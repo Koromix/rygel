@@ -5,6 +5,8 @@
 #include "../../libcc/libcc.hh"
 #include "mco_dump.hh"
 
+namespace RG {
+
 void mco_DumpGhmDecisionTree(Span<const mco_GhmDecisionNode> ghm_nodes,
                              Size node_idx, int depth, StreamWriter *out_st)
 {
@@ -12,12 +14,12 @@ void mco_DumpGhmDecisionTree(Span<const mco_GhmDecisionNode> ghm_nodes,
         return;
 
     for (Size i = 0;; i++) {
-        if (UNLIKELY(i >= ghm_nodes.len)) {
+        if (RG_UNLIKELY(i >= ghm_nodes.len)) {
             LogError("Empty GHM tree or infinite loop (%2)", ghm_nodes.len);
             return;
         }
 
-        DebugAssert(node_idx < ghm_nodes.len);
+        RG_DEBUG_ASSERT(node_idx < ghm_nodes.len);
         const mco_GhmDecisionNode &ghm_node = ghm_nodes[node_idx];
 
         switch (ghm_node.type) {
@@ -59,7 +61,7 @@ void mco_DumpDiagnosisTable(Span<const mco_DiagnosisInfo> diagnoses,
 {
     for (const mco_DiagnosisInfo &diag: diagnoses) {
         const auto DumpMask = [&](int8_t sex) {
-            for (Size i = 0; i < ARRAY_SIZE(diag.Attributes(sex).raw); i++) {
+            for (Size i = 0; i < RG_ARRAY_SIZE(diag.Attributes(sex).raw); i++) {
                 Print(out_st, " 0b%1", FmtBin(diag.Attributes(sex).raw[i]).Pad0(-8));
             }
             PrintLn(out_st);
@@ -84,10 +86,10 @@ void mco_DumpDiagnosisTable(Span<const mco_DiagnosisInfo> diagnoses,
             Print(out_st, "        Mask:");
             DumpMask(1);
         }
-        PrintLn(out_st, "        Warnings: 0b%1", FmtBin(diag.warnings).Pad0(-8 * SIZE(diag.warnings)));
+        PrintLn(out_st, "        Warnings: 0b%1", FmtBin(diag.warnings).Pad0(-8 * RG_SIZE(diag.warnings)));
 
         if (exclusions.len) {
-            Assert(diag.exclusion_set_idx <= exclusions.len);
+            RG_ASSERT(diag.exclusion_set_idx <= exclusions.len);
             const mco_ExclusionInfo *excl = &exclusions[diag.exclusion_set_idx];
 
             Print(out_st, "        Exclusions (list %1):", diag.exclusion_set_idx);
@@ -110,7 +112,7 @@ void mco_DumpProcedureTable(Span<const mco_ProcedureInfo> procedures, StreamWrit
         PrintLn(out_st, "        Activities: %1", proc.ActivitiesToDec());
         PrintLn(out_st, "        Extensions: %1", proc.ExtensionsToDec());
         Print(out_st, "        Mask: ");
-        for (Size i = 0; i < ARRAY_SIZE(proc.bytes); i++) {
+        for (Size i = 0; i < RG_ARRAY_SIZE(proc.bytes); i++) {
             Print(out_st, " 0b%1", FmtBin(proc.bytes[i]).Pad0(-8));
         }
         PrintLn(out_st);
@@ -182,7 +184,7 @@ void mco_DumpGhmToGhsTable(Span<const mco_GhmToGhsInfo> ghs, StreamWriter *out_s
             PrintLn(out_st, "          Diagnosis List D$%1.%2",
                     ghm_to_ghs_info.diagnosis_mask.offset, ghm_to_ghs_info.diagnosis_mask.value);
         }
-        for (const ListMask &mask: ghm_to_ghs_info.procedure_masks) {
+        for (const drd_ListMask &mask: ghm_to_ghs_info.procedure_masks) {
             PrintLn(out_st, "          Procedure List A$%1.%2", mask.offset, mask.value);
         }
     }
@@ -267,7 +269,7 @@ void mco_DumpTableSetContent(const mco_TableSet &table_set, StreamWriter *out_st
                                      index.valid ? "" : " (incomplete)");
         // We don't really need to loop here, but we want the switch to get
         // warnings when we introduce new table types.
-        for (Size i = 0; i < ARRAY_SIZE(index.tables); i++) {
+        for (Size i = 0; i < RG_ARRAY_SIZE(index.tables); i++) {
             if (!index.tables[i])
                 continue;
 
@@ -299,7 +301,7 @@ void mco_DumpTableSetContent(const mco_TableSet &table_set, StreamWriter *out_st
                     mco_DumpSeverityTable(index.gnn_cells, out_st);
                     PrintLn(out_st);
 
-                    for (Size j = 0; j < ARRAY_SIZE(index.cma_cells); j++) {
+                    for (Size j = 0; j < RG_ARRAY_SIZE(index.cma_cells); j++) {
                         PrintLn(out_st, "    CMA Table %1:", j + 1);
                         mco_DumpSeverityTable(index.cma_cells[j], out_st);
                         PrintLn(out_st);
@@ -315,7 +317,7 @@ void mco_DumpTableSetContent(const mco_TableSet &table_set, StreamWriter *out_st
                     mco_DumpAuthorizationTable(index.authorizations, out_st);
                 } break;
                 case mco_TableType::SrcPairTable: {
-                    for (Size j = 0; j < ARRAY_SIZE(index.src_pairs); j++) {
+                    for (Size j = 0; j < RG_ARRAY_SIZE(index.src_pairs); j++) {
                         PrintLn(out_st, "    Supplement Pairs List %1:", j + 1);
                         DumpSupplementPairTable(index.src_pairs[j], out_st);
                         PrintLn(out_st);
@@ -336,4 +338,6 @@ void mco_DumpTableSetContent(const mco_TableSet &table_set, StreamWriter *out_st
         }
         PrintLn(out_st);
     }
+}
+
 }

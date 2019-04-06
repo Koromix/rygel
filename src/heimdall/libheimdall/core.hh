@@ -9,7 +9,9 @@
 #include "animation.hh"
 #include "../../libgui/libgui.hh"
 
-#define HEIMDALL_NAME "heimdall"
+namespace RG {
+
+#define RG_HEIMDALL_NAME "heimdall"
 
 enum class InterpolationMode {
     Linear,
@@ -78,3 +80,5 @@ struct InterfaceState {
 
 bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSet> &concept_sets,
                   const EntitySet &entity_set);
+
+}

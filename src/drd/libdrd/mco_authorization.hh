@@ -7,12 +7,14 @@
 #include "../../libcc/libcc.hh"
 #include "mco_common.hh"
 
+namespace RG {
+
 struct mco_Authorization {
     drd_UnitCode unit;
     int8_t type;
     Date dates[2];
 
-    HASH_TABLE_HANDLER(mco_Authorization, unit);
+    RG_HASH_TABLE_HANDLER(mco_Authorization, unit);
 };
 
 struct mco_AuthorizationSet {
@@ -41,3 +43,5 @@ public:
 bool mco_LoadAuthorizationSet(const char *profile_directory,
                               const char *authorization_filename,
                               mco_AuthorizationSet *out_set);
+
+}

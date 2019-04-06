@@ -7,6 +7,8 @@
 #include "../../libcc/libcc.hh"
 #include "../../drd/libdrd/libdrd.hh"
 
+namespace RG {
+
 struct StructureEntity {
     const char *path;
     drd_UnitCode unit;
@@ -37,3 +39,5 @@ public:
 };
 
 bool LoadStructureSet(Span<const char *const> filenames, StructureSet *out_set);
+
+}

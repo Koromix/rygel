@@ -8,5 +8,9 @@
 #include "user.hh"
 #include "../../wrappers/http.hh"
 
+namespace RG {
+
 int ProduceMcoAggregate(const http_Request &request, const User *user, http_Response *out_response);
 int ProduceMcoResults(const http_Request &request, const User *user, http_Response *out_response);
+
+}

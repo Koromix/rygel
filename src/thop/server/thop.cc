@@ -14,6 +14,8 @@
 #include "../../wrappers/http.hh"
 #include "../../felix/libpack/libpack.hh"
 
+namespace RG {
+
 struct CatalogSet {
     HeapArray<pack_Asset> catalogs;
     LinkedAllocator alloc;
@@ -43,7 +45,7 @@ struct Route {
         int (*func)(const http_Request &request, const User *user, http_Response *out_response);
     } u;
 
-    HASH_TABLE_HANDLER(Route, url);
+    RG_HASH_TABLE_HANDLER(Route, url);
 };
 
 Config thop_config;
@@ -89,8 +91,8 @@ static bool InitCatalogSet(Span<const char *const> table_directories)
     for (const char *filename: filenames) {
         pack_Asset catalog = {};
 
-        const char *name = SplitStrReverseAny(filename, PATH_SEPARATORS).ptr;
-        Assert(name[0]);
+        const char *name = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
+        RG_ASSERT(name[0]);
 
         HeapArray<uint8_t> buf(&catalog_set.alloc);
         {
@@ -166,7 +168,7 @@ static void InitRoutes()
 
     // Static assets and catalogs
     pack_Asset html = {};
-    DebugAssert(assets.len > 0);
+    RG_DEBUG_ASSERT(assets.len > 0);
     for (const pack_Asset &asset: assets) {
         if (TestStr(asset.name, "thop.html")) {
             html = asset;
@@ -181,7 +183,7 @@ static void InitRoutes()
         const char *url = Fmt(&routes_alloc, "/catalogs/%1", desc.name).ptr;
         add_asset_route("GET", url, Route::Matching::Exact, desc);
     }
-    DebugAssert(html.name);
+    RG_DEBUG_ASSERT(html.name);
 
     // Patch HTML
     html.data = pack_PatchVariables(html, &routes_alloc,
@@ -222,7 +224,7 @@ static void InitRoutes()
     // We can use a global ETag because everything is in the binary
     {
         uint64_t buf[2];
-        randombytes_buf(&buf, SIZE(buf));
+        randombytes_buf(&buf, RG_SIZE(buf));
         Fmt(etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
     }
 }
@@ -243,7 +245,7 @@ static int HandleRequest(const http_Request &request, http_Response *out_respons
     const User *user = CheckSessionUser(request, &user_mismatch);
 
     // Send these headers whenever possible
-    DEFER {
+    RG_DEFER {
         MHD_add_response_header(*out_response, "Referrer-Policy", "no-referrer");
         if (user_mismatch) {
             DeleteSessionCookies(out_response);
@@ -297,7 +299,7 @@ static int HandleRequest(const http_Request &request, http_Response *out_respons
             code = route->u.func(request, user, out_response);
         } break;
     }
-    DebugAssert(code);
+    RG_DEBUG_ASSERT(code);
 
     // Send cache information
 #ifndef NDEBUG
@@ -308,7 +310,7 @@ static int HandleRequest(const http_Request &request, http_Response *out_respons
     return code;
 }
 
-int main(int argc, char **argv)
+int RunThop(int argc, char **argv)
 {
     BlockAllocator temp_alloc;
 
@@ -433,7 +435,7 @@ Options:
     // Init routes
 #ifndef NDEBUG
     assets_filename = Fmt(&temp_alloc, "%1%/thop_assets%2",
-                          GetApplicationDirectory(), SHARED_LIBRARY_EXTENSION).ptr;
+                          GetApplicationDirectory(), RG_SHARED_LIBRARY_EXTENSION).ptr;
     if (asset_set.LoadFromLibrary(assets_filename) == pack_LoadStatus::Error)
         return 1;
     assets = asset_set.assets;
@@ -456,3 +458,8 @@ Options:
     LogInfo("Exit");
     return 0;
 }
+
+}
+
+// C++ namespaces are stupid
+int main(int argc, char **argv) { return RG::RunThop(argc, argv); }

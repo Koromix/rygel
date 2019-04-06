@@ -8,8 +8,12 @@
 #include "user.hh"
 #include "../../wrappers/http.hh"
 
+namespace RG {
+
 int ProduceMcoDiagnoses(const http_Request &request, const User *user, http_Response *out_response);
 int ProduceMcoProcedures(const http_Request &request, const User *user, http_Response *out_response);
 int ProduceMcoGhmGhs(const http_Request &request, const User *user, http_Response *out_response);
 
 int ProduceMcoTree(const http_Request &request, const User *user, http_Response *out_response);
+
+}

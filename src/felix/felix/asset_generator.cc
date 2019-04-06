@@ -6,6 +6,8 @@
 #include "asset_generator.hh"
 #include "asset_output.hh"
 
+namespace RG {
+
 // For simplicity, I've replicated the required data structures from libcc
 // and packer.hh directly below. Don't forget to keep them in sync.
 static const char *const CodePrefix =
@@ -194,16 +196,16 @@ bool GenerateFiles(Span<const AssetInfo> assets, const char *output_path,
             return false;
         } break;
     }
-    DebugAssert(compression_ext);
+    RG_DEBUG_ASSERT(compression_ext);
 
     for (const AssetInfo &asset: assets) {
         StreamWriter st;
 
-        if (UNLIKELY(PathIsAbsolute(asset.name))) {
+        if (RG_UNLIKELY(PathIsAbsolute(asset.name))) {
             LogError("Asset name '%1' cannot be an absolute path", asset.name);
             return false;
         }
-        if (UNLIKELY(PathContainsDotDot(asset.name))) {
+        if (RG_UNLIKELY(PathContainsDotDot(asset.name))) {
             LogError("Asset name '%1' must not contain '..'", asset.name);
             return false;
         }
@@ -236,4 +238,6 @@ bool GenerateFiles(Span<const AssetInfo> assets, const char *output_path,
     }
 
     return true;
+}
+
 }

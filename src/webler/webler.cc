@@ -8,6 +8,8 @@ extern "C" {
 }
 #include "../felix/libpack/libpack.hh"
 
+namespace RG {
+
 extern "C" const Span<const pack_Asset> pack_assets;
 
 struct PageSection {
@@ -35,7 +37,7 @@ struct PageData {
 static const char *FileNameToPageName(const char *filename, Allocator *alloc)
 {
     // File name and extension
-    Span<const char> name = SplitStrReverseAny(filename, PATH_SEPARATORS);
+    Span<const char> name = SplitStrReverseAny(filename, RG_PATH_SEPARATORS);
     SplitStrReverse(name, '.', &name);
 
     // Remove leading number and underscore if any
@@ -60,7 +62,7 @@ static const char *FileNameToPageName(const char *filename, Allocator *alloc)
 static bool RenderPageContent(PageData *page, Allocator *alloc)
 {
     buf *ib = bufnew(1024);
-    DEFER { bufrelease(ib); };
+    RG_DEFER { bufrelease(ib); };
 
     // Load the file, struct buf is used by libsoldout
     {
@@ -198,7 +200,7 @@ static bool RenderPageContent(PageData *page, Allocator *alloc)
     // Convert Markdown to HTML
     {
         buf *ob = bufnew(64);
-        DEFER { free(ob); };
+        RG_DEFER { free(ob); };
 
         markdown(ob, ib, &renderer);
         page->html_buf.reset(ob->data, free);
@@ -282,7 +284,7 @@ static bool RenderFullPage(Span<const PageData> pages, Size page_idx, const char
     return st.Close();
 }
 
-int main(int argc, char *argv[])
+int RunWebler(int argc, char *argv[])
 {
     BlockAllocator temp_alloc;
 
@@ -433,3 +435,8 @@ Options:
     LogInfo("Done!");
     return 0;
 }
+
+}
+
+// C++ namespaces are stupid
+int main(int argc, char **argv) { return RG::RunWebler(argc, argv); }

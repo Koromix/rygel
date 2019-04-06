@@ -7,6 +7,8 @@
 #include "../../libcc/libcc.hh"
 #include "mco_common.hh"
 
+namespace RG {
+
 enum class mco_TableType: uint32_t {
     UnknownTable,
 
@@ -104,15 +106,15 @@ struct mco_DiagnosisInfo {
     uint16_t warnings;
 
     uint16_t exclusion_set_idx;
-    ListMask cma_exclusion_mask;
+    drd_ListMask cma_exclusion_mask;
 
     const Attributes &Attributes(int8_t sex) const
     {
-        DebugAssert(sex == 1 || sex == 2);
+        RG_DEBUG_ASSERT(sex == 1 || sex == 2);
         return attributes[sex - 1];
     }
 
-    HASH_TABLE_HANDLER(mco_DiagnosisInfo, diag);
+    RG_HASH_TABLE_HANDLER(mco_DiagnosisInfo, diag);
 };
 
 struct mco_ExclusionInfo {
@@ -149,7 +151,7 @@ struct mco_ProcedureInfo {
     int ActivitiesToDec() const { return MaskToDec(activities); }
     int ExtensionsToDec() const { return MaskToDec(extensions); }
 
-    HASH_TABLE_HANDLER(mco_ProcedureInfo, proc);
+    RG_HASH_TABLE_HANDLER(mco_ProcedureInfo, proc);
 };
 
 struct mco_ProcedureLink {
@@ -170,7 +172,7 @@ struct mco_ValueRangeCell {
 
     bool Test(Size idx, int value) const
     {
-        DebugAssert(idx < N);
+        RG_DEBUG_ASSERT(idx < N);
         return (value >= limits[idx].min && value < limits[idx].max);
     }
 };
@@ -190,9 +192,9 @@ struct mco_GhmRootInfo {
 
     int8_t childbirth_severity_list;
 
-    ListMask cma_exclusion_mask;
+    drd_ListMask cma_exclusion_mask;
 
-    HASH_TABLE_HANDLER(mco_GhmRootInfo, ghm_root);
+    RG_HASH_TABLE_HANDLER(mco_GhmRootInfo, ghm_root);
 };
 
 struct mco_GhmToGhsInfo {
@@ -203,20 +205,20 @@ struct mco_GhmToGhsInfo {
     int8_t unit_authorization;
     int8_t minimum_duration;
     int8_t minimum_age;
-    ListMask main_diagnosis_mask;
-    ListMask diagnosis_mask;
-    LocalArray<ListMask, 4> procedure_masks;
+    drd_ListMask main_diagnosis_mask;
+    drd_ListMask diagnosis_mask;
+    LocalArray<drd_ListMask, 4> procedure_masks;
 
     int8_t conditions_count;
 
     mco_GhsCode Ghs(drd_Sector sector) const
     {
-        StaticAssert((int)drd_Sector::Public == 0);
+        RG_STATIC_ASSERT((int)drd_Sector::Public == 0);
         return ghs[(int)sector];
     }
 
-    HASH_TABLE_HANDLER(mco_GhmToGhsInfo, ghm);
-    HASH_TABLE_HANDLER_N(GhmRootHandler, mco_GhmToGhsInfo, ghm.Root());
+    RG_HASH_TABLE_HANDLER(mco_GhmToGhsInfo, ghm);
+    RG_HASH_TABLE_HANDLER_N(GhmRootHandler, mco_GhmToGhsInfo, ghm.Root());
 };
 
 struct mco_GhsPriceInfo {
@@ -234,7 +236,7 @@ struct mco_GhsPriceInfo {
     int32_t exb_cents;
     uint16_t flags;
 
-    HASH_TABLE_HANDLER(mco_GhsPriceInfo, ghs);
+    RG_HASH_TABLE_HANDLER(mco_GhsPriceInfo, ghs);
 };
 
 enum class mco_AuthorizationScope: int8_t {
@@ -257,14 +259,14 @@ struct mco_AuthorizationInfo {
     } type;
     int8_t function;
 
-    HASH_TABLE_HANDLER(mco_AuthorizationInfo, type.value);
+    RG_HASH_TABLE_HANDLER(mco_AuthorizationInfo, type.value);
 };
 
 struct mco_SrcPair {
     drd_DiagnosisCode diag;
     drd_ProcedureCode proc;
 
-    HASH_TABLE_HANDLER(mco_SrcPair, diag);
+    RG_HASH_TABLE_HANDLER(mco_SrcPair, diag);
 };
 
 Date mco_ConvertDate1980(uint16_t days);
@@ -273,7 +275,7 @@ struct mco_TableIndex {
     Date limit_dates[2];
     bool valid;
 
-    const mco_TableInfo *tables[ARRAY_SIZE(mco_TableTypeNames)];
+    const mco_TableInfo *tables[RG_ARRAY_SIZE(mco_TableTypeNames)];
     uint32_t changed_tables;
 
     Span<const mco_GhmDecisionNode> ghm_nodes;
@@ -433,12 +435,12 @@ public:
             case Type::All: { return true; } break;
 
             case Type::Mask: {
-                return LIKELY(u.mask.offset < values.len) &&
+                return RG_LIKELY(u.mask.offset < values.len) &&
                        values[u.mask.offset] & u.mask.mask;
             } break;
 
             case Type::ReverseMask: {
-                return LIKELY(u.mask.offset < values.len) &&
+                return RG_LIKELY(u.mask.offset < values.len) &&
                        !(values[u.mask.offset] & u.mask.mask);
             } break;
 
@@ -451,6 +453,8 @@ public:
                        values[1] == u.cmd_jump.jump;
             } break;
         }
-        DebugAssert(false);
+        RG_DEBUG_ASSERT(false);
     }
 };
+
+}

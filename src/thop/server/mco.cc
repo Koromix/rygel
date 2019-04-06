@@ -9,6 +9,8 @@
 #include "thop.hh"
 #include "user.hh"
 
+namespace RG {
+
 mco_TableSet mco_table_set;
 HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> mco_constraints_set;
 HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> mco_index_to_constraints;
@@ -164,7 +166,7 @@ bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *con
         for (const Span<const mco_Stay> &group: groups) {
             Date exit_date = group[group.len - 1].exit.date;
 
-            if (LIKELY(exit_date.IsValid())) {
+            if (RG_LIKELY(exit_date.IsValid())) {
                 mco_stay_set_dates[0] = exit_date;
                 break;
             }
@@ -173,7 +175,7 @@ bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *con
             const Span<const mco_Stay> &group = groups[i];
             Date exit_date = group[group.len - 1].exit.date;
 
-            if (LIKELY(exit_date.IsValid())) {
+            if (RG_LIKELY(exit_date.IsValid())) {
                 mco_stay_set_dates[1] = exit_date + 1;
                 break;
             }
@@ -268,7 +270,7 @@ static Span<const mco_Result *> GetIndexRange(Span<const mco_Result *> index,
 
 bool McoResultProvider::Run(std::function<void(Span<const mco_Result>, Span<const mco_Result>)> func)
 {
-    DebugAssert(min_date.IsValid() && max_date.IsValid());
+    RG_DEBUG_ASSERT(min_date.IsValid() && max_date.IsValid());
 
     if (filter) {
         return RunFilter(func);
@@ -281,7 +283,7 @@ bool McoResultProvider::Run(std::function<void(Span<const mco_Result>, Span<cons
 
 bool McoResultProvider::RunFilter(std::function<void(Span<const mco_Result>, Span<const mco_Result>)> func)
 {
-    DebugAssert(filter);
+    RG_DEBUG_ASSERT(filter);
 
     const Size split_size = 8192;
 
@@ -344,7 +346,7 @@ bool McoResultProvider::RunFilter(std::function<void(Span<const mco_Result>, Spa
                     if (result.ghm.Root() == ghm_root) {
                         results_buf[j] = result;
                         memmove(&mono_results_buf[k], &mono_results_buf[m],
-                                result.stays.len * SIZE(mco_Result));
+                                result.stays.len * RG_SIZE(mco_Result));
 
                         j++;
                         k += result.stays.len;
@@ -367,7 +369,7 @@ bool McoResultProvider::RunFilter(std::function<void(Span<const mco_Result>, Spa
 
 bool McoResultProvider::RunIndex(std::function<void(Span<const mco_Result>, Span<const mco_Result>)> func)
 {
-    DebugAssert(ghm_root.IsValid());
+    RG_DEBUG_ASSERT(ghm_root.IsValid());
 
     const Size split_size = 8192;
 
@@ -399,7 +401,7 @@ bool McoResultProvider::RunIndex(std::function<void(Span<const mco_Result>, Span
 
 bool McoResultProvider::RunDirect(std::function<void(Span<const mco_Result>, Span<const mco_Result>)> func)
 {
-    DebugAssert(!ghm_root.IsValid());
+    RG_DEBUG_ASSERT(!ghm_root.IsValid());
 
     const Size split_size = 65536;
 
@@ -458,7 +460,7 @@ int ProduceMcoSettings(const http_Request &request, const User *user, http_Respo
             const OptionDesc &default_desc = mco_DispenseModeOptions[(int)thop_config.mco_dispense_mode];
 
             json.Key("algorithms"); json.StartArray();
-            for (Size i = 0; i < ARRAY_SIZE(mco_DispenseModeOptions); i++) {
+            for (Size i = 0; i < RG_ARRAY_SIZE(mco_DispenseModeOptions); i++) {
                 if (user->CheckMcoDispenseMode((mco_DispenseMode)i)) {
                     const OptionDesc &desc = mco_DispenseModeOptions[i];
 
@@ -474,7 +476,7 @@ int ProduceMcoSettings(const http_Request &request, const User *user, http_Respo
         }
 
         json.Key("permissions"); json.StartArray();
-        for (Size i = 0; i < ARRAY_SIZE(UserPermissionNames); i++) {
+        for (Size i = 0; i < RG_ARRAY_SIZE(UserPermissionNames); i++) {
             if (user->permissions & (1 << i)) {
                 json.String(UserPermissionNames[i]);
             }
@@ -503,4 +505,6 @@ int ProduceMcoSettings(const http_Request &request, const User *user, http_Respo
     json.EndObject();
 
     return json.Finish(out_response);
+}
+
 }

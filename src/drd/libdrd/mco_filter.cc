@@ -8,6 +8,8 @@
 
 #include "../../../vendor/wren/src/include/wren.hpp"
 
+namespace RG {
+
 static const char *const InitCode = R"(
 import "meta" for Meta
 
@@ -186,8 +188,8 @@ private:
     void InitProxyArrays(Size count);
 };
 
-static THREAD_LOCAL Allocator *thread_alloc;
-static THREAD_LOCAL bool first_error;
+static RG_THREAD_LOCAL Allocator *thread_alloc;
+static RG_THREAD_LOCAL bool first_error;
 
 template <typename... Args>
 static void TriggerError(WrenVM *vm, Args... args)
@@ -206,14 +208,14 @@ static void TriggerError(WrenVM *vm, Args... args)
 template <typename T>
 static inline T GetSlotIntegerSafe(WrenVM *vm, int slot)
 {
-    if (UNLIKELY(wrenGetSlotType(vm, slot) != WREN_TYPE_NUM)) {
+    if (RG_UNLIKELY(wrenGetSlotType(vm, slot) != WREN_TYPE_NUM)) {
         TriggerError(vm, "Expected numeric value");
         return 0;
     }
 
     double value = wrenGetSlotDouble(vm, slot);
-    if (UNLIKELY(value < (double)std::numeric_limits<T>::min() ||
-                 value > (double)std::numeric_limits<T>::max())) {
+    if (RG_UNLIKELY(value < (double)std::numeric_limits<T>::min() ||
+                    value > (double)std::numeric_limits<T>::max())) {
         TriggerError(vm, "Expected integer value between %1 and %2",
                      std::numeric_limits<T>::min(), std::numeric_limits<T>::max());
         return 0;
@@ -224,7 +226,7 @@ static inline T GetSlotIntegerSafe(WrenVM *vm, int slot)
 
 static inline const char *GetSlotStringSafe(WrenVM *vm, int slot)
 {
-    if (UNLIKELY(wrenGetSlotType(vm, slot) != WREN_TYPE_STRING)) {
+    if (RG_UNLIKELY(wrenGetSlotType(vm, slot) != WREN_TYPE_STRING)) {
         TriggerError(vm, "Expected string value");
         return nullptr;
     }
@@ -252,7 +254,7 @@ static inline Date GetSlotDateSafe(WrenVM *vm, int slot)
         case WREN_TYPE_FOREIGN: {
             const mco_WrenRunner &runner = *(mco_WrenRunner *)wrenGetUserData(vm);
 
-            if (UNLIKELY(!wrenForeignIsClass(vm, slot, runner.date_class))) {
+            if (RG_UNLIKELY(!wrenForeignIsClass(vm, slot, runner.date_class))) {
                 TriggerError(vm, "Expected Date or null");
                 return {};
             }
@@ -273,7 +275,7 @@ static inline char GetSlotModeSafe(WrenVM *vm, int slot)
     switch (wrenGetSlotType(vm, slot)) {
         case WREN_TYPE_NUM: {
             double value = wrenGetSlotDouble(vm, slot);
-            if (UNLIKELY(value < 0.0 || value >= 10.0)) {
+            if (RG_UNLIKELY(value < 0.0 || value >= 10.0)) {
                 TriggerError(vm, "Mode must be between 0 and 9");
                 return 0;
             }
@@ -282,7 +284,7 @@ static inline char GetSlotModeSafe(WrenVM *vm, int slot)
         } break;
         case WREN_TYPE_STRING: {
             const char *value = wrenGetSlotString(vm, slot);
-            if (UNLIKELY(!value[0] || value[1])) {
+            if (RG_UNLIKELY(!value[0] || value[1])) {
                 TriggerError(vm, "Mode must be one character");
                 return 0;
             }
@@ -304,7 +306,7 @@ static WrenForeignClassMethods BindForeignClass(WrenVM *, const char *, const ch
 
     if (TestStr(class_name, "Date")) {
         methods.allocate = [](WrenVM *vm) {
-            Date *date = (Date *)wrenSetSlotNewForeign(vm, 0, 0, SIZE(Date));
+            Date *date = (Date *)wrenSetSlotNewForeign(vm, 0, 0, RG_SIZE(Date));
             *date = {};
         };
     }
@@ -337,7 +339,7 @@ static WrenForeignClassMethods BindForeignClass(WrenVM *, const char *, const ch
             const Type &obj = *(const Type *)wrenGetSlotForeign(vm, 0); \
              \
             wrenSetSlotHandle(vm, 0, runner.date_class); \
-            Date *date = (Date *)wrenSetSlotNewForeign(vm, 0, 0, SIZE(Date)); \
+            Date *date = (Date *)wrenSetSlotNewForeign(vm, 0, 0, RG_SIZE(Date)); \
             *date = (Value); \
         }; \
     }
@@ -409,7 +411,7 @@ static WrenForeignMethodFn BindDateMethod(const char *signature)
         const mco_WrenRunner &runner = *(const mco_WrenRunner *)wrenGetUserData(vm);
 
         Date date1 = *(Date *)wrenGetSlotForeign(vm, 0);
-        if (UNLIKELY(!date1.IsValid())) {
+        if (RG_UNLIKELY(!date1.IsValid())) {
             TriggerError(vm, "Cannot compute on invalid date");
             return;
         }
@@ -417,7 +419,7 @@ static WrenForeignMethodFn BindDateMethod(const char *signature)
         switch (wrenGetSlotType(vm, 1)) {
             case WREN_TYPE_FOREIGN: {
                 Date date2 = GetSlotDateSafe(vm, 1);
-                if (UNLIKELY(!date2.IsValid())) {
+                if (RG_UNLIKELY(!date2.IsValid())) {
                     TriggerError(vm, "Cannot compute days between invalid dates");
                     return;
                 }
@@ -428,7 +430,7 @@ static WrenForeignMethodFn BindDateMethod(const char *signature)
                 int16_t days = GetSlotIntegerSafe<int16_t>(vm, 1);
 
                 wrenSetSlotHandle(vm, 0, runner.date_class);
-                Date *ret = (Date *)wrenSetSlotNewForeign(vm, 0, 0, SIZE(date1));
+                Date *ret = (Date *)wrenSetSlotNewForeign(vm, 0, 0, RG_SIZE(date1));
                 *ret = date1 - days;
             } break;
 
@@ -442,7 +444,7 @@ static WrenForeignMethodFn BindDateMethod(const char *signature)
         const mco_WrenRunner &runner = *(const mco_WrenRunner *)wrenGetUserData(vm);
 
         Date date = *(Date *)wrenGetSlotForeign(vm, 0);
-        if (UNLIKELY(!date.IsValid())) {
+        if (RG_UNLIKELY(!date.IsValid())) {
             TriggerError(vm, "Cannot compute on invalid date");
             return;
         }
@@ -450,7 +452,7 @@ static WrenForeignMethodFn BindDateMethod(const char *signature)
         int16_t days = GetSlotIntegerSafe<int16_t>(vm, 1);
 
         wrenSetSlotHandle(vm, 0, runner.date_class);
-        Date *ret = (Date *)wrenSetSlotNewForeign(vm, 0, 0, SIZE(date));
+        Date *ret = (Date *)wrenSetSlotNewForeign(vm, 0, 0, RG_SIZE(date));
         *ret = date + days;
     })
     ELSE_IF_GET_NUM("year", Date, obj.st.year)
@@ -509,7 +511,7 @@ static WrenForeignMethodFn BindStayArrayMethod(const char *signature)
         ProxyArray<mco_Stay> *arr = (ProxyArray<mco_Stay> *)wrenGetSlotForeign(vm, 0);
         Size idx = GetSlotIndexSafe(vm, 1, arr->values.len);
 
-        if (LIKELY(idx >= 0)) {
+        if (RG_LIKELY(idx >= 0)) {
             wrenSetSlotHandle(vm, 0, arr->vars[idx]);
         }
     });
@@ -524,7 +526,7 @@ static WrenForeignMethodFn BindDiagnosisArrayMethod(const char *signature)
             *(const ProxyArray<drd_DiagnosisCode> *)wrenGetSlotForeign(vm, 0);
         Size idx = GetSlotIndexSafe(vm, 1, arr.values.len);
 
-        if (LIKELY(idx >= 0)) {
+        if (RG_LIKELY(idx >= 0)) {
             wrenSetSlotString(vm, 0, arr.values[idx].str);
         }
     });
@@ -539,7 +541,7 @@ static WrenForeignMethodFn BindProcedureArrayMethod(const char *signature)
             *(const ProxyArray<mco_ProcedureRealisation> *)wrenGetSlotForeign(vm, 0);
         Size idx = GetSlotIndexSafe(vm, 1, arr.values.len);
 
-        if (LIKELY(idx >= 0)) {
+        if (RG_LIKELY(idx >= 0)) {
             wrenSetSlotString(vm, 0, arr.values[idx].proc.str);
         }
     });
@@ -746,7 +748,7 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
 
         const char *new_value = GetSlotStringSafe(vm, 1);
         drd_DiagnosisCode new_diag = drd_DiagnosisCode::FromString(new_value, (int)ParseFlag::End);
-        if (UNLIKELY(!new_diag.IsValid())) {
+        if (RG_UNLIKELY(!new_diag.IsValid())) {
             TriggerError(vm, "Invalid diagnosis code");
             return;
         }
@@ -762,7 +764,7 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
 
         const char *new_value = GetSlotStringSafe(vm, 1);
         drd_DiagnosisCode new_diag = drd_DiagnosisCode::FromString(new_value, (int)ParseFlag::End);
-        if (UNLIKELY(!new_diag.IsValid())) {
+        if (RG_UNLIKELY(!new_diag.IsValid())) {
             TriggerError(vm, "Invalid diagnosis code");
             return;
         }
@@ -927,7 +929,7 @@ bool mco_WrenRunner::Init(const char *expression, Size max_results)
         // Use fast bump allocator and avoid GC as much as possible for
         // maximum performance.
         config.reallocateFn = [](void *mem, size_t old_size, size_t new_size) {
-            Assert(old_size <= LEN_MAX && new_size <= LEN_MAX);
+            RG_ASSERT(old_size <= RG_SIZE_MAX && new_size <= RG_SIZE_MAX);
             Allocator::Resize(thread_alloc, &mem, (Size)old_size, (Size)new_size);
             return mem;
         };
@@ -958,7 +960,7 @@ bool mco_WrenRunner::Init(const char *expression, Size max_results)
     wrenSetUserData(vm, this);
 
     // Run init code
-    DebugAssert(wrenInterpret(vm, "mco", InitCode) == WREN_RESULT_SUCCESS);
+    RG_DEBUG_ASSERT(wrenInterpret(vm, "mco", InitCode) == WREN_RESULT_SUCCESS);
     wrenEnsureSlots(vm, 1);
     wrenGetVariable(vm, "mco", "Date", 0);
     date_class = wrenGetSlotHandle(vm, 0);
@@ -969,18 +971,18 @@ bool mco_WrenRunner::Init(const char *expression, Size max_results)
     wrenGetVariable(vm, "mco", "ProcedureArray", 0);
     procedure_array_class = wrenGetSlotHandle(vm, 0);
     wrenGetVariable(vm, "mco", "McoResult", 0);
-    wrenSetSlotNewForeign(vm, 0, 0, SIZE(ResultObject));
+    wrenSetSlotNewForeign(vm, 0, 0, RG_SIZE(ResultObject));
     result_obj = (ResultObject *)wrenGetSlotForeign(vm, 0);
     result_obj->var = wrenGetSlotHandle(vm, 0);
     wrenGetVariable(vm, "mco", "StayArray", 0);
-    wrenSetSlotNewForeign(vm, 0, 0, SIZE(ProxyArray<char>));
+    wrenSetSlotNewForeign(vm, 0, 0, RG_SIZE(ProxyArray<char>));
     stays_arr = (ProxyArray<mco_Stay> *)wrenGetSlotForeign(vm, 0);
     stays_arr->var = wrenGetSlotHandle(vm, 0);
     wrenGetVariable(vm, "mco", "MCO", 0);
     mco_class = wrenGetSlotHandle(vm, 0);
     mco_build = wrenMakeCallHandle(vm, "build(_)");
     expression_call = wrenMakeCallHandle(vm, "call()");
-    DebugAssert(wrenInterpret(vm, "mco", VarCode) == WREN_RESULT_SUCCESS);
+    RG_DEBUG_ASSERT(wrenInterpret(vm, "mco", VarCode) == WREN_RESULT_SUCCESS);
 
     // Compile expression
     wrenEnsureSlots(vm, 2);
@@ -1023,7 +1025,7 @@ Size mco_WrenRunner::Process(Span<const mco_Result> results, const mco_Result mo
 
         if (wrenGetSlotType(vm, 0) != WREN_TYPE_BOOL || wrenGetSlotBool(vm, 0)) {
             if (stays_arr->copies.len) {
-                if (UNLIKELY(!out_stay_set)) {
+                if (RG_UNLIKELY(!out_stay_set)) {
                     LogError("Cannot mutate stays");
                     return -1;
                 }
@@ -1034,7 +1036,7 @@ Size mco_WrenRunner::Process(Span<const mco_Result> results, const mco_Result mo
                 if (out_mono_results) {
                     for (Size i = 0; i < result.stays.len; i++) {
                         const mco_Result &mono_result = mono_results[stays_count + i];
-                        DebugAssert(mono_result.stays[0].bill_id == result.stays[0].bill_id);
+                        RG_DEBUG_ASSERT(mono_result.stays[0].bill_id == result.stays[0].bill_id);
 
                         out_mono_results->Append(&mono_result);
                     }
@@ -1056,7 +1058,7 @@ void mco_WrenRunner::InitProxyArrays(Size count)
         wrenSetSlotHandle(vm, 0, stay_class);
         {
             ProxyArrayObject<mco_Stay> *stay_obj =
-                (ProxyArrayObject<mco_Stay> *)wrenSetSlotNewForeign(vm, 0, 0, SIZE(ProxyArrayObject<mco_Stay>));
+                (ProxyArrayObject<mco_Stay> *)wrenSetSlotNewForeign(vm, 0, 0, RG_SIZE(ProxyArrayObject<mco_Stay>));
             WrenHandle *stay_var = wrenGetSlotHandle(vm, 0);
 
             stay_obj->array = stays_arr;
@@ -1067,7 +1069,7 @@ void mco_WrenRunner::InitProxyArrays(Size count)
         wrenSetSlotHandle(vm, 0, diagnosis_array_class);
         {
             ProxyArray<drd_DiagnosisCode> *arr =
-                (ProxyArray<drd_DiagnosisCode> *)wrenSetSlotNewForeign(vm, 0, 0, SIZE(ProxyArray<drd_DiagnosisCode>));
+                (ProxyArray<drd_DiagnosisCode> *)wrenSetSlotNewForeign(vm, 0, 0, RG_SIZE(ProxyArray<drd_DiagnosisCode>));
 
             arr->var = wrenGetSlotHandle(vm, 0);
             other_diagnosis_arrays.Append(arr);
@@ -1076,7 +1078,7 @@ void mco_WrenRunner::InitProxyArrays(Size count)
         wrenSetSlotHandle(vm, 0, procedure_array_class);
         {
             ProxyArray<mco_ProcedureRealisation> *arr =
-                (ProxyArray<mco_ProcedureRealisation> *)wrenSetSlotNewForeign(vm, 0, 0, SIZE(ProxyArray<mco_ProcedureRealisation>));
+                (ProxyArray<mco_ProcedureRealisation> *)wrenSetSlotNewForeign(vm, 0, 0, RG_SIZE(ProxyArray<mco_ProcedureRealisation>));
 
             arr->var = wrenGetSlotHandle(vm, 0);
             procedure_arrays.Append(arr);
@@ -1118,9 +1120,9 @@ bool mco_FilterRunner::Process(Span<const mco_Result> results, Span<const mco_Re
                                HeapArray<const mco_Result *> *out_mono_results,
                                mco_StaySet *out_stay_set)
 {
-    DEFER_NC(out_guard, results_len = out_results->len,
-                        mono_results_len = out_mono_results ? out_mono_results->len : 0,
-                        stays_len = out_stay_set ? out_stay_set->stays.len : 0) {
+    RG_DEFER_NC(out_guard, results_len = out_results->len,
+                           mono_results_len = out_mono_results ? out_mono_results->len : 0,
+                           stays_len = out_stay_set ? out_stay_set->stays.len : 0) {
         out_results->RemoveFrom(results_len);
         if (out_mono_results) {
             out_mono_results->RemoveFrom(mono_results_len);
@@ -1162,4 +1164,6 @@ bool mco_FilterRunner::ResetRunner()
     wren_count = 16384;
 
     return wren->Init(filter_buf.ptr, wren_count);
+}
+
 }

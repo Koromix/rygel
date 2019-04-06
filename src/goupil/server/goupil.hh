@@ -8,5 +8,9 @@
 #include "config.hh"
 #include "data.hh"
 
+namespace RG {
+
 extern Config goupil_config;
 extern SQLiteConnection database;
+
+}

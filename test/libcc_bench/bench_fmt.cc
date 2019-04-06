@@ -18,8 +18,8 @@ void BenchFmt()
 #else
     FILE *fp = fopen("/dev/null", "we");
 #endif
-    Assert(fp);
-    DEFER { fclose(fp); };
+    RG_ASSERT(fp);
+    RG_DEFER { fclose(fp); };
 
     PrintLn("String formatting");
 
@@ -38,7 +38,7 @@ void BenchFmt()
         Checkpoint start = StartBenchmark("snprintf");
         for (int i = 0; i < iterations; i++) {
             char buf[1024];
-            snprintf(buf, SIZE(buf), "%d:%d:%d:%s:%p:%c:%%\n",
+            snprintf(buf, RG_SIZE(buf), "%d:%d:%d:%s:%p:%c:%%\n",
                     1234, 42, -313, "str", (void*)1000, 'X');
         }
         EndBenchmark(start, iterations);
@@ -63,7 +63,7 @@ void BenchFmt()
         Checkpoint start = StartBenchmark("stbsp_snprintf");
         for (int i = 0; i < iterations; i++) {
             char buf[1024];
-            stbsp_snprintf(buf, SIZE(buf), "%d:%d:%d:%s:%p:%c:%%\n",
+            stbsp_snprintf(buf, RG_SIZE(buf), "%d:%d:%d:%s:%p:%c:%%\n",
                            1234, 42, -313, "str", (void*)1000, 'X');
         }
         EndBenchmark(start, iterations);

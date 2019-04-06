@@ -7,6 +7,8 @@
 #include "../../../vendor/sqlite/sqlite3.h"
 #include "../../libcc/libcc.hh"
 
+namespace RG {
+
 class SQLiteConnection {
     sqlite3 *db = nullptr;
 
@@ -22,3 +24,5 @@ public:
 
     operator sqlite3 *() { return db; }
 };
+
+}

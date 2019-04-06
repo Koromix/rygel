@@ -9,6 +9,8 @@
 #include "../libcc/libcc.hh"
 #include "../../vendor/pcg/pcg_basic.h"
 
+namespace RG {
+
 // Adapt PCG to bullshit std::random API
 class pcg_Generator {
     pcg32_random_t *rand;
@@ -46,4 +48,6 @@ static inline double pcg_RandomNormal(pcg32_random_t *rand, double mean, double 
 {
     pcg_Generator generator(rand);
     return std::normal_distribution(mean, sd)(generator);
+}
+
 }

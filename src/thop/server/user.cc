@@ -16,6 +16,8 @@
 #include "thop.hh"
 #include "user.hh"
 
+namespace RG {
+
 static const int64_t PruneDelay = 20 * 60 * 1000;
 static const int64_t IdleSessionDelay = 4 * 3600 * 1000;
 
@@ -27,7 +29,7 @@ struct Session {
 
     const User *user;
 
-    HASH_TABLE_HANDLER_T(Session, const char *, session_key);
+    RG_HASH_TABLE_HANDLER_T(Session, const char *, session_key);
 };
 
 static std::shared_mutex sessions_mutex;
@@ -58,11 +60,11 @@ static Span<const char> SplitListValue(Span<const char> str,
 
 bool UserSetBuilder::LoadIni(StreamReader &st)
 {
-    DEFER_NC(out_guard, len = set.users.len) { set.users.RemoveFrom(len); };
+    RG_DEFER_NC(out_guard, len = set.users.len) { set.users.RemoveFrom(len); };
 
     IniParser ini(&st);
     ini.reader.PushLogHandler();
-    DEFER { PopLogHandler(); };
+    RG_DEFER { PopLogHandler(); };
 
     bool valid = true;
     {
@@ -228,7 +230,7 @@ bool UserSetBuilder::LoadFiles(Span<const char *const> filenames)
 
 void UserSetBuilder::Finish(const StructureSet &structure_set, UserSet *out_set)
 {
-    DebugAssert(set.users.len == rule_sets.len);
+    RG_DEBUG_ASSERT(set.users.len == rule_sets.len);
 
     for (Size i = 0; i < set.users.len; i++) {
         User &user = set.users[i];
@@ -244,7 +246,7 @@ void UserSetBuilder::Finish(const StructureSet &structure_set, UserSet *out_set)
         set.map.Append(&user);
     }
 
-    SwapMemory(out_set, &set, SIZE(set));
+    SwapMemory(out_set, &set, RG_SIZE(set));
 }
 
 bool UserSetBuilder::CheckUnitPermission(const UnitRuleSet &rule_set, const StructureEntity &ent)
@@ -273,7 +275,7 @@ bool LoadUserSet(Span<const char *const> filenames, const StructureSet &structur
 
 static bool GetClientAddress(MHD_Connection *conn, Span<char> out_address)
 {
-    DebugAssert(out_address.len);
+    RG_DEBUG_ASSERT(out_address.len);
 
     int family;
     void *addr;
@@ -285,7 +287,7 @@ static bool GetClientAddress(MHD_Connection *conn, Span<char> out_address)
         switch (saddr->sa_family) {
             case AF_INET: { addr = &((sockaddr_in *)saddr)->sin_addr; } break;
             case AF_INET6: { addr = &((sockaddr_in6 *)saddr)->sin6_addr; } break;
-            default: { Assert(false); } break;
+            default: { RG_ASSERT(false); } break;
         }
     }
 
@@ -346,7 +348,7 @@ static Session *FindSession(const http_Request &request, bool *out_mismatch = nu
     if (!session ||
             !TestStr(session->client_addr, address) ||
             !TestStr(session->user->name, username) ||
-            strncmp(session->user_agent, user_agent, SIZE(session->user_agent) - 1) ||
+            strncmp(session->user_agent, user_agent, RG_SIZE(session->user_agent) - 1) ||
             now - session->last_seen > IdleSessionDelay) {
         if (out_mismatch) {
             *out_mismatch = true;
@@ -402,7 +404,7 @@ int HandleConnect(const http_Request &request, const User *, http_Response *out_
     char session_key[129];
     {
         uint64_t buf[8];
-        randombytes_buf(buf, SIZE(buf));
+        randombytes_buf(buf, RG_SIZE(buf));
         Fmt(session_key, "%1%2%3%4%5%6%7%8",
             FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16),
             FmtHex(buf[2]).Pad0(-16), FmtHex(buf[3]).Pad0(-16),
@@ -414,7 +416,7 @@ int HandleConnect(const http_Request &request, const User *, http_Response *out_
     char url_key[33];
     {
         uint64_t buf[2];
-        randombytes_buf(&buf, SIZE(buf));
+        randombytes_buf(&buf, RG_SIZE(buf));
         Fmt(url_key, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
     }
 
@@ -436,11 +438,11 @@ int HandleConnect(const http_Request &request, const User *, http_Response *out_
             session = ret.first;
         }
 
-        StaticAssert(SIZE(session->session_key) == SIZE(session_key));
-        StaticAssert(SIZE(session->client_addr) == SIZE(address));
+        RG_STATIC_ASSERT(RG_SIZE(session->session_key) == RG_SIZE(session_key));
+        RG_STATIC_ASSERT(RG_SIZE(session->client_addr) == RG_SIZE(address));
         strcpy(session->session_key, session_key);
         strcpy(session->client_addr, address);
-        strncpy(session->user_agent, user_agent, SIZE(session->user_agent) - 1);
+        strncpy(session->user_agent, user_agent, RG_SIZE(session->user_agent) - 1);
         session->last_seen = GetMonotonicTime();
         session->user = user;
     }
@@ -471,4 +473,6 @@ int HandleDisconnect(const http_Request &request, const User *, http_Response *o
     DeleteSessionCookies(out_response);
 
     return 200;
+}
+
 }

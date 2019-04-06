@@ -7,6 +7,8 @@
 #include "../../libcc/libcc.hh"
 #include "drdc.hh"
 
+namespace RG {
+
 struct Config {
     HeapArray<const char *> table_directories;
     const char *profile_directory = nullptr;
@@ -29,3 +31,5 @@ public:
 };
 
 bool LoadConfig(Span<const char *const> filenames, Config *out_config);
+
+}

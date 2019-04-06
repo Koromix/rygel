@@ -8,6 +8,8 @@
 #include "mco_common.hh"
 #include "mco_tables.hh"
 
+namespace RG {
+
 struct mco_GhmConstraint {
     enum class Warning {
         PreferCmd28 = 1 << 0
@@ -19,8 +21,10 @@ struct mco_GhmConstraint {
     uint32_t durations;
     uint32_t warnings;
 
-    HASH_TABLE_HANDLER(mco_GhmConstraint, ghm);
+    RG_HASH_TABLE_HANDLER(mco_GhmConstraint, ghm);
 };
 
 bool mco_ComputeGhmConstraints(const mco_TableIndex &index,
                                HashTable<mco_GhmCode, mco_GhmConstraint> *out_constraints);
+
+}

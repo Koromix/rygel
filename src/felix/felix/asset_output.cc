@@ -6,14 +6,16 @@
 #include "../../wrappers/json.hh"
 #include "asset_output.hh"
 
+namespace RG {
+
 static FmtArg FormatZigzagVLQ64(int value)
 {
-    DebugAssert(value != INT_MIN);
+    RG_DEBUG_ASSERT(value != INT_MIN);
 
     static const char literals[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-    StaticAssert(SIZE(literals) - 1 == 64);
-    StaticAssert((SIZE(FmtArg::value.buf) - 1) * 6 - 2 >= SIZE(value) * 16);
+    RG_STATIC_ASSERT(RG_SIZE(literals) - 1 == 64);
+    RG_STATIC_ASSERT((RG_SIZE(FmtArg::value.buf) - 1) * 6 - 2 >= RG_SIZE(value) * 16);
 
     FmtArg arg;
     arg.type = FmtArg::Type::Buffer;
@@ -78,7 +80,7 @@ static bool BuildJavaScriptMap3(Span<const SourceInfo> sources, StreamWriter *ou
             StreamReader reader(src.filename);
             while (!reader.eof) {
                 char buf[128 * 1024];
-                Size len = reader.Read(SIZE(buf), &buf);
+                Size len = reader.Read(RG_SIZE(buf), &buf);
                 if (len < 0)
                     return false;
 
@@ -126,18 +128,18 @@ Size PackAsset(Span<const SourceInfo> sources, CompressionType compression_type,
             StreamReader reader(src.filename);
             while (!reader.eof) {
                 uint8_t read_buf[128 * 1024];
-                Size read_len = reader.Read(SIZE(read_buf), read_buf);
+                Size read_len = reader.Read(RG_SIZE(read_buf), read_buf);
                 if (read_len < 0)
                     return false;
 
-                Assert(writer.Write(read_buf, read_len));
+                RG_ASSERT(writer.Write(read_buf, read_len));
                 flush_buffer();
             }
 
             writer.Write(src.suffix);
         }
 
-        Assert(writer.Close());
+        RG_ASSERT(writer.Close());
         flush_buffer();
     }
 
@@ -158,8 +160,10 @@ Size PackSourceMap(Span<const SourceInfo> sources, SourceMapType source_map_type
         } break;
     }
 
-    Assert(writer.Close());
+    RG_ASSERT(writer.Close());
     func(buf);
 
     return buf.len;
+}
+
 }

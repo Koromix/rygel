@@ -6,14 +6,16 @@
 #include "../../libcc/libcc.hh"
 #include "data.hh"
 
+namespace RG {
+
 bool SQLiteConnection::Open(const char *filename, unsigned int flags)
 {
     const char *const sql = R"(
         PRAGMA foreign_keys = ON;
     )";
 
-    Assert(!db);
-    DEFER_N(out_guard) { Close(); };
+    RG_ASSERT(!db);
+    RG_DEFER_N(out_guard) { Close(); };
 
     if (sqlite3_open_v2(filename, &db, flags, nullptr) != SQLITE_OK) {
         LogError("SQLite failed to open '%1': %2", filename, sqlite3_errmsg(db));
@@ -37,4 +39,6 @@ bool SQLiteConnection::Close()
     db = nullptr;
 
     return true;
+}
+
 }

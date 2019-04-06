@@ -8,6 +8,8 @@
 #include "build_compiler.hh"
 #include "build_target.hh"
 
+namespace RG {
+
 struct BuildCommand {
     const char *text;
 
@@ -53,3 +55,5 @@ private:
 };
 
 bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose);
+
+}

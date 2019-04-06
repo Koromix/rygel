@@ -6,6 +6,8 @@
 #include "drdc.hh"
 #include "config.hh"
 
+namespace RG {
+
 enum class TestFlag {
     ClusterLen = 1 << 0,
     Ghm = 1 << 1,
@@ -33,7 +35,7 @@ static void PrintSummary(const mco_Pricing &summary)
     PrintLn("    GHS: %1 €", FmtDouble((double)summary.ghs_cents / 100.0, 2));
     PrintLn("  Supplements: %1 €",
             FmtDouble((double)(summary.total_cents - summary.price_cents) / 100.0, 2));
-    for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
+    for (Size i = 0; i < RG_ARRAY_SIZE(mco_SupplementTypeNames); i++) {
         PrintLn("    %1: %2 € [%3]",
                 mco_SupplementTypeNames[i],
                 FmtDouble((double)summary.supplement_cents.values[i] / 100.0, 2),
@@ -59,7 +61,7 @@ static void ExportResults(Span<const mco_Result> results, Span<const mco_Result>
         if (pricing.total_cents > pricing.price_cents) {
             PrintLn("%1Supplements: %2 €", padding,
                     FmtDouble((double)(pricing.total_cents - pricing.price_cents) / 100.0, 2));
-            for (Size j = 0; j < ARRAY_SIZE(mco_SupplementTypeNames); j++) {
+            for (Size j = 0; j < RG_ARRAY_SIZE(mco_SupplementTypeNames); j++) {
                 if (pricing.supplement_cents.values[j]) {
                     PrintLn("%1  %2: %3 € [%4]", padding, mco_SupplementTypeNames[j],
                             FmtDouble((double)pricing.supplement_cents.values[j] / 100.0, 2),
@@ -91,7 +93,7 @@ static void ExportResults(Span<const mco_Result> results, Span<const mco_Result>
             for (Size k = 0; k < result.stays.len; k++) {
                 const mco_Result &mono_result = mono_results[j + k];
                 const mco_Pricing &mono_pricing = mono_pricings[j + k];
-                DebugAssert(mono_result.stays[0].bill_id == result.stays[0].bill_id);
+                RG_DEBUG_ASSERT(mono_result.stays[0].bill_id == result.stays[0].bill_id);
 
                 PrintLn("    %1%2 [%3 -- %4] = GHM %5 [%6] / GHS %7",
                         verbosity ? "  " : "", FmtArg(k).Pad0(-2),
@@ -189,7 +191,7 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
             if (test->supplement_days != result.supplement_days) {
                 failed_supplements++;
                 if (verbose) {
-                    for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
+                    for (Size i = 0; i < RG_ARRAY_SIZE(mco_SupplementTypeNames); i++) {
                         if (test->supplement_days.values[i] != result.supplement_days.values[i]) {
                             PrintLn("    %1 [%2] has inadequate %3 %4 != %5",
                                     test->bill_id, result.stays[result.stays.len - 1].exit.date,
@@ -205,10 +207,10 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
             tested_auth_supplements += sub_mono_results.len;
 
             Size max_auth_tests = sub_mono_results.len;
-            if (max_auth_tests > ARRAY_SIZE(mco_Test::auth_supplements)) {
+            if (max_auth_tests > RG_ARRAY_SIZE(mco_Test::auth_supplements)) {
                 LogError("Testing only first %1 unit authorizations for stay %2",
-                         ARRAY_SIZE(mco_Test::auth_supplements), result.stays[0].bill_id);
-                max_auth_tests = ARRAY_SIZE(mco_Test::auth_supplements);
+                         RG_ARRAY_SIZE(mco_Test::auth_supplements), result.stays[0].bill_id);
+                max_auth_tests = RG_ARRAY_SIZE(mco_Test::auth_supplements);
             }
 
             for (Size i = 0; i < max_auth_tests; i++) {
@@ -761,9 +763,9 @@ Map options:
         if (constraint) {
             PrintLn("Constraint for %1", ghm_to_ghs_info.ghm);
             PrintLn("  Duration = 0x%1",
-                    FmtHex(constraint->durations).Pad0(-2 * SIZE(constraint->durations)));
+                    FmtHex(constraint->durations).Pad0(-2 * RG_SIZE(constraint->durations)));
             PrintLn("  Warnings = 0x%1",
-                    FmtHex(constraint->warnings).Pad0(-2 * SIZE(constraint->warnings)));
+                    FmtHex(constraint->warnings).Pad0(-2 * RG_SIZE(constraint->warnings)));
         } else {
             PrintLn("%1 unreached!", ghm_to_ghs_info.ghm);
         }
@@ -883,7 +885,7 @@ int RunMcoShow(Span<const char *> arguments)
         // Diagnosis?
         {
             drd_DiagnosisCode diag =
-                drd_DiagnosisCode::FromString(name, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+                drd_DiagnosisCode::FromString(name, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (diag.IsValid()) {
                 const mco_DiagnosisInfo *diag_info = index->FindDiagnosis(diag);
                 if (diag_info) {
@@ -896,7 +898,7 @@ int RunMcoShow(Span<const char *> arguments)
         // Procedure?
         {
             drd_ProcedureCode proc =
-                drd_ProcedureCode::FromString(name, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+                drd_ProcedureCode::FromString(name, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (proc.IsValid()) {
                 Span<const mco_ProcedureInfo> proc_info = index->FindProcedure(proc);
                 if (proc_info.len) {
@@ -909,7 +911,7 @@ int RunMcoShow(Span<const char *> arguments)
         // GHM root?
         {
             mco_GhmRootCode ghm_root =
-                mco_GhmRootCode::FromString(name, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+                mco_GhmRootCode::FromString(name, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (ghm_root.IsValid()) {
                 const mco_GhmRootInfo *ghm_root_info = index->FindGhmRoot(ghm_root);
                 if (ghm_root_info) {
@@ -926,7 +928,7 @@ int RunMcoShow(Span<const char *> arguments)
 
         // GHS?
         {
-            mco_GhsCode ghs = mco_GhsCode::FromString(name, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+            mco_GhsCode ghs = mco_GhsCode::FromString(name, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (ghs.IsValid()) {
                 const mco_GhsPriceInfo *pub_price_info = index->FindGhsPrice(ghs, drd_Sector::Public);
                 const mco_GhsPriceInfo *priv_price_info = index->FindGhsPrice(ghs, drd_Sector::Private);
@@ -957,4 +959,6 @@ int RunMcoShow(Span<const char *> arguments)
     }
 
     return 0;
+}
+
 }

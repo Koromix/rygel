@@ -7,6 +7,8 @@
 #include "../libcc/libcc.hh"
 #include "../../vendor/pcg/pcg_basic.h"
 
+namespace RG {
+
 enum class Sex {
     Male,
     Female
@@ -104,3 +106,5 @@ extern "C" void InitializeConfig(SimulationConfig *out_config);
 extern "C" Size InitializeHumans(const SimulationConfig &config, HeapArray<Human> *out_humans);
 extern "C" Size RunSimulationStep(const SimulationConfig &config, Span<const Human> humans,
                                   HeapArray<Human> *out_humans);
+
+}

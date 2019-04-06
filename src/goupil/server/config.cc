@@ -5,13 +5,15 @@
 #include "../../libcc/libcc.hh"
 #include "config.hh"
 
+namespace RG {
+
 bool ConfigBuilder::LoadIni(StreamReader &st)
 {
-    DEFER_NC(out_guard, database_filename =  config.database_filename,
-                        ip_stack = config.ip_stack,
-                        port = config.port,
-                        threads = config.threads,
-                        base_url = config.base_url) {
+    RG_DEFER_NC(out_guard, database_filename =  config.database_filename,
+                           ip_stack = config.ip_stack,
+                           port = config.port,
+                           threads = config.threads,
+                           base_url = config.base_url) {
         config.database_filename = database_filename;
         config.ip_stack = ip_stack;
         config.port = port;
@@ -20,11 +22,11 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
     };
 
     Span<const char> root_directory;
-    SplitStrReverseAny(st.filename, PATH_SEPARATORS, &root_directory);
+    SplitStrReverseAny(st.filename, RG_PATH_SEPARATORS, &root_directory);
 
     IniParser ini(&st);
     ini.reader.PushLogHandler();
-    DEFER { PopLogHandler(); };
+    RG_DEFER { PopLogHandler(); };
 
     bool valid = true;
     {
@@ -114,7 +116,7 @@ bool ConfigBuilder::LoadFiles(Span<const char *const> filenames)
 
 void ConfigBuilder::Finish(Config *out_config)
 {
-    SwapMemory(out_config, &config, SIZE(config));
+    SwapMemory(out_config, &config, RG_SIZE(config));
 }
 
 bool LoadConfig(Span<const char *const> filenames, Config *out_config)
@@ -125,4 +127,6 @@ bool LoadConfig(Span<const char *const> filenames, Config *out_config)
     config_builder.Finish(out_config);
 
     return true;
+}
+
 }

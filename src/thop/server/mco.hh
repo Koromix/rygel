@@ -8,6 +8,8 @@
 #include "user.hh"
 #include "../../wrappers/http.hh"
 
+namespace RG {
+
 extern mco_TableSet mco_table_set;
 extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> mco_constraints_set;
 extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> mco_index_to_constraints;
@@ -55,3 +57,5 @@ private:
 };
 
 int ProduceMcoSettings(const http_Request &request, const User *user, http_Response *out_response);
+
+}

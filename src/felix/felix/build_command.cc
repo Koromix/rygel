@@ -22,6 +22,8 @@
 #include "../../libcc/libcc.hh"
 #include "build_command.hh"
 
+namespace RG {
+
 static bool ExecuteCommandLine(const char *cmd_line, HeapArray<char> *out_buf, int *out_code)
 {
 #ifdef _WIN32
@@ -33,12 +35,12 @@ static bool ExecuteCommandLine(const char *cmd_line, HeapArray<char> *out_buf, i
         LogError("Failed to create pipe: %1", Win32ErrorString());
         return false;
     }
-    DEFER { CloseHandle(out_pipe[0]); };
+    RG_DEFER { CloseHandle(out_pipe[0]); };
 
     // Start process
     HANDLE process_handle;
     {
-        DEFER {
+        RG_DEFER {
             CloseHandle(out_pipe[1]);
 
             if (startup_info.hStdOutput) {
@@ -68,14 +70,14 @@ static bool ExecuteCommandLine(const char *cmd_line, HeapArray<char> *out_buf, i
         process_handle = process_info.hProcess;
         CloseHandle(process_info.hThread);
     }
-    DEFER { CloseHandle(process_handle); };
+    RG_DEFER { CloseHandle(process_handle); };
 
     // Read process output
     for (;;) {
         out_buf->Grow(1024);
 
         DWORD read_len = 0;
-        if (!ReadFile(out_pipe[0], out_buf->end(), 1024, &read_len, nullptr)) {
+        if (!::ReadFile(out_pipe[0], out_buf->end(), 1024, &read_len, nullptr)) {
             if (GetLastError() != ERROR_BROKEN_PIPE) {
                 LogError("Failed to read process output: %1", Win32ErrorString());
             }
@@ -104,12 +106,12 @@ static bool ExecuteCommandLine(const char *cmd_line, HeapArray<char> *out_buf, i
         LogError("Failed to create pipe: %1", strerror(errno));
         return false;
     }
-    DEFER { close(out_pfd[0]); };
+    RG_DEFER { close(out_pfd[0]); };
 
     // Start process
     pid_t pid;
     {
-        DEFER { close(out_pfd[1]); };
+        RG_DEFER { close(out_pfd[1]); };
 
         posix_spawn_file_actions_t file_actions;
         if ((errno = posix_spawn_file_actions_init(&file_actions)) ||
@@ -131,7 +133,7 @@ static bool ExecuteCommandLine(const char *cmd_line, HeapArray<char> *out_buf, i
     for (;;) {
         out_buf->Grow(1024);
 
-        ssize_t read_len = POSIX_RESTART_EINTR(read(out_pfd[0], out_buf->end(), 1024));
+        ssize_t read_len = RG_POSIX_RESTART_EINTR(read(out_pfd[0], out_buf->end(), 1024));
         if (read_len < 0) {
             LogError("Failed to read process output: %1", strerror(errno));
             break;
@@ -144,7 +146,7 @@ static bool ExecuteCommandLine(const char *cmd_line, HeapArray<char> *out_buf, i
 
     // Wait for process exit
     int status;
-    if (POSIX_RESTART_EINTR(waitpid(pid, &status, 0)) < 0) {
+    if (RG_POSIX_RESTART_EINTR(waitpid(pid, &status, 0)) < 0) {
         LogError("Failed to wait for process exit: %1", strerror(errno));
         return false;
     }
@@ -207,7 +209,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
     const Size start_pch_len = pch_commands.len;
     const Size start_obj_len = obj_commands.len;
     const Size start_link_len = link_commands.len;
-    DEFER_N(out_guard) {
+    RG_DEFER_N(out_guard) {
         pch_commands.RemoveFrom(start_pch_len);
         obj_commands.RemoveFrom(start_obj_len);
         link_commands.RemoveFrom(start_link_len);
@@ -250,7 +252,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
                 case SourceType::CXX_Source: { pch_filename = target.cxx_pch_filename; } break;
 
                 case SourceType::C_Header:
-                case SourceType::CXX_Header: { DebugAssert(false); } break;
+                case SourceType::CXX_Header: { RG_DEBUG_ASSERT(false); } break;
             }
 
             cmd.text = Fmt(&str_alloc, "Build %1", obj.src_filename).ptr;
@@ -305,7 +307,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
 
                 // TODO: Check if this conflicts with a target destination file?
                 cmd.text = Fmt(&str_alloc, "Link %1",
-                               SplitStrReverseAny(target.pack_module_filename, PATH_SEPARATORS)).ptr;
+                               SplitStrReverseAny(target.pack_module_filename, RG_PATH_SEPARATORS)).ptr;
                 cmd.dest_filename = DuplicateString(target.pack_module_filename, &str_alloc).ptr;
                 cmd.cmd = compiler->MakeLinkCommand(target.pack_obj_filename, BuildMode::Debug, {},
                                                     LinkType::SharedLibrary, target.pack_module_filename,
@@ -324,7 +326,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
         BuildCommand cmd = {};
 
         cmd.text = Fmt(&str_alloc, "Link %1",
-                       SplitStrReverseAny(target.dest_filename, PATH_SEPARATORS)).ptr;
+                       SplitStrReverseAny(target.dest_filename, RG_PATH_SEPARATORS)).ptr;
         cmd.dest_filename = DuplicateString(target.dest_filename, &str_alloc).ptr;
         cmd.cmd = compiler->MakeLinkCommand(obj_filenames, build_mode, target.libraries,
                                             LinkType::Executable, target.dest_filename, &str_alloc);
@@ -351,7 +353,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
 
 void BuildSetBuilder::Finish(BuildSet *out_set)
 {
-    DebugAssert(!out_set->commands.len);
+    RG_DEBUG_ASSERT(!out_set->commands.len);
 
     if (pch_commands.len) {
         pch_commands[pch_commands.len - 1].sync_after = true;
@@ -364,7 +366,7 @@ void BuildSetBuilder::Finish(BuildSet *out_set)
     out_set->commands.Append(obj_commands);
     out_set->commands.Append(link_commands);
 
-    SwapMemory(&out_set->str_alloc, &str_alloc, SIZE(str_alloc));
+    SwapMemory(&out_set->str_alloc, &str_alloc, RG_SIZE(str_alloc));
 }
 
 bool BuildSetBuilder::NeedsRebuild(const char *src_filename, const char *dest_filename,
@@ -426,7 +428,7 @@ bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
 
     for (const BuildCommand &cmd: commands) {
         async.AddTask([&, cmd]() {
-            DEFER_N(dest_guard) { unlink(cmd.dest_filename); };
+            RG_DEFER_N(dest_guard) { unlink(cmd.dest_filename); };
 
             // The lock is needed to garantuee ordering of progress counter. Atomics
             // do not help much because the LogInfo() calls need to be protected too.
@@ -469,4 +471,6 @@ bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
 
     LogInfo("(100%%) Done!");
     return true;
+}
+
 }

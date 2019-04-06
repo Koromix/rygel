@@ -5,6 +5,8 @@
 #include "../../libcc/libcc.hh"
 #include "mco_classifier.hh"
 
+namespace RG {
+
 struct RunGhmTreeContext {
     const mco_TableIndex *index;
 
@@ -28,13 +30,13 @@ static int16_t ComputeAge(Date date, Date birthdate)
 
 static inline uint8_t GetDiagnosisByte(int8_t sex, const mco_DiagnosisInfo &diag_info, uint8_t byte_idx)
 {
-    Assert(byte_idx < SIZE(mco_DiagnosisInfo::attributes[0].raw));
+    RG_ASSERT(byte_idx < RG_SIZE(mco_DiagnosisInfo::attributes[0].raw));
     return diag_info.Attributes(sex).raw[byte_idx];
 }
 
-static inline bool TestDiagnosis(int8_t sex, const mco_DiagnosisInfo &diag_info, ListMask mask)
+static inline bool TestDiagnosis(int8_t sex, const mco_DiagnosisInfo &diag_info, drd_ListMask mask)
 {
-    DebugAssert(mask.offset >= 0 && mask.offset <= UINT8_MAX);
+    RG_DEBUG_ASSERT(mask.offset >= 0 && mask.offset <= UINT8_MAX);
     return GetDiagnosisByte(sex, diag_info, (uint8_t)mask.offset) & mask.value;
 }
 static inline bool TestDiagnosis(int8_t sex, const mco_DiagnosisInfo &diag_info,
@@ -45,11 +47,11 @@ static inline bool TestDiagnosis(int8_t sex, const mco_DiagnosisInfo &diag_info,
 
 static inline uint8_t GetProcedureByte(const mco_ProcedureInfo &proc_info, int16_t byte_idx)
 {
-    Assert(byte_idx >= 0 && byte_idx < SIZE(mco_ProcedureInfo::bytes));
+    RG_ASSERT(byte_idx >= 0 && byte_idx < RG_SIZE(mco_ProcedureInfo::bytes));
     return proc_info.bytes[byte_idx];
 }
 
-static inline bool TestProcedure(const mco_ProcedureInfo &proc_info, ListMask mask)
+static inline bool TestProcedure(const mco_ProcedureInfo &proc_info, drd_ListMask mask)
 {
     return GetProcedureByte(proc_info, mask.offset) & mask.value;
 }
@@ -60,7 +62,7 @@ static inline bool TestProcedure(const mco_ProcedureInfo &proc_info, int16_t off
 
 static const mco_PreparedStay *FindMainStay(Span<const mco_PreparedStay> mono_preps, int duration)
 {
-    DebugAssert(duration >= 0);
+    RG_DEBUG_ASSERT(duration >= 0);
 
     int max_duration = -1;
     const mco_PreparedStay *zx_prep = nullptr;
@@ -157,7 +159,7 @@ static bool SetError(mco_ErrorSet *error_set, int16_t error, int16_t priority = 
     if (!error)
         return true;
 
-    DebugAssert(error >= 0 && error < decltype(mco_ErrorSet::errors)::Bits);
+    RG_DEBUG_ASSERT(error >= 0 && error < decltype(mco_ErrorSet::errors)::Bits);
     if (error_set) {
         if (priority >= 0 && (!error_set->main_error || priority > error_set->priority ||
                               (priority == error_set->priority && error < error_set->main_error))) {
@@ -175,20 +177,20 @@ static bool CheckDiagnosisErrors(const mco_PreparedStay &prep, const mco_Diagnos
                                  const int16_t error_codes[13], mco_ErrorSet *out_errors)
 {
     // Inappropriate, imprecise warnings
-    if (UNLIKELY(diag_info.warnings & (1 << 9))) {
+    if (RG_UNLIKELY(diag_info.warnings & (1 << 9))) {
         SetError(out_errors, error_codes[8], -1);
     }
-    if (UNLIKELY(diag_info.warnings & (1 << 0))) {
+    if (RG_UNLIKELY(diag_info.warnings & (1 << 0))) {
         SetError(out_errors, error_codes[9], -1);
     }
-    if (UNLIKELY(diag_info.warnings & (1 << 10))) {
+    if (RG_UNLIKELY(diag_info.warnings & (1 << 10))) {
         SetError(out_errors, error_codes[10], -1);
     }
 
     // Sex warning
     {
         int sex_bit = 13 - prep.stay->sex;
-        if (UNLIKELY(diag_info.warnings & (1 << sex_bit))) {
+        if (RG_UNLIKELY(diag_info.warnings & (1 << sex_bit))) {
             SetError(out_errors, error_codes[11], -1);
         }
     }
@@ -210,7 +212,7 @@ static bool CheckDiagnosisErrors(const mco_PreparedStay &prep, const mco_Diagnos
             age_bit = 8;
         }
 
-        if (UNLIKELY(diag_info.warnings & (1 << age_bit))) {
+        if (RG_UNLIKELY(diag_info.warnings & (1 << age_bit))) {
             SetError(out_errors, error_codes[12], -1);
         }
     }
@@ -218,21 +220,21 @@ static bool CheckDiagnosisErrors(const mco_PreparedStay &prep, const mco_Diagnos
     const auto &diag_attr = diag_info.Attributes(prep.stay->sex);
 
     // Real errors
-    if (UNLIKELY(diag_attr.raw[5] & 2)) {
+    if (RG_UNLIKELY(diag_attr.raw[5] & 2)) {
         return SetError(out_errors, error_codes[0]);
-    } else if (UNLIKELY(!diag_attr.raw[0])) {
+    } else if (RG_UNLIKELY(!diag_attr.raw[0])) {
         switch (diag_attr.raw[1]) {
             case 0: { return SetError(out_errors, error_codes[1]); } break;
             case 1: { return SetError(out_errors, error_codes[2]); } break;
             case 2: { return SetError(out_errors, error_codes[3]); } break;
             case 3: { return SetError(out_errors, error_codes[4]); } break;
         }
-    } else if (UNLIKELY(prep.stay->exit.date >= Date(2014, 3, 1) &&
-                        diag_attr.raw[0] == 23 && diag_attr.raw[1] == 14)) {
+    } else if (RG_UNLIKELY(prep.stay->exit.date >= Date(2014, 3, 1) &&
+                           diag_attr.raw[0] == 23 && diag_attr.raw[1] == 14)) {
         return SetError(out_errors, error_codes[5]);
-    } else if (UNLIKELY(diag_attr.raw[19] & 0x10 && prep.age < 9)) {
+    } else if (RG_UNLIKELY(diag_attr.raw[19] & 0x10 && prep.age < 9)) {
         return SetError(out_errors, error_codes[6]);
-    } else if (UNLIKELY(diag_attr.raw[19] & 0x8 && prep.age >= 2)) {
+    } else if (RG_UNLIKELY(diag_attr.raw[19] & 0x8 && prep.age >= 2)) {
         return SetError(out_errors, error_codes[7]);
     }
 
@@ -293,7 +295,7 @@ static bool AppendValidDiagnoses(mco_PreparedSet *out_prepared_set, mco_ErrorSet
             }
 
             const mco_DiagnosisInfo *diag_info = index.FindDiagnosis(diag);
-            if (LIKELY(diag_info)) {
+            if (RG_LIKELY(diag_info)) {
                 out_prepared_set->store.diagnoses.Append(diag_info);
                 mono_prep.diagnoses.len++;
 
@@ -306,7 +308,7 @@ static bool AppendValidDiagnoses(mco_PreparedSet *out_prepared_set, mco_ErrorSet
 
         // Main diagnosis is valid (checks are done in CheckMainError)
         mono_prep.main_diag_info = index.FindDiagnosis(mono_stay.main_diagnosis);
-        if (LIKELY(mono_prep.main_diag_info)) {
+        if (RG_LIKELY(mono_prep.main_diag_info)) {
             out_prepared_set->store.diagnoses.Append(mono_prep.main_diag_info);
             mono_prep.diagnoses.len++;
 
@@ -318,7 +320,7 @@ static bool AppendValidDiagnoses(mco_PreparedSet *out_prepared_set, mco_ErrorSet
 
         if (mono_stay.linked_diagnosis.IsValid()) {
             mono_prep.linked_diag_info = index.FindDiagnosis(mono_stay.linked_diagnosis);
-            if (LIKELY(mono_prep.linked_diag_info)) {
+            if (RG_LIKELY(mono_prep.linked_diag_info)) {
                 out_prepared_set->store.diagnoses.Append(mono_prep.linked_diag_info);
                 mono_prep.diagnoses.len++;
 
@@ -364,32 +366,32 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
         const mco_Stay &mono_stay = *mono_prep.stay;
 
         // Reuse for performance
-        static THREAD_LOCAL Bitset<512> additions;
+        static RG_THREAD_LOCAL Bitset<512> additions;
         int additions_mismatch = 0;
         uint8_t proc_activities = 0;
 
         mono_prep.procedures.ptr = out_prepared_set->store.procedures.end();
         for (const mco_ProcedureRealisation &proc: mono_stay.procedures) {
-            if (UNLIKELY(!proc.count)) {
+            if (RG_UNLIKELY(!proc.count)) {
                 valid &= SetError(out_errors, 52);
             }
-            if (UNLIKELY(!proc.activity)) {
+            if (RG_UNLIKELY(!proc.activity)) {
                 valid &= SetError(out_errors, 103);
             }
-            if (UNLIKELY(proc.doc && (!IsAsciiAlphaOrDigit(proc.doc) ||
-                                      proc.doc == 'I' || proc.doc == 'O'))) {
+            if (RG_UNLIKELY(proc.doc && (!IsAsciiAlphaOrDigit(proc.doc) ||
+                                         proc.doc == 'I' || proc.doc == 'O'))) {
                 valid &= SetError(out_errors, 173);
             }
 
             const mco_ProcedureInfo *proc_info = index.FindProcedure(proc.proc, proc.phase,
                                                                      mono_stay.exit.date);
-            if (LIKELY(proc_info)) {
-                if (UNLIKELY((proc_info->bytes[43] & 0x40) && mono_stay.sex == 2)) {
+            if (RG_LIKELY(proc_info)) {
+                if (RG_UNLIKELY((proc_info->bytes[43] & 0x40) && mono_stay.sex == 2)) {
                     SetError(out_errors, 148, -1);
                 }
-                if (UNLIKELY((out_prep->age || out_prep->age_days > 28) &&
-                             (proc_info->bytes[44] & 0x20) && (!stay.newborn_weight ||
-                                                               stay.newborn_weight >= 3000))) {
+                if (RG_UNLIKELY((out_prep->age || out_prep->age_days > 28) &&
+                                (proc_info->bytes[44] & 0x20) && (!stay.newborn_weight ||
+                                                                  stay.newborn_weight >= 3000))) {
                     valid &= SetError(out_errors, 149);
                 }
 
@@ -398,9 +400,9 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
                     mono_prep.markers |= (int)mco_PreparedStay::Marker::ChildbirthProcedure;
                 }
 
-                if (UNLIKELY(!proc.date.IsValid() ||
-                             proc.date < mono_stay.entry.date ||
-                             proc.date > mono_stay.exit.date)) {
+                if (RG_UNLIKELY(!proc.date.IsValid() ||
+                                proc.date < mono_stay.entry.date ||
+                                proc.date > mono_stay.exit.date)) {
                     if (proc_info->bytes[41] & 0x2) {
                         valid &= SetError(out_errors, 142);
                     } else if (proc.date.value) {
@@ -417,9 +419,9 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
                     }
                 }
 
-                if (UNLIKELY(!(flags & (int)mco_ClassifyFlag::IgnoreProcedureExtension) &&
-                             stay.exit.date >= Date(2016, 3, 1) &&
-                             !(proc_info->extensions & (1u << proc.extension)))) {
+                if (RG_UNLIKELY(!(flags & (int)mco_ClassifyFlag::IgnoreProcedureExtension) &&
+                                stay.exit.date >= Date(2016, 3, 1) &&
+                                !(proc_info->extensions & (1u << proc.extension)))) {
                     if (stay.exit.date >= Date(2017, 3, 1)) {
                         valid &= SetError(out_errors, 186);
                     } else {
@@ -429,7 +431,7 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
 
                 uintptr_t global_ptr_mask = 0;
                 if (!TestStr(MakeSpan(proc.proc.str, 4), "YYYY")) {
-                    if (UNLIKELY(!(proc_info->activities & (1 << proc.activity)))) {
+                    if (RG_UNLIKELY(!(proc_info->activities & (1 << proc.activity)))) {
                         if (proc.activity == 4) {
                             valid &= SetError(out_errors, 110);
                         } else if (proc.activity < 1 || proc.activity > 5) {
@@ -439,8 +441,8 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
                         }
                     }
 
-                    if (UNLIKELY(stay.exit.date >= Date(2013, 3, 1) &&
-                                 proc.activity == 4 && !proc.doc)) {
+                    if (RG_UNLIKELY(stay.exit.date >= Date(2013, 3, 1) &&
+                                    proc.activity == 4 && !proc.doc)) {
                         SetError(out_errors, 170, 0);
                     }
 
@@ -448,7 +450,7 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
                     // requires activity 1. Combined with a pointer-based sort this allows
                     // us to trivially detect when activity 1 is missing for a given procedure
                     // in the deduplication phase below (error 167).
-                    StaticAssert(std::alignment_of<mco_ProcedureInfo>::value >= 2);
+                    RG_STATIC_ASSERT(std::alignment_of<mco_ProcedureInfo>::value >= 2);
                     if (proc.activity != 1 && !(proc_info->bytes[42] & 0x2)) {
                         global_ptr_mask = 0x1;
                     }
@@ -456,10 +458,10 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
 
                 uintptr_t mono_ptr_mask = 0;
                 if (!(flags & (int)mco_ClassifyFlag::IgnoreProcedureAddition)) {
-                    StaticAssert(std::alignment_of<mco_ProcedureInfo>::value >= 8);
+                    RG_STATIC_ASSERT(std::alignment_of<mco_ProcedureInfo>::value >= 8);
 
                     if ((proc_info->bytes[32] & 0x8) &&
-                            proc.activity >= 0 && proc.activity < ARRAY_SIZE(proc_info->additions) &&
+                            proc.activity >= 0 && proc.activity < RG_ARRAY_SIZE(proc_info->additions) &&
                             proc_info->additions[proc.activity]) {
                         additions_mismatch += !additions.TestAndSet(proc_info->additions[proc.activity]);
                     }
@@ -538,7 +540,7 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
         std::sort(procedures.begin(), procedures.end());
 
         // Need to treat index 0 specially for the loop to work correctly
-        if (UNLIKELY((uintptr_t)procedures[0] & 0x1)) {
+        if (RG_UNLIKELY((uintptr_t)procedures[0] & 0x1)) {
             procedures[0] = (const mco_ProcedureInfo *)((uintptr_t)procedures[0] ^ 0x1);
             valid &= SetError(out_errors, 167);
         }
@@ -568,11 +570,11 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
 static bool CheckDateErrors(bool malformed_flag, Date date, const int16_t error_codes[3],
                             mco_ErrorSet *out_errors)
 {
-    if (UNLIKELY(malformed_flag)) {
+    if (RG_UNLIKELY(malformed_flag)) {
         return SetError(out_errors, error_codes[0]);
-    } else if (UNLIKELY(!date.value)) {
+    } else if (RG_UNLIKELY(!date.value)) {
         return SetError(out_errors, error_codes[1]);
-    } else if (UNLIKELY(!date.IsValid())) {
+    } else if (RG_UNLIKELY(!date.IsValid())) {
         return SetError(out_errors, error_codes[2]);
     }
 
@@ -584,93 +586,93 @@ static bool CheckDataErrors(Span<const mco_Stay> mono_stays, mco_ErrorSet *out_e
     bool valid = true;
 
     // Bill id
-    if (UNLIKELY(mono_stays[0].errors & (int)mco_Stay::Error::MalformedBillId)) {
+    if (RG_UNLIKELY(mono_stays[0].errors & (int)mco_Stay::Error::MalformedBillId)) {
         static bool warned = false;
         if (!warned) {
             LogError("Non-numeric RSS identifiers are not supported");
             warned = true;
         }
         valid &= SetError(out_errors, 61);
-    } else if (UNLIKELY(!mono_stays[0].bill_id)) {
+    } else if (RG_UNLIKELY(!mono_stays[0].bill_id)) {
         valid &= SetError(out_errors, 11);
     }
 
     for (const mco_Stay &mono_stay: mono_stays) {
         // Sex
-        if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedSex)) {
+        if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedSex)) {
             valid &= SetError(out_errors, 17);
-        } else if (UNLIKELY(mono_stay.sex != 1 && mono_stay.sex != 2)) {
+        } else if (RG_UNLIKELY(mono_stay.sex != 1 && mono_stay.sex != 2)) {
             valid &= SetError(out_errors, mono_stay.sex ? 17 : 16);
         }
 
         // Entry mode and origin
-        if (UNLIKELY(mono_stay.errors & ((int)mco_Stay::Error::MalformedEntryMode |
-                                        (int)mco_Stay::Error::MalformedEntryOrigin))) {
+        if (RG_UNLIKELY(mono_stay.errors & ((int)mco_Stay::Error::MalformedEntryMode |
+                                            (int)mco_Stay::Error::MalformedEntryOrigin))) {
             valid &= SetError(out_errors, 25);
         }
 
         // Exit mode and destination
-        if (UNLIKELY(mono_stay.errors & ((int)mco_Stay::Error::MalformedExitMode |
-                                        (int)mco_Stay::Error::MalformedExitDestination))) {
+        if (RG_UNLIKELY(mono_stay.errors & ((int)mco_Stay::Error::MalformedExitMode |
+                                            (int)mco_Stay::Error::MalformedExitDestination))) {
             valid &= SetError(out_errors, 34);
         }
 
         // Sessions
-        if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedSessionCount)) {
+        if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedSessionCount)) {
             valid &= SetError(out_errors, 36);
         }
 
         // Gestational age
-        if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedGestationalAge)) {
+        if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedGestationalAge)) {
             valid &= SetError(out_errors, 125);
         }
 
         // Menstrual period
-        if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedLastMenstrualPeriod)) {
+        if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedLastMenstrualPeriod)) {
             valid &= SetError(out_errors, 160);
-        } else if (UNLIKELY(mono_stay.last_menstrual_period.value &&
-                            !mono_stay.last_menstrual_period.IsValid())) {
+        } else if (RG_UNLIKELY(mono_stay.last_menstrual_period.value &&
+                               !mono_stay.last_menstrual_period.IsValid())) {
             valid &= SetError(out_errors, 161);
         }
 
         // IGS2
-        if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedIgs2)) {
+        if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedIgs2)) {
             valid &= SetError(out_errors, 169);
         }
 
         // Confirmation code
-        if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedConfirmation)) {
+        if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedConfirmation)) {
             SetError(out_errors, 121, -1);
         }
 
         // Diagnoses
-        if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedMainDiagnosis)) {
+        if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedMainDiagnosis)) {
            valid &= SetError(out_errors, 41);
-        } else if (UNLIKELY(!mono_stay.main_diagnosis.IsValid())) {
+        } else if (RG_UNLIKELY(!mono_stay.main_diagnosis.IsValid())) {
             valid &= SetError(out_errors, 40);
         }
-        if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedLinkedDiagnosis)) {
+        if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedLinkedDiagnosis)) {
             valid &= SetError(out_errors, 51);
         }
-        if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MissingOtherDiagnosesCount)) {
+        if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MissingOtherDiagnosesCount)) {
             valid &= SetError(out_errors, 55);
-        } else if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedOtherDiagnosesCount)) {
+        } else if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedOtherDiagnosesCount)) {
             valid &= SetError(out_errors, 56);
-        } else if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedOtherDiagnosis)) {
+        } else if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedOtherDiagnosis)) {
             valid &= SetError(out_errors, 42);
         }
 
         // Procedures
-        if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MissingProceduresCount)) {
+        if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MissingProceduresCount)) {
             valid &= SetError(out_errors, 57);
-        } else if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedProceduresCount)) {
+        } else if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedProceduresCount)) {
             valid &= SetError(out_errors, 58);
         } else {
-            if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedProcedureCode)) {
+            if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedProcedureCode)) {
                 valid &= SetError(out_errors, 43);
             }
-            if (UNLIKELY(mono_stays[mono_stays.len - 1].exit.date >= Date(2016, 3, 1) &&
-                         mono_stay.errors & (int)mco_Stay::Error::MalformedProcedureExtension)) {
+            if (RG_UNLIKELY(mono_stays[mono_stays.len - 1].exit.date >= Date(2016, 3, 1) &&
+                            mono_stay.errors & (int)mco_Stay::Error::MalformedProcedureExtension)) {
                 valid &= SetError(out_errors, 185);
             }
         }
@@ -678,13 +680,13 @@ static bool CheckDataErrors(Span<const mco_Stay> mono_stays, mco_ErrorSet *out_e
 
     // Coherency checks
     for (Size i = 1; i < mono_stays.len; i++) {
-        if (UNLIKELY(mono_stays[i].sex != mono_stays[i - 1].sex &&
-                     (mono_stays[i].sex == 1 || mono_stays[i].sex == 2))) {
+        if (RG_UNLIKELY(mono_stays[i].sex != mono_stays[i - 1].sex &&
+                        (mono_stays[i].sex == 1 || mono_stays[i].sex == 2))) {
             valid &= SetError(out_errors, 46);
         }
 
-        if (UNLIKELY(mono_stays[i].birthdate != mono_stays[i - 1].birthdate &&
-                     mono_stays[i].birthdate.IsValid())) {
+        if (RG_UNLIKELY(mono_stays[i].birthdate != mono_stays[i - 1].birthdate &&
+                        mono_stays[i].birthdate.IsValid())) {
             valid &= SetError(out_errors, 45);
         }
     }
@@ -700,17 +702,17 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
     bool valid = true;
 
     if (stay.entry.mode == '0' || stay.exit.mode == '0') {
-        if (UNLIKELY(stay.exit.mode != stay.entry.mode)) {
+        if (RG_UNLIKELY(stay.exit.mode != stay.entry.mode)) {
             valid &= SetError(out_errors, 26);
             SetError(out_errors, 35);
-        } else if (UNLIKELY(prep.duration > 1)) {
+        } else if (RG_UNLIKELY(prep.duration > 1)) {
             valid &= SetError(out_errors, 50);
         }
     } else {
-        if (UNLIKELY(stay.entry.mode == '6' && stay.entry.origin == '1')) {
+        if (RG_UNLIKELY(stay.entry.mode == '6' && stay.entry.origin == '1')) {
             valid &= SetError(out_errors, 26);
         }
-        if (UNLIKELY(stay.exit.mode == '6' && stay.exit.destination == '1')) {
+        if (RG_UNLIKELY(stay.exit.mode == '6' && stay.exit.destination == '1')) {
             valid &= SetError(out_errors, 35);
         }
     }
@@ -719,7 +721,7 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
         const mco_Stay &mono_stay = *mono_prep.stay;
 
         // Dates
-        if (UNLIKELY(mono_stay.entry.date.st.year < 1985 && mono_stay.entry.date.IsValid())) {
+        if (RG_UNLIKELY(mono_stay.entry.date.st.year < 1985 && mono_stay.entry.date.IsValid())) {
             SetError(out_errors, 77, -1);
         }
 
@@ -727,13 +729,13 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
         switch (mono_stay.entry.mode) {
             case '0':
             case '6': {
-                if (UNLIKELY(mono_stay.entry.mode == '0' && mono_stay.entry.origin == '6')) {
+                if (RG_UNLIKELY(mono_stay.entry.mode == '0' && mono_stay.entry.origin == '6')) {
                     valid &= SetError(out_errors, 25);
                 }
-                if (UNLIKELY(mono_stay.entry.mode == '6' && mono_stay.entry.origin == 'R')) {
+                if (RG_UNLIKELY(mono_stay.entry.mode == '6' && mono_stay.entry.origin == 'R')) {
                     valid &= SetError(out_errors, 25);
                 }
-            } FALLTHROUGH;
+            } RG_FALLTHROUGH;
             case '7': {
                 switch (mono_stay.entry.origin) {
                     case '1':
@@ -789,7 +791,7 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
             } break;
 
             case '9': {
-                if (UNLIKELY(mono_stay.exit.destination)) {
+                if (RG_UNLIKELY(mono_stay.exit.destination)) {
                     valid &= SetError(out_errors, 34);
                 }
             } break;
@@ -799,40 +801,40 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
         }
 
         // Sessions
-        if (UNLIKELY(mono_preps.len > 1 && mono_stay.session_count > 0)) {
+        if (RG_UNLIKELY(mono_preps.len > 1 && mono_stay.session_count > 0)) {
             valid &= SetError(out_errors, 37);
         }
-        if (UNLIKELY(mono_stay.session_count < 0 || mono_stay.session_count >= 32)) {
+        if (RG_UNLIKELY(mono_stay.session_count < 0 || mono_stay.session_count >= 32)) {
             SetError(out_errors, 66, -1);
         }
 
         // Gestational age
         if (mono_stay.gestational_age) {
-            if (UNLIKELY(mono_stay.gestational_age > 44 ||
-                         (mono_stay.gestational_age < 22 && stay.exit.mode != '9' && !prep.age))) {
+            if (RG_UNLIKELY(mono_stay.gestational_age > 44 ||
+                            (mono_stay.gestational_age < 22 && stay.exit.mode != '9' && !prep.age))) {
                 valid &= SetError(out_errors, 127);
-            } else if (UNLIKELY(stay.newborn_weight &&
-                                ((mono_stay.gestational_age >= 37 && stay.newborn_weight < 1000 && !mono_stay.main_diagnosis.Matches("P95")) ||
-                                 (mono_stay.gestational_age < 33 && stay.newborn_weight > 4000) ||
-                                 (mono_stay.gestational_age < 28 && stay.newborn_weight > 2500)))) {
+            } else if (RG_UNLIKELY(stay.newborn_weight &&
+                                   ((mono_stay.gestational_age >= 37 && stay.newborn_weight < 1000 && !mono_stay.main_diagnosis.Matches("P95")) ||
+                                    (mono_stay.gestational_age < 33 && stay.newborn_weight > 4000) ||
+                                    (mono_stay.gestational_age < 28 && stay.newborn_weight > 2500)))) {
                 valid &= SetError(out_errors, 129);
             }
         }
 
         // Menstrual period
-        if (UNLIKELY(mono_stay.last_menstrual_period.value &&
-                     mono_stay.last_menstrual_period != stay.last_menstrual_period)) {
+        if (RG_UNLIKELY(mono_stay.last_menstrual_period.value &&
+                        mono_stay.last_menstrual_period != stay.last_menstrual_period)) {
             valid &= SetError(out_errors, 163);
         }
 
         // Stillborn
-        if (UNLIKELY(mono_stay.main_diagnosis.Matches("P95"))) {
-            if (UNLIKELY(mono_stay.exit.mode != '9')) {
+        if (RG_UNLIKELY(mono_stay.main_diagnosis.Matches("P95"))) {
+            if (RG_UNLIKELY(mono_stay.exit.mode != '9')) {
                 valid &= SetError(out_errors, 143);
                 SetError(out_errors, 147);
-            } else if (UNLIKELY(mono_preps.len > 1 || mono_stay.entry.mode != '8' ||
-                                mono_stay.birthdate != mono_stay.entry.date || !mono_stay.newborn_weight ||
-                                mono_stay.exit.date != mono_stay.entry.date)) {
+            } else if (RG_UNLIKELY(mono_preps.len > 1 || mono_stay.entry.mode != '8' ||
+                                   mono_stay.birthdate != mono_stay.entry.date || !mono_stay.newborn_weight ||
+                                   mono_stay.exit.date != mono_stay.entry.date)) {
                 valid &= SetError(out_errors, 147);
             }
         }
@@ -844,22 +846,22 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
         const mco_Stay &mono_stay = *mono_preps[i].stay;
 
         if (prev_mono_stay.exit.mode == '0' && mono_stay.entry.mode == '0') {
-            if (UNLIKELY(mono_stay.entry.date != prev_mono_stay.exit.date &&
+            if (RG_UNLIKELY(mono_stay.entry.date != prev_mono_stay.exit.date &&
                          mono_stay.entry.date - prev_mono_stay.exit.date != 1)) {
                 valid &= SetError(out_errors, 50);
             }
         } else {
-            if (UNLIKELY(prev_mono_stay.exit.mode == '0' ||
-                         mono_stay.entry.mode != '6' ||
-                         mono_stay.entry.origin != '1')) {
+            if (RG_UNLIKELY(prev_mono_stay.exit.mode == '0' ||
+                            mono_stay.entry.mode != '6' ||
+                            mono_stay.entry.origin != '1')) {
                 valid &= SetError(out_errors, 27);
             }
-            if (UNLIKELY(mono_stay.entry.mode == '0' ||
-                         prev_mono_stay.exit.mode != '6' ||
-                         prev_mono_stay.exit.destination != '1')) {
+            if (RG_UNLIKELY(mono_stay.entry.mode == '0' ||
+                            prev_mono_stay.exit.mode != '6' ||
+                            prev_mono_stay.exit.destination != '1')) {
                 valid &= SetError(out_errors, 49);
             }
-            if (UNLIKELY(mono_stay.entry.date != prev_mono_stay.exit.date)) {
+            if (RG_UNLIKELY(mono_stay.entry.date != prev_mono_stay.exit.date)) {
                 valid &= SetError(out_errors, 23);
             }
         }
@@ -867,7 +869,7 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
 
     // Sessions
     if (prep.main_diag_info && (prep.main_diag_info->Attributes(stay.sex).raw[8] & 0x2)) {
-        if (UNLIKELY(!prep.duration && !stay.session_count)) {
+        if (RG_UNLIKELY(!prep.duration && !stay.session_count)) {
             bool tolerate = std::any_of(prep.procedures.begin(), prep.procedures.end(),
                                         [](const mco_ProcedureInfo *proc_info) {
                 return (proc_info->bytes[44] & 0x40);
@@ -877,48 +879,48 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
                 // official classifier does not actually enforce it.
                 SetError(out_errors, 145, 0);
             }
-        } else if (UNLIKELY(stay.session_count > prep.duration + 1)) {
+        } else if (RG_UNLIKELY(stay.session_count > prep.duration + 1)) {
             SetError(out_errors, 146, -1);
         }
     }
 
     // Gestation and newborn
-    if (UNLIKELY(!stay.gestational_age &&
-                 ((prep.markers & (int)mco_PreparedStay::Marker::Childbirth) ||
-                  stay.birthdate == stay.entry.date))) {
+    if (RG_UNLIKELY(!stay.gestational_age &&
+                    ((prep.markers & (int)mco_PreparedStay::Marker::Childbirth) ||
+                     stay.birthdate == stay.entry.date))) {
         valid &= SetError(out_errors, 126);
     }
-    if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedNewbornWeight)) {
+    if (RG_UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedNewbornWeight)) {
         valid &= SetError(out_errors, 82);
     } else {
-        if (UNLIKELY(prep.age_days < 29 && !stay.newborn_weight)) {
+        if (RG_UNLIKELY(prep.age_days < 29 && !stay.newborn_weight)) {
             valid &= SetError(out_errors, 168);
-        } else if (UNLIKELY(stay.newborn_weight > 0 && stay.newborn_weight < 100)) {
+        } else if (RG_UNLIKELY(stay.newborn_weight > 0 && stay.newborn_weight < 100)) {
             valid &= SetError(out_errors, 128);
         }
     }
-    if (UNLIKELY(stay.exit.date >= Date(2013, 3, 1) &&
-                 (prep.markers & (int)mco_PreparedStay::Marker::ChildbirthProcedure) &&
-                 stay.gestational_age < 22)) {
+    if (RG_UNLIKELY(stay.exit.date >= Date(2013, 3, 1) &&
+                    (prep.markers & (int)mco_PreparedStay::Marker::ChildbirthProcedure) &&
+                    stay.gestational_age < 22)) {
         valid &= SetError(out_errors, 174);
     }
 
     // Menstruation
-    if (UNLIKELY((prep.markers & (int)mco_PreparedStay::Marker::Childbirth) &&
-                 !stay.last_menstrual_period.value)) {
+    if (RG_UNLIKELY((prep.markers & (int)mco_PreparedStay::Marker::Childbirth) &&
+                    !stay.last_menstrual_period.value)) {
         valid &= SetError(out_errors, 162);
     }
-    if (UNLIKELY(stay.sex == 1 && stay.last_menstrual_period.value)) {
+    if (RG_UNLIKELY(stay.sex == 1 && stay.last_menstrual_period.value)) {
         SetError(out_errors, 164, -1);
     }
     if (stay.last_menstrual_period.value) {
-        if (UNLIKELY(stay.last_menstrual_period > stay.entry.date)) {
+        if (RG_UNLIKELY(stay.last_menstrual_period > stay.entry.date)) {
             if (stay.exit.date >= Date(2016, 3, 1)) {
                 valid &= SetError(out_errors, 165);
             } else {
                 SetError(out_errors, 165, -1);
             }
-        } else if (UNLIKELY(stay.entry.date - stay.last_menstrual_period > 305)) {
+        } else if (RG_UNLIKELY(stay.entry.date - stay.last_menstrual_period > 305)) {
             SetError(out_errors, 166, -1);
         }
     }
@@ -950,16 +952,16 @@ static bool InitCriticalData(const mco_TableSet &table_set, Span<const mco_Stay>
         exit_date_valid = CheckDateErrors(mono_stay.errors & (int)mco_Stay::Error::MalformedExitDate,
                                           mono_stay.exit.date, exit_date_errors, out_errors);
 
-        if (LIKELY(birthdate_valid && entry_date_valid)) {
+        if (RG_LIKELY(birthdate_valid && entry_date_valid)) {
             mono_prep.age = std::max(ComputeAge(mono_stay.entry.date, mono_stay.birthdate), (int16_t)0);
             mono_prep.age_days = std::max(mono_stay.entry.date - mono_stay.birthdate, 0);
         } else {
             mono_prep.age = -1;
             mono_prep.age_days = -1;
         }
-        if (LIKELY(entry_date_valid && exit_date_valid)) {
+        if (RG_LIKELY(entry_date_valid && exit_date_valid)) {
             int duration = mono_prep.stay->exit.date - mono_prep.stay->entry.date;
-            if (LIKELY(duration >= 0)) {
+            if (RG_LIKELY(duration >= 0)) {
                 mono_prep.duration = (int16_t)duration;
                 total_duration += duration;
             } else {
@@ -973,13 +975,13 @@ static bool InitCriticalData(const mco_TableSet &table_set, Span<const mco_Stay>
 
         valid &= birthdate_valid && entry_date_valid && exit_date_valid;
 
-        if (UNLIKELY(birthdate_valid && entry_date_valid &&
-                     (mono_stay.birthdate > mono_stay.entry.date ||
-                      mono_stay.entry.date.st.year - mono_stay.birthdate.st.year > 140))) {
+        if (RG_UNLIKELY(birthdate_valid && entry_date_valid &&
+                        (mono_stay.birthdate > mono_stay.entry.date ||
+                         mono_stay.entry.date.st.year - mono_stay.birthdate.st.year > 140))) {
             valid &= SetError(out_errors, 15);
         }
-        if (UNLIKELY(entry_date_valid && exit_date_valid &&
-                     mono_stay.exit.date < mono_stay.entry.date)) {
+        if (RG_UNLIKELY(entry_date_valid && exit_date_valid &&
+                        mono_stay.exit.date < mono_stay.entry.date)) {
             valid &= SetError(out_errors, 32);
         }
 
@@ -991,7 +993,7 @@ static bool InitCriticalData(const mco_TableSet &table_set, Span<const mco_Stay>
     out_prepared_set->prep.age = out_prepared_set->mono_preps[0].age;
     out_prepared_set->prep.age_days =out_prepared_set->mono_preps[0].age_days;
 
-    if (LIKELY(exit_date_valid)) {
+    if (RG_LIKELY(exit_date_valid)) {
         out_prepared_set->index = table_set.FindIndex(mono_stays[mono_stays.len - 1].exit.date);
     }
 
@@ -1002,7 +1004,7 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> mono
                         unsigned int flags, mco_PreparedSet *out_prepared_set,
                         mco_ErrorSet *out_errors)
 {
-    DebugAssert(mono_stays.len > 0);
+    RG_DEBUG_ASSERT(mono_stays.len > 0);
 
     // Reset prepared data
     out_prepared_set->index = nullptr;
@@ -1035,8 +1037,8 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> mono
     out_prepared_set->stay.procedures = {};
 
     // Too critical to even try anything (all data is invalid)
-    if (UNLIKELY(mono_stays[0].errors & (int)mco_Stay::Error::UnknownRumVersion)) {
-        DebugAssert(mono_stays.len == 1);
+    if (RG_UNLIKELY(mono_stays[0].errors & (int)mco_Stay::Error::UnknownRumVersion)) {
+        RG_DEBUG_ASSERT(mono_stays.len == 1);
 
         out_prepared_set->prep.duration = -1;
         out_prepared_set->prep.age = -1;
@@ -1052,8 +1054,8 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> mono
     valid &= InitCriticalData(table_set, mono_stays, out_prepared_set, out_errors);
     valid &= CheckDataErrors(mono_stays, out_errors);
 
-    if (LIKELY(valid)) {
-        if (UNLIKELY(!out_prepared_set->index)) {
+    if (RG_LIKELY(valid)) {
+        if (RG_UNLIKELY(!out_prepared_set->index)) {
             SetError(out_errors, 502, 2);
             return mco_GhmCode::FromString("90Z03Z");
         }
@@ -1087,7 +1089,7 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> mono
     // Some of these checks require diagnosis and/or procedure information
     valid &= CheckAggregateErrors(out_prepared_set->prep, out_prepared_set->mono_preps, out_errors);
 
-    if (UNLIKELY(!valid))
+    if (RG_UNLIKELY(!valid))
         return mco_GhmCode::FromString("90Z00Z");
 
     return {};
@@ -1096,7 +1098,7 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> mono
 static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm_node,
                           mco_ErrorSet *out_errors)
 {
-    DebugAssert(ghm_node.type == mco_GhmDecisionNode::Type::Test);
+    RG_DEBUG_ASSERT(ghm_node.type == mco_GhmDecisionNode::Type::Test);
 
     switch (ghm_node.u.test.function) {
         case 0:
@@ -1352,7 +1354,7 @@ static bool CheckConfirmation(const mco_PreparedStay &prep, mco_GhmCode ghm,
     bool valid = true;
 
     bool confirm = false;
-    if (UNLIKELY(prep.duration >= 365)) {
+    if (RG_UNLIKELY(prep.duration >= 365)) {
         confirm = true;
     } else if (prep.duration < ghm_root_info.confirm_duration_treshold &&
                stay.exit.mode != '9' && stay.exit.mode != '0' &&
@@ -1421,26 +1423,26 @@ static bool CheckGhmErrors(const mco_PreparedStay &prep, Span<const mco_Prepared
 
     // Sessions
     if (ghm.parts.cmd == 28) {
-        if (UNLIKELY(mono_preps.len > 1)) {
+        if (RG_UNLIKELY(mono_preps.len > 1)) {
             valid &= SetError(out_errors, 150);
         }
-        if (UNLIKELY(stay.exit.date >= Date(2016, 3, 1) &&
-                     stay.main_diagnosis.Matches("Z511") &&
-                     !stay.linked_diagnosis.IsValid())) {
+        if (RG_UNLIKELY(stay.exit.date >= Date(2016, 3, 1) &&
+                        stay.main_diagnosis.Matches("Z511") &&
+                        !stay.linked_diagnosis.IsValid())) {
             valid &= SetError(out_errors, 187);
         }
     }
 
     // Menstruation
-    if (UNLIKELY(ghm.parts.cmd == 14 &&
-                 ghm.Root() != mco_GhmRootCode(14, 'C', 4) &&
-                 ghm.Root() != mco_GhmRootCode(14, 'M', 2) &&
-                 !stay.last_menstrual_period.value)) {
+    if (RG_UNLIKELY(ghm.parts.cmd == 14 &&
+                    ghm.Root() != mco_GhmRootCode(14, 'C', 4) &&
+                    ghm.Root() != mco_GhmRootCode(14, 'M', 2) &&
+                    !stay.last_menstrual_period.value)) {
         valid &= SetError(out_errors, 162);
     }
 
     // Abortion
-    if (UNLIKELY(stay.exit.date >= Date(2016, 3, 1) && ghm.Root() == mco_GhmRootCode(14, 'Z', 8))) {
+    if (RG_UNLIKELY(stay.exit.date >= Date(2016, 3, 1) && ghm.Root() == mco_GhmRootCode(14, 'Z', 8))) {
         bool type_present = std::any_of(prep.procedures.begin(), prep.procedures.end(),
                                         [](const mco_ProcedureInfo *proc_info) {
             static drd_ProcedureCode proc1 = drd_ProcedureCode::FromString("JNJD002");
@@ -1470,19 +1472,19 @@ static mco_GhmCode RunGhmTree(const mco_TableIndex &index, const mco_PreparedSta
 
     Size ghm_node_idx = 0;
     for (Size i = 0;; i++) {
-        if (UNLIKELY(i >= index.ghm_nodes.len)) {
+        if (RG_UNLIKELY(i >= index.ghm_nodes.len)) {
             LogError("Empty GHM tree or infinite loop (%2)", index.ghm_nodes.len);
             SetError(out_errors, 4, 2);
             return mco_GhmCode::FromString("90Z03Z");
         }
 
-        DebugAssert(ghm_node_idx < index.ghm_nodes.len);
+        RG_DEBUG_ASSERT(ghm_node_idx < index.ghm_nodes.len);
         const mco_GhmDecisionNode &ghm_node = index.ghm_nodes[ghm_node_idx];
 
         switch (ghm_node.type) {
             case mco_GhmDecisionNode::Type::Test: {
                 int function_ret = ExecuteGhmTest(ctx, ghm_node, out_errors);
-                if (UNLIKELY(function_ret < 0 || function_ret >= ghm_node.u.test.children_count)) {
+                if (RG_UNLIKELY(function_ret < 0 || function_ret >= ghm_node.u.test.children_count)) {
                     LogError("Result for GHM tree test %1 out of range (%2 - %3)",
                              ghm_node.u.test.function, 0, ghm_node.u.test.children_count);
                     SetError(out_errors, 4, 2);
@@ -1505,20 +1507,20 @@ static mco_GhmCode RunGhmTree(const mco_TableIndex &index, const mco_PreparedSta
 
 int mco_GetMinimalDurationForSeverity(int severity)
 {
-    DebugAssert(severity >= 0 && severity < 4);
+    RG_DEBUG_ASSERT(severity >= 0 && severity < 4);
     return severity ? (severity + 2) : 0;
 }
 
 int mco_LimitSeverityWithDuration(int severity, int duration)
 {
-    DebugAssert(severity >= 0 && severity < 4);
+    RG_DEBUG_ASSERT(severity >= 0 && severity < 4);
     return duration >= 3 ? std::min(duration - 2, severity) : 0;
 }
 
 bool mco_TestGhmRootExclusion(int8_t sex, const mco_DiagnosisInfo &cma_diag_info,
                               const mco_GhmRootInfo &ghm_root_info)
 {
-    Assert(ghm_root_info.cma_exclusion_mask.offset < SIZE(mco_DiagnosisInfo::attributes[0].raw));
+    RG_ASSERT(ghm_root_info.cma_exclusion_mask.offset < RG_SIZE(mco_DiagnosisInfo::attributes[0].raw));
     return (cma_diag_info.Attributes(sex).raw[ghm_root_info.cma_exclusion_mask.offset] &
             ghm_root_info.cma_exclusion_mask.value);
 }
@@ -1527,12 +1529,12 @@ bool mco_TestDiagnosisExclusion(const mco_TableIndex &index,
                                 const mco_DiagnosisInfo &cma_diag_info,
                                 const mco_DiagnosisInfo &main_diag_info)
 {
-    Assert(cma_diag_info.exclusion_set_idx < index.exclusions.len);
+    RG_ASSERT(cma_diag_info.exclusion_set_idx < index.exclusions.len);
     const mco_ExclusionInfo *excl = &index.exclusions[cma_diag_info.exclusion_set_idx];
-    if (UNLIKELY(!excl))
+    if (RG_UNLIKELY(!excl))
         return false;
 
-    Assert(main_diag_info.cma_exclusion_mask.offset < SIZE(excl->raw));
+    RG_ASSERT(main_diag_info.cma_exclusion_mask.offset < RG_SIZE(excl->raw));
     return (excl->raw[main_diag_info.cma_exclusion_mask.offset] &
             main_diag_info.cma_exclusion_mask.value);
 }
@@ -1576,8 +1578,8 @@ static mco_GhmCode RunGhmSeverity(const mco_TableIndex &index, const mco_Prepare
         int severity = ghm.parts.mode - 'A';
 
         if (ghm_root_info.childbirth_severity_list) {
-            Assert(ghm_root_info.childbirth_severity_list > 0 &&
-                   ghm_root_info.childbirth_severity_list <= SIZE(index.cma_cells));
+            RG_ASSERT(ghm_root_info.childbirth_severity_list > 0 &&
+                   ghm_root_info.childbirth_severity_list <= RG_SIZE(index.cma_cells));
             Span<const mco_ValueRangeCell<2>> cma_cells =
                 index.cma_cells[ghm_root_info.childbirth_severity_list - 1];
             for (const mco_ValueRangeCell<2> &cell: cma_cells) {
@@ -1633,15 +1635,15 @@ mco_GhmCode mco_PickGhm(const mco_TableIndex &index,
     ghm = RunGhmTree(index, prep, out_errors);
 
     const mco_GhmRootInfo *ghm_root_info = index.FindGhmRoot(ghm.Root());
-    if (UNLIKELY(!ghm_root_info)) {
+    if (RG_UNLIKELY(!ghm_root_info)) {
         LogError("Unknown GHM root '%1'", ghm.Root());
         SetError(out_errors, 4, 2);
         return mco_GhmCode::FromString("90Z03Z");
     }
 
-    if (UNLIKELY(!CheckGhmErrors(prep, mono_preps, ghm, out_errors)))
+    if (RG_UNLIKELY(!CheckGhmErrors(prep, mono_preps, ghm, out_errors)))
         return mco_GhmCode::FromString("90Z00Z");
-    if (UNLIKELY(!(flags & (int)mco_ClassifyFlag::IgnoreConfirmation) &&
+    if (RG_UNLIKELY(!(flags & (int)mco_ClassifyFlag::IgnoreConfirmation) &&
                  !CheckConfirmation(prep, ghm, *ghm_root_info, out_errors)))
         return mco_GhmCode::FromString("90Z00Z");
 
@@ -1699,7 +1701,7 @@ static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> m
         if (!test)
             return false;
     }
-    for (const ListMask &mask: ghm_to_ghs_info.procedure_masks) {
+    for (const drd_ListMask &mask: ghm_to_ghs_info.procedure_masks) {
         bool test = std::any_of(prep.procedures.begin(), prep.procedures.end(),
                                 [&](const mco_ProcedureInfo *proc_info) {
             return TestProcedure(*proc_info, mask);
@@ -1721,7 +1723,7 @@ mco_GhsCode mco_PickGhs(const mco_TableIndex &index, const mco_AuthorizationSet 
     mco_GhsCode ghs = mco_GhsCode(9999);
     int ghs_duration = prep.duration;
 
-    if (LIKELY(ghm.IsValid() && !ghm.IsError())) {
+    if (RG_LIKELY(ghm.IsValid() && !ghm.IsError())) {
         // Deal with UHCD-only stays
         if (prep.duration > 0 && stay.entry.mode == '8' && stay.exit.mode == '8') {
             bool uhcd = std::all_of(mono_preps.begin(), mono_preps.end(),
@@ -1742,7 +1744,7 @@ mco_GhsCode mco_PickGhs(const mco_TableIndex &index, const mco_AuthorizationSet 
                 // which makes no sense when duration is forced to 0.
                 ghm = RunGhmTree(index, prep0, nullptr);
                 const mco_GhmRootInfo *ghm_root_info = index.FindGhmRoot(ghm.Root());
-                if (LIKELY(ghm_root_info)) {
+                if (RG_LIKELY(ghm_root_info)) {
                     ghm = RunGhmSeverity(index, prep0, ghm, *ghm_root_info);
                 }
             }
@@ -1907,21 +1909,21 @@ void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSe
         int priority = 0;
         switch (auth_info ? auth_info->function : 0) {
             case 1: {
-                if (LIKELY(prep.age < 2) && ghs != mco_GhsCode(5903)) {
+                if (RG_LIKELY(prep.age < 2) && ghs != mco_GhsCode(5903)) {
                     type = (int)mco_SupplementType::Nn1;
                     priority = 1;
                 }
             } break;
 
             case 2: {
-                if (LIKELY(prep.age < 2) && ghs != mco_GhsCode(5903)) {
+                if (RG_LIKELY(prep.age < 2) && ghs != mco_GhsCode(5903)) {
                     type = (int)mco_SupplementType::Nn2;
                     priority = 3;
                 }
             } break;
 
             case 3: {
-                if (LIKELY(prep.age < 2) && ghs != mco_GhsCode(5903)) {
+                if (RG_LIKELY(prep.age < 2) && ghs != mco_GhsCode(5903)) {
                     if (TestSupplementRea(prep, mono_prep, 1)) {
                         type = (int)mco_SupplementType::Nn3;
                         priority = 6;
@@ -2079,13 +2081,13 @@ static Size RunClassifier(const mco_TableSet &table_set,
         result.sector = sector;
 
         // Classify GHM
-        if (LIKELY(!result.ghm.IsError())) {
+        if (RG_LIKELY(!result.ghm.IsError())) {
             result.main_stay_idx = (int16_t)(prepared_set.main_prep - prepared_set.mono_preps.ptr);
             result.ghm = mco_PickGhm(*prepared_set.index,
                                      prepared_set.prep, prepared_set.mono_preps, flags, &errors);
         }
         result.main_error = errors.main_error;
-        DebugAssert(result.ghm.IsValid());
+        RG_DEBUG_ASSERT(result.ghm.IsValid());
 
         // Classify GHS
         result.ghs = mco_PickGhs(*prepared_set.index, authorization_set, sector,
@@ -2125,7 +2127,7 @@ static Size RunClassifier(const mco_TableSet &table_set,
                             mono_result->ghm = RunGhmTree(*prepared_set.index, mono_prep, &mono_errors);
                             const mco_GhmRootInfo *ghm_root_info =
                                 prepared_set.index->FindGhmRoot(mono_result->ghm.Root());
-                            if (LIKELY(ghm_root_info)) {
+                            if (RG_LIKELY(ghm_root_info)) {
                                 mono_result->ghm = RunGhmSeverity(*prepared_set.index, mono_prep,
                                                                   mono_result->ghm, *ghm_root_info);
                             }
@@ -2133,7 +2135,7 @@ static Size RunClassifier(const mco_TableSet &table_set,
                                                            sector, mono_prep, mono_prep, mono_result->ghm,
                                                            mono_flags, &mono_result->ghs_duration);
                         } else {
-                            DEFER_C(prev_stay = mono_prep.stay) { mono_prep.stay = prev_stay; };
+                            RG_DEFER_C(prev_stay = mono_prep.stay) { mono_prep.stay = prev_stay; };
                             mco_Stay fixed_mono_stay = FixMonoStayForClassifier(*mono_prep.stay);
                             mono_prep.stay = &fixed_mono_stay;
 
@@ -2238,4 +2240,6 @@ Size mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &aut
     }
 
     return results_count;
+}
+
 }

@@ -7,6 +7,8 @@
 #include "../../libcc/libcc.hh"
 #include "build_compiler.hh"
 
+namespace RG {
+
 struct TargetConfig;
 
 enum class TargetType {
@@ -44,7 +46,7 @@ struct Target {
 
     const char *dest_filename;
 
-    HASH_TABLE_HANDLER(Target, name);
+    RG_HASH_TABLE_HANDLER(Target, name);
 };
 
 struct TargetSet {
@@ -78,3 +80,5 @@ private:
 
 bool LoadTargetSet(Span<const char *const> filenames, const char *output_directory,
                    TargetSet *out_set);
+
+}

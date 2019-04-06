@@ -5,6 +5,8 @@
 #include "../libcc/libcc.hh"
 #include "simulate.hh"
 
+namespace RG {
+
 // TODO: Simulate cigarettes smoked per day (or use average values)
 double PredictLungCancer(const Human &human)
 {
@@ -54,4 +56,6 @@ double PredictLungCancer(const Human &human)
     if (human.sex == Sex::Female) value -= 0.05827261;
 
     return 1.0 - pow(0.99629, exp(value));
+}
+
 }

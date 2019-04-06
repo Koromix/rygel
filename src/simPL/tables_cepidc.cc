@@ -6,6 +6,8 @@
 #include "simulate.hh"
 #include "tables.hh"
 
+namespace RG {
+
 double GetDeathProbability(int age, Sex sex, unsigned int flags)
 {
     double probability = 0.0;
@@ -106,4 +108,6 @@ double GetDeathProbability(int age, Sex sex, unsigned int flags)
     }
 
     return probability;
+}
+
 }

@@ -5,6 +5,8 @@
 #include "../libcc/libcc.hh"
 #include "Rcc.hh"
 
+namespace RG {
+
 std::mutex rcc_log_mutex;
 BlockQueue<const char *> rcc_log_messages;
 bool rcc_log_missing_messages = false;
@@ -88,7 +90,7 @@ const Date rcc_Vector<Date>::operator[](Size idx) const
 
 Date rcc_Vector<Date>::Value() const
 {
-    if (UNLIKELY(Len() != 1)) {
+    if (RG_UNLIKELY(Len() != 1)) {
         LogError("Date or date-like vector must have one value (no more, no less)");
         rcc_StopWithLastError();
     }
@@ -104,7 +106,7 @@ void rcc_Vector<Date>::Set(Size idx, Date date)
                 char buf[32];
                 Fmt(buf, "%1", date);
 
-                DebugAssert(idx >= 0 && idx < u.chr.len);
+                RG_DEBUG_ASSERT(idx >= 0 && idx < u.chr.len);
                 SET_STRING_ELT(xp, idx, Rf_mkChar(buf));
             } else {
                 SET_STRING_ELT(xp, idx, NA_STRING);
@@ -119,4 +121,6 @@ void rcc_Vector<Date>::Set(Size idx, Date date)
             }
         } break;
     }
+}
+
 }

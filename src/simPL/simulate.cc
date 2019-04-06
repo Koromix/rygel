@@ -9,6 +9,8 @@
 #include "tables.hh"
 #include "../wrappers/pcg.hh"
 
+namespace RG {
+
 void InitializeConfig(SimulationConfig *out_config)
 {
     out_config->count = 20000;
@@ -78,7 +80,7 @@ static bool SimulateYear(const SimulationConfig &config, const Human &human, Hum
     if (config.predict_cvd != PredictCvdMode::Disabled) {
         double treshold = NAN;
         switch (config.predict_cvd) {
-            case PredictCvdMode::Disabled: { DebugAssert(false); } break;
+            case PredictCvdMode::Disabled: { RG_DEBUG_ASSERT(false); } break;
             case PredictCvdMode::Framingham: { treshold = PredictFraminghamScore(human); } break;
             case PredictCvdMode::QRisk3: { treshold = PredictQRisk3(human); } break;
             // FIXME: HeartScore predicts death risk, fix predicting with
@@ -140,7 +142,7 @@ static bool SimulateYear(const SimulationConfig &config, const Human &human, Hum
 
             // Assign OtherCauses in case the loop fails due to rounding
             out_human->death_type = DeathType::OtherCauses;
-            for (Size i = 0; i < ARRAY_SIZE(DeathTypeNames); i++) {
+            for (Size i = 0; i < RG_ARRAY_SIZE(DeathTypeNames); i++) {
                 if (type_flags & (1 << i)) {
                     p -= GetDeathProbability(human.age, human.sex, 1 << i);
                     if (p <= 0.0) {
@@ -176,4 +178,6 @@ Size RunSimulationStep(const SimulationConfig &config, Span<const Human> humans,
 
     // Return alive count (everyone for now)
     return alive_count;
+}
+
 }

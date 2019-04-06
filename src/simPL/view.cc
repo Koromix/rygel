@@ -7,6 +7,8 @@
 #include "view.hh"
 #include "../../vendor/imgui/imgui.h"
 
+namespace RG {
+
 static void InitializeSimulation(Simulation *out_simulation)
 {
     static int simulations_id = 0;
@@ -68,14 +70,14 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
         ImGui::Combo("Predict CVD", &predict_cvd_mode, [](void *, int idx, const char **str) {
             *str = PredictCvdModeNames[idx];
             return true;
-        }, nullptr, ARRAY_SIZE(PredictCvdModeNames));
+        }, nullptr, RG_ARRAY_SIZE(PredictCvdModeNames));
         simulation->config.predict_cvd = (PredictCvdMode)predict_cvd_mode;
 
         int predict_lung_cancer_mode = (int)simulation->config.predict_lung_cancer;
         ImGui::Combo("Predict Lung Cancer", &predict_lung_cancer_mode, [](void *, int idx, const char **str) {
             *str = PredictLungCancerModeNames[idx];
             return true;
-        }, nullptr, ARRAY_SIZE(PredictLungCancerModeNames));
+        }, nullptr, RG_ARRAY_SIZE(PredictLungCancerModeNames));
         simulation->config.predict_lung_cancer = (PredictLungCancerMode)predict_lung_cancer_mode;
     }
 
@@ -136,7 +138,7 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
         }
 
         if (ImGui::BeginTabItem("Deaths")) {
-            float deaths[ARRAY_SIZE(DeathTypeNames) + 1][6] = {};
+            float deaths[RG_ARRAY_SIZE(DeathTypeNames) + 1][6] = {};
             for (const Human &human: simulation->humans) {
                 if (!human.alive) {
                     int age_cat = 0;
@@ -154,7 +156,7 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
             }
 
             RenderAgeTableHeaders();
-            for (Size i = 0; i < ARRAY_SIZE(DeathTypeNames); i++) {
+            for (Size i = 0; i < RG_ARRAY_SIZE(DeathTypeNames); i++) {
                 ImGui::TextUnformatted(DeathTypeNames[i]); ImGui::NextColumn();
                 for (Size j = 0; j < 6; j++) {
                     if (deaths[0][j]) {
@@ -176,8 +178,8 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
             ImGui::Combo("Type", &histogram_type, [](void *, int idx, const char **str) {
                 *str = idx ? DeathTypeNames[idx - 1] : "All";
                 return true;
-            }, nullptr, ARRAY_SIZE(DeathTypeNames) + 1);
-            ImGui::PlotHistogram("Histogram", deaths[histogram_type], ARRAY_SIZE(deaths[histogram_type]), 0,
+            }, nullptr, RG_ARRAY_SIZE(DeathTypeNames) + 1);
+            ImGui::PlotHistogram("Histogram", deaths[histogram_type], RG_ARRAY_SIZE(deaths[histogram_type]), 0,
                                  nullptr, 0.0f, (float)simulation->humans.len, ImVec2(0, 80));
 
             ImGui::EndTabItem();
@@ -200,7 +202,7 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
 
             RenderAgeTableHeaders();
             ImGui::Text("Smokers"); ImGui::NextColumn();
-            for (Size i = 0; i < ARRAY_SIZE(smokers); i++) {
+            for (Size i = 0; i < RG_ARRAY_SIZE(smokers); i++) {
                 if (population[i]) {
                     float proportion = (smokers[i] / population[i]) * 100.0f;
                     const char *str = Fmt(&frame_alloc, "%1 (%2%%)",
@@ -263,7 +265,7 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
 
             ImGui::Text("Prevalence");
             RenderAgeTableHeaders();
-            for (Size i = 0; i < ARRAY_SIZE(DiseaseNames); i++) {
+            for (Size i = 0; i < RG_ARRAY_SIZE(DiseaseNames); i++) {
                 ImGui::TextUnformatted(DiseaseNames[i]); ImGui::NextColumn();
                 for (Size j = 0; j < 6; j++) {
                     if (population[j]) {
@@ -281,7 +283,7 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
 
             ImGui::Text("Incidence");
             RenderAgeTableHeaders();
-            for (Size i = 0; i < ARRAY_SIZE(DiseaseNames); i++) {
+            for (Size i = 0; i < RG_ARRAY_SIZE(DiseaseNames); i++) {
                 ImGui::TextUnformatted(DiseaseNames[i]); ImGui::NextColumn();
                 for (Size j = 0; j < 6; j++) {
                     if (time[j]) {
@@ -320,4 +322,6 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
     ImGui::End();
 
     return open;
+}
+
 }

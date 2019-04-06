@@ -7,10 +7,12 @@
 #include "../../libcc/libcc.hh"
 #include "common.hh"
 
+namespace RG {
+
 union mco_GhmRootCode {
     int32_t value;
     struct {
-#ifdef ARCH_LITTLE_ENDIAN
+#ifdef RG_ARCH_LITTLE_ENDIAN
         int8_t pad1;
         int8_t seq;
         char type;
@@ -25,13 +27,13 @@ union mco_GhmRootCode {
 
     mco_GhmRootCode() = default;
     constexpr mco_GhmRootCode(int8_t cmd, char type, int8_t seq)
-#ifdef ARCH_LITTLE_ENDIAN
+#ifdef RG_ARCH_LITTLE_ENDIAN
         : parts {0, seq, type, cmd} {}
 #else
         : parts {cmd, type, seq, 0} {}
 #endif
 
-    static mco_GhmRootCode FromString(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
+    static mco_GhmRootCode FromString(Span<const char> str, int flags = RG_DEFAULT_PARSE_FLAGS,
                                       Span<const char> *out_remaining = nullptr)
     {
         mco_GhmRootCode code = {};
@@ -39,7 +41,7 @@ union mco_GhmRootCode {
             bool valid = (flags & (int)ParseFlag::End ? str.len == 5 : str.len >= 5) &&
                          IsAsciiDigit(str[0]) && IsAsciiDigit(str[1]) && IsAsciiAlpha(str[2]) &&
                          IsAsciiDigit(str[3]) && IsAsciiDigit(str[4]);
-            if (UNLIKELY(!valid)) {
+            if (RG_UNLIKELY(!valid)) {
                 if (flags & (int)ParseFlag::Log) {
                     LogError("Malformed GHM root code '%1'", str);
                 }
@@ -71,9 +73,9 @@ union mco_GhmRootCode {
     template <Size N>
     Span<char> ToString(char (&buf)[N]) const
     {
-        StaticAssert(N >= 6);
+        RG_STATIC_ASSERT(N >= 6);
 
-        if (LIKELY(IsValid())) {
+        if (RG_LIKELY(IsValid())) {
             // We need to be fast here (at least for drdR), sprintf is too slow
             buf[0] = (char)('0' + (parts.cmd / 10));
             buf[1] = (char)('0' + (parts.cmd % 10));
@@ -104,7 +106,7 @@ union mco_GhmRootCode {
 union mco_GhmCode {
     int32_t value;
     struct {
-#ifdef ARCH_LITTLE_ENDIAN
+#ifdef RG_ARCH_LITTLE_ENDIAN
         char mode;
         int8_t seq;
         char type;
@@ -119,13 +121,13 @@ union mco_GhmCode {
 
     mco_GhmCode() = default;
     constexpr mco_GhmCode(int8_t cmd, char type, int8_t seq, char mode)
-#ifdef ARCH_LITTLE_ENDIAN
+#ifdef RG_ARCH_LITTLE_ENDIAN
         : parts {mode, seq, type, cmd} {}
 #else
         : parts {cmd, type, seq, mode} {}
 #endif
 
-    static mco_GhmCode FromString(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
+    static mco_GhmCode FromString(Span<const char> str, int flags = RG_DEFAULT_PARSE_FLAGS,
                                   Span<const char> *out_remaining = nullptr)
     {
         mco_GhmCode code = {};
@@ -134,7 +136,7 @@ union mco_GhmCode {
                          IsAsciiDigit(str[0]) && IsAsciiDigit(str[1]) && IsAsciiAlpha(str[2]) &&
                          IsAsciiDigit(str[3]) && IsAsciiDigit(str[4]) &&
                          (str.len == 5 || str[5] == ' ' || IsAsciiAlphaOrDigit(str[5]));
-            if (UNLIKELY(!valid)) {
+            if (RG_UNLIKELY(!valid)) {
                 if (flags & (int)ParseFlag::Log) {
                     LogError("Malformed GHM code '%1'", str);
                 }
@@ -180,9 +182,9 @@ union mco_GhmCode {
     template <Size N>
     Span<char> ToString(char (&buf)[N]) const
     {
-        StaticAssert(N >= 6);
+        RG_STATIC_ASSERT(N >= 6);
 
-        if (LIKELY(IsValid())) {
+        if (RG_LIKELY(IsValid())) {
             // We need to be fast here (at least for drdR), sprintf is too slow
             buf[0] = (char)('0' + (parts.cmd / 10));
             buf[1] = (char)('0' + (parts.cmd % 10));
@@ -225,7 +227,7 @@ struct mco_GhsCode {
     mco_GhsCode() = default;
     explicit mco_GhsCode(int16_t number) : number(number) {}
 
-    static mco_GhsCode FromString(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
+    static mco_GhsCode FromString(Span<const char> str, int flags = RG_DEFAULT_PARSE_FLAGS,
                                   Span<const char> *out_remaining = nullptr)
     {
         mco_GhsCode code = {};
@@ -301,7 +303,7 @@ static const char *const mco_SupplementTypeNames[] = {
 
 template <typename T>
 union mco_SupplementCounters {
-    T values[ARRAY_SIZE(mco_SupplementTypeNames)];
+    T values[RG_ARRAY_SIZE(mco_SupplementTypeNames)];
     struct {
         T rea;
         T reasi;
@@ -323,7 +325,7 @@ union mco_SupplementCounters {
         T ent3;
         T sdc;
     } st;
-    StaticAssert(SIZE(mco_SupplementCounters::values) == SIZE(mco_SupplementCounters::st));
+    RG_STATIC_ASSERT(RG_SIZE(mco_SupplementCounters::values) == RG_SIZE(mco_SupplementCounters::st));
 
     template <typename U>
     mco_SupplementCounters &operator+=(const mco_SupplementCounters<U> &other)
@@ -361,8 +363,10 @@ union mco_SupplementCounters {
     template <typename U>
     bool operator==(const mco_SupplementCounters<U> &other) const
     {
-        return !memcmp(this, &other, SIZE(*this));
+        return !memcmp(this, &other, RG_SIZE(*this));
     }
     template <typename U>
     bool operator !=(const mco_SupplementCounters<U> &other) const { return !(*this == other); }
 };
+
+}

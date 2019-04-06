@@ -6,6 +6,8 @@
 
 #include "../../libcc/libcc.hh"
 
+namespace RG {
+
 enum class drd_Sector: int8_t {
     Public,
     Private
@@ -21,13 +23,13 @@ union drd_DiagnosisCode {
 
     drd_DiagnosisCode() = default;
 
-    static drd_DiagnosisCode FromString(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
+    static drd_DiagnosisCode FromString(Span<const char> str, int flags = RG_DEFAULT_PARSE_FLAGS,
                                         Span<const char> *out_remaining = nullptr)
     {
         drd_DiagnosisCode code = {};
         Size end = 0;
         {
-            Size copy_len = std::min(SIZE(code.str) - 1, str.len);
+            Size copy_len = std::min(RG_SIZE(code.str) - 1, str.len);
             for (; end < copy_len && str[end] != ' '; end++) {
                 code.str[end] = UpperAscii(str[end]);
             }
@@ -36,7 +38,7 @@ union drd_DiagnosisCode {
                                            str.len < 7 || str[end] == ' ')) &&
                          IsAsciiAlpha(code.str[0]) && IsAsciiDigit(code.str[1]) &&
                          IsAsciiDigit(code.str[2]);
-            if (LIKELY(valid)) {
+            if (RG_LIKELY(valid)) {
                 Size real_end = 3;
                 while (code.str[real_end]) {
                     valid &= IsAsciiDigit(code.str[real_end]) ||
@@ -48,7 +50,7 @@ union drd_DiagnosisCode {
                 }
             }
 
-            if (UNLIKELY(!valid)) {
+            if (RG_UNLIKELY(!valid)) {
                 if (flags & (int)ParseFlag::Log) {
                     LogError("Malformed diagnosis code '%1'", str);
                 }
@@ -93,12 +95,12 @@ union drd_ProcedureCode {
 
     drd_ProcedureCode() = default;
 
-    static drd_ProcedureCode FromString(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
+    static drd_ProcedureCode FromString(Span<const char> str, int flags = RG_DEFAULT_PARSE_FLAGS,
                                         Span<const char> *out_remaining = nullptr)
     {
         drd_ProcedureCode code = {};
         {
-            Size copy_len = std::min(SIZE(str) - 1, str.len);
+            Size copy_len = std::min(RG_SIZE(str) - 1, str.len);
             for (Size i = 0; i < copy_len; i++) {
                 code.str[i] = UpperAscii(str[i]);
             }
@@ -108,7 +110,7 @@ union drd_ProcedureCode {
                          IsAsciiAlpha(code.str[2]) && IsAsciiAlpha(code.str[3]) &&
                          IsAsciiDigit(code.str[4]) && IsAsciiDigit(code.str[5]) &&
                          IsAsciiDigit(code.str[6]);
-            if (UNLIKELY(!valid)) {
+            if (RG_UNLIKELY(!valid)) {
                 if (flags & (int)ParseFlag::Log) {
                     LogError("Malformed procedure code '%1'", str);
                 }
@@ -144,7 +146,7 @@ struct drd_UnitCode {
     drd_UnitCode() = default;
     explicit drd_UnitCode(int16_t code) : number(code) {}
 
-    static drd_UnitCode FromString(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
+    static drd_UnitCode FromString(Span<const char> str, int flags = RG_DEFAULT_PARSE_FLAGS,
                                    Span<const char> *out_remaining = nullptr)
     {
         drd_UnitCode code = {};
@@ -175,7 +177,9 @@ struct drd_UnitCode {
     uint64_t Hash() const { return HashTraits<int16_t>::Hash(number); }
 };
 
-struct ListMask {
+struct drd_ListMask {
     int16_t offset;
     uint8_t value;
 };
+
+}

@@ -5,6 +5,8 @@
 #include "../../libcc/libcc.hh"
 #include "mco_stay.hh"
 
+namespace RG {
+
 #pragma pack(push, 1)
 struct PackHeader {
     char signature[13];
@@ -21,10 +23,10 @@ struct PackHeader {
 #define PACK_SIGNATURE "DRD_MCO_PACK"
 
 // This should warn us in most cases when we break dspak files (it's basically a memcpy format)
-StaticAssert(SIZE(PackHeader::signature) == SIZE(PACK_SIGNATURE));
-StaticAssert(SIZE(mco_Stay) == 112);
-StaticAssert(SIZE(drd_DiagnosisCode) == 8);
-StaticAssert(SIZE(mco_ProcedureRealisation) == 24);
+RG_STATIC_ASSERT(RG_SIZE(PackHeader::signature) == RG_SIZE(PACK_SIGNATURE));
+RG_STATIC_ASSERT(RG_SIZE(mco_Stay) == 112);
+RG_STATIC_ASSERT(RG_SIZE(drd_DiagnosisCode) == 8);
+RG_STATIC_ASSERT(RG_SIZE(mco_ProcedureRealisation) == 24);
 
 bool mco_StaySet::SavePack(StreamWriter &st) const
 {
@@ -32,17 +34,17 @@ bool mco_StaySet::SavePack(StreamWriter &st) const
 
     strcpy(bh.signature, PACK_SIGNATURE);
     bh.version = PACK_VERSION;
-    bh.native_size = (uint8_t)SIZE(Size);
-    bh.endianness = (int8_t)ARCH_ENDIANNESS;
+    bh.native_size = (uint8_t)RG_SIZE(Size);
+    bh.endianness = (int8_t)RG_ARCH_ENDIANNESS;
     bh.stays_len = stays.len;
     for (const mco_Stay &stay: stays) {
         bh.diagnoses_len += stay.other_diagnoses.len;
         bh.procedures_len += stay.procedures.len;
     }
 
-    st.Write(&bh, SIZE(bh));
-#ifdef ARCH_64
-    st.Write(stays.ptr, stays.len * SIZE(*stays.ptr));
+    st.Write(&bh, RG_SIZE(bh));
+#ifdef RG_ARCH_64
+    st.Write(stays.ptr, stays.len * RG_SIZE(*stays.ptr));
 #else
     for (const mco_Stay &stay: stays) {
         mco_Stay stay2;
@@ -65,10 +67,10 @@ bool mco_StaySet::SavePack(StreamWriter &st) const
     }
 #endif
     for (const mco_Stay &stay: stays) {
-        st.Write(stay.other_diagnoses.ptr, stay.other_diagnoses.len * SIZE(*stay.other_diagnoses.ptr));
+        st.Write(stay.other_diagnoses.ptr, stay.other_diagnoses.len * RG_SIZE(*stay.other_diagnoses.ptr));
     }
     for (const mco_Stay &stay: stays) {
-        st.Write(stay.procedures.ptr, stay.procedures.len * SIZE(*stay.procedures.ptr));
+        st.Write(stay.procedures.ptr, stay.procedures.len * RG_SIZE(*stay.procedures.ptr));
     }
     if (!st.Close())
         return false;
@@ -92,7 +94,7 @@ bool mco_StaySet::SavePack(const char *filename) const
 bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test> *out_tests)
 {
     const Size start_stays_len = set.stays.len;
-    DEFER_N(set_guard) { set.stays.RemoveFrom(start_stays_len); };
+    RG_DEFER_N(set_guard) { set.stays.RemoveFrom(start_stays_len); };
 
     if (out_tests) {
         LogError("Testing is not supported by '.dmpak' files");
@@ -102,10 +104,10 @@ bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test>
     HeapArray<mco_ProcedureRealisation> procedures(&procedures_alloc);
 
     PackHeader bh;
-    if (st.Read(SIZE(bh), &bh) != SIZE(bh))
+    if (st.Read(RG_SIZE(bh), &bh) != RG_SIZE(bh))
         goto corrupt_error;
 
-    if (strncmp(bh.signature, PACK_SIGNATURE, SIZE(bh.signature)) != 0) {
+    if (strncmp(bh.signature, PACK_SIGNATURE, RG_SIZE(bh.signature)) != 0) {
         LogError("File '%1' does not have dspak signature", st.filename);
         return false;
     }
@@ -114,7 +116,7 @@ bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test>
                  bh.version, PACK_VERSION);
         return false;
     }
-    if (bh.endianness != (int8_t)ARCH_ENDIANNESS) {
+    if (bh.endianness != (int8_t)RG_ARCH_ENDIANNESS) {
         LogError("File '%1' is not compatible with this platform (endianness issue)",
                  st.filename);
         return false;
@@ -122,26 +124,26 @@ bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test>
     if (bh.stays_len < 0 || bh.diagnoses_len < 0 || bh.procedures_len < 0)
         goto corrupt_error;
 
-    if (bh.stays_len > (LEN_MAX - start_stays_len)) {
+    if (bh.stays_len > (RG_SIZE_MAX - start_stays_len)) {
         LogError("Too much data to load in '%1'", st.filename);
         return false;
     }
 
     set.stays.Grow((Size)bh.stays_len);
-    if (st.Read(SIZE(*set.stays.ptr) * (Size)bh.stays_len,
-                set.stays.end()) != SIZE(*set.stays.ptr) * (Size)bh.stays_len)
+    if (st.Read(RG_SIZE(*set.stays.ptr) * (Size)bh.stays_len,
+                set.stays.end()) != RG_SIZE(*set.stays.ptr) * (Size)bh.stays_len)
         goto corrupt_error;
     set.stays.len += (Size)bh.stays_len;
 
     other_diagnoses.Reserve((Size)bh.diagnoses_len);
-    if (st.Read(SIZE(*other_diagnoses.ptr) * (Size)bh.diagnoses_len,
-                other_diagnoses.ptr) != SIZE(*other_diagnoses.ptr) * (Size)bh.diagnoses_len)
+    if (st.Read(RG_SIZE(*other_diagnoses.ptr) * (Size)bh.diagnoses_len,
+                other_diagnoses.ptr) != RG_SIZE(*other_diagnoses.ptr) * (Size)bh.diagnoses_len)
         goto corrupt_error;
     other_diagnoses.len += (Size)bh.diagnoses_len;
 
     procedures.Grow((Size)bh.procedures_len);
-    if (st.Read(SIZE(*procedures.ptr) * (Size)bh.procedures_len,
-                procedures.ptr) != SIZE(*procedures.ptr) * (Size)bh.procedures_len)
+    if (st.Read(RG_SIZE(*procedures.ptr) * (Size)bh.procedures_len,
+                procedures.ptr) != RG_SIZE(*procedures.ptr) * (Size)bh.procedures_len)
         goto corrupt_error;
     procedures.len += (Size)bh.procedures_len;
 
@@ -153,7 +155,7 @@ bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test>
         for (Size i = set.stays.len - (Size)bh.stays_len; i < set.stays.len; i++) {
             mco_Stay *stay = &set.stays[i];
 
-#ifndef ARCH_64
+#ifndef RG_ARCH_64
             union {
                 uint8_t raw[32];
                 struct {
@@ -169,20 +171,20 @@ bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test>
 #endif
 
             if (stay->other_diagnoses.len) {
-                if (UNLIKELY(stay->other_diagnoses.len < 0))
+                if (RG_UNLIKELY(stay->other_diagnoses.len < 0))
                     goto corrupt_error;
                 stay->other_diagnoses.ptr = &other_diagnoses[diagnoses_offset];
                 diagnoses_offset += stay->other_diagnoses.len;
-                if (UNLIKELY(diagnoses_offset <= 0 || diagnoses_offset > bh.diagnoses_len))
+                if (RG_UNLIKELY(diagnoses_offset <= 0 || diagnoses_offset > bh.diagnoses_len))
                     goto corrupt_error;
             }
 
             if (stay->procedures.len) {
-                if (UNLIKELY(stay->procedures.len < 0))
+                if (RG_UNLIKELY(stay->procedures.len < 0))
                     goto corrupt_error;
                 stay->procedures.ptr = &procedures[procedures_offset];
                 procedures_offset += stay->procedures.len;
-                if (UNLIKELY(procedures_offset <= 0 || procedures_offset > bh.procedures_len))
+                if (RG_UNLIKELY(procedures_offset <= 0 || procedures_offset > bh.procedures_len))
                     goto corrupt_error;
             }
         }
@@ -215,15 +217,15 @@ static bool ParsePmsiChar(char c, char *out_value)
 template <typename T>
 static bool ParsePmsiInt(Span<const char> str, T *out_value)
 {
-    DebugAssert(str.len > 0);
+    RG_DEBUG_ASSERT(str.len > 0);
 
     if (str[0] == ' ')
         return true;
-    if (UNLIKELY((unsigned int)(str[0] - '0') > 9))
+    if (RG_UNLIKELY((unsigned int)(str[0] - '0') > 9))
         return false;
 
     T value;
-    if (LIKELY(ParseDec<T>(str, &value, 0, &str))) {
+    if (RG_LIKELY(ParseDec<T>(str, &value, 0, &str))) {
         *out_value = value;
         return true;
     } else {
@@ -233,13 +235,13 @@ static bool ParsePmsiInt(Span<const char> str, T *out_value)
 
 static bool ParsePmsiDate(Span<const char> str, Date *out_date)
 {
-    DebugAssert(str.len == 8);
+    RG_DEBUG_ASSERT(str.len == 8);
 
     if (str[0] == ' ')
         return true;
-    if (UNLIKELY(!IsAsciiDigit(str[0]) || !IsAsciiDigit(str[1]) || !IsAsciiDigit(str[2]) ||
-                 !IsAsciiDigit(str[3]) || !IsAsciiDigit(str[4]) || !IsAsciiDigit(str[5]) ||
-                 !IsAsciiDigit(str[6]) || !IsAsciiDigit(str[7])))
+    if (RG_UNLIKELY(!IsAsciiDigit(str[0]) || !IsAsciiDigit(str[1]) || !IsAsciiDigit(str[2]) ||
+                    !IsAsciiDigit(str[3]) || !IsAsciiDigit(str[4]) || !IsAsciiDigit(str[5]) ||
+                    !IsAsciiDigit(str[6]) || !IsAsciiDigit(str[7])))
         return false;
 
     Date date;
@@ -254,7 +256,7 @@ static bool ParsePmsiDate(Span<const char> str, Date *out_date)
 
 bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, mco_Test> *out_tests)
 {
-    if (UNLIKELY(line.len < 12)) {
+    if (RG_UNLIKELY(line.len < 12)) {
         LogError("Truncated RUM line");
         return false;
     }
@@ -284,12 +286,12 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
         version = (int16_t)(version - 100);
         offset += 15;
     }
-    if (UNLIKELY(version < 16 || version > 19)) {
+    if (RG_UNLIKELY(version < 16 || version > 19)) {
         stay.errors |= (int)mco_Stay::Error::UnknownRumVersion;
         set.stays.Append(stay);
         return true;
     }
-    if (UNLIKELY(line.len < offset + 165)) {
+    if (RG_UNLIKELY(line.len < offset + 165)) {
         LogError("Truncated RUM line");
         return false;
     }
@@ -312,31 +314,31 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
     ParsePmsiInt(ReadFragment(2), &stay.gestational_age) || SetErrorFlag(mco_Stay::Error::MalformedGestationalAge);
     ParsePmsiDate(ReadFragment(8), &stay.last_menstrual_period) || SetErrorFlag(mco_Stay::Error::MalformedLastMenstrualPeriod);
     ParsePmsiInt(ReadFragment(2), &stay.session_count) || SetErrorFlag(mco_Stay::Error::MalformedSessionCount);
-    if (LIKELY(line[offset] != ' ')) {
+    if (RG_LIKELY(line[offset] != ' ')) {
         ParsePmsiInt(line.Take(offset, 2), &das_count) ||
             SetErrorFlag(mco_Stay::Error::MalformedOtherDiagnosesCount);
     } else {
         SetErrorFlag(mco_Stay::Error::MissingOtherDiagnosesCount);
     }
     offset += 2;
-    if (LIKELY(line[offset] != ' ')) {
+    if (RG_LIKELY(line[offset] != ' ')) {
         ParsePmsiInt(line.Take(offset, 2), &dad_count) ||
             SetErrorFlag(mco_Stay::Error::MalformedOtherDiagnosesCount);
     } else {
         SetErrorFlag(mco_Stay::Error::MissingOtherDiagnosesCount);
     }
     offset += 2;
-    if (LIKELY(line[offset] != ' ')) {
+    if (RG_LIKELY(line[offset] != ' ')) {
         ParsePmsiInt(line.Take(offset, 3), &procedures_count) ||
             SetErrorFlag(mco_Stay::Error::MalformedProceduresCount);
     } else {
         SetErrorFlag(mco_Stay::Error::MissingProceduresCount);
     }
     offset += 3;
-    if (LIKELY(line[offset] != ' ')) {
+    if (RG_LIKELY(line[offset] != ' ')) {
         stay.main_diagnosis =
             drd_DiagnosisCode::FromString(line.Take(offset, 8), (int)ParseFlag::End);
-        if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
+        if (RG_UNLIKELY(!stay.main_diagnosis.IsValid())) {
             stay.errors |= (int)mco_Stay::Error::MalformedMainDiagnosis;
         }
     }
@@ -344,7 +346,7 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
     if (line[offset] != ' ') {
         stay.linked_diagnosis =
             drd_DiagnosisCode::FromString(line.Take(offset, 8), (int)ParseFlag::End);
-        if (UNLIKELY(!stay.linked_diagnosis.IsValid())) {
+        if (RG_UNLIKELY(!stay.linked_diagnosis.IsValid())) {
             stay.errors |= (int)mco_Stay::Error::MalformedLinkedDiagnosis;
         }
     }
@@ -352,7 +354,7 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
     ParsePmsiInt(ReadFragment(3), &stay.igs2) || SetErrorFlag(mco_Stay::Error::MalformedIgs2);
     if (line[offset] == '1') {
         stay.flags |= (int)mco_Stay::Flag::Confirmed;
-    } else if (UNLIKELY(line[offset] != ' ')) {
+    } else if (RG_UNLIKELY(line[offset] != ' ')) {
         // According to the GenRSA manual and what the official FG does, confirmation
         // code '2' is supposed to be okay... but why? I don't accept it here.
         stay.errors |= (int)mco_Stay::Error::MalformedConfirmation;
@@ -361,9 +363,9 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
 
     HeapArray<drd_DiagnosisCode> other_diagnoses(&other_diagnoses_alloc);
     HeapArray<mco_ProcedureRealisation> procedures(&procedures_alloc);
-    if (LIKELY(das_count >= 0 && dad_count >=0 && procedures_count >= 0)) {
-        if (UNLIKELY(line.len < offset + 8 * das_count + 8 * dad_count +
-                                (version >= 17 ? 29 : 26) * procedures_count)) {
+    if (RG_LIKELY(das_count >= 0 && dad_count >=0 && procedures_count >= 0)) {
+        if (RG_UNLIKELY(line.len < offset + 8 * das_count + 8 * dad_count +
+                                   (version >= 17 ? 29 : 26) * procedures_count)) {
             LogError("Truncated RUM line");
             return false;
         }
@@ -371,7 +373,7 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
         for (int i = 0; i < das_count; i++) {
             drd_DiagnosisCode diag =
                 drd_DiagnosisCode::FromString(ReadFragment(8), (int)ParseFlag::End);
-            if (LIKELY(diag.IsValid())) {
+            if (RG_LIKELY(diag.IsValid())) {
                 other_diagnoses.Append(diag);
             } else {
                 stay.errors |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
@@ -386,8 +388,8 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
             proc.proc = drd_ProcedureCode::FromString(ReadFragment(7), (int)ParseFlag::End);
             if (version >= 17) {
                 if (line[offset] != ' ') {
-                    if (UNLIKELY(line[offset] != '-' ||
-                                 !ParsePmsiInt(line.Take(offset + 1, 2), &proc.extension))) {
+                    if (RG_UNLIKELY(line[offset] != '-' ||
+                                    !ParsePmsiInt(line.Take(offset + 1, 2), &proc.extension))) {
                         SetErrorFlag(mco_Stay::Error::MalformedProcedureExtension);
                     }
                 }
@@ -402,7 +404,7 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
             offset += 6; // Skip modifiers, etc.
             ParsePmsiInt(ReadFragment(2), &proc.count);
 
-            if (LIKELY(proc.proc.IsValid())) {
+            if (RG_LIKELY(proc.proc.IsValid())) {
                 procedures.Append(proc);
             } else {
                 stay.errors |= (int)mco_Stay::Error::MalformedProcedureCode;
@@ -439,7 +441,7 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
 
 bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, mco_Test> *out_tests)
 {
-    if (UNLIKELY(line.len < 12)) {
+    if (RG_UNLIKELY(line.len < 12)) {
         LogError("Truncated RSA line");
         return false;
     }
@@ -465,12 +467,12 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
 
     int16_t version = 0;
     ParsePmsiInt(ReadFragment(3), &version);
-    if (UNLIKELY(version < 220 || version > 224)) {
+    if (RG_UNLIKELY(version < 220 || version > 224)) {
         SetErrorFlag(mco_Stay::Error::UnknownRumVersion);
         set.stays.Append(rsa);
         return true;
     }
-    if (UNLIKELY(line.len < (version >= 222 ? 174 : 182))) {
+    if (RG_UNLIKELY(line.len < (version >= 222 ? 174 : 182))) {
         LogError("Truncated RSA line");
         return false;
     }
@@ -491,7 +493,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
         bool valid = true;
         valid &= ParsePmsiInt(ReadFragment(2), &rsa.exit.date.st.month);
         valid &= ParsePmsiInt(ReadFragment(4), &rsa.exit.date.st.year);
-        if (UNLIKELY(!valid)) {
+        if (RG_UNLIKELY(!valid)) {
             SetErrorFlag(mco_Stay::Error::MalformedExitDate);
         }
         rsa.exit.date.st.day = 1;
@@ -543,7 +545,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
     offset += 6; // Skip dialysis, UHCD
     if (line[offset] == '1') {
         rsa.flags |= (int)mco_Stay::Flag::Confirmed;
-    } else if (UNLIKELY(line[offset] != ' ')) {
+    } else if (RG_UNLIKELY(line[offset] != ' ')) {
         SetErrorFlag(mco_Stay::Error::MalformedConfirmation);
     }
     offset++;
@@ -588,7 +590,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
     offset += 2 * global_auth_count;
     offset += 7 * radiotherapy_supp_count;
 
-    if (UNLIKELY(offset + test.cluster_len * (version >= 221 ? 60 : 58) > line.len)) {
+    if (RG_UNLIKELY(offset + test.cluster_len * (version >= 221 ? 60 : 58) > line.len)) {
         LogError("Truncated RSA line");
         return false;
     }
@@ -599,10 +601,10 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
         mco_Stay stay = rsa;
 
         offset += 14; // Skip many fields
-        if (LIKELY(line[offset] != ' ')) {
+        if (RG_LIKELY(line[offset] != ' ')) {
             stay.main_diagnosis =
                 drd_DiagnosisCode::FromString(line.Take(offset, 6), (int)ParseFlag::End);
-            if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
+            if (RG_UNLIKELY(!stay.main_diagnosis.IsValid())) {
                 stay.errors |= (int)mco_Stay::Error::MalformedMainDiagnosis;
             }
         }
@@ -610,7 +612,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
         if (line[offset] != ' ') {
             stay.linked_diagnosis =
                 drd_DiagnosisCode::FromString(line.Take(offset, 6), (int)ParseFlag::End);
-            if (UNLIKELY(!stay.linked_diagnosis.IsValid())) {
+            if (RG_UNLIKELY(!stay.linked_diagnosis.IsValid())) {
                 stay.errors |= (int)mco_Stay::Error::MalformedLinkedDiagnosis;
             }
         }
@@ -642,7 +644,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
         stay.unit.number = (int16_t)(stay.unit.number + 10000);
         offset += 2; // Skip end of UM type (A/B, H/P)
 
-        if (LIKELY(i < ARRAY_SIZE(test.auth_supplements))) {
+        if (RG_LIKELY(i < RG_ARRAY_SIZE(test.auth_supplements))) {
             int type = 0;
             ParsePmsiInt(ReadFragment(2), &type);
             ParsePmsiInt(ReadFragment(4), &test.auth_supplements[i].days);
@@ -690,8 +692,8 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
         procedures_count += stay.procedures.len;
     }
 
-    if (UNLIKELY(offset + das_count * 6 +
-                 procedures_count * (version >= 222 ? 24 : 22) > line.len)) {
+    if (RG_UNLIKELY(offset + das_count * 6 +
+                    procedures_count * (version >= 222 ? 24 : 22) > line.len)) {
         LogError("Truncated RSA line");
         return false;
     }
@@ -703,7 +705,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
         for (Size j = 0; j < stay.other_diagnoses.len; j++) {
             drd_DiagnosisCode diag =
                 drd_DiagnosisCode::FromString(ReadFragment(6), (int)ParseFlag::End);
-            if (LIKELY(diag.IsValid())) {
+            if (RG_LIKELY(diag.IsValid())) {
                 other_diagnoses.Append(diag);
             } else {
                 stay.errors |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
@@ -741,7 +743,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
             ParsePmsiInt(ReadFragment(2), &proc.count);
             offset += 1; // Skip date compatibility flag
 
-            if (LIKELY(proc.proc.IsValid())) {
+            if (RG_LIKELY(proc.proc.IsValid())) {
                 procedures.Append(proc);
             } else {
                 stay.errors |= (int)mco_Stay::Error::MalformedProcedureCode;
@@ -764,14 +766,14 @@ bool mco_StaySetBuilder::LoadAtih(StreamReader &st,
                                   HashTable<int32_t, mco_Test> *out_tests)
 {
     Size stays_len = set.stays.len;
-    DEFER_N(set_guard) { set.stays.RemoveFrom(stays_len); };
+    RG_DEFER_N(set_guard) { set.stays.RemoveFrom(stays_len); };
 
     Size errors = 0;
     {
         LineReader reader(&st);
 
         reader.PushLogHandler();
-        DEFER { PopLogHandler(); };
+        RG_DEFER { PopLogHandler(); };
 
         Span<const char> line;
         while (reader.Next(&line)) {
@@ -816,7 +818,7 @@ bool mco_StaySetBuilder::LoadFichComp(StreamReader &st, HashTable<int32_t, mco_T
     {
         LineReader reader(&st);
         reader.PushLogHandler();
-        DEFER { PopLogHandler(); };
+        RG_DEFER { PopLogHandler(); };
 
         Span<const char> line;
         while (reader.Next(&line)) {
@@ -842,7 +844,7 @@ bool mco_StaySetBuilder::LoadFichComp(StreamReader &st, HashTable<int32_t, mco_T
                     valid &= ParsePmsiInt(line.Take(11, 20), &fc.admin_id) && fc.admin_id;
                     valid &= ParsePmsiDate(line.Take(31, 8), &fc.start_date) && fc.start_date.value;
 
-                    if (LIKELY(valid)) {
+                    if (RG_LIKELY(valid)) {
                         fichcomps.Append(fc);
                     } else {
                         LogError("Malformed DIP (FICHCOMP) line");
@@ -861,7 +863,7 @@ bool mco_StaySetBuilder::LoadFichComp(StreamReader &st, HashTable<int32_t, mco_T
                     valid &= ParsePmsiInt(line.Take(72, 10), &fc.count) && fc.count;
                     valid &= (line.Take(57, 15) == "            DIP");
 
-                    if (LIKELY(valid)) {
+                    if (RG_LIKELY(valid)) {
                         fichcomps.Append(fc);
                     } else {
                         LogError("Malformed MED (FICHCOMP) line");
@@ -955,7 +957,7 @@ bool mco_StaySetBuilder::Finish(mco_StaySet *out_set)
                         } break;
 
                         case FichCompData::Type::Dip: {
-                            if (UNLIKELY(sub_stays[0].dip_count)) {
+                            if (RG_UNLIKELY(sub_stays[0].dip_count)) {
                                 LogError("Overwriting DIP count for stay %1", sub_stays[0].bill_id);
                             }
                             sub_stays[0].dip_count = fc->count;
@@ -974,6 +976,8 @@ bool mco_StaySetBuilder::Finish(mco_StaySet *out_set)
                  fichcomps.len - matched_fichcomps.table.count);
     }
 
-    SwapMemory(out_set, &set, SIZE(set));
+    SwapMemory(out_set, &set, RG_SIZE(set));
     return true;
+}
+
 }

@@ -7,6 +7,8 @@
 #include "../../libcc/libcc.hh"
 #include "../../drd/libdrd/libdrd.hh"
 
+namespace RG {
+
 struct Config;
 struct StructureSet;
 struct UserSet;
@@ -16,3 +18,5 @@ extern bool thop_has_casemix;
 
 extern StructureSet thop_structure_set;
 extern UserSet thop_user_set;
+
+}

@@ -6,6 +6,8 @@
 #include "simulate.hh"
 #include "tables.hh"
 
+namespace RG {
+
 double GetSmokingPrevalence(int age, Sex sex)
 {
     switch (sex) {
@@ -28,7 +30,7 @@ double GetSmokingPrevalence(int age, Sex sex)
         } break;
     }
 
-    Assert(false);
+    RG_ASSERT(false);
 }
 
 double GetSmokingStopTrialProbability(int age)
@@ -39,4 +41,6 @@ double GetSmokingStopTrialProbability(int age)
     else if (age < 55) return 0.105;
     else if (age < 65) return 0.12;
     else return 0.099; // age < 75
+}
+
 }

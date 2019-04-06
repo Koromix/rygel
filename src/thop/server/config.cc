@@ -5,20 +5,22 @@
 #include "../../libcc/libcc.hh"
 #include "config.hh"
 
+namespace RG {
+
 bool ConfigBuilder::LoadIni(StreamReader &st)
 {
-    DEFER_NC(out_guard, table_directories_len = config.table_directories.len,
-                        profile_directory = config.profile_directory,
-                        sector = config.sector,
-                        mco_authorization_filename = config.mco_authorization_filename,
-                        mco_dispense_mode = config.mco_dispense_mode,
-                        mco_stay_directories_len = config.mco_stay_directories.len,
-                        mco_stay_filenames_len = config.mco_stay_filenames.len,
-                        ip_stack = config.ip_stack,
-                        port = config.port,
-                        threads = config.threads,
-                        base_url = config.base_url,
-                        max_age = config.max_age) {
+    RG_DEFER_NC(out_guard, table_directories_len = config.table_directories.len,
+                           profile_directory = config.profile_directory,
+                           sector = config.sector,
+                           mco_authorization_filename = config.mco_authorization_filename,
+                           mco_dispense_mode = config.mco_dispense_mode,
+                           mco_stay_directories_len = config.mco_stay_directories.len,
+                           mco_stay_filenames_len = config.mco_stay_filenames.len,
+                           ip_stack = config.ip_stack,
+                           port = config.port,
+                           threads = config.threads,
+                           base_url = config.base_url,
+                           max_age = config.max_age) {
         config.table_directories.RemoveFrom(table_directories_len);
         config.profile_directory = profile_directory;
         config.sector = sector;
@@ -34,11 +36,11 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
     };
 
     Span<const char> root_directory;
-    SplitStrReverseAny(st.filename, PATH_SEPARATORS, &root_directory);
+    SplitStrReverseAny(st.filename, RG_PATH_SEPARATORS, &root_directory);
 
     IniParser ini(&st);
     ini.reader.PushLogHandler();
-    DEFER { PopLogHandler(); };
+    RG_DEFER { PopLogHandler(); };
 
     bool valid = true;
     {
@@ -177,7 +179,7 @@ bool ConfigBuilder::LoadFiles(Span<const char *const> filenames)
 
 void ConfigBuilder::Finish(Config *out_config)
 {
-    SwapMemory(out_config, &config, SIZE(config));
+    SwapMemory(out_config, &config, RG_SIZE(config));
 }
 
 bool LoadConfig(Span<const char *const> filenames, Config *out_config)
@@ -188,4 +190,6 @@ bool LoadConfig(Span<const char *const> filenames, Config *out_config)
     config_builder.Finish(out_config);
 
     return true;
+}
+
 }

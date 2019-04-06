@@ -7,6 +7,8 @@
 #include "../../libcc/libcc.hh"
 #include "mco_common.hh"
 
+namespace RG {
+
 struct mco_ProcedureRealisation {
     drd_ProcedureCode proc;
     int8_t phase;
@@ -87,7 +89,7 @@ struct mco_Stay {
     // files on 32-bit platforms.
     Span<drd_DiagnosisCode> other_diagnoses;
     Span<mco_ProcedureRealisation> procedures;
-#ifndef ARCH_64
+#ifndef RG_ARCH_64
     char _pad1[32 - 2 * SIZE(Size) - 2 * SIZE(void *)];
 #endif
 };
@@ -101,7 +103,7 @@ static inline bool mco_SplitTest(int32_t id1, int32_t id2)
 template <typename T>
 Span<T> mco_Split(Span<T> mono_stays, Size split_len, Span<T> *out_remainder = nullptr)
 {
-    DebugAssert(mono_stays.len >= split_len);
+    RG_DEBUG_ASSERT(mono_stays.len >= split_len);
 
     while (split_len < mono_stays.len &&
            !mco_SplitTest(mono_stays[split_len - 1].bill_id, mono_stays[split_len].bill_id)) {
@@ -133,7 +135,7 @@ struct mco_Test {
     SupplementTest auth_supplements[16];
     int exb_exh;
 
-    HASH_TABLE_HANDLER(mco_Test, bill_id);
+    RG_HASH_TABLE_HANDLER(mco_Test, bill_id);
 };
 
 struct mco_StaySet {
@@ -148,8 +150,8 @@ struct mco_StaySet {
 class mco_StaySetBuilder {
     mco_StaySet set;
 
-    IndirectBlockAllocator other_diagnoses_alloc {&set.array_alloc, 2048 * SIZE(drd_DiagnosisCode)};
-    IndirectBlockAllocator procedures_alloc {&set.array_alloc, 2048 * SIZE(mco_ProcedureRealisation)};
+    IndirectBlockAllocator other_diagnoses_alloc {&set.array_alloc, 2048 * RG_SIZE(drd_DiagnosisCode)};
+    IndirectBlockAllocator procedures_alloc {&set.array_alloc, 2048 * RG_SIZE(mco_ProcedureRealisation)};
 
     struct FichCompData {
         enum class Type {
@@ -185,3 +187,5 @@ private:
     bool ParseRssLine(Span<const char> line, HashTable<int32_t, mco_Test> *out_tests);
     bool ParseRsaLine(Span<const char> line, HashTable<int32_t, mco_Test> *out_tests);
 };
+
+}

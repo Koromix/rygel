@@ -9,6 +9,8 @@
 #include "../../drd/libdrd/libdrd.hh"
 #include "../../wrappers/http.hh"
 
+namespace RG {
+
 struct StructureEntity;
 
 enum class UserPermission {
@@ -34,7 +36,7 @@ struct User {
     bool CheckMcoDispenseMode(mco_DispenseMode dispense_mode) const
         { return mco_dispense_modes & (1 << (int)dispense_mode); }
 
-    HASH_TABLE_HANDLER(User, name);
+    RG_HASH_TABLE_HANDLER(User, name);
 };
 
 struct UserSet {
@@ -78,3 +80,5 @@ void DeleteSessionCookies(http_Response *response);
 
 int HandleConnect(const http_Request &request, const User *user, http_Response *out_response);
 int HandleDisconnect(const http_Request &request, const User *user, http_Response *out_response);
+
+}

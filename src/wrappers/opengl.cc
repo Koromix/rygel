@@ -5,6 +5,8 @@
 #include "../libcc/libcc.hh"
 #include "opengl.hh"
 
+namespace RG {
+
 bool ogl_InitFunctions(void *(*get_proc_address)(const char *name))
 {
     int gl_version;
@@ -12,7 +14,7 @@ bool ogl_InitFunctions(void *(*get_proc_address)(const char *name))
         GLint major, minor;
         glGetIntegerv(GL_MAJOR_VERSION, &major);
         glGetIntegerv(GL_MINOR_VERSION, &minor);
-        Assert(major < 10 && minor < 10);
+        RG_ASSERT(major < 10 && minor < 10);
         gl_version = major * 10 + minor;
         if (gl_version > 33) {
             gl_version = 33;
@@ -56,7 +58,7 @@ static void LogShaderError(GLuint id, void (GL_API *msg_func)(GLuint, GLsizei, G
     }
 
     char buf[512];
-    msg_func(id, SIZE(buf), nullptr, buf);
+    msg_func(id, RG_SIZE(buf), nullptr, buf);
     Size len = (Size)strlen(buf);
     while (len && strchr(" \t\r\n", buf[len - 1])) {
         len--;
@@ -69,7 +71,7 @@ static void LogShaderError(GLuint id, void (GL_API *msg_func)(GLuint, GLsizei, G
 GLuint ogl_BuildShader(const char *name, const char *vertex_src, const char *fragment_src)
 {
     GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    DEFER { glDeleteShader(vertex_shader); };
+    RG_DEFER { glDeleteShader(vertex_shader); };
     {
         glShaderSource(vertex_shader, 1, &vertex_src, nullptr);
         glCompileShader(vertex_shader);
@@ -83,7 +85,7 @@ GLuint ogl_BuildShader(const char *name, const char *vertex_src, const char *fra
     }
 
     GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    DEFER { glDeleteShader(fragment_shader); };
+    RG_DEFER { glDeleteShader(fragment_shader); };
     {
         glShaderSource(fragment_shader, 1, &fragment_src, nullptr);
         glCompileShader(fragment_shader);
@@ -97,7 +99,7 @@ GLuint ogl_BuildShader(const char *name, const char *vertex_src, const char *fra
     }
 
     GLuint shader_program = glCreateProgram();
-    DEFER_N(program_guard) { glDeleteProgram(shader_program); };
+    RG_DEFER_N(program_guard) { glDeleteProgram(shader_program); };
     {
         glAttachShader(shader_program, vertex_shader);
         glAttachShader(shader_program, fragment_shader);
@@ -115,8 +117,10 @@ GLuint ogl_BuildShader(const char *name, const char *vertex_src, const char *fra
     return shader_program;
 }
 
+}
+
 #ifndef __EMSCRIPTEN__
     #define OGL_FUNCTION(Cond, ...) \
-        FORCE_EXPAND(OGL_FUNCTION_PTR(__VA_ARGS__))
+        RG_FORCE_EXPAND(OGL_FUNCTION_PTR(__VA_ARGS__))
     #include "opengl_func.inc"
 #endif

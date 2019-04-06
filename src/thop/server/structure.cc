@@ -5,13 +5,15 @@
 #include "../../libcc/libcc.hh"
 #include "structure.hh"
 
+namespace RG {
+
 bool StructureSetBuilder::LoadIni(StreamReader &st)
 {
-    DEFER_NC(out_guard, len = set.structures.len) { set.structures.RemoveFrom(len); };
+    RG_DEFER_NC(out_guard, len = set.structures.len) { set.structures.RemoveFrom(len); };
 
     IniParser ini(&st);
     ini.reader.PushLogHandler();
-    DEFER { PopLogHandler(); };
+    RG_DEFER { PopLogHandler(); };
 
     bool valid = true;
     {
@@ -108,7 +110,7 @@ void StructureSetBuilder::Finish(StructureSet *out_set)
         }
     }
 
-    SwapMemory(out_set, &set, SIZE(set));
+    SwapMemory(out_set, &set, RG_SIZE(set));
 }
 
 bool LoadStructureSet(Span<const char *const> filenames, StructureSet *out_set)
@@ -119,4 +121,6 @@ bool LoadStructureSet(Span<const char *const> filenames, StructureSet *out_set)
     structure_set_builder.Finish(out_set);
 
     return true;
+}
+
 }

@@ -13,6 +13,8 @@
 #include "../../libcc/libcc.hh"
 #include "build_compiler.hh"
 
+namespace RG {
+
 static void AppendGccObjectArguments(const char *src_filename, BuildMode build_mode,
                                      const char *pch_filename, Span<const char *const> definitions,
                                      Span<const char *const> include_directories,
@@ -71,7 +73,7 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames, BuildM
         {
             // TODO: Maybe we should try to delete these temporary files when felix exits?
             char temp_directory[4096];
-            if (!GetTempPath(SIZE(temp_directory), temp_directory) ||
+            if (!GetTempPath(RG_SIZE(temp_directory), temp_directory) ||
                     !GetTempFileName(temp_directory, "fxb", 0, rsp_filename)) {
                 LogError("Failed to create temporary path");
                 return false;
@@ -276,3 +278,5 @@ static const Compiler *const CompilerTable[] = {
     &GnuCompiler
 };
 const Span<const Compiler *const> Compilers = CompilerTable;
+
+}

@@ -5,7 +5,9 @@
 #include "../../libcc/libcc.hh"
 #include "../libheimdall/libheimdall.hh"
 
-int main(void)
+namespace RG {
+
+int RunHeimdallW(int, char **)
 {
     InterfaceState render_state = {};
     HeapArray<ConceptSet> concept_sets;
@@ -13,7 +15,7 @@ int main(void)
 
     gui_Window window;
 
-    if (!window.Init(HEIMDALL_NAME))
+    if (!window.Init(RG_HEIMDALL_NAME))
         return 1;
     if (!window.InitImGui())
         return 1;
@@ -27,3 +29,8 @@ int main(void)
 
     return 0;
 }
+
+}
+
+// C++ namespaces are stupid
+int main(int argc, char **argv) { return RG::RunHeimdallW(argc, argv); }

@@ -7,10 +7,12 @@
 #include "../../libgui/libgui.hh"
 #include "core.hh"
 #include "data.hh"
-PUSH_NO_WARNINGS()
+RG_PUSH_NO_WARNINGS()
 #include "../../../vendor/imgui/imgui.h"
 #include "../../../vendor/imgui/imgui_internal.h"
-POP_NO_WARNINGS()
+RG_POP_NO_WARNINGS()
+
+namespace RG {
 
 // Ideas:
 // - Multiple / Task-oriented concept trees
@@ -40,7 +42,7 @@ static ImU32 GetVisColor(VisColor color, float alpha = 1.0f)
         case VisColor::Plot: { return ImGui::GetColorU32(ImGuiCol_PlotLines, alpha); } break;
         case VisColor::Limit: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.9f, 0.7f, 0.03f, 0.4f * alpha)); } break;
     }
-    DebugAssert(false);
+    RG_DEBUG_ASSERT(false);
 }
 
 static bool DetectAnomaly(const Element &elmt)
@@ -53,7 +55,7 @@ static bool DetectAnomaly(const Element &elmt)
         } break;
         case Element::Type::Period: { return false; } break;
     }
-    DebugAssert(false);
+    RG_DEBUG_ASSERT(false);
 }
 
 static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoom, float alpha,
@@ -63,7 +65,7 @@ static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoo
     ImDrawList *draw = ImGui::GetWindowDrawList();
 
     for (const Element *elmt: periods) {
-        DebugAssert(elmt->type == Element::Type::Period);
+        RG_DEBUG_ASSERT(elmt->type == Element::Type::Period);
 
         ImRect rect {
             x_offset + (float)elmt->time * time_zoom, y_min,
@@ -91,9 +93,9 @@ static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoo
 
 static void TextMeasure(const Element &elmt, double align_offset)
 {
-    DebugAssert(elmt.type == Element::Type::Measure);
+    RG_DEBUG_ASSERT(elmt.type == Element::Type::Measure);
 
-    DEFER_N(style_guard) { ImGui::PopStyleColor(); };
+    RG_DEFER_N(style_guard) { ImGui::PopStyleColor(); };
     if (DetectAnomaly(elmt)) {
         ImGui::PushStyleColor(ImGuiCol_Text, GetVisColor(VisColor::Alert));
     } else {
@@ -143,7 +145,7 @@ static void DrawEventsBlock(ImRect rect, float alpha, Span<const Element *const>
                 { rect.Max.x + 10.0f, bb.Max.y },
                 { rect.Min.x - 10.0f, bb.Max.y }
             };
-            draw->AddConvexPolyFilled(points, ARRAY_SIZE(points), color);
+            draw->AddConvexPolyFilled(points, RG_ARRAY_SIZE(points), color);
         } else {
             ImVec2 points[] = {
                 { rect.Min.x, bb.Min.y },
@@ -229,7 +231,7 @@ void DrawLine(InterpolationMode interpolation, Fun f)
                 if (!f(i, &point, &color))
                     break;
 
-                if (LIKELY(!std::isnan(prev_point.y) && !std::isnan(point.y))) {
+                if (RG_LIKELY(!std::isnan(prev_point.y) && !std::isnan(point.y))) {
                     draw->AddLine(prev_point, point, prev_color, 1.0f);
                 }
 
@@ -249,13 +251,13 @@ void DrawLine(InterpolationMode interpolation, Fun f)
                 if (!f(i, &point, &color))
                     break;
 
-                if (LIKELY(!std::isnan(prev_point.y) && !std::isnan(point.y))) {
+                if (RG_LIKELY(!std::isnan(prev_point.y) && !std::isnan(point.y))) {
                     ImVec2 points[] = {
                         prev_point,
                         ImVec2(point.x, prev_point.y),
                         point
                     };
-                    draw->AddPolyline(points, ARRAY_SIZE(points), prev_color, false, 1.0f);
+                    draw->AddPolyline(points, RG_ARRAY_SIZE(points), prev_color, false, 1.0f);
                 }
 
                 prev_color = color;
@@ -280,7 +282,7 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
 {
     if (!measures.len)
         return;
-    DebugAssert(measures[0]->type == Element::Type::Measure);
+    RG_DEBUG_ASSERT(measures[0]->type == Element::Type::Measure);
 
     ImDrawList *draw = ImGui::GetWindowDrawList();
 
@@ -288,7 +290,7 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
     if (max > min) {
         y_scaler  = (y_max - y_min - 4.0f) / (float)(max - min);;
     } else {
-        DebugAssert(!(min > max));
+        RG_DEBUG_ASSERT(!(min > max));
         y_max = (y_max + y_min) / 2.0f;
         y_scaler = 1.0f;
     }
@@ -308,7 +310,7 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
     DrawLine(interpolation, [&](Size i, ImVec2 *out_point, ImU32 *out_color) {
         if (i >= measures.len)
             return false;
-        DebugAssert(measures[i]->type == Element::Type::Measure);
+        RG_DEBUG_ASSERT(measures[i]->type == Element::Type::Measure);
         if (!std::isnan(measures[i]->u.measure.min)) {
             *out_point = ComputeCoordinates(measures[i]->time, measures[i]->u.measure.min);
             *out_color = GetVisColor(VisColor::Limit, alpha);
@@ -430,7 +432,7 @@ static LineInteraction DrawLineFrame(ImRect bb, float tree_width, const LineData
         }
 
         ImGui::PushStyleColor(ImGuiCol_Text, text_color);
-        DEFER { ImGui::PopStyleColor(1); };
+        RG_DEFER { ImGui::PopStyleColor(1); };
 
         if (!line.leaf) {
             ImGui::RenderArrow(ImVec2(bb.Min.x + (float)line.depth * 16.0f, y),
@@ -586,7 +588,7 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
                     continue;
                 }
             }
-            DebugAssert(path.len > 0);
+            RG_DEBUG_ASSERT(path.len > 0);
 
             bool fully_deployed = false;
             {
@@ -628,7 +630,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
 
     ImDrawList *draw = ImGui::GetWindowDrawList();
     draw->PushClipRect(bb.Min, bb.Max);
-    DEFER { draw->PopClipRect(); };
+    RG_DEFER { draw->PopClipRect(); };
 
     bool cache_refreshed = false;
     if (!state.size_cache_valid ||
@@ -735,7 +737,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                         continue;
                     }
                 }
-                DebugAssert(path.len > 0);
+                RG_DEBUG_ASSERT(path.len > 0);
 
                 bool fully_deployed = true;
                 int tree_depth = 0;
@@ -851,7 +853,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
     {
         draw->PushClipRect(ImVec2(win->ClipRect.Min.x + tree_width, win->ClipRect.Min.y),
                            win->ClipRect.Max, true);
-        DEFER { draw->PopClipRect(); };
+        RG_DEFER { draw->PopClipRect(); };
 
         float y = render_offset + bb.Min.y;
         for (const LineData &line: lines) {
@@ -1170,7 +1172,7 @@ static void ToggleAlign(InterfaceState &state)
     if (state.align_concepts.table.count) {
         state.align_concepts.Clear();
     } else {
-        SwapMemory(&state.align_concepts, &state.select_concepts, SIZE(state.align_concepts));
+        SwapMemory(&state.align_concepts, &state.select_concepts, RG_SIZE(state.align_concepts));
     }
     state.size_cache_valid = false;
 }
@@ -1282,7 +1284,7 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
         ImGui::SetNextWindowPos(view_pos);
         ImGui::SetNextWindowSize(view_size);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-        DEFER { ImGui::PopStyleVar(1); };
+        RG_DEFER { ImGui::PopStyleVar(1); };
 
         ImGui::Begin("View", nullptr, view_flags);
         {
@@ -1351,7 +1353,7 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
         if (ImGui::CollapsingHeader("Plots", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Checkbox("Draw plots", &state.new_settings.plot_measures);
             ImGui::Combo("Interpolation", (int *)&state.new_settings.interpolation,
-                     interpolation_mode_names, ARRAY_SIZE(interpolation_mode_names));
+                     interpolation_mode_names, RG_ARRAY_SIZE(interpolation_mode_names));
         }
 
         if (ImGui::Button("Apply")) {
@@ -1383,4 +1385,6 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
     }
 
     return true;
+}
+
 }

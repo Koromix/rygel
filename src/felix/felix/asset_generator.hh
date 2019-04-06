@@ -6,6 +6,8 @@
 
 #include "../../libcc/libcc.hh"
 
+namespace RG {
+
 enum class GeneratorType {
     C,
     Files
@@ -40,3 +42,5 @@ bool GenerateC(Span<const AssetInfo> assets, const char *output_path,
                CompressionType compression_type);
 bool GenerateFiles(Span<const AssetInfo> assets, const char *output_path,
                    CompressionType compression_type);
+
+}

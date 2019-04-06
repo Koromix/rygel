@@ -20,6 +20,8 @@
 #include "../felix/libpack/libpack.hh"
 #include "../../vendor/imgui/imgui.h"
 
+namespace RG {
+
 extern "C" const pack_Asset *const pack_asset_Roboto_Medium_ttf;
 
 decltype(InitializeConfig) *InitializeConfig_;
@@ -102,7 +104,7 @@ static LoadStatus LoadSimulationModule(const char *filename)
     InitializeConfig_ = (decltype(InitializeConfig_))find_symbol("InitializeConfig");
     InitializeHumans_ = (decltype(InitializeHumans_))find_symbol("InitializeHumans");
     RunSimulationStep_ = (decltype(RunSimulationStep_))find_symbol("RunSimulationStep");
-    DebugAssert(InitializeConfig_ && InitializeHumans_ && RunSimulationStep_);
+    RG_DEBUG_ASSERT(InitializeConfig_ && InitializeHumans_ && RunSimulationStep_);
 
     return LoadStatus::Loaded;
 }
@@ -116,14 +118,14 @@ void Simulation::Reset()
     iteration = 0;
 }
 
-int main(int, char **)
+int RunSimPL(int, char **)
 {
 #ifdef SIMPL_ENABLE_HOT_RELOAD
     char module_filename[4096];
     {
         Span<const char> executable_path = GetApplicationExecutable();
         SplitStrReverse(executable_path, '.', &executable_path);
-        Fmt(module_filename, "%1%2", executable_path, SHARED_LIBRARY_EXTENSION);
+        Fmt(module_filename, "%1%2", executable_path, RG_SHARED_LIBRARY_EXTENSION);
     }
 
     // The OS will unload this for us
@@ -138,7 +140,7 @@ int main(int, char **)
     ImFontAtlas font_atlas;
     {
         const pack_Asset &font = *pack_asset_Roboto_Medium_ttf;
-        DebugAssert(font.data.len <= INT_MAX);
+        RG_DEBUG_ASSERT(font.data.len <= INT_MAX);
 
         ImFontConfig font_config;
         font_config.FontDataOwnedByAtlas = false;
@@ -172,7 +174,7 @@ int main(int, char **)
                     simulation->iteration++;
                 }
             } else {
-                SwapMemory(&simulations[i--], &simulations[simulations.len - 1], SIZE(Simulation));
+                SwapMemory(&simulations[i--], &simulations[simulations.len - 1], RG_SIZE(Simulation));
                 simulations.RemoveLast();
             }
         }
@@ -205,3 +207,8 @@ int main(int, char **)
 
     return 0;
 }
+
+}
+
+// C++ namespaces are stupid
+int main(int argc, char **argv) { return RG::RunSimPL(argc, argv); }

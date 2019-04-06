@@ -5,10 +5,12 @@
 #include "../libcc/libcc.hh"
 #include "window.hh"
 #include "../wrappers/opengl.hh"
-PUSH_NO_WARNINGS()
+RG_PUSH_NO_WARNINGS()
 #include "../../vendor/imgui/imgui.h"
 #include "../../vendor/imgui/imgui_internal.h"
-POP_NO_WARNINGS()
+RG_POP_NO_WARNINGS()
+
+namespace RG {
 
 static const char *const ImGuiVertexCode =
 #ifdef __EMSCRIPTEN__
@@ -71,10 +73,10 @@ bool gui_Window::imgui_ready = false;
 
 bool gui_Window::InitImGui(ImFontAtlas *font_atlas)
 {
-    Assert(!imgui_ready);
+    RG_ASSERT(!imgui_ready);
 
     ImGui::CreateContext(font_atlas);
-    DEFER_N(imgui_guard) { ReleaseImGui(); };
+    RG_DEFER_N(imgui_guard) { ReleaseImGui(); };
 
     ImGuiIO *io = &ImGui::GetIO();
     io->IniFilename = nullptr;
@@ -108,12 +110,12 @@ bool gui_Window::InitImGui(ImFontAtlas *font_atlas)
     glEnableVertexAttribArray(attrib_position);
     glEnableVertexAttribArray(attrib_uv);
     glEnableVertexAttribArray(attrib_color);
-    glVertexAttribPointer(attrib_position, 2, GL_FLOAT, GL_FALSE, SIZE(ImDrawVert),
-                          (GLvoid *)OFFSET_OF(ImDrawVert, pos));
-    glVertexAttribPointer(attrib_uv, 2, GL_FLOAT, GL_FALSE, SIZE(ImDrawVert),
-                          (GLvoid *)OFFSET_OF(ImDrawVert, uv));
-    glVertexAttribPointer(attrib_color, 4, GL_UNSIGNED_BYTE, GL_TRUE, SIZE(ImDrawVert),
-                          (GLvoid *)OFFSET_OF(ImDrawVert, col));
+    glVertexAttribPointer(attrib_position, 2, GL_FLOAT, GL_FALSE, RG_SIZE(ImDrawVert),
+                          (GLvoid *)RG_OFFSET_OF(ImDrawVert, pos));
+    glVertexAttribPointer(attrib_uv, 2, GL_FLOAT, GL_FALSE, RG_SIZE(ImDrawVert),
+                          (GLvoid *)RG_OFFSET_OF(ImDrawVert, uv));
+    glVertexAttribPointer(attrib_color, 4, GL_UNSIGNED_BYTE, GL_TRUE, RG_SIZE(ImDrawVert),
+                          (GLvoid *)RG_OFFSET_OF(ImDrawVert, col));
 
     if (!font_texture) {
         uint8_t *pixels;
@@ -164,7 +166,7 @@ void gui_Window::StartImGuiFrame()
     io->DisplaySize = ImVec2((float)info.display.width, (float)info.display.height);
     io->DeltaTime = (float)info.time.monotonic_delta;
 
-    memset(io->KeysDown, 0, SIZE(io->KeysDown));
+    memset(io->KeysDown, 0, RG_SIZE(io->KeysDown));
     for (Size idx: info.input.keys) {
         io->KeysDown[idx] = true;
     }
@@ -174,7 +176,7 @@ void gui_Window::StartImGuiFrame()
     io->AddInputCharactersUTF8(info.input.text.data);
 
     io->MousePos = ImVec2((float)info.input.x, (float)info.input.y);
-    for (Size i = 0; i < ARRAY_SIZE(io->MouseDown); i++) {
+    for (Size i = 0; i < RG_ARRAY_SIZE(io->MouseDown); i++) {
         io->MouseDown[i] = info.input.buttons & (unsigned int)(1 << i);
     }
     io->MouseWheel = (float)info.input.wheel_y;
@@ -215,7 +217,7 @@ void gui_Window::ReleaseImGui()
 
 void gui_Window::RenderImGui()
 {
-    DebugAssert(imgui_local);
+    RG_DEBUG_ASSERT(imgui_local);
 
     // Clear screen
     glViewport(0, 0, info.display.width, info.display.height);
@@ -261,10 +263,10 @@ void gui_Window::RenderImGui()
             const ImDrawIdx *idx_buffer_offset = nullptr;
 
             glBindBuffer(GL_ARRAY_BUFFER, array_buffer);
-            glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)cmds->VtxBuffer.Size * SIZE(ImDrawVert),
+            glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)cmds->VtxBuffer.Size * RG_SIZE(ImDrawVert),
                          (const GLvoid*)cmds->VtxBuffer.Data, GL_STREAM_DRAW);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elements_buffer);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)cmds->IdxBuffer.Size * SIZE(ImDrawIdx),
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)cmds->IdxBuffer.Size * RG_SIZE(ImDrawIdx),
                          (const GLvoid*)cmds->IdxBuffer.Data, GL_STREAM_DRAW);
 
             for (const ImDrawCmd &cmd: cmds->CmdBuffer) {
@@ -276,11 +278,13 @@ void gui_Window::RenderImGui()
                               (int)(cmd.ClipRect.z - cmd.ClipRect.x),
                               (int)(cmd.ClipRect.w - cmd.ClipRect.y));
                     glDrawElements(GL_TRIANGLES, (GLsizei)cmd.ElemCount,
-                                   SIZE(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT,
+                                   RG_SIZE(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT,
                                    idx_buffer_offset);
                 }
                 idx_buffer_offset += cmd.ElemCount;
             }
         }
     }
+}
+
 }

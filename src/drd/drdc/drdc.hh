@@ -7,6 +7,8 @@
 #include "../../libcc/libcc.hh"
 #include "../libdrd/libdrd.hh"
 
+namespace RG {
+
 struct Config;
 
 extern const char *const CommonOptions;
@@ -14,3 +16,5 @@ extern const char *const CommonOptions;
 extern Config drdc_config;
 
 bool HandleCommonOption(OptionParser &opt);
+
+}

@@ -7,6 +7,8 @@
 #include "../../libcc/libcc.hh"
 #include "mco_classifier.hh"
 
+namespace RG {
+
 class mco_FilterRunner {
     HeapArray<char> filter_buf;
 
@@ -52,4 +54,6 @@ static inline bool mco_Filter(const char *filter,
     mco_FilterRunner runner;
     return runner.Init(filter) &&
            runner.Process(results, out_results, out_stay_set);
+}
+
 }

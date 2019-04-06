@@ -6,6 +6,8 @@
 #include "drdc.hh"
 #include "config.hh"
 
+namespace RG {
+
 int RunMcoClassify(Span<const char *> arguments);
 int RunMcoDump(Span<const char *> arguments);
 int RunMcoList(Span<const char *> arguments);
@@ -57,7 +59,7 @@ bool HandleCommonOption(OptionParser &opt)
     return true;
 }
 
-int main(int argc, char **argv)
+int RunDrdc(int argc, char **argv)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc <command> [<args>]
@@ -120,7 +122,7 @@ Commands:
 
 #define HANDLE_COMMAND(Cmd, Func) \
         do { \
-            if (TestStr(cmd, STRINGIFY(Cmd))) { \
+            if (TestStr(cmd, RG_STRINGIFY(Cmd))) { \
                 if (config_filename && !LoadConfig(config_filename, &drdc_config)) \
                     return 1; \
                  \
@@ -140,3 +142,8 @@ Commands:
     LogError("Unknown command '%1'", cmd);
     return 1;
 }
+
+}
+
+// C++ namespaces are stupid
+int main(int argc, char **argv) { return RG::RunDrdc(argc, argv); }

@@ -6,22 +6,24 @@
 #include "drdc.hh"
 #include "config.hh"
 
+namespace RG {
+
 bool ConfigBuilder::LoadIni(StreamReader &st)
 {
-    DEFER_NC(out_guard, table_directories_len = config.table_directories.len,
-                        profile_directory = config.profile_directory,
-                        mco_authorization_filename = config.mco_authorization_filename) {
+    RG_DEFER_NC(out_guard, table_directories_len = config.table_directories.len,
+                           profile_directory = config.profile_directory,
+                           mco_authorization_filename = config.mco_authorization_filename) {
         config.table_directories.RemoveFrom(table_directories_len);
         config.profile_directory = profile_directory;
         config.mco_authorization_filename = mco_authorization_filename;
     };
 
     Span<const char> root_directory;
-    SplitStrReverseAny(st.filename, PATH_SEPARATORS, &root_directory);
+    SplitStrReverseAny(st.filename, RG_PATH_SEPARATORS, &root_directory);
 
     IniParser ini(&st);
     ini.reader.PushLogHandler();
-    DEFER { PopLogHandler(); };
+    RG_DEFER { PopLogHandler(); };
 
     bool valid = true;
     {
@@ -110,7 +112,7 @@ bool ConfigBuilder::LoadFiles(Span<const char *const> filenames)
 
 void ConfigBuilder::Finish(Config *out_config)
 {
-    SwapMemory(out_config, &config, SIZE(config));
+    SwapMemory(out_config, &config, RG_SIZE(config));
 }
 
 bool LoadConfig(Span<const char *const> filenames, Config *out_config)
@@ -121,4 +123,6 @@ bool LoadConfig(Span<const char *const> filenames, Config *out_config)
     config_builder.Finish(out_config);
 
     return true;
+}
+
 }
