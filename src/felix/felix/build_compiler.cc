@@ -137,7 +137,7 @@ public:
                                   const char *deps_filename, Allocator *alloc) const override
     {
 #ifdef _WIN32
-        static const char *const flags = "-Wall -Wno-unknown-warning-option "
+        static const char *const flags = "-Wall -Wno-unknown-warning-option -Wno-unknown-pragmas "
                                          "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE";
 #else
         static const char *const flags = "-pthread -Wall";
