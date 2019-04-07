@@ -233,7 +233,7 @@ void AggregateSetBuilder::Process(Span<const mco_Result> results, Span<const mco
             const mco_Result &mono_result = sub_mono_results[k];
             const mco_Pricing &mono_pricing = sub_mono_pricings[k];
             drd_UnitCode unit = mono_result.stays[0].unit;
-            RG_DEBUG_ASSERT(mono_result.stays[0].bill_id == result.stays[0].bill_id);
+            RG_ASSERT_DEBUG(mono_result.stays[0].bill_id == result.stays[0].bill_id);
 
             if (user->mco_allowed_units.Find(unit)) {
                 std::pair<Aggregate::Part *, bool> ret =
@@ -287,7 +287,7 @@ void AggregateSetBuilder::Process(Span<const mco_Result> results, Span<const mco
             agg->mono_count += multiplier * (int32_t)result.stays.len;
             agg->price_cents += multiplier * pricing.price_cents;
             if (agg->parts.ptr) {
-                RG_DEBUG_ASSERT(agg->parts.len == agg_parts.len);
+                RG_ASSERT_DEBUG(agg->parts.len == agg_parts.len);
                 for (Size k = 0; k < agg->parts.len; k++) {
                     agg->parts[k].mono_count += agg_parts[k].mono_count;
                     agg->parts[k].price_cents += agg_parts[k].price_cents;

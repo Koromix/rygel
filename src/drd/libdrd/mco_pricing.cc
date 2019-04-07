@@ -73,7 +73,7 @@ void mco_Price(const mco_Result &result, bool apply_coefficient, mco_Pricing *ou
     }
 
     out_pricing->supplement_days += result.supplement_days;
-    for (Size i = 0; i < RG_ARRAY_SIZE(mco_SupplementTypeNames); i++) {
+    for (Size i = 0; i < RG_LEN(mco_SupplementTypeNames); i++) {
         int32_t supplement_cents = (int32_t)(ghs_coefficient *
                                              (result.supplement_days.values[i] * prices.values[i]));
 
@@ -141,7 +141,7 @@ static double ComputeCoefficients(const mco_Pricing &pricing, Span<const mco_Pri
     double total = 0;
     for (Size i = 0; i < mono_pricings.len; i++) {
         const mco_Pricing &mono_pricing = mono_pricings[i];
-        RG_DEBUG_ASSERT(mono_pricing.stays[0].bill_id == pricing.stays[0].bill_id);
+        RG_ASSERT_DEBUG(mono_pricing.stays[0].bill_id == pricing.stays[0].bill_id);
 
         double coefficient = -1;
         switch (mode) {
@@ -188,7 +188,7 @@ static double ComputeCoefficients(const mco_Pricing &pricing, Span<const mco_Pri
 void mco_Dispense(Span<const mco_Pricing> pricings, Span<const mco_Pricing> mono_pricings,
                   mco_DispenseMode dispense_mode, HeapArray<mco_Pricing> *out_mono_pricings)
 {
-    RG_DEBUG_ASSERT(mono_pricings.len >= pricings.len);
+    RG_ASSERT_DEBUG(mono_pricings.len >= pricings.len);
 
     static const int task_size = 2048;
 

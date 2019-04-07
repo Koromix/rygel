@@ -106,7 +106,7 @@ void rcc_Vector<Date>::Set(Size idx, Date date)
                 char buf[32];
                 Fmt(buf, "%1", date);
 
-                RG_DEBUG_ASSERT(idx >= 0 && idx < u.chr.len);
+                RG_ASSERT_DEBUG(idx >= 0 && idx < u.chr.len);
                 SET_STRING_ELT(xp, idx, Rf_mkChar(buf));
             } else {
                 SET_STRING_ELT(xp, idx, NA_STRING);

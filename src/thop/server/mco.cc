@@ -270,7 +270,7 @@ static Span<const mco_Result *> GetIndexRange(Span<const mco_Result *> index,
 
 bool McoResultProvider::Run(std::function<void(Span<const mco_Result>, Span<const mco_Result>)> func)
 {
-    RG_DEBUG_ASSERT(min_date.IsValid() && max_date.IsValid());
+    RG_ASSERT_DEBUG(min_date.IsValid() && max_date.IsValid());
 
     if (filter) {
         return RunFilter(func);
@@ -283,7 +283,7 @@ bool McoResultProvider::Run(std::function<void(Span<const mco_Result>, Span<cons
 
 bool McoResultProvider::RunFilter(std::function<void(Span<const mco_Result>, Span<const mco_Result>)> func)
 {
-    RG_DEBUG_ASSERT(filter);
+    RG_ASSERT_DEBUG(filter);
 
     const Size split_size = 8192;
 
@@ -369,7 +369,7 @@ bool McoResultProvider::RunFilter(std::function<void(Span<const mco_Result>, Spa
 
 bool McoResultProvider::RunIndex(std::function<void(Span<const mco_Result>, Span<const mco_Result>)> func)
 {
-    RG_DEBUG_ASSERT(ghm_root.IsValid());
+    RG_ASSERT_DEBUG(ghm_root.IsValid());
 
     const Size split_size = 8192;
 
@@ -401,7 +401,7 @@ bool McoResultProvider::RunIndex(std::function<void(Span<const mco_Result>, Span
 
 bool McoResultProvider::RunDirect(std::function<void(Span<const mco_Result>, Span<const mco_Result>)> func)
 {
-    RG_DEBUG_ASSERT(!ghm_root.IsValid());
+    RG_ASSERT_DEBUG(!ghm_root.IsValid());
 
     const Size split_size = 65536;
 
@@ -460,7 +460,7 @@ int ProduceMcoSettings(const http_Request &request, const User *user, http_Respo
             const OptionDesc &default_desc = mco_DispenseModeOptions[(int)thop_config.mco_dispense_mode];
 
             json.Key("algorithms"); json.StartArray();
-            for (Size i = 0; i < RG_ARRAY_SIZE(mco_DispenseModeOptions); i++) {
+            for (Size i = 0; i < RG_LEN(mco_DispenseModeOptions); i++) {
                 if (user->CheckMcoDispenseMode((mco_DispenseMode)i)) {
                     const OptionDesc &desc = mco_DispenseModeOptions[i];
 
@@ -476,7 +476,7 @@ int ProduceMcoSettings(const http_Request &request, const User *user, http_Respo
         }
 
         json.Key("permissions"); json.StartArray();
-        for (Size i = 0; i < RG_ARRAY_SIZE(UserPermissionNames); i++) {
+        for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
             if (user->permissions & (1 << i)) {
                 json.String(UserPermissionNames[i]);
             }

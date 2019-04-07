@@ -129,8 +129,8 @@ bool http_Daemon::Start(IPStack stack, int port, int threads, const char *base_u
 {
     RG_ASSERT(!daemon);
 
-    RG_DEBUG_ASSERT(handle_func);
-    RG_DEBUG_ASSERT(base_url);
+    RG_ASSERT_DEBUG(handle_func);
+    RG_ASSERT_DEBUG(base_url);
 
     // Validate configuration
     {
@@ -217,7 +217,7 @@ void http_Response::AddCookieHeader(const char *path, const char *name, const ch
 
 void http_Response::AddCachingHeaders(int max_age, const char *etag)
 {
-    RG_DEBUG_ASSERT(max_age >= 0);
+    RG_ASSERT_DEBUG(max_age >= 0);
 
     if (flags & (int)http_Response::Flag::DisableCacheControl) {
         max_age = 0;

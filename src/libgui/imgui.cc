@@ -176,7 +176,7 @@ void gui_Window::StartImGuiFrame()
     io->AddInputCharactersUTF8(info.input.text.data);
 
     io->MousePos = ImVec2((float)info.input.x, (float)info.input.y);
-    for (Size i = 0; i < RG_ARRAY_SIZE(io->MouseDown); i++) {
+    for (Size i = 0; i < RG_LEN(io->MouseDown); i++) {
         io->MouseDown[i] = info.input.buttons & (unsigned int)(1 << i);
     }
     io->MouseWheel = (float)info.input.wheel_y;
@@ -217,7 +217,7 @@ void gui_Window::ReleaseImGui()
 
 void gui_Window::RenderImGui()
 {
-    RG_DEBUG_ASSERT(imgui_local);
+    RG_ASSERT_DEBUG(imgui_local);
 
     // Clear screen
     glViewport(0, 0, info.display.width, info.display.height);

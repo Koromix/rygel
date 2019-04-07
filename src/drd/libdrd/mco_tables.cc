@@ -140,7 +140,7 @@ static bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filenam
                                                        RG_SIZE(PackedHeader1111)));
 
         PackedHeader1111 raw_table_header;
-        PackedSection1111 raw_table_sections[RG_ARRAY_SIZE(table.sections.data)];
+        PackedSection1111 raw_table_sections[RG_LEN(table.sections.data)];
         {
             bool weird_section = false;
 
@@ -155,7 +155,7 @@ static bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filenam
             }
             FAIL_PARSE_IF(filename, file_data.len < (Size)(raw_table_ptr.raw_offset +
                                                            (uint32_t)raw_table_header.sections_count * RG_SIZE(PackedSection1111)));
-            FAIL_PARSE_IF(filename, raw_table_header.sections_count > RG_ARRAY_SIZE(raw_table_sections));
+            FAIL_PARSE_IF(filename, raw_table_header.sections_count > RG_LEN(raw_table_sections));
 
             for (int j = 0; j < raw_table_header.sections_count; j++) {
                 memcpy(&raw_table_sections[j], file_data.ptr + raw_table_ptr.raw_offset +
@@ -864,7 +864,7 @@ static bool ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &ta
             uint16_t low_duration_treshold;
         } sectors[2];
 	};
-    RG_STATIC_ASSERT(RG_ARRAY_SIZE(PackedGhsNode().sectors) == RG_ARRAY_SIZE(mco_GhmToGhsInfo().ghs));
+    RG_STATIC_ASSERT(RG_LEN(PackedGhsNode().sectors) == RG_LEN(mco_GhmToGhsInfo().ghs));
 #pragma pack(pop)
 
     FAIL_PARSE_IF(table.filename, table.sections.len != 1);
@@ -959,7 +959,7 @@ static bool ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &ta
         }
 
         if (raw_ghs_node.valid_ghs) {
-            for (Size j = 0; j < RG_ARRAY_SIZE(current_ghs.ghs); j++) {
+            for (Size j = 0; j < RG_LEN(current_ghs.ghs); j++) {
                 current_ghs.ghs[j].number = (int16_t)raw_ghs_node.sectors[j].ghs_code;
             }
             out_ghs->Append(current_ghs);
@@ -1384,11 +1384,11 @@ bool mco_TableSetBuilder::Finish(mco_TableSet *out_set)
 
     int failures = 0;
     {
-        TableLoadInfo *active_tables[RG_ARRAY_SIZE(mco_TableTypeNames)];
+        TableLoadInfo *active_tables[RG_LEN(mco_TableTypeNames)];
         Size active_count = 0;
 
-        TableLoadInfo dummy_loads[RG_ARRAY_SIZE(mco_TableTypeNames)];
-        for (Size i = 0; i < RG_ARRAY_SIZE(active_tables); i++) {
+        TableLoadInfo dummy_loads[RG_LEN(mco_TableTypeNames)];
+        for (Size i = 0; i < RG_LEN(active_tables); i++) {
             dummy_loads[i].table_idx = -1;
             dummy_loads[i].prev_index_idx = -1;
             active_tables[i] = &dummy_loads[i];
@@ -1404,7 +1404,7 @@ bool mco_TableSetBuilder::Finish(mco_TableSet *out_set)
 
                 start_date = {};
                 Date next_end_date = {};
-                for (Size i = 0; i < RG_ARRAY_SIZE(active_tables); i++) {
+                for (Size i = 0; i < RG_LEN(active_tables); i++) {
                     if (active_tables[i]->table_idx < 0)
                         continue;
 
@@ -1460,7 +1460,7 @@ static void BuildAdditionLists(const mco_TableIndex &index,
     for (const ProcedureAdditionInfo &addition_info: additions) {
         int16_t addition_idx = 0;
         if (RG_LIKELY(addition_info.activity2 >= 0 &&
-                      addition_info.activity2 < RG_ARRAY_SIZE(mco_ProcedureInfo::additions))) {
+                      addition_info.activity2 < RG_LEN(mco_ProcedureInfo::additions))) {
             mco_ProcedureInfo *proc_info =
                 (mco_ProcedureInfo *)index.procedures_map->FindValue(addition_info.proc2, nullptr);
 
@@ -1560,7 +1560,7 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
         } while (false)
 
     // Load tables and build index
-    for (Size i = 0; i < RG_ARRAY_SIZE(index.tables); i++) {
+    for (Size i = 0; i < RG_LEN(index.tables); i++) {
         bool valid = true;
 
         TableLoadInfo *load_info = current_tables[i];

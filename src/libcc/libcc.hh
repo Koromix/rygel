@@ -164,9 +164,9 @@ extern "C" void RG_NORETURN AssertFail(const char *cond);
             RG::AssertFail(RG_STRINGIFY(Cond)); \
     } while (false)
 #ifndef NDEBUG
-    #define RG_DEBUG_ASSERT(Cond) RG_ASSERT(Cond)
+    #define RG_ASSERT_DEBUG(Cond) RG_ASSERT(Cond)
 #else
-    #define RG_DEBUG_ASSERT(Cond) \
+    #define RG_ASSERT_DEBUG(Cond) \
         do { \
             if (!RG_LIKELY(Cond)) { \
                 RG_UNREACHABLE(); \
@@ -195,7 +195,7 @@ constexpr Size Kilobytes(Size len) { return len * 1000; }
 #define RG_SIZE(Type) ((RG::Size)sizeof(Type))
 template <typename T, unsigned N>
 char (&ComputeArraySize(T const (&)[N]))[N];
-#define RG_ARRAY_SIZE(Array) RG_SIZE(RG::ComputeArraySize(Array))
+#define RG_LEN(Array) RG_SIZE(RG::ComputeArraySize(Array))
 #define RG_OFFSET_OF(Type, Member) ((Size)&(((Type *)nullptr)->Member))
 
 static inline constexpr uint16_t ReverseBytes(uint16_t u)
@@ -567,7 +567,7 @@ public:
     BlockAllocatorBase(Size block_size = RG_BLOCK_ALLOCATOR_DEFAULT_SIZE)
         : block_size(block_size)
     {
-        RG_DEBUG_ASSERT(block_size > 0);
+        RG_ASSERT_DEBUG(block_size > 0);
     }
 
 protected:
@@ -645,12 +645,12 @@ struct Span {
 
     T &operator[](Size idx)
     {
-        RG_DEBUG_ASSERT(idx >= 0 && idx < len);
+        RG_ASSERT_DEBUG(idx >= 0 && idx < len);
         return ptr[idx];
     }
     const T &operator[](Size idx) const
     {
-        RG_DEBUG_ASSERT(idx >= 0 && idx < len);
+        RG_ASSERT_DEBUG(idx >= 0 && idx < len);
         return ptr[idx];
     }
 
@@ -672,8 +672,8 @@ struct Span {
 
     Span Take(Size offset, Size sub_len) const
     {
-        RG_DEBUG_ASSERT(sub_len >= 0 && sub_len <= len);
-        RG_DEBUG_ASSERT(offset >= 0 && offset <= len - sub_len);
+        RG_ASSERT_DEBUG(sub_len >= 0 && sub_len <= len);
+        RG_ASSERT_DEBUG(offset >= 0 && offset <= len - sub_len);
 
         Span<T> sub;
         sub.ptr = ptr + offset;
@@ -707,7 +707,7 @@ struct Span<const char> {
 
     char operator[](Size idx) const
     {
-        RG_DEBUG_ASSERT(idx >= 0 && idx < len);
+        RG_ASSERT_DEBUG(idx >= 0 && idx < len);
         return ptr[idx];
     }
 
@@ -719,8 +719,8 @@ struct Span<const char> {
 
     Span Take(Size offset, Size sub_len) const
     {
-        RG_DEBUG_ASSERT(sub_len >= 0 && sub_len <= len);
-        RG_DEBUG_ASSERT(offset >= 0 && offset <= len - sub_len);
+        RG_ASSERT_DEBUG(sub_len >= 0 && sub_len <= len);
+        RG_ASSERT_DEBUG(offset >= 0 && offset <= len - sub_len);
 
         Span<const char> sub;
         sub.ptr = ptr + offset;
@@ -759,7 +759,7 @@ public:
 
     T &operator[](Size idx) const
     {
-        RG_DEBUG_ASSERT(idx >= 0);
+        RG_ASSERT_DEBUG(idx >= 0);
         return *(T *)((uint8_t *)ptr + (idx * stride));
     }
 };
@@ -791,7 +791,7 @@ public:
     FixedArray() = default;
     FixedArray(std::initializer_list<T> l)
     {
-        RG_DEBUG_ASSERT(l.size() <= N);
+        RG_ASSERT_DEBUG(l.size() <= N);
         for (Size i = 0; i < l.size(); i++) {
             data[i] = l[i];
         }
@@ -807,12 +807,12 @@ public:
 
     T &operator[](Size idx)
     {
-        RG_DEBUG_ASSERT(idx >= 0 && idx < N);
+        RG_ASSERT_DEBUG(idx >= 0 && idx < N);
         return data[idx];
     }
     const T &operator[](Size idx) const
     {
-        RG_DEBUG_ASSERT(idx >= 0 && idx < N);
+        RG_ASSERT_DEBUG(idx >= 0 && idx < N);
         return data[idx];
     }
 
@@ -843,7 +843,7 @@ public:
     LocalArray() = default;
     LocalArray(std::initializer_list<T> l)
     {
-        RG_DEBUG_ASSERT(l.size() <= N);
+        RG_ASSERT_DEBUG(l.size() <= N);
         for (const T &val: l) {
             Append(val);
         }
@@ -869,12 +869,12 @@ public:
 
     T &operator[](Size idx)
     {
-        RG_DEBUG_ASSERT(idx >= 0 && idx < len);
+        RG_ASSERT_DEBUG(idx >= 0 && idx < len);
         return data[idx];
     }
     const T &operator[](Size idx) const
     {
-        RG_DEBUG_ASSERT(idx >= 0 && idx < len);
+        RG_ASSERT_DEBUG(idx >= 0 && idx < len);
         return data[idx];
     }
 
@@ -894,7 +894,7 @@ public:
 
     T *AppendDefault(Size count = 1)
     {
-        RG_DEBUG_ASSERT(len <= N - count);
+        RG_ASSERT_DEBUG(len <= N - count);
 
         T *it = data + len;
         *it = {};
@@ -905,7 +905,7 @@ public:
 
     T *Append(const T &value)
     {
-        RG_DEBUG_ASSERT(len < N);
+        RG_ASSERT_DEBUG(len < N);
 
         T *it = data + len;
         *it = value;
@@ -915,7 +915,7 @@ public:
     }
     T *Append(Span<const T> values)
     {
-        RG_DEBUG_ASSERT(values.len <= N - len);
+        RG_ASSERT_DEBUG(values.len <= N - len);
 
         T *it = data + len;
         for (Size i = 0; i < values.len; i++) {
@@ -928,7 +928,7 @@ public:
 
     void RemoveFrom(Size first)
     {
-        RG_DEBUG_ASSERT(first >= 0 && first <= len);
+        RG_ASSERT_DEBUG(first >= 0 && first <= len);
 
         for (Size i = first; i < len; i++) {
             data[i] = T();
@@ -937,7 +937,7 @@ public:
     }
     void RemoveLast(Size count = 1)
     {
-        RG_DEBUG_ASSERT(count >= 0 && count <= len);
+        RG_ASSERT_DEBUG(count >= 0 && count <= len);
         RemoveFrom(len - count);
     }
 
@@ -1019,12 +1019,12 @@ public:
 
     T &operator[](Size idx)
     {
-        RG_DEBUG_ASSERT(idx >= 0 && idx < len);
+        RG_ASSERT_DEBUG(idx >= 0 && idx < len);
         return ptr[idx];
     }
     const T &operator[](Size idx) const
     {
-        RG_DEBUG_ASSERT(idx >= 0 && idx < len);
+        RG_ASSERT_DEBUG(idx >= 0 && idx < len);
         return ptr[idx];
     }
 
@@ -1044,7 +1044,7 @@ public:
 
     void SetCapacity(Size new_capacity)
     {
-        RG_DEBUG_ASSERT(new_capacity >= 0);
+        RG_ASSERT_DEBUG(new_capacity >= 0);
 
         if (new_capacity == capacity)
             return;
@@ -1070,9 +1070,9 @@ public:
 
     void Grow(Size reserve_capacity = 1)
     {
-        RG_DEBUG_ASSERT(capacity >= 0);
-        RG_DEBUG_ASSERT(reserve_capacity >= 0);
-        RG_DEBUG_ASSERT((size_t)capacity + (size_t)reserve_capacity <= RG_SIZE_MAX);
+        RG_ASSERT_DEBUG(capacity >= 0);
+        RG_ASSERT_DEBUG(reserve_capacity >= 0);
+        RG_ASSERT_DEBUG((size_t)capacity + (size_t)reserve_capacity <= RG_SIZE_MAX);
 
         if (reserve_capacity <= capacity - len)
             return;
@@ -1150,7 +1150,7 @@ public:
 
     void RemoveFrom(Size first)
     {
-        RG_DEBUG_ASSERT(first >= 0 && first <= len);
+        RG_ASSERT_DEBUG(first >= 0 && first <= len);
 
 #if __cplusplus >= 201703L
         if constexpr(!std::is_trivial<T>::value) {
@@ -1165,7 +1165,7 @@ public:
     }
     void RemoveLast(Size count = 1)
     {
-        RG_DEBUG_ASSERT(count >= 0 && count <= len);
+        RG_ASSERT_DEBUG(count >= 0 && count <= len);
         RemoveFrom(len - count);
     }
 
@@ -1298,7 +1298,7 @@ public:
 
     const T &operator[](Size idx) const
     {
-        RG_DEBUG_ASSERT(idx >= 0 && idx < len);
+        RG_ASSERT_DEBUG(idx >= 0 && idx < len);
 
         idx += offset;
         Size bucket_idx = idx / BucketSize;
@@ -1334,7 +1334,7 @@ public:
 
     void RemoveFrom(Size from)
     {
-        RG_DEBUG_ASSERT(from >= 0 && from <= len);
+        RG_ASSERT_DEBUG(from >= 0 && from <= len);
 
         if (from == len)
             return;
@@ -1364,13 +1364,13 @@ public:
     }
     void RemoveLast(Size count = 1)
     {
-        RG_DEBUG_ASSERT(count >= 0 && count <= len);
+        RG_ASSERT_DEBUG(count >= 0 && count <= len);
         RemoveFrom(len - count);
     }
 
     void RemoveFirst(Size count = 1)
     {
-        RG_DEBUG_ASSERT(count >= 0 && count <= len);
+        RG_ASSERT_DEBUG(count >= 0 && count <= len);
 
         if (count == len) {
             Clear();
@@ -1460,19 +1460,19 @@ public:
 
         Size operator*() const
         {
-            RG_DEBUG_ASSERT(offset <= RG_ARRAY_SIZE(bitset->data));
+            RG_ASSERT_DEBUG(offset <= RG_LEN(bitset->data));
 
-            if (offset == RG_ARRAY_SIZE(bitset->data))
+            if (offset == RG_LEN(bitset->data))
                 return -1;
             return offset * RG_SIZE(size_t) * 8 + ctz;
         }
 
         Iterator &operator++()
         {
-            RG_DEBUG_ASSERT(offset <= RG_ARRAY_SIZE(bitset->data));
+            RG_ASSERT_DEBUG(offset <= RG_LEN(bitset->data));
 
             while (!bits) {
-                if (offset == RG_ARRAY_SIZE(bitset->data) - 1)
+                if (offset == RG_LEN(bitset->data) - 1)
                     return *this;
                 bits = bitset->data[++offset];
             }
@@ -1508,8 +1508,8 @@ public:
 
     Iterator<Bitset> begin() { return Iterator<Bitset>(this, 0); }
     Iterator<const Bitset> begin() const { return Iterator<const Bitset>(this, 0); }
-    Iterator<Bitset> end() { return Iterator<Bitset>(this, RG_ARRAY_SIZE(data)); }
-    Iterator<const Bitset> end() const { return Iterator<const Bitset>(this, RG_ARRAY_SIZE(data)); }
+    Iterator<Bitset> end() { return Iterator<Bitset>(this, RG_LEN(data)); }
+    Iterator<const Bitset> end() const { return Iterator<const Bitset>(this, RG_LEN(data)); }
 
     Size PopCount() const
     {
@@ -1522,7 +1522,7 @@ public:
 
     inline bool Test(Size idx) const
     {
-        RG_DEBUG_ASSERT(idx >= 0 && idx < N);
+        RG_ASSERT_DEBUG(idx >= 0 && idx < N);
 
         Size offset = idx / (RG_SIZE(size_t) * 8);
         size_t mask = (size_t)1 << (idx % (RG_SIZE(size_t) * 8));
@@ -1531,7 +1531,7 @@ public:
     }
     inline void Set(Size idx, bool value = true)
     {
-        RG_DEBUG_ASSERT(idx >= 0 && idx < N);
+        RG_ASSERT_DEBUG(idx >= 0 && idx < N);
 
         Size offset = idx / (RG_SIZE(size_t) * 8);
         size_t mask = (size_t)1 << (idx % (RG_SIZE(size_t) * 8));
@@ -1540,7 +1540,7 @@ public:
     }
     inline bool TestAndSet(Size idx, bool value = true)
     {
-        RG_DEBUG_ASSERT(idx >= 0 && idx < N);
+        RG_ASSERT_DEBUG(idx >= 0 && idx < N);
 
         Size offset = idx / (RG_SIZE(size_t) * 8);
         size_t mask = (size_t)1 << (idx % (RG_SIZE(size_t) * 8));
@@ -1553,7 +1553,7 @@ public:
 
     Bitset &operator&=(const Bitset &other)
     {
-        for (Size i = 0; i < RG_ARRAY_SIZE(data); i++) {
+        for (Size i = 0; i < RG_LEN(data); i++) {
             data[i] &= other.data[i];
         }
         return *this;
@@ -1561,7 +1561,7 @@ public:
     Bitset operator&(const Bitset &other)
     {
         Bitset ret;
-        for (Size i = 0; i < RG_ARRAY_SIZE(data); i++) {
+        for (Size i = 0; i < RG_LEN(data); i++) {
             ret.data[i] = data[i] & other.data[i];
         }
         return ret;
@@ -1569,7 +1569,7 @@ public:
 
     Bitset &operator|=(const Bitset &other)
     {
-        for (Size i = 0; i < RG_ARRAY_SIZE(data); i++) {
+        for (Size i = 0; i < RG_LEN(data); i++) {
             data[i] |= other.data[i];
         }
         return *this;
@@ -1577,7 +1577,7 @@ public:
     Bitset operator|(const Bitset &other)
     {
         Bitset ret;
-        for (Size i = 0; i < RG_ARRAY_SIZE(data); i++) {
+        for (Size i = 0; i < RG_LEN(data); i++) {
             ret.data[i] = data[i] | other.data[i];
         }
         return ret;
@@ -1585,7 +1585,7 @@ public:
 
     Bitset &operator^=(const Bitset &other)
     {
-        for (Size i = 0; i < RG_ARRAY_SIZE(data); i++) {
+        for (Size i = 0; i < RG_LEN(data); i++) {
             data[i] ^= other.data[i];
         }
         return *this;
@@ -1593,7 +1593,7 @@ public:
     Bitset operator^(const Bitset &other)
     {
         Bitset ret;
-        for (Size i = 0; i < RG_ARRAY_SIZE(data); i++) {
+        for (Size i = 0; i < RG_LEN(data); i++) {
             ret.data[i] = data[i] ^ other.data[i];
         }
         return ret;
@@ -1601,7 +1601,7 @@ public:
 
     Bitset &Flip()
     {
-        for (Size i = 0; i < RG_ARRAY_SIZE(data); i++) {
+        for (Size i = 0; i < RG_LEN(data); i++) {
             data[i] = ~data[i];
         }
         return *this;
@@ -1609,7 +1609,7 @@ public:
     Bitset operator~()
     {
         Bitset ret;
-        for (Size i = 0; i < RG_ARRAY_SIZE(data); i++) {
+        for (Size i = 0; i < RG_LEN(data); i++) {
             ret.data[i] = ~data[i];
         }
         return ret;
@@ -1640,18 +1640,18 @@ public:
 
         ValueType &operator*()
         {
-            RG_DEBUG_ASSERT(!table->IsEmpty(offset));
+            RG_ASSERT_DEBUG(!table->IsEmpty(offset));
             return table->data[offset];
         }
         const ValueType &operator*() const
         {
-            RG_DEBUG_ASSERT(!table->IsEmpty(offset));
+            RG_ASSERT_DEBUG(!table->IsEmpty(offset));
             return table->data[offset];
         }
 
         Iterator &operator++()
         {
-            RG_DEBUG_ASSERT(offset < table->capacity);
+            RG_ASSERT_DEBUG(offset < table->capacity);
             while (++offset < table->capacity && table->IsEmpty(offset));
             return *this;
         }
@@ -1807,7 +1807,7 @@ public:
     {
         if (!it)
             return;
-        RG_DEBUG_ASSERT(!IsEmpty(it - data));
+        RG_ASSERT_DEBUG(!IsEmpty(it - data));
 
         it->~ValueType();
         count--;
@@ -1892,7 +1892,7 @@ private:
     {
         if (new_capacity == capacity)
             return;
-        RG_DEBUG_ASSERT(count <= new_capacity);
+        RG_ASSERT_DEBUG(count <= new_capacity);
 
         size_t *old_used = used;
         ValueType *old_data = data;
@@ -2200,9 +2200,9 @@ union Date {
     Date() = default;
     Date(int16_t year, int8_t month, int8_t day)
 #ifdef RG_ARCH_LITTLE_ENDIAN
-        : st({day, month, year}) { RG_DEBUG_ASSERT(IsValid()); }
+        : st({day, month, year}) { RG_ASSERT_DEBUG(IsValid()); }
 #else
-        : st({year, month, day}) { DebugAssert(IsValid()); }
+        : st({year, month, day}) { RG_ASSERT_DEBUG(IsValid()); }
 #endif
 
     static inline bool IsLeapYear(int16_t year)

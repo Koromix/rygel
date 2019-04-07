@@ -42,7 +42,7 @@ static ImU32 GetVisColor(VisColor color, float alpha = 1.0f)
         case VisColor::Plot: { return ImGui::GetColorU32(ImGuiCol_PlotLines, alpha); } break;
         case VisColor::Limit: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.9f, 0.7f, 0.03f, 0.4f * alpha)); } break;
     }
-    RG_DEBUG_ASSERT(false);
+    RG_ASSERT_DEBUG(false);
 }
 
 static bool DetectAnomaly(const Element &elmt)
@@ -55,7 +55,7 @@ static bool DetectAnomaly(const Element &elmt)
         } break;
         case Element::Type::Period: { return false; } break;
     }
-    RG_DEBUG_ASSERT(false);
+    RG_ASSERT_DEBUG(false);
 }
 
 static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoom, float alpha,
@@ -65,7 +65,7 @@ static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoo
     ImDrawList *draw = ImGui::GetWindowDrawList();
 
     for (const Element *elmt: periods) {
-        RG_DEBUG_ASSERT(elmt->type == Element::Type::Period);
+        RG_ASSERT_DEBUG(elmt->type == Element::Type::Period);
 
         ImRect rect {
             x_offset + (float)elmt->time * time_zoom, y_min,
@@ -93,7 +93,7 @@ static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoo
 
 static void TextMeasure(const Element &elmt, double align_offset)
 {
-    RG_DEBUG_ASSERT(elmt.type == Element::Type::Measure);
+    RG_ASSERT_DEBUG(elmt.type == Element::Type::Measure);
 
     RG_DEFER_N(style_guard) { ImGui::PopStyleColor(); };
     if (DetectAnomaly(elmt)) {
@@ -145,7 +145,7 @@ static void DrawEventsBlock(ImRect rect, float alpha, Span<const Element *const>
                 { rect.Max.x + 10.0f, bb.Max.y },
                 { rect.Min.x - 10.0f, bb.Max.y }
             };
-            draw->AddConvexPolyFilled(points, RG_ARRAY_SIZE(points), color);
+            draw->AddConvexPolyFilled(points, RG_LEN(points), color);
         } else {
             ImVec2 points[] = {
                 { rect.Min.x, bb.Min.y },
@@ -257,7 +257,7 @@ void DrawLine(InterpolationMode interpolation, Fun f)
                         ImVec2(point.x, prev_point.y),
                         point
                     };
-                    draw->AddPolyline(points, RG_ARRAY_SIZE(points), prev_color, false, 1.0f);
+                    draw->AddPolyline(points, RG_LEN(points), prev_color, false, 1.0f);
                 }
 
                 prev_color = color;
@@ -282,7 +282,7 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
 {
     if (!measures.len)
         return;
-    RG_DEBUG_ASSERT(measures[0]->type == Element::Type::Measure);
+    RG_ASSERT_DEBUG(measures[0]->type == Element::Type::Measure);
 
     ImDrawList *draw = ImGui::GetWindowDrawList();
 
@@ -290,7 +290,7 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
     if (max > min) {
         y_scaler  = (y_max - y_min - 4.0f) / (float)(max - min);;
     } else {
-        RG_DEBUG_ASSERT(!(min > max));
+        RG_ASSERT_DEBUG(!(min > max));
         y_max = (y_max + y_min) / 2.0f;
         y_scaler = 1.0f;
     }
@@ -310,7 +310,7 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
     DrawLine(interpolation, [&](Size i, ImVec2 *out_point, ImU32 *out_color) {
         if (i >= measures.len)
             return false;
-        RG_DEBUG_ASSERT(measures[i]->type == Element::Type::Measure);
+        RG_ASSERT_DEBUG(measures[i]->type == Element::Type::Measure);
         if (!std::isnan(measures[i]->u.measure.min)) {
             *out_point = ComputeCoordinates(measures[i]->time, measures[i]->u.measure.min);
             *out_color = GetVisColor(VisColor::Limit, alpha);
@@ -588,7 +588,7 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
                     continue;
                 }
             }
-            RG_DEBUG_ASSERT(path.len > 0);
+            RG_ASSERT_DEBUG(path.len > 0);
 
             bool fully_deployed = false;
             {
@@ -737,7 +737,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                         continue;
                     }
                 }
-                RG_DEBUG_ASSERT(path.len > 0);
+                RG_ASSERT_DEBUG(path.len > 0);
 
                 bool fully_deployed = true;
                 int tree_depth = 0;
@@ -1353,7 +1353,7 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
         if (ImGui::CollapsingHeader("Plots", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Checkbox("Draw plots", &state.new_settings.plot_measures);
             ImGui::Combo("Interpolation", (int *)&state.new_settings.interpolation,
-                     interpolation_mode_names, RG_ARRAY_SIZE(interpolation_mode_names));
+                     interpolation_mode_names, RG_LEN(interpolation_mode_names));
         }
 
         if (ImGui::Button("Apply")) {

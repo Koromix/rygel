@@ -36,7 +36,7 @@ static inline uint8_t GetDiagnosisByte(int8_t sex, const mco_DiagnosisInfo &diag
 
 static inline bool TestDiagnosis(int8_t sex, const mco_DiagnosisInfo &diag_info, drd_ListMask mask)
 {
-    RG_DEBUG_ASSERT(mask.offset >= 0 && mask.offset <= UINT8_MAX);
+    RG_ASSERT_DEBUG(mask.offset >= 0 && mask.offset <= UINT8_MAX);
     return GetDiagnosisByte(sex, diag_info, (uint8_t)mask.offset) & mask.value;
 }
 static inline bool TestDiagnosis(int8_t sex, const mco_DiagnosisInfo &diag_info,
@@ -62,7 +62,7 @@ static inline bool TestProcedure(const mco_ProcedureInfo &proc_info, int16_t off
 
 static const mco_PreparedStay *FindMainStay(Span<const mco_PreparedStay> mono_preps, int duration)
 {
-    RG_DEBUG_ASSERT(duration >= 0);
+    RG_ASSERT_DEBUG(duration >= 0);
 
     int max_duration = -1;
     const mco_PreparedStay *zx_prep = nullptr;
@@ -159,7 +159,7 @@ static bool SetError(mco_ErrorSet *error_set, int16_t error, int16_t priority = 
     if (!error)
         return true;
 
-    RG_DEBUG_ASSERT(error >= 0 && error < decltype(mco_ErrorSet::errors)::Bits);
+    RG_ASSERT_DEBUG(error >= 0 && error < decltype(mco_ErrorSet::errors)::Bits);
     if (error_set) {
         if (priority >= 0 && (!error_set->main_error || priority > error_set->priority ||
                               (priority == error_set->priority && error < error_set->main_error))) {
@@ -461,7 +461,7 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
                     RG_STATIC_ASSERT(std::alignment_of<mco_ProcedureInfo>::value >= 8);
 
                     if ((proc_info->bytes[32] & 0x8) &&
-                            proc.activity >= 0 && proc.activity < RG_ARRAY_SIZE(proc_info->additions) &&
+                            proc.activity >= 0 && proc.activity < RG_LEN(proc_info->additions) &&
                             proc_info->additions[proc.activity]) {
                         additions_mismatch += !additions.TestAndSet(proc_info->additions[proc.activity]);
                     }
@@ -1004,7 +1004,7 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> mono
                         unsigned int flags, mco_PreparedSet *out_prepared_set,
                         mco_ErrorSet *out_errors)
 {
-    RG_DEBUG_ASSERT(mono_stays.len > 0);
+    RG_ASSERT_DEBUG(mono_stays.len > 0);
 
     // Reset prepared data
     out_prepared_set->index = nullptr;
@@ -1038,7 +1038,7 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> mono
 
     // Too critical to even try anything (all data is invalid)
     if (RG_UNLIKELY(mono_stays[0].errors & (int)mco_Stay::Error::UnknownRumVersion)) {
-        RG_DEBUG_ASSERT(mono_stays.len == 1);
+        RG_ASSERT_DEBUG(mono_stays.len == 1);
 
         out_prepared_set->prep.duration = -1;
         out_prepared_set->prep.age = -1;
@@ -1098,7 +1098,7 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> mono
 static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm_node,
                           mco_ErrorSet *out_errors)
 {
-    RG_DEBUG_ASSERT(ghm_node.type == mco_GhmDecisionNode::Type::Test);
+    RG_ASSERT_DEBUG(ghm_node.type == mco_GhmDecisionNode::Type::Test);
 
     switch (ghm_node.u.test.function) {
         case 0:
@@ -1478,7 +1478,7 @@ static mco_GhmCode RunGhmTree(const mco_TableIndex &index, const mco_PreparedSta
             return mco_GhmCode::FromString("90Z03Z");
         }
 
-        RG_DEBUG_ASSERT(ghm_node_idx < index.ghm_nodes.len);
+        RG_ASSERT_DEBUG(ghm_node_idx < index.ghm_nodes.len);
         const mco_GhmDecisionNode &ghm_node = index.ghm_nodes[ghm_node_idx];
 
         switch (ghm_node.type) {
@@ -1507,13 +1507,13 @@ static mco_GhmCode RunGhmTree(const mco_TableIndex &index, const mco_PreparedSta
 
 int mco_GetMinimalDurationForSeverity(int severity)
 {
-    RG_DEBUG_ASSERT(severity >= 0 && severity < 4);
+    RG_ASSERT_DEBUG(severity >= 0 && severity < 4);
     return severity ? (severity + 2) : 0;
 }
 
 int mco_LimitSeverityWithDuration(int severity, int duration)
 {
-    RG_DEBUG_ASSERT(severity >= 0 && severity < 4);
+    RG_ASSERT_DEBUG(severity >= 0 && severity < 4);
     return duration >= 3 ? std::min(duration - 2, severity) : 0;
 }
 
@@ -2087,7 +2087,7 @@ static Size RunClassifier(const mco_TableSet &table_set,
                                      prepared_set.prep, prepared_set.mono_preps, flags, &errors);
         }
         result.main_error = errors.main_error;
-        RG_DEBUG_ASSERT(result.ghm.IsValid());
+        RG_ASSERT_DEBUG(result.ghm.IsValid());
 
         // Classify GHS
         result.ghs = mco_PickGhs(*prepared_set.index, authorization_set, sector,

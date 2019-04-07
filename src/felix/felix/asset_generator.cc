@@ -196,7 +196,7 @@ bool GenerateFiles(Span<const AssetInfo> assets, const char *output_path,
             return false;
         } break;
     }
-    RG_DEBUG_ASSERT(compression_ext);
+    RG_ASSERT_DEBUG(compression_ext);
 
     for (const AssetInfo &asset: assets) {
         StreamWriter st;
