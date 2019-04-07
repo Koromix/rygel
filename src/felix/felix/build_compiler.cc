@@ -236,6 +236,9 @@ public:
         }
         if (warnings) {
             Fmt(&buf, " -Wall");
+            if (src_type == SourceType::CXX_Source || src_type == SourceType::CXX_Header) {
+                Fmt(&buf, " -Wno-class-memaccess");
+            }
         }
 
         AppendGccObjectArguments(src_filename, build_mode, pch_filename, definitions,
