@@ -13,7 +13,8 @@ struct TargetConfig;
 
 enum class TargetType {
     Executable,
-    Library
+    Library,
+    ExternalLibrary
 };
 
 enum class PackLinkType {
