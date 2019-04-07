@@ -168,7 +168,7 @@ static void InitRoutes()
 
     // Static assets and catalogs
     pack_Asset html = {};
-    RG_DEBUG_ASSERT(assets.len > 0);
+    RG_ASSERT_DEBUG(assets.len > 0);
     for (const pack_Asset &asset: assets) {
         if (TestStr(asset.name, "thop.html")) {
             html = asset;
@@ -183,7 +183,7 @@ static void InitRoutes()
         const char *url = Fmt(&routes_alloc, "/catalogs/%1", desc.name).ptr;
         add_asset_route("GET", url, Route::Matching::Exact, desc);
     }
-    RG_DEBUG_ASSERT(html.name);
+    RG_ASSERT_DEBUG(html.name);
 
     // Patch HTML
     html.data = pack_PatchVariables(html, &routes_alloc,
@@ -299,7 +299,7 @@ static int HandleRequest(const http_Request &request, http_Response *out_respons
             code = route->u.func(request, user, out_response);
         } break;
     }
-    RG_DEBUG_ASSERT(code);
+    RG_ASSERT_DEBUG(code);
 
     // Send cache information
 #ifndef NDEBUG

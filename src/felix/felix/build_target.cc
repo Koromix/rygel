@@ -67,7 +67,7 @@ static void AppendListValues(Span<const char> str,
 static const char *BuildOutputPath(const char *src_filename, const char *output_directory,
                                    const char *suffix, Allocator *alloc)
 {
-    RG_DEBUG_ASSERT(!PathIsAbsolute(src_filename));
+    RG_ASSERT_DEBUG(!PathIsAbsolute(src_filename));
 
     HeapArray<char> buf;
     buf.allocator = alloc;
@@ -480,7 +480,7 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     }
 
     bool appended = targets_map.Append(target_config->name, set.targets.len - 1).second;
-    RG_DEBUG_ASSERT(appended);
+    RG_ASSERT_DEBUG(appended);
 
     out_guard.Disable();
     return target;

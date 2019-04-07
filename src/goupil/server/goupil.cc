@@ -94,7 +94,7 @@ static void InitRoutes()
             add_asset_route("GET", url, asset);
         }
     }
-    RG_DEBUG_ASSERT(html.name);
+    RG_ASSERT_DEBUG(html.name);
 
     // Patch HTML
     html.data = pack_PatchVariables(html, &routes_alloc,

@@ -104,7 +104,7 @@ static LoadStatus LoadSimulationModule(const char *filename)
     InitializeConfig_ = (decltype(InitializeConfig_))find_symbol("InitializeConfig");
     InitializeHumans_ = (decltype(InitializeHumans_))find_symbol("InitializeHumans");
     RunSimulationStep_ = (decltype(RunSimulationStep_))find_symbol("RunSimulationStep");
-    RG_DEBUG_ASSERT(InitializeConfig_ && InitializeHumans_ && RunSimulationStep_);
+    RG_ASSERT_DEBUG(InitializeConfig_ && InitializeHumans_ && RunSimulationStep_);
 
     return LoadStatus::Loaded;
 }
@@ -140,7 +140,7 @@ int RunSimPL(int, char **)
     ImFontAtlas font_atlas;
     {
         const pack_Asset &font = *pack_asset_Roboto_Medium_ttf;
-        RG_DEBUG_ASSERT(font.data.len <= INT_MAX);
+        RG_ASSERT_DEBUG(font.data.len <= INT_MAX);
 
         ImFontConfig font_config;
         font_config.FontDataOwnedByAtlas = false;

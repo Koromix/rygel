@@ -230,7 +230,7 @@ bool UserSetBuilder::LoadFiles(Span<const char *const> filenames)
 
 void UserSetBuilder::Finish(const StructureSet &structure_set, UserSet *out_set)
 {
-    RG_DEBUG_ASSERT(set.users.len == rule_sets.len);
+    RG_ASSERT_DEBUG(set.users.len == rule_sets.len);
 
     for (Size i = 0; i < set.users.len; i++) {
         User &user = set.users[i];
@@ -275,7 +275,7 @@ bool LoadUserSet(Span<const char *const> filenames, const StructureSet &structur
 
 static bool GetClientAddress(MHD_Connection *conn, Span<char> out_address)
 {
-    RG_DEBUG_ASSERT(out_address.len);
+    RG_ASSERT_DEBUG(out_address.len);
 
     int family;
     void *addr;

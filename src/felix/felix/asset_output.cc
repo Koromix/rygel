@@ -10,7 +10,7 @@ namespace RG {
 
 static FmtArg FormatZigzagVLQ64(int value)
 {
-    RG_DEBUG_ASSERT(value != INT_MIN);
+    RG_ASSERT_DEBUG(value != INT_MIN);
 
     static const char literals[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 

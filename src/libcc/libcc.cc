@@ -117,7 +117,7 @@ static Allocator *GetDefaultAllocator()
 
 void *Allocator::Allocate(Allocator *alloc, Size size, unsigned int flags)
 {
-    RG_DEBUG_ASSERT(size >= 0);
+    RG_ASSERT_DEBUG(size >= 0);
 
     if (!alloc) {
         alloc = GetDefaultAllocator();
@@ -128,7 +128,7 @@ void *Allocator::Allocate(Allocator *alloc, Size size, unsigned int flags)
 void Allocator::Resize(Allocator *alloc, void **ptr, Size old_size, Size new_size,
                        unsigned int flags)
 {
-    RG_DEBUG_ASSERT(new_size >= 0);
+    RG_ASSERT_DEBUG(new_size >= 0);
 
     if (!alloc) {
         alloc = GetDefaultAllocator();
@@ -229,7 +229,7 @@ void BlockAllocatorBase::ForgetCurrentBlock()
 
 void *BlockAllocatorBase::Allocate(Size size, unsigned int flags)
 {
-    RG_DEBUG_ASSERT(size >= 0);
+    RG_ASSERT_DEBUG(size >= 0);
 
     LinkedAllocator *alloc = GetAllocator();
 
@@ -260,8 +260,8 @@ void *BlockAllocatorBase::Allocate(Size size, unsigned int flags)
 
 void BlockAllocatorBase::Resize(void **ptr, Size old_size, Size new_size, unsigned int flags)
 {
-    RG_DEBUG_ASSERT(old_size >= 0);
-    RG_DEBUG_ASSERT(new_size >= 0);
+    RG_ASSERT_DEBUG(old_size >= 0);
+    RG_ASSERT_DEBUG(new_size >= 0);
 
     if (!new_size) {
         Release(*ptr, old_size);
@@ -304,7 +304,7 @@ void BlockAllocatorBase::Resize(void **ptr, Size old_size, Size new_size, unsign
 
 void BlockAllocatorBase::Release(void *ptr, Size size)
 {
-    RG_DEBUG_ASSERT(size >= 0);
+    RG_ASSERT_DEBUG(size >= 0);
 
     if (ptr) {
         LinkedAllocator *alloc = GetAllocator();
@@ -405,7 +405,7 @@ malformed:
 
 Date Date::FromJulianDays(int days)
 {
-    RG_DEBUG_ASSERT(days >= 0);
+    RG_ASSERT_DEBUG(days >= 0);
 
     // Algorithm from Richards, copied from Wikipedia:
     // https://en.wikipedia.org/w/index.php?title=Julian_day&oldid=792497863
@@ -426,7 +426,7 @@ Date Date::FromJulianDays(int days)
 
 int Date::ToJulianDays() const
 {
-    RG_DEBUG_ASSERT(IsValid());
+    RG_ASSERT_DEBUG(IsValid());
 
     // Straight from the Web:
     // http://www.cs.utsa.edu/~cs1063/projects/Spring2011/Project1/jdn-explanation.html
@@ -446,7 +446,7 @@ int Date::ToJulianDays() const
 
 int Date::GetWeekDay() const
 {
-    RG_DEBUG_ASSERT(IsValid());
+    RG_ASSERT_DEBUG(IsValid());
 
     // Zeller's congruence:
     // https://en.wikipedia.org/wiki/Zeller%27s_congruence
@@ -471,7 +471,7 @@ int Date::GetWeekDay() const
 
 Date &Date::operator++()
 {
-    RG_DEBUG_ASSERT(IsValid());
+    RG_ASSERT_DEBUG(IsValid());
 
     if (st.day < DaysInMonth(st.year, st.month)) {
         st.day++;
@@ -489,7 +489,7 @@ Date &Date::operator++()
 
 Date &Date::operator--()
 {
-    RG_DEBUG_ASSERT(IsValid());
+    RG_ASSERT_DEBUG(IsValid());
 
     if (st.day > 1) {
         st.day--;
@@ -604,7 +604,7 @@ static Span<const char> FormatDouble(double value, int precision, char out_buf[2
     } else {
         buf_len = snprintf(out_buf, 256, "%g", value);
     }
-    RG_DEBUG_ASSERT(buf_len >= 0 && buf_len < 256);
+    RG_ASSERT_DEBUG(buf_len >= 0 && buf_len < 256);
 
     return MakeSpan(out_buf, (Size)buf_len);
 }
@@ -723,7 +723,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             } break;
 
             case FmtArg::Type::Date: {
-                RG_DEBUG_ASSERT(!arg.value.date.value || arg.value.date.IsValid());
+                RG_ASSERT_DEBUG(!arg.value.date.value || arg.value.date.IsValid());
 
                 int year = arg.value.date.st.year;
                 if (year < 0) {
@@ -898,7 +898,7 @@ static inline void DoFormat(const char *fmt, Span<const FmtArg> args, AppendFunc
 
 Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Span<char> out_buf)
 {
-    RG_DEBUG_ASSERT(out_buf.len >= 0);
+    RG_ASSERT_DEBUG(out_buf.len >= 0);
 
     if (!out_buf.len)
         return {};
@@ -950,11 +950,11 @@ void PrintFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *st)
 {
     LocalArray<char, RG_FMT_STRING_PRINT_BUFFER_SIZE> buf;
     DoFormat(fmt, args, [&](Span<const char> frag) {
-        if (frag.len > RG_ARRAY_SIZE(buf.data) - buf.len) {
+        if (frag.len > RG_LEN(buf.data) - buf.len) {
             st->Write(buf);
             buf.len = 0;
         }
-        if (frag.len >= RG_ARRAY_SIZE(buf.data)) {
+        if (frag.len >= RG_LEN(buf.data)) {
             st->Write(frag);
         } else {
             memcpy(buf.data + buf.len, frag.ptr, (size_t)frag.len);
@@ -970,11 +970,11 @@ void PrintFmt(const char *fmt, Span<const FmtArg> args, FILE *fp)
 
     LocalArray<char, RG_FMT_STRING_PRINT_BUFFER_SIZE> buf;
     DoFormat(fmt, args, [&](Span<const char> frag) {
-        if (frag.len > RG_ARRAY_SIZE(buf.data) - buf.len) {
+        if (frag.len > RG_LEN(buf.data) - buf.len) {
             fwrite(buf.data, 1, (size_t)buf.len, fp);
             buf.len = 0;
         }
-        if (frag.len >= RG_ARRAY_SIZE(buf.data)) {
+        if (frag.len >= RG_LEN(buf.data)) {
             fwrite(frag.ptr, 1, (size_t)frag.len, fp);
         } else {
             memcpy(buf.data + buf.len, frag.ptr, (size_t)frag.len);
@@ -1130,13 +1130,13 @@ void EndConsoleLog()
 
 void PushLogHandler(std::function<LogHandlerFunc> handler)
 {
-    RG_DEBUG_ASSERT(log_handlers_len < RG_ARRAY_SIZE(log_handlers));
+    RG_ASSERT_DEBUG(log_handlers_len < RG_LEN(log_handlers));
     log_handlers[log_handlers_len++] = new std::function<LogHandlerFunc>(handler);
 }
 
 void PopLogHandler()
 {
-    RG_DEBUG_ASSERT(log_handlers_len > 0);
+    RG_ASSERT_DEBUG(log_handlers_len > 0);
     delete log_handlers[--log_handlers_len];
 }
 
@@ -1408,7 +1408,7 @@ bool TestFile(const char *filename, FileType type)
         switch (type) {
             case FileType::Directory: { LogError("Path '%1' is not a directory", filename); } break;
             case FileType::File: { LogError("Path '%1' is not a file", filename); } break;
-            case FileType::Unknown: { RG_DEBUG_ASSERT(false); } break;
+            case FileType::Unknown: { RG_ASSERT_DEBUG(false); } break;
         }
 
         return false;
@@ -1786,8 +1786,8 @@ bool EnsureDirectoryExists(const char *filename)
 
 void WaitForDelay(int64_t delay)
 {
-    RG_DEBUG_ASSERT(delay >= 0);
-    RG_DEBUG_ASSERT(delay < 1000ll * INT32_MAX);
+    RG_ASSERT_DEBUG(delay >= 0);
+    RG_ASSERT_DEBUG(delay < 1000ll * INT32_MAX);
 
 #ifdef _WIN32
     while (delay) {
@@ -1893,8 +1893,8 @@ static int g_max_workers;
 
 void Async::SetWorkerCount(int max_threads)
 {
-    RG_DEBUG_ASSERT(max_threads > 0);
-    RG_DEBUG_ASSERT(!g_async_pool);
+    RG_ASSERT_DEBUG(max_threads > 0);
+    RG_ASSERT_DEBUG(!g_async_pool);
 
 #ifdef __EMSCRIPTEN__
     LogError("Cannot use parallelism on Emscripten platform");
@@ -2156,8 +2156,8 @@ bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compress
         error = true;
     };
 
-    RG_DEBUG_ASSERT(fp);
-    RG_DEBUG_ASSERT(filename);
+    RG_ASSERT_DEBUG(fp);
+    RG_ASSERT_DEBUG(filename);
     this->filename = filename;
 
     source.type = SourceType::File;
@@ -2179,7 +2179,7 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
         error = true;
     };
 
-    RG_DEBUG_ASSERT(filename);
+    RG_ASSERT_DEBUG(filename);
     this->filename = filename;
 
     source.type = SourceType::File;
@@ -2529,7 +2529,7 @@ truncated_error:
     error = true;
     return -1;
 #else
-    RG_DEBUG_ASSERT(false);
+    RG_ASSERT_DEBUG(false);
 #endif
 }
 
@@ -2655,8 +2655,8 @@ bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compress
         error = true;
     };
 
-    RG_DEBUG_ASSERT(fp);
-    RG_DEBUG_ASSERT(filename);
+    RG_ASSERT_DEBUG(fp);
+    RG_ASSERT_DEBUG(filename);
     this->filename = filename;
 
     dest.type = DestinationType::File;
@@ -2679,7 +2679,7 @@ bool StreamWriter::Open(const char *filename, CompressionType compression_type)
         error = true;
     };
 
-    RG_DEBUG_ASSERT(filename);
+    RG_ASSERT_DEBUG(filename);
     this->filename = filename;
 
     dest.type = DestinationType::File;
@@ -2788,7 +2788,7 @@ bool StreamWriter::Write(Span<const uint8_t> buf)
 #endif
         } break;
     }
-    RG_DEBUG_ASSERT(false);
+    RG_ASSERT_DEBUG(false);
 }
 
 bool StreamWriter::InitCompressor(CompressionType type)
@@ -2903,7 +2903,7 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
             return true;
         } break;
     }
-    RG_DEBUG_ASSERT(false);
+    RG_ASSERT_DEBUG(false);
 }
 
 bool SpliceStream(StreamReader *reader, Size max_len, StreamWriter *writer)
@@ -3145,8 +3145,8 @@ const char *OptionParser::Next()
 
 bool OptionParser::Test(const char *test1, const char *test2, OptionType type)
 {
-    RG_DEBUG_ASSERT(test1 && IsOption(test1));
-    RG_DEBUG_ASSERT(!test2 || IsOption(test2));
+    RG_ASSERT_DEBUG(test1 && IsOption(test1));
+    RG_ASSERT_DEBUG(!test2 || IsOption(test2));
 
     if (TestStr(test1, current_option) || (test2 && TestStr(test2, current_option))) {
         switch (type) {

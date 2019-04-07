@@ -385,17 +385,17 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
     rcc_Vector<double> ghs_coefficient = df_builder.Add<double>("ghs_coefficient");
     rcc_Vector<int> ghs_duration = df_builder.Add<int>("ghs_duration");
     rcc_Vector<int> exb_exh = df_builder.Add<int>("exb_exh");
-    rcc_Vector<double> supplement_cents[RG_ARRAY_SIZE(mco_SupplementTypeNames)];
-    rcc_Vector<int> supplement_count[RG_ARRAY_SIZE(mco_SupplementTypeNames)];
+    rcc_Vector<double> supplement_cents[RG_LEN(mco_SupplementTypeNames)];
+    rcc_Vector<int> supplement_count[RG_LEN(mco_SupplementTypeNames)];
     if (export_supplement_cents) {
-        for (Size i = 0; i < RG_ARRAY_SIZE(mco_SupplementTypeNames); i++) {
+        for (Size i = 0; i < RG_LEN(mco_SupplementTypeNames); i++) {
             char name_buf[32];
             MakeSupplementColumnName(mco_SupplementTypeNames[i], "_cents", name_buf);
             supplement_cents[i] = df_builder.Add<double>(name_buf);
         }
     }
     if (export_supplement_counts) {
-        for (Size i = 0; i < RG_ARRAY_SIZE(mco_SupplementTypeNames); i++) {
+        for (Size i = 0; i < RG_LEN(mco_SupplementTypeNames); i++) {
             char name_buf[32];
             MakeSupplementColumnName(mco_SupplementTypeNames[i], "_count", name_buf);
             supplement_count[i] = df_builder.Add<int>(name_buf);
@@ -415,7 +415,7 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
 
             bill_id[k] = result.stays[0].bill_id;
             if (export_units) {
-                RG_DEBUG_ASSERT(result.stays.len == 1);
+                RG_ASSERT_DEBUG(result.stays.len == 1);
                 unit[k] = result.stays[0].unit.number;
             }
             exit_date.Set(k, result.stays[result.stays.len - 1].exit.date);
@@ -436,7 +436,7 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
             ghs_coefficient[k] = (double)pricing.ghs_coefficient;
             ghs_duration[k] = (result.ghs_duration >= 0) ? result.ghs_duration : NA_INTEGER;
             exb_exh[k] = pricing.exb_exh;
-            for (Size l = 0; l < RG_ARRAY_SIZE(mco_SupplementTypeNames); l++) {
+            for (Size l = 0; l < RG_LEN(mco_SupplementTypeNames); l++) {
                 if (export_supplement_cents) {
                     supplement_cents[l][k] = pricing.supplement_cents.values[l];
                 }
@@ -669,14 +669,14 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
         df_builder.Set("price_cents", (double)summary.price_cents);
         df_builder.Set("ghs_cents", (double)summary.ghs_cents);
         if (export_supplement_cents) {
-            for (Size i = 0; i < RG_ARRAY_SIZE(mco_SupplementTypeNames); i++) {
+            for (Size i = 0; i < RG_LEN(mco_SupplementTypeNames); i++) {
                 char name_buf[32];
                 MakeSupplementColumnName(mco_SupplementTypeNames[i], "_cents", name_buf);
                 df_builder.Set(name_buf, (double)summary.supplement_cents.values[i]);
             }
         }
         if (export_supplement_counts) {
-            for (Size i = 0; i < RG_ARRAY_SIZE(mco_SupplementTypeNames); i++) {
+            for (Size i = 0; i < RG_LEN(mco_SupplementTypeNames); i++) {
                 char name_buf[32];
                 MakeSupplementColumnName(mco_SupplementTypeNames[i], "_count", name_buf);
                 df_builder.Set(name_buf, (int)summary.supplement_days.values[i]);
@@ -1327,8 +1327,8 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
 
 RcppExport SEXP drdR_mco_SupplementTypes()
 {
-    rcc_Vector<const char *> types(RG_ARRAY_SIZE(mco_SupplementTypeNames));
-    for (Size i = 0; i < RG_ARRAY_SIZE(mco_SupplementTypeNames); i++) {
+    rcc_Vector<const char *> types(RG_LEN(mco_SupplementTypeNames));
+    for (Size i = 0; i < RG_LEN(mco_SupplementTypeNames); i++) {
         types.Set(i, mco_SupplementTypeNames[i]);
     }
 

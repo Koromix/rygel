@@ -252,7 +252,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
                 case SourceType::CXX_Source: { pch_filename = target.cxx_pch_filename; } break;
 
                 case SourceType::C_Header:
-                case SourceType::CXX_Header: { RG_DEBUG_ASSERT(false); } break;
+                case SourceType::CXX_Header: { RG_ASSERT_DEBUG(false); } break;
             }
 
             cmd.text = Fmt(&str_alloc, "Build %1", obj.src_filename).ptr;
@@ -353,7 +353,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
 
 void BuildSetBuilder::Finish(BuildSet *out_set)
 {
-    RG_DEBUG_ASSERT(!out_set->commands.len);
+    RG_ASSERT_DEBUG(!out_set->commands.len);
 
     if (pch_commands.len) {
         pch_commands[pch_commands.len - 1].sync_after = true;

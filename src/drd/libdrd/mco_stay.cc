@@ -217,7 +217,7 @@ static bool ParsePmsiChar(char c, char *out_value)
 template <typename T>
 static bool ParsePmsiInt(Span<const char> str, T *out_value)
 {
-    RG_DEBUG_ASSERT(str.len > 0);
+    RG_ASSERT_DEBUG(str.len > 0);
 
     if (str[0] == ' ')
         return true;
@@ -235,7 +235,7 @@ static bool ParsePmsiInt(Span<const char> str, T *out_value)
 
 static bool ParsePmsiDate(Span<const char> str, Date *out_date)
 {
-    RG_DEBUG_ASSERT(str.len == 8);
+    RG_ASSERT_DEBUG(str.len == 8);
 
     if (str[0] == ' ')
         return true;
@@ -644,7 +644,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
         stay.unit.number = (int16_t)(stay.unit.number + 10000);
         offset += 2; // Skip end of UM type (A/B, H/P)
 
-        if (RG_LIKELY(i < RG_ARRAY_SIZE(test.auth_supplements))) {
+        if (RG_LIKELY(i < RG_LEN(test.auth_supplements))) {
             int type = 0;
             ParsePmsiInt(ReadFragment(2), &type);
             ParsePmsiInt(ReadFragment(4), &test.auth_supplements[i].days);

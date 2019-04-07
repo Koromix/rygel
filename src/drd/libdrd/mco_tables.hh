@@ -110,7 +110,7 @@ struct mco_DiagnosisInfo {
 
     const Attributes &Attributes(int8_t sex) const
     {
-        RG_DEBUG_ASSERT(sex == 1 || sex == 2);
+        RG_ASSERT_DEBUG(sex == 1 || sex == 2);
         return attributes[sex - 1];
     }
 
@@ -172,7 +172,7 @@ struct mco_ValueRangeCell {
 
     bool Test(Size idx, int value) const
     {
-        RG_DEBUG_ASSERT(idx < N);
+        RG_ASSERT_DEBUG(idx < N);
         return (value >= limits[idx].min && value < limits[idx].max);
     }
 };
@@ -275,7 +275,7 @@ struct mco_TableIndex {
     Date limit_dates[2];
     bool valid;
 
-    const mco_TableInfo *tables[RG_ARRAY_SIZE(mco_TableTypeNames)];
+    const mco_TableInfo *tables[RG_LEN(mco_TableTypeNames)];
     uint32_t changed_tables;
 
     Span<const mco_GhmDecisionNode> ghm_nodes;
@@ -453,7 +453,7 @@ public:
                        values[1] == u.cmd_jump.jump;
             } break;
         }
-        RG_DEBUG_ASSERT(false);
+        RG_ASSERT_DEBUG(false);
     }
 };
 

@@ -696,7 +696,7 @@ double PredictQRisk3(const Human &human)
                                             9.002537727355957, smoke_cat, 0, 0.392308831214905);
         } break;
     }
-    RG_DEBUG_ASSERT(!std::isnan(score10));
+    RG_ASSERT_DEBUG(!std::isnan(score10));
 
     return AnnualizePrediction(score10, 10);
 }

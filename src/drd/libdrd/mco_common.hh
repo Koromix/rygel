@@ -303,7 +303,7 @@ static const char *const mco_SupplementTypeNames[] = {
 
 template <typename T>
 union mco_SupplementCounters {
-    T values[RG_ARRAY_SIZE(mco_SupplementTypeNames)];
+    T values[RG_LEN(mco_SupplementTypeNames)];
     struct {
         T rea;
         T reasi;
