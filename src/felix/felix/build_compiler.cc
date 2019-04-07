@@ -132,15 +132,15 @@ public:
     ClangCompiler(): Compiler("Clang", (int)CompilerFlag::PCH | (int)CompilerFlag::LTO) {}
 
     const char *MakeObjectCommand(const char *src_filename, SourceType src_type, BuildMode build_mode,
-                                  const char *pch_filename, Span<const char *const> definitions,
+                                  bool warnings, const char *pch_filename, Span<const char *const> definitions,
                                   Span<const char *const> include_directories, const char *dest_filename,
                                   const char *deps_filename, Allocator *alloc) const override
     {
 #ifdef _WIN32
-        static const char *const flags = "-Wall -Wno-unknown-warning-option -Wno-unknown-pragmas "
+        static const char *const flags = "-Wno-unknown-warning-option -Wno-unknown-pragmas "
                                          "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE";
 #else
-        static const char *const flags = "-pthread -Wall";
+        static const char *const flags = "-pthread";
 #endif
 
         HeapArray<char> buf;
@@ -151,6 +151,11 @@ public:
             case SourceType::C_Header: { Fmt(&buf, "clang -std=gnu11 -x c-header %1", flags); } break;
             case SourceType::CXX_Source: { Fmt(&buf, "clang++ -std=gnu++17 -fno-exceptions %1", flags); } break;
             case SourceType::CXX_Header: { Fmt(&buf, "clang++ -std=gnu++17 -fno-exceptions -x c++-header %1", flags); } break;
+        }
+        if (warnings) {
+            Fmt(&buf, " -Wall");
+        } else {
+            Fmt(&buf, " -Wno-everything");
         }
 #ifdef _WIN32
         Fmt(&buf, " -D_MT -Xclang --dependent-lib=libcmt -Xclang --dependent-lib=oldnames");
@@ -208,14 +213,14 @@ public:
     }
 
     const char *MakeObjectCommand(const char *src_filename, SourceType src_type, BuildMode build_mode,
-                                  const char *pch_filename, Span<const char *const> definitions,
+                                  bool warnings, const char *pch_filename, Span<const char *const> definitions,
                                   Span<const char *const> include_directories, const char *dest_filename,
                                   const char *deps_filename, Allocator *alloc) const override
     {
 #ifdef _WIN32
-        static const char *const flags = "-Wall -D__USE_MINGW_ANSI_STDIO=1";
+        static const char *const flags = "-D__USE_MINGW_ANSI_STDIO=1";
 #else
-        static const char *const flags = "-pthread -Wall";
+        static const char *const flags = "-pthread";
 #endif
 
         HeapArray<char> buf;
@@ -228,6 +233,9 @@ public:
                                                      "%1", flags); } break;
             case SourceType::CXX_Header: { Fmt(&buf, "g++ -std=gnu++17 -fno-exceptions "
                                                      "-x c++-header %1", flags); } break;
+        }
+        if (warnings) {
+            Fmt(&buf, " -Wall");
         }
 
         AppendGccObjectArguments(src_filename, build_mode, pch_filename, definitions,

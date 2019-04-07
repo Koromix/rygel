@@ -54,7 +54,7 @@ public:
     bool Supports(CompilerFlag flag) const { return flags & (int)flag; }
 
     virtual const char *MakeObjectCommand(const char *src_filename, SourceType src_type, BuildMode build_mode,
-                                          const char *pch_filename, Span<const char *const> definitions,
+                                          bool warnings, const char *pch_filename, Span<const char *const> definitions,
                                           Span<const char *const> include_directories, const char *dest_filename,
                                           const char *deps_filename, Allocator *alloc) const = 0;
     virtual const char *MakePackCommand(Span<const char *const> pack_filenames, const char *pack_options,

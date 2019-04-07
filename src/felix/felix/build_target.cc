@@ -153,6 +153,8 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
                     target_config.enable_by_default = true;
                 } else if (prop.value == "Library") {
                     target_config.type = TargetType::Library;
+                } else if (prop.value == "ExternalLibrary") {
+                    target_config.type = TargetType::ExternalLibrary;
                 } else {
                     LogError("Unknown target type '%1'", prop.value);
                     valid = false;
@@ -388,7 +390,7 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
                 }
 
                 import = &set.targets[import_idx];
-                if (import->type != TargetType::Library) {
+                if (import->type != TargetType::Library && import->type != TargetType::ExternalLibrary) {
                     LogError("Cannot import non-library target '%1'", import->name);
                     return nullptr;
                 }

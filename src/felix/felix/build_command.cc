@@ -217,6 +217,8 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
 
     HeapArray<const char *> obj_filenames;
 
+    bool warnings = (target.type != TargetType::ExternalLibrary);
+
     // Precompiled headers
     for (const ObjectInfo &obj: target.pch_objects) {
         const char *deps_filename = Fmt(&temp_alloc, "%1.d", obj.dest_filename).ptr;
@@ -229,8 +231,8 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
             if (!CreatePrecompileHeader(obj.src_filename, obj.dest_filename))
                 return false;
 
-            cmd.cmd = compiler->MakeObjectCommand(obj.dest_filename, obj.src_type, build_mode, nullptr,
-                                                  target.definitions, target.include_directories,
+            cmd.cmd = compiler->MakeObjectCommand(obj.dest_filename, obj.src_type, build_mode, warnings,
+                                                  nullptr, target.definitions, target.include_directories,
                                                   nullptr, deps_filename, &str_alloc);
             if (!cmd.cmd)
                 return false;
@@ -259,8 +261,8 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
             cmd.dest_filename = DuplicateString(obj.dest_filename, &str_alloc).ptr;
             if (!EnsureDirectoryExists(obj.dest_filename))
                 return false;
-            cmd.cmd = compiler->MakeObjectCommand(obj.src_filename, obj.src_type, build_mode, pch_filename,
-                                                  target.definitions, target.include_directories,
+            cmd.cmd = compiler->MakeObjectCommand(obj.src_filename, obj.src_type, build_mode, warnings,
+                                                  pch_filename, target.definitions, target.include_directories,
                                                   obj.dest_filename, deps_filename, &str_alloc);
             if (!cmd.cmd)
                 return false;
