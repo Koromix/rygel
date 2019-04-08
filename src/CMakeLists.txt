@@ -340,9 +340,6 @@ set(GOUPIL_ASSETS
     goupil/client/goupil.html
     libweb/compat.js
     libweb/util.js
-    goupil/client/store.js
-    goupil/client/widgets.js
-    goupil/client/widgets.css
 )
 
 add_executable(goupil ${GOUPIL_SRC})
