@@ -13,6 +13,7 @@
 * _src/libgui_: Simple OpenGL window creation 
 * _src/libweb_: Reusable utility functions and HTML/CSS/JS widgets
 * _src/thop_: Web-based institutional PMSI reporting tool based on libdrd
+* _src/webler_ : Simple markdown-to-HTML website generator (e.g. koromix.dev)
 * _src/wrappers_: Small C++ wrappers for library code (http, R)
 
 ## Draft projects
