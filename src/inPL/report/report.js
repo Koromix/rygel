@@ -84,18 +84,19 @@ let report = (function() {
                     case 'ems_force': return tests.testStrength(data).text;
                     case 'ems_fractures': return tests.testFractureRisk(data).text;
 
-                    case 'neuropsy_efficience': return tests.testEfficiency(data).text;
-                    case 'neuropsy_memoire': return tests.testMemory(data).text;
-                    case 'neuropsy_execution': return tests.testExecution(data).text;
-                    case 'neuropsy_attention': return tests.testAttention(data).text;
-                    case 'neuropsy_cognition': return tests.testCognition(data).text;
-                    case 'neuropsy_had': return tests.testDepressionAnxiety(data).text;
-                    case 'neuropsy_sommeil': return tests.testSleep(data).text;
+                    case 'neuropsy_efficience': return tests.neuroEfficiency(data).text;
+                    case 'neuropsy_memoire': return tests.neuroMemory(data).text;
+                    case 'neuropsy_execution': return tests.neuroExecution(data).text;
+                    case 'neuropsy_attention': return tests.neuroAttention(data).text;
+                    case 'neuropsy_cognition': return tests.neuroCognition(data).text;
+                    case 'neuropsy_had': return tests.neuroDepressionAnxiety(data).text;
+                    case 'neuropsy_sommeil': return tests.neuroSleep(data).text;
 
-                    case 'constantes_hta_ortho': return tests.testOrthostaticHypotension(data).text;
-                    case 'constantes_vop': return tests.testVOP(data).text;
-                    case 'audition_surdite_gauche': return tests.testSurdityL(data).text;
-                    case 'audition_surdite_droite': return tests.testSurdityR(data).text;
+                    case 'constantes_hta_ortho': return tests.cardioOrthostaticHypotension(data).text;
+                    case 'constantes_vop': return tests.cardioRigidity(data).text;
+
+                    case 'audition_surdite_gauche': return tests.surdityLeft(data).text;
+                    case 'audition_surdite_droite': return tests.surdityRight(data).text;
 
                     default: throw `Unknown test \'${test_name}\'`;
                 }
@@ -103,7 +104,7 @@ let report = (function() {
             function calc(data, calc_name)
             {
                 switch (calc_name) {
-                    case 'aq1_epices': return tests.computeEpices(data);
+                    case 'aq_epices': return tests.aqEpices(data);
 
                     default: throw `Unknown calculated variable \'${calc_name}\'`;
                 }
