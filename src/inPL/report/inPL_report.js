@@ -51,8 +51,8 @@ let inPL = (function() {
             refresh_tabs &= ~(1 << route_params.tab);
 
             switch (route_params.tab) {
-                case 0: { tables.refreshList(rows); } break;
-                case 1: { tables.refreshSummary(rows); } break;
+                case 0: { coaching.refreshList(rows); } break;
+                case 1: { coaching.refreshSummary(rows); } break;
                 case 2: { report.refreshReport(rows); } break;
             }
         }

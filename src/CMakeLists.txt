@@ -371,8 +371,8 @@ set(INPL_REPORT_ASSETS
     inPL/report/mod_neuropsy.js
     inPL/report/mod_nutrition.js
     inPL/report/bridge.js
+    inPL/report/coaching.js
     inPL/report/report.js
-    inPL/report/tables.js
     inPL/report/inPL_report.css
 )
 
