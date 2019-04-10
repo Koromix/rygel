@@ -69,33 +69,33 @@ let report = (function() {
             function test(data, test_name)
             {
                 switch (test_name) {
-                    case 'demo_rachis': return demo.testRachis(data).text;
-                    case 'demo_col': return demo.testFemoralNeck(data).text;
-                    case 'demo_hanche': return demo.testHip(data).text;
-                    case 'demo_avbras': return demo.testForearm(data).text;
-                    case 'demo_sarcopenie': return demo.testSarcopenia(data).text;
+                    case 'demo_rachis': return tests.testRachis(data).text;
+                    case 'demo_col': return tests.testFemoralNeck(data).text;
+                    case 'demo_hanche': return tests.testHip(data).text;
+                    case 'demo_avbras': return tests.testForearm(data).text;
+                    case 'demo_sarcopenie': return tests.testSarcopenia(data).text;
 
-                    case 'diet_diversite': return nutrition.testDiversity(data).text;
-                    case 'diet_proteines': return nutrition.testProteinIntake(data).text;
-                    case 'diet_calcium': return nutrition.testCalciumIntake(data).text;
-                    case 'diet_comportement': return nutrition.testBehavior(data).text;
+                    case 'diet_diversite': return tests.testDiversity(data).text;
+                    case 'diet_proteines': return tests.testProteinIntake(data).text;
+                    case 'diet_calcium': return tests.testCalciumIntake(data).text;
+                    case 'diet_comportement': return tests.testBehavior(data).text;
 
-                    case 'ems_mobilite': return ems.testMobility(data).text;
-                    case 'ems_force': return ems.testStrength(data).text;
-                    case 'ems_fractures': return ems.testFractureRisk(data).text;
+                    case 'ems_mobilite': return tests.testMobility(data).text;
+                    case 'ems_force': return tests.testStrength(data).text;
+                    case 'ems_fractures': return tests.testFractureRisk(data).text;
 
-                    case 'neuropsy_efficience': return neuropsy.testEfficiency(data).text;
-                    case 'neuropsy_memoire': return neuropsy.testMemory(data).text;
-                    case 'neuropsy_execution': return neuropsy.testExecution(data).text;
-                    case 'neuropsy_attention': return neuropsy.testAttention(data).text;
-                    case 'neuropsy_cognition': return neuropsy.testCognition(data).text;
-                    case 'neuropsy_had': return neuropsy.testDepressionAnxiety(data).text;
-                    case 'neuropsy_sommeil': return neuropsy.testSleep(data).text;
+                    case 'neuropsy_efficience': return tests.testEfficiency(data).text;
+                    case 'neuropsy_memoire': return tests.testMemory(data).text;
+                    case 'neuropsy_execution': return tests.testExecution(data).text;
+                    case 'neuropsy_attention': return tests.testAttention(data).text;
+                    case 'neuropsy_cognition': return tests.testCognition(data).text;
+                    case 'neuropsy_had': return tests.testDepressionAnxiety(data).text;
+                    case 'neuropsy_sommeil': return tests.testSleep(data).text;
 
-                    case 'constantes_hta_ortho': return misc.testOrthostaticHypotension(data).text;
-                    case 'constantes_vop': return misc.testVOP(data).text;
-                    case 'audition_surdite_gauche': return misc.testSurdityL(data).text;
-                    case 'audition_surdite_droite': return misc.testSurdityR(data).text;
+                    case 'constantes_hta_ortho': return tests.testOrthostaticHypotension(data).text;
+                    case 'constantes_vop': return tests.testVOP(data).text;
+                    case 'audition_surdite_gauche': return tests.testSurdityL(data).text;
+                    case 'audition_surdite_droite': return tests.testSurdityR(data).text;
 
                     default: throw `Unknown test \'${test_name}\'`;
                 }
@@ -103,7 +103,7 @@ let report = (function() {
             function calc(data, calc_name)
             {
                 switch (calc_name) {
-                    case 'aq1_epices': return misc.computeEpices(data);
+                    case 'aq1_epices': return tests.computeEpices(data);
 
                     default: throw `Unknown calculated variable \'${calc_name}\'`;
                 }
