@@ -365,11 +365,7 @@ set(INPL_REPORT_ASSETS
     libweb/util.js
     inPL/report/common.js
     inPL/report/inPL_report.js
-    inPL/report/mod_demo.js
-    inPL/report/mod_ems.js
-    inPL/report/mod_misc.js
-    inPL/report/mod_neuropsy.js
-    inPL/report/mod_nutrition.js
+    inPL/report/tests.js
     inPL/report/bridge.js
     inPL/report/coaching.js
     inPL/report/report.js

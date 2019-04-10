@@ -2,10 +2,283 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let neuropsy = (function() {
+let tests = (function() {
     let self = this;
 
-    let tresholds = {
+    // ------------------------------------------------------------------------
+    // Densitometry
+    // ------------------------------------------------------------------------
+
+    function makeBoneResult(t)
+    {
+        if (t === null)
+            return makeTestResult(null);
+
+        if (t <= -2.5) {
+            return makeTestResult(TestScore.Bad, 'ostéoporose');
+        } else if (t <= -1.0) {
+            return makeTestResult(TestScore.Fragile, 'ostéopénie');
+        } else {
+            return makeTestResult(TestScore.Good, 'absence d\'ostéopénie/ostéoporose');
+        }
+    }
+
+    this.testRachis = function(data) { return makeBoneResult(data.demo_dmo_rachis); }
+    this.testFemoralNeck = function(data) { return makeBoneResult(data.demo_dmo_col); }
+    this.testHip = function(data) { return makeBoneResult(data.demo_dmo_hanche); }
+    this.testForearm = function(data) { return makeBoneResult(data.demo_dmo_avb1); }
+
+    this.testSarcopenia = function(data) {
+        if (data.consultant_sexe === null || data.demo_dxa_indice_mm === null)
+            return makeTestResult(null);
+
+        let treshold;
+        switch (data.consultant_sexe) {
+            case 'M': { treshold = 7.23; } break;
+            case 'F': { treshold = 5.67; } break;
+        }
+
+        if (data.demo_dmo_avb1 <= treshold) {
+            return makeTestResult(TestScore.Fragile, 'sarcopénie');
+        } else {
+            return makeTestResult(TestScore.Good, 'absence de sarcopénie');
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // EMS
+    // ------------------------------------------------------------------------
+
+    this.testMobility = function(data) {
+        if (data.ems_pratique_activites === null || data.ems_temps_assis_jour === null ||
+                data.ems_assis_2h_continu === null)
+            return makeTestResult(null);
+
+        let sedentary = data.ems_temps_assis_jour >= 7 * 60 ||
+                        data.ems_assis_2h_continu;
+
+        let activity_score = 0;
+        for (let i = 1; i <= 10; i++) {
+            if (data[`ems_act${i}`] === null)
+                continue;
+
+            let intensity = data[`ems_act${i}_intensite`];
+            let duration = data[`ems_act${i}_temps`];
+            let frequency = data[`ems_act${i}_freq`];
+
+            if (intensity == 3 && duration >= 20) {
+                if (frequency >= 3) {
+                    activity_score += 4;
+                } else if (frequency >= 1) {
+                    activity_score += 2;
+                }
+            } else if (intensity == 2 && duration >= 30) {
+                if (frequency >= 5) {
+                    activity_score += 4;
+                } else if (frequency >= 3) {
+                    activity_score += 2;
+                } else if (frequency >= 1) {
+                    activity_score += 1;
+                }
+            }
+        }
+
+        if (activity_score < 4 || sedentary) {
+            return makeTestResult(TestScore.Fragile);
+        } else {
+            return makeTestResult(TestScore.Good);
+        }
+    };
+
+    this.testStrength = function(data) {
+        if (data.consultant_sexe === null || data.ems_test_handgrip === null || data.demo_dxa_indice_mm === null ||
+                data.ems_test_vit4m === null)
+            return makeTestResult(null);
+
+        switch (data.consultant_sexe) {
+            case 'M': {
+                if (data.ems_test_vit4m <= 0.8) {
+                    return makeTestResult(TestScore.Bad);
+                } else if (data.ems_test_handgrip < 27 || data.demo_dxa_indice_mm <= 7.23) {
+                    return makeTestResult(TestScore.Fragile);
+                } else {
+                    return makeTestResult(TestScore.Good);
+                }
+            } break;
+
+            case 'F': {
+                if (data.ems_test_vit4m <= 0.8) {
+                    return makeTestResult(TestScore.Bad);
+                } else if (data.ems_test_handgrip < 16 || data.demo_dxa_indice_mm <= 5.67) {
+                    return makeTestResult(TestScore.Fragile);
+                } else {
+                    return makeTestResult(TestScore.Good);
+                }
+            } break;
+        }
+    };
+
+    this.testFractureRisk = function(data) {
+        if (data.ems_test_unipod === null || (data.ems_test_timeup === null && data.ems_test_getup === null) ||
+                data.demo_dmo_rachis === null || data.demo_dmo_col === null)
+            return makeTestResult(null);
+
+        let dmo_min = Math.min(data.demo_dmo_rachis, data.demo_dmo_col);
+
+        if (data.ems_test_getup !== null) {
+            // New version (2019+)
+            if (data.ems_test_unipod < 5 || data.ems_test_getup >= 3 || dmo_min <= -2.5) {
+                return makeTestResult(TestScore.Bad);
+            } else if (data.ems_test_unipod < 30 || data.ems_test_getup == 2 || dmo_min <= -1.0) {
+                return makeTestResult(TestScore.Fragile);
+            } else {
+                return makeTestResult(TestScore.Good);
+            }
+        } else {
+            // Old version (2018)
+            if (data.ems_test_unipod < 5 || data.ems_test_timeup >= 14 || dmo_min <= -2.5) {
+                return makeTestResult(TestScore.Bad);
+            } else if (data.ems_test_unipod < 30 || dmo_min <= -1.0) {
+                return makeTestResult(TestScore.Fragile);
+            } else {
+                return makeTestResult(TestScore.Good);
+            }
+        }
+    };
+
+    this.testEMS = function(data) {
+        let score = Math.min(self.testMobility(data).score, self.testStrength(data).score,
+                             self.testFractureRisk(data).score);
+        return makeTestResult(score);
+    };
+
+    this.computeEpices = function(data) {
+        if (data.aq1_seco4 === null || data.aq1_seco7 === null || data.aq1_seco10 === null ||
+                data.aq1_seco2 === null || data.aq1_seco3 === null || data.aq1_lois2 === null ||
+                data.aq1_lois3 === null || data.aq1_lois4 === null || data.aq1_integsoc2 === null ||
+                data.aq1_integsoc3 === null || data.aq1_integsoc4 === null)
+            return null;
+
+        let score = !!data.aq1_seco4 * 10.06 +
+                    !!data.aq1_seco7 * -11.83 +
+                    !!data.aq1_seco10 * -8.28 +
+                    !!data.aq1_seco2 * -8.28 +
+                    !!data.aq1_seco3 * 14.8 +
+                    !!data.aq1_lois2 * -6.51 + // !!data.aq1_seco11
+                    !!data.aq1_lois3 * -7.1 + // !!data.aq1_seco12
+                    !!data.aq1_lois4 * -7.1 + // !!data.aq1_seco13
+                    !!data.aq1_integsoc2 * -9.47 + // !!data.aq1_seco14
+                    !!data.aq1_integsoc3 * -9.47 + // !!data.aq1_seco15
+                    !!data.aq1_integsoc4 * -7.1 + // !!data.aq1_seco16
+                    75.14;
+        score = roundTo(score, 2);
+
+        return score;
+    };
+
+    // ------------------------------------------------------------------------
+    // General
+    // ------------------------------------------------------------------------
+
+    function getSystolicPressure(data) {
+        if (data.explcv2b != null) {
+            return data.explcv2b;
+        } else if (data.explcv2 != null) {
+            return data.explcv2;
+        } else {
+            return makeTestResult(null);
+        }
+    }
+    function getDiastolicPressure(data) {
+        if (data.explcv3b != null) {
+            return data.explcv3b;
+        } else if (data.explcv3 != null) {
+            return data.explcv3;
+        } else {
+            return makeTestResult(null);
+        }
+    }
+
+    this.testOrthostaticHypotension = function(data) {
+        let pas = getSystolicPressure(data);
+        let pad = getDiastolicPressure(data);
+
+        if (pas === null || pad === null ||
+                data.constantes_explcv8 === null || data.constantes_explcv9 === null ||
+                data.constantes_explcv11 === null || data.constantes_explcv12 === null)
+                // data.constantes_explcv14 === null || data.constantes_explcv15 === null)
+            return makeTestResult(null);
+
+        let pas_min = Math.min(data.constantes_explcv8, data.constantes_explcv11); //, data.constantes_explcv14);
+        let pad_min = Math.min(data.constantes_explcv9, data.constantes_explcv12); //, data.constantes_explcv15);
+
+        if (pas - pas_min >= 20 || pad - pad_min >= 10) {
+            return makeTestResult(TestScore.Bad, 'hypotension orthostatique');
+        //} else if (pas - data.constantes_explcv14 >= 20 || pad - data.constantes_explcv15 >= 10) {
+        //    return ScreeningResult.Fragile;
+        } else {
+            return makeTestResult(TestScore.Good, 'absence d\'hypotension orthostatique');
+        }
+    };
+
+    this.testVOP = function(data) {
+        if (data.rdv_age === null || data.explcv17 === null)
+            return null;
+
+        let treshold;
+        if (data.rdv_age < 30) {
+            treshold = 7.1;
+        } else if (data.rdv_age < 40) {
+            treshold = 8.0
+        } else if (data.rdv_age < 50) {
+            treshold = 8.6;
+        } else if (data.rdv_age < 60) {
+            treshold = 10.0;
+        } else if (data.rdv_age < 70) {
+            treshold = 13.1;
+        } else {
+            treshold = 14.6;
+        }
+
+        if (getSystolicPressure(data) >= 140 || getDiastolicPressure(data) >= 90) {
+            return makeTestResult(TestScore.Bad, 'non pertinent car HTA lors de l\'examen');
+        } else if (data.explcv17 >= treshold) {
+            return makeTestResult(TestScore.Fragile, 'rigidité artérielle anormalement élevée avec risque de développer une HTA dans l’avenir');
+        } else {
+            return makeTestResult(TestScore.Good, 'rigidité artérielle dans les normes');
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // Audition
+    // ------------------------------------------------------------------------
+
+    function testSurdity(loss)
+    {
+        if (loss === null)
+            return null;
+
+        if (loss >= 90) {
+            return makeTestResult(TestScore.Bad, 'perte auditive profonde');
+        } else if (loss >= 70) {
+            return makeTestResult(TestScore.Bad, 'perte auditive sévère');
+        } else if (loss >= 40) {
+            return makeTestResult(TestScore.Bad, 'perte auditive moyenne');
+        } else if (loss >= 20) {
+            return makeTestResult(TestScore.Fragile, 'perte auditive légère');
+        } else {
+            return makeTestResult(TestScore.Good, 'audition normale');
+        }
+    }
+
+    this.testSurdityL = function(data) { return testSurdity(data.perte_tonale_gauche); }
+    this.testSurdityR = function(data) { return testSurdity(data.perte_tonale_droite); }
+
+    // ------------------------------------------------------------------------
+    // Neuropsy
+    // ------------------------------------------------------------------------
+
+    let neuro_tresholds = {
         401: {moca_mean: 25.9, moca_sd: 2.7, moca_c50: 26, moca_c5: 21.4, rl_mean: 31, rl_sd: 6, rl_c50: 32, rl_c5: 21.1, rt_mean: 44.5, rt_sd: 4.9, rt_c50: 46, rt_c5: 38.6, p_mean: 12.5, p_sd: 4.2, p_c50: 12, p_c5: 12, animx_mean: 18.9, animx_sd: 4.5, animx_c50: 19, animx_c5: 11.7, tmta_mean: 41, tmta_sd: 22, tmta_c50: 34, tmta_c5: 98, tmtb_mean: 99, tmtb_sd: 42, tmtb_c50: 93, tmtb_c5: 186, deno_mean: 62, deno_sd: 12, deno_c50: 59, deno_c5: 92, lecture_mean: 45, lecture_sd: 9, lecture_c50: 44, lecture_c5: 62, interf_mean: 117, interf_sd: 27, interf_c50: 118, interf_c5: 193, int_deno_mean: 55, int_deno_sd: 21, int_deno_c50: 55, int_deno_c5: 104, code_c50: 67, code_c5: 43, slc_c50: 11, slc_c5: 5},
         411: {moca_mean: 25.9, moca_sd: 2.7, moca_c50: 26, moca_c5: 21.4, rl_mean: 31, rl_sd: 6, rl_c50: 32, rl_c5: 21.1, rt_mean: 44.5, rt_sd: 4.9, rt_c50: 46, rt_c5: 38.6, p_mean: 12.5, p_sd: 4.2, p_c50: 12, p_c5: 12, animx_mean: 18.9, animx_sd: 4.5, animx_c50: 19, animx_c5: 11.7, tmta_mean: 41, tmta_sd: 22, tmta_c50: 34, tmta_c5: 98, tmtb_mean: 99, tmtb_sd: 42, tmtb_c50: 93, tmtb_c5: 186, deno_mean: 62, deno_sd: 12, deno_c50: 59, deno_c5: 92, lecture_mean: 45, lecture_sd: 9, lecture_c50: 44, lecture_c5: 62, interf_mean: 117, interf_sd: 27, interf_c50: 118, interf_c5: 193, int_deno_mean: 55, int_deno_sd: 21, int_deno_c50: 55, int_deno_c5: 104, code_c50: 67, code_c5: 43, slc_c50: 11, slc_c5: 5},
         421: {moca_mean: 25.9, moca_sd: 2.7, moca_c50: 26, moca_c5: 21.4, rl_mean: 31, rl_sd: 6, rl_c50: 32, rl_c5: 21.1, rt_mean: 44.5, rt_sd: 4.9, rt_c50: 46, rt_c5: 38.6, p_mean: 12.5, p_sd: 4.2, p_c50: 12, p_c5: 12, animx_mean: 18.9, animx_sd: 4.5, animx_c50: 19, animx_c5: 11.7, tmta_mean: 41, tmta_sd: 22, tmta_c50: 34, tmta_c5: 98, tmtb_mean: 99, tmtb_sd: 42, tmtb_c50: 93, tmtb_c5: 186, deno_mean: 62, deno_sd: 12, deno_c50: 59, deno_c5: 92, lecture_mean: 45, lecture_sd: 9, lecture_c50: 44, lecture_c5: 62, interf_mean: 117, interf_sd: 27, interf_c50: 118, interf_c5: 193, int_deno_mean: 55, int_deno_sd: 21, int_deno_c50: 55, int_deno_c5: 104, code_c50: 67, code_c5: 43, slc_c50: 11, slc_c5: 5},
@@ -191,12 +464,12 @@ let neuropsy = (function() {
         1003: {moca_mean: 27.6, moca_sd: 2.1, moca_c50: 28, moca_c5: 22.8, rl_mean: 30.4, rl_sd: 6.4, rl_c50: 31, rl_c5: 18.8, rt_mean: 46.1, rt_sd: 2.6, rt_c50: 47, rt_c5: 40, p_mean: 15.6, p_sd: 4.2, p_c50: 15, p_c5: 15, animx_mean: 20.5, animx_sd: 5.3, animx_c50: 21, animx_c5: 13.2, tmta_mean: 49, tmta_sd: 18, tmta_c50: 44, tmta_c5: 84, tmtb_mean: 118, tmtb_sd: 51, tmtb_c50: 105, tmtb_c5: 226, deno_mean: 65, deno_sd: 12, deno_c50: 62, deno_c5: 87, lecture_mean: 44, lecture_sd: 6, lecture_c50: 43, lecture_c5: 55, interf_mean: 123, interf_sd: 32, interf_c50: 113, interf_c5: 191, int_deno_mean: 58, int_deno_sd: 25, int_deno_c50: 51, int_deno_c5: 131, code_c50: 38, code_c5: 22, slc_c50: 7, slc_c5: 3}
     };
 
-    function getTresholds(age, sc_level)
+    function getNeuroTresholds(age, sc_level)
     {
         age = Math.min(Math.max(age, 40), 100);
 
         let key = age * 10 + sc_level;
-        return tresholds[key];
+        return neuro_tresholds[key];
     }
 
     function testInfC5(value, treshold)
@@ -231,7 +504,7 @@ let neuropsy = (function() {
         if (data.rdv_age === null || data.neuropsy_nsc === null || data.neuropsy_moca === null)
             return makeTestResult(null);
 
-        let tresholds = getTresholds(data.rdv_age, data.neuropsy_nsc);
+        let tresholds = getNeuroTresholds(data.rdv_age, data.neuropsy_nsc);
         if (!tresholds)
             return makeTestResult(null);
 
@@ -249,7 +522,7 @@ let neuropsy = (function() {
                 data.neuropsy_rt === null)
             return makeTestResult(null);
 
-        let tresholds = getTresholds(data.rdv_age, data.neuropsy_nsc);
+        let tresholds = getNeuroTresholds(data.rdv_age, data.neuropsy_nsc);
         if (!tresholds)
             return makeTestResult(null);
 
@@ -268,7 +541,7 @@ let neuropsy = (function() {
                  (data.neuropsy_animx === null) + (data.neuropsy_p === null)) > 2)
             return makeTestResult(null);
 
-        let tresholds = getTresholds(data.rdv_age, data.neuropsy_nsc);
+        let tresholds = getNeuroTresholds(data.rdv_age, data.neuropsy_nsc);
         if (!tresholds)
             return makeTestResult(null);
 
@@ -298,7 +571,7 @@ let neuropsy = (function() {
                  (data.neuropsy_deno === null)) > 2)
             return makeTestResult(null);
 
-        let tresholds = getTresholds(data.rdv_age, data.neuropsy_nsc);
+        let tresholds = getNeuroTresholds(data.rdv_age, data.neuropsy_nsc);
         if (!tresholds)
             return makeTestResult(null);
 
@@ -366,11 +639,129 @@ let neuropsy = (function() {
         }
     };
 
-    this.testAll = function(data) {
+    this.testNeuro = function(data) {
         let score = Math.min(self.testCognition(data).score, self.testDepressionAnxiety(data).score,
                              self.testSleep(data).score);
         return makeTestResult(score);
     }
+
+    // ------------------------------------------------------------------------
+    // Nutrition
+    // ------------------------------------------------------------------------
+
+    // TODO: Check inequality operators (< / <=, etc.)
+    this.testDiversity = function(data) {
+        if (data.rdv_age === null || data.diet_diversite_alimentaire === null || data.constantes_poids === null ||
+                data.constantes_taille === null || data.diet_poids_estime_6mois === null)
+            return makeTestResult(null);
+
+        let relative_weight = data.constantes_poids / data.diet_poids_estime_6mois - 1.0;
+        let bmi = data.constantes_poids / Math.pow(data.constantes_taille / 100.0, 2);
+
+        let bmi_type;
+        if (data.rdv_age < 65) {
+            if (bmi < 18.5) {
+                bmi_type = 1;
+            } else if (bmi < 25) {
+                bmi_type = 2;
+            } else if (bmi < 30) {
+                bmi_type = 3;
+            } else {
+                bmi_type = 4;
+            }
+        } else {
+            if (bmi < 21) {
+                bmi_type = 1;
+            } else if (bmi < 28) {
+                bmi_type = 2;
+            } else if (bmi < 33) {
+                bmi_type = 3;
+            } else {
+                bmi_type = 4;
+            }
+        }
+
+        if (relative_weight > 0.1) {
+            switch (bmi_type) {
+                case 1: return makeTestResult(TestScore.Bad, 'alimentation non diversifiée');
+                case 2: return makeTestResult(TestScore.Fragile, 'diversité alimentaire insuffisante');
+                case 3: return makeTestResult(TestScore.Fragile, 'diversité insuffisante');
+                case 4: return makeTestResult(TestScore.Bad, 'alimentation non diversifiée');
+            }
+        } else if (relative_weight < -0.1) {
+            switch (bmi_type) {
+                case 1: return makeTestResult(TestScore.Bad, 'alimentation non diversifiée');
+                case 2: return makeTestResult(TestScore.Fragile, 'diversité alimentaire insuffisante');
+                case 3: return makeTestResult(TestScore.Fragile, 'diversité alimentaire insuffisante');
+                case 4: return makeTestResult(TestScore.Fragile, 'diversité alimentaire insuffisante');
+            }
+        } else {
+            if (data.diet_diversite_alimentaire == 0) {
+                return makeTestResult(TestScore.Fragile, 'diversité alimentaire insuffisante');
+            } else {
+                return makeTestResult(TestScore.Good, 'bonne diversité alimentaire');
+            }
+        }
+    };
+
+    this.testProteinIntake = function(data) {
+        if (data.diet_apports_proteines === null || data.consultant_sexe === null || data.demo_dxa_indice_mm === null ||
+                data.bio_albuminemie === null)
+            return makeTestResult(null);
+
+        if (data.bio_albuminemie < 35) {
+            return makeTestResult(TestScore.Bad, 'hypoalbuminémie');
+        } else if (data.diet_apports_proteines == 0) {
+            return makeTestResult(TestScore.Fragile, 'apports protéiques insuffisants');
+        } else {
+            switch (data.consultant_sexe) {
+                case 'M': {
+                    if (data.demo_dxa_indice_mm <= 7.23) {
+                        return makeTestResult(TestScore.Fragile, 'apports protéiques insuffisants');
+                    } else {
+                        return makeTestResult(TestScore.Good, 'bons apports protéiques');
+                    }
+                } break;
+                case 'F': {
+                    if (data.demo_dxa_indice_mm <= 5.67) {
+                        return makeTestResult(TestScore.Fragile, 'apports protéiques insuffisants');
+                    } else {
+                        return makeTestResult(TestScore.Good, 'bons apports protéiques');
+                    }
+                } break;
+            }
+        }
+    };
+
+    this.testCalciumIntake = function(data) {
+        if (data.diet_apports_calcium === null)
+            return makeTestResult(null);
+
+        if (data.diet_apports_calcium == 0) {
+            return makeTestResult(TestScore.Fragile, 'apports calciques insuffisants');
+        } else {
+            return makeTestResult(TestScore.Good, 'bons apports calciques');
+        }
+    };
+
+    this.testBehavior = function(data) {
+        if (data.diet_tendances_adaptees === null || data.diet_tendances_inadaptees === null)
+            return makeTestResult(null);
+
+        if (data.diet_tendances_adaptees == 0 && data.diet_tendances_inadaptees == 1) {
+            return makeTestResult(TestScore.Bad, 'comportement alimentaire pathologique');
+        } else if (data.diet_tendances_adaptees == 0 && data.diet_tendances_inadaptees == 0) {
+            return makeTestResult(TestScore.Fragile, 'comportement alimentaire inadapté');
+        } else {
+            return makeTestResult(TestScore.Good, 'bon comportement alimentaire');
+        }
+    };
+
+    this.testNutrition = function(data) {
+        let score = Math.min(self.testDiversity(data).score, self.testProteinIntake(data).score,
+                             self.testCalciumIntake(data).score, self.testBehavior(data).score);
+        return makeTestResult(score);
+    };
 
     return this;
 }).call({});

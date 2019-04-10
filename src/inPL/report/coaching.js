@@ -6,23 +6,23 @@ let coaching = (function() {
     let self = this;
 
     const ScreeningHandlers = [
-        {group: 'Neuropsychologie', abbrev: 'EFF', title: 'Efficience cognitive', func: neuropsy.testEfficiency},
-        {group: 'Neuropsychologie', abbrev: 'MEM', title: 'Mémoire', func: neuropsy.testMemory},
-        {group: 'Neuropsychologie', abbrev: 'EXE', title: 'Exécution', func: neuropsy.testExecution},
-        {group: 'Neuropsychologie', abbrev: 'ATT', title: 'Attention et vitesse de traitement', func: neuropsy.testAttention},
-        {group: 'Neuropsychologie', abbrev: 'COG', title: 'Cognition', func: neuropsy.testCognition},
-        {group: 'Neuropsychologie', abbrev: 'DA', title: 'Dépression / anxiété', func: neuropsy.testDepressionAnxiety},
-        {group: 'Neuropsychologie', abbrev: 'SOM', title: 'Sommeil', func: neuropsy.testSleep},
-        {group: 'Neuropsychologie', abbrev: 'NP', title: 'Neuropsychologie', func: neuropsy.testAll},
-        {group: 'Nutrition', abbrev: 'DIV', title: 'Diversité', func: nutrition.testDiversity},
-        {group: 'Nutrition', abbrev: 'PRO', title: 'Protéines', func: nutrition.testProteinIntake},
-        {group: 'Nutrition', abbrev: 'CAL', title: 'Calcium', func: nutrition.testCalciumIntake},
-        {group: 'Nutrition', abbrev: 'CMP', title: 'Comportement', func: nutrition.testBehavior},
-        {group: 'Nutrition', abbrev: 'NUT', title: 'Nutrition', func: nutrition.testAll},
-        {group: 'EMS', abbrev: 'MOB', title: 'Mobilité', func: ems.testMobility},
-        {group: 'EMS', abbrev: 'FOR', title: 'Force', func: ems.testStrength},
-        {group: 'EMS', abbrev: 'RF', title: 'Risque de fracture', func: ems.testFractureRisk},
-        {group: 'EMS', abbrev: 'EMS', title: 'EMS', func: ems.testAll}
+        {group: 'Neuropsychologie', abbrev: 'EFF', title: 'Efficience cognitive', func: tests.testEfficiency},
+        {group: 'Neuropsychologie', abbrev: 'MEM', title: 'Mémoire', func: tests.testMemory},
+        {group: 'Neuropsychologie', abbrev: 'EXE', title: 'Exécution', func: tests.testExecution},
+        {group: 'Neuropsychologie', abbrev: 'ATT', title: 'Attention et vitesse de traitement', func: tests.testAttention},
+        {group: 'Neuropsychologie', abbrev: 'COG', title: 'Cognition', func: tests.testCognition},
+        {group: 'Neuropsychologie', abbrev: 'DA', title: 'Dépression / anxiété', func: tests.testDepressionAnxiety},
+        {group: 'Neuropsychologie', abbrev: 'SOM', title: 'Sommeil', func: tests.testSleep},
+        {group: 'Neuropsychologie', abbrev: 'NP', title: 'Neuropsychologie', func: tests.testNeuro},
+        {group: 'Nutrition', abbrev: 'DIV', title: 'Diversité', func: tests.testDiversity},
+        {group: 'Nutrition', abbrev: 'PRO', title: 'Protéines', func: tests.testProteinIntake},
+        {group: 'Nutrition', abbrev: 'CAL', title: 'Calcium', func: tests.testCalciumIntake},
+        {group: 'Nutrition', abbrev: 'CMP', title: 'Comportement', func: tests.testBehavior},
+        {group: 'Nutrition', abbrev: 'NUT', title: 'Nutrition', func: tests.testNutrition},
+        {group: 'EMS', abbrev: 'MOB', title: 'Mobilité', func: tests.testMobility},
+        {group: 'EMS', abbrev: 'FOR', title: 'Force', func: tests.testStrength},
+        {group: 'EMS', abbrev: 'RF', title: 'Risque de fracture', func: tests.testFractureRisk},
+        {group: 'EMS', abbrev: 'EMS', title: 'EMS', func: tests.testEMS}
     ];
 
     function createCategoryHeaders(handlers)
