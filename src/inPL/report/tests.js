@@ -227,7 +227,7 @@ let tests = (function() {
 
     this.cardioRigidity = function(data) {
         if (data.rdv_age === null || data.explcv17 === null)
-            return null;
+            return makeTestResult(null);
 
         let treshold;
         if (data.rdv_age < 30) {
@@ -260,7 +260,7 @@ let tests = (function() {
     function testSurdity(loss)
     {
         if (loss === null)
-            return null;
+            return makeTestResult(null);
 
         if (loss >= 90) {
             return makeTestResult(TestScore.Bad, 'perte auditive profonde');
