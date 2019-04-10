@@ -108,6 +108,14 @@ let report = (function() {
                     default: throw `Unknown calculated variable \'${calc_name}\'`;
                 }
             }
+            function sex(data, male_text, female_text)
+            {
+                switch (data.consultant_sexe) {
+                    case 'M': return male_text;
+                    case 'F': return female_text;
+                    default: return null;
+                }
+            }
 
             reader.onload = function() {
                 let zip = new JSZip(reader.result);
