@@ -6,6 +6,34 @@ let tests = (function() {
     let self = this;
 
     // ------------------------------------------------------------------------
+    // Survey
+    // ------------------------------------------------------------------------
+
+    this.aqEpices = function(data) {
+        if (data.aq1_seco4 === null || data.aq1_seco7 === null || data.aq1_seco10 === null ||
+                data.aq1_seco2 === null || data.aq1_seco3 === null || data.aq1_lois2 === null ||
+                data.aq1_lois3 === null || data.aq1_lois4 === null || data.aq1_integsoc2 === null ||
+                data.aq1_integsoc3 === null || data.aq1_integsoc4 === null)
+            return null;
+
+        let score = !!data.aq1_seco4 * 10.06 +
+                    !!data.aq1_seco7 * -11.83 +
+                    !!data.aq1_seco10 * -8.28 +
+                    !!data.aq1_seco2 * -8.28 +
+                    !!data.aq1_seco3 * 14.8 +
+                    !!data.aq1_lois2 * -6.51 + // !!data.aq1_seco11
+                    !!data.aq1_lois3 * -7.1 + // !!data.aq1_seco12
+                    !!data.aq1_lois4 * -7.1 + // !!data.aq1_seco13
+                    !!data.aq1_integsoc2 * -9.47 + // !!data.aq1_seco14
+                    !!data.aq1_integsoc3 * -9.47 + // !!data.aq1_seco15
+                    !!data.aq1_integsoc4 * -7.1 + // !!data.aq1_seco16
+                    75.14;
+        score = roundTo(score, 2);
+
+        return score;
+    };
+
+    // ------------------------------------------------------------------------
     // Densitometry
     // ------------------------------------------------------------------------
 
@@ -23,12 +51,12 @@ let tests = (function() {
         }
     }
 
-    this.testRachis = function(data) { return makeBoneResult(data.demo_dmo_rachis); }
-    this.testFemoralNeck = function(data) { return makeBoneResult(data.demo_dmo_col); }
-    this.testHip = function(data) { return makeBoneResult(data.demo_dmo_hanche); }
-    this.testForearm = function(data) { return makeBoneResult(data.demo_dmo_avb1); }
+    this.demoRachis = function(data) { return makeBoneResult(data.demo_dmo_rachis); }
+    this.demoFemoralNeck = function(data) { return makeBoneResult(data.demo_dmo_col); }
+    this.demoHip = function(data) { return makeBoneResult(data.demo_dmo_hanche); }
+    this.demoForearm = function(data) { return makeBoneResult(data.demo_dmo_avb1); }
 
-    this.testSarcopenia = function(data) {
+    this.demoSarcopenia = function(data) {
         if (data.consultant_sexe === null || data.demo_dxa_indice_mm === null)
             return makeTestResult(null);
 
@@ -49,7 +77,7 @@ let tests = (function() {
     // EMS
     // ------------------------------------------------------------------------
 
-    this.testMobility = function(data) {
+    this.emsMobility = function(data) {
         if (data.ems_pratique_activites === null || data.ems_temps_assis_jour === null ||
                 data.ems_assis_2h_continu === null)
             return makeTestResult(null);
@@ -90,7 +118,7 @@ let tests = (function() {
         }
     };
 
-    this.testStrength = function(data) {
+    this.emsStrength = function(data) {
         if (data.consultant_sexe === null || data.ems_test_handgrip === null || data.demo_dxa_indice_mm === null ||
                 data.ems_test_vit4m === null)
             return makeTestResult(null);
@@ -118,7 +146,7 @@ let tests = (function() {
         }
     };
 
-    this.testFractureRisk = function(data) {
+    this.emsFractureRisk = function(data) {
         if (data.ems_test_unipod === null || (data.ems_test_timeup === null && data.ems_test_getup === null) ||
                 data.demo_dmo_rachis === null || data.demo_dmo_col === null)
             return makeTestResult(null);
@@ -146,38 +174,14 @@ let tests = (function() {
         }
     };
 
-    this.testEMS = function(data) {
-        let score = Math.min(self.testMobility(data).score, self.testStrength(data).score,
-                             self.testFractureRisk(data).score);
+    this.emsAll = function(data) {
+        let score = Math.min(self.emsMobility(data).score, self.emsStrength(data).score,
+                             self.emsFractureRisk(data).score);
         return makeTestResult(score);
     };
 
-    this.computeEpices = function(data) {
-        if (data.aq1_seco4 === null || data.aq1_seco7 === null || data.aq1_seco10 === null ||
-                data.aq1_seco2 === null || data.aq1_seco3 === null || data.aq1_lois2 === null ||
-                data.aq1_lois3 === null || data.aq1_lois4 === null || data.aq1_integsoc2 === null ||
-                data.aq1_integsoc3 === null || data.aq1_integsoc4 === null)
-            return null;
-
-        let score = !!data.aq1_seco4 * 10.06 +
-                    !!data.aq1_seco7 * -11.83 +
-                    !!data.aq1_seco10 * -8.28 +
-                    !!data.aq1_seco2 * -8.28 +
-                    !!data.aq1_seco3 * 14.8 +
-                    !!data.aq1_lois2 * -6.51 + // !!data.aq1_seco11
-                    !!data.aq1_lois3 * -7.1 + // !!data.aq1_seco12
-                    !!data.aq1_lois4 * -7.1 + // !!data.aq1_seco13
-                    !!data.aq1_integsoc2 * -9.47 + // !!data.aq1_seco14
-                    !!data.aq1_integsoc3 * -9.47 + // !!data.aq1_seco15
-                    !!data.aq1_integsoc4 * -7.1 + // !!data.aq1_seco16
-                    75.14;
-        score = roundTo(score, 2);
-
-        return score;
-    };
-
     // ------------------------------------------------------------------------
-    // General
+    // Cardio-vascular
     // ------------------------------------------------------------------------
 
     function getSystolicPressure(data) {
@@ -199,7 +203,7 @@ let tests = (function() {
         }
     }
 
-    this.testOrthostaticHypotension = function(data) {
+    this.cardioOrthostaticHypotension = function(data) {
         let pas = getSystolicPressure(data);
         let pad = getDiastolicPressure(data);
 
@@ -221,7 +225,7 @@ let tests = (function() {
         }
     };
 
-    this.testVOP = function(data) {
+    this.cardioRigidity = function(data) {
         if (data.rdv_age === null || data.explcv17 === null)
             return null;
 
@@ -271,8 +275,8 @@ let tests = (function() {
         }
     }
 
-    this.testSurdityL = function(data) { return testSurdity(data.perte_tonale_gauche); }
-    this.testSurdityR = function(data) { return testSurdity(data.perte_tonale_droite); }
+    this.surdityLeft = function(data) { return testSurdity(data.perte_tonale_gauche); }
+    this.surdityRight = function(data) { return testSurdity(data.perte_tonale_droite); }
 
     // ------------------------------------------------------------------------
     // Neuropsy
@@ -500,7 +504,7 @@ let tests = (function() {
         }
     }
 
-    this.testEfficiency = function(data) {
+    this.neuroEfficiency = function(data) {
         if (data.rdv_age === null || data.neuropsy_nsc === null || data.neuropsy_moca === null)
             return makeTestResult(null);
 
@@ -517,7 +521,7 @@ let tests = (function() {
         }
     };
 
-    this.testMemory = function(data) {
+    this.neuroMemory = function(data) {
         if (data.rdv_age === null || data.neuropsy_nsc === null || data.neuropsy_rl === null ||
                 data.neuropsy_rt === null)
             return makeTestResult(null);
@@ -535,7 +539,7 @@ let tests = (function() {
         }
     };
 
-    this.testExecution = function(data) {
+    this.neuroExecution = function(data) {
         if (data.rdv_age === null || data.neuropsy_nsc === null ||
                 ((data.neuropsy_tmtb === null) + (data.neuropsy_interf === null) + (data.neuropsy_slc === null) +
                  (data.neuropsy_animx === null) + (data.neuropsy_p === null)) > 2)
@@ -565,7 +569,7 @@ let tests = (function() {
         }
     };
 
-    this.testAttention = function(data) {
+    this.neuroAttention = function(data) {
         if (data.rdv_age === null || data.neuropsy_nsc === null ||
                 ((data.neuropsy_code === null) + (data.neuropsy_tmta === null) + (data.neuropsy_lecture === null) +
                  (data.neuropsy_deno === null)) > 2)
@@ -593,13 +597,13 @@ let tests = (function() {
         }
     };
 
-    this.testCognition = function(data) {
-        let score = Math.min(self.testEfficiency(data).score, self.testMemory(data).score,
-                             self.testExecution(data).score, self.testAttention(data).score);
+    this.neuroCognition = function(data) {
+        let score = Math.min(self.neuroEfficiency(data).score, self.neuroMemory(data).score,
+                             self.neuroExecution(data).score, self.neuroAttention(data).score);
         return makeTestResult(score);
     };
 
-    this.testDepressionAnxiety = function(data) {
+    this.neuroDepressionAnxiety = function(data) {
         if (data.aq1_had1 === null || data.aq1_had2 === null || data.aq1_had3 === null ||
                  data.aq1_had4 === null || data.aq1_had5 === null || data.aq1_had6 === null ||
                  data.aq1_had7 === null || data.aq1_had8 === null || data.aq1_had9 === null ||
@@ -621,7 +625,7 @@ let tests = (function() {
         }
     };
 
-    this.testSleep = function(data) {
+    this.neuroSleep = function(data) {
         if (data.aq1_som1 === null || data.neuropsy_plainte_som === null)
             return makeTestResult(null);
 
@@ -639,9 +643,9 @@ let tests = (function() {
         }
     };
 
-    this.testNeuro = function(data) {
-        let score = Math.min(self.testCognition(data).score, self.testDepressionAnxiety(data).score,
-                             self.testSleep(data).score);
+    this.neuroAll = function(data) {
+        let score = Math.min(self.neuroCognition(data).score, self.neuroDepressionAnxiety(data).score,
+                             self.neuroSleep(data).score);
         return makeTestResult(score);
     }
 
@@ -650,7 +654,7 @@ let tests = (function() {
     // ------------------------------------------------------------------------
 
     // TODO: Check inequality operators (< / <=, etc.)
-    this.testDiversity = function(data) {
+    this.nutritionDiversity = function(data) {
         if (data.rdv_age === null || data.diet_diversite_alimentaire === null || data.constantes_poids === null ||
                 data.constantes_taille === null || data.diet_poids_estime_6mois === null)
             return makeTestResult(null);
@@ -704,7 +708,7 @@ let tests = (function() {
         }
     };
 
-    this.testProteinIntake = function(data) {
+    this.nutritionProteinIntake = function(data) {
         if (data.diet_apports_proteines === null || data.consultant_sexe === null || data.demo_dxa_indice_mm === null ||
                 data.bio_albuminemie === null)
             return makeTestResult(null);
@@ -733,7 +737,7 @@ let tests = (function() {
         }
     };
 
-    this.testCalciumIntake = function(data) {
+    this.nutritionCalciumIntake = function(data) {
         if (data.diet_apports_calcium === null)
             return makeTestResult(null);
 
@@ -744,7 +748,7 @@ let tests = (function() {
         }
     };
 
-    this.testBehavior = function(data) {
+    this.nutritionBehavior = function(data) {
         if (data.diet_tendances_adaptees === null || data.diet_tendances_inadaptees === null)
             return makeTestResult(null);
 
@@ -757,9 +761,9 @@ let tests = (function() {
         }
     };
 
-    this.testNutrition = function(data) {
-        let score = Math.min(self.testDiversity(data).score, self.testProteinIntake(data).score,
-                             self.testCalciumIntake(data).score, self.testBehavior(data).score);
+    this.nutritionAll = function(data) {
+        let score = Math.min(self.nutritionDiversity(data).score, self.nutritionProteinIntake(data).score,
+                             self.nutritionCalciumIntake(data).score, self.nutritionBehavior(data).score);
         return makeTestResult(score);
     };
 
