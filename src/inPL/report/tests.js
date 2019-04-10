@@ -279,6 +279,49 @@ let tests = (function() {
     this.surdityRight = function(data) { return testSurdity(data.perte_tonale_droite); }
 
     // ------------------------------------------------------------------------
+    // Spirometry
+    // ------------------------------------------------------------------------
+
+    this.spiroQuality = function(data) {
+        if (data.respi_spiro_qualite1 === null) {
+            return null;
+        } else if (data.respi_spiro_qualite1) {
+            return 'bonne qualité';
+        } else {
+            if (data.respi_presence_plateau == null) {
+                return null;
+            } else if (data.respi_presence_plateau) {
+                return 'bonne qualité';
+            } else {
+                return 'non interprétable';
+            }
+        }
+    };
+
+    this.spiroResult = function(data) {
+        if (data.respi_vems === null || data.respi_vems_limite === null ||
+                data.respi_cvf === null ||data.respi_cvf_limite === null ||
+                data.respi_def2575 === null || data.respi_def2575_limite === null)
+            return makeTestResult(null);
+
+        let obstructive = (data.respi_vems / data.respi_cvf) < 0.7;
+        let restrictive = data.respi_vems < data.respi_vems_limite ||
+                          data.respi_cvf < data.respi_cvf_limite;
+
+        if (obstructive && restrictive) {
+            return makeTestResult(TestScore.Bad, 'trouble mixte');
+        } else if (obstructive) {
+            return makeTestResult(TestScore.Bad, 'trouble obstructif');
+        } else if (restrictive) {
+            return makeTestResult(TestScore.Bad, 'trouble restrictif');
+        } else if (data.respi_def2575 < data.respi_def2575_limite) {
+            return makeTestResult(TestScore.Fragile, 'anomalie des bronches distales (DEF 25-75)');
+        } else {
+            return makeTestResult(TestScore.Good, 'spirométrie normale');
+        }
+    };
+
+    // ------------------------------------------------------------------------
     // Neuropsy
     // ------------------------------------------------------------------------
 
