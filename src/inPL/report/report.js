@@ -107,6 +107,8 @@ let report = (function() {
             function calc(data, calc_name)
             {
                 switch (calc_name) {
+                    case 'constantes_pas': return tests.systolicPressure(data);
+                    case 'constantes_pad': return tests.diastolicPressure(data);
                     case 'aq_epices': return tests.aqEpices(data);
 
                     default: throw `Unknown calculated variable \'${calc_name}\'`;
