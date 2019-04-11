@@ -29,7 +29,8 @@ VARSETS <- c(
     'constantes',
     'vision',
     'audition',
-    'respi'
+    'respi',
+    'ecg'
 )
 
 VARIABLES_CALCULEES <- tribble(
