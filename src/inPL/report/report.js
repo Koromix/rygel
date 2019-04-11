@@ -92,7 +92,7 @@ let report = (function() {
                     case 'neuropsy_had': return tests.neuroDepressionAnxiety(data).text;
                     case 'neuropsy_sommeil': return tests.neuroSleep(data).text;
 
-                    case 'constantes_hta_ortho': return tests.cardioOrthostaticHypotension(data).text;
+                    case 'constantes_htos': return tests.cardioOrthostaticHypotension(data).text;
                     case 'constantes_vop': return tests.cardioRigidity(data).text;
 
                     case 'audition_surdite_gauche': return tests.surdityLeft(data).text;
