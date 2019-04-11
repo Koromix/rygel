@@ -249,7 +249,7 @@ let tests = (function() {
         } else if (data.explcv17 >= treshold) {
             return makeTestResult(TestScore.Fragile, 'rigidité artérielle anormalement élevée avec risque de développer une HTA dans l’avenir');
         } else {
-            return makeTestResult(TestScore.Good, 'rigidité artérielle dans les normes');
+            return makeTestResult(TestScore.Good, 'absence de rigidité artérielle (VOP dans les normes)');
         }
     }
 
@@ -732,7 +732,7 @@ let tests = (function() {
             switch (bmi_type) {
                 case 1: return makeTestResult(TestScore.Bad, 'alimentation non diversifiée');
                 case 2: return makeTestResult(TestScore.Fragile, 'diversité alimentaire insuffisante');
-                case 3: return makeTestResult(TestScore.Fragile, 'diversité insuffisante');
+                case 3: return makeTestResult(TestScore.Fragile, 'diversité alimentaire insuffisante');
                 case 4: return makeTestResult(TestScore.Bad, 'alimentation non diversifiée');
             }
         } else if (relative_weight < -0.1) {
