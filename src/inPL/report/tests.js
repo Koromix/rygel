@@ -262,23 +262,23 @@ let tests = (function() {
     // Cardio-vascular
     // ------------------------------------------------------------------------
 
+    this.systolicPressureLeft = (data => data.constantes_explcv5b || data.constantes_explcv5);
+    this.diastolicPressureLeft = (data => data.constantes_explcv6b || data.constantes_explcv6);
+    this.systolicPressureRight = (data => data.constantes_explcv2b || data.constantes_explcv2);
+    this.diastolicPressureRight = (data => data.constantes_explcv3b || data.constantes_explcv3);
     this.systolicPressure = function(data) {
-        if (data.explcv2b != null) {
-            return data.explcv2b;
-        } else if (data.explcv2 != null) {
-            return data.explcv2;
-        } else {
-            return null;
-        }
+        let max_value = Math.max(self.systolicPressureLeft(data) || 1000,
+                                 self.systolicPressureRight(data) || 1000);
+        max_value = (max_value !== 1000) ? max_value : null;
+
+        return max_value;
     }
     this.diastolicPressure = function(data) {
-        if (data.explcv3b != null) {
-            return data.explcv3b;
-        } else if (data.explcv3 != null) {
-            return data.explcv3;
-        } else {
-            return null;
-        }
+        let max_value = Math.max(self.diastolicPressureLeft(data) || 1000,
+                                 self.diastolicPressureRight(data) || 1000);
+        max_value = (max_value !== 1000) ? max_value : null;
+
+        return max_value;
     }
 
     this.cardioOrthostaticHypotension = function(data) {

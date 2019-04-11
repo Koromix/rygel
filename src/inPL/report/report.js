@@ -107,9 +107,14 @@ let report = (function() {
             function calc(data, calc_name)
             {
                 switch (calc_name) {
+                    case 'aq_epices': return tests.aqEpices(data);
+
+                    case 'constantes_pas_gauche': return tests.systolicPressureLeft(data);
+                    case 'constantes_pad_gauche': return tests.diastolicPressureLeft(data);
+                    case 'constantes_pas_droite': return tests.systolicPressureRight(data);
+                    case 'constantes_pad_droite': return tests.diastolicPressureRight(data);
                     case 'constantes_pas': return tests.systolicPressure(data);
                     case 'constantes_pad': return tests.diastolicPressure(data);
-                    case 'aq_epices': return tests.aqEpices(data);
 
                     default: throw `Unknown calculated variable \'${calc_name}\'`;
                 }
