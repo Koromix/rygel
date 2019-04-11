@@ -56,6 +56,65 @@ let tests = (function() {
     this.demoHip = function(data) { return makeBoneResult(data.demo_dmo_hanche); }
     this.demoForearm = function(data) { return makeBoneResult(data.demo_dmo_avb1); }
 
+    this.demoFrax = function(data) {
+        if (data.rdv_age === null || data.demo_frax_majeur === null)
+            return makeTestResult(null);
+
+        let tresholds = {
+            50: 5.0,
+            50: 5.3,
+            52: 5.5,
+            53: 5.7,
+            54: 5.9,
+            55: 6.0,
+            56: 6.1,
+            57: 6.3,
+            58: 6.4,
+            59: 6.6,
+            60: 6.9,
+            61: 7.5,
+            62: 8.0,
+            63: 8.5,
+            64: 8.9,
+            65: 9.3,
+            66: 10.0,
+            67: 11.0,
+            68: 12.0,
+            69: 13.0,
+            70: 13.0,
+            71: 15.0,
+            72: 16.0,
+            73: 17.0,
+            74: 18.0,
+            75: 19.0,
+            76: 21.0,
+            77: 22.0,
+            78: 24.0,
+            79: 25.0,
+            80: 27.0,
+            81: 29.0,
+            82: 30.0,
+            83: 32.0,
+            84: 34.0,
+            85: 35.0,
+            86: 36.0,
+            87: 36.0,
+            88: 36.0,
+            89: 36.0,
+            90: 36.0
+        };
+
+        let treshold = tresholds[data.rdv_age];
+
+        if (treshold === null) {
+            return makeTestResult(null);
+        } else if (data.demo_frax_majeur >= treshold) {
+            return makeTestResult(TestScore.Fragile, `indication au traitement (seuil = ${treshold}%)`);
+        } else {
+            return makeTestResult(TestScore.Good, `pas d\'indication au traitement (seuil = ${treshold}%)`);
+        }
+    };
+
     this.demoSarcopenia = function(data) {
         if (data.consultant_sexe === null || data.demo_dxa_indice_mm === null)
             return makeTestResult(null);
