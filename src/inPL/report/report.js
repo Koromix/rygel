@@ -98,7 +98,7 @@ let report = (function() {
                     case 'audition_surdite_gauche': return tests.surdityLeft(data).text;
                     case 'audition_surdite_droite': return tests.surdityRight(data).text;
 
-                    case 'respi_qualite': return tests.spiroQuality(data).text;
+                    case 'respi_qualite': return tests.spiroQuality(data);
                     case 'respi_trouble': return tests.spiroResult(data).text;
 
                     default: throw `Unknown test \'${test_name}\'`;
