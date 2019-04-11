@@ -170,10 +170,14 @@ let tests = (function() {
             }
         }
 
-        if (activity_score < 4 || sedentary) {
-            return makeTestResult(TestScore.Fragile);
+        if (activity_score < 4 && sedentary) {
+            return makeTestResult(TestScore.Fragile, 'inactif et sédentaire');
+        } else if (activity_score < 4) {
+            return makeTestResult(TestScore.Fragile, 'inactif mais non sédentaire');
+        } else if (sedentary) {
+            return makeTestResult(TestScore.Fragile, 'actif mais sédantaire');
         } else {
-            return makeTestResult(TestScore.Good);
+            return makeTestResult(TestScore.Good, 'actif et non sédentaire');
         }
     };
 
