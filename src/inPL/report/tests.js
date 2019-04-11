@@ -184,28 +184,28 @@ let tests = (function() {
     // Cardio-vascular
     // ------------------------------------------------------------------------
 
-    function getSystolicPressure(data) {
+    this.systolicPressure = function(data) {
         if (data.explcv2b != null) {
             return data.explcv2b;
         } else if (data.explcv2 != null) {
             return data.explcv2;
         } else {
-            return makeTestResult(null);
+            return null;
         }
     }
-    function getDiastolicPressure(data) {
+    this.diastolicPressure = function(data) {
         if (data.explcv3b != null) {
             return data.explcv3b;
         } else if (data.explcv3 != null) {
             return data.explcv3;
         } else {
-            return makeTestResult(null);
+            return null;
         }
     }
 
     this.cardioOrthostaticHypotension = function(data) {
-        let pas = getSystolicPressure(data);
-        let pad = getDiastolicPressure(data);
+        let pas = self.systolicPressure(data);
+        let pad = self.diastolicPressure(data);
 
         if (pas === null || pad === null ||
                 data.constantes_explcv8 === null || data.constantes_explcv9 === null ||
@@ -244,7 +244,7 @@ let tests = (function() {
             treshold = 14.6;
         }
 
-        if (getSystolicPressure(data) >= 140 || getDiastolicPressure(data) >= 90) {
+        if (self.systolicPressure(data) >= 140 || self.diastolicPressure(data) >= 90) {
             return makeTestResult(TestScore.Bad, 'non pertinent car HTA lors de l\'examen');
         } else if (data.explcv17 >= treshold) {
             return makeTestResult(TestScore.Fragile, 'rigidité artérielle anormalement élevée avec risque de développer une HTA dans l’avenir');
