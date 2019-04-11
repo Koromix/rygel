@@ -70,8 +70,7 @@ let report = (function() {
             {
                 switch (test_name) {
                     case 'demo_rachis': return tests.demoRachis(data).text;
-                    case 'demo_col': return tests.demoFemoralNeck(data).text;
-                    case 'demo_hanche': return tests.demoHip(data).text;
+                    case 'demo_col': return tests.demoHip(data).text;
                     case 'demo_avbras': return tests.demoForearm(data).text;
                     case 'demo_frax': return tests.demoFrax(data).text;
                     case 'demo_sarcopenie': return tests.demoSarcopenia(data).text;

@@ -51,10 +51,25 @@ let tests = (function() {
         }
     }
 
-    this.demoRachis = function(data) { return makeBoneResult(data.demo_dmo_rachis); }
-    this.demoFemoralNeck = function(data) { return makeBoneResult(data.demo_dmo_col); }
-    this.demoHip = function(data) { return makeBoneResult(data.demo_dmo_hanche); }
-    this.demoForearm = function(data) { return makeBoneResult(data.demo_dmo_avb1); }
+    this.demoRachis = function(data) {
+        let min_score = Math.min(data.demo_dmo_rachis || 1000, data.demo_dmo_l1 || 1000, data.demo_dmo_l2 || 1000,
+                                 data.demo_dmo_l3 || 1000, data.demo_dmo_l4 || 1000);
+        min_score = (min_score !== 1000) ? min_score : null;
+
+        return makeBoneResult(min_score);
+    };
+    this.demoHip = function(data) {
+        let min_score = Math.min(data.demo_dmo_hanche || 1000, data.demo_dmo_col || 1000);
+        min_score = (min_score !== 1000) ? min_score : null;
+
+        return makeBoneResult(min_score);
+    };
+    this.demoForearm = function(data) {
+        let min_score = Math.min(data.demo_dmo_avb1 || 1000, data.demo_dmo_avb2 || 1000);
+        min_score = (min_score !== 1000) ? min_score : null;
+
+        return makeBoneResult(min_score);
+    };
 
     this.demoFrax = function(data) {
         if (data.rdv_age === null || data.demo_frax_majeur === null)
