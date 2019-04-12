@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../src/libcc/libcc.hh"
+#include "bench_libcc.hh"
 
 namespace RG {
 
