@@ -7,6 +7,8 @@
 #include "../../src/libcc/libcc.hh"
 #include "bench.hh"
 
+namespace RG {
+
 #define ITERATIONS 4000000
 
 void BenchFmt()
@@ -131,4 +133,6 @@ void BenchFmt()
         }
         EndBenchmark(start, iterations);
     }
+}
+
 }
