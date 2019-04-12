@@ -5,7 +5,7 @@
 #include "vendor/stb_sprintf.h"
 #include "vendor/fmt/format.h"
 #include "../../src/libcc/libcc.hh"
-#include "bench.hh"
+#include "bench_libcc.hh"
 
 namespace RG {
 

@@ -9,17 +9,17 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
 endif()
 
 # ------------------------------------------------------------------------
-# libcc_bench
+# bench_libcc
 # ------------------------------------------------------------------------
 
-add_executable(libcc_bench
-    libcc_bench/vendor/stb_sprintf.c
-    libcc_bench/vendor/fmt/posix.cc
-    libcc_bench/vendor/fmt/format.cc
+add_executable(bench_libcc
+    bench_libcc/vendor/stb_sprintf.c
+    bench_libcc/vendor/fmt/posix.cc
+    bench_libcc/vendor/fmt/format.cc
 
-    libcc_bench/bench.cc
-    libcc_bench/bench.hh
-    libcc_bench/bench_fmt.cc
+    bench_libcc/bench_libcc.cc
+    bench_libcc/bench_libcc.hh
+    bench_libcc/bench_fmt.cc
 )
-target_include_directories(libcc_bench PRIVATE libcc_bench/vendor)
-target_link_libraries(libcc_bench PRIVATE libcc)
+target_include_directories(bench_libcc PRIVATE bench_libcc/vendor)
+target_link_libraries(bench_libcc PRIVATE libcc)
