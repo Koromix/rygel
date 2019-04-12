@@ -4,11 +4,18 @@
 
 #include "../../src/libcc/libcc.hh"
 
+namespace RG {
+
 void BenchFmt();
 
-int main(int, char **)
+int RunBenchLibcc(int, char **)
 {
     BenchFmt();
 
     return 0;
 }
+
+}
+
+// C++ namespaces are stupid
+int main(int argc, char **argv) { return RG::RunBenchLibcc(argc, argv); }

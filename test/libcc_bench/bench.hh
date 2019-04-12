@@ -6,6 +6,8 @@
 
 #include "../../src/libcc/libcc.hh"
 
+namespace RG {
+
 struct Checkpoint {
     int64_t time;
     int64_t clock;
@@ -29,4 +31,6 @@ static inline void EndBenchmark(Checkpoint start, unsigned int iterations)
     uint64_t clock = now.clock - start.clock;
     PrintLn(" %1 ms / %2 cycles (%3 cycles per iteration)", time, clock,
             clock / iterations);
+}
+
 }
