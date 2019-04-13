@@ -242,23 +242,21 @@ function Schedule(widget, year, month, resources_map, meetings_map) {
                                     e.preventDefault();
                                 }
 
-                                let slot_td;
-                                if (slot_ref.identity) {
-                                    slot_td = html`<td class="sc_slot_identity">
-                                        ${slot_ref.identity}
-                                        <a class="sc_slot_edit" href="#"
-                                           onclick=${e => { deleteMeeting(slot_ref); e.preventDefault(); }}>x</a>
-                                    </td>`;
-                                } else {
-                                    slot_td = html`<td class="sc_slot_identity">
-                                        <a class="sc_slot_edit" href="#"
-                                           onclick=${e => { createMeeting(slot_ref); e.preventDefault(); }}>+</a>
-                                    </td>`;
-                                }
-
                                 return html`<tr class=${slot_ref.cls} ondragover=${dragOverSlot} ondrop=${dropSlot}>
                                     <td class="sc_slot_time" draggable="true" ondragstart=${dragStart}>${formatTime(slot_ref.time)}</td>
-                                    ${slot_td}
+                                    <td class="sc_slot_identity">
+                                        ${slot_ref.identity ?
+                                            html`
+                                                ${slot_ref.identity}
+                                                <a class="sc_slot_edit" href="#"
+                                                   onclick=${e => { deleteMeeting(slot_ref); e.preventDefault(); }}>x</a>
+                                            ` :
+                                            html`
+                                                <a class="sc_slot_edit" href="#"
+                                                   onclick=${e => { createMeeting(slot_ref); e.preventDefault(); }}>+</a>
+                                            `
+                                        }
+                                    </td>
                                 </tr>`;
                             })}
                         </table>
