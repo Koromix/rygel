@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<!--
+    This Source Code Form is subject to the terms of the Mozilla Public
+    License, v. 2.0. If a copy of the MPL was not distributed with this
+    file, You can obtain one at http://mozilla.org/MPL/2.0/.
+-->
+<html>
+    <head>
+        <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1"/>
+
+        <title>inPL schedule</title>
+
+        <script src="../../../../vendor/lighterhtml/lighterhtml.min.js"></script>
+        <script>const {render, html, svg} = lighterhtml;</script>
+
+        <link rel="stylesheet" href="inPL.css"/>
+        <link rel="stylesheet" href="schedule.css"/>
+        <script src="schedule.js"></script>
+
+        <script>
+            let settings = {
+                slots_per_doctor: 1,
+                resources: {
+                    '2019-04-01': [
+                        {time: 730, doctors: ['X'], overbook: 0},
+                        {time: 1130, doctors: ['X'], overbook: 3}
+                    ],
+                    '2019-04-02': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X'], overbook: 1}
+                    ],
+                    '2019-04-03': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+                    '2019-04-04': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+                    '2019-04-05': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+                    '2019-04-06': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+                    '2019-04-08': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+                    '2019-04-09': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+                    '2019-04-10': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+                    '2019-04-11': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+                    '2019-04-12': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+                    '2019-04-13': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+
+                    '2019-04-15': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+                    '2019-04-16': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+                    '2019-04-17': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+                    '2019-04-18': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+                    '2019-04-19': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+                    '2019-04-20': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+
+                    '2019-04-22': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+                    '2019-04-23': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+                    '2019-04-24': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+                    '2019-04-25': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+                    '2019-04-26': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+                    '2019-04-27': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+
+                    '2019-04-29': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ],
+                    '2019-04-30': [
+                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
+                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
+                    ]
+                }
+            };
+            let meetings = {
+                '2019-04-01': [
+                    {time: 730, identity: 'Clark KENT'},
+                    {time: 730, identity: 'Lex LUTHOR'},
+                    {time: 1130, identity: 'Lois LANE'}
+                ],
+                '2019-04-02': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'}
+                ]
+            };
+
+            document.addEventListener('readystatechange', function() {
+                if (document.readyState === 'complete')
+                    new Schedule(document.querySelector('#schedule'), 2019, 4, settings, meetings);
+            });
+        </script>
+    </head>
+    <body>
+        <div id="schedule"></div>
+    </body>
+</html>

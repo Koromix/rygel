@@ -1,0 +1,118 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+   License, v. 2.0. If a copy of the MPL was not distributed with this
+   file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/* -------------------- Schedule layout -------------------- */
+
+.sc_skip, .sc_day {
+    display: inline-block;
+    width: 14.28%; /* 100% / 7 */
+    box-sizing: border-box;
+}
+.sc_day {
+    background: #eaeaea;
+    text-align: center;
+    height: 134px;
+    border: 2px solid white;
+    border-radius: 12px 12px 4px 4px;
+}
+.sc_day_disabled { background: #cbcbcb; }
+.sc_day_disabled .sc_head { background: #373737; }
+.sc_day_empty .sc_head { background: #e68f00; }
+.sc_day_some .sc_head { background: green; }
+.sc_day_full .sc_head { background: #ca3317; }
+
+@media screen and (max-width: 599px) {
+    .sc_day { width: 100%; }
+    .sc_skip { display: none; }
+}
+@media screen and (min-width: 600px) and (max-width: 1099px) {
+    .sc_day { width: 50%; }
+    .sc_skip { display: none; }
+}
+
+/* -------------------- Day header -------------------- */
+
+.sc_head {
+    display: table;
+    table-layout: fixed;
+    width: 100%;
+    box-sizing: border-box;
+    color: white;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 4px 4px 0 0;
+}
+.sc_head_date {
+    display: table-cell;
+    text-align: left;
+}
+.sc_head_count {
+    display: table-cell;
+    text-align: right;
+}
+.sc_head_week_day { display: none; }
+.sc_head_date {
+    display: table-cell;
+    text-align: left;
+}
+
+@media screen and (max-width: 1099px) {
+    .sc_head_week_day {
+        display: table-cell;
+        text-align: left;
+    }
+    .sc_head_date { text-align: center; }
+}
+
+/* -------------------- Slot table -------------------- */
+
+.sc_slots {
+    width: 100%;
+    border-collapse: collapse;
+}
+.sc_slots td {
+    border: 0;
+    padding: 2px;
+}
+.sc_slots tr:hover {
+    background: #bbb;
+    color: white;
+}
+.sc_slot_time {
+    opacity: 0.7;
+    text-align: right;
+    width: 30px;
+    border: 0;
+}
+.sc_slot_used .sc_slot_time { cursor: grab; }
+.sc_slot_identity { text-align: left; }
+.sc_slot_warn.sc_slot_used {
+    background: #ca3317;
+    color: white;
+    font-style: italic;
+}
+.sc_slot_warn .sc_slot_identity:after {
+    float: right;
+    margin-right: 3px;
+    content: '⚠ ';
+    font-size: 0.9em;
+    font-style: normal;
+}
+.sc_slot_overbook .sc_slot_time, .sc_slot_overbook.sc_slot_used { font-style: italic; }
+.sc_slot_overbook.sc_slot_used {
+    background: #9b56f2;
+    color: white;
+    font-style: italic;
+}
+.sc_slot_overbook .sc_slot_identity:after {
+    float: right;
+    margin-right: 3px;
+    content: '∂ ';
+    font-style: normal;
+}
+.sc_slot_edit {
+    color: inherit;
+    text-decoration: none;
+    float: right;
+}
