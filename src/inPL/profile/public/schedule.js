@@ -2,10 +2,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function Schedule(widget, year, month, resources_map, meetings_map) {
+function Schedule(widget, resources_map, meetings_map) {
     let self = this;
 
-    let days;
+    let widget_months;
+    let widget_days;
+
+    let current_month;
+    let current_year;
     let drag_slot_ref;
 
     function formatTime(time) {
@@ -70,14 +74,14 @@ function Schedule(widget, year, month, resources_map, meetings_map) {
                 identity: name
             });
 
-            self.render();
+            renderDays(current_year, current_month);
         }
     }
 
     function deleteMeeting(slot_ref) {
         if (confirm('Are you sure?')) {
             slot_ref.meetings.splice(slot_ref.splice_idx, 1);
-            self.render();
+            renderDays(current_year, current_month);
         }
     }
 
@@ -109,11 +113,13 @@ function Schedule(widget, year, month, resources_map, meetings_map) {
             src_ref.meetings.splice(src_ref.splice_idx, 1);
         }
 
-        self.render();
+        renderDays(current_year, current_month);
     }
 
-    this.render = function() {
-        render(widget, () => html`<div class="sc_schedule">${days.map(day => {
+    function renderDays() {
+        let days = getMonthDays(current_year, current_month);
+
+        render(widget.childNodes[0], () => html`<div class="sc_days">${days.map(day => {
             if (day !== null) {
                 if (!settings.resources[day.key])
                     settings.resources[day.key] = [];
@@ -268,8 +274,46 @@ function Schedule(widget, year, month, resources_map, meetings_map) {
         })}</div>`);
     }
 
-    days = getMonthDays(year, month);
-    this.render();
+    function renderMonths() {
+        let month_names = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet',
+                           'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+        render(widget.childNodes[1], () => html`<nav class="sc_footer">
+            <div class="sc_selector">
+                <a href="#" onclick="${e => { current_month > 1 ? schedule.render(current_year, current_month - 1)
+                                                                : schedule.render(current_year - 1, 12); e.preventDefault(); }}">≪</a>
+                <b>${month_names[current_month - 1]}</b>
+                <a href="#" onclick="${e => { current_month < 12 ? schedule.render(current_year, current_month + 1)
+                                                                 : schedule.render(current_year + 1, 1); e.preventDefault(); }}">≫</a>
+            </div>
+
+            <div class="sc_months">${month_names.map((name, idx) => {
+                return html`<a class=${idx + 1 == current_month ? 'sc_month active' : 'sc_month'}
+                               href="#" onclick=${e => { schedule.render(current_year, idx + 1); e.preventDefault(); }}>${name}</a>`;
+            })}</div>
+
+            <div class="sc_selector">
+                <a href="#" onclick="${e => { schedule.render(current_year - 1, current_month); e.preventDefault(); }}">≪</a>
+                <b>${current_year}</b>
+                <a href="#" onclick="${e => { schedule.render(current_year + 1, current_month); e.preventDefault(); }}">≫</a>
+            </div>
+
+            <a class="sc_deploy" href="#" onclick=${e => { e.target.parentNode.querySelector('.sc_months').classList.toggle('active'); e.preventDefault(); }}></a>
+        </nav>`);
+    }
+
+    this.render = function(year, month) {
+        current_year = year;
+        current_month = month;
+
+        renderDays();
+        renderMonths();
+    };
+
+    // FIXME: Can we replace a node with render, instead of replacing its content?
+    // Right now, renderDays() and renderMonths() create content inside these two divs
+    // instead of replacing them.
+    render(widget, () => html`<div></div><div></div>`);
 
     widget.object = this;
 }

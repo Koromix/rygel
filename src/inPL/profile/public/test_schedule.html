@@ -144,9 +144,12 @@
                 ]
             };
 
+            let schedule;
             document.addEventListener('readystatechange', function() {
-                if (document.readyState === 'complete')
-                    new Schedule(document.querySelector('#schedule'), 2019, 4, settings, meetings);
+                if (document.readyState === 'complete') {
+                    schedule = new Schedule(document.querySelector('#schedule'), settings, meetings);
+                    schedule.render(2019, 4);
+                }
             });
         </script>
     </head>

@@ -2,33 +2,103 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/* -------------------- Year / month selection menu -------------------- */
+
+.sc_footer {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100vw;
+    z-index: 999;
+    background: #262626;
+    color: white;
+    text-align: center;
+}
+.sc_selector, .sc_months { display: inline-block; }
+.sc_selector { margin: 0 1em; }
+.sc_selector a, .sc_months a {
+    display: inline-block;
+    height: 30px;
+    box-sizing: border-box;
+    text-decoration: none;
+    vertical-align: middle;
+    padding: 7px 0.5em;
+    color: white;
+}
+.sc_months a.active {
+    background: white;
+    color: black;
+}
+.sc_months a:not(.active):hover { background: #444; }
+.sc_selector b {
+    display: inline-block;
+    padding-top: 7px;
+    width: 6em;
+}
+.sc_deploy { display: none; }
+
+@media screen and (max-width: 1099px) {
+    .sc_months { display: none; }
+    .sc_months.active { display: block; }
+    .sc_selector {
+        display: inline-block;
+        margin: 0 1em;
+    }
+    .sc_month { width: 50%; }
+    .sc_deploy {
+        display: block;
+        position: fixed;
+        bottom: 0;
+        left: calc(100vw - 32px);
+        width: 32px;
+        height: 30px;
+        margin: 0;
+        padding: 0;
+        z-index: 20;
+        background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAALCAYAAAB7/H1+AAAAmElEQVQoka3RT4uBYRSHYV9CWUw2UtIoKRaUlcWsbKbmi8tGWSiFQokys3HN5j0l+fPwOnXvTtfmVygkHn7QS/1PRb/xhy0670KH+MUpa4NWXvQLxzM0WqHxKjrA4QoaLVB/Fu1jfweN5qimol3sEtBohsojtJ0tn4pGU5RvoU2sX0CjCT4u0U8sc6DRGKVAa9nCedFohOI/R7r6ZdlC4fkAAAAASUVORK5CYII=");
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+}
+
 /* -------------------- Schedule layout -------------------- */
 
+.sc_days:after {
+    display: table;
+    content: " ";
+    clear: both;
+}
+.sc_days { margin-bottom: 32px; }
 .sc_skip, .sc_day {
-    display: inline-block;
+    float: left;
     width: 14.28%; /* 100% / 7 */
+    min-height: 134px;
     box-sizing: border-box;
 }
 .sc_day {
     background: #eaeaea;
     text-align: center;
-    height: 134px;
     border: 2px solid white;
     border-radius: 12px 12px 4px 4px;
 }
 .sc_day_disabled { background: #cbcbcb; }
-.sc_day_disabled .sc_head { background: #373737; }
-.sc_day_empty .sc_head { background: #e68f00; }
-.sc_day_some .sc_head { background: green; }
-.sc_day_full .sc_head { background: #ca3317; }
 
-@media screen and (max-width: 599px) {
-    .sc_day { width: 100%; }
+@media screen and (min-width: 1100px) {
+    .sc_day:nth-child(7n + 1) { clear: both; }
+}
+@media screen and (max-width: 1099px) {
+    .sc_day { width: 50%; }
+    .sc_day:nth-child(2n + 1) { clear: both; }
     .sc_skip { display: none; }
 }
-@media screen and (min-width: 600px) and (max-width: 1099px) {
-    .sc_day { width: 50%; }
-    .sc_skip { display: none; }
+@media screen and (max-width: 599px) {
+    .sc_days { margin-bottom: 30px; }
+    .sc_day {
+        width: 100%;
+        min-height: 0;
+        border: 0;
+        border-radius: 0;
+    }
 }
 
 /* -------------------- Day header -------------------- */
@@ -43,6 +113,10 @@
     padding: 2px 6px;
     border-radius: 4px 4px 0 0;
 }
+.sc_day_disabled .sc_head { background: #373737; }
+.sc_day_empty .sc_head { background: #e68f00; }
+.sc_day_some .sc_head { background: green; }
+.sc_day_full .sc_head { background: #ca3317; }
 .sc_head_date {
     display: table-cell;
     text-align: left;
@@ -57,6 +131,9 @@
     text-align: left;
 }
 
+@media screen and (max-width: 599px) {
+    .sc_head { border-radius: 0; }
+}
 @media screen and (max-width: 1099px) {
     .sc_head_week_day {
         display: table-cell;
