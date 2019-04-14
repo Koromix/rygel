@@ -16,6 +16,18 @@ function Schedule(widget, resources_map, meetings_map) {
     let current_year;
     let drag_slot_ref;
 
+    let prev_event_time = 0;
+
+    function slowDownEvents(delay, func) {
+        return e => {
+            let now = performance.now();
+            if (now - prev_event_time >= delay) {
+                func(e);
+                prev_event_time = now;
+            }
+        };
+    }
+
     function formatTime(time) {
         let hour = Math.floor(time / 100);
         let min = time % 100;
@@ -275,37 +287,75 @@ function Schedule(widget, resources_map, meetings_map) {
         })}</div>`);
     }
 
+    function switchToPreviousMonth() {
+        if (current_month > 1) {
+            schedule.render(current_year, current_month - 1);
+        } else {
+            schedule.render(current_year - 1, 12);
+        }
+    }
+
+    function switchToNextMonth() {
+        if (current_month < 12) {
+            schedule.render(current_year, current_month + 1);
+        } else {
+            schedule.render(current_year + 1, 1);
+        }
+    }
+
+    function switchToPreviousYear() {
+        schedule.render(current_year - 1, current_month);
+    }
+
+    function switchToNextYear() {
+        schedule.render(current_year + 1, current_month);
+    }
+
     function renderMonths() {
         render(widget.childNodes[2], () => html`<nav class="sc_footer">
             <div class="sc_selector">
-                <a href="#" onclick="${e => { current_month > 1 ? schedule.render(current_year, current_month - 1)
-                                                                : schedule.render(current_year - 1, 12); e.preventDefault(); }}">≪</a>
+                <a href="#"
+                   onclick=${e => { switchToPreviousMonth(); e.preventDefault(); }}
+                   ondragover=${slowDownEvents(300, switchToPreviousMonth)}>≪</a>
                 <b>${month_names[current_month - 1]}</b>
-                <a href="#" onclick="${e => { current_month < 12 ? schedule.render(current_year, current_month + 1)
-                                                                 : schedule.render(current_year + 1, 1); e.preventDefault(); }}">≫</a>
+                <a href="#"
+                   onclick=${e => { switchToNextMonth(); e.preventDefault(); }}
+                   ondragover=${slowDownEvents(300, switchToNextMonth)}>≫</a>
             </div>
 
             <div class="sc_months">${month_names.map((name, idx) => {
-                return html`<a class=${idx + 1 == current_month ? 'sc_month active' : 'sc_month'}
-                               href="#" onclick=${e => { schedule.render(current_year, idx + 1); e.preventDefault(); }}>${name}</a>`;
+                function switchMonth(e) {
+                    schedule.render(current_year, idx + 1);
+                }
+
+                return html`<a class=${idx + 1 == current_month ? 'sc_month active' : 'sc_month'} href="#"
+                               onclick=${e => { schedule.render(current_year, idx + 1); e.preventDefault(); }}
+                               ondragover=${e => schedule.render(current_year, idx + 1)}>${name}</a>`;
             })}</div>
 
             <div class="sc_selector">
-                <a href="#" onclick="${e => { schedule.render(current_year - 1, current_month); e.preventDefault(); }}">≪</a>
+                <a href="#"
+                   onclick=${e => { switchToPreviousYear(); e.preventDefault(); }}
+                   ondragover=${slowDownEvents(300, switchToPreviousYear)}>≪</a>
                 <b>${current_year}</b>
-                <a href="#" onclick="${e => { schedule.render(current_year + 1, current_month); e.preventDefault(); }}">≫</a>
+                <a href="#"
+                   onclick=${e => { switchToNextYear(); e.preventDefault(); }}
+                   ondragover=${slowDownEvents(300, switchToNextYear)}>≫</a>
             </div>
 
-            <a class="sc_deploy" href="#" onclick=${e => { e.target.parentNode.querySelector('.sc_months').classList.toggle('active'); e.preventDefault(); }}></a>
+            <a class="sc_deploy" href="#"
+               onclick=${e => { e.target.parentNode.querySelector('.sc_months').classList.toggle('active'); e.preventDefault(); }}></a>
         </nav>`);
     }
 
     this.render = function(year, month) {
-        current_year = year;
-        current_month = month;
+        if (year !== current_year || month !== current_month) {
+            current_year = year;
+            current_month = month;
 
-        renderDays();
-        renderMonths();
+            renderDays();
+            renderMonths();
+        }
     };
 
     // FIXME: Can we replace a node with render, instead of replacing its content?
