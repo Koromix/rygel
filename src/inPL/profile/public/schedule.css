@@ -4,6 +4,12 @@
 
 /* -------------------- Week day names header -------------------- */
 
+.sc_header {
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
 .sc_header div {
     display: inline-block;
     width: 14.28%; /* 100% / 7 */
@@ -27,6 +33,10 @@
     background: #262626;
     color: white;
     text-align: center;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
 }
 .sc_selector, .sc_months { display: inline-block; }
 .sc_selector { margin: 0 1em; }
