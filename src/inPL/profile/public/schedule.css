@@ -48,6 +48,8 @@
     padding: 7px 0.5em;
     color: white;
 }
+.sc_selector a { padding: 7px 0em; }
+.sc_months a { padding: 7px 1em; }
 .sc_months a.active {
     background: #f8f8f8;
     color: black;
