@@ -6,6 +6,7 @@ body {
     font: 0.75em sans-serif;
     padding: 0;
     margin: 32px 2px 2px 2px;
+    background: #f8f8f8;
 }
 
 @media screen and (max-width: 599px) {
@@ -33,7 +34,7 @@ body {
     color: white;
 }
 #bb_menu a.active {
-    background: white;
+    background: #f8f8f8;
     color: black;
 }
 #bb_menu a:not(.active):hover { background: #444; }
