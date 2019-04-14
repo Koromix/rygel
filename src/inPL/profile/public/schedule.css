@@ -38,17 +38,19 @@
     -webkit-user-select: none;
     -ms-user-select: none;
 }
-.sc_selector, .sc_months { display: inline-block; }
+.sc_selector, .sc_months {
+    display: inline-block;
+    vertical-align: bottom;
+}
 .sc_selector { margin: 0 1em; }
 .sc_selector a, .sc_months a {
     display: inline-block;
     height: 30px;
     box-sizing: border-box;
     text-decoration: none;
-    padding: 7px 0.5em;
     color: white;
 }
-.sc_selector a { padding: 7px 0em; }
+.sc_selector a { padding: 6px 0em; }
 .sc_months a { padding: 7px 1em; }
 .sc_months a.active {
     background: #f8f8f8;
