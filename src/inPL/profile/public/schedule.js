@@ -86,7 +86,7 @@ function Schedule(widget, resources_map, meetings_map) {
         }
     }
 
-    function moveSlot(src_ref, dest_ref)
+    function moveMeeting(src_ref, dest_ref)
     {
         if (dest_ref.identity) {
             // Exchange
@@ -237,15 +237,15 @@ function Schedule(widget, resources_map, meetings_map) {
                                 function dragStart(e) {
                                     if (slot_ref.identity) {
                                         drag_slot_ref = slot_ref;
-                                        e.dataTransfer.setData('application/x-slot', '');
+                                        e.dataTransfer.setData('application/x-meeting', '');
                                     }
                                 }
                                 function dragOverSlot(e) {
-                                    if (e.dataTransfer.types.includes('application/x-slot'))
+                                    if (e.dataTransfer.types.includes('application/x-meeting'))
                                         e.preventDefault();
                                 }
                                 function dropSlot(e) {
-                                    moveSlot(drag_slot_ref, slot_ref);
+                                    moveMeeting(drag_slot_ref, slot_ref);
                                     e.preventDefault();
                                 }
 
