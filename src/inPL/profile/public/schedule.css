@@ -2,6 +2,20 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/* -------------------- Week day names header -------------------- */
+
+.sc_header div {
+    display: inline-block;
+    width: 14.28%; /* 100% / 7 */
+    text-align: center;
+    color: #444;
+    font-style: italic;
+}
+
+@media screen and (max-width: 1099px) {
+    .sc_header { display: none; }
+}
+
 /* -------------------- Year / month selection menu -------------------- */
 
 .sc_footer {
