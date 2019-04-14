@@ -5,6 +5,10 @@
 function Schedule(widget, resources_map, meetings_map) {
     let self = this;
 
+    let month_names = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet',
+                       'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+    let week_day_names = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+
     let widget_months;
     let widget_days;
 
@@ -43,8 +47,6 @@ function Schedule(widget, resources_map, meetings_map) {
     }
 
     function getMonthDays(year, month) {
-        let week_day_names = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
-
         let days_count = daysInMonth(year, month);
         let start_week_day = getWeekDay(year, month, 1);
 
@@ -119,7 +121,7 @@ function Schedule(widget, resources_map, meetings_map) {
     function renderDays() {
         let days = getMonthDays(current_year, current_month);
 
-        render(widget.childNodes[0], () => html`<div class="sc_days">${days.map(day => {
+        render(widget.childNodes[1], () => html`<div class="sc_days">${days.map(day => {
             if (day !== null) {
                 if (!settings.resources[day.key])
                     settings.resources[day.key] = [];
@@ -275,10 +277,7 @@ function Schedule(widget, resources_map, meetings_map) {
     }
 
     function renderMonths() {
-        let month_names = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet',
-                           'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-
-        render(widget.childNodes[1], () => html`<nav class="sc_footer">
+        render(widget.childNodes[2], () => html`<nav class="sc_footer">
             <div class="sc_selector">
                 <a href="#" onclick="${e => { current_month > 1 ? schedule.render(current_year, current_month - 1)
                                                                 : schedule.render(current_year - 1, 12); e.preventDefault(); }}">≪</a>
@@ -313,7 +312,11 @@ function Schedule(widget, resources_map, meetings_map) {
     // FIXME: Can we replace a node with render, instead of replacing its content?
     // Right now, renderDays() and renderMonths() create content inside these two divs
     // instead of replacing them.
-    render(widget, () => html`<div></div><div></div>`);
+    render(widget, () => html`
+        <div class="sc_header">${week_day_names.map(name => html`<div>${name}</div>`)}</div>
+        <div></div>
+        <div></div>
+    `);
 
     widget.object = this;
 }
