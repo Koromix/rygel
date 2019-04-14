@@ -45,7 +45,6 @@
     height: 30px;
     box-sizing: border-box;
     text-decoration: none;
-    vertical-align: middle;
     padding: 7px 0.5em;
     color: white;
 }
@@ -122,6 +121,7 @@
         min-height: 0;
         border: 0;
         border-radius: 0;
+        background: inherit;
     }
 }
 
