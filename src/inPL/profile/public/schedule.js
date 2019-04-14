@@ -54,10 +54,9 @@ function Schedule(widget, resources_map, meetings_map) {
         for (let i = 0; i < start_week_day; i++)
             days.push(null);
         for (let i = 1; i <= days_count; i++) {
-
-
             let month_str = (month < 10 ? '0' : '') + month;
             let day_str = (i < 10 ? '0' : '') + i;
+
             days.push({
                 key: `${year}-${month_str}-${day_str}`,
                 date: `${day_str}/${month_str}/${year}`,
