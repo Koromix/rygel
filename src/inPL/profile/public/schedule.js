@@ -19,6 +19,9 @@ function Schedule(widget, resources_map, meetings_map) {
     let drag_slot_ref;
     let prev_event_time = 0;
 
+    let copy_resources;
+    let copy_ignore = new Set;
+
     function slowDownEvents(delay, func) {
         return e => {
             let now = performance.now();
@@ -319,6 +322,15 @@ function Schedule(widget, resources_map, meetings_map) {
         }
     }
 
+    function startCopy(day) {
+        copy_resources = resources_map[day.key];
+        copy_ignore.clear();
+        copy_ignore.add(day.key);
+
+        current_mode = 'copy';
+        renderCopy();
+    }
+
     function renderSettings() {
         let days = getMonthDays(current_year, current_month);
 
@@ -375,7 +387,56 @@ function Schedule(widget, resources_map, meetings_map) {
                         })}
                     </table>` : ''}
 
-                    <a href="#" onclick=${e => { createSlot(resources); e.preventDefault(); }}>Nouveau créneau</a>
+                    <a href="#" onclick=${e => { createSlot(resources); e.preventDefault(); }}>Nouveau</a> |
+                    <a href="#" onclick=${e => { startCopy(day); e.preventDefault(); }}>Copier</a>
+                </div>`;
+            } else {
+                return html`<div class="sc_skip"></div>`;
+            }
+        })}</div>`);
+    }
+
+    function executeCopy(dest_day) {
+        copy_ignore.add(dest_day.key);
+        resources_map[dest_day.key] = copy_resources.map(res => Object.assign({}, res));
+
+        renderCopy();
+    }
+
+    function executeCopyAndEnd(dest_day) {
+        copy_ignore.add(dest_day.key);
+        resources_map[dest_day.key] = copy_resources.map(res => Object.assign({}, res));
+
+        current_mode = 'settings';
+        renderSettings();
+    }
+
+    function renderCopy() {
+        let days = getMonthDays(current_year, current_month);
+
+        render(widget.childNodes[1], () => html`<div class="sc_days">${days.map(day => {
+            if (day !== null) {
+                let resources = resources_map[day.key] || [];
+
+                let normal_count = resources.reduce((acc, res) => acc + res.slots, 0);
+                let overbook_count = resources.reduce((acc, res) => acc + res.overbook, 0);
+
+                let cls;
+                if (normal_count + overbook_count) {
+                    cls = 'sc_day sc_opt_some';
+                } else {
+                    cls = 'sc_day sc_opt_empty';
+                }
+
+                return html`<div class="${cls}">
+                    <div class="sc_head">
+                        <div class="sc_head_week_day">${day.week_day}</div>
+                        <div class="sc_head_date">${day.date}</div>
+                        <div class="sc_head_count">${(normal_count + overbook_count) ? `${normal_count}+${overbook_count}` : 'Fermé'}</div>
+                    </div>
+
+                    ${!copy_ignore.has(day.key) ? html`<a href="#" onclick=${e => { executeCopyAndEnd(day); e.preventDefault(); }}>ICI</a> |
+                                                       <a href="#" onclick=${e => { executeCopy(day); e.preventDefault(); }}>ICI et plus</a>` : ''}
                 </div>`;
             } else {
                 return html`<div class="sc_skip"></div>`;
@@ -409,8 +470,9 @@ function Schedule(widget, resources_map, meetings_map) {
 
     function toggleMode() {
         switch (current_mode) {
-            case 'settings': { current_mode = 'schedule'; } break;
             case 'schedule': { current_mode = 'settings'; } break;
+            case 'settings': { current_mode = 'schedule'; } break;
+            case 'copy': { current_mode = 'settings'; } break;
         }
 
         renderAll();
@@ -451,7 +513,7 @@ function Schedule(widget, resources_map, meetings_map) {
                    ondragover=${slowDownEvents(300, switchToNextYear)}>≫</a>
             </div>
 
-            <a class=${current_mode === 'settings' ? 'sc_mode active' : 'sc_mode'} href="#"
+            <a class=${current_mode === 'schedule' ? 'sc_mode' : 'sc_mode active'} href="#"
                onclick=${e => { toggleMode(); e.preventDefault(); }}>⚙</a>
         </nav>`);
     }
@@ -459,9 +521,11 @@ function Schedule(widget, resources_map, meetings_map) {
     function renderAll()
     {
         switch (current_mode) {
-            case 'settings': { renderSettings(); } break;
             case 'schedule': { renderSchedule(); } break;
+            case 'settings': { renderSettings(); } break;
+            case 'copy': { renderCopy(); } break;
         }
+
         renderFooter();
     }
 
