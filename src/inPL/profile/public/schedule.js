@@ -36,14 +36,14 @@ function Schedule(widget, resources_map, meetings_map) {
         let hour = Math.floor(time / 100);
         let min = time % 100;
 
-        return `${hour}h${min}`;
+        return `${hour}h${min < 10 ? ('0' + min) : min}`;
     }
 
     function parseTime(str) {
-        if (!/^[0-9]{1,2}h[0-9]{1,2}$/.test(str))
+        if (!/^[0-9]{1,2}h[0-9]{0,2}$/.test(str))
             return null;
 
-        let [hours, min] = str.split('h').map(str => parseInt(str, 10));
+        let [hours, min] = str.split('h').map(str => parseInt(str, 10) || 0);
         if (hours > 23 || min > 59)
             return null;
 
