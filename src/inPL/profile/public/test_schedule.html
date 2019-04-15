@@ -19,117 +19,113 @@
         <script src="schedule.js"></script>
 
         <script>
-            let settings = {
-                slots_per_doctor: 1,
-                resources: {
-                    '2019-04-01': [
-                        {time: 730, doctors: ['X'], overbook: 0},
-                        {time: 1130, doctors: ['X'], overbook: 3}
-                    ],
-                    '2019-04-02': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X'], overbook: 1}
-                    ],
-                    '2019-04-03': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
-                    '2019-04-04': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
-                    '2019-04-05': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
-                    '2019-04-06': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
-                    '2019-04-08': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
-                    '2019-04-09': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
-                    '2019-04-10': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
-                    '2019-04-11': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
-                    '2019-04-12': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
-                    '2019-04-13': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
+            let resources = {
+                '2019-04-01': [
+                    {time: 730, slots: 1, overbook: 0},
+                    {time: 1130, slots: 1, overbook: 3}
+                ],
+                '2019-04-02': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 1, overbook: 1}
+                ],
+                '2019-04-03': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ],
+                '2019-04-04': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ],
+                '2019-04-05': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ],
+                '2019-04-06': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ],
+                '2019-04-08': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ],
+                '2019-04-09': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ],
+                '2019-04-10': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ],
+                '2019-04-11': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ],
+                '2019-04-12': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ],
+                '2019-04-13': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ],
 
-                    '2019-04-15': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
-                    '2019-04-16': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
-                    '2019-04-17': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
-                    '2019-04-18': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
-                    '2019-04-19': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
-                    '2019-04-20': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
+                '2019-04-15': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ],
+                '2019-04-16': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ],
+                '2019-04-17': [
+                    {time: 730, slots: 2, overbook: 0}
+                ],
+                '2019-04-18': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ],
+                '2019-04-19': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ],
+                '2019-04-20': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ],
 
-                    '2019-04-22': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
-                    '2019-04-23': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
-                    '2019-04-24': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
-                    '2019-04-25': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
-                    '2019-04-26': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
-                    '2019-04-27': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
+                '2019-04-22': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ],
+                '2019-04-23': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ],
+                '2019-04-24': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ],
+                '2019-04-25': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ],
+                '2019-04-26': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ],
+                '2019-04-27': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ],
 
-                    '2019-04-29': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ],
-                    '2019-04-30': [
-                        {time: 730, doctors: ['X', 'Y'], overbook: 0},
-                        {time: 1130, doctors: ['X', 'Y'], overbook: 1}
-                    ]
-                }
+                '2019-04-29': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ],
+                '2019-04-30': [
+                    {time: 730, slots: 2, overbook: 0},
+                    {time: 1130, slots: 2, overbook: 1}
+                ]
             };
             let meetings = {
                 '2019-04-01': [
@@ -140,14 +136,129 @@
                 '2019-04-02': [
                     {time: 730, identity: 'Gwen STACY'},
                     {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'}
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-03': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-04': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-05': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-06': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-08': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-09': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-10': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-11': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-12': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-13': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-14': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-15': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-16': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-17': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-18': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-19': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-20': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-22': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-23': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-24': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-25': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-26': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
+                ],
+                '2019-04-27': [
+                    {time: 730, identity: 'Gwen STACY'},
+                    {time: 730, identity: 'Peter PARKER'},
+                    {time: 1130, identity: 'Mary JANE'},
                 ]
             };
 
             let schedule;
             document.addEventListener('readystatechange', function() {
                 if (document.readyState === 'complete') {
-                    schedule = new Schedule(document.querySelector('#bb_schedule'), settings, meetings);
+                    schedule = new Schedule(document.querySelector('#bb_schedule'), resources, meetings);
                     schedule.render(2019, 4);
                 }
             });

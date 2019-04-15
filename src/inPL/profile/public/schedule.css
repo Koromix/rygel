@@ -43,16 +43,23 @@
     vertical-align: bottom;
 }
 .sc_selector { margin: 0 1em; }
-.sc_selector a, .sc_months a {
+.sc_mode, .sc_selector a, .sc_months a {
     display: inline-block;
     height: 30px;
     box-sizing: border-box;
     text-decoration: none;
     color: white;
 }
+.sc_mode {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    padding: 4px 0.4em;
+    font-size: 1.3em;
+}
 .sc_selector a { padding: 6px 0em; }
 .sc_months a { padding: 7px 1em; }
-.sc_months a.active {
+.sc_months a.active, .sc_mode.active {
     background: #f8f8f8;
     color: black;
 }
@@ -109,6 +116,12 @@
     border-radius: 12px 12px 4px 4px;
 }
 .sc_day_disabled { background: #cbcbcb; }
+.sc_day a {
+    color: inherit;
+    text-decoration: none;
+    font-weight: bold;
+    font-style: normal;
+}
 
 @media screen and (min-width: 1100px) {
     .sc_day:nth-child(7n + 1) { clear: both; }
@@ -176,6 +189,13 @@
 .sc_slots {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
+}
+.sc_slots th {
+    font-size: 0.85em;
+    font-weight: normal;
+    font-style: italic;
+    text-align: center;
 }
 .sc_slots td {
     border: 0;
@@ -188,11 +208,13 @@
 .sc_slot_time {
     opacity: 0.7;
     text-align: right;
-    width: 30px;
+    width: 36px;
     border: 0;
 }
 .sc_slot_used .sc_slot_time { cursor: grab; }
-.sc_slot_identity { text-align: left; }
+.sc_slot_identity {
+    text-align: left;
+}
 .sc_slot_warn.sc_slot_used {
     background: #ca3317;
     color: white;
@@ -201,7 +223,7 @@
 .sc_slot_warn .sc_slot_identity:after {
     float: right;
     margin-right: 3px;
-    content: '⚠ ';
+    content: '⚠';
     font-size: 0.9em;
     font-style: normal;
 }
@@ -214,11 +236,31 @@
 .sc_slot_overbook .sc_slot_identity:after {
     float: right;
     margin-right: 3px;
-    content: '∂ ';
+    content: '≈';
     font-style: normal;
 }
 .sc_slot_edit {
-    color: inherit;
-    text-decoration: none;
-    float: right;
+    text-align: right;
+    width: 8px;
+}
+
+/* -------------------- Settings -------------------- */
+
+.sc_opt_empty .sc_head {
+    background: repeating-linear-gradient(
+        -45deg,
+        #373737,
+        #373737 10px,
+        #515151 10px,
+        #515151 20px
+    )
+}
+.sc_opt_some .sc_head {
+    background: repeating-linear-gradient(
+        -45deg,
+        #ebb326,
+        #ebb326 10px,
+        #f6c344 10px,
+        #f6c344 20px
+    )
 }
