@@ -387,8 +387,10 @@ function Schedule(widget, resources_map, meetings_map) {
                         })}
                     </table>` : ''}
 
-                    <a href="#" onclick=${e => { createSlot(resources); e.preventDefault(); }}>Nouveau</a> |
-                    <a href="#" onclick=${e => { startCopy(day); e.preventDefault(); }}>Copier</a>
+                    <div class="sc_actions">
+                        <a href="#" onclick=${e => { createSlot(resources); e.preventDefault(); }}>Nouveau</a> |
+                        <a href="#" onclick=${e => { startCopy(day); e.preventDefault(); }}>Copier</a>
+                    </div>
                 </div>`;
             } else {
                 return html`<div class="sc_skip"></div>`;
@@ -435,8 +437,10 @@ function Schedule(widget, resources_map, meetings_map) {
                         <div class="sc_head_count">${(normal_count + overbook_count) ? `${normal_count}+${overbook_count}` : 'Fermé'}</div>
                     </div>
 
-                    ${!copy_ignore.has(day.key) ? html`<a href="#" onclick=${e => { executeCopyAndEnd(day); e.preventDefault(); }}>ICI</a> |
-                                                       <a href="#" onclick=${e => { executeCopy(day); e.preventDefault(); }}>ICI et plus</a>` : ''}
+                    <div class="sc_copy" style=${copy_ignore.has(day.key) ? 'opacity: 0.1' : ''}>
+                        <a href="#" onclick=${e => { executeCopy(day); e.preventDefault(); }}>+</a>
+                        <a href="#" onclick=${e => { executeCopyAndEnd(day); e.preventDefault(); }}>⇳</a>
+                    </div>
                 </div>`;
             } else {
                 return html`<div class="sc_skip"></div>`;

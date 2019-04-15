@@ -159,6 +159,24 @@
 .sc_day_some .sc_head { background: #24579d; }
 .sc_day_full .sc_head { background: green; }
 .sc_day_warn .sc_head { background: #ca3317; }
+.sc_opt_empty .sc_head {
+    background: repeating-linear-gradient(
+        -45deg,
+        #373737,
+        #373737 10px,
+        #515151 10px,
+        #515151 20px
+    )
+}
+.sc_opt_some .sc_head {
+    background: repeating-linear-gradient(
+        -45deg,
+        #ebb326,
+        #ebb326 10px,
+        #f6c344 10px,
+        #f6c344 20px
+    )
+}
 .sc_head_date {
     display: table-cell;
     text-align: left;
@@ -243,24 +261,18 @@
     text-align: right;
     width: 8px;
 }
-
-/* -------------------- Settings -------------------- */
-
-.sc_opt_empty .sc_head {
-    background: repeating-linear-gradient(
-        -45deg,
-        #373737,
-        #373737 10px,
-        #515151 10px,
-        #515151 20px
-    )
+.sc_actions { padding: 3px 0; }
+.sc_copy {
+    display: table;
+    table-layout: fixed;
+    width: 100%;
+    height: 114px;
 }
-.sc_opt_some .sc_head {
-    background: repeating-linear-gradient(
-        -45deg,
-        #ebb326,
-        #ebb326 10px,
-        #f6c344 10px,
-        #f6c344 20px
-    )
+.sc_copy a {
+    display: table-cell;
+    font-size: 5em;
+}
+.sc_copy a:hover {
+    background: #ccc;
+    font-size: 5em;
 }
