@@ -143,8 +143,9 @@
 }
 .sc_day_disabled .sc_head { background: #373737; }
 .sc_day_empty .sc_head { background: #e68f00; }
-.sc_day_some .sc_head { background: green; }
-.sc_day_full .sc_head { background: #ca3317; }
+.sc_day_some .sc_head { background: #24579d; }
+.sc_day_full .sc_head { background: green; }
+.sc_day_warn .sc_head { background: #ca3317; }
 .sc_head_date {
     display: table-cell;
     text-align: left;
