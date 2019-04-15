@@ -324,8 +324,19 @@ function Schedule(widget, resources_map, meetings_map) {
 
     function startCopy(day) {
         copy_resources = resources_map[day.key];
-        copy_ignore.clear();
-        copy_ignore.add(day.key);
+
+        // Ignore days with same configuration
+        {
+            let json = JSON.stringify(copy_resources);
+            let days = getMonthDays(current_year, current_month);
+
+            copy_ignore.clear();
+            for (let day of days) {
+                // Slow, but does the job
+                if (day !== null && JSON.stringify(resources_map[day.key]) === json)
+                    copy_ignore.add(day.key);
+            }
+        }
 
         current_mode = 'copy';
         renderCopy();
