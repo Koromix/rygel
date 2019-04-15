@@ -244,41 +244,39 @@ function Schedule(widget, resources_map, meetings_map) {
                             <div class="sc_head_date">${day.date}</div>
                             <div class="sc_head_count">${slot_refs.length ? (`${used_slots}/${normal_slots}` + (warn_slots ? ` + ${warn_slots}` : '')) : 'Fermé'}</div>
                         </div>
-                        <table class="sc_slots">
-                            ${slot_refs.map(slot_ref => {
-                                function dragStart(e) {
-                                    if (slot_ref.identity) {
-                                        drag_slot_ref = slot_ref;
-                                        e.dataTransfer.setData('application/x-meeting', '');
-                                    }
+                        <table class="sc_slots">${slot_refs.map(slot_ref => {
+                            function dragStart(e) {
+                                if (slot_ref.identity) {
+                                    drag_slot_ref = slot_ref;
+                                    e.dataTransfer.setData('application/x-meeting', '');
                                 }
-                                function dragOverSlot(e) {
-                                    if (e.dataTransfer.types.includes('application/x-meeting'))
-                                        e.preventDefault();
-                                }
-                                function dropSlot(e) {
-                                    moveMeeting(drag_slot_ref, slot_ref);
+                            }
+                            function dragOverSlot(e) {
+                                if (e.dataTransfer.types.includes('application/x-meeting'))
                                     e.preventDefault();
-                                }
+                            }
+                            function dropSlot(e) {
+                                moveMeeting(drag_slot_ref, slot_ref);
+                                e.preventDefault();
+                            }
 
-                                return html`<tr class=${slot_ref.cls} ondragover=${dragOverSlot} ondrop=${dropSlot}>
-                                    <td class="sc_slot_time" draggable="true" ondragstart=${dragStart}>${formatTime(slot_ref.time)}</td>
-                                    <td class="sc_slot_identity">
-                                        ${slot_ref.identity ?
-                                            html`
-                                                ${slot_ref.identity}
-                                                <a class="sc_slot_edit" href="#"
-                                                   onclick=${e => { deleteMeeting(slot_ref); e.preventDefault(); }}>x</a>
-                                            ` :
-                                            html`
-                                                <a class="sc_slot_edit" href="#"
-                                                   onclick=${e => { createMeeting(slot_ref); e.preventDefault(); }}>+</a>
-                                            `
-                                        }
-                                    </td>
-                                </tr>`;
-                            })}
-                        </table>
+                            return html`<tr class=${slot_ref.cls} ondragover=${dragOverSlot} ondrop=${dropSlot}>
+                                <td class="sc_slot_time" draggable="true" ondragstart=${dragStart}>${formatTime(slot_ref.time)}</td>
+                                <td class="sc_slot_identity">
+                                    ${slot_ref.identity ?
+                                        html`
+                                            ${slot_ref.identity}
+                                            <a class="sc_slot_edit" href="#"
+                                               onclick=${e => { deleteMeeting(slot_ref); e.preventDefault(); }}>x</a>
+                                        ` :
+                                        html`
+                                            <a class="sc_slot_edit" href="#"
+                                               onclick=${e => { createMeeting(slot_ref); e.preventDefault(); }}>+</a>
+                                        `
+                                    }
+                                </td>
+                            </tr>`;
+                        })}</table>
                     </div>
                 `;
             } else {
