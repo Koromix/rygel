@@ -255,10 +255,53 @@
                 ]
             };
 
-            let schedule;
+            // Load schedule changes
+            function loadScheduleData(name) {
+                if (/^schedule\:[0-9]{4}\-[0-9]{2}\-[0-9]{2}\:(resources|meetings)$/.test(name)) {
+                    try {
+                        let [_, key, type] = name.split(':');
+                        let value = JSON.parse(localStorage.getItem(name));
+
+                        switch (type) {
+                            case 'resources': { resources[key] = value; } break;
+                            case 'meetings': { meetings[key] = value; } break;
+                        }
+                    } catch (err) {
+                        console.log(err);
+                        localStorage.removeItem(name);
+                    }
+                }
+            }
+            for(let i = 0; i < localStorage.length; i++) {
+                let name = localStorage.key(i);
+                loadScheduleData(name);
+            }
+
             document.addEventListener('readystatechange', function() {
                 if (document.readyState === 'complete') {
-                    schedule = new Schedule(document.querySelector('#bb_schedule'), resources, meetings);
+                    let schedule = new Schedule(document.querySelector('#bb_schedule'), resources, meetings);
+
+                    // TODO: This is a basic but stupid way to replicate changes, when we move
+                    // to actually replication over the air, we will need to apply changes with a
+                    // merge algorithm to limit risk of erasing local changes.
+                    window.addEventListener('storage', e => {
+                        if (e.storageArea === localStorage) {
+                            // FIXME: This may wreck drag-and-drop (assuming D&D does not prevent
+                            // this event from occuring) because the slot_ref thing uses array
+                            // indexes to perform changes.
+                            loadScheduleData(e.key);
+                            schedule.render();
+                        }
+                    });
+
+                    // Save schedule changes
+                    schedule.changeResourcesHandler = (key, resources) => {
+                        localStorage.setItem(`schedule:${key}:resources`, JSON.stringify(resources));
+                    };
+                    schedule.changeMeetingsHandler = (key, meetings) => {
+                        localStorage.setItem(`schedule:${key}:meetings`, JSON.stringify(meetings));
+                    };
+
                     schedule.render(2019, 4);
                 }
             });

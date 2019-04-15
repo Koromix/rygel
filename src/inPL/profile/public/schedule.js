@@ -3,6 +3,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 function Schedule(widget, resources_map, meetings_map) {
+    this.changeResourcesHandler = (key, resources) => {};
+    this.changeMeetingsHandler = (key, meetings) => {};
+
     let self = this;
 
     let month_names = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet',
@@ -99,6 +102,7 @@ function Schedule(widget, resources_map, meetings_map) {
                 time: slot_ref.time,
                 identity: name
             });
+            self.changeMeetingsHandler(slot_ref.day.key, slot_ref.meetings);
 
             renderMeetings();
         }
@@ -107,6 +111,8 @@ function Schedule(widget, resources_map, meetings_map) {
     function deleteMeeting(slot_ref) {
         if (confirm('Are you sure?')) {
             slot_ref.meetings.splice(slot_ref.splice_idx, 1);
+            self.changeMeetingsHandler(slot_ref.day.key, slot_ref.meetings);
+
             renderMeetings();
         }
     }
@@ -138,6 +144,9 @@ function Schedule(widget, resources_map, meetings_map) {
             });
             src_ref.meetings.splice(src_ref.splice_idx, 1);
         }
+
+        self.changeMeetingsHandler(src_ref.day.key, src_ref.meetings);
+        self.changeMeetingsHandler(dest_ref.day.key, dest_ref.meetings);
 
         renderMeetings();
     }
@@ -186,6 +195,7 @@ function Schedule(widget, resources_map, meetings_map) {
                         let meeting = meetings[j];
 
                         let slot_ref = {
+                            day: day,
                             meetings: meetings,
                             time: meeting.time,
                             identity: meeting.identity,
@@ -219,6 +229,7 @@ function Schedule(widget, resources_map, meetings_map) {
 
                         if (!slot.overbook || first_empty_slot) {
                             let slot_ref = {
+                                day: day,
                                 meetings: meetings,
                                 time: slot.time,
                                 identity: null,
@@ -292,9 +303,10 @@ function Schedule(widget, resources_map, meetings_map) {
         })}</div>`);
     }
 
-    function createSlot(resources) {
-        let time = parseTime(prompt('Time?'));
+    function createResource(day) {
+        let resources = resources_map[day.key];
 
+        let time = parseTime(prompt('Time?'));
         if (time !== null) {
             let prev_res = resources.find(res => res.time === time);
 
@@ -309,13 +321,19 @@ function Schedule(widget, resources_map, meetings_map) {
                 resources.sort((res1, res2) => res1.time - res2.time);
             }
 
+            self.changeResourcesHandler(day.key, resources);
+
             renderSettings();
         }
     }
 
-    function deleteSlot(resources, res_idx) {
+    function deleteResource(day, res_idx) {
+        let resources = resources_map[day.key];
+
         if (confirm('Are you sure?')) {
             resources.splice(res_idx, 1);
+            self.changeResourcesHandler(day.key, resources);
+
             renderSettings();
         }
     }
@@ -375,6 +393,8 @@ function Schedule(widget, resources_map, meetings_map) {
                             function changeSlots(delta) {
                                 return e => {
                                     res.slots = Math.max(0, res.slots + delta);
+                                    self.changeResourcesHandler(day.key, resources);
+
                                     renderSettings();
                                     e.preventDefault();
                                 };
@@ -382,6 +402,8 @@ function Schedule(widget, resources_map, meetings_map) {
                             function changeOverbook(delta) {
                                 return e => {
                                     res.overbook = Math.max(0, res.overbook + delta);
+                                    self.changeResourcesHandler(day.key, resources);
+
                                     renderSettings();
                                     e.preventDefault();
                                 };
@@ -391,13 +413,13 @@ function Schedule(widget, resources_map, meetings_map) {
                                 <td class="sc_slot_time">${formatTime(res.time)}</td>
                                 <td class="sc_slot_option">${res.slots} <a href="#" onclick=${changeSlots(1)}>▲</a><a href="#" onclick=${changeSlots(-1)}>▼</a></td>
                                 <td class="sc_slot_option">${res.overbook} <a href="#" onclick=${changeOverbook(1)}>▲</a><a href="#" onclick=${changeOverbook(-1)}>▼</a></td>
-                                <td class="sc_slot_edit"><a href="#" onclick=${e => { deleteSlot(resources, res_idx); e.preventDefault(); }}>x</a></td>
+                                <td class="sc_slot_edit"><a href="#" onclick=${e => { deleteResource(day, res_idx); e.preventDefault(); }}>x</a></td>
                             </tr>`;
                         })}
                     </table>` : ''}
 
                     <div class="sc_actions">
-                        <a href="#" onclick=${e => { createSlot(resources); e.preventDefault(); }}>Nouveau</a> |
+                        <a href="#" onclick=${e => { createResource(day); e.preventDefault(); }}>Nouveau</a> |
                         <a href="#" onclick=${e => { startCopy(day); e.preventDefault(); }}>Copier</a>
                     </div>
                 </div>`;
@@ -409,14 +431,18 @@ function Schedule(widget, resources_map, meetings_map) {
 
     function executeCopy(dest_day) {
         copy_ignore.add(dest_day.key);
+
         resources_map[dest_day.key] = copy_resources.map(res => Object.assign({}, res));
+        self.changeResourcesHandler(dest_day.key, resources_map[dest_day.key]);
 
         renderCopy();
     }
 
     function executeCopyAndEnd(dest_day) {
         copy_ignore.add(dest_day.key);
+
         resources_map[dest_day.key] = copy_resources.map(res => Object.assign({}, res));
+        self.changeResourcesHandler(dest_day.key, resources_map[dest_day.key]);
 
         current_mode = 'settings';
         renderSettings();
@@ -544,8 +570,10 @@ function Schedule(widget, resources_map, meetings_map) {
     }
 
     this.render = function(year, month) {
-        current_year = year;
-        current_month = month;
+        if (year !== undefined) {
+            current_year = year;
+            current_month = month;
+        }
 
         renderAll();
     };
