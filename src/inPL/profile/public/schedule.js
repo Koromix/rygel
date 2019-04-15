@@ -9,7 +9,7 @@ function Schedule(widget, resources_map, meetings_map) {
                        'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
     let week_day_names = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 
-    let current_mode = 'schedule';
+    let current_mode = 'meetings';
     let current_month;
     let current_year;
 
@@ -100,14 +100,14 @@ function Schedule(widget, resources_map, meetings_map) {
                 identity: name
             });
 
-            renderSchedule(current_year, current_month);
+            renderMeetings();
         }
     }
 
     function deleteMeeting(slot_ref) {
         if (confirm('Are you sure?')) {
             slot_ref.meetings.splice(slot_ref.splice_idx, 1);
-            renderSchedule(current_year, current_month);
+            renderMeetings();
         }
     }
 
@@ -139,10 +139,10 @@ function Schedule(widget, resources_map, meetings_map) {
             src_ref.meetings.splice(src_ref.splice_idx, 1);
         }
 
-        renderSchedule(current_year, current_month);
+        renderMeetings();
     }
 
-    function renderSchedule() {
+    function renderMeetings() {
         let days = getMonthDays(current_year, current_month);
 
         render(widget.childNodes[1], () => html`<div class="sc_days">${days.map(day => {
@@ -459,32 +459,37 @@ function Schedule(widget, resources_map, meetings_map) {
 
     function switchToPreviousMonth() {
         if (current_month > 1) {
-            schedule.render(current_year, current_month - 1);
+            self.render(current_year, current_month - 1);
         } else {
-            schedule.render(current_year - 1, 12);
+            self.render(current_year - 1, 12);
         }
     }
 
     function switchToNextMonth() {
         if (current_month < 12) {
-            schedule.render(current_year, current_month + 1);
+            self.render(current_year, current_month + 1);
         } else {
-            schedule.render(current_year + 1, 1);
+            self.render(current_year + 1, 1);
         }
     }
 
+    function switchToMonth(month) {
+        if (month !== current_month)
+            self.render(current_year, month);
+    }
+
     function switchToPreviousYear() {
-        schedule.render(current_year - 1, current_month);
+        self.render(current_year - 1, current_month);
     }
 
     function switchToNextYear() {
-        schedule.render(current_year + 1, current_month);
+        self.render(current_year + 1, current_month);
     }
 
     function toggleMode() {
         switch (current_mode) {
-            case 'schedule': { current_mode = 'settings'; } break;
-            case 'settings': { current_mode = 'schedule'; } break;
+            case 'meetings': { current_mode = 'settings'; } break;
+            case 'settings': { current_mode = 'meetings'; } break;
             case 'copy': { current_mode = 'settings'; } break;
         }
 
@@ -507,13 +512,9 @@ function Schedule(widget, resources_map, meetings_map) {
             </div>
 
             <div class="sc_months">${month_names.map((name, idx) => {
-                function switchMonth(e) {
-                    schedule.render(current_year, idx + 1);
-                }
-
                 return html`<a class=${idx + 1 == current_month ? 'sc_month active' : 'sc_month'} href="#"
-                               onclick=${e => { schedule.render(current_year, idx + 1); e.preventDefault(); }}
-                               ondragover=${e => schedule.render(current_year, idx + 1)}>${name}</a>`;
+                               onclick=${e => { switchToMonth(idx + 1); e.preventDefault(); }}
+                               ondragover=${e => switchToMonth(idx + 1)}>${name}</a>`;
             })}</div>
 
             <div class="sc_selector">
@@ -526,7 +527,7 @@ function Schedule(widget, resources_map, meetings_map) {
                    ondragover=${slowDownEvents(300, switchToNextYear)}>≫</a>
             </div>
 
-            <a class=${current_mode === 'schedule' ? 'sc_mode' : 'sc_mode active'} href="#"
+            <a class=${current_mode === 'meetings' ? 'sc_mode' : 'sc_mode active'} href="#"
                onclick=${e => { toggleMode(); e.preventDefault(); }}>⚙</a>
         </nav>`);
     }
@@ -534,7 +535,7 @@ function Schedule(widget, resources_map, meetings_map) {
     function renderAll()
     {
         switch (current_mode) {
-            case 'schedule': { renderSchedule(); } break;
+            case 'meetings': { renderMeetings(); } break;
             case 'settings': { renderSettings(); } break;
             case 'copy': { renderCopy(); } break;
         }
@@ -543,12 +544,10 @@ function Schedule(widget, resources_map, meetings_map) {
     }
 
     this.render = function(year, month) {
-        if (year !== current_year || month !== current_month) {
-            current_year = year;
-            current_month = month;
+        current_year = year;
+        current_month = month;
 
-            renderAll();
-        }
+        renderAll();
     };
 
     // FIXME: Can we replace a node with render, instead of replacing its content?
