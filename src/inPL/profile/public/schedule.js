@@ -12,10 +12,11 @@ function Schedule(widget, resources_map, meetings_map) {
     let widget_months;
     let widget_days;
 
+    let current_mode = 'schedule';
     let current_month;
     let current_year;
-    let drag_slot_ref;
 
+    let drag_slot_ref;
     let prev_event_time = 0;
 
     function slowDownEvents(delay, func) {
@@ -33,6 +34,17 @@ function Schedule(widget, resources_map, meetings_map) {
         let min = time % 100;
 
         return `${hour}h${min}`;
+    }
+
+    function parseTime(str) {
+        if (!/^[0-9]{1,2}h[0-9]{1,2}$/.test(str))
+            return null;
+
+        let [hours, min] = str.split('h').map(str => parseInt(str, 10));
+        if (hours > 23 || min > 59)
+            return null;
+
+        return hours * 100 + min;
     }
 
     function isLeapYear(year) {
@@ -87,14 +99,14 @@ function Schedule(widget, resources_map, meetings_map) {
                 identity: name
             });
 
-            renderDays(current_year, current_month);
+            renderSchedule(current_year, current_month);
         }
     }
 
     function deleteMeeting(slot_ref) {
         if (confirm('Are you sure?')) {
             slot_ref.meetings.splice(slot_ref.splice_idx, 1);
-            renderDays(current_year, current_month);
+            renderSchedule(current_year, current_month);
         }
     }
 
@@ -126,26 +138,26 @@ function Schedule(widget, resources_map, meetings_map) {
             src_ref.meetings.splice(src_ref.splice_idx, 1);
         }
 
-        renderDays(current_year, current_month);
+        renderSchedule(current_year, current_month);
     }
 
-    function renderDays() {
+    function renderSchedule() {
         let days = getMonthDays(current_year, current_month);
 
         render(widget.childNodes[1], () => html`<div class="sc_days">${days.map(day => {
             if (day !== null) {
-                if (!settings.resources[day.key])
-                    settings.resources[day.key] = [];
+                if (!resources_map[day.key])
+                    resources_map[day.key] = [];
                 if (!meetings_map[day.key])
                     meetings_map[day.key] = [];
 
-                let resources = settings.resources[day.key];
+                let resources = resources_map[day.key];
                 let meetings = meetings_map[day.key];
 
                 // Create slots
                 let slots = [];
                 for (let res of resources) {
-                    for (let j = 0; j < res.doctors.length * settings.slots_per_doctor; j++) {
+                    for (let j = 0; j < res.slots; j++) {
                         slots.push({
                             time: res.time,
                             overbook: false
@@ -262,23 +274,109 @@ function Schedule(widget, resources_map, meetings_map) {
 
                             return html`<tr class=${slot_ref.cls} ondragover=${dragOverSlot} ondrop=${dropSlot}>
                                 <td class="sc_slot_time" draggable="true" ondragstart=${dragStart}>${formatTime(slot_ref.time)}</td>
-                                <td class="sc_slot_identity">
+                                <td class="sc_slot_identity">${slot_ref.identity || ''}</td>
+                                <td class="sc_slot_edit">
                                     ${slot_ref.identity ?
-                                        html`
-                                            ${slot_ref.identity}
-                                            <a class="sc_slot_edit" href="#"
-                                               onclick=${e => { deleteMeeting(slot_ref); e.preventDefault(); }}>x</a>
-                                        ` :
-                                        html`
-                                            <a class="sc_slot_edit" href="#"
-                                               onclick=${e => { createMeeting(slot_ref); e.preventDefault(); }}>+</a>
-                                        `
+                                        html`<a href="#" onclick=${e => { deleteMeeting(slot_ref); e.preventDefault(); }}>x</a>` :
+                                        html`<a href="#" onclick=${e => { createMeeting(slot_ref); e.preventDefault(); }}>+</a>`
                                     }
                                 </td>
                             </tr>`;
                         })}</table>
                     </div>
                 `;
+            } else {
+                return html`<div class="sc_skip"></div>`;
+            }
+        })}</div>`);
+    }
+
+    function createSlot(resources) {
+        let time = parseTime(prompt('Time?'));
+
+        if (time !== null) {
+            let prev_res = resources.find(res => res.time === time);
+
+            if (prev_res) {
+                prev_res.slots++;
+            } else {
+                resources.push({
+                    time: time,
+                    slots: 1,
+                    overbook: 0
+                });
+                resources.sort((res1, res2) => res1.time - res2.time);
+            }
+
+            renderSettings();
+        }
+    }
+
+    function deleteSlot(resources, res_idx) {
+        if (confirm('Are you sure?')) {
+            resources.splice(res_idx, 1);
+            renderSettings();
+        }
+    }
+
+    function renderSettings() {
+        let days = getMonthDays(current_year, current_month);
+
+        render(widget.childNodes[1], () => html`<div class="sc_days">${days.map(day => {
+            if (day !== null) {
+                let resources = resources_map[day.key] || [];
+
+                let normal_count = resources.reduce((acc, res) => acc + res.slots, 0);
+                let overbook_count = resources.reduce((acc, res) => acc + res.overbook, 0);
+
+                let cls;
+                if (normal_count + overbook_count) {
+                    cls = 'sc_day sc_opt_some';
+                } else {
+                    cls = 'sc_day sc_opt_empty';
+                }
+
+                return html`<div class="${cls}">
+                    <div class="sc_head">
+                        <div class="sc_head_week_day">${day.week_day}</div>
+                        <div class="sc_head_date">${day.date}</div>
+                        <div class="sc_head_count">${(normal_count + overbook_count) ? `${normal_count}+${overbook_count}` : 'Fermé'}</div>
+                    </div>
+
+                    ${resources.length ? html`<table class="sc_slots">
+                        <tr>
+                            <th style="width: 36px;"></th>
+                            <th>places</th>
+                            <th>surbooking</th>
+                            <th style="width: 10px;"></th>
+                        </tr>
+                        ${resources.map((res, res_idx) => {
+                            function changeSlots(delta) {
+                                return e => {
+                                    res.slots = Math.max(0, res.slots + delta);
+                                    renderSettings();
+                                    e.preventDefault();
+                                };
+                            }
+                            function changeOverbook(delta) {
+                                return e => {
+                                    res.overbook = Math.max(0, res.overbook + delta);
+                                    renderSettings();
+                                    e.preventDefault();
+                                };
+                            }
+
+                            return html`<tr>
+                                <td class="sc_slot_time">${formatTime(res.time)}</td>
+                                <td class="sc_slot_option">${res.slots} <a href="#" onclick=${changeSlots(1)}>▲</a><a href="#" onclick=${changeSlots(-1)}>▼</a></td>
+                                <td class="sc_slot_option">${res.overbook} <a href="#" onclick=${changeOverbook(1)}>▲</a><a href="#" onclick=${changeOverbook(-1)}>▼</a></td>
+                                <td class="sc_slot_edit"><a href="#" onclick=${e => { deleteSlot(resources, res_idx); e.preventDefault(); }}>x</a></td>
+                            </tr>`;
+                        })}
+                    </table>` : ''}
+
+                    <a href="#" onclick=${e => { createSlot(resources); e.preventDefault(); }}>Nouveau créneau</a>
+                </div>`;
             } else {
                 return html`<div class="sc_skip"></div>`;
             }
@@ -309,8 +407,20 @@ function Schedule(widget, resources_map, meetings_map) {
         schedule.render(current_year + 1, current_month);
     }
 
-    function renderMonths() {
+    function toggleMode() {
+        switch (current_mode) {
+            case 'settings': { current_mode = 'schedule'; } break;
+            case 'schedule': { current_mode = 'settings'; } break;
+        }
+
+        renderAll();
+    }
+
+    function renderFooter() {
         render(widget.childNodes[2], () => html`<nav class="sc_footer">
+            <a class="sc_deploy" href="#"
+               onclick=${e => { e.target.parentNode.querySelector('.sc_months').classList.toggle('active'); e.preventDefault(); }}></a>
+
             <div class="sc_selector">
                 <a href="#"
                    onclick=${e => { switchToPreviousMonth(); e.preventDefault(); }}
@@ -341,9 +451,18 @@ function Schedule(widget, resources_map, meetings_map) {
                    ondragover=${slowDownEvents(300, switchToNextYear)}>≫</a>
             </div>
 
-            <a class="sc_deploy" href="#"
-               onclick=${e => { e.target.parentNode.querySelector('.sc_months').classList.toggle('active'); e.preventDefault(); }}></a>
+            <a class=${current_mode === 'settings' ? 'sc_mode active' : 'sc_mode'} href="#"
+               onclick=${e => { toggleMode(); e.preventDefault(); }}>⚙</a>
         </nav>`);
+    }
+
+    function renderAll()
+    {
+        switch (current_mode) {
+            case 'settings': { renderSettings(); } break;
+            case 'schedule': { renderSchedule(); } break;
+        }
+        renderFooter();
     }
 
     this.render = function(year, month) {
@@ -351,14 +470,12 @@ function Schedule(widget, resources_map, meetings_map) {
             current_year = year;
             current_month = month;
 
-            renderDays();
-            renderMonths();
+            renderAll();
         }
     };
 
     // FIXME: Can we replace a node with render, instead of replacing its content?
-    // Right now, renderDays() and renderMonths() create content inside these two divs
-    // instead of replacing them.
+    // Right now, render functions create content inside these two divs instead of replacing them.
     render(widget, () => html`
         <div class="sc_header">${week_day_names.map(name => html`<div>${name}</div>`)}</div>
         <div></div>
