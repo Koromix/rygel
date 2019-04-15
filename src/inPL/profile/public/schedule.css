@@ -226,13 +226,11 @@
 .sc_slot_time {
     opacity: 0.7;
     text-align: right;
-    width: 36px;
+    width: 40px;
     border: 0;
 }
 .sc_slot_used .sc_slot_time { cursor: grab; }
-.sc_slot_identity {
-    text-align: left;
-}
+.sc_slot_identity { text-align: left; }
 .sc_slot_warn.sc_slot_used {
     background: #ca3317;
     color: white;

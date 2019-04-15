@@ -368,7 +368,7 @@ function Schedule(widget, resources_map, meetings_map) {
 
                     ${resources.length ? html`<table class="sc_slots">
                         <tr>
-                            <th style="width: 36px;"></th>
+                            <th style="width: 40px;"></th>
                             <th>places</th>
                             <th>surbooking</th>
                             <th style="width: 10px;"></th>
