@@ -225,7 +225,7 @@ function Schedule(widget, resources_map, meetings_map) {
                 // Select day CSS class
                 let cls;
                 if (warn_slots) {
-                    cls = 'sc_day sc_day_full';
+                    cls = 'sc_day sc_day_warn';
                 } else if (!slot_refs.length) {
                     cls = 'sc_day sc_day_disabled';
                 } else if (!used_slots) {
