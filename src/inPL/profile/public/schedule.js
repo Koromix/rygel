@@ -9,14 +9,12 @@ function Schedule(widget, resources_map, meetings_map) {
                        'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
     let week_day_names = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 
-    let widget_months;
-    let widget_days;
-
     let current_mode = 'schedule';
     let current_month;
     let current_year;
 
     let drag_slot_ref;
+
     let prev_event_time = 0;
 
     let copy_resources;
