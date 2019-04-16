@@ -304,12 +304,11 @@ function Schedule(widget, resources_map, meetings_map) {
     }
 
     function createResource(day) {
-        let resources = resources_map[day.key];
-
         let time = parseTime(prompt('Time?'));
         if (time !== null) {
-            let prev_res = resources.find(res => res.time === time);
+            let resources = resources_map[day.key];
 
+            let prev_res = resources.find(res => res.time === time);
             if (prev_res) {
                 prev_res.slots++;
             } else {
@@ -328,10 +327,21 @@ function Schedule(widget, resources_map, meetings_map) {
     }
 
     function deleteResource(day, res_idx) {
-        let resources = resources_map[day.key];
-
         if (confirm('Are you sure?')) {
+            let resources = resources_map[day.key];
+
             resources.splice(res_idx, 1);
+            self.changeResourcesHandler(day.key, resources);
+
+            renderSettings();
+        }
+    }
+
+    function closeDay(day) {
+        if (confirm('Are you sure?')) {
+            let resources = resources_map[day.key];
+
+            resources_map[day.key].length = 0;
             self.changeResourcesHandler(day.key, resources);
 
             renderSettings();
@@ -420,7 +430,8 @@ function Schedule(widget, resources_map, meetings_map) {
 
                     <div class="sc_actions">
                         <a href="#" onclick=${e => { createResource(day); e.preventDefault(); }}>Nouveau</a> |
-                        <a href="#" onclick=${e => { startCopy(day); e.preventDefault(); }}>Copier</a>
+                        <a href="#" onclick=${e => { startCopy(day); e.preventDefault(); }}>Copier</a> |
+                        <a href="#" onclick=${e => { closeDay(day); e.preventDefault(); }}>Fermer</a>
                     </div>
                 </div>`;
             } else {
