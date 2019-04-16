@@ -213,7 +213,6 @@ function buildUrl(url, query_values)
     if (query_fragments.length)
         url += '?' + query_fragments.sort().join('&');
 
-    url = encodeURI(url);
     return url;
 }
 
