@@ -4,43 +4,40 @@
 
 -------------------- Structure --------------------
 
-CREATE TABLE sc_activities (
-    id INTEGER PRIMARY KEY,
-    name TEXT UNIQUE NOT NULL,
-    slots_per_doctor INTEGER NOT NULL
-);
-
-CREATE TABLE sc_slots (
-    id INTEGER PRIMARY KEY,
-    activity_id INTEGER NOT NULL,
+CREATE TABLE sc_resources (
+    schedule TEXT NOT NULL CHECK(schedule IN ('pl', 'entreprise')),
     date TEXT NOT NULL,
     time INTEGER NOT NULL,
-    overbook INTEGER NOT NULL,
 
-    FOREIGN KEY (activity_id) REFERENCES sc_activities(id)
+    slots INTEGER NOT NULL,
+    overbook INTEGER NOT NULL
 );
+CREATE UNIQUE INDEX sc_resources_key ON sc_resources (schedule, date, time);
+CREATE INDEX sc_resources_day ON sc_resources (schedule, date);
 
-CREATE TABLE sc_resources (
-    slot_id INTEGER NOT NULL,
-    type TEXT CHECK(type IN ('doctor')),
-    name TEXT NOT NULL,
+CREATE TABLE sc_meetings (
+    schedule TEXT NOT NULL CHECK(schedule IN ('pl', 'entreprise')),
+    date TEXT NOT NULL,
+    time INTEGER NOT NULL,
 
-    FOREIGN KEY (slot_id) REFERENCES sc_slots(id)
+    name TEXT NOT NULL
 );
+CREATE INDEX sc_meetings_day ON sc_meetings (schedule, date);
 
 -------------------- Test data --------------------
 
-INSERT INTO sc_activities VALUES (1, 'pl', 1);
-INSERT INTO sc_slots VALUES (1, 1, '2019-04-01', 730, 0);
-INSERT INTO sc_slots VALUES (2, 1, '2019-04-01', 1130, 3);
-INSERT INTO sc_slots VALUES (3, 1, '2019-04-02', 730, 0);
-INSERT INTO sc_slots VALUES (4, 1, '2019-04-02', 1130, 1);
-INSERT INTO sc_slots VALUES (5, 1, '2019-04-03', 730, 0);
-INSERT INTO sc_slots VALUES (6, 1, '2019-04-03', 1130, 1);
-INSERT INTO sc_resources VALUES (1, 'doctor', 'X');
-INSERT INTO sc_resources VALUES (1, 'doctor', 'Y');
-INSERT INTO sc_resources VALUES (2, 'doctor', 'X');
-INSERT INTO sc_resources VALUES (3, 'doctor', 'X');
-INSERT INTO sc_resources VALUES (4, 'doctor', 'X');
-INSERT INTO sc_resources VALUES (5, 'doctor', 'X');
-INSERT INTO sc_resources VALUES (6, 'doctor', 'X');
+INSERT INTO sc_resources VALUES ('pl', '2019-04-01', 730, 1, 1);
+INSERT INTO sc_resources VALUES ('pl', '2019-04-01', 1130, 2, 0);
+INSERT INTO sc_resources VALUES ('pl', '2019-04-02', 730, 1, 1);
+INSERT INTO sc_resources VALUES ('pl', '2019-04-02', 1130, 2, 0);
+INSERT INTO sc_resources VALUES ('pl', '2019-04-03', 730, 1, 1);
+INSERT INTO sc_resources VALUES ('pl', '2019-04-03', 1130, 2, 0);
+INSERT INTO sc_resources VALUES ('pl', '2019-04-04', 730, 1, 1);
+INSERT INTO sc_resources VALUES ('pl', '2019-04-04', 1130, 2, 0);
+INSERT INTO sc_resources VALUES ('pl', '2019-04-05', 730, 1, 1);
+INSERT INTO sc_resources VALUES ('pl', '2019-04-05', 1130, 2, 0);
+INSERT INTO sc_meetings VALUES ('pl', '2019-04-01', 730, 'Peter PARKER');
+INSERT INTO sc_meetings VALUES ('pl', '2019-04-01', 730, 'Mary JANE');
+INSERT INTO sc_meetings VALUES ('pl', '2019-04-01', 730, 'Gwen STACY');
+INSERT INTO sc_meetings VALUES ('pl', '2019-04-02', 730, 'Clark KENT');
+INSERT INTO sc_meetings VALUES ('pl', '2019-04-02', 1130, 'Lex LUTHOR');
