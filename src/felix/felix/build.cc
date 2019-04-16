@@ -7,6 +7,10 @@
 #include "build_compiler.hh"
 #include "build_target.hh"
 
+#ifndef _WIN32
+    #include <unistd.h>
+#endif
+
 namespace RG {
 
 struct Toolchain {
@@ -83,7 +87,13 @@ static int RunTarget(const Target &target, Span<const char *const> arguments, bo
     }
     PrintLn(stderr);
 
+#ifdef _WIN32
     return system(cmd_buf.ptr);
+#else
+    execl("/bin/sh", "sh", "-c", cmd_buf.ptr, nullptr);
+    LogError("Failed to execute /bin/sh: %1", strerror(errno));
+    return 127;
+#endif
 }
 
 int RunBuild(Span<const char *> arguments)
