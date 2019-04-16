@@ -74,13 +74,15 @@ function Schedule(widget, resources_map, meetings_map) {
         return (day + Math.floor(13 * (month + 1) / 5) + year + Math.floor(year / 4) + Math.floor(century / 4) + 5 * century + 5) % 7;
     }
 
-    function getMonthDays(year, month) {
+    function getMonthDays(year, month, add_skip_days = false) {
         let days_count = daysInMonth(year, month);
         let start_week_day = getWeekDay(year, month, 1);
 
         let days = [];
-        for (let i = 0; i < start_week_day; i++)
-            days.push(null);
+        if (add_skip_days) {
+            for (let i = 0; i < start_week_day; i++)
+                days.push(null);
+        }
         for (let i = 1; i <= days_count; i++) {
             let month_str = (month < 10 ? '0' : '') + month;
             let day_str = (i < 10 ? '0' : '') + i;
@@ -95,6 +97,26 @@ function Schedule(widget, resources_map, meetings_map) {
         return days;
     }
 
+    function expandSlots(resources) {
+        let slots = [];
+        for (let res of resources) {
+            for (let j = 0; j < res.slots; j++) {
+                slots.push({
+                    time: res.time,
+                    overbook: false
+                });
+            }
+            for (let j = 0; j < res.overbook; j++) {
+                slots.push({
+                    time: res.time,
+                    overbook: true
+                });
+            }
+        }
+
+        return slots;
+    }
+
     function createMeeting(slot_ref) {
         let name = prompt('Name?');
         if (name !== null) {
@@ -104,7 +126,7 @@ function Schedule(widget, resources_map, meetings_map) {
             });
             self.changeMeetingsHandler(slot_ref.day.key, slot_ref.meetings);
 
-            renderMeetings();
+            renderAll();
         }
     }
 
@@ -113,7 +135,7 @@ function Schedule(widget, resources_map, meetings_map) {
             slot_ref.meetings.splice(slot_ref.splice_idx, 1);
             self.changeMeetingsHandler(slot_ref.day.key, slot_ref.meetings);
 
-            renderMeetings();
+            renderAll();
         }
     }
 
@@ -148,38 +170,22 @@ function Schedule(widget, resources_map, meetings_map) {
         self.changeMeetingsHandler(src_ref.day.key, src_ref.meetings);
         self.changeMeetingsHandler(dest_ref.day.key, dest_ref.meetings);
 
-        renderMeetings();
+        renderAll();
     }
 
     function renderMeetings() {
-        let days = getMonthDays(current_year, current_month);
+        let days = getMonthDays(current_year, current_month, true);
 
         render(widget.childNodes[1], () => html`<div class="sc_days">${days.map(day => {
             if (day !== null) {
-                if (!resources_map[day.key])
-                    resources_map[day.key] = [];
                 if (!meetings_map[day.key])
                     meetings_map[day.key] = [];
+                if (!resources_map[day.key])
+                    resources_map[day.key] = [];
 
-                let resources = resources_map[day.key];
                 let meetings = meetings_map[day.key];
-
-                // Create slots
-                let slots = [];
-                for (let res of resources) {
-                    for (let j = 0; j < res.slots; j++) {
-                        slots.push({
-                            time: res.time,
-                            overbook: false
-                        });
-                    }
-                    for (let j = 0; j < res.overbook; j++) {
-                        slots.push({
-                            time: res.time,
-                            overbook: true
-                        });
-                    }
-                }
+                let resources = resources_map[day.key];
+                let slots = expandSlots(resources);
 
                 // Match slots and meetings
                 let slot_refs = [];
@@ -322,7 +328,7 @@ function Schedule(widget, resources_map, meetings_map) {
 
             self.changeResourcesHandler(day.key, resources);
 
-            renderSettings();
+            renderAll();
         }
     }
 
@@ -333,7 +339,7 @@ function Schedule(widget, resources_map, meetings_map) {
             resources.splice(res_idx, 1);
             self.changeResourcesHandler(day.key, resources);
 
-            renderSettings();
+            renderAll();
         }
     }
 
@@ -344,7 +350,7 @@ function Schedule(widget, resources_map, meetings_map) {
             resources_map[day.key].length = 0;
             self.changeResourcesHandler(day.key, resources);
 
-            renderSettings();
+            renderAll();
         }
     }
 
@@ -359,7 +365,7 @@ function Schedule(widget, resources_map, meetings_map) {
             copy_ignore.clear();
             for (let day of days) {
                 // Slow, but does the job
-                if (day !== null && JSON.stringify(resources_map[day.key]) === json)
+                if (JSON.stringify(resources_map[day.key]) === json)
                     copy_ignore.add(day.key);
             }
         }
@@ -369,7 +375,7 @@ function Schedule(widget, resources_map, meetings_map) {
     }
 
     function renderSettings() {
-        let days = getMonthDays(current_year, current_month);
+        let days = getMonthDays(current_year, current_month, true);
 
         render(widget.childNodes[1], () => html`<div class="sc_days">${days.map(day => {
             if (day !== null) {
@@ -405,7 +411,7 @@ function Schedule(widget, resources_map, meetings_map) {
                                     res.slots = Math.max(0, res.slots + delta);
                                     self.changeResourcesHandler(day.key, resources);
 
-                                    renderSettings();
+                                    renderAll();
                                     e.preventDefault();
                                 };
                             }
@@ -414,7 +420,7 @@ function Schedule(widget, resources_map, meetings_map) {
                                     res.overbook = Math.max(0, res.overbook + delta);
                                     self.changeResourcesHandler(day.key, resources);
 
-                                    renderSettings();
+                                    renderAll();
                                     e.preventDefault();
                                 };
                             }
@@ -446,7 +452,7 @@ function Schedule(widget, resources_map, meetings_map) {
         resources_map[dest_day.key] = copy_resources.map(res => Object.assign({}, res));
         self.changeResourcesHandler(dest_day.key, resources_map[dest_day.key]);
 
-        renderCopy();
+        renderAll();
     }
 
     function executeCopyAndEnd(dest_day) {
@@ -456,11 +462,11 @@ function Schedule(widget, resources_map, meetings_map) {
         self.changeResourcesHandler(dest_day.key, resources_map[dest_day.key]);
 
         current_mode = 'settings';
-        renderSettings();
+        renderAll();
     }
 
     function renderCopy() {
-        let days = getMonthDays(current_year, current_month);
+        let days = getMonthDays(current_year, current_month, true);
 
         render(widget.childNodes[1], () => html`<div class="sc_days">${days.map(day => {
             if (day !== null) {
@@ -549,9 +555,41 @@ function Schedule(widget, resources_map, meetings_map) {
             </div>
 
             <div class="sc_months">${month_names.map((name, idx) => {
-                return html`<a class=${idx + 1 == current_month ? 'sc_month active' : 'sc_month'} href="#"
-                               onclick=${e => { switchToMonth(idx + 1); e.preventDefault(); }}
-                               ondragover=${e => switchToMonth(idx + 1)}>${name}</a>`;
+                let month = idx + 1;
+
+                let warn = false;
+                {
+                    let days = getMonthDays(current_year, month);
+
+                    for (let i = 0; !warn && i < days.length; i++) {
+                        let day = days[i];
+
+                        let meetings = meetings_map[day.key] || [];
+                        let resources = resources_map[day.key] || [];
+                        let slots = expandSlots(resources);
+
+                        for (let j = 0, k = 0; j < meetings.length; j++) {
+                            while (k < slots.length && slots[k].time < meetings[j].time) {
+                                k++;
+                            }
+
+                            if (k >= slots.length || slots[k++].time !== meetings[j].time) {
+                                warn = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                let cls = '';
+                if (warn)
+                    cls += ' sc_month_warn';
+                if (month === current_month)
+                    cls += ' active';
+
+                return html`<a class=${cls} href="#"
+                               onclick=${e => { switchToMonth(month); e.preventDefault(); }}
+                               ondragover=${e => switchToMonth(month)}>${name}</a>`;
             })}</div>
 
             <div class="sc_selector">

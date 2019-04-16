@@ -64,6 +64,15 @@
     color: black;
 }
 .sc_months a:not(.active):hover { background: #444; }
+.sc_month_warn:before {
+    content: '⚠ ';
+    font-size: 0.9em;
+    vertical-align: middle;
+}
+.sc_month_warn {
+    background: #ca3317;
+    color: white;
+}
 .sc_selector b {
     display: inline-block;
     padding-top: 7px;
@@ -78,7 +87,7 @@
         display: inline-block;
         margin: 0 1em;
     }
-    .sc_month { width: 50%; }
+    .sc_months a { width: 50%; }
     .sc_deploy {
         display: block;
         position: fixed;
