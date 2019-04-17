@@ -12,8 +12,7 @@ CREATE TABLE sc_resources (
     slots INTEGER NOT NULL,
     overbook INTEGER NOT NULL
 );
-CREATE UNIQUE INDEX sc_resources_key ON sc_resources (schedule, date, time);
-CREATE INDEX sc_resources_day ON sc_resources (schedule, date);
+CREATE UNIQUE INDEX sc_resources_sdt ON sc_resources (schedule, date, time);
 
 CREATE TABLE sc_meetings (
     schedule TEXT NOT NULL CHECK(schedule IN ('pl', 'entreprise')),
@@ -22,7 +21,7 @@ CREATE TABLE sc_meetings (
 
     name TEXT NOT NULL
 );
-CREATE INDEX sc_meetings_day ON sc_meetings (schedule, date);
+CREATE INDEX sc_meetings_sd ON sc_meetings (schedule, date);
 
 -------------------- Test data --------------------
 
@@ -36,6 +35,7 @@ INSERT INTO sc_resources VALUES ('pl', '2019-04-04', 730, 1, 1);
 INSERT INTO sc_resources VALUES ('pl', '2019-04-04', 1130, 2, 0);
 INSERT INTO sc_resources VALUES ('pl', '2019-04-05', 730, 1, 1);
 INSERT INTO sc_resources VALUES ('pl', '2019-04-05', 1130, 2, 0);
+
 INSERT INTO sc_meetings VALUES ('pl', '2019-04-01', 730, 'Peter PARKER');
 INSERT INTO sc_meetings VALUES ('pl', '2019-04-01', 730, 'Mary JANE');
 INSERT INTO sc_meetings VALUES ('pl', '2019-04-01', 730, 'Gwen STACY');
