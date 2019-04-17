@@ -25,6 +25,8 @@ CREATE INDEX sc_meetings_sd ON sc_meetings (schedule, date);
 
 -------------------- Test data --------------------
 
+BEGIN TRANSACTION;
+
 INSERT INTO sc_resources VALUES ('pl', '2019-04-01', 730, 1, 1);
 INSERT INTO sc_resources VALUES ('pl', '2019-04-01', 1130, 2, 0);
 INSERT INTO sc_resources VALUES ('pl', '2019-04-02', 730, 1, 1);
@@ -41,3 +43,5 @@ INSERT INTO sc_meetings VALUES ('pl', '2019-04-01', 730, 'Mary JANE');
 INSERT INTO sc_meetings VALUES ('pl', '2019-04-01', 730, 'Gwen STACY');
 INSERT INTO sc_meetings VALUES ('pl', '2019-04-02', 730, 'Clark KENT');
 INSERT INTO sc_meetings VALUES ('pl', '2019-04-02', 1130, 'Lex LUTHOR');
+
+END TRANSACTION;
