@@ -12,7 +12,7 @@ CREATE TABLE sc_resources (
     slots INTEGER NOT NULL,
     overbook INTEGER NOT NULL
 );
-CREATE UNIQUE INDEX sc_resources_sdt ON sc_resources (schedule, date, time);
+CREATE UNIQUE INDEX sc_resources_sdt ON sc_resources (schedule, date, time, slots, overbook);
 
 CREATE TABLE sc_meetings (
     schedule TEXT NOT NULL CHECK(schedule IN ('pl', 'entreprise')),
@@ -21,7 +21,7 @@ CREATE TABLE sc_meetings (
 
     name TEXT NOT NULL
 );
-CREATE INDEX sc_meetings_sd ON sc_meetings (schedule, date);
+CREATE INDEX sc_meetings_sd ON sc_meetings (schedule, date, time, name);
 
 -------------------- Test data --------------------
 
