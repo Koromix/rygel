@@ -107,14 +107,13 @@ endif()
 # libgui
 # ------------------------------------------------------------------------
 
-if(WIN32 OR EMSCRIPTEN)
+if(WIN32)
     set(LIBGUI_SRC
         wrappers/opengl.cc
         wrappers/opengl.hh
         wrappers/opengl_func.inc
         libgui/imgui.cc
         libgui/window_win32.cc
-        libgui/window_emsdk.cc
         libgui/window.hh
     )
 
