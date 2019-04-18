@@ -384,60 +384,6 @@ add_custom_command(
 )
 
 # ------------------------------------------------------------------------
-# simPL
-# ------------------------------------------------------------------------
-
-if(TARGET libgui)
-    set(SIMPL_SRC
-        simPL/simPL.cc
-        simPL/view.cc
-        simPL/view.hh
-    )
-    set(SIMPL_ASSETS
-        ../vendor/imgui/misc/fonts/Roboto-Medium.ttf
-    )
-
-    set(SIMPL_MODULE_SRC
-        wrappers/pcg.hh
-        simPL/economics.cc
-        simPL/economics.hh
-        simPL/predict_cancer.cc
-        simPL/predict_cv.cc
-        simPL/predict_cv_qrisk3.cc
-        simPL/predict.hh
-        simPL/simulate.cc
-        simPL/simulate.hh
-        simPL/tables_cepidc.cc
-        simPL/tables_smoking.cc
-        simPL/tables.hh
-    )
-
-    add_executable(simPL ${SIMPL_SRC})
-    target_link_libraries(simPL PRIVATE libcc libgui)
-    target_assets(simPL
-        SOURCES ${SIMPL_ASSETS}
-    )
-
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        # The copy is mostly for Windows, where incomplete DLLs can generate
-        # annoying MessageBox errors.
-        add_library(simPL_module MODULE ${SIMPL_MODULE_SRC})
-        target_link_libraries(simPL_module PRIVATE libcc pcg)
-        add_custom_command(
-            TARGET simPL_module POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:simPL_module>
-                                             "$<TARGET_FILE_DIR:simPL_module>/simPL${CMAKE_SHARED_LIBRARY_SUFFIX}"
-        )
-
-        target_compile_definitions(simPL PRIVATE SIMPL_ENABLE_HOT_RELOAD)
-        target_compile_definitions(simPL_module PRIVATE SIMPL_ENABLE_HOT_RELOAD)
-    else()
-        target_sources(simPL PRIVATE ${SIMPL_MODULE_SRC})
-        target_link_libraries(simPL PRIVATE pcg)
-    endif()
-endif()
-
-# ------------------------------------------------------------------------
 # webler
 # ------------------------------------------------------------------------
 
