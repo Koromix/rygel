@@ -10,7 +10,7 @@
 * _src/heimdall_: Medical timeline visualization (proof-of-concept)
 * _src/inPL_: Dashboards and various tools for IPL's longevity checkup
 * _src/libcc_: C++ container and system library
-* _src/libgui_: Simple OpenGL window creation 
+* _src/libgui_: Simple OpenGL window creation
 * _src/libweb_: Reusable utility functions and HTML/CSS/JS widgets
 * _src/thop_: Web-based institutional PMSI reporting tool based on libdrd
 * _src/webler_ : Simple markdown-to-HTML website generator (e.g. koromix.dev)
@@ -19,7 +19,6 @@
 ## Draft projects
 
 * _src/goupil_: Vastly simplified alternative to Voozanoo (from Epiconcept)
-* _src/simPL_: Medico-economic simulation for IPL's longevity checkup
 
 # Help
 
