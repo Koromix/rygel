@@ -63,7 +63,7 @@ void mco_Price(const mco_Result &result, bool apply_coefficient, mco_Pricing *ou
     if (RG_LIKELY(price_info)) {
         int64_t price_cents = mco_PriceGhs(*price_info, ghs_coefficient, result.ghs_duration,
                                            result.stays[result.stays.len - 1].exit.mode == '9',
-                                           result.stays[0].flags & (int)mco_Stay::Flag::Ucd,
+                                           result.stays[0].flags & (int)mco_Stay::Flag::UCD,
                                            &out_pricing->ghs_cents, &out_pricing->exb_exh);
         out_pricing->price_cents += price_cents;
         out_pricing->total_cents += price_cents;
