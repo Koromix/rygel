@@ -708,14 +708,17 @@ static bool ParseGhmRootTable(const uint8_t *file_data, const mco_TableInfo &tab
         uint8_t cma_exclusion_mask;
         uint8_t confirm_duration_treshold;
         uint8_t childbirth_severity_mode; // Appeared in FG 11d
+        uint8_t ignore_raac; // Appeared in FG 2019
 	};
 #pragma pack(pop)
 
     FAIL_PARSE_IF(table.filename, table.sections.len != 1);
-    if (table.version[0] > 11 || (table.version[0] == 11 && table.version[1] > 14)) {
+    if (table.version[0] > 11 || (table.version[0] == 11 && table.version[1] > 27)) {
         FAIL_PARSE_IF(table.filename, table.sections[0].value_len != RG_SIZE(PackedGhmRoot));
-    } else {
+    } else if (table.version[0] == 11 && table.version[1] > 14) {
         FAIL_PARSE_IF(table.filename, table.sections[0].value_len != RG_SIZE(PackedGhmRoot) - 1);
+    } else {
+        FAIL_PARSE_IF(table.filename, table.sections[0].value_len != RG_SIZE(PackedGhmRoot) - 2);
     }
 
     for (Size i = 0; i < table.sections[0].values_count; i++) {
@@ -787,6 +790,11 @@ static bool ParseGhmRootTable(const uint8_t *file_data, const mco_TableInfo &tab
             FAIL_PARSE_IF(table.filename, raw_ghm_root.childbirth_severity_mode < 2 ||
                                           raw_ghm_root.childbirth_severity_mode > 4);
             ghm_root.childbirth_severity_list = (int8_t)(raw_ghm_root.childbirth_severity_mode - 1);
+        }
+        if (table.sections[0].value_len >= 13) {
+            FAIL_PARSE_IF(table.filename, raw_ghm_root.ignore_raac != 0 &&
+                                          raw_ghm_root.ignore_raac != 1);
+            ghm_root.allow_raac = !raw_ghm_root.ignore_raac;
         }
 
         ghm_root.cma_exclusion_mask.offset = raw_ghm_root.cma_exclusion_offset;

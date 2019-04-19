@@ -1234,8 +1234,9 @@ let mco_casemix = {};
                         createInfoRow('Poids du nouveau-né',
                                       stay.newborn_weight ? (stay.newborn_weight + ' grammes') : null),
                         createInfoRow('Confirmation', stay.confirm ? 'Oui' : null),
-                        createInfoRow('Séances de DIP', stay.dip_count),
-                        createInfoRow('Présence UCD', stay.ucd ? 'Oui' : null)
+                        createInfoRow('Présence UCD', stay.ucd ? 'Oui' : null),
+                        createInfoRow('RAAC', stay.raac ? 'Oui' : null),
+                        createInfoRow('Séances de DIP', stay.dip_count)
                     );
 
                     // Diagnoses

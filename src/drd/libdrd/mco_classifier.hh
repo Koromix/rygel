@@ -92,7 +92,7 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> mono
                         mco_ErrorSet *out_errors);
 
 int mco_GetMinimalDurationForSeverity(int severity);
-int mco_LimitSeverityWithDuration(int severity, int duration);
+int mco_LimitSeverity(int severity, int duration);
 bool mco_TestGhmRootExclusion(int8_t sex, const mco_DiagnosisInfo &cma_diag_info,
                               const mco_GhmRootInfo &ghm_root_info);
 bool mco_TestDiagnosisExclusion(const mco_TableIndex &index,

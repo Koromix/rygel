@@ -184,6 +184,7 @@ struct mco_GhmRootInfo {
 
     bool allow_ambulatory;
     int8_t short_duration_treshold;
+    bool allow_raac;
 
     int8_t young_severity_limit;
     int8_t young_age_treshold;
