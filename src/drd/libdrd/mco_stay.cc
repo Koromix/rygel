@@ -840,7 +840,7 @@ bool mco_StaySetBuilder::LoadFichComp(StreamReader &st, HashTable<int32_t, mco_T
                     FichCompData fc = {};
                     bool valid = true;
 
-                    fc.type = FichCompData::Type::Ucd;
+                    fc.type = FichCompData::Type::UCD;
                     valid &= ParsePmsiInt(line.Take(11, 20), &fc.admin_id) && fc.admin_id;
                     valid &= ParsePmsiDate(line.Take(31, 8), &fc.start_date) && fc.start_date.value;
 
@@ -856,7 +856,7 @@ bool mco_StaySetBuilder::LoadFichComp(StreamReader &st, HashTable<int32_t, mco_T
                     FichCompData fc = {};
                     bool valid = true;
 
-                    fc.type = FichCompData::Type::Dip;
+                    fc.type = FichCompData::Type::DIP;
                     valid &= ParsePmsiInt(line.Take(11, 20), &fc.admin_id) && fc.admin_id;
                     valid &= ParsePmsiDate(line.Take(41, 8), &fc.start_date) && fc.start_date.value;
                     valid &= ParsePmsiDate(line.Take(49, 8), &fc.end_date) && fc.end_date.value;
@@ -952,11 +952,11 @@ bool mco_StaySetBuilder::Finish(mco_StaySet *out_set)
                 if (fc->start_date >= sub_stays[0].entry.date &&
                         (!fc->end_date.value || fc->end_date <= sub_stays[sub_stays.len - 1].exit.date)) {
                     switch (fc->type) {
-                        case FichCompData::Type::Ucd: {
-                            sub_stays[0].flags |= (int)mco_Stay::Flag::Ucd;
+                        case FichCompData::Type::UCD: {
+                            sub_stays[0].flags |= (int)mco_Stay::Flag::UCD;
                         } break;
 
-                        case FichCompData::Type::Dip: {
+                        case FichCompData::Type::DIP: {
                             if (RG_UNLIKELY(sub_stays[0].dip_count)) {
                                 LogError("Overwriting DIP count for stay %1", sub_stays[0].bill_id);
                             }

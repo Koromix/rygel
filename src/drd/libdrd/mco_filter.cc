@@ -791,7 +791,7 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
     })
     ELSE_IF_METHOD("ucd", [](WrenVM *vm) {
         const ProxyArrayObject<mco_Stay> &obj = *(ProxyArrayObject<mco_Stay> *)wrenGetSlotForeign(vm, 0);
-        wrenSetSlotDouble(vm, 0, !!(obj.array->values[obj.idx].flags & (int)mco_Stay::Flag::Ucd));
+        wrenSetSlotDouble(vm, 0, !!(obj.array->values[obj.idx].flags & (int)mco_Stay::Flag::UCD));
     })
     ELSE_IF_METHOD("ucd=(_)", [](WrenVM *vm) {
         ProxyArrayObject<mco_Stay> *obj = (ProxyArrayObject<mco_Stay> *)wrenGetSlotForeign(vm, 0);
@@ -799,7 +799,7 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
 
         bool new_value = GetSlotIntegerSafe<int>(vm, 1);
         uint32_t new_flags = ApplyMask(array->values[obj->idx].flags,
-                                       (int)mco_Stay::Flag::Ucd, new_value);
+                                       (int)mco_Stay::Flag::UCD, new_value);
 
         if (new_flags != array->values[obj->idx].flags) {
             GetMutableStay(obj)->flags = new_flags;

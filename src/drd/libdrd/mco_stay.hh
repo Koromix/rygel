@@ -23,7 +23,7 @@ struct mco_ProcedureRealisation {
 struct mco_Stay {
     enum class Flag {
         Confirmed = 1 << 0,
-        Ucd = 1 << 1
+        UCD = 1 << 1
     };
 
     enum class Error {
@@ -155,8 +155,8 @@ class mco_StaySetBuilder {
 
     struct FichCompData {
         enum class Type {
-            Ucd,
-            Dip
+            UCD,
+            DIP
         };
 
         Type type;

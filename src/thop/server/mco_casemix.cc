@@ -677,8 +677,8 @@ int ProduceMcoResults(const http_Request &request, const User *user, http_Respon
                     if (stay.dip_count) {
                         json.Key("dip_count"); json.Int(stay.dip_count);
                     }
-                    if (stay.flags & (int)mco_Stay::Flag::Ucd) {
-                        json.Key("ucd"); json.Bool(stay.flags & (int)mco_Stay::Flag::Ucd);
+                    if (stay.flags & (int)mco_Stay::Flag::UCD) {
+                        json.Key("ucd"); json.Bool(stay.flags & (int)mco_Stay::Flag::UCD);
                     }
 
                     if (RG_LIKELY(stay.main_diagnosis.IsValid())) {

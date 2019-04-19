@@ -205,7 +205,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
             stay.flags |= (int)mco_Stay::Flag::Confirmed;
         }
         if (stays.ucd.Len() && stays.ucd[i] && stays.ucd[i] != NA_INTEGER) {
-            stay.flags |= (int)mco_Stay::Flag::Ucd;
+            stay.flags |= (int)mco_Stay::Flag::UCD;
         }
         stay.dip_count = stays.dip_count[i];
 
@@ -1280,7 +1280,7 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
                 stays_linked_diagnosis.Set(i, nullptr);
             }
             stays_confirm[i] = !!(stay.flags & (int)mco_Stay::Flag::Confirmed);
-            stays_ucd[i] = !!(stay.flags & (int)mco_Stay::Flag::Ucd);
+            stays_ucd[i] = !!(stay.flags & (int)mco_Stay::Flag::UCD);
             stays_dip_count[i] = stay.dip_count;
 
             for (drd_DiagnosisCode diag: stay.other_diagnoses) {
