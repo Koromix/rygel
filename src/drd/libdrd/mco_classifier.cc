@@ -701,6 +701,7 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
 
     bool valid = true;
 
+    // Check PIE and mutations
     if (stay.entry.mode == '0' || stay.exit.mode == '0') {
         if (RG_UNLIKELY(stay.exit.mode != stay.entry.mode)) {
             valid &= SetError(out_errors, 26);
@@ -757,6 +758,12 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
                     case '7': { /* Valid origin */ } break;
 
                     default: { valid &= SetError(out_errors, 25); } break;
+                }
+            } break;
+
+            case 'N': {
+                if (stay.exit.date < Date(2019, 3, 1) || mono_stay.entry.origin) {
+                    valid &= SetError(out_errors, 25);
                 }
             } break;
 
@@ -832,8 +839,9 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
             if (RG_UNLIKELY(mono_stay.exit.mode != '9')) {
                 valid &= SetError(out_errors, 143);
                 SetError(out_errors, 147);
-            } else if (RG_UNLIKELY(mono_preps.len > 1 || mono_stay.entry.mode != '8' ||
-                                   mono_stay.birthdate != mono_stay.entry.date || !mono_stay.newborn_weight ||
+            } else if (RG_UNLIKELY(mono_preps.len > 1 || !mono_stay.newborn_weight ||
+                                   (mono_stay.entry.mode != '8' && mono_stay.entry.mode != 'N') ||
+                                   mono_stay.birthdate != mono_stay.entry.date ||
                                    mono_stay.exit.date != mono_stay.entry.date)) {
                 valid &= SetError(out_errors, 147);
             }
@@ -922,6 +930,16 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
             }
         } else if (RG_UNLIKELY(stay.entry.date - stay.last_menstrual_period > 305)) {
             SetError(out_errors, 166, -1);
+        }
+    }
+
+    // Newborn entry
+    if (stay.exit.date >= Date(2019, 3, 1) && stay.entry.mode == 'N') {
+        if (RG_UNLIKELY(stay.entry.date != stay.birthdate)) {
+            valid &= SetError(out_errors, 190);
+        }
+        if (RG_UNLIKELY(mono_preps[0].stay->main_diagnosis.Matches("Z762"))) {
+            valid &= SetError(out_errors, 191);
         }
     }
 
