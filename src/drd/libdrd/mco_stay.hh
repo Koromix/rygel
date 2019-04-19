@@ -23,7 +23,8 @@ struct mco_ProcedureRealisation {
 struct mco_Stay {
     enum class Flag {
         Confirmed = 1 << 0,
-        UCD = 1 << 1
+        UCD = 1 << 1,
+        RAAC = 1 << 2
     };
 
     enum class Error {
@@ -43,15 +44,16 @@ struct mco_Stay {
         MalformedLastMenstrualPeriod = 1 << 13,
         MalformedIgs2 = 1 << 14,
         MalformedConfirmation = 1 << 15,
-        MalformedMainDiagnosis = 1 << 16,
-        MalformedLinkedDiagnosis = 1 << 17,
-        MissingOtherDiagnosesCount = 1 << 18,
-        MalformedOtherDiagnosesCount = 1 << 19,
-        MalformedOtherDiagnosis = 1 << 20,
-        MissingProceduresCount = 1 << 21,
-        MalformedProceduresCount = 1 << 22,
-        MalformedProcedureCode = 1 << 23,
-        MalformedProcedureExtension = 1 << 24
+        MalformedRAAC = 1 << 16,
+        MalformedMainDiagnosis = 1 << 17,
+        MalformedLinkedDiagnosis = 1 << 18,
+        MissingOtherDiagnosesCount = 1 << 19,
+        MalformedOtherDiagnosesCount = 1 << 20,
+        MalformedOtherDiagnosis = 1 << 21,
+        MissingProceduresCount = 1 << 22,
+        MalformedProceduresCount = 1 << 23,
+        MalformedProcedureCode = 1 << 24,
+        MalformedProcedureExtension = 1 << 25
     };
 
     uint32_t flags;

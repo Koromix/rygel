@@ -674,11 +674,14 @@ int ProduceMcoResults(const http_Request &request, const User *user, http_Respon
                     if (stay.flags & (int)mco_Stay::Flag::Confirmed) {
                         json.Key("confirm"); json.Bool(true);
                     }
-                    if (stay.dip_count) {
-                        json.Key("dip_count"); json.Int(stay.dip_count);
+                    if (stay.flags & (int)mco_Stay::Flag::RAAC) {
+                        json.Key("raac"); json.Bool(true);
                     }
                     if (stay.flags & (int)mco_Stay::Flag::UCD) {
                         json.Key("ucd"); json.Bool(stay.flags & (int)mco_Stay::Flag::UCD);
+                    }
+                    if (stay.dip_count) {
+                        json.Key("dip_count"); json.Int(stay.dip_count);
                     }
 
                     if (RG_LIKELY(stay.main_diagnosis.IsValid())) {

@@ -94,6 +94,8 @@ foreign class McoStay {
     foreign confirmed=(value)
     foreign ucd
     foreign ucd=(value)
+    foreign raac
+    foreign raac=(value)
 
     foreign other_diagnoses
     foreign procedures
@@ -800,6 +802,22 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
         bool new_value = GetSlotIntegerSafe<int>(vm, 1);
         uint32_t new_flags = ApplyMask(array->values[obj->idx].flags,
                                        (int)mco_Stay::Flag::UCD, new_value);
+
+        if (new_flags != array->values[obj->idx].flags) {
+            GetMutableStay(obj)->flags = new_flags;
+        }
+    })
+    ELSE_IF_METHOD("raac", [](WrenVM *vm) {
+        const ProxyArrayObject<mco_Stay> &obj = *(ProxyArrayObject<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        wrenSetSlotDouble(vm, 0, !!(obj.array->values[obj.idx].flags & (int)mco_Stay::Flag::RAAC));
+    })
+    ELSE_IF_METHOD("raac=(_)", [](WrenVM *vm) {
+        ProxyArrayObject<mco_Stay> *obj = (ProxyArrayObject<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        ProxyArray<mco_Stay> *array = obj->array;
+
+        bool new_value = GetSlotIntegerSafe<int>(vm, 1);
+        uint32_t new_flags = ApplyMask(array->values[obj->idx].flags,
+                                       (int)mco_Stay::Flag::RAAC, new_value);
 
         if (new_flags != array->values[obj->idx].flags) {
             GetMutableStay(obj)->flags = new_flags;

@@ -642,9 +642,12 @@ static bool CheckDataErrors(Span<const mco_Stay> mono_stays, mco_ErrorSet *out_e
             valid &= SetError(out_errors, 169);
         }
 
-        // Confirmation code
+        // Flags
         if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedConfirmation)) {
             SetError(out_errors, 121, -1);
+        }
+        if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedRAAC)) {
+            valid &= SetError(out_errors, 188);
         }
 
         // Diagnoses
@@ -1049,10 +1052,8 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> mono
         }
     }
     out_prepared_set->stay.exit = mono_stays[mono_stays.len - 1].exit;
-    out_prepared_set->stay.flags = 0;
-    if (mono_stays[mono_stays.len - 1].flags & (int)mco_Stay::Flag::Confirmed) {
-        out_prepared_set->stay.flags |= (int)mco_Stay::Flag::Confirmed;
-    }
+    out_prepared_set->stay.flags = mono_stays[mono_stays.len - 1].flags &
+                                   ((int)mco_Stay::Flag::Confirmed | (int)mco_Stay::Flag::RAAC);
     out_prepared_set->stay.other_diagnoses = {};
     out_prepared_set->stay.procedures = {};
 
@@ -1378,7 +1379,8 @@ static bool CheckConfirmation(const mco_PreparedStay &prep, mco_GhmCode ghm,
         confirm = true;
     } else if (prep.duration < ghm_root_info.confirm_duration_treshold &&
                stay.exit.mode != '9' && stay.exit.mode != '0' &&
-               (stay.exit.mode != '7' || stay.exit.destination != '1')) {
+               (stay.exit.mode != '7' || stay.exit.destination != '1') &&
+               !(stay.flags & (int)mco_Stay::Flag::RAAC)) {
         confirm = true;
     } else if (prep.markers & ((int)mco_PreparedStay::Marker::Childbirth |
                              (int)mco_PreparedStay::Marker::ChildbirthType)) {
@@ -1531,7 +1533,7 @@ int mco_GetMinimalDurationForSeverity(int severity)
     return severity ? (severity + 2) : 0;
 }
 
-int mco_LimitSeverityWithDuration(int severity, int duration)
+int mco_LimitSeverity(int severity, int duration)
 {
     RG_ASSERT_DEBUG(severity >= 0 && severity < 4);
     return duration >= 3 ? std::min(duration - 2, severity) : 0;
@@ -1610,7 +1612,8 @@ static mco_GhmCode RunGhmSeverity(const mco_TableIndex &index, const mco_Prepare
             }
         }
 
-        ghm.parts.mode = (char)('A' + mco_LimitSeverityWithDuration(severity, prep.duration));
+        bool raac = (prep.stay->flags & (int)mco_Stay::Flag::RAAC) && ghm_root_info.allow_raac;
+        ghm.parts.mode = (char)('A' + (raac ? severity : mco_LimitSeverity(severity, prep.duration)));
     } else if (!ghm.parts.mode) {
         int severity = 0;
 
@@ -1640,7 +1643,8 @@ static mco_GhmCode RunGhmSeverity(const mco_TableIndex &index, const mco_Prepare
             severity = 1;
         }
 
-        ghm.parts.mode = (char)('1' + mco_LimitSeverityWithDuration(severity, prep.duration));
+        bool raac = (prep.stay->flags & (int)mco_Stay::Flag::RAAC) && ghm_root_info.allow_raac;
+        ghm.parts.mode = (char)('1' + (raac ? severity : mco_LimitSeverity(severity, prep.duration)));
     }
 
     return ghm;
@@ -1664,7 +1668,7 @@ mco_GhmCode mco_PickGhm(const mco_TableIndex &index,
     if (RG_UNLIKELY(!CheckGhmErrors(prep, mono_preps, ghm, out_errors)))
         return mco_GhmCode::FromString("90Z00Z");
     if (RG_UNLIKELY(!(flags & (int)mco_ClassifyFlag::IgnoreConfirmation) &&
-                 !CheckConfirmation(prep, ghm, *ghm_root_info, out_errors)))
+                    !CheckConfirmation(prep, ghm, *ghm_root_info, out_errors)))
         return mco_GhmCode::FromString("90Z00Z");
 
     ghm = RunGhmSeverity(index, prep, ghm, *ghm_root_info);
