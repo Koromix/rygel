@@ -3,4 +3,3 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "window_win32.cc"
-#include "window_emsdk.cc"
