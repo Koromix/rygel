@@ -238,6 +238,13 @@ int ProduceMcoGhmGhs(const http_Request &request, const User *, http_Response *o
             if (ghm_to_ghs_info.minimum_age) {
                 json.Key("minimum_age"); json.Int(ghm_to_ghs_info.minimum_age);
             }
+            switch (ghm_to_ghs_info.special_mode) {
+                case mco_GhmToGhsInfo::SpecialMode::None: {} break;
+                case mco_GhmToGhsInfo::SpecialMode::Diabetes: {
+                    json.Key("special_mode"); json.String("diabetes");
+                    json.Key("special_duration"); json.Int(ghm_to_ghs_info.special_duration);
+                } break;
+            }
             if (ghm_to_ghs_info.main_diagnosis_mask.value) {
                 json.Key("main_diagnosis");
                 json.String(Fmt(buf, "D$%1.%2",

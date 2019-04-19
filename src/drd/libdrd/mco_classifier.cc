@@ -1708,6 +1708,24 @@ static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> m
     }
     if (ghm_to_ghs_info.minimum_duration && duration < ghm_to_ghs_info.minimum_duration)
         return false;
+    switch (ghm_to_ghs_info.special_mode) {
+        case mco_GhmToGhsInfo::SpecialMode::None: {} break;
+        case mco_GhmToGhsInfo::SpecialMode::Diabetes: {
+            if (prep.duration < ghm_to_ghs_info.special_duration &&
+                    stay.entry.mode == '8' && stay.entry.origin != '5' && stay.exit.mode == '8' &&
+                    (TestDiagnosis(stay.sex, *prep.main_diag_info, 32, 0x20) ||
+                     (prep.linked_diag_info && TestDiagnosis(stay.sex, *prep.linked_diag_info, 32, 0x20)))) {
+                bool auth62 = std::any_of(mono_preps.begin(), mono_preps.end(),
+                                          [&](const mco_PreparedStay &mono_prep) {
+                    const mco_Stay &mono_stay = *mono_prep.stay;
+                    return authorization_set.TestAuthorization(mono_stay.unit, mono_stay.exit.date, 62);
+                });
+
+                if (auth62)
+                    return false;
+            }
+        } break;
+    }
 
     if (ghm_to_ghs_info.main_diagnosis_mask.value) {
         if (!TestDiagnosis(stay.sex, *prep.main_diag_info, ghm_to_ghs_info.main_diagnosis_mask))
