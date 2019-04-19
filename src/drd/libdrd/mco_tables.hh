@@ -127,8 +127,8 @@ struct mco_ProcedureInfo {
     uint8_t activities;
 
     Date limit_dates[2];
-    uint8_t bytes[54];
-    uint8_t extensions;
+    uint8_t bytes[52];
+    uint32_t extensions;
 
     int16_t additions[8];
     struct {

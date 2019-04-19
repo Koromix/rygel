@@ -680,7 +680,7 @@ static bool ParseProcedureExtensionTable(const uint8_t *file_data, const mco_Tab
                                                  raw_proc_ext.seq_phase / 10);
             ext_info.phase = (char)(raw_proc_ext.seq_phase % 10);
 
-            FAIL_PARSE_IF(table.filename, raw_proc_ext.extension > 15);
+            FAIL_PARSE_IF(table.filename, raw_proc_ext.extension > INT8_MAX);
             ext_info.extension = (int8_t)raw_proc_ext.extension;
 
             out_extensions->Append(ext_info);
@@ -1624,9 +1624,9 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                                                           *table_info, &extensions);
 
                     for (const ProcedureExtensionInfo &ext_info: extensions) {
-                        if (ext_info.extension >= 8) {
-                            LogError("Procedure extension value %1 > 7 cannot be used",
-                                     ext_info.extension);
+                        if (ext_info.extension >= 32) {
+                            LogError("Procedure extension value %1 > 31 cannot be used (%2)",
+                                     ext_info.extension, ext_info.proc);
                             continue;
                         }
 
