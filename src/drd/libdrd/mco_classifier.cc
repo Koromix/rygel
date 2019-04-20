@@ -706,7 +706,7 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
 
     bool valid = true;
 
-    // Check PIE and mutations
+    // Check PIE, mutations, RAAC
     if (stay.entry.mode == '0' || stay.exit.mode == '0') {
         if (RG_UNLIKELY(stay.exit.mode != stay.entry.mode)) {
             valid &= SetError(out_errors, 26);
@@ -720,6 +720,11 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
         }
         if (RG_UNLIKELY(stay.exit.mode == '6' && stay.exit.destination == '1')) {
             valid &= SetError(out_errors, 35);
+        }
+        if (RG_UNLIKELY((stay.flags & (int)mco_Stay::Flag::RAAC) &&
+                        (stay.exit.mode == '9' || (stay.exit.mode == '7' &&
+                                                   stay.exit.destination == '1')))) {
+            valid &= SetError(out_errors, 189);
         }
     }
 
