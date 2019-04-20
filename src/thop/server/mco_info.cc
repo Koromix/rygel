@@ -217,15 +217,20 @@ int ProduceMcoGhmGhs(const http_Request &request, const User *, http_Response *o
                 json.Key("old_severity_limit"); json.Int(ghm_root_info.old_severity_limit);
             }
             json.Key("durations"); json.Uint(combined_durations);
-
-            json.Key("ghs"); json.Int(ghs.number);
-            if ((combined_durations & 1) && constraint &&
-                    (constraint->warnings & (int)mco_GhmConstraint::Warning::PreferCmd28)) {
-                json.Key("warn_cmd28"); json.Bool(true);
+            if (constraint) {
+                if (constraint->raac_durations) {
+                    json.Key("raac_durations"); json.Uint(constraint->raac_durations);
+                }
+                if ((combined_durations & 0x1) &&
+                        (constraint->warnings & (int)mco_GhmConstraint::Warning::PreferCmd28)) {
+                    json.Key("warn_cmd28"); json.Bool(true);
+                }
             }
             if (ghm_root_info.confirm_duration_treshold) {
                 json.Key("confirm_treshold"); json.Int(ghm_root_info.confirm_duration_treshold);
             }
+
+            json.Key("ghs"); json.Int(ghs.number);
             if (ghm_to_ghs_info.unit_authorization) {
                 json.Key("unit_authorization"); json.Int(ghm_to_ghs_info.unit_authorization);
             }

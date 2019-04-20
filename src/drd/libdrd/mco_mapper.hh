@@ -19,6 +19,7 @@ struct mco_GhmConstraint {
 
     uint32_t cmds;
     uint32_t durations;
+    uint32_t raac_durations;
     uint32_t warnings;
 
     RG_HASH_TABLE_HANDLER(mco_GhmConstraint, ghm);

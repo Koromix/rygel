@@ -280,6 +280,10 @@ let mco_pricing = {};
                             td.addClass('warn');
                             title += 'Devrait être orienté dans la CMD 28 (séance)\n';
                         }
+                        if (testDuration(col.raac_durations || 0, duration)) {
+                            td.addClass('warn');
+                            title += 'Accessible en cas de RAAC\n';
+                        }
                         if (col.warn_ucd) {
                             td.addClass('info');
                             title += 'Possibilité de minoration UCD (40 €)\n';
@@ -542,10 +546,10 @@ let mco_pricing = {};
         }
     }
 
-    function testDuration(ghs, duration)
+    function testDuration(mask, duration)
     {
         let duration_mask = (duration < 32) ? (1 << duration) : (1 << 31);
-        return !!(ghs.durations & duration_mask);
+        return !!(mask & duration_mask);
     }
     this.testDuration = testDuration;
 
@@ -553,7 +557,7 @@ let mco_pricing = {};
     {
         if (!ghs.ghs_cents)
             return null;
-        if (!testDuration(ghs, duration))
+        if (!testDuration(ghs.durations, duration))
             return null;
 
         let price_cents;

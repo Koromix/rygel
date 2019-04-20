@@ -1060,7 +1060,7 @@ let mco_casemix = {};
                                         title: tooltip},
                                  priceText(duration_stat.price_cents_total, false, !!mix_params.diff))
                         );
-                    } else if (mco_pricing.testDuration(col, duration)) {
+                    } else if (mco_pricing.testDuration(col.durations, duration)) {
                         cls += ' empty';
                         tr.appendContent(
                             html('td', {class: ['count', cls]}),

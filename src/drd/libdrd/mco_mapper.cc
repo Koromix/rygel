@@ -18,16 +18,18 @@ static bool MergeConstraint(const mco_TableIndex &index,
                             const mco_GhmCode ghm, mco_GhmConstraint constraint,
                             HashTable<mco_GhmCode, mco_GhmConstraint> *out_constraints)
 {
-#define MERGE_CONSTRAINT(ModeChar, DurationMask) \
+#define MERGE_CONSTRAINT(ModeChar, DurationMask, RaacMask) \
         do { \
             mco_GhmConstraint new_constraint = constraint; \
             new_constraint.ghm.parts.mode = (char)(ModeChar); \
             new_constraint.durations &= (DurationMask); \
+            new_constraint.raac_durations = constraint.durations & (RaacMask); \
             if (new_constraint.durations) { \
                 std::pair<mco_GhmConstraint *, bool> ret = out_constraints->Append(new_constraint); \
                 if (!ret.second) { \
                     ret.first->cmds |= new_constraint.cmds; \
                     ret.first->durations |= new_constraint.durations; \
+                    ret.first->raac_durations |= new_constraint.raac_durations; \
                     ret.first->warnings &= new_constraint.warnings; \
                 } \
             } \
@@ -42,28 +44,38 @@ static bool MergeConstraint(const mco_TableIndex &index,
     }
 
     if (ghm_root_info->allow_ambulatory) {
-        MERGE_CONSTRAINT('J', 0x1);
+        MERGE_CONSTRAINT('J', 0x1, 0);
         // Update base mask so that following GHM can't overlap with this one
         constraint.durations &= ~(uint32_t)0x1;
     }
     if (ghm_root_info->short_duration_treshold) {
         uint32_t short_mask = (uint32_t)(1 << ghm_root_info->short_duration_treshold) - 1;
-        MERGE_CONSTRAINT('T', short_mask);
+        MERGE_CONSTRAINT('T', short_mask, 0);
         constraint.durations &= ~short_mask;
     }
 
     if (ghm.parts.mode != 'J' && ghm.parts.mode != 'T') {
         if (!ghm.parts.mode) {
             for (int severity = 0; severity < 4; severity++) {
-                uint32_t mode_mask = ~((uint32_t)(1 << mco_GetMinimalDurationForSeverity(severity)) - 1);
-                MERGE_CONSTRAINT('1' + severity, mode_mask);
+                uint32_t mode_mask = (uint32_t)(1 << mco_GetMinimalDurationForSeverity(severity)) - 1;
+
+                if (ghm_root_info->allow_raac) {
+                    MERGE_CONSTRAINT('1' + severity, UINT32_MAX, mode_mask);
+                } else {
+                    MERGE_CONSTRAINT('1' + severity, ~mode_mask, 0);
+                }
             }
         } else if (ghm.parts.mode >= 'A' && ghm.parts.mode < 'E') {
             int severity = ghm.parts.mode - 'A';
-            uint32_t mode_mask = ~((uint32_t)(1 << mco_GetMinimalDurationForSeverity(severity)) - 1);
-            MERGE_CONSTRAINT('A' + severity, mode_mask);
+            uint32_t mode_mask = (uint32_t)(1 << mco_GetMinimalDurationForSeverity(severity)) - 1;
+
+            if (ghm_root_info->allow_raac) {
+                MERGE_CONSTRAINT(ghm.parts.mode, UINT32_MAX, mode_mask);
+            } else {
+                MERGE_CONSTRAINT(ghm.parts.mode, ~mode_mask, 0);
+            }
         } else {
-            MERGE_CONSTRAINT(ghm.parts.mode, UINT32_MAX);
+            MERGE_CONSTRAINT(ghm.parts.mode, UINT32_MAX, 0);
         }
     }
 
