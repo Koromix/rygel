@@ -1544,6 +1544,13 @@ int mco_LimitSeverity(int severity, int duration)
     return duration >= 3 ? std::min(duration - 2, severity) : 0;
 }
 
+static int LimitSeverity(const mco_PreparedStay &prep, const mco_GhmRootInfo &ghm_root_info,
+                         int severity)
+{
+    bool raac = (prep.stay->flags & (int)mco_Stay::Flag::RAAC) && ghm_root_info.allow_raac;
+    return raac ? severity : mco_LimitSeverity(severity, prep.duration);
+}
+
 bool mco_TestGhmRootExclusion(int8_t sex, const mco_DiagnosisInfo &cma_diag_info,
                               const mco_GhmRootInfo &ghm_root_info)
 {
@@ -1617,8 +1624,9 @@ static mco_GhmCode RunGhmSeverity(const mco_TableIndex &index, const mco_Prepare
             }
         }
 
-        bool raac = (prep.stay->flags & (int)mco_Stay::Flag::RAAC) && ghm_root_info.allow_raac;
-        ghm.parts.mode = (char)('A' + (raac ? severity : mco_LimitSeverity(severity, prep.duration)));
+        severity = LimitSeverity(prep, ghm_root_info, severity);
+
+        ghm.parts.mode = (char)('A' + severity);
     } else if (!ghm.parts.mode) {
         int severity = 0;
 
@@ -1648,8 +1656,9 @@ static mco_GhmCode RunGhmSeverity(const mco_TableIndex &index, const mco_Prepare
             severity = 1;
         }
 
-        bool raac = (prep.stay->flags & (int)mco_Stay::Flag::RAAC) && ghm_root_info.allow_raac;
-        ghm.parts.mode = (char)('1' + (raac ? severity : mco_LimitSeverity(severity, prep.duration)));
+        severity = LimitSeverity(prep, ghm_root_info, severity);
+
+        ghm.parts.mode = (char)('1' + severity);
     }
 
     return ghm;
