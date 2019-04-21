@@ -379,5 +379,5 @@ function saveBlob(blob, filename)
     document.body.removeChild(anchor);
 
     if(URL.revokeObjectURL)
-        setTimeout(() => URL.revokeObjectURL(url), 60000);
+        setTimeout(function() { URL.revokeObjectURL(url) }, 60000);
 }
