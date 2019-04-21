@@ -22,7 +22,7 @@ struct Route {
 };
 
 Config goupil_config;
-SQLiteConnection database;
+SQLiteDatabase database;
 
 static Span<const pack_Asset> assets;
 #ifndef NDEBUG
@@ -43,6 +43,8 @@ static bool InitDatabase(const char *filename)
         return database.Open(filename, SQLITE_OPEN_READWRITE);
     } else if (extension == ".sql") {
         if (!database.Open(":memory:", SQLITE_OPEN_READWRITE))
+            return false;
+        if (!database.CreateSchema())
             return false;
 
         HeapArray<char> sql;

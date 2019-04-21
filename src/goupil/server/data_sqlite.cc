@@ -8,7 +8,7 @@
 
 namespace RG {
 
-bool SQLiteConnection::Open(const char *filename, unsigned int flags)
+bool SQLiteDatabase::Open(const char *filename, unsigned int flags)
 {
     const char *const sql = R"(
         PRAGMA foreign_keys = ON;
@@ -32,11 +32,45 @@ bool SQLiteConnection::Open(const char *filename, unsigned int flags)
     return true;
 }
 
-bool SQLiteConnection::Close()
+bool SQLiteDatabase::Close()
 {
     if (sqlite3_close(db) != SQLITE_OK)
         return false;
     db = nullptr;
+
+    return true;
+}
+
+bool SQLiteDatabase::CreateSchema()
+{
+    static const char *const sql = R"(
+        CREATE TABLE sc_resources (
+            schedule TEXT NOT NULL CHECK(schedule IN ('pl', 'entreprise')),
+            date TEXT NOT NULL,
+            time INTEGER NOT NULL,
+
+            slots INTEGER NOT NULL,
+            overbook INTEGER NOT NULL
+        );
+        CREATE UNIQUE INDEX sc_resources_sdt ON sc_resources (schedule, date, time, slots, overbook);
+
+        CREATE TABLE sc_meetings (
+            schedule TEXT NOT NULL CHECK(schedule IN ('pl', 'entreprise')),
+            date TEXT NOT NULL,
+            time INTEGER NOT NULL,
+
+            name TEXT NOT NULL
+        );
+        CREATE INDEX sc_meetings_sd ON sc_meetings (schedule, date, time, name);
+    )";
+
+    char *error = nullptr;
+    if (sqlite3_exec(db, sql, nullptr, nullptr, &error) != SQLITE_OK) {
+        LogError("SQLite request failed: %1", error);
+        sqlite3_free(error);
+
+        return false;
+    }
 
     return true;
 }

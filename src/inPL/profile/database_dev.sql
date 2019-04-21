@@ -2,29 +2,6 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
--------------------- Structure --------------------
-
-CREATE TABLE sc_resources (
-    schedule TEXT NOT NULL CHECK(schedule IN ('pl', 'entreprise')),
-    date TEXT NOT NULL,
-    time INTEGER NOT NULL,
-
-    slots INTEGER NOT NULL,
-    overbook INTEGER NOT NULL
-);
-CREATE UNIQUE INDEX sc_resources_sdt ON sc_resources (schedule, date, time, slots, overbook);
-
-CREATE TABLE sc_meetings (
-    schedule TEXT NOT NULL CHECK(schedule IN ('pl', 'entreprise')),
-    date TEXT NOT NULL,
-    time INTEGER NOT NULL,
-
-    name TEXT NOT NULL
-);
-CREATE INDEX sc_meetings_sd ON sc_meetings (schedule, date, time, name);
-
--------------------- Test data --------------------
-
 BEGIN TRANSACTION;
 
 INSERT INTO sc_resources VALUES ('pl', '2019-04-01', 730, 1, 1);
