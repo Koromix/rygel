@@ -336,9 +336,12 @@ set(GOUPIL_SRC
     goupil/server/goupil.hh
 )
 set(GOUPIL_ASSETS
-    goupil/client/goupil.html
-    libweb/compat.js
-    libweb/util.js
+    ../vendor/lighterhtml/lighterhtml.min.js
+    goupil/client/goupil.js
+    goupil/client/schedule.js
+    goupil/client/goupil.css
+    goupil/client/schedule.css
+    goupil/client/schedule.html
 )
 
 set(GOUPIL_ADMIN_SRC

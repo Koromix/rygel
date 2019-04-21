@@ -89,7 +89,7 @@ static void InitRoutes()
     // Static assets
     pack_Asset html = {};
     for (const pack_Asset &asset: assets) {
-        if (TestStr(asset.name, "goupil.html")) {
+        if (TestStr(asset.name, "schedule.html")) {
             html = asset;
         } else {
             const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
@@ -101,7 +101,7 @@ static void InitRoutes()
     // Patch HTML
     html.data = pack_PatchVariables(html, &routes_alloc,
                                     [](const char *key, StreamWriter *writer) {
-        if (TestStr(key, "GOUPIL_BASE_URL")) {
+        if (TestStr(key, "BASE_URL")) {
             writer->Write(goupil_config.base_url);
             return true;
         } else {
