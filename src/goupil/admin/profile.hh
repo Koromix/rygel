@@ -5,12 +5,9 @@
 #pragma once
 
 #include "../../libcc/libcc.hh"
-#include "config.hh"
-#include "data.hh"
 
 namespace RG {
 
-extern Config goupil_config;
-extern SQLiteDatabase database;
+int RunCreateProfile(Span<const char *> arguments);
 
 }

@@ -9,18 +9,20 @@
 
 namespace RG {
 
-class SQLiteConnection {
+class SQLiteDatabase {
     sqlite3 *db = nullptr;
 
 public:
-    SQLiteConnection() {}
-    SQLiteConnection(const char *filename, unsigned int flags) { Open(filename, flags); }
-    ~SQLiteConnection() { Close(); }
+    SQLiteDatabase() {}
+    SQLiteDatabase(const char *filename, unsigned int flags) { Open(filename, flags); }
+    ~SQLiteDatabase() { Close(); }
 
     bool IsValid() const { return db; }
 
     bool Open(const char *filename, unsigned int flags);
     bool Close();
+
+    bool CreateSchema();
 
     operator sqlite3 *() { return db; }
 };

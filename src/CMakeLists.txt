@@ -341,6 +341,14 @@ set(GOUPIL_ASSETS
     libweb/util.js
 )
 
+set(GOUPIL_ADMIN_SRC
+    goupil/admin/goupil_admin.cc
+    goupil/admin/profile.cc
+    goupil/admin/profile.hh
+    goupil/server/data_sqlite.cc
+    goupil/server/data.hh
+)
+
 add_executable(goupil ${GOUPIL_SRC})
 target_link_libraries(goupil PRIVATE libcc libpack microhttpd sqlite)
 target_assets(goupil
@@ -349,6 +357,9 @@ target_assets(goupil
     OPTIONS -cGzip $<$<CONFIG:Debug>:--source_map>
     SOURCES ${GOUPIL_ASSETS}
 )
+
+add_executable(goupil_admin ${GOUPIL_ADMIN_SRC})
+target_link_libraries(goupil_admin PRIVATE libcc sqlite)
 
 # ------------------------------------------------------------------------
 # inPL_report
