@@ -78,7 +78,9 @@
 .pr_grid .added:after { content: '*'; }
 
 #pr_table .info:before {
-    content: "⚠ ";
+    position: absolute;
+    margin-left: -1.2em;
+    content: "⚠";
     font-size: 0.8em;
 }
 #pr_table .warn {
@@ -86,7 +88,9 @@
     color: #555;
 }
 #pr_table .warn:before {
-    content: "⚠ ";
+    position: absolute;
+    margin-left: -1.2em;
+    content: "⚠";
     font-size: 0.8em;
 }
 
