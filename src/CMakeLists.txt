@@ -365,35 +365,35 @@ add_executable(goupil_admin ${GOUPIL_ADMIN_SRC})
 target_link_libraries(goupil_admin PRIVATE libcc sqlite)
 
 # ------------------------------------------------------------------------
-# inPL_report
+# inPL
 # ------------------------------------------------------------------------
 
-set(INPL_REPORT_ASSETS
-    inPL/report/inPL_report.html
-    inPL/report/inPL_logo.png
+set(INPL_ASSETS
+    inPL/inPL.html
+    inPL/inPL_logo.png
     ../vendor/papaparse/papaparse.min.js
     ../vendor/docxtemplater/jszip.min.js
     ../vendor/docxtemplater/docxtemplater.min.js
     libweb/compat.js
     libweb/util.js
-    inPL/report/common.js
-    inPL/report/inPL_report.js
-    inPL/report/tests.js
-    inPL/report/bridge.js
-    inPL/report/coaching.js
-    inPL/report/report.js
-    inPL/report/inPL_report.css
+    inPL/common.js
+    inPL/inPL.js
+    inPL/tests.js
+    inPL/bridge.js
+    inPL/coaching.js
+    inPL/report.js
+    inPL/inPL.css
 )
 
-add_custom_target(inPL_report ALL
-    DEPENDS "${CMAKE_BINARY_DIR}/inPL_report/inPL.html"
+add_custom_target(inPL ALL
+    DEPENDS "${CMAKE_BINARY_DIR}/inPL/inPL.html"
 )
 add_custom_command(
-    OUTPUT "${CMAKE_BINARY_DIR}/inPL_report/inPL.html"
-    COMMAND $<TARGET_FILE:felix> pack -M inPL/report/packer.ini -gFiles "-O${CMAKE_BINARY_DIR}/inPL_report" ${INPL_REPORT_ASSETS}
-    COMMAND $<TARGET_FILE:felix> pack -M inPL/report/packer.ini -gFiles -cGzip "-O${CMAKE_BINARY_DIR}/inPL_report" ${INPL_REPORT_ASSETS}
+    OUTPUT "${CMAKE_BINARY_DIR}/inPL/inPL.html"
+    COMMAND $<TARGET_FILE:felix> pack -M inPL/packer.ini -gFiles "-O${CMAKE_BINARY_DIR}/inPL" ${INPL_ASSETS}
+    COMMAND $<TARGET_FILE:felix> pack -M inPL/packer.ini -gFiles -cGzip "-O${CMAKE_BINARY_DIR}/inPL" ${INPL_ASSETS}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DEPENDS felix ${INPL_REPORT_ASSETS}
+    DEPENDS felix ${INPL_ASSETS}
 )
 
 # ------------------------------------------------------------------------
