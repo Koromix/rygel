@@ -83,11 +83,20 @@
 
             document.addEventListener('readystatechange', function() {
                 if (document.readyState === 'complete') {
+                    let year;
+                    let month;
+                    {
+                        let date = new Date();
+
+                        year = date.getFullYear();
+                        month = date.getMonth() + 1;
+                    }
+
                     function updateSchedule(data, errors) {
                         if (!errors.length) {
                             let el = document.querySelector('#bb_schedule');
                             let schedule = new Schedule(el, data.resources, data.meetings);
-                            schedule.render(2019, 4);
+                            schedule.render(year, month);
                         } else {
                             for (let err of errors)
                                 console.log(`Fetch error: ${err}`);
@@ -95,8 +104,8 @@
                     }
 
                     let queue = new FetchQueue(updateSchedule);
-                    queue.fetch('resources', '{BASE_URL}schedule/resources.json?schedule=pl&start=2019-04-01&end=2019-04-16');
-                    queue.fetch('meetings', '{BASE_URL}schedule/meetings.json?schedule=pl&start=2019-04-01&end=2019-04-16');
+                    queue.fetch('resources', `{BASE_URL}schedule/resources.json?schedule=pl&year=${year}&month=${month}`);
+                    queue.fetch('meetings', `{BASE_URL}schedule/meetings.json?schedule=pl&year=${year}&month=${month}`);
                 }
             });
         </script>
