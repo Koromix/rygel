@@ -6,17 +6,30 @@
 #include "config.hh"
 #include "data.hh"
 #include "goupil.hh"
+#include "schedule.hh"
 #include "../../wrappers/http.hh"
 #include "../../felix/libpack/libpack.hh"
 
 namespace RG {
 
 struct Route {
+    enum class Type {
+        Asset,
+        Function
+    };
+
     const char *method;
     const char *url;
 
-    pack_Asset asset;
-    const char *mime_type;
+    Type type;
+    union {
+        struct {
+            pack_Asset asset;
+            const char *mime_type;
+        } st;
+
+        int (*func)(const http_Request &request, http_Response *out_response);
+    } u;
 
     RG_HASH_TABLE_HANDLER(Route, url);
 };
@@ -75,42 +88,65 @@ static void InitRoutes()
     routes_alloc.ReleaseAll();
 
     const auto add_asset_route = [](const char *method, const char *url,
-                                 const pack_Asset &asset) {
+                                    const pack_Asset &asset) {
         Route route = {};
 
         route.method = method;
         route.url = url;
-        route.asset = asset;
-        route.mime_type = http_GetMimeType(GetPathExtension(asset.name));
+        route.type = Route::Type::Asset;
+        route.u.st.asset = asset;
+        route.u.st.mime_type = http_GetMimeType(GetPathExtension(asset.name));
+
+        routes.Append(route);
+    };
+    const auto add_function_route = [&](const char *method, const char *url,
+                                        int (*func)(const http_Request &request, http_Response *out_response)) {
+        Route route = {};
+
+        route.method = method;
+        route.url = url;
+        route.type = Route::Type::Function;
+        route.u.func = func;
 
         routes.Append(route);
     };
 
     // Static assets
-    pack_Asset html = {};
     for (const pack_Asset &asset: assets) {
-        if (TestStr(asset.name, "schedule.html")) {
-            html = asset;
+        Span<const char> extension = GetPathExtension(asset.name);
+
+        if (extension == ".html") {
+            pack_Asset html = asset;
+            html.data = pack_PatchVariables(html, &routes_alloc,
+                                            [](const char *key, StreamWriter *writer) {
+                if (TestStr(key, "BASE_URL")) {
+                    writer->Write(goupil_config.base_url);
+                    return true;
+                } else {
+                    return false;
+                }
+            });
+
+            const char *url;
+            if (TestStr(asset.name, "goupil.html")) {
+                url = "/";
+            } else {
+                Span<const char> name;
+                SplitStrReverse(asset.name, '.', &name);
+
+                url = Fmt(&routes_alloc, "/%1", name).ptr;
+            }
+
+            add_asset_route("GET", url, html);
         } else {
             const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
             add_asset_route("GET", url, asset);
         }
     }
-    RG_ASSERT_DEBUG(html.name);
 
-    // Patch HTML
-    html.data = pack_PatchVariables(html, &routes_alloc,
-                                    [](const char *key, StreamWriter *writer) {
-        if (TestStr(key, "BASE_URL")) {
-            writer->Write(goupil_config.base_url);
-            return true;
-        } else {
-            return false;
-        }
-    });
-
-    // Root
-    add_asset_route("GET", "/", html);
+    // Schedule API
+    add_function_route("GET", "/schedule/resources.json", ProduceScheduleResources);
+    add_function_route("GET", "/schedule/meetings.json", ProduceScheduleMeetings);
 }
 
 static int HandleRequest(const http_Request &request, http_Response *out_response)
@@ -129,10 +165,19 @@ static int HandleRequest(const http_Request &request, http_Response *out_respons
         return http_ProduceErrorPage(404, out_response);
     }
 
-    int code = http_ProduceStaticAsset(route->asset.data, route->asset.compression_type,
-                                       route->mime_type, request.compression_type, out_response);
-    if (route->asset.source_map) {
-        MHD_add_response_header(*out_response, "SourceMap", route->asset.source_map);
+    int code;
+    switch (route->type) {
+        case Route::Type::Asset: {
+            code = http_ProduceStaticAsset(route->u.st.asset.data, route->u.st.asset.compression_type,
+                                           route->u.st.mime_type, request.compression_type, out_response);
+            if (route->u.st.asset.source_map) {
+                MHD_add_response_header(*out_response, "SourceMap", route->u.st.asset.source_map);
+            }
+        } break;
+
+        case Route::Type::Function: {
+            code = route->u.func(request, out_response);
+        } break;
     }
 
     return code;
