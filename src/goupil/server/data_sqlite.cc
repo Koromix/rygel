@@ -10,7 +10,7 @@ namespace RG {
 
 bool SQLiteDatabase::Open(const char *filename, unsigned int flags)
 {
-    const char *const sql = R"(
+    static const char *const sql = R"(
         PRAGMA foreign_keys = ON;
     )";
 

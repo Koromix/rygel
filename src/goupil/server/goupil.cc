@@ -22,7 +22,7 @@ struct Route {
 };
 
 Config goupil_config;
-SQLiteDatabase database;
+SQLiteDatabase goupil_db;
 
 static Span<const pack_Asset> assets;
 #ifndef NDEBUG
@@ -40,11 +40,11 @@ static bool InitDatabase(const char *filename)
     Span<const char> extension = GetPathExtension(filename);
 
     if (extension == ".db") {
-        return database.Open(filename, SQLITE_OPEN_READWRITE);
+        return goupil_db.Open(filename, SQLITE_OPEN_READWRITE);
     } else if (extension == ".sql") {
-        if (!database.Open(":memory:", SQLITE_OPEN_READWRITE))
+        if (!goupil_db.Open(":memory:", SQLITE_OPEN_READWRITE))
             return false;
-        if (!database.CreateSchema())
+        if (!goupil_db.CreateSchema())
             return false;
 
         HeapArray<char> sql;
@@ -53,7 +53,7 @@ static bool InitDatabase(const char *filename)
         sql.Append(0);
 
         char *error = nullptr;
-        if (sqlite3_exec(database, sql.ptr, nullptr, nullptr, &error) != SQLITE_OK) {
+        if (sqlite3_exec(goupil_db, sql.ptr, nullptr, nullptr, &error) != SQLITE_OK) {
             LogError("SQLite request failed: %1", error);
             sqlite3_free(error);
 
