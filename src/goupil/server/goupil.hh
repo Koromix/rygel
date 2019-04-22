@@ -11,6 +11,6 @@
 namespace RG {
 
 extern Config goupil_config;
-extern SQLiteDatabase database;
+extern SQLiteDatabase goupil_db;
 
 }
