@@ -38,6 +38,15 @@ struct Route {
     RG_HASH_TABLE_HANDLER(Route, url);
 };
 
+struct PushContext {
+    PushContext *next;
+
+    std::mutex mutex;
+    MHD_Connection *conn;
+
+    unsigned int events;
+};
+
 Config goupil_config;
 SQLiteDatabase goupil_db;
 
@@ -51,6 +60,84 @@ extern "C" const Span<const pack_Asset> pack_assets;
 
 static HashTable<const char *, Route> routes;
 static BlockAllocator routes_alloc;
+
+static std::atomic<PushContext *> push_head;
+static std::atomic_int push_count;
+
+static void PushEvents(unsigned int events)
+{
+    static std::mutex push_mutex;
+    std::lock_guard<std::mutex> push_lock(push_mutex);
+
+    PushContext *ctx = nullptr;
+    while (!push_head.compare_exchange_strong(ctx, nullptr));
+
+    while (ctx) {
+        std::lock_guard<std::mutex> ctx_lock(ctx->mutex);
+
+        PushContext *next = ctx->next;
+        ctx->events |= events;
+        MHD_resume_connection(ctx->conn);
+
+        ctx = next;
+    }
+}
+
+void PushEvent(EventType type)
+{
+    PushEvents(1u << (int)type);
+}
+
+static ssize_t SendPendingEvents(void *cls, uint64_t pos, char *buf, size_t max)
+{
+    PushContext *ctx = (PushContext *)cls;
+
+    std::lock_guard<std::mutex> ctx_lock(ctx->mutex);
+
+    if (ctx->events != UINT_MAX) {
+        ctx->next = nullptr;
+        while (!push_head.compare_exchange_strong(ctx->next, ctx));
+        MHD_suspend_connection(ctx->conn);
+
+        if (ctx->events) {
+            int ctz = CountTrailingZeros(ctx->events);
+            ctx->events &= ~(1u << ctz);
+
+            // FIXME: This may result in truncation when max is very low
+            return Fmt(MakeSpan(buf, max), "event: %1\ndata:\n\n", EventTypeNames[ctz]).len;
+        } else {
+            return Fmt(MakeSpan(buf, max), ": keep_alive\n\n").len;
+        }
+    } else {
+        return MHD_CONTENT_READER_END_OF_STREAM;
+    }
+}
+
+static void FreePushContext(void *cls)
+{
+    PushContext *ctx = (PushContext *)cls;
+    delete ctx;
+
+    push_count--;
+}
+
+static int ProduceEvents(const http_Request &request, http_Response *out_response)
+{
+    out_response->flags |= (int)http_Response::Flag::DisableCache;
+
+    // TODO: Use the allocator buried in http_Request?
+    PushContext *ctx = new PushContext();
+    ctx->conn = request.conn;
+
+    MHD_Response *response = MHD_create_response_from_callback(MHD_SIZE_UNKNOWN, 1024,
+                                                               SendPendingEvents, ctx, FreePushContext);
+    out_response->response.reset(response);
+    MHD_add_response_header(*out_response, "Content-Type", "text/event-stream");
+
+    push_count++;
+
+    return 200;
+}
 
 static bool InitDatabase(const char *filename)
 {
@@ -161,6 +248,9 @@ static void InitRoutes()
             add_asset_route("GET", url, asset);
         }
     }
+
+    // General API
+    add_function_route("GET", "/goupil/events.json", ProduceEvents);
 
     // Schedule API
     add_function_route("GET", "/schedule/resources.json", ProduceScheduleResources);
@@ -300,6 +390,12 @@ Options:
     WaitForConsoleInterruption();
 
     LogInfo("Exit");
+
+    while (push_count.load()) {
+        PushEvents(UINT_MAX);
+        WaitForDelay(20);
+    }
+
     return 0;
 }
 

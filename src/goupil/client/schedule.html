@@ -94,8 +94,10 @@
 
                     function updateSchedule(data, errors) {
                         if (!errors.length) {
-                            let el = document.querySelector('#bb_schedule');
-                            let schedule = new Schedule(el, data.resources, data.meetings);
+                            let widget = document.querySelector('#bb_schedule');
+
+                            // FIXME: Use merge algorithm instead of mass replace
+                            let schedule = new Schedule(widget, data.resources, data.meetings);
                             schedule.render(year, month);
                         } else {
                             for (let err of errors)
@@ -103,9 +105,18 @@
                         }
                     }
 
-                    let queue = new FetchQueue(updateSchedule);
-                    queue.fetch('resources', `{BASE_URL}schedule/resources.json?schedule=pl&year=${year}&month=${month}`);
-                    queue.fetch('meetings', `{BASE_URL}schedule/meetings.json?schedule=pl&year=${year}&month=${month}`);
+
+                    function pullCurrentSchedule() {
+                        let queue = new FetchQueue(updateSchedule);
+
+                        queue.fetch('resources', `{BASE_URL}schedule/resources.json?schedule=pl&year=${year}&month=${month}`);
+                        queue.fetch('meetings', `{BASE_URL}schedule/meetings.json?schedule=pl&year=${year}&month=${month}`);
+                    }
+
+                    let event_src = new EventSource(`{BASE_URL}goupil/events.json`);
+                    event_src.addEventListener('schedule', pullCurrentSchedule);
+
+                    pullCurrentSchedule();
                 }
             });
         </script>
