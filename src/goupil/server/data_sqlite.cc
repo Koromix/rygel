@@ -52,7 +52,7 @@ bool SQLiteDatabase::CreateSchema()
             slots INTEGER NOT NULL,
             overbook INTEGER NOT NULL
         );
-        CREATE UNIQUE INDEX sc_resources_sdt ON sc_resources (schedule, date, time, slots, overbook);
+        CREATE UNIQUE INDEX sc_resources_sdt ON sc_resources (schedule, date, time);
 
         CREATE TABLE sc_identities (
             id INTEGER PRIMARY KEY,
@@ -70,7 +70,7 @@ bool SQLiteDatabase::CreateSchema()
 
             consultant_id INTEGER NOT NULL REFERENCES sc_identities(id)
         );
-        CREATE INDEX sc_meetings_sd ON sc_meetings (schedule, date, time, consultant_id);
+        CREATE INDEX sc_meetings_sd ON sc_meetings (schedule, date, time);
     )";
 
     char *error = nullptr;
