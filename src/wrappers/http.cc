@@ -156,7 +156,7 @@ bool http_Daemon::Start(IPStack stack, int port, int threads, const char *base_u
     }
 
     // MHD options
-    int flags = MHD_USE_AUTO_INTERNAL_THREAD | MHD_USE_ERROR_LOG;
+    int flags = MHD_USE_AUTO_INTERNAL_THREAD | MHD_ALLOW_SUSPEND_RESUME | MHD_USE_ERROR_LOG;
     LocalArray<MHD_OptionItem, 16> mhd_options;
     switch (stack) {
         case IPStack::Dual: { flags |= MHD_USE_DUAL_STACK; } break;

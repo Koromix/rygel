@@ -10,6 +10,15 @@
 
 namespace RG {
 
+enum class EventType {
+    Schedule
+};
+static const char *const EventTypeNames[] = {
+    "schedule"
+};
+
+void PushEvent(EventType type);
+
 extern Config goupil_config;
 extern SQLiteDatabase goupil_db;
 
