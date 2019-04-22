@@ -54,11 +54,17 @@ INSERT INTO sc_resources VALUES ('pl', '2019-04-04', 1130, 2, 0);
 INSERT INTO sc_resources VALUES ('pl', '2019-04-05', 730, 1, 1);
 INSERT INTO sc_resources VALUES ('pl', '2019-04-05', 1130, 2, 0);
 
-INSERT INTO sc_meetings VALUES ('pl', '2019-04-01', 730, 'Peter PARKER');
-INSERT INTO sc_meetings VALUES ('pl', '2019-04-01', 730, 'Mary JANE');
-INSERT INTO sc_meetings VALUES ('pl', '2019-04-01', 730, 'Gwen STACY');
-INSERT INTO sc_meetings VALUES ('pl', '2019-04-02', 730, 'Clark KENT');
-INSERT INTO sc_meetings VALUES ('pl', '2019-04-02', 1130, 'Lex LUTHOR');
+INSERT INTO sc_identities VALUES (1, 'Gwen', 'STACY', NULL, '1989-01-02');
+INSERT INTO sc_identities VALUES (2, 'Peter', 'PARKER', NULL, '1990-04-08');
+INSERT INTO sc_identities VALUES (3, 'Mary', 'JANE', 'PARKER', '1991-03-01');
+INSERT INTO sc_identities VALUES (4, 'Clark', 'KENT', NULL, '1987-09-22');
+INSERT INTO sc_identities VALUES (5, 'Lex', 'LUTHOR', NULL, '1985-07-17');
+
+INSERT INTO sc_meetings VALUES ('pl', '2019-04-01', 730, 1);
+INSERT INTO sc_meetings VALUES ('pl', '2019-04-01', 730, 2);
+INSERT INTO sc_meetings VALUES ('pl', '2019-04-01', 730, 3);
+INSERT INTO sc_meetings VALUES ('pl', '2019-04-02', 730, 4);
+INSERT INTO sc_meetings VALUES ('pl', '2019-04-02', 1130, 5);
 
 END TRANSACTION;)";
 
