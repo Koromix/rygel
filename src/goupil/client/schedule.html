@@ -15,290 +15,88 @@
         <script src="{BASE_URL}static/goupil.pk.js"></script>
 
         <script>
-            let resources = {
-                '2019-04-01': [
-                    {time: 730, slots: 1, overbook: 0},
-                    {time: 1130, slots: 1, overbook: 3}
-                ],
-                '2019-04-02': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 1, overbook: 1}
-                ],
-                '2019-04-03': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ],
-                '2019-04-04': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ],
-                '2019-04-05': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ],
-                '2019-04-06': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ],
-                '2019-04-08': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ],
-                '2019-04-09': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ],
-                '2019-04-10': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ],
-                '2019-04-11': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ],
-                '2019-04-12': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ],
-                '2019-04-13': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ],
+            function FetchQueue(func) {
+                let self = this;
 
-                '2019-04-15': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ],
-                '2019-04-16': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ],
-                '2019-04-17': [
-                    {time: 730, slots: 2, overbook: 0}
-                ],
-                '2019-04-18': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ],
-                '2019-04-19': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ],
-                '2019-04-20': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ],
+                let missing = new Set;
+                let data = {};
+                let errors = [];
 
-                '2019-04-22': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ],
-                '2019-04-23': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ],
-                '2019-04-24': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ],
-                '2019-04-25': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ],
-                '2019-04-26': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ],
-                '2019-04-27': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ],
+                let controller;
+                let timer_id;
 
-                '2019-04-29': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ],
-                '2019-04-30': [
-                    {time: 730, slots: 2, overbook: 0},
-                    {time: 1130, slots: 2, overbook: 1}
-                ]
-            };
-            let meetings = {
-                '2019-04-01': [
-                    {time: 730, identity: 'Clark KENT'},
-                    {time: 730, identity: 'Lex LUTHOR'},
-                    {time: 1130, identity: 'Lois LANE'}
-                ],
-                '2019-04-02': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-03': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-04': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-05': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-06': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-08': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-09': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-10': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-11': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-12': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-13': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-14': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-15': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-16': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-17': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-18': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-19': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-20': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-22': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-23': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-24': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-25': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-26': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ],
-                '2019-04-27': [
-                    {time: 730, identity: 'Gwen STACY'},
-                    {time: 730, identity: 'Peter PARKER'},
-                    {time: 1130, identity: 'Mary JANE'},
-                ]
-            };
+                function clearFetch(key) {
+                    missing.delete(key);
 
-            // Load schedule changes
-            function loadScheduleData(name) {
-                if (/^schedule\:[0-9]{4}\-[0-9]{2}\-[0-9]{2}\:(resources|meetings)$/.test(name)) {
-                    try {
-                        let [_, key, type] = name.split(':');
-                        let value = JSON.parse(localStorage.getItem(name));
-
-                        switch (type) {
-                            case 'resources': { resources[key] = value; } break;
-                            case 'meetings': { meetings[key] = value; } break;
-                        }
-                    } catch (err) {
-                        console.log(err);
-                        localStorage.removeItem(name);
+                    if (!missing.size) {
+                        clearTimeout(timer_id);
+                        func(data, errors);
                     }
                 }
-            }
-            for(let i = 0; i < localStorage.length; i++) {
-                let name = localStorage.key(i);
-                loadScheduleData(name);
+
+                function handleResponse(key, response) {
+                    if (missing.has(key)) {
+                        if (response.status == 200) {
+                            response.json().then(json => {
+                                data[key] = json;
+                                clearFetch(key);
+                            });
+                        } else {
+                            errors.push(response.statusText);
+                            clearFetch(key);
+                        }
+                    }
+                }
+
+                function handleError(key, err) {
+                    if (missing.has(key)) {
+                        errors.push(err.message);
+                        clearFetch(key);
+                    }
+                }
+
+                function handleTimeout() {
+                    if (missing.size) {
+                        controller.abort();
+
+                        errors.push(`${missing.size} network ${missing.size > 1 ? 'requests have' : 'request has'} timed out`);
+                        missing.clear();
+
+                        func(data, errors);
+                    }
+                }
+
+                this.fetch = function(key, url, options = {}) {
+                    if (!controller) {
+                        controller = new AbortController();
+                        timer_id = setTimeout(handleTimeout, 10000);
+                    }
+
+                    options = Object.assign({}, options);
+                    options.signal = controller.signal;
+
+                    missing.add(key);
+                    fetch(url, options).then(response => handleResponse(key, response))
+                                       .catch(error => handleError(key, error));
+                }
             }
 
             document.addEventListener('readystatechange', function() {
                 if (document.readyState === 'complete') {
-                    let schedule = new Schedule(document.querySelector('#bb_schedule'), resources, meetings);
-
-                    // TODO: This is a basic but stupid way to replicate changes, when we move
-                    // to actually replication over the air, we will need to apply changes with a
-                    // merge algorithm to limit risk of erasing local changes.
-                    window.addEventListener('storage', e => {
-                        if (e.storageArea === localStorage) {
-                            // FIXME: This may wreck drag-and-drop (assuming D&D does not prevent
-                            // this event from occuring) because the slot_ref thing uses array
-                            // indexes to perform changes.
-                            loadScheduleData(e.key);
-                            schedule.render();
+                    function updateSchedule(data, errors) {
+                        if (!errors.length) {
+                            let el = document.querySelector('#bb_schedule');
+                            let schedule = new Schedule(el, data.resources, data.meetings);
+                            schedule.render(2019, 4);
+                        } else {
+                            for (let err of errors)
+                                console.log(`Fetch error: ${err}`);
                         }
-                    });
+                    }
 
-                    // Save schedule changes
-                    schedule.changeResourcesHandler = (key, resources) => {
-                        localStorage.setItem(`schedule:${key}:resources`, JSON.stringify(resources));
-                    };
-                    schedule.changeMeetingsHandler = (key, meetings) => {
-                        localStorage.setItem(`schedule:${key}:meetings`, JSON.stringify(meetings));
-                    };
-
-                    schedule.render(2019, 4);
+                    let queue = new FetchQueue(updateSchedule);
+                    queue.fetch('resources', '{BASE_URL}schedule/resources.json?schedule=pl&start=2019-04-01&end=2019-04-16');
+                    queue.fetch('meetings', '{BASE_URL}schedule/meetings.json?schedule=pl&start=2019-04-01&end=2019-04-16');
                 }
             });
         </script>
