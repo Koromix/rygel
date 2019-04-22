@@ -2715,6 +2715,7 @@ typedef void LogHandlerFunc(LogLevel level, const char *ctx,
                             const char *fmt, Span<const FmtArg> args);
 
 bool GetDebugFlag(const char *name);
+bool LogUsesTerminalOutput();
 
 void LogFmt(LogLevel level, const char *fmt, Span<const FmtArg> args);
 

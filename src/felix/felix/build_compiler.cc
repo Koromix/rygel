@@ -21,7 +21,9 @@ static void AppendGccObjectArguments(const char *src_filename, BuildMode build_m
                                      const char *dest_filename, const char *deps_filename,
                                      HeapArray<char> *out_buf)
 {
-    Fmt(out_buf, " -fdiagnostics-color=always");
+    if (LogUsesTerminalOutput()) {
+        Fmt(out_buf, " -fdiagnostics-color=always");
+    }
 
     switch (build_mode) {
         case BuildMode::Debug: { Fmt(out_buf, " -O0 -g"); } break;
@@ -56,7 +58,9 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames, BuildM
                                    LinkType link_type, Span<const char *const> libraries,
                                    const char *dest_filename, HeapArray<char> *out_buf)
 {
-    Fmt(out_buf, " -fdiagnostics-color=always");
+    if (LogUsesTerminalOutput()) {
+        Fmt(out_buf, " -fdiagnostics-color=always");
+    }
     if (build_mode == BuildMode::LTO) {
         Fmt(out_buf, " -flto");
     }

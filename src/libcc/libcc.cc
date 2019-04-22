@@ -1031,7 +1031,7 @@ bool GetDebugFlag(const char *name)
 #endif
 }
 
-static bool ConfigLogTerminalOutput()
+bool LogUsesTerminalOutput()
 {
     static bool init, output_is_terminal;
 
@@ -1111,7 +1111,7 @@ void DefaultLogHandler(LogLevel level, const char *ctx,
 
 void StartConsoleLog(LogLevel level)
 {
-    if (ConfigLogTerminalOutput()) {
+    if (LogUsesTerminalOutput()) {
         switch (level)  {
             case LogLevel::Error: { fputs("\x1B[31m", stderr); } break;
             case LogLevel::Info: { fputs("\x1B[96m", stderr); } break;
@@ -1122,7 +1122,7 @@ void StartConsoleLog(LogLevel level)
 
 void EndConsoleLog()
 {
-    if (ConfigLogTerminalOutput()) {
+    if (LogUsesTerminalOutput()) {
         fputs("\x1B[0m", stderr);
     }
     fputs("\n", stderr);
