@@ -153,8 +153,8 @@ static void InitRoutes()
         routes.Append(route);
     };
     const auto add_function_route = [&](const char *method, const char *url,
-                                   int (*func)(const http_Request &request, const User *user,
-                                               http_Response *out_response)) {
+                                        int (*func)(const http_Request &request, const User *user,
+                                                    http_Response *out_response)) {
         Route route = {};
 
         route.method = method;
