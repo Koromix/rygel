@@ -49,10 +49,10 @@ static int GetQueryDate(const http_Request &request, const char *key,
     return 0;
 }
 
-int ProduceScheduleResources(const http_Request &request, http_Response *out_response)
+// SQL must use 3 bind parameters: schedule, start date, end date (in this order)
+static int PrepareRangeQuery(const http_Request &request, const char *sql,
+                             http_Response *out_response, sqlite3_stmt **out_stmt)
 {
-    out_response->flags |= (int)http_Response::Flag::DisableCache;
-
     // Get query parameters
     const char *schedule_name;
     Date dates[2];
@@ -69,15 +69,8 @@ int ProduceScheduleResources(const http_Request &request, http_Response *out_res
             return code;
     }
 
-    static const char *sql = R"(
-        SELECT date, time, slots, overbook
-        FROM sc_resources
-        WHERE schedule = ? AND date >= ? AND date < ?
-        ORDER BY date, time
-    )";
-
-    sqlite3_stmt *stmt = nullptr;
-    RG_DEFER { sqlite3_finalize(stmt); };
+    // Prepare statement
+    sqlite3_stmt *stmt;
     {
         char buf[32];
 
@@ -90,6 +83,29 @@ int ProduceScheduleResources(const http_Request &request, http_Response *out_res
         sqlite3_bind_text(stmt, 2, Fmt(buf, "%1", dates[0]).ptr, -1, SQLITE_TRANSIENT);
         sqlite3_bind_text(stmt, 3, Fmt(buf, "%1", dates[1]).ptr, -1, SQLITE_TRANSIENT);
     }
+
+    *out_stmt = stmt;
+    return 0;
+}
+
+int ProduceScheduleResources(const http_Request &request, http_Response *out_response)
+{
+    out_response->flags |= (int)http_Response::Flag::DisableCache;
+
+    // Execute query
+    sqlite3_stmt *stmt;
+    {
+        static const char *const sql = R"(
+            SELECT date, time, slots, overbook
+            FROM sc_resources
+            WHERE schedule = ? AND date >= ? AND date < ?
+            ORDER BY date, time
+        )";
+
+        if (int code = PrepareRangeQuery(request, sql, out_response, &stmt); code)
+            return code;
+    }
+    RG_DEFER { sqlite3_finalize(stmt); };
 
     // Export data
     http_JsonPageBuilder json(request.compression_type);
@@ -129,44 +145,21 @@ int ProduceScheduleMeetings(const http_Request &request, http_Response *out_resp
 {
     out_response->flags |= (int)http_Response::Flag::DisableCache;
 
-    // Get query parameters
-    const char *schedule_name;
-    Date dates[2];
-    if (int code = GetQuerySchedule(request, "schedule", out_response, &schedule_name); code)
-        return code;
-    if (request.GetQueryValue("date")) {
-        if (int code = GetQueryDate(request, "date", out_response, &dates[0]); code)
-            return code;
-        dates[1] = dates[0] + 1;
-    } else {
-        if (int code = GetQueryDate(request, "start", out_response, &dates[0]); code)
-            return code;
-        if (int code = GetQueryDate(request, "end", out_response, &dates[1]); code)
-            return code;
-    }
-
-    static const char *sql = R"(
-        SELECT m.date, m.time, PRINTF('%s %s', i.first_name, i.last_name) AS identity
-        FROM sc_meetings m
-        INNER JOIN sc_identities i ON (i.id = m.consultant_id)
-        WHERE m.schedule = ? AND m.date >= ? AND m.date < ?
-        ORDER BY m.date, m.time
-    )";
-
-    sqlite3_stmt *stmt = nullptr;
-    RG_DEFER { sqlite3_finalize(stmt); };
+    // Execute query
+    sqlite3_stmt *stmt;
     {
-        char buf[32];
+        static const char *const sql = R"(
+            SELECT m.date, m.time, PRINTF('%s %s', i.first_name, i.last_name) AS identity
+            FROM sc_meetings m
+            INNER JOIN sc_identities i ON (i.id = m.consultant_id)
+            WHERE m.schedule = ? AND m.date >= ? AND m.date < ?
+            ORDER BY m.date, m.time
+        )";
 
-        if (sqlite3_prepare_v2(goupil_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
-            LogError("SQLite Error: %1", sqlite3_errmsg(goupil_db));
-            return http_ProduceErrorPage(500, out_response);
-        }
-
-        sqlite3_bind_text(stmt, 1, schedule_name, -1, SQLITE_TRANSIENT);
-        sqlite3_bind_text(stmt, 2, Fmt(buf, "%1", dates[0]).ptr, -1, SQLITE_TRANSIENT);
-        sqlite3_bind_text(stmt, 3, Fmt(buf, "%1", dates[1]).ptr, -1, SQLITE_TRANSIENT);
+        if (int code = PrepareRangeQuery(request, sql, out_response, &stmt); code)
+            return code;
     }
+    RG_DEFER { sqlite3_finalize(stmt); };
 
     // Export data
     http_JsonPageBuilder json(request.compression_type);
