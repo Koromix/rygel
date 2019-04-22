@@ -13,27 +13,8 @@ static const char *const ScheduleNames[] = {
     "pl"
 };
 
-static int GetQuerySchedule(const http_Request &request, const char *key,
-                            http_Response *out_response, const char **out_schedule_name)
-{
-    const char *str = request.GetQueryValue(key);
-    if (!str) {
-        LogError("Missing '%1' argument", key);
-        return http_ProduceErrorPage(422, out_response);
-    }
-
-    if (!std::any_of(std::begin(ScheduleNames), std::end(ScheduleNames),
-                     [&](const char *name) { return TestStr(str, name); })) {
-        LogError("Invalid schedule name '%1'", str);
-        return http_ProduceErrorPage(422, out_response);
-    }
-
-    *out_schedule_name = str;
-    return 0;
-}
-
-static int GetQueryDate(const http_Request &request, const char *key,
-                        http_Response *out_response, Date *out_date)
+static int GetQueryInteger(const http_Request &request, const char *key,
+                           http_Response *out_response, int *out_value)
 {
     const char *str = request.GetQueryValue(key);
     if (!str) {
@@ -41,33 +22,43 @@ static int GetQueryDate(const http_Request &request, const char *key,
         return http_ProduceErrorPage(422, out_response);
     }
 
-    Date date = Date::FromString(str);
-    if (!date.value)
+    int value;
+    if (!ParseDec(str, &value))
         return http_ProduceErrorPage(422, out_response);
 
-    *out_date = date;
+    *out_value = value;
     return 0;
 }
 
 // SQL must use 3 bind parameters: schedule, start date, end date (in this order)
-static int PrepareRangeQuery(const http_Request &request, const char *sql,
+static int PrepareMonthQuery(const http_Request &request, const char *sql,
                              http_Response *out_response, sqlite3_stmt **out_stmt)
 {
     // Get query parameters
     const char *schedule_name;
-    Date dates[2];
-    if (int code = GetQuerySchedule(request, "schedule", out_response, &schedule_name); code)
+    int year;
+    int month;
+    schedule_name = request.GetQueryValue("schedule");
+    if (int code = GetQueryInteger(request, "year", out_response, &year); code)
         return code;
-    if (request.GetQueryValue("date")) {
-        if (int code = GetQueryDate(request, "date", out_response, &dates[0]); code)
-            return code;
-        dates[1] = dates[0] + 1;
-    } else {
-        if (int code = GetQueryDate(request, "start", out_response, &dates[0]); code)
-            return code;
-        if (int code = GetQueryDate(request, "end", out_response, &dates[1]); code)
-            return code;
+    if (int code = GetQueryInteger(request, "month", out_response, &month); code)
+        return code;
+
+    // Check arguments
+    if (!std::any_of(std::begin(ScheduleNames), std::end(ScheduleNames),
+                     [&](const char *name) { return TestStr(schedule_name, name); })) {
+        LogError("Invalid schedule name '%1'", schedule_name);
+        return http_ProduceErrorPage(422, out_response);
     }
+    if (month < 1 || month > 12) {
+        LogError("Invalid month value %1", month);
+        return http_ProduceErrorPage(422, out_response);
+    }
+
+    // Determine query range
+    Date dates[2];
+    dates[0] = Date(year, month, 1);
+    dates[1] = month < 12 ? Date(year, month + 1, 1) : Date(year + 1, 1, 1);
 
     // Prepare statement
     sqlite3_stmt *stmt;
@@ -102,7 +93,7 @@ int ProduceScheduleResources(const http_Request &request, http_Response *out_res
             ORDER BY date, time
         )";
 
-        if (int code = PrepareRangeQuery(request, sql, out_response, &stmt); code)
+        if (int code = PrepareMonthQuery(request, sql, out_response, &stmt); code)
             return code;
     }
     RG_DEFER { sqlite3_finalize(stmt); };
@@ -156,7 +147,7 @@ int ProduceScheduleMeetings(const http_Request &request, http_Response *out_resp
             ORDER BY m.date, m.time
         )";
 
-        if (int code = PrepareRangeQuery(request, sql, out_response, &stmt); code)
+        if (int code = PrepareMonthQuery(request, sql, out_response, &stmt); code)
             return code;
     }
     RG_DEFER { sqlite3_finalize(stmt); };
