@@ -93,7 +93,7 @@ static int GetQueryGhmRoot(const http_Request &request, const char *key,
 {
     const char *str = request.GetQueryValue(key);
     if (!str) {
-        LogError("Missing 'ghm_root' argument");
+        LogError("Missing '%1' argument", key);
         return http_ProduceErrorPage(422, out_response);
     }
 
