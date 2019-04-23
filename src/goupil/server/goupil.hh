@@ -11,10 +11,12 @@
 namespace RG {
 
 enum class EventType {
-    Schedule
+    Schedule,
+    KeepAlive
 };
 static const char *const EventTypeNames[] = {
-    "schedule"
+    "schedule",
+    "keepalive"
 };
 
 void PushEvent(EventType type);

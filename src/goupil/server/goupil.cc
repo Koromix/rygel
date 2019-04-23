@@ -96,22 +96,22 @@ static ssize_t SendPendingEvents(void *cls, uint64_t pos, char *buf, size_t max)
 
     std::lock_guard<std::mutex> ctx_lock(ctx->mutex);
 
-    if (ctx->events != UINT_MAX) {
+    if (ctx->events == UINT_MAX) {
+        return MHD_CONTENT_READER_END_OF_STREAM;
+    } else if (ctx->events) {
+        int ctz = CountTrailingZeros(ctx->events);
+        ctx->events &= ~(1u << ctz);
+
+        // FIXME: This may result in truncation when max is very low
+        return Fmt(MakeSpan(buf, max), "event: %1\ndata:\n\n", EventTypeNames[ctz]).len;
+    } else {
         ctx->next = nullptr;
         while (!push_head.compare_exchange_strong(ctx->next, ctx));
         MHD_suspend_connection(ctx->conn);
 
-        if (ctx->events) {
-            int ctz = CountTrailingZeros(ctx->events);
-            ctx->events &= ~(1u << ctz);
-
-            // FIXME: This may result in truncation when max is very low
-            return Fmt(MakeSpan(buf, max), "event: %1\ndata:\n\n", EventTypeNames[ctz]).len;
-        } else {
-            return Fmt(MakeSpan(buf, max), ": keep_alive\n\n").len;
-        }
-    } else {
-        return MHD_CONTENT_READER_END_OF_STREAM;
+        // libmicrohttpd crashes (assert) if you return 0
+        buf[0] = '\n';
+        return 1;
     }
 }
 
@@ -417,7 +417,7 @@ Options:
 
     // We need to send keep-alive notices to SSE clients
     while (!WaitForConsoleInterruption(goupil_config.sse_keep_alive)) {
-        PushEvents(0);
+        PushEvent(EventType::KeepAlive);
     }
 
     LogInfo("Exit");
