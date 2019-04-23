@@ -15,6 +15,7 @@ namespace RG {
 struct Route {
     enum class Type {
         Asset,
+        Redirect,
         Function
     };
 
@@ -27,7 +28,10 @@ struct Route {
             pack_Asset asset;
             const char *mime_type;
         } st;
-
+        struct {
+            int code;
+            const char *location;
+        } redirect;
         int (*func)(const http_Request &request, http_Response *out_response);
     } u;
 
@@ -99,6 +103,18 @@ static void InitRoutes()
 
         routes.Append(route);
     };
+    const auto add_redirect_route = [](const char *method, const char *url, int code,
+                                       const char *location) {
+        Route route = {};
+
+        route.method = method;
+        route.url = url;
+        route.type = Route::Type::Redirect;
+        route.u.redirect.code = code;
+        route.u.redirect.location = location;
+
+        routes.Append(route);
+    };
     const auto add_function_route = [&](const char *method, const char *url,
                                         int (*func)(const http_Request &request, http_Response *out_response)) {
         Route route = {};
@@ -127,17 +143,19 @@ static void InitRoutes()
                 }
             });
 
-            const char *url;
             if (TestStr(asset.name, "goupil.html")) {
-                url = "/";
+                add_asset_route("GET", "/", html);
             } else {
                 Span<const char> name;
                 SplitStrReverse(asset.name, '.', &name);
 
-                url = Fmt(&routes_alloc, "/%1", name).ptr;
-            }
+                const char *url = Fmt(&routes_alloc, "/%1/", name).ptr;
+                add_asset_route("GET", url, html);
 
-            add_asset_route("GET", url, html);
+                const char *redirect_url = Fmt(&routes_alloc, "/%1", name).ptr;
+                const char *redirect_location = Fmt(&routes_alloc, "%1%2/", goupil_config.base_url, name).ptr;
+                add_redirect_route("GET", redirect_url, 301, redirect_location);
+            }
         } else {
             const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
             add_asset_route("GET", url, asset);
@@ -161,9 +179,8 @@ static int HandleRequest(const http_Request &request, http_Response *out_respons
 #endif
 
     Route *route = routes.Find(request.url);
-    if (!route) {
+    if (!route)
         return http_ProduceErrorPage(404, out_response);
-    }
 
     int code;
     switch (route->type) {
@@ -173,6 +190,15 @@ static int HandleRequest(const http_Request &request, http_Response *out_respons
             if (route->u.st.asset.source_map) {
                 MHD_add_response_header(*out_response, "SourceMap", route->u.st.asset.source_map);
             }
+        } break;
+
+        case Route::Type::Redirect: {
+            MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+            out_response->response.reset(response);
+
+            MHD_add_response_header(response, "Location", route->u.redirect.location);
+
+            return 301;
         } break;
 
         case Route::Type::Function: {
