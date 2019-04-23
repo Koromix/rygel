@@ -387,7 +387,10 @@ Options:
     LogInfo("Listening on port %1 (%2 stack)",
             goupil_config.port, IPStackNames[(int)goupil_config.ip_stack]);
 
-    WaitForConsoleInterruption();
+    // We need to send keep-alive notices to SSE clients
+    while (!WaitForConsoleInterruption(120000)) {
+        PushEvents(0);
+    }
 
     LogInfo("Exit");
 
