@@ -1821,22 +1821,49 @@ static BOOL CALLBACK ConsoleCtrlHandler(DWORD)
     return (BOOL)TRUE;
 }
 
-void WaitForConsoleInterruption()
+bool WaitForConsoleInterruption(int64_t delay)
 {
     SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
-    WaitForSingleObject(console_ctrl_event, INFINITE);
+
+    if (delay >= 0) {
+        while (delay) {
+            DWORD delay32 = (DWORD)std::min(delay, (int64_t)UINT32_MAX);
+            delay -= delay32;
+
+            if (WaitForSingleObject(console_ctrl_event, delay32) == WAIT_OBJECT_0)
+                return true;
+        }
+
+        return false;
+    } else {
+        return WaitForSingleObject(console_ctrl_event, INFINITE) == WAIT_OBJECT_0;
+    }
 }
 #else
-void WaitForConsoleInterruption()
+bool WaitForConsoleInterruption(int64_t delay)
 {
     static volatile bool run = true;
 
     signal(SIGINT, [](int) { run = false; });
     signal(SIGTERM, [](int) { run = false; });
 
-    while (run) {
-        pause();
+    if (delay >= 0) {
+        struct timespec ts;
+        ts.tv_sec = (int)(delay / 1000);
+        ts.tv_nsec = (int)((delay % 1000) * 1000000);
+
+        struct timespec rem;
+        while (run && nanosleep(&ts, &rem) < 0) {
+            RG_ASSERT(errno == EINTR);
+            ts = rem;
+        }
+    } else {
+        while (run) {
+            pause();
+        }
     }
+
+    return !run;
 }
 #endif
 
