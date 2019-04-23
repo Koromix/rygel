@@ -15,6 +15,7 @@ struct Config {
     int port = 8888;
     int threads = 4;
     const char *base_url = "/";
+    int max_age = 3600;
 
     BlockAllocator str_alloc;
 };

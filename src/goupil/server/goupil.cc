@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 #include "../../libcc/libcc.hh"
 #include "config.hh"
 #include "data.hh"
@@ -60,6 +61,7 @@ extern "C" const Span<const pack_Asset> pack_assets;
 
 static HashTable<const char *, Route> routes;
 static BlockAllocator routes_alloc;
+static char etag[64];
 
 static std::atomic<PushContext *> push_head;
 static std::atomic_int push_count;
@@ -253,6 +255,13 @@ static void InitRoutes()
     // Schedule API
     add_function_route("GET", "/schedule/resources.json", ProduceScheduleResources);
     add_function_route("GET", "/schedule/meetings.json", ProduceScheduleMeetings);
+
+    // We can use a global ETag because everything is in the binary
+    {
+        uint64_t buf[2];
+        randombytes_buf(&buf, RG_SIZE(buf));
+        Fmt(etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
+    }
 }
 
 static int HandleRequest(const http_Request &request, http_Response *out_response)
@@ -266,11 +275,25 @@ static int HandleRequest(const http_Request &request, http_Response *out_respons
     }
 #endif
 
+    // Send these headers whenever possible
+    RG_DEFER { MHD_add_response_header(*out_response, "Referrer-Policy", "no-referrer"); };
+
+    // Handle server-side cache validation (ETag)
+    {
+        const char *client_etag = request.GetHeaderValue("If-None-Match");
+        if (client_etag && TestStr(client_etag, etag)) {
+            *out_response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+            return 304;
+        }
+    }
+
+    // Find appropriate route
     Route *route = routes.Find(request.url);
     if (!route)
         return http_ProduceErrorPage(404, out_response);
 
-    int code;
+    // Execute route
+    int code = 0;
     switch (route->type) {
         case Route::Type::Asset: {
             code = http_ProduceStaticAsset(route->u.st.asset.data, route->u.st.asset.compression_type,
@@ -293,6 +316,13 @@ static int HandleRequest(const http_Request &request, http_Response *out_respons
             code = route->u.func(request, out_response);
         } break;
     }
+    RG_ASSERT_DEBUG(code);
+
+    // Send cache information
+#ifndef NDEBUG
+    out_response->flags &= ~(unsigned int)http_Response::Flag::EnableCache;
+#endif
+    out_response->AddCachingHeaders(goupil_config.max_age, etag);
 
     return code;
 }
