@@ -63,6 +63,7 @@ static HashTable<const char *, Route> routes;
 static BlockAllocator routes_alloc;
 static char etag[64];
 
+static std::atomic_bool push_run = true;
 static std::atomic<PushContext *> push_head;
 static std::atomic_int push_count;
 
@@ -96,22 +97,24 @@ static ssize_t SendPendingEvents(void *cls, uint64_t pos, char *buf, size_t max)
 
     std::lock_guard<std::mutex> ctx_lock(ctx->mutex);
 
-    if (ctx->events == UINT_MAX) {
-        return MHD_CONTENT_READER_END_OF_STREAM;
-    } else if (ctx->events) {
-        int ctz = CountTrailingZeros(ctx->events);
-        ctx->events &= ~(1u << ctz);
+    if (push_run) {
+        if (ctx->events) {
+            int ctz = CountTrailingZeros(ctx->events);
+            ctx->events &= ~(1u << ctz);
 
-        // FIXME: This may result in truncation when max is very low
-        return Fmt(MakeSpan(buf, max), "event: %1\ndata:\n\n", EventTypeNames[ctz]).len;
+            // FIXME: This may result in truncation when max is very low
+            return Fmt(MakeSpan(buf, max), "event: %1\ndata:\n\n", EventTypeNames[ctz]).len;
+        } else {
+            ctx->next = nullptr;
+            while (!push_head.compare_exchange_strong(ctx->next, ctx));
+            MHD_suspend_connection(ctx->conn);
+
+            // libmicrohttpd crashes (assert) if you return 0
+            buf[0] = '\n';
+            return 1;
+        }
     } else {
-        ctx->next = nullptr;
-        while (!push_head.compare_exchange_strong(ctx->next, ctx));
-        MHD_suspend_connection(ctx->conn);
-
-        // libmicrohttpd crashes (assert) if you return 0
-        buf[0] = '\n';
-        return 1;
+        return MHD_CONTENT_READER_END_OF_STREAM;
     }
 }
 
@@ -420,13 +423,14 @@ Options:
         PushEvent(EventType::KeepAlive);
     }
 
-    LogInfo("Exit");
-
-    while (push_count.load()) {
-        PushEvents(UINT_MAX);
+    // Resume and disconnect SSE clients
+    push_run = false;
+    while (push_count > 0) {
+        PushEvents(0);
         WaitForDelay(20);
     }
 
+    LogInfo("Exit");
     return 0;
 }
 
