@@ -16,6 +16,7 @@ struct Config {
     int threads = 4;
     const char *base_url = "/";
     int max_age = 3600;
+    int sse_keep_alive = 120000;
 
     BlockAllocator str_alloc;
 };
