@@ -13,12 +13,14 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                            ip_stack = config.ip_stack,
                            port = config.port,
                            threads = config.threads,
-                           base_url = config.base_url) {
+                           base_url = config.base_url,
+                           max_age = config.max_age) {
         config.database_filename = database_filename;
         config.ip_stack = ip_stack;
         config.port = port;
         config.threads = threads;
         config.base_url = base_url;
+        config.max_age = max_age;
     };
 
     Span<const char> root_directory;
@@ -66,6 +68,8 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                         }
                     } else if (prop.key == "BaseUrl") {
                         config.base_url = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "MaxAge") {
+                        valid &= ParseDec(prop.value, &config.max_age);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
