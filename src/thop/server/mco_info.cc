@@ -132,6 +132,7 @@ int ProduceMcoDiagnoses(const http_Request &request, const User *, http_Response
     }
     json.EndArray();
 
+    out_response->flags |= (int)http_Response::Flag::EnableCache;
     return json.Finish(out_response);
 }
 
@@ -173,6 +174,7 @@ int ProduceMcoProcedures(const http_Request &request, const User *, http_Respons
     }
     json.EndArray();
 
+    out_response->flags |= (int)http_Response::Flag::EnableCache;
     return json.Finish(out_response);
 }
 
@@ -294,6 +296,7 @@ int ProduceMcoGhmGhs(const http_Request &request, const User *, http_Response *o
     }
     json.EndArray();
 
+    out_response->flags |= (int)http_Response::Flag::EnableCache;
     return json.Finish(out_response);
 }
 
@@ -664,6 +667,7 @@ int ProduceMcoTree(const http_Request &request, const User *, http_Response *out
     }
     json.EndArray();
 
+    out_response->flags |= (int)http_Response::Flag::EnableCache;
     return json.Finish(out_response);
 }
 

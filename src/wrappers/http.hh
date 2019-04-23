@@ -12,9 +12,9 @@ namespace RG {
 
 struct http_Response {
     enum class Flag {
-        DisableCacheControl = 1 << 0,
-        DisableETag = 1 << 1,
-        DisableCache = (int)DisableCacheControl | (int)DisableETag
+        EnableCacheControl = 1 << 0,
+        EnableETag = 1 << 1,
+        EnableCache = (int)EnableCacheControl | (int)EnableETag
     };
 
     struct ResponseDeleter {
