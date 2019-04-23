@@ -253,7 +253,7 @@ static int HandleRequest(const http_Request &request, http_Response *out_respons
     };
 
     // Handle server-side cache validation (ETag)
-    if (!(out_response->flags & (int)http_Response::Flag::DisableETag)) {
+    {
         const char *client_etag = request.GetHeaderValue("If-None-Match");
         if (client_etag && TestStr(client_etag, etag)) {
             *out_response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
@@ -303,7 +303,7 @@ static int HandleRequest(const http_Request &request, http_Response *out_respons
 
     // Send cache information
 #ifndef NDEBUG
-    out_response->flags |= (int)http_Response::Flag::DisableCache;
+    out_response->flags &= ~(unsigned int)http_Response::Flag::EnableCache;
 #endif
     out_response->AddCachingHeaders(thop_config.max_age, etag);
 

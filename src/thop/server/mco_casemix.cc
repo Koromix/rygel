@@ -377,7 +377,6 @@ int ProduceMcoAggregate(const http_Request &request, const User *user, http_Resp
         LogError("Not allowed to query MCO aggregations");
         return http_ProduceErrorPage(403, out_response);
     }
-    out_response->flags |= (int)http_Response::Flag::DisableCache;
 
     // Get query parameters
     Date period[2] = {};
@@ -536,7 +535,6 @@ int ProduceMcoResults(const http_Request &request, const User *user, http_Respon
         LogError("Not allowed to query MCO results");
         return http_ProduceErrorPage(403, out_response);
     }
-    out_response->flags |= (int)http_Response::Flag::DisableCache;
 
     // Get query parameters
     Date period[2] = {};

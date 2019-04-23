@@ -123,8 +123,6 @@ static void FreePushContext(void *cls)
 
 static int ProduceEvents(const http_Request &request, http_Response *out_response)
 {
-    out_response->flags |= (int)http_Response::Flag::DisableCache;
-
     // TODO: Use the allocator buried in http_Request?
     PushContext *ctx = new PushContext();
     ctx->conn = request.conn;

@@ -99,11 +99,6 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
         }
     }
 
-    // Only cache GET requests by default
-    if (!TestStr(request->method, "GET")) {
-        response.flags |= (int)http_Response::Flag::DisableCache;
-    }
-
     // Run real handler
     int code = daemon->handle_func(*request, &response);
     return MHD_queue_response(conn, (unsigned int)code, response.response.get());
@@ -221,10 +216,10 @@ void http_Response::AddCachingHeaders(int max_age, const char *etag)
 {
     RG_ASSERT_DEBUG(max_age >= 0);
 
-    if (flags & (int)http_Response::Flag::DisableCacheControl) {
+    if (!(flags & (int)http_Response::Flag::EnableCacheControl)) {
         max_age = 0;
     }
-    if (flags & (int)http_Response::Flag::DisableETag) {
+    if (!(flags & (int)http_Response::Flag::EnableETag)) {
         etag = nullptr;
     }
 
@@ -348,6 +343,7 @@ int http_ProduceStaticAsset(Span<const uint8_t> data, CompressionType in_compres
         MHD_add_response_header(*out_response, "Content-Type", mime_type);
     }
 
+    out_response->flags |= (int)http_Response::Flag::EnableCache;
     return 200;
 }
 

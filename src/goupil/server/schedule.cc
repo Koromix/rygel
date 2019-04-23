@@ -81,8 +81,6 @@ static int PrepareMonthQuery(const http_Request &request, const char *sql,
 
 int ProduceScheduleResources(const http_Request &request, http_Response *out_response)
 {
-    out_response->flags |= (int)http_Response::Flag::DisableCache;
-
     // Execute query
     sqlite3_stmt *stmt;
     {
@@ -134,8 +132,6 @@ int ProduceScheduleResources(const http_Request &request, http_Response *out_res
 
 int ProduceScheduleMeetings(const http_Request &request, http_Response *out_response)
 {
-    out_response->flags |= (int)http_Response::Flag::DisableCache;
-
     // Execute query
     sqlite3_stmt *stmt;
     {
