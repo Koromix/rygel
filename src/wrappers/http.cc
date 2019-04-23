@@ -53,9 +53,11 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
                     MHD_Response *response =
                         MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
                     MHD_add_response_header(response, "Location", daemon->base_url);
-                    return 303;
+
+                    return MHD_queue_response(conn, 303, response);
                 } else {
-                    return http_ProduceErrorPage(404, &response);
+                    http_ProduceErrorPage(404, &response);
+                    return MHD_queue_response(conn, 404, response.response.get());
                 }
             }
         }
