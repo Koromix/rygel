@@ -334,6 +334,8 @@ set(GOUPIL_SRC
     goupil/server/data.hh
     goupil/server/goupil.cc
     goupil/server/goupil.hh
+    goupil/server/schedule.cc
+    goupil/server/schedule.hh
 )
 set(GOUPIL_ASSETS
     ../vendor/lighterhtml/lighterhtml.min.js
@@ -353,7 +355,7 @@ set(GOUPIL_ADMIN_SRC
 )
 
 add_executable(goupil ${GOUPIL_SRC})
-target_link_libraries(goupil PRIVATE libcc libpack microhttpd sqlite)
+target_link_libraries(goupil PRIVATE libcc libpack microhttpd sqlite sodium)
 target_assets(goupil
     MODE ModuleIfDebug
     MERGE_RULES goupil/client/packer.ini
