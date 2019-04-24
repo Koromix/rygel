@@ -138,7 +138,7 @@ int ProduceScheduleMeetings(const http_Request &request, http_Response *out_resp
         static const char *const sql = R"(
             SELECT m.date, m.time, PRINTF('%s %s', i.first_name, i.last_name) AS identity
             FROM sc_meetings m
-            INNER JOIN sc_identities i ON (i.id = m.consultant_id)
+            INNER JOIN sc_identities i ON (i.id = m.identity_id)
             WHERE m.schedule = ? AND m.date >= ? AND m.date < ?
             ORDER BY m.date, m.time
         )";
