@@ -68,7 +68,7 @@ bool SQLiteDatabase::CreateSchema()
             date TEXT NOT NULL,
             time INTEGER NOT NULL,
 
-            consultant_id INTEGER NOT NULL REFERENCES sc_identities(id)
+            identity_id INTEGER NOT NULL REFERENCES sc_identities(id)
         );
         CREATE INDEX sc_meetings_sd ON sc_meetings (schedule, date, time);
     )";
