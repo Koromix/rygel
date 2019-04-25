@@ -14,6 +14,9 @@ function PageBuilder(root, widgets) {
     }
 
     function addWidget(name, id, func, value) {
+        if (interfaces[name])
+            throw new Error(`Variable '${name}' already exists`);
+
         let widget = {
             id: id,
             func: func,
