@@ -99,6 +99,26 @@ function PageBuilder(root, widgets) {
 
         return addWidget(name, id, func, value);
     };
+
+    this.info = function(name, label, value, options = {}) {
+        let id = makeID(name);
+
+        let text = value;
+        if (!options.raw) {
+            if (isNaN(value) || value == null) {
+                text = '';
+            } else if (isFinite(value)) {
+                text = value.toFixed(2);
+            }
+        }
+
+        let func = errors => wrapWidget(id, html`
+            <label for=${id}>${label}</label>
+            <span>${text}</span>
+        `, options, errors);
+
+        return addWidget(name, id, func, value);
+    };
 }
 
 function generatePage(script) {
