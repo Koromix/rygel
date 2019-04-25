@@ -5,7 +5,7 @@
 body {
     font: 0.8em sans-serif;
     padding: 0;
-    margin: 32px 2px 2px 2px;
+    margin: 2px;
     background: #f8f8f8;
 }
 
@@ -13,7 +13,7 @@ body {
     body { margin: 30px 0 0 0; }
 }
 
-#bb_menu {
+#gp_menu {
     left: 0;
     top: 0;
     width: 100vw;
@@ -25,7 +25,7 @@ body {
     -webkit-user-select: none;
     -ms-user-select: none;
 }
-#bb_menu a {
+#gp_menu a {
     display: table-cell;
     height: 30px;
     box-sizing: border-box;
@@ -33,18 +33,20 @@ body {
     padding: 7px 1.5em;
     color: white;
 }
-#bb_menu a.active {
+#gp_menu a.active {
     background: #f8f8f8;
     color: black;
 }
-#bb_menu a:not(.active):hover { background: #444; }
+#gp_menu a:not(.active):hover { background: #444; }
+
+main { margin-top: 32px; }
 
 @media screen and (max-width: 1099px) {
-    #bb_menu {
+    #gp_menu {
         display: table;
         table-layout: fixed;
     }
-    #bb_menu a {
+    #gp_menu a {
         display: table-cell;
         text-align: center;
     }
