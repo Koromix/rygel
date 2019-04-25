@@ -47,7 +47,10 @@ function PageBuilder(root, widgets) {
     }
 
     this.find = name => interfaces[name];
-    this.value = name => interfaces[name].value;
+    this.value = function(name) {
+        let intf = interfaces[name];
+        return intf ? intf.value : undefined;
+    };
     this.error = (name, msg) => interfaces[name].error(msg);
 
     this.boolean = function(name, label, options = {}) {
