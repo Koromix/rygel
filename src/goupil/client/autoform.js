@@ -146,7 +146,8 @@ function generatePage(script) {
 
         return true;
     } catch (err) {
-        log.textContent = `⚠ Line ${err.lineNumber}: ${err.message}`;
+        // TODO: Parse err.stack to get the error line in the Function() scope
+        log.textContent = `⚠ ${err.message}`;
         return false;
     }
 }
