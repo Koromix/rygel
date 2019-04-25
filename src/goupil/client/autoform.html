@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<!--
+    This Source Code Form is subject to the terms of the Mozilla Public
+    License, v. 2.0. If a copy of the MPL was not distributed with this
+    file, You can obtain one at http://mozilla.org/MPL/2.0/.
+-->
+<html>
+    <head>
+        <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1"/>
+
+        <title>goupil autoform</title>
+
+        <!-- Editor -->
+        <script src="{BASE_URL}static/ace.js"></script>
+
+        <!-- Our code -->
+        <script src="{BASE_URL}static/goupil.pk.js"></script>
+        <link rel="stylesheet" href="{BASE_URL}static/goupil.pk.css"/>
+    </head>
+
+    <body>
+        <nav id="gp_menu">
+            <a class="active" href="{BASE_URL}autoform">Formulaire</a>
+            <a href="{BASE_URL}schedule">Agenda</a>
+        </nav>
+
+        <main>
+            <div id="af_editor"></div>
+
+            <div id="af_page">
+                <div id="af_form"></div>
+                <div id="af_log"></div>
+            </div>
+        </main>
+    </body>
+</html>

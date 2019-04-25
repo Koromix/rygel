@@ -94,7 +94,7 @@
 
                     function updateSchedule(data, errors) {
                         if (!errors.length) {
-                            let widget = document.querySelector('#bb_schedule');
+                            let widget = document.querySelector('#gp_schedule');
 
                             // FIXME: Use merge algorithm instead of mass replace
                             let schedule = new Schedule(widget, data.resources, data.meetings);
@@ -121,11 +121,13 @@
         </script>
     </head>
     <body>
-        <nav id="bb_menu">
-            <a href="X">Consultants</a>
-            <a class="active" href="test_schedule.html">Agenda</a>
-            <a href="Z">Rapports</a>
+        <nav id="gp_menu">
+            <a href="{BASE_URL}autoform">Formulaire</a>
+            <a class="active" href="{BASE_URL}schedule">Agenda</a>
         </nav>
-        <div id="bb_schedule"></div>
+
+        <main>
+            <div id="gp_schedule"></div>
+        </main>
     </body>
 </html>

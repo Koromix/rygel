@@ -339,10 +339,13 @@ set(GOUPIL_SRC
 )
 set(GOUPIL_ASSETS
     ../vendor/lighterhtml/lighterhtml.min.js
+    goupil/client/autoform.js
     goupil/client/goupil.js
     goupil/client/schedule.js
+    goupil/client/autoform.css
     goupil/client/goupil.css
     goupil/client/schedule.css
+    goupil/client/autoform.html
     goupil/client/schedule.html
 )
 

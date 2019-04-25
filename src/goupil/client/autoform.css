@@ -1,0 +1,53 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+   License, v. 2.0. If a copy of the MPL was not distributed with this
+   file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#af_editor {
+    position: fixed;
+    left: 0;
+    top: 30px;
+    height: calc(100% - 30px);
+    width: 50%;
+    z-index: 999;
+    box-sizing: border-box;
+}
+#af_log { color: red; }
+
+#af_page {
+    max-width: 800px;
+    margin: 0 0 0 calc(50% + 0.5em);
+}
+#af_form {
+    background: #eee;
+    padding: 2px;
+}
+#af_log { padding: 5px; }
+
+.af_var {
+    margin: 6px;
+    padding: 6px;
+}
+.af_var:after {
+    display: table;
+    content: " ";
+    clear: both;
+}
+.af_var label {
+    display: inline-block;
+    width: 250px;
+}
+.af_error {
+    background: #c12406;
+    color: white;
+}
+.af_error_msg {
+    float: right;
+    clear: both;
+}
+.af_help {
+    font-size: 0.85em;
+    font-style: italic;
+    color: #666;
+    margin: 2px 0 0 20px;
+}
+.af_help:before { content: '☞ '; }
