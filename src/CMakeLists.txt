@@ -338,6 +338,10 @@ set(GOUPIL_SRC
     goupil/server/schedule.hh
 )
 set(GOUPIL_ASSETS
+    ../vendor/ace/ace.js
+    ../vendor/ace/mode-javascript.js
+    ../vendor/ace/theme-monokai.js
+    ../vendor/ace/worker-javascript.js
     ../vendor/lighterhtml/lighterhtml.min.js
     goupil/client/autoform.js
     goupil/client/goupil.js
