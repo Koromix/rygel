@@ -24,7 +24,10 @@ function PageBuilder(root, widgets) {
         };
         let intf = {
             value: value,
-            error: msg => widget.errors.push(msg || '')
+            error: msg => {
+                widget.errors.push(msg || '');
+                return intf;
+            }
         };
 
         widgets.push(widget);
