@@ -136,7 +136,7 @@ document.addEventListener('readystatechange', function() {
 
         editor.setTheme('ace/theme/monokai');
         editor.setShowPrintMargin(false);
-        editor.setFontSize(14);
+        editor.setFontSize(12);
         editor.session.setMode('ace/mode/javascript');
 
         let script = localStorage.getItem('script');
