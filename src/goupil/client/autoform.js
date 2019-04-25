@@ -48,7 +48,7 @@ function PageBuilder(root, widgets) {
         let id = makeID(name);
 
         let prev = root.querySelector(`#${id}`);
-        let value = prev ? prev.checked : false;
+        let value = prev ? prev.checked : undefined;
 
         let func = errors => wrapWidget(id, html`
             <label for=${id}>${label}</label>
@@ -63,7 +63,7 @@ function PageBuilder(root, widgets) {
         let id = makeID(name);
 
         let prev = root.querySelector(`#${id}`);
-        let value = (prev && prev.value != '') ? prev.value : null;
+        let value = (prev && prev.value != '') ? parseInt(prev.value, 10) : undefined;
 
         let func = errors => wrapWidget(id, html`
             <label for=${id}>${label}</label>
@@ -87,7 +87,7 @@ function PageBuilder(root, widgets) {
         let id = makeID(name);
 
         let prev = root.querySelector(`#${id}`);
-        let value = prev ? prev.value : null;
+        let value = prev ? prev.value : undefined;
 
         let func = errors => wrapWidget(id, html`
             <label for=${id}>${label}</label>
