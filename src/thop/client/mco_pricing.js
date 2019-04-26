@@ -251,7 +251,7 @@ let mco_pricing = {};
             for (let duration = 0; duration < max_duration; duration++) {
                 if (duration % 10 == 0) {
                     let text = '' + duration + ' - ' +
-                                    durationText(Math.min(max_duration - 1, duration + 9));
+                                    format.duration(Math.min(max_duration - 1, duration + 9));
                     let tr = html('tr',
                         html('th', {class: 'repeat', colspan: ghs.length + 1}, text)
                     );
@@ -259,7 +259,7 @@ let mco_pricing = {};
                 }
 
                 let tr = html('tr',
-                    html('th', durationText(duration))
+                    html('th', format.duration(duration))
                 );
                 for (const col of ghs) {
                     let info;
@@ -273,7 +273,7 @@ let mco_pricing = {};
                     let td;
                     if (info) {
                         td = html('td', {class: info.mode},
-                                  priceText(info.price, true, diff_index >= 0));
+                                  format.price(info.price, true, diff_index >= 0));
 
                         let title = '';
                         if (!duration && col.warn_cmd28) {
@@ -361,24 +361,24 @@ let mco_pricing = {};
                               col.conditions.length ? col.conditions.length.toString() : '');
                 return [el, {class: 'conditions'}, true];
             });
-            appendRow('Borne basse', function(col) { return [durationText(col.exb_treshold), {class: 'exb'}, true]; });
+            appendRow('Borne basse', function(col) { return [format.duration(col.exb_treshold), {class: 'exb'}, true]; });
             appendRow('Borne haute',
-                      function(col) { return [durationText(col.exh_treshold && col.exh_treshold - 1), {class: 'exh'}, true]; });
+                      function(col) { return [format.duration(col.exh_treshold && col.exh_treshold - 1), {class: 'exh'}, true]; });
             appendRow('Tarif €', function(col) {
                 let cents = applyGhsCoefficient(col, col.ghs_cents, apply_coeff);
-                return [priceText(cents), {class: 'noex'}, true];
+                return [format.price(cents), {class: 'noex'}, true];
             });
             appendRow('Forfait EXB €', function(col) {
                 let cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
-                return [col.exb_once ? priceText(cents) : '', {class: 'exb'}, true];
+                return [col.exb_once ? format.price(cents) : '', {class: 'exb'}, true];
             });
             appendRow('Tarif EXB €', function(col) {
                 let cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
-                return [!col.exb_once ? priceText(cents) : '', {class: 'exb'}, true];
+                return [!col.exb_once ? format.price(cents) : '', {class: 'exb'}, true];
             });
             appendRow('Tarif EXH €', function(col) {
                 let cents = applyGhsCoefficient(col, col.exh_cents, apply_coeff);
-                return [priceText(cents), {class: 'exh'}, true];
+                return [format.price(cents), {class: 'exh'}, true];
             });
             appendRow('Age', function(col) {
                 let texts = [];
@@ -510,11 +510,11 @@ let mco_pricing = {};
                         intersect: false,
                         callbacks: {
                             title: function(items, data) {
-                                return durationText(items[0].xLabel)
+                                return format.duration(items[0].xLabel)
                             },
                             label: function(item, data) {
                                 return 'GHS ' + data.datasets[item.datasetIndex].label + ': ' +
-                                       priceText(item.yLabel);
+                                       format.price(item.yLabel);
                             }
                         }
                     },
@@ -528,7 +528,7 @@ let mco_pricing = {};
                             type: 'linear',
                             ticks: {
                                 stepSize: 10,
-                                callback: function(value) { return durationText(value); }
+                                callback: function(value) { return format.duration(value); }
                             }
                         }],
                         yAxes: [{
@@ -536,7 +536,7 @@ let mco_pricing = {};
                             ticks: {
                                 suggestedMin: min_price,
                                 suggestedMax: max_price,
-                                callback: function(value) { return priceText(value); }
+                                callback: function(value) { return format.price(value); }
                             }
                         }]
                     },

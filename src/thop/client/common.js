@@ -3,75 +3,74 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 // ------------------------------------------------------------------------
-// Text
+// Format
 // ------------------------------------------------------------------------
 
-function numberText(n, show_plus)
-{
-    if (show_plus === undefined)
-        show_plus = false;
+let format = (function() {
+    this.number = function(n, show_plus) {
+        if (show_plus === undefined)
+            show_plus = false;
 
-    return (show_plus && n > 0 ? '+' : '') +
-           n.toLocaleString('fr-FR');
-}
-
-function percentText(value, show_plus)
-{
-    if (show_plus === undefined)
-        show_plus = false;
-
-    const parameters = {
-        style: 'percent',
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 1
+        return (show_plus && n > 0 ? '+' : '') +
+               n.toLocaleString('fr-FR');
     };
 
-    if (!isNaN(value)) {
-        return (show_plus && fraction > 0 ? '+' : '') +
-               value.toLocaleString('fr-FR', parameters);
-    } else {
-        return '-';
-    }
-}
+    this.percent = function(value, show_plus) {
+        if (show_plus === undefined)
+            show_plus = false;
 
-function priceText(price_cents, format_cents, show_plus)
-{
-    if (format_cents === undefined)
-        format_cents = true;
-    if (show_plus === undefined)
-        show_plus = false;
-
-    if (price_cents !== undefined) {
         const parameters = {
-            minimumFractionDigits: format_cents ? 2 : 0,
-            maximumFractionDigits: format_cents ? 2 : 0,
-
+            style: 'percent',
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1
         };
 
-        return (show_plus && price_cents > 0 ? '+' : '') +
-               (price_cents / 100.0).toLocaleString('fr-FR', parameters);
-    } else {
-        return '';
-    }
-}
+        if (!isNaN(value)) {
+            return (show_plus && fraction > 0 ? '+' : '') +
+                   value.toLocaleString('fr-FR', parameters);
+        } else {
+            return '-';
+        }
+    };
 
-function durationText(duration)
-{
-    if (duration !== null && duration !== undefined) {
-        return duration.toString() + (duration >= 2 ? ' nuits' : ' nuit');
-    } else {
-        return '';
-    }
-}
+    this.price = function(price_cents, format_cents, show_plus) {
+        if (format_cents === undefined)
+            format_cents = true;
+        if (show_plus === undefined)
+            show_plus = false;
 
-function ageText(age)
-{
-    if (age !== null && age !== undefined) {
-        return age.toString() + (age >= 2 ? ' ans' : ' an');
-    } else {
-        return '';
-    }
-}
+        if (price_cents !== undefined) {
+            const parameters = {
+                minimumFractionDigits: format_cents ? 2 : 0,
+                maximumFractionDigits: format_cents ? 2 : 0,
+
+            };
+
+            return (show_plus && price_cents > 0 ? '+' : '') +
+                   (price_cents / 100.0).toLocaleString('fr-FR', parameters);
+        } else {
+            return '';
+        }
+    };
+
+    this.duration = function(duration) {
+        if (duration !== null && duration !== undefined) {
+            return duration.toString() + (duration >= 2 ? ' nuits' : ' nuit');
+        } else {
+            return '';
+        }
+    };
+
+    this.age = function(age) {
+        if (age !== null && age !== undefined) {
+            return age.toString() + (age >= 2 ? ' ans' : ' an');
+        } else {
+            return '';
+        }
+    };
+
+    return this;
+}).call({});
 
 // ------------------------------------------------------------------------
 // Aggregation

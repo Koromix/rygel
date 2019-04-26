@@ -826,25 +826,25 @@ let mco_casemix = {};
         function addPercentCell(value)
         {
             if (!isNaN(value)) {
-                dtab.addCell('td', value, percentText(value));
+                dtab.addCell('td', value, format.percent(value));
             } else {
                 dtab.addCell('td', null, '-');
             }
         }
 
-        dtab.addCell('td', stat.count, numberText(stat.count, !!mix_params.diff));
+        dtab.addCell('td', stat.count, format.number(stat.count, !!mix_params.diff));
         if (!mix_params.diff)
             addPercentCell(stat.count / total.count);
-        dtab.addCell('td', stat.mono_count, numberText(stat.mono_count, !!mix_params.diff));
+        dtab.addCell('td', stat.mono_count, format.number(stat.mono_count, !!mix_params.diff));
         if (!mix_params.diff)
             addPercentCell(stat.mono_count / total.mono_count);
-        dtab.addCell('td', stat.price_cents_total / 100.0, priceText(stat.price_cents_total, false, !!mix_params.diff));
+        dtab.addCell('td', stat.price_cents_total / 100.0, format.price(stat.price_cents_total, false, !!mix_params.diff));
         if (!mix_params.diff)
             addPercentCell(stat.price_cents_total / total.price_cents_total);
-        dtab.addCell('td', stat.price_cents / 100.0, priceText(stat.price_cents, false, !!mix_params.diff));
+        dtab.addCell('td', stat.price_cents / 100.0, format.price(stat.price_cents, false, !!mix_params.diff));
         if (!mix_params.diff)
             addPercentCell(stat.price_cents / total.price_cents);
-        dtab.addCell('td', stat.deaths, numberText(stat.deaths, !!mix_params.diff));
+        dtab.addCell('td', stat.deaths, format.number(stat.deaths, !!mix_params.diff));
         if (!mix_params.diff)
             addPercentCell(stat.deaths / stat.count);
     }
@@ -938,14 +938,14 @@ let mco_casemix = {};
 
                 if (!mix_params.diff) {
                     tooltip += col.ghm + ' (' + col.ghs + ') – ' + title + ' :\n' +
-                               '– ' + percentText(duration_stat.count / stat0.count) + ' / ' +
-                               percentText(duration_stat.price_cents_total / stat0.price_cents_total) +
+                               '– ' + format.percent(duration_stat.count / stat0.count) + ' / ' +
+                               format.percent(duration_stat.price_cents_total / stat0.price_cents_total) +
                                ' de la racine\n' +
-                               '– ' + percentText(duration_stat.count / col_stat.count) + ' / ' +
-                               percentText(duration_stat.price_cents_total / col_stat.price_cents_total) +
+                               '– ' + format.percent(duration_stat.count / col_stat.count) + ' / ' +
+                               format.percent(duration_stat.price_cents_total / col_stat.price_cents_total) +
                                ' de la colonne\n' +
-                               '– ' + percentText(duration_stat.count / row_stat.count) + ' / ' +
-                               percentText(duration_stat.price_cents_total / row_stat.price_cents_total) +
+                               '– ' + format.percent(duration_stat.count / row_stat.count) + ' / ' +
+                               format.percent(duration_stat.price_cents_total / row_stat.price_cents_total) +
                                ' de la ligne\n\n';
                 }
 
@@ -953,16 +953,16 @@ let mco_casemix = {};
                 {
                     let missing_cents = duration_stat.price_cents_total;
                     for (const unit_stat of unit_stats) {
-                        tooltip += '\n– ' + unit_stat.unit + ' : ' + priceText(unit_stat.price_cents, true, !!mix_params.diff);
+                        tooltip += '\n– ' + unit_stat.unit + ' : ' + format.price(unit_stat.price_cents, true, !!mix_params.diff);
                         if (!mix_params.diff)
-                            tooltip += ' (' + percentText(unit_stat.price_cents / duration_stat.price_cents_total) + ')';
+                            tooltip += ' (' + format.percent(unit_stat.price_cents / duration_stat.price_cents_total) + ')';
                         missing_cents -= unit_stat.price_cents;
                     }
 
                     if (missing_cents) {
-                        tooltip += '\n– Autres : ' + priceText(missing_cents);
+                        tooltip += '\n– Autres : ' + format.price(missing_cents);
                         if (!mix_params.diff)
-                            tooltip += ' (' + percentText(missing_cents / duration_stat.price_cents_total) + ')';
+                            tooltip += ' (' + format.percent(missing_cents / duration_stat.price_cents_total) + ')';
                     }
                 }
 
@@ -1001,10 +1001,10 @@ let mco_casemix = {};
                         tr.appendContent(
                             html('td', {class: ['count', 'total'].concat(diffToClasses(col_stat.count)),
                                         title: tooltip},
-                                 '' + numberText(col_stat.count, !!mix_params.diff)),
+                                 '' + format.number(col_stat.count, !!mix_params.diff)),
                             html('td', {class: ['price', 'total'].concat(diffToClasses(col_stat.price_cents_total)),
                                         title: tooltip},
-                                 priceText(col_stat.price_cents_total, false, !!mix_params.diff))
+                                 format.price(col_stat.price_cents_total, false, !!mix_params.diff))
                         );
                     } else {
                         tr.appendContent(
@@ -1023,7 +1023,7 @@ let mco_casemix = {};
 
                 if (duration % 10 == 0) {
                     let text = '' + duration + ' - ' +
-                                    durationText(Math.min(max_duration - 1, duration + 9));
+                                    format.duration(Math.min(max_duration - 1, duration + 9));
                     let tr = html('tr',
                         html('th', {class: 'repeat', colspan: columns.length * 2 + 1}, text)
                     );
@@ -1031,7 +1031,7 @@ let mco_casemix = {};
                 }
 
                 let tr = html('tr',
-                    html('th', durationText(duration))
+                    html('th', format.duration(duration))
                 );
                 for (const col of columns) {
                     let col_stat = stats1.find(col.ghm, col.ghs);
@@ -1048,17 +1048,17 @@ let mco_casemix = {};
 
                     if (duration_stat) {
                         let tooltip =
-                            makeTooltip(durationText(duration),
+                            makeTooltip(format.duration(duration),
                                         col, col_stat, row_stat, duration_stat,
                                         stats2_units.findPartial(col.ghm, col.ghs, duration));
 
                         tr.appendContent(
                             html('td', {class: ['count', cls].concat(diffToClasses(duration_stat.count)),
                                         title: tooltip},
-                                 '' + numberText(duration_stat.count, !!mix_params.diff)),
+                                 '' + format.number(duration_stat.count, !!mix_params.diff)),
                             html('td', {class: ['price', cls].concat(diffToClasses(duration_stat.price_cents_total)),
                                         title: tooltip},
-                                 priceText(duration_stat.price_cents_total, false, !!mix_params.diff))
+                                 format.price(duration_stat.price_cents_total, false, !!mix_params.diff))
                         );
                     } else if (mco_pricing.testDuration(col.durations, duration)) {
                         cls += ' empty';
@@ -1162,8 +1162,8 @@ let mco_casemix = {};
                             html('a', {class: 'rt_id', href: '#', click: handleIdClick},
                                  '' + result.bill_id)
                         ),
-                        html('td', (['♂ ', '♀ '][result.sex - 1] || '') + ageText(result.age)),
-                        html('td', (result.duration !== undefined ? durationText(result.duration) : '') +
+                        html('td', (['♂ ', '♀ '][result.sex - 1] || '') + format.age(result.age)),
+                        html('td', (result.duration !== undefined ? format.duration(result.duration) : '') +
                                    (result.stays[result.stays.length - 1].exit_mode == '9' ? ' (✝)' : '')),
                         html('td', {title: codeWithDesc(ghm_roots_map, result.ghm_root) + '\n\n' +
                                            'GHM : ' + result.ghm + '\n' +
@@ -1176,8 +1176,8 @@ let mco_casemix = {};
                             result.ghm.startsWith('90') ? (' [' + result.main_error + ']')
                                                         : (' (' + result.ghs + ')')
                         ),
-                        html('td', {style: 'text-align: right;'}, priceText(result.price_cents) + '€'),
-                        html('td', {style: 'text-align: right;'}, priceText(result.total_cents) + '€')
+                        html('td', {style: 'text-align: right;'}, format.price(result.price_cents) + '€'),
+                        html('td', {style: 'text-align: right;'}, format.price(result.total_cents) + '€')
                     )
                 )
             );
@@ -1194,13 +1194,13 @@ let mco_casemix = {};
                     html('tr', {class: 'rt_stay'},
                         html('td', 'RUM ' + (j + 1) + (j == result.main_stay ? ' *' : '')),
                         html('th', {title: unitPath(stay.unit)}, '' + (stay.unit || '')),
-                        html('td', (stay.duration !== undefined ? durationText(stay.duration) : '') +
+                        html('td', (stay.duration !== undefined ? format.duration(stay.duration) : '') +
                                    (stay.exit_mode == '9' ? ' (✝)' : '')),
                         html('td'),
                         html('td', {style: 'text-align: right;'},
-                             stay.total_cents ? (priceText(stay.price_cents) + '€') : ''),
+                             stay.total_cents ? (format.price(stay.price_cents) + '€') : ''),
                         html('td', {style: 'text-align: right;'},
-                             stay.price_cents ? (priceText(stay.total_cents) + '€') : '')
+                             stay.price_cents ? (format.price(stay.total_cents) + '€') : '')
                     )
                 );
 
@@ -1220,7 +1220,7 @@ let mco_casemix = {};
                     table0.appendContent(
                         createInfoRow('Sexe', ['Homme', 'Femme'][stay.sex - 1] || ''),
                         createInfoRow('Date de naissance', (stay.birthdate || '') +
-                                                           (stay.age !== undefined ? ' (' + ageText(stay.age) + ')' : '')),
+                                                           (stay.age !== undefined ? ' (' + format.age(stay.age) + ')' : '')),
                         createInfoRow('Entrée', '' + stay.entry_date + ' ' + stay.entry_mode +
                                                 (stay.entry_origin ? '-' + stay.entry_origin : '')),
                         createInfoRow('Sortie', '' + stay.exit_date + ' ' + stay.exit_mode +
