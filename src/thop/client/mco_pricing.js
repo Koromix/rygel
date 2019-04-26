@@ -120,7 +120,7 @@ let mco_pricing = {};
             url = url_parts.join('/');
         }
 
-        url = buildUrl(url, {
+        url = util.buildUrl(url, {
             apply_coefficient: new_route.apply_coefficient ? 1 : null
         });
 
@@ -155,8 +155,8 @@ let mco_pricing = {};
         const date_key = indexes[index].begin_date + '@' + sector;
 
         if (!available_dates.has(date_key)) {
-            let url = buildUrl(thop.baseUrl('api/mco_ghm_ghs.json'),
-                               {date: indexes[index].begin_date, sector: sector});
+            let url = util.buildUrl(thop.baseUrl('api/mco_ghm_ghs.json'),
+                                    {date: indexes[index].begin_date, sector: sector});
             data.get(url, 'json', function(json) {
                 for (let ghm_ghs of json) {
                     const ghm_root = ghm_ghs.ghm_root;
@@ -399,7 +399,7 @@ let mco_pricing = {};
     function refreshPriceChart(pricing_info, main_index, diff_index, max_duration, apply_coeff)
     {
         if (typeof Chart === 'undefined') {
-            lazyLoad('chartjs');
+            data.lazyLoad('chartjs');
             return;
         }
 

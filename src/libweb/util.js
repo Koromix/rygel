@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 // ------------------------------------------------------------------------
-// DOM
+// Simpler DOM
 // ------------------------------------------------------------------------
 
 Element.prototype.query = function(selector) { return this.querySelector(selector); }
@@ -79,6 +79,10 @@ Element.prototype.replaceContent = function() {
     this.appendContent.apply(this, arguments);
 }
 
+// ------------------------------------------------------------------------
+// DOM creation
+// ------------------------------------------------------------------------
+
 function expandNamespace(ns)
 {
     return ({
@@ -140,88 +144,118 @@ function html(tag) { return createElementProxy('html', tag, arguments, 1); }
 function svg(tag) { return createElementProxy('svg', tag, arguments, 1); }
 
 // ------------------------------------------------------------------------
-// Cookies
+// Utility
 // ------------------------------------------------------------------------
 
-// Why the f*ck is there still no good cookie API?
-function getCookie(name)
-{
-    let cookie = ' ' + document.cookie;
+let util = (function() {
+    // Why the f*ck is there still no good cookie API?
+    this.getCookie = function(name) {
+        let cookie = ' ' + document.cookie;
 
-    let start = cookie.indexOf(' ' + name + '=');
-    if (start < 0)
-        return null;
+        let start = cookie.indexOf(' ' + name + '=');
+        if (start < 0)
+            return null;
 
-    start = cookie.indexOf('=', start) + 1;
-    let end = cookie.indexOf(';', start);
-    if (end < 0)
-        end = cookie.length;
+        start = cookie.indexOf('=', start) + 1;
+        let end = cookie.indexOf(';', start);
+        if (end < 0)
+            end = cookie.length;
 
-    let value = unescape(cookie.substring(start, end));
+        let value = unescape(cookie.substring(start, end));
 
-    return value;
-}
-
-// ------------------------------------------------------------------------
-// URL
-// ------------------------------------------------------------------------
-
-function parseUrl(url)
-{
-    let a = document.createElement('a');
-    a.href = url;
-
-    return {
-        source: url,
-        href: a.href,
-        origin: a.origin,
-        protocol: a.protocol.replace(':', ''),
-        host: a.hostname,
-        port: a.port,
-        query: a.search,
-        params: (function() {
-            let ret = {};
-            let seg = a.search.replace(/^\?/, '').split('&');
-            let len = seg.length;
-            let s;
-            for (let i = 0; i < len; i++) {
-                if (!seg[i])
-                    continue;
-                s = seg[i].split('=');
-                ret[s[0]] = decodeURI(s[1]);
-            }
-            return ret;
-        })(),
-        hash: a.hash.replace('#', ''),
-        path: a.pathname.replace(/^([^/])/, '/$1')
+        return value;
     };
-}
 
-function buildUrl(url, query_values)
-{
-    if (query_values === undefined)
-        query_values = {};
+    this.parseUrl = function(url) {
+        let a = document.createElement('a');
+        a.href = url;
 
-    let query_fragments = [];
-    for (const k in query_values) {
-        let value = query_values[k];
-        if (value !== null && value !== undefined) {
-            let arg = encodeURIComponent(k) + '=' + encodeURIComponent(value);
-            query_fragments.push(arg);
+        return {
+            source: url,
+            href: a.href,
+            origin: a.origin,
+            protocol: a.protocol.replace(':', ''),
+            host: a.hostname,
+            port: a.port,
+            query: a.search,
+            params: (function() {
+                let ret = {};
+                let seg = a.search.replace(/^\?/, '').split('&');
+                let len = seg.length;
+                let s;
+                for (let i = 0; i < len; i++) {
+                    if (!seg[i])
+                        continue;
+                    s = seg[i].split('=');
+                    ret[s[0]] = decodeURI(s[1]);
+                }
+                return ret;
+            })(),
+            hash: a.hash.replace('#', ''),
+            path: a.pathname.replace(/^([^/])/, '/$1')
+        };
+    };
+
+    this.buildUrl = function(url, query_values) {
+        if (query_values === undefined)
+            query_values = {};
+
+        let query_fragments = [];
+        for (const k in query_values) {
+            let value = query_values[k];
+            if (value !== null && value !== undefined) {
+                let arg = encodeURIComponent(k) + '=' + encodeURIComponent(value);
+                query_fragments.push(arg);
+            }
         }
-    }
-    if (query_fragments.length)
-        url += '?' + query_fragments.sort().join('&');
+        if (query_fragments.length)
+            url += '?' + query_fragments.sort().join('&');
 
-    return url;
-}
+        return url;
+    };
+
+    this.roundTo = function(n, digits) {
+        if (digits === undefined)
+            digits = 0;
+
+        let multiplicator = Math.pow(10, digits);
+        n = parseFloat((n * multiplicator).toFixed(11));
+        return Math.round(n) / multiplicator;
+    };
+
+    this.compareValues = function(value1, value2) {
+        if (value1 < value2) {
+            return -1;
+        } else if (value1 > value2) {
+            return 1;
+        } else {
+            return 0;
+        }
+    };
+
+    this.saveBlob = function(blob, filename) {
+        let url = URL.createObjectURL(blob);
+        let anchor = html('a', {
+            download: filename,
+            href: url
+        });
+
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+
+        if(URL.revokeObjectURL)
+            setTimeout(function() { URL.revokeObjectURL(url) }, 60000);
+    };
+
+    return this;
+}).call({});
 
 // ------------------------------------------------------------------------
 // Data
 // ------------------------------------------------------------------------
 
-let data = {};
-(function() {
+let data = (function() {
     this.busyHandler = null;
 
     let self = this;
@@ -245,11 +279,26 @@ let data = {};
         if (!xhr)
             return;
 
-        let encoded_parameters = buildUrl('', parameters).substr(1);
+        let encoded_parameters = util.buildUrl('', parameters).substr(1);
         xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
         xhr.send(encoded_parameters || null);
     }
     this.post = post;
+
+    function lazyLoad(module, func)
+    {
+        if (typeof LazyModules !== 'object' || !LazyModules[module]) {
+            console.log('Cannot load module ' + module);
+            return;
+        }
+
+        get(LazyModules[module], null, function(js) {
+            eval.call(window, js);
+            if (func)
+                func();
+        });
+    };
+    this.lazyLoad = lazyLoad;
 
     function openRequest(method, url, type, proceed, fail)
     {
@@ -318,66 +367,6 @@ let data = {};
 
     this.getErrors = function() { return errors; }
     this.clearErrors = function() { errors = []; }
-}).call(data);
 
-// ------------------------------------------------------------------------
-// Misc
-// ------------------------------------------------------------------------
-
-function roundTo(n, digits)
-{
-    if (digits === undefined)
-        digits = 0;
-
-    let multiplicator = Math.pow(10, digits);
-    n = parseFloat((n * multiplicator).toFixed(11));
-    return Math.round(n) / multiplicator;
-}
-
-function compareValues(value1, value2)
-{
-    if (value1 < value2) {
-        return -1;
-    } else if (value1 > value2) {
-        return 1;
-    } else {
-        return 0;
-    }
-}
-
-function generateRandomInt(min, max)
-{
-    min = Math.ceil(min);
-    max = Math.floor(max);
-    return Math.floor(Math.random() * (max - min)) + min;
-}
-
-function lazyLoad(module, func)
-{
-    if (typeof LazyModules !== 'object' || !LazyModules[module]) {
-        console.log('Cannot load module ' + module);
-        return;
-    }
-
-    data.get(LazyModules[module], null, function(js) {
-        eval.call(window, js);
-        if (func)
-            func();
-    });
-}
-
-function saveBlob(blob, filename)
-{
-    let url = URL.createObjectURL(blob);
-    let anchor = html('a', {
-        download: filename,
-        href: url
-    });
-
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-
-    if(URL.revokeObjectURL)
-        setTimeout(function() { URL.revokeObjectURL(url) }, 60000);
-}
+    return this;
+}).call({});

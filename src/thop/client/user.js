@@ -49,7 +49,7 @@ let user = {};
 
     function connect(username, password, func)
     {
-        let url = buildUrl(thop.baseUrl('api/connect.json'));
+        let url = util.buildUrl(thop.baseUrl('api/connect.json'));
         let params = {
             username: username,
             password: password
@@ -65,7 +65,7 @@ let user = {};
 
     function disconnect(func)
     {
-        let url = buildUrl(thop.baseUrl('api/disconnect.json'));
+        let url = util.buildUrl(thop.baseUrl('api/disconnect.json'));
         let params = {};
 
         data.post(url, 'json', params, function(json) {
@@ -98,8 +98,8 @@ let user = {};
     {
         let prev_url_key = url_key;
 
-        url_key = getCookie('url_key') || 0;
-        username = getCookie('username');
+        url_key = util.getCookie('url_key') || 0;
+        username = util.getCookie('username');
 
         if (url_key !== prev_url_key) {
             for (let handler of change_handlers)

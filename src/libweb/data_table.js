@@ -24,7 +24,7 @@ function DataTable(widget)
     function handleExcelClick(e)
     {
         if (typeof XLSX === 'undefined') {
-            lazyLoad('xlsx', function() { handleExcelClick(e); });
+            data.lazyLoad('xlsx', function() { handleExcelClick(e); });
             return;
         }
 
