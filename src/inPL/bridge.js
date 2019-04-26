@@ -999,7 +999,7 @@ let bridge = (function() {
     function translateFloat(str)
     {
         let value = parseFloat(str);
-        return !isNaN(value) ? roundTo(value, 2) : null;
+        return !isNaN(value) ? util.roundTo(value, 2) : null;
     }
 
     function computeAge(birth_date, rdv_date)

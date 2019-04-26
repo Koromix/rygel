@@ -84,7 +84,7 @@ let thop = {};
         query('main').toggleClass('busy', true);
 
         // Parse new URL
-        let url_parts = new_url ? parseUrl(new_url) : route_url_parts;
+        let url_parts = new_url ? util.parseUrl(new_url) : route_url_parts;
         let app_url = url_parts.path.substr(BaseUrl.length);
 
         // Update scroll cache and history
@@ -131,7 +131,7 @@ let thop = {};
                     real_url += '#' + url_parts.hash;
 
                 window.history.replaceState(null, null, real_url);
-                route_url_parts = parseUrl(real_url);
+                route_url_parts = util.parseUrl(real_url);
                 route_url = real_url.substr(BaseUrl.length);
             } else {
                 route_url_parts = url_parts;
@@ -237,7 +237,7 @@ let thop = {};
                 url_key: null
             };
 
-            let url = buildUrl(thop.baseUrl('api/mco_settings.json'), {key: user.getUrlKey()});
+            let url = util.buildUrl(thop.baseUrl('api/mco_settings.json'), {key: user.getUrlKey()});
             data.get(url, 'json', function(json) {
                 mco_settings = json;
 

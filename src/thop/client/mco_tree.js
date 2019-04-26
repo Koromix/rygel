@@ -68,7 +68,7 @@ let mco_tree = {};
 
     function updateTree(date)
     {
-        let url = buildUrl(thop.baseUrl('api/mco_tree.json'), {date: date});
+        let url = util.buildUrl(thop.baseUrl('api/mco_tree.json'), {date: date});
         if (url === tree_url)
             return;
 

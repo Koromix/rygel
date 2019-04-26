@@ -312,7 +312,7 @@ let mco_list = {};
         if (new_route.group && Lists[new_route.list] && Lists[new_route.list].groups &&
                 new_route.group === Lists[new_route.list].groups[0].type)
             new_route.group = null;
-        url = buildUrl(url, {
+        url = util.buildUrl(url, {
             search: new_route.search || null,
             group: new_route.group,
             page: new_route.page,
@@ -339,7 +339,7 @@ let mco_list = {};
             sector: Lists[list_name].sector ? sector : null,
             spec: spec
         };
-        let url = buildUrl(thop.baseUrl(Lists[list_name].path), params);
+        let url = util.buildUrl(thop.baseUrl(Lists[list_name].path), params);
         let list = list_cache[list_name];
 
         if (!list || url !== list.url) {

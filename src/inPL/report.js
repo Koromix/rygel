@@ -154,7 +154,7 @@ let report = (function() {
                         mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
                     });
 
-                    saveBlob(out, `CR_${row.rdv_plid}.docx`);
+                    util.saveBlob(out, `CR_${row.rdv_plid}.docx`);
                 } catch (e) {
                     let error_count = 0;
                     if (e.properties.id === 'multi_error') {

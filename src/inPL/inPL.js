@@ -36,7 +36,7 @@ let inPL = (function() {
             refresh_tabs = 0xFFFFFFFF;
         }
 
-        let new_url = buildUrl('', route_params);
+        let new_url = util.buildUrl('', route_params);
         if (mark_history && new_url !== route_url) {
             window.history.pushState(null, null, new_url);
         } else {
@@ -62,7 +62,7 @@ let inPL = (function() {
 
     this.url = function(new_params) {
         new_params = Object.assign({}, route_params, new_params);
-        return buildUrl('', new_params);
+        return util.buildUrl('', new_params);
     };
     this.go = function(new_params) {
         route(new_params);
@@ -111,7 +111,7 @@ let inPL = (function() {
     function initNavigation()
     {
         window.addEventListener('popstate', function(e) {
-            route(parseUrl(window.location.href).params, false);
+            route(util.parseUrl(window.location.href).params, false);
             refreshMainView();
         });
 
@@ -119,7 +119,7 @@ let inPL = (function() {
             if (e.target && e.target.tagName == 'A' && !e.target.getAttribute('download')) {
                 let href = e.target.getAttribute('href');
                 if (href && !href.match(/^(?:[a-z]+:)?\/\//) && href[0] != '#') {
-                    self.go(parseUrl(href).params);
+                    self.go(util.parseUrl(href).params);
                     e.preventDefault();
                 }
             }
@@ -129,7 +129,7 @@ let inPL = (function() {
     window.addEventListener('load', function() {
         initNavigation();
 
-        let params = Object.assign({}, route_params, parseUrl(window.location.href).params);
+        let params = Object.assign({}, route_params, util.parseUrl(window.location.href).params);
         route(params, false);
 
         self.importAndRefresh();
