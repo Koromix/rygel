@@ -36,7 +36,9 @@
 
                     let script = sessionStorage.getItem('goupil_autoform_script');
                     if (script == null) {
-                        script = `let sexe = page.dropdown("sexe", "Sexe",
+                        script = `// Test autoform script
+
+let sexe = page.dropdown("sexe", "Sexe",
                          [["M", "Homme"], ["F", "Femme"]]);
 
 if (sexe.value == "F")
@@ -54,7 +56,7 @@ if (alcool.value)
 page.integer("enfants", "Combien avez-vous d'enfants ?", {min: 0, max: 30});
 page.boolean("frites", "Aimez-vous les frites ?",
              {help: "Si si, c'est important, je vous le jure !"});
-            `;
+`;
                     }
                     editor.setValue(script);
                     editor.clearSelection();
