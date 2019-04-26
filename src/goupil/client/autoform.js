@@ -130,71 +130,38 @@ function PageBuilder(root, widgets) {
     };
 }
 
-function generatePage(script) {
-    let root = document.querySelector('#af_form');
-    let log = document.querySelector('#af_log');
+function AutoForm(widget) {
+    let self = this;
 
-    let widgets = [];
-    let page = new PageBuilder(root, widgets);
-    page.changeHandler = () => generatePage(script);
+    let form;
+    let log;
 
-    try {
-        Function('page', script)(page);
+    self.render = function(script) {
+        let widgets = [];
 
-        render(root, () => html`${widgets.map(w => w.func(w.errors))}`);
-        log.innerHTML = '';
+        let page = new PageBuilder(form, widgets);
+        page.changeHandler = () => self.render(script);
 
-        return true;
-    } catch (err) {
-        // TODO: Parse err.stack to get the error line in the Function() scope
-        log.textContent = `⚠ ${err.message}`;
-        return false;
-    }
-}
+        try {
+            Function('page', script)(page);
 
-function refreshAndSave() {
-    let editor = ace.edit('af_editor');
-    let script = editor.getValue();
+            render(form, () => html`${widgets.map(w => w.func(w.errors))}`);
+            log.innerHTML = '';
 
-    if (generatePage(script))
-        localStorage.setItem('script', script);
-}
-
-document.addEventListener('readystatechange', function() {
-    if (document.readyState === 'complete') {
-        let editor = ace.edit('af_editor');
-
-        editor.setTheme('ace/theme/monokai');
-        editor.setShowPrintMargin(false);
-        editor.setFontSize(12);
-        editor.session.setMode('ace/mode/javascript');
-
-        let script = localStorage.getItem('script');
-        if (script == null) {
-            script = `let sexe = page.dropdown("sexe", "Sexe",
-                         [["M", "Homme"], ["F", "Femme"]]);
-
-if (sexe.value == "F")
-    page.boolean("enceinte", "Êtes-vous enceinte ?");
-
-let alcool = page.boolean("alcool", "Consommez-vous de l'alcool ?");
-if (alcool.value && sexe.value == "F" && page.value("enceinte")) {
-    alcool.error("Pensez au bébé...");
-    alcool.error("On peut mettre plusieurs erreurs");
-    page.error("alcool", "Et de plein de manières différentes !");
-}
-if (alcool.value)
-    page.integer("alcool_qt", "Combien de verres par semaine ?", {min: 1, max: 30});
-
-page.integer("enfants", "Combien avez-vous d'enfants ?", {min: 0, max: 30});
-page.boolean("frites", "Aimez-vous les frites ?",
-             {help: "Si si, c'est important, je vous le jure !"});
-`;
+            return true;
+        } catch (err) {
+            // TODO: Parse err.stack to get the error line in the Function() scope
+            log.textContent = `⚠ ${err.message}`;
+            return false;
         }
-        editor.setValue(script);
-        editor.clearSelection();
+    };
 
-        editor.on('change', refreshAndSave);
-        refreshAndSave();
-    }
-});
+    render(widget, () => html`
+        <div class="af_form"></div>
+        <div class="af_log"></div>
+    `);
+    form = widget.childNodes[0];
+    log = widget.childNodes[1];
+
+    widget.object = this;
+}

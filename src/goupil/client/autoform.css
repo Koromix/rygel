@@ -11,17 +11,19 @@
     z-index: 999;
     box-sizing: border-box;
 }
-#af_log { color: red; }
-
 #af_page {
     max-width: 800px;
-    margin: 0 0 0 calc(50% + 0.5em);
+    margin: 0 0 0 50%;
 }
-#af_form {
+
+.af_form {
     background: #eee;
     padding: 2px;
 }
-#af_log { padding: 5px; }
+.af_log {
+    padding: 5px;
+    color: red;
+}
 
 .af_var {
     margin: 6px;

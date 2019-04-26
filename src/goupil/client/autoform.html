@@ -11,11 +11,60 @@
 
         <title>goupil autoform</title>
 
-        <!-- Editor -->
         <script src="{BASE_URL}static/ace.js"></script>
-
-        <!-- Our code -->
         <script src="{BASE_URL}static/goupil.pk.js"></script>
+        <script>
+            function refreshAndSave() {
+                let editor = ace.edit('af_editor');
+                let page = document.querySelector('#af_page');
+
+                let script = editor.getValue();
+
+                let autoform = new AutoForm(page);
+                if (autoform.render(script))
+                    localStorage.setItem('script', script);
+            }
+
+            document.addEventListener('readystatechange', function() {
+                if (document.readyState === 'complete') {
+                    let editor = ace.edit('af_editor');
+
+                    editor.setTheme('ace/theme/monokai');
+                    editor.setShowPrintMargin(false);
+                    editor.setFontSize(12);
+                    editor.session.setMode('ace/mode/javascript');
+
+                    let script = localStorage.getItem('script');
+                    if (script == null) {
+                        script = `let sexe = page.dropdown("sexe", "Sexe",
+                         [["M", "Homme"], ["F", "Femme"]]);
+
+if (sexe.value == "F")
+    page.boolean("enceinte", "Êtes-vous enceinte ?");
+
+let alcool = page.boolean("alcool", "Consommez-vous de l'alcool ?");
+if (alcool.value && sexe.value == "F" && page.value("enceinte")) {
+    alcool.error("Pensez au bébé...");
+    alcool.error("On peut mettre plusieurs erreurs");
+    page.error("alcool", "Et de plein de manières différentes !");
+}
+if (alcool.value)
+    page.integer("alcool_qt", "Combien de verres par semaine ?", {min: 1, max: 30});
+
+page.integer("enfants", "Combien avez-vous d'enfants ?", {min: 0, max: 30});
+page.boolean("frites", "Aimez-vous les frites ?",
+             {help: "Si si, c'est important, je vous le jure !"});
+            `;
+                    }
+                    editor.setValue(script);
+                    editor.clearSelection();
+
+                    editor.on('change', refreshAndSave);
+                    refreshAndSave();
+                }
+            });
+        </script>
+
         <link rel="stylesheet" href="{BASE_URL}static/goupil.pk.css"/>
     </head>
 
@@ -27,11 +76,7 @@
 
         <main>
             <div id="af_editor"></div>
-
-            <div id="af_page">
-                <div id="af_form"></div>
-                <div id="af_log"></div>
-            </div>
+            <div id="af_page"></div>
         </main>
     </body>
 </html>
