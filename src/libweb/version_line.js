@@ -30,8 +30,8 @@ function VersionLine(widget)
 
         if (versions.length >= 2) {
             widget.appendContent(
-                svg('line', {class: 'vlin_line', x1: '2%', y1: 20, x2: '98%', y2: 20}),
-                svg('g')
+                dom.s('line', {class: 'vlin_line', x1: '2%', y1: 20, x2: '98%', y2: 20}),
+                dom.s('g')
             );
             let g = widget.query('g');
 
@@ -63,13 +63,13 @@ function VersionLine(widget)
                     href = '#';
                 }
 
-                let anchor = svg('a', {click: handleNodeClick});
+                let anchor = dom.s('a', {click: handleNodeClick});
                 anchor.setAttributeNS('http://www.w3.org/1999/xlink', 'href', href);
                 anchor.value = version.date;
 
-                let node = svg('circle', {class: 'vlin_node', cx: x, cy: 20,
-                                          r: radius, fill: color},
-                    svg('title', version.tooltip)
+                let node = dom.s('circle', {class: 'vlin_node', cx: x, cy: 20,
+                                            r: radius, fill: color},
+                    dom.s('title', version.tooltip)
                 );
                 anchor.appendChild(node);
 
@@ -77,9 +77,9 @@ function VersionLine(widget)
                     let text_y = text_above ? 10 : 40;
                     text_above = !text_above;
 
-                    let text = svg('text', {class: 'vlin_text', x: x, y: text_y,
-                                            'text-anchor': 'middle', fill: color,
-                                            style: 'font-weight: ' + weight + ';'},
+                    let text = dom.s('text', {class: 'vlin_text', x: x, y: text_y,
+                                              'text-anchor': 'middle', fill: color,
+                                              style: 'font-weight: ' + weight + ';'},
                                    version.label);
                     anchor.appendChild(text);
                 }

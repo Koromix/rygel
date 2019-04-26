@@ -7,9 +7,9 @@ let report = (function() {
 
     function createRow(title, value)
     {
-        return html('tr',
-            html('th', title),
-            html('td', value)
+        return dom.h('tr',
+            dom.h('th', title),
+            dom.h('td', value)
         );
     }
 
@@ -20,27 +20,27 @@ let report = (function() {
         let report = query('#inpl_report');
 
         report.replaceContent(
-            html('h1', 'Identité'),
-            row ? html('div',
-                html('table',
+            dom.h('h1', 'Identité'),
+            row ? dom.h('div',
+                dom.h('table',
                     createRow('Nom', row.consultant_nom),
                     createRow('Prénom', row.consultant_prenom),
                     createRow('Sexe', {M: 'Homme', F: 'Femme'}[row.consultant_sexe]),
                     createRow('Date de naissance', row.consultant_date_naissance)
                 )
             ) : null,
-            html('h1', 'Biologie médicale'),
-            html('h1', 'Examen général'),
-            html('h1', 'Électrocardiogramme (ECG)'),
-            html('h1', 'Examen de la vision'),
-            html('h1', 'Examen de l\'audition'),
-            html('h1', 'Examen de spirométrie'),
-            html('h1', 'Examen de densitométrie osseuse'),
-            html('h1', 'Entretien avec neuro-psychologue'),
-            html('h1', 'Entretien avec nutritionniste'),
-            html('h1', 'Entretien avec EMS'),
-            row ? html('button', {style: 'display: block; margin: 0 auto;',
-                                  click: (e) => generateDocument(row)}, 'Générer un Compte-Rendu') : null
+            dom.h('h1', 'Biologie médicale'),
+            dom.h('h1', 'Examen général'),
+            dom.h('h1', 'Électrocardiogramme (ECG)'),
+            dom.h('h1', 'Examen de la vision'),
+            dom.h('h1', 'Examen de l\'audition'),
+            dom.h('h1', 'Examen de spirométrie'),
+            dom.h('h1', 'Examen de densitométrie osseuse'),
+            dom.h('h1', 'Entretien avec neuro-psychologue'),
+            dom.h('h1', 'Entretien avec nutritionniste'),
+            dom.h('h1', 'Entretien avec EMS'),
+            row ? dom.h('button', {style: 'display: block; margin: 0 auto;',
+                                   click: (e) => generateDocument(row)}, 'Générer un Compte-Rendu') : null
         );
     };
 

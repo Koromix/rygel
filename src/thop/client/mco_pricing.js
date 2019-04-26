@@ -199,7 +199,7 @@ let mco_pricing = {};
         el.replaceContent(
             ghm_roots.map(function(ghm_root_info) {
                 let disabled = !checkIndexGhmRoot(indexes, main_index, sector, ghm_root_info.ghm_root);
-                return html('option',
+                return dom.h('option',
                     {value: ghm_root_info.ghm_root, disabled: disabled},
                     ghm_root_info.ghm_root + ' – ' + ghm_root_info.desc + (disabled ? ' *' : '')
                 );
@@ -213,10 +213,10 @@ let mco_pricing = {};
         let el = query("#opt_diff_index > select");
 
         el.replaceContent(
-            html('option', {value: ''}, 'Désactiver'),
+            dom.h('option', {value: ''}, 'Désactiver'),
             indexes.map(function(index, i) {
                 let disabled = !checkIndexGhmRoot(indexes, i, sector, test_ghm_root);
-                return html('option',
+                return dom.h('option',
                     {value: indexes[i].begin_date, disabled: disabled},
                     indexes[i].begin_date + (disabled ? ' *' : '')
                 );
@@ -234,8 +234,8 @@ let mco_pricing = {};
 
         let table = query('#pr_table');
         table.replaceContent(
-            html('thead'),
-            html('tbody')
+            dom.h('thead'),
+            dom.h('tbody')
         );
 
         if (pricing_info && pricing_info[main_index] &&
@@ -252,14 +252,14 @@ let mco_pricing = {};
                 if (duration % 10 == 0) {
                     let text = '' + duration + ' - ' +
                                     format.duration(Math.min(max_duration - 1, duration + 9));
-                    let tr = html('tr',
-                        html('th', {class: 'repeat', colspan: ghs.length + 1}, text)
+                    let tr = dom.h('tr',
+                        dom.h('th', {class: 'repeat', colspan: ghs.length + 1}, text)
                     );
                     tbody.appendContent(tr);
                 }
 
-                let tr = html('tr',
-                    html('th', format.duration(duration))
+                let tr = dom.h('tr',
+                    dom.h('th', format.duration(duration))
                 );
                 for (const col of ghs) {
                     let info;
@@ -272,8 +272,8 @@ let mco_pricing = {};
 
                     let td;
                     if (info) {
-                        td = html('td', {class: info.mode},
-                                  format.price(info.price, true, diff_index >= 0));
+                        td = dom.h('td', {class: info.mode},
+                                   format.price(info.price, true, diff_index >= 0));
 
                         let title = '';
                         if (!duration && col.warn_cmd28) {
@@ -291,7 +291,7 @@ let mco_pricing = {};
                         if (title)
                             td.title = title;
                     } else {
-                        td = html('td');
+                        td = dom.h('td');
                     }
                     tr.appendContent(td);
                 }
@@ -317,15 +317,15 @@ let mco_pricing = {};
         }
 
         thead.appendContent(
-            html('tr',
-                html('td', {colspan: 1 + columns.length, class: 'ghm_root'}, title)
+            dom.h('tr',
+                dom.h('td', {colspan: 1 + columns.length, class: 'ghm_root'}, title)
             )
         );
 
         function appendRow(name, func)
         {
-            let tr = html('tr',
-                html('th', name)
+            let tr = dom.h('tr',
+                dom.h('th', name)
             );
 
             let prev_cell = [document.createTextNode(''), {}, false];
@@ -343,7 +343,7 @@ let mco_pricing = {};
                     let colspan = parseInt(prev_td.getAttribute('colspan') || 1);
                     prev_td.setAttribute('colspan', colspan + 1);
                 } else {
-                    prev_td = tr.appendChild(html('td', cell[1], cell[0]));
+                    prev_td = tr.appendChild(dom.h('td', cell[1], cell[0]));
                 }
 
                 prev_cell = cell;
@@ -357,8 +357,8 @@ let mco_pricing = {};
         appendRow('Niveau', function(col) { return ['Niveau ' + col.ghm.substr(5, 1), {class: 'desc'}, true]; });
         if (show_pricing) {
             appendRow('Conditions', function(col) {
-                let el = html('div', {title: col.conditions.join('\n')},
-                              col.conditions.length ? col.conditions.length.toString() : '');
+                let el = dom.h('div', {title: col.conditions.join('\n')},
+                               col.conditions.length ? col.conditions.length.toString() : '');
                 return [el, {class: 'conditions'}, true];
             });
             appendRow('Borne basse', function(col) { return [format.duration(col.exb_treshold), {class: 'exb'}, true]; });

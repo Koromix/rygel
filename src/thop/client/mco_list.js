@@ -365,7 +365,7 @@ let mco_list = {};
         if (spec) {
             h1.replaceContent(
                 'Filtre : ' + spec + ' ',
-                html('a', {href: routeToUrl({spec: null}).url}, '(retirer)')
+                dom.h('a', {href: routeToUrl({spec: null}).url}, '(retirer)')
             );
             h1.removeClass('hide');
         } else {
@@ -380,7 +380,7 @@ let mco_list = {};
 
         el.replaceContent(
             list_info.groups.map(function(group) {
-                return html('option', {value: group.type}, group.name)
+                return dom.h('option', {value: group.type}, group.name)
             })
         );
 
@@ -555,7 +555,7 @@ let mco_list = {};
             return str;
         }
 
-        let anchor = html('a', {href: url, class: cls}, str);
+        let anchor = dom.h('a', {href: url, class: cls}, str);
 
         return anchor;
     }
@@ -585,7 +585,7 @@ let mco_list = {};
             if (last_page) {
                 let builder = new Pager(pager, active_page, last_page);
                 builder.anchorBuilder = function(text, active_page) {
-                    return html('a', {href: routeToUrl({page: active_page}).url}, '' + text);
+                    return dom.h('a', {href: routeToUrl({page: active_page}).url}, '' + text);
                 }
                 builder.render();
 

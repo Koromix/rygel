@@ -28,14 +28,14 @@ function Pager(widget, active_page, last_page)
             if (self.anchorBuilder) {
                 content = self.anchorBuilder.call(this, '' + text, page);
             } else {
-                content = html('a', {href: '#', click: function(e) { handlePageClick(e, page); }},
-                               '' + text);
+                content = dom.h('a', {href: '#', click: function(e) { handlePageClick(e, page); }},
+                                '' + text);
             }
         } else {
             content = '' + text;
         }
 
-        let td = html('td', content);
+        let td = dom.h('td', content);
         tr.appendChild(td);
 
         return td;
@@ -43,7 +43,7 @@ function Pager(widget, active_page, last_page)
 
     this.render = function() {
         widget.addClass('pagr');
-        widget.replaceContent(html('tr'));
+        widget.replaceContent(dom.h('tr'));
         let tr = widget.firstChild;
 
         let start_page, end_page;

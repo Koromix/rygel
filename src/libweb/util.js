@@ -83,65 +83,72 @@ Element.prototype.replaceContent = function() {
 // DOM creation
 // ------------------------------------------------------------------------
 
-function expandNamespace(ns)
-{
-    return ({
-        svg: 'http://www.w3.org/2000/svg',
-        html: 'http://www.w3.org/1999/xhtml'
-    })[ns] || ns;
-}
+// For new code, prefer lighterhtml to this crap, unless you need
+// compatibility with older browsers (e.g. for THOP).
 
-function createElement(ns, tag, attributes, children)
-{
-    ns = expandNamespace(ns);
-    let el = document.createElementNS(ns, tag);
+let dom = (function() {
+    let self = this;
 
-    for (const key in attributes) {
-        let value = attributes[key];
+    function expandNamespace(ns)
+    {
+        return ({
+            svg: 'http://www.w3.org/2000/svg',
+            html: 'http://www.w3.org/1999/xhtml'
+        })[ns] || ns;
+    }
 
-        if (Array.isArray(value)) {
-            value = value.filter(function(x) { return !!x; })
-                         .map(function(x) { return '' + x; })
-                         .join(' ');
-            el.setAttribute(key, value);
-        } else if (value === null || value === undefined) {
-            // Skip attribute
-        } else if (typeof value === 'function') {
-            el.addEventListener(key, value.bind(el));
-        } else if (typeof value === 'boolean') {
-            if (value)
-                el.setAttribute(key, '');
-        } else {
-            el.setAttribute(key, value);
+    function create(ns, tag, attributes, children)
+    {
+        ns = expandNamespace(ns);
+        let el = document.createElementNS(ns, tag);
+
+        for (const key in attributes) {
+            let value = attributes[key];
+
+            if (Array.isArray(value)) {
+                value = value.filter(function(x) { return !!x; })
+                             .map(function(x) { return '' + x; })
+                             .join(' ');
+                el.setAttribute(key, value);
+            } else if (value === null || value === undefined) {
+                // Skip attribute
+            } else if (typeof value === 'function') {
+                el.addEventListener(key, value.bind(el));
+            } else if (typeof value === 'boolean') {
+                if (value)
+                    el.setAttribute(key, '');
+            } else {
+                el.setAttribute(key, value);
+            }
         }
+
+        el.appendContent(children);
+
+        return el;
     }
 
-    el.appendContent(children);
+    this.createProxy = function(ns, tag, args, args_idx) {
+        let attributes;
+        if (arguments.length > args_idx &&
+                args[args_idx] instanceof Object &&
+                !(args[args_idx] instanceof Node || Array.isArray(args[args_idx]))) {
+            attributes = args[args_idx++];
+        } else {
+            attributes = {};
+        }
 
-    return el;
-}
+        let el = create(ns, tag, attributes, []);
+        for (let i = args_idx; i < args.length; i++)
+            el.appendContent(args[i]);
 
-function createElementProxy(ns, tag, args, args_idx)
-{
-    let attributes;
-    if (arguments.length > args_idx &&
-            args[args_idx] instanceof Object &&
-            !(args[args_idx] instanceof Node || Array.isArray(args[args_idx]))) {
-        attributes = args[args_idx++];
-    } else {
-        attributes = {};
-    }
+        return el;
+    };
 
-    let el = createElement(ns, tag, attributes, []);
-    for (let i = args_idx; i < args.length; i++)
-        el.appendContent(args[i]);
+    this.h = function(tag) { return self.createProxy('html', tag, arguments, 1); };
+    this.s = function(tag) { return self.createProxy('svg', tag, arguments, 1); };
 
-    return el;
-}
-
-function elem(ns, tag) { return createElementProxy(ns, tag, arguments, 2); }
-function html(tag) { return createElementProxy('html', tag, arguments, 1); }
-function svg(tag) { return createElementProxy('svg', tag, arguments, 1); }
+    return this;
+}).call({});
 
 // ------------------------------------------------------------------------
 // Utility
@@ -235,14 +242,14 @@ let util = (function() {
 
     this.saveBlob = function(blob, filename) {
         let url = URL.createObjectURL(blob);
-        let anchor = html('a', {
-            download: filename,
-            href: url
-        });
 
-        document.body.appendChild(anchor);
-        anchor.click();
-        document.body.removeChild(anchor);
+        let a = document.createElement('a');
+        a.download = filename;
+        a.href = url;
+
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
 
         if(URL.revokeObjectURL)
             setTimeout(function() { URL.revokeObjectURL(url) }, 60000);
