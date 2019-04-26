@@ -22,7 +22,7 @@
 
                 let autoform = new AutoForm(page);
                 if (autoform.render(script))
-                    localStorage.setItem('script', script);
+                    sessionStorage.setItem('goupil_autoform_script', script);
             }
 
             document.addEventListener('readystatechange', function() {
@@ -34,7 +34,7 @@
                     editor.setFontSize(12);
                     editor.session.setMode('ace/mode/javascript');
 
-                    let script = localStorage.getItem('script');
+                    let script = sessionStorage.getItem('goupil_autoform_script');
                     if (script == null) {
                         script = `let sexe = page.dropdown("sexe", "Sexe",
                          [["M", "Homme"], ["F", "Femme"]]);
