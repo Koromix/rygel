@@ -117,7 +117,10 @@ function PageBuilder(root, widgets) {
             if (isNaN(value) || value == null) {
                 text = '';
             } else if (isFinite(value)) {
-                text = value.toFixed(2);
+                // This is a garbage way to round numbers
+                let multiplicator = Math.pow(10, 2);
+                let n = parseFloat((value * multiplicator).toFixed(11));
+                text = Math.round(n) / multiplicator;
             }
         }
 
