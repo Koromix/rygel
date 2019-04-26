@@ -18,7 +18,7 @@ function PeriodPicker(widget, min_date, max_date, start_date, end_date)
     let grab_start_day;
     let grab_end_day;
 
-    let parser = html('input', {type: 'date'});
+    let parser = dom.h('input', {type: 'date'});
     function strToDate(str)
     {
         // Put a few hours into the day to avoid DST problems
@@ -239,20 +239,20 @@ function PeriodPicker(widget, min_date, max_date, start_date, end_date)
     widget.addClass('ppik');
     widget.replaceContent(
         // This dummy button catches click events that happen when a label encloses the widget
-        html('button', {style: 'display: none;', click: function(e) { e.preventDefault(); }}),
+        dom.h('button', {style: 'display: none;', click: function(e) { e.preventDefault(); }}),
 
-        html('div', {class: 'ppik_main'},
-            html('div', {class: 'ppik_line'}),
-            html('div', Object.assign({class: 'ppik_bar'}, mouseEvents(handleBarDown, handleBarMove))),
-            html('div', {class: 'ppik_handle'},
-                html('div', mouseEvents(handleHandleDown, handleHandleMove)),
-                html('input', {type: 'date', style: 'bottom: 4px;',
-                               change: handleDateChange, focusout: handleDateFocusOut})
+        dom.h('div', {class: 'ppik_main'},
+            dom.h('div', {class: 'ppik_line'}),
+            dom.h('div', Object.assign({class: 'ppik_bar'}, mouseEvents(handleBarDown, handleBarMove))),
+            dom.h('div', {class: 'ppik_handle'},
+                dom.h('div', mouseEvents(handleHandleDown, handleHandleMove)),
+                dom.h('input', {type: 'date', style: 'bottom: 4px;',
+                                change: handleDateChange, focusout: handleDateFocusOut})
             ),
-            html('div', {class: 'ppik_handle'},
-                html('div', mouseEvents(handleHandleDown, handleHandleMove)),
-                html('input', {type: 'date', style: 'top: 18px;',
-                               change: handleDateChange, focusout: handleDateFocusOut})
+            dom.h('div', {class: 'ppik_handle'},
+                dom.h('div', mouseEvents(handleHandleDown, handleHandleMove)),
+                dom.h('input', {type: 'date', style: 'top: 18px;',
+                                change: handleDateChange, focusout: handleDateFocusOut})
             )
         )
     );

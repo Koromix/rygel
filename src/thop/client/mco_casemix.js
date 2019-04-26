@@ -500,7 +500,7 @@ let mco_casemix = {};
 
         el.replaceContent(
             settings.algorithms.map(function(algorithm) {
-                return html('option',
+                return dom.h('option',
                     {value: algorithm.name},
                     'Algorithme ' + algorithm.name + (algorithm.name === settings.default_algorithm ? ' *' : '')
                 );
@@ -579,7 +579,7 @@ let mco_casemix = {};
         el.replaceContent(
             ghm_roots.map(function(ghm_root_info) {
                 let disabled = !checkCasemixGhmRoot(ghm_root_info.ghm_root);
-                return html('option',
+                return dom.h('option',
                     {value: ghm_root_info.ghm_root, disabled: disabled},
                     ghm_root_info.ghm_root + ' – ' + ghm_root_info.desc + (disabled ? ' *' : '')
                 );
@@ -801,7 +801,7 @@ let mco_casemix = {};
                     }
 
                     let elements = [
-                        html('a', {href: routeToUrl({view: 'durations', ghm_root: ghm_root}).url}, ghm_root),
+                        dom.h('a', {href: routeToUrl({view: 'durations', ghm_root: ghm_root}).url}, ghm_root),
                         ghm_root_info ? ' - ' + ghm_root_info.desc : null
                     ];
                     let title = ghm_root_info ? (ghm_root + ' - ' + ghm_root_info.desc) : null;
@@ -855,7 +855,7 @@ let mco_casemix = {};
             if (last_page) {
                 let builder = new Pager(pager, active_page, last_page);
                 builder.anchorBuilder = function(text, active_page) {
-                    return html('a', {href: routeToUrl({page: active_page}).url}, '' + text);
+                    return dom.h('a', {href: routeToUrl({page: active_page}).url}, '' + text);
                 }
                 builder.render();
 
@@ -874,8 +874,8 @@ let mco_casemix = {};
 
         let table = query('#cm_table');
         table.replaceContent(
-            html('thead'),
-            html('tbody')
+            dom.h('thead'),
+            dom.h('tbody')
         );
 
         if (mix_durations[ghm_root] && mix_durations[ghm_root].rows.length) {
@@ -986,8 +986,8 @@ let mco_casemix = {};
 
             // Totals
             {
-                let tr = html('tr',
-                    html('th', 'Total')
+                let tr = dom.h('tr',
+                    dom.h('th', 'Total')
                 );
 
                 for (const col of columns) {
@@ -999,17 +999,17 @@ let mco_casemix = {};
                                         stats1_units.findPartial(col.ghm, col.ghs));
 
                         tr.appendContent(
-                            html('td', {class: ['count', 'total'].concat(diffToClasses(col_stat.count)),
-                                        title: tooltip},
+                            dom.h('td', {class: ['count', 'total'].concat(diffToClasses(col_stat.count)),
+                                         title: tooltip},
                                  '' + format.number(col_stat.count, !!mix_params.diff)),
-                            html('td', {class: ['price', 'total'].concat(diffToClasses(col_stat.price_cents_total)),
-                                        title: tooltip},
+                            dom.h('td', {class: ['price', 'total'].concat(diffToClasses(col_stat.price_cents_total)),
+                                         title: tooltip},
                                  format.price(col_stat.price_cents_total, false, !!mix_params.diff))
                         );
                     } else {
                         tr.appendContent(
-                            html('td', {class: ['count', 'total', 'empty']}),
-                            html('td', {class: ['price', 'total', 'empty']})
+                            dom.h('td', {class: ['count', 'total', 'empty']}),
+                            dom.h('td', {class: ['price', 'total', 'empty']})
                         );
                     }
                 }
@@ -1024,14 +1024,14 @@ let mco_casemix = {};
                 if (duration % 10 == 0) {
                     let text = '' + duration + ' - ' +
                                     format.duration(Math.min(max_duration - 1, duration + 9));
-                    let tr = html('tr',
-                        html('th', {class: 'repeat', colspan: columns.length * 2 + 1}, text)
+                    let tr = dom.h('tr',
+                        dom.h('th', {class: 'repeat', colspan: columns.length * 2 + 1}, text)
                     );
                     tbody.appendContent(tr);
                 }
 
-                let tr = html('tr',
-                    html('th', format.duration(duration))
+                let tr = dom.h('tr',
+                    dom.h('th', format.duration(duration))
                 );
                 for (const col of columns) {
                     let col_stat = stats1.find(col.ghm, col.ghs);
@@ -1053,23 +1053,23 @@ let mco_casemix = {};
                                         stats2_units.findPartial(col.ghm, col.ghs, duration));
 
                         tr.appendContent(
-                            html('td', {class: ['count', cls].concat(diffToClasses(duration_stat.count)),
-                                        title: tooltip},
+                            dom.h('td', {class: ['count', cls].concat(diffToClasses(duration_stat.count)),
+                                         title: tooltip},
                                  '' + format.number(duration_stat.count, !!mix_params.diff)),
-                            html('td', {class: ['price', cls].concat(diffToClasses(duration_stat.price_cents_total)),
-                                        title: tooltip},
+                            dom.h('td', {class: ['price', cls].concat(diffToClasses(duration_stat.price_cents_total)),
+                                         title: tooltip},
                                  format.price(duration_stat.price_cents_total, false, !!mix_params.diff))
                         );
                     } else if (mco_pricing.testDuration(col.durations, duration)) {
                         cls += ' empty';
                         tr.appendContent(
-                            html('td', {class: ['count', cls]}),
-                            html('td', {class: ['price', cls]})
+                            dom.h('td', {class: ['count', cls]}),
+                            dom.h('td', {class: ['price', cls]})
                         );
                     } else {
                         tr.appendContent(
-                            html('td', {class: 'count'}),
-                            html('td', {class: 'price'})
+                            dom.h('td', {class: 'count'}),
+                            dom.h('td', {class: 'price'})
                         );
                     }
                 }
@@ -1131,9 +1131,9 @@ let mco_casemix = {};
         function createInfoRow(key, value, title)
         {
             if (value !== null && value !== undefined) {
-                return html('tr',
-                    html('th', key),
-                    html('td', {title: title}, '' + (value || ''))
+                return dom.h('tr',
+                    dom.h('th', key),
+                    dom.h('td', {title: title}, '' + (value || ''))
                 );
             } else {
                 return null;
@@ -1155,29 +1155,29 @@ let mco_casemix = {};
         for (let i = offset; i < end; i++) {
             const result = results[i];
 
-            let table = html('table', {class: 'rt_result', 'data-bill_id': result.bill_id},
-                html('tbody',
-                    html('tr', {class: 'rt_header'},
-                        html('td',
-                            html('a', {class: 'rt_id', href: '#', click: handleIdClick},
-                                 '' + result.bill_id)
+            let table = dom.h('table', {class: 'rt_result', 'data-bill_id': result.bill_id},
+                dom.h('tbody',
+                    dom.h('tr', {class: 'rt_header'},
+                        dom.h('td',
+                            dom.h('a', {class: 'rt_id', href: '#', click: handleIdClick},
+                                  '' + result.bill_id)
                         ),
-                        html('td', (['♂ ', '♀ '][result.sex - 1] || '') + format.age(result.age)),
-                        html('td', (result.duration !== undefined ? format.duration(result.duration) : '') +
-                                   (result.stays[result.stays.length - 1].exit_mode == '9' ? ' (✝)' : '')),
-                        html('td', {title: codeWithDesc(ghm_roots_map, result.ghm_root) + '\n\n' +
-                                           'GHM : ' + result.ghm + '\n' +
-                                           'Erreur : ' + codeWithDesc(errors_map, result.main_error) + '\n' +
-                                           'GHS : ' + result.ghs},
-                            html('a', {href: mco_pricing.routeToUrl({view: 'table',
-                                                                     date: result.index_date,
-                                                                     ghm_root: result.ghm.substr(0, 5)}).url},
+                        dom.h('td', (['♂ ', '♀ '][result.sex - 1] || '') + format.age(result.age)),
+                        dom.h('td', (result.duration !== undefined ? format.duration(result.duration) : '') +
+                                    (result.stays[result.stays.length - 1].exit_mode == '9' ? ' (✝)' : '')),
+                        dom.h('td', {title: codeWithDesc(ghm_roots_map, result.ghm_root) + '\n\n' +
+                                            'GHM : ' + result.ghm + '\n' +
+                                            'Erreur : ' + codeWithDesc(errors_map, result.main_error) + '\n' +
+                                            'GHS : ' + result.ghs},
+                            dom.h('a', {href: mco_pricing.routeToUrl({view: 'table',
+                                                                      date: result.index_date,
+                                                                      ghm_root: result.ghm.substr(0, 5)}).url},
                                  result.ghm),
                             result.ghm.startsWith('90') ? (' [' + result.main_error + ']')
                                                         : (' (' + result.ghs + ')')
                         ),
-                        html('td', {style: 'text-align: right;'}, format.price(result.price_cents) + '€'),
-                        html('td', {style: 'text-align: right;'}, format.price(result.total_cents) + '€')
+                        dom.h('td', {style: 'text-align: right;'}, format.price(result.price_cents) + '€'),
+                        dom.h('td', {style: 'text-align: right;'}, format.price(result.total_cents) + '€')
                     )
                 )
             );
@@ -1191,25 +1191,25 @@ let mco_casemix = {};
                 const stay = result.stays[j];
 
                 tbody.appendContent(
-                    html('tr', {class: 'rt_stay'},
-                        html('td', 'RUM ' + (j + 1) + (j == result.main_stay ? ' *' : '')),
-                        html('th', {title: unitPath(stay.unit)}, '' + (stay.unit || '')),
-                        html('td', (stay.duration !== undefined ? format.duration(stay.duration) : '') +
-                                   (stay.exit_mode == '9' ? ' (✝)' : '')),
-                        html('td'),
-                        html('td', {style: 'text-align: right;'},
-                             stay.total_cents ? (format.price(stay.price_cents) + '€') : ''),
-                        html('td', {style: 'text-align: right;'},
-                             stay.price_cents ? (format.price(stay.total_cents) + '€') : '')
+                    dom.h('tr', {class: 'rt_stay'},
+                        dom.h('td', 'RUM ' + (j + 1) + (j == result.main_stay ? ' *' : '')),
+                        dom.h('th', {title: unitPath(stay.unit)}, '' + (stay.unit || '')),
+                        dom.h('td', (stay.duration !== undefined ? format.duration(stay.duration) : '') +
+                                    (stay.exit_mode == '9' ? ' (✝)' : '')),
+                        dom.h('td'),
+                        dom.h('td', {style: 'text-align: right;'},
+                              stay.total_cents ? (format.price(stay.price_cents) + '€') : ''),
+                        dom.h('td', {style: 'text-align: right;'},
+                              stay.price_cents ? (format.price(stay.total_cents) + '€') : '')
                     )
                 );
 
                 if (stay.sex) {
-                    let tr = html('tr', {class: 'rt_details'},
-                        html('td', {colspan: 6},
-                            html('table'),
-                            html('table'),
-                            html('table')
+                    let tr = dom.h('tr', {class: 'rt_details'},
+                        dom.h('td', {colspan: 6},
+                            dom.h('table'),
+                            dom.h('table'),
+                            dom.h('table')
                         )
                     );
                     let table0 = tr.firstChild.childNodes[0];
@@ -1260,16 +1260,16 @@ let mco_casemix = {};
                             if (diag.severity) {
                                 if (diag.exclude) {
                                     contents.push(' ');
-                                    contents.push(html('s', '(' + (diag.severity + 1) + ')'));
+                                    contents.push(dom.h('s', '(' + (diag.severity + 1) + ')'));
                                 } else {
                                     contents.push(' (' + (diag.severity + 1) + ')');
                                 }
                             }
 
                             table1.appendContent(
-                                html('tr',
-                                    html('th', k ? '' : 'Diagnostics associés'),
-                                    html('td', {title: codeWithDesc(cim10_map, diag.diag)}, contents)
+                                dom.h('tr',
+                                    dom.h('th', k ? '' : 'Diagnostics associés'),
+                                    dom.h('td', {title: codeWithDesc(cim10_map, diag.diag)}, contents)
                                 )
                             );
                         }
@@ -1309,9 +1309,9 @@ let mco_casemix = {};
                                        (proc.count !== 1 ? ' * ' + proc.count : '');
 
                             table2.appendContent(
-                                html('tr',
-                                    html('th', k ? '' : 'Actes'),
-                                    html('td', {title: codeWithDesc(ccam_map, proc.proc)}, text)
+                                dom.h('tr',
+                                    dom.h('th', k ? '' : 'Actes'),
+                                    dom.h('td', {title: codeWithDesc(ccam_map, proc.proc)}, text)
                                 )
                             );
                         }
@@ -1325,8 +1325,8 @@ let mco_casemix = {};
         }
 
         let pagers = [
-            html('table', {class: 'pagr'}),
-            html('table', {class: 'pagr'})
+            dom.h('table', {class: 'pagr'}),
+            dom.h('table', {class: 'pagr'})
         ];
         syncPagers(pagers, page, computeLastPage(end - offset, results.length, TableLen));
 

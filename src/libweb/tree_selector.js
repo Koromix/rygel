@@ -74,15 +74,15 @@ function TreeSelector(widget, prefix)
 
         summary.replaceContent(prefix);
         if (!values.length) {
-            let a = html('a', 'Aucune sélection');
+            let a = dom.h('a', 'Aucune sélection');
             summary.appendChild(a);
         } else if (values.length < 8) {
             for (const value of values) {
-                let a = html('a', {href: '#', click: handleSummaryOptionClick}, value);
+                let a = dom.h('a', {href: '#', click: handleSummaryOptionClick}, value);
                 summary.appendChild(a);
             }
         } else {
-            let a = html('a', '' + values.length + ' / ' + total);
+            let a = dom.h('a', '' + values.length + ' / ' + total);
             summary.appendChild(a);
         }
     }
@@ -156,11 +156,11 @@ function TreeSelector(widget, prefix)
             tabbar.removeClass('hide');
             curtab.removeClass('hide');
         } else {
-            list = html('div', {class: 'tsel_list'});
+            list = dom.h('div', {class: 'tsel_list'});
             view.appendChild(list);
         }
 
-        let tab = html('a', {class: 'tsel_tab', href: '#', click: handleTabClick}, name);
+        let tab = dom.h('a', {class: 'tsel_tab', href: '#', click: handleTabClick}, name);
         if (list.hasClass('active'))
             tab.addClass('active');
         tab.list = list;
@@ -170,9 +170,9 @@ function TreeSelector(widget, prefix)
     };
 
     this.beginGroup = function(name) {
-        let el = html('label', {class: 'tsel_group', style: 'padding-left: ' + depth + 'em;',
-                                         'data-depth': depth},
-            html('input', {type: 'checkbox', click: handleGroupClick}),
+        let el = dom.h('label', {class: 'tsel_group', style: 'padding-left: ' + depth + 'em;',
+                                 'data-depth': depth},
+            dom.h('input', {type: 'checkbox', click: handleGroupClick}),
             name
         );
 
@@ -190,10 +190,10 @@ function TreeSelector(widget, prefix)
         options.selected = options.selected || false;
 
         options.selected &= !options.disabled;
-        let el = html('label', {class: 'tsel_option' + (options.disabled ? ' disabled' : ''),
-                                style: 'padding-left: ' + depth + 'em;', 'data-depth': depth},
-            html('input', {type: 'checkbox', click: handleOptionClick,
-                           'data-value': value, checked: options.selected ? 'checked' : null}),
+        let el = dom.h('label', {class: 'tsel_option' + (options.disabled ? ' disabled' : ''),
+                                 style: 'padding-left: ' + depth + 'em;', 'data-depth': depth},
+            dom.h('input', {type: 'checkbox', click: handleOptionClick,
+                            'data-value': value, checked: options.selected ? 'checked' : null}),
             name
         );
 
@@ -265,21 +265,21 @@ function TreeSelector(widget, prefix)
     widget.addEventListener('click', function(e) { e.stopPropagation(); });
     widget.replaceContent(
         // This dummy button catches click events that happen when a label encloses the widget
-        html('button', {style: 'display: none;', click: function(e) { e.preventDefault(); }}),
+        dom.h('button', {style: 'display: none;', click: function(e) { e.preventDefault(); }}),
 
-        html('div', {class: 'tsel_main'},
-            html('div', {class: 'tsel_rect', click: function(e) { self.toggle(); }},
-                 html('div', {class: ['tsel_curtab', 'hide']}),
-                 html('div', {class: 'tsel_summary'})
+        dom.h('div', {class: 'tsel_main'},
+            dom.h('div', {class: 'tsel_rect', click: function(e) { self.toggle(); }},
+                 dom.h('div', {class: ['tsel_curtab', 'hide']}),
+                 dom.h('div', {class: 'tsel_summary'})
             ),
-            html('div', {class: 'tsel_view'},
-                html('div', {class: ['tsel_tabbar', 'hide']}),
-                html('div', {class: 'tsel_shortcuts'},
-                    html('a', {href: '#', click: handleCheckAll}, 'Tout cocher'), ' / ',
-                    html('a', {href: '#', click: handleUncheckAll}, 'Tout décocher')
+            dom.h('div', {class: 'tsel_view'},
+                dom.h('div', {class: ['tsel_tabbar', 'hide']}),
+                dom.h('div', {class: 'tsel_shortcuts'},
+                    dom.h('a', {href: '#', click: handleCheckAll}, 'Tout cocher'), ' / ',
+                    dom.h('a', {href: '#', click: handleUncheckAll}, 'Tout décocher')
                 ),
-                html('button', {class: 'tsel_validate', click: self.close}, 'Fermer'),
-                html('div', {class: ['tsel_list', 'active']})
+                dom.h('button', {class: 'tsel_validate', click: self.close}, 'Fermer'),
+                dom.h('div', {class: ['tsel_list', 'active']})
             )
         )
     );

@@ -44,12 +44,12 @@ let coaching = (function() {
             }
         }
 
-        return groups.map(group => html('th', {colspan: group.colspan}, group.title));
+        return groups.map(group => dom.h('th', {colspan: group.colspan}, group.title));
     }
 
     function createScreeningHeaders(handlers)
     {
-        return handlers.map(handler => html('th', {title: handler.title}, handler.abbrev));
+        return handlers.map(handler => dom.h('th', {title: handler.title}, handler.abbrev));
     }
 
     this.refreshSummary = function(rows) {
@@ -120,16 +120,16 @@ let coaching = (function() {
             }
 
             summary.replaceContent(
-                html('thead',
-                    html('tr',
-                        html('th', {rowspan: 2}),
+                dom.h('thead',
+                    dom.h('tr',
+                        dom.h('th', {rowspan: 2}),
                         createCategoryHeaders(handlers)
                     ),
-                    html('tr',
+                    dom.h('tr',
                         createScreeningHeaders(handlers)
                     )
                 ),
-                html('tbody')
+                dom.h('tbody')
             );
             let thead = summary.query('thead');
             let tbody = summary.query('tbody');
@@ -140,16 +140,16 @@ let coaching = (function() {
             });
 
             for (let i = 0; i < row_names.length; i++) {
-                let tr = html('tr',
-                    html('th', {colspan: 4}, row_names[i])
+                let tr = dom.h('tr',
+                    dom.h('th', {colspan: 4}, row_names[i])
                 );
 
                 for (let j = 0; j < handlers.length; j++) {
                     tr.appendContent(
-                        html('td', {class: 'inpl_result_3'}, '' + stats[i][j][3]),
-                        html('td', {class: 'inpl_result_2'}, '' + stats[i][j][2]),
-                        html('td', {class: 'inpl_result_1'}, '' + stats[i][j][1]),
-                        html('td', {class: 'inpl_result_0'}, '' + stats[i][j][0])
+                        dom.h('td', {class: 'inpl_result_3'}, '' + stats[i][j][3]),
+                        dom.h('td', {class: 'inpl_result_2'}, '' + stats[i][j][2]),
+                        dom.h('td', {class: 'inpl_result_1'}, '' + stats[i][j][1]),
+                        dom.h('td', {class: 'inpl_result_0'}, '' + stats[i][j][0])
                     );
                 }
 
@@ -167,36 +167,36 @@ let coaching = (function() {
             function resultCell(result)
             {
                 switch (result.score) {
-                    case TestScore.Bad: return html('td', {class: 'inpl_result_1', title: result.text}, 'P');
-                    case TestScore.Fragile: return html('td', {class: 'inpl_result_2', title: result.text}, 'F');
-                    case TestScore.Good: return html('td', {class: 'inpl_result_3', title: result.text}, 'R');
-                    default: return html('td', {class: 'inpl_result_0', title: 'Indéfini'}, '?');
+                    case TestScore.Bad: return dom.h('td', {class: 'inpl_result_1', title: result.text}, 'P');
+                    case TestScore.Fragile: return dom.h('td', {class: 'inpl_result_2', title: result.text}, 'F');
+                    case TestScore.Good: return dom.h('td', {class: 'inpl_result_3', title: result.text}, 'R');
+                    default: return dom.h('td', {class: 'inpl_result_0', title: 'Indéfini'}, '?');
                 }
             }
 
             list.replaceContent(
-                html('thead',
-                    html('tr',
-                        html('th', {rowspan: 2}),
-                        html('th', {rowspan: 2}),
-                        html('th', {rowspan: 2}),
+                dom.h('thead',
+                    dom.h('tr',
+                        dom.h('th', {rowspan: 2}),
+                        dom.h('th', {rowspan: 2}),
+                        dom.h('th', {rowspan: 2}),
                         createCategoryHeaders(ScreeningHandlers)
                     ),
-                    html('tr',
+                    dom.h('tr',
                         createScreeningHeaders(ScreeningHandlers)
                     )
                 ),
-                html('tbody')
+                dom.h('tbody')
             );
             let tbody = list.query('tbody');
 
             for (let row of rows) {
-                let tr = html('tr',
-                    html('th',
-                        html('a', {href: inPL.url({tab: 2, plid: row.rdv_plid})}, '' + row.rdv_plid)
+                let tr = dom.h('tr',
+                    dom.h('th',
+                        dom.h('a', {href: inPL.url({tab: 2, plid: row.rdv_plid})}, '' + row.rdv_plid)
                     ),
-                    html('td', '' + (row.consultant_sexe || '?')),
-                    html('td', '' + (row.rdv_age || '?')),
+                    dom.h('td', '' + (row.consultant_sexe || '?')),
+                    dom.h('td', '' + (row.rdv_age || '?')),
                     ScreeningHandlers.map(handler => resultCell(handler.func(row)))
                 );
 

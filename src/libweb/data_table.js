@@ -90,7 +90,7 @@ function DataTable(widget)
     }
 
     this.addColumn = function(key, format) {
-        let th = createElementProxy('html', 'th', arguments, 2);
+        let th = dom.createProxy('html', 'th', arguments, 2);
         th.addEventListener('click', handleHeaderClick.bind(th));
         th.col_idx = columns.length;
 
@@ -136,12 +136,12 @@ function DataTable(widget)
     this.addCell = function(type, value) {
         let td;
         if (arguments.length >= 3) {
-            td = createElementProxy('html', type, arguments, 2);
+            td = dom.createProxy('html', type, arguments, 2);
         } else {
-            td = html(type, '' + value);
+            td = dom.h(type, '' + value);
         }
         if (!ptr.cells.length && ptr.depth) {
-            let spacer = html('span', {style: 'display: inline-block; width: ' + (ptr.depth * 0.8) + 'em;'});
+            let spacer = dom.h('span', {style: 'display: inline-block; width: ' + (ptr.depth * 0.8) + 'em;'});
             td.insertBefore(spacer, td.firstChild);
         }
 
@@ -241,14 +241,14 @@ function DataTable(widget)
         widget.addClass('dtab');
         if (sorted_rows.length) {
             widget.appendContent(
-                html('p', {class: 'dtab_count'}),
-                html('a', {class: 'dtab_excel', href: '#', click: handleExcelClick})
+                dom.h('p', {class: 'dtab_count'}),
+                dom.h('a', {class: 'dtab_excel', href: '#', click: handleExcelClick})
             );
         }
         widget.appendContent(
-            html('table', {class: 'dtab_table'},
-                html('thead'),
-                html('tbody')
+            dom.h('table', {class: 'dtab_table'},
+                dom.h('thead'),
+                dom.h('tbody')
             )
         );
 
@@ -259,7 +259,7 @@ function DataTable(widget)
             let tbody = widget.query('tbody');
 
             if (options.render_header && columns.length) {
-                let tr = html('tr');
+                let tr = dom.h('tr');
                 for (let i = 0; i < columns.length; i++) {
                     let th = columns[i].cell;
                     if (i === sort_idx) {
@@ -277,7 +277,7 @@ function DataTable(widget)
 
             function addRow(row, leaf)
             {
-                let tr = html('tr', {class: leaf ? null : 'parent'}, row.cells);
+                let tr = dom.h('tr', {class: leaf ? null : 'parent'}, row.cells);
                 tbody.appendChild(tr);
             }
 
@@ -302,8 +302,8 @@ function DataTable(widget)
             render_count = Math.max(end - offset, 0);
             if (!render_count) {
                 let msg = sorted_rows.length ? 'Cette page n\'existe pas' : 'Aucun contenu à afficher';
-                tbody.appendChild(html('tr',
-                    html('td', {colspan: columns.length}, msg)
+                tbody.appendChild(dom.h('tr',
+                    dom.h('td', {colspan: columns.length}, msg)
                 ));
             }
 
@@ -349,9 +349,9 @@ function createPagedDataTable(el)
 {
     if (!el.childNodes.length) {
         el.appendContent(
-            html('table', {class: 'pagr'}),
-            html('div', {class: 'dtab'}),
-            html('table', {class: 'pagr'})
+            dom.h('table', {class: 'pagr'}),
+            dom.h('div', {class: 'dtab'}),
+            dom.h('table', {class: 'pagr'})
         );
     }
 

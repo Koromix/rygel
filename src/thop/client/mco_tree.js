@@ -93,7 +93,7 @@ let mco_tree = {};
 
     function recurseNodes(start_idx, chain_str, parent_next_indices)
     {
-        let ul = html('ul');
+        let ul = dom.h('ul');
 
         let indices = [];
         for (let node_idx = start_idx;;) {
@@ -151,7 +151,7 @@ let mco_tree = {};
                 while (indices.length && nodes[indices[0]].children_count === 2 &&
                        nodes[nodes[indices[0]].children_idx + 1].test === 20 &&
                        nodes[nodes[indices[0]].children_idx + 1].children_idx === node.children_idx + 1) {
-                    li.appendContent(html('br'));
+                    li.appendContent(dom.h('br'));
 
                     let li2 = createNodeLi(indices[0], nodes[indices[0]].text, recurse_str);
                     li2.children[0].id = li2.id;
@@ -218,24 +218,19 @@ let mco_tree = {};
     {
         if (chain_str) {
             return (
-                html('li',
-                    {
-                         id: 'n' + idx,
-                         class: ['parent', collapse_nodes.has(chain_str) ? 'collapse' : null],
-                         'data-chain': chain_str
-                    },
-                    html('span',
-                        html('span', {class: 'n', click: handleNodeClick}, '' + idx + ' '),
+                dom.h('li', {id: 'n' + idx, class: ['parent', collapse_nodes.has(chain_str) ? 'collapse' : null],
+                             'data-chain': chain_str},
+                    dom.h('span',
+                        dom.h('span', {class: 'n', click: handleNodeClick}, '' + idx + ' '),
                         mco_list.addSpecLinks(text)
                     )
                 )
             );
         } else {
             return (
-                html('li',
-                    {id: 'n' + idx, class: 'leaf'},
-                    html('span',
-                        html('span', {class: 'n'}, '' + idx + ' '),
+                dom.h('li', {id: 'n' + idx, class: 'leaf'},
+                    dom.h('span',
+                        dom.h('span', {class: 'n'}, '' + idx + ' '),
                         mco_list.addSpecLinks(text)
                     )
                 )

@@ -112,15 +112,15 @@ let user = {};
         if (url_key) {
             query('#side_session_box').replaceContent(
                 username + ' (',
-                html('a', {href: routeToUrl().url}, 'changer'),
+                dom.h('a', {href: routeToUrl().url}, 'changer'),
                 ', ',
-                html('a', {href: '#', click: function(e) { logout(); e.preventDefault(); }},
-                     'déconnexion'),
+                dom.h('a', {href: '#', click: function(e) { logout(); e.preventDefault(); }},
+                      'déconnexion'),
                 ')'
             );
         } else {
             query('#side_session_box').replaceContent(
-                html('a', {href: routeToUrl().url}, 'Se connecter')
+                dom.h('a', {href: routeToUrl().url}, 'Se connecter')
             );
         }
     }
@@ -129,12 +129,12 @@ let user = {};
     {
         if (url_key) {
             query('#side_session_menu').replaceContent(
-                html('a', {href: '#', click: function(e) { logout(); e.preventDefault(); }},
-                     'Se déconnecter (' + username + ')')
+                dom.h('a', {href: '#', click: function(e) { logout(); e.preventDefault(); }},
+                      'Se déconnecter (' + username + ')')
             );
         } else {
             query('#side_session_menu').replaceContent(
-                html('a', {href: routeToUrl().url}, 'Se connecter')
+                dom.h('a', {href: routeToUrl().url}, 'Se connecter')
             );
         }
     }
