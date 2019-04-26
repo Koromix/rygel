@@ -38,9 +38,9 @@ function PageBuilder(root, widgets) {
 
     function wrapWidget(id, frag, options, errors) {
         return html`
-            <div class=${errors.length ? 'af_var af_error' : 'af_var'} id=${id + '_div'}>
+            <div class=${errors.length ? 'af_var af_var_error' : 'af_var'} id=${id + '_div'}>
                 ${frag}
-                ${errors.map(err => html`<span class="af_error_msg">${err}</span>`)}
+                <span class="af_error">${errors.map(err => html`${err}<br/>`)}</span>
                 ${options.help ? html`<p class="af_help">${options.help}</p>` : ''}
             </div>
         `;
