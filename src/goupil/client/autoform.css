@@ -2,19 +2,18 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/* -------------------- Global layout -------------------- */
+
 #af_editor {
     position: fixed;
     left: 0;
     top: 30px;
     height: calc(100% - 30px);
     width: 50%;
-    z-index: 999;
     box-sizing: border-box;
+    z-index: 999;
 }
-#af_page {
-    max-width: 800px;
-    margin: 0 0 0 50%;
-}
+#af_page { margin: 0 0 0 50%; }
 
 .af_form {
     background: #eee;
@@ -25,9 +24,11 @@
     color: red;
 }
 
+/* -------------------- Variable layout -------------------- */
+
 .af_var {
     margin: 6px;
-    padding: 6px;
+    padding: 5px;
 }
 .af_var:after {
     display: table;
@@ -38,13 +39,14 @@
     display: inline-block;
     width: 250px;
 }
-.af_error {
+.af_var_error {
     background: #c12406;
     color: white;
 }
-.af_error_msg {
+.af_error {
     float: right;
     clear: both;
+    padding-top: 3px;
 }
 .af_help {
     font-size: 0.85em;
