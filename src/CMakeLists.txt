@@ -342,7 +342,7 @@ set(GOUPIL_ASSETS
     ../vendor/ace/mode-javascript.js
     ../vendor/ace/theme-monokai.js
     ../vendor/ace/worker-javascript.js
-    ../vendor/lighterhtml/lighterhtml.min.js
+    ../vendor/lit-html/lit-html.min.js
     goupil/client/autoform.js
     goupil/client/goupil.js
     goupil/client/schedule.js
