@@ -130,6 +130,27 @@ function PageBuilder(root, widgets) {
 
         return addVariable(name, id, render, value);
     };
+
+    this.section = function(label, func = () => {}) {
+        let widgets = [];
+        let prev_widgets = widgets_ref;
+
+        widgets_ref = widgets;
+        func();
+        widgets_ref = prev_widgets;
+
+        let render = () => html`
+            <fieldset class="af_section">
+                <legend>${label}</legend>
+                ${widgets.map(w => w.func(w.errors))}
+            </fieldset>
+        `;
+
+        widgets_ref.push({
+            func: render,
+            errors: []
+        });
+    };
 }
 
 function AutoForm(widget) {
