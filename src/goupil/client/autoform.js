@@ -153,8 +153,16 @@ function AutoForm(widget) {
 
             return true;
         } catch (err) {
-            // TODO: Parse err.stack to get the error line in the Function() scope
-            log.textContent = `⚠ ${err.message}`;
+            let line;
+            if (err.stack) {
+                let m = err.stack.match(/ > Function:([0-9]+):[0-9]+/) ||
+                        err.stack.match(/, <anonymous>:([0-9]+):[0-9]+/);
+
+                // Can someone explain to me why do I have to offset by -2?
+                line = (m && m.length >= 2) ? (parseInt(m[1], 10) - 2) : null;
+            }
+
+            log.textContent = `⚠ Line ${line || '?'}: ${err.message}`;
             return false;
         }
     };
