@@ -12,6 +12,9 @@ function Schedule(widget, resources_map, meetings_map) {
                        'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
     let week_day_names = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 
+    let main;
+    let footer;
+
     let current_mode = 'meetings';
     let current_month;
     let current_year;
@@ -176,7 +179,7 @@ function Schedule(widget, resources_map, meetings_map) {
     function renderMeetings() {
         let days = getMonthDays(current_year, current_month, true);
 
-        render(widget.childNodes[1], () => html`<div class="sc_days">${days.map(day => {
+        render(html`<div class="sc_days">${days.map(day => {
             if (day !== null) {
                 if (!meetings_map[day.key])
                     meetings_map[day.key] = [];
@@ -290,13 +293,13 @@ function Schedule(widget, resources_map, meetings_map) {
                                 e.preventDefault();
                             }
 
-                            return html`<tr class=${slot_ref.cls} ondragover=${dragOverSlot} ondrop=${dropSlot}>
-                                <td class="sc_slot_time" draggable="true" ondragstart=${dragStart}>${formatTime(slot_ref.time)}</td>
+                            return html`<tr class=${slot_ref.cls} @dragover=${dragOverSlot} @drop=${dropSlot}>
+                                <td class="sc_slot_time" draggable="true" @dragstart=${dragStart}>${formatTime(slot_ref.time)}</td>
                                 <td class="sc_slot_identity">${slot_ref.identity || ''}</td>
                                 <td class="sc_slot_edit">
                                     ${slot_ref.identity ?
-                                        html`<a href="#" onclick=${e => { deleteMeeting(slot_ref); e.preventDefault(); }}>x</a>` :
-                                        html`<a href="#" onclick=${e => { createMeeting(slot_ref); e.preventDefault(); }}>+</a>`
+                                        html`<a href="#" @click=${e => { deleteMeeting(slot_ref); e.preventDefault(); }}>x</a>` :
+                                        html`<a href="#" @click=${e => { createMeeting(slot_ref); e.preventDefault(); }}>+</a>`
                                     }
                                 </td>
                             </tr>`;
@@ -306,7 +309,7 @@ function Schedule(widget, resources_map, meetings_map) {
             } else {
                 return html`<div class="sc_skip"></div>`;
             }
-        })}</div>`);
+        })}</div>`, main);
     }
 
     function createResource(day) {
@@ -377,7 +380,7 @@ function Schedule(widget, resources_map, meetings_map) {
     function renderSettings() {
         let days = getMonthDays(current_year, current_month, true);
 
-        render(widget.childNodes[1], () => html`<div class="sc_days">${days.map(day => {
+        render(html`<div class="sc_days">${days.map(day => {
             if (day !== null) {
                 let resources = resources_map[day.key] || [];
 
@@ -427,23 +430,23 @@ function Schedule(widget, resources_map, meetings_map) {
 
                             return html`<tr>
                                 <td class="sc_slot_time">${formatTime(res.time)}</td>
-                                <td class="sc_slot_option">${res.slots} <a href="#" onclick=${changeSlots(1)}>▲</a><a href="#" onclick=${changeSlots(-1)}>▼</a></td>
-                                <td class="sc_slot_option">${res.overbook} <a href="#" onclick=${changeOverbook(1)}>▲</a><a href="#" onclick=${changeOverbook(-1)}>▼</a></td>
-                                <td class="sc_slot_edit"><a href="#" onclick=${e => { deleteResource(day, res_idx); e.preventDefault(); }}>x</a></td>
+                                <td class="sc_slot_option">${res.slots} <a href="#" @click=${changeSlots(1)}>▲</a><a href="#" @click=${changeSlots(-1)}>▼</a></td>
+                                <td class="sc_slot_option">${res.overbook} <a href="#" @click=${changeOverbook(1)}>▲</a><a href="#" @click=${changeOverbook(-1)}>▼</a></td>
+                                <td class="sc_slot_edit"><a href="#" @click=${e => { deleteResource(day, res_idx); e.preventDefault(); }}>x</a></td>
                             </tr>`;
                         })}
                     </table>` : ''}
 
                     <div class="sc_actions">
-                        <a href="#" onclick=${e => { createResource(day); e.preventDefault(); }}>Nouveau</a> |
-                        <a href="#" onclick=${e => { startCopy(day); e.preventDefault(); }}>Copier</a> |
-                        <a href="#" onclick=${e => { closeDay(day); e.preventDefault(); }}>Fermer</a>
+                        <a href="#" @click=${e => { createResource(day); e.preventDefault(); }}>Nouveau</a> |
+                        <a href="#" @click=${e => { startCopy(day); e.preventDefault(); }}>Copier</a> |
+                        <a href="#" @click=${e => { closeDay(day); e.preventDefault(); }}>Fermer</a>
                     </div>
                 </div>`;
             } else {
                 return html`<div class="sc_skip"></div>`;
             }
-        })}</div>`);
+        })}</div>`, main);
     }
 
     function executeCopy(dest_day) {
@@ -468,7 +471,7 @@ function Schedule(widget, resources_map, meetings_map) {
     function renderCopy() {
         let days = getMonthDays(current_year, current_month, true);
 
-        render(widget.childNodes[1], () => html`<div class="sc_days">${days.map(day => {
+        render(html`<div class="sc_days">${days.map(day => {
             if (day !== null) {
                 let resources = resources_map[day.key] || [];
 
@@ -490,14 +493,14 @@ function Schedule(widget, resources_map, meetings_map) {
                     </div>
 
                     <div class="sc_copy" style=${copy_ignore.has(day.key) ? 'opacity: 0.1' : ''}>
-                        <a href="#" onclick=${e => { executeCopy(day); e.preventDefault(); }}>+</a>
-                        <a href="#" onclick=${e => { executeCopyAndEnd(day); e.preventDefault(); }}>⇳</a>
+                        <a href="#" @click=${e => { executeCopy(day); e.preventDefault(); }}>+</a>
+                        <a href="#" @click=${e => { executeCopyAndEnd(day); e.preventDefault(); }}>⇳</a>
                     </div>
                 </div>`;
             } else {
                 return html`<div class="sc_skip"></div>`;
             }
-        })}</div>`);
+        })}</div>`, main);
     }
 
     function switchToPreviousMonth() {
@@ -540,18 +543,18 @@ function Schedule(widget, resources_map, meetings_map) {
     }
 
     function renderFooter() {
-        render(widget.childNodes[2], () => html`<nav class="sc_footer">
+        render(html`<nav class="sc_footer">
             <a class="sc_deploy" href="#"
-               onclick=${e => { e.target.parentNode.querySelector('.sc_months').classList.toggle('active'); e.preventDefault(); }}></a>
+               @click=${e => { e.target.parentNode.querySelector('.sc_months').classList.toggle('active'); e.preventDefault(); }}></a>
 
             <div class="sc_selector">
                 <a href="#"
-                   onclick=${e => { switchToPreviousMonth(); e.preventDefault(); }}
-                   ondragover=${slowDownEvents(300, switchToPreviousMonth)}>≪</a>
+                   @click=${e => { switchToPreviousMonth(); e.preventDefault(); }}
+                   @dragover=${slowDownEvents(300, switchToPreviousMonth)}>≪</a>
                 <b>${month_names[current_month - 1]}</b>
                 <a href="#"
-                   onclick=${e => { switchToNextMonth(); e.preventDefault(); }}
-                   ondragover=${slowDownEvents(300, switchToNextMonth)}>≫</a>
+                   @click=${e => { switchToNextMonth(); e.preventDefault(); }}
+                   @dragover=${slowDownEvents(300, switchToNextMonth)}>≫</a>
             </div>
 
             <div class="sc_months">${month_names.map((name, idx) => {
@@ -588,23 +591,23 @@ function Schedule(widget, resources_map, meetings_map) {
                     cls += ' active';
 
                 return html`<a class=${cls} href="#"
-                               onclick=${e => { switchToMonth(month); e.preventDefault(); }}
-                               ondragover=${e => switchToMonth(month)}>${name}</a>`;
+                               @click=${e => { switchToMonth(month); e.preventDefault(); }}
+                               @dragover=${e => switchToMonth(month)}>${name}</a>`;
             })}</div>
 
             <div class="sc_selector">
                 <a href="#"
-                   onclick=${e => { switchToPreviousYear(); e.preventDefault(); }}
-                   ondragover=${slowDownEvents(300, switchToPreviousYear)}>≪</a>
+                   @click=${e => { switchToPreviousYear(); e.preventDefault(); }}
+                   @dragover=${slowDownEvents(300, switchToPreviousYear)}>≪</a>
                 <b>${current_year}</b>
                 <a href="#"
-                   onclick=${e => { switchToNextYear(); e.preventDefault(); }}
-                   ondragover=${slowDownEvents(300, switchToNextYear)}>≫</a>
+                   @click=${e => { switchToNextYear(); e.preventDefault(); }}
+                   @dragover=${slowDownEvents(300, switchToNextYear)}>≫</a>
             </div>
 
             <a class=${current_mode === 'meetings' ? 'sc_mode' : 'sc_mode active'} href="#"
-               onclick=${e => { toggleMode(); e.preventDefault(); }}>⚙</a>
-        </nav>`);
+               @click=${e => { toggleMode(); e.preventDefault(); }}>⚙</a>
+        </nav>`, footer);
     }
 
     function renderAll()
@@ -629,11 +632,13 @@ function Schedule(widget, resources_map, meetings_map) {
 
     // FIXME: Can we replace a node with render, instead of replacing its content?
     // Right now, render functions create content inside these two divs instead of replacing them.
-    render(widget, () => html`
+    render(html`
         <div class="sc_header">${week_day_names.map(name => html`<div>${name}</div>`)}</div>
-        <div></div>
-        <div></div>
-    `);
+        <div class="sc_main"></div>
+        <div class="sc_footer"></div>
+    `, widget);
+    main = widget.querySelector('.sc_main');
+    footer = widget.querySelector('.sc_footer');
 
     widget.object = this;
 }
