@@ -21,7 +21,23 @@
 }
 .af_log {
     padding: 5px;
-    color: red;
+    color: #e70e0e;
+}
+
+/* -------------------- Sections -------------------- */
+
+.af_section {
+    margin: 0.5em 2px 0 2px;
+    padding: 0.5em;
+    background: rgba(136, 136, 136, 18%);
+    border: 0;
+}
+.af_section legend {
+    padding: 0 0.5em;
+    background: #ff6600;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: white;
 }
 
 /* -------------------- Variable layout -------------------- */
@@ -40,7 +56,7 @@
     width: 250px;
 }
 .af_var_error {
-    background: #c12406;
+    background: #e70e0e;
     color: white;
 }
 .af_error {
