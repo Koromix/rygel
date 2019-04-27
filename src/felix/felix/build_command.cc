@@ -285,7 +285,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
             cmd.dest_filename = DuplicateString(target.pack_obj_filename, &str_alloc).ptr;
             if (!EnsureDirectoryExists(target.pack_obj_filename))
                 return false;
-            cmd.cmd = compiler->MakePackCommand(target.pack_filenames, target.pack_options,
+            cmd.cmd = compiler->MakePackCommand(target.pack_filenames, build_mode, target.pack_options,
                                                 target.pack_obj_filename, &str_alloc);
             if (!cmd.cmd)
                 return false;

@@ -57,8 +57,8 @@ public:
                                           bool warnings, const char *pch_filename, Span<const char *const> definitions,
                                           Span<const char *const> include_directories, const char *dest_filename,
                                           const char *deps_filename, Allocator *alloc) const = 0;
-    virtual const char *MakePackCommand(Span<const char *const> pack_filenames, const char *pack_options,
-                                        const char *dest_filename, Allocator *alloc) const = 0;
+    virtual const char *MakePackCommand(Span<const char *const> pack_filenames, BuildMode build_mode,
+                                        const char *pack_options, const char *dest_filename, Allocator *alloc) const = 0;
     virtual const char *MakeLinkCommand(Span<const char *const> obj_filenames, BuildMode build_mode,
                                         Span<const char *const> libraries, LinkType link_type,
                                         const char *dest_filename, Allocator *alloc) const = 0;

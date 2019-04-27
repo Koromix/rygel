@@ -114,8 +114,8 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames, BuildM
     return true;
 }
 
-static void AppendPackCommandLine(Span<const char *const> pack_filenames, const char *pack_options,
-                                  HeapArray<char> *out_buf)
+static void AppendPackCommandLine(Span<const char *const> pack_filenames, BuildMode build_mode,
+                                  const char *pack_options, HeapArray<char> *out_buf)
 {
 #ifdef _WIN32
     Fmt(out_buf, "cmd /c \"%1\" pack", GetApplicationExecutable());
@@ -123,6 +123,9 @@ static void AppendPackCommandLine(Span<const char *const> pack_filenames, const 
     Fmt(out_buf, "\"%1\" pack", GetApplicationExecutable());
 #endif
 
+    if (build_mode == BuildMode::Debug) {
+        Fmt(out_buf, " --source_map");
+    }
     if (pack_options) {
         Fmt(out_buf, " %1", pack_options);
     }
@@ -174,13 +177,13 @@ public:
         return (const char *)buf.Leak().ptr;
     }
 
-    const char *MakePackCommand(Span<const char *const> pack_filenames, const char *pack_options,
-                                const char *dest_filename, Allocator *alloc) const override
+    const char *MakePackCommand(Span<const char *const> pack_filenames, BuildMode build_mode,
+                                const char *pack_options, const char *dest_filename, Allocator *alloc) const override
     {
         HeapArray<char> buf;
         buf.allocator = alloc;
 
-        AppendPackCommandLine(pack_filenames, pack_options, &buf);
+        AppendPackCommandLine(pack_filenames, build_mode, pack_options, &buf);
         Fmt(&buf, " | clang -x c -c - -o %1", dest_filename);
 
         return (const char *)buf.Leak().ptr;
@@ -251,13 +254,13 @@ public:
         return (const char *)buf.Leak().ptr;
     }
 
-    const char *MakePackCommand(Span<const char *const> pack_filenames, const char *pack_options,
-                                const char *dest_filename, Allocator *alloc) const override
+    const char *MakePackCommand(Span<const char *const> pack_filenames, BuildMode build_mode,
+                                const char *pack_options, const char *dest_filename, Allocator *alloc) const override
     {
         HeapArray<char> buf;
         buf.allocator = alloc;
 
-        AppendPackCommandLine(pack_filenames, pack_options, &buf);
+        AppendPackCommandLine(pack_filenames, build_mode, pack_options, &buf);
         Fmt(&buf, " | gcc -x c -c - -o %1", dest_filename);
 
         return (const char *)buf.Leak().ptr;
