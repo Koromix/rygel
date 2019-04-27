@@ -109,7 +109,7 @@ function PageBuilder(root, widgets) {
         return addWidget(name, id, func, value);
     };
 
-    this.info = function(name, label, value, options = {}) {
+    this.calc = function(name, label, value, options = {}) {
         let id = makeID(name);
 
         let text = value;
