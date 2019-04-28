@@ -138,6 +138,11 @@ function PageBuilder(root, widgets) {
     };
 
     this.output = function(content, options = {}) {
+        // Don't output function content, helps avoid garbage output when the
+        // user types 'page.oupt(html);'.
+        if (!content || typeof content === 'function')
+            return;
+
         let render = () => wrapWidget(content, options);
         addWidget(render);
     };
