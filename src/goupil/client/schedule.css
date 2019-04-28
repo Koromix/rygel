@@ -70,7 +70,7 @@
     vertical-align: middle;
 }
 .sc_month_warn {
-    background: #ca3317;
+    background: #e70e0e;
     color: white;
 }
 .sc_selector b {
@@ -164,10 +164,10 @@
     border-radius: 4px 4px 0 0;
 }
 .sc_day_disabled .sc_head { background: #373737; }
-.sc_day_empty .sc_head { background: #e68f00; }
+.sc_day_empty .sc_head { background: #ff6600; }
 .sc_day_some .sc_head { background: #24579d; }
 .sc_day_full .sc_head { background: green; }
-.sc_day_warn .sc_head { background: #ca3317; }
+.sc_day_warn .sc_head { background: #e70e0e; }
 .sc_opt_empty .sc_head {
     background: repeating-linear-gradient(
         -45deg,
@@ -180,10 +180,10 @@
 .sc_opt_some .sc_head {
     background: repeating-linear-gradient(
         -45deg,
-        #ebb326,
-        #ebb326 10px,
-        #f6c344 10px,
-        #f6c344 20px
+        #ff6600,
+        #ff6600 10px,
+        #f26100 10px,
+        #f26100 20px
     )
 }
 .sc_head_date {
@@ -241,7 +241,7 @@
 .sc_slot_used .sc_slot_time { cursor: grab; }
 .sc_slot_identity { text-align: left; }
 .sc_slot_warn.sc_slot_used {
-    background: #ca3317;
+    background: #e70e0e;
     color: white;
     font-style: italic;
 }
