@@ -33,10 +33,9 @@
     border: 0;
 }
 .af_section legend {
-    padding: 0 0.5em;
+    padding: 1px 0.7em;
     background: #ff6600;
-    font-size: 1.2em;
-    font-weight: bold;
+    font-size: 1.1em;
     color: white;
 }
 
@@ -67,7 +66,7 @@
 .af_help {
     font-size: 0.85em;
     font-style: italic;
-    color: #666;
+    color: #444;
     margin: 2px 0 0 20px;
 }
 .af_help:before { content: '☞ '; }
