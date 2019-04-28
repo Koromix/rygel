@@ -5,35 +5,15 @@
 let inPL = (function() {
     let self = this;
 
-    let route_params = {
-        tab: 0
-    };
+    let route_params = {};
     let route_url = null;
-    let refresh_tabs = 0xFFFFFFFF;
 
     let rows = [];
 
     function route(new_params, mark_history = true) {
-        Object.assign(route_params, new_params);
-
-        if (new_params.tab !== undefined) {
-            route_params.tab = parseInt(new_params.tab);
-            self.openTab(route_params.tab);
-        }
         if (new_params.plid !== undefined) {
             route_params.plid = new_params.plid;
-            query('#inpl_option_plid').value = route_params.plid;
-            refresh_tabs = 0xFFFFFFFF;
-        }
-        if (new_params.sex !== undefined) {
-            route_params.sex = new_params.sex;
-            query('#inpl_option_sex').value = route_params.sex;
-            refresh_tabs = 0xFFFFFFFF;
-        }
-        if (new_params.rows !== undefined) {
-            route_params.rows = new_params.rows;
-            query('#inpl_option_rows').value = route_params.rows;
-            refresh_tabs = 0xFFFFFFFF;
+            query('#inpl_plid').value = route_params.plid;
         }
 
         let new_url = util.buildUrl('', route_params);
@@ -47,16 +27,7 @@ let inPL = (function() {
 
     function refreshMainView()
     {
-        if (refresh_tabs & (1 << route_params.tab)) {
-            refresh_tabs &= ~(1 << route_params.tab);
-
-            switch (route_params.tab) {
-                case 0: { coaching.refreshList(rows); } break;
-                case 1: { coaching.refreshSummary(rows); } break;
-                case 2: { report.refreshReport(rows); } break;
-            }
-        }
-
+        report.refreshReport(rows);
         document.body.style.display = 'block';
     }
 
@@ -69,22 +40,12 @@ let inPL = (function() {
         refreshMainView();
     }
 
-    this.openTab = function(idx) {
-        let tabs = query('#inpl_menu').queryAll('button');
-        let pages = document.body.queryAll('.inpl_page');
-
-        tabs.removeClass('active');
-        tabs[idx].addClass('active');
-        pages.removeClass('active');
-        pages[idx].addClass('active');
-    }
-
     this.importAndRefresh = function() {
-        let file = query('#inpl_menu_file').files[0];
-        let encoding = query('#inpl_menu_encoding').value;
+        let file = query('#inpl_file').files[0];
+        let encoding = query('#inpl_encoding').value;
 
-        let stat = query('#inpl_menu_stat');
-        refresh_tabs = 0xFFFFFFFF;
+        let info = query('#inpl_file_info');
+        let plid = query('#inpl_plid');
 
         rows.length = 0;
         if (file) {
@@ -96,12 +57,21 @@ let inPL = (function() {
                 complete: () => {
                     rows.sort((row1, row2) => row1.rdv_plid - row2.rdv_plid);
 
-                    stat.replaceContent(`(${file.name} contient ${rows.length} rendez-vous)`);
+                    info.replaceContent(`${file.name} (${rows.length} lignes).`);
+                    plid.innerHTML = '';
+                    for (let row of rows) {
+                        let option = dom.h('option', {value: row.rdv_plid},
+                                           `${row.rdv_plid} - ${row.consultant_nom} ${row.consultant_prenom} (${row.consultant_sexe})`);
+                        plid.appendContent(option);
+                    }
+
                     refreshMainView();
                 }
             });
         } else {
-            stat.innerHTML = '';
+            info.innerHTML = 'Pas de données.';
+            plid.replaceContent(dom.h('option', 'Aucune donnée disponible'));
+
             refreshMainView();
         }
     };

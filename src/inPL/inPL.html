@@ -9,7 +9,7 @@
         <meta charset="UTF-8"/>
         <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1"/>
 
-        <title>Tableaux de bord inPL</title>
+        <title>Compte-Rendu inPL</title>
 
         <link rel="stylesheet" href="inPL.pk.css"/>
         <script type="text/javascript" src="inPL.pk.js" async></script>
@@ -18,59 +18,28 @@
     <body style="display: none;">
         <img id="inpl_logo" src="inPL_logo.png" alt="inPL"/>
 
-        <div id="inpl_menu">
-            <button onclick="inPL.go({tab: 0});">Résultats</button>
-            <button onclick="inPL.go({tab: 1});">Synthèse</button>
-            <button onclick="inPL.go({tab: 2});">Consultant</button>
+        <nav id="inpl_menu">
+            <div style="float: left;">
+                <input id="inpl_template" type="file" accept=".docx"/>
+                <span id="inpl_template_info"></span>
+            </div>
 
             <div style="float: right;">
-                <span id="inpl_menu_stat"></span>
-                <input id="inpl_menu_file" type="file" accept=".csv" onchange="inPL.importAndRefresh();"
+                <span id="inpl_file_info"></span>
+                <input id="inpl_file" type="file" accept=".csv" onchange="inPL.importAndRefresh();"
                        style="display: none;"/>
-                <button onclick="parentNode.query('#inpl_menu_file').click();">Charger...</button>
-                <select id="inpl_menu_encoding" onchange="inPL.importAndRefresh();">
+                <button onclick="parentNode.query('#inpl_file').click();">Charger</button>
+
+                <select id="inpl_encoding" onchange="inPL.importAndRefresh();">
                     <option value="UTF-8">UTF-8</option>
                     <option value="ISO-8859-1">ISO-8859-1</option>
                 </select>
             </div>
-        </div>
+        </nav>
 
-        <div class="inpl_page">
-            <table id="inpl_list" class="inpl_table"></table>
-        </div>
-
-        <div class="inpl_page">
-            <div class="inpl_options">
-                <label>Sexe :
-                    <select id="inpl_option_sex" onchange="inPL.go({sex: this.value});">
-                        <option value="all">Tout</option>
-                        <option value="male">Hommes</option>
-                        <option value="female">Femmes</option>
-                    </select>
-                </label>
-                <label>Lignes :
-                    <select id="inpl_option_rows" onchange="inPL.go({rows: this.value});">
-                        <option value="age">Âge (classes)</option>
-                        <option value="sex">Sexe</option>
-                    </select>
-                </label>
-            </div>
-
-            <table id="inpl_summary" class="inpl_table"></table>
-        </div>
-
-        <div class="inpl_page">
-            <div class="inpl_options">
-                <label>PLID :
-                    <input id="inpl_option_plid" type="text"
-                           oninput="inPL.go({plid: this.value});"/>
-                </label>
-                <label>Modèle :
-                    <input id="inpl_option_template" type="file" accept=".docx"/>
-                </label>
-            </div>
-
+        <main>
+            <select id="inpl_plid" onchange="inPL.go({plid: this.value});"></select>
             <div id="inpl_report"></div>
-        </div>
+        </main>
     </body>
 </html>

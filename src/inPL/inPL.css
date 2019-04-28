@@ -9,10 +9,7 @@ body {
     margin: 1em auto;
 }
 @media screen and (max-width: 801px) {
-    body {
-        margin: 0;
-        font-size: 11px;
-    }
+    body { margin: 0; }
 }
 
 a {
@@ -21,111 +18,41 @@ a {
     text-decoration: underline dotted;
 }
 
-@media screen and (min-width: 800px) {
-    #inpl_logo {
-        height: 100px;
-        float: left;
-    }
-    #inpl_menu {
-        position: relative;
-        top: 50px;
-        left: 20px;
-    }
+#inpl_logo {
+    float: left;
+    height: 100px;
+    margin-top: -60px;
 }
-@media screen and (max-width: 801px) {
-    #inpl_logo {
-        position: absolute;
-        z-index: 1;
-        top: 0;
-        left: 0;
-        height: 26px;
-        padding: 4px;
-    }
-    #inpl_menu { padding-left: 40px; }
-}
-
-.inpl_page:not(.active) { display: none; }
 #inpl_menu {
     overflow: hidden;
     border: 1px solid #ccc;
     background-color: #f1f1f1;
-    margin: 0 1em;
-}
-#inpl_menu > * {
-    display: table-cell;
-    vertical-align: middle;
-}
-#inpl_menu button {
-    background-color: inherit;
-    border: none;
-    outline: none;
-    cursor: pointer;
-    padding: 9px 13px;
-}
-#inpl_menu button:hover { background-color: #ddd; }
-#inpl_menu button.active { background-color: #ccc; }
-.inpl_page {
-    clear: both;
-    padding: 1em;
+    margin: 60px 6px 0 0;
+    padding: 6px;
+    color: #666;
 }
 @media screen and (max-width: 801px) {
+    #inpl_logo {
+        position: absolute;
+        z-index: 999;
+        top: 60px;
+        left: 0;
+        height: 26px;
+        padding: 4px;
+    }
     #inpl_menu {
         margin: 0;
+        padding-left: 46px;
         border: 0;
     }
 }
-#inpl_menu_stat { color: #666; }
+#inpl_plid { width: 100%; }
 
-.inpl_options {
-    text-align: center;
-    padding: 0 0 1em 0;
-}
-.inpl_options > * { padding: 0 0.5em 0 0.5em; }
-
-.inpl_table {
-    width: 95%;
-    table-layout: fixed;
-    border-collapse: collapse;
+main {
+    clear: both;
     margin: 0 auto;
-    background: #eee;
-}
-.inpl_table th, .inpl_table td {
-    padding: 2px 0;
-    border: 1px solid #ddd;
-}
-.inpl_table th { padding: 2px 4px 2px 4px; }
-.inpl_table td { padding: 2px 0; }
-.inpl_table th:first-child { width: 5.5em; }
-.inpl_table tbody th {
-    font-weight: normal;
-    font-style: italic;
-    text-align: right;
-} 
-.inpl_table tbody th a { font-style: italic; }
-.inpl_table tbody td { text-align: center; }
-@media screen and (max-width: 801px) {
-    .inpl_table {
-        width: calc(100% + 2em);
-        margin-left: -1em;
-    }
-    .inpl_table th, .inpl_table td { border: 0; }
-}
-
-.inpl_result_1 {
-    background: #ff0000;
-    color: white;
-}
-.inpl_result_2 {
-    background: #ffc000;
-    color: white;
-}
-.inpl_result_3 {
-    background: #70ad47;
-    color: white;
-}
-.inpl_result_0 {
-    background: #aaa;
-    color: white;
+    padding: 1em;
+    max-width: 800px;
 }
 
 #inpl_report h1 {
@@ -135,7 +62,12 @@ a {
     color: #888;
     border-bottom: 1px dotted #ccc;
 }
-
+#inpl_report table { table-layout: fixed; }
+#inpl_report th {
+    text-align: left;
+    font-weight: normal;
+}
+#inpl_report td { font-style: italic; }
 @media screen and (min-width: 801px) {
     /* Hack I stole from Bootstrap */
     #inpl_report div:after {
@@ -152,9 +84,7 @@ a {
 @media screen and (max-width: 801px) {
     #inpl_report table { width: 100% }
 }
-#inpl_report table { table-layout: fixed; }
-#inpl_report th {
-    text-align: left;
-    font-weight: normal;
+#inpl_generate {
+    display: block;
+    margin: 0 auto;
 }
-#inpl_report td { font-style: italic; }
