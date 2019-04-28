@@ -118,7 +118,7 @@ function PageBuilder(root, widgets) {
         let id = makeID(name);
 
         let text = value;
-        if (!options.raw) {
+        if (!options.raw && typeof value !== 'string') {
             if (isNaN(value) || value == null) {
                 text = '';
             } else if (isFinite(value)) {
