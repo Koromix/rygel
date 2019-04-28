@@ -38,24 +38,30 @@
                     if (script == null) {
                         script = `// Test autoform script
 
-let sexe = page.dropdown("sexe", "Sexe",
+page.integer("age", "Quel est votre âge ?", {min: 18, max: 120});
+
+let sexe = page.dropdown("sexe", "Quel est votre sexe ?",
                          [["M", "Homme"], ["F", "Femme"]]);
 
 if (sexe.value == "F")
     page.boolean("enceinte", "Êtes-vous enceinte ?");
 
-let alcool = page.boolean("alcool", "Consommez-vous de l'alcool ?");
-if (alcool.value && sexe.value == "F" && page.value("enceinte")) {
-    alcool.error("Pensez au bébé...");
-    alcool.error("On peut mettre plusieurs erreurs");
-    page.error("alcool", "Et de plein de manières différentes !");
-}
-if (alcool.value)
-    page.integer("alcool_qt", "Combien de verres par semaine ?", {min: 1, max: 30});
+page.section("Alcool", () => {
+    let alcool = page.boolean("alcool", "Consommez-vous de l'alcool ?");
+    if (alcool.value && sexe.value == "F" && page.value("enceinte")) {
+        alcool.error("Pensez au bébé...");
+        alcool.error("On peut mettre plusieurs erreurs");
+        page.error("alcool", "Et de plein de manières différentes !");
+    }
+    if (alcool.value)
+        page.integer("alcool_qt", "Combien de verres par semaine ?", {min: 1, max: 30});
+});
 
-page.integer("enfants", "Combien avez-vous d'enfants ?", {min: 0, max: 30});
-page.boolean("frites", "Aimez-vous les frites ?",
-             {help: "Si si, c'est important, je vous le jure !"});
+page.section("Autres", () => {
+    page.integer("enfants", "Combien avez-vous d'enfants ?", {min: 0, max: 30});
+    page.boolean("frites", "Aimez-vous les frites ?",
+                 {help: "Si si, c'est important, je vous le jure !"});
+});
 `;
                     }
                     editor.setValue(script);
