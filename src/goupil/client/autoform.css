@@ -70,3 +70,17 @@
     margin: 2px 0 0 20px;
 }
 .af_help:before { content: '☞ '; }
+
+/* -------------------- Widget types -------------------- */
+
+.af_select { display: inline-block; }
+.af_select button {
+    margin: 0 1px 0 0;
+    padding: 2px 0.7em;
+    background: #f8f8f8;
+    border: 0;
+}
+.af_select button.active {
+    background: #ff6600;
+    color: white;
+}

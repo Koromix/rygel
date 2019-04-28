@@ -58,21 +58,6 @@ function PageBuilder(root, widgets) {
     };
     this.error = (name, msg) => interfaces[name].error(msg);
 
-    this.boolean = function(name, label, options = {}) {
-        let id = makeID(name);
-
-        let prev = root.querySelector(`#${id}`);
-        let value = prev ? prev.checked : undefined;
-
-        let render = errors => wrapWidget(html`
-            <label for=${id}>${label}</label>
-            <input id=${id} type="checkbox" ?checked=${value}
-                   @input=${e => self.changeHandler(e)}/>
-        `, options, errors);
-
-        return addVariableWidget(name, id, render, value);
-    };
-
     this.integer = function(name, label, options = {}) {
         let id = makeID(name);
 
@@ -112,6 +97,46 @@ function PageBuilder(root, widgets) {
         `, options, errors);
 
         return addVariableWidget(name, id, render, value);
+    };
+
+    function changeSelect(e, id, value) {
+        let json = JSON.stringify(value);
+
+        let els = document.querySelectorAll(`#${id} button`);
+        for (let el of els)
+            el.classList.toggle('active', el.dataset.value == json && !el.classList.contains('active'));
+
+        self.changeHandler(e);
+    }
+
+    this.select = function(name, label, choices = [], options = {}) {
+        let id = makeID(name);
+
+        let prev = root.querySelector(`#${id}`);
+        let value;
+        if (prev) {
+            let els = prev.querySelectorAll('button');
+            for (let el of els) {
+                if (el.classList.contains('active')) {
+                    value = JSON.parse(el.dataset.value);
+                    break;
+                }
+            }
+        }
+
+        let render = errors => wrapWidget(html`
+            <label for=${id}>${label}</label>
+            <div class="af_select" id=${id}>
+                ${choices.map(c => html`<button data-value=${JSON.stringify(c[0])} class=${value == c[0] ? 'active' : ''}
+                                                @click=${e => changeSelect(e, id, c[0])}>${c[1]}</button>`)}
+            </div>
+        `, options, errors);
+
+        return addVariableWidget(name, id, render, value);
+    };
+
+    this.boolean = function(name, label, options = {}) {
+        return self.select(name, label, [[true, 'Oui'], [false, 'Non']], options);
     };
 
     this.calc = function(name, label, value, options = {}) {
