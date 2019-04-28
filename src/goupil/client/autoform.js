@@ -10,7 +10,7 @@ function PageBuilder(root, widgets) {
     let interfaces = {};
     let widgets_ref = widgets;
 
-    function makeID(name) { return `af_var_${name}`; }
+    function makeID(name) { return `af_id_${name}`; }
     function makeName(label) { return label.replace(/[^a-zA-Z0-9]/g, '_'); }
 
     function addVariable(name, id, func, value) {
