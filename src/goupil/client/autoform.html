@@ -70,7 +70,11 @@ page.output("Ou bien encore mettre du <b>texte brut</b>.");
                     editor.setValue(script);
                     editor.clearSelection();
 
-                    editor.on('change', refreshAndSave);
+                    editor.on('change', e => {
+                        // If something goes wrong during refreshAndSave(), we don't
+                        // want to break ACE state.
+                        setTimeout(refreshAndSave, 0);
+                    });
                     refreshAndSave();
                 }
             });
