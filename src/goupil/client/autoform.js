@@ -85,16 +85,16 @@ function PageBuilder(root, widgets) {
                    @input=${e => self.changeHandler(e)}/>
         `, options, errors);
 
-        let ret = addVariableWidget(name, id, render, value);
+        let intf = addVariableWidget(name, id, render, value);
 
         if (value != null) {
             if (options.min !== undefined && value < options.min)
-                ret.error(`Valeur < ${options.min}`);
+                intf.error(`Valeur < ${options.min}`);
             if (options.max !== undefined && value > options.max)
-                ret.error(`Valeur > ${options.max}`);
+                intf.error(`Valeur > ${options.max}`);
         }
 
-        return ret;
+        return intf;
     };
 
     this.dropdown = function(name, label, choices = [], options = {}) {
