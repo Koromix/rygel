@@ -10,17 +10,36 @@ function PageBuilder(root, widgets) {
     let interfaces = {};
     let widgets_ref = widgets;
 
-    function makeID(name) { return `af_id_${name}`; }
+    function makeID(name) { return `af_var_${name}`; }
     function makeName(label) { return label.replace(/[^a-zA-Z0-9]/g, '_'); }
 
-    function addVariable(name, id, func, value) {
+    function addWidget(render) {
+        let widget = {
+            render: render,
+            errors: []
+        };
+
+        widgets_ref.push(widget);
+
+        return widget;
+    }
+
+    function wrapWidget(frag, options, errors = []) {
+        return html`
+            <div class=${errors.length ? 'af_widget af_widget_error' : 'af_widget'}>
+                ${frag}
+                ${errors.length ? html`<span class="af_error">${errors.map(err => html`${err}<br/>`)}</span>` : html``}
+                ${options.help ? html`<p class="af_help">${options.help}</p>` : ''}
+            </div>
+        `;
+    }
+
+    function addVariableWidget(name, id, render, value) {
         if (interfaces[name])
             throw new Error(`Variable '${name}' already exists`);
 
-        let widget = {
-            func: func,
-            errors: []
-        };
+        let widget = addWidget(render);
+
         let intf = {
             value: value,
             error: msg => {
@@ -28,21 +47,9 @@ function PageBuilder(root, widgets) {
                 return intf;
             }
         };
-
-        widgets_ref.push(widget);
         interfaces[name] = intf;
 
         return intf;
-    }
-
-    function wrapVarWidget(id, frag, options, errors) {
-        return html`
-            <div class=${errors.length ? 'af_var af_var_error' : 'af_var'} id=${id + '_div'}>
-                ${frag}
-                <span class="af_error">${errors.map(err => html`${err}<br/>`)}</span>
-                ${options.help ? html`<p class="af_help">${options.help}</p>` : ''}
-            </div>
-        `;
     }
 
     this.find = name => interfaces[name];
@@ -58,13 +65,13 @@ function PageBuilder(root, widgets) {
         let prev = root.querySelector(`#${id}`);
         let value = prev ? prev.checked : undefined;
 
-        let render = errors => wrapVarWidget(id, html`
+        let render = errors => wrapWidget(html`
             <label for=${id}>${label}</label>
             <input id=${id} type="checkbox" ?checked=${value}
                    @input=${e => self.changeHandler(e)}/>
         `, options, errors);
 
-        return addVariable(name, id, render, value);
+        return addVariableWidget(name, id, render, value);
     };
 
     this.integer = function(name, label, options = {}) {
@@ -73,13 +80,13 @@ function PageBuilder(root, widgets) {
         let prev = root.querySelector(`#${id}`);
         let value = (prev && prev.value != '') ? parseInt(prev.value, 10) : undefined;
 
-        let render = errors => wrapVarWidget(id, html`
+        let render = errors => wrapWidget(html`
             <label for=${id}>${label}</label>
             <input id=${id} type="number" value=${value}
                    @input=${e => self.changeHandler(e)}/>
         `, options, errors);
 
-        let ret = addVariable(name, id, render, value);
+        let ret = addVariableWidget(name, id, render, value);
 
         if (value != null) {
             if (options.min !== undefined && value < options.min)
@@ -97,7 +104,7 @@ function PageBuilder(root, widgets) {
         let prev = root.querySelector(`#${id}`);
         let value = prev ? prev.value : undefined;
 
-        let render = errors => wrapVarWidget(id, html`
+        let render = errors => wrapWidget(html`
             <label for=${id}>${label}</label>
             <select id=${id} @change=${e => self.changeHandler(e)}>
                 <option value="" ?selected=${value == null}>-- Choisissez une option --</option>
@@ -105,7 +112,7 @@ function PageBuilder(root, widgets) {
             </select>
         `, options, errors);
 
-        return addVariable(name, id, render, value);
+        return addVariableWidget(name, id, render, value);
     };
 
     this.calc = function(name, label, value, options = {}) {
@@ -123,12 +130,17 @@ function PageBuilder(root, widgets) {
             }
         }
 
-        let render = errors => wrapVarWidget(id, html`
+        let render = errors => wrapWidget(html`
             <label for=${id}>${label}</label>
             <span>${text}</span>
         `, options, errors);
 
-        return addVariable(name, id, render, value);
+        return addVariableWidget(name, id, render, value);
+    };
+
+    this.output = function(content, options = {}) {
+        let render = () => wrapWidget(content, options);
+        addWidget(render);
     };
 
     this.section = function(label, func = () => {}) {
@@ -142,14 +154,11 @@ function PageBuilder(root, widgets) {
         let render = () => html`
             <fieldset class="af_section">
                 <legend>${label}</legend>
-                ${widgets.map(w => w.func(w.errors))}
+                ${widgets.map(w => w.render(w.errors))}
             </fieldset>
         `;
 
-        widgets_ref.push({
-            func: render,
-            errors: []
-        });
+        addWidget(render);
     };
 }
 
@@ -181,7 +190,7 @@ function AutoForm(widget) {
             return false;
         }
 
-        render(html`${widgets.map(w => w.func(w.errors))}`, form);
+        render(html`${widgets.map(w => w.render(w.errors))}`, form);
         log.innerHTML = '';
 
         return true;

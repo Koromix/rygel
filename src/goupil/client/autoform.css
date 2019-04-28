@@ -42,20 +42,20 @@
 
 /* -------------------- Variable layout -------------------- */
 
-.af_var {
+.af_widget {
     margin: 6px;
     padding: 5px;
 }
-.af_var:after {
+.af_widget:after {
     display: table;
     content: " ";
     clear: both;
 }
-.af_var label {
+.af_widget label {
     display: inline-block;
     width: 250px;
 }
-.af_var_error {
+.af_widget_error {
     background: #e70e0e;
     color: white;
 }
