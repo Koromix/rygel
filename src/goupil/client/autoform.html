@@ -62,6 +62,9 @@ page.section("Autres", () => {
     page.boolean("frites", "Aimez-vous les frites ?",
                  {help: "Si si, c'est important, je vous le jure !"});
 });
+
+page.output(html\`On peut aussi mettre du <b>HTML directement</b> si on veut...\`);
+page.output('Ou bien encore mettre du <b>texte brut</b>.');
 `;
                     }
                     editor.setValue(script);
