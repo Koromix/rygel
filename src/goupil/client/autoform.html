@@ -40,9 +40,19 @@
 
 page.integer("age", "Quel est votre âge ?", {min: 18, max: 120});
 
-let sexe = page.dropdown("sexe", "Quel est votre sexe ?",
-                         [["M", "Homme"], ["F", "Femme"]]);
+let sexe = page.select("sexe", "Quel est votre sexe ?",
+                      [["M", "Homme"], ["F", "Femme"]]);
 
+page.dropdown("csp", "Quelle est votre CSP ?", [
+    [1, "Agriculteur exploitants"],
+    [2, "Artisan, commerçant ou chef d'entreprise"],
+    [3, "Cadres ou profession intellectuelle supérieure"],
+    [4, "Profession intermédiaire"],
+    [5, "Employé"],
+    [6, "Ouvrier"],
+    [7, "Retraité"],
+    [8, "Autre ou sans activité professionnelle"]
+]);
 if (sexe.value == "F")
     page.boolean("enceinte", "Êtes-vous enceinte ?");
 
