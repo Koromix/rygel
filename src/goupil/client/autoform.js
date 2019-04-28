@@ -101,13 +101,13 @@ function PageBuilder(root, widgets) {
         let id = makeID(name);
 
         let prev = root.querySelector(`#${id}`);
-        let value = prev ? prev.value : undefined;
+        let value = prev ? JSON.parse(prev.value) : undefined;
 
         let render = errors => wrapWidget(html`
             <label for=${id}>${label}</label>
             <select id=${id} @change=${e => self.changeHandler(e)}>
-                <option value="" ?selected=${value == null}>-- Choisissez une option --</option>
-                ${choices.map(c => html`<option value=${c[0]} ?selected=${value === c[0]}>${c[1]}</option>`)}
+                <option value="null" ?selected=${value == null}>-- Choisissez une option --</option>
+                ${choices.map(c => html`<option value=${JSON.stringify(c[0])} ?selected=${value === c[0]}>${c[1]}</option>`)}
             </select>
         `, options, errors);
 
