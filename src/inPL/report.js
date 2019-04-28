@@ -14,13 +14,13 @@ let report = (function() {
     }
 
     this.refreshReport = function(rows) {
-        let plid = query('#inpl_option_plid').value;
+        let plid = query('#inpl_plid').value;
         let row = rows.find(row => row.rdv_plid == plid);
 
         let report = query('#inpl_report');
 
         report.replaceContent(
-            dom.h('h1', 'Identité'),
+            row ? dom.h('h1', 'Identité') : null,
             row ? dom.h('div',
                 dom.h('table',
                     createRow('Nom', row.consultant_nom),
@@ -29,24 +29,14 @@ let report = (function() {
                     createRow('Date de naissance', row.consultant_date_naissance)
                 )
             ) : null,
-            dom.h('h1', 'Biologie médicale'),
-            dom.h('h1', 'Examen général'),
-            dom.h('h1', 'Électrocardiogramme (ECG)'),
-            dom.h('h1', 'Examen de la vision'),
-            dom.h('h1', 'Examen de l\'audition'),
-            dom.h('h1', 'Examen de spirométrie'),
-            dom.h('h1', 'Examen de densitométrie osseuse'),
-            dom.h('h1', 'Entretien avec neuro-psychologue'),
-            dom.h('h1', 'Entretien avec nutritionniste'),
-            dom.h('h1', 'Entretien avec EMS'),
-            row ? dom.h('button', {style: 'display: block; margin: 0 auto;',
+            row ? dom.h('button', {id: 'inpl_generate',
                                    click: (e) => generateDocument(row)}, 'Générer un Compte-Rendu') : null
         );
     };
 
     function generateDocument(row)
     {
-        let file = query('#inpl_option_template').files[0];
+        let file = query('#inpl_template').files[0];
 
         if (file && row) {
             let reader = new FileReader();

@@ -383,13 +383,11 @@ set(INPL_ASSETS
     ../vendor/papaparse/papaparse.min.js
     ../vendor/docxtemplater/jszip.min.js
     ../vendor/docxtemplater/docxtemplater.min.js
-    libweb/compat.js
     libweb/util.js
     inPL/common.js
     inPL/inPL.js
     inPL/tests.js
     inPL/bridge.js
-    inPL/coaching.js
     inPL/report.js
     inPL/inPL.css
 )
