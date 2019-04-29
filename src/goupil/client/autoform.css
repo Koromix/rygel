@@ -21,7 +21,7 @@
 }
 .af_log {
     padding: 5px;
-    color: #e70e0e;
+    color: #db0a0a;
 }
 
 /* -------------------- Sections -------------------- */
@@ -57,7 +57,7 @@
     padding-top: 3px;
 }
 .af_widget_error {
-    background: #e70e0e;
+    background: #db0a0a;
     color: white;
 }
 .af_error {
