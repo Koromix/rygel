@@ -107,7 +107,7 @@ int RunBuild(Span<const char *> arguments)
     Toolchain toolchain = {Compilers[0], BuildMode::Debug};
     bool disable_pch = false;
     bool verbose = false;
-    bool run = false;
+    const char *run_target_name = nullptr;
     Span<const char *> run_arguments = {};
 
     // NOTE: This overrules LIBCC_THREADS if it exists
@@ -133,7 +133,7 @@ Options:
 
     -v, --verbose                Show detailed build commands
 
-        --run                    Run target after successful build
+        --run <target>           Run target after successful build
                                  (all remaining arguments are passed as-is)
 
 Available toolchains:)", toolchain);
@@ -182,8 +182,8 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
                 Async::SetWorkerCount(jobs);
             } else if (opt.Test("-v", "--verbose")) {
                 verbose = true;
-            } else if (opt.Test("--run")) {
-                run = true;
+            } else if (opt.Test("--run", OptionType::Value)) {
+                run_target_name = opt.current_value;
                 break;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
@@ -191,12 +191,8 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
             }
         }
 
-        if (run) {
-            if (target_names.len != 1) {
-                LogError("Exactly one target name must be specified with --run");
-                return 1;
-            }
-
+        if (run_target_name) {
+            target_names.Append(run_target_name);
             run_arguments = opt.GetRemainingArguments();
         }
     }
@@ -255,7 +251,7 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
 
     // Select targets and their dependencies (imports)
     HeapArray<const Target *> enabled_targets;
-    const Target *first_target = nullptr;
+    const Target *run_target = nullptr;
     {
         HashSet<const char *> handled_set;
 
@@ -277,8 +273,8 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
                 }
 
                 enabled_targets.Append(target);
-                if (!first_target) {
-                    first_target = target;
+                if (run_target_name && TestStr(target_name, run_target_name)) {
+                    run_target = target;
                 }
             }
         }
@@ -337,7 +333,7 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
         return 1;
 
     // Run?
-    return run ? RunTarget(*first_target, run_arguments, verbose) : 0;
+    return run_target ? RunTarget(*run_target, run_arguments, verbose) : 0;
 }
 
 }
