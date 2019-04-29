@@ -70,7 +70,7 @@
     vertical-align: middle;
 }
 .sc_month_warn {
-    background: #e70e0e;
+    background: #db0a0a;
     color: white;
 }
 .sc_selector b {
@@ -167,7 +167,7 @@
 .sc_day_empty .sc_head { background: #ff6600; }
 .sc_day_some .sc_head { background: #24579d; }
 .sc_day_full .sc_head { background: green; }
-.sc_day_warn .sc_head { background: #e70e0e; }
+.sc_day_warn .sc_head { background: #db0a0a; }
 .sc_opt_empty .sc_head {
     background: repeating-linear-gradient(
         -45deg,
@@ -241,7 +241,7 @@
 .sc_slot_used .sc_slot_time { cursor: grab; }
 .sc_slot_identity { text-align: left; }
 .sc_slot_warn.sc_slot_used {
-    background: #e70e0e;
+    background: #db0a0a;
     color: white;
     font-style: italic;
 }
