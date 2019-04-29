@@ -64,6 +64,7 @@
     float: right;
     clear: both;
     padding-top: 3px;
+    text-align: right;
 }
 .af_help {
     font-size: 0.85em;
