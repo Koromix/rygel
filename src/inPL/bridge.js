@@ -3,6 +3,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 let bridge = (function() {
+    let self = this;
+
     const DictInfo = {
         sexe: { 'M': 'Homme', 'F': 'Femme', },
         oui_non: { 1: 'Oui', 0: 'Non', },
@@ -1115,6 +1117,69 @@ let bridge = (function() {
             },
             complete: config.complete
         });
+    };
+
+    // Must be executed from within VZV domain
+    this.importFromVZV = function(id, func) {
+        let vzv = 'https://monparcours-sante.pasteur-lille.fr/iplille';
+
+        // I copied this garbage from a Voozanoo export request, I don't know what
+        // parts are important. And honestly I don't care, Voozanoo is beyond garbage.
+        let url = `${vzv}/export/index/build/id/190/fmt/csv/exportoptions/[{"name":"encoding","value":"utf-8"},{"name":"separator","value":";"},{"name":"terminator","value":"CRLF"},{"name":"dictionnary","value":"code"}]`;
+        let body = {
+            id: 'inPL',
+            total_rows: 1,
+            begin: 0,
+            range: 0,
+            cursor: 0,
+            standby: true,
+            mode: 'rw',
+            metadata: {
+                fields: {
+                    id_rdv: {
+                        type: 'integer',
+                        mandatory: 'false',
+                        default_label: 'ID RDV',
+                        integer: { max: null, min: null }
+                    }
+                },
+                variables: []
+            },
+            rowdata: [{ id_rdv: id }],
+            clientdata: {
+                generatedids: [],
+                changedfields: []
+            }
+        };
+        let params = {
+            headers: {
+                'Accept': '*/*',
+                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+            },
+            method: 'POST',
+            credentials: 'include',
+            body: `data=${encodeURIComponent(JSON.stringify(body))}`
+        };
+
+        // TODO: Improve error management in this code
+        fetch(url, params).then(response => response.json().then(json => {
+            let url = `${vzv}/export/index/download/file/${json.filename}`;
+            let params = {
+                credentials: 'include'
+            };
+
+            fetch(url, params).then(response => response.text().then(csv => {
+                let rows = Papa.parse(csv, {
+                    header: true,
+                    encoding: 'UTF-8',
+                    complete: ret => {
+                        row = translateRow(ret.data[0] || {});
+                        if (row.rdv_plid && row.consultant_sexe)
+                            func(row);
+                    }
+                });
+            }));
+        }));
     };
 
     return this;
