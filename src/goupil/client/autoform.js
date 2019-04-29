@@ -279,19 +279,26 @@ function AutoForm(widget) {
                 line = (m && m.length >= 2) ? (parseInt(m[1], 10) - 2) : null;
             }
 
+            form.classList.add('af_form_broken');
+
             log.textContent = `⚠ Line ${line || '?'}: ${err.message}`;
+            log.style.display = 'block';
+
             return false;
         }
 
         render(html`${widgets.map(w => w.render(w.errors))}`, form);
+        form.classList.remove('af_form_broken');
+
         log.innerHTML = '';
+        log.style.display = 'none';
 
         return true;
     };
 
     render(html`
         <div class="af_form"></div>
-        <div class="af_log"></div>
+        <div class="af_log" style="display: none;"></div>
     `, widget);
     form = widget.querySelector('.af_form');
     log = widget.querySelector('.af_log');

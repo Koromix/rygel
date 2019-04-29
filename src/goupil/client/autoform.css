@@ -19,9 +19,16 @@
     background: #eaeaea;
     padding: 2px;
 }
+.af_form_broken {
+    filter: grayscale(100%);
+    opacity: 0.5;
+}
 .af_log {
+    position: fixed;
+    top: 30px;
     padding: 5px;
-    color: #db0a0a;
+    background: #db0a0a;
+    color: white;
 }
 
 /* -------------------- Sections -------------------- */
