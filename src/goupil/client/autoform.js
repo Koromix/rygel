@@ -95,7 +95,9 @@ function PageBuilder(root, widgets) {
             <label for=${id}>${label || name}</label>
             <select id=${id} @change=${e => self.changeHandler(e)}>
                 <option value="null" ?selected=${value == null}>-- Choisissez une option --</option>
-                ${choices.map(c => html`<option value=${stringifyValue(c[0])} ?selected=${value === c[0]}>${c[1]}</option>`)}
+                ${choices.filter(c => c != null).map(c => html`
+                    <option value=${stringifyValue(c[0])} ?selected=${value === c[0]}>${c[1]}</option>
+                `)}
             </select>
         `, options, errors);
 
@@ -130,8 +132,10 @@ function PageBuilder(root, widgets) {
         let render = errors => wrapWidget(html`
             <label for=${id}>${label || name}</label>
             <div class="af_select" id=${id}>
-                ${choices.map(c => html`<button data-value=${stringifyValue(c[0])} class=${value == c[0] ? 'active' : ''}
-                                                @click=${e => changeSelect(e, id, c[0])}>${c[1]}</button>`)}
+                ${choices.filter(c => c != null).map(c => html`
+                    <button data-value=${stringifyValue(c[0])} class=${value == c[0] ? 'active' : ''}
+                            @click=${e => changeSelect(e, id, c[0])}>${c[1]}</button>
+                `)}
             </div>
         `, options, errors);
 
@@ -163,7 +167,7 @@ function PageBuilder(root, widgets) {
         let render = errors => wrapWidget(html`
             <label>${label || name}</label>
             <div class="af_radio" id=${id}>
-                ${choices.map((c, i) => html`
+                ${choices.filter(c => c != null).map((c, i) => html`
                     <input type="radio" name=${id} id=${`${id}.${i}`} value=${stringifyValue(c[0])}
                            class=${value == c[0] ? 'active' : ''}
                            @click=${e => changeRadio(e, value == c[0])}/>
@@ -191,7 +195,7 @@ function PageBuilder(root, widgets) {
         let render = errors => wrapWidget(html`
             <label>${label || name}</label>
             <div class="af_multi" id=${id}>
-                ${choices.map((c, i) => html`
+                ${choices.filter(c => c != null).map((c, i) => html`
                     <input type="checkbox" name=${id} id=${`${id}.${i}`} value=${stringifyValue(c[0])}
                            class=${value == c[0] ? 'active' : ''}
                            @click=${e => self.changeHandler(e)}/>
