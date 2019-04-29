@@ -180,6 +180,15 @@ output_dataquery <- function(variables, varsets, condition) {
     </join>
     <condition sql="{activite} = 2" optional="false">
         <field table_name="activite" field_name="code" alias="activite"/>
+    </condition>
+
+    <!-- Condition RDV spécifique -->
+    <condition sql="{rdv.id_data} = {id_rdv}" optional="true">
+        <field field_name="id_data" alias="rdv.id_data" table_name="rdv"/>
+        <variable alias="id_rdv" default="NULL">
+            <entry type="param" name="id_rdv" />
+            <entry type="dataset" name="filtre_global" field="id_rdv" row="current" />
+        </variable>
     </condition>')
     } else {
         stop(str_interp('Unknown condition ${condition}'))

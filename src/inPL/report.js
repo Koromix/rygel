@@ -37,7 +37,10 @@ let report = (function() {
     function generateDocument(row)
     {
         let file = query('#inpl_template').files[0];
+        return self.generate(row, file);
+    }
 
+    this.generate = function(row, file) {
         if (file && row) {
             let reader = new FileReader();
 
@@ -165,7 +168,7 @@ let report = (function() {
         } else if (row) {
             alert('You must specify a template document');
         }
-    }
+    };
 
     return this;
 }).call({});
