@@ -185,7 +185,7 @@ function PageBuilder(root, widgets) {
 
         let render = () => html`
             <fieldset class="af_section">
-                <legend>${label}</legend>
+                ${label ? html`<legend>${label}</legend>` : html``}
                 ${widgets.map(w => w.render(w.errors))}
             </fieldset>
         `;
