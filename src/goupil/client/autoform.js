@@ -142,6 +142,67 @@ function PageBuilder(root, widgets) {
         return self.select(name, label, [[true, 'Oui'], [false, 'Non']], options);
     };
 
+    function changeRadio(e, already_checked) {
+        if (already_checked)
+            e.target.checked = false;
+
+        self.changeHandler(e);
+    }
+
+    this.radio = function(name, label, choices = [], options = {}) {
+        let id = makeID(name);
+
+        let prev = root.querySelector(`#${id}`);
+        let value;
+        if (prev) {
+            let el = prev.querySelector('input:checked');
+            if (el)
+                value = parseValue(el.value);
+        }
+
+        let render = errors => wrapWidget(html`
+            <label>${label || name}</label>
+            <div class="af_radio" id=${id}>
+                ${choices.map((c, i) => html`
+                    <input type="radio" name=${id} id=${`${id}.${i}`} value=${stringifyValue(c[0])}
+                           class=${value == c[0] ? 'active' : ''}
+                           @click=${e => changeRadio(e, value == c[0])}/>
+                    <label for=${`${id}.${i}`}>${c[1]}</label><br/>
+                `)}
+            </div>
+        `, options, errors);
+
+        return addVariableWidget(name, id, render, value);
+    };
+
+    this.multi = function(name, label, choices = [], options = {}) {
+        let id = makeID(name);
+
+        let prev = root.querySelector(`#${id}`);
+        let value = [];
+        if (prev) {
+            let els = prev.querySelectorAll('input');
+            for (let el of els) {
+                if (el.checked)
+                    value.push(parseValue(el.value));
+            }
+        }
+
+        let render = errors => wrapWidget(html`
+            <label>${label || name}</label>
+            <div class="af_multi" id=${id}>
+                ${choices.map((c, i) => html`
+                    <input type="checkbox" name=${id} id=${`${id}.${i}`} value=${stringifyValue(c[0])}
+                           class=${value == c[0] ? 'active' : ''}
+                           @click=${e => self.changeHandler(e)}/>
+                    <label for=${`${id}.${i}`}>${c[1]}</label><br/>
+                `)}
+            </div>
+        `, options, errors);
+
+        return addVariableWidget(name, id, render, value);
+    };
+
     this.calc = function(name, label, value, options = {}) {
         let id = makeID(name);
 
