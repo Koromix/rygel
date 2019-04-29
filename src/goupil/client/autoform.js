@@ -82,17 +82,20 @@ function PageBuilder(root, widgets) {
         return intf;
     };
 
+    function parseValue(str) { return (str && str !== 'undefined') ? JSON.parse(str) : undefined; }
+    function stringifyValue(value) { return JSON.stringify(value); }
+
     this.dropdown = function(name, label, choices = [], options = {}) {
         let id = makeID(name);
 
         let prev = root.querySelector(`#${id}`);
-        let value = prev ? JSON.parse(prev.value) : undefined;
+        let value = prev ? parseValue(prev.value) : undefined;
 
         let render = errors => wrapWidget(html`
             <label for=${id}>${label}</label>
             <select id=${id} @change=${e => self.changeHandler(e)}>
                 <option value="null" ?selected=${value == null}>-- Choisissez une option --</option>
-                ${choices.map(c => html`<option value=${JSON.stringify(c[0])} ?selected=${value === c[0]}>${c[1]}</option>`)}
+                ${choices.map(c => html`<option value=${stringifyValue(c[0])} ?selected=${value === c[0]}>${c[1]}</option>`)}
             </select>
         `, options, errors);
 
@@ -100,7 +103,7 @@ function PageBuilder(root, widgets) {
     };
 
     function changeSelect(e, id, value) {
-        let json = JSON.stringify(value);
+        let json = stringifyValue(value);
 
         let els = document.querySelectorAll(`#${id} button`);
         for (let el of els)
@@ -118,7 +121,7 @@ function PageBuilder(root, widgets) {
             let els = prev.querySelectorAll('button');
             for (let el of els) {
                 if (el.classList.contains('active')) {
-                    value = JSON.parse(el.dataset.value);
+                    value = parseValue(el.dataset.value);
                     break;
                 }
             }
@@ -127,7 +130,7 @@ function PageBuilder(root, widgets) {
         let render = errors => wrapWidget(html`
             <label for=${id}>${label}</label>
             <div class="af_select" id=${id}>
-                ${choices.map(c => html`<button data-value=${JSON.stringify(c[0])} class=${value == c[0] ? 'active' : ''}
+                ${choices.map(c => html`<button data-value=${stringifyValue(c[0])} class=${value == c[0] ? 'active' : ''}
                                                 @click=${e => changeSelect(e, id, c[0])}>${c[1]}</button>`)}
             </div>
         `, options, errors);
