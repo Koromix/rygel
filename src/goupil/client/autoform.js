@@ -65,7 +65,7 @@ function PageBuilder(root, widgets) {
         let value = (prev && prev.value != '') ? parseInt(prev.value, 10) : undefined;
 
         let render = errors => wrapWidget(html`
-            <label for=${id}>${label}</label>
+            <label for=${id}>${label || name}</label>
             <input id=${id} type="number" value=${value}
                    @input=${e => self.changeHandler(e)}/>
         `, options, errors);
@@ -92,7 +92,7 @@ function PageBuilder(root, widgets) {
         let value = prev ? parseValue(prev.value) : undefined;
 
         let render = errors => wrapWidget(html`
-            <label for=${id}>${label}</label>
+            <label for=${id}>${label || name}</label>
             <select id=${id} @change=${e => self.changeHandler(e)}>
                 <option value="null" ?selected=${value == null}>-- Choisissez une option --</option>
                 ${choices.map(c => html`<option value=${stringifyValue(c[0])} ?selected=${value === c[0]}>${c[1]}</option>`)}
@@ -128,7 +128,7 @@ function PageBuilder(root, widgets) {
         }
 
         let render = errors => wrapWidget(html`
-            <label for=${id}>${label}</label>
+            <label for=${id}>${label || name}</label>
             <div class="af_select" id=${id}>
                 ${choices.map(c => html`<button data-value=${stringifyValue(c[0])} class=${value == c[0] ? 'active' : ''}
                                                 @click=${e => changeSelect(e, id, c[0])}>${c[1]}</button>`)}
@@ -158,7 +158,7 @@ function PageBuilder(root, widgets) {
         }
 
         let render = errors => wrapWidget(html`
-            <label for=${id}>${label}</label>
+            <label for=${id}>${label || name}</label>
             <span>${text}</span>
         `, options, errors);
 
