@@ -275,7 +275,10 @@ function AutoForm(widget) {
             Function('page', script)(page);
         } catch (err) {
             let line;
-            if (err.stack) {
+            if (err instanceof SyntaxError) {
+                // At least Firefox seems to do well in this case, it's better than nothing
+                line = err.lineNumber - 2;
+            } else if (err.stack) {
                 let m = err.stack.match(/ > Function:([0-9]+):[0-9]+/) ||
                         err.stack.match(/, <anonymous>:([0-9]+):[0-9]+/);
 
