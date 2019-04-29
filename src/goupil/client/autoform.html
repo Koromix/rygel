@@ -44,7 +44,7 @@ let sexe = page.select("sexe", "Quel est votre sexe ?",
                        [["M", "Homme"], ["F", "Femme"]]);
 
 page.dropdown("csp", "Quelle est votre CSP ?", [
-    [1, "Agriculteur exploitants"],
+    [1, "Agriculteur exploitant"],
     [2, "Artisan, commerçant ou chef d'entreprise"],
     [3, "Cadre ou profession intellectuelle supérieure"],
     [4, "Profession intermédiaire"],
@@ -52,6 +52,18 @@ page.dropdown("csp", "Quelle est votre CSP ?", [
     [6, "Ouvrier"],
     [7, "Retraité"],
     [8, "Autre ou sans activité professionnelle"]
+]);
+
+page.radio("lieu_vie", "Quel est votre lieu de vie ?", [
+    ["maison", "Maison"],
+    ["appartement", "Appartement"]
+]);
+
+page.multi("sommeil", "Présentez-vous un trouble du sommeil ?", [
+    [1, "Troubles d’endormissement"],
+    [2, "Troubles de maintien du sommeil"],
+    [3, "Réveil précoce"],
+    [4, "Sommeil non récupérateur"]
 ]);
 
 if (sexe.value == "F") {
