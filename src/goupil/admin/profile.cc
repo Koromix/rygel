@@ -15,22 +15,7 @@
 
 namespace RG {
 
-int RunCreateProfile(Span<const char *> arguments)
-{
-    BlockAllocator temp_alloc;
-
-    // Options
-    bool dev = false;
-    const char *profile_directory = nullptr;
-
-    static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: goupil_admin create_profile [options] profile_directory
-
-Options:
-       --dev                     Create developer-oriented profile)");
-    };
-
-    static const char *const DefaultConfig =
+static const char *const DefaultConfig =
 R"([Resources]
 DatabaseFile = %1
 
@@ -38,9 +23,10 @@ DatabaseFile = %1
 # IPStack = Dual
 # Port = 8888
 # Threads = 4
-# BaseUrl = /)";
+# BaseUrl = /
+)";
 
-    static const char *const DevData =
+static const char *const DemoSQL =
 R"(BEGIN TRANSACTION;
 
 INSERT INTO sc_resources VALUES ('pl', '2019-04-01', 730, 1, 1);
@@ -66,7 +52,25 @@ INSERT INTO sc_meetings VALUES ('pl', '2019-04-01', 730, 3);
 INSERT INTO sc_meetings VALUES ('pl', '2019-04-02', 730, 4);
 INSERT INTO sc_meetings VALUES ('pl', '2019-04-02', 1130, 5);
 
-END TRANSACTION;)";
+END TRANSACTION;
+)";
+
+int RunCreateProfile(Span<const char *> arguments)
+{
+    BlockAllocator temp_alloc;
+
+    // Options
+    bool dev = false;
+    bool demo = false;
+    const char *profile_directory = nullptr;
+
+    static const auto PrintUsage = [](FILE *fp) {
+        PrintLn(fp, R"(Usage: goupil_admin create_profile [options] profile_directory
+
+Options:
+       --dev                     Create developer-oriented profile
+       --demo                    Insert fake data in profile)");
+    };
 
     // Parse arguments
     {
@@ -78,6 +82,8 @@ END TRANSACTION;)";
                 return 0;
             } else if (opt.Test("--dev")) {
                 dev = true;
+            } else if (opt.Test("--demo")) {
+                demo = true;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -118,7 +124,7 @@ END TRANSACTION;)";
         const char *filename = Fmt(&temp_alloc, "%1%/%2", profile_directory, database_name).ptr;
         files.Append(filename);
 
-        if (!WriteFile(DevData, filename))
+        if (!WriteFile(demo ? DemoSQL : "", filename))
             return 1;
     } else {
         database_name = "database.db";
@@ -131,6 +137,9 @@ END TRANSACTION;)";
             return 1;
         if (!database.CreateSchema())
             return 1;
+
+        if (demo && !database.Execute(DemoSQL))
+            return 1;
     }
 
     // Create configuration file
@@ -139,7 +148,7 @@ END TRANSACTION;)";
         files.Append(filename);
 
         StreamWriter st(filename);
-        PrintLn(&st, DefaultConfig, database_name);
+        Print(&st, DefaultConfig, database_name);
         if (!st.Close())
             return 1;
     }
