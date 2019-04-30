@@ -31,11 +31,17 @@ function generateCR(id)
     if (typeof bridge === 'undefined') {
         loadScript(script_url, () => generateCR(id));
     } else {
-        fetch(template_url).then(response => response.blob().then(blob => {
-            bridge.importFromVZV(id, row => report.generate(row, blob));
-        }));
+        let button = document.querySelector('#inpl_button');
+
+        // FIXME: Use promises correctly, and use finally() to remove the class
+        button.classList.add('inpl_working');
+        setTimeout(() => button.classList.remove('inpl_working'), 10000);
+
+        fetch(template_url).then(response => response.blob())
+                           .then(blob => bridge.importFromVZV(id, row => report.generate(row, blob)));
     }
 }
 
-let id = parseInt(document.querySelector('#inpl_id_rdv > div > span > span').innerHTML, 10);
+let field = document.querySelector('#inpl_id_rdv > div > span > span');
+let id = parseInt(field.innerText.trim(), 10);
 generateCR(id);
