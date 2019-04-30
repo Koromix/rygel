@@ -1162,24 +1162,26 @@ let bridge = (function() {
         };
 
         // TODO: Improve error management in this code
-        fetch(url, params).then(response => response.json().then(json => {
+        return fetch(url, params).then(response => response.json())
+                                 .then(json => {
             let url = `${vzv}/export/index/download/file/${json.filename}`;
             let params = {
                 credentials: 'include'
             };
 
-            fetch(url, params).then(response => response.text().then(csv => {
-                let rows = Papa.parse(csv, {
-                    header: true,
-                    encoding: 'UTF-8',
-                    complete: ret => {
-                        row = translateRow(ret.data[0] || {});
-                        if (row.rdv_plid && row.consultant_sexe)
-                            func(row);
-                    }
-                });
-            }));
-        }));
+            return fetch(url, params);
+        }).then(response => response.text())
+          .then(csv => {
+            let rows = Papa.parse(csv, {
+                header: true,
+                encoding: 'UTF-8',
+                complete: ret => {
+                    row = translateRow(ret.data[0] || {});
+                    if (row.rdv_plid && row.consultant_sexe)
+                        func(row);
+                }
+            });
+        });
     };
 
     return this;
