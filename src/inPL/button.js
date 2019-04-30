@@ -23,13 +23,13 @@ function loadScript(url, func)
     head.appendChild(script);
 }
 
-function generateCR(id)
+function generateReport(id)
 {
     let script_url = 'https://koromix.dev/inPL/inPL.pk.js';
     let template_url = 'https://koromix.dev/inPL/template.docx';
 
     if (typeof bridge === 'undefined') {
-        loadScript(script_url, () => generateCR(id));
+        loadScript(script_url, () => generateReport(id));
     } else {
         let button = document.querySelector('#inpl_button');
 
@@ -44,4 +44,4 @@ function generateCR(id)
 
 let field = document.querySelector('#inpl_id_rdv > div > span > span');
 let id = parseInt(field.innerText.trim(), 10);
-generateCR(id);
+generateReport(id);
