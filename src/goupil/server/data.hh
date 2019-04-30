@@ -22,6 +22,8 @@ public:
     bool Open(const char *filename, unsigned int flags);
     bool Close();
 
+    bool Execute(const char *sql);
+
     bool CreateSchema();
 
     operator sqlite3 *() { return db; }

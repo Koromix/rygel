@@ -8,6 +8,36 @@
 
 namespace RG {
 
+static const char *const SchemaSQL = R"(
+CREATE TABLE sc_resources (
+    schedule TEXT NOT NULL CHECK(schedule IN ('pl', 'entreprise')),
+    date TEXT NOT NULL,
+    time INTEGER NOT NULL,
+
+    slots INTEGER NOT NULL,
+    overbook INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX sc_resources_sdt ON sc_resources (schedule, date, time);
+
+CREATE TABLE sc_identities (
+    id INTEGER PRIMARY KEY,
+
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    spouse_name TEXT,
+    birthdate TEXT NOT NULL
+);
+
+CREATE TABLE sc_meetings (
+    schedule TEXT NOT NULL CHECK(schedule IN ('pl', 'entreprise')),
+    date TEXT NOT NULL,
+    time INTEGER NOT NULL,
+
+    identity_id INTEGER NOT NULL REFERENCES sc_identities(id)
+);
+CREATE INDEX sc_meetings_sd ON sc_meetings (schedule, date, time);
+)";
+
 bool SQLiteDatabase::Open(const char *filename, unsigned int flags)
 {
     static const char *const sql = R"(
@@ -41,38 +71,8 @@ bool SQLiteDatabase::Close()
     return true;
 }
 
-bool SQLiteDatabase::CreateSchema()
+bool SQLiteDatabase::Execute(const char *sql)
 {
-    static const char *const sql = R"(
-        CREATE TABLE sc_resources (
-            schedule TEXT NOT NULL CHECK(schedule IN ('pl', 'entreprise')),
-            date TEXT NOT NULL,
-            time INTEGER NOT NULL,
-
-            slots INTEGER NOT NULL,
-            overbook INTEGER NOT NULL
-        );
-        CREATE UNIQUE INDEX sc_resources_sdt ON sc_resources (schedule, date, time);
-
-        CREATE TABLE sc_identities (
-            id INTEGER PRIMARY KEY,
-
-            first_name TEXT NOT NULL,
-            last_name TEXT NOT NULL,
-            spouse_name TEXT,
-            birthdate TEXT NOT NULL
-        );
-
-        CREATE TABLE sc_meetings (
-            schedule TEXT NOT NULL CHECK(schedule IN ('pl', 'entreprise')),
-            date TEXT NOT NULL,
-            time INTEGER NOT NULL,
-
-            identity_id INTEGER NOT NULL REFERENCES sc_identities(id)
-        );
-        CREATE INDEX sc_meetings_sd ON sc_meetings (schedule, date, time);
-    )";
-
     char *error = nullptr;
     if (sqlite3_exec(db, sql, nullptr, nullptr, &error) != SQLITE_OK) {
         LogError("SQLite request failed: %1", error);
@@ -82,6 +82,11 @@ bool SQLiteDatabase::CreateSchema()
     }
 
     return true;
+}
+
+bool SQLiteDatabase::CreateSchema()
+{
+    return Execute(SchemaSQL);
 }
 
 }
