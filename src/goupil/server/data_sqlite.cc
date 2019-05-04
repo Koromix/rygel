@@ -9,6 +9,12 @@
 namespace RG {
 
 static const char *const SchemaSQL = R"(
+CREATE TABLE af_records (
+    id TEXT NOT NULL,
+    data TEXT NOT NULL
+);
+CREATE UNIQUE INDEX af_records_i ON af_records (id);
+
 CREATE TABLE sc_resources (
     schedule TEXT NOT NULL CHECK(schedule IN ('pl', 'entreprise')),
     date TEXT NOT NULL,
