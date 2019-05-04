@@ -229,7 +229,7 @@ set(SQLITE_SRC
 )
 
 add_library(sqlite STATIC ${SQLITE_SRC})
-target_compile_definitions(sqlite PRIVATE -DSQLITE_THREADSAFE=1)
+target_compile_definitions(sqlite PRIVATE -DSQLITE_THREADSAFE=1 -DSQLITE_ENABLE_JSON1)
 target_link_libraries(sqlite PUBLIC Threads::Threads)
 if(NOT WIN32)
     target_link_libraries(sqlite PUBLIC dl)
