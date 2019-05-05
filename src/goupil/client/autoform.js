@@ -395,7 +395,7 @@ function AutoForm(widget) {
         render(html`
             ${key && !pages.has(key) ? html`<option value=${key} .selected=${true}>-- Unknown page '${key}' --</option>` : html``}
             ${Array.from(pages, ([_, page]) =>
-                html`<option value=${page.key} .selected=${page.key == key}>${page.title}</option>`)}
+                html`<option value=${page.key} .selected=${page.key == key}>${page.title} (${page.key})</option>`)}
         `, title);
     }
 
