@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function FormBuilder(root, widgets) {
+function FormBuilder(root, widgets, mem) {
     let self = this;
 
     this.changeHandler = e => {};
@@ -61,8 +61,17 @@ function FormBuilder(root, widgets) {
     this.integer = function(name, label, options = {}) {
         let id = makeID(name);
 
-        let prev = root.querySelector(`#${id}`);
-        let value = (prev && prev.value != '') ? parseInt(prev.value, 10) : undefined;
+        let value;
+        {
+            let prev = root.querySelector(`#${id}`);
+
+            if (prev) {
+                value = parseInt(prev.value, 10);
+                mem[name] = value;
+            } else if (typeof mem[name] === 'number') {
+                value = mem[name];
+            }
+        }
 
         let render = errors => wrapWidget(html`
             <label for=${id}>${label || name}</label>
@@ -88,8 +97,17 @@ function FormBuilder(root, widgets) {
     this.dropdown = function(name, label, choices = [], options = {}) {
         let id = makeID(name);
 
-        let prev = root.querySelector(`#${id}`);
-        let value = prev ? parseValue(prev.value) : undefined;
+        let value;
+        {
+            let prev = root.querySelector(`#${id}`);
+
+            if (prev) {
+                value = parseValue(prev.value);
+                mem[name] = value;
+            } else {
+                value = mem[name];
+            }
+        }
 
         let render = errors => wrapWidget(html`
             <label for=${id}>${label || name}</label>
@@ -116,15 +134,22 @@ function FormBuilder(root, widgets) {
     this.select = function(name, label, choices = [], options = {}) {
         let id = makeID(name);
 
-        let prev = root.querySelector(`#${id}`);
         let value;
-        if (prev) {
-            let els = prev.querySelectorAll('button');
-            for (let el of els) {
-                if (el.classList.contains('active')) {
-                    value = parseValue(el.dataset.value);
-                    break;
+        {
+            let prev = root.querySelector(`#${id}`);
+
+            if (prev) {
+                let els = prev.querySelectorAll('button');
+                for (let el of els) {
+                    if (el.classList.contains('active')) {
+                        value = parseValue(el.dataset.value);
+                        break;
+                    }
                 }
+
+                mem[name] = value;
+            } else {
+                value = mem[name];
             }
         }
 
@@ -155,12 +180,19 @@ function FormBuilder(root, widgets) {
     this.radio = function(name, label, choices = [], options = {}) {
         let id = makeID(name);
 
-        let prev = root.querySelector(`#${id}`);
         let value;
-        if (prev) {
-            let el = prev.querySelector('input:checked');
-            if (el)
-                value = parseValue(el.value);
+        {
+            let prev = root.querySelector(`#${id}`);
+
+            if (prev) {
+                let el = prev.querySelector('input:checked');
+                if (el)
+                    value = parseValue(el.value);
+
+                mem[name] = value;
+            } else {
+                value = mem[name];
+            }
         }
 
         let render = errors => wrapWidget(html`
@@ -180,13 +212,24 @@ function FormBuilder(root, widgets) {
     this.multi = function(name, label, choices = [], options = {}) {
         let id = makeID(name);
 
-        let prev = root.querySelector(`#${id}`);
-        let value = [];
-        if (prev) {
-            let els = prev.querySelectorAll('input');
-            for (let el of els) {
-                if (el.checked)
-                    value.push(parseValue(el.value));
+        let value;
+        {
+            let prev = root.querySelector(`#${id}`);
+
+            if (prev) {
+                let els = prev.querySelectorAll('input');
+
+                value = [];
+                for (let el of els) {
+                    if (el.checked)
+                        value.push(parseValue(el.value));
+                }
+
+                mem[name] = value;
+            } else if (Array.isArray(mem[name])) {
+                value = mem[name];
+            } else {
+                value = [];
             }
         }
 
@@ -288,6 +331,7 @@ function AutoForm(widget) {
 
     let pages = new Map;
     let current_page_key = null;
+    let mem = {};
 
     function page(key, title, func) {
         if (pages.has(key))
@@ -342,7 +386,7 @@ function AutoForm(widget) {
         current_page_key = page.key;
 
         let widgets = [];
-        let form_builder = new FormBuilder(form, widgets);
+        let form_builder = new FormBuilder(form, widgets, mem);
         form_builder.changeHandler = () => renderPage(key);
 
         try {
