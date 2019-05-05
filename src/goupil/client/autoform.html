@@ -42,7 +42,7 @@
                     if (script == null) {
                         script = `// Test autoform script
 
-page('aq', 'Auto-questionnaire', f => {
+page("aq", "Auto-questionnaire", f => {
     f.integer("age", "Quel est votre âge ?", {min: 18, max: 120});
 
     let sexe = f.select("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]]);
@@ -67,7 +67,8 @@ page('aq', 'Auto-questionnaire', f => {
         [1, "Troubles d’endormissement"],
         [2, "Troubles de maintien du sommeil"],
         [3, "Réveil précoce"],
-        [4, "Sommeil non récupérateur"]
+        [4, "Sommeil non récupérateur"],
+        [null, "Aucune de ces réponses"]
     ]);
 
     if (sexe.value == "F") {
@@ -95,8 +96,14 @@ page('aq', 'Auto-questionnaire', f => {
                   {help: "Si si, c'est important, je vous le jure !"});
     });
 
-    f.output(html\`On peut aussi mettre du <b>HTML directement</b> si on veut...\`);
+    f.output(html\`On peut aussi mettre du <b>HTML directement</b> si on veut...
+                  <button class="af_button" @click=\${e => go("aide")}>Afficher l'aide</button>\`);
     f.output("Ou bien encore mettre du <b>texte brut</b>.");
+});
+
+page("aide", "Aide", f => {
+    f.output("Loreum ipsum");
+    f.button("Revenir à l'auto-questionnaire", () => go("aq"));
 });
 `;
                     }
