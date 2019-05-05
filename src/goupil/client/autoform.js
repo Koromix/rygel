@@ -76,7 +76,7 @@ function FormBuilder(root, widgets, mem) {
         let render = errors => wrapWidget(html`
             <label for=${id}>${label || name}</label>
             <input id=${id} type="number" .value=${value}
-                   @input=${e => self.changeHandler(e)}/>
+                   @input=${self.changeHandler}/>
         `, options, errors);
 
         let intf = addVariableWidget(name, id, render, value);
@@ -111,7 +111,7 @@ function FormBuilder(root, widgets, mem) {
 
         let render = errors => wrapWidget(html`
             <label for=${id}>${label || name}</label>
-            <select id=${id} @change=${e => self.changeHandler(e)}>
+            <select id=${id} @change=${self.changeHandler}>
                 <option value="null" .selected=${value == null}>-- Choisissez une option --</option>
                 ${choices.filter(c => c != null).map(c =>
                     html`<option value=${stringifyValue(c[0])} .selected=${value === c[0]}>${c[1]}</option>`)}
