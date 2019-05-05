@@ -17,11 +17,6 @@
             let autoform;
 
             function refreshAndSave() {
-                if (!autoform) {
-                    let root = document.querySelector('#af_page');
-                    autoform = new AutoForm(root);
-                }
-
                 let editor = ace.edit('af_editor');
                 let script = editor.getValue();
 
@@ -29,18 +24,22 @@
                     sessionStorage.setItem('goupil_autoform_script', script);
             }
 
-            document.addEventListener('readystatechange', function() {
-                if (document.readyState === 'complete') {
-                    let editor = ace.edit('af_editor');
+            function initAutoForm() {
+                let root = document.querySelector('#af_page');
+                autoform = new AutoForm(root);
+            }
 
-                    editor.setTheme('ace/theme/monokai');
-                    editor.setShowPrintMargin(false);
-                    editor.setFontSize(12);
-                    editor.session.setMode('ace/mode/javascript');
+            function initEditor() {
+                let editor = ace.edit('af_editor');
 
-                    let script = sessionStorage.getItem('goupil_autoform_script');
-                    if (script == null) {
-                        script = `// Test autoform script
+                editor.setTheme('ace/theme/monokai');
+                editor.setShowPrintMargin(false);
+                editor.setFontSize(12);
+                editor.session.setMode('ace/mode/javascript');
+
+                let script = sessionStorage.getItem('goupil_autoform_script');
+                if (script == null) {
+                    script = `// Test autoform script
 
 page("aq", "Auto-questionnaire", f => {
     f.integer("age", "Quel est votre âge ?", {min: 18, max: 120});
@@ -106,15 +105,22 @@ page("aide", "Aide", f => {
     f.button("Revenir à l'auto-questionnaire", () => go("aq"));
 });
 `;
-                    }
-                    editor.setValue(script);
-                    editor.clearSelection();
+                }
+                editor.setValue(script);
+                editor.clearSelection();
 
-                    editor.on('change', e => {
-                        // If something goes wrong during refreshAndSave(), we don't
-                        // want to break ACE state.
-                        setTimeout(refreshAndSave, 0);
-                    });
+                editor.on('change', e => {
+                    // If something goes wrong during refreshAndSave(), we don't
+                    // want to break ACE state.
+                    setTimeout(refreshAndSave, 0);
+                });
+            }
+
+            document.addEventListener('readystatechange', function() {
+                if (document.readyState === 'complete') {
+                    initAutoForm();
+                    initEditor();
+
                     refreshAndSave();
                 }
             });
