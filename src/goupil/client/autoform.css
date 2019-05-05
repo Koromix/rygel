@@ -31,17 +31,28 @@
     color: white;
 }
 
+/* -------------------- Pages and sections -------------------- */
+
 .af_title {
-    margin: -2px -2px 0.5em -2px;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
     padding: 3px 2em;
-    font-size: 1.3em;
     background: #ff6600;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAALCAYAAABhwJ3wAAAAmElEQVQ4jbXSsQpBARgFYC+hDLJISZQUA2UymCzKi8uiDEqhUKKw+CyGf7jEdZ064+lbTg55THHPqGtUc0lBAbMMkA3qiUjAipj/gOzQfIsErIRFCuSA9kdIwMpYfoEc0f0KCVgFqw+QE/qpkIDVng96hZwx+AkJWAPbBOSCYSZIwFrYB+SKUaZIwDrPZ90w/gsSsB4mafcPBrf6ZZY6+FYAAAAASUVORK5CYII=");
+    background-repeat: no-repeat;
+    background-position: right;
+    border: 0;
+    outline: 0;
     color: white;
+    font-size: 1.3em;
     font-weight: normal;
     text-align: center;
+    text-align-last: center;
 }
-
-/* -------------------- Sections -------------------- */
 
 .af_section {
     margin: 0.5em 2px 0 2px;

@@ -339,6 +339,7 @@ function FormBuilder(root, widgets, mem) {
 function AutoForm(widget) {
     let self = this;
 
+    let title;
     let form;
     let log;
 
@@ -390,7 +391,15 @@ function AutoForm(widget) {
         }
     }
 
-    function renderPage(key) {
+    function renderTitle(key) {
+        render(html`
+            ${key && !pages.has(key) ? html`<option value=${key} .selected=${true}>-- Unknown page '${key}' --</option>` : html``}
+            ${Array.from(pages, ([_, page]) =>
+                html`<option value=${page.key} .selected=${page.key == key}>${page.title}</option>`)}
+        `, title);
+    }
+
+    function renderForm(key) {
         let page = pages.get(key);
         if (!page) {
             setError(null, `Page '${key}' does not exist`);
@@ -406,18 +415,20 @@ function AutoForm(widget) {
             page.func(form_builder);
         } catch (err) {
             let line = parseAnonymousErrorLine(err);
-
             setError(line, err.message);
+
             return false;
         }
 
-        render(html`
-            <h1 class="af_title">${page.title}</h1>
-            ${widgets.map(w => w.render(w.errors))}
-        `, form);
-
+        render(html`${widgets.map(w => w.render(w.errors))}`, form);
         clearError();
+
         return true;
+    }
+
+    function renderPage(key) {
+        renderTitle(key);
+        return renderForm(key);
     }
 
     self.update = function(script) {
@@ -435,7 +446,11 @@ function AutoForm(widget) {
             }
 
             setError(line, err.message);
+
             return false;
+        } finally {
+            if (current_page_key)
+                renderTitle(current_page_key);
         }
 
         if (pages.size) {
@@ -446,6 +461,7 @@ function AutoForm(widget) {
         } else {
             current_page_key = null;
 
+            render(html``, title);
             render(html``, form);
             setError(null, 'No page defined');
 
@@ -454,9 +470,11 @@ function AutoForm(widget) {
     };
 
     render(html`
+        <select class="af_title" @change=${e => self.go(e.target.value)}></select>
         <div class="af_form"></div>
         <div class="af_log" style="display: none;"></div>
     `, widget);
+    title = widget.querySelector('.af_title');
     form = widget.querySelector('.af_form');
     log = widget.querySelector('.af_log');
 
