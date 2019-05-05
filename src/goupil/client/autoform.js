@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function PageBuilder(root, widgets) {
+function FormBuilder(root, widgets) {
     let self = this;
 
     this.changeHandler = e => {};
@@ -261,42 +261,114 @@ function AutoForm(widget) {
     let form;
     let log;
 
-    self.render = function(script) {
-        let widgets = [];
+    let pages = new Map;
+    let current_page_key = null;
 
-        let page = new PageBuilder(form, widgets);
-        page.changeHandler = () => self.render(script);
+    function page(key, title, func) {
+        if (pages.has(key))
+            throw new Error(`Page '${title}' already exists`);
+
+        let page = {
+            key: key,
+            title: title,
+            func: func
+        };
+
+        pages.set(key, page);
+    }
+
+    function go(key) {
+        setTimeout(() => renderPage(key), 0);
+    }
+
+    function setError(line, msg) {
+        form.classList.add('af_form_broken');
+
+        log.textContent = `⚠ Line ${line || '?'}: ${msg}`;
+        log.style.display = 'block';
+    }
+
+    function clearError() {
+        form.classList.remove('af_form_broken');
+
+        log.innerHTML = '';
+        log.style.display = 'none';
+    }
+
+    function parseAnonymousErrorLine(err) {
+        if (err.stack) {
+            let m = err.stack.match(/ > Function:([0-9]+):[0-9]+/) ||
+                    err.stack.match(/, <anonymous>:([0-9]+):[0-9]+/);
+
+            // Can someone explain to me why do I have to offset by -2?
+            let line = (m && m.length >= 2) ? (parseInt(m[1], 10) - 2) : null;
+            return line;
+        } else {
+            return null;
+        }
+    }
+
+    function renderPage(key) {
+        let page = pages.get(key);
+        if (!page) {
+            setError(null, `Page '${key}' does not exist`);
+            return false;
+        }
+        current_page_key = page.key;
+
+        let widgets = [];
+        let form_builder = new FormBuilder(form, widgets);
+        form_builder.changeHandler = () => renderPage(key);
 
         try {
-            Function('page', script)(page);
+            page.func(form_builder);
+        } catch (err) {
+            let line = parseAnonymousErrorLine(err);
+
+            setError(line, err.message);
+            return false;
+        }
+
+        render(html`
+            <h1 class="af_title">${page.title}</h1>
+            ${widgets.map(w => w.render(w.errors))}
+        `, form);
+
+        clearError();
+        return true;
+    }
+
+    self.update = function(script) {
+        pages.clear();
+
+        try {
+            Function('page', 'go', script)(page, go);
         } catch (err) {
             let line;
             if (err instanceof SyntaxError) {
                 // At least Firefox seems to do well in this case, it's better than nothing
                 line = err.lineNumber - 2;
             } else if (err.stack) {
-                let m = err.stack.match(/ > Function:([0-9]+):[0-9]+/) ||
-                        err.stack.match(/, <anonymous>:([0-9]+):[0-9]+/);
-
-                // Can someone explain to me why do I have to offset by -2?
-                line = (m && m.length >= 2) ? (parseInt(m[1], 10) - 2) : null;
+                line = parseAnonymousErrorLine(err);
             }
 
-            form.classList.add('af_form_broken');
-
-            log.textContent = `⚠ Line ${line || '?'}: ${err.message}`;
-            log.style.display = 'block';
-
+            setError(line, err.message);
             return false;
         }
 
-        render(html`${widgets.map(w => w.render(w.errors))}`, form);
-        form.classList.remove('af_form_broken');
+        if (pages.size) {
+            if (!current_page_key)
+                current_page_key = pages.values().next().value.key;
 
-        log.innerHTML = '';
-        log.style.display = 'none';
+            return renderPage(current_page_key);
+        } else {
+            current_page_key = null;
 
-        return true;
+            render(html``, form);
+            setError(null, 'No page defined');
+
+            return false;
+        }
     };
 
     render(html`

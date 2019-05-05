@@ -31,6 +31,16 @@
     color: white;
 }
 
+.af_title {
+    margin: -2px -2px 1em -2px;
+    padding: 3px 2em;
+    font-size: 1.3em;
+    background: #ff6600;
+    color: white;
+    font-weight: normal;
+    text-align: center;
+}
+
 /* -------------------- Sections -------------------- */
 
 .af_section {
