@@ -66,7 +66,7 @@ function PageBuilder(root, widgets) {
 
         let render = errors => wrapWidget(html`
             <label for=${id}>${label || name}</label>
-            <input id=${id} type="number" value=${value}
+            <input id=${id} type="number" .value=${value}
                    @input=${e => self.changeHandler(e)}/>
         `, options, errors);
 
@@ -94,9 +94,9 @@ function PageBuilder(root, widgets) {
         let render = errors => wrapWidget(html`
             <label for=${id}>${label || name}</label>
             <select id=${id} @change=${e => self.changeHandler(e)}>
-                <option value="null" ?selected=${value == null}>-- Choisissez une option --</option>
+                <option value="null" .selected=${value == null}>-- Choisissez une option --</option>
                 ${choices.filter(c => c != null).map(c =>
-                    html`<option value=${stringifyValue(c[0])} ?selected=${value === c[0]}>${c[1]}</option>`)}
+                    html`<option value=${stringifyValue(c[0])} .selected=${value === c[0]}>${c[1]}</option>`)}
             </select>
         `, options, errors);
 
@@ -132,7 +132,7 @@ function PageBuilder(root, widgets) {
             <label for=${id}>${label || name}</label>
             <div class="af_select" id=${id}>
                 ${choices.filter(c => c != null).map(c =>
-                    html`<button data-value=${stringifyValue(c[0])} class=${value == c[0] ? 'active' : ''}
+                    html`<button data-value=${stringifyValue(c[0])} .className=${value == c[0] ? 'active' : ''}
                                  @click=${e => changeSelect(e, id, c[0])}>${c[1]}</button>`)}
             </div>
         `, options, errors);
@@ -167,8 +167,8 @@ function PageBuilder(root, widgets) {
             <div class="af_radio" id=${id}>
                 ${choices.filter(c => c != null).map((c, i) =>
                     html`<input type="radio" name=${id} id=${`${id}.${i}`} value=${stringifyValue(c[0])}
-                                class=${value == c[0] ? 'active' : ''}
-                                @click=${e => changeRadio(e, value == c[0])}/>
+                                .checked=${value === c[0]}
+                                @click=${e => changeRadio(e, value === c[0])}/>
                          <label for=${`${id}.${i}`}>${c[1]}</label><br/>`)}
             </div>
         `, options, errors);
@@ -194,7 +194,7 @@ function PageBuilder(root, widgets) {
             <div class="af_multi" id=${id}>
                 ${choices.filter(c => c != null).map((c, i) =>
                     html`<input type="checkbox" name=${id} id=${`${id}.${i}`} value=${stringifyValue(c[0])}
-                                class=${value == c[0] ? 'active' : ''}
+                                .checked=${value.includes(c[0])}
                                 @click=${e => self.changeHandler(e)}/>
                          <label for=${`${id}.${i}`}>${c[1]}</label><br/>`)}
             </div>
