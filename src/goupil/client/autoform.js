@@ -209,6 +209,19 @@ function FormBuilder(root, widgets, mem) {
         return addVariableWidget(name, id, render, value);
     };
 
+    function changeMulti(e) {
+        let target = e.target;
+        let els = target.parentNode.querySelectorAll('input');
+
+        let nullify = (target.checked && target.value === 'null');
+        for (let el of els) {
+            if ((el.value === 'null') != nullify)
+                el.checked = false;
+        }
+
+        self.changeHandler(e);
+    }
+
     this.multi = function(name, label, choices = [], options = {}) {
         let id = makeID(name);
 
@@ -239,7 +252,7 @@ function FormBuilder(root, widgets, mem) {
                 ${choices.filter(c => c != null).map((c, i) =>
                     html`<input type="checkbox" name=${id} id=${`${id}.${i}`} value=${stringifyValue(c[0])}
                                 .checked=${value.includes(c[0])}
-                                @click=${e => self.changeHandler(e)}/>
+                                @click=${changeMulti}/>
                          <label for=${`${id}.${i}`}>${c[1]}</label><br/>`)}
             </div>
         `, options, errors);
