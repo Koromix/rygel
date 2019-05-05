@@ -14,14 +14,18 @@
         <script src="{BASE_URL}static/ace.js"></script>
         <script src="{BASE_URL}static/goupil.pk.js"></script>
         <script>
-            function refreshAndSave() {
-                let editor = ace.edit('af_editor');
-                let page = document.querySelector('#af_page');
+            let autoform;
 
+            function refreshAndSave() {
+                if (!autoform) {
+                    let root = document.querySelector('#af_page');
+                    autoform = new AutoForm(root);
+                }
+
+                let editor = ace.edit('af_editor');
                 let script = editor.getValue();
 
-                let autoform = new AutoForm(page);
-                if (autoform.render(script))
+                if (autoform.update(script))
                     sessionStorage.setItem('goupil_autoform_script', script);
             }
 
@@ -38,61 +42,62 @@
                     if (script == null) {
                         script = `// Test autoform script
 
-page.integer("age", "Quel est votre âge ?", {min: 18, max: 120});
+page('aq', 'Auto-questionnaire', f => {
+    f.integer("age", "Quel est votre âge ?", {min: 18, max: 120});
 
-let sexe = page.select("sexe", "Quel est votre sexe ?",
-                       [["M", "Homme"], ["F", "Femme"]]);
+    let sexe = f.select("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]]);
 
-page.dropdown("csp", "Quelle est votre CSP ?", [
-    [1, "Agriculteur exploitant"],
-    [2, "Artisan, commerçant ou chef d'entreprise"],
-    [3, "Cadre ou profession intellectuelle supérieure"],
-    [4, "Profession intermédiaire"],
-    [5, "Employé"],
-    [6, "Ouvrier"],
-    [7, "Retraité"],
-    [8, "Autre ou sans activité professionnelle"]
-]);
+    f.dropdown("csp", "Quelle est votre CSP ?", [
+        [1, "Agriculteur exploitant"],
+        [2, "Artisan, commerçant ou chef d'entreprise"],
+        [3, "Cadre ou profession intellectuelle supérieure"],
+        [4, "Profession intermédiaire"],
+        [5, "Employé"],
+        [6, "Ouvrier"],
+        [7, "Retraité"],
+        [8, "Autre ou sans activité professionnelle"]
+    ]);
 
-page.radio("lieu_vie", "Quel est votre lieu de vie ?", [
-    ["maison", "Maison"],
-    ["appartement", "Appartement"]
-]);
+    f.radio("lieu_vie", "Quel est votre lieu de vie ?", [
+        ["maison", "Maison"],
+        ["appartement", "Appartement"]
+    ]);
 
-page.multi("sommeil", "Présentez-vous un trouble du sommeil ?", [
-    [1, "Troubles d’endormissement"],
-    [2, "Troubles de maintien du sommeil"],
-    [3, "Réveil précoce"],
-    [4, "Sommeil non récupérateur"]
-]);
+    f.multi("sommeil", "Présentez-vous un trouble du sommeil ?", [
+        [1, "Troubles d’endormissement"],
+        [2, "Troubles de maintien du sommeil"],
+        [3, "Réveil précoce"],
+        [4, "Sommeil non récupérateur"]
+    ]);
 
-if (sexe.value == "F") {
-    page.boolean("enceinte", "Êtes-vous enceinte ?");
-}
-
-page.section("Alcool", () => {
-    let alcool = page.boolean("alcool", "Consommez-vous de l'alcool ?");
-
-    if (alcool.value && page.value("enceinte")) {
-        alcool.error("Pensez au bébé...");
-        alcool.error("On peut mettre plusieurs erreurs");
-        page.error("alcool", "Et de plein de manières différentes !");
+    if (sexe.value == "F") {
+        f.boolean("enceinte", "Êtes-vous enceinte ?");
     }
 
-    if (alcool.value) {
-        page.integer("alcool_qt", "Combien de verres par semaine ?",
-                     {min: 1, max: 30});
-    }
-});
+    f.section("Alcool", () => {
+        let alcool = f.boolean("alcool", "Consommez-vous de l'alcool ?");
 
-page.section("Autres", () => {
-    page.integer("enfants", "Combien avez-vous d'enfants ?", {min: 0, max: 30});
-    page.boolean("frites", "Aimez-vous les frites ?",
-                 {help: "Si si, c'est important, je vous le jure !"});
-});
+        if (alcool.value && f.value("enceinte")) {
+            alcool.error("Pensez au bébé...");
+            alcool.error("On peut mettre plusieurs erreurs");
+            f.error("alcool", "Et de plein de manières différentes !");
+        }
 
-page.output(html\`On peut aussi mettre du <b>HTML directement</b> si on veut...\`);
-page.output("Ou bien encore mettre du <b>texte brut</b>.");
+        if (alcool.value) {
+            f.integer("alcool_qt", "Combien de verres par semaine ?",
+                      {min: 1, max: 30});
+        }
+    });
+
+    f.section("Autres", () => {
+        f.integer("enfants", "Combien avez-vous d'enfants ?", {min: 0, max: 30});
+        f.boolean("frites", "Aimez-vous les frites ?",
+                  {help: "Si si, c'est important, je vous le jure !"});
+    });
+
+    f.output(html\`On peut aussi mettre du <b>HTML directement</b> si on veut...\`);
+    f.output("Ou bien encore mettre du <b>texte brut</b>.");
+});
 `;
                     }
                     editor.setValue(script);
