@@ -132,7 +132,8 @@ function FormBuilder(root, widgets) {
             <label for=${id}>${label || name}</label>
             <div class="af_select" id=${id}>
                 ${choices.filter(c => c != null).map(c =>
-                    html`<button data-value=${stringifyValue(c[0])} .className=${value == c[0] ? 'active' : ''}
+                    html`<button data-value=${stringifyValue(c[0])}
+                                 .className=${value == c[0] ? 'af_button active' : 'af_button'}
                                  @click=${e => changeSelect(e, id, c[0])}>${c[1]}</button>`)}
             </div>
         `, options, errors);
@@ -250,6 +251,30 @@ function FormBuilder(root, widgets) {
                 ${widgets.map(w => w.render(w.errors))}
             </fieldset>
         `;
+
+        addWidget(render);
+    };
+
+    this.link = function(label, dest, options = {}) {
+        if (typeof dest === 'function') {
+            let render = () => wrapWidget(html`
+                <a class="af_link" href="#" @click=${e => { dest(e); e.preventDefault(); }}>${label}</a>
+            `, options);
+
+            addWidget(render);
+        } else {
+            let render = () => wrapWidget(html`
+                <a class="af_link" href=${dest}>${label}</a>
+            `, options);
+
+            addWidget(render);
+        }
+    };
+
+    this.button = function(label, func, options = {}) {
+        let render = () => wrapWidget(html`
+            <button class="af_button" @click=${func}>${label}</button>
+        `, options);
 
         addWidget(render);
     };
