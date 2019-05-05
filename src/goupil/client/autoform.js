@@ -346,7 +346,7 @@ function AutoForm(widget) {
     let current_page_key = null;
     let mem = {};
 
-    function page(key, title, func) {
+    self.page = function(key, title, func) {
         if (pages.has(key))
             throw new Error(`Page '${title}' already exists`);
 
@@ -357,11 +357,11 @@ function AutoForm(widget) {
         };
 
         pages.set(key, page);
-    }
+    };
 
-    function go(key) {
+    self.go = function(key) {
         setTimeout(() => renderPage(key), 0);
-    }
+    };
 
     function setError(line, msg) {
         form.classList.add('af_form_broken');
@@ -424,7 +424,7 @@ function AutoForm(widget) {
         pages.clear();
 
         try {
-            Function('page', 'go', script)(page, go);
+            Function('page', 'go', script)(self.page, self.go);
         } catch (err) {
             let line;
             if (err instanceof SyntaxError) {
