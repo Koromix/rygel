@@ -353,7 +353,7 @@ function AutoForm(widget) {
 
         let page = {
             key: key,
-            title: title,
+            title: title || key,
             func: func
         };
 
