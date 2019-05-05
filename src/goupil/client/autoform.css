@@ -94,13 +94,20 @@
 /* -------------------- Widget types -------------------- */
 
 .af_select, .af_radio, .af_multi { display: inline-block; }
-.af_select button {
+
+.af_button {
     margin: 0 1px 0 0;
     padding: 2px 0.7em;
     background: #f8f8f8;
     border: 0;
 }
-.af_select button.active {
+.af_button.active {
     background: #ff6600;
     color: white;
 }
+
+.af_link {
+    color: #ff6600;
+    text-decoration: none;
+}
+.af_link:hover { text-decoration: underline; }
