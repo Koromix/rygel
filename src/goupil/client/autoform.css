@@ -97,12 +97,16 @@
 
 .af_button {
     margin: 0 1px 0 0;
-    padding: 2px 0.7em;
+    padding: 1px 0.7em;
     background: #f8f8f8;
-    border: 0;
+    border: 1px solid #f8f8f8;
+}
+.af_button:hover {
+    border: 1px solid #ff6600;
 }
 .af_button.active {
     background: #ff6600;
+    border: 1px solid #ff6600;
     color: white;
 }
 
