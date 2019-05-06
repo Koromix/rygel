@@ -86,7 +86,7 @@ function FormBuilder(root, widgets, mem) {
         let render = errors => wrapWidget(html`
             <label for=${id}>${label || name}</label>
             ${createPrefixOrSuffix('af_prefix', options.prefix, value)}
-            <input id=${id} type="text" .value=${value || ''}
+            <input id=${id} type="text" size="${options.size || 30}" .value=${value || ''}
                    @input=${self.changeHandler}/>
             ${createPrefixOrSuffix('af_suffix', options.suffix, value)}
         `, options, errors);
