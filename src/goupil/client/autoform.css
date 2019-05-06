@@ -58,7 +58,7 @@
 .af_section {
     margin: 0.5em 2px 0 2px;
     padding: 0.5em;
-    background: rgba(136, 136, 136, 18%);
+    background: rgba(136, 136, 136, 0.18);
     border: 0;
 }
 .af_section legend {
