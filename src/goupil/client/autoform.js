@@ -405,7 +405,7 @@ function AutoForm(widget) {
     function setError(line, msg) {
         form.classList.add('af_form_broken');
 
-        log.textContent = `⚠ Line ${line || '?'}: ${msg}`;
+        log.textContent = `⚠\uFE0E Line ${line || '?'}: ${msg}`;
         log.style.display = 'block';
     }
 

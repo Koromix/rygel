@@ -65,7 +65,7 @@
 }
 .sc_months a:not(.active):hover { background: #444; }
 .sc_month_warn:before {
-    content: '⚠ ';
+    content: '⚠\FE0E  ';
     font-size: 0.9em;
     vertical-align: middle;
 }
@@ -242,7 +242,7 @@
 .sc_slot_warn .sc_slot_identity:after {
     float: right;
     margin-right: 3px;
-    content: '⚠';
+    content: '⚠\FE0E';
     font-size: 0.9em;
     font-style: normal;
 }

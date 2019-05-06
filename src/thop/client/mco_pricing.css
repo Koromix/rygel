@@ -80,8 +80,8 @@
 #pr_table .info:before {
     position: absolute;
     margin-left: -1.2em;
-    content: "⚠";
-    font-size: 0.8em;
+    content: "⚠\FE0E";
+    font-size: 0.9em;
 }
 #pr_table .warn {
     filter: grayscale(90%) !important;
@@ -90,8 +90,8 @@
 #pr_table .warn:before {
     position: absolute;
     margin-left: -1.2em;
-    content: "⚠";
-    font-size: 0.8em;
+    content: "⚠\FE0E";
+    font-size: 0.9em;
 }
 
 @media screen and (min-width: 801px) {
