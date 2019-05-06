@@ -42,6 +42,7 @@
                     script = `// Test autoform script
 
 page("aq", "Auto-questionnaire", f => {
+    f.text("name", "Quel est votre nom ?");
     f.integer("age", "Quel est votre âge ?", {min: 18, max: 120});
 
     let sexe = f.select("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]]);
