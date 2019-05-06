@@ -15,26 +15,11 @@
 }
 #af_page { margin: 0 0 0 50%; }
 
-.af_form {
-    background: #eaeaea;
-    padding: 2px;
-}
-.af_form_broken {
-    filter: grayscale(100%);
-    opacity: 0.5;
-}
-.af_log {
-    position: fixed;
-    top: 30px;
-    padding: 5px;
-    background: #db0a0a;
-    color: white;
-}
-
-/* -------------------- Pages and sections -------------------- */
+/* -------------------- Form and sections -------------------- */
 
 .af_title {
     width: 100%;
+    height: 30px;
     box-sizing: border-box;
     margin: 0;
     padding: 3px 2em;
@@ -52,6 +37,21 @@
     font-weight: normal;
     text-align: center;
     text-align-last: center;
+}
+.af_form {
+    background: #eaeaea;
+    padding: 2px;
+}
+.af_form_broken {
+    filter: grayscale(100%);
+    opacity: 0.5;
+}
+.af_log {
+    position: fixed;
+    top: 60px;
+    padding: 5px;
+    background: #db0a0a;
+    color: white;
 }
 
 .af_section {
