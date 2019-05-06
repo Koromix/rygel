@@ -58,6 +58,30 @@ function FormBuilder(root, widgets, mem) {
     };
     this.error = (name, msg) => interfaces[name].error(msg);
 
+    this.text = function(name, label, options = {}) {
+        let id = makeID(name);
+
+        let value;
+        {
+            let prev = root.querySelector(`#${id}`);
+
+            if (prev) {
+                value = prev.value;
+                mem[name] = value;
+            } else {
+                value = mem[name];
+            }
+        }
+
+        let render = errors => wrapWidget(html`
+            <label for=${id}>${label || name}</label>
+            <input id=${id} type="text" .value=${value || ''}
+                   @input=${self.changeHandler}/>
+        `, options, errors);
+
+        return addVariableWidget(name, id, render, value);
+    };
+
     this.integer = function(name, label, options = {}) {
         let id = makeID(name);
 
@@ -68,8 +92,8 @@ function FormBuilder(root, widgets, mem) {
             if (prev) {
                 value = parseInt(prev.value, 10);
                 mem[name] = value;
-            } else if (typeof mem[name] === 'number') {
-                value = mem[name];
+            } else {
+                value = parseInt(mem[name], 10);
             }
         }
 
