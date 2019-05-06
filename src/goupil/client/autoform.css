@@ -97,7 +97,6 @@
 .af_help {
     font-size: 0.85em;
     font-style: italic;
-    color: #444;
     margin: 2px 0 0 20px;
 }
 .af_help:before { content: '☞ '; }
