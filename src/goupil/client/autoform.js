@@ -51,6 +51,16 @@ function FormBuilder(root, widgets, mem) {
         return intf;
     }
 
+    function createPrefixOrSuffix(cls, text, value) {
+        if (typeof text === 'function') {
+            return html`<span class="${cls}">${text(value)}</span>`;
+        } else if (text) {
+            return html`<span class="${cls}">${text}</span>`;
+        } else {
+            return html``;
+        }
+    }
+
     this.find = name => interfaces[name];
     this.value = function(name) {
         let intf = interfaces[name];
@@ -75,8 +85,10 @@ function FormBuilder(root, widgets, mem) {
 
         let render = errors => wrapWidget(html`
             <label for=${id}>${label || name}</label>
+            ${createPrefixOrSuffix('af_prefix', options.prefix, value)}
             <input id=${id} type="text" .value=${value || ''}
                    @input=${self.changeHandler}/>
+            ${createPrefixOrSuffix('af_suffix', options.suffix, value)}
         `, options, errors);
 
         return addVariableWidget(name, id, render, value);
@@ -99,8 +111,10 @@ function FormBuilder(root, widgets, mem) {
 
         let render = errors => wrapWidget(html`
             <label for=${id}>${label || name}</label>
+            ${createPrefixOrSuffix('af_prefix', options.prefix, value)}
             <input id=${id} type="number" .value=${value}
                    @input=${self.changeHandler}/>
+            ${createPrefixOrSuffix('af_suffix', options.suffix, value)}
         `, options, errors);
 
         let intf = addVariableWidget(name, id, render, value);

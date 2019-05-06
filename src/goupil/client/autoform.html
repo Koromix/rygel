@@ -43,7 +43,8 @@
 
 page("aq", "Auto-questionnaire", f => {
     f.text("name", "Quel est votre nom ?");
-    f.integer("age", "Quel est votre âge ?", {min: 18, max: 120});
+    f.integer("age", "Quel est votre âge ?",
+              {min: 0, max: 120, suffix: value => (value === 0 || value === 1) ? "an" : "ans"});
 
     let sexe = f.select("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]]);
 
