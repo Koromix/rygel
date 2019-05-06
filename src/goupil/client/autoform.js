@@ -418,15 +418,19 @@ function AutoForm(widget) {
 
     function parseAnonymousErrorLine(err) {
         if (err.stack) {
-            let m = err.stack.match(/ > Function:([0-9]+):[0-9]+/) ||
-                    err.stack.match(/, <anonymous>:([0-9]+):[0-9]+/);
-
-            // Can someone explain to me why do I have to offset by -2?
-            let line = (m && m.length >= 2) ? (parseInt(m[1], 10) - 2) : null;
-            return line;
-        } else {
-            return null;
+            let m;
+            if (m = err.stack.match(/ > Function:([0-9]+):[0-9]+/) ||
+                    err.stack.match(/, <anonymous>:([0-9]+):[0-9]+/)) {
+                // Can someone explain to me why do I have to offset by -2?
+                let line = parseInt(m[1], 10) - 2;
+                return line;
+            } else if (m = err.stack.match(/Function code:([0-9]+):[0-9]+/)) {
+                let line = parseInt(m[1], 10);
+                return line;
+            }
         }
+
+        return null;
     }
 
     function renderTitle(key) {
