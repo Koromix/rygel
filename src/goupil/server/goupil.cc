@@ -91,7 +91,7 @@ void PushEvent(EventType type)
     PushEvents(1u << (int)type);
 }
 
-static ssize_t SendPendingEvents(void *cls, uint64_t pos, char *buf, size_t max)
+static ssize_t SendPendingEvents(void *cls, uint64_t, char *buf, size_t max)
 {
     PushContext *ctx = (PushContext *)cls;
 
