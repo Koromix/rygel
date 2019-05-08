@@ -94,7 +94,7 @@ function FormBuilder(root, widgets, mem) {
         return addVariableWidget(name, id, render, value);
     };
 
-    this.numeric = function(name, label, options = {}) {
+    this.number = function(name, label, options = {}) {
         let id = makeID(name);
 
         let value;
@@ -170,7 +170,7 @@ function FormBuilder(root, widgets, mem) {
         self.changeHandler(e);
     }
 
-    this.select = function(name, label, choices = [], options = {}) {
+    this.choice = function(name, label, choices = [], options = {}) {
         let id = makeID(name);
 
         let value;
@@ -206,7 +206,7 @@ function FormBuilder(root, widgets, mem) {
     };
 
     this.boolean = function(name, label, options = {}) {
-        return self.select(name, label, [[true, 'Oui'], [false, 'Non']], options);
+        return self.choice(name, label, [[true, 'Oui'], [false, 'Non']], options);
     };
 
     function changeRadio(e, already_checked) {
