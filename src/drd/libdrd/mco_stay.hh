@@ -24,8 +24,9 @@ struct mco_Stay {
     enum class Flag {
         Confirmed = 1 << 0,
         UCD = 1 << 1,
-        Conversion = 1 << 2,
-        RAAC = 1 << 3
+        NoConversion = 1 << 2,
+        Conversion = 1 << 3,
+        RAAC = 1 << 4
     };
 
     enum class Error {
