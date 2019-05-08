@@ -331,7 +331,15 @@ function FormBuilder(root, widgets, mem) {
         addWidget(render);
     };
 
-    this.section = function(label, func = () => {}) {
+    this.section = function(label, func) {
+        if (!func)
+            throw new Error(`Section call must contain a function.
+
+Make sure you did not use this syntax by accident:
+    f.section("Title"), () => { /* Do stuff here */ };
+instead of:
+    f.section("Title", () => { /* Do stuff here */ });`);
+
         let widgets = [];
         let prev_widgets = widgets_ref;
 
@@ -405,7 +413,7 @@ function AutoForm(widget) {
     function setError(line, msg) {
         form.classList.add('af_form_broken');
 
-        log.textContent = `⚠\uFE0E Line ${line || '?'}: ${msg}`;
+        render(html`⚠\uFE0E Line ${line || '?'}: ${msg}`, log);
         log.style.display = 'block';
     }
 
