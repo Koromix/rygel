@@ -43,10 +43,10 @@
 
 page("aq", "Auto-questionnaire", form => {
     form.text("name", "Quel est votre nom ?");
-    form.numeric("age", "Quel est votre âge ?",
-                 {min: 0, max: 120, suffix: value => (value === 0 || value === 1) ? "an" : "ans"});
+    form.number("age", "Quel est votre âge ?", {min: 0, max: 120,
+                                                suffix: value => (value === 0 || value === 1) ? "an" : "ans"});
 
-    let sexe = form.select("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]]);
+    let sexe = form.choice("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]]);
 
     form.dropdown("csp", "Quelle est votre CSP ?", [
         [1, "Agriculteur exploitant"],
@@ -86,13 +86,12 @@ page("aq", "Auto-questionnaire", form => {
         }
 
         if (alcool.value) {
-            form.numeric("alcool_qt", "Combien de verres par semaine ?",
-                         {min: 1, max: 30});
+            form.number("alcool_qt", "Combien de verres par semaine ?", {min: 1, max: 30});
         }
     });
 
     form.section("Autres", () => {
-        form.numeric("enfants", "Combien avez-vous d'enfants ?", {min: 0, max: 30});
+        form.number("enfants", "Combien avez-vous d'enfants ?", {min: 0, max: 30});
         form.boolean("frites", "Aimez-vous les frites ?",
                      {help: "Si si, c'est important, je vous le jure !"});
     });
