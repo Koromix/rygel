@@ -19,7 +19,7 @@ struct PackHeader {
     int64_t procedures_len;
 };
 #pragma pack(pop)
-#define PACK_VERSION 14
+#define PACK_VERSION 15
 #define PACK_SIGNATURE "DRD_MCO_PACK"
 
 // This should warn us in most cases when we break dspak files (it's basically a memcpy format)
@@ -359,15 +359,20 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
         // code '2' is supposed to be okay... but why? I don't accept it here.
         stay.errors |= (int)mco_Stay::Error::MalformedConfirmation;
     }
-    offset += 19; // Skip a bunch of fields
+    offset += 18; // Skip a bunch of fields
     if (version >= 19) {
         if (line[offset] == '1') {
-            stay.flags |= (int)mco_Stay::Flag::RAAC;
+            stay.flags |= (int)mco_Stay::Flag::Conversion;
         } else if (RG_UNLIKELY(line[offset] != '2' && line[offset] != ' ')) {
+            stay.errors |= (int)mco_Stay::Error::MalformedConversion;
+        }
+        if (line[offset + 1] == '1') {
+            stay.flags |= (int)mco_Stay::Flag::RAAC;
+        } else if (RG_UNLIKELY(line[offset + 1] != '2' && line[offset + 1] != ' ')) {
             stay.errors |= (int)mco_Stay::Error::MalformedRAAC;
         }
     }
-    offset += 14; // Skip a bunch of fields
+    offset += 15; // Skip a bunch of fields
 
     HeapArray<drd_DiagnosisCode> other_diagnoses(&other_diagnoses_alloc);
     HeapArray<mco_ProcedureRealisation> procedures(&procedures_alloc);
