@@ -646,6 +646,9 @@ static bool CheckDataErrors(Span<const mco_Stay> mono_stays, mco_ErrorSet *out_e
         if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedConfirmation)) {
             SetError(out_errors, 121, -1);
         }
+        if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedConversion)) {
+            SetError(out_errors, 151);
+        }
         if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedRAAC)) {
             valid &= SetError(out_errors, 188);
         }
