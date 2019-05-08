@@ -25,8 +25,9 @@ struct mco_AuthorizationSet {
     Span<const mco_Authorization> FindUnit(drd_UnitCode unit) const;
     const mco_Authorization *FindUnit(drd_UnitCode unit, Date date) const;
 
-    int8_t GetAuthorizationType(drd_UnitCode unit, Date date) const;
-    bool TestAuthorization(drd_UnitCode unit, Date date, int8_t auth_type) const;
+    int8_t GetUnitAuthorization(drd_UnitCode unit, Date date) const;
+    bool TestFacilityAuthorization(int8_t auth_type, Date date) const;
+    bool TestAuthorization(int8_t auth_type, drd_UnitCode unit, Date date) const;
 };
 
 class mco_AuthorizationSetBuilder {

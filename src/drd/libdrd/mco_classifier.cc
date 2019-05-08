@@ -1703,14 +1703,17 @@ static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> m
     if (ghm_to_ghs_info.unit_authorization) {
         duration = 0;
         bool authorized = false;
+
         for (const mco_PreparedStay &mono_prep: mono_preps) {
             const mco_Stay &mono_stay = *mono_prep.stay;
-            if (authorization_set.TestAuthorization(mono_stay.unit, mono_stay.exit.date,
-                                                    ghm_to_ghs_info.unit_authorization)) {
+
+            if (authorization_set.TestAuthorization(ghm_to_ghs_info.unit_authorization,
+                                                    mono_stay.unit, mono_stay.exit.date)) {
                 duration += std::max((int16_t)1, mono_prep.duration);
                 authorized = true;
             }
         }
+
         if (!authorized)
             return false;
     } else {
@@ -1729,19 +1732,12 @@ static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> m
     switch (ghm_to_ghs_info.special_mode) {
         case mco_GhmToGhsInfo::SpecialMode::None: {} break;
         case mco_GhmToGhsInfo::SpecialMode::Diabetes: {
-            if (prep.duration < ghm_to_ghs_info.special_duration &&
+            if (authorization_set.TestFacilityAuthorization(62, stay.exit.date) &&
+                    prep.duration < ghm_to_ghs_info.special_duration &&
                     stay.entry.mode == '8' && stay.entry.origin != '5' && stay.exit.mode == '8' &&
                     (TestDiagnosis(stay.sex, *prep.main_diag_info, 32, 0x20) ||
-                     (prep.linked_diag_info && TestDiagnosis(stay.sex, *prep.linked_diag_info, 32, 0x20)))) {
-                bool auth62 = std::any_of(mono_preps.begin(), mono_preps.end(),
-                                          [&](const mco_PreparedStay &mono_prep) {
-                    const mco_Stay &mono_stay = *mono_prep.stay;
-                    return authorization_set.TestAuthorization(mono_stay.unit, mono_stay.exit.date, 62);
-                });
-
-                if (auth62)
-                    return false;
-            }
+                     (prep.linked_diag_info && TestDiagnosis(stay.sex, *prep.linked_diag_info, 32, 0x20))))
+                return false;
         } break;
     }
 
@@ -1785,7 +1781,7 @@ mco_GhsCode mco_PickGhs(const mco_TableIndex &index, const mco_AuthorizationSet 
             bool uhcd = std::all_of(mono_preps.begin(), mono_preps.end(),
                                     [&](const mco_PreparedStay &mono_prep) {
                 const mco_Stay &mono_stay = *mono_prep.stay;
-                int8_t auth_type = authorization_set.GetAuthorizationType(mono_stay.unit,
+                int8_t auth_type = authorization_set.GetUnitAuthorization(mono_stay.unit,
                                                                           mono_stay.exit.date);
                 return (auth_type == 7);
             });
@@ -1956,7 +1952,7 @@ void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSe
         const mco_PreparedStay &mono_prep = mono_preps[i];
         const mco_Stay &mono_stay = *mono_prep.stay;
 
-        int8_t auth_type = authorization_set.GetAuthorizationType(mono_stay.unit, mono_stay.exit.date);
+        int8_t auth_type = authorization_set.GetUnitAuthorization(mono_stay.unit, mono_stay.exit.date);
         const mco_AuthorizationInfo *auth_info =
             index.FindAuthorization(mco_AuthorizationScope::Unit, auth_type);
 

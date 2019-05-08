@@ -41,7 +41,7 @@ const mco_Authorization *mco_AuthorizationSet::FindUnit(drd_UnitCode unit, Date 
     return nullptr;
 }
 
-int8_t mco_AuthorizationSet::GetAuthorizationType(drd_UnitCode unit, Date date) const
+int8_t mco_AuthorizationSet::GetUnitAuthorization(drd_UnitCode unit, Date date) const
 {
     if (unit.number >= 10000) {
         return (int8_t)(unit.number % 100);
@@ -55,16 +55,18 @@ int8_t mco_AuthorizationSet::GetAuthorizationType(drd_UnitCode unit, Date date) 
     }
 }
 
-bool mco_AuthorizationSet::TestAuthorization(drd_UnitCode unit, Date date, int8_t auth_type) const
+bool mco_AuthorizationSet::TestFacilityAuthorization(int8_t auth_type, Date date) const
 {
-    if (GetAuthorizationType(unit, date) == auth_type)
-        return true;
-    for (const mco_Authorization &auth: facility_authorizations) {
-        if (auth.type == auth_type && date >= auth.dates[0] && date < auth.dates[1])
-            return true;
-    }
+    return std::any_of(facility_authorizations.begin(), facility_authorizations.end(),
+                       [&](const mco_Authorization &auth) {
+        return auth.type == auth_type && date >= auth.dates[0] && date < auth.dates[1];
+    });
+}
 
-    return false;
+bool mco_AuthorizationSet::TestAuthorization(int8_t auth_type, drd_UnitCode unit, Date date) const
+{
+    return GetUnitAuthorization(unit, date) == auth_type ||
+           TestFacilityAuthorization(auth_type, date);
 }
 
 bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader &st)
