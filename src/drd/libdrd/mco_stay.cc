@@ -19,7 +19,7 @@ struct PackHeader {
     int64_t procedures_len;
 };
 #pragma pack(pop)
-#define PACK_VERSION 15
+#define PACK_VERSION 16
 #define PACK_SIGNATURE "DRD_MCO_PACK"
 
 // This should warn us in most cases when we break dspak files (it's basically a memcpy format)
@@ -363,7 +363,9 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
     if (version >= 19) {
         if (line[offset] == '1') {
             stay.flags |= (int)mco_Stay::Flag::Conversion;
-        } else if (RG_UNLIKELY(line[offset] != '2' && line[offset] != ' ')) {
+        } else if (line[offset] == '2') {
+            stay.flags |= (int)mco_Stay::Flag::NoConversion;
+        } else if (RG_UNLIKELY(line[offset] != ' ')) {
             stay.errors |= (int)mco_Stay::Error::MalformedConversion;
         }
         if (line[offset + 1] == '1') {
