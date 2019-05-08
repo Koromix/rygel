@@ -43,7 +43,7 @@
 
 page("aq", "Auto-questionnaire", f => {
     f.text("name", "Quel est votre nom ?");
-    f.integer("age", "Quel est votre âge ?",
+    f.numeric("age", "Quel est votre âge ?",
               {min: 0, max: 120, suffix: value => (value === 0 || value === 1) ? "an" : "ans"});
 
     let sexe = f.select("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]]);
@@ -86,13 +86,13 @@ page("aq", "Auto-questionnaire", f => {
         }
 
         if (alcool.value) {
-            f.integer("alcool_qt", "Combien de verres par semaine ?",
+            f.numeric("alcool_qt", "Combien de verres par semaine ?",
                       {min: 1, max: 30});
         }
     });
 
     f.section("Autres", () => {
-        f.integer("enfants", "Combien avez-vous d'enfants ?", {min: 0, max: 30});
+        f.numeric("enfants", "Combien avez-vous d'enfants ?", {min: 0, max: 30});
         f.boolean("frites", "Aimez-vous les frites ?",
                   {help: "Si si, c'est important, je vous le jure !"});
     });

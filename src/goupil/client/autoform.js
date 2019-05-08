@@ -94,7 +94,7 @@ function FormBuilder(root, widgets, mem) {
         return addVariableWidget(name, id, render, value);
     };
 
-    this.integer = function(name, label, options = {}) {
+    this.numeric = function(name, label, options = {}) {
         let id = makeID(name);
 
         let value;
@@ -102,17 +102,18 @@ function FormBuilder(root, widgets, mem) {
             let prev = root.querySelector(`#${id}`);
 
             if (prev) {
-                value = parseInt(prev.value, 10);
+                value = parseFloat(prev.value);
                 mem[name] = value;
             } else {
-                value = parseInt(mem[name], 10);
+                value = parseFloat(mem[name]);
             }
         }
 
         let render = errors => wrapWidget(html`
             <label for=${id}>${label || name}</label>
             ${createPrefixOrSuffix('af_prefix', options.prefix, value)}
-            <input id=${id} type="number" .value=${value}
+            <input id=${id} type="number"
+                   step=${1 / Math.pow(10, options.decimals || 0)} .value=${value}
                    @input=${self.changeHandler}/>
             ${createPrefixOrSuffix('af_suffix', options.suffix, value)}
         `, options, errors);
