@@ -363,7 +363,7 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
     if (version >= 19) {
         if (line[offset] == '1') {
             stay.flags |= (int)mco_Stay::Flag::RAAC;
-        } else if (RG_UNLIKELY(line[offset] != '2' && line[offset] != '0')) {
+        } else if (RG_UNLIKELY(line[offset] != '2' && line[offset] != ' ')) {
             stay.errors |= (int)mco_Stay::Error::MalformedRAAC;
         }
     }
