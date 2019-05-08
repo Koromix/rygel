@@ -1101,6 +1101,11 @@ let bridge = (function() {
         return row2;
     }
 
+    function rowIsValid(row)
+    {
+        return row.consultant_nom && row.consultant_sexe;
+    }
+
     this.getVarInfo = function(dict_name) { return VarInfo[dict_name]; }
     this.getDictInfo = function(dict_name) { return DictInfo[dict_name]; }
 
@@ -1111,7 +1116,7 @@ let bridge = (function() {
             chunk: ret => {
                 for (let row of ret.data) {
                     row = translateRow(row);
-                    if (row.rdv_plid && row.consultant_sexe)
+                    if (rowIsValid(row))
                         config.step(row);
                 }
             },
@@ -1177,8 +1182,7 @@ let bridge = (function() {
                 encoding: 'UTF-8',
                 complete: ret => {
                     row = translateRow(ret.data[0] || {});
-                    if (row.rdv_plid && row.consultant_sexe)
-                        func(row);
+                    func(row);
                 }
             });
         });
