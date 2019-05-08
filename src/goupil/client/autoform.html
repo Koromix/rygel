@@ -41,14 +41,14 @@
                 if (script == null) {
                     script = `// Test autoform script
 
-page("aq", "Auto-questionnaire", f => {
-    f.text("name", "Quel est votre nom ?");
-    f.numeric("age", "Quel est votre âge ?",
-              {min: 0, max: 120, suffix: value => (value === 0 || value === 1) ? "an" : "ans"});
+page("aq", "Auto-questionnaire", form => {
+    form.text("name", "Quel est votre nom ?");
+    form.numeric("age", "Quel est votre âge ?",
+                 {min: 0, max: 120, suffix: value => (value === 0 || value === 1) ? "an" : "ans"});
 
-    let sexe = f.select("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]]);
+    let sexe = form.select("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]]);
 
-    f.dropdown("csp", "Quelle est votre CSP ?", [
+    form.dropdown("csp", "Quelle est votre CSP ?", [
         [1, "Agriculteur exploitant"],
         [2, "Artisan, commerçant ou chef d'entreprise"],
         [3, "Cadre ou profession intellectuelle supérieure"],
@@ -59,12 +59,12 @@ page("aq", "Auto-questionnaire", f => {
         [8, "Autre ou sans activité professionnelle"]
     ]);
 
-    f.radio("lieu_vie", "Quel est votre lieu de vie ?", [
+    form.radio("lieu_vie", "Quel est votre lieu de vie ?", [
         ["maison", "Maison"],
         ["appartement", "Appartement"]
     ]);
 
-    f.multi("sommeil", "Présentez-vous un trouble du sommeil ?", [
+    form.multi("sommeil", "Présentez-vous un trouble du sommeil ?", [
         [1, "Troubles d’endormissement"],
         [2, "Troubles de maintien du sommeil"],
         [3, "Réveil précoce"],
@@ -73,38 +73,38 @@ page("aq", "Auto-questionnaire", f => {
     ]);
 
     if (sexe.value == "F") {
-        f.boolean("enceinte", "Êtes-vous enceinte ?");
+        form.boolean("enceinte", "Êtes-vous enceinte ?");
     }
 
-    f.section("Alcool", () => {
-        let alcool = f.boolean("alcool", "Consommez-vous de l'alcool ?");
+    form.section("Alcool", () => {
+        let alcool = form.boolean("alcool", "Consommez-vous de l'alcool ?");
 
-        if (alcool.value && f.value("enceinte")) {
+        if (alcool.value && form.value("enceinte")) {
             alcool.error("Pensez au bébé...");
             alcool.error("On peut mettre plusieurs erreurs");
-            f.error("alcool", "Et de plein de manières différentes !");
+            form.error("alcool", "Et de plein de manières différentes !");
         }
 
         if (alcool.value) {
-            f.numeric("alcool_qt", "Combien de verres par semaine ?",
-                      {min: 1, max: 30});
+            form.numeric("alcool_qt", "Combien de verres par semaine ?",
+                         {min: 1, max: 30});
         }
     });
 
-    f.section("Autres", () => {
-        f.numeric("enfants", "Combien avez-vous d'enfants ?", {min: 0, max: 30});
-        f.boolean("frites", "Aimez-vous les frites ?",
-                  {help: "Si si, c'est important, je vous le jure !"});
+    form.section("Autres", () => {
+        form.numeric("enfants", "Combien avez-vous d'enfants ?", {min: 0, max: 30});
+        form.boolean("frites", "Aimez-vous les frites ?",
+                     {help: "Si si, c'est important, je vous le jure !"});
     });
 
-    f.output(html\`On peut aussi mettre du <b>HTML directement</b> si on veut...
+    form.output(html\`On peut aussi mettre du <b>HTML directement</b> si on veut...
                   <button class="af_button" @click=\${e => go("aide")}>Afficher l'aide</button>\`);
-    f.output("Ou bien encore mettre du <b>texte brut</b>.");
+    form.output("Ou bien encore mettre du <b>texte brut</b>.");
 });
 
-page("aide", "Aide", f => {
-    f.output("Loreum ipsum");
-    f.button("Revenir à l'auto-questionnaire", () => go("aq"));
+page("aide", "Aide", form => {
+    form.output("Loreum ipsum");
+    form.button("Revenir à l'auto-questionnaire", () => go("aq"));
 });
 `;
                 }
