@@ -103,7 +103,10 @@ page("aq", "Auto-questionnaire", form => {
 
 page("aide", "Aide", form => {
     form.output("Loreum ipsum");
-    form.button("Revenir à l'auto-questionnaire", () => go("aq"));
+    form.buttons([
+        ["Donner l'alerte", () => alert("Alerte générale !!")],
+        ["Revenir à l'auto-questionnaire", () => go("aq")]
+    ]);
 });
 `;
                 }
