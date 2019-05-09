@@ -122,11 +122,12 @@
 }
 
 .af_buttons {
-    display: table;
-    margin: 0 auto;
+    margin: -10px 0 0 0;
+    text-align: center;
 }
 .af_buttons > .af_button {
-    display: table-row;
-    width: 100%;
-    margin: 0 0 10px 0;
+    display: block;
+    width: 60%;
+    max-width: 400px;
+    margin: 10px auto 0 auto;
 }
