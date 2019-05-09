@@ -121,5 +121,4 @@
     color: white;
 }
 
-.af_link { color: #ff6600; }
-.af_link:hover { text-decoration: underline; }
+.af_buttons { text-align: right; }
