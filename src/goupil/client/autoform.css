@@ -48,7 +48,7 @@
 }
 .af_log {
     position: fixed;
-    top: 60px;
+    bottom: 0;
     right: 0;
     padding: 5px;
     background: #db0a0a;
