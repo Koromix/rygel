@@ -358,28 +358,18 @@ instead of:
         addWidget(render);
     };
 
-    this.link = function(label, dest, options = {}) {
-        if (typeof dest === 'function') {
-            let render = () => wrapWidget(html`
-                <a class="af_link" href="#" @click=${e => { dest(e); e.preventDefault(); }}>${label}</a>
-            `, options);
-
-            addWidget(render);
-        } else {
-            let render = () => wrapWidget(html`
-                <a class="af_link" href=${dest}>${label}</a>
-            `, options);
-
-            addWidget(render);
-        }
-    };
-
-    this.button = function(label, func, options = {}) {
+    this.buttons = function(buttons, options = {}) {
         let render = () => wrapWidget(html`
-            <button class="af_button" @click=${func}>${label}</button>
+            <div class="af_buttons">
+                ${buttons.map(button =>
+                    html`<button class="af_button" @click=${button[1]}>${button[0]}</button>`)}
+            </div>
         `, options);
 
         addWidget(render);
+    };
+    this.buttons.std = {
+        SaveCancel: func => [['Enregistrer', func || (() => {})], ['Annuler', func || (() => {})]]
     };
 }
 
