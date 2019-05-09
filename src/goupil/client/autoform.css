@@ -121,4 +121,12 @@
     color: white;
 }
 
-.af_buttons { text-align: right; }
+.af_buttons {
+    display: table;
+    margin: 0 auto;
+}
+.af_buttons > .af_button {
+    display: table-row;
+    width: 100%;
+    margin: 0 0 10px 0;
+}
