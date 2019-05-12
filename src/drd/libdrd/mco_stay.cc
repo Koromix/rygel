@@ -454,7 +454,7 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
     return true;
 }
 
-// TODO: Missing from RSA parser (yet to be documented by ATIH): partial stay information, RAAC, etc.
+// TODO: Missing from RSA parser (yet to be documented by ATIH): RAAC, conversion (etc?)
 bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, mco_Test> *out_tests)
 {
     if (RG_UNLIKELY(line.len < 12)) {
@@ -658,7 +658,12 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
         }
         ParsePmsiInt(ReadFragment(2), &stay.unit.number);
         stay.unit.number = (int16_t)(stay.unit.number + 10000);
-        offset += 2; // Skip end of UM type (A/B, H/P)
+        offset += 1; // Skip end of UM type (A/B)
+        switch (line[offset++]) {
+            case 'C': {} break;
+            case 'P': { stay.unit.number = (int16_t)(stay.unit.number + 1000); } break;
+            case 'M': { stay.unit.number = (int16_t)(stay.unit.number + 2000); } break;
+        }
 
         if (RG_LIKELY(i < RG_LEN(test.auth_supplements))) {
             int type = 0;
