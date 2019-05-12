@@ -454,17 +454,17 @@ function AutoForm(widget) {
 
         try {
             page.func(form_builder);
+
+            render(html`${widgets.map(w => w.render(w.errors))}`, form);
+            clearError();
+
+            return true;
         } catch (err) {
             let line = parseAnonymousErrorLine(err);
             setError(line, err.message);
 
             return false;
         }
-
-        render(html`${widgets.map(w => w.render(w.errors))}`, form);
-        clearError();
-
-        return true;
     }
 
     function renderPage(key) {
