@@ -1971,7 +1971,7 @@ static bool TestSupplementSrc(const mco_TableIndex &index, const mco_PreparedSta
 }
 
 // TODO: Count correctly when authorization date is too early (REA)
-void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSet &authorization_set,
+void mco_CountSupplements(const mco_TableIndex &index,
                           const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
                           mco_GhmCode ghm, mco_GhsCode ghs, unsigned int /*flags*/,
                           mco_SupplementCounters<int16_t> *out_counters,
@@ -2276,14 +2276,13 @@ static Size RunClassifier(const mco_TableSet &table_set,
             }
 
             // Count supplements days
-            mco_CountSupplements(*prepared_set.index, authorization_set,
-                                 prepared_set.prep, prepared_set.mono_preps, result.ghm, result.ghs,
-                                 flags, &result.supplement_days, mono_supplement_days);
+            mco_CountSupplements(*prepared_set.index, prepared_set.prep, prepared_set.mono_preps,
+                                 result.ghm, result.ghs, flags,
+                                 &result.supplement_days, mono_supplement_days);
         } else {
             // Count supplements days
-            mco_CountSupplements(*prepared_set.index, authorization_set,
-                                 prepared_set.prep, prepared_set.mono_preps, result.ghm, result.ghs,
-                                 flags, &result.supplement_days);
+            mco_CountSupplements(*prepared_set.index, prepared_set.prep, prepared_set.mono_preps,
+                                 result.ghm, result.ghs, flags, &result.supplement_days);
         }
 
         // Commit result
