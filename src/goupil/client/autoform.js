@@ -633,6 +633,11 @@ page("aide", "Aide", form => {
     this.activate = function() {
         document.title = 'goupil autoform';
 
+        if (!window.ace) {
+            goupil.loadScript(`${settings.base_url}static/ace.js`);
+            return;
+        }
+
         let main = document.querySelector('main');
 
         render(html`
