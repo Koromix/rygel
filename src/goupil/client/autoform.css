@@ -36,7 +36,6 @@
     background: inherit;
     border: 0;
     color: white;
-    cursor: pointer;
 }
 #af_menu > button:hover {
     background: #e05a00;
