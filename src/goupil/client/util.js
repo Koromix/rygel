@@ -4,6 +4,25 @@
 
 const {render, html, svg} = lithtml;
 
+let util = (function() {
+    this.pluralEN = function(value, single_text, plural_text) {
+        if (value === 1) {
+            return single_text;
+        } else {
+            return plural_text;
+        }
+    };
+    this.pluralFR = function(value, single_text, plural_text) {
+        if (value < 2) {
+            return single_text;
+        } else {
+            return plural_text;
+        }
+    };
+
+    return this;
+}).call({});
+
 function FetchQueue(func) {
     let self = this;
 
