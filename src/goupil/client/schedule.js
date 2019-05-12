@@ -44,6 +44,8 @@ function Schedule(widget, resources_map, meetings_map) {
     }
 
     function parseTime(str) {
+        str = str || '';
+
         if (!/^[0-9]{1,2}h[0-9]{0,2}$/.test(str))
             return null;
 
@@ -122,7 +124,7 @@ function Schedule(widget, resources_map, meetings_map) {
 
     function createMeeting(slot_ref) {
         let name = prompt('Name?');
-        if (name !== null) {
+        if (name) {
             slot_ref.meetings.splice(slot_ref.splice_idx, 0, {
                 time: slot_ref.time,
                 identity: name
@@ -314,7 +316,7 @@ function Schedule(widget, resources_map, meetings_map) {
 
     function createResource(day) {
         let time = parseTime(prompt('Time?'));
-        if (time !== null) {
+        if (time) {
             let resources = resources_map[day.key];
 
             let prev_res = resources.find(res => res.time === time);
