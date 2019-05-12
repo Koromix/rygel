@@ -859,6 +859,13 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
                 valid &= SetError(out_errors, 147);
             }
         }
+
+        // Conversions
+        if (RG_UNLIKELY(stay.exit.date >= Date(2019, 3, 1) &&
+                        (mono_stay.flags & (int)mco_Stay::Flag::Conversion) &&
+                        (mono_prep.markers & (int)mco_PreparedStay::Marker::PartialUnit))) {
+            SetError(out_errors, 152, 0);
+        }
     }
 
     // Continuity checks
@@ -956,10 +963,28 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
         }
     }
 
+    // Conversions
+    if (stay.exit.date >= Date(2019, 3, 1) && mono_preps.len > 1 && !mono_preps[0].duration) {
+        const mco_PreparedStay &mono_prep0 = mono_preps[0];
+        const mco_Stay &mono_stay0 = *mono_prep0.stay;
+
+        if (RG_UNLIKELY((mono_prep0.markers & (int)mco_PreparedStay::Marker::PartialUnit) &&
+                        (mono_stay0.flags & (int)mco_Stay::Flag::NoConversion))) {
+            SetError(out_errors, 153, 0);
+        }
+        if (RG_UNLIKELY((mono_prep0.markers & (int)mco_PreparedStay::Marker::PartialOrMixedUnit) &&
+                        !(mono_stay0.flags & ((int)mco_Stay::Flag::Conversion |
+                                              (int)mco_Stay::Flag::NoConversion)))) {
+            SetError(out_errors, 154, 0);
+        }
+    }
+
     return valid;
 }
 
-static bool InitCriticalData(const mco_TableSet &table_set, Span<const mco_Stay> mono_stays,
+static bool InitCriticalData(const mco_TableSet &table_set,
+                             const mco_AuthorizationSet &authorization_set,
+                             Span<const mco_Stay> mono_stays,
                              mco_PreparedSet *out_prepared_set, mco_ErrorSet *out_errors)
 {
     // Malformed, missing, incoherent (e.g. 2001/02/29)
@@ -1016,6 +1041,46 @@ static bool InitCriticalData(const mco_TableSet &table_set, Span<const mco_Stay>
             valid &= SetError(out_errors, 32);
         }
 
+        if (RG_LIKELY(exit_date_valid)) {
+            if (mono_stay.unit.number >= 10000) {
+                int auth_type = mono_stay.unit.number % 100;
+                int unit_type = (mono_stay.unit.number % 10000) / 1000;
+
+                switch (unit_type) {
+                    case 0: {
+                        mono_prep.auth_type = (int8_t)auth_type;
+                    } break;
+                    case 1: {
+                        mono_prep.auth_type = (int8_t)auth_type;
+                        mono_prep.markers |= (int)mco_PreparedStay::Marker::PartialUnit |
+                                             (int)mco_PreparedStay::Marker::PartialOrMixedUnit;
+                    } break;
+                    case 2: {
+                        mono_prep.auth_type = (int8_t)auth_type;
+                        mono_prep.markers |= (int)mco_PreparedStay::Marker::PartialOrMixedUnit;
+                    } break;
+                }
+            } else {
+                const mco_Authorization *auth = authorization_set.FindUnit(mono_stay.unit,
+                                                                           mono_stay.exit.date);
+
+                if (RG_LIKELY(auth)) {
+                    mono_prep.auth_type = auth->type;
+
+                    switch (auth->mode) {
+                        case mco_Authorization::Mode::Complete: {} break;
+                        case mco_Authorization::Mode::Partial: {
+                            mono_prep.markers |= (int)mco_PreparedStay::Marker::PartialUnit |
+                                                 (int)mco_PreparedStay::Marker::PartialOrMixedUnit;
+                        } break;
+                        case mco_Authorization::Mode::Mixed: {
+                            mono_prep.markers |= (int)mco_PreparedStay::Marker::PartialOrMixedUnit;
+                        } break;
+                    }
+                }
+            }
+        }
+
         out_prepared_set->mono_preps.Append(mono_prep);
     }
 
@@ -1031,9 +1096,10 @@ static bool InitCriticalData(const mco_TableSet &table_set, Span<const mco_Stay>
     return valid;
 }
 
-mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> mono_stays,
-                        unsigned int flags, mco_PreparedSet *out_prepared_set,
-                        mco_ErrorSet *out_errors)
+mco_GhmCode mco_Prepare(const mco_TableSet &table_set,
+                        const mco_AuthorizationSet &authorization_set,
+                        Span<const mco_Stay> mono_stays, unsigned int flags,
+                        mco_PreparedSet *out_prepared_set, mco_ErrorSet *out_errors)
 {
     RG_ASSERT_DEBUG(mono_stays.len > 0);
 
@@ -1080,7 +1146,8 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> mono
 
     bool valid = true;
 
-    valid &= InitCriticalData(table_set, mono_stays, out_prepared_set, out_errors);
+    valid &= InitCriticalData(table_set, authorization_set, mono_stays,
+                              out_prepared_set, out_errors);
     valid &= CheckDataErrors(mono_stays, out_errors);
 
     if (RG_LIKELY(valid)) {
@@ -1710,8 +1777,9 @@ static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> m
         for (const mco_PreparedStay &mono_prep: mono_preps) {
             const mco_Stay &mono_stay = *mono_prep.stay;
 
-            if (authorization_set.TestAuthorization(ghm_to_ghs_info.unit_authorization,
-                                                    mono_stay.unit, mono_stay.exit.date)) {
+            if (mono_prep.auth_type == ghm_to_ghs_info.unit_authorization ||
+                    authorization_set.TestFacilityAuthorization(ghm_to_ghs_info.unit_authorization,
+                                                                mono_stay.exit.date)) {
                 duration += std::max((int16_t)1, mono_prep.duration);
                 authorized = true;
             }
@@ -1783,10 +1851,7 @@ mco_GhsCode mco_PickGhs(const mco_TableIndex &index, const mco_AuthorizationSet 
         if (prep.duration > 0 && stay.entry.mode == '8' && stay.exit.mode == '8') {
             bool uhcd = std::all_of(mono_preps.begin(), mono_preps.end(),
                                     [&](const mco_PreparedStay &mono_prep) {
-                const mco_Stay &mono_stay = *mono_prep.stay;
-                int8_t auth_type = authorization_set.GetUnitAuthorization(mono_stay.unit,
-                                                                          mono_stay.exit.date);
-                return (auth_type == 7);
+                return mono_prep.auth_type == 7;
             });
 
             if (uhcd) {
@@ -1955,9 +2020,8 @@ void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSe
         const mco_PreparedStay &mono_prep = mono_preps[i];
         const mco_Stay &mono_stay = *mono_prep.stay;
 
-        int8_t auth_type = authorization_set.GetUnitAuthorization(mono_stay.unit, mono_stay.exit.date);
         const mco_AuthorizationInfo *auth_info =
-            index.FindAuthorization(mco_AuthorizationScope::Unit, auth_type);
+            index.FindAuthorization(mco_AuthorizationScope::Unit, mono_prep.auth_type);
 
         bool reanimation = false;
         int type = -1;
@@ -2129,7 +2193,8 @@ static Size RunClassifier(const mco_TableSet &table_set,
         // Prepare
         errors.main_error = 0;
         result.stays = mco_Split(mono_stays, 1, &mono_stays);
-        result.ghm = mco_Prepare(table_set, result.stays, flags, &prepared_set, &errors);
+        result.ghm = mco_Prepare(table_set, authorization_set, result.stays, flags,
+                                 &prepared_set, &errors);
         result.index = prepared_set.index;
         result.age = prepared_set.prep.age;
         result.duration = prepared_set.prep.duration;
