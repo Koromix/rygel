@@ -373,46 +373,26 @@ instead of:
     };
 }
 
-function AutoForm() {
+function FormExecutor(script, mem, go) {
     let self = this;
 
-    let title;
-    let form;
-    let log;
+    let af_form;
+    let af_log;
 
-    let pages = new Map;
-    let current_page_key = null;
-    let mem = {};
-
-    self.page = function(key, title, func) {
-        if (pages.has(key))
-            throw new Error(`Page '${title}' already exists`);
-
-        let page = {
-            key: key,
-            title: title || key,
-            func: func
-        };
-
-        pages.set(key, page);
-    };
-
-    self.go = function(key) {
-        setTimeout(() => renderPage(key), 0);
-    };
+    let func;
 
     function setError(line, msg) {
-        form.classList.add('af_form_broken');
+        af_form.classList.add('af_form_broken');
 
-        log.textContent = `⚠\uFE0E Line ${line || '?'}: ${msg}`;
-        log.style.display = 'block';
+        af_log.textContent = `⚠\uFE0E Line ${line || '?'}: ${msg}`;
+        af_log.style.display = 'block';
     }
 
     function clearError() {
-        form.classList.remove('af_form_broken');
+        af_form.classList.remove('af_form_broken');
 
-        log.innerHTML = '';
-        log.style.display = 'none';
+        af_log.innerHTML = '';
+        af_log.style.display = 'none';
     }
 
     function parseAnonymousErrorLine(err) {
@@ -432,51 +412,18 @@ function AutoForm() {
         return null;
     }
 
-    function renderTitle(key) {
-        render(html`
-            ${key && !pages.has(key) ? html`<option value=${key} .selected=${true}>-- Unknown page '${key}' --</option>` : html``}
-            ${Array.from(pages, ([_, page]) =>
-                html`<option value=${page.key} .selected=${page.key == key}>${page.title} (${page.key})</option>`)}
-        `, title);
-    }
-
-    function renderForm(key) {
-        let page = pages.get(key);
-        if (!page) {
-            setError(null, `Page '${key}' does not exist`);
-            return false;
-        }
-        current_page_key = page.key;
-
+    function renderForm() {
         let widgets = [];
-        let form_builder = new FormBuilder(form, widgets, mem);
-        form_builder.changeHandler = () => renderPage(key);
+
+        let builder = new FormBuilder(af_form, widgets, mem);
+        builder.changeHandler = renderForm;
 
         try {
-            page.func(form_builder);
+            func = Function('form', 'go', script)(builder, go);
 
-            render(html`${widgets.map(w => w.render(w.errors))}`, form);
+            render(html`${widgets.map(w => w.render(w.errors))}`, af_form);
             clearError();
 
-            return true;
-        } catch (err) {
-            let line = parseAnonymousErrorLine(err);
-            setError(line, err.message);
-
-            return false;
-        }
-    }
-
-    function renderPage(key) {
-        renderTitle(key);
-        return renderForm(key);
-    }
-
-    this.update = function(script) {
-        pages.clear();
-
-        try {
-            Function('page', 'go', script)(self.page, self.go);
             return true;
         } catch (err) {
             let line;
@@ -491,50 +438,201 @@ function AutoForm() {
 
             return false;
         }
-    };
+    }
 
     this.render = function(root) {
         render(html`
-            <select class="af_title" @change=${e => self.go(e.target.value)}></select>
             <div class="af_form"></div>
             <div class="af_log" style="display: none;"></div>
         `, root);
-        title = root.querySelector('.af_title');
-        form = root.querySelector('.af_form');
-        log = root.querySelector('.af_log');
+        af_form = root.querySelector('.af_form');
+        af_log = root.querySelector('.af_log');
 
-        if (pages.size) {
-            if (!current_page_key)
-                current_page_key = pages.values().next().value.key;
-
-            return renderPage(current_page_key);
-        } else {
-            current_page_key = null;
-
-            render(html``, title);
-            render(html``, form);
-            setError(null, 'No page defined');
-
-            return false;
-        }
+        return renderForm();
     };
 }
 
 let autoform = (function() {
     let self = this;
 
-    let autoform;
+    let init = false;
+
     let editor;
+    let af_menu;
+    let af_page;
+
+    let pages = new Map;
+    let current_key;
+    let mem = {};
+
+    function loadDefaultPages() {
+        pages = new Map([
+            ['aq', {
+                key: 'aq',
+                title: 'Auto-questionnaire',
+                script: `form.text("name", "Quel est votre nom ?");
+form.number("age", "Quel est votre âge ?", {min: 0, max: 120,
+                                            suffix: value => util.pluralFR(value, "an", "ans")});
+
+let sexe = form.choice("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]]);
+
+form.dropdown("csp", "Quelle est votre CSP ?", [
+    [1, "Agriculteur exploitant"],
+    [2, "Artisan, commerçant ou chef d'entreprise"],
+    [3, "Cadre ou profession intellectuelle supérieure"],
+    [4, "Profession intermédiaire"],
+    [5, "Employé"],
+    [6, "Ouvrier"],
+    [7, "Retraité"],
+    [8, "Autre ou sans activité professionnelle"]
+]);
+
+form.radio("lieu_vie", "Quel est votre lieu de vie ?", [
+    ["maison", "Maison"],
+    ["appartement", "Appartement"]
+]);
+
+form.multi("sommeil", "Présentez-vous un trouble du sommeil ?", [
+    [1, "Troubles d’endormissement"],
+    [2, "Troubles de maintien du sommeil"],
+    [3, "Réveil précoce"],
+    [4, "Sommeil non récupérateur"],
+    [null, "Aucune de ces réponses"]
+]);
+
+if (sexe.value == "F") {
+    form.boolean("enceinte", "Êtes-vous enceinte ?");
+}
+
+form.section("Alcool", () => {
+    let alcool = form.boolean("alcool", "Consommez-vous de l'alcool ?");
+
+    if (alcool.value && form.value("enceinte")) {
+        alcool.error("Pensez au bébé...");
+        alcool.error("On peut mettre plusieurs erreurs");
+        form.error("alcool", "Et de plein de manières différentes !");
+    }
+
+    if (alcool.value) {
+        form.number("alcool_qt", "Combien de verres par semaine ?", {min: 1, max: 30});
+    }
+});
+
+form.section("Autres", () => {
+    form.number("enfants", "Combien avez-vous d'enfants ?", {min: 0, max: 30});
+    form.boolean("frites", "Aimez-vous les frites ?",
+                 {help: "Si si, c'est important, je vous le jure !"});
+});
+
+form.output(html\`On peut aussi mettre du <b>HTML directement</b> si on veut...
+                 <button class="af_button" @click=\${e => go("aide")}>Afficher l'aide</button>\`);
+form.output("Ou bien encore mettre du <b>texte brut</b>.");
+`
+            }],
+
+            ['aide', {
+                key: 'aide',
+                title: 'Aide',
+                script: `form.output("Loreum ipsum");
+
+form.buttons([
+    ["Donner l'alerte", () => alert("Alerte générale !!")],
+    ["Revenir à l'auto-questionnaire", () => go("aq")]
+]);
+`
+            }]
+        ]);
+    }
+
+    function savePages() {
+        let entries = Array.from(pages.entries());
+        sessionStorage.setItem('goupil_af_pages', JSON.stringify(entries));
+    }
+
+    function createPage() {
+        let key = prompt('Key?');
+        if (key) {
+            if (pages.has(key))
+                throw new Error(`Page '${key}' already exists`);
+
+            let title = prompt('Title?');
+            if (title) {
+                let page = {
+                    key: key,
+                    title: title,
+                    script: ''
+                };
+
+                pages.set(key, page);
+                savePages();
+
+                self.go(key);
+            }
+        }
+    }
+
+    function deletePage(key) {
+        if (key && confirm('Are you sure?')) {
+            pages.delete(key);
+            savePages();
+
+            if (current_key === key && pages.size) {
+                let first_key = pages.values().next().value.key;
+                self.go(first_key);
+            } else {
+                renderAll();
+            }
+        }
+    }
+
+    function resetPages() {
+        if (confirm('Are you sure?')) {
+            loadDefaultPages();
+
+            let first_key = pages.values().next().value.key;
+            self.go(first_key);
+        }
+    }
+
+    function renderAll() {
+        let page = pages.get(current_key);
+
+        render(html`
+            <button @click=${createPage}>Ajouter</button>
+            ${page ? html`<button @click=${e => deletePage(current_key)}>Supprimer</button>` : html``}
+            <select @change=${e => self.go(e.target.value)}>
+                ${!current_key && !pages.size ? html`<option>-- No page available --</option>` : html``}
+                ${current_key && !page ?
+                    html`<option value=${current_key} .selected=${true}>-- Unknown page '${current_key}' --</option>` : html``}
+                ${Array.from(pages, ([_, page]) =>
+                    html`<option value=${page.key} .selected=${page.key == current_key}>${page.title} (${page.key})</option>`)}
+            </select>
+            <button @click=${resetPages}>Réinitialiser</button>
+        `, af_menu);
+
+        if (page) {
+            let exec = new FormExecutor(page.script, mem, self.go);
+            return exec.render(af_form);
+        } else {
+            return false;
+        }
+    }
 
     function refreshAndSave() {
-        let page = document.querySelector('#af_page');
+        let page = pages.get(current_key);
 
-        let editor = ace.edit('af_editor');
-        let script = editor.getValue();
+        if (page) {
+            let prev_script = page.script;
 
-        if (autoform.update(script))
-            sessionStorage.setItem('goupil_autoform_script', script);
-        autoform.render(page);
+            page.script = editor.getValue();
+
+            if (renderAll()) {
+                savePages();
+            } else {
+                // Restore working script
+                page.script = prev_script;
+            }
+        }
     }
 
     function initEditor() {
@@ -545,82 +643,6 @@ let autoform = (function() {
         editor.setFontSize(12);
         editor.session.setMode('ace/mode/javascript');
 
-        let script = sessionStorage.getItem('goupil_autoform_script');
-        if (script == null) {
-            script = `// Test autoform script
-
-page("aq", "Auto-questionnaire", form => {
-    form.text("name", "Quel est votre nom ?");
-    form.number("age", "Quel est votre âge ?", {min: 0, max: 120,
-                                                suffix: value => util.pluralFR(value, "an", "ans")});
-
-    let sexe = form.choice("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]]);
-
-    form.dropdown("csp", "Quelle est votre CSP ?", [
-        [1, "Agriculteur exploitant"],
-        [2, "Artisan, commerçant ou chef d'entreprise"],
-        [3, "Cadre ou profession intellectuelle supérieure"],
-        [4, "Profession intermédiaire"],
-        [5, "Employé"],
-        [6, "Ouvrier"],
-        [7, "Retraité"],
-        [8, "Autre ou sans activité professionnelle"]
-    ]);
-
-    form.radio("lieu_vie", "Quel est votre lieu de vie ?", [
-        ["maison", "Maison"],
-        ["appartement", "Appartement"]
-    ]);
-
-    form.multi("sommeil", "Présentez-vous un trouble du sommeil ?", [
-        [1, "Troubles d’endormissement"],
-        [2, "Troubles de maintien du sommeil"],
-        [3, "Réveil précoce"],
-        [4, "Sommeil non récupérateur"],
-        [null, "Aucune de ces réponses"]
-    ]);
-
-    if (sexe.value == "F") {
-        form.boolean("enceinte", "Êtes-vous enceinte ?");
-    }
-
-    form.section("Alcool", () => {
-        let alcool = form.boolean("alcool", "Consommez-vous de l'alcool ?");
-
-        if (alcool.value && form.value("enceinte")) {
-            alcool.error("Pensez au bébé...");
-            alcool.error("On peut mettre plusieurs erreurs");
-            form.error("alcool", "Et de plein de manières différentes !");
-        }
-
-        if (alcool.value) {
-            form.number("alcool_qt", "Combien de verres par semaine ?", {min: 1, max: 30});
-        }
-    });
-
-    form.section("Autres", () => {
-        form.number("enfants", "Combien avez-vous d'enfants ?", {min: 0, max: 30});
-        form.boolean("frites", "Aimez-vous les frites ?",
-                     {help: "Si si, c'est important, je vous le jure !"});
-    });
-
-    form.output(html\`On peut aussi mettre du <b>HTML directement</b> si on veut...
-                     <button class="af_button" @click=\${e => go("aide")}>Afficher l'aide</button>\`);
-    form.output("Ou bien encore mettre du <b>texte brut</b>.");
-});
-
-page("aide", "Aide", form => {
-    form.output("Loreum ipsum");
-    form.buttons([
-        ["Donner l'alerte", () => alert("Alerte générale !!")],
-        ["Revenir à l'auto-questionnaire", () => go("aq")]
-    ]);
-});
-`;
-        }
-        editor.setValue(script);
-        editor.clearSelection();
-
         editor.on('change', e => {
             // If something goes wrong during refreshAndSave(), we don't
             // want to break ACE state.
@@ -628,28 +650,63 @@ page("aide", "Aide", form => {
         });
     }
 
+    this.go = function(key) {
+        let page = pages.get(key);
+
+        if (page) {
+            let editor = ace.edit('af_editor');
+
+            editor.setValue(page.script);
+            editor.clearSelection();
+        }
+        current_key = key;
+
+        renderAll();
+    }
+
     this.activate = function() {
         document.title = 'goupil autoform';
 
-        if (!window.ace) {
-            goupil.loadScript(`${settings.base_url}static/ace.js`);
-            return;
+        if (!init) {
+            if (!window.ace) {
+                goupil.loadScript(`${settings.base_url}static/ace.js`);
+                return;
+            }
+
+            let json = sessionStorage.getItem('goupil_af_pages');
+
+            if (json) {
+                try {
+                    pages = new Map(JSON.parse(json));
+                } catch (err) {
+                    console.log('Loading default pages (load error)');
+                    loadDefaultPages();
+                }
+            } else {
+                loadDefaultPages();
+            }
+
+            init = true;
         }
 
         let main = document.querySelector('main');
 
         render(html`
+            <div id="af_menu"></div>
             <div id="af_editor"></div>
-            <div id="af_page"></div>
+            <div id="af_form"></div>
         `, main);
+        af_menu = document.querySelector('#af_menu');
+        af_form = document.querySelector('#af_form');
 
-        if (!autoform) {
-            let root = document.querySelector('#af_page');
-            autoform = new AutoForm();
-        }
         initEditor();
 
-        refreshAndSave();
+        if (current_key && pages.size) {
+            self.go(current_key);
+        } else {
+            let first_key = pages.size ? pages.values().next().value.key : null;
+            self.go(first_key);
+        }
     };
 
     return this;

@@ -7,23 +7,43 @@
 #af_editor {
     position: fixed;
     left: 0;
-    top: 30px;
+    top: 60px;
     height: calc(100% - 30px);
     width: 50%;
     box-sizing: border-box;
     z-index: 999;
 }
-#af_page { margin: 0 0 0 50%; }
-
-/* -------------------- Form and sections -------------------- */
-
-.af_title {
-    width: 100%;
+#af_menu {
+    position: fixed;
+    top: 30px;
     height: 30px;
+    width: 100%;
     box-sizing: border-box;
     margin: 0;
-    padding: 3px 2em;
+    padding: 3px;
     background: #ff6600;
+}
+#af_form { margin: 60px 0 0 50%; }
+
+/* -------------------- Main menu -------------------- */
+
+#af_menu {
+    display: flex;
+    padding: 0;
+}
+
+#af_menu > button {
+    background: inherit;
+    border: 0;
+    color: white;
+    cursor: pointer;
+}
+#af_menu > button:hover {
+    background: #e05a00;
+}
+#af_menu > select {
+    flex-grow: 1;
+    background: inherit;
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
@@ -38,6 +58,9 @@
     text-align: center;
     text-align-last: center;
 }
+
+/* -------------------- Form and sections -------------------- */
+
 .af_form {
     background: #eaeaea;
     padding: 2px;
@@ -62,7 +85,7 @@
     background: rgba(136, 136, 136, 0.18);
     border: 0;
 }
-.af_section legend {
+.af_section > legend {
     padding: 1px 0.7em;
     background: #ff6600;
     font-size: 1.1em;
