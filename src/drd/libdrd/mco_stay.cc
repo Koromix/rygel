@@ -825,7 +825,7 @@ bool mco_StaySetBuilder::LoadRsa(StreamReader &st, HashTable<int32_t, mco_Test> 
 {
     static std::atomic_flag gave_rsa_warning = ATOMIC_FLAG_INIT;
     if (!gave_rsa_warning.test_and_set()) {
-        LogError("RSA files contain partial information that can lead to classifier errors"
+        LogError("RSA files contain partial information that can lead to errors"
                  " (such as procedure date errors)");
     }
 
