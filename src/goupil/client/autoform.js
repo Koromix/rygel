@@ -554,7 +554,7 @@ let autoform = (function() {
 page("aq", "Auto-questionnaire", form => {
     form.text("name", "Quel est votre nom ?");
     form.number("age", "Quel est votre âge ?", {min: 0, max: 120,
-                                                suffix: value => (value === 0 || value === 1) ? "an" : "ans"});
+                                                suffix: value => util.pluralFR(value, "an", "ans")});
 
     let sexe = form.choice("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]]);
 
