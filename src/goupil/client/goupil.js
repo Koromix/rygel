@@ -39,6 +39,19 @@ let goupil = (function() {
         }
     };
 
+    // TODO: React to onerror?
+    this.loadScript = function(url) {
+        let head = document.querySelector('script');
+        let script = document.createElement('script');
+
+        script.type = 'text/javascript';
+        script.src = url;
+        script.onreadystatechange = () => self.go(window.location.href);
+        script.onload = () => self.go(window.location.href);
+
+        head.appendChild(script);
+    };
+
     function initNavigation() {
         window.addEventListener('popstate', e => {
             self.go(window.location.href, false);
