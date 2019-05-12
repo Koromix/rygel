@@ -8,7 +8,7 @@
     position: fixed;
     left: 0;
     top: 60px;
-    height: calc(100% - 30px);
+    height: calc(100% - 60px);
     width: 50%;
     box-sizing: border-box;
     z-index: 999;
