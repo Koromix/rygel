@@ -27,7 +27,7 @@ static const OptionDesc mco_ClassifyFlagOptions[] = {
 struct mco_PreparedStay {
     enum class Marker {
         PartialUnit = 1 << 0,
-        PartialOrMixedUnit = 1 << 1,
+        MixedUnit = 1 << 1,
 
         ChildbirthDiagnosis = 1 << 2,
         ChildbirthProcedure = 1 << 3,

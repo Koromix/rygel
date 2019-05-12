@@ -976,7 +976,8 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
                         (mono_stay0.flags & (int)mco_Stay::Flag::NoConversion))) {
             SetError(out_errors, 153, 0);
         }
-        if (RG_UNLIKELY((mono_prep0.markers & (int)mco_PreparedStay::Marker::PartialOrMixedUnit) &&
+        if (RG_UNLIKELY((mono_prep0.markers & ((int)mco_PreparedStay::Marker::PartialUnit |
+                                               (int)mco_PreparedStay::Marker::MixedUnit)) &&
                         !(mono_stay0.flags & ((int)mco_Stay::Flag::Conversion |
                                               (int)mco_Stay::Flag::NoConversion)))) {
             SetError(out_errors, 154, 0);
@@ -1056,12 +1057,11 @@ static bool InitCriticalData(const mco_TableSet &table_set,
                     } break;
                     case 1: {
                         mono_prep.auth_type = (int8_t)auth_type;
-                        mono_prep.markers |= (int)mco_PreparedStay::Marker::PartialUnit |
-                                             (int)mco_PreparedStay::Marker::PartialOrMixedUnit;
+                        mono_prep.markers |= (int)mco_PreparedStay::Marker::PartialUnit;
                     } break;
                     case 2: {
                         mono_prep.auth_type = (int8_t)auth_type;
-                        mono_prep.markers |= (int)mco_PreparedStay::Marker::PartialOrMixedUnit;
+                        mono_prep.markers |= (int)mco_PreparedStay::Marker::MixedUnit;
                     } break;
                 }
             } else {
@@ -1074,11 +1074,10 @@ static bool InitCriticalData(const mco_TableSet &table_set,
                     switch (auth->mode) {
                         case mco_Authorization::Mode::Complete: {} break;
                         case mco_Authorization::Mode::Partial: {
-                            mono_prep.markers |= (int)mco_PreparedStay::Marker::PartialUnit |
-                                                 (int)mco_PreparedStay::Marker::PartialOrMixedUnit;
+                            mono_prep.markers |= (int)mco_PreparedStay::Marker::PartialUnit;
                         } break;
                         case mco_Authorization::Mode::Mixed: {
-                            mono_prep.markers |= (int)mco_PreparedStay::Marker::PartialOrMixedUnit;
+                            mono_prep.markers |= (int)mco_PreparedStay::Marker::MixedUnit;
                         } break;
                     }
                 }
