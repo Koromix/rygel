@@ -373,7 +373,7 @@ instead of:
     };
 }
 
-function AutoForm(widget) {
+function AutoForm() {
     let self = this;
 
     let title;
@@ -472,11 +472,12 @@ function AutoForm(widget) {
         return renderForm(key);
     }
 
-    self.update = function(script) {
+    this.update = function(script) {
         pages.clear();
 
         try {
             Function('page', 'go', script)(self.page, self.go);
+            return true;
         } catch (err) {
             let line;
             if (err instanceof SyntaxError) {
@@ -489,10 +490,18 @@ function AutoForm(widget) {
             setError(line, err.message);
 
             return false;
-        } finally {
-            if (current_page_key)
-                renderTitle(current_page_key);
         }
+    };
+
+    this.render = function(root) {
+        render(html`
+            <select class="af_title" @change=${e => self.go(e.target.value)}></select>
+            <div class="af_form"></div>
+            <div class="af_log" style="display: none;"></div>
+        `, root);
+        title = root.querySelector('.af_title');
+        form = root.querySelector('.af_form');
+        log = root.querySelector('.af_log');
 
         if (pages.size) {
             if (!current_page_key)
@@ -509,15 +518,6 @@ function AutoForm(widget) {
             return false;
         }
     };
-
-    render(html`
-        <select class="af_title" @change=${e => self.go(e.target.value)}></select>
-        <div class="af_form"></div>
-        <div class="af_log" style="display: none;"></div>
-    `, widget);
-    title = widget.querySelector('.af_title');
-    form = widget.querySelector('.af_form');
-    log = widget.querySelector('.af_log');
 }
 
 let autoform = (function() {
@@ -527,16 +527,14 @@ let autoform = (function() {
     let editor;
 
     function refreshAndSave() {
+        let page = document.querySelector('#af_page');
+
         let editor = ace.edit('af_editor');
         let script = editor.getValue();
 
         if (autoform.update(script))
             sessionStorage.setItem('goupil_autoform_script', script);
-    }
-
-    function initAutoForm() {
-        let root = document.querySelector('#af_page');
-        autoform = new AutoForm(root);
+        autoform.render(page);
     }
 
     function initEditor() {
@@ -645,7 +643,10 @@ page("aide", "Aide", form => {
             <div id="af_page"></div>
         `, main);
 
-        initAutoForm();
+        if (!autoform) {
+            let root = document.querySelector('#af_page');
+            autoform = new AutoForm();
+        }
         initEditor();
 
         refreshAndSave();
