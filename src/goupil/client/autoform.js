@@ -518,6 +518,133 @@ function AutoForm(widget) {
     title = widget.querySelector('.af_title');
     form = widget.querySelector('.af_form');
     log = widget.querySelector('.af_log');
-
-    widget.object = this;
 }
+
+let autoform = (function() {
+    let self = this;
+
+    let autoform;
+    let editor;
+
+    function refreshAndSave() {
+        let editor = ace.edit('af_editor');
+        let script = editor.getValue();
+
+        if (autoform.update(script))
+            sessionStorage.setItem('goupil_autoform_script', script);
+    }
+
+    function initAutoForm() {
+        let root = document.querySelector('#af_page');
+        autoform = new AutoForm(root);
+    }
+
+    function initEditor() {
+        editor = ace.edit('af_editor');
+
+        editor.setTheme('ace/theme/monokai');
+        editor.setShowPrintMargin(false);
+        editor.setFontSize(12);
+        editor.session.setMode('ace/mode/javascript');
+
+        let script = sessionStorage.getItem('goupil_autoform_script');
+        if (script == null) {
+            script = `// Test autoform script
+
+page("aq", "Auto-questionnaire", form => {
+    form.text("name", "Quel est votre nom ?");
+    form.number("age", "Quel est votre âge ?", {min: 0, max: 120,
+                                                suffix: value => (value === 0 || value === 1) ? "an" : "ans"});
+
+    let sexe = form.choice("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]]);
+
+    form.dropdown("csp", "Quelle est votre CSP ?", [
+        [1, "Agriculteur exploitant"],
+        [2, "Artisan, commerçant ou chef d'entreprise"],
+        [3, "Cadre ou profession intellectuelle supérieure"],
+        [4, "Profession intermédiaire"],
+        [5, "Employé"],
+        [6, "Ouvrier"],
+        [7, "Retraité"],
+        [8, "Autre ou sans activité professionnelle"]
+    ]);
+
+    form.radio("lieu_vie", "Quel est votre lieu de vie ?", [
+        ["maison", "Maison"],
+        ["appartement", "Appartement"]
+    ]);
+
+    form.multi("sommeil", "Présentez-vous un trouble du sommeil ?", [
+        [1, "Troubles d’endormissement"],
+        [2, "Troubles de maintien du sommeil"],
+        [3, "Réveil précoce"],
+        [4, "Sommeil non récupérateur"],
+        [null, "Aucune de ces réponses"]
+    ]);
+
+    if (sexe.value == "F") {
+        form.boolean("enceinte", "Êtes-vous enceinte ?");
+    }
+
+    form.section("Alcool", () => {
+        let alcool = form.boolean("alcool", "Consommez-vous de l'alcool ?");
+
+        if (alcool.value && form.value("enceinte")) {
+            alcool.error("Pensez au bébé...");
+            alcool.error("On peut mettre plusieurs erreurs");
+            form.error("alcool", "Et de plein de manières différentes !");
+        }
+
+        if (alcool.value) {
+            form.number("alcool_qt", "Combien de verres par semaine ?", {min: 1, max: 30});
+        }
+    });
+
+    form.section("Autres", () => {
+        form.number("enfants", "Combien avez-vous d'enfants ?", {min: 0, max: 30});
+        form.boolean("frites", "Aimez-vous les frites ?",
+                     {help: "Si si, c'est important, je vous le jure !"});
+    });
+
+    form.output(html\`On peut aussi mettre du <b>HTML directement</b> si on veut...
+                     <button class="af_button" @click=\${e => go("aide")}>Afficher l'aide</button>\`);
+    form.output("Ou bien encore mettre du <b>texte brut</b>.");
+});
+
+page("aide", "Aide", form => {
+    form.output("Loreum ipsum");
+    form.buttons([
+        ["Donner l'alerte", () => alert("Alerte générale !!")],
+        ["Revenir à l'auto-questionnaire", () => go("aq")]
+    ]);
+});
+`;
+        }
+        editor.setValue(script);
+        editor.clearSelection();
+
+        editor.on('change', e => {
+            // If something goes wrong during refreshAndSave(), we don't
+            // want to break ACE state.
+            setTimeout(refreshAndSave, 0);
+        });
+    }
+
+    this.activate = function() {
+        document.title = 'goupil autoform';
+
+        let main = document.querySelector('main');
+
+        render(html`
+            <div id="af_editor"></div>
+            <div id="af_page"></div>
+        `, main);
+
+        initAutoForm();
+        initEditor();
+
+        refreshAndSave();
+    };
+
+    return this;
+}).call({});
