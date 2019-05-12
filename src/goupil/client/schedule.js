@@ -644,7 +644,7 @@ function Schedule(widget, resources_map, meetings_map) {
 let schedule = (function() {
     let self = this;
 
-    let event_src;
+    let init = false;
     let schedule;
 
     function updateSchedule(year, month) {
@@ -668,6 +668,11 @@ let schedule = (function() {
     this.activate = function() {
         document.title = 'goupil schedule';
 
+        if (!init) {
+            goupil.listenToServerEvent('schedule', e => updateSchedule(year, month));
+            init = true;
+        }
+
         let year;
         let month;
         {
@@ -675,11 +680,6 @@ let schedule = (function() {
 
             year = date.getFullYear();
             month = date.getMonth() + 1;
-        }
-
-        if (!event_src) {
-            event_src = new EventSource(`${settings.base_url}goupil/events.json`);
-            event_src.addEventListener('schedule', e => updateSchedule(year, month));
         }
 
         if (schedule) {

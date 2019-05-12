@@ -5,8 +5,26 @@
 let goupil = (function() {
     let self = this;
 
+    let event_src;
+
     function parseURL(href, base) {
         return new URL(href, base);
+    }
+
+    function initNavigation() {
+        window.addEventListener('popstate', e => {
+            self.go(window.location.href, false);
+        });
+
+        document.body.addEventListener('click', e => {
+            if (e.target && e.target.tagName == 'A' && !e.target.getAttribute('download')) {
+                let href = e.target.getAttribute('href');
+                if (href && !href.match(/^(?:[a-z]+:)?\/\//) && href[0] != '#') {
+                    self.go(href);
+                    e.preventDefault();
+                }
+            }
+        });
     }
 
     this.go = function(href, history = true) {
@@ -39,6 +57,15 @@ let goupil = (function() {
         }
     };
 
+    this.listenToServerEvent = function(event, func) {
+        if (!event_src) {
+            event_src = new EventSource(`${settings.base_url}goupil/events.json`);
+            event_src.onerror = e => event_src = null;
+        }
+
+        event_src.addEventListener(event, func);
+    };
+
     // TODO: React to onerror?
     this.loadScript = function(url) {
         let head = document.querySelector('script');
@@ -52,27 +79,11 @@ let goupil = (function() {
         head.appendChild(script);
     };
 
-    function initNavigation() {
-        window.addEventListener('popstate', e => {
-            self.go(window.location.href, false);
-        });
-
-        document.body.addEventListener('click', e => {
-            if (e.target && e.target.tagName == 'A' && !e.target.getAttribute('download')) {
-                let href = e.target.getAttribute('href');
-                if (href && !href.match(/^(?:[a-z]+:)?\/\//) && href[0] != '#') {
-                    self.go(href);
-                    e.preventDefault();
-                }
-            }
-        });
-
-        self.go(window.location.href, false);
-    }
-
     document.addEventListener('readystatechange', e => {
-        if (document.readyState === 'complete')
+        if (document.readyState === 'complete') {
             initNavigation();
+            self.go(window.location.href, false);
+        }
     });
 
     return this;
