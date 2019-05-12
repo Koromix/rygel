@@ -373,27 +373,13 @@ instead of:
     };
 }
 
-function FormExecutor(script, mem, go) {
+function FormExecutor(mem, go) {
     let self = this;
 
     let af_form;
     let af_log;
 
     let func;
-
-    function setError(line, msg) {
-        af_form.classList.add('af_form_broken');
-
-        af_log.textContent = `⚠\uFE0E Line ${line || '?'}: ${msg}`;
-        af_log.style.display = 'block';
-    }
-
-    function clearError() {
-        af_form.classList.remove('af_form_broken');
-
-        af_log.innerHTML = '';
-        af_log.style.display = 'none';
-    }
 
     function parseAnonymousErrorLine(err) {
         if (err.stack) {
@@ -412,17 +398,17 @@ function FormExecutor(script, mem, go) {
         return null;
     }
 
-    function renderForm() {
+    function renderForm(script) {
         let widgets = [];
 
         let builder = new FormBuilder(af_form, widgets, mem);
-        builder.changeHandler = renderForm;
+        builder.changeHandler = () => renderForm(script);
 
         try {
             func = Function('form', 'go', script)(builder, go);
 
             render(html`${widgets.map(w => w.render(w.errors))}`, af_form);
-            clearError();
+            self.clearError();
 
             return true;
         } catch (err) {
@@ -434,13 +420,27 @@ function FormExecutor(script, mem, go) {
                 line = parseAnonymousErrorLine(err);
             }
 
-            setError(line, err.message);
+            self.setError(line, err.message);
 
             return false;
         }
     }
 
-    this.render = function(root) {
+    this.setError = function(line, msg) {
+        af_form.classList.add('af_form_broken');
+
+        af_log.textContent = `⚠\uFE0E Line ${line || '?'}: ${msg}`;
+        af_log.style.display = 'block';
+    };
+
+    this.clearError = function() {
+        af_form.classList.remove('af_form_broken');
+
+        af_log.innerHTML = '';
+        af_log.style.display = 'none';
+    };
+
+    this.render = function(root, script) {
         render(html`
             <div class="af_form"></div>
             <div class="af_log" style="display: none;"></div>
@@ -448,7 +448,11 @@ function FormExecutor(script, mem, go) {
         af_form = root.querySelector('.af_form');
         af_log = root.querySelector('.af_log');
 
-        return renderForm();
+        if (script !== undefined) {
+            return renderForm(script);
+        } else {
+            return true;
+        }
     };
 }
 
@@ -464,6 +468,8 @@ let autoform = (function() {
     let pages = new Map;
     let current_key;
     let mem = {};
+
+    let executor;
 
     function loadDefaultPages() {
         pages = new Map([
@@ -610,10 +616,25 @@ form.buttons([
             <button @click=${resetPages}>Réinitialiser</button>
         `, af_menu);
 
+        if (!executor)
+            executor = new FormExecutor(mem, self.go);
+
         if (page) {
-            let exec = new FormExecutor(page.script, mem, self.go);
-            return exec.render(af_form);
+            editor.setReadOnly(false);
+            editor.container.classList.remove('disabled');
+
+            return executor.render(af_form, page.script);
         } else {
+            editor.setReadOnly(true);
+            editor.container.classList.add('disabled');
+
+            executor.render(af_form);
+            if (current_key) {
+                executor.setError(null, `Unknown page '${current_key}'`);
+            } else {
+                executor.setError(null, 'No page available');
+            }
+
             return false;
         }
     }
@@ -656,12 +677,6 @@ form.buttons([
         if (page) {
             editor.setValue(page.script);
             editor.clearSelection();
-
-            editor.setReadOnly(false);
-            editor.container.classList.remove('disabled');
-        } else {
-            editor.setReadOnly(true);
-            editor.container.classList.add('disabled');
         }
         current_key = key;
 
