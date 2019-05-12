@@ -13,6 +13,7 @@
     box-sizing: border-box;
     z-index: 999;
 }
+#af_editor.disabled { filter: saturate(0%); }
 #af_menu {
     position: fixed;
     top: 30px;
