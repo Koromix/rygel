@@ -218,11 +218,10 @@ static void InitRoutes()
     };
 
     // Static assets
+    pack_Asset html = {};
     for (const pack_Asset &asset: assets) {
-        Span<const char> extension = GetPathExtension(asset.name);
-
-        if (extension == ".html") {
-            pack_Asset html = asset;
+        if (TestStr(asset.name, "goupil.html")) {
+            html = asset;
             html.data = pack_PatchVariables(html, &routes_alloc,
                                             [](const char *key, StreamWriter *writer) {
                 if (TestStr(key, "BASE_URL")) {
@@ -232,25 +231,19 @@ static void InitRoutes()
                     return false;
                 }
             });
-
-            if (TestStr(asset.name, "goupil.html")) {
-                add_asset_route("GET", "/", html);
-            } else {
-                Span<const char> name;
-                SplitStrReverse(asset.name, '.', &name);
-
-                const char *url = Fmt(&routes_alloc, "/%1/", name).ptr;
-                add_asset_route("GET", url, html);
-
-                const char *redirect_url = Fmt(&routes_alloc, "/%1", name).ptr;
-                const char *redirect_location = Fmt(&routes_alloc, "%1%2/", goupil_config.base_url, name).ptr;
-                add_redirect_route("GET", redirect_url, 301, redirect_location);
-            }
         } else {
             const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
             add_asset_route("GET", url, asset);
         }
     }
+    RG_ASSERT_DEBUG(html.name);
+
+    // Main pages
+    add_asset_route("GET", "/", html);
+    add_redirect_route("GET", "/autoform", 301, "/autoform/");
+    add_asset_route("GET", "/autoform/", html);
+    add_redirect_route("GET", "/schedule", 301, "/schedule/");
+    add_asset_route("GET", "/schedule/", html);
 
     // General API
     add_function_route("GET", "/goupil/events.json", ProduceEvents);

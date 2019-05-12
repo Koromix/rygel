@@ -343,14 +343,14 @@ set(GOUPIL_ASSETS
     ../vendor/ace/theme-monokai.js
     ../vendor/ace/worker-javascript.js
     ../vendor/lit-html/lit-html.min.js
-    goupil/client/autoform.js
+    goupil/client/util.js
     goupil/client/goupil.js
+    goupil/client/autoform.js
     goupil/client/schedule.js
-    goupil/client/autoform.css
     goupil/client/goupil.css
+    goupil/client/autoform.css
     goupil/client/schedule.css
-    goupil/client/autoform.html
-    goupil/client/schedule.html
+    goupil/client/goupil.html
 )
 
 set(GOUPIL_ADMIN_SRC

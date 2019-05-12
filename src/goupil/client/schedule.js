@@ -612,6 +612,16 @@ function Schedule(widget, resources_map, meetings_map) {
 
     function renderAll()
     {
+        // FIXME: Can we replace a node with render, instead of replacing its content?
+        // Right now, render functions create content inside these two divs instead of replacing them.
+        render(html`
+            <div class="sc_header">${week_day_names.map(name => html`<div>${name}</div>`)}</div>
+            <div class="sc_main"></div>
+            <div class="sc_footer"></div>
+        `, widget);
+        main = widget.querySelector('.sc_main');
+        footer = widget.querySelector('.sc_footer');
+
         switch (current_mode) {
             case 'meetings': { renderMeetings(); } break;
             case 'settings': { renderSettings(); } break;
@@ -629,16 +639,55 @@ function Schedule(widget, resources_map, meetings_map) {
 
         renderAll();
     };
-
-    // FIXME: Can we replace a node with render, instead of replacing its content?
-    // Right now, render functions create content inside these two divs instead of replacing them.
-    render(html`
-        <div class="sc_header">${week_day_names.map(name => html`<div>${name}</div>`)}</div>
-        <div class="sc_main"></div>
-        <div class="sc_footer"></div>
-    `, widget);
-    main = widget.querySelector('.sc_main');
-    footer = widget.querySelector('.sc_footer');
-
-    widget.object = this;
 }
+
+let schedule = (function() {
+    let self = this;
+
+    let event_src;
+    let schedule;
+
+    function updateSchedule(year, month) {
+        let queue = new FetchQueue((data, errors) => {
+            if (!errors.length) {
+                let main = document.querySelector('main');
+
+                // FIXME: Use merge algorithm instead of mass replace
+                schedule = new Schedule(main, data.resources, data.meetings);
+                schedule.render(year, month);
+            } else {
+                for (let err of errors)
+                    console.log(`Fetch error: ${err}`);
+            }
+        });
+
+        queue.fetch('resources', `${settings.base_url}schedule/resources.json?schedule=pl&year=${year}&month=${month}`);
+        queue.fetch('meetings', `${settings.base_url}schedule/meetings.json?schedule=pl&year=${year}&month=${month}`);
+    }
+
+    this.activate = function() {
+        document.title = 'goupil schedule';
+
+        let year;
+        let month;
+        {
+            let date = new Date();
+
+            year = date.getFullYear();
+            month = date.getMonth() + 1;
+        }
+
+        if (!event_src) {
+            event_src = new EventSource(`${settings.base_url}goupil/events.json`);
+            event_src.addEventListener('schedule', e => updateSchedule(year, month));
+        }
+
+        if (schedule) {
+            schedule.render(year, month);
+        } else {
+            updateSchedule(year, month);
+        }
+    };
+
+    return this;
+}).call({});
