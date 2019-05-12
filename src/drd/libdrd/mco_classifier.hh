@@ -116,7 +116,7 @@ mco_GhsCode mco_PickGhs(const mco_TableIndex &index, const mco_AuthorizationSet 
                         drd_Sector sector, const mco_PreparedStay &prep,
                         Span<const mco_PreparedStay> mono_preps, mco_GhmCode ghm,
                         unsigned int flags, int16_t *out_ghs_duration = nullptr);
-void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSet &authorization_set,
+void mco_CountSupplements(const mco_TableIndex &index,
                           const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
                           mco_GhmCode ghm, mco_GhsCode ghs, unsigned int flags,
                           mco_SupplementCounters<int16_t> *out_counters,
