@@ -546,7 +546,7 @@ form.buttons([
 
     function savePages() {
         let entries = Array.from(pages.entries());
-        sessionStorage.setItem('goupil_af_pages', JSON.stringify(entries));
+        localStorage.setItem('goupil_af_pages', JSON.stringify(entries));
     }
 
     function createPage() {
@@ -673,7 +673,7 @@ form.buttons([
                 return;
             }
 
-            let json = sessionStorage.getItem('goupil_af_pages');
+            let json = localStorage.getItem('goupil_af_pages');
 
             if (json) {
                 try {
