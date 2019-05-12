@@ -607,6 +607,10 @@ static bool CheckDataErrors(Span<const mco_Stay> mono_stays, mco_ErrorSet *out_e
             valid &= SetError(out_errors, mono_stay.sex ? 17 : 16);
         }
 
+        if (RG_UNLIKELY(!mono_stay.unit.number)) {
+            SetError(out_errors, 62, -1);
+        }
+
         // Entry mode and origin
         if (RG_UNLIKELY(mono_stay.errors & ((int)mco_Stay::Error::MalformedEntryMode |
                                             (int)mco_Stay::Error::MalformedEntryOrigin))) {
