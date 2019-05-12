@@ -41,32 +41,12 @@ const mco_Authorization *mco_AuthorizationSet::FindUnit(drd_UnitCode unit, Date 
     return nullptr;
 }
 
-int8_t mco_AuthorizationSet::GetUnitAuthorization(drd_UnitCode unit, Date date) const
-{
-    if (unit.number >= 10000) {
-        return (int8_t)(unit.number % 100);
-    } else if (unit.number) {
-        const mco_Authorization *auth = FindUnit(unit, date);
-        if (RG_UNLIKELY(!auth))
-            return 0;
-        return auth->type;
-    } else {
-        return 0;
-    }
-}
-
 bool mco_AuthorizationSet::TestFacilityAuthorization(int8_t auth_type, Date date) const
 {
     return std::any_of(facility_authorizations.begin(), facility_authorizations.end(),
                        [&](const mco_Authorization &auth) {
         return auth.type == auth_type && date >= auth.dates[0] && date < auth.dates[1];
     });
-}
-
-bool mco_AuthorizationSet::TestAuthorization(int8_t auth_type, drd_UnitCode unit, Date date) const
-{
-    return GetUnitAuthorization(unit, date) == auth_type ||
-           TestFacilityAuthorization(auth_type, date);
 }
 
 bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader &st)
@@ -108,6 +88,11 @@ bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader &st)
                 ParseDec(line.Take(20, 4), &auth.dates[0].st.year,
                          RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
                 auth.dates[1] = default_end_date;
+                switch (line[27]) {
+                    case 'C': { auth.mode = mco_Authorization::Mode::Complete; } break;
+                    case 'P': { auth.mode = mco_Authorization::Mode::Partial; } break;
+                    case 'M': { auth.mode = mco_Authorization::Mode::Mixed; } break;
+                }
 
                 if (!auth.unit.number || !auth.dates[0].IsValid()) {
                     LogError("Invalid authorization attributes");
@@ -160,6 +145,17 @@ bool mco_AuthorizationSetBuilder::LoadIni(StreamReader &st)
             do {
                 if (prop.key == "Authorization") {
                     valid &= ParseDec(prop.value, &auth.type, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::End);
+                } else if (prop.key == "Mode") {
+                    if (prop.value == "Complete") {
+                        auth.mode = mco_Authorization::Mode::Complete;
+                    } else if (prop.value == "Partial") {
+                        auth.mode = mco_Authorization::Mode::Partial;
+                    } else if (prop.value == "Mixed") {
+                        auth.mode = mco_Authorization::Mode::Mixed;
+                    } else {
+                        LogError("Invalid unit mode '%1'", prop.value);
+                        valid = false;
+                    }
                 } else if (prop.key == "Date") {
                     auth.dates[0] = Date::FromString(prop.value);
                     valid &= !!auth.dates[0].value;

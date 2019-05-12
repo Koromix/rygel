@@ -10,8 +10,15 @@
 namespace RG {
 
 struct mco_Authorization {
+    enum class Mode: int8_t {
+        Complete,
+        Partial,
+        Mixed
+    };
+
     drd_UnitCode unit;
     int8_t type;
+    Mode mode;
     Date dates[2];
 
     RG_HASH_TABLE_HANDLER(mco_Authorization, unit);
@@ -25,9 +32,7 @@ struct mco_AuthorizationSet {
     Span<const mco_Authorization> FindUnit(drd_UnitCode unit) const;
     const mco_Authorization *FindUnit(drd_UnitCode unit, Date date) const;
 
-    int8_t GetUnitAuthorization(drd_UnitCode unit, Date date) const;
     bool TestFacilityAuthorization(int8_t auth_type, Date date) const;
-    bool TestAuthorization(int8_t auth_type, drd_UnitCode unit, Date date) const;
 };
 
 class mco_AuthorizationSetBuilder {

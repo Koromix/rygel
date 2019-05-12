@@ -26,10 +26,13 @@ static const OptionDesc mco_ClassifyFlagOptions[] = {
 
 struct mco_PreparedStay {
     enum class Marker {
-        ChildbirthDiagnosis = 1 << 0,
-        ChildbirthProcedure = 1 << 1,
-        Childbirth = (1 << 0) | (1 << 1),
-        ChildbirthType = 1 << 2
+        PartialUnit = 1 << 0,
+        PartialOrMixedUnit = 1 << 1,
+
+        ChildbirthDiagnosis = 1 << 2,
+        ChildbirthProcedure = 1 << 3,
+        Childbirth = (1 << 2) | (1 << 3),
+        ChildbirthType = 1 << 4
     };
 
     const mco_Stay *stay;
@@ -44,6 +47,7 @@ struct mco_PreparedStay {
     Span<const mco_ProcedureInfo *> procedures;
     uint8_t proc_activities;
 
+    int8_t auth_type;
     uint16_t markers;
     Date childbirth_date;
 };
@@ -87,9 +91,10 @@ struct mco_Result {
     mco_SupplementCounters<int16_t> supplement_days;
 };
 
-mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> mono_stays,
-                        unsigned int flags, mco_PreparedSet *out_prepared_set,
-                        mco_ErrorSet *out_errors);
+mco_GhmCode mco_Prepare(const mco_TableSet &table_set,
+                        const mco_AuthorizationSet &authorization_set,
+                        Span<const mco_Stay> mono_stays, unsigned int flags,
+                        mco_PreparedSet *out_prepared_set, mco_ErrorSet *out_errors);
 
 int mco_GetMinimalDurationForSeverity(int severity);
 int mco_LimitSeverity(int severity, int duration);

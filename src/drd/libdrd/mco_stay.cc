@@ -454,6 +454,7 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
     return true;
 }
 
+// TODO: Missing from RSA parser (yet to be documented by ATIH): partial stay information, RAAC, etc.
 bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, mco_Test> *out_tests)
 {
     if (RG_UNLIKELY(line.len < 12)) {
