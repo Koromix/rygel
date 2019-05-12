@@ -572,7 +572,7 @@ form.buttons([
     }
 
     function deletePage(key) {
-        if (key && confirm('Are you sure?')) {
+        if (confirm('Are you sure?')) {
             pages.delete(key);
             savePages();
 
@@ -580,7 +580,7 @@ form.buttons([
                 let first_key = pages.values().next().value.key;
                 self.go(first_key);
             } else {
-                renderAll();
+                self.go(current_key);
             }
         }
     }
@@ -654,10 +654,14 @@ form.buttons([
         let page = pages.get(key);
 
         if (page) {
-            let editor = ace.edit('af_editor');
-
             editor.setValue(page.script);
             editor.clearSelection();
+
+            editor.setReadOnly(false);
+            editor.container.classList.remove('disabled');
+        } else {
+            editor.setReadOnly(true);
+            editor.container.classList.add('disabled');
         }
         current_key = key;
 
