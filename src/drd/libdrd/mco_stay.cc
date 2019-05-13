@@ -454,7 +454,6 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
     return true;
 }
 
-// TODO: Missing from RSA parser (yet to be documented by ATIH): RAAC, conversion (etc?)
 bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, mco_Test> *out_tests)
 {
     if (RG_UNLIKELY(line.len < 12)) {
@@ -483,7 +482,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
 
     int16_t version = 0;
     ParsePmsiInt(ReadFragment(3), &version);
-    if (RG_UNLIKELY(version < 220 || version > 224)) {
+    if (RG_UNLIKELY(version < 220 || version > 225)) {
         SetErrorFlag(mco_Stay::Error::UnknownRumVersion);
         set.stays.Append(rsa);
         return true;
@@ -593,8 +592,23 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
         rsa.bed_authorization = 8;
     }
 
-    // Skip a whole bunch of stuff we don't care about
-    if (version >= 223) {
+    // Skip a whole bunch of stuff we (mostly) don't care about
+    if (version >= 225) {
+        offset += 17;
+        ParsePmsiInt(ReadFragment(1), &test.supplement_days.st.sdc);
+        switch (line[offset++]) {
+            case ' ': {} break;
+            case '0': { rsa.flags |= (int)mco_Stay::Flag::NoConversion; } break;
+            case '1': { rsa.flags |= (int)mco_Stay::Flag::Conversion; } break;
+            default: { SetErrorFlag(mco_Stay::Error::MalformedConversion); } break;
+        }
+        switch (line[offset++]) {
+            case '0': {} break;
+            case '1': { rsa.flags |= (int)mco_Stay::Flag::RAAC; } break;
+            default: { SetErrorFlag(mco_Stay::Error::MalformedRAAC); } break;
+        }
+        offset += 44;
+    } else if (version >= 223) {
         offset += 17;
         ParsePmsiInt(ReadFragment(1), &test.supplement_days.st.sdc);
         offset += 46;
@@ -661,7 +675,11 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
         offset += 1; // Skip end of UM type (A/B)
         switch (line[offset++]) {
             case 'C': {} break;
-            case 'P': { stay.unit.number = (int16_t)(stay.unit.number + 1000); } break;
+            case 'P': {
+                stay.unit.number = (int16_t)(stay.unit.number + 1000);
+                // This will prevent error 152 from popping up on all conversions
+                stay.flags &= ~(uint32_t)mco_Stay::Flag::Conversion;
+            } break;
             case 'M': { stay.unit.number = (int16_t)(stay.unit.number + 2000); } break;
         }
 
