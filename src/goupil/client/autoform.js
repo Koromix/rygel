@@ -373,13 +373,15 @@ instead of:
     };
 }
 
-function FormExecutor(mem, go) {
+function FormExecutor() {
+    this.goHandler = key => {};
+
     let self = this;
 
     let af_form;
     let af_log;
 
-    let func;
+    let mem = {};
 
     function parseAnonymousErrorLine(err) {
         if (err.stack) {
@@ -405,7 +407,7 @@ function FormExecutor(mem, go) {
         builder.changeHandler = () => renderForm(script);
 
         try {
-            func = Function('form', 'go', script)(builder, go);
+            Function('form', 'go', script)(builder, key => self.goHandler(key));
 
             render(html`${widgets.map(w => w.render(w.errors))}`, af_form);
             self.clearError();
@@ -467,7 +469,6 @@ let autoform = (function() {
 
     let pages = new Map;
     let current_key;
-    let mem = {};
 
     let executor;
 
@@ -616,8 +617,10 @@ form.buttons([
             <button @click=${resetPages}>Réinitialiser</button>
         `, af_menu);
 
-        if (!executor)
-            executor = new FormExecutor(mem, self.go);
+        if (!executor) {
+            executor = new FormExecutor();
+            executor.goHandler = self.go;
+        }
 
         if (page) {
             editor.setReadOnly(false);
