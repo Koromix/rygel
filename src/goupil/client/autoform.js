@@ -595,6 +595,7 @@ form.buttons([
     function resetPages() {
         if (confirm('Are you sure?')) {
             loadDefaultPages();
+            executor = null;
 
             let first_key = pages.values().next().value.key;
             self.go(first_key);
