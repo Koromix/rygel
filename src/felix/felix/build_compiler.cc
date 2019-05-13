@@ -274,16 +274,17 @@ public:
         buf.allocator = alloc;
 
         Fmt(&buf, "g++ -g");
+
+        if (!AppendGccLinkArguments(obj_filenames, build_mode, link_type, libraries,
+                                    dest_filename, &buf))
+            return (const char *)nullptr;
+
 #ifdef _WIN32
         if (build_mode != BuildMode::Debug) {
             // Force static linking of libgcc, libstdc++ and winpthread
             Fmt(&buf, " -static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic");
         }
 #endif
-
-        if (!AppendGccLinkArguments(obj_filenames, build_mode, link_type, libraries,
-                                    dest_filename, &buf))
-            return (const char *)nullptr;
 
         return (const char *)buf.Leak().ptr;
     }
