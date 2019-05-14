@@ -7,54 +7,64 @@
     border-collapse: collapse;
 }
 .pr_grid th, .pr_grid td {
-    border: 1px solid #a4a4a4;
+    min-width: 60px;
+    height: 18px;
+    box-sizing: border-box;
     padding: 3px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    min-width: 60px;
-    height: 16px;
 }
 .pr_grid th {
     background: white;
+    border: 1px solid #ccc;
     text-align: left;
     font-style: italic;
     font-weight: normal;
 }
-.pr_grid td { border-left: 0; }
+.pr_grid td {
+    border: 1px solid #a7a7a7;
+    border-left: 0;
+}
 .pr_grid thead td { text-align: center; }
 .pr_grid tbody td {
-    background: #969696;
+    background: #9b9a9a;
     text-align: right;
 }
 
 .pr_grid .desc {
     background: #ffc634;
+    border-color: #ffd057;
     color: black;
 }
 .pr_grid .conditions {
     background: #b70202;
+    border-color: #be3f3f;
     color: white;
 }
 .pr_grid .noex {
     background: #6cc943;
+    border-color: #89ca6d;
     color: black;
 }
 .pr_grid .exb {
     background: #ff8900;
+    border-color: #f09e3e;
     color: black;
 }
 .pr_grid .exh {
     background: #6b1b6a;
+    border-color: #7e237c;
     color: #b4cdff;
 }
 .pr_grid .age {
     background: #99ffff;
+    border-color: #7cdede;
     color: black;
 }
 .pr_grid .diff:before {
     float: left;
-    height: 22px;
+    height: 24px;
     margin: -3px;
     width: 16px;
     text-align: center;
@@ -77,21 +87,19 @@
 .pr_grid .removed:after { content: '*'; }
 .pr_grid .added:after { content: '*'; }
 
-#pr_table .info:before {
+#pr_table .info:not(.diff):before {
     position: absolute;
     margin-left: -1.2em;
     content: "⚠\FE0E";
-    font-size: 0.9em;
 }
 #pr_table .warn {
     filter: grayscale(90%) !important;
     color: #555;
 }
-#pr_table .warn:before {
+#pr_table .warn:not(.diff):before {
     position: absolute;
     margin-left: -1.2em;
     content: "⚠\FE0E";
-    font-size: 0.9em;
 }
 
 @media screen and (min-width: 801px) {
