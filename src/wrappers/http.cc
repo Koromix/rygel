@@ -254,6 +254,10 @@ const char *http_GetMimeType(Span<const char> extension)
         return "image/svg+xml";
     } else if (extension == ".map") {
         return "application/json";
+    } else if (extension == ".woff") {
+        return "font/woff";
+    } else if (extension == ".woff2") {
+        return "font/woff2";
     } else {
         LogError("Unknown MIME type for extension '%1'", extension);
         return "application/octet-stream";

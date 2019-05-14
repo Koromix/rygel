@@ -244,6 +244,15 @@ if(NOT EMSCRIPTEN)
         libweb/version_line.css
         thop/client/images/thop_logo.svg
         thop/client/images/favicon.png
+        ../vendor/notosans/NotoSans.css
+        ../vendor/notosans/NotoSans-Italic.woff
+        ../vendor/notosans/NotoSans-Italic.woff2
+        ../vendor/notosans/NotoSans-Regular.woff
+        ../vendor/notosans/NotoSans-Regular.woff2
+        ../vendor/notosans/NotoSans-SemiBold.woff
+        ../vendor/notosans/NotoSans-SemiBold.woff2
+        ../vendor/notosans/NotoSans-SemiBoldItalic.woff
+        ../vendor/notosans/NotoSans-SemiBoldItalic.woff2
     )
 
     set(THOP_HASH_PASSWORD_SRC

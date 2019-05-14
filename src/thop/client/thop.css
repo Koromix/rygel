@@ -6,8 +6,8 @@
 body {
     margin: 0;
     padding: 0;
-    font-family: Geneva, sans-serif;
-    font-size: 13px;
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 12px;
 }
 #side_bar { background: #eeeeee; }
 
@@ -15,7 +15,7 @@ body {
 a {
     color: #ed6d0a;
     text-decoration: none;
-    font-weight: bold;
+    font-weight: normal;
 }
 
 /* Side bar */
@@ -31,7 +31,7 @@ a {
     text-decoration: none;
     color: black;
 }
-#side_menu li a:not(.category) { font-weight: normal; }
+#side_menu li a.category { font-weight: bold; }
 #side_menu li a.active {
     background: #262626;
     color: white;
@@ -123,17 +123,13 @@ form button, form input[type=submit] {
     #side_session_box {
         padding: 8px 2px 0 2px;
         text-align: center;
-        font-size: 0.7em;
+        font-size: 0.8em;
     }
     #side_session_menu { display: none; }
 }
 
 @media screen and (max-width: 800px) {
     /* Global */
-    body {
-        padding: 0;
-        margin: 0;
-    }
     main { padding-top: 30px; }
 
     /* Forms */
