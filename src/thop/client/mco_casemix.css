@@ -78,6 +78,28 @@
     font-style: italic;
 }
 
+.rt_severity {
+    font-weight: bold;
+    font-style: normal;
+}
+.rt_severity_exclude {
+    background: #c8c8c8;
+    color: #838383;
+    text-decoration: line-through;
+}
+.rt_severity_s1 {
+    background: #c6d9f1;
+    color: #0070c0;
+}
+.rt_severity_s2 {
+    background: #fdcba2;
+    color: #ff6600;
+}
+.rt_severity_s3 {
+    background: #efa9a8;
+    color: #ff0000;
+}
+
 @media screen and (min-width: 801px) {
     .rt_result { margin-bottom: 1em; }
 
