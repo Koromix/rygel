@@ -46,7 +46,7 @@ function VersionLine(widget)
                 let color;
                 let weight;
                 if (version.date === value) {
-                    color = '#ed6d0a';
+                    color = '#ff6600';
                     weight = 'bold';
                 } else if (version.major) {
                     color = '#000';

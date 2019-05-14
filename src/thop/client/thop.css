@@ -9,11 +9,11 @@ body {
     font-family: 'Noto Sans', sans-serif;
     font-size: 12px;
 }
-#side_bar { background: #eeeeee; }
+#side_bar { background: #e9e9e9; }
 
 /* Common tags */
 a {
-    color: #ed6d0a;
+    color: #ff6600;
     text-decoration: none;
     font-weight: normal;
 }
