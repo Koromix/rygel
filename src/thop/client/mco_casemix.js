@@ -1258,12 +1258,15 @@ let mco_casemix = {};
 
                             let contents = [diag.diag];
                             if (diag.severity) {
+                                let cls;
                                 if (diag.exclude) {
-                                    contents.push(' ');
-                                    contents.push(dom.h('s', '(' + (diag.severity + 1) + ')'));
+                                    cls = 'rt_severity rt_severity_exclude';
                                 } else {
-                                    contents.push(' (' + (diag.severity + 1) + ')');
+                                    cls = 'rt_severity rt_severity_s' + diag.severity;
                                 }
+
+                                contents.push(' ');
+                                contents.push(dom.h('span', {class: cls}, 'S' + (diag.severity + 1)));
                             }
 
                             table1.appendContent(
