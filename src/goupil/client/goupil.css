@@ -6,10 +6,18 @@ body {
     margin: 0;
     padding: 0;
     background: #f8f8f8;
-    font: 0.8em sans-serif;
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 12px;
 }
 
-button { cursor: pointer; }
+a {
+    color: #ff6600;
+}
+button {
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 1em;
+}
 
 @media screen and (max-width: 599px) {
     body { margin: 30px 0 0 0; }

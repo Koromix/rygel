@@ -263,8 +263,6 @@ function Schedule(widget, resources_map, meetings_map) {
                     cls = 'sc_day sc_day_warn';
                 } else if (!slot_refs.length) {
                     cls = 'sc_day sc_day_disabled';
-                } else if (!used_slots) {
-                    cls = 'sc_day sc_day_empty';
                 } else if (used_slots < slot_refs.length) {
                     cls = 'sc_day sc_day_some';
                 } else {

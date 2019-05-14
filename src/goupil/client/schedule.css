@@ -125,9 +125,8 @@
 }
 .sc_day_disabled { background: #cbcbcb; }
 .sc_day a {
-    color: inherit;
     text-decoration: none;
-    font-weight: bold;
+    font-weight: normal;
     font-style: normal;
 }
 
@@ -161,7 +160,6 @@
     padding: 2px 6px;
 }
 .sc_day_disabled .sc_head { background: #373737; }
-.sc_day_empty .sc_head { background: #ff6600; }
 .sc_day_some .sc_head { background: #24579d; }
 .sc_day_full .sc_head { background: green; }
 .sc_day_warn .sc_head { background: #db0a0a; }
@@ -221,6 +219,7 @@
 .sc_slots td {
     border: 0;
     padding: 2px;
+    font-size: 0.95em;
 }
 .sc_slots tr:hover {
     background: #bbb;
@@ -259,9 +258,12 @@
     font-style: normal;
 }
 .sc_slot_edit {
-    text-align: right;
+    text-align: center;
     width: 8px;
+    font-weight: bold;
 }
+.sc_slot_edit > a { font-weight: bold; }
+.sc_slot_option > a { color: black; }
 .sc_actions { padding: 3px 0; }
 .sc_copy {
     display: table;
@@ -272,6 +274,7 @@
 .sc_copy a {
     display: table-cell;
     font-size: 5em;
+    color: black;
 }
 .sc_copy a:hover {
     background: #ccc;
