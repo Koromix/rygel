@@ -97,6 +97,7 @@ static bool ResolveFileSet(const FileSet &file_set,
 {
     RG_DEFER_NC(out_guard, len = out_filenames->len) { out_filenames->RemoveFrom(len); };
 
+    out_filenames->Append(file_set.filenames);
     for (const char *directory: file_set.directories) {
         if (!EnumerateFiles(directory, nullptr, 0, 1024, alloc, out_filenames))
             return false;
@@ -105,7 +106,6 @@ static bool ResolveFileSet(const FileSet &file_set,
         if (!EnumerateFiles(directory, nullptr, -1, 1024, alloc, out_filenames))
             return false;
     }
-    out_filenames->Append(file_set.filenames);
 
     out_filenames->RemoveFrom(std::remove_if(out_filenames->begin(), out_filenames->end(),
                                              [&](const char *filename) {
