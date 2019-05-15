@@ -240,9 +240,9 @@ static void InitRoutes()
 
     // Main pages
     add_asset_route("GET", "/", html);
-    add_redirect_route("GET", "/autoform", 301, "/autoform/");
+    add_redirect_route("GET", "/autoform", 301, "autoform/");
     add_asset_route("GET", "/autoform/", html);
-    add_redirect_route("GET", "/schedule", 301, "/schedule/");
+    add_redirect_route("GET", "/schedule", 301, "schedule/");
     add_asset_route("GET", "/schedule/", html);
 
     // General API
