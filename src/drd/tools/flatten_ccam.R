@@ -1,0 +1,109 @@
+#!/usr/bin/env Rscript
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+# Start the script from a command line this way:
+# Rscript flatten_ccam.csv [in.xls] [out.csv]
+# Example: Rscript flatten_ccam.csv CCAM_V57.xls ccam57_plate.csv
+
+library(zoo, warn.conflicts = FALSE)
+library(data.table, warn.conflicts = FALSE)
+library(readxl, warn.conflicts = FALSE)
+library(optparse, warn.conflicts = FALSE)
+library(stringr, warn.conflicts = FALSE)
+
+args <- parse_args(OptionParser(), positional_arguments = 2)
+args_src <- args$args[1]
+args_dest <- args$args[2]
+
+# ----- Lecture du fichier brut -----
+
+ccam_brute <- setDT(read_excel(args_src, skip = 1, na = '',
+                               col_types = c('text', 'skip', 'text', 'numeric', 'numeric',
+                                             'text', 'text', 'text', 'text', 'text', 'text')))
+names(ccam_brute) <- c('code', 'texte', 'activite', 'phase', 'tarif1', 'tarif2', 'rc',
+                       'accord_prealable', 'exo_tm', 'regroupement')
+
+# ---- Table nettoyée ----
+
+ccam_dup <- data.table(
+    code = ccam_brute$code,
+    desc = ccam_brute$texte,
+    phase = ccam_brute$phase,
+    chapitre1 = ccam_brute$code,
+    chapitre1_desc = NA_character_,
+    chapitre2 = ccam_brute$code,
+    chapitre2_desc = NA_character_,
+    chapitre3 = ccam_brute$code,
+    chapitre3_desc = NA_character_,
+    chapitre4 = ccam_brute$code,
+    chapitre4_desc = NA_character_,
+    activite1 = 0,
+    activite2 = 0,
+    activite3 = 0,
+    activite4 = 0,
+    activite5 = 0,
+    regroupement = ccam_brute$regroupement,
+    gestcomp = NA_character_,
+
+    texte = ccam_brute$texte,
+    activite = ccam_brute$activite
+)
+
+# ---- Informations manquantes (LOCF) ----
+
+ccam_dup$code <- ifelse(grepl('^[A-Z]{4}[0-9]{3}$', ccam_dup$code), ccam_dup$code, NA)
+ccam_dup$desc <- ifelse(!is.na(ccam_dup$code), ccam_dup$desc, NA)
+ccam_dup$code <- na.locf(ccam_dup$code, na.rm = FALSE)
+ccam_dup$desc <- na.locf(ccam_dup$desc, na.rm = FALSE)
+ccam_dup$desc <- paste0(ccam_dup$code, ' - ', ifelse(grepl('^Phase [0-9] :', ccam_dup$texte),
+                                                     paste0(ccam_dup$desc, ' (', ccam_dup$texte, ')'), ccam_dup$desc))
+
+# ---- Découpage des chapitres ----
+
+ccam_dup$chapitre1 <- ifelse(grepl('^[0-9]{1,2}$', ccam_dup$chapitre1), ccam_dup$chapitre1, NA)
+ccam_dup$chapitre1 <- na.locf(ccam_dup$chapitre1, na.rm = FALSE)
+ccam_dup$chapitre2 <- ifelse(grepl('^[0-9]{1,2}(\\.[0-9]{2})?$', ccam_dup$chapitre2), ccam_dup$chapitre2, NA)
+ccam_dup$chapitre2 <- na.locf(ccam_dup$chapitre2, na.rm = FALSE)
+ccam_dup$chapitre3 <- ifelse(grepl('^[0-9]{1,2}(\\.[0-9]{2}(\\.[0-9]{2})?)?$', ccam_dup$chapitre3), ccam_dup$chapitre3, NA)
+ccam_dup$chapitre3 <- na.locf(ccam_dup$chapitre3, na.rm = FALSE)
+ccam_dup$chapitre4 <- ifelse(grepl('^[0-9]{1,2}(\\.[0-9]{2}(\\.[0-9]{2}(\\.[0-9]{2})?)?)?$', ccam_dup$chapitre4), ccam_dup$chapitre4, NA)
+ccam_dup$chapitre4 <- na.locf(ccam_dup$chapitre4, na.rm = FALSE)
+
+# ---- Informations chapitres et gestes complémentaires ----
+
+chapitres <- data.table(
+    chapitre = ccam_brute$code,
+    desc = paste0(str_pad(ccam_brute$code, 2, pad = '0'), ' - ', ccam_brute$texte)
+)
+chapitres <- chapitres[grepl('^[0-9]{1,2}(\\.[0-9]{2}(\\.[0-9]{2}(\\.[0-9]{2})?)?)?$', chapitre),]
+
+gestcomp <- data.table(
+    code = ccam_dup$code,
+    actes = ccam_dup$texte
+)
+gestcomp <- gestcomp[grepl('\\(([A-Z]{4}[0-9]{3})(\\, ([A-Z]{4}[0-9]{3}))*\\)$', actes),]
+gestcomp$actes <- sapply(regmatches(gestcomp$actes, gregexpr('[A-Z]{4}[0-9]{3}', gestcomp$actes)),
+                         function(x) paste(x, collapse = '|'))
+
+# ----- Table finale -----
+
+ccam <- unique(ccam_dup[!is.na(code) & !is.na(phase),], by = c('code', 'phase'))
+ccam$texte <- NULL
+ccam$activite <- NULL
+ccam[chapitres, chapitre1 := i.desc, on = c('chapitre1' = 'chapitre')]
+ccam[chapitres, chapitre2 := i.desc, on = c('chapitre2' = 'chapitre')]
+ccam[chapitres, chapitre3 := i.desc, on = c('chapitre3' = 'chapitre')]
+ccam[chapitres, chapitre4 := i.desc, on = c('chapitre4' = 'chapitre')]
+ccam[ccam_dup[activite == 1,], activite1 := 1, on = 'code']
+ccam[ccam_dup[activite == 2,], activite2 := 1, on = 'code']
+ccam[ccam_dup[activite == 3,], activite3 := 1, on = 'code']
+ccam[ccam_dup[activite == 4,], activite4 := 1, on = 'code']
+ccam[ccam_dup[activite == 5,], activite5 := 1, on = 'code']
+ccam[gestcomp, gestcomp := i.actes, on = 'code']
+
+# ----- Export -----
+
+write.csv2(ccam, file = args_dest, row.names = FALSE, na = '')
