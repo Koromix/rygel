@@ -1521,11 +1521,11 @@ const char *GetApplicationExecutable()
     static char executable_path[4096];
 
     if (!executable_path[0]) {
-        uint32_t buffer_size = SIZE(executable_path);
+        uint32_t buffer_size = RG_SIZE(executable_path);
         RG_ASSERT(!_NSGetExecutablePath(executable_path, &buffer_size));
         char *path_buf = realpath(executable_path, nullptr);
         RG_ASSERT(path_buf);
-        RG_ASSERT(strlen(path_buf) < SIZE(executable_path));
+        RG_ASSERT(strlen(path_buf) < RG_SIZE(executable_path));
         strcpy(executable_path, path_buf);
         free(path_buf);
     }
