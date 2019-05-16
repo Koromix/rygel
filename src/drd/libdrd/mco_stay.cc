@@ -48,7 +48,7 @@ bool mco_StaySet::SavePack(StreamWriter &st) const
 #else
     for (const mco_Stay &stay: stays) {
         mco_Stay stay2;
-        memcpy(&stay2, &stay, SIZE(stay));
+        memcpy(&stay2, &stay, RG_SIZE(stay));
 
         union {
             uint8_t raw[32];
@@ -63,7 +63,7 @@ bool mco_StaySet::SavePack(StreamWriter &st) const
         u.st.procedures_len = (int64_t)stay.procedures.len;
         memcpy(&stay2.other_diagnoses, u.raw, 32);
 
-        st.Write(&stay2, SIZE(stay2));
+        st.Write(&stay2, RG_SIZE(stay2));
     }
 #endif
     for (const mco_Stay &stay: stays) {
