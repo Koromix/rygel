@@ -406,6 +406,13 @@ function FormExecutor() {
         let builder = new FormBuilder(af_form, widgets, mem);
         builder.changeHandler = () => renderForm(script);
 
+
+        // Prevent go() call from working if called during script eval
+        let prev_go_handler = self.goHandler;
+        self.goHandler = key => {
+            throw new Error('go() must be called from a callback (button click, etc.)');
+        };
+
         try {
             Function('form', 'go', script)(builder, key => self.goHandler(key));
 
@@ -425,6 +432,8 @@ function FormExecutor() {
             self.setError(line, err.message);
 
             return false;
+        } finally {
+            self.goHandler = prev_go_handler;
         }
     }
 
