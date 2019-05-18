@@ -38,10 +38,7 @@
     -webkit-user-select: none;
     -ms-user-select: none;
 }
-.sc_selector, .sc_months {
-    display: inline-block;
-    vertical-align: bottom;
-}
+.sc_selector, .sc_months { display: inline-block; }
 .sc_selector { margin: 0 1em; }
 .sc_mode, .sc_selector a, .sc_months a {
     display: inline-block;
@@ -54,11 +51,10 @@
     position: fixed;
     left: 0;
     bottom: 0;
-    padding: 4px 0.4em;
+    padding: 4px 0.4em 0 0.4em;
     font-size: 1.3em;
 }
-.sc_selector a { padding: 6px 0em; }
-.sc_months a { padding: 7px 1em; }
+.sc_selector a, .sc_months a { padding: 7px 1em 0 1em; }
 .sc_months a.active, .sc_mode.active {
     background: #f8f8f8;
     color: black;
@@ -83,10 +79,7 @@
 @media screen and (max-width: 1099px) {
     .sc_months { display: none; }
     .sc_months.active { display: block; }
-    .sc_selector {
-        display: inline-block;
-        margin: 0 1em;
-    }
+    .sc_selector { margin: 0 1em; }
     .sc_months a { width: 50%; }
     .sc_deploy {
         display: block;
