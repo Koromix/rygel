@@ -218,8 +218,8 @@
 }
 .sc_slots td {
     border: 0;
-    padding: 2px;
-    font-size: 0.95em;
+    padding: 1px 1px 2px 1px;
+    font-size: 0.9em;
 }
 .sc_slots tr:hover {
     background: #bbb;
@@ -228,7 +228,7 @@
 .sc_slot_time {
     opacity: 0.7;
     text-align: right;
-    width: 40px;
+    width: 36px;
     border: 0;
 }
 .sc_slot_used .sc_slot_time { cursor: grab; }
@@ -242,7 +242,6 @@
     float: right;
     margin-right: 3px;
     content: '⚠\FE0E';
-    font-size: 0.9em;
     font-style: normal;
 }
 .sc_slot_overbook .sc_slot_time, .sc_slot_overbook.sc_slot_used { font-style: italic; }
