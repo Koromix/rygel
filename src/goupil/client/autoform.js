@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function FormBuilder(root, widgets, mem) {
+function FormBuilder(root, widgets, mem = {}) {
     let self = this;
 
     this.changeHandler = e => {};
@@ -415,7 +415,6 @@ function FormExecutor() {
         let builder = new FormBuilder(af_form, widgets, mem);
         builder.changeHandler = () => renderForm(script);
 
-
         // Prevent go() call from working if called during script eval
         let prev_go_handler = self.goHandler;
         self.goHandler = key => {
@@ -489,11 +488,14 @@ let autoform = (function() {
     let editor;
     let af_menu;
     let af_page;
+    let af_popup;
 
     let pages = new Map;
     let current_key;
 
     let executor;
+
+    let popup_timer;
 
     function loadDefaultPages() {
         pages = new Map([
@@ -756,6 +758,26 @@ form.buttons([
         });
     }
 
+    function initPopup() {
+        af_popup.addEventListener('click', e => e.stopPropagation());
+        af_popup.addEventListener('mousemove', e => {
+            clearTimeout(popup_timer);
+            popup_timer = null;
+
+            e.stopPropagation();
+        });
+        document.addEventListener('click', closePopup);
+        document.addEventListener('mousemove', e => {
+            if (popup_timer == null)
+                popup_timer = setTimeout(closePopup, 500);
+        });
+    }
+
+    function closePopup() {
+        af_popup.classList.remove('active');
+        render(html``, af_popup);
+    }
+
     this.go = function(key) {
         let page = pages.get(key);
 
@@ -766,7 +788,33 @@ form.buttons([
         current_key = key;
 
         renderAll();
-    }
+    };
+
+    this.popup = function(e, func) {
+        let widgets = [];
+
+        let builder = new FormBuilder(af_popup, widgets);
+        builder.changeHandler = () => self.popup(e, func);
+        builder.close = closePopup;
+
+        func(builder);
+        render(html`${widgets.map(w => w.render(w.errors))}`, af_popup);
+
+        if (e.clientX > 600) {
+            af_popup.style.left = (e.clientX - af_popup.scrollWidth + 1) + 'px';
+            af_popup.style.top = (e.clientY - 1) + 'px';
+        } else {
+            af_popup.style.left = (e.clientX - 1) + 'px';
+            af_popup.style.top = (e.clientY - 1) + 'px';
+        }
+        af_popup.classList.add('active');
+
+        if (e.stopPropagation)
+            e.stopPropagation();
+
+        clearTimeout(popup_timer);
+        popup_timer = null;
+    };
 
     this.activate = function() {
         document.title = 'goupil autoform';
@@ -799,11 +847,15 @@ form.buttons([
             <div id="af_menu"></div>
             <div id="af_editor"></div>
             <div id="af_form"></div>
+
+            <div id="af_popup"></div>
         `, main);
         af_menu = document.querySelector('#af_menu');
         af_form = document.querySelector('#af_form');
+        af_popup = document.querySelector('#af_popup');
 
         initEditor();
+        initPopup();
 
         if (current_key && pages.size) {
             self.go(current_key);
