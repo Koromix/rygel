@@ -14,10 +14,10 @@ a {
     color: #ff6600;
 }
 button {
-    cursor: pointer;
     font-family: inherit;
     font-size: 1em;
 }
+button:not(:disabled) { cursor: pointer; }
 
 @media screen and (max-width: 599px) {
     body { margin: 30px 0 0 0; }
