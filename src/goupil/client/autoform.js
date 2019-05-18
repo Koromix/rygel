@@ -410,7 +410,12 @@ function FormExecutor() {
         // Prevent go() call from working if called during script eval
         let prev_go_handler = self.goHandler;
         self.goHandler = key => {
-            throw new Error('go() must be called from a callback (button click, etc.)');
+            throw new Error(`go() must be called from a callback (button click, etc.).
+
+If you are using it for events, make sure you did not use this syntax by accident:
+    go('page_key')
+instead of:
+    () => go('page_key')`);
         };
 
         try {
