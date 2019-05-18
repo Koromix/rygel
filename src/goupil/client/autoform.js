@@ -10,6 +10,8 @@ function FormBuilder(root, widgets, mem) {
     let interfaces = {};
     let widgets_ref = widgets;
 
+    this.errors = [];
+
     function makeID(name) { return `af_var_${name}`; }
 
     function addWidget(render) {
@@ -42,7 +44,9 @@ function FormBuilder(root, widgets, mem) {
         let intf = {
             value: value,
             error: msg => {
+                self.errors.push(msg || '');
                 widget.errors.push(msg || '');
+
                 return intf;
             }
         };
