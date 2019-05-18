@@ -155,3 +155,6 @@
     max-width: 400px;
     margin: 10px auto 0 auto;
 }
+
+.af_widget > p:first-child { margin-top: 0; }
+.af_widget > p:last-child { margin-bottom: 0; }
