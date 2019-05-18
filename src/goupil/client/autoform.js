@@ -120,11 +120,16 @@ function FormBuilder(root, widgets, mem) {
 
         let intf = addVariableWidget(name, id, render, value);
 
-        if (value != null) {
-            if (options.min !== undefined && value < options.min)
-                intf.error(`Valeur < ${options.min}`);
-            if (options.max !== undefined && value > options.max)
-                intf.error(`Valeur > ${options.max}`);
+        if (value != null &&
+                (options.min !== undefined && value < options.min) ||
+                (options.max !== undefined && value > options.max)) {
+            if (options.min !== undefined && options.max !== undefined) {
+                intf.error(`Doit être entre ${options.min} et ${options.max}`);
+            } else if (options.min !== undefined) {
+                intf.error(`Doit être ≥ ${options.min}`);
+            } else {
+                intf.error(`Doit être ≤ ${options.max}`);
+            }
         }
 
         return intf;
