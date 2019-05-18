@@ -162,11 +162,11 @@
 /* -------------------- Popup -------------------- */
 
 #af_popup {
-    position: absolute;
+    display: none;
+    position: fixed;
     width: 700px;
     z-index: 9999;
     border: 1px solid #ddd;
     background: #eaeaea;
-    visibility: hidden;
 }
-#af_popup.active { visibility: visible; }
+#af_popup.active { display: block; }

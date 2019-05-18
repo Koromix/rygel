@@ -829,14 +829,34 @@ form.buttons([
         func(builder);
         render(html`${widgets.map(w => w.render(w.errors))}`, af_popup);
 
-        if (e.clientX > 600) {
-            af_popup.style.left = (e.clientX - af_popup.scrollWidth + 1) + 'px';
-            af_popup.style.top = (e.clientY - 1) + 'px';
-        } else {
-            af_popup.style.left = (e.clientX - 1) + 'px';
-            af_popup.style.top = (e.clientY - 1) + 'px';
-        }
+        // We need to know popup width and height
+        af_popup.style.visibility = 'hidden';
         af_popup.classList.add('active');
+
+        // Try different positions
+        {
+            let x = e.clientX - 1;
+            if (x > window.innerWidth - af_popup.scrollWidth - 10) {
+                x = e.clientX - af_popup.scrollWidth - 1;
+                if (x < 10) {
+                    x = Math.min(e.clientX - 1, window.innerWidth - af_popup.scrollWidth - 10);
+                    x = Math.max(x, 10);
+                }
+            }
+
+            let y = e.clientY - 1;
+            if (y > window.innerHeight - af_popup.scrollHeight - 10) {
+                y = e.clientY - af_popup.scrollHeight - 1;
+                if (y < 10) {
+                    y = Math.min(e.clientY - 1, window.innerHeight - af_popup.scrollHeight - 10);
+                    y = Math.max(y, 10);
+                }
+            }
+
+            af_popup.style.left = x + 'px';
+            af_popup.style.top = y + 'px';
+            af_popup.style.visibility = 'visible';
+        }
 
         if (e.stopPropagation)
             e.stopPropagation();
