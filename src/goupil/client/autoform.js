@@ -371,7 +371,8 @@ instead of:
         let render = () => wrapWidget(html`
             <div class="af_buttons">
                 ${buttons.map(button =>
-                    html`<button class="af_button" @click=${button[1]}>${button[0]}</button>`)}
+                    html`<button class="af_button" ?disabled=${!button[1]}
+                                 @click=${button[1]}>${button[0]}</button>`)}
             </div>
         `, options);
 
@@ -639,30 +640,42 @@ form.buttons([
         localStorage.setItem('goupil_af_pages', JSON.stringify(entries));
     }
 
-    function createPage() {
-        let key = prompt('Key?');
-        if (key) {
-            if (pages.has(key))
-                throw new Error(`Page '${key}' already exists`);
+    function createPage(e) {
+        function doCreate(key, title) {
+            let page = {
+                key: key,
+                title: title,
+                script: ''
+            };
 
-            let title = prompt('Title?');
-            if (title) {
-                let page = {
-                    key: key,
-                    title: title,
-                    script: ''
-                };
+            pages.set(key, page);
+            savePages();
 
-                pages.set(key, page);
-                savePages();
-
-                self.go(key);
-            }
+            self.go(key);
         }
+
+        autoform.popup(e, form => {
+            let key = form.text('key', 'Clé :');
+            let title = form.text('title', 'Titre :');
+
+            if (key.value) {
+                if (pages.has(key.value))
+                    key.error('Existe déjà');
+                if (!key.value.match(/^[a-zA-Z0-9_]*$/))
+                    key.error('Caractères autorisés: a-z, 0-9 et _');
+            }
+
+            let valid = key.value && title.value && !form.errors.length;
+
+            form.buttons([
+                ['Créer', valid ? () => { doCreate(key.value, title.value); form.close(); } : null],
+                ['Annuler', form.close]
+            ])
+        });
     }
 
-    function deletePage(key) {
-        if (confirm('Are you sure?')) {
+    function deletePage(e, key) {
+        function doDelete() {
             pages.delete(key);
             savePages();
 
@@ -673,16 +686,32 @@ form.buttons([
                 self.go(current_key);
             }
         }
+
+        autoform.popup(e, form => {
+            form.output(`Voulez-vous vraiment supprimer la page '${key}' ?`);
+            form.buttons([
+                ['Supprimer', () => { doDelete(); form.close(); }],
+                ['Annuler', form.close]
+            ]);
+        });
     }
 
-    function resetPages() {
-        if (confirm('Are you sure?')) {
+    function resetPages(e) {
+        function doReset() {
             loadDefaultPages();
             executor = null;
 
             let first_key = pages.values().next().value.key;
             self.go(first_key);
         }
+
+        autoform.popup(e, form => {
+            form.output('Voulez-vous vraiment réinitialiser toutes les pages ?');
+            form.buttons([
+                ['Réinitialiser', () => { doReset(); form.close(); }],
+                ['Annuler', form.close]
+            ]);
+        });
     }
 
     function renderAll() {
@@ -690,7 +719,7 @@ form.buttons([
 
         render(html`
             <button @click=${createPage}>Ajouter</button>
-            ${page ? html`<button @click=${e => deletePage(current_key)}>Supprimer</button>` : html``}
+            ${page ? html`<button @click=${e => deletePage(e, current_key)}>Supprimer</button>` : html``}
             <select @change=${e => self.go(e.target.value)}>
                 ${!current_key && !pages.size ? html`<option>-- No page available --</option>` : html``}
                 ${current_key && !page ?
