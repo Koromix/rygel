@@ -24,10 +24,10 @@ button:not(:disabled) { cursor: pointer; }
 }
 
 #gp_menu {
+    position: fixed;
     left: 0;
     top: 0;
     width: 100vw;
-    position: fixed;
     z-index: 999;
     background: #262626;
     user-select: none;
@@ -40,7 +40,7 @@ button:not(:disabled) { cursor: pointer; }
     height: 30px;
     box-sizing: border-box;
     text-decoration: none;
-    padding: 7px 1.5em;
+    padding: 7px 1.5em 0 1.5em;
     color: white;
 }
 #gp_menu a.active {
@@ -50,14 +50,3 @@ button:not(:disabled) { cursor: pointer; }
 #gp_menu a:not(.active):hover { background: #444; }
 
 main { margin-top: 30px; }
-
-@media screen and (max-width: 1099px) {
-    #gp_menu {
-        display: table;
-        table-layout: fixed;
-    }
-    #gp_menu a {
-        display: table-cell;
-        text-align: center;
-    }
-}
