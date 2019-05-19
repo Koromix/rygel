@@ -46,7 +46,8 @@ let goupil = (function() {
         gp_popup.addEventListener('keydown', e => {
             switch (e.keyCode) {
                 case 13: {
-                    if (popup_builder.submit)
+                    if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A' &&
+                            popup_builder.submit)
                         popup_builder.submit();
                 } break;
                 case 27: { closePopup(); } break;
@@ -178,14 +179,15 @@ let goupil = (function() {
 
             gp_popup.style.left = pos.x + 'px';
             gp_popup.style.top = pos.y + 'px';
-            gp_popup.style.visibility = 'visible';
         }
 
         if (e.stopPropagation)
             e.stopPropagation();
-
         clearTimeout(popup_timer);
         popup_timer = null;
+
+        // Reveal!
+        gp_popup.style.visibility = 'visible';
 
         // Give focus to first input
         if (give_focus) {
