@@ -645,8 +645,8 @@ form.buttons([
             if (key.value) {
                 if (pages.has(key.value))
                     key.error('Existe déjà');
-                if (!key.value.match(/^[a-zA-Z0-9_]*$/))
-                    key.error('Caractères autorisés: a-z, 0-9 et _');
+                if (!key.value.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
+                    key.error('Autorisé : a-z, _ et 0-9 (sauf initiale)');
             }
 
             if (key.value && title.value && !form.errors.length) {
