@@ -159,15 +159,3 @@
 
 .af_widget > p:first-child { margin-top: 0; }
 .af_widget > p:last-child { margin-bottom: 0; }
-
-/* -------------------- Popup -------------------- */
-
-#af_popup {
-    display: none;
-    position: fixed;
-    width: 700px;
-    z-index: 9999;
-    border: 1px solid #ddd;
-    background: #eaeaea;
-}
-#af_popup.active { display: block; }

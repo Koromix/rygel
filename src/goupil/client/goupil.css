@@ -2,6 +2,8 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/* -------------------- Layout -------------------- */
+
 body {
     margin: 0;
     padding: 0;
@@ -9,15 +11,6 @@ body {
     font-family: 'Noto Sans', sans-serif;
     font-size: 12px;
 }
-
-a {
-    color: #ff6600;
-}
-button {
-    font-family: inherit;
-    font-size: 1em;
-}
-button:not(:disabled) { cursor: pointer; }
 
 @media screen and (max-width: 599px) {
     body { margin: 30px 0 0 0; }
@@ -50,3 +43,24 @@ button:not(:disabled) { cursor: pointer; }
 #gp_menu a:not(.active):hover { background: #444; }
 
 main { margin-top: 30px; }
+
+/* -------------------- Common elements -------------------- */
+
+a { color: #ff6600; }
+button {
+    font-family: inherit;
+    font-size: 1em;
+}
+button:not(:disabled) { cursor: pointer; }
+
+/* -------------------- Popup -------------------- */
+
+#gp_popup {
+    display: none;
+    position: fixed;
+    width: 700px;
+    z-index: 9999;
+    border: 1px solid #ddd;
+    background: #eaeaea;
+}
+#gp_popup.active { display: block; }

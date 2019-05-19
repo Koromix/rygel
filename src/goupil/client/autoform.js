@@ -489,14 +489,11 @@ let autoform = (function() {
     let editor;
     let af_menu;
     let af_page;
-    let af_popup;
 
     let pages = new Map;
     let current_key;
 
     let executor;
-
-    let popup_timer;
 
     function loadDefaultPages() {
         pages = new Map([
@@ -654,7 +651,7 @@ form.buttons([
             self.go(key);
         }
 
-        autoform.popup(e, form => {
+        goupil.popup(e, form => {
             let key = form.text('key', 'Clé :');
             let title = form.text('title', 'Titre :');
 
@@ -687,7 +684,7 @@ form.buttons([
             }
         }
 
-        autoform.popup(e, form => {
+        goupil.popup(e, form => {
             form.output(`Voulez-vous vraiment supprimer la page '${key}' ?`);
             form.buttons([
                 ['Supprimer', () => { doDelete(); form.close(); }],
@@ -705,7 +702,7 @@ form.buttons([
             self.go(first_key);
         }
 
-        autoform.popup(e, form => {
+        goupil.popup(e, form => {
             form.output('Voulez-vous vraiment réinitialiser toutes les pages ?');
             form.buttons([
                 ['Réinitialiser', () => { doReset(); form.close(); }],
@@ -787,30 +784,6 @@ form.buttons([
         });
     }
 
-    function initPopup() {
-        af_popup = document.createElement('div');
-        af_popup.setAttribute('id', 'af_popup');
-        document.body.appendChild(af_popup);
-
-        af_popup.addEventListener('click', e => e.stopPropagation());
-        af_popup.addEventListener('mousemove', e => {
-            clearTimeout(popup_timer);
-            popup_timer = null;
-
-            e.stopPropagation();
-        });
-        document.addEventListener('click', closePopup);
-        document.addEventListener('mousemove', e => {
-            if (popup_timer == null)
-                popup_timer = setTimeout(closePopup, 500);
-        });
-    }
-
-    function closePopup() {
-        af_popup.classList.remove('active');
-        render(html``, af_popup);
-    }
-
     this.go = function(key) {
         let page = pages.get(key);
 
@@ -821,55 +794,6 @@ form.buttons([
         current_key = key;
 
         renderAll();
-    };
-
-    this.popup = function(e, func) {
-        if (!af_popup)
-            initPopup();
-
-        let widgets = [];
-
-        let builder = new FormBuilder(af_popup, widgets);
-        builder.changeHandler = () => self.popup(e, func);
-        builder.close = closePopup;
-
-        func(builder);
-        render(html`${widgets.map(w => w.render(w.errors))}`, af_popup);
-
-        // We need to know popup width and height
-        af_popup.style.visibility = 'hidden';
-        af_popup.classList.add('active');
-
-        // Try different positions
-        {
-            let x = e.clientX - 1;
-            if (x > window.innerWidth - af_popup.scrollWidth - 10) {
-                x = e.clientX - af_popup.scrollWidth - 1;
-                if (x < 10) {
-                    x = Math.min(e.clientX - 1, window.innerWidth - af_popup.scrollWidth - 10);
-                    x = Math.max(x, 10);
-                }
-            }
-
-            let y = e.clientY - 1;
-            if (y > window.innerHeight - af_popup.scrollHeight - 10) {
-                y = e.clientY - af_popup.scrollHeight - 1;
-                if (y < 10) {
-                    y = Math.min(e.clientY - 1, window.innerHeight - af_popup.scrollHeight - 10);
-                    y = Math.max(y, 10);
-                }
-            }
-
-            af_popup.style.left = x + 'px';
-            af_popup.style.top = y + 'px';
-            af_popup.style.visibility = 'visible';
-        }
-
-        if (e.stopPropagation)
-            e.stopPropagation();
-
-        clearTimeout(popup_timer);
-        popup_timer = null;
     };
 
     this.activate = function() {

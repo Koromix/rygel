@@ -133,7 +133,7 @@ function Schedule(widget, resources_map, meetings_map) {
             renderAll();
         }
 
-        autoform.popup(e, form => {
+        goupil.popup(e, form => {
             let name = form.text('name', 'Nom :');
 
             form.buttons([
@@ -151,7 +151,7 @@ function Schedule(widget, resources_map, meetings_map) {
             renderAll();
         }
 
-        autoform.popup(e, form => {
+        goupil.popup(e, form => {
             form.output('Voulez-vous vraiment supprimer ce rendez-vous ?');
             form.buttons([
                 ['Supprimer', () => { doDelete(); form.close(); }],
@@ -349,7 +349,7 @@ function Schedule(widget, resources_map, meetings_map) {
             renderAll();
         }
 
-        autoform.popup(e, form => {
+        goupil.popup(e, form => {
             let time = form.text('time', 'Horaire :');
 
             let time2 = parseTime(time.value);
@@ -373,7 +373,7 @@ function Schedule(widget, resources_map, meetings_map) {
             renderAll();
         }
 
-        autoform.popup(e, form => {
+        goupil.popup(e, form => {
             form.output('Voulez-vous vraiment supprimer ces créneaux ?');
             form.buttons([
                 ['Supprimer', () => { doDelete(); form.close(); }],
@@ -392,7 +392,7 @@ function Schedule(widget, resources_map, meetings_map) {
             renderAll();
         }
 
-        autoform.popup(e, form => {
+        goupil.popup(e, form => {
             form.output('Voulez-vous vraiment fermer cette journée ?',
                         {help: 'Ceci supprime tous les créneaux'});
             form.buttons([
