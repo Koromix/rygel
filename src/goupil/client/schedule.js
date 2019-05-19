@@ -525,24 +525,24 @@ function Schedule(widget, resources_map, meetings_map) {
                 let normal_count = resources.reduce((acc, res) => acc + res.slots, 0);
                 let overbook_count = resources.reduce((acc, res) => acc + res.overbook, 0);
 
-                let cls;
+                let cls = 'sc_day sc_day_copy';
                 if (normal_count + overbook_count) {
-                    cls = 'sc_day sc_opt_some';
+                    cls += ' sc_opt_some';
                 } else {
-                    cls = 'sc_day sc_opt_empty';
+                    cls += ' sc_opt_empty';
                 }
 
-                return html`<div class="${cls}">
+                return html`<div class=${cls}>
                     <div class="sc_head">
                         <div class="sc_head_week_day">${day.week_day}</div>
                         <div class="sc_head_date">${day.date}</div>
                         <div class="sc_head_count">${(normal_count + overbook_count) ? `${normal_count}+${overbook_count}` : 'Fermé'}</div>
                     </div>
 
-                    <div class="sc_copy" style=${copy_ignore.has(day.key) ? 'opacity: 0.1' : ''}>
-                        <a href="#" @click=${e => { executeCopy(day); e.preventDefault(); }}>+</a>
-                        <a href="#" @click=${e => { executeCopyAndEnd(day); e.preventDefault(); }}>⇳</a>
-                    </div>
+                    <a href="#" style=${copy_ignore.has(day.key) ? 'opacity: 0.1' : ''}
+                       @click=${e => { executeCopy(day); e.preventDefault(); }}>+</a>
+                    <a href="#" style=${copy_ignore.has(day.key) ? 'opacity: 0.1' : ''}
+                       @click=${e => { executeCopyAndEnd(day); e.preventDefault(); }}>⇳</a>
                 </div>`;
             } else {
                 return html`<div class="sc_skip"></div>`;
