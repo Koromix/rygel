@@ -58,7 +58,6 @@ button:not(:disabled) { cursor: pointer; }
 #gp_popup {
     display: none;
     position: fixed;
-    width: 700px;
     z-index: 9999;
     border: 1px solid #ddd;
     background: #eaeaea;

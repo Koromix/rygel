@@ -26,10 +26,17 @@ function FormBuilder(root, widgets, mem = {}) {
     }
 
     function wrapWidget(frag, options, errors = []) {
+        let cls = 'af_widget';
+        if (options.large)
+            cls += ' af_widget_large';
+        if (errors.length)
+            cls += ' af_widget_error';
+
         return html`
-            <div class=${errors.length ? 'af_widget af_widget_error' : 'af_widget'}>
+            <div class=${cls}>
                 ${frag}
-                ${errors.length ? html`<span class="af_error">${errors.map(err => html`${err}<br/>`)}</span>` : html``}
+                ${errors.length && errors.every(err => err) ?
+                    html`<div class="af_error">${errors.map(err => html`${err}<br/>`)}</div>` : html``}
                 ${options.help ? html`<p class="af_help">${options.help}</p>` : ''}
             </div>
         `;
