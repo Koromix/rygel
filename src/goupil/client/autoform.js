@@ -9,6 +9,7 @@ function FormBuilder(root, widgets, mem = {}) {
 
     let interfaces = {};
     let widgets_ref = widgets;
+    let options_stack = [{}];
 
     this.errors = [];
 
@@ -72,6 +73,17 @@ function FormBuilder(root, widgets, mem = {}) {
         }
     }
 
+    this.pushOptions = function(options = {}) {
+        options = Object.assign({}, options_stack[options_stack.length - 1], options);
+        options_stack.push(options);
+    };
+    this.popOptions = function() {
+        if (options_stack.length < 2)
+            throw new Error('Too many popOptions() operations');
+
+        options_stack.pop();
+    }
+
     this.find = name => interfaces[name];
     this.value = function(name) {
         let intf = interfaces[name];
@@ -80,6 +92,8 @@ function FormBuilder(root, widgets, mem = {}) {
     this.error = (name, msg) => interfaces[name].error(msg);
 
     this.text = function(name, label, options = {}) {
+        options = Object.assign({}, options_stack[options_stack.length - 1], options);
+
         let id = makeID(name);
 
         let value;
@@ -106,6 +120,8 @@ function FormBuilder(root, widgets, mem = {}) {
     };
 
     this.number = function(name, label, options = {}) {
+        options = Object.assign({}, options_stack[options_stack.length - 1], options);
+
         let id = makeID(name);
 
         let value;
@@ -150,6 +166,8 @@ function FormBuilder(root, widgets, mem = {}) {
     function stringifyValue(value) { return JSON.stringify(value); }
 
     this.dropdown = function(name, label, choices = [], options = {}) {
+        options = Object.assign({}, options_stack[options_stack.length - 1], options);
+
         let id = makeID(name);
 
         let value;
@@ -187,6 +205,8 @@ function FormBuilder(root, widgets, mem = {}) {
     }
 
     this.choice = function(name, label, choices = [], options = {}) {
+        options = Object.assign({}, options_stack[options_stack.length - 1], options);
+
         let id = makeID(name);
 
         let value;
@@ -233,6 +253,8 @@ function FormBuilder(root, widgets, mem = {}) {
     }
 
     this.radio = function(name, label, choices = [], options = {}) {
+        options = Object.assign({}, options_stack[options_stack.length - 1], options);
+
         let id = makeID(name);
 
         let value;
@@ -278,6 +300,8 @@ function FormBuilder(root, widgets, mem = {}) {
     }
 
     this.multi = function(name, label, choices = [], options = {}) {
+        options = Object.assign({}, options_stack[options_stack.length - 1], options);
+
         let id = makeID(name);
 
         let value;
@@ -316,6 +340,8 @@ function FormBuilder(root, widgets, mem = {}) {
     };
 
     this.calc = function(name, label, value, options = {}) {
+        options = Object.assign({}, options_stack[options_stack.length - 1], options);
+
         let id = makeID(name);
 
         let text = value;
@@ -339,6 +365,8 @@ function FormBuilder(root, widgets, mem = {}) {
     };
 
     this.output = function(content, options = {}) {
+        options = Object.assign({}, options_stack[options_stack.length - 1], options);
+
         // Don't output function content, helps avoid garbage output when the
         // user types 'page.oupt(html);'.
         if (!content || typeof content === 'function')
@@ -375,6 +403,8 @@ instead of:
     };
 
     this.buttons = function(buttons, options = {}) {
+        options = Object.assign({}, options_stack[options_stack.length - 1], options);
+
         let render = () => wrapWidget(html`
             <div class="af_buttons">
                 ${buttons.map(button =>
