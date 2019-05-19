@@ -161,17 +161,17 @@ let goupil = (function() {
                 x: origin.x,
                 y: origin.y
             };
-            if (pos.x > window.innerWidth - gp_popup.scrollWidth - 10) {
-                pos.x = origin.x - gp_popup.scrollWidth;
+            if (pos.x > window.innerWidth - gp_popup.offsetWidth - 10) {
+                pos.x = origin.x - gp_popup.offsetWidth;
                 if (pos.x < 10) {
-                    pos.x = Math.min(origin.x, window.innerWidth - gp_popup.scrollWidth - 10);
+                    pos.x = Math.min(origin.x, window.innerWidth - gp_popup.offsetWidth - 10);
                     pos.x = Math.max(pos.x, 10);
                 }
             }
-            if (pos.y > window.innerHeight - gp_popup.scrollHeight - 10) {
-                pos.y = origin.y - gp_popup.scrollHeight;
+            if (pos.y > window.innerHeight - gp_popup.offsetHeight - 10) {
+                pos.y = origin.y - gp_popup.offsetHeight;
                 if (pos.y < 10) {
-                    pos.y = Math.min(origin.y, window.innerHeight - gp_popup.scrollHeight - 10);
+                    pos.y = Math.min(origin.y, window.innerHeight - gp_popup.offsetHeight - 10);
                     pos.y = Math.max(pos.y, 10);
                 }
             }
