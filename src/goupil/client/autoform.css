@@ -64,7 +64,7 @@
 
 .af_form {
     background: #eaeaea;
-    padding: 2px;
+    padding: 6px;
 }
 .af_form_broken {
     filter: grayscale(100%);
@@ -82,7 +82,7 @@
 
 .af_section {
     min-height: 30px;
-    margin: 6px 2px 0 2px;
+    margin: 6px 0 0 0;
     padding: 0 5px 0 5px;
     background: rgba(136, 136, 136, 0.18);
     border: 0;
@@ -97,7 +97,7 @@
 /* -------------------- Widgets -------------------- */
 
 .af_widget {
-    margin: 6px;
+    margin-bottom: 2px;
     padding: 5px;
 }
 .af_widget > label {

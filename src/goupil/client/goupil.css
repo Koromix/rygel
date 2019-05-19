@@ -59,6 +59,7 @@ button:not(:disabled) { cursor: pointer; }
     display: none;
     position: fixed;
     z-index: 9999;
+    padding: 6px;
     border: 1px solid #ddd;
     background: #eaeaea;
 }
