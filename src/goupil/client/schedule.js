@@ -123,40 +123,41 @@ function Schedule(widget, resources_map, meetings_map) {
     }
 
     function createMeeting(e, slot_ref) {
-        function doCreate(name) {
-            slot_ref.meetings.splice(slot_ref.splice_idx, 0, {
-                time: slot_ref.time,
-                identity: name
-            });
-            self.changeMeetingsHandler(slot_ref.day.key, slot_ref.meetings);
-
-            renderAll();
-        }
-
         goupil.popup(e, form => {
             let name = form.text('name', 'Nom :');
 
-            form.buttons([
-                ['Créer', name.value ? () => { doCreate(name.value); form.close(); } : null],
-                ['Annuler', form.close]
-            ]);
+            if (name.value) {
+                form.submit = () => {
+                    slot_ref.meetings.splice(slot_ref.splice_idx, 0, {
+                        time: slot_ref.time,
+                        identity: name.value
+                    });
+                    self.changeMeetingsHandler(slot_ref.day.key, slot_ref.meetings);
+
+                    renderAll();
+
+                    form.close();
+                };
+            }
+
+            form.buttons(form.buttons.std.OkCancel('Créer'));
         });
     }
 
     function deleteMeeting(e, slot_ref) {
-        function doDelete() {
-            slot_ref.meetings.splice(slot_ref.splice_idx, 1);
-            self.changeMeetingsHandler(slot_ref.day.key, slot_ref.meetings);
-
-            renderAll();
-        }
-
         goupil.popup(e, form => {
             form.output('Voulez-vous vraiment supprimer ce rendez-vous ?');
-            form.buttons([
-                ['Supprimer', () => { doDelete(); form.close(); }],
-                ['Annuler', () => form.close()]
-            ]);
+
+            form.submit = () => {
+                slot_ref.meetings.splice(slot_ref.splice_idx, 1);
+                self.changeMeetingsHandler(slot_ref.day.key, slot_ref.meetings);
+
+                renderAll();
+
+                form.close();
+            };
+
+            form.buttons(form.buttons.std.OkCancel('Supprimer'));
         });
     }
 
@@ -329,26 +330,6 @@ function Schedule(widget, resources_map, meetings_map) {
     }
 
     function createResource(e, day) {
-        function doCreate(time) {
-            let resources = resources_map[day.key];
-
-            let prev_res = resources.find(res => res.time === time);
-            if (prev_res) {
-                prev_res.slots++;
-            } else {
-                resources.push({
-                    time: time,
-                    slots: 1,
-                    overbook: 0
-                });
-                resources.sort((res1, res2) => res1.time - res2.time);
-            }
-
-            self.changeResourcesHandler(day.key, resources);
-
-            renderAll();
-        }
-
         goupil.popup(e, form => {
             let time = form.text('time', 'Horaire :');
 
@@ -356,49 +337,70 @@ function Schedule(widget, resources_map, meetings_map) {
             if (time.value && !time2)
                 time.error('Non valide (ex : 15h27)');
 
-            form.buttons([
-                ['Créer', time2 ? () => { doCreate(time2); form.close(); } : null],
-                ['Annuler', form.close]
-            ]);
+            if (time2) {
+                form.submit = () => {
+                    let resources = resources_map[day.key];
+
+                    let prev_res = resources.find(res => res.time === time2);
+                    if (prev_res) {
+                        prev_res.slots++;
+                    } else {
+                        resources.push({
+                            time: time2,
+                            slots: 1,
+                            overbook: 0
+                        });
+                        resources.sort((res1, res2) => res1.time - res2.time);
+                    }
+
+                    self.changeResourcesHandler(day.key, resources);
+
+                    renderAll();
+
+                    form.close();
+                };
+            }
+
+            form.buttons(form.buttons.std.OkCancel('Créer'));
         });
     }
 
     function deleteResource(e, day, res_idx) {
-        function doDelete() {
-            let resources = resources_map[day.key];
-
-            resources.splice(res_idx, 1);
-            self.changeResourcesHandler(day.key, resources);
-
-            renderAll();
-        }
-
         goupil.popup(e, form => {
             form.output('Voulez-vous vraiment supprimer ces créneaux ?');
-            form.buttons([
-                ['Supprimer', () => { doDelete(); form.close(); }],
-                ['Annuler', () => form.close()]
-            ]);
+
+            form.submit = () => {
+                let resources = resources_map[day.key];
+
+                resources.splice(res_idx, 1);
+                self.changeResourcesHandler(day.key, resources);
+
+                renderAll();
+
+                form.close();
+            };
+
+            form.buttons(form.buttons.std.OkCancel('Supprimer'));
         });
     }
 
     function closeDay(e, day) {
-        function doClose() {
-            let resources = resources_map[day.key];
-
-            resources_map[day.key].length = 0;
-            self.changeResourcesHandler(day.key, resources);
-
-            renderAll();
-        }
-
         goupil.popup(e, form => {
             form.output('Voulez-vous vraiment fermer cette journée ?',
                         {help: 'Ceci supprime tous les créneaux'});
-            form.buttons([
-                ['Fermer', () => { doClose(); form.close(); }],
-                ['Annuler', () => form.close()]
-            ]);
+
+            form.submit = () => {
+                let resources = resources_map[day.key];
+
+                resources_map[day.key].length = 0;
+                self.changeResourcesHandler(day.key, resources);
+
+                renderAll();
+
+                form.close();
+            };
+
+            form.buttons(form.buttons.std.OkCancel('Fermer'));
         });
     }
 

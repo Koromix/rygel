@@ -8,6 +8,7 @@ let goupil = (function() {
     let event_src;
 
     let gp_popup;
+    let popup_builder;
     let popup_timer;
 
     function parseURL(href, base) {
@@ -42,6 +43,16 @@ let goupil = (function() {
 
             e.stopPropagation();
         });
+        gp_popup.addEventListener('keydown', e => {
+            switch (e.keyCode) {
+                case 13: {
+                    if (popup_builder.submit)
+                        popup_builder.submit();
+                } break;
+                case 27: { closePopup(); } break;
+            }
+        });
+
         document.addEventListener('click', closePopup);
         document.addEventListener('mousemove', e => {
             if (popup_timer == null)
@@ -50,6 +61,11 @@ let goupil = (function() {
     }
 
     function closePopup() {
+        popup_builder = null;
+
+        clearTimeout(popup_timer);
+        popup_timer = null;
+
         gp_popup.classList.remove('active');
         render(html``, gp_popup);
     }
@@ -112,39 +128,56 @@ let goupil = (function() {
 
         let widgets = [];
 
-        let builder = new FormBuilder(gp_popup, widgets);
-        builder.changeHandler = () => self.popup(e, func);
-        builder.close = closePopup;
+        popup_builder = new FormBuilder(gp_popup, widgets);
+        popup_builder.changeHandler = () => self.popup(e, func);
+        popup_builder.submit = null;
+        popup_builder.close = closePopup;
 
-        func(builder);
+        func(popup_builder);
         render(html`${widgets.map(w => w.render(w.errors))}`, gp_popup);
 
         // We need to know popup width and height
+        let give_focus = !gp_popup.classList.contains('active');
         gp_popup.style.visibility = 'hidden';
         gp_popup.classList.add('active');
 
         // Try different positions
         {
-            let x = e.clientX - 1;
-            if (x > window.innerWidth - gp_popup.scrollWidth - 10) {
-                x = e.clientX - gp_popup.scrollWidth - 1;
-                if (x < 10) {
-                    x = Math.min(e.clientX - 1, window.innerWidth - gp_popup.scrollWidth - 10);
-                    x = Math.max(x, 10);
+            let origin;
+            if (e.clientX && e.clientY) {
+                origin = {
+                    x: e.clientX - 1,
+                    y: e.clientY - 1
+                };
+            } else {
+                let rect = e.target.getBoundingClientRect();
+                origin = {
+                    x: (rect.left + rect.right) / 2,
+                    y: (rect.top + rect.bottom) / 2
                 }
             }
 
-            let y = e.clientY - 1;
-            if (y > window.innerHeight - gp_popup.scrollHeight - 10) {
-                y = e.clientY - gp_popup.scrollHeight - 1;
-                if (y < 10) {
-                    y = Math.min(e.clientY - 1, window.innerHeight - gp_popup.scrollHeight - 10);
-                    y = Math.max(y, 10);
+            let pos = {
+                x: origin.x,
+                y: origin.y
+            };
+            if (pos.x > window.innerWidth - gp_popup.scrollWidth - 10) {
+                pos.x = origin.x - gp_popup.scrollWidth;
+                if (pos.x < 10) {
+                    pos.x = Math.min(origin.x, window.innerWidth - gp_popup.scrollWidth - 10);
+                    pos.x = Math.max(pos.x, 10);
+                }
+            }
+            if (pos.y > window.innerHeight - gp_popup.scrollHeight - 10) {
+                pos.y = origin.y - gp_popup.scrollHeight;
+                if (pos.y < 10) {
+                    pos.y = Math.min(origin.y, window.innerHeight - gp_popup.scrollHeight - 10);
+                    pos.y = Math.max(pos.y, 10);
                 }
             }
 
-            gp_popup.style.left = x + 'px';
-            gp_popup.style.top = y + 'px';
+            gp_popup.style.left = pos.x + 'px';
+            gp_popup.style.top = pos.y + 'px';
             gp_popup.style.visibility = 'visible';
         }
 
@@ -153,6 +186,14 @@ let goupil = (function() {
 
         clearTimeout(popup_timer);
         popup_timer = null;
+
+        // Give focus to first input
+        if (give_focus) {
+            let first_widget = gp_popup.querySelector(`.af_widget input, .af_widget select,
+                                                       .af_widget button, .af_widget textarea`);
+            if (first_widget)
+                first_widget.focus();
+        }
     };
 
     document.addEventListener('readystatechange', e => {
