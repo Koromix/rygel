@@ -139,6 +139,7 @@
     border: 1px solid #999;
 }
 .af_button:not(:disabled):hover { border: 1px solid #ff6600; }
+.af_button:disabled { background: #999; }
 .af_button.active {
     background: #ff6600;
     border: 1px solid #ff6600;
