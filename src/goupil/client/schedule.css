@@ -256,19 +256,19 @@
 }
 .sc_slot_edit > a { font-weight: bold; }
 .sc_slot_option > a { color: black; }
+
+/* -------------------- Special modes -------------------- */
+
 .sc_actions { padding: 3px 0; }
-.sc_copy {
-    display: table;
-    table-layout: fixed;
-    width: 100%;
-    height: 114px;
+.sc_day_copy {
+    display: flex;
+    flex-direction: column;
 }
-.sc_copy a {
-    display: table-cell;
-    font-size: 5em;
+.sc_day_copy a {
+    display: block;
+    flex: 1;
+    vertical-align: middle;
+    font-size: 3em;
     color: black;
 }
-.sc_copy a:hover {
-    background: #ccc;
-    font-size: 5em;
-}
+.sc_day_copy a:hover { background: #ccc; }
