@@ -537,7 +537,11 @@ let autoform = (function() {
             ['tuto', {
                 key: 'tuto',
                 title: 'Tutoriel',
-                script: `form.output(html\`
+                script: `// Retirez le commentaire de la ligne suivante pour afficher les
+// champs (texte, numérique, etc.) à droite du libellé.
+// form.pushOptions({large: true});
+
+form.output(html\`
     <p>Une <b>fonction</b> est composée d'un <i>nom</i> et de plusieurs <i>paramètres</i> et permet de proposer un outil de saisie (champ texte, menu déroulant ...).
     <p>Exemple : la fonction form.text("num_patient", "Numéro de patient") propose un champ de saisie texte intitulé <i>Numéro de patient</i> et le stocke dans la variable <i>num_patient</i>.
     <p>Vous pouvez copier les fonctions présentées dans la section <b>Exemples</b> dans <b>Nouvelle section</b> pour créer votre propre formulaire.
@@ -595,7 +599,9 @@ form.section("Exemples", () => {
             ['complicated', {
                 key: 'complicated',
                 title: 'Formulaire compliqué',
-                script: `form.text("name", "Quel est votre nom ?");
+                script: `form.pushOptions({large: true});
+
+form.text("name", "Quel est votre nom ?");
 form.number("age", "Quel est votre âge ?", {min: 0, max: 120,
                                             suffix: value => util.pluralFR(value, "an", "ans")});
 
