@@ -7,6 +7,9 @@ let goupil = (function() {
 
     let event_src;
 
+    let gp_popup;
+    let popup_timer;
+
     function parseURL(href, base) {
         return new URL(href, base);
     }
@@ -25,6 +28,30 @@ let goupil = (function() {
                 }
             }
         });
+    }
+
+    function initPopup() {
+        gp_popup = document.createElement('div');
+        gp_popup.setAttribute('id', 'gp_popup');
+        document.body.appendChild(gp_popup);
+
+        gp_popup.addEventListener('click', e => e.stopPropagation());
+        gp_popup.addEventListener('mousemove', e => {
+            clearTimeout(popup_timer);
+            popup_timer = null;
+
+            e.stopPropagation();
+        });
+        document.addEventListener('click', closePopup);
+        document.addEventListener('mousemove', e => {
+            if (popup_timer == null)
+                popup_timer = setTimeout(closePopup, 500);
+        });
+    }
+
+    function closePopup() {
+        gp_popup.classList.remove('active');
+        render(html``, gp_popup);
     }
 
     this.go = function(href, history = true) {
@@ -77,6 +104,55 @@ let goupil = (function() {
         script.onload = () => self.go(window.location.href);
 
         head.appendChild(script);
+    };
+
+    this.popup = function(e, func) {
+        if (!gp_popup)
+            initPopup();
+
+        let widgets = [];
+
+        let builder = new FormBuilder(gp_popup, widgets);
+        builder.changeHandler = () => self.popup(e, func);
+        builder.close = closePopup;
+
+        func(builder);
+        render(html`${widgets.map(w => w.render(w.errors))}`, gp_popup);
+
+        // We need to know popup width and height
+        gp_popup.style.visibility = 'hidden';
+        gp_popup.classList.add('active');
+
+        // Try different positions
+        {
+            let x = e.clientX - 1;
+            if (x > window.innerWidth - gp_popup.scrollWidth - 10) {
+                x = e.clientX - gp_popup.scrollWidth - 1;
+                if (x < 10) {
+                    x = Math.min(e.clientX - 1, window.innerWidth - gp_popup.scrollWidth - 10);
+                    x = Math.max(x, 10);
+                }
+            }
+
+            let y = e.clientY - 1;
+            if (y > window.innerHeight - gp_popup.scrollHeight - 10) {
+                y = e.clientY - gp_popup.scrollHeight - 1;
+                if (y < 10) {
+                    y = Math.min(e.clientY - 1, window.innerHeight - gp_popup.scrollHeight - 10);
+                    y = Math.max(y, 10);
+                }
+            }
+
+            gp_popup.style.left = x + 'px';
+            gp_popup.style.top = y + 'px';
+            gp_popup.style.visibility = 'visible';
+        }
+
+        if (e.stopPropagation)
+            e.stopPropagation();
+
+        clearTimeout(popup_timer);
+        popup_timer = null;
     };
 
     document.addEventListener('readystatechange', e => {
