@@ -379,7 +379,7 @@ instead of:
         addWidget(render);
     };
     this.buttons.std = {
-        SaveCancel: func => [['Enregistrer', func || (() => {})], ['Annuler', func || (() => {})]]
+        OkCancel: label => [[label || 'OK', self.submit], ['Annuler', self.close]]
     };
 }
 
@@ -638,19 +638,6 @@ form.buttons([
     }
 
     function createPage(e) {
-        function doCreate(key, title) {
-            let page = {
-                key: key,
-                title: title,
-                script: ''
-            };
-
-            pages.set(key, page);
-            savePages();
-
-            self.go(key);
-        }
-
         goupil.popup(e, form => {
             let key = form.text('key', 'Clé :');
             let title = form.text('title', 'Titre :');
@@ -662,52 +649,64 @@ form.buttons([
                     key.error('Caractères autorisés: a-z, 0-9 et _');
             }
 
-            let valid = key.value && title.value && !form.errors.length;
+            if (key.value && title.value && !form.errors.length) {
+                form.submit = () => {
+                    let page = {
+                        key: key.value,
+                        title: title.value,
+                        script: ''
+                    };
 
-            form.buttons([
-                ['Créer', valid ? () => { doCreate(key.value, title.value); form.close(); } : null],
-                ['Annuler', form.close]
-            ])
+                    pages.set(key.value, page);
+                    savePages();
+
+                    form.close();
+
+                    self.go(key.value);
+                };
+            }
+
+            form.buttons(form.buttons.std.OkCancel('Créer'));
         });
     }
 
     function deletePage(e, key) {
-        function doDelete() {
-            pages.delete(key);
-            savePages();
-
-            if (current_key === key && pages.size) {
-                let first_key = pages.values().next().value.key;
-                self.go(first_key);
-            } else {
-                self.go(current_key);
-            }
-        }
-
         goupil.popup(e, form => {
             form.output(`Voulez-vous vraiment supprimer la page '${key}' ?`);
-            form.buttons([
-                ['Supprimer', () => { doDelete(); form.close(); }],
-                ['Annuler', form.close]
-            ]);
+
+            form.submit = () => {
+                pages.delete(key);
+                savePages();
+
+                form.close();
+
+                if (current_key === key && pages.size) {
+                    let first_key = pages.values().next().value.key;
+                    self.go(first_key);
+                } else {
+                    self.go(current_key);
+                }
+            };
+
+            form.buttons(form.buttons.std.OkCancel('Supprimer'));
         });
     }
 
     function resetPages(e) {
-        function doReset() {
-            loadDefaultPages();
-            executor = null;
-
-            let first_key = pages.values().next().value.key;
-            self.go(first_key);
-        }
-
         goupil.popup(e, form => {
             form.output('Voulez-vous vraiment réinitialiser toutes les pages ?');
-            form.buttons([
-                ['Réinitialiser', () => { doReset(); form.close(); }],
-                ['Annuler', form.close]
-            ]);
+
+            form.submit = () => {
+                loadDefaultPages();
+                executor = null;
+
+                form.close();
+
+                let first_key = pages.values().next().value.key;
+                self.go(first_key);
+            };
+
+            form.buttons(form.buttons.std.OkCancel('Réinitialiser'));
         });
     }
 
