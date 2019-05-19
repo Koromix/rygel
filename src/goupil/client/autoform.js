@@ -788,6 +788,10 @@ form.buttons([
     }
 
     function initPopup() {
+        af_popup = document.createElement('div');
+        af_popup.setAttribute('id', 'af_popup');
+        document.body.appendChild(af_popup);
+
         af_popup.addEventListener('click', e => e.stopPropagation());
         af_popup.addEventListener('mousemove', e => {
             clearTimeout(popup_timer);
@@ -820,6 +824,9 @@ form.buttons([
     };
 
     this.popup = function(e, func) {
+        if (!af_popup)
+            initPopup();
+
         let widgets = [];
 
         let builder = new FormBuilder(af_popup, widgets);
@@ -896,15 +903,11 @@ form.buttons([
             <div id="af_menu"></div>
             <div id="af_editor"></div>
             <div id="af_form"></div>
-
-            <div id="af_popup"></div>
         `, main);
         af_menu = document.querySelector('#af_menu');
         af_form = document.querySelector('#af_form');
-        af_popup = document.querySelector('#af_popup');
 
         initEditor();
-        initPopup();
 
         if (current_key && pages.size) {
             self.go(current_key);
