@@ -537,7 +537,7 @@ let autoform = (function() {
             ['tuto', {
                 key: 'tuto',
                 title: 'Tutoriel',
-                script: `// Retirez le commentaire de la ligne suivante pour afficher les
+                script: `// Retirer le commentaire de la ligne suivante pour afficher les
 // champs (texte, numérique, etc.) à droite du libellé.
 // form.pushOptions({large: true});
 
