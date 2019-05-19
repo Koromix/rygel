@@ -46,7 +46,7 @@ function Schedule(widget, resources_map, meetings_map) {
     function parseTime(str) {
         str = str || '';
 
-        if (!/^[0-9]{1,2}h[0-9]{0,2}$/.test(str))
+        if (!/^[0-9]{1,2}h(|[0-9]{2})$/.test(str))
             return null;
 
         let [hours, min] = str.split('h').map(str => parseInt(str, 10) || 0);
@@ -122,9 +122,8 @@ function Schedule(widget, resources_map, meetings_map) {
         return slots;
     }
 
-    function createMeeting(slot_ref) {
-        let name = prompt('Name?');
-        if (name) {
+    function createMeeting(e, slot_ref) {
+        function doCreate(name) {
             slot_ref.meetings.splice(slot_ref.splice_idx, 0, {
                 time: slot_ref.time,
                 identity: name
@@ -133,15 +132,32 @@ function Schedule(widget, resources_map, meetings_map) {
 
             renderAll();
         }
+
+        autoform.popup(e, form => {
+            let name = form.text('name', 'Nom :');
+
+            form.buttons([
+                ['Créer', name.value ? () => { doCreate(name.value); form.close(); } : null],
+                ['Annuler', form.close]
+            ]);
+        });
     }
 
-    function deleteMeeting(slot_ref) {
-        if (confirm('Are you sure?')) {
+    function deleteMeeting(e, slot_ref) {
+        function doDelete() {
             slot_ref.meetings.splice(slot_ref.splice_idx, 1);
             self.changeMeetingsHandler(slot_ref.day.key, slot_ref.meetings);
 
             renderAll();
         }
+
+        autoform.popup(e, form => {
+            form.output('Voulez-vous vraiment supprimer ce rendez-vous ?');
+            form.buttons([
+                ['Supprimer', () => { doDelete(); form.close(); }],
+                ['Annuler', () => form.close()]
+            ]);
+        });
     }
 
     function moveMeeting(src_ref, dest_ref)
@@ -298,8 +314,8 @@ function Schedule(widget, resources_map, meetings_map) {
                                 <td class="sc_slot_identity">${slot_ref.identity || ''}</td>
                                 <td class="sc_slot_edit">
                                     ${slot_ref.identity ?
-                                        html`<a href="#" @click=${e => { deleteMeeting(slot_ref); e.preventDefault(); }}>x</a>` :
-                                        html`<a href="#" @click=${e => { createMeeting(slot_ref); e.preventDefault(); }}>+</a>`
+                                        html`<a href="#" @click=${e => { deleteMeeting(e, slot_ref); e.preventDefault(); }}>x</a>` :
+                                        html`<a href="#" @click=${e => { createMeeting(e, slot_ref); e.preventDefault(); }}>+</a>`
                                     }
                                 </td>
                             </tr>`;
@@ -312,9 +328,8 @@ function Schedule(widget, resources_map, meetings_map) {
         })}</div>`, main);
     }
 
-    function createResource(day) {
-        let time = parseTime(prompt('Time?'));
-        if (time) {
+    function createResource(e, day) {
+        function doCreate(time) {
             let resources = resources_map[day.key];
 
             let prev_res = resources.find(res => res.time === time);
@@ -333,10 +348,23 @@ function Schedule(widget, resources_map, meetings_map) {
 
             renderAll();
         }
+
+        autoform.popup(e, form => {
+            let time = form.text('time', 'Horaire :');
+
+            let time2 = parseTime(time.value);
+            if (time.value && !time2)
+                time.error('Non valide (ex : 15h27)');
+
+            form.buttons([
+                ['Créer', time2 ? () => { doCreate(time2); form.close(); } : null],
+                ['Annuler', form.close]
+            ]);
+        });
     }
 
-    function deleteResource(day, res_idx) {
-        if (confirm('Are you sure?')) {
+    function deleteResource(e, day, res_idx) {
+        function doDelete() {
             let resources = resources_map[day.key];
 
             resources.splice(res_idx, 1);
@@ -344,10 +372,18 @@ function Schedule(widget, resources_map, meetings_map) {
 
             renderAll();
         }
+
+        autoform.popup(e, form => {
+            form.output('Voulez-vous vraiment supprimer ces créneaux ?');
+            form.buttons([
+                ['Supprimer', () => { doDelete(); form.close(); }],
+                ['Annuler', () => form.close()]
+            ]);
+        });
     }
 
-    function closeDay(day) {
-        if (confirm('Are you sure?')) {
+    function closeDay(e, day) {
+        function doClose() {
             let resources = resources_map[day.key];
 
             resources_map[day.key].length = 0;
@@ -355,6 +391,15 @@ function Schedule(widget, resources_map, meetings_map) {
 
             renderAll();
         }
+
+        autoform.popup(e, form => {
+            form.output('Voulez-vous vraiment fermer cette journée ?',
+                        {help: 'Ceci supprime tous les créneaux'});
+            form.buttons([
+                ['Fermer', () => { doClose(); form.close(); }],
+                ['Annuler', () => form.close()]
+            ]);
+        });
     }
 
     function startCopy(day) {
@@ -432,15 +477,15 @@ function Schedule(widget, resources_map, meetings_map) {
                                 <td class="sc_slot_time">${formatTime(res.time)}</td>
                                 <td class="sc_slot_option">${res.slots} <a href="#" @click=${changeSlots(1)}>▲</a><a href="#" @click=${changeSlots(-1)}>▼</a></td>
                                 <td class="sc_slot_option">${res.overbook} <a href="#" @click=${changeOverbook(1)}>▲</a><a href="#" @click=${changeOverbook(-1)}>▼</a></td>
-                                <td class="sc_slot_edit"><a href="#" @click=${e => { deleteResource(day, res_idx); e.preventDefault(); }}>x</a></td>
+                                <td class="sc_slot_edit"><a href="#" @click=${e => { deleteResource(e, day, res_idx); e.preventDefault(); }}>x</a></td>
                             </tr>`;
                         })}
                     </table>` : ''}
 
                     <div class="sc_actions">
-                        <a href="#" @click=${e => { createResource(day); e.preventDefault(); }}>Nouveau</a> |
+                        <a href="#" @click=${e => { createResource(e, day); e.preventDefault(); }}>Nouveau</a> |
                         <a href="#" @click=${e => { startCopy(day); e.preventDefault(); }}>Copier</a> |
-                        <a href="#" @click=${e => { closeDay(day); e.preventDefault(); }}>Fermer</a>
+                        <a href="#" @click=${e => { closeDay(e, day); e.preventDefault(); }}>Fermer</a>
                     </div>
                 </div>`;
             } else {
