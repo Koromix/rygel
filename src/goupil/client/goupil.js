@@ -36,13 +36,14 @@ let goupil = (function() {
         gp_popup.setAttribute('id', 'gp_popup');
         document.body.appendChild(gp_popup);
 
-        gp_popup.addEventListener('click', e => e.stopPropagation());
-        gp_popup.addEventListener('mousemove', e => {
+        gp_popup.addEventListener('mouseleave', e => {
+            popup_timer = setTimeout(closePopup, 3000);
+        });
+        gp_popup.addEventListener('mouseenter', e => {
             clearTimeout(popup_timer);
             popup_timer = null;
-
-            e.stopPropagation();
         });
+
         gp_popup.addEventListener('keydown', e => {
             switch (e.keyCode) {
                 case 13: {
@@ -52,13 +53,13 @@ let goupil = (function() {
                 } break;
                 case 27: { closePopup(); } break;
             }
+
+            clearTimeout(popup_timer);
+            popup_timer = null;
         });
 
+        gp_popup.addEventListener('click', e => e.stopPropagation());
         document.addEventListener('click', closePopup);
-        document.addEventListener('mousemove', e => {
-            if (popup_timer == null)
-                popup_timer = setTimeout(closePopup, 500);
-        });
     }
 
     function closePopup() {
