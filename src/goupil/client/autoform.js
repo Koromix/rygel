@@ -680,7 +680,40 @@ form.buttons([
         localStorage.setItem('goupil_af_pages', JSON.stringify(entries));
     }
 
-    function createPage(e) {
+    function createPage(key, title) {
+        let page = {
+            key: key,
+            title: title,
+            script: ''
+        };
+
+        pages.set(key, page);
+        savePages();
+
+        self.go(key);
+    }
+
+    function deletePage(key) {
+        pages.delete(key);
+        savePages();
+
+        if (current_key === key && pages.size) {
+            let first_key = pages.values().next().value.key;
+            self.go(first_key);
+        } else {
+            self.go(current_key);
+        }
+    }
+
+    function resetPages() {
+        loadDefaultPages();
+        executor = null;
+
+        let first_key = pages.values().next().value.key;
+        self.go(first_key);
+    }
+
+    function showCreatePageDialog(e) {
         goupil.popup(e, form => {
             let key = form.text('key', 'Clé :');
             let title = form.text('title', 'Titre :');
@@ -694,61 +727,34 @@ form.buttons([
 
             if (key.value && title.value && !form.errors.length) {
                 form.submit = () => {
-                    let page = {
-                        key: key.value,
-                        title: title.value,
-                        script: ''
-                    };
-
-                    pages.set(key.value, page);
-                    savePages();
-
+                    createPage(key.value, title.value);
                     form.close();
-
-                    self.go(key.value);
                 };
             }
-
             form.buttons(form.buttons.std.OkCancel('Créer'));
         });
     }
 
-    function deletePage(e, key) {
+    function showDeletePageDialog(e, key) {
         goupil.popup(e, form => {
             form.output(`Voulez-vous vraiment supprimer la page '${key}' ?`);
 
             form.submit = () => {
-                pages.delete(key);
-                savePages();
-
+                deletePage(key);
                 form.close();
-
-                if (current_key === key && pages.size) {
-                    let first_key = pages.values().next().value.key;
-                    self.go(first_key);
-                } else {
-                    self.go(current_key);
-                }
             };
-
             form.buttons(form.buttons.std.OkCancel('Supprimer'));
         });
     }
 
-    function resetPages(e) {
+    function showResetPagesDialog(e) {
         goupil.popup(e, form => {
             form.output('Voulez-vous vraiment réinitialiser toutes les pages ?');
 
             form.submit = () => {
-                loadDefaultPages();
-                executor = null;
-
+                resetPages();
                 form.close();
-
-                let first_key = pages.values().next().value.key;
-                self.go(first_key);
             };
-
             form.buttons(form.buttons.std.OkCancel('Réinitialiser'));
         });
     }
@@ -757,8 +763,8 @@ form.buttons([
         let page = pages.get(current_key);
 
         render(html`
-            <button @click=${createPage}>Ajouter</button>
-            ${page ? html`<button @click=${e => deletePage(e, current_key)}>Supprimer</button>` : html``}
+            <button @click=${showCreatePageDialog}>Ajouter</button>
+            ${page ? html`<button @click=${e => showDeletePageDialog(e, current_key)}>Supprimer</button>` : html``}
             <select @change=${e => self.go(e.target.value)}>
                 ${!current_key && !pages.size ? html`<option>-- No page available --</option>` : html``}
                 ${current_key && !page ?
@@ -766,7 +772,7 @@ form.buttons([
                 ${Array.from(pages, ([_, page]) =>
                     html`<option value=${page.key} .selected=${page.key == current_key}>${page.title} (${page.key})</option>`)}
             </select>
-            <button @click=${resetPages}>Réinitialiser</button>
+            <button @click=${showResetPagesDialog}>Réinitialiser</button>
         `, af_menu);
 
         if (!executor) {
