@@ -59,7 +59,7 @@
     background: #f8f8f8;
     color: black;
 }
-.sc_months a:not(.active):hover { background: #444; }
+.sc_footer a:not(.active):hover { background-color: #444; }
 .sc_month_warn:before {
     content: '⚠\FE0E  ';
     font-size: 0.9em;
