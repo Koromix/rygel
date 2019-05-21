@@ -13,7 +13,14 @@ function FormBuilder(root, widgets, mem = {}) {
 
     this.errors = [];
 
-    function makeID(name) { return `af_var_${name}`; }
+    function makeID(name) {
+        if (!name)
+            throw new Error('Empty variable names are not allowed');
+        if (!name.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
+            throw new Error('Allowed variable key characters: a-z, _ and 0-9 (not as first character)');
+
+        return `af_var_${name}`;
+    }
 
     function addWidget(render) {
         let widget = {
