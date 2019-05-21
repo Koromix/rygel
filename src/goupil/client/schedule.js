@@ -122,43 +122,21 @@ function Schedule(widget, resources_map, meetings_map) {
         return slots;
     }
 
-    function createMeeting(e, slot_ref) {
-        goupil.popup(e, form => {
-            let name = form.text('name', 'Nom :');
-
-            if (name.value) {
-                form.submit = () => {
-                    slot_ref.meetings.splice(slot_ref.splice_idx, 0, {
-                        time: slot_ref.time,
-                        identity: name.value
-                    });
-                    self.changeMeetingsHandler(slot_ref.day.key, slot_ref.meetings);
-
-                    renderAll();
-
-                    form.close();
-                };
-            }
-
-            form.buttons(form.buttons.std.OkCancel('Créer'));
+    function createMeeting(slot_ref, identity) {
+        slot_ref.meetings.splice(slot_ref.splice_idx, 0, {
+            time: slot_ref.time,
+            identity: identity
         });
+        self.changeMeetingsHandler(slot_ref.day.key, slot_ref.meetings);
+
+        renderAll();
     }
 
-    function deleteMeeting(e, slot_ref) {
-        goupil.popup(e, form => {
-            form.output('Voulez-vous vraiment supprimer ce rendez-vous ?');
+    function deleteMeeting(slot_ref) {
+        slot_ref.meetings.splice(slot_ref.splice_idx, 1);
+        self.changeMeetingsHandler(slot_ref.day.key, slot_ref.meetings);
 
-            form.submit = () => {
-                slot_ref.meetings.splice(slot_ref.splice_idx, 1);
-                self.changeMeetingsHandler(slot_ref.day.key, slot_ref.meetings);
-
-                renderAll();
-
-                form.close();
-            };
-
-            form.buttons(form.buttons.std.OkCancel('Supprimer'));
-        });
+        renderAll();
     }
 
     function moveMeeting(src_ref, dest_ref)
@@ -193,6 +171,33 @@ function Schedule(widget, resources_map, meetings_map) {
         self.changeMeetingsHandler(dest_ref.day.key, dest_ref.meetings);
 
         renderAll();
+    }
+
+
+    function showCreateMeetingDialog(e, slot_ref) {
+        goupil.popup(e, form => {
+            let name = form.text('name', 'Nom :');
+
+            if (name.value) {
+                form.submit = () => {
+                    createMeeting(slot_ref, name.value);
+                    form.close();
+                };
+            }
+            form.buttons(form.buttons.std.OkCancel('Créer'));
+        });
+    }
+
+    function showDeleteMeetingDialog(e, slot_ref) {
+        goupil.popup(e, form => {
+            form.output('Voulez-vous vraiment supprimer ce rendez-vous ?');
+
+            form.submit = () => {
+                deleteMeeting(slot_ref);
+                form.close();
+            };
+            form.buttons(form.buttons.std.OkCancel('Supprimer'));
+        });
     }
 
     function renderMeetings() {
@@ -315,8 +320,8 @@ function Schedule(widget, resources_map, meetings_map) {
                                 <td class="sc_slot_identity">${slot_ref.identity || ''}</td>
                                 <td class="sc_slot_edit">
                                     ${slot_ref.identity ?
-                                        html`<a href="#" @click=${e => { deleteMeeting(e, slot_ref); e.preventDefault(); }}>x</a>` :
-                                        html`<a href="#" @click=${e => { createMeeting(e, slot_ref); e.preventDefault(); }}>+</a>`
+                                        html`<a href="#" @click=${e => { showDeleteMeetingDialog(e, slot_ref); e.preventDefault(); }}>x</a>` :
+                                        html`<a href="#" @click=${e => { showCreateMeetingDialog(e, slot_ref); e.preventDefault(); }}>+</a>`
                                     }
                                 </td>
                             </tr>`;
@@ -329,79 +334,42 @@ function Schedule(widget, resources_map, meetings_map) {
         })}</div>`, main);
     }
 
-    function createResource(e, day) {
-        goupil.popup(e, form => {
-            let time = form.text('time', 'Horaire :');
+    function createResource(day, time) {
+        let resources = resources_map[day.key];
 
-            let time2 = parseTime(time.value);
-            if (time.value && !time2)
-                time.error('Non valide (ex : 15h27)');
+        let prev_res = resources.find(res => res.time === time);
+        if (prev_res) {
+            prev_res.slots++;
+        } else {
+            resources.push({
+                time: time,
+                slots: 1,
+                overbook: 0
+            });
+            resources.sort((res1, res2) => res1.time - res2.time);
+        }
 
-            if (time2) {
-                form.submit = () => {
-                    let resources = resources_map[day.key];
+        self.changeResourcesHandler(day.key, resources);
 
-                    let prev_res = resources.find(res => res.time === time2);
-                    if (prev_res) {
-                        prev_res.slots++;
-                    } else {
-                        resources.push({
-                            time: time2,
-                            slots: 1,
-                            overbook: 0
-                        });
-                        resources.sort((res1, res2) => res1.time - res2.time);
-                    }
-
-                    self.changeResourcesHandler(day.key, resources);
-
-                    renderAll();
-
-                    form.close();
-                };
-            }
-
-            form.buttons(form.buttons.std.OkCancel('Créer'));
-        });
+        renderAll();
     }
 
-    function deleteResource(e, day, res_idx) {
-        goupil.popup(e, form => {
-            form.output('Voulez-vous vraiment supprimer ces créneaux ?');
+    function deleteResource(day, res_idx) {
+        let resources = resources_map[day.key];
 
-            form.submit = () => {
-                let resources = resources_map[day.key];
+        resources.splice(res_idx, 1);
+        self.changeResourcesHandler(day.key, resources);
 
-                resources.splice(res_idx, 1);
-                self.changeResourcesHandler(day.key, resources);
-
-                renderAll();
-
-                form.close();
-            };
-
-            form.buttons(form.buttons.std.OkCancel('Supprimer'));
-        });
+        renderAll();
     }
 
-    function closeDay(e, day) {
-        goupil.popup(e, form => {
-            form.output('Voulez-vous vraiment fermer cette journée ?',
-                        {help: 'Ceci supprime tous les créneaux'});
+    function closeDay(day) {
+        let resources = resources_map[day.key];
 
-            form.submit = () => {
-                let resources = resources_map[day.key];
+        resources_map[day.key].length = 0;
+        self.changeResourcesHandler(day.key, resources);
 
-                resources_map[day.key].length = 0;
-                self.changeResourcesHandler(day.key, resources);
-
-                renderAll();
-
-                form.close();
-            };
-
-            form.buttons(form.buttons.std.OkCancel('Fermer'));
-        });
+        renderAll();
     }
 
     function startCopy(day) {
@@ -422,6 +390,50 @@ function Schedule(widget, resources_map, meetings_map) {
 
         current_mode = 'copy';
         renderCopy();
+    }
+
+    function showCreateResourceDialog(e, day) {
+        goupil.popup(e, form => {
+            let time = form.text('time', 'Horaire :');
+
+            // Check value
+            let time2 = parseTime(time.value);
+            if (time.value && !time2)
+                time.error('Non valide (ex : 15h27)');
+
+            if (time2) {
+                form.submit = () => {
+                    createResource(day, time2);
+                    form.close();
+                };
+            }
+            form.buttons(form.buttons.std.OkCancel('Créer'));
+        });
+    }
+
+    function showDeleteResourceDialog(e, day, res_idx) {
+        goupil.popup(e, form => {
+            form.output('Voulez-vous vraiment supprimer ces créneaux ?');
+
+            form.submit = () => {
+                deleteResource(day, res_idx);
+                form.close();
+            };
+            form.buttons(form.buttons.std.OkCancel('Supprimer'));
+        });
+    }
+
+    function showCloseDayDialog(e, day) {
+        goupil.popup(e, form => {
+            form.output('Voulez-vous vraiment fermer cette journée ?',
+                        {help: 'Ceci supprime tous les créneaux'});
+
+            form.submit = () => {
+                closeDay(day);
+                form.close();
+            };
+            form.buttons(form.buttons.std.OkCancel('Fermer'));
+        });
     }
 
     function renderSettings() {
@@ -479,15 +491,15 @@ function Schedule(widget, resources_map, meetings_map) {
                                 <td class="sc_slot_time">${formatTime(res.time)}</td>
                                 <td class="sc_slot_option">${res.slots} <a href="#" @click=${changeSlots(1)}>▲</a><a href="#" @click=${changeSlots(-1)}>▼</a></td>
                                 <td class="sc_slot_option">${res.overbook} <a href="#" @click=${changeOverbook(1)}>▲</a><a href="#" @click=${changeOverbook(-1)}>▼</a></td>
-                                <td class="sc_slot_edit"><a href="#" @click=${e => { deleteResource(e, day, res_idx); e.preventDefault(); }}>x</a></td>
+                                <td class="sc_slot_edit"><a href="#" @click=${e => { showDeleteResourceDialog(e, day, res_idx); e.preventDefault(); }}>x</a></td>
                             </tr>`;
                         })}
                     </table>` : ''}
 
                     <div class="sc_actions">
-                        <a href="#" @click=${e => { createResource(e, day); e.preventDefault(); }}>Nouveau</a> |
+                        <a href="#" @click=${e => { showCreateResourceDialog(e, day); e.preventDefault(); }}>Nouveau</a> |
                         <a href="#" @click=${e => { startCopy(day); e.preventDefault(); }}>Copier</a> |
-                        <a href="#" @click=${e => { closeDay(e, day); e.preventDefault(); }}>Fermer</a>
+                        <a href="#" @click=${e => { showCloseDayDialog(e, day); e.preventDefault(); }}>Fermer</a>
                     </div>
                 </div>`;
             } else {
