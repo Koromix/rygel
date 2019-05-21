@@ -190,7 +190,7 @@ let tests = (function() {
         } else if (activity_score < 4) {
             return makeTestResult(TestScore.Fragile, 'inactif mais non sédentaire');
         } else if (sedentary) {
-            return makeTestResult(TestScore.Fragile, 'actif mais sédantaire');
+            return makeTestResult(TestScore.Fragile, 'actif mais sédentaire');
         } else {
             return makeTestResult(TestScore.Good, 'actif et non sédentaire');
         }
