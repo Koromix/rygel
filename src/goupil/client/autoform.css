@@ -62,7 +62,7 @@
 
 .af_form {
     background: #eaeaea;
-    padding: 6px;
+    padding: 12px 12px 6px 12px;
 }
 .af_form_broken {
     filter: grayscale(100%);
@@ -80,7 +80,7 @@
 
 .af_section {
     min-height: 30px;
-    margin: 6px 0 0 0;
+    margin: 6px 0 12px 0;
     padding: 0 5px 0 5px;
     background: rgba(136, 136, 136, 0.18);
     border: 0;
