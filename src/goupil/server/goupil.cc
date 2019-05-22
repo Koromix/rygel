@@ -227,6 +227,9 @@ static void InitRoutes()
                 if (TestStr(key, "BASE_URL")) {
                     writer->Write(goupil_config.base_url);
                     return true;
+                } else if (TestStr(key, "MAIN_COLOR")) {
+                    writer->Write(goupil_config.main_color);
+                    return true;
                 } else {
                     return false;
                 }

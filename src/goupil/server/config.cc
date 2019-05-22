@@ -79,6 +79,15 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                         valid = false;
                     }
                 } while (ini.NextInSection(&prop));
+            } else if (prop.section == "Theme") {
+                do {
+                    if (prop.key == "MainColor") {
+                        config.main_color = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
             } else {
                 LogError("Unknown section '%1'", prop.section);
                 while (ini.NextInSection(&prop));
