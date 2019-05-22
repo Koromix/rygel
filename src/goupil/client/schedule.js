@@ -46,10 +46,15 @@ function Schedule(widget, resources_map, meetings_map) {
     function parseTime(str) {
         str = str || '';
 
-        if (!/^[0-9]{1,2}h(|[0-9]{2})$/.test(str))
+        let hours;
+        let min;
+        if (str.match(/^[0-9]{1,2}h(|[0-9]{2})$/)) {
+            [hours, min] = str.split('h').map(str => parseInt(str, 10) || 0);
+        } else if (str.match(/^[0-9]{1,2}:[0-9]{2}$/)) {
+            [hours, min] = str.split(':').map(str => parseInt(str, 10) || 0);
+        } else {
             return null;
-
-        let [hours, min] = str.split('h').map(str => parseInt(str, 10) || 0);
+        }
         if (hours > 23 || min > 59)
             return null;
 
@@ -399,7 +404,7 @@ function Schedule(widget, resources_map, meetings_map) {
             // Check value
             let time2 = parseTime(time.value);
             if (time.value && !time2)
-                time.error('Non valide (ex : 15h27)');
+                time.error('Non valide (ex : 15h30, 7:30)');
 
             if (time2) {
                 form.submit = () => {
