@@ -2,6 +2,12 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/* -------------------- Colors -------------------- */
+
+html {
+    --main_color: #ff6600;
+}
+
 /* -------------------- Layout -------------------- */
 
 body {
@@ -46,7 +52,7 @@ main { margin-top: 30px; }
 
 /* -------------------- Common elements -------------------- */
 
-a { color: #ff6600; }
+a { color: var(--main_color); }
 button {
     font-family: inherit;
     font-size: 1em;

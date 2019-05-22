@@ -22,7 +22,7 @@
     box-sizing: border-box;
     margin: 0;
     padding: 3px;
-    background: #ff6600;
+    background: var(--main_color);
     z-index: 999;
 }
 #af_form { margin: 60px 0 0 50%; }
@@ -39,9 +39,7 @@
     border: 0;
     color: white;
 }
-#af_menu > button:hover {
-    background: #e05a00;
-}
+#af_menu > button:hover { filter: grayscale(20%); }
 #af_menu > select {
     flex-grow: 1;
     background: inherit;
@@ -89,7 +87,7 @@
 }
 .af_section > legend {
     padding: 1px 0.7em;
-    background: #ff6600;
+    background: var(--main_color);
     font-size: 1.1em;
     color: white;
 }
@@ -152,11 +150,11 @@
 }
 .af_button::-moz-focus-inner { border: 0; }
 .af_button:not(:disabled):focus { outline: 1px dotted #999; }
-.af_button:not(:disabled):hover { border: 1px solid #ff6600; }
+.af_button:not(:disabled):hover { border: 1px solid var(--main_color); }
 .af_button:disabled { background: #999; }
 .af_button.active {
-    background: #ff6600;
-    border: 1px solid #ff6600;
+    background: var(--main_color);
+    border: 1px solid var(--main_color);
     color: white;
 }
 
