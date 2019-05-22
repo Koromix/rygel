@@ -24,6 +24,9 @@ DatabaseFile = %1
 # Port = 8888
 # Threads = 4
 # BaseUrl = /
+
+# [Theme]
+# MainColor = #ff6600
 )";
 
 static const char *const DemoSQL =

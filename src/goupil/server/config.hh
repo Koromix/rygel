@@ -18,6 +18,8 @@ struct Config {
     int max_age = 3600;
     int sse_keep_alive = 120000;
 
+    const char *main_color = "#ff6600";
+
     BlockAllocator str_alloc;
 };
 
