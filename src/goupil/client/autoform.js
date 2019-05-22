@@ -110,8 +110,10 @@ function FormBuilder(root, widgets, mem = {}) {
             if (prev) {
                 value = prev.value;
                 mem[name] = value;
-            } else {
+            } else if (mem.hasOwnProperty(name)) {
                 value = mem[name];
+            } else {
+                value = options.value;
             }
         }
 
@@ -138,8 +140,10 @@ function FormBuilder(root, widgets, mem = {}) {
             if (prev) {
                 value = parseFloat(prev.value);
                 mem[name] = value;
-            } else {
+            } else if (mem.hasOwnProperty(name)) {
                 value = parseFloat(mem[name]);
+            } else {
+                value = parseFloat(options.value);
             }
         }
 
@@ -184,8 +188,10 @@ function FormBuilder(root, widgets, mem = {}) {
             if (prev) {
                 value = parseValue(prev.value);
                 mem[name] = value;
-            } else {
+            } else if (mem.hasOwnProperty(name)) {
                 value = mem[name];
+            } else {
+                value = options.value;
             }
         }
 
@@ -230,8 +236,10 @@ function FormBuilder(root, widgets, mem = {}) {
                 }
 
                 mem[name] = value;
-            } else {
+            } else if (mem.hasOwnProperty(name)) {
                 value = mem[name];
+            } else {
+                value = options.value;
             }
         }
 
@@ -274,8 +282,10 @@ function FormBuilder(root, widgets, mem = {}) {
                     value = parseValue(el.value);
 
                 mem[name] = value;
-            } else {
+            } else if (mem.hasOwnProperty(name)) {
                 value = mem[name];
+            } else {
+                value = options.value;
             }
         }
 
@@ -325,10 +335,10 @@ function FormBuilder(root, widgets, mem = {}) {
                 }
 
                 mem[name] = value;
-            } else if (Array.isArray(mem[name])) {
-                value = mem[name];
+            } else if (mem.hasOwnProperty(name)) {
+                value = Array.isArray(mem[name]) ? mem[name] : [];
             } else {
-                value = [];
+                value = Array.isArray(options.value) ? options.value : [];
             }
         }
 
