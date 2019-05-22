@@ -710,11 +710,18 @@ form.buttons([
         self.go(key);
     }
 
-    function deletePage(key) {
-        pages.delete(key);
+    function editPage(page, title) {
+        page.title = title;
         savePages();
 
-        if (current_key === key && pages.size) {
+        renderAll();
+    }
+
+    function deletePage(page) {
+        pages.delete(page.key);
+        savePages();
+
+        if (current_key === page.key && pages.size) {
             let first_key = pages.values().next().value.key;
             self.go(first_key);
         } else {
@@ -752,12 +759,26 @@ form.buttons([
         });
     }
 
-    function showDeletePageDialog(e, key) {
+    function showEditPageDialog(e, page) {
         goupil.popup(e, form => {
-            form.output(`Voulez-vous vraiment supprimer la page '${key}' ?`);
+            let title = form.text('title', 'Titre :', {value: page.title});
+
+            if (title.value) {
+                form.submit = () => {
+                    editPage(page, title.value);
+                    form.close();
+                };
+            }
+            form.buttons(form.buttons.std.OkCancel('Modifier'));
+        });
+    }
+
+    function showDeletePageDialog(e, page) {
+        goupil.popup(e, form => {
+            form.output(`Voulez-vous vraiment supprimer la page '${page.key}' ?`);
 
             form.submit = () => {
-                deletePage(key);
+                deletePage(page);
                 form.close();
             };
             form.buttons(form.buttons.std.OkCancel('Supprimer'));
@@ -781,7 +802,8 @@ form.buttons([
 
         render(html`
             <button @click=${showCreatePageDialog}>Ajouter</button>
-            ${page ? html`<button @click=${e => showDeletePageDialog(e, current_key)}>Supprimer</button>` : html``}
+            ${page ? html`<button @click=${e => showEditPageDialog(e, page)}>Modifier</button>
+                          <button @click=${e => showDeletePageDialog(e, page)}>Supprimer</button>` : html``}
             <select @change=${e => self.go(e.target.value)}>
                 ${!current_key && !pages.size ? html`<option>-- No page available --</option>` : html``}
                 ${current_key && !page ?
