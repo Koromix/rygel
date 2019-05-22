@@ -403,7 +403,7 @@ function Schedule(widget, resources_map, meetings_map) {
 
             // Check value
             let time2 = parseTime(time.value);
-            if (time.value && !time2)
+            if (time.value && time2 == null)
                 time.error('Non valide (ex : 15h30, 7:30)');
 
             if (time2) {
