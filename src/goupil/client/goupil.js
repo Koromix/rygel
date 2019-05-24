@@ -9,6 +9,7 @@ let goupil = (function() {
 
     let gp_popup;
     let popup_builder;
+    let popup_mem = {};
     let popup_timer;
 
     function parseURL(href, base) {
@@ -62,76 +63,14 @@ let goupil = (function() {
         document.addEventListener('click', closePopup);
     }
 
-    function closePopup() {
-        popup_builder = null;
-
-        clearTimeout(popup_timer);
-        popup_timer = null;
-
-        gp_popup.classList.remove('active');
-        render(html``, gp_popup);
-    }
-
-    this.go = function(href, history = true) {
-        // Module path
-        let path = parseURL(href, window.location.href).pathname;
-        if (path.startsWith(settings.base_url))
-            path = path.substr(settings.base_url.length);
-        if (path.endsWith('/'))
-            path = path.substr(0, path.length - 1);
-
-        // Run module
-        switch (path) {
-            case '': { path = 'autoform' } // fallthrough
-            case 'autoform': { autoform.activate(); } break;
-            case 'schedule': { schedule.activate(); } break;
-        }
-
-        // Full path
-        let full_path = `${settings.base_url}${path}/`;
-
-        // Update menu state
-        for (let el of document.querySelectorAll('#gp_menu > a'))
-            el.classList.toggle('active', el.getAttribute('href') === full_path);
-
-        // Update history
-        if (history && full_path !== parseURL(window.location.href).pathname) {
-            window.history.pushState(null, null, full_path);
-        } else {
-            window.history.replaceState(null, null, full_path);
-        }
-    };
-
-    this.listenToServerEvent = function(event, func) {
-        if (!event_src) {
-            event_src = new EventSource(`${settings.base_url}goupil/events.json`);
-            event_src.onerror = e => event_src = null;
-        }
-
-        event_src.addEventListener(event, func);
-    };
-
-    // TODO: React to onerror?
-    this.loadScript = function(url) {
-        let head = document.querySelector('script');
-        let script = document.createElement('script');
-
-        script.type = 'text/javascript';
-        script.src = url;
-        script.onreadystatechange = () => self.go(window.location.href);
-        script.onload = () => self.go(window.location.href);
-
-        head.appendChild(script);
-    };
-
-    this.popup = function(e, func) {
+    function openPopup(e, func) {
         if (!gp_popup)
             initPopup();
 
         let widgets = [];
 
-        popup_builder = new FormBuilder(gp_popup, widgets);
-        popup_builder.changeHandler = () => self.popup(e, func);
+        popup_builder = new FormBuilder(gp_popup, widgets, popup_mem);
+        popup_builder.changeHandler = () => openPopup(e, func);
         popup_builder.submit = null;
         popup_builder.close = closePopup;
 
@@ -197,6 +136,76 @@ let goupil = (function() {
             if (first_widget)
                 first_widget.focus();
         }
+    }
+
+    function closePopup() {
+        popup_mem = {};
+        popup_builder = null;
+
+        clearTimeout(popup_timer);
+        popup_timer = null;
+
+        if (gp_popup) {
+            gp_popup.classList.remove('active');
+            render(html``, gp_popup);
+        }
+    }
+
+    this.go = function(href, history = true) {
+        // Module path
+        let path = parseURL(href, window.location.href).pathname;
+        if (path.startsWith(settings.base_url))
+            path = path.substr(settings.base_url.length);
+        if (path.endsWith('/'))
+            path = path.substr(0, path.length - 1);
+
+        // Run module
+        switch (path) {
+            case '': { path = 'autoform' } // fallthrough
+            case 'autoform': { autoform.activate(); } break;
+            case 'schedule': { schedule.activate(); } break;
+        }
+
+        // Full path
+        let full_path = `${settings.base_url}${path}/`;
+
+        // Update menu state
+        for (let el of document.querySelectorAll('#gp_menu > a'))
+            el.classList.toggle('active', el.getAttribute('href') === full_path);
+
+        // Update history
+        if (history && full_path !== parseURL(window.location.href).pathname) {
+            window.history.pushState(null, null, full_path);
+        } else {
+            window.history.replaceState(null, null, full_path);
+        }
+    };
+
+    this.listenToServerEvent = function(event, func) {
+        if (!event_src) {
+            event_src = new EventSource(`${settings.base_url}goupil/events.json`);
+            event_src.onerror = e => event_src = null;
+        }
+
+        event_src.addEventListener(event, func);
+    };
+
+    // TODO: React to onerror?
+    this.loadScript = function(url) {
+        let head = document.querySelector('script');
+        let script = document.createElement('script');
+
+        script.type = 'text/javascript';
+        script.src = url;
+        script.onreadystatechange = () => self.go(window.location.href);
+        script.onload = () => self.go(window.location.href);
+
+        head.appendChild(script);
+    };
+
+    this.popup = function(e, func) {
+        closePopup();
+        openPopup(e, func);
     };
 
     document.addEventListener('readystatechange', e => {
