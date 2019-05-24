@@ -23,7 +23,7 @@
     font-weight: normal;
 }
 .pr_grid td {
-    border: 1px solid #a7a7a7;
+    border: 1px solid #a2a1a1;
     border-left: 0;
 }
 .pr_grid thead td { text-align: center; }
@@ -34,28 +34,28 @@
 
 .pr_grid .desc {
     background: #ffc634;
-    border-color: #ffd057;
+    border-color: #ffcc4a;
     color: black;
 }
 .pr_grid .conditions {
-    background: #b70202;
-    border-color: #be3f3f;
+    background: #cb1717;
+    border-color: #cb2c2c;
     color: white;
 }
 .pr_grid .noex {
     background: #6cc943;
-    border-color: #89ca6d;
+    border-color: #82c962;
     color: black;
 }
 .pr_grid .exb {
-    background: #ff8900;
-    border-color: #f09e3e;
-    color: black;
+    background: #ff6600;
+    border-color: #ff761b;
+    color: white;
 }
 .pr_grid .exh {
     background: #6b1b6a;
-    border-color: #7e237c;
-    color: #b4cdff;
+    border-color: #771f75;
+    color: white;
 }
 .pr_grid .age {
     background: #99ffff;
