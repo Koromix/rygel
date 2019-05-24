@@ -422,19 +422,19 @@ let mco_pricing = {};
         function modeToColor(mode)
         {
             return {
-                "J": "#fdae6b",
-                "T": "#fdae6b",
-                "1": "#fd8d3c",
-                "2": "#f16913",
-                "3": "#d94801",
-                "4": "#a63603",
-                "A": "#fd8d3c",
-                "B": "#f16913",
-                "C": "#d94801",
-                "D": "#a63603",
-                "E": "#7f2704",
-                "Z": "#9a9a9a"
-            }[mode] || "black";
+                J: '#1b9e77',
+                T: '#1b9e77',
+                1: '#9a9a9a',
+                2: '#0070c0',
+                3: '#ff6600',
+                4: '#ff0000',
+                A: '#9a9a9a',
+                B: '#0070c0',
+                C: '#ff6600',
+                D: '#ff0000',
+                E: '#7f2704',
+                Z: '#9a9a9a'
+            }[mode] || 'black';
         }
 
         let datasets = [];
