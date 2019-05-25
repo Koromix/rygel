@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function FormBuilder(root, widgets, mem) {
+function FormBuilder(root, unique_key, widgets, mem) {
     let self = this;
 
     this.changeHandler = e => {};
@@ -14,7 +14,7 @@ function FormBuilder(root, widgets, mem) {
     this.errors = [];
 
     function makeID(name) {
-        return `af_var_${name}`;
+        return `af_var_${unique_key}_${name}`;
     }
 
     function addWidget(render) {
@@ -410,11 +410,11 @@ function FormExecutor() {
         return null;
     }
 
-    function renderForm(script) {
+    function renderForm(page_key, script) {
         let widgets = [];
 
-        let builder = new FormBuilder(af_form, widgets, mem);
-        builder.changeHandler = () => renderForm(script);
+        let builder = new FormBuilder(af_form, page_key, widgets, mem);
+        builder.changeHandler = () => renderForm(page_key, script);
 
         // Prevent go() call from working if called during script eval
         let prev_go_handler = self.goHandler;
@@ -465,7 +465,7 @@ instead of:
         af_log.style.display = 'none';
     };
 
-    this.render = function(root, script) {
+    this.render = function(root, page_key, script) {
         render(html`
             <div class="af_form"></div>
             <div class="af_log" style="display: none;"></div>
@@ -474,7 +474,7 @@ instead of:
         af_log = root.querySelector('.af_log');
 
         if (script !== undefined) {
-            return renderForm(script);
+            return renderForm(page_key, script);
         } else {
             return true;
         }
@@ -769,7 +769,7 @@ form.buttons([
             editor.setReadOnly(false);
             editor.container.classList.remove('disabled');
 
-            return executor.render(af_form, page.script);
+            return executor.render(af_form, page.key, page.script);
         } else {
             editor.setReadOnly(true);
             editor.container.classList.add('disabled');

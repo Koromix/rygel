@@ -69,7 +69,7 @@ let goupil = (function() {
 
         let widgets = [];
 
-        popup_builder = new FormBuilder(gp_popup, widgets, popup_mem);
+        popup_builder = new FormBuilder(gp_popup, 'popup!', widgets, popup_mem);
         popup_builder.changeHandler = () => openPopup(e, func);
         popup_builder.submit = null;
         popup_builder.close = closePopup;
