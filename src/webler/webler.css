@@ -9,7 +9,7 @@ nav#top_menu ul {
     height: 40px;
     margin: 0;
     padding: 0;
-    background: #292d3e;
+    background: #24579d;
     overflow: hidden;
 }
 nav#top_menu li {
@@ -25,7 +25,7 @@ nav#top_menu a {
 }
 nav#top_menu a.active {
     background: #f8f8f8;
-    color: #292d3e;
+    color: black;
 }
 
 nav#side_menu ul {
@@ -54,18 +54,18 @@ main {
     overflow: auto;
 }
 footer {
-    padding: 0 12px;
-    line-height: 32px;
+    padding: 2px 6px 0 6px;
     flex: 0 0 auto;
-    background: #292d3e;
-    color: white;
+    border-top: 1px solid #ebebeb;
+    font-size: 0.75em;
+    color: black;
     /* Avoid margin collapse */
     overflow: auto;
     text-align: right;
 }
 
 a {
-    color: #292d3e;
+    color: #24579d;
     text-decoration: underline;
 }
 
@@ -154,7 +154,7 @@ code {
         text-decoration: none;
     }
     nav#side_menu a.active {
-        background: #292d3e;
+        background: #24579d;
         color: white;
     }
     main {
@@ -229,7 +229,7 @@ code {
         background-repeat: no-repeat;
         background-position: center;
     }
-    nav#top_menu { background: #292d3e; }
+    nav#top_menu { background: #24579d; }
     nav#top_menu li {
         float: left !important;
         clear: left;
