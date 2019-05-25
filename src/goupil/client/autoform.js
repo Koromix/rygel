@@ -13,8 +13,8 @@ function FormBuilder(root, unique_key, widgets, mem) {
 
     this.errors = [];
 
-    function makeID(name) {
-        return `af_var_${unique_key}_${name}`;
+    function makeID(key) {
+        return `af_var_${unique_key}_${key}`;
     }
 
     function addWidget(render) {
@@ -45,13 +45,13 @@ function FormBuilder(root, unique_key, widgets, mem) {
         `;
     }
 
-    function addVariableWidget(name, id, render, value) {
-        if (!name)
-            throw new Error('Empty variable names are not allowed');
-        if (!name.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
+    function addVariableWidget(key, render, value) {
+        if (!key)
+            throw new Error('Empty variable keys are not allowed');
+        if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
             throw new Error('Allowed variable key characters: a-z, _ and 0-9 (not as first character)');
-        if (interfaces[name])
-            throw new Error(`Variable '${name}' already exists`);
+        if (interfaces[key])
+            throw new Error(`Variable '${key}' already exists`);
 
         let widget = addWidget(render);
 
@@ -64,7 +64,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
                 return intf;
             }
         };
-        interfaces[name] = intf;
+        interfaces[key] = intf;
 
         return intf;
     }
@@ -93,12 +93,12 @@ function FormBuilder(root, unique_key, widgets, mem) {
     function parseValue(str) { return (str && str !== 'undefined') ? JSON.parse(str) : undefined; }
     function stringifyValue(value) { return JSON.stringify(value); }
 
-    this.find = name => interfaces[name];
-    this.value = function(name) {
-        let intf = interfaces[name];
+    this.find = key => interfaces[key];
+    this.value = function(key) {
+        let intf = interfaces[key];
         return intf ? intf.value : undefined;
     };
-    this.error = (name, msg) => interfaces[name].error(msg);
+    this.error = (key, msg) => interfaces[key].error(msg);
 
     function handleTextInput(e, key) {
         let value = e.target.value;
@@ -107,21 +107,21 @@ function FormBuilder(root, unique_key, widgets, mem) {
         self.changeHandler(e);
     };
 
-    this.text = function(name, label, options = {}) {
+    this.text = function(key, label, options = {}) {
         options = Object.assign({}, options_stack[options_stack.length - 1], options);
 
-        let id = makeID(name);
-        let value = mem.hasOwnProperty(name) ? mem[name] : options.value;
+        let id = makeID(key);
+        let value = mem.hasOwnProperty(key) ? mem[key] : options.value;
 
         let render = errors => wrapWidget(html`
-            <label for=${id}>${label || name}</label>
+            <label for=${id}>${label || key}</label>
             ${createPrefixOrSuffix('af_prefix', options.prefix, value)}
             <input id=${id} type="text" size="${options.size || 30}" .value=${value || ''}
-                   @input=${e => handleTextInput(e, name)}/>
+                   @input=${e => handleTextInput(e, key)}/>
             ${createPrefixOrSuffix('af_suffix', options.suffix, value)}
         `, options, errors);
 
-        return addVariableWidget(name, id, render, value);
+        return addVariableWidget(key, render, value);
     };
 
     function handleNumberChange(e, key)
@@ -132,22 +132,22 @@ function FormBuilder(root, unique_key, widgets, mem) {
         self.changeHandler(e);
     }
 
-    this.number = function(name, label, options = {}) {
+    this.number = function(key, label, options = {}) {
         options = Object.assign({}, options_stack[options_stack.length - 1], options);
 
-        let id = makeID(name);
-        let value = parseFloat(mem.hasOwnProperty(name) ? mem[name] : options.value);
+        let id = makeID(key);
+        let value = parseFloat(mem.hasOwnProperty(key) ? mem[key] : options.value);
 
         let render = errors => wrapWidget(html`
-            <label for=${id}>${label || name}</label>
+            <label for=${id}>${label || key}</label>
             ${createPrefixOrSuffix('af_prefix', options.prefix, value)}
             <input id=${id} type="number"
                    step=${1 / Math.pow(10, options.decimals || 0)} .value=${value}
-                   @input=${e => handleNumberChange(e, name)}/>
+                   @input=${e => handleNumberChange(e, key)}/>
             ${createPrefixOrSuffix('af_suffix', options.suffix, value)}
         `, options, errors);
 
-        let intf = addVariableWidget(name, id, render, value);
+        let intf = addVariableWidget(key, render, value);
 
         if (value != null &&
                 (options.min !== undefined && value < options.min) ||
@@ -171,22 +171,22 @@ function FormBuilder(root, unique_key, widgets, mem) {
         self.changeHandler(e);
     }
 
-    this.dropdown = function(name, label, choices = [], options = {}) {
+    this.dropdown = function(key, label, choices = [], options = {}) {
         options = Object.assign({}, options_stack[options_stack.length - 1], options);
 
-        let id = makeID(name);
-        let value = mem.hasOwnProperty(name) ? mem[name] : options.value;
+        let id = makeID(key);
+        let value = mem.hasOwnProperty(key) ? mem[key] : options.value;
 
         let render = errors => wrapWidget(html`
-            <label for=${id}>${label || name}</label>
-            <select id=${id} @change=${e => handleDropdownChange(e, name)}>
+            <label for=${id}>${label || key}</label>
+            <select id=${id} @change=${e => handleDropdownChange(e, key)}>
                 <option value="null" .selected=${value == null}>-- Choisissez une option --</option>
                 ${choices.filter(c => c != null).map(c =>
                     html`<option value=${stringifyValue(c[0])} .selected=${value === c[0]}>${c[1]}</option>`)}
             </select>
         `, options, errors);
 
-        return addVariableWidget(name, id, render, value);
+        return addVariableWidget(key, render, value);
     };
 
     function handleChoiceChange(e, key) {
@@ -206,27 +206,27 @@ function FormBuilder(root, unique_key, widgets, mem) {
         self.changeHandler(e);
     }
 
-    this.choice = function(name, label, choices = [], options = {}) {
+    this.choice = function(key, label, choices = [], options = {}) {
         options = Object.assign({}, options_stack[options_stack.length - 1], options);
 
-        let id = makeID(name);
-        let value = mem.hasOwnProperty(name) ? mem[name] : options.value;
+        let id = makeID(key);
+        let value = mem.hasOwnProperty(key) ? mem[key] : options.value;
 
         let render = errors => wrapWidget(html`
-            <label for=${id}>${label || name}</label>
+            <label for=${id}>${label || key}</label>
             <div class="af_select" id=${id}>
                 ${choices.filter(c => c != null).map(c =>
                     html`<button data-value=${stringifyValue(c[0])}
                                  .className=${value == c[0] ? 'af_button active' : 'af_button'}
-                                 @click=${e => handleChoiceChange(e, name)}>${c[1]}</button>`)}
+                                 @click=${e => handleChoiceChange(e, key)}>${c[1]}</button>`)}
             </div>
         `, options, errors);
 
-        return addVariableWidget(name, id, render, value);
+        return addVariableWidget(key, render, value);
     };
 
-    this.boolean = function(name, label, options = {}) {
-        return self.choice(name, label, [[true, 'Oui'], [false, 'Non']], options);
+    this.boolean = function(key, label, options = {}) {
+        return self.choice(key, label, [[true, 'Oui'], [false, 'Non']], options);
     };
 
     function handleRadioChange(e, key, already_checked) {
@@ -242,24 +242,24 @@ function FormBuilder(root, unique_key, widgets, mem) {
         self.changeHandler(e);
     }
 
-    this.radio = function(name, label, choices = [], options = {}) {
+    this.radio = function(key, label, choices = [], options = {}) {
         options = Object.assign({}, options_stack[options_stack.length - 1], options);
 
-        let id = makeID(name);
-        let value = mem.hasOwnProperty(name) ? mem[name] : options.value;
+        let id = makeID(key);
+        let value = mem.hasOwnProperty(key) ? mem[key] : options.value;
 
         let render = errors => wrapWidget(html`
-            <label>${label || name}</label>
+            <label>${label || key}</label>
             <div class="af_radio" id=${id}>
                 ${choices.filter(c => c != null).map((c, i) =>
                     html`<input type="radio" name=${id} id=${`${id}.${i}`} value=${stringifyValue(c[0])}
                                 .checked=${value === c[0]}
-                                @click=${e => handleRadioChange(e, name, value === c[0])}/>
+                                @click=${e => handleRadioChange(e, key, value === c[0])}/>
                          <label for=${`${id}.${i}`}>${c[1]}</label><br/>`)}
             </div>
         `, options, errors);
 
-        return addVariableWidget(name, id, render, value);
+        return addVariableWidget(key, render, value);
     };
 
     function handleMultiChange(e, key) {
@@ -278,34 +278,34 @@ function FormBuilder(root, unique_key, widgets, mem) {
         self.changeHandler(e);
     }
 
-    this.multi = function(name, label, choices = [], options = {}) {
+    this.multi = function(key, label, choices = [], options = {}) {
         options = Object.assign({}, options_stack[options_stack.length - 1], options);
 
-        let id = makeID(name);
+        let id = makeID(key);
         let value;
         {
-            let candidate = mem.hasOwnProperty(name) ? mem[name] : options.value;
+            let candidate = mem.hasOwnProperty(key) ? mem[key] : options.value;
             value = Array.isArray(candidate) ? candidate : [];
         }
 
         let render = errors => wrapWidget(html`
-            <label>${label || name}</label>
+            <label>${label || key}</label>
             <div class="af_multi" id=${id}>
                 ${choices.filter(c => c != null).map((c, i) =>
-                    html`<input type="checkbox" name=${id} id=${`${id}.${i}`} value=${stringifyValue(c[0])}
+                    html`<input type="checkbox" id=${`${id}.${i}`} value=${stringifyValue(c[0])}
                                 .checked=${value.includes(c[0])}
-                                @click=${e => handleMultiChange(e, name)}/>
+                                @click=${e => handleMultiChange(e, key)}/>
                          <label for=${`${id}.${i}`}>${c[1]}</label><br/>`)}
             </div>
         `, options, errors);
 
-        return addVariableWidget(name, id, render, value);
+        return addVariableWidget(key, render, value);
     };
 
-    this.calc = function(name, label, value, options = {}) {
+    this.calc = function(key, label, value, options = {}) {
         options = Object.assign({}, options_stack[options_stack.length - 1], options);
 
-        let id = makeID(name);
+        let id = makeID(key);
 
         let text = value;
         if (!options.raw && typeof value !== 'string') {
@@ -320,11 +320,11 @@ function FormBuilder(root, unique_key, widgets, mem) {
         }
 
         let render = errors => wrapWidget(html`
-            <label for=${id}>${label || name}</label>
+            <label for=${id}>${label || key}</label>
             <span>${text}</span>
         `, options, errors);
 
-        return addVariableWidget(name, id, render, value);
+        return addVariableWidget(key, render, value);
     };
 
     this.output = function(content, options = {}) {
