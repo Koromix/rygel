@@ -487,6 +487,7 @@ let autoform = (function() {
     let self = this;
 
     let init = false;
+    let store;
 
     let editor;
     let af_menu;
@@ -638,11 +639,9 @@ form.buttons([
 `
             }]
         ]);
-    }
 
-    function savePages() {
-        let entries = Array.from(pages.entries());
-        localStorage.setItem('goupil_af_pages', JSON.stringify(entries));
+        for (let page of pages.values())
+            store.save(page);
     }
 
     function createPage(key, title) {
@@ -652,29 +651,33 @@ form.buttons([
             script: ''
         };
 
-        pages.set(key, page);
-        savePages();
-
-        self.go(key);
+        store.save(page).then(() => {
+            pages.set(key, page);
+            self.go(key);
+        });
     }
 
     function editPage(page, title) {
-        page.title = title;
-        savePages();
+        let new_page = Object.assign({}, page);
+        new_page.title = title;
 
-        renderAll();
+        store.save(new_page).then(() => {
+            pages.set(new_page.key, new_page);
+            renderAll();
+        });
     }
 
     function deletePage(page) {
-        pages.delete(page.key);
-        savePages();
+        store.delete(page.key).then(() => {
+            pages.delete(page.key);
 
-        if (current_key === page.key && pages.size) {
-            let first_key = pages.values().next().value.key;
-            self.go(first_key);
-        } else {
-            self.go(current_key);
-        }
+            if (current_key === page.key && pages.size) {
+                let first_key = pages.values().next().value.key;
+                self.go(first_key);
+            } else {
+                self.go(current_key);
+            }
+        });
     }
 
     function resetPages() {
@@ -796,7 +799,7 @@ form.buttons([
             page.script = editor.getValue();
 
             if (renderAll()) {
-                savePages();
+                store.save(page);
             } else {
                 // Restore working script
                 page.script = prev_script;
@@ -840,18 +843,15 @@ form.buttons([
                 return;
             }
 
-            let json = localStorage.getItem('goupil_af_pages');
-
-            if (json) {
-                try {
-                    pages = new Map(JSON.parse(json));
-                } catch (err) {
-                    console.log('Loading default pages (load error)');
+            store = goupil.openStore('pages');
+            store.loadAll().then(pages2 => {
+                if (pages2.length) {
+                    pages = new Map(pages2.map(page => [page.key, page]));
+                } else {
                     loadDefaultPages();
                 }
-            } else {
-                loadDefaultPages();
-            }
+                self.activate();
+            });
 
             init = true;
         }
