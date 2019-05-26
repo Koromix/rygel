@@ -227,6 +227,9 @@ static void InitRoutes()
                 if (TestStr(key, "BASE_URL")) {
                     writer->Write(goupil_config.base_url);
                     return true;
+                } else if (TestStr(key, "PROJECT_KEY")) {
+                    writer->Write(goupil_config.project_key);
+                    return true;
                 } else if (TestStr(key, "MAIN_COLOR")) {
                     writer->Write(goupil_config.main_color);
                     return true;
@@ -383,6 +386,12 @@ Options:
                 return 1;
             }
         }
+    }
+
+    // Check project configuration
+    if (!goupil_config.project_key || !goupil_config.project_key[0]) {
+        LogError("Project key must not be empty");
+        return 1;
     }
 
     // Init database

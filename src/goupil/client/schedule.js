@@ -730,7 +730,7 @@ let schedule = (function() {
     }
 
     this.activate = function() {
-        document.title = 'goupil schedule';
+        document.title = `${settings.project_key} — goupil schedule`;
 
         if (!init) {
             goupil.listenToServerEvent('schedule', e => updateSchedule(year, month));

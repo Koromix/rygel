@@ -36,9 +36,11 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
     {
         IniProperty prop;
         while (ini.Next(&prop)) {
-            if (prop.section == "Resources") {
+            if (prop.section == "Data") {
                 do {
-                    if (prop.key == "DatabaseFile") {
+                    if (prop.key == "ProjectKey") {
+                        config.project_key = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "DatabaseFile") {
                         config.database_filename = NormalizePath(prop.value, root_directory,
                                                                  &config.str_alloc).ptr;
                     } else {

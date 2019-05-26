@@ -830,7 +830,7 @@ form.buttons([
     };
 
     this.activate = function() {
-        document.title = 'goupil autoform';
+        document.title = `${settings.project_key} — goupil autoform`;
 
         if (!init) {
             if (!window.ace) {

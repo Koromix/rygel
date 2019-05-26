@@ -9,6 +9,7 @@
 namespace RG {
 
 struct Config {
+    const char *project_key = nullptr;
     const char *database_filename = nullptr;
 
     IPStack ip_stack = IPStack::Dual;
