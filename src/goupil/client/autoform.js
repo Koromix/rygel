@@ -225,9 +225,11 @@ function FormBuilder(root, unique_key, widgets, mem) {
         return addVariableWidget(key, render, value);
     };
 
-    this.boolean = function(key, label, options = {}) {
-        return self.choice(key, label, [[true, 'Oui'], [false, 'Non']], options);
+    this.binary = function(key, label, options = {}) {
+        return self.choice(key, label, [[1, 'Oui'], [0, 'Non']], options);
     };
+    // NOTE: Deprecated
+    this.boolean = this.binary;
 
     function handleRadioChange(e, key, already_checked) {
         let value = parseValue(e.target.value);
@@ -595,11 +597,11 @@ form.multi("sommeil", "Présentez-vous un trouble du sommeil ?", [
 ]);
 
 if (sexe.value == "F") {
-    form.boolean("enceinte", "Êtes-vous enceinte ?");
+    form.binary("enceinte", "Êtes-vous enceinte ?");
 }
 
 form.section("Alcool", () => {
-    let alcool = form.boolean("alcool", "Consommez-vous de l'alcool ?");
+    let alcool = form.binary("alcool", "Consommez-vous de l'alcool ?");
 
     if (alcool.value && form.value("enceinte")) {
         alcool.error("Pensez au bébé...");
@@ -614,8 +616,8 @@ form.section("Alcool", () => {
 
 form.section("Autres", () => {
     form.number("enfants", "Combien avez-vous d'enfants ?", {min: 0, max: 30});
-    form.boolean("frites", "Aimez-vous les frites ?",
-                 {help: "Si si, c'est important, je vous le jure !"});
+    form.binary("frites", "Aimez-vous les frites ?",
+                {help: "Si si, c'est important, je vous le jure !"});
 });
 
 form.output(html\`On peut aussi mettre du <b>HTML directement</b> si on veut...
