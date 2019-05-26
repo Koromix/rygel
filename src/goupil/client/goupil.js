@@ -12,6 +12,8 @@ let goupil = (function() {
     let popup_mem = {};
     let popup_timer;
 
+    let db;
+
     function parseURL(href, base) {
         return new URL(href, base);
     }
@@ -206,6 +208,26 @@ let goupil = (function() {
     this.popup = function(e, func) {
         closePopup();
         openPopup(e, func);
+    };
+
+    this.openStore = function(name) {
+        if (!db) {
+            if (navigator.storage && navigator.storage.persist) {
+                navigator.storage.persist().then(granted => {
+                    if (!granted)
+                        console.warn('Storage may be cleared by the UA under storage pressure');
+                });
+            } else {
+                console.warn('Storage may be cleared by the UA under storage pressure');
+            }
+
+            let db_name = `goupil_${settings.project_key}`;
+            db = data.open(db_name, db => {
+                db.createObjectStore('pages', { keyPath: 'key' });
+            });
+        }
+
+        return db.openStore(name);
     };
 
     document.addEventListener('readystatechange', e => {
