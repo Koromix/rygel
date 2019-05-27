@@ -352,9 +352,10 @@ let mco_pricing = {};
             thead.appendContent(tr);
         }
 
-        appendRow('GHS', function(col) { return ['' + col.ghs, {class: 'desc'}, false]; });
         appendRow('GHM', function(col) { return [col.ghm, {class: 'desc'}, true]; });
         appendRow('Niveau', function(col) { return ['Niveau ' + col.ghm.substr(5, 1), {class: 'desc'}, true]; });
+        appendRow('GHS', function(col) { return ['' + col.ghs + (col.conditions.length ? '*' : ''),
+                                                 {class: 'desc'}, false]; });
         if (show_pricing) {
             appendRow('Conditions', function(col) {
                 let el = dom.h('div', {title: col.conditions.join('\n')},
