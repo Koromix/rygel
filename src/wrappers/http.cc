@@ -282,7 +282,7 @@ uint32_t http_ParseAcceptableEncodings(Span<const char> encodings)
 
             if (encoding == "identity") {
                 high_priority = ApplyMask(high_priority, 1u << (int)CompressionType::None, quality != "q=0");
-                low_priority = ApplyMask(high_priority, 1u << (int)CompressionType::None, quality != "q=0");
+                low_priority = ApplyMask(low_priority, 1u << (int)CompressionType::None, quality != "q=0");
             } else if (encoding == "gzip") {
                 high_priority = ApplyMask(high_priority, 1u << (int)CompressionType::Gzip, quality != "q=0");
                 low_priority = ApplyMask(low_priority, 1u << (int)CompressionType::Gzip, quality != "q=0");
