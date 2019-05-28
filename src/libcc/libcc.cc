@@ -2940,7 +2940,7 @@ bool SpliceStream(StreamReader *reader, Size max_len, StreamWriter *writer)
 
     Size len = 0;
     while (!reader->eof) {
-        char buf[128 * 1024];
+        char buf[16 * 1024];
         Size read_len = reader->Read(RG_SIZE(buf), buf);
         if (read_len < 0)
             return false;
