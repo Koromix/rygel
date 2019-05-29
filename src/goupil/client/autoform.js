@@ -493,14 +493,16 @@ let autoform = (function() {
     let af_menu;
     let af_page;
 
-    let pages = new Map;
+    // TODO: Simplify code with some kind of OrderedMap?
+    let pages = [];
+    let pages_map = {};
     let current_key;
 
     let executor;
 
     function loadDefaultPages() {
-        pages = new Map([
-            ['tuto', {
+        pages = [
+            {
                 key: 'tuto',
                 title: 'Tutoriel',
                 script: `// Retirer le commentaire de la ligne suivante pour afficher les
@@ -560,9 +562,9 @@ form.section("Exemples", () => {
     ]);
 });
 `
-            }],
+            },
 
-            ['complicated', {
+            {
                 key: 'complicated',
                 title: 'Formulaire compliqué',
                 script: `form.pushOptions({large: true});
@@ -625,9 +627,9 @@ form.output(html\`On peut aussi mettre du <b>HTML directement</b> si on veut...
                  <button class="af_button" @click=\${e => go("complicated_help")}>Afficher l'aide</button>\`);
 form.output("Ou bien encore mettre du <b>texte brut</b>.");
 `
-            }],
+            },
 
-            ['complicated_help', {
+            {
                 key: 'complicated_help',
                 title: 'Formulaire compliqué (aide)',
                 script: `form.output("Loreum ipsum");
@@ -637,10 +639,15 @@ form.buttons([
     ["Revenir à l'auto-questionnaire", () => go("complicated")]
 ]);
 `
-            }]
-        ]);
+            }
+        ];
+        pages.sort((page1, page2) => util.compareStrings(page1.key, page2.key));
 
-        for (let page of pages.values())
+        pages_map = {};
+        for (let page of pages)
+            pages_map[page.key] = page;
+
+        for (let page of pages)
             store.save(page);
     }
 
@@ -652,7 +659,10 @@ form.buttons([
         };
 
         store.save(page).then(() => {
-            pages.set(key, page);
+            pages.push(page);
+            pages.sort((page1, page2) => util.compareStrings(page1.key, page2.key));
+            pages_map[page.key] = page;
+
             self.go(key);
         });
     }
@@ -662,17 +672,22 @@ form.buttons([
         new_page.title = title;
 
         store.save(new_page).then(() => {
-            pages.set(new_page.key, new_page);
+            Object.assign(page, new_page);
             renderAll();
         });
     }
 
     function deletePage(page) {
         store.delete(page.key).then(() => {
-            pages.delete(page.key);
+            let key = page.key;
 
-            if (current_key === page.key && pages.size) {
-                let first_key = pages.values().next().value.key;
+            // Remove from pages array and map
+            let page_idx = pages.findIndex(page => page.key === key);
+            pages.splice(page_idx, 1);
+            delete pages_map[key];
+
+            if (current_key === key && pages.length) {
+                let first_key = pages[0].key;
                 self.go(first_key);
             } else {
                 self.go(current_key);
@@ -684,7 +699,7 @@ form.buttons([
         loadDefaultPages();
         executor = null;
 
-        let first_key = pages.values().next().value.key;
+        let first_key = pages[0].key;
         self.go(first_key);
     }
 
@@ -694,7 +709,7 @@ form.buttons([
             let title = form.text('title', 'Titre :');
 
             if (key.value) {
-                if (pages.has(key.value))
+                if (pages.some(page => page.key === key.value))
                     key.error('Existe déjà');
                 if (!key.value.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
                     key.error('Autorisé : a-z, _ et 0-9 (sauf initiale)');
@@ -749,17 +764,17 @@ form.buttons([
     }
 
     function renderAll() {
-        let page = pages.get(current_key);
+        let page = pages_map[current_key];
 
         render(html`
             <button @click=${showCreatePageDialog}>Ajouter</button>
             ${page ? html`<button @click=${e => showEditPageDialog(e, page)}>Modifier</button>
                           <button @click=${e => showDeletePageDialog(e, page)}>Supprimer</button>` : html``}
             <select @change=${e => self.go(e.target.value)}>
-                ${!current_key && !pages.size ? html`<option>-- No page available --</option>` : html``}
+                ${!current_key && !pages.length ? html`<option>-- No page available --</option>` : html``}
                 ${current_key && !page ?
                     html`<option value=${current_key} .selected=${true}>-- Unknown page '${current_key}' --</option>` : html``}
-                ${Array.from(pages, ([_, page]) =>
+                ${pages.map(page =>
                     html`<option value=${page.key} .selected=${page.key == current_key}>${page.title} (${page.key})</option>`)}
             </select>
             <button @click=${showResetPagesDialog}>Réinitialiser</button>
@@ -791,7 +806,7 @@ form.buttons([
     }
 
     function refreshAndSave() {
-        let page = pages.get(current_key);
+        let page = pages_map[current_key];
 
         if (page) {
             let prev_script = page.script;
@@ -823,7 +838,7 @@ form.buttons([
     }
 
     this.go = function(key) {
-        let page = pages.get(key);
+        let page = pages_map[key];
 
         if (page) {
             editor.setValue(page.script);
@@ -846,7 +861,9 @@ form.buttons([
             store = goupil.openStore('pages');
             store.loadAll().then(pages2 => {
                 if (pages2.length) {
-                    pages = new Map(pages2.map(page => [page.key, page]));
+                    pages = Array.from(pages2);
+                    for (let page of pages)
+                        pages_map[page.key] = page;
                 } else {
                     loadDefaultPages();
                 }
@@ -868,10 +885,10 @@ form.buttons([
 
         initEditor();
 
-        if (current_key && pages.size) {
+        if (current_key && pages.length) {
             self.go(current_key);
         } else {
-            let first_key = pages.size ? pages.values().next().value.key : null;
+            let first_key = pages.length ? pages[0].key : null;
             self.go(first_key);
         }
     };
