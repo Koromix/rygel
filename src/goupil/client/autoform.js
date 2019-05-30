@@ -805,11 +805,8 @@ form.buttons([
             editor.container.classList.add('disabled');
 
             executor.render(af_form);
-            if (current_key) {
+            if (current_key)
                 executor.setError(null, `Unknown page '${current_key}'`);
-            } else {
-                executor.setError(null, 'No page available');
-            }
 
             return false;
         }
