@@ -228,8 +228,9 @@ function FormBuilder(root, unique_key, widgets, mem) {
     this.binary = function(key, label, options = {}) {
         return self.choice(key, label, [[1, 'Oui'], [0, 'Non']], options);
     };
-    // NOTE: Deprecated
-    this.boolean = this.binary;
+    this.boolean = function(key, label, options = {}) {
+        return self.choice(key, label, [[true, 'Oui'], [false, 'Non']], options);
+    };
 
     function handleRadioChange(e, key, already_checked) {
         let value = parseValue(e.target.value);
