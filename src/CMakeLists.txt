@@ -356,6 +356,7 @@ set(GOUPIL_ASSETS
     goupil/client/data.js
     goupil/client/goupil.js
     goupil/client/autoform.js
+    goupil/client/autoform_default.js
     goupil/client/schedule.js
     goupil/client/goupil.css
     goupil/client/autoform.css
