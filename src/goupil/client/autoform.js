@@ -499,220 +499,110 @@ let autoform = (function() {
     let pages = [];
     let pages_map = {};
     let current_key;
+    let default_key;
 
     let executor;
 
-    function getDefaultPages() {
-        let default_pages = [
-            {
-                key: 'tuto',
-                title: 'Tutoriel',
-                script: `// Retirer le commentaire de la ligne suivante pour afficher les
-// champs (texte, numérique, etc.) à droite du libellé.
-// form.pushOptions({large: true});
-
-form.output(html\`
-    <p>Une <b>fonction</b> est composée d'un <i>nom</i> et de plusieurs <i>paramètres</i> et permet de proposer un outil de saisie (champ texte, menu déroulant ...).
-    <p>Exemple : la fonction form.text("num_patient", "Numéro de patient") propose un champ de saisie texte intitulé <i>Numéro de patient</i> et le stocke dans la variable <i>num_patient</i>.
-    <p>Vous pouvez copier les fonctions présentées dans la section <b>Exemples</b> dans <b>Nouvelle section</b> pour créer votre propre formulaire.
-\`);
-
-form.section("Nouvelle section", () => {
-    // Copier coller les fonctions ci-dessous
-    // Modifier les noms de variables. Ex : "nom" -> "prenom"
-
-    // Remplacer ce commentaire par une première fonction
-
-    // Remplacer ce commentaire par une deuxième fonction
-});
-
-form.section("Exemples", () => {
-    // Variable texte
-    form.text("nom", "Quel est votre nom ?");
-
-    // Variable numérique
-    form.number("age", "Quel est votre âge ?", {min: 0, max: 120});
-
-    // Variable de choix (boutons)
-    form.choice("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]]);
-
-    // Variable à choix unique (menu déroulant)
-    form.dropdown("csp", "Quelle est votre CSP ?", [
-        [1, "Agriculteur exploitant"],
-        [2, "Artisan, commerçant ou chef d'entreprise"],
-        [3, "Cadre ou profession intellectuelle supérieure"],
-        [4, "Profession intermédiaire"],
-        [5, "Employé"],
-        [6, "Ouvrier"],
-        [7, "Retraité"],
-        [8, "Autre ou sans activité professionnelle"]
-    ]);
-
-    // Variable à choix unique (bouton radio)
-    form.radio("lieu_vie", "Quel est votre lieu de vie ?", [
-        ["maison", "Maison"],
-        ["appartement", "Appartement"]
-    ]);
-
-    // Variable cases à cocher multiples
-    form.multi("sommeil", "Présentez-vous un trouble du sommeil ?", [
-        [1, "Troubles d’endormissement"],
-        [2, "Troubles de maintien du sommeil"],
-        [3, "Réveil précoce"],
-        [4, "Sommeil non récupérateur"],
-        [null, "Aucune de ces réponses"]
-    ]);
-});
-`
-            },
-
-            {
-                key: 'complicated',
-                title: 'Formulaire compliqué',
-                script: `form.pushOptions({large: true});
-
-form.text("name", "Quel est votre nom ?");
-form.number("age", "Quel est votre âge ?", {min: 0, max: 120,
-                                            suffix: value => util.pluralFR(value, "an", "ans")});
-
-let sexe = form.choice("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]]);
-
-form.dropdown("csp", "Quelle est votre CSP ?", [
-    [1, "Agriculteur exploitant"],
-    [2, "Artisan, commerçant ou chef d'entreprise"],
-    [3, "Cadre ou profession intellectuelle supérieure"],
-    [4, "Profession intermédiaire"],
-    [5, "Employé"],
-    [6, "Ouvrier"],
-    [7, "Retraité"],
-    [8, "Autre ou sans activité professionnelle"]
-]);
-
-form.radio("lieu_vie", "Quel est votre lieu de vie ?", [
-    ["maison", "Maison"],
-    ["appartement", "Appartement"]
-]);
-
-form.multi("sommeil", "Présentez-vous un trouble du sommeil ?", [
-    [1, "Troubles d’endormissement"],
-    [2, "Troubles de maintien du sommeil"],
-    [3, "Réveil précoce"],
-    [4, "Sommeil non récupérateur"],
-    [null, "Aucune de ces réponses"]
-]);
-
-if (sexe.value == "F") {
-    form.binary("enceinte", "Êtes-vous enceinte ?");
-}
-
-form.section("Alcool", () => {
-    let alcool = form.binary("alcool", "Consommez-vous de l'alcool ?");
-
-    if (alcool.value && form.value("enceinte")) {
-        alcool.error("Pensez au bébé...");
-        alcool.error("On peut mettre plusieurs erreurs");
-        form.error("alcool", "Et de plein de manières différentes !");
+    function pickDefaultKey() {
+        if (default_key) {
+            return default_key;
+        } else if (pages.length) {
+            return pages[0].key;
+        } else {
+            return null;
+        }
     }
 
-    if (alcool.value) {
-        form.number("alcool_qt", "Combien de verres par semaine ?", {min: 1, max: 30});
-    }
-});
-
-form.section("Autres", () => {
-    form.number("enfants", "Combien avez-vous d'enfants ?", {min: 0, max: 30});
-    form.binary("frites", "Aimez-vous les frites ?",
-                {help: "Si si, c'est important, je vous le jure !"});
-});
-
-form.output(html\`On peut aussi mettre du <b>HTML directement</b> si on veut...
-                 <button class="af_button" @click=\${e => go("complicated_help")}>Afficher l'aide</button>\`);
-form.output("Ou bien encore mettre du <b>texte brut</b>.");
-`
-            },
-
-            {
-                key: 'complicated_help',
-                title: 'Formulaire compliqué (aide)',
-                script: `form.output("Loreum ipsum");
-
-form.buttons([
-    ["Donner l'alerte", () => alert("Alerte générale !!")],
-    ["Revenir à l'auto-questionnaire", () => go("complicated")]
-]);
-`
-            }
-        ];
-        default_pages.sort((page1, page2) => util.compareStrings(page1.key, page2.key));
-
-        return default_pages;
-    }
-
-    function createPage(key, title) {
+    function createPage(key, title, is_default) {
         let page = {
             key: key,
             title: title,
             script: ''
         };
 
-        goupil.database.save('pages', page).then(() => {
+        let t = goupil.database.transaction(db => {
+            db.save('pages', page);
+            if (is_default)
+                db.saveWithKey('settings', 'default_page', key);
+        });
+
+        t.then(() => {
             pages.push(page);
             pages.sort((page1, page2) => util.compareStrings(page1.key, page2.key));
-            pages_map[page.key] = page;
+            pages_map[key] = page;
+
+            if (is_default)
+                default_key = key;
 
             self.go(key);
         });
     }
 
-    function editPage(page, title) {
+    function editPage(page, title, is_default) {
         let new_page = Object.assign({}, page);
         new_page.title = title;
 
-        goupil.database.save('pages', new_page).then(() => {
+        let t = goupil.database.transaction(db => {
+            db.save('pages', new_page);
+            if (is_default) {
+                db.saveWithKey('settings', 'default_page', page.key);
+            } else if (default_key === page.key) {
+                db.delete('settings', 'default_page');
+            }
+        });
+
+        t.then(() => {
             Object.assign(page, new_page);
+
+            if (is_default) {
+                default_key = page.key;
+            } else if (page.key === default_key) {
+                default_key = null;
+            }
+
             renderAll();
         });
     }
 
     function deletePage(page) {
-        goupil.database.delete('pages', page.key).then(() => {
-            let key = page.key;
+        let t = goupil.database.transaction(db => {
+            db.delete('pages', page.key);
+            if (default_key === page.key)
+                db.delete('settings', 'default_page');
+        });
 
+        t.then(() => {
             // Remove from pages array and map
-            let page_idx = pages.findIndex(page => page.key === key);
+            let page_idx = pages.findIndex(it => it.key === page.key);
             pages.splice(page_idx, 1);
-            delete pages_map[key];
+            delete pages_map[page.key];
 
-            if (current_key === key && pages.length) {
-                let first_key = pages[0].key;
-                self.go(first_key);
-            } else {
-                self.go(current_key);
-            }
+            if (page.key === default_key)
+                default_key = null;
+
+            self.go(pickDefaultKey());
         });
     }
 
     function resetPages() {
-        let default_pages = getDefaultPages();
-
-        // Save those pages
         let t = goupil.database.transaction(db => {
             db.clear('pages');
-            for (let page of default_pages)
+            for (let page of autoform_default.pages)
                 db.save('pages', page);
+
+            db.saveWithKey('settings', 'default_page', autoform_default.key);
         });
 
-        // Reset interface
         t.then(() => {
-            pages = default_pages;
+            pages = autoform_default.pages.map(page => Object.assign({}, page));
             pages_map = {};
             for (let page of pages)
                 pages_map[page.key] = page;
 
+            default_key = autoform_default.key;
             executor = null;
 
-            let first_key = pages[0].key;
-            self.go(first_key);
+            self.go(default_key);
         });
     }
 
@@ -720,6 +610,8 @@ form.buttons([
         goupil.popup(e, form => {
             let key = form.text('key', 'Clé :');
             let title = form.text('title', 'Titre :');
+            let is_default = form.boolean('is_default', 'Page par défaut :',
+                                          {untoggle: false, value: false});
 
             if (key.value) {
                 if (pages.some(page => page.key === key.value))
@@ -730,7 +622,7 @@ form.buttons([
 
             if (key.value && title.value && !form.errors.length) {
                 form.submit = () => {
-                    createPage(key.value, title.value);
+                    createPage(key.value, title.value, is_default.value);
                     form.close();
                 };
             }
@@ -741,10 +633,12 @@ form.buttons([
     function showEditPageDialog(e, page) {
         goupil.popup(e, form => {
             let title = form.text('title', 'Titre :', {value: page.title});
+            let is_default = form.boolean('is_default', 'Page par défaut :',
+                                          {untoggle: false, value: default_key === page.key});
 
             if (title.value) {
                 form.submit = () => {
-                    editPage(page, title.value);
+                    editPage(page, title.value, is_default.value);
                     form.close();
                 };
             }
@@ -868,11 +762,12 @@ form.buttons([
                 return;
             }
 
+            goupil.database.load('settings', 'default_page').then(default_page => { default_key = default_page; });
             goupil.database.loadAll('pages').then(pages2 => {
                 if (pages2.length) {
                     pages = Array.from(pages2);
                 } else {
-                    pages = getDefaultPages();
+                    pages = autoform_default.pages;
                 }
                 for (let page of pages)
                     pages_map[page.key] = page;
@@ -895,12 +790,7 @@ form.buttons([
 
         initEditor();
 
-        if (current_key && pages.length) {
-            self.go(current_key);
-        } else {
-            let first_key = pages.length ? pages[0].key : null;
-            self.go(first_key);
-        }
+        self.go(current_key || pickDefaultKey());
     };
 
     return this;

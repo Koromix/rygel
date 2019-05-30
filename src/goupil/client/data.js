@@ -97,6 +97,16 @@ let data = (function () {
             });
         };
 
+        this.saveWithKey = function(store, key, value) {
+            return executeQuery(store, true, (t, resolve, reject) => {
+                let obj = t.objectStore(store);
+                obj.put(value, key);
+
+                t.addEventListener('complete', e => resolve());
+                t.addEventListener('abort', e => reject('Database transaction failure'));
+            });
+        };
+
         this.load = function(store, key) {
             return executeQuery(store, false, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
