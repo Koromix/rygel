@@ -777,7 +777,7 @@ form.buttons([
                 ${current_key && !page ?
                     html`<option value=${current_key} .selected=${true}>-- Unknown page '${current_key}' --</option>` : html``}
                 ${pages.map(page =>
-                    html`<option value=${page.key} .selected=${page.key == current_key}>${page.title} (${page.key})</option>`)}
+                    html`<option value=${page.key} .selected=${page.key == current_key}>${page.key} (${page.title})</option>`)}
             </select>
             <button @click=${showResetPagesDialog}>Réinitialiser</button>
         `, af_menu);
