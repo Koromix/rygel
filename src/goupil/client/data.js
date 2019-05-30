@@ -9,12 +9,55 @@ let data = (function () {
     // Beware, the IndexedDB API is asynchronous crap. Not my fault.
     // The whole point of this is to hide most of the async stuff.
 
-    function ObjectStoreWrapper(intf, store_name) {
-        function restartWhenReady(func) {
-            if (!intf.broken) {
+    function DatabaseInterface(intf) {
+        let self = this;
+
+        let t_type = null;
+        let t_stores = new Set;
+        let t_queries = [];
+
+        this.transaction = function(type, func) {
+            if (intf.db) {
+                self.abort();
+
+                try {
+                    t_type = type;
+                    func(self);
+
+                    if (type != null) {
+                        let complete_funcs = [];
+                        let error_funcs = [];
+
+                        let t = intf.db.transaction(Array.from(t_stores), type);
+                        for (let query of t_queries) {
+                            query.func(t, query.resolve, query.reject);
+
+                            if (t.oncomplete)
+                                complete_funcs.push(t.oncomplete);
+                            if (t.onerror)
+                                error_funcs.push(t.onerror);
+                        }
+
+                        return new Promise((resolve, reject) => {
+                            t.oncomplete = e => {
+                                for (let func of complete_funcs)
+                                    func();
+                                resolve();
+                            };
+                            t.onerror = e => {
+                                for (let func of error_funcs)
+                                    func(e.target.error);
+                                reject(e.target.error);
+                            };
+                        });
+                    }
+                } finally {
+                    self.abort();
+                }
+            } else if (!intf.broken) {
                 return new Promise((resolve, reject) => {
                     let call = {
-                        func: func,
+                        func: () => self.transaction(type, func),
                         resolve: resolve,
                         reject: reject
                     };
@@ -23,56 +66,65 @@ let data = (function () {
             } else {
                 throw new Error('Database not available');
             }
+        };
+
+        this.abort = function() {
+            t_type = null;
+            t_stores.clear();
+            t_queries.length = 0;
+        };
+
+        function executeQuery(store, type, func) {
+            if (t_type) {
+                t_stores.add(store);
+                return new Promise((resolve, reject) => {
+                    let query = {
+                        func: func,
+                        resolve: resolve,
+                        reject: reject
+                    };
+                    t_queries.push(query);
+                });
+            } else {
+                let ret;
+                self.transaction(type, () => { ret = executeQuery(store, type, func); });
+                return ret;
+            }
         }
 
-        this.save = function(value) {
-            if (!intf.db)
-                return restartWhenReady(() => this.save(key, value));
+        this.save = function(store, value) {
+            return executeQuery(store, 'readwrite', (t, resolve, reject) => {
+                let obj = t.objectStore(store);
+                obj.put(value);
 
-            let t = intf.db.transaction([store_name], 'readwrite');
-            let obj = t.objectStore(store_name);
-
-            obj.put(value);
-
-            return new Promise((resolve, reject) => {
                 t.oncomplete = () => resolve();
                 t.onerror = e => reject(e.target.error);
             });
         };
 
-        this.load = function(key) {
-            if (!intf.db)
-                return restartWhenReady(() => this.load(key));
+        this.load = function(store, key) {
+            return executeQuery(store, 'readonly', (t, resolve, reject) => {
+                let obj = t.objectStore(store);
+                let req = obj.get(key);
 
-            let t = intf.db.transaction([store_name]);
-            let obj = t.objectStore(store_name);
-            let req = obj.get(key);
-
-            return new Promise((resolve, reject) => {
                 req.onsuccess = e => resolve(e.target.result);
                 req.onerror = e => reject(e.target.error);
             });
         };
 
-        this.loadAll = function() {
-            if (!intf.db)
-                return restartWhenReady(this.loadAll);
+        this.loadAll = function(store) {
+            return executeQuery(store, 'readonly', (t, resolve, reject) => {
+                let obj = t.objectStore(store);
 
-            let t = intf.db.transaction([store_name]);
-            let obj = t.objectStore(store_name);
+                if (obj.getAll) {
+                    let req = obj.getAll();
 
-            if (obj.getAll) {
-                let req = obj.getAll();
-
-                return new Promise((resolve, reject) => {
                     req.onsuccess = e => resolve(e.target.result);
                     req.onerror = e => reject(e.target.error);
-                });
-            } else {
-                let cur = obj.openCursor();
-                let values = [];
+                } else {
+                    let cur = obj.openCursor();
+                    let values = [];
 
-                return new Promise((resolve, reject) => {
                     cur.onsuccess = e => {
                         let cursor = e.target.result;
                         if (cursor) {
@@ -83,28 +135,28 @@ let data = (function () {
                         }
                     };
                     cur.onerror = e => reject(e.target.error);
-                });
-            }
-        };
-
-        this.delete = function(key) {
-            if (!intf.db)
-                return restartWhenReady(() => this.delete(key));
-
-            let t = intf.db.transaction([store_name], 'readwrite');
-            let obj = t.objectStore(store_name);
-            let req = obj.delete(key);
-
-            return new Promise((resolve, reject) => {
-                req.onsuccess = e => resolve();
-                req.onerror = e => reject(e.target.error);
+                }
             });
         };
-    }
 
-    function DatabaseInterface(intf) {
-        this.openStore = function(store_name) {
-            return new ObjectStoreWrapper(intf, store_name);
+        this.delete = function(store, key) {
+            return executeQuery(store, 'readwrite', (t, resolve, reject) => {
+                let obj = t.objectStore(store);
+                obj.delete(key);
+
+                t.oncomplete = e => resolve();
+                t.onerror = e => reject(e.target.error);
+            });
+        };
+
+        this.clear = function(store) {
+            return executeQuery(store, 'readwrite', (t, resolve, reject) => {
+                let obj = t.objectStore(store);
+                obj.clear();
+
+                t.onsuccess = e => resolve();
+                t.onerror = e => reject(e.target.error);
+            });
         };
     }
 

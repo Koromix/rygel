@@ -487,7 +487,6 @@ let autoform = (function() {
     let self = this;
 
     let init = false;
-    let store;
 
     let editor;
     let af_menu;
@@ -647,8 +646,11 @@ form.buttons([
         for (let page of pages)
             pages_map[page.key] = page;
 
-        for (let page of pages)
-            store.save(page);
+        goupil.database.transaction('readwrite', db => {
+            db.clear('pages');
+            for (let page of pages)
+                db.save('pages', page);
+        });
     }
 
     function createPage(key, title) {
@@ -658,7 +660,7 @@ form.buttons([
             script: ''
         };
 
-        store.save(page).then(() => {
+        goupil.database.save('pages', page).then(() => {
             pages.push(page);
             pages.sort((page1, page2) => util.compareStrings(page1.key, page2.key));
             pages_map[page.key] = page;
@@ -671,14 +673,14 @@ form.buttons([
         let new_page = Object.assign({}, page);
         new_page.title = title;
 
-        store.save(new_page).then(() => {
+        goupil.database.save('pages', new_page).then(() => {
             Object.assign(page, new_page);
             renderAll();
         });
     }
 
     function deletePage(page) {
-        store.delete(page.key).then(() => {
+        goupil.database.delete('pages', page.key).then(() => {
             let key = page.key;
 
             // Remove from pages array and map
@@ -814,7 +816,7 @@ form.buttons([
             page.script = editor.getValue();
 
             if (renderAll()) {
-                store.save(page);
+                goupil.database.save('pages', page);
             } else {
                 // Restore working script
                 page.script = prev_script;
@@ -858,8 +860,7 @@ form.buttons([
                 return;
             }
 
-            store = goupil.openStore('pages');
-            store.loadAll().then(pages2 => {
+            goupil.database.loadAll('pages').then(pages2 => {
                 if (pages2.length) {
                     pages = Array.from(pages2);
                     for (let page of pages)
