@@ -499,8 +499,8 @@ let autoform = (function() {
 
     let executor;
 
-    function loadDefaultPages() {
-        pages = [
+    function getDefaultPages() {
+        let default_pages = [
             {
                 key: 'tuto',
                 title: 'Tutoriel',
@@ -640,17 +640,9 @@ form.buttons([
 `
             }
         ];
-        pages.sort((page1, page2) => util.compareStrings(page1.key, page2.key));
+        default_pages.sort((page1, page2) => util.compareStrings(page1.key, page2.key));
 
-        pages_map = {};
-        for (let page of pages)
-            pages_map[page.key] = page;
-
-        goupil.database.transaction(db => {
-            db.clear('pages');
-            for (let page of pages)
-                db.save('pages', page);
-        });
+        return default_pages;
     }
 
     function createPage(key, title) {
@@ -698,11 +690,27 @@ form.buttons([
     }
 
     function resetPages() {
-        loadDefaultPages();
-        executor = null;
+        let default_pages = getDefaultPages();
 
-        let first_key = pages[0].key;
-        self.go(first_key);
+        // Save those pages
+        let t = goupil.database.transaction(db => {
+            db.clear('pages');
+            for (let page of default_pages)
+                db.save('pages', page);
+        });
+
+        // Reset interface
+        t.then(() => {
+            pages = default_pages;
+            pages_map = {};
+            for (let page of pages)
+                pages_map[page.key] = page;
+
+            executor = null;
+
+            let first_key = pages[0].key;
+            self.go(first_key);
+        });
     }
 
     function showCreatePageDialog(e) {
@@ -863,11 +871,12 @@ form.buttons([
             goupil.database.loadAll('pages').then(pages2 => {
                 if (pages2.length) {
                     pages = Array.from(pages2);
-                    for (let page of pages)
-                        pages_map[page.key] = page;
                 } else {
-                    loadDefaultPages();
+                    pages = getDefaultPages();
                 }
+                for (let page of pages)
+                    pages_map[page.key] = page;
+
                 self.activate();
             });
 
