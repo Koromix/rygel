@@ -33,34 +33,39 @@ let data = (function () {
                     t_status = 'valid';
                     func(self);
 
-                    if (t_status === 'valid') {
-                        let complete_funcs = [];
-                        let error_funcs = []
+                    let complete_funcs = [];
+                    let error_funcs = []
 
-                        let t = intf.db.transaction(Array.from(t_stores),
-                                                    t_readwrite ? 'readwrite' : 'readonly');
-                        for (let query of t_queries) {
-                            query.func(t, query.resolve, query.reject);
+                    let t = intf.db.transaction(Array.from(t_stores),
+                                                t_readwrite ? 'readwrite' : 'readonly');
+                    for (let query of t_queries) {
+                        query.func(t, query.resolve, query.reject);
 
-                            if (t.oncomplete)
-                                complete_funcs.push(t.oncomplete);
-                            if (t.onerror)
-                                error_funcs.push(t.onerror);
+                        if (t.oncomplete) {
+                            complete_funcs.push(t.oncomplete);
+                            t.oncomplete = null;
                         }
-
-                        return new Promise((resolve, reject) => {
-                            t.oncomplete = e => {
-                                for (let func of complete_funcs)
-                                    func();
-                                resolve();
-                            };
-                            t.onerror = e => {
-                                for (let func of error_funcs)
-                                    func(e.target.error);
-                                reject(e.target.error);
-                            };
-                        });
+                        if (t.onerror) {
+                            error_funcs.push(t.onerror);
+                            t.onerror = null;
+                        }
                     }
+
+                    if (t_status === 'abort')
+                        t.abort();
+
+                    return new Promise((resolve, reject) => {
+                        t.oncomplete = e => {
+                            for (let func of complete_funcs)
+                                func();
+                            resolve();
+                        };
+                        t.onerror = e => {
+                            for (let func of error_funcs)
+                                func(e);
+                            reject(e.target.error);
+                        };
+                    });
                 } finally {
                     resetTransaction();
                 }
@@ -79,7 +84,6 @@ let data = (function () {
         };
 
         this.abort = function() {
-            resetTransaction();
             t_status = 'abort';
         };
 
