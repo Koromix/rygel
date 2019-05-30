@@ -646,7 +646,7 @@ form.buttons([
         for (let page of pages)
             pages_map[page.key] = page;
 
-        goupil.database.transaction('readwrite', db => {
+        goupil.database.transaction(db => {
             db.clear('pages');
             for (let page of pages)
                 db.save('pages', page);

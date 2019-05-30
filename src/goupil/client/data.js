@@ -12,23 +12,33 @@ let data = (function () {
     function DatabaseInterface(intf) {
         let self = this;
 
-        let t_type = null;
+        let t_status = 'none';
+        let t_readwrite = false;
         let t_stores = new Set;
         let t_queries = [];
 
-        this.transaction = function(type, func) {
+        function resetTransaction() {
+            t_status = 'none';
+            t_readwrite = false;
+            t_stores.clear();
+            t_queries.length = 0;
+        }
+
+        this.transaction = function(func) {
             if (intf.db) {
-                self.abort();
+                if (t_status !== 'none')
+                    throw new Error('Ongoing database transaction');
 
                 try {
-                    t_type = type;
+                    t_status = 'valid';
                     func(self);
 
-                    if (type != null) {
+                    if (t_status === 'valid') {
                         let complete_funcs = [];
-                        let error_funcs = [];
+                        let error_funcs = []
 
-                        let t = intf.db.transaction(Array.from(t_stores), type);
+                        let t = intf.db.transaction(Array.from(t_stores),
+                                                    t_readwrite ? 'readwrite' : 'readonly');
                         for (let query of t_queries) {
                             query.func(t, query.resolve, query.reject);
 
@@ -52,12 +62,12 @@ let data = (function () {
                         });
                     }
                 } finally {
-                    self.abort();
+                    resetTransaction();
                 }
             } else if (!intf.broken) {
                 return new Promise((resolve, reject) => {
                     let call = {
-                        func: () => self.transaction(type, func),
+                        func: () => self.transaction(func),
                         resolve: resolve,
                         reject: reject
                     };
@@ -69,13 +79,13 @@ let data = (function () {
         };
 
         this.abort = function() {
-            t_type = null;
-            t_stores.clear();
-            t_queries.length = 0;
+            resetTransaction();
+            t_status = 'abort';
         };
 
-        function executeQuery(store, type, func) {
-            if (t_type) {
+        function executeQuery(store, readwrite, func) {
+            if (t_status !== 'none') {
+                t_readwrite |= readwrite;
                 t_stores.add(store);
                 return new Promise((resolve, reject) => {
                     let query = {
@@ -87,13 +97,13 @@ let data = (function () {
                 });
             } else {
                 let ret;
-                self.transaction(type, () => { ret = executeQuery(store, type, func); });
+                self.transaction(() => { ret = executeQuery(store, readwrite, func); });
                 return ret;
             }
         }
 
         this.save = function(store, value) {
-            return executeQuery(store, 'readwrite', (t, resolve, reject) => {
+            return executeQuery(store, true, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
                 obj.put(value);
 
@@ -103,7 +113,7 @@ let data = (function () {
         };
 
         this.load = function(store, key) {
-            return executeQuery(store, 'readonly', (t, resolve, reject) => {
+            return executeQuery(store, false, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
                 let req = obj.get(key);
 
@@ -113,7 +123,7 @@ let data = (function () {
         };
 
         this.loadAll = function(store) {
-            return executeQuery(store, 'readonly', (t, resolve, reject) => {
+            return executeQuery(store, false, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
 
                 if (obj.getAll) {
@@ -140,7 +150,7 @@ let data = (function () {
         };
 
         this.delete = function(store, key) {
-            return executeQuery(store, 'readwrite', (t, resolve, reject) => {
+            return executeQuery(store, true, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
                 obj.delete(key);
 
@@ -150,7 +160,7 @@ let data = (function () {
         };
 
         this.clear = function(store) {
-            return executeQuery(store, 'readwrite', (t, resolve, reject) => {
+            return executeQuery(store, true, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
                 obj.clear();
 
