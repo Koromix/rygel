@@ -18,6 +18,20 @@ let goupil = (function() {
         return new URL(href, base);
     }
 
+    function initData() {
+        if (navigator.storage && navigator.storage.persist) {
+            navigator.storage.persist().then(granted => {
+                if (!granted)
+                    console.warn('Storage may be cleared by the UA under storage pressure');
+            });
+        } else {
+            console.warn('Storage may be cleared by the UA under storage pressure');
+        }
+
+        let db_name = `goupil_${settings.project_key}`;
+        self.database = data.open(db_name);
+    }
+
     function initNavigation() {
         window.addEventListener('popstate', e => {
             self.go(window.location.href, false);
@@ -210,29 +224,11 @@ let goupil = (function() {
         openPopup(e, func);
     };
 
-    this.openStore = function(name) {
-        if (!db) {
-            if (navigator.storage && navigator.storage.persist) {
-                navigator.storage.persist().then(granted => {
-                    if (!granted)
-                        console.warn('Storage may be cleared by the UA under storage pressure');
-                });
-            } else {
-                console.warn('Storage may be cleared by the UA under storage pressure');
-            }
-
-            let db_name = `goupil_${settings.project_key}`;
-            db = data.open(db_name, db => {
-                db.createObjectStore('pages', { keyPath: 'key' });
-            });
-        }
-
-        return db.openStore(name);
-    };
-
     document.addEventListener('readystatechange', e => {
         if (document.readyState === 'complete') {
+            initData();
             initNavigation();
+
             self.go(window.location.href, false);
         }
     });
