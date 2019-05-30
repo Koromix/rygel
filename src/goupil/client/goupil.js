@@ -29,7 +29,9 @@ let goupil = (function() {
         }
 
         let db_name = `goupil_${settings.project_key}`;
-        self.database = data.open(db_name);
+        self.database = data.open(db_name, db => {
+            db.createObjectStore('pages', {keyPath: 'key'});
+        });
     }
 
     function initNavigation() {
