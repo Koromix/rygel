@@ -145,6 +145,7 @@ set(LIBSODIUM_SRC
     libsodium/src/libsodium/crypto_shorthash/siphash24/ref/shorthash_siphash24_ref.c
     libsodium/src/libsodium/crypto_scalarmult/crypto_scalarmult.c
     libsodium/src/libsodium/crypto_scalarmult/ed25519/ref10/scalarmult_ed25519_ref10.c
+    libsodium/src/libsodium/crypto_scalarmult/ristretto255/ref10/scalarmult_ristretto255_ref10.c
     libsodium/src/libsodium/crypto_scalarmult/curve25519/scalarmult_curve25519.c
     libsodium/src/libsodium/crypto_scalarmult/curve25519/sandy2x/curve25519_sandy2x.c
     libsodium/src/libsodium/crypto_scalarmult/curve25519/sandy2x/fe_frombytes_sandy2x.c
@@ -155,9 +156,8 @@ set(LIBSODIUM_SRC
     libsodium/src/libsodium/crypto_onetimeauth/poly1305/donna/poly1305_donna.c
     libsodium/src/libsodium/crypto_onetimeauth/poly1305/sse2/poly1305_sse2.c
     libsodium/src/libsodium/randombytes/randombytes.c
+    libsodium/src/libsodium/randombytes/internal/randombytes_internal_random.c
     libsodium/src/libsodium/randombytes/sysrandom/randombytes_sysrandom.c
-    libsodium/src/libsodium/randombytes/salsa20/randombytes_salsa20_random.c
-    libsodium/src/libsodium/randombytes/nativeclient/randombytes_nativeclient.c
     libsodium/src/libsodium/crypto_box/crypto_box_easy.c
     libsodium/src/libsodium/crypto_box/crypto_box_seal.c
     libsodium/src/libsodium/crypto_box/crypto_box.c
@@ -199,6 +199,7 @@ set(LIBSODIUM_SRC
     libsodium/src/libsodium/crypto_core/hsalsa20/core_hsalsa20.c
     libsodium/src/libsodium/crypto_core/hsalsa20/ref2/core_hsalsa20_ref2.c
     libsodium/src/libsodium/crypto_core/ed25519/core_ed25519.c
+    libsodium/src/libsodium/crypto_core/ed25519/core_ristretto255.c
     libsodium/src/libsodium/crypto_core/ed25519/ref10/ed25519_ref10.c
 )
 
