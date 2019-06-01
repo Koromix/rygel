@@ -1,8 +1,8 @@
-diff --git a/vendor/libsodium/src/libsodium/randombytes/salsa20/randombytes_salsa20_random.c b/vendor/libsodium/src/libsodium/randombytes/salsa20/randombytes_salsa20_random.c
-index 79916ea..8f2b472 100644
---- a/vendor/libsodium/src/libsodium/randombytes/salsa20/randombytes_salsa20_random.c
-+++ b/vendor/libsodium/src/libsodium/randombytes/salsa20/randombytes_salsa20_random.c
-@@ -71,7 +71,9 @@ BOOLEAN NTAPI RtlGenRandom(PVOID RandomBuffer, ULONG RandomBufferLength);
+diff --git a/vendor/libsodium/src/libsodium/randombytes/internal/randombytes_internal_random.c b/vendor/libsodium/src/libsodium/randombytes/internal/randombytes_internal_random.c
+index b3c9a75d..649c4b20 100644
+--- a/vendor/libsodium/src/libsodium/randombytes/internal/randombytes_internal_random.c
++++ b/vendor/libsodium/src/libsodium/randombytes/internal/randombytes_internal_random.c
+@@ -96,7 +96,7 @@ BOOLEAN NTAPI RtlGenRandom(PVOID RandomBuffer, ULONG RandomBufferLength);
  #endif
  
  #ifndef TLS
@@ -10,7 +10,4 @@ index 79916ea..8f2b472 100644
 +# ifdef _MSC_VER
  #  define TLS __declspec(thread)
  # else
--#  define TLS
-+#  define TLS __thread
- # endif
- #endif
+ #  define TLS

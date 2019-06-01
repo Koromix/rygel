@@ -1,5 +1,5 @@
 diff --git a/vendor/libsodium/src/libsodium/include/sodium/private/common.h b/vendor/libsodium/src/libsodium/include/sodium/private/common.h
-index 9a2f7fab..d2a9d934 100644
+index 339e725b..ebc812d6 100644
 --- a/vendor/libsodium/src/libsodium/include/sodium/private/common.h
 +++ b/vendor/libsodium/src/libsodium/include/sodium/private/common.h
 @@ -10,12 +10,6 @@
@@ -15,18 +15,13 @@ index 9a2f7fab..d2a9d934 100644
  #include <stdint.h>
  #include <stdlib.h>
  #include <string.h>
-@@ -226,26 +220,51 @@ xor_buf(unsigned char *out, const unsigned char *in, size_t n)
+@@ -226,26 +220,52 @@ xor_buf(unsigned char *out, const unsigned char *in, size_t n)
  # endif
  #endif
  
 -#if defined(_MSC_VER) && \
 -    (defined(_M_X64) || defined(_M_AMD64) || defined(_M_IX86))
 -
-+/*
-+ * We barely enable anything on Clang because instrinsic pragmas do not
-+ * work correctly there.
-+ */
-+#if defined(_M_X64) || defined(_M_AMD64) || defined(_M_IX86)
 -# include <intrin.h>
 -
 -# define HAVE_INTRIN_H    1
@@ -37,6 +32,11 @@ index 9a2f7fab..d2a9d934 100644
 -# define HAVE_SMMINTRIN_H 1
 -# define HAVE_AVXINTRIN_H 1
 -# if _MSC_VER >= 1600
++/*
++ * We barely enable anything on Clang because instrinsic pragmas do not
++ * work correctly there.
++ */
++#if defined(_M_X64) || defined(_M_AMD64) || defined(_M_IX86)
 +# define NATIVE_LITTLE_ENDIAN 1
 +# if defined(__GNUC__)
 +#  define HAVE_MEMSET_S    1
@@ -86,11 +86,11 @@ index 9a2f7fab..d2a9d934 100644
  #endif
  
  #ifdef HAVE_LIBCTGRIND
-diff --git a/vendor/libsodium/src/libsodium/randombytes/salsa20/randombytes_salsa20_random.c b/vendor/libsodium/src/libsodium/randombytes/salsa20/randombytes_salsa20_random.c
-index 87ad70e6..21b8afb4 100644
---- a/vendor/libsodium/src/libsodium/randombytes/salsa20/randombytes_salsa20_random.c
-+++ b/vendor/libsodium/src/libsodium/randombytes/salsa20/randombytes_salsa20_random.c
-@@ -41,10 +41,6 @@
+diff --git a/vendor/libsodium/src/libsodium/randombytes/internal/randombytes_internal_random.c b/vendor/libsodium/src/libsodium/randombytes/internal/randombytes_internal_random.c
+index 7a140c1f..649c4b20 100644
+--- a/vendor/libsodium/src/libsodium/randombytes/internal/randombytes_internal_random.c
++++ b/vendor/libsodium/src/libsodium/randombytes/internal/randombytes_internal_random.c
+@@ -44,10 +44,6 @@
  #ifdef BLOCK_ON_DEV_RANDOM
  # include <poll.h>
  #endif
@@ -100,11 +100,12 @@ index 87ad70e6..21b8afb4 100644
 -#endif
  
  #include "core.h"
- #include "crypto_core_salsa20.h"
-@@ -55,6 +51,11 @@
+ #include "crypto_core_hchacha20.h"
+@@ -58,6 +54,12 @@
  #include "runtime.h"
  #include "utils.h"
  
++
 +#ifdef HAVE_RDRAND
 +# pragma GCC target("rdrnd")
 +# include <immintrin.h>
