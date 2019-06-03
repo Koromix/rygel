@@ -94,10 +94,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
     function stringifyValue(value) { return JSON.stringify(value); }
 
     this.find = key => interfaces[key];
-    this.value = function(key) {
-        let intf = interfaces[key];
-        return intf ? intf.value : undefined;
-    };
+    this.value = key => mem[key];
     this.error = (key, msg) => interfaces[key].error(msg);
 
     function handleTextInput(e, key) {
