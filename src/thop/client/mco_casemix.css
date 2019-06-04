@@ -33,7 +33,6 @@
 }
 #cm_table .price.diff { min-width: 78px; }
 #cm_table .price.diff:before { font-style: normal; }
-#cm_table .empty { opacity: 0.5; }
 
 .rt_result {
     width: 100%;
