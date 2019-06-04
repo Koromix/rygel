@@ -67,11 +67,29 @@ let data = (function() {
 
         let xhr = new XMLHttpRequest();
         xhr.timeout = 14000;
-        xhr.onload = function(e) { handleFinishedRequest(this.status, xhr.response); };
+        xhr.onload = function(e) {
+            if (this.status === 200) {
+                if (!type)
+                    type = null;
+
+                let data;
+                try {
+                    switch (type) {
+                        case null:
+                        case 'text': {  data = xhr.response; } break;
+                        case 'json': {  data = JSON.parse(xhr.response); } break;
+                    }
+                } catch {
+                    data = null;
+                }
+
+                handleFinishedRequest(this.status, data);
+            } else {
+                handleFinishedRequest(this.status, xhr.response);
+            }
+        };
         xhr.onerror = function(e) { handleFinishedRequest(503); };
         xhr.ontimeout = function(e) { handleFinishedRequest(504); };
-        if (type)
-            xhr.responseType = type;
         xhr.open(method, url, true);
 
         if (self.busyHandler)
@@ -82,24 +100,25 @@ let data = (function() {
 
     function callRequestHandlers(url, proceed, fail, status, response)
     {
-        let error = null;
-        switch (status) {
-            case 200: { /* Success */ } break;
-            case 403: { error = 'Accès refusé'; } break;
-            case 404: { error = 'Adresse \'' + url + '\' introuvable'; } break;
-            case 422: { error = 'Paramètres incorrects'; } break;
-            case 502:
-            case 503: { error = 'Service non accessible'; } break;
-            case 504: { error = 'Délai d\'attente dépassé, réessayez'; } break;
-            default: { error = 'Erreur inconnue ' + status; } break;
-        }
-
-        if (!error) {
+        if (status === 200) {
             proceed(response);
         } else {
-            errors.push(error);
+            if (!response) {
+                switch (status) {
+                    case 200: { /* Success */ } break;
+                    case 403: { response = 'Accès refusé'; } break;
+                    case 404: { response = 'Adresse \'' + url + '\' introuvable'; } break;
+                    case 422: { response = 'Paramètres incorrects'; } break;
+                    case 502:
+                    case 503: { response = 'Service non accessible'; } break;
+                    case 504: { response = 'Délai d\'attente dépassé, réessayez'; } break;
+                    default: { response = 'Erreur inconnue ' + status; } break;
+                }
+            }
+
+            errors.push(response);
             if (fail)
-                fail(error);
+                fail(response);
         }
     }
 
