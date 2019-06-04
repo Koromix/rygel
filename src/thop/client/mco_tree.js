@@ -9,12 +9,8 @@ let mco_tree = {};
     let nodes = [];
     let collapse_nodes = new Set();
 
-    function runTree(route, path, parameters, hash, errors)
+    function runModule(route, errors)
     {
-        // Parse route (model: tree/<date>)
-        let path_parts = path.split('/');
-        route.date = path_parts[1] || null;
-
         // Resources
         let indexes = thop.updateMcoSettings().indexes;
         if (!route.date && indexes.length)
@@ -34,11 +30,24 @@ let mco_tree = {};
         // Refresh view
         if (!thop.isBusy()) {
             refreshTree(nodes);
-            deploySelectedNode(hash);
+
+            deploySelectedNode(route.highlight_node);
+            route.highlight_node = null;
         }
 
         query('#tr').removeClass('hide');
     }
+    this.runModule = runModule;
+
+    function parseRoute(route, path, parameters, hash)
+    {
+        // Mode: tree/<date>
+        let path_parts = path.split('/');
+
+        route.date = path_parts[1] || null;
+        route.highlight_node = hash;
+    }
+    this.parseRoute = parseRoute;
 
     function routeToUrl(args)
     {
@@ -59,12 +68,6 @@ let mco_tree = {};
         };
     }
     this.routeToUrl = routeToUrl;
-
-    function go(args, delay)
-    {
-        thop.route(routeToUrl(args).url, delay);
-    }
-    this.go = go;
 
     function updateTree(date)
     {
@@ -250,5 +253,5 @@ let mco_tree = {};
         e.preventDefault();
     };
 
-    thop.registerUrl('mco_tree', this, runTree);
+    thop.registerUrl('mco_tree', this);
 }).call(mco_tree);

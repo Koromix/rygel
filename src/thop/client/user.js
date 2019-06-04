@@ -9,7 +9,7 @@ let user = {};
     let url_key = 0;
     let username = null;
 
-    function runLogin(route, path, parameters, hash, errors)
+    function runModule(route, errors)
     {
         query('#usr button').disabled = false;
 
@@ -18,6 +18,7 @@ let user = {};
         if (focus)
             query('#usr_username').focus();
     }
+    this.runModule = runModule;
 
     function runSession()
     {
@@ -145,5 +146,5 @@ let user = {};
     this.getUrlKey = function() { return url_key; }
     this.getUsername = function() { return username; }
 
-    thop.registerUrl('login', this, runLogin);
+    thop.registerUrl('login', this);
 }).call(user);

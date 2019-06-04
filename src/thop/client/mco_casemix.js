@@ -29,27 +29,9 @@ let mco_casemix = {};
     let summaries = {};
     let deploy_results = new Set;
 
-    function runCasemix(route, path, parameters, hash, errors)
+    function runModule(route, errors)
     {
-        // Parse route (model: casemix/<view>/<json_parameters_in_base64>)
-        let path_parts = path.split('/', 3);
-        if (path_parts[2])
-            Object.assign(route, thop.buildRoute(JSON.parse(window.atob(path_parts[2]))));
-        route.view = path_parts[1] || 'ghm_roots';
-        route.period = route.period || [null, null];
-        route.prev_period = route.prev_period || [null, null];
-        route.structure = route.structure || 0;
-        route.regroup = route.regroup || 'none';
-        route.mode = route.mode || 'none';
-        route.algorithm = route.algorithm || null;
-        route.filter = route.filter || null;
-        route.units = route.units || [];
-        route.ghm_roots = route.ghm_roots || [];
-        route.refresh = route.refresh || false;
-        route.ghm_root = route.ghm_root || null;
-        route.apply_coefficient = route.apply_coefficient || false;
-        route.page = parseInt(parameters.page, 10) || 1;
-        route.sort = parameters.sort || null;
+        // Memorize route info
         pages[route.view] = route.page;
         sorts[route.view] = route.sort;
 
@@ -212,6 +194,32 @@ let mco_casemix = {};
         }
         query('#cm').removeClass('hide');
     }
+    this.runModule = runModule;
+
+    function parseRoute(route, path, parameters, hash, errors)
+    {
+        // Model: mco_casemix/<view>/<json_parameters_in_base64>
+        let path_parts = path.split('/', 3);
+        if (path_parts[2])
+            Object.assign(route, thop.buildRoute(JSON.parse(window.atob(path_parts[2]))));
+
+        route.view = path_parts[1] || 'ghm_roots';
+        route.period = route.period || [null, null];
+        route.prev_period = route.prev_period || [null, null];
+        route.structure = route.structure || 0;
+        route.regroup = route.regroup || 'none';
+        route.mode = route.mode || 'none';
+        route.algorithm = route.algorithm || null;
+        route.filter = route.filter || null;
+        route.units = route.units || [];
+        route.ghm_roots = route.ghm_roots || [];
+        route.refresh = route.refresh || false;
+        route.ghm_root = route.ghm_root || null;
+        route.apply_coefficient = route.apply_coefficient || false;
+        route.page = parseInt(parameters.page, 10) || 1;
+        route.sort = parameters.sort || null;
+    }
+    this.parseRoute = parseRoute;
 
     function routeToUrl(args)
     {
@@ -226,8 +234,7 @@ let mco_casemix = {};
             'algorithm',
             'filter',
             'ghm_root',
-            'apply_coefficient',
-            'refresh'
+            'apply_coefficient'
         ];
 
         if (args.units)
@@ -275,12 +282,6 @@ let mco_casemix = {};
         };
     }
     this.routeToUrl = routeToUrl;
-
-    function go(args, delay)
-    {
-        thop.route(routeToUrl(args).url, delay);
-    }
-    this.go = go;
 
     // A true result actually means maybe (if we haven't download the relevant data yet)
     function checkCasemixGhmRoot(ghm_root)
@@ -432,7 +433,7 @@ let mco_casemix = {};
             let builder = new PeriodPicker(picker, settings.start_date, settings.end_date,
                                            period[0], period[1]);
             builder.changeHandler = function() {
-                go({period: this.object.getValues()});
+                thop.go({period: this.object.getValues()});
             };
             builder.render();
         }
@@ -442,7 +443,7 @@ let mco_casemix = {};
             let builder = new PeriodPicker(prev_picker, settings.start_date, settings.end_date,
                                            prev_period[0], prev_period[1]);
             builder.changeHandler = function() {
-                go({prev_period: this.object.getValues()});
+                thop.go({prev_period: this.object.getValues()});
             };
             builder.render();
         }
@@ -463,8 +464,8 @@ let mco_casemix = {};
 
         let builder = new TreeSelector(select, 'Unités : ');
         builder.changeHandler = function() {
-            go({units: this.object.getValues(),
-                structure: this.object.getActiveTab()});
+            thop.go({units: this.object.getValues(),
+                     structure: this.object.getActiveTab()});
         };
 
         for (const structure of settings.structures) {
@@ -530,8 +531,8 @@ let mco_casemix = {};
 
         let builder = new TreeSelector(select, 'GHM : ');
         builder.changeHandler = function() {
-            go({ghm_roots: this.object.getValues(),
-                regroup: GroupTypes[this.object.getActiveTab()].key});
+            thop.go({ghm_roots: this.object.getValues(),
+                     regroup: GroupTypes[this.object.getActiveTab()].key});
         };
 
         for (const group_type of GroupTypes) {
@@ -596,7 +597,7 @@ let mco_casemix = {};
         let summary = summaries.units;
         if (!summary) {
             summary = createPagedDataTable(query('#cm_units'));
-            summary.sortHandler = function(sort) { go({sort: sort}); };
+            summary.sortHandler = function(sort) { thop.go({sort: sort}); };
 
             summaries.units = summary;
         }
@@ -703,7 +704,7 @@ let mco_casemix = {};
         let summary = summaries.ghm_roots;
         if (!summary) {
             summary = createPagedDataTable(query('#cm_ghm_roots'));
-            summary.sortHandler = function(sort) { go({sort: sort}); };
+            summary.sortHandler = function(sort) { thop.go({sort: sort}); };
 
             summaries.ghm_roots = summary;
         }
@@ -1397,5 +1398,5 @@ let mco_casemix = {};
         });
     });
 
-    thop.registerUrl('mco_casemix', this, runCasemix);
+    thop.registerUrl('mco_casemix', this);
 }).call(mco_casemix);

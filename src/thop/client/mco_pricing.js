@@ -13,25 +13,8 @@ let mco_pricing = {};
     // Chart.js
     let chart = null;
 
-    function runPricing(route, path, parameters, hash, errors)
+    function runModule(route, errors)
     {
-        // Parse route (model: pricing/<view>/[<diff>..]<date>/<ghm_root>/<sector>)
-        let path_parts = path.split('/');
-        route.view = path_parts[1] || 'table';
-        route.sector = path_parts[2] || 'public';
-        if (path_parts[3]) {
-            let date_parts = path_parts[3].split('..', 2);
-            if (date_parts.length === 2) {
-                route.date = date_parts[1];
-                route.diff = date_parts[0];
-            } else {
-                route.date = date_parts[0];
-                route.diff = null;
-            }
-        }
-        route.ghm_root = path_parts[4] || null;
-        route.apply_coefficient = !!parseInt(parameters.apply_coefficient) || false;
-
         // Resources
         let indexes = thop.updateMcoSettings().indexes;
         {
@@ -104,6 +87,29 @@ let mco_pricing = {};
         query('#pr_chart').toggleClass('hide', route.view !== 'chart');
         query('#pr').removeClass('hide');
     }
+    this.runModule = runModule;
+
+    function parseRoute(route, path, parameters, hash)
+    {
+        // Model: mco_pricing/<view>/[<diff>..]<date>/<ghm_root>/<sector>)
+        let path_parts = path.split('/');
+
+        route.view = path_parts[1] || 'table';
+        route.sector = path_parts[2] || 'public';
+        if (path_parts[3]) {
+            let date_parts = path_parts[3].split('..', 2);
+            if (date_parts.length === 2) {
+                route.date = date_parts[1];
+                route.diff = date_parts[0];
+            } else {
+                route.date = date_parts[0];
+                route.diff = null;
+            }
+        }
+        route.ghm_root = path_parts[4] || null;
+        route.apply_coefficient = !!parseInt(parameters.apply_coefficient) || false;
+    }
+    this.parseRoute = parseRoute;
 
     function routeToUrl(args)
     {
@@ -130,12 +136,6 @@ let mco_pricing = {};
         };
     }
     this.routeToUrl = routeToUrl;
-
-    function go(args, delay)
-    {
-        thop.route(routeToUrl(args).url, delay);
-    }
-    this.go = go;
 
     // A true result actually means maybe (if we haven't download the relevant index yet)
     function checkIndexGhmRoot(indexes, index, sector, ghm_root)
@@ -642,5 +642,5 @@ let mco_pricing = {};
     }
     this.buildConditionsArray = buildConditionsArray;
 
-    thop.registerUrl('mco_pricing', this, runPricing);
+    thop.registerUrl('mco_pricing', this);
 }).call(mco_pricing);
