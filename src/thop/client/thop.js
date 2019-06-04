@@ -264,7 +264,8 @@ let thop = {};
     {
         let log = query('#log');
 
-        log.innerHTML = errors.join('<br/>');
+        log.innerHTML = errors.map(function(err) { return err.replace('\n', '<br/>&nbsp;&nbsp;&nbsp;&nbsp;'); })
+                              .join('<br/>');
         log.toggleClass('hide', !errors.length);
     }
 

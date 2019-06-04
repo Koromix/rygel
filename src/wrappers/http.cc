@@ -304,8 +304,8 @@ uint32_t http_ParseAcceptableEncodings(Span<const char> encodings)
 
 int http_ProduceErrorPage(int code, http_Response *out_response)
 {
-    Span<char> page = Fmt((Allocator *)nullptr, "Error %1: %2", code,
-                          MHD_get_reason_phrase_for((unsigned int)code));
+    Span<char> page = Fmt((Allocator *)nullptr, "Error %1: %2\n%3", code,
+                          MHD_get_reason_phrase_for((unsigned int)code), GetLastLogError());
 
     MHD_Response *response =
         MHD_create_response_from_buffer_with_free_callback((size_t)page.len, page.ptr,
