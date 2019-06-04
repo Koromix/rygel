@@ -2711,8 +2711,7 @@ static inline void PrintLn() { putchar('\n'); }
 // Debug and errors
 // ------------------------------------------------------------------------
 
-typedef void LogHandlerFunc(LogLevel level, const char *ctx,
-                            const char *fmt, Span<const FmtArg> args);
+typedef void LogHandlerFunc(LogLevel level, const char *ctx, const char *msg);
 
 bool GetDebugFlag(const char *name);
 bool LogUsesTerminalOutput();
@@ -2743,13 +2742,15 @@ static inline void LogInfo(Args... args) { Log(LogLevel::Info, args...); }
 template <typename... Args>
 static inline void LogError(Args... args) { Log(LogLevel::Error, args...); }
 
-void DefaultLogHandler(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg> args);
+void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg);
 
 void StartConsoleLog(LogLevel level);
 void EndConsoleLog();
 
 void PushLogHandler(std::function<LogHandlerFunc> handler);
 void PopLogHandler();
+
+const char *GetLastLogError();
 
 // ------------------------------------------------------------------------
 // Strings
