@@ -4,16 +4,17 @@
 
 let thop = {};
 (function() {
-    let route_modules = {};
+    let modules = {};
 
-    let route_timer_id = null;
-
-    let route_url = null;
-    let route_url_parts = null;
+    // Go
+    let go_timer_id = null;
     let route_values = {};
-    let scroll_cache = {};
-    let module = null;
+    let current_module = null;
+    let current_url = null;
     let prev_module = null;
+
+    // Scroll
+    let scroll_state = {};
 
     // Refresh
     let ignore_busy = false;
@@ -53,103 +54,77 @@ let thop = {};
     }
     this.buildRoute = buildRoute;
 
-    function registerUrl(prefix, object, func)
+    function registerUrl(prefix, object)
     {
-        route_modules[prefix] = {
-            object: object,
-            func: func
-        };
+        modules[prefix] = object;
     }
     this.registerUrl = registerUrl;
 
-    function route(new_url, delay, mark_history)
+    function run(module, args, delay, mark)
     {
-        if (new_url === undefined)
-            new_url = null;
-        if (mark_history === undefined)
-            mark_history = true;
+        if (mark === undefined)
+            mark = true;
 
-        if (route_timer_id) {
-            clearTimeout(route_timer_id);
-            route_timer_id = null;
+        // Respect delay (if any)
+        if (go_timer_id) {
+            clearTimeout(go_timer_id);
+            go_timer_id = null;
         }
         if (delay) {
-            route_timer_id = setTimeout(function() {
-                route(new_url, 0, mark_history);
-            }, delay);
+            go_timer_id = setTimeout(function() { go(args, 0); }, delay);
             return;
         }
 
-        // Busy
-        query('main').toggleClass('busy', true);
-
-        // Parse new URL
-        let url_parts = new_url ? util.parseUrl(new_url) : route_url_parts;
-        let app_url = url_parts.path.substr(BaseUrl.length);
-
-        // Update scroll cache and history
-        if (!route_url_parts || url_parts.href !== route_url_parts.href) {
-            if (route_url_parts)
-                scroll_cache[route_url_parts.path] = [window.pageXOffset, window.pageYOffset];
-            if (mark_history)
-                window.history.pushState(null, null, url_parts.href);
-        }
-
-        // Update user stuff
+        // Update session information
         user.runSession();
 
-        // Find relevant module and run
+        // Prepare route and errors
         let errors = new Set(data.getErrors());
-        {
-            let new_module_name = app_url.split('/')[0];
-            let new_module = route_modules[new_module_name];
+        Object.assign(route_values, args);
 
-            if (new_module !== module) {
-                queryAll('main > div').addClass('hide');
-                prev_module = module;
-            }
-            queryAll('#opt_menu > *').addClass('hide');
-            document.body.removeClass('hide');
+        // Hide previous UI (if needed)
+        if (module !== current_module) {
+            queryAll('main > div').addClass('hide');
 
-            module = new_module;
-            if (module)
-                module.func(route_values, app_url, url_parts.params, url_parts.hash, errors);
+            prev_module = current_module;
+            current_module = module;
         }
+        queryAll('#opt_menu > *').addClass('hide');
+        document.body.removeClass('hide');
+
+        // Run module
+        let new_url;
+        if (module) {
+            module.runModule(route_values, errors);
+            new_url = module.routeToUrl({}).url;
+        } else {
+            new_url = util.parseUrl(window.location.href).path;
+        }
+
+        // Update browser URL
+        if (mark && new_url !== current_url) {
+            window.history.pushState(null, null, new_url);
+        } else {
+            window.history.replaceState(null, null, new_url);
+        }
+        current_url = new_url;
 
         // Show errors if any
         refreshErrors(Array.from(errors));
         if (!data_busy)
             data.clearErrors();
 
-        // Update URL to reflect real state (module may have set default values, etc.)
-        {
-            let real_url = null;
-            if (module) {
-                real_url = module.object.routeToUrl({}).url;
-
-                if (url_parts.hash)
-                    real_url += '#' + url_parts.hash;
-
-                window.history.replaceState(null, null, real_url);
-                route_url_parts = util.parseUrl(real_url);
-                route_url = real_url.substr(BaseUrl.length);
-            } else {
-                route_url_parts = url_parts;
-                route_url = app_url;
-            }
-        }
-
         // Update side menu state and links
         queryAll('#side_menu li a').forEach(function(anchor) {
             if (anchor.dataset.path) {
                 let path = eval(anchor.dataset.path);
+
                 anchor.classList.toggle('hide', !path.allowed);
                 anchor.href = path.url;
-            }
 
-            let active = (route_url_parts.href.startsWith(anchor.href) &&
-                          !anchor.hasClass('category'));
-            anchor.toggleClass('active', active);
+                let active = new_url && new_url.startsWith(path.url) && !anchor.hasClass('category');
+                anchor.toggleClass('active', active);
+            }
         });
         toggleMenu('#side_menu', false);
 
@@ -161,34 +136,55 @@ let thop = {};
         });
         queryAll('#opt_deploy, #opt_menu').toggleClass('hide', opt_hide);
 
-        // Update scroll target
-        let scroll_target = scroll_cache[route_url_parts.path];
-        if (route_url_parts.hash) {
-            let el = query('#' + route_url_parts.hash);
-            if (el && el.offsetTop)
-                window.scrollTo(0, el.offsetTop - 5);
-        } else if (scroll_target) {
-            window.scrollTo(scroll_target[0], scroll_target[1]);
-        } else {
-            window.scrollTo(0, 0);
-        }
-
         // Done
         query('main').toggleClass('busy', isBusy());
+    }
+
+    function go(args, delay, mark)
+    {
+        run(current_module, args, delay, mark);
+    }
+    this.go = go;
+
+    function route(href, delay, mark)
+    {
+        if (mark === undefined)
+            mark = true;
+
+        let url = util.parseUrl(href);
+        if (url.path.startsWith(BaseUrl))
+            url.path = url.path.substr(BaseUrl.length);
+
+        let new_module_name = url.path.split('/')[0];
+        let new_module = modules[new_module_name];
+
+        // Save scroll state
+        if (mark)
+            scroll_state[current_url] = [window.pageXOffset, window.pageYOffset];
+
+        if (new_module && new_module.parseRoute)
+            new_module.parseRoute(route_values, url.path, url.params, url.hash);
+        run(new_module, {}, 0, mark);
+
+        // Try to restore scroll state (for new pages)
+        if (mark) {
+            if (window.location.hash) {
+                let el = query('#' + window.location.hash);
+                if (el && el.offsetTop)
+                    window.scrollTo(0, el.offsetTop - 5);
+            } else {
+                let target = scroll_state[current_url] || [0, 0];
+                window.scrollTo(target[0], target[1]);
+            }
+        }
     }
     this.route = route;
 
     function routeToUrl(args)
     {
-        return module.object.routeToUrl(args);
+        return current_module.routeToUrl(args);
     }
     this.routeToUrl = routeToUrl;
-
-    function go(args, delay)
-    {
-        module.object.go(args, delay);
-    }
-    this.go = go;
 
     function goHome()
     {
@@ -200,7 +196,7 @@ let thop = {};
     function goBackOrHome()
     {
         if (prev_module) {
-            prev_module.object.go({});
+            run(prev_module, {});
         } else {
             goHome();
         }
@@ -278,6 +274,8 @@ let thop = {};
             let first_anchor = query('#side_menu a[data-path]');
             new_url = eval(first_anchor.dataset.path).url;
         }
+
+        // Avoid history push
         route(new_url, 0, false);
 
         window.addEventListener('popstate', function(e) {
@@ -298,7 +296,7 @@ let thop = {};
                 data_busy |= !ignore_busy;
             } else {
                 data_busy = false;
-                route();
+                go({});
             }
         }
     }

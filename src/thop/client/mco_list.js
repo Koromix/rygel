@@ -192,23 +192,9 @@ let mco_list = {};
     let list_cache = {};
     let reactor = {};
 
-    function runList(route, path, parameters, hash, errors)
+    function runModule(route, errors)
     {
-        // Parse route (model: list/<table>/<date>/<sector>)
-        let path_parts = path.split('/');
-        route.list = path_parts[1] || 'ghm_roots';
-        if (Lists[route.list] && Lists[route.list].sector) {
-            route.sector = path_parts[2] || 'public';
-            route.date = path_parts[3] || null;
-            route.spec = (path_parts[3] && path_parts[4]) ? path_parts[4] : null;
-        } else {
-            route.date = path_parts[2] || null;
-            route.spec = (path_parts[2] && path_parts[3]) ? path_parts[3] : null;
-        }
-        route.search = parameters.search || null;
-        route.group = parameters.group || null;
-        route.page = parseInt(parameters.page, 10) || 1;
-        route.sort = parameters.sort || null;
+        // Memorize route info
         specs[route.list] = route.spec;
         search[route.list] = route.search;
         groups[route.list] = route.group;
@@ -276,6 +262,28 @@ let mco_list = {};
             query('#ls').addClass('hide');
         }
     }
+    this.runModule = runModule;
+
+    function parseRoute(route, path, parameters, hash)
+    {
+        // Model: mco_list/<table>/<date>/<sector>
+        let path_parts = path.split('/');
+
+        route.list = path_parts[1] || 'ghm_roots';
+        if (Lists[route.list] && Lists[route.list].sector) {
+            route.sector = path_parts[2] || 'public';
+            route.date = path_parts[3] || null;
+            route.spec = (path_parts[3] && path_parts[4]) ? path_parts[4] : null;
+        } else {
+            route.date = path_parts[2] || null;
+            route.spec = (path_parts[2] && path_parts[3]) ? path_parts[3] : null;
+        }
+        route.search = parameters.search || null;
+        route.group = parameters.group || null;
+        route.page = parseInt(parameters.page, 10) || 1;
+        route.sort = parameters.sort || null;
+    }
+    this.parseRoute = parseRoute;
 
     function routeToUrl(args)
     {
@@ -325,12 +333,6 @@ let mco_list = {};
         };
     }
     this.routeToUrl = routeToUrl;
-
-    function go(args, delay)
-    {
-        thop.route(routeToUrl(args).url, delay);
-    }
-    this.go = go;
 
     function updateList(list_name, date, sector, spec)
     {
@@ -403,7 +405,7 @@ let mco_list = {};
         let builder;
         if (thop.needsRefresh(list, group_info, search)) {
             builder = createPagedDataTable(query('#ls_' + list_name));
-            builder.sortHandler = function(sort) { go({sort: sort}); }
+            builder.sortHandler = function(sort) { thop.go({sort: sort}); }
             list.builder = builder;
 
             // Special column
@@ -597,5 +599,5 @@ let mco_list = {};
         });
     }
 
-    thop.registerUrl('mco_list', this, runList);
+    thop.registerUrl('mco_list', this);
 }).call(mco_list);
