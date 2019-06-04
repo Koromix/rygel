@@ -1004,6 +1004,8 @@ void PrintLnFmt(const char *fmt, Span<const FmtArg> args, FILE *fp)
 static RG_THREAD_LOCAL std::function<LogHandlerFunc> *log_handlers[16];
 static RG_THREAD_LOCAL Size log_handlers_len;
 
+static RG_THREAD_LOCAL char log_last_error[512];
+
 bool GetDebugFlag(const char *name)
 {
     LogDebug("Checked debug flag '%1'", name);
@@ -1083,29 +1085,34 @@ bool LogUsesTerminalOutput()
 
 void LogFmt(LogLevel level, const char *fmt, Span<const FmtArg> args)
 {
+    static std::mutex log_mutex;
+
     char ctx_buf[128];
+    char msg_buf[RG_SIZE(log_last_error)];
     {
         double time = (double)(GetMonotonicTime() - g_start_time) / 1000;
         Fmt(ctx_buf, " [%1] ", FmtDouble(time, 3).Pad(-8));
+
+        FmtFmt(fmt, args, msg_buf);
     }
 
-    static std::mutex log_mutex;
+    if (level == LogLevel::Error) {
+        strcpy(log_last_error, msg_buf);
+    }
 
     // FIXME: Avoid need for mutex in Log API
     std::lock_guard<std::mutex> lock(log_mutex);
     if (log_handlers_len) {
-        (*log_handlers[log_handlers_len - 1])(level, ctx_buf, fmt, args);
+        (*log_handlers[log_handlers_len - 1])(level, ctx_buf, msg_buf);
     } else {
-        DefaultLogHandler(level, ctx_buf, fmt, args);
+        DefaultLogHandler(level, ctx_buf, msg_buf);
     }
 }
 
-void DefaultLogHandler(LogLevel level, const char *ctx,
-                       const char *fmt, Span<const FmtArg> args)
+void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg)
 {
     StartConsoleLog(level);
-    Print(stderr, ctx);
-    PrintFmt(fmt, args, stderr);
+    Print(stderr, "%1%2", ctx, msg);
     EndConsoleLog();
 }
 
@@ -1138,6 +1145,11 @@ void PopLogHandler()
 {
     RG_ASSERT_DEBUG(log_handlers_len > 0);
     delete log_handlers[--log_handlers_len];
+}
+
+const char *GetLastLogError()
+{
+    return log_last_error;
 }
 
 // ------------------------------------------------------------------------
@@ -2631,11 +2643,9 @@ bool LineReader::Next(Span<char> *out_line)
 
 void LineReader::PushLogHandler()
 {
-    RG::PushLogHandler([=](LogLevel level, const char *ctx,
-                           const char *fmt, Span<const FmtArg> args) {
+    RG::PushLogHandler([=](LogLevel level, const char *ctx, const char *msg) {
         StartConsoleLog(level);
-        Print(stderr, "%1%2(%3): ", ctx, st->filename, line_number);
-        PrintFmt(fmt, args, stderr);
+        Print(stderr, "%1%2(%3): %4", ctx, st->filename, line_number, msg);
         EndConsoleLog();
     });
 }

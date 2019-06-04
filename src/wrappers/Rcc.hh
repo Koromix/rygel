@@ -15,13 +15,12 @@ extern BlockQueue<const char *> rcc_log_messages;
 extern bool rcc_log_missing_messages;
 
 #define RG_RCC_SETUP_LOG_HANDLER() \
-    PushLogHandler([](LogLevel level, const char *ctx, \
-                      const char *fmt, Span<const FmtArg> args) { \
+    PushLogHandler([](LogLevel level, const char *ctx, const char *msg) { \
         switch (level) { \
             case LogLevel::Error: { \
                 std::lock_guard<std::mutex> lock(rcc_log_mutex); \
-                const char *msg = FmtFmt(fmt, args, rcc_log_messages.bucket_allocator).ptr; \
-                rcc_log_messages.Append(msg); \
+                const char *msg2 = DuplicateString(msg, rcc_log_messages.bucket_allocator).ptr; \
+                rcc_log_messages.Append(msg2); \
                 if (rcc_log_messages.len > 100) { \
                     rcc_log_messages.RemoveFirst(); \
                     rcc_log_missing_messages = true; \
@@ -30,9 +29,7 @@ extern bool rcc_log_missing_messages;
  \
             case LogLevel::Info: \
             case LogLevel::Debug: { \
-                Print("%1", ctx); \
-                PrintFmt(fmt, args, stdout); \
-                PrintLn(); \
+                PrintLn("%1%2", ctx, msg); \
             } break; \
         } \
     }); \
