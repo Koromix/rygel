@@ -452,9 +452,9 @@ int ProduceMcoAggregate(const http_Request &request, const User *user, http_Resp
         };
 
         if (!aggregate_period(period[0], period[1], 1))
-            return http_ProduceErrorPage(500, out_response);
+            return http_ProduceErrorPage(422, out_response);
         if (diff[0].value && !aggregate_period(diff[0], diff[1], -1))
-            return http_ProduceErrorPage(500, out_response);
+            return http_ProduceErrorPage(422, out_response);
 
         aggregate_set_builder.Finish(&aggregate_set, ghm_root.IsValid() ? &ghm_roots : nullptr);
     }
@@ -741,7 +741,7 @@ int ProduceMcoResults(const http_Request &request, const User *user, http_Respon
         }
     });
     if (!success)
-        return http_ProduceErrorPage(500, out_response);
+        return http_ProduceErrorPage(422, out_response);
     json.EndArray();
 
     return json.Finish(out_response);
