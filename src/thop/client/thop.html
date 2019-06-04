@@ -101,9 +101,10 @@
 
                 <label id="opt_filter">
                     <textarea placeholder="Filtre"
-                              oninput="this.rows = Math.min(this.value.split('\n').length, 5);
-                                       thop.go({filter: this.value}, 500);"
-                              rows="1" style="overflow-x: hidden; width: 85%; margin-bottom: 0.5em;"></textarea><br/>
+                              oninput="thop.go({filter: this.value}, 500);"
+                              onfocus="this.rows = 10;" onblur="setTimeout((function() { this.rows = 1; }).bind(this), 500);"
+                              rows="1" style="overflow-x: hidden; width: 85%; margin-bottom: 0.5em;
+                                              resize: none;"></textarea><br/>
                 </label>
 
                 <label id="opt_mode">
