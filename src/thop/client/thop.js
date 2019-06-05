@@ -126,6 +126,9 @@ let thop = {};
 
                 let active = new_url && new_url.startsWith(path.url) && !anchor.hasClass('category');
                 anchor.toggleClass('active', active);
+
+                if (active)
+                    document.title = 'THOP — ' + anchor.innerText;
             }
         });
         toggleMenu('#side_menu', false);
