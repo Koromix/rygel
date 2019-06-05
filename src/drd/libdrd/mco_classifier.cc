@@ -1803,6 +1803,7 @@ static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> m
     }
     if (ghm_to_ghs_info.minimum_duration && duration < ghm_to_ghs_info.minimum_duration)
         return false;
+
     switch (ghm_to_ghs_info.special_mode) {
         case mco_GhmToGhsInfo::SpecialMode::None: {} break;
         case mco_GhmToGhsInfo::SpecialMode::Diabetes: {
