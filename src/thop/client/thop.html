@@ -86,7 +86,7 @@
                 <label id="opt_search">
                     Recherche
                     <input type="search" style="width: 16em;"
-                           oninput="thop.go({search: this.value}, 200);"/>
+                           oninput="thop.go({search: this.value}, null, 200);"/>
                 </label>
 
                 <label id="opt_group">
@@ -101,7 +101,7 @@
 
                 <label id="opt_filter">
                     <textarea placeholder="Filtre"
-                              oninput="thop.go({filter: this.value}, 500);"
+                              oninput="thop.go({filter: this.value}, null, 500);"
                               onfocus="this.rows = 10;" onblur="setTimeout((function() { this.rows = 1; }).bind(this), 500);"
                               rows="1" style="overflow-x: hidden; width: 85%; margin-bottom: 0.5em;
                                               resize: none;"></textarea><br/>
