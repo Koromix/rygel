@@ -87,8 +87,25 @@ if (!Object.values) {
     }
 }
 
+if (!String.prototype.padStart) {
+    String.prototype.padStart = function(target_len, pad) {
+        if (pad === undefined)
+            pad = ' ';
+
+        if (this.length >= target_len) {
+            return String(this);
+        } else {
+            target_len = target_len - this.length;
+            if (target_len > pad.length) {
+                pad += pad.repeat(target_len / pad.length);
+            }
+            return pad.slice(0, target_len) + String(this);
+        }
+    };
+}
+
 if (window.NodeList && !NodeList.prototype.forEach) {
-    NodeList.prototype.forEach = function (callback, thisArg) {
+    NodeList.prototype.forEach = function(callback, thisArg) {
         thisArg = thisArg || window;
 
         for (let i = 0; i < this.length; i++)
