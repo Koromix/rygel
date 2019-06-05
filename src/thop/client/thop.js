@@ -60,7 +60,7 @@ let thop = {};
     }
     this.registerUrl = registerUrl;
 
-    function run(module, args, delay, mark)
+    function run(module, args, hash, delay, mark)
     {
         if (mark === undefined)
             mark = true;
@@ -100,6 +100,8 @@ let thop = {};
         } else {
             new_url = util.parseUrl(window.location.href).path;
         }
+        if (hash)
+            new_url += '#' + hash;
 
         // Update browser URL
         if (mark && new_url !== current_url) {
@@ -140,9 +142,9 @@ let thop = {};
         query('main').toggleClass('busy', isBusy());
     }
 
-    function go(args, delay, mark)
+    function go(args, hash, delay, mark)
     {
-        run(current_module, args, delay, mark);
+        run(current_module, args, hash, delay, mark);
     }
     this.go = go;
 
@@ -164,12 +166,12 @@ let thop = {};
 
         if (new_module && new_module.parseRoute)
             new_module.parseRoute(route_values, url.path, url.params, url.hash);
-        run(new_module, {}, 0, mark);
+        run(new_module, {}, url.hash, 0, mark);
 
         // Try to restore scroll state (for new pages)
         if (mark) {
-            if (window.location.hash) {
-                let el = query('#' + window.location.hash);
+            if (url.hash) {
+                let el = query('#' + url.hash);
                 if (el && el.offsetTop)
                     window.scrollTo(0, el.offsetTop - 5);
             } else {
