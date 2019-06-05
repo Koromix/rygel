@@ -196,51 +196,101 @@ let mco_casemix = {};
     }
     this.runModule = runModule;
 
+    function parsePeriod(str) {
+        let period = (str || '').split('..');
+        if (period.length == 2) {
+            return period;
+        } else {
+            return [null, null];
+        }
+    }
+
+    function periodToStr(period) {
+        if (period && period[0]) {
+            return period[0] + '..' + period[1];
+        } else {
+            return null;
+        }
+    }
+
     function parseRoute(route, path, parameters, hash, errors)
     {
         // Model: mco_casemix/<view>/<json_parameters_in_base64>
-        let path_parts = path.split('/', 3);
-        if (path_parts[2])
-            Object.assign(route, thop.buildRoute(JSON.parse(window.atob(path_parts[2]))));
+        let path_parts = path.split('/', 4);
 
+        // Get simple parameters
         route.view = path_parts[1] || 'ghm_roots';
-        route.period = route.period || [null, null];
-        route.prev_period = route.prev_period || [null, null];
-        route.structure = route.structure || 0;
-        route.regroup = route.regroup || 'none';
-        route.mode = route.mode || 'none';
-        route.algorithm = route.algorithm || null;
-        route.filter = route.filter || null;
-        route.units = route.units || [];
-        route.ghm_roots = route.ghm_roots || [];
-        route.refresh = route.refresh || false;
-        route.ghm_root = route.ghm_root || null;
-        route.apply_coefficient = route.apply_coefficient || false;
+        route.period = parsePeriod(path_parts[2]);
+        route.prev_period = parsePeriod(parameters.prev_period);
+        route.structure = parameters.structure || 0;
+        route.regroup = parameters.regroup || 'none';
+        route.mode = parameters.mode || 'none';
+        route.algorithm = parameters.algorithm || null;
+        route.filter = parameters.filter || null;
+        route.ghm_root = parameters.ghm_root || null;
+        route.apply_coefficient = !!parseInt(parameters.apply_coefficient, 10) || false;
         route.page = parseInt(parameters.page, 10) || 1;
         route.sort = parameters.sort || null;
+
+        // Decode GHM roots
+        route.ghm_roots = [];
+        if (parameters.ghm_roots) {
+            try {
+                let encoded = atob(parameters.ghm_roots);
+
+                let x;
+                let y;
+                for (let i = 0; i < encoded.length;) {
+                    let z = encoded.charCodeAt(i++);
+                    if (z & 0x40) {
+                        z &= ~0x40;
+                    } else {
+                        x = z || 90;
+                        y = encoded[i++];
+                        z = encoded.charCodeAt(i++);
+                    }
+
+                    let ghm_root = ('' + x).padStart(2, '0') + y + ('' + z).padStart(2, '0');
+                    route.ghm_roots.push(ghm_root);
+                }
+            } catch (err) {
+                // Tolerate broken URLs
+            }
+        }
+
+        // Decode units
+        route.units = [];
+        if (parameters.units) {
+            try {
+                let encoded = atob(parameters.units);
+
+                let unit = 0;
+                for (let i = 0; i < encoded.length; i) {
+                    let x = encoded.charCodeAt(i++);
+
+                    if (x & 0x40) {
+                        x &= ~0x40;
+                        unit += (x & ~0x40);
+                    } else {
+                        let y = encoded.charCodeAt(i++);
+                        let z = encoded.charCodeAt(i++);
+                        unit = (x << 12) + (y << 6) + z;
+                    }
+
+                    route.units.push(unit);
+                }
+            } catch (err) {
+                // Tolerate broken URLs
+            }
+        }
     }
     this.parseRoute = parseRoute;
 
     function routeToUrl(args)
     {
-        const KeepKeys = [
-            'period',
-            'prev_period',
-            'units',
-            'ghm_roots',
-            'structure',
-            'regroup',
-            'mode',
-            'algorithm',
-            'filter',
-            'ghm_root',
-            'apply_coefficient'
-        ];
-
-        if (args.units)
-            args.units = args.units.map(function(str) { return parseInt(str, 10); });
-
         let new_route = thop.buildRoute(args);
+
+        // Clean up some arguments
         if (args.page === undefined)
             new_route.page = pages[new_route.view];
         if (args.sort === undefined)
@@ -248,18 +298,65 @@ let mco_casemix = {};
         if (!new_route.algorithm)
             unspecified = true;
 
-        let short_route_str;
-        {
-            let short_route = {};
-            for (const k of KeepKeys)
-                short_route[k] = new_route[k] || null;
+        // Encode GHM roots
+        let ghm_roots_enc;
+        if (new_route.ghm_roots) {
+            let encoded = '';
 
-            short_route_str = window.btoa(JSON.stringify(short_route));
+            for (let i = 0; i < new_route.ghm_roots.length; i++) {
+                let ghm_root = new_route.ghm_roots[i];
+
+                if (i && ghm_root.substr(0, 3) == new_route.ghm_roots[i - 1].substr(0, 3)) {
+                    let z = parseInt(ghm_root.substr(3), 10);
+                    encoded += String.fromCharCode((z & 0x3F) | 0x40);
+                } else {
+                    let x = parseInt(ghm_root.substr(0, 2), 10);
+                    if (x === 90)
+                        x = 0;
+                    let y = ghm_root[2];
+                    let z = parseInt(ghm_root.substr(3), 10);
+                    encoded += String.fromCharCode(x & 0x3F) + y +
+                                     String.fromCharCode(z & 0x3F);
+                }
+            }
+
+            try {
+                ghm_roots_enc = btoa(encoded);
+            } catch (err) {
+                // Binary data handling in JS is crap, hence the restriction to ASCII plane
+                // in the encoding above.
+            }
+        }
+
+        // Encode units
+        let units_enc;
+        if (new_route.units) {
+            let encoded = '';
+
+            for (let i = 0; i < new_route.units.length; i++) {
+                let unit = new_route.units[i];
+                let delta = unit - (i ? new_route.units[i - 1] : 0);
+                if (delta > 0 && delta < 64) {
+                    let delta = unit - new_route.units[i - 1];
+                    encoded += String.fromCharCode(delta | 0x40);
+                } else {
+                    encoded += String.fromCharCode((unit >> 12) & 0x3F) +
+                                 String.fromCharCode((unit >> 6) & 0x3F) +
+                                 String.fromCharCode(unit & 0x3F);
+                }
+            }
+
+            try {
+                units_enc = btoa(encoded);
+            } catch (err) {
+                // Binary data handling in JS is crap, hence the restriction to ASCII plane
+                // in the encoding above.
+            }
         }
 
         let url;
         {
-            let url_parts = [thop.baseUrl('mco_casemix'), new_route.view, short_route_str];
+            let url_parts = [thop.baseUrl('mco_casemix'), new_route.view, periodToStr(new_route.period)];
             while (!url_parts[url_parts.length - 1])
                 url_parts.pop();
 
@@ -267,6 +364,16 @@ let mco_casemix = {};
         }
 
         url = util.buildUrl(url, {
+            prev_period: new_route.mode !== 'none' ? periodToStr(new_route.prev_period) : null,
+            ghm_roots: ghm_roots_enc || null,
+            units: units_enc || null,
+            structure: new_route.structure || null,
+            regroup: new_route.regroup !== 'none' ? new_route.regroup : null,
+            mode: new_route.mode !== 'none' ? new_route.mode : null,
+            algorithm: new_route.algorithm,
+            filter: new_route.filter,
+            ghm_root: new_route.ghm_root || null,
+            apply_coefficient: new_route.apply_coefficient ? 1 : null,
             page: (new_route.page !== 1) ? new_route.page : null,
             sort: new_route.sort || null
         });
@@ -464,7 +571,7 @@ let mco_casemix = {};
 
         let builder = new TreeSelector(select, 'Unités : ');
         builder.changeHandler = function() {
-            thop.go({units: this.object.getValues(),
+            thop.go({units: this.object.getValues().map(function(unit) { return parseInt(unit, 10); }).sort(),
                      structure: this.object.getActiveTab()});
         };
 
