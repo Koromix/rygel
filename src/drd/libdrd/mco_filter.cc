@@ -35,20 +35,30 @@ foreign class Date {
 }
 
 foreign class StayArray is Sequence {
-    foreign count
     foreign [index]
-    foreign iterate(it)
     foreign iteratorValue(it)
+    foreign iterate(it)
+    foreign count
 }
 
 foreign class DiagnosisArray is Sequence {
-    foreign iterate(it)
+    foreign add(str)
+    foreign remove(str)
+
+    foreign [index]
     foreign iteratorValue(it)
+    foreign iterate(it)
+    foreign count
 }
 
 foreign class ProcedureArray is Sequence {
-    foreign iterate(it)
+    foreign add(str, date, phase, activities, extensions)
+    foreign remove(str)
+
+    foreign [index]
     foreign iteratorValue(it)
+    foreign iterate(it)
+    foreign count
 }
 
 foreign class McoStay {
@@ -471,14 +481,33 @@ static WrenForeignMethodFn BindDateMethod(const char *signature)
     return nullptr;
 }
 
-static WrenForeignMethodFn BindProxyArrayMethod(const char *signature, void (*func)(WrenVM *vm))
+template <typename T>
+static void MakeArrayMutable(ProxyArray<T> *array)
+{
+    if (!array->copies.len) {
+        array->copies.Append(array->values);
+        array->values = array->copies;
+    }
+}
+
+static void MarkStaysAsMutated(WrenVM *vm)
+{
+    mco_WrenRunner *runner = (mco_WrenRunner *)wrenGetUserData(vm);
+    MakeArrayMutable(runner->stays_arr);
+}
+
+static inline mco_Stay *GetMutableStay(ProxyArrayObject<mco_Stay> *obj)
+{
+    ProxyArray<mco_Stay> *array = obj->array;
+
+    MakeArrayMutable(array);
+    return &array->copies[obj->idx];
+}
+
+static WrenForeignMethodFn BindProxyArrayMethod(const char *signature)
 {
     if (false) {}
 
-    ELSE_IF_METHOD("count", [](WrenVM *vm) {
-        const ProxyArray<char> &arr = *(const ProxyArray<char> *)wrenGetSlotForeign(vm, 0);
-        wrenSetSlotDouble(vm, 0, (double)arr.values.len);
-    })
     ELSE_IF_METHOD("iterate(_)", [](WrenVM *vm) {
         const ProxyArray<char> &arr = *(const ProxyArray<char> *)wrenGetSlotForeign(vm, 0);
 
@@ -499,31 +528,37 @@ static WrenForeignMethodFn BindProxyArrayMethod(const char *signature, void (*fu
             wrenSetSlotBool(vm, 0, false);
         }
     })
-    ELSE_IF_METHOD("[_]", func)
-    ELSE_IF_METHOD("iteratorValue(_)", func)
+    ELSE_IF_METHOD("count", [](WrenVM *vm) {
+        const ProxyArray<char> &arr = *(const ProxyArray<char> *)wrenGetSlotForeign(vm, 0);
+        wrenSetSlotDouble(vm, 0, (double)arr.values.len);
+    })
 
     return nullptr;
 }
 
 static WrenForeignMethodFn BindStayArrayMethod(const char *signature)
 {
-    if (false) {}
-
-    return BindProxyArrayMethod(signature, [](WrenVM *vm) {
+    const auto get_idx_value = [](WrenVM *vm) {
         ProxyArray<mco_Stay> *arr = (ProxyArray<mco_Stay> *)wrenGetSlotForeign(vm, 0);
         Size idx = GetSlotIndexSafe(vm, 1, arr->values.len);
 
         if (RG_LIKELY(idx >= 0)) {
             wrenSetSlotHandle(vm, 0, arr->vars[idx]);
         }
-    });
+    };
+
+    if (false) {}
+
+    ELSE_IF_METHOD("[_]", get_idx_value)
+    ELSE_IF_METHOD("iteratorValue(_)", get_idx_value)
+
+    // Generic methods (count, iterator)
+    return BindProxyArrayMethod(signature);
 }
 
 static WrenForeignMethodFn BindDiagnosisArrayMethod(const char *signature)
 {
-    if (false) {}
-
-    return BindProxyArrayMethod(signature, [](WrenVM *vm) {
+    const auto get_idx_value = [](WrenVM *vm) {
         const ProxyArray<drd_DiagnosisCode> &arr =
             *(const ProxyArray<drd_DiagnosisCode> *)wrenGetSlotForeign(vm, 0);
         Size idx = GetSlotIndexSafe(vm, 1, arr.values.len);
@@ -531,14 +566,62 @@ static WrenForeignMethodFn BindDiagnosisArrayMethod(const char *signature)
         if (RG_LIKELY(idx >= 0)) {
             wrenSetSlotString(vm, 0, arr.values[idx].str);
         }
-    });
+    };
+
+    if (false) {}
+
+    ELSE_IF_METHOD("add(_)", [](WrenVM *vm) {
+        ProxyArray<drd_DiagnosisCode> &arr = *(ProxyArray<drd_DiagnosisCode> *)wrenGetSlotForeign(vm, 0);
+        const char *str = GetSlotStringSafe(vm, 1);
+
+        drd_DiagnosisCode new_diag = drd_DiagnosisCode::FromString(str, (int)ParseFlag::End);
+        if (!new_diag.IsValid()) {
+            TriggerError(vm, "Invalid diagnosis code");
+            return;
+        }
+
+        if (!std::any_of(arr.values.begin(), arr.values.end(),
+                         [&](drd_DiagnosisCode diag) { return diag == new_diag; })) {
+            if (!arr.copies.len) {
+                arr.copies.Append(arr.values);
+            }
+            arr.copies.Append(new_diag);
+            arr.values = arr.copies;
+
+            MarkStaysAsMutated(vm);
+        }
+    })
+    ELSE_IF_METHOD("remove(_)", [](WrenVM *vm) {
+        ProxyArray<drd_DiagnosisCode> &arr = *(ProxyArray<drd_DiagnosisCode> *)wrenGetSlotForeign(vm, 0);
+        const char *str = GetSlotStringSafe(vm, 1);
+
+        drd_DiagnosisCode remove_diag = drd_DiagnosisCode::FromString(str, (int)ParseFlag::End);
+        if (!remove_diag.IsValid()) {
+            TriggerError(vm, "Invalid diagnosis code");
+            return;
+        }
+
+        arr.copies.RemoveFrom(0);
+        for (drd_DiagnosisCode diag: arr.values) {
+            if (diag == remove_diag) {
+                MarkStaysAsMutated(vm);
+            } else {
+                arr.copies.Append(diag);
+            }
+        }
+        arr.values = arr.copies;
+    })
+
+    ELSE_IF_METHOD("[_]", get_idx_value)
+    ELSE_IF_METHOD("iteratorValue(_)", get_idx_value)
+
+    // Generic methods (count, iterator)
+    return BindProxyArrayMethod(signature);
 }
 
 static WrenForeignMethodFn BindProcedureArrayMethod(const char *signature)
 {
-    if (false) {}
-
-    return BindProxyArrayMethod(signature, [](WrenVM *vm) {
+    const auto get_idx_value = [](WrenVM *vm) {
         const ProxyArray<mco_ProcedureRealisation> &arr =
             *(const ProxyArray<mco_ProcedureRealisation> *)wrenGetSlotForeign(vm, 0);
         Size idx = GetSlotIndexSafe(vm, 1, arr.values.len);
@@ -546,19 +629,75 @@ static WrenForeignMethodFn BindProcedureArrayMethod(const char *signature)
         if (RG_LIKELY(idx >= 0)) {
             wrenSetSlotString(vm, 0, arr.values[idx].proc.str);
         }
-    });
-}
+    };
 
-static inline mco_Stay *GetMutableStay(ProxyArrayObject<mco_Stay> *obj)
-{
-    ProxyArray<mco_Stay> *array = obj->array;
+    if (false) {}
 
-    if (!array->copies.len) {
-        array->copies.Append(array->values);
-        array->values = array->copies;
-    }
+    // TODO: Check for duplicates before add? What counts as a duplicate?
+    ELSE_IF_METHOD("add(_,_,_,_,_)", [](WrenVM *vm) {
+        ProxyArray<mco_ProcedureRealisation> &arr =
+            *(ProxyArray<mco_ProcedureRealisation> *)wrenGetSlotForeign(vm, 0);
+        const char *str = GetSlotStringSafe(vm, 1);
+        Date date = GetSlotDateSafe(vm, 2);
+        int8_t phase = GetSlotIntegerSafe<int8_t>(vm, 3);
+        int activities_dec = GetSlotIntegerSafe<int>(vm, 4);
+        int8_t extension = GetSlotIntegerSafe<int>(vm, 5);
 
-    return &array->copies[obj->idx];
+        mco_ProcedureRealisation new_proc = {};
+
+        new_proc.proc = drd_ProcedureCode::FromString(str, (int)ParseFlag::End);
+        if (!new_proc.proc.IsValid()) {
+            TriggerError(vm, "Invalid procedure code");
+            return;
+        }
+        new_proc.phase = phase;
+        new_proc.count = 1;
+        new_proc.date = date;
+        new_proc.extension = extension;
+
+        if (activities_dec) {
+            if (!arr.copies.len) {
+                arr.copies.Append(arr.values);
+            }
+
+            while (activities_dec) {
+                new_proc.activity = (int8_t)(activities_dec % 10);
+                activities_dec /= 10;
+
+                arr.copies.Append(new_proc);
+            }
+            arr.values = arr.copies;
+
+            MarkStaysAsMutated(vm);
+        }
+    })
+    ELSE_IF_METHOD("remove(_)", [](WrenVM *vm) {
+        ProxyArray<mco_ProcedureRealisation> &arr =
+            *(ProxyArray<mco_ProcedureRealisation> *)wrenGetSlotForeign(vm, 0);
+        const char *str = GetSlotStringSafe(vm, 1);
+
+        drd_ProcedureCode remove_proc = drd_ProcedureCode::FromString(str, (int)ParseFlag::End);
+        if (!remove_proc.IsValid()) {
+            TriggerError(vm, "Invalid procedure code");
+            return;
+        }
+
+        arr.copies.RemoveFrom(0);
+        for (const mco_ProcedureRealisation &proc: arr.values) {
+            if (proc.proc == remove_proc) {
+                MarkStaysAsMutated(vm);
+            } else {
+                arr.copies.Append(proc);
+            }
+        }
+        arr.values = arr.copies;
+    })
+
+    ELSE_IF_METHOD("[_]", get_idx_value)
+    ELSE_IF_METHOD("iteratorValue(_)", get_idx_value)
+
+    // Generic methods (count, iterator)
+    return BindProxyArrayMethod(signature);
 }
 
 static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
@@ -1020,6 +1159,11 @@ Size mco_WrenRunner::Process(Span<const mco_Result> results, const mco_Result mo
 {
     thread_alloc = &vm_alloc;
 
+    IndirectBlockAllocator new_other_diagnoses_alloc {&out_stay_set->array_alloc, 2048 * RG_SIZE(drd_DiagnosisCode)};
+    IndirectBlockAllocator new_procedures_alloc {&out_stay_set->array_alloc, 2048 * RG_SIZE(mco_ProcedureRealisation)};
+    HeapArray<drd_DiagnosisCode> new_other_diagnoses(&new_other_diagnoses_alloc);
+    HeapArray<mco_ProcedureRealisation> new_procedures(&new_procedures_alloc);
+
     Size stays_count = 0;
     for (const mco_Result &result: results) {
         InitProxyArrays(result.stays.len - other_diagnosis_arrays.len);
@@ -1033,7 +1177,9 @@ Size mco_WrenRunner::Process(Span<const mco_Result> results, const mco_Result mo
             const mco_Stay &stay = result.stays[i];
 
             other_diagnosis_arrays[i]->values = stay.other_diagnoses;
+            other_diagnosis_arrays[i]->copies.RemoveFrom(0);
             procedure_arrays[i]->values = stay.procedures;
+            procedure_arrays[i]->copies.RemoveFrom(0);
         }
 
         wrenEnsureSlots(vm, 1);
@@ -1046,6 +1192,18 @@ Size mco_WrenRunner::Process(Span<const mco_Result> results, const mco_Result mo
                 if (RG_UNLIKELY(!out_stay_set)) {
                     LogError("Cannot mutate stays");
                     return -1;
+                }
+
+                for (Size i = 0; i < result.stays.len; i++) {
+                    if (other_diagnosis_arrays[i]->copies.len) {
+                        new_other_diagnoses.Append(other_diagnosis_arrays[i]->values);
+                        stays_arr->copies[i].other_diagnoses = new_other_diagnoses.TrimAndLeak();
+                    }
+
+                    if (procedure_arrays[i]->copies.len) {
+                        new_procedures.Append(procedure_arrays[i]->values);
+                        stays_arr->copies[i].procedures = new_procedures.TrimAndLeak();
+                    }
                 }
 
                 out_stay_set->stays.Append(stays_arr->copies);
