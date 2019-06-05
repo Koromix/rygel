@@ -79,7 +79,7 @@ let data = (function() {
                         case 'text': {  data = xhr.response; } break;
                         case 'json': {  data = JSON.parse(xhr.response); } break;
                     }
-                } catch {
+                } catch (err) {
                     data = null;
                 }
 
