@@ -447,8 +447,9 @@ int HandleConnect(const http_Request &request, const User *, http_Response *out_
         session->user = user;
     }
 
-    MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-    out_response->response.reset(response);
+    http_JsonPageBuilder json(request.compression_type);
+    json.Null();
+    json.Finish(out_response);
 
     // Set session cookies
     out_response->AddCookieHeader(thop_config.base_url, "session_key", session_key, true);
@@ -466,8 +467,9 @@ int HandleDisconnect(const http_Request &request, const User *, http_Response *o
         sessions.Remove(FindSession(request));
     }
 
-    MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-    out_response->response.reset(response);
+    http_JsonPageBuilder json(request.compression_type);
+    json.Null();
+    json.Finish(out_response);
 
     // Delete session cookies
     DeleteSessionCookies(out_response);
