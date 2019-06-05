@@ -358,8 +358,8 @@ let mco_pricing = {};
                                                  {class: 'desc'}, false]; });
         if (show_pricing) {
             appendRow('Conditions', function(col) {
-                let el = dom.h('div', {title: col.conditions.join('\n')},
-                               col.conditions.length ? col.conditions.length.toString() : '');
+                let el = dom.h('div',
+                               col.conditions.map(function(cond) { return [mco_list.addSpecLinks(cond), dom.h('br')]; }));
                 return [el, {class: 'conditions'}, true];
             });
             appendRow('Borne basse', function(col) { return [format.duration(col.exb_treshold), {class: 'exb'}, true]; });

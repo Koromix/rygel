@@ -32,6 +32,8 @@
     text-align: right;
 }
 
+.pr_grid a { color: inherit; }
+
 .pr_grid .desc {
     background: #ffc634;
     border-color: #ffcc4a;
