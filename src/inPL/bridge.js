@@ -1045,7 +1045,7 @@ let bridge = (function() {
                 case 'enum': {
                     let dict = DictInfo[var_info.dict_name];
 
-                    let value = parseInt(row[csv_name]);
+                    let value = parseInt(row[csv_name], 10);
                     value = isNaN(value) ? row[csv_name] : value;
 
                     row2[var_name] = dict[value] ? value : null;
@@ -1054,7 +1054,7 @@ let bridge = (function() {
                     let dict = DictInfo[var_info.dict_name];
 
                     row2[var_name] = row[csv_name].split('|').map(str => {
-                        let value = parseInt(str);
+                        let value = parseInt(str, 10);
                         value = isNaN(value) ? str : value;
 
                         return dict[value] ? value : null;
@@ -1083,8 +1083,8 @@ let bridge = (function() {
         row2.neuropsy_rt = translateFloat(row['neuropsy.score_3rt']) || translateFloat(row['neuropsy.score_2rt'])
 
         // Simplified EMS variables
-        row2.ems_temps_assis_jour = parseInt(row['ems.temps_assis_jour_h']) * 60 +
-                                    parseInt(row['ems.temps_assis_jour_min'])
+        row2.ems_temps_assis_jour = parseInt(row['ems.temps_assis_jour_h'], 10) * 60 +
+                                    parseInt(row['ems.temps_assis_jour_min'], 10)
         for (let i = 1; i <= 10; i++) {
             switch (row2[`ems.act${i}_temps`]) {
                 case 0: { row2[`ems_act${i}_temps`] = 15; } break;

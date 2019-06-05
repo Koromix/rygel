@@ -68,7 +68,7 @@ let mco_pricing = {};
             let pricing_info = pricings_map[route.ghm_root];
             if (pricing_info)
                 pricing_info = pricing_info[route.sector];
-            const max_duration = parseInt(query('#opt_max_duration > input').value);
+            const max_duration = parseInt(query('#opt_max_duration > input').value, 10);
 
             switch (route.view) {
                 case 'table': {
@@ -107,7 +107,7 @@ let mco_pricing = {};
             }
         }
         route.ghm_root = path_parts[4] || null;
-        route.apply_coefficient = !!parseInt(parameters.apply_coefficient) || false;
+        route.apply_coefficient = !!parseInt(parameters.apply_coefficient, 10) || false;
     }
     this.parseRoute = parseRoute;
 
@@ -340,7 +340,7 @@ let mco_pricing = {};
 
                 if (merge_cells && cell[2] && cell[0].isEqualNode(prev_cell[0]) &&
                         cell[1].class === prev_cell[1].class) {
-                    let colspan = parseInt(prev_td.getAttribute('colspan') || 1);
+                    let colspan = parseInt(prev_td.getAttribute('colspan') || 1, 10);
                     prev_td.setAttribute('colspan', colspan + 1);
                 } else {
                     prev_td = tr.appendChild(dom.h('td', cell[1], cell[0]));

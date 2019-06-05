@@ -926,7 +926,7 @@ let mco_casemix = {};
 
             mco_pricing.addPricingHeader(thead, ghm_root, columns, false, apply_coeff, merge_cells);
             thead.queryAll('td').forEach(function(td) {
-                td.setAttribute('colspan', parseInt(td.getAttribute('colspan') || 1) * 2);
+                td.setAttribute('colspan', parseInt(td.getAttribute('colspan') || 1, 10) * 2);
             });
 
             function makeTooltip(title, col, col_stat, row_stat, duration_stat, unit_stats)

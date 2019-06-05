@@ -34,7 +34,7 @@ function TreeSelector(widget, prefix)
         for (let i = elements.length - 1; i >= 0; i--) {
             let el = elements[i];
 
-            let depth = parseInt(el.dataset.depth);
+            let depth = parseInt(el.dataset.depth, 10);
             let checkbox = el.query('input[type=checkbox]');
 
             if (el.hasClass('tsel_group')) {
