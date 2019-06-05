@@ -17,6 +17,7 @@ a {
     text-decoration: none;
     font-weight: normal;
 }
+a:hover { text-decoration: underline; }
 
 /* Side bar */
 #side_menu ul {
