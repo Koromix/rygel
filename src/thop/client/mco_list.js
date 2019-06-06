@@ -392,8 +392,22 @@ let mco_list = {};
 
     function refreshListTable(list_name, group_info, search, page, sort)
     {
-        if (search)
+        let test;
+        if (search && search.match(/^\/.*\/$/)) {
+            search = simplifyForSearch(search.substr(1, search.length - 2));
+            try {
+                search = new RegExp(search);
+                test = function(content) { return !!simplifyForSearch(content).match(search); };
+            } catch (err) {
+                // TODO: Issue RegExp error message
+                test = function(content) { return false; };
+            }
+        } else if (search) {
             search = simplifyForSearch(search);
+            test = function(content) { return simplifyForSearch(content).indexOf(search) >= 0; };
+        } else {
+            test = function(content) { return true; };
+        }
 
         let list_info = Lists[list_name];
         let list = list_cache[list_name];
@@ -440,8 +454,7 @@ let mco_list = {};
                     let content = createContent(col, item, concepts_map,
                                                 group_info ? group_info.type : null);
 
-                    if (!search || simplifyForSearch(content).indexOf(search) >= 0)
-                        show = true;
+                    show |= test(content);
                     cells.push(content);
                 }
 
