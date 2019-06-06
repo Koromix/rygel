@@ -1116,8 +1116,8 @@ let mco_casemix = {};
                         );
                     } else {
                         tr.appendContent(
-                            dom.h('td', {class: ['count', 'total']}),
-                            dom.h('td', {class: ['price', 'total']})
+                            dom.h('td', {class: ['count', 'total', 'empty']}),
+                            dom.h('td', {class: ['price', 'total', 'empty']})
                         );
                     }
                 }
@@ -1169,6 +1169,7 @@ let mco_casemix = {};
                                  format.price(duration_stat.price_cents_total, false, !!mix_params.diff))
                         );
                     } else if (mco_pricing.testDuration(col.durations, duration)) {
+                        cls += ' empty';
                         tr.appendContent(
                             dom.h('td', {class: ['count', cls]}),
                             dom.h('td', {class: ['price', cls]})
