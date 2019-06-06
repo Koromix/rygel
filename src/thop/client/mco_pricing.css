@@ -4,6 +4,7 @@
 
 .pr_grid {
     width: 100%;
+    border: 1px solid #ddd;
     border-collapse: collapse;
 }
 .pr_grid th, .pr_grid td {
@@ -17,15 +18,12 @@
 }
 .pr_grid th {
     background: white;
-    border: 1px solid #ccc;
+    border: 1px solid #ddd;
     text-align: left;
     font-style: italic;
     font-weight: normal;
 }
-.pr_grid td {
-    border: 1px solid #a2a1a1;
-    border-left: 0;
-}
+.pr_grid td { box-shadow: inset 1px 1px 0px 0px rgba(255, 255, 255, 0.08); }
 .pr_grid thead td { text-align: center; }
 .pr_grid tbody td {
     background: #9b9a9a;
@@ -36,32 +34,26 @@
 
 .pr_grid .desc {
     background: #ffc634;
-    border-color: #ffcc4a;
     color: black;
 }
 .pr_grid .conditions {
     background: #cb1717;
-    border-color: #cb2c2c;
     color: white;
 }
 .pr_grid .noex {
     background: #6cc943;
-    border-color: #82c962;
     color: black;
 }
 .pr_grid .exb {
     background: #ff6600;
-    border-color: #ff761b;
     color: white;
 }
 .pr_grid .exh {
     background: #6b1b6a;
-    border-color: #771f75;
     color: white;
 }
 .pr_grid .age {
     background: #99ffff;
-    border-color: #7cdede;
     color: black;
 }
 .pr_grid .diff:before {
@@ -111,9 +103,11 @@
 }
 
 @media screen and (max-width: 800px) {
+    .pr_grid { border: 0; }
     .pr_grid th, .pr_grid td {
         font-size: 0.9em;
         border: 0;
+        box-shadow: none;
     }
     .pr_grid th:not(.repeat) { display: none; }
     .pr_grid .repeat {
