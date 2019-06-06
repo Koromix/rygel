@@ -538,6 +538,10 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
             out_node->text = "Calcul du GNN";
         } break;
 
+        case 40: {
+            out_node->text = "Annulation erreurs 80 et 222";
+        } break;
+
         case 41: {
             out_node->text = Fmt(ctx.str_alloc, "DP / DR / DAS D-%1%2",
                                  FmtArg(ghm_node.u.test.params[0]).Pad0(-2),

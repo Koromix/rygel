@@ -1412,6 +1412,20 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
             return 0;
         } break;
 
+        case 40: {
+            if (out_errors) {
+                if (out_errors->main_error == 80 || out_errors->main_error == 222) {
+                    out_errors->main_error = 0;
+                    out_errors->priority = 0;
+                }
+
+                out_errors->errors.Set(80, false);
+                out_errors->errors.Set(222, false);
+            }
+
+            return 0;
+        } break;
+
         case 41: {
             for (const mco_DiagnosisInfo *diag_info: ctx.prep->diagnoses) {
                 uint8_t cmd = diag_info->Attributes(ctx.stay->sex).cmd;
