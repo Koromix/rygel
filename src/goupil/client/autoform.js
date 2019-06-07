@@ -34,6 +34,8 @@ function FormBuilder(root, unique_key, widgets, mem) {
             cls += ' af_widget_large';
         if (errors.length)
             cls += ' af_widget_error';
+        if (options.disable)
+            cls += ' af_widget_disable';
 
         return html`
             <div class=${cls}>
@@ -114,7 +116,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             <label for=${id}>${label || key}</label>
             ${createPrefixOrSuffix('af_prefix', options.prefix, value)}
             <input id=${id} type="text" size="${options.size || 30}" .value=${value || ''}
-                   @input=${e => handleTextInput(e, key)}/>
+                   ?disabled=${options.disable} @input=${e => handleTextInput(e, key)}/>
             ${createPrefixOrSuffix('af_suffix', options.suffix, value)}
         `, options, errors);
 
@@ -140,7 +142,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             ${createPrefixOrSuffix('af_prefix', options.prefix, value)}
             <input id=${id} type="number"
                    step=${1 / Math.pow(10, options.decimals || 0)} .value=${value}
-                   @input=${e => handleNumberChange(e, key)}/>
+                   ?disabled=${options.disable} @input=${e => handleNumberChange(e, key)}/>
             ${createPrefixOrSuffix('af_suffix', options.suffix, value)}
         `, options, errors);
 
@@ -176,7 +178,8 @@ function FormBuilder(root, unique_key, widgets, mem) {
 
         let render = errors => wrapWidget(html`
             <label for=${id}>${label || key}</label>
-            <select id=${id} @change=${e => handleDropdownChange(e, key)}>
+            <select id=${id} ?disabled=${options.disable}
+                    @change=${e => handleDropdownChange(e, key)}>
                 ${options.untoggle || !choices.some(c => c != null && value === c[0]) ?
                     html`<option value="null" .selected=${value == null}>-- Choisissez une option --</option>` : html``}
                 ${choices.filter(c => c != null).map(c =>
@@ -216,7 +219,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             <div class="af_select" id=${id}>
                 ${choices.filter(c => c != null).map(c =>
                     html`<button data-value=${stringifyValue(c[0])}
-                                 .className=${value === c[0] ? 'af_button active' : 'af_button'}
+                                 ?disabled=${options.disable} .className=${value === c[0] ? 'af_button active' : 'af_button'}
                                  @click=${e => handleChoiceChange(e, key, options.untoggle)}>${c[1]}</button>`)}
             </div>
         `, options, errors);
@@ -255,7 +258,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             <div class="af_radio" id=${id}>
                 ${choices.filter(c => c != null).map((c, i) =>
                     html`<input type="radio" name=${id} id=${`${id}.${i}`} value=${stringifyValue(c[0])}
-                                .checked=${value === c[0]}
+                                ?disabled=${options.disable} .checked=${value === c[0]}
                                 @click=${e => handleRadioChange(e, key, options.untoggle && value === c[0])}/>
                          <label for=${`${id}.${i}`}>${c[1]}</label><br/>`)}
             </div>
@@ -295,7 +298,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             <div class="af_multi" id=${id}>
                 ${choices.filter(c => c != null).map((c, i) =>
                     html`<input type="checkbox" id=${`${id}.${i}`} value=${stringifyValue(c[0])}
-                                .checked=${value.includes(c[0])}
+                                ?disabled=${options.disable} .checked=${value.includes(c[0])}
                                 @click=${e => handleMultiChange(e, key)}/>
                          <label for=${`${id}.${i}`}>${c[1]}</label><br/>`)}
             </div>
