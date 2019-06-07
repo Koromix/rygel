@@ -217,7 +217,6 @@ if(NOT EMSCRIPTEN)
     set(THOP_ASSETS
         thop/client/thop.html
         ../vendor/lit-html/lit-html.min.js
-        libweb/compat.js
         libweb/util.js
         thop/client/common.js
         thop/client/thop.js
@@ -425,7 +424,6 @@ set(WEBLER_SRC
 set(WEBLER_ASSETS
     webler/webler.css
 
-    libweb/compat.js
     libweb/util.js
     webler/webler.js
 )
