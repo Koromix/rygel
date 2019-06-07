@@ -108,6 +108,14 @@
     background: #db0a0a;
     color: white;
 }
+.af_widget_disable {
+    opacity: 0.5;
+    pointer-events: none;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
 .af_error {
     margin-top: 6px;
     font-style: italic;
@@ -143,7 +151,7 @@
 .af_select, .af_radio, .af_multi { display: inline-block; }
 
 .af_button {
-    margin: 0 1px 0 0;
+    margin: 0 1px 1px 0;
     padding: 1px 0.7em;
     background: #f8f8f8;
     border: 1px solid #999;
