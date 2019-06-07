@@ -59,6 +59,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
 
         let intf = {
             value: value,
+            missing: value == null,
             error: msg => {
                 self.errors.push(msg || '');
                 widget.errors.push(msg || '');
@@ -97,6 +98,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
 
     this.find = key => interfaces[key];
     this.value = key => mem[key];
+    this.missing = key => mem[key] == null;
     this.error = (key, msg) => interfaces[key].error(msg);
 
     function handleTextInput(e, key) {
