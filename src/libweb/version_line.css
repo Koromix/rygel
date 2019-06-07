@@ -8,6 +8,21 @@
 }
 
 .vlin_node { cursor: pointer; }
+.vlin_node_current {
+    color: #ff6600;
+    fill: #ff6600;
+    font-weight: bold;
+}
+.vlin_node_major {
+    color: black;
+    fill: black;
+    font-weight: normal;
+}
+.vlin_node_normal {
+    color: #888;
+    fill: #888;
+    font-weight: normal;
+}
 .vlin_text { cursor: pointer; }
 
 @media screen and (max-width: 800px) {

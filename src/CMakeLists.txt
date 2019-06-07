@@ -216,6 +216,7 @@ if(NOT EMSCRIPTEN)
     )
     set(THOP_ASSETS
         thop/client/thop.html
+        ../vendor/lit-html/lit-html.min.js
         libweb/compat.js
         libweb/util.js
         thop/client/common.js

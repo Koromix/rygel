@@ -321,15 +321,9 @@ function refreshIndexesLine(indexes, main_index)
     if (!thop.needsRefresh(refreshIndexesLine, arguments))
         return;
 
-    let svg = query('#opt_index');
-
-    let builder = new VersionLine(svg);
-    builder.anchorBuilder = function(version) {
-        return thop.routeToUrl({date: version.date}).url;
-    };
-    builder.changeHandler = function() {
-        thop.go({date: this.object.getValue()});
-    };
+    let builder = new VersionLine();
+    builder.hrefBuilder = version => thop.routeToUrl({date: version.date}).url;
+    builder.changeHandler = e => thop.go({date: builder.getDate()});
 
     for (const index of indexes) {
         let label = index.begin_date;
@@ -339,9 +333,10 @@ function refreshIndexesLine(indexes, main_index)
         builder.addVersion(index.begin_date, label, index.begin_date, index.changed_prices);
     }
     if (main_index >= 0)
-        builder.setValue(indexes[main_index].begin_date);
+        builder.setDate(indexes[main_index].begin_date);
 
-    builder.render();
+    let svg = query('#opt_index');
+    builder.render(svg);
 }
 
 // ------------------------------------------------------------------------

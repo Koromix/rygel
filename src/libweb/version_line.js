@@ -2,92 +2,19 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function VersionLine(widget)
+function VersionLine()
 {
-    this.anchorBuilder = null;
-    this.changeHandler = null;
-
     let self = this;
 
+    this.hrefBuilder = page => '#';
+    this.changeHandler = null;
+
+    let root_el;
+
     let versions = [];
-    let value = null;
+    let current_date;
 
-    function handleNodeClick(e)
-    {
-        value = this.value;
-        setTimeout(self.render, 0);
-
-        if (self.changeHandler)
-            setTimeout(function() { self.changeHandler.call(widget); }, 0);
-
-        e.preventDefault();
-    }
-
-    this.render = function() {
-        while (widget.lastChild)
-            widget.removeChild(widget.lastChild);
-        widget.addClass('vlin');
-
-        if (versions.length >= 2) {
-            widget.appendContent(
-                dom.s('line', {class: 'vlin_line', x1: '2%', y1: 20, x2: '98%', y2: 20}),
-                dom.s('g')
-            );
-            let g = widget.query('g');
-
-            let min_date = new Date(versions[0].date);
-            let max_date = new Date(versions[versions.length - 1].date);
-
-            let text_above = true;
-            for (const version of versions) {
-                let x = (6.0 + (new Date(version.date) - min_date) / (max_date - min_date) * 88.0).toFixed(1) + '%';
-                let radius = 4 + !!version.major + (version.date === value);
-
-                let color;
-                let weight;
-                if (version.date === value) {
-                    color = '#ff6600';
-                    weight = 'bold';
-                } else if (version.major) {
-                    color = '#000';
-                    weight = 'normal';
-                } else {
-                    color = '#888';
-                    weight = 'normal';
-                }
-
-                let href;
-                if (self.anchorBuilder) {
-                    href = self.anchorBuilder(version);
-                } else {
-                    href = '#';
-                }
-
-                let anchor = dom.s('a', {click: handleNodeClick});
-                anchor.setAttributeNS('http://www.w3.org/1999/xlink', 'href', href);
-                anchor.value = version.date;
-
-                let node = dom.s('circle', {class: 'vlin_node', cx: x, cy: 20,
-                                            r: radius, fill: color},
-                    dom.s('title', version.tooltip)
-                );
-                anchor.appendChild(node);
-
-                if (version.major) {
-                    let text_y = text_above ? 10 : 40;
-                    text_above = !text_above;
-
-                    let text = dom.s('text', {class: 'vlin_text', x: x, y: text_y,
-                                              'text-anchor': 'middle', fill: color,
-                                              style: 'font-weight: ' + weight + ';'},
-                                   version.label);
-                    anchor.appendChild(text);
-                }
-
-                g.appendChild(anchor);
-            }
-        }
-    }
+    this.getRootElement = function() { return root_el; }
 
     this.addVersion = function(date, label, tooltip, major) {
         versions.push({
@@ -97,10 +24,61 @@ function VersionLine(widget)
             major: major
         });
     };
+    this.setDate = function(date) { current_date = date; };
+    this.getDate = function() { return current_date; };
 
-    this.setValue = function(date) { value = date; };
-    this.getValue = function() { return value; };
-    this.getWidget = function() { return widget; }
+    function handleNodeClick(e, date)
+    {
+        current_date = date;
+        setTimeout(() => self.render(root_el), 0);
 
-    widget.object = this;
+        if (self.changeHandler)
+            setTimeout(() => self.changeHandler.call(self, e), 0);
+
+        e.preventDefault();
+    }
+
+    this.render = function(new_root_el) {
+        root_el = new_root_el;
+
+        if (versions.length >= 2) {
+            let min_date = new Date(versions[0].date);
+            let max_date = new Date(versions[versions.length - 1].date);
+
+            // Alternate versions labels above and below line
+            let text_above = false;
+
+            render(svg`
+                <svg class="vlin">
+                    <line class="vlin_line" x1="2%" y1="20" x2="98%" y2="20"/>
+                    <g>${versions.map(version => {
+                        let x = (6.0 + (new Date(version.date) - min_date) / (max_date - min_date) * 88.0).toFixed(1) + '%';
+                        let radius = 4 + !!version.major + (version.date === current_date);
+
+                        let cls = 'vlin_node';
+                        if (version.date === current_date) {
+                            cls += ' vlin_node_current';
+                        } else if (version.major) {
+                            cls += ' vlin_node_major';
+                        } else {
+                            cls += ' vlin_node_normal';
+                        }
+
+                        return svg`
+                            <a class=${cls} href=${self.hrefBuilder(version)} @click=${e => handleNodeClick(e, version.date)}>
+                                <circle cx=${x} cy="20" r=${radius}>
+                                    <title>${version.tooltip}</title>
+                                </circle>
+                                ${version.major ?
+                                    svg`<text class="vlin_text" x=${x} y=${(text_above = !text_above) ? 10 : 40}
+                                              text-anchor="middle">${version.label}</text>` : svg``}
+                            </a>
+                        `;
+                    })}</g>
+                </svg>
+            `, root_el);
+        } else {
+            render(svg``, root_el);
+        }
+    };
 }
