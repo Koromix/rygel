@@ -537,22 +537,20 @@ let mco_casemix = {};
 
         // Set main picker
         {
-            let builder = new PeriodPicker(picker, settings.start_date, settings.end_date,
-                                           period[0], period[1]);
-            builder.changeHandler = function() {
-                thop.go({period: this.object.getValues()});
-            };
-            builder.render();
+            let builder = new PeriodPicker();
+            builder.changeHandler = () => thop.go({period: builder.getDates()});
+            builder.setLimitDates([settings.start_date, settings.end_date]);
+            builder.setDates(period);
+            builder.render(picker);
         }
 
         // Set diff picker
         {
-            let builder = new PeriodPicker(prev_picker, settings.start_date, settings.end_date,
-                                           prev_period[0], prev_period[1]);
-            builder.changeHandler = function() {
-                thop.go({prev_period: this.object.getValues()});
-            };
-            builder.render();
+            let builder = new PeriodPicker();
+            builder.changeHandler = () => thop.go({prev_period: builder.getDates()});
+            builder.setLimitDates([settings.start_date, settings.end_date]);
+            builder.setDates(prev_period);
+            builder.render(prev_picker);
         }
 
         picker.style.width = (mode !== 'none') ? '49%' : '100%';

@@ -5,6 +5,7 @@
 .ppik {
     display: inline-block;
     height: 72px;
+    width: 100%;
 }
 .ppik_main {
     position: relative;
@@ -44,7 +45,7 @@
     height: 14px;
     width: 14px;
     left: -7px;
-    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAAiElEQVQokaWSsQrDMAxENea0dvTvhWJi+UP8e/mG0iXnNR7TpbSldUJqHxxoeZyQTuRD9HA0pGw601BoKM850cNJTUsYRkasOepWMyPWJQzjD7QHfPsF08MdJdWS6eGEhnQWylE3mk73q6hk0/kf6H1JQzkL3oJc+sGeVduO0/yO5gJ0Va6l5A8tTnAg3xtIJAAAAABJRU5ErkJggg==');
+    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAAe0lEQVQoka2SMQ6EMAwEp6LhAbzqSqqI6nCektdRRuIj6ZeKO0RAigyWXI53bS8cSjODjCQjKyJFJCPLSJoZuCoZQUb5Aec2ioxQQ3dAPSAc7d0r1eCyq6VmKLJqot/B3Ax++fz3a1eTRroXQLdV93G873AH4FHkPCHfALqcaZAoX5UBAAAAAElFTkSuQmCC');
     cursor: ew-resize;
 }
 
