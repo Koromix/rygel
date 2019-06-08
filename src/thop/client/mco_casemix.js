@@ -799,7 +799,7 @@ let mco_casemix = {};
         summary.sort(sort);
 
         let render_count = summary.render((page - 1) * TableLen, TableLen, {render_empty: false});
-        syncPagers(queryAll('#cm_units .pagr'), page,
+        syncPagers(queryAll('#cm_units .dtab_pager'), page,
                    computeLastPage(render_count, summary.getRowCount(), TableLen));
     }
 
@@ -925,7 +925,7 @@ let mco_casemix = {};
         summary.sort(sort);
 
         let render_count = summary.render((page - 1) * TableLen, TableLen, {render_empty: false});
-        syncPagers(queryAll('#cm_ghm_roots .pagr'), page,
+        syncPagers(queryAll('#cm_ghm_roots .dtab_pager'), page,
                    computeLastPage(render_count, summary.getRowCount(), TableLen));
     }
 
@@ -957,15 +957,15 @@ let mco_casemix = {};
             addPercentCell(stat.deaths / stat.count);
     }
 
-    function syncPagers(pagers, active_page, last_page)
+    function syncPagers(pagers, current_page, last_page)
     {
         pagers.forEach(function(pager) {
             if (last_page) {
-                let builder = new Pager(pager, active_page, last_page);
-                builder.anchorBuilder = function(text, active_page) {
-                    return dom.h('a', {href: routeToUrl({page: active_page}).url}, '' + text);
-                }
-                builder.render();
+                let builder = new Pager();
+                builder.hrefBuilder = page => routeToUrl({page: page}).url;
+                builder.setLastPage(last_page);
+                builder.setCurrentPage(current_page);
+                builder.render(pager);
 
                 pager.removeClass('hide');
             } else {

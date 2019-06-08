@@ -157,6 +157,16 @@ let dom = (function() {
 // ------------------------------------------------------------------------
 
 let util = (function() {
+    this.mapRange = function(start, end, func) {
+        let len = end - start;
+        let arr = Array.from({length: len});
+
+        for (let i = 0; i < len; i++)
+            arr[i] = func(start + i);
+
+        return arr;
+    };
+
     // Why the f*ck is there still no good cookie API?
     this.getCookie = function(name) {
         let cookie = ' ' + document.cookie;
