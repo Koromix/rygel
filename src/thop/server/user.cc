@@ -19,7 +19,7 @@
 namespace RG {
 
 static const int64_t PruneDelay = 20 * 60 * 1000;
-static const int64_t IdleSessionDelay = 4 * 3600 * 1000;
+static const int64_t IdleSessionDelay = 2 * 3600 * 1000;
 
 struct Session {
     char session_key[129];
