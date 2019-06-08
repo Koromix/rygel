@@ -349,9 +349,9 @@ function createPagedDataTable(el)
 {
     if (!el.childNodes.length) {
         el.appendContent(
-            dom.h('table', {class: 'pagr'}),
+            dom.h('div', {class: 'dtab_pager'}),
             dom.h('div', {class: 'dtab'}),
-            dom.h('table', {class: 'pagr'})
+            dom.h('div', {class: 'dtab_pager'})
         );
     }
 

@@ -486,7 +486,7 @@ let mco_list = {};
 
         let render_count = builder.render((page - 1) * TableLen, TableLen,
                                           {render_header: list_info.header, render_parents: !sort});
-        syncPagers(queryAll('#ls_' + list_name + ' .pagr'), page,
+        syncPagers(queryAll('#ls_' + list_name + ' .dtab_pager'), page,
                    computeLastPage(render_count, builder.getRowCount(), TableLen));
     }
 
@@ -594,15 +594,15 @@ let mco_list = {};
     }
     this.addSpecLinks = addSpecLinks;
 
-    function syncPagers(pagers, active_page, last_page)
+    function syncPagers(pagers, current_page, last_page)
     {
         pagers.forEach(function(pager) {
             if (last_page) {
-                let builder = new Pager(pager, active_page, last_page);
-                builder.anchorBuilder = function(text, active_page) {
-                    return dom.h('a', {href: routeToUrl({page: active_page}).url}, '' + text);
-                }
-                builder.render();
+                let builder = new Pager();
+                builder.hrefBuilder = page => routeToUrl({page: page}).url;
+                builder.setLastPage(last_page);
+                builder.setCurrentPage(current_page);
+                builder.render(pager);
 
                 pager.removeClass('hide');
             } else {

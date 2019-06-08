@@ -2,89 +2,76 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function Pager(widget, active_page, last_page)
+function Pager()
 {
-    this.anchorBuilder = null;
+    let self = this;
+
+    this.hrefBuilder = page => '#';
     this.changeHandler = null;
 
-    let self = this;
+    let root_el;
+
+    let last_page;
+    let current_page;
+
+    this.getRootElement = function() { return root_el; }
+
+    this.setLastPage = function(page) { last_page = page; }
+    this.getLastPage = function() { return last_page; }
+    this.setCurrentPage = function(page) { current_page = page; }
+    this.getCurrentPage = function() { return current_page; }
 
     function handlePageClick(e, page)
     {
-        active_page = page;
-        setTimeout(self.render, 0);
+        current_page = page;
+        setTimeout(() => self.render(root_el), 0);
 
         if (self.changeHandler)
-            self.changeHandler.call(this, page);
+            self.changeHandler.call(self, e);
 
         e.preventDefault();
     }
-    this.handlePageClick = handlePageClick;
 
-    function addPageLink(tr, text, page)
+    function makePageLink(text, page)
     {
-        let content = null;
         if (page) {
-            if (self.anchorBuilder) {
-                content = self.anchorBuilder.call(this, '' + text, page);
-            } else {
-                content = dom.h('a', {href: '#', click: function(e) { handlePageClick(e, page); }},
-                                '' + text);
-            }
+            return html`<td><a href=${self.hrefBuilder(page)} @click=${e => handlePageClick(e, page)}>${text}</a></td>`;
         } else {
-            content = '' + text;
+            return html`<td>${text}</td>`;
         }
-
-        let td = dom.h('td', content);
-        tr.appendChild(td);
-
-        return td;
     }
 
-    this.render = function() {
-        widget.addClass('pagr');
-        widget.replaceContent(dom.h('tr'));
-        let tr = widget.firstChild;
+    this.render = function(new_root_el) {
+        root_el = new_root_el;
 
         let start_page, end_page;
         if (last_page < 8) {
             start_page = 1;
             end_page = last_page;
-        } else if (active_page < 5) {
+        } else if (current_page < 5) {
             start_page = 1;
             end_page = 5;
-        } else if (active_page > last_page - 4) {
+        } else if (current_page > last_page - 4) {
             start_page = last_page - 4;
             end_page = last_page;
         } else {
-            start_page = active_page - 1;
-            end_page = active_page + 1;
+            start_page = current_page - 1;
+            end_page = current_page + 1;
         }
 
-        addPageLink(tr, '≪', (active_page > 1) ? (active_page - 1) : null);
-        if (start_page > 1) {
-            addPageLink(tr, 1, 1);
-            addPageLink(tr, ' … ');
-        }
-        for (let i = start_page; i <= end_page; i++) {
-            let td = addPageLink(tr, i, (i !== active_page) ? i : null);
-            if (i === active_page)
-                td.addClass('active');
-        }
-        if (end_page < last_page) {
-            addPageLink(tr, ' … ');
-            addPageLink(tr, last_page, last_page);
-        }
-        addPageLink(tr, '≫', (active_page < last_page) ? (active_page + 1) : null);
+        render(html`
+            <table class="pagr">
+                ${makePageLink('≪', current_page > 1 ? (current_page - 1) : null)}
+                ${start_page > 1 ?
+                    html`${makePageLink(1, 1)}<td> … </td>` : html``}
+                ${util.mapRange(start_page, end_page + 1,
+                                page => makePageLink(page, page !== current_page ? page : null))}
+                ${end_page < last_page ?
+                    html`<td> … </td>${makePageLink(last_page, last_page)}` : html``}
+                ${makePageLink('≫', current_page < last_page ? (current_page + 1) : null)}
+            </table>
+        `, root_el);
     }
-
-    this.getValue = function() {
-        let active = widget.query('td.active');
-        return parseInt(active.textContent, 10);
-    }
-    this.getWidget = function() { return widget; }
-
-    widget.object = this;
 }
 
 function computeLastPage(render_count, row_count, page_length)
