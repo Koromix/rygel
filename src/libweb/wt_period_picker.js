@@ -243,9 +243,9 @@ let wt_period_picker = (function() {
                     </div>
                 </div>
             `, root_el);
-            main_el = root_el.query('.ppik_main');
-            handle_els = root_el.queryAll('.ppik_handle');
-            bar_el = root_el.query('.ppik_bar');
+            main_el = root_el.querySelector('.ppik_main');
+            handle_els = root_el.querySelectorAll('.ppik_handle');
+            bar_el = root_el.querySelector('.ppik_bar');
 
             syncView();
         };

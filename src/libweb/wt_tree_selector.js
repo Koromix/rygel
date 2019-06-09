@@ -90,7 +90,7 @@ let wt_tree_selector = (function() {
         // Does not work correctly for deep hierarchies (more than 32 levels)
         function syncCheckboxes()
         {
-            let labels = root_el.queryAll('.tsel_list > label');
+            let labels = root_el.querySelectorAll('.tsel_list > label');
 
             let or_state = 0;
             let and_state = 0xFFFFFFFF;
@@ -98,9 +98,9 @@ let wt_tree_selector = (function() {
                 let el = labels[i];
 
                 let depth = parseInt(el.dataset.depth, 10);
-                let input = el.query('input[type=checkbox]');
+                let input = el.querySelector('input[type=checkbox]');
 
-                if (el.hasClass('tsel_group')) {
+                if (el.classList.contains('tsel_group')) {
                     let check = !!(or_state & (1 << (depth + 1)));
                     input.indeterminate = check && !(and_state & (1 << (depth + 1)));
                     input.checked = check && !input.indeterminate;
@@ -130,7 +130,7 @@ let wt_tree_selector = (function() {
             e.preventDefault();
             e.stopPropagation();
 
-            if (!view_el.hasClass('active') && self.changeHandler)
+            if (!view_el.classList.contains('active') && self.changeHandler)
                 setTimeout(function() { self.changeHandler.call(self); }, 0);
         }
 
@@ -186,8 +186,8 @@ let wt_tree_selector = (function() {
             let group = target.parentNode;
             let sibling = group.nextElementSibling;
             while (sibling && sibling.dataset.depth > group.dataset.depth) {
-                if (sibling.hasClass('tsel_option')) {
-                    let input = sibling.query('input[type=checkbox]');
+                if (sibling.classList.contains('tsel_option')) {
+                    let input = sibling.querySelector('input[type=checkbox]');
                     let value = util.strToValue(input.dataset.value);
 
                     updateValue(value, target.checked);
@@ -211,18 +211,18 @@ let wt_tree_selector = (function() {
         }
 
         this.open = function() {
-            queryAll('.tsel_view.active').forEach(el => el.intf.close());
-            view_el.addClass('active');
+            document.querySelectorAll('.tsel_view.active').forEach(el => el.intf.close());
+            view_el.classList.add('active');
         }
         this.toggle = function(state) {
-            if (!view_el.hasClass('active')) {
+            if (!view_el.classList.contains('active')) {
                 self.open();
             } else {
                 self.close();
             }
         };
         this.close = function() {
-            view_el.removeClass('active');
+            view_el.classList.remove('active');
             if (self.changeHandler)
                 setTimeout(function() { self.changeHandler.call(self); }, 0);
         };
@@ -277,11 +277,11 @@ let wt_tree_selector = (function() {
                     </div>
                 </div>
             `, root_el);
-            curtab_el = root_el.query('.tsel_curtab');
-            summary_el = root_el.query('.tsel_summary');
-            tabbar_el = root_el.query('.tsel_tabbar');
-            view_el = root_el.query('.tsel_view');
-            list_el = root_el.query('.tsel_list');
+            curtab_el = root_el.querySelector('.tsel_curtab');
+            summary_el = root_el.querySelector('.tsel_summary');
+            tabbar_el = root_el.querySelector('.tsel_tabbar');
+            view_el = root_el.querySelector('.tsel_view');
+            list_el = root_el.querySelector('.tsel_list');
 
             // Make it easy to find self for active selectors
             view_el.intf = self;
@@ -294,7 +294,7 @@ let wt_tree_selector = (function() {
     this.create = function() { return new TreeSelector(); };
 
     document.addEventListener('click', e => {
-        queryAll('.tsel_view.active').forEach(el => el.intf.close());
+        document.querySelectorAll('.tsel_view.active').forEach(el => el.intf.close());
     });
 
     return this;
