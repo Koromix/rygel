@@ -1506,5 +1506,5 @@ let mco_casemix = {};
         });
     });
 
-    thop.registerUrl('mco_casemix', this);
+    thop.registerModule('mco_casemix', this);
 }).call(mco_casemix);

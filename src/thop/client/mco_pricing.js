@@ -642,5 +642,5 @@ let mco_pricing = {};
     }
     this.buildConditionsArray = buildConditionsArray;
 
-    thop.registerUrl('mco_pricing', this);
+    thop.registerModule('mco_pricing', this);
 }).call(mco_pricing);
