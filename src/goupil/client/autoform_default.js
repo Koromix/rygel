@@ -77,7 +77,7 @@ form.section("Exemples", () => {
 
 form.text("name", "Quel est votre nom ?");
 form.number("age", "Quel est votre âge ?", {min: 0, max: 120,
-                                            suffix: value => util.pluralFR(value, "an", "ans")});
+                                            suffix: value => value > 1 ? "ans" : "an"});
 
 let sexe = form.choice("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]]);
 
@@ -147,7 +147,7 @@ form.buttons([
 `
         }
     ];
-    this.pages.sort((page1, page2) => util.compareStrings(page1.key, page2.key));
+    this.pages.sort((page1, page2) => util.compareValues(page1.key, page2.key));
 
     return this;
 }).call({});

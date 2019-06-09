@@ -252,7 +252,6 @@ let util = (function() {
         }
     };
 
-
     this.strToValue = function(str) {
         try {
             return JSON.parse(str);

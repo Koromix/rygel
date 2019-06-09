@@ -530,7 +530,7 @@ let autoform = (function() {
 
         t.then(() => {
             pages.push(page);
-            pages.sort((page1, page2) => util.compareStrings(page1.key, page2.key));
+            pages.sort((page1, page2) => util.compareValues(page1.key, page2.key));
             pages_map[key] = page;
 
             if (is_default)
@@ -770,8 +770,6 @@ let autoform = (function() {
                 let json = localStorage.getItem('goupil_af_pages');
                 let pages2 = JSON.parse(json).map(kv => kv[1]);
                 let default_key2 = pages.length ? pages[0].key : null;
-
-                pages2.sort((page1, page2) => util.compareStrings(page1.key, page2.key));
 
                 let t = goupil.database.transaction(db => {
                     if (default_key2)
