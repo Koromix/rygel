@@ -146,5 +146,5 @@ let user = {};
     this.getUrlKey = function() { return url_key; }
     this.getUsername = function() { return username; }
 
-    thop.registerUrl('login', this);
+    thop.registerModule('login', this);
 }).call(user);

@@ -612,5 +612,5 @@ let mco_list = {};
         });
     }
 
-    thop.registerUrl('mco_list', this);
+    thop.registerModule('mco_list', this);
 }).call(mco_list);

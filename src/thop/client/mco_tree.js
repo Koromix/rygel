@@ -253,5 +253,5 @@ let mco_tree = {};
         e.preventDefault();
     };
 
-    thop.registerUrl('mco_tree', this);
+    thop.registerModule('mco_tree', this);
 }).call(mco_tree);

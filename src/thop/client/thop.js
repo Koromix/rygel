@@ -2,8 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let thop = {};
-(function() {
+let thop = (function() {
+    let self = this;
+
+    // Registered modules
     let modules = {};
 
     // Go
@@ -24,54 +26,37 @@ let thop = {};
     // Cache
     let mco_settings = {};
 
-    function toggleMenu(selector, enable)
-    {
+    this.registerModule = function(prefix, object) {
+        modules[prefix] = object;
+    };
+
+    this.toggleMenu = function(selector, enable) {
         let el = query(selector);
         if (enable === undefined)
             enable = !el.classList.contains('active');
         if (enable) {
-            queryAll('nav').forEach(function(nav) {
-                nav.toggleClass('active', nav === el);
-            });
+            queryAll('nav').forEach(nav => nav.toggleClass('active', nav === el));
         } else {
             el.removeClass('active');
         }
-    }
-    this.toggleMenu = toggleMenu;
+    };
 
-    function baseUrl(module_name)
-    {
-        return BaseUrl + module_name;
-    }
-    this.baseUrl = baseUrl;
+    this.baseUrl = function(module_name) {
+        return `${BaseUrl}${module_name}`;
+    };
 
-    function buildRoute(args)
-    {
-        if (args === undefined)
-            args = {};
-
+    this.buildRoute = function(args = {}) {
         return Object.assign({}, route_values, args);
-    }
-    this.buildRoute = buildRoute;
+    };
 
-    function registerUrl(prefix, object)
-    {
-        modules[prefix] = object;
-    }
-    this.registerUrl = registerUrl;
-
-    function run(module, args, hash, delay, mark)
-    {
-        if (mark === undefined)
-            mark = true;
-
+    function run(module, args, hash, delay = 0, mark = true) {
         // Respect delay (if any)
         if (go_timer_id) {
             clearTimeout(go_timer_id);
             go_timer_id = null;
         }
         if (delay) {
-            go_timer_id = setTimeout(function() { go(args, 0); }, delay);
+            go_timer_id = setTimeout(() => run(module, args, hash, 0, mark), delay);
             return;
         }
 
@@ -101,7 +86,7 @@ let thop = {};
             new_url = util.parseUrl(window.location.href).path;
         }
         if (hash)
-            new_url += '#' + hash;
+            new_url += `#${hash}`;
 
         // Update browser URL
         if (mark && new_url !== current_url) {
@@ -117,7 +102,7 @@ let thop = {};
             data.clearErrors();
 
         // Update side menu state and links
-        queryAll('#side_menu li a').forEach(function(anchor) {
+        queryAll('#side_menu li a').forEach(anchor => {
             if (anchor.dataset.path) {
                 let path = eval(anchor.dataset.path);
 
@@ -128,34 +113,28 @@ let thop = {};
                 anchor.toggleClass('active', active);
 
                 if (active)
-                    document.title = 'THOP — ' + anchor.innerText;
+                    document.title = `THOP — ${anchor.innerText}`;
             }
         });
-        toggleMenu('#side_menu', false);
+        self.toggleMenu('#side_menu', false);
 
         // Hide page menu if empty
         let opt_hide = true;
-        queryAll('#opt_menu > *').forEach(function(el) {
+        queryAll('#opt_menu > *').forEach(el => {
             if (!el.hasClass('hide'))
                 opt_hide = false;
         });
         queryAll('#opt_deploy, #opt_menu').toggleClass('hide', opt_hide);
 
         // Done
-        query('main').toggleClass('busy', isBusy());
+        query('main').toggleClass('busy', self.isBusy());
     }
 
-    function go(args, hash, delay, mark)
-    {
+    this.go = function(args, hash, delay, mark) {
         run(current_module, args, hash, delay, mark);
-    }
-    this.go = go;
+    };
 
-    function route(href, delay, mark)
-    {
-        if (mark === undefined)
-            mark = true;
-
+    this.route = function(href, delay = 0, mark = true) {
         let url = util.parseUrl(href);
         if (url.path.startsWith(BaseUrl))
             url.path = url.path.substr(BaseUrl.length);
@@ -174,7 +153,7 @@ let thop = {};
         // Try to restore scroll state (for new pages)
         if (mark) {
             if (url.hash) {
-                let el = query('#' + url.hash);
+                let el = query(`#${url.hash}`);
                 if (el && el.offsetTop)
                     window.scrollTo(0, el.offsetTop - 5);
             } else {
@@ -182,33 +161,26 @@ let thop = {};
                 window.scrollTo(target[0], target[1]);
             }
         }
-    }
-    this.route = route;
+    };
 
-    function routeToUrl(args)
-    {
+    this.routeToUrl = function(args) {
         return current_module.routeToUrl(args);
-    }
-    this.routeToUrl = routeToUrl;
+    };
 
-    function goHome()
-    {
+    this.goHome = function() {
         let first_anchor = query('#side_menu a[data-path]');
-        route(first_anchor.href);
-    }
-    this.goHome = goHome;
+        self.route(first_anchor.href);
+    };
 
-    function goBackOrHome()
-    {
+    this.goBackOrHome = function() {
         if (prev_module) {
             run(prev_module, {});
         } else {
-            goHome();
+            self.goHome();
         }
-    }
-    this.goBackOrHome = goBackOrHome;
+    };
 
-    function needsRefresh(obj) {
+    this.needsRefresh = function(obj) {
         let args_json = JSON.stringify(Array.from(arguments).slice(1));
 
         if (force_idx !== obj.prev_force_idx || args_json !== obj.prev_args_json) {
@@ -218,27 +190,20 @@ let thop = {};
         } else {
             return false;
         }
-    }
-    this.needsRefresh = needsRefresh;
+    };
 
-    function isBusy() { return data_busy; }
-    this.isBusy = isBusy;
+    this.isBusy = function() { return data_busy; };
+    this.setIgnoreBusy = function(ignore) { ignore_busy = !!ignore; };
+    this.forceRefresh = function() { force_idx++; };
 
-    function setIgnoreBusy(ignore) { ignore_busy = !!ignore; }
-    this.setIgnoreBusy = setIgnoreBusy;
-
-    function forceRefresh() { force_idx++; }
-    this.forceRefresh = forceRefresh;
-
-    function updateMcoSettings()
-    {
+    this.updateMcoSettings = function() {
         if (user.getUrlKey() !== mco_settings.url_key) {
             mco_settings = {
                 indexes: mco_settings.indexes || [],
                 url_key: null
             };
 
-            let url = util.buildUrl(thop.baseUrl('api/mco_settings.json'), {key: user.getUrlKey()});
+            let url = util.buildUrl(self.baseUrl('api/mco_settings.json'), {key: user.getUrlKey()});
             data.get(url, 'json', function(json) {
                 mco_settings = json;
 
@@ -258,57 +223,60 @@ let thop = {};
         }
 
         return mco_settings;
-    }
-    this.updateMcoSettings = updateMcoSettings;
+    };
 
-    function refreshErrors(errors)
-    {
-        let log = query('#log');
+    function refreshErrors(errors) {
+        let log = document.querySelector('#log');
 
-        log.innerHTML = errors.map(function(err) { return err.replace('\n', '<br/>&nbsp;&nbsp;&nbsp;&nbsp;'); })
-                              .join('<br/>');
+        log.innerHTML = errors.map(err => err.replace('\n', '<br/>&nbsp;&nbsp;&nbsp;&nbsp;')).join('<br/>');
         log.toggleClass('hide', !errors.length);
     }
 
-    function init()
-    {
-        let new_url;
-        if (window.location.pathname !== BaseUrl) {
-            new_url = window.location.href;
-        } else {
-            let first_anchor = query('#side_menu a[data-path]');
-            new_url = eval(first_anchor.dataset.path).url;
-        }
-
-        // Avoid history push
-        route(new_url, 0, false);
-
-        window.addEventListener('popstate', function(e) {
-            route(window.location.href, 0, false);
-        });
-        document.body.addEventListener('click', function(e) {
-            if (e.target && e.target.tagName == 'A' &&
-                    !e.ctrlKey && !e.target.getAttribute('download')) {
-                let href = e.target.getAttribute('href');
-                if (href && !href.match(/^(?:[a-z]+:)?\/\//) && href[0] != '#') {
-                    route(href);
-                    e.preventDefault();
-                }
-            }
-        });
-
-        data.busyHandler = function(busy) {
+    function initData() {
+        data.busyHandler = busy => {
             if (busy) {
                 data_busy |= !ignore_busy;
             } else {
                 data_busy = false;
-                go({});
+                self.go({});
             }
-        }
+        };
     }
 
-    document.addEventListener('readystatechange', function() {
-        if (document.readyState === 'complete')
-            init();
+    function initNavigation() {
+        window.addEventListener('popstate', e => {
+            self.route(window.location.href, 0, false);
+        });
+
+        document.body.addEventListener('click', e => {
+            if (e.target && e.target.tagName == 'A' &&
+                    !e.ctrlKey && !e.target.getAttribute('download')) {
+                let href = e.target.getAttribute('href');
+                if (href && !href.match(/^(?:[a-z]+:)?\/\//) && href[0] != '#') {
+                    self.route(href);
+                    e.preventDefault();
+                }
+            }
+        });
+    }
+
+    document.addEventListener('readystatechange', e => {
+        if (document.readyState === 'complete') {
+            initData();
+            initNavigation();
+
+            let new_url;
+            if (window.location.pathname !== BaseUrl) {
+                new_url = window.location.href;
+            } else {
+                let first_anchor = query('#side_menu a[data-path]');
+                new_url = eval(first_anchor.dataset.path).url;
+            }
+
+            // Avoid history push
+            self.route(new_url, 0, false);
+        }
     });
-}).call(thop);
+
+    return this;
+}).call({});
