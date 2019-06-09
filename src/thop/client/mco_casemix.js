@@ -537,7 +537,7 @@ let mco_casemix = {};
 
         // Set main picker
         {
-            let builder = new PeriodPicker();
+            let builder = wt_period_picker.create();
             builder.changeHandler = () => thop.go({period: builder.getDates()});
             builder.setLimitDates([settings.start_date, settings.end_date]);
             builder.setDates(period);
@@ -546,7 +546,7 @@ let mco_casemix = {};
 
         // Set diff picker
         {
-            let builder = new PeriodPicker();
+            let builder = wt_period_picker.create();
             builder.changeHandler = () => thop.go({prev_period: builder.getDates()});
             builder.setLimitDates([settings.start_date, settings.end_date]);
             builder.setDates(prev_period);
@@ -567,7 +567,7 @@ let mco_casemix = {};
 
         let select = query('#opt_units > div');
 
-        let builder = new TreeSelector();
+        let builder = wt_tree_selector.create();
         builder.changeHandler = function() {
             thop.go({units: this.getValues().sort(),
                      structure: this.getCurrentTab()});
@@ -635,7 +635,7 @@ let mco_casemix = {};
 
         let select = query('#opt_ghm_roots > div');
 
-        let builder = new TreeSelector();
+        let builder = wt_tree_selector.create();
         builder.changeHandler = function() {
             thop.go({ghm_roots: this.getValues(),
                      regroup: GroupTypes[this.getCurrentTab()].key});
@@ -800,7 +800,7 @@ let mco_casemix = {};
 
         let render_count = summary.render((page - 1) * TableLen, TableLen, {render_empty: false});
         syncPagers(queryAll('#cm_units .dtab_pager'), page,
-                   computeLastPage(render_count, summary.getRowCount(), TableLen));
+                   wt_pager.computeLastPage(render_count, summary.getRowCount(), TableLen));
     }
 
     function refreshGhmRootsTable(filter_units, filter_ghm_roots, regroup, page, sort)
@@ -926,7 +926,7 @@ let mco_casemix = {};
 
         let render_count = summary.render((page - 1) * TableLen, TableLen, {render_empty: false});
         syncPagers(queryAll('#cm_ghm_roots .dtab_pager'), page,
-                   computeLastPage(render_count, summary.getRowCount(), TableLen));
+                   wt_pager.computeLastPage(render_count, summary.getRowCount(), TableLen));
     }
 
     function addSummaryCells(dtab, stat, total)
@@ -961,7 +961,7 @@ let mco_casemix = {};
     {
         pagers.forEach(function(pager) {
             if (last_page) {
-                let builder = new Pager();
+                let builder = wt_pager.create();
                 builder.hrefBuilder = page => routeToUrl({page: page}).url;
                 builder.setLastPage(last_page);
                 builder.setCurrentPage(current_page);
@@ -1439,7 +1439,7 @@ let mco_casemix = {};
             dom.h('table', {class: 'pagr'}),
             dom.h('table', {class: 'pagr'})
         ];
-        syncPagers(pagers, page, computeLastPage(end - offset, results.length, TableLen));
+        syncPagers(pagers, page, wt_pager.computeLastPage(end - offset, results.length, TableLen));
 
         query('#rt').replaceContent(
             pagers[0],

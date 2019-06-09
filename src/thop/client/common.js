@@ -321,7 +321,7 @@ function refreshIndexesLine(indexes, main_index)
     if (!thop.needsRefresh(refreshIndexesLine, arguments))
         return;
 
-    let builder = new VersionLine();
+    let builder = wt_version_line.create();
     builder.hrefBuilder = version => thop.routeToUrl({date: version.date}).url;
     builder.changeHandler = e => thop.go({date: builder.getDate()});
 

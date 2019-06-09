@@ -487,7 +487,7 @@ let mco_list = {};
         let render_count = builder.render((page - 1) * TableLen, TableLen,
                                           {render_header: list_info.header, render_parents: !sort});
         syncPagers(queryAll('#ls_' + list_name + ' .dtab_pager'), page,
-                   computeLastPage(render_count, builder.getRowCount(), TableLen));
+                   wt_pager.computeLastPage(render_count, builder.getRowCount(), TableLen));
     }
 
     function createContent(column, item, concepts_map, group)
@@ -598,7 +598,7 @@ let mco_list = {};
     {
         pagers.forEach(function(pager) {
             if (last_page) {
-                let builder = new Pager();
+                let builder = wt_pager.create();
                 builder.hrefBuilder = page => routeToUrl({page: page}).url;
                 builder.setLastPage(last_page);
                 builder.setCurrentPage(current_page);
