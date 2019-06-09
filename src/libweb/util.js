@@ -252,6 +252,18 @@ let util = (function() {
         }
     };
 
+
+    this.strToValue = function(str) {
+        try {
+            return JSON.parse(str);
+        } catch (err) {
+            return undefined;
+        }
+    };
+    this.valueToStr = function(value) {
+        return JSON.stringify(value);
+    };
+
     this.saveBlob = function(blob, filename) {
         let url = URL.createObjectURL(blob);
 
