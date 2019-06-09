@@ -226,10 +226,10 @@ if(NOT EMSCRIPTEN)
         thop/client/mco_pricing.js
         thop/client/mco_tree.js
         libweb/data_table.js
-        libweb/pager.js
-        libweb/period_picker.js
-        libweb/tree_selector.js
-        libweb/version_line.js
+        libweb/wt_pager.js
+        libweb/wt_period_picker.js
+        libweb/wt_tree_selector.js
+        libweb/wt_version_line.js
         ../vendor/chartjs/chart.min.js
         ../vendor/sheetjs/xlsx.core.min.js
         thop/client/thop.css
@@ -238,10 +238,10 @@ if(NOT EMSCRIPTEN)
         thop/client/mco_pricing.css
         thop/client/mco_tree.css
         libweb/data_table.css
-        libweb/pager.css
-        libweb/period_picker.css
-        libweb/tree_selector.css
-        libweb/version_line.css
+        libweb/wt_pager.css
+        libweb/wt_period_picker.css
+        libweb/wt_tree_selector.css
+        libweb/wt_version_line.css
         thop/client/images/thop_logo.svg
         thop/client/images/favicon.png
         ../vendor/notosans/NotoSans.css
