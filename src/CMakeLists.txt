@@ -352,7 +352,7 @@ set(GOUPIL_ASSETS
     ../vendor/ace/theme-monokai.js
     ../vendor/ace/worker-javascript.js
     ../vendor/lit-html/lit-html.min.js
-    goupil/client/util.js
+    libweb/util.js
     goupil/client/data.js
     goupil/client/goupil.js
     goupil/client/autoform.js
