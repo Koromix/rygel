@@ -2,118 +2,168 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function TreeSelector(widget, prefix)
+function TreeSelector()
 {
+    let self = this;
+
     this.changeHandler = null;
 
-    let self = this;
-    let curtab = null;
-    let summary = null;
-    let tabbar = null;
-    let view = null;
-    let list = null;
+    let root_el;
+    let curtab_el;
+    let summary_el;
+    let tabbar_el;
+    let view_el;
+    let list_el;
 
-    let depth = 0;
-    let total = 0;
+    let prefix = null;
+    let tabs = [];
+    let values = new Set;
 
-    function syncValue(value, checked)
+    let current_tab = {
+        title: null,
+        options: []
+    };
+    let current_values = new Set;
+
+    let current_depth = 0;
+
+    this.getRootElement = function() { return root_el; };
+
+    this.setPrefix = function(str) { prefix = str; };
+    this.getPrefix = function() { return prefix; };
+
+    this.addTab = function(title) {
+        let tab = {
+            title: title,
+            options: []
+        };
+
+        tabs.push(tab);
+        current_tab = tab;
+        current_depth = 0;
+    };
+
+    this.beginGroup = function(title) {
+        let opt = {
+            title: title,
+            depth: current_depth
+        };
+
+        current_tab.options.push(opt);
+        current_depth++;
+    };
+    this.endGroup = function() {
+        current_depth--;
+    };
+
+    this.addOption = function(title, value, options = {}) {
+        let opt = {
+            title: title,
+            value: value,
+            depth: current_depth,
+            disabled: !!options.disabled
+        };
+        let selected = !!options.selected & !opt.disabled;
+
+        current_tab.options.push(opt);
+
+        values.add(value);
+        if (selected)
+            current_values.add(value);
+    };
+
+    this.setCurrentTab = function(tab_idx) { current_tab = tabs[tab_idx]; }
+    this.getCurrentTab = function() { return tabs.indexOf(current_tab); }
+    this.setValues = function(values) { current_values = new Set(values); }
+    this.getValues = function() { return Array.from(current_values); }
+
+    function updateValue(value, enable)
     {
-        let checkboxes = widget.queryAll('.tsel_option input[data-value="' + value + '"]');
-        checkboxes.forEach(function(checkbox) {
-            checkbox.checked = checked;
-        });
+        if (enable && values.has(value)) {
+            current_values.add(value);
+        } else {
+            current_values.delete(value);
+        }
     }
 
     // Does not work correctly for deep hierarchies (more than 32 levels)
-    function syncGroupCheckboxes()
+    function syncCheckboxes()
     {
-        let elements = widget.queryAll('.tsel_list > label');
+        let labels = root_el.queryAll('.tsel_list > label');
 
         let or_state = 0;
         let and_state = 0xFFFFFFFF;
-        for (let i = elements.length - 1; i >= 0; i--) {
-            let el = elements[i];
+        for (let i = labels.length - 1; i >= 0; i--) {
+            let el = labels[i];
 
             let depth = parseInt(el.dataset.depth, 10);
-            let checkbox = el.query('input[type=checkbox]');
+            let input = el.query('input[type=checkbox]');
 
             if (el.hasClass('tsel_group')) {
                 let check = !!(or_state & (1 << (depth + 1)));
-                checkbox.indeterminate = check && !(and_state & (1 << (depth + 1)));
-                checkbox.checked = check && !checkbox.indeterminate;
+                input.indeterminate = check && !(and_state & (1 << (depth + 1)));
+                input.checked = check && !input.indeterminate;
+            } else {
+                let value = util.strToValue(input.dataset.value);
+                input.checked = current_values.has(value);
             }
 
             or_state &= (1 << (depth + 1)) - 1;
             and_state |= ~((1 << (depth + 1)) - 1);
-            if (checkbox.indeterminate || checkbox.checked)
+            if (input.indeterminate || input.checked)
                 or_state |= 1 << depth;
-            if (checkbox.indeterminate || !checkbox.checked)
+            if (input.indeterminate || !input.checked)
                 and_state &= ~(1 << depth);
         }
     }
 
-    function updateSummary()
+    function handleSummaryClick(e)
     {
-        let values = self.getValues();
+        let target = e.target;
+        let value = util.strToValue(target.dataset.value);
 
-        function handleSummaryOptionClick(e)
-        {
-            syncValue(this.textContent, false);
-            syncGroupCheckboxes();
-            updateSummary();
+        updateValue(value, false);
+        syncCheckboxes();
+        syncSummary();
 
-            e.preventDefault();
-            e.stopPropagation();
-
-            if (!widget.hasClass('active') && self.changeHandler)
-                setTimeout(function() { self.changeHandler.call(widget); }, 0);
-        }
-
-        if (!curtab.hasClass('hide'))
-            curtab.innerHTML = tabbar.childNodes[self.getActiveTab()].innerHTML;
-
-        summary.replaceContent(prefix);
-        if (!values.length) {
-            let a = dom.h('a', 'Aucune sélection');
-            summary.appendChild(a);
-        } else if (values.length < 8) {
-            for (const value of values) {
-                let a = dom.h('a', {href: '#', click: handleSummaryOptionClick}, value);
-                summary.appendChild(a);
-            }
-        } else {
-            let a = dom.h('a', '' + values.length + ' / ' + total);
-            summary.appendChild(a);
-        }
-    }
-
-    function selectTab(tab)
-    {
-        widget.queryAll('.tsel_tab.active, .tsel_list.active').removeClass('active');
-        tab.addClass('active');
-        tab.list.addClass('active');
-
-        syncGroupCheckboxes();
-        updateSummary();
-    }
-
-    function setVisibleState(checked)
-    {
-        let list = widget.query('.tsel_list.active');
-
-        let checkboxes = list.queryAll('.tsel_option input[type=checkbox]');
-        checkboxes.forEach(function(checkbox) {
-            syncValue(checkbox.dataset.value, checked);
-        });
-
-        syncGroupCheckboxes();
-        updateSummary();
-    }
-
-    function handleTabClick(e)
-    {
-        selectTab(this);
         e.preventDefault();
+        e.stopPropagation();
+
+        if (!view_el.hasClass('active') && self.changeHandler)
+            setTimeout(function() { self.changeHandler.call(self); }, 0);
+    }
+
+    function syncSummary()
+    {
+        if (!current_values.size) {
+            render(html`${prefix}<a>Aucune sélection</a>`, summary_el);
+        } else if (current_values.size < 8) {
+            let sorted_values = Array.from(current_values).sort();
+
+            render(html`${prefix}
+                ${sorted_values.map(value => html`<a href="#" @click=${handleSummaryClick}
+                                                     data-value=${util.valueToStr(value)}>${value}</a>`)}
+            `, summary_el);
+        } else {
+            render(html`${prefix}<a>${current_values.size} / ${values.size}</a>`, summary_el);
+        }
+    }
+
+    function setVisibleState(enable)
+    {
+        for (let opt of current_tab.options) {
+            if (opt.value !== undefined)
+                updateValue(opt.value, enable);
+        }
+
+        syncCheckboxes();
+        syncSummary();
+    }
+
+    function handleTabClick(e, tab)
+    {
+        current_tab = tab;
+        self.render(root_el);
     }
 
     function handleCheckAll(e)
@@ -130,170 +180,116 @@ function TreeSelector(widget, prefix)
 
     function handleGroupClick(e)
     {
-        let group = this.parentNode;
-        let sibling = group.nextSibling;
+        let target = e.target;
+
+        let group = target.parentNode;
+        let sibling = group.nextElementSibling;
         while (sibling && sibling.dataset.depth > group.dataset.depth) {
             if (sibling.hasClass('tsel_option')) {
-                let checkbox = sibling.query('input[type=checkbox]');
-                syncValue(checkbox.dataset.value, this.checked);
+                let input = sibling.query('input[type=checkbox]');
+                let value = util.strToValue(input.dataset.value);
+
+                updateValue(value, target.checked);
             }
-            sibling = sibling.nextSibling;
+            sibling = sibling.nextElementSibling;
         }
 
-        syncGroupCheckboxes();
-        updateSummary();
+        syncCheckboxes();
+        syncSummary();
     }
 
     function handleOptionClick(e)
     {
-        syncValue(this.dataset.value, this.checked);
-        syncGroupCheckboxes();
-        updateSummary();
+        let target = e.target;
+        let value = util.strToValue(target.dataset.value);
+
+        updateValue(value, target.checked);
+
+        syncCheckboxes();
+        syncSummary();
     }
-
-    this.createTab = function(name, active) {
-        if (tabbar.hasClass('hide')) {
-            tabbar.removeClass('hide');
-            curtab.removeClass('hide');
-        } else {
-            list = dom.h('div', {class: 'tsel_list'});
-            view.appendChild(list);
-        }
-
-        let tab = dom.h('a', {class: 'tsel_tab', href: '#', click: handleTabClick}, name);
-        if (list.hasClass('active'))
-            tab.addClass('active');
-        tab.list = list;
-        tabbar.appendChild(tab);
-
-        depth = 0;
-    };
-
-    this.beginGroup = function(name) {
-        let el = dom.h('label', {class: 'tsel_group', style: 'padding-left: ' + depth + 'em;',
-                                 'data-depth': depth},
-            dom.h('input', {type: 'checkbox', click: handleGroupClick}),
-            name
-        );
-
-        list.appendChild(el);
-        depth++;
-    };
-    this.endGroup = function() {
-        depth--;
-    };
-
-    this.addOption = function(name, value, options) {
-        if (!options)
-            options = {};
-        options.disabled = options.disabled || false;
-        options.selected = options.selected || false;
-
-        options.selected &= !options.disabled;
-        let el = dom.h('label', {class: 'tsel_option' + (options.disabled ? ' disabled' : ''),
-                                 style: 'padding-left: ' + depth + 'em;', 'data-depth': depth},
-            dom.h('input', {type: 'checkbox', click: handleOptionClick,
-                            'data-value': value, checked: options.selected ? 'checked' : null}),
-            name
-        );
-
-        list.appendChild(el);
-    };
 
     this.open = function() {
-        queryAll('.tsel.active').forEach(function(tsel) {
-            tsel.object.close();
-        });
-        widget.addClass('active');
+        queryAll('.tsel_view.active').forEach(el => el.intf.close());
+        view_el.addClass('active');
     }
     this.toggle = function(state) {
-        if (!widget.hasClass('active')) {
+        if (!view_el.hasClass('active')) {
             self.open();
         } else {
             self.close();
         }
     };
     this.close = function() {
-        widget.removeClass('active');
+        view_el.removeClass('active');
         if (self.changeHandler)
-            setTimeout(function() { self.changeHandler.call(widget); }, 0);
+            setTimeout(function() { self.changeHandler.call(self); }, 0);
     };
 
-    this.getActiveTab = function() {
-        for (let i = 0; i < tabbar.childNodes.length; i++) {
-            if (tabbar.childNodes[i].hasClass('active'))
-                return i;
-        }
-        return 0;
-    };
-    this.setActiveTab = function(idx) {
-        if (idx >= 0 && idx < tabbar.childNodes.length)
-            selectTab(tabbar.childNodes[idx]);
-    };
+    this.render = function(new_root_el) {
+        root_el = new_root_el;
 
-    this.getValues = function(all) {
-        if (all === undefined)
-            all = false;
+        // The dummy button catches click events that happen when a label encloses the widget
+        render(html`
+            <div class="tsel" @click=${e => e.stopPropagation()}>
+                <button style="display: none;" @click=${e => e.preventDefault()}></button>
 
-        let values = [];
-        {
-            let checkboxes = widget.queryAll('.tsel_option input[type=checkbox]');
-            checkboxes.forEach(function(checkbox) {
-                if (checkbox.checked || all)
-                    values.push(checkbox.dataset.value);
-            });
-        }
+                <div class="tsel_main">
+                    <div class="tsel_rect" @click=${e => self.toggle()}>
+                        ${tabs.length ? html`<div class="tsel_curtab">${current_tab.title}</div>` : html``}
+                        <div class="tsel_summary"></div>
+                    </div>
 
-        values = values.sort().filter(function(value, i) {
-            return !i || value !== values[i - 1];
-        });
+                    <div class="tsel_view">
+                        <div class="tsel_tabbar">${tabs.map(tab => html`
+                            <button class=${'tsel_tab' + (tab === current_tab ? ' active' : '')}
+                                    @click=${e => handleTabClick(e, tab)}>${tab.title}</button>
+                        `)}</div>
+                        <div class="tsel_shortcuts">
+                            <a href="#" @click=${handleCheckAll}>Tout cocher</a> /
+                            <a href="#" @click=${handleUncheckAll}>Tout décocher</a>
+                        </div>
 
-        return values;
-    };
+                        <div class="tsel_list">${current_tab.options.map(opt => {
+                            if (opt.value === undefined) {
+                                return html`
+                                    <label class="tsel_group"
+                                           style=${'padding-left: ' + opt.depth + 'em;'} data-depth=${opt.depth}>
+                                        <input type="checkbox" @click=${handleGroupClick}/>
+                                        ${opt.title}
+                                    </label>
+                                `;
+                            } else {
+                                return html`
+                                    <label class=${'tsel_option' + (opt.disabled ? ' disabled' : '')}
+                                           style=${'padding-left: ' + opt.depth + 'em;'} data-depth=${opt.depth}>
+                                        <input type="checkbox" data-value=${util.valueToStr(opt.value)}
+                                               ?disabled=${opt.disabled} @click=${handleOptionClick}/>
+                                        ${opt.title}
+                                    </label>
+                                `;
+                            }
+                        })}</div>
 
-    // TODO: Only mess with the (visible?) DOM when 'rendering'
-    this.render = function() {
-        total = self.getValues(true).length;
+                        <button class="tsel_validate" @click=${self.close}>Fermer</button>
+                    </div>
+                </div>
+            </div>
+        `, root_el);
+        curtab_el = root_el.query('.tsel_curtab');
+        summary_el = root_el.query('.tsel_summary');
+        tabbar_el = root_el.query('.tsel_tabbar');
+        view_el = root_el.query('.tsel_view');
+        list_el = root_el.query('.tsel_list');
 
-        syncGroupCheckboxes();
-        updateSummary();
+        // Make it easy to find self for active selectors
+        view_el.intf = self;
+
+        syncCheckboxes();
+        syncSummary();
     }
-
-    this.getWidget = function() { return widget; }
-
-    widget.addClass('tsel');
-    widget.addEventListener('click', function(e) { e.stopPropagation(); });
-    widget.replaceContent(
-        // This dummy button catches click events that happen when a label encloses the widget
-        dom.h('button', {style: 'display: none;', click: function(e) { e.preventDefault(); }}),
-
-        dom.h('div', {class: 'tsel_main'},
-            dom.h('div', {class: 'tsel_rect', click: function(e) { self.toggle(); }},
-                 dom.h('div', {class: ['tsel_curtab', 'hide']}),
-                 dom.h('div', {class: 'tsel_summary'})
-            ),
-            dom.h('div', {class: 'tsel_view'},
-                dom.h('div', {class: ['tsel_tabbar', 'hide']}),
-                dom.h('div', {class: 'tsel_shortcuts'},
-                    dom.h('a', {href: '#', click: handleCheckAll}, 'Tout cocher'), ' / ',
-                    dom.h('a', {href: '#', click: handleUncheckAll}, 'Tout décocher')
-                ),
-                dom.h('button', {class: 'tsel_validate', click: self.close}, 'Fermer'),
-                dom.h('div', {class: ['tsel_list', 'active']})
-            )
-        )
-    );
-    curtab = widget.query('.tsel_curtab');
-    summary = widget.query('.tsel_summary');
-    tabbar = widget.query('.tsel_tabbar');
-    view = widget.query('.tsel_view');
-    list = widget.query('.tsel_list');
-
-    widget.object = this;
 }
 
-document.addEventListener('click', function(e) {
-    queryAll('.tsel.active').forEach(function(tsel) {
-        tsel.object.close();
-    });
+document.addEventListener('click', e => {
+    queryAll('.tsel_view.active').forEach(el => el.intf.close());
 });

@@ -567,14 +567,15 @@ let mco_casemix = {};
 
         let select = query('#opt_units > div');
 
-        let builder = new TreeSelector(select, 'Unités : ');
+        let builder = new TreeSelector();
         builder.changeHandler = function() {
-            thop.go({units: this.object.getValues().map(function(unit) { return parseInt(unit, 10); }).sort(),
-                     structure: this.object.getActiveTab()});
+            thop.go({units: this.getValues().sort(),
+                     structure: this.getCurrentTab()});
         };
+        builder.setPrefix('Unités : ');
 
         for (const structure of settings.structures) {
-            builder.createTab(structure.name);
+            builder.addTab(structure.name);
 
             let prev_groups = [];
             for (const ent of structure.entities) {
@@ -595,9 +596,9 @@ let mco_casemix = {};
                                   {selected: units.has(ent.unit)});
             }
         }
-        builder.setActiveTab(structure_idx);
+        builder.setCurrentTab(structure_idx);
 
-        builder.render();
+        builder.render(select);
     }
 
     function refreshAlgorithmsMenu(algorithm)
@@ -634,11 +635,12 @@ let mco_casemix = {};
 
         let select = query('#opt_ghm_roots > div');
 
-        let builder = new TreeSelector(select, 'GHM : ');
+        let builder = new TreeSelector();
         builder.changeHandler = function() {
-            thop.go({ghm_roots: this.object.getValues(),
-                     regroup: GroupTypes[this.object.getActiveTab()].key});
+            thop.go({ghm_roots: this.getValues(),
+                     regroup: GroupTypes[this.getCurrentTab()].key});
         };
+        builder.setPrefix('GHM : ');
 
         for (const group_type of GroupTypes) {
             ghm_roots = ghm_roots.slice().sort(function(ghm_root1, ghm_root2) {
@@ -654,7 +656,7 @@ let mco_casemix = {};
                 }
             });
 
-            builder.createTab(group_type.text);
+            builder.addTab(group_type.text);
 
             let prev_group = null;
             for (const ghm_root of ghm_roots) {
@@ -671,11 +673,11 @@ let mco_casemix = {};
                                   {selected: select_ghm_roots.has(ghm_root.ghm_root)});
             }
         }
-        builder.setActiveTab(GroupTypes.findIndex(function(group_type) {
+        builder.setCurrentTab(GroupTypes.findIndex(function(group_type) {
             return group_type.key === regroup;
         }));
 
-        builder.render();
+        builder.render(select);
     }
 
     function refreshGhmRootsMenu(ghm_roots, select_ghm_root)

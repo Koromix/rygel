@@ -4,7 +4,8 @@
 
 .tsel {
     display: inline-block;
-    min-width: 14em;
+    box-sizing: border-box;
+    width: 100%;
     margin: 2px;
     vertical-align: middle;
     background: white;
@@ -48,20 +49,19 @@
     font-style: italic;
 }
 
-.tsel_view { display: none; }
-.tsel.active .tsel_view { display: block; }
+.tsel_view:not(.active) { display: none; }
 
 .tsel_tabbar {
-    display: table;
-    table-layout: fixed;
+    display: flex;
     width: 100%;
 }
 .tsel_tab {
-    display: table-cell;
+    flex: 1;
     height: 2em;
     text-align: center;
     vertical-align: middle;
     background: #eee;
+    border: 0;
     font-weight: normal;
     text-decoration: none;
     color: black;
@@ -83,11 +83,9 @@
 }
 
 .tsel_list {
-    display: none;
     overflow-x: hidden;
     overflow-y: scroll;
 }
-.tsel_list.active { display: block; }
 
 .tsel_list > label {
     display: block;
