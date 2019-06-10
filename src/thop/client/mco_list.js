@@ -5,52 +5,36 @@
 let mco_list = {};
 (function() {
     const Lists = {
-        'ghm_roots': {
-            'path': 'api/mco_ghm_ghs.json',
-            'sector': true,
-            'catalog': 'mco_ghm_roots',
+        ghm_roots: {
+            path: 'api/mco_ghm_ghs.json',
+            sector: true,
+            catalog: 'mco_ghm_roots',
 
-            'groups': [
+            groups: [
                 {type: 'cmd', name: 'Catégories majeures de diagnostic',
-                 func: function(ghm_ghs1, ghm_ghs2, ghm_roots_map) {
-                    if (ghm_ghs1.ghm_root !== ghm_ghs2.ghm_root) {
-                        return (ghm_ghs1.ghm_root < ghm_ghs2.ghm_root) ? -1 : 1;
-                    } else {
-                        return 0;
-                    }
-                }},
+                 func: (ghm_ghs1, ghm_ghs2) => util.compareValues(ghm_ghs1.ghm_root, ghm_ghs2.ghm_root)},
                 {type: 'da', name: 'Domaines d\'activité',
-                 func: function(ghm_ghs1, ghm_ghs2, ghm_roots_map) {
+                 func: (ghm_ghs1, ghm_ghs2, ghm_roots_map) => {
                     let ghm_root_info1 = ghm_roots_map[ghm_ghs1.ghm_root] || {};
                     let ghm_root_info2 = ghm_roots_map[ghm_ghs2.ghm_root] || {};
 
-                    if (ghm_root_info1.da !== ghm_root_info2.da) {
-                        return (ghm_root_info1.da < ghm_root_info2.da) ? -1 : 1;
-                    } else if (ghm_root_info1.ghm_root !== ghm_root_info2.ghm_root) {
-                        return (ghm_root_info1.ghm_root < ghm_root_info2.ghm_root) ? -1 : 1;
-                    } else {
-                        return 0;
-                    }
+                    return util.compareValues(ghm_root_info1.da, ghm_root_info2.da) ||
+                           util.compareValues(ghm_root_info1.ghm_root, ghm_root_info2.ghm_root);
                 }},
                 {type: 'ga', name: 'Groupes d\'activité',
-                 func: function(ghm_ghs1, ghm_ghs2, ghm_roots_map) {
+                 func: (ghm_ghs1, ghm_ghs2, ghm_roots_map) => {
                     let ghm_root_info1 = ghm_roots_map[ghm_ghs1.ghm_root] || {};
                     let ghm_root_info2 = ghm_roots_map[ghm_ghs2.ghm_root] || {};
 
-                    if (ghm_root_info1.ga !== ghm_root_info2.ga) {
-                        return (ghm_root_info1.ga < ghm_root_info2.ga) ? -1 : 1;
-                    } else if (ghm_root_info1.ghm_root !== ghm_root_info2.ghm_root) {
-                        return (ghm_root_info1.ghm_root < ghm_root_info2.ghm_root) ? -1 : 1;
-                    } else {
-                        return 0;
-                    }
+                    return util.compareValues(ghm_root_info1.ga, ghm_root_info2.ga) ||
+                           util.compareValues(ghm_root_info1.ghm_root, ghm_root_info2.ghm_root);
                 }}
             ],
-            'deduplicate': function(ghm_ghs) { return ghm_ghs.ghm_root; },
+            deduplicate: ghm_ghs => ghm_ghs.ghm_root,
 
-            'header': false,
-            'columns': [
-                {func: function(ghm_ghs, ghm_roots_map, group) {
+            header: false,
+            columns: [
+                {func: (ghm_ghs, ghm_roots_map, group) => {
                     switch (group) {
                         case 'cmd': {
                             let ghm_root_info = ghm_roots_map[ghm_ghs.ghm_root];
@@ -81,39 +65,35 @@ let mco_list = {};
                     }
                 }},
                 {key: 'ghm_root', header: 'Racine de GHM',
-                 func: function(ghm_ghs, ghm_roots_map) {
+                 func: (ghm_ghs, ghm_roots_map) => {
                     return ghm_ghs.ghm_root + (ghm_roots_map[ghm_ghs.ghm_root] ?
                                               ' - ' + ghm_roots_map[ghm_ghs.ghm_root].desc : '');
                 }}
             ]
         },
 
-        'ghm_ghs': {
-            'path': 'api/mco_ghm_ghs.json',
-            'sector': true,
-            'catalog': 'mco_ghm_roots',
+        ghm_ghs: {
+            path: 'api/mco_ghm_ghs.json',
+            sector: true,
+            catalog: 'mco_ghm_roots',
 
-            'header': true,
-            'columns': [
-                {key: 'ghm_root', func: function(ghm_ghs, ghm_roots_map) {
+            header: true,
+            columns: [
+                {key: 'ghm_root', func: (ghm_ghs, ghm_roots_map) => {
                     return ghm_ghs.ghm_root + (ghm_roots_map[ghm_ghs.ghm_root] ?
                                               ' - ' + ghm_roots_map[ghm_ghs.ghm_root].desc : '');
                 }},
                 {key: 'ghm', header: 'GHM', variable: 'ghm'},
                 {key: 'ghs', header: 'GHS', variable: 'ghs'},
                 {key: 'durations', header: 'Durées', tooltip: 'Durées (nuits)',
-                 func: function(ghm_ghs) {
-                    return maskToRanges(ghm_ghs.durations);
-                }},
+                 func: ghm_ghs => maskToRanges(ghm_ghs.durations)},
                 {key: 'confirm', header: 'Confirmation', tooltip: 'Confirmation (nuits)',
-                 func: function(ghm_ghs) {
-                    return ghm_ghs.confirm_treshold ? '< ' + ghm_ghs.confirm_treshold : null;
-                }},
+                 func: ghm_ghs => ghm_ghs.confirm_treshold ? '< ' + ghm_ghs.confirm_treshold : null},
                 {key: 'main_diagnosis', header: 'DP', variable: 'main_diagnosis'},
                 {key: 'diagnoses', header: 'Diagnostics', variable: 'diagnoses'},
                 {key: 'procedures', header: 'Actes', variable: 'procedures'},
                 {key: 'authorizations', header: 'Autorisations', tooltip: 'Autorisations (unités et lits)',
-                 func: function(ghm_ghs) {
+                 func: ghm_ghs => {
                     let ret = [];
                     if (ghm_ghs.unit_authorization)
                         ret.push('Unité ' + ghm_ghs.unit_authorization);
@@ -121,7 +101,7 @@ let mco_list = {};
                         ret.push('Lit ' + ghm_ghs.bed_authorization);
                     return ret;
                 }},
-                {key: 'old_severity', header: 'Sévérité âgé', func: function(ghm_ghs) {
+                {key: 'old_severity', header: 'Sévérité âgé', func: ghm_ghs => {
                     if (ghm_ghs.old_age_treshold) {
                         return '≥ ' + ghm_ghs.old_age_treshold + ' et < ' +
                                (ghm_ghs.old_severity_limit + 1);
@@ -129,7 +109,7 @@ let mco_list = {};
                         return null;
                     }
                 }},
-                {key: 'young_severity', header: 'Sévérité jeune', func: function(ghm_ghs) {
+                {key: 'young_severity', header: 'Sévérité jeune', func: ghm_ghs => {
                     if (ghm_ghs.young_age_treshold) {
                         return '< ' + ghm_ghs.young_age_treshold + ' et < ' +
                                (ghm_ghs.young_severity_limit + 1);
@@ -140,14 +120,14 @@ let mco_list = {};
             ]
         },
 
-        'diagnoses': {
-            'path': 'api/mco_diagnoses.json',
-            'catalog': 'cim10',
+        diagnoses: {
+            path: 'api/mco_diagnoses.json',
+            catalog: 'cim10',
 
-            'header': true,
-            'columns': [
+            header: true,
+            columns: [
                 {key: 'diag', header: 'Diagnostic',
-                 func: function(diag, cim10_map) {
+                 func: (diag, cim10_map) => {
                     let text = diag.diag;
                     switch (diag.sex) {
                         case 'Homme': { text += ' (♂)'; } break;
@@ -158,25 +138,25 @@ let mco_list = {};
                     return text;
                 }},
                 {key: 'severity', header: 'Niveau',
-                 func: function(diag) { return diag.severity ? diag.severity + 1 : 1; }},
+                 func: diag => diag.severity ? diag.severity + 1 : 1},
                 {key: 'cmd' , header: 'CMD', variable: 'cmd'},
                 {key: 'main_list', header: 'Liste principale', variable: 'main_list'}
             ]
         },
 
-        'procedures': {
-            'path': 'api/mco_procedures.json',
-            'catalog': 'ccam',
+        procedures: {
+            path: 'api/mco_procedures.json',
+            catalog: 'ccam',
 
-            'header': true,
-            'columns': [
+            header: true,
+            columns: [
                 {key: 'proc', header: 'Acte',
-                 func: function(proc, ccam_map) {
+                 func: (proc, ccam_map) => {
                     let proc_phase = proc.proc + (proc.phase ? '/' + proc.phase : '');
                     return proc_phase + (ccam_map[proc.proc] ? ' - ' + ccam_map[proc.proc].desc : '');
                 }},
                 {key: 'dates', header: 'Dates', tooltip: 'Date de début incluse, date de fin exclue',
-                 func: function(proc) { return proc.begin_date + ' -- ' + proc.end_date; }},
+                 func: proc => proc.begin_date + ' -- ' + proc.end_date},
                 {key: 'activities', header: 'Activités', variable: 'activities'},
                 {key: 'extensions', header: 'Extensions', tooltip: 'Extensions (CCAM descriptive)',
                  variable: 'extensions'}
