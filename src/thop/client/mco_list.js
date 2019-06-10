@@ -93,6 +93,7 @@ let mco_list = {};
             'sector': true,
             'catalog': 'mco_ghm_roots',
 
+            'header': true,
             'columns': [
                 {key: 'ghm_root', func: function(ghm_ghs, ghm_roots_map) {
                     return ghm_ghs.ghm_root + (ghm_roots_map[ghm_ghs.ghm_root] ?
@@ -100,18 +101,18 @@ let mco_list = {};
                 }},
                 {key: 'ghm', header: 'GHM', variable: 'ghm'},
                 {key: 'ghs', header: 'GHS', variable: 'ghs'},
-                {key: 'durations', header: 'Durées', title: 'Durées (nuits)',
+                {key: 'durations', header: 'Durées', tooltip: 'Durées (nuits)',
                  func: function(ghm_ghs) {
                     return maskToRanges(ghm_ghs.durations);
                 }},
-                {key: 'confirm', header: 'Confirmation', title: 'Confirmation (nuits)',
+                {key: 'confirm', header: 'Confirmation', tooltip: 'Confirmation (nuits)',
                  func: function(ghm_ghs) {
                     return ghm_ghs.confirm_treshold ? '< ' + ghm_ghs.confirm_treshold : null;
                 }},
                 {key: 'main_diagnosis', header: 'DP', variable: 'main_diagnosis'},
                 {key: 'diagnoses', header: 'Diagnostics', variable: 'diagnoses'},
                 {key: 'procedures', header: 'Actes', variable: 'procedures'},
-                {key: 'authorizations', header: 'Autorisations', title: 'Autorisations (unités et lits)',
+                {key: 'authorizations', header: 'Autorisations', tooltip: 'Autorisations (unités et lits)',
                  func: function(ghm_ghs) {
                     let ret = [];
                     if (ghm_ghs.unit_authorization)
@@ -143,6 +144,7 @@ let mco_list = {};
             'path': 'api/mco_diagnoses.json',
             'catalog': 'cim10',
 
+            'header': true,
             'columns': [
                 {key: 'diag', header: 'Diagnostic',
                  func: function(diag, cim10_map) {
@@ -166,16 +168,17 @@ let mco_list = {};
             'path': 'api/mco_procedures.json',
             'catalog': 'ccam',
 
+            'header': true,
             'columns': [
                 {key: 'proc', header: 'Acte',
                  func: function(proc, ccam_map) {
                     let proc_phase = proc.proc + (proc.phase ? '/' + proc.phase : '');
                     return proc_phase + (ccam_map[proc.proc] ? ' - ' + ccam_map[proc.proc].desc : '');
                 }},
-                {key: 'dates', header: 'Dates', title: 'Date de début incluse, date de fin exclue',
+                {key: 'dates', header: 'Dates', tooltip: 'Date de début incluse, date de fin exclue',
                  func: function(proc) { return proc.begin_date + ' -- ' + proc.end_date; }},
                 {key: 'activities', header: 'Activités', variable: 'activities'},
-                {key: 'extensions', header: 'Extensions', title: 'Extensions (CCAM descriptive)',
+                {key: 'extensions', header: 'Extensions', tooltip: 'Extensions (CCAM descriptive)',
                  variable: 'extensions'}
             ]
         }
@@ -413,7 +416,7 @@ let mco_list = {};
 
         let builder;
         if (thop.needsRefresh(list, group_info, search)) {
-            builder = new DataTable();
+            builder = wt_data_table.create();
             builder.sortHandler = function(sort) { thop.go({sort: sort}); }
             list.builder = builder;
 
@@ -425,7 +428,7 @@ let mco_list = {};
             // Header
             for (let i = first_column; i < list_info.columns.length; i++) {
                 let col = list_info.columns[i];
-                builder.addColumn(col.key, null, {title: col.title || col.header}, col.header);
+                builder.addColumn(col.key, col.header, {tooltip: col.tooltip || col.header});
             }
 
             // Groups
@@ -459,8 +462,7 @@ let mco_list = {};
                             if (prev_cell0)
                                 builder.endRow();
                             builder.beginRow();
-                            builder.addCell('td', cells[0], {colspan: cells.length - 1},
-                                            addSpecLinks(cells[0]));
+                            builder.addCell(cells[0], addSpecLinks, {colspan: cells.length - 1});
                             prev_cell0 = cells[0];
                         }
                     }
@@ -468,7 +470,7 @@ let mco_list = {};
                     builder.beginRow();
                     for (let i = first_column; i < cells.length; i++) {
                         const cell = cells[i];
-                        builder.addCell('td', cell, addSpecLinks(cell));
+                        builder.addCell(cell, addSpecLinks);
                     }
                     builder.endRow();
                 }
@@ -487,7 +489,7 @@ let mco_list = {};
 
         let render_count = builder.render(query('#ls_' + list_name + ' .dtab'),
                                           (page - 1) * TableLen, TableLen,
-                                          {render_header: list_info.header, render_parents: !sort});
+                                          {hide_header: !list_info.header, hide_parents: !!sort});
         syncPagers(queryAll('#ls_' + list_name + ' .dtab_pager'), page,
                    wt_pager.computeLastPage(render_count, builder.getRowCount(), TableLen));
     }

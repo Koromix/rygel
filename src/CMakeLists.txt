@@ -225,7 +225,7 @@ if(NOT EMSCRIPTEN)
         thop/client/mco_list.js
         thop/client/mco_pricing.js
         thop/client/mco_tree.js
-        libweb/data_table.js
+        libweb/wt_data_table.js
         libweb/wt_pager.js
         libweb/wt_period_picker.js
         libweb/wt_tree_selector.js
@@ -237,7 +237,7 @@ if(NOT EMSCRIPTEN)
         thop/client/mco_list.css
         thop/client/mco_pricing.css
         thop/client/mco_tree.css
-        libweb/data_table.css
+        libweb/wt_data_table.css
         libweb/wt_pager.css
         libweb/wt_period_picker.css
         libweb/wt_tree_selector.css
