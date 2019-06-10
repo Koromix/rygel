@@ -764,20 +764,43 @@ let autoform = (function() {
                 return;
             }
 
-            goupil.database.load('settings', 'default_page').then(default_page => { default_key = default_page; });
-            goupil.database.loadAll('pages').then(pages2 => {
-                if (pages2.length) {
-                    pages = Array.from(pages2);
-                } else {
-                    pages = autoform_default.pages;
-                }
-                for (let page of pages)
-                    pages_map[page.key] = page;
+            // NOTE: Migration from localStorage to IndexedDB, drop localStorage
+            // support in a month or two.
+            try {
+                let json = localStorage.getItem('goupil_af_pages');
+                let pages2 = JSON.parse(json).map(kv => kv[1]);
+                let default_key2 = pages.length ? pages[0].key : null;
 
-                self.activate();
-            });
+                pages2.sort((page1, page2) => util.compareStrings(page1.key, page2.key));
 
-            init = true;
+                let t = goupil.database.transaction(db => {
+                    if (default_key2)
+                        db.saveWithKey('settings', 'default_page', default_key2);
+                    db.saveAll('pages', pages2);
+                });
+
+                t.then(() => {
+                    localStorage.removeItem('goupil_af_pages');
+                    self.activate();
+                });
+            } catch (err) {
+                let t = goupil.database.transaction(db => {
+                    db.load('settings', 'default_page').then(default_page => { default_key = default_page; });
+                    db.loadAll('pages').then(pages2 => {
+                        if (pages2.length) {
+                            pages = Array.from(pages2);
+                        } else {
+                            pages = autoform_default.pages;
+                        }
+                        for (let page of pages)
+                            pages_map[page.key] = page;
+                    });
+                });
+
+                t.then(self.activate);
+
+                init = true;
+            }
         }
 
         let main = document.querySelector('main');
