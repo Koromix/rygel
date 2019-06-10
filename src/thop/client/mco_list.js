@@ -192,7 +192,7 @@ let mco_list = {};
     let list_cache = {};
     let reactor = {};
 
-    function runModule(route, errors)
+    function runModule(route)
     {
         // Memorize route info
         specs[route.list] = route.spec;
@@ -221,13 +221,13 @@ let mco_list = {};
 
         // Errors
         if (!Lists[route.list])
-            errors.add('Liste inconnue');
+            thop.error('Liste inconnue');
         if (route.date !== null && indexes.length && main_index < 0)
-            errors.add('Date incorrecte');
+            thop.error('Date incorrecte');
         if (Lists[route.list] && Lists[route.list].sector && !['public', 'private'].includes(route.sector))
-            errors.add('Secteur incorrect');
+            thop.error('Secteur incorrect');
         if (route.group && Lists[route.list] && !group_info)
-            errors.add('Critère de tri inconnu');
+            thop.error('Critère de tri inconnu');
 
         // Refresh settings
         queryAll('#opt_index').removeClass('hide');

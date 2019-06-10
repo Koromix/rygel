@@ -8,9 +8,9 @@
 
 let data = (function() {
     this.busyHandler = null;
+    this.errorHandler = null;
 
     let self = this;
-    let errors = [];
     let queue = new Set();
     let busy = 0;
 
@@ -116,7 +116,8 @@ let data = (function() {
                 }
             }
 
-            errors.push(response);
+            if (self.errorHandler)
+                self.errorHandler(response);
             if (fail)
                 fail(response);
         }
@@ -134,9 +135,6 @@ let data = (function() {
             queue.clear();
         }
     }
-
-    this.getErrors = function() { return errors; }
-    this.clearErrors = function() { errors = []; }
 
     return this;
 }).call({});

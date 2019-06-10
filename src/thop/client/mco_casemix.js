@@ -29,7 +29,7 @@ let mco_casemix = {};
     let summaries = {};
     let deploy_results = new Set;
 
-    function runModule(route, errors)
+    function runModule(route)
     {
         // Memorize route info
         pages[route.view] = route.page;
@@ -55,12 +55,12 @@ let mco_casemix = {};
         // Permissions
         if (!user.isConnected() || !settings.permissions) {
             if (!user.isConnected())
-                errors.add('Vous n\'êtes pas connecté(e)');
+                thop.error('Vous n\'êtes pas connecté(e)');
             query('#cm').addClass('hide');
             return;
         }
         if (route.view === 'results' && !settings.permissions.has('FullResults')) {
-            errors.add('Vous n\'avez pas les droits pour utiliser cette page');
+            thop.error('Vous n\'avez pas les droits pour utiliser cette page');
             query('#cm').addClass('hide');
             return;
         }
@@ -99,26 +99,26 @@ let mco_casemix = {};
 
         // Errors
         if (!(['ghm_roots', 'units', 'durations', 'results'].includes(route.view)))
-            errors.add('Mode d\'affichage incorrect');
+            thop.error('Mode d\'affichage incorrect');
         if (!route.units.length && mix_ready)
-            errors.add('Aucune unité sélectionnée');
+            thop.error('Aucune unité sélectionnée');
         if (['ghm_roots', 'units'].includes(route.view) && !route.ghm_roots.length && mix_ready)
-            errors.add('Aucune racine sélectionnée');
+            thop.error('Aucune racine sélectionnée');
         if (route.structure > settings.structures.length && settings.structures.length)
-            errors.add('Structure inexistante');
+            thop.error('Structure inexistante');
         if (!['none', 'cmd', 'da', 'ga'].includes(route.regroup))
-            errors.add('Regroupement incorrect');
+            thop.error('Regroupement incorrect');
         if (['durations', 'results'].includes(route.view)) {
             if (!checkCasemixGhmRoot(route.ghm_root))
-                errors.add('Cette racine n\'existe pas dans cette période');
+                thop.error('Cette racine n\'existe pas dans cette période');
             if (route.view === 'durations' && mix_mismatched_roots.has(route.ghm_root))
-                errors.add('Regroupement des GHS suite à changement')
+                thop.error('Regroupement des GHS suite à changement')
         }
         if (!(['none', 'absolute'].includes(route.mode)))
-            errors.add('Mode de comparaison inconnu');
+            thop.error('Mode de comparaison inconnu');
         if (settings.algorithms.length &&
                 !settings.algorithms.find(function(algorithm) { return algorithm.name === route.algorithm; }))
-            errors.add('Algorithme inconnu');
+            thop.error('Algorithme inconnu');
 
         // Refresh settings
         queryAll('#opt_units, #opt_periods, #opt_algorithm, #opt_update, #opt_apply_coefficient')
@@ -213,7 +213,7 @@ let mco_casemix = {};
         }
     }
 
-    function parseRoute(route, path, parameters, hash, errors)
+    function parseRoute(route, path, parameters, hash)
     {
         // Model: mco_casemix/<view>/<json_parameters_in_base64>
         let path_parts = path.split('/', 4);

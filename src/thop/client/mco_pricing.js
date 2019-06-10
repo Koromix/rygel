@@ -13,7 +13,7 @@ let mco_pricing = {};
     // Chart.js
     let chart = null;
 
-    function runModule(route, errors)
+    function runModule(route)
     {
         // Resources
         let indexes = thop.updateMcoSettings().indexes;
@@ -35,21 +35,21 @@ let mco_pricing = {};
 
         // Errors
         if (route.view !== 'chart' && route.view !== 'table')
-            errors.add('Mode d\'affichage incorrect');
+            thop.error('Mode d\'affichage incorrect');
         if (route.date && indexes.length && main_index < 0)
-            errors.add('Date incorrecte');
+            thop.error('Date incorrecte');
         if (route.diff && indexes.length && diff_index < 0)
-            errors.add('Date de comparaison incorrecte');
+            thop.error('Date de comparaison incorrecte');
         if (!['public', 'private'].includes(route.sector))
-            errors.add('Secteur incorrect');
+            thop.error('Secteur incorrect');
         if (route.ghm_root !== null && ghm_roots.length) {
             if (!ghm_roots_map[route.ghm_root]) {
-                errors.add('Racine de GHM inconnue');
+                thop.error('Racine de GHM inconnue');
             } else {
                 if (!checkIndexGhmRoot(indexes, main_index, route.sector, route.ghm_root))
-                    errors.add('Cette racine n\'existe pas dans la version \'' + indexes[main_index].begin_date + '\'');
+                    thop.error('Cette racine n\'existe pas dans la version \'' + indexes[main_index].begin_date + '\'');
                 if (!checkIndexGhmRoot(indexes, diff_index, route.sector, route.ghm_root))
-                    errors.add('Cette racine n\'existe pas dans la version \'' + indexes[diff_index].begin_date + '\'');
+                    thop.error('Cette racine n\'existe pas dans la version \'' + indexes[diff_index].begin_date + '\'');
             }
         }
 
