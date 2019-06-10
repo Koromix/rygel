@@ -397,8 +397,10 @@ int HandleConnect(const http_Request &request, const User *, http_Response *out_
     // Find and validate user
     const User *user = thop_user_set.FindUser(username);
     if (!user || !user->password_hash ||
-            crypto_pwhash_str_verify(user->password_hash, password, strlen(password)) != 0)
+            crypto_pwhash_str_verify(user->password_hash, password, strlen(password)) != 0) {
+        LogError("Incorrect username or password");
         return http_ProduceErrorPage(403, out_response);
+    }
 
     // Create session key
     char session_key[129];
