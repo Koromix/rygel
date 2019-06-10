@@ -20,19 +20,6 @@ let user = {};
     }
     this.runModule = runModule;
 
-    function runSession()
-    {
-        if (ShowUser) {
-            updateSession();
-
-            refreshSessionBox();
-            refreshSessionMenu();
-        }
-
-        queryAll('#side_session_box, #side_session_menu').toggleClass('hide', !ShowUser);
-    }
-    this.runSession = runSession;
-
     function routeToUrl(args)
     {
         return {
@@ -107,44 +94,11 @@ let user = {};
                 handler();
         }
     }
-
-    function refreshSessionBox()
-    {
-        if (url_key) {
-            query('#side_session_box').replaceContent(
-                username + ' (',
-                dom.h('a', {href: routeToUrl().url}, 'changer'),
-                ', ',
-                dom.h('a', {href: '#', click: function(e) { logout(); e.preventDefault(); }},
-                      'déconnexion'),
-                ')'
-            );
-        } else {
-            query('#side_session_box').replaceContent(
-                dom.h('a', {href: routeToUrl().url}, 'Se connecter')
-            );
-        }
-    }
-
-    function refreshSessionMenu()
-    {
-        if (url_key) {
-            query('#side_session_menu').replaceContent(
-                dom.h('a', {href: '#', click: function(e) { logout(); e.preventDefault(); }},
-                      'Se déconnecter (' + username + ')')
-            );
-        } else {
-            query('#side_session_menu').replaceContent(
-                dom.h('a', {href: routeToUrl().url}, 'Se connecter')
-            );
-        }
-    }
+    this.updateSession = updateSession;
 
     this.addChangeHandler = function(func) { change_handlers.push(func); }
 
     this.isConnected = function() { return !!url_key; }
     this.getUrlKey = function() { return url_key; }
     this.getUsername = function() { return username; }
-
-    thop.registerModule('login', this);
 }).call(user);

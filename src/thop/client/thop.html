@@ -14,7 +14,7 @@
 
         <script type="text/javascript">
             let BaseUrl = '{THOP_BASE_URL}';
-            let ShowUser = {THOP_SHOW_USER};
+            let HasUsers = {THOP_HAS_USERS};
             let TableLen = 100;
 
             let LazyModules = {
@@ -27,41 +27,21 @@
         <script type="text/javascript" src="{THOP_BASE_URL}static/thop.pk.js" async></script>
     </head>
 
-    <body class="hide">
+    <body style="display: none;">
         <div id="side_bar">
             <a id="side_deploy" href="#" onclick="thop.toggleMenu('#side_menu'); return false;"></a>
-            <nav id="side_menu">
-                <div id="side_session_box" class="hide"></div>
 
-                <img id="logo" src="{THOP_BASE_URL}static/thop_logo.svg" width="165" alt="THOP logo"/>
-                <ul>
-                    <li id="side_session_menu" class="hide"><a class="category"></a></li>
-
-                    <li><a class="category" data-path="mco_list.routeToUrl({list: 'ghm_roots'});">Tarifs</a></li>
-                    <li><a data-path="mco_list.routeToUrl({list: 'ghm_roots'});">Racines de GHM</a></li>
-                    <li><a data-path="mco_pricing.routeToUrl({view: 'table'});">Tarifs (grille)</a></li>
-                    <li><a data-path="mco_pricing.routeToUrl({view: 'chart'});">Tarifs (courbes)</a></li>
-
-                    <li><a class="category" data-path="mco_tree.routeToUrl();">Listes</a></li>
-                    <li><a data-path="mco_tree.routeToUrl();">Arbre de groupage</a></li>
-                    <li><a data-path="mco_list.routeToUrl({list: 'ghm_ghs'});">GHM / GHS</a></li>
-                    <li><a data-path="mco_list.routeToUrl({list: 'diagnoses'});">Diagnostics</a></li>
-                    <li><a data-path="mco_list.routeToUrl({list: 'procedures'});">Actes</a></li>
-
-                    <li><a class="category" data-path="mco_casemix.routeToUrl({view: 'units'});">Activité</a></li>
-                    <li><a data-path="mco_casemix.routeToUrl({view: 'units'});">Unités médicales</a></li>
-                    <li><a data-path="mco_casemix.routeToUrl({view: 'ghm_roots'});">Racines de GHM</a></li>
-                    <li><a data-path="mco_casemix.routeToUrl({view: 'durations'});">Valorisations</a></li>
-                    <li><a data-path="mco_casemix.routeToUrl({view: 'results'});">Résumés (RSS)</a></li>
-                </ul>
-            </nav>
-
+            <div class="session"></div>
+            <img id="side_logo" src="{THOP_BASE_URL}static/thop_logo.svg" width="150" alt="THOP logo"/>
+            <nav id="side_menu"></nav>
             <div id="side_version">{THOP_VERSION}</div>
         </div>
 
         <main>
             <a id="opt_deploy" class="deploy" href="#" onclick="thop.toggleMenu('#opt_menu'); return false;"></a>
             <nav id="opt_menu">
+                <div class="session"></div>
+
                 <svg id="opt_index" class="indexes_line"></svg>
 
                 <label id="opt_sector">

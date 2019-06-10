@@ -194,7 +194,7 @@ static void InitRoutes()
         } else if (TestStr(key, "THOP_BASE_URL")) {
             writer->Write(thop_config.base_url);
             return true;
-        } else if (TestStr(key, "THOP_SHOW_USER")) {
+        } else if (TestStr(key, "THOP_HAS_USERS")) {
             writer->Write(thop_has_casemix ? "true" : "false");
             return true;
         } else {

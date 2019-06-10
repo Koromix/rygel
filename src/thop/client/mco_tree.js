@@ -252,6 +252,4 @@ let mco_tree = {};
 
         e.preventDefault();
     };
-
-    thop.registerModule('mco_tree', this);
 }).call(mco_tree);
