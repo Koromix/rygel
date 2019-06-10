@@ -2,7 +2,7 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-.dtab_count {
+.dtab_stat {
     margin: 3px;
     font-size: 0.9em;
     font-style: italic;
@@ -48,7 +48,7 @@
 }
 
 @media screen and (min-width: 801px) {
-    .dtab_count { float: left; }
+    .dtab_stat { float: left; }
     .dtab_excel {
         display: block;
         float: right;

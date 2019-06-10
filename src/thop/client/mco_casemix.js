@@ -679,7 +679,7 @@ let mco_casemix = {};
     {
         let summary = summaries.units;
         if (!summary) {
-            summary = new DataTable();
+            summary = wt_data_table.create();
             summary.sortHandler = function(sort) { thop.go({sort: sort}); };
 
             summaries.units = summary;
@@ -694,22 +694,22 @@ let mco_casemix = {};
 
             summary.clear();
 
-            summary.addColumn('unit', null, 'Unité');
-            summary.addColumn('rss', '#,##0', 'RSS');
+            summary.addColumn('unit', 'Unité');
+            summary.addColumn('rss', 'RSS', {format: '#,##0'});
             if (!mix_params.diff)
-                summary.addColumn('rss_pct', '0.00%', '%');
-            summary.addColumn('rum', '#,##0', 'RUM');
+                summary.addColumn('rss_pct', '%', {format: '0.00%'});
+            summary.addColumn('rum', 'RUM', {format: '#,##0'});
             if (!mix_params.diff)
-                summary.addColumn('rum_pct', '0.00%', '%');
-            summary.addColumn('total', '#,##0.00', 'Total');
+                summary.addColumn('rum_pct', '%', {format: '0.00%'});
+            summary.addColumn('total', 'Total', {format: '#,##0.00'});
             if (!mix_params.diff)
-                summary.addColumn('total_pct', '0.00%', '%');
-            summary.addColumn('pay', '#,##0.00', 'Rétribué');
+                summary.addColumn('total_pct', '%', {format: '0.00%'});
+            summary.addColumn('pay', 'Rétribué', {format: '#,##0.00'});
             if (!mix_params.diff)
-                summary.addColumn('pay_pct', '0.00%', '%');
-            summary.addColumn('deaths', '#,##0', 'Décès');
+                summary.addColumn('pay_pct', '%', {format: '0.00%'});
+            summary.addColumn('deaths', 'Décès', {format: '#,##0'});
             if (!mix_params.diff)
-                summary.addColumn('deaths_pct', '0.00%', '%');
+                summary.addColumn('deaths_pct', '%', {format: '0.00%'});
 
             // Aggregate
             let stat0;
@@ -732,7 +732,7 @@ let mco_casemix = {};
 
             if (stat0) {
                 summary.beginRow();
-                summary.addCell('td', 'Total');
+                summary.addCell('Total');
                 addSummaryCells(summary, stat0, stat0);
 
                 let prev_groups = [];
@@ -756,7 +756,7 @@ let mco_casemix = {};
                         let group_stat = stats1.find(ent.path[k]);
 
                         summary.beginRow();
-                        summary.addCell('td', ent.path[k], {title: ent.path[k]}, ent.path[k]);
+                        summary.addCell(ent.path[k], null, {tooltip: ent.path[k]});
                         addSummaryCells(summary, group_stat, prev_totals[prev_totals.length - 1]);
 
                         prev_groups.push(ent.path[k]);
@@ -764,8 +764,8 @@ let mco_casemix = {};
                     }
 
                     summary.beginRow();
-                    summary.addCell('td', ent.path[ent.path.length - 1],
-                                    {title: ent.path[ent.path.length - 1]}, ent.path[ent.path.length - 1]);
+                    summary.addCell(ent.path[ent.path.length - 1], null,
+                                    {tooltip: ent.path[ent.path.length - 1]});
                     addSummaryCells(summary, unit_stat, prev_totals[prev_totals.length - 1]);
                     summary.endRow();
                 }
@@ -781,7 +781,7 @@ let mco_casemix = {};
         `, query('#cm_units'));
 
         let render_count = summary.render(query('#cm_units .dtab'),
-                                          (page - 1) * TableLen, TableLen, {render_empty: false});
+                                          (page - 1) * TableLen, TableLen, {hide_empty: true});
         syncPagers(queryAll('#cm_units .dtab_pager'), page,
                    wt_pager.computeLastPage(render_count, summary.getRowCount(), TableLen));
     }
@@ -790,7 +790,7 @@ let mco_casemix = {};
     {
         let summary = summaries.ghm_roots;
         if (!summary) {
-            summary = new DataTable();
+            summary = wt_data_table.create();
             summary.sortHandler = function(sort) { thop.go({sort: sort}); };
 
             summaries.ghm_roots = summary;
@@ -816,22 +816,22 @@ let mco_casemix = {};
 
             summary.clear();
 
-            summary.addColumn('ghm_root', null, 'Racine');
-            summary.addColumn('rss', '#,##0', 'RSS');
+            summary.addColumn('ghm_root', 'Racine');
+            summary.addColumn('rss', 'RSS', {format: '#,##0'});
             if (!mix_params.diff)
-                summary.addColumn('rss_pct', '0.00%', '%');
-            summary.addColumn('rum', '#,##0', 'RUM');
+                summary.addColumn('rss_pct', '%', {format: '0.00%'});
+            summary.addColumn('rum', 'RUM', {format: '#,##0'});
             if (!mix_params.diff)
-                summary.addColumn('rum_pct', '0.00%', '%');
-            summary.addColumn('total', '#,##0.00', 'Total');
+                summary.addColumn('rum_pct', '%', {format: '0.00%'});
+            summary.addColumn('total', 'Total', {format: '#,##0.00'});
             if (!mix_params.diff)
-                summary.addColumn('total_pct', '0.00%', '%');
-            summary.addColumn('pay', '#,##0.00', 'Rétribué');
+                summary.addColumn('total_pct', '%', {format: '0.00%'});
+            summary.addColumn('pay', 'Rétribué', {format: '#,##0.00'});
             if (!mix_params.diff)
-                summary.addColumn('pay_pct', '0.00%', '%');
-            summary.addColumn('deaths', '#,##0', 'Décès');
+                summary.addColumn('pay_pct', '%', {format: '0.00%'});
+            summary.addColumn('deaths', 'Décès', {format: '#,##0'});
             if (!mix_params.diff)
-                summary.addColumn('deaths_pct', '0.00%', '%');
+                summary.addColumn('deaths_pct', '%', {format: '0.00%'});
 
             // Aggregate
             let stat0;
@@ -859,7 +859,7 @@ let mco_casemix = {};
 
             if (stat0) {
                 summary.beginRow();
-                summary.addCell('td', 'Total');
+                summary.addCell('Total');
                 addSummaryCells(summary, stat0, stat0);
 
                 let prev_group = null;
@@ -880,7 +880,7 @@ let mco_casemix = {};
                         if (group) {
                             let stat = stats1.find(group);
                             summary.beginRow();
-                            summary.addCell('td', group + ' - ' + ghm_root_info[regroup + '_desc']);
+                            summary.addCell(`${group} - ${ghm_root_info[regroup + '_desc']}`);
                             addSummaryCells(summary, stat, total);
                             total = stat;
                         }
@@ -888,14 +888,11 @@ let mco_casemix = {};
                         prev_group = group;
                     }
 
-                    let elements = [
-                        dom.h('a', {href: routeToUrl({view: 'durations', ghm_root: ghm_root}).url}, ghm_root),
-                        ghm_root_info ? ' - ' + ghm_root_info.desc : null
-                    ];
-                    let title = ghm_root_info ? (ghm_root + ' - ' + ghm_root_info.desc) : null;
-
                     summary.beginRow();
-                    summary.addCell('td', ghm_root, {title: title}, elements);
+                    summary.addCell(ghm_root, () => html`
+                        <a href=${routeToUrl({view: 'durations', ghm_root: ghm_root}).url}>${ghm_root}</a>
+                        ${ghm_root_info ? ` - ${ghm_root_info.desc}` : null}
+                    `, {tooltip: ghm_root_info ? `${ghm_root} - ${ghm_root_info.desc}` : null});
                     addSummaryCells(summary, stat, total);
                     summary.endRow();
                 }
@@ -911,7 +908,7 @@ let mco_casemix = {};
         `, query('#cm_ghm_roots'));
 
         let render_count = summary.render(query('#cm_ghm_roots .dtab'),
-                                          (page - 1) * TableLen, TableLen, {render_empty: false});
+                                          (page - 1) * TableLen, TableLen, {hide_empty: true});
         syncPagers(queryAll('#cm_ghm_roots .dtab_pager'), page,
                    wt_pager.computeLastPage(render_count, summary.getRowCount(), TableLen));
     }
@@ -921,25 +918,25 @@ let mco_casemix = {};
         function addPercentCell(value)
         {
             if (!isNaN(value)) {
-                dtab.addCell('td', value, format.percent(value));
+                dtab.addCell(value, value => format.percent(value));
             } else {
-                dtab.addCell('td', null, '-');
+                dtab.addCell(null, value => '-');
             }
         }
 
-        dtab.addCell('td', stat.count, format.number(stat.count, !!mix_params.diff));
+        dtab.addCell(stat.count, value => format.number(value, !!mix_params.diff));
         if (!mix_params.diff)
             addPercentCell(stat.count / total.count);
-        dtab.addCell('td', stat.mono_count, format.number(stat.mono_count, !!mix_params.diff));
+        dtab.addCell(stat.mono_count, value => format.number(value, !!mix_params.diff));
         if (!mix_params.diff)
             addPercentCell(stat.mono_count / total.mono_count);
-        dtab.addCell('td', stat.price_cents_total / 100.0, format.price(stat.price_cents_total, false, !!mix_params.diff));
+        dtab.addCell(stat.price_cents_total / 100.0, value => format.price(value, false, !!mix_params.diff));
         if (!mix_params.diff)
             addPercentCell(stat.price_cents_total / total.price_cents_total);
-        dtab.addCell('td', stat.price_cents / 100.0, format.price(stat.price_cents, false, !!mix_params.diff));
+        dtab.addCell(stat.price_cents / 100.0, value => format.price(value, false, !!mix_params.diff));
         if (!mix_params.diff)
             addPercentCell(stat.price_cents / total.price_cents);
-        dtab.addCell('td', stat.deaths, format.number(stat.deaths, !!mix_params.diff));
+        dtab.addCell(stat.deaths, value => format.number(value, !!mix_params.diff));
         if (!mix_params.diff)
             addPercentCell(stat.deaths / stat.count);
     }
