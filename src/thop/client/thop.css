@@ -74,7 +74,7 @@ form button, form input[type=submit] {
 /* Utility */
 .hide { display: none !important; }
 .busy {
-    animation: busy 1s 1 linear;
+    animation: busy 0.3s 1 linear;
     filter: grayscale(100%);
     opacity: 0.5;
     pointer-events: none;
