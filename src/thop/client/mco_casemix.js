@@ -1505,6 +1505,4 @@ let mco_casemix = {};
                 el.innerHTML = '';
         });
     });
-
-    thop.registerModule('mco_casemix', this);
 }).call(mco_casemix);

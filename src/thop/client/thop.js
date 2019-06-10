@@ -5,8 +5,29 @@
 let thop = (function() {
     let self = this;
 
-    // Registered modules
-    let modules = {};
+    // Modules and links
+    let Modules = {
+        'mco_casemix': mco_casemix,
+        'mco_list': mco_list,
+        'mco_pricing': mco_pricing,
+        'mco_tree': mco_tree,
+        'login': user
+    };
+    let Links = [
+        {category: 'Tarifs', title: 'Racines de GHM', func: () => mco_list.routeToUrl({list: 'ghm_roots'})},
+        {category: 'Tarifs', title: 'Tarifs (grille)', func: () => mco_pricing.routeToUrl({view: 'table'})},
+        {category: 'Tarifs', title: 'Tarifs (courbes)', func: () => mco_pricing.routeToUrl({view: 'chart'})},
+
+        {category: 'Listes', title: 'Arbre de groupage', func: () => mco_tree.routeToUrl()},
+        {category: 'Listes', title: 'GHM / GHS', func: () => mco_list.routeToUrl({list: 'ghm_ghs'})},
+        {category: 'Listes', title: 'Diagnostics', func: () => mco_list.routeToUrl({list: 'diagnoses'})},
+        {category: 'Listes', title: 'Actes', func: () => mco_list.routeToUrl({list: 'procedures'})},
+
+        {category: 'Activité', title: 'Unités médicales', func: () => mco_casemix.routeToUrl({view: 'units'})},
+        {category: 'Activité', title: 'Racines de GHM', func: () => mco_casemix.routeToUrl({view: 'ghm_roots'})},
+        {category: 'Activité', title: 'Valorisations', func: () => mco_casemix.routeToUrl({view: 'durations'})},
+        {category: 'Activité', title: 'Résumés (RSS)', func: () => mco_casemix.routeToUrl({view: 'results'})}
+    ];
 
     // Go
     let go_timer_id = null;
@@ -25,10 +46,6 @@ let thop = (function() {
 
     // Cache
     let mco_settings = {};
-
-    this.registerModule = function(prefix, object) {
-        modules[prefix] = object;
-    };
 
     this.toggleMenu = function(selector, enable) {
         let el = query(selector);
@@ -49,6 +66,43 @@ let thop = (function() {
         return Object.assign({}, route_values, args);
     };
 
+    function updateMenu() {
+        let session_els = HasUsers ? queryAll('.session') : [];
+        let menu_el = query('#side_menu');
+
+        for (let el of session_els) {
+            render(html`
+                ${!user.isConnected() ?
+                    html`<a href="${user.routeToUrl().url}">Se connecter</a>` : html``}
+                ${user.isConnected() ?
+                    html`${user.getUsername()} (<a href="${user.routeToUrl().url}">changer</a>, <a href="#" @click=${e => { user.logout(); e.preventDefault(); }}>déconnexion</a>)` : html``}
+            `, el);
+        }
+
+        let prev_category = null;
+        render(html`
+            ${Links.map(link => {
+                let path = link.func();
+
+                let active = current_url && current_url.startsWith(path.url);
+                if (active)
+                    document.title = `THOP — ${link.title}`;
+
+                if (path.allowed) {
+                    if (link.category === prev_category) {
+                        return html`<a class=${active ? 'active': ''} href=${path.url}>${link.title}</a>`;
+                    } else {
+                        prev_category = link.category;
+                        return html`<a class="category">${link.category}</li>
+                                    <a class=${active ? 'active': ''} href=${path.url}>${link.title}</a>`;
+                    }
+                } else {
+                    return html``;
+                }
+            })}
+        `, menu_el);
+    }
+
     function run(module, args, hash, delay = 0, mark = true) {
         // Respect delay (if any)
         if (go_timer_id) {
@@ -61,7 +115,8 @@ let thop = (function() {
         }
 
         // Update session information
-        user.runSession();
+        if (HasUsers)
+            user.updateSession();
 
         // Prepare route and errors
         let errors = new Set(data.getErrors());
@@ -75,7 +130,7 @@ let thop = (function() {
             current_module = module;
         }
         queryAll('#opt_menu > *').addClass('hide');
-        document.body.removeClass('hide');
+        document.body.style.display = 'block';
 
         // Run module
         let new_url;
@@ -102,32 +157,23 @@ let thop = (function() {
             data.clearErrors();
 
         // Update side menu state and links
-        queryAll('#side_menu li a').forEach(anchor => {
-            if (anchor.dataset.path) {
-                let path = eval(anchor.dataset.path);
-
-                anchor.classList.toggle('hide', !path.allowed);
-                anchor.href = path.url;
-
-                let active = new_url && new_url.startsWith(path.url) && !anchor.hasClass('category');
-                anchor.toggleClass('active', active);
-
-                if (active)
-                    document.title = `THOP — ${anchor.innerText}`;
-            }
-        });
+        updateMenu();
         self.toggleMenu('#side_menu', false);
 
         // Hide page menu if empty
-        let opt_hide = true;
-        queryAll('#opt_menu > *').forEach(el => {
-            if (!el.hasClass('hide'))
-                opt_hide = false;
-        });
-        queryAll('#opt_deploy, #opt_menu').toggleClass('hide', opt_hide);
+        if (!data_busy) {
+            let opt_hide = true;
+            queryAll('#opt_menu > *').forEach(el => {
+                if (!el.hasClass('hide'))
+                    opt_hide = false;
+            });
+            queryAll('#opt_deploy, #opt_menu').toggleClass('hide', opt_hide);
+            if (opt_hide)
+                self.toggleMenu('#opt_menu', false);
+        }
 
         // Done
-        query('main').toggleClass('busy', self.isBusy());
+        query('main').toggleClass('busy', data_busy);
     }
 
     this.go = function(args, hash, delay, mark) {
@@ -140,7 +186,7 @@ let thop = (function() {
             url.path = url.path.substr(BaseUrl.length);
 
         let new_module_name = url.path.split('/')[0];
-        let new_module = modules[new_module_name];
+        let new_module = Modules[new_module_name];
 
         // Save scroll state
         if (mark)
@@ -168,8 +214,8 @@ let thop = (function() {
     };
 
     this.goHome = function() {
-        let first_anchor = query('#side_menu a[data-path]');
-        self.route(first_anchor.href);
+        let home_url = Links[0].func().url;
+        self.route(home_url);
     };
 
     this.goBackOrHome = function() {
@@ -238,7 +284,7 @@ let thop = (function() {
                 data_busy |= !ignore_busy;
             } else {
                 data_busy = false;
-                self.go({});
+                self.go({}, null, 0, false);
             }
         };
     }
@@ -269,8 +315,7 @@ let thop = (function() {
             if (window.location.pathname !== BaseUrl) {
                 new_url = window.location.href;
             } else {
-                let first_anchor = query('#side_menu a[data-path]');
-                new_url = eval(first_anchor.dataset.path).url;
+                new_url = Links[0].func().url;
             }
 
             // Avoid history push
