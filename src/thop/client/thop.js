@@ -122,19 +122,17 @@ let thop = (function() {
         if (HasUsers)
             user.updateSession();
 
-        // Hide previous UI (if needed)
-        if (module !== current_module) {
-            queryAll('main > div').addClass('hide');
-
-            prev_module = current_module;
-            current_module = module;
-        }
+        // Hide previous options
         queryAll('#opt_menu > *').addClass('hide');
-        document.body.style.display = 'block';
 
         // Run module
         let new_url;
         if (module) {
+            if (module !== current_module) {
+                prev_module = current_module;
+                current_module = module;
+            }
+
             module.runModule(route_values);
             new_url = module.routeToUrl({}).url;
         } else {
@@ -173,6 +171,7 @@ let thop = (function() {
         }
 
         // Done
+        document.body.style.display = 'block';
         query('main').toggleClass('busy', data_busy);
     }
 
@@ -280,6 +279,13 @@ let thop = (function() {
         log.toggleClass('hide', !errors.length);
     }
 
+    function initUser() {
+        user.addChangeHandler(() => {
+            let view_el = query('#view');
+            render(html``, view_el);
+        });
+    }
+
     function initData() {
         data.busyHandler = busy => {
             if (busy) {
@@ -311,6 +317,7 @@ let thop = (function() {
 
     document.addEventListener('readystatechange', e => {
         if (document.readyState === 'complete') {
+            initUser();
             initData();
             initNavigation();
 

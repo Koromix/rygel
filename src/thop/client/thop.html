@@ -39,7 +39,7 @@
 
         <main>
             <a id="opt_deploy" class="deploy" href="#" onclick="thop.toggleMenu('#opt_menu'); return false;"></a>
-            <nav id="opt_menu">
+            <nav id="opt_menu" class="hide">
                 <div class="session"></div>
 
                 <svg id="opt_index" class="indexes_line"></svg>
@@ -124,42 +124,8 @@
                             style="width: 96%; margin-top: 4px;"></select><br/>
                 </label>
             </nav>
-            <div id="log"></div>
-
-            <div id="usr">
-                <form>
-                    <label>Utilisateur : <input id="usr_username" type="text"/></label>
-                    <label>Mot de passe : <input id="usr_password" type="password"/></label>
-                    <button onclick="user.login(); return false;">Se connecter</button>
-                </form>
-            </div>
-
-            <div id="pr">
-                <table id="pr_table" class="pr_grid"></table>
-                <canvas id="pr_chart" width="400" height="300"></canvas>
-            </div>
-
-            <div id="tr">
-                <ul id="tr_tree"></ul>
-            </div>
-
-            <div id="ls">
-                <h1 id="ls_spec"></h1>
-
-                <div id="ls_ghm_roots" class="ls_table"></div>
-                <div id="ls_ghm_ghs" class="ls_table"></div>
-                <div id="ls_diagnoses" class="ls_table"></div>
-                <div id="ls_procedures" class="ls_table"></div>
-            </div>
-
-            <div id="cm">
-                <div id="cm_ghm_roots" class="cm_summary"></div>
-                <div id="cm_units" class="cm_summary"></div>
-
-                <table id="cm_table" class="pr_grid"></table>
-
-                <div id="rt"></div>
-            </div>
+            <div id="log" class="hide"></div>
+            <div id="view"></div>
         </main>
     </body>
 </html>

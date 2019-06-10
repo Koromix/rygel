@@ -11,12 +11,22 @@ let user = {};
 
     function runModule(route)
     {
-        query('#usr button').disabled = false;
+        if (!thop.isBusy()) {
+            let view_el = query('#view');
 
-        let focus = query('#usr').hasClass('hide');
-        query('#usr').removeClass('hide');
-        if (focus)
-            query('#usr_username').focus();
+            render(html`
+                <form>
+                    <label>Utilisateur : <input id="usr_username" type="text"/></label>
+                    <label>Mot de passe : <input id="usr_password" type="password"/></label>
+
+                    <button id="usr_button" @click=${e => {user.login(); e.preventDefault(); }}>Se connecter</button>
+                </form>
+            `, view_el);
+
+            if (!document.querySelector('#usr_password:focus'))
+                query('#usr_username').focus();
+            query('#usr_button').disabled = false;
+        }
     }
     this.runModule = runModule;
 
@@ -70,7 +80,7 @@ let user = {};
         let password = query('#usr_password').value;
         query('#usr_username').value = '';
         query('#usr_password').value = '';
-        query('#usr button').disabled = true;
+        query('#usr_button').disabled = true;
 
         connect(username, password, thop.goBackOrHome);
     }

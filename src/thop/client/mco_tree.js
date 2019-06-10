@@ -29,13 +29,14 @@ let mco_tree = {};
 
         // Refresh view
         if (!thop.isBusy()) {
+            let view_el = query('#view');
+
+            render(html`<ul id="tr_tree"></ul>`, view_el);
             refreshTree(nodes);
 
             deploySelectedNode(route.highlight_node);
             route.highlight_node = null;
         }
-
-        query('#tr').removeClass('hide');
     }
     this.runModule = runModule;
 
@@ -84,9 +85,6 @@ let mco_tree = {};
 
     function refreshTree(nodes)
     {
-        if (!thop.needsRefresh(refreshTree, arguments))
-            return;
-
         if (nodes.length) {
             query('#tr_tree').replaceContent(recurseNodes(0, '', []).childNodes);
         } else {
