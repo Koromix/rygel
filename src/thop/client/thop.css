@@ -33,7 +33,11 @@ button { cursor: pointer; }
     text-decoration: none;
     color: black;
 }
-#side_menu li a.category { font-weight: bold; }
+#side_menu li a.category {
+    font-weight: bold;
+    font-variant: small-caps;
+    font-size: 1.1em;
+}
 #side_menu li a.active {
     background: #262626;
     color: white;
@@ -204,7 +208,6 @@ form button, form input[type=submit] {
         font-size: 12px;
         font-style: normal;
         text-align: center;
-        padding:
     }
     #side_menu li a.active {
         display: block;
