@@ -2,11 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function DataTable(widget)
+function DataTable()
 {
     this.sortHandler = null;
 
     let self = this;
+
+    let root_el;
 
     let columns;
     let columns_map;
@@ -20,6 +22,8 @@ function DataTable(widget)
 
     let prev_offset;
     let prev_len;
+
+    this.getRootElement = function() { return root_el; };
 
     function handleExcelClick(e)
     {
@@ -83,7 +87,7 @@ function DataTable(widget)
             self.sortHandler(sort);
         } else {
             self.sort(sort);
-            self.render(prev_offset, prev_len);
+            self.render(root_el, prev_offset, prev_len);
         }
 
         e.preventDefault();
@@ -229,7 +233,9 @@ function DataTable(widget)
         return true;
     };
 
-    this.render = function(offset, len, options) {
+    this.render = function(new_root_el, offset, len, options) {
+        root_el = new_root_el;
+
         offset = (offset !== undefined) ? offset : 0;
         len = (len !== undefined) ? len : sorted_rows.length;
         options = (options !== undefined) ? options : {};
@@ -237,15 +243,15 @@ function DataTable(widget)
         options.render_parents = (options.render_parents !== undefined) ? options.render_parents : true;
         options.render_empty = (options.render_empty !== undefined) ? options.render_empty : true;
 
-        widget.innerHTML = '';
-        widget.addClass('dtab');
+        root_el.innerHTML = '';
+        root_el.addClass('dtab');
         if (sorted_rows.length) {
-            widget.appendContent(
+            root_el.appendContent(
                 dom.h('p', {class: 'dtab_count'}),
                 dom.h('a', {class: 'dtab_excel', href: '#', click: handleExcelClick})
             );
         }
-        widget.appendContent(
+        root_el.appendContent(
             dom.h('table', {class: 'dtab_table'},
                 dom.h('thead'),
                 dom.h('tbody')
@@ -254,9 +260,9 @@ function DataTable(widget)
 
         let render_count = 0;
         if (sorted_rows.length || options.render_empty) {
-            let p = widget.query('p');
-            let thead = widget.query('thead');
-            let tbody = widget.query('tbody');
+            let p = root_el.query('p');
+            let thead = root_el.query('thead');
+            let tbody = root_el.query('tbody');
 
             if (options.render_header && columns.length) {
                 let tr = dom.h('tr');
@@ -338,24 +344,6 @@ function DataTable(widget)
     };
 
     this.getRowCount = function() { return sorted_rows.length; }
-    this.getWidget = function() { return widget; }
 
     self.clear();
-
-    widget.object = this;
-}
-
-function createPagedDataTable(el)
-{
-    if (!el.childNodes.length) {
-        el.appendContent(
-            dom.h('div', {class: 'dtab_pager'}),
-            dom.h('div', {class: 'dtab'}),
-            dom.h('div', {class: 'dtab_pager'})
-        );
-    }
-
-    let dtab = new DataTable(el.query('.dtab'));
-
-    return dtab;
 }

@@ -56,12 +56,10 @@ let mco_casemix = {};
         if (!user.isConnected() || !settings.permissions) {
             if (!user.isConnected())
                 thop.error('Vous n\'êtes pas connecté(e)');
-            query('#cm').addClass('hide');
             return;
         }
         if (route.view === 'results' && !settings.permissions.has('FullResults')) {
             thop.error('Vous n\'avez pas les droits pour utiliser cette page');
-            query('#cm').addClass('hide');
             return;
         }
 
@@ -148,51 +146,32 @@ let mco_casemix = {};
 
         // Refresh view
         if (!thop.isBusy()) {
+            let view_el = query('#view');
+
             switch (route.view) {
                 case 'ghm_roots': {
+                    render(html`<div id="cm_ghm_roots" class="cm_summary"></div>`, view_el);
                     refreshGhmRootsTable(route.units, route.ghm_roots, route.regroup,
                                          route.page, route.sort);
                 } break;
                 case 'units': {
+                    render(html`<div id="cm_units" class="cm_summary"></div>`, view_el);
                     refreshUnitsTable(route.units, route.ghm_roots, route.structure,
                                       route.page, route.sort);
                 } break;
                 case 'durations': {
+                    render(html`<table id="cm_table" class="pr_grid"></table>`, view_el);
                     refreshDurationTable(route.units, route.ghm_root,
                                          route.apply_coefficient, true);
                 } break;
                 case 'results': {
+                    render(html`<div id="rt"></div>`, view_el);
                     refreshResults(route.units, route.page);
                 } break;
             }
-        }
 
-        // Update visible view
-        {
-            const ViewNodes = {
-                'ghm_roots': query('#cm_ghm_roots'),
-                'units': query('#cm_units'),
-                'durations': query('#cm_table'),
-                'results': query('#rt')
-            };
-
-            for (const k in ViewNodes) {
-                if (k === route.view) {
-                    if (!thop.isBusy())
-                        ViewNodes[k].removeClass('hide');
-                } else {
-                    ViewNodes[k].addClass('hide');
-                }
-            }
+            view_el.toggleClass('busy', !mix_ready);
         }
-
-        // Reveal casemix
-        if (!thop.isBusy() && !mix_ready) {
-            query('#cm').addClass('busy');
-        } else if (!thop.isBusy()) {
-            query('#cm').removeClass('busy');
-        }
-        query('#cm').removeClass('hide');
     }
     this.runModule = runModule;
 
@@ -698,12 +677,9 @@ let mco_casemix = {};
 
     function refreshUnitsTable(filter_units, filter_ghm_roots, structure, page, sort)
     {
-        if (!thop.needsRefresh(refreshUnitsTable, mix_url, arguments))
-            return;
-
         let summary = summaries.units;
         if (!summary) {
-            summary = createPagedDataTable(query('#cm_units'));
+            summary = new DataTable();
             summary.sortHandler = function(sort) { thop.go({sort: sort}); };
 
             summaries.units = summary;
@@ -798,19 +774,23 @@ let mco_casemix = {};
 
         summary.sort(sort);
 
-        let render_count = summary.render((page - 1) * TableLen, TableLen, {render_empty: false});
+        render(html`
+            <div class="dtab_pager"></div>
+            <div class="dtab"></div>
+            <div class="dtab_pager"></div>
+        `, query('#cm_units'));
+
+        let render_count = summary.render(query('#cm_units .dtab'),
+                                          (page - 1) * TableLen, TableLen, {render_empty: false});
         syncPagers(queryAll('#cm_units .dtab_pager'), page,
                    wt_pager.computeLastPage(render_count, summary.getRowCount(), TableLen));
     }
 
     function refreshGhmRootsTable(filter_units, filter_ghm_roots, regroup, page, sort)
     {
-        if (!thop.needsRefresh(refreshGhmRootsTable, mix_url, arguments))
-            return;
-
         let summary = summaries.ghm_roots;
         if (!summary) {
-            summary = createPagedDataTable(query('#cm_ghm_roots'));
+            summary = new DataTable();
             summary.sortHandler = function(sort) { thop.go({sort: sort}); };
 
             summaries.ghm_roots = summary;
@@ -924,7 +904,14 @@ let mco_casemix = {};
 
         summary.sort(sort);
 
-        let render_count = summary.render((page - 1) * TableLen, TableLen, {render_empty: false});
+        render(html`
+            <div class="dtab_pager"></div>
+            <div class="dtab"></div>
+            <div class="dtab_pager"></div>
+        `, query('#cm_ghm_roots'));
+
+        let render_count = summary.render(query('#cm_ghm_roots .dtab'),
+                                          (page - 1) * TableLen, TableLen, {render_empty: false});
         syncPagers(queryAll('#cm_ghm_roots .dtab_pager'), page,
                    wt_pager.computeLastPage(render_count, summary.getRowCount(), TableLen));
     }
@@ -977,9 +964,6 @@ let mco_casemix = {};
 
     function refreshDurationTable(units, ghm_root, apply_coeff, merge_cells)
     {
-        if (!thop.needsRefresh(refreshDurationTable, mix_url, arguments))
-            return;
-
         let table = query('#cm_table');
         table.replaceContent(
             dom.h('thead'),
@@ -1188,9 +1172,6 @@ let mco_casemix = {};
 
     function refreshResults(units, page)
     {
-        if (!thop.needsRefresh(refreshResults, rt_url, arguments))
-            return;
-
         units = new Set(units);
 
         let cim10_map = catalog.update('cim10').map;
@@ -1499,10 +1480,5 @@ let mco_casemix = {};
 
         deploy_results.clear();
         summaries = {};
-
-        queryAll('#cm > *').forEach(function(el) {
-            if (el.innerHTML)
-                el.innerHTML = '';
-        });
     });
 }).call(mco_casemix);

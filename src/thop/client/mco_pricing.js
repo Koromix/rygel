@@ -11,7 +11,8 @@ let mco_pricing = {};
     let pricings_map = {};
 
     // Chart.js
-    let chart = null;
+    let chart_el;
+    let chart;
 
     function runModule(route)
     {
@@ -64,6 +65,8 @@ let mco_pricing = {};
 
         // Refresh view
         if (!thop.isBusy()) {
+            let view_el = query('#view');
+
             const ghm_root_info = ghm_roots_map[route.ghm_root];
             let pricing_info = pricings_map[route.ghm_root];
             if (pricing_info)
@@ -72,20 +75,25 @@ let mco_pricing = {};
 
             switch (route.view) {
                 case 'table': {
+                    render(html`<table id="pr_table" class="pr_grid"></table>`, view_el);
                     refreshPriceTable(route.ghm_root, pricing_info, main_index, diff_index,
                                       max_duration, route.apply_coefficient, true);
                 } break;
 
                 case 'chart': {
+                    if (!chart_el) {
+                        chart_el = document.createElement('canvas');
+                        chart_el.setAttribute('id', 'pr_chart');
+                        chart_el.setAttribute('width', 400);
+                        chart_el.setAttribute('height', 300);
+                    }
+
+                    render(chart_el, view_el);
                     refreshPriceChart(pricing_info, main_index, diff_index,
                                       max_duration, route.apply_coefficient);
                 } break;
             }
         }
-
-        query('#pr_table').toggleClass('hide', route.view !== 'table');
-        query('#pr_chart').toggleClass('hide', route.view !== 'chart');
-        query('#pr').removeClass('hide');
     }
     this.runModule = runModule;
 
@@ -229,9 +237,6 @@ let mco_pricing = {};
     function refreshPriceTable(ghm_root, pricing_info, main_index, diff_index,
                                max_duration, apply_coeff, merge_cells)
     {
-        if (!thop.needsRefresh(refreshPriceTable, arguments))
-            return;
-
         let table = query('#pr_table');
         table.replaceContent(
             dom.h('thead'),
@@ -404,12 +409,11 @@ let mco_pricing = {};
             return;
         }
 
-        if (!thop.needsRefresh(refreshPriceChart, Array.from(arguments)))
-            return;
-
         if (!pricing_info || !pricing_info[main_index]) {
-            if (chart)
+            if (chart) {
                 chart.destroy();
+                chart = null;
+            }
             return;
         }
 

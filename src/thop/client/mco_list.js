@@ -248,18 +248,16 @@ let mco_list = {};
         }
 
         // Refresh view
-        if (!thop.isBusy()) {
+        if (!thop.isBusy() && Lists[route.list]) {
+            let view_el = query('#view');
+
+            render(html`
+                <h1 id="ls_spec"></h1>
+                <div id=${'ls_' + route.list} class="ls_table"></div>
+            `, view_el);
+
             refreshHeader(route.spec);
-
-            queryAll('.ls_table').addClass('hide');
-            if (Lists[route.list]) {
-                refreshListTable(route.list, group_info, route.search, route.page, route.sort);
-                query('#ls_' + route.list).removeClass('hide');
-            }
-
-            query('#ls').removeClass('hide');
-        } else if (query('#ls_' + route.list).hasClass('hide')) {
-            query('#ls').addClass('hide');
+            refreshListTable(route.list, group_info, route.search, route.page, route.sort);
         }
     }
     this.runModule = runModule;
@@ -413,12 +411,9 @@ let mco_list = {};
         let list = list_cache[list_name];
         let concepts_map = catalog.update(list_info.catalog).map;
 
-        if (!list || !thop.needsRefresh(refreshListTable, list.url, arguments))
-            return;
-
         let builder;
         if (thop.needsRefresh(list, group_info, search)) {
-            builder = createPagedDataTable(query('#ls_' + list_name));
+            builder = new DataTable();
             builder.sortHandler = function(sort) { thop.go({sort: sort}); }
             list.builder = builder;
 
@@ -484,7 +479,14 @@ let mco_list = {};
 
         builder.sort(sort, false);
 
-        let render_count = builder.render((page - 1) * TableLen, TableLen,
+        render(html`
+            <div class="dtab_pager"></div>
+            <div class="dtab"></div>
+            <div class="dtab_pager"></div>
+        `, query('#ls_' + list_name));
+
+        let render_count = builder.render(query('#ls_' + list_name + ' .dtab'),
+                                          (page - 1) * TableLen, TableLen,
                                           {render_header: list_info.header, render_parents: !sort});
         syncPagers(queryAll('#ls_' + list_name + ' .dtab_pager'), page,
                    wt_pager.computeLastPage(render_count, builder.getRowCount(), TableLen));
