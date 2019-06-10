@@ -9,7 +9,7 @@ let mco_tree = {};
     let nodes = [];
     let collapse_nodes = new Set();
 
-    function runModule(route, errors)
+    function runModule(route)
     {
         // Resources
         let indexes = thop.updateMcoSettings().indexes;
@@ -21,7 +21,7 @@ let mco_tree = {};
 
         // Errors
         if (route.date !== null && indexes.length && main_index < 0)
-            errors.add('Date incorrecte');
+            thop.error('Date incorrecte');
 
         // Refresh settings
         queryAll('#opt_index').removeClass('hide');

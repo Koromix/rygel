@@ -36,6 +36,9 @@ let thop = (function() {
     let current_url = null;
     let prev_module = null;
 
+    // Errors
+    let errors = new Set;
+
     // Scroll
     let scroll_state = {};
 
@@ -114,13 +117,10 @@ let thop = (function() {
             return;
         }
 
-        // Update session information
+        // Update route and session
+        Object.assign(route_values, args);
         if (HasUsers)
             user.updateSession();
-
-        // Prepare route and errors
-        let errors = new Set(data.getErrors());
-        Object.assign(route_values, args);
 
         // Hide previous UI (if needed)
         if (module !== current_module) {
@@ -135,7 +135,7 @@ let thop = (function() {
         // Run module
         let new_url;
         if (module) {
-            module.runModule(route_values, errors);
+            module.runModule(route_values);
             new_url = module.routeToUrl({}).url;
         } else {
             new_url = util.parseUrl(window.location.href).path;
@@ -154,7 +154,7 @@ let thop = (function() {
         // Show errors if any
         refreshErrors(Array.from(errors));
         if (!data_busy)
-            data.clearErrors();
+            errors.clear();
 
         // Update side menu state and links
         updateMenu();
@@ -238,6 +238,8 @@ let thop = (function() {
         }
     };
 
+    this.error = function(err) { errors.add(err); };
+
     this.isBusy = function() { return data_busy; };
     this.setIgnoreBusy = function(ignore) { ignore_busy = !!ignore; };
     this.forceRefresh = function() { force_idx++; };
@@ -287,6 +289,7 @@ let thop = (function() {
                 self.go({}, null, 0, false);
             }
         };
+        data.errorHandler = self.error;
     }
 
     function initNavigation() {

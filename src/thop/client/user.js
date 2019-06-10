@@ -9,7 +9,7 @@ let user = {};
     let url_key = 0;
     let username = null;
 
-    function runModule(route, errors)
+    function runModule(route)
     {
         query('#usr button').disabled = false;
 
