@@ -1004,7 +1004,7 @@ void PrintLnFmt(const char *fmt, Span<const FmtArg> args, FILE *fp)
 static RG_THREAD_LOCAL std::function<LogHandlerFunc> *log_handlers[16];
 static RG_THREAD_LOCAL Size log_handlers_len;
 
-static RG_THREAD_LOCAL char log_last_error[512];
+static RG_THREAD_LOCAL char log_last_error[1024];
 
 bool GetDebugFlag(const char *name)
 {
@@ -1088,7 +1088,7 @@ void LogFmt(LogLevel level, const char *fmt, Span<const FmtArg> args)
     static std::mutex log_mutex;
 
     char ctx_buf[128];
-    char msg_buf[RG_SIZE(log_last_error)];
+    char msg_buf[4096];
     {
         double time = (double)(GetMonotonicTime() - g_start_time) / 1000;
         Fmt(ctx_buf, " [%1] ", FmtDouble(time, 3).Pad(-8));
@@ -1097,7 +1097,8 @@ void LogFmt(LogLevel level, const char *fmt, Span<const FmtArg> args)
     }
 
     if (level == LogLevel::Error) {
-        strcpy(log_last_error, msg_buf);
+        strncpy(log_last_error, msg_buf, RG_SIZE(log_last_error));
+        log_last_error[RG_SIZE(log_last_error) - 1] = 0;
     }
 
     // FIXME: Avoid need for mutex in Log API

@@ -24,6 +24,17 @@
 
 namespace RG {
 
+const char *BuildTargetFilename(const Target &target, const char *output_directory, Allocator *alloc)
+{
+    RG_ASSERT_DEBUG(target.type == TargetType::Executable);
+
+#ifdef _WIN32
+    return Fmt(alloc, "%1%/%2.exe", output_directory, target.name).ptr;
+#else
+    return Fmt(&alloc, "%1%/%2", output_directory, target.name).ptr;
+#endif
+}
+
 static bool ExecuteCommandLine(const char *cmd_line, HeapArray<char> *out_buf, int *out_code)
 {
 #ifdef _WIN32
@@ -194,6 +205,34 @@ static bool ParseCompilerMakeRule(const char *filename, Allocator *alloc,
     return true;
 }
 
+static const char *BuildObjectPath(const char *src_filename, const char *output_directory,
+                                   const char *suffix, Allocator *alloc)
+{
+    RG_ASSERT_DEBUG(!PathIsAbsolute(src_filename));
+
+    HeapArray<char> buf;
+    buf.allocator = alloc;
+
+    Size offset = Fmt(&buf, "%1%/objects%/", output_directory).len;
+    Fmt(&buf, "%1%2", src_filename, suffix);
+
+    // Replace '..' components with '__'
+    {
+        char *ptr = buf.ptr + offset;
+
+        while ((ptr = strstr(ptr, ".."))) {
+            if (IsPathSeparator(ptr[-1]) && (IsPathSeparator(ptr[2]) || !ptr[2])) {
+                ptr[0] = '_';
+                ptr[1] = '_';
+            }
+
+            ptr += 2;
+        }
+    }
+
+    return buf.Leak().ptr;
+}
+
 static bool CreatePrecompileHeader(const char *pch_filename, const char *dest_filename)
 {
     if (!EnsureDirectoryExists(dest_filename))
@@ -220,80 +259,101 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
     bool warnings = (target.type != TargetType::ExternalLibrary);
 
     // Precompiled headers
-    for (const ObjectInfo &obj: target.pch_objects) {
-        const char *deps_filename = Fmt(&temp_alloc, "%1.d", obj.dest_filename).ptr;
+    const char *c_pch_filename = nullptr;
+    const char *cxx_pch_filename = nullptr;
+    const auto add_pch_object = [&](const char *src_filename, SourceType src_type) {
+        const char *pch_filename = BuildObjectPath(src_filename, output_directory,
+                                                   ".pch.h", &temp_alloc);
+        const char *deps_filename = Fmt(&temp_alloc, "%1.d", pch_filename).ptr;
 
-        if (NeedsRebuild(obj.src_filename, obj.dest_filename, deps_filename)) {
+        if (NeedsRebuild(src_filename, pch_filename, deps_filename)) {
             BuildCommand cmd = {};
 
-            cmd.text = Fmt(&str_alloc, "Precompile %1", obj.src_filename).ptr;
-            cmd.dest_filename = DuplicateString(obj.dest_filename, &str_alloc).ptr;
-            if (!CreatePrecompileHeader(obj.src_filename, obj.dest_filename))
-                return false;
+            cmd.text = Fmt(&str_alloc, "Precompile %1", src_filename).ptr;
+            cmd.dest_filename = DuplicateString(pch_filename, &str_alloc).ptr;
+            if (!CreatePrecompileHeader(src_filename, pch_filename))
+                return (const char *)nullptr;
 
-            cmd.cmd = compiler->MakeObjectCommand(obj.dest_filename, obj.src_type, build_mode, warnings,
+            cmd.cmd = compiler->MakeObjectCommand(pch_filename, src_type, build_mode, warnings,
                                                   nullptr, target.definitions, target.include_directories,
                                                   nullptr, deps_filename, &str_alloc);
             if (!cmd.cmd)
-                return false;
+                return (const char *)nullptr;
 
             pch_commands.Append(cmd);
         }
+
+        return pch_filename;
+    };
+    if (target.c_pch_filename) {
+        c_pch_filename = add_pch_object(target.c_pch_filename, SourceType::C_Header);
+        if (!c_pch_filename)
+            return false;
+    }
+    if (target.cxx_pch_filename) {
+        cxx_pch_filename = add_pch_object(target.cxx_pch_filename, SourceType::CXX_Header);
+        if (!cxx_pch_filename)
+            return false;
     }
 
     // Object commands
-    for (const ObjectInfo &obj: target.objects) {
-        const char *deps_filename = Fmt(&temp_alloc, "%1.d", obj.dest_filename).ptr;
+    for (const SourceFile &src: target.sources) {
+        const char *obj_filename = BuildObjectPath(src.filename, output_directory,
+                                                   ".o", &temp_alloc);
+        const char *deps_filename = Fmt(&temp_alloc, "%1.d", obj_filename).ptr;
 
-        if (NeedsRebuild(obj.src_filename, obj.dest_filename, deps_filename)) {
+        if (NeedsRebuild(src.filename, obj_filename, deps_filename)) {
             BuildCommand cmd = {};
 
             const char *pch_filename = nullptr;
-            switch (obj.src_type) {
-                case SourceType::C_Source: { pch_filename = target.c_pch_filename; } break;
-                case SourceType::CXX_Source: { pch_filename = target.cxx_pch_filename; } break;
+            switch (src.type) {
+                case SourceType::C_Source: { pch_filename = c_pch_filename; } break;
+                case SourceType::CXX_Source: { pch_filename = cxx_pch_filename; } break;
 
                 case SourceType::C_Header:
                 case SourceType::CXX_Header: { RG_ASSERT_DEBUG(false); } break;
             }
 
-            cmd.text = Fmt(&str_alloc, "Build %1", obj.src_filename).ptr;
-            cmd.dest_filename = DuplicateString(obj.dest_filename, &str_alloc).ptr;
-            if (!EnsureDirectoryExists(obj.dest_filename))
+            cmd.text = Fmt(&str_alloc, "Build %1", src.filename).ptr;
+            cmd.dest_filename = DuplicateString(obj_filename, &str_alloc).ptr;
+            if (!EnsureDirectoryExists(obj_filename))
                 return false;
-            cmd.cmd = compiler->MakeObjectCommand(obj.src_filename, obj.src_type, build_mode, warnings,
+            cmd.cmd = compiler->MakeObjectCommand(src.filename, src.type, build_mode, warnings,
                                                   pch_filename, target.definitions, target.include_directories,
-                                                  obj.dest_filename, deps_filename, &str_alloc);
+                                                  obj_filename, deps_filename, &str_alloc);
             if (!cmd.cmd)
                 return false;
 
             obj_commands.Append(cmd);
 
             // Pretend object file does not exist to force link step
-            mtime_map.Set(obj.dest_filename, -1);
+            mtime_map.Set(obj_filename, -1);
         }
 
-        obj_filenames.Append(obj.dest_filename);
+        obj_filenames.Append(obj_filename);
     }
 
     // Assets
-    if (target.pack_obj_filename) {
-        if (!IsFileUpToDate(target.pack_obj_filename, target.pack_filenames)) {
+    if (target.pack_filenames.len) {
+        const char *obj_filename = Fmt(&temp_alloc, "%1%/assets%/%2_assets.o",
+                                       output_directory, target.name).ptr;
+
+        if (!IsFileUpToDate(obj_filename, target.pack_filenames)) {
             BuildCommand cmd = {};
 
             cmd.text = Fmt(&str_alloc, "Pack %1 assets", target.name).ptr;
-            cmd.dest_filename = DuplicateString(target.pack_obj_filename, &str_alloc).ptr;
-            if (!EnsureDirectoryExists(target.pack_obj_filename))
+            cmd.dest_filename = DuplicateString(obj_filename, &str_alloc).ptr;
+            if (!EnsureDirectoryExists(obj_filename))
                 return false;
-            cmd.cmd = compiler->MakePackCommand(target.pack_filenames, build_mode, target.pack_options,
-                                                target.pack_obj_filename, &str_alloc);
+            cmd.cmd = compiler->MakePackCommand(target.pack_filenames, build_mode,
+                                                target.pack_options, obj_filename, &str_alloc);
             if (!cmd.cmd)
                 return false;
 
             obj_commands.Append(cmd);
 
             // Pretend object file does not exist to force link step
-            mtime_map.Set(target.pack_obj_filename, -1);
+            mtime_map.Set(obj_filename, -1);
         }
 
         bool module = false;
@@ -304,38 +364,49 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
         }
 
         if (module) {
-            if (!IsFileUpToDate(target.pack_module_filename, target.pack_obj_filename)) {
+#ifdef _WIN32
+            const char *module_filename = Fmt(&temp_alloc, "%1%/%2_assets.dll",
+                                              output_directory, target.name).ptr;
+#else
+            const char *module_filename = Fmt(&temp_alloc, "%1%/%2_assets.so",
+                                              output_directory, target.name).ptr;
+#endif
+
+            if (!IsFileUpToDate(module_filename, obj_filename)) {
                 BuildCommand cmd = {};
 
                 // TODO: Check if this conflicts with a target destination file?
                 cmd.text = Fmt(&str_alloc, "Link %1",
-                               SplitStrReverseAny(target.pack_module_filename, RG_PATH_SEPARATORS)).ptr;
-                cmd.dest_filename = DuplicateString(target.pack_module_filename, &str_alloc).ptr;
-                cmd.cmd = compiler->MakeLinkCommand(target.pack_obj_filename, BuildMode::Debug, {},
-                                                    LinkType::SharedLibrary, target.pack_module_filename,
+                               SplitStrReverseAny(module_filename, RG_PATH_SEPARATORS)).ptr;
+                cmd.dest_filename = DuplicateString(module_filename, &str_alloc).ptr;
+                cmd.cmd = compiler->MakeLinkCommand(obj_filename, BuildMode::Debug, {},
+                                                    LinkType::SharedLibrary, module_filename,
                                                     &str_alloc);
 
                 link_commands.Append(cmd);
             }
         } else {
-            obj_filenames.Append(target.pack_obj_filename);
+            obj_filenames.Append(obj_filename);
         }
     }
 
     // Link commands
-    if (target.type == TargetType::Executable &&
-            !IsFileUpToDate(target.dest_filename, obj_filenames)) {
-        BuildCommand cmd = {};
+    if (target.type == TargetType::Executable) {
+        const char *target_filename = BuildTargetFilename(target, output_directory, &temp_alloc);
 
-        cmd.text = Fmt(&str_alloc, "Link %1",
-                       SplitStrReverseAny(target.dest_filename, RG_PATH_SEPARATORS)).ptr;
-        cmd.dest_filename = DuplicateString(target.dest_filename, &str_alloc).ptr;
-        cmd.cmd = compiler->MakeLinkCommand(obj_filenames, build_mode, target.libraries,
-                                            LinkType::Executable, target.dest_filename, &str_alloc);
-        if (!cmd.cmd)
-            return false;
+        if (!IsFileUpToDate(target_filename, obj_filenames)) {
+            BuildCommand cmd = {};
 
-        link_commands.Append(cmd);
+            cmd.text = Fmt(&str_alloc, "Link %1",
+                           SplitStrReverseAny(target_filename, RG_PATH_SEPARATORS)).ptr;
+            cmd.dest_filename = DuplicateString(target_filename, &str_alloc).ptr;
+            cmd.cmd = compiler->MakeLinkCommand(obj_filenames, build_mode, target.libraries,
+                                                LinkType::Executable, target_filename, &str_alloc);
+            if (!cmd.cmd)
+                return false;
+
+            link_commands.Append(cmd);
+        }
     }
 
     // Do this at the end because it's much harder to roll back changes in out_guard

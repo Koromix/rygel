@@ -63,18 +63,14 @@ static bool ParseToolchainSpec(Span<const char> str, Toolchain *out_toolchain)
     return true;
 }
 
-static int RunTarget(const Target &target, Span<const char *const> arguments, bool verbose)
+static int RunTarget(const Target &target, const char *target_filename,
+                     Span<const char *const> arguments, bool verbose)
 {
-    if (target.type != TargetType::Executable) {
-        LogError("Cannot run non-executable target '%1'", target.name);
-        return 1;
-    }
-
     HeapArray<char> cmd_buf;
 
     // FIXME: Just like the code in compiler.cc, command-line escaping is
     // either wrong or not done. Make something to deal with that uniformely.
-    Fmt(&cmd_buf, "\"%1\"", target.dest_filename);
+    Fmt(&cmd_buf, "\"%1\"", target_filename);
     for (const char *arg: arguments) {
         bool escape = strchr(arg, ' ');
         Fmt(&cmd_buf, escape ? " \"%1\"" : " %1", arg);
@@ -233,7 +229,7 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
 
     // Load configuration file
     TargetSet target_set;
-    if (!LoadTargetSet(config_filename, output_directory, &target_set))
+    if (!LoadTargetSet(config_filename, &target_set))
         return 1;
 
     // Default targets
@@ -302,7 +298,6 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
     }
     if (disable_pch) {
         for (Target &target: target_set.targets) {
-            target.pch_objects.Clear();
             target.c_pch_filename = nullptr;
             target.cxx_pch_filename = nullptr;
         }
@@ -318,7 +313,8 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
     // Create build commands
     BuildSet build_set;
     {
-        BuildSetBuilder build_set_builder(toolchain.compiler, toolchain.build_mode);
+        BuildSetBuilder build_set_builder(toolchain.compiler, toolchain.build_mode,
+                                          output_directory);
 
         for (const Target *target: enabled_targets) {
             if (!build_set_builder.AppendTargetCommands(*target))
@@ -333,7 +329,17 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
         return 1;
 
     // Run?
-    return run_target ? RunTarget(*run_target, run_arguments, verbose) : 0;
+    if (run_target) {
+        if (run_target->type != TargetType::Executable) {
+            LogError("Cannot run non-executable target '%1'", run_target->name);
+            return 1;
+        }
+
+        const char *target_filename = BuildTargetFilename(*run_target, output_directory, &temp_alloc);
+        return RunTarget(*run_target, target_filename, run_arguments, verbose);
+    } else {
+        return 0;
+    }
 }
 
 }

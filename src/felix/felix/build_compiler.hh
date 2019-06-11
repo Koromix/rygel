@@ -15,13 +15,6 @@ enum class SourceType {
     CXX_Header
 };
 
-struct ObjectInfo {
-    const char *src_filename;
-    SourceType src_type;
-
-    const char *dest_filename;
-};
-
 enum class BuildMode {
     Debug,
     Fast,

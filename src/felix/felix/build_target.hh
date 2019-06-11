@@ -17,6 +17,11 @@ enum class TargetType {
     ExternalLibrary
 };
 
+struct SourceFile {
+    const char *filename;
+    SourceType type;
+};
+
 enum class PackLinkType {
     Static,
     Module,
@@ -34,18 +39,13 @@ struct Target {
     HeapArray<const char *> include_directories;
     HeapArray<const char *> libraries;
 
-    HeapArray<ObjectInfo> pch_objects;
     const char *c_pch_filename;
     const char *cxx_pch_filename;
-    HeapArray<ObjectInfo> objects;
+    HeapArray<SourceFile> sources;
 
     HeapArray<const char *> pack_filenames;
     const char *pack_options;
-    const char *pack_obj_filename;
     PackLinkType pack_link_type;
-    const char *pack_module_filename; // PackLinkMode = Module or ModuleIfDebug
-
-    const char *dest_filename;
 
     RG_HASH_TABLE_HANDLER(Target, name);
 };
@@ -58,8 +58,6 @@ struct TargetSet {
 };
 
 class TargetSetBuilder {
-    const char *output_directory;
-
     BlockAllocator temp_alloc;
 
     TargetSet set;
@@ -67,9 +65,6 @@ class TargetSetBuilder {
     HashMap<Span<const char>, Size> targets_map;
 
 public:
-    TargetSetBuilder(const char *output_directory)
-        : output_directory(output_directory) {}
-
     bool LoadIni(StreamReader &st);
     bool LoadFiles(Span<const char *const> filenames);
 
@@ -79,7 +74,6 @@ private:
     const Target *CreateTarget(TargetConfig *target_config);
 };
 
-bool LoadTargetSet(Span<const char *const> filenames, const char *output_directory,
-                   TargetSet *out_set);
+bool LoadTargetSet(Span<const char *const> filenames, TargetSet *out_set);
 
 }

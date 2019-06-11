@@ -25,9 +25,12 @@ struct BuildSet {
     BlockAllocator str_alloc;
 };
 
+const char *BuildTargetFilename(const Target &target, const char *output_directory, Allocator *alloc);
+
 class BuildSetBuilder {
     const Compiler *compiler;
     BuildMode build_mode;
+    const char *output_directory;
 
     BlockAllocator temp_alloc;
 
@@ -40,8 +43,8 @@ class BuildSetBuilder {
     HashSet<const char *> output_set;
 
 public:
-    BuildSetBuilder(const Compiler *compiler, BuildMode build_mode)
-        : compiler(compiler), build_mode(build_mode) {}
+    BuildSetBuilder(const Compiler *compiler, BuildMode build_mode, const char *output_directory)
+        : compiler(compiler), build_mode(build_mode), output_directory(output_directory) {}
 
     bool AppendTargetCommands(const Target &target);
 
