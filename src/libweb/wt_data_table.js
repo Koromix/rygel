@@ -28,11 +28,12 @@ let wt_data_table = (function() {
 
         this.getRowCount = function() { return sorted_rows.length; }
 
-        this.addColumn = function(key, title, options = {}) {
+        this.addColumn = function(key, title, render = null, options = {}) {
             let column = {
                 idx: columns.length,
                 key: key,
                 title: title,
+                render: render || (value => value),
                 format: options.format,
                 tooltip: options.tooltip
             };
@@ -68,10 +69,9 @@ let wt_data_table = (function() {
             row_ptr = row_ptr.parent;
         };
 
-        this.addCell = function(value, render = null, options = {}) {
+        this.addCell = function(value, options = {}) {
             let cell = {
                 value: value,
-                render: render || (value => value),
                 tooltip: options.tooltip,
                 colspan: options.colspan || 1
             };
@@ -194,8 +194,9 @@ let wt_data_table = (function() {
         function renderRowCells(row)
         {
             return row.cells.map((cell, idx) => {
+                let render = columns[idx].render;
                 let padding = !idx ? `padding-left: calc(3px + ${row.depth} * 0.8em);` : '';
-                return html`<td colspan=${cell.colspan} style=${padding}>${cell.render(cell.value)}</td>`;
+                return html`<td colspan=${cell.colspan} style=${padding}>${render(cell.value)}</td>`;
             });
         }
 
