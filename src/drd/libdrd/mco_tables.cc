@@ -1650,7 +1650,7 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                         if (RG_LIKELY(proc_info)) {
                             do {
                                 if (proc_info->phase == ext_info.phase) {
-                                    proc_info->extensions |= (uint8_t)(1u << ext_info.extension);
+                                    proc_info->extensions |= (uint32_t)(1u << ext_info.extension);
                                 }
                             } while (++proc_info < index.procedures.end() &&
                                      proc_info->proc == ext_info.proc);
