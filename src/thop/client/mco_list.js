@@ -537,31 +537,49 @@ let mco_list = {};
         return ranges.join(', ');
     }
 
-    function makeSpecLink(str)
+    // FIXME: Get rid of this when everything is lithtml-ready
+    function makeSpecAnchorDom(str)
     {
-        let url = null;
-        let cls = null;
         if (str[0] === 'A') {
-            url = routeToUrl({list: 'procedures', spec: str}).url;
+            let href = routeToUrl({list: 'procedures', spec: str}).url;
+            return dom.h('a', {href: href}, str);
         } else if (str[0] === 'D') {
-            url = routeToUrl({list: 'diagnoses', spec: str}).url;
+            let href = routeToUrl({list: 'diagnoses', spec: str}).url;
+            return dom.h('a', {href: href}, str);
         } else if (str.match(/^[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?$/)) {
-            url = mco_pricing.routeToUrl({view: 'table', ghm_root: str.substr(0, 5)}).url;
-            cls = 'ghm';
+            let href = mco_pricing.routeToUrl({view: 'table', ghm_root: str.substr(0, 5)}).url;
+            return dom.h('a', {href: href, class: 'ghm'}, str);
         } else if (str.match(/[Nn]oeud [0-9]+/)) {
-            url = mco_tree.routeToUrl().url + '#n' + str.substr(6);
+            let href = mco_tree.routeToUrl().url + '#n' + str.substr(6);
+            return dom.h('a', {href: href}, str);
         } else {
             return str;
         }
-
-        let anchor = dom.h('a', {href: url, class: cls}, str);
-
-        return anchor;
     }
-    this.makeSpecLink = makeSpecLink;
 
-    function addSpecLinks(str)
+    function makeSpecAnchorVirtual(str)
     {
+        if (str[0] === 'A') {
+            let href = routeToUrl({list: 'procedures', spec: str}).url;
+            return html`<a href=${href}>${str}</a>`;
+        } else if (str[0] === 'D') {
+            let href = routeToUrl({list: 'diagnoses', spec: str}).url;
+            return html`<a href=${href}>${str}</a>`;
+        } else if (str.match(/^[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?$/)) {
+            let href = mco_pricing.routeToUrl({view: 'table', ghm_root: str.substr(0, 5)}).url;
+            return html`<a class="ghm" href=${href}>${str}</a>`;
+        } else if (str.match(/[Nn]oeud [0-9]+/)) {
+            let href = mco_tree.routeToUrl().url + '#n' + str.substr(6);
+            return html`<a href=${href}>${str}</a>`;
+        } else {
+            return str;
+        }
+    }
+
+    function addSpecLinks(str, use_vdom = true)
+    {
+        let make_anchor = use_vdom ? makeSpecAnchorVirtual : makeSpecAnchorDom;
+
         let elements = [];
         for (;;) {
             let m = str.match(/([AD](\-[0-9]+|\$[0-9]+\.[0-9]+)|[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?|[Nn]oeud [0-9]+)/);
@@ -569,7 +587,7 @@ let mco_list = {};
                 break;
 
             elements.push(str.substr(0, m.index));
-            elements.push(makeSpecLink(m[0]));
+            elements.push(make_anchor(m[0]));
             str = str.substr(m.index + m[0].length);
         }
         elements.push(str);

@@ -223,7 +223,7 @@ let mco_tree = {};
                              'data-chain': chain_str},
                     dom.h('span',
                         dom.h('span', {class: 'n', click: handleNodeClick}, '' + idx + ' '),
-                        mco_list.addSpecLinks(text)
+                        mco_list.addSpecLinks(text, false)
                     )
                 )
             );
@@ -232,7 +232,7 @@ let mco_tree = {};
                 dom.h('li', {id: 'n' + idx, class: 'leaf'},
                     dom.h('span',
                         dom.h('span', {class: 'n'}, '' + idx + ' '),
-                        mco_list.addSpecLinks(text)
+                        mco_list.addSpecLinks(text, false)
                     )
                 )
             );
