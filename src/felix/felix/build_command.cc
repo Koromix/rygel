@@ -24,17 +24,6 @@
 
 namespace RG {
 
-const char *BuildTargetFilename(const Target &target, const char *output_directory, Allocator *alloc)
-{
-    RG_ASSERT_DEBUG(target.type == TargetType::Executable);
-
-#ifdef _WIN32
-    return Fmt(alloc, "%1%/%2.exe", output_directory, target.name).ptr;
-#else
-    return Fmt(&alloc, "%1%/%2", output_directory, target.name).ptr;
-#endif
-}
-
 static bool ExecuteCommandLine(const char *cmd_line, HeapArray<char> *out_buf, int *out_code)
 {
 #ifdef _WIN32
@@ -392,7 +381,11 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
 
     // Link commands
     if (target.type == TargetType::Executable) {
-        const char *target_filename = BuildTargetFilename(target, output_directory, &temp_alloc);
+#ifdef _WIN32
+        const char *target_filename = Fmt(&str_alloc, "%1%/%2.exe", output_directory, target.name).ptr;
+#else
+        const char *target_filename = Fmt(&str_alloc, "%1%/%2", output_directory, target.name).ptr;
+#endif
 
         if (!IsFileUpToDate(target_filename, obj_filenames)) {
             BuildCommand cmd = {};
@@ -407,6 +400,8 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
 
             link_commands.Append(cmd);
         }
+
+        target_filenames.Set(target.name, target_filename);
     }
 
     // Do this at the end because it's much harder to roll back changes in out_guard
@@ -438,6 +433,7 @@ void BuildSetBuilder::Finish(BuildSet *out_set)
     out_set->commands.Append(pch_commands);
     out_set->commands.Append(obj_commands);
     out_set->commands.Append(link_commands);
+    std::swap(out_set->target_filenames, target_filenames);
 
     SwapMemory(&out_set->str_alloc, &str_alloc, RG_SIZE(str_alloc));
 }

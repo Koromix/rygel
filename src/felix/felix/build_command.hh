@@ -22,10 +22,10 @@ struct BuildCommand {
 struct BuildSet {
     HeapArray<BuildCommand> commands;
 
+    HashMap<const char *, const char *> target_filenames;
+
     BlockAllocator str_alloc;
 };
-
-const char *BuildTargetFilename(const Target &target, const char *output_directory, Allocator *alloc);
 
 class BuildSetBuilder {
     const Compiler *compiler;
@@ -41,6 +41,8 @@ class BuildSetBuilder {
 
     HashMap<const char *, int64_t> mtime_map;
     HashSet<const char *> output_set;
+
+    HashMap<const char *, const char *> target_filenames;
 
 public:
     BuildSetBuilder(const Compiler *compiler, BuildMode build_mode, const char *output_directory)
