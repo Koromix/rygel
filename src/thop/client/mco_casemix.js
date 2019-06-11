@@ -693,23 +693,8 @@ let mco_casemix = {};
             const rows = filterCasemix(mix_rows, filter_units, filter_ghm_roots);
 
             summary.clear();
-
             summary.addColumn('unit', 'Unité');
-            summary.addColumn('rss', 'RSS', {format: '#,##0'});
-            if (!mix_params.diff)
-                summary.addColumn('rss_pct', '%', {format: '0.00%'});
-            summary.addColumn('rum', 'RUM', {format: '#,##0'});
-            if (!mix_params.diff)
-                summary.addColumn('rum_pct', '%', {format: '0.00%'});
-            summary.addColumn('total', 'Total', {format: '#,##0.00'});
-            if (!mix_params.diff)
-                summary.addColumn('total_pct', '%', {format: '0.00%'});
-            summary.addColumn('pay', 'Rétribué', {format: '#,##0.00'});
-            if (!mix_params.diff)
-                summary.addColumn('pay_pct', '%', {format: '0.00%'});
-            summary.addColumn('deaths', 'Décès', {format: '#,##0'});
-            if (!mix_params.diff)
-                summary.addColumn('deaths_pct', '%', {format: '0.00%'});
+            addSummaryColumns(summary);
 
             // Aggregate
             let stat0;
@@ -756,7 +741,7 @@ let mco_casemix = {};
                         let group_stat = stats1.find(ent.path[k]);
 
                         summary.beginRow();
-                        summary.addCell(ent.path[k], null, {tooltip: ent.path[k]});
+                        summary.addCell(ent.path[k], {tooltip: ent.path[k]});
                         addSummaryCells(summary, group_stat, prev_totals[prev_totals.length - 1]);
 
                         prev_groups.push(ent.path[k]);
@@ -764,8 +749,7 @@ let mco_casemix = {};
                     }
 
                     summary.beginRow();
-                    summary.addCell(ent.path[ent.path.length - 1], null,
-                                    {tooltip: ent.path[ent.path.length - 1]});
+                    summary.addCell(ent.path[ent.path.length - 1], {tooltip: ent.path[ent.path.length - 1]});
                     addSummaryCells(summary, unit_stat, prev_totals[prev_totals.length - 1]);
                     summary.endRow();
                 }
@@ -815,23 +799,18 @@ let mco_casemix = {};
             let ghm_roots_map = catalog.update('mco_ghm_roots').map;
 
             summary.clear();
-
-            summary.addColumn('ghm_root', 'Racine');
-            summary.addColumn('rss', 'RSS', {format: '#,##0'});
-            if (!mix_params.diff)
-                summary.addColumn('rss_pct', '%', {format: '0.00%'});
-            summary.addColumn('rum', 'RUM', {format: '#,##0'});
-            if (!mix_params.diff)
-                summary.addColumn('rum_pct', '%', {format: '0.00%'});
-            summary.addColumn('total', 'Total', {format: '#,##0.00'});
-            if (!mix_params.diff)
-                summary.addColumn('total_pct', '%', {format: '0.00%'});
-            summary.addColumn('pay', 'Rétribué', {format: '#,##0.00'});
-            if (!mix_params.diff)
-                summary.addColumn('pay_pct', '%', {format: '0.00%'});
-            summary.addColumn('deaths', 'Décès', {format: '#,##0'});
-            if (!mix_params.diff)
-                summary.addColumn('deaths_pct', '%', {format: '0.00%'});
+            summary.addColumn('ghm_root', 'Racine', value => {
+                let ghm_root_info = ghm_roots_map[value];
+                if (ghm_root_info) {
+                    return html`
+                        <a href=${routeToUrl({view: 'durations', ghm_root: value}).url}>${value}</a>
+                        ${ghm_root_info ? ` - ${ghm_root_info.desc}` : null}
+                    `;
+                } else {
+                    return value;
+                }
+            });
+            addSummaryColumns(summary);
 
             // Aggregate
             let stat0;
@@ -889,10 +868,8 @@ let mco_casemix = {};
                     }
 
                     summary.beginRow();
-                    summary.addCell(ghm_root, () => html`
-                        <a href=${routeToUrl({view: 'durations', ghm_root: ghm_root}).url}>${ghm_root}</a>
-                        ${ghm_root_info ? ` - ${ghm_root_info.desc}` : null}
-                    `, {tooltip: ghm_root_info ? `${ghm_root} - ${ghm_root_info.desc}` : null});
+                    summary.addCell(ghm_root,
+                                    {tooltip: ghm_root_info ? `${ghm_root} - ${ghm_root_info.desc}` : null});
                     addSummaryCells(summary, stat, total);
                     summary.endRow();
                 }
@@ -913,32 +890,49 @@ let mco_casemix = {};
                    wt_pager.computeLastPage(render_count, summary.getRowCount(), TableLen));
     }
 
+    function addSummaryColumns(dtab)
+    {
+        if (mix_params.diff) {
+            dtab.addColumn('rss', 'RSS', value => format.number(value, true), {format: '#,##0'});
+            dtab.addColumn('rum', 'RUM', value => format.number(value, true), {format: '#,##0'});
+            dtab.addColumn('total', 'Total', value => format.price(value, false, true), {format: '#,##0.00'});
+            dtab.addColumn('pay', 'Rétribué', value => format.price(value, false, true), {format: '#,##0.00'});
+            dtab.addColumn('deaths', 'Décès', value => format.number(value, true), {format: '#,##0'});
+        } else {
+            dtab.addColumn('rss', 'RSS', value => format.number(value), {format: '#,##0'});
+            dtab.addColumn('rss_pct', '%', value => format.percent(value), {format: '0.00%'});
+            dtab.addColumn('rum', 'RUM', value => format.number(value), {format: '#,##0'});
+            dtab.addColumn('rum_pct', '%', value => format.percent(value), {format: '0.00%'});
+            dtab.addColumn('total', 'Total', value => format.price(value, false), {format: '#,##0.00'});
+            dtab.addColumn('total_pct', '%', value => format.percent(value), {format: '0.00%'});
+            dtab.addColumn('pay', 'Rétribué', value => format.price(value, false), {format: '#,##0.00'});
+            dtab.addColumn('pay_pct', '%', value => format.percent(value), {format: '0.00%'});
+            dtab.addColumn('deaths', 'Décès', value => format.number(value), {format: '#,##0'});
+            dtab.addColumn('deaths_pct', '%', value => format.percent(value), {format: '0.00%'});
+        }
+    }
+
     function addSummaryCells(dtab, stat, total)
     {
-        function addPercentCell(value)
-        {
-            if (!isNaN(value)) {
-                dtab.addCell(value, value => format.percent(value));
-            } else {
-                dtab.addCell(null, value => '-');
-            }
+        if (mix_params.diff) {
+            dtab.addCell(stat.count);
+            dtab.addCell(stat.mono_count);
+            dtab.addCell(stat.price_cents_total / 100.0);
+            dtab.addCell(stat.price_cents / 100.0);
+            dtab.addCell(stat.deaths);
+        } else {
+            dtab.addCell(stat.count);
+            dtab.addCell(stat.count / total.count);
+            dtab.addCell(stat.mono_count);
+            dtab.addCell(stat.mono_count / total.mono_count);
+            dtab.addCell(stat.price_cents_total / 100.0);
+            dtab.addCell(stat.price_cents_total / total.price_cents_total);
+            dtab.addCell(stat.price_cents / 100.0);
+            dtab.addCell(stat.price_cents / total.price_cents);
+            dtab.addCell(stat.deaths);
+            dtab.addCell(stat.deaths / stat.count);
         }
 
-        dtab.addCell(stat.count, value => format.number(value, !!mix_params.diff));
-        if (!mix_params.diff)
-            addPercentCell(stat.count / total.count);
-        dtab.addCell(stat.mono_count, value => format.number(value, !!mix_params.diff));
-        if (!mix_params.diff)
-            addPercentCell(stat.mono_count / total.mono_count);
-        dtab.addCell(stat.price_cents_total / 100.0, value => format.price(value, false, !!mix_params.diff));
-        if (!mix_params.diff)
-            addPercentCell(stat.price_cents_total / total.price_cents_total);
-        dtab.addCell(stat.price_cents / 100.0, value => format.price(value, false, !!mix_params.diff));
-        if (!mix_params.diff)
-            addPercentCell(stat.price_cents / total.price_cents);
-        dtab.addCell(stat.deaths, value => format.number(value, !!mix_params.diff));
-        if (!mix_params.diff)
-            addPercentCell(stat.deaths / stat.count);
     }
 
     function syncPagers(pagers, current_page, last_page)

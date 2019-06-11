@@ -408,7 +408,7 @@ let mco_list = {};
             // Header
             for (let i = first_column; i < list_info.columns.length; i++) {
                 let col = list_info.columns[i];
-                builder.addColumn(col.key, col.header, {tooltip: col.tooltip || col.header});
+                builder.addColumn(col.key, col.header, addSpecLinks, {tooltip: col.tooltip || col.header});
             }
 
             // Groups
@@ -442,7 +442,7 @@ let mco_list = {};
                             if (prev_cell0)
                                 builder.endRow();
                             builder.beginRow();
-                            builder.addCell(cells[0], addSpecLinks, {colspan: cells.length - 1});
+                            builder.addCell(cells[0], {colspan: cells.length - 1});
                             prev_cell0 = cells[0];
                         }
                     }
@@ -450,7 +450,7 @@ let mco_list = {};
                     builder.beginRow();
                     for (let i = first_column; i < cells.length; i++) {
                         const cell = cells[i];
-                        builder.addCell(cell, addSpecLinks);
+                        builder.addCell(cell);
                     }
                     builder.endRow();
                 }
