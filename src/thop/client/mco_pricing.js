@@ -364,7 +364,7 @@ let mco_pricing = {};
         if (show_pricing) {
             appendRow('Conditions', function(col) {
                 let el = dom.h('div',
-                               col.conditions.map(function(cond) { return [mco_list.addSpecLinks(cond), dom.h('br')]; }));
+                               col.conditions.map(function(cond) { return [mco_list.addSpecLinks(cond, false), dom.h('br')]; }));
                 return [el, {class: 'conditions'}, true];
             });
             appendRow('Borne basse', function(col) { return [format.duration(col.exb_treshold), {class: 'exb'}, true]; });
