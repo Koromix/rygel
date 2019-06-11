@@ -970,15 +970,15 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
     // Conversions
     if (stay.exit.date >= Date(2019, 3, 1) && mono_preps.len > 1 && !mono_preps[0].duration) {
         const mco_PreparedStay &mono_prep0 = mono_preps[0];
-        const mco_Stay &mono_stay0 = *mono_prep0.stay;
+        const mco_Stay &mono_stay1 = *mono_preps[1].stay;
 
         if (RG_UNLIKELY((mono_prep0.markers & (int)mco_PreparedStay::Marker::PartialUnit) &&
-                        (mono_stay0.flags & (int)mco_Stay::Flag::NoConversion))) {
+                        (mono_stay1.flags & (int)mco_Stay::Flag::NoConversion))) {
             SetError(out_errors, 153, 0);
         }
         if (RG_UNLIKELY((mono_prep0.markers & ((int)mco_PreparedStay::Marker::PartialUnit |
                                                (int)mco_PreparedStay::Marker::MixedUnit)) &&
-                        !(mono_stay0.flags & ((int)mco_Stay::Flag::Conversion |
+                        !(mono_stay1.flags & ((int)mco_Stay::Flag::Conversion |
                                               (int)mco_Stay::Flag::NoConversion)))) {
             SetError(out_errors, 154, 0);
         }
