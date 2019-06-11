@@ -114,8 +114,13 @@ static bool ExecuteCommandLine(const char *cmd_line, HeapArray<char> *out_buf, i
         RG_DEFER { close(out_pfd[1]); };
 
         posix_spawn_file_actions_t file_actions;
-        if ((errno = posix_spawn_file_actions_init(&file_actions)) ||
-                (errno = posix_spawn_file_actions_adddup2(&file_actions, out_pfd[1], STDOUT_FILENO)) ||
+        if ((errno = posix_spawn_file_actions_init(&file_actions))) {
+            LogError("Failed to set up standard process descriptors: %1", strerror(errno));
+            return false;
+        }
+        RG_DEFER { posix_spawn_file_actions_destroy(&file_actions); };
+
+        if ((errno = posix_spawn_file_actions_adddup2(&file_actions, out_pfd[1], STDOUT_FILENO)) ||
                 (errno = posix_spawn_file_actions_adddup2(&file_actions, out_pfd[1], STDERR_FILENO))) {
             LogError("Failed to set up standard process descriptors: %1", strerror(errno));
             return false;
