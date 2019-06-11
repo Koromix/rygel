@@ -64,34 +64,6 @@ static void AppendListValues(Span<const char> str,
     }
 }
 
-static const char *BuildOutputPath(const char *src_filename, const char *output_directory,
-                                   const char *suffix, Allocator *alloc)
-{
-    RG_ASSERT_DEBUG(!PathIsAbsolute(src_filename));
-
-    HeapArray<char> buf;
-    buf.allocator = alloc;
-
-    Size offset = Fmt(&buf, "%1%/objects%/", output_directory).len;
-    Fmt(&buf, "%1%2", src_filename, suffix);
-
-    // Replace '..' components with '__'
-    {
-        char *ptr = buf.ptr + offset;
-
-        while ((ptr = strstr(ptr, ".."))) {
-            if (IsPathSeparator(ptr[-1]) && (IsPathSeparator(ptr[2]) || !ptr[2])) {
-                ptr[0] = '_';
-                ptr[1] = '_';
-            }
-
-            ptr += 2;
-        }
-    }
-
-    return buf.Leak().ptr;
-}
-
 static bool ResolveFileSet(const FileSet &file_set,
                            Allocator *alloc, HeapArray<const char *> *out_filenames)
 {
@@ -358,21 +330,19 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
             return nullptr;
 
         for (const char *src_filename: src_filenames) {
-            ObjectInfo obj = {};
+            SourceFile src = {};
 
             Span<const char> extension = GetPathExtension(src_filename);
             if (extension == ".c") {
-                obj.src_type = SourceType::C_Source;
+                src.type = SourceType::C_Source;
             } else if (extension == ".cc" || extension == ".cpp") {
-                obj.src_type = SourceType::CXX_Source;
+                src.type = SourceType::CXX_Source;
             } else {
                 continue;
             }
+            src.filename = DuplicateString(src_filename, &set.str_alloc).ptr;
 
-            obj.src_filename = DuplicateString(src_filename, &set.str_alloc).ptr;
-            obj.dest_filename = BuildOutputPath(src_filename, output_directory, ".o", &set.str_alloc);
-
-            target->objects.Append(obj);
+            target->sources.Append(src);
         }
     }
 
@@ -398,7 +368,7 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
 
             target->imports.Append(import->imports);
             target->libraries.Append(import->libraries);
-            target->objects.Append(import->objects);
+            target->sources.Append(import->sources);
         }
 
         target->imports.Append(target_config->imports);
@@ -423,63 +393,25 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
         return CmpStr(lib1, lib2) < 0;
     });
     target->libraries.RemoveFrom(std::unique(target->libraries.begin(), target->libraries.end(),
-                                 [](const char *lib1, const char *lib2) {
+                                             [](const char *lib1, const char *lib2) {
         return TestStr(lib1, lib2);
     }) - target->libraries.begin());
-    std::sort(target->objects.begin(), target->objects.end(),
-              [](const ObjectInfo &obj1, const ObjectInfo &obj2) {
-        return CmpStr(obj1.dest_filename, obj2.dest_filename) < 0;
+    std::sort(target->sources.begin(), target->sources.end(),
+              [](const SourceFile &src1, const SourceFile &src2) {
+        return CmpStr(src1.filename, src2.filename) < 0;
     });
-    target->objects.RemoveFrom(std::unique(target->objects.begin(), target->objects.end(),
-                                   [](const ObjectInfo &obj1, const ObjectInfo &obj2) {
-        return TestStr(obj1.dest_filename, obj2.dest_filename);
-    }) - target->objects.begin());
+    target->sources.RemoveFrom(std::unique(target->sources.begin(), target->sources.end(),
+                                           [](const SourceFile &src1, const SourceFile &src2) {
+        return TestStr(src1.filename, src2.filename);
+    }) - target->sources.begin());
 
     // PCH files
-    if (target_config->c_pch_filename) {
-        ObjectInfo obj = {};
-
-        obj.src_type = SourceType::C_Header;
-        obj.src_filename = target_config->c_pch_filename;
-        obj.dest_filename = BuildOutputPath(target_config->c_pch_filename, output_directory,
-                                            ".pch.h", &set.str_alloc);
-
-        target->c_pch_filename = obj.dest_filename;
-        target->pch_objects.Append(obj);
-    }
-    if (target_config->cxx_pch_filename) {
-        ObjectInfo obj = {};
-
-        obj.src_type = SourceType::CXX_Header;
-        obj.src_filename = target_config->cxx_pch_filename;
-        obj.dest_filename = BuildOutputPath(target_config->cxx_pch_filename, output_directory,
-                                            ".pch.h", &set.str_alloc);
-
-        target->cxx_pch_filename = obj.dest_filename;
-        target->pch_objects.Append(obj);
-    }
+    target->c_pch_filename = target_config->c_pch_filename;
+    target->cxx_pch_filename = target_config->cxx_pch_filename;
 
     // Gather asset filenames
     if (!ResolveFileSet(target_config->pack_file_set, &set.str_alloc, &target->pack_filenames))
         return nullptr;
-    if (target->pack_filenames.len) {
-        target->pack_obj_filename = Fmt(&set.str_alloc, "%1%/assets%/%2_assets.o",
-                                        output_directory, target->name).ptr;
-#ifdef _WIN32
-        target->pack_module_filename = Fmt(&set.str_alloc, "%1%/%2_assets.dll", output_directory, target->name).ptr;
-#else
-        target->pack_module_filename = Fmt(&set.str_alloc, "%1%/%2_assets.so", output_directory, target->name).ptr;
-#endif
-    }
-
-    // Final target output
-    if (target->type == TargetType::Executable) {
-#ifdef _WIN32
-        target->dest_filename = Fmt(&set.str_alloc, "%1%/%2.exe", output_directory, target->name).ptr;
-#else
-        target->dest_filename = Fmt(&set.str_alloc, "%1%/%2", output_directory, target->name).ptr;
-#endif
-    }
 
     bool appended = targets_map.Append(target_config->name, set.targets.len - 1).second;
     RG_ASSERT_DEBUG(appended);
@@ -497,10 +429,9 @@ void TargetSetBuilder::Finish(TargetSet *out_set)
     SwapMemory(&set, out_set, RG_SIZE(set));
 }
 
-bool LoadTargetSet(Span<const char *const> filenames, const char *output_directory,
-                   TargetSet *out_set)
+bool LoadTargetSet(Span<const char *const> filenames, TargetSet *out_set)
 {
-    TargetSetBuilder target_set_builder(output_directory);
+    TargetSetBuilder target_set_builder;
     if (!target_set_builder.LoadFiles(filenames))
         return false;
     target_set_builder.Finish(out_set);
