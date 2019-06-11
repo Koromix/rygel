@@ -14,19 +14,19 @@ let thop = (function() {
         'login': user
     };
     let Links = [
-        {category: 'Tarifs', title: 'Racines de GHM', func: () => mco_list.routeToUrl({list: 'ghm_roots'})},
-        {category: 'Tarifs', title: 'Tarifs (grille)', func: () => mco_pricing.routeToUrl({view: 'table'})},
-        {category: 'Tarifs', title: 'Tarifs (courbes)', func: () => mco_pricing.routeToUrl({view: 'chart'})},
+        {category: 'Tarifs MCO', title: 'Racines de GHM', func: () => mco_list.routeToUrl({list: 'ghm_roots'})},
+        {category: 'Tarifs MCO', title: 'Tarifs (grille)', func: () => mco_pricing.routeToUrl({view: 'table'})},
+        {category: 'Tarifs MCO', title: 'Tarifs (courbes)', func: () => mco_pricing.routeToUrl({view: 'chart'})},
 
-        {category: 'Listes', title: 'Arbre de groupage', func: () => mco_tree.routeToUrl()},
-        {category: 'Listes', title: 'GHM / GHS', func: () => mco_list.routeToUrl({list: 'ghm_ghs'})},
-        {category: 'Listes', title: 'Diagnostics', func: () => mco_list.routeToUrl({list: 'diagnoses'})},
-        {category: 'Listes', title: 'Actes', func: () => mco_list.routeToUrl({list: 'procedures'})},
+        {category: 'Listes MCO', title: 'Arbre de groupage', func: () => mco_tree.routeToUrl()},
+        {category: 'Listes MCO', title: 'GHM / GHS', func: () => mco_list.routeToUrl({list: 'ghm_ghs'})},
+        {category: 'Listes MCO', title: 'Diagnostics', func: () => mco_list.routeToUrl({list: 'diagnoses'})},
+        {category: 'Listes MCO', title: 'Actes', func: () => mco_list.routeToUrl({list: 'procedures'})},
 
-        {category: 'Activité', title: 'Unités médicales', func: () => mco_casemix.routeToUrl({view: 'units'})},
-        {category: 'Activité', title: 'Racines de GHM', func: () => mco_casemix.routeToUrl({view: 'ghm_roots'})},
-        {category: 'Activité', title: 'Valorisations', func: () => mco_casemix.routeToUrl({view: 'durations'})},
-        {category: 'Activité', title: 'Résumés (RSS)', func: () => mco_casemix.routeToUrl({view: 'results'})}
+        {category: 'Activité MCO', title: 'Unités médicales', func: () => mco_casemix.routeToUrl({view: 'units'})},
+        {category: 'Activité MCO', title: 'Racines de GHM', func: () => mco_casemix.routeToUrl({view: 'ghm_roots'})},
+        {category: 'Activité MCO', title: 'Valorisations', func: () => mco_casemix.routeToUrl({view: 'durations'})},
+        {category: 'Activité MCO', title: 'Résumés (RSS)', func: () => mco_casemix.routeToUrl({view: 'results'})}
     ];
 
     // Go
@@ -89,7 +89,7 @@ let thop = (function() {
 
                 let active = current_url && current_url.startsWith(path.url);
                 if (active)
-                    document.title = `THOP — ${link.title}`;
+                    document.title = `${link.category} — ${link.title}`;
 
                 if (path.allowed) {
                     if (link.category === prev_category) {
