@@ -907,9 +907,13 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
                 return (proc_info->bytes[44] & 0x40);
             });
             if (!tolerate) {
-                // According to the manual, this is a blocking error but the
-                // official classifier does not actually enforce it.
-                SetError(out_errors, 145, 0);
+                if (stay.exit.date >= Date(2019, 3, 1)) {
+                    valid &= SetError(out_errors, 145);
+                } else {
+                    // According to the manual, this is a blocking error but the
+                    // official classifier did not always enforce it.
+                    SetError(out_errors, 145, 0);
+                }
             }
         } else if (RG_UNLIKELY(stay.session_count > prep.duration + 1)) {
             SetError(out_errors, 146, -1);
