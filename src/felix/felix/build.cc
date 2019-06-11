@@ -66,6 +66,11 @@ static bool ParseToolchainSpec(Span<const char> str, Toolchain *out_toolchain)
 static int RunTarget(const Target &target, const char *target_filename,
                      Span<const char *const> arguments, bool verbose)
 {
+    if (target.type != TargetType::Executable) {
+        LogError("Cannot run non-executable target '%1'", target.name);
+        return 1;
+    }
+
     HeapArray<char> cmd_buf;
 
     // FIXME: Just like the code in compiler.cc, command-line escaping is
@@ -330,12 +335,7 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
 
     // Run?
     if (run_target) {
-        if (run_target->type != TargetType::Executable) {
-            LogError("Cannot run non-executable target '%1'", run_target->name);
-            return 1;
-        }
-
-        const char *target_filename = BuildTargetFilename(*run_target, output_directory, &temp_alloc);
+        const char *target_filename = build_set.target_filenames.FindValue(run_target->name, nullptr);
         return RunTarget(*run_target, target_filename, run_arguments, verbose);
     } else {
         return 0;
