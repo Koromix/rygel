@@ -62,8 +62,10 @@ namespace RG {
 #define RG_THREAD_MAX_IDLE_TIME 10000
 
 // ------------------------------------------------------------------------
-// Utilities
+// Utility
 // ------------------------------------------------------------------------
+
+extern "C" const char *BuildVersion;
 
 enum class Endianness {
     LittleEndian,
