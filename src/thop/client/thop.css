@@ -108,6 +108,8 @@ form button, form input[type=submit] {
 
     /* Side bar */
     #side_bar {
+        display: flex;
+        flex-direction: column;
         position: fixed;
         left: 0;
         top: 0;
@@ -115,6 +117,7 @@ form button, form input[type=submit] {
         width: 180px;
         z-index: 999;
     }
+    #side_menu { flex: 1; }
     #side_menu li a { padding: 0.5em 0.5em 0.5em 2em; }
     #side_menu li a.category { padding-left: 0.5em; }
     #side_menu li a:hover:not(.active) {
@@ -122,11 +125,17 @@ form button, form input[type=submit] {
         color: black !important;
     }
     #side_session_box {
-        padding: 8px 2px 0 2px;
+        padding: 6px 2px 0 2px;
         text-align: center;
         font-size: 0.8em;
     }
     #side_session_menu { display: none; }
+    #side_version {
+        padding: 0 2px 4px 2px;
+        text-align: center;
+        font-size: 0.8em;
+        color: #ff6600;
+    }
 }
 
 @media screen and (max-width: 800px) {
@@ -202,6 +211,7 @@ form button, form input[type=submit] {
     }
     #side_menu.active li a { display: block; }
     #side_session_box { display: none; }
+    #side_version { display: none; }
 
     /* Top page-specific menu */
     #opt_menu {

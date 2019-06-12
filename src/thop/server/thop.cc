@@ -188,7 +188,10 @@ static void InitRoutes()
     // Patch HTML
     html.data = pack_PatchVariables(html, &routes_alloc,
                                     [](const char *key, StreamWriter *writer) {
-        if (TestStr(key, "THOP_BASE_URL")) {
+        if (TestStr(key, "THOP_VERSION")) {
+            writer->Write(BuildVersion ? BuildVersion : "");
+            return true;
+        } else if (TestStr(key, "THOP_BASE_URL")) {
             writer->Write(thop_config.base_url);
             return true;
         } else if (TestStr(key, "THOP_SHOW_USER")) {
