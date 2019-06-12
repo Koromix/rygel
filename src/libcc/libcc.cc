@@ -52,8 +52,12 @@
 namespace RG {
 
 // ------------------------------------------------------------------------
-// Assert
+// Utility
 // ------------------------------------------------------------------------
+
+#ifndef FELIX_VERSION
+const char *BuildVersion;
+#endif
 
 extern "C" void RG_NORETURN AssertFail(const char *cond)
 {

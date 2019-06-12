@@ -97,6 +97,22 @@ static int RunTarget(const Target &target, const char *target_filename,
 #endif
 }
 
+static const char *BuildGitVersionString(Allocator *alloc)
+{
+    HeapArray<char> output(alloc);
+    int exit_code;
+    if (!ExecuteCommandLine("git log -n1 --pretty=format:%ad_%h --date=format:%Y%m%d",
+                            &output, &exit_code))
+        return nullptr;
+    if (exit_code) {
+        LogError("Command 'git log' failed");
+        return nullptr;
+    }
+
+    output.len = TrimStrRight((Span<const char>)output).len;
+    return output.TrimAndLeak().ptr;
+}
+
 int RunBuild(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -318,8 +334,12 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
     // Create build commands
     BuildSet build_set;
     {
-        BuildSetBuilder build_set_builder(toolchain.compiler, toolchain.build_mode,
-                                          output_directory);
+        BuildSetBuilder build_set_builder(output_directory, toolchain.compiler);
+        build_set_builder.build_mode = toolchain.build_mode;
+        build_set_builder.version_str = BuildGitVersionString(&temp_alloc);
+        if (!build_set_builder.version_str) {
+            LogError("Git version string will be null");
+        }
 
         for (const Target *target: enabled_targets) {
             if (!build_set_builder.AppendTargetCommands(*target))

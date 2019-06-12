@@ -28,11 +28,14 @@ struct BuildSet {
 };
 
 class BuildSetBuilder {
-    const Compiler *compiler;
-    BuildMode build_mode;
-    const char *output_directory;
-
     BlockAllocator temp_alloc;
+
+    bool version_init = false;
+    const char *version_obj_filename = nullptr;
+
+    // Reuse for performance
+    HeapArray<const char *> obj_filenames;
+    HeapArray<const char *> definitions;
 
     HeapArray<BuildCommand> pch_commands;
     HeapArray<BuildCommand> obj_commands;
@@ -45,8 +48,13 @@ class BuildSetBuilder {
     HashMap<const char *, const char *> target_filenames;
 
 public:
-    BuildSetBuilder(const Compiler *compiler, BuildMode build_mode, const char *output_directory)
-        : compiler(compiler), build_mode(build_mode), output_directory(output_directory) {}
+    const char *output_directory;
+    const Compiler *compiler;
+    BuildMode build_mode = BuildMode::Debug;
+    const char *version_str = nullptr;
+
+    BuildSetBuilder(const char *output_directory, const Compiler *compiler)
+        : output_directory(output_directory), compiler(compiler) {}
 
     bool AppendTargetCommands(const Target &target);
 
@@ -58,6 +66,8 @@ private:
     bool IsFileUpToDate(const char *dest_filename, Span<const char *const> src_filenames);
     int64_t GetFileModificationTime(const char *filename);
 };
+
+bool ExecuteCommandLine(const char *cmd_line, HeapArray<char> *out_buf, int *out_code);
 
 bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose);
 

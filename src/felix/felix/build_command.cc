@@ -24,149 +24,6 @@
 
 namespace RG {
 
-static bool ExecuteCommandLine(const char *cmd_line, HeapArray<char> *out_buf, int *out_code)
-{
-#ifdef _WIN32
-    STARTUPINFO startup_info = {};
-
-    // Create read pipe
-    HANDLE out_pipe[2];
-    if (!CreatePipe(&out_pipe[0], &out_pipe[1], nullptr, 0)) {
-        LogError("Failed to create pipe: %1", Win32ErrorString());
-        return false;
-    }
-    RG_DEFER { CloseHandle(out_pipe[0]); };
-
-    // Start process
-    HANDLE process_handle;
-    {
-        RG_DEFER {
-            CloseHandle(out_pipe[1]);
-
-            if (startup_info.hStdOutput) {
-                CloseHandle(startup_info.hStdOutput);
-            }
-            if (startup_info.hStdError) {
-                CloseHandle(startup_info.hStdError);
-            }
-        };
-
-        if (!DuplicateHandle(GetCurrentProcess(), out_pipe[1], GetCurrentProcess(),
-                             &startup_info.hStdOutput, 0, TRUE, DUPLICATE_SAME_ACCESS) ||
-            !DuplicateHandle(GetCurrentProcess(), out_pipe[1], GetCurrentProcess(),
-                             &startup_info.hStdError, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
-            LogError("Failed to duplicate handle: %1", Win32ErrorString());
-            return false;
-        }
-        startup_info.dwFlags |= STARTF_USESTDHANDLES;
-
-        PROCESS_INFORMATION process_info = {};
-        if (!CreateProcessA(nullptr, const_cast<char *>(cmd_line), nullptr, nullptr, TRUE, 0,
-                            nullptr, nullptr, &startup_info, &process_info)) {
-            LogError("Failed to start process: %1", Win32ErrorString());
-            return false;
-        }
-
-        process_handle = process_info.hProcess;
-        CloseHandle(process_info.hThread);
-    }
-    RG_DEFER { CloseHandle(process_handle); };
-
-    // Read process output
-    for (;;) {
-        out_buf->Grow(1024);
-
-        DWORD read_len = 0;
-        if (!::ReadFile(out_pipe[0], out_buf->end(), 1024, &read_len, nullptr)) {
-            if (GetLastError() != ERROR_BROKEN_PIPE) {
-                LogError("Failed to read process output: %1", Win32ErrorString());
-            }
-            break;
-        }
-
-        out_buf->len += read_len;
-    }
-
-    // Wait for process exit
-    DWORD exit_code;
-    if (WaitForSingleObject(process_handle, INFINITE) != WAIT_OBJECT_0) {
-        LogError("WaitForSingleObject() failed: %1", Win32ErrorString());
-        return false;
-    }
-    if (!GetExitCodeProcess(process_handle, &exit_code)) {
-        LogError("GetExitCodeProcess() failed: %1", Win32ErrorString());
-        return false;
-    }
-
-    *out_code = (int)exit_code;
-    return true;
-#else
-    int out_pfd[2];
-    if (pipe2(out_pfd, O_CLOEXEC) < 0) {
-        LogError("Failed to create pipe: %1", strerror(errno));
-        return false;
-    }
-    RG_DEFER { close(out_pfd[0]); };
-
-    // Start process
-    pid_t pid;
-    {
-        RG_DEFER { close(out_pfd[1]); };
-
-        posix_spawn_file_actions_t file_actions;
-        if ((errno = posix_spawn_file_actions_init(&file_actions))) {
-            LogError("Failed to set up standard process descriptors: %1", strerror(errno));
-            return false;
-        }
-        RG_DEFER { posix_spawn_file_actions_destroy(&file_actions); };
-
-        if ((errno = posix_spawn_file_actions_adddup2(&file_actions, out_pfd[1], STDOUT_FILENO)) ||
-                (errno = posix_spawn_file_actions_adddup2(&file_actions, out_pfd[1], STDERR_FILENO))) {
-            LogError("Failed to set up standard process descriptors: %1", strerror(errno));
-            return false;
-        }
-
-        const char *argv[] = {"sh", "-c", cmd_line, nullptr};
-        if ((errno = posix_spawn(&pid, "/bin/sh", &file_actions, nullptr,
-                                 const_cast<char **>(argv), environ))) {
-            LogError("Failed to start process: %1", strerror(errno));
-            return false;
-        }
-    }
-
-    // Read process output
-    for (;;) {
-        out_buf->Grow(1024);
-
-        ssize_t read_len = RG_POSIX_RESTART_EINTR(read(out_pfd[0], out_buf->end(), 1024));
-        if (read_len < 0) {
-            LogError("Failed to read process output: %1", strerror(errno));
-            break;
-        } else if (!read_len) {
-            break;
-        }
-
-        out_buf->len += (Size)read_len;
-    }
-
-    // Wait for process exit
-    int status;
-    if (RG_POSIX_RESTART_EINTR(waitpid(pid, &status, 0)) < 0) {
-        LogError("Failed to wait for process exit: %1", strerror(errno));
-        return false;
-    }
-
-    if (WIFSIGNALED(status)) {
-        *out_code = 128 + WTERMSIG(status);
-    } else if (WIFEXITED(status)) {
-        *out_code = WEXITSTATUS(status);
-    } else {
-        *out_code = -1;
-    }
-    return true;
-#endif
-}
-
 // TODO: Support Make escaping
 static bool ParseCompilerMakeRule(const char *filename, Allocator *alloc,
                                   HeapArray<const char *> *out_filenames)
@@ -227,6 +84,34 @@ static const char *BuildObjectPath(const char *src_filename, const char *output_
     return buf.Leak().ptr;
 }
 
+static bool UpdateVersionSource(const char *version_str, const char *dest_filename)
+{
+    if (!EnsureDirectoryExists(dest_filename))
+        return false;
+
+    char code[512];
+    Fmt(code, "const char *BuildVersion = \"%1\";\n", version_str);
+
+    bool new_version;
+    if (TestFile(dest_filename, FileType::File)) {
+        char old_code[512] = {};
+        {
+            StreamReader reader(dest_filename);
+            reader.Read(RG_SIZE(old_code) - 1, old_code);
+        }
+
+        new_version = !TestStr(old_code, code);
+    } else {
+        new_version = true;
+    }
+
+    if (new_version) {
+        return WriteFile(code, dest_filename);
+    } else {
+        return true;
+    }
+}
+
 static bool CreatePrecompileHeader(const char *pch_filename, const char *dest_filename)
 {
     if (!EnsureDirectoryExists(dest_filename))
@@ -248,7 +133,9 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
         link_commands.RemoveFrom(start_link_len);
     };
 
-    HeapArray<const char *> obj_filenames;
+    obj_filenames.RemoveFrom(0);
+    definitions.RemoveFrom(0);
+    definitions.Append(target.definitions);
 
     bool warnings = (target.type != TargetType::ExternalLibrary);
 
@@ -269,7 +156,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
                 return (const char *)nullptr;
 
             cmd.cmd = compiler->MakeObjectCommand(pch_filename, src_type, build_mode, warnings,
-                                                  nullptr, target.definitions, target.include_directories,
+                                                  nullptr, definitions, target.include_directories,
                                                   nullptr, deps_filename, &str_alloc);
             if (!cmd.cmd)
                 return (const char *)nullptr;
@@ -288,6 +175,37 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
         cxx_pch_filename = add_pch_object(target.cxx_pch_filename, SourceType::CXX_Header);
         if (!cxx_pch_filename)
             return false;
+    }
+
+    // Build information
+    if (!version_init && version_str) {
+        const char *src_filename = Fmt(&temp_alloc, "%1%/resources%/version.c", output_directory).ptr;
+        version_obj_filename = Fmt(&str_alloc, "%1%/resources%/version.c.o", output_directory).ptr;
+
+        if (UpdateVersionSource(version_str, src_filename)) {
+            if (!IsFileUpToDate(version_obj_filename, src_filename)) {
+                BuildCommand cmd = {};
+
+                cmd.text = "Build version file";
+                cmd.dest_filename = version_obj_filename;
+                cmd.cmd = compiler->MakeObjectCommand(src_filename, SourceType::C_Source, build_mode, false,
+                                                      nullptr, {}, {}, version_obj_filename, nullptr, &str_alloc);
+
+                obj_commands.Append(cmd);
+
+                // Pretend object file does not exist to force link step
+                mtime_map.Set(version_obj_filename, -1);
+            }
+        } else {
+            LogError("Failed to build git version string");
+            version_obj_filename = nullptr;
+        }
+
+        version_init = true;
+    }
+    if (version_obj_filename) {
+        obj_filenames.Append(version_obj_filename);
+        definitions.Append("FELIX_VERSION");
     }
 
     // Object commands
@@ -313,7 +231,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
             if (!EnsureDirectoryExists(obj_filename))
                 return false;
             cmd.cmd = compiler->MakeObjectCommand(src.filename, src.type, build_mode, warnings,
-                                                  pch_filename, target.definitions, target.include_directories,
+                                                  pch_filename, definitions, target.include_directories,
                                                   obj_filename, deps_filename, &str_alloc);
             if (!cmd.cmd)
                 return false;
@@ -491,6 +409,149 @@ int64_t BuildSetBuilder::GetFileModificationTime(const char *filename)
     }
 
     return *ret.first;
+}
+
+bool ExecuteCommandLine(const char *cmd_line, HeapArray<char> *out_buf, int *out_code)
+{
+#ifdef _WIN32
+    STARTUPINFO startup_info = {};
+
+    // Create read pipe
+    HANDLE out_pipe[2];
+    if (!CreatePipe(&out_pipe[0], &out_pipe[1], nullptr, 0)) {
+        LogError("Failed to create pipe: %1", Win32ErrorString());
+        return false;
+    }
+    RG_DEFER { CloseHandle(out_pipe[0]); };
+
+    // Start process
+    HANDLE process_handle;
+    {
+        RG_DEFER {
+            CloseHandle(out_pipe[1]);
+
+            if (startup_info.hStdOutput) {
+                CloseHandle(startup_info.hStdOutput);
+            }
+            if (startup_info.hStdError) {
+                CloseHandle(startup_info.hStdError);
+            }
+        };
+
+        if (!DuplicateHandle(GetCurrentProcess(), out_pipe[1], GetCurrentProcess(),
+                             &startup_info.hStdOutput, 0, TRUE, DUPLICATE_SAME_ACCESS) ||
+            !DuplicateHandle(GetCurrentProcess(), out_pipe[1], GetCurrentProcess(),
+                             &startup_info.hStdError, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
+            LogError("Failed to duplicate handle: %1", Win32ErrorString());
+            return false;
+        }
+        startup_info.dwFlags |= STARTF_USESTDHANDLES;
+
+        PROCESS_INFORMATION process_info = {};
+        if (!CreateProcessA(nullptr, const_cast<char *>(cmd_line), nullptr, nullptr, TRUE, 0,
+                            nullptr, nullptr, &startup_info, &process_info)) {
+            LogError("Failed to start process: %1", Win32ErrorString());
+            return false;
+        }
+
+        process_handle = process_info.hProcess;
+        CloseHandle(process_info.hThread);
+    }
+    RG_DEFER { CloseHandle(process_handle); };
+
+    // Read process output
+    for (;;) {
+        out_buf->Grow(1024);
+
+        DWORD read_len = 0;
+        if (!::ReadFile(out_pipe[0], out_buf->end(), 1024, &read_len, nullptr)) {
+            if (GetLastError() != ERROR_BROKEN_PIPE) {
+                LogError("Failed to read process output: %1", Win32ErrorString());
+            }
+            break;
+        }
+
+        out_buf->len += read_len;
+    }
+
+    // Wait for process exit
+    DWORD exit_code;
+    if (WaitForSingleObject(process_handle, INFINITE) != WAIT_OBJECT_0) {
+        LogError("WaitForSingleObject() failed: %1", Win32ErrorString());
+        return false;
+    }
+    if (!GetExitCodeProcess(process_handle, &exit_code)) {
+        LogError("GetExitCodeProcess() failed: %1", Win32ErrorString());
+        return false;
+    }
+
+    *out_code = (int)exit_code;
+    return true;
+#else
+    int out_pfd[2];
+    if (pipe2(out_pfd, O_CLOEXEC) < 0) {
+        LogError("Failed to create pipe: %1", strerror(errno));
+        return false;
+    }
+    RG_DEFER { close(out_pfd[0]); };
+
+    // Start process
+    pid_t pid;
+    {
+        RG_DEFER { close(out_pfd[1]); };
+
+        posix_spawn_file_actions_t file_actions;
+        if ((errno = posix_spawn_file_actions_init(&file_actions))) {
+            LogError("Failed to set up standard process descriptors: %1", strerror(errno));
+            return false;
+        }
+        RG_DEFER { posix_spawn_file_actions_destroy(&file_actions); };
+
+        if ((errno = posix_spawn_file_actions_adddup2(&file_actions, out_pfd[1], STDOUT_FILENO)) ||
+                (errno = posix_spawn_file_actions_adddup2(&file_actions, out_pfd[1], STDERR_FILENO))) {
+            LogError("Failed to set up standard process descriptors: %1", strerror(errno));
+            return false;
+        }
+
+        const char *argv[] = {"sh", "-c", cmd_line, nullptr};
+        if ((errno = posix_spawn(&pid, "/bin/sh", &file_actions, nullptr,
+                                 const_cast<char **>(argv), environ))) {
+            LogError("Failed to start process: %1", strerror(errno));
+            return false;
+        }
+    }
+
+    // Read process output
+    for (;;) {
+        out_buf->Grow(1024);
+
+        ssize_t read_len = RG_POSIX_RESTART_EINTR(read(out_pfd[0], out_buf->end(), 1024));
+        if (read_len < 0) {
+            LogError("Failed to read process output: %1", strerror(errno));
+            break;
+        } else if (!read_len) {
+            break;
+        }
+
+        out_buf->len += (Size)read_len;
+    }
+
+    // Wait for process exit
+    int status;
+    if (RG_POSIX_RESTART_EINTR(waitpid(pid, &status, 0)) < 0) {
+        LogError("Failed to wait for process exit: %1", strerror(errno));
+        return false;
+    }
+
+    if (WIFSIGNALED(status)) {
+        *out_code = 128 + WTERMSIG(status);
+    } else if (WIFEXITED(status)) {
+        *out_code = WEXITSTATUS(status);
+    } else {
+        *out_code = -1;
+    }
+    return true;
+#endif
 }
 
 bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
