@@ -4,6 +4,8 @@
 
 let mco_casemix = {};
 (function() {
+    let page_len = 100;
+
     // Route
     let unspecified = false;
     let pages = {};
@@ -765,9 +767,9 @@ let mco_casemix = {};
         `, query('#cm_units'));
 
         let render_count = summary.render(query('#cm_units .dtab'),
-                                          (page - 1) * TableLen, TableLen, {hide_empty: true});
+                                          (page - 1) * page_len, page_len, {hide_empty: true});
         syncPagers(queryAll('#cm_units .dtab_pager'), page,
-                   wt_pager.computeLastPage(render_count, summary.getRowCount(), TableLen));
+                   wt_pager.computeLastPage(render_count, summary.getRowCount(), page_len));
     }
 
     function refreshGhmRootsTable(filter_units, filter_ghm_roots, regroup, page, sort)
@@ -885,9 +887,9 @@ let mco_casemix = {};
         `, query('#cm_ghm_roots'));
 
         let render_count = summary.render(query('#cm_ghm_roots .dtab'),
-                                          (page - 1) * TableLen, TableLen, {hide_empty: true});
+                                          (page - 1) * page_len, page_len, {hide_empty: true});
         syncPagers(queryAll('#cm_ghm_roots .dtab_pager'), page,
-                   wt_pager.computeLastPage(render_count, summary.getRowCount(), TableLen));
+                   wt_pager.computeLastPage(render_count, summary.getRowCount(), page_len));
     }
 
     function addSummaryColumns(dtab)
@@ -1228,8 +1230,8 @@ let mco_casemix = {};
             return false;
         });
 
-        let offset = (page - 1) * TableLen;
-        let end = Math.min(offset + TableLen, results.length);
+        let offset = (page - 1) * page_len;
+        let end = Math.min(offset + page_len, results.length);
 
         let elements = [];
         for (let i = offset; i < end; i++) {
@@ -1411,7 +1413,7 @@ let mco_casemix = {};
             dom.h('table', {class: 'pagr'}),
             dom.h('table', {class: 'pagr'})
         ];
-        syncPagers(pagers, page, wt_pager.computeLastPage(end - offset, results.length, TableLen));
+        syncPagers(pagers, page, wt_pager.computeLastPage(end - offset, results.length, page_len));
 
         query('#rt').replaceContent(
             pagers[0],
