@@ -69,7 +69,9 @@ let mco_list = {};
                     return ghm_ghs.ghm_root + (ghm_roots_map[ghm_ghs.ghm_root] ?
                                               ' - ' + ghm_roots_map[ghm_ghs.ghm_root].desc : '');
                 }}
-            ]
+            ],
+
+            page_len: 800
         },
 
         ghm_ghs: {
@@ -117,7 +119,9 @@ let mco_list = {};
                         return null;
                     }
                 }}
-            ]
+            ],
+
+            page_len: 300
         },
 
         diagnoses: {
@@ -141,7 +145,9 @@ let mco_list = {};
                  func: diag => diag.severity ? diag.severity + 1 : 1},
                 {key: 'cmd' , header: 'CMD', variable: 'cmd'},
                 {key: 'main_list', header: 'Liste principale', variable: 'main_list'}
-            ]
+            ],
+
+            page_len: 300
         },
 
         procedures: {
@@ -160,7 +166,9 @@ let mco_list = {};
                 {key: 'activities', header: 'Activités', variable: 'activities'},
                 {key: 'extensions', header: 'Extensions', tooltip: 'Extensions (CCAM descriptive)',
                  variable: 'extensions'}
-            ]
+            ],
+
+            page_len: 300
         }
     };
 
@@ -468,10 +476,10 @@ let mco_list = {};
         `, query('#ls_' + list_name));
 
         let render_count = builder.render(query('#ls_' + list_name + ' .dtab'),
-                                          (page - 1) * TableLen, TableLen,
+                                          (page - 1) * list_info.page_len, list_info.page_len,
                                           {hide_header: !list_info.header, hide_parents: !!sort});
         syncPagers(queryAll('#ls_' + list_name + ' .dtab_pager'), page,
-                   wt_pager.computeLastPage(render_count, builder.getRowCount(), TableLen));
+                   wt_pager.computeLastPage(render_count, builder.getRowCount(), list_info.page_len));
     }
 
     function createContent(column, item, concepts_map, group)
