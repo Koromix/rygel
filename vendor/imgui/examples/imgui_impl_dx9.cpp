@@ -3,6 +3,7 @@
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'LPDIRECT3DTEXTURE9' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
+//  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bits indices.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
@@ -10,6 +11,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-05-29: DirectX9: Added support for large mesh (64K+ vertices), enable ImGuiBackendFlags_RendererHasVtxOffset flag.
 //  2019-04-30: DirectX9: Added support for special ImDrawCallback_ResetRenderState callback to reset render state.
 //  2019-03-29: Misc: Fixed erroneous assert in ImGui_ImplDX9_InvalidateDeviceObjects().
 //  2019-01-16: Misc: Disabled fog before drawing UI's. Fixes issue #2288.
@@ -78,7 +80,7 @@ static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
     g_pd3dDevice->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
 
     // Setup orthographic projection matrix
-    // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right).
+    // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
     // Being agnostic of whether <d3dx9.h> or <DirectXMath.h> can be used, we aren't relying on D3DXMatrixIdentity()/D3DXMatrixOrthoOffCenterLH() or DirectX::XMMatrixIdentity()/DirectX::XMMatrixOrthographicOffCenterLH()
     {
         float L = draw_data->DisplayPos.x + 0.5f;
@@ -172,8 +174,9 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     ImGui_ImplDX9_SetupRenderState(draw_data);
 
     // Render command lists
-    int vtx_offset = 0;
-    int idx_offset = 0;
+    // (Because we merged all buffers into a single one, we maintain our own offset into them)
+    int global_vtx_offset = 0;
+    int global_idx_offset = 0;
     ImVec2 clip_off = draw_data->DisplayPos;
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
@@ -196,11 +199,11 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
                 const LPDIRECT3DTEXTURE9 texture = (LPDIRECT3DTEXTURE9)pcmd->TextureId;
                 g_pd3dDevice->SetTexture(0, texture);
                 g_pd3dDevice->SetScissorRect(&r);
-                g_pd3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, vtx_offset, 0, (UINT)cmd_list->VtxBuffer.Size, idx_offset, pcmd->ElemCount/3);
+                g_pd3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, pcmd->VtxOffset + global_vtx_offset, 0, (UINT)cmd_list->VtxBuffer.Size, pcmd->IdxOffset + global_idx_offset, pcmd->ElemCount/3);
             }
-            idx_offset += pcmd->ElemCount;
         }
-        vtx_offset += cmd_list->VtxBuffer.Size;
+        global_idx_offset += cmd_list->IdxBuffer.Size;
+        global_vtx_offset += cmd_list->VtxBuffer.Size;
     }
 
     // Restore the DX9 transform
@@ -215,8 +218,10 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
 
 bool ImGui_ImplDX9_Init(IDirect3DDevice9* device)
 {
+    // Setup back-end capabilities flags
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_dx9";
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
     g_pd3dDevice = device;
     g_pd3dDevice->AddRef();
