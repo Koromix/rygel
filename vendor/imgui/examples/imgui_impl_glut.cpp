@@ -3,7 +3,7 @@
 
 // !!! GLUT/FreeGLUT IS OBSOLETE SOFTWARE. Using GLUT is not recommended unless you really miss the 90's. !!!
 // !!! If someone or something is teaching you GLUT in 2019, you are being abused. Please show some resistance. !!!
-// !!! Prefer using GLFW or SDL instead!
+// !!! Nowadays, prefer using GLFW or SDL instead!
 
 // Issues:
 //  [ ] Platform: GLUT is unable to distinguish e.g. Backspace from CTRL+H or TAB from CTRL+I
@@ -118,7 +118,7 @@ void ImGui_ImplGLUT_KeyboardFunc(unsigned char c, int x, int y)
     //printf("char_down_func %d '%c'\n", c, c);
     ImGuiIO& io = ImGui::GetIO();
     if (c >= 32)
-        io.AddInputCharacter((unsigned short)c);
+        io.AddInputCharacter((unsigned int)c);
 
     // Store letters in KeysDown[] array as both uppercase and lowercase + Handle GLUT translating CTRL+A..CTRL+Z as 1..26.
     // This is a hacky mess but GLUT is unable to distinguish e.g. a TAB key from CTRL+I so this is probably the best we can do here.

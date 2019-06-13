@@ -1,5 +1,5 @@
 -----------------------------------------------------------------------
- dear imgui, v1.70
+ dear imgui, v1.71
 -----------------------------------------------------------------------
  examples/README.txt
  (This is the README file for the examples/ folder. See docs/ for more documentation)
@@ -93,7 +93,7 @@ Most the example bindings are split in 2 parts:
 
  - Road-map: Dear ImGui 1.80 (WIP currently in the "docking" branch) will allows imgui windows to be
    seamlessly detached from the main application window. This is achieved using an extra layer to the
-   platform and renderer bindings, which allows imgui to communicate platform-specific requests.
+   platform and renderer bindings, which allows Dear ImGui to communicate platform-specific requests.
    If you decide to use unmodified imgui_impl_xxxx.cpp files, you will automatically benefit from
    improvements and fixes related to viewports and platform windows without extra work on your side.
 
@@ -104,7 +104,7 @@ List of Platforms Bindings in this repository:
     imgui_impl_osx.mm         ; macOS native API (not as feature complete as glfw/sdl back-ends)
     imgui_impl_sdl.cpp        ; SDL2 (Windows, macOS, Linux, iOS, Android) https://www.libsdl.org
     imgui_impl_win32.cpp      ; Win32 native API (Windows)
-    imgui_impl_glut.cpp       ; GLUT/FreeGLUT (not recommended unless really miss the 90's)
+    imgui_impl_glut.cpp       ; GLUT/FreeGLUT (absolutely not recommended in 2019)
 
 List of Renderer Bindings in this repository:
 
@@ -175,7 +175,7 @@ example_empscripten:
     We provide this to make the Emscripten differences obvious, and have them not pollute all other examples.
 
 example_glfw_metal/
-    GLFW (Mac) + Vulkan example.
+    GLFW (Mac) + Metal example.
     = main.mm + imgui_impl_glfw.cpp + imgui_impl_metal.mm.
 
 example_glfw_opengl2/
@@ -210,6 +210,12 @@ example_glut_opengl2/
 example_marmalade/
     Marmalade example using IwGx.
     = main.cpp + imgui_impl_marmalade.cpp
+
+example_null
+    Null example, compile and link imgui, create context, run headless with no inputs and no graphics output.
+    = main.cpp
+    This is used to quickly test compilation of core imgui files in as many setups as possible.
+    Because this application doesn't create a window nor a graphic context, there's no graphics output.
 
 example_sdl_opengl2/
     SDL2 (Win32, Mac, Linux etc.) + OpenGL example (legacy, fixed pipeline).
