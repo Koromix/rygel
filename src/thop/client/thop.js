@@ -149,17 +149,17 @@ let thop = (function() {
         }
         current_url = new_url;
 
-        // Show errors if any
-        refreshErrors(Array.from(errors));
-        if (!data_busy)
-            errors.clear();
-
-        // Update side menu state and links
-        updateMenu();
-        self.toggleMenu('#side_menu', false);
-
-        // Hide page menu if empty
         if (!data_busy) {
+            // Show errors if any
+            refreshErrors(Array.from(errors));
+            if (!data_busy)
+                errors.clear();
+
+            // Update side menu state and links
+            updateMenu();
+            self.toggleMenu('#side_menu', false);
+
+            // Hide page menu if empty
             let opt_hide = true;
             queryAll('#opt_menu > *').forEach(el => {
                 if (!el.hasClass('hide'))
@@ -168,10 +168,11 @@ let thop = (function() {
             queryAll('#opt_deploy, #opt_menu').toggleClass('hide', opt_hide);
             if (opt_hide)
                 self.toggleMenu('#opt_menu', false);
+
+            // Show page (first load)
+            document.body.style.display = 'block';
         }
 
-        // Done
-        document.body.style.display = 'block';
         query('main').toggleClass('busy', data_busy);
     }
 
