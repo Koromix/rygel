@@ -525,7 +525,7 @@ let catalog = {};
         let info = Catalogs[name];
         let set = catalogs[name];
 
-        if (info && !set) {
+        if (info && (!set || !set.concepts.length)) {
             set = {
                 concepts: [],
                 map: {}
