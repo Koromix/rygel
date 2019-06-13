@@ -919,17 +919,17 @@ let mco_casemix = {};
         if (mix_params.diff) {
             dtab.addCell(stat.count);
             dtab.addCell(stat.mono_count);
-            dtab.addCell(stat.price_cents_total / 100.0);
-            dtab.addCell(stat.price_cents / 100.0);
+            dtab.addCell(stat.price_cents_total);
+            dtab.addCell(stat.price_cents);
             dtab.addCell(stat.deaths);
         } else {
             dtab.addCell(stat.count);
             dtab.addCell(stat.count / total.count);
             dtab.addCell(stat.mono_count);
             dtab.addCell(stat.mono_count / total.mono_count);
-            dtab.addCell(stat.price_cents_total / 100.0);
+            dtab.addCell(stat.price_cents_total);
             dtab.addCell(stat.price_cents_total / total.price_cents_total);
-            dtab.addCell(stat.price_cents / 100.0);
+            dtab.addCell(stat.price_cents);
             dtab.addCell(stat.price_cents / total.price_cents);
             dtab.addCell(stat.deaths);
             dtab.addCell(stat.deaths / stat.count);
