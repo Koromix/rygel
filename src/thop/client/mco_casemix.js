@@ -948,7 +948,7 @@ let mco_casemix = {};
                 pager.removeClass('hide');
             } else {
                 pager.addClass('hide');
-                pager.innerHTML = '';
+                render(html``, pager);
             }
         });
     }
