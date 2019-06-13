@@ -18,12 +18,16 @@ enum class SourceType {
 enum class BuildMode {
     Debug,
     Fast,
-    LTO
+    LTO,
+    StaticFast,
+    StaticLTO
 };
 static const char *const BuildModeNames[] = {
     "Debug",
     "Fast",
-    "LTO"
+    "LTO",
+    "StaticFast",
+    "StaticLTO"
 };
 
 enum class LinkType {
