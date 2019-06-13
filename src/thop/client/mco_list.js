@@ -609,7 +609,7 @@ let mco_list = {};
                 pager.removeClass('hide');
             } else {
                 pager.addClass('hide');
-                pager.innerHTML = '';
+                render(html``, pager);
             }
         });
     }
