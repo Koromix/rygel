@@ -6,28 +6,8 @@ let thop = (function() {
     let self = this;
 
     // Modules and links
-    let Modules = {
-        'mco_casemix': mco_casemix,
-        'mco_list': mco_list,
-        'mco_pricing': mco_pricing,
-        'mco_tree': mco_tree,
-        'login': user
-    };
-    let Links = [
-        {category: 'Tarifs MCO', title: 'Racines de GHM', func: () => mco_list.routeToUrl({list: 'ghm_roots'})},
-        {category: 'Tarifs MCO', title: 'Tarifs (grille)', func: () => mco_pricing.routeToUrl({view: 'table'})},
-        {category: 'Tarifs MCO', title: 'Tarifs (courbes)', func: () => mco_pricing.routeToUrl({view: 'chart'})},
-
-        {category: 'Listes MCO', title: 'Arbre de groupage', func: () => mco_tree.routeToUrl()},
-        {category: 'Listes MCO', title: 'GHM / GHS', func: () => mco_list.routeToUrl({list: 'ghm_ghs'})},
-        {category: 'Listes MCO', title: 'Diagnostics', func: () => mco_list.routeToUrl({list: 'diagnoses'})},
-        {category: 'Listes MCO', title: 'Actes', func: () => mco_list.routeToUrl({list: 'procedures'})},
-
-        {category: 'Activité MCO', title: 'Unités médicales', func: () => mco_casemix.routeToUrl({view: 'units'})},
-        {category: 'Activité MCO', title: 'Racines de GHM', func: () => mco_casemix.routeToUrl({view: 'ghm_roots'})},
-        {category: 'Activité MCO', title: 'Valorisations', func: () => mco_casemix.routeToUrl({view: 'durations'})},
-        {category: 'Activité MCO', title: 'Résumés (RSS)', func: () => mco_casemix.routeToUrl({view: 'results'})}
-    ];
+    let modules = {};
+    let links = [];
 
     // Go
     let go_timer_id = null;
@@ -49,6 +29,73 @@ let thop = (function() {
 
     // Cache
     let mco_settings = {};
+
+    function initModules() {
+        modules = {
+            'mco_casemix': mco_casemix,
+            'mco_list': mco_list,
+            'mco_pricing': mco_pricing,
+            'mco_tree': mco_tree,
+            'login': user
+        };
+
+        links = [
+            {category: 'Tarifs MCO', title: 'Racines de GHM', func: () => mco_list.routeToUrl({list: 'ghm_roots'})},
+            {category: 'Tarifs MCO', title: 'Tarifs (grille)', func: () => mco_pricing.routeToUrl({view: 'table'})},
+            {category: 'Tarifs MCO', title: 'Tarifs (courbes)', func: () => mco_pricing.routeToUrl({view: 'chart'})},
+
+            {category: 'Listes MCO', title: 'Arbre de groupage', func: () => mco_tree.routeToUrl()},
+            {category: 'Listes MCO', title: 'GHM / GHS', func: () => mco_list.routeToUrl({list: 'ghm_ghs'})},
+            {category: 'Listes MCO', title: 'Diagnostics', func: () => mco_list.routeToUrl({list: 'diagnoses'})},
+            {category: 'Listes MCO', title: 'Actes', func: () => mco_list.routeToUrl({list: 'procedures'})},
+
+            {category: 'Activité MCO', title: 'Unités médicales', func: () => mco_casemix.routeToUrl({view: 'units'})},
+            {category: 'Activité MCO', title: 'Racines de GHM', func: () => mco_casemix.routeToUrl({view: 'ghm_roots'})},
+            {category: 'Activité MCO', title: 'Valorisations', func: () => mco_casemix.routeToUrl({view: 'durations'})},
+            {category: 'Activité MCO', title: 'Résumés (RSS)', func: () => mco_casemix.routeToUrl({view: 'results'})}
+        ];
+
+        // Initialize data helper
+        data.busyHandler = busy => {
+            if (busy) {
+                data_busy |= !ignore_busy;
+            } else {
+                data_busy = false;
+                self.go({}, null, 0, false);
+            }
+        };
+        data.errorHandler = self.error;
+
+        // Run module initialization
+        for (let key in modules) {
+            let module = modules[key];
+            if (module.initModule)
+                module.initModule();
+        }
+
+        // Don't let potentially sensitive data visible
+        user.addChangeHandler(() => {
+            let view_el = query('#view');
+            render(html``, view_el);
+        });
+    }
+
+    function initNavigation() {
+        window.addEventListener('popstate', e => {
+            self.route(window.location.href, 0, false);
+        });
+
+        document.body.addEventListener('click', e => {
+            if (e.target && e.target.tagName == 'A' &&
+                    !e.ctrlKey && !e.target.getAttribute('download')) {
+                let href = e.target.getAttribute('href');
+                if (href && !href.match(/^(?:[a-z]+:)?\/\//) && href[0] != '#') {
+                    self.route(href);
+                    e.preventDefault();
+                }
+            }
+        });
+    }
 
     this.toggleMenu = function(selector, enable) {
         let el = query(selector);
@@ -84,7 +131,7 @@ let thop = (function() {
 
         let prev_category = null;
         render(html`
-            ${Links.map(link => {
+            ${links.map(link => {
                 let path = link.func();
 
                 let active = current_url && current_url.startsWith(path.url);
@@ -104,6 +151,13 @@ let thop = (function() {
                 }
             })}
         `, menu_el);
+    }
+
+    function refreshErrors(errors) {
+        let log = document.querySelector('#log');
+
+        log.innerHTML = errors.map(err => err.replace('\n', '<br/>&nbsp;&nbsp;&nbsp;&nbsp;')).join('<br/>');
+        log.toggleClass('hide', !errors.length);
     }
 
     function run(module, args, hash, delay = 0, mark = true) {
@@ -186,7 +240,7 @@ let thop = (function() {
             url.path = url.path.substr(BaseUrl.length);
 
         let new_module_name = url.path.split('/')[0];
-        let new_module = Modules[new_module_name];
+        let new_module = modules[new_module_name];
 
         // Save scroll state
         if (mark)
@@ -214,7 +268,7 @@ let thop = (function() {
     };
 
     this.goHome = function() {
-        let home_url = Links[0].func().url;
+        let home_url = links[0].func().url;
         self.route(home_url);
     };
 
@@ -273,60 +327,16 @@ let thop = (function() {
         return mco_settings;
     };
 
-    function refreshErrors(errors) {
-        let log = document.querySelector('#log');
-
-        log.innerHTML = errors.map(err => err.replace('\n', '<br/>&nbsp;&nbsp;&nbsp;&nbsp;')).join('<br/>');
-        log.toggleClass('hide', !errors.length);
-    }
-
-    function initUser() {
-        user.addChangeHandler(() => {
-            let view_el = query('#view');
-            render(html``, view_el);
-        });
-    }
-
-    function initData() {
-        data.busyHandler = busy => {
-            if (busy) {
-                data_busy |= !ignore_busy;
-            } else {
-                data_busy = false;
-                self.go({}, null, 0, false);
-            }
-        };
-        data.errorHandler = self.error;
-    }
-
-    function initNavigation() {
-        window.addEventListener('popstate', e => {
-            self.route(window.location.href, 0, false);
-        });
-
-        document.body.addEventListener('click', e => {
-            if (e.target && e.target.tagName == 'A' &&
-                    !e.ctrlKey && !e.target.getAttribute('download')) {
-                let href = e.target.getAttribute('href');
-                if (href && !href.match(/^(?:[a-z]+:)?\/\//) && href[0] != '#') {
-                    self.route(href);
-                    e.preventDefault();
-                }
-            }
-        });
-    }
-
     document.addEventListener('readystatechange', e => {
         if (document.readyState === 'complete') {
-            initUser();
-            initData();
+            initModules();
             initNavigation();
 
             let new_url;
             if (window.location.pathname !== BaseUrl) {
                 new_url = window.location.href;
             } else {
-                new_url = Links[0].func().url;
+                new_url = links[0].func().url;
             }
 
             // Avoid history push
