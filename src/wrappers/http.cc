@@ -38,6 +38,9 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
 
     http_Response response = {};
 
+    // Avoid stale messages and messages from other theads in error pages
+    ClearLastLogError();
+
     // Init request data
     if (!request) {
         request = new http_Request();

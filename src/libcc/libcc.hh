@@ -2753,6 +2753,7 @@ void PushLogHandler(std::function<LogHandlerFunc> handler);
 void PopLogHandler();
 
 const char *GetLastLogError();
+void ClearLastLogError();
 
 // ------------------------------------------------------------------------
 // Strings
