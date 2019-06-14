@@ -311,6 +311,15 @@ Available compression types:)");
         }
     }
 
+    // Enforce source ordering for merged assets
+    for (AssetInfo &asset: assets) {
+        std::sort(asset.sources.begin(), asset.sources.end(),
+                  [](const SourceInfo &src1, const SourceInfo &src2) {
+            return CmpStr(src1.filename, src2.filename) < 0;
+        });
+    }
+
+    // Generate output
     switch (generator) {
         case GeneratorType::C: return !GenerateC(assets, output_path, compression_type);
         case GeneratorType::Files: return !GenerateFiles(assets, output_path, compression_type);
