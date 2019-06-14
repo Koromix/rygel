@@ -27,9 +27,8 @@ static void AppendGccObjectArguments(const char *src_filename, BuildMode build_m
 
     switch (build_mode) {
         case BuildMode::Debug: { Fmt(out_buf, " -O0 -g"); } break;
-        case BuildMode::Fast:
-        case BuildMode::StaticFast: { Fmt(out_buf, " -O2 -g -DNDEBUG"); } break;
-        case BuildMode::LTO:
+        case BuildMode::DebugFast: { Fmt(out_buf, " -Og -g"); } break;
+        case BuildMode::Fast: { Fmt(out_buf, " -O2 -DNDEBUG"); } break;
         case BuildMode::StaticLTO: { Fmt(out_buf, " -O2 -flto -DNDEBUG"); } break;
     }
 
@@ -63,7 +62,7 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames, BuildM
     if (LogUsesTerminalOutput()) {
         Fmt(out_buf, " -fdiagnostics-color=always");
     }
-    if (build_mode == BuildMode::LTO) {
+    if (build_mode == BuildMode::StaticLTO) {
         Fmt(out_buf, " -flto");
     }
 
@@ -112,10 +111,6 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames, BuildM
         case LinkType::SharedLibrary: { Fmt(out_buf, " -shared"); } break;
     }
 
-    if (build_mode == BuildMode::LTO || build_mode == BuildMode::StaticLTO) {
-        Fmt(out_buf, " -s");
-    }
-
     Fmt(out_buf, " -o %1", dest_filename);
 
     return true;
@@ -130,7 +125,7 @@ static void AppendPackCommandLine(Span<const char *const> pack_filenames, BuildM
     Fmt(out_buf, "\"%1\" pack", GetApplicationExecutable());
 #endif
 
-    if (build_mode == BuildMode::Debug) {
+    if (build_mode == BuildMode::Debug || build_mode == BuildMode::DebugFast) {
         Fmt(out_buf, " --source_map");
     }
     if (pack_options) {
@@ -212,7 +207,7 @@ public:
                                     dest_filename, &buf))
             return (const char *)nullptr;
 
-        if (build_mode == BuildMode::StaticFast || build_mode == BuildMode::StaticLTO) {
+        if (build_mode == BuildMode::StaticLTO) {
             Fmt(&buf, " -static");
         }
 
@@ -291,18 +286,21 @@ public:
             return (const char *)nullptr;
 
         switch (build_mode) {
-            case BuildMode::Debug: {} break;
-            case BuildMode::Fast:
-            case BuildMode::LTO: {
+            case BuildMode::Debug:
+            case BuildMode::DebugFast: {} break;
+            case BuildMode::Fast: {
 #ifndef _WIN32
                 // Force static linking of libgcc, libstdc++ and winpthread
                 Fmt(&buf, " -static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic");
 #endif
             } break;
-            case BuildMode::StaticFast:
             case BuildMode::StaticLTO: {
                 Fmt(&buf, " -static");
             } break;
+        }
+
+        if (build_mode == BuildMode::Fast || build_mode == BuildMode::StaticLTO) {
+            Fmt(&buf, " -s");
         }
 
         return (const char *)buf.Leak().ptr;
