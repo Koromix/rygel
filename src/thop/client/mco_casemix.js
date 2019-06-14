@@ -31,6 +31,18 @@ let mco_casemix = {};
     let summaries = {};
     let deploy_results = new Set;
 
+    function initModule()
+    {
+        // Clear casemix data when user changes or disconnects
+        user.addChangeHandler(function() {
+            clearCasemix();
+
+            deploy_results.clear();
+            summaries = {};
+        });
+    }
+    this.initModule = initModule;
+
     function runModule(route)
     {
         // Memorize route info
@@ -1466,12 +1478,4 @@ let mco_casemix = {};
 
         return agg;
     }
-
-    // Clear casemix data when user changes or disconnects
-    user.addChangeHandler(function() {
-        clearCasemix();
-
-        deploy_results.clear();
-        summaries = {};
-    });
 }).call(mco_casemix);
