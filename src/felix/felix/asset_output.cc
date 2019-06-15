@@ -57,7 +57,7 @@ static int CountNewLines(Span<const char> buf)
     return lines;
 }
 
-static bool BuildJavaScriptMap3(Span<const SourceInfo> sources, StreamWriter *out_writer)
+static bool BuildJavaScriptMap3(Span<const PackSourceInfo> sources, StreamWriter *out_writer)
 {
     json_Writer writer(out_writer);
 
@@ -65,7 +65,7 @@ static bool BuildJavaScriptMap3(Span<const SourceInfo> sources, StreamWriter *ou
 
     writer.Key("version"); writer.Int(3);
     writer.Key("sources"); writer.StartArray();
-    for (const SourceInfo &src: sources) {
+    for (const PackSourceInfo &src: sources) {
         writer.String(src.name);
     }
     writer.EndArray();
@@ -73,7 +73,7 @@ static bool BuildJavaScriptMap3(Span<const SourceInfo> sources, StreamWriter *ou
 
     writer.Key("mappings"); writer.Flush(); out_writer->Write(":\"");
     for (Size i = 0, prev_lines = 0; i < sources.len; i++) {
-        const SourceInfo &src = sources[i];
+        const PackSourceInfo &src = sources[i];
 
         Size lines = 0;
         {
@@ -108,7 +108,7 @@ static bool BuildJavaScriptMap3(Span<const SourceInfo> sources, StreamWriter *ou
     return true;
 }
 
-Size PackAsset(Span<const SourceInfo> sources, CompressionType compression_type,
+Size PackAsset(Span<const PackSourceInfo> sources, CompressionType compression_type,
                std::function<void(Span<const uint8_t> buf)> func)
 {
     Size written_len = 0;
@@ -122,7 +122,7 @@ Size PackAsset(Span<const SourceInfo> sources, CompressionType compression_type,
             buf.RemoveFrom(0);
         };
 
-        for (const SourceInfo &src: sources) {
+        for (const PackSourceInfo &src: sources) {
             writer.Write(src.prefix);
 
             StreamReader reader(src.filename);
@@ -146,7 +146,7 @@ Size PackAsset(Span<const SourceInfo> sources, CompressionType compression_type,
     return written_len;
 }
 
-Size PackSourceMap(Span<const SourceInfo> sources, SourceMapType source_map_type,
+Size PackSourceMap(Span<const PackSourceInfo> sources, SourceMapType source_map_type,
                    CompressionType compression_type, std::function<void(Span<const uint8_t> buf)> func)
 {
     HeapArray<uint8_t> buf;

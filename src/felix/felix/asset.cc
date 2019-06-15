@@ -133,7 +133,7 @@ static const MergeRule *FindMergeRule(Span<const MergeRule> rules, const char *f
     return nullptr;
 }
 
-static void InitSourceMergeData(SourceInfo *src, MergeMode merge_mode, Allocator *alloc)
+static void InitSourceMergeData(PackSourceInfo *src, MergeMode merge_mode, Allocator *alloc)
 {
     switch (merge_mode) {
         case MergeMode::Naive: {
@@ -271,14 +271,14 @@ Available compression types:)");
     }
 
     // Map source files to assets
-    HeapArray<AssetInfo> assets;
+    HeapArray<PackAssetInfo> assets;
     {
         HashMap<const void *, Size> merge_map;
         for (const char *filename: filenames) {
             const char *basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
             const MergeRule *rule = FindMergeRule(merge_rules, basename);
 
-            SourceInfo src = {};
+            PackSourceInfo src = {};
             src.filename = filename;
             src.name = StripDirectoryComponents(filename, strip_count);
 
@@ -291,7 +291,7 @@ Available compression types:)");
                 } else {
                     merge_map.Append(rule, assets.len);
 
-                    AssetInfo asset = {};
+                    PackAssetInfo asset = {};
                     asset.name = rule->name;
                     asset.source_map_type = rule->source_map_type;
                     if (rule->source_map_type != SourceMapType::None) {
@@ -304,7 +304,7 @@ Available compression types:)");
             if (!rule || rule->source_map_type != SourceMapType::None) {
                 InitSourceMergeData(&src, MergeMode::Naive, &temp_alloc);
 
-                AssetInfo asset = {};
+                PackAssetInfo asset = {};
                 asset.name = src.name;
                 assets.Append(asset)->sources.Append(src);
             }

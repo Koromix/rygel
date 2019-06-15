@@ -34,13 +34,13 @@ typedef struct Span {
     Size len;
 } Span;
 
-typedef struct pack_Asset {
+typedef struct AssetInfo {
     const char *name;
     int compression_type; // CompressionType
     Span data;
 
     const char *source_map;
-} pack_Asset;)";
+} AssetInfo;)";
 
 struct BlobInfo {
     const char *str_name;
@@ -76,7 +76,7 @@ static void PrintAsHexArray(Span<const uint8_t> bytes, StreamWriter *out_st)
     }
 }
 
-bool GenerateC(Span<const AssetInfo> assets, const char *output_path,
+bool GenerateC(Span<const PackAssetInfo> assets, const char *output_path,
                CompressionType compression_type)
 {
     BlockAllocator temp_alloc;
@@ -99,7 +99,7 @@ static const uint8_t raw_data[] = {)");
 
         // Pack assets and source maps
         HeapArray<BlobInfo> blobs;
-        for (const AssetInfo &asset: assets) {
+        for (const PackAssetInfo &asset: assets) {
             BlobInfo blob = {};
             blob.str_name = asset.name;
             blob.var_name = CreateVariableName(asset.name, &temp_alloc);
@@ -136,7 +136,7 @@ static const uint8_t raw_data[] = {)");
 
         PrintLn(&st, R"(};
 
-static pack_Asset assets[%1] = {)", blobs.len);
+static AssetInfo assets[%1] = {)", blobs.len);
 
         // Write asset table
         for (Size i = 0, cumulative_len = 0; i < blobs.len; i++) {
@@ -163,8 +163,8 @@ const Span pack_assets = {assets, %1};
             const BlobInfo &blob = blobs[i];
 
             PrintLn(&st,
-R"(EXPORT extern const pack_Asset *const pack_asset_%1;
-const pack_Asset *const pack_asset_%1 = &assets[%2];)", blob.var_name, i);
+R"(EXPORT extern const AssetInfo *const pack_asset_%1;
+const AssetInfo *const pack_asset_%1 = &assets[%2];)", blob.var_name, i);
         }
     } else {
         PrintLn(&st, R"(
@@ -175,7 +175,7 @@ const Span pack_assets = {0, 0};)");
     return st.Close();
 }
 
-bool GenerateFiles(Span<const AssetInfo> assets, const char *output_path,
+bool GenerateFiles(Span<const PackAssetInfo> assets, const char *output_path,
                    CompressionType compression_type)
 {
     BlockAllocator temp_alloc;
@@ -198,7 +198,7 @@ bool GenerateFiles(Span<const AssetInfo> assets, const char *output_path,
     }
     RG_ASSERT_DEBUG(compression_ext);
 
-    for (const AssetInfo &asset: assets) {
+    for (const PackAssetInfo &asset: assets) {
         StreamWriter st;
 
         if (RG_UNLIKELY(PathIsAbsolute(asset.name))) {

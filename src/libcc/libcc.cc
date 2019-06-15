@@ -16,6 +16,7 @@
 
     extern "C" __declspec(dllimport) int __stdcall PathMatchSpecA(const char *pszFile, const char *pszSpec);
 #else
+    #include <dlfcn.h>
     #include <dirent.h>
     #include <fcntl.h>
     #include <fnmatch.h>
@@ -3068,6 +3069,117 @@ bool IniParser::NextInSection(IniProperty *out_prop)
 {
     LineType type = FindNextLine(out_prop);
     return type == LineType::KeyValue;
+}
+
+// ------------------------------------------------------------------------
+// Assets
+// ------------------------------------------------------------------------
+
+AssetLoadStatus AssetSet::LoadFromLibrary(const char *filename, const char *var_name)
+{
+    const Span<const AssetInfo> *lib_assets = nullptr;
+
+    // Check library time
+    {
+        FileInfo file_info;
+        if (!StatFile(filename, &file_info))
+            return AssetLoadStatus::Error;
+
+        if (last_time == file_info.modification_time)
+            return AssetLoadStatus::Unchanged;
+        last_time = file_info.modification_time;
+    }
+
+#ifdef _WIN32
+    HMODULE h = LoadLibrary(filename);
+    if (!h) {
+        LogError("Cannot load library '%1'", filename);
+        return AssetLoadStatus::Error;
+    }
+    RG_DEFER { FreeLibrary(h); };
+
+    lib_assets = (const Span<const AssetInfo> *)GetProcAddress(h, var_name);
+#else
+    void *h = dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
+    if (!h) {
+        LogError("Cannot load library '%1': %2", filename, dlerror());
+        return AssetLoadStatus::Error;
+    }
+    RG_DEFER { dlclose(h); };
+
+    lib_assets = (const Span<const AssetInfo> *)dlsym(h, var_name);
+#endif
+    if (!lib_assets) {
+        LogError("Cannot find symbol '%1' in library '%2'", var_name, filename);
+        return AssetLoadStatus::Error;
+    }
+
+    assets.Clear();
+    alloc.ReleaseAll();
+    for (const AssetInfo &asset: *lib_assets) {
+        AssetInfo asset_copy;
+
+        asset_copy.name = DuplicateString(asset.name, &alloc).ptr;
+        uint8_t *data_ptr = (uint8_t *)Allocator::Allocate(&alloc, asset.data.len);
+        memcpy(data_ptr, asset.data.ptr, (size_t)asset.data.len);
+        asset_copy.data = {data_ptr, asset.data.len};
+        asset_copy.compression_type = asset.compression_type;
+        asset_copy.source_map = DuplicateString(asset.source_map, &alloc).ptr;
+
+        assets.Append(asset_copy);
+    }
+
+    return AssetLoadStatus::Loaded;
+}
+
+// This won't win any beauty or speed contest (especially when writing
+// a compressed stream) but whatever.
+Span<const uint8_t> PatchAssetVariables(AssetInfo &asset, Allocator *alloc,
+                                        std::function<bool(const char *, StreamWriter *)> func)
+{
+    HeapArray<uint8_t> buf;
+    buf.allocator = alloc;
+
+    StreamReader reader(asset.data, nullptr, asset.compression_type);
+    StreamWriter writer(&buf, nullptr, asset.compression_type);
+
+    char c;
+    while (reader.Read(1, &c) == 1) {
+        if (c == '{') {
+            char name[33] = {};
+            Size name_len = reader.Read(1, &name[0]);
+            RG_ASSERT(name_len >= 0);
+
+            bool valid = false;
+            if (IsAsciiAlpha(name[0]) || name[0] == '_') {
+                do {
+                    RG_ASSERT(reader.Read(1, &name[name_len]) >= 0);
+
+                    if (name[name_len] == '}') {
+                        name[name_len] = 0;
+                        valid = func(name, &writer);
+                        name[name_len++] = '}';
+
+                        break;
+                    } else if (!IsAsciiAlphaOrDigit(name[name_len]) && name[name_len] != '_') {
+                        name_len++;
+                        break;
+                    }
+                } while (++name_len < RG_SIZE(name));
+            }
+
+            if (!valid) {
+                writer.Write('{');
+                writer.Write(name, name_len);
+            }
+        } else {
+            writer.Write(c);
+        }
+    }
+    RG_ASSERT(!reader.error);
+
+    RG_ASSERT(writer.Close());
+    return buf.Leak();
 }
 
 // ------------------------------------------------------------------------

@@ -9,7 +9,6 @@
 #include "goupil.hh"
 #include "schedule.hh"
 #include "../../wrappers/http.hh"
-#include "../../felix/libpack/libpack.hh"
 
 namespace RG {
 
@@ -26,7 +25,7 @@ struct Route {
     Type type;
     union {
         struct {
-            pack_Asset asset;
+            AssetInfo asset;
             const char *mime_type;
         } st;
         struct {
@@ -51,12 +50,12 @@ struct PushContext {
 Config goupil_config;
 SQLiteDatabase goupil_db;
 
-static Span<const pack_Asset> assets;
+static Span<const AssetInfo> assets;
 #ifndef NDEBUG
 static const char *assets_filename;
-static pack_AssetSet asset_set;
+static AssetSet asset_set;
 #else
-extern "C" const Span<const pack_Asset> pack_assets;
+extern "C" const Span<const AssetInfo> pack_assets;
 #endif
 
 static HashTable<const char *, Route> routes;
@@ -182,7 +181,7 @@ static void InitRoutes()
     routes_alloc.ReleaseAll();
 
     const auto add_asset_route = [](const char *method, const char *url,
-                                    const pack_Asset &asset) {
+                                    const AssetInfo &asset) {
         Route route = {};
 
         route.method = method;
@@ -218,11 +217,11 @@ static void InitRoutes()
     };
 
     // Static assets
-    pack_Asset html = {};
-    for (const pack_Asset &asset: assets) {
+    AssetInfo html = {};
+    for (const AssetInfo &asset: assets) {
         if (TestStr(asset.name, "goupil.html")) {
             html = asset;
-            html.data = pack_PatchVariables(html, &routes_alloc,
+            html.data = PatchAssetVariables(html, &routes_alloc,
                                             [](const char *key, StreamWriter *writer) {
                 if (TestStr(key, "BASE_URL")) {
                     writer->Write(goupil_config.base_url);
@@ -269,7 +268,7 @@ static void InitRoutes()
 static int HandleRequest(const http_Request &request, http_Response *out_response)
 {
 #ifndef NDEBUG
-    if (asset_set.LoadFromLibrary(assets_filename) == pack_LoadStatus::Loaded) {
+    if (asset_set.LoadFromLibrary(assets_filename) == AssetLoadStatus::Loaded) {
         LogInfo("Reloaded assets from library");
         assets = asset_set.assets;
 
@@ -406,7 +405,7 @@ Options:
 #ifndef NDEBUG
     assets_filename = Fmt(&temp_alloc, "%1%/goupil_assets%2",
                           GetApplicationDirectory(), RG_SHARED_LIBRARY_EXTENSION).ptr;
-    if (asset_set.LoadFromLibrary(assets_filename) == pack_LoadStatus::Error)
+    if (asset_set.LoadFromLibrary(assets_filename) == AssetLoadStatus::Error)
         return 1;
     assets = asset_set.assets;
 #else

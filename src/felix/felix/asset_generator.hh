@@ -17,7 +17,7 @@ static const char *const GeneratorTypeNames[] = {
     "Files"
 };
 
-struct SourceInfo {
+struct PackSourceInfo {
     const char *filename;
     const char *name;
 
@@ -30,17 +30,17 @@ enum class SourceMapType {
     JSv3
 };
 
-struct AssetInfo {
+struct PackAssetInfo {
     const char *name;
-    HeapArray<SourceInfo> sources;
+    HeapArray<PackSourceInfo> sources;
 
     SourceMapType source_map_type;
     const char *source_map_name;
 };
 
-bool GenerateC(Span<const AssetInfo> assets, const char *output_path,
+bool GenerateC(Span<const PackAssetInfo> assets, const char *output_path,
                CompressionType compression_type);
-bool GenerateFiles(Span<const AssetInfo> assets, const char *output_path,
+bool GenerateFiles(Span<const PackAssetInfo> assets, const char *output_path,
                    CompressionType compression_type);
 
 }
