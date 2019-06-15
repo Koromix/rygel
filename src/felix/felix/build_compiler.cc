@@ -28,7 +28,9 @@ static void AppendGccObjectArguments(const char *src_filename, BuildMode build_m
     switch (build_mode) {
         case BuildMode::Debug: { Fmt(out_buf, " -O0 -g"); } break;
         case BuildMode::DebugFast: { Fmt(out_buf, " -Og -g"); } break;
-        case BuildMode::Fast: { Fmt(out_buf, " -O2 -DNDEBUG"); } break;
+        case BuildMode::Fast:
+        case BuildMode::StaticFast: { Fmt(out_buf, " -O2 -DNDEBUG"); } break;
+        case BuildMode::LTO:
         case BuildMode::StaticLTO: { Fmt(out_buf, " -O2 -flto -DNDEBUG"); } break;
     }
 
@@ -207,7 +209,7 @@ public:
                                     dest_filename, &buf))
             return (const char *)nullptr;
 
-        if (build_mode == BuildMode::StaticLTO) {
+        if (build_mode == BuildMode::StaticFast || build_mode == BuildMode::StaticLTO) {
             Fmt(&buf, " -static");
         }
 
@@ -288,7 +290,8 @@ public:
         switch (build_mode) {
             case BuildMode::Debug:
             case BuildMode::DebugFast: {} break;
-            case BuildMode::Fast: {
+            case BuildMode::Fast:
+            case BuildMode::LTO: {
 #ifdef _WIN32
                 // Force static linking of libgcc, libstdc++ and winpthread
                 Fmt(&buf, " -static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic -s");
@@ -296,13 +299,10 @@ public:
                 Fmt(&buf, " -s");
 #endif
             } break;
+            case BuildMode::StaticFast:
             case BuildMode::StaticLTO: {
-                Fmt(&buf, " -static");
+                Fmt(&buf, " -static -s");
             } break;
-        }
-
-        if (build_mode == BuildMode::Fast || build_mode == BuildMode::StaticLTO) {
-            Fmt(&buf, " -s");
         }
 
         return (const char *)buf.Leak().ptr;
