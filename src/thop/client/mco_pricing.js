@@ -402,6 +402,25 @@ let mco_pricing = {};
     }
     this.addPricingHeader = addPricingHeader;
 
+    function modeToColor(mode)
+    {
+        switch (mode) {
+            case 'J': return '#1b9e77';
+            case 'T': return '#1b9e77';
+            case '1': return '#9a9a9a';
+            case '2': return '#0070c0';
+            case '3': return '#ff6600';
+            case '4': return '#ff0000';
+            case 'A': return '#9a9a9a';
+            case 'B': return '#0070c0';
+            case 'C': return '#ff6600';
+            case 'D': return '#ff0000';
+            case 'E': return '#7f2704';
+            case 'Z': return '#9a9a9a';
+            default: return 'black';
+        };
+    }
+
     function refreshPriceChart(pricing_info, main_index, diff_index, max_duration, apply_coeff)
     {
         if (typeof Chart === 'undefined') {
@@ -414,42 +433,19 @@ let mco_pricing = {};
                 chart.destroy();
                 chart = null;
             }
+
             return;
         }
 
         let ghs = pricing_info[main_index].ghs;
 
-        function ghsLabel(ghs, conditions)
-        {
-            return '' + ghs.ghs + (conditions.length ? '*' : '') + ' (' + ghs.ghm + ')';
-        }
-
-        function modeToColor(mode)
-        {
-            return {
-                J: '#1b9e77',
-                T: '#1b9e77',
-                1: '#9a9a9a',
-                2: '#0070c0',
-                3: '#ff6600',
-                4: '#ff0000',
-                A: '#9a9a9a',
-                B: '#0070c0',
-                C: '#ff6600',
-                D: '#ff0000',
-                E: '#7f2704',
-                Z: '#9a9a9a'
-            }[mode] || 'black';
-        }
-
         let datasets = [];
-
         let max_price = 0.0;
         for (let i = ghs.length - 1; i >= 0; i--) {
             let col = ghs[i];
 
             let dataset = {
-                label: ghsLabel(col, col.conditions),
+                label: `${col.ghs}${col.conditions.length ? '*' : ''} (${col.ghm})`,
                 data: [],
                 borderColor: modeToColor(col.ghm.substr(5, 1)),
                 backgroundColor: modeToColor(col.ghm.substr(5, 1)),
