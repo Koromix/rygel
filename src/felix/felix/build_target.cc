@@ -64,6 +64,22 @@ static void AppendListValues(Span<const char> str,
     }
 }
 
+static bool EnumerateSortedFiles(const char *directory, bool recursive,
+                                 Allocator *alloc, HeapArray<const char *> *out_filenames)
+{
+    Size start_idx = out_filenames->len;
+
+    if (!EnumerateFiles(directory, nullptr, recursive ? -1  : 0, 1024, alloc, out_filenames))
+            return false;
+
+    std::sort(out_filenames->begin() + start_idx, out_filenames->end(),
+              [](const char *filename1, const char *filename2) {
+        return CmpStr(filename1, filename2) < 0;
+    });
+
+    return true;
+}
+
 static bool ResolveFileSet(const FileSet &file_set,
                            Allocator *alloc, HeapArray<const char *> *out_filenames)
 {
@@ -71,11 +87,11 @@ static bool ResolveFileSet(const FileSet &file_set,
 
     out_filenames->Append(file_set.filenames);
     for (const char *directory: file_set.directories) {
-        if (!EnumerateFiles(directory, nullptr, 0, 1024, alloc, out_filenames))
+        if (!EnumerateSortedFiles(directory, false, alloc, out_filenames))
             return false;
     }
     for (const char *directory: file_set.directories_rec) {
-        if (!EnumerateFiles(directory, nullptr, -1, 1024, alloc, out_filenames))
+        if (!EnumerateSortedFiles(directory, true, alloc, out_filenames))
             return false;
     }
 
