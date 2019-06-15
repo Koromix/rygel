@@ -32,7 +32,7 @@ static void AppendGccObjectArguments(const char *src_filename, BuildMode build_m
         case BuildMode::StaticLTO: { Fmt(out_buf, " -O2 -flto -DNDEBUG"); } break;
     }
 
-    Fmt(out_buf, " -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -fvisibility=hidden");
+    Fmt(out_buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -fvisibility=hidden");
 #ifdef _WIN32
     Fmt(out_buf, " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601");
 #endif
@@ -99,12 +99,12 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames, BuildM
     }
 #endif
 
-#ifndef _WIN32
-    Fmt(out_buf, " -lrt -ldl -pthread");
-#endif
     for (const char *lib: libraries) {
         Fmt(out_buf, " -l%1", lib);
     }
+#ifndef _WIN32
+    Fmt(out_buf, " -lrt -ldl -pthread");
+#endif
 
     switch (link_type) {
         case LinkType::Executable: { /* Skip */ } break;
@@ -289,9 +289,11 @@ public:
             case BuildMode::Debug:
             case BuildMode::DebugFast: {} break;
             case BuildMode::Fast: {
-#ifndef _WIN32
+#ifdef _WIN32
                 // Force static linking of libgcc, libstdc++ and winpthread
-                Fmt(&buf, " -static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic");
+                Fmt(&buf, " -static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic -s");
+#else
+                Fmt(&buf, " -s");
 #endif
             } break;
             case BuildMode::StaticLTO: {
