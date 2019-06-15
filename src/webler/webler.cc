@@ -6,11 +6,10 @@
 extern "C" {
     #include "../../vendor/libsoldout/soldout.h"
 }
-#include "../felix/libpack/libpack.hh"
 
 namespace RG {
 
-extern "C" const Span<const pack_Asset> pack_assets;
+extern "C" const Span<const AssetInfo> pack_assets;
 
 struct PageSection {
     const char *id;
@@ -418,7 +417,7 @@ Options:
     }
 
     // Extract static assets
-    for (const pack_Asset &asset: pack_assets) {
+    for (const AssetInfo &asset: pack_assets) {
         const char *dest_filename = Fmt(&temp_alloc, "%1%/static%/%2", output_dir, asset.name).ptr;
 
         if (!EnsureDirectoryExists(dest_filename))

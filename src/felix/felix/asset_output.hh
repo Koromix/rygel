@@ -9,9 +9,9 @@
 
 namespace RG {
 
-Size PackAsset(Span<const SourceInfo> sources, CompressionType compression_type,
+Size PackAsset(Span<const PackSourceInfo> sources, CompressionType compression_type,
                std::function<void(Span<const uint8_t> buf)> func);
-Size PackSourceMap(Span<const SourceInfo> sources, SourceMapType source_map_type,
+Size PackSourceMap(Span<const PackSourceInfo> sources, SourceMapType source_map_type,
                    CompressionType compression_type, std::function<void(Span<const uint8_t>)> func);
 
 }

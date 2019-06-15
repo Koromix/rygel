@@ -3291,6 +3291,37 @@ private:
 };
 
 // ------------------------------------------------------------------------
+// Assets
+// ------------------------------------------------------------------------
+
+// Keep in sync with version in packer.cc
+struct AssetInfo {
+    const char *name;
+    CompressionType compression_type;
+    Span<const uint8_t> data;
+
+    const char *source_map;
+};
+
+enum class AssetLoadStatus {
+    Unchanged,
+    Loaded,
+    Error
+};
+
+struct AssetSet {
+    HeapArray<AssetInfo> assets;
+    LinkedAllocator alloc;
+
+    int64_t last_time = -1;
+
+    AssetLoadStatus LoadFromLibrary(const char *filename, const char *var_name = "pack_assets");
+};
+
+Span<const uint8_t> PatchAssetVariables(AssetInfo &asset, Allocator *alloc,
+                                        std::function<bool(const char *, StreamWriter *)> func);
+
+// ------------------------------------------------------------------------
 // Options
 // ------------------------------------------------------------------------
 

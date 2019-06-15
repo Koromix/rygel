@@ -12,12 +12,11 @@
 #include "mco_info.hh"
 #include "user.hh"
 #include "../../wrappers/http.hh"
-#include "../../felix/libpack/libpack.hh"
 
 namespace RG {
 
 struct CatalogSet {
-    HeapArray<pack_Asset> catalogs;
+    HeapArray<AssetInfo> catalogs;
     LinkedAllocator alloc;
 };
 
@@ -38,7 +37,7 @@ struct Route {
     Type type;
     union {
         struct {
-            pack_Asset asset;
+            AssetInfo asset;
             const char *mime_type;
         } st;
 
@@ -54,12 +53,12 @@ bool thop_has_casemix;
 StructureSet thop_structure_set;
 UserSet thop_user_set;
 
-static Span<const pack_Asset> assets;
+static Span<const AssetInfo> assets;
 #ifndef NDEBUG
 static const char *assets_filename;
-static pack_AssetSet asset_set;
+static AssetSet asset_set;
 #else
-extern "C" const Span<const pack_Asset> pack_assets;
+extern "C" const Span<const AssetInfo> pack_assets;
 #endif
 static CatalogSet catalog_set;
 
@@ -89,7 +88,7 @@ static bool InitCatalogSet(Span<const char *const> table_directories)
     }
 
     for (const char *filename: filenames) {
-        pack_Asset catalog = {};
+        AssetInfo catalog = {};
 
         const char *name = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
         RG_ASSERT(name[0]);
@@ -140,7 +139,7 @@ static void InitRoutes()
     routes_alloc.ReleaseAll();
 
     const auto add_asset_route = [&](const char *method, const char *url,
-                                     Route::Matching matching, const pack_Asset &asset) {
+                                     Route::Matching matching, const AssetInfo &asset) {
         Route route = {};
 
         route.method = method;
@@ -167,9 +166,9 @@ static void InitRoutes()
     };
 
     // Static assets and catalogs
-    pack_Asset html = {};
+    AssetInfo html = {};
     RG_ASSERT_DEBUG(assets.len > 0);
-    for (const pack_Asset &asset: assets) {
+    for (const AssetInfo &asset: assets) {
         if (TestStr(asset.name, "thop.html")) {
             html = asset;
         } else if (TestStr(asset.name, "favicon.png")) {
@@ -179,14 +178,14 @@ static void InitRoutes()
             add_asset_route("GET", url, Route::Matching::Exact, asset);
         }
     }
-    for (const pack_Asset &desc: catalog_set.catalogs) {
+    for (const AssetInfo &desc: catalog_set.catalogs) {
         const char *url = Fmt(&routes_alloc, "/catalogs/%1", desc.name).ptr;
         add_asset_route("GET", url, Route::Matching::Exact, desc);
     }
     RG_ASSERT_DEBUG(html.name);
 
     // Patch HTML
-    html.data = pack_PatchVariables(html, &routes_alloc,
+    html.data = PatchAssetVariables(html, &routes_alloc,
                                     [](const char *key, StreamWriter *writer) {
         if (TestStr(key, "THOP_VERSION")) {
             writer->Write(BuildVersion ? BuildVersion : "");
@@ -235,7 +234,7 @@ static void InitRoutes()
 static int HandleRequest(const http_Request &request, http_Response *out_response)
 {
 #ifndef NDEBUG
-    if (asset_set.LoadFromLibrary(assets_filename) == pack_LoadStatus::Loaded) {
+    if (asset_set.LoadFromLibrary(assets_filename) == AssetLoadStatus::Loaded) {
         LogInfo("Reloaded assets from library");
         assets = asset_set.assets;
 
@@ -439,7 +438,7 @@ Options:
 #ifndef NDEBUG
     assets_filename = Fmt(&temp_alloc, "%1%/thop_assets%2",
                           GetApplicationDirectory(), RG_SHARED_LIBRARY_EXTENSION).ptr;
-    if (asset_set.LoadFromLibrary(assets_filename) == pack_LoadStatus::Error)
+    if (asset_set.LoadFromLibrary(assets_filename) == AssetLoadStatus::Error)
         return 1;
     assets = asset_set.assets;
 #else
