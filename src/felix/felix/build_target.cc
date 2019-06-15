@@ -367,6 +367,7 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
             }
 
             target->imports.Append(import->imports);
+            target->definitions.Append(import->definitions);
             target->libraries.Append(import->libraries);
             target->sources.Append(import->sources);
         }
