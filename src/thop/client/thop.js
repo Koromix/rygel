@@ -130,27 +130,25 @@ let thop = (function() {
         }
 
         let prev_category = null;
-        render(html`
-            ${links.map(link => {
-                let path = link.func();
+        render(links.map(link => {
+            let path = link.func();
 
-                let active = current_url && current_url.startsWith(path.url);
-                if (active)
-                    document.title = `${link.category} — ${link.title}`;
+            let active = current_url && current_url.startsWith(path.url);
+            if (active)
+                document.title = `${link.category} — ${link.title}`;
 
-                if (path.allowed) {
-                    if (link.category === prev_category) {
-                        return html`<a class=${active ? 'active': ''} href=${path.url}>${link.title}</a>`;
-                    } else {
-                        prev_category = link.category;
-                        return html`<a class="category">${link.category}</li>
-                                    <a class=${active ? 'active': ''} href=${path.url}>${link.title}</a>`;
-                    }
+            if (path.allowed) {
+                if (link.category === prev_category) {
+                    return html`<a class=${active ? 'active': ''} href=${path.url}>${link.title}</a>`;
                 } else {
-                    return html``;
+                    prev_category = link.category;
+                    return html`<a class="category">${link.category}</li>
+                                <a class=${active ? 'active': ''} href=${path.url}>${link.title}</a>`;
                 }
-            })}
-        `, menu_el);
+            } else {
+                return html``;
+            }
+        }), menu_el);
     }
 
     function refreshErrors(errors) {

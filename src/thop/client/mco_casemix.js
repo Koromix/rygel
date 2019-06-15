@@ -598,10 +598,10 @@ let mco_casemix = {};
     {
         let el = query('#opt_algorithm > select');
 
-        render(html`${settings.algorithms.map(algorithm => {
+        render(settings.algorithms.map(algorithm => {
             let label = `Algorithme ${algorithm.name}${algorithm.name === settings.default_algorithm ? ' *' : ''}`;
             return html`<option value=${algorithm.name}>${label}</option>`;
-        })}`, el);
+        }), el);
 
         el.value = algorithm;
     }
@@ -674,12 +674,12 @@ let mco_casemix = {};
     {
         let el = query('#opt_ghm_root > select');
 
-        render(html`${ghm_roots.map(ghm_root_info => {
+        render(ghm_roots.map(ghm_root_info => {
             let disabled = !checkCasemixGhmRoot(ghm_root_info.ghm_root);
             let label = `${ghm_root_info.ghm_root} – ${ghm_root_info.desc}${disabled ? ' *' : ''}`;
 
             return html`<option value=${ghm_root_info.ghm_root} ?disabled=${disabled}>${label}</option>`;
-        })}`, el);
+        }), el);
 
         el.value = select_ghm_root || el.value;
     }

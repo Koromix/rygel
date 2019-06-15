@@ -369,8 +369,8 @@ let mco_list = {};
     {
         let el = query('#opt_group > select');
 
-        render(html`${list_info.groups.map(group =>
-            html`<option value=${group.type}>${group.name}</option>`)}`, el);
+        render(list_info.groups.map(group =>
+            html`<option value=${group.type}>${group.name}</option>`), el);
 
         if (select_group)
             el.value = select_group;
