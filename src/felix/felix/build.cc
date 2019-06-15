@@ -141,7 +141,7 @@ Options:
     -O, --output <directory>     Set output directory
                                  (default: bin/<toolchain>)
 
-    -t, --toolchain <toolcahin>  Set toolchain, see below
+    -t, --toolchain <toolchain>  Set toolchain, see below
                                  (default: %1)
         --disable_pch            Disable header precompilation (PCH)
 

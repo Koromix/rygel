@@ -17,18 +17,18 @@ int RunMcoShow(Span<const char *> arguments);
 
 const char *const CommonOptions =
 R"(Common options:
-     -C, --config_file <file>     Set configuration file
-                                  (default: <executable_dir>%/profile%/drdc.ini)
+    -C, --config_file <file>     Set configuration file
+                                 (default: <executable_dir>%/profile%/drdc.ini)
 
-         --profile_dir <dir>      Set profile directory
-         --table_dir <dir>        Add table directory
+        --profile_dir <dir>      Set profile directory
+        --table_dir <dir>        Add table directory
 
-         --mco_auth_file <file>   Set MCO authorization file
-                                  (default: <profile_dir>%/mco_authorizations.ini
-                                            <profile_dir>%/mco_authorizations.txt)
+        --mco_auth_file <file>   Set MCO authorization file
+                                 (default: <profile_dir>%/mco_authorizations.ini
+                                           <profile_dir>%/mco_authorizations.txt)
 
-     -s, --sector <sector>        Use Public or Private sector GHS and prices
-                                  (default: Public))";
+    -s, --sector <sector>        Use Public or Private sector GHS and prices
+                                 (default: Public))";
 
 Config drdc_config;
 
