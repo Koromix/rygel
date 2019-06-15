@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "../../libcc/libcc.hh"
-#include "asset_generator.hh"
+#include "../libcc/libcc.hh"
+#include "pack_generator.hh"
 
 namespace RG {
 
