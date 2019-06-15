@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "../../libcc/libcc.hh"
+#include "../libcc/libcc.hh"
 
 namespace RG {
 

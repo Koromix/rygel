@@ -19,7 +19,7 @@
     extern char **environ;
 #endif
 
-#include "../../libcc/libcc.hh"
+#include "../libcc/libcc.hh"
 #include "build_command.hh"
 
 namespace RG {

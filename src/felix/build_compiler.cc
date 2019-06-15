@@ -10,7 +10,7 @@
     #include <windows.h>
 #endif
 
-#include "../../libcc/libcc.hh"
+#include "../libcc/libcc.hh"
 #include "build_compiler.hh"
 
 namespace RG {
