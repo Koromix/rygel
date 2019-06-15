@@ -445,7 +445,9 @@ let mco_pricing = {};
         let datasets = [];
 
         let max_price = 0.0;
-        for (const col of ghs) {
+        for (let i = ghs.length - 1; i >= 0; i--) {
+            let col = ghs[i];
+
             let dataset = {
                 label: ghsLabel(col, col.conditions),
                 data: [],
@@ -510,6 +512,10 @@ let mco_pricing = {};
                 },
                 options: {
                     responsive: true,
+                    legend: {
+                        reverse: true,
+                        onClick: null
+                    },
                     tooltips: {
                         mode: 'index',
                         intersect: false,
@@ -544,8 +550,7 @@ let mco_pricing = {};
                                 callback: function(value) { return format.price(value); }
                             }
                         }]
-                    },
-                    legend: {onClick: null}
+                    }
                 },
             });
         }
