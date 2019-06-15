@@ -354,13 +354,13 @@ let mco_list = {};
         let h1 = query('#ls_spec');
 
         if (spec) {
-            h1.replaceContent(
-                'Filtre : ' + spec + ' ',
-                dom.h('a', {href: routeToUrl({spec: null}).url}, '(retirer)')
-            );
+            render(html`
+                Filtre : ${spec}
+                <a href=${routeToUrl({spec: null}).url}>(retirer)</a>
+            `, h1);
             h1.removeClass('hide');
         } else {
-            h1.innerHTML = '';
+            render(html``, h1);
             h1.addClass('hide');
         }
     }
@@ -369,11 +369,8 @@ let mco_list = {};
     {
         let el = query('#opt_group > select');
 
-        el.replaceContent(
-            list_info.groups.map(function(group) {
-                return dom.h('option', {value: group.type}, group.name)
-            })
-        );
+        render(html`${list_info.groups.map(group =>
+            html`<option value=${group.type}>${group.name}</option>`)}`, el);
 
         if (select_group)
             el.value = select_group;

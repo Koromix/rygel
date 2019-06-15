@@ -204,15 +204,13 @@ let mco_pricing = {};
     {
         let el = query('#opt_ghm_root > select');
 
-        el.replaceContent(
-            ghm_roots.map(function(ghm_root_info) {
-                let disabled = !checkIndexGhmRoot(indexes, main_index, sector, ghm_root_info.ghm_root);
-                return dom.h('option',
-                    {value: ghm_root_info.ghm_root, disabled: disabled},
-                    ghm_root_info.ghm_root + ' – ' + ghm_root_info.desc + (disabled ? ' *' : '')
-                );
-            })
-        );
+        render(html`${ghm_roots.map(ghm_root_info => {
+            let disabled = !checkIndexGhmRoot(indexes, main_index, sector, ghm_root_info.ghm_root);
+            let label = `${ghm_root_info.ghm_root} – ${ghm_root_info.desc}${disabled ? ' *' : ''}`;
+
+            return html`<option value=${ghm_root_info.ghm_root} ?disabled=${disabled}>${label}</option>`;
+        })}`, el);
+
         el.value = select_ghm_root || el.value;
     }
 
@@ -220,16 +218,16 @@ let mco_pricing = {};
     {
         let el = query("#opt_diff_index > select");
 
-        el.replaceContent(
-            dom.h('option', {value: ''}, 'Désactiver'),
-            indexes.map(function(index, i) {
-                let disabled = !checkIndexGhmRoot(indexes, i, sector, test_ghm_root);
-                return dom.h('option',
-                    {value: indexes[i].begin_date, disabled: disabled},
-                    indexes[i].begin_date + (disabled ? ' *' : '')
-                );
-            })
-        );
+        render(html`
+            <option value="">Désactiver</option>
+            ${indexes.map((index, idx) => {
+                let disabled = !checkIndexGhmRoot(indexes, idx, sector, test_ghm_root);
+                let label = `${index.begin_date}${disabled ? ' *' : ''}`;
+
+                return html`<option value=${index.begin_date} ?disabled=${disabled}>${label}</option>`;
+            })}
+        `, el);
+
         if (diff_index >= 0)
             el.value = indexes[diff_index].begin_date;
     }
