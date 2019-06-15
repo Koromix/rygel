@@ -34,9 +34,12 @@ static void AppendGccObjectArguments(const char *src_filename, BuildMode build_m
         case BuildMode::StaticLTO: { Fmt(out_buf, " -O2 -flto -DNDEBUG"); } break;
     }
 
-    Fmt(out_buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -fvisibility=hidden");
+    Fmt(out_buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
+                 " -D_FORTIFY_SOURCE=2");
 #ifdef _WIN32
     Fmt(out_buf, " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601");
+#else
+    Fmt(out_buf, " -fPIC -fstack-protector-strong --param ssp-buffer-size=4");
 #endif
 
     Fmt(out_buf, " -c %1", src_filename);
@@ -64,9 +67,18 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames, BuildM
     if (LogUsesTerminalOutput()) {
         Fmt(out_buf, " -fdiagnostics-color=always");
     }
+
     if (build_mode == BuildMode::StaticLTO) {
         Fmt(out_buf, " -flto");
     }
+    if ((build_mode == BuildMode::StaticFast || build_mode == BuildMode::StaticLTO) &&
+            link_type == LinkType::Executable) {
+        Fmt(out_buf, " -static");
+    }
+
+#ifndef _WIN32
+    Fmt(out_buf, " -Wl,-z,relro,-z,now");
+#endif
 
 #ifdef _WIN32
     Size rsp_offset = out_buf->len;
@@ -209,10 +221,6 @@ public:
                                     dest_filename, &buf))
             return (const char *)nullptr;
 
-        if (build_mode == BuildMode::StaticFast || build_mode == BuildMode::StaticLTO) {
-            Fmt(&buf, " -static");
-        }
-
         return (const char *)buf.Leak().ptr;
     }
 };
@@ -287,6 +295,14 @@ public:
                                     dest_filename, &buf))
             return (const char *)nullptr;
 
+#ifdef _WIN32
+    Fmt(&buf, " -Wl,--dynamicbase -Wl,--nxcompat -Wl,--high-entropy-va");
+#else
+    if (link_type == LinkType::Executable) {
+        Fmt(&buf, " -pie");
+    }
+#endif
+
         switch (build_mode) {
             case BuildMode::Debug:
             case BuildMode::DebugFast: {} break;
@@ -301,7 +317,7 @@ public:
             } break;
             case BuildMode::StaticFast:
             case BuildMode::StaticLTO: {
-                Fmt(&buf, " -static -s");
+                Fmt(&buf, " -s");
             } break;
         }
 
