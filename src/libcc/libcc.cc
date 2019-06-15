@@ -1092,12 +1092,15 @@ void LogFmt(LogLevel level, const char *fmt, Span<const FmtArg> args)
     static std::mutex log_mutex;
 
     char ctx_buf[128];
-    char msg_buf[4096];
+    char msg_buf[16384];
     {
         double time = (double)(GetMonotonicTime() - g_start_time) / 1000;
         Fmt(ctx_buf, " [%1] ", FmtDouble(time, 3).Pad(-8));
 
-        FmtFmt(fmt, args, msg_buf);
+        Size len = FmtFmt(fmt, args, msg_buf).len;
+        if (len == RG_SIZE(msg_buf) - 1) {
+            strcpy(msg_buf + RG_SIZE(msg_buf) - 32, "... [truncated]");
+        }
     }
 
     if (level == LogLevel::Error) {
