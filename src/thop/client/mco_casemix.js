@@ -598,14 +598,11 @@ let mco_casemix = {};
     {
         let el = query('#opt_algorithm > select');
 
-        el.replaceContent(
-            settings.algorithms.map(function(algorithm) {
-                return dom.h('option',
-                    {value: algorithm.name},
-                    'Algorithme ' + algorithm.name + (algorithm.name === settings.default_algorithm ? ' *' : '')
-                );
-            })
-        );
+        render(html`${settings.algorithms.map(algorithm => {
+            let label = `Algorithme ${algorithm.name}${algorithm.name === settings.default_algorithm ? ' *' : ''}`;
+            return html`<option value=${algorithm.name}>${label}</option>`;
+        })}`, el);
+
         el.value = algorithm;
     }
 
@@ -677,15 +674,13 @@ let mco_casemix = {};
     {
         let el = query('#opt_ghm_root > select');
 
-        el.replaceContent(
-            ghm_roots.map(function(ghm_root_info) {
-                let disabled = !checkCasemixGhmRoot(ghm_root_info.ghm_root);
-                return dom.h('option',
-                    {value: ghm_root_info.ghm_root, disabled: disabled},
-                    ghm_root_info.ghm_root + ' – ' + ghm_root_info.desc + (disabled ? ' *' : '')
-                );
-            })
-        );
+        render(html`${ghm_roots.map(ghm_root_info => {
+            let disabled = !checkCasemixGhmRoot(ghm_root_info.ghm_root);
+            let label = `${ghm_root_info.ghm_root} – ${ghm_root_info.desc}${disabled ? ' *' : ''}`;
+
+            return html`<option value=${ghm_root_info.ghm_root} ?disabled=${disabled}>${label}</option>`;
+        })}`, el);
+
         el.value = select_ghm_root || el.value;
     }
 
