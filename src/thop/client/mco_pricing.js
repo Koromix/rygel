@@ -204,12 +204,12 @@ let mco_pricing = {};
     {
         let el = query('#opt_ghm_root > select');
 
-        render(html`${ghm_roots.map(ghm_root_info => {
+        render(ghm_roots.map(ghm_root_info => {
             let disabled = !checkIndexGhmRoot(indexes, main_index, sector, ghm_root_info.ghm_root);
             let label = `${ghm_root_info.ghm_root} – ${ghm_root_info.desc}${disabled ? ' *' : ''}`;
 
             return html`<option value=${ghm_root_info.ghm_root} ?disabled=${disabled}>${label}</option>`;
-        })}`, el);
+        }), el);
 
         el.value = select_ghm_root || el.value;
     }

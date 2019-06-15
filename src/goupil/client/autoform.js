@@ -437,7 +437,7 @@ instead of:
         try {
             Function('form', 'go', script)(builder, key => self.goHandler(key));
 
-            render(html`${widgets.map(w => w.render(w.errors))}`, af_form);
+            render(widgets.map(w => w.render(w.errors)), af_form);
             self.clearError();
 
             return true;

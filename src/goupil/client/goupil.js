@@ -95,7 +95,7 @@ let goupil = (function() {
         popup_builder.close = closePopup;
 
         func(popup_builder);
-        render(html`${widgets.map(w => w.render(w.errors))}`, gp_popup);
+        render(widgets.map(w => w.render(w.errors)), gp_popup);
 
         // We need to know popup width and height
         let give_focus = !gp_popup.classList.contains('active');
