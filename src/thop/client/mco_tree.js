@@ -29,9 +29,6 @@ let mco_tree = {};
 
         // Refresh view
         if (!thop.isBusy()) {
-            let view_el = query('#view');
-
-            render(html`<ul id="tr_tree"></ul>`, view_el);
             refreshTree(nodes);
 
             deploySelectedNode(route.highlight_node);
@@ -85,16 +82,23 @@ let mco_tree = {};
 
     function refreshTree(nodes)
     {
+        let root_el = query('#view');
+
         if (nodes.length) {
-            query('#tr_tree').replaceContent(recurseNodes(0, '', []).childNodes);
+            let children = recurseNodes(0, '', []);
+            render(html`
+                <ul id="tr_tree">
+                    ${renderChildren(children)}
+                </ul>
+            `, root_el);
         } else {
-            query('#tr_tree').innerHTML = '';
+            render(html``, root_el);
         }
     }
 
     function recurseNodes(start_idx, chain_str, parent_next_indices)
     {
-        let ul = dom.h('ul');
+        let elements = [];
 
         let indices = [];
         for (let node_idx = start_idx;;) {
@@ -115,72 +119,44 @@ let mco_tree = {};
             let node = nodes[node_idx];
             indices.shift();
 
-            // Hide GOTO nodes at the end of a chain, the classifier uses those to
-            // jump back to go back one level.
-            if (node.test === 20 && node.children_idx === parent_next_indices[0])
+            if (node.test === 20 && node.children_idx === parent_next_indices[0]) {
+                // Hide GOTO nodes at the end of a chain, the classifier uses those to
+                // jump back to go back one level.
                 break;
-
-            if (node.children_count > 2 && nodes[node.children_idx + 1].header) {
+            } else if (node.children_count > 2 && nodes[node.children_idx + 1].header) {
                 // Here we deal with jump lists (mainly D-xx and D-xxxx)
                 for (let j = 1; j < node.children_count; j++) {
                     let recurse_str = chain_str + node.key + ('0' + j).slice(-2);
-
                     let pseudo_idx = (j > 1) ? ('' + node_idx + '-' + j) : node_idx;
                     let pseudo_text = node.text + ' ' + nodes[node.children_idx + j].header;
-                    let children = recurseNodes(node.children_idx + j, recurse_str, indices);
-                    let li = createNodeLi(pseudo_idx, pseudo_text,
-                                          children.tagName === 'UL' ? recurse_str : null);
-                    li.appendContent(children);
-                    ul.appendContent(li);
-                }
-            } else if (node.children_count === 2 && node.reverse) {
-                let recurse_str = chain_str + node.key;
 
-                let children = recurseNodes(node.children_idx, recurse_str, indices);
-                let li = createNodeLi(node_idx, node.reverse,
-                                      children.tagName === 'UL' ? recurse_str  : null);
-                li.appendContent(children);
-                ul.appendContent(li);
+                    let children = recurseNodes(node.children_idx + j, recurse_str, indices);
+                    let li = renderNode(pseudo_idx, pseudo_text, children, recurse_str);
+                    elements.push(li);
+                }
             } else if (node.children_count === 2) {
                 let recurse_str = chain_str + node.key;
 
-                let children = recurseNodes(node.children_idx + 1, recurse_str, indices);
-                let li = createNodeLi(node_idx, node.text,
-                                      children.tagName === 'UL' ? recurse_str : null);
-
-                // Simplify OR GOTO chains
-                while (indices.length && nodes[indices[0]].children_count === 2 &&
-                       nodes[nodes[indices[0]].children_idx + 1].test === 20 &&
-                       nodes[nodes[indices[0]].children_idx + 1].children_idx === node.children_idx + 1) {
-                    li.appendContent(dom.h('br'));
-
-                    let li2 = createNodeLi(indices[0], nodes[indices[0]].text, recurse_str);
-                    li2.children[0].id = li2.id;
-                    li.appendContent(li2.childNodes);
-
-                    indices.shift();
-                }
-
-                li.appendContent(children);
-                ul.appendContent(li);
+                let children = recurseNodes(node.children_idx + !node.reverse, recurse_str, indices);
+                let li = renderNode(node_idx, node.reverse || node.text, children, recurse_str);
+                elements.push(li);
             } else {
                 let recurse_str = chain_str + node.key;
-
                 let leaf = !node.children_count || node.children_count == 1;
-                let li = createNodeLi(node_idx, node.text, leaf ? null : recurse_str);
-                for (let j = 1; j < node.children_count; j++) {
-                    let children = recurseNodes(node.children_idx + j, recurse_str, indices);
-                    li.appendContent(children);
-                }
-                ul.appendContent(li);
+
+                let children = util.mapRange(1, node.children_count,
+                                             j => recurseNodes(node.children_idx + j, recurse_str, indices));
+                let li = renderNode(node_idx, node.text, children, recurse_str);
+                elements.push(li);
 
                 // Hide repeated subtrees, this happens with error-generating nodes 80 and 222
                 if (node.test !== 20 && parent_next_indices.includes(node.children_idx)) {
                     if (node.children_idx != parent_next_indices[0]) {
                         let pseudo_idx = '' + node_idx + '-2';
                         let pseudo_text = 'Saut noeud ' + node.children_idx;
-                        let li = createNodeLi(pseudo_idx, pseudo_text, null);
-                        ul.appendContent(li);
+
+                        let li = renderNode(pseudo_idx, pseudo_text);
+                        elements.push(li);
                     }
 
                     break;
@@ -188,55 +164,7 @@ let mco_tree = {};
             }
         }
 
-        // Simplify when there is only one leaf children
-        if (ul.queryAll('li').length === 1) {
-            ul = ul.query('li').childNodes;
-            ul.addClass('direct');
-            ul = Array.prototype.slice.call(ul);
-        }
-
-        return ul;
-    }
-
-    function deploySelectedNode(hash)
-    {
-        let ul = query('#tr_tree');
-
-        // Make sure the corresponding node is visible
-        if (hash && hash.match(/^n[0-9]+$/)) {
-            let el = ul.query('#' + hash);
-            while (el && el !== ul) {
-                if (el.tagName === 'LI' && el.dataset.chain) {
-                    el.removeClass('collapse');
-                    collapse_nodes.delete(el.dataset.chain);
-                }
-                el = el.parentNode;
-            }
-        }
-    }
-
-    function createNodeLi(idx, text, chain_str)
-    {
-        if (chain_str) {
-            return (
-                dom.h('li', {id: 'n' + idx, class: ['parent', collapse_nodes.has(chain_str) ? 'collapse' : null],
-                             'data-chain': chain_str},
-                    dom.h('span',
-                        dom.h('span', {class: 'n', click: handleNodeClick}, '' + idx + ' '),
-                        mco_list.addSpecLinks(text, false)
-                    )
-                )
-            );
-        } else {
-            return (
-                dom.h('li', {id: 'n' + idx, class: 'leaf'},
-                    dom.h('span',
-                        dom.h('span', {class: 'n'}, '' + idx + ' '),
-                        mco_list.addSpecLinks(text, false)
-                    )
-                )
-            );
-        }
+        return elements;
     }
 
     function handleNodeClick(e)
@@ -249,5 +177,63 @@ let mco_tree = {};
         }
 
         e.preventDefault();
-    };
+    }
+
+    function renderNode(idx, text, children = [], chain_str = null)
+    {
+        if (children.length === 1 && children[0].type === 'leaf') {
+            // Simplify when there is only one leaf children
+            let ret = {
+                idx: idx,
+                type: 'leaf',
+                vdom: html`<span><span class="n">${idx} </span>${mco_list.addSpecLinks(text)}</span>
+                           <span class="direct">${children[0].vdom}</span>`
+            };
+
+            return ret;
+        } else if (children.length) {
+            let ret = {
+                idx: idx,
+                type: 'parent',
+                chain_str: chain_str,
+                vdom: html`<span><span class="n" @click=${handleNodeClick}>${idx} </span>${mco_list.addSpecLinks(text)}</span>
+                           <ul>${renderChildren(children)}</ul>`
+            };
+
+            return ret;
+        } else {
+            let ret = {
+                idx: idx,
+                type: 'leaf',
+                vdom: html`<span><span class="n">${idx} </span>${mco_list.addSpecLinks(text)}</span>`
+            };
+
+            return ret;
+        }
+    }
+
+    function renderChildren(children)
+    {
+        return children.map(child => {
+            let cls = child.type + (child.chain_str && collapse_nodes.has(child.chain_str) ? ' collapse' : '');
+            return html`<li id=${'n' + child.idx} class=${cls}>${child.vdom}</li>`;
+        });
+    }
+
+    function deploySelectedNode(hash)
+    {
+        let root_el = query('#tr_tree');
+
+        // Make sure the corresponding node is visible
+        if (hash && hash.match(/^n[0-9]+$/)) {
+            let el = root_el.query('#' + hash);
+            while (el && el !== root_el) {
+                if (el.tagName === 'LI' && el.dataset.chain) {
+                    el.removeClass('collapse');
+                    collapse_nodes.delete(el.dataset.chain);
+                }
+                el = el.parentNode;
+            }
+        }
+    }
 }).call(mco_tree);
