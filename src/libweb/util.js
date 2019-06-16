@@ -167,6 +167,24 @@ let util = (function() {
         return arr;
     };
 
+    this.mapRLE = function(arr, func) {
+        let arr2 = Array.from({length: arr.length});
+
+        let arr2_len = 0;
+        for (let i = 0; i < arr.length;) {
+            let j = i + 1;
+            while (j < arr.length && arr[j] === arr[i]) {
+                j++;
+            }
+
+            arr2[arr2_len++] = func(arr[i], j - i);
+            i = j;
+        }
+        arr2.length = arr2_len;
+
+        return arr2;
+    };
+
     // Why the f*ck is there still no good cookie API?
     this.getCookie = function(name) {
         let cookie = ' ' + document.cookie;
