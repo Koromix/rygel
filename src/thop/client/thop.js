@@ -154,7 +154,8 @@ let thop = (function() {
     function refreshErrors(errors) {
         let log = document.querySelector('#log');
 
-        log.innerHTML = errors.map(err => err.replace('\n', '<br/>&nbsp;&nbsp;&nbsp;&nbsp;')).join('<br/>');
+        render(errors.map(err => err.split('\n').map((line, idx) =>
+               idx ? html`&nbsp;&nbsp;&nbsp;&nbsp;${line}<br/>` : html`${line}<br/>`)), log);
         log.toggleClass('hide', !errors.length);
     }
 
