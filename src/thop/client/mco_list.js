@@ -542,27 +542,7 @@ let mco_list = {};
         return ranges.join(', ');
     }
 
-    // FIXME: Get rid of this when everything is lithtml-ready
-    function makeSpecAnchorDom(str)
-    {
-        if (str[0] === 'A') {
-            let href = routeToUrl({list: 'procedures', spec: str}).url;
-            return dom.h('a', {href: href}, str);
-        } else if (str[0] === 'D') {
-            let href = routeToUrl({list: 'diagnoses', spec: str}).url;
-            return dom.h('a', {href: href}, str);
-        } else if (str.match(/^[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?$/)) {
-            let href = mco_pricing.routeToUrl({view: 'table', ghm_root: str.substr(0, 5)}).url;
-            return dom.h('a', {href: href, class: 'ghm'}, str);
-        } else if (str.match(/[Nn]oeud [0-9]+/)) {
-            let href = mco_tree.routeToUrl().url + '#n' + str.substr(6);
-            return dom.h('a', {href: href}, str);
-        } else {
-            return str;
-        }
-    }
-
-    function makeSpecAnchorVirtual(str)
+    function makeSpecAnchor(str)
     {
         if (str[0] === 'A') {
             let href = routeToUrl({list: 'procedures', spec: str}).url;
@@ -581,10 +561,8 @@ let mco_list = {};
         }
     }
 
-    function addSpecLinks(str, use_vdom = true)
+    function addSpecLinks(str)
     {
-        let make_anchor = use_vdom ? makeSpecAnchorVirtual : makeSpecAnchorDom;
-
         let elements = [];
         for (;;) {
             let m = str.match(/([AD](\-[0-9]+|\$[0-9]+\.[0-9]+)|[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?|[Nn]oeud [0-9]+)/);
@@ -592,7 +570,7 @@ let mco_list = {};
                 break;
 
             elements.push(str.substr(0, m.index));
-            elements.push(make_anchor(m[0]));
+            elements.push(makeSpecAnchor(m[0]));
             str = str.substr(m.index + m[0].length);
         }
         elements.push(str);
