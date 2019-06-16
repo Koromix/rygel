@@ -75,9 +75,8 @@ let mco_pricing = {};
 
             switch (route.view) {
                 case 'table': {
-                    render(html`<table id="pr_table" class="pr_grid"></table>`, view_el);
                     refreshPriceTable(route.ghm_root, pricing_info, main_index, diff_index,
-                                      max_duration, route.apply_coefficient, true);
+                                      max_duration, route.apply_coefficient);
                 } break;
 
                 case 'chart': {
@@ -148,13 +147,14 @@ let mco_pricing = {};
     // A true result actually means maybe (if we haven't download the relevant index yet)
     function checkIndexGhmRoot(indexes, index, sector, ghm_root)
     {
-        if (index < 0)
+        if (index >= 0) {
+            const date_key = indexes[index].begin_date + '@' + sector;
+
+            return !available_dates.has(date_key) ||
+                   (pricings_map[ghm_root] && pricings_map[ghm_root][sector] && pricings_map[ghm_root][sector][index]);
+       } else {
             return true;
-
-        const date_key = indexes[index].begin_date + '@' + sector;
-
-        return !available_dates.has(date_key) ||
-               (pricings_map[ghm_root] && pricings_map[ghm_root][sector] && pricings_map[ghm_root][sector][index]);
+       }
     }
 
     function updatePriceMap(index, sector)
@@ -233,172 +233,107 @@ let mco_pricing = {};
     }
 
     function refreshPriceTable(ghm_root, pricing_info, main_index, diff_index,
-                               max_duration, apply_coeff, merge_cells)
+                               max_duration, apply_coeff)
     {
-        let table = query('#pr_table');
-        table.replaceContent(
-            dom.h('thead'),
-            dom.h('tbody')
-        );
+        let root_el = query('#view');
 
-        if (pricing_info && pricing_info[main_index] &&
-                (diff_index < 0 || pricing_info[diff_index])) {
-            let thead = table.query('thead');
-            let tbody = table.query('tbody');
-
-            let ghs = pricing_info[main_index].ghs;
-
-            addPricingHeader(thead, ghm_root, pricing_info[main_index].ghs, true,
-                             apply_coeff, merge_cells);
-
-            for (let duration = 0; duration < max_duration; duration++) {
-                if (duration % 10 == 0) {
-                    let text = '' + duration + ' - ' +
-                                    format.duration(Math.min(max_duration - 1, duration + 9));
-                    let tr = dom.h('tr',
-                        dom.h('th', {class: 'repeat', colspan: ghs.length + 1}, text)
-                    );
-                    tbody.appendContent(tr);
-                }
-
-                let tr = dom.h('tr',
-                    dom.h('th', format.duration(duration))
-                );
-                for (const col of ghs) {
-                    let info;
-                    if (diff_index < 0) {
-                        info = computePrice(col, duration, apply_coeff);
-                    } else {
-                        let prev_ghs = pricing_info[diff_index].ghs_map[col.ghs];
-                        info = computeDelta(col, prev_ghs, duration, apply_coeff);
-                    }
-
-                    let td;
-                    if (info) {
-                        td = dom.h('td', {class: info.mode},
-                                   format.price(info.price, true, diff_index >= 0));
-
-                        let title = '';
-                        if (!duration && col.warn_cmd28) {
-                            td.addClass('warn');
-                            title += 'Devrait être orienté dans la CMD 28 (séance)\n';
-                        }
-                        if (testDuration(col.raac_durations || 0, duration)) {
-                            td.addClass('warn');
-                            title += 'Accessible en cas de RAAC\n';
-                        }
-                        if (col.warn_ucd) {
-                            td.addClass('info');
-                            title += 'Possibilité de minoration UCD (40 €)\n';
-                        }
-                        if (title)
-                            td.title = title;
-                    } else {
-                        td = dom.h('td');
-                    }
-                    tr.appendContent(td);
-                }
-                tbody.appendContent(tr);
-            }
-        }
-    }
-
-    function addPricingHeader(thead, ghm_root, columns, show_pricing, apply_coeff, merge_cells)
-    {
-        if (apply_coeff === undefined)
-            apply_coeff = false;
-        if (merge_cells === undefined)
-            merge_cells = true;
-
-        let title;
+        let title = ghm_root;
         {
             let ghm_roots_map = catalog.update('mco_ghm_roots').map;
-
-            title = ghm_root;
             if (ghm_roots_map[ghm_root])
                 title += ' - '  + ghm_roots_map[ghm_root].desc;
         }
 
-        thead.appendContent(
-            dom.h('tr',
-                dom.h('td', {colspan: 1 + columns.length, class: 'ghm_root'}, title)
-            )
-        );
+        let ghs;
+        if (pricing_info && pricing_info[main_index] &&
+                (diff_index < 0 || pricing_info[diff_index])) {
+            let ghs = pricing_info[main_index].ghs;
 
-        function appendRow(name, func)
-        {
-            let tr = dom.h('tr',
-                dom.h('th', name)
-            );
+            render(html`
+                <table id="pr_table" class="pr_grid">
+                    <thead>
+                        <tr><td class="ghm_root" colspan=${ghs.length + 1}>${title}</td></tr>
 
-            let prev_cell = [document.createTextNode(''), {}, false];
-            let prev_td = null;
-            for (let i = 0; i < columns.length; i++) {
-                let cell = func(columns[i], i) || [null, {}, false];
-                if (cell[0] === null) {
-                    cell[0] = document.createTextNode('');
-                } else if (typeof cell[0] === 'string') {
-                    cell[0] = document.createTextNode(cell[0]);
-                }
+                        <tr><th>GHM</th>${util.mapRLE(ghs.map(col => col.ghm),
+                            (ghm, colspan) => html`<td class="desc" colspan=${colspan}>${ghm}</td>`)}</tr>
+                        <tr><th>Niveau</th>${util.mapRLE(ghs.map(col => col.ghm.substr(5, 1)),
+                            (mode, colspan) => html`<td class="desc" colspan=${colspan}>Niveau ${mode}</td>`)}</tr>
+                        <tr><th>GHS</th>${ghs.map(col =>
+                            html`<td class="desc">${col.ghs}${col.conditions.length ? '*' : ''}</td>`)}</tr>
+                        <tr><th>Conditions</th>${ghs.map(col =>
+                            html`<td class="conditions">${col.conditions.map(cond => html`${mco_list.addSpecLinks(cond)}<br/>`)}</td>`)}</tr>
+                        <tr><th>Borne basse</th>${util.mapRLE(ghs.map(col => col.exb_treshold),
+                            (treshold, colspan) => html`<td class="exb" colspan=${colspan}>${format.duration(treshold)}</td>`)}</tr>
+                        <tr><th>Borne haute</th>${util.mapRLE(ghs.map(col => col.exh_treshold ? (col.exh_treshold - 1) : null),
+                            (treshold, colspan) => html`<td class="exh" colspan=${colspan}>${format.duration(treshold)}</td>`)}</tr>
+                        <tr><th>Tarif €</th>${util.mapRLE(ghs.map(col =>
+                            applyCoefficient(col.ghs_cents, !apply_coeff || col.ghs_coefficient)),
+                            (cents, colspan) => html`<td class="noex" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
+                        <tr><th>Forfait EXB €</th>${util.mapRLE(ghs.map(col =>
+                            applyCoefficient(col.exb_once ? col.exb_cents : null, !apply_coeff || col.ghs_coefficient)),
+                            (cents, colspan) => html`<td class="exb" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
+                        <tr><th>Tarif EXB €</th>${util.mapRLE(ghs.map(col =>
+                            applyCoefficient(col.exb_once ? null : col.exb_cents, !apply_coeff || col.ghs_coefficient)),
+                            (cents, colspan) => html`<td class="exb" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
+                        <tr><th>Tarif EXH €</th>${util.mapRLE(ghs.map(col =>
+                            applyCoefficient(col.exh_cents, !apply_coeff || col.ghs_coefficient)),
+                            (cents, colspan) => html`<td class="exh" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
+                        <tr><th>Age</th>${util.mapRLE(ghs.map(col => {
+                            let texts = [];
+                            let severity = col.ghm.charCodeAt(5) - '1'.charCodeAt(0);
+                            if (severity >= 0 && severity < 4) {
+                                if (severity < col.young_severity_limit)
+                                    texts.push('< ' + col.young_age_treshold.toString());
+                                if (severity < col.old_severity_limit)
+                                    texts.push('≥ ' + col.old_age_treshold.toString());
+                            }
 
-                if (merge_cells && cell[2] && cell[0].isEqualNode(prev_cell[0]) &&
-                        cell[1].class === prev_cell[1].class) {
-                    let colspan = parseInt(prev_td.getAttribute('colspan') || 1, 10);
-                    prev_td.setAttribute('colspan', colspan + 1);
-                } else {
-                    prev_td = tr.appendChild(dom.h('td', cell[1], cell[0]));
-                }
+                            return texts.join(', ');
+                        }), (text, colspan) => html`<td class="age" colspan=${colspan}>${text}</td>`)}</tr>
+                    </thead>
 
-                prev_cell = cell;
-            }
+                    <tbody>${util.mapRange(0, max_duration, duration =>
+                        html`<tr>
+                            <th>${format.duration(duration)}</th>
+                            ${ghs.map(col => {
+                                let info;
+                                if (diff_index < 0) {
+                                    info = computePrice(col, duration, apply_coeff);
+                                } else {
+                                    let prev_ghs = pricing_info[diff_index].ghs_map[col.ghs];
+                                    info = computeDelta(col, prev_ghs, duration, apply_coeff);
+                                }
 
-            thead.appendContent(tr);
-        }
+                                if (info) {
+                                    let cls = info.mode;
+                                    let tooltip = '';
+                                    if (!duration && col.warn_cmd28) {
+                                        cls += ' warn';
+                                        tooltip += 'Devrait être orienté dans la CMD 28 (séance)\n';
+                                    }
+                                    if (testDuration(col.raac_durations || 0, duration)) {
+                                        cls += ' warn';
+                                        tooltip += 'Accessible en cas de RAAC\n';
+                                    }
+                                    if (col.warn_ucd) {
+                                        cls += ' info';
+                                        tooltip += 'Possibilité de minoration UCD (40 €)\n';
+                                    }
 
-        appendRow('GHM', function(col) { return [col.ghm, {class: 'desc'}, true]; });
-        appendRow('Niveau', function(col) { return ['Niveau ' + col.ghm.substr(5, 1), {class: 'desc'}, true]; });
-        appendRow('GHS', function(col) { return ['' + col.ghs + (col.conditions.length ? '*' : ''),
-                                                 {class: 'desc'}, false]; });
-        if (show_pricing) {
-            appendRow('Conditions', function(col) {
-                let el = dom.h('div',
-                               col.conditions.map(function(cond) { return [mco_list.addSpecLinks(cond, false), dom.h('br')]; }));
-                return [el, {class: 'conditions'}, true];
-            });
-            appendRow('Borne basse', function(col) { return [format.duration(col.exb_treshold), {class: 'exb'}, true]; });
-            appendRow('Borne haute',
-                      function(col) { return [format.duration(col.exh_treshold && col.exh_treshold - 1), {class: 'exh'}, true]; });
-            appendRow('Tarif €', function(col) {
-                let cents = applyGhsCoefficient(col, col.ghs_cents, apply_coeff);
-                return [format.price(cents), {class: 'noex'}, true];
-            });
-            appendRow('Forfait EXB €', function(col) {
-                let cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
-                return [col.exb_once ? format.price(cents) : '', {class: 'exb'}, true];
-            });
-            appendRow('Tarif EXB €', function(col) {
-                let cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
-                return [!col.exb_once ? format.price(cents) : '', {class: 'exb'}, true];
-            });
-            appendRow('Tarif EXH €', function(col) {
-                let cents = applyGhsCoefficient(col, col.exh_cents, apply_coeff);
-                return [format.price(cents), {class: 'exh'}, true];
-            });
-            appendRow('Age', function(col) {
-                let texts = [];
-                let severity = col.ghm.charCodeAt(5) - '1'.charCodeAt(0);
-                if (severity >= 0 && severity < 4) {
-                    if (severity < col.young_severity_limit)
-                        texts.push('< ' + col.young_age_treshold.toString());
-                    if (severity < col.old_severity_limit)
-                        texts.push('≥ ' + col.old_age_treshold.toString());
-                }
-
-                return [texts.join(', '), {class: 'age'}, true];
-            });
+                                    let text = format.price(info.price, true, diff_index >= 0);
+                                    return html`<td class=${cls} title=${tooltip}>${text}</td>`;
+                                } else {
+                                    return html`<td></td>`;
+                                }
+                            })}
+                        </tr>`
+                    )}</tbody>
+                </table>
+            `, root_el);
+        } else {
+            render(html``, root_el);
         }
     }
-    this.addPricingHeader = addPricingHeader;
 
     function modeToColor(mode)
     {
@@ -582,7 +517,7 @@ let mco_pricing = {};
             mode = 'noex';
         }
 
-        price_cents = applyGhsCoefficient(ghs, price_cents, apply_coeff);
+        price_cents = applyCoefficient(price_cents, !apply_coeff || ghs.ghs_coefficient);
         return {price: price_cents, mode: mode};
     }
 
@@ -613,11 +548,10 @@ let mco_pricing = {};
         return p;
     }
 
-    function applyGhsCoefficient(ghs, cents, apply_coeff)
+    function applyCoefficient(cents, coefficient)
     {
-        return apply_coeff && cents ? (ghs.ghs_coefficient * cents) : cents;
+        return cents ? (cents * coefficient) : cents;
     }
-    this.applyGhsCoefficient = applyGhsCoefficient;
 
     function buildConditionsArray(ghs)
     {
@@ -643,5 +577,4 @@ let mco_pricing = {};
 
         return conditions;
     }
-    this.buildConditionsArray = buildConditionsArray;
 }).call(mco_pricing);
