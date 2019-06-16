@@ -973,7 +973,7 @@ let mco_casemix = {};
         if (mix_durations[ghm_root] && mix_durations[ghm_root].rows.length) {
             units = new Set(units);
 
-            const columns = mix_durations[ghm_root].ghs;
+            const ghs = mix_durations[ghm_root].ghs;
             const rows = mix_durations[ghm_root].rows.filter(function(row) {
                 for (const unit of row.unit) {
                     if (units.has(unit))
@@ -1015,10 +1015,14 @@ let mco_casemix = {};
                 max_price_cents = Math.max(max_price_cents, duration_stat.price_cents);
             }
 
-            mco_pricing.addPricingHeader(thead, ghm_root, columns, false, apply_coeff, merge_cells);
-            thead.queryAll('td').forEach(function(td) {
-                td.setAttribute('colspan', parseInt(td.getAttribute('colspan') || 1, 10) * 2);
-            });
+            render(html`
+                <tr><th>GHM</th>${util.mapRLE(ghs.map(col => col.ghm),
+                    (ghm, colspan) => html`<td class="desc" colspan=${colspan * 2}>${ghm}</td>`)}</tr>
+                <tr><th>Niveau</th>${util.mapRLE(ghs.map(col => col.ghm.substr(5, 1)),
+                    (mode, colspan) => html`<td class="desc" colspan=${colspan * 2}>Niveau ${mode}</td>`)}</tr>
+                <tr><th>GHS</th>${ghs.map(col =>
+                    html`<td class="desc" colspan="2">${col.ghs}${col.conditions.length ? '*' : ''}</td>`)}</tr>
+            `, thead);
 
             function makeTooltip(title, col, col_stat, row_stat, duration_stat, unit_stats)
             {
@@ -1082,7 +1086,7 @@ let mco_casemix = {};
                     dom.h('th', 'Total')
                 );
 
-                for (const col of columns) {
+                for (const col of ghs) {
                     let col_stat = stats1.find(col.ghm, col.ghs);
 
                     if (col_stat) {
@@ -1113,19 +1117,10 @@ let mco_casemix = {};
             for (let duration = 0; duration < max_duration; duration++) {
                 let row_stat = stats3.find(duration);
 
-                if (duration % 10 == 0) {
-                    let text = '' + duration + ' - ' +
-                                    format.duration(Math.min(max_duration - 1, duration + 9));
-                    let tr = dom.h('tr',
-                        dom.h('th', {class: 'repeat', colspan: columns.length * 2 + 1}, text)
-                    );
-                    tbody.appendContent(tr);
-                }
-
                 let tr = dom.h('tr',
                     dom.h('th', format.duration(duration))
                 );
-                for (const col of columns) {
+                for (const col of ghs) {
                     let col_stat = stats1.find(col.ghm, col.ghs);
                     let duration_stat = stats2.find(col.ghm, col.ghs, duration);
 

@@ -144,25 +144,19 @@ let data = (function() {
 // ------------------------------------------------------------------------
 
 let format = (function() {
-    this.number = function(n, show_plus) {
-        if (show_plus === undefined)
-            show_plus = false;
-
+    this.number = function(n, show_plus = false) {
         return (show_plus && n > 0 ? '+' : '') +
                n.toLocaleString('fr-FR');
     };
 
-    this.percent = function(value, show_plus) {
-        if (show_plus === undefined)
-            show_plus = false;
-
-        const parameters = {
+    this.percent = function(value, show_plus = false) {
+        let parameters = {
             style: 'percent',
             minimumFractionDigits: 1,
             maximumFractionDigits: 1
         };
 
-        if (!isNaN(value)) {
+        if (value != null && !isNaN(value)) {
             return (show_plus && fraction > 0 ? '+' : '') +
                    value.toLocaleString('fr-FR', parameters);
         } else {
@@ -170,17 +164,11 @@ let format = (function() {
         }
     };
 
-    this.price = function(price_cents, format_cents, show_plus) {
-        if (format_cents === undefined)
-            format_cents = true;
-        if (show_plus === undefined)
-            show_plus = false;
-
-        if (price_cents !== undefined) {
-            const parameters = {
+    this.price = function(price_cents, format_cents = true, show_plus = false) {
+        if (price_cents != null && !isNaN(price_cents)) {
+            let parameters = {
                 minimumFractionDigits: format_cents ? 2 : 0,
-                maximumFractionDigits: format_cents ? 2 : 0,
-
+                maximumFractionDigits: format_cents ? 2 : 0
             };
 
             return (show_plus && price_cents > 0 ? '+' : '') +
@@ -191,7 +179,7 @@ let format = (function() {
     };
 
     this.duration = function(duration) {
-        if (duration !== null && duration !== undefined) {
+        if (duration != null && !isNaN(duration)) {
             return duration.toString() + (duration >= 2 ? ' nuits' : ' nuit');
         } else {
             return '';
@@ -199,7 +187,7 @@ let format = (function() {
     };
 
     this.age = function(age) {
-        if (age !== null && age !== undefined) {
+        if (age != null && !isNaN(age)) {
             return age.toString() + (age >= 2 ? ' ans' : ' an');
         } else {
             return '';
