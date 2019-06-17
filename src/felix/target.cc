@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../libcc/libcc.hh"
-#include "build_target.hh"
+#include "target.hh"
 
 namespace RG {
 

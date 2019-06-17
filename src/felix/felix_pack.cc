@@ -3,8 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../libcc/libcc.hh"
-#include "pack_generator.hh"
-#include "pack_output.hh"
+#include "pack.hh"
 
 namespace RG {
 
@@ -166,7 +165,7 @@ int RunPack(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    GeneratorType generator = GeneratorType::C;
+    PackMode mode = PackMode::C;
     const char *output_path = nullptr;
     int strip_count = INT_MAX;
     CompressionType compression_type = CompressionType::None;
@@ -191,9 +190,9 @@ Options:
     -M, --merge_file <file>      Load merge rules from file
         --source_map             Generate source maps when applicable
 
-Available generators:)", GeneratorTypeNames[(int)generator],
+Available generators:)", PackModeNames[(int)mode],
                          CompressionTypeNames[(int)compression_type]);
-        for (const char *gen: GeneratorTypeNames) {
+        for (const char *gen: PackModeNames) {
             PrintLn(fp, "    %1", gen);
         }
         PrintLn(fp, R"(
@@ -212,14 +211,14 @@ Available compression types:)");
                 PrintUsage(stdout);
                 return 0;
             } else if (opt.Test("-g", "--generator", OptionType::Value)) {
-                const char *const *name = FindIf(GeneratorTypeNames,
+                const char *const *name = FindIf(PackModeNames,
                                                  [&](const char *name) { return TestStr(name, opt.current_value); });
                 if (!name) {
                     LogError("Unknown generator type '%1'", opt.current_value);
                     return 1;
                 }
 
-                generator = (GeneratorType)(name - GeneratorTypeNames);
+                mode = (PackMode)(name - PackModeNames);
             } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
                 output_path = opt.current_value;
             } else if (opt.Test("-s", "--strip", OptionType::Value)) {
@@ -312,9 +311,9 @@ Available compression types:)");
     }
 
     // Generate output
-    switch (generator) {
-        case GeneratorType::C: return !GenerateC(assets, output_path, compression_type);
-        case GeneratorType::Files: return !GenerateFiles(assets, output_path, compression_type);
+    switch (mode) {
+        case PackMode::C: return !PackToC(assets, output_path, compression_type);
+        case PackMode::Files: return !PackToFiles(assets, output_path, compression_type);
     }
     RG_ASSERT(false);
 }

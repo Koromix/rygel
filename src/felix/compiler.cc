@@ -11,7 +11,7 @@
 #endif
 
 #include "../libcc/libcc.hh"
-#include "build_compiler.hh"
+#include "compiler.hh"
 
 namespace RG {
 
