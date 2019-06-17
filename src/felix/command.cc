@@ -209,7 +209,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
     }
 
     // Object commands
-    for (const SourceFile &src: target.sources) {
+    for (const SourceFileInfo &src: target.sources) {
         const char *obj_filename = BuildObjectPath(src.filename, output_directory,
                                                    ".o", &temp_alloc);
         const char *deps_filename = Fmt(&temp_alloc, "%1.d", obj_filename).ptr;

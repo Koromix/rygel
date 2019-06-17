@@ -5,6 +5,7 @@
 #pragma once
 
 #include "../libcc/libcc.hh"
+#include "merge.hh"
 
 namespace RG {
 
@@ -17,30 +18,12 @@ static const char *const PackModeNames[] = {
     "Files"
 };
 
-struct PackSourceInfo {
-    const char *filename;
-    const char *name;
-
-    const char *prefix;
-    const char *suffix;
-};
-
-enum class SourceMapType {
-    None,
-    JSv3
-};
-
-struct PackAssetInfo {
-    const char *name;
-    HeapArray<PackSourceInfo> sources;
-
-    SourceMapType source_map_type;
-    const char *source_map_name;
-};
-
 bool PackToC(Span<const PackAssetInfo> assets, const char *output_path,
              CompressionType compression_type);
 bool PackToFiles(Span<const PackAssetInfo> assets, const char *output_path,
                  CompressionType compression_type);
+
+bool PackAssets(Span<const PackAssetInfo> assets, const char *output_path,
+                PackMode mode, CompressionType compression_type);
 
 }
