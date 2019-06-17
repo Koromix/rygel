@@ -293,7 +293,7 @@ let mco_pricing = {};
                     </thead>
 
                     <tbody>${util.mapRange(0, max_duration, duration =>
-                        html`<tr>
+                        html`<tr class="duration">
                             <th>${format.duration(duration)}</th>
                             ${ghs.map(col => {
                                 let info;
