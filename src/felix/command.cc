@@ -20,7 +20,7 @@
 #endif
 
 #include "../libcc/libcc.hh"
-#include "build_command.hh"
+#include "command.hh"
 
 namespace RG {
 

@@ -8,11 +8,11 @@
 
 namespace RG {
 
-enum class GeneratorType {
+enum class PackMode {
     C,
     Files
 };
-static const char *const GeneratorTypeNames[] = {
+static const char *const PackModeNames[] = {
     "C",
     "Files"
 };
@@ -38,9 +38,9 @@ struct PackAssetInfo {
     const char *source_map_name;
 };
 
-bool GenerateC(Span<const PackAssetInfo> assets, const char *output_path,
-               CompressionType compression_type);
-bool GenerateFiles(Span<const PackAssetInfo> assets, const char *output_path,
-                   CompressionType compression_type);
+bool PackToC(Span<const PackAssetInfo> assets, const char *output_path,
+             CompressionType compression_type);
+bool PackToFiles(Span<const PackAssetInfo> assets, const char *output_path,
+                 CompressionType compression_type);
 
 }
