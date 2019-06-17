@@ -1117,7 +1117,7 @@ let mco_casemix = {};
             for (let duration = 0; duration < max_duration; duration++) {
                 let row_stat = stats3.find(duration);
 
-                let tr = dom.h('tr',
+                let tr = dom.h('tr', {class: 'duration'},
                     dom.h('th', format.duration(duration))
                 );
                 for (const col of ghs) {
