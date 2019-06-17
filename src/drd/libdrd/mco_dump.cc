@@ -107,10 +107,12 @@ void mco_DumpDiagnosisTable(Span<const mco_DiagnosisInfo> diagnoses,
 void mco_DumpProcedureTable(Span<const mco_ProcedureInfo> procedures, StreamWriter *out_st)
 {
     for (const mco_ProcedureInfo &proc: procedures) {
+       char buf[512];
+
         PrintLn(out_st, "      %1/%2:", proc.proc, proc.phase);
         PrintLn(out_st, "        Validity: %1 to %2", proc.limit_dates[0], proc.limit_dates[1]);
-        PrintLn(out_st, "        Activities: %1", proc.ActivitiesToDec());
-        PrintLn(out_st, "        Extensions: %1", proc.ExtensionsToDec());
+        PrintLn(out_st, "        Activities: %1", proc.ActivitiesToStr(buf));
+        PrintLn(out_st, "        Extensions: %1", proc.ExtensionsToStr(buf));
         Print(out_st, "        Mask: ");
         for (Size i = 0; i < RG_LEN(proc.bytes); i++) {
             Print(out_st, " 0b%1", FmtBin(proc.bytes[i]).Pad0(-8));
