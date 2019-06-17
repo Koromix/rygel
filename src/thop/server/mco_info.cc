@@ -165,9 +165,9 @@ int ProduceMcoProcedures(const http_Request &request, const User *, http_Respons
             json.Key("begin_date"); json.String(Fmt(buf, "%1", proc_info.limit_dates[0]).ptr);
             json.Key("end_date"); json.String(Fmt(buf, "%1", proc_info.limit_dates[1]).ptr);
             json.Key("phase"); json.Int(proc_info.phase);
-            json.Key("activities"); json.Int(proc_info.ActivitiesToDec());
+            json.Key("activities"); json.String(proc_info.ActivitiesToStr(buf).ptr);
             if (proc_info.extensions > 1) {
-                json.Key("extensions"); json.Int(proc_info.ExtensionsToDec());
+                json.Key("extensions"); json.String(proc_info.ExtensionsToStr(buf).ptr);
             }
             json.EndObject();
         }

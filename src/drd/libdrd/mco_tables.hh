@@ -136,20 +136,8 @@ struct mco_ProcedureInfo {
         int16_t len;
     } addition_list;
 
-    static int MaskToDec(int8_t value)
-    {
-        int dec = 0;
-        for (int i = 0; value; i++) {
-            if (value & 0x1) {
-                dec = (dec * 10) + i;
-            }
-            value >>= 1;
-        }
-        return dec;
-    }
-
-    int ActivitiesToDec() const { return MaskToDec(activities); }
-    int ExtensionsToDec() const { return MaskToDec(extensions); }
+    Span<const char> ActivitiesToStr(Span<char> out_buf) const;
+    Span<const char> ExtensionsToStr(Span<char> out_buf) const;
 
     RG_HASH_TABLE_HANDLER(mco_ProcedureInfo, proc);
 };

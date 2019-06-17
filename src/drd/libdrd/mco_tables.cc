@@ -32,6 +32,43 @@ struct ProcedureAdditionInfo {
         } \
     } while (false)
 
+Span<const char> mco_ProcedureInfo::ActivitiesToStr(Span<char> out_buf) const
+{
+    Size offset = 0;
+    if (RG_LIKELY(out_buf.len)) {
+        uint8_t value = activities;
+
+        for (int i = 0; value && offset < out_buf.len - 1; i++) {
+            out_buf[offset] = '0' + i;
+            offset += (value & 0x1);
+            value >>= 1;
+        }
+
+        out_buf[offset] = 0;
+    }
+
+    return MakeSpan(out_buf.ptr, offset);
+}
+
+Span<const char> mco_ProcedureInfo::ExtensionsToStr(Span<char> out_buf) const
+{
+    Size offset = 0;
+    if (extensions > 1) {
+        uint32_t value = extensions >> 1;
+
+        for (int i = 1; offset < out_buf.len && value; i++) {
+            if (value & 0x1) {
+                offset += Fmt(out_buf.Take(offset, out_buf.len - offset), "-%1,", FmtArg(i).Pad0(-2)).len;
+            }
+            value >>= 1;
+        }
+
+        out_buf[--offset] = 0;
+    }
+
+    return MakeSpan(out_buf.ptr, offset);
+}
+
 Date mco_ConvertDate1980(uint16_t days)
 {
     static const int base_days = Date(1979, 12, 31).ToJulianDays();
