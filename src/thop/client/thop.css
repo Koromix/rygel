@@ -135,7 +135,7 @@ form button, form input[type=submit] {
 
     /* Session */
     #side_bar .session {
-        padding: 8px 2px 0 2px;
+        padding: 6px 2px 0 2px;
         text-align: center;
         font-size: 0.8em;
     }
@@ -230,7 +230,7 @@ form button, form input[type=submit] {
         top: 30px;
         box-sizing: border-box;
         width: 100vw;
-        padding: 1em;
+        padding: 6px 10px 4px 10px;
         margin: 0;
         background: #eeeeee;
         z-index: 1;
