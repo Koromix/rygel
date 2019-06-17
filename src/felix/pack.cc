@@ -150,7 +150,7 @@ static bool BuildJavaScriptMap3(Span<const PackSourceInfo> sources, StreamWriter
     return true;
 }
 
-static Size PackAsset(Span<const PackSourceInfo> sources, CompressionType compression_type,
+static Size PackAsset(const PackAssetInfo &asset, CompressionType compression_type,
                       std::function<void(Span<const uint8_t> buf)> func)
 {
     Size written_len = 0;
@@ -164,7 +164,7 @@ static Size PackAsset(Span<const PackSourceInfo> sources, CompressionType compre
             buf.RemoveFrom(0);
         };
 
-        for (const PackSourceInfo &src: sources) {
+        for (const PackSourceInfo &src: asset.sources) {
             writer.Write(src.prefix);
 
             StreamReader reader(src.filename);
@@ -264,7 +264,7 @@ static const uint8_t raw_data[] = {)");
 
             PrintLn(&st, "    // %1", blob.str_name);
             Print(&st, "    ");
-            blob.len = PackAsset(asset.sources, compression_type,
+            blob.len = PackAsset(asset, compression_type,
                                  [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
             if (blob.len < 0)
                 return 1;
@@ -375,7 +375,7 @@ bool PackToFiles(Span<const PackAssetInfo> assets, const char *output_path,
 
         if (!st.Open(filename))
             return false;
-        if (PackAsset(asset.sources, compression_type,
+        if (PackAsset(asset, compression_type,
                       [&](Span<const uint8_t> buf) { st.Write(buf); }) < 0)
             return false;
         if (!st.Close())
@@ -396,6 +396,16 @@ bool PackToFiles(Span<const PackAssetInfo> assets, const char *output_path,
     }
 
     return true;
+}
+
+bool PackAssets(Span<const PackAssetInfo> assets, const char *output_path,
+                PackMode mode, CompressionType compression_type)
+{
+    switch (mode) {
+        case PackMode::C: return PackToC(assets, output_path, compression_type);
+        case PackMode::Files: return PackToFiles(assets, output_path, compression_type);
+    }
+    RG_ASSERT(false);
 }
 
 }

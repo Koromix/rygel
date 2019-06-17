@@ -17,7 +17,7 @@ enum class TargetType {
     ExternalLibrary
 };
 
-struct SourceFile {
+struct SourceFileInfo {
     const char *filename;
     SourceType type;
 };
@@ -41,7 +41,7 @@ struct Target {
 
     const char *c_pch_filename;
     const char *cxx_pch_filename;
-    HeapArray<SourceFile> sources;
+    HeapArray<SourceFileInfo> sources;
 
     HeapArray<const char *> pack_filenames;
     const char *pack_options;

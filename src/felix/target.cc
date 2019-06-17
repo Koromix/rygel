@@ -346,7 +346,7 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
             return nullptr;
 
         for (const char *src_filename: src_filenames) {
-            SourceFile src = {};
+            SourceFileInfo src = {};
 
             Span<const char> extension = GetPathExtension(src_filename);
             if (extension == ".c") {
@@ -414,11 +414,11 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
         return TestStr(lib1, lib2);
     }) - target->libraries.begin());
     std::sort(target->sources.begin(), target->sources.end(),
-              [](const SourceFile &src1, const SourceFile &src2) {
+              [](const SourceFileInfo &src1, const SourceFileInfo &src2) {
         return CmpStr(src1.filename, src2.filename) < 0;
     });
     target->sources.RemoveFrom(std::unique(target->sources.begin(), target->sources.end(),
-                                           [](const SourceFile &src1, const SourceFile &src2) {
+                                           [](const SourceFileInfo &src1, const SourceFileInfo &src2) {
         return TestStr(src1.filename, src2.filename);
     }) - target->sources.begin());
 
