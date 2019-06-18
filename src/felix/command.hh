@@ -67,8 +67,6 @@ private:
     int64_t GetFileModificationTime(const char *filename);
 };
 
-bool ExecuteCommandLine(const char *cmd_line, HeapArray<char> *out_buf, int *out_code);
-
 bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose);
 
 }
