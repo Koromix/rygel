@@ -3205,6 +3205,11 @@ enum class OpenFileMode {
 
 FILE *OpenFile(const char *path, OpenFileMode mode);
 
+bool ExecuteCommandLine(const char *cmd_line,
+                        std::function<void(Span<char> buf)> out_func, int *out_code);
+bool ExecuteCommandLine(const char *cmd_line, Size max_len,
+                        HeapArray<char> *out_buf, int *out_code);
+
 void WaitForDelay(int64_t delay);
 bool WaitForConsoleInterruption(int64_t delay = -1);
 

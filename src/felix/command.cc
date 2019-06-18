@@ -2,21 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#ifdef _WIN32
-    #define WIN32_LEAN_AND_MEAN
-    #ifndef NOMINMAX
-        #define NOMINMAX
-    #endif
-    #include <windows.h>
-#else
-    #include <fcntl.h>
-    #include <spawn.h>
-    #include <sys/stat.h>
-    #include <sys/types.h>
-    #include <sys/wait.h>
+#ifndef _WIN32
     #include <unistd.h>
-
-    extern char **environ;
 #endif
 
 #include "../libcc/libcc.hh"
@@ -412,149 +399,6 @@ int64_t BuildSetBuilder::GetFileModificationTime(const char *filename)
     return *ret.first;
 }
 
-bool ExecuteCommandLine(const char *cmd_line, HeapArray<char> *out_buf, int *out_code)
-{
-#ifdef _WIN32
-    STARTUPINFO startup_info = {};
-
-    // Create read pipe
-    HANDLE out_pipe[2];
-    if (!CreatePipe(&out_pipe[0], &out_pipe[1], nullptr, 0)) {
-        LogError("Failed to create pipe: %1", Win32ErrorString());
-        return false;
-    }
-    RG_DEFER { CloseHandle(out_pipe[0]); };
-
-    // Start process
-    HANDLE process_handle;
-    {
-        RG_DEFER {
-            CloseHandle(out_pipe[1]);
-
-            if (startup_info.hStdOutput) {
-                CloseHandle(startup_info.hStdOutput);
-            }
-            if (startup_info.hStdError) {
-                CloseHandle(startup_info.hStdError);
-            }
-        };
-
-        if (!DuplicateHandle(GetCurrentProcess(), out_pipe[1], GetCurrentProcess(),
-                             &startup_info.hStdOutput, 0, TRUE, DUPLICATE_SAME_ACCESS) ||
-            !DuplicateHandle(GetCurrentProcess(), out_pipe[1], GetCurrentProcess(),
-                             &startup_info.hStdError, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
-            LogError("Failed to duplicate handle: %1", Win32ErrorString());
-            return false;
-        }
-        startup_info.dwFlags |= STARTF_USESTDHANDLES;
-
-        PROCESS_INFORMATION process_info = {};
-        if (!CreateProcessA(nullptr, const_cast<char *>(cmd_line), nullptr, nullptr, TRUE, 0,
-                            nullptr, nullptr, &startup_info, &process_info)) {
-            LogError("Failed to start process: %1", Win32ErrorString());
-            return false;
-        }
-
-        process_handle = process_info.hProcess;
-        CloseHandle(process_info.hThread);
-    }
-    RG_DEFER { CloseHandle(process_handle); };
-
-    // Read process output
-    for (;;) {
-        out_buf->Grow(1024);
-
-        DWORD read_len = 0;
-        if (!::ReadFile(out_pipe[0], out_buf->end(), 1024, &read_len, nullptr)) {
-            if (GetLastError() != ERROR_BROKEN_PIPE) {
-                LogError("Failed to read process output: %1", Win32ErrorString());
-            }
-            break;
-        }
-
-        out_buf->len += read_len;
-    }
-
-    // Wait for process exit
-    DWORD exit_code;
-    if (WaitForSingleObject(process_handle, INFINITE) != WAIT_OBJECT_0) {
-        LogError("WaitForSingleObject() failed: %1", Win32ErrorString());
-        return false;
-    }
-    if (!GetExitCodeProcess(process_handle, &exit_code)) {
-        LogError("GetExitCodeProcess() failed: %1", Win32ErrorString());
-        return false;
-    }
-
-    *out_code = (int)exit_code;
-    return true;
-#else
-    int out_pfd[2];
-    if (pipe2(out_pfd, O_CLOEXEC) < 0) {
-        LogError("Failed to create pipe: %1", strerror(errno));
-        return false;
-    }
-    RG_DEFER { close(out_pfd[0]); };
-
-    // Start process
-    pid_t pid;
-    {
-        RG_DEFER { close(out_pfd[1]); };
-
-        posix_spawn_file_actions_t file_actions;
-        if ((errno = posix_spawn_file_actions_init(&file_actions))) {
-            LogError("Failed to set up standard process descriptors: %1", strerror(errno));
-            return false;
-        }
-        RG_DEFER { posix_spawn_file_actions_destroy(&file_actions); };
-
-        if ((errno = posix_spawn_file_actions_adddup2(&file_actions, out_pfd[1], STDOUT_FILENO)) ||
-                (errno = posix_spawn_file_actions_adddup2(&file_actions, out_pfd[1], STDERR_FILENO))) {
-            LogError("Failed to set up standard process descriptors: %1", strerror(errno));
-            return false;
-        }
-
-        const char *argv[] = {"sh", "-c", cmd_line, nullptr};
-        if ((errno = posix_spawn(&pid, "/bin/sh", &file_actions, nullptr,
-                                 const_cast<char **>(argv), environ))) {
-            LogError("Failed to start process: %1", strerror(errno));
-            return false;
-        }
-    }
-
-    // Read process output
-    for (;;) {
-        out_buf->Grow(1024);
-
-        ssize_t read_len = RG_POSIX_RESTART_EINTR(read(out_pfd[0], out_buf->end(), 1024));
-        if (read_len < 0) {
-            LogError("Failed to read process output: %1", strerror(errno));
-            break;
-        } else if (!read_len) {
-            break;
-        }
-
-        out_buf->len += (Size)read_len;
-    }
-
-    // Wait for process exit
-    int status;
-    if (RG_POSIX_RESTART_EINTR(waitpid(pid, &status, 0)) < 0) {
-        LogError("Failed to wait for process exit: %1", strerror(errno));
-        return false;
-    }
-
-    if (WIFSIGNALED(status)) {
-        *out_code = 128 + WTERMSIG(status);
-    } else if (WIFEXITED(status)) {
-        *out_code = WEXITSTATUS(status);
-    } else {
-        *out_code = -1;
-    }
-    return true;
-#endif
-}
-
 bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
 {
     Async async;
@@ -578,7 +422,7 @@ bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
             // Run command
             HeapArray<char> output;
             int exit_code;
-            if (!ExecuteCommandLine(cmd.cmd, &output, &exit_code))
+            if (!ExecuteCommandLine(cmd.cmd, Megabytes(1), &output, &exit_code))
                 return false;
 
             // Print command output
