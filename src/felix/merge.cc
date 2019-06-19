@@ -69,6 +69,8 @@ bool LoadMergeRules(const char *filename, MergeRuleSet *out_set)
                         LogError("Invalid SourceMap value '%1'", prop.value);
                         valid = false;
                     }
+                } else if (prop.key == "TransformCommand") {
+                    rule->transform_cmd = DuplicateString(prop.value, &out_set->str_alloc).ptr;
                 } else if (prop.key == "Include") {
                     while (prop.value.len) {
                         Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
@@ -159,32 +161,41 @@ void ResolveAssets(Span<const char *const> filenames, int strip_count,
         src.filename = filename;
         src.name = StripDirectoryComponents(filename, strip_count);
 
+        bool include_raw_file;
         if (rule) {
             InitSourceMergeData(&src, rule->merge_mode, &out_set->str_alloc);
 
             Size asset_idx = merge_map.FindValue(rule, -1);
             if (asset_idx >= 0) {
-                out_set->assets[asset_idx].sources.Append(src);
+                PackAssetInfo *asset = &out_set->assets[asset_idx];
+                asset->sources.Append(src);
+
+                include_raw_file = (asset->source_map_type != SourceMapType::None);
             } else {
                 merge_map.Append(rule, out_set->assets.len);
 
                 PackAssetInfo asset = {};
                 asset.name = rule->name;
-                asset.source_map_type = rule->source_map_type;
-                // TODO: Solve string ownership problems
-                asset.transform_cmd = rule->transform_cmd;
-                if (asset.source_map_type != SourceMapType::None && asset.transform_cmd) {
-                    LogError("Ignoring source map for transformed files");
-                    asset.source_map_type = SourceMapType::None;
+                if (rule->source_map_type != SourceMapType::None) {
+                    if (!rule->transform_cmd) {
+                        asset.source_map_type = rule->source_map_type;
+                        asset.source_map_name = Fmt(&out_set->str_alloc, "%1.map", rule->name).ptr;
+                    } else {
+                        LogError("Ignoring source map for transformed asset '%1'", asset.name);
+                    }
                 }
-                if (asset.source_map_type != SourceMapType::None) {
-                    asset.source_map_name = Fmt(&out_set->str_alloc, "%1.map", rule->name).ptr;
+                if (rule->transform_cmd) {
+                    asset.transform_cmd = DuplicateString(rule->transform_cmd, &out_set->str_alloc).ptr;
                 }
                 out_set->assets.Append(asset)->sources.Append(src);
+
+                include_raw_file = (asset.source_map_type != SourceMapType::None);
             }
+        } else {
+            include_raw_file = true;
         }
 
-        if (!rule || rule->source_map_type != SourceMapType::None) {
+        if (include_raw_file) {
             InitSourceMergeData(&src, MergeMode::Naive, &out_set->str_alloc);
 
             PackAssetInfo asset = {};
