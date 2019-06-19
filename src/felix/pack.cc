@@ -172,7 +172,7 @@ static Size PackAsset(const PackAssetInfo &asset, CompressionType compression_ty
                 uint8_t read_buf[128 * 1024];
                 Size read_len = reader.Read(RG_SIZE(read_buf), read_buf);
                 if (read_len < 0)
-                    return false;
+                    return -1;
 
                 RG_ASSERT(writer.Write(read_buf, read_len));
                 flush_buffer();
@@ -246,7 +246,7 @@ bool PackToC(Span<const PackAssetInfo> assets, const char *output_path,
         st.Open(stdout, "<stdout>");
     }
     if (st.error)
-        return 1;
+        return false;
 
     PrintLn(&st, CodePrefix);
 
@@ -267,7 +267,7 @@ static const uint8_t raw_data[] = {)");
             blob.len = PackAsset(asset, compression_type,
                                  [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
             if (blob.len < 0)
-                return 1;
+                return false;
             PrintLn(&st);
 
             if (asset.source_map_name) {
@@ -282,7 +282,7 @@ static const uint8_t raw_data[] = {)");
                 blob_map.len = PackSourceMap(asset.sources, asset.source_map_type, compression_type,
                                              [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
                 if (blob_map.len < 0)
-                    return 1;
+                    return false;
                 PrintLn(&st);
 
                 blobs.Append(blob);
