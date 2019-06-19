@@ -422,7 +422,7 @@ bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
             // Run command
             HeapArray<char> output;
             int exit_code;
-            if (!ExecuteCommandLine(cmd.cmd, Megabytes(1), &output, &exit_code))
+            if (!ExecuteCommandLine(cmd.cmd, {}, Megabytes(1), &output, &exit_code))
                 return false;
 
             // Print command output

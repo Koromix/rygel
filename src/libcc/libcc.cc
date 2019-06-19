@@ -2163,7 +2163,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_buf,
 }
 #endif
 
-bool ExecuteCommandLine(const char *cmd_line, Size max_len,
+bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_buf, Size max_len,
                         HeapArray<char> *out_buf, int *out_code)
 {
     Size start_len = out_buf->len;
@@ -2172,7 +2172,7 @@ bool ExecuteCommandLine(const char *cmd_line, Size max_len,
     // Don't f*ck up the log
     bool warned = false;
 
-    bool success = ExecuteCommandLine(cmd_line, {}, [&](Span<char> buf) {
+    bool success = ExecuteCommandLine(cmd_line, in_buf, [&](Span<char> buf) {
         if (max_len < 0 || out_buf->len - start_len <= max_len - buf.len) {
             out_buf->Append(buf);
         } else if (!warned) {
