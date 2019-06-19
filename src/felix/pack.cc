@@ -188,16 +188,49 @@ static Size PackAsset(const PackAssetInfo &asset, CompressionType compression_ty
     return written_len;
 }
 
-static Size PackSourceMap(Span<const PackSourceInfo> sources, SourceMapType source_map_type,
-                          CompressionType compression_type, std::function<void(Span<const uint8_t> buf)> func)
+static Size TransformAndPackAsset(const PackAssetInfo &asset, CompressionType compression_type,
+                                  std::function<void(Span<const uint8_t> buf)> func)
 {
+    if (asset.transform_cmd) {
+        // FIXME: Implement some kind of stream API for external process input / output
+
+        HeapArray<uint8_t> merge_buf;
+        if (!PackAsset(asset, compression_type,
+                       [&](Span<const uint8_t> buf) { merge_buf.Append(buf); }))
+            return -1;
+
+        int code;
+        Size asset_len = 0;
+        bool success = ExecuteCommandLine(asset.transform_cmd, merge_buf,
+                                          [&](Span<const uint8_t> buf) {
+            asset_len += buf.len;
+            func(buf);
+        }, &code);
+        if (!success)
+            return -1;
+        if (code) {
+            LogError("Transform command '%1' failed with code: %2", asset.transform_cmd, code);
+            return -1;
+        }
+
+        return asset_len;
+    } else {
+        return PackAsset(asset, compression_type, func);
+    }
+}
+
+static Size PackSourceMap(const PackAssetInfo &asset, CompressionType compression_type,
+                          std::function<void(Span<const uint8_t> buf)> func)
+{
+    RG_ASSERT_DEBUG(!asset.transform_cmd);
+
     HeapArray<uint8_t> buf;
     StreamWriter writer(&buf, nullptr, compression_type);
 
-    switch (source_map_type) {
-        case SourceMapType::None: {} break;
+    switch (asset.source_map_type) {
+        case SourceMapType::None: { RG_ASSERT(false); } break;
         case SourceMapType::JSv3: {
-            if (!BuildJavaScriptMap3(sources, &writer))
+            if (!BuildJavaScriptMap3(asset.sources, &writer))
                 return false;
         } break;
     }
@@ -264,8 +297,8 @@ static const uint8_t raw_data[] = {)");
 
             PrintLn(&st, "    // %1", blob.str_name);
             Print(&st, "    ");
-            blob.len = PackAsset(asset, compression_type,
-                                 [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
+            blob.len = TransformAndPackAsset(asset, compression_type,
+                                             [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
             if (blob.len < 0)
                 return false;
             PrintLn(&st);
@@ -279,7 +312,7 @@ static const uint8_t raw_data[] = {)");
 
                 PrintLn(&st, "    // %1", blob_map.str_name);
                 Print(&st, "    ");
-                blob_map.len = PackSourceMap(asset.sources, asset.source_map_type, compression_type,
+                blob_map.len = PackSourceMap(asset, compression_type,
                                              [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
                 if (blob_map.len < 0)
                     return false;
@@ -375,8 +408,8 @@ bool PackToFiles(Span<const PackAssetInfo> assets, const char *output_path,
 
         if (!st.Open(filename))
             return false;
-        if (PackAsset(asset, compression_type,
-                      [&](Span<const uint8_t> buf) { st.Write(buf); }) < 0)
+        if (TransformAndPackAsset(asset, compression_type,
+                                  [&](Span<const uint8_t> buf) { st.Write(buf); }) < 0)
             return false;
         if (!st.Close())
             return false;
@@ -387,7 +420,7 @@ bool PackToFiles(Span<const PackAssetInfo> assets, const char *output_path,
 
             if (!st.Open(map_filename))
                 return false;
-            if (PackSourceMap(asset.sources, asset.source_map_type, compression_type,
+            if (PackSourceMap(asset, compression_type,
                               [&](Span<const uint8_t> buf) { st.Write(buf); }) < 0)
                 return false;
             if (!st.Close())
