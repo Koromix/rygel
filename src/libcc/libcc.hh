@@ -3205,7 +3205,7 @@ enum class OpenFileMode {
 
 FILE *OpenFile(const char *path, OpenFileMode mode);
 
-bool ExecuteCommandLine(const char *cmd_line,
+bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_buf,
                         std::function<void(Span<char> buf)> out_func, int *out_code);
 bool ExecuteCommandLine(const char *cmd_line, Size max_len,
                         HeapArray<char> *out_buf, int *out_code);
