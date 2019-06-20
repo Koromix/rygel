@@ -17,8 +17,8 @@ int RunPack(Span<const char *> arguments)
     const char *output_path = nullptr;
     int strip_count = INT_MAX;
     CompressionType compression_type = CompressionType::None;
+    unsigned int merge_flags = 0;
     const char *merge_file = nullptr;
-    bool source_maps = false;
     HeapArray<const char *> filenames;
 
     static const auto PrintUsage = [=](FILE *fp) {
@@ -26,7 +26,7 @@ int RunPack(Span<const char *> arguments)
 R"(Usage: felix pack <filename> ...
 
 Options:
-    -m, --mode <mode>            Set output file type
+    -t, --type <type>            Set output file type
                                  (default: C)
     -O, --output_file <file>     Redirect output to file or directory
 
@@ -36,10 +36,10 @@ Options:
                                  (default: %2)
 
     -M, --merge_file <file>      Load merge rules from file
-        --source_map             Generate source maps when applicable
+    -m, --merge_option <options> Merge options (see below)
 
-Available modes:)", PackModeNames[(int)mode],
-                         CompressionTypeNames[(int)compression_type]);
+Available output types:)", PackModeNames[(int)mode],
+                           CompressionTypeNames[(int)compression_type]);
         for (const char *gen: PackModeNames) {
             PrintLn(fp, "    %1", gen);
         }
@@ -47,6 +47,11 @@ Available modes:)", PackModeNames[(int)mode],
 Available compression types:)");
         for (const char *type: CompressionTypeNames) {
             PrintLn(fp, "    %1", type);
+        }
+        PrintLn(fp, R"(
+Available merge options:)");
+        for (const char *option: MergeFlagNames) {
+            PrintLn(fp, "    %1", option);
         }
     };
 
@@ -58,7 +63,7 @@ Available compression types:)");
             if (opt.Test("--help")) {
                 PrintUsage(stdout);
                 return 0;
-            } else if (opt.Test("-m", "--mode", OptionType::Value)) {
+            } else if (opt.Test("-t", "--type", OptionType::Value)) {
                 const char *const *name = FindIf(PackModeNames,
                                                  [&](const char *name) { return TestStr(name, opt.current_value); });
                 if (!name) {
@@ -86,8 +91,19 @@ Available compression types:)");
                 compression_type = (CompressionType)(name - CompressionTypeNames);
             } else if (opt.Test("-M", "--merge_file", OptionType::Value)) {
                 merge_file = opt.current_value;
-            } else if (opt.Test("--source_map")) {
-                source_maps = true;
+            } else if (opt.Test("-m", "--merge_option", OptionType::Value)) {
+                const char *flags_str = opt.current_value;
+
+                while (flags_str[0]) {
+                    Span<const char> flag = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
+                    const char *const *name = FindIf(MergeFlagNames,
+                                                     [&](const char *name) { return TestStr(name, flag); });
+                    if (!name) {
+                        LogError("Unknown merge flag '%1'", flag);
+                        return 1;
+                    }
+                    merge_flags |= 1u << (name - MergeFlagNames);
+                }
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -109,13 +125,8 @@ Available compression types:)");
 
     // Load merge rules
     MergeRuleSet merge_rule_set;
-    if (merge_file && !LoadMergeRules(merge_file, &merge_rule_set))
+    if (merge_file && !LoadMergeRules(merge_file, merge_flags, &merge_rule_set))
         return 1;
-    if (!source_maps) {
-        for (MergeRule &rule: merge_rule_set.rules) {
-            rule.source_map_type = SourceMapType::None;
-        }
-    }
 
     // Resolve merge rules
     PackAssetSet asset_set;

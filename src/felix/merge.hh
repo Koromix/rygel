@@ -8,6 +8,15 @@
 
 namespace RG {
 
+enum class MergeFlag {
+    SourceMap = 1 << 0,
+    RunTransform = 1 << 1
+};
+static const char *const MergeFlagNames[] = {
+    "SourceMap",
+    "RunTransform"
+};
+
 enum class MergeMode {
     Naive,
     CSS,
@@ -57,7 +66,7 @@ struct PackAssetSet {
     BlockAllocator str_alloc;
 };
 
-bool LoadMergeRules(const char *filename, MergeRuleSet *out_set);
+bool LoadMergeRules(const char *filename, unsigned int flags, MergeRuleSet *out_set);
 
 void ResolveAssets(Span<const char *const> filenames, int strip_count,
                    Span<const MergeRule> rules, PackAssetSet *out_set);

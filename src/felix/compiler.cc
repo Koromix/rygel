@@ -139,9 +139,15 @@ static void AppendPackCommandLine(Span<const char *const> pack_filenames, BuildM
     Fmt(out_buf, "\"%1\" pack", GetApplicationExecutable());
 #endif
 
-    if (build_mode == BuildMode::Debug || build_mode == BuildMode::DebugFast) {
-        Fmt(out_buf, " --source_map");
+    switch (build_mode) {
+        case BuildMode::Debug:
+        case BuildMode::DebugFast: { Fmt(out_buf, " -m SourceMap"); } break;
+        case BuildMode::Fast:
+        case BuildMode::StaticFast:
+        case BuildMode::LTO:
+        case BuildMode::StaticLTO: { Fmt(out_buf, " -m RunTransform"); } break;
     }
+
     if (pack_options) {
         Fmt(out_buf, " %1", pack_options);
     }
