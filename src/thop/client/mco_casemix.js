@@ -57,7 +57,7 @@ let mco_casemix = {};
         let ghm_roots = catalog.update('mco_ghm_roots').concepts;
         if (['durations', 'results'].includes(route.view) && !route.ghm_root && ghm_roots.length)
             route.ghm_root = ghm_roots[0].ghm_root;
-        if (unspecified && settings.structures.length && ghm_roots.length) {
+        if (unspecified && settings.structures && settings.structures.length && ghm_roots.length) {
             if (!route.units.length && settings.structures[route.structure])
                 route.units = settings.structures[route.structure].entities.map(function(ent) { return ent.unit; }).sort();
             if (!route.ghm_roots.length)
