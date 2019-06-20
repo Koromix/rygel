@@ -20,7 +20,7 @@ static MergeMode FindDefaultMergeMode(const char *filename)
     }
 }
 
-bool LoadMergeRules(const char *filename, MergeRuleSet *out_set)
+bool LoadMergeRules(const char *filename, unsigned int flags, MergeRuleSet *out_set)
 {
     RG_DEFER_NC(out_guard, len = out_set->rules.len) { out_set->rules.RemoveFrom(len); };
 
@@ -69,15 +69,25 @@ bool LoadMergeRules(const char *filename, MergeRuleSet *out_set)
                         LogError("Invalid SourceMap value '%1'", prop.value);
                         valid = false;
                     }
+
+                    if (!(flags & (int)MergeFlag::SourceMap)) {
+                        rule->source_map_type = SourceMapType::None;
+                    }
                 } else if (prop.key == "TransformCommand") {
-                    rule->transform_cmd = DuplicateString(prop.value, &out_set->str_alloc).ptr;
+                    if (flags & (int)MergeFlag::RunTransform) {
+                        rule->transform_cmd = DuplicateString(prop.value, &out_set->str_alloc).ptr;
+                    }
                 } else if (prop.key == "TransformCommand_Win32") {
 #ifdef _WIN32
-                    rule->transform_cmd = DuplicateString(prop.value, &out_set->str_alloc).ptr;
+                    if (flags & (int)MergeFlag::RunTransform) {
+                        rule->transform_cmd = DuplicateString(prop.value, &out_set->str_alloc).ptr;
+                    }
 #endif
                 } else if (prop.key == "TransformCommand_POSIX") {
 #ifndef _WIN32
-                    rule->transform_cmd = DuplicateString(prop.value, &out_set->str_alloc).ptr;
+                    if (flags & (int)MergeFlag::RunTransform) {
+                        rule->transform_cmd = DuplicateString(prop.value, &out_set->str_alloc).ptr;
+                    }
 #endif
                 } else if (prop.key == "Include") {
                     while (prop.value.len) {
