@@ -682,6 +682,9 @@ struct Span {
         sub.len = sub_len;
         return sub;
     }
+
+    template <typename U>
+    Span<U> CastAs() const { return Span<U>((U *)ptr, len); }
 };
 
 // Use strlen() to build Span<const char> instead of the template-based
@@ -729,6 +732,9 @@ struct Span<const char> {
         sub.len = sub_len;
         return sub;
     }
+
+    template <typename U>
+    Span<U> CastAs() const { return Span<U>((U *)ptr, len); }
 };
 
 template <typename T>
@@ -2492,7 +2498,7 @@ public:
     bool Close();
 
     bool Write(Span<const uint8_t> buf);
-    bool Write(Span<const char> buf) { return Write(MakeSpan((const uint8_t *)buf.ptr, buf.len)); }
+    bool Write(Span<const char> buf) { return Write(buf.CastAs<const uint8_t>()); }
     bool Write(char buf) { return Write(MakeSpan(&buf, 1)); }
     bool Write(const void *buf, Size len) { return Write(MakeSpan((const uint8_t *)buf, len)); }
 
@@ -3205,10 +3211,22 @@ enum class OpenFileMode {
 
 FILE *OpenFile(const char *path, OpenFileMode mode);
 
-bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_buf,
-                        std::function<void(Span<char> buf)> out_func, int *out_code);
-bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_buf, Size max_len,
-                        HeapArray<char> *out_buf, int *out_code);
+bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
+                        std::function<void(Span<uint8_t> buf)> out_func, int *out_code);
+bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf, Size max_len,
+                        HeapArray<uint8_t> *out_buf, int *out_code);
+static inline bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_buf,
+                                      std::function<void(Span<char> buf)> out_func, int *out_code)
+{
+    return ExecuteCommandLine(cmd_line, in_buf.CastAs<const uint8_t>(),
+                              [&](Span<uint8_t> buf) { out_func(buf.CastAs<char>()); }, out_code);
+}
+static inline bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_buf, Size max_len,
+                                      HeapArray<char> *out_buf, int *out_code)
+{
+    return ExecuteCommandLine(cmd_line, in_buf.CastAs<const uint8_t>(), max_len,
+                              (HeapArray<uint8_t> *)out_buf, out_code);
+}
 
 void WaitForDelay(int64_t delay);
 bool WaitForConsoleInterruption(int64_t delay = -1);

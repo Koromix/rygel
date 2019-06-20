@@ -1862,8 +1862,8 @@ static bool CreateOverlappedPipe(bool overlap0, bool overlap1, HANDLE *out_h0, H
     return true;
 }
 
-bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_buf,
-                        std::function<void(Span<char> buf)> out_func, int *out_code)
+bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
+                        std::function<void(Span<uint8_t> buf)> out_func, int *out_code)
 {
     STARTUPINFO startup_info = {};
 
@@ -1950,7 +1950,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_buf,
             CloseHandleSafe(&in_pipe[1]);
         }
 
-        char read_buf[1024];
+        uint8_t read_buf[1024];
         DWORD read_len = 0;
         bool read_pending = false;
         OVERLAPPED read_ov = {};
@@ -2025,8 +2025,8 @@ static void CloseDescriptorSafe(int *fd_ptr)
     *fd_ptr = -1;
 }
 
-bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_buf,
-                        std::function<void(Span<char> buf)> out_func, int *out_code)
+bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
+                        std::function<void(Span<uint8_t> buf)> out_func, int *out_code)
 {
     // Create read and write pipes
     int in_pfd[2] = {-1, -1};
@@ -2124,7 +2124,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_buf,
             LogError("Failed to poll process output");
             break;
         } else if (out_revents & POLLIN) {
-            char read_buf[1024];
+            uint8_t read_buf[1024];
             ssize_t read_len = read(out_pfd[0], read_buf, RG_SIZE(read_buf));
 
             if (read_len > 0) {
@@ -2163,8 +2163,8 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_buf,
 }
 #endif
 
-bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_buf, Size max_len,
-                        HeapArray<char> *out_buf, int *out_code)
+bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf, Size max_len,
+                        HeapArray<uint8_t> *out_buf, int *out_code)
 {
     Size start_len = out_buf->len;
     RG_DEFER_N(out_guard) { out_buf->RemoveFrom(start_len); };
@@ -2172,7 +2172,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_buf, Size max_
     // Don't f*ck up the log
     bool warned = false;
 
-    bool success = ExecuteCommandLine(cmd_line, in_buf, [&](Span<char> buf) {
+    bool success = ExecuteCommandLine(cmd_line, in_buf, [&](Span<uint8_t> buf) {
         if (max_len < 0 || out_buf->len - start_len <= max_len - buf.len) {
             out_buf->Append(buf);
         } else if (!warned) {
