@@ -71,6 +71,14 @@ bool LoadMergeRules(const char *filename, MergeRuleSet *out_set)
                     }
                 } else if (prop.key == "TransformCommand") {
                     rule->transform_cmd = DuplicateString(prop.value, &out_set->str_alloc).ptr;
+                } else if (prop.key == "TransformCommand_Win32") {
+#ifdef _WIN32
+                    rule->transform_cmd = DuplicateString(prop.value, &out_set->str_alloc).ptr;
+#endif
+                } else if (prop.key == "TransformCommand_POSIX") {
+#ifndef _WIN32
+                    rule->transform_cmd = DuplicateString(prop.value, &out_set->str_alloc).ptr;
+#endif
                 } else if (prop.key == "Include") {
                     while (prop.value.len) {
                         Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
