@@ -120,14 +120,14 @@ let thop = (function() {
         let session_els = HasUsers ? queryAll('.session') : [];
         let menu_el = query('#side_menu');
 
-        for (let el of session_els) {
+        session_els.forEach(el => {
             render(html`
                 ${!user.isConnected() ?
                     html`<a href="${user.routeToUrl().url}">Se connecter</a>` : html``}
                 ${user.isConnected() ?
                     html`${user.getUsername()} (<a href="${user.routeToUrl().url}">changer</a>, <a href="#" @click=${e => { user.logout(); e.preventDefault(); }}>déconnexion</a>)` : html``}
             `, el);
-        }
+        });
 
         let prev_category = null;
         render(links.map(link => {
