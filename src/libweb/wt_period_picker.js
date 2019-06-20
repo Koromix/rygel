@@ -9,6 +9,8 @@ let wt_period_picker = (function() {
 
         this.changeHandler = null;
 
+        let root_el;
+
         let limit_dates = [new Date(1900, 1, 1), new Date(2100, 1, 1)];
         let current_dates = limit_dates.map(date => new Date(date));
 
