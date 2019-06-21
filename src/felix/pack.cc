@@ -150,73 +150,80 @@ static bool BuildJavaScriptMap3(Span<const PackSourceInfo> sources, StreamWriter
     return true;
 }
 
+static bool MergeAssetSourceFiles(Span<const PackSourceInfo> sources,
+                                  std::function<void(Span<const uint8_t> buf)> func)
+{
+    for (const PackSourceInfo &src: sources) {
+        func(Span<const char>(src.prefix).CastAs<const uint8_t>());
+
+        StreamReader reader(src.filename);
+        while (!reader.eof) {
+            LocalArray<uint8_t, 16384> read_buf;
+            read_buf.len = reader.Read(read_buf.Available(), read_buf.data);
+            if (read_buf.len < 0)
+                return false;
+
+            func(read_buf);
+        }
+
+        func(Span<const char>(src.suffix).CastAs<const uint8_t>());
+    }
+
+    return true;
+}
+
 static Size PackAsset(const PackAssetInfo &asset, CompressionType compression_type,
                       std::function<void(Span<const uint8_t> buf)> func)
 {
+    HeapArray<uint8_t> compressed_buf;
+    StreamWriter compressor(&compressed_buf, nullptr, compression_type);
+
     Size written_len = 0;
-    {
-        HeapArray<uint8_t> buf;
-        StreamWriter writer(&buf, nullptr, compression_type);
+    const auto flush_compressor_buffer = [&]() {
+        func(compressed_buf);
+        written_len += compressed_buf.len;
+        compressed_buf.RemoveFrom(0);
+    };
 
-        const auto flush_buffer = [&]() {
-            written_len += buf.len;
-            func(buf);
-            buf.RemoveFrom(0);
-        };
-
-        for (const PackSourceInfo &src: asset.sources) {
-            writer.Write(src.prefix);
-
-            StreamReader reader(src.filename);
-            while (!reader.eof) {
-                uint8_t read_buf[128 * 1024];
-                Size read_len = reader.Read(RG_SIZE(read_buf), read_buf);
-                if (read_len < 0)
-                    return -1;
-
-                RG_ASSERT(writer.Write(read_buf, read_len));
-                flush_buffer();
-            }
-
-            writer.Write(src.suffix);
-        }
-
-        RG_ASSERT(writer.Close());
-        flush_buffer();
-    }
-
-    return written_len;
-}
-
-static Size TransformAndPackAsset(const PackAssetInfo &asset, CompressionType compression_type,
-                                  std::function<void(Span<const uint8_t> buf)> func)
-{
     if (asset.transform_cmd) {
         // FIXME: Implement some kind of stream API for external process input / output
-
         HeapArray<uint8_t> merge_buf;
-        if (!PackAsset(asset, compression_type,
-                       [&](Span<const uint8_t> buf) { merge_buf.Append(buf); }))
-            return -1;
-
-        int code;
-        Size asset_len = 0;
-        bool success = ExecuteCommandLine(asset.transform_cmd, merge_buf,
-                                          [&](Span<const uint8_t> buf) {
-            asset_len += buf.len;
-            func(buf);
-        }, &code);
-        if (!success)
-            return -1;
-        if (code) {
-            LogError("Transform command '%1' failed with code: %2", asset.transform_cmd, code);
-            return -1;
+        {
+            bool success = MergeAssetSourceFiles(asset.sources, [&](Span<const uint8_t> buf) {
+                merge_buf.Append(buf);
+            });
+            if (!success)
+                return -1;
         }
 
-        return asset_len;
+        // Execute transform command
+        {
+            int code;
+            bool success = ExecuteCommandLine(asset.transform_cmd, merge_buf,
+                                              [&](Span<const uint8_t> buf) {
+                compressor.Write(buf);
+                flush_compressor_buffer();
+            }, &code);
+            if (!success)
+                return -1;
+            if (code) {
+                LogError("Transform command '%1' failed with code: %2", asset.transform_cmd, code);
+                return -1;
+            }
+        }
     } else {
-        return PackAsset(asset, compression_type, func);
+        bool success = MergeAssetSourceFiles(asset.sources, [&](Span<const uint8_t> buf) {
+            compressor.Write(buf);
+            flush_compressor_buffer();
+        });
+        if (!success)
+            return -1;
     }
+
+    RG_ASSERT_DEBUG(compressor.Close());
+    flush_compressor_buffer();
+
+    return written_len;
 }
 
 static Size PackSourceMap(const PackAssetInfo &asset, CompressionType compression_type,
@@ -297,8 +304,8 @@ static const uint8_t raw_data[] = {)");
 
             PrintLn(&st, "    // %1", blob.str_name);
             Print(&st, "    ");
-            blob.len = TransformAndPackAsset(asset, compression_type,
-                                             [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
+            blob.len = PackAsset(asset, compression_type,
+                                 [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
             if (blob.len < 0)
                 return false;
             PrintLn(&st);
@@ -408,8 +415,8 @@ bool PackToFiles(Span<const PackAssetInfo> assets, const char *output_path,
 
         if (!st.Open(filename))
             return false;
-        if (TransformAndPackAsset(asset, compression_type,
-                                  [&](Span<const uint8_t> buf) { st.Write(buf); }) < 0)
+        if (PackAsset(asset, compression_type,
+                      [&](Span<const uint8_t> buf) { st.Write(buf); }) < 0)
             return false;
         if (!st.Close())
             return false;
