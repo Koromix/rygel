@@ -18,7 +18,7 @@ let wt_period_picker = (function() {
         let handle_els;
         let bar_el;
 
-        let grab_capture = false;
+        let grab_target;
         let grab_offset;
         let grab_diff_year;
         let grab_diff_month;
@@ -127,14 +127,27 @@ let wt_period_picker = (function() {
 
         function handleHandleDown(e)
         {
-            e.target.setPointerCapture(e.pointerId);
-            grab_capture = true;
+            if (Element.prototype.setPointerCapture) {
+                e.target.setPointerCapture(e.pointerId);
+            } else if (!grab_target) {
+                function forwardUp(e)
+                {
+                    document.body.removeEventListener('mousemove', handleHandleMove);
+                    document.body.removeEventListener('mouseup', forwardUp);
+                    handlePointerUp(e);
+                }
+
+                document.body.addEventListener('mousemove', handleHandleMove);
+                document.body.addEventListener('mouseup', forwardUp);
+            }
+
+            grab_target = e.target;
         }
 
         function handleHandleMove(e)
         {
-            if (grab_capture) {
-                let handle = e.target.parentNode;
+            if (grab_target) {
+                let handle = grab_target.parentNode;
                 let date = positionToDate(e.clientX - main_el.offsetLeft);
 
                 if (handle === handle_els[0]) {
@@ -180,8 +193,21 @@ let wt_period_picker = (function() {
 
         function handleBarDown(e)
         {
-            e.target.setPointerCapture(e.pointerId);
-            grab_capture = true;
+            if (Element.prototype.setPointerCapture) {
+                e.target.setPointerCapture(e.pointerId);
+            } else if (!grab_target) {
+                function forwardUp(e)
+                {
+                    document.body.removeEventListener('mousemove', handleBarMove);
+                    document.body.removeEventListener('mouseup', forwardUp);
+                    handlePointerUp(e);
+                }
+
+                document.body.addEventListener('mousemove', handleBarMove);
+                document.body.addEventListener('mouseup', forwardUp);
+            }
+
+            grab_target = e.target;
 
             grab_offset = e.offsetX;
             grab_diff_year = current_dates[1].getFullYear() - current_dates[0].getFullYear();
@@ -192,7 +218,7 @@ let wt_period_picker = (function() {
 
         function handleBarMove(e)
         {
-            if (grab_capture) {
+            if (grab_target) {
                 current_dates[0] = positionToDate(e.clientX - main_el.offsetLeft - grab_offset);
                 current_dates[1] = new Date(current_dates[0].getFullYear() + grab_diff_year,
                                             current_dates[0].getMonth() + grab_diff_month,
@@ -209,7 +235,7 @@ let wt_period_picker = (function() {
 
         function handlePointerUp(e)
         {
-            grab_capture = false;
+            grab_target = null;
 
             if (self.changeHandler)
                 setTimeout(() => self.changeHandler.call(self, e), 0);
@@ -217,8 +243,12 @@ let wt_period_picker = (function() {
 
         function makeMouseElement(cls, down, move)
         {
-            return html`<div class=${cls} @pointerdown=${down} @pointermove=${move}
-                             @pointerup=${handlePointerUp}></div>`;
+            if (Element.prototype.setPointerCapture) {
+                return html`<div class=${cls} @pointerdown=${down} @pointermove=${move}
+                                 @pointerup=${handlePointerUp}></div>`;
+            } else {
+                return html`<div class=${cls} @mousedown=${down}</div>`;
+            }
         }
 
         this.render = function(new_root_el) {
