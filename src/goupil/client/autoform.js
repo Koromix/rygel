@@ -125,6 +125,23 @@ function FormBuilder(root, unique_key, widgets, mem) {
         return addVariableWidget(key, render, value);
     };
 
+    this.password = function(key, label, options = {}) {
+        options = Object.assign({}, options_stack[options_stack.length - 1], options);
+
+        let id = makeID(key);
+        let value = mem.hasOwnProperty(key) ? mem[key] : options.value;
+
+        let render = errors => wrapWidget(html`
+            <label for=${id}>${label || key}</label>
+            ${createPrefixOrSuffix('af_prefix', options.prefix, value)}
+            <input id=${id} type="password" size="${options.size || 30}" .value=${value || ''}
+                   ?disabled=${options.disable} @input=${e => handleTextInput(e, key)}/>
+            ${createPrefixOrSuffix('af_suffix', options.suffix, value)}
+        `, options, errors);
+
+        return addVariableWidget(key, render, value);
+    };
+
     function handleNumberChange(e, key)
     {
         let value = parseFloat(e.target.value);
