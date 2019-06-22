@@ -13,18 +13,18 @@ function FormBuilder(root, unique_key, widgets, mem) {
     this.errors = [];
 
     this.changeHandler = e => {};
-    this.checkHandler = (form, mem) => {
+    this.validateHandler = (form, mem) => {
         let problems = [];
         if (missing_set.size)
-            problems.push('Plusieurs informations manquantes');
+            problems.push('Informations obligatoires manquantes');
         if (self.errors.length)
-            problems.push('Présence d\'erreurs');
+            problems.push('Présence d\'erreurs sur le formulaire');
 
         return problems;
     };
     this.submitHandler = null;
 
-    this.isValid = function() { return !self.checkHandler().length; };
+    this.isValid = function() { return !self.validateHandler().length; };
 
     function makeID(key) {
         return `af_var_${unique_key}_${key}`;
@@ -413,24 +413,26 @@ instead of:
         let render = () => wrapWidget(html`
             <div class="af_buttons">
                 ${buttons.map(button =>
-                    html`<button class="af_button" ?disabled=${!button[1]}
+                    html`<button class="af_button" ?disabled=${!button[1]} title=${button[2] || ''}
                                  @click=${button[1]}>${button[0]}</button>`)}
             </div>
         `, options);
 
         addWidget(render);
     };
-    this.buttons.Save = (label, options = {}) => self.buttons([
-        [label || 'Enregistrer', self.submitHandler && !self.checkHandler().length ? self.submit : null]
-    ], options);
-    this.buttons.SaveCancel = (label, options = {}) => self.buttons([
-        [label || 'Enregistrer', self.submitHandler && !self.checkHandler().length ? self.submit : null],
-        ['Annuler', self.close]
-    ], options);
-    this.buttons.OkCancel = (label, options = {}) => self.buttons([
-        [label || 'OK', self.submitHandler && !self.checkHandler().length ? self.submit : null],
-        ['Annuler', self.close]
-    ], options);
+    this.buttons.Save = (label, options = {}) => {
+        let problems = self.validateHandler();
+        return self.buttons([
+            [label || 'Enregistrer', self.submitHandler && !problems.length ? self.submit : null, problems.join('\n')]
+        ], options);
+    };
+    this.buttons.OkCancel = (label, options = {}) => {
+        let problems = self.validateHandler();
+        return self.buttons([
+            [label || 'OK', self.submitHandler && !problems.length ? self.submit : null, problems.join('\n')],
+            ['Annuler', self.close]
+        ], options);
+    };
 
     this.errorList = function(options = {}) {
         options = Object.assign({}, options_stack[options_stack.length - 1], options);
