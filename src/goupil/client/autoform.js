@@ -62,7 +62,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
         `;
     }
 
-    function addVariableWidget(key, label, options, render, value) {
+    function addVariableWidget(key, label, options, render, value, missing) {
         if (!key)
             throw new Error('Empty variable keys are not allowed');
         if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
@@ -75,7 +75,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             key: key,
             label: label,
             value: value,
-            missing: value == null || Number.isNaN(value),
+            missing: missing,
             error: msg => {
                 if (!intf.errors.length)
                     self.errors.push(intf);
@@ -84,7 +84,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
                 return intf;
             }
         });
-        if (options.mandatory && intf.missing)
+        if (options.mandatory && missing)
             missing_set.add(key);
 
         interfaces[key] = intf;
@@ -142,7 +142,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `, options, errors);
 
-        return addVariableWidget(key, label, options, render, value);
+        return addVariableWidget(key, label, options, render, value, value == null);
     };
 
     this.password = function(key, label, options = {}) {
@@ -159,7 +159,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `, options, errors);
 
-        return addVariableWidget(key, label, options, render, value);
+        return addVariableWidget(key, label, options, render, value, value == null);
     };
 
     function handleNumberChange(e, key) {
@@ -184,7 +184,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `, options, errors);
 
-        let intf = addVariableWidget(key, label, options, render, value);
+        let intf = addVariableWidget(key, label, options, render, value, Number.isNaN(value));
 
         if (value != null &&
                 (options.min !== undefined && value < options.min) ||
@@ -225,7 +225,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             </select>
         `, options, errors);
 
-        return addVariableWidget(key, label, options, render, value);
+        return addVariableWidget(key, label, options, render, value, value == null);
     };
 
     function handleChoiceChange(e, key, allow_untoggle) {
@@ -262,7 +262,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             </div>
         `, options, errors);
 
-        return addVariableWidget(key, label, options, render, value);
+        return addVariableWidget(key, label, options, render, value, value == null);
     };
 
     this.binary = function(key, label, options = {}) {
@@ -302,7 +302,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             </div>
         `, options, errors);
 
-        return addVariableWidget(key, label, options, render, value);
+        return addVariableWidget(key, label, options, render, value, value == null);
     };
 
     function handleMultiChange(e, key) {
@@ -323,6 +323,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
 
     this.multi = function(key, label, choices = [], options = {}) {
         options = Object.assign({}, options_stack[options_stack.length - 1], options);
+        choices = choices.filter(c => c != null);
 
         let id = makeID(key);
         let value;
@@ -334,15 +335,16 @@ function FormBuilder(root, unique_key, widgets, mem) {
         let render = errors => wrapWidget(html`
             <label>${label || key}</label>
             <div class="af_multi" id=${id}>
-                ${choices.filter(c => c != null).map((c, i) =>
-                    html`<input type="checkbox" id=${`${id}.${i}`} value=${stringifyValue(c[0])}
+                ${choices.map((c, idx) =>
+                    html`<input type="checkbox" id=${`${id}.${idx}`} value=${stringifyValue(c[0])}
                                 ?disabled=${options.disable} .checked=${value.includes(c[0])}
                                 @click=${e => handleMultiChange(e, key)}/>
-                         <label for=${`${id}.${i}`}>${c[1]}</label><br/>`)}
+                         <label for=${`${id}.${idx}`}>${c[1]}</label><br/>`)}
             </div>
         `, options, errors);
 
-        return addVariableWidget(key, label, options, render, value);
+        let missing = !value.length && choices.some(c => c[0] == null);
+        return addVariableWidget(key, label, options, render, value, missing);
     };
 
     this.calc = function(key, label, value, options = {}) {
