@@ -68,17 +68,17 @@
     text-align: center;
 }
 .pr_grid .lower:before {
-    content: '↘';
+    content: "↘\FE0E";
     background: #ff8888 !important;
     color: black;
 }
 .pr_grid .higher:before {
-    content: '↗';
+    content: "↗\FE0E";
     background: #a2d4b6 !important;
     color: black;
 }
 .pr_grid .neutral:before {
-    content: ' ';
+    content: " ";
     background: #d7d7d7 !important;
     color: black;
 }
