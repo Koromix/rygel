@@ -49,6 +49,8 @@ function FormBuilder(root, unique_key, widgets, mem) {
             cls += ' af_widget_error';
         if (options.disable)
             cls += ' af_widget_disable';
+        if (options.mandatory)
+            cls += ' af_widget_mandatory';
 
         return html`
             <div class=${cls}>
