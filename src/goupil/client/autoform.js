@@ -781,6 +781,7 @@ let autoform = (function() {
         editor.setTheme('ace/theme/monokai');
         editor.setShowPrintMargin(false);
         editor.setFontSize(12);
+        editor.session.setOption('useWorker', false);
         editor.session.setMode('ace/mode/javascript');
 
         editor.on('change', e => {
