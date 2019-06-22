@@ -540,6 +540,7 @@ let autoform = (function() {
     let init = false;
 
     let editor;
+    let editor_history_cache = {};
     let af_menu;
     let af_page;
 
@@ -626,6 +627,8 @@ let autoform = (function() {
             pages.splice(page_idx, 1);
             delete pages_map[page.key];
 
+            delete editor_history_cache[page.key];
+
             if (page.key === default_key)
                 default_key = null;
 
@@ -647,6 +650,8 @@ let autoform = (function() {
             pages_map = {};
             for (let page of pages)
                 pages_map[page.key] = page;
+
+            editor_history_cache = {};
 
             default_key = autoform_default.key;
             executor = null;
@@ -822,6 +827,13 @@ let autoform = (function() {
         if (page) {
             editor.setValue(page.script);
             editor.clearSelection();
+
+            let history = editor_history_cache[key];
+            if (!history) {
+                history = new ace.UndoManager();
+                editor_history_cache[key] = history;
+            }
+            editor.session.setUndoManager(history);
         }
         current_key = key;
 
