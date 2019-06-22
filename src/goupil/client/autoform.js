@@ -18,14 +18,14 @@ function FormBuilder(root, unique_key, widgets, mem) {
     }
 
     function addWidget(render) {
-        let widget = {
+        let intf = {
             render: render,
             errors: []
         };
 
-        widgets_ref.push(widget);
+        widgets_ref.push(intf);
 
-        return widget;
+        return intf;
     }
 
     function wrapWidget(frag, options, errors = []) {
@@ -47,7 +47,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
         `;
     }
 
-    function addVariableWidget(key, render, value) {
+    function addVariableWidget(key, label, render, value) {
         if (!key)
             throw new Error('Empty variable keys are not allowed');
         if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
@@ -55,18 +55,21 @@ function FormBuilder(root, unique_key, widgets, mem) {
         if (interfaces[key])
             throw new Error(`Variable '${key}' already exists`);
 
-        let widget = addWidget(render);
-
-        let intf = {
+        let intf = addWidget(render);
+        Object.assign(intf, {
+            key: key,
+            label: label,
             value: value,
             missing: value == null,
             error: msg => {
-                self.errors.push(msg || '');
-                widget.errors.push(msg || '');
+                if (!intf.errors.length)
+                    self.errors.push(intf);
+                intf.errors.push(msg || '');
 
                 return intf;
             }
-        };
+        });
+
         interfaces[key] = intf;
 
         return intf;
@@ -122,7 +125,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             ${createPrefixOrSuffix('af_suffix', options.suffix, value)}
         `, options, errors);
 
-        return addVariableWidget(key, render, value);
+        return addVariableWidget(key, label, render, value);
     };
 
     this.password = function(key, label, options = {}) {
@@ -139,7 +142,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             ${createPrefixOrSuffix('af_suffix', options.suffix, value)}
         `, options, errors);
 
-        return addVariableWidget(key, render, value);
+        return addVariableWidget(key, label, render, value);
     };
 
     function handleNumberChange(e, key)
@@ -165,7 +168,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             ${createPrefixOrSuffix('af_suffix', options.suffix, value)}
         `, options, errors);
 
-        let intf = addVariableWidget(key, render, value);
+        let intf = addVariableWidget(key, label, render, value);
 
         if (value != null &&
                 (options.min !== undefined && value < options.min) ||
@@ -206,7 +209,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             </select>
         `, options, errors);
 
-        return addVariableWidget(key, render, value);
+        return addVariableWidget(key, label, render, value);
     };
 
     function handleChoiceChange(e, key, allow_untoggle) {
@@ -243,7 +246,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             </div>
         `, options, errors);
 
-        return addVariableWidget(key, render, value);
+        return addVariableWidget(key, label, render, value);
     };
 
     this.binary = function(key, label, options = {}) {
@@ -283,7 +286,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             </div>
         `, options, errors);
 
-        return addVariableWidget(key, render, value);
+        return addVariableWidget(key, label, render, value);
     };
 
     function handleMultiChange(e, key) {
@@ -323,7 +326,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             </div>
         `, options, errors);
 
-        return addVariableWidget(key, render, value);
+        return addVariableWidget(key, label, render, value);
     };
 
     this.calc = function(key, label, value, options = {}) {
@@ -348,7 +351,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             <span>${text}</span>
         `, options, errors);
 
-        return addVariableWidget(key, render, value);
+        return addVariableWidget(key, label, render, value);
     };
 
     this.output = function(content, options = {}) {
@@ -405,10 +408,33 @@ instead of:
     this.buttons.std = {
         OkCancel: label => [[label || 'OK', self.submit], ['Annuler', self.close]]
     };
+
+    this.conclude = function(label, options = {}) {
+        options = Object.assign({}, options_stack[options_stack.length - 1], options);
+
+        if (self.errors.length) {
+            let render = () => html`
+                <fieldset class="af_section af_section_error">
+                    <legend>Liste des erreurs</legend>
+                    ${self.errors.map(intf =>
+                        html`${intf.errors.length} ${intf.errors.length > 1 ? 'erreurs' : 'erreur'} sur :
+                             <a href=${'#' + makeID(intf.key)}>${intf.label}</a><br/>`)}
+                </fieldset>
+            `;
+
+            addWidget(render);
+        }
+
+        // TODO: Add tooltip to button
+        self.buttons([
+            [label || 'Enregistrer', !self.errors.length ? self.submit : null]
+        ]);
+    };
 }
 
 function FormExecutor() {
     this.goHandler = key => {};
+    this.submitHandler = mem => {};
 
     let self = this;
 
@@ -439,17 +465,20 @@ function FormExecutor() {
 
         let builder = new FormBuilder(af_form, page_key, widgets, mem);
         builder.changeHandler = () => renderForm(page_key, script);
+        builder.submit = () => self.submitHandler(mem);
 
         // Prevent go() call from working if called during script eval
         let prev_go_handler = self.goHandler;
+        let prev_submit_handler = self.submitHandler;
         self.goHandler = key => {
-            throw new Error(`go() must be called from a callback (button click, etc.).
+            throw new Error(`Navigation functions (go, form.submit, etc.) must be called from a callback (button click, etc.).
 
 If you are using it for events, make sure you did not use this syntax by accident:
     go('page_key')
 instead of:
     () => go('page_key')`);
         };
+        self.submitHandler = self.goHandler;
 
         try {
             Function('form', 'go', script)(builder, key => self.goHandler(key));
@@ -472,8 +501,12 @@ instead of:
             return false;
         } finally {
             self.goHandler = prev_go_handler;
+            self.submitHandler = prev_submit_handler;
         }
     }
+
+    this.setData = function(new_mem) { mem = new_mem; };
+    this.getData = function() { return mem; }
 
     this.setError = function(line, msg) {
         af_form.classList.add('af_form_broken');
@@ -521,6 +554,7 @@ let autoform = (function() {
     let default_key;
 
     let executor;
+    let record_id;
 
     function pickDefaultKey() {
         if (default_key) {
@@ -706,11 +740,6 @@ let autoform = (function() {
             <button @click=${showResetPagesDialog}>Réinitialiser</button>
         `, af_menu);
 
-        if (!executor) {
-            executor = new FormExecutor();
-            executor.goHandler = self.go;
-        }
-
         if (page) {
             editor.setReadOnly(false);
             editor.container.classList.remove('disabled');
@@ -760,9 +789,40 @@ let autoform = (function() {
         });
     }
 
-    this.go = function(key) {
-        let page = pages_map[key];
+    function saveData(mem) {
+        goupil.database.save('data', mem);
+    }
 
+    this.go = function(key, id) {
+        if (!executor) {
+            executor = new FormExecutor();
+            executor.goHandler = self.go;
+            executor.submitHandler = saveData;
+        }
+
+        // Load record data
+        if (id != null && id !== record_id) {
+            goupil.database.load('data', id).then(data => {
+                if (data) {
+                    executor.setData(data);
+                    record_id = id;
+
+                    self.go(key);
+                } else {
+                    // TODO: Trigger goupil error in this case
+                }
+            });
+
+            return;
+        }
+        if (record_id == null) {
+            // TODO: Generate ULID-like IDs
+            record_id = util.getRandomInt(1, 9007199254740991);
+            executor.setData({id: record_id});
+        }
+
+        // Change current page
+        let page = pages_map[key];
         if (page) {
             editor.setValue(page.script);
             editor.clearSelection();

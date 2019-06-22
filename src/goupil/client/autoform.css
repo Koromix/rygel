@@ -92,6 +92,16 @@
     color: white;
 }
 
+.af_section_error {
+    background: #f4e6e6;
+    border: 1px dashed #d72a2a;
+    padding: 5px 10px;
+}
+.af_section_error > legend {
+    background: #d72a2a;
+    margin-left: -5px;
+}
+
 /* -------------------- Widgets -------------------- */
 
 .af_widget {
