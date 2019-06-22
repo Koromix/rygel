@@ -81,12 +81,17 @@ let mco_casemix = {};
         if (!route.period[0]) {
             let year = parseInt(settings.end_date.split('-')[0], 10);
             if (settings.end_date.endsWith('-01-01')) {
-                route.period = ['' + (year - 1) + '-01-01', settings.end_date];
-                route.prev_period = ['' + (year - 2) + '-01-01', '' + (year - 1) + '-01-01'];
+                route.period = [`${year - 1}-01-01`, settings.end_date];
             } else {
-                route.period = ['' + year + '-01-01', settings.end_date];
-                route.prev_period = ['' + (year - 1) + '-01-01', '' + (year - 1) + settings.end_date.substring(4)];
+                route.period = [`${year}-01-01`, settings.end_date];
             }
+        }
+        if (route.mode !== 'none' && !route.prev_period[0]) {
+            let parts = route.period[0].split('-');
+            let year = parseInt(parts[0], 10);
+            route.prev_period = [`${year - 1}-${parts[1]}-${parts[2]}`, route.period[0]];
+            if (route.prev_period[0] < settings.start_date)
+                route.prev_period = route.period;
         }
         if (!route.algorithm)
             route.algorithm = settings.default_algorithm;
