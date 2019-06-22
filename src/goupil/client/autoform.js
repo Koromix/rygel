@@ -60,7 +60,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             key: key,
             label: label,
             value: value,
-            missing: value == null || isNaN(value),
+            missing: value == null || Number.isNaN(value),
             error: msg => {
                 if (!intf.errors.length)
                     self.errors.push(intf);
@@ -106,7 +106,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
 
     function handleTextInput(e, key) {
         let value = e.target.value;
-        mem[key] = value;
+        mem[key] = value || null;
 
         self.changeHandler(e);
     };
@@ -336,7 +336,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
 
         let text = value;
         if (!options.raw && typeof value !== 'string') {
-            if (isNaN(value) || value == null) {
+            if (value == null || Number.isNaN(value)) {
                 text = '';
             } else if (isFinite(value)) {
                 // This is a garbage way to round numbers
