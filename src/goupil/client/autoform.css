@@ -114,6 +114,10 @@
     margin-bottom: 6px;
     padding-top: 3px;
 }
+.af_widget_mandatory > label:after {
+    content: ' *';
+    color: #d72a2a;
+}
 .af_widget_error {
     background: #d72a2a;
     color: white;
