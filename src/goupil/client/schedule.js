@@ -181,14 +181,12 @@ function Schedule(widget, resources_map, meetings_map) {
 
     function showCreateMeetingDialog(e, slot_ref) {
         goupil.popup(e, form => {
-            let name = form.text('name', 'Nom :');
+            let name = form.text('name', 'Nom :', {mandatory: true});
 
-            if (name.value) {
-                form.submit = () => {
-                    createMeeting(slot_ref, name.value);
-                    form.close();
-                };
-            }
+            form.submitHandler = () => {
+                createMeeting(slot_ref, name.value);
+                form.close();
+            };
             form.buttons.OkCancel('Créer');
         });
     }
@@ -197,7 +195,7 @@ function Schedule(widget, resources_map, meetings_map) {
         goupil.popup(e, form => {
             form.output('Voulez-vous vraiment supprimer ce rendez-vous ?');
 
-            form.submit = () => {
+            form.submitHandler = () => {
                 deleteMeeting(slot_ref);
                 form.close();
             };
@@ -399,19 +397,17 @@ function Schedule(widget, resources_map, meetings_map) {
 
     function showCreateResourceDialog(e, day) {
         goupil.popup(e, form => {
-            let time = form.text('time', 'Horaire :');
+            let time = form.text('time', 'Horaire :', {mandatory: true});
 
             // Check value
             let time2 = parseTime(time.value);
             if (time.value && time2 == null)
                 time.error('Non valide (ex : 15h30, 7:30)');
 
-            if (time2) {
-                form.submit = () => {
-                    createResource(day, time2);
-                    form.close();
-                };
-            }
+            form.submitHandler = () => {
+                createResource(day, time2);
+                form.close();
+            };
             form.buttons.OkCancel('Créer');
         });
     }
@@ -420,7 +416,7 @@ function Schedule(widget, resources_map, meetings_map) {
         goupil.popup(e, form => {
             form.output('Voulez-vous vraiment supprimer ces créneaux ?');
 
-            form.submit = () => {
+            form.submitHandler = () => {
                 deleteResource(day, res_idx);
                 form.close();
             };
@@ -433,7 +429,7 @@ function Schedule(widget, resources_map, meetings_map) {
             form.output('Voulez-vous vraiment fermer cette journée ?',
                         {help: 'Ceci supprime tous les créneaux'});
 
-            form.submit = () => {
+            form.submitHandler = () => {
                 closeDay(day);
                 form.close();
             };

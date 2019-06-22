@@ -5,13 +5,26 @@
 function FormBuilder(root, unique_key, widgets, mem) {
     let self = this;
 
-    this.changeHandler = e => {};
-
     let interfaces = {};
     let widgets_ref = widgets;
     let options_stack = [{untoggle: true}];
+    let missing_set = new Set;
 
     this.errors = [];
+
+    this.changeHandler = e => {};
+    this.checkHandler = (form, mem) => {
+        let problems = [];
+        if (missing_set.size)
+            problems.push('Plusieurs informations manquantes');
+        if (self.errors.length)
+            problems.push('Présence d\'erreurs');
+
+        return problems;
+    };
+    this.submitHandler = null;
+
+    this.isValid = function() { return !self.checkHandler().length; };
 
     function makeID(key) {
         return `af_var_${unique_key}_${key}`;
@@ -47,7 +60,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
         `;
     }
 
-    function addVariableWidget(key, label, render, value) {
+    function addVariableWidget(key, label, options, render, value) {
         if (!key)
             throw new Error('Empty variable keys are not allowed');
         if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
@@ -69,6 +82,8 @@ function FormBuilder(root, unique_key, widgets, mem) {
                 return intf;
             }
         });
+        if (options.mandatory && intf.missing)
+            missing_set.add(key);
 
         interfaces[key] = intf;
 
@@ -125,7 +140,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             ${createPrefixOrSuffix('af_suffix', options.suffix, value)}
         `, options, errors);
 
-        return addVariableWidget(key, label, render, value);
+        return addVariableWidget(key, label, options, render, value);
     };
 
     this.password = function(key, label, options = {}) {
@@ -142,7 +157,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             ${createPrefixOrSuffix('af_suffix', options.suffix, value)}
         `, options, errors);
 
-        return addVariableWidget(key, label, render, value);
+        return addVariableWidget(key, label, options, render, value);
     };
 
     function handleNumberChange(e, key)
@@ -168,7 +183,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             ${createPrefixOrSuffix('af_suffix', options.suffix, value)}
         `, options, errors);
 
-        let intf = addVariableWidget(key, label, render, value);
+        let intf = addVariableWidget(key, label, options, render, value);
 
         if (value != null &&
                 (options.min !== undefined && value < options.min) ||
@@ -209,7 +224,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             </select>
         `, options, errors);
 
-        return addVariableWidget(key, label, render, value);
+        return addVariableWidget(key, label, options, render, value);
     };
 
     function handleChoiceChange(e, key, allow_untoggle) {
@@ -246,7 +261,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             </div>
         `, options, errors);
 
-        return addVariableWidget(key, label, render, value);
+        return addVariableWidget(key, label, options, render, value);
     };
 
     this.binary = function(key, label, options = {}) {
@@ -286,7 +301,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             </div>
         `, options, errors);
 
-        return addVariableWidget(key, label, render, value);
+        return addVariableWidget(key, label, options, render, value);
     };
 
     function handleMultiChange(e, key) {
@@ -326,7 +341,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             </div>
         `, options, errors);
 
-        return addVariableWidget(key, label, render, value);
+        return addVariableWidget(key, label, options, render, value);
     };
 
     this.calc = function(key, label, value, options = {}) {
@@ -351,7 +366,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             <span>${text}</span>
         `, options, errors);
 
-        return addVariableWidget(key, label, render, value);
+        return addVariableWidget(key, label, options, render, value);
     };
 
     this.output = function(content, options = {}) {
@@ -405,9 +420,17 @@ instead of:
 
         addWidget(render);
     };
-    this.buttons.Save = (label, options = {}) => self.buttons([[label || 'Enregistrer', self.submit]], options);
-    this.buttons.SaveCancel = (label, options = {}) => self.buttons([[label || 'Enregistrer', self.submit], ['Annuler', self.close]], options);
-    this.buttons.OkCancel = (label, options = {}) => self.buttons([[label || 'OK', self.submit], ['Annuler', self.close]], options);
+    this.buttons.Save = (label, options = {}) => self.buttons([
+        [label || 'Enregistrer', self.submitHandler && !self.checkHandler().length ? self.submit : null]
+    ], options);
+    this.buttons.SaveCancel = (label, options = {}) => self.buttons([
+        [label || 'Enregistrer', self.submitHandler && !self.checkHandler().length ? self.submit : null],
+        ['Annuler', self.close]
+    ], options);
+    this.buttons.OkCancel = (label, options = {}) => self.buttons([
+        [label || 'OK', self.submitHandler && !self.checkHandler().length ? self.submit : null],
+        ['Annuler', self.close]
+    ], options);
 
     this.errorList = function(options = {}) {
         options = Object.assign({}, options_stack[options_stack.length - 1], options);
@@ -425,6 +448,11 @@ instead of:
 
             addWidget(render);
         }
+    };
+
+    this.submit = function() {
+        if (self.submitHandler && self.isValid())
+            self.submitHandler(self, mem);
     };
 }
 
@@ -461,7 +489,7 @@ function FormExecutor() {
 
         let builder = new FormBuilder(af_form, page_key, widgets, mem);
         builder.changeHandler = () => renderForm(page_key, script);
-        builder.submit = () => self.submitHandler(mem);
+        builder.submitHandler = () => self.submitHandler(mem);
 
         // Prevent go() call from working if called during script eval
         let prev_go_handler = self.goHandler;
@@ -662,8 +690,8 @@ let autoform = (function() {
 
     function showCreatePageDialog(e) {
         goupil.popup(e, form => {
-            let key = form.text('key', 'Clé :');
-            let title = form.text('title', 'Titre :');
+            let key = form.text('key', 'Clé :', {mandatory: true});
+            let title = form.text('title', 'Titre :', {mandatory: true});
             let is_default = form.boolean('is_default', 'Page par défaut :',
                                           {untoggle: false, value: false});
 
@@ -674,28 +702,24 @@ let autoform = (function() {
                     key.error('Autorisé : a-z, _ et 0-9 (sauf initiale)');
             }
 
-            if (key.value && title.value && !form.errors.length) {
-                form.submit = () => {
-                    createPage(key.value, title.value, is_default.value);
-                    form.close();
-                };
-            }
+            form.submitHandler = () => {
+                createPage(key.value, title.value, is_default.value);
+                form.close();
+            };
             form.buttons.OkCancel('Créer');
         });
     }
 
     function showEditPageDialog(e, page) {
         goupil.popup(e, form => {
-            let title = form.text('title', 'Titre :', {value: page.title});
+            let title = form.text('title', 'Titre :', {mandatory: true, value: page.title});
             let is_default = form.boolean('is_default', 'Page par défaut :',
                                           {untoggle: false, value: default_key === page.key});
 
-            if (title.value) {
-                form.submit = () => {
-                    editPage(page, title.value, is_default.value);
-                    form.close();
-                };
-            }
+            form.submitHandler = () => {
+                editPage(page, title.value, is_default.value);
+                form.close();
+            };
             form.buttons.OkCancel('Modifier');
         });
     }
@@ -704,7 +728,7 @@ let autoform = (function() {
         goupil.popup(e, form => {
             form.output(`Voulez-vous vraiment supprimer la page '${page.key}' ?`);
 
-            form.submit = () => {
+            form.submitHandler = () => {
                 deletePage(page);
                 form.close();
             };
@@ -716,7 +740,7 @@ let autoform = (function() {
         goupil.popup(e, form => {
             form.output('Voulez-vous vraiment réinitialiser toutes les pages ?');
 
-            form.submit = () => {
+            form.submitHandler = () => {
                 resetPages();
                 form.close();
             };
