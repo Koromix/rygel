@@ -450,8 +450,8 @@ let mco_pricing = {};
                         intersect: false,
                         callbacks: {
                             title: (items, data) => format.duration(items[0].xLabel),
-                            label: (item, data) => `GHS ${data.datasets[item.datasetIndex].label}: ` +
-                                                   format.price(item.yLabel)
+                            label: (item, data) => `GHS ${data.datasets[item.datasetIndex].label} : ` +
+                                                   format.price(item.yLabel, true, diff_index >= 0)
                         }
                     },
                     hover: {mode: 'x', intersect: true},
