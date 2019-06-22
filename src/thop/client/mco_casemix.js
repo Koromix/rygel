@@ -189,7 +189,7 @@ let mco_casemix = {};
                 } break;
             }
 
-            view_el.toggleClass('busy', !mix_ready);
+            queryAll('#view > *').toggleClass('busy', !mix_ready);
         }
     }
     this.runModule = runModule;
