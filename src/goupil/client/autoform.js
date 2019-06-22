@@ -405,17 +405,18 @@ instead of:
 
         addWidget(render);
     };
-    this.buttons.std = {
-        OkCancel: label => [[label || 'OK', self.submit], ['Annuler', self.close]]
-    };
+    this.buttons.Save = (label, options = {}) => self.buttons([[label || 'Enregistrer', self.submit]], options);
+    this.buttons.SaveCancel = (label, options = {}) => self.buttons([[label || 'Enregistrer', self.submit], ['Annuler', self.close]], options);
+    this.buttons.OkCancel = (label, options = {}) => self.buttons([[label || 'OK', self.submit], ['Annuler', self.close]], options);
 
-    this.conclude = function(label, options = {}) {
+    this.errorList = function(options = {}) {
         options = Object.assign({}, options_stack[options_stack.length - 1], options);
 
-        if (self.errors.length) {
+        if (self.errors.length || options.force) {
             let render = () => html`
                 <fieldset class="af_section af_section_error">
-                    <legend>Liste des erreurs</legend>
+                    <legend>${options.label || 'Liste des erreurs'}</legend>
+                    ${!self.errors.length ? 'Aucune erreur' : html``}
                     ${self.errors.map(intf =>
                         html`${intf.errors.length} ${intf.errors.length > 1 ? 'erreurs' : 'erreur'} sur :
                              <a href=${'#' + makeID(intf.key)}>${intf.label}</a><br/>`)}
@@ -424,11 +425,6 @@ instead of:
 
             addWidget(render);
         }
-
-        // TODO: Add tooltip to button
-        self.buttons([
-            [label || 'Enregistrer', !self.errors.length ? self.submit : null]
-        ]);
     };
 }
 
@@ -679,7 +675,7 @@ let autoform = (function() {
                     form.close();
                 };
             }
-            form.buttons(form.buttons.std.OkCancel('Créer'));
+            form.buttons.OkCancel('Créer');
         });
     }
 
@@ -695,7 +691,7 @@ let autoform = (function() {
                     form.close();
                 };
             }
-            form.buttons(form.buttons.std.OkCancel('Modifier'));
+            form.buttons.OkCancel('Modifier');
         });
     }
 
@@ -707,7 +703,7 @@ let autoform = (function() {
                 deletePage(page);
                 form.close();
             };
-            form.buttons(form.buttons.std.OkCancel('Supprimer'));
+            form.buttons.OkCancel('Supprimer');
         });
     }
 
@@ -719,7 +715,7 @@ let autoform = (function() {
                 resetPages();
                 form.close();
             };
-            form.buttons(form.buttons.std.OkCancel('Réinitialiser'));
+            form.buttons.OkCancel('Réinitialiser');
         });
     }
 

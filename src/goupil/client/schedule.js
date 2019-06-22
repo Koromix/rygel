@@ -189,7 +189,7 @@ function Schedule(widget, resources_map, meetings_map) {
                     form.close();
                 };
             }
-            form.buttons(form.buttons.std.OkCancel('Créer'));
+            form.buttons.OkCancel('Créer');
         });
     }
 
@@ -201,7 +201,7 @@ function Schedule(widget, resources_map, meetings_map) {
                 deleteMeeting(slot_ref);
                 form.close();
             };
-            form.buttons(form.buttons.std.OkCancel('Supprimer'));
+            form.buttons.OkCancel('Supprimer');
         });
     }
 
@@ -412,7 +412,7 @@ function Schedule(widget, resources_map, meetings_map) {
                     form.close();
                 };
             }
-            form.buttons(form.buttons.std.OkCancel('Créer'));
+            form.buttons.OkCancel('Créer');
         });
     }
 
@@ -424,7 +424,7 @@ function Schedule(widget, resources_map, meetings_map) {
                 deleteResource(day, res_idx);
                 form.close();
             };
-            form.buttons(form.buttons.std.OkCancel('Supprimer'));
+            form.buttons.OkCancel('Supprimer');
         });
     }
 
@@ -437,7 +437,7 @@ function Schedule(widget, resources_map, meetings_map) {
                 closeDay(day);
                 form.close();
             };
-            form.buttons(form.buttons.std.OkCancel('Fermer'));
+            form.buttons.OkCancel('Fermer');
         });
     }
 
