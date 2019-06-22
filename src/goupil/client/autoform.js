@@ -75,7 +75,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             key: key,
             label: label,
             value: value,
-            missing: missing,
+            missing: missing || options.missing,
             error: msg => {
                 if (!intf.errors.length)
                     self.errors.push(intf);
@@ -84,7 +84,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
                 return intf;
             }
         });
-        if (options.mandatory && missing)
+        if (options.mandatory && intf.missing)
             missing_set.add(key);
 
         interfaces[key] = intf;
