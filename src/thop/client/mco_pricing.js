@@ -2,8 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let mco_pricing = {};
-(function() {
+let mco_pricing = (function() {
+    let self = this;
+
     // Cache
     let ghm_roots = [];
     let ghm_roots_map = {};
@@ -14,8 +15,7 @@ let mco_pricing = {};
     let chart_el;
     let chart;
 
-    function runModule(route)
-    {
+    this.runModule = function(route) {
         // Resources
         let indexes = thop.updateMcoSettings().indexes;
         {
@@ -30,9 +30,9 @@ let mco_pricing = {};
         let main_index = indexes.findIndex(info => info.begin_date === route.date);
         let diff_index = indexes.findIndex(info => info.begin_date === route.diff);
         if (main_index >= 0)
-            updatePriceMap(main_index, route.sector);
+            self.updatePriceMap(main_index, route.sector);
         if (diff_index >= 0)
-            updatePriceMap(diff_index, route.sector);
+            self.updatePriceMap(diff_index, route.sector);
 
         // Errors
         if (route.view !== 'chart' && route.view !== 'table')
@@ -93,11 +93,9 @@ let mco_pricing = {};
                 } break;
             }
         }
-    }
-    this.runModule = runModule;
+    };
 
-    function parseRoute(route, path, parameters, hash)
-    {
+    this.parseRoute = function(route, path, parameters, hash) {
         // Model: mco_pricing/<view>/[<diff>..]<date>/<ghm_root>/<sector>)
         let path_parts = path.split('/');
 
@@ -115,11 +113,9 @@ let mco_pricing = {};
         }
         route.ghm_root = path_parts[4] || null;
         route.apply_coefficient = !!parseInt(parameters.apply_coefficient, 10) || false;
-    }
-    this.parseRoute = parseRoute;
+    };
 
-    function routeToUrl(args)
-    {
+    this.routeToUrl = function(args) {
         let new_route = thop.buildRoute(args);
 
         let url;
@@ -141,12 +137,10 @@ let mco_pricing = {};
             url: url,
             allowed: true
         };
-    }
-    this.routeToUrl = routeToUrl;
+    };
 
     // A true result actually means maybe (if we haven't download the relevant index yet)
-    function checkIndexGhmRoot(indexes, index, sector, ghm_root)
-    {
+    function checkIndexGhmRoot(indexes, index, sector, ghm_root) {
         if (index >= 0) {
             const date_key = indexes[index].begin_date + '@' + sector;
 
@@ -157,8 +151,7 @@ let mco_pricing = {};
        }
     }
 
-    function updatePriceMap(index, sector)
-    {
+    this.updatePriceMap = function(index, sector) {
         const indexes = thop.updateMcoSettings().indexes;
         const date_key = indexes[index].begin_date + '@' + sector;
 
@@ -197,11 +190,9 @@ let mco_pricing = {};
         }
 
         return pricings_map;
-    }
-    this.updatePriceMap = updatePriceMap;
+    };
 
-    function refreshGhmRootsMenu(indexes, main_index, sector, select_ghm_root)
-    {
+    function refreshGhmRootsMenu(indexes, main_index, sector, select_ghm_root) {
         let el = query('#opt_ghm_root > select');
 
         render(ghm_roots.map(ghm_root_info => {
@@ -214,8 +205,7 @@ let mco_pricing = {};
         el.value = select_ghm_root || el.value;
     }
 
-    function refreshDiffMenu(indexes, diff_index, sector, test_ghm_root)
-    {
+    function refreshDiffMenu(indexes, diff_index, sector, test_ghm_root) {
         let el = query("#opt_diff_index > select");
 
         render(html`
@@ -233,8 +223,7 @@ let mco_pricing = {};
     }
 
     function refreshPriceTable(ghm_root, pricing_info, main_index, diff_index,
-                               max_duration, apply_coeff)
-    {
+                               max_duration, apply_coeff) {
         let root_el = query('#view');
 
         let title = ghm_root;
@@ -311,7 +300,7 @@ let mco_pricing = {};
                                         cls += ' warn';
                                         tooltip += 'Devrait être orienté dans la CMD 28 (séance)\n';
                                     }
-                                    if (testDuration(col.raac_durations || 0, duration)) {
+                                    if (self.testDuration(col.raac_durations || 0, duration)) {
                                         cls += ' warn';
                                         tooltip += 'Accessible en cas de RAAC\n';
                                     }
@@ -335,8 +324,7 @@ let mco_pricing = {};
         }
     }
 
-    function modeToColor(mode)
-    {
+    function modeToColor(mode) {
         switch (mode) {
             case 'J': return '#1b9e77';
             case 'T': return '#1b9e77';
@@ -354,8 +342,7 @@ let mco_pricing = {};
         };
     }
 
-    function refreshPriceChart(pricing_info, main_index, diff_index, max_duration, apply_coeff)
-    {
+    function refreshPriceChart(pricing_info, main_index, diff_index, max_duration, apply_coeff) {
         if (typeof Chart === 'undefined') {
             data.lazyLoad('chartjs');
             return;
@@ -481,18 +468,15 @@ let mco_pricing = {};
         }
     }
 
-    function testDuration(mask, duration)
-    {
+    this.testDuration = function(mask, duration) {
         let duration_mask = (duration < 32) ? (1 << duration) : (1 << 31);
         return !!(mask & duration_mask);
-    }
-    this.testDuration = testDuration;
+    };
 
-    function computePrice(ghs, duration, apply_coeff)
-    {
+    function computePrice(ghs, duration, apply_coeff) {
         if (!ghs.ghs_cents)
             return null;
-        if (!testDuration(ghs.durations, duration))
+        if (!self.testDuration(ghs.durations, duration))
             return null;
 
         let price_cents;
@@ -517,8 +501,7 @@ let mco_pricing = {};
         return {price: price_cents, mode: mode};
     }
 
-    function computeDelta(ghs, prev_ghs, duration, apply_coeff)
-    {
+    function computeDelta(ghs, prev_ghs, duration, apply_coeff) {
         let p = ghs ? computePrice(ghs, duration, apply_coeff) : null;
         let p2 = prev_ghs ? computePrice(prev_ghs, duration, apply_coeff) : null;
 
@@ -544,13 +527,11 @@ let mco_pricing = {};
         return p;
     }
 
-    function applyCoefficient(cents, coefficient)
-    {
+    function applyCoefficient(cents, coefficient) {
         return cents ? (cents * coefficient) : cents;
     }
 
-    function buildConditionsArray(ghs)
-    {
+    function buildConditionsArray(ghs) {
         let conditions = [];
 
         if (ghs.unit_authorization)
@@ -573,4 +554,6 @@ let mco_pricing = {};
 
         return conditions;
     }
-}).call(mco_pricing);
+
+    return this;
+}).call({});

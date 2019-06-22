@@ -10,8 +10,7 @@
 //
 // Yeah, this is beyond ugly. Voozanoo is complete crap.
 
-function loadScript(url, func)
-{
+function loadScript(url, func) {
     let head = document.getElementsByTagName('head')[0];
     let script = document.createElement('script');
 
@@ -23,8 +22,7 @@ function loadScript(url, func)
     head.appendChild(script);
 }
 
-function generateReport(id)
-{
+function generateReport(id) {
     let script_url = 'https://koromix.dev/inPL/inPL.pk.js';
     let template_url = 'https://koromix.dev/inPL/template.docx';
 

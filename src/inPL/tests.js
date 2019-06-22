@@ -37,8 +37,7 @@ let tests = (function() {
     // Densitometry
     // ------------------------------------------------------------------------
 
-    function makeBoneResult(t)
-    {
+    function makeBoneResult(t) {
         if (t === null)
             return makeTestResult(null);
 
@@ -335,8 +334,7 @@ let tests = (function() {
     // Audition
     // ------------------------------------------------------------------------
 
-    function testSurdity(loss)
-    {
+    function testSurdity(loss) {
         if (loss === null)
             return makeTestResult(null);
 
@@ -589,33 +587,19 @@ let tests = (function() {
         1003: {moca_mean: 27.6, moca_sd: 2.1, moca_c50: 28, moca_c5: 22.8, rl_mean: 30.4, rl_sd: 6.4, rl_c50: 31, rl_c5: 18.8, rt_mean: 46.1, rt_sd: 2.6, rt_c50: 47, rt_c5: 40, p_mean: 15.6, p_sd: 4.2, p_c50: 15, p_c5: 15, animx_mean: 20.5, animx_sd: 5.3, animx_c50: 21, animx_c5: 13.2, tmta_mean: 49, tmta_sd: 18, tmta_c50: 44, tmta_c5: 84, tmtb_mean: 118, tmtb_sd: 51, tmtb_c50: 105, tmtb_c5: 226, deno_mean: 65, deno_sd: 12, deno_c50: 62, deno_c5: 87, lecture_mean: 44, lecture_sd: 6, lecture_c50: 43, lecture_c5: 55, interf_mean: 123, interf_sd: 32, interf_c50: 113, interf_c5: 191, int_deno_mean: 58, int_deno_sd: 25, int_deno_c50: 51, int_deno_c5: 131, code_c50: 38, code_c5: 22, slc_c50: 7, slc_c5: 3}
     };
 
-    function getNeuroTresholds(age, sc_level)
-    {
+    function getNeuroTresholds(age, sc_level) {
         age = Math.min(Math.max(age, 40), 100);
 
         let key = age * 10 + sc_level;
         return neuro_tresholds[key];
     }
 
-    function testInfC5(value, treshold)
-    {
-        return (value !== null) ? (value <= treshold) : false;
-    }
-    function testInfC50(value, treshold)
-    {
-        return (value !== null) ? (value < treshold) : false;
-    }
-    function testSupC5(value, treshold)
-    {
-        return (value !== null) ? (value >= treshold) : false;
-    }
-    function testSupC50(value, treshold)
-    {
-        return (value !== null) ? (value > treshold) : false;
-    }
+    function testInfC5(value, treshold) { return (value !== null) ? (value <= treshold) : false; }
+    function testInfC50(value, treshold) { return (value !== null) ? (value < treshold) : false; }
+    function testSupC5(value, treshold) { return (value !== null) ? (value >= treshold) : false; }
+    function testSupC50(value, treshold) { return (value !== null) ? (value > treshold) : false; }
 
-    function makeNeuroResult(score)
-    {
+    function makeNeuroResult(score) {
         switch (score) {
             case TestScore.Bad: return makeTestResult(TestScore.Bad, 'en dehors des normes (pathologique)');
             case TestScore.Fragile: return makeTestResult(TestScore.Fragile, 'dans les limites des normes (fragilité)');

@@ -8,8 +8,7 @@ const TestScore = Object.freeze({
     Good: 3
 });
 
-function makeTestResult(score, text)
-{
+function makeTestResult(score, text) {
     if (text === undefined) {
         switch (score) {
             case TestScore.Bad: { text = 'pathologique'; } break;

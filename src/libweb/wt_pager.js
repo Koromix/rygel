@@ -3,8 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 let wt_pager = (function() {
-    function Pager()
-    {
+    function Pager() {
         let self = this;
 
         this.hrefBuilder = page => '#';
@@ -22,8 +21,7 @@ let wt_pager = (function() {
         this.setCurrentPage = function(page) { current_page = page; }
         this.getCurrentPage = function() { return current_page; }
 
-        function handlePageClick(e, page)
-        {
+        function handlePageClick(e, page) {
             current_page = page;
             setTimeout(() => self.render(root_el), 0);
 
@@ -33,8 +31,7 @@ let wt_pager = (function() {
             e.preventDefault();
         }
 
-        function makePageLink(text, page)
-        {
+        function makePageLink(text, page) {
             if (page) {
                 return html`<td><a href=${self.hrefBuilder(page)} @click=${e => handlePageClick(e, page)}>${text}</a></td>`;
             } else {

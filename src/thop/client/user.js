@@ -2,15 +2,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let user = {};
-(function() {
+let user = (function() {
+    let self = this;
+
     let change_handlers = [];
 
     let url_key = 0;
     let username = null;
 
-    function runModule(route)
-    {
+    this.runModule = function(route) {
         if (!thop.isBusy()) {
             let view_el = query('#view');
 
@@ -19,7 +19,7 @@ let user = {};
                     <label>Utilisateur : <input id="usr_username" type="text"/></label>
                     <label>Mot de passe : <input id="usr_password" type="password"/></label>
 
-                    <button id="usr_button" @click=${e => {user.login(); e.preventDefault(); }}>Se connecter</button>
+                    <button id="usr_button" @click=${e => {self.login(); e.preventDefault(); }}>Se connecter</button>
                 </form>
             `, view_el);
 
@@ -27,26 +27,20 @@ let user = {};
                 query('#usr_username').focus();
             query('#usr_button').disabled = false;
         }
-    }
-    this.runModule = runModule;
+    };
 
-    function routeToUrl(args)
-    {
+    this.routeToUrl = function(args) {
         return {
             url: thop.baseUrl('login'),
             allowed: true
         };
-    }
-    this.routeToUrl = routeToUrl;
+    };
 
-    function go(args, delay)
-    {
-        thop.route(routeToUrl(args).url, delay);
-    }
-    this.go = go;
+    this.go = function(args, delay) {
+        thop.route(self.routeToUrl(args).url, delay);
+    };
 
-    function connect(username, password, func)
-    {
+    this.connect = function(username, password, func) {
         let url = util.buildUrl(thop.baseUrl('api/connect.json'));
         let params = {
             username: username,
@@ -54,46 +48,38 @@ let user = {};
         };
 
         data.post(url, 'json', params, function() {
-            updateSession();
+            self.updateSession();
             if (func)
                 func();
         });
-    }
-    this.connect = connect;
+    };
 
-    function disconnect(func)
-    {
+    this.disconnect = function(func) {
         let url = util.buildUrl(thop.baseUrl('api/disconnect.json'));
         let params = {};
 
         data.post(url, 'json', params, function(json) {
-            updateSession();
+            self.updateSession();
             if (func)
                 func();
         });
-    }
-    this.disconnect = disconnect;
+    };
 
-    function login()
-    {
+    this.login = function() {
         let username = query('#usr_username').value;
         let password = query('#usr_password').value;
         query('#usr_username').value = '';
         query('#usr_password').value = '';
         query('#usr_button').disabled = true;
 
-        connect(username, password, thop.goBackOrHome);
-    }
-    this.login = login;
+        self.connect(username, password, thop.goBackOrHome);
+    };
 
-    function logout()
-    {
-        disconnect();
-    }
-    this.logout = logout;
+    this.logout = function() {
+        self.disconnect();
+    };
 
-    function updateSession()
-    {
+    this.updateSession = function() {
         let prev_url_key = url_key;
 
         url_key = util.getCookie('url_key') || 0;
@@ -103,12 +89,13 @@ let user = {};
             for (let handler of change_handlers)
                 handler();
         }
-    }
-    this.updateSession = updateSession;
+    };
 
     this.addChangeHandler = function(func) { change_handlers.push(func); }
 
     this.isConnected = function() { return !!url_key; }
     this.getUrlKey = function() { return url_key; }
     this.getUsername = function() { return username; }
-}).call(user);
+
+    return this;
+}).call({});

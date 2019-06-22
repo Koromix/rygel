@@ -25,8 +25,7 @@ let inPL = (function() {
         route_url = new_url;
     };
 
-    function refreshMainView()
-    {
+    function refreshMainView() {
         report.refreshReport(rows);
         document.body.style.display = 'block';
     }
@@ -78,8 +77,7 @@ let inPL = (function() {
 
     this.getRows = function() { return rows; }
 
-    function initNavigation()
-    {
+    function initNavigation() {
         window.addEventListener('popstate', function(e) {
             route(util.parseUrl(window.location.href).params, false);
             refreshMainView();
