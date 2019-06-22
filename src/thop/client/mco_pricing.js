@@ -27,8 +27,8 @@ let mco_pricing = {};
             route.date = indexes[indexes.length - 1].begin_date;
         if (!route.ghm_root && ghm_roots.length)
             route.ghm_root = ghm_roots[0].ghm_root;
-        let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
-        let diff_index = indexes.findIndex(function(info) { return info.begin_date === route.diff; });
+        let main_index = indexes.findIndex(info => info.begin_date === route.date);
+        let diff_index = indexes.findIndex(info => info.begin_date === route.diff);
         if (main_index >= 0)
             updatePriceMap(main_index, route.sector);
         if (diff_index >= 0)
@@ -165,7 +165,7 @@ let mco_pricing = {};
         if (!available_dates.has(date_key)) {
             let url = util.buildUrl(thop.baseUrl('api/mco_ghm_ghs.json'),
                                     {date: indexes[index].begin_date, sector: sector});
-            data.get(url, 'json', function(json) {
+            data.get(url, 'json', json => {
                 for (let ghm_ghs of json) {
                     const ghm_root = ghm_ghs.ghm_root;
 
@@ -449,13 +449,9 @@ let mco_pricing = {};
                         mode: 'index',
                         intersect: false,
                         callbacks: {
-                            title: function(items, data) {
-                                return format.duration(items[0].xLabel)
-                            },
-                            label: function(item, data) {
-                                return 'GHS ' + data.datasets[item.datasetIndex].label + ': ' +
-                                       format.price(item.yLabel);
-                            }
+                            title: (items, data) => format.duration(items[0].xLabel),
+                            label: (item, data) => `GHS ${data.datasets[item.datasetIndex].label}: ` +
+                                                   format.price(item.yLabel)
                         }
                     },
                     hover: {mode: 'x', intersect: true},
@@ -468,7 +464,7 @@ let mco_pricing = {};
                             type: 'linear',
                             ticks: {
                                 stepSize: 10,
-                                callback: function(value) { return format.duration(value); }
+                                callback: value => format.duration(value)
                             }
                         }],
                         yAxes: [{
@@ -476,7 +472,7 @@ let mco_pricing = {};
                             ticks: {
                                 suggestedMin: min_price,
                                 suggestedMax: max_price,
-                                callback: function(value) { return format.price(value); }
+                                callback: value => format.price(value)
                             }
                         }]
                     }
