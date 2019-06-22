@@ -66,7 +66,7 @@ let data = (function() {
         }
 
         let xhr = new XMLHttpRequest();
-        xhr.timeout = 14000;
+        xhr.timeout = 20000;
         xhr.onload = function(e) {
             if (this.status === 200) {
                 if (!type)
