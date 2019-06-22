@@ -99,6 +99,7 @@ let goupil = (function() {
         popup_builder = new FormBuilder(gp_popup, 'popup!', widgets, popup_mem);
         popup_builder.changeHandler = () => openPopup(e, func);
         popup_builder.close = closePopup;
+        popup_builder.pushOptions({missingMode: 'disable'});
 
         func(popup_builder);
         render(widgets.map(w => w.render(w.errors)), gp_popup);

@@ -2,20 +2,22 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function FormBuilder(root, unique_key, widgets, mem) {
+function FormBuilder(root, unique_key, widgets, mem, missing_errors = new Set) {
     let self = this;
 
     let interfaces = {};
     let widgets_ref = widgets;
     let options_stack = [{untoggle: true}];
+
     let missing_set = new Set;
+    let missing_block = false;
 
     this.errors = [];
 
     this.changeHandler = e => {};
     this.validateHandler = (form, mem) => {
         let problems = [];
-        if (missing_set.size)
+        if (missing_block)
             problems.push('Informations obligatoires manquantes');
         if (self.errors.length)
             problems.push('Présence d\'erreurs sur le formulaire');
@@ -84,8 +86,14 @@ function FormBuilder(root, unique_key, widgets, mem) {
                 return intf;
             }
         });
-        if (options.mandatory && intf.missing)
+
+        if (options.mandatory && intf.missing) {
             missing_set.add(key);
+            if (options.missingMode === 'error' || missing_errors.has(key))
+                intf.error('Donnée obligatoire manquante');
+            if (options.missingMode === 'disable')
+                missing_block |= true;
+        }
 
         interfaces[key] = intf;
 
@@ -124,6 +132,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
     function handleTextInput(e, key) {
         let value = e.target.value;
         mem[key] = value || null;
+        missing_errors.delete(key);
 
         self.changeHandler(e);
     }
@@ -165,6 +174,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
     function handleNumberChange(e, key) {
         let value = parseFloat(e.target.value);
         mem[key] = value;
+        missing_errors.delete(key);
 
         self.changeHandler(e);
     }
@@ -204,6 +214,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
     function handleDropdownChange(e, key) {
         let value = parseValue(e.target.value);
         mem[key] = value;
+        missing_errors.delete(key);
 
         self.changeHandler(e);
     }
@@ -235,6 +246,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
         } else {
             mem[key] = parseValue(json);
         }
+        missing_errors.delete(key);
 
         // This is useless in most cases because the new form will incorporate
         // this change, but who knows. Do it like other browser-native widgets.
@@ -281,6 +293,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
         } else {
             mem[key] = value;
         }
+        missing_errors.delete(key);
 
         self.changeHandler(e);
     }
@@ -317,6 +330,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
                 value.push(parseValue(el.value));
         }
         mem[key] = value;
+        missing_errors.delete(key);
 
         self.changeHandler(e);
     }
@@ -456,8 +470,18 @@ instead of:
     };
 
     this.submit = function() {
-        if (self.submitHandler && self.isValid())
+        if (self.submitHandler && self.isValid()) {
+            if (missing_set.size) {
+                missing_errors.clear();
+                for (let key of missing_set)
+                    missing_errors.add(key);
+
+                self.changeHandler(null);
+                return;
+            }
+
             self.submitHandler(self, mem);
+        }
     };
 }
 
@@ -471,6 +495,7 @@ function FormExecutor() {
     let af_log;
 
     let mem = {};
+    let missing_errors = new Set;
 
     function parseAnonymousErrorLine(err) {
         if (err.stack) {
@@ -492,7 +517,7 @@ function FormExecutor() {
     function renderForm(page_key, script) {
         let widgets = [];
 
-        let builder = new FormBuilder(af_form, page_key, widgets, mem);
+        let builder = new FormBuilder(af_form, page_key, widgets, mem, missing_errors);
         builder.changeHandler = () => renderForm(page_key, script);
         builder.submitHandler = () => self.submitHandler(mem);
 
