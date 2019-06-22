@@ -3,8 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 let wt_version_line = (function() {
-    function VersionLine()
-    {
+    function VersionLine() {
         let self = this;
 
         this.hrefBuilder = page => '#';
@@ -28,8 +27,7 @@ let wt_version_line = (function() {
         this.setDate = function(date) { current_date = date; };
         this.getDate = function() { return current_date; };
 
-        function handleNodeClick(e, date)
-        {
+        function handleNodeClick(e, date) {
             current_date = date;
             setTimeout(() => self.render(root_el), 0);
 

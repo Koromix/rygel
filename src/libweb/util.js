@@ -91,16 +91,14 @@ Element.prototype.replaceContent = function() {
 let dom = (function() {
     let self = this;
 
-    function expandNamespace(ns)
-    {
+    function expandNamespace(ns) {
         return ({
             svg: 'http://www.w3.org/2000/svg',
             html: 'http://www.w3.org/1999/xhtml'
         })[ns] || ns;
     }
 
-    function create(ns, tag, attributes, children)
-    {
+    function create(ns, tag, attributes, children) {
         ns = expandNamespace(ns);
         let el = document.createElementNS(ns, tag);
 

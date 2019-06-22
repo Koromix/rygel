@@ -144,8 +144,7 @@ function Schedule(widget, resources_map, meetings_map) {
         renderAll();
     }
 
-    function moveMeeting(src_ref, dest_ref)
-    {
+    function moveMeeting(src_ref, dest_ref) {
         if (dest_ref.identity) {
             // Exchange
             dest_ref.meetings.splice(dest_ref.splice_idx, 1, {
@@ -670,8 +669,7 @@ function Schedule(widget, resources_map, meetings_map) {
         </nav>`, footer);
     }
 
-    function renderAll()
-    {
+    function renderAll() {
         // FIXME: Can we replace a node with render, instead of replacing its content?
         // Right now, render functions create content inside these two divs instead of replacing them.
         render(html`

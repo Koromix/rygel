@@ -3,8 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 let wt_data_table = (function() {
-    function DataTable()
-    {
+    function DataTable() {
         let self = this;
 
         this.sortHandler = null;
@@ -99,8 +98,7 @@ let wt_data_table = (function() {
             prev_len = null;
         };
 
-        function sortRows(rows, col_idx, order)
-        {
+        function sortRows(rows, col_idx, order) {
             if (col_idx != null) {
                 rows.sort((row1, row2) => (util.compareValues(row1.cells[col_idx].value, row2.cells[col_idx].value) ||
                                            row1.insert_idx - row2.insert_idx) * order);
@@ -109,8 +107,7 @@ let wt_data_table = (function() {
             }
         }
 
-        function sortRowsRecursive(rows, col_idx, order)
-        {
+        function sortRowsRecursive(rows, col_idx, order) {
             sortRows(rows, col_idx, order);
 
             for (const row of rows) {
@@ -161,8 +158,7 @@ let wt_data_table = (function() {
             return true;
         };
 
-        function handleExcelClick(e)
-        {
+        function handleExcelClick(e) {
             if (typeof XLSX === 'undefined') {
                 // FIXME: Fix dependency on THOP-specific code
                 data.lazyLoad('xlsx', () => handleExcelClick(e));
@@ -175,8 +171,7 @@ let wt_data_table = (function() {
             e.preventDefault();
         }
 
-        function handleHeaderClick(e, col_idx)
-        {
+        function handleHeaderClick(e, col_idx) {
             let sort_key = columns[col_idx].key;
             if (sort_idx === col_idx && sort_order > 0)
                 sort_key = '-' + sort_key;
@@ -191,8 +186,7 @@ let wt_data_table = (function() {
             e.preventDefault();
         }
 
-        function renderRowCells(row)
-        {
+        function renderRowCells(row) {
             return row.cells.map((cell, idx) => {
                 let render = columns[idx].render;
                 let padding = !idx ? `padding-left: calc(3px + ${row.depth} * 0.8em);` : '';

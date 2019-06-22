@@ -7,25 +7,23 @@
 // ------------------------------------------------------------------------
 
 let data = (function() {
+    let self = this;
+
     this.busyHandler = null;
     this.errorHandler = null;
 
-    let self = this;
     let queue = new Set();
     let busy = 0;
 
-    function get(url, type, proceed, fail)
-    {
+    this.get = function(url, type, proceed, fail){
         let xhr = openRequest('GET', url, type, proceed, fail);
         if (!xhr)
             return;
 
         xhr.send();
-    }
-    this.get = get;
+    };
 
-    function post(url, type, parameters, proceed, fail)
-    {
+    this.post = function(url, type, parameters, proceed, fail) {
         let xhr = openRequest('POST', url, type, proceed, fail);
         if (!xhr)
             return;
@@ -33,33 +31,28 @@ let data = (function() {
         let encoded_parameters = util.buildUrl('', parameters).substr(1);
         xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
         xhr.send(encoded_parameters || null);
-    }
-    this.post = post;
+    };
 
-    function lazyLoad(module, func)
-    {
+    this.lazyLoad = function(module, func) {
         if (typeof LazyModules !== 'object' || !LazyModules[module]) {
             console.log('Cannot load module ' + module);
             return;
         }
 
-        get(LazyModules[module], null, function(js) {
+        self.get(LazyModules[module], null, function(js) {
             eval.call(window, js);
             if (func)
                 func();
         });
     };
-    this.lazyLoad = lazyLoad;
 
-    function openRequest(method, url, type, proceed, fail)
-    {
+    function openRequest(method, url, type, proceed, fail) {
         if (queue.has(url))
             return;
         queue.add(url);
         busy++;
 
-        function handleFinishedRequest(status, response)
-        {
+        function handleFinishedRequest(status, response) {
             callRequestHandlers(url, proceed, fail, status, response);
             if (!--busy)
                 callIdleHandler();
@@ -98,8 +91,7 @@ let data = (function() {
         return xhr;
     }
 
-    function callRequestHandlers(url, proceed, fail, status, response)
-    {
+    function callRequestHandlers(url, proceed, fail, status, response) {
         if (status === 200) {
             proceed(response);
         } else {
@@ -123,8 +115,7 @@ let data = (function() {
         }
     }
 
-    function callIdleHandler()
-    {
+    function callIdleHandler() {
         if (self.busyHandler) {
             setTimeout(function() {
                 self.busyHandler(false);
@@ -201,8 +192,7 @@ let format = (function() {
 // Aggregation
 // ------------------------------------------------------------------------
 
-function Aggregator(template, func, by)
-{
+function Aggregator(template, func, by) {
     let self = this;
 
     let list = [];
@@ -230,8 +220,7 @@ function Aggregator(template, func, by)
         return ptr;
     };
 
-    function aggregateRec(row, row_ptrs, ptr, col_idx, key_idx)
-    {
+    function aggregateRec(row, row_ptrs, ptr, col_idx, key_idx) {
         for (let i = key_idx; i < by.length; i++) {
             let key = by[i];
             let value;
@@ -302,8 +291,7 @@ function Aggregator(template, func, by)
 // Indexes
 // ------------------------------------------------------------------------
 
-function refreshIndexesLine(indexes, main_index)
-{
+function refreshIndexesLine(indexes, main_index) {
     if (!thop.needsRefresh(refreshIndexesLine, arguments))
         return;
 
@@ -329,8 +317,9 @@ function refreshIndexesLine(indexes, main_index)
 // Catalogs
 // ------------------------------------------------------------------------
 
-let catalog = {};
-(function() {
+let catalog = (function() {
+    let self = this;
+
     const Catalogs = {
         'ccam': {path: 'catalogs/ccam.json', key: 'procedure'},
         'cim10': {path: 'catalogs/cim10.json', key: 'diagnosis'},
@@ -517,8 +506,7 @@ let catalog = {};
     // Cache
     let catalogs = {};
 
-    function update(name)
-    {
+    this.update = function(name) {
         let info = Catalogs[name];
         let set = catalogs[name];
 
@@ -549,6 +537,7 @@ let catalog = {};
         }
 
         return set;
-    }
-    this.update = update;
-}).call(catalog);
+    };
+
+    return this;
+}).call({});

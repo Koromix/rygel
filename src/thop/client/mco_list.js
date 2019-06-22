@@ -2,8 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let mco_list = {};
-(function() {
+let mco_list = (function() {
+    let self = this;
+
     const Lists = {
         ghm_roots: {
             path: 'api/mco_ghm_ghs.json',
@@ -183,8 +184,7 @@ let mco_list = {};
     let list_cache = {};
     let reactor = {};
 
-    function runModule(route)
-    {
+    this.runModule = function(route) {
         // Memorize route info
         specs[route.list] = route.spec;
         search[route.list] = route.search;
@@ -250,11 +250,9 @@ let mco_list = {};
             refreshHeader(route.spec);
             refreshListTable(route.list, group_info, route.search, route.page, route.sort);
         }
-    }
-    this.runModule = runModule;
+    };
 
-    function parseRoute(route, path, parameters, hash)
-    {
+    this.parseRoute = function(route, path, parameters, hash) {
         // Model: mco_list/<table>/<date>/<sector>
         let path_parts = path.split('/');
 
@@ -271,11 +269,9 @@ let mco_list = {};
         route.group = parameters.group || null;
         route.page = parseInt(parameters.page, 10) || 1;
         route.sort = parameters.sort || null;
-    }
-    this.parseRoute = parseRoute;
+    };
 
-    function routeToUrl(args)
-    {
+    this.routeToUrl = function(args) {
         let new_route = thop.buildRoute(args);
         if (args.spec === undefined)
             new_route.spec = specs[new_route.list];
@@ -320,11 +316,9 @@ let mco_list = {};
             url: url,
             allowed: true
         };
-    }
-    this.routeToUrl = routeToUrl;
+    };
 
-    function updateList(list_name, date, sector, spec)
-    {
+    function updateList(list_name, date, sector, spec) {
         let params = {
             date: date,
             sector: Lists[list_name].sector ? sector : null,
@@ -349,14 +343,13 @@ let mco_list = {};
         }
     }
 
-    function refreshHeader(spec)
-    {
+    function refreshHeader(spec) {
         let h1 = query('#ls_spec');
 
         if (spec) {
             render(html`
                 Filtre : ${spec}
-                <a href=${routeToUrl({spec: null}).url}>(retirer)</a>
+                <a href=${self.routeToUrl({spec: null}).url}>(retirer)</a>
             `, h1);
             h1.removeClass('hide');
         } else {
@@ -365,8 +358,7 @@ let mco_list = {};
         }
     }
 
-    function refreshGroupsMenu(list_info, select_group)
-    {
+    function refreshGroupsMenu(list_info, select_group) {
         let el = query('#opt_group > select');
 
         render(list_info.groups.map(group =>
@@ -376,8 +368,7 @@ let mco_list = {};
             el.value = select_group;
     }
 
-    function refreshListTable(list_name, group_info, search, page, sort)
-    {
+    function refreshListTable(list_name, group_info, search, page, sort) {
         let test;
         if (search && search.match(/^\/.*\/$/)) {
             search = simplifyForSearch(search.substr(1, search.length - 2));
@@ -413,7 +404,8 @@ let mco_list = {};
             // Header
             for (let i = first_column; i < list_info.columns.length; i++) {
                 let col = list_info.columns[i];
-                builder.addColumn(col.key, col.header, addSpecLinks, {tooltip: col.tooltip || col.header});
+                builder.addColumn(col.key, col.header, self.addSpecLinks,
+                                  {tooltip: col.tooltip || col.header});
             }
 
             // Groups
@@ -479,8 +471,7 @@ let mco_list = {};
                    wt_pager.computeLastPage(render_count, builder.getRowCount(), list_info.page_len));
     }
 
-    function createContent(column, item, concepts_map, group)
-    {
+    function createContent(column, item, concepts_map, group) {
         let content;
         if (column.variable) {
             content = item[column.variable];
@@ -497,8 +488,7 @@ let mco_list = {};
         return '' + content;
     }
 
-    function simplifyForSearch(str)
-    {
+    function simplifyForSearch(str) {
         return str.toLowerCase().replace(/[êéèàâïùœ]/g, function(c) {
             switch (c) {
                 case 'ê': return 'e';
@@ -513,8 +503,7 @@ let mco_list = {};
         });
     }
 
-    function maskToRanges(mask)
-    {
+    function maskToRanges(mask) {
         let ranges = [];
 
         let i = 0;
@@ -542,13 +531,12 @@ let mco_list = {};
         return ranges.join(', ');
     }
 
-    function makeSpecAnchor(str)
-    {
+    function makeSpecAnchor(str) {
         if (str[0] === 'A') {
-            let href = routeToUrl({list: 'procedures', spec: str}).url;
+            let href = self.routeToUrl({list: 'procedures', spec: str}).url;
             return html`<a href=${href}>${str}</a>`;
         } else if (str[0] === 'D') {
-            let href = routeToUrl({list: 'diagnoses', spec: str}).url;
+            let href = self.routeToUrl({list: 'diagnoses', spec: str}).url;
             return html`<a href=${href}>${str}</a>`;
         } else if (str.match(/^[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?$/)) {
             let href = mco_pricing.routeToUrl({view: 'table', ghm_root: str.substr(0, 5)}).url;
@@ -561,8 +549,7 @@ let mco_list = {};
         }
     }
 
-    function addSpecLinks(str)
-    {
+    this.addSpecLinks = function(str) {
         let elements = [];
         for (;;) {
             let m = str.match(/([AD](\-[0-9]+|\$[0-9]+\.[0-9]+)|[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?|[Nn]oeud [0-9]+)/);
@@ -576,15 +563,13 @@ let mco_list = {};
         elements.push(str);
 
         return elements;
-    }
-    this.addSpecLinks = addSpecLinks;
+    };
 
-    function syncPagers(pagers, current_page, last_page)
-    {
+    function syncPagers(pagers, current_page, last_page) {
         pagers.forEach(function(pager) {
             if (last_page) {
                 let builder = wt_pager.create();
-                builder.hrefBuilder = page => routeToUrl({page: page}).url;
+                builder.hrefBuilder = page => self.routeToUrl({page: page}).url;
                 builder.setLastPage(last_page);
                 builder.setCurrentPage(current_page);
                 builder.render(pager);
@@ -596,4 +581,6 @@ let mco_list = {};
             }
         });
     }
-}).call(mco_list);
+
+    return this;
+}).call({});

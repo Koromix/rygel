@@ -3,8 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 let wt_period_picker = (function() {
-    function PeriodPicker()
-    {
+    function PeriodPicker() {
         let self = this;
 
         this.changeHandler = null;
@@ -36,14 +35,12 @@ let wt_period_picker = (function() {
         this.setDates = function(dates) { current_dates = dates.map((str, idx) => str ? strToDate(str) : limit_dates[idx]); };
         this.getDates = function() { return current_dates.map(dateToStr); };
 
-        function dateToStr(date)
-        {
+        function dateToStr(date) {
             date_el.valueAsDate = date;
             return date_el.value;
         }
 
-        function strToDate(str)
-        {
+        function strToDate(str) {
             date_el.value = str;
 
             let date = date_el.valueAsDate;
@@ -53,8 +50,7 @@ let wt_period_picker = (function() {
             return date;
         }
 
-        function syncHandle(handle, date)
-        {
+        function syncHandle(handle, date) {
             let input = handle.querySelector('input');
 
             let new_pos = 100 * (date - limit_dates[0]) / (limit_dates[1] - limit_dates[0]);
@@ -62,8 +58,7 @@ let wt_period_picker = (function() {
             input.valueAsDate = date;
         }
 
-        function syncView()
-        {
+        function syncView() {
             syncHandle(handle_els[0], current_dates[0]);
             syncHandle(handle_els[1], current_dates[1]);
 
@@ -71,8 +66,7 @@ let wt_period_picker = (function() {
             bar_el.style.width = 'calc(' + handle_els[1].style.left + ' - ' + handle_els[0].style.left + ')';
         }
 
-        function positionToDate(pos)
-        {
+        function positionToDate(pos) {
             let date_delta;
             {
                 let min_pos = 0;
@@ -95,8 +89,7 @@ let wt_period_picker = (function() {
             return date;
         }
 
-        function clampStartDate(date)
-        {
+        function clampStartDate(date) {
             let max = new Date(current_dates[1]);
             max.setDate(max.getDate() - 1);
             max.setHours(2);
@@ -110,8 +103,7 @@ let wt_period_picker = (function() {
             }
         }
 
-        function clampEndDate(date)
-        {
+        function clampEndDate(date) {
             let min = new Date(current_dates[0]);
             min.setDate(min.getDate() + 1);
             min.setHours(2);
@@ -125,13 +117,11 @@ let wt_period_picker = (function() {
             }
         }
 
-        function handleHandleDown(e)
-        {
+        function handleHandleDown(e) {
             if (Element.prototype.setPointerCapture) {
                 e.target.setPointerCapture(e.pointerId);
             } else if (!grab_target) {
-                function forwardUp(e)
-                {
+                function forwardUp(e) {
                     document.body.removeEventListener('mousemove', handleHandleMove);
                     document.body.removeEventListener('mouseup', forwardUp);
                     handlePointerUp(e);
@@ -144,8 +134,7 @@ let wt_period_picker = (function() {
             grab_target = e.target;
         }
 
-        function handleHandleMove(e)
-        {
+        function handleHandleMove(e) {
             if (grab_target) {
                 let handle = grab_target.parentNode;
                 let date = positionToDate(e.clientX - main_el.offsetLeft);
@@ -160,8 +149,7 @@ let wt_period_picker = (function() {
             }
         }
 
-        function handleDateChange(e)
-        {
+        function handleDateChange(e) {
             let handle = e.target.parentNode;
             let input = handle.querySelector('input');
 
@@ -185,19 +173,16 @@ let wt_period_picker = (function() {
             syncView();
         }
 
-        function handleDateFocusOut(e)
-        {
+        function handleDateFocusOut(e) {
             if (self.changeHandler)
                 setTimeout(() => self.changeHandler.call(self, e), 0);
         }
 
-        function handleBarDown(e)
-        {
+        function handleBarDown(e) {
             if (Element.prototype.setPointerCapture) {
                 e.target.setPointerCapture(e.pointerId);
             } else if (!grab_target) {
-                function forwardUp(e)
-                {
+                function forwardUp(e) {
                     document.body.removeEventListener('mousemove', handleBarMove);
                     document.body.removeEventListener('mouseup', forwardUp);
                     handlePointerUp(e);
@@ -216,8 +201,7 @@ let wt_period_picker = (function() {
             grab_end_day = current_dates[1].getDate();
         }
 
-        function handleBarMove(e)
-        {
+        function handleBarMove(e) {
             if (grab_target) {
                 current_dates[0] = positionToDate(e.clientX - main_el.offsetLeft - grab_offset);
                 current_dates[1] = new Date(current_dates[0].getFullYear() + grab_diff_year,
@@ -233,16 +217,14 @@ let wt_period_picker = (function() {
             }
         }
 
-        function handlePointerUp(e)
-        {
+        function handlePointerUp(e) {
             grab_target = null;
 
             if (self.changeHandler)
                 setTimeout(() => self.changeHandler.call(self, e), 0);
         }
 
-        function makeMouseElement(cls, down, move)
-        {
+        function makeMouseElement(cls, down, move) {
             if (Element.prototype.setPointerCapture) {
                 return html`<div class=${cls} @pointerdown=${down} @pointermove=${move}
                                  @pointerup=${handlePointerUp}></div>`;

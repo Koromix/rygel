@@ -2,20 +2,20 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let mco_tree = {};
-(function() {
+let mco_tree = (function() {
+    let self = this;
+
     // Cache
     let tree_url = null;
     let nodes = [];
     let collapse_nodes = new Set();
 
-    function runModule(route)
-    {
+    this.runModule = function(route) {
         // Resources
         let indexes = thop.updateMcoSettings().indexes;
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
-        let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
+        let main_index = indexes.findIndex(info => info.begin_date === route.date);
         if (main_index >= 0)
             updateTree(indexes[main_index].begin_date);
 
@@ -34,21 +34,17 @@ let mco_tree = {};
             deploySelectedNode(route.highlight_node);
             route.highlight_node = null;
         }
-    }
-    this.runModule = runModule;
+    };
 
-    function parseRoute(route, path, parameters, hash)
-    {
+    this.parseRoute = function(route, path, parameters, hash) {
         // Mode: tree/<date>
         let path_parts = path.split('/');
 
         route.date = path_parts[1] || null;
         route.highlight_node = hash;
-    }
-    this.parseRoute = parseRoute;
+    };
 
-    function routeToUrl(args)
-    {
+    this.routeToUrl = function(args) {
         let new_route = thop.buildRoute(args);
 
         let url;
@@ -64,24 +60,21 @@ let mco_tree = {};
             url: url,
             allowed: true
         };
-    }
-    this.routeToUrl = routeToUrl;
+    };
 
-    function updateTree(date)
-    {
+    function updateTree(date) {
         let url = util.buildUrl(thop.baseUrl('api/mco_tree.json'), {date: date});
         if (url === tree_url)
             return;
 
         nodes = [];
-        data.get(url, 'json', function(json) {
+        data.get(url, 'json', json => {
             nodes = json;
             tree_url = url;
         });
     }
 
-    function refreshTree(nodes)
-    {
+    function refreshTree(nodes) {
         let root_el = query('#view');
 
         if (nodes.length) {
@@ -96,8 +89,7 @@ let mco_tree = {};
         }
     }
 
-    function recurseNodes(start_idx, chain_str, parent_next_indices)
-    {
+    function recurseNodes(start_idx, chain_str, parent_next_indices) {
         let elements = [];
 
         let indices = [];
@@ -167,8 +159,7 @@ let mco_tree = {};
         return elements;
     }
 
-    function handleNodeClick(e)
-    {
+    function handleNodeClick(e) {
         let li = this.parentNode.parentNode;
         if (li.toggleClass('collapse')) {
             collapse_nodes.add(li.dataset.chain);
@@ -179,8 +170,7 @@ let mco_tree = {};
         e.preventDefault();
     }
 
-    function renderNode(idx, text, children = [], chain_str = null)
-    {
+    function renderNode(idx, text, children = [], chain_str = null) {
         if (children.length === 1 && children[0].type === 'leaf') {
             // Simplify when there is only one leaf children
             let ret = {
@@ -212,16 +202,14 @@ let mco_tree = {};
         }
     }
 
-    function renderChildren(children)
-    {
+    function renderChildren(children) {
         return children.map(child => {
             let cls = child.type + (child.chain_str && collapse_nodes.has(child.chain_str) ? ' collapse' : '');
             return html`<li id=${'n' + child.idx} class=${cls}>${child.vdom}</li>`;
         });
     }
 
-    function deploySelectedNode(hash)
-    {
+    function deploySelectedNode(hash) {
         let root_el = query('#tr_tree');
 
         // Make sure the corresponding node is visible
@@ -236,4 +224,6 @@ let mco_tree = {};
             }
         }
     }
-}).call(mco_tree);
+
+    return this;
+}).call({});

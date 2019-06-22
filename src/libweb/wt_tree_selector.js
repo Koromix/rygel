@@ -3,8 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 let wt_tree_selector = (function() {
-    function TreeSelector()
-    {
+    function TreeSelector() {
         let self = this;
 
         this.changeHandler = null;
@@ -78,8 +77,7 @@ let wt_tree_selector = (function() {
         this.setValues = function(values) { current_values = new Set(values); }
         this.getValues = function() { return Array.from(current_values); }
 
-        function updateValue(value, enable)
-        {
+        function updateValue(value, enable) {
             if (enable && values.has(value)) {
                 current_values.add(value);
             } else {
@@ -88,8 +86,7 @@ let wt_tree_selector = (function() {
         }
 
         // Does not work correctly for deep hierarchies (more than 32 levels)
-        function syncCheckboxes()
-        {
+        function syncCheckboxes() {
             let labels = root_el.querySelectorAll('.tsel_list > label');
 
             let or_state = 0;
@@ -118,8 +115,7 @@ let wt_tree_selector = (function() {
             }
         }
 
-        function handleSummaryClick(e)
-        {
+        function handleSummaryClick(e) {
             let target = e.target;
             let value = util.strToValue(target.dataset.value);
 
@@ -134,8 +130,7 @@ let wt_tree_selector = (function() {
                 setTimeout(function() { self.changeHandler.call(self); }, 0);
         }
 
-        function syncSummary()
-        {
+        function syncSummary() {
             if (!current_values.size) {
                 render(html`${prefix}<a>Aucune sélection</a>`, summary_el);
             } else if (current_values.size < 8) {
@@ -150,8 +145,7 @@ let wt_tree_selector = (function() {
             }
         }
 
-        function setVisibleState(enable)
-        {
+        function setVisibleState(enable) {
             for (let opt of current_tab.options) {
                 if (opt.value !== undefined)
                     updateValue(opt.value, enable);
@@ -161,26 +155,22 @@ let wt_tree_selector = (function() {
             syncSummary();
         }
 
-        function handleTabClick(e, tab)
-        {
+        function handleTabClick(e, tab) {
             current_tab = tab;
             self.render(root_el);
         }
 
-        function handleCheckAll(e)
-        {
+        function handleCheckAll(e) {
             setVisibleState(true);
             e.preventDefault();
         }
 
-        function handleUncheckAll(e)
-        {
+        function handleUncheckAll(e) {
             setVisibleState(false);
             e.preventDefault();
         }
 
-        function handleGroupClick(e)
-        {
+        function handleGroupClick(e) {
             let target = e.target;
 
             let group = target.parentNode;
@@ -199,8 +189,7 @@ let wt_tree_selector = (function() {
             syncSummary();
         }
 
-        function handleOptionClick(e)
-        {
+        function handleOptionClick(e) {
             let target = e.target;
             let value = util.strToValue(target.dataset.value);
 

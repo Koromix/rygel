@@ -5,8 +5,7 @@
 let report = (function() {
     let self = this;
 
-    function createRow(title, value)
-    {
+    function createRow(title, value) {
         return dom.h('tr',
             dom.h('th', title),
             dom.h('td', value)
@@ -34,8 +33,7 @@ let report = (function() {
         );
     };
 
-    function generateDocument(row)
-    {
+    function generateDocument(row) {
         let file = query('#inpl_template').files[0];
         return self.generate(row, file);
     }
@@ -45,8 +43,7 @@ let report = (function() {
             let reader = new FileReader();
 
             // Shortcut functions
-            function label(value, var_name)
-            {
+            function label(value, var_name) {
                 if (value instanceof Object && !Array.isArray(value))
                     value = value[var_name];
 
@@ -59,8 +56,7 @@ let report = (function() {
                     return null;
                 }
             }
-            function test(data, test_name)
-            {
+            function test(data, test_name) {
                 switch (test_name) {
                     case 'demo_rachis': return tests.demoRachis(data).text;
                     case 'demo_col': return tests.demoHip(data).text;
@@ -97,8 +93,7 @@ let report = (function() {
                     default: throw `Unknown test \'${test_name}\'`;
                 }
             }
-            function calc(data, calc_name)
-            {
+            function calc(data, calc_name) {
                 switch (calc_name) {
                     case 'aq_epices': return tests.aqEpices(data);
 
@@ -112,8 +107,7 @@ let report = (function() {
                     default: throw `Unknown calculated variable \'${calc_name}\'`;
                 }
             }
-            function sex(data, male_text, female_text)
-            {
+            function sex(data, male_text, female_text) {
                 switch (data.consultant_sexe) {
                     case 'M': return male_text;
                     case 'F': return female_text;

@@ -992,20 +992,17 @@ let bridge = (function() {
         respi_vems_cvf: { kind: 'float' },
     };
 
-    function translateInt(str)
-    {
+    function translateInt(str) {
         let value = parseInt(str, 10);
         return !isNaN(value) ? value : null;
     }
 
-    function translateFloat(str)
-    {
+    function translateFloat(str) {
         let value = parseFloat(str);
         return !isNaN(value) ? util.roundTo(value, 2) : null;
     }
 
-    function computeAge(birth_date, rdv_date)
-    {
+    function computeAge(birth_date, rdv_date) {
         birth_date = (birth_date || '').split('-').map(x => parseInt(x, 10));
         rdv_date = (rdv_date || '').split('-').map(x => parseInt(x, 10));
 
@@ -1019,8 +1016,7 @@ let bridge = (function() {
         return age;
     }
 
-    function translateRow(row)
-    {
+    function translateRow(row) {
         let row2 = {};
         for (let var_name in VarInfo) {
             let var_info = VarInfo[var_name];
@@ -1101,10 +1097,7 @@ let bridge = (function() {
         return row2;
     }
 
-    function rowIsValid(row)
-    {
-        return row.consultant_nom && row.consultant_sexe;
-    }
+    function rowIsValid(row) { return row.consultant_nom && row.consultant_sexe; }
 
     this.getVarInfo = function(dict_name) { return VarInfo[dict_name]; }
     this.getDictInfo = function(dict_name) { return DictInfo[dict_name]; }
