@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function FormBuilder(root, unique_key, widgets, mem, missing_errors = new Set) {
+function FormBuilder(unique_key, widgets, mem, missing_errors = new Set) {
     let self = this;
 
     let interfaces = {};
@@ -517,7 +517,7 @@ function FormExecutor() {
     function renderForm(page_key, script) {
         let widgets = [];
 
-        let builder = new FormBuilder(af_form, page_key, widgets, mem, missing_errors);
+        let builder = new FormBuilder(page_key, widgets, mem, missing_errors);
         builder.changeHandler = () => renderForm(page_key, script);
         builder.submitHandler = () => self.submitHandler(mem);
 
@@ -576,13 +576,13 @@ instead of:
         af_log.style.display = 'none';
     };
 
-    this.render = function(root, page_key, script) {
+    this.render = function(root_el, page_key, script) {
         render(html`
             <div class="af_form"></div>
             <div class="af_log" style="display: none;"></div>
-        `, root);
-        af_form = root.querySelector('.af_form');
-        af_log = root.querySelector('.af_log');
+        `, root_el);
+        af_form = root_el.querySelector('.af_form');
+        af_log = root_el.querySelector('.af_log');
 
         if (script !== undefined) {
             return renderForm(page_key, script);
