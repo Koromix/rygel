@@ -454,19 +454,23 @@ instead of:
     this.errorList = function(options = {}) {
         options = Object.assign({}, options_stack[options_stack.length - 1], options);
 
-        if (self.errors.length || options.force) {
-            let render = () => html`
-                <fieldset class="af_section af_section_error">
-                    <legend>${options.label || 'Liste des erreurs'}</legend>
-                    ${!self.errors.length ? 'Aucune erreur' : html``}
-                    ${self.errors.map(intf =>
-                        html`${intf.errors.length} ${intf.errors.length > 1 ? 'erreurs' : 'erreur'} sur :
-                             <a href=${'#' + makeID(intf.key)}>${intf.label}</a><br/>`)}
-                </fieldset>
-            `;
+        let render = () => {
+            if (self.errors.length || options.force) {
+                return html`
+                    <fieldset class="af_section af_section_error">
+                        <legend>${options.label || 'Liste des erreurs'}</legend>
+                        ${!self.errors.length ? 'Aucune erreur' : html``}
+                        ${self.errors.map(intf =>
+                            html`${intf.errors.length} ${intf.errors.length > 1 ? 'erreurs' : 'erreur'} sur :
+                                 <a href=${'#' + makeID(intf.key)}>${intf.label}</a><br/>`)}
+                    </fieldset>
+                `;
+            } else {
+                return html``;
+            }
+        };
 
-            addWidget(render);
-        }
+        addWidget(render);
     };
 
     this.submit = function() {
