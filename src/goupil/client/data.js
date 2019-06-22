@@ -181,8 +181,8 @@ let data = (function () {
             call.func().then(call.resolve).catch(call.reject);
     }
 
-    this.open = function(db_name, update_func = () => {}) {
-        let req = window.indexedDB.open(db_name, 1);
+    this.open = function(db_name, version, update_func = () => {}) {
+        let req = window.indexedDB.open(db_name, version);
 
         let intf = {
             db: null,
@@ -201,7 +201,7 @@ let data = (function () {
         };
         req.onupgradeneeded = e => {
             let db = e.target.result;
-            update_func(db);
+            update_func(db, e.oldVersion || null);
         };
 
         return new DatabaseInterface(intf);
