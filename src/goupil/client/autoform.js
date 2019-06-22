@@ -60,7 +60,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
             key: key,
             label: label,
             value: value,
-            missing: value == null,
+            missing: value == null || isNaN(value),
             error: msg => {
                 if (!intf.errors.length)
                     self.errors.push(intf);
@@ -101,7 +101,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
 
     this.find = key => interfaces[key];
     this.value = key => mem[key];
-    this.missing = key => mem[key] == null;
+    this.missing = key => interfaces[key].missing;
     this.error = (key, msg) => interfaces[key].error(msg);
 
     function handleTextInput(e, key) {
