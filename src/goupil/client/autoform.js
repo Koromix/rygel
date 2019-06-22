@@ -90,7 +90,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
         return intf;
     }
 
-    function createPrefixOrSuffix(cls, text, value) {
+    function makePrefixOrSuffix(cls, text, value) {
         if (typeof text === 'function') {
             return html`<span class="${cls}">${text(value)}</span>`;
         } else if (text) {
@@ -124,7 +124,7 @@ function FormBuilder(root, unique_key, widgets, mem) {
         mem[key] = value || null;
 
         self.changeHandler(e);
-    };
+    }
 
     this.text = function(key, label, options = {}) {
         options = Object.assign({}, options_stack[options_stack.length - 1], options);
@@ -134,10 +134,10 @@ function FormBuilder(root, unique_key, widgets, mem) {
 
         let render = errors => wrapWidget(html`
             <label for=${id}>${label || key}</label>
-            ${createPrefixOrSuffix('af_prefix', options.prefix, value)}
+            ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
             <input id=${id} type="text" size="${options.size || 30}" .value=${value || ''}
                    ?disabled=${options.disable} @input=${e => handleTextInput(e, key)}/>
-            ${createPrefixOrSuffix('af_suffix', options.suffix, value)}
+            ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `, options, errors);
 
         return addVariableWidget(key, label, options, render, value);
@@ -151,17 +151,16 @@ function FormBuilder(root, unique_key, widgets, mem) {
 
         let render = errors => wrapWidget(html`
             <label for=${id}>${label || key}</label>
-            ${createPrefixOrSuffix('af_prefix', options.prefix, value)}
+            ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
             <input id=${id} type="password" size="${options.size || 30}" .value=${value || ''}
                    ?disabled=${options.disable} @input=${e => handleTextInput(e, key)}/>
-            ${createPrefixOrSuffix('af_suffix', options.suffix, value)}
+            ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `, options, errors);
 
         return addVariableWidget(key, label, options, render, value);
     };
 
-    function handleNumberChange(e, key)
-    {
+    function handleNumberChange(e, key) {
         let value = parseFloat(e.target.value);
         mem[key] = value;
 
@@ -176,11 +175,11 @@ function FormBuilder(root, unique_key, widgets, mem) {
 
         let render = errors => wrapWidget(html`
             <label for=${id}>${label || key}</label>
-            ${createPrefixOrSuffix('af_prefix', options.prefix, value)}
+            ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
             <input id=${id} type="number"
                    step=${1 / Math.pow(10, options.decimals || 0)} .value=${value}
                    ?disabled=${options.disable} @input=${e => handleNumberChange(e, key)}/>
-            ${createPrefixOrSuffix('af_suffix', options.suffix, value)}
+            ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `, options, errors);
 
         let intf = addVariableWidget(key, label, options, render, value);
