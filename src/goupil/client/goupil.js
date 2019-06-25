@@ -9,7 +9,7 @@ let goupil = (function() {
 
     let gp_popup;
     let popup_builder;
-    let popup_mem = {};
+    let popup_state;
     let popup_timer;
 
     let db;
@@ -96,13 +96,13 @@ let goupil = (function() {
 
         let widgets = [];
 
-        popup_builder = new FormBuilder('popup!', widgets, popup_mem);
+        popup_builder = autoform.createBuilder(popup_state, widgets);
         popup_builder.changeHandler = () => openPopup(e, func);
         popup_builder.close = closePopup;
         popup_builder.pushOptions({missingMode: 'disable'});
 
         func(popup_builder);
-        render(widgets.map(w => w.render(w.errors)), gp_popup);
+        autoform.renderWidgets(widgets, gp_popup);
 
         // We need to know popup width and height
         let give_focus = !gp_popup.classList.contains('active');
@@ -166,7 +166,7 @@ let goupil = (function() {
     }
 
     function closePopup() {
-        popup_mem = {};
+        popup_state = autoform.createState();
         popup_builder = null;
 
         clearTimeout(popup_timer);
@@ -189,8 +189,8 @@ let goupil = (function() {
         // Run module
         switch (path) {
             case '': { path = 'autoform' } // fallthrough
-            case 'autoform': { autoform.activate(); } break;
             case 'schedule': { schedule.activate(); } break;
+            case 'autoform': { autoform_mod.activate(); } break;
         }
 
         // Full path
