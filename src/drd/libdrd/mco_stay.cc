@@ -361,20 +361,22 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
     }
     offset += 18; // Skip a bunch of fields
     if (version >= 19) {
-        if (line[offset] == '1') {
-            stay.flags |= (int)mco_Stay::Flag::Conversion;
-        } else if (line[offset] == '2') {
-            stay.flags |= (int)mco_Stay::Flag::NoConversion;
-        } else if (RG_UNLIKELY(line[offset] != ' ')) {
-            stay.errors |= (int)mco_Stay::Error::MalformedConversion;
+        switch (line[offset++]) {
+            case '1': { stay.flags |= (int)mco_Stay::Flag::Conversion; } break;
+            case '2': { stay.flags |= (int)mco_Stay::Flag::NoConversion; } break;
+            case ' ': {} break;
+            default: { SetErrorFlag(mco_Stay::Error::MalformedConversion); } break;
         }
-        if (line[offset + 1] == '1') {
-            stay.flags |= (int)mco_Stay::Flag::RAAC;
-        } else if (RG_UNLIKELY(line[offset + 1] != '2' && line[offset + 1] != ' ')) {
-            stay.errors |= (int)mco_Stay::Error::MalformedRAAC;
+        switch (line[offset++]) {
+            case '1': { stay.flags |= (int)mco_Stay::Flag::RAAC; } break;
+            case '2':
+            case ' ': {}  break;
+            default: { SetErrorFlag(mco_Stay::Error::MalformedRAAC); } break;
         }
+        offset += 13; // Skip a bunch of fields
+    } else {
+        offset += 15; // Skip a bunch of fields
     }
-    offset += 15; // Skip a bunch of fields
 
     HeapArray<drd_DiagnosisCode> other_diagnoses(&other_diagnoses_alloc);
     HeapArray<mco_ProcedureRealisation> procedures(&procedures_alloc);
@@ -592,19 +594,20 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
         rsa.bed_authorization = 8;
     }
 
-    // Skip a whole bunch of stuff we (mostly) don't care about
     if (version >= 225) {
         offset += 17;
         ParsePmsiInt(ReadFragment(1), &test.supplement_days.st.sdc);
         switch (line[offset++]) {
-            case ' ': {} break;
-            case '0': { rsa.flags |= (int)mco_Stay::Flag::NoConversion; } break;
             case '1': { rsa.flags |= (int)mco_Stay::Flag::Conversion; } break;
+            case '2': { rsa.flags |= (int)mco_Stay::Flag::NoConversion; } break;
+            case ' ': {} break;
             default: { SetErrorFlag(mco_Stay::Error::MalformedConversion); } break;
         }
         switch (line[offset++]) {
-            case '0': {} break;
             case '1': { rsa.flags |= (int)mco_Stay::Flag::RAAC; } break;
+            case '2':
+            case '0':
+            case ' ': {} break;
             default: { SetErrorFlag(mco_Stay::Error::MalformedRAAC); } break;
         }
         offset += 44;
