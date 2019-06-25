@@ -189,8 +189,8 @@ let goupil = (function() {
         // Run module
         switch (path) {
             case '': { path = 'autoform' } // fallthrough
-            case 'schedule': { schedule.activate(); } break;
             case 'autoform': { autoform_mod.activate(); } break;
+            case 'schedule': { schedule_mod.activate(); } break;
         }
 
         // Full path
