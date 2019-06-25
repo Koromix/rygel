@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let autoform = (function() {
+let autoform_mod = (function() {
     let self = this;
 
     let init = false;
@@ -261,7 +261,7 @@ let autoform = (function() {
 
     this.go = function(key, id) {
         if (!executor) {
-            executor = new FormExecutor();
+            executor = autoform.createExecutor();
             executor.goHandler = self.go;
             executor.submitHandler = saveData;
         }
