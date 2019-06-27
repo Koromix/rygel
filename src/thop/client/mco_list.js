@@ -539,8 +539,18 @@ let mco_list = (function() {
             let href = self.routeToUrl({list: 'diagnoses', spec: str}).url;
             return html`<a href=${href}>${str}</a>`;
         } else if (str.match(/^[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?$/)) {
+            let ghm_root = str.substr(0, 5);
+
+            let tooltip;
+            {
+                let ghm_roots_map = catalog.update('mco_ghm_roots').map;
+                let ghm_root_info = ghm_roots_map[ghm_root];
+
+                tooltip = ghm_root_info ? `${ghm_root} - ${ghm_root_info.desc}` : '';
+            }
+
             let href = mco_pricing.routeToUrl({view: 'table', ghm_root: str.substr(0, 5)}).url;
-            return html`<a class="ghm" href=${href}>${str}</a>`;
+            return html`<a class="ghm" href=${href} title=${tooltip}>${str}</a>`;
         } else if (str.match(/[Nn]oeud [0-9]+/)) {
             let href = mco_tree.routeToUrl().url + '#n' + str.substr(6);
             return html`<a href=${href}>${str}</a>`;
