@@ -511,11 +511,13 @@ let catalog = (function() {
         let set = catalogs[name];
 
         if (info && (!set || !set.concepts.length)) {
-            set = {
-                concepts: [],
-                map: {}
-            };
-            catalogs[name] = set;
+            if (!set) {
+                set = {
+                    concepts: [],
+                    map: {}
+                };
+                catalogs[name] = set;
+            }
 
             if (info.concepts) {
                 set.concepts = info.concepts;
