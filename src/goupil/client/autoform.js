@@ -176,10 +176,15 @@ let autoform = (function() {
 
         function handleNumberChange(e, key) {
             let value = parseFloat(e.target.value);
-            state.values[key] = value;
-            state.missing_errors.delete(key);
 
-            self.changeHandler(self);
+            // Hack to accept incomplete values, mainly in the case of a '-' being typed first,
+            // in which case we don't want to clear the field immediately.
+            if (!isNaN(value) || !isNaN(state.values[key])) {
+                state.values[key] = value;
+                state.missing_errors.delete(key);
+
+                self.changeHandler(self);
+            }
         }
 
         this.number = function(key, label, options = {}) {
