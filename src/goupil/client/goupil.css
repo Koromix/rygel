@@ -64,3 +64,15 @@ button:not(:disabled) { cursor: pointer; }
     background: #efefef;
 }
 #gp_popup.active { display: block; }
+
+/* -------------------- Misc -------------------- */
+
+.gp_wip {
+    padding: 5px;
+    font-size: 3em;
+    color: red;
+}
+.gp_wip:before {
+    content: '⚠\FE0E';
+    padding-right: 10px;
+}
