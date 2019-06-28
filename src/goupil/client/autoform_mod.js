@@ -7,6 +7,9 @@ let autoform_mod = (function() {
 
     let init = false;
 
+    let left_panel = 'editor';
+    let show_page_panel = true;
+
     let editor;
     let editor_history_cache = {};
     let af_menu;
@@ -188,13 +191,33 @@ let autoform_mod = (function() {
         });
     }
 
+    function toggleLeftPanel(type) {
+        if (left_panel !== type) {
+            left_panel = type;
+        } else {
+            left_panel = null;
+            show_page_panel = true;
+        }
+
+        self.activate();
+    }
+
+    function togglePagePanel() {
+        if (!left_panel)
+            left_panel = 'editor';
+        show_page_panel = !show_page_panel;
+
+        self.activate();
+    }
+
     function renderAll() {
         let page = pages_map[current_key];
 
         render(html`
-            <button @click=${showCreatePageDialog}>Ajouter</button>
-            ${page ? html`<button @click=${e => showEditPageDialog(e, page)}>Modifier</button>
-                          <button @click=${e => showDeletePageDialog(e, page)}>Supprimer</button>` : html``}
+            <button class=${left_panel === 'editor' ? 'active' : ''} @click=${e => toggleLeftPanel('editor')}>Éditeur</button>
+            <button class=${left_panel === 'data' ? 'active' : ''} @click=${e => toggleLeftPanel('data')}>Données</button>
+            <button class=${show_page_panel ? 'active': ''} @click=${e => togglePagePanel()}>Aperçu</button>
+
             <select @change=${e => self.go(e.target.value)}>
                 ${!current_key && !pages.length ? html`<option>-- No page available --</option>` : html``}
                 ${current_key && !page ?
@@ -202,19 +225,26 @@ let autoform_mod = (function() {
                 ${pages.map(page =>
                     html`<option value=${page.key} .selected=${page.key == current_key}>${page.key} (${page.title})</option>`)}
             </select>
+            <button @click=${showCreatePageDialog}>Ajouter</button>
+            ${page ? html`<button @click=${e => showEditPageDialog(e, page)}>Modifier</button>
+                          <button @click=${e => showDeletePageDialog(e, page)}>Supprimer</button>` : html``}
             <button @click=${showResetPagesDialog}>Réinitialiser</button>
         `, af_menu);
 
         if (page) {
-            editor.setReadOnly(false);
-            editor.container.classList.remove('disabled');
+            if (editor) {
+                editor.setReadOnly(false);
+                editor.container.classList.remove('disabled');
+            }
 
-            return executor.render(af_form, page.key, page.script);
+            return executor.render(af_page, page.key, page.script);
         } else {
-            editor.setReadOnly(true);
-            editor.container.classList.add('disabled');
+            if (editor) {
+                editor.setReadOnly(true);
+                editor.container.classList.add('disabled');
+            }
 
-            executor.render(af_form);
+            executor.render(af_page);
             if (current_key)
                 executor.setError(null, `Unknown page '${current_key}'`);
 
@@ -240,19 +270,23 @@ let autoform_mod = (function() {
     }
 
     function initEditor() {
-        editor = ace.edit('af_editor');
+        if (document.querySelector('#af_editor')) {
+            editor = ace.edit('af_editor');
 
-        editor.setTheme('ace/theme/monokai');
-        editor.setShowPrintMargin(false);
-        editor.setFontSize(12);
-        editor.session.setOption('useWorker', false);
-        editor.session.setMode('ace/mode/javascript');
+            editor.setTheme('ace/theme/monokai');
+            editor.setShowPrintMargin(false);
+            editor.setFontSize(12);
+            editor.session.setOption('useWorker', false);
+            editor.session.setMode('ace/mode/javascript');
 
-        editor.on('change', e => {
-            // If something goes wrong during refreshAndSave(), we don't
-            // want to break ACE state.
-            setTimeout(refreshAndSave, 0);
-        });
+            editor.on('change', e => {
+                // If something goes wrong during refreshAndSave(), we don't
+                // want to break ACE state.
+                setTimeout(refreshAndSave, 0);
+            });
+        } else {
+            editor = null;
+        }
     }
 
     function saveData(mem) {
@@ -287,18 +321,20 @@ let autoform_mod = (function() {
             executor.setData({id: record_id});
         }
 
-        // Change current page
-        let page = pages_map[key];
-        if (page) {
-            editor.setValue(page.script);
-            editor.clearSelection();
+        // Change current page in editor
+        if (editor) {
+            let page = pages_map[key];
+            if (page) {
+                editor.setValue(page.script);
+                editor.clearSelection();
 
-            let history = editor_history_cache[key];
-            if (!history) {
-                history = new ace.UndoManager();
-                editor_history_cache[key] = history;
+                let history = editor_history_cache[key];
+                if (!history) {
+                    history = new ace.UndoManager();
+                    editor_history_cache[key] = history;
+                }
+                editor.session.setUndoManager(history);
             }
-            editor.session.setUndoManager(history);
         }
         current_key = key;
 
@@ -351,17 +387,44 @@ let autoform_mod = (function() {
             }
         }
 
-        let main = document.querySelector('main');
+        let main_el = document.querySelector('main');
 
-        render(html`
-            <div id="af_menu"></div>
-            <div id="af_editor"></div>
-            <div id="af_form"></div>
-        `, main);
-        af_menu = document.querySelector('#af_menu');
-        af_form = document.querySelector('#af_form');
+        if (left_panel === 'editor' && show_page_panel) {
+            render(html`
+                <div id="af_menu"></div>
+                <div id="af_editor" class="af_panel_left" id="af_editor"></div>
+                <div id="af_page" class="af_panel_right" id=""></div>
+            `, main_el);
+        } else if (left_panel === 'data' && show_page_panel) {
+            render(html`
+                <div id="af_menu"></div>
+                <div id="af_data" class="af_panel_left"></div>
+                <div id="af_page" class="af_panel_right"></div>
+            `, main_el);
+        } else if (left_panel === 'editor') {
+            render(html`
+                <div id="af_menu"></div>
+                <div id="af_editor" class="af_panel_fixed"></div>
+            `, main_el);
+        } else if (left_panel === 'data') {
+            render(html`
+                <div id="af_menu"></div>
+                <div id="af_data" class="af_panel_fixed"></div>
+            `, main_el);
+        } else {
+            render(html`
+                <div id="af_menu"></div>
+                <div id="af_page" class="af_panel_page"></div>
+            `, main_el);
+        }
 
+        af_menu = main_el.querySelector('#af_menu');
         initEditor();
+        af_page = main_el.querySelector('#af_page');
+        if (!af_page) {
+            // We still need to render the form to test it, so create a dummy element!
+            af_page = document.createElement('div');
+        }
 
         self.go(current_key || pickDefaultKey());
     };

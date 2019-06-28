@@ -4,16 +4,6 @@
 
 /* -------------------- Global layout -------------------- */
 
-#af_editor {
-    position: fixed;
-    left: 0;
-    top: 60px;
-    height: calc(100% - 60px);
-    width: 50%;
-    box-sizing: border-box;
-    z-index: 999;
-}
-#af_editor.disabled { filter: saturate(0%); }
 #af_menu {
     position: fixed;
     top: 30px;
@@ -22,10 +12,35 @@
     box-sizing: border-box;
     margin: 0;
     padding: 3px;
-    background: var(--main_color);
+    background: #24579d;
     z-index: 999;
 }
-#af_form { margin: 60px 0 0 50%; }
+
+.af_panel_left {
+    position: fixed;
+    left: 0;
+    top: 60px;
+    width: 50%;
+    height: calc(100% - 60px);
+    box-sizing: border-box;
+    z-index: 999;
+}
+.af_panel_right { margin: 60px 0 0 50%; }
+.af_panel_fixed {
+    position: fixed;
+    left: 0;
+    top: 60px;
+    width: 100%;
+    height: calc(100% - 60px);
+    box-sizing: border-box;
+    z-index: 999;
+}
+.af_panel_page {
+    margin: 70px auto 0 auto;
+    max-width: 800px;
+}
+
+#af_editor.disabled { filter: saturate(0%); }
 
 /* -------------------- Main menu -------------------- */
 
@@ -39,7 +54,8 @@
     border: 0;
     color: white;
 }
-#af_menu > button:hover { filter: grayscale(20%); }
+#af_menu > button:not(.active):hover { background: #376cb5; }
+#af_menu > button.active { background: #3b7ad1; }
 #af_menu > select {
     flex-grow: 1;
     background: inherit;
