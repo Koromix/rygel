@@ -178,6 +178,16 @@ let goupil = (function() {
         }
     }
 
+    function showDummyPage() {
+        document.title = `${settings.project_key} — goupil autoform`;
+
+        let main_el = document.querySelector('main');
+
+        render(html`
+            <div class="gp_wip">Page en chantier</div>
+        `, main_el);
+    }
+
     this.go = function(href, history = true) {
         // Module path
         let path = parseURL(href, window.location.href).pathname;
@@ -191,6 +201,7 @@ let goupil = (function() {
             case '': { path = 'autoform' } // fallthrough
             case 'autoform': { autoform_mod.activate(); } break;
             case 'schedule': { schedule_mod.activate(); } break;
+            default: { showDummyPage(); } break;
         }
 
         // Full path
