@@ -219,7 +219,7 @@ let autoform_mod = (function() {
             <button class=${left_panel === 'data' ? 'active' : ''} @click=${e => toggleLeftPanel('data')}>Données</button>
             <button class=${show_page_panel ? 'active': ''} @click=${e => togglePagePanel()}>Aperçu</button>
 
-            <select @change=${e => self.go(e.target.value)}>
+            <select id="af_page_selector" @change=${e => self.go(e.target.value)}>
                 ${!current_key && !pages.length ? html`<option>-- No page available --</option>` : html``}
                 ${current_key && !page ?
                     html`<option value=${current_key} .selected=${true}>-- Unknown page '${current_key}' --</option>` : html``}

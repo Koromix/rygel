@@ -603,20 +603,22 @@ function Schedule(widget, resources_map, meetings_map) {
 
     function renderMenu() {
         render(html`
-            <a class="sc_deploy" href="#"
-               @click=${e => { e.target.parentNode.querySelector('.sc_months').classList.toggle('active'); e.preventDefault(); }}></a>
+            <button class=${current_mode === 'meetings' ? 'active' : ''}
+                    @click=${toggleMode}>Agenda</button>
+            <button class=${current_mode === 'meetings' ? '' : 'active'}
+                    @click=${toggleMode}>Créneaux</button>
+
+            <div style="flex: 1;"></div>
 
             <div class="sc_selector">
-                <a href="#"
-                   @click=${e => { switchToPreviousMonth(); e.preventDefault(); }}
-                   @dragover=${slowDownEvents(300, switchToPreviousMonth)}>≪</a>
+                <button @click=${switchToPreviousMonth}
+                        @dragover=${slowDownEvents(300, switchToPreviousMonth)}>≪</button>
                 <b>${month_names[current_month - 1]}</b>
-                <a href="#"
-                   @click=${e => { switchToNextMonth(); e.preventDefault(); }}
-                   @dragover=${slowDownEvents(300, switchToNextMonth)}>≫</a>
+                <button @click=${switchToNextMonth}
+                        @dragover=${slowDownEvents(300, switchToNextMonth)}>≫</button>
             </div>
 
-            <div class="sc_months">${month_names.map((name, idx) => {
+            ${month_names.map((name, idx) => {
                 let month = idx + 1;
 
                 let warn = false;
@@ -649,23 +651,18 @@ function Schedule(widget, resources_map, meetings_map) {
                 if (month === current_month)
                     cls += ' active';
 
-                return html`<a class=${cls} href="#"
-                               @click=${e => { switchToMonth(month); e.preventDefault(); }}
-                               @dragover=${e => switchToMonth(month)}>${name}</a>`;
-            })}</div>
+                return html`<button class=${cls}
+                                    @click=${e => switchToMonth(month)}
+                                    @dragover=${e => switchToMonth(month)}>${name}</button>`;
+            })}
 
             <div class="sc_selector">
-                <a href="#"
-                   @click=${e => { switchToPreviousYear(); e.preventDefault(); }}
-                   @dragover=${slowDownEvents(300, switchToPreviousYear)}>≪</a>
+                <button @click=${switchToPreviousYear}
+                        @dragover=${slowDownEvents(300, switchToPreviousYear)}>≪</button>
                 <b>${current_year}</b>
-                <a href="#"
-                   @click=${e => { switchToNextYear(); e.preventDefault(); }}
-                   @dragover=${slowDownEvents(300, switchToNextYear)}>≫</a>
+                <button @click=${switchToNextYear}
+                        @dragover=${slowDownEvents(300, switchToNextYear)}>≫</button>
             </div>
-
-            <a class=${current_mode === 'meetings' ? 'sc_mode' : 'sc_mode active'} href="#"
-               @click=${e => { toggleMode(); e.preventDefault(); }}>⚙</a>
         `, gp_menu);
     }
 
