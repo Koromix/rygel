@@ -20,26 +20,12 @@
 
 /* -------------------- Year / month selection menu -------------------- */
 
-.sc_selector, .sc_months { display: inline-block; }
 .sc_selector { margin: 0 1em; }
-.sc_mode, .sc_selector a, .sc_months a {
+.sc_selector > b {
     display: inline-block;
-    height: 30px;
-    box-sizing: border-box;
-    text-decoration: none;
-    color: white;
-}
-.sc_mode {
-    position: fixed;
-    left: 0;
-    top: 0;
-    padding: 4px 0.4em 0 0.4em;
-    font-size: 1.3em;
-}
-.sc_selector a, .sc_months a { padding: 7px 1em 0 1em; }
-.sc_months a.active, .sc_mode.active {
-    background: #f8f8f8;
-    color: black;
+    width: 5em;
+    text-align: center;
+    font-weight: bold;
 }
 .sc_month_warn:before {
     content: '⚠\FE0E  ';
@@ -49,11 +35,6 @@
 .sc_month_warn {
     background: #db0a0a;
     color: white;
-}
-.sc_selector b {
-    display: inline-block;
-    padding-top: 7px;
-    width: 6em;
 }
 
 /* -------------------- Schedule layout -------------------- */
