@@ -126,6 +126,7 @@ let autoform_mod = (function() {
 
             default_key = autoform_default.key;
             executor = null;
+            record_id = null;
 
             self.go(default_key);
         });
