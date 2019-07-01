@@ -207,10 +207,6 @@ let goupil = (function() {
         // Full path
         let full_path = `${settings.base_url}${path}/`;
 
-        // Update menu state
-        for (let el of document.querySelectorAll('#gp_menu > a'))
-            el.classList.toggle('active', el.getAttribute('href') === full_path);
-
         // Update history
         if (history && full_path !== parseURL(window.location.href).pathname) {
             window.history.pushState(null, null, full_path);

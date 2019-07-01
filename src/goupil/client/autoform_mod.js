@@ -12,7 +12,7 @@ let autoform_mod = (function() {
 
     let editor;
     let editor_history_cache = {};
-    let af_menu;
+    let gp_menu;
     let af_page;
 
     // TODO: Simplify code with some kind of OrderedMap?
@@ -224,13 +224,13 @@ let autoform_mod = (function() {
                 ${current_key && !page ?
                     html`<option value=${current_key} .selected=${true}>-- Unknown page '${current_key}' --</option>` : html``}
                 ${pages.map(page =>
-                    html`<option value=${page.key} .selected=${page.key == current_key}>${page.key} (${page.title})</option>`)}
+                    html`<option value=${page.key} .selected=${page.key == current_key}>${page.title} [${page.key}]</option>`)}
             </select>
             <button @click=${showCreatePageDialog}>Ajouter</button>
             ${page ? html`<button @click=${e => showEditPageDialog(e, page)}>Modifier</button>
                           <button @click=${e => showDeletePageDialog(e, page)}>Supprimer</button>` : html``}
             <button @click=${showResetPagesDialog}>Réinitialiser</button>
-        `, af_menu);
+        `, gp_menu);
 
         if (page) {
             if (editor) {
@@ -392,34 +392,29 @@ let autoform_mod = (function() {
 
         if (left_panel === 'editor' && show_page_panel) {
             render(html`
-                <div id="af_menu"></div>
                 <div id="af_editor" class="af_panel_left" id="af_editor"></div>
                 <div id="af_page" class="af_panel_right" id=""></div>
             `, main_el);
         } else if (left_panel === 'data' && show_page_panel) {
             render(html`
-                <div id="af_menu"></div>
                 <div id="af_data" class="af_panel_left"></div>
                 <div id="af_page" class="af_panel_right"></div>
             `, main_el);
         } else if (left_panel === 'editor') {
             render(html`
-                <div id="af_menu"></div>
                 <div id="af_editor" class="af_panel_fixed"></div>
             `, main_el);
         } else if (left_panel === 'data') {
             render(html`
-                <div id="af_menu"></div>
                 <div id="af_data" class="af_panel_fixed"></div>
             `, main_el);
         } else {
             render(html`
-                <div id="af_menu"></div>
                 <div id="af_page" class="af_panel_page"></div>
             `, main_el);
         }
 
-        af_menu = main_el.querySelector('#af_menu');
+        gp_menu = document.querySelector('#gp_menu');
         initEditor();
         af_page = main_el.querySelector('#af_page');
         if (!af_page) {
