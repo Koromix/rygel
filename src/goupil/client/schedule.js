@@ -12,8 +12,8 @@ function Schedule(widget, resources_map, meetings_map) {
                        'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
     let week_day_names = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 
-    let main;
-    let footer;
+    let gp_menu;
+    let sc_view;
 
     let current_mode = 'meetings';
     let current_month;
@@ -333,7 +333,7 @@ function Schedule(widget, resources_map, meetings_map) {
             } else {
                 return html`<div class="sc_skip"></div>`;
             }
-        })}</div>`, main);
+        })}</div>`, sc_view);
     }
 
     function createResource(day, time) {
@@ -505,7 +505,7 @@ function Schedule(widget, resources_map, meetings_map) {
             } else {
                 return html`<div class="sc_skip"></div>`;
             }
-        })}</div>`, main);
+        })}</div>`, sc_view);
     }
 
     function executeCopy(dest_day) {
@@ -559,7 +559,7 @@ function Schedule(widget, resources_map, meetings_map) {
             } else {
                 return html`<div class="sc_skip"></div>`;
             }
-        })}</div>`, main);
+        })}</div>`, sc_view);
     }
 
     function switchToPreviousMonth() {
@@ -601,8 +601,8 @@ function Schedule(widget, resources_map, meetings_map) {
         renderAll();
     }
 
-    function renderFooter() {
-        render(html`<nav class="sc_footer">
+    function renderMenu() {
+        render(html`
             <a class="sc_deploy" href="#"
                @click=${e => { e.target.parentNode.querySelector('.sc_months').classList.toggle('active'); e.preventDefault(); }}></a>
 
@@ -666,7 +666,7 @@ function Schedule(widget, resources_map, meetings_map) {
 
             <a class=${current_mode === 'meetings' ? 'sc_mode' : 'sc_mode active'} href="#"
                @click=${e => { toggleMode(); e.preventDefault(); }}>⚙</a>
-        </nav>`, footer);
+        `, gp_menu);
     }
 
     function renderAll() {
@@ -674,11 +674,11 @@ function Schedule(widget, resources_map, meetings_map) {
         // Right now, render functions create content inside these two divs instead of replacing them.
         render(html`
             <div class="sc_header">${week_day_names.map(name => html`<div>${name}</div>`)}</div>
-            <div class="sc_main"></div>
-            <div class="sc_footer"></div>
+            <div class="sc_view"></div>
         `, widget);
-        main = widget.querySelector('.sc_main');
-        footer = widget.querySelector('.sc_footer');
+
+        gp_menu = document.querySelector('#gp_menu');
+        sc_view = widget.querySelector('.sc_view');
 
         switch (current_mode) {
             case 'meetings': { renderMeetings(); } break;
@@ -686,7 +686,7 @@ function Schedule(widget, resources_map, meetings_map) {
             case 'copy': { renderCopy(); } break;
         }
 
-        renderFooter();
+        renderMenu();
     }
 
     this.render = function(year, month) {
