@@ -229,9 +229,6 @@ static void InitRoutes()
                 } else if (TestStr(key, "PROJECT_KEY")) {
                     writer->Write(goupil_config.project_key);
                     return true;
-                } else if (TestStr(key, "MAIN_COLOR")) {
-                    writer->Write(goupil_config.main_color);
-                    return true;
                 } else {
                     return false;
                 }
