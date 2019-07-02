@@ -410,10 +410,10 @@ let autoform = (function() {
             if (!func)
                 throw new Error(`Section call must contain a function.
 
-    Make sure you did not use this syntax by accident:
-        f.section("Title"), () => { /* Do stuff here */ };
-    instead of:
-        f.section("Title", () => { /* Do stuff here */ });`);
+Make sure you did not use this syntax by accident:
+    f.section("Title"), () => { /* Do stuff here */ };
+instead of:
+    f.section("Title", () => { /* Do stuff here */ });`);
 
             let widgets = [];
             let prev_widgets = widgets_ref;
@@ -538,10 +538,10 @@ let autoform = (function() {
             self.goHandler = key => {
                 throw new Error(`Navigation functions (go, form.submit, etc.) must be called from a callback (button click, etc.).
 
-    If you are using it for events, make sure you did not use this syntax by accident:
-        go('page_key')
-    instead of:
-        () => go('page_key')`);
+If you are using it for events, make sure you did not use this syntax by accident:
+    go('page_key')
+instead of:
+    () => go('page_key')`);
             };
             self.submitHandler = self.goHandler;
 
