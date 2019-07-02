@@ -67,6 +67,9 @@ form.section("Exemples", () => {
         [null, "Aucune de ces réponses"]
     ]);
 });
+
+form.errorList();
+form.buttons('save');
 `
         },
 
@@ -132,6 +135,9 @@ form.section("Autres", () => {
 form.output(html\`On peut aussi mettre du <b>HTML directement</b> si on veut...
                  <button class="af_button" @click=\${e => go("complicated_help")}>Afficher l'aide</button>\`);
 form.output("Ou bien encore mettre du <b>texte brut</b>.");
+
+form.errorList();
+form.buttons('save');
 `
         },
 
