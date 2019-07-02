@@ -27,12 +27,8 @@
     text-align: center;
     font-weight: bold;
 }
-.sc_month_warn:before {
-    content: '⚠\FE0E  ';
-    font-size: 0.9em;
-    vertical-align: middle;
-}
-.sc_month_warn {
+#gp_menu .sc_month_warn:before { content: '⚠\FE0E  '; }
+#gp_menu .sc_month_warn {
     background: #db0a0a;
     color: white;
 }
