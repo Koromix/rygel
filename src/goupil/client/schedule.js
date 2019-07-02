@@ -177,7 +177,6 @@ function Schedule(widget, resources_map, meetings_map) {
         renderAll();
     }
 
-
     function showCreateMeetingDialog(e, slot_ref) {
         goupil.popup(e, form => {
             let name = form.text('name', 'Nom :', {mandatory: true});
@@ -186,7 +185,7 @@ function Schedule(widget, resources_map, meetings_map) {
                 createMeeting(slot_ref, name.value);
                 form.close();
             };
-            form.buttons.OkCancel('Créer');
+            form.buttons(form.buttons.std.ok_cancel('Créer'));
         });
     }
 
@@ -198,7 +197,7 @@ function Schedule(widget, resources_map, meetings_map) {
                 deleteMeeting(slot_ref);
                 form.close();
             };
-            form.buttons.OkCancel('Supprimer');
+            form.buttons(form.buttons.std.ok_cancel('Supprimer'));
         });
     }
 
@@ -407,7 +406,7 @@ function Schedule(widget, resources_map, meetings_map) {
                 createResource(day, time2);
                 form.close();
             };
-            form.buttons.OkCancel('Créer');
+            form.buttons(form.buttons.std.ok_cancel('Créer'));
         });
     }
 
@@ -419,7 +418,7 @@ function Schedule(widget, resources_map, meetings_map) {
                 deleteResource(day, res_idx);
                 form.close();
             };
-            form.buttons.OkCancel('Supprimer');
+            form.buttons(form.buttons.std.ok_cancel('Supprimer'));
         });
     }
 
@@ -432,7 +431,7 @@ function Schedule(widget, resources_map, meetings_map) {
                 closeDay(day);
                 form.close();
             };
-            form.buttons.OkCancel('Fermer');
+            form.buttons(form.buttons.std.ok_cancel('Fermer'));
         });
     }
 
