@@ -150,7 +150,7 @@ let autoform_mod = (function() {
                 createPage(key.value, title.value, is_default.value);
                 form.close();
             };
-            form.buttons.OkCancel('Créer');
+            form.buttons(form.buttons.std.ok_cancel('Créer'));
         });
     }
 
@@ -164,7 +164,7 @@ let autoform_mod = (function() {
                 editPage(page, title.value, is_default.value);
                 form.close();
             };
-            form.buttons.OkCancel('Modifier');
+            form.buttons(form.buttons.std.ok_cancel('Modifier'));
         });
     }
 
@@ -176,7 +176,7 @@ let autoform_mod = (function() {
                 deletePage(page);
                 form.close();
             };
-            form.buttons.OkCancel('Supprimer');
+            form.buttons(form.buttons.std.ok_cancel('Supprimer'));
         });
     }
 
@@ -188,7 +188,7 @@ let autoform_mod = (function() {
                 resetPages();
                 form.close();
             };
-            form.buttons.OkCancel('Réinitialiser');
+            form.buttons(form.buttons.std.ok_cancel('Réinitialiser'));
         });
     }
 

@@ -435,6 +435,18 @@ instead of:
         this.buttons = function(buttons, options = {}) {
             options = Object.assign({}, options_stack[options_stack.length - 1], options);
 
+            if (typeof buttons === 'string') {
+                let type = buttons;
+                let func = self.buttons.std[type];
+                if (!func)
+                    throw new Error(`Standard button list '${type}' does not exist.
+
+Valid choices include:
+    ${Object.keys(self.buttons.std).join(', ')}`);
+
+                buttons = func();
+            }
+
             let render = () => wrapWidget(html`
                 <div class="af_buttons">
                     ${buttons.map(button =>
@@ -445,18 +457,21 @@ instead of:
 
             addWidget(render);
         };
-        this.buttons.Save = (label, options = {}) => {
-            let problems = self.validateHandler(self);
-            return self.buttons([
-                [label || 'Enregistrer', self.submitHandler && !problems.length ? self.submit : null, problems.join('\n')]
-            ], options);
-        };
-        this.buttons.OkCancel = (label, options = {}) => {
-            let problems = self.validateHandler(self);
-            return self.buttons([
-                [label || 'OK', self.submitHandler && !problems.length ? self.submit : null, problems.join('\n')],
-                ['Annuler', self.close]
-            ], options);
+        this.buttons.std = {
+            save: (label, options = {}) => {
+                let problems = self.validateHandler(self);
+
+                return [
+                    [label || 'Enregistrer', self.submitHandler && !problems.length ? self.submit : null, problems.join('\n')]
+                ];
+            },
+            ok_cancel: (label, options = {}) => {
+                let problems = self.validateHandler(self);
+                return [
+                    [label || 'OK', self.submitHandler && !problems.length ? self.submit : null, problems.join('\n')],
+                    ['Annuler', self.close]
+                ];
+            }
         };
 
         this.errorList = function(options = {}) {
