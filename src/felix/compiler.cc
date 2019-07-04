@@ -26,8 +26,8 @@ static void AppendGccObjectArguments(const char *src_filename, BuildMode build_m
     }
 
     switch (build_mode) {
-        case BuildMode::Debug: { Fmt(out_buf, " -O0 -g"); } break;
-        case BuildMode::DebugFast: { Fmt(out_buf, " -Og -g"); } break;
+        case BuildMode::Debug: { Fmt(out_buf, " -O0 -g -ftrapv"); } break;
+        case BuildMode::DebugFast: { Fmt(out_buf, " -Og -g -ftrapv"); } break;
         case BuildMode::Fast:
         case BuildMode::StaticFast: { Fmt(out_buf, " -O2 -DNDEBUG"); } break;
         case BuildMode::LTO:
