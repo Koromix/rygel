@@ -279,18 +279,6 @@ let util = (function() {
         return JSON.stringify(value);
     };
 
-    // Minimum is inclusive, maximum is exclusive
-    this.getRandomFloat = function(min, max) {
-        return Math.random() * (max - min) + min;
-    };
-
-    // Minimum is inclusive, maximum is exclusive
-    this.getRandomInt = function(min, max) {
-        min = Math.ceil(min);
-        max = Math.floor(max);
-        return Math.floor(Math.random() * (max - min)) + min;
-    };
-
     function encode30bits(value, buf, offset, len) {
         let characters = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
