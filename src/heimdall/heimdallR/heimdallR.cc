@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#include "../../../vendor/imgui/imgui.h"
 #include "../../libcc/libcc.hh"
 #include "../libheimdall/libheimdall.hh"
 #include "../../wrappers/Rcc.hh"
@@ -21,6 +22,10 @@ struct Instance {
     std::thread run_thread;
     std::mutex lock;
 };
+
+extern "C" const AssetInfo *const pack_asset_Roboto_Medium_ttf;
+
+static ImFontAtlas font_atlas;
 
 RcppExport SEXP heimdallR_Init()
 {
@@ -249,6 +254,20 @@ RcppExport SEXP heimdallR_SetConcepts(SEXP inst_xp, SEXP name_xp, SEXP concepts_
     END_RCPP
 }
 
+static void InitFontAtlas()
+{
+    if (font_atlas.Fonts.empty()) {
+        const AssetInfo &font = *pack_asset_Roboto_Medium_ttf;
+        RG_ASSERT_DEBUG(font.data.len <= INT_MAX);
+
+        ImFontConfig font_config;
+        font_config.FontDataOwnedByAtlas = false;
+
+        font_atlas.AddFontFromMemoryTTF((void *)font.data.ptr, (int)font.data.len,
+                                        16, &font_config);
+    }
+}
+
 RcppExport SEXP heimdallR_Run(SEXP inst_xp)
 {
     BEGIN_RCPP
@@ -266,10 +285,12 @@ RcppExport SEXP heimdallR_Run(SEXP inst_xp)
         inst->run_thread = std::thread([=]() {
             RG_DEFER { inst->run = false; };
 
+            InitFontAtlas();
+
             gui_Window window;
             if (!window.Init(RG_HEIMDALL_NAME))
                 rcc_StopWithLastError();
-            if (!window.InitImGui())
+            if (!window.InitImGui(&font_atlas))
                 rcc_StopWithLastError();
 
             InterfaceState render_state = {};
@@ -300,10 +321,12 @@ RcppExport SEXP heimdallR_RunSync(SEXP inst_xp)
     if (inst->run)
         Rcpp::stop("Async run in progress");
 
+    InitFontAtlas();
+
     gui_Window window;
     if (!window.Init(RG_HEIMDALL_NAME))
         rcc_StopWithLastError();
-    if (!window.InitImGui())
+    if (!window.InitImGui(&font_atlas))
         rcc_StopWithLastError();
 
     InterfaceState render_state = {};
