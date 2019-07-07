@@ -33,7 +33,7 @@ struct InterfaceSettings {
         Always
     };
 
-    bool light_theme = false;
+    bool dark_theme = false;
     float tree_width = 300.0f;
     bool plot_measures = true;
     float deployed_alpha = 0.05f;

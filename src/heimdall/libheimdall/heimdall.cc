@@ -1210,10 +1210,10 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
     gui_info = &window.info;
 
     // Theme
-    if (state.settings.light_theme) {
-        ImGui::StyleColorsLight();
-    } else {
+    if (state.settings.dark_theme) {
         ImGui::StyleColorsDark();
+    } else {
+        ImGui::StyleColorsLight();
     }
 
     // Menu
@@ -1344,7 +1344,7 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
             ImGui::SliderFloat("Plot height", &state.new_settings.plot_height, 20.0f, 100.0f);
         }
         if (ImGui::CollapsingHeader("Appearance", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Checkbox("Light theme", &state.new_settings.light_theme);
+            ImGui::Checkbox("Dark theme", &state.new_settings.dark_theme);
             ImGui::PushItemWidth(100.0f);
             ImGui::SliderFloat("Grid opacity", &state.new_settings.grid_alpha, 0.0f, 1.0f);
             ImGui::PushItemWidth(100.0f);
