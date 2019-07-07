@@ -32,7 +32,7 @@ form.section("Nouvelle section", () => {
 
 form.section("Exemples", () => {
     // Variable texte
-    form.text("nom", "Quel est votre nom ?");
+    form.text("nom", "Quel est votre nom ?", {mandatory: true});
 
     // Variable numérique
     form.number("age", "Quel est votre âge ?", {min: 0, max: 120});
@@ -78,7 +78,7 @@ form.buttons('save');
             title: 'Formulaire compliqué',
             script: `form.pushOptions({large: true});
 
-form.text("name", "Quel est votre nom ?");
+form.text("name", "Quel est votre nom ?", {mandatory: true});
 form.number("age", "Quel est votre âge ?", {min: 0, max: 120,
                                             suffix: value => value > 1 ? "ans" : "an"});
 
