@@ -13,6 +13,7 @@ let autoform_mod = (function() {
     let editor;
     let editor_history_cache = {};
     let gp_menu;
+    let af_data;
     let af_page;
 
     // TODO: Simplify code with some kind of OrderedMap?
@@ -253,6 +254,15 @@ let autoform_mod = (function() {
         }
     }
 
+    function renderExport() {
+        // Refresh export data
+        if (af_data) {
+            goupil.database.loadAll('data').then(rows => {
+                autoform_export.renderTable(rows, af_data);
+            });
+        }
+    }
+
     function refreshAndSave() {
         let page = pages_map[current_key];
 
@@ -291,7 +301,10 @@ let autoform_mod = (function() {
     }
 
     function saveData(mem) {
-        goupil.database.save('data', mem);
+        goupil.database.save('data', mem).then(() => {
+            record_id = null;
+            self.go(current_key);
+        });
     }
 
     this.go = function(key, id) {
@@ -322,6 +335,8 @@ let autoform_mod = (function() {
             executor.setData({id: record_id});
         }
 
+        current_key = key;
+
         // Change current page in editor
         if (editor) {
             let page = pages_map[key];
@@ -337,9 +352,9 @@ let autoform_mod = (function() {
                 editor.session.setUndoManager(history);
             }
         }
-        current_key = key;
 
         renderAll();
+        renderExport();
     };
 
     this.activate = function() {
@@ -416,6 +431,7 @@ let autoform_mod = (function() {
 
         gp_menu = document.querySelector('#gp_menu');
         initEditor();
+        af_data = main_el.querySelector('#af_data');
         af_page = main_el.querySelector('#af_page');
         if (!af_page) {
             // We still need to render the form to test it, so create a dummy element!
