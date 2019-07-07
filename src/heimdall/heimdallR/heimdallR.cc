@@ -22,15 +22,24 @@ struct Instance {
     std::mutex lock;
 };
 
-SEXP Heimdall()
+RcppExport SEXP heimdallR_Init()
 {
+    BEGIN_RCPP
     RG_RCC_SETUP_LOG_HANDLER();
 
     Instance *inst = new Instance;
     RG_DEFER_N(inst_guard) { delete inst; };
 
+    SEXP inst_xp = R_MakeExternalPtr(inst, R_NilValue, R_NilValue);
+    R_RegisterCFinalizerEx(inst_xp, [](SEXP inst_xp) {
+        Instance *inst = (Instance *)R_ExternalPtrAddr(inst_xp);
+        delete inst;
+    }, TRUE);
     inst_guard.Disable();
-    return Rcpp::XPtr<Instance>(inst, true);
+
+    return inst_xp;
+
+    END_RCPP
 }
 
 template <typename Fun>
@@ -98,24 +107,34 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
     return inst->last_source_id;
 }
 
-void HeimdallAddEvents(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame values_df,
-                       Rcpp::CharacterVector keys)
+RcppExport SEXP heimdallR_AddEvents(SEXP inst_xp, SEXP source_xp, SEXP values_xp, SEXP keys_xp)
 {
+    BEGIN_RCPP
     RG_RCC_SETUP_LOG_HANDLER();
 
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
+    Rcpp::String source(source_xp);
+    Rcpp::DataFrame values_df(values_xp);
+    Rcpp::CharacterVector keys(keys_xp);
 
     AddElements(inst, source, values_df, keys, [&](Element &elmt, Size) {
         elmt.type = Element::Type::Event;
     });
+
+    return R_NilValue;
+
+    END_RCPP
 }
 
-void HeimdallAddMeasures(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame values_df,
-                         Rcpp::CharacterVector keys)
+RcppExport SEXP heimdallR_AddMeasures(SEXP inst_xp, SEXP source_xp, SEXP values_xp, SEXP keys_xp)
 {
+    BEGIN_RCPP
     RG_RCC_SETUP_LOG_HANDLER();
 
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
+    Rcpp::String source(source_xp);
+    Rcpp::DataFrame values_df(values_xp);
+    Rcpp::CharacterVector keys(keys_xp);
 
     struct {
         Rcpp::NumericVector value;
@@ -139,14 +158,21 @@ void HeimdallAddMeasures(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame valu
             elmt.u.measure.max = NAN;
         }
     });
+
+    return R_NilValue;
+
+    END_RCPP
 }
 
-void HeimdallAddPeriods(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame periods_df,
-                        Rcpp::CharacterVector keys)
+RcppExport SEXP heimdallR_AddPeriods(SEXP inst_xp, SEXP source_xp, SEXP values_xp, SEXP keys_xp)
 {
+    BEGIN_RCPP
     RG_RCC_SETUP_LOG_HANDLER();
 
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
+    Rcpp::String source(source_xp);
+    Rcpp::DataFrame periods_df(values_xp);
+    Rcpp::CharacterVector keys(keys_xp);
 
     struct {
         Rcpp::NumericVector duration;
@@ -159,13 +185,20 @@ void HeimdallAddPeriods(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame perio
         if (std::isnan(elmt.u.period.duration) || elmt.u.period.duration < 0.0)
             Rcpp::stop("Duration must be zero or a positive number");
     });
+
+    return R_NilValue;
+
+    END_RCPP
 }
 
-void HeimdallSetConcepts(SEXP inst_xp, std::string name, Rcpp::DataFrame concepts_df)
+RcppExport SEXP heimdallR_SetConcepts(SEXP inst_xp, SEXP name_xp, SEXP concepts_xp)
 {
+    BEGIN_RCPP
     RG_RCC_SETUP_LOG_HANDLER();
 
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
+    Rcpp::String name(name_xp);
+    Rcpp::DataFrame concepts_df(concepts_xp);
 
     struct {
         Rcpp::CharacterVector name;
@@ -175,12 +208,12 @@ void HeimdallSetConcepts(SEXP inst_xp, std::string name, Rcpp::DataFrame concept
     concepts.path = concepts_df["path"];
 
     ConceptSet *concept_set = nullptr;
-    for (Size i = 0; i < inst->concept_sets.len; i++) {
-        if (inst->concept_sets[i].name == name) {
+    /*for (Size i = 0; i < inst->concept_sets.len; i++) {
+        if (TestStr(inst->concept_sets[i].name, name.get_cstring())) {
             concept_set = &inst->concept_sets[i];
             break;
         }
-    }
+    }*/
 
     if (concept_set) {
         concept_set->paths.Clear();
@@ -190,7 +223,7 @@ void HeimdallSetConcepts(SEXP inst_xp, std::string name, Rcpp::DataFrame concept
     } else {
         concept_set = inst->concept_sets.AppendDefault();
     }
-    concept_set->name = DuplicateString(name.c_str(), &concept_set->str_alloc).ptr;
+    concept_set->name = DuplicateString(name.get_cstring(), &concept_set->str_alloc).ptr;
 
     for (Size i = 0; i < concepts_df.nrow(); i++) {
         if (((const char *)concepts.path[i])[0] != '/')
@@ -210,10 +243,15 @@ void HeimdallSetConcepts(SEXP inst_xp, std::string name, Rcpp::DataFrame concept
             LogError("Concept '%1' already exists", concept.name);
         }
     }
+
+    return R_NilValue;
+
+    END_RCPP
 }
 
-void HeimdallRun(SEXP inst_xp)
+RcppExport SEXP heimdallR_Run(SEXP inst_xp)
 {
+    BEGIN_RCPP
     RG_RCC_SETUP_LOG_HANDLER();
 
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
@@ -246,10 +284,15 @@ void HeimdallRun(SEXP inst_xp)
             }
         });
     }
+
+    return R_NilValue;
+
+    END_RCPP
 }
 
-void HeimdallRunSync(SEXP inst_xp)
+RcppExport SEXP heimdallR_RunSync(SEXP inst_xp)
 {
+    BEGIN_RCPP
     RG_RCC_SETUP_LOG_HANDLER();
 
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
@@ -271,6 +314,10 @@ void HeimdallRunSync(SEXP inst_xp)
         if (!StepHeimdall(window, render_state, inst->concept_sets, inst->entity_set))
             break;
     }
+
+    return R_NilValue;
+
+    END_RCPP
 }
 
 static void StopInstance(Instance *inst)
@@ -282,38 +329,34 @@ static void StopInstance(Instance *inst)
 }
 Instance::~Instance() { /* StopInstance(this); */ }
 
-void HeimdallStop(SEXP inst_xp)
+RcppExport SEXP heimdallR_Stop(SEXP inst_xp)
 {
+    BEGIN_RCPP
     RG_RCC_SETUP_LOG_HANDLER();
 
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
     StopInstance(inst);
+
+    return R_NilValue;
+
+    END_RCPP
 }
 
 }
 
-// C++ namespaces are stupid
+RcppExport void R_init_heimdallR(DllInfo *dll) {
+    static const R_CallMethodDef call_entries[] = {
+        {"heimdallR_Init", (DL_FUNC)&RG::heimdallR_Init, 0},
+        {"heimdallR_AddEvents", (DL_FUNC)&RG::heimdallR_AddEvents, 4},
+        {"heimdallR_AddMeasures", (DL_FUNC)&RG::heimdallR_AddMeasures, 4},
+        {"heimdallR_AddPeriods", (DL_FUNC)&RG::heimdallR_AddPeriods, 4},
+        {"heimdallR_SetConcepts", (DL_FUNC)&RG::heimdallR_SetConcepts, 3},
+        {"heimdallR_Run", (DL_FUNC)&RG::heimdallR_Run, 1},
+        {"heimdallR_RunSync", (DL_FUNC)&RG::heimdallR_RunSync, 1},
+        {"heimdallR_Stop", (DL_FUNC)&RG::heimdallR_Stop, 1},
+        {}
+    };
 
-// [[Rcpp::export(name = 'heimdall')]]
-SEXP R_Heimdall() { return RG::Heimdall(); }
-// [[Rcpp::export(name = 'heimdall.add_events')]]
-void R_HeimdallAddEvents(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame values_df,
-                         Rcpp::CharacterVector keys)
-    { RG::HeimdallAddEvents(inst_xp, source, values_df, keys); }
-// [[Rcpp::export(name = 'heimdall.add_measures')]]
-void R_HeimdallAddMeasures(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame values_df,
-                           Rcpp::CharacterVector keys)
-    { RG::HeimdallAddMeasures(inst_xp, source, values_df, keys); }
-// [[Rcpp::export(name = 'heimdall.add_periods')]]
-void R_HeimdallAddPeriods(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame periods_df,
-                          Rcpp::CharacterVector keys)
-    { RG::HeimdallAddPeriods(inst_xp, source, periods_df, keys); }
-// [[Rcpp::export(name = 'heimdall.set_concepts')]]
-void R_HeimdallSetConcepts(SEXP inst_xp, std::string name, Rcpp::DataFrame concepts_df)
-    { RG::HeimdallSetConcepts(inst_xp, name, concepts_df); }
-// [[Rcpp::export(name = 'heimdall.run')]]
-void R_HeimdallRun(SEXP inst_xp) { RG::HeimdallRun(inst_xp); }
-// [[Rcpp::export(name = 'heimdall.run_sync')]]
-void R_HeimdallRunSync(SEXP inst_xp) { RG::HeimdallRunSync(inst_xp); }
-// [[Rcpp::export(name = 'heimdall.stop')]]
-void R_HeimdallStop(SEXP inst_xp) { RG::HeimdallStop(inst_xp); }
+    R_registerRoutines(dll, nullptr, call_entries, nullptr, nullptr);
+    R_useDynamicSymbols(dll, FALSE);
+}
