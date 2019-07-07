@@ -291,6 +291,46 @@ let util = (function() {
         return Math.floor(Math.random() * (max - min)) + min;
     };
 
+    function encode30bits(value, buf, offset, len) {
+        let characters = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+
+        buf[offset + 0] = characters[(value >>> 25) & 0x1F];
+        buf[offset + 1] = characters[(value >>> 20) & 0x1F];
+        buf[offset + 2] = characters[(value >>> 15) & 0x1F];
+        buf[offset + 3] = characters[(value >>> 10) & 0x1F];
+        buf[offset + 4] = characters[(value >>> 5) & 0x1F];
+        buf[offset + 5] = characters[value & 0x1F];
+    }
+
+    this.makeULID = function() {
+        let ulid = new Array(26).fill(0);
+
+        // Generate time part
+        {
+            let time = Date.now();
+            if (time < 0 || time >= 0x1000000000000)
+                throw new Error('Cannot generate ULID with current UTC time');
+
+            let now0 = Math.floor(time / 0x100000);
+            let now1 = time % 0x100000;
+
+            encode30bits(now1, ulid, 4);
+            encode30bits(now0, ulid, 0);
+        }
+
+        // Generate random part
+        {
+            let rnd32 = new Uint32Array(3);
+            crypto.getRandomValues(rnd32);
+
+            encode30bits(rnd32[0], ulid, 10);
+            encode30bits(rnd32[1], ulid, 16);
+            encode30bits(rnd32[2], ulid, 20);
+        }
+
+        return ulid.join('');
+    };
+
     this.saveBlob = function(blob, filename) {
         let url = URL.createObjectURL(blob);
 
