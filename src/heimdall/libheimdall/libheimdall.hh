@@ -4,5 +4,5 @@
 
 #pragma once
 
-#include "core.hh"
 #include "data.hh"
+#include "heimdall.hh"

@@ -5,7 +5,7 @@
 #include "../../libcc/libcc.hh"
 #include "../../wrappers/opengl.hh"
 #include "../../libgui/libgui.hh"
-#include "core.hh"
+#include "heimdall.hh"
 #include "data.hh"
 RG_PUSH_NO_WARNINGS()
 #include "../../../vendor/imgui/imgui.h"
