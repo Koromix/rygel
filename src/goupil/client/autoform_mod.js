@@ -302,6 +302,8 @@ let autoform_mod = (function() {
 
     function saveData(mem) {
         goupil.database.save('data', mem).then(() => {
+            goupil.logSuccess('Données sauvegardées !');
+
             record_id = null;
             self.go(current_key);
         });

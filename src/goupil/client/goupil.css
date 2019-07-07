@@ -55,6 +55,41 @@ button:not(:disabled) { cursor: pointer; }
 #gp_menu button:not(.active):hover { background: #376cb5; }
 #gp_menu button.active { background: #3b7ad1; }
 
+/* -------------------- Notifications -------------------- */
+
+#gp_log {
+    position: fixed;
+    left: calc(50% - 200px);
+    top: 40px;
+    width: 400px;
+    z-index: 99999;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
+
+.gp_log_entry {
+    margin-bottom: 8px;
+    padding: 10px;
+    background: #373737;
+    color: white;
+    box-shadow: 1px 1px rgba(0, 0, 0, 0.5);
+    text-align: center;
+    filter: opacity(96%);
+}
+.gp_log_entry:hover { filter: opacity(30%); }
+.gp_log_entry.success { background: #016a27; }
+.gp_log_entry.error { background: #d72a2a; }
+
+.gp_log_close {
+    float: right;
+    background: none;
+    border: 0;
+    color: white;
+    font-weight: bold;
+}
+
 /* -------------------- Popup -------------------- */
 
 #gp_popup {
