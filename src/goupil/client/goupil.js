@@ -21,13 +21,16 @@ let goupil = (function() {
     }
 
     function initData() {
+        let storage_warning = 'Local data may be cleared by the browser under storage pressure, ' +
+                              'check your privacy settings for this website';
+
         if (navigator.storage && navigator.storage.persist) {
             navigator.storage.persist().then(granted => {
                 if (!granted)
-                    console.warn('Storage may be cleared by the UA under storage pressure');
+                    self.logError(storage_warning);
             });
         } else {
-            console.warn('Storage may be cleared by the UA under storage pressure');
+            self.logError(storage_warning);
         }
 
         let db_name = `goupil_${settings.project_key}`;
