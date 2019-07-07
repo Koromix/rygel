@@ -12,6 +12,8 @@ let goupil = (function() {
     let popup_state;
     let popup_timer;
 
+    let log_entries = [];
+
     let db;
 
     function parseURL(href, base) {
@@ -241,6 +243,40 @@ let goupil = (function() {
         closePopup();
         openPopup(e, func);
     };
+
+    function renderLog() {
+        let log_el = document.querySelector('#gp_log');
+
+        render(log_entries.map((entry, idx) => {
+            return html`<div class=${'gp_log_entry ' + entry.type}>
+                <button class="gp_log_close" @click=${e => closeLogEntry(idx)}>X</button>
+                ${entry.msg}
+             </div>`;
+        }), log_el);
+    }
+
+    function closeLogEntry(idx) {
+        log_entries.splice(idx, 1);
+        renderLog();
+    }
+
+    function log(msg, type) {
+        let entry = {
+            msg: msg,
+            type: type
+        };
+        log_entries.push(entry);
+
+        renderLog();
+
+        setTimeout(() => {
+            log_entries.shift();
+            renderLog();
+        }, 6000);
+    }
+
+    this.logSuccess = function(msg) { log(msg, 'success'); };
+    this.logError = function(msg) { log(msg, 'error'); };
 
     document.addEventListener('readystatechange', e => {
         if (document.readyState === 'complete') {

@@ -499,6 +499,8 @@ Valid choices include:
         this.submit = function() {
             if (self.submitHandler && self.isValid()) {
                 if (missing_set.size) {
+                    goupil.logError('Impossible d\'enregistrer : données manquantes');
+
                     state.missing_errors.clear();
                     for (let key of missing_set)
                         state.missing_errors.add(key);
