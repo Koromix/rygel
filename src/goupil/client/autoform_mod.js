@@ -308,6 +308,9 @@ let autoform_mod = (function() {
 
             record_id = null;
             self.go(current_key);
+
+            // TODO: Give focus to first widget
+            window.scrollTo(0, 0);
         });
     }
 
