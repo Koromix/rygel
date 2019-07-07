@@ -26,6 +26,8 @@ let goupil = (function() {
 
         if (navigator.storage && navigator.storage.persist) {
             navigator.storage.persist().then(granted => {
+                // FIXME: For some reason this does not seem to work correctly on Firefox,
+                // where granted is always true. Investigate.
                 if (!granted)
                     self.logError(storage_warning);
             });
