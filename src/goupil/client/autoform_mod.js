@@ -108,8 +108,10 @@ let autoform_mod = (function() {
         });
     }
 
-    function resetPages() {
+    function resetAll() {
         let t = goupil.database.transaction(db => {
+            db.clear('data');
+
             db.clear('pages');
             for (let page of autoform_default.pages)
                 db.save('pages', page);
@@ -181,12 +183,12 @@ let autoform_mod = (function() {
         });
     }
 
-    function showResetPagesDialog(e) {
+    function showResetDialog(e) {
         goupil.popup(e, form => {
-            form.output('Voulez-vous vraiment réinitialiser toutes les pages ?');
+            form.output(html`Voulez-vous vraiment réinitialiser toutes les <b>pages et les données</b> ?`);
 
             form.submitHandler = () => {
-                resetPages();
+                resetAll();
                 form.close();
             };
             form.buttons(form.buttons.std.ok_cancel('Réinitialiser'));
@@ -230,7 +232,7 @@ let autoform_mod = (function() {
             <button @click=${showCreatePageDialog}>Ajouter</button>
             ${page ? html`<button @click=${e => showEditPageDialog(e, page)}>Modifier</button>
                           <button @click=${e => showDeletePageDialog(e, page)}>Supprimer</button>` : html``}
-            <button @click=${showResetPagesDialog}>Réinitialiser</button>
+            <button @click=${showResetDialog}>Réinitialiser</button>
         `, gp_menu);
 
         if (page) {
