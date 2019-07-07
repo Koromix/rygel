@@ -12,6 +12,7 @@
     height: calc(100% - 30px);
     box-sizing: border-box;
     z-index: 999;
+    overflow: auto;
 }
 .af_panel_right { margin: 30px 0 0 50%; }
 .af_panel_fixed {
@@ -22,6 +23,7 @@
     height: calc(100% - 30px);
     box-sizing: border-box;
     z-index: 999;
+    overflow: auto;
 }
 .af_panel_page {
     margin: 40px auto 10px auto;
@@ -183,3 +185,23 @@
 
 .af_widget > p:first-child { margin-top: 0; }
 .af_widget > p:last-child { margin-bottom: 0; }
+
+/* -------------------- Export -------------------- */
+
+.af_export {
+    width: 100%;
+    border-collapse: collapse;
+    border: 0;
+}
+.af_export thead {
+    height: 30px;
+    background: #ddd;
+}
+.af_export tbody tr:nth-child(2n + 1) { background: #efefef; }
+.af_export tbody tr:nth-child(2n) { background: #f4f4f4; }
+.af_export td {
+    padding: 3px;
+    border: 1px solid #ddd;
+}
+.af_export td:first-child, .af_export td:first-child { border-left: 0; }
+.af_export td:last-child, .af_export td:last-child { border-right: 0; }
