@@ -318,7 +318,7 @@ let autoform_mod = (function() {
         }
         if (record_id == null) {
             // TODO: Generate ULID-like IDs
-            record_id = util.getRandomInt(1, 9007199254740991);
+            record_id = util.makeULID();
             executor.setData({id: record_id});
         }
 
