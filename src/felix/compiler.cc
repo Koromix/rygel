@@ -191,6 +191,10 @@ public:
         if (src_type == SourceType::CXX_Source || src_type == SourceType::CXX_Header) {
             Fmt(&buf, " -Xclang -flto-visibility-public-std");
         }
+#else
+        if (build_mode == BuildMode::Debug || build_mode == BuildMode::DebugFast) {
+            Fmt(&buf, " -fstack-size-section");
+        }
 #endif
 
         AppendGccObjectArguments(src_filename, build_mode, pch_filename, definitions,
