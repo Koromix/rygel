@@ -3,6 +3,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../libcc/libcc.hh"
+#include "thop.hh"
+#include "config.hh"
 #include "mco_info.hh"
 #include "mco.hh"
 
@@ -52,7 +54,7 @@ static int GetIndexFromRequest(const http_Request &request, http_Response *out_r
 
         {
             char url_buf[64];
-            Fmt(url_buf, "%1?date=%2", request.url, index->limit_dates[0]);
+            Fmt(url_buf, "%1%2?date=%3", thop_config.base_url, request.url + 1, index->limit_dates[0]);
             MHD_add_response_header(response, "Location", url_buf);
         }
 
