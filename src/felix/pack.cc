@@ -121,7 +121,7 @@ static bool BuildJavaScriptMap3(Span<const PackSourceInfo> sources, StreamWriter
         {
             StreamReader reader(src.filename);
             while (!reader.eof) {
-                char buf[128 * 1024];
+                char buf[16 * 1024];
                 Size len = reader.Read(RG_SIZE(buf), &buf);
                 if (len < 0)
                     return false;
