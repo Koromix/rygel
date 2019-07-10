@@ -706,25 +706,25 @@ enum MHD_StatusCode
    * This daemon was not configured with options that
    * would allow us to build an FD set for select().
    */
-  MHD_SC_CONFIGURATION_MISSMATCH_FOR_GET_FDSET = 50037,
+  MHD_SC_CONFIGURATION_MISMATCH_FOR_GET_FDSET = 50037,
 
   /**
    * This daemon was not configured with options that
    * would allow us to obtain a meaningful timeout.
    */
-  MHD_SC_CONFIGURATION_MISSMATCH_FOR_GET_TIMEOUT = 50038,
+  MHD_SC_CONFIGURATION_MISMATCH_FOR_GET_TIMEOUT = 50038,
 
   /**
    * This daemon was not configured with options that
    * would allow us to run with select() data.
    */
-  MHD_SC_CONFIGURATION_MISSMATCH_FOR_RUN_SELECT = 50039,
+  MHD_SC_CONFIGURATION_MISMATCH_FOR_RUN_SELECT = 50039,
 
   /**
    * This daemon was not configured to run with an
    * external event loop.
    */
-  MHD_SC_CONFIGURATION_MISSMATCH_FOR_RUN_EXTERNAL = 50040,
+  MHD_SC_CONFIGURATION_MISMATCH_FOR_RUN_EXTERNAL = 50040,
 
   /**
    * Encountered an unexpected event loop style
@@ -2187,9 +2187,9 @@ MHD_daemon_tls_mem_dhparams (struct MHD_Daemon *daemon,
  * @param cls closure
  * @param connection the HTTPS connection
  * @param username the user name claimed by the other side
- * @param psk[out] to be set to the pre-shared-key; should be allocated with malloc(),
+ * @param[out] psk to be set to the pre-shared-key; should be allocated with malloc(),
  *                 will be freed by MHD
- * @param psk_size[out] to be set to the number of bytes in @a psk
+ * @param[out] psk_size to be set to the number of bytes in @a psk
  * @return 0 on success, -1 on errors 
  */
 typedef int

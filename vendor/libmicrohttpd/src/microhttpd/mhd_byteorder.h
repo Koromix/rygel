@@ -26,7 +26,9 @@
 #ifndef MHD_BYTEORDER_H
 #define MHD_BYTEORDER_H
 
-#include "platform.h"
+#include "mhd_options.h"
+
+#include <stdint.h>
 
 #if HAVE_ENDIAN_H
 #include <endian.h>

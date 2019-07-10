@@ -17,14 +17,12 @@
      Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
      Boston, MA 02110-1301, USA.
 */
-
 /**
  * @file test_get.c
  * @brief  Testcase for libmicrohttpd GET operations
  *         TODO: test parsing of query
  * @author Christian Grothoff
  */
-
 #include "MHD_config.h"
 #include "platform.h"
 #include <curl/curl.h>
@@ -32,6 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "test_helpers.h"
 #include "mhd_sockets.h" /* only macros used */
 
 
@@ -85,13 +84,15 @@ log_cb (void *cls,
         const char *uri,
         struct MHD_Connection *con)
 {
+  (void) cls;
+  (void) con;
   if (0 != strcmp (uri,
                    EXPECTED_URI_PATH))
     {
       fprintf (stderr,
                "Wrong URI: `%s'\n",
                uri);
-      abort ();
+      _exit (22);
     }
   return NULL;
 }
@@ -129,14 +130,30 @@ ahc_echo (void *cls,
   if ( (NULL == v) ||
        (0 != strcmp ("&",
                      v)) )
-    abort ();
-  v = MHD_lookup_connection_value (connection,
-                                   MHD_GET_ARGUMENT_KIND,
-                                   "b");
+    {
+      fprintf (stderr, "Found while looking for 'a=&': 'a=%s'\n",
+               NULL == v ? "NULL" : v);
+      _exit (17);
+    }
+  v = NULL;
+  if (MHD_YES != MHD_lookup_connection_value_n (connection,
+                                                MHD_GET_ARGUMENT_KIND,
+                                                "b",
+                                                1,
+                                                &v,
+                                                NULL))
+    {
+      fprintf (stderr, "Not found 'b' GET argument.\n");
+      _exit (18);
+    }
   if ( (NULL == v) ||
        (0 != strcmp ("c",
                      v)) )
-    abort ();
+    {
+      fprintf (stderr, "Found while looking for 'b=c': 'b=%s'\n",
+               NULL == v ? "NULL" : v);
+      _exit (19);
+    }
   response = MHD_create_response_from_buffer (strlen (url),
 					      (void *) url,
 					      MHD_RESPMEM_MUST_COPY);
@@ -145,7 +162,10 @@ ahc_echo (void *cls,
                             response);
   MHD_destroy_response (response);
   if (ret == MHD_NO)
-    abort ();
+    {
+      fprintf (stderr, "Failed to queue response.\n");
+      _exit (19);
+    }
   return ret;
 }
 
@@ -190,7 +210,7 @@ testInternalGet (int poll_flag)
   curl_easy_setopt (c, CURLOPT_PORT, (long)global_port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
   curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
   curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
   if (oneone)
@@ -200,7 +220,7 @@ testInternalGet (int poll_flag)
   /* NOTE: use of CONNECTTIMEOUT without also
      setting NOSIGNAL results in really weird
      crashes on my system!*/
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
     {
       fprintf (stderr,
@@ -260,7 +280,7 @@ testMultithreadedGet (int poll_flag)
   curl_easy_setopt (c, CURLOPT_PORT, (long)global_port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
   curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
   if (oneone)
     curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
@@ -270,7 +290,7 @@ testMultithreadedGet (int poll_flag)
   /* NOTE: use of CONNECTTIMEOUT without also
      setting NOSIGNAL results in really weird
      crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
     {
       fprintf (stderr,
@@ -331,7 +351,7 @@ testMultithreadedPoolGet (int poll_flag)
   curl_easy_setopt (c, CURLOPT_PORT, (long)global_port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
   curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
   if (oneone)
     curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
@@ -341,7 +361,7 @@ testMultithreadedPoolGet (int poll_flag)
   /* NOTE: use of CONNECTTIMEOUT without also
      setting NOSIGNAL results in really weird
      crashes on my system!*/
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
     {
       fprintf (stderr,
@@ -374,11 +394,7 @@ testExternalGet ()
   fd_set ws;
   fd_set es;
   MHD_socket maxsock;
-#ifdef MHD_WINSOCK_SOCKETS
-  int maxposixs; /* Max socket number unused on W32 */
-#else  /* MHD_POSIX_SOCKETS */
-#define maxposixs maxsock
-#endif /* MHD_POSIX_SOCKETS */
+  int maxposixs; 
   int running;
   struct CURLMsg *msg;
   time_t start;
@@ -416,7 +432,7 @@ testExternalGet ()
   curl_easy_setopt (c, CURLOPT_PORT, (long)global_port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
   if (oneone)
     curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
   else
@@ -426,7 +442,7 @@ testExternalGet ()
   /* NOTE: use of CONNECTTIMEOUT without also
      setting NOSIGNAL results in really weird
      crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
 
 
   multi = curl_multi_init ();
@@ -472,8 +488,10 @@ testExternalGet ()
         }
       tv.tv_sec = 0;
       tv.tv_usec = 1000;
+#ifdef MHD_POSIX_SOCKETS
       if (maxsock > maxposixs)
-	maxposixs = maxsock;
+        maxposixs = maxsock;
+#endif /* MHD_POSIX_SOCKETS */
       if (-1 == select (maxposixs + 1, &rs, &ws, &es, &tv))
         {
 #ifdef MHD_POSIX_SOCKETS
@@ -481,7 +499,7 @@ testExternalGet ()
             abort ();
 #else
           if (WSAEINVAL != WSAGetLastError() || 0 != rs.fd_count || 0 != ws.fd_count || 0 != es.fd_count)
-            abort ();
+            _exit (99);
           Sleep (1000);
 #endif
         }
@@ -580,7 +598,7 @@ testUnknownPortGet (int poll_flag)
   curl_easy_setopt (c, CURLOPT_URL, buf);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
   curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
   curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
   if (oneone)
@@ -590,7 +608,7 @@ testUnknownPortGet (int poll_flag)
   /* NOTE: use of CONNECTTIMEOUT without also
      setting NOSIGNAL results in really weird
      crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
     {
       fprintf (stderr,
@@ -703,7 +721,10 @@ ahc_empty (void *cls,
   ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
   MHD_destroy_response (response);
   if (ret == MHD_NO)
-    abort ();
+    {
+      fprintf (stderr, "Failed to queue response.\n");
+      _exit (20);
+    }
   return ret;
 }
 
@@ -766,8 +787,8 @@ testEmptyGet (int poll_flag)
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   curl_easy_setopt (c, CURLOPT_DEBUGFUNCTION, &curlExcessFound);
   curl_easy_setopt (c, CURLOPT_DEBUGDATA, &excess_found);
-  curl_easy_setopt (c, CURLOPT_VERBOSE, 1);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_VERBOSE, 1L);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
   curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
   curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
   if (oneone)
@@ -777,7 +798,7 @@ testEmptyGet (int poll_flag)
   /* NOTE: use of CONNECTTIMEOUT without also
      setting NOSIGNAL results in really weird
      crashes on my system!*/
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
     {
       fprintf (stderr,
@@ -801,43 +822,133 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
-  (void) argc;   /* Unused. Silence compiler warning. */
+  unsigned int test_result = 0;
+  int verbose = 0;
 
-  oneone = (NULL != strrchr (argv[0], (int) '/')) ?
-    (NULL != strstr (strrchr (argv[0], (int) '/'), "11")) : 0;
+  if (NULL == argv || 0 == argv[0])
+    return 99;
+  oneone = has_in_name (argv[0], "11");
+  verbose = has_param (argc, argv, "-v") || has_param (argc, argv, "--verbose");
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 2;
   global_port = 0;
-  errorCount += testExternalGet ();
+  test_result = testExternalGet ();
+  if (test_result)
+    fprintf (stderr, "FAILED: testExternalGet () - %u.\n", test_result);
+  else if (verbose)
+    printf ("PASSED: testExternalGet ().\n");
+  errorCount += test_result;
   if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_THREADS))
     {
-      errorCount += testInternalGet (0);
-      errorCount += testMultithreadedGet (0);
-      errorCount += testMultithreadedPoolGet (0);
-      errorCount += testUnknownPortGet (0);
-      errorCount += testStopRace (0);
-      errorCount += testEmptyGet (0);
+      test_result += testInternalGet (0);
+      if (test_result)
+        fprintf (stderr, "FAILED: testInternalGet (0) - %u.\n", test_result);
+      else if (verbose)
+        printf ("PASSED: testInternalGet (0).\n");
+      errorCount += test_result;
+      test_result += testMultithreadedGet (0);
+      if (test_result)
+        fprintf (stderr, "FAILED: testMultithreadedGet (0) - %u.\n", test_result);
+      else if (verbose)
+        printf ("PASSED: testMultithreadedGet (0).\n");
+      errorCount += test_result;
+      test_result += testMultithreadedPoolGet (0);
+      if (test_result)
+        fprintf (stderr, "FAILED: testMultithreadedPoolGet (0) - %u.\n", test_result);
+      else if (verbose)
+        printf ("PASSED: testMultithreadedPoolGet (0).\n");
+      errorCount += test_result;
+      test_result += testUnknownPortGet (0);
+      if (test_result)
+        fprintf (stderr, "FAILED: testUnknownPortGet (0) - %u.\n", test_result);
+      else if (verbose)
+        printf ("PASSED: testUnknownPortGet (0).\n");
+      errorCount += test_result;
+      test_result += testStopRace (0);
+      if (test_result)
+        fprintf (stderr, "FAILED: testStopRace (0) - %u.\n", test_result);
+      else if (verbose)
+        printf ("PASSED: testStopRace (0).\n");
+      errorCount += test_result;
+      test_result += testEmptyGet (0);
+      if (test_result)
+        fprintf (stderr, "FAILED: testEmptyGet (0) - %u.\n", test_result);
+      else if (verbose)
+        printf ("PASSED: testEmptyGet (0).\n");
+      errorCount += test_result;
       if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_POLL))
 	{
-	  errorCount += testInternalGet(MHD_USE_POLL);
-	  errorCount += testMultithreadedGet(MHD_USE_POLL);
-	  errorCount += testMultithreadedPoolGet(MHD_USE_POLL);
-	  errorCount += testUnknownPortGet(MHD_USE_POLL);
-	  errorCount += testStopRace(MHD_USE_POLL);
-	  errorCount += testEmptyGet(MHD_USE_POLL);
+          test_result += testInternalGet(MHD_USE_POLL);
+          if (test_result)
+            fprintf (stderr, "FAILED: testInternalGet (MHD_USE_POLL) - %u.\n", test_result);
+          else if (verbose)
+            printf ("PASSED: testInternalGet (MHD_USE_POLL).\n");
+          errorCount += test_result;
+          test_result += testMultithreadedGet(MHD_USE_POLL);
+          if (test_result)
+            fprintf (stderr, "FAILED: testMultithreadedGet (MHD_USE_POLL) - %u.\n", test_result);
+          else if (verbose)
+            printf ("PASSED: testMultithreadedGet (MHD_USE_POLL).\n");
+          errorCount += test_result;
+          test_result += testMultithreadedPoolGet(MHD_USE_POLL);
+          if (test_result)
+            fprintf (stderr, "FAILED: testMultithreadedPoolGet (MHD_USE_POLL) - %u.\n", test_result);
+          else if (verbose)
+            printf ("PASSED: testMultithreadedPoolGet (MHD_USE_POLL).\n");
+          errorCount += test_result;
+          test_result += testUnknownPortGet(MHD_USE_POLL);
+          if (test_result)
+            fprintf (stderr, "FAILED: testUnknownPortGet (MHD_USE_POLL) - %u.\n", test_result);
+          else if (verbose)
+            printf ("PASSED: testUnknownPortGet (MHD_USE_POLL).\n");
+          errorCount += test_result;
+          test_result += testStopRace(MHD_USE_POLL);
+          if (test_result)
+            fprintf (stderr, "FAILED: testStopRace (MHD_USE_POLL) - %u.\n", test_result);
+          else if (verbose)
+            printf ("PASSED: testStopRace (MHD_USE_POLL).\n");
+          errorCount += test_result;
+          test_result += testEmptyGet(MHD_USE_POLL);
+          if (test_result)
+            fprintf (stderr, "FAILED: testEmptyGet (MHD_USE_POLL) - %u.\n", test_result);
+          else if (verbose)
+            printf ("PASSED: testEmptyGet (MHD_USE_POLL).\n");
+          errorCount += test_result;
 	}
       if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_EPOLL))
 	{
-	  errorCount += testInternalGet(MHD_USE_EPOLL);
-	  errorCount += testMultithreadedPoolGet(MHD_USE_EPOLL);
-	  errorCount += testUnknownPortGet(MHD_USE_EPOLL);
-	  errorCount += testEmptyGet(MHD_USE_EPOLL);
+          test_result += testInternalGet(MHD_USE_EPOLL);
+          if (test_result)
+            fprintf (stderr, "FAILED: testInternalGet (MHD_USE_EPOLL) - %u.\n", test_result);
+          else if (verbose)
+            printf ("PASSED: testInternalGet (MHD_USE_EPOLL).\n");
+          errorCount += test_result;
+          test_result += testMultithreadedPoolGet(MHD_USE_EPOLL);
+          if (test_result)
+            fprintf (stderr, "FAILED: testMultithreadedPoolGet (MHD_USE_EPOLL) - %u.\n", test_result);
+          else if (verbose)
+            printf ("PASSED: testMultithreadedPoolGet (MHD_USE_EPOLL).\n");
+          errorCount += test_result;
+          test_result += testUnknownPortGet(MHD_USE_EPOLL);
+          if (test_result)
+            fprintf (stderr, "FAILED: testUnknownPortGet (MHD_USE_EPOLL) - %u.\n", test_result);
+          else if (verbose)
+            printf ("PASSED: testUnknownPortGet (MHD_USE_EPOLL).\n");
+          errorCount += test_result;
+          test_result += testEmptyGet(MHD_USE_EPOLL);
+          if (test_result)
+            fprintf (stderr, "FAILED: testEmptyGet (MHD_USE_EPOLL) - %u.\n", test_result);
+          else if (verbose)
+            printf ("PASSED: testEmptyGet (MHD_USE_EPOLL).\n");
+          errorCount += test_result;
 	}
     }
   if (0 != errorCount)
     fprintf (stderr,
 	     "Error (code: %u)\n",
 	     errorCount);
+  else if (verbose)
+    printf ("All tests passed.\n");
   curl_global_cleanup ();
   return errorCount != 0;       /* 0 == pass */
 }

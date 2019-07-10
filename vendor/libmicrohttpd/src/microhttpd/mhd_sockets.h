@@ -162,6 +162,12 @@
 #  define MAYBE_SOCK_NONBLOCK 0
 #endif /* ! HAVE_SOCK_NONBLOCK */
 
+#ifdef SOCK_NOSIGPIPE
+#  define MAYBE_SOCK_NOSIGPIPE SOCK_NOSIGPIPE
+#else  /* ! HAVE_SOCK_NONBLOCK */
+#  define MAYBE_SOCK_NOSIGPIPE 0
+#endif /* ! HAVE_SOCK_NONBLOCK */
+
 #ifdef MSG_NOSIGNAL
 #  define MAYBE_MSG_NOSIGNAL MSG_NOSIGNAL
 #else  /* ! MSG_NOSIGNAL */
@@ -178,7 +184,7 @@
 #  define SHUT_RDWR SD_BOTH
 #endif
 
-#if HAVE_ACCEPT4+0 != 0 && (defined(HAVE_SOCK_NONBLOCK) || defined(SOCK_CLOEXEC))
+#if HAVE_ACCEPT4+0 != 0 && (defined(HAVE_SOCK_NONBLOCK) || defined(SOCK_CLOEXEC) || defined(SOCK_NOSIGPIPE))
 #  define USE_ACCEPT4 1
 #endif
 
@@ -270,7 +276,7 @@
  * @return ssize_t type value
  */
 #define MHD_send_(s,b,l) \
-  ((ssize_t)send((s),(const void*)(b),((MHD_SCKT_SEND_SIZE_)l), MAYBE_MSG_NOSIGNAL))
+  ((ssize_t)send((s),(const void*)(b),(MHD_SCKT_SEND_SIZE_)(l), MAYBE_MSG_NOSIGNAL))
 
 
 /**
@@ -281,7 +287,7 @@
  * @return ssize_t type value
  */
 #define MHD_recv_(s,b,l) \
-  ((ssize_t)recv((s),(void*)(b),((MHD_SCKT_SEND_SIZE_)l), 0))
+  ((ssize_t)recv((s),(void*)(b),(MHD_SCKT_SEND_SIZE_)(l), 0))
 
 
 /**

@@ -29,7 +29,7 @@
 #include "mhd_options.h"
 
 #include <stdint.h>
-#include <stdlib.h>
+#include <stddef.h>
 #ifdef HAVE_STDBOOL_H
 #include <stdbool.h>
 #endif /* HAVE_STDBOOL_H */
@@ -80,6 +80,21 @@ int
 MHD_str_equal_caseless_n_ (const char * const str1,
                   const char * const str2,
                   size_t maxlen);
+
+
+/**
+ * Check two string for equality, ignoring case of US-ASCII letters and
+ * checking exactly @a len characters.
+ * Compares exactly @a len characters, including binary zero characters.
+ * @param str1 first string to compare
+ * @param str2 second string to compare
+ * @param len number of characters to compare
+ * @return non-zero if two strings are equal, zero otherwise.
+ */
+bool
+MHD_str_equal_caseless_bin_n_ (const char * const str1,
+                  const char * const str2,
+                  size_t len);
 
 
 /**

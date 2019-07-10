@@ -7,15 +7,16 @@ index 0000000..76bcb63
 +#define PACKAGE "libmicrohttpd"
 +#define PACKAGE_BUGREPORT "libmicrohttpd@gnu.org"
 +#define PACKAGE_NAME "GNU Libmicrohttpd"
-+#define PACKAGE_STRING "GNU Libmicrohttpd 0.9.59"
++#define PACKAGE_STRING "GNU Libmicrohttpd 0.9.65"
 +#define PACKAGE_TARNAME "libmicrohttpd"
 +#define PACKAGE_URL "http://www.gnu.org/software/libmicrohttpd/"
-+#define PACKAGE_VERSION "0.9.59"
-+#define VERSION "0.9.59"
++#define PACKAGE_VERSION "0.9.65"
++#define VERSION "0.9.65"
 +
 +#if defined(__MINGW32__)
 +    #define BAUTH_SUPPORT 1
 +    #define DAUTH_SUPPORT 1
++    #define HAVE_ASSERT 1
 +    #define HAVE_C_VARARRAYS 1
 +    #define HAVE_CALLOC 1
 +    #define HAVE_CLOCK_GETTIME 1
@@ -60,6 +61,8 @@ index 0000000..76bcb63
 +    #define HAVE_WS2TCPIP_H 1
 +    #define INLINE_FUNC 1
 +    #define LT_OBJDIR ".libs/"
++    #define MHD_HAVE___BUILTIN_BSWAP32 1
++    #define MHD_HAVE___BUILTIN_BSWAP64 1
 +    #define MHD_NO_THREAD_NAMES 1
 +    #define MHD_USE_W32_THREADS 1
 +    #define MINGW 1
@@ -96,6 +99,7 @@ index 0000000..76bcb63
 +    #define HAVE_WS2TCPIP_H 1
 +    #define HAVE___LSEEKI64 1
 +    #define HAVE_W32_GMTIME_S 1
++    #define HAVE_ASSERT 1
 +    #define HAVE_CALLOC 1
 +    #define HAVE_SNPRINTF 1
 +    #define HAVE_INTTYPES_H 1
@@ -123,6 +127,7 @@ index 0000000..76bcb63
 +    #define BAUTH_SUPPORT 1
 +    #define DAUTH_SUPPORT 1
 +    #define HAVE_ARPA_INET_H 1
++    #define HAVE_ASSERT 1
 +    #define HAVE_C_VARARRAYS 1
 +    #define HAVE_CALLOC 1
 +    #define HAVE_CLOCK_GETTIME 1
@@ -192,6 +197,8 @@ index 0000000..76bcb63
 +    #define INLINE_FUNC 1
 +    #define OSX 1
 +    #define LT_OBJDIR ".libs/"
++    #define MHD_HAVE___BUILTIN_BSWAP32 1
++    #define MHD_HAVE___BUILTIN_BSWAP64 1
 +    #define MHD_USE_GETSOCKNAME 1
 +    #define MHD_USE_POSIX_THREADS 1
 +    #define STDC_HEADERS 1
@@ -210,6 +217,7 @@ index 0000000..76bcb63
 +    #define EPOLL_SUPPORT 1
 +    #define HAVE_ACCEPT4 1
 +    #define HAVE_ARPA_INET_H 1
++    #define HAVE_ASSERT 1
 +    #define HAVE_C_VARARRAYS 1
 +    #define HAVE_CALLOC 1
 +    #define HAVE_CLOCK_GETTIME 1
@@ -271,6 +279,7 @@ index 0000000..76bcb63
 +    #define HAVE_SYS_STAT_H 1
 +    #define HAVE_SYS_TIME_H 1
 +    #define HAVE_SYS_TYPES_H 1
++    #define HAVE_SYSCONF 1
 +    #define HAVE_TIME_H 1
 +    #define HAVE_TSEARCH 1
 +    #define HAVE_UNISTD_H 1
@@ -279,6 +288,8 @@ index 0000000..76bcb63
 +    #define INLINE_FUNC 1
 +    #define LINUX 1
 +    #define LT_OBJDIR ".libs/"
++    #define MHD_HAVE___BUILTIN_BSWAP32 1
++    #define MHD_HAVE___BUILTIN_BSWAP64 1
 +    #define MHD_USE_POSIX_THREADS 1
 +    #define STDC_HEADERS 1
 +    #define UPGRADE_SUPPORT 1

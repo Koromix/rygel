@@ -52,9 +52,12 @@ MHD_basic_auth_get_username_password (struct MHD_Connection *connection,
   const char *separator;
   char *user;
 
-  if ( (NULL == (header = MHD_lookup_connection_value (connection,
-						       MHD_HEADER_KIND,
-						       MHD_HTTP_HEADER_AUTHORIZATION))) ||
+  if ( (MHD_NO == MHD_lookup_connection_value_n (connection,
+                                                 MHD_HEADER_KIND,
+                                                 MHD_HTTP_HEADER_AUTHORIZATION,
+                                                 MHD_STATICSTR_LEN_ (MHD_HTTP_HEADER_AUTHORIZATION),
+                                                 &header,
+                                                 NULL)) ||
        (0 != strncmp (header,
                       _BASIC_BASE,
                       MHD_STATICSTR_LEN_ (_BASIC_BASE))) )

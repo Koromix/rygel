@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: GNU libmicrohttpd 0.9.63\n"
+"Project-Id-Version: GNU libmicrohttpd 0.9.65\n"
 "Report-Msgid-Bugs-To: libmicrohttpd@gnu.org\n"
-"POT-Creation-Date: 2019-02-10 17:12+0100\n"
+"POT-Creation-Date: 2019-07-05 22:27+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -43,47 +43,47 @@ msgid ""
 "the size of the nonce array.\n"
 msgstr ""
 
-#: src/microhttpd/digestauth.c:792
+#: src/microhttpd/digestauth.c:804
 msgid "Failed to allocate memory for copy of URI arguments\n"
 msgstr ""
 
-#: src/microhttpd/digestauth.c:932
+#: src/microhttpd/digestauth.c:946
 msgid "Authentication failed, invalid timestamp format.\n"
 msgstr ""
 
-#: src/microhttpd/digestauth.c:995
+#: src/microhttpd/digestauth.c:1009
 msgid "Authentication failed, invalid format.\n"
 msgstr ""
 
-#: src/microhttpd/digestauth.c:1005
+#: src/microhttpd/digestauth.c:1019
 msgid "Authentication failed, invalid nc format.\n"
 msgstr ""
 
-#: src/microhttpd/digestauth.c:1031
+#: src/microhttpd/digestauth.c:1045
 msgid "Failed to allocate memory for auth header processing\n"
 msgstr ""
 
-#: src/microhttpd/digestauth.c:1090
+#: src/microhttpd/digestauth.c:1105
 msgid "Authentication failed, URI does not match.\n"
 msgstr ""
 
-#: src/microhttpd/digestauth.c:1109
+#: src/microhttpd/digestauth.c:1124
 msgid "Authentication failed, arguments do not match.\n"
 msgstr ""
 
-#: src/microhttpd/digestauth.c:1264
+#: src/microhttpd/digestauth.c:1281
 msgid "digest size missmatch"
 msgstr ""
 
-#: src/microhttpd/digestauth.c:1356
+#: src/microhttpd/digestauth.c:1373
 msgid "Could not register nonce (is the nonce array size zero?).\n"
 msgstr ""
 
-#: src/microhttpd/digestauth.c:1381
+#: src/microhttpd/digestauth.c:1398
 msgid "Failed to allocate memory for auth response header\n"
 msgstr ""
 
-#: src/microhttpd/digestauth.c:1417
+#: src/microhttpd/digestauth.c:1434
 msgid "Failed to add Digest auth header\n"
 msgstr ""
 
@@ -92,694 +92,706 @@ msgstr ""
 msgid "Fatal error in GNU libmicrohttpd %s:%u: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:418
+#: src/microhttpd/daemon.c:449
 msgid "Failed to add IP connection count node\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:476
+#: src/microhttpd/daemon.c:507
 msgid "Failed to find previously-added IP address\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:482
+#: src/microhttpd/daemon.c:513
 msgid "Previously-added IP address had counter of zero\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:559
+#: src/microhttpd/daemon.c:614
 msgid ""
 "Failed to setup x509 certificate/key: pre 3.X.X version of GnuTLS does not "
 "support setting key password"
 msgstr ""
 
-#: src/microhttpd/daemon.c:613
+#: src/microhttpd/daemon.c:668
 #, c-format
 msgid "Error: invalid credentials type %d specified.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:1012
+#: src/microhttpd/daemon.c:1067
 #, c-format
 msgid "Maximum socket in select set: %d\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:1073
+#: src/microhttpd/daemon.c:1128
 msgid ""
 "MHD_get_fdset2() called with except_fd_set set to NULL. Such behavior is "
 "unsupported.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:1279 src/microhttpd/daemon.c:6469
+#: src/microhttpd/daemon.c:1334 src/microhttpd/daemon.c:6573
 msgid ""
 "Initiated daemon shutdown while \"upgraded\" connection was not closed.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:1293 src/microhttpd/daemon.c:1528
+#: src/microhttpd/daemon.c:1348 src/microhttpd/daemon.c:1583
 msgid "Failed to forward to application "
 msgstr ""
 
-#: src/microhttpd/daemon.c:1460 src/microhttpd/daemon.c:1582
+#: src/microhttpd/daemon.c:1515 src/microhttpd/daemon.c:1637
 msgid "Failed to forward to remote client "
 msgstr ""
 
-#: src/microhttpd/daemon.c:1647
+#: src/microhttpd/daemon.c:1702
 msgid "Error preparing select\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:1681 src/microhttpd/daemon.c:1833
-#: src/microhttpd/daemon.c:1977
+#: src/microhttpd/daemon.c:1736 src/microhttpd/daemon.c:1888
+#: src/microhttpd/daemon.c:2032
 #, c-format
 msgid "Error during select (%d): `%s'\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:1730 src/microhttpd/daemon.c:1854
-#: src/microhttpd/daemon.c:2046
+#: src/microhttpd/daemon.c:1785 src/microhttpd/daemon.c:1909
+#: src/microhttpd/daemon.c:2101
 #, c-format
 msgid "Error during poll: `%s'\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:1817 src/microhttpd/daemon.c:1959
+#: src/microhttpd/daemon.c:1872 src/microhttpd/daemon.c:2014
 msgid "Failed to add FD to fd_set\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:2098
+#: src/microhttpd/daemon.c:2153
 msgid "Processing thread terminating. Closing connection\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:2127
+#: src/microhttpd/daemon.c:2182
 msgid ""
 "Failed to signal thread termination via inter-thread communication channel."
 msgstr ""
 
-#: src/microhttpd/daemon.c:2198
+#: src/microhttpd/daemon.c:2253
 msgid "Internal server error. This should be impossible.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:2208 src/microhttpd/daemon.c:2236
+#: src/microhttpd/daemon.c:2263 src/microhttpd/daemon.c:2300
 msgid "PSK not supported by this server.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:2222
+#: src/microhttpd/daemon.c:2277
 msgid "PSK authentication failed: gnutls_malloc failed to allocate memory\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:2318 src/microhttpd/daemon.c:6113
+#: src/microhttpd/daemon.c:2286
+msgid "PSK authentication failed: PSK too long\n"
+msgstr ""
+
+#: src/microhttpd/daemon.c:2382 src/microhttpd/daemon.c:6217
 #, c-format
 msgid "Socket descriptor larger than FD_SETSIZE: %d > %d\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:2334
+#: src/microhttpd/daemon.c:2398
 #, c-format
 msgid "Failed to set SO_NOSIGPIPE on accepted socket: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:2351 src/microhttpd/daemon.c:3164
+#: src/microhttpd/daemon.c:2415 src/microhttpd/daemon.c:3238
 #, c-format
 msgid "Accepted connection on socket %d\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:2363 src/microhttpd/daemon.c:2543
+#: src/microhttpd/daemon.c:2427 src/microhttpd/daemon.c:2617
 msgid "Server reached connection limit. Closing inbound connection.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:2381
+#: src/microhttpd/daemon.c:2445
 msgid "Connection rejected by application. Closing connection.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:2414 src/microhttpd/daemon.c:2434
-#: src/microhttpd/daemon.c:3750
+#: src/microhttpd/daemon.c:2478 src/microhttpd/daemon.c:2498
+#: src/microhttpd/daemon.c:3824
 #, c-format
 msgid "Error allocating memory: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:2496
+#: src/microhttpd/daemon.c:2570
 #, c-format
 msgid "Failed to setup TLS credentials: unknown credential type %d\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:2505
+#: src/microhttpd/daemon.c:2579
 msgid "Unknown credential type"
 msgstr ""
 
-#: src/microhttpd/daemon.c:2607 src/microhttpd/daemon.c:4240
-#: src/microhttpd/daemon.c:4273 src/microhttpd/daemon.c:5418
-#: src/microhttpd/daemon.c:5435 src/microhttpd/connection.c:3857
-#: src/microhttpd/response.c:968 src/microhttpd/response.c:994
+#: src/microhttpd/daemon.c:2681 src/microhttpd/daemon.c:4314
+#: src/microhttpd/daemon.c:4347 src/microhttpd/daemon.c:5509
+#: src/microhttpd/daemon.c:5526 src/microhttpd/connection.c:4130
+#: src/microhttpd/response.c:1003 src/microhttpd/response.c:1029
 #, c-format
 msgid "Call to epoll_ctl failed: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:2632
+#: src/microhttpd/daemon.c:2706
 msgid "Failed to signal new connection via inter-thread communication channel."
 msgstr ""
 
-#: src/microhttpd/daemon.c:2737 src/microhttpd/daemon.c:3248
-#: src/microhttpd/daemon.c:6359 src/microhttpd/connection.c:979
-#: src/microhttpd/connection.c:998
+#: src/microhttpd/daemon.c:2811 src/microhttpd/daemon.c:3322
+#: src/microhttpd/daemon.c:6463 src/microhttpd/connection.c:1190
+#: src/microhttpd/connection.c:1209
 msgid "Failed to remove FD from epoll set\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:2786
+#: src/microhttpd/daemon.c:2860
 msgid "Cannot suspend connections without enabling MHD_ALLOW_SUSPEND_RESUME!\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:2792
+#: src/microhttpd/daemon.c:2866
 msgid "Error: connection scheduled for \"upgrade\" cannot be suspended"
 msgstr ""
 
-#: src/microhttpd/daemon.c:2815
+#: src/microhttpd/daemon.c:2889
 msgid "Cannot resume connections without enabling MHD_ALLOW_SUSPEND_RESUME!\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:2829
+#: src/microhttpd/daemon.c:2903
 msgid "Failed to signal resume via inter-thread communication channel."
 msgstr ""
 
-#: src/microhttpd/daemon.c:2961
+#: src/microhttpd/daemon.c:3035
 msgid ""
 "Failed to signal resume of connection via inter-thread communication channel."
 msgstr ""
 
-#: src/microhttpd/daemon.c:3007
+#: src/microhttpd/daemon.c:3081
 #, c-format
 msgid "Failed to set nonblocking mode on new client socket: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:3020
+#: src/microhttpd/daemon.c:3094
 msgid "Failed to set noninheritable mode on new client socket.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:3029
+#: src/microhttpd/daemon.c:3103
 msgid "Failed to reset buffering mode on new client socket.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:3102
+#: src/microhttpd/daemon.c:3176
 #, c-format
 msgid "Error accepting connection: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:3119
+#: src/microhttpd/daemon.c:3193
 msgid ""
 "Hit process or system resource limit at FIRST connection. This is really bad "
 "as there is no sane way to proceed. Will try busy waiting for system "
 "resources to become magically available.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:3133
+#: src/microhttpd/daemon.c:3207
 #, c-format
 msgid ""
 "Hit process or system resource limit at %u connections, temporarily "
 "suspending accept(). Consider setting a lower MHD_OPTION_CONNECTION_LIMIT.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:3145
+#: src/microhttpd/daemon.c:3219
 #, c-format
 msgid "Failed to set nonblocking mode on incoming connection socket: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:3157
+#: src/microhttpd/daemon.c:3231
 msgid "Failed to set noninheritable mode on incoming connection socket.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:3205 src/microhttpd/daemon.c:6511
-#: src/microhttpd/daemon.c:6543 src/microhttpd/daemon.c:6643
+#: src/microhttpd/daemon.c:3279 src/microhttpd/daemon.c:6615
+#: src/microhttpd/daemon.c:6647 src/microhttpd/daemon.c:6747
 msgid "Failed to join a thread\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:3309
+#: src/microhttpd/daemon.c:3383
 msgid "Illegal call to MHD_get_timeout\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:3506
+#: src/microhttpd/daemon.c:3580
 msgid ""
 "MHD_run_from_select() called with except_fd_set set to NULL. Such behavior "
 "is deprecated.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:3586
+#: src/microhttpd/daemon.c:3660
 msgid "Could not obtain daemon fdsets"
 msgstr ""
 
-#: src/microhttpd/daemon.c:3603
+#: src/microhttpd/daemon.c:3677
 msgid "Could not add listen socket to fdset"
 msgstr ""
 
-#: src/microhttpd/daemon.c:3631
+#: src/microhttpd/daemon.c:3705
 msgid "Could not add control inter-thread communication channel FD to fdset"
 msgstr ""
 
-#: src/microhttpd/daemon.c:3687
+#: src/microhttpd/daemon.c:3761
 #, c-format
 msgid "select failed: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:3832 src/microhttpd/daemon.c:3979
+#: src/microhttpd/daemon.c:3906 src/microhttpd/daemon.c:4053
 #, c-format
 msgid "poll failed: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:4109 src/microhttpd/daemon.c:4340
+#: src/microhttpd/daemon.c:4183 src/microhttpd/daemon.c:4414
 #, c-format
 msgid "Call to epoll_wait failed: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:4292 src/microhttpd/daemon.c:4749
+#: src/microhttpd/daemon.c:4366 src/microhttpd/daemon.c:4823
 msgid "Failed to remove listen FD from epoll set\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:4757
+#: src/microhttpd/daemon.c:4831
 msgid "Failed to signal quiesce via inter-thread communication channel"
 msgstr ""
 
-#: src/microhttpd/daemon.c:4779
+#: src/microhttpd/daemon.c:4853
 msgid "failed to signal quiesce via inter-thread communication channel"
 msgstr ""
 
-#: src/microhttpd/daemon.c:4887
+#: src/microhttpd/daemon.c:4964
 msgid "Warning: Too large timeout value, ignored.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:4928
+#: src/microhttpd/daemon.c:5003
 msgid ""
 "Warning: Zero size, specified for thread pool size, is ignored. Thread pool "
 "is not used.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:4936
+#: src/microhttpd/daemon.c:5011
 msgid ""
 "Warning: \"1\", specified for thread pool size, is ignored. Thread pool is "
 "not used.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:4948
+#: src/microhttpd/daemon.c:5023
 #, c-format
 msgid "Specified thread pool size (%u) too big\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:4959
+#: src/microhttpd/daemon.c:5034
 msgid ""
 "MHD_OPTION_THREAD_POOL_SIZE option is specified but "
 "MHD_USE_INTERNAL_POLLING_THREAD flag is not specified.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:4968
+#: src/microhttpd/daemon.c:5043
 msgid ""
 "Both MHD_OPTION_THREAD_POOL_SIZE option and MHD_USE_THREAD_PER_CONNECTION "
 "flag are specified.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:4985 src/microhttpd/daemon.c:4997
-#: src/microhttpd/daemon.c:5009 src/microhttpd/daemon.c:5021
-#: src/microhttpd/daemon.c:5062 src/microhttpd/daemon.c:5090
-#: src/microhttpd/daemon.c:5109
+#: src/microhttpd/daemon.c:5060 src/microhttpd/daemon.c:5072
+#: src/microhttpd/daemon.c:5084 src/microhttpd/daemon.c:5096
+#: src/microhttpd/daemon.c:5147 src/microhttpd/daemon.c:5175
+#: src/microhttpd/daemon.c:5194
 #, c-format
 msgid "MHD HTTPS option %d passed to MHD but MHD_USE_TLS not set\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5040
+#: src/microhttpd/daemon.c:5116
 msgid "Error initializing DH parameters\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5052
+#: src/microhttpd/daemon.c:5126
+msgid "Diffie-Hellman parameters string too long\n"
+msgstr ""
+
+#: src/microhttpd/daemon.c:5137
 msgid "Bad Diffie-Hellman parameters format\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5079
+#: src/microhttpd/daemon.c:5164
 #, c-format
 msgid "Setting priorities to `%s' failed: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5098
+#: src/microhttpd/daemon.c:5183
 msgid ""
 "MHD_OPTION_HTTPS_CERT_CALLBACK requires building MHD with GnuTLS >= 3.0\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5132
+#: src/microhttpd/daemon.c:5217
 msgid ""
 "MHD_OPTION_LISTEN_SOCKET specified for daemon with MHD_USE_NO_LISTEN_SOCKET "
 "flag set.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5181
+#: src/microhttpd/daemon.c:5253
+msgid "TCP fastopen is not supported on this platform\n"
+msgstr ""
+
+#: src/microhttpd/daemon.c:5272
 msgid ""
 "Flag MHD_USE_PEDANTIC_CHECKS is ignored because another behavior is "
 "specified by MHD_OPTION_STRICT_CLIENT.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5313
+#: src/microhttpd/daemon.c:5404
 #, c-format
 msgid "MHD HTTPS option %d passed to MHD compiled without GNUtls >= 3\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5326
+#: src/microhttpd/daemon.c:5417
 #, c-format
 msgid "MHD HTTPS option %d passed to MHD compiled without HTTPS support\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5332
+#: src/microhttpd/daemon.c:5423
 #, c-format
 msgid "Invalid option %d! (Did you terminate the list with MHD_OPTION_END?)\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5362
+#: src/microhttpd/daemon.c:5453
 #, c-format
 msgid "Call to epoll_create1 failed: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5372
+#: src/microhttpd/daemon.c:5463
 msgid "Failed to set noninheritable mode on epoll FD.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5615
+#: src/microhttpd/daemon.c:5706
 msgid ""
 "Warning: MHD_USE_THREAD_PER_CONNECTION must be used only with "
 "MHD_USE_INTERNAL_POLLING_THREAD. Flag MHD_USE_INTERNAL_POLLING_THREAD was "
 "added. Consider setting MHD_USE_INTERNAL_POLLING_THREAD explicitly.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5663
+#: src/microhttpd/daemon.c:5754
 msgid "Using debug build of libmicrohttpd.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5677
+#: src/microhttpd/daemon.c:5768
 #, c-format
 msgid "Failed to create inter-thread communication channel: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5693
+#: src/microhttpd/daemon.c:5784
 msgid ""
 "file descriptor for inter-thread communication channel exceeds maximum "
 "value\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5713
+#: src/microhttpd/daemon.c:5804
 msgid "Specified value for NC_SIZE too large\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5727
+#: src/microhttpd/daemon.c:5818
 #, c-format
 msgid "Failed to allocate memory for nonce-nc map: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5744
+#: src/microhttpd/daemon.c:5835
 msgid "MHD failed to initialize nonce-nc mutex\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5764
+#: src/microhttpd/daemon.c:5855
 msgid "MHD thread pooling only works with MHD_USE_INTERNAL_POLLING_THREAD\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5788
+#: src/microhttpd/daemon.c:5879
 #, c-format
 msgid "Failed to create socket for listening: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5809 src/microhttpd/daemon.c:5828
-#: src/microhttpd/daemon.c:5851 src/microhttpd/daemon.c:5888
-#: src/microhttpd/daemon.c:5965 src/microhttpd/daemon.c:5996
+#: src/microhttpd/daemon.c:5900 src/microhttpd/daemon.c:5919
+#: src/microhttpd/daemon.c:5942 src/microhttpd/daemon.c:5979
+#: src/microhttpd/daemon.c:6056 src/microhttpd/daemon.c:6087
 #, c-format
 msgid "setsockopt failed: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5861
+#: src/microhttpd/daemon.c:5952
 msgid "Cannot allow listening address reuse: SO_REUSEPORT not defined\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5896
+#: src/microhttpd/daemon.c:5987
 msgid ""
 "Cannot disallow listening address reuse: SO_EXCLUSIVEADDRUSE not defined\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:5976
+#: src/microhttpd/daemon.c:6067
 #, c-format
 msgid "Failed to bind to port %u: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:6007
+#: src/microhttpd/daemon.c:6098
 #, c-format
 msgid "Failed to listen for connections: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:6034
+#: src/microhttpd/daemon.c:6129
 #, c-format
 msgid "Failed to get listen port number: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:6044
+#: src/microhttpd/daemon.c:6139
 msgid ""
 "Failed to get listen port number (`struct sockaddr_storage` too small!?)\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:6077
+#: src/microhttpd/daemon.c:6180
 msgid "Unknown address family!\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:6090
+#: src/microhttpd/daemon.c:6194
 #, c-format
 msgid "Failed to set nonblocking mode on listening socket: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:6132
+#: src/microhttpd/daemon.c:6236
 msgid ""
 "Combining MHD_USE_THREAD_PER_CONNECTION and MHD_USE_EPOLL is not supported.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:6146 src/microhttpd/daemon.c:6159
+#: src/microhttpd/daemon.c:6250 src/microhttpd/daemon.c:6263
 msgid "MHD failed to initialize IP connection limit mutex\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:6178
+#: src/microhttpd/daemon.c:6282
 msgid "Failed to initialize TLS support\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:6205
+#: src/microhttpd/daemon.c:6309
 #, c-format
 msgid "Failed to create listen thread: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:6253
+#: src/microhttpd/daemon.c:6357
 #, c-format
 msgid "Failed to create worker inter-thread communication channel: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:6264
+#: src/microhttpd/daemon.c:6368
 msgid ""
 "File descriptor for worker inter-thread communication channel exceeds "
 "maximum value\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:6289
+#: src/microhttpd/daemon.c:6393
 msgid "MHD failed to initialize cleanup connection mutex\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:6303
+#: src/microhttpd/daemon.c:6407
 #, c-format
 msgid "Failed to create pool thread: %s\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:6456 src/microhttpd/daemon.c:6487
+#: src/microhttpd/daemon.c:6560 src/microhttpd/daemon.c:6591
 msgid "MHD_stop_daemon() called while we have suspended connections.\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:6496 src/microhttpd/daemon.c:6625
+#: src/microhttpd/daemon.c:6600 src/microhttpd/daemon.c:6729
 msgid "Failed to signal shutdown via inter-thread communication channel"
 msgstr ""
 
-#: src/microhttpd/daemon.c:6588
+#: src/microhttpd/daemon.c:6692
 msgid "Failed to signal shutdown via inter-thread communication channel."
 msgstr ""
 
-#: src/microhttpd/daemon.c:7055
+#: src/microhttpd/daemon.c:7159
 msgid "Failed to initialize winsock\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:7058
+#: src/microhttpd/daemon.c:7162
 msgid "Winsock version 2.2 is not available\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:7066 src/microhttpd/daemon.c:7070
+#: src/microhttpd/daemon.c:7170 src/microhttpd/daemon.c:7174
 msgid "Failed to initialise multithreading in libgcrypt\n"
 msgstr ""
 
-#: src/microhttpd/daemon.c:7075
+#: src/microhttpd/daemon.c:7179
 msgid "libgcrypt is too old. MHD was compiled for libgcrypt 1.6.0 or newer\n"
 msgstr ""
 
-#: src/microhttpd/mhd_sockets.h:261
+#: src/microhttpd/mhd_sockets.h:267
 msgid "Close socket failed.\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:1104
+#: src/microhttpd/connection.c:1315
 msgid "Closing connection (application reported error generating data)\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:1157
+#: src/microhttpd/connection.c:1364
 msgid "Closing connection (out of memory)\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:1204
+#: src/microhttpd/connection.c:1411
 msgid "Closing connection (application error generating response)\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:1786
+#: src/microhttpd/connection.c:2029
 #, c-format
 msgid ""
 "Error processing request (HTTP response code is %u (`%s')). Closing "
 "connection.\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:1812 src/microhttpd/connection.c:2800
+#: src/microhttpd/connection.c:2055 src/microhttpd/connection.c:3068
 msgid "Closing connection (failed to queue response)\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:1822 src/microhttpd/connection.c:3569
-#: src/microhttpd/connection.c:3692
+#: src/microhttpd/connection.c:2065 src/microhttpd/connection.c:3842
+#: src/microhttpd/connection.c:3965
 msgid "Closing connection (failed to create response header)\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:1868 src/microhttpd/connection.c:2950
-#: src/microhttpd/connection.c:3018 src/microhttpd/connection.c:3334
+#: src/microhttpd/connection.c:2111 src/microhttpd/connection.c:3223
+#: src/microhttpd/connection.c:3291 src/microhttpd/connection.c:3607
 #, c-format
 msgid "In function %s handling connection at state: %s\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:2080
+#: src/microhttpd/connection.c:2329
 msgid "Not enough memory in pool to allocate header record!\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:2122
+#: src/microhttpd/connection.c:2375
 msgid "Not enough memory in pool to parse cookies!\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:2346 src/microhttpd/connection.c:2531
+#: src/microhttpd/connection.c:2605 src/microhttpd/connection.c:2790
 msgid "Application reported internal error, closing connection.\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:2399 src/microhttpd/connection.c:2476
+#: src/microhttpd/connection.c:2658 src/microhttpd/connection.c:2735
 msgid ""
 "Received malformed HTTP request (bad chunked encoding). Closing connection.\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:2539
+#: src/microhttpd/connection.c:2798
 msgid "libmicrohttpd API violation"
 msgstr ""
 
-#: src/microhttpd/connection.c:2554
+#: src/microhttpd/connection.c:2813
 msgid ""
 "WARNING: incomplete upload processing and connection not suspended may "
 "result in hung connection.\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:2624
+#: src/microhttpd/connection.c:2884
 msgid "Received malformed line (no colon). Closing connection.\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:2778
+#: src/microhttpd/connection.c:3046
 msgid "Received HTTP 1.1 request without `Host' header.\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:2789
+#: src/microhttpd/connection.c:3057
 msgid "Closing connection (failed to create response)\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:2929
+#: src/microhttpd/connection.c:3202
 msgid "Socket disconnected while reading request.\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:2935
+#: src/microhttpd/connection.c:3208
 msgid "Connection socket is closed due to error when reading request.\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:3044
+#: src/microhttpd/connection.c:3317
 #, c-format
 msgid "Failed to send data in request for %s.\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:3053
+#: src/microhttpd/connection.c:3326
 #, c-format
 msgid "Sent 100 continue response: `%.*s'\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:3077
+#: src/microhttpd/connection.c:3350
 msgid "Connection was closed while sending response headers.\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:3118
+#: src/microhttpd/connection.c:3391
 msgid "Data offset exceeds limit"
 msgstr ""
 
-#: src/microhttpd/connection.c:3127
+#: src/microhttpd/connection.c:3400
 #, c-format
 msgid "Sent %d-byte DATA response: `%.*s'\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:3144
+#: src/microhttpd/connection.c:3417
 #, c-format
 msgid "Failed to send data in request for `%s'.\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:3172 src/microhttpd/connection.c:3200
+#: src/microhttpd/connection.c:3445 src/microhttpd/connection.c:3473
 msgid "Connection was closed while sending response body.\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:3223
+#: src/microhttpd/connection.c:3496
 msgid "Internal error\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:3296
+#: src/microhttpd/connection.c:3569
 msgid ""
 "Failed to signal end of connection via inter-thread communication channel"
 msgstr ""
 
-#: src/microhttpd/connection.c:4043
+#: src/microhttpd/connection.c:4316
 msgid "Attempted to queue response on wrong thread!\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:4054
+#: src/microhttpd/connection.c:4327
 msgid ""
 "Attempted 'upgrade' connection on daemon without MHD_ALLOW_UPGRADE option!\n"
 msgstr ""
 
-#: src/microhttpd/connection.c:4063
+#: src/microhttpd/connection.c:4336
 msgid "Application used invalid status code for 'upgrade' response!\n"
 msgstr ""
 
-#: src/microhttpd/response.c:830
+#: src/microhttpd/response.c:865
 msgid ""
 "Invalid response for upgrade: application failed to set the 'Upgrade' "
 "header!\n"
 msgstr ""
 
-#: src/microhttpd/response.c:871
+#: src/microhttpd/response.c:906
 msgid "Failed to make loopback sockets non-blocking.\n"
 msgstr ""
 
-#: src/microhttpd/response.c:890
+#: src/microhttpd/response.c:925
 msgid "Failed to set SO_NOSIGPIPE on loopback sockets.\n"
 msgstr ""
 
-#: src/microhttpd/response.c:910
+#: src/microhttpd/response.c:945
 #, c-format
 msgid "Socketpair descriptor larger than FD_SETSIZE: %d > %d\n"
 msgstr ""
 
-#: src/microhttpd/response.c:991
+#: src/microhttpd/response.c:1026
 msgid "Error cleaning up while handling epoll error"
 msgstr ""
 
-#: src/microhttpd/mhd_itc.h:347
+#: src/microhttpd/mhd_itc.h:349
 msgid "Failed to destroy ITC.\n"
 msgstr ""
 
-#: src/microhttpd/basicauth.c:67
+#: src/microhttpd/basicauth.c:70
 msgid "Error decoding basic authentication\n"
 msgstr ""
 
-#: src/microhttpd/basicauth.c:77
+#: src/microhttpd/basicauth.c:80
 msgid "Basic authentication doesn't contain ':' separator\n"
 msgstr ""
 
-#: src/microhttpd/basicauth.c:95
+#: src/microhttpd/basicauth.c:98
 msgid "Failed to allocate memory for password\n"
 msgstr ""
 
-#: src/microhttpd/basicauth.c:158
+#: src/microhttpd/basicauth.c:161
 msgid "Failed to add Basic auth header\n"
 msgstr ""

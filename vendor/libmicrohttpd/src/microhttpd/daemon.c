@@ -167,12 +167,12 @@ void
 MHD_init(void);
 
 
-#if defined(_WIN32) && ! defined(__CYGWIN__)
+#if defined(MHD_WINSOCK_SOCKETS)
 /**
  * Track initialization of winsock
  */
 static int mhd_winsock_inited_ = 0;
-#endif
+#endif /* MHD_WINSOCK_SOCKETS */
 
 #ifdef _AUTOINIT_FUNCS_ARE_SUPPORTED
 /**
@@ -217,6 +217,37 @@ MHD_check_global_init_ (void)
 #endif
 }
 #endif /* ! _AUTOINIT_FUNCS_ARE_SUPPORTED */
+
+
+/**
+ * Default logger function
+ */
+static void
+MHD_default_logger_ (void *cls,
+                     const char *fm,
+                     va_list ap)
+{
+  vfprintf ((FILE*)cls, fm, ap);
+#ifdef _DEBUG
+  fflush ((FILE*)cls);
+#endif /* _DEBUG */
+}
+
+
+/**
+ * Free the memory given by @a ptr. Calls "free(ptr)".  This function
+ * should be used to free the username returned by
+ * #MHD_digest_auth_get_username().
+ * @note Since v0.9.56
+ *
+ * @param ptr pointer to free.
+ */
+_MHD_EXTERN void
+MHD_free (void *ptr)
+{
+  free (ptr);
+}
+
 
 /**
  * Trace up to and return master daemon. If the supplied daemon
@@ -517,8 +548,18 @@ MHD_init_daemon_certificate (struct MHD_Daemon *daemon)
 #endif
   if (NULL != daemon->https_mem_trust)
     {
+      size_t paramlen;
+      paramlen = strlen (daemon->https_mem_trust);
+      if (UINT_MAX < paramlen)
+        {
+#ifdef HAVE_MESSAGES
+          MHD_DLOG(daemon,
+                   "Too long trust certificate\n");
+#endif
+          return -1;
+        }
       cert.data = (unsigned char *) daemon->https_mem_trust;
-      cert.size = strlen (daemon->https_mem_trust);
+      cert.size = (unsigned int) paramlen;
       if (gnutls_certificate_set_x509_trust_mem (daemon->x509_cred,
                                                  &cert,
 						 GNUTLS_X509_FMT_PEM) < 0)
@@ -540,10 +581,24 @@ MHD_init_daemon_certificate (struct MHD_Daemon *daemon)
   if ( (NULL != daemon->https_mem_cert) &&
        (NULL != daemon->https_mem_key) )
     {
+      size_t param1len;
+      size_t param2len;
+
+      param1len = strlen (daemon->https_mem_key);
+      param2len = strlen (daemon->https_mem_cert);
+      if ( (UINT_MAX < param1len) ||
+           (UINT_MAX < param2len) )
+        {
+#ifdef HAVE_MESSAGES
+          MHD_DLOG(daemon,
+                   "Too long key or certificate\n");
+#endif
+          return -1;
+        }
       key.data = (unsigned char *) daemon->https_mem_key;
-      key.size = strlen (daemon->https_mem_key);
+      key.size = (unsigned int)param1len;
       cert.data = (unsigned char *) daemon->https_mem_cert;
-      cert.size = strlen (daemon->https_mem_cert);
+      cert.size = (unsigned int)param2len;
 
       if (NULL != daemon->https_key_password) {
 #if GNUTLS_VERSION_NUMBER >= 0x030111
@@ -1197,7 +1252,7 @@ call_handlers (struct MHD_Connection *con,
    * connections are processed individually. */
   /* Note: no need to check for read buffer availability for
    * TLS read-ready connection in 'read info' state as connection
-   * without space in read buffer will be market as 'info block'. */
+   * without space in read buffer will be marked as 'info block'. */
   if ( (! con->daemon->data_already_pending) &&
        (0 == (con->daemon->options & MHD_USE_THREAD_PER_CONNECTION)) )
     {
@@ -2177,7 +2232,7 @@ MHD_tls_push_func_(gnutls_transport_ptr_t trnsp,
  *
  * @param session the session to lookup PSK for
  * @param username username to lookup PSK for
- * @param key[out] where to write PSK
+ * @param[out] key where to write PSK
  * @return 0 on success, -1 on error
  */
 static int
@@ -2224,7 +2279,16 @@ psk_gnutls_adapter (gnutls_session_t session,
       free (app_psk);
       return -1;
     }
-  key->size = app_psk_size;
+  if (UINT_MAX < app_psk_size)
+    {
+#ifdef HAVE_MESSAGES
+      MHD_DLOG (daemon,
+                _("PSK authentication failed: PSK too long\n"));
+#endif
+      free (app_psk);
+      return -1;
+    }
+  key->size = (unsigned int)app_psk_size;
   memcpy (key->data,
 	  app_psk,
 	  app_psk_size);
@@ -2460,17 +2524,27 @@ internal_add_connection (struct MHD_Daemon *daemon,
   else
     {
 #ifdef HTTPS_SUPPORT
+      gnutls_init_flags_t flags;
+
+      flags = GNUTLS_SERVER;
+#if (GNUTLS_VERSION_NUMBER+0 >= 0x030402)
+      flags |= GNUTLS_NO_SIGNAL;
+#endif /* GNUTLS_VERSION_NUMBER >= 0x030402 */
+#if GNUTLS_VERSION_MAJOR >= 3
+      flags |= GNUTLS_NONBLOCK;
+#endif /* GNUTLS_VERSION_MAJOR >= 3*/
+#if (GNUTLS_VERSION_NUMBER+0 >= 0x030603)
+      if (0 != (daemon->options & MHD_USE_POST_HANDSHAKE_AUTH_SUPPORT))
+	flags |= GNUTLS_POST_HANDSHAKE_AUTH;
+#endif
+#if (GNUTLS_VERSION_NUMBER+0 >= 0x030605)
+      if (0 != (daemon->options & MHD_USE_INSECURE_TLS_EARLY_DATA))
+	flags |= GNUTLS_ENABLE_EARLY_DATA;
+#endif      
       connection->tls_state = MHD_TLS_CONN_INIT;
       MHD_set_https_callbacks (connection);
       gnutls_init (&connection->tls_session,
-                   GNUTLS_SERVER
-#if (GNUTLS_VERSION_NUMBER+0 >= 0x030402)
-                   | GNUTLS_NO_SIGNAL
-#endif /* GNUTLS_VERSION_NUMBER >= 0x030402 */
-#if GNUTLS_VERSION_MAJOR >= 3
-                   | GNUTLS_NONBLOCK
-#endif /* GNUTLS_VERSION_MAJOR >= 3*/
-                  );
+		   flags);
       gnutls_priority_set (connection->tls_session,
 			   daemon->priority_cache);
       gnutls_session_set_ptr (connection->tls_session,
@@ -3077,7 +3151,7 @@ MHD_accept_connection (struct MHD_Daemon *daemon)
   s = accept4 (fd,
                addr,
                &addrlen,
-               MAYBE_SOCK_CLOEXEC | MAYBE_SOCK_NONBLOCK);
+               MAYBE_SOCK_CLOEXEC | MAYBE_SOCK_NONBLOCK | MAYBE_SOCK_NOSIGPIPE);
   sk_nonbl = (MAYBE_SOCK_NONBLOCK != 0);
 #else  /* ! USE_ACCEPT4 */
   s = accept (fd,
@@ -3741,7 +3815,7 @@ MHD_poll_all (struct MHD_Daemon *daemon,
     struct pollfd *p;
     MHD_socket ls;
 
-    p = MHD_calloc_ ((2 + num_connections),
+    p = MHD_calloc_ ((2 + (size_t)num_connections),
                      sizeof (struct pollfd));
     if (NULL == p)
       {
@@ -4877,10 +4951,13 @@ parse_options_va (struct MHD_Daemon *daemon,
         case MHD_OPTION_CONNECTION_TIMEOUT:
           uv = va_arg (ap,
                        unsigned int);
+          daemon->connection_timeout = (time_t)uv;
           /* Next comparison could be always false on some platforms and whole branch will
            * be optimized out on those platforms. On others it will be compiled into real
            * check. */
-          if (TIME_T_MAX < uv) /* Compiler may warn on some platforms, ignore warning. */
+          if ( ( (MHD_TYPE_IS_SIGNED_(time_t)) &&
+                 (daemon->connection_timeout < 0) ) || /* Compiler may warn on some platforms, ignore warning. */
+               (uv != (unsigned int)daemon->connection_timeout) )
             {
 #ifdef HAVE_MESSAGES
               MHD_DLOG (daemon,
@@ -4888,8 +4965,6 @@ parse_options_va (struct MHD_Daemon *daemon,
 #endif
               daemon->connection_timeout = 0;
             }
-          else
-            daemon->connection_timeout = (time_t)uv;
           break;
         case MHD_OPTION_NOTIFY_COMPLETED:
           daemon->notify_completed = va_arg (ap,
@@ -5032,6 +5107,7 @@ parse_options_va (struct MHD_Daemon *daemon,
           if (0 != (daemon->options & MHD_USE_TLS))
             {
               gnutls_datum_t dhpar;
+              size_t pstr_len;
 
               if (gnutls_dh_params_init (&daemon->https_mem_dhparams) < 0)
                 {
@@ -5042,7 +5118,16 @@ parse_options_va (struct MHD_Daemon *daemon,
                   return MHD_NO;
                 }
               dhpar.data = (unsigned char *) pstr;
-              dhpar.size = strlen (pstr);
+              pstr_len = strlen (pstr);
+              if (UINT_MAX < pstr_len)
+                {
+#ifdef HAVE_MESSAGES
+                  MHD_DLOG (daemon,
+                            _("Diffie-Hellman parameters string too long\n"));
+#endif
+                  return MHD_NO;
+                }
+              dhpar.size = (unsigned int) pstr_len;
               if (gnutls_dh_params_import_pkcs3 (daemon->https_mem_dhparams,
                                                  &dhpar,
                                                  GNUTLS_X509_FMT_PEM) < 0)
@@ -5157,12 +5242,18 @@ parse_options_va (struct MHD_Daemon *daemon,
                                               size_t);
           break;
 #endif
-#ifdef TCP_FASTOPEN
         case MHD_OPTION_TCP_FASTOPEN_QUEUE_SIZE:
+#ifdef TCP_FASTOPEN
           daemon->fastopen_queue_size = va_arg (ap,
                                                 unsigned int);
           break;
-#endif
+#else  /* ! TCP_FASTOPEN */
+#ifdef HAVE_MESSAGES
+          MHD_DLOG (daemon,
+                    _("TCP fastopen is not supported on this platform\n"));
+          return MHD_NO;
+#endif /* HAVE_MESSAGES */
+#endif /* ! TCP_FASTOPEN */
 	case MHD_OPTION_LISTENING_ADDRESS_REUSE:
 	  daemon->listening_address_reuse = va_arg (ap,
                                                     unsigned int) ? 1 : -1;
@@ -5172,7 +5263,7 @@ parse_options_va (struct MHD_Daemon *daemon,
                                                 unsigned int);
 	  break;
 	case MHD_OPTION_STRICT_FOR_CLIENT:
-          daemon->strict_for_client = va_arg (ap, int);;
+          daemon->strict_for_client = va_arg (ap, int);
 #ifdef HAVE_MESSAGES
 	  if ( (0 != (daemon->options & MHD_USE_PEDANTIC_CHECKS)) &&
 	       (1 != daemon->strict_for_client) )
@@ -5604,7 +5695,7 @@ MHD_start_daemon_va (unsigned int flags,
   daemon->listen_backlog_size = 511; /* should be safe value */
 #endif /* !SOMAXCONN */
 #ifdef HAVE_MESSAGES
-  daemon->custom_error_log = (MHD_LogCallback) &vfprintf;
+  daemon->custom_error_log = &MHD_default_logger_;
   daemon->custom_error_log_cls = stderr;
 #endif
   if ( (0 != (*pflags & MHD_USE_THREAD_PER_CONNECTION)) &&
@@ -5922,7 +6013,7 @@ MHD_start_daemon_va (unsigned int flags,
 #ifdef IN6ADDR_ANY_INIT
 	      servaddr6.sin6_addr = static_in6any;
 #endif
-#if HAVE_SOCKADDR_IN_SIN_LEN
+#if HAVE_STRUCT_SOCKADDR_IN6_SIN6_LEN
 	      servaddr6.sin6_len = sizeof (struct sockaddr_in6);
 #endif
 	      servaddr = (struct sockaddr *) &servaddr6;
@@ -5937,7 +6028,7 @@ MHD_start_daemon_va (unsigned int flags,
 	      servaddr4.sin_port = htons (port);
 	      if (0 != INADDR_ANY)
 	        servaddr4.sin_addr.s_addr = htonl (INADDR_ANY);
-#if HAVE_SOCKADDR_IN_SIN_LEN
+#if HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
 	      servaddr4.sin_len = sizeof (struct sockaddr_in);
 #endif
 	      servaddr = (struct sockaddr *) &servaddr4;
@@ -6016,17 +6107,21 @@ MHD_start_daemon_va (unsigned int flags,
       listen_fd = daemon->listen_fd;
     }
 
+#ifdef HAVE_GETSOCKNAME
   if ( (0 == daemon->port) &&
        (0 == (*pflags & MHD_USE_NO_LISTEN_SOCKET)) )
     { /* Get port number. */
-      struct sockaddr_storage servaddr;
+      struct sockaddr_storage bindaddr;
 
-      memset (&servaddr,
+      memset (&bindaddr,
               0,
               sizeof (struct sockaddr_storage));
-      addrlen = sizeof (servaddr);
+      addrlen = sizeof (struct sockaddr_storage);
+#ifdef HAVE_STRUCT_SOCKADDR_STORAGE_SS_LEN
+      bindaddr.ss_len = addrlen;
+#endif
       if (0 != getsockname (listen_fd,
-                            (struct sockaddr *) &servaddr,
+                            (struct sockaddr *) &bindaddr,
                             &addrlen))
       {
 #ifdef HAVE_MESSAGES
@@ -6036,7 +6131,7 @@ MHD_start_daemon_va (unsigned int flags,
 #endif /* HAVE_MESSAGES */
         }
 #ifdef MHD_POSIX_SOCKETS
-      else if (sizeof (servaddr) < addrlen)
+      else if (sizeof (bindaddr) < addrlen)
         {
           /* should be impossible with `struct sockaddr_storage` */
 #ifdef HAVE_MESSAGES
@@ -6044,14 +6139,22 @@ MHD_start_daemon_va (unsigned int flags,
                     _("Failed to get listen port number (`struct sockaddr_storage` too small!?)\n"));
 #endif /* HAVE_MESSAGES */
         }
+#ifndef __linux__
+      else if (0 == addrlen)
+        {
+          /* Many non-Linux-based platforms return zero addrlen
+           * for AF_UNIX sockets */
+          daemon->port = 0; /* special value for UNIX domain sockets */
+        }
+#endif /* __linux__ */
 #endif /* MHD_POSIX_SOCKETS */
       else
         {
-          switch (servaddr.ss_family)
+          switch (bindaddr.ss_family)
           {
           case AF_INET:
             {
-              struct sockaddr_in *s4 = (struct sockaddr_in *) &servaddr;
+              struct sockaddr_in *s4 = (struct sockaddr_in *) &bindaddr;
 
               daemon->port = ntohs (s4->sin_port);
               break;
@@ -6059,7 +6162,7 @@ MHD_start_daemon_va (unsigned int flags,
 #ifdef HAVE_INET6
           case AF_INET6:
             {
-              struct sockaddr_in6 *s6 = (struct sockaddr_in6 *) &servaddr;
+              struct sockaddr_in6 *s6 = (struct sockaddr_in6 *) &bindaddr;
 
               daemon->port = ntohs(s6->sin6_port);
               mhd_assert (0 != (*pflags & MHD_USE_IPv6));
@@ -6081,6 +6184,7 @@ MHD_start_daemon_va (unsigned int flags,
           }
         }
     }
+#endif /* HAVE_GETSOCKNAME */
 
   if ( (MHD_INVALID_SOCKET != listen_fd) &&
        (! MHD_socket_nonblocking_ (listen_fd)) )
@@ -7043,20 +7147,20 @@ static struct gcry_thread_cbs gcry_threads_w32 = {
 void
 MHD_init(void)
 {
-#if defined(_WIN32) && ! defined(__CYGWIN__)
+#if defined(MHD_WINSOCK_SOCKETS)
   WSADATA wsd;
-#endif /* _WIN32 && ! __CYGWIN__ */
+#endif /* MHD_WINSOCK_SOCKETS */
 
   if (NULL == mhd_panic)
     mhd_panic = &mhd_panic_std;
 
-#if defined(_WIN32) && ! defined(__CYGWIN__)
+#if defined(MHD_WINSOCK_SOCKETS)
   if (0 != WSAStartup(MAKEWORD(2, 2), &wsd))
     MHD_PANIC (_("Failed to initialize winsock\n"));
   mhd_winsock_inited_ = 1;
   if (2 != LOBYTE(wsd.wVersion) && 2 != HIBYTE(wsd.wVersion))
     MHD_PANIC (_("Winsock version 2.2 is not available\n"));
-#endif
+#endif /* MHD_WINSOCK_SOCKETS */
 #ifdef HTTPS_SUPPORT
 #ifdef MHD_HTTPS_REQUIRE_GRYPT
 #if GCRYPT_VERSION_NUMBER < 0x010600
@@ -7081,6 +7185,7 @@ MHD_init(void)
 #ifdef HAVE_FREEBSD_SENDFILE
   MHD_conn_init_static_ ();
 #endif /* HAVE_FREEBSD_SENDFILE */
+  MHD_init_mem_pools_ ();
 }
 
 
@@ -7090,10 +7195,10 @@ MHD_fini(void)
 #ifdef HTTPS_SUPPORT
   gnutls_global_deinit ();
 #endif /* HTTPS_SUPPORT */
-#if defined(_WIN32) && ! defined(__CYGWIN__)
+#if defined(MHD_WINSOCK_SOCKETS)
   if (mhd_winsock_inited_)
     WSACleanup();
-#endif
+#endif /* MHD_WINSOCK_SOCKETS */
   MHD_monotonic_sec_counter_finish();
 }
 

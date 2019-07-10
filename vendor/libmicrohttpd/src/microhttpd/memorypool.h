@@ -1,6 +1,7 @@
 /*
      This file is part of libmicrohttpd
-     Copyright (C) 2007, 2009 Daniel Pittman and Christian Grothoff
+     Copyright (C) 2007--2019 Daniel Pittman, Christian Grothoff and
+     Karlson2k (Evgeny Grin)
 
      This library is free software; you can redistribute it and/or
      modify it under the terms of the GNU Lesser General Public
@@ -23,12 +24,17 @@
  *        for each connection and bounding memory use for each
  *        request
  * @author Christian Grothoff
+ * @author Karlson2k (Evgeny Grin)
  */
 
 #ifndef MEMORYPOOL_H
 #define MEMORYPOOL_H
 
-#include "internal.h"
+#include "mhd_options.h"
+#include <stddef.h>
+#ifdef HAVE_STDBOOL_H
+#include <stdbool.h>
+#endif
 
 /**
  * Opaque handle for a memory pool.
@@ -36,6 +42,12 @@
  * by multiple threads.
  */
 struct MemoryPool;
+
+/**
+ * Initilise values for memory pools
+ */
+void
+MHD_init_mem_pools_ (void);
 
 
 /**
@@ -62,7 +74,7 @@ MHD_pool_destroy (struct MemoryPool *pool);
  *
  * @param pool memory pool to use for the operation
  * @param size number of bytes to allocate
- * @param from_end allocate from end of pool (set to #MHD_YES);
+ * @param from_end allocate from end of pool (set to 'true');
  *        use this for small, persistent allocations that
  *        will never be reallocated
  * @return NULL if the pool cannot support size more
@@ -70,8 +82,8 @@ MHD_pool_destroy (struct MemoryPool *pool);
  */
 void *
 MHD_pool_allocate (struct MemoryPool *pool,
-		   size_t size,
-                   int from_end);
+                   size_t size,
+                   bool from_end);
 
 
 /**
@@ -81,15 +93,15 @@ MHD_pool_allocate (struct MemoryPool *pool,
  * If the given block is not the most recently
  * (re)allocated block, the memory of the previous
  * allocation may be leaked until the pool is
- * destroyed (and copying the data maybe required).
+ * destroyed or reset.
  *
  * @param pool memory pool to use for the operation
  * @param old the existing block
  * @param old_size the size of the existing block
  * @param new_size the new size of the block
  * @return new address of the block, or
- *         NULL if the pool cannot support new_size
- *         bytes (old continues to be valid for old_size)
+ *         NULL if the pool cannot support @a new_size
+ *         bytes (old continues to be valid for @a old_size)
  */
 void *
 MHD_pool_reallocate (struct MemoryPool *pool,

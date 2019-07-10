@@ -151,7 +151,7 @@ test_query_session ()
                      port);
   c = curl_easy_init ();
 #if DEBUG_HTTPS_TEST
-  curl_easy_setopt (c, CURLOPT_VERBOSE, 1);
+  curl_easy_setopt (c, CURLOPT_VERBOSE, 1L);
 #endif
   curl_easy_setopt (c, CURLOPT_URL, url);
   curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
@@ -163,14 +163,14 @@ test_query_session ()
   curl_easy_setopt (c, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_1);
   curl_easy_setopt (c, CURLOPT_SSL_CIPHER_LIST, aes256_sha);
   /* currently skip any peer authentication */
-  curl_easy_setopt (c, CURLOPT_SSL_VERIFYPEER, 0);
-  curl_easy_setopt (c, CURLOPT_SSL_VERIFYHOST, 0);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_SSL_VERIFYPEER, 0L);
+  curl_easy_setopt (c, CURLOPT_SSL_VERIFYHOST, 0L);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
 
   /* NOTE: use of CONNECTTIMEOUT without also
    * setting NOSIGNAL results in really weird
    * crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
     {
       fprintf (stderr, "curl_easy_perform failed: `%s'\n",

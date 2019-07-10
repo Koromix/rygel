@@ -92,9 +92,9 @@ MHD_DLOG (const struct MHD_Daemon *daemon,
  * Close FD and abort execution if error is detected.
  * @param fd the FD to close
  */
-#define MHD_fd_close_chk_(fd) do {             \
-    if (0 == close ((fd)) && (EBADF == errno)) \
-      MHD_PANIC(_("Failed to close FD.\n"));   \
+#define MHD_fd_close_chk_(fd) do {                      \
+    if ( (0 != close ((fd)) && (EBADF == errno)) )	\
+      MHD_PANIC(_("Failed to close FD.\n"));            \
   } while(0)
 
 /**

@@ -75,6 +75,9 @@
 /* Define to 1 if you have the usable `calloc' function. */
 #define HAVE_CALLOC 1
 
+/* Define if you have usable assert() and assert.h */
+#define HAVE_ASSERT 1
+
 #if _MSC_VER >= 1900 /* snprintf() supported natively since VS2015 */
 /* Define to 1 if you have the `snprintf' function. */
 #define HAVE_SNPRINTF 1

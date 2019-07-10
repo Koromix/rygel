@@ -51,6 +51,12 @@
 #define CPU_COUNT 2
 #endif
 
+#ifndef PATH_MAX
+/* Some platforms (namely: GNU Hurd) do no define PATH_MAX.
+   As it is only example for MHD, just use reasonable value for PATH_MAX. */
+#define PATH_MAX 16384
+#endif
+
 /**
  * Number of threads to run in the thread pool.  Should (roughly) match
  * the number of cores on your system.

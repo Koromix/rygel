@@ -99,7 +99,6 @@ static int test_4xx(void)
   errcount += expect_result(MHD_HTTP_EXPECTATION_FAILED, "expectation failed");
   errcount += expect_result(MHD_HTTP_REQUEST_HEADER_FIELDS_TOO_LARGE, "request header fields too large");
   errcount += expect_absent(441);
-  errcount += expect_result(MHD_HTTP_NO_RESPONSE, "no response");
   errcount += expect_result(MHD_HTTP_UNAVAILABLE_FOR_LEGAL_REASONS, "unavailable for legal reasons");
   errcount += expect_absent(470);
   errcount += expect_absent(493);

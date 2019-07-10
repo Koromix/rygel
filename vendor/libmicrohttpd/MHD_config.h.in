@@ -65,10 +65,6 @@
    */
 #undef HAVE_DCGETTEXT
 
-/* Define to 1 if you have the declaration of `getsockname', and to 0 if you
-   don't. */
-#undef HAVE_DECL_GETSOCKNAME
-
 /* Define to 1 if you have the declaration of `SOCK_NONBLOCK', and to 0 if you
    don't. */
 #undef HAVE_DECL_SOCK_NONBLOCK
@@ -253,9 +249,6 @@
 /* Define to 1 if you have the `snprintf' function. */
 #undef HAVE_SNPRINTF
 
-/* Do we have sockaddr_in.sin_len? */
-#undef HAVE_SOCKADDR_IN_SIN_LEN
-
 /* Define to 1 if you have the <sockLib.h> header file. */
 #undef HAVE_SOCKLIB_H
 
@@ -286,6 +279,18 @@
 
 /* Define to 1 if you have the <string.h> header file. */
 #undef HAVE_STRING_H
+
+/* Define to 1 if `sin6_len' is a member of `struct sockaddr_in6'. */
+#undef HAVE_STRUCT_SOCKADDR_IN6_SIN6_LEN
+
+/* Define to 1 if `sin_len' is a member of `struct sockaddr_in'. */
+#undef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
+
+/* Define to 1 if `ss_len' is a member of `struct sockaddr_storage'. */
+#undef HAVE_STRUCT_SOCKADDR_STORAGE_SS_LEN
+
+/* Define to 1 if you have the `sysconf' function. */
+#undef HAVE_SYSCONF
 
 /* Define to 1 if you have the <sys/byteorder.h> header file. */
 #undef HAVE_SYS_BYTEORDER_H
@@ -430,6 +435,12 @@
 
 /* Define to the sub-directory where libtool stores uninstalled libraries. */
 #undef LT_OBJDIR
+
+/* Define to 1 if you have __builtin_bswap32() builtin function */
+#undef MHD_HAVE___BUILTIN_BSWAP32
+
+/* Define to 1 if you have __builtin_bswap64() builtin function */
+#undef MHD_HAVE___BUILTIN_BSWAP64
 
 /* Define to `1' if HTTPS require initialisation of libgcrypt */
 #undef MHD_HTTPS_REQUIRE_GCRYPT

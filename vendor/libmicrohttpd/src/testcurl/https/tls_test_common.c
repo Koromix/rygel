@@ -89,7 +89,7 @@ test_daemon_get (void *cls,
 
   c = curl_easy_init ();
 #if DEBUG_HTTPS_TEST
-  curl_easy_setopt (c, CURLOPT_VERBOSE, 1);
+  curl_easy_setopt (c, CURLOPT_VERBOSE, 1L);
 #endif
   curl_easy_setopt (c, CURLOPT_URL, url);
   curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
@@ -107,13 +107,13 @@ test_daemon_get (void *cls,
   curl_easy_setopt (c, CURLOPT_SSL_VERIFYPEER, ver_peer);
   if (ver_peer)
     curl_easy_setopt (c, CURLOPT_CAINFO, ca_cert_file_name);
-  curl_easy_setopt (c, CURLOPT_SSL_VERIFYHOST, 0);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_SSL_VERIFYHOST, 0L);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
 
   /* NOTE: use of CONNECTTIMEOUT without also
      setting NOSIGNAL results in really weird
      crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
     {
       fprintf (stderr, "curl_easy_perform failed: `%s'\n",
@@ -238,15 +238,15 @@ send_curl_req (char *url, struct CBC * cbc, const char *cipher_suite,
   curl_easy_setopt (c, CURLOPT_SSL_CIPHER_LIST, cipher_suite);
 
   /* currently skip any peer authentication */
-  curl_easy_setopt (c, CURLOPT_SSL_VERIFYPEER, 0);
-  curl_easy_setopt (c, CURLOPT_SSL_VERIFYHOST, 0);
+  curl_easy_setopt (c, CURLOPT_SSL_VERIFYPEER, 0L);
+  curl_easy_setopt (c, CURLOPT_SSL_VERIFYHOST, 0L);
 
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
 
   /* NOTE: use of CONNECTTIMEOUT without also
      setting NOSIGNAL results in really weird
      crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
     {
       fprintf (stderr, "curl_easy_perform failed: `%s'\n",

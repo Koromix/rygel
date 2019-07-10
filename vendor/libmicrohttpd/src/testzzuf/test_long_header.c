@@ -132,7 +132,7 @@ testLongUrlGet ()
       curl_easy_setopt (c, CURLOPT_URL, url);
       curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
       curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-      curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+      curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
       curl_easy_setopt (c, CURLOPT_TIMEOUT_MS, CURL_TIMEOUT);
       curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT_MS, CURL_TIMEOUT);
       if (oneone)
@@ -142,7 +142,7 @@ testLongUrlGet ()
       /* NOTE: use of CONNECTTIMEOUT without also
        *   setting NOSIGNAL results in really weird
        *   crashes on my system! */
-      curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+      curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
       curl_easy_perform (c);
       curl_easy_cleanup (c);
       free (url);
@@ -195,7 +195,7 @@ testLongHeaderGet ()
       curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1:11081/hello_world");
       curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
       curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-      curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+      curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
       curl_easy_setopt (c, CURLOPT_TIMEOUT_MS, CURL_TIMEOUT);
       curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT_MS, CURL_TIMEOUT);
       if (oneone)
@@ -205,7 +205,7 @@ testLongHeaderGet ()
       /* NOTE: use of CONNECTTIMEOUT without also
        *   setting NOSIGNAL results in really weird
        *   crashes on my system! */
-      curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+      curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
       curl_easy_perform (c);
       curl_slist_free_all (header);
       header = NULL;

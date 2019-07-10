@@ -133,6 +133,7 @@ endif
 if ENABLE_DAUTH
 libmicrohttpd_la_SOURCES += \
   digestauth.c \
+  mhd_bithelpers.h \
   md5.c md5.h \
   sha256.c sha256.h
 endif
@@ -155,6 +156,8 @@ check_PROGRAMS = \
   test_str_to_value \
   test_str_token \
   test_http_reasons \
+  test_md5 \
+  test_sha256 \
   test_start_stop \
   test_daemon \
   test_options
@@ -191,7 +194,7 @@ TESTS = $(check_PROGRAMS)
 # on Cygwin as this ability is deliberately ignored on Cygwin
 # to improve compatibility with core OS.
 if !CYGWIN_TARGET
-if USE_POSIX_THREADS
+if HAVE_POSIX_THREADS
 if HAVE_LISTEN_SHUTDOWN
 check_PROGRAMS += \
   test_shutdown_select \
@@ -315,6 +318,14 @@ test_str_token_SOURCES = \
 test_http_reasons_SOURCES = \
   test_http_reasons.c \
   reason_phrase.c mhd_str.c mhd_str.h
+
+test_md5_SOURCES = \
+  test_md5.c test_helpers.h \
+  md5.c md5.h mhd_bithelpers.h
+
+test_sha256_SOURCES = \
+  test_sha256.c test_helpers.h \
+  sha256.c sha256.h mhd_bithelpers.h
 
 test_options_SOURCES = \
   test_options.c

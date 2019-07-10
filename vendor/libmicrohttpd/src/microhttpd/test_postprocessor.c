@@ -137,6 +137,8 @@ test_urlencoding (void)
   connection.headers_received = &header;
   header.header = MHD_HTTP_HEADER_CONTENT_TYPE;
   header.value = MHD_HTTP_POST_ENCODING_FORM_URLENCODED;
+  header.header_size = MHD_STATICSTR_LEN_(MHD_HTTP_HEADER_CONTENT_TYPE);
+  header.value_size = MHD_STATICSTR_LEN_(MHD_HTTP_POST_ENCODING_FORM_URLENCODED);
   header.kind = MHD_HEADER_KIND;
   pp = MHD_create_post_processor (&connection,
                                   1024, &value_checker, &want_off);
@@ -181,6 +183,8 @@ test_multipart_garbage (void)
     header.header = MHD_HTTP_HEADER_CONTENT_TYPE;
     header.value =
       MHD_HTTP_POST_ENCODING_MULTIPART_FORMDATA ", boundary=AaB03x";
+    header.header_size = MHD_STATICSTR_LEN_(MHD_HTTP_HEADER_CONTENT_TYPE);
+    header.value_size = MHD_STATICSTR_LEN_(MHD_HTTP_POST_ENCODING_MULTIPART_FORMDATA ", boundary=AaB03x");
     header.kind = MHD_HEADER_KIND;
     pp = MHD_create_post_processor (&connection,
                                     1024, &value_checker, &want_off);
@@ -214,6 +218,8 @@ test_multipart_splits (void)
     header.header = MHD_HTTP_HEADER_CONTENT_TYPE;
     header.value =
       MHD_HTTP_POST_ENCODING_MULTIPART_FORMDATA ", boundary=AaB03x";
+    header.header_size = strlen (header.header);
+    header.value_size = strlen (header.value);
     header.kind = MHD_HEADER_KIND;
     pp = MHD_create_post_processor (&connection,
                                     1024, &value_checker, &want_off);
@@ -245,6 +251,8 @@ test_multipart (void)
   header.value =
     MHD_HTTP_POST_ENCODING_MULTIPART_FORMDATA ", boundary=AaB03x";
   header.kind = MHD_HEADER_KIND;
+  header.header_size = strlen (header.header);
+  header.value_size = strlen (header.value);
   pp = MHD_create_post_processor (&connection,
                                   1024, &value_checker, &want_off);
   i = 0;
@@ -280,6 +288,8 @@ test_nested_multipart (void)
   header.value =
     MHD_HTTP_POST_ENCODING_MULTIPART_FORMDATA ", boundary=AaB03x";
   header.kind = MHD_HEADER_KIND;
+  header.header_size = strlen (header.header);
+  header.value_size = strlen (header.value);
   pp = MHD_create_post_processor (&connection,
                                   1024, &value_checker, &want_off);
   i = 0;
@@ -313,6 +323,8 @@ test_empty_value (void)
   connection.headers_received = &header;
   header.header = MHD_HTTP_HEADER_CONTENT_TYPE;
   header.value = MHD_HTTP_POST_ENCODING_FORM_URLENCODED;
+  header.header_size = strlen (header.header);
+  header.value_size = strlen (header.value);
   header.kind = MHD_HEADER_KIND;
   pp = MHD_create_post_processor (&connection,
                                   1024, &value_checker, &want_off);

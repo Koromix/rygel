@@ -1,6 +1,7 @@
 /*
   This file is part of libmicrohttpd
-  Copyright (C) 2007-2018 Daniel Pittman and Christian Grothoff
+  Copyright (C) 2007-2019 Daniel Pittman, Christian Grothoff and
+  Karlson2k (Evgeny Grin)
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -26,6 +27,18 @@
  */
 #include "internal.h"
 
+
+/**
+ * Size of single file read operation for
+ * file-backed responses.
+ */
+#ifndef MHD_FILE_READ_BLOCK_SIZE
+#ifdef _WIN32
+#define MHD_FILE_READ_BLOCK_SIZE 16384 /* 16k */
+#else /* _WIN32 */
+#define MHD_FILE_READ_BLOCK_SIZE 4096 /* 4k */
+#endif /* _WIN32 */
+#endif /* !MHD_FD_BLOCK_SIZE */
 
 /**
  * Given a file descriptor, read data from the file
@@ -182,7 +195,7 @@ MHD_response_from_fd (enum MHD_HTTP_StatusCode sc,
 
   response = MHD_response_from_callback (sc,
 					 size,
-					 MHD_FD_BLOCK_SIZE,
+					 MHD_FILE_READ_BLOCK_SIZE,
 					 &file_reader,
 					 NULL,
 					 &free_callback);

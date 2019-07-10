@@ -57,6 +57,12 @@
     <ClCompile Include="$(MhdSrc)microhttpd\md5.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="$(MhdSrc)microhttpd\sha256.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClInclude Include="$(MhdSrc)microhttpd\sha256.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
     <ClCompile Include="$(MhdSrc)microhttpd\memorypool.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -96,7 +102,13 @@
     <ClInclude Include="$(MhdSrc)microhttpd\tsearch.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="$(MhdSrc)microhttpd\mhd_assert.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
     <ClInclude Include="$(MhdSrc)microhttpd\mhd_limits.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MhdSrc)microhttpd\mhd_bithelpers.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="$(MhdSrc)microhttpd\mhd_byteorder.h">

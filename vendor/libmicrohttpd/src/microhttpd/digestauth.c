@@ -156,7 +156,7 @@ struct DigestAlgorithm
    * Compute final @a digest.
    *
    * @param ctx context to use
-   * @param digest[out] where to write the result,
+   * @param[out] digest where to write the result,
    *        must be @e digest_length bytes long
    */
   void
@@ -198,7 +198,7 @@ cvthex (const unsigned char *bin,
  * @param alg The hash algorithm used, can be "md5" or "md5-sess"
  *            or "sha-256" or "sha-256-sess"
  *    Note that the rest of the code does not support the the "-sess" variants!
- * @param da[in,out] digest implementation, must match @a alg; the
+ * @param[in,out] da digest implementation, must match @a alg; the
  *          da->sessionkey will be initialized to the digest in HEX
  * @param digest An `unsigned char *' pointer to the binary MD5 sum
  * 			for the precalculated hash value "username:realm:password"
@@ -263,7 +263,7 @@ digest_calc_ha1_from_digest (const char *alg,
  * @param password A `char *' pointer to the password value
  * @param nonce A `char *' pointer to the nonce value
  * @param cnonce A `char *' pointer to the cnonce value
- * @param da[in,out] digest algorithm to use, and where to write
+ * @param[in,out] da digest algorithm to use, and where to write
  *         the sessionkey to
  */
 static void
@@ -317,7 +317,7 @@ digest_calc_ha1_from_user (const char *alg,
  * @param method method from request
  * @param uri requested URL
  * @param hentity H(entity body) if qop="auth-int"
- * @param da[in,out] digest algorithm to use, also
+ * @param[in,out] da digest algorithm to use, also
  *        we write da->sessionkey (set to response request-digest or response-digest)
  */
 static void
@@ -629,10 +629,12 @@ MHD_digest_auth_get_username(struct MHD_Connection *connection)
   char user[MAX_USERNAME_LENGTH];
   const char *header;
 
-  if (NULL == (header =
-               MHD_lookup_connection_value (connection,
-                                            MHD_HEADER_KIND,
-                                            MHD_HTTP_HEADER_AUTHORIZATION)))
+  if (MHD_NO == MHD_lookup_connection_value_n (connection,
+                                               MHD_HEADER_KIND,
+                                               MHD_HTTP_HEADER_AUTHORIZATION,
+                                               MHD_STATICSTR_LEN_ (MHD_HTTP_HEADER_AUTHORIZATION),
+                                               &header,
+                                               NULL))
     return NULL;
   if (0 != strncmp (header,
                     _BASE,
@@ -731,7 +733,9 @@ calculate_nonce (uint32_t nonce_time,
  *
  * @param connection the connection
  * @param key the key
+ * @param key_size number of bytes in @a key
  * @param value the value, can be NULL
+ * @param value_size number of bytes in @a value
  * @param kind type of the header
  * @return #MHD_YES if the key-value pair is in the headers,
  *         #MHD_NO if not
@@ -739,7 +743,9 @@ calculate_nonce (uint32_t nonce_time,
 static int
 test_header (struct MHD_Connection *connection,
 	     const char *key,
+             size_t key_size,
 	     const char *value,
+	     size_t value_size,
 	     enum MHD_ValueKind kind)
 {
   struct MHD_HTTP_Header *pos;
@@ -748,16 +754,22 @@ test_header (struct MHD_Connection *connection,
     {
       if (kind != pos->kind)
 	continue;
-      if (0 != strcmp (key,
-                       pos->header))
+      if (key_size != pos->header_size)
+	continue;
+      if (value_size != pos->value_size)
+        continue;
+      if (0 != memcmp (key,
+                       pos->header,
+                       key_size))
 	continue;
       if ( (NULL == value) &&
 	   (NULL == pos->value) )
 	return MHD_YES;
       if ( (NULL == value) ||
 	   (NULL == pos->value) ||
-	   (0 != strcmp (value,
-                         pos->value)) )
+	   (0 != memcmp (value,
+                         pos->value,
+			 value_size)) )
 	continue;
       return MHD_YES;
     }
@@ -812,7 +824,7 @@ check_argument_match (struct MHD_Connection *connection,
     }
   if (0 != num_headers)
     {
-      /* argument count missmatch */
+      /* argument count mismatch */
       return MHD_NO;
     }
   return MHD_YES;
@@ -823,7 +835,7 @@ check_argument_match (struct MHD_Connection *connection,
  * Authenticates the authorization header sent by the client
  *
  * @param connection The MHD connection structure
- * @param da[in,out] digest algorithm to use for checking (written to as
+ * @param[in,out] da digest algorithm to use for checking (written to as
  *         part of the calculations, but the values left in the struct
  *         are not actually expected to be useful for the caller)
  * @param realm The realm presented to the client
@@ -865,10 +877,12 @@ digest_auth_check_all (struct MHD_Connection *connection,
   char *qmark;
 
   VLA_CHECK_LEN_DIGEST(da->digest_size);
-  header = MHD_lookup_connection_value (connection,
-					MHD_HEADER_KIND,
-					MHD_HTTP_HEADER_AUTHORIZATION);
-  if (NULL == header)
+  if (MHD_NO == MHD_lookup_connection_value_n (connection,
+                                               MHD_HEADER_KIND,
+                                               MHD_HTTP_HEADER_AUTHORIZATION,
+                                               MHD_STATICSTR_LEN_ (MHD_HTTP_HEADER_AUTHORIZATION),
+                                               &header,
+                                               NULL))
     return MHD_NO;
   if (0 != strncmp (header,
                     _BASE,
@@ -1052,6 +1066,7 @@ digest_auth_check_all (struct MHD_Connection *connection,
     else
       {
         /* This will initialize da->sessionkey (ha1) */
+        mhd_assert (NULL != password); /* NULL == digest => password != NULL */
 	digest_calc_ha1_from_user (da->alg,
 				   username,
 				   realm,
@@ -1173,15 +1188,16 @@ MHD_digest_auth_check (struct MHD_Connection *connection,
   } skey;                                         \
   struct DigestAlgorithm da;                      \
                                                   \
+  do {                                            \
   switch (algo) {                                 \
   case MHD_DIGEST_ALG_MD5:                        \
     da.digest_size = MD5_DIGEST_SIZE;             \
     da.ctx = &ctx.md5;                            \
     da.alg = "md5";                               \
     da.sessionkey = skey.md5;                     \
-    da.init = &MD5Init;                           \
-    da.update = &MD5Update;                       \
-    da.digest = &MD5Final;                        \
+    da.init = &MHD_MD5Init;                           \
+    da.update = &MHD_MD5Update;                       \
+    da.digest = &MHD_MD5Final;                        \
     break;                                        \
   case MHD_DIGEST_ALG_AUTO:                             \
     /* auto == SHA256, fall-though thus intentional! */ \
@@ -1190,11 +1206,12 @@ MHD_digest_auth_check (struct MHD_Connection *connection,
     da.ctx = &ctx.sha256;                               \
     da.alg = "sha-256";                                 \
     da.sessionkey = skey.sha256;                        \
-    da.init = &sha256_init;                             \
-    da.update = &sha256_update;                         \
-    da.digest = &sha256_digest;                         \
+    da.init = &MHD_SHA256_init;                             \
+    da.update = &MHD_SHA256_update;                         \
+    da.digest = &sha256_finish;                         \
     break;                                              \
-  }
+  }                                                     \
+  } while(0)
 
 
 

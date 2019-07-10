@@ -55,7 +55,7 @@ MHD_daemon_run (struct MHD_Daemon *daemon)
   if (daemon->shutdown)
     return MHD_SC_DAEMON_ALREADY_SHUTDOWN;
   if (MHD_TM_EXTERNAL_EVENT_LOOP != daemon->threading_mode)
-    return MHD_SC_CONFIGURATION_MISSMATCH_FOR_RUN_EXTERNAL;
+    return MHD_SC_CONFIGURATION_MISMATCH_FOR_RUN_EXTERNAL;
   switch (daemon->event_loop_syscall)
     {
     case MHD_ELS_POLL:
