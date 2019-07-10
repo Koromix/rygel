@@ -8,25 +8,25 @@ import babel from 'rollup-plugin-babel';
 import { uglify } from 'rollup-plugin-uglify';
 
 export default {
-  input: 'lit-html/lit-html.js',
-  plugins: [
-    resolve({module: true}),
-    babel({presets: ['@babel/preset-env']}),
-    uglify()
-  ],
-  context: 'null',
-  moduleContext: 'null',
-  output: {
-    file: 'lit-html.min.js',
-    format: 'iife',
-	name: 'lithtml'
-  }
+    input: 'node_modules/lit-html/lit-html.js',
+    plugins: [
+        resolve({module: true}),
+        babel({presets: ['@babel/preset-env']}),
+        uglify()
+    ],
+    context: 'null',
+    moduleContext: 'null',
+    output: {
+        file: 'lit-html.min.js',
+        format: 'iife',
+        name: 'lithtml'
+    }
 };
 ```
 
 Run the following commands:
 
 ```bash
-npm install rollup rollup-plugin-node-resolve rollup-plugin-babel rollup-plugin-uglify @babel/core @babel/preset-env
+npm install lit-html rollup rollup-plugin-node-resolve rollup-plugin-babel rollup-plugin-uglify @babel/core @babel/preset-env
 node_modules/.bin/rollup -c rollup.js
 ```
