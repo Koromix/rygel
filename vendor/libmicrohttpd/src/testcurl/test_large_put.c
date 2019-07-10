@@ -202,7 +202,7 @@ testPutInternalThread (unsigned int add_flag)
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | add_flag,
                         port,
                         NULL, NULL, &ahc_echo, &done_flag,
-			MHD_OPTION_CONNECTION_MEMORY_LIMIT, (size_t)(incr_read ? 1024 : (PUT_SIZE * 4)),
+			MHD_OPTION_CONNECTION_MEMORY_LIMIT, (size_t)(incr_read ? 1024 : (PUT_SIZE * 4 / 3)),
 			MHD_OPTION_END);
   if (d == NULL)
     return 1;
@@ -223,7 +223,7 @@ testPutInternalThread (unsigned int add_flag)
   curl_easy_setopt (c, CURLOPT_READDATA, &pos);
   curl_easy_setopt (c, CURLOPT_UPLOAD, 1L);
   curl_easy_setopt (c, CURLOPT_INFILESIZE, (long) PUT_SIZE);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
   curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
   if (oneone)
     curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
@@ -233,7 +233,7 @@ testPutInternalThread (unsigned int add_flag)
   /* NOTE: use of CONNECTTIMEOUT without also
    *   setting NOSIGNAL results in really weird
    *   crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
     {
       fprintf (stderr,
@@ -303,7 +303,7 @@ testPutThreadPerConn (unsigned int add_flag)
   curl_easy_setopt (c, CURLOPT_READDATA, &pos);
   curl_easy_setopt (c, CURLOPT_UPLOAD, 1L);
   curl_easy_setopt (c, CURLOPT_INFILESIZE, (long) PUT_SIZE);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
   curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
   if (oneone)
     curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
@@ -313,7 +313,7 @@ testPutThreadPerConn (unsigned int add_flag)
   /* NOTE: use of CONNECTTIMEOUT without also
    *   setting NOSIGNAL results in really weird
    *   crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
     {
       fprintf (stderr,
@@ -386,7 +386,7 @@ testPutThreadPool (unsigned int add_flag)
   curl_easy_setopt (c, CURLOPT_READDATA, &pos);
   curl_easy_setopt (c, CURLOPT_UPLOAD, 1L);
   curl_easy_setopt (c, CURLOPT_INFILESIZE, (long) PUT_SIZE);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
   curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
   if (oneone)
     curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
@@ -396,7 +396,7 @@ testPutThreadPool (unsigned int add_flag)
   /* NOTE: use of CONNECTTIMEOUT without also
    *   setting NOSIGNAL results in really weird
    *   crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
     {
       fprintf (stderr,
@@ -483,7 +483,7 @@ testPutExternal (void)
   curl_easy_setopt (c, CURLOPT_READDATA, &pos);
   curl_easy_setopt (c, CURLOPT_UPLOAD, 1L);
   curl_easy_setopt (c, CURLOPT_INFILESIZE, (long) PUT_SIZE);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
   curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
   if (oneone)
     curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
@@ -493,7 +493,7 @@ testPutExternal (void)
   /* NOTE: use of CONNECTTIMEOUT without also
    *   setting NOSIGNAL results in really weird
    *   crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
 
 
   multi = curl_multi_init ();

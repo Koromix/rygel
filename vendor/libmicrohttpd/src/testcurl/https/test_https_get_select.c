@@ -134,9 +134,9 @@ testExternalGet (int flags)
   /* TLS options */
   curl_easy_setopt (c, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1);
   curl_easy_setopt (c, CURLOPT_SSL_CIPHER_LIST, aes256_sha);
-  curl_easy_setopt (c, CURLOPT_SSL_VERIFYPEER, 0);
-  curl_easy_setopt (c, CURLOPT_SSL_VERIFYHOST, 0);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_SSL_VERIFYPEER, 0L);
+  curl_easy_setopt (c, CURLOPT_SSL_VERIFYHOST, 0L);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
   if (oneone)
     curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
   else
@@ -146,7 +146,7 @@ testExternalGet (int flags)
   /* NOTE: use of CONNECTTIMEOUT without also
      setting NOSIGNAL results in really weird
      crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
 
 
   multi = curl_multi_init ();
@@ -250,6 +250,7 @@ main (int argc, char *const *argv)
   unsigned int errorCount = 0;
   (void)argc;   /* Unused. Silent compiler warning. */
 
+  oneone = 0;
   if (!testsuite_curl_global_init ())
     return 99;
   if (NULL == curl_version_info (CURLVERSION_NOW)->ssl_version)

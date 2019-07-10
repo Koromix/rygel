@@ -108,11 +108,13 @@ static const uint64_t _MHD_itc_wr_data = 1;
        (void)__r; } while(0)
 
 /**
- * Destroy previously initialised ITC
+ * Destroy previously initialised ITC.  Note that close()
+ * on some platforms returns odd errors, so we ONLY fail
+ * if the errno is EBADF.
  * @param itc the itc to destroy
  * @return non-zero if succeeded, zero otherwise
  */
-#define MHD_itc_destroy_(itc) ((0 != close ((itc).fd)) || (EBADF != errno))
+#define MHD_itc_destroy_(itc) ((0 == close ((itc).fd)) || (EBADF != errno))
 
 /**
  * Check whether ITC has valid value.

@@ -57,6 +57,19 @@
 
 
 /**
+ * Size of single file read operation for
+ * file-backed responses.
+ */
+#ifndef MHD_FILE_READ_BLOCK_SIZE
+#ifdef _WIN32
+#define MHD_FILE_READ_BLOCK_SIZE 16384 /* 16k */
+#else /* _WIN32 */
+#define MHD_FILE_READ_BLOCK_SIZE 4096 /* 4k */
+#endif /* _WIN32 */
+#endif /* !MHD_FD_BLOCK_SIZE */
+
+
+/**
  * Add a header or footer line to the response.
  *
  * @param response response to add a header to
@@ -92,12 +105,14 @@ add_response_entry (struct MHD_Response *response,
       free (hdr);
       return MHD_NO;
     }
+  hdr->header_size = strlen (header);
   if (NULL == (hdr->value = strdup (content)))
     {
       free (hdr->header);
       free (hdr);
       return MHD_NO;
     }
+  hdr->value_size = strlen (content);
   hdr->kind = kind;
   hdr->next = response->first_header;
   response->first_header = hdr;
@@ -184,18 +199,26 @@ MHD_del_response_header (struct MHD_Response *response,
 {
   struct MHD_HTTP_Header *pos;
   struct MHD_HTTP_Header *prev;
+  size_t header_len;
+  size_t content_len;
 
   if ( (NULL == header) ||
   (NULL == content) )
     return MHD_NO;
+  header_len = strlen (header);
+  content_len = strlen (content);
   prev = NULL;
   pos = response->first_header;
   while (NULL != pos)
     {
-      if ((0 == strcmp (header,
-                        pos->header)) &&
-          (0 == strcmp (content,
-                        pos->value)))
+      if ((header_len == pos->header_size) &&
+          (content_len == pos->value_size) &&
+          (0 == memcmp (header,
+                        pos->header,
+                        header_len)) &&
+          (0 == memcmp (content,
+                        pos->value,
+                        content_len)))
         {
           free (pos->header);
           free (pos->value);
@@ -260,14 +283,18 @@ MHD_get_response_header (struct MHD_Response *response,
 			 const char *key)
 {
   struct MHD_HTTP_Header *pos;
+  size_t key_size;
 
   if (NULL == key)
     return NULL;
+
+  key_size = strlen (key);
   for (pos = response->first_header;
        NULL != pos;
        pos = pos->next)
     {
-      if (MHD_str_equal_caseless_ (pos->header, key))
+      if ((pos->header_size == key_size) &&
+          (MHD_str_equal_caseless_bin_n_ (pos->header, key, pos->header_size)))
         return pos->value;
     }
   return NULL;
@@ -282,8 +309,10 @@ MHD_get_response_header (struct MHD_Response *response,
  *
  * @param response  the response to query
  * @param key       header name
+ * @param key_len   the length of @a key, not including optional
+ *                  terminating null-character.
  * @param token     the token to find
- * @param token_len the length of token, not including optional
+ * @param token_len the length of @a token, not including optional
  *                  terminating null-character.
  * @return true if token is found in specified header,
  *         false otherwise
@@ -291,6 +320,7 @@ MHD_get_response_header (struct MHD_Response *response,
 bool
 MHD_check_response_header_token_ci (const struct MHD_Response *response,
                                     const char *key,
+                                    size_t key_len,
                                     const char *token,
                                     size_t token_len)
 {
@@ -302,13 +332,18 @@ MHD_check_response_header_token_ci (const struct MHD_Response *response,
        ('\0' == token[0]) )
     return false;
 
+  /* Token must not contain binary zero! */
+  mhd_assert(strlen(token) == token_len);
+
   for (pos = response->first_header;
        NULL != pos;
        pos = pos->next)
     {
       if ( (pos->kind == MHD_HEADER_KIND) &&
-           MHD_str_equal_caseless_ (pos->header,
-                                    key) &&
+           (key_len == pos->header_size) &&
+           MHD_str_equal_caseless_bin_n_ (pos->header,
+                                          key,
+                                          key_len) &&
            MHD_str_has_token_caseless_ (pos->value,
                                         token,
                                         token_len) )
@@ -568,7 +603,7 @@ MHD_create_response_from_fd_at_offset64 (uint64_t size,
     return NULL;
 
   response = MHD_create_response_from_callback (size,
-						MHD_FD_BLOCK_SIZE,
+                                                MHD_FILE_READ_BLOCK_SIZE,
 						&file_reader,
 						NULL,
 						&free_callback);
@@ -939,7 +974,7 @@ MHD_response_execute_upgrade_ (struct MHD_Response *response,
            to another protocol. */
         buf = MHD_pool_allocate (pool,
                                  avail,
-                                 MHD_NO);
+                                 false);
       }
     /* use half the buffer for inbound, half for outbound */
     urh->in_buffer_size = avail / 2;

@@ -1,6 +1,6 @@
 /*
      This file is part of libmicrohttpd
-     Copyright (C) 2006-2018 Christian Grothoff (and other contributing authors)
+     Copyright (C) 2006--2019 Christian Grothoff (and other contributing authors)
 
      This library is free software; you can redistribute it and/or
      modify it under the terms of the GNU Lesser General Public
@@ -101,20 +101,26 @@ extern "C"
    on platforms where they do not exist).
    */
 #ifndef MHD_PLATFORM_H
+#if defined(_WIN32) && ! defined(__CYGWIN__) && \
+  ! defined(_CRT_DECLARE_NONSTDC_NAMES)
+#define _CRT_DECLARE_NONSTDC_NAMES 1
+#endif /* _WIN32 && ! __CYGWIN__ && ! _CRT_DECLARE_NONSTDC_NAMES */
 #include <stdarg.h>
 #include <stdint.h>
 #include <sys/types.h>
-#if defined(_WIN32) && !defined(__CYGWIN__)
+#if !defined(_WIN32) || defined(__CYGWIN__)
+#include <unistd.h>
+#include <sys/time.h>
+#include <sys/socket.h>
+#else  /* _WIN32 && ! __CYGWIN__ */
+/* Declare POSIX-compatible names */
+#define _CRT_DECLARE_NONSTDC_NAMES 1
 #include <ws2tcpip.h>
 #if defined(_MSC_FULL_VER) && !defined (_SSIZE_T_DEFINED)
 #define _SSIZE_T_DEFINED
 typedef intptr_t ssize_t;
 #endif /* !_SSIZE_T_DEFINED */
-#else
-#include <unistd.h>
-#include <sys/time.h>
-#include <sys/socket.h>
-#endif
+#endif /* _WIN32 && ! __CYGWIN__ */
 #endif
 
 #if defined(__CYGWIN__) && !defined(_SYS_TYPES_FD_SET)
@@ -126,7 +132,7 @@ typedef intptr_t ssize_t;
  * Current version of the library.
  * 0x01093001 = 1.9.30-1.
  */
-#define MHD_VERSION 0x00096300
+#define MHD_VERSION 0x00096500
 
 /**
  * MHD-internal return code for "YES".
@@ -302,104 +308,191 @@ _MHD_DEPR_MACRO("Macro MHD_LONG_LONG_PRINTF is deprecated, use MHD_UNSIGNED_LONG
 /**
  * @defgroup httpcode HTTP response codes.
  * These are the status codes defined for HTTP responses.
+ * See: https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+ * Registry export date: 2019-06-09
  * @{
  */
-/* See http://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml */
 
+/* 100 "Continue".            RFC7231, Section 6.2.1. */
 #define MHD_HTTP_CONTINUE 100
+/* 101 "Switching Protocols". RFC7231, Section 6.2.2. */
 #define MHD_HTTP_SWITCHING_PROTOCOLS 101
+/* 102 "Processing".          RFC2518. */
 #define MHD_HTTP_PROCESSING 102
+/* 103 "Early Hints".         RFC8297. */
+#define MHD_HTTP_EARLY_HINTS 103
 
+/* 200 "OK".                  RFC7231, Section 6.3.1. */
 #define MHD_HTTP_OK 200
+/* 201 "Created".             RFC7231, Section 6.3.2. */
 #define MHD_HTTP_CREATED 201
+/* 202 "Accepted".            RFC7231, Section 6.3.3. */
 #define MHD_HTTP_ACCEPTED 202
+/* 203 "Non-Authoritative Information". RFC7231, Section 6.3.4. */
 #define MHD_HTTP_NON_AUTHORITATIVE_INFORMATION 203
+/* 204 "No Content".          RFC7231, Section 6.3.5. */
 #define MHD_HTTP_NO_CONTENT 204
+/* 205 "Reset Content".       RFC7231, Section 6.3.6. */
 #define MHD_HTTP_RESET_CONTENT 205
+/* 206 "Partial Content".     RFC7233, Section 4.1. */
 #define MHD_HTTP_PARTIAL_CONTENT 206
+/* 207 "Multi-Status".        RFC4918. */
 #define MHD_HTTP_MULTI_STATUS 207
+/* 208 "Already Reported".    RFC5842. */
 #define MHD_HTTP_ALREADY_REPORTED 208
 
+/* 226 "IM Used".             RFC3229. */
 #define MHD_HTTP_IM_USED 226
 
+/* 300 "Multiple Choices".    RFC7231, Section 6.4.1. */
 #define MHD_HTTP_MULTIPLE_CHOICES 300
+/* 301 "Moved Permanently".   RFC7231, Section 6.4.2. */
 #define MHD_HTTP_MOVED_PERMANENTLY 301
+/* 302 "Found".               RFC7231, Section 6.4.3. */
 #define MHD_HTTP_FOUND 302
+/* 303 "See Other".           RFC7231, Section 6.4.4. */
 #define MHD_HTTP_SEE_OTHER 303
+/* 304 "Not Modified".        RFC7232, Section 4.1. */
 #define MHD_HTTP_NOT_MODIFIED 304
+/* 305 "Use Proxy".           RFC7231, Section 6.4.5. */
 #define MHD_HTTP_USE_PROXY 305
+/* 306 "Switch Proxy".        Not used! RFC7231, Section 6.4.6. */
 #define MHD_HTTP_SWITCH_PROXY 306
+/* 307 "Temporary Redirect".  RFC7231, Section 6.4.7. */
 #define MHD_HTTP_TEMPORARY_REDIRECT 307
+/* 308 "Permanent Redirect".  RFC7538. */
 #define MHD_HTTP_PERMANENT_REDIRECT 308
 
+/* 400 "Bad Request".         RFC7231, Section 6.5.1. */
 #define MHD_HTTP_BAD_REQUEST 400
+/* 401 "Unauthorized".        RFC7235, Section 3.1. */
 #define MHD_HTTP_UNAUTHORIZED 401
+/* 402 "Payment Required".    RFC7231, Section 6.5.2. */
 #define MHD_HTTP_PAYMENT_REQUIRED 402
+/* 403 "Forbidden".           RFC7231, Section 6.5.3. */
 #define MHD_HTTP_FORBIDDEN 403
+/* 404 "Not Found".           RFC7231, Section 6.5.4. */
 #define MHD_HTTP_NOT_FOUND 404
+/* 405 "Method Not Allowed".  RFC7231, Section 6.5.5. */
 #define MHD_HTTP_METHOD_NOT_ALLOWED 405
+/* 406 "Not Acceptable".      RFC7231, Section 6.5.6. */
 #define MHD_HTTP_NOT_ACCEPTABLE 406
+/* 407 "Proxy Authentication Required". RFC7235, Section 3.2. */
+#define MHD_HTTP_PROXY_AUTHENTICATION_REQUIRED 407
+/* 408 "Request Timeout".     RFC7231, Section 6.5.7. */
+#define MHD_HTTP_REQUEST_TIMEOUT 408
+/* 409 "Conflict".            RFC7231, Section 6.5.8. */
+#define MHD_HTTP_CONFLICT 409
+/* 410 "Gone".                RFC7231, Section 6.5.9. */
+#define MHD_HTTP_GONE 410
+/* 411 "Length Required".     RFC7231, Section 6.5.10. */
+#define MHD_HTTP_LENGTH_REQUIRED 411
+/* 412 "Precondition Failed". RFC7232, Section 4.2; RFC8144, Section 3.2. */
+#define MHD_HTTP_PRECONDITION_FAILED 412
+/* 413 "Payload Too Large".   RFC7231, Section 6.5.11. */
+#define MHD_HTTP_PAYLOAD_TOO_LARGE 413
+/* 414 "URI Too Long".        RFC7231, Section 6.5.12. */
+#define MHD_HTTP_URI_TOO_LONG 414
+/* 415 "Unsupported Media Type". RFC7231, Section 6.5.13; RFC7694, Section 3. */
+#define MHD_HTTP_UNSUPPORTED_MEDIA_TYPE 415
+/* 416 "Range Not Satisfiable". RFC7233, Section 4.4. */
+#define MHD_HTTP_RANGE_NOT_SATISFIABLE 416
+/* 417 "Expectation Failed".  RFC7231, Section 6.5.14. */
+#define MHD_HTTP_EXPECTATION_FAILED 417
+
+/* 421 "Misdirected Request". RFC7540, Section 9.1.2. */
+#define MHD_HTTP_MISDIRECTED_REQUEST 421
+/* 422 "Unprocessable Entity". RFC4918. */
+#define MHD_HTTP_UNPROCESSABLE_ENTITY 422
+/* 423 "Locked".              RFC4918. */
+#define MHD_HTTP_LOCKED 423
+/* 424 "Failed Dependency".   RFC4918. */
+#define MHD_HTTP_FAILED_DEPENDENCY 424
+/* 425 "Too Early".           RFC8470. */
+#define MHD_HTTP_TOO_EARLY 425
+/* 426 "Upgrade Required".    RFC7231, Section 6.5.15. */
+#define MHD_HTTP_UPGRADE_REQUIRED 426
+
+/* 428 "Precondition Required". RFC6585. */
+#define MHD_HTTP_PRECONDITION_REQUIRED 428
+/* 429 "Too Many Requests".   RFC6585. */
+#define MHD_HTTP_TOO_MANY_REQUESTS 429
+
+/* 431 "Request Header Fields Too Large". RFC6585. */
+#define MHD_HTTP_REQUEST_HEADER_FIELDS_TOO_LARGE 431
+
+/* 451 "Unavailable For Legal Reasons". RFC7725. */
+#define MHD_HTTP_UNAVAILABLE_FOR_LEGAL_REASONS 451
+
+/* 500 "Internal Server Error". RFC7231, Section 6.6.1. */
+#define MHD_HTTP_INTERNAL_SERVER_ERROR 500
+/* 501 "Not Implemented".     RFC7231, Section 6.6.2. */
+#define MHD_HTTP_NOT_IMPLEMENTED 501
+/* 502 "Bad Gateway".         RFC7231, Section 6.6.3. */
+#define MHD_HTTP_BAD_GATEWAY 502
+/* 503 "Service Unavailable". RFC7231, Section 6.6.4. */
+#define MHD_HTTP_SERVICE_UNAVAILABLE 503
+/* 504 "Gateway Timeout".     RFC7231, Section 6.6.5. */
+#define MHD_HTTP_GATEWAY_TIMEOUT 504
+/* 505 "HTTP Version Not Supported". RFC7231, Section 6.6.6. */
+#define MHD_HTTP_HTTP_VERSION_NOT_SUPPORTED 505
+/* 506 "Variant Also Negotiates". RFC2295. */
+#define MHD_HTTP_VARIANT_ALSO_NEGOTIATES 506
+/* 507 "Insufficient Storage". RFC4918. */
+#define MHD_HTTP_INSUFFICIENT_STORAGE 507
+/* 508 "Loop Detected".       RFC5842. */
+#define MHD_HTTP_LOOP_DETECTED 508
+
+/* 510 "Not Extended".        RFC2774. */
+#define MHD_HTTP_NOT_EXTENDED 510
+/* 511 "Network Authentication Required". RFC6585. */
+#define MHD_HTTP_NETWORK_AUTHENTICATION_REQUIRED 511
+
+
+/* Not registered non-standard codes */
+/* 449 "Reply With".          MS IIS extension. */
+#define MHD_HTTP_RETRY_WITH 449
+
+/* 450 "Blocked by Windows Parental Controls". MS extension. */
+#define MHD_HTTP_BLOCKED_BY_WINDOWS_PARENTAL_CONTROLS 450
+
+/* 509 "Bandwidth Limit Exceeded". Apache extension. */
+#define MHD_HTTP_BANDWIDTH_LIMIT_EXCEEDED 509
+
+
+/* Deprecated codes */
 /** @deprecated */
 #define MHD_HTTP_METHOD_NOT_ACCEPTABLE \
   _MHD_DEPR_IN_MACRO("Value MHD_HTTP_METHOD_NOT_ACCEPTABLE is deprecated, use MHD_HTTP_NOT_ACCEPTABLE") 406
-#define MHD_HTTP_PROXY_AUTHENTICATION_REQUIRED 407
-#define MHD_HTTP_REQUEST_TIMEOUT 408
-#define MHD_HTTP_CONFLICT 409
-#define MHD_HTTP_GONE 410
-#define MHD_HTTP_LENGTH_REQUIRED 411
-#define MHD_HTTP_PRECONDITION_FAILED 412
-#define MHD_HTTP_PAYLOAD_TOO_LARGE 413
+
 /** @deprecated */
 #define MHD_HTTP_REQUEST_ENTITY_TOO_LARGE \
   _MHD_DEPR_IN_MACRO("Value MHD_HTTP_REQUEST_ENTITY_TOO_LARGE is deprecated, use MHD_HTTP_PAYLOAD_TOO_LARGE") 413
-#define MHD_HTTP_URI_TOO_LONG 414
+
 /** @deprecated */
 #define MHD_HTTP_REQUEST_URI_TOO_LONG \
   _MHD_DEPR_IN_MACRO("Value MHD_HTTP_REQUEST_URI_TOO_LONG is deprecated, use MHD_HTTP_URI_TOO_LONG") 414
-#define MHD_HTTP_UNSUPPORTED_MEDIA_TYPE 415
-#define MHD_HTTP_RANGE_NOT_SATISFIABLE 416
+
 /** @deprecated */
 #define MHD_HTTP_REQUESTED_RANGE_NOT_SATISFIABLE \
   _MHD_DEPR_IN_MACRO("Value MHD_HTTP_REQUESTED_RANGE_NOT_SATISFIABLE is deprecated, use MHD_HTTP_RANGE_NOT_SATISFIABLE") 416
-#define MHD_HTTP_EXPECTATION_FAILED 417
 
-#define MHD_HTTP_MISDIRECTED_REQUEST 421
-#define MHD_HTTP_UNPROCESSABLE_ENTITY 422
-#define MHD_HTTP_LOCKED 423
-#define MHD_HTTP_FAILED_DEPENDENCY 424
-#define MHD_HTTP_UNORDERED_COLLECTION 425
-#define MHD_HTTP_UPGRADE_REQUIRED 426
+/** @deprecated */
+#define MHD_HTTP_UNORDERED_COLLECTION \
+  _MHD_DEPR_IN_MACRO("Value MHD_HTTP_UNORDERED_COLLECTION is deprecated as it was removed from RFC") 425
 
-#define MHD_HTTP_PRECONDITION_REQUIRED 428
-#define MHD_HTTP_TOO_MANY_REQUESTS 429
-#define MHD_HTTP_REQUEST_HEADER_FIELDS_TOO_LARGE 431
+/** @deprecated */
+#define MHD_HTTP_NO_RESPONSE \
+  _MHD_DEPR_IN_MACRO("Value MHD_HTTP_NO_RESPONSE is deprecated as it is nginx internal code for logs only") 444
 
-#define MHD_HTTP_NO_RESPONSE 444
-
-#define MHD_HTTP_RETRY_WITH 449
-#define MHD_HTTP_BLOCKED_BY_WINDOWS_PARENTAL_CONTROLS 450
-#define MHD_HTTP_UNAVAILABLE_FOR_LEGAL_REASONS 451
-
-#define MHD_HTTP_INTERNAL_SERVER_ERROR 500
-#define MHD_HTTP_NOT_IMPLEMENTED 501
-#define MHD_HTTP_BAD_GATEWAY 502
-#define MHD_HTTP_SERVICE_UNAVAILABLE 503
-#define MHD_HTTP_GATEWAY_TIMEOUT 504
-#define MHD_HTTP_HTTP_VERSION_NOT_SUPPORTED 505
-#define MHD_HTTP_VARIANT_ALSO_NEGOTIATES 506
-#define MHD_HTTP_INSUFFICIENT_STORAGE 507
-#define MHD_HTTP_LOOP_DETECTED 508
-#define MHD_HTTP_BANDWIDTH_LIMIT_EXCEEDED 509
-#define MHD_HTTP_NOT_EXTENDED 510
-#define MHD_HTTP_NETWORK_AUTHENTICATION_REQUIRED 511
 
 /** @} */ /* end of group httpcode */
 
 /**
  * Returns the string reason phrase for a response code.
  *
- * If we don't have a string for a status code, we give the first
- * message in that status code class.
+ * If message string is not available for a status code,
+ * "Unknown" string will be returned.
  */
 _MHD_EXTERN const char *
 MHD_get_reason_phrase_for (unsigned int code);
@@ -417,7 +510,7 @@ MHD_get_reason_phrase_for (unsigned int code);
  * @defgroup headers HTTP headers
  * These are the standard headers found in HTTP requests and responses.
  * See: http://www.iana.org/assignments/message-headers/message-headers.xml
- * Registry Version 2017-01-27
+ * Registry export date: 2019-06-09
  * @{
  */
 
@@ -530,6 +623,8 @@ MHD_get_reason_phrase_for (unsigned int code);
 #define MHD_HTTP_HEADER_ACCEPT_FEATURES "Accept-Features"
 /* No category.   RFC5789 */
 #define MHD_HTTP_HEADER_ACCEPT_PATCH "Accept-Patch"
+/* Standard.      https://www.w3.org/TR/ldp/ */
+#define MHD_HTTP_HEADER_ACCEPT_POST "Accept-Post"
 /* Standard.      RFC7639, Section 2 */
 #define MHD_HTTP_HEADER_ALPN "ALPN"
 /* Standard.      RFC7838 */
@@ -554,8 +649,12 @@ MHD_get_reason_phrase_for (unsigned int code);
 #define MHD_HTTP_HEADER_C_PEP "C-PEP"
 /* No category.   RFC4229 */
 #define MHD_HTTP_HEADER_C_PEP_INFO "C-PEP-Info"
+/* Standard.      RFC8607, Section 5.1 */
+#define MHD_HTTP_HEADER_CAL_MANAGED_ID "Cal-Managed-ID"
 /* Standard.      RFC7809, Section 7.1 */
 #define MHD_HTTP_HEADER_CALDAV_TIMEZONES "CalDAV-Timezones"
+/* Standard.      RFC8586 */
+#define MHD_HTTP_HEADER_CDN_LOOP "CDN-Loop"
 /* Obsoleted.     RFC2068; RFC2616 */
 #define MHD_HTTP_HEADER_CONTENT_BASE "Content-Base"
 /* Standard.      RFC6266 */
@@ -592,6 +691,10 @@ MHD_get_reason_phrase_for (unsigned int code);
 #define MHD_HTTP_HEADER_DIFFERENTIAL_ID "Differential-ID"
 /* No category.   RFC4229 */
 #define MHD_HTTP_HEADER_DIGEST "Digest"
+/* Standard.      RFC8470 */
+#define MHD_HTTP_HEADER_EARLY_DATA "Early-Data"
+/* Experimental.  RFC-ietf-httpbis-expect-ct-08 */
+#define MHD_HTTP_HEADER_EXPECT_CT "Expect-CT"
 /* No category.   RFC4229 */
 #define MHD_HTTP_HEADER_EXT "Ext"
 /* Standard.      RFC7239 */
@@ -608,11 +711,13 @@ MHD_get_reason_phrase_for (unsigned int code);
 #define MHD_HTTP_HEADER_IF "If"
 /* Standard.      RFC6638 */
 #define MHD_HTTP_HEADER_IF_SCHEDULE_TAG_MATCH "If-Schedule-Tag-Match"
+/* Standard.      RFC8473 */
+#define MHD_HTTP_HEADER_INCLUDE_REFERRED_TOKEN_BINDING_ID "Include-Referred-Token-Binding-ID"
 /* No category.   RFC4229 */
 #define MHD_HTTP_HEADER_KEEP_ALIVE "Keep-Alive"
 /* No category.   RFC4229 */
 #define MHD_HTTP_HEADER_LABEL "Label"
-/* No category.   RFC5988 */
+/* Standard.      RFC8288 */
 #define MHD_HTTP_HEADER_LINK "Link"
 /* Standard.      RFC4918 */
 #define MHD_HTTP_HEADER_LOCK_TOKEN "Lock-Token"
@@ -632,6 +737,8 @@ MHD_get_reason_phrase_for (unsigned int code);
 #define MHD_HTTP_HEADER_ORDERING_TYPE "Ordering-Type"
 /* Standard.      RFC6454 */
 #define MHD_HTTP_HEADER_ORIGIN "Origin"
+/* Standard.      RFC-ietf-core-object-security-16, Section 11.1 */
+#define MHD_HTTP_HEADER_OSCORE "OSCORE"
 /* Standard.      RFC4918 */
 #define MHD_HTTP_HEADER_OVERWRITE "Overwrite"
 /* No category.   RFC4229 */
@@ -672,12 +779,16 @@ MHD_get_reason_phrase_for (unsigned int code);
 #define MHD_HTTP_HEADER_PUBLIC_KEY_PINS_REPORT_ONLY "Public-Key-Pins-Report-Only"
 /* No category.   RFC4437 */
 #define MHD_HTTP_HEADER_REDIRECT_REF "Redirect-Ref"
+/* Standard.      RFC8555, Section 6.5.1 */
+#define MHD_HTTP_HEADER_REPLAY_NONCE "Replay-Nonce"
 /* No category.   RFC4229 */
 #define MHD_HTTP_HEADER_SAFE "Safe"
 /* Standard.      RFC6638 */
 #define MHD_HTTP_HEADER_SCHEDULE_REPLY "Schedule-Reply"
 /* Standard.      RFC6638 */
 #define MHD_HTTP_HEADER_SCHEDULE_TAG "Schedule-Tag"
+/* Standard.      RFC8473 */
+#define MHD_HTTP_HEADER_SEC_TOKEN_BINDING "Sec-Token-Binding"
 /* Standard.      RFC6455 */
 #define MHD_HTTP_HEADER_SEC_WEBSOCKET_ACCEPT "Sec-WebSocket-Accept"
 /* Standard.      RFC6455 */
@@ -704,6 +815,8 @@ MHD_get_reason_phrase_for (unsigned int code);
 #define MHD_HTTP_HEADER_STATUS_URI "Status-URI"
 /* Standard.      RFC6797 */
 #define MHD_HTTP_HEADER_STRICT_TRANSPORT_SECURITY "Strict-Transport-Security"
+/* Informational. RFC8594 */
+#define MHD_HTTP_HEADER_SUNSET "Sunset"
 /* No category.   RFC4229 */
 #define MHD_HTTP_HEADER_SURROGATE_CAPABILITY "Surrogate-Capability"
 /* No category.   RFC4229 */
@@ -724,6 +837,8 @@ MHD_get_reason_phrase_for (unsigned int code);
 #define MHD_HTTP_HEADER_VARIANT_VARY "Variant-Vary"
 /* No category.   RFC4229 */
 #define MHD_HTTP_HEADER_WANT_DIGEST "Want-Digest"
+/* Standard.      https://fetch.spec.whatwg.org/#x-content-type-options-header */
+#define MHD_HTTP_HEADER_X_CONTENT_TYPE_OPTIONS "X-Content-Type-Options"
 /* Informational. RFC7034 */
 #define MHD_HTTP_HEADER_X_FRAME_OPTIONS "X-Frame-Options"
 
@@ -746,9 +861,10 @@ MHD_get_reason_phrase_for (unsigned int code);
  * @defgroup methods HTTP methods
  * HTTP methods (as strings).
  * See: http://www.iana.org/assignments/http-methods/http-methods.xml
- * Registry Version 2015-05-19
+ * Registry export date: 2019-06-09
  * @{
  */
+
 /* Main HTTP methods. */
 /* Not safe. Not idempotent. RFC7231, Section 4.3.6. */
 #define MHD_HTTP_METHOD_CONNECT "CONNECT"
@@ -790,9 +906,9 @@ MHD_get_reason_phrase_for (unsigned int code);
 #define MHD_HTTP_METHOD_MERGE "MERGE"
 /* Not safe. Idempotent.     RFC3253, Section 13.5. */
 #define MHD_HTTP_METHOD_MKACTIVITY "MKACTIVITY"
-/* Not safe. Idempotent.     RFC4791, Section 5.3.1. */
+/* Not safe. Idempotent.     RFC4791, Section 5.3.1; RFC8144, Section 2.3. */
 #define MHD_HTTP_METHOD_MKCALENDAR "MKCALENDAR"
-/* Not safe. Idempotent.     RFC4918, Section 9.3. */
+/* Not safe. Idempotent.     RFC4918, Section 9.3; RFC5689, Section 3; RFC8144, Section 2.3. */
 #define MHD_HTTP_METHOD_MKCOL "MKCOL"
 /* Not safe. Idempotent.     RFC4437, Section 6. */
 #define MHD_HTTP_METHOD_MKREDIRECTREF "MKREDIRECTREF"
@@ -806,13 +922,13 @@ MHD_get_reason_phrase_for (unsigned int code);
 #define MHD_HTTP_METHOD_PATCH "PATCH"
 /* Safe.     Idempotent.     RFC7540, Section 3.5. */
 #define MHD_HTTP_METHOD_PRI "PRI"
-/* Safe.     Idempotent.     RFC4918, Section 9.1. */
+/* Safe.     Idempotent.     RFC4918, Section 9.1; RFC8144, Section 2.1. */
 #define MHD_HTTP_METHOD_PROPFIND "PROPFIND"
-/* Not safe. Idempotent.     RFC4918, Section 9.2. */
+/* Not safe. Idempotent.     RFC4918, Section 9.2; RFC8144, Section 2.2. */
 #define MHD_HTTP_METHOD_PROPPATCH "PROPPATCH"
 /* Not safe. Idempotent.     RFC5842, Section 6. */
 #define MHD_HTTP_METHOD_REBIND "REBIND"
-/* Safe.     Idempotent.     RFC3253, Section 3.6. */
+/* Safe.     Idempotent.     RFC3253, Section 3.6; RFC8144, Section 2.1. */
 #define MHD_HTTP_METHOD_REPORT "REPORT"
 /* Safe.     Idempotent.     RFC5323, Section 2. */
 #define MHD_HTTP_METHOD_SEARCH "SEARCH"
@@ -1147,7 +1263,19 @@ enum MHD_FLAG
    * This is combination of #MHD_USE_AUTO and #MHD_USE_INTERNAL_POLLING_THREAD
    * flags.
    */
-  MHD_USE_AUTO_INTERNAL_THREAD = MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD
+  MHD_USE_AUTO_INTERNAL_THREAD = MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD,
+
+  /**
+   * Flag set to enable post-handshake client authentication
+   * (only useful in combination with #MHD_USE_TLS).
+   */
+  MHD_USE_POST_HANDSHAKE_AUTH_SUPPORT = 1U <<17,
+
+  /**
+   * Flag set to enable TLS 1.3 early data.  This has
+   * security implications, be VERY careful when using this.
+   */
+  MHD_USE_INSECURE_TLS_EARLY_DATA = 1U <<18
 
 };
 
@@ -1173,9 +1301,9 @@ typedef void
  * @param cls closure
  * @param connection the HTTPS connection
  * @param username the user name claimed by the other side
- * @param psk[out] to be set to the pre-shared-key; should be allocated with malloc(),
+ * @param[out] psk to be set to the pre-shared-key; should be allocated with malloc(),
  *                 will be freed by MHD
- * @param psk_size[out] to be set to the number of bytes in @a psk
+ * @param[out] psk_size to be set to the number of bytes in @a psk
  * @return 0 on success, -1 on errors
  */
 typedef int
@@ -1380,10 +1508,12 @@ enum MHD_OPTION
    *                         struct MHD_Connection *c,
    *                         char *s)
    *
-   * where the return value must be "strlen(s)" and "s" should be
-   * updated.  Note that the unescape function must not lengthen "s"
-   * (the result must be shorter than the input and still be
-   * 0-terminated).  "cls" will be set to the second argument
+   * where the return value must be the length of the value left in
+   * "s" (without the 0-terminator) and "s" should be updated.  Note
+   * that the unescape function must not lengthen "s" (the result must
+   * be shorter than the input and must still be 0-terminated).
+   * However, it may also include binary zeros before the
+   * 0-termination.  "cls" will be set to the second argument
    * following #MHD_OPTION_UNESCAPE_CALLBACK.
    */
   MHD_OPTION_UNESCAPE_CALLBACK = 16,
@@ -2037,6 +2167,33 @@ typedef int
 
 
 /**
+ * Iterator over key-value pairs with size parameters.
+ * This iterator can be used to iterate over all of
+ * the cookies, headers, or POST-data fields of a
+ * request, and also to iterate over the headers that
+ * have been added to a response.
+ * @note Available since #MHD_VERSION 0x00096303
+ *
+ * @param cls closure
+ * @param kind kind of the header we are looking at
+ * @param key key for the value, can be an empty string
+ * @param value corresponding value, can be NULL
+ * @param value_size number of bytes in @a value, NEW since #MHD_VERSION 0x00096301;
+ *                   for C-strings, the length excludes the 0-terminator
+ * @return #MHD_YES to continue iterating,
+ *         #MHD_NO to abort the iteration
+ * @ingroup request
+ */
+typedef int
+(*MHD_KeyValueIteratorN) (void *cls,
+                         enum MHD_ValueKind kind,
+                         const char *key,
+                         size_t key_size,
+                         const char *value,
+                         size_t value_size);
+
+
+/**
  * Callback used by libmicrohttpd in order to obtain content.  The
  * callback is to copy at most @a max bytes of content into @a buf.  The
  * total number of bytes that has been placed into @a buf should be
@@ -2450,7 +2607,8 @@ MHD_run_from_select (struct MHD_Daemon *daemon,
  * @param iterator callback to call on each header;
  *        maybe NULL (then just count headers)
  * @param iterator_cls extra argument to @a iterator
- * @return number of entries iterated over
+ * @return number of entries iterated over,
+ *         -1 if connection is NULL.
  * @ingroup request
  */
 _MHD_EXTERN int
@@ -2458,6 +2616,25 @@ MHD_get_connection_values (struct MHD_Connection *connection,
                            enum MHD_ValueKind kind,
                            MHD_KeyValueIterator iterator,
                            void *iterator_cls);
+
+
+/**
+ * Get all of the headers from the request.
+ *
+ * @param connection connection to get values from
+ * @param kind types of values to iterate over, can be a bitmask
+ * @param iterator callback to call on each header;
+ *        maybe NULL (then just count headers)
+ * @param iterator_cls extra argument to @a iterator
+ * @return number of entries iterated over,
+ *         -1 if connection is NULL.
+ * @ingroup request
+ */
+_MHD_EXTERN int
+MHD_get_connection_values_n (struct MHD_Connection *connection,
+                             enum MHD_ValueKind kind,
+                             MHD_KeyValueIteratorN iterator,
+                             void *iterator_cls);
 
 
 /**
@@ -2491,6 +2668,40 @@ MHD_set_connection_value (struct MHD_Connection *connection,
                           enum MHD_ValueKind kind,
                           const char *key,
 			  const char *value);
+
+
+/**
+ * This function can be used to add an arbitrary entry to connection.
+ * This function could add entry with binary zero, which is allowed
+ * for #MHD_GET_ARGUMENT_KIND. For other kind on entries it is
+ * recommended to use #MHD_set_connection_value.
+ *
+ * This function MUST only be called from within the
+ * #MHD_AccessHandlerCallback (otherwise, access maybe improperly
+ * synchronized).  Furthermore, the client must guarantee that the key
+ * and value arguments are 0-terminated strings that are NOT freed
+ * until the connection is closed.  (The easiest way to do this is by
+ * passing only arguments to permanently allocated strings.).
+ *
+ * @param connection the connection for which a
+ *  value should be set
+ * @param kind kind of the value
+ * @param key key for the value, must be zero-terminated
+ * @param key_size number of bytes in @a key (excluding 0-terminator)
+ * @param value the value itself, must be zero-terminated
+ * @param value_size number of bytes in @a value (excluding 0-terminator)
+ * @return #MHD_NO if the operation could not be
+ *         performed due to insufficient memory;
+ *         #MHD_YES on success
+ * @ingroup request
+ */
+int
+MHD_set_connection_value_n (struct MHD_Connection *connection,
+			    enum MHD_ValueKind kind,
+			    const char *key,
+                            size_t key_size,
+			    const char *value,
+			    size_t value_size);
 
 
 /**
@@ -2540,6 +2751,34 @@ _MHD_EXTERN const char *
 MHD_lookup_connection_value (struct MHD_Connection *connection,
 			     enum MHD_ValueKind kind,
 			     const char *key);
+
+
+/**
+ * Get a particular header value.  If multiple
+ * values match the kind, return any one of them.
+ * @note Since MHD_VERSION 0x00096304
+ *
+ * @param connection connection to get values from
+ * @param kind what kind of value are we looking for
+ * @param key the header to look for, NULL to lookup 'trailing' value without a key
+ * @param key_size the length of @a key in bytes
+ * @param[out] value_ptr the pointer to variable, which will be set to found value,
+ *                       will not be updated if key not found,
+ *                       could be NULL to just check for presence of @a key
+ * @param[out] value_size_ptr the pointer variable, which will set to found value,
+ *                            will not be updated if key not found,
+ *                            could be NULL
+ * @return #MHD_YES if key is found,
+ *         #MHD_NO otherwise.
+ * @ingroup request
+ */
+_MHD_EXTERN int
+MHD_lookup_connection_value_n (struct MHD_Connection *connection,
+                               enum MHD_ValueKind kind,
+                               const char *key,
+                               size_t key_size,
+                               const char **value_ptr,
+                               size_t *value_size_ptr);
 
 
 /**
@@ -3075,7 +3314,8 @@ MHD_del_response_header (struct MHD_Response *response,
  */
 _MHD_EXTERN int
 MHD_get_response_headers (struct MHD_Response *response,
-                          MHD_KeyValueIterator iterator, void *iterator_cls);
+                          MHD_KeyValueIterator iterator,
+			  void *iterator_cls);
 
 
 /**

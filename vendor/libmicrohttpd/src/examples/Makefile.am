@@ -70,7 +70,8 @@ endif
 
 if HAVE_ZLIB
 noinst_PROGRAMS += \
- http_compression
+ http_compression \
+ http_chunked_compression
 endif
 
 if HAVE_W32
@@ -206,8 +207,13 @@ https_fileserver_example_LDADD = \
 
 http_compression_SOURCES = \
  http_compression.c
+http_chunked_compression_SOURCES = \
+ http_chunked_compression.c
 http_compression_LDADD = \
+ $(top_builddir)/src/microhttpd/libmicrohttpd.la
+http_chunked_compression_LDADD = \
  $(top_builddir)/src/microhttpd/libmicrohttpd.la
 if HAVE_ZLIB
  http_compression_LDADD += -lz
+ http_chunked_compression_LDADD += -lz
 endif

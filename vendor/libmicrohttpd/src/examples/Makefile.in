@@ -118,12 +118,14 @@ noinst_PROGRAMS = benchmark$(EXEEXT) benchmark_https$(EXEEXT) \
 @ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@ upgrade_example
 
 @HAVE_ZLIB_TRUE@am__append_10 = \
-@HAVE_ZLIB_TRUE@ http_compression
+@HAVE_ZLIB_TRUE@ http_compression \
+@HAVE_ZLIB_TRUE@ http_chunked_compression
 
 @HAVE_W32_TRUE@am__append_11 = -DWINDOWS
 @HAVE_LIBMAGIC_TRUE@am__append_12 = -lmagic
 @HAVE_LIBMAGIC_TRUE@am__append_13 = -lmagic
 @HAVE_ZLIB_TRUE@am__append_14 = -lz
+@HAVE_ZLIB_TRUE@am__append_15 = -lz
 subdir = src/examples
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ac_define_dir.m4 \
@@ -142,6 +144,7 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ac_define_dir.m4 \
 	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
 	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
 	$(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/mhd_check_func.m4 \
 	$(top_srcdir)/m4/mhd_shutdown_socket_trigger.m4 \
 	$(top_srcdir)/m4/mhd_sys_extentions.m4 $(top_srcdir)/m4/nls.m4 \
 	$(top_srcdir)/m4/pkg.m4 $(top_srcdir)/m4/po.m4 \
@@ -163,7 +166,8 @@ CONFIG_CLEAN_VPATH_FILES =
 @ENABLE_DAUTH_TRUE@am__EXEEXT_6 = digest_auth_example$(EXEEXT)
 @ENABLE_BAUTH_TRUE@am__EXEEXT_7 = authorization_example$(EXEEXT)
 @ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@am__EXEEXT_8 = upgrade_example$(EXEEXT)
-@HAVE_ZLIB_TRUE@am__EXEEXT_9 = http_compression$(EXEEXT)
+@HAVE_ZLIB_TRUE@am__EXEEXT_9 = http_compression$(EXEEXT) \
+@HAVE_ZLIB_TRUE@	http_chunked_compression$(EXEEXT)
 PROGRAMS = $(noinst_PROGRAMS)
 am_authorization_example_OBJECTS = authorization_example.$(OBJEXT)
 authorization_example_OBJECTS = $(am_authorization_example_OBJECTS)
@@ -226,6 +230,13 @@ fileserver_example_external_select_OBJECTS =  \
 	$(am_fileserver_example_external_select_OBJECTS)
 fileserver_example_external_select_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_http_chunked_compression_OBJECTS =  \
+	http_chunked_compression.$(OBJEXT)
+http_chunked_compression_OBJECTS =  \
+	$(am_http_chunked_compression_OBJECTS)
+http_chunked_compression_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la \
+	$(am__DEPENDENCIES_1)
 am_http_compression_OBJECTS = http_compression.$(OBJEXT)
 http_compression_OBJECTS = $(am_http_compression_OBJECTS)
 http_compression_DEPENDENCIES =  \
@@ -301,6 +312,7 @@ am__depfiles_remade = ./$(DEPDIR)/authorization_example.Po \
 	./$(DEPDIR)/fileserver_example.Po \
 	./$(DEPDIR)/fileserver_example_dirs.Po \
 	./$(DEPDIR)/fileserver_example_external_select.Po \
+	./$(DEPDIR)/http_chunked_compression.Po \
 	./$(DEPDIR)/http_compression.Po \
 	./$(DEPDIR)/https_fileserver_example-https_fileserver_example.Po \
 	./$(DEPDIR)/minimal_example.Po \
@@ -336,6 +348,7 @@ SOURCES = $(authorization_example_SOURCES) $(benchmark_SOURCES) \
 	$(fileserver_example_SOURCES) \
 	$(fileserver_example_dirs_SOURCES) \
 	$(fileserver_example_external_select_SOURCES) \
+	$(http_chunked_compression_SOURCES) \
 	$(http_compression_SOURCES) \
 	$(https_fileserver_example_SOURCES) $(minimal_example_SOURCES) \
 	$(minimal_example_comet_SOURCES) $(post_example_SOURCES) \
@@ -349,6 +362,7 @@ DIST_SOURCES = $(authorization_example_SOURCES) $(benchmark_SOURCES) \
 	$(fileserver_example_SOURCES) \
 	$(fileserver_example_dirs_SOURCES) \
 	$(fileserver_example_external_select_SOURCES) \
+	$(http_chunked_compression_SOURCES) \
 	$(http_compression_SOURCES) \
 	$(https_fileserver_example_SOURCES) $(minimal_example_SOURCES) \
 	$(minimal_example_comet_SOURCES) $(post_example_SOURCES) \
@@ -598,7 +612,6 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
-runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -767,9 +780,15 @@ https_fileserver_example_LDADD = \
 http_compression_SOURCES = \
  http_compression.c
 
+http_chunked_compression_SOURCES = \
+ http_chunked_compression.c
+
 http_compression_LDADD =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la \
 	$(am__append_14)
+http_chunked_compression_LDADD =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la \
+	$(am__append_15)
 all: all-recursive
 
 .SUFFIXES:
@@ -857,6 +876,10 @@ fileserver_example_external_select$(EXEEXT): $(fileserver_example_external_selec
 	@rm -f fileserver_example_external_select$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(fileserver_example_external_select_OBJECTS) $(fileserver_example_external_select_LDADD) $(LIBS)
 
+http_chunked_compression$(EXEEXT): $(http_chunked_compression_OBJECTS) $(http_chunked_compression_DEPENDENCIES) $(EXTRA_http_chunked_compression_DEPENDENCIES) 
+	@rm -f http_chunked_compression$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(http_chunked_compression_OBJECTS) $(http_chunked_compression_LDADD) $(LIBS)
+
 http_compression$(EXEEXT): $(http_compression_OBJECTS) $(http_compression_DEPENDENCIES) $(EXTRA_http_compression_DEPENDENCIES) 
 	@rm -f http_compression$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(http_compression_OBJECTS) $(http_compression_LDADD) $(LIBS)
@@ -914,6 +937,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fileserver_example.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fileserver_example_dirs.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fileserver_example_external_select.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/http_chunked_compression.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/http_compression.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/https_fileserver_example-https_fileserver_example.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/minimal_example.Po@am__quote@ # am--include-marker
@@ -1268,6 +1292,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/fileserver_example.Po
 	-rm -f ./$(DEPDIR)/fileserver_example_dirs.Po
 	-rm -f ./$(DEPDIR)/fileserver_example_external_select.Po
+	-rm -f ./$(DEPDIR)/http_chunked_compression.Po
 	-rm -f ./$(DEPDIR)/http_compression.Po
 	-rm -f ./$(DEPDIR)/https_fileserver_example-https_fileserver_example.Po
 	-rm -f ./$(DEPDIR)/minimal_example.Po
@@ -1334,6 +1359,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/fileserver_example.Po
 	-rm -f ./$(DEPDIR)/fileserver_example_dirs.Po
 	-rm -f ./$(DEPDIR)/fileserver_example_external_select.Po
+	-rm -f ./$(DEPDIR)/http_chunked_compression.Po
 	-rm -f ./$(DEPDIR)/http_compression.Po
 	-rm -f ./$(DEPDIR)/https_fileserver_example-https_fileserver_example.Po
 	-rm -f ./$(DEPDIR)/minimal_example.Po

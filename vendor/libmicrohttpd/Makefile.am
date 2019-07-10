@@ -28,10 +28,14 @@ W32VS2017 = w32/VS2017/libmicrohttpd.vcxproj w32/VS2017/libmicrohttpd.vcxproj.fi
   w32/VS2017/hellobrowser.vcxproj w32/VS2017/hellobrowser.vcxproj.filters \
   w32/VS2017/simplepost.vcxproj w32/VS2017/largepost.vcxproj \
   w32/VS2017/libmicrohttpd.sln
+W32VS2019 = w32/VS2019/libmicrohttpd.vcxproj w32/VS2019/libmicrohttpd.vcxproj.filters \
+  w32/VS2019/hellobrowser.vcxproj w32/VS2019/hellobrowser.vcxproj.filters \
+  w32/VS2019/simplepost.vcxproj w32/VS2019/largepost.vcxproj \
+  w32/VS2019/libmicrohttpd.sln
 EXTRA_DIST = \
   acinclude.m4 \
   libmicrohttpd.pc.in \
-  $(W32COMMON) $(W32VS2013) $(W32VS2015) $(W32VS2017)
+  $(W32COMMON) $(W32VS2013) $(W32VS2015) $(W32VS2017) $(W32VS2019)
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libmicrohttpd.pc

@@ -173,7 +173,7 @@ start_socket_listen(int domain)
   memset (&sock_addr, 0, sizeof (struct sockaddr_in));
   sock_addr.sin_family = AF_INET;
   sock_addr.sin_port = htons (0);
-#if HAVE_SOCKADDR_IN_SIN_LEN
+#ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
   sock_addr.sin_len = sizeof (struct sockaddr_in);
 #endif
   addrlen = sizeof (struct sockaddr_in);

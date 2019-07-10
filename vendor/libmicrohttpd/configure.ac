@@ -22,15 +22,15 @@
 #
 AC_PREREQ([2.64])
 LT_PREREQ([2.4.0])
-AC_INIT([GNU Libmicrohttpd],[0.9.63],[libmicrohttpd@gnu.org])
+AC_INIT([GNU Libmicrohttpd],[0.9.65],[libmicrohttpd@gnu.org])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([silent-rules] [subdir-objects])
 AC_CONFIG_HEADERS([MHD_config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
-LIB_VERSION_CURRENT=62
+LIB_VERSION_CURRENT=64
 LIB_VERSION_REVISION=0
-LIB_VERSION_AGE=50
+LIB_VERSION_AGE=52
 AC_SUBST(LIB_VERSION_CURRENT)
 AC_SUBST(LIB_VERSION_REVISION)
 AC_SUBST(LIB_VERSION_AGE)
@@ -55,6 +55,7 @@ AS_IF([test `uname -s` = "OS/390"],
 
 # Checks for programs.
 AC_PROG_AWK
+AC_PROG_GREP
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
@@ -267,95 +268,82 @@ CFLAGS="$save_CFLAGS"
 # Check system type
 shutdown_trig_select='no'
 AC_MSG_CHECKING([[for target host OS]])
-case "$host_os" in
-*darwin* | *rhapsody* | *macosx*)
-     AC_DEFINE_UNQUOTED(OSX,1,[This is an OS X system])
+AS_CASE(["$host_os"],
+ [*darwin* | *rhapsody* | *macosx*],
+ [AC_DEFINE_UNQUOTED(OSX,1,[This is an OS X system])
      CFLAGS="-no-cpp-precomp -fno-common $CFLAGS"
      mhd_host_os='Darwin'
-     AC_MSG_RESULT([[$mhd_host_os]])
-     ;;
-freebsd*)
-     AC_DEFINE_UNQUOTED(SOMEBSD,1,[This is a BSD system])
+     AC_MSG_RESULT([[$mhd_host_os]])],
+ [freebsd*],
+ [AC_DEFINE_UNQUOTED(SOMEBSD,1,[This is a BSD system])
      AC_DEFINE_UNQUOTED(FREEBSD,1,[This is a FreeBSD system])
      mhd_host_os='FreeBSD'
-     AC_MSG_RESULT([[$mhd_host_os]])
-     ;;
-openbsd*)
-     AC_DEFINE_UNQUOTED(SOMEBSD,1,[This is a BSD system])
+     AC_MSG_RESULT([[$mhd_host_os]])],
+ [openbsd*],
+ [AC_DEFINE_UNQUOTED(SOMEBSD,1,[This is a BSD system])
      AC_DEFINE_UNQUOTED(OPENBSD,1,[This is an OpenBSD system])
      mhd_host_os='OpenBSD'
-     AC_MSG_RESULT([[$mhd_host_os]])
-     ;;
-netbsd*)
-     AC_DEFINE_UNQUOTED(SOMEBSD,1,[This is a BSD system])
+     AC_MSG_RESULT([[$mhd_host_os]])],
+ [netbsd*],
+ [AC_DEFINE_UNQUOTED(SOMEBSD,1,[This is a BSD system])
      AC_DEFINE_UNQUOTED(NETBSD,1,[This is a NetBSD system])
      mhd_host_os='NetBSD'
-     AC_MSG_RESULT([[$mhd_host_os]])
-     ;;
-*solaris*)
-     AC_DEFINE_UNQUOTED(SOLARIS,1,[This is a Solaris system])
+     AC_MSG_RESULT([[$mhd_host_os]])],
+ [*solaris*],
+ [AC_DEFINE_UNQUOTED(SOLARIS,1,[This is a Solaris system])
      AC_DEFINE_UNQUOTED(_REENTRANT,1,[Need with solaris or errno doesnt work])
      mhd_host_os='Solaris'
      AC_MSG_RESULT([[$mhd_host_os]])
      AC_SEARCH_LIBS(gethostbyname, nsl)
-     AC_SEARCH_LIBS(socket, socket)
-     ;;
-*arm-linux*)
-     AC_DEFINE_UNQUOTED(LINUX,1,[This is a Linux kernel])
+     AC_SEARCH_LIBS(socket, socket)],
+  [*arm-linux*],
+  [AC_DEFINE_UNQUOTED(LINUX,1,[This is a Linux kernel])
      mhd_host_os='ARM Linux'
      AC_MSG_RESULT([[$mhd_host_os]])
-     CFLAGS="-fPIC -pipe $CFLAGS"
-     ;;
-*linux*)
-     AC_DEFINE_UNQUOTED(LINUX,1,[This is a Linux kernel])
+     CFLAGS="-fPIC -pipe $CFLAGS"],
+  [*linux*],
+  [AC_DEFINE_UNQUOTED(LINUX,1,[This is a Linux kernel])
      mhd_host_os='Linux'
-     AC_MSG_RESULT([[$mhd_host_os]])
-     ;;
-*cygwin*)
-     AC_DEFINE_UNQUOTED(CYGWIN,1,[This is a Cygwin system])
+     AC_MSG_RESULT([[$mhd_host_os]])],
+  [*cygwin*],
+  [AC_DEFINE_UNQUOTED(CYGWIN,1,[This is a Cygwin system])
      mhd_host_os='Windows (Cygwin)'
      AC_MSG_RESULT([[$mhd_host_os]])
-     os_is_windows=yes
-     ;;
-*mingw*)
-     AC_DEFINE_UNQUOTED(MINGW,1,[This is a MinGW system])
+     os_is_windows=yes],
+  [*mingw*],
+  [AC_DEFINE_UNQUOTED(MINGW,1,[This is a MinGW system])
      AC_DEFINE_UNQUOTED(WINDOWS,1,[This is a Windows system])
      mhd_host_os='Windows (MinGW)'
      AC_MSG_RESULT([[$mhd_host_os]])
      LIBS="$LIBS -lws2_32"
      AC_CHECK_HEADERS([winsock2.h ws2tcpip.h], [], [AC_MSG_ERROR([[Winsock2 headers are required for W32]])], [AC_INCLUDES_DEFAULT])
      AC_CACHE_CHECK([for MS lib utility], [ac_cv_use_ms_lib_tool],
-       [[mslibcheck=`lib 2>&1`
-        if [[ $mslibcheck = "Microsoft (R) Library Manager"* ]]; then
-          ac_cv_use_ms_lib_tool=yes
-        else
-          ac_cv_use_ms_lib_tool=no
-        fi
-         ]])
-     if test "x$ac_cv_use_ms_lib_tool" = "xyes"; then
-       AC_SUBST([MS_LIB_TOOL], [[lib]])
-     fi
+       [mslibcheck=`lib 2>&1`
+        AS_IF([echo "$mslibcheck" | $GREP -e '^Microsoft (R) Library Manager' - >/dev/null],
+          [ac_cv_use_ms_lib_tool=yes],
+          [ac_cv_use_ms_lib_tool=no])
+         ])
+     AS_IF([test "x$ac_cv_use_ms_lib_tool" = "xyes"],
+       [AC_SUBST([MS_LIB_TOOL], [[lib]])])
      AC_SUBST([lt_cv_objdir])
      os_is_windows=yes
      os_is_native_w32=yes
-     ;;
-*openedition*)
-     AC_DEFINE_UNQUOTED(OS390,1,[This is a OS/390 system])
+   ],
+   [*openedition*],
+   [AC_DEFINE_UNQUOTED(OS390,1,[This is a OS/390 system])
      mhd_host_os='OS/390'
-     AC_MSG_RESULT([[$mhd_host_os]])
-    ;;
-gnu*)
-     AC_DEFINE([[GNU_HURD]], [[1]], [Define to `1' if host machine runs on GNU Hurd.])
+     AC_MSG_RESULT([[$mhd_host_os]])],
+   [gnu*],
+   [AC_DEFINE([[GNU_HURD]], [[1]], [Define to `1' if host machine runs on GNU Hurd.])
      mhd_host_os='GNU Hurd'
      AC_MSG_RESULT([[$mhd_host_os]])
-    ;;
-*)
+    ],
+    [
      mhd_host_os='unrecognised OS'
      AC_MSG_RESULT([[$mhd_host_os]])
      AC_MSG_WARN([Unrecognised OS $host_os])
      AC_DEFINE_UNQUOTED(OTHEROS,1,[Some strange OS])
-;;
-esac
+ ])
 
 AM_CONDITIONAL([CYGWIN_TARGET], [[test "x$os_is_windows" = "xyes" && \
                                   test "x${os_is_native_w32}" != "xyes"]])
@@ -662,6 +650,20 @@ AX_CHECK_LINK_FLAG([-fno-strict-aliasing],
 
 AC_C_BIGENDIAN
 AC_C_VARARRAYS
+AC_CACHE_CHECK([[whether __builtin_bswap32() is available]],
+  [[mhd_cv_func___builtin_bswap32_avail]], [dnl
+  AC_TRY_LINK([#include<stdint.h>],[uint32_t a = 1; uint32_t b = __builtin_bswap32(a); a = b;],
+    [[mhd_cv_func___builtin_bswap32_avail="yes"]], [[mhd_cv_func___builtin_bswap32_avail="no"]])
+])
+AS_IF([[test "x$mhd_cv_func___builtin_bswap32_avail" = "xyes"]],
+  [AC_DEFINE([[MHD_HAVE___BUILTIN_BSWAP32]], [[1]], [Define to 1 if you have __builtin_bswap32() builtin function])])
+AC_CACHE_CHECK([[whether __builtin_bswap64() is available]],
+  [[mhd_cv_func___builtin_bswap64_avail]], [dnl
+  AC_TRY_LINK([#include<stdint.h>],[uint64_t a = 1; uint32_t b = __builtin_bswap64(a); a = b;],
+    [[mhd_cv_func___builtin_bswap64_avail="yes"]], [[mhd_cv_func___builtin_bswap64_avail="no"]])
+])
+AS_IF([[test "x$mhd_cv_func___builtin_bswap64_avail" = "xyes"]],
+  [AC_DEFINE([[MHD_HAVE___BUILTIN_BSWAP64]], [[1]], [Define to 1 if you have __builtin_bswap64() builtin function])])
 
 AC_CHECK_PROG([HAVE_CURL_BINARY],[curl],[yes],[no])
 AM_CONDITIONAL([HAVE_CURL_BINARY],[test "x$HAVE_CURL_BINARY" = "xyes"])
@@ -770,12 +772,27 @@ AC_CHECK_HEADERS([zlib.h],[have_zlib=yes],[have_zlib=no], [AC_INCLUDES_DEFAULT])
 AM_CONDITIONAL([HAVE_ZLIB], [[test "x$have_zlib" = xyes]])
 
 # Check for generic functions
-AC_CHECK_FUNCS([rand random])
+MHD_CHECK_FUNC([random],
+  [
+AC_INCLUDES_DEFAULT
+[#include <stdlib.h>
+  ]],
+  [[long int r = random(); (void)r;]],
+  [],
+  [
+    MHD_CHECK_FUNC([rand],
+      [
+AC_INCLUDES_DEFAULT
+[#include <stdlib.h>
+      ]],
+      [[int r = rand(); (void)r;]],
+	)
+  ]
+)
 
-AC_CHECK_MEMBER([struct sockaddr_in.sin_len],
-   [ AC_DEFINE(HAVE_SOCKADDR_IN_SIN_LEN, 1, [Do we have sockaddr_in.sin_len?])
-   ],
-   [],
+AC_CHECK_MEMBERS([struct sockaddr_in.sin_len, struct sockaddr_in6.sin6_len, 
+                  struct sockaddr_storage.ss_len],
+   [], [],
    [
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -788,12 +805,25 @@ AC_CHECK_MEMBER([struct sockaddr_in.sin_len],
 #endif
    ])
 
-AC_CHECK_DECLS([getsockname],
+MHD_CHECK_FUNC([getsockname],
+  [[
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+#ifdef HAVE_WINSOCK2_H
+#include <winsock2.h>
+#endif
+  ]],
   [
-   AC_CHECK_FUNCS([getsockname],
-     [
-      AC_CACHE_CHECK([[whether getsockname() is usable]], [[mhc_cv_getsockname_usable]],
-        [
+    struct sockaddr_storage ss;
+    (void)getsockname(socket(0,0,0),(struct sockaddr *)&ss,(void*)0);
+  ],
+  [
+    AC_CACHE_CHECK([[whether getsockname() is usable]], [[mhc_cv_getsockname_usable]],
+      [
          AC_RUN_IFELSE(
            [
             AC_LANG_SOURCE(
@@ -803,6 +833,9 @@ AC_CHECK_DECLS([getsockname],
 #endif
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
 #endif
 #ifdef HAVE_WINSOCK2_H
 #include <winsock2.h>
@@ -847,7 +880,7 @@ int main(void)
   {
     zr_mem(&sa, c_addr_size);
     sa.sin_family = AF_INET;
-#if HAVE_SOCKADDR_IN_SIN_LEN
+#ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
     sa.sin_len = c_addr_size;
 #endif
     if (0 == bind (sckt, (struct sockaddr *)&sa, c_addr_size))
@@ -884,22 +917,9 @@ int main(void)
          )
         ]
       )
-      AS_VAR_IF([[mhc_cv_getsockname_usable]], [["no"]], [:],
+    AS_VAR_IF([[mhc_cv_getsockname_usable]], [["no"]], [:],
         [AC_DEFINE([[MHD_USE_GETSOCKNAME]], [[1]], [Define if you have usable `getsockname' function.])])
-     ]
-   )
-  ], [],
-  [[
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-#ifdef HAVE_WINSOCK2_H
-#include <winsock2.h>
-#endif
-  ]]
+  ]
 )
 
 # Check for inter-thread signaling type
@@ -1182,23 +1202,23 @@ have_inet6=no
 ])
 AC_MSG_RESULT($have_inet6)
 
+MHD_CHECK_FUNC([[sysconf]], [[#include <unitstd.h>]], [[long a = sysconf(0); if (a) return 1;]])
+
 HIDDEN_VISIBILITY_CFLAGS=""
-case "$host" in
-  *-*-mingw*)
+AS_CASE(["$host"],
+  [*-*-mingw*],[
     dnl on mingw32 we do -fvisibility=hidden and __declspec(dllexport)
     AC_DEFINE([_MHD_EXTERN], [__attribute__((visibility("default"))) __declspec(dllexport) extern],
               [defines how to decorate public symbols while building])
     HIDDEN_VISIBILITY_CFLAGS="-fvisibility=hidden"
-    ;;
-  *)
+  ],[
     dnl on other compilers, check if we can do -fvisibility=hidden
     AX_CHECK_LINK_FLAG([-fvisibility=hidden],
       [AX_CHECK_COMPILE_FLAG([-fvisibility=hidden],
                            [AC_DEFINE([_MHD_EXTERN], [__attribute__((visibility("default"))) extern],
                                        [defines how to decorate public symbols while building])
                             HIDDEN_VISIBILITY_CFLAGS="-fvisibility=hidden"])])
-    ;;
-esac
+   ])
 AC_SUBST(HIDDEN_VISIBILITY_CFLAGS)
 
 # libcurl (required for testing)
@@ -1206,24 +1226,22 @@ AC_ARG_ENABLE([curl],
   [AS_HELP_STRING([--disable-curl],[disable cURL based testcases])],
   [enable_curl=${enableval}])
 curl=0
-if test "$enable_curl" != "no"
-then
-  LIBCURL_CHECK_CONFIG([yes],[7.16.4],[enable_curl=yes],
+AS_IF([test "$enable_curl" != "no"],
+ [LIBCURL_CHECK_CONFIG([yes],[7.16.4],[enable_curl=yes],
     [
-      if test "x$enable_curl" = "xyes"; then
-        AC_MSG_WARN([[cURL-based tests cannot be enabled because libcurl is missing]])
-      fi
+      AS_IF([test "x$enable_curl" = "xyes"],
+       [AC_MSG_WARN([[cURL-based tests cannot be enabled because libcurl is missing]])])
       enable_curl=no
     ])
-fi
-if test "$enable_curl" != "no"
-then
+])
+AS_IF([test "$enable_curl" != "no"],
+ [
 # Lib cURL & cURL - OpenSSL versions
   AC_DEFINE([MHD_REQ_CURL_VERSION], ["7.16.4"], [required cURL version to run tests])
   AC_DEFINE([MHD_REQ_CURL_OPENSSL_VERSION], ["0.9.8"], [required cURL SSL version to run tests])
   AC_DEFINE([MHD_REQ_CURL_GNUTLS_VERSION], ["2.8.6"], [gnuTLS lib version - used in conjunction with cURL])
   AC_DEFINE([MHD_REQ_CURL_NSS_VERSION], ["3.12.0"], [NSS lib version - used in conjunction with cURL])
-fi
+ ])
 AM_CONDITIONAL([HAVE_CURL], [test "x$enable_curl" = "xyes"])
 
 mhd_have_libmagic="no"
@@ -1487,8 +1505,7 @@ AC_ARG_ENABLE([https],
    [AS_HELP_STRING([--enable-https],
                [enable HTTPS support (yes, no, auto)[auto]])],
    [enable_https=${enableval}])
-if test "x$enable_https" != "xno"
-then
+AS_IF([test "x$enable_https" != "xno"],[
 #
 # Next block is large unindented block
 #
@@ -1499,18 +1516,18 @@ AC_MSG_CHECKING([[how to find GnuTLS library]])
 AC_ARG_WITH([[gnutls]],
    [AS_HELP_STRING([[--with-gnutls[=PFX]]],[use GnuTLS for HTTPS support, optional PFX overrides pkg-config data for GnuTLS headers (PFX/include) and libs (PFX/lib)])],
    [
-    case $with_gnutls in
-      no)
+    AS_CASE([$with_gnutls],
+     [no],[
         AC_MSG_RESULT([[GnuTLS disabled]])
         AS_UNSET([GNUTLS_CPPFLAGS])
         AS_UNSET([GNUTLS_CFLAGS])
         AS_UNSET([GNUTLS_LDFLAGS])
         AS_UNSET([GNUTLS_LIBS])
-        ;;
-      yes)
+      ],
+      [yes],[
         AC_MSG_RESULT([[automatically, forced]])
-        ;;
-      *)
+      ],
+      [
         AC_MSG_RESULT([[-I$with_gnutls/include -L$with_gnutls/lib -lgnutls]])
         SAVE_LDFLAGS="$LDFLAGS"
         SAVE_CPPFLAGS="$CPPFLAGS"
@@ -1532,8 +1549,7 @@ AC_ARG_WITH([[gnutls]],
         CFLAGS="$SAVE_CFLAGS"
         LDFLAGS="$SAVE_LDFLAGS"
         LIBS="$SAVE_LIBS"
-        ;;
-    esac
+      ])
    ],
    [AC_MSG_RESULT([[automatically]])
    ])
@@ -1679,9 +1695,6 @@ AS_IF([test "x$with_gnutls" != "xno" && test "x$have_gnutls" != "xyes"],
 )
 AS_IF([test "x$have_gnutls" != "xyes" && test "x$with_gnutls" = "xyes"],
       [AC_MSG_ERROR([[can't find usable libgnutls]])])
-#
-# End of large unindented block
-#
 
   AS_IF([test "x$have_gnutls" = "xyes"],
     [
@@ -1783,7 +1796,7 @@ choke me now
           AS_IF([[test "x$mhd_cv_gcrypt_required" = "xyes"]],
             [
              MSG_HTTPS="yes (using libgnutls and libgcrypt)"
-	     MHD_TLS_LIB_CPPFLAGS="$LIBGCRYPT_CFLAGS $GNUTLS_CPPFLAGS"
+	         MHD_TLS_LIB_CPPFLAGS="$LIBGCRYPT_CFLAGS $GNUTLS_CPPFLAGS"
              MHD_TLS_LIB_CFLAGS="$LIBGCRYPT_CFLAGS $GNUTLS_CFLAGS"
              MHD_TLS_LIB_LDFLAGS="$GNUTLS_LDFLAGS"
              MHD_TLS_LIBDEPS="$GNUTLS_LIBS $LIBGCRYPT_LIBS"
@@ -1829,9 +1842,15 @@ choke me now
      AS_UNSET([GNUTLS_LIBS])
     ]
   )
-else
+],[
   MSG_HTTPS="no (disabled)"
-fi
+])
+
+#
+# End of large unindented block
+#
+
+
 AC_MSG_CHECKING(whether to support HTTPS)
 AC_MSG_RESULT([$MSG_HTTPS])
 
@@ -2064,11 +2083,9 @@ src/testzzuf/Makefile])
 AC_OUTPUT
 
 # Finally: summary
-if test "x$enable_curl" != "xyes"; then
- MSG_CURL="no, many unit tests will not run"
-else
- MSG_CURL="yes"
-fi
+AS_IF([test "x$enable_curl" != "xyes"],
+ [MSG_CURL="no, many unit tests will not run"],
+ [MSG_CURL="yes"])
 
 AC_MSG_NOTICE([GNU libmicrohttpd ${PACKAGE_VERSION} Configuration Summary:
   Target directory:  ${prefix}
@@ -2094,21 +2111,16 @@ AC_MSG_NOTICE([GNU libmicrohttpd ${PACKAGE_VERSION} Configuration Summary:
   Test with libcurl: ${MSG_CURL}
 ])
 
-if test "x$enable_https" = "xyes"
-then
- AC_MSG_NOTICE([HTTPS subsystem configuration:
+AS_IF([test "x$enable_https" = "xyes"],
+ [AC_MSG_NOTICE([HTTPS subsystem configuration:
   License         :  LGPL only
- ])
-else
- AC_MSG_NOTICE([
+ ])],
+ [AC_MSG_NOTICE([
   License         :  LGPL or eCos
-])
-fi
+ ])])
 
-if test "x$enable_bauth" != "xyes" || \
+AS_IF([test "x$enable_bauth" != "xyes" || \
    test "x$enable_dauth" != "xyes" || \
    test "x$enable_httpupgrade" != "xyes" || \
-   test "x$enable_postprocessor" != "xyes"
-then
- AC_MSG_NOTICE([WARNING: This will be a custom build with missing symbols. Do NOT use this build in a distribution. Building with these kinds of configure options is only for custom builds for embedded systems.])
-fi
+   test "x$enable_postprocessor" != "xyes"],
+   [AC_MSG_NOTICE([WARNING: This will be a custom build with missing symbols. Do NOT use this build in a distribution. Building with these kinds of configure options is only for custom builds for embedded systems.])])

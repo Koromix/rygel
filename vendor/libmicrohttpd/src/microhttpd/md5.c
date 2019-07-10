@@ -10,37 +10,21 @@
  * with every copy.
  *
  * To compute the message digest of a chunk of bytes, declare an
- * MD5Context structure, pass it to MD5Init, call MD5Update as
- * needed on buffers full of bytes, and then call MD5Final, which
+ * MD5Context structure, pass it to MHD_MD5Init, call MHD_MD5Update as
+ * needed on buffers full of bytes, and then call MHD_MD5Final, which
  * will fill a supplied 16-byte array with the digest.
  */
 
-/* Based on OpenBSD modifications */
+/* Based on OpenBSD modifications.
+ * Optimized by Karlson2k (Evgeny Grin). */
 
 #include "md5.h"
-#include "mhd_byteorder.h"
-
-#define PUT_64BIT_LE(cp, value) do {					\
-	(cp)[7] = (uint8_t)((value) >> 56);				\
-	(cp)[6] = (uint8_t)((value) >> 48);				\
-	(cp)[5] = (uint8_t)((value) >> 40);				\
-	(cp)[4] = (uint8_t)((value) >> 32);				\
-	(cp)[3] = (uint8_t)((value) >> 24);				\
-	(cp)[2] = (uint8_t)((value) >> 16);				\
-	(cp)[1] = (uint8_t)((value) >> 8);				\
-	(cp)[0] = (uint8_t)((value)); } while (0)
-
-#define PUT_32BIT_LE(cp, value) do {					\
-	(cp)[3] = (uint8_t)((value) >> 24);				\
-	(cp)[2] = (uint8_t)((value) >> 16);				\
-	(cp)[1] = (uint8_t)((value) >> 8);				\
-	(cp)[0] = (uint8_t)((value)); } while (0)
-
-static uint8_t PADDING[MD5_BLOCK_SIZE] = {
-  0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
+#include <string.h>
+#ifdef HAVE_MEMORY_H
+#include <memory.h>
+#endif /* HAVE_MEMORY_H */
+#include "mhd_bithelpers.h"
+#include "mhd_assert.h"
 
 
 /**
@@ -50,12 +34,11 @@ static uint8_t PADDING[MD5_BLOCK_SIZE] = {
  * @param ctx must be a `struct MD5Context *`
  */
 void
-MD5Init (void *ctx_)
+MHD_MD5Init (void *ctx_)
 {
   struct MD5Context *ctx = ctx_;
 
-  if (!ctx)
-    return;
+  mhd_assert (ctx != NULL);
   ctx->count = 0;
   ctx->state[0] = 0x67452301;
   ctx->state[1] = 0xefcdab89;
@@ -63,55 +46,64 @@ MD5Init (void *ctx_)
   ctx->state[3] = 0x10325476;
 }
 
-
-/**
- * Pad pad to 64-byte boundary with the bit pattern
- * 1 0* (64-bit count of bits processed, MSB-first)
- */
 static void
-MD5Pad (struct MD5Context *ctx)
-{
-  uint8_t count[8];
-  size_t padlen;
-
-  if (!ctx)
-    return;
-
-  /* Convert count to 8 bytes in little endian order. */
-  PUT_64BIT_LE(count, ctx->count);
-
-  /* Pad out to 56 mod 64. */
-  padlen = MD5_BLOCK_SIZE -
-    ((ctx->count >> 3) & (MD5_BLOCK_SIZE - 1));
-  if (padlen < 1 + 8)
-    padlen += MD5_BLOCK_SIZE;
-  MD5Update(ctx, PADDING, padlen - 8);		/* padlen - 8 <= 64 */
-  MD5Update(ctx, count, 8);
-}
+MD5Transform (uint32_t state[4],
+              const uint8_t block[MD5_BLOCK_SIZE]);
 
 
 /**
- * Final wrapup--call MD5Pad, fill in digest and zero out ctx.
+ * Final wrapup, fill in digest and zero out ctx.
  *
  * @param ctx must be a `struct MD5Context *`
  */
 void
-MD5Final (void *ctx_,
-          unsigned char digest[MD5_DIGEST_SIZE])
+MHD_MD5Final (void *ctx_,
+          uint8_t digest[MD5_DIGEST_SIZE])
 {
   struct MD5Context *ctx = ctx_;
-  int i;
+  uint64_t count_bits;
+  size_t have_bytes;
 
-  if (!ctx || !digest)
-    return;
+  mhd_assert (ctx != NULL);
+  mhd_assert (digest != NULL);
 
-  MD5Pad(ctx);
-  for (i = 0; i < 4; i++)
-    PUT_32BIT_LE(digest + i * 4, ctx->state[i]);
+  /* Convert count to 8 bytes in little endian order. */
+  have_bytes = (ctx->count) & (MD5_BLOCK_SIZE - 1);
 
+  /* Pad data */
+  /* Buffer always have space for one byte or more. */
+  ctx->buffer[have_bytes++] = 0x80; /* First padding byte is 0x80 */
+
+  if (MD5_BLOCK_SIZE - have_bytes < 8)
+    { /* Not enough space to put number of bits */
+      while (have_bytes < MD5_BLOCK_SIZE) ctx->buffer[have_bytes++] = 0;
+      MD5Transform(ctx->state, ctx->buffer);
+      have_bytes = 0; /* Additional block */
+    }
+  /* Pad out to 56 */
+  memset(ctx->buffer + have_bytes, 0, MD5_BLOCK_SIZE - have_bytes - 8);
+
+  /* Put number of bits */
+  count_bits = ctx->count << 3;
+  _MHD_PUT_64BIT_LE(ctx->buffer + 56, count_bits);
+  MD5Transform(ctx->state, ctx->buffer);
+
+  /* Put digest in LE mode */
+  _MHD_PUT_32BIT_LE(digest, ctx->state[0]);
+  _MHD_PUT_32BIT_LE(digest + 4, ctx->state[1]);
+  _MHD_PUT_32BIT_LE(digest + 8, ctx->state[2]);
+  _MHD_PUT_32BIT_LE(digest + 12, ctx->state[3]);
+
+  /* Erase buffer */
   memset(ctx, 0, sizeof(*ctx));
 }
 
+
+/**
+ * Number of bytes in single SHA-256 word
+ * used to process data
+ */
+#define MD5_BYTES_IN_WORD (32 / 8)
 
 /* The four core functions - F1 is optimized somewhat */
 
@@ -127,25 +119,24 @@ MD5Final (void *ctx_,
 
 /**
  * The core of the MD5 algorithm, this alters an existing MD5 hash to
- * reflect the addition of 16 longwords of new data.  MD5Update blocks
+ * reflect the addition of 16 longwords of new data.  MHD_MD5Update blocks
  * the data and converts bytes into longwords for this routine.
  */
 static void
 MD5Transform (uint32_t state[4],
               const uint8_t block[MD5_BLOCK_SIZE])
 {
-  uint32_t a, b, c, d, in[MD5_BLOCK_SIZE / 4];
+  uint32_t a, b, c, d;
 
 #if _MHD_BYTE_ORDER == _MHD_LITTLE_ENDIAN
-  memcpy(in, block, sizeof(in));
+  const uint32_t *in = (const uint32_t *)block;
 #else
-  for (a = 0; a < MD5_BLOCK_SIZE / 4; a++)
+  uint32_t in[MD5_BLOCK_SIZE / MD5_BYTES_IN_WORD];
+  int i;
+
+  for (i = 0; i < MD5_BLOCK_SIZE / MD5_BYTES_IN_WORD; i++)
   {
-    in[a] = (uint32_t)(
-      (uint32_t)(block[a * 4 + 0]) |
-      (uint32_t)(block[a * 4 + 1]) << 8 |
-      (uint32_t)(block[a * 4 + 2]) << 16 |
-      (uint32_t)(block[a * 4 + 3]) << 24);
+    in[i] = _MHD_GET_32BIT_LE(block + i * MD5_BYTES_IN_WORD);
   }
 #endif
 
@@ -234,22 +225,22 @@ MD5Transform (uint32_t state[4],
  * of bytes.
  */
 void
-MD5Update (void *ctx_,
+MHD_MD5Update (void *ctx_,
            const uint8_t *input,
            size_t len)
 {
   struct MD5Context *ctx = ctx_;
   size_t have, need;
 
-  if (!ctx || !input)
-    return;
+  mhd_assert (ctx != NULL);
+  mhd_assert ((ctx != NULL) || (len == 0));
 
   /* Check how many bytes we already have and how many more we need. */
-  have = (size_t)((ctx->count >> 3) & (MD5_BLOCK_SIZE - 1));
+  have = (size_t)((ctx->count) & (MD5_BLOCK_SIZE - 1));
   need = MD5_BLOCK_SIZE - have;
 
-  /* Update bitcount */
-  ctx->count += (uint64_t)len << 3;
+  /* Update bytecount */
+  ctx->count += (uint64_t)len;
 
   if (len >= need)
   {
@@ -280,7 +271,6 @@ MD5Update (void *ctx_,
             input,
             len);
 }
-
 
 
 /* end of md5.c */

@@ -73,7 +73,7 @@ test_unmatching_ssl_version (void * cls, int port, const char *cipher_suite,
       send_curl_req (url, &cbc, cipher_suite, curl_req_ssl_version))
     {
       free (cbc.buf);
-      fprintf (stderr, "cURL failed to reject request despite SSL version missmatch!\n");
+      fprintf (stderr, "cURL failed to reject request despite SSL version mismatch!\n");
       return -1;
     }
 

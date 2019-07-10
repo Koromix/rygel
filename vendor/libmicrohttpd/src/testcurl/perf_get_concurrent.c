@@ -41,6 +41,7 @@
 #include <time.h>
 #include <pthread.h>
 #include "gauger.h"
+#include "mhd_has_in_name.h"
 
 #if defined(CPU_COUNT) && (CPU_COUNT+0) < 2
 #undef CPU_COUNT
@@ -52,8 +53,13 @@
 /**
  * How many rounds of operations do we do for each
  * test (total number of requests will be ROUNDS * PAR).
+ * Ensure that free ports are not exhausted during test.
  */
+#if CPU_COUNT > 8
+#define ROUNDS (1 + (30000 / 12) / CPU_COUNT)
+#else
 #define ROUNDS 500
+#endif
 
 /**
  * How many requests do we do in parallel?
@@ -177,23 +183,23 @@ thread_gets (void *param)
   unsigned int i;
   char * const url = (char*) param;
 
+  c = curl_easy_init ();
+  curl_easy_setopt (c, CURLOPT_URL, url);
+  curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
+  curl_easy_setopt (c, CURLOPT_WRITEDATA, NULL);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
+  curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
+  if (oneone)
+    curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+  else
+    curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
+  curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
+  /* NOTE: use of CONNECTTIMEOUT without also
+     setting NOSIGNAL results in really weird
+     crashes on my system! */
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   for (i=0;i<ROUNDS;i++)
     {
-      c = curl_easy_init ();
-      curl_easy_setopt (c, CURLOPT_URL, url);
-      curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
-      curl_easy_setopt (c, CURLOPT_WRITEDATA, NULL);
-      curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
-      curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
-      if (oneone)
-        curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-      else
-        curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
-      curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
-      /* NOTE: use of CONNECTTIMEOUT without also
-         setting NOSIGNAL results in really weird
-         crashes on my system! */
-      curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
       if (CURLE_OK != (errornum = curl_easy_perform (c)))
         {
           fprintf (stderr,
@@ -202,8 +208,8 @@ thread_gets (void *param)
           curl_easy_cleanup (c);
           return "curl error";
         }
-      curl_easy_cleanup (c);
     }
+  curl_easy_cleanup (c);
 
   return NULL;
 }
@@ -462,8 +468,9 @@ main (int argc, char *const *argv)
   int port = 1100;
   (void)argc;   /* Unused. Silent compiler warning. */
 
-  oneone = (NULL != strrchr (argv[0], (int) '/')) ?
-    (NULL != strstr (strrchr (argv[0], (int) '/'), "11")) : 0;
+  if (NULL == argv || 0 == argv[0])
+    return 99;
+  oneone = has_in_name (argv[0], "11");
   if (oneone)
     port += 15;
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))

@@ -35,7 +35,7 @@
  * Set listen socket options to allow port rebinding (or not)
  * depending on how MHD was configured.
  *
- * @param daemon[in,out] the daemon with the listen socket to configure
+ * @param[in,out] daemon the daemon with the listen socket to configure
  * @return #MHD_SC_OK on success (or non-fatal errors)
  */
 static enum MHD_StatusCode
@@ -148,7 +148,7 @@ configure_listen_reuse (struct MHD_Daemon *daemon)
 /**
  * Open, configure and bind the listen socket (if required).
  *
- * @param daemon[in,out] daemon to open the socket for
+ * @param[in,out] daemon daemon to open the socket for
  * @return #MHD_SC_OK on success
  */
 static enum MHD_StatusCode
@@ -310,7 +310,7 @@ open_listen_socket (struct MHD_Daemon *daemon)
 #ifdef IN6ADDR_ANY_INIT
 	  sin6->sin6_addr = static_in6any;
 #endif
-#if HAVE_SOCKADDR_IN_SIN_LEN
+#if HAVE_STRUCT_SOCKADDR_IN6_SIN6_LEN
 	  sin6->sin6_len = sizeof (struct sockaddr_in6);
 #endif
 	}
@@ -327,7 +327,7 @@ open_listen_socket (struct MHD_Daemon *daemon)
 	  sin4->sin_port = htons (daemon->listen_port);
 	  if (0 != INADDR_ANY)
 	    sin4->sin_addr.s_addr = htonl (INADDR_ANY);
-#if HAVE_SOCKADDR_IN_SIN_LEN
+#if HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
 	  sin4->sin_len = sizeof (struct sockaddr_in);
 #endif
 	}
@@ -413,7 +413,7 @@ open_listen_socket (struct MHD_Daemon *daemon)
  * a listen socket or if the port was 0 and the OS picked
  * a free one).
  *
- * @param daemon[in,out] daemon to obtain the port number for
+ * @param[in,out] daemon daemon to obtain the port number for
  */
 static void
 get_listen_port_number (struct MHD_Daemon *daemon)
@@ -659,7 +659,7 @@ MHD_polling_thread (void *cls)
 /**
  * Setup the thread pool (if needed).
  *
- * @param daemon[in,out] daemon to setup thread pool for
+ * @param[in,out] daemon daemon to setup thread pool for
  * @return #MHD_SC_OK on success
  */
 static enum MHD_StatusCode

@@ -321,7 +321,7 @@ MHD_daemon_get_fdset2 (struct MHD_Daemon *daemon,
 {
   if ( (MHD_TM_EXTERNAL_EVENT_LOOP != daemon->threading_mode) ||
        (MHD_ELS_POLL == daemon->event_loop_syscall) )
-    return MHD_SC_CONFIGURATION_MISSMATCH_FOR_GET_FDSET;
+    return MHD_SC_CONFIGURATION_MISMATCH_FOR_GET_FDSET;
 
 #ifdef EPOLL_SUPPORT
   if (MHD_ELS_EPOLL == daemon->event_loop_syscall)

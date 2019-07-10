@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "mhd_has_in_name.h"
 
 #ifndef WINDOWS
 #include <unistd.h>
@@ -159,7 +160,7 @@ testExternalGet ()
   curl_easy_setopt (c, CURLOPT_PORT, (long)port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
   /* note that the string below intentionally uses the
      various ways cookies can be specified to exercise the
      parser! Do not change! */
@@ -174,7 +175,7 @@ testExternalGet ()
   /* NOTE: use of CONNECTTIMEOUT without also
      setting NOSIGNAL results in really weird
      crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
 
 
   multi = curl_multi_init ();
@@ -274,8 +275,9 @@ main (int argc, char *const *argv)
   unsigned int errorCount = 0;
   (void)argc;   /* Unused. Silent compiler warning. */
 
-  oneone = (NULL != strrchr (argv[0], (int) '/')) ?
-    (NULL != strstr (strrchr (argv[0], (int) '/'), "11")) : 0;
+  if (NULL == argv || 0 == argv[0])
+    return 99;
+  oneone = has_in_name (argv[0], "11");
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 2;
   errorCount += testExternalGet ();

@@ -161,7 +161,7 @@ testInternalPut ()
       curl_easy_setopt (c, CURLOPT_READDATA, &pos);
       curl_easy_setopt (c, CURLOPT_UPLOAD, 1L);
       curl_easy_setopt (c, CURLOPT_INFILESIZE, (long) PUT_SIZE);
-      curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+      curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
       curl_easy_setopt (c, CURLOPT_TIMEOUT_MS, CURL_TIMEOUT);
       if (oneone)
         curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
@@ -171,7 +171,7 @@ testInternalPut ()
       /* NOTE: use of CONNECTTIMEOUT without also
        *   setting NOSIGNAL results in really weird
        *   crashes on my system! */
-      curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+      curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
       curl_easy_perform (c);
       curl_easy_cleanup (c);
     }
@@ -213,7 +213,7 @@ testMultithreadedPut ()
       curl_easy_setopt (c, CURLOPT_READDATA, &pos);
       curl_easy_setopt (c, CURLOPT_UPLOAD, 1L);
       curl_easy_setopt (c, CURLOPT_INFILESIZE, (long) PUT_SIZE);
-      curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+      curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
       curl_easy_setopt (c, CURLOPT_TIMEOUT_MS, CURL_TIMEOUT);
       if (oneone)
         curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
@@ -223,7 +223,7 @@ testMultithreadedPut ()
       /* NOTE: use of CONNECTTIMEOUT without also
        *   setting NOSIGNAL results in really weird
        *   crashes on my system! */
-      curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+      curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
       curl_easy_perform (c);
       curl_easy_cleanup (c);
     }
@@ -284,7 +284,7 @@ testExternalPut ()
       curl_easy_setopt (c, CURLOPT_READDATA, &pos);
       curl_easy_setopt (c, CURLOPT_UPLOAD, 1L);
       curl_easy_setopt (c, CURLOPT_INFILESIZE, (long) PUT_SIZE);
-      curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+      curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
       curl_easy_setopt (c, CURLOPT_TIMEOUT_MS, CURL_TIMEOUT);
       if (oneone)
         curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
@@ -294,7 +294,7 @@ testExternalPut ()
       /* NOTE: use of CONNECTTIMEOUT without also
        *   setting NOSIGNAL results in really weird
        *   crashes on my system! */
-      curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+      curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
 
 
 

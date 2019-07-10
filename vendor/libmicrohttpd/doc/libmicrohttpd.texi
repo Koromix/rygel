@@ -615,6 +615,26 @@ on platform.  If application doesn't have requirements for any
 specific polling function, it's recommended to use this flag.  This
 flag is very convenient for multiplatform applications.
 
+@item MHD_USE_POST_HANDSHAKE_AUTH_SUPPORT
+Tell the TLS library to support post handshake client authentication.
+Only useful in combination with @code{MHD_USE_TLS}.
+
+This option will only work if the underyling TLS library
+supports it (i.e. GnuTLS after 3.6.3). If the TLS library
+does not support it, MHD may ignore the option and proceed
+without supporting this features.
+
+@item MHD_USE_INSECURE_TLS_EARLY_DATA
+Tell the TLS library to support TLS v1.3 early data (0-RTT) with the
+resulting security drawbacks. Only enable this if you really know what
+you are doing. MHD currently does NOT enforce that this only affects
+GET requests! You have been warned.
+
+This option will only work if the underyling TLS library
+supports it (i.e. GnuTLS after 3.6.3). If the TLS library
+does not support it, MHD may ignore the option and proceed
+without supporting this features.
+
 @end table
 @end deftp
 
@@ -1356,7 +1376,7 @@ reason for request termination see @code{MHD_OPTION_NOTIFY_COMPLETED}.
 @end deftypefn
 
 
-@deftypefn {Function Pointer} int {*MHD_KeyValueIterator} (void *cls, enum MHD_ValueKind kind, const char *key, const char *value)
+@deftypefn {Function Pointer} int {*MHD_KeyValueIterator} (void *cls, enum MHD_ValueKind kind, const char *key, const char *value, size_t value_size)
 Iterator over key-value pairs.  This iterator can be used to iterate
 over all of the cookies, headers, or @code{POST}-data fields of a
 request, and also to iterate over the headers that have been added to a
@@ -1374,6 +1394,17 @@ key for the value, can be an empty string
 
 @item value
 value corresponding value, can be NULL
+
+@item value_size
+number of bytes in @code{value}. This argument was introduced in
+@code{MHD_VERSION} 0x00096301 to allow applications to use binary
+zeros in values.  Applications using this argument must ensure that
+they are using a sufficiently recent version of MHD, i.e. by testing
+@code{MHD_get_version()} for values above or equal to 0.9.64.
+Applications that do not need zeros in values and that want to compile
+without warnings against newer versions of MHD should not declare this
+argument and cast the function pointer argument to
+@code{MHD_KeyValueIterator}.
 
 @end table
 
@@ -2925,7 +2956,7 @@ connections have been handled.
 @section Obtaining state information about a connection
 
 
-@deftypefun {const union MHD_ConnectionInfo *} MHD_get_connection_info (struct MHD_Connection *daemon, enum MHD_ConnectionInfoType infoType, ...)
+@deftypefun {const union MHD_ConnectionInfo *} MHD_get_connection_info (struct MHD_Connection *connection, enum MHD_ConnectionInfoType infoType, ...)
 Obtain information about the given connection.
 
 @table @var

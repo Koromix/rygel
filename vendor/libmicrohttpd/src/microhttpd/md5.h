@@ -10,15 +10,17 @@
  * with every copy.
  *
  * To compute the message digest of a chunk of bytes, declare an
- * MD5Context structure, pass it to MD5Init, call MD5Update as
- * needed on buffers full of bytes, and then call MD5Final, which
+ * MD5Context structure, pass it to MHD_MD5Init, call MHD_MD5Update as
+ * needed on buffers full of bytes, and then call MHD_MD5Final, which
  * will fill a supplied 16-byte array with the digest.
  */
 
 #ifndef MHD_MD5_H
 #define MHD_MD5_H
 
-#include "platform.h"
+#include "mhd_options.h"
+#include <stdint.h>
+#include <stddef.h>
 
 #define	MD5_BLOCK_SIZE              64
 #define	MD5_DIGEST_SIZE             16
@@ -27,7 +29,7 @@
 struct MD5Context
 {
   uint32_t state[4];			/* state */
-  uint64_t count;			/* number of bits, mod 2^64 */
+  uint64_t count;			/* number of bytes, mod 2^64 */
   uint8_t buffer[MD5_BLOCK_SIZE];	/* input buffer */
 };
 
@@ -39,7 +41,7 @@ struct MD5Context
  * @param ctx_ must be a `struct MD5Context *`
  */
 void
-MD5Init (void *ctx_);
+MHD_MD5Init (void *ctx_);
 
 
 /**
@@ -49,7 +51,7 @@ MD5Init (void *ctx_);
  * @param ctx_ must be a `struct MD5Context *`
  */
 void
-MD5Update (void *ctx_,
+MHD_MD5Update (void *ctx_,
            const uint8_t *input,
            size_t len);
 
@@ -60,8 +62,8 @@ MD5Update (void *ctx_,
  * @param ctx_ must be a `struct MD5Context *`
  */
 void
-MD5Final (void *ctx_,
-          unsigned char digest[MD5_DIGEST_SIZE]);
+MHD_MD5Final (void *ctx_,
+          uint8_t digest[MD5_DIGEST_SIZE]);
 
 
 #endif /* !MHD_MD5_H */

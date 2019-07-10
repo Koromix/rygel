@@ -111,6 +111,7 @@ host_triplet = @host@
 
 @ENABLE_DAUTH_TRUE@am__append_11 = \
 @ENABLE_DAUTH_TRUE@  digestauth.c \
+@ENABLE_DAUTH_TRUE@  mhd_bithelpers.h \
 @ENABLE_DAUTH_TRUE@  md5.c md5.h \
 @ENABLE_DAUTH_TRUE@  sha256.c sha256.h
 
@@ -123,6 +124,7 @@ host_triplet = @host@
 
 check_PROGRAMS = test_str_compare$(EXEEXT) test_str_to_value$(EXEEXT) \
 	test_str_token$(EXEEXT) test_http_reasons$(EXEEXT) \
+	test_md5$(EXEEXT) test_sha256$(EXEEXT) \
 	test_start_stop$(EXEEXT) test_daemon$(EXEEXT) \
 	test_options$(EXEEXT) $(am__EXEEXT_1) $(am__EXEEXT_2) \
 	$(am__EXEEXT_3) $(am__EXEEXT_4) $(am__EXEEXT_5) \
@@ -140,13 +142,13 @@ check_PROGRAMS = test_str_compare$(EXEEXT) test_str_to_value$(EXEEXT) \
 # Do not test trigger of select by shutdown of listen socket
 # on Cygwin as this ability is deliberately ignored on Cygwin
 # to improve compatibility with core OS.
-@CYGWIN_TARGET_FALSE@@HAVE_LISTEN_SHUTDOWN_TRUE@@USE_POSIX_THREADS_TRUE@am__append_19 = \
-@CYGWIN_TARGET_FALSE@@HAVE_LISTEN_SHUTDOWN_TRUE@@USE_POSIX_THREADS_TRUE@  test_shutdown_select \
-@CYGWIN_TARGET_FALSE@@HAVE_LISTEN_SHUTDOWN_TRUE@@USE_POSIX_THREADS_TRUE@  test_shutdown_poll
+@CYGWIN_TARGET_FALSE@@HAVE_LISTEN_SHUTDOWN_TRUE@@HAVE_POSIX_THREADS_TRUE@am__append_19 = \
+@CYGWIN_TARGET_FALSE@@HAVE_LISTEN_SHUTDOWN_TRUE@@HAVE_POSIX_THREADS_TRUE@  test_shutdown_select \
+@CYGWIN_TARGET_FALSE@@HAVE_LISTEN_SHUTDOWN_TRUE@@HAVE_POSIX_THREADS_TRUE@  test_shutdown_poll
 
-@CYGWIN_TARGET_FALSE@@HAVE_LISTEN_SHUTDOWN_FALSE@@USE_POSIX_THREADS_TRUE@am__append_20 = \
-@CYGWIN_TARGET_FALSE@@HAVE_LISTEN_SHUTDOWN_FALSE@@USE_POSIX_THREADS_TRUE@  test_shutdown_select_ignore \
-@CYGWIN_TARGET_FALSE@@HAVE_LISTEN_SHUTDOWN_FALSE@@USE_POSIX_THREADS_TRUE@  test_shutdown_poll_ignore
+@CYGWIN_TARGET_FALSE@@HAVE_LISTEN_SHUTDOWN_FALSE@@HAVE_POSIX_THREADS_TRUE@am__append_20 = \
+@CYGWIN_TARGET_FALSE@@HAVE_LISTEN_SHUTDOWN_FALSE@@HAVE_POSIX_THREADS_TRUE@  test_shutdown_select_ignore \
+@CYGWIN_TARGET_FALSE@@HAVE_LISTEN_SHUTDOWN_FALSE@@HAVE_POSIX_THREADS_TRUE@  test_shutdown_poll_ignore
 
 subdir = src/microhttpd
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -166,6 +168,7 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ac_define_dir.m4 \
 	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
 	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
 	$(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/mhd_check_func.m4 \
 	$(top_srcdir)/m4/mhd_shutdown_socket_trigger.m4 \
 	$(top_srcdir)/m4/mhd_sys_extentions.m4 $(top_srcdir)/m4/nls.m4 \
 	$(top_srcdir)/m4/pkg.m4 $(top_srcdir)/m4/po.m4 \
@@ -186,10 +189,10 @@ CONFIG_CLEAN_VPATH_FILES =
 @HAVE_POSTPROCESSOR_TRUE@am__EXEEXT_5 = test_postprocessor$(EXEEXT) \
 @HAVE_POSTPROCESSOR_TRUE@	test_postprocessor_large$(EXEEXT) \
 @HAVE_POSTPROCESSOR_TRUE@	test_postprocessor_amp$(EXEEXT)
-@CYGWIN_TARGET_FALSE@@HAVE_LISTEN_SHUTDOWN_TRUE@@USE_POSIX_THREADS_TRUE@am__EXEEXT_6 = test_shutdown_select$(EXEEXT) \
-@CYGWIN_TARGET_FALSE@@HAVE_LISTEN_SHUTDOWN_TRUE@@USE_POSIX_THREADS_TRUE@	test_shutdown_poll$(EXEEXT)
-@CYGWIN_TARGET_FALSE@@HAVE_LISTEN_SHUTDOWN_FALSE@@USE_POSIX_THREADS_TRUE@am__EXEEXT_7 = test_shutdown_select_ignore$(EXEEXT) \
-@CYGWIN_TARGET_FALSE@@HAVE_LISTEN_SHUTDOWN_FALSE@@USE_POSIX_THREADS_TRUE@	test_shutdown_poll_ignore$(EXEEXT)
+@CYGWIN_TARGET_FALSE@@HAVE_LISTEN_SHUTDOWN_TRUE@@HAVE_POSIX_THREADS_TRUE@am__EXEEXT_6 = test_shutdown_select$(EXEEXT) \
+@CYGWIN_TARGET_FALSE@@HAVE_LISTEN_SHUTDOWN_TRUE@@HAVE_POSIX_THREADS_TRUE@	test_shutdown_poll$(EXEEXT)
+@CYGWIN_TARGET_FALSE@@HAVE_LISTEN_SHUTDOWN_FALSE@@HAVE_POSIX_THREADS_TRUE@am__EXEEXT_7 = test_shutdown_select_ignore$(EXEEXT) \
+@CYGWIN_TARGET_FALSE@@HAVE_LISTEN_SHUTDOWN_FALSE@@HAVE_POSIX_THREADS_TRUE@	test_shutdown_poll_ignore$(EXEEXT)
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
     $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
@@ -229,9 +232,9 @@ am__libmicrohttpd_la_SOURCES_DIST = connection.c connection.h \
 	mhd_str.h mhd_assert.h mhd_sockets.c mhd_sockets.h mhd_itc.c \
 	mhd_itc.h mhd_itc_types.h mhd_compat.c mhd_compat.h response.c \
 	response.h mhd_threads.c mhd_threads.h mhd_locks.h tsearch.c \
-	tsearch.h postprocessor.c digestauth.c md5.c md5.h sha256.c \
-	sha256.h basicauth.c base64.c base64.h connection_https.c \
-	connection_https.h
+	tsearch.h postprocessor.c digestauth.c mhd_bithelpers.h md5.c \
+	md5.h sha256.c sha256.h basicauth.c base64.c base64.h \
+	connection_https.c connection_https.h
 @USE_POSIX_THREADS_TRUE@am__objects_1 =  \
 @USE_POSIX_THREADS_TRUE@	libmicrohttpd_la-mhd_threads.lo
 @USE_W32_THREADS_TRUE@am__objects_2 = libmicrohttpd_la-mhd_threads.lo
@@ -272,6 +275,9 @@ am_test_http_reasons_OBJECTS = test_http_reasons.$(OBJEXT) \
 	reason_phrase.$(OBJEXT) mhd_str.$(OBJEXT)
 test_http_reasons_OBJECTS = $(am_test_http_reasons_OBJECTS)
 test_http_reasons_LDADD = $(LDADD)
+am_test_md5_OBJECTS = test_md5.$(OBJEXT) md5.$(OBJEXT)
+test_md5_OBJECTS = $(am_test_md5_OBJECTS)
+test_md5_LDADD = $(LDADD)
 am_test_options_OBJECTS = test_options.$(OBJEXT)
 test_options_OBJECTS = $(am_test_options_OBJECTS)
 test_options_DEPENDENCIES =  \
@@ -304,6 +310,9 @@ test_postprocessor_large_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(test_postprocessor_large_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
+am_test_sha256_OBJECTS = test_sha256.$(OBJEXT) sha256.$(OBJEXT)
+test_sha256_OBJECTS = $(am_test_sha256_OBJECTS)
+test_sha256_LDADD = $(LDADD)
 am_test_shutdown_poll_OBJECTS =  \
 	test_shutdown_poll-test_shutdown_select.$(OBJEXT)
 test_shutdown_poll_OBJECTS = $(am_test_shutdown_poll_OBJECTS)
@@ -409,13 +418,15 @@ am__depfiles_remade = ./$(DEPDIR)/libmicrohttpd_la-base64.Plo \
 	./$(DEPDIR)/libmicrohttpd_la-response.Plo \
 	./$(DEPDIR)/libmicrohttpd_la-sha256.Plo \
 	./$(DEPDIR)/libmicrohttpd_la-sysfdsetsize.Plo \
-	./$(DEPDIR)/libmicrohttpd_la-tsearch.Plo \
+	./$(DEPDIR)/libmicrohttpd_la-tsearch.Plo ./$(DEPDIR)/md5.Po \
 	./$(DEPDIR)/mhd_str.Po ./$(DEPDIR)/reason_phrase.Po \
-	./$(DEPDIR)/test_daemon.Po ./$(DEPDIR)/test_http_reasons.Po \
+	./$(DEPDIR)/sha256.Po ./$(DEPDIR)/test_daemon.Po \
+	./$(DEPDIR)/test_http_reasons.Po ./$(DEPDIR)/test_md5.Po \
 	./$(DEPDIR)/test_options.Po \
 	./$(DEPDIR)/test_postprocessor-test_postprocessor.Po \
 	./$(DEPDIR)/test_postprocessor_amp-test_postprocessor_amp.Po \
 	./$(DEPDIR)/test_postprocessor_large-test_postprocessor_large.Po \
+	./$(DEPDIR)/test_sha256.Po \
 	./$(DEPDIR)/test_shutdown_poll-test_shutdown_select.Po \
 	./$(DEPDIR)/test_shutdown_poll_ignore-test_shutdown_select.Po \
 	./$(DEPDIR)/test_shutdown_select-test_shutdown_select.Po \
@@ -444,10 +455,10 @@ am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = $(libmicrohttpd_la_SOURCES) $(test_daemon_SOURCES) \
-	$(test_http_reasons_SOURCES) $(test_options_SOURCES) \
-	$(test_postprocessor_SOURCES) \
+	$(test_http_reasons_SOURCES) $(test_md5_SOURCES) \
+	$(test_options_SOURCES) $(test_postprocessor_SOURCES) \
 	$(test_postprocessor_amp_SOURCES) \
-	$(test_postprocessor_large_SOURCES) \
+	$(test_postprocessor_large_SOURCES) $(test_sha256_SOURCES) \
 	$(test_shutdown_poll_SOURCES) \
 	$(test_shutdown_poll_ignore_SOURCES) \
 	$(test_shutdown_select_SOURCES) \
@@ -457,9 +468,10 @@ SOURCES = $(libmicrohttpd_la_SOURCES) $(test_daemon_SOURCES) \
 	$(test_upgrade_SOURCES) $(test_upgrade_tls_SOURCES)
 DIST_SOURCES = $(am__libmicrohttpd_la_SOURCES_DIST) \
 	$(test_daemon_SOURCES) $(test_http_reasons_SOURCES) \
-	$(test_options_SOURCES) $(test_postprocessor_SOURCES) \
+	$(test_md5_SOURCES) $(test_options_SOURCES) \
+	$(test_postprocessor_SOURCES) \
 	$(test_postprocessor_amp_SOURCES) \
-	$(test_postprocessor_large_SOURCES) \
+	$(test_postprocessor_large_SOURCES) $(test_sha256_SOURCES) \
 	$(test_shutdown_poll_SOURCES) \
 	$(test_shutdown_poll_ignore_SOURCES) \
 	$(test_shutdown_select_SOURCES) \
@@ -848,7 +860,6 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
-runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -1029,6 +1040,14 @@ test_http_reasons_SOURCES = \
   test_http_reasons.c \
   reason_phrase.c mhd_str.c mhd_str.h
 
+test_md5_SOURCES = \
+  test_md5.c test_helpers.h \
+  md5.c md5.h mhd_bithelpers.h
+
+test_sha256_SOURCES = \
+  test_sha256.c test_helpers.h \
+  sha256.c sha256.h mhd_bithelpers.h
+
 test_options_SOURCES = \
   test_options.c
 
@@ -1126,6 +1145,10 @@ test_http_reasons$(EXEEXT): $(test_http_reasons_OBJECTS) $(test_http_reasons_DEP
 	@rm -f test_http_reasons$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_http_reasons_OBJECTS) $(test_http_reasons_LDADD) $(LIBS)
 
+test_md5$(EXEEXT): $(test_md5_OBJECTS) $(test_md5_DEPENDENCIES) $(EXTRA_test_md5_DEPENDENCIES) 
+	@rm -f test_md5$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_md5_OBJECTS) $(test_md5_LDADD) $(LIBS)
+
 test_options$(EXEEXT): $(test_options_OBJECTS) $(test_options_DEPENDENCIES) $(EXTRA_test_options_DEPENDENCIES) 
 	@rm -f test_options$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_options_OBJECTS) $(test_options_LDADD) $(LIBS)
@@ -1141,6 +1164,10 @@ test_postprocessor_amp$(EXEEXT): $(test_postprocessor_amp_OBJECTS) $(test_postpr
 test_postprocessor_large$(EXEEXT): $(test_postprocessor_large_OBJECTS) $(test_postprocessor_large_DEPENDENCIES) $(EXTRA_test_postprocessor_large_DEPENDENCIES) 
 	@rm -f test_postprocessor_large$(EXEEXT)
 	$(AM_V_CCLD)$(test_postprocessor_large_LINK) $(test_postprocessor_large_OBJECTS) $(test_postprocessor_large_LDADD) $(LIBS)
+
+test_sha256$(EXEEXT): $(test_sha256_OBJECTS) $(test_sha256_DEPENDENCIES) $(EXTRA_test_sha256_DEPENDENCIES) 
+	@rm -f test_sha256$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_sha256_OBJECTS) $(test_sha256_LDADD) $(LIBS)
 
 test_shutdown_poll$(EXEEXT): $(test_shutdown_poll_OBJECTS) $(test_shutdown_poll_DEPENDENCIES) $(EXTRA_test_shutdown_poll_DEPENDENCIES) 
 	@rm -f test_shutdown_poll$(EXEEXT)
@@ -1209,14 +1236,18 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmicrohttpd_la-sha256.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmicrohttpd_la-sysfdsetsize.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmicrohttpd_la-tsearch.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/md5.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mhd_str.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/reason_phrase.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sha256.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_daemon.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_http_reasons.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_md5.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_options.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_postprocessor-test_postprocessor.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_postprocessor_amp-test_postprocessor_amp.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_postprocessor_large-test_postprocessor_large.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sha256.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_shutdown_poll-test_shutdown_select.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_shutdown_poll_ignore-test_shutdown_select.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_shutdown_select-test_shutdown_select.Po@am__quote@ # am--include-marker
@@ -1757,6 +1788,20 @@ test_http_reasons.log: test_http_reasons$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_md5.log: test_md5$(EXEEXT)
+	@p='test_md5$(EXEEXT)'; \
+	b='test_md5'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_sha256.log: test_sha256$(EXEEXT)
+	@p='test_sha256$(EXEEXT)'; \
+	b='test_sha256'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test_start_stop.log: test_start_stop$(EXEEXT)
 	@p='test_start_stop$(EXEEXT)'; \
 	b='test_start_stop'; \
@@ -1959,14 +2004,18 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/libmicrohttpd_la-sha256.Plo
 	-rm -f ./$(DEPDIR)/libmicrohttpd_la-sysfdsetsize.Plo
 	-rm -f ./$(DEPDIR)/libmicrohttpd_la-tsearch.Plo
+	-rm -f ./$(DEPDIR)/md5.Po
 	-rm -f ./$(DEPDIR)/mhd_str.Po
 	-rm -f ./$(DEPDIR)/reason_phrase.Po
+	-rm -f ./$(DEPDIR)/sha256.Po
 	-rm -f ./$(DEPDIR)/test_daemon.Po
 	-rm -f ./$(DEPDIR)/test_http_reasons.Po
+	-rm -f ./$(DEPDIR)/test_md5.Po
 	-rm -f ./$(DEPDIR)/test_options.Po
 	-rm -f ./$(DEPDIR)/test_postprocessor-test_postprocessor.Po
 	-rm -f ./$(DEPDIR)/test_postprocessor_amp-test_postprocessor_amp.Po
 	-rm -f ./$(DEPDIR)/test_postprocessor_large-test_postprocessor_large.Po
+	-rm -f ./$(DEPDIR)/test_sha256.Po
 	-rm -f ./$(DEPDIR)/test_shutdown_poll-test_shutdown_select.Po
 	-rm -f ./$(DEPDIR)/test_shutdown_poll_ignore-test_shutdown_select.Po
 	-rm -f ./$(DEPDIR)/test_shutdown_select-test_shutdown_select.Po
@@ -2042,14 +2091,18 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/libmicrohttpd_la-sha256.Plo
 	-rm -f ./$(DEPDIR)/libmicrohttpd_la-sysfdsetsize.Plo
 	-rm -f ./$(DEPDIR)/libmicrohttpd_la-tsearch.Plo
+	-rm -f ./$(DEPDIR)/md5.Po
 	-rm -f ./$(DEPDIR)/mhd_str.Po
 	-rm -f ./$(DEPDIR)/reason_phrase.Po
+	-rm -f ./$(DEPDIR)/sha256.Po
 	-rm -f ./$(DEPDIR)/test_daemon.Po
 	-rm -f ./$(DEPDIR)/test_http_reasons.Po
+	-rm -f ./$(DEPDIR)/test_md5.Po
 	-rm -f ./$(DEPDIR)/test_options.Po
 	-rm -f ./$(DEPDIR)/test_postprocessor-test_postprocessor.Po
 	-rm -f ./$(DEPDIR)/test_postprocessor_amp-test_postprocessor_amp.Po
 	-rm -f ./$(DEPDIR)/test_postprocessor_large-test_postprocessor_large.Po
+	-rm -f ./$(DEPDIR)/test_sha256.Po
 	-rm -f ./$(DEPDIR)/test_shutdown_poll-test_shutdown_select.Po
 	-rm -f ./$(DEPDIR)/test_shutdown_poll_ignore-test_shutdown_select.Po
 	-rm -f ./$(DEPDIR)/test_shutdown_select-test_shutdown_select.Po

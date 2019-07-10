@@ -201,7 +201,7 @@ do_get (const char *url, int port)
 
   c = curl_easy_init ();
 #if DEBUG_HTTPS_TEST
-  curl_easy_setopt (c, CURLOPT_VERBOSE, 1);
+  curl_easy_setopt (c, CURLOPT_VERBOSE, 1L);
 #endif
   curl_easy_setopt (c, CURLOPT_URL, url);
   curl_easy_setopt (c, CURLOPT_PORT, (long)port);
@@ -213,19 +213,19 @@ do_get (const char *url, int port)
 
   /* perform peer authentication */
   /* TODO merge into send_curl_req */
-  curl_easy_setopt (c, CURLOPT_SSL_VERIFYPEER, 0);
-  curl_easy_setopt (c, CURLOPT_SSL_VERIFYHOST, 2);
+  curl_easy_setopt (c, CURLOPT_SSL_VERIFYPEER, 0L);
+  curl_easy_setopt (c, CURLOPT_SSL_VERIFYHOST, 2L);
   sprintf(buf, "host1:%d:127.0.0.1", port);
   dns_info = curl_slist_append (NULL, buf);
   sprintf(buf, "host2:%d:127.0.0.1", port);
   dns_info = curl_slist_append (dns_info, buf);
   curl_easy_setopt (c, CURLOPT_RESOLVE, dns_info);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
 
   /* NOTE: use of CONNECTTIMEOUT without also
      setting NOSIGNAL results in really weird
      crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
     {
       fprintf (stderr, "curl_easy_perform failed: `%s'\n",

@@ -90,6 +90,7 @@ build_triplet = @build@
 host_triplet = @host@
 @ENABLE_HTTPS_TRUE@am__append_1 = https
 @HAVE_POSIX_THREADS_TRUE@am__append_2 = \
+@HAVE_POSIX_THREADS_TRUE@  perf_get_concurrent11 \
 @HAVE_POSIX_THREADS_TRUE@  test_quiesce \
 @HAVE_POSIX_THREADS_TRUE@  test_concurrent_stop \
 @HAVE_POSIX_THREADS_TRUE@  perf_get_concurrent
@@ -150,6 +151,7 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ac_define_dir.m4 \
 	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
 	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
 	$(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/mhd_check_func.m4 \
 	$(top_srcdir)/m4/mhd_shutdown_socket_trigger.m4 \
 	$(top_srcdir)/m4/mhd_sys_extentions.m4 $(top_srcdir)/m4/nls.m4 \
 	$(top_srcdir)/m4/pkg.m4 $(top_srcdir)/m4/po.m4 \
@@ -171,7 +173,9 @@ CONFIG_CLEAN_VPATH_FILES =
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@	test_postform11$(EXEEXT) \
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@	test_post_loop11$(EXEEXT)
 @HAVE_CURL_BINARY_TRUE@@HAVE_CURL_TRUE@@HAVE_FORK_WAITPID_TRUE@am__EXEEXT_2 = test_get_response_cleanup$(EXEEXT)
-@HAVE_POSIX_THREADS_TRUE@am__EXEEXT_3 = test_quiesce$(EXEEXT) \
+@HAVE_POSIX_THREADS_TRUE@am__EXEEXT_3 =  \
+@HAVE_POSIX_THREADS_TRUE@	perf_get_concurrent11$(EXEEXT) \
+@HAVE_POSIX_THREADS_TRUE@	test_quiesce$(EXEEXT) \
 @HAVE_POSIX_THREADS_TRUE@	test_concurrent_stop$(EXEEXT) \
 @HAVE_POSIX_THREADS_TRUE@	perf_get_concurrent$(EXEEXT)
 @HAVE_CURL_BINARY_TRUE@@HAVE_POSIX_THREADS_TRUE@am__EXEEXT_4 = test_quiesce_stream$(EXEEXT)
@@ -214,6 +218,16 @@ perf_get_concurrent_DEPENDENCIES =  \
 perf_get_concurrent_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(perf_get_concurrent_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
+am_perf_get_concurrent11_OBJECTS =  \
+	perf_get_concurrent11-perf_get_concurrent.$(OBJEXT)
+perf_get_concurrent11_OBJECTS = $(am_perf_get_concurrent11_OBJECTS)
+perf_get_concurrent11_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la \
+	$(am__DEPENDENCIES_1)
+perf_get_concurrent11_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(perf_get_concurrent11_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 am_test_callback_OBJECTS = test_callback.$(OBJEXT)
 test_callback_OBJECTS = $(am_test_callback_OBJECTS)
@@ -393,6 +407,7 @@ am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/curl_version_check.Po \
 	./$(DEPDIR)/perf_get.Po \
 	./$(DEPDIR)/perf_get_concurrent-perf_get_concurrent.Po \
+	./$(DEPDIR)/perf_get_concurrent11-perf_get_concurrent.Po \
 	./$(DEPDIR)/test_callback.Po \
 	./$(DEPDIR)/test_concurrent_stop-test_concurrent_stop.Po \
 	./$(DEPDIR)/test_delete.Po ./$(DEPDIR)/test_digestauth.Po \
@@ -431,7 +446,8 @@ am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = $(libcurl_version_check_a_SOURCES) $(perf_get_SOURCES) \
-	$(perf_get_concurrent_SOURCES) $(test_callback_SOURCES) \
+	$(perf_get_concurrent_SOURCES) \
+	$(perf_get_concurrent11_SOURCES) $(test_callback_SOURCES) \
 	$(test_concurrent_stop_SOURCES) $(test_delete_SOURCES) \
 	$(test_digestauth_SOURCES) $(test_digestauth_sha256_SOURCES) \
 	$(test_digestauth_with_arguments_SOURCES) $(test_get_SOURCES) \
@@ -451,7 +467,8 @@ SOURCES = $(libcurl_version_check_a_SOURCES) $(perf_get_SOURCES) \
 	$(test_termination_SOURCES) $(test_timeout_SOURCES) \
 	$(test_urlparse_SOURCES)
 DIST_SOURCES = $(libcurl_version_check_a_SOURCES) $(perf_get_SOURCES) \
-	$(perf_get_concurrent_SOURCES) $(test_callback_SOURCES) \
+	$(perf_get_concurrent_SOURCES) \
+	$(perf_get_concurrent11_SOURCES) $(test_callback_SOURCES) \
 	$(test_concurrent_stop_SOURCES) $(test_delete_SOURCES) \
 	$(test_digestauth_SOURCES) $(test_digestauth_sha256_SOURCES) \
 	$(test_digestauth_with_arguments_SOURCES) $(test_get_SOURCES) \
@@ -917,7 +934,6 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
-runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -991,7 +1007,7 @@ test_callback_LDADD = \
 
 perf_get_SOURCES = \
   perf_get.c \
-  gauger.h
+  gauger.h mhd_has_in_name.h
 
 perf_get_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
@@ -999,12 +1015,23 @@ perf_get_LDADD = \
 
 perf_get_concurrent_SOURCES = \
   perf_get_concurrent.c \
-  gauger.h
+  gauger.h mhd_has_in_name.h
 
 perf_get_concurrent_CFLAGS = \
   $(PTHREAD_CFLAGS) $(AM_CFLAGS)
 
 perf_get_concurrent_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  $(PTHREAD_LIBS) @LIBCURL@
+
+perf_get_concurrent11_SOURCES = \
+  perf_get_concurrent.c \
+  gauger.h mhd_has_in_name.h
+
+perf_get_concurrent11_CFLAGS = \
+  $(PTHREAD_CFLAGS) $(AM_CFLAGS)
+
+perf_get_concurrent11_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   $(PTHREAD_LIBS) @LIBCURL@
 
@@ -1030,21 +1057,21 @@ test_digestauth_with_arguments_LDADD = \
   @LIBGCRYPT_LIBS@ @LIBCURL@
 
 test_get_sendfile_SOURCES = \
-  test_get_sendfile.c
+  test_get_sendfile.c mhd_has_in_name.h
 
 test_get_sendfile_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBCURL@
 
 test_urlparse_SOURCES = \
-  test_urlparse.c
+  test_urlparse.c mhd_has_in_name.h
 
 test_urlparse_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBCURL@
 
 test_get_response_cleanup_SOURCES = \
-  test_get_response_cleanup.c
+  test_get_response_cleanup.c mhd_has_in_name.h
 
 test_get_response_cleanup_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la
@@ -1057,56 +1084,56 @@ test_get_chunked_LDADD = \
   @LIBCURL@
 
 test_post_SOURCES = \
-  test_post.c
+  test_post.c mhd_has_in_name.h
 
 test_post_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBCURL@
 
 test_process_headers_SOURCES = \
-  test_process_headers.c
+  test_process_headers.c mhd_has_in_name.h
 
 test_process_headers_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBCURL@
 
 test_parse_cookies_SOURCES = \
-  test_parse_cookies.c
+  test_parse_cookies.c mhd_has_in_name.h
 
 test_parse_cookies_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBCURL@
 
 test_process_arguments_SOURCES = \
-  test_process_arguments.c
+  test_process_arguments.c mhd_has_in_name.h
 
 test_process_arguments_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBCURL@
 
 test_postform_SOURCES = \
-  test_postform.c
+  test_postform.c mhd_has_in_name.h
 
 test_postform_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBGCRYPT_LIBS@ @LIBCURL@
 
 test_post_loop_SOURCES = \
-  test_post_loop.c
+  test_post_loop.c mhd_has_in_name.h
 
 test_post_loop_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBCURL@
 
 test_delete_SOURCES = \
-  test_delete.c
+  test_delete.c mhd_has_in_name.h
 
 test_delete_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBCURL@
 
 test_put_SOURCES = \
-  test_put.c
+  test_put.c mhd_has_in_name.h
 
 test_put_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
@@ -1127,35 +1154,35 @@ test_get11_LDADD = \
   @LIBCURL@
 
 test_get_sendfile11_SOURCES = \
-  test_get_sendfile.c
+  test_get_sendfile.c mhd_has_in_name.h
 
 test_get_sendfile11_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBCURL@
 
 test_post11_SOURCES = \
-  test_post.c
+  test_post.c mhd_has_in_name.h
 
 test_post11_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBCURL@
 
 test_postform11_SOURCES = \
-  test_postform.c
+  test_postform.c mhd_has_in_name.h
 
 test_postform11_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBGCRYPT_LIBS@ @LIBCURL@
 
 test_post_loop11_SOURCES = \
-  test_post_loop.c
+  test_post_loop.c mhd_has_in_name.h
 
 test_post_loop11_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBCURL@
 
 test_put11_SOURCES = \
-  test_put.c
+  test_put.c mhd_has_in_name.h
 
 test_put11_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
@@ -1183,21 +1210,21 @@ test_large_put_inc11_LDADD = \
   @LIBCURL@
 
 test_long_header_SOURCES = \
-  test_long_header.c
+  test_long_header.c mhd_has_in_name.h
 
 test_long_header_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBCURL@
 
 test_long_header11_SOURCES = \
-  test_long_header.c
+  test_long_header.c mhd_has_in_name.h
 
 test_long_header11_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBCURL@
 
 test_iplimit11_SOURCES = \
-  test_iplimit.c
+  test_iplimit.c mhd_has_in_name.h
 
 test_iplimit11_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
@@ -1211,7 +1238,7 @@ test_termination_LDADD = \
   @LIBCURL@
 
 test_timeout_SOURCES = \
-  test_timeout.c
+  test_timeout.c mhd_has_in_name.h
 
 test_timeout_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
@@ -1275,6 +1302,10 @@ perf_get$(EXEEXT): $(perf_get_OBJECTS) $(perf_get_DEPENDENCIES) $(EXTRA_perf_get
 perf_get_concurrent$(EXEEXT): $(perf_get_concurrent_OBJECTS) $(perf_get_concurrent_DEPENDENCIES) $(EXTRA_perf_get_concurrent_DEPENDENCIES) 
 	@rm -f perf_get_concurrent$(EXEEXT)
 	$(AM_V_CCLD)$(perf_get_concurrent_LINK) $(perf_get_concurrent_OBJECTS) $(perf_get_concurrent_LDADD) $(LIBS)
+
+perf_get_concurrent11$(EXEEXT): $(perf_get_concurrent11_OBJECTS) $(perf_get_concurrent11_DEPENDENCIES) $(EXTRA_perf_get_concurrent11_DEPENDENCIES) 
+	@rm -f perf_get_concurrent11$(EXEEXT)
+	$(AM_V_CCLD)$(perf_get_concurrent11_LINK) $(perf_get_concurrent11_OBJECTS) $(perf_get_concurrent11_LDADD) $(LIBS)
 
 test_callback$(EXEEXT): $(test_callback_OBJECTS) $(test_callback_DEPENDENCIES) $(EXTRA_test_callback_DEPENDENCIES) 
 	@rm -f test_callback$(EXEEXT)
@@ -1425,6 +1456,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/curl_version_check.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/perf_get.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/perf_get_concurrent-perf_get_concurrent.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/perf_get_concurrent11-perf_get_concurrent.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_callback.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_concurrent_stop-test_concurrent_stop.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_delete.Po@am__quote@ # am--include-marker
@@ -1495,6 +1527,20 @@ perf_get_concurrent-perf_get_concurrent.obj: perf_get_concurrent.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='perf_get_concurrent.c' object='perf_get_concurrent-perf_get_concurrent.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(perf_get_concurrent_CFLAGS) $(CFLAGS) -c -o perf_get_concurrent-perf_get_concurrent.obj `if test -f 'perf_get_concurrent.c'; then $(CYGPATH_W) 'perf_get_concurrent.c'; else $(CYGPATH_W) '$(srcdir)/perf_get_concurrent.c'; fi`
+
+perf_get_concurrent11-perf_get_concurrent.o: perf_get_concurrent.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(perf_get_concurrent11_CFLAGS) $(CFLAGS) -MT perf_get_concurrent11-perf_get_concurrent.o -MD -MP -MF $(DEPDIR)/perf_get_concurrent11-perf_get_concurrent.Tpo -c -o perf_get_concurrent11-perf_get_concurrent.o `test -f 'perf_get_concurrent.c' || echo '$(srcdir)/'`perf_get_concurrent.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/perf_get_concurrent11-perf_get_concurrent.Tpo $(DEPDIR)/perf_get_concurrent11-perf_get_concurrent.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='perf_get_concurrent.c' object='perf_get_concurrent11-perf_get_concurrent.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(perf_get_concurrent11_CFLAGS) $(CFLAGS) -c -o perf_get_concurrent11-perf_get_concurrent.o `test -f 'perf_get_concurrent.c' || echo '$(srcdir)/'`perf_get_concurrent.c
+
+perf_get_concurrent11-perf_get_concurrent.obj: perf_get_concurrent.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(perf_get_concurrent11_CFLAGS) $(CFLAGS) -MT perf_get_concurrent11-perf_get_concurrent.obj -MD -MP -MF $(DEPDIR)/perf_get_concurrent11-perf_get_concurrent.Tpo -c -o perf_get_concurrent11-perf_get_concurrent.obj `if test -f 'perf_get_concurrent.c'; then $(CYGPATH_W) 'perf_get_concurrent.c'; else $(CYGPATH_W) '$(srcdir)/perf_get_concurrent.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/perf_get_concurrent11-perf_get_concurrent.Tpo $(DEPDIR)/perf_get_concurrent11-perf_get_concurrent.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='perf_get_concurrent.c' object='perf_get_concurrent11-perf_get_concurrent.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(perf_get_concurrent11_CFLAGS) $(CFLAGS) -c -o perf_get_concurrent11-perf_get_concurrent.obj `if test -f 'perf_get_concurrent.c'; then $(CYGPATH_W) 'perf_get_concurrent.c'; else $(CYGPATH_W) '$(srcdir)/perf_get_concurrent.c'; fi`
 
 test_concurrent_stop-test_concurrent_stop.o: test_concurrent_stop.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_concurrent_stop_CFLAGS) $(CFLAGS) -MT test_concurrent_stop-test_concurrent_stop.o -MD -MP -MF $(DEPDIR)/test_concurrent_stop-test_concurrent_stop.Tpo -c -o test_concurrent_stop-test_concurrent_stop.o `test -f 'test_concurrent_stop.c' || echo '$(srcdir)/'`test_concurrent_stop.c
@@ -1994,6 +2040,13 @@ test_timeout.log: test_timeout$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+perf_get_concurrent11.log: perf_get_concurrent11$(EXEEXT)
+	@p='perf_get_concurrent11$(EXEEXT)'; \
+	b='perf_get_concurrent11'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test_quiesce.log: test_quiesce$(EXEEXT)
 	@p='test_quiesce$(EXEEXT)'; \
 	b='test_quiesce'; \
@@ -2165,6 +2218,7 @@ distclean: distclean-recursive
 		-rm -f ./$(DEPDIR)/curl_version_check.Po
 	-rm -f ./$(DEPDIR)/perf_get.Po
 	-rm -f ./$(DEPDIR)/perf_get_concurrent-perf_get_concurrent.Po
+	-rm -f ./$(DEPDIR)/perf_get_concurrent11-perf_get_concurrent.Po
 	-rm -f ./$(DEPDIR)/test_callback.Po
 	-rm -f ./$(DEPDIR)/test_concurrent_stop-test_concurrent_stop.Po
 	-rm -f ./$(DEPDIR)/test_delete.Po
@@ -2239,6 +2293,7 @@ maintainer-clean: maintainer-clean-recursive
 		-rm -f ./$(DEPDIR)/curl_version_check.Po
 	-rm -f ./$(DEPDIR)/perf_get.Po
 	-rm -f ./$(DEPDIR)/perf_get_concurrent-perf_get_concurrent.Po
+	-rm -f ./$(DEPDIR)/perf_get_concurrent11-perf_get_concurrent.Po
 	-rm -f ./$(DEPDIR)/test_callback.Po
 	-rm -f ./$(DEPDIR)/test_concurrent_stop-test_concurrent_stop.Po
 	-rm -f ./$(DEPDIR)/test_delete.Po

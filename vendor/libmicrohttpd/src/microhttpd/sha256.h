@@ -1,85 +1,93 @@
-/* sha256.h
+/*
+     This file is part of libmicrohttpd
+     Copyright (C) 2019 Karlson2k (Evgeny Grin)
 
-   The sha256 hash function.
+     This library is free software; you can redistribute it and/or
+     modify it under the terms of the GNU Lesser General Public
+     License as published by the Free Software Foundation; either
+     version 2.1 of the License, or (at your option) any later version.
 
-   Copyright (C) 2001, 2012 Niels Möller
-   Copyright (C) 2018 Christian Grothoff (extraction of minimal subset
-     from GNU Nettle to work with GNU libmicrohttpd)
+     This library is distributed in the hope that it will be useful,
+     but WITHOUT ANY WARRANTY; without even the implied warranty of
+     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+     Lesser General Public License for more details.
 
-   This file is part of GNU Nettle.
-
-   GNU Nettle is free software: you can redistribute it and/or
-   modify it under the terms of either:
-
-     * the GNU Lesser General Public License as published by the Free
-       Software Foundation; either version 3 of the License, or (at your
-       option) any later version.
-
-   or
-
-     * the GNU General Public License as published by the Free
-       Software Foundation; either version 2 of the License, or (at your
-       option) any later version.
-
-   or both in parallel, as here.
-
-   GNU Nettle is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-   General Public License for more details.
-
-   You should have received copies of the GNU General Public License and
-   the GNU Lesser General Public License along with this program.  If
-   not, see http://www.gnu.org/licenses/.
+     You should have received a copy of the GNU Lesser General Public
+     License along with this library.
+     If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef NETTLE_SHA2_H_INCLUDED
-#define NETTLE_SHA2_H_INCLUDED
+/**
+ * @file microhttpd/sha256.h
+ * @brief  Calculation of SHA-256 digest
+ * @author Karlson2k (Evgeny Grin)
+ */
 
-#define SHA256_DIGEST_SIZE 32
+#ifndef MHD_SHA256_H
+#define MHD_SHA256_H 1
+
+#include "mhd_options.h"
+#include <stdint.h>
+#include <stddef.h>
+
+/**
+ *  Digest is kept internally as 8 32-bit words.
+ */
+#define _SHA256_DIGEST_LENGTH 8
+
+/**
+ * Size of SHA-256 digest in bytes
+ */
+#define SHA256_DIGEST_SIZE (_SHA256_DIGEST_LENGTH * 4)
+
+/**
+ * Size of SHA-256 digest string in chars
+ */
+#define SHA256_DIGEST_STRING_SIZE ((SHA256_DIGEST_SIZE) * 2 + 1)
+
+/**
+ * Size of single processing block in bytes
+ */
 #define SHA256_BLOCK_SIZE 64
 
-/* Digest is kept internally as 8 32-bit words. */
-#define _SHA256_DIGEST_LENGTH 8
 
 struct sha256_ctx
 {
-  uint32_t state[_SHA256_DIGEST_LENGTH];    /* State variables */
-  uint64_t count;                           /* 64-bit block count */
-  uint8_t block[SHA256_BLOCK_SIZE];          /* SHA256 data buffer */
-  unsigned int index;                       /* index into buffer */
+  uint32_t H[_SHA256_DIGEST_LENGTH];    /**< Intermediate hash value / digest at end of calculation */
+  uint64_t count;                       /**< number of bytes, mod 2^64 */
+  uint8_t buffer[SHA256_BLOCK_SIZE];     /**< SHA256 input data buffer */
 };
 
-
 /**
- * Start SHA256 calculation.
+ * Initialise structure for SHA256 calculation.
  *
  * @param ctx_ must be a `struct sha256_ctx *`
  */
 void
-sha256_init (void *ctx_);
+MHD_SHA256_init (void *ctx_);
 
 
 /**
- * Update hash calculation.
+ * Process portion of bytes.
  *
  * @param ctx_ must be a `struct sha256_ctx *`
- * @param length number of bytes in @a data
  * @param data bytes to add to hash
+ * @param length number of bytes in @a data
  */
 void
-sha256_update (void *ctx_,
+MHD_SHA256_update (void *ctx_,
                const uint8_t *data,
                size_t length);
 
+
 /**
- * Complete SHA256 calculation.
+ * Finalise SHA256 calculation, return digest.
  *
  * @param ctx_ must be a `struct sha256_ctx *`
- * @param digest[out] set to the hash, must be #SHA256_DIGEST_SIZE bytes
+ * @param[out] digest set to the hash, must be #SHA256_DIGEST_SIZE bytes
  */
 void
-sha256_digest (void *ctx_,
+sha256_finish (void *ctx_,
                uint8_t digest[SHA256_DIGEST_SIZE]);
 
-#endif /* NETTLE_SHA2_H_INCLUDED */
+#endif /* MHD_SHA256_H */

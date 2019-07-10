@@ -1,3 +1,138 @@
+Fri Jul 05 2019 22:30:40 MSK
+	Releasing libmicrohttpd 0.9.65. -EG
+
+Sun Jun 23 2019 21:27:43 MSK
+	Many fixes and improvements for connection-specific memory pool:
+	* Added asserts;
+	* Added testing of reallocation;
+	* Reallocation code rewritten to avoid extra allocation, when
+	  possible to reuse already allocated memory;
+	* Large memory pools aligned to system page size;
+	* Large memory pools on W32 are cleared more securely after use,
+	  optimised usage of system memory.
+	Better handled connection's memory shortage situations:
+	* error response could be sent to client even if all buffer space
+	  was used;
+	* if buffer space become low when receiving, do not allocate last
+	  buffer space and use small receive blocks instead.
+	Improved sending speed by using all available buffer space for
+	sending. -EG
+
+Sun Jun 09 2019 20:27:04 MSK
+	Releasing libmicrohttpd 0.9.64. -EG
+
+Sun Jun 09 2019 20:03:16 MSK
+	Updated HTTP headers, methods and status codes from registries,
+	Added scripts to import new headers, methods and status codes from
+	registries,
+	Minor doxyget comment fix,
+	Added missing MSVS project files to tarball.
+	Reodered includes in microhttpd.h -EG
+
+Mon 03 Jun 2019 11:45:52 PM CEST
+	Apply MHD_-prefix to hash functions, even if they are not in the
+	officially exported API. -CG/DB
+
+Sun Jun 02 01:52:11 MSK 2019
+	Support usage of SOCK_NOSIGPIPE on Solaris 11.4 and NetBSD 7+,
+	finally avoid SIGPIPE on Solaris. -EG
+
+Sat Jun 01 22:51:50 MSK 2019
+	Do not report errors if AF_UNIX socket is used on *BSD. -EG
+
+Thu May 30 23:32:09 MSK 2019
+	Improved detection of 'getsockname()' in configure.
+	Avoided using 'getsockname()' in code if not detected. -EG
+
+Sun May 26 23:32:49 MSK 2019
+	Fixed some tests on W32. -EG
+
+Sun May 26 23:05:42 MSK 2019
+	Better detection of sockaddr member in configure, fixed build on *BSD,
+	Fixed compiler warnings,
+	Updated and fixed libcurl tests. -EG
+
+Tue May 21 22:12:43 MSK 2019
+	Fixed doxygen comments,
+	Avoid dropping 'const' qualifier in macros,
+	Fixed some compiler warnings,
+	Properly support automatic port detections on some platforms,
+	Added checks for too long TLS parameters strings. -EG
+
+Tue May 21 17:52:48 MSK 2019
+	Spelling fixes. -EG
+
+Mon May 20 15:39:35 MSK 2019
+	Compiler warning fixes. -EG/CG
+	Fixed example for non-64bits platforms. -EG
+
+Web May 15 23:51:49 MSK 2019
+	Optimized and improved processing speed by using precalculated and
+	already calculated lengths of strings. -EG
+
+Web May 15 14:54:00 MSK 2019
+	Fixed build from source on GNU Hurd. -EG
+
+Mon May  6 11:58:00 MSK 2019
+	Updated README and COPYING files. MHD remains LGPLv2.1-licensed. -EG
+
+Fri May  3 20:08:00 MSK 2019
+	Store connection's keys and values with sizes;
+	Speedup keys search be comparing key length first;
+	Added functions for working with keys and values with binary zeros;
+	Fixed test_postprocessor_amp to fail on problems. -EG
+
+Wed May  1 16:40:00 MSK 2019
+	Reverted change of MHD_KeyValueIterator, implemented MHD_KeyValueIteratorN
+	with sizes for connection's key and value to get keys and values
+	with binary zeros. -EG
+
+Mon 29 Apr 2019 01:26:39 AM BRT
+	Fixed signed/unsigned comparison in example http_chunked_compression.c. -SC/TR
+
+Sun Apr 21 16:40:00 MSK 2019
+	Improved compatibility with MSVC compilers;
+	Fixed MHD compilation by Clang/LLVM in VS;
+	Used MSVC intrinsics for bit rotations and bytes swap;
+	Added project files for VS2019. -EG
+
+Fri Apr 19 23:00:00 MSK 2019
+	Rewritten SHA-256 calculations from scratch to avoid changing LGPL version;
+	Added usage of GCC/Clang built-ins for bytes swap to significantly improve 
+	speed of MD5 and SHA-256 calculation on platforms with known endianness.
+	Added test for SHA-256 calculations. -EG
+
+Wed Apr 17 20:52:00 MSK 2019
+	Refactoring of mhd5.c: optimized, dead code removed;
+	Faster MD5 calculation on little endian platforms;
+	Bit manipulations moved to separate header file.
+	Added tests for MD5 calculations. -EG
+
+Mon 15 Apr 2019 05:33:52 PM CEST
+	Add MHD_USE_POST_HANDSHAKE_AUTH_SUPPORT and
+	MHD_USE_INSECURE_TLS_EARLY_DATA flags. -CG
+
+Thu Apr 11 11:37:00 MSK 2019
+	Fixed MSVC 'Release' builds;
+	Fixed usage of MSVC's assert. -EG
+
+Wed Apr 10 14:31:00 MSK 2019
+	Improved shell compatibility for 'bootstrap', removed bash-ism.
+	Added wrapper script 'autogen.sh'. -EG
+
+Mon 08 Apr 2019 03:06:05 PM CEST
+	Fix close() checks as suggested by MK on the mailinglist
+        (#3926). -MK/CG
+
+Wed 20 Mar 2019 10:20:24 AM CET
+	Adding additional "value_length" argument to MHD_KeyValueIterator
+	callback to support binary zeros in values.  This is done in a
+	backwards-compatible way, but may require adding a cast to existing
+	code to avoid a compiler warning. -CG
+
+Sun Feb 10 21:00:37 BRT 2019
+	Added example for how to compress a chunked HTTP response. -SC
+
 Sun 10 Feb 2019 05:03:44 PM CET
 	Releasing libmicrohttpd 0.9.63. -CG
 

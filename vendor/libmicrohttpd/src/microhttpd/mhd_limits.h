@@ -108,7 +108,7 @@
 #elif defined(INTPTR_MAX)
 #define SSIZE_MAX INTPTR_MAX
 #else
-#define SSIZE_MAN MHD_SIGNED_TYPE_MAX_(ssize_t)
+#define SSIZE_MAX MHD_SIGNED_TYPE_MAX_(ssize_t)
 #endif
 #endif /* ! SSIZE_MAX */
 
@@ -142,13 +142,5 @@
 #define TIMEVAL_TV_SEC_MAX LONG_MAX
 #endif /* _WIN32 */
 #endif /* !TIMEVAL_TV_SEC_MAX */
-
-#ifndef MHD_FD_BLOCK_SIZE
-#ifdef _WIN32
-#define MHD_FD_BLOCK_SIZE 16384 /* 16k */
-#else /* _WIN32 */
-#define MHD_FD_BLOCK_SIZE 4096 /* 4k */
-#endif /* _WIN32 */
-#endif /* !MHD_FD_BLOCK_SIZE */
 
 #endif /* MHD_LIMITS_H */

@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "mhd_has_in_name.h"
 
 #ifndef WINDOWS
 #include <unistd.h>
@@ -41,7 +42,7 @@
  * half of this value, so the actual value does not have
  * to be big at all...
  */
-#define VERY_LONG (1024*10)
+#define VERY_LONG (1024*8)
 
 static int oneone;
 
@@ -93,7 +94,7 @@ ahc_echo (void *cls,
 
 
 static int
-testLongUrlGet ()
+testLongUrlGet (size_t buff_size)
 {
   struct MHD_Daemon *d;
   CURL *c;
@@ -107,7 +108,7 @@ testLongUrlGet ()
     port = 0;
   else
     {
-      port = 1330;
+      port = 1330 + buff_size % 20;
       if (oneone)
         port += 5;
     }
@@ -121,7 +122,7 @@ testLongUrlGet ()
                         &ahc_echo,
                         "GET",
                         MHD_OPTION_CONNECTION_MEMORY_LIMIT,
-                        (size_t) (VERY_LONG / 2), MHD_OPTION_END);
+                        (size_t) buff_size, MHD_OPTION_END);
   if (d == NULL)
     return 1;
   if (0 == port)
@@ -146,7 +147,7 @@ testLongUrlGet ()
   curl_easy_setopt (c, CURLOPT_PORT, (long)port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
   curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
   curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
   if (oneone)
@@ -156,7 +157,7 @@ testLongUrlGet ()
   /* NOTE: use of CONNECTTIMEOUT without also
      setting NOSIGNAL results in really weird
      crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK == curl_easy_perform (c))
     {
       curl_easy_cleanup (c);
@@ -181,7 +182,7 @@ testLongUrlGet ()
 
 
 static int
-testLongHeaderGet ()
+testLongHeaderGet (size_t buff_size)
 {
   struct MHD_Daemon *d;
   CURL *c;
@@ -196,7 +197,7 @@ testLongHeaderGet ()
     port = 0;
   else
     {
-      port = 1331;
+      port = 1331 + buff_size % 20;
       if (oneone)
         port += 5;
     }
@@ -211,7 +212,7 @@ testLongHeaderGet ()
                         &ahc_echo,
                         "GET",
                         MHD_OPTION_CONNECTION_MEMORY_LIMIT,
-                        (size_t) (VERY_LONG / 2), MHD_OPTION_END);
+                        (size_t) buff_size, MHD_OPTION_END);
   if (d == NULL)
     return 16;
   if (0 == port)
@@ -240,7 +241,7 @@ testLongHeaderGet ()
   curl_easy_setopt (c, CURLOPT_PORT, (long)port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
   curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
   curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
   if (oneone)
@@ -250,7 +251,7 @@ testLongHeaderGet ()
   /* NOTE: use of CONNECTTIMEOUT without also
      setting NOSIGNAL results in really weird
      crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK == curl_easy_perform (c))
     {
       curl_easy_cleanup (c);
@@ -282,12 +283,15 @@ main (int argc, char *const *argv)
   unsigned int errorCount = 0;
   (void)argc;   /* Unused. Silent compiler warning. */
 
-  oneone = (NULL != strrchr (argv[0], (int) '/')) ?
-    (NULL != strstr (strrchr (argv[0], (int) '/'), "11")) : 0;
+  if (NULL == argv || 0 == argv[0])
+    return 99;
+  oneone = has_in_name (argv[0], "11");
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 2;
-  errorCount += testLongUrlGet ();
-  errorCount += testLongHeaderGet ();
+  errorCount += testLongUrlGet (VERY_LONG / 2);
+  errorCount += testLongUrlGet (VERY_LONG / 2 + 978);
+  errorCount += testLongHeaderGet (VERY_LONG / 2);
+  errorCount += testLongHeaderGet (VERY_LONG / 2 + 1893);
   if (errorCount != 0)
     fprintf (stderr, "Error (code: %u)\n", errorCount);
   curl_global_cleanup ();

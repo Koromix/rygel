@@ -38,8 +38,9 @@ static ssize_t
 called_twice(void *cls, uint64_t pos, char *buf, size_t max)
 {
   struct callback_closure *cls2 = cls;
-  (void)pos;    /* Unused. Silent compiler warning. */
 
+  (void) pos;    /* Unused. Silence compiler warning. */
+  (void) max;
   if (cls2->called == 0)
     {
       memcpy(buf, "test", 5);
@@ -157,11 +158,11 @@ main(int argc, char **argv)
   curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/");
   curl_easy_setopt (c, CURLOPT_PORT, (long)port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &discard_buffer);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
   curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
   curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
   curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   multi = curl_multi_init ();
   if (multi == NULL)
     {

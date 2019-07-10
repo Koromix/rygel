@@ -288,10 +288,12 @@ MHD_create_post_processor (struct MHD_Connection *connection,
                __FILE__,
                __LINE__,
                NULL);
-  encoding = MHD_lookup_connection_value (connection,
-                                          MHD_HEADER_KIND,
-                                          MHD_HTTP_HEADER_CONTENT_TYPE);
-  if (NULL == encoding)
+  if (MHD_NO == MHD_lookup_connection_value_n (connection,
+                                               MHD_HEADER_KIND,
+                                               MHD_HTTP_HEADER_CONTENT_TYPE,
+                                               MHD_STATICSTR_LEN_(MHD_HTTP_HEADER_CONTENT_TYPE),
+                                               &encoding,
+                                               NULL))
     return NULL;
   boundary = NULL;
   if (! MHD_str_equal_caseless_n_ (MHD_HTTP_POST_ENCODING_FORM_URLENCODED,
@@ -518,12 +520,14 @@ post_process_urlencoded (struct MHD_PostProcessor *pp,
  * rest of the line into the suffix ptr.
  *
  * @param prefix prefix to match
+ * @param prefix_len length of @a prefix
  * @param line line to match prefix in
  * @param suffix set to a copy of the rest of the line, starting at the end of the match
  * @return #MHD_YES if there was a match, #MHD_NO if not
  */
 static int
 try_match_header (const char *prefix,
+                  size_t prefix_len,
                   char *line,
                   char **suffix)
 {
@@ -533,9 +537,9 @@ try_match_header (const char *prefix,
     {
       if (MHD_str_equal_caseless_n_ (prefix,
                                      line,
-                                     strlen (prefix)))
+                                     prefix_len))
         {
-          *suffix = strdup (&line[strlen (prefix)]);
+          *suffix = strdup (&line[prefix_len]);
           return MHD_YES;
         }
       ++line;
@@ -722,9 +726,11 @@ process_multipart_headers (struct MHD_PostProcessor *pp,
   else
     {
       try_match_header ("Content-type: ",
+                        MHD_STATICSTR_LEN_("Content-type: "),
                         buf,
                         &pp->content_type);
       try_match_header ("Content-Transfer-Encoding: ",
+                        MHD_STATICSTR_LEN_("Content-Transfer-Encoding: "),
                         buf,
                         &pp->content_transfer_encoding);
     }

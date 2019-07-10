@@ -507,12 +507,18 @@ MHD_socket_create_listen_ (int pf)
 {
   MHD_socket fd;
   int cloexec_set;
+#if defined(SOCK_NOSIGPIPE) || defined(MHD_socket_nosignal_)
+  int nosigpipe_set;
+#endif /* SOCK_NOSIGPIPE ||  MHD_socket_nosignal_ */
 
-#if defined(MHD_POSIX_SOCKETS) && defined(SOCK_CLOEXEC)
+#if defined(MHD_POSIX_SOCKETS) && ( defined(SOCK_CLOEXEC) || defined(SOCK_NOSIGPIPE) )
   fd = socket (pf,
-               SOCK_STREAM | SOCK_CLOEXEC,
+               SOCK_STREAM | SOCK_CLOEXEC | MAYBE_SOCK_NOSIGPIPE,
                0);
-  cloexec_set = !0;
+  cloexec_set = (MAYBE_SOCK_CLOEXEC != 0);
+#if defined(SOCK_NOSIGPIPE) || defined(MHD_socket_nosignal_)
+  nosigpipe_set = (MAYBE_SOCK_NOSIGPIPE != 0);
+#endif /* SOCK_NOSIGPIPE ||  MHD_socket_nosignal_ */
 #elif defined(MHD_WINSOCK_SOCKETS) && defined (WSA_FLAG_NO_HANDLE_INHERIT)
   fd = WSASocketW (pf,
                    SOCK_STREAM,
@@ -533,15 +539,24 @@ MHD_socket_create_listen_ (int pf)
     }
   if (MHD_INVALID_SOCKET == fd)
     return MHD_INVALID_SOCKET;
+
+#if defined(SOCK_NOSIGPIPE) || defined(MHD_socket_nosignal_)
+  if ( ( (! nosigpipe_set)
 #ifdef MHD_socket_nosignal_
-  if(! MHD_socket_nosignal_(fd))
+         || (! MHD_socket_nosignal_(fd))
+#endif /* MHD_socket_nosignal_ */
+       ) && (0 == MAYBE_MSG_NOSIGNAL) )
     {
+      /* SIGPIPE disable is possible on this platform
+       * (so application expect that it will be disabled),
+       * but failed to be disabled here and it is not
+       * possible to disable SIGPIPE by MSG_NOSIGNAL. */
       const int err = MHD_socket_get_error_ ();
       (void) MHD_socket_close_ (fd);
       MHD_socket_fset_error_ (err);
       return MHD_INVALID_SOCKET;
     }
-#endif /* MHD_socket_nosignal_ */
+#endif /* SOCK_NOSIGPIPE ||  MHD_socket_nosignal_ */
   if (! cloexec_set)
     (void) MHD_socket_noninheritable_ (fd);
 

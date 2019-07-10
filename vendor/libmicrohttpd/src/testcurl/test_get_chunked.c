@@ -213,14 +213,14 @@ testInternalGet ()
   curl_easy_setopt (c, CURLOPT_PORT, (long)port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
   curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
   curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
   curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
   /* NOTE: use of CONNECTTIMEOUT without also
    *   setting NOSIGNAL results in really weird
    *   crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
     {
       fprintf (stderr,
@@ -270,14 +270,14 @@ testMultithreadedGet ()
   curl_easy_setopt (c, CURLOPT_PORT, (long)port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
   curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
   curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
   curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
   /* NOTE: use of CONNECTTIMEOUT without also
    *   setting NOSIGNAL results in really weird
    *   crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
     {
       fprintf (stderr,
@@ -328,14 +328,14 @@ testMultithreadedPoolGet ()
   curl_easy_setopt (c, CURLOPT_PORT, (long)port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
   curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
   curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
   curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
   /* NOTE: use of CONNECTTIMEOUT without also
    *   setting NOSIGNAL results in really weird
    *   crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
     {
       fprintf (stderr,
@@ -400,14 +400,14 @@ testExternalGet ()
   curl_easy_setopt (c, CURLOPT_PORT, (long)port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
   curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
   curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
   curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 5L);
   /* NOTE: use of CONNECTTIMEOUT without also
    *   setting NOSIGNAL results in really weird
    *   crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
 
 
   multi = curl_multi_init ();

@@ -33,11 +33,12 @@
 #include <pthread.h>
 #include "gauger.h"
 
-#ifdef CPU_COUNT
+#if defined(CPU_COUNT) && (CPU_COUNT+0) < 2
 #undef CPU_COUNT
 #endif
-#define CPU_COUNT 40
-
+#if !defined(CPU_COUNT)
+#define CPU_COUNT 2
+#endif
 
 /**
  * How many rounds of operations do we do for each
@@ -48,7 +49,7 @@
 /**
  * How many requests do we do in parallel?
  */
-#define PAR CPU_COUNT
+#define PAR (CPU_COUNT * 4)
 
 /**
  * Do we use HTTP 1.1?
@@ -60,6 +61,63 @@ static int oneone;
  */
 static struct MHD_Response *response;
 
+/**
+ * Continue generating new requests?
+ */
+static volatile int continue_requesting;
+
+/**
+ * Continue waiting in watchdog thread?
+ */
+static volatile int watchdog_continue;
+
+static const char *watchdog_obj;
+
+static void *
+thread_watchdog (void *param)
+{
+  int seconds_passed;
+  const int timeout_val = (int) (intptr_t) param;
+
+  seconds_passed = 0;
+  while (watchdog_continue) /* Poor threads sync, but works for testing. */
+    {
+      if (0 == sleep (1)) /* Poor accuracy, but enough for testing. */
+        seconds_passed++;
+      if (timeout_val < seconds_passed)
+        {
+          fprintf (stderr, "%s timeout expired.\n", watchdog_obj ? watchdog_obj : "Watchdog");
+          fflush (stderr);
+          _exit(16);
+        }
+    }
+  return NULL;
+}
+
+pthread_t watchdog_tid;
+
+static void
+start_watchdog(int timeout, const char *obj_name)
+{
+  watchdog_continue = 1;
+  watchdog_obj = obj_name;
+  if (0 != pthread_create(&watchdog_tid, NULL, &thread_watchdog, (void*)(intptr_t)timeout))
+    {
+      fprintf(stderr, "Failed to start watchdog.\n");
+      _exit (99);
+    }
+}
+
+static void
+stop_watchdog(void)
+{
+  watchdog_continue = 0;
+  if (0 != pthread_join (watchdog_tid, NULL))
+    {
+      fprintf(stderr, "Failed to stop watchdog.\n");
+      _exit (99);
+    }
+}
 
 static size_t
 copyBuffer (void *ptr,
@@ -103,61 +161,44 @@ ahc_echo (void *cls,
   return ret;
 }
 
-static void
-clean_curl(void * param)
-{
-  if (param)
-    {
-      CURL * const c = *((CURL **)param);
-      if (c)
-        curl_easy_cleanup (c);
-    }
-}
-
 static void *
 thread_gets (void *param)
 {
   CURL *c;
   CURLcode errornum;
-  unsigned int i;
   char * const url = (char*) param;
-  int pth_olst;
-  if (pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &pth_olst) ||
-      pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, &pth_olst) )
+
+  c = NULL;
+  c = curl_easy_init ();
+  if (NULL == c)
     {
-      fprintf(stderr,
-              "pthread_setcancelstate()/pthread_setcanceltype() failed.\n");
+      fprintf(stderr, "curl_easy_init failed.\n");
       _exit(99);
     }
-
-  for (i=0;i<ROUNDS;i++)
+  curl_easy_setopt (c, CURLOPT_URL, url);
+  curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
+  curl_easy_setopt (c, CURLOPT_WRITEDATA, NULL);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
+  curl_easy_setopt (c, CURLOPT_TIMEOUT, 2L);
+  if (oneone)
+    curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+  else
+    curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
+  curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 2L);
+  /* NOTE: use of CONNECTTIMEOUT without also
+     setting NOSIGNAL results in really weird
+     crashes on my system! */
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
+  while (continue_requesting)
     {
-      pthread_testcancel();
-      c = NULL;
-      pthread_cleanup_push(clean_curl, (void*)&c);
-      c = curl_easy_init ();
-      pthread_testcancel();
-      curl_easy_setopt (c, CURLOPT_URL, url);
-      curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
-      curl_easy_setopt (c, CURLOPT_WRITEDATA, NULL);
-      curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
-      curl_easy_setopt (c, CURLOPT_TIMEOUT, 5L);
-      if (oneone)
-        curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-      else
-        curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
-      curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 5L);
-      /* NOTE: use of CONNECTTIMEOUT without also
-         setting NOSIGNAL results in really weird
-         crashes on my system! */
-      curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
-      pthread_testcancel();
       errornum = curl_easy_perform (c);
-      pthread_cleanup_pop (1);
       if (CURLE_OK != errornum)
-        return NULL;
+        {
+          curl_easy_cleanup (c);
+          return NULL;
+        }
     }
-
+  curl_easy_cleanup (c);
   return NULL;
 }
 
@@ -179,9 +220,9 @@ do_gets (void * param)
       if (0 != pthread_create(&par[j], NULL, &thread_gets, (void*)url))
         {
           fprintf(stderr, "pthread_create failed.\n");
+          continue_requesting = 0;
           for (j--; j >= 0; j--)
             {
-              pthread_cancel(par[j]);
               pthread_join(par[j], NULL);
             }
           _exit(99);
@@ -190,7 +231,6 @@ do_gets (void * param)
   (void)sleep (1);
   for (j=0;j<PAR;j++)
     {
-      pthread_cancel(par[j]);
       pthread_join(par[j], NULL);
     }
   return NULL;
@@ -200,6 +240,7 @@ do_gets (void * param)
 pthread_t start_gets(int port)
 {
   pthread_t tid;
+  continue_requesting = 1;
   if (0 != pthread_create(&tid, NULL, &do_gets, (void*)(intptr_t)port))
     {
       fprintf(stderr, "pthread_create failed.\n");
@@ -233,7 +274,10 @@ testMultithreadedGet (int port,
     }
   p = start_gets (port);
   (void)sleep (1);
+  start_watchdog(10, "daemon_stop() in testMultithreadedGet");
   MHD_stop_daemon (d);
+  stop_watchdog();
+  continue_requesting = 0;
   pthread_join (p, NULL);
   return 0;
 }
@@ -264,7 +308,10 @@ testMultithreadedPoolGet (int port,
     }
   p = start_gets (port);
   (void)sleep (1);
+  start_watchdog(10, "daemon_stop() in testMultithreadedPoolGet");
   MHD_stop_daemon (d);
+  stop_watchdog();
+  continue_requesting = 0;
   pthread_join (p, NULL);
   return 0;
 }
@@ -276,14 +323,16 @@ main (int argc, char *const *argv)
   unsigned int errorCount = 0;
   int port;
   (void)argc;   /* Unused. Silent compiler warning. */
+  (void)argv;   /* Unused. Silent compiler warning. */
 
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
     port = 1142;
 
-  oneone = (NULL != strrchr (argv[0], (int) '/')) ?
-    (NULL != strstr (strrchr (argv[0], (int) '/'), "11")) : 0;
+  /* Do reuse connection, otherwise all available local ports may exhausted. */
+  oneone = 1;
+
   if (0 != port && oneone)
     port += 5;
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))

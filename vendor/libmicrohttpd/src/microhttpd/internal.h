@@ -77,9 +77,9 @@
  * Close FD and abort execution if error is detected.
  * @param fd the FD to close
  */
-#define MHD_fd_close_chk_(fd) do {             \
-    if (0 == close ((fd)) && (EBADF == errno)) \
-      MHD_PANIC(_("Failed to close FD.\n"));   \
+#define MHD_fd_close_chk_(fd) do {                      \
+    if ( (0 != close ((fd)) && (EBADF == errno)) )	\
+      MHD_PANIC(_("Failed to close FD.\n"));            \
   } while(0)
 
 /**
@@ -93,7 +93,7 @@
 
 
 /**
- * Minimum size by which MHD tries to increment read/write buffers.
+ * Minimum reasonable size by which MHD tries to increment read/write buffers.
  * We usually begin with half the available pool space for the
  * IO-buffer, but if absolutely needed we additively grow by the
  * number of bytes given here (up to -- theoretically -- the full pool
@@ -271,9 +271,19 @@ struct MHD_HTTP_Header
   char *header;
 
   /**
+   * Number of bytes in @a header.
+   */
+  size_t header_size;
+
+  /**
    * The value of the header.
    */
   char *value;
+
+  /**
+   * Number of bytes in @a value.
+   */
+  size_t value_size;
 
   /**
    * Type of the header (where in the HTTP protocol is this header
@@ -1412,7 +1422,7 @@ struct MHD_Daemon
    * Function for logging error messages (if we
    * support error reporting).
    */
-  void (*custom_error_log) (void *cls, const char *fmt, va_list va);
+  MHD_LogCallback custom_error_log;
 
   /**
    * Closure argument to @e custom_error_log.
@@ -1881,7 +1891,9 @@ MHD_unescape_plus (char *arg);
  *
  * @param connection context of the iteration
  * @param key 0-terminated key string, never NULL
- * @param value 0-terminated value string, may be NULL
+ * @param key_size number of bytes in key
+ * @param value 0-terminated binary data, may include binary zeros, may be NULL
+ * @param value_size number of bytes in value
  * @param kind origin of the key-value pair
  * @return #MHD_YES on success (continue to iterate)
  *         #MHD_NO to signal failure (and abort iteration)
@@ -1889,7 +1901,9 @@ MHD_unescape_plus (char *arg);
 typedef int
 (*MHD_ArgumentIterator_)(struct MHD_Connection *connection,
 			 const char *key,
+                         size_t key_size,
 			 const char *value,
+			 size_t value_size,
 			 enum MHD_ValueKind kind);
 
 
@@ -1916,14 +1930,17 @@ MHD_parse_arguments_ (struct MHD_Connection *connection,
 
 
 /**
- * Check whether response header contains particular @a token.
+ * Check whether response header contains particular token.
  *
  * Token could be surrounded by spaces and tabs and delimited by comma.
  * Case-insensitive match used for header names and tokens.
+ *
  * @param response  the response to query
  * @param key       header name
+ * @param key_len   the length of @a key, not including optional
+ *                  terminating null-character.
  * @param token     the token to find
- * @param token_len the length of token, not including optional
+ * @param token_len the length of @a token, not including optional
  *                  terminating null-character.
  * @return true if token is found in specified header,
  *         false otherwise
@@ -1931,6 +1948,7 @@ MHD_parse_arguments_ (struct MHD_Connection *connection,
 bool
 MHD_check_response_header_token_ci (const struct MHD_Response *response,
                                     const char *key,
+                                    size_t key_len,
                                     const char *token,
                                     size_t token_len);
 
@@ -1946,7 +1964,8 @@ MHD_check_response_header_token_ci (const struct MHD_Response *response,
  *         false otherwise
  */
 #define MHD_check_response_header_s_token_ci(r,k,tkn) \
-    MHD_check_response_header_token_ci((r),(k),(tkn),MHD_STATICSTR_LEN_(tkn))
+    MHD_check_response_header_token_ci((r),(k),MHD_STATICSTR_LEN_(k),\
+                  (tkn),MHD_STATICSTR_LEN_(tkn))
 
 
 /**

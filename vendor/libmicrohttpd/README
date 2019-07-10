@@ -8,7 +8,7 @@ protocol.  The main application must still provide the application
 logic to generate the content.
 
 GNU libmicrohttpd is dual-licensed under the GNU Lesser General Public
-License (LGPLv3+) and the eCos License.  See COPYING for details.
+License (LGPLv2.1+) and the eCos License.  See COPYING for details.
 
 
 Installation
