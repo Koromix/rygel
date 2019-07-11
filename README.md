@@ -4,7 +4,7 @@
 
 | Project    | Description                                                                | Quality          |
 | ---------- | -------------------------------------------------------------------------- | -----------------|
-| _drd_      | Alternative PMSI classifier, with three subprojects: libdrd, drdc and drdR | Good             |
+| _drd_      | Alternative PMSI MCO classifier, subprojects: libdrd, drdc and drdR        | Good             |
 | _felix_    | Small build system made specifically for this repository                   | Good             |
 | _goupil_   | Vastly simplified alternative to Voozanoo (from Epiconcept)                | Draft            |
 | _heimdall_ | Medical timeline visualization (proof-of-concept)                          | Proof-of-concept |
@@ -12,7 +12,7 @@
 | _libcc_    | C++ container and system library                                           | Good             |
 | _libgui_   | Simple OpenGL window creation                                              | Win32-only       |
 | _libweb_   | Reusable utility functions and HTML/CSS/JS widgets                         | Good             |
-| _thop_     | Web-based institutional PMSI reporting tool based on libdrd                | Good             |
+| _thop_     | Web-based institutional PMSI (MCO) reporting tool based on libdrd          | Good             |
 | _webler_   | Simple markdown-to-HTML website generator (e.g. koromix.dev)               | Good             |
 | _wrappers_ | Small C++ wrappers for library code (http, R)                              | Good             |
 
