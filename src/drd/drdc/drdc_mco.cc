@@ -78,9 +78,9 @@ static void ExportResults(Span<const mco_Result> results, Span<const mco_Result>
         const mco_Result &result = results[i];
         const mco_Pricing &pricing = pricings[i];
 
-        PrintLn("  %1 [%2 -- %3] = GHM %4 [%5] / GHS %6",
-                result.stays[0].bill_id, result.duration,
-                result.stays[result.stays.len - 1].exit.date,
+        PrintLn("  %1 %2 [%3 -- %4] = GHM %5 [%6] / GHS %7",
+                result.stays[0].admin_id, result.stays[0].bill_id,
+                result.duration, result.stays[result.stays.len - 1].exit.date,
                 result.ghm, result.main_error, result.ghs);
         if (verbosity) {
             export_verbose_info("    ", result, pricing);
