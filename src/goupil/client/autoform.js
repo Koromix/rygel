@@ -219,6 +219,33 @@ let autoform = (function() {
             return intf;
         };
 
+        function normalizePropositions(props) {
+            props = props.filter(c => c != null).map(c => {
+                if (Array.isArray(c)) {
+                    return {value: c[0], label: c[1] || c[0]};
+                } else if (typeof c === 'string') {
+                    let sep_pos = c.indexOf(':::');
+                    if (sep_pos >= 0) {
+                        let value = c.substr(0, sep_pos);
+                        let label = c.substr(sep_pos + 3);
+                        return {value: value, label: label || value};
+                    } else {
+                        return {value: c, label: c};
+                    }
+                } else if (typeof c === 'number') {
+                    return {value: c, label: c};
+                } else {
+                    return c;
+                }
+            });
+
+            return props;
+        }
+
+        this.proposition = function(value, label) {
+            return {value: value, label: label || value};
+        };
+
         function handleDropdownChange(e, key) {
             let value = parseValue(e.target.value);
             state.values[key] = value;
@@ -227,7 +254,8 @@ let autoform = (function() {
             self.changeHandler(self);
         }
 
-        this.dropdown = function(key, label, choices = [], options = {}) {
+        this.dropdown = function(key, label, props = [], options = {}) {
+            props = normalizePropositions(props);
             options = Object.assign({}, options_stack[options_stack.length - 1], options);
 
             let id = makeID(key);
@@ -237,10 +265,10 @@ let autoform = (function() {
                 <label for=${id}>${label || key}</label>
                 <select id=${id} ?disabled=${options.disable}
                         @change=${e => handleDropdownChange(e, key)}>
-                    ${options.untoggle || !choices.some(c => c != null && value === c[0]) ?
+                    ${options.untoggle || !props.some(p => p != null && value === p.value) ?
                         html`<option value="null" .selected=${value == null}>-- Choisissez une option --</option>` : html``}
-                    ${choices.filter(c => c != null).map(c =>
-                        html`<option value=${stringifyValue(c[0])} .selected=${value === c[0]}>${c[1]}</option>`)}
+                    ${props.map(p =>
+                        html`<option value=${stringifyValue(p.value)} .selected=${value === p.value}>${p.label}</option>`)}
                 </select>
             `, options, errors);
 
@@ -266,7 +294,8 @@ let autoform = (function() {
             self.changeHandler(self);
         }
 
-        this.choice = function(key, label, choices = [], options = {}) {
+        this.choice = function(key, label, props = [], options = {}) {
+            props = normalizePropositions(props);
             options = Object.assign({}, options_stack[options_stack.length - 1], options);
 
             let id = makeID(key);
@@ -275,10 +304,10 @@ let autoform = (function() {
             let render = errors => wrapWidget(html`
                 <label for=${id}>${label || key}</label>
                 <div class="af_select" id=${id}>
-                    ${choices.filter(c => c != null).map(c =>
-                        html`<button data-value=${stringifyValue(c[0])}
-                                     ?disabled=${options.disable} .className=${value === c[0] ? 'af_button active' : 'af_button'}
-                                     @click=${e => handleChoiceChange(e, key, options.untoggle)}>${c[1]}</button>`)}
+                    ${props.map(p =>
+                        html`<button data-value=${stringifyValue(p.value)}
+                                     ?disabled=${options.disable} .className=${value === p.value ? 'af_button active' : 'af_button'}
+                                     @click=${e => handleChoiceChange(e, key, options.untoggle)}>${p.label}</button>`)}
                 </div>
             `, options, errors);
 
@@ -306,7 +335,8 @@ let autoform = (function() {
             self.changeHandler(self);
         }
 
-        this.radio = function(key, label, choices = [], options = {}) {
+        this.radio = function(key, label, props = [], options = {}) {
+            props = normalizePropositions(props);
             options = Object.assign({}, options_stack[options_stack.length - 1], options);
 
             let id = makeID(key);
@@ -315,11 +345,11 @@ let autoform = (function() {
             let render = errors => wrapWidget(html`
                 <label>${label || key}</label>
                 <div class="af_radio" id=${id}>
-                    ${choices.filter(c => c != null).map((c, i) =>
-                        html`<input type="radio" name=${id} id=${`${id}.${i}`} value=${stringifyValue(c[0])}
-                                    ?disabled=${options.disable} .checked=${value === c[0]}
-                                    @click=${e => handleRadioChange(e, key, options.untoggle && value === c[0])}/>
-                             <label for=${`${id}.${i}`}>${c[1]}</label><br/>`)}
+                    ${props.map((p, i) =>
+                        html`<input type="radio" name=${id} id=${`${id}.${i}`} value=${stringifyValue(p.value)}
+                                    ?disabled=${options.disable} .checked=${value === p.value}
+                                    @click=${e => handleRadioChange(e, key, options.untoggle && value === p.value)}/>
+                             <label for=${`${id}.${i}`}>${p.label}</label><br/>`)}
                 </div>
             `, options, errors);
 
@@ -343,9 +373,9 @@ let autoform = (function() {
             self.changeHandler(self);
         }
 
-        this.multi = function(key, label, choices = [], options = {}) {
+        this.multi = function(key, label, props = [], options = {}) {
+            props = normalizePropositions(props);
             options = Object.assign({}, options_stack[options_stack.length - 1], options);
-            choices = choices.filter(c => c != null);
 
             let id = makeID(key);
             let value;
@@ -357,15 +387,15 @@ let autoform = (function() {
             let render = errors => wrapWidget(html`
                 <label>${label || key}</label>
                 <div class="af_multi" id=${id}>
-                    ${choices.map((c, idx) =>
-                        html`<input type="checkbox" id=${`${id}.${idx}`} value=${stringifyValue(c[0])}
-                                    ?disabled=${options.disable} .checked=${value.includes(c[0])}
+                    ${props.map((p, idx) =>
+                        html`<input type="checkbox" id=${`${id}.${idx}`} value=${stringifyValue(p.value)}
+                                    ?disabled=${options.disable} .checked=${value.includes(p.value)}
                                     @click=${e => handleMultiChange(e, key)}/>
-                             <label for=${`${id}.${idx}`}>${c[1]}</label><br/>`)}
+                             <label for=${`${id}.${idx}`}>${p.label}</label><br/>`)}
                 </div>
             `, options, errors);
 
-            let missing = !value.length && choices.some(c => c[0] == null);
+            let missing = !value.length && props.some(p => p.value == null);
             return addVariableWidget(key, label, options, render, value, missing);
         };
 
