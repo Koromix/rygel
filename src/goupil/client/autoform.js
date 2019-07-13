@@ -68,13 +68,6 @@ let autoform = (function() {
         }
 
         function addVariableWidget(key, label, options, render, value, missing) {
-            if (!key)
-                throw new Error('Empty variable keys are not allowed');
-            if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
-                throw new Error('Allowed variable key characters: a-z, _ and 0-9 (not as first character)');
-            if (interfaces[key])
-                throw new Error(`Variable '${key}' already exists`);
-
             let intf = addWidget(render);
             Object.assign(intf, {
                 key: key,
@@ -113,8 +106,29 @@ let autoform = (function() {
             }
         }
 
-        this.pushOptions = function(options = {}) {
+        function expandOptions(options) {
             options = Object.assign({}, options_stack[options_stack.length - 1], options);
+            return options;
+        }
+
+        function decodeKey(key, options) {
+            if (key.startsWith('*')) {
+                key = key.substr(1);
+                options.mandatory = true;
+            }
+
+            if (interfaces[key])
+                throw new Error(`Variable '${key}' already exists`);
+            if (!key)
+                throw new Error('Empty variable keys are not allowed');
+            if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
+                throw new Error('Allowed variable key characters: a-z, _ and 0-9 (not as first character)');
+
+            return key;
+        }
+
+        this.pushOptions = function(options = {}) {
+            options = expandOptions(options);
             options_stack.push(options);
         };
         this.popOptions = function() {
@@ -141,7 +155,8 @@ let autoform = (function() {
         }
 
         this.text = function(key, label, options = {}) {
-            options = Object.assign({}, options_stack[options_stack.length - 1], options);
+            options = expandOptions(options);
+            key = decodeKey(key, options);
 
             let id = makeID(key);
             let value = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
@@ -158,7 +173,8 @@ let autoform = (function() {
         };
 
         this.password = function(key, label, options = {}) {
-            options = Object.assign({}, options_stack[options_stack.length - 1], options);
+            options = expandOptions(options);
+            key = decodeKey(key, options);
 
             let id = makeID(key);
             let value = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
@@ -188,7 +204,8 @@ let autoform = (function() {
         }
 
         this.number = function(key, label, options = {}) {
-            options = Object.assign({}, options_stack[options_stack.length - 1], options);
+            options = expandOptions(options);
+            key = decodeKey(key, options);
 
             let id = makeID(key);
             let value = parseFloat(state.values.hasOwnProperty(key) ? state.values[key] : options.value);
@@ -255,8 +272,9 @@ let autoform = (function() {
         }
 
         this.dropdown = function(key, label, props = [], options = {}) {
+            options = expandOptions(options);
+            key = decodeKey(key, options);
             props = normalizePropositions(props);
-            options = Object.assign({}, options_stack[options_stack.length - 1], options);
 
             let id = makeID(key);
             let value = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
@@ -295,8 +313,9 @@ let autoform = (function() {
         }
 
         this.choice = function(key, label, props = [], options = {}) {
+            options = expandOptions(options);
+            key = decodeKey(key, options);
             props = normalizePropositions(props);
-            options = Object.assign({}, options_stack[options_stack.length - 1], options);
 
             let id = makeID(key);
             let value = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
@@ -336,8 +355,9 @@ let autoform = (function() {
         }
 
         this.radio = function(key, label, props = [], options = {}) {
+            options = expandOptions(options);
+            key = decodeKey(key, options);
             props = normalizePropositions(props);
-            options = Object.assign({}, options_stack[options_stack.length - 1], options);
 
             let id = makeID(key);
             let value = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
@@ -374,8 +394,9 @@ let autoform = (function() {
         }
 
         this.multi = function(key, label, props = [], options = {}) {
+            options = expandOptions(options);
+            key = decodeKey(key, options);
             props = normalizePropositions(props);
-            options = Object.assign({}, options_stack[options_stack.length - 1], options);
 
             let id = makeID(key);
             let value;
@@ -400,7 +421,8 @@ let autoform = (function() {
         };
 
         this.calc = function(key, label, value, options = {}) {
-            options = Object.assign({}, options_stack[options_stack.length - 1], options);
+            options = expandOptions(options);
+            key = decodeKey(key, options);
 
             let id = makeID(key);
 
@@ -425,7 +447,7 @@ let autoform = (function() {
         };
 
         this.output = function(content, options = {}) {
-            options = Object.assign({}, options_stack[options_stack.length - 1], options);
+            options = expandOptions(options);
 
             // Don't output function content, helps avoid garbage output when the
             // user types 'page.oupt(html);'.
@@ -463,7 +485,7 @@ instead of:
         };
 
         this.buttons = function(buttons, options = {}) {
-            options = Object.assign({}, options_stack[options_stack.length - 1], options);
+            options = expandOptions(options);
 
             if (typeof buttons === 'string') {
                 let type = buttons;
@@ -505,7 +527,7 @@ Valid choices include:
         };
 
         this.errorList = function(options = {}) {
-            options = Object.assign({}, options_stack[options_stack.length - 1], options);
+            options = expandOptions(options);
 
             let render = () => {
                 if (self.errors.length || options.force) {
