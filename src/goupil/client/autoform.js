@@ -5,10 +5,10 @@
 let autoform = (function() {
     let current_unique_key = 0;
 
-    function FormBuilder(unique_key, state, widgets) {
+    function FormBuilder(unique_key, state, widgets, variables = []) {
         let self = this;
 
-        let interfaces = {};
+        let variables_map = {};
         let widgets_ref = widgets;
         let options_stack = [{untoggle: true}];
 
@@ -91,7 +91,8 @@ let autoform = (function() {
                     missing_block |= true;
             }
 
-            interfaces[key] = intf;
+            variables.push(intf);
+            variables_map[key] = intf;
 
             return intf;
         }
@@ -117,7 +118,7 @@ let autoform = (function() {
                 options.mandatory = true;
             }
 
-            if (interfaces[key])
+            if (variables_map[key])
                 throw new Error(`Variable '${key}' already exists`);
             if (!key)
                 throw new Error('Empty variable keys are not allowed');
@@ -141,10 +142,10 @@ let autoform = (function() {
         function parseValue(str) { return (str && str !== 'undefined') ? JSON.parse(str) : undefined; }
         function stringifyValue(value) { return JSON.stringify(value); }
 
-        this.find = key => interfaces[key];
+        this.find = key => variables_map[key];
         this.value = key => state.values[key];
-        this.missing = key => interfaces[key].missing;
-        this.error = (key, msg) => interfaces[key].error(msg);
+        this.missing = key => variables_map[key].missing;
+        this.error = (key, msg) => variables_map[key].error(msg);
 
         function handleTextInput(e, key) {
             let value = e.target.value;
@@ -575,6 +576,7 @@ Valid choices include:
         let af_form;
         let af_log;
 
+        let variables = [];
         let state = autoform.createState();
 
         function parseAnonymousErrorLine(err) {
@@ -594,12 +596,18 @@ Valid choices include:
             return null;
         }
 
+        function submitForm() {
+            variables = variables.map(variable => variable.key);
+            self.submitHandler(state.values, variables);
+        }
+
         function renderForm(page_key, script) {
             let widgets = [];
+            variables.length = 0;
 
-            let builder = autoform.createBuilder(state, widgets);
+            let builder = autoform.createBuilder(state, widgets, variables);
             builder.changeHandler = () => renderForm(page_key, script);
-            builder.submitHandler = () => self.submitHandler(state.values);
+            builder.submitHandler = submitForm;
 
             // Prevent go() call from working if called during script eval
             let prev_go_handler = self.goHandler;
@@ -680,8 +688,8 @@ instead of:
 
         return state;
     };
-    this.createBuilder = function(state, widgets) {
-        return new FormBuilder(current_unique_key++, state, widgets);
+    this.createBuilder = function(state, widgets, variables) {
+        return new FormBuilder(current_unique_key++, state, widgets, variables);
     };
     this.createExecutor = function() { return new FormExecutor(); };
 
