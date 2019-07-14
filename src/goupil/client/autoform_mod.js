@@ -260,8 +260,12 @@ let autoform_mod = (function() {
     function renderExport() {
         // Refresh export data
         if (af_data) {
-            goupil.database.loadAll('data').then(rows => {
-                autoform_export.renderTable(rows, af_data);
+            let p = Promise.all([goupil.database.loadAll('data'),
+                                 goupil.database.loadAll('variables')]);
+
+            p.then(values => {
+                let [rows, variables] = values;
+                autoform_export.renderTable(rows, variables, af_data);
             });
         }
     }
