@@ -36,7 +36,7 @@ let goupil = (function() {
         }
 
         let db_name = `goupil_${settings.project_key}`;
-        self.database = data.open(db_name, 2, (db, old_version) => {
+        self.database = data.open(db_name, 3, (db, old_version) => {
             switch (old_version) {
                 case null: {
                     db.createObjectStore('pages', {keyPath: 'key'});
@@ -44,6 +44,9 @@ let goupil = (function() {
                 } // fallthrough
                 case 1: {
                     db.createObjectStore('data', {keyPath: 'id'});
+                } // fallthrough
+                case 2: {
+                    db.createObjectStore('variables', {keyPath: 'key'});
                 } break;
             }
         });

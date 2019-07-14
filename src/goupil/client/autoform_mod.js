@@ -111,6 +111,7 @@ let autoform_mod = (function() {
     function resetAll() {
         let t = goupil.database.transaction(db => {
             db.clear('data');
+            db.clear('variables');
 
             db.clear('pages');
             for (let page of autoform_default.pages)
@@ -302,8 +303,23 @@ let autoform_mod = (function() {
         }
     }
 
-    function saveData(mem) {
-        goupil.database.save('data', mem).then(() => {
+    function saveData(values, variables) {
+        variables = variables.map((key, idx) => {
+            let ret = {
+                before: variables[idx - 1] || null,
+                key: key,
+                after: variables[idx + 1] || null
+            };
+
+            return ret;
+        });
+
+        let t = goupil.database.transaction(db => {
+            db.saveAll('variables', variables);
+            db.save('data', values);
+        });
+
+        t.then(() => {
             goupil.logSuccess('Données sauvegardées !');
 
             record_id = null;
