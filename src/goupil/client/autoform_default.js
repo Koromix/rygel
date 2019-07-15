@@ -69,7 +69,7 @@ form.buttons('save')
             title: 'Formulaire compliqué',
             script: `form.pushOptions({large: true})
 
-form.text("name", "Quel est votre nom ?", {mandatory: true})
+form.text("nom", "Quel est votre nom ?", {mandatory: true})
 form.number("age", "Quel est votre âge ?", {min: 0, max: 120,
                                             suffix: value => value > 1 ? "ans" : "an"})
 
