@@ -103,7 +103,7 @@ let autoform_export = (function() {
                             if (Array.isArray(value))
                                 value = value.join('|');
 
-                            return html`<td>${value}</td>`;
+                            return html`<td title=${value}>${value}</td>`;
                         })}</tr>`)}
                     </tbody>
                 </table>
