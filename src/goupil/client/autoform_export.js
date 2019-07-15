@@ -66,7 +66,9 @@ let autoform_export = (function() {
                     </thead>
                     <tbody>
                         ${rows.map(row => html`<tr>${columns.map(key => {
-                            let value = row[key] || '';
+                            let value = row[key];
+                            if (value == null)
+                                value = '';
                             if (Array.isArray(value))
                                 value = value.join('|');
 
