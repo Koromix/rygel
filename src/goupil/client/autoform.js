@@ -143,7 +143,10 @@ let autoform = (function() {
         function stringifyValue(value) { return JSON.stringify(value); }
 
         this.find = key => variables_map[key];
-        this.value = key => state.values[key];
+        this.value = key => {
+            let intf = variables_map[key];
+            return intf ? intf.value : undefined;
+        };
         this.missing = key => variables_map[key].missing;
         this.error = (key, msg) => variables_map[key].error(msg);
 
