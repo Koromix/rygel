@@ -87,30 +87,32 @@ let autoform_export = (function() {
     }
 
     this.renderTable = function(rows, variables, root_el) {
-        if (rows.length) {
-            let columns = orderColumns(variables);
+        let columns = orderColumns(variables);
 
-            render(html`
-                <table class="af_export">
-                    <thead>
-                        <tr>${columns.map(key => html`<th>${key}</th>`)}</tr>
-                    </thead>
-                    <tbody>
-                        ${rows.map(row => html`<tr>${columns.map(key => {
-                            let value = row[key];
-                            if (value == null)
-                                value = '';
-                            if (Array.isArray(value))
-                                value = value.join('|');
+        render(html`
+            <table class="af_export">
+                <thead>
+                    <tr>
+                        ${!columns.length ?
+                            html`<th>Colonnes inconnues</th>` : html``}
+                        ${columns.map(key => html`<th>${key}</th>`)}
+                    </tr>
+                </thead>
+                <tbody>
+                    ${!rows.length ?
+                        html`<tr><td colspan=${Math.max(1, columns.length)}>Aucune donnée à afficher</td></tr>` : html``}
+                    ${rows.map(row => html`<tr>${columns.map(key => {
+                        let value = row[key];
+                        if (value == null)
+                            value = '';
+                        if (Array.isArray(value))
+                            value = value.join('|');
 
-                            return html`<td title=${value}>${value}</td>`;
-                        })}</tr>`)}
-                    </tbody>
-                </table>
-            `, root_el);
-        } else {
-            render(html``, root_el);
-        }
+                        return html`<td title=${value}>${value}</td>`;
+                    })}</tr>`)}
+                </tbody>
+            </table>
+        `, root_el);
     };
 
     return this;
