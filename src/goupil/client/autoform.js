@@ -35,9 +35,31 @@ let autoform = (function() {
             return `af_var_${unique_key}_${key}`;
         }
 
-        function addWidget(render) {
+        function renderWrappedWidget(intf, frag) {
+            let cls = 'af_widget';
+            if (intf.options.large)
+                cls += ' af_widget_large';
+            if (intf.errors.length)
+                cls += ' af_widget_error';
+            if (intf.options.disable)
+                cls += ' af_widget_disable';
+            if (intf.options.mandatory)
+                cls += ' af_widget_mandatory';
+
+            return html`
+                <div class=${cls}>
+                    ${frag}
+                    ${intf.errors.length && intf.errors.every(err => err) ?
+                        html`<div class="af_error">${intf.errors.map(err => html`${err}<br/>`)}</div>` : html``}
+                    ${intf.options.help ? html`<p class="af_help">${intf.options.help}</p>` : ''}
+                </div>
+            `;
+        }
+
+        function addWidget(render, options = {}) {
             let intf = {
                 render: render,
+                options: options,
                 errors: []
             };
 
@@ -46,34 +68,12 @@ let autoform = (function() {
             return intf;
         }
 
-        function wrapWidget(frag, options, errors = []) {
-            let cls = 'af_widget';
-            if (options.large)
-                cls += ' af_widget_large';
-            if (errors.length)
-                cls += ' af_widget_error';
-            if (options.disable)
-                cls += ' af_widget_disable';
-            if (options.mandatory)
-                cls += ' af_widget_mandatory';
-
-            return html`
-                <div class=${cls}>
-                    ${frag}
-                    ${errors.length && errors.every(err => err) ?
-                        html`<div class="af_error">${errors.map(err => html`${err}<br/>`)}</div>` : html``}
-                    ${options.help ? html`<p class="af_help">${options.help}</p>` : ''}
-                </div>
-            `;
-        }
-
-        function addVariableWidget(key, label, options, render, value, missing) {
-            let intf = addWidget(render);
+        function fillVariableInfo(intf, key, label, value, missing) {
             Object.assign(intf, {
                 key: key,
                 label: label,
                 value: value,
-                missing: missing || options.missing,
+                missing: missing || intf.options.missing,
                 error: msg => {
                     if (!intf.errors.length)
                         self.errors.push(intf);
@@ -83,11 +83,11 @@ let autoform = (function() {
                 }
             });
 
-            if (options.mandatory && intf.missing) {
+            if (intf.options.mandatory && intf.missing) {
                 missing_set.add(key);
-                if (options.missingMode === 'error' || state.missing_errors.has(key))
+                if (intf.options.missingMode === 'error' || state.missing_errors.has(key))
                     intf.error('Donnée obligatoire manquante');
-                if (options.missingMode === 'disable')
+                if (intf.options.missingMode === 'disable')
                     missing_block |= true;
             }
 
@@ -165,15 +165,18 @@ let autoform = (function() {
             let id = makeID(key);
             let value = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
 
-            let render = errors => wrapWidget(html`
+            let render = intf => renderWrappedWidget(intf, html`
                 <label for=${id}>${label || key}</label>
                 ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
                 <input id=${id} type="text" size="${options.size || 30}" .value=${value || ''}
                        ?disabled=${options.disable} @input=${e => handleTextInput(e, key)}/>
                 ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
-            `, options, errors);
+            `);
 
-            return addVariableWidget(key, label, options, render, value, value == null);
+            let intf = addWidget(render, options);
+            fillVariableInfo(intf, key, label, value, value == null);
+
+            return intf;
         };
 
         this.password = function(key, label, options = {}) {
@@ -183,15 +186,18 @@ let autoform = (function() {
             let id = makeID(key);
             let value = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
 
-            let render = errors => wrapWidget(html`
+            let render = intf => renderWrappedWidget(intf, html`
                 <label for=${id}>${label || key}</label>
                 ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
                 <input id=${id} type="password" size="${options.size || 30}" .value=${value || ''}
                        ?disabled=${options.disable} @input=${e => handleTextInput(e, key)}/>
                 ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
-            `, options, errors);
+            `);
 
-            return addVariableWidget(key, label, options, render, value, value == null);
+            let intf = addWidget(render, options);
+            fillVariableInfo(intf, key, label, value, value == null);
+
+            return intf;
         };
 
         function handleNumberChange(e, key) {
@@ -214,16 +220,17 @@ let autoform = (function() {
             let id = makeID(key);
             let value = parseFloat(state.values.hasOwnProperty(key) ? state.values[key] : options.value);
 
-            let render = errors => wrapWidget(html`
+            let render = intf => renderWrappedWidget(intf, html`
                 <label for=${id}>${label || key}</label>
                 ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
                 <input id=${id} type="number"
                        step=${1 / Math.pow(10, options.decimals || 0)} .value=${value}
                        ?disabled=${options.disable} @input=${e => handleNumberChange(e, key)}/>
                 ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
-            `, options, errors);
+            `);
 
-            let intf = addVariableWidget(key, label, options, render, value, Number.isNaN(value));
+            let intf = addWidget(render, options);
+            fillVariableInfo(intf, key, label, value, Number.isNaN(value));
 
             if (value != null &&
                     (options.min !== undefined && value < options.min) ||
@@ -283,7 +290,7 @@ let autoform = (function() {
             let id = makeID(key);
             let value = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
 
-            let render = errors => wrapWidget(html`
+            let render = intf => renderWrappedWidget(intf, html`
                 <label for=${id}>${label || key}</label>
                 <select id=${id} ?disabled=${options.disable}
                         @change=${e => handleDropdownChange(e, key)}>
@@ -292,9 +299,12 @@ let autoform = (function() {
                     ${props.map(p =>
                         html`<option value=${stringifyValue(p.value)} .selected=${value === p.value}>${p.label}</option>`)}
                 </select>
-            `, options, errors);
+            `);
 
-            return addVariableWidget(key, label, options, render, value, value == null);
+            let intf = addWidget(render, options);
+            fillVariableInfo(intf, key, label, value, value == null);
+
+            return intf;
         };
 
         function handleChoiceChange(e, key, allow_untoggle) {
@@ -324,7 +334,7 @@ let autoform = (function() {
             let id = makeID(key);
             let value = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
 
-            let render = errors => wrapWidget(html`
+            let render = intf => renderWrappedWidget(intf, html`
                 <label for=${id}>${label || key}</label>
                 <div class="af_select" id=${id}>
                     ${props.map(p =>
@@ -332,9 +342,12 @@ let autoform = (function() {
                                      ?disabled=${options.disable} .className=${value === p.value ? 'af_button active' : 'af_button'}
                                      @click=${e => handleChoiceChange(e, key, options.untoggle)}>${p.label}</button>`)}
                 </div>
-            `, options, errors);
+            `);
 
-            return addVariableWidget(key, label, options, render, value, value == null);
+            let intf = addWidget(render, options);
+            fillVariableInfo(intf, key, label, value, value == null);
+
+            return intf;
         };
 
         this.binary = function(key, label, options = {}) {
@@ -366,7 +379,7 @@ let autoform = (function() {
             let id = makeID(key);
             let value = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
 
-            let render = errors => wrapWidget(html`
+            let render = intf => renderWrappedWidget(intf, html`
                 <label>${label || key}</label>
                 <div class="af_radio" id=${id}>
                     ${props.map((p, i) =>
@@ -375,9 +388,12 @@ let autoform = (function() {
                                     @click=${e => handleRadioChange(e, key, options.untoggle && value === p.value)}/>
                              <label for=${`${id}.${i}`}>${p.label}</label><br/>`)}
                 </div>
-            `, options, errors);
+            `);
 
-            return addVariableWidget(key, label, options, render, value, value == null);
+            let intf = addWidget(render, options);
+            fillVariableInfo(intf, key, label, value, value == null);
+
+            return intf;
         };
 
         function handleMultiChange(e, key) {
@@ -409,7 +425,7 @@ let autoform = (function() {
                 value = Array.isArray(candidate) ? candidate : [];
             }
 
-            let render = errors => wrapWidget(html`
+            let render = intf => renderWrappedWidget(intf, html`
                 <label>${label || key}</label>
                 <div class="af_multi" id=${id}>
                     ${props.map((p, idx) =>
@@ -418,10 +434,13 @@ let autoform = (function() {
                                     @click=${e => handleMultiChange(e, key)}/>
                              <label for=${`${id}.${idx}`}>${p.label}</label><br/>`)}
                 </div>
-            `, options, errors);
+            `);
 
+            let intf = addWidget(render, options);
             let missing = !value.length && props.some(p => p.value == null);
-            return addVariableWidget(key, label, options, render, value, missing);
+            fillVariableInfo(intf, key, label, value, missing);
+
+            return intf;
         };
 
         this.calc = function(key, label, value, options = {}) {
@@ -442,12 +461,15 @@ let autoform = (function() {
                 }
             }
 
-            let render = errors => wrapWidget(html`
+            let render = intf => renderWrappedWidget(intf, html`
                 <label for=${id}>${label || key}</label>
                 <span>${text}</span>
-            `, options, errors);
+            `);
 
-            return addVariableWidget(key, label, options, render, value);
+            let intf = addWidget(render, options);
+            fillVariableInfo(intf, key, label, value);
+
+            return intf;
         };
 
         this.output = function(content, options = {}) {
@@ -458,8 +480,9 @@ let autoform = (function() {
             if (!content || typeof content === 'function')
                 return;
 
-            let render = () => wrapWidget(content, options);
-            addWidget(render);
+            let render = intf => renderWrappedWidget(intf, content);
+
+            addWidget(render, options);
         };
 
         this.section = function(label, func) {
@@ -478,10 +501,10 @@ instead of:
             func();
             widgets_ref = prev_widgets;
 
-            let render = () => html`
+            let render = intf => html`
                 <fieldset class="af_section">
                     ${label ? html`<legend>${label}</legend>` : html``}
-                    ${widgets.map(w => w.render(w.errors))}
+                    ${widgets.map(intf => intf.render(intf))}
                 </fieldset>
             `;
 
@@ -503,13 +526,13 @@ Valid choices include:
                 buttons = func();
             }
 
-            let render = () => wrapWidget(html`
+            let render = intf => renderWrappedWidget(intf, html`
                 <div class="af_buttons">
                     ${buttons.map(button =>
                         html`<button class="af_button" ?disabled=${!button[1]} title=${button[2] || ''}
                                      @click=${button[1]}>${button[0]}</button>`)}
                 </div>
-            `, options);
+            `);
 
             addWidget(render);
         };
@@ -533,7 +556,7 @@ Valid choices include:
         this.errorList = function(options = {}) {
             options = expandOptions(options);
 
-            let render = () => {
+            let render = intf => {
                 if (self.errors.length || options.force) {
                     return html`
                         <fieldset class="af_section af_section_error">
@@ -697,7 +720,7 @@ instead of:
     this.createExecutor = function() { return new FormExecutor(); };
 
     this.renderWidgets = function(widgets, root_el) {
-        render(widgets.map(w => w.render(w.errors)), root_el);
+        render(widgets.map(intf => intf.render(intf)), root_el);
     };
 
     return this;
