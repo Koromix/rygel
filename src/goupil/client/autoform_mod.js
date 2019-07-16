@@ -340,6 +340,43 @@ let autoform_mod = (function() {
         return columns;
     }
 
+    function saveRecord(values, variables) {
+        variables = variables.map((key, idx) => {
+            let ret = {
+                before: variables[idx - 1] || null,
+                key: key,
+                after: variables[idx + 1] || null
+            };
+
+            return ret;
+        });
+
+        let t = goupil.database.transaction(db => {
+            db.saveAll('variables', variables);
+            db.save('data', values);
+        });
+
+        return t;
+    }
+
+    function deleteRecord(id) {
+        return goupil.database.delete('data', id);
+    }
+
+    function showDeleteRecordDialog(e, id) {
+        goupil.popup(e, form => {
+            form.output('Voulez-vous vraiment supprimer cet enregistrement ?');
+
+            form.submitHandler = () => {
+                let p = deleteRecord(id)
+                p.then(loadRecordsAndRender);
+
+                form.close();
+            };
+            form.buttons(form.buttons.std.ok_cancel('Supprimer'));
+        });
+    }
+
     function renderExport(records, variables) {
         let columns = orderColumns(variables);
 
@@ -357,7 +394,11 @@ let autoform_mod = (function() {
                     ${!records.length ?
                         html`<tr><td colspan=${1 + Math.max(1, columns.length)}>Aucune donnée à afficher</td></tr>` : html``}
                     ${records.map(record => html`<tr>
-                        <th><a href="#" @click=${e => { self.go(current_key, record.id); e.preventDefault(); }}>🔍\uFE0E</a></th>
+                        <th>
+                            <a href="#" @click=${e => { self.go(current_key, record.id); e.preventDefault(); }}>🔍\uFE0E</a>
+                            <a href="#" @click=${e => { showDeleteRecordDialog(e, record.id); e.preventDefault(); }}>x</a>
+                        </th>
+
                         ${columns.map(key => {
                             let value = record[key];
                             if (value == null)
@@ -423,23 +464,10 @@ let autoform_mod = (function() {
         }
     }
 
-    function saveData(values, variables) {
-        variables = variables.map((key, idx) => {
-            let ret = {
-                before: variables[idx - 1] || null,
-                key: key,
-                after: variables[idx + 1] || null
-            };
+    function saveRecordAndReset(values, variables) {
+        let p = saveRecord(values, variables);
 
-            return ret;
-        });
-
-        let t = goupil.database.transaction(db => {
-            db.saveAll('variables', variables);
-            db.save('data', values);
-        });
-
-        t.then(() => {
+        p.then(() => {
             goupil.logSuccess('Données sauvegardées !');
 
             record_id = null;
@@ -454,7 +482,7 @@ let autoform_mod = (function() {
         if (!executor) {
             executor = autoform.createExecutor();
             executor.goHandler = self.go;
-            executor.submitHandler = saveData;
+            executor.submitHandler = saveRecordAndReset;
         }
 
         // Load record data
