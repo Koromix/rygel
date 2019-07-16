@@ -396,7 +396,7 @@ let autoform_mod = (function() {
                     ${records.map(record => html`<tr>
                         <th>
                             <a href="#" @click=${e => { self.go(current_key, record.id); e.preventDefault(); }}>🔍\uFE0E</a>
-                            <a href="#" @click=${e => { showDeleteRecordDialog(e, record.id); e.preventDefault(); }}>x</a>
+                            <a href="#" @click=${e => { showDeleteRecordDialog(e, record.id); e.preventDefault(); }}>✕</a>
                         </th>
 
                         ${columns.map(key => {

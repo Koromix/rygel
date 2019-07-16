@@ -199,7 +199,7 @@
     height: 30px;
     background: #ddd;
 }
-.af_head_actions { width: 30px; }
+.af_head_actions { width: 22px; }
 .af_head_variable { width: 60px; }
 
 .af_export tbody tr:nth-child(2n + 1) { background: #efefef; }
