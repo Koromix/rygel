@@ -60,7 +60,7 @@ form.section("Exemples", () => {
 })
 
 form.errorList()
-form.buttons('save')
+form.buttons("save")
 `
         },
 
@@ -128,7 +128,7 @@ form.output(html\`On peut aussi mettre du <b>HTML directement</b> si on veut...
 form.output("Ou bien encore mettre du <b>texte brut</b>.")
 
 form.errorList()
-form.buttons('save')
+form.buttons("save")
 `
         },
 
