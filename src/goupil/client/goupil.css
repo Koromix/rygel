@@ -60,7 +60,7 @@ button:not(:disabled) { cursor: pointer; }
 #gp_log {
     position: fixed;
     left: calc(50% - 200px);
-    top: 40px;
+    top: 20px;
     width: 400px;
     z-index: 99999;
     user-select: none;
