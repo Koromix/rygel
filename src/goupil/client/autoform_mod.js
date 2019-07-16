@@ -347,23 +347,27 @@ let autoform_mod = (function() {
             <table class="af_export">
                 <thead>
                     <tr>
+                        <th class="af_head_actions"></th>
                         ${!columns.length ?
                             html`<th>Colonnes inconnues</th>` : html``}
-                        ${columns.map(key => html`<th>${key}</th>`)}
+                        ${columns.map(key => html`<th class="af_head_variable">${key}</th>`)}
                     </tr>
                 </thead>
                 <tbody>
                     ${!records.length ?
-                        html`<tr><td colspan=${Math.max(1, columns.length)}>Aucune donnée à afficher</td></tr>` : html``}
-                    ${records.map(record => html`<tr>${columns.map(key => {
-                        let value = record[key];
-                        if (value == null)
-                            value = '';
-                        if (Array.isArray(value))
-                            value = value.join('|');
+                        html`<tr><td colspan=${1 + Math.max(1, columns.length)}>Aucune donnée à afficher</td></tr>` : html``}
+                    ${records.map(record => html`<tr>
+                        <th><a href="#" @click=${e => { self.go(current_key, record.id); e.preventDefault(); }}>🔍\uFE0E</a></th>
+                        ${columns.map(key => {
+                            let value = record[key];
+                            if (value == null)
+                                value = '';
+                            if (Array.isArray(value))
+                                value = value.join('|');
 
-                        return html`<td title=${value}>${value}</td>`;
-                    })}</tr>`)}
+                            return html`<td title=${value}>${value}</td>`;
+                        })}
+                    </tr>`)}
                 </tbody>
             </table>
         `, af_data);
