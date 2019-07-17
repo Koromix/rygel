@@ -530,7 +530,9 @@ let autoform_mod = (function() {
 
         if (!init) {
             if (!window.ace) {
-                goupil.loadScript(`${settings.base_url}static/ace.js`);
+                let p = util.loadScript(`${settings.base_url}static/ace.js`);
+                p.then(self.activate);
+
                 return;
             }
 

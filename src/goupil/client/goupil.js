@@ -234,19 +234,6 @@ let goupil = (function() {
         event_src.addEventListener(event, func);
     };
 
-    // TODO: React to onerror?
-    this.loadScript = function(url) {
-        let head = document.querySelector('script');
-        let script = document.createElement('script');
-
-        script.type = 'text/javascript';
-        script.src = url;
-        script.onreadystatechange = () => self.go(window.location.href);
-        script.onload = () => self.go(window.location.href);
-
-        head.appendChild(script);
-    };
-
     this.popup = function(e, func) {
         closePopup();
         openPopup(e, func);
