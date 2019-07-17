@@ -373,7 +373,8 @@ let autoform_mod = (function() {
 
             form.submitHandler = () => {
                 let p = deleteRecord(id)
-                p.then(loadRecordsAndRender);
+                p.then(loadAllRecords)
+                 .then(values => renderRecords(values.records, values.variables));
 
                 form.close();
             };
@@ -381,14 +382,21 @@ let autoform_mod = (function() {
         });
     }
 
-    function renderExport(records, variables) {
+    function handleExportClick(e) {
+        let p = loadAllRecords();
+        p.then(values => exportToExcel(values.records, values.variables));
+    }
+
+    function renderRecords(records, variables) {
         let columns = orderColumns(variables);
 
         render(html`
-            <table class="af_export">
+            <table class="af_records">
                 <thead>
                     <tr>
-                        <th class="af_head_actions"></th>
+                        <th class="af_head_actions">
+                            <button class="af_excel" @click=${handleExportClick}></button>
+                        </th>
                         ${!columns.length ?
                             html`<th>Colonnes inconnues</th>` : html``}
                         ${columns.map(key => html`<th class="af_head_variable">${key}</th>`)}
@@ -418,17 +426,34 @@ let autoform_mod = (function() {
         `, af_data);
     }
 
-    function loadRecordsAndRender() {
-        // Refresh export data
-        if (af_data) {
-            let p = Promise.all([goupil.database.loadAll('data'),
-                                 goupil.database.loadAll('variables')]);
+    function exportToExcel(rows, variables) {
+        if (!window.XLSX) {
+            let p = util.loadScript(`${settings.base_url}static/xlsx.core.min.js`);
+            p.then(() => exportToExcel(rows, variables));
 
-            p.then(values => {
-                let [rows, variables] = values;
-                renderExport(rows, variables);
-            });
+            return;
         }
+
+        let columns = orderColumns(variables);
+
+        let ws = XLSX.utils.aoa_to_sheet([columns]);
+        for (let row of rows) {
+            let values = columns.map(col => row[col]);
+            XLSX.utils.sheet_add_aoa(ws, [values], {origin: -1});
+        }
+
+        // TODO: Put date in sheet name and file name
+        let wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Export');
+        XLSX.writeFile(wb, 'export.xlsx');
+    }
+
+    function loadAllRecords() {
+        let p = Promise.all([goupil.database.loadAll('data'),
+                             goupil.database.loadAll('variables')]);
+        p = p.then(values => ({records: values[0], variables: values[1]}));
+
+        return p;
     }
 
     function refreshAndSave() {
@@ -526,7 +551,10 @@ let autoform_mod = (function() {
         }
 
         renderAll();
-        loadRecordsAndRender();
+        if (af_data) {
+            let p = loadAllRecords();
+            p.then(values => renderRecords(values.records, values.variables));
+        }
     };
 
     this.activate = function() {
