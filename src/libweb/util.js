@@ -319,6 +319,21 @@ let util = (function() {
         return ulid.join('');
     };
 
+    // TODO: React to onerror?
+    this.loadScript = function(url) {
+        let head = document.querySelector('script');
+        let script = document.createElement('script');
+
+        return new Promise((resolve, reject) => {
+            script.type = 'text/javascript';
+            script.src = url;
+            script.onreadystatechange = resolve;
+            script.onload = resolve;
+
+            head.appendChild(script);
+        });
+    };
+
     this.saveBlob = function(blob, filename) {
         let url = URL.createObjectURL(blob);
 
