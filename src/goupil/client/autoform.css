@@ -188,40 +188,51 @@
 
 /* -------------------- Export -------------------- */
 
-.af_export {
+.af_records {
     width: 100%;
     border-collapse: collapse;
     border: 0;
     table-layout: fixed;
 }
 
-.af_export thead {
+.af_records thead {
     height: 30px;
     background: #ddd;
 }
 .af_head_actions { width: 30px; }
 .af_head_variable { width: 60px; }
 
-.af_export tbody tr:nth-child(2n + 1) { background: #efefef; }
-.af_export tbody tr:nth-child(2n) { background: #f4f4f4; }
-.af_export tbody tr.af_row_current {
+.af_records tbody tr:nth-child(2n + 1) { background: #efefef; }
+.af_records tbody tr:nth-child(2n) { background: #f4f4f4; }
+.af_records tbody tr.af_row_current {
     background: #24579d;
     color: white;
 }
 
-.af_export tbody th, .af_export td { border: 1px solid #ddd; }
-.af_export td {
+.af_records tbody th, .af_records td { border: 1px solid #ddd; }
+.af_records td {
     padding: 3px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.af_export td:first-child, .af_export td:first-child { border-left: 0; }
-.af_export td:last-child, .af_export td:last-child { border-right: 0; }
+.af_records td:first-child, .af_records td:first-child { border-left: 0; }
+.af_records td:last-child, .af_records td:last-child { border-right: 0; }
 
-.af_export a {
+.af_records a {
     color: inherit;
     text-decoration: none;
     font-weight: normal;
     font-style: normal;
+}
+
+.af_excel {
+    display: block;
+    width: 100%;
+    height: 16px;
+    background: inherit;
+    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAABrUlEQVQokWNgwA4YGbK0ebBLpRmzypY46MgWOYfLFbm2yRW7bFEod78vU+BwiMGTX5nBiUGZIUAMQhszsDLIFDp7KNZ4/les8vyvWO35X77C/b9EocN/h/aE//MPrfuz4vi2P3MPrPmz4tyOP2aNoYEMUkWOfsq13v+l8x3+i+bY/Fcucf8vU+D0X78m8H/agsb/C49u/B82rej/yWdX/0dOK4phkC5y9hEvdfxfu3bS//KVvf87t879L5Bp8V+vOuB/8tza/zP2rfwfMqXg/757Z/6HTS2IZJAucvYRLbb/HzGt5P/3Xz//u3Qm/xeEakiYU/1/2t4V/4Mm5f3fe/f0/7CpxRANIkV2/7MWNv1/8/n9/8hpJf/5M8z/61b5/4+dWfF/yp5l//0mZP/fc+cUVEO+g49Mhev/wmUd/yOmlfxv3zL7v3CW1X+96oD/ibMhNgRPzv+/7+5piJOkilz9lGq9/4vm2PwXzbH5L5Xv8F8W6unU+fX/FxzZ8D9kauH/E0+hnkYOVqVqr/+KlR7wYF1waN2flejByhCqzSZT6KJLdMThShqiOJIGADXf7VjCuLmEAAAAAElFTkSuQmCC');
+    background-repeat: no-repeat;
+    background-position: center center;
+    border: 0;
 }
