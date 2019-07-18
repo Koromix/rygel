@@ -151,6 +151,40 @@ let dom = (function() {
 }).call({});
 
 // ------------------------------------------------------------------------
+// Log
+// ------------------------------------------------------------------------
+
+let log = (function() {
+    let self = this;
+
+    this.defaultHandler = function(type, msg) {
+        switch (type) {
+            case 'debug':
+            case 'info':
+            case 'success': { console.log(msg); } break;
+            case 'error': { console.error(msg); } break;
+        }
+    };
+
+    let handlers = [self.defaultHandler];
+
+    this.pushHandler = function(func) { handlers.push(func); };
+    this.popHandler = function() { handlers.pop(); };
+
+    function log(type, msg) {
+        let func = handlers[handlers.length - 1];
+        func(type, msg);
+    }
+
+    this.debug = function(msg) { log('debug', msg); };
+    this.info = function(msg) { log('info', msg); };
+    this.success = function(msg) { log('success', msg); };
+    this.error = function(msg) { log('error', msg); };
+
+    return this;
+}).call({});
+
+// ------------------------------------------------------------------------
 // Utility
 // ------------------------------------------------------------------------
 
