@@ -359,6 +359,14 @@ let autoform_mod = (function() {
         return goupil.database.delete('data', id);
     }
 
+    function switchCurrentRecord(e, id) {
+        if (id === record_id) {
+            self.go(null, current_key);
+        } else {
+            self.go(id, current_key);
+        }
+    }
+
     function showDeleteRecordDialog(e, id) {
         goupil.popup(e, form => {
             form.output('Voulez-vous vraiment supprimer cet enregistrement ?');
@@ -389,9 +397,9 @@ let autoform_mod = (function() {
                 <tbody>
                     ${!records.length ?
                         html`<tr><td colspan=${1 + Math.max(1, columns.length)}>Aucune donnée à afficher</td></tr>` : html``}
-                    ${records.map(record => html`<tr>
+                    ${records.map(record => html`<tr class=${record_id === record.id ? 'af_row_current' : ''}>
                         <th>
-                            <a href="#" @click=${e => { self.go(record.id, current_key); e.preventDefault(); }}>🔍\uFE0E</a>
+                            <a href="#" @click=${e => { switchCurrentRecord(e, record.id); e.preventDefault(); }}>🔍\uFE0E</a>
                             <a href="#" @click=${e => { showDeleteRecordDialog(e, record.id); e.preventDefault(); }}>✕</a>
                         </th>
 
