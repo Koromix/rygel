@@ -56,7 +56,7 @@ let autoform_mod = (function() {
             if (is_default)
                 default_key = key;
 
-            self.go(key);
+            self.go(record_id, key);
         });
     }
 
@@ -104,7 +104,7 @@ let autoform_mod = (function() {
             if (page.key === default_key)
                 default_key = null;
 
-            self.go(pickDefaultKey());
+            self.go(record_id, pickDefaultKey());
         });
     }
 
@@ -127,9 +127,8 @@ let autoform_mod = (function() {
 
             default_key = autoform_default.key;
             executor = null;
-            record_id = null;
 
-            self.go(default_key);
+            self.go(null, default_key);
         });
     }
 
@@ -220,7 +219,7 @@ let autoform_mod = (function() {
             <button class=${left_panel === 'data' ? 'active' : ''} @click=${e => toggleLeftPanel('data')}>Données</button>
             <button class=${show_page_panel ? 'active': ''} @click=${e => togglePagePanel()}>Aperçu</button>
 
-            <select id="af_page_selector" @change=${e => self.go(e.target.value)}>
+            <select id="af_page_selector" @change=${e => self.go(record_id, e.target.value)}>
                 ${!current_key && !pages.length ? html`<option>-- No page available --</option>` : html``}
                 ${current_key && !page ?
                     html`<option value=${current_key} .selected=${true}>-- Unknown page '${current_key}' --</option>` : html``}
@@ -392,7 +391,7 @@ let autoform_mod = (function() {
                         html`<tr><td colspan=${1 + Math.max(1, columns.length)}>Aucune donnée à afficher</td></tr>` : html``}
                     ${records.map(record => html`<tr>
                         <th>
-                            <a href="#" @click=${e => { self.go(current_key, record.id); e.preventDefault(); }}>🔍\uFE0E</a>
+                            <a href="#" @click=${e => { self.go(record.id, current_key); e.preventDefault(); }}>🔍\uFE0E</a>
                             <a href="#" @click=${e => { showDeleteRecordDialog(e, record.id); e.preventDefault(); }}>✕</a>
                         </th>
 
@@ -467,40 +466,39 @@ let autoform_mod = (function() {
         p.then(() => {
             log.success('Données sauvegardées !');
 
-            record_id = null;
-            self.go(current_key);
+            self.go(null, current_key);
 
             // TODO: Give focus to first widget
             window.scrollTo(0, 0);
         });
     }
 
-    this.go = function(key, id) {
+    this.go = function(id, key) {
         if (!executor) {
             executor = autoform.createExecutor();
-            executor.goHandler = self.go;
+            executor.goHandler = key => self.go(record_id, key);
             executor.submitHandler = saveRecordAndReset;
         }
 
         // Load record data
-        if (id != null && id !== record_id) {
-            goupil.database.load('data', id).then(data => {
-                if (data) {
-                    executor.setData(data);
-                    record_id = id;
+        if (id !== record_id) {
+            if (id === null) {
+                record_id = util.makeULID();
+                executor.setData({id: record_id});
+            } else {
+                goupil.database.load('data', id).then(data => {
+                    if (data) {
+                        record_id = id;
+                        executor.setData(data);
 
-                    self.go(key);
-                } else {
-                    // TODO: Trigger goupil error in this case
-                }
-            });
+                        self.go(record_id, key);
+                    } else {
+                        // TODO: Trigger goupil error in this case
+                    }
+                });
 
-            return;
-        }
-        if (record_id == null) {
-            // TODO: Generate ULID-like IDs
-            record_id = util.makeULID();
-            executor.setData({id: record_id});
+                return;
+            }
         }
 
         current_key = key;
@@ -608,7 +606,7 @@ let autoform_mod = (function() {
             af_page = document.createElement('div');
         }
 
-        self.go(current_key || pickDefaultKey());
+        self.go(record_id, current_key || pickDefaultKey());
     };
 
     return this;
