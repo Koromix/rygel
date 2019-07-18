@@ -20,6 +20,10 @@ let goupil = (function() {
         return new URL(href, base);
     }
 
+    function initLog() {
+        log.pushHandler(addLogEntry);
+    }
+
     function initData() {
         let storage_warning = 'Local data may be cleared by the browser under storage pressure, ' +
                               'check your privacy settings for this website';
@@ -29,10 +33,10 @@ let goupil = (function() {
                 // FIXME: For some reason this does not seem to work correctly on Firefox,
                 // where granted is always true. Investigate.
                 if (!granted)
-                    self.logError(storage_warning);
+                    log.error(storage_warning);
             });
         } else {
-            self.logError(storage_warning);
+            log.error(storage_warning);
         }
 
         let db_name = `goupil_${settings.project_key}`;
@@ -98,6 +102,41 @@ let goupil = (function() {
 
         gp_popup.addEventListener('click', e => e.stopPropagation());
         document.addEventListener('click', closePopup);
+    }
+
+    function renderLog() {
+        let log_el = document.querySelector('#gp_log');
+
+        render(log_entries.map((entry, idx) => {
+            return html`<div class=${'gp_log_entry ' + entry.type}>
+                <button class="gp_log_close" @click=${e => closeLogEntry(idx)}>X</button>
+                ${entry.msg}
+             </div>`;
+        }), log_el);
+    }
+
+    function addLogEntry(type, msg) {
+        if (type === 'error' || type === 'success') {
+            let entry = {
+                msg: msg,
+                type: type
+            };
+            log_entries.push(entry);
+
+            renderLog();
+
+            setTimeout(() => {
+                log_entries.shift();
+                renderLog();
+            }, 6000);
+        }
+
+        log.defaultHandler(type, msg);
+    }
+
+    function closeLogEntry(idx) {
+        log_entries.splice(idx, 1);
+        renderLog();
     }
 
     function openPopup(e, func) {
@@ -239,42 +278,9 @@ let goupil = (function() {
         openPopup(e, func);
     };
 
-    function renderLog() {
-        let log_el = document.querySelector('#gp_log');
-
-        render(log_entries.map((entry, idx) => {
-            return html`<div class=${'gp_log_entry ' + entry.type}>
-                <button class="gp_log_close" @click=${e => closeLogEntry(idx)}>X</button>
-                ${entry.msg}
-             </div>`;
-        }), log_el);
-    }
-
-    function closeLogEntry(idx) {
-        log_entries.splice(idx, 1);
-        renderLog();
-    }
-
-    function log(msg, type) {
-        let entry = {
-            msg: msg,
-            type: type
-        };
-        log_entries.push(entry);
-
-        renderLog();
-
-        setTimeout(() => {
-            log_entries.shift();
-            renderLog();
-        }, 6000);
-    }
-
-    this.logSuccess = function(msg) { log(msg, 'success'); };
-    this.logError = function(msg) { log(msg, 'error'); };
-
     document.addEventListener('readystatechange', e => {
         if (document.readyState === 'complete') {
+            initLog();
             initData();
             initNavigation();
 

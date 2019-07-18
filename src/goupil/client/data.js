@@ -45,7 +45,7 @@ let data = (function () {
                     return new Promise((resolve, reject) => {
                         t.addEventListener('complete', e => resolve());
                         t.addEventListener('abort', e => {
-                            goupil.logError('Database transaction failure');
+                            log.error('Database transaction failure');
                             reject('Database transaction failure');
                         });
                     });

@@ -465,7 +465,7 @@ let autoform_mod = (function() {
         let p = saveRecord(values, variables);
 
         p.then(() => {
-            goupil.logSuccess('Données sauvegardées !');
+            log.success('Données sauvegardées !');
 
             record_id = null;
             self.go(current_key);
