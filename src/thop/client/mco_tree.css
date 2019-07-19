@@ -3,7 +3,7 @@
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #tr_tree {
-    margin: 8px 22px;
+    margin: 8px 8px 8px 22px;
     padding: 0;
     white-space: nowrap;
 }
@@ -38,9 +38,14 @@
     background: #ff6600;
     color: white;
 }
+#tr_tree .desc {
+    color: #888;
+    font-size: 0.9em;
+    font-style: italic;
+}
 
 @media screen and (min-width: 801px) {
-    #tr_tree ul { padding-left: 40px; }
+    #tr_tree ul { padding-left: 30px; }
 }
 
 @media screen and (max-width: 800px) {
