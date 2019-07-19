@@ -506,9 +506,9 @@ let catalog = (function() {
     // Cache
     let catalogs = {};
 
-    this.update = function(name) {
-        let info = Catalogs[name];
-        let set = catalogs[name];
+    this.update = function(type) {
+        let info = Catalogs[type];
+        let set = catalogs[type];
 
         if (info && (!set || !set.concepts.length)) {
             if (!set) {
@@ -516,7 +516,7 @@ let catalog = (function() {
                     concepts: [],
                     map: {}
                 };
-                catalogs[name] = set;
+                catalogs[type] = set;
             }
 
             if (info.concepts) {
@@ -539,6 +539,22 @@ let catalog = (function() {
         }
 
         return set;
+    };
+
+    this.getInfo = function(type, key) {
+        let map = self.update(type).map;
+        return map[key];
+    };
+
+    this.getDesc = function(type, key) {
+        let info = self.getInfo(type, key);
+        return info ? info.desc : null;
+    };
+    this.appendDesc = function(type, key, text = null) {
+        let desc = self.getDesc(type, key);
+        if (!text)
+            text = key;
+        return desc ? `${text} - ${desc}` : text;
     };
 
     return this;

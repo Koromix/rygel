@@ -15,17 +15,17 @@ let mco_list = (function() {
                 {type: 'cmd', name: 'Catégories majeures de diagnostic',
                  func: (ghm_ghs1, ghm_ghs2) => util.compareValues(ghm_ghs1.ghm_root, ghm_ghs2.ghm_root)},
                 {type: 'da', name: 'Domaines d\'activité',
-                 func: (ghm_ghs1, ghm_ghs2, ghm_roots_map) => {
-                    let ghm_root_info1 = ghm_roots_map[ghm_ghs1.ghm_root] || {};
-                    let ghm_root_info2 = ghm_roots_map[ghm_ghs2.ghm_root] || {};
+                 func: (ghm_ghs1, ghm_ghs2) => {
+                    let ghm_root_info1 = catalog.getInfo('mco_ghm_roots', ghm_ghs1.ghm_root) || {};
+                    let ghm_root_info2 = catalog.getInfo('mco_ghm_roots', ghm_ghs2.ghm_root) || {};
 
                     return util.compareValues(ghm_root_info1.da, ghm_root_info2.da) ||
                            util.compareValues(ghm_root_info1.ghm_root, ghm_root_info2.ghm_root);
                 }},
                 {type: 'ga', name: 'Groupes d\'activité',
-                 func: (ghm_ghs1, ghm_ghs2, ghm_roots_map) => {
-                    let ghm_root_info1 = ghm_roots_map[ghm_ghs1.ghm_root] || {};
-                    let ghm_root_info2 = ghm_roots_map[ghm_ghs2.ghm_root] || {};
+                 func: (ghm_ghs1, ghm_ghs2) => {
+                    let ghm_root_info1 = catalog.getInfo('mco_ghm_roots', ghm_ghs1.ghm_root) || {};
+                    let ghm_root_info2 = catalog.getInfo('mco_ghm_roots', ghm_ghs2.ghm_root) || {};
 
                     return util.compareValues(ghm_root_info1.ga, ghm_root_info2.ga) ||
                            util.compareValues(ghm_root_info1.ghm_root, ghm_root_info2.ghm_root);
@@ -35,30 +35,30 @@ let mco_list = (function() {
 
             header: false,
             columns: [
-                {func: (ghm_ghs, ghm_roots_map, group) => {
+                {func: (ghm_ghs, group) => {
                     switch (group) {
                         case 'cmd': {
-                            let ghm_root_info = ghm_roots_map[ghm_ghs.ghm_root];
+                            let ghm_root_info = catalog.getInfo('mco_ghm_roots', ghm_ghs.ghm_root);
                             if (ghm_root_info && ghm_root_info.cmd) {
-                                return ghm_root_info.cmd + ' - ' + ghm_root_info.cmd_desc;
+                                return `${ghm_root_info.cmd} - ${ghm_root_info.cmd_desc}`;
                             } else {
                                 return 'CMD inconnue ??';
                             }
                         } break;
 
                         case 'da': {
-                            let ghm_root_info = ghm_roots_map[ghm_ghs.ghm_root];
+                            let ghm_root_info = catalog.getInfo('mco_ghm_roots', ghm_ghs.ghm_root);
                             if (ghm_root_info && ghm_root_info.da) {
-                                return ghm_root_info.da + ' - ' + ghm_root_info.da_desc;
+                                return `${ghm_root_info.da} - ${ghm_root_info.da_desc}`;
                             } else {
                                 return 'DA inconnu ??';
                             }
                         } break;
 
                         case 'ga': {
-                            let ghm_root_info = ghm_roots_map[ghm_ghs.ghm_root];
+                            let ghm_root_info = catalog.getInfo('mco_ghm_roots', ghm_ghs.ghm_root);
                             if (ghm_root_info && ghm_root_info.ga) {
-                                return ghm_root_info.ga + ' - ' + ghm_root_info.ga_desc;
+                                return `${ghm_root_info.ga} - ${ghm_root_info.ga_desc}`;
                             } else {
                                 return 'GA inconnu ??';
                             }
@@ -66,10 +66,7 @@ let mco_list = (function() {
                     }
                 }},
                 {key: 'ghm_root', header: 'Racine de GHM',
-                 func: (ghm_ghs, ghm_roots_map) => {
-                    return ghm_ghs.ghm_root + (ghm_roots_map[ghm_ghs.ghm_root] ?
-                                              ' - ' + ghm_roots_map[ghm_ghs.ghm_root].desc : '');
-                }}
+                 func: ghm_ghs => catalog.appendDesc('mco_ghm_roots', ghm_ghs.ghm_root)}
             ],
 
             page_len: 800
@@ -82,10 +79,8 @@ let mco_list = (function() {
 
             header: true,
             columns: [
-                {key: 'ghm_root', func: (ghm_ghs, ghm_roots_map) => {
-                    return ghm_ghs.ghm_root + (ghm_roots_map[ghm_ghs.ghm_root] ?
-                                              ' - ' + ghm_roots_map[ghm_ghs.ghm_root].desc : '');
-                }},
+                {key: 'ghm_root',
+                 func: ghm_ghs => catalog.appendDesc('mco_ghm_roots', ghm_ghs.ghm_root)},
                 {key: 'ghm', header: 'GHM', variable: 'ghm'},
                 {key: 'ghs', header: 'GHS', variable: 'ghs'},
                 {key: 'durations', header: 'Durées', tooltip: 'Durées (nuits)',
@@ -132,15 +127,13 @@ let mco_list = (function() {
             header: true,
             columns: [
                 {key: 'diag', header: 'Diagnostic',
-                 func: (diag, cim10_map) => {
+                 func: diag => {
                     let text = diag.diag;
                     switch (diag.sex) {
                         case 'Homme': { text += ' (♂)'; } break;
                         case 'Femme': { text += ' (♀)'; } break;
                     }
-                    if (cim10_map[diag.diag])
-                        text += ' - ' + cim10_map[diag.diag].desc;
-                    return text;
+                    return catalog.appendDesc('cim10', diag.diag, text);
                 }},
                 {key: 'severity', header: 'Niveau',
                  func: diag => diag.severity ? diag.severity + 1 : 1},
@@ -158,9 +151,9 @@ let mco_list = (function() {
             header: true,
             columns: [
                 {key: 'proc', header: 'Acte',
-                 func: (proc, ccam_map) => {
-                    let proc_phase = proc.proc + (proc.phase ? '/' + proc.phase : '');
-                    return proc_phase + (ccam_map[proc.proc] ? ' - ' + ccam_map[proc.proc].desc : '');
+                 func: proc => {
+                    let proc_with_phase = proc.proc + (proc.phase ? '/' + proc.phase : '');
+                    return catalog.appendDesc('ccam', proc.proc, proc_with_phase);
                 }},
                 {key: 'dates', header: 'Dates', tooltip: 'Date de début incluse, date de fin exclue',
                  func: proc => proc.begin_date + ' -- ' + proc.end_date},
@@ -388,7 +381,6 @@ let mco_list = (function() {
 
         let list_info = Lists[list_name];
         let list = list_cache[list_name];
-        let concepts_map = catalog.update(list_info.catalog).map;
 
         let builder;
         if (thop.needsRefresh(list, group_info, search)) {
@@ -410,14 +402,14 @@ let mco_list = (function() {
 
             // Groups
             if (group_info)
-                list.items.sort(function(v1, v2) { return group_info.func(v1, v2, concepts_map); });
+                list.items.sort(function(v1, v2) { return group_info.func(v1, v2); });
 
             // Data
             let prev_cell0 = null;
             let prev_deduplicate_key = null;
             for (const item of list.items) {
                 if (list_info.deduplicate) {
-                    let deduplicate_key = list_info.deduplicate(item, concepts_map);
+                    let deduplicate_key = list_info.deduplicate(item);
                     if (deduplicate_key === prev_deduplicate_key)
                         continue;
                     prev_deduplicate_key = deduplicate_key;
@@ -426,8 +418,7 @@ let mco_list = (function() {
                 let show = false;
                 let cells = [];
                 for (const col of list_info.columns) {
-                    let content = createContent(col, item, concepts_map,
-                                                group_info ? group_info.type : null);
+                    let content = createContent(col, item, group_info ? group_info.type : null);
 
                     show |= test(content);
                     cells.push(content);
@@ -471,12 +462,12 @@ let mco_list = (function() {
                    wt_pager.computeLastPage(render_count, builder.getRowCount(), list_info.page_len));
     }
 
-    function createContent(column, item, concepts_map, group) {
+    function createContent(column, item, group) {
         let content;
         if (column.variable) {
             content = item[column.variable];
         } else if (column.func) {
-            content = column.func(item, concepts_map, group);
+            content = column.func(item, group);
         }
 
         if (content === undefined || content === null) {
@@ -531,28 +522,21 @@ let mco_list = (function() {
         return ranges.join(', ');
     }
 
-    function getCodeDesc(type, key) {
-        let map = catalog.update(type).map;
-        let info = map[key];
-
-        return info ? info.desc : null;
-    }
-
     function makeSpecAnchor(str, append_desc) {
         if (str[0] === 'A') {
-            let desc = append_desc ? getCodeDesc('ccam', str) : null;
+            let desc = append_desc ? catalog.getDesc('ccam', str) : null;
             let href = self.routeToUrl({list: 'procedures', spec: str}).url;
 
             return html`<a href=${href}>${str}</a>${desc ? html` <span class="desc">${desc}</span>` : html``}`;
         } else if (str[0] === 'D') {
-            let desc = append_desc ? getCodeDesc('cim10', str) : null;
+            let desc = append_desc ? catalog.getDesc('cim10', str) : null;
             let href = self.routeToUrl({list: 'diagnoses', spec: str}).url;
 
             return html`<a href=${href}>${str}</a>${desc ? html` <span class="desc">${desc}</span>` : html``}`;
         } else if (str.match(/^[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?( \[[0-9]{1,3}\])?$/)) {
             let ghm_root = str.substr(0, 5);
 
-            let desc = getCodeDesc('mco_ghm_roots', ghm_root);
+            let desc = catalog.getDesc('mco_ghm_roots', ghm_root);
             let tooltip = desc ? `${ghm_root} - ${desc}` : '';
             if (!append_desc)
                 desc = '';
