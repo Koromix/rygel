@@ -531,26 +531,34 @@ let mco_list = (function() {
         return ranges.join(', ');
     }
 
-    function makeSpecAnchor(str) {
+    function getCodeDesc(type, key) {
+        let map = catalog.update(type).map;
+        let info = map[key];
+
+        return info ? info.desc : null;
+    }
+
+    function makeSpecAnchor(str, append_desc) {
         if (str[0] === 'A') {
+            let desc = append_desc ? getCodeDesc('ccam', str) : null;
             let href = self.routeToUrl({list: 'procedures', spec: str}).url;
-            return html`<a href=${href}>${str}</a>`;
+
+            return html`<a href=${href}>${str}</a>${desc ? html` <span class="desc">${desc}</span>` : html``}`;
         } else if (str[0] === 'D') {
+            let desc = append_desc ? getCodeDesc('cim10', str) : null;
             let href = self.routeToUrl({list: 'diagnoses', spec: str}).url;
-            return html`<a href=${href}>${str}</a>`;
-        } else if (str.match(/^[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?$/)) {
+
+            return html`<a href=${href}>${str}</a>${desc ? html` <span class="desc">${desc}</span>` : html``}`;
+        } else if (str.match(/^[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?( \[[0-9]{1,3}\])?$/)) {
             let ghm_root = str.substr(0, 5);
 
-            let tooltip;
-            {
-                let ghm_roots_map = catalog.update('mco_ghm_roots').map;
-                let ghm_root_info = ghm_roots_map[ghm_root];
+            let desc = getCodeDesc('mco_ghm_roots', ghm_root);
+            let tooltip = desc ? `${ghm_root} - ${desc}` : '';
+            if (!append_desc)
+                desc = '';
 
-                tooltip = ghm_root_info ? `${ghm_root} - ${ghm_root_info.desc}` : '';
-            }
-
-            let href = mco_pricing.routeToUrl({view: 'table', ghm_root: str.substr(0, 5)}).url;
-            return html`<a class="ghm" href=${href} title=${tooltip}>${str}</a>`;
+            let href = mco_pricing.routeToUrl({view: 'table', ghm_root: ghm_root}).url;
+            return html`<a class="ghm" href=${href} title=${tooltip}>${str}</a>${desc ? html` <span class="desc">${desc}</span>` : html``}`;
         } else if (str.match(/[Nn]oeud [0-9]+/)) {
             let href = mco_tree.routeToUrl().url + '#n' + str.substr(6);
             return html`<a href=${href}>${str}</a>`;
@@ -559,15 +567,15 @@ let mco_list = (function() {
         }
     }
 
-    this.addSpecLinks = function(str) {
+    this.addSpecLinks = function(str, append_desc = false) {
         let elements = [];
         for (;;) {
-            let m = str.match(/([AD](\-[0-9]+|\$[0-9]+\.[0-9]+)|[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?|[Nn]oeud [0-9]+)/);
+            let m = str.match(/([AD](\-[0-9]+|\$[0-9]+\.[0-9]+)|[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?( \[[0-9]{1,3}\])?|[Nn]oeud [0-9]+)/);
             if (!m)
                 break;
 
             elements.push(str.substr(0, m.index));
-            elements.push(makeSpecAnchor(m[0]));
+            elements.push(makeSpecAnchor(m[0], append_desc));
             str = str.substr(m.index + m[0].length);
         }
         elements.push(str);

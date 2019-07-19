@@ -195,7 +195,7 @@ let mco_tree = (function() {
             let ret = {
                 idx: idx,
                 type: 'leaf',
-                vdom: html`<span><span class="n">${idx} </span>${mco_list.addSpecLinks(text)}</span>`
+                vdom: html`<span><span class="n">${idx} </span>${mco_list.addSpecLinks(text, true)}</span>`
             };
 
             return ret;
