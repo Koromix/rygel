@@ -18,11 +18,7 @@ let mco_pricing = (function() {
     this.runModule = function(route) {
         // Resources
         let indexes = thop.updateMcoSettings().indexes;
-        {
-            let ret = catalog.update('mco_ghm_roots');
-            ghm_roots = ret.concepts;
-            ghm_roots_map = ret.map;
-        }
+        ({concepts: ghm_roots, map: ghm_roots_map} = catalog.update('mco_ghm_roots'));
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
         if (!route.ghm_root && ghm_roots.length)
@@ -226,13 +222,6 @@ let mco_pricing = (function() {
                                max_duration, apply_coeff) {
         let root_el = query('#view');
 
-        let title = ghm_root;
-        {
-            let ghm_roots_map = catalog.update('mco_ghm_roots').map;
-            if (ghm_roots_map[ghm_root])
-                title += ' - '  + ghm_roots_map[ghm_root].desc;
-        }
-
         let ghs;
         if (pricing_info && pricing_info[main_index] &&
                 (diff_index < 0 || pricing_info[diff_index])) {
@@ -241,7 +230,7 @@ let mco_pricing = (function() {
             render(html`
                 <table id="pr_table" class="pr_grid">
                     <thead>
-                        <tr><td class="ghm_root" colspan=${ghs.length + 1}>${title}</td></tr>
+                        <tr><td class="ghm_root" colspan=${ghs.length + 1}>${catalog.appendDesc('mco_ghm_roots', ghm_root)}</td></tr>
 
                         <tr><th>GHM</th>${util.mapRLE(ghs.map(col => col.ghm),
                             (ghm, colspan) => html`<td class="desc" colspan=${colspan}>${ghm}</td>`)}</tr>

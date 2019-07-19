@@ -610,8 +610,6 @@ let mco_casemix = (function() {
 
         select_ghm_roots = new Set(select_ghm_roots);
 
-        let ghm_roots_map = catalog.update('mco_ghm_roots').map;
-
         let select = query('#opt_ghm_roots > div');
 
         let builder = wt_tree_selector.create();
@@ -789,11 +787,10 @@ let mco_casemix = (function() {
                         return 0;
                     }
                 });
-            let ghm_roots_map = catalog.update('mco_ghm_roots').map;
 
             summary.clear();
             summary.addColumn('ghm_root', 'Racine', value => {
-                let ghm_root_info = ghm_roots_map[value];
+                let ghm_root_info = catalog.getInfo('mco_ghm_roots', value);
                 if (ghm_root_info) {
                     return html`
                         <a href=${self.routeToUrl({view: 'durations', ghm_root: value}).url}>${value}</a>
@@ -810,7 +807,7 @@ let mco_casemix = (function() {
             let stats1;
             {
                 function rowToGroup(row) {
-                    let ghm_root_info = ghm_roots_map[row.ghm_root]
+                    let ghm_root_info = catalog.getInfo('mco_ghm_roots', row.ghm_root);
                     if (ghm_root_info) {
                         let values = row.unit.map(function(unit) { return [ghm_root_info[regroup], row.ghm_root]; });
                         return ['group', values];
@@ -1143,11 +1140,6 @@ let mco_casemix = (function() {
     function refreshResults(units, page) {
         units = new Set(units);
 
-        let cim10_map = catalog.update('cim10').map;
-        let ccam_map = catalog.update('ccam').map;
-        let ghm_roots_map = catalog.update('mco_ghm_roots').map;
-        let errors_map = catalog.update('mco_errors').map;
-
         function handleIdClick(e) {
             let table = this.parentNode.parentNode.parentNode.parentNode;
             if (table.toggleClass('deploy')) {
@@ -1157,15 +1149,6 @@ let mco_casemix = (function() {
             }
 
             e.preventDefault();
-        }
-
-        function codeWithDesc(map, code) {
-            const desc = map[code];
-            if (code !== null && code !== undefined) {
-                return '' + code + (desc ? ' - ' + desc.desc : '');
-            } else {
-                return null;
-            }
         }
 
         function unitPath(unit) {
@@ -1219,9 +1202,9 @@ let mco_casemix = (function() {
                         dom.h('td', (['♂ ', '♀ '][result.sex - 1] || '') + format.age(result.age)),
                         dom.h('td', (result.duration !== undefined ? format.duration(result.duration) : '') +
                                     (result.stays[result.stays.length - 1].exit_mode == '9' ? ' (✝)' : '')),
-                        dom.h('td', {title: codeWithDesc(ghm_roots_map, result.ghm_root) + '\n\n' +
+                        dom.h('td', {title: catalog.appendDesc('mco_ghm_roots', result.ghm_root) + '\n\n' +
                                             'GHM : ' + result.ghm + '\n' +
-                                            'Erreur : ' + codeWithDesc(errors_map, result.main_error) + '\n' +
+                                            'Erreur : ' + catalog.appendDesc('mco_errors', result.main_error) + '\n' +
                                             'GHS : ' + result.ghs},
                             dom.h('a', {href: mco_pricing.routeToUrl({view: 'table',
                                                                       date: result.index_date,
@@ -1297,9 +1280,9 @@ let mco_casemix = (function() {
                     {
                         table1.appendContent(
                             createInfoRow('Diagnostic principal', stay.main_diagnosis,
-                                          codeWithDesc(cim10_map, stay.main_diagnosis)),
+                                          catalog.appendDesc('cim10', stay.main_diagnosis)),
                             createInfoRow('Diagnostic relié', stay.linked_diagnosis,
-                                          codeWithDesc(cim10_map, stay.linked_diagnosis))
+                                          catalog.appendDesc('cim10', stay.linked_diagnosis))
                         );
 
                         let other_diagnoses = stay.other_diagnoses.slice();
@@ -1326,7 +1309,7 @@ let mco_casemix = (function() {
                             table1.appendContent(
                                 dom.h('tr',
                                     dom.h('th', k ? '' : 'Diagnostics associés'),
-                                    dom.h('td', {title: codeWithDesc(cim10_map, diag.diag)}, contents)
+                                    dom.h('td', {title: catalog.appendDesc('cim10', diag.diag)}, contents)
                                 )
                             );
                         }
@@ -1368,7 +1351,7 @@ let mco_casemix = (function() {
                             table2.appendContent(
                                 dom.h('tr',
                                     dom.h('th', k ? '' : 'Actes'),
-                                    dom.h('td', {title: codeWithDesc(ccam_map, proc.proc)}, text)
+                                    dom.h('td', {title: catalog.appendDesc('ccam', proc.proc)}, text)
                                 )
                             );
                         }
