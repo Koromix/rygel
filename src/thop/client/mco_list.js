@@ -341,7 +341,7 @@ let mco_list = (function() {
 
         if (spec) {
             render(html`
-                Filtre : ${spec}
+                Liste : ${spec}
                 <a href=${self.routeToUrl({spec: null}).url}>(retirer)</a>
             `, h1);
             h1.removeClass('hide');
