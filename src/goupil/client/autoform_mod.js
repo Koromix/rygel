@@ -540,41 +540,22 @@ let autoform_mod = (function() {
                 return;
             }
 
-            // NOTE: Migration from localStorage to IndexedDB, drop localStorage
-            // support in a month or two.
-            try {
-                let json = localStorage.getItem('goupil_af_pages');
-                let pages2 = JSON.parse(json).map(kv => kv[1]);
-                let default_key2 = pages.length ? pages[0].key : null;
-
-                let t = goupil.database.transaction(db => {
-                    if (default_key2)
-                        db.saveWithKey('settings', 'default_page', default_key2);
-                    db.saveAll('pages', pages2);
+            // Load pages
+            let t = goupil.database.transaction(db => {
+                db.load('settings', 'default_page').then(default_page => { default_key = default_page; });
+                db.loadAll('pages').then(pages2 => {
+                    if (pages2.length) {
+                        pages = Array.from(pages2);
+                    } else {
+                        pages = autoform_default.pages;
+                    }
+                    for (let page of pages)
+                        pages_map[page.key] = page;
                 });
+            });
+            t.then(self.activate);
 
-                t.then(() => {
-                    localStorage.removeItem('goupil_af_pages');
-                    self.activate();
-                });
-            } catch (err) {
-                let t = goupil.database.transaction(db => {
-                    db.load('settings', 'default_page').then(default_page => { default_key = default_page; });
-                    db.loadAll('pages').then(pages2 => {
-                        if (pages2.length) {
-                            pages = Array.from(pages2);
-                        } else {
-                            pages = autoform_default.pages;
-                        }
-                        for (let page of pages)
-                            pages_map[page.key] = page;
-                    });
-                });
-
-                t.then(self.activate);
-
-                init = true;
-            }
+            init = true;
         }
 
         let main_el = document.querySelector('main');
