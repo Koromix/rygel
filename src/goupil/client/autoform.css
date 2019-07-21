@@ -200,7 +200,6 @@
     background: #ddd;
 }
 .af_head_actions { width: 30px; }
-.af_head_variable { width: 60px; }
 
 .af_records tbody tr:nth-child(2n + 1) { background: #efefef; }
 .af_records tbody tr:nth-child(2n) { background: #f4f4f4; }
