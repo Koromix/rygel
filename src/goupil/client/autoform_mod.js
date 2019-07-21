@@ -489,24 +489,22 @@ let autoform_mod = (function() {
         }
 
         // Load record data
-        if (id !== record_id) {
-            if (id === null) {
-                record_id = util.makeULID();
-                executor.setData({id: record_id});
-            } else {
-                goupil.database.load('data', id).then(data => {
-                    if (data) {
-                        record_id = id;
-                        executor.setData(data);
+        if (id == null) {
+            record_id = util.makeULID();
+            executor.setData({id: record_id});
+        } else if (id !== record_id) {
+            goupil.database.load('data', id).then(data => {
+                if (data) {
+                    record_id = id;
+                    executor.setData(data);
 
-                        self.go(record_id, key);
-                    } else {
-                        // TODO: Trigger goupil error in this case
-                    }
-                });
+                    self.go(record_id, key);
+                } else {
+                    // TODO: Trigger goupil error in this case
+                }
+            });
 
-                return;
-            }
+            return;
         }
 
         current_key = key;
