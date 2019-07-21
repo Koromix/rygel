@@ -391,7 +391,7 @@ let autoform_mod = (function() {
         let columns = orderColumns(variables);
 
         render(html`
-            <table class="af_records">
+            <table class="af_records" style=${`min-width: ${30 + 60 * columns.length}px`}>
                 <thead>
                     <tr>
                         <th class="af_head_actions">
