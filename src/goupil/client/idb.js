@@ -6,7 +6,7 @@ window.indexedDB = window.indexedDB || window.webkitIndexedDB || window.mozIndex
                    window.OIndexedDB || window.msIndexedDB;
 
 // TODO: Support degraded mode when IDB is not available (e.g. private browsing)
-let data = (function () {
+let idb = (function () {
     // Beware, the IndexedDB API is asynchronous crap. Not my fault.
     // The whole point of this is to hide most of the async stuff.
 

@@ -42,7 +42,7 @@ let autoform_mod = (function() {
             script: ''
         };
 
-        let t = goupil.database.transaction(db => {
+        let t = database.transaction(db => {
             db.save('pages', page);
             if (is_default)
                 db.saveWithKey('settings', 'default_page', key);
@@ -64,7 +64,7 @@ let autoform_mod = (function() {
         let new_page = Object.assign({}, page);
         new_page.title = title;
 
-        let t = goupil.database.transaction(db => {
+        let t = database.transaction(db => {
             db.save('pages', new_page);
             if (is_default) {
                 db.saveWithKey('settings', 'default_page', page.key);
@@ -87,7 +87,7 @@ let autoform_mod = (function() {
     }
 
     function deletePage(page) {
-        let t = goupil.database.transaction(db => {
+        let t = database.transaction(db => {
             db.delete('pages', page.key);
             if (default_key === page.key)
                 db.delete('settings', 'default_page');
@@ -109,7 +109,7 @@ let autoform_mod = (function() {
     }
 
     function resetPages() {
-        let t = goupil.database.transaction(db => {
+        let t = database.transaction(db => {
             db.clear('pages');
             for (let page of autoform_default.pages)
                 db.save('pages', page);
@@ -347,7 +347,7 @@ let autoform_mod = (function() {
             return ret;
         });
 
-        let t = goupil.database.transaction(db => {
+        let t = database.transaction(db => {
             db.saveAll('variables', variables);
             db.save('data', values);
         });
@@ -356,7 +356,7 @@ let autoform_mod = (function() {
     }
 
     function deleteRecord(id) {
-        return goupil.database.delete('data', id);
+        return database.delete('data', id);
     }
 
     function switchCurrentRecord(e, id) {
@@ -449,8 +449,8 @@ let autoform_mod = (function() {
     }
 
     function loadAllRecords() {
-        let p = Promise.all([goupil.database.loadAll('data'),
-                             goupil.database.loadAll('variables')]);
+        let p = Promise.all([database.loadAll('data'),
+                             database.loadAll('variables')]);
         p = p.then(values => ({records: values[0], variables: values[1]}));
 
         return p;
@@ -465,7 +465,7 @@ let autoform_mod = (function() {
             page.script = editor.getValue();
 
             if (renderAll()) {
-                goupil.database.save('pages', page);
+                database.save('pages', page);
             } else {
                 // Restore working script
                 page.script = prev_script;
@@ -518,7 +518,7 @@ let autoform_mod = (function() {
             record_id = util.makeULID();
             executor.setData({id: record_id});
         } else if (id !== record_id) {
-            goupil.database.load('data', id).then(data => {
+            database.load('data', id).then(data => {
                 if (data) {
                     record_id = id;
                     executor.setData(data);
@@ -569,7 +569,7 @@ let autoform_mod = (function() {
             }
 
             // Load pages
-            let t = goupil.database.transaction(db => {
+            let t = database.transaction(db => {
                 db.load('settings', 'default_page').then(default_page => { default_key = default_page; });
                 db.loadAll('pages').then(pages2 => {
                     if (pages2.length) {

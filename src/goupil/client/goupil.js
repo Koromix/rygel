@@ -14,8 +14,6 @@ let goupil = (function() {
 
     let log_entries = [];
 
-    let db;
-
     function parseURL(href, base) {
         return new URL(href, base);
     }
@@ -24,7 +22,7 @@ let goupil = (function() {
         log.pushHandler(addLogEntry);
     }
 
-    function initData() {
+    function initDatabase() {
         let storage_warning = 'Local data may be cleared by the browser under storage pressure, ' +
                               'check your privacy settings for this website';
 
@@ -40,7 +38,7 @@ let goupil = (function() {
         }
 
         let db_name = `goupil_${settings.project_key}`;
-        self.database = data.open(db_name, 3, (db, old_version) => {
+        database = idb.open(db_name, 3, (db, old_version) => {
             switch (old_version) {
                 case null: {
                     db.createObjectStore('pages', {keyPath: 'key'});
@@ -281,7 +279,7 @@ let goupil = (function() {
     document.addEventListener('readystatechange', e => {
         if (document.readyState === 'complete') {
             initLog();
-            initData();
+            initDatabase();
             initNavigation();
 
             self.go(window.location.href, false);
@@ -290,3 +288,6 @@ let goupil = (function() {
 
     return this;
 }).call({});
+
+// Initialized by initDatabase()
+let database = null;
