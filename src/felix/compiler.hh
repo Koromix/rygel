@@ -19,16 +19,16 @@ enum class BuildMode {
     Debug,
     DebugFast,
     Fast,
-    StaticFast,
     LTO,
+    StaticFast,
     StaticLTO
 };
 static const char *const BuildModeNames[] = {
     "Debug",
     "DebugFast",
     "Fast",
-    "StaticFast",
     "LTO",
+    "StaticFast",
     "StaticLTO"
 };
 
