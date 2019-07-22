@@ -68,7 +68,7 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames, BuildM
         Fmt(out_buf, " -fdiagnostics-color=always");
     }
 
-    if (build_mode == BuildMode::StaticLTO) {
+    if (build_mode == BuildMode::LTO || build_mode == BuildMode::StaticLTO) {
         Fmt(out_buf, " -flto");
     }
     if ((build_mode == BuildMode::StaticFast || build_mode == BuildMode::StaticLTO) &&
