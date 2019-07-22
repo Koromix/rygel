@@ -28,9 +28,9 @@ static void AppendGccObjectArguments(const char *src_filename, BuildMode build_m
     switch (build_mode) {
         case BuildMode::Debug: { Fmt(out_buf, " -O0 -g -ftrapv"); } break;
         case BuildMode::DebugFast: { Fmt(out_buf, " -Og -g -ftrapv"); } break;
-        case BuildMode::Fast:
+        case BuildMode::Fast: { Fmt(out_buf, " -O2 -g -DNDEBUG"); } break;
+        case BuildMode::LTO: { Fmt(out_buf, " -O2 -flto -g -DNDEBUG"); } break;
         case BuildMode::StaticFast: { Fmt(out_buf, " -O2 -DNDEBUG"); } break;
-        case BuildMode::LTO:
         case BuildMode::StaticLTO: { Fmt(out_buf, " -O2 -flto -DNDEBUG"); } break;
     }
 
@@ -143,8 +143,8 @@ static void AppendPackCommandLine(Span<const char *const> pack_filenames, BuildM
         case BuildMode::Debug:
         case BuildMode::DebugFast: { Fmt(out_buf, " -m SourceMap"); } break;
         case BuildMode::Fast:
-        case BuildMode::StaticFast:
         case BuildMode::LTO:
+        case BuildMode::StaticFast:
         case BuildMode::StaticLTO: { Fmt(out_buf, " -m RunTransform"); } break;
     }
 
@@ -320,9 +320,7 @@ public:
             case BuildMode::LTO: {
 #ifdef _WIN32
                 // Force static linking of libgcc, libstdc++ and winpthread
-                Fmt(&buf, " -static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic -s");
-#else
-                Fmt(&buf, " -s");
+                Fmt(&buf, " -static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic");
 #endif
             } break;
             case BuildMode::StaticFast:
