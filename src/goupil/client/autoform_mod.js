@@ -390,21 +390,30 @@ let autoform_mod = (function() {
     function renderRecords(records, variables) {
         let columns = orderColumns(variables);
 
+        let empty_msg;
+        if (!records.length) {
+            empty_msg = 'Aucune donnée à afficher';
+        } else if (!columns.length) {
+            empty_msg = 'Impossible d\'afficher les données (colonnes inconnues)';
+            records = [];
+        }
+
         render(html`
             <table class="af_records" style=${`min-width: ${30 + 60 * columns.length}px`}>
                 <thead>
                     <tr>
                         <th class="af_head_actions">
-                            <button class="af_excel" @click=${handleExportClick}></button>
+                            ${columns.length ?
+                                html`<button class="af_excel" @click=${handleExportClick}></button>` : html``}
                         </th>
                         ${!columns.length ?
-                            html`<th>Colonnes inconnues</th>` : html``}
+                            html`<th></th>` : html``}
                         ${columns.map(key => html`<th class="af_head_variable">${key}</th>`)}
                     </tr>
                 </thead>
                 <tbody>
-                    ${!records.length ?
-                        html`<tr><td colspan=${1 + Math.max(1, columns.length)}>Aucune donnée à afficher</td></tr>` : html``}
+                    ${empty_msg ?
+                        html`<tr><td colspan=${1 + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : html``}
                     ${records.map(record => html`<tr class=${record_id === record.id ? 'af_row_current' : ''}>
                         <th>
                             <a href="#" @click=${e => { switchCurrentRecord(e, record.id); e.preventDefault(); }}>🔍\uFE0E</a>
