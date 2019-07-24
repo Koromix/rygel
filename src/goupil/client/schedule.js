@@ -61,47 +61,24 @@ function Schedule(widget, resources_map, meetings_map) {
         return hours * 100 + min;
     }
 
-    function isLeapYear(year) {
-        return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
-    }
-
-    function daysInMonth(year, month) {
-        let days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-        return days_per_month[month - 1] + (month == 2 && isLeapYear(year));
-    }
-
-    function getWeekDay(year, month, day) {
-        if (month < 3) {
-            year--;
-            month += 12;
-        }
-
-        let century = Math.floor(year / 100);
-        year %= 100;
-
-        // Zeller's congruence:
-        // https://en.wikipedia.org/wiki/Zeller%27s_congruence
-        return (day + Math.floor(13 * (month + 1) / 5) + year + Math.floor(year / 4) + Math.floor(century / 4) + 5 * century + 5) % 7;
-    }
-
     function getMonthDays(year, month, add_skip_days = false) {
-        let days_count = daysInMonth(year, month);
-        let start_week_day = getWeekDay(year, month, 1);
+        let start_date = dates.create(year, month, 1);
+        let start_week_day = start_date.getWeekDay();
 
         let days = [];
         if (add_skip_days) {
             for (let i = 0; i < start_week_day; i++)
                 days.push(null);
         }
-        for (let i = 1; i <= days_count; i++) {
-            let month_str = (month < 10 ? '0' : '') + month;
-            let day_str = (i < 10 ? '0' : '') + i;
+        for (let date = start_date; date.year === start_date.year &&
+                                    date.month === start_date.month; date = date.plus(1)) {
+            let day = {
+                key: date.toString(),
+                date: date.toLocaleString(),
+                week_day: week_day_names[date.getWeekDay() - 1]
+            };
 
-            days.push({
-                key: `${year}-${month_str}-${day_str}`,
-                date: `${day_str}/${month_str}/${year}`,
-                week_day: week_day_names[(start_week_day + i - 1) % 7]
-            });
+            days.push(day);
         }
 
         return days;

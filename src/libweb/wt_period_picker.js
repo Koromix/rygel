@@ -10,8 +10,8 @@ let wt_period_picker = (function() {
 
         let root_el;
 
-        let limit_dates = [new Date(1900, 1, 1), new Date(2100, 1, 1)];
-        let current_dates = limit_dates.map(date => new Date(date));
+        let limit_dates = [dates.create(1900, 1, 1), dates.create(2100, 1, 1)];
+        let current_dates = limit_dates;
 
         let main_el;
         let handle_els;
@@ -19,43 +19,22 @@ let wt_period_picker = (function() {
 
         let grab_target;
         let grab_offset;
-        let grab_diff_year;
-        let grab_diff_month;
-        let grab_start_day;
-        let grab_end_day;
-
-        // Used by dateToStr() and strToDate()
-        let date_el = document.createElement('input');
-        date_el.setAttribute('type', 'date');
+        let grab_start_date;
+        let grab_end_date;
 
         this.getRootElement = function() { return root_el; };
 
-        this.setLimitDates = function(dates) { limit_dates = dates.map(strToDate); };
-        this.getLimitDates = function() { return limit_dates.map(dateToStr); };
-        this.setDates = function(dates) { current_dates = dates.map((str, idx) => str ? strToDate(str) : limit_dates[idx]); };
-        this.getDates = function() { return current_dates.map(dateToStr); };
-
-        function dateToStr(date) {
-            date_el.valueAsDate = date;
-            return date_el.value;
-        }
-
-        function strToDate(str) {
-            date_el.value = str;
-
-            let date = date_el.valueAsDate;
-            // Put a few hours into the day to avoid DST problems
-            date.setHours(2);
-
-            return date;
-        }
+        this.setLimitDates = function(dates) { limit_dates = dates; };
+        this.getLimitDates = function() { return limit_dates; };
+        this.setDates = function(dates) { current_dates = dates.map((date, idx) => date || limit_dates[idx]); };
+        this.getDates = function() { return current_dates; };
 
         function syncHandle(handle, date) {
             let input = handle.querySelector('input');
 
-            let new_pos = 100 * (date - limit_dates[0]) / (limit_dates[1] - limit_dates[0]);
+            let new_pos = 100 * date.diff(limit_dates[0]) / limit_dates[1].diff(limit_dates[0]);
             handle.style.left = '' + new_pos + '%';
-            input.valueAsDate = date;
+            input.value = date.toString();
         }
 
         function syncView() {
@@ -67,32 +46,21 @@ let wt_period_picker = (function() {
         }
 
         function positionToDate(pos) {
-            let date_delta;
-            {
-                let min_pos = 0;
-                let max_pos = main_el.offsetWidth;
-                if (pos < min_pos) {
-                    pos = min_pos;
-                } else if (pos > max_pos) {
-                    pos = max_pos;
-                }
+            let delta_days = Math.floor(limit_dates[1].diff(limit_dates[0]) * (pos / main_el.offsetWidth));
+            let date = limit_dates[0].plus(delta_days);
 
-                date_delta = ((limit_dates[1] - limit_dates[0]) * ((pos - min_pos) / (max_pos - min_pos)));
-            }
+            return date;
+        }
 
-            // Is there any part of the standard JS library that isn't complete crap?
-            let date = new Date(limit_dates[0]);
-            date.setTime(date.getTime() + date_delta + 2 * 86400000);
-            date.setDate(1);
-            date.setHours(2);
+        function forceDay(date, day) {
+            day = Math.min(dates.daysInMonth(date.year, date.month), day);
+            date = dates.create(date.year, date.month, day);
 
             return date;
         }
 
         function clampStartDate(date) {
-            let max = new Date(current_dates[1]);
-            max.setDate(max.getDate() - 1);
-            max.setHours(2);
+            let max = current_dates[1].minus(1);
 
             if (date <= limit_dates[0]) {
                 return limit_dates[0];
@@ -104,9 +72,7 @@ let wt_period_picker = (function() {
         }
 
         function clampEndDate(date) {
-            let min = new Date(current_dates[0]);
-            min.setDate(min.getDate() + 1);
-            min.setHours(2);
+            let min = current_dates[0].plus(1);
 
             if (date >= limit_dates[1]) {
                 return limit_dates[1];
@@ -153,11 +119,13 @@ let wt_period_picker = (function() {
             let handle = e.target.parentNode;
             let input = handle.querySelector('input');
 
-            if (input.valueAsDate) {
+            if (input.value) {
+                let date = dates.fromString(input.value);
+
                 if (handle === handle_els[0]) {
-                    current_dates[0] = clampStartDate(input.valueAsDate);
+                    current_dates[0] = clampStartDate(date);
                 } else {
-                    current_dates[1] = clampEndDate(input.valueAsDate);
+                    current_dates[1] = clampEndDate(date);
                 }
             } else {
                 if (handle === handle_els[0]) {
@@ -195,23 +163,37 @@ let wt_period_picker = (function() {
             grab_target = e.target;
 
             grab_offset = e.offsetX;
-            grab_diff_year = current_dates[1].getFullYear() - current_dates[0].getFullYear();
-            grab_diff_month = current_dates[1].getMonth() - current_dates[0].getMonth();
-            grab_start_day = current_dates[0].getDate();
-            grab_end_day = current_dates[1].getDate();
+            grab_start_date = current_dates[0];
+            grab_end_date = current_dates[1];
         }
 
         function handleBarMove(e) {
             if (grab_target) {
-                current_dates[0] = positionToDate(e.clientX - main_el.offsetLeft - grab_offset);
-                current_dates[1] = new Date(current_dates[0].getFullYear() + grab_diff_year,
-                                            current_dates[0].getMonth() + grab_diff_month,
-                                            grab_end_day, 2);
-                while (current_dates[1] > limit_dates[1]) {
-                    current_dates[0].setMonth(current_dates[0].getMonth() - 1);
-                    current_dates[1].setMonth(current_dates[1].getMonth() - 1);
+                let delta = grab_end_date.diff(grab_start_date);
+                let delta_months = (grab_end_date.year - grab_start_date.year) * 12 +
+                                   (grab_end_date.month - grab_start_date.month);
+
+                let start_date = forceDay(positionToDate(e.clientX - main_el.offsetLeft - grab_offset), grab_start_date.day);
+                let end_date = forceDay(start_date.plusMonths(delta_months), grab_end_date.day);
+
+                if (start_date < limit_dates[0]) {
+                    current_dates[0] = limit_dates[0];
+                    if (grab_start_date.day !== limit_dates[0].day) {
+                        current_dates[1] = limit_dates[0].plus(delta);
+                    } else {
+                        current_dates[1] = forceDay(limit_dates[0].plusMonths(delta_months), grab_end_date.day);
+                    }
+                } else if (end_date > limit_dates[1]) {
+                    if (grab_end_date.day !== limit_dates[1].day) {
+                        current_dates[0] = limit_dates[1].minus(delta);
+                    } else {
+                        current_dates[0] = forceDay(limit_dates[1].minusMonths(delta_months), grab_start_date.day);
+                    }
+                    current_dates[1] = limit_dates[1];
+                } else {
+                    current_dates[0] = clampStartDate(start_date);
+                    current_dates[1] = clampEndDate(end_date);
                 }
-                current_dates[0].setDate(grab_start_day);
 
                 syncView();
             }
