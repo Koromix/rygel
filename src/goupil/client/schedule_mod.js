@@ -101,19 +101,12 @@ let schedule_mod = (function() {
             init = true;
         }
 
-        let year;
-        let month;
-        {
-            let date = new Date();
-
-            year = date.getFullYear();
-            month = date.getMonth() + 1;
-        }
+        let today = dates.today();
 
         if (schedule) {
-            schedule.render(year, month);
+            schedule.render(today.year, today.month);
         } else {
-            updateSchedule(year, month);
+            updateSchedule(today.year, today.month);
         }
     };
 

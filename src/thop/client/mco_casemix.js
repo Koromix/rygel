@@ -523,18 +523,18 @@ let mco_casemix = (function() {
         // Set main picker
         {
             let builder = wt_period_picker.create();
-            builder.changeHandler = () => thop.go({period: builder.getDates()});
-            builder.setLimitDates([settings.start_date, settings.end_date]);
-            builder.setDates(period);
+            builder.changeHandler = () => thop.go({period: builder.getDates().map(date => date.toString())});
+            builder.setLimitDates([settings.start_date, settings.end_date].map(dates.fromString));
+            builder.setDates(period.map(str => str ? dates.fromString(str) : null));
             builder.render(picker);
         }
 
         // Set diff picker
         {
             let builder = wt_period_picker.create();
-            builder.changeHandler = () => thop.go({prev_period: builder.getDates()});
-            builder.setLimitDates([settings.start_date, settings.end_date]);
-            builder.setDates(prev_period);
+            builder.changeHandler = () => thop.go({prev_period: builder.getDates().map(date => date.toString())});
+            builder.setLimitDates([settings.start_date, settings.end_date].map(dates.fromString));
+            builder.setDates(prev_period.map(str => str ? dates.fromString(str) : null));
             builder.render(prev_picker);
         }
 
