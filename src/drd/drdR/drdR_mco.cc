@@ -796,11 +796,13 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP sector_xp
         rcc_DataFrameBuilder df_builder(row_count);
         rcc_Vector<const char *> ghm = df_builder.Add<const char *>("ghm");
         rcc_Vector<int> ghs = df_builder.Add<int>("ghs");
+        rcc_Vector<int> allow_ambulatory = df_builder.Add<int>("allow_ambulatory");
+        rcc_Vector<int> short_duration_treshold = df_builder.Add<int>("short_duration_treshold");
+        rcc_Vector<int> confirm_treshold = df_builder.Add<int>("confirm_treshold");
         rcc_Vector<int> young_age_treshold = df_builder.Add<int>("young_age_treshold");
         rcc_Vector<int> young_severity_limit = df_builder.Add<int>("young_severity_limit");
         rcc_Vector<int> old_age_treshold = df_builder.Add<int>("old_age_treshold");
         rcc_Vector<int> old_severity_limit = df_builder.Add<int>("old_severity_limit");
-        rcc_Vector<int> confirm_treshold = df_builder.Add<int>("confirm_treshold");
         rcc_Vector<int> unit_authorization = df_builder.Add<int>("unit_authorization");
         rcc_Vector<int> bed_authorization = df_builder.Add<int>("bed_authorization");
         rcc_Vector<int> minimum_duration = df_builder.Add<int>("minimum_duration");
@@ -833,6 +835,9 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP sector_xp
 
                 ghm.Set(i, ghm_to_ghs_info.ghm.ToString(buf));
                 ghs[i] = ghs_code.number;
+                allow_ambulatory[i] = ghm_root_info.allow_ambulatory;
+                short_duration_treshold[i] = ghm_root_info.short_duration_treshold ? ghm_root_info.short_duration_treshold : NA_INTEGER;
+                confirm_treshold[i] = ghm_root_info.confirm_duration_treshold ? ghm_root_info.confirm_duration_treshold : NA_INTEGER;
                 if (ghm_root_info.young_severity_limit) {
                     young_age_treshold[i] = ghm_root_info.young_age_treshold;
                     young_severity_limit[i] = ghm_root_info.young_severity_limit;
@@ -847,7 +852,6 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP sector_xp
                     old_age_treshold[i] = NA_INTEGER;
                     old_severity_limit[i] = NA_INTEGER;
                 }
-                confirm_treshold[i] = ghm_root_info.confirm_duration_treshold ? ghm_root_info.confirm_duration_treshold : NA_INTEGER;
                 unit_authorization[i] = ghm_to_ghs_info.unit_authorization ? ghm_to_ghs_info.unit_authorization : NA_INTEGER;
                 bed_authorization[i] = ghm_to_ghs_info.bed_authorization ? ghm_to_ghs_info.bed_authorization : NA_INTEGER;
                 minimum_duration[i] = ghm_to_ghs_info.minimum_duration ? ghm_to_ghs_info.minimum_duration : NA_INTEGER;
