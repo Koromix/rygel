@@ -798,6 +798,7 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP sector_xp
         rcc_Vector<int> ghs = df_builder.Add<int>("ghs");
         rcc_Vector<int> allow_ambulatory = df_builder.Add<int>("allow_ambulatory");
         rcc_Vector<int> short_duration_treshold = df_builder.Add<int>("short_duration_treshold");
+        rcc_Vector<int> allow_raac = df_builder.Add<int>("allow_raac");
         rcc_Vector<int> confirm_treshold = df_builder.Add<int>("confirm_treshold");
         rcc_Vector<int> young_age_treshold = df_builder.Add<int>("young_age_treshold");
         rcc_Vector<int> young_severity_limit = df_builder.Add<int>("young_severity_limit");
@@ -837,6 +838,7 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP sector_xp
                 ghs[i] = ghs_code.number;
                 allow_ambulatory[i] = ghm_root_info.allow_ambulatory;
                 short_duration_treshold[i] = ghm_root_info.short_duration_treshold ? ghm_root_info.short_duration_treshold : NA_INTEGER;
+                allow_raac[i] = ghm_root_info.allow_raac;
                 confirm_treshold[i] = ghm_root_info.confirm_duration_treshold ? ghm_root_info.confirm_duration_treshold : NA_INTEGER;
                 if (ghm_root_info.young_severity_limit) {
                     young_age_treshold[i] = ghm_root_info.young_age_treshold;
