@@ -445,16 +445,20 @@ let autoform_mod = (function() {
 
         let columns = orderColumns(variables);
 
-        let ws = XLSX.utils.aoa_to_sheet([columns]);
-        for (let row of rows) {
-            let values = columns.map(col => row[col]);
-            XLSX.utils.sheet_add_aoa(ws, [values], {origin: -1});
+        let export_name = `${settings.project_key}_${dates.today()}`;
+        let filename = `export_${export_name}.xlsx`;
+
+        let wb = XLSX.utils.book_new();
+        {
+            let ws = XLSX.utils.aoa_to_sheet([columns]);
+            for (let row of rows) {
+                let values = columns.map(col => row[col]);
+                XLSX.utils.sheet_add_aoa(ws, [values], {origin: -1});
+            }
+            XLSX.utils.book_append_sheet(wb, ws, export_name);
         }
 
-        // TODO: Put date in sheet name and file name
-        let wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Export');
-        XLSX.writeFile(wb, 'export.xlsx');
+        XLSX.writeFile(wb, filename);
     }
 
     function loadAllRecords() {
