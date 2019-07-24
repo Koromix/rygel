@@ -178,7 +178,7 @@ mco_indexes <- function(classifier) {
 #' @param map Calculate information about possible GHM durations.
 #'
 #' @md
-mco_ghm_ghs <- function(classifier, date, sector = NULL, map = TRUE) {
+mco_ghm_ghs <- function(classifier, date, sector = NULL, map = FALSE) {
     .Call(`drdR_mco_GhmGhs`, classifier, date, sector, map)
 }
 
