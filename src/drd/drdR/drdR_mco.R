@@ -23,7 +23,7 @@
 #'         varierty of other functions.
 #'
 #' @md
-mco_init <- function(table_dirs, authorization_filename,
+mco_init <- function(table_dirs, authorization_filename = NULL,
                      table_filenames = character(0), default_sector = NULL) {
     .Call(`drdR_mco_Init`, table_dirs, table_filenames, authorization_filename, default_sector)
 }
