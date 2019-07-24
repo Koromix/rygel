@@ -385,3 +385,182 @@ let util = (function() {
 
     return this;
 }).call({});
+
+// ------------------------------------------------------------------------
+// Date
+// ------------------------------------------------------------------------
+
+let dates = (function() {
+    let self = this;
+
+    this.isLeapYear = function(year) {
+        return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+    };
+
+    this.daysInMonth = function(year, month) {
+        let days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        return days_per_month[month - 1] + (month == 2 && self.isLeapYear(year));
+    };
+
+    function LocalDate(year = 0, month = 0, day = 0) {
+        let self = this;
+
+        this.year = year;
+        this.month = month;
+        this.day = day;
+
+        this.clone = function() { return dates.create(self.year, self.month, self.day); };
+
+        this.isZero = function() { return !year && !month && !day; };
+        this.isValid = function() {
+            if (self.year < -4712)
+                return false;
+            if (self.month < 1 || self.month > 12)
+                return false;
+            if (self.day < 1 || self.day > dates.daysInMonth(self.year, self.month))
+                return false;
+
+            return true;
+        };
+
+        this.equals = function(other) { return +self === +other; };
+
+        this.toJulianDays = function() {
+            // Straight from the Web:
+            // http://www.cs.utsa.edu/~cs1063/projects/Spring2011/Project1/jdn-explanation.html
+
+            let adjust = self.month < 3;
+            let year = self.year + 4800 - adjust;
+            let month = self.month + 12 * adjust - 3;
+
+            let julian_days = self.day + Math.floor((153 * month + 2) / 5) + 365 * year - 32045 +
+                              Math.floor(year / 4) - Math.floor(year / 100) + Math.floor(year / 400);
+
+            return julian_days;
+        };
+
+        this.getWeekDay = function() {
+            // Zeller's congruence:
+            // https://en.wikipedia.org/wiki/Zeller%27s_congruence
+
+            let year = self.year;
+            let month = self.month;
+            if (month < 3) {
+                year--;
+                month += 12;
+            }
+
+            let century = Math.floor(year / 100);
+            year %= 100;
+
+            let week_day = (self.day + Math.floor(13 * (month + 1) / 5) + year + Math.floor(year / 4) +
+                            Math.floor(century / 4) + 5 * century + 5) % 7;
+
+            return week_day;
+        };
+
+        this.diff = function(other) { return self.toJulianDays() - other.toJulianDays(); };
+
+        this.plus = function(days) {
+            let date = dates.fromJulianDays(self.toJulianDays() + days);
+            return date;
+        };
+        this.minus = function(days) {
+            let date = dates.fromJulianDays(self.toJulianDays() - days);
+            return date;
+        };
+
+        this.plusMonths = function(months) {
+            if (months >= 0) {
+                let m = self.month + months - 1;
+
+                let year = self.year + Math.floor(m / 12);
+                let month = 1 + (m % 12);
+                let day = Math.min(self.day, dates.daysInMonth(year, month));
+
+                return dates.create(year, month, day);
+            } else {
+                let m = 12 - self.month - months;
+
+                let year = self.year - Math.floor(m / 12);
+                let month = 12 - (m % 12);
+                let day = Math.min(self.day, dates.daysInMonth(year, month));
+
+                return dates.create(year, month, day);
+            }
+        };
+        this.minusMonths = function(months) { return self.plusMonths(-months); };
+
+        this.valueOf = function() {
+            let value = (self.year << 16) | (self.month << 8) | (self.day);
+            return value;
+        };
+
+        this.toString = function() {
+            let year_str = ('' + self.year).padStart(4, '0');
+            let month_str = ('' + self.month).padStart(2, '0');
+            let day_str = ('' + self.day).padStart(2, '0');
+
+            let str = `${year_str}-${month_str}-${day_str}`;
+            return str;
+        };
+
+        // FIXME: Actually use locale string format
+        this.toLocaleString = function() {
+            let year_str = ('' + self.year).padStart(4, '0');
+            let month_str = ('' + self.month).padStart(2, '0');
+            let day_str = ('' + self.day).padStart(2, '0');
+
+            let str = `${day_str}/${month_str}/${year_str}`;
+            return str;
+        };
+    }
+
+    this.create = function(year = 0, month = 0, day = 0) {
+        let date = new LocalDate(year, month, day);
+        return Object.freeze(date);
+    };
+
+    this.fromString = function(str, validate = true) {
+        let date;
+        try {
+            let [year, month, day] = str.split('-').map(x => parseInt(x, 10));
+            date = dates.create(year, month, day);
+        } catch (err) {
+            throw new Error(`Date '${str}' is malformed`);
+        }
+
+        if (validate && !date.isValid())
+            throw new Error(`Date '${str}' is invalid`);
+
+        return date;
+    };
+
+    this.fromJulianDays = function(days) {
+        // Algorithm from Richards, copied from Wikipedia:
+        // https://en.wikipedia.org/w/index.php?title=Julian_day&oldid=792497863
+
+        let f = days + 1401 + Math.floor((Math.floor((4 * days + 274277) / 146097) * 3) / 4) - 38;
+        let e = 4 * f + 3;
+        let g = Math.floor(e % 1461 / 4);
+        let h = 5 * g + 2;
+
+        let month = Math.floor(h / 153 + 2) % 12 + 1;
+        let year = Math.floor(e / 1461) - 4716 + (month < 3);
+        let day = Math.floor(h % 153 / 5) + 1;
+
+        return dates.create(year, month, day);
+    };
+
+    this.today = function() {
+        let date = new Date();
+
+        let year = date.getFullYear();
+        let month = date.getMonth() + 1;
+        let day = date.getDate();
+
+        return dates.create(year, month, day);
+    };
+
+    return this;
+}).call({});
