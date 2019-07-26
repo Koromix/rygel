@@ -127,14 +127,15 @@ struct mco_ProcedureInfo {
     uint8_t activities;
 
     Date limit_dates[2];
-    uint8_t bytes[52];
-    uint32_t extensions;
 
     int16_t additions[8];
     struct {
         int16_t offset;
         int16_t len;
     } addition_list;
+    uint64_t extensions;
+
+    uint8_t bytes[56];
 
     Span<const char> ActivitiesToStr(Span<char> out_buf) const;
     Span<const char> ExtensionsToStr(Span<char> out_buf) const;

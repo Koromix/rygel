@@ -54,7 +54,7 @@ Span<const char> mco_ProcedureInfo::ExtensionsToStr(Span<char> out_buf) const
 {
     Size offset = 0;
     if (extensions > 1) {
-        uint32_t value = extensions >> 1;
+        uint64_t value = extensions >> 1;
 
         for (int i = 1; offset < out_buf.len && value; i++) {
             if (value & 0x1) {
@@ -1687,7 +1687,7 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                         if (RG_LIKELY(proc_info)) {
                             do {
                                 if (proc_info->phase == ext_info.phase) {
-                                    proc_info->extensions |= (uint32_t)(1u << ext_info.extension);
+                                    proc_info->extensions |= 1ull << ext_info.extension;
                                 }
                             } while (++proc_info < index.procedures.end() &&
                                      proc_info->proc == ext_info.proc);
