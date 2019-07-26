@@ -188,7 +188,7 @@ mco_ghm_ghs <- function(classifier, date, sector = NULL, map = FALSE) {
 #' You can use any `date` supported by the set of tables loaded in [mco_init()].
 #'
 #' @param classifier Classifier object created by [mco_init()].
-#' @param date Determines which tables to use.
+#' @param date Determines which tables to use, format: 'yyyy-mm-dd' (e.g. '2018-03-01').
 #'
 #' @md
 mco_diagnoses <- function(classifier, date) {
@@ -201,7 +201,7 @@ mco_diagnoses <- function(classifier, date) {
 #' You can use any `date` supported by the set of tables loaded in [mco_init()].
 #'
 #' @param classifier Classifier object created by [mco_init()].
-#' @param date Determines which tables to use.
+#' @param date Determines which tables to use, format: 'yyyy-mm-dd' (e.g. '2018-03-01').
 #'
 #' @md
 mco_exclusions <- function(classifier, date) {
@@ -214,7 +214,7 @@ mco_exclusions <- function(classifier, date) {
 #' You can use any `date` supported by the set of tables loaded in [mco_init()].
 #'
 #' @param classifier Classifier object created by [mco_init()].
-#' @param date Determines which tables to use.
+#' @param date Determines which tables to use, format: 'yyyy-mm-dd' (e.g. '2018-03-01').
 #'
 #' @md
 mco_procedures <- function(classifier, date) {
