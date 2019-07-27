@@ -677,26 +677,22 @@ List options:
             case mco_ListSpecifier::Table::Invalid: { /* Handled above */ } break;
 
             case mco_ListSpecifier::Table::Diagnoses: {
-                for (const mco_DiagnosisInfo &diag: index->diagnoses) {
-                    if (diag.flags & (int)mco_DiagnosisInfo::Flag::SexDifference) {
-                        if (spec.Match(diag.Attributes(1).raw)) {
-                            PrintLn("  %1 (male)", diag.diag);
-                        }
-                        if (spec.Match(diag.Attributes(2).raw)) {
-                            PrintLn("  %1 (female)", diag.diag);
-                        }
-                    } else {
-                        if (spec.Match(diag.Attributes(1).raw)) {
-                            PrintLn("  %1", diag.diag);
-                        }
+                for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
+                    const char *sex_str;
+                    switch (diag_info.sexes) {
+                        case 0x1: { sex_str = " (male)"; } break;
+                        case 0x2: { sex_str = " (female)"; } break;
+                        case 0x3: { sex_str = ""; } break;
                     }
+
+                    PrintLn("  %1%2", diag_info.diag, sex_str);
                 }
             } break;
 
             case mco_ListSpecifier::Table::Procedures: {
-                for (const mco_ProcedureInfo &proc: index->procedures) {
-                    if (spec.Match(proc.bytes)) {
-                        PrintLn("  %1", proc.proc);
+                for (const mco_ProcedureInfo &proc_info: index->procedures) {
+                    if (spec.Match(proc_info.bytes)) {
+                        PrintLn("  %1", proc_info.proc);
                     }
                 }
             } break;
@@ -887,9 +883,9 @@ int RunMcoShow(Span<const char *> arguments)
             drd_DiagnosisCode diag =
                 drd_DiagnosisCode::FromString(name, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (diag.IsValid()) {
-                const mco_DiagnosisInfo *diag_info = index->FindDiagnosis(diag);
-                if (diag_info) {
-                    mco_DumpDiagnosisTable(*diag_info, index->exclusions, &stdout_st);
+                Span<const mco_DiagnosisInfo> diagnoses = index->FindDiagnosis(diag);
+                if (diagnoses.len) {
+                    mco_DumpDiagnosisTable(diagnoses, index->exclusions, &stdout_st);
                     continue;
                 }
             }
@@ -900,9 +896,9 @@ int RunMcoShow(Span<const char *> arguments)
             drd_ProcedureCode proc =
                 drd_ProcedureCode::FromString(name, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (proc.IsValid()) {
-                Span<const mco_ProcedureInfo> proc_info = index->FindProcedure(proc);
-                if (proc_info.len) {
-                    mco_DumpProcedureTable(proc_info, &stdout_st);
+                Span<const mco_ProcedureInfo> procedures = index->FindProcedure(proc);
+                if (procedures.len) {
+                    mco_DumpProcedureTable(procedures, &stdout_st);
                     continue;
                 }
             }

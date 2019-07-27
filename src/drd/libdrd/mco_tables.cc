@@ -351,9 +351,9 @@ static bool ParseGhmDecisionTree(const uint8_t *file_data, const mco_TableInfo &
 }
 
 static bool ParseDiagnosisTable(const uint8_t *file_data, const mco_TableInfo &table,
-                                HeapArray<mco_DiagnosisInfo> *out_diags)
+                                HeapArray<mco_DiagnosisInfo> *out_diagnoses)
 {
-    RG_DEFER_NC(out_diags_guard, len = out_diags->len) { out_diags->RemoveFrom(len); };
+    RG_DEFER_NC(out_guard, len = out_diagnoses->len) { out_diagnoses->RemoveFrom(len); };
 
 #pragma pack(push, 1)
     struct PackedDiagnosisPtr  {
@@ -371,7 +371,7 @@ static bool ParseDiagnosisTable(const uint8_t *file_data, const mco_TableInfo &t
                                   table.sections[0].value_len != 2);
     FAIL_PARSE_IF(table.filename, table.sections[1].value_len != RG_SIZE(PackedDiagnosisPtr));
     FAIL_PARSE_IF(table.filename, !table.sections[2].value_len || table.sections[2].value_len % 2 ||
-                                  table.sections[2].value_len / 2 > RG_SIZE(mco_DiagnosisInfo::attributes[0].raw));
+                                  table.sections[2].value_len / 2 > RG_SIZE(mco_DiagnosisInfo::raw));
     FAIL_PARSE_IF(table.filename, !table.sections[3].value_len ||
                                   table.sections[3].value_len > RG_SIZE(mco_DiagnosisInfo::warnings) * 8);
     FAIL_PARSE_IF(table.filename, !table.sections[4].value_len);
@@ -393,8 +393,6 @@ static bool ParseDiagnosisTable(const uint8_t *file_data, const mco_TableInfo &t
 
         for (Size block_offset = block_start; block_offset < block_end;
              block_offset += RG_SIZE(PackedDiagnosisPtr)) {
-            mco_DiagnosisInfo diag = {};
-
             PackedDiagnosisPtr raw_diag_ptr;
             memcpy(&raw_diag_ptr, file_data + block_offset, RG_SIZE(PackedDiagnosisPtr));
             raw_diag_ptr.code456 = BigEndian(raw_diag_ptr.code456);
@@ -408,58 +406,60 @@ static bool ParseDiagnosisTable(const uint8_t *file_data, const mco_TableInfo &t
             FAIL_PARSE_IF(table.filename,
                           raw_diag_ptr.section4_idx >= table.sections[4].values_count);
 
-            diag.diag = ConvertDiagnosisCode(root_idx, raw_diag_ptr.code456);
+            const auto add_diagnosis_info = [&](uint8_t sexes, const uint8_t *raw) {
+                mco_DiagnosisInfo diag_info = {};
 
-            // Flags and warnings
-            {
-                const uint8_t *sex_data = file_data + table.sections[2].raw_offset +
-                                          raw_diag_ptr.section2_idx * table.sections[2].value_len;
-                memcpy(diag.attributes[0].raw, sex_data, (size_t)(table.sections[2].value_len / 2));
-                memcpy(diag.attributes[1].raw, sex_data + table.sections[2].value_len / 2,
-                       (size_t)(table.sections[2].value_len / 2));
-                if (memcmp(diag.attributes[0].raw, diag.attributes[1].raw, RG_SIZE(diag.attributes[0].raw))) {
-                    diag.flags |= (int)mco_DiagnosisInfo::Flag::SexDifference;
-                }
-
-                for (int i = 0; i < 2; i++) {
-                    diag.attributes[i].cmd = diag.attributes[i].raw[0];
-                    diag.attributes[i].jump = diag.attributes[i].raw[1];
-
-                    if (diag.attributes[i].raw[21] & 0x40) {
-                        diag.attributes[i].severity = 3;
-                    } else if (diag.attributes[i].raw[21] & 0x80) {
-                        diag.attributes[i].severity = 2;
-                    } else if (diag.attributes[i].raw[20] & 0x1) {
-                        diag.attributes[i].severity = 1;
-                    }
-
-                    if (diag.attributes[i].raw[19] & 0x10) {
-                        diag.attributes[i].cma_minimum_age = 14;
-                    }
-                    if (diag.attributes[i].raw[19] & 0x8 || diag.diag.str[0] == 'P') {
-                        diag.attributes[i].cma_maximum_age = 2;
-                    }
-                }
+                diag_info.diag = ConvertDiagnosisCode(root_idx, raw_diag_ptr.code456);
+                diag_info.sexes = sexes;
 
                 const uint8_t *warn_data = file_data + table.sections[3].raw_offset +
                                            raw_diag_ptr.section3_idx * table.sections[3].value_len;
                 for (int i = 0; i < table.sections[3].value_len; i++) {
                     if (warn_data[i]) {
-                        diag.warnings = (uint16_t)(diag.warnings | (1 << i));
+                        diag_info.warnings = (uint16_t)(diag_info.warnings | (1 << i));
                     }
                 }
 
-                diag.exclusion_set_idx = raw_diag_ptr.section4_idx;
-                diag.cma_exclusion_mask.offset = (uint8_t)(raw_diag_ptr.section4_bit >> 3);
-                diag.cma_exclusion_mask.value =
-                    (uint8_t)(0x80 >> (raw_diag_ptr.section4_bit & 0x7));
-            }
+                memcpy(diag_info.raw, raw, table.sections[2].value_len / 2);
 
-            out_diags->Append(diag);
+                diag_info.cmd = raw[0];
+                diag_info.jump = raw[1];
+                if (raw[21] & 0x40) {
+                    diag_info.severity = 3;
+                } else if (raw[21] & 0x80) {
+                    diag_info.severity = 2;
+                } else if (raw[20] & 0x1) {
+                    diag_info.severity = 1;
+                }
+
+                if (raw[19] & 0x10) {
+                    diag_info.cma_minimum_age = 14;
+                }
+                if (raw[19] & 0x8 || diag_info.diag.str[0] == 'P') {
+                    diag_info.cma_maximum_age = 2;
+                }
+                diag_info.exclusion_set_idx = raw_diag_ptr.section4_idx;
+                diag_info.cma_exclusion_mask.offset = (uint8_t)(raw_diag_ptr.section4_bit >> 3);
+                diag_info.cma_exclusion_mask.value =
+                    (uint8_t)(0x80 >> (raw_diag_ptr.section4_bit & 0x7));
+
+                out_diagnoses->Append(diag_info);
+            };
+
+            const uint8_t *sex1_data = file_data + table.sections[2].raw_offset +
+                                       raw_diag_ptr.section2_idx * table.sections[2].value_len;
+            const uint8_t *sex2_data = sex1_data + table.sections[2].value_len / 2;
+
+            if (memcmp(sex1_data, sex2_data, table.sections[2].value_len / 2)) {
+                add_diagnosis_info(0x1, sex1_data);
+                add_diagnosis_info(0x2, sex2_data);
+            } else {
+                add_diagnosis_info(0x3, sex1_data);
+            }
         }
     }
 
-    out_diags_guard.Disable();
+    out_guard.Disable();
     return true;
 }
 
@@ -1898,9 +1898,23 @@ Span<const T> FindSpan(Span<const T> arr, const HashTable<U, const T *, Handler>
     return ret;
 }
 
-const mco_DiagnosisInfo *mco_TableIndex::FindDiagnosis(drd_DiagnosisCode diag) const
+Span<const mco_DiagnosisInfo> mco_TableIndex::FindDiagnosis(drd_DiagnosisCode diag) const
 {
-    return diagnoses_map->FindValue(diag, nullptr);
+    return FindSpan(diagnoses, diagnoses_map, diag);
+}
+
+const mco_DiagnosisInfo *mco_TableIndex::FindDiagnosis(drd_DiagnosisCode diag, int sex) const
+{
+    const mco_DiagnosisInfo *diag_info = diagnoses_map->FindValue(diag, nullptr);
+
+    if (diag_info) {
+        if (diag_info->sexes & sex)
+            return diag_info;
+        if (++diag_info < diagnoses.end() && diag_info->sexes & sex)
+            return diag_info;
+    }
+
+    return nullptr;
 }
 
 Span<const mco_ProcedureInfo> mco_TableIndex::FindProcedure(drd_ProcedureCode proc) const
@@ -1911,17 +1925,17 @@ Span<const mco_ProcedureInfo> mco_TableIndex::FindProcedure(drd_ProcedureCode pr
 const mco_ProcedureInfo *mco_TableIndex::FindProcedure(drd_ProcedureCode proc, int8_t phase, Date date) const
 {
     const mco_ProcedureInfo *proc_info = procedures_map->FindValue(proc, nullptr);
-    if (!proc_info)
-        return nullptr;
 
-    do {
-        if (proc_info->phase != phase)
-            continue;
-        if (date < proc_info->limit_dates[0] || date >= proc_info->limit_dates[1])
-            continue;
+    if (proc_info) {
+        do {
+            if (proc_info->phase != phase)
+                continue;
+            if (date < proc_info->limit_dates[0] || date >= proc_info->limit_dates[1])
+                continue;
 
-        return proc_info;
-    } while (++proc_info < procedures.end() && proc_info->proc == proc);
+            return proc_info;
+        } while (++proc_info < procedures.end() && proc_info->proc == proc);
+    }
 
     return nullptr;
 }

@@ -59,42 +59,30 @@ void mco_DumpDiagnosisTable(Span<const mco_DiagnosisInfo> diagnoses,
                             Span<const mco_ExclusionInfo> exclusions,
                             StreamWriter *out_st)
 {
-    for (const mco_DiagnosisInfo &diag: diagnoses) {
-        const auto DumpMask = [&](int8_t sex) {
-            for (Size i = 0; i < RG_LEN(diag.Attributes(sex).raw); i++) {
-                Print(out_st, " 0b%1", FmtBin(diag.Attributes(sex).raw[i]).Pad0(-8));
-            }
-            PrintLn(out_st);
-        };
-
-        PrintLn(out_st, "      %1:", diag.diag);
-        if (diag.flags & (int)mco_DiagnosisInfo::Flag::SexDifference) {
-            PrintLn(out_st, "        Male:");
-            PrintLn(out_st, "          Category: %1", diag.Attributes(1).cmd);
-            PrintLn(out_st, "          Severity: %1", diag.Attributes(1).severity + 1);
-            Print(out_st, "          Mask:");
-            DumpMask(1);
-
-            PrintLn(out_st, "        Female:");
-            PrintLn(out_st, "          Category: %1", diag.Attributes(2).cmd);
-            PrintLn(out_st, "          Severity: %1", diag.Attributes(2).severity + 1);
-            Print(out_st, "          Mask:");
-            DumpMask(2);
-        } else {
-            PrintLn(out_st, "        Category: %1", diag.Attributes(1).cmd);
-            PrintLn(out_st, "        Severity: %1", diag.Attributes(1).severity + 1);
-            Print(out_st, "        Mask:");
-            DumpMask(1);
+    for (const mco_DiagnosisInfo &diag_info: diagnoses) {
+        const char *sex_str;
+        switch (diag_info.sexes) {
+            case 0x1: { sex_str = " (male)"; } break;
+            case 0x2: { sex_str = " (female)"; } break;
+            case 0x3: { sex_str = ""; } break;
         }
-        PrintLn(out_st, "        Warnings: 0b%1", FmtBin(diag.warnings).Pad0(-8 * RG_SIZE(diag.warnings)));
+
+        PrintLn(out_st, "      %1%2:", diag_info.diag, sex_str);
+        PrintLn(out_st, "        Category: %1", diag_info.cmd);
+        PrintLn(out_st, "        Severity: %1", diag_info.severity + 1);
+        Print(out_st, "        Mask:");
+        for (Size i = 0; i < RG_LEN(diag_info.raw); i++) {
+            Print(out_st, " 0b%1", FmtBin(diag_info.raw[i]).Pad0(-8));
+        }
+        PrintLn(out_st);
 
         if (exclusions.len) {
-            RG_ASSERT(diag.exclusion_set_idx <= exclusions.len);
-            const mco_ExclusionInfo *excl = &exclusions[diag.exclusion_set_idx];
+            RG_ASSERT(diag_info.exclusion_set_idx <= exclusions.len);
+            const mco_ExclusionInfo *excl_info = &exclusions[diag_info.exclusion_set_idx];
 
-            Print(out_st, "        Exclusions (list %1):", diag.exclusion_set_idx);
+            Print(out_st, "        Exclusions (list %1):", diag_info.exclusion_set_idx);
             for (const mco_DiagnosisInfo &excl_diag: diagnoses) {
-                if (excl->raw[excl_diag.cma_exclusion_mask.offset] &
+                if (excl_info->raw[excl_diag.cma_exclusion_mask.offset] &
                         excl_diag.cma_exclusion_mask.value) {
                     Print(out_st, " %1", excl_diag.diag);
                 }
