@@ -1164,7 +1164,7 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set,
         valid &= AppendValidProcedures(out_prepared_set, flags, out_errors);
 
         // Pick main stay
-        {
+        if (valid) {
             const mco_PreparedStay *main_prep;
             if (mono_stays.len > 1) {
                 main_prep = FindMainStay(out_prepared_set->mono_preps, out_prepared_set->prep.duration);
