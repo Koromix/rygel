@@ -98,12 +98,12 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set,
 
 int mco_GetMinimalDurationForSeverity(int severity);
 int mco_LimitSeverity(int severity, int duration);
-bool mco_TestGhmRootExclusion(int8_t sex, const mco_DiagnosisInfo &cma_diag_info,
+bool mco_TestGhmRootExclusion(const mco_DiagnosisInfo &cma_diag_info,
                               const mco_GhmRootInfo &ghm_root_info);
 bool mco_TestDiagnosisExclusion(const mco_TableIndex &index,
                                 const mco_DiagnosisInfo &cma_diag_info,
                                 const mco_DiagnosisInfo &main_diag_info);
-bool mco_TestExclusion(const mco_TableIndex &index, int8_t sex, int age,
+bool mco_TestExclusion(const mco_TableIndex &index, int age,
                        const mco_DiagnosisInfo &cma_diag_info,
                        const mco_GhmRootInfo &ghm_root_info,
                        const mco_DiagnosisInfo &main_diag_info,

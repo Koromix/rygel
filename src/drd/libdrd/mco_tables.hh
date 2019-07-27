@@ -86,33 +86,21 @@ struct mco_GhmDecisionNode {
 };
 
 struct mco_DiagnosisInfo {
-    enum class Flag {
-        SexDifference = 1
-    };
-
     drd_DiagnosisCode diag;
+    uint8_t sexes;
 
-    uint16_t flags;
-    struct Attributes {
-        uint8_t raw[37];
-
-        int8_t cmd;
-        int8_t jump;
-
-        int8_t severity;
-        int8_t cma_minimum_age;
-        int8_t cma_maximum_age;
-    } attributes[2];
     uint16_t warnings;
 
+    uint8_t raw[37];
+
+    int8_t cmd;
+    int8_t jump;
+    int8_t severity;
+
+    int8_t cma_minimum_age;
+    int8_t cma_maximum_age;
     uint16_t exclusion_set_idx;
     drd_ListMask cma_exclusion_mask;
-
-    const Attributes &Attributes(int8_t sex) const
-    {
-        RG_ASSERT_DEBUG(sex == 1 || sex == 2);
-        return attributes[sex - 1];
-    }
 
     RG_HASH_TABLE_HANDLER(mco_DiagnosisInfo, diag);
 };
@@ -303,7 +291,8 @@ struct mco_TableIndex {
 
     const HashTable<mco_GhsCode, const mco_GhsPriceInfo *> *ghs_prices_map[2];
 
-    const mco_DiagnosisInfo *FindDiagnosis(drd_DiagnosisCode diag) const;
+    Span<const mco_DiagnosisInfo> FindDiagnosis(drd_DiagnosisCode diag) const;
+    const mco_DiagnosisInfo *FindDiagnosis(drd_DiagnosisCode diag, int sex) const;
     Span<const mco_ProcedureInfo> FindProcedure(drd_ProcedureCode proc) const;
     const mco_ProcedureInfo *FindProcedure(drd_ProcedureCode proc, int8_t phase, Date date) const;
     const mco_GhmRootInfo *FindGhmRoot(mco_GhmRootCode ghm_root) const;

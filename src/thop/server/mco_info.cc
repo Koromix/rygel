@@ -89,46 +89,28 @@ int ProduceMcoDiagnoses(const http_Request &request, const User *, http_Response
     http_JsonPageBuilder json(request.compression_type);
     char buf[512];
 
-    const auto WriteSexSpecificInfo = [&](const mco_DiagnosisInfo &diag_info,
-                                          int sex) {
-        if (diag_info.Attributes(sex).cmd) {
-            json.Key("cmd");
-            json.String(Fmt(buf, "D-%1",
-                              FmtArg(diag_info.Attributes(sex).cmd).Pad0(-2)).ptr);
-        }
-        if (diag_info.Attributes(sex).cmd && diag_info.Attributes(sex).jump) {
-            json.Key("main_list");
-            json.String(Fmt(buf, "D-%1%2",
-                              FmtArg(diag_info.Attributes(sex).cmd).Pad0(-2),
-                              FmtArg(diag_info.Attributes(sex).jump).Pad0(-2)).ptr);
-        }
-        if (diag_info.Attributes(sex).severity) {
-            json.Key("severity"); json.Int(diag_info.Attributes(sex).severity);
-        }
-    };
-
     json.StartArray();
     for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
-        if (diag_info.flags & (int)mco_DiagnosisInfo::Flag::SexDifference) {
-            if (spec.Match(diag_info.Attributes(1).raw)) {
-                json.StartObject();
-                json.Key("diag"); json.String(diag_info.diag.str);
-                json.Key("sex"); json.String("Homme");
-                WriteSexSpecificInfo(diag_info, 1);
-                json.EndObject();
-            }
-
-            if (spec.Match(diag_info.Attributes(2).raw)) {
-                json.StartObject();
-                json.Key("diag"); json.String(diag_info.diag.str);
-                json.Key("sex"); json.String("Femme");
-                WriteSexSpecificInfo(diag_info, 2);
-                json.EndObject();
-            }
-        } else if (spec.Match(diag_info.Attributes(1).raw)) {
+        if (spec.Match(diag_info.raw)) {
             json.StartObject();
             json.Key("diag"); json.String(diag_info.diag.str);
-            WriteSexSpecificInfo(diag_info, 1);
+            switch (diag_info.sexes) {
+                case 0x1: { json.Key("sex"); json.String("Homme"); } break;
+                case 0x2: { json.Key("sex"); json.String("Femme"); } break;
+                case 0x3: {} break;
+            }
+            if (diag_info.cmd) {
+                json.Key("cmd");
+                json.String(Fmt(buf, "D-%1", FmtArg(diag_info.cmd).Pad0(-2)).ptr);
+            }
+            if (diag_info.cmd && diag_info.jump) {
+                json.Key("main_list");
+                json.String(Fmt(buf, "D-%1%2", FmtArg(diag_info.cmd).Pad0(-2),
+                                               FmtArg(diag_info.jump).Pad0(-2)).ptr);
+            }
+            if (diag_info.severity) {
+                json.Key("severity"); json.Int(diag_info.severity);
+            }
             json.EndObject();
         }
     }

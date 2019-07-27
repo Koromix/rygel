@@ -126,9 +126,9 @@ static bool RecurseGhmTree(MapperContext &ctx, Size depth, Size ghm_node_idx,
                                 warn_cmd28_jumps = UINT64_MAX;
                                 RG_ASSERT(ghm_node.u.test.children_count <= 64);
                                 for (const mco_DiagnosisInfo &diag_info: ctx.index->diagnoses) {
-                                    if (constraint.cmds & (1u << diag_info.attributes[0].cmd) &&
-                                            !(diag_info.attributes[0].raw[8] & 0x2)) {
-                                        warn_cmd28_jumps &= ~(1ull << diag_info.attributes[0].raw[1]);
+                                    if (constraint.cmds & (1u << diag_info.cmd) &&
+                                            !(diag_info.raw[8] & 0x2)) {
+                                        warn_cmd28_jumps &= ~(1ull << diag_info.raw[1]);
                                     }
                                 }
 

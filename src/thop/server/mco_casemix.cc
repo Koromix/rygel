@@ -597,9 +597,11 @@ int ProduceMcoResults(const http_Request &request, const User *user, http_Respon
             const mco_DiagnosisInfo *main_diag_info = nullptr;
             const mco_DiagnosisInfo *linked_diag_info = nullptr;
             if (RG_LIKELY(result.index)) {
+                const mco_Stay &main_stay = result.stays[result.main_stay_idx];
+
                 ghm_root_info = result.index->FindGhmRoot(result.ghm.Root());
-                main_diag_info = result.index->FindDiagnosis(result.stays[result.main_stay_idx].main_diagnosis);
-                linked_diag_info = result.index->FindDiagnosis(result.stays[result.main_stay_idx].linked_diagnosis);
+                main_diag_info = result.index->FindDiagnosis(main_stay.main_diagnosis, main_stay.sex);
+                linked_diag_info = result.index->FindDiagnosis(main_stay.linked_diagnosis, main_stay.sex);
             }
 
             json.StartObject();
@@ -692,16 +694,15 @@ int ProduceMcoResults(const http_Request &request, const User *user, http_Respon
                     json.Key("other_diagnoses"); json.StartArray();
                     for (drd_DiagnosisCode diag: stay.other_diagnoses) {
                         const mco_DiagnosisInfo *diag_info =
-                            RG_LIKELY(result.index) ? result.index->FindDiagnosis(diag) : nullptr;
+                            RG_LIKELY(result.index) ? result.index->FindDiagnosis(diag, stay.sex) : nullptr;
 
                         json.StartObject();
                         json.Key("diag"); json.String(diag.str);
                         if (!result.ghm.IsError() && ghm_root_info && main_diag_info && diag_info) {
-                            json.Key("severity"); json.Int(diag_info->Attributes(stay.sex).severity);
+                            json.Key("severity"); json.Int(diag_info->severity);
 
-                            if (mco_TestExclusion(*result.index, stay.sex, result.age,
-                                                  *diag_info, *ghm_root_info, *main_diag_info,
-                                                  linked_diag_info)) {
+                            if (mco_TestExclusion(*result.index, result.age, *diag_info,
+                                                  *ghm_root_info, *main_diag_info, linked_diag_info)) {
                                 json.Key("exclude"); json.Bool(true);
                             }
                         }

@@ -28,21 +28,20 @@ static int16_t ComputeAge(Date date, Date birthdate)
     return age;
 }
 
-static inline uint8_t GetDiagnosisByte(int8_t sex, const mco_DiagnosisInfo &diag_info, uint8_t byte_idx)
+static inline uint8_t GetDiagnosisByte(const mco_DiagnosisInfo &diag_info, uint8_t byte_idx)
 {
-    RG_ASSERT(byte_idx < RG_SIZE(mco_DiagnosisInfo::attributes[0].raw));
-    return diag_info.Attributes(sex).raw[byte_idx];
+    RG_ASSERT(byte_idx < RG_SIZE(mco_DiagnosisInfo::raw));
+    return diag_info.raw[byte_idx];
 }
 
-static inline bool TestDiagnosis(int8_t sex, const mco_DiagnosisInfo &diag_info, drd_ListMask mask)
+static inline bool TestDiagnosis(const mco_DiagnosisInfo &diag_info, drd_ListMask mask)
 {
     RG_ASSERT_DEBUG(mask.offset >= 0 && mask.offset <= UINT8_MAX);
-    return GetDiagnosisByte(sex, diag_info, (uint8_t)mask.offset) & mask.value;
+    return GetDiagnosisByte(diag_info, (uint8_t)mask.offset) & mask.value;
 }
-static inline bool TestDiagnosis(int8_t sex, const mco_DiagnosisInfo &diag_info,
-                                 uint8_t offset, uint8_t value)
+static inline bool TestDiagnosis(const mco_DiagnosisInfo &diag_info, uint8_t offset, uint8_t value)
 {
-    return GetDiagnosisByte(sex, diag_info, offset) & value;
+    return GetDiagnosisByte(diag_info, offset) & value;
 }
 
 static inline uint8_t GetProcedureByte(const mco_ProcedureInfo &proc_info, int16_t byte_idx)
@@ -113,7 +112,7 @@ static const mco_PreparedStay *FindMainStay(Span<const mco_PreparedStay> mono_pr
         }
 
         if (!ignore_trauma) {
-            if (mono_prep.main_diag_info->Attributes(mono_stay.sex).raw[21] & 0x4) {
+            if (mono_prep.main_diag_info->raw[21] & 0x4) {
                 last_trauma_prep = &mono_prep;
                 if (mono_prep.duration > max_duration) {
                     trauma_prep = &mono_prep;
@@ -123,7 +122,7 @@ static const mco_PreparedStay *FindMainStay(Span<const mco_PreparedStay> mono_pr
             }
         }
 
-        if (mono_prep.main_diag_info->Attributes(mono_stay.sex).raw[21] & 0x20) {
+        if (mono_prep.main_diag_info->raw[21] & 0x20) {
             stay_score += 150;
         } else if (mono_prep.duration >= 2) {
             base_score += 100;
@@ -133,7 +132,7 @@ static const mco_PreparedStay *FindMainStay(Span<const mco_PreparedStay> mono_pr
         } else if (mono_prep.duration == 1) {
             stay_score++;
         }
-        if (mono_prep.main_diag_info->Attributes(mono_stay.sex).raw[21] & 0x2) {
+        if (mono_prep.main_diag_info->raw[21] & 0x2) {
             stay_score += 201;
         }
 
@@ -217,24 +216,22 @@ static bool CheckDiagnosisErrors(const mco_PreparedStay &prep, const mco_Diagnos
         }
     }
 
-    const auto &diag_attr = diag_info.Attributes(prep.stay->sex);
-
     // Real errors
-    if (RG_UNLIKELY(diag_attr.raw[5] & 2)) {
+    if (RG_UNLIKELY(diag_info.raw[5] & 2)) {
         return SetError(out_errors, error_codes[0]);
-    } else if (RG_UNLIKELY(!diag_attr.raw[0])) {
-        switch (diag_attr.raw[1]) {
+    } else if (RG_UNLIKELY(!diag_info.raw[0])) {
+        switch (diag_info.raw[1]) {
             case 0: { return SetError(out_errors, error_codes[1]); } break;
             case 1: { return SetError(out_errors, error_codes[2]); } break;
             case 2: { return SetError(out_errors, error_codes[3]); } break;
             case 3: { return SetError(out_errors, error_codes[4]); } break;
         }
     } else if (RG_UNLIKELY(prep.stay->exit.date >= Date(2014, 3, 1) &&
-                           diag_attr.raw[0] == 23 && diag_attr.raw[1] == 14)) {
+                           diag_info.raw[0] == 23 && diag_info.raw[1] == 14)) {
         return SetError(out_errors, error_codes[5]);
-    } else if (RG_UNLIKELY(diag_attr.raw[19] & 0x10 && prep.age < 9)) {
+    } else if (RG_UNLIKELY(diag_info.raw[19] & 0x10 && prep.age < 9)) {
         return SetError(out_errors, error_codes[6]);
-    } else if (RG_UNLIKELY(diag_attr.raw[19] & 0x8 && prep.age >= 2)) {
+    } else if (RG_UNLIKELY(diag_info.raw[19] & 0x8 && prep.age >= 2)) {
         return SetError(out_errors, error_codes[7]);
     }
 
@@ -294,7 +291,7 @@ static bool AppendValidDiagnoses(mco_PreparedSet *out_prepared_set, mco_ErrorSet
                 mono_prep.markers |= (int)mco_PreparedStay::Marker::ChildbirthType;
             }
 
-            const mco_DiagnosisInfo *diag_info = index.FindDiagnosis(diag);
+            const mco_DiagnosisInfo *diag_info = index.FindDiagnosis(diag, mono_stay.sex);
             if (RG_LIKELY(diag_info)) {
                 out_prepared_set->store.diagnoses.Append(diag_info);
                 mono_prep.diagnoses.len++;
@@ -306,8 +303,7 @@ static bool AppendValidDiagnoses(mco_PreparedSet *out_prepared_set, mco_ErrorSet
             }
         }
 
-        // Main diagnosis is valid (checks are done in CheckMainError)
-        mono_prep.main_diag_info = index.FindDiagnosis(mono_stay.main_diagnosis);
+        mono_prep.main_diag_info = index.FindDiagnosis(mono_stay.main_diagnosis, mono_stay.sex);
         if (RG_LIKELY(mono_prep.main_diag_info)) {
             out_prepared_set->store.diagnoses.Append(mono_prep.main_diag_info);
             mono_prep.diagnoses.len++;
@@ -319,7 +315,7 @@ static bool AppendValidDiagnoses(mco_PreparedSet *out_prepared_set, mco_ErrorSet
         }
 
         if (mono_stay.linked_diagnosis.IsValid()) {
-            mono_prep.linked_diag_info = index.FindDiagnosis(mono_stay.linked_diagnosis);
+            mono_prep.linked_diag_info = index.FindDiagnosis(mono_stay.linked_diagnosis, mono_stay.sex);
             if (RG_LIKELY(mono_prep.linked_diag_info)) {
                 out_prepared_set->store.diagnoses.Append(mono_prep.linked_diag_info);
                 mono_prep.diagnoses.len++;
@@ -900,7 +896,7 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
     }
 
     // Sessions
-    if (prep.main_diag_info && (prep.main_diag_info->Attributes(stay.sex).raw[8] & 0x2)) {
+    if (prep.main_diag_info && (prep.main_diag_info->raw[8] & 0x2)) {
         if (RG_UNLIKELY(!prep.duration && !stay.session_count)) {
             bool tolerate = std::any_of(prep.procedures.begin(), prep.procedures.end(),
                                         [](const mco_ProcedureInfo *proc_info) {
@@ -1206,8 +1202,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
     switch (ghm_node.u.test.function) {
         case 0:
         case 1: {
-            return GetDiagnosisByte(ctx.stay->sex, *ctx.main_diag_info,
-                                    ghm_node.u.test.params[0]);
+            return GetDiagnosisByte(*ctx.main_diag_info, ghm_node.u.test.params[0]);
         } break;
 
         case 2: {
@@ -1227,16 +1222,14 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
         } break;
 
         case 5: {
-            return TestDiagnosis(ctx.stay->sex, *ctx.main_diag_info,
-                                 ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
+            return TestDiagnosis(*ctx.main_diag_info, ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
         } break;
 
         case 6: {
             // NOTE: Incomplete, should behave differently when params[0] >= 128,
             // but it's probably relevant only for FG 9 and 10 (CMAs)
             for (const mco_DiagnosisInfo *diag_info: ctx.prep->diagnoses) {
-                if (TestDiagnosis(ctx.stay->sex, *diag_info,
-                                  ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
+                if (TestDiagnosis(*diag_info, ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
                         diag_info != ctx.main_diag_info && diag_info != ctx.linked_diag_info)
                     return 1;
             }
@@ -1245,8 +1238,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 7: {
             for (const mco_DiagnosisInfo *diag_info: ctx.prep->diagnoses) {
-                if (TestDiagnosis(ctx.stay->sex, *diag_info,
-                                  ghm_node.u.test.params[0], ghm_node.u.test.params[1]))
+                if (TestDiagnosis(*diag_info, ghm_node.u.test.params[0], ghm_node.u.test.params[1]))
                     return 1;
             }
             return 0;
@@ -1256,8 +1248,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
             int result = 0;
             for (const mco_ProcedureInfo *proc_info: ctx.prep->procedures) {
                 if (proc_info->bytes[0] & 0x80) {
-                    if (TestProcedure(*proc_info,
-                                      ghm_node.u.test.params[0], ghm_node.u.test.params[1])) {
+                    if (TestProcedure(*proc_info, ghm_node.u.test.params[0], ghm_node.u.test.params[1])) {
                         result = 1;
                     } else {
                         return 0;
@@ -1287,8 +1278,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
         } break;
 
         case 13: {
-            uint8_t diag_byte = GetDiagnosisByte(ctx.stay->sex, *ctx.main_diag_info,
-                                                 ghm_node.u.test.params[0]);
+            uint8_t diag_byte = GetDiagnosisByte(*ctx.main_diag_info, ghm_node.u.test.params[0]);
             return (diag_byte == ghm_node.u.test.params[1]);
         } break;
 
@@ -1301,8 +1291,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
             HashSet<drd_DiagnosisCode> handled_codes;
             Size special_matches = 0;
             for (const mco_DiagnosisInfo *diag_info: ctx.prep->diagnoses) {
-                if (TestDiagnosis(ctx.stay->sex, *diag_info,
-                                  ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
+                if (TestDiagnosis(*diag_info, ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
                         handled_codes.Append(diag_info->diag).second) {
                     special_matches += (diag_info == ctx.main_diag_info ||
                                         diag_info == ctx.linked_diag_info);
@@ -1341,8 +1330,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 26: {
             if (ctx.linked_diag_info) {
-                return TestDiagnosis(ctx.stay->sex, *ctx.linked_diag_info,
-                                     ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
+                return TestDiagnosis(*ctx.linked_diag_info, ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
             } else {
                 return 0;
             }
@@ -1368,12 +1356,9 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
         } break;
 
         case 34: {
-            if (ctx.linked_diag_info && ctx.linked_diag_info == ctx.prep->linked_diag_info) {
-                uint8_t cmd = ctx.linked_diag_info->Attributes(ctx.stay->sex).cmd;
-                uint8_t jump = ctx.linked_diag_info->Attributes(ctx.stay->sex).jump;
-                if (cmd || jump != 3) {
-                    std::swap(ctx.main_diag_info, ctx.linked_diag_info);
-                }
+            if (ctx.linked_diag_info && ctx.linked_diag_info == ctx.prep->linked_diag_info &&
+                    (ctx.linked_diag_info->cmd || ctx.linked_diag_info->jump != 3)) {
+                std::swap(ctx.main_diag_info, ctx.linked_diag_info);
             }
 
             return 0;
@@ -1385,8 +1370,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 36: {
             for (const mco_DiagnosisInfo *diag_info: ctx.prep->diagnoses) {
-                if (TestDiagnosis(ctx.stay->sex, *diag_info,
-                                  ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
+                if (TestDiagnosis(*diag_info, ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
                         diag_info != ctx.linked_diag_info)
                     return 1;
             }
@@ -1432,9 +1416,8 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 41: {
             for (const mco_DiagnosisInfo *diag_info: ctx.prep->diagnoses) {
-                uint8_t cmd = diag_info->Attributes(ctx.stay->sex).cmd;
-                uint8_t jump = diag_info->Attributes(ctx.stay->sex).jump;
-                if (cmd == ghm_node.u.test.params[0] && jump == ghm_node.u.test.params[1])
+                if (diag_info->cmd == ghm_node.u.test.params[0] &&
+                        diag_info->jump == ghm_node.u.test.params[1])
                     return 1;
             }
 
@@ -1448,9 +1431,8 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 43: {
             for (const mco_DiagnosisInfo *diag_info: ctx.prep->diagnoses) {
-                uint8_t cmd = diag_info->Attributes(ctx.stay->sex).cmd;
-                uint8_t jump = diag_info->Attributes(ctx.stay->sex).jump;
-                if (cmd == ghm_node.u.test.params[0] && jump == ghm_node.u.test.params[1] &&
+                if (diag_info->cmd == ghm_node.u.test.params[0] &&
+                        diag_info->jump == ghm_node.u.test.params[1] &&
                         diag_info != ctx.linked_diag_info)
                     return 1;
             }
@@ -1642,11 +1624,11 @@ static int LimitSeverity(const mco_PreparedStay &prep, const mco_GhmRootInfo &gh
     return raac ? severity : mco_LimitSeverity(severity, prep.duration);
 }
 
-bool mco_TestGhmRootExclusion(int8_t sex, const mco_DiagnosisInfo &cma_diag_info,
+bool mco_TestGhmRootExclusion(const mco_DiagnosisInfo &cma_diag_info,
                               const mco_GhmRootInfo &ghm_root_info)
 {
-    RG_ASSERT(ghm_root_info.cma_exclusion_mask.offset < RG_SIZE(mco_DiagnosisInfo::attributes[0].raw));
-    return (cma_diag_info.Attributes(sex).raw[ghm_root_info.cma_exclusion_mask.offset] &
+    RG_ASSERT(ghm_root_info.cma_exclusion_mask.offset < RG_SIZE(mco_DiagnosisInfo::raw));
+    return (cma_diag_info.raw[ghm_root_info.cma_exclusion_mask.offset] &
             ghm_root_info.cma_exclusion_mask.value);
 }
 
@@ -1665,19 +1647,19 @@ bool mco_TestDiagnosisExclusion(const mco_TableIndex &index,
 }
 
 // Don't forget to update drdR::mco_exclusions() if this changes
-bool mco_TestExclusion(const mco_TableIndex &index, int8_t sex, int age,
+bool mco_TestExclusion(const mco_TableIndex &index, int age,
                        const mco_DiagnosisInfo &cma_diag_info,
                        const mco_GhmRootInfo &ghm_root_info,
                        const mco_DiagnosisInfo &main_diag_info,
                        const mco_DiagnosisInfo *linked_diag_info)
 {
-    if (age < cma_diag_info.Attributes(sex).cma_minimum_age)
+    if (age < cma_diag_info.cma_minimum_age)
         return true;
-    if (cma_diag_info.Attributes(sex).cma_maximum_age &&
-            age >= cma_diag_info.Attributes(sex).cma_maximum_age)
+    if (cma_diag_info.cma_maximum_age &&
+            age >= cma_diag_info.cma_maximum_age)
         return true;
 
-    if (mco_TestGhmRootExclusion(sex, cma_diag_info, ghm_root_info))
+    if (mco_TestGhmRootExclusion(cma_diag_info, ghm_root_info))
         return true;
 
     if (mco_TestDiagnosisExclusion(index, cma_diag_info, main_diag_info))
@@ -1725,14 +1707,12 @@ static mco_GhmCode RunGhmSeverity(const mco_TableIndex &index, const mco_Prepare
             if (diag_info == prep.main_diag_info || diag_info == prep.linked_diag_info)
                 continue;
 
-            // We wouldn't have gotten here if main_diagnosis was missing from the index
-            int new_severity = diag_info->Attributes(stay.sex).severity;
-            if (new_severity > severity) {
-                bool excluded = mco_TestExclusion(index, stay.sex, prep.age,
-                                                  *diag_info, ghm_root_info,
+            if (diag_info->severity > severity) {
+                // We wouldn't have gotten here if main_diagnosis was missing from the index
+                bool excluded = mco_TestExclusion(index, prep.age, *diag_info, ghm_root_info,
                                                   *prep.main_diag_info, prep.linked_diag_info);
                 if (!excluded) {
-                    severity = new_severity;
+                    severity = diag_info->severity;
                 }
             }
         }
@@ -1828,20 +1808,20 @@ static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> m
             if (authorization_set.TestFacilityAuthorization(62, stay.exit.date) &&
                     prep.duration < ghm_to_ghs_info.special_duration &&
                     stay.entry.mode == '8' && stay.entry.origin != '5' && stay.exit.mode == '8' &&
-                    (TestDiagnosis(stay.sex, *prep.main_diag_info, 32, 0x20) ||
-                     (prep.linked_diag_info && TestDiagnosis(stay.sex, *prep.linked_diag_info, 32, 0x20))))
+                    (TestDiagnosis(*prep.main_diag_info, 32, 0x20) ||
+                     (prep.linked_diag_info && TestDiagnosis(*prep.linked_diag_info, 32, 0x20))))
                 return false;
         } break;
     }
 
     if (ghm_to_ghs_info.main_diagnosis_mask.value) {
-        if (!TestDiagnosis(stay.sex, *prep.main_diag_info, ghm_to_ghs_info.main_diagnosis_mask))
+        if (!TestDiagnosis(*prep.main_diag_info, ghm_to_ghs_info.main_diagnosis_mask))
             return false;
     }
     if (ghm_to_ghs_info.diagnosis_mask.value) {
         bool test = std::any_of(prep.diagnoses.begin(), prep.diagnoses.end(),
                                 [&](const mco_DiagnosisInfo *diag_info) {
-            return TestDiagnosis(stay.sex, *diag_info, ghm_to_ghs_info.diagnosis_mask);
+            return TestDiagnosis(*diag_info, ghm_to_ghs_info.diagnosis_mask);
         });
         if (!test)
             return false;
@@ -1872,7 +1852,7 @@ mco_GhsCode mco_PickGhs(const mco_TableIndex &index, const mco_AuthorizationSet 
         // Deal with UHCD-only stays
         if (prep.duration > 0 && stay.entry.mode == '8' && stay.exit.mode == '8') {
             bool uhcd = std::all_of(mono_preps.begin(), mono_preps.end(),
-                                    [&](const mco_PreparedStay &mono_prep) {
+                                    [](const mco_PreparedStay &mono_prep) {
                 return mono_prep.auth_type == 7;
             });
 
@@ -1931,8 +1911,6 @@ static bool TestSupplementSrc(const mco_TableIndex &index, const mco_PreparedSta
                               const mco_PreparedStay &mono_prep, int16_t igs2_src_adjust,
                               bool prev_reanimation, const mco_PreparedStay *prev_mono_prep)
 {
-    const mco_Stay &stay = *prep.stay;
-
     if (prev_reanimation)
         return true;
     if (prep.age >= 18 && mono_prep.stay->igs2 - igs2_src_adjust >= 15)
@@ -1942,9 +1920,9 @@ static bool TestSupplementSrc(const mco_TableIndex &index, const mco_PreparedSta
 
     if (mono_prep.stay->igs2 - igs2_src_adjust >= 7 || prep.age < 18) {
         for (const mco_DiagnosisInfo *diag_info: mono_prep.diagnoses) {
-            if (diag_info->Attributes(stay.sex).raw[21] & 0x10)
+            if (diag_info->raw[21] & 0x10)
                 return true;
-            if (diag_info->Attributes(stay.sex).raw[21] & 0x8) {
+            if (diag_info->raw[21] & 0x8) {
                 const mco_SrcPair *pair = index.src_pairs_map[0]->FindValue(diag_info->diag, nullptr);
                 if (pair) {
                     do {
@@ -1956,9 +1934,9 @@ static bool TestSupplementSrc(const mco_TableIndex &index, const mco_PreparedSta
     }
     if (prep.age < 18) {
         for (const mco_DiagnosisInfo *diag_info: mono_prep.diagnoses) {
-            if (diag_info->Attributes(stay.sex).raw[22] & 0x80)
+            if (diag_info->raw[22] & 0x80)
                 return true;
-            if (diag_info->Attributes(stay.sex).raw[22] & 0x40) {
+            if (diag_info->raw[22] & 0x40) {
                 const mco_SrcPair *pair = index.src_pairs_map[1]->FindValue(diag_info->diag, nullptr);
                 if (pair) {
                     do {
@@ -2171,8 +2149,8 @@ void mco_CountSupplements(const mco_TableIndex &index,
 
     if (prep.markers & (int)mco_PreparedStay::Marker::ChildbirthProcedure) {
         bool ant_diag = std::any_of(prep.diagnoses.begin(), prep.diagnoses.end(),
-                                      [&](const mco_DiagnosisInfo *diag_info) {
-            return diag_info->Attributes(stay.sex).raw[25] & 0x40;
+                                    [](const mco_DiagnosisInfo *diag_info) {
+            return diag_info->raw[25] & 0x40;
         });
 
         if (ant_diag) {
