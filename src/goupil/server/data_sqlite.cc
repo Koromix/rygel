@@ -16,7 +16,7 @@ CREATE TABLE af_records (
 CREATE UNIQUE INDEX af_records_i ON af_records (id);
 
 CREATE TABLE sc_resources (
-    schedule TEXT NOT NULL CHECK(schedule IN ('pl', 'entreprise')),
+    schedule TEXT NOT NULL,
     date TEXT NOT NULL,
     time INTEGER NOT NULL,
 
@@ -35,7 +35,7 @@ CREATE TABLE sc_identities (
 );
 
 CREATE TABLE sc_meetings (
-    schedule TEXT NOT NULL CHECK(schedule IN ('pl', 'entreprise')),
+    schedule TEXT NOT NULL,
     date TEXT NOT NULL,
     time INTEGER NOT NULL,
 
