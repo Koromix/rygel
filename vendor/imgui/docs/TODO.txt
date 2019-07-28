@@ -30,14 +30,16 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window/opt: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. -> this may require enforcing that it is illegal to submit contents if Begin returns false.
  - window/child: the first draw command of a child window could be moved into the current draw command of the parent window (unless child+tooltip?).
  - window/child: border could be emitted in parent as well.
+ - window/child: allow SetNextWindowContentSize() to work on child windows.
  - window/clipping: some form of clipping when DisplaySize (or corresponding viewport) is zero.
  - window/tab: add a way to signify that a window or docked window requires attention (e.g. blinking title bar).
+ ! scrolling: exposing horizontal scrolling with Shift+Wheel even when scrollbar is disabled expose lots of issues (#2424, #1463)
  - scrolling: while holding down a scrollbar, try to keep the same contents visible (at least while not moving mouse)
  - scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
  - scrolling/clipping: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y). (2017-08-20: can't repro)
  - scrolling/style: shadows on scrollable areas to denote that there is more contents
 
- - drawdata: make it easy to clone (or swap?) a ImDrawData so user can easily save that data if they use threaded rendering.
+ - drawdata: make it easy to clone (or swap?) a full ImDrawData so user can easily save that data if they use threaded rendering. (e.g. #2646)
  ! drawlist: add calctextsize func to facilitate consistent code from user pov (currently need to use ImGui or ImFont alternatives!)
  - drawlist: end-user probably can't call Clear() directly because we expect a texture to be pushed in the stack.
  - drawlist: maintaining bounding box per command would allow to merge draw command when clipping isn't relied on (typical non-scrolling window or non-overflowing column would merge with previous command).
@@ -65,7 +67,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - widgets: start exposing PushItemFlag() and ImGuiItemFlags
  - widgets: alignment options in style (e.g. center Selectable, Right-Align within Button, etc.) #1260
  - widgets: activate by identifier (trigger button, focus given id)
- - widgets: a way to represent "mixed" values, so e.g. all values replaced with **, including check-boxes, colors, etc. with support for multi-components widgets (e.g. SliderFloat3, make only "Y" mixed)
+ - widgets: a way to represent "mixed" values, so e.g. all values replaced with *, including check-boxes, colors, etc. with support for multi-components widgets (e.g. SliderFloat3, make only "Y" mixed) (#2644)
  - widgets: selectable: generic BeginSelectable()/EndSelectable() mechanism.
  - widgets: selectable: a way to visualize partial/mixed selection (e.g. parent tree node has children with mixed selection)
  - widgets: checkbox: checkbox with custom glyph inside frame.
@@ -87,6 +89,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input text: decorrelate layout from inputs - e.g. what's the easiest way to implement a nice IP/Mac address input editor?
  - input text: global callback system so user can plug in an expression evaluator easily. (#1691)
  - input text: force scroll to end or scroll to a given line/contents (so user can implement a log or a search feature)
+ - input text: a way to preview completion (e.g. disabled text completing from the cursor)
  - input text: a side bar that could e.g. preview where errors are. probably left to the user to draw but we'd need to give them the info there.
  - input text: a way for the user to provide syntax coloring.
  - input text: Shift+TAB with ImGuiInputTextFlags_AllowTabInput could eat preceding blanks, up to tab_count.
@@ -120,6 +123,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - columns: option to alternate background colors on odd/even scanlines.
  - columns: allow columns to recurse.
  - columns: allow a same columns set to be interrupted by e.g. CollapsingHeader and resume with columns in sync when moving them.
+ - columns: sizing is lossy when columns width is very small (default width may turn negative etc.)
  - columns: separator function or parameter that works within the column (currently Separator() bypass all columns) (#125)
  - columns: flag to add horizontal separator above/below?
  - columns/layout: setup minimum line height (equivalent of automatically calling AlignFirstTextHeightToWidgets)
@@ -204,23 +208,24 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - shortcuts: programmatically access shortcuts "Focus("&Save"))
  - menus: menu-bar: main menu-bar could affect clamping of windows position (~ akin to modifying DisplayMin)
  - menus: hovering from menu to menu on a menu-bar has 1 frame without any menu, which is a little annoying. ideally either 0 either longer.
+ - menus: could merge draw call in most cases (how about storing an optional aabb in ImDrawCmd to move the burden of merging in a single spot).
 
  - text: selectable text (for copy) as a generic feature (ItemFlags?)
  - text: proper alignment options in imgui_internal.h
- - text wrapped: figure out better way to use TextWrapped() in an always auto-resize context (tooltip, etc.) (#249)
  - text: it's currently impossible to have a window title with "##". perhaps an official workaround would be nice. \ style inhibitor? non-visible ascii code to insert between #?
  - text: provided a framed text helper, e.g. https://pastebin.com/1Laxy8bT
  - text: refactor TextUnformatted (or underlying function) to more explicitly request if we need width measurement or not
  - text link/url button: underlined. should api expose an ID or use text contents as ID? which colors enum to use?
+ - text/wrapped: should be a more first-class citizen, e.g. wrapped text within a Selectable with known width
+ - text/wrapped: figure out better way to use TextWrapped() in an always auto-resize context (tooltip, etc.) (#249)
 
- - tree node / optimization: avoid formatting when clipped.
- - tree node: tree-node/header right-most side doesn't take account of horizontal scrolling.
  - tree node: add treenode/treepush int variants? not there because (void*) cast from int warns on some platforms/settings?
  - tree node: try to apply scrolling at time of TreePop() if node was just opened and end of node is past scrolling limits?
  - tree node / selectable render mismatch which is visible if you use them both next to each other (e.g. cf. property viewer)
  - tree node: tweak color scheme to distinguish headers from selected tree node (#581)
  - tree node: leaf/non-leaf highlight mismatch.
  - tree node: _NoIndentOnOpen flag? would require to store a per-depth bit mask to store info for pop (or whatever is cheaper)
+ - tree node/opt: could avoid formatting when clipped (flag assuming we don't care about width/height, assume single line height?)
 
  - settings: write more decent code to allow saving/loading new fields: columns, selected tree nodes?
  - settings: api for per-tool simple persistent data (bool,int,float,columns sizes,etc.) in .ini file (#437)
