@@ -2,6 +2,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+// These globals are initialized above
+let g_database = null;
+let g_assets = null;
+let g_records = null;
+
 let goupil = (function() {
     let self = this;
 
@@ -22,23 +27,23 @@ let goupil = (function() {
         log.pushHandler(addLogEntry);
     }
 
-    function initDatabase() {
+    async function openDatabase() {
         let storage_warning = 'Local data may be cleared by the browser under storage pressure, ' +
                               'check your privacy settings for this website';
 
         if (navigator.storage && navigator.storage.persist) {
-            navigator.storage.persist().then(granted => {
-                // FIXME: For some reason this does not seem to work correctly on Firefox,
-                // where granted is always true. Investigate.
-                if (!granted)
-                    log.error(storage_warning);
-            });
+            let granted = await navigator.storage.persist();
+
+            // FIXME: For some reason this does not seem to work correctly on Firefox,
+            // where granted is always true. Investigate.
+            if (!granted)
+                log.error(storage_warning);
         } else {
             log.error(storage_warning);
         }
 
         let db_name = `goupil_${settings.project_key}`;
-        database = idb.open(db_name, 3, (db, old_version) => {
+        let db = await idb.open(db_name, 4, (db, old_version) => {
             switch (old_version) {
                 case null: {
                     db.createObjectStore('pages', {keyPath: 'key'});
@@ -49,9 +54,18 @@ let goupil = (function() {
                 } // fallthrough
                 case 2: {
                     db.createObjectStore('variables', {keyPath: 'key'});
-                } break;
+                } // fallthrough
+                case 3: {
+                    db.deleteObjectStore('data');
+                    db.deleteObjectStore('settings');
+
+                    db.createObjectStore('assets', {keyPath: 'key'});
+                    db.createObjectStore('records', {keyPath: 'id'});
+                } // fallthrough
             }
         });
+
+        return db;
     }
 
     function initNavigation() {
@@ -143,13 +157,13 @@ let goupil = (function() {
 
         let widgets = [];
 
-        popup_builder = autoform.createBuilder(popup_state, widgets);
+        popup_builder = new FormBuilder(popup_state, widgets);
         popup_builder.changeHandler = () => openPopup(e, func);
         popup_builder.close = closePopup;
         popup_builder.pushOptions({missingMode: 'disable'});
 
         func(popup_builder);
-        autoform.renderWidgets(widgets, gp_popup);
+        render(widgets.map(intf => intf.render(intf)), gp_popup);
 
         // We need to know popup width and height
         let give_focus = !gp_popup.classList.contains('active');
@@ -213,7 +227,7 @@ let goupil = (function() {
     }
 
     function closePopup() {
-        popup_state = autoform.createState();
+        popup_state = new FormState();
         popup_builder = null;
 
         clearTimeout(popup_timer);
@@ -236,25 +250,18 @@ let goupil = (function() {
     }
 
     this.go = function(href, history = true) {
-        // Module path
-        let path = parseURL(href, window.location.href).pathname;
-        if (path.startsWith(settings.base_url))
-            path = path.substr(settings.base_url.length);
-        if (path.endsWith('/'))
-            path = path.substr(0, path.length - 1);
+        // Asset key
+        let asset_key = parseURL(href, window.location.href).pathname;
+        if (asset_key.startsWith(settings.base_url))
+            asset_key = asset_key.substr(settings.base_url.length);
+        while (asset_key.endsWith('/'))
+            asset_key = asset_key.substr(0, asset_key.length - 1);
 
-        // Run module
-        switch (path) {
-            case '': { path = 'autoform' } // fallthrough
-            case 'autoform': { autoform_mod.activate(); } break;
-            case 'schedule': { schedule_mod.activate(); } break;
-            default: { showDummyPage(); } break;
-        }
-
-        // Full path
-        let full_path = `${settings.base_url}${path}/`;
+        // Run asset
+        pilot.go(asset_key);
 
         // Update history
+        let full_path = `${settings.base_url}${asset_key}${asset_key ? '/' : ''}`;
         if (history && full_path !== parseURL(window.location.href).pathname) {
             window.history.pushState(null, null, full_path);
         } else {
@@ -276,18 +283,21 @@ let goupil = (function() {
         openPopup(e, func);
     };
 
-    document.addEventListener('readystatechange', e => {
-        if (document.readyState === 'complete') {
-            initLog();
-            initDatabase();
-            initNavigation();
+    async function initGoupil() {
+        initLog();
+        initNavigation();
 
-            self.go(window.location.href, false);
-        }
+        g_database = await openDatabase();
+        g_assets = new AssetManager(g_database);
+        g_records = new RecordManager(g_database);
+
+        self.go(window.location.href, false);
+    }
+
+    document.addEventListener('readystatechange', e => {
+        if (document.readyState === 'complete')
+            initGoupil();
     });
 
     return this;
 }).call({});
-
-// Initialized by initDatabase()
-let database = null;

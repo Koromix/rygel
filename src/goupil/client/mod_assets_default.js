@@ -2,14 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let autoform_default = (function() {
+let assets_default = (function() {
     let self = this;
 
-    this.key = 'tuto';
-
-    this.pages = [
+    this.assets = [
         {
             key: 'tuto',
+            mime: 'application/x.goupil.form',
             title: 'Tutoriel',
             script: `// Retirer le commentaire de la ligne suivante pour afficher les
 // champs (texte, numérique, etc.) à droite du libellé.
@@ -66,6 +65,7 @@ form.buttons("save")
 
         {
             key: 'complicated',
+            mime: 'application/x.goupil.form',
             title: 'Formulaire compliqué',
             script: `form.pushOptions({large: true})
 
@@ -134,6 +134,7 @@ form.buttons("save")
 
         {
             key: 'complicated_help',
+            mime: 'application/x.goupil.form',
             title: 'Formulaire compliqué (aide)',
             script: `form.output("Loreum ipsum")
 
@@ -144,7 +145,7 @@ form.buttons([
 `
         }
     ];
-    this.pages.sort((page1, page2) => util.compareValues(page1.key, page2.key));
+    this.assets.sort((page1, page2) => util.compareValues(page1.key, page2.key));
 
     return this;
 }).call({});

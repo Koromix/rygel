@@ -7,10 +7,7 @@ window.indexedDB = window.indexedDB || window.webkitIndexedDB || window.mozIndex
 
 // TODO: Support degraded mode when IDB is not available (e.g. private browsing)
 let idb = (function () {
-    // Beware, the IndexedDB API is asynchronous crap. Not my fault.
-    // The whole point of this is to hide most of the async stuff.
-
-    function DatabaseInterface(intf) {
+    function DatabaseInterface(db) {
         let self = this;
 
         let t_status = 'none';
@@ -25,44 +22,33 @@ let idb = (function () {
             t_queries.length = 0;
         }
 
+        function logAndReject(reject, err) {
+            log.error(err);
+            reject(err);
+        }
+
         this.transaction = function(func) {
-            if (intf.db) {
-                if (t_status !== 'none')
-                    throw new Error('Ongoing database transaction');
+            if (t_status !== 'none')
+                throw new Error('Ongoing database transaction');
 
-                try {
-                    t_status = 'valid';
-                    func(self);
+            try {
+                t_status = 'valid';
+                func(self);
 
-                    let t = intf.db.transaction(Array.from(t_stores),
-                                                t_readwrite ? 'readwrite' : 'readonly');
+                let t = db.transaction(Array.from(t_stores),
+                                       t_readwrite ? 'readwrite' : 'readonly');
 
-                    for (let query of t_queries)
-                        query.func(t, query.resolve, query.reject);
-                    if (t_status === 'abort')
-                        t.abort();
+                for (let query of t_queries)
+                    query.func(t, query.resolve, query.reject);
+                if (t_status === 'abort')
+                    t.abort();
 
-                    return new Promise((resolve, reject) => {
-                        t.addEventListener('complete', e => resolve());
-                        t.addEventListener('abort', e => {
-                            log.error('Database transaction failure');
-                            reject('Database transaction failure');
-                        });
-                    });
-                } finally {
-                    resetTransaction();
-                }
-            } else if (!intf.broken) {
                 return new Promise((resolve, reject) => {
-                    let call = {
-                        func: () => self.transaction(func),
-                        resolve: resolve,
-                        reject: reject
-                    };
-                    intf.pending.push(call);
+                    t.addEventListener('complete', e => resolve());
+                    t.addEventListener('abort', e => logAndReject(reject, 'Database transaction failure'));
                 });
-            } else {
-                throw new Error('Database not available');
+            } finally {
+                resetTransaction();
             }
         };
 
@@ -81,6 +67,7 @@ let idb = (function () {
                         resolve: resolve,
                         reject: reject
                     };
+
                     t_queries.push(query);
                 });
             } else {
@@ -96,7 +83,7 @@ let idb = (function () {
                 obj.put(value);
 
                 t.addEventListener('complete', e => resolve());
-                t.addEventListener('abort', e => reject('Database transaction failure'));
+                t.addEventListener('abort', e => logAndReject(reject, 'Database transaction failure'));
             });
         };
 
@@ -106,7 +93,7 @@ let idb = (function () {
                 obj.put(value, key);
 
                 t.addEventListener('complete', e => resolve());
-                t.addEventListener('abort', e => reject('Database transaction failure'));
+                t.addEventListener('abort', e => logAndReject(reject, 'Database transaction failure'));
             });
         };
 
@@ -117,7 +104,7 @@ let idb = (function () {
                     obj.put(value);
 
                 t.addEventListener('complete', e => resolve());
-                t.addEventListener('abort', e => reject('Database transaction failure'));
+                t.addEventListener('abort', e => logAndReject(reject, 'Database transaction failure'));
             });
         };
 
@@ -126,8 +113,14 @@ let idb = (function () {
                 let obj = t.objectStore(store);
                 let req = obj.get(key);
 
-                req.onsuccess = e => resolve(e.target.result);
-                req.onerror = e => reject(e.target.error);
+                req.onsuccess = e => {
+                    if (e.target.result) {
+                        resolve(e.target.result);
+                    } else {
+                        logAndReject(reject, `Value '${key}' in '${store}' does not exist`);
+                    }
+                };
+                req.onerror = e => logAndReject(reject, e.target.error);
             });
         };
 
@@ -135,6 +128,7 @@ let idb = (function () {
             return executeQuery(store, false, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
 
+                // TODO: Error is does not exist
                 if (obj.getAll) {
                     let req = obj.getAll();
 
@@ -164,7 +158,7 @@ let idb = (function () {
                 obj.delete(key);
 
                 t.addEventListener('complete', e => resolve());
-                t.addEventListener('abort', e => reject('Database transaction failure'));
+                t.addEventListener('abort', e => logAndReject(reject, 'Database transaction failure'));
             });
         };
 
@@ -174,40 +168,26 @@ let idb = (function () {
                 obj.clear();
 
                 t.addEventListener('complete', e => resolve());
-                t.addEventListener('abort', e => reject('Database transaction failure'));
+                t.addEventListener('abort', e => logAndReject(reject, 'Database transaction failure'));
             });
         };
-    }
-
-    function resolvePending(pending) {
-        for (let call of pending)
-            call.func().then(call.resolve).catch(call.reject);
     }
 
     this.open = function(db_name, version, update_func = () => {}) {
         let req = window.indexedDB.open(db_name, version);
 
-        let intf = {
-            db: null,
-            broken: false,
-            pending: []
-        };
-
-        req.onsuccess = e => {
-            intf.db = e.target.result;
-            resolvePending(intf.pending);
-        };
-        req.onerror = e => {
-            console.log('Failed to open database');
-            intf.broken = true;
-            resolvePending(intf.pending);
-        };
         req.onupgradeneeded = e => {
             let db = e.target.result;
             update_func(db, e.oldVersion || null);
         };
 
-        return new DatabaseInterface(intf);
+        return new Promise((resolve, reject) => {
+            req.onsuccess = e => {
+                let intf = new DatabaseInterface(e.target.result);
+                resolve(intf);
+            };
+            req.onerror = e => logAndReject(reject, 'Failed to open database');
+        });
     };
 
     return this;

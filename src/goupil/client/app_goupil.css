@@ -13,21 +13,9 @@ body {
 }
 
 #gp_menu {
-    display: flex;
     position: fixed;
     top: 0;
-    height: 30px;
-    width: 100%;
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    background: #24579d;
-    z-index: 999;
     color: white;
-    user-select: none;
-    -moz-user-select: none;
-    -webkit-user-select: none;
-    -ms-user-select: none;
 }
 
 main { margin-top: 30px; }
@@ -41,9 +29,24 @@ button {
 }
 button:not(:disabled) { cursor: pointer; }
 
-/* -------------------- Menu content -------------------- */
+/* -------------------- Toolbars -------------------- */
 
-#gp_menu button {
+.gp_toolbar {
+    display: flex;
+    box-sizing: border-box;
+    width: 100%;
+    height: 30px;
+    margin: 0;
+    padding: 0;
+    z-index: 999;
+    background: #24579d;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
+
+.gp_toolbar button {
     display: inline-block;
     height: 100%;
     box-sizing: border-box;
@@ -52,8 +55,8 @@ button:not(:disabled) { cursor: pointer; }
     color: inherit;
     text-decoration: none;
 }
-#gp_menu button:not(.active):hover { background: #376cb5; }
-#gp_menu button.active { background: #3b7ad1; }
+.gp_toolbar button:not(.active):hover { background: #376cb5; }
+.gp_toolbar button.active { background: #3b7ad1; }
 
 /* -------------------- Notifications -------------------- */
 
