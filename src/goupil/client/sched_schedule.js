@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function Schedule(widget, resources_map, meetings_map) {
+function Schedule(resources_map, meetings_map) {
     this.changeResourcesHandler = (key, resources) => {};
     this.changeMeetingsHandler = (key, meetings) => {};
 
@@ -12,12 +12,12 @@ function Schedule(widget, resources_map, meetings_map) {
                        'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
     let week_day_names = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 
-    let gp_menu;
     let sc_view;
+    let sc_footer;
 
-    let current_mode = 'meetings';
     let current_month;
     let current_year;
+    let current_mode;
 
     let drag_slot_ref;
 
@@ -281,11 +281,11 @@ function Schedule(widget, resources_map, meetings_map) {
                             function dragStart(e) {
                                 if (slot_ref.identity) {
                                     drag_slot_ref = slot_ref;
-                                    e.dataTransfer.setData('application/x-meeting', '');
+                                    e.dataTransfer.setData('application/x.goupil.meeting', '');
                                 }
                             }
                             function dragOverSlot(e) {
-                                if (e.dataTransfer.types.includes('application/x-meeting'))
+                                if (e.dataTransfer.types.includes('application/x.goupil.meeting'))
                                     e.preventDefault();
                             }
                             function dropSlot(e) {
@@ -539,53 +539,42 @@ function Schedule(widget, resources_map, meetings_map) {
     }
 
     function switchToPreviousMonth() {
-        if (current_month > 1) {
-            self.render(current_year, current_month - 1);
-        } else {
-            self.render(current_year - 1, 12);
-        }
-    }
-
-    function switchToNextMonth() {
-        if (current_month < 12) {
-            self.render(current_year, current_month + 1);
-        } else {
-            self.render(current_year + 1, 1);
-        }
-    }
-
-    function switchToMonth(month) {
-        if (month !== current_month)
-            self.render(current_year, month);
-    }
-
-    function switchToPreviousYear() {
-        self.render(current_year - 1, current_month);
-    }
-
-    function switchToNextYear() {
-        self.render(current_year + 1, current_month);
-    }
-
-    function toggleMode() {
-        switch (current_mode) {
-            case 'meetings': { current_mode = 'settings'; } break;
-            case 'settings': { current_mode = 'meetings'; } break;
-            case 'copy': { current_mode = 'settings'; } break;
+        if (--current_month < 1) {
+            current_year--;
+            current_month = 12;
         }
 
         renderAll();
     }
 
-    function renderMenu() {
+    function switchToNextMonth() {
+        if (++current_month > 12) {
+            current_year++;
+            current_month = 1;
+        }
+
+        renderAll();
+    }
+
+    function switchToMonth(month) {
+        if (month !== current_month) {
+            current_month = month;
+            renderAll();
+        }
+    }
+
+    function switchToPreviousYear() {
+        current_year--;
+        renderAll();
+    }
+
+    function switchToNextYear() {
+        current_year++;
+        renderAll();
+    }
+
+    function renderFooter() {
         render(html`
-            <button class=${current_mode === 'meetings' ? 'active' : ''}
-                    @click=${toggleMode}>Agenda</button>
-            <button class=${current_mode === 'meetings' ? '' : 'active'}
-                    @click=${toggleMode}>Créneaux</button>
-
-            <div style="flex: 1;"></div>
-
             <div class="sc_selector">
                 <button @click=${switchToPreviousMonth}
                         @dragover=${slowDownEvents(300, switchToPreviousMonth)}>≪</button>
@@ -639,34 +628,33 @@ function Schedule(widget, resources_map, meetings_map) {
                 <button @click=${switchToNextYear}
                         @dragover=${slowDownEvents(300, switchToNextYear)}>≫</button>
             </div>
-        `, gp_menu);
+        `, sc_footer);
     }
 
     function renderAll() {
-        // FIXME: Can we replace a node with render, instead of replacing its content?
-        // Right now, render functions create content inside these two divs instead of replacing them.
-        render(html`
-            <div class="sc_header">${week_day_names.map(name => html`<div>${name}</div>`)}</div>
-            <div class="sc_view"></div>
-        `, widget);
-
-        gp_menu = document.querySelector('#gp_menu');
-        sc_view = widget.querySelector('.sc_view');
-
         switch (current_mode) {
             case 'meetings': { renderMeetings(); } break;
             case 'settings': { renderSettings(); } break;
             case 'copy': { renderCopy(); } break;
         }
-
-        renderMenu();
+        renderFooter();
     }
 
-    this.render = function(year, month) {
-        if (year !== undefined) {
-            current_year = year;
-            current_month = month;
-        }
+    this.render = function(year, month, mode, root_el) {
+        current_year = year;
+        current_month = month;
+        current_mode = mode;
+
+        // FIXME: Can we replace a node with render, instead of replacing its content?
+        // Right now, render functions create content inside these two divs instead of replacing them.
+        render(html`
+            <div id="sc_header">${week_day_names.map(name => html`<div>${name}</div>`)}</div>
+            <div id="sc_view"></div>
+            <div id="sc_footer" class="gp_toolbar"></div>
+        `, root_el);
+
+        sc_view = root_el.querySelector('#sc_view');
+        sc_footer = root_el.querySelector('#sc_footer');
 
         renderAll();
     };

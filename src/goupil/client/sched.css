@@ -4,13 +4,13 @@
 
 /* -------------------- Week day names header -------------------- */
 
-.sc_header {
+#sc_header {
     user-select: none;
     -moz-user-select: none;
     -webkit-user-select: none;
     -ms-user-select: none;
 }
-.sc_header div {
+#sc_header div {
     display: inline-block;
     width: 14.28%; /* 100% / 7 */
     text-align: center;
@@ -20,6 +20,16 @@
 
 /* -------------------- Year / month selection menu -------------------- */
 
+#sc_footer {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100vw;
+    z-index: 999;
+    color: white;
+    justify-content: center;
+}
+
 .sc_selector { margin: 0 1em; }
 .sc_selector > b {
     display: inline-block;
@@ -27,8 +37,9 @@
     text-align: center;
     font-weight: bold;
 }
-#gp_menu .sc_month_warn:before { content: '⚠\FE0E  '; }
-#gp_menu .sc_month_warn {
+
+#sc_footer .sc_month_warn:before { content: '⚠\FE0E  '; }
+#sc_footer .sc_month_warn:not(.active) {
     background: #db0a0a;
     color: white;
 }
