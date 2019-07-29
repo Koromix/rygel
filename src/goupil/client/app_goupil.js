@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 // These globals are initialized above
-let g_database = null;
 let g_assets = null;
 let g_records = null;
 
@@ -287,9 +286,9 @@ let goupil = (function() {
         initLog();
         initNavigation();
 
-        g_database = await openDatabase();
-        g_assets = new AssetManager(g_database);
-        g_records = new RecordManager(g_database);
+        let db = await openDatabase();
+        g_assets = new AssetManager(db);
+        g_records = new RecordManager(db);
 
         self.go(window.location.href, false);
     }
