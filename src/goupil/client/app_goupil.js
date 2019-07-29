@@ -132,12 +132,12 @@ let goupil = (function() {
                 msg: msg,
                 type: type
             };
-            log_entries.push(entry);
+            log_entries.unshift(entry);
 
             renderLog();
 
             setTimeout(() => {
-                log_entries.shift();
+                log_entries.pop();
                 renderLog();
             }, 6000);
         }
