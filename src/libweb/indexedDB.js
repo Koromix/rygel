@@ -2,9 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-window.indexedDB = window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB ||
-                   window.OIndexedDB || window.msIndexedDB;
-
 // TODO: Support degraded mode when IDB is not available (e.g. private browsing)
 let idb = (function () {
     function DatabaseInterface(db) {
@@ -174,7 +171,9 @@ let idb = (function () {
     }
 
     this.open = function(db_name, version, update_func = () => {}) {
-        let req = window.indexedDB.open(db_name, version);
+        let indexedDB = window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB ||
+                        window.OIndexedDB || window.msIndexedDB;
+        let req = indexedDB.open(db_name, version);
 
         req.onupgradeneeded = e => {
             let db = e.target.result;
