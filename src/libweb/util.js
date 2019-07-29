@@ -387,6 +387,39 @@ let util = (function() {
 }).call({});
 
 // ------------------------------------------------------------------------
+// Containers
+// ------------------------------------------------------------------------
+
+function LruMap(limit) {
+    let map = new Map();
+
+    this.set = function(key, value) {
+        map.delete(key);
+        map.set(key, value);
+
+        if (map.size > limit) {
+            let oldest_key = map.keys().next().value;
+            map.delete(oldest_key);
+        }
+    };
+
+    this.delete = function(key) { map.delete(key); };
+
+    this.get = function(key) {
+        let value = map.get(key);
+
+        if (value !== undefined) {
+            map.delete(key);
+            map.set(key, value);
+        }
+
+        return value;
+    };
+
+    this.clear = function() { map.clear(); };
+}
+
+// ------------------------------------------------------------------------
 // Date
 // ------------------------------------------------------------------------
 
