@@ -125,12 +125,11 @@ let idb = (function () {
             return executeQuery(store, false, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
 
-                // TODO: Error is does not exist
                 if (obj.getAll) {
                     let req = obj.getAll();
 
                     req.onsuccess = e => resolve(e.target.result);
-                    req.onerror = e => reject(e.target.error);
+                    req.onerror = e => logAndReject(reject, e.target.error);
                 } else {
                     let cur = obj.openCursor();
                     let values = [];
@@ -144,7 +143,7 @@ let idb = (function () {
                             resolve(values);
                         }
                     };
-                    cur.onerror = e => reject(e.target.error);
+                    cur.onerror = e => logAndReject(reject, e.target.error);
                 }
             });
         };
