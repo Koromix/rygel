@@ -78,6 +78,7 @@ let pilot = (function() {
                 delete assets_map[asset.key];
 
                 current_key = null;
+                current_asset = null;
 
                 form.close();
                 self.go();
@@ -95,6 +96,7 @@ let pilot = (function() {
 
                 init = false;
                 current_key = null;
+                current_asset = null;
 
                 form.close();
                 self.go();
@@ -121,6 +123,14 @@ let pilot = (function() {
                                    <button @click=${e => showDeleteDialog(e, current_asset)}>Supprimer</button>` : html``}
             <button @click=${showResetDialog}>Réinitialiser</button>
         `, menu_el);
+    }
+
+    function renderEmpty() {
+        let modes_el = document.querySelector('#dev_modes');
+        let main_el = document.querySelector('main');
+
+        render(html``, modes_el);
+        render(html``, main_el);
     }
 
     this.go = async function(key, args = {}) {
@@ -158,8 +168,14 @@ let pilot = (function() {
             switch (current_asset.mime) {
                 case 'application/x.goupil.form': { dev_form.run(current_asset, args); } break;
                 case 'application/x.goupil.schedule': { dev_schedule.run(current_asset, args); } break;
-                default: { log.error(`Unknown asset type '${current_asset.mime}'`); } break;
+                default: {
+                    renderEmpty();
+                    log.error(`Unknown asset type '${current_asset.mime}'`);
+                } break;
             }
+        } else {
+            renderEmpty();
+            log.error('No asset available');
         }
     };
 
