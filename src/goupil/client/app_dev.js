@@ -19,9 +19,9 @@ let pilot = (function() {
             let key = form.text('key', 'Clé :', {mandatory: true});
             let title = form.text('title', 'Titre :', {mandatory: true});
 
-            let type = form.choice('type', 'Type :', [
-                'application/x.goupil.form:::Formulaire',
-                'application/x.goupil.schedule:::Agenda'
+            let type = form.dropdown('type', 'Type :', [
+                'application/x.goupil.form',
+                'application/x.goupil.schedule'
             ], {mandatory: true, untoggle: false, value: 'application/x.goupil.form'});
 
             if (key.value) {
