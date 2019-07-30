@@ -331,12 +331,21 @@ let dev_form = (function() {
 
                             ${columns.map(col => {
                                 let value = record[col.key];
-                                if (value == null)
-                                    value = '';
+
+                                let tooltip;
+                                let cls;
+                                if (value != null) {
+                                    tooltip = value;
+                                    cls = `af_record_${col.type}`;
+                                } else {
+                                    value = 'NA';
+                                    tooltip = 'Donnée manquante';
+                                    cls = `af_record_missing`;
+                                }
                                 if (Array.isArray(value))
                                     value = value.join('|');
 
-                                return html`<td title=${value}>${value}</td>`;
+                                return html`<td class=${cls} title=${tooltip}>${value}</td>`;
                             })}
                         </tr>`)}
                     </tbody>

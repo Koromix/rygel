@@ -178,6 +178,13 @@
     font-style: normal;
 }
 
+.af_record_number { text-align: right; }
+.af_record_missing {
+    text-align: center;
+    font-style: italic;
+    color: #cbcbcb;
+}
+
 .af_excel {
     display: block;
     width: 100%;
