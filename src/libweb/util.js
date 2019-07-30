@@ -391,32 +391,92 @@ let util = (function() {
 // ------------------------------------------------------------------------
 
 function LruMap(limit) {
-    let map = new Map();
+    if (limit == null || limit < 2)
+        throw new Error('LruMap limit must be >= 2');
+
+    let self = this;
+
+    let map = {};
+    let count = 0;
+
+    let root_bucket = {}
+    root_bucket.prev = root_bucket;
+    root_bucket.next = root_bucket;
+
+    function link(bucket) {
+        bucket.prev = root_bucket.prev;
+        bucket.next = root_bucket;
+        root_bucket.prev.next = bucket;
+        root_bucket.prev = bucket;
+    }
+
+    function unlink(bucket) {
+        bucket.prev.next = bucket.next;
+        bucket.next.prev = bucket.prev;
+    }
 
     this.set = function(key, value) {
-        map.delete(key);
-        map.set(key, value);
+        let bucket = map[key];
 
-        if (map.size > limit) {
-            let oldest_key = map.keys().next().value;
-            map.delete(oldest_key);
+        if (bucket) {
+            bucket.value = value;
+            unlink(bucket);
+            link(bucket);
+        } else if (count < limit) {
+            bucket = {
+                key: key,
+                value: value,
+                prev: null,
+                next: null
+            };
+
+            map[key] = bucket;
+            link(bucket);
+            count++;
+        } else {
+            bucket = root_bucket.next;
+
+            bucket.value = value;
+            unlink(bucket);
+            link(bucket);
         }
     };
 
-    this.delete = function(key) { map.delete(key); };
+    this.delete = function(key) {
+        let bucket = map[key];
+
+        if (bucket) {
+            unlink(bucket);
+            delete map[key];
+            count--;
+        }
+    };
 
     this.get = function(key) {
-        let value = map.get(key);
+        let bucket = map[key];
 
-        if (value !== undefined) {
-            map.delete(key);
-            map.set(key, value);
+        if (bucket) {
+            if (bucket.next !== root_bucket) {
+                unlink(bucket);
+                link(bucket);
+            }
+
+            return bucket.value;
+        } else {
+            return undefined;
         }
-
-        return value;
     };
 
-    this.clear = function() { map.clear(); };
+    this.clear = function() {
+        // First, break cycle to help GC (maybe)
+        root_bucket.prev.next = null;
+        root_bucket.next.prev = null;
+        root_bucket.prev = root_bucket;
+        root_bucket.next = root_bucket;
+
+        map = {};
+        count = 0;
+    };
 }
 
 // ------------------------------------------------------------------------
