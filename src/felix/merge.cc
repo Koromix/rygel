@@ -125,17 +125,16 @@ bool LoadMergeRules(const char *filename, unsigned int flags, MergeRuleSet *out_
     return true;
 }
 
-static const MergeRule *FindMergeRule(Span<const MergeRule> rules, const char *filename)
+static void FindMergeRules(Span<const MergeRule> rules, const char *filename,
+                           HeapArray<const MergeRule *> *out_rules)
 {
     const auto test_pattern = [&](const char *pattern) { return MatchPathName(filename, pattern); };
 
     for (const MergeRule &rule: rules) {
         if (std::any_of(rule.include.begin(), rule.include.end(), test_pattern) &&
                 !std::any_of(rule.exclude.begin(), rule.exclude.end(), test_pattern))
-            return &rule;
+            out_rules->Append(&rule);
     }
-
-    return nullptr;
 }
 
 static void InitSourceMergeData(PackSourceInfo *src, MergeMode merge_mode, Allocator *alloc)
@@ -171,16 +170,22 @@ void ResolveAssets(Span<const char *const> filenames, int strip_count,
 {
     HashMap<const void *, Size> merge_map;
 
+    // Reuse for performance
+    HeapArray<const MergeRule *> file_rules;
+
     for (const char *filename: filenames) {
         const char *basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
-        const MergeRule *rule = FindMergeRule(rules, basename);
 
         PackSourceInfo src = {};
         src.filename = filename;
         src.name = StripDirectoryComponents(filename, strip_count);
 
-        bool include_raw_file;
-        if (rule) {
+        file_rules.RemoveFrom(0);
+        FindMergeRules(rules, basename, &file_rules);
+
+        bool include_raw_file = !file_rules.len;
+
+        for (const MergeRule *rule: file_rules) {
             InitSourceMergeData(&src, rule->merge_mode, &out_set->str_alloc);
 
             Size asset_idx = merge_map.FindValue(rule, -1);
@@ -188,7 +193,7 @@ void ResolveAssets(Span<const char *const> filenames, int strip_count,
                 PackAssetInfo *asset = &out_set->assets[asset_idx];
                 asset->sources.Append(src);
 
-                include_raw_file = (asset->source_map_type != SourceMapType::None);
+                include_raw_file |= (asset->source_map_type != SourceMapType::None);
             } else {
                 merge_map.Append(rule, out_set->assets.len);
 
@@ -207,10 +212,8 @@ void ResolveAssets(Span<const char *const> filenames, int strip_count,
                 }
                 out_set->assets.Append(asset)->sources.Append(src);
 
-                include_raw_file = (asset.source_map_type != SourceMapType::None);
+                include_raw_file |= (asset.source_map_type != SourceMapType::None);
             }
-        } else {
-            include_raw_file = true;
         }
 
         if (include_raw_file) {
