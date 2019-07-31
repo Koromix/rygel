@@ -49,12 +49,12 @@ let data_local = (function() {
     this.RecordManager = function(db) {
         let self = this;
 
-        self.create = function() {
+        this.create = function() {
             let record = {id: util.makeULID()};
             return record;
         };
 
-        self.save = function(record, variables) {
+        this.save = async function(record, variables) {
             variables = variables.map((key, idx) => {
                 let ret = {
                     before: variables[idx - 1] || null,
@@ -65,23 +65,27 @@ let data_local = (function() {
                 return ret;
             });
 
-            return db.transaction(db => {
+            return await db.transaction(db => {
                 db.save('records', record);
                 db.saveAll('variables', variables);
             });
         };
 
-        self.load = function(id) {
-            return db.load('records', id);
+        this.delete = async function(id) {
+            return await db.delete('records', id);
         };
 
-        self.loadAll = function() {
-            return Promise.all([db.loadAll('records'),
-                                db.loadAll('variables')]);
+        this.reset = async function() {
+            await db.clear('records');
         };
 
-        self.delete = function(id) {
-            return db.delete('records', id);
+        this.load = async function(id) {
+            return await db.load('records', id);
+        };
+
+        this.loadAll = async function() {
+            return await Promise.all([db.loadAll('records'),
+                                      db.loadAll('variables')]);
         };
 
         return this;
