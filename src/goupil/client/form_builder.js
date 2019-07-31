@@ -169,7 +169,8 @@ function FormBuilder(state, widgets, variables = []) {
             <label for=${id}>${label || key}</label>
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
             <input id=${id} type="text" size="${options.size || 30}" .value=${value || ''}
-                   ?disabled=${options.disable} @input=${e => handleTextInput(e, key)}/>
+                   placeholder=${options.placeholder || ''} ?disabled=${options.disable}
+                   @input=${e => handleTextInput(e, key)}/>
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
 
@@ -223,9 +224,10 @@ function FormBuilder(state, widgets, variables = []) {
         let render = intf => renderWrappedWidget(intf, html`
             <label for=${id}>${label || key}</label>
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
-            <input id=${id} type="number"
-                   step=${1 / Math.pow(10, options.decimals || 0)} .value=${value}
-                   ?disabled=${options.disable} @input=${e => handleNumberChange(e, key)}/>
+            <input id=${id} type="number" .value=${value}
+                   step=${1 / Math.pow(10, options.decimals || 0)}
+                   placeholder=${options.placeholder || ''} ?disabled=${options.disable}
+                   @input=${e => handleNumberChange(e, key)}/>
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
 
