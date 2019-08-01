@@ -1678,8 +1678,7 @@ static mco_GhmCode RunGhmSeverity(const mco_TableIndex &index, const mco_Prepare
     // Ambulatory and / or short duration GHM
     if (ghm_root_info.allow_ambulatory && !prep.duration) {
         ghm.parts.mode = 'J';
-    } else if (ghm_root_info.short_duration_treshold &&
-               prep.duration < ghm_root_info.short_duration_treshold) {
+    } else if (prep.duration < ghm_root_info.short_duration_treshold) {
         ghm.parts.mode = 'T';
     } else if (ghm.parts.mode >= 'A' && ghm.parts.mode < 'E') {
         int severity = ghm.parts.mode - 'A';
