@@ -5,7 +5,7 @@
 function FormExecutor() {
     let self = this;
 
-    this.goHandler = key => {};
+    this.goHandler = (key, args) => {};
     this.submitHandler = (values, variables) => {};
 
     let af_form;
@@ -51,7 +51,7 @@ function FormExecutor() {
         // Prevent go() call from working if called during script eval
         let prev_go_handler = self.goHandler;
         let prev_submit_handler = self.submitHandler;
-        self.goHandler = key => {
+        self.goHandler = () => {
             throw new Error(`Navigation functions (go, form.submit, etc.) must be called from a callback (button click, etc.).
 
 If you are using it for events, make sure you did not use this syntax by accident:
@@ -62,7 +62,7 @@ instead of:
         self.submitHandler = self.goHandler;
 
         try {
-            Function('form', 'go', script)(builder, key => self.goHandler(key));
+            Function('form', 'go', script)(builder, (key, args = {}) => self.goHandler(key, args));
 
             render(widgets.map(intf => intf.render(intf)), af_form);
             self.clearError();
