@@ -5,13 +5,20 @@
 let data_local = (function() {
     let self = this;
 
+    // TODO: probably not the best place for mimetypes
+    this.mimetypes = [
+        'application/x.goupil.form',
+        'application/x.goupil.schedule'
+    ];
+
     this.AssetManager = function(db) {
         let self = this;
 
-        this.create = function(key, mime, title) {
+        this.create = function(table, key, mimetype, title) {
             let asset = {
+                table: table,
                 key: key,
-                mime: mime,
+                mimetype: mimetype,
                 title: title,
                 script: ''
             };
@@ -49,15 +56,32 @@ let data_local = (function() {
     this.RecordManager = function(db) {
         let self = this;
 
-        this.create = function() {
-            let record = {id: util.makeULID()};
+        function makeTableKey(table, id) {
+            return `${table}_${id}`;
+        }
+
+        this.create = function(table) {
+            let id = util.makeULID();
+            let tkey = makeTableKey(table, id);
+
+            let record = {
+                tkey: tkey,
+
+                id: id,
+                table: table,
+                values: {}
+            };
+
             return record;
         };
 
         this.save = async function(record, variables) {
             variables = variables.map((variable, idx) => {
                 let ret = {
+                    tkey: makeTableKey(record.table, variable.key),
+
                     key: variable.key,
+                    table: record.table,
                     type: variable.type,
                     before: variables[idx - 1] ? variables[idx - 1].key : null,
                     after: variables[idx + 1] ? variables[idx + 1].key : null
@@ -72,21 +96,29 @@ let data_local = (function() {
             });
         };
 
-        this.delete = async function(id) {
-            return await db.delete('records', id);
+        this.delete = async function(table, id) {
+            let tkey = makeTableKey(table, id);
+            return await db.delete('records', tkey);
         };
 
         this.reset = async function() {
             await db.clear('records');
         };
 
-        this.load = async function(id) {
-            return await db.load('records', id);
+        this.load = async function(table, id) {
+            let tkey = makeTableKey(table, id);
+            return await db.load('records', tkey);
         };
 
-        this.loadAll = async function() {
-            return await Promise.all([db.loadAll('records'),
-                                      db.loadAll('variables')]);
+        this.loadAll = async function(table) {
+            let [records, variables] = await Promise.all([db.loadAll('records'),
+                                                          db.loadAll('variables')]);
+
+            // TODO: Use IndexedDB range API to request only those
+            records = records.filter(record => record.table === table);
+            variables = variables.filter(variable => variable.table === table);
+
+            return [records, variables];
         };
 
         return this;

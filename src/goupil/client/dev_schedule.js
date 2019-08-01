@@ -41,8 +41,6 @@ let dev_schedule = (function() {
     }
 
     this.run = async function(asset, args) {
-        document.title = `${settings.project_key} — goupil schedule`;
-
         if (!init) {
             goupil.listenToServerEvent('schedule', e => {
                 schedule = null;

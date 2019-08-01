@@ -7,8 +7,9 @@ let data_default = (function() {
 
     this.assets = [
         {
+            table: 'tuto',
             key: 'tuto',
-            mime: 'application/x.goupil.form',
+            mimetype: 'application/x.goupil.form',
             title: 'Tutoriel',
             script: `// Retirer le commentaire de la ligne suivante pour afficher les
 // champs (texte, numérique, etc.) à droite du libellé.
@@ -64,8 +65,9 @@ form.buttons("save")
         },
 
         {
+            table: 'complicated',
             key: 'complicated',
-            mime: 'application/x.goupil.form',
+            mimetype: 'application/x.goupil.form',
             title: 'Formulaire compliqué',
             script: `form.pushOptions({large: true})
 
@@ -133,8 +135,9 @@ form.buttons("save")
         },
 
         {
+            table: 'complicated',
             key: 'complicated_help',
-            mime: 'application/x.goupil.form',
+            mimetype: 'application/x.goupil.form',
             title: 'Formulaire compliqué (aide)',
             script: `form.output("Loreum ipsum")
 

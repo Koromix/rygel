@@ -19,10 +19,13 @@ let pilot = (function() {
             let key = form.text('key', 'Clé :', {mandatory: true});
             let title = form.text('title', 'Titre :', {mandatory: true});
 
-            let type = form.dropdown('type', 'Type :', [
-                'application/x.goupil.form',
-                'application/x.goupil.schedule'
-            ], {mandatory: true, untoggle: false, value: 'application/x.goupil.form'});
+            let table;
+            let mimetype;
+            form.section('Options avancées', () => {
+                table = form.text('table', 'Table :', {placeholder: key.value});
+                mimetype = form.dropdown('mimetype', 'Type :', data_local.mimetypes,
+                                         {mandatory: true, untoggle: false, value: data_local.mimetypes[0]});
+            });
 
             if (key.value) {
                 if (assets.some(asset => asset.key === key.value))
@@ -32,7 +35,8 @@ let pilot = (function() {
             }
 
             form.submitHandler = async () => {
-                let asset = g_assets.create(key.value, type.value, title.value);
+                let table_name = table.value || key.value;
+                let asset = g_assets.create(table_name, key.value, mimetype.value, title.value);
                 await g_assets.save(asset);
 
                 assets.push(asset);
@@ -49,10 +53,18 @@ let pilot = (function() {
     function showEditDialog(e, asset) {
         goupil.popup(e, form => {
             let title = form.text('title', 'Titre :', {mandatory: true, value: asset.title});
-            form.calc('type', 'Type :', asset.mime);
+
+            let table;
+            form.section('Options avancées', () => {
+                table = form.text('table', 'Table :', {mandatory: true, value: asset.table});
+                form.calc('type', 'Type :', asset.mimetype);
+            });
 
             form.submitHandler = async () => {
-                let new_asset = Object.assign({}, asset, {title: title.value});
+                let new_asset = Object.assign({}, asset, {
+                    table: table.value,
+                    title: title.value
+                });
                 await g_assets.save(new_asset);
 
                 Object.assign(assets_map[asset.key], new_asset);
@@ -116,7 +128,7 @@ let pilot = (function() {
                 ${current_key && !current_asset ?
                     html`<option value=${current_key} .selected=${true}>-- Unknown asset '${current_key}' --</option>` : html``}
                 ${assets.map(item =>
-                    html`<option value=${item.key} .selected=${item.key == current_key}>${item.key} -- ${item.title} [${item.mime}]</option>`)}
+                    html`<option value=${item.key} .selected=${item.key == current_key}>[${item.table}] ${item.key} -- ${item.title} (${item.mimetype})</option>`)}
             </select>
             <button @click=${showCreateDialog}>Ajouter</button>
             ${current_asset ? html`<button @click=${e => showEditDialog(e, current_asset)}>Modifier</button>
@@ -165,15 +177,19 @@ let pilot = (function() {
 
         renderMenu();
         if (current_asset) {
-            switch (current_asset.mime) {
+            document.title = `${current_asset.title} — ${settings.project_key}`;
+
+            switch (current_asset.mimetype) {
                 case 'application/x.goupil.form': { dev_form.run(current_asset, args); } break;
                 case 'application/x.goupil.schedule': { dev_schedule.run(current_asset, args); } break;
                 default: {
                     renderEmpty();
-                    log.error(`Unknown asset type '${current_asset.mime}'`);
+                    log.error(`Unknown asset type '${current_asset.mimetype}'`);
                 } break;
             }
         } else {
+            document.title = settings.project_key;
+
             renderEmpty();
             log.error('No asset available');
         }

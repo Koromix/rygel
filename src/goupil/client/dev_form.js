@@ -15,9 +15,9 @@ let dev_form = (function() {
     let editor;
     let editor_history_cache = {};
 
-    let current_asset;
     let executor;
-    let record_id;
+    let current_asset;
+    let current_record = {};
 
     function toggleLeftPanel(type) {
         if (left_panel !== type) {
@@ -256,11 +256,11 @@ let dev_form = (function() {
         return columns;
     }
 
-    async function exportToExcel() {
+    async function exportToExcel(table) {
         if (!window.XLSX)
             await util.loadScript(`${settings.base_url}static/xlsx.core.min.js`);
 
-        let [records, variables] = await g_records.loadAll();
+        let [records, variables] = await g_records.loadAll(table);
         let columns = orderColumns(variables);
 
         let export_name = `${settings.project_key}_${dates.today()}`;
@@ -270,7 +270,7 @@ let dev_form = (function() {
         {
             let ws = XLSX.utils.aoa_to_sheet([columns.map(col => col.key)]);
             for (let record of records) {
-                let values = columns.map(col => record[col.key]);
+                let values = columns.map(col => record.values[col.key]);
                 XLSX.utils.sheet_add_aoa(ws, [values], {origin: -1});
             }
             XLSX.utils.book_append_sheet(wb, ws, export_name);
@@ -279,31 +279,31 @@ let dev_form = (function() {
         XLSX.writeFile(wb, filename);
     }
 
-    function handleEditClick(e, id) {
-        if (id !== record_id) {
-            pilot.go(null, {id: id});
+    function handleEditClick(e, record) {
+        if (record.id !== current_record.id) {
+            pilot.go(null, {id: record.id});
         } else {
             pilot.go(null, {id: null});
         }
     }
 
-    function showDeleteDialog(e, id) {
+    function showDeleteDialog(e, record) {
         goupil.popup(e, form => {
             form.output('Voulez-vous vraiment supprimer cet enregistrement ?');
 
             form.submitHandler = async () => {
-                await g_records.delete(id);
+                await g_records.delete(record.table, record.id);
 
-                renderRecords();
+                renderRecords(record.table);
                 form.close();
             };
             form.buttons(form.buttons.std.ok_cancel('Supprimer'));
         });
     }
 
-    async function renderRecords() {
+    async function renderRecords(table) {
         if (left_panel === 'data') {
-            let [records, variables] = await g_records.loadAll();
+            let [records, variables] = await g_records.loadAll(table);
             let columns = orderColumns(variables);
 
             let empty_msg;
@@ -320,7 +320,7 @@ let dev_form = (function() {
                         <tr>
                             <th class="af_head_actions">
                                 ${columns.length ?
-                                    html`<button class="af_excel" @click=${exportToExcel}></button>` : html``}
+                                    html`<button class="af_excel" @click=${e => exportToExcel(table)}></button>` : html``}
                             </th>
                             ${!columns.length ?
                                 html`<th></th>` : html``}
@@ -330,27 +330,29 @@ let dev_form = (function() {
                     <tbody>
                         ${empty_msg ?
                             html`<tr><td colspan=${1 + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : html``}
-                        ${records.map(record => html`<tr class=${record_id === record.id ? 'af_row_current' : ''}>
+                        ${records.map(record => html`<tr class=${record.id === current_record.id ? 'af_row_current' : ''}>
                             <th>
-                                <a href="#" @click=${e => { handleEditClick(e, record.id); e.preventDefault(); }}>🔍\uFE0E</a>
-                                <a href="#" @click=${e => { showDeleteDialog(e, record.id); e.preventDefault(); }}>✕</a>
+                                <a href="#" @click=${e => { handleEditClick(e, record); e.preventDefault(); }}>🔍\uFE0E</a>
+                                <a href="#" @click=${e => { showDeleteDialog(e, record); e.preventDefault(); }}>✕</a>
                             </th>
 
                             ${columns.map(col => {
-                                let value = record[col.key];
+                                let value = record.values[col.key];
 
                                 let tooltip;
                                 let cls;
                                 if (value != null) {
+                                    if (Array.isArray(value))
+                                        value = value.join('|');
+
                                     tooltip = value;
                                     cls = `af_record_${col.type}`;
                                 } else {
                                     value = 'NA';
+
                                     tooltip = 'Donnée manquante';
                                     cls = `af_record_missing`;
                                 }
-                                if (Array.isArray(value))
-                                    value = value.join('|');
 
                                 return html`<td class=${cls} title=${tooltip}>${value}</td>`;
                             })}
@@ -361,8 +363,8 @@ let dev_form = (function() {
         }
     }
 
-    async function saveRecordAndReset(record, variables) {
-        await g_records.save(record, variables);
+    async function saveRecordAndReset(values, variables) {
+        await g_records.save(current_record, variables);
         log.success('Données sauvegardées !');
 
         pilot.go(null, {id: null});
@@ -371,26 +373,24 @@ let dev_form = (function() {
     }
 
     this.run = async function(asset, args) {
-        document.title = `${settings.project_key} — goupil autoform`;
-
         // Deal with form executor
         if (!executor) {
             executor = new FormExecutor();
-            executor.goHandler = key => pilot.go(key);
+            executor.goHandler = (key, args) => pilot.go(key, args);
             executor.submitHandler = saveRecordAndReset;
         }
 
         // Load record (if needed)
-        if (args.hasOwnProperty('id') || !record_id) {
+        if (!args.hasOwnProperty('id') && asset.table !== current_record.table)
+            current_record = {};
+        if (args.hasOwnProperty('id') || current_record.id == null) {
             if (args.id == null) {
-                record_id = util.makeULID();
-                executor.setData({id: record_id});
-            } else if (args.id !== record_id) {
-                let record = await g_records.load(args.id);
-
-                record_id = record.id;
-                executor.setData(record);
+                current_record = g_records.create(asset.table);
+            } else if (args.id !== current_record.id) {
+                current_record = await g_records.load(asset.table, args.id);
             }
+
+            executor.setData(current_record.values);
         }
         current_asset = asset;
 
@@ -399,7 +399,7 @@ let dev_form = (function() {
         renderModes();
         renderForm();
         syncEditor();
-        renderRecords();
+        renderRecords(asset.table);
     };
 
     return this;
