@@ -10,7 +10,10 @@ function FormBuilder(state, widgets, variables = []) {
 
     let variables_map = {};
     let widgets_ref = widgets;
-    let options_stack = [{untoggle: true}];
+    let options_stack = [{
+        deploy: true,
+        untoggle: true
+    }];
 
     let missing_set = new Set;
     let missing_block = false;
@@ -489,7 +492,14 @@ function FormBuilder(state, widgets, variables = []) {
         addWidget(render, options);
     };
 
-    this.section = function(label, func) {
+    function handleSectionClick(e, label) {
+        state.sections_state[label] = !state.sections_state[label];
+        self.changeHandler(self);
+    }
+
+    this.section = function(label, func, options = {}) {
+        options = expandOptions(options);
+
         if (!func)
             throw new Error(`Section call must contain a function.
 
@@ -505,10 +515,19 @@ instead of:
         func();
         widgets_ref = prev_widgets;
 
+        let deploy = state.sections_state[label];
+        if (deploy == null) {
+            state.sections_state[label] = options.deploy;
+            deploy = options.deploy;
+        }
+
         let render = intf => html`
             <fieldset class="af_section">
-                ${label ? html`<legend>${label}</legend>` : html``}
-                ${widgets.map(intf => intf.render(intf))}
+                ${label ? html`<legend @click=${e => handleSectionClick(e, label)}>${label}</legend>` : html``}
+                ${deploy ?
+                    widgets.map(intf => intf.render(intf)) :
+                    html`<a class="af_deploy" href="#"
+                            @click=${e => { handleSectionClick(e, label); e.preventDefault(); }}>(ouvrir la section)</a>`}
             </fieldset>
         `;
 
