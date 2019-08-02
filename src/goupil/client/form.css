@@ -37,6 +37,7 @@
     background: #24579d;
     font-size: 1.1em;
     color: white;
+    cursor: pointer;
 }
 
 .af_section_error {
@@ -47,6 +48,14 @@
 .af_section_error > legend {
     background: #d72a2a;
     margin-left: -5px;
+}
+
+.af_deploy {
+    display: block;
+    padding: 2px 0 5px 0;
+    text-align: center;
+    font-size: 0.9em;
+    text-decoration: none;
 }
 
 /* -------------------- Widgets -------------------- */

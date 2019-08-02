@@ -25,7 +25,7 @@ let pilot = (function() {
                 table = form.text('table', 'Table :', {placeholder: key.value});
                 mimetype = form.dropdown('mimetype', 'Type :', data_local.mimetypes,
                                          {mandatory: true, untoggle: false, value: data_local.mimetypes[0]});
-            });
+            }, {deploy: false});
 
             if (key.value) {
                 if (assets.some(asset => asset.key === key.value))
@@ -58,7 +58,7 @@ let pilot = (function() {
             form.section('Options avancées', () => {
                 table = form.text('table', 'Table :', {mandatory: true, value: asset.table});
                 form.calc('type', 'Type :', asset.mimetype);
-            });
+            }, {deploy: false});
 
             form.submitHandler = async () => {
                 let new_asset = Object.assign({}, asset, {
