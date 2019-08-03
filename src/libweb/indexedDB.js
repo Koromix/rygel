@@ -121,17 +121,26 @@ let idb = (function () {
             });
         };
 
-        this.loadAll = function(store) {
+        this.loadAll = function(store, start = null, end = null) {
             return executeQuery(store, false, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
 
+                let query;
+                if (start != null && end != null) {
+                    query = IDBKeyRange.bound(start, end, false, true);
+                } else if (start != null) {
+                    query = IDBKeyRange.lowerBound(start);
+                } else if (end != null) {
+                    query = IDBKeyRange.upperBound(end, true);
+                }
+
                 if (obj.getAll) {
-                    let req = obj.getAll();
+                    let req = obj.getAll(query);
 
                     req.onsuccess = e => resolve(e.target.result);
                     req.onerror = e => logAndReject(reject, e.target.error);
                 } else {
-                    let cur = obj.openCursor();
+                    let cur = obj.openCursor(query);
                     let values = [];
 
                     cur.onsuccess = e => {
