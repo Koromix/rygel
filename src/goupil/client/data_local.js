@@ -111,12 +111,14 @@ let data_local = (function() {
         };
 
         this.loadAll = async function(table) {
-            let [records, variables] = await Promise.all([db.loadAll('records'),
-                                                          db.loadAll('variables')]);
+            // Works for ASCII names, which we enforce
+            let start_key = table + '_';
+            let end_key = table + '`';
 
-            // TODO: Use IndexedDB range API to request only those
-            records = records.filter(record => record.table === table);
-            variables = variables.filter(variable => variable.table === table);
+            let [records, variables] = await Promise.all([
+                db.loadAll('records', start_key, end_key),
+                db.loadAll('variables', start_key, end_key)
+            ]);
 
             return [records, variables];
         };
