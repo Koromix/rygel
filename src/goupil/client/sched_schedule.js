@@ -12,8 +12,8 @@ function Schedule(resources_map, meetings_map) {
                        'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
     let week_day_names = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 
-    let sc_view;
-    let sc_footer;
+    let days_el;
+    let footer_el;
 
     let current_month;
     let current_year;
@@ -181,7 +181,7 @@ function Schedule(resources_map, meetings_map) {
     function renderMeetings() {
         let days = getMonthDays(current_year, current_month, true);
 
-        render(html`<div class="sc_days">${days.map(day => {
+        render(days.map(day => {
             if (day !== null) {
                 if (!meetings_map[day.key])
                     meetings_map[day.key] = [];
@@ -309,7 +309,7 @@ function Schedule(resources_map, meetings_map) {
             } else {
                 return html`<div class="sc_skip"></div>`;
             }
-        })}</div>`, sc_view);
+        }), days_el);
     }
 
     function createResource(day, time) {
@@ -415,7 +415,7 @@ function Schedule(resources_map, meetings_map) {
     function renderSettings() {
         let days = getMonthDays(current_year, current_month, true);
 
-        render(html`<div class="sc_days">${days.map(day => {
+        render(days.map(day => {
             if (day !== null) {
                 let resources = resources_map[day.key] || [];
 
@@ -481,7 +481,7 @@ function Schedule(resources_map, meetings_map) {
             } else {
                 return html`<div class="sc_skip"></div>`;
             }
-        })}</div>`, sc_view);
+        }), days_el);
     }
 
     function executeCopy(dest_day) {
@@ -506,7 +506,7 @@ function Schedule(resources_map, meetings_map) {
     function renderCopy() {
         let days = getMonthDays(current_year, current_month, true);
 
-        render(html`<div class="sc_days">${days.map(day => {
+        render(days.map(day => {
             if (day !== null) {
                 let resources = resources_map[day.key] || [];
 
@@ -535,7 +535,7 @@ function Schedule(resources_map, meetings_map) {
             } else {
                 return html`<div class="sc_skip"></div>`;
             }
-        })}</div>`, sc_view);
+        }), days_el);
     }
 
     function switchToPreviousMonth() {
@@ -628,7 +628,7 @@ function Schedule(resources_map, meetings_map) {
                 <button @click=${switchToNextYear}
                         @dragover=${slowDownEvents(300, switchToNextYear)}>≫</button>
             </div>
-        `, sc_footer);
+        `, footer_el);
     }
 
     function renderAll() {
@@ -645,16 +645,14 @@ function Schedule(resources_map, meetings_map) {
         current_month = month;
         current_mode = mode;
 
-        // FIXME: Can we replace a node with render, instead of replacing its content?
-        // Right now, render functions create content inside these two divs instead of replacing them.
         render(html`
             <div id="sc_header">${week_day_names.map(name => html`<div>${name}</div>`)}</div>
-            <div id="sc_view"></div>
+            <div id="sc_days"></div>
             <div id="sc_footer" class="gp_toolbar"></div>
         `, root_el);
 
-        sc_view = root_el.querySelector('#sc_view');
-        sc_footer = root_el.querySelector('#sc_footer');
+        days_el = root_el.querySelector('#sc_days');
+        footer_el = root_el.querySelector('#sc_footer');
 
         renderAll();
     };
