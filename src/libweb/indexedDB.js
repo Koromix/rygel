@@ -4,6 +4,11 @@
 
 // TODO: Support degraded mode when IDB is not available (e.g. private browsing)
 let idb = (function () {
+    function logAndReject(reject, err) {
+        log.error(err);
+        reject(err);
+    }
+
     function DatabaseInterface(db) {
         let self = this;
 
@@ -17,11 +22,6 @@ let idb = (function () {
             t_readwrite = false;
             t_stores.clear();
             t_queries.length = 0;
-        }
-
-        function logAndReject(reject, err) {
-            log.error(err);
-            reject(err);
         }
 
         this.transaction = function(func) {
