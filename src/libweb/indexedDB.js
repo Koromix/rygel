@@ -179,8 +179,6 @@ let idb = (function () {
     }
 
     this.open = function(db_name, version, update_func = () => {}) {
-        let indexedDB = window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB ||
-                        window.OIndexedDB || window.msIndexedDB;
         let req = indexedDB.open(db_name, version);
 
         req.onupgradeneeded = e => {
