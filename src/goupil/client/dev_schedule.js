@@ -33,9 +33,10 @@ let dev_schedule = (function() {
     }
 
     async function loadSchedule(year, month) {
-        // TODO: Fetch at the same time
-        let resources = await fetch(`${settings.base_url}schedule/resources.json?schedule=pl&year=${year}&month=${month}`).then(response => response.json());
-        let meetings = await fetch(`${settings.base_url}schedule/meetings.json?schedule=pl&year=${year}&month=${month}`).then(response => response.json());
+        let [resources, meetings] = await Promise.all([
+            fetch(`${settings.base_url}schedule/resources.json?schedule=pl&year=${year}&month=${month}`).then(response => response.json()),
+            fetch(`${settings.base_url}schedule/meetings.json?schedule=pl&year=${year}&month=${month}`).then(response => response.json())
+        ]);
 
         return [resources, meetings];
     }
