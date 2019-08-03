@@ -23,8 +23,8 @@ let pilot = (function() {
             let mimetype;
             form.section('Options avancées', () => {
                 table = form.text('table', 'Table :', {placeholder: key.value});
-                mimetype = form.dropdown('mimetype', 'Type :', data_local.mimetypes,
-                                         {mandatory: true, untoggle: false, value: data_local.mimetypes[0]});
+                mimetype = form.dropdown('mimetype', 'Type :', AssetManager.mimetypes,
+                                         {mandatory: true, untoggle: false, value: AssetManager.mimetypes[0]});
             }, {deploy: false});
 
             if (key.value) {

@@ -296,8 +296,8 @@ let goupil = (function() {
         initNavigation();
 
         let db = await openDatabase();
-        g_assets = new data_local.AssetManager(db);
-        g_records = new data_local.RecordManager(db);
+        g_assets = new AssetManager(db);
+        g_records = new RecordManager(db);
 
         self.go(window.location.href, false);
     }
