@@ -6,7 +6,7 @@ function FormExecutor() {
     let self = this;
 
     this.goHandler = key => {};
-    this.submitHandler = values => {};
+    this.submitHandler = (values, variables) => {};
 
     let af_form;
     let af_log;
@@ -32,8 +32,12 @@ function FormExecutor() {
     }
 
     function submitForm() {
-        variables = variables.map(variable => variable.key);
-        self.submitHandler(state.values, variables);
+        let variables2 = variables.map(variable => ({
+            key: variable.key,
+            type: variable.type
+        }));
+
+        self.submitHandler(state.values, variables2);
     }
 
     function renderForm(page_key, script) {
