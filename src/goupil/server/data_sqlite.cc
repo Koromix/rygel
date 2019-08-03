@@ -9,13 +9,32 @@
 namespace RG {
 
 static const char *const SchemaSQL = R"(
-CREATE TABLE af_records (
+CREATE TABLE assets (
+    key TEXT NOT NULL,
+    mimetype TEXT NOT NULL,
+    title TEXT NOT NULL,
+    table_name TEXT NOT NULL,
+    data BLOB NOT NULL
+);
+CREATE UNIQUE INDEX assets_k ON assets (key);
+
+CREATE TABLE form_records (
     id TEXT NOT NULL,
+    table_name TEXT NOT NULL,
     data TEXT NOT NULL
 );
-CREATE UNIQUE INDEX af_records_i ON af_records (id);
+CREATE UNIQUE INDEX form_records_i ON form_records (id);
 
-CREATE TABLE sc_resources (
+CREATE TABLE form_variables (
+    table_name TEXT NOT NULL,
+    key TEXT NOT NULL,
+    type TEXT NOT NULL,
+    before TEXT,
+    after TEXT
+);
+CREATE UNIQUE INDEX form_variables_tk ON form_variables (table_name, key);
+
+CREATE TABLE sched_resources (
     schedule TEXT NOT NULL,
     date TEXT NOT NULL,
     time INTEGER NOT NULL,
@@ -23,25 +42,16 @@ CREATE TABLE sc_resources (
     slots INTEGER NOT NULL,
     overbook INTEGER NOT NULL
 );
-CREATE UNIQUE INDEX sc_resources_sdt ON sc_resources (schedule, date, time);
+CREATE UNIQUE INDEX sched_resources_sdt ON sched_resources (schedule, date, time);
 
-CREATE TABLE sc_identities (
-    id INTEGER PRIMARY KEY,
-
-    first_name TEXT NOT NULL,
-    last_name TEXT NOT NULL,
-    spouse_name TEXT,
-    birthdate TEXT NOT NULL
-);
-
-CREATE TABLE sc_meetings (
+CREATE TABLE sched_meetings (
     schedule TEXT NOT NULL,
     date TEXT NOT NULL,
     time INTEGER NOT NULL,
 
-    identity_id INTEGER NOT NULL REFERENCES sc_identities(id)
+    identity TEXT NOT NULL
 );
-CREATE INDEX sc_meetings_sd ON sc_meetings (schedule, date, time);
+CREATE INDEX sched_meetings_sd ON sched_meetings (schedule, date, time);
 )";
 
 bool SQLiteDatabase::Open(const char *filename, unsigned int flags)

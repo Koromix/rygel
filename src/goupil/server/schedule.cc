@@ -86,7 +86,7 @@ int ProduceScheduleResources(const http_Request &request, http_Response *out_res
     {
         static const char *const sql = R"(
             SELECT date, time, slots, overbook
-            FROM sc_resources
+            FROM sched_resources
             WHERE schedule = ? AND date >= ? AND date < ?
             ORDER BY date, time
         )";
@@ -136,11 +136,10 @@ int ProduceScheduleMeetings(const http_Request &request, http_Response *out_resp
     sqlite3_stmt *stmt;
     {
         static const char *const sql = R"(
-            SELECT m.date, m.time, PRINTF('%s %s', i.first_name, i.last_name) AS identity
-            FROM sc_meetings m
-            INNER JOIN sc_identities i ON (i.id = m.identity_id)
-            WHERE m.schedule = ? AND m.date >= ? AND m.date < ?
-            ORDER BY m.date, m.time
+            SELECT date, time, identity
+            FROM sched_meetings
+            WHERE schedule = ? AND date >= ? AND date < ?
+            ORDER BY date, time
         )";
 
         if (int code = PrepareMonthQuery(request, sql, out_response, &stmt); code)
