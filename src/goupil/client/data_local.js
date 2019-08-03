@@ -55,11 +55,12 @@ let data_local = (function() {
         };
 
         this.save = async function(record, variables) {
-            variables = variables.map((key, idx) => {
+            variables = variables.map((variable, idx) => {
                 let ret = {
-                    before: variables[idx - 1] || null,
-                    key: key,
-                    after: variables[idx + 1] || null
+                    key: variable.key,
+                    type: variable.type,
+                    before: variables[idx - 1] ? variables[idx - 1].key : null,
+                    after: variables[idx + 1] ? variables[idx + 1].key : null
                 };
 
                 return ret;

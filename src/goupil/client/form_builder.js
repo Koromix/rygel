@@ -68,9 +68,10 @@ function FormBuilder(state, widgets, variables = []) {
         return intf;
     }
 
-    function fillVariableInfo(intf, key, label, value, missing) {
+    function fillVariableInfo(intf, key, type, label, value, missing) {
         Object.assign(intf, {
             key: key,
+            type: type,
             label: label,
             value: value,
             missing: missing || intf.options.missing,
@@ -175,7 +176,7 @@ function FormBuilder(state, widgets, variables = []) {
         `);
 
         let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, label, value, value == null);
+        fillVariableInfo(intf, key, 'string', label, value, value == null);
 
         return intf;
     };
@@ -196,7 +197,7 @@ function FormBuilder(state, widgets, variables = []) {
         `);
 
         let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, label, value, value == null);
+        fillVariableInfo(intf, key, 'string', label, value, value == null);
 
         return intf;
     };
@@ -232,7 +233,7 @@ function FormBuilder(state, widgets, variables = []) {
         `);
 
         let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, label, value, Number.isNaN(value));
+        fillVariableInfo(intf, key, 'number', label, value, Number.isNaN(value));
 
         if (value != null &&
                 (options.min !== undefined && value < options.min) ||
@@ -304,7 +305,7 @@ function FormBuilder(state, widgets, variables = []) {
         `);
 
         let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, label, value, value == null);
+        fillVariableInfo(intf, key, 'enum', label, value, value == null);
 
         return intf;
     };
@@ -347,7 +348,7 @@ function FormBuilder(state, widgets, variables = []) {
         `);
 
         let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, label, value, value == null);
+        fillVariableInfo(intf, key, 'enum', label, value, value == null);
 
         return intf;
     };
@@ -393,7 +394,7 @@ function FormBuilder(state, widgets, variables = []) {
         `);
 
         let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, label, value, value == null);
+        fillVariableInfo(intf, key, 'enum', label, value, value == null);
 
         return intf;
     };
@@ -440,7 +441,7 @@ function FormBuilder(state, widgets, variables = []) {
 
         let intf = addWidget(render, options);
         let missing = !value.length && props.some(p => p.value == null);
-        fillVariableInfo(intf, key, label, value, missing);
+        fillVariableInfo(intf, key, 'multi', label, value, missing);
 
         return intf;
     };
@@ -469,7 +470,8 @@ function FormBuilder(state, widgets, variables = []) {
         `);
 
         let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, label, value);
+        let type = options.type || 'string';
+        fillVariableInfo(intf, key, type, label, value);
 
         return intf;
     };

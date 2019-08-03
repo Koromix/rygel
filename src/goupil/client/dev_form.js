@@ -197,8 +197,13 @@ let dev_form = (function() {
                     for (let key of set_ptr) {
                         let variable = variables_map[key];
 
-                        if (!set_ptr.has(variable.after))
-                            columns.push(key);
+                        if (!set_ptr.has(variable.after)) {
+                            let col = {
+                                key: key,
+                                type: variable.type
+                            };
+                            columns.push(col);
+                        }
                     }
 
                     reverseLastColumns(columns, frag_start_idx);
@@ -206,11 +211,16 @@ let dev_form = (function() {
                     // Avoid infinite loop that may happen in rare cases
                     if (columns.length === frag_start_idx) {
                         let use_key = str_ptr.values().next().value;
-                        columns.push(use_key);
+
+                        let col = {
+                            key: use_key,
+                            type: variables_map[use_key].type,
+                        };
+                        columns.push(col);
                     }
 
                     for (let i = frag_start_idx; i < columns.length; i++) {
-                        let key = columns[i];
+                        let key = columns[i].key;
 
                         let next_set = sets_map[key];
                         if (next_set) {
@@ -228,8 +238,13 @@ let dev_form = (function() {
         }
 
         // Remaining variables (probably from old forms)
-        for (let key in variables_map)
-            columns.push(key);
+        for (let key in variables_map) {
+            let col = {
+                key: key,
+                type: variables_map[key].type
+            }
+            columns.push(col);
+        }
 
         return columns;
     }
@@ -246,9 +261,9 @@ let dev_form = (function() {
 
         let wb = XLSX.utils.book_new();
         {
-            let ws = XLSX.utils.aoa_to_sheet([columns]);
+            let ws = XLSX.utils.aoa_to_sheet([columns.map(col => col.key)]);
             for (let record of records) {
-                let values = columns.map(col => record[col]);
+                let values = columns.map(col => record[col.key]);
                 XLSX.utils.sheet_add_aoa(ws, [values], {origin: -1});
             }
             XLSX.utils.book_append_sheet(wb, ws, export_name);
@@ -302,7 +317,7 @@ let dev_form = (function() {
                             </th>
                             ${!columns.length ?
                                 html`<th></th>` : html``}
-                            ${columns.map(key => html`<th class="af_head_variable">${key}</th>`)}
+                            ${columns.map(col => html`<th class="af_head_variable">${col.key}</th>`)}
                         </tr>
                     </thead>
                     <tbody>
@@ -314,8 +329,8 @@ let dev_form = (function() {
                                 <a href="#" @click=${e => { showDeleteDialog(e, record.id); e.preventDefault(); }}>✕</a>
                             </th>
 
-                            ${columns.map(key => {
-                                let value = record[key];
+                            ${columns.map(col => {
+                                let value = record[col.key];
                                 if (value == null)
                                     value = '';
                                 if (Array.isArray(value))
