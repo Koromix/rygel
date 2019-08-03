@@ -38,12 +38,27 @@ let dev_form = (function() {
         pilot.go();
     }
 
+    function makeEditorElement(cls) {
+        if (!editor_el) {
+            editor_el = document.createElement('div');
+            editor_el.id = 'af_editor';
+        }
+
+        for (let cls of editor_el.classList) {
+            if (!cls.startsWith('ace_') && !cls.startsWith('ace-'))
+                editor_el.classList.remove(cls);
+        }
+        editor_el.classList.add(cls);
+
+        return editor_el;
+    }
+
     function renderLayout() {
         let main_el = document.querySelector('main');
 
         if (left_panel === 'editor' && show_main_panel) {
             render(html`
-                <div id="af_editor" class="dev_panel_left"></div>
+                ${makeEditorElement('dev_panel_left')}
                 <div id="af_form" class="dev_panel_right"></div>
             `, main_el);
         } else if (left_panel === 'data' && show_main_panel) {
@@ -53,7 +68,7 @@ let dev_form = (function() {
             `, main_el);
         } else if (left_panel === 'editor') {
             render(html`
-                <div id="af_editor" class="dev_panel_fixed"></div>
+                ${makeEditorElement('dev_panel_fixed')}
             `, main_el);
         } else if (left_panel === 'data') {
             render(html`
@@ -66,12 +81,8 @@ let dev_form = (function() {
         }
 
         modes_el = document.querySelector('#dev_modes');
-        editor_el = document.querySelector('#af_editor');
-        form_el = document.querySelector('#af_form');
-        if (!form_el) {
-            // We still need to render the form to test it, so create a dummy element!
-            form_el = document.createElement('div');
-        }
+        // We still need to render the form to test it, so create a dummy element!
+        form_el = document.querySelector('#af_form') || document.createElement('div');
         data_el = document.querySelector('#af_data');
     }
 
@@ -107,14 +118,7 @@ let dev_form = (function() {
         if (!window.ace)
             await util.loadScript(`${settings.base_url}static/ace.js`);
 
-        // This takes care of resetting ACE both when the DOM has changed (we do VDOM diffing)
-        // and when the editor is hidden.
-        if (editor && editor.renderer.getContainerElement() !== editor_el) {
-            editor.destroy();
-            editor = null;
-        }
-
-        if (editor_el) {
+        if (left_panel === 'editor') {
             if (!editor) {
                 editor = ace.edit(editor_el);
 
@@ -132,16 +136,19 @@ let dev_form = (function() {
             }
 
             if (current_asset) {
-                editor.setValue(current_asset.script);
-                editor.setReadOnly(false);
-                editor.clearSelection();
-
                 let history = editor_history_cache[current_asset.key];
-                if (!history) {
-                    history = new ace.UndoManager();
-                    editor_history_cache[current_asset.key] = history;
+
+                if (history !== editor.session.getUndoManager()) {
+                    editor.setValue(current_asset.script);
+                    editor.setReadOnly(false);
+                    editor.clearSelection();
+
+                    if (!history) {
+                        history = new ace.UndoManager();
+                        editor_history_cache[current_asset.key] = history;
+                    }
+                    editor.session.setUndoManager(history);
                 }
-                editor.session.setUndoManager(history);
             } else {
                 editor.setValue('');
                 editor.setReadOnly(true);
@@ -295,7 +302,7 @@ let dev_form = (function() {
     }
 
     async function renderRecords() {
-        if (data_el) {
+        if (left_panel === 'data') {
             let [records, variables] = await g_records.loadAll();
             let columns = orderColumns(variables);
 
