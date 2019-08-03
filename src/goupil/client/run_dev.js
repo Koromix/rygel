@@ -14,6 +14,11 @@ let pilot = (function() {
     let current_key;
     let current_asset;
 
+    function validateIdentifierWidget(widget) {
+        if (widget.value && !widget.value.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
+            widget.error('Autorisé : a-z, _ et 0-9 (sauf initiale)');
+    }
+
     function showCreateDialog(e) {
         goupil.popup(e, form => {
             let key = form.text('key', 'Clé :', {mandatory: true});
@@ -30,9 +35,9 @@ let pilot = (function() {
             if (key.value) {
                 if (assets.some(asset => asset.key === key.value))
                     key.error('Existe déjà');
-                if (!key.value.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
-                    key.error('Autorisé : a-z, _ et 0-9 (sauf initiale)');
+                validateIdentifierWidget(key);
             }
+            validateIdentifierWidget(table);
 
             form.submitHandler = async () => {
                 let table_name = table.value || key.value;
@@ -59,6 +64,8 @@ let pilot = (function() {
                 table = form.text('table', 'Table :', {mandatory: true, value: asset.table});
                 form.calc('type', 'Type :', asset.mimetype);
             }, {deploy: false});
+
+            validateIdentifierWidget(table);
 
             form.submitHandler = async () => {
                 let new_asset = Object.assign({}, asset, {
