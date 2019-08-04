@@ -132,7 +132,7 @@ typedef intptr_t ssize_t;
  * Current version of the library.
  * 0x01093001 = 1.9.30-1.
  */
-#define MHD_VERSION 0x00096500
+#define MHD_VERSION 0x00096600
 
 /**
  * MHD-internal return code for "YES".
@@ -1646,7 +1646,18 @@ enum MHD_OPTION
    * gnutls_psk_set_server_credentials_function. It is used to
    * retrieve the shared key for a given username.
    */
-  MHD_OPTION_GNUTLS_PSK_CRED_HANDLER = 30
+  MHD_OPTION_GNUTLS_PSK_CRED_HANDLER = 30,
+
+  /**
+   * Use a callback to determine which X.509 certificate should be
+   * used for a given HTTPS connection.  This option should be
+   * followed by a argument of type `gnutls_certificate_retrieve_function3 *`.
+   * This option provides an
+   * alternative/extension to #MHD_OPTION_HTTPS_CERT_CALLBACK.
+	* You must use this version if you want to use OCSP stapling.
+   * Using this option requires GnuTLS 3.6.3 or higher.
+   */
+  MHD_OPTION_HTTPS_CERT_CALLBACK2 = 31
 };
 
 
@@ -3927,7 +3938,13 @@ enum MHD_FEATURE
   /**
    * Get whether MHD supports threads.
    */
-  MHD_FEATURE_THREADS
+  MHD_FEATURE_THREADS = 22,
+
+  /**
+   * Get whether option #MHD_OPTION_HTTPS_CERT_CALLBACK2 is
+   * supported.
+   */
+  MHD_FEATURE_HTTPS_CERT_CALLBACK2 = 23
 };
 
 

@@ -1,4 +1,4 @@
-This is libmicrohttpd-tutorial.info, produced by makeinfo version 6.6
+This is libmicrohttpd-tutorial.info, produced by makeinfo version 6.5
 from libmicrohttpd-tutorial.texi.
 
 This tutorial documents GNU libmicrohttpd version 0.9.48, last updated 2
@@ -1777,9 +1777,9 @@ documented in the GnuTLS API for the
           use the function 'gnutls_x509_rdn_get()'.
 
      PK_ALGOS
-          contains a list with server’s acceptable signature
-          algorithms.  The certificate returned should support the
-          server’s given algorithms.
+          contains a list with server’s acceptable signature algorithms.
+          The certificate returned should support the server’s given
+          algorithms.
 
      PCERT
           should contain a single certificate and public or a list of
@@ -4182,10 +4182,12 @@ C.8 tlsauthentication.c
        char *tmp;
        size_t length = strlen (message);
      
-       tmp = malloc (length * 2 + 1);
+       tmp = malloc (length * 2);
        if (NULL == tmp)
-         return NULL;
+         return tmp;
+     
        tmp[0] = 0;
+     
        for (i = 0; i < length; i += 3)
          {
            l = (((unsigned long) message[i]) << 16)
@@ -4316,7 +4318,7 @@ C.8 tlsauthentication.c
        const char *strbase = "Basic ";
        int authenticated;
        size_t slen;
-     
+       
        headervalue =
          MHD_lookup_connection_value (connection, MHD_HEADER_KIND,
                                       "Authorization");
@@ -4449,16 +4451,16 @@ Node: Processing POST data35235
 Node: Improved processing of POST data43981
 Node: Session management54798
 Node: Adding a layer of security58312
-Node: Bibliography72896
-Node: License text74090
-Node: Example programs99246
-Node: hellobrowser.c99559
-Node: logging.c101675
-Node: responseheaders.c103804
-Node: basicauthentication.c106927
-Node: simplepost.c109941
-Node: largepost.c116782
-Node: sessions.c128443
-Node: tlsauthentication.c151909
+Node: Bibliography72895
+Node: License text74089
+Node: Example programs99245
+Node: hellobrowser.c99558
+Node: logging.c101674
+Node: responseheaders.c103803
+Node: basicauthentication.c106926
+Node: simplepost.c109940
+Node: largepost.c116781
+Node: sessions.c128442
+Node: tlsauthentication.c151908
 
 End Tag Table
