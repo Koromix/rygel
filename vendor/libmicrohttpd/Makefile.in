@@ -225,7 +225,8 @@ am__DIST_COMMON = $(srcdir)/MHD_config.h.in $(srcdir)/Makefile.in \
 	build-aux/compile build-aux/config.guess \
 	build-aux/config.rpath build-aux/config.sub build-aux/depcomp \
 	build-aux/install-sh build-aux/ltmain.sh build-aux/mdate-sh \
-	build-aux/missing build-aux/texinfo.tex config.rpath
+	build-aux/missing build-aux/texinfo.tex compile config.guess \
+	config.rpath config.sub depcomp install-sh ltmain.sh missing
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -442,6 +443,7 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
+runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@

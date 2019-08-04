@@ -1,3 +1,24 @@
+Thu 01 Aug 2019 01:23:36 PM CEST
+    Releasing libmicrohttpd 0.9.66. -CG
+
+Thu 01 Aug 2019 12:53:49 AM CEST
+    Fix issue with discarding unhandled upload data discovered
+    by Florian Dold. -CG
+
+Mon 29 Jul 2019 08:01:50 PM CEST
+    Fix hanging situation with large transmission over upgraded
+    (i.e. Web socket) connection with epoll() and HTTPS enabled
+    (as reported by Viet on the mailinglist). -CG
+
+Thu 25 Jul 2019 02:40:12 PM CEST
+    Fixing regression introduced in cc5032b85 (bit mask matching
+    of the header kinds in MHD_lookup_connection_value()), as
+    reported by Jose Bollo on the mailinglist. -CG/JB
+
+Tue Jul 16 19:56:14 CEST 2019
+    Add MHD_OPTION_HTTPS_CERT_CALLBACK2 to allow OCSP stapling
+    and MHD_FEATURE_HTTPS_CERT_CALLBACK2 to check for. -TR
+
 Fri Jul 05 2019 22:30:40 MSK
 	Releasing libmicrohttpd 0.9.65. -EG
 
@@ -98,7 +119,7 @@ Sun Apr 21 16:40:00 MSK 2019
 
 Fri Apr 19 23:00:00 MSK 2019
 	Rewritten SHA-256 calculations from scratch to avoid changing LGPL version;
-	Added usage of GCC/Clang built-ins for bytes swap to significantly improve 
+	Added usage of GCC/Clang built-ins for bytes swap to significantly improve
 	speed of MD5 and SHA-256 calculation on platforms with known endianness.
 	Added test for SHA-256 calculations. -EG
 

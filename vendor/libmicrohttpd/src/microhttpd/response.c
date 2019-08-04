@@ -80,9 +80,9 @@
  */
 static int
 add_response_entry (struct MHD_Response *response,
-		    enum MHD_ValueKind kind,
-		    const char *header,
-		    const char *content)
+                    enum MHD_ValueKind kind,
+                    const char *header,
+                    const char *content)
 {
   struct MHD_HTTP_Header *hdr;
 
@@ -195,7 +195,7 @@ MHD_add_response_footer (struct MHD_Response *response,
 int
 MHD_del_response_header (struct MHD_Response *response,
                          const char *header,
-			 const char *content)
+                         const char *content)
 {
   struct MHD_HTTP_Header *pos;
   struct MHD_HTTP_Header *prev;
@@ -280,7 +280,7 @@ MHD_get_response_headers (struct MHD_Response *response,
  */
 const char *
 MHD_get_response_header (struct MHD_Response *response,
-			 const char *key)
+                         const char *key)
 {
   struct MHD_HTTP_Header *pos;
   size_t key_size;
@@ -558,8 +558,8 @@ free_callback (void *cls)
  */
 struct MHD_Response *
 MHD_create_response_from_fd_at_offset (size_t size,
-				       int fd,
-				       off_t offset)
+                                       int fd,
+                                       off_t offset)
 {
   return MHD_create_response_from_fd_at_offset64 (size,
                                                   fd,
@@ -627,7 +627,7 @@ MHD_create_response_from_fd_at_offset64 (uint64_t size,
  */
 struct MHD_Response *
 MHD_create_response_from_fd (size_t size,
-			     int fd)
+                             int fd)
 {
   return MHD_create_response_from_fd_at_offset64 (size,
                                                   fd,
@@ -732,8 +732,8 @@ MHD_create_response_from_data (size_t size,
  */
 struct MHD_Response *
 MHD_create_response_from_buffer (size_t size,
-				 void *buffer,
-				 enum MHD_ResponseMemoryMode mode)
+                                 void *buffer,
+                                 enum MHD_ResponseMemoryMode mode)
 {
   return MHD_create_response_from_data (size,
 					buffer,
@@ -754,15 +754,15 @@ MHD_create_response_from_buffer (size_t size,
  */
 _MHD_EXTERN struct MHD_Response *
 MHD_create_response_from_buffer_with_free_callback (size_t size,
-						    void *buffer,
-						    MHD_ContentReaderFreeCallback crfc)
+                                                    void *buffer,
+                                                    MHD_ContentReaderFreeCallback crfc)
 {
   struct MHD_Response *r;
 
   r = MHD_create_response_from_data (size,
-				     buffer,
-				     MHD_YES,
-				     MHD_NO);
+                                     buffer,
+                                     MHD_YES,
+                                     MHD_NO);
   if (NULL == r)
     return r;
   r->crfc = crfc;
@@ -997,17 +997,17 @@ MHD_response_execute_upgrade_ (struct MHD_Response *response,
                             EPOLL_CTL_ADD,
                             connection->socket_fd,
                             &event))
-	{
+          {
 #ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("Call to epoll_ctl failed: %s\n"),
-                    MHD_socket_last_strerr_ ());
+            MHD_DLOG (daemon,
+                      _("Call to epoll_ctl failed: %s\n"),
+                      MHD_socket_last_strerr_ ());
 #endif
-          MHD_socket_close_chk_ (sv[0]);
-          MHD_socket_close_chk_ (sv[1]);
-          free (urh);
-          return MHD_NO;
-	}
+            MHD_socket_close_chk_ (sv[0]);
+            MHD_socket_close_chk_ (sv[1]);
+            free (urh);
+            return MHD_NO;
+          }
 
         /* Second, add our end of the UNIX socketpair() */
         event.events = EPOLLIN | EPOLLOUT | EPOLLPRI | EPOLLET;
@@ -1016,28 +1016,28 @@ MHD_response_execute_upgrade_ (struct MHD_Response *response,
                             EPOLL_CTL_ADD,
                             urh->mhd.socket,
                             &event))
-	{
-          event.events = EPOLLIN | EPOLLOUT | EPOLLPRI;
-          event.data.ptr = &urh->app;
-          if (0 != epoll_ctl (daemon->epoll_upgrade_fd,
-                              EPOLL_CTL_DEL,
-                              connection->socket_fd,
-                              &event))
-            MHD_PANIC (_("Error cleaning up while handling epoll error"));
+          {
+            event.events = EPOLLIN | EPOLLOUT | EPOLLPRI;
+            event.data.ptr = &urh->app;
+            if (0 != epoll_ctl (daemon->epoll_upgrade_fd,
+                                EPOLL_CTL_DEL,
+                                connection->socket_fd,
+                                &event))
+              MHD_PANIC (_("Error cleaning up while handling epoll error"));
 #ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("Call to epoll_ctl failed: %s\n"),
-                    MHD_socket_last_strerr_ ());
+            MHD_DLOG (daemon,
+                      _("Call to epoll_ctl failed: %s\n"),
+                      MHD_socket_last_strerr_ ());
 #endif
-          MHD_socket_close_chk_ (sv[0]);
-          MHD_socket_close_chk_ (sv[1]);
-          free (urh);
-          return MHD_NO;
-	}
-	EDLL_insert (daemon->eready_urh_head,
-		     daemon->eready_urh_tail,
-		     urh);
-	urh->in_eready_list = true;
+            MHD_socket_close_chk_ (sv[0]);
+            MHD_socket_close_chk_ (sv[1]);
+            free (urh);
+            return MHD_NO;
+          }
+        EDLL_insert (daemon->eready_urh_head,
+                     daemon->eready_urh_tail,
+                     urh);
+        urh->in_eready_list = true;
       }
 #endif /* EPOLL_SUPPORT */
     if (0 == (daemon->options & MHD_USE_THREAD_PER_CONNECTION) )

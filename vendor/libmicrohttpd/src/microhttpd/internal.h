@@ -1670,6 +1670,14 @@ struct MHD_Daemon
   void *cred_callback_cls;
 #endif
 
+#if GNUTLS_VERSION_NUMBER >= 0x030603
+  /**
+   * Function that can be used to obtain the certificate.  Needed
+   * for OCSP stapling support.  See #MHD_OPTION_HTTPS_CERT_CALLBACK2.
+   */
+  gnutls_certificate_retrieve_function3 *cert_callback2;
+#endif
+
   /**
    * Pointer to our SSL/TLS key (in ASCII) in memory.
    */

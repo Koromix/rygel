@@ -129,10 +129,10 @@ check_PROGRAMS = test_str_compare$(EXEEXT) test_str_to_value$(EXEEXT) \
 	test_options$(EXEEXT) $(am__EXEEXT_1) $(am__EXEEXT_2) \
 	$(am__EXEEXT_3) $(am__EXEEXT_4) $(am__EXEEXT_5) \
 	$(am__EXEEXT_6) $(am__EXEEXT_7)
-@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_POSIX_THREADS_TRUE@am__append_14 = test_upgrade
-@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_W32_THREADS_TRUE@am__append_15 = test_upgrade
-@ENABLE_HTTPS_TRUE@@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_POSIX_THREADS_TRUE@am__append_16 = test_upgrade_tls
-@ENABLE_HTTPS_TRUE@@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_W32_THREADS_TRUE@am__append_17 = test_upgrade_tls
+@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_POSIX_THREADS_TRUE@am__append_14 = test_upgrade test_upgrade_large
+@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_W32_THREADS_TRUE@am__append_15 = test_upgrade test_upgrade_large
+@ENABLE_HTTPS_TRUE@@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_POSIX_THREADS_TRUE@am__append_16 = test_upgrade_tls test_upgrade_large_tls
+@ENABLE_HTTPS_TRUE@@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_W32_THREADS_TRUE@am__append_17 = test_upgrade_tls test_upgrade_large_tls
 @HAVE_POSTPROCESSOR_TRUE@am__append_18 = \
 @HAVE_POSTPROCESSOR_TRUE@  test_postprocessor \
 @HAVE_POSTPROCESSOR_TRUE@  test_postprocessor_large \
@@ -182,10 +182,14 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/MHD_config.h
 CONFIG_CLEAN_FILES = microhttpd_dll_res.rc
 CONFIG_CLEAN_VPATH_FILES =
-@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_POSIX_THREADS_TRUE@am__EXEEXT_1 = test_upgrade$(EXEEXT)
-@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_W32_THREADS_TRUE@am__EXEEXT_2 = test_upgrade$(EXEEXT)
-@ENABLE_HTTPS_TRUE@@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_POSIX_THREADS_TRUE@am__EXEEXT_3 = test_upgrade_tls$(EXEEXT)
-@ENABLE_HTTPS_TRUE@@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_W32_THREADS_TRUE@am__EXEEXT_4 = test_upgrade_tls$(EXEEXT)
+@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_POSIX_THREADS_TRUE@am__EXEEXT_1 = test_upgrade$(EXEEXT) \
+@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_POSIX_THREADS_TRUE@	test_upgrade_large$(EXEEXT)
+@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_W32_THREADS_TRUE@am__EXEEXT_2 = test_upgrade$(EXEEXT) \
+@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_W32_THREADS_TRUE@	test_upgrade_large$(EXEEXT)
+@ENABLE_HTTPS_TRUE@@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_POSIX_THREADS_TRUE@am__EXEEXT_3 = test_upgrade_tls$(EXEEXT) \
+@ENABLE_HTTPS_TRUE@@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_POSIX_THREADS_TRUE@	test_upgrade_large_tls$(EXEEXT)
+@ENABLE_HTTPS_TRUE@@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_W32_THREADS_TRUE@am__EXEEXT_4 = test_upgrade_tls$(EXEEXT) \
+@ENABLE_HTTPS_TRUE@@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_W32_THREADS_TRUE@	test_upgrade_large_tls$(EXEEXT)
 @HAVE_POSTPROCESSOR_TRUE@am__EXEEXT_5 = test_postprocessor$(EXEEXT) \
 @HAVE_POSTPROCESSOR_TRUE@	test_postprocessor_large$(EXEEXT) \
 @HAVE_POSTPROCESSOR_TRUE@	test_postprocessor_amp$(EXEEXT)
@@ -373,6 +377,28 @@ test_upgrade_DEPENDENCIES =  \
 test_upgrade_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(test_upgrade_CFLAGS) \
 	$(CFLAGS) $(test_upgrade_LDFLAGS) $(LDFLAGS) -o $@
+am_test_upgrade_large_OBJECTS =  \
+	test_upgrade_large-test_upgrade_large.$(OBJEXT)
+test_upgrade_large_OBJECTS = $(am_test_upgrade_large_OBJECTS)
+test_upgrade_large_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
+test_upgrade_large_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(test_upgrade_large_CFLAGS) $(CFLAGS) \
+	$(test_upgrade_large_LDFLAGS) $(LDFLAGS) -o $@
+am_test_upgrade_large_tls_OBJECTS =  \
+	test_upgrade_large_tls-test_upgrade_large.$(OBJEXT)
+test_upgrade_large_tls_OBJECTS = $(am_test_upgrade_large_tls_OBJECTS)
+test_upgrade_large_tls_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
+test_upgrade_large_tls_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(test_upgrade_large_tls_CFLAGS) $(CFLAGS) \
+	$(test_upgrade_large_tls_LDFLAGS) $(LDFLAGS) -o $@
 am_test_upgrade_tls_OBJECTS = test_upgrade_tls-test_upgrade.$(OBJEXT)
 test_upgrade_tls_OBJECTS = $(am_test_upgrade_tls_OBJECTS)
 test_upgrade_tls_DEPENDENCIES =  \
@@ -434,6 +460,8 @@ am__depfiles_remade = ./$(DEPDIR)/libmicrohttpd_la-base64.Plo \
 	./$(DEPDIR)/test_start_stop.Po ./$(DEPDIR)/test_str.Po \
 	./$(DEPDIR)/test_str_token.Po \
 	./$(DEPDIR)/test_upgrade-test_upgrade.Po \
+	./$(DEPDIR)/test_upgrade_large-test_upgrade_large.Po \
+	./$(DEPDIR)/test_upgrade_large_tls-test_upgrade_large.Po \
 	./$(DEPDIR)/test_upgrade_tls-test_upgrade.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
@@ -465,7 +493,8 @@ SOURCES = $(libmicrohttpd_la_SOURCES) $(test_daemon_SOURCES) \
 	$(test_shutdown_select_ignore_SOURCES) \
 	$(test_start_stop_SOURCES) $(test_str_compare_SOURCES) \
 	$(test_str_to_value_SOURCES) $(test_str_token_SOURCES) \
-	$(test_upgrade_SOURCES) $(test_upgrade_tls_SOURCES)
+	$(test_upgrade_SOURCES) $(test_upgrade_large_SOURCES) \
+	$(test_upgrade_large_tls_SOURCES) $(test_upgrade_tls_SOURCES)
 DIST_SOURCES = $(am__libmicrohttpd_la_SOURCES_DIST) \
 	$(test_daemon_SOURCES) $(test_http_reasons_SOURCES) \
 	$(test_md5_SOURCES) $(test_options_SOURCES) \
@@ -478,7 +507,8 @@ DIST_SOURCES = $(am__libmicrohttpd_la_SOURCES_DIST) \
 	$(test_shutdown_select_ignore_SOURCES) \
 	$(test_start_stop_SOURCES) $(test_str_compare_SOURCES) \
 	$(test_str_to_value_SOURCES) $(test_str_token_SOURCES) \
-	$(test_upgrade_SOURCES) $(test_upgrade_tls_SOURCES)
+	$(test_upgrade_SOURCES) $(test_upgrade_large_SOURCES) \
+	$(test_upgrade_large_tls_SOURCES) $(test_upgrade_tls_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -860,6 +890,7 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
+runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -938,6 +969,23 @@ test_upgrade_LDADD = \
   $(MHD_TLS_LIB_LDFLAGS) $(MHD_TLS_LIBDEPS) \
   $(PTHREAD_LIBS)
 
+test_upgrade_large_SOURCES = \
+  test_upgrade_large.c test_helpers.h mhd_sockets.h
+
+test_upgrade_large_CPPFLAGS = \
+  $(AM_CPPFLAGS) $(MHD_TLS_LIB_CPPFLAGS)
+
+test_upgrade_large_CFLAGS = \
+  $(AM_CFLAGS) $(PTHREAD_CFLAGS) $(MHD_TLS_LIB_CFLAGS)
+
+test_upgrade_large_LDFLAGS = \
+  $(MHD_TLS_LIB_LDFLAGS)
+
+test_upgrade_large_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  $(MHD_TLS_LIB_LDFLAGS) $(MHD_TLS_LIBDEPS) \
+  $(PTHREAD_LIBS)
+
 test_upgrade_tls_SOURCES = \
   test_upgrade.c test_helpers.h mhd_sockets.h
 
@@ -951,6 +999,23 @@ test_upgrade_tls_LDFLAGS = \
   $(MHD_TLS_LIB_LDFLAGS)
 
 test_upgrade_tls_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  $(MHD_TLS_LIB_LDFLAGS) $(MHD_TLS_LIBDEPS) \
+  $(PTHREAD_LIBS)
+
+test_upgrade_large_tls_SOURCES = \
+  test_upgrade_large.c test_helpers.h mhd_sockets.h
+
+test_upgrade_large_tls_CPPFLAGS = \
+  $(AM_CPPFLAGS) $(MHD_TLS_LIB_CPPFLAGS)
+
+test_upgrade_large_tls_CFLAGS = \
+  $(AM_CFLAGS) $(PTHREAD_CFLAGS) $(MHD_TLS_LIB_CFLAGS)
+
+test_upgrade_large_tls_LDFLAGS = \
+  $(MHD_TLS_LIB_LDFLAGS)
+
+test_upgrade_large_tls_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   $(MHD_TLS_LIB_LDFLAGS) $(MHD_TLS_LIBDEPS) \
   $(PTHREAD_LIBS)
@@ -1205,6 +1270,14 @@ test_upgrade$(EXEEXT): $(test_upgrade_OBJECTS) $(test_upgrade_DEPENDENCIES) $(EX
 	@rm -f test_upgrade$(EXEEXT)
 	$(AM_V_CCLD)$(test_upgrade_LINK) $(test_upgrade_OBJECTS) $(test_upgrade_LDADD) $(LIBS)
 
+test_upgrade_large$(EXEEXT): $(test_upgrade_large_OBJECTS) $(test_upgrade_large_DEPENDENCIES) $(EXTRA_test_upgrade_large_DEPENDENCIES) 
+	@rm -f test_upgrade_large$(EXEEXT)
+	$(AM_V_CCLD)$(test_upgrade_large_LINK) $(test_upgrade_large_OBJECTS) $(test_upgrade_large_LDADD) $(LIBS)
+
+test_upgrade_large_tls$(EXEEXT): $(test_upgrade_large_tls_OBJECTS) $(test_upgrade_large_tls_DEPENDENCIES) $(EXTRA_test_upgrade_large_tls_DEPENDENCIES) 
+	@rm -f test_upgrade_large_tls$(EXEEXT)
+	$(AM_V_CCLD)$(test_upgrade_large_tls_LINK) $(test_upgrade_large_tls_OBJECTS) $(test_upgrade_large_tls_LDADD) $(LIBS)
+
 test_upgrade_tls$(EXEEXT): $(test_upgrade_tls_OBJECTS) $(test_upgrade_tls_DEPENDENCIES) $(EXTRA_test_upgrade_tls_DEPENDENCIES) 
 	@rm -f test_upgrade_tls$(EXEEXT)
 	$(AM_V_CCLD)$(test_upgrade_tls_LINK) $(test_upgrade_tls_OBJECTS) $(test_upgrade_tls_LDADD) $(LIBS)
@@ -1256,6 +1329,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_str.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_str_token.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_upgrade-test_upgrade.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_upgrade_large-test_upgrade_large.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_upgrade_large_tls-test_upgrade_large.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_upgrade_tls-test_upgrade.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
@@ -1547,6 +1622,34 @@ test_upgrade-test_upgrade.obj: test_upgrade.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_upgrade_CPPFLAGS) $(CPPFLAGS) $(test_upgrade_CFLAGS) $(CFLAGS) -c -o test_upgrade-test_upgrade.obj `if test -f 'test_upgrade.c'; then $(CYGPATH_W) 'test_upgrade.c'; else $(CYGPATH_W) '$(srcdir)/test_upgrade.c'; fi`
 
+test_upgrade_large-test_upgrade_large.o: test_upgrade_large.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_upgrade_large_CPPFLAGS) $(CPPFLAGS) $(test_upgrade_large_CFLAGS) $(CFLAGS) -MT test_upgrade_large-test_upgrade_large.o -MD -MP -MF $(DEPDIR)/test_upgrade_large-test_upgrade_large.Tpo -c -o test_upgrade_large-test_upgrade_large.o `test -f 'test_upgrade_large.c' || echo '$(srcdir)/'`test_upgrade_large.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_upgrade_large-test_upgrade_large.Tpo $(DEPDIR)/test_upgrade_large-test_upgrade_large.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_upgrade_large.c' object='test_upgrade_large-test_upgrade_large.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_upgrade_large_CPPFLAGS) $(CPPFLAGS) $(test_upgrade_large_CFLAGS) $(CFLAGS) -c -o test_upgrade_large-test_upgrade_large.o `test -f 'test_upgrade_large.c' || echo '$(srcdir)/'`test_upgrade_large.c
+
+test_upgrade_large-test_upgrade_large.obj: test_upgrade_large.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_upgrade_large_CPPFLAGS) $(CPPFLAGS) $(test_upgrade_large_CFLAGS) $(CFLAGS) -MT test_upgrade_large-test_upgrade_large.obj -MD -MP -MF $(DEPDIR)/test_upgrade_large-test_upgrade_large.Tpo -c -o test_upgrade_large-test_upgrade_large.obj `if test -f 'test_upgrade_large.c'; then $(CYGPATH_W) 'test_upgrade_large.c'; else $(CYGPATH_W) '$(srcdir)/test_upgrade_large.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_upgrade_large-test_upgrade_large.Tpo $(DEPDIR)/test_upgrade_large-test_upgrade_large.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_upgrade_large.c' object='test_upgrade_large-test_upgrade_large.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_upgrade_large_CPPFLAGS) $(CPPFLAGS) $(test_upgrade_large_CFLAGS) $(CFLAGS) -c -o test_upgrade_large-test_upgrade_large.obj `if test -f 'test_upgrade_large.c'; then $(CYGPATH_W) 'test_upgrade_large.c'; else $(CYGPATH_W) '$(srcdir)/test_upgrade_large.c'; fi`
+
+test_upgrade_large_tls-test_upgrade_large.o: test_upgrade_large.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_upgrade_large_tls_CPPFLAGS) $(CPPFLAGS) $(test_upgrade_large_tls_CFLAGS) $(CFLAGS) -MT test_upgrade_large_tls-test_upgrade_large.o -MD -MP -MF $(DEPDIR)/test_upgrade_large_tls-test_upgrade_large.Tpo -c -o test_upgrade_large_tls-test_upgrade_large.o `test -f 'test_upgrade_large.c' || echo '$(srcdir)/'`test_upgrade_large.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_upgrade_large_tls-test_upgrade_large.Tpo $(DEPDIR)/test_upgrade_large_tls-test_upgrade_large.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_upgrade_large.c' object='test_upgrade_large_tls-test_upgrade_large.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_upgrade_large_tls_CPPFLAGS) $(CPPFLAGS) $(test_upgrade_large_tls_CFLAGS) $(CFLAGS) -c -o test_upgrade_large_tls-test_upgrade_large.o `test -f 'test_upgrade_large.c' || echo '$(srcdir)/'`test_upgrade_large.c
+
+test_upgrade_large_tls-test_upgrade_large.obj: test_upgrade_large.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_upgrade_large_tls_CPPFLAGS) $(CPPFLAGS) $(test_upgrade_large_tls_CFLAGS) $(CFLAGS) -MT test_upgrade_large_tls-test_upgrade_large.obj -MD -MP -MF $(DEPDIR)/test_upgrade_large_tls-test_upgrade_large.Tpo -c -o test_upgrade_large_tls-test_upgrade_large.obj `if test -f 'test_upgrade_large.c'; then $(CYGPATH_W) 'test_upgrade_large.c'; else $(CYGPATH_W) '$(srcdir)/test_upgrade_large.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_upgrade_large_tls-test_upgrade_large.Tpo $(DEPDIR)/test_upgrade_large_tls-test_upgrade_large.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_upgrade_large.c' object='test_upgrade_large_tls-test_upgrade_large.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_upgrade_large_tls_CPPFLAGS) $(CPPFLAGS) $(test_upgrade_large_tls_CFLAGS) $(CFLAGS) -c -o test_upgrade_large_tls-test_upgrade_large.obj `if test -f 'test_upgrade_large.c'; then $(CYGPATH_W) 'test_upgrade_large.c'; else $(CYGPATH_W) '$(srcdir)/test_upgrade_large.c'; fi`
+
 test_upgrade_tls-test_upgrade.o: test_upgrade.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_upgrade_tls_CPPFLAGS) $(CPPFLAGS) $(test_upgrade_tls_CFLAGS) $(CFLAGS) -MT test_upgrade_tls-test_upgrade.o -MD -MP -MF $(DEPDIR)/test_upgrade_tls-test_upgrade.Tpo -c -o test_upgrade_tls-test_upgrade.o `test -f 'test_upgrade.c' || echo '$(srcdir)/'`test_upgrade.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_upgrade_tls-test_upgrade.Tpo $(DEPDIR)/test_upgrade_tls-test_upgrade.Po
@@ -1830,9 +1933,23 @@ test_upgrade.log: test_upgrade$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_upgrade_large.log: test_upgrade_large$(EXEEXT)
+	@p='test_upgrade_large$(EXEEXT)'; \
+	b='test_upgrade_large'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test_upgrade_tls.log: test_upgrade_tls$(EXEEXT)
 	@p='test_upgrade_tls$(EXEEXT)'; \
 	b='test_upgrade_tls'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_upgrade_large_tls.log: test_upgrade_large_tls$(EXEEXT)
+	@p='test_upgrade_large_tls$(EXEEXT)'; \
+	b='test_upgrade_large_tls'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -2024,6 +2141,8 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_str.Po
 	-rm -f ./$(DEPDIR)/test_str_token.Po
 	-rm -f ./$(DEPDIR)/test_upgrade-test_upgrade.Po
+	-rm -f ./$(DEPDIR)/test_upgrade_large-test_upgrade_large.Po
+	-rm -f ./$(DEPDIR)/test_upgrade_large_tls-test_upgrade_large.Po
 	-rm -f ./$(DEPDIR)/test_upgrade_tls-test_upgrade.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
@@ -2111,6 +2230,8 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_str.Po
 	-rm -f ./$(DEPDIR)/test_str_token.Po
 	-rm -f ./$(DEPDIR)/test_upgrade-test_upgrade.Po
+	-rm -f ./$(DEPDIR)/test_upgrade_large-test_upgrade_large.Po
+	-rm -f ./$(DEPDIR)/test_upgrade_large_tls-test_upgrade_large.Po
 	-rm -f ./$(DEPDIR)/test_upgrade_tls-test_upgrade.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic

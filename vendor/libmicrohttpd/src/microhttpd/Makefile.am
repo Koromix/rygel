@@ -165,17 +165,17 @@ check_PROGRAMS = \
 if HAVE_POSIX_THREADS
 if ENABLE_UPGRADE
 if USE_POSIX_THREADS
-  check_PROGRAMS += test_upgrade
+  check_PROGRAMS += test_upgrade test_upgrade_large
 endif
 if USE_W32_THREADS
-  check_PROGRAMS += test_upgrade
+  check_PROGRAMS += test_upgrade test_upgrade_large
 endif
 if ENABLE_HTTPS
 if USE_POSIX_THREADS
-check_PROGRAMS += test_upgrade_tls
+check_PROGRAMS += test_upgrade_tls test_upgrade_large_tls
 endif
 if USE_W32_THREADS
-check_PROGRAMS += test_upgrade_tls
+check_PROGRAMS += test_upgrade_tls test_upgrade_large_tls
 endif
 endif
 endif
@@ -230,6 +230,19 @@ test_upgrade_LDADD = \
   $(MHD_TLS_LIB_LDFLAGS) $(MHD_TLS_LIBDEPS) \
   $(PTHREAD_LIBS)
 
+test_upgrade_large_SOURCES = \
+  test_upgrade_large.c test_helpers.h mhd_sockets.h
+test_upgrade_large_CPPFLAGS = \
+  $(AM_CPPFLAGS) $(MHD_TLS_LIB_CPPFLAGS)
+test_upgrade_large_CFLAGS = \
+  $(AM_CFLAGS) $(PTHREAD_CFLAGS) $(MHD_TLS_LIB_CFLAGS)
+test_upgrade_large_LDFLAGS = \
+  $(MHD_TLS_LIB_LDFLAGS)
+test_upgrade_large_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  $(MHD_TLS_LIB_LDFLAGS) $(MHD_TLS_LIBDEPS) \
+  $(PTHREAD_LIBS)
+
 test_upgrade_tls_SOURCES = \
   test_upgrade.c test_helpers.h mhd_sockets.h
 test_upgrade_tls_CPPFLAGS = \
@@ -239,6 +252,19 @@ test_upgrade_tls_CFLAGS = \
 test_upgrade_tls_LDFLAGS = \
   $(MHD_TLS_LIB_LDFLAGS)
 test_upgrade_tls_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  $(MHD_TLS_LIB_LDFLAGS) $(MHD_TLS_LIBDEPS) \
+  $(PTHREAD_LIBS)
+
+test_upgrade_large_tls_SOURCES = \
+  test_upgrade_large.c test_helpers.h mhd_sockets.h
+test_upgrade_large_tls_CPPFLAGS = \
+  $(AM_CPPFLAGS) $(MHD_TLS_LIB_CPPFLAGS)
+test_upgrade_large_tls_CFLAGS = \
+  $(AM_CFLAGS) $(PTHREAD_CFLAGS) $(MHD_TLS_LIB_CFLAGS)
+test_upgrade_large_tls_LDFLAGS = \
+  $(MHD_TLS_LIB_LDFLAGS)
+test_upgrade_large_tls_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   $(MHD_TLS_LIB_LDFLAGS) $(MHD_TLS_LIBDEPS) \
   $(PTHREAD_LIBS)

@@ -1,11 +1,11 @@
 #define PACKAGE "libmicrohttpd"
 #define PACKAGE_BUGREPORT "libmicrohttpd@gnu.org"
 #define PACKAGE_NAME "GNU Libmicrohttpd"
-#define PACKAGE_STRING "GNU Libmicrohttpd 0.9.65"
+#define PACKAGE_STRING "GNU Libmicrohttpd 0.9.66"
 #define PACKAGE_TARNAME "libmicrohttpd"
 #define PACKAGE_URL "http://www.gnu.org/software/libmicrohttpd/"
-#define PACKAGE_VERSION "0.9.65"
-#define VERSION "0.9.65"
+#define PACKAGE_VERSION "0.9.66"
+#define VERSION "0.9.66"
 
 #if defined(__MINGW32__)
     #define BAUTH_SUPPORT 1

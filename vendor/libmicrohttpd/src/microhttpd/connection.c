@@ -970,7 +970,7 @@ MHD_lookup_connection_value_n (struct MHD_Connection *connection,
     {
       for (pos = connection->headers_received; NULL != pos; pos = pos->next)
         {
-          if ( (kind == pos->kind) &&
+          if ( (0 != (kind & pos->kind)) &&
                (NULL == pos->header) )
             break;
         }
@@ -979,7 +979,7 @@ MHD_lookup_connection_value_n (struct MHD_Connection *connection,
     {
       for (pos = connection->headers_received; NULL != pos; pos = pos->next)
         {
-          if ( (kind == pos->kind) &&
+          if ( (0 != (kind & pos->kind)) &&
                (key_size == pos->header_size) &&
                ( (key == pos->header) ||
                  (MHD_str_equal_caseless_bin_n_ (key,
@@ -2624,7 +2624,19 @@ process_request_body (struct MHD_Connection *connection)
   char *buffer_head;
 
   if (NULL != connection->response)
-    return;                     /* already queued a response */
+  {
+    /* already queued a response, discard remaining upload
+       (but not more, there might be another request after it) */
+    uint64_t purge = MHD_MIN (connection->remaining_upload_size,
+                              connection->read_buffer_offset);
+    connection->remaining_upload_size -= purge;
+    if (connection->read_buffer_offset > purge)
+      memmove (connection->read_buffer,
+               &connection->read_buffer[purge],
+               connection->read_buffer_offset - purge);
+    connection->read_buffer_offset -= purge;
+    return;
+  }
 
   buffer_head = connection->read_buffer;
   available = connection->read_buffer_offset;
@@ -2759,19 +2771,19 @@ process_request_body (struct MHD_Connection *connection)
         {
           /* no chunked encoding, give all to the client */
           if ( (0 != connection->remaining_upload_size) &&
-	       (MHD_SIZE_UNKNOWN != connection->remaining_upload_size) &&
-	       (connection->remaining_upload_size < available) )
-	    {
+               (MHD_SIZE_UNKNOWN != connection->remaining_upload_size) &&
+               (connection->remaining_upload_size < available) )
+            {
               to_be_processed = (size_t)connection->remaining_upload_size;
-	    }
+            }
           else
-	    {
+            {
               /**
                * 1. no chunked encoding, give all to the client
                * 2. client may send large chunked data, but only a smaller part is available at one time.
                */
               to_be_processed = available;
-	    }
+            }
         }
       left_unprocessed = to_be_processed;
       connection->client_aware = true;
