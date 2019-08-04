@@ -294,7 +294,11 @@ let dev_form = (function() {
             form.submitHandler = async () => {
                 await g_records.delete(record.table, record.id);
 
-                renderRecords(record.table);
+                if (current_record.id === record.id) {
+                    pilot.go(null, {id: null});
+                } else {
+                    pilot.go();
+                }
                 form.close();
             };
             form.buttons(form.buttons.std.ok_cancel('Supprimer'));
