@@ -23,7 +23,7 @@ let goupil = (function() {
     }
 
     function initLog() {
-        log.pushHandler(addLogEntry);
+        log.pushHandler(updateLogEntry);
     }
 
     async function openDatabase() {
@@ -131,39 +131,41 @@ let goupil = (function() {
         document.addEventListener('click', closePopup);
     }
 
-    function renderLog() {
-        let log_el = document.querySelector('#gp_log');
+    function updateLogEntry(entry) {
+        if (entry.type !== 'debug') {
+            if (entry.new) {
+                log_entries.unshift(entry);
+            } else if (entry.type == null) {
+                log_entries = log_entries.filter(it => it !== entry);
+            }
 
-        render(log_entries.map((entry, idx) => {
-            return html`<div class=${'gp_log_entry ' + entry.type}>
-                <button class="gp_log_close" @click=${e => closeLogEntry(idx)}>X</button>
-                ${entry.msg}
-             </div>`;
-        }), log_el);
-    }
-
-    function addLogEntry(type, msg) {
-        if (type === 'error' || type === 'success') {
-            let entry = {
-                msg: msg,
-                type: type
-            };
-            log_entries.unshift(entry);
-
-            renderLog();
-
-            setTimeout(() => {
-                log_entries.pop();
+            if (entry.type === 'progress' && entry.new) {
+                // Wait a bit to show progress entries to prevent quick actions from showing up
+                setTimeout(renderLog, 500);
+            } else {
                 renderLog();
-            }, 6000);
+            }
         }
 
-        log.defaultHandler(type, msg);
+        log.defaultHandler(entry);
     }
 
     function closeLogEntry(idx) {
         log_entries.splice(idx, 1);
         renderLog();
+    }
+
+    function renderLog() {
+        let log_el = document.querySelector('#gp_log');
+
+        render(log_entries.map((entry, idx) => {
+            return html`<div class=${'gp_log_entry ' + entry.type}>
+                ${entry.type === 'progress' ?
+                    html`<div class="gp_log_spin"></div>` :
+                    html`<button class="gp_log_close" @click=${e => closeLogEntry(idx)}>X</button>`}
+                ${entry.msg}
+             </div>`;
+        }), log_el);
     }
 
     function openPopup(e, func) {
