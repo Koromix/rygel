@@ -40,23 +40,23 @@ function RecordManager(db) {
         });
 
         return await db.transaction(db => {
-            db.save('records', record);
-            db.saveAll('variables', variables);
+            db.save('form_records', record);
+            db.saveAll('form_variables', variables);
         });
     };
 
     this.delete = async function(table, id) {
         let tkey = makeTableKey(table, id);
-        return await db.delete('records', tkey);
+        return await db.delete('form_records', tkey);
     };
 
     this.reset = async function() {
-        await db.clear('records');
+        await db.clear('form_records');
     };
 
     this.load = async function(table, id) {
         let tkey = makeTableKey(table, id);
-        return await db.load('records', tkey);
+        return await db.load('form_records', tkey);
     };
 
     this.loadAll = async function(table) {
@@ -65,8 +65,8 @@ function RecordManager(db) {
         let end_key = table + '`';
 
         let [records, variables] = await Promise.all([
-            db.loadAll('records', start_key, end_key),
-            db.loadAll('variables', start_key, end_key)
+            db.loadAll('form_records', start_key, end_key),
+            db.loadAll('form_variables', start_key, end_key)
         ]);
 
         return [records, variables];
