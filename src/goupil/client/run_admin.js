@@ -28,8 +28,8 @@ let pilot = (function() {
             let mimetype;
             form.section('Options avancées', () => {
                 table = form.text('table', 'Table :', {placeholder: key.value});
-                mimetype = form.dropdown('mimetype', 'Type :', AssetManager.mimetypes,
-                                         {mandatory: true, untoggle: false, value: AssetManager.mimetypes[0]});
+                mimetype = form.choice('mimetype', 'Type :', AssetManager.mimetypes.entries(),
+                                       {mandatory: true, untoggle: false, value: 'application/x.goupil.form'});
             }, {deploy: false});
 
             if (key.value) {
@@ -62,7 +62,7 @@ let pilot = (function() {
             let table;
             form.section('Options avancées', () => {
                 table = form.text('table', 'Table :', {mandatory: true, value: asset.table});
-                form.calc('type', 'Type :', asset.mimetype);
+                form.calc('type', 'Type :', AssetManager.mimetypes.get(asset.mimetype) || asset.mimetype);
             }, {deploy: false});
 
             validateIdentifierWidget(table);
