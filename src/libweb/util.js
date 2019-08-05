@@ -157,12 +157,13 @@ let dom = (function() {
 let log = (function() {
     let self = this;
 
-    this.defaultHandler = function(type, msg) {
-        switch (type) {
+    this.defaultHandler = function(entry) {
+        switch (entry.type) {
             case 'debug':
             case 'info':
-            case 'success': { console.log(msg); } break;
-            case 'error': { console.error(msg); } break;
+            case 'success':
+            case 'progress': { console.log(entry.msg); } break;
+            case 'error': { console.error(entry.msg); } break;
         }
     };
 
@@ -171,15 +172,50 @@ let log = (function() {
     this.pushHandler = function(func) { handlers.push(func); };
     this.popHandler = function() { handlers.pop(); };
 
-    function log(type, msg) {
+    function updateEntry(entry, type, msg, timeout) {
+        entry.new = !entry.type;
+
+        entry.type = type;
+        entry.msg = msg;
+
+        if (entry.timer_id != null) {
+            clearTimeout(entry.timer_id);
+            entry.timer_id = null;
+        }
+        if (timeout >= 0)
+            entry.timer_id = setTimeout(() => updateEntry(entry, null, null), timeout);
+
         let func = handlers[handlers.length - 1];
-        func(type, msg);
+        func(entry);
     }
 
-    this.debug = function(msg) { log('debug', msg); };
-    this.info = function(msg) { log('info', msg); };
-    this.success = function(msg) { log('success', msg); };
-    this.error = function(msg) { log('error', msg); };
+    this.Entry = function() {
+        let self = this;
+
+        this.type = null;
+        this.msg = null;
+        this.timer_id = null;
+        this.new = true;
+
+        this.debug = function(msg, timeout = 6000) { updateEntry(self, 'debug', msg, timeout); };
+        this.info = function(msg, timeout = 6000) { updateEntry(self, 'info', msg, timeout); };
+        this.success = function(msg, timeout = 6000) { updateEntry(self, 'success', msg, timeout); };
+        this.error = function(msg, timeout = 6000) { updateEntry(self, 'error', msg, timeout); };
+
+        this.progress = function(action, value = null, max = null) {
+            if (value != null) {
+                let msg = `${action}: ${value}${max != null ? ('/' + max) : ''}`;
+                updateEntry(self, 'progress', msg, -1);
+            } else {
+                updateEntry(self, 'progress', action, -1);
+            }
+        };
+    };
+
+    this.debug = function(msg, timeout = 6000) { new self.Entry().debug(msg, timeout); };
+    this.info = function(msg, timeout = 6000) { new self.Entry().info(msg, timeout); };
+    this.success = function(msg, timeout = 6000) { new self.Entry().success(msg, timeout); };
+    this.error = function(msg, timeout = 6000) { new self.Entry().error(msg, timeout); };
 
     return this;
 }).call({});

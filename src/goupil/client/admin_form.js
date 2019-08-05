@@ -368,8 +368,11 @@ let admin_form = (function() {
     }
 
     async function saveRecordAndReset(values, variables) {
+        let entry = new log.Entry();
+        entry.progress('Enregistrement en cours');
+
         await g_records.save(current_record, variables);
-        log.success('Données sauvegardées !');
+        entry.success('Données enregistrées !');
 
         pilot.go(null, {id: null});
         // TODO: Give focus to first widget
