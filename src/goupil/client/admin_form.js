@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let dev_form = (function() {
+let admin_form = (function() {
     let self = this;
 
     let form_el;
@@ -58,29 +58,29 @@ let dev_form = (function() {
 
         if (left_panel === 'editor' && show_main_panel) {
             render(html`
-                ${makeEditorElement('dev_panel_left')}
-                <div id="af_form" class="dev_panel_right"></div>
+                ${makeEditorElement('adm_panel_left')}
+                <div id="af_form" class="adm_panel_right"></div>
             `, main_el);
         } else if (left_panel === 'data' && show_main_panel) {
             render(html`
-                <div id="af_data" class="dev_panel_left"></div>
-                <div id="af_form" class="dev_panel_right"></div>
+                <div id="af_data" class="adm_panel_left"></div>
+                <div id="af_form" class="adm_panel_right"></div>
             `, main_el);
         } else if (left_panel === 'editor') {
             render(html`
-                ${makeEditorElement('dev_panel_fixed')}
+                ${makeEditorElement('adm_panel_fixed')}
             `, main_el);
         } else if (left_panel === 'data') {
             render(html`
-                <div id="af_data" class="dev_panel_fixed"></div>
+                <div id="af_data" class="adm_panel_fixed"></div>
             `, main_el);
         } else {
             render(html`
-                <div id="af_form" class="dev_panel_page"></div>
+                <div id="af_form" class="adm_panel_page"></div>
             `, main_el);
         }
 
-        modes_el = document.querySelector('#dev_modes');
+        modes_el = document.querySelector('#adm_modes');
         // We still need to render the form to test it, so create a dummy element!
         form_el = document.querySelector('#af_form') || document.createElement('div');
         data_el = document.querySelector('#af_data');
