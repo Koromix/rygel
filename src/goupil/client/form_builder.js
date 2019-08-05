@@ -254,6 +254,9 @@ function FormBuilder(state, widgets, variables = []) {
     };
 
     function normalizePropositions(props) {
+        if (!Array.isArray(props))
+            props = Array.from(props);
+
         props = props.filter(c => c != null).map(c => {
             if (Array.isArray(c)) {
                 return {value: c[0], label: c[1] || c[0]};

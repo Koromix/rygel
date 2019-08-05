@@ -44,7 +44,7 @@ function AssetManager(db) {
     return this;
 }
 
-AssetManager.mimetypes = Object.freeze([
-    'application/x.goupil.form',
-    'application/x.goupil.schedule'
+AssetManager.mimetypes = new Map([
+    ['application/x.goupil.form', 'Formulaire'],
+    ['application/x.goupil.schedule', 'Agenda']
 ]);
