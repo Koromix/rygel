@@ -31,12 +31,13 @@ let goupil = (function() {
                               'check your privacy settings for this website';
 
         if (navigator.storage && navigator.storage.persist) {
-            let granted = await navigator.storage.persist();
-
-            // FIXME: For some reason this does not seem to work correctly on Firefox,
-            // where granted is always true. Investigate.
-            if (!granted)
-                log.error(storage_warning);
+            navigator.storage.persist().then(granted => {
+                // NOTE: For some reason this does not seem to work correctly on my Firefox profile,
+                // where granted is always true. Might come from an extension or some obscure privacy
+                // setting. Investigate.
+                if (!granted)
+                    log.error(storage_warning);
+            });
         } else {
             log.error(storage_warning);
         }
