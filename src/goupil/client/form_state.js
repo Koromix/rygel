@@ -5,6 +5,6 @@
 function FormState(values = {}) {
     this.values = values;
 
-    this.missing_errors = new Set(),
-    this.sections_state = {}
+    this.missing_errors = new Set();
+    this.sections_state = {};
 }
