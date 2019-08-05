@@ -128,9 +128,9 @@ let pilot = (function() {
         let menu_el = document.querySelector('#gp_menu');
 
         render(html`
-            <div id="dev_modes"></div>
+            <div id="adm_modes"></div>
 
-            <select id="dev_pages" @change=${e => self.go(e.target.value)}>
+            <select id="adm_pages" @change=${e => self.go(e.target.value)}>
                 ${!current_key && !assets.length ? html`<option>-- No asset available --</option>` : html``}
                 ${current_key && !current_asset ?
                     html`<option value=${current_key} .selected=${true}>-- Unknown asset '${current_key}' --</option>` : html``}
@@ -145,7 +145,7 @@ let pilot = (function() {
     }
 
     function renderEmpty() {
-        let modes_el = document.querySelector('#dev_modes');
+        let modes_el = document.querySelector('#adm_modes');
         let main_el = document.querySelector('main');
 
         render(html``, modes_el);
@@ -187,8 +187,8 @@ let pilot = (function() {
             document.title = `${current_asset.title} — ${settings.project_key}`;
 
             switch (current_asset.mimetype) {
-                case 'application/x.goupil.form': { dev_form.run(current_asset, args); } break;
-                case 'application/x.goupil.schedule': { dev_schedule.run(current_asset, args); } break;
+                case 'application/x.goupil.form': { admin_form.run(current_asset, args); } break;
+                case 'application/x.goupil.schedule': { admin_schedule.run(current_asset, args); } break;
                 default: {
                     renderEmpty();
                     log.error(`Unknown asset type '${current_asset.mimetype}'`);
