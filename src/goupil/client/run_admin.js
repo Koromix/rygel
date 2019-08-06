@@ -59,17 +59,13 @@ let pilot = (function() {
         goupil.popup(e, form => {
             let title = form.text('title', 'Titre :', {mandatory: true, value: asset.title});
 
-            let table;
             form.section('Options avancées', () => {
-                table = form.text('table', 'Table :', {mandatory: true, value: asset.table});
+                form.calc('table', 'Table :', asset.table);
                 form.calc('type', 'Type :', AssetManager.mimetypes.get(asset.mimetype) || asset.mimetype);
             }, {deploy: false});
 
-            validateIdentifierWidget(table);
-
             form.submitHandler = async () => {
                 let new_asset = Object.assign({}, asset, {
-                    table: table.value,
                     title: title.value
                 });
                 await g_assets.save(new_asset);
