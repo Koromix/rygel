@@ -141,7 +141,7 @@ let goupil = (function() {
 
             if (entry.type === 'progress' && entry.new) {
                 // Wait a bit to show progress entries to prevent quick actions from showing up
-                setTimeout(renderLog, 500);
+                setTimeout(renderLog, 200);
             } else {
                 renderLog();
             }
