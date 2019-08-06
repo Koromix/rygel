@@ -167,6 +167,29 @@ let idb = (function () {
             });
         };
 
+        this.deleteAll = function(store, start = null, end = null) {
+            let query;
+            if (start != null && end != null) {
+                query = IDBKeyRange.bound(start, end, false, true);
+            } else if (start != null) {
+                query = IDBKeyRange.lowerBound(start);
+            } else if (end != null) {
+                query = IDBKeyRange.upperBound(end, true);
+            }
+
+            if (query) {
+                return executeQuery(store, true, (t, resolve, reject) => {
+                    let obj = t.objectStore(store);
+                    obj.delete(query);
+
+                    t.addEventListener('complete', e => resolve());
+                    t.addEventListener('abort', e => logAndReject(reject, 'Database transaction failure'));
+                });
+            } else {
+                return self.clear();
+            }
+        };
+
         this.clear = function(store) {
             return executeQuery(store, true, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
