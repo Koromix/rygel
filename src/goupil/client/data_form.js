@@ -47,11 +47,18 @@ function RecordManager(db) {
 
     this.delete = async function(table, id) {
         let tkey = makeTableKey(table, id);
-        return await db.delete('form_records', tkey);
+        await db.delete('form_records', tkey);
     };
 
-    this.reset = async function() {
-        await db.clear('form_records');
+    this.clear = async function(table) {
+        // Works for ASCII names, which we enforce
+        let start_key = table + '_';
+        let end_key = table + '`';
+
+        await db.transaction(db => {
+            db.deleteAll('form_records', start_key, end_key);
+            db.deleteAll('form_variables', start_key, end_key);
+        });
     };
 
     this.load = async function(table, id) {
