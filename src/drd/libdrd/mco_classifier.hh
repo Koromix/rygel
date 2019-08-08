@@ -82,6 +82,7 @@ struct mco_Result {
     int16_t duration;
     int16_t age;
     mco_GhmCode ghm;
+    mco_GhmCode ghm_for_ghs;
     int16_t main_error;
 
     drd_Sector sector;
@@ -111,7 +112,7 @@ bool mco_TestExclusion(const mco_TableIndex &index, int age,
 
 mco_GhmCode mco_PickGhm(const mco_TableIndex &index,
                         const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
-                        unsigned int flags, mco_ErrorSet *out_errors);
+                        unsigned int flags, mco_ErrorSet *out_errors, mco_GhmCode *out_ghm_for_ghs = nullptr);
 mco_GhsCode mco_PickGhs(const mco_TableIndex &index, const mco_AuthorizationSet &authorization_set,
                         drd_Sector sector, const mco_PreparedStay &prep,
                         Span<const mco_PreparedStay> mono_preps, mco_GhmCode ghm,

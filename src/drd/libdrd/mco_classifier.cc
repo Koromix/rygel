@@ -1617,13 +1617,6 @@ int mco_LimitSeverity(int severity, int duration)
     return duration >= 3 ? std::min(duration - 2, severity) : 0;
 }
 
-static int LimitSeverity(const mco_PreparedStay &prep, const mco_GhmRootInfo &ghm_root_info,
-                         int severity)
-{
-    bool raac = (prep.stay->flags & (int)mco_Stay::Flag::RAAC) && ghm_root_info.allow_raac;
-    return raac ? severity : mco_LimitSeverity(severity, prep.duration);
-}
-
 bool mco_TestGhmRootExclusion(const mco_DiagnosisInfo &cma_diag_info,
                               const mco_GhmRootInfo &ghm_root_info)
 {
@@ -1671,15 +1664,20 @@ bool mco_TestExclusion(const mco_TableIndex &index, int age,
 }
 
 static mco_GhmCode RunGhmSeverity(const mco_TableIndex &index, const mco_PreparedStay &prep,
-                                  mco_GhmCode ghm, const mco_GhmRootInfo &ghm_root_info)
+                                  mco_GhmCode ghm, const mco_GhmRootInfo &ghm_root_info,
+                                  mco_GhmCode *out_ghm_for_ghs)
 {
     const mco_Stay &stay = *prep.stay;
 
-    // Ambulatory and / or short duration GHM
+    // Yeah for RAAC...
+    mco_GhmCode ghm_for_ghs = ghm;
+
     if (ghm_root_info.allow_ambulatory && !prep.duration) {
         ghm.parts.mode = 'J';
+        ghm_for_ghs.parts.mode = 'J';
     } else if (prep.duration < ghm_root_info.short_duration_treshold) {
         ghm.parts.mode = 'T';
+        ghm_for_ghs.parts.mode = 'T';
     } else if (ghm.parts.mode >= 'A' && ghm.parts.mode < 'E') {
         int severity = ghm.parts.mode - 'A';
 
@@ -1696,9 +1694,11 @@ static mco_GhmCode RunGhmSeverity(const mco_TableIndex &index, const mco_Prepare
             }
         }
 
-        severity = LimitSeverity(prep, ghm_root_info, severity);
+        int real_severity = mco_LimitSeverity(severity, prep.duration);
+        bool raac = (prep.stay->flags & (int)mco_Stay::Flag::RAAC) && ghm_root_info.allow_raac;
 
-        ghm.parts.mode = (char)('A' + severity);
+        ghm.parts.mode = (char)('A' + real_severity);
+        ghm_for_ghs.parts.mode = (char)('A' + (raac ? severity : real_severity));
     } else if (!ghm.parts.mode) {
         int severity = 0;
 
@@ -1726,36 +1726,52 @@ static mco_GhmCode RunGhmSeverity(const mco_TableIndex &index, const mco_Prepare
             severity = 1;
         }
 
-        severity = LimitSeverity(prep, ghm_root_info, severity);
+        int real_severity = mco_LimitSeverity(severity, prep.duration);
+        bool raac = (prep.stay->flags & (int)mco_Stay::Flag::RAAC) && ghm_root_info.allow_raac;
 
-        ghm.parts.mode = (char)('1' + severity);
+        ghm.parts.mode = (char)('1' + real_severity);
+        ghm_for_ghs.parts.mode = (char)('1' + (raac ? severity : real_severity));
     }
 
+    if (out_ghm_for_ghs) {
+        *out_ghm_for_ghs = ghm_for_ghs;
+    }
     return ghm;
 }
 
 mco_GhmCode mco_PickGhm(const mco_TableIndex &index,
                         const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
-                        unsigned int flags, mco_ErrorSet *out_errors)
+                        unsigned int flags, mco_ErrorSet *out_errors, mco_GhmCode *out_ghm_for_ghs)
 {
     mco_GhmCode ghm;
 
     ghm = RunGhmTree(index, prep, out_errors);
 
+#define RETURN_ERROR_GHM(GhmStr) \
+        do { \
+            mco_GhmCode ghm = mco_GhmCode::FromString(GhmStr); \
+            if (out_ghm_for_ghs) { \
+                *out_ghm_for_ghs = ghm; \
+            } \
+            return ghm; \
+        } while (false)
+
     const mco_GhmRootInfo *ghm_root_info = index.FindGhmRoot(ghm.Root());
     if (RG_UNLIKELY(!ghm_root_info)) {
         LogError("Unknown GHM root '%1'", ghm.Root());
         SetError(out_errors, 4, 2);
-        return mco_GhmCode::FromString("90Z03Z");
+        RETURN_ERROR_GHM("90Z03Z");
     }
 
     if (RG_UNLIKELY(!CheckGhmErrors(prep, mono_preps, ghm, out_errors)))
-        return mco_GhmCode::FromString("90Z00Z");
+        RETURN_ERROR_GHM("90Z00Z");
     if (RG_UNLIKELY(!(flags & (int)mco_ClassifyFlag::IgnoreConfirmation) &&
                     !CheckConfirmation(prep, ghm, *ghm_root_info, out_errors)))
-        return mco_GhmCode::FromString("90Z00Z");
+        RETURN_ERROR_GHM("90Z00Z");
 
-    ghm = RunGhmSeverity(index, prep, ghm, *ghm_root_info);
+#undef RETURN_ERROR_GHM
+
+    ghm = RunGhmSeverity(index, prep, ghm, *ghm_root_info, out_ghm_for_ghs);
 
     return ghm;
 }
@@ -1866,7 +1882,7 @@ mco_GhsCode mco_PickGhs(const mco_TableIndex &index, const mco_AuthorizationSet 
                 ghm = RunGhmTree(index, prep0, nullptr);
                 const mco_GhmRootInfo *ghm_root_info = index.FindGhmRoot(ghm.Root());
                 if (RG_LIKELY(ghm_root_info)) {
-                    ghm = RunGhmSeverity(index, prep0, ghm, *ghm_root_info);
+                    ghm = RunGhmSeverity(index, prep0, ghm, *ghm_root_info, nullptr);
                 }
             }
         }
@@ -2194,6 +2210,7 @@ static Size RunClassifier(const mco_TableSet &table_set,
         result.stays = mco_Split(mono_stays, 1, &mono_stays);
         result.ghm = mco_Prepare(table_set, authorization_set, result.stays, flags,
                                  &prepared_set, &errors);
+        result.ghm_for_ghs = result.ghm;
         result.index = prepared_set.index;
         result.age = prepared_set.prep.age;
         result.duration = prepared_set.prep.duration;
@@ -2202,15 +2219,15 @@ static Size RunClassifier(const mco_TableSet &table_set,
         // Classify GHM
         if (RG_LIKELY(!result.ghm.IsError())) {
             result.main_stay_idx = (int16_t)(prepared_set.main_prep - prepared_set.mono_preps.ptr);
-            result.ghm = mco_PickGhm(*prepared_set.index,
-                                     prepared_set.prep, prepared_set.mono_preps, flags, &errors);
+            result.ghm = mco_PickGhm(*prepared_set.index, prepared_set.prep, prepared_set.mono_preps,
+                                     flags, &errors, &result.ghm_for_ghs);
         }
         result.main_error = errors.main_error;
         RG_ASSERT_DEBUG(result.ghm.IsValid());
 
         // Classify GHS
         result.ghs = mco_PickGhs(*prepared_set.index, authorization_set, sector,
-                                 prepared_set.prep, prepared_set.mono_preps, result.ghm,
+                                 prepared_set.prep, prepared_set.mono_preps, result.ghm_for_ghs,
                                  flags, &result.ghs_duration);
 
         if (out_mono_results.IsValid()) {
@@ -2244,11 +2261,13 @@ static Size RunClassifier(const mco_TableSet &table_set,
                         mono_errors.main_error = 0;
                         if (flags & (int)mco_ClassifyFlag::MonoOriginalStay) {
                             mono_result->ghm = RunGhmTree(*prepared_set.index, mono_prep, &mono_errors);
+                            mono_result->ghm_for_ghs = mono_result->ghm;
                             const mco_GhmRootInfo *ghm_root_info =
                                 prepared_set.index->FindGhmRoot(mono_result->ghm.Root());
                             if (RG_LIKELY(ghm_root_info)) {
                                 mono_result->ghm = RunGhmSeverity(*prepared_set.index, mono_prep,
-                                                                  mono_result->ghm, *ghm_root_info);
+                                                                  mono_result->ghm, *ghm_root_info,
+                                                                  &mono_result->ghm_for_ghs);
                             }
                             mono_result->ghs = mco_PickGhs(*prepared_set.index, authorization_set,
                                                            sector, mono_prep, mono_prep, mono_result->ghm,
@@ -2258,10 +2277,10 @@ static Size RunClassifier(const mco_TableSet &table_set,
                             mco_Stay fixed_mono_stay = FixMonoStayForClassifier(*mono_prep.stay);
                             mono_prep.stay = &fixed_mono_stay;
 
-                            mono_result->ghm = mco_PickGhm(*prepared_set.index, mono_prep,
-                                                           mono_prep, mono_flags, &mono_errors);
+                            mono_result->ghm = mco_PickGhm(*prepared_set.index, mono_prep, mono_prep, mono_flags,
+                                                           &mono_errors, &mono_result->ghm_for_ghs);
                             mono_result->ghs = mco_PickGhs(*prepared_set.index, authorization_set,
-                                                           sector, mono_prep, mono_prep, mono_result->ghm,
+                                                           sector, mono_prep, mono_prep, mono_result->ghm_for_ghs,
                                                            mono_flags, &mono_result->ghs_duration);
                         }
                         mono_result->main_error = mono_errors.main_error;
