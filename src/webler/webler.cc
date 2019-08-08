@@ -293,7 +293,7 @@ int RunWebler(int argc, char *argv[])
     bool subdirs = false;
     bool pretty_urls = false;
 
-    static const auto PrintUsage = [](FILE *fp) {
+    const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: webler input_directory -O output_directory
 
 Options:
@@ -309,7 +309,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                PrintUsage(stdout);
+                print_usage(stdout);
                 return 0;
             } else if (opt.Test("-O", "--output", OptionType::Value)) {
                 output_dir = opt.current_value;

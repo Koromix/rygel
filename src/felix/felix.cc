@@ -11,7 +11,7 @@ int RunPack(Span<const char *> arguments);
 
 int RunFelix(int argc, char **argv)
 {
-    static const auto PrintUsage = [](FILE *fp) {
+    const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: felix <command> [<args>]
 
 Commands:
@@ -25,7 +25,7 @@ Commands:
             argv[1] = argv[2];
             argv[2] = const_cast<char *>("--help");
         } else {
-            PrintUsage(stdout);
+            print_usage(stdout);
             return 0;
         }
     }

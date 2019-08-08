@@ -1615,7 +1615,7 @@ Span<const char> GetPathExtension(Span<const char> filename, CompressionType *ou
     filename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS);
 
     Span<const char> extension = {};
-    const auto GetNextExtension = [&]() {
+    const auto consume_next_extension = [&]() {
         extension = SplitStrReverse(filename, '.', &filename);
         if (extension.ptr > filename.ptr) {
             extension.ptr--;
@@ -1625,11 +1625,11 @@ Span<const char> GetPathExtension(Span<const char> filename, CompressionType *ou
         }
     };
 
-    GetNextExtension();
+    consume_next_extension();
     if (out_compression_type) {
         if (TestStr(extension, ".gz")) {
             *out_compression_type = CompressionType::Gzip;
-            GetNextExtension();
+            consume_next_extension();
         } else {
             *out_compression_type = CompressionType::None;
         }
@@ -1647,7 +1647,7 @@ Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
     HeapArray<char> buf;
     buf.allocator = alloc;
 
-    const auto AppendNormalizedPath = [&](Span<const char> path) {
+    const auto append_normalized_path = [&](Span<const char> path) {
         Size parts_count = 0;
 
         if (!buf.len && PathIsAbsolute(path)) {
@@ -1678,9 +1678,9 @@ Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
     };
 
     if (root_directory.len && (!path.len || !PathIsAbsolute(path))) {
-        AppendNormalizedPath(root_directory);
+        append_normalized_path(root_directory);
     }
-    AppendNormalizedPath(path);
+    append_normalized_path(path);
 
     if (!buf.len) {
         buf.Append('.');

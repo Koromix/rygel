@@ -268,19 +268,19 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
 
     // Declaring (simple) lambdas inside loops does not seem to impact performance
     Size offset = 9;
-    const auto ReadFragment = [&](Size len) {
+    const auto read_fragment = [&](Size len) {
         Span<const char> frag = line.Take(offset, len);
         offset += len;
         return frag;
     };
-    const auto SetErrorFlag = [&stay](mco_Stay::Error flag) {
+    const auto set_error_flag = [&stay](mco_Stay::Error flag) {
         stay.errors |= (uint32_t)flag;
         return true;
     };
 
     bool tests = false;
     int16_t version = 0;
-    ParsePmsiInt(ReadFragment(3), &version);
+    ParsePmsiInt(read_fragment(3), &version);
     if (version > 100) {
         tests = true;
         version = (int16_t)(version - 100);
@@ -296,43 +296,43 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
         return false;
     }
 
-    ParsePmsiInt(ReadFragment(20), &stay.bill_id) || SetErrorFlag(mco_Stay::Error::MalformedBillId);
-    ParsePmsiInt(ReadFragment(20), &stay.admin_id);
+    ParsePmsiInt(read_fragment(20), &stay.bill_id) || set_error_flag(mco_Stay::Error::MalformedBillId);
+    ParsePmsiInt(read_fragment(20), &stay.admin_id);
     offset += 10; // Skip RUM id
-    ParsePmsiDate(ReadFragment(8), &stay.birthdate) || SetErrorFlag(mco_Stay::Error::MalformedBirthdate);
-    ParsePmsiInt(ReadFragment(1), &stay.sex) || SetErrorFlag(mco_Stay::Error::MalformedSex);
-    ParsePmsiInt(ReadFragment(4), &stay.unit.number);
-    ParsePmsiInt(ReadFragment(2), &stay.bed_authorization);
-    ParsePmsiDate(ReadFragment(8), &stay.entry.date) || SetErrorFlag(mco_Stay::Error::MalformedEntryDate);
+    ParsePmsiDate(read_fragment(8), &stay.birthdate) || set_error_flag(mco_Stay::Error::MalformedBirthdate);
+    ParsePmsiInt(read_fragment(1), &stay.sex) || set_error_flag(mco_Stay::Error::MalformedSex);
+    ParsePmsiInt(read_fragment(4), &stay.unit.number);
+    ParsePmsiInt(read_fragment(2), &stay.bed_authorization);
+    ParsePmsiDate(read_fragment(8), &stay.entry.date) || set_error_flag(mco_Stay::Error::MalformedEntryDate);
     ParsePmsiChar(line[offset++], &stay.entry.mode);
     ParsePmsiChar(line[offset++], &stay.entry.origin);
-    ParsePmsiDate(ReadFragment(8), &stay.exit.date) || SetErrorFlag(mco_Stay::Error::MalformedExitDate);
+    ParsePmsiDate(read_fragment(8), &stay.exit.date) || set_error_flag(mco_Stay::Error::MalformedExitDate);
     ParsePmsiChar(line[offset++], &stay.exit.mode);
     ParsePmsiChar(line[offset++], &stay.exit.destination);
     offset += 5; // Skip postal code
-    ParsePmsiInt(ReadFragment(4), &stay.newborn_weight) || SetErrorFlag(mco_Stay::Error::MalformedNewbornWeight);
-    ParsePmsiInt(ReadFragment(2), &stay.gestational_age) || SetErrorFlag(mco_Stay::Error::MalformedGestationalAge);
-    ParsePmsiDate(ReadFragment(8), &stay.last_menstrual_period) || SetErrorFlag(mco_Stay::Error::MalformedLastMenstrualPeriod);
-    ParsePmsiInt(ReadFragment(2), &stay.session_count) || SetErrorFlag(mco_Stay::Error::MalformedSessionCount);
+    ParsePmsiInt(read_fragment(4), &stay.newborn_weight) || set_error_flag(mco_Stay::Error::MalformedNewbornWeight);
+    ParsePmsiInt(read_fragment(2), &stay.gestational_age) || set_error_flag(mco_Stay::Error::MalformedGestationalAge);
+    ParsePmsiDate(read_fragment(8), &stay.last_menstrual_period) || set_error_flag(mco_Stay::Error::MalformedLastMenstrualPeriod);
+    ParsePmsiInt(read_fragment(2), &stay.session_count) || set_error_flag(mco_Stay::Error::MalformedSessionCount);
     if (RG_LIKELY(line[offset] != ' ')) {
         ParsePmsiInt(line.Take(offset, 2), &das_count) ||
-            SetErrorFlag(mco_Stay::Error::MalformedOtherDiagnosesCount);
+            set_error_flag(mco_Stay::Error::MalformedOtherDiagnosesCount);
     } else {
-        SetErrorFlag(mco_Stay::Error::MissingOtherDiagnosesCount);
+        set_error_flag(mco_Stay::Error::MissingOtherDiagnosesCount);
     }
     offset += 2;
     if (RG_LIKELY(line[offset] != ' ')) {
         ParsePmsiInt(line.Take(offset, 2), &dad_count) ||
-            SetErrorFlag(mco_Stay::Error::MalformedOtherDiagnosesCount);
+            set_error_flag(mco_Stay::Error::MalformedOtherDiagnosesCount);
     } else {
-        SetErrorFlag(mco_Stay::Error::MissingOtherDiagnosesCount);
+        set_error_flag(mco_Stay::Error::MissingOtherDiagnosesCount);
     }
     offset += 2;
     if (RG_LIKELY(line[offset] != ' ')) {
         ParsePmsiInt(line.Take(offset, 3), &procedures_count) ||
-            SetErrorFlag(mco_Stay::Error::MalformedProceduresCount);
+            set_error_flag(mco_Stay::Error::MalformedProceduresCount);
     } else {
-        SetErrorFlag(mco_Stay::Error::MissingProceduresCount);
+        set_error_flag(mco_Stay::Error::MissingProceduresCount);
     }
     offset += 3;
     if (RG_LIKELY(line[offset] != ' ')) {
@@ -351,7 +351,7 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
         }
     }
     offset += 8;
-    ParsePmsiInt(ReadFragment(3), &stay.igs2) || SetErrorFlag(mco_Stay::Error::MalformedIgs2);
+    ParsePmsiInt(read_fragment(3), &stay.igs2) || set_error_flag(mco_Stay::Error::MalformedIgs2);
     if (line[offset] == '1') {
         stay.flags |= (int)mco_Stay::Flag::Confirmed;
     } else if (RG_UNLIKELY(line[offset] != ' ')) {
@@ -365,13 +365,13 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
             case '1': { stay.flags |= (int)mco_Stay::Flag::Conversion; } break;
             case '2': { stay.flags |= (int)mco_Stay::Flag::NoConversion; } break;
             case ' ': {} break;
-            default: { SetErrorFlag(mco_Stay::Error::MalformedConversion); } break;
+            default: { set_error_flag(mco_Stay::Error::MalformedConversion); } break;
         }
         switch (line[offset++]) {
             case '1': { stay.flags |= (int)mco_Stay::Flag::RAAC; } break;
             case '2':
             case ' ': {}  break;
-            default: { SetErrorFlag(mco_Stay::Error::MalformedRAAC); } break;
+            default: { set_error_flag(mco_Stay::Error::MalformedRAAC); } break;
         }
         offset += 13; // Skip a bunch of fields
     } else {
@@ -389,7 +389,7 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
 
         for (int i = 0; i < das_count; i++) {
             drd_DiagnosisCode diag =
-                drd_DiagnosisCode::FromString(ReadFragment(8), (int)ParseFlag::End);
+                drd_DiagnosisCode::FromString(read_fragment(8), (int)ParseFlag::End);
             if (RG_LIKELY(diag.IsValid())) {
                 other_diagnoses.Append(diag);
             } else {
@@ -401,25 +401,25 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
         for (int i = 0; i < procedures_count; i++) {
             mco_ProcedureRealisation proc = {};
 
-            ParsePmsiDate(ReadFragment(8), &proc.date);
-            proc.proc = drd_ProcedureCode::FromString(ReadFragment(7), (int)ParseFlag::End);
+            ParsePmsiDate(read_fragment(8), &proc.date);
+            proc.proc = drd_ProcedureCode::FromString(read_fragment(7), (int)ParseFlag::End);
             if (version >= 17) {
                 if (line[offset] != ' ') {
                     if (RG_UNLIKELY(line[offset] != '-' ||
                                     !ParsePmsiInt(line.Take(offset + 1, 2), &proc.extension))) {
-                        SetErrorFlag(mco_Stay::Error::MalformedProcedureExtension);
+                        set_error_flag(mco_Stay::Error::MalformedProcedureExtension);
                     }
                 }
                 offset += 3;
             }
-            ParsePmsiInt(ReadFragment(1), &proc.phase);
-            ParsePmsiInt(ReadFragment(1), &proc.activity);
+            ParsePmsiInt(read_fragment(1), &proc.phase);
+            ParsePmsiInt(read_fragment(1), &proc.activity);
             if (line[offset] != ' ') {
                 proc.doc = UpperAscii(line[offset]);
             }
             offset += 1;
             offset += 6; // Skip modifiers, etc.
-            ParsePmsiInt(ReadFragment(2), &proc.count);
+            ParsePmsiInt(read_fragment(2), &proc.count);
 
             if (RG_LIKELY(proc.proc.IsValid())) {
                 procedures.Append(proc);
@@ -472,20 +472,20 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
 
     // Declaring (simple) lambdas inside loops does not seem to impact performance
     Size offset = 9;
-    const auto ReadFragment = [&](Size len) {
+    const auto read_fragment = [&](Size len) {
         Span<const char> frag = line.Take(offset, len);
         offset += len;
         return frag;
     };
-    const auto SetErrorFlag = [&rsa](mco_Stay::Error flag) {
+    const auto set_error_flag = [&rsa](mco_Stay::Error flag) {
         rsa.errors |= (uint32_t)flag;
         return true;
     };
 
     int16_t version = 0;
-    ParsePmsiInt(ReadFragment(3), &version);
+    ParsePmsiInt(read_fragment(3), &version);
     if (RG_UNLIKELY(version < 220 || version > 225)) {
-        SetErrorFlag(mco_Stay::Error::UnknownRumVersion);
+        set_error_flag(mco_Stay::Error::UnknownRumVersion);
         set.stays.Append(rsa);
         return true;
     }
@@ -494,24 +494,24 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
         return false;
     }
 
-    ParsePmsiInt(ReadFragment(10), &rsa.bill_id) || SetErrorFlag(mco_Stay::Error::MalformedBillId);
+    ParsePmsiInt(read_fragment(10), &rsa.bill_id) || set_error_flag(mco_Stay::Error::MalformedBillId);
     rsa.admin_id = rsa.bill_id;
     test.bill_id = rsa.bill_id;
     offset += 19; // Skip more version info, first GHM
-    test.ghm = mco_GhmCode::FromString(ReadFragment(6));
-    ParsePmsiInt(ReadFragment(3), &test.error);
-    ParsePmsiInt(ReadFragment(2), &test.cluster_len);
-    ParsePmsiInt(ReadFragment(3), &age) || SetErrorFlag(mco_Stay::Error::MalformedBirthdate);
-    ParsePmsiInt(ReadFragment(3), &age_days) || SetErrorFlag(mco_Stay::Error::MalformedBirthdate);
-    ParsePmsiInt(ReadFragment(1), &rsa.sex) || SetErrorFlag(mco_Stay::Error::MalformedSex);
+    test.ghm = mco_GhmCode::FromString(read_fragment(6));
+    ParsePmsiInt(read_fragment(3), &test.error);
+    ParsePmsiInt(read_fragment(2), &test.cluster_len);
+    ParsePmsiInt(read_fragment(3), &age) || set_error_flag(mco_Stay::Error::MalformedBirthdate);
+    ParsePmsiInt(read_fragment(3), &age_days) || set_error_flag(mco_Stay::Error::MalformedBirthdate);
+    ParsePmsiInt(read_fragment(1), &rsa.sex) || set_error_flag(mco_Stay::Error::MalformedSex);
     ParsePmsiChar(line[offset++], &rsa.entry.mode);
     ParsePmsiChar(line[offset++], &rsa.entry.origin);
     {
         bool valid = true;
-        valid &= ParsePmsiInt(ReadFragment(2), &rsa.exit.date.st.month);
-        valid &= ParsePmsiInt(ReadFragment(4), &rsa.exit.date.st.year);
+        valid &= ParsePmsiInt(read_fragment(2), &rsa.exit.date.st.month);
+        valid &= ParsePmsiInt(read_fragment(4), &rsa.exit.date.st.year);
         if (RG_UNLIKELY(!valid)) {
-            SetErrorFlag(mco_Stay::Error::MalformedExitDate);
+            set_error_flag(mco_Stay::Error::MalformedExitDate);
         }
         rsa.exit.date.st.day = 1;
     }
@@ -520,7 +520,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
     offset += 1; // Skip stay type
     {
         int duration = 0;
-        if (ParsePmsiInt(ReadFragment(4), &duration) && rsa.exit.date.IsValid()) {
+        if (ParsePmsiInt(read_fragment(4), &duration) && rsa.exit.date.IsValid()) {
             rsa.entry.date = rsa.exit.date - duration;
             if (age) {
                 rsa.birthdate = Date((int16_t)(rsa.entry.date.st.year - age), 1, 1);
@@ -528,92 +528,92 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
                 rsa.birthdate = rsa.entry.date - age_days;
             }
         } else {
-            SetErrorFlag(mco_Stay::Error::MalformedEntryDate);
+            set_error_flag(mco_Stay::Error::MalformedEntryDate);
         }
     }
     offset += 5; // Skip geography code
-    ParsePmsiInt(ReadFragment(4), &rsa.newborn_weight) || SetErrorFlag(mco_Stay::Error::MalformedNewbornWeight);
-    ParsePmsiInt(ReadFragment(2), &rsa.gestational_age) || SetErrorFlag(mco_Stay::Error::MalformedGestationalAge);
+    ParsePmsiInt(read_fragment(4), &rsa.newborn_weight) || set_error_flag(mco_Stay::Error::MalformedNewbornWeight);
+    ParsePmsiInt(read_fragment(2), &rsa.gestational_age) || set_error_flag(mco_Stay::Error::MalformedGestationalAge);
     if (line[offset] != ' ') {
         int last_period_delay;
         if (ParsePmsiInt(line.Take(offset, 3), &last_period_delay) && rsa.entry.date.IsValid()) {
             rsa.last_menstrual_period = rsa.entry.date - last_period_delay;
         } else {
-            SetErrorFlag(mco_Stay::Error::MalformedLastMenstrualPeriod);
+            set_error_flag(mco_Stay::Error::MalformedLastMenstrualPeriod);
         }
     }
     offset += 3;
-    ParsePmsiInt(ReadFragment(2), &rsa.session_count) || SetErrorFlag(mco_Stay::Error::MalformedSessionCount);
+    ParsePmsiInt(read_fragment(2), &rsa.session_count) || set_error_flag(mco_Stay::Error::MalformedSessionCount);
     if (line[offset] == ' ' && line[offset + 1] == 'D') {
         offset += 2;
-        ParsePmsiInt(ReadFragment(2), &test.ghs.number);
+        ParsePmsiInt(read_fragment(2), &test.ghs.number);
         test.ghs.number += 20000;
     } else {
-        ParsePmsiInt(ReadFragment(4), &test.ghs.number);
+        ParsePmsiInt(read_fragment(4), &test.ghs.number);
     }
     {
         int exh = 0;
         int exb = 0;
-        ParsePmsiInt(ReadFragment(4), &exh);
+        ParsePmsiInt(read_fragment(4), &exh);
         offset += 1;
-        ParsePmsiInt(ReadFragment(2), &exb);
+        ParsePmsiInt(read_fragment(2), &exb);
         test.exb_exh = exh - exb;
     }
     offset += 6; // Skip dialysis, UHCD
     if (line[offset] == '1') {
         rsa.flags |= (int)mco_Stay::Flag::Confirmed;
     } else if (RG_UNLIKELY(line[offset] != ' ')) {
-        SetErrorFlag(mco_Stay::Error::MalformedConfirmation);
+        set_error_flag(mco_Stay::Error::MalformedConfirmation);
     }
     offset++;
-    ParsePmsiInt(ReadFragment(1), &global_auth_count);
-    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.dia);
-    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.ent1);
-    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.ent2);
-    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.ent3);
-    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.aph);
-    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.rap);
-    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.ant);
-    ParsePmsiInt(ReadFragment(1), &radiotherapy_supp_count);
+    ParsePmsiInt(read_fragment(1), &global_auth_count);
+    ParsePmsiInt(read_fragment(3), &test.supplement_days.st.dia);
+    ParsePmsiInt(read_fragment(3), &test.supplement_days.st.ent1);
+    ParsePmsiInt(read_fragment(3), &test.supplement_days.st.ent2);
+    ParsePmsiInt(read_fragment(3), &test.supplement_days.st.ent3);
+    ParsePmsiInt(read_fragment(3), &test.supplement_days.st.aph);
+    ParsePmsiInt(read_fragment(3), &test.supplement_days.st.rap);
+    ParsePmsiInt(read_fragment(3), &test.supplement_days.st.ant);
+    ParsePmsiInt(read_fragment(1), &radiotherapy_supp_count);
     offset += (version >= 222) ? 14 : 22;
-    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.ohb);
+    ParsePmsiInt(read_fragment(3), &test.supplement_days.st.ohb);
     offset++; // Skip prestation type
-    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.rea);
-    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.reasi);
+    ParsePmsiInt(read_fragment(3), &test.supplement_days.st.rea);
+    ParsePmsiInt(read_fragment(3), &test.supplement_days.st.reasi);
     {
         int stf = 0;
-        ParsePmsiInt(ReadFragment(3), &stf);
+        ParsePmsiInt(read_fragment(3), &stf);
         test.supplement_days.st.si = (int16_t)(stf - test.supplement_days.st.reasi);
     }
-    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.src);
-    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.nn1);
-    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.nn2);
-    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.nn3);
-    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.rep);
+    ParsePmsiInt(read_fragment(3), &test.supplement_days.st.src);
+    ParsePmsiInt(read_fragment(3), &test.supplement_days.st.nn1);
+    ParsePmsiInt(read_fragment(3), &test.supplement_days.st.nn2);
+    ParsePmsiInt(read_fragment(3), &test.supplement_days.st.nn3);
+    ParsePmsiInt(read_fragment(3), &test.supplement_days.st.rep);
     if (line[offset++] > '0') {
         rsa.bed_authorization = 8;
     }
 
     if (version >= 225) {
         offset += 17;
-        ParsePmsiInt(ReadFragment(1), &test.supplement_days.st.sdc);
+        ParsePmsiInt(read_fragment(1), &test.supplement_days.st.sdc);
         switch (line[offset++]) {
             case '1': { rsa.flags |= (int)mco_Stay::Flag::Conversion; } break;
             case '2': { rsa.flags |= (int)mco_Stay::Flag::NoConversion; } break;
             case ' ': {} break;
-            default: { SetErrorFlag(mco_Stay::Error::MalformedConversion); } break;
+            default: { set_error_flag(mco_Stay::Error::MalformedConversion); } break;
         }
         switch (line[offset++]) {
             case '1': { rsa.flags |= (int)mco_Stay::Flag::RAAC; } break;
             case '2':
             case '0':
             case ' ': {} break;
-            default: { SetErrorFlag(mco_Stay::Error::MalformedRAAC); } break;
+            default: { set_error_flag(mco_Stay::Error::MalformedRAAC); } break;
         }
         offset += 44;
     } else if (version >= 223) {
         offset += 17;
-        ParsePmsiInt(ReadFragment(1), &test.supplement_days.st.sdc);
+        ParsePmsiInt(read_fragment(1), &test.supplement_days.st.sdc);
         offset += 46;
     } else if (version >= 222) {
         offset += 49;
@@ -650,12 +650,12 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
             }
         }
         offset += 6;
-        ParsePmsiInt(ReadFragment(3), &stay.igs2);
+        ParsePmsiInt(read_fragment(3), &stay.igs2);
         if (version >= 221) {
-            ParsePmsiInt(ReadFragment(2), &stay.gestational_age);
+            ParsePmsiInt(read_fragment(2), &stay.gestational_age);
         }
-        ParsePmsiInt(ReadFragment(2), &stay.other_diagnoses.len);
-        ParsePmsiInt(ReadFragment(3), &stay.procedures.len);
+        ParsePmsiInt(read_fragment(2), &stay.other_diagnoses.len);
+        ParsePmsiInt(read_fragment(3), &stay.procedures.len);
         if (i) {
             stay.entry.date = set.stays[set.stays.len - 1].exit.date;
             stay.entry.mode = '6';
@@ -663,7 +663,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
         }
         {
             int duration;
-            if (ParsePmsiInt(ReadFragment(4), &duration)) {
+            if (ParsePmsiInt(read_fragment(4), &duration)) {
                 stay.exit.date = stay.entry.date + duration;
             } else {
                 stay.errors |= (int)mco_Stay::Error::MalformedExitDate;
@@ -673,7 +673,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
             stay.exit.mode = '6';
             stay.exit.destination = '1';
         }
-        ParsePmsiInt(ReadFragment(2), &stay.unit.number);
+        ParsePmsiInt(read_fragment(2), &stay.unit.number);
         stay.unit.number = (int16_t)(stay.unit.number + 10000);
         offset += 1; // Skip end of UM type (A/B)
         switch (line[offset++]) {
@@ -688,8 +688,8 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
 
         if (RG_LIKELY(i < RG_LEN(test.auth_supplements))) {
             int type = 0;
-            ParsePmsiInt(ReadFragment(2), &type);
-            ParsePmsiInt(ReadFragment(4), &test.auth_supplements[i].days);
+            ParsePmsiInt(read_fragment(2), &type);
+            ParsePmsiInt(read_fragment(4), &test.auth_supplements[i].days);
             if (!test.auth_supplements[i].days) {
                 type = 0;
             }
@@ -746,7 +746,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
         HeapArray<drd_DiagnosisCode> other_diagnoses(&other_diagnoses_alloc);
         for (Size j = 0; j < stay.other_diagnoses.len; j++) {
             drd_DiagnosisCode diag =
-                drd_DiagnosisCode::FromString(ReadFragment(6), (int)ParseFlag::End);
+                drd_DiagnosisCode::FromString(read_fragment(6), (int)ParseFlag::End);
             if (RG_LIKELY(diag.IsValid())) {
                 other_diagnoses.Append(diag);
             } else {
@@ -766,23 +766,23 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
 
             {
                 int proc_delay;
-                if (ParsePmsiInt(ReadFragment(3), &proc_delay)) {
+                if (ParsePmsiInt(read_fragment(3), &proc_delay)) {
                     proc.date = rsa.entry.date + proc_delay;
                 }
             }
-            proc.proc = drd_ProcedureCode::FromString(ReadFragment(7), (int)ParseFlag::End);
+            proc.proc = drd_ProcedureCode::FromString(read_fragment(7), (int)ParseFlag::End);
             if (version >= 222) {
                 if (line[offset] != ' ') {
                     ParsePmsiInt(line.Take(offset, 2), &proc.extension) ||
-                        SetErrorFlag(mco_Stay::Error::MalformedProcedureExtension);
+                        set_error_flag(mco_Stay::Error::MalformedProcedureExtension);
                 }
                 offset += 2;
             }
-            ParsePmsiInt(ReadFragment(1), &proc.phase);
-            ParsePmsiInt(ReadFragment(1), &proc.activity);
+            ParsePmsiInt(read_fragment(1), &proc.phase);
+            ParsePmsiInt(read_fragment(1), &proc.activity);
             ParsePmsiChar(line[offset++], &proc.doc);
             offset += 6; // Skip modifiers, doc extension, etc.
-            ParsePmsiInt(ReadFragment(2), &proc.count);
+            ParsePmsiInt(read_fragment(2), &proc.count);
             offset += 1; // Skip date compatibility flag
 
             if (RG_LIKELY(proc.proc.IsValid())) {

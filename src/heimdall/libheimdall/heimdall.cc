@@ -295,13 +295,13 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
         y_scaler = 1.0f;
     }
 
-    const auto ComputeCoordinates = [&](double time, double value) {
+    const auto compute_coordinates = [&](double time, double value) {
         return ImVec2 {
             x_offset + ((float)time * time_zoom),
             y_max - 4.0f - y_scaler * (float)(value - min)
         };
     };
-    const auto GetColor = [&](const Element *elmt) {
+    const auto get_color = [&](const Element *elmt) {
         return DetectAnomaly(*elmt) ? GetVisColor(VisColor::Alert, alpha)
                                     : GetVisColor(VisColor::Plot, alpha);
     };
@@ -312,7 +312,7 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
             return false;
         RG_ASSERT_DEBUG(measures[i]->type == Element::Type::Measure);
         if (!std::isnan(measures[i]->u.measure.min)) {
-            *out_point = ComputeCoordinates(measures[i]->time, measures[i]->u.measure.min);
+            *out_point = compute_coordinates(measures[i]->time, measures[i]->u.measure.min);
             *out_color = GetVisColor(VisColor::Limit, alpha);
         } else {
             out_point->y = NAN;
@@ -323,7 +323,7 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
         if (i >= measures.len)
             return false;
         if (!std::isnan(measures[i]->u.measure.max)) {
-            *out_point = ComputeCoordinates(measures[i]->time, measures[i]->u.measure.max);
+            *out_point = compute_coordinates(measures[i]->time, measures[i]->u.measure.max);
             *out_color = GetVisColor(VisColor::Limit, alpha);
         } else {
             out_point->y = NAN;
@@ -335,15 +335,15 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
     DrawLine(interpolation, [&](Size i, ImVec2 *out_point, ImU32 *out_color) {
         if (i >= measures.len)
             return false;
-        *out_point = ComputeCoordinates(measures[i]->time, measures[i]->u.measure.value);
-        *out_color = GetColor(measures[i]);
+        *out_point = compute_coordinates(measures[i]->time, measures[i]->u.measure.value);
+        *out_color = get_color(measures[i]);
         return true;
     });
 
     // Draw points
     for (const Element *elmt: measures) {
-        ImU32 color = GetColor(elmt);
-        ImVec2 point = ComputeCoordinates(elmt->time, elmt->u.measure.value);
+        ImU32 color = get_color(elmt);
+        ImVec2 point = compute_coordinates(elmt->time, elmt->u.measure.value);
         ImRect point_bb = {
             point.x - 3.0f, point.y - 3.0f,
             point.x + 3.0f, point.y + 3.0f

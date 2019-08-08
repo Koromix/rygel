@@ -130,7 +130,7 @@ int RunBuild(Span<const char *> arguments)
     // NOTE: This overrules LIBCC_THREADS if it exists
     Async::SetWorkerCount(Async::GetWorkerCount() + 1);
 
-    static const auto PrintUsage = [=](FILE *fp) {
+    const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
 R"(Usage: felix build [options] [target...]
        felix build [options] target --run [arguments...]
@@ -176,7 +176,7 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
                 break;
 
             if (opt.Test("--help")) {
-                PrintUsage(stdout);
+                print_usage(stdout);
                 return 0;
             } else if (opt.Test("-C", "--config", OptionType::Value)) {
                 config_filename = opt.current_value;
@@ -260,10 +260,11 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
                 target_names.Append(target.name);
             }
         }
-    }
-    if (!target_names.len) {
-        LogError("There are no targets");
-        return 1;
+
+        if (!target_names.len) {
+            LogError("There are no targets");
+            return 1;
+        }
     }
 
     // Select targets and their dependencies (imports)

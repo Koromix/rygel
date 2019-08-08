@@ -9,7 +9,7 @@ namespace RG {
 
 int RunGoupilAdmin(int argc, char **argv)
 {
-    static const auto PrintUsage = [](FILE *fp) {
+    const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: goupil_admin <command> [<args>]
 
 Commands:
@@ -17,7 +17,7 @@ Commands:
     };
 
     if (argc < 2) {
-        PrintUsage(stderr);
+        print_usage(stderr);
         return 1;
     }
 
@@ -30,7 +30,7 @@ Commands:
             cmd = arguments[0];
             arguments[0] = "--help";
         } else {
-            PrintUsage(stdout);
+            print_usage(stdout);
             return 0;
         }
     }
