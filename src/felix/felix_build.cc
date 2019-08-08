@@ -122,7 +122,7 @@ int RunBuild(Span<const char *> arguments)
     const char *config_filename = nullptr;
     const char *output_directory = nullptr;
     Toolchain toolchain = {Compilers[0], BuildMode::Debug};
-    bool disable_pch = false;
+    bool enable_pch = true;
     bool verbose = false;
     const char *run_target_name = nullptr;
     Span<const char *> run_arguments = {};
@@ -143,7 +143,7 @@ Options:
 
     -t, --toolchain <toolchain>  Set toolchain, see below
                                  (default: %1)
-        --disable_pch            Disable header precompilation (PCH)
+        --no_pch                 Disable header precompilation (PCH)
 
     -j, --jobs <count>           Set maximum number of parallel jobs
                                  (default: number of cores + 1)
@@ -185,8 +185,8 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
             } else if (opt.Test("-t", "--toolchain", OptionType::Value)) {
                 if (!ParseToolchainSpec(opt.current_value, &toolchain))
                     return 1;
-            } else if (opt.Test("--disable_pch")) {
-                disable_pch = true;
+            } else if (opt.Test("--no_pch")) {
+                enable_pch = false;
             } else if (opt.Test("-j", "--jobs", OptionType::Value)) {
                 int jobs;
                 if (!ParseDec(opt.current_value, &jobs))
@@ -305,19 +305,19 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
     LogInfo("Output directory: '%1'", output_directory);
 
     // Disable PCH?
-    if (!disable_pch && !toolchain.compiler->Supports(CompilerFlag::PCH)) {
+    if (enable_pch && !toolchain.compiler->Supports(CompilerFlag::PCH)) {
         bool using_pch = std::any_of(enabled_targets.begin(), enabled_targets.end(),
-                                   [](const Target *target) {
+                                     [](const Target *target) {
             return target->c_pch_filename || target->cxx_pch_filename;
         });
 
         if (using_pch) {
             LogError("PCH does not work correctly with %1 compiler (ignoring)",
                      toolchain.compiler->name);
-            disable_pch = true;
+            enable_pch = false;
         }
     }
-    if (disable_pch) {
+    if (!enable_pch) {
         for (Target &target: target_set.targets) {
             target.c_pch_filename = nullptr;
             target.cxx_pch_filename = nullptr;
