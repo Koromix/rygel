@@ -21,7 +21,7 @@ int RunPack(Span<const char *> arguments)
     const char *merge_file = nullptr;
     HeapArray<const char *> filenames;
 
-    static const auto PrintUsage = [=](FILE *fp) {
+    const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
 R"(Usage: felix pack <filename> ...
 
@@ -61,7 +61,7 @@ Available merge options:)");
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                PrintUsage(stdout);
+                print_usage(stdout);
                 return 0;
             } else if (opt.Test("-t", "--type", OptionType::Value)) {
                 const char *const *name = FindIf(PackModeNames,

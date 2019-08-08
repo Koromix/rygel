@@ -972,7 +972,7 @@ RcppExport SEXP drdR_mco_Diagnoses(SEXP classifier_xp, SEXP date_xp)
         rcc_Vector<int> severity = df_builder.Add<int>("severity");
 
         Size i = 0;
-        const auto ExportDiagInfo = [&](int8_t sex, const mco_DiagnosisInfo &diag_info) {
+        const auto export_diag_info = [&](int8_t sex, const mco_DiagnosisInfo &diag_info) {
             diag.Set(i, diag_info.diag.str);
             sex_spec[i] = (diag_info.flags & (int)mco_DiagnosisInfo::Flag::SexDifference) ? sex : NA_INTEGER;
             cmd[i] = diag_info.Attributes(sex).cmd ? diag_info.Attributes(sex).cmd : NA_INTEGER;
@@ -982,9 +982,9 @@ RcppExport SEXP drdR_mco_Diagnoses(SEXP classifier_xp, SEXP date_xp)
         };
 
         for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
-            ExportDiagInfo(1, diag_info);
+            export_diag_info(1, diag_info);
             if (diag_info.flags & (int)mco_DiagnosisInfo::Flag::SexDifference) {
-                ExportDiagInfo(2, diag_info);
+                export_diag_info(2, diag_info);
             }
         }
 

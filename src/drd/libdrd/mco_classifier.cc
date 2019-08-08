@@ -2024,7 +2024,7 @@ void mco_CountSupplements(const mco_TableIndex &index,
     int ambu_priority = 0;
     int16_t ambu_type = -1;
 
-    const auto AddToCounter = [&](Size stay_idx, int type, int count) {
+    const auto add_to_counter = [&](Size stay_idx, int type, int count) {
         out_counters->values[type] += count;
         if (out_mono_counters.ptr) {
             out_mono_counters[stay_idx].values[type] += count;
@@ -2125,12 +2125,12 @@ void mco_CountSupplements(const mco_TableIndex &index,
             if (ambu_stay_idx >= 0 && ambu_priority >= priority) {
                 if (type >= 0) {
                     int16_t days = mono_prep.duration + (mono_stay.exit.mode == '9') - 1;
-                    AddToCounter(i, type, days);
+                    add_to_counter(i, type, days);
                 }
-                AddToCounter(ambu_stay_idx, ambu_type, 1);
+                add_to_counter(ambu_stay_idx, ambu_type, 1);
             } else if (type >= 0) {
                 int16_t days = mono_prep.duration + (mono_stay.exit.mode == '9');
-                AddToCounter(i, type, days);
+                add_to_counter(i, type, days);
             }
             ambu_stay_idx = -1;
             ambu_priority = 0;
@@ -2141,25 +2141,25 @@ void mco_CountSupplements(const mco_TableIndex &index,
         }
 
         for (const mco_ProcedureInfo *proc_info: mono_prep.procedures) {
-            AddToCounter(i, (int)mco_SupplementType::Ohb, test_ohb && (proc_info->bytes[31] & 0x20));
-            AddToCounter(i, (int)mco_SupplementType::Aph, test_aph && (proc_info->bytes[38] & 0x8));
-            AddToCounter(i, (int)mco_SupplementType::Rap, prep.age < 18 && ((proc_info->bytes[27] & 0x80) |
-                                                                            (proc_info->bytes[22] & 0x4) |
-                                                                            (proc_info->bytes[39] & 0x10) |
-                                                                            (proc_info->bytes[41] & 0xF0) |
-                                                                            (proc_info->bytes[40] & 0x7)));
-            AddToCounter(i, (int)mco_SupplementType::Dia, test_dia && !!(proc_info->bytes[32] & 0x2));
-            AddToCounter(i, (int)mco_SupplementType::Ent1, test_dia && !!(proc_info->bytes[23] & 0x1));
-            AddToCounter(i, (int)mco_SupplementType::Ent2, test_dia && !!(proc_info->bytes[24] & 0x80));
-            AddToCounter(i, (int)mco_SupplementType::Ent3, test_ent3 && !!(proc_info->bytes[30] & 0x4));
+            add_to_counter(i, (int)mco_SupplementType::Ohb, test_ohb && (proc_info->bytes[31] & 0x20));
+            add_to_counter(i, (int)mco_SupplementType::Aph, test_aph && (proc_info->bytes[38] & 0x8));
+            add_to_counter(i, (int)mco_SupplementType::Rap, prep.age < 18 && ((proc_info->bytes[27] & 0x80) |
+                                                                              (proc_info->bytes[22] & 0x4) |
+                                                                              (proc_info->bytes[39] & 0x10) |
+                                                                              (proc_info->bytes[41] & 0xF0) |
+                                                                              (proc_info->bytes[40] & 0x7)));
+            add_to_counter(i, (int)mco_SupplementType::Dia, test_dia && !!(proc_info->bytes[32] & 0x2));
+            add_to_counter(i, (int)mco_SupplementType::Ent1, test_dia && !!(proc_info->bytes[23] & 0x1));
+            add_to_counter(i, (int)mco_SupplementType::Ent2, test_dia && !!(proc_info->bytes[24] & 0x80));
+            add_to_counter(i, (int)mco_SupplementType::Ent3, test_ent3 && !!(proc_info->bytes[30] & 0x4));
             if (test_sdc && (proc_info->bytes[24] & 0x2)) {
-                AddToCounter(i, (int)mco_SupplementType::Sdc, 1);
+                add_to_counter(i, (int)mco_SupplementType::Sdc, 1);
                 test_sdc = false;
             }
         }
     }
     if (ambu_stay_idx >= 0) {
-        AddToCounter(ambu_stay_idx, ambu_type, 1);
+        add_to_counter(ambu_stay_idx, ambu_type, 1);
     }
 
     if (prep.markers & (int)mco_PreparedStay::Marker::ChildbirthProcedure) {
@@ -2172,13 +2172,13 @@ void mco_CountSupplements(const mco_TableIndex &index,
             int16_t ant_days = prep.childbirth_date - stay.entry.date - 2;
             for (Size i = 0; ant_days > 0; i++) {
                 int mono_ant_days = std::min(mono_preps[i].duration, ant_days);
-                AddToCounter(i, (int)mco_SupplementType::Ant, mono_ant_days);
+                add_to_counter(i, (int)mco_SupplementType::Ant, mono_ant_days);
                 ant_days -= mono_ant_days;
             }
         }
     }
 
-    AddToCounter(0, (int)mco_SupplementType::Dip, stay.dip_count);
+    add_to_counter(0, (int)mco_SupplementType::Dip, stay.dip_count);
 }
 
 static mco_Stay FixMonoStayForClassifier(mco_Stay mono_stay)

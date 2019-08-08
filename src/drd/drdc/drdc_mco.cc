@@ -316,7 +316,7 @@ int RunMcoClassify(Span<const char *> arguments)
     int torture = 0;
     HeapArray<const char *> filenames;
 
-    static const auto PrintUsage = [](FILE *fp) {
+    const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_classify [options] stay_file ...
 )");
         PrintLn(fp, CommonOptions);
@@ -356,7 +356,7 @@ Test options:)");
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                PrintUsage(stdout);
+                print_usage(stdout);
                 return 0;
             } else if (opt.Test("-o", "--option", OptionType::Value)) {
                 const char *flags_str = opt.current_value;
@@ -576,7 +576,7 @@ int RunMcoDump(Span<const char *> arguments)
     bool dump = false;
     HeapArray<const char *> filenames;
 
-    static const auto PrintUsage = [](FILE *fp) {
+    const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_dump [options] [filename] ...
 )");
         PrintLn(fp, CommonOptions);
@@ -591,7 +591,7 @@ Dump options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                PrintUsage(stdout);
+                print_usage(stdout);
                 return 0;
             } else if (opt.Test("-d", "--dump")) {
                 dump = true;
@@ -621,7 +621,7 @@ int RunMcoList(Span<const char *> arguments)
     Date index_date = {};
     HeapArray<const char *> spec_strings;
 
-    static const auto PrintUsage = [](FILE *fp) {
+    const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_list [options] list_name ...
 )");
         PrintLn(fp, CommonOptions);
@@ -637,7 +637,7 @@ List options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                PrintUsage(stdout);
+                print_usage(stdout);
                 return 0;
             } else if (opt.Test("-d", "--date", OptionType::Value)) {
                 index_date = Date::FromString(opt.current_value);
@@ -709,7 +709,7 @@ int RunMcoMap(Span<const char *> arguments)
     // Options
     Date index_date = {};
 
-    static const auto PrintUsage = [](FILE *fp) {
+    const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_map [options]
 )");
         PrintLn(fp, CommonOptions);
@@ -725,7 +725,7 @@ Map options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                PrintUsage(stdout);
+                print_usage(stdout);
                 return 0;
             } else if (opt.Test("-d", "--date", OptionType::Value)) {
                 index_date = Date::FromString(opt.current_value);
@@ -777,7 +777,7 @@ int RunMcoPack(Span<const char *> arguments)
     const char *dest_filename = nullptr;
     HeapArray<const char *> filenames;
 
-    static const auto PrintUsage = [](FILE *fp) {
+    const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_pack [options] stay_file ... -O output_file
 )");
         PrintLn(fp, CommonOptions);
@@ -792,7 +792,7 @@ Pack options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                PrintUsage(stdout);
+                print_usage(stdout);
                 return 0;
             } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
                 dest_filename = opt.current_value;
@@ -836,7 +836,7 @@ int RunMcoShow(Span<const char *> arguments)
     Date index_date = {};
     HeapArray<const char *> names;
 
-    static const auto PrintUsage = [](FILE *fp) {
+    const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_show [options] name ...
 )");
         PrintLn(fp, CommonOptions);
@@ -848,7 +848,7 @@ int RunMcoShow(Span<const char *> arguments)
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                PrintUsage(stdout);
+                print_usage(stdout);
                 return 0;
             } else if (opt.Test("-d", "--date", OptionType::Value)) {
                 index_date = Date::FromString(opt.current_value);

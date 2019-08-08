@@ -329,7 +329,7 @@ int RunGoupil(int argc, char **argv)
 {
     BlockAllocator temp_alloc;
 
-    static const auto PrintUsage = [](FILE *fp) {
+    const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: goupil [options]
 
 Options:
@@ -349,7 +349,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                PrintUsage(stdout);
+                print_usage(stdout);
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::OptionalValue)) {
                 config_filename = opt.current_value;

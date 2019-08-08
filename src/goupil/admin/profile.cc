@@ -60,7 +60,7 @@ int RunCreateProfile(Span<const char *> arguments)
     bool demo = false;
     const char *profile_directory = nullptr;
 
-    static const auto PrintUsage = [](FILE *fp) {
+    const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: goupil_admin create_profile [options] profile_directory
 
 Options:
@@ -77,7 +77,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                PrintUsage(stdout);
+                print_usage(stdout);
                 return 0;
             } else if (opt.Test("-k", "--key", OptionType::Value)) {
                 project_key = opt.current_value;
