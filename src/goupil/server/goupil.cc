@@ -223,7 +223,10 @@ static void InitRoutes()
             html = asset;
             html.data = PatchAssetVariables(html, &routes_alloc,
                                             [](const char *key, StreamWriter *writer) {
-                if (TestStr(key, "BASE_URL")) {
+                if (TestStr(key, "VERSION")) {
+                    writer->Write(BuildVersion);
+                    return true;
+                } else if (TestStr(key, "BASE_URL")) {
                     writer->Write(goupil_config.base_url);
                     return true;
                 } else if (TestStr(key, "PROJECT_KEY")) {
