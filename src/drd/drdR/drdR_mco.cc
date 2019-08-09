@@ -939,6 +939,17 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP sector_xp
     END_RCPP
 }
 
+static int GetDiagnosisSexSpec(const mco_DiagnosisInfo &diag_info)
+{
+    switch (diag_info.sexes) {
+        case 0x1: return 1;
+        case 0x2: return 2;
+        case 0x3: return NA_INTEGER;
+    }
+
+    RG_ASSERT(false);
+}
+
 RcppExport SEXP drdR_mco_Diagnoses(SEXP classifier_xp, SEXP date_xp)
 {
     BEGIN_RCPP
@@ -959,33 +970,21 @@ RcppExport SEXP drdR_mco_Diagnoses(SEXP classifier_xp, SEXP date_xp)
 
     rcc_AutoSexp diagnoses_df;
     {
-        Size row_count = index->diagnoses.len;
-        for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
-            row_count += !!(diag_info.flags & (int)mco_DiagnosisInfo::Flag::SexDifference);
-        }
-
-        rcc_DataFrameBuilder df_builder(row_count);
+        rcc_DataFrameBuilder df_builder(index->diagnoses.len);
         rcc_Vector<const char *> diag = df_builder.Add<const char *>("diagnosis");
         rcc_Vector<int> sex_spec = df_builder.Add<int>("sex");
         rcc_Vector<int> cmd = df_builder.Add<int>("cmd");
         rcc_Vector<int> jump = df_builder.Add<int>("jump");
         rcc_Vector<int> severity = df_builder.Add<int>("severity");
 
-        Size i = 0;
-        const auto export_diag_info = [&](int8_t sex, const mco_DiagnosisInfo &diag_info) {
-            diag.Set(i, diag_info.diag.str);
-            sex_spec[i] = (diag_info.flags & (int)mco_DiagnosisInfo::Flag::SexDifference) ? sex : NA_INTEGER;
-            cmd[i] = diag_info.Attributes(sex).cmd ? diag_info.Attributes(sex).cmd : NA_INTEGER;
-            jump[i] = diag_info.Attributes(sex).jump ? diag_info.Attributes(sex).jump : NA_INTEGER;
-            severity[i] = diag_info.Attributes(sex).severity ? diag_info.Attributes(sex).severity : NA_INTEGER;
-            i++;
-        };
+        for (Size i = 0; i < index->diagnoses.len; i++) {
+            const mco_DiagnosisInfo &diag_info = index->diagnoses[i];
 
-        for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
-            export_diag_info(1, diag_info);
-            if (diag_info.flags & (int)mco_DiagnosisInfo::Flag::SexDifference) {
-                export_diag_info(2, diag_info);
-            }
+            diag.Set(i, diag_info.diag.str);
+            sex_spec[i] = GetDiagnosisSexSpec(diag_info);
+            cmd[i] = diag_info.cmd ? diag_info.cmd : NA_INTEGER;
+            jump[i] = diag_info.jump ? diag_info.jump : NA_INTEGER;
+            severity[i] = diag_info.severity ? diag_info.severity : NA_INTEGER;
         }
 
         diagnoses_df = df_builder.Build();
@@ -1018,26 +1017,27 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
     {
         struct ExclusionInfo {
             drd_DiagnosisCode diag;
+            int sex_spec;
             mco_GhmRootCode ghm_root;
         };
         HeapArray<ExclusionInfo> ghm_exclusions;
 
         for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
             for (const mco_GhmRootInfo &ghm_root_info: index->ghm_roots) {
-                bool test = mco_TestGhmRootExclusion(1, diag_info, ghm_root_info);
+                if (mco_TestGhmRootExclusion(diag_info, ghm_root_info)) {
+                    ExclusionInfo excl = {};
+                    excl.diag = diag_info.diag;
+                    excl.sex_spec = GetDiagnosisSexSpec(diag_info);
+                    excl.ghm_root = ghm_root_info.ghm_root;
 
-                if ((diag_info.flags & (int)mco_DiagnosisInfo::Flag::SexDifference) &&
-                        mco_TestGhmRootExclusion(2, diag_info, ghm_root_info) != test)
-                    Rcpp::stop("mco_exclusions() cannot export sex-specific exclusions");
-
-                if (test) {
-                    ghm_exclusions.Append({diag_info.diag, ghm_root_info.ghm_root});
+                    ghm_exclusions.Append(excl);
                 }
             }
         }
 
         rcc_DataFrameBuilder df_builder(ghm_exclusions.len);
         rcc_Vector<const char *> diag = df_builder.Add<const char *>("diagnosis");
+        rcc_Vector<int> sex_spec = df_builder.Add<int>("sex");
         rcc_Vector<const char *> ghm_root = df_builder.Add<const char *>("ghm_root");
 
         for (Size i = 0; i < ghm_exclusions.len; i++) {
@@ -1046,6 +1046,7 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
             const ExclusionInfo &excl = ghm_exclusions[i];
 
             diag.Set(i, excl.diag.str);
+            sex_spec[i] = excl.sex_spec;
             ghm_root.Set(i, excl.ghm_root.ToString(buf));
         }
 
@@ -1056,27 +1057,39 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
     {
         struct ExclusionInfo {
             drd_DiagnosisCode diag;
+            int sex_spec;
             drd_DiagnosisCode main_diag;
+            int main_sex_spec;
         };
         HeapArray<ExclusionInfo> exclusions;
 
         for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
             for (const mco_DiagnosisInfo &main_diag_info: index->diagnoses) {
                 if (mco_TestDiagnosisExclusion(*index, diag_info, main_diag_info)) {
-                    exclusions.Append({diag_info.diag, main_diag_info.diag});
+                    ExclusionInfo excl = {};
+                    excl.diag = diag_info.diag;
+                    excl.sex_spec = GetDiagnosisSexSpec(diag_info);
+                    excl.main_diag = main_diag_info.diag;
+                    excl.main_sex_spec = GetDiagnosisSexSpec(main_diag_info);
+
+                    exclusions.Append(excl);
                 }
             }
         }
 
         rcc_DataFrameBuilder df_builder(exclusions.len);
         rcc_Vector<const char *> diag = df_builder.Add<const char *>("diagnosis");
+        rcc_Vector<int> sex_spec = df_builder.Add<int>("sex");
         rcc_Vector<const char *> main_diag = df_builder.Add<const char *>("main_or_linked_diagnosis");
+        rcc_Vector<int> main_sex_spec = df_builder.Add<int>("main_or_linked_sex");
 
         for (Size i = 0; i < exclusions.len; i++) {
             const ExclusionInfo &excl = exclusions[i];
 
             diag.Set(i, excl.diag.str);
+            sex_spec[i] = excl.sex_spec;
             main_diag.Set(i, excl.main_diag.str);
+            main_sex_spec[i] = excl.main_sex_spec;
         }
 
         diagnoses_df = df_builder.Build();
@@ -1086,31 +1099,26 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
     {
         Size age_exclusions_count = 0;
         for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
-            bool test = diag_info.Attributes(1).cma_minimum_age ||
-                        diag_info.Attributes(1).cma_maximum_age;
-
-            if ((diag_info.flags & (int)mco_DiagnosisInfo::Flag::SexDifference) &&
-                    (diag_info.Attributes(2).cma_minimum_age ||
-                     diag_info.Attributes(2).cma_maximum_age) != test)
-                Rcpp::stop("mco_exclusions() cannot export sex-specific exclusions");
-
-            age_exclusions_count += test;
+            age_exclusions_count += (diag_info.cma_minimum_age ||
+                                     diag_info.cma_maximum_age);
         }
 
         rcc_DataFrameBuilder df_builder(age_exclusions_count);
         rcc_Vector<const char *> diag = df_builder.Add<const char *>("diagnosis");
+        rcc_Vector<int> sex_spec = df_builder.Add<int>("sex");
         rcc_Vector<int> minimum_age = df_builder.Add<int>("minimum_age");
         rcc_Vector<int> maximum_age = df_builder.Add<int>("maximum_age");
 
         Size i = 0;
         for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
-            bool test = diag_info.Attributes(1).cma_minimum_age ||
-                        diag_info.Attributes(1).cma_maximum_age;
+            bool test = diag_info.cma_minimum_age ||
+                        diag_info.cma_maximum_age;
 
             if (test) {
                 diag.Set(i, diag_info.diag.str);
-                minimum_age[i] = diag_info.Attributes(1).cma_minimum_age ? diag_info.Attributes(1).cma_minimum_age : NA_INTEGER;
-                maximum_age[i] = diag_info.Attributes(1).cma_maximum_age ? diag_info.Attributes(1).cma_maximum_age : NA_INTEGER;
+                sex_spec[i] = GetDiagnosisSexSpec(diag_info);
+                minimum_age[i] = diag_info.cma_minimum_age ? diag_info.cma_minimum_age : NA_INTEGER;
+                maximum_age[i] = diag_info.cma_maximum_age ? diag_info.cma_maximum_age : NA_INTEGER;
                 i++;
             }
         }
