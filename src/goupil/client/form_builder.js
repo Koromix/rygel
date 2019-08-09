@@ -472,7 +472,7 @@ function FormBuilder(state, widgets, variables = []) {
 
         let render = intf => renderWrappedWidget(intf, html`
             <label for=${id}>${label || key}</label>
-            <span>${text}</span>
+            <span class="af_calc">${text}</span>
         `);
 
         let intf = addWidget(render, options);
