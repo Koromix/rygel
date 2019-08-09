@@ -1129,8 +1129,8 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set,
         }
     }
     out_prepared_set->stay.exit = mono_stays[mono_stays.len - 1].exit;
-    out_prepared_set->stay.flags = mono_stays[mono_stays.len - 1].flags &
-                                   ((int)mco_Stay::Flag::Confirmed | (int)mco_Stay::Flag::RAAC);
+    out_prepared_set->stay.flags = (mono_stays[0].flags & (int)mco_Stay::Flag::RAAC) |
+                                   (mono_stays[mono_stays.len - 1].flags & (int)mco_Stay::Flag::Confirmed);
     out_prepared_set->stay.other_diagnoses = {};
     out_prepared_set->stay.procedures = {};
 
