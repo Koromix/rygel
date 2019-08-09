@@ -1833,6 +1833,11 @@ bool mco_LoadTableSet(Span<const char *const> table_directories,
                       Span<const char *const> table_filenames,
                       mco_TableSet *out_set)
 {
+    static const char *const directory_names[] = {
+        "mco",
+        "mco_tables"
+    };
+
     BlockAllocator temp_alloc;
 
     HeapArray<const char *> filenames;
@@ -1854,10 +1859,12 @@ bool mco_LoadTableSet(Span<const char *const> table_directories,
         };
 
         bool success = true;
-        for (const char *resource_dir: table_directories) {
-            const char *tab_dir = Fmt(&temp_alloc, "%1%/mco_tables", resource_dir).ptr;
-            if (TestFile(tab_dir, FileType::Directory)) {
-                success &= enumerate_directory_files(tab_dir);
+        for (const char *table_dir: table_directories) {
+            for (const char *dir_name: directory_names) {
+                const char *mco_dir = Fmt(&temp_alloc, "%1%/%2", table_dir, dir_name).ptr;
+                if (TestFile(mco_dir, FileType::Directory)) {
+                    success &= enumerate_directory_files(mco_dir);
+                }
             }
         }
         filenames.Append(table_filenames);
