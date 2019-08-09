@@ -146,11 +146,13 @@ static const mco_PreparedStay *FindMainStay(Span<const mco_PreparedStay> mono_pr
         }
     }
 
-    if (zx_prep)
+    if (zx_prep) {
         return zx_prep;
-    if (last_trauma_prep >= score_prep)
+    } else if (last_trauma_prep >= score_prep) {
         return trauma_prep;
-    return score_prep;
+    } else {
+        return score_prep;
+    }
 }
 
 static bool SetError(mco_ErrorSet *error_set, int16_t error, int16_t priority = 1)
