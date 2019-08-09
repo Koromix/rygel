@@ -60,7 +60,7 @@ void mco_DumpDiagnosisTable(Span<const mco_DiagnosisInfo> diagnoses,
                             StreamWriter *out_st)
 {
     for (const mco_DiagnosisInfo &diag_info: diagnoses) {
-        const char *sex_str;
+        const char *sex_str = nullptr;
         switch (diag_info.sexes) {
             case 0x1: { sex_str = " (male)"; } break;
             case 0x2: { sex_str = " (female)"; } break;
