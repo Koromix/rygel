@@ -1177,26 +1177,67 @@ void ClearLastLogError()
 
 #ifdef _WIN32
 
+static bool ConvertUtf8ToWide(const char *str, Span<WCHAR> out_str_w)
+{
+    RG_ASSERT_DEBUG(out_str_w.len >= 1);
+
+    int len = MultiByteToWideChar(CP_UTF8, 0, str, -1, out_str_w.ptr, out_str_w.len);
+    if (!len) {
+        switch (GetLastError()) {
+            case ERROR_INSUFFICIENT_BUFFER: { LogError("Path '%1' is too large", str); } break;
+            case ERROR_NO_UNICODE_TRANSLATION: { LogError("Path '%1' is not valid UTF-8", str); } break;
+            default: { LogError("MultiByteToWideChar() failed: %1", Win32ErrorString()); } break;
+        }
+        return false;
+    }
+
+    return true;
+}
+
+static bool ConvertWideToUtf8(LPCWSTR str_w, Span<char> out_str)
+{
+    RG_ASSERT_DEBUG(out_str.len >= 1);
+
+    int len = WideCharToMultiByte(CP_UTF8, 0, str_w, -1, out_str.ptr, out_str.len, nullptr, nullptr);
+    if (!len) {
+        // This function is mainly used for strings returned by Win32, errors should
+        // be rare so there is no need for fancy messages.
+        LogError("WideCharToMultiByte() failed: %1", Win32ErrorString());
+        return false;
+    }
+
+    return true;
+}
+
 char *Win32ErrorString(uint32_t error_code)
 {
+    static RG_THREAD_LOCAL char str_buf[512];
+
     if (error_code == UINT32_MAX) {
         error_code = GetLastError();
     }
 
-    static RG_THREAD_LOCAL char str_buf[256];
-    DWORD fmt_ret = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                                  nullptr, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                                  str_buf, RG_SIZE(str_buf), nullptr);
-    if (fmt_ret) {
+    WCHAR buf_w[256];
+    if (!FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                        nullptr, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                        buf_w, RG_SIZE(buf_w), nullptr))
+        goto fail;
+
+    if (!WideCharToMultiByte(CP_UTF8, 0, buf_w, -1, str_buf, RG_SIZE(str_buf), nullptr, nullptr))
+        goto fail;
+
+    // Truncate newlines
+    {
         char *str_end = str_buf + strlen(str_buf);
-        // FormatMessage adds newlines, remove them
         while (str_end > str_buf && (str_end[-1] == '\n' || str_end[-1] == '\r'))
             str_end--;
         *str_end = 0;
-    } else {
-        strcpy(str_buf, "(unknown)");
     }
 
+    return str_buf;
+
+fail:
+    sprintf(str_buf, "Win32 error 0x%x", error_code);
     return str_buf;
 }
 
@@ -1219,8 +1260,12 @@ static int64_t FileTimeToUnixTime(FILETIME ft)
 
 bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
 {
-    HANDLE h = CreateFile(filename, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                          nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+    WCHAR filename_w[4096];
+    if (!ConvertUtf8ToWide(filename, filename_w))
+        return false;
+
+    HANDLE h = CreateFileW(filename_w, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                           nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
     if (h == INVALID_HANDLE_VALUE) {
         DWORD err = GetLastError();
         if (error_if_missing ||
@@ -1247,21 +1292,37 @@ bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               std::function<bool(const char *, FileType)> func)
 {
-    char find_filter[4096];
-    if (!filter) {
+    if (filter) {
+        RG_ASSERT_DEBUG(!strpbrk(filter, RG_PATH_SEPARATORS));
+    } else {
         filter = "*";
     }
-    if (snprintf(find_filter, RG_SIZE(find_filter), "%s\\%s", dirname, filter) >= RG_SIZE(find_filter)) {
-        LogError("Cannot enumerate directory '%1': Path too long", dirname);
-        return EnumStatus::Error;
+
+    WCHAR find_filter_w[4096];
+    {
+        char find_filter[4096];
+        if (snprintf(find_filter, RG_SIZE(find_filter), "%s\\%s", dirname, filter) >= RG_SIZE(find_filter)) {
+            LogError("Cannot enumerate directory '%1': Path too long", dirname);
+            return EnumStatus::Error;
+        }
+
+        if (!ConvertUtf8ToWide(find_filter, find_filter_w))
+            return EnumStatus::Error;
     }
 
-    WIN32_FIND_DATA find_data;
-    HANDLE handle = FindFirstFileEx(find_filter, FindExInfoBasic, &find_data,
-                                    FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
+    WIN32_FIND_DATAW find_data;
+    HANDLE handle = FindFirstFileExW(find_filter_w, FindExInfoBasic, &find_data,
+                                     FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
     if (handle == INVALID_HANDLE_VALUE) {
         if (GetLastError() == ERROR_FILE_NOT_FOUND) {
-            DWORD attrib = GetFileAttributes(dirname);
+            // Erase the filter part from the buffer, we are about to exit anyway.
+            // And no, I don't want to include wchar.h
+            Size len = 0;
+            while (find_filter_w[len++]);
+            while (len > 0 && find_filter_w[--len] != L'\\');
+            find_filter_w[len] = 0;
+
+            DWORD attrib = GetFileAttributesW(find_filter_w);
             if (attrib != INVALID_FILE_ATTRIBUTES && (attrib & FILE_ATTRIBUTE_DIRECTORY))
                 return EnumStatus::Done;
         }
@@ -1283,11 +1344,15 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
             return EnumStatus::Partial;
         }
 
+        char filename[512];
+        if (!ConvertWideToUtf8(find_data.cFileName, filename))
+            return EnumStatus::Error;
+
         FileType file_type = FileAttributesToType(find_data.dwFileAttributes);
 
-        if (!func(find_data.cFileName, file_type))
+        if (!func(filename, file_type))
             return EnumStatus::Partial;
-    } while (FindNextFile(handle, &find_data));
+    } while (FindNextFileW(handle, &find_data));
 
     if (GetLastError() != ERROR_NO_MORE_FILES) {
         LogError("Error while enumerating directory '%1': %2", dirname,
@@ -1448,6 +1513,7 @@ bool TestFile(const char *filename, FileType type)
     return true;
 }
 
+// TODO: Replace with OS-independent implementation, with support for full paths
 bool MatchPathName(const char *name, const char *pattern)
 {
 #ifdef _WIN32
@@ -1460,7 +1526,11 @@ bool MatchPathName(const char *name, const char *pattern)
 bool SetWorkingDirectory(const char *directory)
 {
 #ifdef _WIN32
-    if (!SetCurrentDirectory(directory)) {
+    WCHAR directory_w[4096];
+    if (!ConvertUtf8ToWide(directory, directory_w))
+        return false;
+
+    if (!SetCurrentDirectoryW(directory_w)) {
         LogError("Failed to set current directory to '%1': %2", directory, Win32ErrorString());
         return false;
     }
@@ -1479,8 +1549,11 @@ const char *GetWorkingDirectory()
     static RG_THREAD_LOCAL char buf[4096];
 
 #ifdef _WIN32
-    DWORD ret = GetCurrentDirectory(RG_SIZE(buf), buf);
-    RG_ASSERT(ret && ret <= RG_SIZE(buf));
+    WCHAR buf_w[RG_SIZE(buf)];
+    DWORD ret = GetCurrentDirectoryW(RG_SIZE(buf_w), buf_w);
+    RG_ASSERT(ret && ret <= RG_SIZE(buf_w));
+
+    RG_ASSERT(ConvertWideToUtf8(buf_w, buf));
 #else
     RG_ASSERT(getcwd(buf, RG_SIZE(buf)));
 #endif
@@ -1542,9 +1615,11 @@ const char *GetApplicationExecutable()
     static char executable_path[4096];
 
     if (!executable_path[0]) {
-        Size path_len = (Size)GetModuleFileName(nullptr, executable_path, RG_SIZE(executable_path));
-        RG_ASSERT(path_len);
-        RG_ASSERT(path_len < RG_SIZE(executable_path));
+        WCHAR path_w[RG_SIZE(executable_path)];
+        Size path_len = (Size)GetModuleFileNameW(nullptr, path_w, RG_SIZE(path_w));
+        RG_ASSERT(path_len && path_len < RG_SIZE(path_w));
+
+        RG_ASSERT(ConvertWideToUtf8(path_w, executable_path));
     }
 
     return executable_path;
@@ -1840,17 +1915,17 @@ static bool CreateOverlappedPipe(bool overlap0, bool overlap1, HANDLE *out_h0, H
         Fmt(pipe_name, "\\\\.\\Pipe\\libcc.%1.%2",
             GetCurrentProcessId(), InterlockedIncrement(&pipe_idx));
 
-        handles[0] = CreateNamedPipe(pipe_name,
-                                     PIPE_ACCESS_INBOUND | (overlap0 ? FILE_FLAG_OVERLAPPED : 0),
-                                     PIPE_TYPE_BYTE | PIPE_WAIT, 1, 8192, 8192, 0, nullptr);
+        handles[0] = CreateNamedPipeA(pipe_name,
+                                      PIPE_ACCESS_INBOUND | (overlap0 ? FILE_FLAG_OVERLAPPED : 0),
+                                      PIPE_TYPE_BYTE | PIPE_WAIT, 1, 8192, 8192, 0, nullptr);
         if (!handles[0] && GetLastError() != ERROR_ACCESS_DENIED) {
             LogError("Failed to create pipe: %1", Win32ErrorString());
             return false;
         }
     } while (!handles[0]);
 
-    handles[1] = CreateFile(pipe_name, GENERIC_WRITE, 0, nullptr, OPEN_EXISTING,
-                            FILE_ATTRIBUTE_NORMAL | (overlap1 ? FILE_FLAG_OVERLAPPED : 0), nullptr);
+    handles[1] = CreateFileA(pipe_name, GENERIC_WRITE, 0, nullptr, OPEN_EXISTING,
+                             FILE_ATTRIBUTE_NORMAL | (overlap1 ? FILE_FLAG_OVERLAPPED : 0), nullptr);
     if (handles[1] == INVALID_HANDLE_VALUE) {
         LogError("Failed to create pipe: %1", Win32ErrorString());
         return false;
@@ -1865,7 +1940,15 @@ static bool CreateOverlappedPipe(bool overlap0, bool overlap1, HANDLE *out_h0, H
 bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
                         std::function<void(Span<uint8_t> buf)> out_func, int *out_code)
 {
-    STARTUPINFO startup_info = {};
+    STARTUPINFOW startup_info = {};
+
+    // Convert command line
+    Span<WCHAR> cmd_line_w;
+    cmd_line_w.len = 4 * strlen(cmd_line) + 2;
+    cmd_line_w.ptr = (WCHAR *)Allocator::Allocate(nullptr, cmd_line_w.len);
+    RG_DEFER { Allocator::Release(nullptr, cmd_line_w.ptr, cmd_line_w.len); };
+    if (!ConvertUtf8ToWide(cmd_line, cmd_line_w))
+        return false;
 
     // Create read and write pipes
     HANDLE in_pipe[2] = {};
@@ -1900,7 +1983,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
         startup_info.dwFlags |= STARTF_USESTDHANDLES;
 
         PROCESS_INFORMATION process_info = {};
-        if (!CreateProcessA(nullptr, const_cast<char *>(cmd_line), nullptr, nullptr, TRUE, 0,
+        if (!CreateProcessW(nullptr, cmd_line_w.ptr, nullptr, nullptr, TRUE, 0,
                             nullptr, nullptr, &startup_info, &process_info)) {
             LogError("Failed to start process: %1", Win32ErrorString());
             return false;
@@ -3486,7 +3569,11 @@ AssetLoadStatus AssetSet::LoadFromLibrary(const char *filename, const char *var_
     }
 
 #ifdef _WIN32
-    HMODULE h = LoadLibrary(filename);
+    WCHAR filename_w[4096];
+    if (!ConvertUtf8ToWide(filename, filename_w))
+        return AssetLoadStatus::Error;
+
+    HMODULE h = LoadLibraryW(filename_w);
     if (!h) {
         LogError("Cannot load library '%1'", filename);
         return AssetLoadStatus::Error;

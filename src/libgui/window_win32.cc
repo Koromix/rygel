@@ -47,30 +47,6 @@ struct gui_Win32Window {
 static RG_THREAD_LOCAL gui_Info *thread_info;
 static RG_THREAD_LOCAL gui_Win32Window *thread_window;
 
-static const char *GetWin32ErrorMessage(DWORD err)
-{
-    static char msg_buf[2048];
-
-    if (FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, err,
-                      MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msg_buf, RG_SIZE(msg_buf), NULL)) {
-        // FormatMessage adds newlines, remove them
-        char *msg_end = msg_buf + strlen(msg_buf);
-        while (msg_end > msg_buf && strchr("\r\n", msg_end[-1]))
-            msg_end--;
-        *msg_end = 0;
-    } else {
-        strcpy(msg_buf, "(unknown)");
-    }
-
-    return msg_buf;
-}
-
-static const char *GetWin32ErrorMessage()
-{
-    DWORD last_error = GetLastError();
-    return GetWin32ErrorMessage(last_error);
-}
-
 static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
     switch (msg) {
@@ -189,22 +165,22 @@ static HWND CreateMainWindow(const char *application_name)
     if (!main_cls_atom) {
         Fmt(main_cls_name, "%1_main", application_name);
 
-        WNDCLASSEX gl_cls = { RG_SIZE(gl_cls) };
+        WNDCLASSEXA gl_cls = { RG_SIZE(gl_cls) };
         gl_cls.hInstance = GetModuleHandle(nullptr);
         gl_cls.lpszClassName = main_cls_name;
         gl_cls.lpfnWndProc = MainWindowProc;
         gl_cls.hCursor = LoadCursor(nullptr, IDC_ARROW);
         gl_cls.style = CS_OWNDC;
 
-        main_cls_atom = RegisterClassEx(&gl_cls);
+        main_cls_atom = RegisterClassExA(&gl_cls);
         if (!main_cls_atom) {
             LogError("Failed to register window class '%1': %2", main_cls_name,
-                     GetWin32ErrorMessage());
+                     Win32ErrorString());
             return nullptr;
         }
 
         atexit([]() {
-            UnregisterClass(main_cls_name, GetModuleHandle(nullptr));
+            UnregisterClassA(main_cls_name, GetModuleHandle(nullptr));
         });
     }
 
@@ -216,12 +192,12 @@ static HWND CreateMainWindow(const char *application_name)
         rect.bottom = 648;
         AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, 0);
 
-        main_wnd = CreateWindowEx(0, main_cls_name, application_name, WS_OVERLAPPEDWINDOW,
-                                  CW_USEDEFAULT, CW_USEDEFAULT,
-                                  rect.right - rect.left, rect.bottom - rect.top,
-                                  nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
+        main_wnd = CreateWindowExA(0, main_cls_name, application_name, WS_OVERLAPPEDWINDOW,
+                                   CW_USEDEFAULT, CW_USEDEFAULT,
+                                   rect.right - rect.left, rect.bottom - rect.top,
+                                   nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
         if (!main_wnd) {
-            LogError("Failed to create Win32 window: %s", GetWin32ErrorMessage());
+            LogError("Failed to create Win32 window: %s", Win32ErrorString());
             return nullptr;
         }
 
@@ -249,27 +225,28 @@ static bool InitWGL(const char *application_name)
     Fmt(dummy_cls_name, "%1_init_gl", application_name);
 
     {
-        WNDCLASSEX dummy_cls = { RG_SIZE(dummy_cls) };
+        WNDCLASSEXA dummy_cls = { RG_SIZE(dummy_cls) };
         dummy_cls.hInstance = GetModuleHandle(nullptr);
         dummy_cls.lpszClassName = dummy_cls_name;
         dummy_cls.lpfnWndProc = DefWindowProc;
-        if (!RegisterClassEx(&dummy_cls)) {
+
+        if (!RegisterClassExA(&dummy_cls)) {
             LogError("Failed to register window class '%1': %2", dummy_cls_name,
-                     GetWin32ErrorMessage());
+                     Win32ErrorString());
             return false;
         }
     }
-    RG_DEFER { UnregisterClass(dummy_cls_name, GetModuleHandle(nullptr)); };
+    RG_DEFER { UnregisterClassA(dummy_cls_name, GetModuleHandle(nullptr)); };
 
     HWND dummy_wnd;
     HDC dummy_dc;
     {
-        dummy_wnd = CreateWindowEx(0, dummy_cls_name, dummy_cls_name, 0, 0, 0, 0, 0,
-                                   nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
+        dummy_wnd = CreateWindowExA(0, dummy_cls_name, dummy_cls_name, 0, 0, 0, 0, 0,
+                                    nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
         dummy_dc = GetDC(dummy_wnd);
         if (!dummy_wnd || !dummy_dc) {
             LogError("Failed to create dummy window for OpenGL context: %1",
-                     GetWin32ErrorMessage());
+                     Win32ErrorString());
             return false;
         }
     }
@@ -283,20 +260,20 @@ static bool InitWGL(const char *application_name)
         pfd.cColorBits = 24;
         int suggested_pixel_fmt = ChoosePixelFormat(dummy_dc, &pfd);
         if (!SetPixelFormat(dummy_dc, suggested_pixel_fmt, &pfd)) {
-            LogError("Failed to set pixel format for dummy window: %1", GetWin32ErrorMessage());
+            LogError("Failed to set pixel format for dummy window: %1", Win32ErrorString());
             return false;
         }
     }
 
     HGLRC dummy_ctx = wglCreateContext(dummy_dc);
     if (!dummy_ctx) {
-        LogError("Failed to create OpenGL context for dummy window: %1", GetWin32ErrorMessage());
+        LogError("Failed to create OpenGL context for dummy window: %1", Win32ErrorString());
         return false;
     }
     RG_DEFER { wglDeleteContext(dummy_ctx); };
 
     if (!wglMakeCurrent(dummy_dc, dummy_ctx)) {
-        LogError("Failed to change OpenGL context of dummy window: %1", GetWin32ErrorMessage());
+        LogError("Failed to change OpenGL context of dummy window: %1", Win32ErrorString());
         return false;
     }
     RG_DEFER { wglMakeCurrent(dummy_dc, nullptr); };
@@ -350,7 +327,7 @@ static HGLRC CreateGLContext(const char *application_name, HDC dc)
         PIXELFORMATDESCRIPTOR pixel_fmt_desc;
         DescribePixelFormat(dc, pixel_fmt_index, RG_SIZE(pixel_fmt_desc), &pixel_fmt_desc);
         if (!SetPixelFormat(dc, pixel_fmt_index, &pixel_fmt_desc)) {
-            LogError("Cannot set pixel format on GL window: %1", GetWin32ErrorMessage());
+            LogError("Cannot set pixel format on GL window: %1", Win32ErrorString());
             return nullptr;
         }
     }

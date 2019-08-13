@@ -60,6 +60,28 @@ static void AppendGccObjectArguments(const char *src_filename, BuildMode build_m
     }
 }
 
+#ifdef _WIN32
+static bool MakeTemporaryFile(Span<char> out_filename)
+{
+    WCHAR temp_path_w[1024];
+    WCHAR temp_filename_w[1024];
+    if (!GetTempPathW(RG_LEN(temp_path_w), temp_path_w))
+        goto fail;
+    if (!GetTempFileNameW(temp_path_w, L"fxb", 0, temp_filename_w))
+        goto fail;
+
+    if (!WideCharToMultiByte(CP_UTF8, 0, temp_filename_w, -1,
+                             out_filename.ptr, out_filename.len, nullptr, nullptr))
+        goto fail;
+
+    return true;
+
+fail:
+    LogError("Failed to create temporary filename");
+    return false;
+}
+#endif
+
 static bool AppendGccLinkArguments(Span<const char *const> obj_filenames, BuildMode build_mode,
                                    LinkType link_type, Span<const char *const> libraries,
                                    const char *dest_filename, HeapArray<char> *out_buf)
@@ -82,22 +104,15 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames, BuildM
 
 #ifdef _WIN32
     Size rsp_offset = out_buf->len;
-#endif
+
     for (const char *obj_filename: obj_filenames) {
         Fmt(out_buf, " %1", obj_filename);
     }
-#ifdef _WIN32
+
     if (out_buf->len - rsp_offset >= 4096) {
         char rsp_filename[4096];
-        {
-            // TODO: Maybe we should try to delete these temporary files when felix exits?
-            char temp_directory[4096];
-            if (!GetTempPath(RG_SIZE(temp_directory), temp_directory) ||
-                    !GetTempFileName(temp_directory, "fxb", 0, rsp_filename)) {
-                LogError("Failed to create temporary path");
-                return false;
-            }
-        }
+        if (!MakeTemporaryFile(rsp_filename))
+            return false;
 
         // Apparently backslash characters needs to be escaped in response files,
         // but it's easier to use '/' instead.
@@ -110,6 +125,10 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames, BuildM
 
         out_buf->RemoveFrom(rsp_offset);
         Fmt(out_buf, " \"@%1\"", rsp_filename);
+    }
+#else
+    for (const char *obj_filename: obj_filenames) {
+        Fmt(out_buf, " %1", obj_filename);
     }
 #endif
 
