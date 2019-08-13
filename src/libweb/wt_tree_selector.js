@@ -132,7 +132,7 @@ let wt_tree_selector = (function() {
 
         function syncSummary() {
             if (!current_values.size) {
-                render(html`${prefix}<a>Aucune sélection</a>`, summary_el);
+                render(html`${prefix}Aucune sélection`, summary_el);
             } else if (current_values.size < 8) {
                 let sorted_values = Array.from(current_values).sort();
 
@@ -141,7 +141,7 @@ let wt_tree_selector = (function() {
                                                          data-value=${util.valueToStr(value)}>${value}</a>`)}
                 `, summary_el);
             } else {
-                render(html`${prefix}<a>${current_values.size} / ${values.size}</a>`, summary_el);
+                render(html`${prefix}${current_values.size} / ${values.size}`, summary_el);
             }
         }
 
