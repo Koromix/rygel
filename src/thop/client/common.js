@@ -296,18 +296,23 @@ function refreshIndexesLine(indexes, main_index) {
         return;
 
     let builder = wt_version_line.create();
-    builder.hrefBuilder = version => thop.routeToUrl({date: version.date}).url;
-    builder.changeHandler = e => thop.go({date: builder.getDate()});
+    builder.hrefBuilder = version => thop.routeToUrl({date: version.date.toString()}).url;
+    builder.changeHandler = e => thop.go({date: builder.getDate().toString()});
 
     for (const index of indexes) {
+        let date = dates.fromString(index.begin_date);
         let label = index.begin_date;
+
         if (label.endsWith('-01'))
             label = label.substr(0, label.length - 3);
 
-        builder.addVersion(index.begin_date, label, index.begin_date, index.changed_prices);
+        builder.addVersion(date, label, index.begin_date, index.changed_prices);
     }
-    if (main_index >= 0)
-        builder.setDate(indexes[main_index].begin_date);
+
+    if (main_index >= 0) {
+        let current_date = dates.fromString(indexes[main_index].begin_date);
+        builder.setDate(current_date);
+    }
 
     let svg = query('#opt_index');
     builder.render(svg);

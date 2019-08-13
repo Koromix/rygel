@@ -41,8 +41,8 @@ let wt_version_line = (function() {
             root_el = new_root_el;
 
             if (versions.length >= 2) {
-                let min_date = new Date(versions[0].date);
-                let max_date = new Date(versions[versions.length - 1].date);
+                let min_date = versions[0].date;
+                let max_diff = versions[versions.length - 1].date.diff(min_date);
 
                 // Alternate versions labels above and below line
                 let text_above = false;
@@ -51,11 +51,11 @@ let wt_version_line = (function() {
                     <svg class="vlin">
                         <line class="vlin_line" x1="2%" y1="20" x2="98%" y2="20"/>
                         <g>${versions.map(version => {
-                            let x = (6.0 + (new Date(version.date) - min_date) / (max_date - min_date) * 88.0).toFixed(1) + '%';
-                            let radius = 4 + !!version.major + (version.date === current_date);
+                            let x = (6.0 + version.date.diff(min_date) / max_diff * 88.0).toFixed(1) + '%';
+                            let radius = 4 + !!version.major + version.date.equals(current_date);
 
                             let cls = 'vlin_node';
-                            if (version.date === current_date) {
+                            if (version.date.equals(current_date)) {
                                 cls += ' vlin_node_current';
                             } else if (version.major) {
                                 cls += ' vlin_node_major';
