@@ -522,7 +522,7 @@ let mco_casemix = (function() {
 
         // Set main picker
         {
-            let builder = wt_period_picker.create();
+            let builder = new PeriodPicker;
             builder.changeHandler = () => thop.go({period: builder.getDates().map(date => date.toString())});
             builder.setLimitDates([settings.start_date, settings.end_date].map(dates.fromString));
             builder.setDates(period.map(str => str ? dates.fromString(str) : null));
@@ -531,7 +531,7 @@ let mco_casemix = (function() {
 
         // Set diff picker
         {
-            let builder = wt_period_picker.create();
+            let builder = new PeriodPicker;
             builder.changeHandler = () => thop.go({prev_period: builder.getDates().map(date => date.toString())});
             builder.setLimitDates([settings.start_date, settings.end_date].map(dates.fromString));
             builder.setDates(prev_period.map(str => str ? dates.fromString(str) : null));
@@ -551,7 +551,7 @@ let mco_casemix = (function() {
 
         let select = query('#opt_units > div');
 
-        let builder = wt_tree_selector.create();
+        let builder = new TreeSelector;
         builder.changeHandler = function() {
             thop.go({units: this.getValues().sort(),
                      structure: this.getCurrentTab()});
@@ -612,7 +612,7 @@ let mco_casemix = (function() {
 
         let select = query('#opt_ghm_roots > div');
 
-        let builder = wt_tree_selector.create();
+        let builder = new TreeSelector;
         builder.changeHandler = function() {
             thop.go({ghm_roots: this.getValues(),
                      regroup: GroupTypes[this.getCurrentTab()].key});
@@ -673,7 +673,7 @@ let mco_casemix = (function() {
     function refreshUnitsTable(filter_units, filter_ghm_roots, structure, page, sort) {
         let summary = summaries.units;
         if (!summary) {
-            summary = wt_data_table.create();
+            summary = new DataTable;
             summary.sortHandler = function(sort) { thop.go({sort: sort}); };
 
             summaries.units = summary;
@@ -759,13 +759,13 @@ let mco_casemix = (function() {
         let render_count = summary.render(query('#cm_units .dtab'),
                                           (page - 1) * page_len, page_len, {hide_empty: true});
         syncPagers(queryAll('#cm_units .dtab_pager'), page,
-                   wt_pager.computeLastPage(render_count, summary.getRowCount(), page_len));
+                   Pager.computeLastPage(render_count, summary.getRowCount(), page_len));
     }
 
     function refreshGhmRootsTable(filter_units, filter_ghm_roots, regroup, page, sort) {
         let summary = summaries.ghm_roots;
         if (!summary) {
-            summary = wt_data_table.create();
+            summary = new DataTable;
             summary.sortHandler = function(sort) { thop.go({sort: sort}); };
 
             summaries.ghm_roots = summary;
@@ -875,7 +875,7 @@ let mco_casemix = (function() {
         let render_count = summary.render(query('#cm_ghm_roots .dtab'),
                                           (page - 1) * page_len, page_len, {hide_empty: true});
         syncPagers(queryAll('#cm_ghm_roots .dtab_pager'), page,
-                   wt_pager.computeLastPage(render_count, summary.getRowCount(), page_len));
+                   Pager.computeLastPage(render_count, summary.getRowCount(), page_len));
     }
 
     function addSummaryColumns(dtab) {
@@ -924,7 +924,7 @@ let mco_casemix = (function() {
     function syncPagers(pagers, current_page, last_page) {
         pagers.forEach(function(pager) {
             if (last_page) {
-                let builder = wt_pager.create();
+                let builder = new Pager;
                 builder.hrefBuilder = page => self.routeToUrl({page: page}).url;
                 builder.setLastPage(last_page);
                 builder.setCurrentPage(current_page);
@@ -1368,7 +1368,7 @@ let mco_casemix = (function() {
             dom.h('table', {class: 'pagr'}),
             dom.h('table', {class: 'pagr'})
         ];
-        syncPagers(pagers, page, wt_pager.computeLastPage(end - offset, results.length, page_len));
+        syncPagers(pagers, page, Pager.computeLastPage(end - offset, results.length, page_len));
 
         query('#rt').replaceContent(
             pagers[0],
