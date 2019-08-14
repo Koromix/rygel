@@ -384,7 +384,7 @@ let mco_list = (function() {
 
         let builder;
         if (thop.needsRefresh(list, group_info, search)) {
-            builder = wt_data_table.create();
+            builder = new DataTable;
             builder.sortHandler = function(sort) { thop.go({sort: sort}); }
             list.builder = builder;
 
@@ -459,7 +459,7 @@ let mco_list = (function() {
                                           (page - 1) * list_info.page_len, list_info.page_len,
                                           {hide_header: !list_info.header, hide_parents: !!sort});
         syncPagers(queryAll('#ls_' + list_name + ' .dtab_pager'), page,
-                   wt_pager.computeLastPage(render_count, builder.getRowCount(), list_info.page_len));
+                   Pager.computeLastPage(render_count, builder.getRowCount(), list_info.page_len));
     }
 
     function createContent(column, item, group) {
@@ -570,7 +570,7 @@ let mco_list = (function() {
     function syncPagers(pagers, current_page, last_page) {
         pagers.forEach(function(pager) {
             if (last_page) {
-                let builder = wt_pager.create();
+                let builder = new Pager;
                 builder.hrefBuilder = page => self.routeToUrl({page: page}).url;
                 builder.setLastPage(last_page);
                 builder.setCurrentPage(current_page);
