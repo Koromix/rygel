@@ -371,6 +371,7 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
     }
 
     rcc_DataFrameBuilder df_builder(results_count);
+    rcc_Vector<int> admin_id = df_builder.Add<int>("admin_id");
     rcc_Vector<int> bill_id = df_builder.Add<int>("bill_id");
     rcc_Vector<int> unit;
     if (export_units) {
@@ -417,6 +418,7 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
 
             char buf[32];
 
+            admin_id[k] = result.stays[0].admin_id;
             bill_id[k] = result.stays[0].bill_id;
             if (export_units) {
                 RG_ASSERT_DEBUG(result.stays.len == 1);
