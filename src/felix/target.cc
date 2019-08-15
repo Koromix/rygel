@@ -27,6 +27,7 @@ struct TargetConfig {
     HeapArray<const char *> imports;
 
     HeapArray<const char *> definitions;
+    HeapArray<const char *> export_definitions;
     HeapArray<const char *> include_directories;
     HeapArray<const char *> libraries;
 
@@ -232,6 +233,8 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
 #ifndef _WIN32
                     AppendListValues(prop.value, &set.str_alloc, &target_config.definitions);
 #endif
+                } else if (prop.key == "ExportDefinitions") {
+                    AppendListValues(prop.value, &set.str_alloc, &target_config.export_definitions);
                 } else if (prop.key == "Link") {
                     AppendListValues(prop.value, &set.str_alloc, &target_config.libraries);
                 } else if (prop.key == "Link_Win32") {
@@ -335,6 +338,8 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     target->type = target_config->type;
     target->enable_by_default = target_config->enable_by_default;
     std::swap(target->definitions, target_config->definitions);
+    std::swap(target->export_definitions, target_config->export_definitions);
+    target->definitions.Append(target->export_definitions);
     std::swap(target->include_directories, target_config->include_directories);
     target->pack_link_type = target_config->pack_link_type;
     target->pack_options = target_config->pack_options;
@@ -383,7 +388,8 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
             }
 
             target->imports.Append(import->imports);
-            target->definitions.Append(import->definitions);
+            target->definitions.Append(import->export_definitions);
+            target->export_definitions.Append(import->export_definitions);
             target->libraries.Append(import->libraries);
             target->sources.Append(import->sources);
         }
