@@ -36,6 +36,7 @@ struct Target {
     HeapArray<const char *> imports;
 
     HeapArray<const char *> definitions;
+    HeapArray<const char *> export_definitions;
     HeapArray<const char *> include_directories;
     HeapArray<const char *> libraries;
 
