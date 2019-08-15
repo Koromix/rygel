@@ -58,6 +58,49 @@ button:not(:disabled) { cursor: pointer; }
 .gp_toolbar button:not(.active):hover { background: #376cb5; }
 .gp_toolbar button.active { background: #3b7ad1; }
 
+
+/* -------------------- Paths -------------------- */
+
+.gp_path {
+    padding: 4px 0 4px 0;
+    height: 22px;
+}
+
+.gp_path_node {
+    display: inline-block;
+    position: relative;
+    height: 16px;
+    padding: 2px 14px 4px 20px;
+    background: #efefef;
+    color: black;
+    text-decoration: none;
+}
+.gp_path_node:after {
+    content: '';
+    position: absolute;
+    display: block;
+    top: 0;
+    right: -11px;
+    width: 22px;
+    height: 22px;
+    transform: scale(0.707) rotate(45deg);
+    z-index: 1;
+    background: inherit;
+    box-shadow: 3px -3px #f8f8f8;
+}
+.gp_path_node.complete {
+    background: #016a27;
+    color: white;
+}
+.gp_path_node.partial {
+    background: #ff6600;
+    color: white;
+}
+.gp_path_node:hover {
+    background: #24579d;
+    color: white;
+}
+
 /* -------------------- Notifications -------------------- */
 
 #gp_log {
