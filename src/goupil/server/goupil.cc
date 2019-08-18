@@ -32,7 +32,7 @@ struct Route {
             int code;
             const char *location;
         } redirect;
-        int (*func)(const http_Request &request, http_Response *out_response);
+        int (*func)(const http_RequestInfo &request, http_Response *out_response);
     } u;
 
     RG_HASH_TABLE_HANDLER(Route, url);
@@ -125,9 +125,9 @@ static void FreePushContext(void *cls)
     push_count--;
 }
 
-static int ProduceEvents(const http_Request &request, http_Response *out_response)
+static int ProduceEvents(const http_RequestInfo &request, http_Response *out_response)
 {
-    // TODO: Use the allocator buried in http_Request?
+    // TODO: Use the allocator buried in http_RequestInfo?
     PushContext *ctx = new PushContext();
     ctx->conn = request.conn;
 
@@ -205,7 +205,7 @@ static void InitRoutes()
         routes.Append(route);
     };
     const auto add_function_route = [&](const char *method, const char *url,
-                                        int (*func)(const http_Request &request, http_Response *out_response)) {
+                                        int (*func)(const http_RequestInfo &request, http_Response *out_response)) {
         Route route = {};
 
         route.method = method;
@@ -265,7 +265,7 @@ static void InitRoutes()
     }
 }
 
-static int HandleRequest(const http_Request &request, http_Response *out_response)
+static int HandleRequest(const http_RequestInfo &request, http_Response *out_response)
 {
 #ifndef NDEBUG
     if (asset_set.LoadFromLibrary(assets_filename) == AssetLoadStatus::Loaded) {

@@ -34,7 +34,7 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
                                void **con_cls)
 {
     http_Daemon *daemon = (http_Daemon *)cls;
-    http_Request *request = *(http_Request **)con_cls;
+    http_RequestInfo *request = *(http_RequestInfo **)con_cls;
 
     http_Response response = {};
 
@@ -43,7 +43,7 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
 
     // Init request data
     if (!request) {
-        request = new http_Request();
+        request = new http_RequestInfo();
         *con_cls = request;
 
         request->conn = conn;
@@ -77,7 +77,7 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
                                                     [](void *cls, enum MHD_ValueKind, const char *key,
                                                        const char *, const char *, const char *,
                                                        const char *data, uint64_t, size_t) {
-                http_Request *request = (http_Request *)cls;
+                http_RequestInfo *request = (http_RequestInfo *)cls;
 
                 key = DuplicateString(key, &request->alloc).ptr;
                 data = DuplicateString(data, &request->alloc).ptr;
@@ -111,7 +111,7 @@ void http_Daemon::RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
                                    MHD_RequestTerminationCode toe)
 {
     const http_Daemon &daemon = *(const http_Daemon *)cls;
-    http_Request *request = (http_Request *)*con_cls;
+    http_RequestInfo *request = (http_RequestInfo *)*con_cls;
 
     if (request) {
         if (daemon.release_func) {

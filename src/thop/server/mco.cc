@@ -420,7 +420,7 @@ bool McoResultProvider::RunDirect(std::function<void(Span<const mco_Result>, Spa
     return true;
 }
 
-int ProduceMcoSettings(const http_Request &request, const User *user, http_Response *out_response)
+int ProduceMcoSettings(const http_RequestInfo &request, const User *user, http_Response *out_response)
 {
     if (!user) {
         out_response->flags |= (int)http_Response::Flag::EnableCache;

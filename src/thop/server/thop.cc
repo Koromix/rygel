@@ -41,7 +41,7 @@ struct Route {
             const char *mime_type;
         } st;
 
-        int (*func)(const http_Request &request, const User *user, http_Response *out_response);
+        int (*func)(const http_RequestInfo &request, const User *user, http_Response *out_response);
     } u;
 
     RG_HASH_TABLE_HANDLER(Route, url);
@@ -152,7 +152,7 @@ static void InitRoutes()
         routes.Append(route);
     };
     const auto add_function_route = [&](const char *method, const char *url,
-                                        int (*func)(const http_Request &request, const User *user,
+                                        int (*func)(const http_RequestInfo &request, const User *user,
                                                     http_Response *out_response)) {
         Route route = {};
 
@@ -231,7 +231,7 @@ static void InitRoutes()
     }
 }
 
-static int HandleRequest(const http_Request &request, http_Response *out_response)
+static int HandleRequest(const http_RequestInfo &request, http_Response *out_response)
 {
 #ifndef NDEBUG
     if (asset_set.LoadFromLibrary(assets_filename) == AssetLoadStatus::Loaded) {

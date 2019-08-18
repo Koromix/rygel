@@ -10,7 +10,7 @@
 
 namespace RG {
 
-static int GetIndexFromRequest(const http_Request &request, http_Response *out_response,
+static int GetIndexFromRequest(const http_RequestInfo &request, http_Response *out_response,
                                const mco_TableIndex **out_index, drd_Sector *out_sector = nullptr)
 {
     Date date = {};
@@ -68,7 +68,7 @@ static int GetIndexFromRequest(const http_Request &request, http_Response *out_r
     return 0;
 }
 
-int ProduceMcoDiagnoses(const http_Request &request, const User *, http_Response *out_response)
+int ProduceMcoDiagnoses(const http_RequestInfo &request, const User *, http_Response *out_response)
 {
     const mco_TableIndex *index;
     if (int code = GetIndexFromRequest(request, out_response, &index); code)
@@ -120,7 +120,7 @@ int ProduceMcoDiagnoses(const http_Request &request, const User *, http_Response
     return json.Finish(out_response);
 }
 
-int ProduceMcoProcedures(const http_Request &request, const User *, http_Response *out_response)
+int ProduceMcoProcedures(const http_RequestInfo &request, const User *, http_Response *out_response)
 {
     const mco_TableIndex *index;
     if (int code = GetIndexFromRequest(request, out_response, &index); code)
@@ -162,7 +162,7 @@ int ProduceMcoProcedures(const http_Request &request, const User *, http_Respons
     return json.Finish(out_response);
 }
 
-int ProduceMcoGhmGhs(const http_Request &request, const User *, http_Response *out_response)
+int ProduceMcoGhmGhs(const http_RequestInfo &request, const User *, http_Response *out_response)
 {
     const mco_TableIndex *index;
     drd_Sector sector;
@@ -621,7 +621,7 @@ static bool BuildReadableGhmTree(Span<const mco_GhmDecisionNode> ghm_nodes,
     return true;
 }
 
-int ProduceMcoTree(const http_Request &request, const User *, http_Response *out_response)
+int ProduceMcoTree(const http_RequestInfo &request, const User *, http_Response *out_response)
 {
     const mco_TableIndex *index;
     if (int code = GetIndexFromRequest(request, out_response, &index); code)

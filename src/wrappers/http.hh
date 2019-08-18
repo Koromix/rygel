@@ -36,16 +36,17 @@ struct http_Response {
     void AddCachingHeaders(int max_age, const char *etag = nullptr);
 };
 
-struct http_Request {
+class http_RequestInfo {
+    MHD_PostProcessor *pp;
+    BlockAllocator alloc;
+
+public:
     MHD_Connection *conn;
 
     const char *method;
     const char *url;
     CompressionType compression_type;
     HashMap<const char *, Span<const char>> post;
-
-    MHD_PostProcessor *pp;
-    BlockAllocator alloc;
 
     const char *GetHeaderValue(const char *key) const
         { return MHD_lookup_connection_value(conn, MHD_HEADER_KIND, key); }
@@ -55,6 +56,8 @@ struct http_Request {
         { return MHD_lookup_connection_value(conn, MHD_COOKIE_KIND, key); }
     const char *GetPostValue(const char *key) const
         { return post.FindValue(key, {}).ptr; }
+
+    friend class http_Daemon;
 };
 
 class http_Daemon {
@@ -64,8 +67,8 @@ class http_Daemon {
 public:
     ~http_Daemon() { Stop(); }
 
-    std::function<int(const http_Request &request, http_Response *out_response)> handle_func;
-    std::function<void(const http_Request &request, MHD_RequestTerminationCode code)> release_func;
+    std::function<int(const http_RequestInfo &request, http_Response *out_response)> handle_func;
+    std::function<void(const http_RequestInfo &request, MHD_RequestTerminationCode code)> release_func;
 
     bool Start(IPStack stack, int port, int threads, const char *base_url);
     void Stop();
