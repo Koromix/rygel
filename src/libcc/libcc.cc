@@ -2696,7 +2696,8 @@ bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compress
     this->filename = filename;
 
     source.type = SourceType::File;
-    source.u.fp = fp;
+    source.u.file.fp = fp;
+    source.u.file.owned = false;
 
     if (!InitDecompressor(compression_type))
         return false;
@@ -2718,10 +2719,33 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
     this->filename = filename;
 
     source.type = SourceType::File;
-    source.u.fp = OpenFile(filename, OpenFileMode::Read);
-    if (!source.u.fp)
+    source.u.file.fp = OpenFile(filename, OpenFileMode::Read);
+    if (!source.u.file.fp)
         return false;
-    source.owned = true;
+    source.u.file.owned = true;
+
+    if (!InitDecompressor(compression_type))
+        return false;
+
+    error_guard.Disable();
+    return true;
+}
+
+
+bool StreamReader::Open(std::function<Size(Span<uint8_t>)> func, const char *filename,
+                        CompressionType compression_type)
+{
+    RG_ASSERT(!this->filename);
+
+    RG_DEFER_N(error_guard) {
+        ReleaseResources();
+        error = true;
+    };
+
+    this->filename = filename ? filename : "<closure>";
+
+    source.type = SourceType::Function;
+    new (&source.u.func) std::function<Size(Span<uint8_t>)>(func);
 
     if (!InitDecompressor(compression_type))
         return false;
@@ -2814,19 +2838,23 @@ Size StreamReader::ComputeStreamLen()
         return raw_len;
 
     switch (source.type) {
+        case SourceType::Memory: {
+            raw_len = source.u.memory.buf.len;
+        } break;
+
         case SourceType::File: {
 #ifdef _WIN32
-            int64_t pos = _ftelli64(source.u.fp);
-            RG_DEFER { _fseeki64(source.u.fp, pos, SEEK_SET); };
-            if (_fseeki64(source.u.fp, 0, SEEK_END) < 0)
+            int64_t pos = _ftelli64(source.u.file.fp);
+            RG_DEFER { _fseeki64(source.u.file.fp, pos, SEEK_SET); };
+            if (_fseeki64(source.u.file.fp, 0, SEEK_END) < 0)
                 return -1;
-            int64_t len = _ftelli64(source.u.fp);
+            int64_t len = _ftelli64(source.u.file.fp);
 #else
-            off64_t pos = ftello64(source.u.fp);
-            RG_DEFER { fseeko64(source.u.fp, pos, SEEK_SET); };
-            if (fseeko64(source.u.fp, 0, SEEK_END) < 0)
+            off64_t pos = ftello64(source.u.file.fp);
+            RG_DEFER { fseeko64(source.u.file.fp, pos, SEEK_SET); };
+            if (fseeko64(source.u.file.fp, 0, SEEK_END) < 0)
                 return -1;
-            off64_t len = ftello64(source.u.fp);
+            off64_t len = ftello64(source.u.file.fp);
 #endif
             if (len > RG_SIZE_MAX) {
                 static bool warned = false;
@@ -2839,8 +2867,8 @@ Size StreamReader::ComputeStreamLen()
             raw_len = (Size)len;
         } break;
 
-        case SourceType::Memory: {
-            raw_len = source.u.memory.buf.len;
+        case SourceType::Function: {
+            return -1;
         } break;
     }
 
@@ -2886,18 +2914,25 @@ void StreamReader::ReleaseResources()
     }
     compression.type = CompressionType::None;
 
-    if (source.owned) {
-        switch (source.type) {
-            case SourceType::File: {
-                if (source.u.fp) {
-                    fclose(source.u.fp);
-                }
-            } break;
+    switch (source.type) {
+        case SourceType::Memory: {
+            source.u.memory = {};
+        } break;
 
-            case SourceType::Memory: {} break;
-        }
-        source.owned = false;
+        case SourceType::File: {
+            if (source.u.file.owned && source.u.file.fp) {
+                fclose(source.u.file.fp);
+            }
+
+            source.u.file.fp = nullptr;
+            source.u.file.owned = false;
+        } break;
+
+        case SourceType::Function: {
+            source.u.func.~function();
+        } break;
     }
+    source.type = SourceType::Memory;
 }
 
 Size StreamReader::Deflate(Size max_len, void *out_buf)
@@ -3074,20 +3109,6 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
 
     Size read_len = 0;
     switch (source.type) {
-        case SourceType::File: {
-restart:
-            read_len = (Size)fread(out_buf, 1, (size_t)max_len, source.u.fp);
-            if (ferror(source.u.fp)) {
-                if (errno == EINTR)
-                    goto restart;
-
-                LogError("Error while reading file '%1': %2", filename, strerror(errno));
-                error = true;
-                return -1;
-            }
-            source.eof |= (bool)feof(source.u.fp);
-        } break;
-
         case SourceType::Memory: {
             read_len = source.u.memory.buf.len - source.u.memory.pos;
             if (read_len > max_len) {
@@ -3096,6 +3117,29 @@ restart:
             memcpy(out_buf, source.u.memory.buf.ptr + source.u.memory.pos, (size_t)read_len);
             source.u.memory.pos += read_len;
             source.eof |= (source.u.memory.pos >= source.u.memory.buf.len);
+        } break;
+
+        case SourceType::File: {
+restart:
+            read_len = (Size)fread(out_buf, 1, (size_t)max_len, source.u.file.fp);
+            if (ferror(source.u.file.fp)) {
+                if (errno == EINTR)
+                    goto restart;
+
+                LogError("Error while reading file '%1': %2", filename, strerror(errno));
+                error = true;
+                return -1;
+            }
+            source.eof |= (bool)feof(source.u.file.fp);
+        } break;
+
+        case SourceType::Function: {
+            read_len = source.u.func(MakeSpan((uint8_t *)out_buf, max_len));
+            if (read_len < 0) {
+                error = true;
+                return -1;
+            }
+            source.eof |= (read_len == 0);
         } break;
     }
 
@@ -3169,7 +3213,7 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
     this->filename = filename ? filename : "<memory>";
 
     dest.type = DestinationType::Memory;
-    dest.u.mem = mem;
+    dest.u.memory = mem;
 
     if (!InitCompressor(compression_type))
         return false;
@@ -3193,7 +3237,8 @@ bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compress
     this->filename = filename;
 
     dest.type = DestinationType::File;
-    dest.u.fp = fp;
+    dest.u.file.fp = fp;
+    dest.u.file.owned = false;
 
     if (!InitCompressor(compression_type))
         return false;
@@ -3216,10 +3261,33 @@ bool StreamWriter::Open(const char *filename, CompressionType compression_type)
     this->filename = filename;
 
     dest.type = DestinationType::File;
-    dest.u.fp = OpenFile(filename, OpenFileMode::Write);
-    if (!dest.u.fp)
+    dest.u.file.fp = OpenFile(filename, OpenFileMode::Write);
+    if (!dest.u.file.fp)
         return false;
-    dest.owned = true;
+    dest.u.file.owned = true;
+
+    if (!InitCompressor(compression_type))
+        return false;
+
+    open = true;
+    error_guard.Disable();
+    return true;
+}
+
+bool StreamWriter::Open(std::function<bool(Span<const uint8_t>)> func, const char *filename,
+                        CompressionType compression_type)
+{
+    RG_ASSERT(!this->filename);
+
+    RG_DEFER_N(error_guard) {
+        ReleaseResources();
+        error = true;
+    };
+
+    this->filename = filename ? filename : "<closure>";
+
+    dest.type = DestinationType::Function;
+    new (&dest.u.func) std::function<bool(Span<const uint8_t>)>(func);
 
     if (!InitCompressor(compression_type))
         return false;
@@ -3264,18 +3332,22 @@ bool StreamWriter::Close()
         }
 
         switch (dest.type) {
+            case DestinationType::Memory: {} break;
+
             case DestinationType::File: {
 #ifdef _WIN32
-                if (fflush(dest.u.fp) != 0) {
+                if (fflush(dest.u.file.fp) != 0) {
 #else
-                if ((fflush(dest.u.fp) != 0 || fsync(fileno(dest.u.fp)) < 0) && errno != EINVAL) {
+                if ((fflush(dest.u.file.fp) != 0 || fsync(fileno(dest.u.file.fp)) < 0) && errno != EINVAL) {
 #endif
                     LogError("Failed to finalize writing to '%1': %2", filename, strerror(errno));
                     success = false;
                 }
             } break;
 
-            case DestinationType::Memory: {} break;
+            case DestinationType::Function: {
+                success = dest.u.func({});
+            } break;
         }
     }
 
@@ -3389,30 +3461,46 @@ void StreamWriter::ReleaseResources()
     }
     compression.type = CompressionType::None;
 
-    if (dest.owned) {
-        switch (dest.type) {
-            case DestinationType::File: {
-                if (dest.u.fp) {
-                    fclose(dest.u.fp);
-                }
-            } break;
+    switch (dest.type) {
+        case DestinationType::Memory: {
+            dest.u.memory = nullptr;
+        } break;
 
-            case DestinationType::Memory: {} break;
-        }
-        dest.owned = false;
+        case DestinationType::File: {
+            if (dest.u.file.owned && dest.u.file.fp) {
+                fclose(dest.u.file.fp);
+            }
+
+            dest.u.file.fp = nullptr;
+            dest.u.file.owned = false;
+        } break;
+
+        case DestinationType::Function: {
+            dest.u.func.~function();
+        } break;
     }
+    dest.type = DestinationType::Memory;
 }
 
 bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
 {
     switch (dest.type) {
+        case DestinationType::Memory: {
+            // dest.u.memory->Append(buf) would work but it's probably slower
+            dest.u.memory->Grow(buf.len);
+            memcpy(dest.u.memory->ptr + dest.u.memory->len, buf.ptr, (size_t)buf.len);
+            dest.u.memory->len += buf.len;
+
+            return true;
+        } break;
+
         case DestinationType::File: {
             while (buf.len) {
-                size_t write_len = fwrite(buf.ptr, 1, (size_t)buf.len, dest.u.fp);
+                size_t write_len = fwrite(buf.ptr, 1, (size_t)buf.len, dest.u.file.fp);
 
-                if (ferror(dest.u.fp)) {
+                if (ferror(dest.u.file.fp)) {
                     if (errno == EINTR) {
-                        clearerr(dest.u.fp);
+                        clearerr(dest.u.file.fp);
                     } else {
                         LogError("Failed to write to '%1': %2", filename, strerror(errno));
                         error = true;
@@ -3427,13 +3515,14 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
             return true;
         } break;
 
-        case DestinationType::Memory: {
-            // dest.u.mem->Append(buf) would work but it's probably slower
-            dest.u.mem->Grow(buf.len);
-            memcpy(dest.u.mem->ptr + dest.u.mem->len, buf.ptr, (size_t)buf.len);
-            dest.u.mem->len += buf.len;
+        case DestinationType::Function: {
+            // Empty writes are used to "close" the file
+            if (buf.len) {
+                bool ret = dest.u.func(buf);
 
-            return true;
+                error |= ret;
+                return ret;
+            }
         } break;
     }
     RG_ASSERT_DEBUG(false);

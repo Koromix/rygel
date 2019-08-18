@@ -2331,23 +2331,31 @@ static const char *const CompressionTypeNames[] = {
 class StreamReader {
 public:
     enum class SourceType {
+        Memory,
         File,
-        Memory
+        Function
     };
 
     // NOTE: Should we use DuplicateString() for this? Same question in StreamWriter.
     const char *filename;
 
     struct {
-        SourceType type;
-        union {
-            FILE *fp;
+        SourceType type = SourceType::Memory;
+        union U {
             struct {
                 Span<const uint8_t> buf;
                 Size pos;
             } memory;
+            struct {
+                FILE *fp;
+                bool owned;
+            } file;
+            std::function<Size(Span<uint8_t> buf)> func;
+
+            // StreamReader deals with func destructor
+            U() {}
+            ~U() {}
         } u;
-        bool owned = false;
 
         bool eof;
     } source;
@@ -2375,6 +2383,9 @@ public:
     StreamReader(const char *filename,
                  CompressionType compression_type = CompressionType::None)
         : StreamReader() { Open(filename, compression_type); }
+    StreamReader(std::function<Size(Span<uint8_t>)> func, const char *filename = nullptr,
+                 CompressionType compression_type = CompressionType::None)
+        : StreamReader() { Open(func, filename, compression_type); }
     ~StreamReader() { Close(); }
 
     StreamReader(const StreamReader &other) = delete;
@@ -2385,6 +2396,8 @@ public:
     bool Open(FILE *fp, const char *filename,
               CompressionType compression_type = CompressionType::None);
     bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
+    bool Open(std::function<Size(Span<uint8_t>)> func, const char *filename = nullptr,
+              CompressionType compression_type = CompressionType::None);
     void Close();
 
     Size Read(Size max_len, void *out_buf);
@@ -2451,19 +2464,27 @@ public:
 class StreamWriter {
 public:
     enum class DestinationType {
+        Memory,
         File,
-        Memory
+        Function
     };
 
     const char *filename;
 
     struct {
-        DestinationType type;
-        union {
-            HeapArray<uint8_t> *mem;
-            FILE *fp;
+        DestinationType type = DestinationType::Memory;
+        union U {
+            HeapArray<uint8_t> *memory;
+            struct {
+                FILE *fp;
+                bool owned;
+            } file;
+            std::function<bool(Span<const uint8_t>)> func;
+
+            // StreamWriter deals with func destructor
+            U() {}
+            ~U() {}
         } u;
-        bool owned = false;
     } dest;
 
     struct {
@@ -2486,6 +2507,9 @@ public:
     StreamWriter(const char *filename,
                  CompressionType compression_type = CompressionType::None)
         : StreamWriter() { Open(filename, compression_type); }
+    StreamWriter(std::function<bool(Span<const uint8_t>)> func, const char *filename = nullptr,
+                 CompressionType compression_type = CompressionType::None)
+        : StreamWriter() { Open(func, filename, compression_type); }
     ~StreamWriter() { Close(); }
 
     StreamWriter(const StreamWriter &other) = delete;
@@ -2496,6 +2520,8 @@ public:
     bool Open(FILE *fp, const char *filename,
               CompressionType compression_type = CompressionType::None);
     bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
+    bool Open(std::function<bool(Span<const uint8_t>)> func, const char *filename = nullptr,
+              CompressionType compression_type = CompressionType::None);
     bool Close();
 
     bool Write(Span<const uint8_t> buf);
