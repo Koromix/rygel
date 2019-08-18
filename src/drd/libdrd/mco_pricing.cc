@@ -94,7 +94,7 @@ void mco_Price(Span<const mco_Result> results, bool apply_coefficient,
     for (Size i = 0; i < results.len; i += task_size) {
         Size task_offset = i;
 
-        async.AddTask([&, task_offset]() {
+        async.Run([&, task_offset]() {
             Size end = std::min(results.len, task_offset + task_size);
             memset(out_pricings->ptr + start_pricings_len + task_offset, 0,
                    (end - task_offset) * RG_SIZE(*out_pricings->ptr));
@@ -122,7 +122,7 @@ void mco_PriceTotal(Span<const mco_Result> results, bool apply_coefficient,
         mco_Pricing *task_pricing = &task_pricings[i];
         Size task_offset = i * task_size;
 
-        async.AddTask([&, task_offset, task_pricing]() {
+        async.Run([&, task_offset, task_pricing]() {
             Size end = std::min(results.len, task_offset + task_size);
             for (Size j = task_offset; j < end; j++) {
                 mco_Price(results[j], apply_coefficient, task_pricing);
@@ -205,7 +205,7 @@ void mco_Dispense(Span<const mco_Pricing> pricings, Span<const mco_Pricing> mono
             j += pricings[i].stays_count;
         }
 
-        async.AddTask([&, task_offset, task_mono_offset]() {
+        async.Run([&, task_offset, task_mono_offset]() {
             // Reuse for performance
             HeapArray<double> coefficients;
 

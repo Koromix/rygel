@@ -45,7 +45,7 @@ bool InitMcoTables(Span<const char *const> table_directories)
                 if (mco_table_set.indexes[i].changed_tables & MaskEnum(mco_TableType::GhmDecisionTree) ||
                         !mco_index_to_constraints[mco_index_to_constraints.len - 1]) {
                     HashTable<mco_GhmCode, mco_GhmConstraint> *constraints = mco_constraints_set.AppendDefault();
-                    async.AddTask([=]() {
+                    async.Run([=]() {
                         return mco_ComputeGhmConstraints(mco_table_set.indexes[i], constraints);
                     });
                 }

@@ -407,7 +407,7 @@ bool RunBuildCommands(Span<const BuildCommand> commands, int jobs, bool verbose)
     Size progress_counter = 0;
 
     for (const BuildCommand &cmd: commands) {
-        async.AddTask([&, cmd]() {
+        async.Run([&, cmd]() {
             RG_DEFER_N(dest_guard) { unlink(cmd.dest_filename); };
 
             // The lock is needed to garantuee ordering of progress counter. Atomics

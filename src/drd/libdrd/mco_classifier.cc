@@ -2352,7 +2352,7 @@ Size mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &aut
         for (Size i = 1; i < mono_stays.len; i++) {
             if (mco_SplitTest(mono_stays[i - 1].bill_id, mono_stays[i].bill_id)) {
                 if (results_count % task_size == 0) {
-                    async.AddTask([&, task_stays, results_offset]() mutable {
+                    async.Run([&, task_stays, results_offset]() mutable {
                         run_classifier_task(task_stays, results_offset);
                         return true;
                     });
@@ -2363,7 +2363,7 @@ Size mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &aut
             }
             task_stays.len++;
         }
-        async.AddTask([&, task_stays, results_offset]() mutable {
+        async.Run([&, task_stays, results_offset]() mutable {
             run_classifier_task(task_stays, results_offset);
             return true;
         });

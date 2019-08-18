@@ -633,7 +633,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
             }
             mco_Pricing *task_summary = summaries.AppendDefault();
 
-            async.AddTask([=, &stays, &diagnoses, &procedures]() mutable {
+            async.Run([=, &stays, &diagnoses, &procedures]() mutable {
                 if (!RunClassifier(*classifier, stays, stays_offset, stays_end,
                                    diagnoses, diagnoses_offset, diagnoses_end,
                                    procedures, procedures_offset, procedures_end,
