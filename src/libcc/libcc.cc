@@ -2353,6 +2353,35 @@ bool WaitForConsoleInterruption(int64_t delay)
 }
 #endif
 
+int GetCoreCount()
+{
+#ifdef __EMSCRIPTEN__
+    return 1;
+#else
+    static int cores;
+
+    if (!cores) {
+        const char *env = getenv("RYGEL_CORES");
+
+        if (env) {
+            char *end_ptr;
+            long value = strtol(env, &end_ptr, 10);
+            if (end_ptr > env && !end_ptr[0] && value > 0) {
+                cores = (int)value;
+            } else {
+                LogError("RYGEL_CORES must be positive number (ignored)");
+            }
+        } else {
+            cores = (int)std::thread::hardware_concurrency();
+        }
+
+        RG_ASSERT(cores > 0);
+    }
+
+    return cores;
+#endif
+}
+
 // ------------------------------------------------------------------------
 // Tasks
 // ------------------------------------------------------------------------
@@ -2367,95 +2396,70 @@ struct TaskQueue {
     BlockQueue<Task> tasks;
 };
 
-struct AsyncWorker {
-    bool running;
-    Size queue_idx;
-};
-
 class AsyncPool {
     std::mutex pool_mutex;
     std::condition_variable pending_cv;
     std::condition_variable sync_cv;
 
-    Size async_count = 0;
-    HeapArray<AsyncWorker> workers;
+    // Manipulate with pool_mutex locked
+    int refcount = 0;
+
+    int async_count = 0;
+    HeapArray<bool> workers_state;
 
     HeapArray<TaskQueue> queues;
-    Size next_queue_idx = 0;
+    int next_queue_idx = 0;
     std::atomic_int pending_tasks {0};
 
 public:
-    AsyncPool(Size worker_count);
+    AsyncPool(int threads, bool leak);
 
     void RegisterAsync();
     void UnregisterAsync();
 
     void AddTask(Async *async, const std::function<bool()> &func);
 
-    void RunWorker(Size worker_idx);
-
-    void RunTasks(Size queue_idx);
-    void RunTask(Task *task);
-
+    void RunWorker(int worker_idx);
     void SyncOn(Async *async);
+
+    void RunTasks(int queue_idx);
+    void RunTask(Task *task);
 };
 
 // thread_local breaks down on MinGW when destructors are involved, work
 // around this with heap allocation.
+static RG_THREAD_LOCAL Async *g_async = nullptr;
 static RG_THREAD_LOCAL AsyncPool *g_async_pool = nullptr;
-static RG_THREAD_LOCAL Size g_async_worker_idx;
+static RG_THREAD_LOCAL int g_async_worker_idx;
 static RG_THREAD_LOCAL bool g_task_running = false;
-static int g_max_workers;
 
-void Async::SetWorkerCount(int max_threads)
+Async::Async(int threads)
 {
-    RG_ASSERT_DEBUG(max_threads > 0);
-    RG_ASSERT_DEBUG(!g_async_pool);
+    RG_ASSERT(!g_async);
+    RG_ASSERT_DEBUG(threads != 0);
 
-#ifdef __EMSCRIPTEN__
-    LogError("Cannot use parallelism on Emscripten platform");
-    g_max_workers = 1;
-#else
-    g_max_workers = max_threads;
-#endif
-}
+    prev_pool = g_async_pool;
+    prev_worker_idx = g_async_worker_idx;
 
-int Async::GetWorkerCount()
-{
-    if (!g_max_workers) {
-#ifdef __EMSCRIPTEN__
-        g_max_workers = 1;
-#else
-        const char *env = getenv("LIBCC_THREADS");
-        if (env) {
-            char *end_ptr;
-            long threads = strtol(env, &end_ptr, 10);
-            if (end_ptr > env && !end_ptr[0] && threads > 0) {
-                g_max_workers = (int)threads;
-            } else {
-                LogError("LIBCC_THREADS must be positive number (ignored)");
-            }
-        } else {
-            g_max_workers = (int)std::thread::hardware_concurrency();
+    if (threads > 0) {
+        if (threads > RG_ASYNC_MAX_THREADS) {
+            LogError("Async cannot go beyond %1 threads", RG_ASYNC_MAX_THREADS);
+            threads = RG_ASYNC_MAX_THREADS;
         }
 
-        RG_ASSERT(g_max_workers > 0);
-#endif
-    }
+        g_async_pool = new AsyncPool(threads, false);
+        g_async_worker_idx = 0;
+    } else if (!g_async_pool) {
+        threads = std::min(GetCoreCount(), RG_ASYNC_MAX_THREADS);
 
-    return g_max_workers;
-}
-
-Async::Async()
-{
-    if (!g_async_pool) {
-        // NOTE: We're leaking one ThreadPool each time a non-worker thread uses Async for
+        // NOTE: We're leaking one AsyncPool each time a non-worker thread uses Async() for
         // the first time. That's only one leak in most cases, when the main thread is the
         // only non-worker thread using Async, but still. Something to keep in mind.
-        g_async_pool = new AsyncPool(GetWorkerCount());
+        g_async_pool = new AsyncPool(threads, true);
         g_async_worker_idx = 0;
     }
 
+    g_async = this;
     g_async_pool->RegisterAsync();
 }
 
@@ -2464,6 +2468,10 @@ Async::~Async()
     RG_ASSERT(!remaining_tasks);
 
     g_async_pool->UnregisterAsync();
+    g_async = nullptr;
+
+    g_async_pool = (AsyncPool *)prev_pool;
+    g_async_worker_idx = prev_worker_idx;
 }
 
 void Async::AddTask(const std::function<bool()> &func)
@@ -2482,10 +2490,12 @@ bool Async::IsTaskRunning()
     return g_task_running;
 }
 
-AsyncPool::AsyncPool(Size worker_count)
+AsyncPool::AsyncPool(int threads, bool leak)
 {
-    workers.AppendDefault(worker_count);
-    queues.AppendDefault(worker_count);
+    workers_state.AppendDefault(threads);
+    queues.AppendDefault(threads);
+
+    refcount = leak;
 }
 
 void AsyncPool::RegisterAsync()
@@ -2493,12 +2503,12 @@ void AsyncPool::RegisterAsync()
     std::lock_guard<std::mutex> lock_pool(pool_mutex);
 
     if (!async_count++) {
-        for (Size i = 1; i < workers.len; i++) {
-            AsyncWorker *worker = &workers[i];
-
-            if (!worker->running) {
+        for (int i = 1; i < workers_state.len; i++) {
+            if (!workers_state[i]) {
                 std::thread(&AsyncPool::RunWorker, this, i).detach();
-                worker->running = true;
+
+                refcount++;
+                workers_state[i] = true;
             }
         }
     }
@@ -2514,12 +2524,12 @@ void AsyncPool::AddTask(Async *async, const std::function<bool()> &func)
 {
     // If we are the main thread, and haven't reached Sync() yet, try to assign
     // task to a "random" queue first.
-    if (!g_task_running && workers.len > 1) {
+    if (!g_task_running && workers_state.len > 1) {
         for (;;) {
             TaskQueue *queue = &queues[next_queue_idx];
 
             if (--next_queue_idx < 0) {
-                next_queue_idx = workers.len - 1;
+                next_queue_idx = workers_state.len - 1;
             }
 
             std::unique_lock<std::mutex> lock_queue(queue->queue_mutex, std::try_to_lock);
@@ -2546,36 +2556,43 @@ void AsyncPool::AddTask(Async *async, const std::function<bool()> &func)
     }
 }
 
-void AsyncPool::RunWorker(Size worker_idx)
+void AsyncPool::RunWorker(int worker_idx)
 {
     g_async_pool = this;
     g_async_worker_idx = worker_idx;
 
-    AsyncWorker *worker = &workers[worker_idx];
+    std::unique_lock<std::mutex> lock_pool(pool_mutex);
 
-    for (;;) {
+    while (async_count) {
+        lock_pool.unlock();
         RunTasks(worker_idx);
+        lock_pool.lock();
 
-        std::unique_lock<std::mutex> lock_pool(pool_mutex);
-        while (!pending_tasks) {
-#if RG_THREAD_MAX_IDLE_TIME >= 0
-            pending_cv.wait_for(lock_pool,
-                                std::chrono::duration<int, std::milli>(RG_THREAD_MAX_IDLE_TIME));
-            if (!async_count) {
-                worker->running = false;
-                return;
-            }
-#else
-            pending_cv.wait(lock_pool);
-#endif
-        }
+        std::chrono::duration<int, std::milli> duration(RG_ASYNC_MAX_IDLE_TIME); // Thanks C++
+        pending_cv.wait_for(lock_pool, duration, [&]() { return !!pending_tasks; });
+    }
+
+    workers_state[worker_idx] = false;
+    if (!--refcount) {
+        lock_pool.unlock();
+        delete this;
     }
 }
 
-void AsyncPool::RunTasks(Size queue_idx)
+void AsyncPool::SyncOn(Async *async)
+{
+    while (async->remaining_tasks) {
+        RunTasks(g_async_worker_idx);
+
+        std::unique_lock<std::mutex> lock_sync(pool_mutex);
+        sync_cv.wait(lock_sync, [&]() { return pending_tasks || !async->remaining_tasks; });
+    }
+}
+
+void AsyncPool::RunTasks(int queue_idx)
 {
     // The '12' factor is pretty arbitrary, don't try to find meaning there
-    for (Size i = 0; i < workers.len * 12; i++) {
+    for (int i = 0; i < workers_state.len * 12; i++) {
         TaskQueue *queue = &queues[queue_idx];
 
         std::unique_lock<std::mutex> lock_queue(queue->queue_mutex, std::try_to_lock);
@@ -2585,8 +2602,6 @@ void AsyncPool::RunTasks(Size queue_idx)
 
             lock_queue.unlock();
             RunTask(&task);
-
-            i = -1;
         }
 
         queue_idx++;
@@ -2611,18 +2626,6 @@ void AsyncPool::RunTask(Task *task)
     if (!--async->remaining_tasks) {
         std::lock_guard<std::mutex> lock_sync(pool_mutex);
         sync_cv.notify_all();
-    }
-}
-
-void AsyncPool::SyncOn(Async *async)
-{
-    while (async->remaining_tasks) {
-        RunTasks(g_async_worker_idx);
-
-        std::unique_lock<std::mutex> lock_sync(pool_mutex);
-        while (!pending_tasks && async->remaining_tasks) {
-            sync_cv.wait(lock_sync);
-        }
     }
 }
 

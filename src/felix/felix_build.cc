@@ -123,12 +123,10 @@ int RunBuild(Span<const char *> arguments)
     const char *output_directory = nullptr;
     Toolchain toolchain = {Compilers[0], BuildMode::Debug};
     bool enable_pch = true;
+    int jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_THREADS);
     bool verbose = false;
     const char *run_target_name = nullptr;
     Span<const char *> run_arguments = {};
-
-    // NOTE: This overrules LIBCC_THREADS if it exists
-    Async::SetWorkerCount(Async::GetWorkerCount() + 1);
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
@@ -146,14 +144,14 @@ Options:
         --no_pch                 Disable header precompilation (PCH)
 
     -j, --jobs <count>           Set maximum number of parallel jobs
-                                 (default: number of cores + 1)
+                                 (default: %2)
 
     -v, --verbose                Show detailed build commands
 
         --run <target>           Run target after successful build
                                  (all remaining arguments are passed as-is)
 
-Available toolchains:)", toolchain);
+Available toolchains:)", toolchain, jobs);
         for (const Compiler *compiler: Compilers) {
             for (const char *mode_name: BuildModeNames) {
                 PrintLn(fp, "    %1_%2", compiler->name, mode_name);
@@ -188,15 +186,12 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
             } else if (opt.Test("--no_pch")) {
                 enable_pch = false;
             } else if (opt.Test("-j", "--jobs", OptionType::Value)) {
-                int jobs;
                 if (!ParseDec(opt.current_value, &jobs))
                     return 1;
                 if (jobs < 1) {
                     LogError("Jobs count cannot be < 1");
                     return 1;
                 }
-
-                Async::SetWorkerCount(jobs);
             } else if (opt.Test("-v", "--verbose")) {
                 verbose = true;
             } else if (opt.Test("--run", OptionType::Value)) {
@@ -351,7 +346,7 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
     }
 
     // Build
-    if (!RunBuildCommands(build_set.commands, verbose))
+    if (!RunBuildCommands(build_set.commands, jobs, verbose))
         return 1;
 
     // Run?

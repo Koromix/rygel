@@ -59,7 +59,8 @@ namespace RG {
 
 #define RG_LINE_READER_STEP_SIZE 65536
 
-#define RG_THREAD_MAX_IDLE_TIME 10000
+#define RG_ASYNC_MAX_THREADS 256
+#define RG_ASYNC_MAX_IDLE_TIME 10000
 
 // ------------------------------------------------------------------------
 // Utility
@@ -3231,6 +3232,8 @@ static inline bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_
 void WaitForDelay(int64_t delay);
 bool WaitForConsoleInterruption(int64_t delay = -1);
 
+int GetCoreCount();
+
 enum class IPStack {
     Dual,
     IPv4,
@@ -3259,11 +3262,11 @@ class Async {
     std::atomic_int success {1};
     std::atomic_int remaining_tasks {0};
 
-public:
-    static void SetWorkerCount(int max_threads);
-    static int GetWorkerCount();
+    void *prev_pool;
+    int prev_worker_idx;
 
-    Async();
+public:
+    Async(int threads = -1);
     ~Async();
 
     Async(Async &) = delete;
