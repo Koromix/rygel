@@ -3298,7 +3298,7 @@ public:
     Async(Async &) = delete;
     Async &operator=(const Async &) = delete;
 
-    void AddTask(const std::function<bool()> &f);
+    void Run(const std::function<bool()> &f);
     bool Sync();
 
     static bool IsTaskRunning();

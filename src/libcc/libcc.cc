@@ -2473,7 +2473,7 @@ Async::~Async()
     g_async_worker_idx = prev_worker_idx;
 }
 
-void Async::AddTask(const std::function<bool()> &func)
+void Async::Run(const std::function<bool()> &func)
 {
     g_async_pool->AddTask(this, func);
 }
