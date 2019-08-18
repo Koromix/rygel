@@ -123,7 +123,7 @@ int RunBuild(Span<const char *> arguments)
     const char *output_directory = nullptr;
     Toolchain toolchain = {Compilers[0], BuildMode::Debug};
     bool enable_pch = true;
-    int jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_THREADS);
+    int jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_WORKERS + 1);
     bool verbose = false;
     const char *run_target_name = nullptr;
     Span<const char *> run_arguments = {};

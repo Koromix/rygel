@@ -59,7 +59,7 @@ namespace RG {
 
 #define RG_LINE_READER_STEP_SIZE 65536
 
-#define RG_ASYNC_MAX_THREADS 256
+#define RG_ASYNC_MAX_WORKERS 256
 #define RG_ASYNC_MAX_IDLE_TIME 10000
 
 // ------------------------------------------------------------------------
@@ -3266,7 +3266,7 @@ class Async {
     int prev_worker_idx;
 
 public:
-    Async(int threads = -1);
+    Async(int workers = -1);
     ~Async();
 
     Async(Async &) = delete;
