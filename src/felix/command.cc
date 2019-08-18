@@ -399,9 +399,9 @@ int64_t BuildSetBuilder::GetFileModificationTime(const char *filename)
     return *ret.first;
 }
 
-bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
+bool RunBuildCommands(Span<const BuildCommand> commands, int jobs, bool verbose)
 {
-    Async async;
+    Async async(jobs);
 
     std::mutex out_mutex;
     Size progress_counter = 0;
