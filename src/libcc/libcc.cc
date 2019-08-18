@@ -2433,29 +2433,28 @@ static RG_THREAD_LOCAL AsyncPool *g_async_pool = nullptr;
 static RG_THREAD_LOCAL int g_async_worker_idx;
 static RG_THREAD_LOCAL bool g_task_running = false;
 
-Async::Async(int threads)
+Async::Async(int workers)
 {
     RG_ASSERT(!g_async);
-    RG_ASSERT_DEBUG(threads != 0);
 
     prev_pool = g_async_pool;
     prev_worker_idx = g_async_worker_idx;
 
-    if (threads > 0) {
-        if (threads > RG_ASYNC_MAX_THREADS) {
-            LogError("Async cannot go beyond %1 threads", RG_ASYNC_MAX_THREADS);
-            threads = RG_ASYNC_MAX_THREADS;
+    if (workers >= 0) {
+        if (workers > RG_ASYNC_MAX_WORKERS) {
+            LogError("Async cannot use more than %1 workers", RG_ASYNC_MAX_WORKERS);
+            workers = RG_ASYNC_MAX_WORKERS;
         }
 
-        g_async_pool = new AsyncPool(threads, false);
+        g_async_pool = new AsyncPool(workers, false);
         g_async_worker_idx = 0;
     } else if (!g_async_pool) {
-        threads = std::min(GetCoreCount(), RG_ASYNC_MAX_THREADS);
+        workers = std::min(GetCoreCount() - 1, RG_ASYNC_MAX_WORKERS);
 
         // NOTE: We're leaking one AsyncPool each time a non-worker thread uses Async() for
         // the first time. That's only one leak in most cases, when the main thread is the
         // only non-worker thread using Async, but still. Something to keep in mind.
-        g_async_pool = new AsyncPool(threads, true);
+        g_async_pool = new AsyncPool(workers, true);
         g_async_worker_idx = 0;
     }
 
@@ -2490,10 +2489,12 @@ bool Async::IsTaskRunning()
     return g_task_running;
 }
 
-AsyncPool::AsyncPool(int threads, bool leak)
+AsyncPool::AsyncPool(int workers, bool leak)
 {
-    workers_state.AppendDefault(threads);
-    queues.AppendDefault(threads);
+    // The first queue is for the main thread, whereas workers_state[0] is
+    // not used but it's easier to index it the same way.
+    workers_state.AppendDefault(workers + 1);
+    queues.AppendDefault(workers + 1);
 
     refcount = leak;
 }
