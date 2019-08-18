@@ -322,7 +322,7 @@ static void PruneStaleSessions()
 }
 
 // Call with sessions_mutex locked
-static Session *FindSession(const http_Request &request, bool *out_mismatch = nullptr)
+static Session *FindSession(const http_RequestInfo &request, bool *out_mismatch = nullptr)
 {
     int64_t now = GetMonotonicTime();
 
@@ -365,7 +365,7 @@ static Session *FindSession(const http_Request &request, bool *out_mismatch = nu
     return session;
 }
 
-const User *CheckSessionUser(const http_Request &request, bool *out_mismatch)
+const User *CheckSessionUser(const http_RequestInfo &request, bool *out_mismatch)
 {
     PruneStaleSessions();
 
@@ -382,7 +382,7 @@ void DeleteSessionCookies(http_Response *out_response)
     out_response->AddCookieHeader(thop_config.base_url, "username", nullptr);
 }
 
-int HandleConnect(const http_Request &request, const User *, http_Response *out_response)
+int HandleConnect(const http_RequestInfo &request, const User *, http_Response *out_response)
 {
     char address[65];
     if (!GetClientAddress(request.conn, address))
@@ -468,7 +468,7 @@ int HandleConnect(const http_Request &request, const User *, http_Response *out_
     return 200;
 }
 
-int HandleDisconnect(const http_Request &request, const User *, http_Response *out_response)
+int HandleDisconnect(const http_RequestInfo &request, const User *, http_Response *out_response)
 {
     // Drop session
     {

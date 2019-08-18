@@ -11,7 +11,7 @@
 
 namespace RG {
 
-static int GetQueryDateRange(const http_Request &request, const char *key,
+static int GetQueryDateRange(const http_RequestInfo &request, const char *key,
                              http_Response *out_response, Date *out_start_date, Date *out_end_date)
 {
     const char *str = request.GetQueryValue(key);
@@ -45,7 +45,7 @@ invalid:
     return http_ProduceErrorPage(422, out_response);
 }
 
-static int GetQueryDispenseMode(const http_Request &request, const char *key,
+static int GetQueryDispenseMode(const http_RequestInfo &request, const char *key,
                                 http_Response *out_response, mco_DispenseMode *out_dispense_mode)
 {
     const char *str = request.GetQueryValue(key);
@@ -65,7 +65,7 @@ static int GetQueryDispenseMode(const http_Request &request, const char *key,
     return 0;
 }
 
-static int GetQueryApplyCoefficient(const http_Request &request, const char *key,
+static int GetQueryApplyCoefficient(const http_RequestInfo &request, const char *key,
                                     http_Response *out_response, bool *out_apply_coefficient)
 {
     const char *str = request.GetQueryValue(key);
@@ -88,7 +88,7 @@ static int GetQueryApplyCoefficient(const http_Request &request, const char *key
     return 0;
 }
 
-static int GetQueryGhmRoot(const http_Request &request, const char *key,
+static int GetQueryGhmRoot(const http_RequestInfo &request, const char *key,
                            http_Response *out_response, mco_GhmRootCode *out_ghm_root)
 {
     const char *str = request.GetQueryValue(key);
@@ -371,7 +371,7 @@ static void GatherGhmGhsInfo(Span<const mco_GhmRootCode> ghm_roots, Date min_dat
     }
 }
 
-int ProduceMcoAggregate(const http_Request &request, const User *user, http_Response *out_response)
+int ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http_Response *out_response)
 {
     if (!user) {
         LogError("Not allowed to query MCO aggregations");
@@ -529,7 +529,7 @@ int ProduceMcoAggregate(const http_Request &request, const User *user, http_Resp
     return json.Finish(out_response);
 }
 
-int ProduceMcoResults(const http_Request &request, const User *user, http_Response *out_response)
+int ProduceMcoResults(const http_RequestInfo &request, const User *user, http_Response *out_response)
 {
     if (!user || !user->CheckPermission(UserPermission::FullResults)) {
         LogError("Not allowed to query MCO results");

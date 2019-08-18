@@ -13,7 +13,7 @@ static const char *const ScheduleNames[] = {
     "pl"
 };
 
-static int GetQueryInteger(const http_Request &request, const char *key,
+static int GetQueryInteger(const http_RequestInfo &request, const char *key,
                            http_Response *out_response, int *out_value)
 {
     const char *str = request.GetQueryValue(key);
@@ -31,7 +31,7 @@ static int GetQueryInteger(const http_Request &request, const char *key,
 }
 
 // SQL must use 3 bind parameters: schedule, start date, end date (in this order)
-static int PrepareMonthQuery(const http_Request &request, const char *sql,
+static int PrepareMonthQuery(const http_RequestInfo &request, const char *sql,
                              http_Response *out_response, sqlite3_stmt **out_stmt)
 {
     // Get query parameters
@@ -79,7 +79,7 @@ static int PrepareMonthQuery(const http_Request &request, const char *sql,
     return 0;
 }
 
-int ProduceScheduleResources(const http_Request &request, http_Response *out_response)
+int ProduceScheduleResources(const http_RequestInfo &request, http_Response *out_response)
 {
     // Execute query
     sqlite3_stmt *stmt;
@@ -130,7 +130,7 @@ int ProduceScheduleResources(const http_Request &request, http_Response *out_res
     return json.Finish(out_response);
 }
 
-int ProduceScheduleMeetings(const http_Request &request, http_Response *out_response)
+int ProduceScheduleMeetings(const http_RequestInfo &request, http_Response *out_response)
 {
     // Execute query
     sqlite3_stmt *stmt;
