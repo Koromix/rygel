@@ -134,7 +134,7 @@ static int ProduceEvents(const http_RequestInfo &request, http_Response *out_res
     MHD_Response *response = MHD_create_response_from_callback(MHD_SIZE_UNKNOWN, 1024,
                                                                SendPendingEvents, ctx, FreePushContext);
     out_response->AttachResponse(response);
-    MHD_add_response_header(*out_response, "Content-Type", "text/event-stream");
+    out_response->AddHeader("Content-Type", "text/event-stream");
 
     push_count++;
 
@@ -277,7 +277,7 @@ static int HandleRequest(const http_RequestInfo &request, http_Response *out_res
 #endif
 
     // Send these headers whenever possible
-    RG_DEFER { MHD_add_response_header(*out_response, "Referrer-Policy", "no-referrer"); };
+    out_response->AddHeader("Referrer-Policy", "no-referrer");
 
     // Handle server-side cache validation (ETag)
     {
@@ -301,15 +301,14 @@ static int HandleRequest(const http_RequestInfo &request, http_Response *out_res
             code = http_ProduceStaticAsset(route->u.st.asset.data, route->u.st.asset.compression_type,
                                            route->u.st.mime_type, request.compression_type, out_response);
             if (route->u.st.asset.source_map) {
-                MHD_add_response_header(*out_response, "SourceMap", route->u.st.asset.source_map);
+                out_response->AddHeader("SourceMap", route->u.st.asset.source_map);
             }
         } break;
 
         case Route::Type::Redirect: {
             MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
             out_response->AttachResponse(response);
-
-            MHD_add_response_header(response, "Location", route->u.redirect.location);
+            out_response->AddHeader("Location", route->u.redirect.location);
 
             return 301;
         } break;

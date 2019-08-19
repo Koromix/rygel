@@ -194,15 +194,20 @@ http_Response::http_Response()
     response.reset(response0);
 }
 
+void http_Response::AddHeader(const char *key, const char *value)
+{
+    MHD_add_response_header(response.get(), key, value);
+}
+
 void http_Response::AddEncodingHeader(CompressionType compression_type)
 {
     switch (compression_type) {
         case CompressionType::None: {} break;
         case CompressionType::Zlib: {
-            MHD_add_response_header(response.get(), "Content-Encoding", "deflate");
+            AddHeader("Content-Encoding", "deflate");
         } break;
         case CompressionType::Gzip: {
-            MHD_add_response_header(response.get(), "Content-Encoding", "gzip");
+            AddHeader("Content-Encoding", "gzip");
         } break;
     }
 }
@@ -218,7 +223,7 @@ void http_Response::AddCookieHeader(const char *path, const char *name, const ch
         Fmt(cookie_buf, "%1=; Path=%2; Max-Age=0;", name, path);
     }
 
-    MHD_add_response_header(response.get(), "Set-Cookie", cookie_buf);
+    AddHeader("Set-Cookie", cookie_buf);
 }
 
 void http_Response::AddCachingHeaders(int max_age, const char *etag)
@@ -235,13 +240,13 @@ void http_Response::AddCachingHeaders(int max_age, const char *etag)
     if (max_age || etag) {
         char buf[512];
         Fmt(buf, "max-age=%1", max_age);
-        MHD_add_response_header(response.get(), "Cache-Control", buf);
+        AddHeader("Cache-Control", buf);
 
         if (etag) {
-            MHD_add_response_header(response.get(), "ETag", etag);
+            AddHeader("ETag", etag);
         }
     } else {
-        MHD_add_response_header(response.get(), "Cache-Control", "no-store");
+        AddHeader("Cache-Control", "no-store");
     }
 }
 
@@ -326,8 +331,7 @@ int http_ProduceErrorPage(int code, http_Response *out_response)
         MHD_create_response_from_buffer_with_free_callback((size_t)page.len, page.ptr,
                                                            ReleaseDataCallback);
     out_response->AttachResponse(response);
-
-    MHD_add_response_header(response, "Content-Type", "text/plain");
+    out_response->AddHeader("Content-Type", "text/plain");
 
     return code;
 }
@@ -359,7 +363,7 @@ int http_ProduceStaticAsset(Span<const uint8_t> data, CompressionType in_compres
 
     out_response->AddEncodingHeader(out_compression_type);
     if (mime_type) {
-        MHD_add_response_header(*out_response, "Content-Type", mime_type);
+        out_response->AddHeader("Content-Type", mime_type);
     }
 
     out_response->flags |= (int)http_Response::Flag::EnableCache;
@@ -377,10 +381,10 @@ int http_JsonPageBuilder::Finish(http_Response *out_response)
         MHD_create_response_from_buffer_with_free_callback((size_t)buf.len, buf.ptr,
                                                            ReleaseDataCallback);
     buf.Leak();
-    out_response->AttachResponse(response);
 
+    out_response->AttachResponse(response);
     out_response->AddEncodingHeader(compression_type);
-    MHD_add_response_header(*out_response, "Content-Type", "application/json");
+    out_response->AddHeader("Content-Type", "application/json");
 
     return 200;
 }
