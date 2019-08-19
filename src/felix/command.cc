@@ -431,7 +431,11 @@ bool RunBuildCommands(Span<const BuildCommand> commands, int jobs, bool verbose)
             }
             if (output.len) {
                 std::lock_guard<std::mutex> out_lock(out_mutex);
-                stdout_st.Write(output);
+                if (exit_code) {
+                    stderr_st.Write(output);
+                } else {
+                    stdout_st.Write(output);
+                }
             }
 
             if (!exit_code) {
