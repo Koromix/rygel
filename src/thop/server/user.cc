@@ -375,24 +375,24 @@ const User *CheckSessionUser(const http_RequestInfo &request, bool *out_mismatch
     return session ? session->user : nullptr;
 }
 
-void DeleteSessionCookies(http_Response *out_response)
+void DeleteSessionCookies(http_IO *io)
 {
-    out_response->AddCookieHeader(thop_config.base_url, "session_key", nullptr);
-    out_response->AddCookieHeader(thop_config.base_url, "url_key", nullptr);
-    out_response->AddCookieHeader(thop_config.base_url, "username", nullptr);
+    io->AddCookieHeader(thop_config.base_url, "session_key", nullptr);
+    io->AddCookieHeader(thop_config.base_url, "url_key", nullptr);
+    io->AddCookieHeader(thop_config.base_url, "username", nullptr);
 }
 
-int HandleConnect(const http_RequestInfo &request, const User *, http_Response *out_response)
+int HandleConnect(const http_RequestInfo &request, const User *, http_IO *io)
 {
     char address[65];
     if (!GetClientAddress(request.conn, address))
-        return http_ProduceErrorPage(500, out_response);
+        return http_ProduceErrorPage(500, io);
 
     const char *username = request.GetPostValue("username");
     const char *password = request.GetPostValue("password");
     const char *user_agent = request.GetHeaderValue("User-Agent");
     if (!username || !password || !user_agent)
-        return http_ProduceErrorPage(422, out_response);
+        return http_ProduceErrorPage(422, io);
 
     // Find and validate user
     const User *user = thop_user_set.FindUser(username);
@@ -405,7 +405,7 @@ int HandleConnect(const http_RequestInfo &request, const User *, http_Response *
             WaitForDelay(safety_delay);
 
             LogError("Incorrect username or password");
-            return http_ProduceErrorPage(403, out_response);
+            return http_ProduceErrorPage(403, io);
         }
     }
 
@@ -442,7 +442,7 @@ int HandleConnect(const http_RequestInfo &request, const User *, http_Response *
             std::pair<Session *, bool> ret = sessions.AppendDefault(session_key);
             if (!ret.second) {
                 LogError("Generated duplicate session key");
-                return http_ProduceErrorPage(500, out_response);
+                return http_ProduceErrorPage(500, io);
             }
             session = ret.first;
         }
@@ -458,17 +458,17 @@ int HandleConnect(const http_RequestInfo &request, const User *, http_Response *
 
     http_JsonPageBuilder json(request.compression_type);
     json.Null();
-    json.Finish(out_response);
+    json.Finish(io);
 
     // Set session cookies
-    out_response->AddCookieHeader(thop_config.base_url, "session_key", session_key, true);
-    out_response->AddCookieHeader(thop_config.base_url, "url_key", url_key, false);
-    out_response->AddCookieHeader(thop_config.base_url, "username", user->name, false);
+    io->AddCookieHeader(thop_config.base_url, "session_key", session_key, true);
+    io->AddCookieHeader(thop_config.base_url, "url_key", url_key, false);
+    io->AddCookieHeader(thop_config.base_url, "username", user->name, false);
 
     return 200;
 }
 
-int HandleDisconnect(const http_RequestInfo &request, const User *, http_Response *out_response)
+int HandleDisconnect(const http_RequestInfo &request, const User *, http_IO *io)
 {
     // Drop session
     {
@@ -478,10 +478,10 @@ int HandleDisconnect(const http_RequestInfo &request, const User *, http_Respons
 
     http_JsonPageBuilder json(request.compression_type);
     json.Null();
-    json.Finish(out_response);
+    json.Finish(io);
 
     // Delete session cookies
-    DeleteSessionCookies(out_response);
+    DeleteSessionCookies(io);
 
     return 200;
 }

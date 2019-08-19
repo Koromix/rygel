@@ -10,7 +10,7 @@
 
 namespace RG {
 
-int ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http_Response *out_response);
-int ProduceMcoResults(const http_RequestInfo &request, const User *user, http_Response *out_response);
+int ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http_IO *io);
+int ProduceMcoResults(const http_RequestInfo &request, const User *user, http_IO *io);
 
 }

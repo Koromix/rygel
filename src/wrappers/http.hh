@@ -10,37 +10,6 @@
 
 namespace RG {
 
-class http_Response {
-    struct ResponseDeleter {
-        void operator()(MHD_Response *response) { MHD_destroy_response(response); }
-    };
-
-    std::unique_ptr<MHD_Response, ResponseDeleter> response;
-
-public:
-    enum class Flag {
-        EnableCacheControl = 1 << 0,
-        EnableETag = 1 << 1,
-        EnableCache = (int)EnableCacheControl | (int)EnableETag
-    };
-
-    unsigned int flags = 0;
-
-    http_Response();
-
-    operator MHD_Response *() const { return response.get(); }
-
-    void AddHeader(const char *key, const char *value);
-    void AddEncodingHeader(CompressionType compression_type);
-    void AddCookieHeader(const char *path, const char *name, const char *value,
-                         bool http_only = false);
-    void AddCachingHeaders(int max_age, const char *etag = nullptr);
-
-    void AttachResponse(MHD_Response *new_response);
-
-    friend class http_Daemon;
-};
-
 class http_RequestInfo {
     MHD_PostProcessor *pp;
     BlockAllocator alloc;
@@ -65,6 +34,37 @@ public:
     friend class http_Daemon;
 };
 
+class http_IO {
+    struct ResponseDeleter {
+        void operator()(MHD_Response *response) { MHD_destroy_response(response); }
+    };
+
+    std::unique_ptr<MHD_Response, ResponseDeleter> response;
+
+public:
+    enum class Flag {
+        EnableCacheControl = 1 << 0,
+        EnableETag = 1 << 1,
+        EnableCache = (int)EnableCacheControl | (int)EnableETag
+    };
+
+    unsigned int flags = 0;
+
+    http_IO();
+
+    operator MHD_Response *() const { return response.get(); }
+
+    void AddHeader(const char *key, const char *value);
+    void AddEncodingHeader(CompressionType compression_type);
+    void AddCookieHeader(const char *path, const char *name, const char *value,
+                         bool http_only = false);
+    void AddCachingHeaders(int max_age, const char *etag = nullptr);
+
+    void AttachResponse(MHD_Response *new_response);
+
+    friend class http_Daemon;
+};
+
 class http_Daemon {
     MHD_Daemon *daemon = nullptr;
     const char *base_url;
@@ -72,7 +72,7 @@ class http_Daemon {
 public:
     ~http_Daemon() { Stop(); }
 
-    std::function<int(const http_RequestInfo &request, http_Response *out_response)> handle_func;
+    std::function<int(const http_RequestInfo &request, http_IO *io)> handle_func;
     std::function<void(const http_RequestInfo &request, MHD_RequestTerminationCode code)> release_func;
 
     bool Start(IPStack stack, int port, int threads, const char *base_url);
@@ -90,10 +90,10 @@ const char *http_GetMimeType(Span<const char> extension);
 
 uint32_t http_ParseAcceptableEncodings(Span<const char> encodings);
 
-int http_ProduceErrorPage(int code, http_Response *out_response);
+int http_ProduceErrorPage(int code, http_IO *io);
 int http_ProduceStaticAsset(Span<const uint8_t> data, CompressionType in_compression_type,
                             const char *mime_type, CompressionType out_compression_type,
-                            http_Response *out_response);
+                            http_IO *io);
 
 class http_JsonPageBuilder: public json_Writer {
     HeapArray<uint8_t> buf;
@@ -103,7 +103,7 @@ public:
     http_JsonPageBuilder(CompressionType compression_type) :
         json_Writer(&st), st(&buf, nullptr, compression_type) {}
 
-    int Finish(http_Response *out_response);
+    int Finish(http_IO *io);
 };
 
 }

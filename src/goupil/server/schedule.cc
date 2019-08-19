@@ -14,17 +14,17 @@ static const char *const ScheduleNames[] = {
 };
 
 static int GetQueryInteger(const http_RequestInfo &request, const char *key,
-                           http_Response *out_response, int *out_value)
+                           http_IO *io, int *out_value)
 {
     const char *str = request.GetQueryValue(key);
     if (!str) {
         LogError("Missing '%1' parameter", key);
-        return http_ProduceErrorPage(422, out_response);
+        return http_ProduceErrorPage(422, io);
     }
 
     int value;
     if (!ParseDec(str, &value))
-        return http_ProduceErrorPage(422, out_response);
+        return http_ProduceErrorPage(422, io);
 
     *out_value = value;
     return 0;
@@ -32,27 +32,27 @@ static int GetQueryInteger(const http_RequestInfo &request, const char *key,
 
 // SQL must use 3 bind parameters: schedule, start date, end date (in this order)
 static int PrepareMonthQuery(const http_RequestInfo &request, const char *sql,
-                             http_Response *out_response, sqlite3_stmt **out_stmt)
+                             http_IO *io, sqlite3_stmt **out_stmt)
 {
     // Get query parameters
     const char *schedule_name;
     int year;
     int month;
     schedule_name = request.GetQueryValue("schedule");
-    if (int code = GetQueryInteger(request, "year", out_response, &year); code)
+    if (int code = GetQueryInteger(request, "year", io, &year); code)
         return code;
-    if (int code = GetQueryInteger(request, "month", out_response, &month); code)
+    if (int code = GetQueryInteger(request, "month", io, &month); code)
         return code;
 
     // Check arguments
     if (!std::any_of(std::begin(ScheduleNames), std::end(ScheduleNames),
                      [&](const char *name) { return TestStr(schedule_name, name); })) {
         LogError("Invalid schedule name '%1'", schedule_name);
-        return http_ProduceErrorPage(422, out_response);
+        return http_ProduceErrorPage(422, io);
     }
     if (month < 1 || month > 12) {
         LogError("Invalid month value %1", month);
-        return http_ProduceErrorPage(422, out_response);
+        return http_ProduceErrorPage(422, io);
     }
 
     // Determine query range
@@ -67,7 +67,7 @@ static int PrepareMonthQuery(const http_RequestInfo &request, const char *sql,
 
         if (sqlite3_prepare_v2(goupil_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
             LogError("SQLite Error: %1", sqlite3_errmsg(goupil_db));
-            return http_ProduceErrorPage(500, out_response);
+            return http_ProduceErrorPage(500, io);
         }
 
         sqlite3_bind_text(stmt, 1, schedule_name, -1, SQLITE_TRANSIENT);
@@ -79,7 +79,7 @@ static int PrepareMonthQuery(const http_RequestInfo &request, const char *sql,
     return 0;
 }
 
-int ProduceScheduleResources(const http_RequestInfo &request, http_Response *out_response)
+int ProduceScheduleResources(const http_RequestInfo &request, http_IO *io)
 {
     // Execute query
     sqlite3_stmt *stmt;
@@ -91,7 +91,7 @@ int ProduceScheduleResources(const http_RequestInfo &request, http_Response *out
             ORDER BY date, time
         )";
 
-        if (int code = PrepareMonthQuery(request, sql, out_response, &stmt); code)
+        if (int code = PrepareMonthQuery(request, sql, io, &stmt); code)
             return code;
     }
     RG_DEFER { sqlite3_finalize(stmt); };
@@ -122,15 +122,15 @@ int ProduceScheduleResources(const http_RequestInfo &request, http_Response *out
         }
         if (rc != SQLITE_DONE) {
             LogError("SQLite Error: %1", sqlite3_errmsg(goupil_db));
-            return http_ProduceErrorPage(500, out_response);
+            return http_ProduceErrorPage(500, io);
         }
     }
     json.EndObject();
 
-    return json.Finish(out_response);
+    return json.Finish(io);
 }
 
-int ProduceScheduleMeetings(const http_RequestInfo &request, http_Response *out_response)
+int ProduceScheduleMeetings(const http_RequestInfo &request, http_IO *io)
 {
     // Execute query
     sqlite3_stmt *stmt;
@@ -142,7 +142,7 @@ int ProduceScheduleMeetings(const http_RequestInfo &request, http_Response *out_
             ORDER BY date, time
         )";
 
-        if (int code = PrepareMonthQuery(request, sql, out_response, &stmt); code)
+        if (int code = PrepareMonthQuery(request, sql, io, &stmt); code)
             return code;
     }
     RG_DEFER { sqlite3_finalize(stmt); };
@@ -172,12 +172,12 @@ int ProduceScheduleMeetings(const http_RequestInfo &request, http_Response *out_
         }
         if (rc != SQLITE_DONE) {
             LogError("SQLite Error: %1", sqlite3_errmsg(goupil_db));
-            return http_ProduceErrorPage(500, out_response);
+            return http_ProduceErrorPage(500, io);
         }
     }
     json.EndObject();
 
-    return json.Finish(out_response);
+    return json.Finish(io);
 }
 
 }

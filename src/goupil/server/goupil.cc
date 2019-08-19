@@ -32,7 +32,7 @@ struct Route {
             int code;
             const char *location;
         } redirect;
-        int (*func)(const http_RequestInfo &request, http_Response *out_response);
+        int (*func)(const http_RequestInfo &request, http_IO *io);
     } u;
 
     RG_HASH_TABLE_HANDLER(Route, url);
@@ -125,7 +125,7 @@ static void FreePushContext(void *cls)
     push_count--;
 }
 
-static int ProduceEvents(const http_RequestInfo &request, http_Response *out_response)
+static int ProduceEvents(const http_RequestInfo &request, http_IO *io)
 {
     // TODO: Use the allocator buried in http_RequestInfo?
     PushContext *ctx = new PushContext();
@@ -133,8 +133,8 @@ static int ProduceEvents(const http_RequestInfo &request, http_Response *out_res
 
     MHD_Response *response = MHD_create_response_from_callback(MHD_SIZE_UNKNOWN, 1024,
                                                                SendPendingEvents, ctx, FreePushContext);
-    out_response->AttachResponse(response);
-    out_response->AddHeader("Content-Type", "text/event-stream");
+    io->AttachResponse(response);
+    io->AddHeader("Content-Type", "text/event-stream");
 
     push_count++;
 
@@ -205,7 +205,7 @@ static void InitRoutes()
         routes.Append(route);
     };
     const auto add_function_route = [&](const char *method, const char *url,
-                                        int (*func)(const http_RequestInfo &request, http_Response *out_response)) {
+                                        int (*func)(const http_RequestInfo &request, http_IO *io)) {
         Route route = {};
 
         route.method = method;
@@ -265,7 +265,7 @@ static void InitRoutes()
     }
 }
 
-static int HandleRequest(const http_RequestInfo &request, http_Response *out_response)
+static int HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
 #ifndef NDEBUG
     if (asset_set.LoadFromLibrary(assets_filename) == AssetLoadStatus::Loaded) {
@@ -277,14 +277,14 @@ static int HandleRequest(const http_RequestInfo &request, http_Response *out_res
 #endif
 
     // Send these headers whenever possible
-    out_response->AddHeader("Referrer-Policy", "no-referrer");
+    io->AddHeader("Referrer-Policy", "no-referrer");
 
     // Handle server-side cache validation (ETag)
     {
         const char *client_etag = request.GetHeaderValue("If-None-Match");
         if (client_etag && TestStr(client_etag, etag)) {
             MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-            out_response->AttachResponse(response);
+            io->AttachResponse(response);
             return 304;
         }
     }
@@ -292,38 +292,38 @@ static int HandleRequest(const http_RequestInfo &request, http_Response *out_res
     // Find appropriate route
     Route *route = routes.Find(request.url);
     if (!route)
-        return http_ProduceErrorPage(404, out_response);
+        return http_ProduceErrorPage(404, io);
 
     // Execute route
     int code = 0;
     switch (route->type) {
         case Route::Type::Asset: {
             code = http_ProduceStaticAsset(route->u.st.asset.data, route->u.st.asset.compression_type,
-                                           route->u.st.mime_type, request.compression_type, out_response);
+                                           route->u.st.mime_type, request.compression_type, io);
             if (route->u.st.asset.source_map) {
-                out_response->AddHeader("SourceMap", route->u.st.asset.source_map);
+                io->AddHeader("SourceMap", route->u.st.asset.source_map);
             }
         } break;
 
         case Route::Type::Redirect: {
             MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-            out_response->AttachResponse(response);
-            out_response->AddHeader("Location", route->u.redirect.location);
+            io->AttachResponse(response);
+            io->AddHeader("Location", route->u.redirect.location);
 
             return 301;
         } break;
 
         case Route::Type::Function: {
-            code = route->u.func(request, out_response);
+            code = route->u.func(request, io);
         } break;
     }
     RG_ASSERT_DEBUG(code);
 
     // Send cache information
 #ifndef NDEBUG
-    out_response->flags &= ~(unsigned int)http_Response::Flag::EnableCache;
+    io->flags &= ~(unsigned int)http_IO::Flag::EnableCache;
 #endif
-    out_response->AddCachingHeaders(goupil_config.max_age, etag);
+    io->AddCachingHeaders(goupil_config.max_age, etag);
 
     return code;
 }
