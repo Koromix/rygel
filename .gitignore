@@ -12,3 +12,4 @@ RcppExports.*
 .Rhistory
 .Rbuildignore
 *.sublime-*
+/rygel.*
