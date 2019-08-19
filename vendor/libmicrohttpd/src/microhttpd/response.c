@@ -1150,6 +1150,31 @@ MHD_create_response_for_upgrade (MHD_UpgradeHandler upgrade_handler,
 
 
 /**
+ * Move response headers from one response object to another.
+ *
+ * @param src response object to steal from
+ * @param dest response object to move headers to
+ * @ingroup response
+ */
+_MHD_EXTERN void
+MHD_move_response_headers (struct MHD_Response *src,
+			   struct MHD_Response *dest)
+{
+  struct MHD_HTTP_Header *last_header;
+
+  if (NULL != src->first_header) {
+    last_header = src->first_header;
+    while (NULL != last_header->next)
+      last_header = last_header->next;
+
+    last_header->next = dest->first_header;
+    dest->first_header = src->first_header;
+    src->first_header = NULL;
+  }
+}
+
+
+/**
  * Destroy a response object and associated resources.  Note that
  * libmicrohttpd may keep some of the resources around if the response
  * is still in the queue for some clients, so the memory may not
