@@ -50,7 +50,7 @@ static int GetIndexFromRequest(const http_RequestInfo &request, http_Response *o
     // Redirect to the canonical URL for this version, to improve client-side caching
     if (date != index->limit_dates[0]) {
         MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-        out_response->response.reset(response);
+        out_response->AttachResponse(response);
 
         {
             char url_buf[64];

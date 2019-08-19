@@ -133,7 +133,7 @@ static int ProduceEvents(const http_RequestInfo &request, http_Response *out_res
 
     MHD_Response *response = MHD_create_response_from_callback(MHD_SIZE_UNKNOWN, 1024,
                                                                SendPendingEvents, ctx, FreePushContext);
-    out_response->response.reset(response);
+    out_response->AttachResponse(response);
     MHD_add_response_header(*out_response, "Content-Type", "text/event-stream");
 
     push_count++;
@@ -283,7 +283,8 @@ static int HandleRequest(const http_RequestInfo &request, http_Response *out_res
     {
         const char *client_etag = request.GetHeaderValue("If-None-Match");
         if (client_etag && TestStr(client_etag, etag)) {
-            *out_response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+            MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+            out_response->AttachResponse(response);
             return 304;
         }
     }
@@ -306,7 +307,7 @@ static int HandleRequest(const http_RequestInfo &request, http_Response *out_res
 
         case Route::Type::Redirect: {
             MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-            out_response->response.reset(response);
+            out_response->AttachResponse(response);
 
             MHD_add_response_header(response, "Location", route->u.redirect.location);
 
