@@ -55,7 +55,7 @@ static int GetIndexFromRequest(const http_RequestInfo &request, http_Response *o
         {
             char url_buf[64];
             Fmt(url_buf, "%1%2?date=%3", thop_config.base_url, request.url + 1, index->limit_dates[0]);
-            MHD_add_response_header(response, "Location", url_buf);
+            out_response->AddHeader("Location", url_buf);
         }
 
         return 303;

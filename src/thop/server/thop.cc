@@ -247,12 +247,10 @@ static int HandleRequest(const http_RequestInfo &request, http_Response *out_res
     const User *user = CheckSessionUser(request, &user_mismatch);
 
     // Send these headers whenever possible
-    RG_DEFER {
-        MHD_add_response_header(*out_response, "Referrer-Policy", "no-referrer");
-        if (user_mismatch) {
-            DeleteSessionCookies(out_response);
-        }
-    };
+    out_response->AddHeader("Referrer-Policy", "no-referrer");
+    if (user_mismatch) {
+        DeleteSessionCookies(out_response);
+    }
 
     // Handle server-side cache validation (ETag)
     {
@@ -294,7 +292,7 @@ static int HandleRequest(const http_RequestInfo &request, http_Response *out_res
             code = http_ProduceStaticAsset(route->u.st.asset.data, route->u.st.asset.compression_type,
                                            route->u.st.mime_type, request.compression_type, out_response);
             if (route->u.st.asset.source_map) {
-                MHD_add_response_header(*out_response, "SourceMap", route->u.st.asset.source_map);
+                out_response->AddHeader("SourceMap", route->u.st.asset.source_map);
             }
         } break;
 

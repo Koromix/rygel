@@ -30,6 +30,7 @@ public:
 
     operator MHD_Response *() const { return response.get(); }
 
+    void AddHeader(const char *key, const char *value);
     void AddEncodingHeader(CompressionType compression_type);
     void AddCookieHeader(const char *path, const char *name, const char *value,
                          bool http_only = false);
