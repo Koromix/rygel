@@ -1,0 +1,59 @@
+diff --git a/vendor/libmicrohttpd/src/include/microhttpd.h b/vendor/libmicrohttpd/src/include/microhttpd.h
+index c2fc90a4..0eedaf9b 100644
+--- a/vendor/libmicrohttpd/src/include/microhttpd.h
++++ b/vendor/libmicrohttpd/src/include/microhttpd.h
+@@ -3118,6 +3118,18 @@ MHD_create_response_from_fd_at_offset64 (uint64_t size,
+                                          uint64_t offset);
+ 
+ 
++/**
++ * Move response headers from one response object to another.
++ *
++ * @param src response object to steal from
++ * @param dest response object to move headers to
++ * @ingroup response
++ */
++_MHD_EXTERN void
++MHD_move_response_headers (struct MHD_Response *src,
++                           struct MHD_Response *dest);
++
++
+ /**
+  * Enumeration for actions MHD should perform on the underlying socket
+  * of the upgrade.  This API is not finalized, and in particular
+diff --git a/vendor/libmicrohttpd/src/microhttpd/response.c b/vendor/libmicrohttpd/src/microhttpd/response.c
+index 3e9fb053..952648e0 100644
+--- a/vendor/libmicrohttpd/src/microhttpd/response.c
++++ b/vendor/libmicrohttpd/src/microhttpd/response.c
+@@ -1149,6 +1149,31 @@ MHD_create_response_for_upgrade (MHD_UpgradeHandler upgrade_handler,
+ #endif /* UPGRADE_SUPPORT */
+ 
+ 
++/**
++ * Move response headers from one response object to another.
++ *
++ * @param src response object to steal from
++ * @param dest response object to move headers to
++ * @ingroup response
++ */
++_MHD_EXTERN void
++MHD_move_response_headers (struct MHD_Response *src,
++			   struct MHD_Response *dest)
++{
++  struct MHD_HTTP_Header *last_header;
++
++  if (NULL != src->first_header) {
++    last_header = src->first_header;
++    while (NULL != last_header->next)
++      last_header = last_header->next;
++
++    last_header->next = dest->first_header;
++    dest->first_header = src->first_header;
++    src->first_header = NULL;
++  }
++}
++
++
+ /**
+  * Destroy a response object and associated resources.  Note that
+  * libmicrohttpd may keep some of the resources around if the response

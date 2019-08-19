@@ -3119,6 +3119,18 @@ MHD_create_response_from_fd_at_offset64 (uint64_t size,
 
 
 /**
+ * Move response headers from one response object to another.
+ *
+ * @param src response object to steal from
+ * @param dest response object to move headers to
+ * @ingroup response
+ */
+_MHD_EXTERN void
+MHD_move_response_headers (struct MHD_Response *src,
+                           struct MHD_Response *dest);
+
+
+/**
  * Enumeration for actions MHD should perform on the underlying socket
  * of the upgrade.  This API is not finalized, and in particular
  * the final set of actions is yet to be decided. This is just an
