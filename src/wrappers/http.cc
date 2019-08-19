@@ -188,6 +188,12 @@ void http_Daemon::Stop()
     daemon = nullptr;
 }
 
+http_Response::http_Response()
+{
+    MHD_Response *response0 = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+    response.reset(response0);
+}
+
 void http_Response::AddEncodingHeader(CompressionType compression_type)
 {
     switch (compression_type) {
@@ -237,6 +243,12 @@ void http_Response::AddCachingHeaders(int max_age, const char *etag)
     } else {
         MHD_add_response_header(response.get(), "Cache-Control", "no-store");
     }
+}
+
+void http_Response::AttachResponse(MHD_Response *new_response)
+{
+    MHD_move_response_headers(response.get(), new_response);
+    response.reset(new_response);
 }
 
 const char *http_GetMimeType(Span<const char> extension)
@@ -313,7 +325,7 @@ int http_ProduceErrorPage(int code, http_Response *out_response)
     MHD_Response *response =
         MHD_create_response_from_buffer_with_free_callback((size_t)page.len, page.ptr,
                                                            ReleaseDataCallback);
-    out_response->response.reset(response);
+    out_response->AttachResponse(response);
 
     MHD_add_response_header(response, "Content-Type", "text/plain");
 
@@ -343,7 +355,7 @@ int http_ProduceStaticAsset(Span<const uint8_t> data, CompressionType in_compres
         response = MHD_create_response_from_buffer((size_t)data.len, (void *)data.ptr,
                                                    MHD_RESPMEM_PERSISTENT);
     }
-    out_response->response.reset(response);
+    out_response->AttachResponse(response);
 
     out_response->AddEncodingHeader(out_compression_type);
     if (mime_type) {
@@ -365,7 +377,7 @@ int http_JsonPageBuilder::Finish(http_Response *out_response)
         MHD_create_response_from_buffer_with_free_callback((size_t)buf.len, buf.ptr,
                                                            ReleaseDataCallback);
     buf.Leak();
-    out_response->response.reset(response);
+    out_response->AttachResponse(response);
 
     out_response->AddEncodingHeader(compression_type);
     MHD_add_response_header(*out_response, "Content-Type", "application/json");

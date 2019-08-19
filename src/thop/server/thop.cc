@@ -258,7 +258,8 @@ static int HandleRequest(const http_RequestInfo &request, http_Response *out_res
     {
         const char *client_etag = request.GetHeaderValue("If-None-Match");
         if (client_etag && TestStr(client_etag, etag)) {
-            *out_response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+            MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+            out_response->AttachResponse(response);
             return 304;
         }
     }
