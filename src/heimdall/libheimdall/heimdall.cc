@@ -163,7 +163,7 @@ static void DrawEventsBlock(ImRect rect, float alpha, Span<const Element *const>
             {
                 text_bb = bb.GetCenter();
                 ImVec2 text_size = ImGui::CalcTextSize(len_str);
-                text_bb.x -= text_size.x / 2.0f + 1.0f;
+                text_bb.x -= text_size.x / 2.0f;
                 text_bb.y -= text_size.y / 2.0f - 2.0f;
             }
 
