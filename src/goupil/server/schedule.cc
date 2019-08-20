@@ -72,7 +72,6 @@ static sqlite3_stmt *PrepareMonthQuery(const http_RequestInfo &request, const ch
 
         if (sqlite3_prepare_v2(goupil_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
             LogError("SQLite Error: %1", sqlite3_errmsg(goupil_db));
-            http_ProduceErrorPage(500, io);
             return nullptr;
         }
 
@@ -128,7 +127,6 @@ void ProduceScheduleResources(const http_RequestInfo &request, http_IO *io)
         }
         if (rc != SQLITE_DONE) {
             LogError("SQLite Error: %1", sqlite3_errmsg(goupil_db));
-            http_ProduceErrorPage(500, io);
             return;
         }
     }
@@ -180,7 +178,6 @@ void ProduceScheduleMeetings(const http_RequestInfo &request, http_IO *io)
         }
         if (rc != SQLITE_DONE) {
             LogError("SQLite Error: %1", sqlite3_errmsg(goupil_db));
-            http_ProduceErrorPage(500, io);
             return;
         }
     }

@@ -102,6 +102,10 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
 
     // Run real handler
     daemon->handle_func(*request, &io);
+    if (io.code < 0) {
+        http_ProduceErrorPage(500, &io);
+    }
+
     return MHD_queue_response(conn, (unsigned int)io.code, io.response.get());
 }
 
@@ -250,6 +254,8 @@ void http_IO::AddCachingHeaders(int max_age, const char *etag)
 
 void http_IO::AttachResponse(int new_code, MHD_Response *new_response)
 {
+    RG_ASSERT_DEBUG(new_code >= 0);
+
     code = new_code;
 
     MHD_move_response_headers(response.get(), new_response);
@@ -334,7 +340,7 @@ void http_ProduceErrorPage(int code, http_IO *io)
     io->AddHeader("Content-Type", "text/plain");
 }
 
-void http_ProduceStaticAsset(Span<const uint8_t> data, CompressionType in_compression_type,
+bool http_ProduceStaticAsset(Span<const uint8_t> data, CompressionType in_compression_type,
                              const char *mime_type, CompressionType out_compression_type,
                              http_IO *io)
 {
@@ -344,14 +350,10 @@ void http_ProduceStaticAsset(Span<const uint8_t> data, CompressionType in_compre
         {
             StreamReader reader(data, nullptr, in_compression_type);
             StreamWriter writer(&buf, nullptr, out_compression_type);
-            if (!SpliceStream(&reader, Megabytes(8), &writer)) {
-                http_ProduceErrorPage(500, io);
-                return;
-            }
-            if (!writer.Close()) {
-                http_ProduceErrorPage(500, io);
-                return;
-            }
+            if (!SpliceStream(&reader, Megabytes(8), &writer))
+                return false;
+            if (!writer.Close())
+                return false;
         }
 
         response = MHD_create_response_from_buffer_with_free_callback((size_t)buf.len, (void *)buf.ptr,
@@ -369,6 +371,8 @@ void http_ProduceStaticAsset(Span<const uint8_t> data, CompressionType in_compre
     }
 
     io->flags |= (int)http_IO::Flag::EnableCache;
+
+    return true;
 }
 
 void http_JsonPageBuilder::Finish(http_IO *io)

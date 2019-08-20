@@ -39,7 +39,7 @@ class http_IO {
         void operator()(MHD_Response *response) { MHD_destroy_response(response); }
     };
 
-    int code;
+    int code = -1;
     std::unique_ptr<MHD_Response, ResponseDeleter> response;
 
 public:
@@ -92,7 +92,7 @@ const char *http_GetMimeType(Span<const char> extension);
 uint32_t http_ParseAcceptableEncodings(Span<const char> encodings);
 
 void http_ProduceErrorPage(int code, http_IO *io);
-void http_ProduceStaticAsset(Span<const uint8_t> data, CompressionType in_compression_type,
+bool http_ProduceStaticAsset(Span<const uint8_t> data, CompressionType in_compression_type,
                              const char *mime_type, CompressionType out_compression_type,
                              http_IO *io);
 
