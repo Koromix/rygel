@@ -385,10 +385,8 @@ void DeleteSessionCookies(http_IO *io)
 void HandleConnect(const http_RequestInfo &request, const User *, http_IO *io)
 {
     char address[65];
-    if (!GetClientAddress(request.conn, address)) {
-        http_ProduceErrorPage(500, io);
+    if (!GetClientAddress(request.conn, address))
         return;
-    }
 
     const char *username = request.GetPostValue("username");
     const char *password = request.GetPostValue("password");
@@ -447,7 +445,6 @@ void HandleConnect(const http_RequestInfo &request, const User *, http_IO *io)
             std::pair<Session *, bool> ret = sessions.AppendDefault(session_key);
             if (!ret.second) {
                 LogError("Generated duplicate session key");
-                http_ProduceErrorPage(500, io);
                 return;
             }
             session = ret.first;

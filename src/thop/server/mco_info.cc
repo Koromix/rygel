@@ -631,7 +631,7 @@ void ProduceMcoTree(const http_RequestInfo &request, const User *, http_IO *io)
     BlockAllocator readable_nodes_alloc;
     HeapArray<ReadableGhmDecisionNode> readable_nodes;
     if (!BuildReadableGhmTree(index->ghm_nodes, &readable_nodes, &readable_nodes_alloc))
-        return http_ProduceErrorPage(500, io);
+        return;
 
     http_JsonPageBuilder json(request.compression_type);
 
