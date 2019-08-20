@@ -10,8 +10,8 @@
 
 namespace RG {
 
-static int GetIndexFromRequest(const http_RequestInfo &request, http_IO *io,
-                               const mco_TableIndex **out_index, drd_Sector *out_sector = nullptr)
+static const mco_TableIndex *GetIndexFromRequest(const http_RequestInfo &request, http_IO *io,
+                                                 drd_Sector *out_sector = nullptr)
 {
     Date date = {};
     {
@@ -21,8 +21,10 @@ static int GetIndexFromRequest(const http_RequestInfo &request, http_IO *io,
         } else {
             LogError("Missing 'date' parameter");
         }
-        if (!date.value)
-            return http_ProduceErrorPage(422, io);
+        if (!date.value) {
+            http_ProduceErrorPage(422, io);
+            return nullptr;
+        }
     }
 
     drd_Sector sector = drd_Sector::Public;
@@ -30,49 +32,47 @@ static int GetIndexFromRequest(const http_RequestInfo &request, http_IO *io,
         const char *sector_str = request.GetQueryValue("sector");
         if (!sector_str) {
             LogError("Missing 'sector' parameter");
-            return http_ProduceErrorPage(422, io);
+            http_ProduceErrorPage(422, io);
+            return nullptr;
         } else if (TestStr(sector_str, "public")) {
             sector = drd_Sector::Public;
         } else if (TestStr(sector_str, "private")) {
             sector = drd_Sector::Private;
         } else {
             LogError("Invalid 'sector' parameter");
-            return http_ProduceErrorPage(422, io);
+            http_ProduceErrorPage(422, io);
+            return nullptr;
         }
     }
 
     const mco_TableIndex *index = mco_table_set.FindIndex(date);
     if (!index) {
         LogError("No table index available on '%1'", date);
-        return http_ProduceErrorPage(404, io);
+        http_ProduceErrorPage(404, io);
+        return nullptr;
     }
 
     // Redirect to the canonical URL for this version, to improve client-side caching
     if (date != index->limit_dates[0]) {
-        MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-        io->AttachResponse(response);
+        char url_buf[64];
+        Fmt(url_buf, "%1%2?date=%3", thop_config.base_url, request.url + 1, index->limit_dates[0]);
 
-        {
-            char url_buf[64];
-            Fmt(url_buf, "%1%2?date=%3", thop_config.base_url, request.url + 1, index->limit_dates[0]);
-            io->AddHeader("Location", url_buf);
-        }
+        io->AddHeader("Location", url_buf);
 
-        return 303;
+        return nullptr;
     }
 
-    *out_index = index;
     if (out_sector) {
         *out_sector = sector;
     }
-    return 0;
+    return index;
 }
 
-int ProduceMcoDiagnoses(const http_RequestInfo &request, const User *, http_IO *io)
+void ProduceMcoDiagnoses(const http_RequestInfo &request, const User *, http_IO *io)
 {
-    const mco_TableIndex *index;
-    if (int code = GetIndexFromRequest(request, io, &index); code)
-        return code;
+    const mco_TableIndex *index = GetIndexFromRequest(request, io);
+    if (!index)
+        return;
 
     mco_ListSpecifier spec(mco_ListSpecifier::Table::Diagnoses);
     {
@@ -120,11 +120,11 @@ int ProduceMcoDiagnoses(const http_RequestInfo &request, const User *, http_IO *
     return json.Finish(io);
 }
 
-int ProduceMcoProcedures(const http_RequestInfo &request, const User *, http_IO *io)
+void ProduceMcoProcedures(const http_RequestInfo &request, const User *, http_IO *io)
 {
-    const mco_TableIndex *index;
-    if (int code = GetIndexFromRequest(request, io, &index); code)
-        return code;
+    const mco_TableIndex *index = GetIndexFromRequest(request, io);
+    if (!index)
+        return;
 
     mco_ListSpecifier spec(mco_ListSpecifier::Table::Procedures);
     {
@@ -162,12 +162,12 @@ int ProduceMcoProcedures(const http_RequestInfo &request, const User *, http_IO 
     return json.Finish(io);
 }
 
-int ProduceMcoGhmGhs(const http_RequestInfo &request, const User *, http_IO *io)
+void ProduceMcoGhmGhs(const http_RequestInfo &request, const User *, http_IO *io)
 {
-    const mco_TableIndex *index;
     drd_Sector sector;
-    if (int code = GetIndexFromRequest(request, io, &index, &sector); code)
-        return code;
+    const mco_TableIndex *index = GetIndexFromRequest(request, io, &sector);
+    if (!index)
+        return;
 
     const HashTable<mco_GhmCode, mco_GhmConstraint> &constraints =
         *mco_index_to_constraints[index - mco_table_set.indexes.ptr];
@@ -621,11 +621,11 @@ static bool BuildReadableGhmTree(Span<const mco_GhmDecisionNode> ghm_nodes,
     return true;
 }
 
-int ProduceMcoTree(const http_RequestInfo &request, const User *, http_IO *io)
+void ProduceMcoTree(const http_RequestInfo &request, const User *, http_IO *io)
 {
-    const mco_TableIndex *index;
-    if (int code = GetIndexFromRequest(request, io, &index); code)
-        return code;
+    const mco_TableIndex *index = GetIndexFromRequest(request, io);
+    if (!index)
+        return;
 
     // TODO: Generate ahead of time
     BlockAllocator readable_nodes_alloc;

@@ -9,8 +9,8 @@
 
 namespace RG {
 
-int ProduceScheduleResources(const http_RequestInfo &request, http_IO *io);
-int ProduceScheduleMeetings(const http_RequestInfo &request, http_IO *io);
-int ProduceScheduleEvents(const http_RequestInfo &request, http_IO *io);
+void ProduceScheduleResources(const http_RequestInfo &request, http_IO *io);
+void ProduceScheduleMeetings(const http_RequestInfo &request, http_IO *io);
+void ProduceScheduleEvents(const http_RequestInfo &request, http_IO *io);
 
 }

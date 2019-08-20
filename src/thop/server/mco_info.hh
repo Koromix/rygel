@@ -10,10 +10,10 @@
 
 namespace RG {
 
-int ProduceMcoDiagnoses(const http_RequestInfo &request, const User *user, http_IO *io);
-int ProduceMcoProcedures(const http_RequestInfo &request, const User *user, http_IO *io);
-int ProduceMcoGhmGhs(const http_RequestInfo &request, const User *user, http_IO *io);
+void ProduceMcoDiagnoses(const http_RequestInfo &request, const User *user, http_IO *io);
+void ProduceMcoProcedures(const http_RequestInfo &request, const User *user, http_IO *io);
+void ProduceMcoGhmGhs(const http_RequestInfo &request, const User *user, http_IO *io);
 
-int ProduceMcoTree(const http_RequestInfo &request, const User *user, http_IO *io);
+void ProduceMcoTree(const http_RequestInfo &request, const User *user, http_IO *io);
 
 }

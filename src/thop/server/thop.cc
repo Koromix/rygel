@@ -41,7 +41,7 @@ struct Route {
             const char *mime_type;
         } st;
 
-        int (*func)(const http_RequestInfo &request, const User *user, http_IO *io);
+        void (*func)(const http_RequestInfo &request, const User *user, http_IO *io);
     } u;
 
     RG_HASH_TABLE_HANDLER(Route, url);
@@ -152,8 +152,8 @@ static void InitRoutes()
         routes.Append(route);
     };
     const auto add_function_route = [&](const char *method, const char *url,
-                                        int (*func)(const http_RequestInfo &request, const User *user,
-                                                    http_IO *io)) {
+                                        void (*func)(const http_RequestInfo &request, const User *user,
+                                                     http_IO *io)) {
         Route route = {};
 
         route.method = method;
@@ -231,7 +231,7 @@ static void InitRoutes()
     }
 }
 
-static int HandleRequest(const http_RequestInfo &request, http_IO *io)
+static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
 #ifndef NDEBUG
     if (asset_set.LoadFromLibrary(assets_filename) == AssetLoadStatus::Loaded) {
@@ -257,8 +257,8 @@ static int HandleRequest(const http_RequestInfo &request, http_IO *io)
         const char *client_etag = request.GetHeaderValue("If-None-Match");
         if (client_etag && TestStr(client_etag, etag)) {
             MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-            io->AttachResponse(response);
-            return 304;
+            io->AttachResponse(304, response);
+            return;
         }
     }
 
@@ -286,29 +286,25 @@ static int HandleRequest(const http_RequestInfo &request, http_IO *io)
     }
 
     // Execute route
-    int code = 0;
     switch (route->type) {
         case Route::Type::Asset: {
-            code = http_ProduceStaticAsset(route->u.st.asset.data, route->u.st.asset.compression_type,
-                                           route->u.st.mime_type, request.compression_type, io);
+            http_ProduceStaticAsset(route->u.st.asset.data, route->u.st.asset.compression_type,
+                                    route->u.st.mime_type, request.compression_type, io);
             if (route->u.st.asset.source_map) {
                 io->AddHeader("SourceMap", route->u.st.asset.source_map);
             }
         } break;
 
         case Route::Type::Function: {
-            code = route->u.func(request, user, io);
+            route->u.func(request, user, io);
         } break;
     }
-    RG_ASSERT_DEBUG(code);
 
     // Send cache information
 #ifndef NDEBUG
     io->flags &= ~(unsigned int)http_IO::Flag::EnableCache;
 #endif
     io->AddCachingHeaders(thop_config.max_age, etag);
-
-    return code;
 }
 
 int RunThop(int argc, char **argv)

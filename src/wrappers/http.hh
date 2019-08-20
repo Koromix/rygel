@@ -39,6 +39,7 @@ class http_IO {
         void operator()(MHD_Response *response) { MHD_destroy_response(response); }
     };
 
+    int code;
     std::unique_ptr<MHD_Response, ResponseDeleter> response;
 
 public:
@@ -60,7 +61,7 @@ public:
                          bool http_only = false);
     void AddCachingHeaders(int max_age, const char *etag = nullptr);
 
-    void AttachResponse(MHD_Response *new_response);
+    void AttachResponse(int code, MHD_Response *new_response);
 
     friend class http_Daemon;
 };
@@ -72,7 +73,7 @@ class http_Daemon {
 public:
     ~http_Daemon() { Stop(); }
 
-    std::function<int(const http_RequestInfo &request, http_IO *io)> handle_func;
+    std::function<void(const http_RequestInfo &request, http_IO *io)> handle_func;
     std::function<void(const http_RequestInfo &request, MHD_RequestTerminationCode code)> release_func;
 
     bool Start(IPStack stack, int port, int threads, const char *base_url);
@@ -90,10 +91,10 @@ const char *http_GetMimeType(Span<const char> extension);
 
 uint32_t http_ParseAcceptableEncodings(Span<const char> encodings);
 
-int http_ProduceErrorPage(int code, http_IO *io);
-int http_ProduceStaticAsset(Span<const uint8_t> data, CompressionType in_compression_type,
-                            const char *mime_type, CompressionType out_compression_type,
-                            http_IO *io);
+void http_ProduceErrorPage(int code, http_IO *io);
+void http_ProduceStaticAsset(Span<const uint8_t> data, CompressionType in_compression_type,
+                             const char *mime_type, CompressionType out_compression_type,
+                             http_IO *io);
 
 class http_JsonPageBuilder: public json_Writer {
     HeapArray<uint8_t> buf;
@@ -103,7 +104,7 @@ public:
     http_JsonPageBuilder(CompressionType compression_type) :
         json_Writer(&st), st(&buf, nullptr, compression_type) {}
 
-    int Finish(http_IO *io);
+    void Finish(http_IO *io);
 };
 
 }

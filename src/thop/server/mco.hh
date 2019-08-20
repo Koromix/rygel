@@ -56,6 +56,6 @@ private:
     bool RunDirect(std::function<void(Span<const mco_Result>, Span<const mco_Result>)> func);
 };
 
-int ProduceMcoSettings(const http_RequestInfo &request, const User *user, http_IO *io);
+void ProduceMcoSettings(const http_RequestInfo &request, const User *user, http_IO *io);
 
 }
