@@ -159,12 +159,12 @@ enum class Endianness {
     #define RG_FALLTHROUGH
 #endif
 
-extern "C" void RG_NORETURN AssertFail(const char *cond);
+extern "C" void RG_NORETURN AssertFail(const char *filename, int line, const char *cond);
 
 #define RG_ASSERT(Cond) \
     do { \
         if (!RG_LIKELY(Cond)) \
-            RG::AssertFail(RG_STRINGIFY(Cond)); \
+            RG::AssertFail(__FILE__, __LINE__, RG_STRINGIFY(Cond)); \
     } while (false)
 #ifndef NDEBUG
     #define RG_ASSERT_DEBUG(Cond) RG_ASSERT(Cond)
