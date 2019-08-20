@@ -1254,8 +1254,10 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
 
         ImGui::Checkbox("Other settings", &state.show_settings);
 
-//        ImGui::Text("             Framerate: %.1f (%.3f ms/frame)             ",
-//                    ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+#if 0
+        ImGui::Text("             Framerate: %.1f (%.3f ms/frame)             ",
+                    ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+#endif
 
         menu_height = ImGui::GetWindowSize().y;
         ImGui::EndMainMenuBar();
