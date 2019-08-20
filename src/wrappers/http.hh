@@ -10,6 +10,8 @@
 
 namespace RG {
 
+class http_Daemon;
+
 class http_RequestInfo {
     MHD_PostProcessor *pp;
     BlockAllocator alloc;
@@ -31,12 +33,15 @@ public:
     const char *GetPostValue(const char *key) const
         { return post.FindValue(key, {}).ptr; }
 
-    friend class http_Daemon;
+    friend http_Daemon;
 };
 
 class http_IO {
     int code = -1;
     MHD_Response *response;
+
+    bool handled = false;
+    std::function<void(const http_RequestInfo &request, http_IO *io)> async_func;
 
 public:
     enum class Flag {
@@ -50,6 +55,8 @@ public:
     http_IO();
     ~http_IO();
 
+    void RunAsync(std::function<void(const http_RequestInfo &request, http_IO *io)> func);
+
     void AddHeader(const char *key, const char *value);
     void AddEncodingHeader(CompressionType compression_type);
     void AddCookieHeader(const char *path, const char *name, const char *value,
@@ -58,12 +65,14 @@ public:
 
     void AttachResponse(int code, MHD_Response *new_response);
 
-    friend class http_Daemon;
+    friend http_Daemon;
 };
 
 class http_Daemon {
     MHD_Daemon *daemon = nullptr;
     const char *base_url;
+
+    Async *async = nullptr;
 
 public:
     ~http_Daemon() { Stop(); }
