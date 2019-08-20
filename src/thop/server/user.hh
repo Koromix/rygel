@@ -78,7 +78,7 @@ bool LoadUserSet(Span<const char *const> filenames, const StructureSet &structur
 const User *CheckSessionUser(const http_RequestInfo &request, bool *out_mismatch = nullptr);
 void DeleteSessionCookies(http_IO *io);
 
-int HandleConnect(const http_RequestInfo &request, const User *user, http_IO *io);
-int HandleDisconnect(const http_RequestInfo &request, const User *user, http_IO *io);
+void HandleConnect(const http_RequestInfo &request, const User *user, http_IO *io);
+void HandleDisconnect(const http_RequestInfo &request, const User *user, http_IO *io);
 
 }

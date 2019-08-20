@@ -32,7 +32,7 @@ struct Route {
             int code;
             const char *location;
         } redirect;
-        int (*func)(const http_RequestInfo &request, http_IO *io);
+        void (*func)(const http_RequestInfo &request, http_IO *io);
     } u;
 
     RG_HASH_TABLE_HANDLER(Route, url);
@@ -125,7 +125,7 @@ static void FreePushContext(void *cls)
     push_count--;
 }
 
-static int ProduceEvents(const http_RequestInfo &request, http_IO *io)
+static void ProduceEvents(const http_RequestInfo &request, http_IO *io)
 {
     // TODO: Use the allocator buried in http_RequestInfo?
     PushContext *ctx = new PushContext();
@@ -133,12 +133,10 @@ static int ProduceEvents(const http_RequestInfo &request, http_IO *io)
 
     MHD_Response *response = MHD_create_response_from_callback(MHD_SIZE_UNKNOWN, 1024,
                                                                SendPendingEvents, ctx, FreePushContext);
-    io->AttachResponse(response);
+    io->AttachResponse(200, response);
     io->AddHeader("Content-Type", "text/event-stream");
 
     push_count++;
-
-    return 200;
 }
 
 static bool InitDatabase(const char *filename)
@@ -205,7 +203,7 @@ static void InitRoutes()
         routes.Append(route);
     };
     const auto add_function_route = [&](const char *method, const char *url,
-                                        int (*func)(const http_RequestInfo &request, http_IO *io)) {
+                                        void (*func)(const http_RequestInfo &request, http_IO *io)) {
         Route route = {};
 
         route.method = method;
@@ -265,7 +263,7 @@ static void InitRoutes()
     }
 }
 
-static int HandleRequest(const http_RequestInfo &request, http_IO *io)
+static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
 #ifndef NDEBUG
     if (asset_set.LoadFromLibrary(assets_filename) == AssetLoadStatus::Loaded) {
@@ -284,22 +282,23 @@ static int HandleRequest(const http_RequestInfo &request, http_IO *io)
         const char *client_etag = request.GetHeaderValue("If-None-Match");
         if (client_etag && TestStr(client_etag, etag)) {
             MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-            io->AttachResponse(response);
-            return 304;
+            io->AttachResponse(304, response);
+            return;
         }
     }
 
     // Find appropriate route
     Route *route = routes.Find(request.url);
-    if (!route)
-        return http_ProduceErrorPage(404, io);
+    if (!route) {
+        http_ProduceErrorPage(404, io);
+        return;
+    }
 
     // Execute route
-    int code = 0;
     switch (route->type) {
         case Route::Type::Asset: {
-            code = http_ProduceStaticAsset(route->u.st.asset.data, route->u.st.asset.compression_type,
-                                           route->u.st.mime_type, request.compression_type, io);
+            http_ProduceStaticAsset(route->u.st.asset.data, route->u.st.asset.compression_type,
+                                    route->u.st.mime_type, request.compression_type, io);
             if (route->u.st.asset.source_map) {
                 io->AddHeader("SourceMap", route->u.st.asset.source_map);
             }
@@ -307,25 +306,23 @@ static int HandleRequest(const http_RequestInfo &request, http_IO *io)
 
         case Route::Type::Redirect: {
             MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-            io->AttachResponse(response);
             io->AddHeader("Location", route->u.redirect.location);
+            io->AttachResponse(301, response);
 
-            return 301;
+            // Avoid cache headers
+            return;
         } break;
 
         case Route::Type::Function: {
-            code = route->u.func(request, io);
+            route->u.func(request, io);
         } break;
     }
-    RG_ASSERT_DEBUG(code);
 
     // Send cache information
 #ifndef NDEBUG
     io->flags &= ~(unsigned int)http_IO::Flag::EnableCache;
 #endif
     io->AddCachingHeaders(goupil_config.max_age, etag);
-
-    return code;
 }
 
 int RunGoupil(int argc, char **argv)

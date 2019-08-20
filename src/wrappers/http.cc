@@ -12,20 +12,21 @@ static void ReleaseDataCallback(void *ptr)
     Allocator::Release(nullptr, ptr, -1);
 }
 
-static int NegociateContentEncoding(MHD_Connection *conn, CompressionType *out_compression_type,
-                                    http_IO *io)
+static bool NegociateContentEncoding(MHD_Connection *conn, CompressionType *out_compression_type,
+                                     http_IO *io)
 {
     const char *accept_str = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "Accept-Encoding");
     uint32_t acceptable_encodings = http_ParseAcceptableEncodings(accept_str);
 
     if (acceptable_encodings & (1 << (int)CompressionType::Gzip)) {
         *out_compression_type = CompressionType::Gzip;
-        return 0;
+        return true;
     } else if (acceptable_encodings) {
         *out_compression_type = (CompressionType)CountTrailingZeros(acceptable_encodings);
-        return 0;
+        return true;
     } else {
-        return http_ProduceErrorPage(406, io);
+        http_ProduceErrorPage(406, io);
+        return false;
     }
 }
 
@@ -57,14 +58,14 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
                     return MHD_queue_response(conn, 303, io.response.get());
                 } else {
                     http_ProduceErrorPage(404, &io);
-                    return MHD_queue_response(conn, 404, io.response.get());
+                    return MHD_queue_response(conn, (unsigned int)io.code, io.response.get());
                 }
             }
         }
         request->url = --url;
 
-        if (int code = NegociateContentEncoding(conn, &request->compression_type, &io); code)
-            return MHD_queue_response(conn, (unsigned int)code, io.response.get());
+        if (!NegociateContentEncoding(conn, &request->compression_type, &io))
+            return MHD_queue_response(conn, (unsigned int)io.code, io.response.get());
     }
 
     // Process POST data if any
@@ -84,14 +85,14 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
             }, request);
             if (!request->pp) {
                 http_ProduceErrorPage(422, &io);
-                return MHD_queue_response(conn, 422, io.response.get());
+                return MHD_queue_response(conn, (unsigned int)io.code, io.response.get());
             }
 
             return MHD_YES;
         } else if (*upload_data_size) {
             if (MHD_post_process(request->pp, upload_data, *upload_data_size) != MHD_YES) {
                 http_ProduceErrorPage(422, &io);
-                return MHD_queue_response(conn, 422, io.response.get());
+                return MHD_queue_response(conn, (unsigned int)io.code, io.response.get());
             }
 
             *upload_data_size = 0;
@@ -100,8 +101,8 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
     }
 
     // Run real handler
-    int code = daemon->handle_func(*request, &io);
-    return MHD_queue_response(conn, (unsigned int)code, io.response.get());
+    daemon->handle_func(*request, &io);
+    return MHD_queue_response(conn, (unsigned int)io.code, io.response.get());
 }
 
 void http_Daemon::RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
@@ -247,8 +248,10 @@ void http_IO::AddCachingHeaders(int max_age, const char *etag)
     }
 }
 
-void http_IO::AttachResponse(MHD_Response *new_response)
+void http_IO::AttachResponse(int new_code, MHD_Response *new_response)
 {
+    code = new_code;
+
     MHD_move_response_headers(response.get(), new_response);
     response.reset(new_response);
 }
@@ -319,7 +322,7 @@ uint32_t http_ParseAcceptableEncodings(Span<const char> encodings)
     return acceptable_encodings;
 }
 
-int http_ProduceErrorPage(int code, http_IO *io)
+void http_ProduceErrorPage(int code, http_IO *io)
 {
     Span<char> page = Fmt((Allocator *)nullptr, "Error %1: %2\n%3", code,
                           MHD_get_reason_phrase_for((unsigned int)code), GetLastLogError());
@@ -327,15 +330,13 @@ int http_ProduceErrorPage(int code, http_IO *io)
     MHD_Response *response =
         MHD_create_response_from_buffer_with_free_callback((size_t)page.len, page.ptr,
                                                            ReleaseDataCallback);
-    io->AttachResponse(response);
+    io->AttachResponse(code, response);
     io->AddHeader("Content-Type", "text/plain");
-
-    return code;
 }
 
-int http_ProduceStaticAsset(Span<const uint8_t> data, CompressionType in_compression_type,
-                            const char *mime_type, CompressionType out_compression_type,
-                            http_IO *io)
+void http_ProduceStaticAsset(Span<const uint8_t> data, CompressionType in_compression_type,
+                             const char *mime_type, CompressionType out_compression_type,
+                             http_IO *io)
 {
     MHD_Response *response;
     if (in_compression_type != out_compression_type) {
@@ -343,10 +344,14 @@ int http_ProduceStaticAsset(Span<const uint8_t> data, CompressionType in_compres
         {
             StreamReader reader(data, nullptr, in_compression_type);
             StreamWriter writer(&buf, nullptr, out_compression_type);
-            if (!SpliceStream(&reader, Megabytes(8), &writer))
-                return http_ProduceErrorPage(500, io);
-            if (!writer.Close())
-                return http_ProduceErrorPage(500, io);
+            if (!SpliceStream(&reader, Megabytes(8), &writer)) {
+                http_ProduceErrorPage(500, io);
+                return;
+            }
+            if (!writer.Close()) {
+                http_ProduceErrorPage(500, io);
+                return;
+            }
         }
 
         response = MHD_create_response_from_buffer_with_free_callback((size_t)buf.len, (void *)buf.ptr,
@@ -356,7 +361,7 @@ int http_ProduceStaticAsset(Span<const uint8_t> data, CompressionType in_compres
         response = MHD_create_response_from_buffer((size_t)data.len, (void *)data.ptr,
                                                    MHD_RESPMEM_PERSISTENT);
     }
-    io->AttachResponse(response);
+    io->AttachResponse(200, response);
 
     io->AddEncodingHeader(out_compression_type);
     if (mime_type) {
@@ -364,10 +369,9 @@ int http_ProduceStaticAsset(Span<const uint8_t> data, CompressionType in_compres
     }
 
     io->flags |= (int)http_IO::Flag::EnableCache;
-    return 200;
 }
 
-int http_JsonPageBuilder::Finish(http_IO *io)
+void http_JsonPageBuilder::Finish(http_IO *io)
 {
     CompressionType compression_type = st.compression.type;
 
@@ -379,11 +383,9 @@ int http_JsonPageBuilder::Finish(http_IO *io)
                                                            ReleaseDataCallback);
     buf.Leak();
 
-    io->AttachResponse(response);
+    io->AttachResponse(200, response);
     io->AddEncodingHeader(compression_type);
     io->AddHeader("Content-Type", "application/json");
-
-    return 200;
 }
 
 }

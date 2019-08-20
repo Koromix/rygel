@@ -420,7 +420,7 @@ bool McoResultProvider::RunDirect(std::function<void(Span<const mco_Result>, Spa
     return true;
 }
 
-int ProduceMcoSettings(const http_RequestInfo &request, const User *user, http_IO *io)
+void ProduceMcoSettings(const http_RequestInfo &request, const User *user, http_IO *io)
 {
     if (!user) {
         io->flags |= (int)http_IO::Flag::EnableCache;
@@ -504,7 +504,7 @@ int ProduceMcoSettings(const http_RequestInfo &request, const User *user, http_I
 
     json.EndObject();
 
-    return json.Finish(io);
+    json.Finish(io);
 }
 
 }
