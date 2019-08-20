@@ -127,8 +127,14 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
                 thread_info->input.mouseover = true;
             }
         } break;
-        case WM_LBUTTONDOWN: { thread_info->input.buttons |= MaskEnum(gui_InputButton::Left); } break;
-        case WM_LBUTTONUP: { thread_window->released_buttons |= MaskEnum(gui_InputButton::Left); } break;
+        case WM_LBUTTONDOWN: {
+            thread_info->input.buttons |= MaskEnum(gui_InputButton::Left);
+            SetCapture(thread_window->hwnd);
+        } break;
+        case WM_LBUTTONUP: {
+            thread_window->released_buttons |= MaskEnum(gui_InputButton::Left);
+            ReleaseCapture();
+        } break;
         case WM_MBUTTONDOWN: { thread_info->input.buttons |= MaskEnum(gui_InputButton::Middle); } break;
         case WM_MBUTTONUP: { thread_window->released_buttons |= MaskEnum(gui_InputButton::Middle); } break;
         case WM_RBUTTONDOWN: { thread_info->input.buttons |= MaskEnum(gui_InputButton::Right); } break;
