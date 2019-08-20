@@ -59,7 +59,7 @@ namespace RG {
 
 #define RG_LINE_READER_STEP_SIZE 65536
 
-#define RG_ASYNC_MAX_WORKERS 256
+#define RG_ASYNC_MAX_WORKERS 255
 #define RG_ASYNC_MAX_IDLE_TIME 10000
 
 // ------------------------------------------------------------------------
@@ -3355,12 +3355,13 @@ static const char *const IPStackNames[] = {
 // Tasks
 // ------------------------------------------------------------------------
 
+class AsyncPool;
+
 class Async {
     std::atomic_int success {1};
     std::atomic_int remaining_tasks {0};
 
-    void *prev_pool;
-    int prev_worker_idx;
+    AsyncPool *pool;
 
 public:
     Async(int workers = -1);
@@ -3374,7 +3375,7 @@ public:
 
     static bool IsTaskRunning();
 
-    friend class AsyncPool;
+    friend AsyncPool;
 };
 
 // ------------------------------------------------------------------------
