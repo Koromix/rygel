@@ -53,11 +53,8 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
         for (Size i = 0; daemon->base_url[i]; i++, url++) {
             if (url[0] != daemon->base_url[i]) {
                 if (!url[0] && daemon->base_url[i] == '/' && !daemon->base_url[i + 1]) {
-                    MHD_Response *response =
-                        MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-                    MHD_add_response_header(response, "Location", daemon->base_url);
-
-                    return MHD_queue_response(conn, 303, response);
+                    io.AddHeader("Location", daemon->base_url);
+                    return MHD_queue_response(conn, 303, io.response.get());
                 } else {
                     http_ProduceErrorPage(404, &io);
                     return MHD_queue_response(conn, 404, io.response.get());
