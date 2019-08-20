@@ -2480,6 +2480,12 @@ bool Async::Sync()
     return success;
 }
 
+void Async::Abort()
+{
+    success = false;
+    Sync();
+}
+
 bool Async::IsTaskRunning()
 {
     return g_task_running;

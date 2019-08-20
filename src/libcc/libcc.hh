@@ -3371,7 +3371,9 @@ public:
     Async &operator=(const Async &) = delete;
 
     void Run(const std::function<bool()> &f);
+
     bool Sync();
+    void Abort();
 
     static bool IsTaskRunning();
 
