@@ -55,17 +55,17 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
             if (url[0] != daemon->base_url[i]) {
                 if (!url[0] && daemon->base_url[i] == '/' && !daemon->base_url[i + 1]) {
                     io.AddHeader("Location", daemon->base_url);
-                    return MHD_queue_response(conn, 303, io.response.get());
+                    return MHD_queue_response(conn, 303, io.response);
                 } else {
                     http_ProduceErrorPage(404, &io);
-                    return MHD_queue_response(conn, (unsigned int)io.code, io.response.get());
+                    return MHD_queue_response(conn, (unsigned int)io.code, io.response);
                 }
             }
         }
         request->url = --url;
 
         if (!NegociateContentEncoding(conn, &request->compression_type, &io))
-            return MHD_queue_response(conn, (unsigned int)io.code, io.response.get());
+            return MHD_queue_response(conn, (unsigned int)io.code, io.response);
     }
 
     // Process POST data if any
@@ -85,14 +85,14 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
             }, request);
             if (!request->pp) {
                 http_ProduceErrorPage(422, &io);
-                return MHD_queue_response(conn, (unsigned int)io.code, io.response.get());
+                return MHD_queue_response(conn, (unsigned int)io.code, io.response);
             }
 
             return MHD_YES;
         } else if (*upload_data_size) {
             if (MHD_post_process(request->pp, upload_data, *upload_data_size) != MHD_YES) {
                 http_ProduceErrorPage(422, &io);
-                return MHD_queue_response(conn, (unsigned int)io.code, io.response.get());
+                return MHD_queue_response(conn, (unsigned int)io.code, io.response);
             }
 
             *upload_data_size = 0;
@@ -106,7 +106,7 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
         http_ProduceErrorPage(500, &io);
     }
 
-    return MHD_queue_response(conn, (unsigned int)io.code, io.response.get());
+    return MHD_queue_response(conn, (unsigned int)io.code, io.response);
 }
 
 void http_Daemon::RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
@@ -192,13 +192,17 @@ void http_Daemon::Stop()
 
 http_IO::http_IO()
 {
-    MHD_Response *response0 = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-    response.reset(response0);
+    response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+}
+
+http_IO::~http_IO()
+{
+    MHD_destroy_response(response);
 }
 
 void http_IO::AddHeader(const char *key, const char *value)
 {
-    MHD_add_response_header(response.get(), key, value);
+    MHD_add_response_header(response, key, value);
 }
 
 void http_IO::AddEncodingHeader(CompressionType compression_type)
@@ -258,8 +262,9 @@ void http_IO::AttachResponse(int new_code, MHD_Response *new_response)
 
     code = new_code;
 
-    MHD_move_response_headers(response.get(), new_response);
-    response.reset(new_response);
+    MHD_move_response_headers(response, new_response);
+    MHD_destroy_response(response);
+    response = new_response;
 }
 
 const char *http_GetMimeType(Span<const char> extension)
