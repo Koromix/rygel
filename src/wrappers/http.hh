@@ -35,12 +35,8 @@ public:
 };
 
 class http_IO {
-    struct ResponseDeleter {
-        void operator()(MHD_Response *response) { MHD_destroy_response(response); }
-    };
-
     int code = -1;
-    std::unique_ptr<MHD_Response, ResponseDeleter> response;
+    MHD_Response *response;
 
 public:
     enum class Flag {
@@ -52,8 +48,7 @@ public:
     unsigned int flags = 0;
 
     http_IO();
-
-    operator MHD_Response *() const { return response.get(); }
+    ~http_IO();
 
     void AddHeader(const char *key, const char *value);
     void AddEncodingHeader(CompressionType compression_type);
