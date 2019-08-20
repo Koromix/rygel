@@ -2434,59 +2434,49 @@ public:
 
 // thread_local breaks down on MinGW when destructors are involved, work
 // around this with heap allocation.
-static RG_THREAD_LOCAL Async *g_async = nullptr;
 static RG_THREAD_LOCAL AsyncPool *g_async_pool = nullptr;
 static RG_THREAD_LOCAL int g_async_worker_idx;
 static RG_THREAD_LOCAL bool g_task_running = false;
 
 Async::Async(int workers)
 {
-    RG_ASSERT(!g_async);
-
-    prev_pool = g_async_pool;
-    prev_worker_idx = g_async_worker_idx;
-
     if (workers >= 0) {
         if (workers > RG_ASYNC_MAX_WORKERS) {
             LogError("Async cannot use more than %1 workers", RG_ASYNC_MAX_WORKERS);
             workers = RG_ASYNC_MAX_WORKERS;
         }
 
-        g_async_pool = new AsyncPool(workers, false);
-        g_async_worker_idx = 0;
-    } else if (!g_async_pool) {
-        workers = std::min(GetCoreCount() - 1, RG_ASYNC_MAX_WORKERS);
+        pool = new AsyncPool(workers, false);
+    } else {
+        if (!g_async_pool) {
+            workers = std::min(GetCoreCount() - 1, RG_ASYNC_MAX_WORKERS);
 
-        // NOTE: We're leaking one AsyncPool each time a non-worker thread uses Async() for
-        // the first time. That's only one leak in most cases, when the main thread is the
-        // only non-worker thread using Async, but still. Something to keep in mind.
-        g_async_pool = new AsyncPool(workers, true);
-        g_async_worker_idx = 0;
+            // NOTE: We're leaking one AsyncPool each time a non-worker thread uses Async()
+            // for the first time. That's only one leak in most cases, when the main thread
+            // is the only non-worker thread using Async, but still. Something to keep in mind.
+            g_async_pool = new AsyncPool(workers, true);
+        }
+
+        pool = g_async_pool;
     }
 
-    g_async = this;
-    g_async_pool->RegisterAsync();
+    pool->RegisterAsync();
 }
 
 Async::~Async()
 {
     RG_ASSERT(!remaining_tasks);
-
-    g_async_pool->UnregisterAsync();
-    g_async = nullptr;
-
-    g_async_pool = (AsyncPool *)prev_pool;
-    g_async_worker_idx = prev_worker_idx;
+    pool->UnregisterAsync();
 }
 
 void Async::Run(const std::function<bool()> &func)
 {
-    g_async_pool->AddTask(this, func);
+    pool->AddTask(this, func);
 }
 
 bool Async::Sync()
 {
-    g_async_pool->SyncOn(this);
+    pool->SyncOn(this);
     return success;
 }
 
@@ -2529,9 +2519,7 @@ void AsyncPool::UnregisterAsync()
 
 void AsyncPool::AddTask(Async *async, const std::function<bool()> &func)
 {
-    // If we are the main thread, and haven't reached Sync() yet, try to assign
-    // task to a "random" queue first.
-    if (!g_task_running && workers_state.len > 1) {
+    if (g_async_pool != async->pool) {
         for (;;) {
             TaskQueue *queue = &queues[next_queue_idx];
 
@@ -2588,6 +2576,15 @@ void AsyncPool::RunWorker(int worker_idx)
 
 void AsyncPool::SyncOn(Async *async)
 {
+    RG_DEFER_C(pool = g_async_pool,
+               worker_idx = g_async_worker_idx) {
+        g_async_pool = pool;
+        g_async_worker_idx = worker_idx;
+    };
+
+    g_async_pool = this;
+    g_async_worker_idx = 0;
+
     while (async->remaining_tasks) {
         RunTasks(g_async_worker_idx);
 
