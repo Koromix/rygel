@@ -7,6 +7,11 @@
 
 namespace RG {
 
+struct ConnectionData {
+    http_RequestInfo request;
+    http_IO io;
+};
+
 static void ReleaseDataCallback(void *ptr)
 {
     Allocator::Release(nullptr, ptr, -1);
@@ -35,38 +40,40 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
                                void **con_cls)
 {
     http_Daemon *daemon = (http_Daemon *)cls;
-    http_RequestInfo *request = *(http_RequestInfo **)con_cls;
-
-    http_IO io = {};
+    ConnectionData *data = *(ConnectionData **)con_cls;
 
     // Avoid stale messages and messages from other theads in error pages
     ClearLastLogError();
 
     // Init request data
-    if (!request) {
-        request = new http_RequestInfo();
-        *con_cls = request;
+    if (!data) {
+        data = new ConnectionData();
+        *con_cls = data;
 
-        request->conn = conn;
-        request->method = method;
+        data->request.conn = conn;
+        data->request.method = method;
 
         // Trim URL prefix (base_url setting)
         for (Size i = 0; daemon->base_url[i]; i++, url++) {
             if (url[0] != daemon->base_url[i]) {
                 if (!url[0] && daemon->base_url[i] == '/' && !daemon->base_url[i + 1]) {
-                    io.AddHeader("Location", daemon->base_url);
-                    return MHD_queue_response(conn, 303, io.response);
+                    data->io.AddHeader("Location", daemon->base_url);
+                    return MHD_queue_response(conn, 303, data->io.response);
                 } else {
-                    http_ProduceErrorPage(404, &io);
-                    return MHD_queue_response(conn, (unsigned int)io.code, io.response);
+                    http_ProduceErrorPage(404, &data->io);
+                    return MHD_queue_response(conn, (unsigned int)data->io.code, data->io.response);
                 }
             }
         }
-        request->url = --url;
+        data->request.url = --url;
 
-        if (!NegociateContentEncoding(conn, &request->compression_type, &io))
-            return MHD_queue_response(conn, (unsigned int)io.code, io.response);
+        if (!NegociateContentEncoding(conn, &data->request.compression_type, &data->io))
+            return MHD_queue_response(conn, (unsigned int)data->io.code, data->io.response);
     }
+
+    // Keep things sane
+    http_RequestInfo *request = &data->request;
+    http_IO *io = &data->io;
 
     // Process POST data if any
     if (TestStr(method, "POST")) {
@@ -84,15 +91,15 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
                 return MHD_YES;
             }, request);
             if (!request->pp) {
-                http_ProduceErrorPage(422, &io);
-                return MHD_queue_response(conn, (unsigned int)io.code, io.response);
+                http_ProduceErrorPage(422, io);
+                return MHD_queue_response(conn, (unsigned int)io->code, io->response);
             }
 
             return MHD_YES;
         } else if (*upload_data_size) {
             if (MHD_post_process(request->pp, upload_data, *upload_data_size) != MHD_YES) {
-                http_ProduceErrorPage(422, &io);
-                return MHD_queue_response(conn, (unsigned int)io.code, io.response);
+                http_ProduceErrorPage(422, io);
+                return MHD_queue_response(conn, (unsigned int)io->code, io->response);
             }
 
             *upload_data_size = 0;
@@ -100,30 +107,52 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
         }
     }
 
-    // Run real handler
-    daemon->handle_func(*request, &io);
-    if (io.code < 0) {
-        http_ProduceErrorPage(500, &io);
+    // Run real handler (first time)
+    if (!io->handled) {
+        daemon->handle_func(*request, io);
+        io->handled = true;
     }
 
-    return MHD_queue_response(conn, (unsigned int)io.code, io.response);
+    // Run registered async functions (as many times as needed)
+    if (io->async_func) {
+        MHD_suspend_connection(request->conn);
+
+        daemon->async->Run([=]() {
+            std::function<void(const http_RequestInfo &request, http_IO *io)> func;
+            std::swap(io->async_func, func);
+
+            func(*request, io);
+            MHD_resume_connection(request->conn);
+
+            return true;
+        });
+
+        return MHD_YES;
+    }
+
+    // Default to internal error (if nothing else)
+    if (io->code < 0) {
+        http_ProduceErrorPage(500, io);
+    }
+
+    return MHD_queue_response(conn, (unsigned int)io->code, io->response);
 }
 
 void http_Daemon::RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
                                    MHD_RequestTerminationCode toe)
 {
     const http_Daemon &daemon = *(const http_Daemon *)cls;
-    http_RequestInfo *request = (http_RequestInfo *)*con_cls;
+    ConnectionData *data = *(ConnectionData **)con_cls;
 
-    if (request) {
+    if (data) {
         if (daemon.release_func) {
-            daemon.release_func(*request, toe);
+            daemon.release_func(data->request, toe);
         }
 
-        if (request->pp) {
-            MHD_destroy_post_processor(request->pp);
+        if (data->request.pp) {
+            MHD_destroy_post_processor(data->request.pp);
         }
-        delete request;
+        delete data;
     }
 }
 
@@ -179,14 +208,23 @@ bool http_Daemon::Start(IPStack stack, int port, int threads, const char *base_u
                               MHD_OPTION_ARRAY, mhd_options.data, MHD_OPTION_END);
     this->base_url = base_url;
 
+    // TODO: Configurable number of threads
+    async = new Async(16);
+
     return daemon;
 }
 
 void http_Daemon::Stop()
 {
+    if (async) {
+        async->Abort();
+        delete async;
+    }
     if (daemon) {
         MHD_stop_daemon(daemon);
     }
+
+    async = nullptr;
     daemon = nullptr;
 }
 
@@ -198,6 +236,12 @@ http_IO::http_IO()
 http_IO::~http_IO()
 {
     MHD_destroy_response(response);
+}
+
+void http_IO::RunAsync(std::function<void(const http_RequestInfo &request, http_IO *io)> func)
+{
+    RG_ASSERT_DEBUG(!async_func);
+    async_func = func;
 }
 
 void http_IO::AddHeader(const char *key, const char *value)
