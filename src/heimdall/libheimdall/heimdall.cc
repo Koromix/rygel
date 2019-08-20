@@ -1020,7 +1020,7 @@ static float AdjustScrollAfterZoom(float stable_x, double prev_zoom, double new_
     return (float)(stable_time * (new_zoom - prev_zoom));
 }
 
-static bool DrawView(InterfaceState &state,
+static void DrawView(InterfaceState &state,
                      const EntitySet &entity_set, const ConceptSet *concept_set)
 {
     ImGuiWindow *win = ImGui::GetCurrentWindow();
@@ -1114,13 +1114,10 @@ static bool DrawView(InterfaceState &state,
     }
 
     // Render time scale and entities
-    bool valid_frame;
-    {
-        DrawTimeScale(scale_rect, time_offset, state.time_zoom, state.settings.grid_alpha,
-                      state.align_concepts.table.count);
-        valid_frame = DrawEntities(entity_rect, state.settings.tree_width, time_offset,
-                                   state, entity_set, concept_set);
-    }
+    DrawTimeScale(scale_rect, time_offset, state.time_zoom, state.settings.grid_alpha,
+                  state.align_concepts.table.count);
+    DrawEntities(entity_rect, state.settings.tree_width, time_offset,
+                 state, entity_set, concept_set);
 
     // Inform ImGui about content size and fake scroll offsets
     {
@@ -1163,8 +1160,6 @@ static bool DrawView(InterfaceState &state,
         }
     }
     ImGui::ItemSize(ImVec2(0.0f, 0.0f));
-
-    return valid_frame;
 }
 
 static void ToggleAlign(InterfaceState &state)
@@ -1267,7 +1262,6 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
     }
 
     // Main view
-    bool valid_frame;
     {
         ImVec2 view_pos = ImVec2(0, menu_height);
         ImVec2 view_size = ImGui::GetIO().DisplaySize;
@@ -1292,7 +1286,8 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
             if (state.concept_set_idx >= 0 && state.concept_set_idx < concept_sets.len) {
                 concept_set = &concept_sets[state.concept_set_idx];
             }
-            valid_frame = DrawView(state, entity_set, concept_set);
+
+            DrawView(state, entity_set, concept_set);
         }
 
         if (ImGui::BeginPopup("tree_menu")) {
@@ -1376,13 +1371,8 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
         ImGui::End();
     }
 
-    // FIXME: This is a hack to work around the fact that ImGui::SetScroll() functions
-    // are off by one frame. We need to take over ImGui layout completely, because we
-    // do know the window size!
     window.RenderImGui();
-    if (valid_frame) {
-        window.SwapBuffers();
-    }
+    window.SwapBuffers();
 
     return true;
 }
