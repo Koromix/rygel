@@ -37,8 +37,8 @@ static const gui_Info *gui_info;
 static ImU32 GetVisColor(VisColor color, float alpha = 1.0f)
 {
     switch (color) {
-        case VisColor::Event: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.27f, 0.52f, 0.85f, alpha)); } break;
-        case VisColor::Alert: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.93f, 0.22f, 0.20f, alpha)); } break;
+        case VisColor::Event: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.36f, 0.60f, 0.91f, alpha)); } break;
+        case VisColor::Alert: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.97f, 0.36f, 0.34f, alpha)); } break;
         case VisColor::Plot: { return ImGui::GetColorU32(ImGuiCol_PlotLines, alpha); } break;
         case VisColor::Limit: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.9f, 0.7f, 0.03f, 0.4f * alpha)); } break;
     }
