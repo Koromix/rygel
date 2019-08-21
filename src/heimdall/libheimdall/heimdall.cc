@@ -1379,8 +1379,8 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
     window.RenderImGui();
     window.SwapBuffers();
 
-    // Stop running loop if more than 500 ms have happened since last user interaction
-    state.idle = (gui_info->time.monotonic - gui_info->input.interaction_time) > 0.5;
+    // Stop running loop enough time has passed since last user interaction
+    state.idle = (gui_info->time.monotonic - gui_info->input.interaction_time) > 0.1;
 
     return true;
 }
