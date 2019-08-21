@@ -15,11 +15,7 @@ RG_POP_NO_WARNINGS()
 namespace RG {
 
 // Ideas:
-// - Multiple / Task-oriented concept trees
 // - Magic shift, to filter concept under the cursor and pick and choose concepts in right panel
-// - Negative coordinates
-// - Cursor-centered zoom (needs negative coordinates first)
-// - Relative time setting (use first period X, etc.)
 // - Ctrl + click on element = instant zoom to pertinent level
 // - One pixel mode (height 1 pixel) for dense view
 
