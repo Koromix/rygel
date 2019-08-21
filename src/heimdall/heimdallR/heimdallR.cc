@@ -296,7 +296,7 @@ RcppExport SEXP heimdallR_Run(SEXP inst_xp)
             InterfaceState render_state = {};
 
             while (inst->run) {
-                if (!window.Prepare())
+                if (!window.ProcessEvents(render_state.idle))
                     break;
 
                 std::lock_guard<std::mutex> locker(inst->lock);
@@ -332,7 +332,7 @@ RcppExport SEXP heimdallR_RunSync(SEXP inst_xp)
     InterfaceState render_state = {};
 
     for (;;) {
-        if (!window.Prepare())
+        if (!window.ProcessEvents(render_state.idle))
             break;
         if (!StepHeimdall(window, render_state, inst->concept_sets, inst->entity_set))
             break;

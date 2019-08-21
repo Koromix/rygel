@@ -59,6 +59,8 @@ struct gui_Info {
         int x, y;
         unsigned int buttons;
         int wheel_x, wheel_y;
+
+        double interaction_time;
     } input;
 };
 
@@ -84,7 +86,7 @@ public:
     bool InitImGui(ImFontAtlas *font_atlas = nullptr);
     void Release();
 
-    bool Prepare();
+    bool ProcessEvents(bool wait = false);
 
     void RenderImGui();
     void SwapBuffers();

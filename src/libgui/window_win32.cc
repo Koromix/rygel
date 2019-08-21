@@ -448,35 +448,10 @@ void gui_Window::SwapBuffers()
     ::SwapBuffers(window->hdc);
 }
 
-bool gui_Window::Prepare()
+bool gui_Window::ProcessEvents(bool wait)
 {
     thread_window = window;
     thread_info = &priv;
-
-    // Reset relative inputs
-    priv.input.text.Clear();
-    priv.input.buttons &= ~window->released_buttons;
-    window->released_buttons = 0;
-    priv.input.wheel_x = 0;
-    priv.input.wheel_y = 0;
-
-    // Pump Win32 messages
-    {
-        MSG msg;
-        while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
-            if (msg.message == WM_QUIT)
-                return false;
-
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-    }
-
-    // Append NUL byte to keyboard text
-    if (!priv.input.text.Available()) {
-        priv.input.text.len--;
-    }
-    priv.input.text.Append('\0');
 
     // Update monotonic clock
     {
@@ -488,6 +463,35 @@ bool gui_Window::Prepare()
         priv.time.monotonic_delta = monotonic_time - priv.time.monotonic;
         priv.time.monotonic = monotonic_time;
     }
+
+    // Reset relative inputs
+    priv.input.text.Clear();
+    priv.input.buttons &= ~window->released_buttons;
+    window->released_buttons = 0;
+    priv.input.wheel_x = 0;
+    priv.input.wheel_y = 0;
+
+    // Pump Win32 messages
+    {
+        MSG msg;
+        while (wait ? GetMessage(&msg, nullptr, 0, 0)
+                    : PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+            if (msg.message == WM_QUIT)
+                return false;
+
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+
+            priv.input.interaction_time = priv.time.monotonic;
+            wait = false;
+        }
+    }
+
+    // Append NUL byte to keyboard text
+    if (!priv.input.text.Available()) {
+        priv.input.text.len--;
+    }
+    priv.input.text.Append('\0');
 
     // FIXME: Should we report an error instead?
     RG_ASSERT(SetGLContext(window->hdc, window->hgl));

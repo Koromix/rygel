@@ -74,6 +74,8 @@ struct InterfaceState {
     float grab_canvas_x;
     float grab_canvas_y;
 
+    bool idle = false;
+
     HashSet<Span<const char>> select_concepts;
     HashSet<Span<const char>> align_concepts;
 };
