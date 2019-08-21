@@ -628,10 +628,12 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
     const ImGuiStyle &style = ImGui::GetStyle();
     ImGuiWindow *win = ImGui::GetCurrentWindow();
 
+    // Prepare draw API
     ImDrawList *draw = ImGui::GetWindowDrawList();
     draw->PushClipRect(bb.Min, bb.Max);
     RG_DEFER { draw->PopClipRect(); };
 
+    // Recalculate entity height if needed
     bool cache_refreshed = false;
     if (!state.size_cache_valid ||
             state.lines_top.len != entity_set.entities.len ||
@@ -670,6 +672,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
         cache_refreshed = true;
     }
 
+    // Determine first entity to render and where
     Size render_idx = entity_set.entities.len - 1;
     float render_offset = state.lines_top[entity_set.entities.len - 1];
     for (Size i = 1; i < state.lines_top.len; i++) {
@@ -685,6 +688,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
     }
     render_offset -= state.scroll_y;
 
+    // Should we highlight this entity?
     bool highlight = false;
     switch (state.settings.highlight_mode) {
         case InterfaceSettings::HighlightMode::Never: {
@@ -698,6 +702,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
         } break;
     }
 
+    // Distribute entity elements to separate lines
     HeapArray<LineData> lines;
     {
         float base_y = render_offset;
@@ -841,6 +846,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
         }
     }
 
+    // Sort lines
     std::sort(lines.begin(), lines.end(),
               [](const LineData &line1, const LineData &line2) {
         return MultiCmp((int)(line1.entity - line2.entity),
@@ -923,6 +929,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
         }
     }
 
+    // Handle user interactions
     if (deploy_path.len) {
         std::pair<Span<const char> *, bool> ret = state.deploy_paths.Append(deploy_path);
         if (!ret.second) {
@@ -1023,7 +1030,7 @@ static void DrawView(InterfaceState &state,
 {
     ImGuiWindow *win = ImGui::GetCurrentWindow();
 
-    // Layout
+    // Global layout
     float scale_height = 16.0f + ImGui::GetFontSize();
     ImRect scale_rect = win->ClipRect;
     ImRect entity_rect = win->ClipRect;
@@ -1034,7 +1041,7 @@ static void DrawView(InterfaceState &state,
     view_rect.Min.x += state.settings.tree_width + 15.0f;
     view_rect.Max.y -= scale_height;
 
-    // Default zoom
+    // Auto-zoom
     if (std::isnan(state.time_zoom)) {
         double min_time = DBL_MAX;
         double max_time = DBL_MIN;
@@ -1117,7 +1124,7 @@ static void DrawView(InterfaceState &state,
     DrawEntities(entity_rect, state.settings.tree_width, time_offset,
                  state, entity_set, concept_set);
 
-    // Inform ImGui about content size and fake scroll offsets
+    // Inform ImGui about content size and fake scroll offsets (hacky)
     {
         float width = state.settings.tree_width + 20.0f +
                       state.total_width_unscaled * (float)state.time_zoom;
