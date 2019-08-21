@@ -67,7 +67,11 @@ class gui_Window {
 
 #ifdef _WIN32
     struct gui_Win32Window *window = nullptr;
+#else
+    struct GLFWwindow *window = nullptr;
+    unsigned int released_buttons = 0;
 #endif
+
     bool imgui_local = false;
     static bool imgui_ready; // = false
 
