@@ -1252,6 +1252,11 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
         }
         ImGui::Separator();
 
+        if (ImGui::Button("Auto-Zoom")) {
+            state.time_zoom = NAN;
+        }
+        ImGui::Separator();
+
         ImGui::Checkbox("Other settings", &state.show_settings);
 
 #if 0
