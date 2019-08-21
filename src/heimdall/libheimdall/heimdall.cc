@@ -1043,7 +1043,7 @@ static void DrawView(InterfaceState &state,
         for (const Entity &ent: entity_set.entities) {
             for (const Element &elmt: ent.elements) {
                 min_time = std::min(min_time, elmt.time);
-                max_time = std::max(max_time + (elmt.type == Element::Type::Period ? elmt.u.period.duration : 0), elmt.time);
+                max_time = std::max(max_time, elmt.time + (elmt.type == Element::Type::Period ? elmt.u.period.duration : 0));
             }
         }
 
