@@ -40,6 +40,8 @@ bool gui_Window::Init(const char *application_name)
 
         self->priv.input.x = (int)x;
         self->priv.input.y = (int)y;
+
+        self->priv.input.interaction_time = self->priv.time.monotonic;
     });
     glfwSetMouseButtonCallback(window, [](GLFWwindow* window, int button, int action, int) {
         gui_Window *self = (gui_Window *)glfwGetWindowUserPointer(window);
@@ -49,12 +51,16 @@ bool gui_Window::Init(const char *application_name)
         } else {
             self->released_buttons |= 1u << button;
         }
+
+        self->priv.input.interaction_time = self->priv.time.monotonic;
     });
     glfwSetScrollCallback(window, [](GLFWwindow *window, double xoffset, double yoffset) {
         gui_Window *self = (gui_Window *)glfwGetWindowUserPointer(window);
 
         self->priv.input.wheel_x = (int)xoffset;
         self->priv.input.wheel_y = (int)yoffset;
+
+        self->priv.input.interaction_time = self->priv.time.monotonic;
     });
 
     // Keyboard callacks
@@ -90,6 +96,8 @@ bool gui_Window::Init(const char *application_name)
         }
 
 #undef HANDLE_KEY
+
+        self->priv.input.interaction_time = self->priv.time.monotonic;
     });
     glfwSetCharCallback(window, [](GLFWwindow *window, unsigned int c) {
         gui_Window *self = (gui_Window *)glfwGetWindowUserPointer(window);
@@ -107,6 +115,8 @@ bool gui_Window::Init(const char *application_name)
         } else {
             LogError("Dropping text events (buffer full)");
         }
+
+        self->priv.input.interaction_time = self->priv.time.monotonic;
     });
 
     // Set GL context
@@ -132,8 +142,16 @@ void gui_Window::SwapBuffers()
     glfwSwapBuffers(window);
 }
 
-bool gui_Window::Prepare()
+bool gui_Window::ProcessEvents(bool wait)
 {
+    // Update monotonic clock
+    {
+        double monotonic_time = glfwGetTime();
+
+        priv.time.monotonic_delta = monotonic_time - priv.time.monotonic;
+        priv.time.monotonic = monotonic_time;
+    }
+
     // Reset relative inputs
     priv.input.text.Clear();
     priv.input.buttons &= ~released_buttons;
@@ -141,8 +159,12 @@ bool gui_Window::Prepare()
     priv.input.wheel_x = 0;
     priv.input.wheel_y = 0;
 
-    // Poll events
-    glfwPollEvents();
+    // Process GLFW events
+    if (wait) {
+        glfwWaitEvents();
+    } else {
+        glfwPollEvents();
+    }
     if (glfwWindowShouldClose(window))
         return false;
 
@@ -155,14 +177,6 @@ bool gui_Window::Prepare()
         priv.input.text.len--;
     }
     priv.input.text.Append('\0');
-
-    // Update monotonic clock
-    {
-        double monotonic_time = glfwGetTime();
-
-        priv.time.monotonic_delta = monotonic_time - priv.time.monotonic;
-        priv.time.monotonic = monotonic_time;
-    }
 
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);

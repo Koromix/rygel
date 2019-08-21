@@ -35,7 +35,7 @@ int RunHeimdallW(int, char **)
         return 1;
 
     for (;;) {
-        if (!window.Prepare())
+        if (!window.ProcessEvents(render_state.idle))
             return 0;
         if (!StepHeimdall(window, render_state, concept_sets, entity_set))
             return 0;
