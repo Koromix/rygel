@@ -673,20 +673,20 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
     }
 
     // Determine first entity to render and where
-    Size render_idx = entity_set.entities.len - 1;
-    float render_offset = state.lines_top[entity_set.entities.len - 1];
+    state.render_idx = entity_set.entities.len - 1;
+    state.render_offset = state.lines_top[entity_set.entities.len - 1];
     for (Size i = 1; i < state.lines_top.len; i++) {
         if (state.lines_top[i] >= state.scroll_y) {
             if (!cache_refreshed) {
                 state.scroll_to_idx = i;
                 state.scroll_offset_y = state.lines_top[i] - state.scroll_y;
             }
-            render_idx = i - 1;
-            render_offset = state.lines_top[i - 1];
+            state.render_idx = i - 1;
+            state.render_offset = state.lines_top[i - 1];
             break;
         }
     }
-    render_offset -= state.scroll_y;
+    state.render_offset -= state.scroll_y;
 
     // Should we highlight this entity?
     bool highlight = false;
@@ -705,10 +705,10 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
     // Distribute entity elements to separate lines
     HeapArray<LineData> lines;
     {
-        float base_y = render_offset;
+        float base_y = state.render_offset;
         float y = base_y;
-        for (Size i = render_idx; i < entity_set.entities.len &&
-                                  y < win->ClipRect.Max.y; i++) {
+        for (Size i = state.render_idx; i < entity_set.entities.len &&
+                                        y < win->ClipRect.Max.y; i++) {
             const Entity &ent = entity_set.entities[i];
 
             double align_offset = 0.0f;
@@ -861,7 +861,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
                            win->ClipRect.Max, true);
         RG_DEFER { draw->PopClipRect(); };
 
-        float y = render_offset + bb.Min.y;
+        float y = state.render_offset + bb.Min.y;
         for (const LineData &line: lines) {
             if (!line.draw)
                 continue;
@@ -881,7 +881,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
         const Entity *ent = nullptr;
         float ent_offset_y = 0.0f;
 
-        float y = render_offset + bb.Min.y;
+        float y = state.render_offset + bb.Min.y;
         for (Size i = 0; i < lines.len && y < win->ClipRect.Max.y; i++) {
             const LineData &line = lines[i];
             if (!line.draw)
@@ -1041,21 +1041,6 @@ static void DrawView(InterfaceState &state,
     view_rect.Min.x += state.settings.tree_width + 15.0f;
     view_rect.Max.y -= scale_height;
 
-    // Auto-zoom
-    if (std::isnan(state.time_zoom)) {
-        double min_time = DBL_MAX;
-        double max_time = DBL_MIN;
-        for (const Entity &ent: entity_set.entities) {
-            for (const Element &elmt: ent.elements) {
-                min_time = std::min(min_time, elmt.time);
-                max_time = std::max(max_time, elmt.time + (elmt.type == Element::Type::Period ? elmt.u.period.duration : 0));
-            }
-        }
-
-        state.time_zoom = (float)(view_rect.GetWidth() / (max_time - min_time));
-        state.scroll_x = (float)(min_time * state.time_zoom);
-    }
-
     // Sync scroll from ImGui
     float prev_scroll_x = state.scroll_x;
     float prev_scroll_y = state.scroll_y;
@@ -1064,6 +1049,41 @@ static void DrawView(InterfaceState &state,
         state.scroll_x += prev_scroll_x - state.imgui_scroll_delta_x;
     }
     state.scroll_y = ImGui::GetScrollY() + (state.scroll_y < 0 ? state.scroll_y : 0);
+
+    // Auto-zoom
+    if ((std::isnan(state.time_zoom) || state.autozoom) &&
+            entity_set.entities.len && state.lines_top.len == entity_set.entities.len) {
+        double min_time = DBL_MAX;
+        double max_time = DBL_MIN;
+
+        float y = state.render_offset;
+        for (Size i = state.render_idx; i < entity_set.entities.len &&
+                                        y < win->ClipRect.Max.y; i++) {
+            const Entity &ent = entity_set.entities[i];
+
+            for (const Element &elmt: ent.elements) {
+                min_time = std::min(min_time, elmt.time);
+                max_time = std::max(max_time, elmt.time + (elmt.type == Element::Type::Period ? elmt.u.period.duration : 0));
+            }
+
+            if (i + 1 < state.lines_top.len) {
+                y += state.lines_top[i + 1] - state.lines_top[i];
+            }
+        }
+
+        // Give some room on both sides
+        {
+            double delta = max_time - min_time;
+
+            min_time -= delta / 50.0f;
+            max_time += delta / 50.0f;
+        }
+
+        state.time_zoom = (float)(view_rect.GetWidth() / (max_time - min_time));
+        state.scroll_x = (float)(min_time * state.time_zoom);
+
+        state.autozoom = false;
+    }
 
     // Handle controls
     float entities_mouse_x = (state.scroll_x + (float)gui_info->input.x - win->ClipRect.Min.x - (state.settings.tree_width + 15.0f));
