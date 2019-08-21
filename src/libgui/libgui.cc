@@ -2,5 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#include "window_glfw.cc"
 #include "window_win32.cc"
 #include "imgui.cc"

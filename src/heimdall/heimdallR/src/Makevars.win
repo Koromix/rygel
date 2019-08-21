@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-include Makevars
+include Makevars.inc
 
 PKG_CPPFLAGS += -DWINVER=0x0602 -D_WIN32_WINNT=0x0602 -D__USE_MINGW_ANSI_STDIO=1
 PKG_LIBS += -lshlwapi -lgdi32 -lopengl32 -limm32
