@@ -618,12 +618,12 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
     return ImRect(min_x, 0.0f, max_x, height);
 }
 
-static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
+static void DrawEntities(ImRect bb, float tree_width, double time_offset,
                          InterfaceState &state, const EntitySet &entity_set,
                          const ConceptSet *concept_set)
 {
     if (!entity_set.entities.len)
-        return true;
+        return;
 
     const ImGuiStyle &style = ImGui::GetStyle();
     ImGuiWindow *win = ImGui::GetCurrentWindow();
@@ -939,8 +939,6 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
             state.select_concepts.Remove(concept);
         }
     }
-
-    return !cache_refreshed;
 }
 
 static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom, float grid_alpha,
