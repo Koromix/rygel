@@ -9,7 +9,7 @@
 | _goupil_   | Vastly simplified alternative to Voozanoo (from Epiconcept)                | Draft            |
 | _heimdall_ | Medical timeline visualization (proof-of-concept)                          | Proof-of-concept |
 | _libcc_    | C++ container and system library                                           | Good             |
-| _libgui_   | Simple OpenGL window creation                                              | Win32-only       |
+| _libgui_   | Simple OpenGL window creation                                              | Average          |
 | _libweb_   | Reusable utility functions and HTML/CSS/JS widgets                         | Good             |
 | _thop_     | Web-based institutional PMSI (MCO) reporting tool based on libdrd          | Good             |
 | _webler_   | Simple markdown-to-HTML website generator (e.g. koromix.dev)               | Good             |
