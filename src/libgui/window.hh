@@ -43,11 +43,6 @@ enum class gui_InputButton {
 
 struct gui_Info {
     struct {
-        int instance_count;
-        int64_t iteration_count;
-    } main;
-
-    struct {
         double monotonic;
         double monotonic_delta;
     } time;
