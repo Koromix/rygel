@@ -108,6 +108,24 @@ static bool ResolveFileSet(const FileSet &file_set,
     return true;
 }
 
+static bool MatchPlatform(Span<const char> name, bool *out_match)
+{
+    if (name == "Win32") {
+#ifdef _WIN32
+        *out_match = true;
+#endif
+        return true;
+    } else if (name == "POSIX") {
+#ifndef _WIN32
+        *out_match = true;
+#endif
+        return true;
+    } else {
+        LogError("Unknown platform '%1'", name);
+        return false;
+    }
+}
+
 bool TargetSetBuilder::LoadIni(StreamReader &st)
 {
     RG_DEFER_NC(out_guard, len = set.targets.len) { set.targets.RemoveFrom(len); };
@@ -156,130 +174,117 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
             bool restricted_platforms = false;
             bool supported_platform = false;
             while (ini.NextInSection(&prop)) {
+                // These properties do not support platform suffixes
                 if (prop.key == "Type") {
                     LogError("Target type cannot be changed");
                     valid = false;
-                } else if (prop.key == "EnableByDefault") {
-                    if (prop.value == "1" || prop.value == "On" || prop.value == "Y") {
-                        target_config.enable_by_default = true;
-                    } else if (prop.value == "0" || prop.value == "Off" || prop.value == "N") {
-                        target_config.enable_by_default = false;
-                    } else {
-                        LogError("Invalid EnableByDefault value '%1'", prop.value);
-                        valid = false;
-                    }
                 } else if (prop.key == "Platforms") {
                     while (prop.value.len) {
                         Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
 
                         if (part.len) {
-                            if (part == "Win32") {
-#ifdef _WIN32
-                                supported_platform = true;
-#endif
-                            } else if (part == "POSIX") {
-#ifndef _WIN32
-                                supported_platform = true;
-#endif
-                            } else {
-                                LogError("Unknown platform '%1'", part);
-                                valid = false;
-                            }
+                            valid &= MatchPlatform(part, &supported_platform);
                         }
                     }
 
                     restricted_platforms = true;
-                } else if (prop.key == "SourceDirectory") {
-                    valid &= AppendNormalizedPath(prop.value,
-                                                  &set.str_alloc, &target_config.src_file_set.directories);
-                } else if (prop.key == "SourceDirectoryRec") {
-                    valid &= AppendNormalizedPath(prop.value,
-                                                  &set.str_alloc, &target_config.src_file_set.directories_rec);
-                } else if (prop.key == "SourceFile") {
-                    valid &= AppendNormalizedPath(prop.value,
-                                                  &set.str_alloc, &target_config.src_file_set.filenames);
-                } else if (prop.key == "SourceIgnore") {
-                    while (prop.value.len) {
-                        Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
+                } else {
+                    Span<const char> platform;
+                    prop.key = SplitStr(prop.key, '_', &platform);
 
-                        if (part.len) {
-                            const char *copy = DuplicateString(part, &set.str_alloc).ptr;
-                            target_config.src_file_set.ignore.Append(copy);
-                        }
+                    if (platform.len) {
+                        bool use_property = false;
+                        valid &= MatchPlatform(platform, &use_property);
+
+                        if (!use_property)
+                            continue;
                     }
-                } else if (prop.key == "ImportFrom") {
-                    while (prop.value.len) {
-                        Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
 
-                        if (part.len) {
-                            const char *copy = DuplicateString(part, &set.str_alloc).ptr;
-                            target_config.imports.Append(copy);
+                    if (prop.key == "EnableByDefault") {
+                        if (prop.value == "1" || prop.value == "On" || prop.value == "Y") {
+                            target_config.enable_by_default = true;
+                        } else if (prop.value == "0" || prop.value == "Off" || prop.value == "N") {
+                            target_config.enable_by_default = false;
+                        } else {
+                            LogError("Invalid EnableByDefault value '%1'", prop.value);
+                            valid = false;
                         }
-                    }
-                } else if (prop.key == "IncludeDirectory") {
-                    valid &= AppendNormalizedPath(prop.value, &set.str_alloc,
-                                                  &target_config.include_directories);
-                } else if (prop.key == "Precompile_C") {
-                    target_config.c_pch_filename = NormalizePath(prop.value, &set.str_alloc).ptr;
-                } else if (prop.key == "Precompile_CXX") {
-                    target_config.cxx_pch_filename = NormalizePath(prop.value, &set.str_alloc).ptr;
-                } else if (prop.key == "Definitions") {
-                    AppendListValues(prop.value, &set.str_alloc, &target_config.definitions);
-                } else if (prop.key == "Definitions_Win32") {
-#ifdef _WIN32
-                    AppendListValues(prop.value, &set.str_alloc, &target_config.definitions);
-#endif
-                } else if (prop.key == "Definitions_POSIX") {
-#ifndef _WIN32
-                    AppendListValues(prop.value, &set.str_alloc, &target_config.definitions);
-#endif
-                } else if (prop.key == "ExportDefinitions") {
-                    AppendListValues(prop.value, &set.str_alloc, &target_config.export_definitions);
-                } else if (prop.key == "Link") {
-                    AppendListValues(prop.value, &set.str_alloc, &target_config.libraries);
-                } else if (prop.key == "Link_Win32") {
-#ifdef _WIN32
-                    AppendListValues(prop.value, &set.str_alloc, &target_config.libraries);
-#endif
-                } else if (prop.key == "Link_POSIX") {
-#ifndef _WIN32
-                    AppendListValues(prop.value, &set.str_alloc, &target_config.libraries);
-#endif
-                } else if (prop.key == "AssetDirectory") {
-                    valid &= AppendNormalizedPath(prop.value,
-                                                  &set.str_alloc, &target_config.pack_file_set.directories);
-                } else if (prop.key == "AssetDirectoryRec") {
-                    valid &= AppendNormalizedPath(prop.value,
-                                                  &set.str_alloc, &target_config.pack_file_set.directories_rec);
-                } else if (prop.key == "AssetFile") {
-                    valid &= AppendNormalizedPath(prop.value,
-                                                  &set.str_alloc, &target_config.pack_file_set.filenames);
+                    } else if (prop.key == "SourceDirectory") {
+                        valid &= AppendNormalizedPath(prop.value,
+                                                      &set.str_alloc, &target_config.src_file_set.directories);
+                    } else if (prop.key == "SourceDirectoryRec") {
+                        valid &= AppendNormalizedPath(prop.value,
+                                                      &set.str_alloc, &target_config.src_file_set.directories_rec);
+                    } else if (prop.key == "SourceFile") {
+                        valid &= AppendNormalizedPath(prop.value,
+                                                      &set.str_alloc, &target_config.src_file_set.filenames);
+                    } else if (prop.key == "SourceIgnore") {
+                        while (prop.value.len) {
+                            Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
 
-                } else if (prop.key == "AssetIgnore") {
-                    while (prop.value.len) {
-                        Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
-
-                        if (part.len) {
-                            const char *copy = DuplicateString(part, &set.str_alloc).ptr;
-                            target_config.pack_file_set.ignore.Append(copy);
+                            if (part.len) {
+                                const char *copy = DuplicateString(part, &set.str_alloc).ptr;
+                                target_config.src_file_set.ignore.Append(copy);
+                            }
                         }
-                    }
-                } else if (prop.key == "AssetOptions") {
-                    target_config.pack_options = DuplicateString(prop.value, &set.str_alloc).ptr;
-                } else if (prop.key == "AssetLink") {
-                    if (prop.value == "Static") {
-                        target_config.pack_link_type = PackLinkType::Static;
-                    } else if (prop.value == "Module") {
-                        target_config.pack_link_type = PackLinkType::Module;
-                    } else if (prop.value == "ModuleIfDebug") {
-                        target_config.pack_link_type = PackLinkType::ModuleIfDebug;
+                    } else if (prop.key == "ImportFrom") {
+                        while (prop.value.len) {
+                            Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
+
+                            if (part.len) {
+                                const char *copy = DuplicateString(part, &set.str_alloc).ptr;
+                                target_config.imports.Append(copy);
+                            }
+                        }
+                    } else if (prop.key == "IncludeDirectory") {
+                        valid &= AppendNormalizedPath(prop.value, &set.str_alloc,
+                                                      &target_config.include_directories);
+                    } else if (prop.key == "PrecompileC") {
+                        target_config.c_pch_filename = NormalizePath(prop.value, &set.str_alloc).ptr;
+                    } else if (prop.key == "PrecompileCXX") {
+                        target_config.cxx_pch_filename = NormalizePath(prop.value, &set.str_alloc).ptr;
+                    } else if (prop.key == "Definitions") {
+                        AppendListValues(prop.value, &set.str_alloc, &target_config.definitions);
+                    } else if (prop.key == "ExportDefinitions") {
+                        AppendListValues(prop.value, &set.str_alloc, &target_config.export_definitions);
+                    } else if (prop.key == "Link") {
+                        AppendListValues(prop.value, &set.str_alloc, &target_config.libraries);
+                    } else if (prop.key == "AssetDirectory") {
+                        valid &= AppendNormalizedPath(prop.value,
+                                                      &set.str_alloc, &target_config.pack_file_set.directories);
+                    } else if (prop.key == "AssetDirectoryRec") {
+                        valid &= AppendNormalizedPath(prop.value,
+                                                      &set.str_alloc, &target_config.pack_file_set.directories_rec);
+                    } else if (prop.key == "AssetFile") {
+                        valid &= AppendNormalizedPath(prop.value,
+                                                      &set.str_alloc, &target_config.pack_file_set.filenames);
+
+                    } else if (prop.key == "AssetIgnore") {
+                        while (prop.value.len) {
+                            Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
+
+                            if (part.len) {
+                                const char *copy = DuplicateString(part, &set.str_alloc).ptr;
+                                target_config.pack_file_set.ignore.Append(copy);
+                            }
+                        }
+                    } else if (prop.key == "AssetOptions") {
+                        target_config.pack_options = DuplicateString(prop.value, &set.str_alloc).ptr;
+                    } else if (prop.key == "AssetLink") {
+                        if (prop.value == "Static") {
+                            target_config.pack_link_type = PackLinkType::Static;
+                        } else if (prop.value == "Module") {
+                            target_config.pack_link_type = PackLinkType::Module;
+                        } else if (prop.value == "ModuleIfDebug") {
+                            target_config.pack_link_type = PackLinkType::ModuleIfDebug;
+                        } else {
+                            LogError("Unknown asset link mode '%1'", prop.value);
+                            valid = false;
+                        }
                     } else {
-                        LogError("Unknown asset link mode '%1'", prop.value);
+                        LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
                     }
-                } else {
-                    LogError("Unknown attribute '%1'", prop.key);
-                    valid = false;
                 }
             }
 
