@@ -1381,7 +1381,9 @@ static void ToggleAlign(InterfaceState &state)
         }
         state.select_concepts.Clear();
     }
+
     state.size_cache_valid = false;
+    state.autozoom = true;
 }
 
 static ConceptSet *CreateView(const char *name, HeapArray<ConceptSet> *out_concept_sets)
