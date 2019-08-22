@@ -774,14 +774,14 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
 
     // Should we highlight this entity?
     bool highlight = false;
-    switch (state.settings.highlight_mode) {
-        case InterfaceSettings::HighlightMode::Never: {
+    switch (state.highlight_mode) {
+        case InterfaceState::HighlightMode::Never: {
             highlight = false;
         } break;
-        case InterfaceSettings::HighlightMode::Deployed: {
+        case InterfaceState::HighlightMode::Deployed: {
             highlight = state.deploy_paths.Find("/");
         } break;
-        case InterfaceSettings::HighlightMode::Always: {
+        case InterfaceState::HighlightMode::Always: {
             highlight = true;
         } break;
     }
@@ -1446,11 +1446,10 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
         ImGui::Separator();
 
         {
-            int highlight_mode = (int)state.settings.highlight_mode;
+            int highlight_mode = (int)state.highlight_mode;
             ImGui::Text("Highlight:");
             if (ImGui::Combo("##highlight_mode", &highlight_mode, "Never\0Deployed\0Always\0")) {
-                state.settings.highlight_mode = (InterfaceSettings::HighlightMode)highlight_mode;
-                state.new_settings.highlight_mode = (InterfaceSettings::HighlightMode)highlight_mode;
+                state.highlight_mode = (InterfaceState::HighlightMode)highlight_mode;
             }
         }
         ImGui::Separator();
