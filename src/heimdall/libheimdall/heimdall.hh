@@ -26,6 +26,27 @@ static const char *const InterpolationModeNames[] = {
     "Disable"
 };
 
+enum class TimeUnit {
+    Unknown,
+    Milliseconds,
+    Seconds,
+    Minutes,
+    Hours,
+    Days,
+    Months,
+    Years
+};
+static const char *const TimeUnitNames[] = {
+    "Unknown",
+    "Milliseconds",
+    "Seconds",
+    "Minutes",
+    "Hours",
+    "Days",
+    "Months",
+    "Year"
+};
+
 struct InterfaceSettings {
     enum class HighlightMode {
         Never,
@@ -41,6 +62,8 @@ struct InterfaceSettings {
     InterpolationMode interpolation = InterpolationMode::Linear;
     float grid_alpha = 0.04f;
     HighlightMode highlight_mode = HighlightMode::Deployed;
+    TimeUnit time_unit = TimeUnit::Unknown;
+    bool natural_time = false;
 };
 
 struct InterfaceState {
