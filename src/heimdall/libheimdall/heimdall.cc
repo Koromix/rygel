@@ -73,7 +73,7 @@ static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoo
 
         if (ImGui::ItemAdd(rect, 0)) {
             ImVec4 color = style.Colors[ImGuiCol_Border];
-            color.w *= style.Alpha * alpha;
+            color.w *= style.Alpha * alpha * 0.8f;
 
             draw->AddRectFilled(rect.Min, rect.Max, ImGui::ColorConvertFloat4ToU32(color));
 
