@@ -1376,7 +1376,7 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
         if (ImGui::CollapsingHeader("Plots", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Checkbox("Draw plots", &state.new_settings.plot_measures);
             ImGui::Combo("Interpolation", (int *)&state.new_settings.interpolation,
-                     interpolation_mode_names, RG_LEN(interpolation_mode_names));
+                         InterpolationModeNames, RG_LEN(InterpolationModeNames));
         }
 
         if (ImGui::Button("Apply")) {

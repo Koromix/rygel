@@ -19,7 +19,7 @@ enum class InterpolationMode {
     Spline,
     Disable
 };
-static const char *const interpolation_mode_names[] = {
+static const char *const InterpolationModeNames[] = {
     "Linear",
     "LOCF",
     "Spline",
