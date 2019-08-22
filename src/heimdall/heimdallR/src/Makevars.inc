@@ -12,7 +12,7 @@ all:
 
 override OBJECTS := $(addprefix ./${R_ARCH}_, heimdallR.cc.o Rcc.cc.o libcc.cc.o libgui.cc.o opengl.cc.o libheimdall.cc.o\
                                               imgui.cpp.o imgui_demo.cpp.o imgui_draw.cpp.o imgui_widgets.cpp.o miniz.c.o\
-                                              assets.c.o)
+                                              roboto_medium_ttf.c.o)
 
 ./${R_ARCH}_heimdallR.cc.o: ../heimdallR.cc
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
@@ -26,6 +26,8 @@ override OBJECTS := $(addprefix ./${R_ARCH}_, heimdallR.cc.o Rcc.cc.o libcc.cc.o
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
 ./${R_ARCH}_libheimdall.cc.o: ../../libheimdall/libheimdall.cc
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
+./${R_ARCH}_roboto_medium_ttf.c.o: ../../libheimdall/roboto_medium_ttf.c
+	$(CC) $(ALL_CPPFLAGS) $(ALL_CFLAGS) -c -o $@ $<
 
 ./${R_ARCH}_imgui.cpp.o: ../../../../vendor/imgui/imgui.cpp
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
@@ -35,9 +37,6 @@ override OBJECTS := $(addprefix ./${R_ARCH}_, heimdallR.cc.o Rcc.cc.o libcc.cc.o
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
 ./${R_ARCH}_imgui_widgets.cpp.o: ../../../../vendor/imgui/imgui_widgets.cpp
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
-
-./${R_ARCH}_assets.c.o: ../../../../vendor/imgui/misc/fonts/Roboto-Medium.ttf
-	felix pack $< | $(CXX) -std=gnu99 -c -o $@ -x c -
 
 MINIZ_FLAGS = -fno-strict-aliasing -DMINIZ_NO_MALLOC -DMINIZ_NO_STDIO -DMINIZ_NO_TIME\
               -DMINIZ_NO_ARCHIVE_APIS -DMINIZ_NO_ARCHIVE_WRITING_APIS -DMINIZ_NO_ZLIB_APIS\
