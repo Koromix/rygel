@@ -1405,6 +1405,7 @@ static void AddConceptsToView(const HashMap<Span<const char>, Span<const char>> 
 static void RemoveConceptsFromView(const HashMap<Span<const char>, Span<const char>> &concepts, ConceptSet *out_concept_set)
 {
     for (const auto &it: concepts.table) {
+        // FIXME: We leak string memory (here and elsewhere...) when we remove stuff
         out_concept_set->concepts_map.Remove(it.key.ptr);
     }
 }
@@ -1439,7 +1440,7 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
                 ToggleAlign(state);
             }
             ImGui::Separator();
-            // TODO: Fix limited format specifiers on Windows
+            // FIXME: Fix limited format specifiers on Windows
             ImGui::Text("Entities: %d / %d",
                         (int)state.visible_entities, (int)entity_set.entities.len);
         } else {
@@ -1519,7 +1520,7 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
             if (concept_set && ImGui::BeginMenu("Add to view")) {
                 ImGui::Text("New view:");
                 static char new_view_buf[128];
-                // TODO: Avoid empty and duplicate names
+                // FIXME: Avoid empty and duplicate names
                 ImGui::InputText("##new_view", new_view_buf, IM_ARRAYSIZE(new_view_buf));
                 if (ImGui::Button("Create")) {
                     ConceptSet *new_concept_set = CreateView(new_view_buf, &concept_sets);
@@ -1540,7 +1541,7 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
             if (ImGui::BeginMenu("Add to view (flat)")) {
                 ImGui::Text("New view:");
                 static char new_view_buf[128];
-                // TODO: Avoid empty and duplicate names
+                // FIXME: Avoid empty and duplicate names
                 ImGui::InputText("##new_view", new_view_buf, IM_ARRAYSIZE(new_view_buf));
                 if (ImGui::Button("Create")) {
                     ConceptSet *new_concept_set = CreateView(new_view_buf, &concept_sets);
