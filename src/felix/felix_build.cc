@@ -110,7 +110,9 @@ static const char *BuildGitVersionString(Allocator *alloc)
     }
 
     output.len = TrimStrRight((Span<const char>)output).len;
-    return output.TrimAndLeak().ptr;
+    output.Append(0);
+
+    return output.Leak().ptr;
 }
 
 int RunBuild(Span<const char *> arguments)
