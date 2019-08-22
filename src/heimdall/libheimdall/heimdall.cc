@@ -1375,7 +1375,11 @@ static void ToggleAlign(InterfaceState &state)
     if (state.align_concepts.table.count) {
         state.align_concepts.Clear();
     } else {
-        SwapMemory(&state.align_concepts, &state.select_concepts, RG_SIZE(state.align_concepts));
+        state.align_concepts.Clear();
+        for (const auto &it: state.select_concepts.table) {
+            state.align_concepts.Append(it.key);
+        }
+        state.select_concepts.Clear();
     }
     state.size_cache_valid = false;
 }
