@@ -132,6 +132,8 @@ bool gui_Window::InitImGui(ImFontAtlas *font_atlas)
         io->Fonts->TexID = (void *)(intptr_t)font_texture;
     }
 
+    io->BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
+
     io->KeyMap[ImGuiKey_Tab] = (int)gui_InputKey::Tab;
     io->KeyMap[ImGuiKey_Delete] = (int)gui_InputKey::Delete;
     io->KeyMap[ImGuiKey_Backspace] = (int)gui_InputKey::Backspace;
@@ -277,9 +279,10 @@ void gui_Window::RenderImGui()
                     glScissor((int)cmd.ClipRect.x, info.display.height - (int)cmd.ClipRect.w,
                               (int)(cmd.ClipRect.z - cmd.ClipRect.x),
                               (int)(cmd.ClipRect.w - cmd.ClipRect.y));
-                    glDrawElements(GL_TRIANGLES, (GLsizei)cmd.ElemCount,
-                                   RG_SIZE(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT,
-                                   idx_buffer_offset);
+
+                    glDrawElementsBaseVertex(GL_TRIANGLES, (GLsizei)cmd.ElemCount,
+                                             RG_SIZE(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT,
+                                             idx_buffer_offset, (GLint)cmd.VtxOffset);
                 }
                 idx_buffer_offset += cmd.ElemCount;
             }
