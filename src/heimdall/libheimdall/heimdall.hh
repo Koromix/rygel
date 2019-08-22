@@ -48,12 +48,6 @@ static const char *const TimeUnitNames[] = {
 };
 
 struct InterfaceSettings {
-    enum class HighlightMode {
-        Never,
-        Deployed,
-        Always
-    };
-
     bool dark_theme = false;
     float tree_width = 300.0f;
     bool plot_measures = true;
@@ -61,12 +55,17 @@ struct InterfaceSettings {
     float plot_height = 50.0f;
     InterpolationMode interpolation = InterpolationMode::Linear;
     float grid_alpha = 0.04f;
-    HighlightMode highlight_mode = HighlightMode::Deployed;
     TimeUnit time_unit = TimeUnit::Unknown;
     bool natural_time = false;
 };
 
 struct InterfaceState {
+    enum class HighlightMode {
+        Never,
+        Deployed,
+        Always
+    };
+
     // TODO: Separate deploy_paths set for each concept set
     HashSet<Span<const char>> deploy_paths;
 
@@ -93,6 +92,7 @@ struct InterfaceState {
     float render_offset = 0.0f;
     bool autozoom = false;
 
+    HighlightMode highlight_mode = HighlightMode::Deployed;
     Size scroll_to_idx = 0;
     float scroll_offset_y;
     Size highlight_idx = -1;
