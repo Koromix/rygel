@@ -944,17 +944,33 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
     }
 }
 
-static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom, float grid_alpha,
-                          bool highlight_zero)
+// FIXME: Avoid excessive overdraw on the left of the screen when time_offset is big
+static void DrawTime(ImRect bb, double time_offset, float time_zoom,
+                     float grid_alpha, bool highlight_zero, TimeUnit time_unit)
 {
     ImDrawList *draw = ImGui::GetWindowDrawList();
 
-    // float time_step = 10.0f / powf(10.0f, floorf(log10f(time_zoom)));
+    // Suffix appropriate for time unit
+    const char *suffix = nullptr;
+    switch (time_unit) {
+        case TimeUnit::Unknown: { suffix = ""; } break;
+        case TimeUnit::Milliseconds: { suffix = "ms"; } break;
+        case TimeUnit::Seconds: { suffix = "s"; } break;
+        case TimeUnit::Minutes: { suffix = "min"; } break;
+        case TimeUnit::Hours: { suffix = "h"; } break;
+        case TimeUnit::Days: { suffix = "d"; } break;
+        case TimeUnit::Months: { suffix = "mo"; } break;
+        case TimeUnit::Years: { suffix = "y"; } break;
+    }
+    RG_ASSERT_DEBUG(suffix);
+
+    // Find appropriate time step
     float time_step = 10.0f / powf(10.0f, floorf(log10f(time_zoom)));
     int precision = (int)log10f(1.0f / time_step);
-    float min_text_delta = 25.0f + 10.0f * fabsf(log10f(1.0f / time_step));
+    float min_text_delta = 25.0f + 10.0f * fabsf(log10f(1.0f / time_step))
+                                 + 10.0f * strlen(suffix);
 
-    // TODO: Avoid overdraw (left of screen)
+    // Find start time and corresponding X coordinate
     float x = bb.Min.x - (float)time_offset * time_zoom;
     float time = 0.0f;
     {
@@ -965,6 +981,7 @@ static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom, float 
         }
     }
 
+    // Draw!
     float prev_text_x = x - min_text_delta - 1.0f;
     while (x < bb.Max.x + 30.0f) {
         bool show_text = false;
@@ -992,9 +1009,9 @@ static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom, float 
                 char time_str[32];
                 ImVec2 text_size;
                 if (std::abs(time) < 0.000001) {
-                    Fmt(time_str, "%1", FmtDouble(0.0, precision));
+                    Fmt(time_str, "%1%2", FmtDouble(0.0, precision), suffix);
                 } else {
-                    Fmt(time_str, "%1", FmtDouble(time, precision));
+                    Fmt(time_str, "%1%2", FmtDouble(time, precision), suffix);
                 }
                 text_size = ImGui::CalcTextSize(time_str);
 
@@ -1124,21 +1141,93 @@ static void DrawView(InterfaceState &state,
         }
     }
 
-    // Update time zoom
-    double time_offset;
+    // Update and animate time scroll and zoom
     {
         double prev_zoom = state.time_zoom;
         state.time_zoom.Update(gui_info->time.monotonic);
         state.scroll_x += AdjustScrollAfterZoom(entities_mouse_x, prev_zoom, state.time_zoom);
-
-        time_offset = state.scroll_x / state.time_zoom;
     }
 
-    // Render time scale and entities
-    DrawTimeScale(scale_rect, time_offset, state.time_zoom, state.settings.grid_alpha,
-                  state.align_concepts.table.count);
-    DrawEntities(entity_rect, state.settings.tree_width, time_offset,
-                 state, entity_set, concept_set);
+    // Render time
+    if (state.settings.natural_time && state.settings.time_unit != TimeUnit::Unknown) {
+        TimeUnit time_unit = state.settings.time_unit;
+        double time_zoom = state.time_zoom;
+
+        if (time_zoom < 1.5f) {
+            if (time_unit == TimeUnit::Milliseconds && time_zoom < 3.0f) {
+                time_zoom *= 1000.0f;
+                time_unit = TimeUnit::Seconds;
+            }
+            if (time_unit == TimeUnit::Seconds && time_zoom < 3.0f) {
+                time_zoom *= 60.0f;
+                time_unit = TimeUnit::Minutes;
+            }
+            if (time_unit == TimeUnit::Minutes && time_zoom < 3.0f) {
+                time_zoom *= 60.0f;
+                time_unit = TimeUnit::Hours;
+            }
+            if (time_unit == TimeUnit::Hours && time_zoom < 3.0f) {
+                time_zoom *= 24.0f;
+                time_unit = TimeUnit::Days;
+            }
+            if (time_unit == TimeUnit::Days) {
+                if (time_zoom < 3.0f / 12.0f) {
+                    time_zoom *= 365.0f;
+                    time_unit = TimeUnit::Years;
+                } else if (time_zoom < 3.0f) {
+                    time_zoom *= 28.0f;
+                    time_unit = TimeUnit::Months;
+                }
+            } else if (time_unit == TimeUnit::Months && time_zoom < 3.0f) {
+                time_zoom *= 12.0f;
+                time_unit = TimeUnit::Years;
+            }
+        } else if (time_zoom > 150.0f) {
+            if (time_unit == TimeUnit::Years) {
+                if (time_zoom > 75.0f * 12.0f) {
+                    time_zoom /= 365.0f;
+                    time_unit = TimeUnit::Days;
+                } else if (time_zoom > 75.0f) {
+                    time_zoom /= 12.0f;
+                    time_unit = TimeUnit::Months;
+                }
+            } else if (time_unit == TimeUnit::Months && time_zoom > 75.0f) {
+                time_zoom /= 28.0f;
+                time_unit = TimeUnit::Days;
+            }
+            if (time_unit == TimeUnit::Days && time_zoom > 75.0f) {
+                time_zoom /= 24.0f;
+                time_unit = TimeUnit::Hours;
+            }
+            if (time_unit == TimeUnit::Hours && time_zoom > 75.0f) {
+                time_zoom /= 60.0f;
+                time_unit = TimeUnit::Minutes;
+            }
+            if (time_unit == TimeUnit::Minutes && time_zoom > 75.0f) {
+                time_zoom /= 60.0f;
+                time_unit = TimeUnit::Seconds;
+            }
+            if (time_unit == TimeUnit::Seconds && time_zoom > 75.0f) {
+                time_zoom /= 1000.0f;
+                time_unit = TimeUnit::Milliseconds;
+            }
+        }
+
+        double time_offset = state.scroll_x / time_zoom;
+        DrawTime(scale_rect, time_offset, time_zoom, state.settings.grid_alpha,
+                 state.align_concepts.table.count, time_unit);
+    } else {
+        double time_offset = state.scroll_x / state.time_zoom;
+        DrawTime(scale_rect, time_offset, state.time_zoom, state.settings.grid_alpha,
+                 state.align_concepts.table.count, state.settings.time_unit);
+    }
+
+    // Render entities
+    {
+        double time_offset = state.scroll_x / state.time_zoom;
+        DrawEntities(entity_rect, state.settings.tree_width, time_offset,
+                     state, entity_set, concept_set);
+    }
 
     // Inform ImGui about content size and fake scroll offsets (hacky)
     {
@@ -1377,6 +1466,12 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
             ImGui::Checkbox("Draw plots", &state.new_settings.plot_measures);
             ImGui::Combo("Interpolation", (int *)&state.new_settings.interpolation,
                          InterpolationModeNames, RG_LEN(InterpolationModeNames));
+        }
+        if (ImGui::CollapsingHeader("Time", ImGuiTreeNodeFlags_DefaultOpen)) {
+            int time_unit = (int)state.new_settings.time_unit;
+            ImGui::Combo("Time unit", &time_unit, TimeUnitNames, RG_LEN(TimeUnitNames));
+            state.new_settings.time_unit = (TimeUnit)time_unit;
+            ImGui::Checkbox("Natural time", &state.new_settings.natural_time);
         }
 
         if (ImGui::Button("Apply")) {
