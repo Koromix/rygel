@@ -646,9 +646,6 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
     double align_offset;
     if (FindConceptAndAlign(ent, state.align_concepts, &align_offset)) {
         for (const Element &elmt: ent.elements) {
-            min_x = std::min((float)(elmt.time - align_offset), min_x);
-            max_x = std::max((float)(elmt.time + (elmt.type == Element::Type::Period ? elmt.u.period.duration : 0) - align_offset), max_x);
-
             Span<const char> path;
             {
                 if (elmt.concept[0] == '/') {
@@ -668,6 +665,14 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
                 }
             }
             RG_ASSERT_DEBUG(path.len > 0);
+
+            if (state.filter_text[0] &&
+                    !strstr(path.ptr, state.filter_text) &&
+                    !strstr(elmt.concept, state.filter_text))
+                continue;
+
+            min_x = std::min((float)(elmt.time - align_offset), min_x);
+            max_x = std::max((float)(elmt.time + (elmt.type == Element::Type::Period ? elmt.u.period.duration : 0) - align_offset), max_x);
 
             bool fully_deployed = false;
             {
@@ -822,6 +827,11 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
                     }
                 }
                 RG_ASSERT_DEBUG(path.len > 0);
+
+                if (state.filter_text[0] &&
+                        !strstr(path.ptr, state.filter_text) &&
+                        !strstr(elmt.concept, state.filter_text))
+                    continue;
 
                 bool fully_deployed = true;
                 int tree_depth = 0;
@@ -1448,6 +1458,10 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
         if (ImGui::Button("Auto-Zoom")) {
             state.time_zoom = NAN;
         }
+        ImGui::Separator();
+
+        state.size_cache_valid &= !ImGui::InputText("Manual filter", state.filter_text,
+                                                    IM_ARRAYSIZE(state.filter_text));
         ImGui::Separator();
 
         ImGui::Checkbox("Other settings", &state.show_settings);
