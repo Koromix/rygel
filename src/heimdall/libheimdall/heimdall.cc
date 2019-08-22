@@ -15,7 +15,10 @@ RG_POP_NO_WARNINGS()
 
 namespace RG {
 
-// Ideas:
+// NOTE: Beware, as of now, this software is a proof-of-concept. The quality of the
+// code reflects that... Good luck ;)
+
+// Misc Ideas:
 // - Magic shift, to filter concept under the cursor and pick and choose concepts in right panel
 // - Ctrl + click on element = instant zoom to pertinent level
 // - One pixel mode (height 1 pixel) for dense view
