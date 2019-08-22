@@ -24,16 +24,18 @@ bundle_drdR <- function(project_dir, build_dir) {
         file.copy(src_files, dest_dir, recursive = recursive, overwrite = TRUE)
     }
 
-    copy_files(c('src/drd/drdR/src/Makevars',
-                 'src/drd/drdR/src/Makevars.win'), 'src')
     local({
-        filename <- str_interp('${build_dir}/src/Makevars')
-        lines <- readLines(filename)
+        for (name in c('Makevars', 'Makevars.win', 'Makevars.inc')) {
+            copy_files(str_interp('src/drd/drdR/src/${name}'), 'src')
 
-        lines <- sub('.o: ../', '.o: drd/drdR/', lines)
-        lines <- lines[!grepl('../R', lines, fixed = TRUE)]
+            filename <- str_interp('${build_dir}/src/${name}')
+            lines <- readLines(filename)
 
-        writeLines(lines, filename)
+            lines <- sub('.o: ../', '.o: drd/drdR/', lines)
+            lines <- lines[!grepl('../R', lines, fixed = TRUE)]
+
+            writeLines(lines, filename)
+        }
     })
 
     copy_files(c('src/drd/drdR/DESCRIPTION',
