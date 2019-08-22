@@ -101,7 +101,7 @@ struct InterfaceState {
     float grab_canvas_x;
     float grab_canvas_y;
 
-    HashSet<Span<const char>> select_concepts;
+    HashMap<Span<const char>, Span<const char>> select_concepts;
     HashSet<Span<const char>> align_concepts;
     char filter_text[256] = {};
 

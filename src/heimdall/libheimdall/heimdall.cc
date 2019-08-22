@@ -966,7 +966,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
 
     // Draw frames (header, support line)
     Span<const char> deploy_path = {};
-    HeapArray<Span<const char>> select_concepts;
+    HeapArray<const LineData *> select_lines;
     bool select_enable = false;
     {
         const Entity *ent = nullptr;
@@ -999,11 +999,11 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
                 case LineInteraction::Select:
                 case LineInteraction::Menu: {
                     if (line.leaf) {
-                        select_concepts.Append(line.title);
+                        select_lines.Append(&line);
                     }
                     for (Size j = i + 1; j < lines.len && lines[j].depth > line.depth; j++) {
                         if (lines[j].leaf) {
-                            select_concepts.Append(lines[j].title);
+                            select_lines.Append(&lines[j]);
                         }
                     }
 
@@ -1029,12 +1029,12 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
 
         state.size_cache_valid = false;
     } else if (select_enable) {
-        for (Span<const char> concept: select_concepts) {
-             state.select_concepts.Append(concept);
+        for (const LineData *line: select_lines) {
+             state.select_concepts.Append(line->title, line->path);
         }
     } else {
-        for (Span<const char> concept: select_concepts) {
-            state.select_concepts.Remove(concept);
+        for (const LineData *line: select_lines) {
+            state.select_concepts.Remove(line->title);
         }
     }
 }
@@ -1386,21 +1386,26 @@ static ConceptSet *CreateView(const char *name, HeapArray<ConceptSet> *out_conce
     return concept_set;
 }
 
-static void AddConceptsToView(const HashSet<Span<const char>> &concepts, ConceptSet *out_concept_set)
+static void AddConceptsToView(const HashMap<Span<const char>, Span<const char>> &concepts,
+                              bool keep_paths, ConceptSet *out_concept_set)
 {
-    for (Span<const char> concept_name: concepts.table) {
+    for (const auto &it: concepts.table) {
         Concept concept = {};
-        concept.name = DuplicateString(concept_name, &out_concept_set->str_alloc).ptr;
+        concept.name = DuplicateString(it.key, &out_concept_set->str_alloc).ptr;
         concept.title = concept.name;
-        concept.path = "/";
+        if (keep_paths) {
+            concept.path = DuplicateString(it.value, &out_concept_set->str_alloc).ptr;
+        } else {
+            concept.path = "/";
+        }
         out_concept_set->concepts_map.Append(concept);
     }
 }
 
-static void RemoveConceptsFromView(const HashSet<Span<const char>> &concepts, ConceptSet *out_concept_set)
+static void RemoveConceptsFromView(const HashMap<Span<const char>, Span<const char>> &concepts, ConceptSet *out_concept_set)
 {
-    for (Span<const char> concept_name: concepts.table) {
-        out_concept_set->concepts_map.Remove(concept_name.ptr);
+    for (const auto &it: concepts.table) {
+        out_concept_set->concepts_map.Remove(it.key.ptr);
     }
 }
 
@@ -1495,15 +1500,15 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
         RG_DEFER { ImGui::PopStyleVar(1); };
 
-        ImGui::Begin("View", nullptr, view_flags);
-        {
-            const ConceptSet *concept_set = nullptr;
-            if (state.concept_set_idx >= 0 && state.concept_set_idx < concept_sets.len) {
-                concept_set = &concept_sets[state.concept_set_idx];
-            }
-
-            DrawView(state, entity_set, concept_set);
+        const ConceptSet *concept_set;
+        if (state.concept_set_idx >= 0 && state.concept_set_idx < concept_sets.len) {
+            concept_set = &concept_sets[state.concept_set_idx];
+        } else {
+            concept_set = nullptr;
         }
+
+        ImGui::Begin("View", nullptr, view_flags);
+        DrawView(state, entity_set, concept_set);
 
         if (ImGui::BeginPopup("tree_menu")) {
             if (ImGui::MenuItem("Align", nullptr, state.align_concepts.table.count,
@@ -1511,22 +1516,43 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
                 ToggleAlign(state);
             }
             ImGui::Separator();
-            if (ImGui::BeginMenu("Add to view")) {
+            if (concept_set && ImGui::BeginMenu("Add to view")) {
                 ImGui::Text("New view:");
                 static char new_view_buf[128];
                 // TODO: Avoid empty and duplicate names
                 ImGui::InputText("##new_view", new_view_buf, IM_ARRAYSIZE(new_view_buf));
                 if (ImGui::Button("Create")) {
-                    ConceptSet *concept_set = CreateView(new_view_buf, &concept_sets);
+                    ConceptSet *new_concept_set = CreateView(new_view_buf, &concept_sets);
                     new_view_buf[0] = 0;
-                    AddConceptsToView(state.select_concepts, concept_set);
+                    AddConceptsToView(state.select_concepts, true, new_concept_set);
                     state.select_concepts.Clear();
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::Separator();
-                for (ConceptSet &concept_set: concept_sets) {
-                    if (ImGui::MenuItem(concept_set.name)) {
-                        AddConceptsToView(state.select_concepts, &concept_set);
+                for (ConceptSet &it: concept_sets) {
+                    if (ImGui::MenuItem(it.name)) {
+                        AddConceptsToView(state.select_concepts, true, &it);
+                        state.select_concepts.Clear();
+                    }
+                }
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Add to view (flat)")) {
+                ImGui::Text("New view:");
+                static char new_view_buf[128];
+                // TODO: Avoid empty and duplicate names
+                ImGui::InputText("##new_view", new_view_buf, IM_ARRAYSIZE(new_view_buf));
+                if (ImGui::Button("Create")) {
+                    ConceptSet *new_concept_set = CreateView(new_view_buf, &concept_sets);
+                    new_view_buf[0] = 0;
+                    AddConceptsToView(state.select_concepts, false, new_concept_set);
+                    state.select_concepts.Clear();
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::Separator();
+                for (ConceptSet &it: concept_sets) {
+                    if (ImGui::MenuItem(it.name)) {
+                        AddConceptsToView(state.select_concepts, false, &it);
                         state.select_concepts.Clear();
                     }
                 }
