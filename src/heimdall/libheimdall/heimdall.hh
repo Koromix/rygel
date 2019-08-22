@@ -101,10 +101,11 @@ struct InterfaceState {
     float grab_canvas_x;
     float grab_canvas_y;
 
-    bool idle = false;
-
     HashSet<Span<const char>> select_concepts;
     HashSet<Span<const char>> align_concepts;
+    char filter_text[256] = {};
+
+    bool idle = false;
 };
 
 bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSet> &concept_sets,
