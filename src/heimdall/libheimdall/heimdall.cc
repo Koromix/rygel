@@ -10,6 +10,7 @@
 RG_PUSH_NO_WARNINGS()
 #include "../../../vendor/imgui/imgui.h"
 #include "../../../vendor/imgui/imgui_internal.h"
+#include "../../../vendor/tkspline/src/spline.h"
 RG_POP_NO_WARNINGS()
 
 namespace RG {
@@ -210,6 +211,53 @@ static void DrawEvents(float x_offset, float y_min, float y_max, float time_zoom
     }
 }
 
+static void DrawPartialSpline(ImDrawList *draw, const std::vector<double> &xs,
+                              const std::vector<double> &ys, Span<const ImU32> colors)
+{
+    if (xs.size() >= 3) {
+        // Solve the spline.
+        tk::spline spline;
+        spline.set_points(xs, ys);
+
+        // Don't overdraw (slow and unnecessary)
+        float min_x = std::max((float)xs[0], draw->GetClipRectMin().x);
+        float max_x = std::min((float)xs[xs.size() - 1], draw->GetClipRectMax().x);
+
+        // Draw the curve
+        {
+            ImU32 prev_color = colors[0];
+            Size color_idx = 0;
+
+            HeapArray<ImVec2> points;
+            for (float x = min_x; x <= max_x; x += 1.0f) {
+                ImVec2 point = {(float)x, (float)spline(x)};
+                points.Append(point);
+
+                while (color_idx < colors.len && xs[color_idx] < x) {
+                    color_idx++;
+                }
+                color_idx--;
+
+                if (colors[color_idx] != prev_color) {
+                    draw->AddPolyline(points.ptr, points.len, prev_color, false, 1.0f);
+
+                    points[0] = points[points.len - 1];
+                    points.RemoveFrom(1);
+                }
+                prev_color = colors[color_idx];
+            }
+
+            draw->AddPolyline(points.ptr, points.len, prev_color, false, 1.0f);
+        }
+    } else if (xs.size() == 2) {
+        ImVec2 points[] = {
+            ImVec2((float)xs[0], (float)ys[0]),
+            ImVec2((float)xs[1], (float)ys[1])
+        };
+        draw->AddPolyline(points, RG_LEN(points), colors[0], false, 1.0f);
+    }
+}
+
 template <typename Fun>
 void DrawLine(InterpolationMode interpolation, Fun f)
 {
@@ -262,8 +310,43 @@ void DrawLine(InterpolationMode interpolation, Fun f)
         } break;
 
         case InterpolationMode::Spline: {
-            // TODO: Implement Akima spline interpolation
-            // See http://www.iue.tuwien.ac.at/phd/rottinger/node60.html
+            // Cumulate points in std::vector to tk::spline (yuck..). I'll drop
+            // th::spline eventually and hand-code the spline stuff. If I ever get the time.
+            std::vector<double> xs;
+            std::vector<double> ys;
+            HeapArray<ImU32> colors;
+            for (Size i = 0;; i++) {
+                ImVec2 point = {};
+                ImU32 color = 0;
+                if (!f(i, &point, &color))
+                    break;
+
+                if (RG_LIKELY(!std::isnan(point.y))) {
+                    // Dirty way to handle sudden changes, even though it kinda breaks the curve
+                    if (xs.size() && point.x - 1.0f <= xs[xs.size() - 1]) {
+                        DrawPartialSpline(draw, xs, ys, colors);
+
+                        xs[0] = xs[xs.size() - 1];
+                        ys[0] = ys[ys.size() - 1];
+                        colors[0] = colors[colors.len - 1];
+                        xs.erase(xs.begin() + 1, xs.end());
+                        ys.erase(ys.begin() + 1, ys.end());
+                        colors.RemoveFrom(1);
+                    }
+
+                    xs.push_back(point.x);
+                    ys.push_back(point.y);
+                    colors.Append(color);
+                } else {
+                    DrawPartialSpline(draw, xs, ys, colors);
+
+                    xs.clear();
+                    ys.clear();
+                    colors.RemoveFrom(0);
+                }
+            }
+
+            DrawPartialSpline(draw, xs, ys, colors);
         } break;
 
         case InterpolationMode::Disable: {
