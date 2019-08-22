@@ -121,6 +121,8 @@ static void DrawEventsBlock(ImRect rect, float alpha, Span<const Element *const>
                             double align_offset)
 {
     ImDrawList *draw = ImGui::GetWindowDrawList();
+    ImFont *font = ImGui::GetFont();
+    float font_size = ImGui::GetFontSize() * 0.85f;
 
     ImRect bb {
         rect.Min.x - 10.0f, std::max(rect.Min.y, rect.Max.y - 20.0f),
@@ -159,12 +161,12 @@ static void DrawEventsBlock(ImRect rect, float alpha, Span<const Element *const>
             ImVec2 text_bb;
             {
                 text_bb = bb.GetCenter();
-                ImVec2 text_size = ImGui::CalcTextSize(len_str);
+                ImVec2 text_size = font->CalcTextSizeA(font_size, FLT_MAX, -1.0f, len_str);
                 text_bb.x -= text_size.x / 2.0f;
-                text_bb.y -= text_size.y / 2.0f - 2.0f;
+                text_bb.y -= text_size.y / 2.0f - 2.0f + round(std::min(rect.GetWidth() / 5.0f, 2.0f));
             }
 
-            draw->AddText(text_bb, ImGui::GetColorU32(ImGuiCol_Text, alpha), len_str, nullptr);
+            draw->AddText(font, font_size, text_bb, ImGui::GetColorU32(ImGuiCol_Text, alpha), len_str, nullptr);
         }
     }
 
