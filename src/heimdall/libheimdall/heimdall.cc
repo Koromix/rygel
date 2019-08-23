@@ -1476,8 +1476,10 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
         }
         ImGui::Separator();
 
-        state.size_cache_valid &= !ImGui::InputText("Manual filter", state.filter_text,
-                                                    IM_ARRAYSIZE(state.filter_text));
+        if (ImGui::InputText("Manual filter", state.filter_text, IM_ARRAYSIZE(state.filter_text))) {
+            state.size_cache_valid = false;
+            state.autozoom = true;
+        }
         ImGui::Separator();
 
         ImGui::Checkbox("Other settings", &state.show_settings);
