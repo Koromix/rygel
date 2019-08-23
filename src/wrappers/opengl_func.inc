@@ -12,6 +12,10 @@
 
 #else
 
+#ifndef _WIN32
+      #include <GL/gl.h>
+#else
+
 // OpenGL 1.2
 
 OGL_FUNCTION(gl_version >= 12, void, glCopyTexSubImage3D, GLenum target, GLint level, GLint xoffset,
@@ -185,6 +189,8 @@ OGL_FUNCTION(gl_version >= 14 && gl_compat, void, glWindowPos3i, GLint x, GLint 
 OGL_FUNCTION(gl_version >= 14 && gl_compat, void, glWindowPos3iv, const GLint *v);
 OGL_FUNCTION(gl_version >= 14 && gl_compat, void, glWindowPos3s, GLshort x, GLshort y, GLshort z);
 OGL_FUNCTION(gl_version >= 14 && gl_compat, void, glWindowPos3sv, const GLshort *v);
+#endif
+
 #endif
 
 // OpenGL 1.5
