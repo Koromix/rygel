@@ -1213,7 +1213,6 @@ public:
         LinkedAllocator allocator;
     };
 
-    // TODO: Make the iterator faster (right now it's naive and goes through operator[])
     template <typename U>
     class Iterator {
     public:
@@ -1224,20 +1223,40 @@ public:
         typedef Iterator &reference;
 
         U *queue = nullptr;
-        Size idx;
+        Size bucket_idx;
+        Size bucket_offset;
+        Bucket *bucket;
+        Bucket *next_bucket;
 
         Iterator() = default;
-        Iterator(U *queue, Size idx)
-            : queue(queue), idx(idx) {}
+        Iterator(U *queue, Size bucket_idx, Size bucket_offset)
+            : queue(queue), bucket_idx(bucket_idx), bucket_offset(bucket_offset),
+              bucket(GetBucketSafe(bucket_idx)), next_bucket(GetBucketSafe(bucket_idx + 1)) {}
 
-        T *operator->() { return &(*queue)[idx]; }
-        const T *operator->() const { return &(*queue)[idx]; }
-        T &operator*() { return (*queue)[idx]; }
-        const T &operator*() const { return (*queue)[idx]; }
+        T *operator->() { return &bucket->values[bucket_offset]; }
+        const T *operator->() const { return &bucket->values[bucket_offset]; }
+        T &operator*() { return bucket->values[bucket_offset]; }
+        const T &operator*() const { return bucket->values[bucket_offset]; }
 
         Iterator &operator++()
         {
-            idx++;
+            if (++bucket_offset >= BucketSize) {
+                bucket_idx++;
+                if (next_bucket) {
+                    // We support deletion of all values up to (and including) the current one.
+                    // When the user does that, some or all front buckets may be gone, but we can
+                    // use next_bucket to fix bucket_idx.
+                    while (bucket_idx >= queue->buckets.len ||
+                           queue->buckets[bucket_idx] != next_bucket) {
+                        bucket_idx--;
+                    }
+                }
+                bucket_offset = 0;
+
+                bucket = GetBucketSafe(bucket_idx);
+                next_bucket = GetBucketSafe(bucket_idx + 1);
+            }
+
             return *this;
         }
         Iterator operator++(int)
@@ -1249,7 +1268,16 @@ public:
 
         Iterator &operator--()
         {
-            idx--;
+            if (--bucket_offset < 0) {
+                RG_ASSERT_DEBUG(bucket_idx > 0);
+
+                bucket_idx--;
+                bucket_offset = BucketSize - 1;
+
+                bucket = GetBucketSafe(bucket_idx);
+                next_bucket = GetBucketSafe(bucket_idx + 1);
+            }
+
             return *this;
         }
         Iterator operator--(int)
@@ -1260,8 +1288,13 @@ public:
         }
 
         bool operator==(const Iterator &other) const
-            { return queue == other.queue && idx == other.idx; }
+            { return queue == other.queue && bucket == other.bucket &&
+                     bucket_offset == other.bucket_offset; }
         bool operator!=(const Iterator &other) const { return !(*this == other); }
+
+    private:
+        Bucket *GetBucketSafe(Size idx)
+            { return idx < queue->buckets.len ? queue->buckets[idx] : nullptr; }
     };
 
     HeapArray<Bucket *> buckets;
@@ -1300,10 +1333,24 @@ public:
         bucket_allocator = &first_bucket->allocator;
     }
 
-    iterator_type begin() { return iterator_type(this, 0); }
-    Iterator<const BlockQueue<T, BucketSize>> begin() const { return iterator_type(this, 0); }
-    iterator_type end() { return iterator_type(this, len); }
-    Iterator<const BlockQueue<T, BucketSize>> end() const { return iterator_type(this, len); }
+    iterator_type begin() { return iterator_type(this, 0, offset); }
+    Iterator<const BlockQueue<T, BucketSize>> begin() const { return iterator_type(this, 0, offset); }
+    iterator_type end()
+    {
+        Size end_idx = offset + len;
+        Size bucket_idx = end_idx / BucketSize;
+        Size bucket_offset = end_idx % BucketSize;
+
+        return iterator_type(this, bucket_idx, bucket_offset);
+    }
+    Iterator<const BlockQueue<T, BucketSize>> end() const
+    {
+        Size end_idx = offset + len;
+        Size bucket_idx = end_idx / BucketSize;
+        Size bucket_offset = end_idx % BucketSize;
+
+        return iterator_type(this, bucket_idx, bucket_offset);
+    }
 
     const T &operator[](Size idx) const
     {
@@ -1355,9 +1402,11 @@ public:
         Size start_idx = offset + from;
         Size end_idx = offset + len;
         Size start_bucket_idx = start_idx / BucketSize;
+        Size start_bucket_offset = start_idx % BucketSize;
         Size end_bucket_idx = end_idx / BucketSize;
 
-        DeleteValues(iterator_type(this, from), end());
+        iterator_type from_it(this, start_bucket_idx, start_bucket_offset);
+        DeleteValues(from_it, end());
 
         for (Size i = start_bucket_idx + 1; i <= end_bucket_idx; i++) {
             DeleteBucket(buckets[i]);
@@ -1388,8 +1437,10 @@ public:
 
         Size end_idx = offset + count;
         Size end_bucket_idx = end_idx / BucketSize;
+        Size end_bucket_offset = end_idx % BucketSize;
 
-        DeleteValues(begin(), iterator_type(this, count));
+        iterator_type until_it(this, end_bucket_idx, end_bucket_offset);
+        DeleteValues(begin(), until_it);
 
         if (end_bucket_idx) {
             for (Size i = 0; i < end_bucket_idx; i++) {
