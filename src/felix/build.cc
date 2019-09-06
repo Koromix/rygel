@@ -399,24 +399,28 @@ int64_t BuildSetBuilder::GetFileModificationTime(const char *filename)
     return *ret.first;
 }
 
+// The caller needs to ignore (or do whetever) SIGINT for the clean up to work if the user
+// interrupts felix. For this you can use libcc: call WaitForConsoleInterruption(0).
 bool RunBuildCommands(Span<const BuildCommand> commands, int jobs, bool verbose)
 {
     Async async(jobs - 1);
 
     std::mutex out_mutex;
     Size progress_counter = 0;
+    HashSet<const char *> broken_files;
+    bool interrupted = false;
 
     for (const BuildCommand &cmd: commands) {
         async.Run([&, cmd]() {
-            RG_DEFER_N(dest_guard) { unlink(cmd.dest_filename); };
-
-            // The lock is needed to garantuee ordering of progress counter. Atomics
+            // The lock is needed to guarantee ordering of progress counter. Atomics
             // do not help much because the LogInfo() calls need to be protected too.
             {
                 std::lock_guard<std::mutex> out_lock(out_mutex);
 
                 Size progress = 100 * progress_counter++ / commands.len;
                 LogInfo("(%1%%) %2", FmtArg(progress).Pad(-3), verbose ? cmd.cmd : cmd.text);
+
+                broken_files.Append(cmd.dest_filename);
             }
 
             // Run command
@@ -425,36 +429,43 @@ bool RunBuildCommands(Span<const BuildCommand> commands, int jobs, bool verbose)
             if (!ExecuteCommandLine(cmd.cmd, {}, Megabytes(1), &output, &exit_code))
                 return false;
 
-            // Print command output
-            if (exit_code) {
-                LogError("Command '%1' failed", cmd.cmd);
-            }
-            if (output.len) {
+            // Print output and remove filename from broken set on success
+            {
                 std::lock_guard<std::mutex> out_lock(out_mutex);
-                if (exit_code) {
-                    stderr_st.Write(output);
-                } else {
+
+                if (!exit_code) {
+                    broken_files.Remove(cmd.dest_filename);
                     stdout_st.Write(output);
+                } else if (exit_code == 130) { // SIGINT
+                    interrupted = true;
+                } else {
+                    LogError("Command '%1' failed (exit code %2)", cmd.cmd, exit_code);
+                    stderr_st.Write(output);
                 }
             }
 
-            if (!exit_code) {
-                dest_guard.Disable();
-                return true;
-            } else {
-                return false;
-            }
+            return !exit_code;
         });
 
         if (cmd.sync_after && !async.Sync())
-            return false;
+            break;
     }
+    async.Sync();
 
-    if (!async.Sync())
+    if (broken_files.table.count) {
+        if (interrupted) {
+            LogError("Build was interrupted");
+        }
+
+        for (const char *filename: broken_files.table) {
+            unlink(filename);
+        }
+
         return false;
-
-    LogInfo("(100%%) Done!");
-    return true;
+    } else {
+        LogInfo("(100%%) Done!");
+        return true;
+    }
 }
 
 }
