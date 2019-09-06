@@ -2317,13 +2317,13 @@ bool WaitForConsoleInterruption(int64_t delay)
     SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
 
     if (delay >= 0) {
-        while (delay) {
+        do {
             DWORD delay32 = (DWORD)std::min(delay, (int64_t)UINT32_MAX);
             delay -= delay32;
 
             if (WaitForSingleObject(console_ctrl_event, delay32) == WAIT_OBJECT_0)
                 return true;
-        }
+        } while (delay);
 
         return false;
     } else {
