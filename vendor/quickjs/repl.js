@@ -28,8 +28,9 @@ import * as std from "std";
 import * as os from "os";
 
 (function(g) {
-    /* add a 'global' binding */
-    g.global = std.global;
+    /* add 'os' and 'std' bindings */
+    g.os = os;
+    g.std = std;
     
     /* close global objects */
     var Object = g.Object;
@@ -1503,4 +1504,4 @@ import * as os from "os";
     
     cmd_start();
 
-})(std.global);
+})(globalThis);
