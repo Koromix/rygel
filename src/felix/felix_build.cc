@@ -347,6 +347,11 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
         build_set_builder.Finish(&build_set);
     }
 
+    // The detection of SIGINT (or the Win32 equivalent) by WaitForConsoleInterruption()
+    // remains after timing out, which will allow RunBuildCommands() to clean up files
+    // produced by interrupted commands.
+    WaitForConsoleInterruption(0);
+
     // Build
     if (!RunBuildCommands(build_set.commands, jobs, verbose))
         return 1;
