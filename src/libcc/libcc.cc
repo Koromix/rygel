@@ -2095,6 +2095,11 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
         return false;
     }
 
+    // Mimic POSIX SIGINT
+    if (exit_code == STATUS_CONTROL_C_EXIT) {
+        exit_code = 130;
+    }
+
     *out_code = (int)exit_code;
     return true;
 }
