@@ -750,11 +750,6 @@ static JSValue add_helpers1(JSContext *ctx)
     JS_SetPropertyStr(ctx, global_obj, "print",
                       JS_NewCFunction(ctx, js_print, "print", 1));
 
-    /* add it in the engine once the proposal is accepted */
-    JS_DefinePropertyValueStr(ctx, global_obj, "globalThis",
-                              JS_DupValue(ctx, global_obj),
-                              JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE);
-
     /* $262 special object used by the tests */
     obj262 = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, obj262, "detachArrayBuffer",
@@ -1607,7 +1602,8 @@ int run_test(const char *filename, int index)
             p = find_tag(desc, "flags:", &state);
             if (p) {
                 while ((option = get_option(&p, &state)) != NULL) {
-                    if (str_equal(option, "noStrict")) {
+                    if (str_equal(option, "noStrict") ||
+                        str_equal(option, "raw")) {
                         is_nostrict = TRUE;
                         skip |= (test_mode == TEST_STRICT);
                     }
@@ -1718,6 +1714,8 @@ int run_test(const char *filename, int index)
     }
 
     use_strict = use_nostrict = 0;
+    /* XXX: should remove 'test_mode' or simplify it just to force
+       strict or non strict mode for single file tests */
     switch (test_mode) {
     case TEST_DEFAULT_NOSTRICT:
         if (is_onlystrict)
@@ -1740,10 +1738,14 @@ int run_test(const char *filename, int index)
             use_strict = 1;
         break;
     case TEST_ALL:
-        if (!is_nostrict)
-            use_strict = 1;
-        if (!is_onlystrict)
+        if (is_module) {
             use_nostrict = 1;
+        } else {
+            if (!is_nostrict)
+                use_strict = 1;
+            if (!is_onlystrict)
+                use_nostrict = 1;
+        }
         break;
     }
 
@@ -1903,7 +1905,8 @@ void run_test_dir_list(namelist_t *lp, int start_index, int stop_index)
 
 void help(void)
 {
-    printf("usage: run-test262 [options] {-f file ... | [dir_list] [index range]}\n"
+    printf("run-test262 version " CONFIG_VERSION "\n"
+           "usage: run-test262 [options] {-f file ... | [dir_list] [index range]}\n"
            "-h             help\n"
            "-a             run tests in strict and nostrict modes\n"
            "-m             print memory usage summary\n"
