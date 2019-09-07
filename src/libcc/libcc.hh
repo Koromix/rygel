@@ -1867,25 +1867,31 @@ public:
     {
         if (!it)
             return;
-        RG_ASSERT_DEBUG(!IsEmpty(it - data));
+
+        Size empty_idx = it - data;
+        RG_ASSERT_DEBUG(!IsEmpty(empty_idx));
 
         it->~ValueType();
         count--;
 
-        Size idx = it - data;
-        for (;;) {
-            Size next_idx = (idx + 1) & (capacity - 1);
+        // Move following slots if needed
+        {
+            Size idx = (empty_idx + 1) & (capacity - 1);
 
-            if (IsEmpty(next_idx) ||
-                    KeyToIndex(Handler::GetKey(data[next_idx])) == next_idx) {
-                MarkEmpty(idx);
-                new (&data[idx]) ValueType();
-                break;
+            while (!IsEmpty(idx)) {
+                Size real_idx = KeyToIndex(Handler::GetKey(data[idx]));
+
+                if (TestNewSlot(real_idx, empty_idx)) {
+                    memmove(&data[empty_idx], &data[idx], RG_SIZE(*data));
+                    empty_idx = idx;
+                }
+
+                idx = (idx + 1) & (capacity - 1);
             }
-
-            memmove(&data[idx], &data[next_idx], RG_SIZE(*data));
-            idx = next_idx;
         }
+
+        MarkEmpty(empty_idx);
+        new (&data[empty_idx]) ValueType();
     }
     void Remove(const KeyType &key) { Remove(Find(key)); }
 
@@ -2010,6 +2016,20 @@ private:
     {
         uint64_t hash = Handler::HashKey(key);
         return HashToIndex(hash);
+    }
+
+    // FIXME: Testing all slots each time (see Remove()) is slow and stupid
+    bool TestNewSlot(Size idx, Size dest_idx) const
+    {
+        for (;;) {
+            if (idx == dest_idx) {
+                return true;
+            } else if (IsEmpty(idx)) {
+                return false;
+            }
+
+            idx = (idx + 1) & (capacity - 1);
+        }
     }
 };
 
