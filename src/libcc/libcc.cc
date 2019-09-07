@@ -2337,6 +2337,7 @@ bool WaitForConsoleInterruption(int64_t delay)
 
     signal(SIGINT, [](int) { run = false; });
     signal(SIGTERM, [](int) { run = false; });
+    signal(SIGHUP, [](int) { run = false; });
 
     if (delay >= 0) {
         struct timespec ts;
