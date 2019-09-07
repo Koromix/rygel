@@ -399,8 +399,8 @@ int64_t BuildSetBuilder::GetFileModificationTime(const char *filename)
     return *ret.first;
 }
 
-// The caller needs to ignore (or do whetever) SIGINT for the clean up to work if the user
-// interrupts felix. For this you can use libcc: call WaitForConsoleInterruption(0).
+// The caller needs to ignore (or do whetever) SIGINT for the clean up to work if
+// the user interrupts felix. For this you can use libcc: call WaitForInterruption(0).
 bool RunBuildCommands(Span<const BuildCommand> commands, int jobs, bool verbose)
 {
     Async async(jobs - 1);

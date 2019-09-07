@@ -2301,7 +2301,7 @@ void WaitForDelay(int64_t delay)
 }
 
 #ifdef _WIN32
-// We can't use a lambda in WaitForConsoleInterruption because it has to use
+// We can't use a lambda in WaitForInterruption() because it has to use
 // the __stdcall calling convention, and MinGW (unlike MSVC) cannot convert
 // lambdas to non-cdecl functions pointers.
 static HANDLE console_ctrl_event = CreateEvent(nullptr, TRUE, FALSE, nullptr);
@@ -2312,7 +2312,7 @@ static BOOL CALLBACK ConsoleCtrlHandler(DWORD)
     return (BOOL)TRUE;
 }
 
-bool WaitForConsoleInterruption(int64_t delay)
+bool WaitForInterruption(int64_t delay)
 {
     SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
 
@@ -2331,7 +2331,7 @@ bool WaitForConsoleInterruption(int64_t delay)
     }
 }
 #else
-bool WaitForConsoleInterruption(int64_t delay)
+bool WaitForInterruption(int64_t delay)
 {
     static volatile bool run = true;
 
