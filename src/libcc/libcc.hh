@@ -3327,7 +3327,7 @@ static inline bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_
 }
 
 void WaitForDelay(int64_t delay);
-bool WaitForConsoleInterruption(int64_t delay = -1);
+bool WaitForInterruption(int64_t delay = -1);
 
 int GetCoreCount();
 

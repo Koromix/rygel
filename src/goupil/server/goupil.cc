@@ -420,7 +420,7 @@ Options:
             goupil_config.port, IPStackNames[(int)goupil_config.ip_stack]);
 
     // We need to send keep-alive notices to SSE clients
-    while (!WaitForConsoleInterruption(goupil_config.sse_keep_alive)) {
+    while (!WaitForInterruption(goupil_config.sse_keep_alive)) {
         PushEvent(EventType::KeepAlive);
     }
 

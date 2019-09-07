@@ -450,7 +450,7 @@ Options:
     LogInfo("Listening on port %1 (%2 stack)",
             thop_config.port, IPStackNames[(int)thop_config.ip_stack]);
 
-    WaitForConsoleInterruption();
+    WaitForInterruption();
 
     LogInfo("Exit");
     return 0;
