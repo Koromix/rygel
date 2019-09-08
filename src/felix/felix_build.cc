@@ -297,9 +297,12 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
             return 1;
     }
 
-    // We're ready to output stuff
+    // Make sure output directory exists
     if (!MakeDirectoryRec(output_directory))
         return 1;
+
+    // We're ready to output stuff
+    LogInfo("Root directory: '%1'", GetWorkingDirectory());
     LogInfo("Output directory: '%1'", output_directory);
 
     // Disable PCH?
