@@ -2009,7 +2009,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
         startup_info.dwFlags |= STARTF_USESTDHANDLES;
 
         PROCESS_INFORMATION process_info = {};
-        if (!CreateProcessW(nullptr, cmd_line_w.ptr, nullptr, nullptr, TRUE, 0,
+        if (!CreateProcessW(nullptr, cmd_line_w.ptr, nullptr, nullptr, TRUE, CREATE_NEW_PROCESS_GROUP,
                             nullptr, nullptr, &startup_info, &process_info)) {
             LogError("Failed to start process: %1", Win32ErrorString());
             return false;
@@ -2129,6 +2129,9 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
 
     // Get exit code
     if (WaitForSingleObject(console_ctrl_event, 0) == WAIT_OBJECT_0) {
+        // NOTE: GenerateConsoleCtrlEvent() may be better, but it did trigger "MessageBox"
+        // failures for child processes so it may not be a good idea. Maybe I did something wrong?
+
         TerminateProcess(process_handle, STATUS_CONTROL_C_EXIT);
         exit_code = STATUS_CONTROL_C_EXIT;
     } else if (!GetExitCodeProcess(process_handle, &exit_code)) {
