@@ -1891,6 +1891,28 @@ bool EnsureDirectoryExists(const char *filename)
 }
 
 #ifdef _WIN32
+static HANDLE console_ctrl_event = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+static bool ignore_ctrl_event = false;
+
+static BOOL CALLBACK ConsoleCtrlHandler(DWORD)
+{
+    SetEvent(console_ctrl_event);
+    return (BOOL)ignore_ctrl_event;
+}
+
+static bool InitConsoleCtrlHandler()
+{
+    static std::once_flag flag;
+
+    static bool success;
+    std::call_once(flag, []() { success = SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE); });
+
+    if (!success) {
+        LogError("SetConsoleCtrlHandler() failed: %1", Win32ErrorString());
+    }
+    return success;
+}
+
 static void CloseHandleSafe(HANDLE *handle_ptr)
 {
     if (*handle_ptr && *handle_ptr != INVALID_HANDLE_VALUE) {
@@ -1950,6 +1972,10 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
     if (!ConvertUtf8ToWide(cmd_line, cmd_line_w))
         return false;
 
+    // Detect CTRL+C and CTRL+BREAK events
+    if (!InitConsoleCtrlHandler())
+        return false;
+
     // Create read and write pipes
     HANDLE in_pipe[2] = {};
     HANDLE out_pipe[2] = {};
@@ -1999,9 +2025,10 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
 
     // Read and write standard process streams
     {
-        HANDLE events[2] = {
+        HANDLE events[3] = {
             CreateEvent(nullptr, TRUE, FALSE, nullptr),
-            CreateEvent(nullptr, TRUE, TRUE, nullptr)
+            CreateEvent(nullptr, TRUE, TRUE, nullptr),
+            console_ctrl_event
         };
         RG_DEFER {
             CloseHandleSafe(&events[0]);
@@ -2073,6 +2100,8 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
                     CancelIo(out_pipe[0]);
                     break;
                 }
+            } else if (ret == WAIT_OBJECT_0 + 2) {
+                break;
             } else {
                 // Not sure how this could happen, but who knows?
                 LogError("Read/write for process failed: %1", Win32ErrorString());
@@ -2086,11 +2115,23 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
 
     // Wait for process exit
     DWORD exit_code;
-    if (WaitForSingleObject(process_handle, INFINITE) != WAIT_OBJECT_0) {
-        LogError("WaitForSingleObject() failed: %1", Win32ErrorString());
-        return false;
+    {
+        HANDLE events[2] = {
+            process_handle,
+            console_ctrl_event
+        };
+
+        if (WaitForMultipleObjects(RG_LEN(events), events, FALSE, INFINITE) == WAIT_FAILED) {
+            LogError("WaitForMultipleObjects() failed: %1", Win32ErrorString());
+            return false;
+        }
     }
-    if (!GetExitCodeProcess(process_handle, &exit_code)) {
+
+    // Get exit code
+    if (WaitForSingleObject(console_ctrl_event, 0) == WAIT_OBJECT_0) {
+        TerminateProcess(process_handle, STATUS_CONTROL_C_EXIT);
+        exit_code = STATUS_CONTROL_C_EXIT;
+    } else if (!GetExitCodeProcess(process_handle, &exit_code)) {
         LogError("GetExitCodeProcess() failed: %1", Win32ErrorString());
         return false;
     }
@@ -2301,20 +2342,10 @@ void WaitForDelay(int64_t delay)
 }
 
 #ifdef _WIN32
-// We can't use a lambda in WaitForInterruption() because it has to use
-// the __stdcall calling convention, and MinGW (unlike MSVC) cannot convert
-// lambdas to non-cdecl functions pointers.
-static HANDLE console_ctrl_event = CreateEvent(nullptr, TRUE, FALSE, nullptr);
-
-static BOOL CALLBACK ConsoleCtrlHandler(DWORD)
-{
-    SetEvent(console_ctrl_event);
-    return (BOOL)TRUE;
-}
-
 bool WaitForInterruption(int64_t delay)
 {
-    SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
+    RG_ASSERT(InitConsoleCtrlHandler());
+    ignore_ctrl_event = true;
 
     if (delay >= 0) {
         do {
