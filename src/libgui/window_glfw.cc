@@ -21,10 +21,15 @@ static bool InitGLFW()
 {
     std::lock_guard<std::mutex> lock(init_mutex);
 
-    // TODO: Set GLFW error callback
-    if (!windows_count && !glfwInit()) {
-        LogError("glfwInit() failed");
-        return false;
+    if (!windows_count) {
+        if (!glfwInit()) {
+            LogError("glfwInit() failed");
+            return false;
+        }
+
+        glfwSetErrorCallback([](int code, const char* description) {
+            LogError("GLFW: %1", description);
+        });
     }
     windows_count++;
 
