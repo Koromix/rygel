@@ -2465,6 +2465,7 @@ public:
 
 // thread_local breaks down on MinGW when destructors are involved, work
 // around this with heap allocation.
+static RG_THREAD_LOCAL AsyncPool *async_default_pool = nullptr;
 static RG_THREAD_LOCAL AsyncPool *async_running_pool = nullptr;
 static RG_THREAD_LOCAL int async_running_worker_idx;
 static RG_THREAD_LOCAL bool async_running_task = false;
@@ -2478,17 +2479,19 @@ Async::Async(int workers)
         }
 
         pool = new AsyncPool(workers, false);
+    } else if (async_running_pool) {
+        pool = async_running_pool;
     } else {
-        if (!async_running_pool) {
+        if (!async_default_pool) {
             // NOTE: We're leaking one AsyncPool each time a non-worker thread uses Async()
             // for the first time. That's only one leak in most cases, when the main thread
             // is the only non-worker thread using Async, but still. Something to keep in mind.
 
             workers = std::min(GetCoreCount() - 1, RG_ASYNC_MAX_WORKERS);
-            async_running_pool = new AsyncPool(workers, true);
+            async_default_pool = new AsyncPool(workers, true);
         }
 
-        pool = async_running_pool;
+        pool = async_default_pool;
     }
 
     pool->RegisterAsync();
