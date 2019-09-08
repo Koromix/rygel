@@ -2659,8 +2659,8 @@ void AsyncPool::RunTask(Task *task)
 {
     Async *async = task->async;
 
+    RG_DEFER_C(running = async_running_task) { async_running_task = running; };
     async_running_task = true;
-    RG_DEFER { async_running_task = false; };
 
     pending_tasks--;
     if (async->success && !task->func()) {
