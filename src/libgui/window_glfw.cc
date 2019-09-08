@@ -11,17 +11,39 @@
 
 namespace RG {
 
+static std::mutex init_mutex;
+static Size windows_count = 0;
+
 // Including wrappers/opengl.hh goes wrong (duplicate prototypes with GLFW stuff)
 bool ogl_InitFunctions(void *(*get_proc_address)(const char *name));
 
-bool gui_Window::Init(const char *application_name)
+static bool InitGLFW()
 {
-    // TODO: Call glfwTerminate() somehow
+    std::lock_guard<std::mutex> lock(init_mutex);
+
     // TODO: Set GLFW error callback
-    if (!glfwInit()) {
+    if (!windows_count && !glfwInit()) {
         LogError("glfwInit() failed");
         return false;
     }
+    windows_count++;
+
+    return true;
+}
+
+static void TerminateGLFW()
+{
+    std::lock_guard<std::mutex> lock(init_mutex);
+
+    if (!--windows_count) {
+        glfwTerminate();
+    }
+}
+
+bool gui_Window::Init(const char *application_name)
+{
+    if (!InitGLFW())
+        return false;
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -135,6 +157,7 @@ void gui_Window::Release()
     }
 
     glfwDestroyWindow(window);
+    TerminateGLFW();
 }
 
 void gui_Window::SwapBuffers()
