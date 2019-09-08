@@ -519,8 +519,6 @@ Date &Date::operator--()
 // Time
 // ------------------------------------------------------------------------
 
-int64_t g_start_time = GetMonotonicTime();
-
 int64_t GetMonotonicTime()
 {
 #if defined(_WIN32)
@@ -1009,6 +1007,8 @@ void PrintLnFmt(const char *fmt, Span<const FmtArg> args, FILE *fp)
 // Debug and errors
 // ------------------------------------------------------------------------
 
+static int64_t start_time = GetMonotonicTime();
+
 // NOTE: LocalArray does not work with __thread, and thread_local is broken on MinGW
 // when destructors are involved. So heap allocation it is, at least for now.
 static RG_THREAD_LOCAL std::function<LogHandlerFunc> *log_handlers[16];
@@ -1100,7 +1100,7 @@ void LogFmt(LogLevel level, const char *fmt, Span<const FmtArg> args)
     char ctx_buf[128];
     char msg_buf[16384];
     {
-        double time = (double)(GetMonotonicTime() - g_start_time) / 1000;
+        double time = (double)(GetMonotonicTime() - start_time) / 1000;
         Fmt(ctx_buf, " [%1] ", FmtDouble(time, 3).Pad(-8));
 
         Size len = FmtFmt(fmt, args, msg_buf).len;
@@ -2465,9 +2465,9 @@ public:
 
 // thread_local breaks down on MinGW when destructors are involved, work
 // around this with heap allocation.
-static RG_THREAD_LOCAL AsyncPool *g_async_pool = nullptr;
-static RG_THREAD_LOCAL int g_async_worker_idx;
-static RG_THREAD_LOCAL bool g_task_running = false;
+static RG_THREAD_LOCAL AsyncPool *async_running_pool = nullptr;
+static RG_THREAD_LOCAL int async_running_worker_idx;
+static RG_THREAD_LOCAL bool async_running_task = false;
 
 Async::Async(int workers)
 {
@@ -2479,16 +2479,16 @@ Async::Async(int workers)
 
         pool = new AsyncPool(workers, false);
     } else {
-        if (!g_async_pool) {
-            workers = std::min(GetCoreCount() - 1, RG_ASYNC_MAX_WORKERS);
-
+        if (!async_running_pool) {
             // NOTE: We're leaking one AsyncPool each time a non-worker thread uses Async()
             // for the first time. That's only one leak in most cases, when the main thread
             // is the only non-worker thread using Async, but still. Something to keep in mind.
-            g_async_pool = new AsyncPool(workers, true);
+
+            workers = std::min(GetCoreCount() - 1, RG_ASYNC_MAX_WORKERS);
+            async_running_pool = new AsyncPool(workers, true);
         }
 
-        pool = g_async_pool;
+        pool = async_running_pool;
     }
 
     pool->RegisterAsync();
@@ -2519,7 +2519,7 @@ void Async::Abort()
 
 bool Async::IsTaskRunning()
 {
-    return g_task_running;
+    return async_running_task;
 }
 
 AsyncPool::AsyncPool(int workers, bool leak)
@@ -2556,7 +2556,7 @@ void AsyncPool::UnregisterAsync()
 
 void AsyncPool::AddTask(Async *async, const std::function<bool()> &func)
 {
-    if (g_async_pool != async->pool) {
+    if (async_running_pool != async->pool) {
         for (;;) {
             TaskQueue *queue = &queues[next_queue_idx];
 
@@ -2571,7 +2571,7 @@ void AsyncPool::AddTask(Async *async, const std::function<bool()> &func)
             }
         }
     } else {
-        TaskQueue *queue = &queues[g_async_worker_idx];
+        TaskQueue *queue = &queues[async_running_worker_idx];
 
         std::lock_guard<std::mutex> lock_queue(queue->queue_mutex);
         queue->tasks.Append({async, func});
@@ -2590,8 +2590,8 @@ void AsyncPool::AddTask(Async *async, const std::function<bool()> &func)
 
 void AsyncPool::RunWorker(int worker_idx)
 {
-    g_async_pool = this;
-    g_async_worker_idx = worker_idx;
+    async_running_pool = this;
+    async_running_worker_idx = worker_idx;
 
     std::unique_lock<std::mutex> lock_pool(pool_mutex);
 
@@ -2613,17 +2613,17 @@ void AsyncPool::RunWorker(int worker_idx)
 
 void AsyncPool::SyncOn(Async *async)
 {
-    RG_DEFER_C(pool = g_async_pool,
-               worker_idx = g_async_worker_idx) {
-        g_async_pool = pool;
-        g_async_worker_idx = worker_idx;
+    RG_DEFER_C(pool = async_running_pool,
+               worker_idx = async_running_worker_idx) {
+        async_running_pool = pool;
+        async_running_worker_idx = worker_idx;
     };
 
-    g_async_pool = this;
-    g_async_worker_idx = 0;
+    async_running_pool = this;
+    async_running_worker_idx = 0;
 
     while (async->remaining_tasks) {
-        RunTasks(g_async_worker_idx);
+        RunTasks(async_running_worker_idx);
 
         std::unique_lock<std::mutex> lock_sync(pool_mutex);
         sync_cv.wait(lock_sync, [&]() { return pending_tasks || !async->remaining_tasks; });
@@ -2656,8 +2656,8 @@ void AsyncPool::RunTask(Task *task)
 {
     Async *async = task->async;
 
-    g_task_running = true;
-    RG_DEFER { g_task_running = false; };
+    async_running_task = true;
+    RG_DEFER { async_running_task = false; };
 
     pending_tasks--;
     if (async->success && !task->func()) {

@@ -2363,8 +2363,6 @@ union Date {
 // Time
 // ------------------------------------------------------------------------
 
-extern int64_t g_start_time;
-
 int64_t GetMonotonicTime();
 
 #if defined(_MSC_VER)
