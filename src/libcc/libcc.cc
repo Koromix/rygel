@@ -1564,7 +1564,7 @@ const char *GetWorkingDirectory()
 #ifdef __EMSCRIPTEN__
 static bool running_in_node;
 
-INIT(MountHostFilesystem)
+RG_INIT(MountHostFilesystem)
 {
     running_in_node = EM_ASM_INT({
         try {
