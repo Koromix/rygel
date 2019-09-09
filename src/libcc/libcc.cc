@@ -1976,6 +1976,16 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
     if (!InitConsoleCtrlHandler())
         return false;
 
+    // Neither GenerateConsoleCtrlEvent() or TerminateProcess() manage to fully kill Clang on
+    // Windows (in highly-parallel builds) after CTRL-C, with occasionnal suspended child
+    // processes remaining alive. Furthermore, processes killed by GenerateConsoleCtrlEvent()
+    // can trigger "MessageBox" errors, unless SetErrorMode() is used.
+    //
+    // TerminateJobObject() is a bit brutal, but it takes care of these issues. If job creation
+    // or assignement fails, we will try TerminateProcess() instead.
+    HANDLE job_handle = CreateJobObject(nullptr, nullptr);
+    RG_DEFER { CloseHandleSafe(&job_handle); };
+
     // Create read and write pipes
     HANDLE in_pipe[2] = {};
     HANDLE out_pipe[2] = {};
@@ -2013,6 +2023,9 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
                             nullptr, nullptr, &startup_info, &process_info)) {
             LogError("Failed to start process: %1", Win32ErrorString());
             return false;
+        }
+        if (!AssignProcessToJobObject(job_handle, process_info.hProcess)) {
+            CloseHandleSafe(&job_handle);
         }
 
         process_handle = process_info.hProcess;
@@ -2129,10 +2142,11 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
 
     // Get exit code
     if (WaitForSingleObject(console_ctrl_event, 0) == WAIT_OBJECT_0) {
-        // NOTE: GenerateConsoleCtrlEvent() may be better, but it did trigger "MessageBox"
-        // failures for child processes so it may not be a good idea. Maybe I did something wrong?
-
-        TerminateProcess(process_handle, STATUS_CONTROL_C_EXIT);
+        if (job_handle) {
+            TerminateJobObject(job_handle, STATUS_CONTROL_C_EXIT);
+        } else {
+            TerminateProcess(process_handle, STATUS_CONTROL_C_EXIT);
+        }
         exit_code = STATUS_CONTROL_C_EXIT;
     } else if (!GetExitCodeProcess(process_handle, &exit_code)) {
         LogError("GetExitCodeProcess() failed: %1", Win32ErrorString());
