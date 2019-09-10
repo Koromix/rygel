@@ -2678,6 +2678,9 @@ void AsyncPool::RunTask(Task *task)
     RG_DEFER_C(running = async_running_task) { async_running_task = running; };
     async_running_task = true;
 
+    // Avoid stale error messages
+    ClearLastLogError();
+
     pending_tasks--;
     if (async->success && !task->func()) {
         async->success = false;
