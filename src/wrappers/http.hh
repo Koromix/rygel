@@ -81,7 +81,8 @@ class http_IO {
     std::function<void(const http_RequestInfo &request, http_IO *io)> async_func;
 
     std::condition_variable read_cv;
-    HeapArray<uint8_t> read_buf;
+    Span<uint8_t> read_buf = {};
+    Size read_len = 0;
 
 public:
     enum class Flag {

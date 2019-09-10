@@ -105,11 +105,15 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
     } else if (io->state == http_IO::State::Read) {
         // Read upload data and give it to async handler
         if (*upload_data_size) {
-            io->read_buf.Grow(*upload_data_size);
-            memcpy(io->read_buf.end(), upload_data, *upload_data_size);
-            io->read_buf.len += *upload_data_size;
+            RG_ASSERT_DEBUG(io->read_buf.IsValid());
 
-            if (io->read_buf.len >= Kibibytes(16)) {
+            Size copy_len = std::min(io->read_buf.len - io->read_len, (Size)*upload_data_size);
+
+            memcpy(io->read_buf.ptr + io->read_len, upload_data, copy_len);
+            io->read_len += copy_len;
+            *upload_data_size -= copy_len;
+
+            if (io->read_len == io->read_buf.len) {
                 io->Suspend();
             }
         } else {
@@ -119,7 +123,6 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
 
         io->read_cv.notify_one();
 
-        *upload_data_size = 0;
         return MHD_YES;
     }
 
@@ -348,16 +351,18 @@ bool http_IO::ReadPostValues(Allocator *alloc,
 
     // Parse available upload data
     while (state == State::Read) {
+        uint8_t buf[1024];
+        read_buf = buf;
+        read_len = 0;
+
         Resume();
         read_cv.wait(lock);
 
-        if (MHD_post_process(pp, (const char *)read_buf.ptr, (size_t)read_buf.len) != MHD_YES) {
+        if (MHD_post_process(pp, (const char *)buf, (size_t)read_len) != MHD_YES) {
             LogError("Failed to parse POST data");
             http_ProduceErrorPage(422, this);
             return false;
         }
-
-        read_buf.RemoveFrom(0);
     }
 
     error_guard.Disable();
