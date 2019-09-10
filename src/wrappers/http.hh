@@ -10,8 +10,6 @@
 
 namespace RG {
 
-class http_Daemon;
-
 struct http_Config {
     IPStack ip_stack = IPStack::Dual;
     int port = 8888;
@@ -20,6 +18,32 @@ struct http_Config {
     int async_threads = 16;
 
     const char *base_url = "/";
+};
+
+struct http_RequestInfo;
+class http_IO;
+
+class http_Daemon {
+    MHD_Daemon *daemon = nullptr;
+
+    const char *base_url;
+    std::function<void(const http_RequestInfo &request, http_IO *io)> handle_func;
+
+    Async *async = nullptr;
+
+public:
+    ~http_Daemon() { Stop(); }
+
+    bool Start(const http_Config &config,
+               std::function<void(const http_RequestInfo &request, http_IO *io)> func);
+    void Stop();
+
+private:
+    static int HandleRequest(void *cls, MHD_Connection *conn, const char *url, const char *method,
+                             const char *, const char *upload_data, size_t *upload_data_size,
+                             void **con_cls);
+    static void RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
+                                 MHD_RequestTerminationCode toe);
 };
 
 struct http_RequestInfo {
@@ -93,29 +117,6 @@ private:
     void Resume();
 
     friend http_Daemon;
-};
-
-class http_Daemon {
-    MHD_Daemon *daemon = nullptr;
-
-    const char *base_url;
-    std::function<void(const http_RequestInfo &request, http_IO *io)> handle_func;
-
-    Async *async = nullptr;
-
-public:
-    ~http_Daemon() { Stop(); }
-
-    bool Start(const http_Config &config,
-               std::function<void(const http_RequestInfo &request, http_IO *io)> func);
-    void Stop();
-
-private:
-    static int HandleRequest(void *cls, MHD_Connection *conn, const char *url, const char *method,
-                             const char *, const char *upload_data, size_t *upload_data_size,
-                             void **con_cls);
-    static void RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
-                                 MHD_RequestTerminationCode toe);
 };
 
 const char *http_GetMimeType(Span<const char> extension);
