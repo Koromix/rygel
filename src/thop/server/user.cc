@@ -377,9 +377,9 @@ const User *CheckSessionUser(const http_RequestInfo &request, bool *out_mismatch
 
 void DeleteSessionCookies(http_IO *io)
 {
-    io->AddCookieHeader(thop_config.base_url, "session_key", nullptr);
-    io->AddCookieHeader(thop_config.base_url, "url_key", nullptr);
-    io->AddCookieHeader(thop_config.base_url, "username", nullptr);
+    io->AddCookieHeader(thop_config.http.base_url, "session_key", nullptr);
+    io->AddCookieHeader(thop_config.http.base_url, "url_key", nullptr);
+    io->AddCookieHeader(thop_config.http.base_url, "username", nullptr);
 }
 
 void HandleConnect(const http_RequestInfo &request, const User *, http_IO *io)
@@ -475,9 +475,9 @@ void HandleConnect(const http_RequestInfo &request, const User *, http_IO *io)
     json.Finish(io);
 
     // Set session cookies
-    io->AddCookieHeader(thop_config.base_url, "session_key", session_key, true);
-    io->AddCookieHeader(thop_config.base_url, "url_key", url_key, false);
-    io->AddCookieHeader(thop_config.base_url, "username", user->name, false);
+    io->AddCookieHeader(thop_config.http.base_url, "session_key", session_key, true);
+    io->AddCookieHeader(thop_config.http.base_url, "url_key", url_key, false);
+    io->AddCookieHeader(thop_config.http.base_url, "username", user->name, false);
 }
 
 void HandleDisconnect(const http_RequestInfo &request, const User *, http_IO *io)

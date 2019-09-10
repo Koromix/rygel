@@ -12,6 +12,16 @@ namespace RG {
 
 class http_Daemon;
 
+struct http_Config {
+    IPStack ip_stack = IPStack::Dual;
+    int port = 8888;
+
+    int threads = 4;
+    int async_threads = 16;
+
+    const char *base_url = "/";
+};
+
 struct http_RequestInfo {
     MHD_Connection *conn;
 
@@ -87,17 +97,17 @@ private:
 
 class http_Daemon {
     MHD_Daemon *daemon = nullptr;
+
     const char *base_url;
+    std::function<void(const http_RequestInfo &request, http_IO *io)> handle_func;
 
     Async *async = nullptr;
 
 public:
     ~http_Daemon() { Stop(); }
 
-    std::function<void(const http_RequestInfo &request, http_IO *io)> handle_func;
-    std::function<void(const http_RequestInfo &request, MHD_RequestTerminationCode code)> release_func;
-
-    bool Start(IPStack stack, int port, int threads, const char *base_url);
+    bool Start(const http_Config &config,
+               std::function<void(const http_RequestInfo &request, http_IO *io)> func);
     void Stop();
 
 private:

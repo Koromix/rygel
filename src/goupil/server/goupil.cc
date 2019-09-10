@@ -225,7 +225,7 @@ static void InitRoutes()
                     writer->Write(BuildVersion);
                     return true;
                 } else if (TestStr(key, "BASE_URL")) {
-                    writer->Write(goupil_config.base_url);
+                    writer->Write(goupil_config.http.base_url);
                     return true;
                 } else if (TestStr(key, "PROJECT_KEY")) {
                     writer->Write(goupil_config.project_key);
@@ -339,7 +339,7 @@ Options:
                                  (default: %1))
         --base_url <url>         Change base URL
                                  (default: %2))",
-                goupil_config.port, goupil_config.base_url);
+                goupil_config.http.port, goupil_config.http.base_url);
     };
 
     // Find config filename
@@ -373,10 +373,10 @@ Options:
             if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
             } else if (opt.Test("--port", OptionType::Value)) {
-                if (!ParseDec(opt.current_value, &goupil_config.port))
+                if (!ParseDec(opt.current_value, &goupil_config.http.port))
                     return 1;
             } else if (opt.Test("--base_url", OptionType::Value)) {
-                goupil_config.base_url = opt.current_value;
+                goupil_config.http.base_url = opt.current_value;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -412,12 +412,10 @@ Options:
 
     // Run!
     http_Daemon daemon;
-    daemon.handle_func = HandleRequest;
-    if (!daemon.Start(goupil_config.ip_stack, goupil_config.port, goupil_config.threads,
-                      goupil_config.base_url))
+    if (!daemon.Start(goupil_config.http, HandleRequest))
         return 1;
     LogInfo("Listening on port %1 (%2 stack)",
-            goupil_config.port, IPStackNames[(int)goupil_config.ip_stack]);
+            goupil_config.http.port, IPStackNames[(int)goupil_config.http.ip_stack]);
 
     // We need to send keep-alive notices to SSE clients
     while (!WaitForInterruption(goupil_config.sse_keep_alive)) {

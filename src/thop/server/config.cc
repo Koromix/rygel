@@ -16,10 +16,7 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                            mco_dispense_mode = config.mco_dispense_mode,
                            mco_stay_directories_len = config.mco_stay_directories.len,
                            mco_stay_filenames_len = config.mco_stay_filenames.len,
-                           ip_stack = config.ip_stack,
-                           port = config.port,
-                           threads = config.threads,
-                           base_url = config.base_url,
+                           http = config.http,
                            max_age = config.max_age) {
         config.table_directories.RemoveFrom(table_directories_len);
         config.profile_directory = profile_directory;
@@ -28,10 +25,7 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
         config.mco_dispense_mode = mco_dispense_mode;
         config.mco_stay_directories.RemoveFrom(mco_stay_directories_len);
         config.mco_stay_filenames.RemoveFrom(mco_stay_filenames_len);
-        config.ip_stack = ip_stack;
-        config.port = port;
-        config.threads = threads;
-        config.base_url = base_url;
+        config.http = http;
         config.max_age = max_age;
     };
 
@@ -107,26 +101,28 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                 do {
                     if (prop.key == "IPStack") {
                         if (prop.value == "Dual") {
-                            config.ip_stack = IPStack::Dual;
+                            config.http.ip_stack = IPStack::Dual;
                         } else if (prop.value == "IPv4") {
-                            config.ip_stack = IPStack::IPv4;
+                            config.http.ip_stack = IPStack::IPv4;
                         } else if (prop.value == "IPv6") {
-                            config.ip_stack = IPStack::IPv6;
+                            config.http.ip_stack = IPStack::IPv6;
                         } else {
                             LogError("Unknown IP stack '%1'", prop.value);
                         }
                     } else if (prop.key == "Port") {
-                        valid &= ParseDec(prop.value, &config.port);
+                        valid &= ParseDec(prop.value, &config.http.port);
                     } else if (prop.key == "Threads") {
-                        if (ParseDec(prop.value, &config.threads, (int)ParseFlag::End)) {
+                        if (ParseDec(prop.value, &config.http.threads, (int)ParseFlag::End)) {
                             // Number of threads
                         } else if (prop.value == "PerConnection") {
-                            config.threads = 0;
+                            config.http.threads = 0;
                         } else {
                             LogError("Invalid value '%1' for Threads attribute", prop.value);
                         }
+                    } else if (prop.key == "AsyncThreads") {
+                        valid &= ParseDec(prop.value, &config.http.async_threads);
                     } else if (prop.key == "BaseUrl") {
-                        config.base_url = DuplicateString(prop.value, &config.str_alloc).ptr;
+                        config.http.base_url = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else if (prop.key == "MaxAge") {
                         valid &= ParseDec(prop.value, &config.max_age);
                     } else {
