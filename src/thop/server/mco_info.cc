@@ -628,9 +628,8 @@ void ProduceMcoTree(const http_RequestInfo &request, const User *, http_IO *io)
         return;
 
     // TODO: Generate ahead of time
-    BlockAllocator readable_nodes_alloc;
     HeapArray<ReadableGhmDecisionNode> readable_nodes;
-    if (!BuildReadableGhmTree(index->ghm_nodes, &readable_nodes, &readable_nodes_alloc))
+    if (!BuildReadableGhmTree(index->ghm_nodes, &readable_nodes, &io->allocator))
         return;
 
     http_JsonPageBuilder json(request.compression_type);
