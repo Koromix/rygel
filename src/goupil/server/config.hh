@@ -5,6 +5,7 @@
 #pragma once
 
 #include "../../libcc/libcc.hh"
+#include "../../wrappers/http.hh"
 
 namespace RG {
 
@@ -12,10 +13,7 @@ struct Config {
     const char *project_key = nullptr;
     const char *database_filename = nullptr;
 
-    IPStack ip_stack = IPStack::Dual;
-    int port = 8888;
-    int threads = 4;
-    const char *base_url = "/";
+    http_Config http;
     int max_age = 3600;
     int sse_keep_alive = 120000;
 

@@ -10,17 +10,11 @@ namespace RG {
 bool ConfigBuilder::LoadIni(StreamReader &st)
 {
     RG_DEFER_NC(out_guard, database_filename =  config.database_filename,
-                           ip_stack = config.ip_stack,
-                           port = config.port,
-                           threads = config.threads,
-                           base_url = config.base_url,
+                           http = config.http,
                            max_age = config.max_age,
                            sse_keep_alive = config.sse_keep_alive) {
         config.database_filename = database_filename;
-        config.ip_stack = ip_stack;
-        config.port = port;
-        config.threads = threads;
-        config.base_url = base_url;
+        config.http = http;
         config.max_age = max_age;
         config.sse_keep_alive = sse_keep_alive;
     };
@@ -52,26 +46,28 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                 do {
                     if (prop.key == "IPStack") {
                         if (prop.value == "Dual") {
-                            config.ip_stack = IPStack::Dual;
+                            config.http.ip_stack = IPStack::Dual;
                         } else if (prop.value == "IPv4") {
-                            config.ip_stack = IPStack::IPv4;
+                            config.http.ip_stack = IPStack::IPv4;
                         } else if (prop.value == "IPv6") {
-                            config.ip_stack = IPStack::IPv6;
+                            config.http.ip_stack = IPStack::IPv6;
                         } else {
                             LogError("Unknown IP version '%1'", prop.value);
                         }
                     } else if (prop.key == "Port") {
-                        valid &= ParseDec(prop.value, &config.port);
+                        valid &= ParseDec(prop.value, &config.http.port);
                     } else if (prop.key == "Threads") {
-                        if (ParseDec(prop.value, &config.threads, (int)ParseFlag::End)) {
+                        if (ParseDec(prop.value, &config.http.threads, (int)ParseFlag::End)) {
                             // Number of threads
                         } else if (prop.value == "PerConnection") {
-                            config.threads = 0;
+                            config.http.threads = 0;
                         } else {
                             LogError("Invalid value '%1' for Threads attribute", prop.value);
                         }
+                    } else if (prop.key == "AsyncThreads") {
+                        valid &= ParseDec(prop.value, &config.http.async_threads);
                     } else if (prop.key == "BaseUrl") {
-                        config.base_url = DuplicateString(prop.value, &config.str_alloc).ptr;
+                        config.http.base_url = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else if (prop.key == "MaxAge") {
                         valid &= ParseDec(prop.value, &config.max_age);
                     } else if (prop.key == "SSEKeepAlive") {

@@ -6,6 +6,7 @@
 
 #include "../../libcc/libcc.hh"
 #include "../../drd/libdrd/libdrd.hh"
+#include "../../wrappers/http.hh"
 
 namespace RG {
 
@@ -20,10 +21,7 @@ struct Config {
     HeapArray<const char *> mco_stay_directories;
     HeapArray<const char *> mco_stay_filenames;
 
-    IPStack ip_stack = IPStack::Dual;
-    int port = 8888;
-    int threads = 4;
-    const char *base_url = "/";
+    http_Config http;
     int max_age = 3600;
 
     BlockAllocator str_alloc;

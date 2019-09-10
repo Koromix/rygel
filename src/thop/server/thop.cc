@@ -191,7 +191,7 @@ static void InitRoutes()
             writer->Write(BuildVersion ? BuildVersion : "");
             return true;
         } else if (TestStr(key, "THOP_BASE_URL")) {
-            writer->Write(thop_config.base_url);
+            writer->Write(thop_config.http.base_url);
             return true;
         } else if (TestStr(key, "THOP_HAS_USERS")) {
             writer->Write(thop_has_casemix ? "true" : "false");
@@ -331,7 +331,7 @@ Options:
                                  (default: %1))
         --base_url <url>         Change base URL
                                  (default: %2))",
-                thop_config.port, thop_config.base_url);
+                thop_config.http.port, thop_config.http.base_url);
     };
 
     if (sodium_init() < 0) {
@@ -382,10 +382,10 @@ Options:
             } else if (opt.Test("--mco_auth_file", OptionType::Value)) {
                 thop_config.mco_authorization_filename = opt.current_value;
             } else if (opt.Test("--port", OptionType::Value)) {
-                if (!ParseDec(opt.current_value, &thop_config.port))
+                if (!ParseDec(opt.current_value, &thop_config.http.port))
                     return 1;
             } else if (opt.Test("--base_url", OptionType::Value)) {
-                thop_config.base_url = opt.current_value;
+                thop_config.http.base_url = opt.current_value;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -445,12 +445,10 @@ Options:
 
     // Run!
     http_Daemon daemon;
-    daemon.handle_func = HandleRequest;
-    if (!daemon.Start(thop_config.ip_stack, thop_config.port, thop_config.threads,
-                      thop_config.base_url))
+    if (!daemon.Start(thop_config.http, HandleRequest))
         return 1;
     LogInfo("Listening on port %1 (%2 stack)",
-            thop_config.port, IPStackNames[(int)thop_config.ip_stack]);
+            thop_config.http.port, IPStackNames[(int)thop_config.http.ip_stack]);
 
     WaitForInterruption();
 

@@ -55,7 +55,7 @@ static const mco_TableIndex *GetIndexFromRequest(const http_RequestInfo &request
     // Redirect to the canonical URL for this version, to improve client-side caching
     if (date != index->limit_dates[0]) {
         char url_buf[64];
-        Fmt(url_buf, "%1%2?date=%3", thop_config.base_url, request.url + 1, index->limit_dates[0]);
+        Fmt(url_buf, "%1%2?date=%3", thop_config.http.base_url, request.url + 1, index->limit_dates[0]);
 
         io->AddHeader("Location", url_buf);
 
