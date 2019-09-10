@@ -112,13 +112,7 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                     } else if (prop.key == "Port") {
                         valid &= ParseDec(prop.value, &config.http.port);
                     } else if (prop.key == "Threads") {
-                        if (ParseDec(prop.value, &config.http.threads, (int)ParseFlag::End)) {
-                            // Number of threads
-                        } else if (prop.value == "PerConnection") {
-                            config.http.threads = 0;
-                        } else {
-                            LogError("Invalid value '%1' for Threads attribute", prop.value);
-                        }
+                        valid &= ParseDec(prop.value, &config.http.threads);
                     } else if (prop.key == "AsyncThreads") {
                         valid &= ParseDec(prop.value, &config.http.async_threads);
                     } else if (prop.key == "BaseUrl") {

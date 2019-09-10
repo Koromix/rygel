@@ -158,8 +158,8 @@ bool http_Daemon::Start(const http_Config &config,
             LogError("HTTP port %1 is invalid (range: 1 - %2)", config.port, UINT16_MAX);
             valid = false;
         }
-        if (config.threads < 0 || config.threads > 128) {
-            LogError("HTTP threads %1 is invalid (range: 0 - 128)", config.threads);
+        if (config.threads <= 0 || config.threads > 128) {
+            LogError("HTTP threads %1 is invalid (range: 1 - 128)", config.threads);
             valid = false;
         }
         if (config.async_threads <= 0) {
@@ -183,9 +183,7 @@ bool http_Daemon::Start(const http_Config &config,
         case IPStack::IPv4: {} break;
         case IPStack::IPv6: { flags |= MHD_USE_IPv6; } break;
     }
-    if (!config.threads) {
-        flags |= MHD_USE_THREAD_PER_CONNECTION;
-    } else if (config.threads > 1) {
+    if (config.threads > 1) {
         mhd_options.Append({MHD_OPTION_THREAD_POOL_SIZE, config.threads});
     }
     mhd_options.Append({MHD_OPTION_END, 0, nullptr});
