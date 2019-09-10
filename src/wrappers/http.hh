@@ -14,8 +14,8 @@ struct http_Config {
     IPStack ip_stack = IPStack::Dual;
     int port = 8888;
 
-    int threads = 4;
-    int async_threads = 16;
+    int threads = std::max(GetCoreCount(), 4);
+    int async_threads = std::max(GetCoreCount() * 2, 8);
 
     const char *base_url = "/";
 };
