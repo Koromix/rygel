@@ -7,6 +7,81 @@
 
 namespace RG {
 
+bool http_Daemon::Start(const http_Config &config,
+                        std::function<void(const http_RequestInfo &request, http_IO *io)> func)
+{
+    RG_ASSERT(!daemon);
+
+    RG_ASSERT_DEBUG(config.base_url);
+    RG_ASSERT_DEBUG(func);
+
+    // Validate configuration
+    {
+        bool valid = true;
+
+        if (config.port < 1 || config.port > UINT16_MAX) {
+            LogError("HTTP port %1 is invalid (range: 1 - %2)", config.port, UINT16_MAX);
+            valid = false;
+        }
+        if (config.threads <= 0 || config.threads > 128) {
+            LogError("HTTP threads %1 is invalid (range: 1 - 128)", config.threads);
+            valid = false;
+        }
+        if (config.async_threads <= 0) {
+            LogError("HTTP async threads %1 is invalid (minimum: 1)", config.async_threads);
+            valid = false;
+        }
+        if (config.base_url[0] != '/' || config.base_url[strlen(config.base_url) - 1] != '/') {
+            LogError("Base URL '%1' does not start and end with '/'", config.base_url);
+            valid = false;
+        }
+
+        if (!valid)
+            return false;
+    }
+
+    // MHD options
+    int flags = MHD_USE_AUTO_INTERNAL_THREAD | MHD_ALLOW_SUSPEND_RESUME | MHD_USE_ERROR_LOG;
+    LocalArray<MHD_OptionItem, 16> mhd_options;
+    switch (config.ip_stack) {
+        case IPStack::Dual: { flags |= MHD_USE_DUAL_STACK; } break;
+        case IPStack::IPv4: {} break;
+        case IPStack::IPv6: { flags |= MHD_USE_IPv6; } break;
+    }
+    if (config.threads > 1) {
+        mhd_options.Append({MHD_OPTION_THREAD_POOL_SIZE, config.threads});
+    }
+    mhd_options.Append({MHD_OPTION_END, 0, nullptr});
+#ifndef NDEBUG
+    flags |= MHD_USE_DEBUG;
+#endif
+
+    handle_func = func;
+    daemon = MHD_start_daemon(flags, (int16_t)config.port, nullptr, nullptr,
+                              &http_Daemon::HandleRequest, this,
+                              MHD_OPTION_NOTIFY_COMPLETED, &http_Daemon::RequestCompleted, this,
+                              MHD_OPTION_ARRAY, mhd_options.data, MHD_OPTION_END);
+    this->base_url = config.base_url;
+
+    async = new Async(config.async_threads - 1);
+
+    return daemon;
+}
+
+void http_Daemon::Stop()
+{
+    if (async) {
+        async->Abort();
+        delete async;
+    }
+    if (daemon) {
+        MHD_stop_daemon(daemon);
+    }
+
+    async = nullptr;
+    daemon = nullptr;
+}
+
 static void ReleaseDataCallback(void *ptr)
 {
     Allocator::Release(nullptr, ptr, -1);
@@ -143,81 +218,6 @@ void http_Daemon::RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
     if (io) {
         delete io;
     }
-}
-
-bool http_Daemon::Start(const http_Config &config,
-                        std::function<void(const http_RequestInfo &request, http_IO *io)> func)
-{
-    RG_ASSERT(!daemon);
-
-    RG_ASSERT_DEBUG(config.base_url);
-    RG_ASSERT_DEBUG(func);
-
-    // Validate configuration
-    {
-        bool valid = true;
-
-        if (config.port < 1 || config.port > UINT16_MAX) {
-            LogError("HTTP port %1 is invalid (range: 1 - %2)", config.port, UINT16_MAX);
-            valid = false;
-        }
-        if (config.threads <= 0 || config.threads > 128) {
-            LogError("HTTP threads %1 is invalid (range: 1 - 128)", config.threads);
-            valid = false;
-        }
-        if (config.async_threads <= 0) {
-            LogError("HTTP async threads %1 is invalid (minimum: 1)", config.async_threads);
-            valid = false;
-        }
-        if (config.base_url[0] != '/' || config.base_url[strlen(config.base_url) - 1] != '/') {
-            LogError("Base URL '%1' does not start and end with '/'", config.base_url);
-            valid = false;
-        }
-
-        if (!valid)
-            return false;
-    }
-
-    // MHD options
-    int flags = MHD_USE_AUTO_INTERNAL_THREAD | MHD_ALLOW_SUSPEND_RESUME | MHD_USE_ERROR_LOG;
-    LocalArray<MHD_OptionItem, 16> mhd_options;
-    switch (config.ip_stack) {
-        case IPStack::Dual: { flags |= MHD_USE_DUAL_STACK; } break;
-        case IPStack::IPv4: {} break;
-        case IPStack::IPv6: { flags |= MHD_USE_IPv6; } break;
-    }
-    if (config.threads > 1) {
-        mhd_options.Append({MHD_OPTION_THREAD_POOL_SIZE, config.threads});
-    }
-    mhd_options.Append({MHD_OPTION_END, 0, nullptr});
-#ifndef NDEBUG
-    flags |= MHD_USE_DEBUG;
-#endif
-
-    handle_func = func;
-    daemon = MHD_start_daemon(flags, (int16_t)config.port, nullptr, nullptr,
-                              &http_Daemon::HandleRequest, this,
-                              MHD_OPTION_NOTIFY_COMPLETED, &http_Daemon::RequestCompleted, this,
-                              MHD_OPTION_ARRAY, mhd_options.data, MHD_OPTION_END);
-    this->base_url = config.base_url;
-
-    async = new Async(config.async_threads - 1);
-
-    return daemon;
-}
-
-void http_Daemon::Stop()
-{
-    if (async) {
-        async->Abort();
-        delete async;
-    }
-    if (daemon) {
-        MHD_stop_daemon(daemon);
-    }
-
-    async = nullptr;
-    daemon = nullptr;
 }
 
 http_IO::http_IO()
