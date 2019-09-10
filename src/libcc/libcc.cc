@@ -39,7 +39,6 @@
     #define ftello64 ftello
 #endif
 #include <chrono>
-#include <condition_variable>
 #include <thread>
 
 #ifndef LIBCC_NO_MINIZ

@@ -12,17 +12,12 @@ namespace RG {
 
 class http_Daemon;
 
-class http_RequestInfo {
-    MHD_PostProcessor *pp;
-    BlockAllocator alloc;
-
-public:
+struct http_RequestInfo {
     MHD_Connection *conn;
 
     const char *method;
     const char *url;
     CompressionType compression_type;
-    HashMap<const char *, Span<const char>> post;
 
     const char *GetHeaderValue(const char *key) const
         { return MHD_lookup_connection_value(conn, MHD_HEADER_KIND, key); }
@@ -30,18 +25,29 @@ public:
         { return MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, key); }
     const char *GetCookieValue(const char *key) const
         { return MHD_lookup_connection_value(conn, MHD_COOKIE_KIND, key); }
-    const char *GetPostValue(const char *key) const
-        { return post.FindValue(key, {}).ptr; }
-
-    friend http_Daemon;
 };
 
 class http_IO {
+    enum class State {
+        First,
+        Read,
+        Async,
+        Done
+    };
+
+    http_RequestInfo request;
+
     int code = -1;
     MHD_Response *response;
 
-    bool handled = false;
+    std::mutex mutex;
+    State state = State::First;
+    bool suspended = false;
+
     std::function<void(const http_RequestInfo &request, http_IO *io)> async_func;
+
+    std::condition_variable read_cv;
+    HeapArray<uint8_t> read_buf;
 
 public:
     enum class Flag {
@@ -49,6 +55,8 @@ public:
         EnableETag = 1 << 1,
         EnableCache = (int)EnableCacheControl | (int)EnableETag
     };
+
+    BlockAllocator allocator;
 
     unsigned int flags = 0;
 
@@ -64,6 +72,15 @@ public:
     void AddCachingHeaders(int max_age, const char *etag = nullptr);
 
     void AttachResponse(int code, MHD_Response *new_response);
+
+    // Blocking, do in async context
+    bool ReadPostValues(Allocator *alloc,
+                        HashMap<const char *, const char *> *out_values);
+
+private:
+    // Call with mutex locked
+    void Suspend();
+    void Resume();
 
     friend http_Daemon;
 };

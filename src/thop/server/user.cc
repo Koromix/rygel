@@ -388,12 +388,23 @@ void HandleConnect(const http_RequestInfo &request, const User *, http_IO *io)
     if (!GetClientAddress(request.conn, address))
         return;
 
-    const char *username = request.GetPostValue("username");
-    const char *password = request.GetPostValue("password");
-    const char *user_agent = request.GetHeaderValue("User-Agent");
-    if (!username || !password || !user_agent) {
-        http_ProduceErrorPage(422, io);
-        return;
+    // Get POST and header values
+    const char *username;
+    const char *password;
+    const char *user_agent;
+    {
+        HashMap<const char *, const char *> values;
+        if (!io->ReadPostValues(&io->allocator, &values))
+            return;
+
+        username = values.FindValue("username", nullptr);
+        password = values.FindValue("password", nullptr);
+        user_agent = request.GetHeaderValue("User-Agent");
+        if (!username || !password || !user_agent) {
+            LogError("Missing parameters");
+            http_ProduceErrorPage(422, io);
+            return;
+        }
     }
 
     // Find and validate user
