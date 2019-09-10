@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <condition_variable>
 #include <errno.h>
 #include <float.h>
 #include <functional>

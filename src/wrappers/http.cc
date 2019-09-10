@@ -7,11 +7,6 @@
 
 namespace RG {
 
-struct ConnectionData {
-    http_RequestInfo request;
-    http_IO io;
-};
-
 static void ReleaseDataCallback(void *ptr)
 {
     Allocator::Release(nullptr, ptr, -1);
@@ -40,101 +35,100 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
                                void **con_cls)
 {
     http_Daemon *daemon = (http_Daemon *)cls;
-    ConnectionData *data = *(ConnectionData **)con_cls;
+    http_IO *io = *(http_IO **)con_cls;
 
     // Avoid stale messages and messages from other theads in error pages
     ClearLastLogError();
 
     // Init request data
-    if (!data) {
-        data = new ConnectionData();
-        *con_cls = data;
+    if (!io) {
+        io = new http_IO();
+        *con_cls = io;
 
-        data->request.conn = conn;
-        data->request.method = method;
+        io->request.conn = conn;
+        io->request.method = method;
 
         // Trim URL prefix (base_url setting)
         for (Size i = 0; daemon->base_url[i]; i++, url++) {
             if (url[0] != daemon->base_url[i]) {
                 if (!url[0] && daemon->base_url[i] == '/' && !daemon->base_url[i + 1]) {
-                    data->io.AddHeader("Location", daemon->base_url);
-                    return MHD_queue_response(conn, 303, data->io.response);
+                    io->AddHeader("Location", daemon->base_url);
+                    return MHD_queue_response(conn, 303, io->response);
                 } else {
-                    http_ProduceErrorPage(404, &data->io);
-                    return MHD_queue_response(conn, (unsigned int)data->io.code, data->io.response);
+                    http_ProduceErrorPage(404, io);
+                    return MHD_queue_response(conn, (unsigned int)io->code, io->response);
                 }
             }
         }
-        data->request.url = --url;
+        io->request.url = --url;
 
-        if (!NegociateContentEncoding(conn, &data->request.compression_type, &data->io))
-            return MHD_queue_response(conn, (unsigned int)data->io.code, data->io.response);
+        if (!NegociateContentEncoding(conn, &io->request.compression_type, io))
+            return MHD_queue_response(conn, (unsigned int)io->code, io->response);
     }
 
-    // Keep things sane
-    http_RequestInfo *request = &data->request;
-    http_IO *io = &data->io;
+    // There may be some kind of async runner
+    std::unique_lock<std::mutex> lock(io->mutex);
+    http_RequestInfo *request = &io->request;
 
-    // Process POST data if any
-    if (TestStr(method, "POST")) {
-        if (!request->pp) {
-            request->pp = MHD_create_post_processor(conn, Kibibytes(32),
-                                                    [](void *cls, enum MHD_ValueKind, const char *key,
-                                                       const char *, const char *, const char *,
-                                                       const char *data, uint64_t, size_t) {
-                http_RequestInfo *request = (http_RequestInfo *)cls;
+    // Run first time handler
+    if (io->state == http_IO::State::First) {
+        daemon->handle_func(*request, io);
 
-                key = DuplicateString(key, &request->alloc).ptr;
-                data = DuplicateString(data, &request->alloc).ptr;
-                request->post.Append(key, data);
-
-                return MHD_YES;
-            }, request);
-            if (!request->pp) {
-                http_ProduceErrorPage(422, io);
-                return MHD_queue_response(conn, (unsigned int)io->code, io->response);
-            }
-
-            return MHD_YES;
-        } else if (*upload_data_size) {
-            if (MHD_post_process(request->pp, upload_data, *upload_data_size) != MHD_YES) {
-                http_ProduceErrorPage(422, io);
-                return MHD_queue_response(conn, (unsigned int)io->code, io->response);
-            }
-
-            *upload_data_size = 0;
-            return MHD_YES;
+        if (io->state == http_IO::State::First) {
+            io->state = http_IO::State::Done;
         }
     }
 
-    // Run real handler (first time)
-    if (!io->handled) {
-        daemon->handle_func(*request, io);
-        io->handled = true;
-    }
+    // Process asynchronous tasks
+    if (io->state == http_IO::State::Async) {
+        io->Suspend();
 
-    // Run registered async functions (as many times as needed)
-    if (io->async_func) {
-        MHD_suspend_connection(request->conn);
+        // Run async handler if needed
+        if (io->async_func) {
+            daemon->async->Run([=]() {
+                std::function<void(const http_RequestInfo &request, http_IO *io)> func;
+                std::swap(io->async_func, func);
 
-        daemon->async->Run([=]() {
-            std::function<void(const http_RequestInfo &request, http_IO *io)> func;
-            std::swap(io->async_func, func);
+                func(*request, io);
 
-            func(*request, io);
-            MHD_resume_connection(request->conn);
+                std::unique_lock<std::mutex> lock(io->mutex);
+                if (!io->async_func) {
+                    io->state = http_IO::State::Done;
+                }
+                io->Resume();
 
-            return true;
-        });
+                return true;
+            });
+        }
 
+        return MHD_YES;
+    } else if (io->state == http_IO::State::Read) {
+        // Read upload data and give it to async handler
+        if (*upload_data_size) {
+            io->read_buf.Grow(*upload_data_size);
+            memcpy(io->read_buf.end(), upload_data, *upload_data_size);
+            io->read_buf.len += *upload_data_size;
+
+            if (io->read_buf.len >= Kibibytes(16)) {
+                io->Suspend();
+            }
+        } else {
+            io->state = http_IO::State::Async;
+            io->Suspend();
+        }
+
+        io->read_cv.notify_one();
+
+        *upload_data_size = 0;
         return MHD_YES;
     }
 
-    // Default to internal error (if nothing else)
+    // We're done
+    RG_ASSERT_DEBUG(io->state == http_IO::State::Done);
     if (io->code < 0) {
+        // Default to internal error (if nothing else)
         http_ProduceErrorPage(500, io);
     }
-
     return MHD_queue_response(conn, (unsigned int)io->code, io->response);
 }
 
@@ -142,17 +136,13 @@ void http_Daemon::RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
                                    MHD_RequestTerminationCode toe)
 {
     const http_Daemon &daemon = *(const http_Daemon *)cls;
-    ConnectionData *data = *(ConnectionData **)con_cls;
+    http_IO *io = *(http_IO **)con_cls;
 
-    if (data) {
+    if (io) {
         if (daemon.release_func) {
-            daemon.release_func(data->request, toe);
+            daemon.release_func(io->request, toe);
         }
-
-        if (data->request.pp) {
-            MHD_destroy_post_processor(data->request.pp);
-        }
-        delete data;
+        delete io;
     }
 }
 
@@ -240,7 +230,9 @@ http_IO::~http_IO()
 
 void http_IO::RunAsync(std::function<void(const http_RequestInfo &request, http_IO *io)> func)
 {
-    RG_ASSERT_DEBUG(!async_func);
+    RG_ASSERT(state == State::First || state == State::Async);
+
+    state = State::Async;
     async_func = func;
 }
 
@@ -309,6 +301,84 @@ void http_IO::AttachResponse(int new_code, MHD_Response *new_response)
     MHD_move_response_headers(response, new_response);
     MHD_destroy_response(response);
     response = new_response;
+}
+
+bool http_IO::ReadPostValues(Allocator *alloc,
+                             HashMap<const char *, const char *> *out_values)
+{
+    RG_ASSERT(state == State::Async);
+    RG_ASSERT(TestStr(request.method, "POST"));
+
+    struct PostProcessorContext {
+        HashMap<const char *, const char *> *values;
+        Allocator *alloc;
+    };
+
+    PostProcessorContext ctx = {};
+    ctx.values = out_values;
+    ctx.alloc = alloc;
+
+    // Create POST data processor
+    MHD_PostProcessor *pp =
+        MHD_create_post_processor(request.conn, Kibibytes(32),
+                                  [](void *cls, enum MHD_ValueKind, const char *key,
+                                     const char *, const char *, const char *,
+                                     const char *data, uint64_t, size_t) {
+        PostProcessorContext *ctx = (PostProcessorContext *)cls;
+
+        key = DuplicateString(key, ctx->alloc).ptr;
+        data = DuplicateString(data, ctx->alloc).ptr;
+        ctx->values->Append(key, data);
+
+        return MHD_YES;
+    }, &ctx);
+    if (!pp) {
+        LogError("Cannot parse this kind of POST data");
+        http_ProduceErrorPage(422, this);
+        return false;
+    }
+
+    std::unique_lock<std::mutex> lock(mutex);
+
+    // Start read
+    state = State::Read;
+    RG_DEFER_N(error_guard) {
+        state = State::Async;
+        Resume();
+    };
+
+    // Parse available upload data
+    while (state == State::Read) {
+        Resume();
+        read_cv.wait(lock);
+
+        if (MHD_post_process(pp, (const char *)read_buf.ptr, (size_t)read_buf.len) != MHD_YES) {
+            LogError("Failed to parse POST data");
+            http_ProduceErrorPage(422, this);
+            return false;
+        }
+
+        read_buf.RemoveFrom(0);
+    }
+
+    error_guard.Disable();
+    return true;
+}
+
+void http_IO::Suspend()
+{
+    if (!suspended) {
+        MHD_suspend_connection(request.conn);
+        suspended = true;
+    }
+}
+
+void http_IO::Resume()
+{
+    if (suspended) {
+        MHD_resume_connection(request.conn);
+        suspended = false;
+    }
 }
 
 const char *http_GetMimeType(Span<const char> extension)
