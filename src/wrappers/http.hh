@@ -109,6 +109,7 @@ public:
     void AttachResponse(int code, MHD_Response *new_response);
 
     // Blocking, do in async context
+    Size Read(Size max_len, void *out_buf);
     bool ReadPostValues(Allocator *alloc,
                         HashMap<const char *, const char *> *out_values);
 
