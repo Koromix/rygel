@@ -1075,3 +1075,18 @@ index 00000000..13fa6160
 +
 +/* the signed version of size_t */
 +/* #undef ssize_t */
+diff --git a/vendor/curl/lib/curl_setup.h b/vendor/curl/lib/curl_setup.h
+index 13af8cde..db717a49 100644
+--- a/vendor/curl/lib/curl_setup.h
++++ b/vendor/curl/lib/curl_setup.h
+@@ -68,6 +68,10 @@
+ #  endif
+ #endif
+ 
++#ifdef __linux__
++#  include "config-linux.h"
++#endif
++
+ #if defined(macintosh) && defined(__MRC__)
+ #  include "config-mac.h"
+ #endif
