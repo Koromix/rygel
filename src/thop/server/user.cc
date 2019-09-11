@@ -394,8 +394,10 @@ void HandleConnect(const http_RequestInfo &request, const User *, http_IO *io)
     const char *user_agent;
     {
         HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values))
+        if (!io->ReadPostValues(&io->allocator, &values)) {
+            http_ProduceErrorPage(422, io);
             return;
+        }
 
         username = values.FindValue("username", nullptr);
         password = values.FindValue("password", nullptr);

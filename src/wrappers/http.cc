@@ -305,6 +305,29 @@ void http_IO::AttachResponse(int new_code, MHD_Response *new_response)
     response = new_response;
 }
 
+// TODO: Detect I/O errors?
+Size http_IO::Read(Size max_len, void *out_buf)
+{
+    RG_ASSERT(state == State::Async);
+
+    std::unique_lock<std::mutex> lock(mutex);
+
+    // Start read
+    state = State::Read;
+    RG_DEFER { state = State::Async; };
+
+    // Wait for upload data
+    do {
+        read_buf = MakeSpan((uint8_t *)out_buf, max_len);
+        read_len = 0;
+
+        Resume();
+        read_cv.wait(lock);
+    } while (!read_len && state == State::Read);
+
+    return read_len;
+}
+
 bool http_IO::ReadPostValues(Allocator *alloc,
                              HashMap<const char *, const char *> *out_values)
 {
@@ -336,36 +359,25 @@ bool http_IO::ReadPostValues(Allocator *alloc,
     }, &ctx);
     if (!pp) {
         LogError("Cannot parse this kind of POST data");
-        http_ProduceErrorPage(422, this);
         return false;
     }
 
-    std::unique_lock<std::mutex> lock(mutex);
-
-    // Start read
-    state = State::Read;
-    RG_DEFER_N(error_guard) {
-        state = State::Async;
-        Resume();
-    };
-
     // Parse available upload data
-    while (state == State::Read) {
+    for (;;) {
         uint8_t buf[1024];
-        read_buf = buf;
-        read_len = 0;
+        Size len = Read(RG_SIZE(buf), buf);
+        if (len < 0) {
+            return false;
+        } else if (!len) {
+            break;
+        }
 
-        Resume();
-        read_cv.wait(lock);
-
-        if (MHD_post_process(pp, (const char *)buf, (size_t)read_len) != MHD_YES) {
+        if (MHD_post_process(pp, (const char *)buf, (size_t)len) != MHD_YES) {
             LogError("Failed to parse POST data");
-            http_ProduceErrorPage(422, this);
             return false;
         }
     }
 
-    error_guard.Disable();
     return true;
 }
 
