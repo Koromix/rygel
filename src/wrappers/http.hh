@@ -63,10 +63,10 @@ struct http_RequestInfo {
 
 class http_IO {
     enum class State {
-        First,
-        Read,
+        Sync,
+        Idle,
         Async,
-        Done
+        Zombie
     };
 
     http_RequestInfo request;
@@ -75,7 +75,7 @@ class http_IO {
     MHD_Response *response;
 
     std::mutex mutex;
-    State state = State::First;
+    State state = State::Sync;
     bool suspended = false;
 
     std::function<void(const http_RequestInfo &request, http_IO *io)> async_func;
@@ -83,6 +83,7 @@ class http_IO {
     std::condition_variable read_cv;
     Span<uint8_t> read_buf = {};
     Size read_len = 0;
+    bool read_eof = false;
 
 public:
     enum class Flag {
