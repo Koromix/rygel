@@ -142,67 +142,72 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
     }
 
     // There may be some kind of async runner
-    std::unique_lock<std::mutex> lock(io->mutex);
+    std::lock_guard<std::mutex> lock(io->mutex);
     http_RequestInfo *request = &io->request;
 
-    // Run first time handler
-    if (io->state == http_IO::State::First) {
+    // Run first handler synchronously
+    if (io->state == http_IO::State::Sync) {
         daemon->handle_func(*request, io);
-
-        if (io->state == http_IO::State::First) {
-            io->state = http_IO::State::Done;
-        }
+        io->state = http_IO::State::Idle;
     }
 
-    // Process asynchronous tasks
-    if (io->state == http_IO::State::Async) {
-        io->Suspend();
+    // Do we have anything async task pending?
+    if (io->state == http_IO::State::Idle && io->async_func) {
+        std::function<void(const http_RequestInfo &request, http_IO *io)> func;
+        std::swap(io->async_func, func);
 
-        // Run async handler if needed
-        if (io->async_func) {
-            daemon->async->Run([=]() {
-                std::function<void(const http_RequestInfo &request, http_IO *io)> func;
-                std::swap(io->async_func, func);
+        daemon->async->Run([=]() {
+            func(*request, io);
 
-                func(*request, io);
+            std::unique_lock<std::mutex> lock(io->mutex);
 
-                std::unique_lock<std::mutex> lock(io->mutex);
-                if (!io->async_func) {
-                    io->state = http_IO::State::Done;
-                }
+            if (io->state == http_IO::State::Zombie) {
+                lock.unlock();
+                delete io;
+            } else {
+                io->state = http_IO::State::Idle;
                 io->Resume();
+            }
 
-                return true;
-            });
-        }
+            return true;
+        });
 
-        return MHD_YES;
-    } else if (io->state == http_IO::State::Read) {
-        // Read upload data and give it to async handler
+        io->state = http_IO::State::Async;
+    }
+
+    // Read and/or suspend while async handler is running
+    if (io->state == http_IO::State::Async) {
         if (*upload_data_size) {
-            RG_ASSERT_DEBUG(io->read_buf.IsValid());
+            if (io->read_len < io->read_buf.len) {
+                // Read upload data and give it to async handler
+                RG_ASSERT_DEBUG(io->read_buf.IsValid());
 
-            Size copy_len = std::min(io->read_buf.len - io->read_len, (Size)*upload_data_size);
+                Size copy_len = std::min(io->read_buf.len - io->read_len, (Size)*upload_data_size);
 
-            memcpy(io->read_buf.ptr + io->read_len, upload_data, copy_len);
-            io->read_len += copy_len;
-            *upload_data_size -= copy_len;
+                memcpy(io->read_buf.ptr + io->read_len, upload_data, copy_len);
+                io->read_len += copy_len;
+                *upload_data_size -= copy_len;
 
-            if (io->read_len == io->read_buf.len) {
+                io->read_cv.notify_one();
+                if (io->read_len == io->read_buf.len) {
+                    io->Suspend();
+                }
+            } else {
                 io->Suspend();
             }
         } else {
-            io->state = http_IO::State::Async;
+            if (io->read_buf.IsValid()) {
+                io->read_eof = true;
+                io->read_cv.notify_one();
+            }
             io->Suspend();
         }
-
-        io->read_cv.notify_one();
 
         return MHD_YES;
     }
 
     // We're done
-    RG_ASSERT_DEBUG(io->state == http_IO::State::Done);
+    RG_ASSERT_DEBUG(io->state == http_IO::State::Idle);
     if (io->code < 0) {
         // Default to internal error (if nothing else)
         http_ProduceErrorPage(500, io);
@@ -216,7 +221,15 @@ void http_Daemon::RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
     http_IO *io = *(http_IO **)con_cls;
 
     if (io) {
-        delete io;
+        std::unique_lock<std::mutex> lock(io->mutex);
+
+        if (io->state == http_IO::State::Async) {
+            io->state = http_IO::State::Zombie;
+            io->read_cv.notify_one();
+        } else {
+            lock.unlock();
+            delete io;
+        }
     }
 }
 
@@ -232,9 +245,7 @@ http_IO::~http_IO()
 
 void http_IO::RunAsync(std::function<void(const http_RequestInfo &request, http_IO *io)> func)
 {
-    RG_ASSERT(state == State::First || state == State::Async);
-
-    state = State::Async;
+    RG_ASSERT(state == State::Sync || state == State::Async);
     async_func = func;
 }
 
@@ -305,25 +316,29 @@ void http_IO::AttachResponse(int new_code, MHD_Response *new_response)
     response = new_response;
 }
 
-// TODO: Detect I/O errors?
 Size http_IO::Read(Size max_len, void *out_buf)
 {
-    RG_ASSERT(state == State::Async);
+    RG_ASSERT(state != State::Sync);
 
     std::unique_lock<std::mutex> lock(mutex);
 
-    // Start read
-    state = State::Read;
-    RG_DEFER { state = State::Async; };
-
-    // Wait for upload data
-    do {
-        read_buf = MakeSpan((uint8_t *)out_buf, max_len);
+    // Set read buffer
+    read_buf = MakeSpan((uint8_t *)out_buf, max_len);
+    read_len = 0;
+    RG_DEFER {
+        read_buf = {};
         read_len = 0;
+    };
 
+    // Wait for libmicrohttpd
+    while (state == State::Async && !read_len && !read_eof) {
         Resume();
         read_cv.wait(lock);
-    } while (!read_len && state == State::Read);
+    }
+    if (state == State::Zombie) {
+        LogError("Connection aborted");
+        return -1;
+    }
 
     return read_len;
 }
@@ -331,7 +346,7 @@ Size http_IO::Read(Size max_len, void *out_buf)
 bool http_IO::ReadPostValues(Allocator *alloc,
                              HashMap<const char *, const char *> *out_values)
 {
-    RG_ASSERT(state == State::Async);
+    RG_ASSERT(state != State::Sync);
     RG_ASSERT(TestStr(request.method, "POST"));
 
     struct PostProcessorContext {
@@ -361,6 +376,7 @@ bool http_IO::ReadPostValues(Allocator *alloc,
         LogError("Cannot parse this kind of POST data");
         return false;
     }
+    RG_DEFER { MHD_destroy_post_processor(pp); };
 
     // Parse available upload data
     for (;;) {
