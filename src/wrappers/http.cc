@@ -245,7 +245,6 @@ http_IO::~http_IO()
 
 void http_IO::RunAsync(std::function<void(const http_RequestInfo &request, http_IO *io)> func)
 {
-    RG_ASSERT(state == State::Sync || state == State::Async);
     async_func = func;
 }
 
