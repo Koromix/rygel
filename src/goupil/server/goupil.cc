@@ -314,7 +314,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         } break;
 
         case Route::Type::Function: {
-            route->u.func(request, io);
+            io->RunAsync(route->u.func);
         } break;
     }
 
