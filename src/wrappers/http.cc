@@ -188,7 +188,6 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
                 io->read_len += copy_len;
                 *upload_data_size -= copy_len;
 
-                io->read_cv.notify_one();
                 if (io->read_len == io->read_buf.len) {
                     io->Suspend();
                 }
@@ -196,12 +195,12 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
                 io->Suspend();
             }
         } else {
-            if (io->read_buf.IsValid()) {
-                io->read_eof = true;
-                io->read_cv.notify_one();
-            }
+            io->read_eof |= io->read_buf.IsValid();
             io->Suspend();
         }
+
+        // Try in all cases, even if not needed... too much spinning beats deadlock
+        io->read_cv.notify_one();
 
         return MHD_YES;
     }
