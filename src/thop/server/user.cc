@@ -18,16 +18,21 @@
 
 namespace RG {
 
-static const int64_t PruneDelay = 20 * 60 * 1000;
-static const int64_t IdleSessionDelay = 2 * 3600 * 1000;
+static const int64_t PruneDelay = 60 * 60000;
+
+static const int64_t MaxSessionDelay = 1440 * 60000;
+static const int64_t MaxKeyDelay = 120 * 60000;
+static const int64_t RegenerateDelay = 15 * 60000;
 
 struct Session {
     char session_key[129];
     char client_addr[65];
     char user_agent[134];
-    std::atomic_int64_t last_seen;
 
     const User *user;
+
+    int64_t login_time;
+    int64_t register_time;
 
     RG_HASH_TABLE_HANDLER_T(Session, const char *, session_key);
 };
@@ -299,6 +304,44 @@ static bool GetClientAddress(MHD_Connection *conn, Span<char> out_address)
     return true;
 }
 
+static Session *RegisterNewSession(const char *address, const char *user_agent, const User *user)
+{
+    std::unique_lock<std::shared_mutex> lock(sessions_mutex, std::defer_lock);
+
+    // Register session with unique key
+    Session *session;
+    for (;;) {
+        char session_key[129];
+        {
+            RG_STATIC_ASSERT(RG_SIZE(session_key) == RG_SIZE(Session::session_key));
+
+            uint64_t buf[8];
+            randombytes_buf(buf, RG_SIZE(buf));
+            Fmt(session_key, "%1%2%3%4%5%6%7%8",
+                FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16),
+                FmtHex(buf[2]).Pad0(-16), FmtHex(buf[3]).Pad0(-16),
+                FmtHex(buf[4]).Pad0(-16), FmtHex(buf[5]).Pad0(-16),
+                FmtHex(buf[6]).Pad0(-16), FmtHex(buf[7]).Pad0(-16));
+        }
+
+        lock.lock();
+
+        std::pair<Session *, bool> ret = sessions.AppendDefault(session_key);
+        if (RG_LIKELY(ret.second)) {
+            session = ret.first;
+            strcpy(session->session_key, session_key);
+            break;
+        }
+    }
+
+    // Fill in remaining information
+    strcpy(session->client_addr, address);
+    strncpy(session->user_agent, user_agent, RG_SIZE(session->user_agent) - 1);
+    session->user = user;
+
+    return session;
+}
+
 static void PruneStaleSessions()
 {
     int64_t now = GetMonotonicTime();
@@ -315,7 +358,7 @@ static void PruneStaleSessions()
     std::unique_lock<std::shared_mutex> lock(sessions_mutex);
     for (auto it = sessions.begin(); it != sessions.end(); it++) {
         const Session &session = *it;
-        if (now - session.last_seen >= IdleSessionDelay) {
+        if (now - session.register_time >= MaxKeyDelay) {
             it.Remove();
         }
     }
@@ -349,15 +392,13 @@ static Session *FindSession(const http_RequestInfo &request, bool *out_mismatch 
             !TestStr(session->client_addr, address) ||
             !TestStr(session->user->name, username) ||
             strncmp(session->user_agent, user_agent, RG_SIZE(session->user_agent) - 1) ||
-            now - session->last_seen > IdleSessionDelay) {
+            now - session->login_time >= MaxSessionDelay ||
+            now - session->register_time >= MaxKeyDelay) {
         if (out_mismatch) {
             *out_mismatch = true;
         }
         return nullptr;
     }
-
-    // Avoid pruning (not idle)
-    session->last_seen = now;
 
     if (out_mismatch) {
         *out_mismatch = false;
@@ -365,33 +406,57 @@ static Session *FindSession(const http_RequestInfo &request, bool *out_mismatch 
     return session;
 }
 
-const User *CheckSessionUser(const http_RequestInfo &request, bool *out_mismatch)
+static void RegenerateSession(Session *session, http_IO *io)
 {
-    PruneStaleSessions();
+    RG_ASSERT_DEBUG(session);
 
-    std::shared_lock<std::shared_mutex> lock(sessions_mutex);
-    Session *session = FindSession(request, out_mismatch);
+    int64_t now = GetMonotonicTime();
 
-    return session ? session->user : nullptr;
+    if (now - session->register_time >= RegenerateDelay) {
+        Session *new_session =
+            RegisterNewSession(session->client_addr, session->user_agent, session->user);
+        new_session->login_time = session->login_time;
+        new_session->register_time = now;
+
+        io->AddCookieHeader(thop_config.http.base_url, "session_key",
+                            new_session->session_key, true);
+    }
 }
 
-void DeleteSessionCookies(http_IO *io)
+static void DeleteSessionCookies(http_IO *io)
 {
     io->AddCookieHeader(thop_config.http.base_url, "session_key", nullptr);
     io->AddCookieHeader(thop_config.http.base_url, "url_key", nullptr);
     io->AddCookieHeader(thop_config.http.base_url, "username", nullptr);
 }
 
+const User *CheckSessionUser(const http_RequestInfo &request, http_IO *io)
+{
+    PruneStaleSessions();
+
+    Session *session;
+    bool mismatch = false;
+    {
+        std::shared_lock<std::shared_mutex> lock(sessions_mutex);
+        session = FindSession(request, &mismatch);
+    }
+
+    if (session) {
+        RegenerateSession(session, io);
+        return session->user;
+    } else if (mismatch) {
+        DeleteSessionCookies(io);
+        return nullptr;
+    } else {
+        return nullptr;
+    }
+}
+
 void HandleConnect(const http_RequestInfo &request, const User *, http_IO *io)
 {
-    char address[65];
-    if (!GetClientAddress(request.conn, address))
-        return;
-
     // Get POST and header values
     const char *username;
     const char *password;
-    const char *user_agent;
     {
         HashMap<const char *, const char *> values;
         if (!io->ReadPostValues(&io->allocator, &values)) {
@@ -401,41 +466,50 @@ void HandleConnect(const http_RequestInfo &request, const User *, http_IO *io)
 
         username = values.FindValue("username", nullptr);
         password = values.FindValue("password", nullptr);
-        user_agent = request.GetHeaderValue("User-Agent");
-        if (!username || !password || !user_agent) {
+        if (!username || !password) {
             LogError("Missing parameters");
             http_ProduceErrorPage(422, io);
             return;
         }
     }
 
+    int64_t now = GetMonotonicTime();
+
     // Find and validate user
     const User *user = thop_user_set.FindUser(username);
+    if (!user || !user->password_hash ||
+            crypto_pwhash_str_verify(user->password_hash, password, strlen(password)) != 0) {
+        int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
+        WaitForDelay(safety_delay);
+
+        LogError("Incorrect username or password");
+        http_ProduceErrorPage(403, io);
+        return;
+    }
+
+    // Get main session security values
+    char address[65];
+    const char *user_agent;
     {
-        int64_t now = GetMonotonicTime();
+        RG_STATIC_ASSERT(RG_SIZE(address) == RG_SIZE(Session::client_addr));
 
-        if (!user || !user->password_hash ||
-                crypto_pwhash_str_verify(user->password_hash, password, strlen(password)) != 0) {
-            int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
-            WaitForDelay(safety_delay);
+        if (!GetClientAddress(request.conn, address)) {
+            http_ProduceErrorPage(422, io);
+            return;
+        }
 
-            LogError("Incorrect username or password");
-            http_ProduceErrorPage(403, io);
+        user_agent = request.GetHeaderValue("User-Agent");
+        if (!user_agent) {
+            LogError("Missing User-Agent header");
+            http_ProduceErrorPage(422, io);
             return;
         }
     }
 
-    // Create session key
-    char session_key[129];
-    {
-        uint64_t buf[8];
-        randombytes_buf(buf, RG_SIZE(buf));
-        Fmt(session_key, "%1%2%3%4%5%6%7%8",
-            FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16),
-            FmtHex(buf[2]).Pad0(-16), FmtHex(buf[3]).Pad0(-16),
-            FmtHex(buf[4]).Pad0(-16), FmtHex(buf[5]).Pad0(-16),
-            FmtHex(buf[6]).Pad0(-16), FmtHex(buf[7]).Pad0(-16));
-    }
+    // Register session
+    Session *session = RegisterNewSession(address, user_agent, user);
+    session->login_time = now;
+    session->register_time = now;
 
     // Create URL key
     char url_key[33];
@@ -445,39 +519,13 @@ void HandleConnect(const http_RequestInfo &request, const User *, http_IO *io)
         Fmt(url_key, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
     }
 
-    // Register session
-    {
-        std::unique_lock<std::shared_mutex> lock(sessions_mutex);
-
-        // Drop current session (if any)
-        sessions.Remove(FindSession(request));
-
-        // std::atomic objects are not copyable so we can't use Append()
-        Session *session;
-        {
-            std::pair<Session *, bool> ret = sessions.AppendDefault(session_key);
-            if (!ret.second) {
-                LogError("Generated duplicate session key");
-                return;
-            }
-            session = ret.first;
-        }
-
-        RG_STATIC_ASSERT(RG_SIZE(session->session_key) == RG_SIZE(session_key));
-        RG_STATIC_ASSERT(RG_SIZE(session->client_addr) == RG_SIZE(address));
-        strcpy(session->session_key, session_key);
-        strcpy(session->client_addr, address);
-        strncpy(session->user_agent, user_agent, RG_SIZE(session->user_agent) - 1);
-        session->last_seen = GetMonotonicTime();
-        session->user = user;
-    }
-
+    // Build empty page
     http_JsonPageBuilder json(request.compression_type);
     json.Null();
     json.Finish(io);
 
     // Set session cookies
-    io->AddCookieHeader(thop_config.http.base_url, "session_key", session_key, true);
+    io->AddCookieHeader(thop_config.http.base_url, "session_key", session->session_key, true);
     io->AddCookieHeader(thop_config.http.base_url, "url_key", url_key, false);
     io->AddCookieHeader(thop_config.http.base_url, "username", user->name, false);
 }
