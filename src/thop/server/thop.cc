@@ -243,14 +243,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 #endif
 
     // Find user information
-    bool user_mismatch = false;
-    const User *user = CheckSessionUser(request, &user_mismatch);
+    const User *user = CheckSessionUser(request, io);
 
     // Send these headers whenever possible
     io->AddHeader("Referrer-Policy", "no-referrer");
-    if (user_mismatch) {
-        DeleteSessionCookies(io);
-    }
 
     // Handle server-side cache validation (ETag)
     {
