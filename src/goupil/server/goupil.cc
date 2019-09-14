@@ -289,7 +289,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
     // Find appropriate route
     Route *route = routes.Find(request.url);
-    if (!route) {
+    if (!route || !TestStr(route->method, request.method)) {
         http_ProduceErrorPage(404, io);
         return;
     }
