@@ -2496,7 +2496,10 @@ public:
     bool IsValid() const { return filename && !error; }
     bool IsEOF() const { return eof; }
 
-    Size Read(Size max_len, void *out_buf);
+    Size Read(Span<uint8_t> out_buf);
+    Size Read(Span<char> out_buf) { return Read(out_buf.CastAs<uint8_t>()); }
+    Size Read(Size max_len, void *out_buf) { return Read(MakeSpan((uint8_t *)out_buf, max_len)); }
+
     Size ReadAll(Size max_len, HeapArray<uint8_t> *out_buf);
     Size ReadAll(Size max_len, HeapArray<char> *out_buf)
         { return ReadAll(max_len, (HeapArray<uint8_t> *)out_buf); }
