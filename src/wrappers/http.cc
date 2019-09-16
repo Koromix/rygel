@@ -526,7 +526,7 @@ bool http_ProduceStaticAsset(Span<const uint8_t> data, CompressionType in_compre
 
 void http_JsonPageBuilder::Finish(http_IO *io)
 {
-    CompressionType compression_type = st.compression.type;
+    CompressionType compression_type = st.GetCompressionType();
 
     Flush();
     RG_ASSERT(st.Close());

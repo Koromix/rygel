@@ -108,24 +108,24 @@ bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test>
         goto corrupt_error;
 
     if (strncmp(bh.signature, PACK_SIGNATURE, RG_SIZE(bh.signature)) != 0) {
-        LogError("File '%1' does not have dspak signature", st.filename);
+        LogError("File '%1' does not have dspak signature", st.GetFileName());
         return false;
     }
     if (bh.version != PACK_VERSION) {
-        LogError("Cannot load '%1' (dspak version %2), expected version %3", st.filename,
+        LogError("Cannot load '%1' (dspak version %2), expected version %3", st.GetFileName(),
                  bh.version, PACK_VERSION);
         return false;
     }
     if (bh.endianness != (int8_t)RG_ARCH_ENDIANNESS) {
         LogError("File '%1' is not compatible with this platform (endianness issue)",
-                 st.filename);
+                 st.GetFileName());
         return false;
     }
     if (bh.stays_len < 0 || bh.diagnoses_len < 0 || bh.procedures_len < 0)
         goto corrupt_error;
 
     if (bh.stays_len > (RG_SIZE_MAX - start_stays_len)) {
-        LogError("Too much data to load in '%1'", st.filename);
+        LogError("Too much data to load in '%1'", st.GetFileName());
         return false;
     }
 
@@ -199,7 +199,7 @@ bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test>
     return true;
 
 corrupt_error:
-    LogError("Stay pack file '%1' appears to be corrupt or truncated", st.filename);
+    LogError("Stay pack file '%1' appears to be corrupt or truncated", st.GetFileName());
     return false;
 }
 
@@ -821,7 +821,7 @@ bool mco_StaySetBuilder::LoadAtih(StreamReader &st,
         while (reader.Next(&line)) {
             errors += !(this->*parse_func)(line, out_tests);
         }
-        if (reader.error)
+        if (!reader.IsValid())
             return false;
     }
     if (errors && set.stays.len == stays_len)
@@ -924,7 +924,7 @@ bool mco_StaySetBuilder::LoadFichComp(StreamReader &st, HashTable<int32_t, mco_T
                 } break;
             }
         }
-        if (reader.error)
+        if (!reader.IsValid())
             return false;
     }
     if (errors && errors == lines)
@@ -960,7 +960,7 @@ bool mco_StaySetBuilder::LoadFiles(Span<const char *const> filenames,
         }
 
         StreamReader st(filename, compression_type);
-        if (st.error) {
+        if (!st.IsValid()) {
             success = false;
             continue;
         }

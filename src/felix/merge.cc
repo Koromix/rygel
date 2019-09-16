@@ -25,11 +25,11 @@ bool LoadMergeRules(const char *filename, unsigned int flags, MergeRuleSet *out_
     RG_DEFER_NC(out_guard, len = out_set->rules.len) { out_set->rules.RemoveFrom(len); };
 
     StreamReader st(filename);
-    if (st.error)
+    if (!st.IsValid())
         return false;
 
     IniParser ini(&st);
-    ini.reader.PushLogHandler();
+    ini.PushLogHandler();
     RG_DEFER { PopLogHandler(); };
 
     bool valid = true;
@@ -118,7 +118,7 @@ bool LoadMergeRules(const char *filename, unsigned int flags, MergeRuleSet *out_
             }
         }
     }
-    if (ini.error || !valid)
+    if (!ini.IsValid() || !valid)
         return false;
 
     out_guard.Disable();
