@@ -57,11 +57,11 @@ bool http_Daemon::Start(const http_Config &config,
 #endif
 
     handle_func = func;
+    base_url = config.base_url;
     daemon = MHD_start_daemon(flags, (int16_t)config.port, nullptr, nullptr,
                               &http_Daemon::HandleRequest, this,
                               MHD_OPTION_NOTIFY_COMPLETED, &http_Daemon::RequestCompleted, this,
                               MHD_OPTION_ARRAY, mhd_options.data, MHD_OPTION_END);
-    this->base_url = config.base_url;
 
     async = new Async(config.async_threads - 1);
 

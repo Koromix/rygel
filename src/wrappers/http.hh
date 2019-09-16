@@ -32,7 +32,11 @@ class http_Daemon {
     Async *async = nullptr;
 
 public:
+    http_Daemon() {}
     ~http_Daemon() { Stop(); }
+
+    http_Daemon(const http_Daemon &other) = delete;
+    http_Daemon &operator=(const http_Daemon &other) = delete;
 
     bool Start(const http_Config &config,
                std::function<void(const http_RequestInfo &request, http_IO *io)> func);
@@ -98,6 +102,9 @@ public:
 
     http_IO();
     ~http_IO();
+
+    http_IO(const http_IO &other) = delete;
+    http_IO &operator=(const http_IO &other) = delete;
 
     void RunAsync(std::function<void(const http_RequestInfo &request, http_IO *io)> func);
 
