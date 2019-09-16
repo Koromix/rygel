@@ -121,12 +121,12 @@ static bool BuildJavaScriptMap3(Span<const PackSourceInfo> sources, StreamWriter
         {
             StreamReader reader(src.filename);
             while (!reader.IsEOF()) {
-                char buf[16 * 1024];
-                Size len = reader.Read(RG_SIZE(buf), &buf);
-                if (len < 0)
+                LocalArray<char, 16384> buf;
+                buf.len = reader.Read(buf.data);
+                if (buf.len < 0)
                     return false;
 
-                lines += CountNewLines(MakeSpan(buf, len));
+                lines += CountNewLines(buf);
             }
         }
 
@@ -159,7 +159,7 @@ static bool MergeAssetSourceFiles(Span<const PackSourceInfo> sources,
         StreamReader reader(src.filename);
         while (!reader.IsEOF()) {
             LocalArray<uint8_t, 16384> read_buf;
-            read_buf.len = reader.Read(read_buf.Available(), read_buf.data);
+            read_buf.len = reader.Read(read_buf.data);
             if (read_buf.len < 0)
                 return false;
 

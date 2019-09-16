@@ -2828,7 +2828,7 @@ void StreamReader::Close()
     eof = false;
 }
 
-Size StreamReader::Read(Size max_len, void *out_buf)
+Size StreamReader::Read(Span<uint8_t> out_buf)
 {
     if (RG_UNLIKELY(error))
         return -1;
@@ -2836,13 +2836,13 @@ Size StreamReader::Read(Size max_len, void *out_buf)
     Size read_len = 0;
     switch (compression.type) {
         case CompressionType::None: {
-            read_len = ReadRaw(max_len, out_buf);
+            read_len = ReadRaw(out_buf.len, out_buf.ptr);
             eof = source.eof;
         } break;
 
         case CompressionType::Gzip:
         case CompressionType::Zlib: {
-            read_len = Deflate(max_len, out_buf);
+            read_len = Deflate(out_buf.len, out_buf.ptr);
         } break;
     }
 
@@ -3589,20 +3589,20 @@ bool SpliceStream(StreamReader *reader, Size max_len, StreamWriter *writer)
     if (!reader->IsValid())
         return false;
 
-    Size len = 0;
+    Size total_len = 0;
     while (!reader->IsEOF()) {
-        char buf[16 * 1024];
-        Size read_len = reader->Read(RG_SIZE(buf), buf);
-        if (read_len < 0)
+        LocalArray<char, 16384> buf;
+        buf.len = reader->Read(buf.data);
+        if (buf.len < 0)
             return false;
 
-        len += read_len;
-        if (len > max_len) {
+        total_len += buf.len;
+        if (total_len > max_len) {
             LogError("File '%1' is too large (limit = %2)", reader->GetFileName(), FmtDiskSize(max_len));
             return false;
         }
 
-        if (!writer->Write(buf, read_len))
+        if (!writer->Write(buf))
             return false;
     }
 
