@@ -151,7 +151,7 @@ static bool BuildJavaScriptMap3(Span<const PackSourceInfo> sources, StreamWriter
 }
 
 static bool MergeAssetSourceFiles(Span<const PackSourceInfo> sources,
-                                  std::function<void(Span<const uint8_t> buf)> func)
+                                  FunctionRef<void(Span<const uint8_t> buf)> func)
 {
     for (const PackSourceInfo &src: sources) {
         func(Span<const char>(src.prefix).CastAs<const uint8_t>());
@@ -173,7 +173,7 @@ static bool MergeAssetSourceFiles(Span<const PackSourceInfo> sources,
 }
 
 static Size PackAsset(const PackAssetInfo &asset, CompressionType compression_type,
-                      std::function<void(Span<const uint8_t> buf)> func)
+                      FunctionRef<void(Span<const uint8_t> buf)> func)
 {
     HeapArray<uint8_t> compressed_buf;
     StreamWriter compressor(&compressed_buf, nullptr, compression_type);
@@ -227,7 +227,7 @@ static Size PackAsset(const PackAssetInfo &asset, CompressionType compression_ty
 }
 
 static Size PackSourceMap(const PackAssetInfo &asset, CompressionType compression_type,
-                          std::function<void(Span<const uint8_t> buf)> func)
+                          FunctionRef<void(Span<const uint8_t> buf)> func)
 {
     RG_ASSERT_DEBUG(!asset.transform_cmd);
 
