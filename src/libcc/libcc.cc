@@ -3247,7 +3247,7 @@ void LineReader::PushLogHandler()
 {
     RG::PushLogHandler([=](LogLevel level, const char *ctx, const char *msg) {
         StartConsoleLog(level);
-        Print(stderr, "%1%2(%3): %4", ctx, st->filename, line_number, msg);
+        Print(stderr, "%1%2(%3): %4", ctx, st->GetFileName(), line_number, msg);
         EndConsoleLog();
     });
 }
@@ -3280,7 +3280,6 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
     if (!InitCompressor(compression_type))
         return false;
 
-    open = true;
     error_guard.Disable();
     return true;
 }
@@ -3305,7 +3304,6 @@ bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compress
     if (!InitCompressor(compression_type))
         return false;
 
-    open = true;
     error_guard.Disable();
     return true;
 }
@@ -3331,7 +3329,6 @@ bool StreamWriter::Open(const char *filename, CompressionType compression_type)
     if (!InitCompressor(compression_type))
         return false;
 
-    open = true;
     error_guard.Disable();
     return true;
 }
@@ -3354,7 +3351,6 @@ bool StreamWriter::Open(std::function<bool(Span<const uint8_t>)> func, const cha
     if (!InitCompressor(compression_type))
         return false;
 
-    open = true;
     error_guard.Disable();
     return true;
 }
@@ -3363,7 +3359,7 @@ bool StreamWriter::Close()
 {
     bool success = !error;
 
-    if (open && !error) {
+    if (IsValid()) {
         switch (compression.type) {
             case CompressionType::None: {} break;
 
@@ -3416,7 +3412,6 @@ bool StreamWriter::Close()
     ReleaseResources();
 
     filename = nullptr;
-    open = false;
     error = false;
 
     return success;
@@ -3592,11 +3587,11 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
 
 bool SpliceStream(StreamReader *reader, Size max_len, StreamWriter *writer)
 {
-    if (reader->error)
+    if (!reader->IsValid())
         return false;
 
     Size len = 0;
-    while (!reader->eof) {
+    while (!reader->IsEOF()) {
         char buf[16 * 1024];
         Size read_len = reader->Read(RG_SIZE(buf), buf);
         if (read_len < 0)
@@ -3604,7 +3599,7 @@ bool SpliceStream(StreamReader *reader, Size max_len, StreamWriter *writer)
 
         len += read_len;
         if (len > max_len) {
-            LogError("File '%1' is too large (limit = %2)", reader->filename, FmtDiskSize(max_len));
+            LogError("File '%1' is too large (limit = %2)", reader->GetFileName(), FmtDiskSize(max_len));
             return false;
         }
 
@@ -3639,18 +3634,18 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
             // Ignore this line (empty or comment)
         } else if (line[0] == '[') {
             if (line.len < 2 || line[line.len - 1] != ']') {
-                LogError("%1(%2): Malformed section line", reader.st->filename, reader.line_number);
+                LogError("%1(%2): Malformed section line", reader.GetFileName(), reader.GetLineNumber());
                 return LineType::Exit;
             }
 
             Span<const char> section = TrimStr(line.Take(1, line.len - 2));
             if (!section.len) {
-                LogError("%1(%2): Empty section name", reader.st->filename, reader.line_number);
+                LogError("%1(%2): Empty section name", reader.GetFileName(), reader.GetLineNumber());
                 return LineType::Exit;
             }
             if (!std::all_of(section.begin(), section.end(), IsAsciiIdChar)) {
                 LogError("%1(%2): Section names can only contain alphanumeric characters, '_', '-', '.' or ' '",
-                         reader.st->filename, reader.line_number);
+                         reader.GetFileName(), reader.GetLineNumber());
                 return LineType::Exit;
             }
 
@@ -3663,12 +3658,12 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
             Span<char> value;
             Span<const char> key = TrimStr(SplitStr(line, '=', &value));
             if (!key.len || key.end() == line.end()) {
-                LogError("%1(%2): Malformed key=value", reader.st->filename, reader.line_number);
+                LogError("%1(%2): Malformed key=value", reader.GetFileName(), reader.GetLineNumber());
                 return LineType::Exit;
             }
             if (!std::all_of(key.begin(), key.end(), IsAsciiIdChar)) {
                 LogError("%1(%2): Key names can only contain alphanumeric characters, '_', '-' or '.'",
-                         reader.st->filename, reader.line_number);
+                         reader.GetFileName(), reader.GetLineNumber());
                 return LineType::Exit;
             }
             value = TrimStr(value);
@@ -3682,7 +3677,7 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
             return LineType::KeyValue;
         }
     }
-    if (reader.error)
+    if (!reader.IsValid())
         return LineType::Exit;
 
     eof = true;
@@ -3813,7 +3808,7 @@ Span<const uint8_t> PatchAssetVariables(AssetInfo &asset, Allocator *alloc,
             writer.Write(c);
         }
     }
-    RG_ASSERT(!reader.error);
+    RG_ASSERT(reader.IsValid());
 
     RG_ASSERT(writer.Close());
     return buf.Leak();

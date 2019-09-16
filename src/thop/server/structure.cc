@@ -12,7 +12,7 @@ bool StructureSetBuilder::LoadIni(StreamReader &st)
     RG_DEFER_NC(out_guard, len = set.structures.len) { set.structures.RemoveFrom(len); };
 
     IniParser ini(&st);
-    ini.reader.PushLogHandler();
+    ini.PushLogHandler();
     RG_DEFER { PopLogHandler(); };
 
     bool valid = true;
@@ -66,7 +66,7 @@ bool StructureSetBuilder::LoadIni(StreamReader &st)
             }
         }
     }
-    if (ini.error || !valid)
+    if (!ini.IsValid() || !valid)
         return false;
 
     out_guard.Disable();
@@ -92,7 +92,7 @@ bool StructureSetBuilder::LoadFiles(Span<const char *const> filenames)
         }
 
         StreamReader st(filename, compression_type);
-        if (st.error) {
+        if (!st.IsValid()) {
             success = false;
             continue;
         }

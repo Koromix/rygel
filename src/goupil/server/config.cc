@@ -20,10 +20,10 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
     };
 
     Span<const char> root_directory;
-    SplitStrReverseAny(st.filename, RG_PATH_SEPARATORS, &root_directory);
+    SplitStrReverseAny(st.GetFileName(), RG_PATH_SEPARATORS, &root_directory);
 
     IniParser ini(&st);
-    ini.reader.PushLogHandler();
+    ini.PushLogHandler();
     RG_DEFER { PopLogHandler(); };
 
     bool valid = true;
@@ -78,7 +78,7 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
             }
         }
     }
-    if (ini.error || !valid)
+    if (!ini.IsValid() || !valid)
         return false;
 
     out_guard.Disable();
@@ -104,7 +104,7 @@ bool ConfigBuilder::LoadFiles(Span<const char *const> filenames)
         }
 
         StreamReader st(filename, compression_type);
-        if (st.error) {
+        if (!st.IsValid()) {
             success = false;
             continue;
         }

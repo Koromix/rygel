@@ -120,7 +120,7 @@ static bool BuildJavaScriptMap3(Span<const PackSourceInfo> sources, StreamWriter
         Size lines = 0;
         {
             StreamReader reader(src.filename);
-            while (!reader.eof) {
+            while (!reader.IsEOF()) {
                 char buf[16 * 1024];
                 Size len = reader.Read(RG_SIZE(buf), &buf);
                 if (len < 0)
@@ -157,7 +157,7 @@ static bool MergeAssetSourceFiles(Span<const PackSourceInfo> sources,
         func(Span<const char>(src.prefix).CastAs<const uint8_t>());
 
         StreamReader reader(src.filename);
-        while (!reader.eof) {
+        while (!reader.IsEOF()) {
             LocalArray<uint8_t, 16384> read_buf;
             read_buf.len = reader.Read(read_buf.Available(), read_buf.data);
             if (read_buf.len < 0)
@@ -285,7 +285,7 @@ bool PackToC(Span<const PackAssetInfo> assets, const char *output_path,
     } else {
         st.Open(stdout, "<stdout>");
     }
-    if (st.error)
+    if (!st.IsValid())
         return false;
 
     PrintLn(&st, CodePrefix);

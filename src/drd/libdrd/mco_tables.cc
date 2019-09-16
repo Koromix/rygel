@@ -1172,7 +1172,7 @@ static bool ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &
         IniParser ini(&st);
         bool valid = true;
 
-        ini.reader.PushLogHandler();
+        ini.PushLogHandler();
         RG_DEFER { PopLogHandler(); };
 
         IniProperty prop;
@@ -1276,7 +1276,7 @@ static bool ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &
                 out_ghs_prices->Append(price_info);
             }
         }
-        if (ini.error || !valid)
+        if (!ini.IsValid() || !valid)
             return false;
 
         if (ghs_coefficient == 0.0) {
@@ -1307,7 +1307,7 @@ bool mco_TableSetBuilder::LoadTab(StreamReader &st)
         return false;
 
     Size start_len = set.tables.len;
-    if (!ParseTableHeaders(raw_buf, st.filename, &set.str_alloc, &set.tables))
+    if (!ParseTableHeaders(raw_buf, st.GetFileName(), &set.str_alloc, &set.tables))
         return false;
 
     Span<uint8_t> raw_data = raw_buf.Leak();
@@ -1334,10 +1334,10 @@ bool mco_TableSetBuilder::LoadPrices(StreamReader &st)
     mco_TableInfo table_info = {};
     TableLoadInfo load_info = {};
     {
-        StreamReader mem_st(raw_buf, st.filename);
+        StreamReader mem_st(raw_buf, st.GetFileName());
         IniParser ini(&mem_st);
 
-        ini.reader.PushLogHandler();
+        ini.PushLogHandler();
         RG_DEFER { PopLogHandler(); };
 
         IniProperty prop;
@@ -1366,7 +1366,7 @@ bool mco_TableSetBuilder::LoadPrices(StreamReader &st)
                 }
             }
         }
-        if (ini.error || !valid)
+        if (!ini.IsValid() || !valid)
             return false;
 
         if (!table_info.limit_dates[0].value || !(int)table_info.type) {
@@ -1384,7 +1384,7 @@ bool mco_TableSetBuilder::LoadPrices(StreamReader &st)
     load_info.prev_index_idx = -1;
     table_loads.Append(load_info);
 
-    table_info.filename = DuplicateString(st.filename, &set.str_alloc).ptr;
+    table_info.filename = DuplicateString(st.GetFileName(), &set.str_alloc).ptr;
     set.tables.Append(table_info);
 
     return true;
@@ -1411,7 +1411,7 @@ bool mco_TableSetBuilder::LoadFiles(Span<const char *const> filenames)
         }
 
         StreamReader st(filename, compression_type);
-        if (st.error) {
+        if (!st.IsValid()) {
             success = false;
             continue;
         }

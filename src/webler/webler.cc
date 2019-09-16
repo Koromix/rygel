@@ -74,7 +74,7 @@ static bool RenderPageContent(PageData *page, Allocator *alloc)
             bufgrow(ib, ib->size + 1024);
         }
 
-        if (st.error)
+        if (!st.IsValid())
             return false;
     }
 

@@ -106,7 +106,7 @@ bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader &st)
             }
         }
     }
-    if (reader.error || !valid)
+    if (!reader.IsValid() || !valid)
         return false;
 
     out_guard.Disable();
@@ -123,7 +123,7 @@ bool mco_AuthorizationSetBuilder::LoadIni(StreamReader &st)
 
     IniParser ini(&st);
 
-    ini.reader.PushLogHandler();
+    ini.PushLogHandler();
     RG_DEFER { PopLogHandler(); };
 
     bool valid = true;
@@ -180,7 +180,7 @@ bool mco_AuthorizationSetBuilder::LoadIni(StreamReader &st)
             authorizations->Append(auth);
         }
     }
-    if (ini.error || !valid)
+    if (!ini.IsValid() || !valid)
         return false;
 
     out_guard.Disable();
@@ -208,7 +208,7 @@ bool mco_AuthorizationSetBuilder::LoadFiles(Span<const char *const> filenames)
         }
 
         StreamReader st(filename, compression_type);
-        if (st.error) {
+        if (!st.IsValid()) {
             success = false;
             continue;
         }

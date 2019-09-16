@@ -2399,7 +2399,6 @@ static const char *const CompressionTypeNames[] = {
 };
 
 class StreamReader {
-public:
     enum class SourceType {
         Memory,
         File,
@@ -2443,6 +2442,7 @@ public:
     bool eof;
     bool error;
 
+public:
     StreamReader() { Close(); }
     StreamReader(Span<const uint8_t> buf, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None)
@@ -2469,6 +2469,11 @@ public:
     bool Open(std::function<Size(Span<uint8_t>)> func, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
     void Close();
+
+    const char *GetFileName() const { return filename; }
+    CompressionType GetCompressionType() const { return compression.type; }
+    bool IsValid() const { return filename && !error; }
+    bool IsEOF() const { return eof; }
 
     Size Read(Size max_len, void *out_buf);
     Size ReadAll(Size max_len, HeapArray<uint8_t> *out_buf);
@@ -2512,18 +2517,23 @@ class LineReader {
     HeapArray<char> buf;
     Span<char> view = {};
 
-public:
-    StreamReader *const st;
+    StreamReader *st;
     bool eof = false;
     bool error = false;
 
     Span<char> line = {};
     Size line_number = 0;
 
+public:
     LineReader(StreamReader *st) : st(st) {}
 
     LineReader(const LineReader &other) = delete;
     LineReader &operator=(const LineReader &other) = delete;
+
+    const char *GetFileName() const { return st->GetFileName(); }
+    Size GetLineNumber() const { return line_number; }
+    bool IsValid() const { return !error; }
+    bool IsEOF() const { return eof; }
 
     bool Next(Span<char> *out_line);
     bool Next(Span<const char> *out_line) { return Next((Span<char> *)out_line); }
@@ -2532,7 +2542,6 @@ public:
 };
 
 class StreamWriter {
-public:
     enum class DestinationType {
         Memory,
         File,
@@ -2564,9 +2573,9 @@ public:
         } u;
     } compression;
 
-    bool open = false;
     bool error = false;
 
+public:
     StreamWriter() { Close(); }
     StreamWriter(HeapArray<uint8_t> *mem, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None)
@@ -2593,6 +2602,10 @@ public:
     bool Open(std::function<bool(Span<const uint8_t>)> func, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
     bool Close();
+
+    const char *GetFileName() const { return filename; }
+    CompressionType GetCompressionType() const { return compression.type; }
+    bool IsValid() const { return filename && !error; }
 
     bool Write(Span<const uint8_t> buf);
     bool Write(Span<const char> buf) { return Write(buf.CastAs<const uint8_t>()); }
@@ -3398,18 +3411,24 @@ class IniParser {
         Exit
     };
 
-public:
     LineReader reader;
     bool eof = false;
     bool error = false;
 
+public:
     IniParser(StreamReader *st) : reader(st) {}
 
     IniParser(const IniParser &other) = delete;
     IniParser &operator=(const IniParser &other) = delete;
 
+    const char *GetFileName() const { return reader.GetFileName(); }
+    bool IsValid() const { return !error; }
+    bool IsEOF() const { return eof; }
+
     bool Next(IniProperty *out_prop);
     bool NextInSection(IniProperty *out_prop);
+
+    void PushLogHandler() { reader.PushLogHandler(); }
 
 private:
     LineType FindNextLine(IniProperty *out_prop);
