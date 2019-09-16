@@ -1338,7 +1338,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
                 (find_data.cFileName[0] == '.' && find_data.cFileName[1] == '.' && !find_data.cFileName[2]))
             continue;
 
-        if (RG_UNLIKELY(++count > max_files && max_files >= 0)) {
+        if (RG_UNLIKELY(count++ >= max_files && max_files >= 0)) {
             LogError("Partial enumation of directory '%1'", dirname);
             return EnumStatus::Partial;
         }
@@ -1414,7 +1414,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
             continue;
 
         if (!filter || !fnmatch(filter, dent->d_name, FNM_PERIOD)) {
-            if (RG_UNLIKELY(++count > max_files && max_files >= 0)) {
+            if (RG_UNLIKELY(count++ >= max_files && max_files >= 0)) {
                 LogError("Partial enumation of directory '%1'", dirname);
                 return EnumStatus::Partial;
             }
@@ -2877,11 +2877,12 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
         Size read_len, total_len = 0;
         out_buf->Grow(Megabytes(1));
         while ((read_len = Read(out_buf->Available(), out_buf->end())) > 0) {
-            total_len += read_len;
-            if (total_len > max_len) {
+            if (RG_UNLIKELY(read_len > max_len - total_len)) {
                 LogError("File '%1' is too large (limit = %2)", filename, FmtDiskSize(max_len));
                 return -1;
             }
+            total_len += read_len;
+
             out_buf->len += read_len;
             out_buf->Grow(Megabytes(1));
         }
@@ -3596,11 +3597,11 @@ bool SpliceStream(StreamReader *reader, Size max_len, StreamWriter *writer)
         if (buf.len < 0)
             return false;
 
-        total_len += buf.len;
-        if (total_len > max_len) {
+        if (RG_UNLIKELY(max_len >= 0 && buf.len > max_len - total_len)) {
             LogError("File '%1' is too large (limit = %2)", reader->GetFileName(), FmtDiskSize(max_len));
             return false;
         }
+        total_len += buf.len;
 
         if (!writer->Write(buf))
             return false;
