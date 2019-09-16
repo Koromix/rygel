@@ -48,12 +48,12 @@ public:
     }
     void SetGhmRoot(mco_GhmRootCode ghm_root) { this->ghm_root = ghm_root; }
 
-    bool Run(std::function<void(Span<const mco_Result>, Span<const mco_Result>)> func);
+    bool Run(FunctionRef<void(Span<const mco_Result>, Span<const mco_Result>)> func);
 
 private:
-    bool RunFilter(std::function<void(Span<const mco_Result>, Span<const mco_Result>)> func);
-    bool RunIndex(std::function<void(Span<const mco_Result>, Span<const mco_Result>)> func);
-    bool RunDirect(std::function<void(Span<const mco_Result>, Span<const mco_Result>)> func);
+    bool RunFilter(FunctionRef<void(Span<const mco_Result>, Span<const mco_Result>)> func);
+    bool RunIndex(FunctionRef<void(Span<const mco_Result>, Span<const mco_Result>)> func);
+    bool RunDirect(FunctionRef<void(Span<const mco_Result>, Span<const mco_Result>)> func);
 };
 
 void ProduceMcoSettings(const http_RequestInfo &request, const User *user, http_IO *io);

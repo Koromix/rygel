@@ -1148,10 +1148,10 @@ void EndConsoleLog()
     fputs("\n", stderr);
 }
 
-void PushLogHandler(std::function<LogHandlerFunc> handler)
+void PushLogHandler(const std::function<LogHandlerFunc> &func)
 {
     RG_ASSERT_DEBUG(log_handlers_len < RG_LEN(log_handlers));
-    log_handlers[log_handlers_len++] = new std::function<LogHandlerFunc>(handler);
+    log_handlers[log_handlers_len++] = new std::function<LogHandlerFunc>(func);
 }
 
 void PopLogHandler()
@@ -1289,7 +1289,7 @@ bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
 }
 
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
-                              std::function<bool(const char *, FileType)> func)
+                              FunctionRef<bool(const char *, FileType)> func)
 {
     if (filter) {
         RG_ASSERT_DEBUG(!strpbrk(filter, RG_PATH_SEPARATORS));
@@ -1397,7 +1397,7 @@ bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
 }
 
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
-                              std::function<bool(const char *, FileType)> func)
+                              FunctionRef<bool(const char *, FileType)> func)
 {
     DIR *dirp = opendir(dirname);
     if (!dirp) {
@@ -1959,7 +1959,7 @@ static bool CreateOverlappedPipe(bool overlap0, bool overlap1, HANDLE *out_h0, H
 }
 
 bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
-                        std::function<void(Span<uint8_t> buf)> out_func, int *out_code)
+                        FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code)
 {
     STARTUPINFOW startup_info = {};
 
@@ -2171,7 +2171,7 @@ static void CloseDescriptorSafe(int *fd_ptr)
 }
 
 bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
-                        std::function<void(Span<uint8_t> buf)> out_func, int *out_code)
+                        FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code)
 {
     // Create read and write pipes
     int in_pfd[2] = {-1, -1};
@@ -2793,8 +2793,7 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
     return true;
 }
 
-
-bool StreamReader::Open(std::function<Size(Span<uint8_t>)> func, const char *filename,
+bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const char *filename,
                         CompressionType compression_type)
 {
     RG_ASSERT(!this->filename);
@@ -3333,7 +3332,7 @@ bool StreamWriter::Open(const char *filename, CompressionType compression_type)
     return true;
 }
 
-bool StreamWriter::Open(std::function<bool(Span<const uint8_t>)> func, const char *filename,
+bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, const char *filename,
                         CompressionType compression_type)
 {
     RG_ASSERT(!this->filename);
@@ -3767,7 +3766,7 @@ AssetLoadStatus AssetSet::LoadFromLibrary(const char *filename, const char *var_
 // This won't win any beauty or speed contest (especially when writing
 // a compressed stream) but whatever.
 Span<const uint8_t> PatchAssetVariables(AssetInfo &asset, Allocator *alloc,
-                                        std::function<bool(const char *, StreamWriter *)> func)
+                                        FunctionRef<bool(const char *, StreamWriter *)> func)
 {
     HeapArray<uint8_t> buf;
     buf.allocator = alloc;

@@ -268,7 +268,7 @@ static Span<const mco_Result *> GetIndexRange(Span<const mco_Result *> index,
     return MakeSpan(start, end);
 }
 
-bool McoResultProvider::Run(std::function<void(Span<const mco_Result>, Span<const mco_Result>)> func)
+bool McoResultProvider::Run(FunctionRef<void(Span<const mco_Result>, Span<const mco_Result>)> func)
 {
     RG_ASSERT_DEBUG(min_date.IsValid() && max_date.IsValid());
 
@@ -281,7 +281,7 @@ bool McoResultProvider::Run(std::function<void(Span<const mco_Result>, Span<cons
     }
 }
 
-bool McoResultProvider::RunFilter(std::function<void(Span<const mco_Result>, Span<const mco_Result>)> func)
+bool McoResultProvider::RunFilter(FunctionRef<void(Span<const mco_Result>, Span<const mco_Result>)> func)
 {
     RG_ASSERT_DEBUG(filter);
 
@@ -367,7 +367,7 @@ bool McoResultProvider::RunFilter(std::function<void(Span<const mco_Result>, Spa
     return true;
 }
 
-bool McoResultProvider::RunIndex(std::function<void(Span<const mco_Result>, Span<const mco_Result>)> func)
+bool McoResultProvider::RunIndex(FunctionRef<void(Span<const mco_Result>, Span<const mco_Result>)> func)
 {
     RG_ASSERT_DEBUG(ghm_root.IsValid());
 
@@ -399,7 +399,7 @@ bool McoResultProvider::RunIndex(std::function<void(Span<const mco_Result>, Span
     return true;
 }
 
-bool McoResultProvider::RunDirect(std::function<void(Span<const mco_Result>, Span<const mco_Result>)> func)
+bool McoResultProvider::RunDirect(FunctionRef<void(Span<const mco_Result>, Span<const mco_Result>)> func)
 {
     RG_ASSERT_DEBUG(!ghm_root.IsValid());
 

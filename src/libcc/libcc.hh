@@ -440,6 +440,34 @@ DeferGuard<Fun> operator+(DeferGuardHelper, Fun &&f)
 #define RG_DEFER_NC(Name, ...) \
     auto Name = RG::DeferGuardHelper() + [&, __VA_ARGS__]()
 
+// Copied the code for FunctionRef from LLVM
+template<typename Fn> class FunctionRef;
+template<typename Ret, typename ...Params>
+class FunctionRef<Ret(Params...)> {
+    Ret (*callback)(intptr_t callable, Params ...params) = nullptr;
+    intptr_t callable;
+
+    template<typename Callable>
+    static Ret callback_fn(intptr_t callable, Params ...params)
+        { return (*reinterpret_cast<Callable*>(callable))(std::forward<Params>(params)...); }
+
+public:
+    FunctionRef() = default;
+    FunctionRef(std::nullptr_t) {}
+
+    template <typename Callable>
+    FunctionRef(Callable &&callable,
+                typename std::enable_if<!std::is_same<typename std::remove_reference<Callable>::type,
+                                        FunctionRef>::value>::type * = nullptr)
+      : callback(callback_fn<typename std::remove_reference<Callable>::type>),
+        callable(reinterpret_cast<intptr_t>(&callable)) {}
+
+    Ret operator()(Params ...params) const
+        { return callback(callable, std::forward<Params>(params)...); }
+
+    operator bool() const { return callback; }
+};
+
 #define RG_INIT(Name) \
     class RG_UNIQUE_ID(InitHelper) { \
     public: \
@@ -2453,7 +2481,7 @@ public:
     StreamReader(const char *filename,
                  CompressionType compression_type = CompressionType::None)
         : StreamReader() { Open(filename, compression_type); }
-    StreamReader(std::function<Size(Span<uint8_t>)> func, const char *filename = nullptr,
+    StreamReader(const std::function<Size(Span<uint8_t>)> &func, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None)
         : StreamReader() { Open(func, filename, compression_type); }
     ~StreamReader() { Close(); }
@@ -2466,7 +2494,7 @@ public:
     bool Open(FILE *fp, const char *filename,
               CompressionType compression_type = CompressionType::None);
     bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
-    bool Open(std::function<Size(Span<uint8_t>)> func, const char *filename = nullptr,
+    bool Open(const std::function<Size(Span<uint8_t>)> &func, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
     void Close();
 
@@ -2586,7 +2614,7 @@ public:
     StreamWriter(const char *filename,
                  CompressionType compression_type = CompressionType::None)
         : StreamWriter() { Open(filename, compression_type); }
-    StreamWriter(std::function<bool(Span<const uint8_t>)> func, const char *filename = nullptr,
+    StreamWriter(const std::function<bool(Span<const uint8_t>)> &func, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None)
         : StreamWriter() { Open(func, filename, compression_type); }
     ~StreamWriter() { Close(); }
@@ -2599,7 +2627,7 @@ public:
     bool Open(FILE *fp, const char *filename,
               CompressionType compression_type = CompressionType::None);
     bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
-    bool Open(std::function<bool(Span<const uint8_t>)> func, const char *filename = nullptr,
+    bool Open(const std::function<bool(Span<const uint8_t>)> &func, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
     bool Close();
 
@@ -2865,7 +2893,7 @@ void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg);
 void StartConsoleLog(LogLevel level);
 void EndConsoleLog();
 
-void PushLogHandler(std::function<LogHandlerFunc> handler);
+void PushLogHandler(const std::function<LogHandlerFunc> &func);
 void PopLogHandler();
 
 const char *GetLastLogError();
@@ -3295,7 +3323,7 @@ static inline bool StatFile(const char *filename, FileInfo *out_info)
     { return StatFile(filename, true, out_info); }
 
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
-                              std::function<bool(const char *, FileType)> func);
+                              FunctionRef<bool(const char *, FileType)> func);
 bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Size max_files,
                     Allocator *str_alloc, HeapArray<const char *> *out_files);
 
@@ -3322,11 +3350,11 @@ enum class OpenFileMode {
 FILE *OpenFile(const char *path, OpenFileMode mode);
 
 bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
-                        std::function<void(Span<uint8_t> buf)> out_func, int *out_code);
+                        FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code);
 bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf, Size max_len,
                         HeapArray<uint8_t> *out_buf, int *out_code);
 static inline bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_buf,
-                                      std::function<void(Span<char> buf)> out_func, int *out_code)
+                                      FunctionRef<void(Span<char> buf)> out_func, int *out_code)
 {
     return ExecuteCommandLine(cmd_line, in_buf.CastAs<const uint8_t>(),
                               [&](Span<uint8_t> buf) { out_func(buf.CastAs<char>()); }, out_code);
@@ -3463,7 +3491,7 @@ struct AssetSet {
 };
 
 Span<const uint8_t> PatchAssetVariables(AssetInfo &asset, Allocator *alloc,
-                                        std::function<bool(const char *, StreamWriter *)> func);
+                                        FunctionRef<bool(const char *, StreamWriter *)> func);
 
 // ------------------------------------------------------------------------
 // Options
