@@ -117,11 +117,13 @@ public:
     void AttachResponse(int code, MHD_Response *new_response);
 
     // Blocking, do in async context
-    Size Read(Size max_len, void *out_buf);
+    bool OpenForRead(StreamReader *out_st);
     bool ReadPostValues(Allocator *alloc,
                         HashMap<const char *, const char *> *out_values);
 
 private:
+    Size Read(Span<uint8_t> out_buf);
+
     // Call with mutex locked
     void Suspend();
     void Resume();

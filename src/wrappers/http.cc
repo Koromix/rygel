@@ -314,31 +314,11 @@ void http_IO::AttachResponse(int new_code, MHD_Response *new_response)
     response = new_response;
 }
 
-Size http_IO::Read(Size max_len, void *out_buf)
+bool http_IO::OpenForRead(StreamReader *out_st)
 {
     RG_ASSERT(state != State::Sync);
 
-    std::unique_lock<std::mutex> lock(mutex);
-
-    // Set read buffer
-    read_buf = MakeSpan((uint8_t *)out_buf, max_len);
-    read_len = 0;
-    RG_DEFER {
-        read_buf = {};
-        read_len = 0;
-    };
-
-    // Wait for libmicrohttpd
-    while (state == State::Async && !read_len && !read_eof) {
-        Resume();
-        read_cv.wait(lock);
-    }
-    if (state == State::Zombie) {
-        LogError("Connection aborted");
-        return -1;
-    }
-
-    return read_len;
+    return out_st->Open([this](Span<uint8_t> out_buf) { return Read(out_buf); }, "<http>");
 }
 
 bool http_IO::ReadPostValues(Allocator *alloc,
@@ -377,22 +357,58 @@ bool http_IO::ReadPostValues(Allocator *alloc,
     RG_DEFER { MHD_destroy_post_processor(pp); };
 
     // Parse available upload data
-    for (;;) {
-        uint8_t buf[1024];
-        Size len = Read(RG_SIZE(buf), buf);
-        if (len < 0) {
-            return false;
-        } else if (!len) {
-            break;
-        }
+    {
+        Size total_len = 0;
+        for (;;) {
+            LocalArray<uint8_t, 1024> buf;
+            buf.len = Read(buf.data);
+            if (buf.len < 0) {
+                return false;
+            } else if (!buf.len) {
+                break;
+            }
 
-        if (MHD_post_process(pp, (const char *)buf, (size_t)len) != MHD_YES) {
-            LogError("Failed to parse POST data");
-            return false;
+            if (RG_UNLIKELY(buf.len > Kibibytes(32) - total_len)) {
+                LogError("POST body is too long (max: %1)", FmtMemSize(buf.len));
+                return false;
+            }
+            total_len += buf.len;
+
+            if (MHD_post_process(pp, (const char *)buf.data, (size_t)buf.len) != MHD_YES) {
+                LogError("Failed to parse POST data");
+                return false;
+            }
         }
     }
 
     return true;
+}
+
+Size http_IO::Read(Span<uint8_t> out_buf)
+{
+    RG_ASSERT_DEBUG(state != State::Sync);
+
+    std::unique_lock<std::mutex> lock(mutex);
+
+    // Set read buffer
+    read_buf = out_buf;
+    read_len = 0;
+    RG_DEFER {
+        read_buf = {};
+        read_len = 0;
+    };
+
+    // Wait for libmicrohttpd
+    while (state == State::Async && !read_len && !read_eof) {
+        Resume();
+        read_cv.wait(lock);
+    }
+    if (state == State::Zombie) {
+        LogError("Connection aborted");
+        return -1;
+    }
+
+    return read_len;
 }
 
 void http_IO::Suspend()
