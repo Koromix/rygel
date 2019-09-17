@@ -1676,9 +1676,10 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                                                           *table_info, &extensions);
 
                     for (const ProcedureExtensionInfo &ext_info: extensions) {
-                        if (ext_info.extension >= 32) {
-                            LogError("Procedure extension value %1 > 31 cannot be used (%2)",
-                                     ext_info.extension, ext_info.proc);
+                        if (ext_info.extension >= RG_SIZE(mco_ProcedureInfo::extensions) * 8) {
+                            LogError("Procedure %1 extension value %2 > %3 cannot be used",
+                                     ext_info.proc, ext_info.extension,
+                                     RG_SIZE(mco_ProcedureInfo::extensions) * 8 - 1);
                             continue;
                         }
 
