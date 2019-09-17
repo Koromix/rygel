@@ -61,7 +61,21 @@ static void AppendGccObjectArguments(const char *src_filename, BuildMode build_m
 }
 
 #ifdef _WIN32
-static bool MakeTemporaryFile(Span<char> out_filename)
+// FIXME: Response files should be handled further down the chain in a
+// clean way, probably in RunBuildCommands().
+
+static std::mutex rsp_files_mutex;
+static BlockAllocator rsp_files_alloc;
+static HeapArray<const char *> rsp_files;
+
+RG_EXIT(DeleteResponseFiles)
+{
+    for (const char *filename: rsp_files) {
+        unlink(filename);
+    }
+}
+
+static const char *MakeTemporaryFile()
 {
     WCHAR temp_path_w[1024];
     WCHAR temp_filename_w[1024];
@@ -70,15 +84,31 @@ static bool MakeTemporaryFile(Span<char> out_filename)
     if (!GetTempFileNameW(temp_path_w, L"fxb", 0, temp_filename_w))
         goto fail;
 
-    if (!WideCharToMultiByte(CP_UTF8, 0, temp_filename_w, -1,
-                             out_filename.ptr, out_filename.len, nullptr, nullptr))
-        goto fail;
+    // Convert to UTF-8
+    char *filename;
+    {
+        int size = WideCharToMultiByte(CP_UTF8, 0, temp_filename_w, -1, nullptr, 0,
+                                       nullptr, nullptr);
+        if (!size)
+            goto fail;
 
-    return true;
+        filename = (char *)Allocator::Allocate(&rsp_files_alloc, size);
+        if (!WideCharToMultiByte(CP_UTF8, 0, temp_filename_w, -1,
+                                 filename, size, nullptr, nullptr))
+            goto fail;
+    }
+
+    // Add to cleanup list
+    {
+        std::lock_guard<std::mutex> lock(rsp_files_mutex);
+        rsp_files.Append(filename);
+    }
+
+    return filename;
 
 fail:
     LogError("Failed to create temporary filename");
-    return false;
+    return nullptr;
 }
 #endif
 
@@ -110,8 +140,8 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames, BuildM
     }
 
     if (out_buf->len - rsp_offset >= 4096) {
-        char rsp_filename[4096];
-        if (!MakeTemporaryFile(rsp_filename))
+        const char *rsp_filename = MakeTemporaryFile();
+        if (!rsp_filename)
             return false;
 
         // Apparently backslash characters needs to be escaped in response files,
