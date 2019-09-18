@@ -21,7 +21,7 @@ let mco_tree = (function() {
 
         // Errors
         if (route.date !== null && indexes.length && main_index < 0)
-            thop.error('Date incorrecte');
+            log.error('Date incorrecte');
 
         // Refresh settings
         queryAll('#opt_index').removeClass('hide');

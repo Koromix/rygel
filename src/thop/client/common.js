@@ -10,7 +10,6 @@ let data = (function() {
     let self = this;
 
     this.busyHandler = null;
-    this.errorHandler = null;
 
     let queue = new Set();
     let busy = 0;
@@ -108,8 +107,7 @@ let data = (function() {
                 }
             }
 
-            if (self.errorHandler)
-                self.errorHandler(response);
+            log.error(response);
             if (fail)
                 fail(response);
         }

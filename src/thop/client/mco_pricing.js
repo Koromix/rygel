@@ -32,21 +32,21 @@ let mco_pricing = (function() {
 
         // Errors
         if (route.view !== 'chart' && route.view !== 'table')
-            thop.error('Mode d\'affichage incorrect');
+            log.error('Mode d\'affichage incorrect');
         if (route.date && indexes.length && main_index < 0)
-            thop.error('Date incorrecte');
+            log.error('Date incorrecte');
         if (route.diff && indexes.length && diff_index < 0)
-            thop.error('Date de comparaison incorrecte');
+            log.error('Date de comparaison incorrecte');
         if (!['public', 'private'].includes(route.sector))
-            thop.error('Secteur incorrect');
+            log.error('Secteur incorrect');
         if (route.ghm_root !== null && ghm_roots.length) {
             if (!ghm_roots_map[route.ghm_root]) {
-                thop.error('Racine de GHM inconnue');
+                log.error('Racine de GHM inconnue');
             } else {
                 if (!checkIndexGhmRoot(indexes, main_index, route.sector, route.ghm_root))
-                    thop.error('Cette racine n\'existe pas dans la version \'' + indexes[main_index].begin_date + '\'');
+                    log.error('Cette racine n\'existe pas dans la version \'' + indexes[main_index].begin_date + '\'');
                 if (!checkIndexGhmRoot(indexes, diff_index, route.sector, route.ghm_root))
-                    thop.error('Cette racine n\'existe pas dans la version \'' + indexes[diff_index].begin_date + '\'');
+                    log.error('Cette racine n\'existe pas dans la version \'' + indexes[diff_index].begin_date + '\'');
             }
         }
 
