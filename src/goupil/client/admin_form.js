@@ -388,13 +388,13 @@ let admin_form = (function() {
         }
 
         // Load record (if needed)
-        if (!args.hasOwnProperty('id') && asset.table !== current_record.table)
+        if (!args.hasOwnProperty('id') && asset.key !== current_record.table)
             current_record = {};
         if (args.hasOwnProperty('id') || current_record.id == null) {
             if (args.id == null) {
-                current_record = g_records.create(asset.table);
+                current_record = g_records.create(asset.key);
             } else if (args.id !== current_record.id) {
-                current_record = await g_records.load(asset.table, args.id);
+                current_record = await g_records.load(asset.key, args.id);
             }
 
             executor.setData(current_record.values);
@@ -406,7 +406,7 @@ let admin_form = (function() {
         renderModes();
         renderForm();
         syncEditor();
-        renderRecords(asset.table);
+        renderRecords(asset.key);
     };
 
     return this;
