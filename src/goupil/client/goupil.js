@@ -131,23 +131,30 @@ let goupil = (function() {
         document.addEventListener('click', closePopup);
     }
 
-    function updateLogEntry(entry) {
+    function updateLogEntry(action, entry) {
         if (entry.type !== 'debug') {
-            if (entry.new) {
-                log_entries.unshift(entry);
-            } else if (entry.type == null) {
-                log_entries = log_entries.filter(it => it !== entry);
-            }
+            switch (action) {
+                case 'open': {
+                    log_entries.unshift(entry);
 
-            if (entry.type === 'progress' && entry.new) {
-                // Wait a bit to show progress entries to prevent quick actions from showing up
-                setTimeout(renderLog, 200);
-            } else {
-                renderLog();
+                    if (entry.type === 'progress') {
+                        // Wait a bit to show progress entries to prevent quick actions from showing up
+                        setTimeout(renderLog, 100);
+                    } else {
+                        renderLog();
+                    }
+                } break;
+                case 'edit': {
+                    renderLog();
+                } break;
+                case 'close': {
+                    log_entries = log_entries.filter(it => it !== entry);
+                    renderLog();
+                } break;
             }
         }
 
-        log.defaultHandler(entry);
+        log.defaultHandler(action, entry);
     }
 
     function closeLogEntry(idx) {
