@@ -30,6 +30,15 @@ let thop = (function() {
     // Cache
     let mco_settings = {};
 
+    function initLog() {
+        log.pushHandler((action, entry) => {
+            if (action !== 'close' && entry.type === 'error')
+                errors.add(entry.msg);
+
+            log.defaultHandler(action, entry);
+        });
+    }
+
     function initModules() {
         modules = {
             'mco_casemix': mco_casemix,
@@ -64,7 +73,6 @@ let thop = (function() {
                 self.go({}, null, 0, false);
             }
         };
-        data.errorHandler = self.error;
 
         // Run module initialization
         for (let key in modules) {
@@ -291,8 +299,6 @@ let thop = (function() {
         }
     };
 
-    this.error = function(err) { errors.add(err); };
-
     this.isBusy = function() { return data_busy; };
     this.setIgnoreBusy = function(ignore) { ignore_busy = !!ignore; };
     this.forceRefresh = function() { force_idx++; };
@@ -328,6 +334,7 @@ let thop = (function() {
 
     document.addEventListener('readystatechange', e => {
         if (document.readyState === 'complete') {
+            initLog();
             initModules();
             initNavigation();
 

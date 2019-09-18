@@ -205,13 +205,13 @@ let mco_list = (function() {
 
         // Errors
         if (!Lists[route.list])
-            thop.error('Liste inconnue');
+            log.error('Liste inconnue');
         if (route.date !== null && indexes.length && main_index < 0)
-            thop.error('Date incorrecte');
+            log.error('Date incorrecte');
         if (Lists[route.list] && Lists[route.list].sector && !['public', 'private'].includes(route.sector))
-            thop.error('Secteur incorrect');
+            log.error('Secteur incorrect');
         if (route.group && Lists[route.list] && !group_info)
-            thop.error('Critère de tri inconnu');
+            log.error('Critère de tri inconnu');
 
         // Refresh settings
         queryAll('#opt_index').removeClass('hide');

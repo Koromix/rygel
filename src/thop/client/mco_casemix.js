@@ -68,11 +68,11 @@ let mco_casemix = (function() {
         // Permissions
         if (!user.isConnected() || !settings.permissions) {
             if (!user.isConnected())
-                thop.error('Vous n\'êtes pas connecté(e)');
+                log.error('Vous n\'êtes pas connecté(e)');
             return;
         }
         if (route.view === 'results' && !settings.permissions.has('FullResults')) {
-            thop.error('Vous n\'avez pas les droits pour utiliser cette page');
+            log.error('Vous n\'avez pas les droits pour utiliser cette page');
             return;
         }
 
@@ -115,26 +115,26 @@ let mco_casemix = (function() {
 
         // Errors
         if (!(['ghm_roots', 'units', 'durations', 'results'].includes(route.view)))
-            thop.error('Mode d\'affichage incorrect');
+            log.error('Mode d\'affichage incorrect');
         if (!route.units.length && mix_ready)
-            thop.error('Aucune unité sélectionnée');
+            log.error('Aucune unité sélectionnée');
         if (['ghm_roots', 'units'].includes(route.view) && !route.ghm_roots.length && mix_ready)
-            thop.error('Aucune racine sélectionnée');
+            log.error('Aucune racine sélectionnée');
         if (route.structure > settings.structures.length && settings.structures.length)
-            thop.error('Structure inexistante');
+            log.error('Structure inexistante');
         if (!['none', 'cmd', 'da', 'ga'].includes(route.regroup))
-            thop.error('Regroupement incorrect');
+            log.error('Regroupement incorrect');
         if (['durations', 'results'].includes(route.view)) {
             if (!checkCasemixGhmRoot(route.ghm_root))
-                thop.error('Cette racine n\'existe pas dans cette période');
+                log.error('Cette racine n\'existe pas dans cette période');
             if (route.view === 'durations' && mix_mismatched_roots.has(route.ghm_root))
-                thop.error('Regroupement des GHS suite à changement')
+                log.error('Regroupement des GHS suite à changement')
         }
         if (!(['none', 'absolute'].includes(route.mode)))
-            thop.error('Mode de comparaison inconnu');
+            log.error('Mode de comparaison inconnu');
         if (settings.algorithms.length &&
                 !settings.algorithms.find(function(algorithm) { return algorithm.name === route.algorithm; }))
-            thop.error('Algorithme inconnu');
+            log.error('Algorithme inconnu');
 
         // Refresh settings
         queryAll('#opt_units, #opt_periods, #opt_algorithm, #opt_update, #opt_apply_coefficient')
