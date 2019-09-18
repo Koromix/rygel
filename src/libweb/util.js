@@ -157,7 +157,7 @@ let dom = (function() {
 let log = (function() {
     let self = this;
 
-    this.defaultHandler = function(entry) {
+    this.defaultHandler = function(action, entry) {
         switch (entry.type) {
             case 'debug':
             case 'info':
@@ -173,7 +173,8 @@ let log = (function() {
     this.popHandler = function() { handlers.pop(); };
 
     function updateEntry(entry, type, msg, timeout) {
-        entry.new = !entry.type;
+        let func = handlers[handlers.length - 1];
+        let is_new = (entry.type == null);
 
         entry.type = type;
         entry.msg = msg;
@@ -183,10 +184,9 @@ let log = (function() {
             entry.timer_id = null;
         }
         if (timeout >= 0)
-            entry.timer_id = setTimeout(() => updateEntry(entry, null, null), timeout);
+            entry.timer_id = setTimeout(() => func('close', entry), timeout);
 
-        let func = handlers[handlers.length - 1];
-        func(entry);
+        func(is_new ? 'open' : 'edit', entry);
     }
 
     this.Entry = function() {
@@ -195,7 +195,6 @@ let log = (function() {
         this.type = null;
         this.msg = null;
         this.timer_id = null;
-        this.new = true;
 
         this.debug = function(msg, timeout = 6000) { updateEntry(self, 'debug', msg, timeout); };
         this.info = function(msg, timeout = 6000) { updateEntry(self, 'info', msg, timeout); };
