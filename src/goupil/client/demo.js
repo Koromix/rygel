@@ -7,10 +7,8 @@ let demo = (function() {
 
     this.assets = [
         {
-            table: 'tuto',
             key: 'tuto',
             mimetype: 'application/x.goupil.form',
-            title: 'Tutoriel',
             script: `// Retirer le commentaire de la ligne suivante pour afficher les
 // champs (texte, numérique, etc.) à droite du libellé.
 // form.pushOptions({large: true})
@@ -65,10 +63,8 @@ form.buttons("save")
         },
 
         {
-            table: 'complicated',
             key: 'complicated',
             mimetype: 'application/x.goupil.form',
-            title: 'Formulaire compliqué',
             script: `form.pushOptions({large: true})
 
 form.text("nom", "Quel est votre nom ?", {mandatory: true})
@@ -135,10 +131,8 @@ form.buttons("save")
         },
 
         {
-            table: 'complicated',
             key: 'complicated_help',
             mimetype: 'application/x.goupil.form',
-            title: 'Formulaire compliqué (aide)',
             script: `form.output("Loreum ipsum")
 
 form.buttons([

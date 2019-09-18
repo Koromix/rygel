@@ -12,8 +12,6 @@ static const char *const SchemaSQL = R"(
 CREATE TABLE assets (
     key TEXT NOT NULL,
     mimetype TEXT NOT NULL,
-    title TEXT NOT NULL,
-    table_name TEXT NOT NULL,
     data BLOB NOT NULL
 );
 CREATE UNIQUE INDEX assets_k ON assets (key);

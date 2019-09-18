@@ -5,12 +5,10 @@
 function AssetManager(db) {
     let self = this;
 
-    this.create = function(table, key, mimetype, title) {
+    this.create = function(key, mimetype) {
         let asset = {
-            table: table,
             key: key,
             mimetype: mimetype,
-            title: title,
             script: ''
         };
 

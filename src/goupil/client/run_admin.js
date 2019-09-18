@@ -22,26 +22,17 @@ let pilot = (function() {
     function showCreateDialog(e) {
         goupil.popup(e, form => {
             let key = form.text('key', 'Clé :', {mandatory: true});
-            let title = form.text('title', 'Titre :', {mandatory: true});
-
-            let table;
-            let mimetype;
-            form.section('Options avancées', () => {
-                table = form.text('table', 'Table :', {placeholder: key.value});
-                mimetype = form.choice('mimetype', 'Type :', AssetManager.mimetypes.entries(),
+            let mimetype = form.choice('mimetype', 'Type :', AssetManager.mimetypes.entries(),
                                        {mandatory: true, untoggle: false, value: 'application/x.goupil.form'});
-            }, {deploy: false});
 
             if (key.value) {
                 if (assets.some(asset => asset.key === key.value))
                     key.error('Existe déjà');
                 validateIdentifierWidget(key);
             }
-            validateIdentifierWidget(table);
 
             form.submitHandler = async () => {
-                let table_name = table.value || key.value;
-                let asset = g_assets.create(table_name, key.value, mimetype.value, title.value);
+                let asset = g_assets.create(key.value, mimetype.value);
                 await g_assets.save(asset);
 
                 assets.push(asset);
@@ -55,34 +46,9 @@ let pilot = (function() {
         });
     }
 
-    function showEditDialog(e, asset) {
-        goupil.popup(e, form => {
-            let title = form.text('title', 'Titre :', {mandatory: true, value: asset.title});
-
-            form.section('Options avancées', () => {
-                form.calc('table', 'Table :', asset.table);
-                form.calc('type', 'Type :', AssetManager.mimetypes.get(asset.mimetype) || asset.mimetype);
-            }, {deploy: false});
-
-            form.submitHandler = async () => {
-                let new_asset = Object.assign({}, asset, {
-                    title: title.value
-                });
-                await g_assets.save(new_asset);
-
-                Object.assign(assets_map[asset.key], new_asset);
-                Object.assign(current_asset, new_asset);
-
-                form.close();
-                self.go(asset.key);
-            };
-            form.buttons(form.buttons.std.ok_cancel('Modifier'));
-        });
-    }
-
     function showDeleteDialog(e, asset) {
         goupil.popup(e, form => {
-            form.output(`Voulez-vous vraiment supprimer la page '${asset.key}' ?`);
+            form.output(`Voulez-vous vraiment supprimer la ressource '${asset.key}' ?`);
 
             form.submitHandler = async () => {
                 await g_assets.delete(asset);
@@ -104,7 +70,7 @@ let pilot = (function() {
 
     function showResetDialog(e) {
         goupil.popup(e, form => {
-            form.output('Voulez-vous vraiment réinitialiser toutes les pages ?');
+            form.output('Voulez-vous vraiment réinitialiser toutes les ressources ?');
 
             form.submitHandler = async () => {
                 await g_assets.reset();
@@ -131,11 +97,11 @@ let pilot = (function() {
                 ${current_key && !current_asset ?
                     html`<option value=${current_key} .selected=${true}>-- Unknown asset '${current_key}' --</option>` : html``}
                 ${assets.map(item =>
-                    html`<option value=${item.key} .selected=${item.key == current_key}>[${item.table}] ${item.key} -- ${item.title} (${item.mimetype})</option>`)}
+                    html`<option value=${item.key} .selected=${item.key == current_key}>${item.key} (${item.mimetype})</option>`)}
             </select>
             <button @click=${showCreateDialog}>Ajouter</button>
-            ${current_asset ? html`<button @click=${e => showEditDialog(e, current_asset)}>Modifier</button>
-                                   <button @click=${e => showDeleteDialog(e, current_asset)}>Supprimer</button>` : html``}
+            ${current_asset ?
+                html`<button @click=${e => showDeleteDialog(e, current_asset)}>Supprimer</button>` : html``}
             <button @click=${showResetDialog}>Réinitialiser</button>
         `, menu_el);
     }
@@ -180,7 +146,7 @@ let pilot = (function() {
 
         renderMenu();
         if (current_asset) {
-            document.title = `${current_asset.title} — ${settings.project_key}`;
+            document.title = `${current_asset.key} — ${settings.project_key}`;
 
             switch (current_asset.mimetype) {
                 case 'application/x.goupil.form': { admin_form.run(current_asset, args); } break;
