@@ -115,6 +115,10 @@ public:
     void AddCachingHeaders(int max_age, const char *etag = nullptr);
 
     void AttachResponse(int code, MHD_Response *new_response);
+    void AttachText(Span<const char> str);
+    bool AttachBinary(Span<const uint8_t> data, const char *mime_type,
+                      CompressionType compression_type = CompressionType::None);
+    void AttachError(int code, const char *details = GetLastLogError());
 
     // Blocking, do in async context
     bool OpenForRead(StreamReader *out_st);
@@ -134,11 +138,6 @@ private:
 const char *http_GetMimeType(Span<const char> extension);
 
 uint32_t http_ParseAcceptableEncodings(Span<const char> encodings);
-
-void http_ProduceErrorPage(int code, http_IO *io);
-bool http_ProduceStaticAsset(Span<const uint8_t> data, CompressionType in_compression_type,
-                             const char *mime_type, CompressionType out_compression_type,
-                             http_IO *io);
 
 class http_JsonPageBuilder: public json_Writer {
     HeapArray<uint8_t> buf;

@@ -17,7 +17,7 @@ static bool GetQueryDateRange(const http_RequestInfo &request, const char *key,
     const char *str = request.GetQueryValue(key);
     if (!str) {
         LogError("Missing '%1' argument", key);
-        http_ProduceErrorPage(422, io);
+        io->AttachError(422);
         return false;
     }
 
@@ -43,7 +43,7 @@ static bool GetQueryDateRange(const http_RequestInfo &request, const char *key,
 
 invalid:
     LogError("Invalid date range '%1'", str);
-    http_ProduceErrorPage(422, io);
+    io->AttachError(422);
     return false;
 }
 
@@ -53,7 +53,7 @@ static bool GetQueryDispenseMode(const http_RequestInfo &request, const char *ke
     const char *str = request.GetQueryValue(key);
     if (!str) {
         LogError("Missing '%1' argument", key);
-        http_ProduceErrorPage(422, io);
+        io->AttachError(422);
         return false;
     }
 
@@ -61,7 +61,7 @@ static bool GetQueryDispenseMode(const http_RequestInfo &request, const char *ke
                                     [&](const OptionDesc &desc) { return TestStr(desc.name, str); });
     if (!desc) {
         LogError("Invalid '%1' parameter value '%2'", key, str);
-        http_ProduceErrorPage(422, io);
+        io->AttachError(422);
         return false;
     }
 
@@ -75,7 +75,7 @@ static bool GetQueryApplyCoefficient(const http_RequestInfo &request, const char
     const char *str = request.GetQueryValue(key);
     if (!str) {
         LogError("Missing '%1' argument", key);
-        http_ProduceErrorPage(422, io);
+        io->AttachError(422);
         return false;
     }
 
@@ -86,7 +86,7 @@ static bool GetQueryApplyCoefficient(const http_RequestInfo &request, const char
         apply_coefficient = false;
     } else {
         LogError("Invalid '%1' parameter value '%2'", key, str);
-        http_ProduceErrorPage(422, io);
+        io->AttachError(422);
         return false;
     }
 
@@ -100,13 +100,13 @@ static bool GetQueryGhmRoot(const http_RequestInfo &request, const char *key,
     const char *str = request.GetQueryValue(key);
     if (!str) {
         LogError("Missing '%1' argument", key);
-        http_ProduceErrorPage(422, io);
+        io->AttachError(422);
         return false;
     }
 
     mco_GhmRootCode ghm_root = mco_GhmRootCode::FromString(str);
     if (!ghm_root.IsValid()) {
-        http_ProduceErrorPage(422, io);
+        io->AttachError(422);
         return false;
     }
 
@@ -384,7 +384,7 @@ void ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http
 {
     if (!user) {
         LogError("Not allowed to query MCO aggregations");
-        http_ProduceErrorPage(403, io);
+        io->AttachError(403);
         return;
     }
 
@@ -414,17 +414,17 @@ void ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http
     // Check errors and permissions
     if (diff[0].value && period[0] < diff[1] && period[1] > diff[0]) {
         LogError("Parameters 'period' and 'diff' must not overlap");
-        http_ProduceErrorPage(422, io);
+        io->AttachError(422);
         return;
     }
     if (!user->CheckMcoDispenseMode(dispense_mode)) {
         LogError("User is not allowed to use this dispensation mode");
-        http_ProduceErrorPage(403, io);
+        io->AttachError(403);
         return;
     }
     if (filter && !user->CheckPermission(UserPermission::UseFilter)) {
         LogError("User is not allowed to use filters");
-        http_ProduceErrorPage(403, io);
+        io->AttachError(403);
         return;
     }
 
@@ -465,11 +465,11 @@ void ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http
         };
 
         if (!aggregate_period(period[0], period[1], 1)) {
-            http_ProduceErrorPage(422, io);
+            io->AttachError(422);
             return;
         }
         if (diff[0].value && !aggregate_period(diff[0], diff[1], -1)) {
-            http_ProduceErrorPage(422, io);
+            io->AttachError(422);
             return;
         }
 
@@ -550,7 +550,7 @@ void ProduceMcoResults(const http_RequestInfo &request, const User *user, http_I
 {
     if (!user || !user->CheckPermission(UserPermission::FullResults)) {
         LogError("Not allowed to query MCO results");
-        http_ProduceErrorPage(403, io);
+        io->AttachError(403);
         return;
     }
 
@@ -573,12 +573,12 @@ void ProduceMcoResults(const http_RequestInfo &request, const User *user, http_I
     // Check permissions
     if (!user->CheckMcoDispenseMode(dispense_mode)) {
         LogError("User is not allowed to use this dispensation mode");
-        http_ProduceErrorPage(403, io);
+        io->AttachError(403);
         return;
     }
     if (filter && !user->CheckPermission(UserPermission::UseFilter)) {
         LogError("User is not allowed to use filters");
-        http_ProduceErrorPage(403, io);
+        io->AttachError(403);
         return;
     }
 
@@ -762,7 +762,7 @@ void ProduceMcoResults(const http_RequestInfo &request, const User *user, http_I
         }
     });
     if (!success) {
-        http_ProduceErrorPage(422, io);
+        io->AttachError(422);
         return;
     }
     json.EndArray();

@@ -19,13 +19,13 @@ static bool GetQueryInteger(const http_RequestInfo &request, const char *key,
     const char *str = request.GetQueryValue(key);
     if (!str) {
         LogError("Missing '%1' parameter", key);
-        http_ProduceErrorPage(422, io);
+        io->AttachError(422);
         return false;
     }
 
     int value;
     if (!ParseDec(str, &value)) {
-        http_ProduceErrorPage(422, io);
+        io->AttachError(422);
         return false;
     }
 
@@ -51,12 +51,12 @@ static sqlite3_stmt *PrepareMonthQuery(const http_RequestInfo &request, const ch
     if (!std::any_of(std::begin(ScheduleNames), std::end(ScheduleNames),
                      [&](const char *name) { return TestStr(schedule_name, name); })) {
         LogError("Invalid schedule name '%1'", schedule_name);
-        http_ProduceErrorPage(422, io);
+        io->AttachError(422);
         return nullptr;
     }
     if (month < 1 || month > 12) {
         LogError("Invalid month value %1", month);
-        http_ProduceErrorPage(422, io);
+        io->AttachError(422);
         return nullptr;
     }
 

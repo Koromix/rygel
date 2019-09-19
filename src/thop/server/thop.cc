@@ -276,16 +276,20 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                 }
             }
 
-            if (!route)
-                return http_ProduceErrorPage(404, io);
+            if (!route) {
+                io->AttachError(404);
+                return;
+            }
         }
     }
 
     // Execute route
     switch (route->type) {
         case Route::Type::Asset: {
-            http_ProduceStaticAsset(route->u.st.asset.data, route->u.st.asset.compression_type,
-                                    route->u.st.mime_type, request.compression_type, io);
+            io->AttachBinary(route->u.st.asset.data, route->u.st.mime_type,
+                             route->u.st.asset.compression_type);
+            io->flags |= (int)http_IO::Flag::EnableCache;
+
             if (route->u.st.asset.source_map) {
                 io->AddHeader("SourceMap", route->u.st.asset.source_map);
             }

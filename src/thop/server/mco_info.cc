@@ -22,7 +22,7 @@ static const mco_TableIndex *GetIndexFromRequest(const http_RequestInfo &request
             LogError("Missing 'date' parameter");
         }
         if (!date.value) {
-            http_ProduceErrorPage(422, io);
+            io->AttachError(422);
             return nullptr;
         }
     }
@@ -32,7 +32,7 @@ static const mco_TableIndex *GetIndexFromRequest(const http_RequestInfo &request
         const char *sector_str = request.GetQueryValue("sector");
         if (!sector_str) {
             LogError("Missing 'sector' parameter");
-            http_ProduceErrorPage(422, io);
+            io->AttachError(422);
             return nullptr;
         } else if (TestStr(sector_str, "public")) {
             sector = drd_Sector::Public;
@@ -40,7 +40,7 @@ static const mco_TableIndex *GetIndexFromRequest(const http_RequestInfo &request
             sector = drd_Sector::Private;
         } else {
             LogError("Invalid 'sector' parameter");
-            http_ProduceErrorPage(422, io);
+            io->AttachError(422);
             return nullptr;
         }
     }
@@ -48,7 +48,7 @@ static const mco_TableIndex *GetIndexFromRequest(const http_RequestInfo &request
     const mco_TableIndex *index = mco_table_set.FindIndex(date);
     if (!index) {
         LogError("No table index available on '%1'", date);
-        http_ProduceErrorPage(404, io);
+        io->AttachError(404);
         return nullptr;
     }
 
@@ -81,7 +81,8 @@ void ProduceMcoDiagnoses(const http_RequestInfo &request, const User *, http_IO 
             spec = mco_ListSpecifier::FromString(spec_str);
             if (!spec.IsValid() || spec.table != mco_ListSpecifier::Table::Diagnoses) {
                 LogError("Invalid diagnosis list specifier '%1'", spec_str);
-                return http_ProduceErrorPage(422, io);
+                io->AttachError(422);
+                return;
             }
         }
     }
@@ -133,7 +134,8 @@ void ProduceMcoProcedures(const http_RequestInfo &request, const User *, http_IO
             spec = mco_ListSpecifier::FromString(spec_str);
             if (!spec.IsValid() || spec.table != mco_ListSpecifier::Table::Procedures) {
                 LogError("Invalid procedure list specifier '%1'", spec_str);
-                return http_ProduceErrorPage(422, io);
+                io->AttachError(422);
+                return;
             }
         }
     }
