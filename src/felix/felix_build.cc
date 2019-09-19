@@ -66,10 +66,7 @@ static bool ParseToolchainSpec(Span<const char> str, Toolchain *out_toolchain)
 static int RunTarget(const Target &target, const char *target_filename,
                      Span<const char *const> arguments, bool verbose)
 {
-    if (target.type != TargetType::Executable) {
-        LogError("Cannot run non-executable target '%1'", target.name);
-        return 1;
-    }
+    RG_ASSERT_DEBUG(target.type == TargetType::Executable);
 
     HeapArray<char> cmd_buf;
 
@@ -295,6 +292,10 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
         }
         if (!valid)
             return 1;
+    }
+    if (run_target && run_target->type != TargetType::Executable) {
+        LogError("Cannot run non-executable target '%1'", run_target->name);
+        return 1;
     }
 
     // Disable PCH?
