@@ -276,9 +276,9 @@ public:
 class GnuCompiler: public Compiler {
 public:
 #ifdef _WIN32
-    GnuCompiler() : Compiler("GNU", 0) {}
+    GnuCompiler() : Compiler("GCC", 0) {}
 #else
-    GnuCompiler() : Compiler("GNU", (int)CompilerFlag::PCH) {}
+    GnuCompiler() : Compiler("GCC", (int)CompilerFlag::PCH) {}
 #endif
 
     const char *MakeObjectCommand(const char *src_filename, SourceType src_type, BuildMode build_mode,
