@@ -325,13 +325,6 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
         }
     }
 
-    // LTO?
-    if ((toolchain.build_mode == BuildMode::LTO || toolchain.build_mode == BuildMode::StaticLTO) &&
-            !toolchain.compiler->Supports(CompilerFlag::LTO)) {
-        LogError("LTO does not work correctly with %1 compiler", toolchain.compiler->name);
-        return 1;
-    }
-
     // Create build commands
     BuildSet build_set;
     {

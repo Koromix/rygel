@@ -28,10 +28,7 @@ static void AppendGccObjectArguments(const char *src_filename, BuildMode build_m
     switch (build_mode) {
         case BuildMode::Debug: { Fmt(out_buf, " -O0 -g -ftrapv"); } break;
         case BuildMode::DebugFast: { Fmt(out_buf, " -Og -g -ftrapv"); } break;
-        case BuildMode::Fast: { Fmt(out_buf, " -O2 -g -DNDEBUG"); } break;
-        case BuildMode::LTO: { Fmt(out_buf, " -O2 -flto -g -DNDEBUG"); } break;
-        case BuildMode::StaticFast: { Fmt(out_buf, " -O2 -DNDEBUG"); } break;
-        case BuildMode::StaticLTO: { Fmt(out_buf, " -O2 -flto -DNDEBUG"); } break;
+        case BuildMode::Release: { Fmt(out_buf, " -O2 -flto -DNDEBUG"); } break;
     }
 
     Fmt(out_buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
@@ -120,12 +117,11 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames, BuildM
         Fmt(out_buf, " -fdiagnostics-color=always");
     }
 
-    if (build_mode == BuildMode::LTO || build_mode == BuildMode::StaticLTO) {
+    if (build_mode == BuildMode::Release) {
         Fmt(out_buf, " -flto");
-    }
-    if ((build_mode == BuildMode::StaticFast || build_mode == BuildMode::StaticLTO) &&
-            link_type == LinkType::Executable) {
-        Fmt(out_buf, " -static");
+        if (link_type == LinkType::Executable) {
+            Fmt(out_buf, " -static");
+        }
     }
 
 #ifndef _WIN32
@@ -191,10 +187,7 @@ static void AppendPackCommandLine(Span<const char *const> pack_filenames, BuildM
     switch (build_mode) {
         case BuildMode::Debug:
         case BuildMode::DebugFast: { Fmt(out_buf, " -m SourceMap"); } break;
-        case BuildMode::Fast:
-        case BuildMode::LTO:
-        case BuildMode::StaticFast:
-        case BuildMode::StaticLTO: { Fmt(out_buf, " -m RunTransform"); } break;
+        case BuildMode::Release: { Fmt(out_buf, " -m RunTransform"); } break;
     }
 
     if (pack_options) {
@@ -207,7 +200,7 @@ static void AppendPackCommandLine(Span<const char *const> pack_filenames, BuildM
 
 class ClangCompiler: public Compiler {
 public:
-    ClangCompiler(): Compiler("Clang", (int)CompilerFlag::PCH | (int)CompilerFlag::LTO) {}
+    ClangCompiler(): Compiler("Clang", (int)CompilerFlag::PCH) {}
 
     const char *MakeObjectCommand(const char *src_filename, SourceType src_type, BuildMode build_mode,
                                   bool warnings, const char *pch_filename, Span<const char *const> definitions,
@@ -282,13 +275,11 @@ public:
 
 class GnuCompiler: public Compiler {
 public:
-    GnuCompiler()
-        : Compiler("GNU", (int)CompilerFlag::PCH | (int)CompilerFlag::LTO)
-    {
 #ifdef _WIN32
-        flags &= ~(int)CompilerFlag::PCH;
+    GnuCompiler() : Compiler("GNU", 0) {}
+#else
+    GnuCompiler() : Compiler("GNU", (int)CompilerFlag::PCH) {}
 #endif
-    }
 
     const char *MakeObjectCommand(const char *src_filename, SourceType src_type, BuildMode build_mode,
                                   bool warnings, const char *pch_filename, Span<const char *const> definitions,
@@ -351,27 +342,15 @@ public:
             return (const char *)nullptr;
 
 #ifdef _WIN32
-    Fmt(&buf, " -Wl,--dynamicbase -Wl,--nxcompat -Wl,--high-entropy-va");
+        Fmt(&buf, " -Wl,--dynamicbase -Wl,--nxcompat -Wl,--high-entropy-va");
 #else
-    if (link_type == LinkType::Executable) {
-        Fmt(&buf, " -pie");
-    }
+        if (link_type == LinkType::Executable) {
+            Fmt(&buf, " -pie");
+        }
 #endif
 
-        switch (build_mode) {
-            case BuildMode::Debug:
-            case BuildMode::DebugFast: {} break;
-            case BuildMode::Fast:
-            case BuildMode::LTO: {
-#ifdef _WIN32
-                // Force static linking of libgcc, libstdc++ and winpthread
-                Fmt(&buf, " -static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic");
-#endif
-            } break;
-            case BuildMode::StaticFast:
-            case BuildMode::StaticLTO: {
-                Fmt(&buf, " -s");
-            } break;
+        if (build_mode == BuildMode::Release) {
+            Fmt(&buf, " -s");
         }
 
         return (const char *)buf.Leak().ptr;
