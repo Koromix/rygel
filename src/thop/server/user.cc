@@ -460,7 +460,7 @@ void HandleConnect(const http_RequestInfo &request, const User *, http_IO *io)
     {
         HashMap<const char *, const char *> values;
         if (!io->ReadPostValues(&io->allocator, &values)) {
-            http_ProduceErrorPage(422, io);
+            io->AttachError(422);
             return;
         }
 
@@ -468,7 +468,7 @@ void HandleConnect(const http_RequestInfo &request, const User *, http_IO *io)
         password = values.FindValue("password", nullptr);
         if (!username || !password) {
             LogError("Missing parameters");
-            http_ProduceErrorPage(422, io);
+            io->AttachError(422);
             return;
         }
     }
@@ -483,7 +483,7 @@ void HandleConnect(const http_RequestInfo &request, const User *, http_IO *io)
         WaitForDelay(safety_delay);
 
         LogError("Incorrect username or password");
-        http_ProduceErrorPage(403, io);
+        io->AttachError(403);
         return;
     }
 
@@ -494,14 +494,14 @@ void HandleConnect(const http_RequestInfo &request, const User *, http_IO *io)
         RG_STATIC_ASSERT(RG_SIZE(address) == RG_SIZE(Session::client_addr));
 
         if (!GetClientAddress(request.conn, address)) {
-            http_ProduceErrorPage(422, io);
+            io->AttachError(422);
             return;
         }
 
         user_agent = request.GetHeaderValue("User-Agent");
         if (!user_agent) {
             LogError("Missing User-Agent header");
-            http_ProduceErrorPage(422, io);
+            io->AttachError(422);
             return;
         }
     }

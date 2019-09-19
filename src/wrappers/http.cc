@@ -100,7 +100,7 @@ static bool NegociateContentEncoding(MHD_Connection *conn, CompressionType *out_
         *out_compression_type = (CompressionType)CountTrailingZeros(acceptable_encodings);
         return true;
     } else {
-        http_ProduceErrorPage(406, io);
+        io->AttachError(406);
         return false;
     }
 }
@@ -130,7 +130,7 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
                     io->AddHeader("Location", daemon->base_url);
                     return MHD_queue_response(conn, 303, io->response);
                 } else {
-                    http_ProduceErrorPage(404, io);
+                    io->AttachError(404);
                     return MHD_queue_response(conn, (unsigned int)io->code, io->response);
                 }
             }
@@ -209,7 +209,7 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
     RG_ASSERT(io->state == http_IO::State::Idle);
     if (io->code < 0) {
         // Default to internal error (if nothing else)
-        http_ProduceErrorPage(500, io);
+        io->AttachError(500);
     }
     return MHD_queue_response(conn, (unsigned int)io->code, io->response);
 }
@@ -312,6 +312,59 @@ void http_IO::AttachResponse(int new_code, MHD_Response *new_response)
     MHD_move_response_headers(response, new_response);
     MHD_destroy_response(response);
     response = new_response;
+}
+
+void http_IO::AttachText(Span<const char> str)
+{
+    MHD_Response *response =
+        MHD_create_response_from_buffer(str.len, (void *)str.ptr, MHD_RESPMEM_PERSISTENT);
+
+    AttachResponse(200, response);
+    AddHeader("Content-Type", "text/plain");
+}
+
+bool http_IO::AttachBinary(Span<const uint8_t> data, const char *mime_type,
+                           CompressionType compression_type)
+{
+    MHD_Response *response;
+    if (compression_type != request.compression_type) {
+        HeapArray<uint8_t> buf;
+        {
+            StreamReader reader(data, nullptr, compression_type);
+            StreamWriter writer(&buf, nullptr, request.compression_type);
+            if (!SpliceStream(&reader, Megabytes(8), &writer))
+                return false;
+            if (!writer.Close())
+                return false;
+        }
+
+        response = MHD_create_response_from_buffer_with_free_callback((size_t)buf.len, (void *)buf.ptr,
+                                                                      ReleaseDataCallback);
+        buf.Leak();
+    } else {
+        response = MHD_create_response_from_buffer((size_t)data.len, (void *)data.ptr,
+                                                   MHD_RESPMEM_PERSISTENT);
+    }
+    AttachResponse(200, response);
+
+    AddEncodingHeader(request.compression_type);
+    if (mime_type) {
+        AddHeader("Content-Type", mime_type);
+    }
+
+    return true;
+}
+
+void http_IO::AttachError(int code, const char *details)
+{
+    Span<char> page = Fmt((Allocator *)nullptr, "Error %1: %2\n%3", code,
+                          MHD_get_reason_phrase_for((unsigned int)code), details ? details : "");
+
+    MHD_Response *response =
+        MHD_create_response_from_buffer_with_free_callback((size_t)page.len, page.ptr,
+                                                           ReleaseDataCallback);
+    AttachResponse(code, response);
+    AddHeader("Content-Type", "text/plain");
 }
 
 bool http_IO::OpenForRead(StreamReader *out_st)
@@ -491,53 +544,6 @@ uint32_t http_ParseAcceptableEncodings(Span<const char> encodings)
     }
 
     return acceptable_encodings;
-}
-
-void http_ProduceErrorPage(int code, http_IO *io)
-{
-    Span<char> page = Fmt((Allocator *)nullptr, "Error %1: %2\n%3", code,
-                          MHD_get_reason_phrase_for((unsigned int)code), GetLastLogError());
-
-    MHD_Response *response =
-        MHD_create_response_from_buffer_with_free_callback((size_t)page.len, page.ptr,
-                                                           ReleaseDataCallback);
-    io->AttachResponse(code, response);
-    io->AddHeader("Content-Type", "text/plain");
-}
-
-bool http_ProduceStaticAsset(Span<const uint8_t> data, CompressionType in_compression_type,
-                             const char *mime_type, CompressionType out_compression_type,
-                             http_IO *io)
-{
-    MHD_Response *response;
-    if (in_compression_type != out_compression_type) {
-        HeapArray<uint8_t> buf;
-        {
-            StreamReader reader(data, nullptr, in_compression_type);
-            StreamWriter writer(&buf, nullptr, out_compression_type);
-            if (!SpliceStream(&reader, Megabytes(8), &writer))
-                return false;
-            if (!writer.Close())
-                return false;
-        }
-
-        response = MHD_create_response_from_buffer_with_free_callback((size_t)buf.len, (void *)buf.ptr,
-                                                                      ReleaseDataCallback);
-        buf.Leak();
-    } else {
-        response = MHD_create_response_from_buffer((size_t)data.len, (void *)data.ptr,
-                                                   MHD_RESPMEM_PERSISTENT);
-    }
-    io->AttachResponse(200, response);
-
-    io->AddEncodingHeader(out_compression_type);
-    if (mime_type) {
-        io->AddHeader("Content-Type", mime_type);
-    }
-
-    io->flags |= (int)http_IO::Flag::EnableCache;
-
-    return true;
 }
 
 void http_JsonPageBuilder::Finish(http_IO *io)
