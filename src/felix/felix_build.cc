@@ -66,7 +66,7 @@ static bool ParseToolchainSpec(Span<const char> str, Toolchain *out_toolchain)
 static int RunTarget(const Target &target, const char *target_filename,
                      Span<const char *const> arguments, bool verbose)
 {
-    RG_ASSERT_DEBUG(target.type == TargetType::Executable);
+    RG_ASSERT(target.type == TargetType::Executable);
 
     HeapArray<char> cmd_buf;
 

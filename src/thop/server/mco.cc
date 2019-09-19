@@ -270,7 +270,7 @@ static Span<const mco_Result *> GetIndexRange(Span<const mco_Result *> index,
 
 bool McoResultProvider::Run(FunctionRef<void(Span<const mco_Result>, Span<const mco_Result>)> func)
 {
-    RG_ASSERT_DEBUG(min_date.IsValid() && max_date.IsValid());
+    RG_ASSERT(min_date.IsValid() && max_date.IsValid());
 
     if (filter) {
         return RunFilter(func);
@@ -283,7 +283,7 @@ bool McoResultProvider::Run(FunctionRef<void(Span<const mco_Result>, Span<const 
 
 bool McoResultProvider::RunFilter(FunctionRef<void(Span<const mco_Result>, Span<const mco_Result>)> func)
 {
-    RG_ASSERT_DEBUG(filter);
+    RG_ASSERT(filter);
 
     const Size split_size = 8192;
 
@@ -369,7 +369,7 @@ bool McoResultProvider::RunFilter(FunctionRef<void(Span<const mco_Result>, Span<
 
 bool McoResultProvider::RunIndex(FunctionRef<void(Span<const mco_Result>, Span<const mco_Result>)> func)
 {
-    RG_ASSERT_DEBUG(ghm_root.IsValid());
+    RG_ASSERT(ghm_root.IsValid());
 
     const Size split_size = 8192;
 
@@ -401,7 +401,7 @@ bool McoResultProvider::RunIndex(FunctionRef<void(Span<const mco_Result>, Span<c
 
 bool McoResultProvider::RunDirect(FunctionRef<void(Span<const mco_Result>, Span<const mco_Result>)> func)
 {
-    RG_ASSERT_DEBUG(!ghm_root.IsValid());
+    RG_ASSERT(!ghm_root.IsValid());
 
     const Size split_size = 65536;
 

@@ -239,7 +239,7 @@ static void InitRoutes()
             add_asset_route("GET", url, asset);
         }
     }
-    RG_ASSERT_DEBUG(html.name);
+    RG_ASSERT(html.name);
 
     // Main pages
     add_asset_route("GET", "/", html);

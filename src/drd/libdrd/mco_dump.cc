@@ -19,7 +19,7 @@ void mco_DumpGhmDecisionTree(Span<const mco_GhmDecisionNode> ghm_nodes,
             return;
         }
 
-        RG_ASSERT_DEBUG(node_idx < ghm_nodes.len);
+        RG_ASSERT(node_idx < ghm_nodes.len);
         const mco_GhmDecisionNode &ghm_node = ghm_nodes[node_idx];
 
         switch (ghm_node.type) {

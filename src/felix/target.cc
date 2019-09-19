@@ -442,7 +442,7 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
         return nullptr;
 
     bool appended = targets_map.Append(target_config->name, set.targets.len - 1).second;
-    RG_ASSERT_DEBUG(appended);
+    RG_ASSERT(appended);
 
     out_guard.Disable();
     return target;

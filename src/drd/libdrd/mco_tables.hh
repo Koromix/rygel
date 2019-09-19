@@ -149,7 +149,7 @@ struct mco_ValueRangeCell {
 
     bool Test(Size idx, int value) const
     {
-        RG_ASSERT_DEBUG(idx < N);
+        RG_ASSERT(idx < N);
         return (value >= limits[idx].min && value < limits[idx].max);
     }
 };
@@ -439,7 +439,7 @@ public:
                        values[1] == u.cmd_jump.jump;
             } break;
         }
-        RG_ASSERT_DEBUG(false);
+        RG_ASSERT(false);
     }
 };
 

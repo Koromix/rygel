@@ -217,7 +217,7 @@ static bool ParsePmsiChar(char c, char *out_value)
 template <typename T>
 static bool ParsePmsiInt(Span<const char> str, T *out_value)
 {
-    RG_ASSERT_DEBUG(str.len > 0);
+    RG_ASSERT(str.len > 0);
 
     if (str[0] == ' ')
         return true;
@@ -235,7 +235,7 @@ static bool ParsePmsiInt(Span<const char> str, T *out_value)
 
 static bool ParsePmsiDate(Span<const char> str, Date *out_date)
 {
-    RG_ASSERT_DEBUG(str.len == 8);
+    RG_ASSERT(str.len == 8);
 
     if (str[0] == ' ')
         return true;

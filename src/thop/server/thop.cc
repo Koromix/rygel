@@ -167,7 +167,7 @@ static void InitRoutes()
 
     // Static assets and catalogs
     AssetInfo html = {};
-    RG_ASSERT_DEBUG(assets.len > 0);
+    RG_ASSERT(assets.len > 0);
     for (const AssetInfo &asset: assets) {
         if (TestStr(asset.name, "thop.html")) {
             html = asset;
@@ -182,7 +182,7 @@ static void InitRoutes()
         const char *url = Fmt(&routes_alloc, "/catalogs/%1", desc.name).ptr;
         add_asset_route("GET", url, Route::Matching::Exact, desc);
     }
-    RG_ASSERT_DEBUG(html.name);
+    RG_ASSERT(html.name);
 
     // Patch HTML
     html.data = PatchAssetVariables(html, &routes_alloc,

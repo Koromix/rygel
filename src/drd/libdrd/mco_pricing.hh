@@ -51,7 +51,7 @@ struct mco_Pricing {
 
     void ApplyCoefficient()
     {
-        RG_ASSERT_DEBUG(!std::isnan(ghs_coefficient));
+        RG_ASSERT(!std::isnan(ghs_coefficient));
 
         ghs_cents = (int64_t)(ghs_coefficient * ghs_cents);
         price_cents = (int64_t)(ghs_coefficient * price_cents);
@@ -63,7 +63,7 @@ struct mco_Pricing {
 
     mco_Pricing WithCoefficient() const
     {
-        RG_ASSERT_DEBUG(!std::isnan(ghs_coefficient));
+        RG_ASSERT(!std::isnan(ghs_coefficient));
 
         mco_Pricing pricing_coeff = *this;
         pricing_coeff.ApplyCoefficient();

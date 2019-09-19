@@ -283,7 +283,7 @@ public:
 
     void Set(Size idx, const char *str)
     {
-        RG_ASSERT_DEBUG(idx >= 0 && idx < span.len);
+        RG_ASSERT(idx >= 0 && idx < span.len);
         if (str) {
             SET_STRING_ELT(xp, idx, Rf_mkChar(str));
         } else {
@@ -292,8 +292,8 @@ public:
     }
     void Set(Size idx, Span<const char> str)
     {
-        RG_ASSERT_DEBUG(idx >= 0 && idx < span.len);
-        RG_ASSERT_DEBUG(str.len < INT_MAX);
+        RG_ASSERT(idx >= 0 && idx < span.len);
+        RG_ASSERT(str.len < INT_MAX);
         SET_STRING_ELT(xp, idx, Rf_mkCharLen(str.ptr, (int)str.len));
     }
 };
@@ -379,7 +379,7 @@ public:
             case Type::Int: { return (T)u.i[idx]; } break;
             case Type::Double: { return (T)u.d[idx]; } break;
         }
-        RG_ASSERT_DEBUG(false);
+        RG_ASSERT(false);
     }
 };
 

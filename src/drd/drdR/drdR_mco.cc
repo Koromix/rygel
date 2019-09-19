@@ -421,7 +421,7 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
             admin_id[k] = result.stays[0].admin_id;
             bill_id[k] = result.stays[0].bill_id;
             if (export_units) {
-                RG_ASSERT_DEBUG(result.stays.len == 1);
+                RG_ASSERT(result.stays.len == 1);
                 unit[k] = result.stays[0].unit.number;
             }
             exit_date.Set(k, result.stays[result.stays.len - 1].exit.date);

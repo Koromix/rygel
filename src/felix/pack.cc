@@ -52,7 +52,7 @@ struct BlobInfo {
 
 static FmtArg FormatZigzagVLQ64(int value)
 {
-    RG_ASSERT_DEBUG(value != INT_MIN);
+    RG_ASSERT(value != INT_MIN);
 
     static const char literals[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -220,7 +220,7 @@ static Size PackAsset(const PackAssetInfo &asset, CompressionType compression_ty
             return -1;
     }
 
-    RG_ASSERT_DEBUG(compressor.Close());
+    RG_ASSERT(compressor.Close());
     flush_compressor_buffer();
 
     return written_len;
@@ -229,7 +229,7 @@ static Size PackAsset(const PackAssetInfo &asset, CompressionType compression_ty
 static Size PackSourceMap(const PackAssetInfo &asset, CompressionType compression_type,
                           FunctionRef<void(Span<const uint8_t> buf)> func)
 {
-    RG_ASSERT_DEBUG(!asset.transform_cmd);
+    RG_ASSERT(!asset.transform_cmd);
 
     HeapArray<uint8_t> buf;
     StreamWriter writer(&buf, nullptr, compression_type);
@@ -394,7 +394,7 @@ bool PackToFiles(Span<const PackAssetInfo> assets, const char *output_path,
             return false;
         } break;
     }
-    RG_ASSERT_DEBUG(compression_ext);
+    RG_ASSERT(compression_ext);
 
     for (const PackAssetInfo &asset: assets) {
         StreamWriter st;
