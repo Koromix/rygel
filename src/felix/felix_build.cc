@@ -297,14 +297,6 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
             return 1;
     }
 
-    // Make sure output directory exists
-    if (!MakeDirectoryRec(output_directory))
-        return 1;
-
-    // We're ready to output stuff
-    LogInfo("Root directory: '%1'", GetWorkingDirectory());
-    LogInfo("Output directory: '%1'", output_directory);
-
     // Disable PCH?
     if (enable_pch && !toolchain.compiler->Supports(CompilerFlag::PCH)) {
         bool using_pch = std::any_of(enabled_targets.begin(), enabled_targets.end(),
@@ -324,6 +316,12 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
             target.cxx_pch_filename = nullptr;
         }
     }
+
+    // We're ready to output stuff
+    LogInfo("Root directory: '%1'", GetWorkingDirectory());
+    LogInfo("Output directory: '%1'", output_directory);
+    if (!MakeDirectoryRec(output_directory))
+        return 1;
 
     // Create build commands
     BuildSet build_set;
