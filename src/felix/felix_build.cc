@@ -313,7 +313,7 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
         });
 
         if (using_pch) {
-            LogError("PCH does not work correctly with %1 compiler (ignoring)",
+            LogError("PCH does not work correctly with %1 on this platform (disabled)",
                      toolchain.compiler->name);
             enable_pch = false;
         }
