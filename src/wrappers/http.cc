@@ -12,8 +12,8 @@ bool http_Daemon::Start(const http_Config &config,
 {
     RG_ASSERT(!daemon);
 
-    RG_ASSERT_DEBUG(config.base_url);
-    RG_ASSERT_DEBUG(func);
+    RG_ASSERT(config.base_url);
+    RG_ASSERT(func);
 
     // Validate configuration
     {
@@ -180,7 +180,7 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
         if (*upload_data_size) {
             if (io->read_len < io->read_buf.len) {
                 // Read upload data and give it to async handler
-                RG_ASSERT_DEBUG(io->read_buf.IsValid());
+                RG_ASSERT(io->read_buf.IsValid());
 
                 Size copy_len = std::min(io->read_buf.len - io->read_len, (Size)*upload_data_size);
 
@@ -206,7 +206,7 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
     }
 
     // We're done
-    RG_ASSERT_DEBUG(io->state == http_IO::State::Idle);
+    RG_ASSERT(io->state == http_IO::State::Idle);
     if (io->code < 0) {
         // Default to internal error (if nothing else)
         http_ProduceErrorPage(500, io);
@@ -281,7 +281,7 @@ void http_IO::AddCookieHeader(const char *path, const char *name, const char *va
 
 void http_IO::AddCachingHeaders(int max_age, const char *etag)
 {
-    RG_ASSERT_DEBUG(max_age >= 0);
+    RG_ASSERT(max_age >= 0);
 
     if (!(flags & (int)Flag::EnableCacheControl)) {
         max_age = 0;
@@ -305,7 +305,7 @@ void http_IO::AddCachingHeaders(int max_age, const char *etag)
 
 void http_IO::AttachResponse(int new_code, MHD_Response *new_response)
 {
-    RG_ASSERT_DEBUG(new_code >= 0);
+    RG_ASSERT(new_code >= 0);
 
     code = new_code;
 
@@ -386,7 +386,7 @@ bool http_IO::ReadPostValues(Allocator *alloc,
 
 Size http_IO::Read(Span<uint8_t> out_buf)
 {
-    RG_ASSERT_DEBUG(state != State::Sync);
+    RG_ASSERT(state != State::Sync);
 
     std::unique_lock<std::mutex> lock(mutex);
 

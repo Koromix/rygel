@@ -93,7 +93,7 @@ static void ExportResults(Span<const mco_Result> results, Span<const mco_Result>
             for (Size k = 0; k < result.stays.len; k++) {
                 const mco_Result &mono_result = mono_results[j + k];
                 const mco_Pricing &mono_pricing = mono_pricings[j + k];
-                RG_ASSERT_DEBUG(mono_result.stays[0].bill_id == result.stays[0].bill_id);
+                RG_ASSERT(mono_result.stays[0].bill_id == result.stays[0].bill_id);
 
                 PrintLn("    %1%2 [%3 -- %4] = GHM %5 [%6] / GHS %7",
                         verbosity ? "  " : "", FmtArg(k).Pad0(-2),

@@ -1117,7 +1117,7 @@ bool mco_WrenRunner::Init(const char *expression, Size max_results)
     wrenSetUserData(vm, this);
 
     // Run init code
-    RG_ASSERT_DEBUG(wrenInterpret(vm, "mco", InitCode) == WREN_RESULT_SUCCESS);
+    RG_ASSERT(wrenInterpret(vm, "mco", InitCode) == WREN_RESULT_SUCCESS);
     wrenEnsureSlots(vm, 1);
     wrenGetVariable(vm, "mco", "Date", 0);
     date_class = wrenGetSlotHandle(vm, 0);
@@ -1139,7 +1139,7 @@ bool mco_WrenRunner::Init(const char *expression, Size max_results)
     mco_class = wrenGetSlotHandle(vm, 0);
     mco_build = wrenMakeCallHandle(vm, "build(_)");
     expression_call = wrenMakeCallHandle(vm, "call()");
-    RG_ASSERT_DEBUG(wrenInterpret(vm, "mco", VarCode) == WREN_RESULT_SUCCESS);
+    RG_ASSERT(wrenInterpret(vm, "mco", VarCode) == WREN_RESULT_SUCCESS);
 
     // Compile expression
     wrenEnsureSlots(vm, 2);
@@ -1212,7 +1212,7 @@ Size mco_WrenRunner::Process(Span<const mco_Result> results, const mco_Result mo
                 if (out_mono_results) {
                     for (Size i = 0; i < result.stays.len; i++) {
                         const mco_Result &mono_result = mono_results[stays_count + i];
-                        RG_ASSERT_DEBUG(mono_result.stays[0].bill_id == result.stays[0].bill_id);
+                        RG_ASSERT(mono_result.stays[0].bill_id == result.stays[0].bill_id);
 
                         out_mono_results->Append(&mono_result);
                     }

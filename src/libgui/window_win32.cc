@@ -397,7 +397,7 @@ static bool SetGLContext(HDC dc, HGLRC gl)
 
 bool gui_Window::Init(const char *application_name)
 {
-    RG_ASSERT_DEBUG(!window);
+    RG_ASSERT(!window);
 
     window = new gui_Win32Window();
     RG_DEFER_N(out_guard) { Release(); };

@@ -235,7 +235,7 @@ bool UserSetBuilder::LoadFiles(Span<const char *const> filenames)
 
 void UserSetBuilder::Finish(const StructureSet &structure_set, UserSet *out_set)
 {
-    RG_ASSERT_DEBUG(set.users.len == rule_sets.len);
+    RG_ASSERT(set.users.len == rule_sets.len);
 
     for (Size i = 0; i < set.users.len; i++) {
         User &user = set.users[i];
@@ -280,7 +280,7 @@ bool LoadUserSet(Span<const char *const> filenames, const StructureSet &structur
 
 static bool GetClientAddress(MHD_Connection *conn, Span<char> out_address)
 {
-    RG_ASSERT_DEBUG(out_address.len);
+    RG_ASSERT(out_address.len);
 
     int family;
     void *addr;
@@ -408,7 +408,7 @@ static Session *FindSession(const http_RequestInfo &request, bool *out_mismatch 
 
 static void RegenerateSession(Session *session, http_IO *io)
 {
-    RG_ASSERT_DEBUG(session);
+    RG_ASSERT(session);
 
     int64_t now = GetMonotonicTime();
 

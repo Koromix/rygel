@@ -42,7 +42,7 @@ static ImU32 GetVisColor(VisColor color, float alpha = 1.0f)
         case VisColor::Plot: { return ImGui::GetColorU32(ImGuiCol_PlotLines, alpha); } break;
         case VisColor::Limit: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.9f, 0.7f, 0.03f, 0.4f * alpha)); } break;
     }
-    RG_ASSERT_DEBUG(false);
+    RG_ASSERT(false);
 }
 
 static bool DetectAnomaly(const Element &elmt)
@@ -55,7 +55,7 @@ static bool DetectAnomaly(const Element &elmt)
         } break;
         case Element::Type::Period: { return false; } break;
     }
-    RG_ASSERT_DEBUG(false);
+    RG_ASSERT(false);
 }
 
 static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoom, float alpha,
@@ -65,7 +65,7 @@ static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoo
     ImDrawList *draw = ImGui::GetWindowDrawList();
 
     for (const Element *elmt: periods) {
-        RG_ASSERT_DEBUG(elmt->type == Element::Type::Period);
+        RG_ASSERT(elmt->type == Element::Type::Period);
 
         ImRect rect {
             x_offset + (float)elmt->time * time_zoom, y_min,
@@ -93,7 +93,7 @@ static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoo
 
 static void TextMeasure(const Element &elmt, double align_offset)
 {
-    RG_ASSERT_DEBUG(elmt.type == Element::Type::Measure);
+    RG_ASSERT(elmt.type == Element::Type::Measure);
 
     RG_DEFER_N(style_guard) { ImGui::PopStyleColor(); };
     if (DetectAnomaly(elmt)) {
@@ -366,7 +366,7 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
 {
     if (!measures.len)
         return;
-    RG_ASSERT_DEBUG(measures[0]->type == Element::Type::Measure);
+    RG_ASSERT(measures[0]->type == Element::Type::Measure);
 
     ImDrawList *draw = ImGui::GetWindowDrawList();
 
@@ -374,7 +374,7 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
     if (max > min) {
         y_scaler  = (y_max - y_min - 4.0f) / (float)(max - min);;
     } else {
-        RG_ASSERT_DEBUG(!(min > max));
+        RG_ASSERT(!(min > max));
         y_max = (y_max + y_min) / 2.0f;
         y_scaler = 1.0f;
     }
@@ -394,7 +394,7 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
     DrawLine(interpolation, [&](Size i, ImVec2 *out_point, ImU32 *out_color) {
         if (i >= measures.len)
             return false;
-        RG_ASSERT_DEBUG(measures[i]->type == Element::Type::Measure);
+        RG_ASSERT(measures[i]->type == Element::Type::Measure);
         if (!std::isnan(measures[i]->u.measure.min)) {
             *out_point = compute_coordinates(measures[i]->time, measures[i]->u.measure.min);
             *out_color = GetVisColor(VisColor::Limit, alpha);
@@ -669,7 +669,7 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
                     continue;
                 }
             }
-            RG_ASSERT_DEBUG(path.len > 0);
+            RG_ASSERT(path.len > 0);
 
             if (state.filter_text[0] &&
                     !strstr(path.ptr, state.filter_text) &&
@@ -831,7 +831,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
                         continue;
                     }
                 }
-                RG_ASSERT_DEBUG(path.len > 0);
+                RG_ASSERT(path.len > 0);
 
                 if (state.filter_text[0] &&
                         !strstr(path.ptr, state.filter_text) &&
@@ -1060,7 +1060,7 @@ static void DrawTime(ImRect bb, double time_offset, float time_zoom,
         case TimeUnit::Months: { suffix = "mo"; } break;
         case TimeUnit::Years: { suffix = "y"; } break;
     }
-    RG_ASSERT_DEBUG(suffix);
+    RG_ASSERT(suffix);
 
     // Find appropriate time step
     float time_step = 10.0f / powf(10.0f, floorf(log10f(time_zoom)));

@@ -46,7 +46,7 @@ static bool ParseCompilerMakeRule(const char *filename, Allocator *alloc,
 static const char *BuildObjectPath(const char *src_filename, const char *output_directory,
                                    const char *suffix, Allocator *alloc)
 {
-    RG_ASSERT_DEBUG(!PathIsAbsolute(src_filename));
+    RG_ASSERT(!PathIsAbsolute(src_filename));
 
     HeapArray<char> buf;
     buf.allocator = alloc;
@@ -210,7 +210,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
                 case SourceType::CXX_Source: { pch_filename = cxx_pch_filename; } break;
 
                 case SourceType::C_Header:
-                case SourceType::CXX_Header: { RG_ASSERT_DEBUG(false); } break;
+                case SourceType::CXX_Header: { RG_ASSERT(false); } break;
             }
 
             cmd.text = Fmt(&str_alloc, "Build %1", src.filename).ptr;
@@ -332,7 +332,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
 
 void BuildSetBuilder::Finish(BuildSet *out_set)
 {
-    RG_ASSERT_DEBUG(!out_set->commands.len);
+    RG_ASSERT(!out_set->commands.len);
 
     if (pch_commands.len) {
         pch_commands[pch_commands.len - 1].sync_after = true;

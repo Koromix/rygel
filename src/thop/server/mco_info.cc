@@ -309,7 +309,7 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
                            const mco_GhmDecisionNode &ghm_node,
                            ReadableGhmDecisionNode *out_node)
 {
-    RG_ASSERT_DEBUG(ghm_node.type == mco_GhmDecisionNode::Type::Test);
+    RG_ASSERT(ghm_node.type == mco_GhmDecisionNode::Type::Test);
 
     out_node->key = Fmt(ctx.str_alloc, "%1%2%3",
                         FmtHex(ghm_node.u.test.function).Pad0(-2),
@@ -567,7 +567,7 @@ static bool ProcessGhmNode(BuildReadableGhmTreeContext &ctx, Size ghm_node_idx)
             return false;
         }
 
-        RG_ASSERT_DEBUG(ghm_node_idx < ctx.ghm_nodes.len);
+        RG_ASSERT(ghm_node_idx < ctx.ghm_nodes.len);
         const mco_GhmDecisionNode &ghm_node = ctx.ghm_nodes[ghm_node_idx];
         ReadableGhmDecisionNode *out_node = &ctx.out_nodes[ghm_node_idx];
 

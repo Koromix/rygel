@@ -108,7 +108,7 @@ static inline bool mco_SplitTest(int32_t id1, int32_t id2)
 template <typename T>
 Span<T> mco_Split(Span<T> mono_stays, Size split_len, Span<T> *out_remainder = nullptr)
 {
-    RG_ASSERT_DEBUG(mono_stays.len >= split_len);
+    RG_ASSERT(mono_stays.len >= split_len);
 
     while (split_len < mono_stays.len &&
            !mco_SplitTest(mono_stays[split_len - 1].bill_id, mono_stays[split_len].bill_id)) {

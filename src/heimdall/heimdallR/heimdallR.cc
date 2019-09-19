@@ -258,7 +258,7 @@ static void InitFontAtlas()
 {
     if (font_atlas.Fonts.empty()) {
         const AssetInfo &font = *pack_asset_Roboto_Medium_ttf;
-        RG_ASSERT_DEBUG(font.data.len <= INT_MAX);
+        RG_ASSERT(font.data.len <= INT_MAX);
 
         ImFontConfig font_config;
         font_config.FontDataOwnedByAtlas = false;

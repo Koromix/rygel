@@ -141,7 +141,7 @@ static double ComputeCoefficients(const mco_Pricing &pricing, Span<const mco_Pri
     double total = 0;
     for (Size i = 0; i < mono_pricings.len; i++) {
         const mco_Pricing &mono_pricing = mono_pricings[i];
-        RG_ASSERT_DEBUG(mono_pricing.stays[0].bill_id == pricing.stays[0].bill_id);
+        RG_ASSERT(mono_pricing.stays[0].bill_id == pricing.stays[0].bill_id);
 
         double coefficient = -1;
         switch (mode) {
@@ -188,7 +188,7 @@ static double ComputeCoefficients(const mco_Pricing &pricing, Span<const mco_Pri
 void mco_Dispense(Span<const mco_Pricing> pricings, Span<const mco_Pricing> mono_pricings,
                   mco_DispenseMode dispense_mode, HeapArray<mco_Pricing> *out_mono_pricings)
 {
-    RG_ASSERT_DEBUG(mono_pricings.len >= pricings.len);
+    RG_ASSERT(mono_pricings.len >= pricings.len);
 
     static const int task_size = 2048;
 

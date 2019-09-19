@@ -219,7 +219,7 @@ void gui_Window::ReleaseImGui()
 
 void gui_Window::RenderImGui()
 {
-    RG_ASSERT_DEBUG(imgui_local);
+    RG_ASSERT(imgui_local);
 
     // Clear screen
     glViewport(0, 0, info.display.width, info.display.height);
