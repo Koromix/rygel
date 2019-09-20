@@ -9,10 +9,6 @@
 
 namespace RG {
 
-static const char *const ScheduleNames[] = {
-    "pl"
-};
-
 static bool GetQueryInteger(const http_RequestInfo &request, const char *key,
                             http_IO *io, int *out_value)
 {
@@ -42,18 +38,18 @@ static sqlite3_stmt *PrepareMonthQuery(const http_RequestInfo &request, const ch
     int year;
     int month;
     schedule_name = request.GetQueryValue("schedule");
+    if (!schedule_name) {
+        LogError("Missing 'schedule' parameter");
+        io->AttachError(422);
+        return nullptr;
+    }
     if (!GetQueryInteger(request, "year", io, &year))
         return nullptr;
     if (!GetQueryInteger(request, "month", io, &month))
         return nullptr;
 
     // Check arguments
-    if (!std::any_of(std::begin(ScheduleNames), std::end(ScheduleNames),
-                     [&](const char *name) { return TestStr(schedule_name, name); })) {
-        LogError("Invalid schedule name '%1'", schedule_name);
-        io->AttachError(422);
-        return nullptr;
-    }
+    // FIXME: Check that schedule_name if a valid asset, with the proper mimetype
     if (month < 1 || month > 12) {
         LogError("Invalid month value %1", month);
         io->AttachError(422);
