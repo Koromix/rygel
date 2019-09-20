@@ -9,7 +9,7 @@ let demo = (function() {
         {
             key: 'tuto',
             mimetype: 'application/x.goupil.form',
-            script: `// Retirer le commentaire de la ligne suivante pour afficher les
+            data: `// Retirer le commentaire de la ligne suivante pour afficher les
 // champs (texte, numérique, etc.) à droite du libellé.
 // form.pushOptions({large: true})
 
@@ -65,7 +65,7 @@ form.buttons("save")
         {
             key: 'complicated',
             mimetype: 'application/x.goupil.form',
-            script: `form.pushOptions({large: true})
+            data: `form.pushOptions({large: true})
 
 form.text("nom", "Quel est votre nom ?", {mandatory: true})
 form.number("age", "Quel est votre âge ?", {min: 0, max: 120,
@@ -133,7 +133,7 @@ form.buttons("save")
         {
             key: 'complicated_help',
             mimetype: 'application/x.goupil.form',
-            script: `form.output("Loreum ipsum")
+            data: `form.output("Loreum ipsum")
 
 form.buttons([
     ["Donner l'alerte", () => alert("Alerte générale !!")],

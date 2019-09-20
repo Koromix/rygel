@@ -9,7 +9,7 @@ function AssetManager(db) {
         let asset = {
             key: key,
             mimetype: mimetype,
-            script: ''
+            data: ''
         };
 
         return asset;
@@ -35,8 +35,11 @@ function AssetManager(db) {
         return await db.load('assets', key);
     };
 
-    this.listAll = async function() {
-        return await db.loadAll('assets');
+    this.list = async function() {
+        let assets = await db.loadAll('assets');
+        for (let asset of assets)
+            delete asset.data;
+        return assets;
     };
 
     return this;

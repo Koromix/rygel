@@ -95,20 +95,20 @@ let admin_form = (function() {
     }
 
     function renderForm() {
-        return executor.render(form_el, current_asset.key, current_asset.script);
+        return executor.render(form_el, current_asset.key, current_asset.data);
     }
 
     function handleEditorChange() {
         if (current_asset) {
-            let prev_script = current_asset.script;
+            let prev_script = current_asset.data;
 
-            current_asset.script = editor.getValue();
+            current_asset.data = editor.getValue();
 
             if (renderForm()) {
                 g_assets.save(current_asset);
             } else {
                 // Restore working script
-                current_asset.script = prev_script;
+                current_asset.data = prev_script;
             }
         }
     }
@@ -139,7 +139,7 @@ let admin_form = (function() {
                 let history = editor_history_cache[current_asset.key];
 
                 if (history !== editor.session.getUndoManager()) {
-                    editor.setValue(current_asset.script);
+                    editor.setValue(current_asset.data);
                     editor.setReadOnly(false);
                     editor.clearSelection();
 
