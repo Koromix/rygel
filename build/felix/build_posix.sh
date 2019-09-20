@@ -2,7 +2,7 @@
 
 cd $(dirname $0)
 
-SRC=$(ls -1 ../../src/felix/*.cc ../../src/libcc/libcc.cc ../../vendor/miniz/miniz.c)
+SRC=$(ls -1 ../../src/felix/*.cc ../../src/libcc/libcc.cc ../../src/wrappers/json.cc ../../vendor/miniz/miniz.c)
 BIN=../../felix
 
 if command -v g++ >/dev/null 2>&1; then
