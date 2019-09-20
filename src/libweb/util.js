@@ -633,14 +633,9 @@ let dates = (function() {
             return str;
         };
 
-        // FIXME: Actually use locale string format
         this.toLocaleString = function() {
-            let year_str = ('' + self.year).padStart(4, '0');
-            let month_str = ('' + self.month).padStart(2, '0');
-            let day_str = ('' + self.day).padStart(2, '0');
-
-            let str = `${day_str}/${month_str}/${year_str}`;
-            return str;
+            let js_date = new Date(self.year, self.month - 1, self.day);
+            return js_date.toLocaleDateString();
         };
     }
 
