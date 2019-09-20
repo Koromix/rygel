@@ -116,7 +116,7 @@ let pilot = (function() {
 
     this.go = async function(key, args = {}) {
         if (!init) {
-            assets = await g_assets.listAll();
+            assets = await g_assets.list();
             assets_map = {};
             for (let asset of assets)
                 assets_map[asset.key] = asset;
