@@ -152,7 +152,7 @@ static bool InitDatabase(const char *filename)
             return false;
 
         HeapArray<char> sql;
-        if (!ReadFile(filename, Megabytes(1), &sql))
+        if (ReadFile(filename, Megabytes(1), &sql) < 0)
             return false;
         sql.Append(0);
 
