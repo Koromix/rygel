@@ -89,6 +89,8 @@ class http_IO {
     Size read_len = 0;
     bool read_eof = false;
 
+    HeapArray<std::function<void()>> finalizers;
+
 public:
     enum class Flag {
         EnableCacheControl = 1 << 0,
@@ -119,6 +121,8 @@ public:
     bool AttachBinary(Span<const uint8_t> data, const char *mime_type,
                       CompressionType compression_type = CompressionType::None);
     void AttachError(int code, const char *details = GetLastLogError());
+
+    void AddFinalizer(const std::function<void()> &func);
 
     // Blocking, do in async context
     bool OpenForRead(StreamReader *out_st);

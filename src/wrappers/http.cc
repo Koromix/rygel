@@ -239,6 +239,10 @@ http_IO::http_IO()
 
 http_IO::~http_IO()
 {
+    for (const auto &func: finalizers) {
+        func();
+    }
+
     MHD_destroy_response(response);
 }
 
@@ -365,6 +369,11 @@ void http_IO::AttachError(int code, const char *details)
                                                            ReleaseDataCallback);
     AttachResponse(code, response);
     AddHeader("Content-Type", "text/plain");
+}
+
+void http_IO::AddFinalizer(const std::function<void()> &func)
+{
+    finalizers.Append(func);
 }
 
 bool http_IO::OpenForRead(StreamReader *out_st)
