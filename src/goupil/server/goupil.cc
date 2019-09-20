@@ -249,11 +249,11 @@ static void InitRoutes()
     add_asset_route("GET", "/schedule/", html);
 
     // General API
-    add_function_route("GET", "/goupil/events.json", ProduceEvents);
+    add_function_route("GET", "/api/events", ProduceEvents);
 
     // Schedule API
-    add_function_route("GET", "/schedule/resources.json", ProduceScheduleResources);
-    add_function_route("GET", "/schedule/meetings.json", ProduceScheduleMeetings);
+    add_function_route("GET", "/api/schedule/resources", ProduceScheduleResources);
+    add_function_route("GET", "/api/schedule/meetings", ProduceScheduleMeetings);
 
     // We can use a global ETag because everything is in the binary
     {

@@ -34,8 +34,8 @@ let admin_schedule = (function() {
 
     async function loadSchedule(year, month) {
         let [resources, meetings] = await Promise.all([
-            fetch(`${settings.base_url}schedule/resources.json?schedule=pl&year=${year}&month=${month}`).then(response => response.json()),
-            fetch(`${settings.base_url}schedule/meetings.json?schedule=pl&year=${year}&month=${month}`).then(response => response.json())
+            fetch(`${settings.base_url}api/schedule/resources?schedule=pl&year=${year}&month=${month}`).then(response => response.json()),
+            fetch(`${settings.base_url}api/schedule/meetings?schedule=pl&year=${year}&month=${month}`).then(response => response.json())
         ]);
 
         return [resources, meetings];

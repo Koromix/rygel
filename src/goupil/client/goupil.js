@@ -295,7 +295,7 @@ let goupil = (function() {
 
     this.listenToServerEvent = function(event, func) {
         if (!event_src) {
-            event_src = new EventSource(`${settings.base_url}goupil/events.json`);
+            event_src = new EventSource(`${settings.base_url}api/events`);
             event_src.onerror = e => event_src = null;
         }
 
