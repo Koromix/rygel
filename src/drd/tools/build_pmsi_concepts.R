@@ -12,8 +12,8 @@ library(jsonlite)
 library(optparse)
 library(enc) # UTF-8 support in R on Windows is completely fucked up
 
-load_mco_ghm_roots <- function(root) {
-    cmds <- tribble(
+load_mco <- function(root) {
+    cmds <- setDT(tribble(
         ~cmd, ~cmd_desc,
         'C01', 'Affections du système nerveux',
         'C02', 'Affections de l\'œil',
@@ -43,7 +43,7 @@ load_mco_ghm_roots <- function(root) {
         'C27', 'Transplantations d\'organes',
         'C28', 'Séances',
         'C90', 'Erreurs et autres séjours inclassables'
-    )
+    ))
 
     files <- list.files(root, pattern = 'regroup.*\\.xlsx?', full.names = TRUE)
     if (!length(files))
@@ -70,7 +70,15 @@ load_mco_ghm_roots <- function(root) {
     ghm_roots <- unique(ghm_roots, by = 'ghm_root')
     ghm_roots$version <- NULL
 
-    return (ghm_roots)
+    parents <- lapply(1:nrow(ghm_roots),
+                      function(i) c(da = ghm_roots[i,]$da, ga = ghm_roots[i,]$ga))
+
+    return (list(
+        da = unique(ghm_roots[, list(da, desc = da_desc)]),
+        ga = unique(ghm_roots[, list(ga, desc = ga_desc)]),
+        ghm_roots = data.table(ghm_root = ghm_roots$ghm_root, desc = ghm_roots$desc,
+                               parents = parents)
+    ))
 }
 
 load_ccam <- function(filename) {
@@ -96,7 +104,7 @@ load_ccam <- function(filename) {
     setorder(ccam, -last_version)
     ccam <- unique(ccam[, list(procedure = code, desc = liblong)])
 
-    return (ccam)
+    return (list(procedures = ccam))
 }
 
 load_cim10 <- function(filename) {
@@ -104,7 +112,7 @@ load_cim10 <- function(filename) {
 
     cim10 <- unique(cim10[, list(diagnosis = code, desc = liblong)])
 
-    return (cim10)
+    return (list(diagnoses = cim10))
 }
 
 opt_parser <- OptionParser(option_list = list(
@@ -115,12 +123,12 @@ args <- parse_args(opt_parser, positional_arguments = 1)
 if (is.null(args$options$destination))
     stop('Missing destination directory');
 
-mco_ghm_roots <- load_mco_ghm_roots(args$args[1])
+mco <- load_mco(args$args[1])
 ccam <- load_ccam(str_interp('${args$args[1]}/ccam.csv'))
 cim10 <- load_cim10(str_interp('${args$args[1]}/cim10.csv'))
 
-write_lines_enc(toJSON(mco_ghm_roots, pretty = 4),
-                path = str_interp('${args$options$destination}/mco_ghm_roots.json'))
+write_lines_enc(toJSON(mco, pretty = 4),
+                path = str_interp('${args$options$destination}/mco.json'))
 write_lines_enc(toJSON(ccam, pretty = 4),
                 path = str_interp('${args$options$destination}/ccam.json'))
 write_lines_enc(toJSON(cim10, pretty = 4),
