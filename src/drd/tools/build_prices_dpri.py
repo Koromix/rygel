@@ -10,6 +10,7 @@ import csv
 import io
 import sys
 import zipfile
+import json
 
 # -------------------------------------------------------------------------
 # Parse
@@ -93,10 +94,24 @@ def write_prices_ini(date, build, sector, ghs, supplements, file):
     cfg.read_dict({'Supplements': supplements})
     cfg.write(file)
 
+def write_prices_json(date, build, sector, ghs, supplements, file):
+    obj = {
+        'Date': date,
+        'Build': build,
+        'Sector': sector,
+        'GHS': ghs,
+        'Supplements': supplements
+    }
+
+    json.dump(obj, file, ensure_ascii = False, indent = 4)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'Convert ATIH ZIP price files to INI files.')
     parser.add_argument('filenames', metavar = 'zip_filename', type = str, nargs = '+',
                         help = 'path to GHS price ZIP files')
+    parser.add_argument('-f', '--format', dest = 'format', action = 'store',
+                        default = 'ini', choices = ['ini', 'json'],
+                        help = 'destination format')
     parser.add_argument('-D', '--destination', dest = 'destination', action = 'store',
                         required = True, help = 'destination directory')
     args = parser.parse_args()
@@ -105,9 +120,17 @@ if __name__ == "__main__":
         date, build, prices = process_zip_file(zip_filename)
         prefix = date.replace('-', '')
 
-        with open(f'{args.destination}/{prefix}_public.dpri', 'w') as ini_file:
-            write_prices_ini(date, build, 'Public', prices['Public']['GHS'],
-                             prices['Public']['Supplements'], ini_file)
-        with open(f'{args.destination}/{prefix}_private.dpri', 'w') as ini_file:
-            write_prices_ini(date, build, 'Private', prices['Private']['GHS'],
-                             prices['Private']['Supplements'], ini_file)
+        if args.format == 'ini':
+            with open(f'{args.destination}/{prefix}_public.dpri', 'w') as ini_file:
+                write_prices_ini(date, build, 'Public', prices['Public']['GHS'],
+                                 prices['Public']['Supplements'], ini_file)
+            with open(f'{args.destination}/{prefix}_private.dpri', 'w') as ini_file:
+                write_prices_ini(date, build, 'Private', prices['Private']['GHS'],
+                                 prices['Private']['Supplements'], ini_file)
+        elif args.format == 'json':
+            with open(f'{args.destination}/{prefix}_public.dprj', 'w') as json_file:
+                write_prices_json(date, build, 'Public', prices['Public']['GHS'],
+                                  prices['Public']['Supplements'], json_file)
+            with open(f'{args.destination}/{prefix}_private.dprj', 'w') as json_file:
+                write_prices_json(date, build, 'Private', prices['Private']['GHS'],
+                                  prices['Private']['Supplements'], json_file)
