@@ -38,6 +38,7 @@ public:
     char *PutBegin() { return 0; }
     Size PutEnd(char *) { return 0; }
 
+    const char *GetFileName() const { return st->GetFileName(); }
     Size GetLineNumber() const { return line_number; }
     Size GetLineOffset() const { return line_offset; }
 
@@ -72,6 +73,109 @@ bool json_Parse(StreamReader *st, Handler *handler)
 
     return true;
 }
+
+enum class json_TokenType {
+    Invalid,
+
+    StartObject,
+    EndObject,
+    StartArray,
+    EndArray,
+
+    Null,
+    Bool,
+    Double,
+    Integer,
+    String,
+
+    Key
+};
+static const char *const json_TokenTypeNames[] = {
+    "Invalid",
+
+    "Object",
+    "End of object",
+    "Array",
+    "End of array",
+
+    "Null",
+    "Boolean",
+    "Double",
+    "Integer",
+    "String",
+
+    "Key"
+};
+
+class json_Parser {
+    struct Handler {
+        Allocator *allocator;
+
+        json_TokenType token = json_TokenType::Invalid;
+        union {
+            bool b;
+            double d;
+            int64_t i;
+            Span<const char> str;
+            Span<const char> key;
+        } u;
+
+        bool StartObject();
+        bool EndObject(Size);
+        bool StartArray();
+        bool EndArray(Size);
+
+        bool Null();
+        bool Bool(bool b);
+        bool Double(double d);
+        bool Int(int i);
+        bool Int64(int64_t i);
+        bool Uint(unsigned int i);
+        bool Uint64(uint64_t i);
+        bool String(const char *str, Size len, bool);
+
+        bool Key(const char *key, Size len, bool);
+
+        bool RawNumber(const char *, Size, bool) { RG_ASSERT(false); }
+    };
+
+    json_StreamReader st;
+    Handler handler;
+    rapidjson::Reader reader;
+
+    Size depth = 0;
+
+    bool error = false;
+    bool eof = false;
+
+public:
+    json_Parser(StreamReader *st, Allocator *alloc);
+
+    const char *GetFileName() const { return st.GetFileName(); }
+    bool IsValid() const { return !error; }
+    bool IsEOF() const { return eof; }
+
+    bool ParseKey(Span<const char> *out_key);
+
+    bool ParseObject();
+    bool InObject();
+    bool ParseArray();
+    bool InArray();
+
+    bool ParseNull();
+    bool ParseBool(bool *out_value);
+    bool ParseInteger(int64_t *out_value);
+    bool ParseDouble(double *out_value);
+    bool ParseString(Span<const char> *out_str);
+
+    void PushLogHandler();
+
+private:
+    json_TokenType PeekToken();
+    bool ConsumeToken(json_TokenType token);
+
+    bool IncreaseDepth();
+};
 
 class json_StreamWriter {
     StreamWriter *st;
