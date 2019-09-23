@@ -84,12 +84,14 @@ load_mco <- function(root) {
     ghm_roots$version <- NULL
 
     parents <- lapply(1:nrow(ghm_roots),
-                      function(i) list(da = unbox(ghm_roots[i,]$da),
+                      function(i) list(cmd = unbox(ghm_roots[i,]$cmd),
+                                       da = unbox(ghm_roots[i,]$da),
                                        ga = unbox(ghm_roots[i,]$ga)))
 
     return (list(
-        da = unique(ghm_roots[, list(code = da, desc = da_desc)]),
-        ga = unique(ghm_roots[, list(code = ga, desc = ga_desc)]),
+        cmd = unique(ghm_roots[, list(code = cmd, desc = cmd_desc)], by = 'code'),
+        da = unique(ghm_roots[, list(code = da, desc = da_desc)], by = 'code'),
+        ga = unique(ghm_roots[, list(code = ga, desc = ga_desc)], by = 'code'),
         ghm_roots = data.table(code = ghm_roots$ghm_root, desc = ghm_roots$desc,
                                parents = parents)
     ))
