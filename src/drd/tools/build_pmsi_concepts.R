@@ -80,7 +80,8 @@ load_mco <- function(root) {
     ghm_roots$version <- NULL
 
     parents <- lapply(1:nrow(ghm_roots),
-                      function(i) c(da = ghm_roots[i,]$da, ga = ghm_roots[i,]$ga))
+                      function(i) list(da = unbox(ghm_roots[i,]$da),
+                                       ga = unbox(ghm_roots[i,]$ga)))
 
     return (list(
         da = unique(ghm_roots[, list(da, desc = da_desc)]),
