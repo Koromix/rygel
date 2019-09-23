@@ -21,7 +21,7 @@ library(roxygen2)
 library(parallel)
 library(optparse)
 
-bundle_drdR <- function(project_dir, build_dir) {
+bundle_drdR <- function(project_dir, version, build_dir) {
     list_files <- function(dir) {
         dir <- str_interp('${project_dir}/${dir}')
         files <- substring(list.files(dir, full.names = TRUE), nchar(project_dir) + 2)
@@ -57,7 +57,6 @@ bundle_drdR <- function(project_dir, build_dir) {
         filename <- str_interp('${build_dir}/DESCRIPTION')
         lines <- readLines(filename)
 
-        version <- gsub('-', '.', Sys.Date(), fixed = TRUE)
         lines <- ifelse(
             grepl('Version:', lines, fixed = TRUE),
             str_interp('Version: ${version}'),
@@ -122,7 +121,11 @@ local({
     Sys.setenv(MAKEFLAGS = str_interp('-j${cores + 1} ${flags}'))
 })
 
+# Package version (commit date)
+version <- trimws(system(str_interp('git -C "${src_dir}" log -n1 --pretty=format:%ad --date=format:%Y.%m.%d'),
+                         show.output.on.console = FALSE, intern = TRUE))
+
 # Bundle, build and register the package
-pkg_dir <- bundle_drdR(src_dir, str_interp('${repo_dir}/tmp/drdR'))
+pkg_dir <- bundle_drdR(src_dir, version, str_interp('${repo_dir}/tmp/drdR'))
 run_roxygen2(pkg_dir)
 build_package(pkg_dir, repo_dir)
