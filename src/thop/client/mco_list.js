@@ -8,64 +8,23 @@ let mco_list = (function() {
     const Lists = {
         ghm_roots: {
             path: 'api/mco_ghm_ghs.json',
-            sector: true,
+            deduplicate_func: ghm_ghs => ghm_ghs.ghm_root,
 
+            sector: true,
             header: false,
             page_len: 800,
 
+            group_func: (ghm_ghs, group) => {
+                let info = catalog.getInfo('mco_ghm_roots', ghm_ghs.ghm_root);
+                return (info && info[group]) ? `${info[group]} - ${info[group + '_desc']}` : '';
+            },
             groups: [
-                {type: 'cmd', name: 'Catégories majeures de diagnostic',
-                 func: (ghm_ghs1, ghm_ghs2) => util.compareValues(ghm_ghs1.ghm_root, ghm_ghs2.ghm_root)},
-                {type: 'da', name: 'Domaines d\'activité',
-                 func: (ghm_ghs1, ghm_ghs2) => {
-                    let ghm_root_info1 = catalog.getInfo('mco_ghm_roots', ghm_ghs1.ghm_root) || {};
-                    let ghm_root_info2 = catalog.getInfo('mco_ghm_roots', ghm_ghs2.ghm_root) || {};
-
-                    return util.compareValues(ghm_root_info1.da, ghm_root_info2.da) ||
-                           util.compareValues(ghm_ghs1.ghm_root, ghm_ghs2.ghm_root);
-                }},
-                {type: 'ga', name: 'Groupes d\'activité',
-                 func: (ghm_ghs1, ghm_ghs2) => {
-                    let ghm_root_info1 = catalog.getInfo('mco_ghm_roots', ghm_ghs1.ghm_root) || {};
-                    let ghm_root_info2 = catalog.getInfo('mco_ghm_roots', ghm_ghs2.ghm_root) || {};
-
-                    return util.compareValues(ghm_root_info1.ga, ghm_root_info2.ga) ||
-                           util.compareValues(ghm_ghs1.ghm_root, ghm_ghs2.ghm_root);
-                }}
+                {type: 'cmd', name: 'Catégories majeures de diagnostic'},
+                {type: 'da', name: 'Domaines d\'activité'},
+                {type: 'ga', name: 'Groupes d\'activité'}
             ],
-            deduplicate: ghm_ghs => ghm_ghs.ghm_root,
 
             columns: [
-                {func: (ghm_ghs, group) => {
-                    switch (group) {
-                        case 'cmd': {
-                            let ghm_root_info = catalog.getInfo('mco_ghm_roots', ghm_ghs.ghm_root);
-                            if (ghm_root_info && ghm_root_info.cmd) {
-                                return `${ghm_root_info.cmd} - ${ghm_root_info.cmd_desc}`;
-                            } else {
-                                return 'CMD inconnue ??';
-                            }
-                        } break;
-
-                        case 'da': {
-                            let ghm_root_info = catalog.getInfo('mco_ghm_roots', ghm_ghs.ghm_root);
-                            if (ghm_root_info && ghm_root_info.da) {
-                                return `${ghm_root_info.da} - ${ghm_root_info.da_desc}`;
-                            } else {
-                                return 'DA inconnu ??';
-                            }
-                        } break;
-
-                        case 'ga': {
-                            let ghm_root_info = catalog.getInfo('mco_ghm_roots', ghm_ghs.ghm_root);
-                            if (ghm_root_info && ghm_root_info.ga) {
-                                return `${ghm_root_info.ga} - ${ghm_root_info.ga_desc}`;
-                            } else {
-                                return 'GA inconnu ??';
-                            }
-                        } break;
-                    }
-                }},
                 {key: 'ghm_root', header: 'Racine de GHM',
                  func: ghm_ghs => catalog.appendDesc('mco_ghm_roots', ghm_ghs.ghm_root)}
             ]
@@ -73,23 +32,23 @@ let mco_list = (function() {
 
         ghm_ghs: {
             path: 'api/mco_ghm_ghs.json',
-            sector: true,
 
+            sector: true,
             header: true,
             page_len: 300,
 
+            group_func: ghm_ghs => catalog.appendDesc('mco_ghm_roots', ghm_ghs.ghm_root),
+
             columns: [
-                {key: 'ghm_root',
-                 func: ghm_ghs => catalog.appendDesc('mco_ghm_roots', ghm_ghs.ghm_root)},
-                {key: 'ghm', header: 'GHM', variable: 'ghm'},
-                {key: 'ghs', header: 'GHS', variable: 'ghs'},
+                {key: 'ghm', header: 'GHM', func: ghm_ghs => ghm_ghs.ghm},
+                {key: 'ghs', header: 'GHS', func: ghm_ghs => ghm_ghs.ghs},
                 {key: 'durations', header: 'Durées', tooltip: 'Durées (nuits)',
                  func: ghm_ghs => maskToRanges(ghm_ghs.durations)},
                 {key: 'confirm', header: 'Confirmation', tooltip: 'Confirmation (nuits)',
                  func: ghm_ghs => ghm_ghs.confirm_treshold ? '< ' + ghm_ghs.confirm_treshold : null},
-                {key: 'main_diagnosis', header: 'DP', variable: 'main_diagnosis'},
-                {key: 'diagnoses', header: 'Diagnostics', variable: 'diagnoses'},
-                {key: 'procedures', header: 'Actes', variable: 'procedures'},
+                {key: 'main_diagnosis', header: 'DP', func: ghm_ghs => ghm_ghs.main_diagnosis},
+                {key: 'diagnoses', header: 'Diagnostics', func: ghm_ghs => ghm_ghs.diagnoses},
+                {key: 'procedures', header: 'Actes', func: ghm_ghs => ghm_ghs.procedures},
                 {key: 'authorizations', header: 'Autorisations', tooltip: 'Autorisations (unités et lits)',
                  func: ghm_ghs => {
                     let ret = [];
@@ -136,8 +95,8 @@ let mco_list = (function() {
                 }},
                 {key: 'severity', header: 'Niveau',
                  func: diag => diag.severity ? diag.severity + 1 : 1},
-                {key: 'cmd' , header: 'CMD', variable: 'cmd'},
-                {key: 'main_list', header: 'Liste principale', variable: 'main_list'}
+                {key: 'cmd' , header: 'CMD', func: diag => diag.cmd},
+                {key: 'main_list', header: 'Liste principale', func: diag => diag.main_list}
             ]
         },
 
@@ -155,9 +114,9 @@ let mco_list = (function() {
                 }},
                 {key: 'dates', header: 'Dates', tooltip: 'Date de début incluse, date de fin exclue',
                  func: proc => proc.begin_date + ' -- ' + proc.end_date},
-                {key: 'activities', header: 'Activités', variable: 'activities'},
+                {key: 'activities', header: 'Activités', func: proc => proc.activities},
                 {key: 'extensions', header: 'Extensions', tooltip: 'Extensions (CCAM descriptive)',
-                 variable: 'extensions'}
+                 func: proc => proc.extensions}
             ]
         }
     };
@@ -171,7 +130,6 @@ let mco_list = (function() {
 
     // Cache
     let list_cache = {};
-    let reactor = {};
 
     this.runModule = function(route) {
         // Memorize route info
@@ -222,13 +180,13 @@ let mco_list = (function() {
             if (route.search != search_input.value)
                 search_input.value = route.search || '';
         }
-        if (Lists[route.list] && Lists[route.list].groups !== undefined) {
+        if (Lists[route.list] && Lists[route.list].groups) {
             query('#opt_group').removeClass('hide');
             refreshGroupsMenu(Lists[route.list], route.group);
         }
 
         // Refresh view
-        if (!thop.isBusy() && Lists[route.list]) {
+        if (!thop.isBusy() && list_cache[route.list]) {
             let view_el = query('#view');
 
             render(html`
@@ -382,28 +340,33 @@ let mco_list = (function() {
             builder.sortHandler = function(sort) { thop.go({sort: sort}); }
             list.builder = builder;
 
-            // Special column
-            let first_column = 0;
-            if (!list_info.columns[0].header)
-                first_column = 1;
-
             // Header
-            for (let i = first_column; i < list_info.columns.length; i++) {
-                let col = list_info.columns[i];
+            for (const col of list_info.columns)
                 builder.addColumn(col.key, col.header, self.addSpecLinks,
                                   {tooltip: col.tooltip || col.header});
-            }
 
             // Groups
-            if (group_info)
-                list.items.sort(function(v1, v2) { return group_info.func(v1, v2); });
+            let sorted_indices = [];
+            for (let i = 0; i < list.items.length; i++)
+                sorted_indices.push(i);
+            if (group_info) {
+                sorted_indices.sort(function(idx1, idx2) {
+                    let group1 = list_info.group_func(list.items[idx1], group_info.type);
+                    let group2 = list_info.group_func(list.items[idx2], group_info.type);
+
+                    return util.compareValues(group1, group2) ||
+                           (idx1 - idx2);
+                });
+            }
 
             // Data
-            let prev_cell0 = null;
+            let prev_group = null;
             let prev_deduplicate_key = null;
-            for (const item of list.items) {
-                if (list_info.deduplicate) {
-                    let deduplicate_key = list_info.deduplicate(item);
+            for (let i = 0; i < sorted_indices.length; i++) {
+                const item = list.items[sorted_indices[i]];
+
+                if (list_info.deduplicate_func) {
+                    let deduplicate_key = list_info.deduplicate_func(item);
                     if (deduplicate_key === prev_deduplicate_key)
                         continue;
                     prev_deduplicate_key = deduplicate_key;
@@ -412,28 +375,26 @@ let mco_list = (function() {
                 let show = false;
                 let cells = [];
                 for (const col of list_info.columns) {
-                    let content = createContent(col, item, group_info ? group_info.type : null);
+                    let content = createContent(col, item);
 
                     show |= test(content);
                     cells.push(content);
                 }
 
                 if (show) {
-                    if (first_column) {
-                        if (cells[0] !== prev_cell0) {
-                            if (prev_cell0)
+                    if (list_info.group_func) {
+                        let group = list_info.group_func(item, group_info ? group_info.type : null);
+                        if (group !== prev_group) {
+                            if (prev_group)
                                 builder.endRow();
                             builder.beginRow();
-                            builder.addCell(cells[0], {colspan: cells.length - 1});
-                            prev_cell0 = cells[0];
+                            builder.addCell(group, {colspan: cells.length});
+                            prev_group = group;
                         }
                     }
 
                     builder.beginRow();
-                    for (let i = first_column; i < cells.length; i++) {
-                        const cell = cells[i];
-                        builder.addCell(cell);
-                    }
+                    builder.addCells(cells);
                     builder.endRow();
                 }
             }
@@ -456,13 +417,8 @@ let mco_list = (function() {
                    Pager.computeLastPage(render_count, builder.getRowCount(), list_info.page_len));
     }
 
-    function createContent(column, item, group) {
-        let content;
-        if (column.variable) {
-            content = item[column.variable];
-        } else if (column.func) {
-            content = column.func(item, group);
-        }
+    function createContent(column, item) {
+        let content = column.func(item);
 
         if (content === undefined || content === null) {
             content = '';
