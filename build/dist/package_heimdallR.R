@@ -13,6 +13,7 @@ if (!exists('.script_utf8')) {
     quit(save = 'no')
 }
 
+library(rprojroot)
 library(stringr)
 library(devtools)
 library(drat)
@@ -23,7 +24,9 @@ library(optparse)
 bundle_heimdallR <- function(project_dir, build_dir) {
     list_files <- function(dir) {
         dir <- str_interp('${project_dir}/${dir}')
-        list.files(dir, full.names = TRUE)
+        files <- substring(list.files(dir, full.names = TRUE), nchar(project_dir) + 2)
+
+        return (files)
     }
     copy_files <- function(src_files, dest_dir, recursive = FALSE) {
         src_files <- sapply(src_files, function(path) str_interp('${project_dir}/${path}'))
@@ -113,16 +116,11 @@ build_package <- function(pkg_dir, repo_dir) {
 
 # Parse arguments
 local({
-    opt_parser <- OptionParser(option_list = list(
-        make_option(c('-R', '--repository'), type = 'character', help = 'repository directory')
-    ))
+    opt_parser <- OptionParser(option_list = list())
     args <- parse_args(opt_parser, positional_arguments = 1)
 
-    if (is.null(args$options$repository))
-        stop('Missing repository directory');
-
-    src_dir <<- args$args[1]
-    repo_dir <<- args$options$repository
+    src_dir <<- rprojroot::find_root('FelixBuild.ini')
+    repo_dir <<- args$args[1]
 })
 
 # Use all cores to build package
