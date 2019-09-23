@@ -21,7 +21,7 @@ library(jsonlite)
 library(optparse)
 library(enc)
 
-load_mco <- function(root) {
+load_mco <- function(root, err_filename) {
     cmds <- setDT(tribble(
         ~cmd, ~cmd_desc,
         'C01', 'Affections du système nerveux',
@@ -67,11 +67,16 @@ load_mco <- function(root) {
         dt$version <- str_match(tolower(basename(filename)), 'v([0-9]+[a-z]?)')[,2]
         dt
     }), use.names = FALSE)
-    setorder(ghm_roots, racine, -version)
-
     setnames(ghm_roots,
              c('racine', 'libelle', 'DA', 'libellé domaine d\'activité', 'GA', 'libellé Groupes d\'Activité'),
              c('ghm_root', 'desc', 'da', 'da_desc', 'ga', 'ga_desc'))
+    setorder(ghm_roots, ghm_root, -version)
+
+    errors <- setDT(read_excel(err_filename, sheet = 'Erreurs'))
+    setnames(errors,
+             c('Code erreur', 'Intitulé'),
+             c('erreur', 'desc'))
+    errors$erreur <- as.integer(errors$erreur)
 
     ghm_roots$cmd <- paste0('C', substr(ghm_roots$ghm_root, 1, 2))
     ghm_roots[cmds, cmd_desc := i.cmd_desc, on = 'cmd']
@@ -93,7 +98,8 @@ load_mco <- function(root) {
         da = unique(ghm_roots[, list(code = da, desc = da_desc)], by = 'code'),
         ga = unique(ghm_roots[, list(code = ga, desc = ga_desc)], by = 'code'),
         ghm_roots = data.table(code = ghm_roots$ghm_root, desc = ghm_roots$desc,
-                               parents = parents)
+                               parents = parents),
+        errors = errors[, list(code = erreur, desc)]
     ))
 }
 
@@ -139,7 +145,7 @@ args <- parse_args(opt_parser, positional_arguments = 1)
 if (is.null(args$options$destination))
     stop('Missing destination directory');
 
-mco <- load_mco(args$args[1])
+mco <- load_mco(args$args[1], str_interp('${args$args[1]}/erreurs.xlsx'))
 ccam <- load_ccam(str_interp('${args$args[1]}/ccam.csv'))
 cim10 <- load_cim10(str_interp('${args$args[1]}/cim10.csv'))
 
