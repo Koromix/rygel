@@ -84,9 +84,9 @@ load_mco <- function(root) {
                                        ga = unbox(ghm_roots[i,]$ga)))
 
     return (list(
-        da = unique(ghm_roots[, list(da, desc = da_desc)]),
-        ga = unique(ghm_roots[, list(ga, desc = ga_desc)]),
-        ghm_roots = data.table(ghm_root = ghm_roots$ghm_root, desc = ghm_roots$desc,
+        da = unique(ghm_roots[, list(code = da, desc = da_desc)]),
+        ga = unique(ghm_roots[, list(code = ga, desc = ga_desc)]),
+        ghm_roots = data.table(code = ghm_roots$ghm_root, desc = ghm_roots$desc,
                                parents = parents)
     ))
 }
@@ -112,7 +112,7 @@ load_ccam <- function(filename) {
     # ), on = 'hiera']
 
     setorder(ccam, -last_version)
-    ccam <- unique(ccam[, list(procedure = code, desc = liblong)])
+    ccam <- unique(ccam[, list(code = code, desc = liblong)])
 
     return (list(procedures = ccam))
 }
@@ -120,7 +120,7 @@ load_ccam <- function(filename) {
 load_cim10 <- function(filename) {
     cim10 <- fread(filename, encoding = 'Latin-1')
 
-    cim10 <- unique(cim10[, list(diagnosis = code, desc = liblong)])
+    cim10 <- unique(cim10[, list(code = code, desc = liblong)])
 
     return (list(diagnoses = cim10))
 }
