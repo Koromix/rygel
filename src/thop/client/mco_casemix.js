@@ -55,12 +55,12 @@ let mco_casemix = (function() {
             route.date = indexes[indexes.length - 1].begin_date;
         let ghm_roots = catalog.update('mco_ghm_roots').concepts;
         if (['durations', 'results'].includes(route.view) && !route.ghm_root && ghm_roots.length)
-            route.ghm_root = ghm_roots[0].ghm_root;
+            route.ghm_root = ghm_roots[0].code;
         if (unspecified && settings.structures && settings.structures.length && ghm_roots.length) {
             if (!route.units.length && settings.structures[route.structure])
                 route.units = settings.structures[route.structure].entities.map(function(ent) { return ent.unit; }).sort();
             if (!route.ghm_roots.length)
-                route.ghm_roots = ghm_roots.map(function(ghm_root) { return ghm_root.ghm_root; }).sort();
+                route.ghm_roots = ghm_roots.map(function(ghm_root) { return ghm_root.code; }).sort();
 
             unspecified = false;
         }
@@ -626,8 +626,8 @@ let mco_casemix = (function() {
 
                 if (group1 !== group2) {
                     return (group1 < group2) ? -1 : 1;
-                } else if (ghm_root1.ghm_root !== ghm_root2.ghm_root) {
-                    return (ghm_root1.ghm_root < ghm_root2.ghm_root) ? -1 : 1;
+                } else if (ghm_root1.code !== ghm_root2.code) {
+                    return (ghm_root1.code < ghm_root2.code) ? -1 : 1;
                 } else {
                     return 0;
                 }
@@ -646,8 +646,8 @@ let mco_casemix = (function() {
                     prev_group = group;
                 }
 
-                builder.addOption(ghm_root.ghm_root + ' - ' + ghm_root.desc, ghm_root.ghm_root,
-                                  {selected: select_ghm_roots.has(ghm_root.ghm_root)});
+                builder.addOption(ghm_root.code + ' - ' + ghm_root.desc, ghm_root.code,
+                                  {selected: select_ghm_roots.has(ghm_root.code)});
             }
         }
         builder.setCurrentTab(GroupTypes.findIndex(function(group_type) {
@@ -661,10 +661,10 @@ let mco_casemix = (function() {
         let el = query('#opt_ghm_root > select');
 
         render(ghm_roots.map(ghm_root_info => {
-            let disabled = !checkCasemixGhmRoot(ghm_root_info.ghm_root);
-            let label = `${ghm_root_info.ghm_root} – ${ghm_root_info.desc}${disabled ? ' *' : ''}`;
+            let disabled = !checkCasemixGhmRoot(ghm_root_info.code);
+            let label = `${ghm_root_info.code} – ${ghm_root_info.desc}${disabled ? ' *' : ''}`;
 
-            return html`<option value=${ghm_root_info.ghm_root} ?disabled=${disabled}>${label}</option>`;
+            return html`<option value=${ghm_root_info.code} ?disabled=${disabled}>${label}</option>`;
         }), el);
 
         el.value = select_ghm_root || el.value;
@@ -781,8 +781,8 @@ let mco_casemix = (function() {
                 .concepts.slice().sort(function(ghm_root1, ghm_root2) {
                     if (ghm_root1[regroup] !== ghm_root2[regroup]) {
                         return (ghm_root1[regroup] < ghm_root2[regroup]) ? -1 : 1;
-                    } else if (ghm_root1.ghm_root !== ghm_root2.ghm_root) {
-                        return (ghm_root1.ghm_root < ghm_root2.ghm_root) ? -1 : 1;
+                    } else if (ghm_root1.code !== ghm_root2.code) {
+                        return (ghm_root1.code < ghm_root2.code) ? -1 : 1;
                     } else {
                         return 0;
                     }
@@ -832,7 +832,7 @@ let mco_casemix = (function() {
                 let prev_group = null;
                 let total = stat0;
                 for (const ghm_root_info of ghm_roots) {
-                    let ghm_root = ghm_root_info.ghm_root;
+                    let ghm_root = ghm_root_info.code;
                     let stat = stats1.find(ghm_root);
                     if (!stat)
                         continue;

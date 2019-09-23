@@ -9,7 +9,9 @@ let mco_list = (function() {
         ghm_roots: {
             path: 'api/mco_ghm_ghs.json',
             sector: true,
-            catalog: 'mco_ghm_roots',
+
+            header: false,
+            page_len: 800,
 
             groups: [
                 {type: 'cmd', name: 'Catégories majeures de diagnostic',
@@ -20,7 +22,7 @@ let mco_list = (function() {
                     let ghm_root_info2 = catalog.getInfo('mco_ghm_roots', ghm_ghs2.ghm_root) || {};
 
                     return util.compareValues(ghm_root_info1.da, ghm_root_info2.da) ||
-                           util.compareValues(ghm_root_info1.ghm_root, ghm_root_info2.ghm_root);
+                           util.compareValues(ghm_ghs1.ghm_root, ghm_ghs2.ghm_root);
                 }},
                 {type: 'ga', name: 'Groupes d\'activité',
                  func: (ghm_ghs1, ghm_ghs2) => {
@@ -28,12 +30,11 @@ let mco_list = (function() {
                     let ghm_root_info2 = catalog.getInfo('mco_ghm_roots', ghm_ghs2.ghm_root) || {};
 
                     return util.compareValues(ghm_root_info1.ga, ghm_root_info2.ga) ||
-                           util.compareValues(ghm_root_info1.ghm_root, ghm_root_info2.ghm_root);
+                           util.compareValues(ghm_ghs1.ghm_root, ghm_ghs2.ghm_root);
                 }}
             ],
             deduplicate: ghm_ghs => ghm_ghs.ghm_root,
 
-            header: false,
             columns: [
                 {func: (ghm_ghs, group) => {
                     switch (group) {
@@ -67,17 +68,16 @@ let mco_list = (function() {
                 }},
                 {key: 'ghm_root', header: 'Racine de GHM',
                  func: ghm_ghs => catalog.appendDesc('mco_ghm_roots', ghm_ghs.ghm_root)}
-            ],
-
-            page_len: 800
+            ]
         },
 
         ghm_ghs: {
             path: 'api/mco_ghm_ghs.json',
             sector: true,
-            catalog: 'mco_ghm_roots',
 
             header: true,
+            page_len: 300,
+
             columns: [
                 {key: 'ghm_root',
                  func: ghm_ghs => catalog.appendDesc('mco_ghm_roots', ghm_ghs.ghm_root)},
@@ -115,16 +115,15 @@ let mco_list = (function() {
                         return null;
                     }
                 }}
-            ],
-
-            page_len: 300
+            ]
         },
 
         diagnoses: {
             path: 'api/mco_diagnoses.json',
-            catalog: 'cim10',
 
             header: true,
+            page_len: 300,
+
             columns: [
                 {key: 'diag', header: 'Diagnostic',
                  func: diag => {
@@ -139,16 +138,15 @@ let mco_list = (function() {
                  func: diag => diag.severity ? diag.severity + 1 : 1},
                 {key: 'cmd' , header: 'CMD', variable: 'cmd'},
                 {key: 'main_list', header: 'Liste principale', variable: 'main_list'}
-            ],
-
-            page_len: 300
+            ]
         },
 
         procedures: {
             path: 'api/mco_procedures.json',
-            catalog: 'ccam',
 
             header: true,
+            page_len: 300,
+
             columns: [
                 {key: 'proc', header: 'Acte',
                  func: proc => {
@@ -160,9 +158,7 @@ let mco_list = (function() {
                 {key: 'activities', header: 'Activités', variable: 'activities'},
                 {key: 'extensions', header: 'Extensions', tooltip: 'Extensions (CCAM descriptive)',
                  variable: 'extensions'}
-            ],
-
-            page_len: 300
+            ]
         }
     };
 
@@ -321,8 +317,6 @@ let mco_list = (function() {
         let list = list_cache[list_name];
 
         if (!list || url !== list.url) {
-            catalog.update(Lists[list_name].catalog);
-
             list_cache[list_name] = {
                 url: null,
                 items: []
