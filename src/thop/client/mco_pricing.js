@@ -22,7 +22,7 @@ let mco_pricing = (function() {
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
         if (!route.ghm_root && ghm_roots.length)
-            route.ghm_root = ghm_roots[0].ghm_root;
+            route.ghm_root = ghm_roots[0].code;
         let main_index = indexes.findIndex(info => info.begin_date === route.date);
         let diff_index = indexes.findIndex(info => info.begin_date === route.diff);
         if (main_index >= 0)
@@ -192,10 +192,10 @@ let mco_pricing = (function() {
         let el = query('#opt_ghm_root > select');
 
         render(ghm_roots.map(ghm_root_info => {
-            let disabled = !checkIndexGhmRoot(indexes, main_index, sector, ghm_root_info.ghm_root);
-            let label = `${ghm_root_info.ghm_root} – ${ghm_root_info.desc}${disabled ? ' *' : ''}`;
+            let disabled = !checkIndexGhmRoot(indexes, main_index, sector, ghm_root_info.code);
+            let label = `${ghm_root_info.code} – ${ghm_root_info.desc}${disabled ? ' *' : ''}`;
 
-            return html`<option value=${ghm_root_info.ghm_root} ?disabled=${disabled}>${label}</option>`;
+            return html`<option value=${ghm_root_info.code} ?disabled=${disabled}>${label}</option>`;
         }), el);
 
         el.value = select_ghm_root || el.value;
