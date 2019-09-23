@@ -8,6 +8,15 @@
 # Rscript flatten_ccam.csv [in.xls] [out.csv]
 # Example: Rscript flatten_ccam.csv CCAM_V57.xls ccam57_plate.csv
 
+# Make sure we run in UTF-8 encoding (mostly for Windows)
+if (!exists('.script_utf8')) {
+    .script_utf8 <- TRUE
+    .script_path <- with(list(args = commandArgs()),
+                        trimws(substring(args[startsWith(args, '--file=')], 8)))
+    source(.script_path, encoding = 'UTF-8')
+    quit(save = 'no')
+}
+
 library(zoo, warn.conflicts = FALSE)
 library(data.table, warn.conflicts = FALSE)
 library(readxl, warn.conflicts = FALSE)
