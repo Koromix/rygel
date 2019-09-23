@@ -59,10 +59,14 @@ load_mco <- function(root) {
         stop('Cannot find any GHM catalog file')
 
     ghm_roots <- rbindlist(lapply(files, function(filename) {
-        dt <- as.data.table(read_excel(filename, sheet = 1))
+        dt <- as.data.table(read_excel(filename, sheet = 5, skip = 2))
+        if (!('DA' %in% colnames(dt))) {
+            dt <- as.data.table(read_excel(filename, sheet = 5, skip = 3))
+        }
+        dt <- dt[, 1:10]
         dt$version <- str_match(tolower(basename(filename)), 'v([0-9]+[a-z]?)')[,2]
         dt
-    }), fill = TRUE)
+    }), use.names = FALSE)
     setorder(ghm_roots, racine, -version)
 
     setnames(ghm_roots,
