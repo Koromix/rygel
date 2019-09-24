@@ -56,6 +56,4 @@ private:
     bool RunDirect(FunctionRef<void(Span<const mco_Result>, Span<const mco_Result>)> func);
 };
 
-void ProduceMcoSettings(const http_RequestInfo &request, const User *user, http_IO *io);
-
 }
