@@ -66,6 +66,97 @@ static HashTable<Span<const char>, Route> routes;
 static BlockAllocator routes_alloc;
 static char etag[64];
 
+static void ProduceSettings(const http_RequestInfo &request, const User *user, http_IO *io)
+{
+    if (!user) {
+        io->flags |= (int)http_IO::Flag::EnableCache;
+    }
+
+    http_JsonPageBuilder json(request.compression_type);
+    char buf[32];
+
+    json.StartObject();
+
+    json.Key("mco"); json.StartObject();
+    {
+        json.Key("versions"); json.StartArray();
+        for (const mco_TableIndex &index: mco_table_set.indexes) {
+            if (!index.valid)
+                continue;
+
+            char buf[32];
+
+            json.StartObject();
+            json.Key("begin_date"); json.String(Fmt(buf, "%1", index.limit_dates[0]).ptr);
+            json.Key("end_date"); json.String(Fmt(buf, "%1", index.limit_dates[1]).ptr);
+            if (index.changed_tables & ~MaskEnum(mco_TableType::PriceTablePublic)) {
+                json.Key("changed_tables"); json.Bool(true);
+            }
+            if (index.changed_tables & MaskEnum(mco_TableType::PriceTablePublic)) {
+                json.Key("changed_prices"); json.Bool(true);
+            }
+            json.EndObject();
+        }
+        json.EndArray();
+
+        if (user) {
+            json.Key("start_date"); json.String(Fmt(buf, "%1", mco_stay_set_dates[0]).ptr);
+            json.Key("end_date"); json.String(Fmt(buf, "%1", mco_stay_set_dates[1]).ptr);
+
+            // Algorithms
+            {
+                const OptionDesc &default_desc = mco_DispenseModeOptions[(int)thop_config.mco_dispense_mode];
+
+                json.Key("algorithms"); json.StartArray();
+                for (Size i = 0; i < RG_LEN(mco_DispenseModeOptions); i++) {
+                    if (user->CheckMcoDispenseMode((mco_DispenseMode)i)) {
+                        const OptionDesc &desc = mco_DispenseModeOptions[i];
+
+                        json.StartObject();
+                        json.Key("name"); json.String(desc.name);
+                        json.Key("help"); json.String(desc.help);
+                        json.EndObject();
+                    }
+                }
+                json.EndArray();
+
+                json.Key("default_algorithm"); json.String(default_desc.name);
+            }
+
+            json.Key("permissions"); json.StartArray();
+            for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
+                if (user->permissions & (1 << i)) {
+                    json.String(UserPermissionNames[i]);
+                }
+            }
+            json.EndArray();
+
+            json.Key("structures"); json.StartArray();
+            for (const Structure &structure: thop_structure_set.structures) {
+                json.StartObject();
+                json.Key("name"); json.String(structure.name);
+                json.Key("entities"); json.StartArray();
+                for (const StructureEntity &ent: structure.entities) {
+                    if (user->mco_allowed_units.Find(ent.unit)) {
+                        json.StartObject();
+                        json.Key("unit"); json.Int(ent.unit.number);
+                        json.Key("path"); json.String(ent.path);
+                        json.EndObject();
+                    }
+                }
+                json.EndArray();
+                json.EndObject();
+            }
+            json.EndArray();
+        }
+    }
+    json.EndObject();
+
+    json.EndObject();
+
+    json.Finish(io);
+}
+
 static bool InitCatalogSet(Span<const char *const> table_directories)
 {
     BlockAllocator temp_alloc;
@@ -210,6 +301,9 @@ static void InitRoutes()
     add_asset_route("GET", "/mco_results", Route::Matching::Walk, html);
     add_asset_route("GET", "/mco_tree", Route::Matching::Walk, html);
 
+    // Common API
+    add_function_route("GET", "/api/settings.json", ProduceSettings);
+
     // User API
     add_function_route("POST", "/api/connect.json", HandleConnect);
     add_function_route("POST", "/api/disconnect.json", HandleDisconnect);
@@ -217,7 +311,6 @@ static void InitRoutes()
     // MCO API
     add_function_route("GET", "/api/mco_aggregate.json", ProduceMcoAggregate);
     add_function_route("GET", "/api/mco_results.json", ProduceMcoResults);
-    add_function_route("GET", "/api/mco_settings.json", ProduceMcoSettings);
     add_function_route("GET", "/api/mco_diagnoses.json", ProduceMcoDiagnoses);
     add_function_route("GET", "/api/mco_procedures.json", ProduceMcoProcedures);
     add_function_route("GET", "/api/mco_ghm_ghs.json", ProduceMcoGhmGhs);
