@@ -116,7 +116,7 @@ let admin_form = (function() {
     async function syncEditor() {
         // FIXME: Make sure we don't run loadScript more than once
         if (!window.ace)
-            await util.loadScript(`${settings.base_url}static/ace.js`);
+            await util.loadScript(`${env.base_url}static/ace.js`);
 
         if (left_panel === 'editor') {
             if (!editor) {
@@ -258,12 +258,12 @@ let admin_form = (function() {
 
     async function exportToExcel(table) {
         if (!window.XLSX)
-            await util.loadScript(`${settings.base_url}static/xlsx.core.min.js`);
+            await util.loadScript(`${env.base_url}static/xlsx.core.min.js`);
 
         let [records, variables] = await g_records.loadAll(table);
         let columns = orderColumns(variables);
 
-        let export_name = `${settings.project_key}_${dates.today()}`;
+        let export_name = `${env.project_key}_${dates.today()}`;
         let filename = `export_${export_name}.xlsx`;
 
         let wb = XLSX.utils.book_new();
