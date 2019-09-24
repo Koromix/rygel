@@ -146,7 +146,7 @@ let pilot = (function() {
 
         renderMenu();
         if (current_asset) {
-            document.title = `${current_asset.key} — ${settings.project_key}`;
+            document.title = `${current_asset.key} — ${env.project_key}`;
 
             switch (current_asset.mimetype) {
                 case 'application/x.goupil.form': { admin_form.run(current_asset, args); } break;
@@ -157,7 +157,7 @@ let pilot = (function() {
                 } break;
             }
         } else {
-            document.title = settings.project_key;
+            document.title = env.project_key;
 
             renderEmpty();
             log.error('No asset available');

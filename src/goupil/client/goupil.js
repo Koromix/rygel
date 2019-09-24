@@ -42,7 +42,7 @@ let goupil = (function() {
             log.error(storage_warning);
         }
 
-        let db_name = `goupil_${settings.project_key}`;
+        let db_name = `goupil_${env.project_key}`;
         let db = await idb.open(db_name, 7, (db, old_version) => {
             switch (old_version) {
                 case null: {
@@ -264,7 +264,7 @@ let goupil = (function() {
     }
 
     function showDummyPage() {
-        document.title = `${settings.project_key} — goupil autoform`;
+        document.title = `${env.project_key} — goupil autoform`;
 
         let main_el = document.querySelector('main');
 
@@ -276,8 +276,8 @@ let goupil = (function() {
     this.go = function(href, history = true) {
         // Asset key
         let asset_key = parseURL(href, window.location.href).pathname;
-        if (asset_key.startsWith(settings.base_url))
-            asset_key = asset_key.substr(settings.base_url.length);
+        if (asset_key.startsWith(env.base_url))
+            asset_key = asset_key.substr(env.base_url.length);
         while (asset_key.endsWith('/'))
             asset_key = asset_key.substr(0, asset_key.length - 1);
 
@@ -285,7 +285,7 @@ let goupil = (function() {
         pilot.go(asset_key);
 
         // Update history
-        let full_path = `${settings.base_url}${asset_key}${asset_key ? '/' : ''}`;
+        let full_path = `${env.base_url}${asset_key}${asset_key ? '/' : ''}`;
         if (history && full_path !== parseURL(window.location.href).pathname) {
             window.history.pushState(null, null, full_path);
         } else {
@@ -295,7 +295,7 @@ let goupil = (function() {
 
     this.listenToServerEvent = function(event, func) {
         if (!event_src) {
-            event_src = new EventSource(`${settings.base_url}api/events`);
+            event_src = new EventSource(`${env.base_url}api/events`);
             event_src.onerror = e => event_src = null;
         }
 
