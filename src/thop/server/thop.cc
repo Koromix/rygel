@@ -187,13 +187,13 @@ static void InitRoutes()
     // Patch HTML
     html.data = PatchAssetVariables(html, &routes_alloc,
                                     [](const char *key, StreamWriter *writer) {
-        if (TestStr(key, "THOP_VERSION")) {
+        if (TestStr(key, "VERSION")) {
             writer->Write(BuildVersion ? BuildVersion : "");
             return true;
-        } else if (TestStr(key, "THOP_BASE_URL")) {
+        } else if (TestStr(key, "BASE_URL")) {
             writer->Write(thop_config.http.base_url);
             return true;
-        } else if (TestStr(key, "THOP_HAS_USERS")) {
+        } else if (TestStr(key, "HAS_USERS")) {
             writer->Write(thop_has_casemix ? "true" : "false");
             return true;
         } else {

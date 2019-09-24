@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<!--
+    This Source Code Form is subject to the terms of the Mozilla Public
+    License, v. 2.0. If a copy of the MPL was not distributed with this
+    file, You can obtain one at http://mozilla.org/MPL/2.0/.
+-->
+<html>
+    <head>
+        <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1"/>
+
+        <title>THOP</title>
+
+        <script>
+            let settings = {
+                base_url: '{BASE_URL}',
+                has_users: {HAS_USERS}
+            };
+        </script>
+        <script src="{BASE_URL}static/thop.pk.js"></script>
+
+        <link rel="stylesheet" href="{BASE_URL}static/thop.pk.css"/>
+    </head>
+
+    <body>
+        <div id="th_log"></div>
+
+        <div id="th_bar">
+            <img id="th_logo" src="{BASE_URL}static/thop_logo.svg" width="150" alt="THOP logo"/>
+            <nav id="th_menu"></nav>
+            <div id="th_version">{VERSION}</div>
+        </div>
+
+        <main></main>
+    </body>
+</html>
