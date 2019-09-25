@@ -88,12 +88,12 @@ let mco_info = (function() {
             <div id="th_options">
                 ${renderVersionLine(settings.mco.versions, version)}
                 <label>Secteur <select @change=${e => thop.go(self, {ghs_sector: e.target.value})}>
-                    <option value="public" ?selected=${self.route.ghs_sector === 'public'}>Public</option>
-                    <option value="private" ?selected=${self.route.ghs_sector === 'private'}>Privé</option>
+                    <option value="public" .selected=${self.route.ghs_sector === 'public'}>Public</option>
+                    <option value="private" .selected=${self.route.ghs_sector === 'private'}>Privé</option>
                 </select></label>
-                <label>Durée <input type="number" step="5" min="0" max="500" value=${self.route.ghs_duration}
+                <label>Durée <input type="number" step="5" min="0" max="500" .value=${self.route.ghs_duration}
                                      @change=${e => thop.go(self, {ghs_duration: e.target.value})}/></label>
-                <label>Coefficient <input type="checkbox" ?value=${self.route.ghs_coeff}
+                <label>Coefficient <input type="checkbox" .checked=${self.route.ghs_coeff}
                                            @change=${e => thop.go(self, {ghs_coeff: e.target.checked})}/></label>
                 ${renderGhmRootSelector(ghm_roots, self.route.ghm_root)}
             </div>
@@ -432,7 +432,7 @@ let mco_info = (function() {
                     let label = `${ghm_root.code} – ${ghm_root.desc}${disabled ? ' *' : ''}`;
 
                     return html`<option value=${ghm_root.code} ?disabled=${disabled}
-                                        ?selected=${ghm_root.code === current_ghm_root}>${label}</option>`
+                                        .selected=${ghm_root.code === current_ghm_root}>${label}</option>`
                 })}
             </select>
         `
