@@ -8,21 +8,9 @@ let mco_info = (function() {
     this.route = {};
 
     this.run = async function() {
-        let version = settings.mco.versions.find(version => version.begin_date.equals(self.route.version));
-        if (!version)
-            throw new Error(`Version MCO '${self.route.version}' inexistante`);
-
-        render(renderVersionLine(settings.mco.versions, version),
-               document.querySelector('#th_options'));
-
         switch (self.route.mode) {
-            case 'tree': {
-                await concepts.load('mco');
-
-                let nodes = await fetch(`${env.base_url}api/mco_tree.json?date=${version.begin_date}`).then(response => response.json());
-                render(renderTree(nodes),
-                       document.querySelector('main'));
-            } break;
+            case 'prices': { await runPrices(); } break;
+            case 'tree': { await runTree(); } break;
 
             default: {
                 throw new Error(`Mode inconnu '${self.route.mode}'`);
@@ -33,48 +21,235 @@ let mco_info = (function() {
     this.parseURL = function(path, query) {
         let parts = path.split('/');
 
+        // Common part
         let args = {
             version: dates.fromString(parts[0] || null) ||
                      settings.mco.versions[settings.mco.versions.length - 1].begin_date,
             mode: parts[1] || 'tree'
         };
 
+        // Mode-specific part
+        switch (args.mode) {
+            case 'prices': {
+                args.ghm_root = parts[2] || null;
+                args.prices_duration = parseInt(query.duration, 10) || 200;
+                args.prices_coeff = !!parseInt(query.coeff, 10) || false;
+            } break;
+            case 'tree': { /* Nothing to do */ } break;
+        }
+
         return args;
     };
 
     this.makeURL = function(args = {}) {
         args = {...self.route, ...args};
-        return `${env.base_url}mco_info/${args.version}/${args.mode}`;
+
+        // Common part
+        let url = `${env.base_url}mco_info/${args.version}/${args.mode}`;
+
+        // Mode-specific part
+        switch (args.mode) {
+            case 'prices': {
+                if (args.ghm_root)
+                    url += `/${args.ghm_root}`;
+
+                url = util.buildUrl(url, {
+                    duration: args.prices_duration,
+                    coeff: 0 + args.prices_coeff
+                })
+            } break;
+            case 'tree': { /* Nothing to do */ } break;
+        }
+
+        return url;
     };
 
     // ------------------------------------------------------------------------
-    // Options
+    // Prices
     // ------------------------------------------------------------------------
 
-    function renderVersionLine(versions, current_version) {
-        let vlin = new VersionLine;
+    async function runPrices() {
+        let version = findVersion(self.route.version);
+        let [ghm_roots, ghmghs] = await Promise.all([
+            concepts.load('mco').then(mco => mco.ghm_roots),
+            fetch(`${env.base_url}api/mco_ghmghs.json?sector=public&date=${version.begin_date}`).then(response => response.json())
+        ]);
 
-        vlin.hrefBuilder = version => self.makeURL({version: version.date});
-        vlin.changeHandler = version => thop.go(null, {version: version.date});
+        render(html`
+            ${renderVersionLine(settings.mco.versions, version)}
+            ${renderGhmRootSelector(ghm_roots, self.route.ghm_root)}
+        `, document.querySelector('#th_options'));
 
-        for (let version of versions) {
-            let label = version.begin_date.toString();
-            if (label.endsWith('-01'))
-                label = label.substr(0, label.length - 3);
+        if (!self.route.ghm_root)
+            self.route.ghm_root = ghm_roots[0].code;
 
-            vlin.addVersion(version.begin_date, label, version.begin_date, version.changed_prices);
-        }
-        if (current_version)
-            vlin.setDate(current_version.begin_date);
-
-        return vlin.render();
+        let columns = ghmghs.filter(it => it.ghm_root === self.route.ghm_root);
+        render(renderPrices(self.route.ghm_root, columns, self.route.prices_duration, self.route.prices_coeff),
+               document.querySelector('main'));
     }
+
+    function renderPrices(ghm_root, columns, max_duration, apply_coeff) {
+        let conditions = columns.map(col => buildConditionsArray(col));
+
+        return html`
+            <table class="pr_grid">
+                <thead>
+                    <tr><td class="ghm_root" colspan=${columns.length + 1}>${concepts.completeGhmRoot(ghm_root)}</td></tr>
+
+                    <tr><th>GHM</th>${util.mapRLE(columns.map(col => col.ghm),
+                        (ghm, colspan) => html`<td class="desc" colspan=${colspan}>${ghm}</td>`)}</tr>
+                    <tr><th>Niveau</th>${util.mapRLE(columns.map(col => col.ghm.substr(5, 1)),
+                        (mode, colspan) => html`<td class="desc" colspan=${colspan}>Niveau ${mode}</td>`)}</tr>
+                    <tr><th>GHS</th>${columns.map((col, idx) =>
+                        html`<td class="desc">${col.ghs}${conditions[idx].length ? '*' : ''}</td>`)}</tr>
+                    <tr><th>Conditions</th>${columns.map((col, idx) =>
+                        html`<td class="conditions">${conditions[idx].map(cond => html`${self.addSpecLinks(cond)}<br/>`)}</td>`)}</tr>
+                    <tr><th>Borne basse</th>${util.mapRLE(columns.map(col => col.exb_treshold),
+                        (treshold, colspan) => html`<td class="exb" colspan=${colspan}>${format.duration(treshold)}</td>`)}</tr>
+                    <tr><th>Borne haute</th>${util.mapRLE(columns.map(col => col.exh_treshold ? (col.exh_treshold - 1) : null),
+                        (treshold, colspan) => html`<td class="exh" colspan=${colspan}>${format.duration(treshold)}</td>`)}</tr>
+                    <tr><th>Tarif €</th>${util.mapRLE(columns.map(col =>
+                        applyGhsCoefficient(col.ghs_cents, !apply_coeff || col.ghs_coefficient)),
+                        (cents, colspan) => html`<td class="noex" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
+                    <tr><th>Forfait EXB €</th>${util.mapRLE(columns.map(col =>
+                        applyGhsCoefficient(col.exb_once ? col.exb_cents : null, !apply_coeff || col.ghs_coefficient)),
+                        (cents, colspan) => html`<td class="exb" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
+                    <tr><th>Tarif EXB €</th>${util.mapRLE(columns.map(col =>
+                        applyGhsCoefficient(col.exb_once ? null : col.exb_cents, !apply_coeff || col.ghs_coefficient)),
+                        (cents, colspan) => html`<td class="exb" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
+                    <tr><th>Tarif EXH €</th>${util.mapRLE(columns.map(col =>
+                        applyGhsCoefficient(col.exh_cents, !apply_coeff || col.ghs_coefficient)),
+                        (cents, colspan) => html`<td class="exh" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
+                    <tr><th>Age</th>${util.mapRLE(columns.map(col => {
+                        let texts = [];
+                        let severity = col.ghm.charCodeAt(5) - '1'.charCodeAt(0);
+                        if (severity >= 0 && severity < 4) {
+                            if (severity < col.young_severity_limit)
+                                texts.push('< ' + col.young_age_treshold.toString());
+                            if (severity < col.old_severity_limit)
+                                texts.push('≥ ' + col.old_age_treshold.toString());
+                        }
+
+                        return texts.join(', ');
+                    }), (text, colspan) => html`<td class="age" colspan=${colspan}>${text}</td>`)}</tr>
+                </thead>
+
+                <tbody>${util.mapRange(0, max_duration, duration =>
+                    html`<tr class="duration">
+                        <th>${format.duration(duration)}</th>
+                        ${columns.map(col => {
+                            let info = computeGhsPrice(col, duration, apply_coeff);
+
+                            if (info) {
+                                let cls = info.mode;
+                                let tooltip = '';
+                                if (!duration && col.warn_cmd28) {
+                                    cls += ' warn';
+                                    tooltip += 'Devrait être orienté dans la CMD 28 (séance)\n';
+                                }
+                                if (self.testGhsDuration(col.raac_durations || 0, duration)) {
+                                    cls += ' warn';
+                                    tooltip += 'Accessible en cas de RAAC\n';
+                                }
+                                if (col.warn_ucd) {
+                                    cls += ' info';
+                                    tooltip += 'Possibilité de minoration UCD (40 €)\n';
+                                }
+
+                                let text = format.price(info.price, true);
+                                return html`<td class=${cls} title=${tooltip}>${text}</td>`;
+                            } else {
+                                return html`<td></td>`;
+                            }
+                        })}
+                    </tr>`
+                )}</tbody>
+            </table>
+        `;
+    }
+
+    function buildConditionsArray(ghs) {
+        let conditions = [];
+
+        if (ghs.unit_authorization)
+            conditions.push('Autorisation Unité ' + ghs.unit_authorization);
+        if (ghs.bed_authorization)
+            conditions.push('Autorisation Lit ' + ghs.bed_authorization);
+        if (ghs.minimum_duration)
+            conditions.push('Durée ≥ ' + ghs.minimum_duration);
+        if (ghs.minimum_age)
+            conditions.push('Âge ≥ ' + ghs.minimum_age);
+        switch (ghs.special_mode) {
+            case 'diabetes': { conditions.push('FI diabète < ' + ghs.special_duration + ' nuits'); } break;
+        }
+        if (ghs.main_diagnosis)
+            conditions.push('DP ' + ghs.main_diagnosis);
+        if (ghs.diagnoses)
+            conditions.push('Diagnostic ' + ghs.diagnoses);
+        if (ghs.procedures)
+            conditions.push('Acte ' + ghs.procedures.join(', '));
+
+        return conditions;
+    }
+
+    function computeGhsPrice(ghs, duration, apply_coeff) {
+        if (!ghs.ghs_cents)
+            return null;
+        if (!self.testGhsDuration(ghs.durations, duration))
+            return null;
+
+        let price_cents;
+        let mode;
+        if (ghs.exb_treshold && duration < ghs.exb_treshold) {
+            price_cents = ghs.ghs_cents;
+            if (ghs.exb_once) {
+                price_cents -= ghs.exb_cents;
+            } else {
+                price_cents -= (ghs.exb_treshold - duration) * ghs.exb_cents;
+            }
+            mode = 'exb';
+        } else if (ghs.exh_treshold && duration >= ghs.exh_treshold) {
+            price_cents = ghs.ghs_cents + (duration - ghs.exh_treshold + 1) * ghs.exh_cents;
+            mode = 'exh';
+        } else {
+            price_cents = ghs.ghs_cents;
+            mode = 'noex';
+        }
+
+        price_cents = applyGhsCoefficient(price_cents, !apply_coeff || ghs.ghs_coefficient);
+        return {price: price_cents, mode: mode};
+    }
+
+    function applyGhsCoefficient(cents, coefficient) {
+        return cents ? (cents * coefficient) : cents;
+    }
+
+    this.testGhsDuration = function(mask, duration) {
+        let duration_mask = (duration < 32) ? (1 << duration) : (1 << 31);
+        return !!(mask & duration_mask);
+    };
 
     // ------------------------------------------------------------------------
     // Tree
     // ------------------------------------------------------------------------
 
     let collapse_nodes = new Set;
+
+    async function runTree() {
+        let version = findVersion(self.route.version);
+
+        let [_, tree_nodes] = await Promise.all([
+            concepts.load('mco'),
+            fetch(`${env.base_url}api/mco_tree.json?date=${version.begin_date}`).then(response => response.json()),
+        ]);
+
+        render(html`
+            ${renderVersionLine(settings.mco.versions, version)}
+        `, document.querySelector('#th_options'));
+
+        render(renderTree(tree_nodes),
+               document.querySelector('main'));
+    }
 
     function renderTree(nodes) {
         if (nodes.length) {
@@ -210,8 +385,52 @@ let mco_info = (function() {
     }
 
     // ------------------------------------------------------------------------
+    // Options
+    // ------------------------------------------------------------------------
+
+    function renderVersionLine(versions, current_version) {
+        let vlin = new VersionLine;
+
+        vlin.hrefBuilder = version => self.makeURL({version: version.date});
+        vlin.changeHandler = version => thop.go(self, {version: version.date});
+
+        for (let version of versions) {
+            let label = version.begin_date.toString();
+            if (label.endsWith('-01'))
+                label = label.substr(0, label.length - 3);
+
+            vlin.addVersion(version.begin_date, label, version.begin_date, version.changed_prices);
+        }
+        if (current_version)
+            vlin.setDate(current_version.begin_date);
+
+        return vlin.render();
+    }
+
+    function renderGhmRootSelector(ghm_roots, current_ghm_root) {
+        return html`
+            <select @change=${e => thop.go(self, {ghm_root: e.target.value})}>
+                ${ghm_roots.map(ghm_root => {
+                    let disabled = false;
+                    let label = `${ghm_root.code} – ${ghm_root.desc}${disabled ? ' *' : ''}`;
+
+                    return html`<option value=${ghm_root.code} ?disabled=${disabled}
+                                        ?selected=${ghm_root.code === current_ghm_root}>${label}</option>`
+                })}
+            </select>
+        `
+    }
+
+    // ------------------------------------------------------------------------
     // Utility
     // ------------------------------------------------------------------------
+
+    function findVersion(date) {
+        let version = settings.mco.versions.find(version => version.begin_date.equals(date));
+        if (!version)
+            throw new Error(`Version MCO '${date}' inexistante`);
+        return version;
+    }
 
     this.addSpecLinks = function(str, append_desc = false) {
         let elements = [];
@@ -230,6 +449,8 @@ let mco_info = (function() {
     };
 
     function makeSpecAnchor(str, append_desc) {
+        append_desc = false;
+
         if (str[0] === 'A') {
             let url = self.makeURL({list: 'procedures', spec: str});
             let desc = append_desc ? catalog.getDesc('ccam', str) : null;

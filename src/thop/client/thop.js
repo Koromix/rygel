@@ -70,7 +70,9 @@ let thop = (function() {
 
                 default: {
                     // Cannot make canonical URL (because it's invalid), but it's better than nothing
-                    updateMenu(mod, push_history);
+                    updateHistory(mod, push_history);
+                    updateMenu(mod);
+
                     log.error('Aucun module disponible pour cette adresse');
                     return;
                 } break;
@@ -82,27 +84,35 @@ let thop = (function() {
         }
 
         Object.assign(route_mod.route, args);
-        updateMenu(route_mod.makeURL(), push_history);
+        updateHistory(route_mod.makeURL(), push_history);
 
         // Run!
         try {
             await route_mod.run();
+
+            // Build the URL again, in case some parameters could not be filled before,
+            // (e.g. a fetch was needed).
+            let url = route_mod.makeURL();
+            updateHistory(url, false);
+            updateMenu(url);
         } catch (err) {
             log.error(err.message);
         }
     };
 
-    function updateMenu(current_url, push_history) {
-        let links = [
-            {category: 'Informations MCO', title: 'Tarifs GHS', func: () => mco_info.makeURL({mode: 'prices'})},
-            {category: 'Informations MCO', title: 'Arbre de groupage', func: () => mco_info.makeURL({mode: 'tree'})}
-        ];
-
+    function updateHistory(current_url, push_history) {
         if (push_history) {
             window.history.pushState(null, null, current_url);
         } else {
             window.history.replaceState(null, null, current_url);
         }
+    }
+
+    function updateMenu(current_url) {
+        let links = [
+            {category: 'Informations MCO', title: 'Tarifs GHS', func: () => mco_info.makeURL({mode: 'prices'})},
+            {category: 'Informations MCO', title: 'Arbre de groupage', func: () => mco_info.makeURL({mode: 'tree'})}
+        ];
 
         let prev_category = null;
         render(links.map(link => {

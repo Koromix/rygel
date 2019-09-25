@@ -2,6 +2,107 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/* -------------------- Prices -------------------- */
+
+.pr_grid {
+    width: 100%;
+    border: 1px solid #ddd;
+    border-collapse: collapse;
+}
+.pr_grid th, .pr_grid td {
+    min-width: 66px;
+    height: 1em;
+    padding: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.pr_grid th {
+    background: white;
+    border: 1px solid #ddd;
+    text-align: left;
+    font-style: italic;
+    font-weight: normal;
+}
+.pr_grid th:first-child { width: 90px; }
+.pr_grid td {
+    position: relative;
+    box-shadow: inset 1px 1px 0px 0px rgba(255, 255, 255, 0.08);
+}
+.pr_grid thead td { text-align: center; }
+.pr_grid tbody td {
+    background: #9b9a9a;
+    text-align: right;
+}
+
+.pr_grid a { color: inherit; }
+
+.pr_grid .desc {
+    background: #ffc634;
+    color: black;
+}
+.pr_grid .conditions {
+    background: #cb1717;
+    color: white;
+}
+.pr_grid .noex {
+    background: #6cc943;
+    color: black;
+}
+.pr_grid .exb {
+    background: #ff6600;
+    color: white;
+}
+.pr_grid .exh {
+    background: #6b1b6a;
+    color: white;
+}
+.pr_grid .age {
+    background: #99ffff;
+    color: black;
+}
+.pr_grid .diff { min-width: 72px; }
+.pr_grid .diff:before {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 18px;
+    text-align: center;
+}
+.pr_grid .lower:before {
+    content: "↘\FE0E";
+    background: #ff8888 !important;
+    color: black;
+}
+.pr_grid .higher:before {
+    content: "↗\FE0E";
+    background: #a2d4b6 !important;
+    color: black;
+}
+.pr_grid .neutral:before {
+    content: " ";
+    background: #d7d7d7 !important;
+    color: black;
+}
+.pr_grid .removed:after { content: '*'; }
+.pr_grid .added:after { content: '*'; }
+
+.pr_grid .info:not(.diff):before {
+    position: absolute;
+    margin-left: -1.2em;
+    content: "⚠\FE0E";
+}
+.pr_grid .warn {
+    filter: grayscale(90%) !important;
+    color: #555;
+}
+.pr_grid .warn:not(.diff):before {
+    position: absolute;
+    margin-left: -1.2em;
+    content: "⚠\FE0E";
+}
+
 /* -------------------- Tree -------------------- */
 
 .tr_tree {
