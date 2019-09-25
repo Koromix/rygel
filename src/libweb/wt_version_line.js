@@ -5,15 +5,11 @@
 function VersionLine() {
     let self = this;
 
+    this.changeHandler = date => {};
     this.hrefBuilder = page => '#';
-    this.changeHandler = null;
-
-    let root_el;
 
     let versions = [];
     let current_date;
-
-    this.getRootElement = function() { return root_el; }
 
     this.addVersion = function(date, label, tooltip, major) {
         versions.push({
@@ -23,22 +19,17 @@ function VersionLine() {
             major: major
         });
     };
+
     this.setDate = function(date) { current_date = date; };
     this.getDate = function() { return current_date; };
 
-    function handleNodeClick(e, date) {
-        current_date = date;
-        setTimeout(() => self.render(root_el), 0);
-
-        if (self.changeHandler)
-            setTimeout(() => self.changeHandler.call(self, e), 0);
-
+    function handleNodeClick(e, version) {
+        let vlin_el = util.findParent(e.target, el => el.classList.contains('vlin'));
+        self.changeHandler.call(self, version);
         e.preventDefault();
     }
 
-    this.render = function(new_root_el) {
-        root_el = new_root_el;
-
+    this.render = function() {
         if (versions.length >= 2) {
             let min_date = versions[0].date;
             let max_diff = versions[versions.length - 1].date.diff(min_date);
@@ -46,9 +37,9 @@ function VersionLine() {
             // Alternate versions labels above and below line
             let text_above = false;
 
-            render(svg`
+            return svg`
                 <svg class="vlin">
-                    <line class="vlin_line" x1="2%" y1="20" x2="98%" y2="20"/>
+                    <line class="vlin_line" x1="2%" y1="23" x2="98%" y2="23"/>
                     <g>${versions.map(version => {
                         let x = (6.0 + version.date.diff(min_date) / max_diff * 88.0).toFixed(1) + '%';
                         let radius = 4 + !!version.major + version.date.equals(current_date);
@@ -63,20 +54,20 @@ function VersionLine() {
                         }
 
                         return svg`
-                            <a class=${cls} href=${self.hrefBuilder(version)} @click=${e => handleNodeClick(e, version.date)}>
-                                <circle cx=${x} cy="20" r=${radius}>
+                            <a class=${cls} href=${self.hrefBuilder(version)} @click=${e => handleNodeClick(e, version)}>
+                                <circle cx=${x} cy="23" r=${radius}>
                                     <title>${version.tooltip}</title>
                                 </circle>
                                 ${version.major ?
-                                    svg`<text class="vlin_text" x=${x} y=${(text_above = !text_above) ? 10 : 40}
+                                    svg`<text class="vlin_text" x=${x} y=${(text_above = !text_above) ? 13 : 43}
                                               text-anchor="middle">${version.label}</text>` : svg``}
                             </a>
                         `;
                     })}</g>
                 </svg>
-            `, root_el);
+            `;
         } else {
-            render(svg``, root_el);
+            return svg``;
         }
     };
 }
