@@ -9,7 +9,7 @@ let mco_info = (function() {
 
     this.run = async function() {
         switch (self.route.mode) {
-            case 'prices': { await runPrices(); } break;
+            case 'ghs': { await runGhs(); } break;
             case 'tree': { await runTree(); } break;
 
             default: {
@@ -30,10 +30,10 @@ let mco_info = (function() {
 
         // Mode-specific part
         switch (args.mode) {
-            case 'prices': {
+            case 'ghs': {
                 args.ghm_root = parts[2] || null;
-                args.prices_duration = parseInt(query.duration, 10) || 200;
-                args.prices_coeff = !!parseInt(query.coeff, 10) || false;
+                args.ghs_duration = parseInt(query.duration, 10) || 200;
+                args.ghs_coeff = !!parseInt(query.coeff, 10) || false;
             } break;
             case 'tree': { /* Nothing to do */ } break;
         }
@@ -49,13 +49,13 @@ let mco_info = (function() {
 
         // Mode-specific part
         switch (args.mode) {
-            case 'prices': {
+            case 'ghs': {
                 if (args.ghm_root)
                     url += `/${args.ghm_root}`;
 
                 url = util.buildUrl(url, {
-                    duration: args.prices_duration,
-                    coeff: 0 + args.prices_coeff
+                    duration: args.ghs_duration,
+                    coeff: 0 + args.ghs_coeff
                 })
             } break;
             case 'tree': { /* Nothing to do */ } break;
@@ -65,10 +65,10 @@ let mco_info = (function() {
     };
 
     // ------------------------------------------------------------------------
-    // Prices
+    // GHS
     // ------------------------------------------------------------------------
 
-    async function runPrices() {
+    async function runGhs() {
         let version = findVersion(self.route.version);
         let [ghm_roots, ghmghs] = await Promise.all([
             concepts.load('mco').then(mco => mco.ghm_roots),
@@ -84,17 +84,17 @@ let mco_info = (function() {
 
         render(html`
             ${renderVersionLine(settings.mco.versions, version)}
-            <label>Durée <input type="number" step="5" value=${self.route.prices_duration}
-                                 @change=${e => thop.go(self, {prices_duration: e.target.value})}/></label>
-            <label>Coefficient <input type="checkbox" ?value=${self.route.prices_coeff}
-                                       @change=${e => thop.go(self, {prices_coeff: e.target.checked})}/></label>
+            <label>Durée <input type="number" step="5" value=${self.route.ghs_duration}
+                                 @change=${e => thop.go(self, {ghs_duration: e.target.value})}/></label>
+            <label>Coefficient <input type="checkbox" ?value=${self.route.ghs_coeff}
+                                       @change=${e => thop.go(self, {ghs_coeff: e.target.checked})}/></label>
             ${renderGhmRootSelector(ghm_roots, self.route.ghm_root)}
 
-            ${renderPrices(self.route.ghm_root, columns, self.route.prices_duration, self.route.prices_coeff)}
+            ${renderPriceGrid(self.route.ghm_root, columns, self.route.ghs_duration, self.route.ghs_coeff)}
         `, document.querySelector('main'));
     }
 
-    function renderPrices(ghm_root, columns, max_duration, apply_coeff) {
+    function renderPriceGrid(ghm_root, columns, max_duration, apply_coeff) {
         let conditions = columns.map(col => buildConditionsArray(col));
 
         return html`

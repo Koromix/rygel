@@ -116,7 +116,7 @@ let thop = (function() {
 
     function updateMenu(current_url) {
         let links = [
-            {category: 'Informations MCO', title: 'Tarifs GHS', func: () => mco_info.makeURL({mode: 'prices'})},
+            {category: 'Informations MCO', title: 'Tarifs GHS', func: () => mco_info.makeURL({mode: 'ghs'})},
             {category: 'Informations MCO', title: 'Arbre de groupage', func: () => mco_info.makeURL({mode: 'tree'})}
         ];
 
