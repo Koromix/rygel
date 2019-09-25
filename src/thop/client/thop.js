@@ -10,6 +10,23 @@ let thop = (function() {
 
     let route_mod;
 
+    document.addEventListener('readystatechange', e => {
+        if (document.readyState === 'complete')
+            initThop();
+    });
+
+    async function initThop() {
+        initLog();
+        initNavigation();
+        await initSettings();
+
+        // Initialize module routes
+        mco_info.route = mco_info.parseURL('');
+        mco_casemix.route = mco_casemix.parseURL('');
+
+        self.go(window.location.href, {}, false);
+    }
+
     function initLog() {
         // STUB
     }
@@ -40,18 +57,6 @@ let thop = (function() {
                 version.end_date = dates.fromString(version.end_date);
             }
         }
-    }
-
-    async function initThop() {
-        initLog();
-        initNavigation();
-        await initSettings();
-
-        // Initialize module routes
-        mco_info.route = mco_info.parseURL('');
-        mco_casemix.route = mco_casemix.parseURL('');
-
-        self.go(window.location.href, {}, false);
     }
 
     this.go = async function(mod, args = {}, push_history = true) {
@@ -128,11 +133,6 @@ let thop = (function() {
             }
         }), document.querySelector('#th_menu'));
     }
-
-    document.addEventListener('readystatechange', e => {
-        if (document.readyState === 'complete')
-            initThop();
-    });
 
     return this;
 }).call({});
