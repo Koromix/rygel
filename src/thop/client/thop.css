@@ -24,7 +24,8 @@ body {
         width: 180px;
         z-index: 999;
     }
-    #th_view {
+
+    main {
         max-width: 1000px;
         margin-left: 180px;
         padding: 1em;
