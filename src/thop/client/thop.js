@@ -16,7 +16,7 @@ let thop = (function() {
     });
 
     async function initThop() {
-        initLog();
+        log.pushHandler(log.notifyHandler);
         initNavigation();
         await initSettings();
 
@@ -26,10 +26,6 @@ let thop = (function() {
         updateMenu('');
 
         self.go(window.location.href, {}, false);
-    }
-
-    function initLog() {
-        // STUB
     }
 
     function initNavigation() {
