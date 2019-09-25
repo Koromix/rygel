@@ -97,7 +97,8 @@ let mco_info = (function() {
                                            @change=${e => thop.go(self, {ghs_coeff: e.target.checked})}/></label>
                 ${renderGhmRootSelector(ghm_roots, self.route.ghm_root)}
             </div>
-            <div id="th_content">
+
+            <div id="th_view">
                 ${renderPriceGrid(self.route.ghm_root, columns, self.route.ghs_duration, self.route.ghs_coeff)}
             </div>
         `, document.querySelector('main'));
@@ -260,7 +261,8 @@ let mco_info = (function() {
             <div id="th_options">
                 ${renderVersionLine(settings.mco.versions, version)}
             </div>
-            <div id="th_content">
+
+            <div id="th_view">
                 ${renderTree(tree_nodes)}
             </div>
         `, document.querySelector('main'));
