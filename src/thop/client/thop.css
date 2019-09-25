@@ -46,6 +46,12 @@ button { cursor: pointer; }
 /* -------------------- Sidebar -------------------- */
 
 @media screen and (min-width: 801px) {
+    #th_session {
+        padding: 6px 2px 0 2px;
+        text-align: center;
+        font-size: 0.8em;
+    }
+
     #th_logo {
         display: block;
         margin: 1em auto;
