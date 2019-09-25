@@ -101,66 +101,6 @@ button:not(:disabled) { cursor: pointer; }
     color: white;
 }
 
-/* -------------------- Notifications -------------------- */
-
-#gp_log {
-    position: fixed;
-    left: calc(50% - 200px);
-    top: 35px;
-    width: 400px;
-    z-index: 99999;
-    user-select: none;
-    -moz-user-select: none;
-    -webkit-user-select: none;
-    -ms-user-select: none;
-}
-
-.gp_log_entry {
-    margin-bottom: 8px;
-    padding: 10px;
-    background: #373737;
-    color: white;
-    box-shadow: 1px 1px rgba(0, 0, 0, 0.5);
-    text-align: center;
-    filter: opacity(96%);
-}
-.gp_log_entry:hover { filter: opacity(30%); }
-.gp_log_entry.success { background: #016a27; }
-.gp_log_entry.error { background: #d72a2a; }
-
-.gp_log_close {
-    float: right;
-    background: none;
-    border: 0;
-    color: white;
-    font-weight: bold;
-}
-
-/* Came from https://loading.io/css/ */
-.gp_log_spin {
-    float: left;
-    display: inline-block;
-    box-sizing: border-box;
-    width: 20px;
-    height: 20px;
-    margin: -2px 0 0 -2px;
-}
-.gp_log_spin:after {
-    content: ' ';
-    display: block;
-    width: 12px;
-    height: 12px;
-    margin: 1px;
-    border-radius: 50%;
-    border: 4px solid white;
-    border-color: white transparent white transparent;
-    animation: gp_log_spin 0.8s ease-in-out infinite;
-}
-@keyframes gp_log_spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
 /* -------------------- Popup -------------------- */
 
 #gp_popup {

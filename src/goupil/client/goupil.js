@@ -16,14 +16,8 @@ let goupil = (function() {
     let popup_state;
     let popup_timer;
 
-    let log_entries = [];
-
     function parseURL(href, base) {
         return new URL(href, base);
-    }
-
-    function initLog() {
-        log.pushHandler(updateLogEntry);
     }
 
     async function openDatabase() {
@@ -129,50 +123,6 @@ let goupil = (function() {
 
         gp_popup.addEventListener('click', e => e.stopPropagation());
         document.addEventListener('click', closePopup);
-    }
-
-    function updateLogEntry(action, entry) {
-        if (entry.type !== 'debug') {
-            switch (action) {
-                case 'open': {
-                    log_entries.unshift(entry);
-
-                    if (entry.type === 'progress') {
-                        // Wait a bit to show progress entries to prevent quick actions from showing up
-                        setTimeout(renderLog, 100);
-                    } else {
-                        renderLog();
-                    }
-                } break;
-                case 'edit': {
-                    renderLog();
-                } break;
-                case 'close': {
-                    log_entries = log_entries.filter(it => it !== entry);
-                    renderLog();
-                } break;
-            }
-        }
-
-        log.defaultHandler(action, entry);
-    }
-
-    function closeLogEntry(idx) {
-        log_entries.splice(idx, 1);
-        renderLog();
-    }
-
-    function renderLog() {
-        let log_el = document.querySelector('#gp_log');
-
-        render(log_entries.map((entry, idx) => {
-            return html`<div class=${'gp_log_entry ' + entry.type}>
-                ${entry.type === 'progress' ?
-                    html`<div class="gp_log_spin"></div>` :
-                    html`<button class="gp_log_close" @click=${e => closeLogEntry(idx)}>X</button>`}
-                ${entry.msg}
-             </div>`;
-        }), log_el);
     }
 
     function openPopup(e, func) {
@@ -308,7 +258,7 @@ let goupil = (function() {
     };
 
     async function initGoupil() {
-        initLog();
+        log.pushHandler(log.notifyHandler);
         initNavigation();
 
         let db = await openDatabase();
