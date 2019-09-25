@@ -95,15 +95,15 @@ let thop = (function() {
         // Run!
         try {
             await route_mod.run();
-
-            // Build the URL again, in case some parameters could not be filled before,
-            // (e.g. a fetch was needed).
-            let url = route_mod.makeURL();
-            updateHistory(url, false);
-            updateMenu(url);
         } catch (err) {
             log.error(err.message);
         }
+
+        // Build the URL again, in case some parameters could not be filled before,
+        // (e.g. a fetch was needed).
+        let url = route_mod.makeURL();
+        updateHistory(url, false);
+        updateMenu(url);
     };
 
     function updateHistory(current_url, push_history) {
