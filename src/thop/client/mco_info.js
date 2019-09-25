@@ -84,7 +84,7 @@ let mco_info = (function() {
 
         render(html`
             ${renderVersionLine(settings.mco.versions, version)}
-            <label>Durée <input type="number" step="5" value=${self.route.ghs_duration}
+            <label>Durée <input type="number" step="5" min="0" max="500" value=${self.route.ghs_duration}
                                  @change=${e => thop.go(self, {ghs_duration: e.target.value})}/></label>
             <label>Coefficient <input type="checkbox" ?value=${self.route.ghs_coeff}
                                        @change=${e => thop.go(self, {ghs_coeff: e.target.checked})}/></label>
