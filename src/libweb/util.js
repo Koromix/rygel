@@ -158,12 +158,14 @@ let log = (function() {
     let self = this;
 
     this.defaultHandler = function(action, entry) {
-        switch (entry.type) {
-            case 'debug':
-            case 'info':
-            case 'success':
-            case 'progress': { console.log(entry.msg); } break;
-            case 'error': { console.error(entry.msg); } break;
+        if (action !== 'close') {
+            switch (entry.type) {
+                case 'debug':
+                case 'info':
+                case 'success':
+                case 'progress': { console.log(entry.msg); } break;
+                case 'error': { console.error(entry.msg); } break;
+            }
         }
     };
 
