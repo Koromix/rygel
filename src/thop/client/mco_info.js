@@ -85,18 +85,21 @@ let mco_info = (function() {
             throw new Error(`Racine de GHM '${self.route.ghm_root}' inexistante`);
 
         render(html`
-            ${renderVersionLine(settings.mco.versions, version)}
-            <label>Secteur <select @change=${e => thop.go(self, {ghs_sector: e.target.value})}>
-                <option value="public" ?selected=${self.route.ghs_sector === 'public'}>Public</option>
-                <option value="private" ?selected=${self.route.ghs_sector === 'private'}>Privé</option>
-            </select></label>
-            <label>Durée <input type="number" step="5" min="0" max="500" value=${self.route.ghs_duration}
-                                 @change=${e => thop.go(self, {ghs_duration: e.target.value})}/></label>
-            <label>Coefficient <input type="checkbox" ?value=${self.route.ghs_coeff}
-                                       @change=${e => thop.go(self, {ghs_coeff: e.target.checked})}/></label>
-            ${renderGhmRootSelector(ghm_roots, self.route.ghm_root)}
-
-            ${renderPriceGrid(self.route.ghm_root, columns, self.route.ghs_duration, self.route.ghs_coeff)}
+            <div id="th_options">
+                ${renderVersionLine(settings.mco.versions, version)}
+                <label>Secteur <select @change=${e => thop.go(self, {ghs_sector: e.target.value})}>
+                    <option value="public" ?selected=${self.route.ghs_sector === 'public'}>Public</option>
+                    <option value="private" ?selected=${self.route.ghs_sector === 'private'}>Privé</option>
+                </select></label>
+                <label>Durée <input type="number" step="5" min="0" max="500" value=${self.route.ghs_duration}
+                                     @change=${e => thop.go(self, {ghs_duration: e.target.value})}/></label>
+                <label>Coefficient <input type="checkbox" ?value=${self.route.ghs_coeff}
+                                           @change=${e => thop.go(self, {ghs_coeff: e.target.checked})}/></label>
+                ${renderGhmRootSelector(ghm_roots, self.route.ghm_root)}
+            </div>
+            <div id="th_content">
+                ${renderPriceGrid(self.route.ghm_root, columns, self.route.ghs_duration, self.route.ghs_coeff)}
+            </div>
         `, document.querySelector('main'));
     }
 
@@ -256,8 +259,12 @@ let mco_info = (function() {
         ]);
 
         render(html`
-            ${renderVersionLine(settings.mco.versions, version)}
-            ${renderTree(tree_nodes)}
+            <div id="th_options">
+                ${renderVersionLine(settings.mco.versions, version)}
+            </div>
+            <div id="th_content">
+                ${renderTree(tree_nodes)}
+            </div>
         `, document.querySelector('main'));
     }
 
