@@ -3,5 +3,23 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 let mco_casemix = (function() {
+    let self = this;
 
+    this.route = {};
+
+    this.run = async function() {
+        // STUB
+    };
+
+    this.parseURL = function(path, query) {
+        // STUB
+        return {};
+    };
+
+    this.makeURL = function(args = {}) {
+        // STUB
+        return `${env.base_url}mco_casemix/`;
+    };
+
+    return this;
 }).call({});
