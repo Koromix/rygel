@@ -310,7 +310,7 @@ static void InitRoutes()
     add_function_route("GET", "/api/mco_results.json", ProduceMcoResults);
     add_function_route("GET", "/api/mco_diagnoses.json", ProduceMcoDiagnoses);
     add_function_route("GET", "/api/mco_procedures.json", ProduceMcoProcedures);
-    add_function_route("GET", "/api/mco_ghm_ghs.json", ProduceMcoGhmGhs);
+    add_function_route("GET", "/api/mco_ghmghs.json", ProduceMcoGhmGhs);
     add_function_route("GET", "/api/mco_tree.json", ProduceMcoTree);
 
     // We can use a global ETag because everything is in the binary
