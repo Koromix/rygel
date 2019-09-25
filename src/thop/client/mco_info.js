@@ -481,7 +481,7 @@ let mco_info = (function() {
         } else if (str.match(/^[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?( \[[0-9]{1,3}\])?$/)) {
             let code = str.substr(0, 5);
 
-            let url = self.makeURL({view: 'table', ghm_root: code});
+            let url = self.makeURL({mode: 'ghs', ghm_root: code});
             let desc = concepts.descGhmRoot(code);
             let tooltip = desc ? `${code} - ${desc}` : '';
             if (!append_desc)
