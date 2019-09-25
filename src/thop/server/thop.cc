@@ -294,12 +294,9 @@ static void InitRoutes()
 
     // Root
     add_asset_route("GET", "/", Route::Matching::Exact, html);
-    add_asset_route("GET", "/login", Route::Matching::Walk, html);
+    add_asset_route("GET", "/mco_info", Route::Matching::Walk, html);
     add_asset_route("GET", "/mco_casemix", Route::Matching::Walk, html);
-    add_asset_route("GET", "/mco_list", Route::Matching::Walk, html);
-    add_asset_route("GET", "/mco_pricing", Route::Matching::Walk, html);
-    add_asset_route("GET", "/mco_results", Route::Matching::Walk, html);
-    add_asset_route("GET", "/mco_tree", Route::Matching::Walk, html);
+    add_asset_route("GET", "/user", Route::Matching::Walk, html);
 
     // Common API
     add_function_route("GET", "/api/settings.json", ProduceSettings);

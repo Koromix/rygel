@@ -24,8 +24,7 @@ body {
         width: 180px;
         z-index: 999;
     }
-
-    main {
+    #th_view {
         max-width: 1000px;
         margin-left: 180px;
         padding: 1em;
@@ -50,7 +49,33 @@ button { cursor: pointer; }
         display: block;
         margin: 1em auto;
     }
+
     #th_menu { flex: 1; }
+    #th_menu a.category {
+        display: block;
+        padding-left: 0.5em;
+        box-sizing: border-box;
+        font-weight: bold;
+        font-variant: small-caps;
+        font-size: 1.1em;
+    }
+    #th_menu a {
+        display: block;
+        padding: 0.5em 0.5em 0.5em 2em;
+        box-sizing: border-box;
+        width: 100%;
+        text-decoration: none;
+        color: black;
+    }
+    #th_menu a.active {
+        background: #262626;
+        color: white;
+    }
+    #th_menu a:not(.category):not(.active):hover {
+        background: #ddd !important;
+        color: black !important;
+    }
+
     #th_version {
         padding: 0 2px 4px 2px;
         text-align: center;
