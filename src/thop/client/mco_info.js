@@ -80,28 +80,28 @@ let mco_info = (function() {
         if (!self.route.ghm_root)
             self.route.ghm_root = ghm_roots[0].code;
 
+        // Options
+        render(html`
+            ${renderVersionLine(settings.mco.versions, version)}
+            <label>Secteur <select @change=${e => thop.go(self, {ghs_sector: e.target.value})}>
+                <option value="public" .selected=${self.route.ghs_sector === 'public'}>Public</option>
+                <option value="private" .selected=${self.route.ghs_sector === 'private'}>Privé</option>
+            </select></label>
+            <label>Durée <input type="number" step="5" min="0" max="500" .value=${self.route.ghs_duration}
+                                 @change=${e => thop.go(self, {ghs_duration: e.target.value})}/></label>
+            <label>Coefficient <input type="checkbox" .checked=${self.route.ghs_coeff}
+                                       @change=${e => thop.go(self, {ghs_coeff: e.target.checked})}/></label>
+            ${renderGhmRootSelector(ghm_roots, self.route.ghm_root)}
+        `, document.querySelector('#th_options'));
+
         let columns = ghmghs.filter(it => it.ghm_root === self.route.ghm_root);
         if (!columns.length)
             throw new Error(`Racine de GHM '${self.route.ghm_root}' inexistante`);
 
-        render(html`
-            <div id="th_options">
-                ${renderVersionLine(settings.mco.versions, version)}
-                <label>Secteur <select @change=${e => thop.go(self, {ghs_sector: e.target.value})}>
-                    <option value="public" .selected=${self.route.ghs_sector === 'public'}>Public</option>
-                    <option value="private" .selected=${self.route.ghs_sector === 'private'}>Privé</option>
-                </select></label>
-                <label>Durée <input type="number" step="5" min="0" max="500" .value=${self.route.ghs_duration}
-                                     @change=${e => thop.go(self, {ghs_duration: e.target.value})}/></label>
-                <label>Coefficient <input type="checkbox" .checked=${self.route.ghs_coeff}
-                                           @change=${e => thop.go(self, {ghs_coeff: e.target.checked})}/></label>
-                ${renderGhmRootSelector(ghm_roots, self.route.ghm_root)}
-            </div>
-
-            <div id="th_view">
-                ${renderPriceGrid(self.route.ghm_root, columns, self.route.ghs_duration, self.route.ghs_coeff)}
-            </div>
-        `, document.querySelector('main'));
+        // Grid
+        render(renderPriceGrid(self.route.ghm_root, columns,
+                               self.route.ghs_duration, self.route.ghs_coeff),
+               document.querySelector('#th_view'));
     }
 
     function renderPriceGrid(ghm_root, columns, max_duration, apply_coeff) {
@@ -251,21 +251,18 @@ let mco_info = (function() {
 
     async function runTree() {
         let version = findVersion(self.route.version);
-
         let [_, tree_nodes] = await Promise.all([
             concepts.load('mco'),
             fetch(`${env.base_url}api/mco_tree.json?date=${version.begin_date}`).then(response => response.json()),
         ]);
 
-        render(html`
-            <div id="th_options">
-                ${renderVersionLine(settings.mco.versions, version)}
-            </div>
+        // Options
+        render(renderVersionLine(settings.mco.versions, version),
+               document.querySelector('#th_options'));
 
-            <div id="th_view">
-                ${renderTree(tree_nodes)}
-            </div>
-        `, document.querySelector('main'));
+        // Tree
+        render(renderTree(tree_nodes),
+               document.querySelector('#th_view'));
     }
 
     function renderTree(nodes) {
