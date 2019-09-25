@@ -23,6 +23,7 @@ let thop = (function() {
         // Initialize module routes
         mco_info.route = mco_info.parseURL('');
         mco_casemix.route = mco_casemix.parseURL('');
+        updateMenu('');
 
         self.go(window.location.href, {}, false);
     }
