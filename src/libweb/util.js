@@ -420,6 +420,12 @@ let util = (function() {
             setTimeout(function() { URL.revokeObjectURL(url) }, 60000);
     };
 
+    this.findParent = function(el, func) {
+        while (el && !func(el))
+            el = el.parentNode;
+        return el;
+    }
+
     return this;
 }).call({});
 
