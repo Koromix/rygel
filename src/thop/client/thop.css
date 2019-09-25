@@ -32,6 +32,17 @@ body {
     }
 }
 
+/* -------------------- Common elements -------------------- */
+
+a {
+    color: #ff6600;
+    text-decoration: none;
+    font-weight: normal;
+}
+a:hover { text-decoration: underline; }
+
+button { cursor: pointer; }
+
 /* -------------------- Sidebar -------------------- */
 
 @media screen and (min-width: 801px) {
