@@ -18,14 +18,14 @@ let mco_info = (function() {
         }
     };
 
-    this.parseURL = function(path, query) {
+    this.parseURL = function(path, query = {}) {
         let parts = path.split('/');
 
         // Common part
         let args = {
             version: dates.fromString(parts[0] || null) ||
                      settings.mco.versions[settings.mco.versions.length - 1].begin_date,
-            mode: parts[1] || 'tree'
+            mode: parts[1] || 'ghs'
         };
 
         // Mode-specific part
