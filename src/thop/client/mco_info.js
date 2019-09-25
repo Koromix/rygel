@@ -109,8 +109,6 @@ let mco_info = (function() {
         return html`
             <table class="pr_grid">
                 <thead>
-                    <tr><td class="ghm_root" colspan=${columns.length + 1}>${concepts.completeGhmRoot(ghm_root)}</td></tr>
-
                     <tr><th>GHM</th>${util.mapRLE(columns.map(col => col.ghm),
                         (ghm, colspan) => html`<td class="desc" colspan=${colspan}>${ghm}</td>`)}</tr>
                     <tr><th>Niveau</th>${util.mapRLE(columns.map(col => col.ghm.substr(5, 1)),
