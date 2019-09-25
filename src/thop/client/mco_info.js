@@ -31,7 +31,8 @@ let mco_info = (function() {
         // Mode-specific part
         switch (args.mode) {
             case 'ghs': {
-                args.ghm_root = parts[2] || null;
+                args.ghs_sector = parts[2] || 'public';
+                args.ghm_root = parts[3] || null;
                 args.ghs_duration = parseInt(query.duration, 10) || 200;
                 args.ghs_coeff = !!parseInt(query.coeff, 10) || false;
             } break;
@@ -50,6 +51,7 @@ let mco_info = (function() {
         // Mode-specific part
         switch (args.mode) {
             case 'ghs': {
+                url += `/${args.ghs_sector}`;
                 if (args.ghm_root)
                     url += `/${args.ghm_root}`;
 
@@ -72,7 +74,7 @@ let mco_info = (function() {
         let version = findVersion(self.route.version);
         let [ghm_roots, ghmghs] = await Promise.all([
             concepts.load('mco').then(mco => mco.ghm_roots),
-            fetch(`${env.base_url}api/mco_ghmghs.json?sector=public&date=${version.begin_date}`).then(response => response.json())
+            fetch(`${env.base_url}api/mco_ghmghs.json?sector=${self.route.ghs_sector}&date=${version.begin_date}`).then(response => response.json())
         ]);
 
         if (!self.route.ghm_root)
@@ -84,6 +86,10 @@ let mco_info = (function() {
 
         render(html`
             ${renderVersionLine(settings.mco.versions, version)}
+            <label>Secteur <select @change=${e => thop.go(self, {ghs_sector: e.target.value})}>
+                <option value="public" ?selected=${self.route.ghs_sector === 'public'}>Public</option>
+                <option value="private" ?selected=${self.route.ghs_sector === 'private'}>Privé</option>
+            </select></label>
             <label>Durée <input type="number" step="5" min="0" max="500" value=${self.route.ghs_duration}
                                  @change=${e => thop.go(self, {ghs_duration: e.target.value})}/></label>
             <label>Coefficient <input type="checkbox" ?value=${self.route.ghs_coeff}
