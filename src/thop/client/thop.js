@@ -23,7 +23,11 @@ let thop = (function() {
         // Initialize module routes
         mco_info.route = mco_info.parseURL('');
         mco_casemix.route = mco_casemix.parseURL('');
+        user.route = user.parseURL('');
+
+        // Initialize some UI elements
         updateMenu('');
+        updateSession();
 
         self.go(window.location.href, {}, false);
     }
@@ -69,6 +73,7 @@ let thop = (function() {
             switch (mod_name || 'mco_info') {
                 case 'mco_info': { route_mod = mco_info; } break;
                 case 'mco_casemix': { route_mod = mco_casemix; } break;
+                case 'user': { route_mod = user; } break;
 
                 default: {
                     // Cannot make canonical URL (because it's invalid), but it's better than nothing
@@ -85,6 +90,7 @@ let thop = (function() {
             route_mod = mod;
         }
 
+        // Update module route
         Object.assign(route_mod.route, args);
         updateHistory(route_mod.makeURL(), push_history);
 
@@ -100,12 +106,30 @@ let thop = (function() {
         }
         view_el.classList.remove('th_view_busy');
 
+        // Maybe we got disconnected for some reason (session expiration)
+        updateSession();
+
         // Build the URL again, in case some parameters could not be filled before,
         // (e.g. a fetch was needed).
         let url = route_mod.makeURL();
         updateHistory(url, false);
         updateMenu(url);
+
     };
+
+    function updateSession() {
+        if (env.has_users) {
+            user.readSessionCookies();
+
+            render(html`
+                ${!user.isConnected() ?
+                    html`<a href=${user.makeURL({mode: 'login'})}>Se connecter</a>` : html``}
+                ${user.isConnected() ?
+                    html`${user.getUserName()} (<a href=${user.makeURL({mode: 'login'})}>changer</a>,
+                                                <a href="#" @click=${e => { user.logout(); e.preventDefault(); }}>déconnexion</a>)` : html``}
+            `, document.querySelector('#th_session'));
+        }
+    }
 
     function updateHistory(current_url, push_history) {
         if (push_history) {

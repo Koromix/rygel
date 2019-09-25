@@ -77,7 +77,7 @@ bool LoadUserSet(Span<const char *const> filenames, const StructureSet &structur
 
 const User *CheckSessionUser(const http_RequestInfo &request, http_IO *io);
 
-void HandleConnect(const http_RequestInfo &request, const User *user, http_IO *io);
-void HandleDisconnect(const http_RequestInfo &request, const User *user, http_IO *io);
+void HandleLogin(const http_RequestInfo &request, const User *user, http_IO *io);
+void HandleLogout(const http_RequestInfo &request, const User *user, http_IO *io);
 
 }

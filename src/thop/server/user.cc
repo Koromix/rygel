@@ -452,7 +452,7 @@ const User *CheckSessionUser(const http_RequestInfo &request, http_IO *io)
     }
 }
 
-void HandleConnect(const http_RequestInfo &request, const User *, http_IO *io)
+void HandleLogin(const http_RequestInfo &request, const User *, http_IO *io)
 {
     // Get POST and header values
     const char *username;
@@ -530,7 +530,7 @@ void HandleConnect(const http_RequestInfo &request, const User *, http_IO *io)
     io->AddCookieHeader(thop_config.http.base_url, "username", user->name, false);
 }
 
-void HandleDisconnect(const http_RequestInfo &request, const User *, http_IO *io)
+void HandleLogout(const http_RequestInfo &request, const User *, http_IO *io)
 {
     // Drop session
     {

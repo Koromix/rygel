@@ -300,10 +300,8 @@ static void InitRoutes()
 
     // Common API
     add_function_route("GET", "/api/settings.json", ProduceSettings);
-
-    // User API
-    add_function_route("POST", "/api/connect.json", HandleConnect);
-    add_function_route("POST", "/api/disconnect.json", HandleDisconnect);
+    add_function_route("POST", "/api/login.json", HandleLogin);
+    add_function_route("POST", "/api/logout.json", HandleLogout);
 
     // MCO API
     add_function_route("GET", "/api/mco_aggregate.json", ProduceMcoAggregate);
