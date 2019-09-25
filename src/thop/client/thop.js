@@ -88,16 +88,17 @@ let thop = (function() {
         Object.assign(route_mod.route, args);
         updateHistory(route_mod.makeURL(), push_history);
 
-        // Run!
-        try {
-            let view_el = document.querySelector('#th_view');
+        let view_el = document.querySelector('#th_view');
 
-            view_el.classList.add('th_view_busy');
+        // Run!
+        view_el.classList.add('th_view_busy');
+        try {
             await route_mod.run();
-            view_el.classList.remove('th_view_busy');
         } catch (err) {
+            render(err.message, view_el);
             log.error(err.message);
         }
+        view_el.classList.remove('th_view_busy');
 
         // Build the URL again, in case some parameters could not be filled before,
         // (e.g. a fetch was needed).
