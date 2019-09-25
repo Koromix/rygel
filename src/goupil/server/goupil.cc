@@ -301,6 +301,11 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                              route->u.st.asset.compression_type);
             io->flags |= (int)http_IO::Flag::EnableCache;
 
+#ifndef NDEBUG
+            io->flags &= ~(unsigned int)http_IO::Flag::EnableCache;
+#endif
+            io->AddCachingHeaders(goupil_config.max_age, etag);
+
             if (route->u.st.asset.source_map) {
                 io->AddHeader("SourceMap", route->u.st.asset.source_map);
             }
@@ -316,15 +321,16 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         } break;
 
         case Route::Type::Function: {
-            io->RunAsync(route->u.func);
+            io->RunAsync([=](const http_RequestInfo &request, http_IO *io) {
+                route->u.func(request, io);
+
+#ifndef NDEBUG
+                io->flags &= ~(unsigned int)http_IO::Flag::EnableCache;
+#endif
+                io->AddCachingHeaders(goupil_config.max_age, etag);
+            });
         } break;
     }
-
-    // Send cache information
-#ifndef NDEBUG
-    io->flags &= ~(unsigned int)http_IO::Flag::EnableCache;
-#endif
-    io->AddCachingHeaders(goupil_config.max_age, etag);
 }
 
 int RunGoupil(int argc, char **argv)
