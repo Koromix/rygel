@@ -75,17 +75,18 @@ let mco_info = (function() {
             fetch(`${env.base_url}api/mco_ghmghs.json?sector=public&date=${version.begin_date}`).then(response => response.json())
         ]);
 
-        render(html`
-            ${renderVersionLine(settings.mco.versions, version)}
-            ${renderGhmRootSelector(ghm_roots, self.route.ghm_root)}
-        `, document.querySelector('#th_options'));
-
         if (!self.route.ghm_root)
             self.route.ghm_root = ghm_roots[0].code;
 
         let columns = ghmghs.filter(it => it.ghm_root === self.route.ghm_root);
-        render(renderPrices(self.route.ghm_root, columns, self.route.prices_duration, self.route.prices_coeff),
-               document.querySelector('main'));
+        if (!columns.length)
+            throw new Error(`Racine de GHM '${self.route.ghm_root}' inexistante`);
+
+        render(html`
+            ${renderVersionLine(settings.mco.versions, version)}
+            ${renderGhmRootSelector(ghm_roots, self.route.ghm_root)}
+            ${renderPrices(self.route.ghm_root, columns, self.route.prices_duration, self.route.prices_coeff)}
+        `, document.querySelector('main'));
     }
 
     function renderPrices(ghm_root, columns, max_duration, apply_coeff) {
@@ -245,10 +246,8 @@ let mco_info = (function() {
 
         render(html`
             ${renderVersionLine(settings.mco.versions, version)}
-        `, document.querySelector('#th_options'));
-
-        render(renderTree(tree_nodes),
-               document.querySelector('main'));
+            ${renderTree(tree_nodes)}
+        `, document.querySelector('main'));
     }
 
     function renderTree(nodes) {
