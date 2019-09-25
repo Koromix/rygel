@@ -90,7 +90,11 @@ let thop = (function() {
 
         // Run!
         try {
+            let view_el = document.querySelector('#th_view');
+
+            view_el.classList.add('th_view_busy');
             await route_mod.run();
+            view_el.classList.remove('th_view_busy');
         } catch (err) {
             log.error(err.message);
         }

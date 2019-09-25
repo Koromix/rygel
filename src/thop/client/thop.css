@@ -91,3 +91,16 @@ button { cursor: pointer; }
     margin: 0 0 10px 0;
     text-align: center;
 }
+
+.th_view_busy {
+    animation: th_view_busy 1s 1 linear;
+    filter: grayscale(100%);
+    opacity: 0.2;
+    pointer-events: none;
+}
+@keyframes th_view_busy {
+    from { filter: grayscale(0); opacity: 1; }
+    40% { filter: grayscale(0); opacity: 1; }
+    60% { filter: grayscale(100%); opacity: 0.2; }
+    to { filter: grayscale(100%); opacity: 0.2; }
+}
