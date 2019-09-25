@@ -653,16 +653,22 @@ let dates = (function() {
     };
 
     this.fromString = function(str, validate = true) {
+        if (str == null)
+            return null;
+
         let date;
         try {
             let [year, month, day] = str.split('-').map(x => parseInt(x, 10));
             date = dates.create(year, month, day);
         } catch (err) {
-            throw new Error(`Date '${str}' is malformed`);
+            log.error(`Date '${str}' is malformed`);
+            return null;
         }
 
-        if (validate && !date.isValid())
-            throw new Error(`Date '${str}' is invalid`);
+        if (validate && !date.isValid()) {
+            log.error(`Date '${str}' is invalid`);
+            return null;
+        }
 
         return date;
     };
