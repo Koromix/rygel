@@ -84,3 +84,10 @@ button { cursor: pointer; }
         color: #ff6600;
     }
 }
+
+/* -------------------- Main -------------------- */
+
+#th_options {
+    margin: 0 0 10px 0;
+    text-align: center;
+}
