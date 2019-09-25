@@ -84,11 +84,11 @@ let mco_info = (function() {
 
         render(html`
             ${renderVersionLine(settings.mco.versions, version)}
+            <label>Durée <input type="number" step="5" value=${self.route.prices_duration}
+                                 @change=${e => thop.go(self, {prices_duration: e.target.value})}/></label>
+            <label>Coefficient <input type="checkbox" ?value=${self.route.prices_coeff}
+                                       @change=${e => thop.go(self, {prices_coeff: e.target.checked})}/></label>
             ${renderGhmRootSelector(ghm_roots, self.route.ghm_root)}
-            <input type="number" step="5" value=${self.route.prices_duration}
-                   @change=${e => thop.go(self, {prices_duration: e.target.value})}/>
-            <input type="checkbox" ?value=${self.route.prices_coeff}
-                   @change=${e => thop.go(self, {prices_coeff: e.target.checked})}/>
 
             ${renderPrices(self.route.ghm_root, columns, self.route.prices_duration, self.route.prices_coeff)}
         `, document.querySelector('main'));
