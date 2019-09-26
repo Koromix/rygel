@@ -27,9 +27,9 @@ let thop = (function() {
             window.history.scrollRestoration = 'manual';
 
         // Initialize module routes
-        mco_info.route = mco_info.parseURL('');
-        mco_casemix.route = mco_casemix.parseURL('');
-        user.route = user.parseURL('');
+        Object.assign(mco_info.route, mco_info.parseURL(''));
+        Object.assign(mco_casemix.route, mco_casemix.parseURL(''));
+        Object.assign(user.route, user.parseURL(''));
 
         // Initialize some UI elements
         updateMenu();

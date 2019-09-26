@@ -5,7 +5,8 @@
 let mco_casemix = (function() {
     let self = this;
 
-    this.route = {};
+    let route = {};
+    this.route = route;
 
     this.run = async function() {
         // STUB
