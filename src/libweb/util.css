@@ -7,7 +7,7 @@
 #ut_log {
     position: fixed;
     left: calc(50% - 200px);
-    top: 35px;
+    top: 10px;
     width: 400px;
     z-index: 99999;
     user-select: none;
