@@ -5,17 +5,18 @@
 let user = (function() {
     let self = this;
 
-    this.route = {};
+    let route = {};
+    this.route = route;
 
     this.run = async function() {
         if (!env.has_users)
             throw new Error('Le module utilisateur est désactivé');
 
-        switch (self.route.mode) {
+        switch (route.mode) {
             case 'login': { runLogin(); } break;
 
             default: {
-                throw new Error(`Mode inconnu '${self.route.mode}'`);
+                throw new Error(`Mode inconnu '${route.mode}'`);
             } break;
         }
     };
@@ -31,7 +32,7 @@ let user = (function() {
     };
 
     this.makeURL = function(args = {}) {
-        args = util.assignDeep({}, self.route, args);
+        args = util.assignDeep({}, route, args);
         return `${env.base_url}user/${args.mode}/`;
     };
 

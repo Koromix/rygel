@@ -5,15 +5,16 @@
 let mco_info = (function() {
     let self = this;
 
-    this.route = {};
+    let route = {};
+    this.route = route;
 
     this.run = async function() {
-        switch (self.route.mode) {
+        switch (route.mode) {
             case 'ghs': { await runGhs(); } break;
             case 'tree': { await runTree(); } break;
 
             default: {
-                throw new Error(`Mode inconnu '${self.route.mode}'`);
+                throw new Error(`Mode inconnu '${route.mode}'`);
             } break;
         }
     };
@@ -45,7 +46,7 @@ let mco_info = (function() {
     };
 
     this.makeURL = function(args = {}) {
-        args = util.assignDeep({}, self.route, args);
+        args = util.assignDeep({}, route, args);
 
         // Common part
         let url = `${env.base_url}mco_info/${args.version}/${args.mode}`;
@@ -73,36 +74,35 @@ let mco_info = (function() {
     // ------------------------------------------------------------------------
 
     async function runGhs() {
-        let version = findVersion(self.route.version);
+        let version = findVersion(route.version);
         let [ghm_roots, ghmghs] = await Promise.all([
             concepts.load('mco').then(mco => mco.ghm_roots),
-            fetch(`${env.base_url}api/mco_ghmghs.json?sector=${self.route.ghs.sector}&date=${version.begin_date}`).then(response => response.json())
+            fetch(`${env.base_url}api/mco_ghmghs.json?sector=${route.ghs.sector}&date=${version.begin_date}`).then(response => response.json())
         ]);
 
-        if (!self.route.ghm_root)
-            self.route.ghm_root = ghm_roots[0].code;
+        if (!route.ghm_root)
+            route.ghm_root = ghm_roots[0].code;
 
         // Options
         render(html`
             ${renderVersionLine(settings.mco.versions, version)}
             <label>Secteur <select @change=${e => thop.go(self, {ghs: {sector: e.target.value}})}>
-                <option value="public" .selected=${self.route.ghs.sector === 'public'}>Public</option>
-                <option value="private" .selected=${self.route.ghs.sector === 'private'}>Privé</option>
+                <option value="public" .selected=${route.ghs.sector === 'public'}>Public</option>
+                <option value="private" .selected=${route.ghs.sector === 'private'}>Privé</option>
             </select></label>
-            <label>Durée <input type="number" step="5" min="0" max="500" .value=${self.route.ghs.duration}
+            <label>Durée <input type="number" step="5" min="0" max="500" .value=${route.ghs.duration}
                                  @change=${e => thop.go(self, {ghs: {duration: e.target.value}})}/></label>
-            <label>Coefficient <input type="checkbox" .checked=${self.route.ghs.coeff}
+            <label>Coefficient <input type="checkbox" .checked=${route.ghs.coeff}
                                        @change=${e => thop.go(self, {ghs: {coeff: e.target.checked}})}/></label>
-            ${renderGhmRootSelector(ghm_roots, self.route.ghm_root)}
+            ${renderGhmRootSelector(ghm_roots, route.ghm_root)}
         `, document.querySelector('#th_options'));
 
-        let columns = ghmghs.filter(it => it.ghm_root === self.route.ghm_root);
+        let columns = ghmghs.filter(it => it.ghm_root === route.ghm_root);
         if (!columns.length)
-            throw new Error(`Racine de GHM '${self.route.ghm_root}' inexistante`);
+            throw new Error(`Racine de GHM '${route.ghm_root}' inexistante`);
 
         // Grid
-        render(renderPriceGrid(self.route.ghm_root, columns,
-                               self.route.ghs.duration, self.route.ghs.coeff),
+        render(renderPriceGrid(route.ghm_root, columns, route.ghs.duration, route.ghs.coeff),
                document.querySelector('#th_view'));
     }
 
@@ -252,7 +252,7 @@ let mco_info = (function() {
     let collapse_nodes = new Set;
 
     async function runTree() {
-        let version = findVersion(self.route.version);
+        let version = findVersion(route.version);
         let [_, tree_nodes] = await Promise.all([
             concepts.load('mco'),
             fetch(`${env.base_url}api/mco_tree.json?date=${version.begin_date}`).then(response => response.json()),
