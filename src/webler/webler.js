@@ -4,9 +4,9 @@
 
 function initMenuHighlight() {
     // Find all side menu items, and the pointed to elements
-    let main = query('main');
-    let items = [].slice.call(queryAll('nav#side_menu a')).map(function(link) {
-        let anchor = query(link.getAttribute('href'));
+    let links = [].slice.call(document.querySelectorAll('nav#side_menu a'));
+    let items = [].slice.call(links).map(link => {
+        let anchor = document.querySelector(link.getAttribute('href'));
         return [link, anchor];
     });
     if (!items.length)
@@ -18,13 +18,13 @@ function initMenuHighlight() {
         if (pending_request)
             return;
 
-        window.requestAnimationFrame(function() {
+        window.requestAnimationFrame(() => {
             pending_request = false;
 
             if (idx !== active_idx) {
                 if (active_idx !== null)
-                    items[active_idx][0].removeClass('active');
-                items[idx][0].addClass('active');
+                    items[active_idx][0].classList.remove('active');
+                items[idx][0].classList.add('active');
                 active_idx = idx;
             }
         });
@@ -35,9 +35,7 @@ function initMenuHighlight() {
     let ignore_scroll = false;
     function highlightOnClick(idx) {
         highlight(idx);
-        setTimeout(function() {
-            ignore_scroll = false;
-        }, 50);
+        setTimeout(() => { ignore_scroll = false; }, 50);
         ignore_scroll = true;
     }
     function highlightOnScroll() {
@@ -68,7 +66,7 @@ function initMenuHighlight() {
         window.addEventListener('scroll', highlightOnScroll);
         highlightOnScroll();
     }
-    mql.addListener(function(mql) {
+    mql.addListener(mql => {
         if (mql.matches) {
             window.addEventListener('scroll', highlightOnScroll);
             highlightOnScroll();
@@ -78,10 +76,15 @@ function initMenuHighlight() {
     });
 }
 
-document.addEventListener('readystatechange', function() {
+function toggleMenu(selector) {
+    let menu = document.querySelector(selector);
+    menu.classList.toggle('active');
+}
+
+document.addEventListener('readystatechange', () => {
     if (document.readyState === 'complete')
         initMenuHighlight();
 });
 
-document.body.removeClass('nojs');
-document.body.addClass('js');
+document.body.classList.remove('nojs');
+document.body.classList.add('js');

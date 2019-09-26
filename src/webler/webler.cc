@@ -224,12 +224,12 @@ static bool RenderFullPage(Span<const PageData> pages, Size page_idx, const char
 
         <title>%1</title>
 
-        <link rel="stylesheet" href="static/style.css">
-        <script type="text/javascript" src="static/script.js" async></script>
+        <link rel="stylesheet" href="static/webler.css">
+        <script type="text/javascript" src="static/webler.js" async></script>
     </head>
     <body>
         <div id="top">
-            <a id="top_deploy" href="#" onclick="parentNode.query('#top_menu').toggleClass('active'); return false;"></a>
+            <a id="top_deploy" href="#" onclick="toggleMenu('#top_menu'); return false;"></a>
             <nav id="top_menu">
                 <ul>)", page.title, page.url);
 
@@ -257,7 +257,7 @@ static bool RenderFullPage(Span<const PageData> pages, Size page_idx, const char
 
     if (page.sections.len) {
         Print(&st, R"(
-            <a id="side_deploy" href="#" onclick="parentNode.query('#side_menu').toggleClass('active'); return false;"></a>
+            <a id="side_deploy" href="#" onclick="toggleMenu('#side_menu'); return false;"></a>
             <nav id="side_menu">
                 <ul>)");
 
