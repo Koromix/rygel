@@ -43,6 +43,20 @@ a:hover { text-decoration: underline; }
 
 button { cursor: pointer; }
 
+.th_form {
+    width: 300px;
+    max-width: 300px;
+}
+.th_form label {
+    display: block;
+    margin: 0 0 15px 0;
+}
+.th_form label > * { float: right; }
+.th_form button, .th_form input[type=submit] {
+    display: block;
+    margin: 0 auto;
+}
+
 /* -------------------- Sidebar -------------------- */
 
 @media screen and (min-width: 801px) {

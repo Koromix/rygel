@@ -46,7 +46,7 @@ let user = (function() {
 
         // View
         render(html`
-            <form @submit=${e => { handleLoginSubmit(); e.preventDefault(); }}>
+            <form class="th_form" @submit=${e => { handleLoginSubmit(); e.preventDefault(); }}>
                 <fieldset id="usr_fieldset" style="margin: 0; padding: 0; border: 0;">
                     <label>Utilisateur : <input id="usr_username" type="text"/></label>
                     <label>Mot de passe : <input id="usr_password" type="password"/></label>
