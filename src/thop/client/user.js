@@ -110,7 +110,7 @@ let user = (function() {
         let response = await fetch(`${env.base_url}api/logout.json`, {method: 'POST'});
 
         if (response.ok) {
-            log.success('Vous êtes déconnecté(e)');
+            log.info('Vous êtes déconnecté(e)');
             self.readSessionCookies(false);
         } else {
             // Should never happen, but just in case...
