@@ -46,7 +46,7 @@ let user = (function() {
 
         // View
         render(html`
-            <form class="th_form" @submit=${e => { handleLoginSubmit(); e.preventDefault(); }}>
+            <form class="th_form" @submit=${handleLoginSubmit}>
                 <fieldset id="usr_fieldset" style="margin: 0; padding: 0; border: 0;">
                     <label>Utilisateur : <input id="usr_username" type="text"/></label>
                     <label>Mot de passe : <input id="usr_password" type="password"/></label>
@@ -59,27 +59,32 @@ let user = (function() {
         document.querySelector('#usr_username').focus();
     }
 
-    async function handleLoginSubmit() {
+    function handleLoginSubmit(e) {
         let fieldset_el = document.querySelector('#usr_fieldset');
         let username_el = document.querySelector('#usr_username');
         let password_el = document.querySelector('#usr_password');
 
-        let success;
-        try {
-            fieldset_el.disabled = true;
-            success = await self.login(username_el.value, password_el.value);
-        } finally {
+        fieldset_el.disabled = true;
+        let p = self.login(username_el.value, password_el.value);
+
+        p.then(success => {
             fieldset_el.disabled = false;
-        }
 
-        if (success) {
-            username_el.value = '';
-            password_el.value = '';
+            if (success) {
+                username_el.value = '';
+                password_el.value = '';
 
-            await thop.go();
-        } else {
-            password_el.focus();
-        }
+                thop.go();
+            } else {
+                password_el.focus();
+            }
+        });
+        p.catch(err => {
+            fieldset_el.disabled = false;
+            log.error(err);
+        });
+
+        e.preventDefault();
     }
 
     this.login = async function(username, password) {

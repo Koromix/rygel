@@ -148,9 +148,21 @@ let thop = (function() {
                     html`<a href=${user.makeURL({mode: 'login'})}>Se connecter</a>` : html``}
                 ${user.isConnected() ?
                     html`${user.getUserName()} (<a href=${user.makeURL({mode: 'login'})}>changer</a>,
-                                                <a href="#" @click=${e => { user.logout(); e.preventDefault(); }}>déconnexion</a>)` : html``}
+                                                <a href="#" @click=${handleLogoutClick}>déconnexion</a>)` : html``}
             `, document.querySelector('#th_session'));
         }
+    }
+
+    function handleLogoutClick(e) {
+        let p = user.logout();
+
+        p.then(success => {
+            if (success)
+                self.go();
+        });
+        p.catch(log.error);
+
+        e.preventDefault();
     }
 
     function updateHistory(push_history) {
