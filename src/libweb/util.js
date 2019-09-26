@@ -429,17 +429,6 @@ let util = (function() {
         return JSON.stringify(value);
     };
 
-    function encode30bits(value, buf, offset, len) {
-        let characters = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
-
-        buf[offset + 0] = characters[(value >>> 25) & 0x1F];
-        buf[offset + 1] = characters[(value >>> 20) & 0x1F];
-        buf[offset + 2] = characters[(value >>> 15) & 0x1F];
-        buf[offset + 3] = characters[(value >>> 10) & 0x1F];
-        buf[offset + 4] = characters[(value >>> 5) & 0x1F];
-        buf[offset + 5] = characters[value & 0x1F];
-    }
-
     this.makeULID = function() {
         let ulid = new Array(26).fill(0);
 
@@ -468,6 +457,17 @@ let util = (function() {
 
         return ulid.join('');
     };
+
+    function encode30bits(value, buf, offset, len) {
+        let characters = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+
+        buf[offset + 0] = characters[(value >>> 25) & 0x1F];
+        buf[offset + 1] = characters[(value >>> 20) & 0x1F];
+        buf[offset + 2] = characters[(value >>> 15) & 0x1F];
+        buf[offset + 3] = characters[(value >>> 10) & 0x1F];
+        buf[offset + 4] = characters[(value >>> 5) & 0x1F];
+        buf[offset + 5] = characters[value & 0x1F];
+    }
 
     // TODO: React to onerror?
     this.loadScript = function(url) {
