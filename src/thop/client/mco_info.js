@@ -12,6 +12,9 @@ let mco_info = (function() {
         switch (route.mode) {
             case 'ghs': { await runGhs(); } break;
             case 'tree': { await runTree(); } break;
+            case 'ghmghs': {} break;
+            case 'diagnoses': {} break;
+            case 'procedures': {} break;
 
             default: {
                 throw new Error(`Mode inconnu '${route.mode}'`);

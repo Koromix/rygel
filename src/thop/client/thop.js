@@ -178,6 +178,15 @@ let thop = (function() {
             <a class="category">Informations MCO</a>
             ${makeMenuLink('Tarifs GHS', mco_info.makeURL({mode: 'ghs'}))}
             ${makeMenuLink('Arbre de groupage', mco_info.makeURL({mode: 'tree'}))}
+            ${makeMenuLink('GHM / GHS', mco_info.makeURL({mode: 'ghmghs'}))}
+            ${makeMenuLink('Diagnostics', mco_info.makeURL({mode: 'diagnoses'}))}
+            ${makeMenuLink('Actes', mco_info.makeURL({mode: 'procedures'}))}
+
+            <a class="category">Activité MCO</a>
+            ${makeMenuLink('GHM', mco_casemix.makeURL({mode: 'ghm'}))}
+            ${makeMenuLink('Unités', mco_casemix.makeURL({mode: 'units'}))}
+            ${makeMenuLink('Valorisation', mco_casemix.makeURL({mode: 'valorisation'}))}
+            ${makeMenuLink('Résumés', mco_casemix.makeURL({mode: 'rss'}))}
         `, document.querySelector('#th_menu'));
     }
 

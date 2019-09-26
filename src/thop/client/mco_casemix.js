@@ -9,17 +9,32 @@ let mco_casemix = (function() {
     this.route = route;
 
     this.run = async function() {
-        // STUB
+        switch (route.mode) {
+            case 'ghm': {} break;
+            case 'units': {} break;
+            case 'valorisation': {} break;
+            case 'rss': {} break;
+
+            default: {
+                throw new Error(`Mode inconnu '${route.mode}'`);
+            } break;
+        }
     };
 
     this.parseURL = function(path, query) {
-        // STUB
-        return {};
+        let parts = path.split('/');
+
+        // Common part
+        let args = {
+            mode: parts[0] || 'ghm'
+        };
+
+        return args;
     };
 
     this.makeURL = function(args = {}) {
-        // STUB
-        return `${env.base_url}mco_casemix/`;
+        args = util.assignDeep({}, route, args);
+        return `${env.base_url}mco_casemix/${args.mode}/`;
     };
 
     return this;
