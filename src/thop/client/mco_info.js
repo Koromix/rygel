@@ -352,7 +352,7 @@ let mco_info = (function() {
 
     function handleTreeNodeClick(e) {
         let li = this.parentNode.parentNode;
-        if (li.toggleClass('collapse')) {
+        if (li.classList.toggle('collapse')) {
             collapse_nodes.add(li.dataset.chain);
         } else {
             collapse_nodes.delete(li.dataset.chain);
