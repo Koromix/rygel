@@ -94,8 +94,8 @@ let thop = (function() {
 
             util.assignDeep(route_mod.route, route_mod.parseURL(mod_path, url.params));
             util.assignDeep(route_mod.route, args);
-        } else if (mod) {
-            route_mod = mod;
+        } else {
+            route_mod = mod || route_mod;
             util.assignDeep(route_mod.route, args);
         }
 
@@ -126,19 +126,17 @@ let thop = (function() {
         }
         view_el.classList.remove('th_view_busy');
 
-        // Update session information
-        updateSession();
-
-        // Update address bar and sidebar (basically)
-        route_url = route_mod.makeURL();
-        updateHistory(false);
-        updateMenu();
-
         // Set appropriate scroll state
         if (window.history.scrollRestoration || push_history) {
             let target = scroll_cache.get(route_url) || [0, 0];
             window.scrollTo(target[0], target[1]);
         }
+
+        // Update shared state and UI
+        route_url = route_mod.makeURL();
+        updateHistory(false);
+        updateSession();
+        updateMenu();
     };
 
     function updateSession() {
