@@ -31,7 +31,7 @@ let user = (function() {
     };
 
     this.makeURL = function(args = {}) {
-        args = {...self.route, ...args};
+        args = util.assignDeep({}, self.route, args);
         return `${env.base_url}user/${args.mode}/`;
     };
 
