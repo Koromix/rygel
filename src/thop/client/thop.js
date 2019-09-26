@@ -61,7 +61,7 @@ let thop = (function() {
     }
 
     this.go = async function(mod, args = {}, push_history = true) {
-        // Parse URL if needed
+        // Update module and route
         if (typeof mod === 'string') {
             let url = util.parseUrl(mod);
             let path = url.path.substr(env.base_url.length);
@@ -85,13 +85,15 @@ let thop = (function() {
                 } break;
             }
 
-            args = {...route_mod.parseURL(mod_path, url.params), ...args};
+            Object.assign(route_mod.route, route_mod.parseURL(mod_path, url.params));
+            Object.assign(route_mod.route, args);
         } else if (mod) {
             route_mod = mod;
+            Object.assign(route_mod.route, args);
         }
 
-        // Update module route
-        Object.assign(route_mod.route, args);
+        // Update URL quickly, even though we'll do it again after module run because some
+        // parts may depend on fetched resources.
         updateHistory(route_mod.makeURL(), push_history);
 
         let view_el = document.querySelector('#th_view');
@@ -106,15 +108,13 @@ let thop = (function() {
         }
         view_el.classList.remove('th_view_busy');
 
-        // Maybe we got disconnected for some reason (session expiration)
+        // Update session information
         updateSession();
 
-        // Build the URL again, in case some parameters could not be filled before,
-        // (e.g. a fetch was needed).
+        // Update address bar and sidebar (basically)
         let url = route_mod.makeURL();
         updateHistory(url, false);
         updateMenu(url);
-
     };
 
     function updateSession() {
