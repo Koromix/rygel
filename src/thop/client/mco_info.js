@@ -25,16 +25,18 @@ let mco_info = (function() {
         let args = {
             version: dates.fromString(parts[0] || null) ||
                      settings.mco.versions[settings.mco.versions.length - 1].begin_date,
-            mode: parts[1] || 'ghs'
+            mode: parts[1] || 'ghs',
+
+            ghs: {}
         };
 
         // Mode-specific part
         switch (args.mode) {
             case 'ghs': {
-                args.ghs_sector = parts[2] || 'public';
+                args.ghs.sector = parts[2] || 'public';
                 args.ghm_root = parts[3] || null;
-                args.ghs_duration = parseInt(query.duration, 10) || 200;
-                args.ghs_coeff = !!parseInt(query.coeff, 10) || false;
+                args.ghs.duration = parseInt(query.duration, 10) || 200;
+                args.ghs.coeff = !!parseInt(query.coeff, 10) || false;
             } break;
             case 'tree': { /* Nothing to do */ } break;
         }
@@ -43,7 +45,7 @@ let mco_info = (function() {
     };
 
     this.makeURL = function(args = {}) {
-        args = {...self.route, ...args};
+        args = util.assignDeep({}, self.route, args);
 
         // Common part
         let url = `${env.base_url}mco_info/${args.version}/${args.mode}`;
@@ -51,13 +53,13 @@ let mco_info = (function() {
         // Mode-specific part
         switch (args.mode) {
             case 'ghs': {
-                url += `/${args.ghs_sector}`;
+                url += `/${args.ghs.sector}`;
                 if (args.ghm_root)
                     url += `/${args.ghm_root}`;
 
                 url = util.buildUrl(url, {
-                    duration: args.ghs_duration,
-                    coeff: 0 + args.ghs_coeff
+                    duration: args.ghs.duration,
+                    coeff: 0 + args.ghs.coeff
                 })
             } break;
             case 'tree': { /* Nothing to do */ } break;
@@ -74,7 +76,7 @@ let mco_info = (function() {
         let version = findVersion(self.route.version);
         let [ghm_roots, ghmghs] = await Promise.all([
             concepts.load('mco').then(mco => mco.ghm_roots),
-            fetch(`${env.base_url}api/mco_ghmghs.json?sector=${self.route.ghs_sector}&date=${version.begin_date}`).then(response => response.json())
+            fetch(`${env.base_url}api/mco_ghmghs.json?sector=${self.route.ghs.sector}&date=${version.begin_date}`).then(response => response.json())
         ]);
 
         if (!self.route.ghm_root)
@@ -83,14 +85,14 @@ let mco_info = (function() {
         // Options
         render(html`
             ${renderVersionLine(settings.mco.versions, version)}
-            <label>Secteur <select @change=${e => thop.go(self, {ghs_sector: e.target.value})}>
-                <option value="public" .selected=${self.route.ghs_sector === 'public'}>Public</option>
-                <option value="private" .selected=${self.route.ghs_sector === 'private'}>Privé</option>
+            <label>Secteur <select @change=${e => thop.go(self, {ghs: {sector: e.target.value}})}>
+                <option value="public" .selected=${self.route.ghs.sector === 'public'}>Public</option>
+                <option value="private" .selected=${self.route.ghs.sector === 'private'}>Privé</option>
             </select></label>
-            <label>Durée <input type="number" step="5" min="0" max="500" .value=${self.route.ghs_duration}
-                                 @change=${e => thop.go(self, {ghs_duration: e.target.value})}/></label>
-            <label>Coefficient <input type="checkbox" .checked=${self.route.ghs_coeff}
-                                       @change=${e => thop.go(self, {ghs_coeff: e.target.checked})}/></label>
+            <label>Durée <input type="number" step="5" min="0" max="500" .value=${self.route.ghs.duration}
+                                 @change=${e => thop.go(self, {ghs: {duration: e.target.value}})}/></label>
+            <label>Coefficient <input type="checkbox" .checked=${self.route.ghs.coeff}
+                                       @change=${e => thop.go(self, {ghs: {coeff: e.target.checked}})}/></label>
             ${renderGhmRootSelector(ghm_roots, self.route.ghm_root)}
         `, document.querySelector('#th_options'));
 
@@ -100,7 +102,7 @@ let mco_info = (function() {
 
         // Grid
         render(renderPriceGrid(self.route.ghm_root, columns,
-                               self.route.ghs_duration, self.route.ghs_coeff),
+                               self.route.ghs.duration, self.route.ghs.coeff),
                document.querySelector('#th_view'));
     }
 

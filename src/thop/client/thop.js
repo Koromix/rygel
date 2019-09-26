@@ -85,11 +85,11 @@ let thop = (function() {
                 } break;
             }
 
-            Object.assign(route_mod.route, route_mod.parseURL(mod_path, url.params));
-            Object.assign(route_mod.route, args);
+            util.assignDeep(route_mod.route, route_mod.parseURL(mod_path, url.params));
+            util.assignDeep(route_mod.route, args);
         } else if (mod) {
             route_mod = mod;
-            Object.assign(route_mod.route, args);
+            util.assignDeep(route_mod.route, args);
         }
 
         // Update URL quickly, even though we'll do it again after module run because some
