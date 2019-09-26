@@ -174,24 +174,16 @@ let thop = (function() {
     }
 
     function updateMenu() {
-        let links = [
-            {category: 'Informations MCO', title: 'Tarifs GHS', func: () => mco_info.makeURL({mode: 'ghs'})},
-            {category: 'Informations MCO', title: 'Arbre de groupage', func: () => mco_info.makeURL({mode: 'tree'})}
-        ];
+        render(html`
+            <a class="category">Informations MCO</a>
+            ${makeMenuLink('Tarifs GHS', mco_info.makeURL({mode: 'ghs'}))}
+            ${makeMenuLink('Arbre de groupage', mco_info.makeURL({mode: 'tree'}))}
+        `, document.querySelector('#th_menu'));
+    }
 
-        let prev_category = null;
-        render(links.map(link => {
-            let url = link.func();
-            let active = route_url.startsWith(url);
-
-            if (link.category === prev_category) {
-                return html`<a class=${active ? 'active' : ''} href=${url}>${link.title}</a>`;
-            } else {
-                prev_category = link.category;
-                return html`<a class="category">${link.category}</li>
-                            <a class=${active ? 'active' : ''} href=${url}>${link.title}</a>`;
-            }
-        }), document.querySelector('#th_menu'));
+    function makeMenuLink(label, url) {
+        let active = route_url.startsWith(url);
+        return html`<a class=${active ? 'active': ''} href=${url}>${label}</a>`;
     }
 
     return this;
