@@ -279,6 +279,8 @@ let log = (function() {
 // ------------------------------------------------------------------------
 
 let util = (function() {
+    let self = this;
+
     this.mapRange = function(start, end, func) {
         let len = end - start;
         let arr = Array.from({length: len});
@@ -306,6 +308,30 @@ let util = (function() {
 
         return arr2;
     };
+
+    this.assignDeep = function(obj, ...sources) {
+        for (let src of sources)
+            assignDeep1(obj, src);
+
+        return obj;
+    };
+
+    function assignDeep1(obj, src) {
+        for (key in src) {
+            let to = obj[key];
+            let from = src[key];
+
+            if (isRealObject(to) && isRealObject(from) && !Object.isFrozen(to)) {
+                assignDeep1(to, from);
+            } else {
+                obj[key] = from;
+            }
+        }
+    }
+
+    function isRealObject(value) {
+        return (typeof value === 'object') && value !== null && !Array.isArray(value);
+    }
 
     // Why the f*ck is there still no good cookie API?
     this.getCookie = function(name) {
