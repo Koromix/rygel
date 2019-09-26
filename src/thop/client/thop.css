@@ -11,25 +11,22 @@ body {
     font-size: 12px;
 }
 
-#th_bar { background: #e9e9e9; }
+#th_bar {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    left: 0;
+    top: 0;
+    min-height: 100%;
+    width: 180px;
+    z-index: 999;
+    background: #e9e9e9;
+}
 
-@media screen and (min-width: 801px) {
-    #th_bar {
-        display: flex;
-        flex-direction: column;
-        position: fixed;
-        left: 0;
-        top: 0;
-        min-height: 100%;
-        width: 180px;
-        z-index: 999;
-    }
-
-    main {
-        max-width: 1000px;
-        margin-left: 180px;
-        padding: 1em;
-    }
+main {
+    max-width: 1000px;
+    margin-left: 180px;
+    padding: 1em;
 }
 
 /* -------------------- Common elements -------------------- */
@@ -59,50 +56,48 @@ button { cursor: pointer; }
 
 /* -------------------- Sidebar -------------------- */
 
-@media screen and (min-width: 801px) {
-    #th_session {
-        padding: 6px 2px 0 2px;
-        text-align: center;
-        font-size: 0.8em;
-    }
+#th_session {
+    padding: 6px 2px 0 2px;
+    text-align: center;
+    font-size: 0.8em;
+}
 
-    #th_logo {
-        display: block;
-        margin: 1em auto;
-    }
+#th_logo {
+    display: block;
+    margin: 1em auto;
+}
 
-    #th_menu { flex: 1; }
-    #th_menu a.category {
-        display: block;
-        padding-left: 0.5em;
-        box-sizing: border-box;
-        font-weight: bold;
-        font-variant: small-caps;
-        font-size: 1.1em;
-    }
-    #th_menu a {
-        display: block;
-        padding: 0.5em 0.5em 0.5em 2em;
-        box-sizing: border-box;
-        width: 100%;
-        text-decoration: none;
-        color: black;
-    }
-    #th_menu a.active {
-        background: #262626;
-        color: white;
-    }
-    #th_menu a:not(.category):not(.active):hover {
-        background: #ddd !important;
-        color: black !important;
-    }
+#th_menu { flex: 1; }
+#th_menu a.category {
+    display: block;
+    padding-left: 0.5em;
+    box-sizing: border-box;
+    font-weight: bold;
+    font-variant: small-caps;
+    font-size: 1.1em;
+}
+#th_menu a {
+    display: block;
+    padding: 0.5em 0.5em 0.5em 2em;
+    box-sizing: border-box;
+    width: 100%;
+    text-decoration: none;
+    color: black;
+}
+#th_menu a.active {
+    background: #262626;
+    color: white;
+}
+#th_menu a:not(.category):not(.active):hover {
+    background: #ddd !important;
+    color: black !important;
+}
 
-    #th_version {
-        padding: 0 2px 4px 2px;
-        text-align: center;
-        font-size: 0.8em;
-        color: #ff6600;
-    }
+#th_version {
+    padding: 0 2px 4px 2px;
+    text-align: center;
+    font-size: 0.8em;
+    color: #ff6600;
 }
 
 /* -------------------- Main -------------------- */
