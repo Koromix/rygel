@@ -54,7 +54,7 @@ load_mco <- function(root, err_filename) {
         'C90', 'Erreurs et autres séjours inclassables'
     ))
 
-    files <- list.files(root, pattern = 'regroup.*\\.xlsx?', full.names = TRUE)
+    files <- list.files(root, pattern = 'regroup.*\\.xls[xm]?', full.names = TRUE)
     if (!length(files))
         stop('Cannot find any GHM catalog file')
 
