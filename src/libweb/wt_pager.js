@@ -6,41 +6,18 @@ function Pager() {
     let self = this;
 
     this.hrefBuilder = page => '#';
-    this.changeHandler = null;
-
-    let root_el;
+    this.changeHandler = page => {};
 
     let last_page;
     let current_page;
 
-    this.getRootElement = function() { return root_el; }
+    this.setLastPage = function(page) { last_page = page; };
+    this.getLastPage = function() { return last_page; };
 
-    this.setLastPage = function(page) { last_page = page; }
-    this.getLastPage = function() { return last_page; }
-    this.setCurrentPage = function(page) { current_page = page; }
-    this.getCurrentPage = function() { return current_page; }
+    this.setCurrentPage = function(page) { current_page = page; };
+    this.getCurrentPage = function() { return current_page; };
 
-    function handlePageClick(e, page) {
-        current_page = page;
-        setTimeout(() => self.render(root_el), 0);
-
-        if (self.changeHandler)
-            self.changeHandler.call(self, e);
-
-        e.preventDefault();
-    }
-
-    function makePageLink(text, page) {
-        if (page) {
-            return html`<td><a href=${self.hrefBuilder(page)} @click=${e => handlePageClick(e, page)}>${text}</a></td>`;
-        } else {
-            return html`<td>${text}</td>`;
-        }
-    }
-
-    this.render = function(new_root_el) {
-        root_el = new_root_el;
-
+    this.render = function() {
         let start_page, end_page;
         if (last_page < 8) {
             start_page = 1;
@@ -56,7 +33,7 @@ function Pager() {
             end_page = current_page + 1;
         }
 
-        render(html`
+        return html`
             <table class="pagr">
                 ${makePageLink('≪', current_page > 1 ? (current_page - 1) : null)}
                 ${start_page > 1 ?
@@ -67,7 +44,22 @@ function Pager() {
                     html`<td> … </td>${makePageLink(last_page, last_page)}` : html``}
                 ${makePageLink('≫', current_page < last_page ? (current_page + 1) : null)}
             </table>
-        `, root_el);
+        `;
+    };
+
+    function handlePageClick(e, page) {
+        current_page = page;
+        self.changeHandler.call(self, page);
+
+        e.preventDefault();
+    }
+
+    function makePageLink(text, page) {
+        if (page) {
+            return html`<td><a href=${self.hrefBuilder(page)} @click=${e => handlePageClick(e, page)}>${text}</a></td>`;
+        } else {
+            return html`<td>${text}</td>`;
+        }
     }
 }
 
