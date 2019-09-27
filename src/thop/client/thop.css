@@ -57,6 +57,7 @@ button { cursor: pointer; }
 /* -------------------- Sidebar -------------------- */
 
 #th_session {
+    height: 1em;
     padding: 6px 2px 0 2px;
     text-align: center;
     font-size: 0.8em;
