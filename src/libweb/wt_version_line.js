@@ -24,7 +24,6 @@ function VersionLine() {
     this.getDate = function() { return current_date; };
 
     function handleNodeClick(e, version) {
-        let vlin_el = util.findParent(e.target, el => el.classList.contains('vlin'));
         self.changeHandler.call(self, version);
         e.preventDefault();
     }
