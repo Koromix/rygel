@@ -12,6 +12,8 @@ let thop = (function() {
     let route_url = '';
     let scroll_cache = new LruMap(32);
 
+    let settings_key;
+
     document.addEventListener('readystatechange', e => {
         if (document.readyState === 'complete')
             initThop();
@@ -21,22 +23,18 @@ let thop = (function() {
         log.pushHandler(log.notifyHandler);
         initNavigation();
 
-        user.readSessionCookies();
-        await initSettings();
-
         // We deal with this
         if (window.history.scrollRestoration)
             window.history.scrollRestoration = 'manual';
+
+        await updateSession();
 
         // Initialize module routes
         Object.assign(mco_info.route, mco_info.parseURL(''));
         Object.assign(mco_casemix.route, mco_casemix.parseURL(''));
         Object.assign(user.route, user.parseURL(''));
 
-        // Initialize some UI elements
         updateMenu();
-        updateSession();
-
         self.go(window.location.href, {}, false);
     }
 
@@ -57,21 +55,6 @@ let thop = (function() {
         });
     }
 
-    async function initSettings() {
-        settings = await fetch(`${env.base_url}api/settings.json`).then(response => response.json());
-
-        if (settings.mco) {
-            for (let version of settings.mco.versions) {
-                version.begin_date = dates.fromString(version.begin_date);
-                version.end_date = dates.fromString(version.end_date);
-            }
-
-            if (settings.mco.casemix) {
-                settings.mco.casemix.min_date = dates.fromString(settings.mco.casemix.min_date);
-                settings.mco.casemix.max_date = dates.fromString(settings.mco.casemix.max_date);
-            }
-        }
-    }
 
     this.go = async function(mod, args = {}, push_history = true) {
         // Update module and route
@@ -142,11 +125,11 @@ let thop = (function() {
         // Update shared state and UI
         route_url = route_mod.makeURL();
         updateHistory(false);
-        updateSession();
+        await updateSession();
         updateMenu();
     };
 
-    function updateSession() {
+    async function updateSession() {
         if (env.has_users) {
             user.readSessionCookies();
 
@@ -157,6 +140,20 @@ let thop = (function() {
                     html`${user.getUserName()} (<a href=${user.makeURL({mode: 'login'})}>changer</a>,
                                                 <a href="#" @click=${handleLogoutClick}>déconnexion</a>)` : html``}
             `, document.querySelector('#th_session'));
+        }
+
+        if (settings_key !== user.getUrlKey()) {
+            let json = await fetch(`${env.base_url}api/settings.json?key=${user.getUrlKey()}`).then(response => response.text());
+
+            // Parse it manually to revive dates. It's relatively small anyway.
+            settings = JSON.parse(json, (key, value) => {
+                if (typeof value === 'string' && value.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)) {
+                    return dates.fromString(value);
+                } else {
+                    return value;
+                }
+            });
+            settings_key = user.getUrlKey();
         }
     }
 
