@@ -100,57 +100,41 @@ static void ProduceSettings(const http_RequestInfo &request, const User *user, h
         json.EndArray();
 
         if (user) {
+            json.Key("casemix"); json.StartObject();
+
             json.Key("start_date"); json.String(Fmt(buf, "%1", mco_stay_set_dates[0]).ptr);
             json.Key("end_date"); json.String(Fmt(buf, "%1", mco_stay_set_dates[1]).ptr);
 
-            // Algorithms
-            {
-                const OptionDesc &default_desc = mco_DispenseModeOptions[(int)thop_config.mco_dispense_mode];
+            json.Key("algorithms"); json.StartArray();
+            for (Size i = 0; i < RG_LEN(mco_DispenseModeOptions); i++) {
+                if (user->CheckMcoDispenseMode((mco_DispenseMode)i)) {
+                    const OptionDesc &desc = mco_DispenseModeOptions[i];
 
-                json.Key("algorithms"); json.StartArray();
-                for (Size i = 0; i < RG_LEN(mco_DispenseModeOptions); i++) {
-                    if (user->CheckMcoDispenseMode((mco_DispenseMode)i)) {
-                        const OptionDesc &desc = mco_DispenseModeOptions[i];
-
-                        json.StartObject();
-                        json.Key("name"); json.String(desc.name);
-                        json.Key("help"); json.String(desc.help);
-                        json.EndObject();
-                    }
-                }
-                json.EndArray();
-
-                json.Key("default_algorithm"); json.String(default_desc.name);
-            }
-
-            json.Key("permissions"); json.StartArray();
-            for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
-                if (user->permissions & (1 << i)) {
-                    json.String(UserPermissionNames[i]);
+                    json.StartObject();
+                    json.Key("name"); json.String(desc.name);
+                    json.Key("help"); json.String(desc.help);
+                    json.EndObject();
                 }
             }
             json.EndArray();
 
-            json.Key("structures"); json.StartArray();
-            for (const Structure &structure: thop_structure_set.structures) {
-                json.StartObject();
-                json.Key("name"); json.String(structure.name);
-                json.Key("entities"); json.StartArray();
-                for (const StructureEntity &ent: structure.entities) {
-                    if (user->mco_allowed_units.Find(ent.unit)) {
-                        json.StartObject();
-                        json.Key("unit"); json.Int(ent.unit.number);
-                        json.Key("path"); json.String(ent.path);
-                        json.EndObject();
-                    }
-                }
-                json.EndArray();
-                json.EndObject();
-            }
-            json.EndArray();
+            const OptionDesc &default_desc = mco_DispenseModeOptions[(int)thop_config.mco_dispense_mode];
+            json.Key("default_algorithm"); json.String(default_desc.name);
+
+            json.EndObject();
         }
     }
     json.EndObject();
+
+    if (user) {
+        json.Key("permissions"); json.StartArray();
+        for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
+            if (user->permissions & (1 << i)) {
+                json.String(UserPermissionNames[i]);
+            }
+        }
+        json.EndArray();
+    }
 
     json.EndObject();
 
@@ -304,6 +288,7 @@ static void InitRoutes()
     add_function_route("POST", "/api/logout.json", HandleLogout);
 
     // MCO API
+    add_function_route("GET", "/api/mco_structures.json", ProduceMcoStructures);
     add_function_route("GET", "/api/mco_aggregate.json", ProduceMcoAggregate);
     add_function_route("GET", "/api/mco_results.json", ProduceMcoResults);
     add_function_route("GET", "/api/mco_diagnoses.json", ProduceMcoDiagnoses);
