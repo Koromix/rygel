@@ -5,86 +5,63 @@
 function PeriodPicker() {
     let self = this;
 
-    this.changeHandler = null;
+    this.changeHandler = (start, end) => {};
 
-    let root_el;
-
-    let limit_dates = [dates.create(1900, 1, 1), dates.create(2100, 1, 1)];
+    let limit_dates = [dates.create(1900, 1, 1), dates.today()];
     let current_dates = limit_dates;
-
-    let main_el;
-    let handle_els;
-    let bar_el;
 
     let grab_target;
     let grab_offset;
     let grab_start_date;
     let grab_end_date;
 
-    this.getRootElement = function() { return root_el; };
+    this.setRange = function(...dates) { limit_dates = dates; };
+    this.getRange = function() { return limit_dates; };
 
-    this.setLimitDates = function(dates) { limit_dates = dates; };
-    this.getLimitDates = function() { return limit_dates; };
-    this.setDates = function(dates) { current_dates = dates.map((date, idx) => date || limit_dates[idx]); };
+    this.setDates = function(...dates) { current_dates = dates.map((date, idx) => date || limit_dates[idx]); };
     this.getDates = function() { return current_dates; };
 
-    function syncHandle(handle, date) {
-        let input = handle.querySelector('input');
+    this.render = function() {
+        return html`
+            <div class="ppik">
+                ${renderWidget()}
+            </div>
+        `;
+    };
 
-        let new_pos = 100 * date.diff(limit_dates[0]) / limit_dates[1].diff(limit_dates[0]);
-        handle.style.left = '' + new_pos + '%';
-        input.value = date.toString();
+    function renderWidget() {
+        let left_pos = dateToPosition(current_dates[0]);
+        let right_pos = dateToPosition(current_dates[1]);
+
+        // The dummy button catches click events that happen when a label encloses the widget
+        return html`
+            <div class="ppik_main">
+                <button style="display: none;" @click=${e => e.preventDefault()}></button>
+
+                <div class="ppik_line"></div>
+                <div class="ppik_bar" style=${`left: ${left_pos}; width: calc(${right_pos} - ${left_pos});`}
+                     @pointerdown=${handleBarDown} @pointermove=${handleBarMove}
+                     @pointerup=${handlePointerUp} @mousedown=${handleBarDown}></div>
+                <div class="ppik_handle" style=${`left: ${left_pos};`}>
+                    <div @pointerdown=${e => handleHandleDown(e, 0)} @pointermove=${e => handleHandleMove(e, 0)}
+                         @pointerup=${handlePointerUp} @mousedown=${handleHandleDown}></div>
+                    <input type="date" style="bottom: 4px;" .value=${current_dates[0].toString()}
+                           @change=${e => handleDateChange(e, 0)} @focusout=${handleDateFocusOut}/>
+                </div>
+                <div class="ppik_handle" style=${`left: ${right_pos};`}>
+                    <div @pointerdown=${e => handleHandleDown(e, 1)} @pointermove=${e => handleHandleMove(e, 1)}
+                         @pointerup=${handlePointerUp} @mousedown=${handleHandleDown}></div>
+                    <input type="date" style="top: 18px;" .value=${current_dates[1].toString()}
+                           @change=${e => handleDateChange(e, 1)} @focusout=${handleDateFocusOut}/>
+                </div>
+            </div>
+        `;
     }
 
-    function syncView() {
-        syncHandle(handle_els[0], current_dates[0]);
-        syncHandle(handle_els[1], current_dates[1]);
-
-        bar_el.style.left = handle_els[0].style.left;
-        bar_el.style.width = 'calc(' + handle_els[1].style.left + ' - ' + handle_els[0].style.left + ')';
-    }
-
-    function positionToDate(pos) {
-        let delta_days = Math.floor(limit_dates[1].diff(limit_dates[0]) * (pos / main_el.offsetWidth));
-        let date = limit_dates[0].plus(delta_days);
-
-        return date;
-    }
-
-    function forceDay(date, day) {
-        day = Math.min(dates.daysInMonth(date.year, date.month), day);
-        date = dates.create(date.year, date.month, day);
-
-        return date;
-    }
-
-    function clampStartDate(date) {
-        let max = current_dates[1].minus(1);
-
-        if (date <= limit_dates[0]) {
-            return limit_dates[0];
-        } else if (date >= max) {
-            return max;
-        } else {
-            return date;
-        }
-    }
-
-    function clampEndDate(date) {
-        let min = current_dates[0].plus(1);
-
-        if (date >= limit_dates[1]) {
-            return limit_dates[1];
-        } else if (date <= min) {
-            return min;
-        } else {
-            return date;
-        }
-    }
-
-    function handleHandleDown(e) {
+    function handleHandleDown(e, idx) {
         if (Element.prototype.setPointerCapture) {
-            e.target.setPointerCapture(e.pointerId);
+            if (e.type === 'pointerdown')
+                e.target.setPointerCapture(e.pointerId);
         } else if (!grab_target) {
             function forwardUp(e) {
                 document.body.removeEventListener('mousemove', handleHandleMove);
@@ -99,55 +76,40 @@ function PeriodPicker() {
         grab_target = e.target;
     }
 
-    function handleHandleMove(e) {
+    function handleHandleMove(e, idx) {
         if (grab_target) {
-            let handle = grab_target.parentNode;
-            let date = positionToDate(e.clientX - main_el.offsetLeft);
+            let root_el = util.findParent(e.target, el => el.classList.contains('ppik'));
+            let main_el = root_el.querySelector('.ppik_main');
 
-            if (handle === handle_els[0]) {
-                current_dates[0] = clampStartDate(date);
-            } else {
-                current_dates[1] = clampEndDate(date);
-            }
+            let date = positionToDate(main_el, e.clientX);
+            current_dates[idx] = clampDate(date, idx);
 
-            syncView();
+            render(renderWidget(), root_el);
         }
     }
 
-    function handleDateChange(e) {
-        let handle = e.target.parentNode;
-        let input = handle.querySelector('input');
+    function handleDateChange(e, idx) {
+        let root_el = util.findParent(e.target, el => el.classList.contains('ppik'));
 
-        if (input.value) {
-            let date = dates.fromString(input.value);
-
-            if (handle === handle_els[0]) {
-                current_dates[0] = clampStartDate(date);
-            } else {
-                current_dates[1] = clampEndDate(date);
-            }
+        if (e.target.value) {
+            let date = dates.fromString(e.target.value);
+            current_dates[idx] = clampDate(date, idx);
         } else {
-            if (handle === handle_els[0]) {
-                current_dates[0] = limit_dates[0];
-            } else {
-                current_dates[1] = limit_dates[1];
-            }
-
-            if (self.changeHandler)
-                setTimeout(() => self.changeHandler.call(self, e), 0);
+            current_dates[idx] = limit_dates[idx];
+            setTimeout(() => self.changeHandler.call(self, current_dates[0], current_dates[1]), 0);
         }
 
-        syncView();
+        render(renderWidget(), root_el);
     }
 
     function handleDateFocusOut(e) {
-        if (self.changeHandler)
-            setTimeout(() => self.changeHandler.call(self, e), 0);
+        setTimeout(() => self.changeHandler.call(self, current_dates[0], current_dates[1]), 0);
     }
 
     function handleBarDown(e) {
         if (Element.prototype.setPointerCapture) {
-            e.target.setPointerCapture(e.pointerId);
+            if (e.type === 'pointerdown')
+                e.target.setPointerCapture(e.pointerId);
         } else if (!grab_target) {
             function forwardUp(e) {
                 document.body.removeEventListener('mousemove', handleBarMove);
@@ -168,11 +130,15 @@ function PeriodPicker() {
 
     function handleBarMove(e) {
         if (grab_target) {
+            let root_el = util.findParent(e.target, el => el.classList.contains('ppik'));
+            let main_el = root_el.querySelector('.ppik_main');
+
             let delta = grab_end_date.diff(grab_start_date);
             let delta_months = (grab_end_date.year - grab_start_date.year) * 12 +
                                (grab_end_date.month - grab_start_date.month);
 
-            let start_date = forceDay(positionToDate(e.clientX - main_el.offsetLeft - grab_offset), grab_start_date.day);
+            let pos = positionToDate(main_el, e.clientX - grab_offset);
+            let start_date = forceDay(pos, grab_start_date.day);
             let end_date = forceDay(start_date.plusMonths(delta_months), grab_end_date.day);
 
             if (start_date < limit_dates[0]) {
@@ -190,58 +156,64 @@ function PeriodPicker() {
                 }
                 current_dates[1] = limit_dates[1];
             } else {
-                current_dates[0] = clampStartDate(start_date);
-                current_dates[1] = clampEndDate(end_date);
+                current_dates[0] = clampDate(start_date, 0);
+                current_dates[1] = clampDate(end_date, 1);
             }
 
-            syncView();
+            render(renderWidget(), root_el);
         }
     }
 
     function handlePointerUp(e) {
         grab_target = null;
-
-        if (self.changeHandler)
-            setTimeout(() => self.changeHandler.call(self, e), 0);
+        setTimeout(() => self.changeHandler.call(self, current_dates[0], current_dates[1]), 0);
     }
 
-    function makeMouseElement(cls, down, move) {
-        if (Element.prototype.setPointerCapture) {
-            return html`<div class=${cls} @pointerdown=${down} @pointermove=${move}
-                             @pointerup=${handlePointerUp}></div>`;
-        } else {
-            return html`<div class=${cls} @mousedown=${down}</div>`;
+    function dateToPosition(date) {
+        let pos = 100 * date.diff(limit_dates[0]) / limit_dates[1].diff(limit_dates[0]);
+        return `${pos}%`;
+    }
+
+    function positionToDate(main_el, pos) {
+        let delta_days = Math.floor(limit_dates[1].diff(limit_dates[0]) *
+                         ((pos - main_el.offsetLeft) / main_el.offsetWidth));
+        let date = limit_dates[0].plus(delta_days);
+
+        return date;
+    }
+
+    function clampDate(date, idx) {
+        switch (idx) {
+            case 0: {
+                let max = current_dates[1].minus(1);
+
+                if (date <= limit_dates[0]) {
+                    return limit_dates[0];
+                } else if (date >= max) {
+                    return max;
+                } else {
+                    return date;
+                }
+            } break;
+
+            case 1: {
+                let min = current_dates[0].plus(1);
+
+                if (date >= limit_dates[1]) {
+                    return limit_dates[1];
+                } else if (date <= min) {
+                    return min;
+                } else {
+                    return date;
+                }
+            } break;
         }
     }
 
-    this.render = function(new_root_el) {
-        root_el = new_root_el;
+    function forceDay(date, day) {
+        day = Math.min(dates.daysInMonth(date.year, date.month), day);
+        date = dates.create(date.year, date.month, day);
 
-        // The dummy button catches click events that happen when a label encloses the widget
-        render(html`
-            <div class="ppik">
-                <button style="display: none;" @click=${e => e.preventDefault()}></button>
-
-                <div class="ppik_main">
-                    <div class="ppik_line"></div>
-                    ${makeMouseElement('ppik_bar', handleBarDown, handleBarMove)}
-                    <div class="ppik_handle">
-                        ${makeMouseElement('', handleHandleDown, handleHandleMove)}
-                        <input type="date" style="bottom: 4px;" @change=${handleDateChange}
-                               @focusout=${handleDateFocusOut}/>
-                    </div>
-                    <div class="ppik_handle">
-                        ${makeMouseElement('', handleHandleDown, handleHandleMove)}
-                        <input type="date" style="top: 18px;" @change=${handleDateChange}
-                               @focusout=${handleDateFocusOut}/>
-                    </div>
-                </div>
-            </div>
-        `, root_el);
-        main_el = root_el.querySelector('.ppik_main');
-        handle_els = root_el.querySelectorAll('.ppik_handle');
-        bar_el = root_el.querySelector('.ppik_bar');
-
-        syncView();
-    };
+        return date;
+    }
 }
