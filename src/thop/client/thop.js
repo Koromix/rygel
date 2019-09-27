@@ -20,6 +20,8 @@ let thop = (function() {
     async function initThop() {
         log.pushHandler(log.notifyHandler);
         initNavigation();
+
+        user.readSessionCookies();
         await initSettings();
 
         // We deal with this
