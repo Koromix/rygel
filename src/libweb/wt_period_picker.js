@@ -22,11 +22,14 @@ function PeriodPicker() {
     this.getDates = function() { return current_dates; };
 
     this.render = function() {
-        return html`
-            <div class="ppik">
-                ${renderWidget()}
-            </div>
-        `;
+        let root_el = document.createElement('div');
+        root_el.className = 'ppik';
+
+        // We can't return VDOM, because if we did the next render() we do after user interaction
+        // would use a new binding, and replace the widget (and break pointer capture).
+        render(renderWidget(), root_el);
+
+        return root_el;
     };
 
     function renderWidget() {
@@ -40,26 +43,28 @@ function PeriodPicker() {
 
                 <div class="ppik_line"></div>
                 <div class="ppik_bar" style=${`left: ${left_pos}; width: calc(${right_pos} - ${left_pos});`}
-                        @pointerdown=${handleBarDown} @pointermove=${handleBarMove}
-                        @pointerup=${handlePointerUp} @mousedown=${handleBarDown}>
+                        @pointerdown=${handleBarDown} @pointerup=${handlePointerUp}
+                        @mousedown=${handleBarDown}>
                 </div>
                 <div class="ppik_text" style=${`margin-left: calc((${right_pos} + ${left_pos}) / 2 - 50%);`}>
                     ${current_dates[0].toLocaleString()} — ${current_dates[1].toLocaleString()}
                 </div>
                 <div class="ppik_handle" style=${`left: ${left_pos};`}
-                     @pointerdown=${e => handleHandleDown(e, 0)} @pointermove=${e => handleHandleMove(e, 0)}
-                     @pointerup=${handlePointerUp} @mousedown=${handleHandleDown}></div>
+                     @pointerdown=${e => handleHandleDown(e, 0)} @pointerup=${handlePointerUp}
+                     @mousedown=${handleHandleDown}></div>
                 <div class="ppik_handle" style=${`left: ${right_pos};`}
-                     @pointerdown=${e => handleHandleDown(e, 1)} @pointermove=${e => handleHandleMove(e, 1)}
-                     @pointerup=${handlePointerUp} @mousedown=${handleHandleDown}></div>
+                     @pointerdown=${e => handleHandleDown(e, 1)} @pointerup=${handlePointerUp}
+                     @mousedown=${handleHandleDown}></div>
             </div>
         `;
     }
 
     function handleHandleDown(e, idx) {
         if (Element.prototype.setPointerCapture) {
-            if (e.type === 'pointerdown')
+            if (e.type === 'pointerdown') {
+                e.target.onpointermove = e => handleHandleMove(e, idx);
                 e.target.setPointerCapture(e.pointerId);
+            }
         } else if (!grab_target) {
             function forwardUp(e) {
                 document.body.removeEventListener('mousemove', handleHandleMove);
@@ -88,8 +93,10 @@ function PeriodPicker() {
 
     function handleBarDown(e) {
         if (Element.prototype.setPointerCapture) {
-            if (e.type === 'pointerdown')
+            if (e.type === 'pointerdown') {
+                e.target.onpointermove = handleBarMove;
                 e.target.setPointerCapture(e.pointerId);
+            }
         } else if (!grab_target) {
             function forwardUp(e) {
                 document.body.removeEventListener('mousemove', handleBarMove);
@@ -146,6 +153,8 @@ function PeriodPicker() {
 
     function handlePointerUp(e) {
         grab_target = null;
+        e.target.onpointermove = null;
+
         setTimeout(() => self.changeHandler.call(self, current_dates[0], current_dates[1]), 0);
     }
 
