@@ -40,20 +40,18 @@ function PeriodPicker() {
 
                 <div class="ppik_line"></div>
                 <div class="ppik_bar" style=${`left: ${left_pos}; width: calc(${right_pos} - ${left_pos});`}
-                     @pointerdown=${handleBarDown} @pointermove=${handleBarMove}
-                     @pointerup=${handlePointerUp} @mousedown=${handleBarDown}></div>
-                <div class="ppik_handle" style=${`left: ${left_pos};`}>
-                    <div @pointerdown=${e => handleHandleDown(e, 0)} @pointermove=${e => handleHandleMove(e, 0)}
-                         @pointerup=${handlePointerUp} @mousedown=${handleHandleDown}></div>
-                    <input type="date" style="bottom: 4px;" .value=${current_dates[0].toString()}
-                           @change=${e => handleDateChange(e, 0)} @focusout=${handleDateFocusOut}/>
+                        @pointerdown=${handleBarDown} @pointermove=${handleBarMove}
+                        @pointerup=${handlePointerUp} @mousedown=${handleBarDown}>
                 </div>
-                <div class="ppik_handle" style=${`left: ${right_pos};`}>
-                    <div @pointerdown=${e => handleHandleDown(e, 1)} @pointermove=${e => handleHandleMove(e, 1)}
-                         @pointerup=${handlePointerUp} @mousedown=${handleHandleDown}></div>
-                    <input type="date" style="top: 18px;" .value=${current_dates[1].toString()}
-                           @change=${e => handleDateChange(e, 1)} @focusout=${handleDateFocusOut}/>
+                <div class="ppik_text" style=${`margin-left: calc((${right_pos} + ${left_pos}) / 2 - 50%);`}>
+                    ${current_dates[0].toLocaleString()} — ${current_dates[1].toLocaleString()}
                 </div>
+                <div class="ppik_handle" style=${`left: ${left_pos};`}
+                     @pointerdown=${e => handleHandleDown(e, 0)} @pointermove=${e => handleHandleMove(e, 0)}
+                     @pointerup=${handlePointerUp} @mousedown=${handleHandleDown}></div>
+                <div class="ppik_handle" style=${`left: ${right_pos};`}
+                     @pointerdown=${e => handleHandleDown(e, 1)} @pointermove=${e => handleHandleMove(e, 1)}
+                     @pointerup=${handlePointerUp} @mousedown=${handleHandleDown}></div>
             </div>
         `;
     }
@@ -86,24 +84,6 @@ function PeriodPicker() {
 
             render(renderWidget(), root_el);
         }
-    }
-
-    function handleDateChange(e, idx) {
-        let root_el = util.findParent(e.target, el => el.classList.contains('ppik'));
-
-        if (e.target.value) {
-            let date = dates.fromString(e.target.value);
-            current_dates[idx] = clampDate(date, idx);
-        } else {
-            current_dates[idx] = limit_dates[idx];
-            setTimeout(() => self.changeHandler.call(self, current_dates[0], current_dates[1]), 0);
-        }
-
-        render(renderWidget(), root_el);
-    }
-
-    function handleDateFocusOut(e) {
-        setTimeout(() => self.changeHandler.call(self, current_dates[0], current_dates[1]), 0);
     }
 
     function handleBarDown(e) {

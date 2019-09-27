@@ -4,8 +4,9 @@
 
 .ppik {
     display: inline-block;
-    height: 72px;
+    height: 42px;
     width: 100%;
+    overflow: hidden;
 }
 .ppik_main {
     position: relative;
@@ -15,7 +16,7 @@
 .ppik_line {
     position: absolute;
     left: 0;
-    top: 32px;
+    top: 24px;
     width: 100%;
     height: 4px;
     border: 1px solid #ddd;
@@ -24,9 +25,7 @@
 
 .ppik_bar {
     position: absolute;
-    left: 0;
-    top: 32px;
-    width: 100%;
+    top: 24px;
     height: 4px;
     background: #ff6600;
     border: 1px solid #ff6600;
@@ -34,24 +33,25 @@
     cursor: move;
     cursor: grab;
 }
+.ppik_text {
+    position: absolute;
+    top: 4px;
+    width: 100%;
+    font-style: italic;
+    color: #262626;
+    text-align: center;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
 
 .ppik_handle {
     position: absolute;
-    top: 28px;
-}
-
-.ppik_handle > div {
-    position: absolute;
+    top: 20px;
     height: 14px;
     width: 14px;
-    left: -7px;
+    margin-left: -7px;
     background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAAe0lEQVQoka2SMQ6EMAwEp6LhAbzqSqqI6nCektdRRuIj6ZeKO0RAigyWXI53bS8cSjODjCQjKyJFJCPLSJoZuCoZQUb5Aec2ioxQQ3dAPSAc7d0r1eCyq6VmKLJqot/B3Ax++fz3a1eTRroXQLdV93G873AH4FHkPCHfALqcaZAoX5UBAAAAAElFTkSuQmCC');
     cursor: ew-resize;
-}
-
-.ppik_handle > input {
-    position: absolute;
-    left: -58px;
-    width: 110px;
-    font-size: 0.8em;
 }
