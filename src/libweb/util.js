@@ -93,9 +93,14 @@ let log = (function() {
             entry.timer_id = null;
         }
         if (timeout >= 0)
-            entry.timer_id = setTimeout(() => func('close', entry), timeout);
+            entry.timer_id = setTimeout(() => closeEntry(entry), timeout);
 
         func(is_new ? 'open' : 'edit', entry);
+    }
+
+    function closeEntry(entry) {
+        let func = handlers[handlers.length - 1];
+        func('close', entry);
     }
 
     this.Entry = function() {
@@ -118,6 +123,8 @@ let log = (function() {
                 updateEntry(self, 'progress', action, -1);
             }
         };
+
+        this.close = function() { closeEntry(self); };
     };
 
     this.debug = function(msg, timeout = 6000) { new self.Entry().debug(msg, timeout); };
