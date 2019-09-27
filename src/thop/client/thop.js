@@ -65,6 +65,11 @@ let thop = (function() {
                 version.begin_date = dates.fromString(version.begin_date);
                 version.end_date = dates.fromString(version.end_date);
             }
+
+            if (settings.mco.casemix) {
+                settings.mco.casemix.min_date = dates.fromString(settings.mco.casemix.min_date);
+                settings.mco.casemix.max_date = dates.fromString(settings.mco.casemix.max_date);
+            }
         }
     }
 

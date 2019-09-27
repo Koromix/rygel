@@ -102,8 +102,8 @@ static void ProduceSettings(const http_RequestInfo &request, const User *user, h
         if (user) {
             json.Key("casemix"); json.StartObject();
 
-            json.Key("start_date"); json.String(Fmt(buf, "%1", mco_stay_set_dates[0]).ptr);
-            json.Key("end_date"); json.String(Fmt(buf, "%1", mco_stay_set_dates[1]).ptr);
+            json.Key("min_date"); json.String(Fmt(buf, "%1", mco_stay_set_dates[0]).ptr);
+            json.Key("max_date"); json.String(Fmt(buf, "%1", mco_stay_set_dates[1]).ptr);
 
             json.Key("algorithms"); json.StartArray();
             for (Size i = 0; i < RG_LEN(mco_DispenseModeOptions); i++) {
