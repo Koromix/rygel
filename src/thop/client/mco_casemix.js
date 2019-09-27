@@ -9,6 +9,9 @@ let mco_casemix = (function() {
     this.route = route;
 
     this.run = async function() {
+        if (!user.isConnected())
+            throw new Error('Vous devez être connecté(e)');
+
         switch (route.mode) {
             case 'ghm': {} break;
             case 'units': {} break;

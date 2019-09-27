@@ -182,11 +182,13 @@ let thop = (function() {
             ${makeMenuLink('Diagnostics', mco_info.makeURL({mode: 'diagnoses'}))}
             ${makeMenuLink('Actes', mco_info.makeURL({mode: 'procedures'}))}
 
-            <a class="category">Activité MCO</a>
-            ${makeMenuLink('GHM', mco_casemix.makeURL({mode: 'ghm'}))}
-            ${makeMenuLink('Unités', mco_casemix.makeURL({mode: 'units'}))}
-            ${makeMenuLink('Valorisation', mco_casemix.makeURL({mode: 'valorisation'}))}
-            ${makeMenuLink('Résumés', mco_casemix.makeURL({mode: 'rss'}))}
+            ${user.isConnected() ? html`
+                <a class="category">Activité MCO</a>
+                ${makeMenuLink('GHM', mco_casemix.makeURL({mode: 'ghm'}))}
+                ${makeMenuLink('Unités', mco_casemix.makeURL({mode: 'units'}))}
+                ${makeMenuLink('Valorisation', mco_casemix.makeURL({mode: 'valorisation'}))}
+                ${makeMenuLink('Résumés', mco_casemix.makeURL({mode: 'rss'}))}
+            ` : html``}
         `, document.querySelector('#th_menu'));
     }
 
