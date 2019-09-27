@@ -69,15 +69,19 @@ function TreeSelector() {
     this.getValues = function() { return Array.from(current_values); };
 
     this.render = function() {
-        // The dummy button catches click events that happen when a label encloses the widget
-        return html`
-            <div class="tsel" @click=${e => e.stopPropagation()}>
-                ${renderWidget()}
-            </div>
-        `;
+        let root_el = document.createElement('div');
+        root_el.className = 'tsel';
+        root_el.addEventListener('click', e => e.stopPropagation());
+
+        // We don't return VDOM, because if we did the next render() we do after user interaction
+        // would use a new binding, and replace the widget.
+        render(renderWidget(), root_el);
+
+        return root_el;
     };
 
     function renderWidget() {
+        // The dummy button catches click events that happen when a label encloses the widget
         return html`
             <button style="display: none;" @click=${e => e.preventDefault()}></button>
 
