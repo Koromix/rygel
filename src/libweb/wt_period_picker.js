@@ -77,6 +77,7 @@ function PeriodPicker() {
         }
 
         grab_target = e.target;
+        e.target.classList.add('grabbed');
     }
 
     function handleHandleMove(e, idx) {
@@ -109,6 +110,7 @@ function PeriodPicker() {
         }
 
         grab_target = e.target;
+        e.target.classList.add('grabbed');
 
         grab_offset = e.offsetX;
         grab_start_date = current_dates[0];
@@ -153,6 +155,7 @@ function PeriodPicker() {
 
     function handlePointerUp(e) {
         grab_target = null;
+        e.target.classList.remove('grabbed');
         e.target.onpointermove = null;
 
         setTimeout(() => self.changeHandler.call(self, current_dates[0], current_dates[1]), 0);

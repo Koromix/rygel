@@ -33,6 +33,7 @@
     cursor: move;
     cursor: grab;
 }
+.ppik_bar.grabbed { cursor: grabbing;  }
 .ppik_text {
     position: absolute;
     top: 4px;
