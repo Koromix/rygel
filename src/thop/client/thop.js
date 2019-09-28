@@ -59,12 +59,16 @@ let thop = (function() {
     this.go = async function(mod, args = {}, push_history = true) {
         // Update module and route
         if (typeof mod === 'string') {
-            let url = util.parseUrl(mod);
-            let path = url.path.substr(env.base_url.length);
+            let url = new URL(mod, window.location.href);
 
             // Who managed to f*ck the string split() limit parameter?
+            let path = url.pathname.substr(env.base_url.length);
             let [mod_name, ...mod_path] = path.split('/');
             mod_path = mod_path.join('/');
+
+            let params = {};
+            for (let [key, value] of url.searchParams)
+                params[key] = value;
 
             switch (mod_name || 'mco_info') {
                 case 'mco_info': { route_mod = mco_info; } break;
@@ -82,7 +86,7 @@ let thop = (function() {
                 } break;
             }
 
-            util.assignDeep(route_mod.route, route_mod.parseURL(mod_path, url.params));
+            util.assignDeep(route_mod.route, route_mod.parseURL(mod_path, params));
             util.assignDeep(route_mod.route, args);
         } else {
             route_mod = mod || route_mod;

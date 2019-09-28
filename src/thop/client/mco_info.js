@@ -22,7 +22,7 @@ let mco_info = (function() {
         }
     };
 
-    this.parseURL = function(path, query = {}) {
+    this.parseURL = function(path, params = {}) {
         let parts = path.split('/');
 
         // Common part
@@ -39,8 +39,8 @@ let mco_info = (function() {
             case 'ghs': {
                 args.ghs.sector = parts[2] || 'public';
                 args.ghm_root = parts[3] || null;
-                args.ghs.duration = parseInt(query.duration, 10) || 200;
-                args.ghs.coeff = !!parseInt(query.coeff, 10) || false;
+                args.ghs.duration = parseInt(params.duration, 10) || 200;
+                args.ghs.coeff = !!parseInt(params.coeff, 10) || false;
             } break;
             case 'tree': { /* Nothing to do */ } break;
         }
@@ -61,10 +61,10 @@ let mco_info = (function() {
                 if (args.ghm_root)
                     url += `/${args.ghm_root}`;
 
-                url = util.buildUrl(url, {
+                url += '?' + new URLSearchParams({
                     duration: args.ghs.duration,
                     coeff: 0 + args.ghs.coeff
-                })
+                }).toString();
             } break;
             case 'tree': { /* Nothing to do */ } break;
         }
