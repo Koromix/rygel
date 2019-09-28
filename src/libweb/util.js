@@ -5,137 +5,6 @@
 const {render, html, svg} = lithtml;
 
 // ------------------------------------------------------------------------
-// Log
-// ------------------------------------------------------------------------
-
-let log = (function() {
-    let self = this;
-
-    let handlers = [];
-    let entries = [];
-
-    // Log to console
-    this.defaultHandler = function(action, entry) {
-        if (action !== 'close') {
-            switch (entry.type) {
-                case 'debug':
-                case 'info':
-                case 'success':
-                case 'progress': { console.log(entry.msg); } break;
-                case 'error': { console.error(entry.msg); } break;
-            }
-        }
-    };
-    handlers.push(self.defaultHandler);
-
-    // Show to user
-    this.notifyHandler = function(action, entry) {
-        if (entry.type !== 'debug') {
-            switch (action) {
-                case 'open': {
-                    entries.unshift(entry);
-
-                    if (entry.type === 'progress') {
-                        // Wait a bit to show progress entries to prevent quick actions from showing up
-                        setTimeout(renderLog, 100);
-                    } else {
-                        renderLog();
-                    }
-                } break;
-                case 'edit': {
-                    renderLog();
-                } break;
-                case 'close': {
-                    entries = entries.filter(it => it !== entry);
-                    renderLog();
-                } break;
-            }
-        }
-
-        self.defaultHandler(action, entry);
-    };
-
-    function closeLogEntry(idx) {
-        entries.splice(idx, 1);
-        renderLog();
-    }
-
-    function renderLog() {
-        let log_el = document.querySelector('#ut_log');
-        if (!log_el) {
-            log_el = document.createElement('div');
-            log_el.id = 'ut_log';
-            document.body.appendChild(log_el);
-        }
-
-        render(entries.map((entry, idx) => {
-            return html`<div class=${'ut_log_entry ' + entry.type}>
-                ${entry.type === 'progress' ?
-                    html`<div class="ut_log_spin"></div>` :
-                    html`<button class="ut_log_close" @click=${e => closeLogEntry(idx)}>X</button>`}
-                ${entry.msg}
-             </div>`;
-        }), log_el);
-    }
-
-    this.pushHandler = function(func) { handlers.push(func); };
-    this.popHandler = function() { handlers.pop(); };
-
-    function updateEntry(entry, type, msg, timeout) {
-        let func = handlers[handlers.length - 1];
-        let is_new = (entry.type == null);
-
-        entry.type = type;
-        entry.msg = msg;
-
-        if (entry.timer_id != null) {
-            clearTimeout(entry.timer_id);
-            entry.timer_id = null;
-        }
-        if (timeout >= 0)
-            entry.timer_id = setTimeout(() => closeEntry(entry), timeout);
-
-        func(is_new ? 'open' : 'edit', entry);
-    }
-
-    function closeEntry(entry) {
-        let func = handlers[handlers.length - 1];
-        func('close', entry);
-    }
-
-    this.Entry = function() {
-        let self = this;
-
-        this.type = null;
-        this.msg = null;
-        this.timer_id = null;
-
-        this.debug = function(msg, timeout = 6000) { updateEntry(self, 'debug', msg, timeout); };
-        this.info = function(msg, timeout = 6000) { updateEntry(self, 'info', msg, timeout); };
-        this.success = function(msg, timeout = 6000) { updateEntry(self, 'success', msg, timeout); };
-        this.error = function(msg, timeout = 6000) { updateEntry(self, 'error', msg, timeout); };
-
-        this.progress = function(action, value = null, max = null) {
-            if (value != null) {
-                let msg = `${action}: ${value}${max != null ? ('/' + max) : ''}`;
-                updateEntry(self, 'progress', msg, -1);
-            } else {
-                updateEntry(self, 'progress', action, -1);
-            }
-        };
-
-        this.close = function() { closeEntry(self); };
-    };
-
-    this.debug = function(msg, timeout = 6000) { new self.Entry().debug(msg, timeout); };
-    this.info = function(msg, timeout = 6000) { new self.Entry().info(msg, timeout); };
-    this.success = function(msg, timeout = 6000) { new self.Entry().success(msg, timeout); };
-    this.error = function(msg, timeout = 6000) { new self.Entry().error(msg, timeout); };
-
-    return this;
-}).call({});
-
-// ------------------------------------------------------------------------
 // Utility
 // ------------------------------------------------------------------------
 
@@ -317,6 +186,137 @@ let util = (function() {
             el = el.parentNode;
         return el;
     }
+
+    return this;
+}).call({});
+
+// ------------------------------------------------------------------------
+// Log
+// ------------------------------------------------------------------------
+
+let log = (function() {
+    let self = this;
+
+    let handlers = [];
+    let entries = [];
+
+    // Log to console
+    this.defaultHandler = function(action, entry) {
+        if (action !== 'close') {
+            switch (entry.type) {
+                case 'debug':
+                case 'info':
+                case 'success':
+                case 'progress': { console.log(entry.msg); } break;
+                case 'error': { console.error(entry.msg); } break;
+            }
+        }
+    };
+    handlers.push(self.defaultHandler);
+
+    // Show to user
+    this.notifyHandler = function(action, entry) {
+        if (entry.type !== 'debug') {
+            switch (action) {
+                case 'open': {
+                    entries.unshift(entry);
+
+                    if (entry.type === 'progress') {
+                        // Wait a bit to show progress entries to prevent quick actions from showing up
+                        setTimeout(renderLog, 100);
+                    } else {
+                        renderLog();
+                    }
+                } break;
+                case 'edit': {
+                    renderLog();
+                } break;
+                case 'close': {
+                    entries = entries.filter(it => it !== entry);
+                    renderLog();
+                } break;
+            }
+        }
+
+        self.defaultHandler(action, entry);
+    };
+
+    function closeLogEntry(idx) {
+        entries.splice(idx, 1);
+        renderLog();
+    }
+
+    function renderLog() {
+        let log_el = document.querySelector('#ut_log');
+        if (!log_el) {
+            log_el = document.createElement('div');
+            log_el.id = 'ut_log';
+            document.body.appendChild(log_el);
+        }
+
+        render(entries.map((entry, idx) => {
+            return html`<div class=${'ut_log_entry ' + entry.type}>
+                ${entry.type === 'progress' ?
+                    html`<div class="ut_log_spin"></div>` :
+                    html`<button class="ut_log_close" @click=${e => closeLogEntry(idx)}>X</button>`}
+                ${entry.msg}
+             </div>`;
+        }), log_el);
+    }
+
+    this.pushHandler = function(func) { handlers.push(func); };
+    this.popHandler = function() { handlers.pop(); };
+
+    function updateEntry(entry, type, msg, timeout) {
+        let func = handlers[handlers.length - 1];
+        let is_new = (entry.type == null);
+
+        entry.type = type;
+        entry.msg = msg;
+
+        if (entry.timer_id != null) {
+            clearTimeout(entry.timer_id);
+            entry.timer_id = null;
+        }
+        if (timeout >= 0)
+            entry.timer_id = setTimeout(() => closeEntry(entry), timeout);
+
+        func(is_new ? 'open' : 'edit', entry);
+    }
+
+    function closeEntry(entry) {
+        let func = handlers[handlers.length - 1];
+        func('close', entry);
+    }
+
+    this.Entry = function() {
+        let self = this;
+
+        this.type = null;
+        this.msg = null;
+        this.timer_id = null;
+
+        this.debug = function(msg, timeout = 6000) { updateEntry(self, 'debug', msg, timeout); };
+        this.info = function(msg, timeout = 6000) { updateEntry(self, 'info', msg, timeout); };
+        this.success = function(msg, timeout = 6000) { updateEntry(self, 'success', msg, timeout); };
+        this.error = function(msg, timeout = 6000) { updateEntry(self, 'error', msg, timeout); };
+
+        this.progress = function(action, value = null, max = null) {
+            if (value != null) {
+                let msg = `${action}: ${value}${max != null ? ('/' + max) : ''}`;
+                updateEntry(self, 'progress', msg, -1);
+            } else {
+                updateEntry(self, 'progress', action, -1);
+            }
+        };
+
+        this.close = function() { closeEntry(self); };
+    };
+
+    this.debug = function(msg, timeout = 6000) { new self.Entry().debug(msg, timeout); };
+    this.info = function(msg, timeout = 6000) { new self.Entry().info(msg, timeout); };
+    this.success = function(msg, timeout = 6000) { new self.Entry().success(msg, timeout); };
+    this.error = function(msg, timeout = 6000) { new self.Entry().error(msg, timeout); };
 
     return this;
 }).call({});
