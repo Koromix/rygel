@@ -25,11 +25,8 @@ let mco_casemix = (function() {
     };
 
     this.parseURL = function(path, params = {}) {
-        let parts = path.split('/');
-
-        // For everyone
         let args = {
-            mode: parts[0] || 'ghm',
+            mode: path[0] || 'ghm',
 
             main: {},
             diff: {},
@@ -40,7 +37,7 @@ let mco_casemix = (function() {
 
         // Authorized users
         args.main = {
-            ...parseDateRange(parts[1], settings.mco.casemix.max_date),
+            ...parseDateRange(path[1], settings.mco.casemix.max_date),
             algorithm: params.algorithm || settings.mco.casemix.default_algorithm,
         };
         args.coeff = !!parseInt(params.coeff, 10) || false;
@@ -48,7 +45,7 @@ let mco_casemix = (function() {
         // Mode-specific part
         switch (args.mode) {
             case 'valorisation': {
-                args.valorisation.ghm_root = parts[2] || null;
+                args.valorisation.ghm_root = path[2] || null;
             } break;
         }
 
@@ -89,23 +86,26 @@ let mco_casemix = (function() {
     this.makeURL = function(args = {}) {
         args = util.assignDeep({}, route, args);
 
-        let url = `${env.base_url}mco_casemix/${args.mode}`;
-        if (args.main.start_date && args.main.end_date)
-            url += `/${args.main.start_date}..${args.main.end_date}`;
+        let path = ['mco_casemix'];
+        let params = {};
 
+        // Common part
+        path.push(args.mode);
+        if (args.main.start_date && args.main.end_date)
+            path.push(`${args.main.start_date}..${args.main.end_date}`);
+
+        params.algorithm = args.main.algorithm;
+        params.coeff = 0 + args.coeff;
+
+        // Mode-specific part
         switch (args.mode) {
             case 'valorisation': {
                 if (args.valorisation.ghm_root)
-                    url += `/${args.valorisation.ghm_root}`;
+                    path.push(args.valorisation.ghm_root);
             } break;
         }
 
-        url += '?' + new URLSearchParams({
-            algorithm: args.main.algorithm,
-            coeff: 0 + args.coeff
-        });
-
-        return url;
+        return util.pasteURL(`${env.base_url}${path.join('/')}`, params);
     };
 
     // ------------------------------------------------------------------------

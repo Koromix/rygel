@@ -22,10 +22,8 @@ let user = (function() {
     };
 
     this.parseURL = function(path, query) {
-        let parts = path.split('/');
-
         let args = {
-            mode: parts[0] || 'login'
+            mode: path[0] || 'login'
         };
 
         return args;

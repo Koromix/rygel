@@ -60,10 +60,8 @@ let thop = (function() {
         if (typeof mod === 'string') {
             let url = new URL(mod, window.location.href);
 
-            // Who managed to f*ck the string split() limit parameter?
-            let path = url.pathname.substr(env.base_url.length);
-            let [mod_name, ...mod_path] = path.split('/');
-            mod_path = mod_path.join('/');
+            let path_str = url.pathname.substr(env.base_url.length);
+            let [mod_name, ...mod_path] = path_str.split('/');
 
             let params = {};
             for (let [key, value] of url.searchParams)
