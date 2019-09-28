@@ -382,7 +382,7 @@ static void GatherGhmGhsInfo(Span<const mco_GhmRootCode> ghm_roots, Date min_dat
 
 void ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http_IO *io)
 {
-    if (!user) {
+    if (!user || !user->CheckPermission(UserPermission::McoCasemix)) {
         LogError("Not allowed to query MCO aggregations");
         io->AttachError(403);
         return;
@@ -422,7 +422,7 @@ void ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http
         io->AttachError(403);
         return;
     }
-    if (filter && !user->CheckPermission(UserPermission::UseFilter)) {
+    if (filter && !user->CheckPermission(UserPermission::McoFilter)) {
         LogError("User is not allowed to use filters");
         io->AttachError(403);
         return;
@@ -431,7 +431,7 @@ void ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http
     // Prepare query
     McoResultProvider provider;
     int flags;
-    provider.SetFilter(filter, user->CheckPermission(UserPermission::MutateFilter));
+    provider.SetFilter(filter, user->CheckPermission(UserPermission::McoMutate));
     if (ghm_root.IsValid()) {
         provider.SetGhmRoot(ghm_root);
         flags = (int)AggregationFlag::KeyOnUnits | (int)AggregationFlag::KeyOnDuration;
@@ -548,7 +548,8 @@ void ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http
 
 void ProduceMcoResults(const http_RequestInfo &request, const User *user, http_IO *io)
 {
-    if (!user || !user->CheckPermission(UserPermission::FullResults)) {
+    if (!user || !user->CheckPermission(UserPermission::McoCasemix) ||
+                 !user->CheckPermission(UserPermission::McoResults)) {
         LogError("Not allowed to query MCO results");
         io->AttachError(403);
         return;
@@ -576,7 +577,7 @@ void ProduceMcoResults(const http_RequestInfo &request, const User *user, http_I
         io->AttachError(403);
         return;
     }
-    if (filter && !user->CheckPermission(UserPermission::UseFilter)) {
+    if (filter && !user->CheckPermission(UserPermission::McoFilter)) {
         LogError("User is not allowed to use filters");
         io->AttachError(403);
         return;
@@ -585,7 +586,7 @@ void ProduceMcoResults(const http_RequestInfo &request, const User *user, http_I
     // Prepare query
     McoResultProvider provider;
     provider.SetDateRange(period[0], period[1]);
-    provider.SetFilter(filter, user->CheckPermission(UserPermission::MutateFilter));
+    provider.SetFilter(filter, user->CheckPermission(UserPermission::McoMutate));
     provider.SetGhmRoot(ghm_root);
 
     // Reuse for performance

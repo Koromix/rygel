@@ -14,14 +14,16 @@ namespace RG {
 struct StructureEntity;
 
 enum class UserPermission {
-    FullResults = 1 << 0,
-    UseFilter = 1 << 1,
-    MutateFilter = 1 << 2
+    McoCasemix = 1 << 0,
+    McoResults = 1 << 1,
+    McoFilter = 1 << 2,
+    McoMutate = 1 << 3
 };
 static const char *const UserPermissionNames[] = {
-    "FullResults",
-    "UseFilter",
-    "MutateFilter"
+    "McoCasemix",
+    "McoResults",
+    "McoFilter",
+    "McoMutate"
 };
 
 struct User {
