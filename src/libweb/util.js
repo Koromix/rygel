@@ -212,54 +212,6 @@ let util = (function() {
         return value;
     };
 
-    this.parseUrl = function(url) {
-        let a = document.createElement('a');
-        a.href = url;
-
-        return {
-            source: url,
-            href: a.href,
-            origin: a.origin,
-            protocol: a.protocol.replace(':', ''),
-            host: a.hostname,
-            port: a.port,
-            query: a.search,
-            params: (function() {
-                let ret = {};
-                let seg = a.search.replace(/^\?/, '').split('&');
-                let len = seg.length;
-                let s;
-                for (let i = 0; i < len; i++) {
-                    if (!seg[i])
-                        continue;
-                    s = seg[i].split('=');
-                    ret[s[0]] = decodeURIComponent(s[1]);
-                }
-                return ret;
-            })(),
-            hash: a.hash.replace('#', ''),
-            path: a.pathname.replace(/^([^/])/, '/$1')
-        };
-    };
-
-    this.buildUrl = function(url, query_values) {
-        if (query_values === undefined)
-            query_values = {};
-
-        let query_fragments = [];
-        for (const k in query_values) {
-            let value = query_values[k];
-            if (value !== null && value !== undefined) {
-                let arg = encodeURIComponent(k) + '=' + encodeURIComponent(value);
-                query_fragments.push(arg);
-            }
-        }
-        if (query_fragments.length)
-            url += '?' + query_fragments.sort().join('&');
-
-        return url;
-    };
-
     this.roundTo = function(n, digits) {
         if (digits === undefined)
             digits = 0;

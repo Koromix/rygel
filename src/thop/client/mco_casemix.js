@@ -24,7 +24,7 @@ let mco_casemix = (function() {
         }
     };
 
-    this.parseURL = function(path, query) {
+    this.parseURL = function(path, params = {}) {
         let parts = path.split('/');
 
         // Common part
