@@ -55,7 +55,6 @@ let thop = (function() {
         });
     }
 
-
     this.go = async function(mod, args = {}, push_history = true) {
         // Update module and route
         if (typeof mod === 'string') {
@@ -190,7 +189,7 @@ let thop = (function() {
             ${makeMenuLink('Diagnostics', mco_info.makeURL({mode: 'diagnoses'}))}
             ${makeMenuLink('Actes', mco_info.makeURL({mode: 'procedures'}))}
 
-            ${user.isConnected() ? html`
+            ${settings.permissions.mco_casemix ? html`
                 <a class="category">Activité MCO</a>
                 ${makeMenuLink('GHM', mco_casemix.makeURL({mode: 'ghm'}))}
                 ${makeMenuLink('Unités', mco_casemix.makeURL({mode: 'units'}))}
