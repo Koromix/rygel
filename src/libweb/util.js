@@ -63,6 +63,14 @@ let util = (function() {
         return (typeof value === 'object') && value !== null && !Array.isArray(value);
     }
 
+    this.pasteURL = function(url, params = null, hash = null) {
+        if (!(params instanceof URLSearchParams))
+            params = new URLSearchParams(params);
+
+        let query_str = params.toString();
+        return `${url}${query_str ? '?' : ''}${query_str || ''}${hash ? '#' : ''}${hash || ''}`;
+    }
+
     // Why the f*ck is there still no good cookie API?
     this.getCookie = function(name) {
         let cookie = ' ' + document.cookie;

@@ -23,13 +23,10 @@ let mco_info = (function() {
     };
 
     this.parseURL = function(path, params = {}) {
-        let parts = path.split('/');
-
-        // Common part
         let args = {
-            version: dates.fromString(parts[0] || null) ||
+            version: dates.fromString(path[0] || null) ||
                      settings.mco.versions[settings.mco.versions.length - 1].begin_date,
-            mode: parts[1] || 'ghs',
+            mode: path[1] || 'ghs',
 
             ghs: {}
         };
@@ -37,8 +34,8 @@ let mco_info = (function() {
         // Mode-specific part
         switch (args.mode) {
             case 'ghs': {
-                args.ghs.sector = parts[2] || 'public';
-                args.ghm_root = parts[3] || null;
+                args.ghs.sector = path[2] || 'public';
+                args.ghm_root = path[3] || null;
                 args.ghs.duration = parseInt(params.duration, 10) || 200;
                 args.ghs.coeff = !!parseInt(params.coeff, 10) || false;
             } break;
@@ -51,25 +48,27 @@ let mco_info = (function() {
     this.makeURL = function(args = {}) {
         args = util.assignDeep({}, route, args);
 
+        let path = ['mco_info'];
+        let params = {};
+
         // Common part
-        let url = `${env.base_url}mco_info/${args.version}/${args.mode}`;
+        path.push(args.version);
+        path.push(args.mode);
 
         // Mode-specific part
         switch (args.mode) {
             case 'ghs': {
-                url += `/${args.ghs.sector}`;
+                path.push(args.ghs.sector);
                 if (args.ghm_root)
-                    url += `/${args.ghm_root}`;
+                    path.push(args.ghm_root);
 
-                url += '?' + new URLSearchParams({
-                    duration: args.ghs.duration,
-                    coeff: 0 + args.ghs.coeff
-                }).toString();
+                params.duration = args.ghs.duration;
+                params.coeff = 0 + args.ghs.coeff;
             } break;
             case 'tree': { /* Nothing to do */ } break;
         }
 
-        return url;
+        return util.pasteURL(`${env.base_url}${path.join('/')}`, params);
     };
 
     // ------------------------------------------------------------------------
