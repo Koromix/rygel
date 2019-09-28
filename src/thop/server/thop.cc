@@ -137,9 +137,8 @@ static void ProduceSettings(const http_RequestInfo &request, const User *user, h
         }
         json.EndArray();
 
+        json.Key("casemix"); json.StartObject();
         if (user) {
-            json.Key("casemix"); json.StartObject();
-
             json.Key("min_date"); json.String(Fmt(buf, "%1", mco_stay_set_dates[0]).ptr);
             json.Key("max_date"); json.String(Fmt(buf, "%1", mco_stay_set_dates[1]).ptr);
 
@@ -147,20 +146,15 @@ static void ProduceSettings(const http_RequestInfo &request, const User *user, h
             for (Size i = 0; i < RG_LEN(mco_DispenseModeOptions); i++) {
                 if (user->CheckMcoDispenseMode((mco_DispenseMode)i)) {
                     const OptionDesc &desc = mco_DispenseModeOptions[i];
-
-                    json.StartObject();
-                    json.Key("name"); json.String(desc.name);
-                    json.Key("help"); json.String(desc.help);
-                    json.EndObject();
+                    json.String(desc.name);
                 }
             }
             json.EndArray();
 
             const OptionDesc &default_desc = mco_DispenseModeOptions[(int)thop_config.mco_dispense_mode];
             json.Key("default_algorithm"); json.String(default_desc.name);
-
-            json.EndObject();
         }
+        json.EndObject();
     }
     json.EndObject();
 
