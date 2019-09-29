@@ -15,8 +15,8 @@
 
 namespace RG {
 
-struct CatalogSet {
-    HeapArray<AssetInfo> catalogs;
+struct DictionarySet {
+    HeapArray<AssetInfo> dictionaries;
     LinkedAllocator alloc;
 };
 
@@ -60,7 +60,7 @@ static AssetSet asset_set;
 #else
 extern "C" const Span<const AssetInfo> pack_assets;
 #endif
-static CatalogSet catalog_set;
+static DictionarySet dictionary_set;
 
 static HashTable<Span<const char>, Route> routes;
 static BlockAllocator routes_alloc;
@@ -203,7 +203,7 @@ static void ProduceStructures(const http_RequestInfo &request, const User *user,
     json.Finish(io);
 }
 
-static bool InitCatalogSet(Span<const char *const> table_directories)
+static bool InitDictionarySet(Span<const char *const> table_directories)
 {
     BlockAllocator temp_alloc;
 
@@ -211,7 +211,7 @@ static bool InitCatalogSet(Span<const char *const> table_directories)
     {
         bool success = true;
         for (const char *resource_dir: table_directories) {
-            const char *desc_dir = Fmt(&temp_alloc, "%1%/catalogs", resource_dir).ptr;
+            const char *desc_dir = Fmt(&temp_alloc, "%1%/dictionaries", resource_dir).ptr;
             if (TestFile(desc_dir, FileType::Directory)) {
                 success &= EnumerateFiles(desc_dir, "*.json", 0, 1024, &temp_alloc, &filenames);
             }
@@ -221,16 +221,16 @@ static bool InitCatalogSet(Span<const char *const> table_directories)
     }
 
     if (!filenames.len) {
-        LogError("No catalog file specified or found");
+        LogError("No dictionary file specified or found");
     }
 
     for (const char *filename: filenames) {
-        AssetInfo catalog = {};
+        AssetInfo dict = {};
 
         const char *name = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
         RG_ASSERT(name[0]);
 
-        HeapArray<uint8_t> buf(&catalog_set.alloc);
+        HeapArray<uint8_t> buf(&dictionary_set.alloc);
         {
             StreamReader reader(filename);
             StreamWriter writer(&buf, nullptr, CompressionType::Gzip);
@@ -240,11 +240,11 @@ static bool InitCatalogSet(Span<const char *const> table_directories)
                 return false;
         }
 
-        catalog.name = DuplicateString(name, &catalog_set.alloc).ptr;
-        catalog.data = buf.Leak();
-        catalog.compression_type = CompressionType::Gzip;
+        dict.name = DuplicateString(name, &dictionary_set.alloc).ptr;
+        dict.data = buf.Leak();
+        dict.compression_type = CompressionType::Gzip;
 
-        catalog_set.catalogs.Append(catalog);
+        dictionary_set.dictionaries.Append(dict);
     }
 
     return true;
@@ -302,7 +302,7 @@ static void InitRoutes()
         routes.Append(route);
     };
 
-    // Static assets and catalogs
+    // Static assets and dictionaries
     AssetInfo html = {};
     RG_ASSERT(assets.len > 0);
     for (const AssetInfo &asset: assets) {
@@ -315,8 +315,8 @@ static void InitRoutes()
             add_asset_route("GET", url, Route::Matching::Exact, asset);
         }
     }
-    for (const AssetInfo &desc: catalog_set.catalogs) {
-        const char *url = Fmt(&routes_alloc, "/catalogs/%1", desc.name).ptr;
+    for (const AssetInfo &desc: dictionary_set.dictionaries) {
+        const char *url = Fmt(&routes_alloc, "/dictionaries/%1", desc.name).ptr;
         add_asset_route("GET", url, Route::Matching::Exact, desc);
     }
     RG_ASSERT(html.name);
@@ -561,7 +561,7 @@ Options:
         if (!InitUsers(thop_config.profile_directory))
             return 1;
     }
-    if (!InitCatalogSet(thop_config.table_directories))
+    if (!InitDictionarySet(thop_config.table_directories))
         return 1;
     if (!InitMcoTables(thop_config.table_directories))
         return 1;
