@@ -182,7 +182,16 @@ static void ProduceStructures(const http_RequestInfo &request, const User *user,
             if (user->mco_allowed_units.Find(ent.unit)) {
                 json.StartObject();
                 json.Key("unit"); json.Int(ent.unit.number);
-                json.Key("path"); json.String(ent.path);
+                json.Key("path"); json.StartArray();
+                {
+                    Span<const char> path = ent.path + 1;
+                    Span<const char> part;
+                    while (path.len) {
+                        part = SplitStr(path, '|', &path);
+                        json.String(part.ptr, part.len);
+                    }
+                }
+                json.EndArray();
                 json.EndObject();
             }
         }
