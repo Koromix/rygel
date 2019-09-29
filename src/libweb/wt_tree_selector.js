@@ -10,14 +10,13 @@ function TreeSelector() {
     let prefix = null;
     let tabs = [];
     let values = new Set;
+    let groups = [];
 
     let current_tab = {
         title: null,
         options: []
     };
     let current_values = new Set;
-
-    let current_depth = 0;
 
     this.setPrefix = function(str) { prefix = str; };
     this.getPrefix = function() { return prefix; };
@@ -30,27 +29,37 @@ function TreeSelector() {
 
         tabs.push(tab);
         current_tab = tab;
-        current_depth = 0;
+        groups.length = 0;
     };
 
     this.beginGroup = function(title) {
         let opt = {
             title: title,
-            depth: current_depth
+            depth: groups.length
         };
 
         current_tab.options.push(opt);
-        current_depth++;
+        groups.push(title);
     };
     this.endGroup = function() {
-        current_depth--;
+        groups.pop();
     };
 
     this.addOption = function(title, value, options = {}) {
+        if (Array.isArray(title)) {
+            while (groups.length >= title.length ||
+                   groups[groups.length - 1] !== title[groups.length - 1])
+                self.endGroup();
+            for (let i = groups.length; i < title.length - 1; i++)
+                self.beginGroup(title[i]);
+
+            title = title[title.length - 1];
+        }
+
         let opt = {
             title: title,
             value: value,
-            depth: current_depth,
+            depth: groups.length,
             disabled: !!options.disabled
         };
         let selected = !!options.selected & !opt.disabled;
@@ -250,12 +259,12 @@ function TreeSelector() {
 
     // Does not work correctly for deep hierarchies (more than 32 levels)
     function syncCheckboxes(root_el) {
-        let labels = root_el.querySelectorAll('.tsel_list > label');
+        let label_els = root_el.querySelectorAll('.tsel_list > label');
 
         let or_state = 0;
         let and_state = 0xFFFFFFFF;
-        for (let i = labels.length - 1; i >= 0; i--) {
-            let el = labels[i];
+        for (let i = label_els.length - 1; i >= 0; i--) {
+            let el = label_els[i];
 
             let depth = parseInt(el.dataset.depth, 10);
             let input = el.querySelector('input[type=checkbox]');
