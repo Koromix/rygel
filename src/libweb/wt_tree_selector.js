@@ -168,7 +168,6 @@ function TreeSelector() {
     function handleSummaryClick(e) {
         let root_el = util.findParent(e.target, el => el.classList.contains('tsel'));
         let summary_el = root_el.querySelector('.tsel_summary');
-        let view_el = root_el.querySelector('.tsel_view');
 
         let value = util.strToValue(e.target.dataset.value);
         updateValue(value, false);
@@ -179,8 +178,9 @@ function TreeSelector() {
         e.preventDefault();
         e.stopPropagation();
 
-        if (!view_el.classList.contains('active'))
-            setTimeout(() => self.changeHandler.call(self, self.getValues()), 0);
+        if (!TreeSelector.close_func)
+            self.changeHandler.call(self, current_values,
+                                    current_tab ? current_tab.title : undefined);
     }
 
     function handleTabClick(e, tab) {
@@ -248,8 +248,8 @@ function TreeSelector() {
                 view_el.classList.remove('active');
                 TreeSelector.close_func = null;
 
-                if (self.changeHandler)
-                    setTimeout(() => self.changeHandler.call(self, self.getValues()), 0);
+                self.changeHandler.call(self, current_values,
+                                        current_tab ? current_tab.title : undefined);
             };
 
             syncCheckboxes(root_el);
