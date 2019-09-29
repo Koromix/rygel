@@ -68,11 +68,13 @@ let util = (function() {
             delete obj[key];
     }
 
-    this.pasteURL = function(url, params = null, hash = null) {
-        if (!(params instanceof URLSearchParams))
-            params = new URLSearchParams(params);
+    this.pasteURL = function(url, params = {}, hash = null) {
+        for (let key in params) {
+            if (params[key] == null)
+                delete params[key];
+        }
 
-        let query_str = params.toString();
+        let query_str = new URLSearchParams(params).toString();
         return `${url}${query_str ? '?' : ''}${query_str || ''}${hash ? '#' : ''}${hash || ''}`;
     }
 
