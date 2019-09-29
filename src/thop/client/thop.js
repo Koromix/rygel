@@ -27,12 +27,8 @@ let thop = (function() {
         if (window.history.scrollRestoration)
             window.history.scrollRestoration = 'manual';
 
-        await updateSession();
-
-        // Initialize module routes
-        Object.assign(mco_info.route, mco_info.parseURL(''));
-        Object.assign(mco_casemix.route, mco_casemix.parseURL(''));
-        Object.assign(user.route, user.parseURL(''));
+        // Update settings
+        await updateSettings();
 
         updateMenu();
         self.go(window.location.href, {}, false);
@@ -74,8 +70,7 @@ let thop = (function() {
 
                 default: {
                     // Cannot make canonical URL (because it's invalid), but it's better than nothing
-                    route_url = mod;
-                    updateHistory(push_history);
+                    updateHistory(mod, push_history);
                     updateMenu();
 
                     log.error('Aucun module disponible pour cette adresse');
@@ -101,9 +96,9 @@ let thop = (function() {
         }
 
         // Update URL quickly, even though we'll do it again after module run because some
-        // parts may depend on fetched resources.
-        route_url = route_mod.makeURL();
-        updateHistory(push_history);
+        // parts may depend on fetched resources. Same thing for session.
+        updateHistory(route_mod.makeURL(), push_history);
+        await updateSettings();
 
         let view_el = document.querySelector('#th_view');
 
@@ -124,29 +119,32 @@ let thop = (function() {
         }
 
         // Update shared state and UI
-        route_url = route_mod.makeURL();
-        updateHistory(false);
-        await updateSession();
+        updateHistory(route_mod.makeURL(), false);
+        await updateSettings();
         updateMenu();
     };
 
-    async function updateSession() {
-        if (env.has_users) {
-            user.readSessionCookies();
-
-            render(html`
-                ${!user.isConnected() ?
-                    html`<a href=${user.makeURL({mode: 'login'})}>Se connecter</a>` : html``}
-                ${user.isConnected() ?
-                    html`${user.getUserName()} (<a href=${user.makeURL({mode: 'login'})}>changer</a>,
-                                                <a href="#" @click=${handleLogoutClick}>déconnexion</a>)` : html``}
-            `, document.querySelector('#th_session'));
+    function updateHistory(url, push_history) {
+        if (push_history && url !== route_url) {
+            window.history.pushState(null, null, url);
+        } else {
+            window.history.replaceState(null, null, url);
         }
 
-        if (settings_key !== user.getUrlKey()) {
+        route_url = url;
+    }
+
+    async function updateSettings() {
+        if (env.has_users)
+            user.readSessionCookies();
+        if (settings_key === user.getUrlKey())
+            return;
+
+        // Fetch new settings
+        {
+            // We'll parse it manually to revive dates. It's relatively small anyway.
             let json = await fetch(`${env.base_url}api/settings.json?key=${user.getUrlKey()}`).then(response => response.text());
 
-            // Parse it manually to revive dates. It's relatively small anyway.
             settings = JSON.parse(json, (key, value) => {
                 if (typeof value === 'string' && value.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)) {
                     return dates.fromString(value);
@@ -155,6 +153,23 @@ let thop = (function() {
                 }
             });
             settings_key = user.getUrlKey();
+        }
+
+        // Initialize module routes
+        for (let mod of [mco_info, mco_casemix, user]) {
+            util.clearObject(mod.route);
+            Object.assign(mod.route, mod.parseURL(''));
+        }
+
+        // Update session information
+        if (env.has_users) {
+            render(html`
+                ${!user.isConnected() ?
+                    html`<a href=${user.makeURL({mode: 'login'})}>Se connecter</a>` : html``}
+                ${user.isConnected() ?
+                    html`${user.getUserName()} (<a href=${user.makeURL({mode: 'login'})}>changer</a>,
+                                                <a href="#" @click=${handleLogoutClick}>déconnexion</a>)` : html``}
+            `, document.querySelector('#th_session'));
         }
     }
 
@@ -168,14 +183,6 @@ let thop = (function() {
         p.catch(log.error);
 
         e.preventDefault();
-    }
-
-    function updateHistory(push_history) {
-        if (push_history) {
-            window.history.pushState(null, null, route_url);
-        } else {
-            window.history.replaceState(null, null, route_url);
-        }
     }
 
     function updateMenu() {
