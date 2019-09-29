@@ -15,7 +15,7 @@ let mco_casemix = (function() {
         // Fetch resources
         let [ghm_roots, structures] = await Promise.all([
             concepts.load('mco').then(mco => mco.ghm_roots),
-            fetch(`${env.base_url}api/structures.json`).then(response => response.json())
+            thop.fetchJSON(`${env.base_url}api/structures.json`)
         ]);
 
         // Check options
@@ -238,7 +238,7 @@ let mco_casemix = (function() {
     async function runSummary(by) {
         let [ghm_roots, structures] = await Promise.all([
             concepts.load('mco').then(mco => mco.ghm_roots),
-            fetch(`${env.base_url}api/structures.json`).then(response => response.json())
+            thop.fetchJSON(`${env.base_url}api/structures.json`)
         ]);
 
         // Options
@@ -262,7 +262,7 @@ let mco_casemix = (function() {
     async function runValorisation() {
         let [ghm_roots, structures] = await Promise.all([
             concepts.load('mco').then(mco => mco.ghm_roots),
-            fetch(`${env.base_url}api/structures.json`).then(response => response.json())
+            thop.fetchJSON(`${env.base_url}api/structures.json`)
         ]);
 
         if (!route.valorisation.ghm_root)
@@ -289,7 +289,7 @@ let mco_casemix = (function() {
     async function runRSS() {
         let [ghm_roots, structures] = await Promise.all([
             concepts.load('mco').then(mco => mco.ghm_roots),
-            fetch(`${env.base_url}api/structures.json`).then(response => response.json())
+            thop.fetchJSON(`${env.base_url}api/structures.json`)
         ]);
 
         // Options
