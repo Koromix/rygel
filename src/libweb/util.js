@@ -63,6 +63,11 @@ let util = (function() {
         return (typeof value === 'object') && value !== null && !Array.isArray(value);
     }
 
+    this.clearObject = function(obj) {
+        for (let key in obj)
+            delete obj[key];
+    }
+
     this.pasteURL = function(url, params = null, hash = null) {
         if (!(params instanceof URLSearchParams))
             params = new URLSearchParams(params);
