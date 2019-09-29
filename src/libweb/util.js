@@ -164,7 +164,6 @@ let util = (function() {
         buf[offset + 5] = characters[value & 0x1F];
     }
 
-    // TODO: React to onerror?
     this.loadScript = function(url) {
         let head = document.querySelector('script');
         let script = document.createElement('script');
@@ -174,6 +173,7 @@ let util = (function() {
             script.src = url;
             script.onreadystatechange = resolve;
             script.onload = resolve;
+            script.onerror = e => reject(`Failed to load '${url}' script`);
 
             head.appendChild(script);
         });
