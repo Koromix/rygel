@@ -1117,6 +1117,7 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set,
 
     // Aggregate mono_stays into stay
     out_prepared_set->stay = mono_stays[0];
+    out_prepared_set->stay.flags = 0;
     out_prepared_set->mono_stays = mono_stays;
     for (const mco_Stay &mono_stay: mono_stays) {
         if (mono_stay.gestational_age > 0) {
@@ -1129,10 +1130,10 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set,
         if (mono_stay.igs2 > out_prepared_set->stay.igs2) {
             out_prepared_set->stay.igs2 = mono_stay.igs2;
         }
+        out_prepared_set->stay.flags |= (mono_stay.flags & (int)mco_Stay::Flag::RAAC);
     }
     out_prepared_set->stay.exit = mono_stays[mono_stays.len - 1].exit;
-    out_prepared_set->stay.flags = (mono_stays[0].flags & (int)mco_Stay::Flag::RAAC) |
-                                   (mono_stays[mono_stays.len - 1].flags & (int)mco_Stay::Flag::Confirmed);
+    out_prepared_set->stay.flags |= (mono_stays[mono_stays.len - 1].flags & (int)mco_Stay::Flag::Confirmed);
     out_prepared_set->stay.other_diagnoses = {};
     out_prepared_set->stay.procedures = {};
 
