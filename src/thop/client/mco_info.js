@@ -12,9 +12,9 @@ let mco_info = (function() {
         switch (route.mode) {
             case 'ghs': { await runGhs(); } break;
             case 'tree': { await runTree(); } break;
-            case 'ghmghs': {} break;
-            case 'diagnoses': {} break;
-            case 'procedures': {} break;
+            case 'ghmghs': { await runList('ghmghs'); } break;
+            case 'diagnoses': { await runList('diagnoses'); } break;
+            case 'procedures': { await runList('procedures'); } break;
 
             default: {
                 throw new Error(`Mode inconnu '${route.mode}'`);
@@ -400,6 +400,21 @@ let mco_info = (function() {
             let cls = child.type + (child.chain_str && collapse_nodes.has(child.chain_str) ? ' collapse' : '');
             return html`<li id=${'n' + child.idx} class=${cls}>${child.vdom}</li>`;
         });
+    }
+
+    // ------------------------------------------------------------------------
+    // Lists
+    // ------------------------------------------------------------------------
+
+    async function runList(name) {
+        let version = findVersion(route.version);
+
+        // Options
+        render(renderVersionLine(settings.mco.versions, version),
+               document.querySelector('#th_options'));
+
+        // View
+        render(html``, document.querySelector('#th_view'));
     }
 
     // ------------------------------------------------------------------------
