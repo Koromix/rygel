@@ -172,7 +172,7 @@ let mco_casemix = (function() {
         if (args.main.start_date && args.main.end_date)
             path.push(`${args.main.start_date}..${args.main.end_date}`);
 
-        params.coeff = 0 + args.coeff;
+        params.coeff = (args.coeff != null) ? (0 + args.coeff) : null;
         params.structure = args.structure;
         params.algorithm = args.main.algorithm;
         params.ghm_roots = args.main.ghm_roots ? encodeGhmRoots(args.main.ghm_roots) : null;

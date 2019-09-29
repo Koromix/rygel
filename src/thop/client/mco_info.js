@@ -63,7 +63,7 @@ let mco_info = (function() {
                     path.push(args.ghm_root);
 
                 params.duration = args.ghs.duration;
-                params.coeff = 0 + args.ghs.coeff;
+                params.coeff = (args.ghs.coeff != null) ? (0 + args.ghs.coeff) : null;
             } break;
             case 'tree': { /* Nothing to do */ } break;
         }
