@@ -37,11 +37,11 @@ function Pager() {
             <table class="pagr">
                 ${makePageLink('≪', current_page > 1 ? (current_page - 1) : null)}
                 ${start_page > 1 ?
-                    html`${makePageLink(1, 1)}<td> … </td>` : html``}
+                    html`${makePageLink(1, 1)}<td> … </td>` : ''}
                 ${util.mapRange(start_page, end_page + 1,
                                 page => makePageLink(page, page !== current_page ? page : null))}
                 ${end_page < last_page ?
-                    html`<td> … </td>${makePageLink(last_page, last_page)}` : html``}
+                    html`<td> … </td>${makePageLink(last_page, last_page)}` : ''}
                 ${makePageLink('≫', current_page < last_page ? (current_page + 1) : null)}
             </table>
         `;

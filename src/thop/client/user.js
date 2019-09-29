@@ -40,7 +40,7 @@ let user = (function() {
 
     function runLogin() {
         // Options
-        render(html``, document.querySelector('#th_options'));
+        render('', document.querySelector('#th_options'));
 
         // View
         render(html`

@@ -93,15 +93,15 @@ let pilot = (function() {
             <div id="adm_modes"></div>
 
             <select id="adm_pages" @change=${e => self.go(e.target.value)}>
-                ${!current_key && !assets.length ? html`<option>-- No asset available --</option>` : html``}
+                ${!current_key && !assets.length ? html`<option>-- No asset available --</option>` : ''}
                 ${current_key && !current_asset ?
-                    html`<option value=${current_key} .selected=${true}>-- Unknown asset '${current_key}' --</option>` : html``}
+                    html`<option value=${current_key} .selected=${true}>-- Unknown asset '${current_key}' --</option>` : ''}
                 ${assets.map(item =>
                     html`<option value=${item.key} .selected=${item.key == current_key}>${item.key} (${item.mimetype})</option>`)}
             </select>
             <button @click=${showCreateDialog}>Ajouter</button>
             ${current_asset ?
-                html`<button @click=${e => showDeleteDialog(e, current_asset)}>Supprimer</button>` : html``}
+                html`<button @click=${e => showDeleteDialog(e, current_asset)}>Supprimer</button>` : ''}
             <button @click=${showResetDialog}>Réinitialiser</button>
         `, menu_el);
     }
@@ -110,8 +110,8 @@ let pilot = (function() {
         let modes_el = document.querySelector('#adm_modes');
         let main_el = document.querySelector('main');
 
-        render(html``, modes_el);
-        render(html``, main_el);
+        render('', modes_el);
+        render('', main_el);
     }
 
     this.go = async function(key, args = {}) {
