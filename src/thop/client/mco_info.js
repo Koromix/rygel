@@ -78,12 +78,12 @@ let mco_info = (function() {
     async function runGhs() {
         let version = findVersion(route.version);
         let [ghm_roots, ghmghs] = await Promise.all([
-            concepts.load('mco').then(mco => mco.ghm_roots),
-            thop.fetchJSON(`${env.base_url}api/mco_ghmghs.json?sector=${route.ghs.sector}&date=${version.begin_date}`)
+            data.fetchDictionary('mco').then(set => set.ghm_roots),
+            data.fetchJSON(`${env.base_url}api/mco_ghmghs.json?sector=${route.ghs.sector}&date=${version.begin_date}`)
         ]);
 
         if (!route.ghm_root)
-            route.ghm_root = ghm_roots[0].code;
+            route.ghm_root = ghm_roots.values()[0].code;
 
         // Options
         render(html`
@@ -96,7 +96,7 @@ let mco_info = (function() {
                                  @change=${e => thop.go(self, {ghs: {duration: e.target.value}})}/></label>
             <label>Coefficient <input type="checkbox" .checked=${route.ghs.coeff}
                                        @change=${e => thop.go(self, {ghs: {coeff: e.target.checked}})}/></label>
-            ${renderGhmRootSelector(ghm_roots, route.ghm_root)}
+            ${renderGhmRootSelector(ghm_roots.values(), route.ghm_root)}
         `, document.querySelector('#th_options'));
 
         let columns = ghmghs.filter(it => it.ghm_root === route.ghm_root);
@@ -256,8 +256,8 @@ let mco_info = (function() {
     async function runTree() {
         let version = findVersion(route.version);
         let [_, tree_nodes] = await Promise.all([
-            concepts.load('mco'),
-            thop.fetchJSON(`${env.base_url}api/mco_tree.json?date=${version.begin_date}`)
+            data.fetchDictionary('mco'),
+            data.fetchJSON(`${env.base_url}api/mco_tree.json?date=${version.begin_date}`)
         ]);
 
         // Options
@@ -445,7 +445,7 @@ let mco_info = (function() {
             <select @change=${e => thop.go(self, {ghm_root: e.target.value})}>
                 ${ghm_roots.map(ghm_root => {
                     let disabled = false;
-                    let label = `${ghm_root.code} – ${ghm_root.desc}${disabled ? ' *' : ''}`;
+                    let label = `${ghm_root.describe()}${disabled ? ' *' : ''}`;
 
                     return html`<option value=${ghm_root.code} ?disabled=${disabled}
                                         .selected=${ghm_root.code === current_ghm_root}>${label}</option>`
@@ -468,12 +468,24 @@ let mco_info = (function() {
     this.addSpecLinks = function(str, append_desc = false) {
         let elements = [];
         for (;;) {
-            let m = str.match(/([AD](\-[0-9]+|\$[0-9]+\.[0-9]+)|[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?( \[[0-9]{1,3}\])?|[Nn]oeud [0-9]+)/);
-            if (!m)
+            let m;
+            let frag;
+            if (m = str.match(/A(\-[0-9]+|\$[0-9]+\.[0-9]+)/)) {
+                frag = makeSpecAnchor('', m[0], null, false, self.makeURL());
+            } else if (m = str.match(/D(\-[0-9]+|\$[0-9]+\.[0-9]+)/)) {
+                frag = makeSpecAnchor('', m[0], null, false, self.makeURL());
+            } else if (m = str.match(/[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?( \[[0-9]{1,3}\])?/)) {
+                let code = m[0].substr(0, 5);
+                frag = makeSpecAnchor('ghm', m[0], findCachedDefinition('mco', 'ghm_roots', code),
+                                      append_desc, self.makeURL({mode: 'ghs', ghm_root: code}));
+            } else if (m = str.match(/[Nn]oeud ([0-9]+)/)) {
+                frag = makeSpecAnchor('', m[0], null, false, self.makeURL({mode: 'tree'}) + `#n${m[1]}`);
+            } else {
                 break;
+            }
 
             elements.push(str.substr(0, m.index));
-            elements.push(makeSpecAnchor(m[0], append_desc));
+            elements.push(frag);
             str = str.substr(m.index + m[0].length);
         }
         elements.push(str);
@@ -481,36 +493,17 @@ let mco_info = (function() {
         return elements;
     };
 
-    function makeSpecAnchor(str, append_desc) {
-        append_desc = false;
+    function makeSpecAnchor(cls, code, defn, append_desc, url) {
+        let tooltip = defn ? defn.describe() : '';
+        let desc = (defn && append_desc) ? defn.desc : null;
 
-        if (str[0] === 'A') {
-            let url = self.makeURL({list: 'procedures', spec: str});
-            let desc = append_desc ? catalog.getDesc('ccam', str) : null;
+        return html`<a class=${cls} href=${url}
+                       title=${tooltip}>${code}</a>${desc ? html`<span class="desc"> ${desc}</span>` : ''}`;
+    }
 
-            return html`<a href=${url}>${str}</a>${desc ? html` <span class="desc">${desc}</span>` : ''}`;
-        } else if (str[0] === 'D') {
-            let url = self.makeURL({list: 'diagnoses', spec: str});
-            let desc = append_desc ? catalog.getDesc('cim10', str) : null;
-
-            return html`<a href=${url}>${str}</a>${desc ? html` <span class="desc">${desc}</span>` : ''}`;
-        } else if (str.match(/^[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?( \[[0-9]{1,3}\])?$/)) {
-            let code = str.substr(0, 5);
-
-            let url = self.makeURL({mode: 'ghs', ghm_root: code});
-            let desc = concepts.descGhmRoot(code);
-            let tooltip = desc ? `${code} - ${desc}` : '';
-            if (!append_desc)
-                desc = '';
-
-            return html`<a class="ghm" href=${url} title=${tooltip}>${str}</a>${desc ? html` <span class="desc">${desc}</span>` : ''}`;
-        } else if (str.match(/[Nn]oeud [0-9]+/)) {
-            let url = self.makeURL() + `#n${str.substr(6)}`;
-
-            return html`<a href=${url}>${str}</a>`;
-        } else {
-            return str;
-        }
+    function findCachedDefinition(name, chapter, code) {
+        let dict = data.fetchCachedDictionary(name, true);
+        return dict ? dict[chapter].find(code) : null;
     }
 
     return this;
