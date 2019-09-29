@@ -5,7 +5,7 @@
 function TreeSelector() {
     let self = this;
 
-    this.changeHandler = null;
+    this.changeHandler = (values, tab) => {};
 
     let prefix = null;
     let tabs = [];
@@ -71,11 +71,22 @@ function TreeSelector() {
             current_values.add(value);
     };
 
-    this.setCurrentTab = function(tab_idx) { current_tab = tabs[tab_idx]; };
-    this.getCurrentTab = function() { return tabs.indexOf(current_tab); };
+    this.setCurrentTab = function(title) {
+        let new_tab = tabs.find(tab => tab.title === title);
+        if (!new_tab)
+            throw new Error(`Tab '${title}' does not exist`);
+        current_tab = new_tab;
+    };
+    this.getCurrentTab = function() { return current_tab.title; };
 
-    this.setValues = function(values) { current_values = new Set(values); };
-    this.getValues = function() { return Array.from(current_values); };
+    this.setValues = function(values) {
+        if (values instanceof Set) {
+            current_values = values;
+        } else {
+            current_values = new Set(values);
+        }
+    }
+    this.getValues = function() { return current_values; };
 
     this.render = function() {
         let root_el = document.createElement('div');
