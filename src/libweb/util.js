@@ -51,7 +51,7 @@ let util = (function() {
             let to = obj[key];
             let from = src[key];
 
-            if (isRealObject(to) && isRealObject(from) && !Object.isFrozen(to)) {
+            if (isPodObject(to) && isPodObject(from) && !Object.isFrozen(to)) {
                 assignDeep1(to, from);
             } else {
                 obj[key] = from;
@@ -59,8 +59,8 @@ let util = (function() {
         }
     }
 
-    function isRealObject(value) {
-        return (typeof value === 'object') && value !== null && !Array.isArray(value);
+    function isPodObject(value) {
+        return !!value && value.constructor === Object;
     }
 
     this.clearObject = function(obj) {
