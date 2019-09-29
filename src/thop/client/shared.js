@@ -16,7 +16,7 @@ let concepts = (function() {
         let set = sets[name];
 
         if (!set) {
-            set = await fetch(`${env.base_url}catalogs/${name}.json`).then(response => response.json());
+            set = await thop.fetchJSON(`${env.base_url}catalogs/${name}.json`);
             sets[name] = set;
 
             for (let type in set) {

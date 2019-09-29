@@ -79,7 +79,7 @@ let mco_info = (function() {
         let version = findVersion(route.version);
         let [ghm_roots, ghmghs] = await Promise.all([
             concepts.load('mco').then(mco => mco.ghm_roots),
-            fetch(`${env.base_url}api/mco_ghmghs.json?sector=${route.ghs.sector}&date=${version.begin_date}`).then(response => response.json())
+            thop.fetchJSON(`${env.base_url}api/mco_ghmghs.json?sector=${route.ghs.sector}&date=${version.begin_date}`)
         ]);
 
         if (!route.ghm_root)
@@ -257,7 +257,7 @@ let mco_info = (function() {
         let version = findVersion(route.version);
         let [_, tree_nodes] = await Promise.all([
             concepts.load('mco'),
-            fetch(`${env.base_url}api/mco_tree.json?date=${version.begin_date}`).then(response => response.json()),
+            thop.fetchJSON(`${env.base_url}api/mco_tree.json?date=${version.begin_date}`)
         ]);
 
         // Options
