@@ -3,46 +3,86 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 // ------------------------------------------------------------------------
-// Concepts
+// Data
 // ------------------------------------------------------------------------
 
-let concepts = (function() {
+let data = (function() {
     let self = this;
 
-    let sets = {};
-    let maps = {};
+    let cache = new LruMap(32);
 
-    this.load = async function(name) {
-        let set = sets[name];
+    this.fetchJSON = async function(url) { return fetchAndCache(url, url, json => json); };
+    this.fetchDictionary = async function(name) {
+        let url = `${env.base_url}dictionaries/${name}.json`;
+        return fetchAndCache(name, url, parseDictionary);
+    };
+    this.fetchCachedDictionary = function(name) { return cache.get(name); }
 
-        if (!set) {
-            set = await thop.fetchJSON(`${env.base_url}dictionaries/${name}.json`);
-            sets[name] = set;
+    async function fetchAndCache(key, url, func) {
+        let resource = cache.get(key);
 
-            for (let type in set) {
-                let arr = set[type];
+        if (!resource) {
+            let response = await fetch(url);
+            if (!response.ok)
+                throw new Error(await response.text());
 
-                let map = {};
-                for (let info of arr)
-                    map[info.code] = info;
-
-                maps[`${name}_${type}`] = map;
-            }
+            resource = func(await response.json());
+            cache.set(key, resource);
         }
 
-        return set;
-    };
+        return resource;
+    }
 
-    this.findGhmRoot = function(code) {
-        return maps.mco_ghm_roots[code];
-    };
-    this.completeGhmRoot = function(code) {
-        let info = maps.mco_ghm_roots[code];
-        return info ? `${code} - ${info.desc}` : null;
-    };
-    this.descGhmRoot = function(code) {
-        let info = maps.mco_ghm_roots[code];
-        return info ? info.desc : null;
+    function parseDictionary(json) {
+        let dict = {};
+
+        for (let chapter in json)
+            dict[chapter] = new DictionaryChapter(json[chapter], dict);
+        for (let chapter in dict)
+            Object.freeze(dict[chapter]);
+
+        return dict;
+    }
+
+    function DictionaryChapter(definitions, set) {
+        let self = this;
+
+        let map = {};
+        for (let defn of definitions) {
+            map[defn.code] = defn;
+
+            if (!defn.parents)
+                defn.parents = {};
+            defn.children = [];
+
+            for (type in defn.parents) {
+                let parent = set[type].find(defn.parents[type]);
+                parent.children.push(defn);
+            }
+
+            defn.describe = describeDefinition;
+        }
+
+        this.size = definitions.length;
+        this.entries = function() { return null; };
+        this.values = function() { return definitions; };
+
+        this.find = function(code) { return map[code]; };
+
+        this.describe = function(code) {
+            let defn = map[code];
+            return defn ? defn.describe() : code;
+        };
+        this.describeParent = function(code, type) {
+            let defn = map[code];
+            return defn ? set[type].describe(defn.parents[type]) : '????';
+        };
+
+        function describeDefinition() { return `${this.code} – ${this.desc}`; };
+    }
+
+    this.clearCache = function() {
+        cache.clear();
     };
 
     return this;

@@ -14,8 +14,6 @@ let thop = (function() {
 
     let settings_key;
 
-    let json_cache = new LruMap(32);
-
     document.addEventListener('readystatechange', e => {
         if (document.readyState === 'complete')
             initThop();
@@ -144,7 +142,7 @@ let thop = (function() {
             return;
 
         // Clear cache, which may contain user-specific and even sensitive data
-        json_cache.clear();
+        data.clearCache();
 
         // Fetch new settings
         {
@@ -214,23 +212,6 @@ let thop = (function() {
         let active = route_url.startsWith(url);
         return html`<a class=${active ? 'active': ''} href=${url}>${label}</a>`;
     }
-
-    this.fetchJSON = async function(url) {
-        let json = json_cache.get(url);
-
-        if (!json) {
-            let response = await fetch(url);
-
-            if (response.ok) {
-                json = await response.json();
-                json_cache.set(url, json);
-            } else {
-                throw new Error(await response.text());
-            }
-        }
-
-        return json;
-    };
 
     return this;
 }).call({});

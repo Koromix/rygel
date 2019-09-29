@@ -14,8 +14,8 @@ let mco_casemix = (function() {
 
         // Fetch resources
         let [ghm_roots, structures] = await Promise.all([
-            concepts.load('mco').then(mco => mco.ghm_roots),
-            thop.fetchJSON(`${env.base_url}api/structures.json`)
+            data.fetchDictionary('mco').then(set => set.ghm_roots),
+            data.fetchJSON(`${env.base_url}api/structures.json`)
         ]);
 
         // Check options
@@ -28,7 +28,7 @@ let mco_casemix = (function() {
         if (!route.main.units)
             route.main.units = new Set(structures[0].entities.map(ent => ent.unit));
         if (!route.main.ghm_roots)
-            route.main.ghm_roots = new Set(ghm_roots.map(ghm_root => ghm_root.code));
+            route.main.ghm_roots = new Set(ghm_roots.values().map(ghm_root => ghm_root.code));
 
         // Run appropriate mode handler
         switch (route.mode) {
@@ -237,8 +237,8 @@ let mco_casemix = (function() {
 
     async function runSummary(by) {
         let [ghm_roots, structures] = await Promise.all([
-            concepts.load('mco').then(mco => mco.ghm_roots),
-            thop.fetchJSON(`${env.base_url}api/structures.json`)
+            data.fetchDictionary('mco').then(set => set.ghm_roots),
+            data.fetchJSON(`${env.base_url}api/structures.json`)
         ]);
 
         // Options
@@ -248,7 +248,7 @@ let mco_casemix = (function() {
             ${renderAlgorithmSelector(settings.mco.casemix.algorithms, route.main.algorithm)}
             ${renderCoefficientCheckbox(route.coeff)}
             ${renderUnitTree(structures, route.structure, route.main.units)}
-            ${renderGhmRootTree(ghm_roots, route.main.ghm_roots)}
+            ${renderGhmRootTree(ghm_roots.values(), route.main.ghm_roots)}
         `, document.querySelector('#th_options'));
 
         // View
@@ -261,12 +261,12 @@ let mco_casemix = (function() {
 
     async function runValorisation() {
         let [ghm_roots, structures] = await Promise.all([
-            concepts.load('mco').then(mco => mco.ghm_roots),
-            thop.fetchJSON(`${env.base_url}api/structures.json`)
+            data.fetchDictionary('mco').then(set => set.ghm_roots),
+            data.fetchJSON(`${env.base_url}api/structures.json`)
         ]);
 
         if (!route.valorisation.ghm_root)
-            route.valorisation.ghm_root = ghm_roots[0].code;
+            route.valorisation.ghm_root = ghm_roots.values()[0].code;
 
         // Options
         render(html`
@@ -275,7 +275,7 @@ let mco_casemix = (function() {
             ${renderAlgorithmSelector(settings.mco.casemix.algorithms, route.main.algorithm)}
             ${renderCoefficientCheckbox(route.coeff)}
             ${renderUnitTree(structures, route.structure, route.main.units)}
-            ${renderGhmRootSelector(ghm_roots, route.valorisation.ghm_root)}
+            ${renderGhmRootSelector(ghm_roots.values(), route.valorisation.ghm_root)}
         `, document.querySelector('#th_options'));
 
         // View
@@ -288,8 +288,8 @@ let mco_casemix = (function() {
 
     async function runRSS() {
         let [ghm_roots, structures] = await Promise.all([
-            concepts.load('mco').then(mco => mco.ghm_roots),
-            thop.fetchJSON(`${env.base_url}api/structures.json`)
+            data.fetchDictionary('mco').then(set => set.ghm_roots),
+            data.fetchJSON(`${env.base_url}api/structures.json`)
         ]);
 
         // Options
@@ -299,7 +299,7 @@ let mco_casemix = (function() {
             ${renderAlgorithmSelector(settings.mco.casemix.algorithms, route.main.algorithm)}
             ${renderCoefficientCheckbox(route.coeff)}
             ${renderUnitTree(structures, route.structure, route.main.units)}
-            ${renderGhmRootTree(ghm_roots, route.main.ghm_roots)}
+            ${renderGhmRootTree(ghm_roots.values(), route.main.ghm_roots)}
         `, document.querySelector('#th_options'));
 
         // View
@@ -364,10 +364,9 @@ let mco_casemix = (function() {
             thop.go(self, {main: {ghm_roots: values}});
 
         tsel.setPrefix('Racines de GHM : ');
-        for (let ghm_root of ghm_roots) {
-            let title = `${ghm_root.code} - ${ghm_root.desc}`;
-            tsel.addOption(title, ghm_root.code, {selected: current_ghm_roots.has(ghm_root.code)});
-        }
+        for (let ghm_root of ghm_roots)
+            tsel.addOption(ghm_root.describe(), ghm_root.code,
+                           {selected: current_ghm_roots.has(ghm_root.code)});
         // tsel.setCurrentTab(current_structure);
 
         return tsel.render();
@@ -378,7 +377,7 @@ let mco_casemix = (function() {
             <select @change=${e => thop.go(self, {valorisation: {ghm_root: e.target.value}})}>
                 ${ghm_roots.map(ghm_root => {
                     let disabled = false;
-                    let label = `${ghm_root.code} – ${ghm_root.desc}${disabled ? ' *' : ''}`;
+                    let label = `${ghm_root.describe()}${disabled ? ' *' : ''}`;
 
                     return html`<option value=${ghm_root.code} ?disabled=${disabled}
                                         .selected=${ghm_root.code === current_ghm_root}>${label}</option>`
