@@ -420,35 +420,4 @@ bool McoResultProvider::RunDirect(FunctionRef<void(Span<const mco_Result>, Span<
     return true;
 }
 
-void ProduceMcoStructures(const http_RequestInfo &request, const User *user, http_IO *io)
-{
-    if (!user) {
-        LogError("Not allowed to query MCO structures");
-        io->AttachError(403);
-        return;
-    }
-
-    http_JsonPageBuilder json(request.compression_type);
-
-    json.StartArray();
-    for (const Structure &structure: thop_structure_set.structures) {
-        json.StartObject();
-        json.Key("name"); json.String(structure.name);
-        json.Key("entities"); json.StartArray();
-        for (const StructureEntity &ent: structure.entities) {
-            if (user->mco_allowed_units.Find(ent.unit)) {
-                json.StartObject();
-                json.Key("unit"); json.Int(ent.unit.number);
-                json.Key("path"); json.String(ent.path);
-                json.EndObject();
-            }
-        }
-        json.EndArray();
-        json.EndObject();
-    }
-    json.EndArray();
-
-    json.Finish(io);
-}
-
 }
