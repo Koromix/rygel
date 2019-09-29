@@ -109,6 +109,7 @@ let thop = (function() {
         try {
             await route_mod.run();
         } catch (err) {
+            render(html``, document.querySelector('#th_options'));
             render(err.message, view_el);
             log.error(err.message);
         }
