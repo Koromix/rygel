@@ -107,7 +107,7 @@ function TreeSelector() {
 
             <div class="tsel_main">
                 <div class="tsel_rect" @click=${handleToggleClick}>
-                    ${tabs.length ? html`<div class="tsel_curtab">${current_tab.title}</div>` : html``}
+                    ${tabs.length ? html`<div class="tsel_curtab">${current_tab.title}</div>` : ''}
                     <div class="tsel_summary">
                         ${renderSummary()}
                     </div>

@@ -109,7 +109,7 @@ let thop = (function() {
         try {
             await route_mod.run();
         } catch (err) {
-            render(html``, document.querySelector('#th_options'));
+            render('', document.querySelector('#th_options'));
             render(err.message, view_el);
             log.error(err.message);
         }
@@ -171,10 +171,10 @@ let thop = (function() {
         if (env.has_users) {
             render(html`
                 ${!user.isConnected() ?
-                    html`<a href=${user.makeURL({mode: 'login'})}>Se connecter</a>` : html``}
+                    html`<a href=${user.makeURL({mode: 'login'})}>Se connecter</a>` : ''}
                 ${user.isConnected() ?
                     html`${user.getUserName()} (<a href=${user.makeURL({mode: 'login'})}>changer</a>,
-                                                <a href="#" @click=${handleLogoutClick}>déconnexion</a>)` : html``}
+                                                <a href="#" @click=${handleLogoutClick}>déconnexion</a>)` : ''}
             `, document.querySelector('#th_session'));
         }
     }
@@ -206,7 +206,7 @@ let thop = (function() {
                 ${makeMenuLink('Unités', mco_casemix.makeURL({mode: 'units'}))}
                 ${makeMenuLink('Valorisation', mco_casemix.makeURL({mode: 'valorisation'}))}
                 ${makeMenuLink('Résumés', mco_casemix.makeURL({mode: 'rss'}))}
-            ` : html``}
+            ` : ''}
         `, document.querySelector('#th_menu'));
     }
 

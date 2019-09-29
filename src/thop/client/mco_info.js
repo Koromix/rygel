@@ -278,7 +278,7 @@ let mco_info = (function() {
                 </ul>
             `;
         } else {
-            return html``;
+            return '';
         }
     }
 
@@ -414,7 +414,7 @@ let mco_info = (function() {
                document.querySelector('#th_options'));
 
         // View
-        render(html``, document.querySelector('#th_view'));
+        render('', document.querySelector('#th_view'));
     }
 
     // ------------------------------------------------------------------------
@@ -488,12 +488,12 @@ let mco_info = (function() {
             let url = self.makeURL({list: 'procedures', spec: str});
             let desc = append_desc ? catalog.getDesc('ccam', str) : null;
 
-            return html`<a href=${url}>${str}</a>${desc ? html` <span class="desc">${desc}</span>` : html``}`;
+            return html`<a href=${url}>${str}</a>${desc ? html` <span class="desc">${desc}</span>` : ''}`;
         } else if (str[0] === 'D') {
             let url = self.makeURL({list: 'diagnoses', spec: str});
             let desc = append_desc ? catalog.getDesc('cim10', str) : null;
 
-            return html`<a href=${url}>${str}</a>${desc ? html` <span class="desc">${desc}</span>` : html``}`;
+            return html`<a href=${url}>${str}</a>${desc ? html` <span class="desc">${desc}</span>` : ''}`;
         } else if (str.match(/^[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?( \[[0-9]{1,3}\])?$/)) {
             let code = str.substr(0, 5);
 
@@ -503,7 +503,7 @@ let mco_info = (function() {
             if (!append_desc)
                 desc = '';
 
-            return html`<a class="ghm" href=${url} title=${tooltip}>${str}</a>${desc ? html` <span class="desc">${desc}</span>` : html``}`;
+            return html`<a class="ghm" href=${url} title=${tooltip}>${str}</a>${desc ? html` <span class="desc">${desc}</span>` : ''}`;
         } else if (str.match(/[Nn]oeud [0-9]+/)) {
             let url = self.makeURL() + `#n${str.substr(6)}`;
 

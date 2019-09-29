@@ -209,7 +209,7 @@ let goupil = (function() {
 
         if (gp_popup) {
             gp_popup.classList.remove('active');
-            render(html``, gp_popup);
+            render('', gp_popup);
         }
     }
 

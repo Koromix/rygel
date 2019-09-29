@@ -53,7 +53,7 @@ function FormBuilder(state, widgets, variables = []) {
             <div class=${cls}>
                 ${frag}
                 ${intf.errors.length && intf.errors.every(err => err) ?
-                    html`<div class="af_error">${intf.errors.map(err => html`${err}<br/>`)}</div>` : html``}
+                    html`<div class="af_error">${intf.errors.map(err => html`${err}<br/>`)}</div>` : ''}
                 ${intf.options.help ? html`<p class="af_help">${intf.options.help}</p>` : ''}
             </div>
         `;
@@ -107,7 +107,7 @@ function FormBuilder(state, widgets, variables = []) {
         } else if (text) {
             return html`<span class="${cls}">${text}</span>`;
         } else {
-            return html``;
+            return '';
         }
     }
 
@@ -304,7 +304,7 @@ function FormBuilder(state, widgets, variables = []) {
             <select id=${id} ?disabled=${options.disable}
                     @change=${e => handleDropdownChange(e, key)}>
                 ${options.untoggle || !props.some(p => p != null && value === p.value) ?
-                    html`<option value="null" .selected=${value == null}>-- Choisissez une option --</option>` : html``}
+                    html`<option value="null" .selected=${value == null}>-- Choisissez une option --</option>` : ''}
                 ${props.map(p =>
                     html`<option value=${stringifyValue(p.value)} .selected=${value === p.value}>${p.label}</option>`)}
             </select>
@@ -526,7 +526,7 @@ instead of:
 
         let render = intf => html`
             <fieldset class="af_section">
-                ${label ? html`<legend @click=${e => handleSectionClick(e, label)}>${label}</legend>` : html``}
+                ${label ? html`<legend @click=${e => handleSectionClick(e, label)}>${label}</legend>` : ''}
                 ${deploy ?
                     widgets.map(intf => intf.render(intf)) :
                     html`<a class="af_deploy" href="#"
@@ -587,14 +587,14 @@ Valid choices include:
                 return html`
                     <fieldset class="af_section af_section_error">
                         <legend>${options.label || 'Liste des erreurs'}</legend>
-                        ${!self.errors.length ? 'Aucune erreur' : html``}
+                        ${!self.errors.length ? 'Aucune erreur' : ''}
                         ${self.errors.map(intf =>
                             html`${intf.errors.length} ${intf.errors.length > 1 ? 'erreurs' : 'erreur'} sur :
                                  <a href=${'#' + makeID(intf.key)}>${intf.label}</a><br/>`)}
                     </fieldset>
                 `;
             } else {
-                return html``;
+                return '';
             }
         };
 

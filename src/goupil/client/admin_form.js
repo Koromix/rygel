@@ -324,16 +324,15 @@ let admin_form = (function() {
                         <tr>
                             <th class="af_head_actions">
                                 ${columns.length ?
-                                    html`<button class="af_excel" @click=${e => exportToExcel(table)}></button>` : html``}
+                                    html`<button class="af_excel" @click=${e => exportToExcel(table)}></button>` : ''}
                             </th>
-                            ${!columns.length ?
-                                html`<th></th>` : html``}
+                            ${!columns.length ? html`<th></th>` : ''}
                             ${columns.map(col => html`<th class="af_head_variable">${col.key}</th>`)}
                         </tr>
                     </thead>
                     <tbody>
                         ${empty_msg ?
-                            html`<tr><td colspan=${1 + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : html``}
+                            html`<tr><td colspan=${1 + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : ''}
                         ${records.map(record => html`<tr class=${record.id === current_record.id ? 'af_row_current' : ''}>
                             <th>
                                 <a href="#" @click=${e => { handleEditClick(e, record); e.preventDefault(); }}>🔍\uFE0E</a>

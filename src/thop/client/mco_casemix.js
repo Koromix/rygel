@@ -252,7 +252,7 @@ let mco_casemix = (function() {
         `, document.querySelector('#th_options'));
 
         // View
-        render(html``, document.querySelector('#th_view'));
+        render('', document.querySelector('#th_view'));
     }
 
     // ------------------------------------------------------------------------
@@ -279,7 +279,7 @@ let mco_casemix = (function() {
         `, document.querySelector('#th_options'));
 
         // View
-        render(html``, document.querySelector('#th_view'));
+        render('', document.querySelector('#th_view'));
     }
 
     // ------------------------------------------------------------------------
@@ -303,7 +303,7 @@ let mco_casemix = (function() {
         `, document.querySelector('#th_options'));
 
         // View
-        render(html``, document.querySelector('#th_view'));
+        render('', document.querySelector('#th_view'));
     }
 
     // ------------------------------------------------------------------------

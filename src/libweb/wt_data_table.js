@@ -220,7 +220,7 @@ function DataTable() {
             <div class="dtab">
                 ${sorted_rows.length ?
                     html`<p class="dtab_stat">${stat_text}</p>
-                         <a class="dtab_excel" href="#" @click=${handleExcelClick}></a>` : html``}
+                         <a class="dtab_excel" href="#" @click=${handleExcelClick}></a>` : ''}
 
                 <table class="dtab_table">
                     <thead><tr>${(!options.hide_header ? columns : []).map((col, idx) => {
@@ -256,7 +256,7 @@ function DataTable() {
 
                         ${!options.hide_empty && !render_count ?
                             html`<tr><td colspan=${columns.length}>${sorted_rows.length ? 'Cette page n\'existe pas'
-                                                                                        : 'Aucun contenu à afficher'}</td></tr>` : html``}
+                                                                                        : 'Aucun contenu à afficher'}</td></tr>` : ''}
                     </tbody>
                 </table>
             </div>
