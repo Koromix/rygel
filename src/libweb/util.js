@@ -418,9 +418,6 @@ function LruMap(limit) {
     };
 
     this.clear = function() {
-        // First, break cycle to help GC (maybe)
-        root_bucket.prev.next = null;
-        root_bucket.next.prev = null;
         root_bucket.prev = root_bucket;
         root_bucket.next = root_bucket;
 
