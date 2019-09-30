@@ -202,8 +202,9 @@ let thop = (function() {
                 <a class="category">Activité MCO</a>
                 ${makeMenuLink('GHM', mco_casemix.makeURL({mode: 'ghm'}))}
                 ${makeMenuLink('Unités', mco_casemix.makeURL({mode: 'units'}))}
+                ${settings.permissions.mco_results ?
+                    makeMenuLink('Résumés (RSS)', mco_casemix.makeURL({mode: 'rss'})) : ''}
                 ${makeMenuLink('Valorisation', mco_casemix.makeURL({mode: 'valorisation'}))}
-                ${makeMenuLink('Résumés', mco_casemix.makeURL({mode: 'rss'}))}
             ` : ''}
         `, document.querySelector('#th_menu'));
     }
