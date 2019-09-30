@@ -96,6 +96,7 @@ function TreeSelector() {
         // We don't return VDOM, because if we did the next render() we do after user interaction
         // would use a new binding, and replace the widget.
         render(renderWidget(), root_el);
+        render(renderSummary(), root_el.querySelector('.tsel_summary'));
 
         return root_el;
     };
@@ -108,9 +109,7 @@ function TreeSelector() {
             <div class="tsel_main">
                 <div class="tsel_rect" @click=${handleToggleClick}>
                     ${tabs.length ? html`<div class="tsel_curtab">${current_tab.title}</div>` : ''}
-                    <div class="tsel_summary">
-                        ${renderSummary()}
-                    </div>
+                    <div class="tsel_summary"></div>
                 </div>
 
                 <div class="tsel_view">
@@ -188,6 +187,7 @@ function TreeSelector() {
 
         current_tab = tab;
         render(renderWidget(), root_el);
+        syncCheckboxes(root_el);
     }
 
     function handleSetAll(e, enable) {
