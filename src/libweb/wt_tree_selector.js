@@ -21,9 +21,10 @@ function TreeSelector() {
     this.setPrefix = function(str) { prefix = str; };
     this.getPrefix = function() { return prefix; };
 
-    this.addTab = function(title) {
+    this.addTab = function(key, title = null) {
         let tab = {
-            title: title,
+            key: key,
+            title: title || key,
             options: []
         };
 
@@ -71,13 +72,13 @@ function TreeSelector() {
             current_values.add(value);
     };
 
-    this.setCurrentTab = function(title) {
-        let new_tab = tabs.find(tab => tab.title === title);
+    this.setCurrentTab = function(key) {
+        let new_tab = tabs.find(tab => tab.key === key);
         if (!new_tab)
-            throw new Error(`Tab '${title}' does not exist`);
+            throw new Error(`Tab '${key}' does not exist`);
         current_tab = new_tab;
     };
-    this.getCurrentTab = function() { return current_tab.title; };
+    this.getCurrentTab = function() { return current_tab.key; };
 
     this.setValues = function(values) {
         if (values instanceof Set) {
