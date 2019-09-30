@@ -94,12 +94,28 @@ load_mco <- function(root, err_filename) {
                                        ga = unbox(ghm_roots[i,]$ga)))
 
     return (list(
-        cmd = unique(ghm_roots[, list(code = cmd, desc = cmd_desc)], by = 'code'),
-        da = unique(ghm_roots[, list(code = da, desc = da_desc)], by = 'code'),
-        ga = unique(ghm_roots[, list(code = ga, desc = ga_desc)], by = 'code'),
-        ghm_roots = data.table(code = ghm_roots$ghm_root, desc = ghm_roots$desc,
-                               parents = parents),
-        errors = errors[, list(code = erreur, desc)]
+        cmd = list(
+            title = unbox('Catégories Majeures de Diagnostics'),
+            definitions = unique(ghm_roots[, list(code = cmd, desc = cmd_desc)], by = 'code')
+        ),
+        da = list(
+            title = unbox('Domaines d\'activité'),
+            definitions = unique(ghm_roots[, list(code = da, desc = da_desc)], by = 'code')
+        ),
+        ga = list(
+            title = unbox('Groupes d\'activité'),
+            definitions = unique(ghm_roots[, list(code = ga, desc = ga_desc)], by = 'code')
+        ),
+        ghm_roots = list(
+            title = unbox('Racines de GHM'),
+            parents = c('cmd', 'da', 'ga'),
+            definitions = data.table(code = ghm_roots$ghm_root, desc = ghm_roots$desc,
+                                     parents = parents)
+        ),
+        errors = list(
+            title = unbox('Erreurs MCO'),
+            definitions = errors[, list(code = erreur, desc)]
+        )
     ))
 }
 
@@ -126,7 +142,12 @@ load_ccam <- function(filename) {
     setorder(ccam, -last_version)
     ccam <- unique(ccam[, list(code = code, desc = liblong)])
 
-    return (list(procedures = ccam))
+    return (list(
+        procedures = list(
+            title = unbox('CCAM'),
+            definitions = ccam
+        )
+    ))
 }
 
 load_cim10 <- function(filename) {
@@ -134,7 +155,12 @@ load_cim10 <- function(filename) {
 
     cim10 <- unique(cim10[, list(code = code, desc = liblong)])
 
-    return (list(diagnoses = cim10))
+    return (list(
+        diagnoses = list(
+            title = unbox('CIM-10'),
+            definitions = cim10
+        )
+    ))
 }
 
 opt_parser <- OptionParser(option_list = list(

@@ -44,28 +44,30 @@ let data = (function() {
         return dict;
     }
 
-    function DictionaryChapter(definitions, set) {
+    function DictionaryChapter(chapter, dict) {
         let self = this;
 
         let map = {};
-        for (let defn of definitions) {
+        for (let defn of chapter.definitions) {
             map[defn.code] = defn;
 
-            if (!defn.parents)
-                defn.parents = {};
             defn.children = [];
 
-            for (type in defn.parents) {
-                let parent = set[type].find(defn.parents[type]);
-                parent.children.push(defn);
+            if (chapter.parents) {
+                for (type of chapter.parents) {
+                    let parent = dict[type].find(defn.parents[type]);
+                    parent.children.push(defn);
+                }
             }
 
             defn.describe = describeDefinition;
+            defn.describeParent = describeParent;
         }
 
-        this.size = definitions.length;
-        this.entries = function() { return null; };
-        this.values = function() { return definitions; };
+        this.title = chapter.title;
+        this.definitions = chapter.definitions;
+        if (chapter.parents)
+            this.parents = chapter.parents;
 
         this.find = function(code) { return map[code]; };
 
@@ -75,10 +77,11 @@ let data = (function() {
         };
         this.describeParent = function(code, type) {
             let defn = map[code];
-            return defn ? set[type].describe(defn.parents[type]) : '????';
+            return defn ? dict[type].describeParent(type) : '????';
         };
 
-        function describeDefinition() { return `${this.code} – ${this.desc}`; };
+        function describeDefinition() { return `${this.code} – ${this.desc}`; }
+        function describeParent(type) { return dict[type].describe(this.parents[type]); }
     }
 
     this.clearCache = function() {

@@ -77,13 +77,13 @@ let mco_info = (function() {
 
     async function runGhs() {
         let version = findVersion(route.version);
-        let [ghm_roots, ghmghs] = await Promise.all([
-            data.fetchDictionary('mco').then(set => set.ghm_roots),
+        let [mco, ghmghs] = await Promise.all([
+            data.fetchDictionary('mco'),
             data.fetchJSON(`${env.base_url}api/mco_ghmghs.json?sector=${route.ghs.sector}&date=${version.begin_date}`)
         ]);
 
         if (!route.ghm_root)
-            route.ghm_root = ghm_roots.values()[0].code;
+            route.ghm_root = mco.ghm_roots.definitions[0].code;
 
         // Options
         render(html`
@@ -96,7 +96,7 @@ let mco_info = (function() {
                                  @change=${e => thop.go(self, {ghs: {duration: e.target.value}})}/></label>
             <label>Coefficient <input type="checkbox" .checked=${route.ghs.coeff}
                                        @change=${e => thop.go(self, {ghs: {coeff: e.target.checked}})}/></label>
-            ${renderGhmRootSelector(ghm_roots.values(), route.ghm_root)}
+            ${renderGhmRootSelector(mco, route.ghm_root)}
         `, document.querySelector('#th_options'));
 
         let columns = ghmghs.filter(it => it.ghm_root === route.ghm_root);
@@ -440,10 +440,10 @@ let mco_info = (function() {
         return vlin.render();
     }
 
-    function renderGhmRootSelector(ghm_roots, current_ghm_root) {
+    function renderGhmRootSelector(mco, ghm_roots, current_ghm_root) {
         return html`
             <select @change=${e => thop.go(self, {ghm_root: e.target.value})}>
-                ${ghm_roots.map(ghm_root => {
+                ${mco.ghm_roots.definitions.map(ghm_root => {
                     let disabled = false;
                     let label = `${ghm_root.describe()}${disabled ? ' *' : ''}`;
 
