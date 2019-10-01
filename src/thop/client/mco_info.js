@@ -28,18 +28,29 @@ let mco_info = (function() {
                      settings.mco.versions[settings.mco.versions.length - 1].begin_date,
             mode: path[1] || 'ghs',
 
-            ghs: {},
-            diagnoses: {}
+            ghmghs: {},
+            diagnoses: {},
+            procedures: {},
+
+            ghs: {}
         };
 
         // Mode-specific part
         switch (args.mode) {
+            case 'ghmghs':
+            case 'diagnoses':
+            case 'procedures': {
+                args[args.mode].offset = parseInt(params.offset, 10) || null;
+                args[args.mode].sort = params.sort || null;
+            } break;
+
             case 'ghs': {
                 args.sector = path[2] || 'public';
                 args.ghm_root = path[3] || null;
                 args.ghs.duration = parseInt(params.duration, 10) || 200;
                 args.ghs.coeff = !!parseInt(params.coeff, 10) || false;
             } break;
+
             case 'tree': { /* Nothing to do */ } break;
         }
 
@@ -58,6 +69,13 @@ let mco_info = (function() {
 
         // Mode-specific part
         switch (args.mode) {
+            case 'ghmghs':
+            case 'diagnoses':
+            case 'procedures': {
+                params.offset = args[args.mode].offset || null;
+                params.sort = args[args.mode].sort || null;
+            } break;
+
             case 'ghs': {
                 path.push(args.sector);
                 if (args.ghm_root)
@@ -66,6 +84,7 @@ let mco_info = (function() {
                 params.duration = args.ghs.duration;
                 params.coeff = (args.ghs.coeff != null) ? (0 + args.ghs.coeff) : null;
             } break;
+
             case 'tree': { /* Nothing to do */ } break;
         }
 
@@ -75,32 +94,6 @@ let mco_info = (function() {
     // ------------------------------------------------------------------------
     // Lists
     // ------------------------------------------------------------------------
-
-    async function runGhmRoots() {
-        let version = findVersion(route.version);
-        let [mco, ghmghs] = await Promise.all([
-            data.fetchDictionary('mco'),
-            data.fetchJSON(`${env.base_url}api/mco_ghmghs.json?sector=${route.sector}&date=${version.begin_date}`)
-        ]);
-
-        // Options
-        render(html`
-            ${renderVersionLine(settings.mco.versions, version)}
-            ${renderSectorSelector(route.sector)}
-        `, document.querySelector('#th_options'));
-
-        // Table
-        renderList('ghm_roots', ghmghs, {
-            page_len: 800,
-            columns: [
-                {key: 'ghm', title: 'GHM', func: ghs => ghs.ghm},
-                {key: 'ghs', title: 'GHS', func: ghs => ghs.ghs},
-                {key: 'durations', title: 'Durées', func: ghs => maskToRangeStr(ghs.durations)},
-                {key: 'confirm', title: 'Confirmation',
-                    func: ghs => ghs.confirm_treshold ? `< ${format.duration(ghs.confirm_treshold)}` : ''}
-            ]
-        });
-    }
 
     async function runGhmGhs() {
         let version = findVersion(route.version);
@@ -116,8 +109,13 @@ let mco_info = (function() {
         `, document.querySelector('#th_options'));
 
         // Table
-        renderList('ghmghs', ghmghs, {
+        renderList(ghmghs, {
             page_len: 300,
+
+            offset: route.ghmghs.offset,
+            sort: route.ghmghs.sort,
+            route: (offset, sort) => ({ghmghs: {offset: offset, sort: sort}}),
+
             columns: [
                 {key: 'ghm', title: 'GHM', func: ghs => ghs.ghm},
                 {key: 'ghs', title: 'GHS', func: ghs => ghs.ghs},
@@ -141,8 +139,13 @@ let mco_info = (function() {
         `, document.querySelector('#th_options'));
 
         // Table
-        renderList('diagnoses', diagnoses, {
+        renderList(diagnoses, {
             page_len: 300,
+
+            offset: route.diagnoses.offset,
+            sort: route.diagnoses.sort,
+            route: (offset, sort) => ({diagnoses: {offset: offset, sort: sort}}),
+
             columns: [
                 {key: 'code', title: 'Code', func: diag => cim10.diagnoses.describe(diag.diag)},
                 {key: 'severity', title: 'Niveau', func: diag => diag.severity},
@@ -165,8 +168,13 @@ let mco_info = (function() {
         `, document.querySelector('#th_options'));
 
         // Table
-        renderList('procedures', procedures, {
+        renderList(procedures, {
             page_len: 300,
+
+            offset: route.procedures.offset,
+            sort: route.procedures.sort,
+            route: (offset, sort) => ({procedures: {offset: offset, sort: sort}}),
+
             columns: [
                 {key: 'code', title: 'Code', func: proc => ccam.procedures.describe(proc.proc)},
                 {key: 'begin_date', title: 'Début', func: proc => dates.fromString(proc.begin_date)},
@@ -178,11 +186,18 @@ let mco_info = (function() {
         });
     }
 
-    function renderList(name, records, handler) {
+    function renderList(records, handler) {
         let route2 = route[name];
 
         let etab = new EasyTable;
+
+        if (handler.route) {
+            etab.hrefBuilder = (offset, sort_key) => self.makeURL(handler.route(offset, sort_key));
+            etab.changeHandler = (offset, sort_key) => thop.goFake(self, handler.route(offset, sort_key));
+        }
+
         etab.setPageLen(handler.page_len);
+        etab.setOffset(handler.offset || 0);
 
         for (let col of handler.columns) {
             etab.addColumn(col.key, col.title, value => {
@@ -207,6 +222,7 @@ let mco_info = (function() {
             etab.endRow();
         }
 
+        etab.sort(handler.sort);
         render(etab.render(), document.querySelector('#th_view'));
     }
 
