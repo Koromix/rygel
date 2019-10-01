@@ -10,7 +10,7 @@ let thop = (function() {
 
     let route_mod;
     let route_url = '';
-    let scroll_cache = new LruMap(32);
+    let scroll_cache = new LruMap(128);
 
     let settings_key;
 
