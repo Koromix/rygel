@@ -2,11 +2,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function Pager() {
+function EasyPager() {
     let self = this;
 
     this.hrefBuilder = page => '#';
-    this.changeHandler = page => {};
+    this.changeHandler = (e, page) => {};
 
     let last_page;
     let current_page;
@@ -14,8 +14,8 @@ function Pager() {
     this.setLastPage = function(page) { last_page = page; };
     this.getLastPage = function() { return last_page; };
 
-    this.setCurrentPage = function(page) { current_page = page; };
-    this.getCurrentPage = function() { return current_page; };
+    this.setPage = function(page) { current_page = page; };
+    this.getPage = function() { return current_page; };
 
     this.render = function() {
         let start_page, end_page;
@@ -34,7 +34,7 @@ function Pager() {
         }
 
         return html`
-            <table class="pagr">
+            <table class="epag">
                 ${makePageLink('≪', current_page > 1 ? (current_page - 1) : null)}
                 ${start_page > 1 ?
                     html`${makePageLink(1, 1)}<td> … </td>` : ''}
@@ -47,13 +47,6 @@ function Pager() {
         `;
     };
 
-    function handlePageClick(e, page) {
-        current_page = page;
-        self.changeHandler.call(self, page);
-
-        e.preventDefault();
-    }
-
     function makePageLink(text, page) {
         if (page) {
             return html`<td><a href=${self.hrefBuilder(page)} @click=${e => handlePageClick(e, page)}>${text}</a></td>`;
@@ -61,9 +54,16 @@ function Pager() {
             return html`<td>${text}</td>`;
         }
     }
+
+    function handlePageClick(e, page) {
+        current_page = page;
+        self.changeHandler.call(self, e, page);
+
+        e.preventDefault();
+    }
 }
 
-Pager.computeLastPage = function(render_count, row_count, page_length) {
+EasyPager.computeLastPage = function(render_count, row_count, page_length) {
     let last_page = Math.floor((row_count - 1) / page_length + 1);
     if (last_page === 1 && render_count === row_count)
         last_page = null;
