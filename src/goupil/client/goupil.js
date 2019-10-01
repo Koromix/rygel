@@ -83,7 +83,7 @@ let goupil = (function() {
         });
 
         document.body.addEventListener('click', e => {
-            if (e.target && e.target.tagName == 'A' &&
+            if (e.target && e.target.tagName == 'A' && !e.defaultPrevented &&
                     !e.ctrlKey && !e.target.getAttribute('download')) {
                 let href = e.target.getAttribute('href');
                 if (href && !href.match(/^(?:[a-z]+:)?\/\//) && href[0] != '#') {
