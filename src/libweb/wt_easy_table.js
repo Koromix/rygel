@@ -5,7 +5,8 @@
 function EasyTable() {
     let self = this;
 
-    this.changeHandler = (offset, sort_key) => {};
+    this.hrefBuilder = page => '#';
+    this.changeHandler = (offset, key) => {};
 
     let page_len = -1;
     let offset = 0;
@@ -18,8 +19,7 @@ function EasyTable() {
     let sorted_rows = [];
     let row_ptr;
 
-    let sort_idx;
-    let sort_order;
+    let sort_key;
 
     this.setPageLen = function(new_len) { page_len = new_len; };
     this.getPageLen = function() { return page_len; };
@@ -93,7 +93,7 @@ function EasyTable() {
         sorted_rows.length = 0;
         row_ptr = null;
 
-        sort_idx = null;
+        sort_key = null;
     };
 
     this.render = function() {
@@ -129,8 +129,10 @@ function EasyTable() {
             <table class="etab_table">
                 <thead><tr>${(!options.hide_header ? columns : []).map((col, idx) => {
                     let cls;
-                    if (idx === sort_idx) {
-                        cls = sort_order > 0 ? 'ascending' : 'descending';
+                    if (col.key === sort_key) {
+                        cls = 'ascending';
+                    } else if (`-${col.key}` === sort_key) {
+                        cls = 'descending';
                     } else {
                         cls = '';
                     }
@@ -171,14 +173,14 @@ function EasyTable() {
     function handleHeaderClick(e, col_idx) {
         let root_el = util.findParent(e.target, el => el.classList.contains('etab'));
 
-        let sort_key = columns[col_idx].key;
-        if (sort_idx === col_idx && sort_order > 0)
-            sort_key = '-' + sort_key;
+        let key = columns[col_idx].key;
+        if (key === sort_key)
+            key = `-${key}`;
 
-        self.sort(sort_key);
+        self.sort(key);
         render(renderWidget(), root_el);
 
-        self.changeHandler.call(offset, sort_key);
+        self.changeHandler.call(self, offset, key);
 
         e.preventDefault();
     }
@@ -195,6 +197,7 @@ function EasyTable() {
         if (page_len >= 0 && (offset || sorted_rows.length > page_len)) {
             let epag = new EasyPager;
 
+            epag.hrefBuilder = page => self.hrefBuilder((page - 1) * page_len, sort_key);
             epag.changeHandler = handlePageClick;
 
             let last_page = Math.floor((sorted_rows.length - 1) / page_len + 1);
@@ -212,20 +215,30 @@ function EasyTable() {
     function handlePageClick(e, page) {
         let root_el = util.findParent(e.target, el => el.classList.contains('etab'));
 
-        self.setOffset((page - 1) * page_len);
+        let offset = (page - 1) * page_len;
+
+        self.setOffset(offset);
         render(renderWidget(), root_el);
+
+        self.changeHandler.call(self, offset, sort_key);
+
+        e.preventDefault();
     }
 
-    this.sort = function(sort_key, sort_rec = true) {
+    this.sort = function(key, sort_rec = true) {
+        key = key || null;
+        if (key === sort_key)
+            return;
+
         let col_idx;
         let order;
-        if (sort_key) {
+        if (key) {
             let column;
-            if (sort_key[0] === '-') {
-                column = columns_map[sort_key.substr(1)];
+            if (key[0] === '-') {
+                column = columns_map[key.substr(1)];
                 order = -1;
             } else {
-                column = columns_map[sort_key];
+                column = columns_map[key];
                 order = 1;
             }
 
@@ -240,9 +253,6 @@ function EasyTable() {
             order = 1;
         }
 
-        if (col_idx === sort_idx && order === sort_order)
-            return false;
-
         if (sort_rec) {
             sorted_rows.length = 0;
             sortRowsRecursive(row_sets[0], col_idx, order);
@@ -251,10 +261,7 @@ function EasyTable() {
         }
         row_ptr = null;
 
-        sort_idx = col_idx;
-        sort_order = order;
-
-        return true;
+        sort_key = key;
     };
 
     function sortRows(rows, col_idx, order) {

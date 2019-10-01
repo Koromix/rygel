@@ -58,8 +58,6 @@ function EasyPager() {
     function handlePageClick(e, page) {
         current_page = page;
         self.changeHandler.call(self, e, page);
-
-        e.preventDefault();
     }
 }
 
