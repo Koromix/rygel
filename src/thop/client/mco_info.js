@@ -562,11 +562,16 @@ let mco_info = (function() {
     }
 
     function renderSectorSelector(current_sector) {
+        let help = 'Le périmètre des tarifs des GHS est différent&nbsp;\n Secteur public : prestation complète\n Secteur privé : clinique et personnel non médical';
+
         return html`
-            <label>Secteur <select @change=${e => thop.go(self, {sector: e.target.value})}>
-                <option value="public" .selected=${current_sector === 'public'}>Public</option>
-                <option value="private" .selected=${current_sector === 'private'}>Privé</option>
-            </select></label>
+            <label>
+                Secteur <abbr title="${help}">?</abbr>
+                <select @change=${e => thop.go(self, {sector: e.target.value})}>
+                    <option value="public" .selected=${current_sector === 'public'}>Public</option>
+                    <option value="private" .selected=${current_sector === 'private'}>Privé</option>
+                </select>
+            </label>
         `;
     }
 
