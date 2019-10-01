@@ -52,7 +52,22 @@ let thop = (function() {
     }
 
     this.go = async function(mod, args = {}, push_history = true) {
-        // Update module and route
+        route(mod, args);
+
+        // Update URL quickly, even though we'll do it again after module run because some
+        // parts may depend on fetched resources. Same thing for session.
+        updateHistory(route_mod.makeURL(), push_history);
+        await updateSettings();
+
+        await run(false);
+    };
+
+    this.goFake = async function(mod, args = {}, push_history = true) {
+        route(mod, args);
+        await run(push_history, true);
+    };
+
+    function route(mod, args) {
         if (typeof mod === 'string') {
             let url = new URL(mod, window.location.href);
 
@@ -84,7 +99,9 @@ let thop = (function() {
             route_mod = mod || route_mod;
             util.assignDeep(route_mod.route, args);
         }
+    }
 
+    async function run(push_history, fake = false) {
         // Memorize current scroll state
         if (window.history.scrollRestoration || push_history) {
             let target = [window.pageXOffset, window.pageYOffset];
@@ -95,23 +112,20 @@ let thop = (function() {
             }
         }
 
-        // Update URL quickly, even though we'll do it again after module run because some
-        // parts may depend on fetched resources. Same thing for session.
-        updateHistory(route_mod.makeURL(), push_history);
-        await updateSettings();
-
-        let view_el = document.querySelector('#th_view');
-
         // Run!
-        view_el.classList.add('th_view_busy');
-        try {
-            await route_mod.run();
-        } catch (err) {
-            render('', document.querySelector('#th_options'));
-            render(err.message, view_el);
-            log.error(err.message);
+        if (!fake) {
+            let view_el = document.querySelector('#th_view');
+
+            view_el.classList.add('th_view_busy');
+            try {
+                await route_mod.run();
+            } catch (err) {
+                render('', document.querySelector('#th_options'));
+                render(err.message, view_el);
+                log.error(err.message);
+            }
+            view_el.classList.remove('th_view_busy');
         }
-        view_el.classList.remove('th_view_busy');
 
         // Set appropriate scroll state
         if (window.history.scrollRestoration || push_history) {
@@ -120,10 +134,10 @@ let thop = (function() {
         }
 
         // Update shared state and UI
-        updateHistory(route_mod.makeURL(), false);
+        updateHistory(route_mod.makeURL(), push_history);
         await updateSettings();
         updateMenu();
-    };
+    }
 
     function updateHistory(url, push_history) {
         if (push_history && url !== route_url) {
