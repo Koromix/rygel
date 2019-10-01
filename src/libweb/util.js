@@ -48,10 +48,16 @@ let util = (function() {
 
     function assignDeep1(obj, src) {
         for (key in src) {
-            let to = obj[key];
             let from = src[key];
 
-            if (isPodObject(to) && isPodObject(from) && !Object.isFrozen(to)) {
+            if (isPodObject(from) && !Object.isFrozen(from)) {
+                let to = obj[key];
+
+                if (to === undefined || !isPodObject(to)) {
+                    to = {};
+                    obj[key] = to;
+                }
+
                 assignDeep1(to, from);
             } else {
                 obj[key] = from;
