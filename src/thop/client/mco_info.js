@@ -12,9 +12,9 @@ let mco_info = (function() {
         switch (route.mode) {
             case 'ghs': { await runGhs(); } break;
             case 'tree': { await runTree(); } break;
-            case 'ghmghs': { await runList('ghmghs'); } break;
-            case 'diagnoses': { await runList('diagnoses'); } break;
-            case 'procedures': { await runList('procedures'); } break;
+            case 'ghmghs': { await runGhmGhs(); } break;
+            case 'diagnoses': { await runDiagnoses(); } break;
+            case 'procedures': { await runProcedures(); } break;
 
             default: {
                 throw new Error(`Mode inconnu '${route.mode}'`);
@@ -28,13 +28,14 @@ let mco_info = (function() {
                      settings.mco.versions[settings.mco.versions.length - 1].begin_date,
             mode: path[1] || 'ghs',
 
-            ghs: {}
+            ghs: {},
+            diagnoses: {}
         };
 
         // Mode-specific part
         switch (args.mode) {
             case 'ghs': {
-                args.ghs.sector = path[2] || 'public';
+                args.sector = path[2] || 'public';
                 args.ghm_root = path[3] || null;
                 args.ghs.duration = parseInt(params.duration, 10) || 200;
                 args.ghs.coeff = !!parseInt(params.coeff, 10) || false;
@@ -58,7 +59,7 @@ let mco_info = (function() {
         // Mode-specific part
         switch (args.mode) {
             case 'ghs': {
-                path.push(args.ghs.sector);
+                path.push(args.sector);
                 if (args.ghm_root)
                     path.push(args.ghm_root);
 
@@ -72,6 +73,144 @@ let mco_info = (function() {
     };
 
     // ------------------------------------------------------------------------
+    // Lists
+    // ------------------------------------------------------------------------
+
+    async function runGhmRoots() {
+        let version = findVersion(route.version);
+        let [mco, ghmghs] = await Promise.all([
+            data.fetchDictionary('mco'),
+            data.fetchJSON(`${env.base_url}api/mco_ghmghs.json?sector=${route.sector}&date=${version.begin_date}`)
+        ]);
+
+        // Options
+        render(html`
+            ${renderVersionLine(settings.mco.versions, version)}
+            ${renderSectorSelector(route.sector)}
+        `, document.querySelector('#th_options'));
+
+        // Table
+        renderList('ghm_roots', ghmghs, {
+            page_len: 800,
+            columns: [
+                {key: 'ghm', title: 'GHM', func: ghs => ghs.ghm},
+                {key: 'ghs', title: 'GHS', func: ghs => ghs.ghs},
+                {key: 'durations', title: 'Durées', func: ghs => maskToRangeStr(ghs.durations)},
+                {key: 'confirm', title: 'Confirmation',
+                    func: ghs => ghs.confirm_treshold ? `< ${format.duration(ghs.confirm_treshold)}` : ''}
+            ]
+        });
+    }
+
+    async function runGhmGhs() {
+        let version = findVersion(route.version);
+        let [mco, ghmghs] = await Promise.all([
+            data.fetchDictionary('mco'),
+            data.fetchJSON(`${env.base_url}api/mco_ghmghs.json?sector=${route.sector}&date=${version.begin_date}`)
+        ]);
+
+        // Options
+        render(html`
+            ${renderVersionLine(settings.mco.versions, version)}
+            ${renderSectorSelector(route.sector)}
+        `, document.querySelector('#th_options'));
+
+        // Table
+        renderList('ghmghs', ghmghs, {
+            page_len: 300,
+            columns: [
+                {key: 'ghm', title: 'GHM', func: ghs => ghs.ghm},
+                {key: 'ghs', title: 'GHS', func: ghs => ghs.ghs},
+                {key: 'durations', title: 'Durées', func: ghs => maskToRangeStr(ghs.durations)},
+                {key: 'confirm', title: 'Confirmation',
+                    func: ghs => ghs.confirm_treshold ? `< ${format.duration(ghs.confirm_treshold)}` : ''}
+            ]
+        });
+    }
+
+    async function runDiagnoses() {
+        let version = findVersion(route.version);
+        let [cim10, diagnoses] = await Promise.all([
+            data.fetchDictionary('cim10'),
+            data.fetchJSON(`${env.base_url}api/mco_diagnoses.json?date=${version.begin_date}`)
+        ]);
+
+        // Options
+        render(html`
+            ${renderVersionLine(settings.mco.versions, version)}
+        `, document.querySelector('#th_options'));
+
+        // Table
+        renderList('diagnoses', diagnoses, {
+            page_len: 300,
+            columns: [
+                {key: 'code', title: 'Code', func: diag => cim10.diagnoses.describe(diag.diag)},
+                {key: 'severity', title: 'Niveau', func: diag => diag.severity},
+                {key: 'cmd', title: 'CMD', func: diag => diag.cmd},
+                {key: 'main_list', title: 'Liste principale', func: diag => diag.main_list}
+            ]
+        });
+    }
+
+    async function runProcedures() {
+        let version = findVersion(route.version);
+        let [ccam, procedures] = await Promise.all([
+            data.fetchDictionary('ccam'),
+            data.fetchJSON(`${env.base_url}api/mco_procedures.json?date=${version.begin_date}`)
+        ]);
+
+        // Options
+        render(html`
+            ${renderVersionLine(settings.mco.versions, version)}
+        `, document.querySelector('#th_options'));
+
+        // Table
+        renderList('procedures', procedures, {
+            page_len: 300,
+            columns: [
+                {key: 'code', title: 'Code', func: proc => ccam.procedures.describe(proc.proc)},
+                {key: 'begin_date', title: 'Début', func: proc => dates.fromString(proc.begin_date)},
+                {key: 'end_date', title: 'Fin', func: proc => dates.fromString(proc.end_date)},
+                {key: 'phase', title: 'Phase', func: proc => proc.phase},
+                {key: 'activities', title: 'Activités', func: proc => proc.activities},
+                {key: 'extensions', title: 'Extensions', func: proc => proc.extensions}
+            ]
+        });
+    }
+
+    function renderList(name, records, handler) {
+        let route2 = route[name];
+
+        let etab = new EasyTable;
+        etab.setPageLen(handler.page_len);
+
+        for (let col of handler.columns) {
+            etab.addColumn(col.key, col.title, value => {
+                if (value == null) {
+                    return null;
+                } else if (typeof value === 'string') {
+                    return self.addSpecLinks(value);
+                } else {
+                    return value.toLocaleString();
+                }
+            });
+        }
+
+        for (let i = 0; i < records.length; i++) {
+            let record = records[i];
+
+            etab.beginRow();
+            for (let col of handler.columns) {
+                let value = col.func(record);
+                etab.addCell(value);
+            }
+            etab.endRow();
+        }
+
+        render(etab.render(), document.querySelector('#th_view'));
+    }
+
+    // ------------------------------------------------------------------------
     // GHS
     // ------------------------------------------------------------------------
 
@@ -79,7 +218,7 @@ let mco_info = (function() {
         let version = findVersion(route.version);
         let [mco, ghmghs] = await Promise.all([
             data.fetchDictionary('mco'),
-            data.fetchJSON(`${env.base_url}api/mco_ghmghs.json?sector=${route.ghs.sector}&date=${version.begin_date}`)
+            data.fetchJSON(`${env.base_url}api/mco_ghmghs.json?sector=${route.sector}&date=${version.begin_date}`)
         ]);
 
         if (!route.ghm_root)
@@ -88,10 +227,7 @@ let mco_info = (function() {
         // Options
         render(html`
             ${renderVersionLine(settings.mco.versions, version)}
-            <label>Secteur <select @change=${e => thop.go(self, {ghs: {sector: e.target.value}})}>
-                <option value="public" .selected=${route.ghs.sector === 'public'}>Public</option>
-                <option value="private" .selected=${route.ghs.sector === 'private'}>Privé</option>
-            </select></label>
+            ${renderSectorSelector(route.sector)}
             <label>Durée <input type="number" step="5" min="0" max="500" .value=${route.ghs.duration}
                                  @change=${e => thop.go(self, {ghs: {duration: e.target.value}})}/></label>
             <label>Coefficient <input type="checkbox" .checked=${route.ghs.coeff}
@@ -403,21 +539,6 @@ let mco_info = (function() {
     }
 
     // ------------------------------------------------------------------------
-    // Lists
-    // ------------------------------------------------------------------------
-
-    async function runList(name) {
-        let version = findVersion(route.version);
-
-        // Options
-        render(renderVersionLine(settings.mco.versions, version),
-               document.querySelector('#th_options'));
-
-        // View
-        render('', document.querySelector('#th_view'));
-    }
-
-    // ------------------------------------------------------------------------
     // Options
     // ------------------------------------------------------------------------
 
@@ -438,6 +559,15 @@ let mco_info = (function() {
             vlin.setDate(current_version.begin_date);
 
         return vlin.render();
+    }
+
+    function renderSectorSelector(current_sector) {
+        return html`
+            <label>Secteur <select @change=${e => thop.go(self, {sector: e.target.value})}>
+                <option value="public" .selected=${current_sector === 'public'}>Public</option>
+                <option value="private" .selected=${current_sector === 'private'}>Privé</option>
+            </select></label>
+        `;
     }
 
     function renderGhmRootSelector(mco, ghm_roots, current_ghm_root) {
@@ -504,6 +634,39 @@ let mco_info = (function() {
     function findCachedDefinition(name, chapter, code) {
         let dict = data.fetchCachedDictionary(name, true);
         return dict ? dict[chapter].find(code) : null;
+    }
+
+
+    function maskToRangeStr(mask) {
+        if (mask === 0xFFFFFFFF)
+            return '';
+
+        let ranges = [];
+
+        let i = 0;
+        for (;;) {
+            while (i < 32 && !(mask & (1 << i)))
+                i++;
+            if (i >= 32)
+                break;
+
+            let j = i + 1;
+            while (j < 32 && (mask & (1 << j)))
+                j++;
+            j--;
+
+            if (j == 31) {
+                ranges.push(`≥ ${format.duration(i)}`);
+            } else if (j > i) {
+                ranges.push(`${i}-${format.duration(j)}`);
+            } else {
+                ranges.push(format.duration(i));
+            }
+
+            i = j + 1;
+        }
+
+        return ranges.join(', ');
     }
 
     return this;
