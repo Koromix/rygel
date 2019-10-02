@@ -206,6 +206,7 @@ let thop = (function() {
     function updateMenu() {
         render(html`
             <a class="category">Informations MCO</a>
+            ${makeMenuLink('Racines de GHM', mco_info.makeURL({mode: 'ghm_roots'}))}
             ${makeMenuLink('Tarifs GHS', mco_info.makeURL({mode: 'ghs'}))}
             ${makeMenuLink('Arbre de groupage', mco_info.makeURL({mode: 'tree'}))}
             ${makeMenuLink('GHM / GHS', mco_info.makeURL({mode: 'ghmghs'}))}
