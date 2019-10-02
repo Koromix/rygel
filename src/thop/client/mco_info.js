@@ -41,9 +41,12 @@ let mco_info = (function() {
             case 'ghm_roots': { /* Nothing to do */ } break;
             case 'ghmghs': {
                 args.sector = path[2] || 'public';
-            } // fallthrough
+                args[args.mode].offset = parseInt(params.offset, 10) || null;
+                args[args.mode].sort = params.sort || null;
+            } break;
             case 'diagnoses':
             case 'procedures': {
+                args[args.mode].list = path[2] || null;
                 args[args.mode].offset = parseInt(params.offset, 10) || null;
                 args[args.mode].sort = params.sort || null;
             } break;
@@ -76,9 +79,13 @@ let mco_info = (function() {
             case 'ghm_roots': { /* Nothing to do */ } break;
             case 'ghmghs': {
                 path.push(args.sector);
-            } // fallthrough
+                params.offset = args[args.mode].offset || null;
+                params.sort = args[args.mode].sort || null;
+            } break;
             case 'diagnoses':
             case 'procedures': {
+                if (args[args.mode].list)
+                    path.push(args[args.mode].list);
                 params.offset = args[args.mode].offset || null;
                 params.sort = args[args.mode].sort || null;
             } break;
@@ -179,12 +186,13 @@ let mco_info = (function() {
         let version = findVersion(route.version);
         let [cim10, diagnoses] = await Promise.all([
             data.fetchDictionary('cim10'),
-            data.fetchJSON(`${env.base_url}api/mco_diagnoses.json?date=${version.begin_date}`)
+            data.fetchJSON(`${env.base_url}api/mco_diagnoses.json?date=${version.begin_date}&spec=${route.diagnoses.list || ''}`)
         ]);
 
         // Options
         render(html`
             ${renderVersionLine(settings.mco.versions, version)}
+            ${renderListInfo('diagnoses', 'diagnostics', route.diagnoses.list)}
         `, document.querySelector('#th_options'));
 
         // Table
@@ -209,12 +217,13 @@ let mco_info = (function() {
         let version = findVersion(route.version);
         let [ccam, procedures] = await Promise.all([
             data.fetchDictionary('ccam'),
-            data.fetchJSON(`${env.base_url}api/mco_procedures.json?date=${version.begin_date}`)
+            data.fetchJSON(`${env.base_url}api/mco_procedures.json?date=${version.begin_date}&spec=${route.procedures.list || ''}`)
         ]);
 
         // Options
         render(html`
             ${renderVersionLine(settings.mco.versions, version)}
+            ${renderListInfo('procedures', 'actes', route.procedures.list)}
         `, document.querySelector('#th_options'));
 
         // Table
@@ -674,6 +683,26 @@ let mco_info = (function() {
         `
     }
 
+    function renderListInfo(type, label, current_list) {
+        if (current_list) {
+            let args = {};
+            args[type] = {list: null, offset: 0};
+
+            return html`
+                <div class="opt_list">
+                    <b>Liste :</b> ${current_list}
+                    <a href=${self.makeURL(args)}>(afficher tout)</a>
+                </div>
+            `;
+        } else {
+            return html`
+                <div class="opt_list">
+                    <b>Liste :</b> tous les ${label}
+                </div>
+            `;
+        }
+    }
+
     // ------------------------------------------------------------------------
     // Utility
     // ------------------------------------------------------------------------
@@ -691,9 +720,9 @@ let mco_info = (function() {
             let m;
             let frag;
             if (m = str.match(/A(\-[0-9]+|\$[0-9]+\.[0-9]+)/)) {
-                frag = html`<a href=${self.makeURL()}>${m[0]}</a>`;
+                frag = html`<a href=${self.makeURL({mode: 'procedures', procedures: {list: m[0], offset: 0}})}>${m[0]}</a>`;
             } else if (m = str.match(/D(\-[0-9]+|\$[0-9]+\.[0-9]+)/)) {
-                frag = html`<a href=${self.makeURL()}>${m[0]}</a>`;
+                frag = html`<a href=${self.makeURL({mode: 'diagnoses', diagnoses: {list: m[0], offset: 0}})}>${m[0]}</a>`;
             } else if (m = str.match(/[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?( \[[0-9]{1,3}\])?/)) {
                 let ghm_root = m[0].substr(0, 5);
                 let tooltip = findCachedLabel('mco', 'ghm_roots', ghm_root) || '';

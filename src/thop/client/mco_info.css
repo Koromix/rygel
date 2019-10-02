@@ -155,3 +155,8 @@
     .tr_tree ul { padding-left: 25px; }
     .tr_tree { font-size: 0.9em; }
 }
+
+/* -------------------- Options -------------------- */
+
+.opt_list { font-size: 1.2em; }
+.opt_list > b { font-variant: small-caps; }
