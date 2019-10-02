@@ -10,7 +10,11 @@ function EasyTable() {
 
     let page_len = -1;
     let offset = 0;
-    let options = {};
+    let options = {
+        header: true,
+        parents: true,
+        empty: true
+    };
 
     let columns;
     let columns_map;
@@ -127,7 +131,7 @@ function EasyTable() {
             ${sorted_rows.length ? html`<p class="etab_stat">${stat_text}</p>` : ''}
 
             <table class="etab_table">
-                <thead><tr>${(!options.hide_header ? columns : []).map((col, idx) => {
+                <thead><tr>${(options.header ? columns : []).map((col, idx) => {
                     let cls;
                     if (col.key === sort_key) {
                         cls = 'ascending';
@@ -146,7 +150,7 @@ function EasyTable() {
                         let row = sorted_rows[idx];
 
                         let trs = [];
-                        if (!options.hide_parents) {
+                        if (options.parents) {
                             let parent = row.parent;
                             while (parent && parent !== parents_buf[parent.depth]) {
                                 parents_buf[parent.depth] = parent;
@@ -160,7 +164,7 @@ function EasyTable() {
                         return trs;
                     })}
 
-                    ${!options.hide_empty && !render_count ?
+                    ${options.empty && !render_count ?
                         html`<tr><td colspan=${columns.length}>${sorted_rows.length ? 'Cette page n\'existe pas'
                                                                                     : 'Aucun contenu à afficher'}</td></tr>` : ''}
                 </tbody>
