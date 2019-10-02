@@ -77,7 +77,7 @@ void ProduceMcoDiagnoses(const http_RequestInfo &request, const User *, http_IO 
     mco_ListSpecifier spec(mco_ListSpecifier::Table::Diagnoses);
     {
         const char *spec_str = request.GetQueryValue("spec");
-        if (spec_str) {
+        if (spec_str && spec_str[0]) {
             spec = mco_ListSpecifier::FromString(spec_str);
             if (!spec.IsValid() || spec.table != mco_ListSpecifier::Table::Diagnoses) {
                 LogError("Invalid diagnosis list specifier '%1'", spec_str);
@@ -130,7 +130,7 @@ void ProduceMcoProcedures(const http_RequestInfo &request, const User *, http_IO
     mco_ListSpecifier spec(mco_ListSpecifier::Table::Procedures);
     {
         const char *spec_str = request.GetQueryValue("spec");
-        if (spec_str) {
+        if (spec_str && spec_str[0]) {
             spec = mco_ListSpecifier::FromString(spec_str);
             if (!spec.IsValid() || spec.table != mco_ListSpecifier::Table::Procedures) {
                 LogError("Invalid procedure list specifier '%1'", spec_str);
