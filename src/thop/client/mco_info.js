@@ -10,11 +10,12 @@ let mco_info = (function() {
 
     this.run = async function() {
         switch (route.mode) {
-            case 'ghs': { await runGhs(); } break;
-            case 'tree': { await runTree(); } break;
+            case 'ghm_roots': { await runGhmRoots(); } break;
             case 'ghmghs': { await runGhmGhs(); } break;
             case 'diagnoses': { await runDiagnoses(); } break;
             case 'procedures': { await runProcedures(); } break;
+            case 'ghs': { await runGhs(); } break;
+            case 'tree': { await runTree(); } break;
 
             default: {
                 throw new Error(`Mode inconnu '${route.mode}'`);
@@ -26,7 +27,7 @@ let mco_info = (function() {
         let args = {
             version: dates.fromString(path[0] || null) ||
                      settings.mco.versions[settings.mco.versions.length - 1].begin_date,
-            mode: path[1] || 'ghs',
+            mode: path[1] || 'ghm_roots',
 
             ghmghs: {},
             diagnoses: {},
@@ -37,7 +38,10 @@ let mco_info = (function() {
 
         // Mode-specific part
         switch (args.mode) {
-            case 'ghmghs':
+            case 'ghm_roots': { /* Nothing to do */ } break;
+            case 'ghmghs': {
+                args.sector = path[2] || 'public';
+            } // fallthrough
             case 'diagnoses':
             case 'procedures': {
                 args[args.mode].offset = parseInt(params.offset, 10) || null;
@@ -69,6 +73,7 @@ let mco_info = (function() {
 
         // Mode-specific part
         switch (args.mode) {
+            case 'ghm_roots': { /* Nothing to do */ } break;
             case 'ghmghs':
             case 'diagnoses':
             case 'procedures': {
@@ -95,6 +100,28 @@ let mco_info = (function() {
     // Lists
     // ------------------------------------------------------------------------
 
+    async function runGhmRoots() {
+        let version = findVersion(route.version);
+        let [mco, ghmghs] = await Promise.all([
+            data.fetchDictionary('mco'),
+            data.fetchJSON(`${env.base_url}api/mco_ghmghs.json?sector=${route.sector || 'public'}&date=${version.begin_date}`)
+        ]);
+
+        let ghm_roots = ghmghs.filter((ghs, idx) => !idx || ghmghs[idx - 1].ghm_root !== ghs.ghm_root)
+                              .map(ghs => ghs.ghm_root);
+
+        // Options
+        render(html`
+            ${renderVersionLine(settings.mco.versions, version)}
+        `, document.querySelector('#th_options'));
+
+        // Table
+        renderList(ghm_roots, {
+            header: false,
+            columns: [{key: 'ghm_root', title: 'Racine de GHM', func: ghm_root => mco.ghm_roots.describe(ghm_root)}]
+        });
+    }
+
     async function runGhmGhs() {
         let version = findVersion(route.version);
         let [mco, ghmghs] = await Promise.all([
@@ -110,6 +137,7 @@ let mco_info = (function() {
 
         // Table
         renderList(ghmghs, {
+            header: true,
             page_len: 300,
 
             offset: route.ghmghs.offset,
@@ -140,6 +168,7 @@ let mco_info = (function() {
 
         // Table
         renderList(diagnoses, {
+            header: true,
             page_len: 300,
 
             offset: route.diagnoses.offset,
@@ -169,6 +198,7 @@ let mco_info = (function() {
 
         // Table
         renderList(procedures, {
+            header: true,
             page_len: 300,
 
             offset: route.procedures.offset,
@@ -198,6 +228,7 @@ let mco_info = (function() {
 
         etab.setPageLen(handler.page_len);
         etab.setOffset(handler.offset || 0);
+        etab.setOptions({header: handler.header});
 
         for (let col of handler.columns) {
             etab.addColumn(col.key, col.title, value => {
