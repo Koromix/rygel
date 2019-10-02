@@ -23,7 +23,7 @@ library(enc)
 
 load_mco <- function(root, err_filename) {
     cmds <- setDT(tribble(
-        ~cmd, ~cmd_desc,
+        ~cmd, ~cmd_label,
         'C01', 'Affections du système nerveux',
         'C02', 'Affections de l\'œil',
         'C03', 'Affections des oreilles, du nez, de la gorge, de la bouche et des dents',
@@ -69,20 +69,20 @@ load_mco <- function(root, err_filename) {
     }), use.names = FALSE)
     setnames(ghm_roots,
              c('racine', 'libelle', 'DA', 'libellé domaine d\'activité', 'GA', 'libellé Groupes d\'Activité'),
-             c('ghm_root', 'desc', 'da', 'da_desc', 'ga', 'ga_desc'))
+             c('ghm_root', 'label', 'da', 'da_label', 'ga', 'ga_label'))
     setorder(ghm_roots, ghm_root, -version)
 
     errors <- setDT(read_excel(err_filename, sheet = 'Erreurs'))
     setnames(errors,
              c('Code erreur', 'Intitulé'),
-             c('erreur', 'desc'))
+             c('erreur', 'label'))
     errors$erreur <- as.integer(errors$erreur)
 
     ghm_roots$cmd <- paste0('C', substr(ghm_roots$ghm_root, 1, 2))
-    ghm_roots[cmds, cmd_desc := i.cmd_desc, on = 'cmd']
+    ghm_roots[cmds, cmd_label := i.cmd_label, on = 'cmd']
 
-    keep_columns <- c('ghm_root', 'desc', 'da', 'da_desc', 'ga', 'ga_desc',
-                      'cmd', 'cmd_desc', 'version')
+    keep_columns <- c('ghm_root', 'label', 'da', 'da_label', 'ga', 'ga_label',
+                      'cmd', 'cmd_label', 'version')
     ghm_roots <- ghm_roots[, intersect(colnames(ghm_roots), keep_columns), with = FALSE]
 
     ghm_roots <- unique(ghm_roots, by = 'ghm_root')
@@ -96,25 +96,25 @@ load_mco <- function(root, err_filename) {
     return (list(
         cmd = list(
             title = unbox('Catégories Majeures de Diagnostics'),
-            definitions = unique(ghm_roots[, list(code = cmd, desc = cmd_desc)], by = 'code')
+            definitions = unique(ghm_roots[, list(code = cmd, label = cmd_label)], by = 'code')
         ),
         da = list(
             title = unbox('Domaines d\'activité'),
-            definitions = unique(ghm_roots[, list(code = da, desc = da_desc)], by = 'code')
+            definitions = unique(ghm_roots[, list(code = da, label = da_label)], by = 'code')
         ),
         ga = list(
             title = unbox('Groupes d\'activité'),
-            definitions = unique(ghm_roots[, list(code = ga, desc = ga_desc)], by = 'code')
+            definitions = unique(ghm_roots[, list(code = ga, label = ga_label)], by = 'code')
         ),
         ghm_roots = list(
             title = unbox('Racines de GHM'),
             parents = c('cmd', 'da', 'ga'),
-            definitions = data.table(code = ghm_roots$ghm_root, desc = ghm_roots$desc,
+            definitions = data.table(code = ghm_roots$ghm_root, label = ghm_roots$label,
                                      parents = parents)
         ),
         errors = list(
             title = unbox('Erreurs MCO'),
-            definitions = errors[, list(code = erreur, desc)]
+            definitions = errors[, list(code = erreur, label)]
         )
     ))
 }
@@ -140,7 +140,7 @@ load_ccam <- function(filename) {
     # ), on = 'hiera']
 
     setorder(ccam, -last_version)
-    ccam <- unique(ccam[, list(code = code, desc = liblong)])
+    ccam <- unique(ccam[, list(code = code, label = liblong)])
 
     return (list(
         procedures = list(
@@ -153,7 +153,7 @@ load_ccam <- function(filename) {
 load_cim10 <- function(filename) {
     cim10 <- fread(filename, encoding = 'Latin-1')
 
-    cim10 <- unique(cim10[, list(code = code, desc = liblong)])
+    cim10 <- unique(cim10[, list(code = code, label = liblong)])
 
     return (list(
         diagnoses = list(
