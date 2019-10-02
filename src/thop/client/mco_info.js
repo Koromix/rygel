@@ -658,7 +658,7 @@ let mco_info = (function() {
         `;
     }
 
-    function renderGhmRootSelector(mco, ghm_roots, current_ghm_root) {
+    function renderGhmRootSelector(mco, current_ghm_root) {
         return html`
             <select @change=${e => thop.go(self, {ghm_root: e.target.value})}>
                 ${mco.ghm_roots.definitions.map(ghm_root => {
