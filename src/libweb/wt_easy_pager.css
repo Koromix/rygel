@@ -3,12 +3,18 @@
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 .epag {
-    margin: 0.5em auto;
-    table-layout: fixed;
+    margin: 2px;
     font-size: 1.1em;
     text-align: center;
+}
+
+.epag table {
+    table-layout: fixed;
+    margin: 0 auto;
+    padding: 0;
 }
 .epag td {
     width: 28px;
     vertical-align: middle;
+    padding: 0;
 }
