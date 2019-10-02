@@ -53,7 +53,7 @@ let util = (function() {
             if (isPodObject(from) && !Object.isFrozen(from)) {
                 let to = obj[key];
 
-                if (to === undefined || !isPodObject(to)) {
+                if (!isPodObject(to)) {
                     to = {};
                     obj[key] = to;
                 }
