@@ -74,7 +74,9 @@ let mco_info = (function() {
         // Mode-specific part
         switch (args.mode) {
             case 'ghm_roots': { /* Nothing to do */ } break;
-            case 'ghmghs':
+            case 'ghmghs': {
+                path.push(args.sector);
+            } // fallthrough
             case 'diagnoses':
             case 'procedures': {
                 params.offset = args[args.mode].offset || null;
