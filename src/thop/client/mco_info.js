@@ -149,7 +149,26 @@ let mco_info = (function() {
                 {key: 'ghs', title: 'GHS', func: ghs => ghs.ghs},
                 {key: 'durations', title: 'Durées', func: ghs => maskToRangeStr(ghs.durations)},
                 {key: 'confirm', title: 'Confirmation',
-                    func: ghs => ghs.confirm_treshold ? `< ${format.duration(ghs.confirm_treshold)}` : ''}
+                    func: ghs => ghs.confirm_treshold ? `< ${format.duration(ghs.confirm_treshold)}` : ''},
+                {key: 'main_diagnosis', title: 'DP', func: ghs => ghs.main_diagnosis},
+                {key: 'diagnoses', title: 'Diagnostics', func: ghs => ghs.diagnoses},
+                {key: 'procedures', title: 'Actes', func: ghs => ghs.procedures ? ghs.procedures.join(', ') : ''},
+                {key: 'authorizations', title: 'Autorisations', tooltip: 'Autorisations (unités et lits)',
+                    func: ghs => {
+                        let ret = [];
+                        if (ghs.unit_authorization)
+                            ret.push(`Unité ${ghs.unit_authorization}`);
+                        if (ghs.bed_authorization)
+                            ret.push(`Lit ${ghs.bed_authorization}`);
+                        return ret;
+                    }
+                },
+                {key: 'old_severity', title: 'Sévérité âgé',
+                    func: ghs => ghs.old_age_treshold ? `≥ ${ghs.old_age_treshold} et ` +
+                                                        `< ${ghs.old_severity_limit + 1}` : null},
+                {key: 'young_severity', title: 'Sévérité jeune',
+                    func: ghs => ghs.young_age_treshold ? `< ${ghs.young_age_treshold} et ` +
+                                                          `< ${ghs.young_severity_limit + 1}` : null}
             ]
         });
     }
