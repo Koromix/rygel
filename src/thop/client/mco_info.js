@@ -674,11 +674,15 @@ let mco_info = (function() {
                 frag = html`<a href=${self.makeURL()}>${m[0]}</a>`;
             } else if (m = str.match(/[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?( \[[0-9]{1,3}\])?/)) {
                 let ghm_root = m[0].substr(0, 5);
-
-                let mco = data.fetchCachedDictionary('mco');
-                let tooltip = mco ? mco.ghm_roots.label(ghm_root) : '';
+                let tooltip = findCachedLabel('mco', 'ghm_roots', ghm_root) || '';
 
                 frag = html`<a class="ghm" href=${self.makeURL({mode: 'ghs', ghm_root: ghm_root})} title=${tooltip}>${m[0]}</a>`;
+            } else if (m = str.match(/[A-Z]{4}[0-9+]{3}/)) {
+                let tooltip = findCachedLabel('ccam', 'procedures', m[0]);
+                frag = tooltip ? html`<abbr title=${tooltip}>${m[0]}</abbr>` : m[0];
+            } else if (m = str.match(/[A-Z][0-9+]{2,5}/)) {
+                let tooltip = findCachedLabel('cim10', 'diagnoses', m[0]);
+                frag = tooltip ? html`<abbr title=${tooltip}>${m[0]}</abbr>` : m[0];
             } else if (m = str.match(/[Nn]oeud ([0-9]+)/)) {
                 frag = html`<a href=${self.makeURL({mode: 'tree'}) + `#n${m[1]}`}>${m[0]}</a>`;
             } else {
@@ -694,6 +698,10 @@ let mco_info = (function() {
         return elements;
     };
 
+    function findCachedLabel(name, chapter, code) {
+        let dict = data.fetchCachedDictionary(name);
+        return dict ? dict[chapter].label(code) : null;
+    }
 
     function maskToRangeStr(mask) {
         if (mask === 0xFFFFFFFF)
