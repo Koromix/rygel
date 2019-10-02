@@ -1177,7 +1177,11 @@ RcppExport SEXP drdR_mco_Procedures(SEXP classifier_xp, SEXP date_xp)
             proc.Set(i, proc_info.proc.str);
             phase[i] = proc_info.phase;
             start_date.Set(i, proc_info.limit_dates[0]);
-            end_date.Set(i, proc_info.limit_dates[1]);
+            if (proc_info.limit_dates[1] < mco_MaxDate1980) {
+                end_date.Set(i, proc_info.limit_dates[1]);
+            } else {
+                end_date.Set(i, {});
+            }
             activities.Set(i, proc_info.ActivitiesToStr(buf));
             extensions.Set(i, proc_info.ExtensionsToStr(buf));
         }

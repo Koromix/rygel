@@ -51,8 +51,6 @@ bool mco_AuthorizationSet::TestFacilityAuthorization(int8_t auth_type, Date date
 
 bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader &st)
 {
-    static const Date default_end_date = mco_ConvertDate1980(UINT16_MAX);
-
     Size authorizations_len = set.authorizations.len;
     RG_DEFER_NC(out_guard, facility_authorizations_len = set.facility_authorizations.len) {
         set.authorizations.RemoveFrom(authorizations_len);
@@ -87,7 +85,7 @@ bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader &st)
                          RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
                 ParseDec(line.Take(20, 4), &auth.dates[0].st.year,
                          RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
-                auth.dates[1] = default_end_date;
+                auth.dates[1] = mco_MaxDate1980;
                 switch (line[27]) {
                     case 'C': { auth.mode = mco_Authorization::Mode::Complete; } break;
                     case 'P': { auth.mode = mco_Authorization::Mode::Partial; } break;
@@ -173,8 +171,7 @@ bool mco_AuthorizationSetBuilder::LoadIni(StreamReader &st)
                 valid = false;
             }
             if (!auth.dates[1].value) {
-                static const Date default_end_date = mco_ConvertDate1980(UINT16_MAX);
-                auth.dates[1] = default_end_date;
+                auth.dates[1] = mco_MaxDate1980;
             }
 
             authorizations->Append(auth);

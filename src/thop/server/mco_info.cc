@@ -149,7 +149,9 @@ void ProduceMcoProcedures(const http_RequestInfo &request, const User *, http_IO
             json.StartObject();
             json.Key("proc"); json.String(proc_info.proc.str);
             json.Key("begin_date"); json.String(Fmt(buf, "%1", proc_info.limit_dates[0]).ptr);
-            json.Key("end_date"); json.String(Fmt(buf, "%1", proc_info.limit_dates[1]).ptr);
+            if (proc_info.limit_dates[1] < mco_MaxDate1980) {
+                json.Key("end_date"); json.String(Fmt(buf, "%1", proc_info.limit_dates[1]).ptr);
+            }
             json.Key("phase"); json.Int(proc_info.phase);
             json.Key("activities"); json.String(proc_info.ActivitiesToStr(buf).ptr);
             if (proc_info.extensions > 1) {
