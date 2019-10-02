@@ -58,7 +58,9 @@ load_mco <- function(root, err_filename) {
     if (!length(files))
         stop('Cannot find any GHM catalog file')
 
-    ghm_roots <- rbindlist(lapply(files, function(filename) {
+    # GHM roots
+
+    ghm_roots <- rbindlist(lapply(files[grepl('racine', files)], function(filename) {
         dt <- as.data.table(read_excel(filename, sheet = 5, skip = 2))
         if (!('DA' %in% colnames(dt))) {
             dt <- as.data.table(read_excel(filename, sheet = 5, skip = 3))
@@ -71,6 +73,30 @@ load_mco <- function(root, err_filename) {
              c('racine', 'libelle', 'DA', 'libellé domaine d\'activité', 'GA', 'libellé Groupes d\'Activité'),
              c('ghm_root', 'label', 'da', 'da_label', 'ga', 'ga_label'))
     setorder(ghm_roots, ghm_root, -version)
+    ghm_roots$cmd <- paste0('C', substr(ghm_roots$ghm_root, 1, 2))
+    ghm_roots[cmds, cmd_label := i.cmd_label, on = 'cmd']
+    ghm_roots <- ghm_roots[, intersect(colnames(ghm_roots),
+                                       c('ghm_root', 'label', 'da', 'da_label', 'ga', 'ga_label',
+                                         'cmd', 'cmd_label', 'version')), with = FALSE]
+    ghm_roots <- unique(ghm_roots, by = 'ghm_root')
+    ghm_roots$version <- NULL
+
+    # GHMs
+
+    ghms <- rbindlist(lapply(files[!grepl('racine', files)], function(filename) {
+        dt <- as.data.table(read_excel(filename, sheet = 1, skip = 2))
+        if (!('DA' %in% colnames(dt))) {
+            dt <- as.data.table(read_excel(filename, sheet = 1, skip = 3))
+        }
+        dt <- dt[, 1:2]
+        dt$version <- str_match(tolower(basename(filename)), 'v([0-9]+[a-z]?)')[,2]
+        dt
+    }), use.names = FALSE)
+    setnames(ghms, c('ghm', 'label', 'version'))
+    setorder(ghms, ghm, -version)
+    ghms <- unique(ghms, by = 'ghm')
+
+    # Errors
 
     errors <- setDT(read_excel(err_filename, sheet = 'Erreurs'))
     setnames(errors,
@@ -78,15 +104,7 @@ load_mco <- function(root, err_filename) {
              c('erreur', 'label'))
     errors$erreur <- as.integer(errors$erreur)
 
-    ghm_roots$cmd <- paste0('C', substr(ghm_roots$ghm_root, 1, 2))
-    ghm_roots[cmds, cmd_label := i.cmd_label, on = 'cmd']
-
-    keep_columns <- c('ghm_root', 'label', 'da', 'da_label', 'ga', 'ga_label',
-                      'cmd', 'cmd_label', 'version')
-    ghm_roots <- ghm_roots[, intersect(colnames(ghm_roots), keep_columns), with = FALSE]
-
-    ghm_roots <- unique(ghm_roots, by = 'ghm_root')
-    ghm_roots$version <- NULL
+    # Output
 
     parents <- lapply(1:nrow(ghm_roots),
                       function(i) list(cmd = unbox(ghm_roots[i,]$cmd),
@@ -111,6 +129,10 @@ load_mco <- function(root, err_filename) {
             parents = c('cmd', 'da', 'ga'),
             definitions = data.table(code = ghm_roots$ghm_root, label = ghm_roots$label,
                                      parents = parents)
+        ),
+        ghm = list(
+            title = unbox('GHM'),
+            definitions = data.table(code = ghms$ghm, label = ghms$label)
         ),
         errors = list(
             title = unbox('Erreurs MCO'),

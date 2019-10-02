@@ -145,7 +145,7 @@ let mco_info = (function() {
             route: (offset, sort) => ({ghmghs: {offset: offset, sort: sort}}),
 
             columns: [
-                {key: 'ghm', title: 'GHM', func: ghs => ghs.ghm},
+                {key: 'ghm', title: 'GHM', func: ghs => mco.ghm.describe(ghs.ghm)},
                 {key: 'ghs', title: 'GHS', func: ghs => ghs.ghs},
                 {key: 'durations', title: 'Durées', func: ghs => maskToRangeStr(ghs.durations)},
                 {key: 'confirm', title: 'Confirmation',
