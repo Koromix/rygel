@@ -489,9 +489,9 @@ let mco_info = (function() {
 
             if (node.type === 'ghm') {
                 let ghm_root = node.key.substr(0, 5);
-                let desc = mco.ghm_roots.label(ghm_root);
+                let label = mco.ghm_roots.label(ghm_root);
 
-                let li = renderTreeGhm(node_idx, node.text, desc);
+                let li = renderTreeGhm(node_idx, node.text, label);
                 elements.push(li);
             } else if (node.test === 20 && node.children_idx === parent_next_indices[0]) {
                 // Hide GOTO nodes at the end of a chain, the classifier uses those to
@@ -591,11 +591,12 @@ let mco_info = (function() {
         e.preventDefault();
     }
 
-    function renderTreeGhm(idx, text, desc) {
+    function renderTreeGhm(idx, text, label) {
         let ret = {
             idx: idx,
             type: 'leaf',
-            vdom: html`<span><span class="n">${idx} </span>${self.addSpecLinks(text)} <span class="desc">${desc}</span></span>`
+            vdom: html`<span><span class="n">${idx} </span>${self.addSpecLinks(text)}
+                             <span class="label">${label}</span></span>`
         };
 
         return ret;
