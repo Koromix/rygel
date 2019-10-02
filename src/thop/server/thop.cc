@@ -341,8 +341,10 @@ static void InitRoutes()
     // Root
     add_asset_route("GET", "/", Route::Matching::Exact, html);
     add_asset_route("GET", "/mco_info", Route::Matching::Walk, html);
-    add_asset_route("GET", "/mco_casemix", Route::Matching::Walk, html);
-    add_asset_route("GET", "/user", Route::Matching::Walk, html);
+    if (thop_has_casemix) {
+        add_asset_route("GET", "/mco_casemix", Route::Matching::Walk, html);
+        add_asset_route("GET", "/user", Route::Matching::Walk, html);
+    }
 
     // Common API
     add_function_route("GET", "/api/settings.json", ProduceSettings);
