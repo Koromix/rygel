@@ -255,6 +255,7 @@ struct mco_SrcPair {
 };
 
 Date mco_ConvertDate1980(uint16_t days);
+static const Date mco_MaxDate1980 = mco_ConvertDate1980(UINT16_MAX);
 
 struct mco_TableIndex {
     Date limit_dates[2];

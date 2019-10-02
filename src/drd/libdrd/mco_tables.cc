@@ -546,7 +546,7 @@ static bool ParseProcedureTable(const uint8_t *file_data, const mco_TableInfo &t
                 if (raw_proc_ptr.date_max < UINT16_MAX) {
                     proc.limit_dates[1] = mco_ConvertDate1980((uint16_t)(raw_proc_ptr.date_max + 1));
                 } else {
-                    proc.limit_dates[1] = mco_ConvertDate1980(UINT16_MAX);
+                    proc.limit_dates[1] = mco_MaxDate1980;
                 }
 
                 const uint8_t *proc_data = file_data + table.sections[2].raw_offset +
