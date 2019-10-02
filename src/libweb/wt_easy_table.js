@@ -126,9 +126,11 @@ function EasyTable() {
 
         let parents_buf = Array.apply(null, Array(row_sets.length - 1));
         return html`
-            ${renderPager()}
-
-            ${sorted_rows.length ? html`<p class="etab_stat">${stat_text}</p>` : ''}
+            <div class="etab_header">
+                ${sorted_rows.length ? html`<p class="etab_stat">${stat_text}</p>` : ''}
+                ${renderPager()}
+                <div></div>
+            </div>
 
             <table class="etab_table">
                 <thead><tr>${(options.header ? columns : []).map((col, idx) => {
