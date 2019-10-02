@@ -438,7 +438,7 @@ let mco_info = (function() {
 
     async function runTree() {
         let version = findVersion(route.version);
-        let [_, tree_nodes] = await Promise.all([
+        let [mco, tree_nodes] = await Promise.all([
             data.fetchDictionary('mco'),
             data.fetchJSON(`${env.base_url}api/mco_tree.json?date=${version.begin_date}`)
         ]);
@@ -448,13 +448,13 @@ let mco_info = (function() {
                document.querySelector('#th_options'));
 
         // Tree
-        render(renderTree(tree_nodes),
+        render(renderTree(tree_nodes, mco),
                document.querySelector('#th_view'));
     }
 
-    function renderTree(nodes) {
+    function renderTree(nodes, mco) {
         if (nodes.length) {
-            let children = buildTreeRec(nodes, 0, '', []);
+            let children = buildTreeRec(nodes, mco, 0, '', []);
             return html`
                 <ul class="tr_tree">
                     ${renderTreeChildren(children)}
@@ -465,7 +465,7 @@ let mco_info = (function() {
         }
     }
 
-    function buildTreeRec(nodes, start_idx, chain_str, parent_next_indices) {
+    function buildTreeRec(nodes, mco, start_idx, chain_str, parent_next_indices) {
         let elements = [];
 
         let indices = [];
@@ -487,7 +487,13 @@ let mco_info = (function() {
             let node = nodes[node_idx];
             indices.shift();
 
-            if (node.test === 20 && node.children_idx === parent_next_indices[0]) {
+            if (node.type === 'ghm') {
+                let ghm_root = node.key.substr(0, 5);
+                let desc = mco.ghm_roots.label(ghm_root);
+
+                let li = renderTreeGhm(node_idx, node.text, desc);
+                elements.push(li);
+            } else if (node.test === 20 && node.children_idx === parent_next_indices[0]) {
                 // Hide GOTO nodes at the end of a chain, the classifier uses those to
                 // jump back to go back one level.
                 break;
@@ -495,35 +501,35 @@ let mco_info = (function() {
                 // Here we deal with jump lists (mainly D-xx and D-xxxx)
                 for (let j = 1; j < node.children_count; j++) {
                     let recurse_str = chain_str + node.key + ('0' + j).slice(-2);
-                    let pseudo_idx = (j > 1) ? ('' + node_idx + '-' + j) : node_idx;
-                    let pseudo_text = node.text + ' ' + nodes[node.children_idx + j].header;
+                    let pseudo_idx = (j > 1) ? `${node_idx}-${j}` : node_idx;
+                    let pseudo_text = `${node.text} ${nodes[node.children_idx + j].header}`;
 
-                    let children = buildTreeRec(nodes, node.children_idx + j, recurse_str, indices);
-                    let li = renderTreeNode(pseudo_idx, pseudo_text, children, recurse_str);
+                    let children = buildTreeRec(nodes, mco, node.children_idx + j, recurse_str, indices);
+                    let li = renderTreeTest(pseudo_idx, pseudo_text, children, recurse_str);
                     elements.push(li);
                 }
             } else if (node.children_count === 2) {
                 let recurse_str = chain_str + node.key;
 
-                let children = buildTreeRec(nodes, node.children_idx + !node.reverse, recurse_str, indices);
-                let li = renderTreeNode(node_idx, node.reverse || node.text, children, recurse_str);
+                let children = buildTreeRec(nodes, mco, node.children_idx + !node.reverse, recurse_str, indices);
+                let li = renderTreeTest(node_idx, node.reverse || node.text, children, recurse_str);
                 elements.push(li);
             } else {
                 let recurse_str = chain_str + node.key;
                 let leaf = !node.children_count || node.children_count == 1;
 
                 let children = util.mapRange(1, node.children_count,
-                                             j => buildTreeRec(nodes, node.children_idx + j, recurse_str, indices));
-                let li = renderTreeNode(node_idx, node.text, children, recurse_str);
+                                             j => buildTreeRec(nodes, mco, node.children_idx + j, recurse_str, indices));
+                let li = renderTreeTest(node_idx, node.text, children, recurse_str);
                 elements.push(li);
 
                 // Hide repeated subtrees, this happens with error-generating nodes 80 and 222
                 if (node.test !== 20 && parent_next_indices.includes(node.children_idx)) {
                     if (node.children_idx != parent_next_indices[0]) {
-                        let pseudo_idx = '' + node_idx + '-2';
+                        let pseudo_idx = `${node_idx}-2`;
                         let pseudo_text = 'Saut noeud ' + node.children_idx;
 
-                        let li = renderTreeNode(pseudo_idx, pseudo_text);
+                        let li = renderTreeTest(pseudo_idx, pseudo_text);
                         elements.push(li);
                     }
 
@@ -535,18 +541,7 @@ let mco_info = (function() {
         return elements;
     }
 
-    function handleTreeNodeClick(e) {
-        let li = this.parentNode.parentNode;
-        if (li.classList.toggle('collapse')) {
-            collapse_nodes.add(li.dataset.chain);
-        } else {
-            collapse_nodes.delete(li.dataset.chain);
-        }
-
-        e.preventDefault();
-    }
-
-    function renderTreeNode(idx, text, children = [], chain_str = null) {
+    function renderTreeTest(idx, text, children = [], chain_str = null) {
         if (children.length === 1 && children[0].type === 'leaf') {
             // Simplify when there is only one leaf children
             let ret = {
@@ -562,7 +557,7 @@ let mco_info = (function() {
                 idx: idx,
                 type: 'parent',
                 chain_str: chain_str,
-                vdom: html`<span><span class="n" @click=${handleTreeNodeClick}>${idx} </span>${self.addSpecLinks(text)}</span>
+                vdom: html`<span><span class="n" @click=${handleTreeTestClick}>${idx} </span>${self.addSpecLinks(text)}</span>
                            <ul>${renderTreeChildren(children)}</ul>`
             };
 
@@ -571,7 +566,7 @@ let mco_info = (function() {
             let ret = {
                 idx: idx,
                 type: 'leaf',
-                vdom: html`<span><span class="n">${idx} </span>${self.addSpecLinks(text, true)}</span>`
+                vdom: html`<span><span class="n">${idx} </span>${self.addSpecLinks(text)}</span>`
             };
 
             return ret;
@@ -583,6 +578,27 @@ let mco_info = (function() {
             let cls = child.type + (child.chain_str && collapse_nodes.has(child.chain_str) ? ' collapse' : '');
             return html`<li id=${'n' + child.idx} class=${cls}>${child.vdom}</li>`;
         });
+    }
+
+    function handleTreeTestClick(e) {
+        let li = this.parentNode.parentNode;
+        if (li.classList.toggle('collapse')) {
+            collapse_nodes.add(li.dataset.chain);
+        } else {
+            collapse_nodes.delete(li.dataset.chain);
+        }
+
+        e.preventDefault();
+    }
+
+    function renderTreeGhm(idx, text, desc) {
+        let ret = {
+            idx: idx,
+            type: 'leaf',
+            vdom: html`<span><span class="n">${idx} </span>${self.addSpecLinks(text)} <span class="desc">${desc}</span></span>`
+        };
+
+        return ret;
     }
 
     // ------------------------------------------------------------------------
@@ -653,15 +669,18 @@ let mco_info = (function() {
             let m;
             let frag;
             if (m = str.match(/A(\-[0-9]+|\$[0-9]+\.[0-9]+)/)) {
-                frag = makeSpecAnchor('', m[0], null, false, self.makeURL());
+                frag = html`<a href=${self.makeURL()}>${m[0]}</a>`;
             } else if (m = str.match(/D(\-[0-9]+|\$[0-9]+\.[0-9]+)/)) {
-                frag = makeSpecAnchor('', m[0], null, false, self.makeURL());
+                frag = html`<a href=${self.makeURL()}>${m[0]}</a>`;
             } else if (m = str.match(/[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?( \[[0-9]{1,3}\])?/)) {
-                let code = m[0].substr(0, 5);
-                frag = makeSpecAnchor('ghm', m[0], findCachedDefinition('mco', 'ghm_roots', code),
-                                      append_desc, self.makeURL({mode: 'ghs', ghm_root: code}));
+                let ghm_root = m[0].substr(0, 5);
+
+                let mco = data.fetchCachedDictionary('mco');
+                let tooltip = mco ? mco.ghm_roots.label(ghm_root) : '';
+
+                frag = html`<a class="ghm" href=${self.makeURL({mode: 'ghs', ghm_root: ghm_root})} title=${tooltip}>${m[0]}</a>`;
             } else if (m = str.match(/[Nn]oeud ([0-9]+)/)) {
-                frag = makeSpecAnchor('', m[0], null, false, self.makeURL({mode: 'tree'}) + `#n${m[1]}`);
+                frag = html`<a href=${self.makeURL({mode: 'tree'}) + `#n${m[1]}`}>${m[0]}</a>`;
             } else {
                 break;
             }
@@ -674,19 +693,6 @@ let mco_info = (function() {
 
         return elements;
     };
-
-    function makeSpecAnchor(cls, code, defn, append_desc, url) {
-        let tooltip = defn ? defn.describe() : '';
-        let desc = (defn && append_desc) ? defn.desc : null;
-
-        return html`<a class=${cls} href=${url}
-                       title=${tooltip}>${code}</a>${desc ? html`<span class="desc"> ${desc}</span>` : ''}`;
-    }
-
-    function findCachedDefinition(name, chapter, code) {
-        let dict = data.fetchCachedDictionary(name, true);
-        return dict ? dict[chapter].find(code) : null;
-    }
 
 
     function maskToRangeStr(mask) {

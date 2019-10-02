@@ -71,13 +71,17 @@ let data = (function() {
 
         this.find = function(code) { return map[code]; };
 
+        this.label = function(code) {
+            let defn = map[code];
+            return defn ? defn.desc : null;
+        };
         this.describe = function(code) {
             let defn = map[code];
             return defn ? defn.describe() : code;
         };
         this.describeParent = function(code, type) {
             let defn = map[code];
-            return defn ? dict[type].describeParent(type) : '????';
+            return defn ? dict[type].describeParent(type) : null;
         };
 
         function describeDefinition() { return `${this.code} – ${this.desc}`; }
