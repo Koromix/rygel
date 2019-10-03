@@ -5,8 +5,8 @@
 function EasyPager() {
     let self = this;
 
-    this.hrefBuilder = page => '#';
-    this.changeHandler = (e, page) => {};
+    this.urlBuilder = page => '#';
+    this.clickHandler = (e, page) => {};
 
     let last_page;
     let current_page;
@@ -18,6 +18,17 @@ function EasyPager() {
     this.getPage = function() { return current_page; };
 
     this.render = function() {
+        let root_el = document.createElement('div');
+        root_el.className = 'epag';
+
+        // We don't return VDOM, because if we did the next render() we do after user interaction
+        // would use a new binding, and replace the widget.
+        render(renderWidget(), root_el);
+
+        return root_el;
+    };
+
+    function renderWidget() {
         let start_page, end_page;
         if (last_page < 8) {
             start_page = 1;
@@ -34,24 +45,22 @@ function EasyPager() {
         }
 
         return html`
-            <div class="epag">
-                <table>
-                    ${makePageLink('≪', current_page > 1 ? (current_page - 1) : null)}
-                    ${start_page > 1 ?
-                        html`${makePageLink(1, 1)}<td> … </td>` : ''}
-                    ${util.mapRange(start_page, end_page + 1,
-                                    page => makePageLink(page, page !== current_page ? page : null))}
-                    ${end_page < last_page ?
-                        html`<td> … </td>${makePageLink(last_page, last_page)}` : ''}
-                    ${makePageLink('≫', current_page < last_page ? (current_page + 1) : null)}
-                </table>
-            </div>
+            <table>
+                ${makePageLink('≪', current_page > 1 ? (current_page - 1) : null)}
+                ${start_page > 1 ?
+                    html`${makePageLink(1, 1)}<td> … </td>` : ''}
+                ${util.mapRange(start_page, end_page + 1,
+                                page => makePageLink(page, page !== current_page ? page : null))}
+                ${end_page < last_page ?
+                    html`<td> … </td>${makePageLink(last_page, last_page)}` : ''}
+                ${makePageLink('≫', current_page < last_page ? (current_page + 1) : null)}
+            </table>
         `;
-    };
+    }
 
     function makePageLink(text, page) {
         if (page) {
-            return html`<td><a href=${self.hrefBuilder(page)} @click=${e => handlePageClick(e, page)}>${text}</a></td>`;
+            return html`<td><a href=${self.urlBuilder.call(self, page)} @click=${e => handlePageClick(e, page)}>${text}</a></td>`;
         } else {
             return html`<td>${text}</td>`;
         }
@@ -59,14 +68,10 @@ function EasyPager() {
 
     function handlePageClick(e, page) {
         current_page = page;
-        self.changeHandler.call(self, e, page);
+
+        if (!self.clickHandler.call(self, e, page)) {
+            let root_el = util.findParent(e.target, el => el.classList.contains('epag'));
+            render(renderWidget(), root_el);
+        }
     }
 }
-
-EasyPager.computeLastPage = function(render_count, row_count, page_length) {
-    let last_page = Math.floor((row_count - 1) / page_length + 1);
-    if (last_page === 1 && render_count === row_count)
-        last_page = null;
-
-    return last_page;
-};

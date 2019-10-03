@@ -5,7 +5,7 @@
 function PeriodPicker() {
     let self = this;
 
-    this.changeHandler = (start, end) => {};
+    this.clickHandler = (e, start, end) => {};
 
     let limit_dates = [dates.create(1900, 1, 1), dates.today()];
     let current_dates = limit_dates;
@@ -158,7 +158,10 @@ function PeriodPicker() {
         e.target.classList.remove('grabbed');
         e.target.onpointermove = null;
 
-        setTimeout(() => self.changeHandler.call(self, current_dates[0], current_dates[1]), 0);
+        if (!self.clickHandler.call(self, e, current_dates[0], current_dates[1])) {
+            let root_el = util.findParent(e.target, el => el.classList.contains('ppik'));
+            render(renderWidget(), root_el);
+        }
     }
 
     function dateToPosition(date) {

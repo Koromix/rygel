@@ -5,7 +5,7 @@
 function TreeSelector() {
     let self = this;
 
-    this.changeHandler = (values, tab) => {};
+    this.clickHandler = (e, values, tab) => {};
 
     let prefix = null;
     let tabs = [];
@@ -175,12 +175,12 @@ function TreeSelector() {
         render(renderSummary(), summary_el);
         syncCheckboxes(root_el);
 
+        if (!TreeSelector.close_func)
+            self.clickHandler.call(self, e, current_values,
+                                   current_tab ? current_tab.key : undefined);
+
         e.preventDefault();
         e.stopPropagation();
-
-        if (!TreeSelector.close_func)
-            self.changeHandler.call(self, current_values,
-                                    current_tab ? current_tab.title : undefined);
     }
 
     function handleTabClick(e, tab) {
@@ -249,8 +249,8 @@ function TreeSelector() {
                 view_el.classList.remove('active');
                 TreeSelector.close_func = null;
 
-                self.changeHandler.call(self, current_values,
-                                        current_tab ? current_tab.title : undefined);
+                self.clickHandler.call(self, e, current_values,
+                                       current_tab ? current_tab.key : undefined);
             };
 
             syncCheckboxes(root_el);
