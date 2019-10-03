@@ -6,7 +6,7 @@
     display: table;
     table-layout: fixed;
     width: 100%;
-    height: 32px;
+    height: 28px;
 }
 .etab_header > * {
     display: table-cell;
