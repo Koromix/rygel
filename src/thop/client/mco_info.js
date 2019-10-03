@@ -239,7 +239,7 @@ let mco_info = (function() {
                 {key: 'code', title: 'Code', func: proc => ccam.procedures.describe(proc.proc)},
                 {key: 'begin_date', title: 'Début', func: proc => dates.fromString(proc.begin_date)},
                 {key: 'end_date', title: 'Fin', func: proc => dates.fromString(proc.end_date)},
-                {key: 'phase', title: 'Phase', func: proc => proc.phase},
+                {key: 'phase', title: 'Phase', func: proc => proc.phase || null},
                 {key: 'activities', title: 'Activités', func: proc => proc.activities},
                 {key: 'extensions', title: 'Extensions', func: proc => proc.extensions}
             ]
