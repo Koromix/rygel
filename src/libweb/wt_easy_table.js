@@ -84,10 +84,8 @@ function EasyTable() {
         row_ptr.cells.push(cell);
     };
     this.addCells = function(values) {
-        for (let value of values) {
-            if (value != null)
-                self.addCell(value);
-        }
+        for (let value of values)
+            self.addCell(value);
     };
 
     this.clear = function() {
