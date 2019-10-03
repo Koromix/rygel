@@ -30,7 +30,7 @@ function EasyTable() {
     this.setOffset = function(new_offset) { offset = new_offset; };
     this.getOffset = function() { return offset; };
 
-    this.setOptions = function(new_options) { options = new_options; };
+    this.setOptions = function(new_options) { Object.assign(options, new_options); };
     this.getOptions = function() { return options; }
 
     this.addColumn = function(key, title, render = null, options = {}) {
@@ -167,7 +167,7 @@ function EasyTable() {
                         return trs;
                     })}
 
-                    ${options.empty && !render_count ?
+                    ${(options.empty && !render_count) ?
                         html`<tr><td colspan=${columns.length}>${sorted_rows.length ? 'Cette page n\'existe pas'
                                                                                     : 'Aucun contenu à afficher'}</td></tr>` : ''}
                 </tbody>
