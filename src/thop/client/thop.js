@@ -30,7 +30,7 @@ let thop = (function() {
         // Update settings
         await updateSettings();
 
-        updateMenu();
+        updateMenu('');
         self.go(window.location.href, {}, false);
     }
 
@@ -44,22 +44,41 @@ let thop = (function() {
     }
 
     this.go = async function(mod, args = {}, push_history = true) {
-        route(mod, args);
+        let url = route(mod, args, push_history);
+        if (!url)
+            return;
 
         // Update URL quickly, even though we'll do it again after module run because some
         // parts may depend on fetched resources. Same thing for session.
-        updateHistory(route_mod.makeURL(), push_history);
+        updateHistory(url, push_history && url !== route_url);
         await updateSettings();
 
+        // Run!
         await run(false);
+        await updateSettings();
+
+        // Update again, even though we probably got it right earlier... but maybe not?
+        url = route_mod.makeURL();
+        updateHistory(url, false);
+        updateScroll(route_url, url);
+        updateMenu(url);
+
+        route_url = url;
     };
 
-    this.goFake = async function(mod, args = {}, push_history = true) {
-        route(mod, args);
-        await run(push_history, true);
+    this.goFake = function(mod, args = {}, push_history = true) {
+        let url = route(mod, args);
+        if (!url)
+            return;
+
+        updateHistory(url, push_history);
+        updateScroll(route_url, url);
+        updateMenu(url);
+
+        route_url = url;
     };
 
-    function route(mod, args) {
+    function route(mod, args, push_history) {
         if (typeof mod === 'string') {
             let url = new URL(mod, window.location.href);
 
@@ -78,10 +97,11 @@ let thop = (function() {
                 default: {
                     // Cannot make canonical URL (because it's invalid), but it's better than nothing
                     updateHistory(mod, push_history);
-                    updateMenu();
+                    updateScroll(route_url, mod);
+                    updateMenu(mod);
 
                     log.error('Aucun module disponible pour cette adresse');
-                    return;
+                    return null;
                 } break;
             }
 
@@ -91,54 +111,22 @@ let thop = (function() {
             route_mod = mod || route_mod;
             util.assignDeep(route_mod.route, args);
         }
+
+        return route_mod.makeURL();
     }
 
     async function run(push_history, fake = false) {
-        // Memorize current scroll state
-        if (window.history.scrollRestoration || push_history) {
-            let target = [window.pageXOffset, window.pageYOffset];
-            if (target[0] || target[1]) {
-                scroll_cache.set(route_url, target);
-            } else {
-                scroll_cache.delete(route_url);
-            }
+        let view_el = document.querySelector('#th_view');
+
+        view_el.classList.add('th_view_busy');
+        try {
+            await route_mod.run();
+        } catch (err) {
+            render('', document.querySelector('#th_options'));
+            render(err.message, view_el);
+            log.error(err.message);
         }
-
-        // Run!
-        if (!fake) {
-            let view_el = document.querySelector('#th_view');
-
-            view_el.classList.add('th_view_busy');
-            try {
-                await route_mod.run();
-            } catch (err) {
-                render('', document.querySelector('#th_options'));
-                render(err.message, view_el);
-                log.error(err.message);
-            }
-            view_el.classList.remove('th_view_busy');
-        }
-
-        // Set appropriate scroll state
-        if (window.history.scrollRestoration || push_history) {
-            let target = scroll_cache.get(route_url) || [0, 0];
-            window.scrollTo(target[0], target[1]);
-        }
-
-        // Update shared state and UI
-        updateHistory(route_mod.makeURL(), push_history);
-        await updateSettings();
-        updateMenu();
-    }
-
-    function updateHistory(url, push_history) {
-        if (push_history && url !== route_url) {
-            window.history.pushState(null, null, url);
-        } else {
-            window.history.replaceState(null, null, url);
-        }
-
-        route_url = url;
+        view_el.classList.remove('th_view_busy');
     }
 
     async function updateSettings() {
@@ -149,6 +137,7 @@ let thop = (function() {
 
         // Clear cache, which may contain user-specific and even sensitive data
         data.clearCache();
+        scroll_cache.clear();
 
         // Fetch new settings
         {
@@ -183,6 +172,28 @@ let thop = (function() {
         }
     }
 
+    function updateHistory(url, push_history) {
+        if (push_history) {
+            window.history.pushState(null, null, url);
+        } else {
+            window.history.replaceState(null, null, url);
+        }
+    }
+
+    function updateScroll(prev_url, new_url) {
+        // Cache current scroll state
+        let prev_target = [window.pageXOffset, window.pageYOffset];
+        if (prev_target[0] || prev_target[1]) {
+            scroll_cache.set(prev_url, prev_target);
+        } else {
+            scroll_cache.delete(prev_url);
+        }
+
+        // Restore scroll position for new URL
+        let new_target = scroll_cache.get(new_url) || [0, 0];
+        window.scrollTo(new_target[0], new_target[1]);
+    }
+
     function handleLogoutClick(e) {
         let p = user.logout();
 
@@ -195,29 +206,29 @@ let thop = (function() {
         e.preventDefault();
     }
 
-    function updateMenu() {
+    function updateMenu(current_url) {
         render(html`
             <a class="category">Informations MCO</a>
-            ${makeMenuLink('Racines de GHM', mco_info.makeURL({mode: 'ghm_roots'}))}
-            ${makeMenuLink('Tarifs GHS', mco_info.makeURL({mode: 'ghs'}))}
-            ${makeMenuLink('Arbre de groupage', mco_info.makeURL({mode: 'tree'}))}
-            ${makeMenuLink('GHM / GHS', mco_info.makeURL({mode: 'ghmghs'}))}
-            ${makeMenuLink('Diagnostics', mco_info.makeURL({mode: 'diagnoses'}))}
-            ${makeMenuLink('Actes', mco_info.makeURL({mode: 'procedures'}))}
+            ${makeMenuLink('Racines de GHM', mco_info.makeURL({mode: 'ghm_roots'}), current_url)}
+            ${makeMenuLink('Tarifs GHS', mco_info.makeURL({mode: 'ghs'}), current_url)}
+            ${makeMenuLink('Arbre de groupage', mco_info.makeURL({mode: 'tree'}), current_url)}
+            ${makeMenuLink('GHM / GHS', mco_info.makeURL({mode: 'ghmghs'}), current_url)}
+            ${makeMenuLink('Diagnostics', mco_info.makeURL({mode: 'diagnoses'}), current_url)}
+            ${makeMenuLink('Actes', mco_info.makeURL({mode: 'procedures'}), current_url)}
 
             ${settings.permissions.mco_casemix ? html`
                 <a class="category">Activité MCO</a>
-                ${makeMenuLink('GHM', mco_casemix.makeURL({mode: 'ghm'}))}
-                ${makeMenuLink('Unités', mco_casemix.makeURL({mode: 'units'}))}
+                ${makeMenuLink('GHM', mco_casemix.makeURL({mode: 'ghm'}), current_url)}
+                ${makeMenuLink('Unités', mco_casemix.makeURL({mode: 'units'}), current_url)}
                 ${settings.permissions.mco_results ?
-                    makeMenuLink('Résumés (RSS)', mco_casemix.makeURL({mode: 'rss'})) : ''}
-                ${makeMenuLink('Valorisation', mco_casemix.makeURL({mode: 'valorisation'}))}
+                    makeMenuLink('Résumés (RSS)', mco_casemix.makeURL({mode: 'rss'}), current_url) : ''}
+                ${makeMenuLink('Valorisation', mco_casemix.makeURL({mode: 'valorisation'}), current_url)}
             ` : ''}
         `, document.querySelector('#th_menu'));
     }
 
-    function makeMenuLink(label, url) {
-        let active = route_url.startsWith(url);
+    function makeMenuLink(label, url, current_url) {
+        let active = current_url.startsWith(url);
         return html`<a class=${active ? 'active': ''} href=${url}>${label}</a>`;
     }
 
