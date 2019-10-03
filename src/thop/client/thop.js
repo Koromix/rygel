@@ -35,17 +35,23 @@ let thop = (function() {
     }
 
     function initNavigation() {
-        window.addEventListener('popstate', e => {
-            self.go(window.location.href, {}, false);
-        });
+        window.addEventListener('popstate', e => self.go(window.location.href, {}, false));
 
         document.body.addEventListener('click', e => {
-            if (e.target && e.target.tagName == 'A' && !e.defaultPrevented &&
-                    !e.ctrlKey && !e.target.getAttribute('download')) {
-                let href = e.target.getAttribute('href');
-                if (href && !href.match(/^(?:[a-z]+:)?\/\//) && href[0] != '#') {
-                    self.go(href);
-                    e.preventDefault();
+            if (!e.defaultPrevented && !e.ctrlKey) {
+                let target = e.target;
+                if (target.namespaceURI === 'http://www.w3.org/2000/svg') {
+                    while (target && target.tagName !== 'a')
+                        target = target.parentElement;
+                }
+
+                if (target && (target.tagName === 'A' || target.tagName === 'a') &&
+                        !target.getAttribute('download')) {
+                    let href = target.getAttribute('href');
+                    if (href && !href.match(/^(?:[a-z]+:)?\/\//) && href[0] != '#') {
+                        self.go(href);
+                        e.preventDefault();
+                    }
                 }
             }
         });
