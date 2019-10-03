@@ -234,7 +234,7 @@ static bool InitDictionarySet(Span<const char *const> table_directories)
         {
             StreamReader reader(filename);
             StreamWriter writer(&buf, nullptr, CompressionType::Gzip);
-            if (!SpliceStream(&reader, Megabytes(8), &writer))
+            if (!SpliceStream(&reader, Megabytes(16), &writer))
                 return false;
             if (!writer.Close())
                 return false;
