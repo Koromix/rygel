@@ -204,9 +204,28 @@ let util = (function() {
 
     this.findParent = function(el, func) {
         while (el && !func(el))
-            el = el.parentNode;
+            el = el.parentElement;
         return el;
     }
+
+    this.interceptLocalAnchors = function(func) {
+        document.body.addEventListener('click', e => {
+            if (!e.defaultPrevented && !e.ctrlKey) {
+                let target = e.target;
+                if (target.namespaceURI === 'http://www.w3.org/2000/svg')
+                    target = self.findParent(target, el => el.tagName === 'a');
+
+                if (target && (target.tagName === 'A' || target.tagName === 'a') &&
+                        !target.getAttribute('download')) {
+                    let href = target.getAttribute('href');
+                    if (href && !href.match(/^(?:[a-z]+:)?\/\//) && href[0] != '#') {
+                        func(e, href);
+                        e.preventDefault();
+                    }
+                }
+            }
+        });
+    };
 
     return this;
 }).call({});
