@@ -662,7 +662,9 @@ let mco_info = (function() {
     }
 
     function renderSectorSelector(current_sector) {
-        let help = 'Le périmètre des tarifs des GHS est différent&nbsp;\n Secteur public : prestation complète\n Secteur privé : clinique et personnel non médical';
+        let help = `Le périmètre des tarifs des GHS est différent :
+– Secteur public : prestation complète
+– Secteur privé : clinique et personnel non médical`;
 
         return html`
             <label>
