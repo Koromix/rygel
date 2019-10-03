@@ -5,8 +5,8 @@
 function EasyTable() {
     let self = this;
 
-    this.hrefBuilder = page => '#';
-    this.changeHandler = (offset, key) => {};
+    this.urlBuilder = page => '#';
+    this.clickHandler = (e, offset, key) => {};
 
     let page_len = -1;
     let offset = 0;
@@ -29,6 +29,7 @@ function EasyTable() {
     this.getPageLen = function() { return page_len; };
     this.setOffset = function(new_offset) { offset = new_offset; };
     this.getOffset = function() { return offset; };
+
     this.setOptions = function(new_options) { options = new_options; };
     this.getOptions = function() { return options; }
 
@@ -183,12 +184,11 @@ function EasyTable() {
         if (key === sort_key)
             key = `-${key}`;
 
+        self.clickHandler.call(self, e, offset, key);
+        e.preventDefault();
+
         self.sort(key);
         render(renderWidget(), root_el);
-
-        self.changeHandler.call(self, offset, key);
-
-        e.preventDefault();
     }
 
     function renderRowCells(row) {
@@ -203,8 +203,8 @@ function EasyTable() {
         if (page_len >= 0 && (offset || sorted_rows.length > page_len)) {
             let epag = new EasyPager;
 
-            epag.hrefBuilder = page => self.hrefBuilder((page - 1) * page_len, sort_key);
-            epag.changeHandler = handlePageClick;
+            epag.urlBuilder = page => self.urlBuilder.call(self, (page - 1) * page_len, sort_key);
+            epag.clickHandler = handlePageClick;
 
             let last_page = Math.floor((sorted_rows.length - 1) / page_len + 1);
             let page = Math.ceil(offset / page_len) + 1;
@@ -223,12 +223,13 @@ function EasyTable() {
 
         let offset = (page - 1) * page_len;
 
-        self.setOffset(offset);
-        render(renderWidget(), root_el);
-
-        self.changeHandler.call(self, offset, sort_key);
-
-        e.preventDefault();
+        if (self.clickHandler.call(self, e, offset, sort_key)) {
+            return true;
+        } else {
+            self.setOffset(offset);
+            render(renderWidget(), root_el);
+            return false;
+        }
     }
 
     this.sort = function(key, sort_rec = true) {

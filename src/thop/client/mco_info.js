@@ -252,8 +252,11 @@ let mco_info = (function() {
         let etab = new EasyTable;
 
         if (handler.route) {
-            etab.hrefBuilder = (offset, sort_key) => self.makeURL(handler.route(offset, sort_key));
-            etab.changeHandler = (offset, sort_key) => thop.goFake(self, handler.route(offset, sort_key));
+            etab.urlBuilder = (offset, sort_key) => self.makeURL(handler.route(offset, sort_key));
+            etab.clickHandler = (e, offset, sort_key) => {
+                thop.goFake(self, handler.route(offset, sort_key));
+                e.preventDefault();
+            };
         }
 
         etab.setPageLen(handler.page_len);
@@ -639,8 +642,11 @@ let mco_info = (function() {
     function renderVersionLine(versions, current_version) {
         let vlin = new VersionLine;
 
-        vlin.hrefBuilder = version => self.makeURL({version: version.date});
-        vlin.changeHandler = version => thop.go(self, {version: version.date});
+        vlin.urlBuilder = version => self.makeURL({version: version.date});
+        vlin.clickHandler = (e, version) => {
+            thop.go(self, {version: version.date});
+            e.preventDefault();
+        };
 
         for (let version of versions) {
             let label = version.begin_date.toString();

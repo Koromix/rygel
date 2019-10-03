@@ -313,7 +313,7 @@ let mco_casemix = (function() {
     function renderPeriodPicker(min_date, max_date, start_date, end_date) {
         let ppik = new PeriodPicker;
 
-        ppik.changeHandler = (start_date, end_date) =>
+        ppik.clickHandler = (e, start_date, end_date) =>
             thop.go(self, {main: {start_date: start_date, end_date: end_date}});
 
         ppik.setRange(min_date, max_date);
@@ -343,7 +343,7 @@ let mco_casemix = (function() {
     function renderUnitTree(structures, current_tab, current_units) {
         let tsel = new TreeSelector;
 
-        tsel.changeHandler = (values, tab) =>
+        tsel.clickHandler = (e, values, tab) =>
             thop.go(self, {main: {units: values}, structure: tab});
 
         tsel.setPrefix('Unités : ');
@@ -360,7 +360,7 @@ let mco_casemix = (function() {
     function renderGhmRootTree(mco, current_ghm_roots) {
         let tsel = new TreeSelector;
 
-        tsel.changeHandler = (values, tab) =>
+        tsel.clickHandler = (e, values, tab) =>
             thop.go(self, {main: {ghm_roots: values}});
 
         tsel.setPrefix('Racines de GHM : ');
