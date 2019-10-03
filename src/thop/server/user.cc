@@ -506,6 +506,12 @@ void HandleLogin(const http_RequestInfo &request, const User *, http_IO *io)
         }
     }
 
+    // Destroy current session (if any)
+    if (const char *session_key = request.GetCookieValue("session_key"); session_key) {
+        std::unique_lock<std::shared_mutex> lock(sessions_mutex);
+        sessions.Remove(session_key);
+    }
+
     // Register session
     Session *session = RegisterNewSession(address, user_agent, user);
     session->login_time = now;
