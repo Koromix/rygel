@@ -117,8 +117,8 @@ public:
     void AddCachingHeaders(int max_age, const char *etag = nullptr);
 
     void AttachResponse(int code, MHD_Response *new_response);
-    void AttachText(Span<const char> str);
-    bool AttachBinary(Span<const uint8_t> data, const char *mime_type,
+    void AttachText(int code, Span<const char> str);
+    bool AttachBinary(int code, Span<const uint8_t> data, const char *mime_type,
                       CompressionType compression_type = CompressionType::None);
     void AttachError(int code, const char *details = GetLastLogError());
 
