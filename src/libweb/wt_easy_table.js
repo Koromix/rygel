@@ -10,10 +10,8 @@ function EasyTable() {
 
     let page_len = -1;
     let offset = 0;
-
     let sort_key;
     let filter = value => true;
-
     let options = {
         header: true,
         parents: true,
@@ -28,6 +26,8 @@ function EasyTable() {
 
     let ready = false;
     let render_rows = [];
+
+    let root_el;
 
     this.setPageLen = function(new_len) { page_len = new_len; };
     this.getPageLen = function() { return page_len; };
@@ -165,8 +165,10 @@ function EasyTable() {
     }
 
     this.render = function() {
-        let root_el = document.createElement('div');
-        root_el.className = 'etab';
+        if (!root_el) {
+            root_el = document.createElement('div');
+            root_el.className = 'etab';
+        }
 
         // We don't return VDOM, because if we did the next render() we do after user interaction
         // would use a new binding, and replace the widget.
@@ -246,8 +248,6 @@ function EasyTable() {
     }
 
     function handleHeaderClick(e, col_idx) {
-        let root_el = util.findParent(e.target, el => el.classList.contains('etab'));
-
         let key = columns[col_idx].key;
         if (key !== sort_key) {
             self.setSortKey(key);
@@ -289,8 +289,6 @@ function EasyTable() {
     }
 
     function handlePageClick(e, page) {
-        let root_el = util.findParent(e.target, el => el.classList.contains('etab'));
-
         let offset = (page - 1) * page_len;
 
         if (self.clickHandler.call(self, e, offset, sort_key)) {

@@ -11,6 +11,8 @@ function EasyPager() {
     let last_page;
     let current_page;
 
+    let root_el;
+
     this.setLastPage = function(page) { last_page = page; };
     this.getLastPage = function() { return last_page; };
 
@@ -18,8 +20,10 @@ function EasyPager() {
     this.getPage = function() { return current_page; };
 
     this.render = function() {
-        let root_el = document.createElement('div');
-        root_el.className = 'epag';
+        if (!root_el) {
+            root_el = document.createElement('div');
+            root_el.className = 'epag';
+        }
 
         // We don't return VDOM, because if we did the next render() we do after user interaction
         // would use a new binding, and replace the widget.
@@ -69,9 +73,7 @@ function EasyPager() {
     function handlePageClick(e, page) {
         current_page = page;
 
-        if (!self.clickHandler.call(self, e, page)) {
-            let root_el = util.findParent(e.target, el => el.classList.contains('epag'));
+        if (!self.clickHandler.call(self, e, page))
             render(renderWidget(), root_el);
-        }
     }
 }
