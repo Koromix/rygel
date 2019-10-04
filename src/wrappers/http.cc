@@ -318,16 +318,16 @@ void http_IO::AttachResponse(int new_code, MHD_Response *new_response)
     response = new_response;
 }
 
-void http_IO::AttachText(Span<const char> str)
+void http_IO::AttachText(int code, Span<const char> str)
 {
     MHD_Response *response =
         MHD_create_response_from_buffer(str.len, (void *)str.ptr, MHD_RESPMEM_PERSISTENT);
 
-    AttachResponse(200, response);
+    AttachResponse(code, response);
     AddHeader("Content-Type", "text/plain");
 }
 
-bool http_IO::AttachBinary(Span<const uint8_t> data, const char *mime_type,
+bool http_IO::AttachBinary(int code, Span<const uint8_t> data, const char *mime_type,
                            CompressionType compression_type)
 {
     MHD_Response *response;
@@ -349,7 +349,7 @@ bool http_IO::AttachBinary(Span<const uint8_t> data, const char *mime_type,
         response = MHD_create_response_from_buffer((size_t)data.len, (void *)data.ptr,
                                                    MHD_RESPMEM_PERSISTENT);
     }
-    AttachResponse(200, response);
+    AttachResponse(code, response);
 
     AddEncodingHeader(request.compression_type);
     if (mime_type) {
