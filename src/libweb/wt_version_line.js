@@ -11,6 +11,8 @@ function VersionLine() {
     let versions = [];
     let current_date;
 
+    let root_el;
+
     this.addVersion = function(date, label, tooltip, major) {
         versions.push({
             date: date,
@@ -27,8 +29,10 @@ function VersionLine() {
         if (versions.length < 2)
             throw new Error('Cannot render VersionLine with less than 2 data points');
 
-        let root_el = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        root_el.setAttribute('class', 'vlin');
+        if (!root_el) {
+            root_el = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            root_el.setAttribute('class', 'vlin');
+        }
 
         // We don't return VDOM, because if we did the next render() we do after user interaction
         // would use a new binding, and replace the widget.
@@ -74,9 +78,7 @@ function VersionLine() {
     }
 
     function handleNodeClick(e, version) {
-        if (!self.clickHandler.call(self, e, version)) {
-            let root_el = util.findParent(e.target, el => el.classList.contains('vlin'));
+        if (!self.clickHandler.call(self, e, version))
             render(renderWidget(), root_el);
-        }
     }
 }

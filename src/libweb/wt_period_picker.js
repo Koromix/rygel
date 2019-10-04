@@ -15,6 +15,8 @@ function PeriodPicker() {
     let grab_start_date;
     let grab_end_date;
 
+    let root_el;
+
     this.setRange = function(...dates) { limit_dates = dates; };
     this.getRange = function() { return limit_dates; };
 
@@ -22,8 +24,10 @@ function PeriodPicker() {
     this.getDates = function() { return current_dates; };
 
     this.render = function() {
-        let root_el = document.createElement('div');
-        root_el.className = 'ppik';
+        if (!root_el) {
+            root_el = document.createElement('div');
+            root_el.className = 'ppik';
+        }
 
         // We can't return VDOM, because if we did the next render() we do after user interaction
         // would use a new binding, and replace the widget (and break pointer capture).
@@ -82,7 +86,6 @@ function PeriodPicker() {
 
     function handleHandleMove(e, idx) {
         if (grab_target) {
-            let root_el = util.findParent(e.target, el => el.classList.contains('ppik'));
             let main_el = root_el.querySelector('.ppik_main');
 
             let date = positionToDate(main_el, e.clientX);
@@ -119,7 +122,6 @@ function PeriodPicker() {
 
     function handleBarMove(e) {
         if (grab_target) {
-            let root_el = util.findParent(e.target, el => el.classList.contains('ppik'));
             let main_el = root_el.querySelector('.ppik_main');
 
             let delta = grab_end_date.diff(grab_start_date);
@@ -158,10 +160,8 @@ function PeriodPicker() {
         e.target.classList.remove('grabbed');
         e.target.onpointermove = null;
 
-        if (!self.clickHandler.call(self, e, current_dates[0], current_dates[1])) {
-            let root_el = util.findParent(e.target, el => el.classList.contains('ppik'));
+        if (!self.clickHandler.call(self, e, current_dates[0], current_dates[1]))
             render(renderWidget(), root_el);
-        }
     }
 
     function dateToPosition(date) {

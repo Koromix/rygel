@@ -18,6 +18,8 @@ function TreeSelector() {
     };
     let current_values = new Set;
 
+    let root_el;
+
     this.setPrefix = function(str) { prefix = str; };
     this.getPrefix = function() { return prefix; };
 
@@ -90,9 +92,11 @@ function TreeSelector() {
     this.getValues = function() { return current_values; };
 
     this.render = function() {
-        let root_el = document.createElement('div');
-        root_el.className = 'tsel';
-        root_el.addEventListener('click', e => e.stopPropagation());
+        if (!root_el) {
+            root_el = document.createElement('div');
+            root_el.className = 'tsel';
+            root_el.addEventListener('click', e => e.stopPropagation());
+        }
 
         // We don't return VDOM, because if we did the next render() we do after user interaction
         // would use a new binding, and replace the widget.
@@ -166,7 +170,6 @@ function TreeSelector() {
     }
 
     function handleSummaryClick(e) {
-        let root_el = util.findParent(e.target, el => el.classList.contains('tsel'));
         let summary_el = root_el.querySelector('.tsel_summary');
 
         let value = util.strToValue(e.target.dataset.value);
@@ -184,15 +187,12 @@ function TreeSelector() {
     }
 
     function handleTabClick(e, tab) {
-        let root_el = util.findParent(e.target, el => el.classList.contains('tsel'));
-
         current_tab = tab;
         render(renderWidget(), root_el);
         syncCheckboxes(root_el);
     }
 
     function handleSetAll(e, enable) {
-        let root_el = util.findParent(e.target, el => el.classList.contains('tsel'));
         let summary_el = root_el.querySelector('.tsel_summary');
 
         for (let opt of current_tab.options) {
@@ -207,7 +207,6 @@ function TreeSelector() {
     }
 
     function handleGroupClick(e) {
-        let root_el = util.findParent(e.target, el => el.classList.contains('tsel'));
         let summary_el = root_el.querySelector('.tsel_summary');
 
         let group = e.target.parentNode;
@@ -227,7 +226,6 @@ function TreeSelector() {
     }
 
     function handleOptionClick(e) {
-        let root_el = util.findParent(e.target, el => el.classList.contains('tsel'));
         let summary_el = root_el.querySelector('.tsel_summary');
 
         let value = util.strToValue(e.target.dataset.value);
@@ -238,7 +236,6 @@ function TreeSelector() {
     }
 
     function handleToggleClick(e) {
-        let root_el = util.findParent(e.target, el => el.classList.contains('tsel'));
         let view_el = root_el.querySelector('.tsel_view');
 
         if (!view_el.classList.contains('active')) {
