@@ -43,12 +43,14 @@ let mco_info = (function() {
                 args.sector = path[2] || 'public';
                 args[args.mode].offset = parseInt(params.offset, 10) || null;
                 args[args.mode].sort = params.sort || null;
+                args[args.mode].filter = params.filter || null;
             } break;
             case 'diagnoses':
             case 'procedures': {
                 args[args.mode].list = path[2] || null;
                 args[args.mode].offset = parseInt(params.offset, 10) || null;
                 args[args.mode].sort = params.sort || null;
+                args[args.mode].filter = params.filter || null;
             } break;
 
             case 'ghs': {
@@ -81,6 +83,7 @@ let mco_info = (function() {
                 path.push(args.sector);
                 params.offset = args[args.mode].offset || null;
                 params.sort = args[args.mode].sort || null;
+                params.filter = args[args.mode].filter || null;
             } break;
             case 'diagnoses':
             case 'procedures': {
@@ -88,6 +91,7 @@ let mco_info = (function() {
                     path.push(args[args.mode].list);
                 params.offset = args[args.mode].offset || null;
                 params.sort = args[args.mode].sort || null;
+                params.filter = args[args.mode].filter || null;
             } break;
 
             case 'ghs': {
@@ -109,6 +113,8 @@ let mco_info = (function() {
     // Lists
     // ------------------------------------------------------------------------
 
+    let input_timer_id;
+
     async function runGhmRoots() {
         let version = findVersion(route.version);
         let [mco, ghmghs] = await Promise.all([
@@ -125,7 +131,7 @@ let mco_info = (function() {
         `, document.querySelector('#th_options'));
 
         // Table
-        renderList(ghm_roots, {
+        renderListTable(ghm_roots, {
             header: false,
             columns: [{key: 'ghm_root', title: 'Racine de GHM', func: ghm_root => mco.ghm_roots.describe(ghm_root)}]
         });
@@ -145,13 +151,14 @@ let mco_info = (function() {
         `, document.querySelector('#th_options'));
 
         // Table
-        renderList(ghmghs, {
+        renderListTable(ghmghs, {
             header: true,
             page_len: 300,
 
             offset: route.ghmghs.offset,
+            filter: route.ghmghs.filter,
             sort: route.ghmghs.sort,
-            route: (offset, sort) => ({ghmghs: {offset: offset, sort: sort}}),
+            route: (offset, filter, sort_key) => ({ghmghs: {offset: offset, filter: filter, sort: sort_key}}),
 
             columns: [
                 {key: 'ghm', title: 'GHM', func: ghs => mco.ghm.describe(ghs.ghm)},
@@ -196,13 +203,14 @@ let mco_info = (function() {
         `, document.querySelector('#th_options'));
 
         // Table
-        renderList(diagnoses, {
+        renderListTable(diagnoses, {
             header: true,
             page_len: 300,
 
             offset: route.diagnoses.offset,
+            filter: route.diagnoses.filter,
             sort: route.diagnoses.sort,
-            route: (offset, sort) => ({diagnoses: {offset: offset, sort: sort}}),
+            route: (offset, filter, sort_key) => ({diagnoses: {offset: offset, filter: filter, sort: sort_key}}),
 
             columns: [
                 {key: 'code', title: 'Code', func: diag => cim10.diagnoses.describe(diag.diag)},
@@ -227,13 +235,14 @@ let mco_info = (function() {
         `, document.querySelector('#th_options'));
 
         // Table
-        renderList(procedures, {
+        renderListTable(procedures, {
             header: true,
             page_len: 300,
 
             offset: route.procedures.offset,
+            filter: route.procedures.filter,
             sort: route.procedures.sort,
-            route: (offset, sort) => ({procedures: {offset: offset, sort: sort}}),
+            route: (offset, filter, sort_key) => ({procedures: {offset: offset, filter: filter, sort: sort_key}}),
 
             columns: [
                 {key: 'code', title: 'Code', func: proc => ccam.procedures.describe(proc.proc)},
@@ -246,31 +255,34 @@ let mco_info = (function() {
         });
     }
 
-    function renderList(records, handler) {
-        let route2 = route[name];
-
+    function renderListTable(records, handler) {
         let etab = new EasyTable;
 
         if (handler.route) {
             etab.urlBuilder = (offset, sort_key) => self.makeURL(handler.route(offset, sort_key));
             etab.clickHandler = (e, offset, sort_key) => {
-                thop.goFake(self, handler.route(offset, sort_key));
+                thop.goFake(self, handler.route(offset, handler.filter, sort_key));
                 e.preventDefault();
             };
         }
 
         etab.setPageLen(handler.page_len);
         etab.setOffset(handler.offset || 0);
-        etab.setOptions({header: handler.header});
+        etab.setSortKey(handler.sort);
+        etab.setFilter(makeFilterFunction(handler.filter));
+        etab.setOptions({
+            header: handler.header,
+            filter: true
+        });
 
         for (let col of handler.columns) {
             etab.addColumn(col.key, col.title, value => {
-                if (value == null) {
-                    return null;
-                } else if (typeof value === 'string') {
+                if (typeof value === 'string') {
                     return self.addSpecLinks(value);
-                } else {
+                } else if (value != null) {
                     return value.toLocaleString();
+                } else {
+                    return null;
                 }
             });
         }
@@ -286,8 +298,97 @@ let mco_info = (function() {
             etab.endRow();
         }
 
-        etab.sort(handler.sort);
+        if ('filter' in handler) {
+            etab.setPanel(html`
+                <label>Filtre : <input type="text" .value=${handler.filter || ''}
+                                       @input=${e => handleFilterInput(e, etab, handler)} /></label>
+            `);
+        }
+
         render(etab.render(), document.querySelector('#th_view'));
+    }
+
+    function makeFilterFunction(filter) {
+        if (filter) {
+            let re = '';
+            for (let i = 0; i < filter.length; i++) {
+                let c = filter[i].toLowerCase();
+
+                switch (c) {
+                    case 'e':
+                    case 'ê':
+                    case 'é':
+                    case 'è':
+                    case 'e': { re += '[eèéê]'; } break;
+                    case 'a':
+                    case 'à':
+                    case 'â': { re += '[aàâ]'; } break;
+                    case 'i':
+                    case 'ï': { re += '[iï]'; } break;
+                    case 'u':
+                    case 'ù': { re += '[uù]'; } break;
+                    case 'o': {
+                        if (filter[i + 1] === 'e') {
+                            re += '(oe|œ)';
+                            i++;
+                        } else {
+                            re += 'o';
+                        }
+                    } break;
+                    case 'œ': { re += '(oe|œ)'; } break;
+
+                    // Escape special regex characters
+                    case '/':
+                    case '+':
+                    case '*':
+                    case '?':
+                    case '-':
+                    case '<':
+                    case '>':
+                    case '-':
+                    case '&':
+                    case '|':
+                    case '\\':
+                    case '^':
+                    case '$':
+                    case '.':
+                    case '(':
+                    case ')':
+                    case '{':
+                    case '}':
+                    case '[':
+                    case ']': { re += `\\${c}`; } break;
+
+                    default: { re += c; } break;
+                }
+            }
+            re = new RegExp(re, 'i');
+
+            let func = value => {
+                if (value != null) {
+                    if (typeof value !== 'string')
+                        value = value.toLocaleString();
+                    return value.match(re);
+                } else {
+                    return false;
+                }
+            };
+            return func;
+        } else {
+            return null;
+        }
+    }
+
+    function handleFilterInput(e, etab, handler) {
+        if (input_timer_id != null)
+            clearTimeout(input_timer_id);
+
+        input_timer_id = setTimeout(() => {
+            thop.goFake(self, handler.route(handler.offset, e.target.value || null, handler.sort));
+
+            etab.setFilter(makeFilterFunction(e.target.value));
+            etab.render();
+        }, 200);
     }
 
     // ------------------------------------------------------------------------
@@ -694,7 +795,7 @@ let mco_info = (function() {
     function renderListInfo(type, label, current_list) {
         if (current_list) {
             let args = {};
-            args[type] = {list: null, offset: 0};
+            args[type] = {list: null, offset: 0, filter: null};
 
             return html`
                 <div class="opt_list">
