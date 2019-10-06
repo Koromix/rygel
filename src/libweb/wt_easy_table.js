@@ -6,10 +6,14 @@ function EasyTable() {
     let self = this;
 
     this.urlBuilder = page => '#';
-    this.clickHandler = (e, offset, key) => {};
+    this.clickHandler = (e, offset, filter, sort_key) => {};
 
     let page_len = -1;
     let offset = 0;
+
+    let sort_key;
+    let filter = value => true;
+
     let options = {
         header: true,
         parents: true,
@@ -20,18 +24,31 @@ function EasyTable() {
     let columns_map;
 
     let row_sets;
-    let sorted_rows = [];
     let row_ptr;
 
-    let sort_key;
+    let ready = false;
+    let render_rows = [];
 
     this.setPageLen = function(new_len) { page_len = new_len; };
     this.getPageLen = function() { return page_len; };
     this.setOffset = function(new_offset) { offset = new_offset; };
     this.getOffset = function() { return offset; };
 
+    this.setFilter = function(new_filter) {
+        filter = new_filter || (value => true);
+        ready = false;
+    };
+    this.getFilter = function() { return filter; };
+    this.setSortKey = function(new_key) {
+        new_key = new_key || null;
+        if (new_key !== sort_key)
+            ready = false;
+        sort_key = new_key;
+    };
+    this.getSortKey = function() { return sort_key; };
+
     this.setOptions = function(new_options) { Object.assign(options, new_options); };
-    this.getOptions = function() { return options; }
+    this.getOptions = function() { return options; };
 
     this.addColumn = function(key, title, render = null, options = {}) {
         let column = {
@@ -49,10 +66,8 @@ function EasyTable() {
 
     this.beginRow = function() {
         let depth = row_ptr ? (row_ptr.depth + 1) : 0;
-        if (depth >= row_sets.length) {
+        if (depth >= row_sets.length)
             row_sets.push([]);
-            sorted_rows.length = 0;
-        }
 
         let row = {
             insert_idx: row_sets[depth].length,
@@ -65,8 +80,7 @@ function EasyTable() {
         if (row_ptr)
             row_ptr.children.push(row);
         row_sets[depth].push(row);
-        if (depth + 1 === row_sets.length)
-            sorted_rows.push(row);
+        ready = false;
 
         row_ptr = row;
     };
@@ -82,6 +96,7 @@ function EasyTable() {
         };
 
         row_ptr.cells.push(cell);
+        ready = false;
     };
     this.addCells = function(values) {
         for (let value of values)
@@ -93,11 +108,61 @@ function EasyTable() {
         columns_map = {};
 
         row_sets = [[]];
-        sorted_rows.length = 0;
         row_ptr = null;
 
-        sort_key = null;
+        ready = false;
+        render_rows.length = 0;
     };
+
+    function sortAndFilter() {
+        let col_idx;
+        let order;
+        if (sort_key) {
+            let column;
+            if (sort_key[0] === '-') {
+                column = columns_map[sort_key.substr(1)];
+                order = -1;
+            } else {
+                column = columns_map[sort_key];
+                order = 1;
+            }
+
+            if (column) {
+                col_idx = column.idx;
+            } else {
+                col_idx = null;
+                order = 1;
+            }
+        } else {
+            col_idx = null;
+            order = 1;
+        }
+
+        render_rows.length = 0;
+        sortRowsRecursive(row_sets[0], col_idx, order, false);
+    };
+
+    function sortRows(rows, col_idx, order) {
+        if (col_idx != null) {
+            rows.sort((row1, row2) => (util.compareValues(row1.cells[col_idx].value, row2.cells[col_idx].value) ||
+                                       row1.insert_idx - row2.insert_idx) * order);
+        } else {
+            rows.sort((row1, row2) => row1.insert_idx - row2.insert_idx);
+        }
+    }
+
+    function sortRowsRecursive(rows, col_idx, order, parent_match) {
+        sortRows(rows, col_idx, order);
+
+        for (let row of rows) {
+            let match = parent_match || row.cells.some(cell => filter(cell.value));
+
+            if (match && row.depth + 1 === row_sets.length)
+                render_rows.push(row);
+
+            sortRowsRecursive(row.children, col_idx, order, match);
+        }
+    }
 
     this.render = function() {
         let root_el = document.createElement('div');
@@ -111,14 +176,19 @@ function EasyTable() {
     };
 
     function renderWidget() {
-        let render_end = (page_len >= 0) ? Math.min(offset + page_len, sorted_rows.length) : sorted_rows.length;
+        if (!ready) {
+            sortAndFilter();
+            ready = true;
+        }
+
+        let render_end = (page_len >= 0) ? Math.min(offset + page_len, render_rows.length) : render_rows.length;
         let render_count = Math.max(render_end - offset, 0);
 
         let stat_text;
         if (render_count) {
-            stat_text = `${offset} - ${offset + render_count} / ${sorted_rows.length}`;
-        } else if (sorted_rows.length) {
-            stat_text = `0 / ${sorted_rows.length}`;
+            stat_text = `${offset + 1} - ${offset + render_count} / ${render_rows.length}`;
+        } else if (render_rows.length) {
+            stat_text = `0 / ${render_rows.length}`;
         } else {
             stat_text = '';
         }
@@ -126,7 +196,7 @@ function EasyTable() {
         let parents_buf = Array.apply(null, Array(row_sets.length - 1));
         return html`
             <div class="etab_header">
-                ${sorted_rows.length ? html`<p class="etab_stat">${stat_text}</p>` : ''}
+                <p class="etab_stat">${stat_text}</p>
                 ${renderPager()}
                 <div></div>
             </div>
@@ -148,7 +218,7 @@ function EasyTable() {
 
                 <tbody>
                     ${util.mapRange(offset, render_end, idx => {
-                        let row = sorted_rows[idx];
+                        let row = render_rows[idx];
 
                         let trs = [];
                         if (options.parents) {
@@ -166,7 +236,7 @@ function EasyTable() {
                     })}
 
                     ${(options.empty && !render_count) ?
-                        html`<tr><td colspan=${columns.length}>${sorted_rows.length ? 'Cette page n\'existe pas'
+                        html`<tr><td colspan=${columns.length}>${render_rows.length ? 'Cette page n\'existe pas'
                                                                                     : 'Aucun contenu à afficher'}</td></tr>` : ''}
                 </tbody>
             </table>
@@ -179,13 +249,15 @@ function EasyTable() {
         let root_el = util.findParent(e.target, el => el.classList.contains('etab'));
 
         let key = columns[col_idx].key;
-        if (key === sort_key)
-            key = `-${key}`;
+        if (key !== sort_key) {
+            self.setSortKey(key);
+        } else {
+            self.setSortKey(`-${key}`);
+        }
 
-        self.clickHandler.call(self, e, offset, key);
+        self.clickHandler.call(self, e, offset, sort_key);
         e.preventDefault();
 
-        self.sort(key);
         render(renderWidget(), root_el);
     }
 
@@ -198,13 +270,13 @@ function EasyTable() {
     }
 
     function renderPager() {
-        if (page_len >= 0 && (offset || sorted_rows.length > page_len)) {
+        if (page_len >= 0 && (offset || render_rows.length > page_len)) {
             let epag = new EasyPager;
 
             epag.urlBuilder = page => self.urlBuilder.call(self, (page - 1) * page_len, sort_key);
             epag.clickHandler = handlePageClick;
 
-            let last_page = Math.floor((sorted_rows.length - 1) / page_len + 1);
+            let last_page = Math.floor((render_rows.length - 1) / page_len + 1);
             let page = Math.ceil(offset / page_len) + 1;
 
             epag.setLastPage(last_page);
@@ -212,7 +284,7 @@ function EasyTable() {
 
             return epag.render();
         } else {
-            return '';
+            return html`<div></div>`;
         }
     }
 
@@ -227,64 +299,6 @@ function EasyTable() {
             self.setOffset(offset);
             render(renderWidget(), root_el);
             return false;
-        }
-    }
-
-    this.sort = function(key, sort_rec = true) {
-        key = key || null;
-        if (key === sort_key)
-            return;
-
-        let col_idx;
-        let order;
-        if (key) {
-            let column;
-            if (key[0] === '-') {
-                column = columns_map[key.substr(1)];
-                order = -1;
-            } else {
-                column = columns_map[key];
-                order = 1;
-            }
-
-            if (column) {
-                col_idx = column.idx;
-            } else {
-                col_idx = null;
-                order = 1;
-            }
-        } else {
-            col_idx = null;
-            order = 1;
-        }
-
-        if (sort_rec) {
-            sorted_rows.length = 0;
-            sortRowsRecursive(row_sets[0], col_idx, order);
-        } else {
-            sortRows(sorted_rows, col_idx, order);
-        }
-        row_ptr = null;
-
-        sort_key = key;
-    };
-
-    function sortRows(rows, col_idx, order) {
-        if (col_idx != null) {
-            rows.sort((row1, row2) => (util.compareValues(row1.cells[col_idx].value, row2.cells[col_idx].value) ||
-                                       row1.insert_idx - row2.insert_idx) * order);
-        } else {
-            rows.sort((row1, row2) => row1.insert_idx - row2.insert_idx);
-        }
-    }
-
-    function sortRowsRecursive(rows, col_idx, order) {
-        sortRows(rows, col_idx, order);
-
-        for (const row of rows) {
-            if (row.depth + 1 === row_sets.length)
-                sorted_rows.push(row);
-            sortRowsRecursive(row.children, col_idx, order);
         }
     }
 
