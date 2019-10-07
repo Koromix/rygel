@@ -190,10 +190,15 @@ function EasyTable() {
         let render_count = Math.max(render_end - offset, 0);
 
         let stat_text;
-        if (render_count) {
-            stat_text = `${offset + 1} - ${offset + render_count} / ${render_rows.length}`;
-        } else if (render_rows.length) {
-            stat_text = `0 / ${render_rows.length}`;
+        if (render_rows.length) {
+            if (render_count) {
+                stat_text = `${offset + 1} - ${offset + render_count} / ${render_rows.length}`;
+            } else {
+                stat_text = `0 / ${render_rows.length}`;
+            }
+
+            if (render_rows.length < row_sets[row_sets.length - 1].length)
+                stat_text += ` (sans filtre : ${row_sets[row_sets.length - 1].length})`;
         } else {
             stat_text = '';
         }
