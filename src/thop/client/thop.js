@@ -60,7 +60,7 @@ let thop = (function() {
         await updateSettings();
 
         // Run!
-        await run(false);
+        await run();
         await updateSettings();
 
         // Update again, even though we probably got it right earlier... but maybe not?
@@ -121,14 +121,13 @@ let thop = (function() {
         return route_mod.makeURL();
     }
 
-    async function run(push_history, fake = false) {
+    async function run(push_history) {
         let view_el = document.querySelector('#th_view');
 
         view_el.classList.add('th_view_busy');
         try {
             await route_mod.run();
         } catch (err) {
-            render('', document.querySelector('#th_options'));
             render(err.message, view_el);
             log.error(err.message);
         }

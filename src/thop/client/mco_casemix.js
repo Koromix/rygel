@@ -9,8 +9,10 @@ let mco_casemix = (function() {
     this.route = route;
 
     this.run = async function() {
-        if (!settings.permissions.mco_casemix)
+        if (!settings.permissions.mco_casemix) {
+            render('', document.querySelector('#th_options'));
             throw new Error('Vous n\'avez pas accès à cette page');
+        }
 
         // Fetch resources
         let [mco, structures] = await Promise.all([
