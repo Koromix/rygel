@@ -284,6 +284,20 @@ let mco_casemix = (function() {
         render('', document.querySelector('#th_view'));
     }
 
+    function renderGhmRootSelector(mco, current_ghm_root) {
+        return html`
+            <select @change=${e => thop.go(self, {valorisation: {ghm_root: e.target.value}})}>
+                ${mco.ghm_roots.definitions.map(defn => {
+                    let disabled = false;
+                    let label = `${defn.describe()}${disabled ? ' *' : ''}`;
+
+                    return html`<option value=${defn.code} ?disabled=${disabled}
+                                        .selected=${defn.code === current_ghm_root}>${label}</option>`
+                })}
+            </select>
+        `;
+    }
+
     // ------------------------------------------------------------------------
     // RSS
     // ------------------------------------------------------------------------
@@ -309,7 +323,7 @@ let mco_casemix = (function() {
     }
 
     // ------------------------------------------------------------------------
-    // Options
+    // Common options
     // ------------------------------------------------------------------------
 
     function renderPeriodPicker(min_date, max_date, start_date, end_date) {
@@ -379,20 +393,6 @@ let mco_casemix = (function() {
         tsel.setCurrentTab('roots');
 
         return tsel.render();
-    }
-
-    function renderGhmRootSelector(mco, current_ghm_root) {
-        return html`
-            <select @change=${e => thop.go(self, {valorisation: {ghm_root: e.target.value}})}>
-                ${mco.ghm_roots.definitions.map(defn => {
-                    let disabled = false;
-                    let label = `${defn.describe()}${disabled ? ' *' : ''}`;
-
-                    return html`<option value=${defn.code} ?disabled=${disabled}
-                                        .selected=${defn.code === current_ghm_root}>${label}</option>`
-                })}
-            </select>
-        `;
     }
 
     return this;
