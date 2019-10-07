@@ -159,6 +159,7 @@ let mco_info = (function() {
             sort: route.ghmghs.sort,
             route: (offset, filter, sort_key) => ({ghmghs: {offset: offset, filter: filter, sort: sort_key}}),
 
+            category: ghs => mco.ghm_roots.describe(ghs.ghm_root),
             columns: [
                 {key: 'ghm', title: 'GHM', func: ghs => mco.ghm.describe(ghs.ghm)},
                 {key: 'ghs', title: 'GHS', func: ghs => ghs.ghs},
@@ -261,6 +262,8 @@ let mco_info = (function() {
             etab.urlBuilder = (offset, sort_key) => self.makeURL(handler.route(offset, sort_key));
             etab.clickHandler = (e, offset, sort_key) => {
                 thop.goFake(self, handler.route(offset, handler.filter, sort_key));
+                etab.setOptions({parents: !etab.getSortKey()});
+
                 e.preventDefault();
             };
         }
@@ -271,6 +274,7 @@ let mco_info = (function() {
         etab.setFilter(makeFilterFunction(handler.filter));
         etab.setOptions({
             header: handler.header,
+            parents: !handler.sort,
             filter: true
         });
 
@@ -286,8 +290,21 @@ let mco_info = (function() {
             });
         }
 
+        let prev_category = null;
         for (let i = 0; i < records.length; i++) {
             let record = records[i];
+
+            if (handler.category) {
+                let category = handler.category(record);
+
+                if (category !== prev_category) {
+                    etab.endRow();
+                    etab.beginRow();
+                    etab.addCell(category, {colspan: handler.columns.length});
+
+                    prev_category = category;
+                }
+            }
 
             etab.beginRow();
             for (let col of handler.columns) {
