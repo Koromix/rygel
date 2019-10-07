@@ -30,6 +30,12 @@ let thop = (function() {
         // Update settings
         await updateSettings();
 
+        // Initialize module routes
+        Object.assign(mco_info.route, mco_info.parseURL(''));
+        Object.assign(mco_casemix.route, mco_casemix.parseURL(''));
+        Object.assign(user.route, user.parseURL(''));
+
+        // Start interface
         updateMenu('');
         self.go(window.location.href, {}, false);
     }
@@ -152,12 +158,6 @@ let thop = (function() {
                 }
             });
             settings_key = user.getUrlKey();
-        }
-
-        // Initialize module routes
-        for (let mod of [mco_info, mco_casemix, user]) {
-            util.clearObject(mod.route);
-            Object.assign(mod.route, mod.parseURL(''));
         }
 
         // Update session information
