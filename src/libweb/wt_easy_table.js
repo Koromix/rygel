@@ -59,6 +59,7 @@ function EasyTable() {
             key: key,
             title: title,
             render: render || (value => value),
+            sort: options.sort || util.compareValues,
             tooltip: options.tooltip || ''
         };
 
@@ -157,7 +158,7 @@ function EasyTable() {
             let cell2 = row2.cells[col_idx];
 
             if (col_idx != null && cell1 && cell2) {
-                return (util.compareValues(cell1.value, cell2.value) ||
+                return (columns[col_idx].sort(cell1.value, cell2.value) ||
                         row1.insert_idx - row2.insert_idx) * order;
             } else {
                 return (row1.insert_idx - row2.insert_idx) * order;
