@@ -59,8 +59,7 @@ function EasyTable() {
             key: key,
             title: title,
             render: render || (value => value),
-            format: options.format,
-            tooltip: options.tooltip
+            tooltip: options.tooltip || ''
         };
 
         columns.push(column);
