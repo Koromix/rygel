@@ -161,7 +161,9 @@ let mco_info = (function() {
 
             category: ghs => mco.ghm_roots.describe(ghs.ghm_root),
             columns: [
-                {key: 'ghm', title: 'GHM', func: ghs => mco.ghm.describe(ghs.ghm)},
+                {key: 'code', title: 'Code', func: ghs => ghs.ghm},
+                {key: 'label', title: 'Libellé', func: ghs => mco.ghm.label(ghs.ghm),
+                    sort: (label1, label2) => label1.localeCompare(label2)},
                 {key: 'ghs', title: 'GHS', func: ghs => ghs.ghs},
                 {key: 'durations', title: 'Durées', func: ghs => maskToRangeStr(ghs.durations)},
                 {key: 'confirm', title: 'Confirmation',
@@ -213,7 +215,9 @@ let mco_info = (function() {
             route: (offset, filter, sort_key) => ({diagnoses: {offset: offset, filter: filter, sort: sort_key}}),
 
             columns: [
-                {key: 'code', title: 'Code', func: diag => cim10.diagnoses.describe(diag.diag)},
+                {key: 'code', title: 'Code', func: diag => diag.diag},
+                {key: 'label', title: 'Libellé', func: diag => cim10.diagnoses.label(diag.diag),
+                    sort: (label1, label2) => label1.localeCompare(label2)},
                 {key: 'severity', title: 'Niveau', func: diag => diag.severity},
                 {key: 'cmd', title: 'CMD', func: diag => diag.cmd},
                 {key: 'main_list', title: 'Liste principale', func: diag => diag.main_list}
@@ -245,7 +249,9 @@ let mco_info = (function() {
             route: (offset, filter, sort_key) => ({procedures: {offset: offset, filter: filter, sort: sort_key}}),
 
             columns: [
-                {key: 'code', title: 'Code', func: proc => ccam.procedures.describe(proc.proc)},
+                {key: 'code', title: 'Code', func: proc => proc.proc},
+                {key: 'label', title: 'Libellé', func: proc => ccam.procedures.label(proc.proc),
+                    sort: (label1, label2) => label1.localeCompare(label2)},
                 {key: 'begin_date', title: 'Début', func: proc => dates.fromString(proc.begin_date)},
                 {key: 'end_date', title: 'Fin', func: proc => dates.fromString(proc.end_date)},
                 {key: 'phase', title: 'Phase', func: proc => proc.phase || null},
