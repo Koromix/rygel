@@ -53,12 +53,12 @@ function EasyTable() {
 
     this.setPanel = function(new_panel) { panel = new_panel || ''; };
 
-    this.addColumn = function(key, title, render = null, options = {}) {
+    this.addColumn = function(key, title, options = {}) {
         let column = {
             idx: columns.length,
             key: key,
             title: title,
-            render: render || (value => value),
+            render: options.render || (value => value),
             sort: options.sort || util.compareValues,
             tooltip: options.tooltip || ''
         };
