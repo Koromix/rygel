@@ -107,6 +107,12 @@ function EasyTable() {
             self.addCell(value);
     };
 
+    this.addRow = function(values) {
+        self.beginRow();
+        self.addCells(values);
+        self.endRow();
+    };
+
     this.clear = function() {
         columns = [];
         columns_map = {};
