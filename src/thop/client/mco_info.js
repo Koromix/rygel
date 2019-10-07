@@ -285,15 +285,18 @@ let mco_info = (function() {
         });
 
         for (let col of handler.columns) {
-            etab.addColumn(col.key, col.title, value => {
-                if (typeof value === 'string') {
-                    return self.addSpecLinks(value);
-                } else if (value != null) {
-                    return value.toLocaleString();
-                } else {
-                    return null;
-                }
-            }, {sort: col.sort});
+            etab.addColumn(col.key, col.title, {
+                render: value => {
+                    if (typeof value === 'string') {
+                        return self.addSpecLinks(value);
+                    } else if (value != null) {
+                        return value.toLocaleString();
+                    } else {
+                        return null;
+                    }
+                },
+                sort: col.sort
+            });
         }
 
         let prev_category = null;
