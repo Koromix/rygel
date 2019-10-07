@@ -770,8 +770,8 @@ let mco_info = (function() {
             <label>
                 Secteur <abbr title="${help}">?</abbr>
                 <select @change=${e => thop.go(self, {sector: e.target.value})}>
-                    <option value="public" .selected=${current_sector === 'public'}>Public</option>
-                    <option value="private" .selected=${current_sector === 'private'}>Privé</option>
+                    <option value="public" .selected=${current_sector === 'public'}>Public (prestation complète)</option>
+                    <option value="private" .selected=${current_sector === 'private'}>Privé (clinique et personnel non médical)</option>
                 </select>
             </label>
         `;
