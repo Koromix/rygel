@@ -73,7 +73,7 @@ let data = (function() {
 
         this.label = function(code) {
             let defn = map[code];
-            return defn ? defn.label : null;
+            return defn ? defn.label : '';
         };
         this.describe = function(code) {
             let defn = map[code];
@@ -81,7 +81,7 @@ let data = (function() {
         };
         this.describeParent = function(code, type) {
             let defn = map[code];
-            return defn ? dict[type].describeParent(type) : null;
+            return defn ? dict[type].describeParent(type) : '';
         };
 
         function describeDefinition() { return `${this.code} – ${this.label}`; }
