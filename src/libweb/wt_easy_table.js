@@ -88,7 +88,8 @@ function EasyTable() {
         row_ptr = row;
     };
     this.endRow = function() {
-        row_ptr = row_ptr.parent;
+        if (row_ptr)
+            row_ptr = row_ptr.parent;
     };
 
     this.addCell = function(value, options = {}) {
@@ -146,12 +147,17 @@ function EasyTable() {
     };
 
     function sortRows(rows, col_idx, order) {
-        if (col_idx != null) {
-            rows.sort((row1, row2) => (util.compareValues(row1.cells[col_idx].value, row2.cells[col_idx].value) ||
-                                       row1.insert_idx - row2.insert_idx) * order);
-        } else {
-            rows.sort((row1, row2) => row1.insert_idx - row2.insert_idx);
-        }
+        rows.sort((row1, row2) => {
+            let cell1 = row1.cells[col_idx];
+            let cell2 = row2.cells[col_idx];
+
+            if (col_idx != null && cell1 && cell2) {
+                return (util.compareValues(cell1.value, cell2.value) ||
+                        row1.insert_idx - row2.insert_idx) * order;
+            } else {
+                return (row1.insert_idx - row2.insert_idx) * order;
+            }
+        });
     }
 
     function sortRowsRecursive(rows, col_idx, order, parent_match) {
