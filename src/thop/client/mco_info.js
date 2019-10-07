@@ -287,7 +287,7 @@ let mco_info = (function() {
                 } else {
                     return null;
                 }
-            });
+            }, {sort: col.sort});
         }
 
         let prev_category = null;
