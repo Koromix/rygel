@@ -352,6 +352,9 @@ let mco_info = (function() {
                         }
                     } break;
                     case 'œ': { re += '(oe|œ)'; } break;
+                    case '—':
+                    case '–':
+                    case '-': { re += '[—–\\-]'; } break;
 
                     // Escape special regex characters
                     case '/':
