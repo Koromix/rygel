@@ -390,6 +390,18 @@ let mco_info = (function() {
         }, 200);
     }
 
+    function renderListInfo(type, label, current_list) {
+        if (current_list) {
+            let args = {};
+            args[type] = {list: null, offset: 0, filter: null};
+
+            return html`<div class="opt_list"><b>Liste :</b> ${current_list}
+                                              <a href=${self.makeURL(args)}>(afficher tout)</a></div>`;
+        } else {
+            return html`<div class="opt_list"><b>Liste :</b> tous les ${label}</div>`;
+        }
+    }
+
     // ------------------------------------------------------------------------
     // GHS
     // ------------------------------------------------------------------------
@@ -422,6 +434,20 @@ let mco_info = (function() {
         // Grid
         render(renderPriceGrid(route.ghs.ghm_root, columns, route.ghs.duration, route.ghs.coeff),
                document.querySelector('#th_view'));
+    }
+
+    function renderGhmRootSelector(mco, current_ghm_root) {
+        return html`
+            <select @change=${e => thop.go(self, {ghs: {ghm_root: e.target.value}})}>
+                ${mco.ghm_roots.definitions.map(ghm_root => {
+                    let disabled = false;
+                    let label = `${ghm_root.describe()}${disabled ? ' *' : ''}`;
+
+                    return html`<option value=${ghm_root.code} ?disabled=${disabled}
+                                        .selected=${ghm_root.code === current_ghm_root}>${label}</option>`
+                })}
+            </select>
+        `
     }
 
     function renderPriceGrid(ghm_root, columns, max_duration, apply_coeff) {
@@ -736,7 +762,7 @@ let mco_info = (function() {
     }
 
     // ------------------------------------------------------------------------
-    // Options
+    // Common options
     // ------------------------------------------------------------------------
 
     function renderVersionLine(versions, current_version) {
@@ -775,40 +801,6 @@ let mco_info = (function() {
                 </select>
             </label>
         `;
-    }
-
-    function renderGhmRootSelector(mco, current_ghm_root) {
-        return html`
-            <select @change=${e => thop.go(self, {ghs: {ghm_root: e.target.value}})}>
-                ${mco.ghm_roots.definitions.map(ghm_root => {
-                    let disabled = false;
-                    let label = `${ghm_root.describe()}${disabled ? ' *' : ''}`;
-
-                    return html`<option value=${ghm_root.code} ?disabled=${disabled}
-                                        .selected=${ghm_root.code === current_ghm_root}>${label}</option>`
-                })}
-            </select>
-        `
-    }
-
-    function renderListInfo(type, label, current_list) {
-        if (current_list) {
-            let args = {};
-            args[type] = {list: null, offset: 0, filter: null};
-
-            return html`
-                <div class="opt_list">
-                    <b>Liste :</b> ${current_list}
-                    <a href=${self.makeURL(args)}>(afficher tout)</a>
-                </div>
-            `;
-        } else {
-            return html`
-                <div class="opt_list">
-                    <b>Liste :</b> tous les ${label}
-                </div>
-            `;
-        }
     }
 
     // ------------------------------------------------------------------------
