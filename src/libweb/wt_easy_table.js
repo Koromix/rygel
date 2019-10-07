@@ -17,6 +17,7 @@ function EasyTable() {
         parents: true,
         empty: true
     };
+    let panel = '';
 
     let columns;
     let columns_map;
@@ -49,6 +50,8 @@ function EasyTable() {
 
     this.setOptions = function(new_options) { Object.assign(options, new_options); };
     this.getOptions = function() { return options; };
+
+    this.setPanel = function(new_panel) { panel = new_panel || ''; };
 
     this.addColumn = function(key, title, render = null, options = {}) {
         let column = {
@@ -200,7 +203,7 @@ function EasyTable() {
             <div class="etab_header">
                 <p class="etab_stat">${stat_text}</p>
                 ${renderPager()}
-                <div></div>
+                <div class="etab_panel">${panel}</div>
             </div>
 
             <table class="etab_table">
