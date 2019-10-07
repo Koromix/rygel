@@ -55,7 +55,7 @@ let mco_info = (function() {
 
             case 'ghs': {
                 args.sector = path[2] || 'public';
-                args.ghm_root = path[3] || null;
+                args.ghs.ghm_root = path[3] || null;
                 args.ghs.duration = parseInt(params.duration, 10) || 200;
                 args.ghs.coeff = !!parseInt(params.coeff, 10) || false;
             } break;
@@ -96,9 +96,8 @@ let mco_info = (function() {
 
             case 'ghs': {
                 path.push(args.sector);
-                if (args.ghm_root)
-                    path.push(args.ghm_root);
-
+                if (args.ghs.ghm_root)
+                    path.push(args.ghs.ghm_root);
                 params.duration = args.ghs.duration;
                 params.coeff = (args.ghs.coeff != null) ? (0 + args.ghs.coeff) : null;
             } break;
@@ -402,8 +401,8 @@ let mco_info = (function() {
             data.fetchJSON(`${env.base_url}api/mco_ghmghs.json?sector=${route.sector}&date=${version.begin_date}`)
         ]);
 
-        if (!route.ghm_root)
-            route.ghm_root = mco.ghm_roots.definitions[0].code;
+        if (!route.ghs.ghm_root)
+            route.ghs.ghm_root = mco.ghm_roots.definitions[0].code;
 
         // Options
         render(html`
@@ -413,15 +412,15 @@ let mco_info = (function() {
                                  @change=${e => thop.go(self, {ghs: {duration: e.target.value}})}/></label>
             <label>Coefficient <input type="checkbox" .checked=${route.ghs.coeff}
                                        @change=${e => thop.go(self, {ghs: {coeff: e.target.checked}})}/></label>
-            ${renderGhmRootSelector(mco, route.ghm_root)}
+            ${renderGhmRootSelector(mco, route.ghs.ghm_root)}
         `, document.querySelector('#th_options'));
 
-        let columns = ghmghs.filter(it => it.ghm_root === route.ghm_root);
+        let columns = ghmghs.filter(it => it.ghm_root === route.ghs.ghm_root);
         if (!columns.length)
-            throw new Error(`Racine de GHM '${route.ghm_root}' inexistante`);
+            throw new Error(`Racine de GHM '${route.ghs.ghm_root}' inexistante`);
 
         // Grid
-        render(renderPriceGrid(route.ghm_root, columns, route.ghs.duration, route.ghs.coeff),
+        render(renderPriceGrid(route.ghs.ghm_root, columns, route.ghs.duration, route.ghs.coeff),
                document.querySelector('#th_view'));
     }
 
@@ -482,7 +481,7 @@ let mco_info = (function() {
                                     cls += ' warn';
                                     tooltip += 'Devrait être orienté dans la CMD 28 (séance)\n';
                                 }
-                                if (self.testGhsDuration(col.raac_durations || 0, duration)) {
+                                if (testGhsDuration(col.raac_durations || 0, duration)) {
                                     cls += ' warn';
                                     tooltip += 'Accessible en cas de RAAC\n';
                                 }
@@ -530,7 +529,7 @@ let mco_info = (function() {
     function computeGhsPrice(ghs, duration, apply_coeff) {
         if (!ghs.ghs_cents)
             return null;
-        if (!self.testGhsDuration(ghs.durations, duration))
+        if (!testGhsDuration(ghs.durations, duration))
             return null;
 
         let price_cents;
@@ -559,7 +558,7 @@ let mco_info = (function() {
         return cents ? (cents * coefficient) : cents;
     }
 
-    this.testGhsDuration = function(mask, duration) {
+    function testGhsDuration(mask, duration) {
         let duration_mask = (duration < 32) ? (1 << duration) : (1 << 31);
         return !!(mask & duration_mask);
     };
@@ -780,7 +779,7 @@ let mco_info = (function() {
 
     function renderGhmRootSelector(mco, current_ghm_root) {
         return html`
-            <select @change=${e => thop.go(self, {ghm_root: e.target.value})}>
+            <select @change=${e => thop.go(self, {ghs: {ghm_root: e.target.value}})}>
                 ${mco.ghm_roots.definitions.map(ghm_root => {
                     let disabled = false;
                     let label = `${ghm_root.describe()}${disabled ? ' *' : ''}`;
@@ -836,7 +835,7 @@ let mco_info = (function() {
                 let ghm_root = m[0].substr(0, 5);
                 let tooltip = findCachedLabel('mco', 'ghm_roots', ghm_root) || '';
 
-                frag = html`<a class="ghm" href=${self.makeURL({mode: 'ghs', ghm_root: ghm_root})} title=${tooltip}>${m[0]}</a>`;
+                frag = html`<a class="ghm" href=${self.makeURL({mode: 'ghs', ghs: {ghm_root: ghm_root}})} title=${tooltip}>${m[0]}</a>`;
             } else if (m = str.match(/[A-Z]{4}[0-9+]{3}/)) {
                 let tooltip = findCachedLabel('ccam', 'procedures', m[0]);
                 frag = tooltip ? html`<abbr title=${tooltip}>${m[0]}</abbr>` : m[0];
