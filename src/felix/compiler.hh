@@ -34,8 +34,9 @@ enum class LinkType {
 class Compiler {
 public:
     const char *name;
+    const char *prefix;
 
-    Compiler(const char *name) : name(name) {}
+    Compiler(const char *name, const char *prefix) : name(name), prefix(prefix) {}
 
     virtual const char *MakeObjectCommand(const char *src_filename, SourceType src_type, BuildMode build_mode,
                                           bool warnings, const char *pch_filename, Span<const char *const> definitions,
