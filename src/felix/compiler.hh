@@ -31,19 +31,11 @@ enum class LinkType {
     SharedLibrary
 };
 
-enum class CompilerFlag {
-    PCH = 1 << 0
-};
-
 class Compiler {
 public:
     const char *name;
-    unsigned int flags;
 
-    Compiler(const char *name, unsigned int flags)
-        : name(name), flags(flags) {}
-
-    bool Supports(CompilerFlag flag) const { return flags & (int)flag; }
+    Compiler(const char *name) : name(name) {}
 
     virtual const char *MakeObjectCommand(const char *src_filename, SourceType src_type, BuildMode build_mode,
                                           bool warnings, const char *pch_filename, Span<const char *const> definitions,
