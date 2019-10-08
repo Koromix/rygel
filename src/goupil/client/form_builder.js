@@ -143,9 +143,6 @@ function FormBuilder(state, widgets, variables = []) {
         options_stack.pop();
     }
 
-    function parseValue(str) { return (str && str !== 'undefined') ? JSON.parse(str) : undefined; }
-    function stringifyValue(value) { return JSON.stringify(value); }
-
     this.find = key => variables_map[key];
     this.value = key => {
         let intf = variables_map[key];
@@ -284,7 +281,7 @@ function FormBuilder(state, widgets, variables = []) {
     };
 
     function handleDropdownChange(e, key) {
-        let value = parseValue(e.target.value);
+        let value = util.strToValue(e.target.value);
         state.values[key] = value;
         state.missing_errors.delete(key);
 
@@ -306,7 +303,7 @@ function FormBuilder(state, widgets, variables = []) {
                 ${options.untoggle || !props.some(p => p != null && value === p.value) ?
                     html`<option value="null" .selected=${value == null}>-- Choisissez une option --</option>` : ''}
                 ${props.map(p =>
-                    html`<option value=${stringifyValue(p.value)} .selected=${value === p.value}>${p.label}</option>`)}
+                    html`<option value=${util.valueToStr(p.value)} .selected=${value === p.value}>${p.label}</option>`)}
             </select>
         `);
 
@@ -321,7 +318,7 @@ function FormBuilder(state, widgets, variables = []) {
         if (e.target.classList.contains('active') && allow_untoggle) {
             state.values[key] = undefined;
         } else {
-            state.values[key] = parseValue(json);
+            state.values[key] = util.strToValue(json);
         }
         state.missing_errors.delete(key);
 
@@ -347,7 +344,7 @@ function FormBuilder(state, widgets, variables = []) {
             <label for=${id}>${label || key}</label>
             <div class="af_select" id=${id}>
                 ${props.map(p =>
-                    html`<button data-value=${stringifyValue(p.value)}
+                    html`<button data-value=${util.valueToStr(p.value)}
                                  ?disabled=${options.disable} .className=${value === p.value ? 'af_button active' : 'af_button'}
                                  @click=${e => handleChoiceChange(e, key, options.untoggle)}>${p.label}</button>`)}
             </div>
@@ -367,7 +364,7 @@ function FormBuilder(state, widgets, variables = []) {
     };
 
     function handleRadioChange(e, key, already_checked) {
-        let value = parseValue(e.target.value);
+        let value = util.strToValue(e.target.value);
 
         if (already_checked) {
             e.target.checked = false;
@@ -392,7 +389,7 @@ function FormBuilder(state, widgets, variables = []) {
             <label>${label || key}</label>
             <div class="af_radio" id=${id}>
                 ${props.map((p, i) =>
-                    html`<input type="radio" name=${id} id=${`${id}.${i}`} value=${stringifyValue(p.value)}
+                    html`<input type="radio" name=${id} id=${`${id}.${i}`} value=${util.valueToStr(p.value)}
                                 ?disabled=${options.disable} .checked=${value === p.value}
                                 @click=${e => handleRadioChange(e, key, options.untoggle && value === p.value)}/>
                          <label for=${`${id}.${i}`}>${p.label}</label><br/>`)}
@@ -414,7 +411,7 @@ function FormBuilder(state, widgets, variables = []) {
             if ((el.value === 'null') != nullify)
                 el.checked = false;
             if (el.checked)
-                value.push(parseValue(el.value));
+                value.push(util.strToValue(el.value));
         }
         state.values[key] = value;
         state.missing_errors.delete(key);
@@ -438,7 +435,7 @@ function FormBuilder(state, widgets, variables = []) {
             <label>${label || key}</label>
             <div class="af_multi" id=${id}>
                 ${props.map((p, idx) =>
-                    html`<input type="checkbox" id=${`${id}.${idx}`} value=${stringifyValue(p.value)}
+                    html`<input type="checkbox" id=${`${id}.${idx}`} value=${util.valueToStr(p.value)}
                                 ?disabled=${options.disable} .checked=${value.includes(p.value)}
                                 @click=${e => handleMultiChange(e, key)}/>
                          <label for=${`${id}.${idx}`}>${p.label}</label><br/>`)}
