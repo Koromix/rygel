@@ -5,10 +5,6 @@
 function RecordManager(db) {
     let self = this;
 
-    function makeTableKey(table, id) {
-        return `${table}_${id}`;
-    }
-
     this.create = function(table) {
         let id = util.makeULID();
         let tkey = makeTableKey(table, id);
@@ -78,6 +74,10 @@ function RecordManager(db) {
 
         return [records, variables];
     };
+
+    function makeTableKey(table, id) {
+        return `${table}_${id}`;
+    }
 
     return this;
 }

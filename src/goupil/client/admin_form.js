@@ -19,38 +19,46 @@ let admin_form = (function() {
     let current_asset;
     let current_record = {};
 
-    function toggleLeftPanel(type) {
-        if (left_panel !== type) {
-            left_panel = type;
-        } else {
-            left_panel = null;
-            show_main_panel = true;
+    this.run = async function(asset, args) {
+        // Deal with form executor
+        if (!executor) {
+            executor = new FormExecutor();
+            executor.goHandler = (key, args) => pilot.go(key, args);
+            executor.submitHandler = saveRecordAndReset;
         }
 
-        pilot.go();
-    }
+        // Load record (if needed)
+        if (!args.hasOwnProperty('id') && asset.key !== current_record.table)
+            current_record = {};
+        if (args.hasOwnProperty('id') || current_record.id == null) {
+            if (args.id == null) {
+                current_record = g_records.create(asset.key);
+            } else if (args.id !== current_record.id) {
+                current_record = await g_records.load(asset.key, args.id);
+            }
 
-    function toggleMainPanel() {
-        if (!left_panel)
-            left_panel = 'editor';
-        show_main_panel = !show_main_panel;
-
-        pilot.go();
-    }
-
-    function makeEditorElement(cls) {
-        if (!editor_el) {
-            editor_el = document.createElement('div');
-            editor_el.id = 'af_editor';
+            executor.setData(current_record.values);
         }
+        current_asset = asset;
 
-        for (let cls of editor_el.classList) {
-            if (!cls.startsWith('ace_') && !cls.startsWith('ace-'))
-                editor_el.classList.remove(cls);
-        }
-        editor_el.classList.add(cls);
+        // Render
+        renderLayout();
+        renderModes();
+        renderForm();
+        syncEditor();
+        renderRecords(asset.key);
+    };
 
-        return editor_el;
+    async function saveRecordAndReset(values, variables) {
+        let entry = new log.Entry();
+        entry.progress('Enregistrement en cours');
+
+        await g_records.save(current_record, variables);
+        entry.success('Données enregistrées !');
+
+        pilot.go(null, {id: null});
+        // TODO: Give focus to first widget
+        window.scrollTo(0, 0);
     }
 
     function renderLayout() {
@@ -86,6 +94,21 @@ let admin_form = (function() {
         data_el = document.querySelector('#af_data');
     }
 
+    function makeEditorElement(cls) {
+        if (!editor_el) {
+            editor_el = document.createElement('div');
+            editor_el.id = 'af_editor';
+        }
+
+        for (let cls of editor_el.classList) {
+            if (!cls.startsWith('ace_') && !cls.startsWith('ace-'))
+                editor_el.classList.remove(cls);
+        }
+        editor_el.classList.add(cls);
+
+        return editor_el;
+    }
+
     function renderModes() {
         render(html`
             <button class=${left_panel === 'editor' ? 'active' : ''} @click=${e => toggleLeftPanel('editor')}>Éditeur</button>
@@ -94,23 +117,27 @@ let admin_form = (function() {
         `, modes_el);
     }
 
-    function renderForm() {
-        return executor.render(form_el, current_asset.key, current_asset.data);
+    function toggleLeftPanel(type) {
+        if (left_panel !== type) {
+            left_panel = type;
+        } else {
+            left_panel = null;
+            show_main_panel = true;
+        }
+
+        pilot.go();
     }
 
-    function handleEditorChange() {
-        if (current_asset) {
-            let prev_script = current_asset.data;
+    function toggleMainPanel() {
+        if (!left_panel)
+            left_panel = 'editor';
+        show_main_panel = !show_main_panel;
 
-            current_asset.data = editor.getValue();
+        pilot.go();
+    }
 
-            if (renderForm()) {
-                g_assets.save(current_asset);
-            } else {
-                // Restore working script
-                current_asset.data = prev_script;
-            }
-        }
+    function renderForm() {
+        return executor.render(form_el, current_asset.key, current_asset.data);
     }
 
     async function syncEditor() {
@@ -158,12 +185,103 @@ let admin_form = (function() {
         }
     }
 
-    function reverseLastColumns(columns, start_idx) {
-        for (let i = 0; i < (columns.length - start_idx) / 2; i++) {
-            let tmp = columns[start_idx + i];
-            columns[start_idx + i] = columns[columns.length - i - 1];
-            columns[columns.length - i - 1] = tmp;
+    function handleEditorChange() {
+        if (current_asset) {
+            let prev_script = current_asset.data;
+
+            current_asset.data = editor.getValue();
+
+            if (renderForm()) {
+                g_assets.save(current_asset);
+            } else {
+                // Restore working script
+                current_asset.data = prev_script;
+            }
         }
+    }
+
+    async function renderRecords(table) {
+        if (left_panel === 'data') {
+            let [records, variables] = await g_records.loadAll(table);
+            let columns = orderColumns(variables);
+
+            let empty_msg;
+            if (!records.length) {
+                empty_msg = 'Aucune donnée à afficher';
+            } else if (!columns.length) {
+                empty_msg = 'Impossible d\'afficher les données (colonnes inconnues)';
+                records = [];
+            }
+
+            render(html`
+                <table class="af_records" style=${`min-width: ${30 + 60 * columns.length}px`}>
+                    <thead>
+                        <tr>
+                            <th class="af_head_actions">
+                                ${columns.length ?
+                                    html`<button class="af_excel" @click=${e => exportToExcel(table)}></button>` : ''}
+                            </th>
+                            ${!columns.length ? html`<th></th>` : ''}
+                            ${columns.map(col => html`<th class="af_head_variable">${col.key}</th>`)}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${empty_msg ?
+                            html`<tr><td colspan=${1 + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : ''}
+                        ${records.map(record => html`<tr class=${record.id === current_record.id ? 'af_row_current' : ''}>
+                            <th>
+                                <a href="#" @click=${e => { handleEditClick(e, record); e.preventDefault(); }}>🔍\uFE0E</a>
+                                <a href="#" @click=${e => { showDeleteDialog(e, record); e.preventDefault(); }}>✕</a>
+                            </th>
+
+                            ${columns.map(col => {
+                                let value = record.values[col.key];
+
+                                let tooltip;
+                                let cls;
+                                if (value != null) {
+                                    if (Array.isArray(value))
+                                        value = value.join('|');
+
+                                    tooltip = value;
+                                    cls = `af_record_${col.type}`;
+                                } else {
+                                    value = 'NA';
+
+                                    tooltip = 'Donnée manquante';
+                                    cls = `af_record_missing`;
+                                }
+
+                                return html`<td class=${cls} title=${tooltip}>${value}</td>`;
+                            })}
+                        </tr>`)}
+                    </tbody>
+                </table>
+            `, data_el);
+        }
+    }
+
+    async function exportToExcel(table) {
+        if (!window.XLSX)
+            await util.loadScript(`${env.base_url}static/xlsx.core.min.js`);
+
+        let [records, variables] = await g_records.loadAll(table);
+        let columns = orderColumns(variables);
+
+        let export_name = `${env.project_key}_${dates.today()}`;
+        let filename = `export_${export_name}.xlsx`;
+
+        let wb = XLSX.utils.book_new();
+        {
+            let ws = XLSX.utils.aoa_to_sheet([columns.map(col => col.key)]);
+            for (let record of records) {
+                let values = columns.map(col => record.values[col.key]);
+                XLSX.utils.sheet_add_aoa(ws, [values], {origin: -1});
+            }
+            XLSX.utils.book_append_sheet(wb, ws, export_name);
+        }
+
+        XLSX.writeFile(wb, filename);
     }
 
     function orderColumns(variables) {
@@ -256,27 +374,12 @@ let admin_form = (function() {
         return columns;
     }
 
-    async function exportToExcel(table) {
-        if (!window.XLSX)
-            await util.loadScript(`${env.base_url}static/xlsx.core.min.js`);
-
-        let [records, variables] = await g_records.loadAll(table);
-        let columns = orderColumns(variables);
-
-        let export_name = `${env.project_key}_${dates.today()}`;
-        let filename = `export_${export_name}.xlsx`;
-
-        let wb = XLSX.utils.book_new();
-        {
-            let ws = XLSX.utils.aoa_to_sheet([columns.map(col => col.key)]);
-            for (let record of records) {
-                let values = columns.map(col => record.values[col.key]);
-                XLSX.utils.sheet_add_aoa(ws, [values], {origin: -1});
-            }
-            XLSX.utils.book_append_sheet(wb, ws, export_name);
+    function reverseLastColumns(columns, start_idx) {
+        for (let i = 0; i < (columns.length - start_idx) / 2; i++) {
+            let tmp = columns[start_idx + i];
+            columns[start_idx + i] = columns[columns.length - i - 1];
+            columns[columns.length - i - 1] = tmp;
         }
-
-        XLSX.writeFile(wb, filename);
     }
 
     function handleEditClick(e, record) {
@@ -304,109 +407,6 @@ let admin_form = (function() {
             form.buttons(form.buttons.std.ok_cancel('Supprimer'));
         });
     }
-
-    async function renderRecords(table) {
-        if (left_panel === 'data') {
-            let [records, variables] = await g_records.loadAll(table);
-            let columns = orderColumns(variables);
-
-            let empty_msg;
-            if (!records.length) {
-                empty_msg = 'Aucune donnée à afficher';
-            } else if (!columns.length) {
-                empty_msg = 'Impossible d\'afficher les données (colonnes inconnues)';
-                records = [];
-            }
-
-            render(html`
-                <table class="af_records" style=${`min-width: ${30 + 60 * columns.length}px`}>
-                    <thead>
-                        <tr>
-                            <th class="af_head_actions">
-                                ${columns.length ?
-                                    html`<button class="af_excel" @click=${e => exportToExcel(table)}></button>` : ''}
-                            </th>
-                            ${!columns.length ? html`<th></th>` : ''}
-                            ${columns.map(col => html`<th class="af_head_variable">${col.key}</th>`)}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${empty_msg ?
-                            html`<tr><td colspan=${1 + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : ''}
-                        ${records.map(record => html`<tr class=${record.id === current_record.id ? 'af_row_current' : ''}>
-                            <th>
-                                <a href="#" @click=${e => { handleEditClick(e, record); e.preventDefault(); }}>🔍\uFE0E</a>
-                                <a href="#" @click=${e => { showDeleteDialog(e, record); e.preventDefault(); }}>✕</a>
-                            </th>
-
-                            ${columns.map(col => {
-                                let value = record.values[col.key];
-
-                                let tooltip;
-                                let cls;
-                                if (value != null) {
-                                    if (Array.isArray(value))
-                                        value = value.join('|');
-
-                                    tooltip = value;
-                                    cls = `af_record_${col.type}`;
-                                } else {
-                                    value = 'NA';
-
-                                    tooltip = 'Donnée manquante';
-                                    cls = `af_record_missing`;
-                                }
-
-                                return html`<td class=${cls} title=${tooltip}>${value}</td>`;
-                            })}
-                        </tr>`)}
-                    </tbody>
-                </table>
-            `, data_el);
-        }
-    }
-
-    async function saveRecordAndReset(values, variables) {
-        let entry = new log.Entry();
-        entry.progress('Enregistrement en cours');
-
-        await g_records.save(current_record, variables);
-        entry.success('Données enregistrées !');
-
-        pilot.go(null, {id: null});
-        // TODO: Give focus to first widget
-        window.scrollTo(0, 0);
-    }
-
-    this.run = async function(asset, args) {
-        // Deal with form executor
-        if (!executor) {
-            executor = new FormExecutor();
-            executor.goHandler = (key, args) => pilot.go(key, args);
-            executor.submitHandler = saveRecordAndReset;
-        }
-
-        // Load record (if needed)
-        if (!args.hasOwnProperty('id') && asset.key !== current_record.table)
-            current_record = {};
-        if (args.hasOwnProperty('id') || current_record.id == null) {
-            if (args.id == null) {
-                current_record = g_records.create(asset.key);
-            } else if (args.id !== current_record.id) {
-                current_record = await g_records.load(asset.key, args.id);
-            }
-
-            executor.setData(current_record.values);
-        }
-        current_asset = asset;
-
-        // Render
-        renderLayout();
-        renderModes();
-        renderForm();
-        syncEditor();
-        renderRecords(asset.key);
-    };
 
     return this;
 }).call({});

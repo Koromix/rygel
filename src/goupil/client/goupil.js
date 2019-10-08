@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// These globals are initialized above
+// These globals are initialized below
 let g_assets = null;
 let g_records = null;
 
@@ -16,8 +16,29 @@ let goupil = (function() {
     let popup_state;
     let popup_timer;
 
-    function parseURL(href, base) {
-        return new URL(href, base);
+    document.addEventListener('readystatechange', e => {
+        if (document.readyState === 'complete')
+            initGoupil();
+    });
+
+    async function initGoupil() {
+        log.pushHandler(log.notifyHandler);
+        initNavigation();
+
+        let db = await openDatabase();
+        g_assets = new AssetManager(db);
+        g_records = new RecordManager(db);
+
+        self.go(window.location.href, false);
+    }
+
+    function initNavigation() {
+        window.addEventListener('popstate', e => self.go(window.location.href, false));
+
+        util.interceptLocalAnchors((e, href) => {
+            self.go(href);
+            e.preventDefault();
+        });
     }
 
     async function openDatabase() {
@@ -77,45 +98,41 @@ let goupil = (function() {
         return db;
     }
 
-    function initNavigation() {
-        window.addEventListener('popstate', e => self.go(window.location.href, false));
+    this.go = function(href, history = true) {
+        let window_path = new URL(href, window.location.href).pathname;
 
-        util.interceptLocalAnchors((e, href) => {
-            self.go(href);
-            e.preventDefault();
-        });
-    }
+        // Asset key
+        let asset_key = window_path;
+        if (asset_key.startsWith(env.base_url))
+            asset_key = asset_key.substr(env.base_url.length);
+        while (asset_key.endsWith('/'))
+            asset_key = asset_key.substr(0, asset_key.length - 1);
 
-    function initPopup() {
-        gp_popup = document.createElement('div');
-        gp_popup.setAttribute('id', 'gp_popup');
-        document.body.appendChild(gp_popup);
+        // Run asset
+        pilot.go(asset_key);
 
-        gp_popup.addEventListener('mouseleave', e => {
-            popup_timer = setTimeout(closePopup, 3000);
-        });
-        gp_popup.addEventListener('mouseenter', e => {
-            clearTimeout(popup_timer);
-            popup_timer = null;
-        });
+        // Update history
+        let full_path = `${env.base_url}${asset_key}${asset_key ? '/' : ''}`;
+        if (history && full_path !== window_path) {
+            window.history.pushState(null, null, full_path);
+        } else {
+            window.history.replaceState(null, null, full_path);
+        }
+    };
 
-        gp_popup.addEventListener('keydown', e => {
-            switch (e.keyCode) {
-                case 13: {
-                    if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A' &&
-                            popup_builder.submit)
-                        popup_builder.submit();
-                } break;
-                case 27: { closePopup(); } break;
-            }
+    this.listenToServerEvent = function(event, func) {
+        if (!event_src) {
+            event_src = new EventSource(`${env.base_url}api/events`);
+            event_src.onerror = e => event_src = null;
+        }
 
-            clearTimeout(popup_timer);
-            popup_timer = null;
-        });
+        event_src.addEventListener(event, func);
+    };
 
-        gp_popup.addEventListener('click', e => e.stopPropagation());
-        document.addEventListener('click', closePopup);
-    }
+    this.popup = function(e, func) {
+        closePopup();
+        openPopup(e, func);
+    };
 
     function openPopup(e, func) {
         if (!gp_popup)
@@ -192,6 +209,37 @@ let goupil = (function() {
         }
     }
 
+    function initPopup() {
+        gp_popup = document.createElement('div');
+        gp_popup.setAttribute('id', 'gp_popup');
+        document.body.appendChild(gp_popup);
+
+        gp_popup.addEventListener('mouseleave', e => {
+            popup_timer = setTimeout(closePopup, 3000);
+        });
+        gp_popup.addEventListener('mouseenter', e => {
+            clearTimeout(popup_timer);
+            popup_timer = null;
+        });
+
+        gp_popup.addEventListener('keydown', e => {
+            switch (e.keyCode) {
+                case 13: {
+                    if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A' &&
+                            popup_builder.submit)
+                        popup_builder.submit();
+                } break;
+                case 27: { closePopup(); } break;
+            }
+
+            clearTimeout(popup_timer);
+            popup_timer = null;
+        });
+
+        gp_popup.addEventListener('click', e => e.stopPropagation());
+        document.addEventListener('click', closePopup);
+    }
+
     function closePopup() {
         popup_state = new FormState();
         popup_builder = null;
@@ -214,56 +262,6 @@ let goupil = (function() {
             <div class="gp_wip">Page en chantier</div>
         `, main_el);
     }
-
-    this.go = function(href, history = true) {
-        // Asset key
-        let asset_key = parseURL(href, window.location.href).pathname;
-        if (asset_key.startsWith(env.base_url))
-            asset_key = asset_key.substr(env.base_url.length);
-        while (asset_key.endsWith('/'))
-            asset_key = asset_key.substr(0, asset_key.length - 1);
-
-        // Run asset
-        pilot.go(asset_key);
-
-        // Update history
-        let full_path = `${env.base_url}${asset_key}${asset_key ? '/' : ''}`;
-        if (history && full_path !== parseURL(window.location.href).pathname) {
-            window.history.pushState(null, null, full_path);
-        } else {
-            window.history.replaceState(null, null, full_path);
-        }
-    };
-
-    this.listenToServerEvent = function(event, func) {
-        if (!event_src) {
-            event_src = new EventSource(`${env.base_url}api/events`);
-            event_src.onerror = e => event_src = null;
-        }
-
-        event_src.addEventListener(event, func);
-    };
-
-    this.popup = function(e, func) {
-        closePopup();
-        openPopup(e, func);
-    };
-
-    async function initGoupil() {
-        log.pushHandler(log.notifyHandler);
-        initNavigation();
-
-        let db = await openDatabase();
-        g_assets = new AssetManager(db);
-        g_records = new RecordManager(db);
-
-        self.go(window.location.href, false);
-    }
-
-    document.addEventListener('readystatechange', e => {
-        if (document.readyState === 'complete')
-            initGoupil();
-    });
 
     return this;
 }).call({});

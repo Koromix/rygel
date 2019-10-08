@@ -3,10 +3,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 function Schedule(resources_map, meetings_map) {
+    let self = this;
+
     this.changeResourcesHandler = (key, resources) => {};
     this.changeMeetingsHandler = (key, meetings) => {};
-
-    let self = this;
 
     let month_names = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet',
                        'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
@@ -26,156 +26,30 @@ function Schedule(resources_map, meetings_map) {
     let copy_resources;
     let copy_ignore = new Set;
 
-    function slowDownEvents(delay, func) {
-        return e => {
-            let now = performance.now();
-            if (now - prev_event_time >= delay) {
-                func(e);
-                prev_event_time = now;
-            }
-        };
-    }
+    this.render = function(year, month, mode, root_el) {
+        current_year = year;
+        current_month = month;
+        current_mode = mode;
 
-    function formatTime(time) {
-        let hour = Math.floor(time / 100);
-        let min = time % 100;
+        render(html`
+            <div id="sc_header">${week_day_names.map(name => html`<div>${name}</div>`)}</div>
+            <div id="sc_days"></div>
+            <div id="sc_footer" class="gp_toolbar"></div>
+        `, root_el);
 
-        return `${hour}h${min < 10 ? ('0' + min) : min}`;
-    }
-
-    function parseTime(str) {
-        str = str || '';
-
-        let hours;
-        let min;
-        if (str.match(/^[0-9]{1,2}h(|[0-9]{2})$/)) {
-            [hours, min] = str.split('h').map(str => parseInt(str, 10) || 0);
-        } else if (str.match(/^[0-9]{1,2}:[0-9]{2}$/)) {
-            [hours, min] = str.split(':').map(str => parseInt(str, 10) || 0);
-        } else {
-            return null;
-        }
-        if (hours > 23 || min > 59)
-            return null;
-
-        return hours * 100 + min;
-    }
-
-    function getMonthDays(year, month, add_skip_days = false) {
-        let start_date = dates.create(year, month, 1);
-        let start_week_day = start_date.getWeekDay();
-
-        let days = [];
-        if (add_skip_days) {
-            for (let i = 0; i < start_week_day; i++)
-                days.push(null);
-        }
-        for (let date = start_date; date.year === start_date.year &&
-                                    date.month === start_date.month; date = date.plus(1)) {
-            let day = {
-                key: date.toString(),
-                date: date.toLocaleString(),
-                week_day: week_day_names[date.getWeekDay() - 1]
-            };
-
-            days.push(day);
-        }
-
-        return days;
-    }
-
-    function expandSlots(resources) {
-        let slots = [];
-        for (let res of resources) {
-            for (let j = 0; j < res.slots; j++) {
-                slots.push({
-                    time: res.time,
-                    overbook: false
-                });
-            }
-            for (let j = 0; j < res.overbook; j++) {
-                slots.push({
-                    time: res.time,
-                    overbook: true
-                });
-            }
-        }
-
-        return slots;
-    }
-
-    function createMeeting(slot_ref, identity) {
-        slot_ref.meetings.splice(slot_ref.splice_idx, 0, {
-            time: slot_ref.time,
-            identity: identity
-        });
-        self.changeMeetingsHandler(slot_ref.day.key, slot_ref.meetings);
+        days_el = root_el.querySelector('#sc_days');
+        footer_el = root_el.querySelector('#sc_footer');
 
         renderAll();
-    }
+    };
 
-    function deleteMeeting(slot_ref) {
-        slot_ref.meetings.splice(slot_ref.splice_idx, 1);
-        self.changeMeetingsHandler(slot_ref.day.key, slot_ref.meetings);
-
-        renderAll();
-    }
-
-    function moveMeeting(src_ref, dest_ref) {
-        if (dest_ref.identity) {
-            // Exchange
-            dest_ref.meetings.splice(dest_ref.splice_idx, 1, {
-                time: dest_ref.time,
-                identity: src_ref.identity
-            });
-            src_ref.meetings.splice(src_ref.splice_idx, 1, {
-                time: src_ref.time,
-                identity: dest_ref.identity
-            });
-        } else if (dest_ref.time < src_ref.time) {
-            // Move to earlier time of day
-            src_ref.meetings.splice(src_ref.splice_idx, 1);
-            dest_ref.meetings.splice(dest_ref.splice_idx, 0, {
-                time: dest_ref.time,
-                identity: src_ref.identity
-            });
-        } else {
-            // Move to later time of day (distinction only matters for same day moves)
-            dest_ref.meetings.splice(dest_ref.splice_idx, 0, {
-                time: dest_ref.time,
-                identity: src_ref.identity
-            });
-            src_ref.meetings.splice(src_ref.splice_idx, 1);
+    function renderAll() {
+        switch (current_mode) {
+            case 'meetings': { renderMeetings(); } break;
+            case 'settings': { renderSettings(); } break;
+            case 'copy': { renderCopy(); } break;
         }
-
-        self.changeMeetingsHandler(src_ref.day.key, src_ref.meetings);
-        self.changeMeetingsHandler(dest_ref.day.key, dest_ref.meetings);
-
-        renderAll();
-    }
-
-    function showCreateMeetingDialog(e, slot_ref) {
-        goupil.popup(e, form => {
-            let name = form.text('name', 'Nom :', {mandatory: true});
-
-            form.submitHandler = () => {
-                createMeeting(slot_ref, name.value);
-                form.close();
-            };
-            form.buttons(form.buttons.std.ok_cancel('Créer'));
-        });
-    }
-
-    function showDeleteMeetingDialog(e, slot_ref) {
-        goupil.popup(e, form => {
-            form.output('Voulez-vous vraiment supprimer ce rendez-vous ?');
-
-            form.submitHandler = () => {
-                deleteMeeting(slot_ref);
-                form.close();
-            };
-            form.buttons(form.buttons.std.ok_cancel('Supprimer'));
-        });
+        renderFooter();
     }
 
     function renderMeetings() {
@@ -312,103 +186,120 @@ function Schedule(resources_map, meetings_map) {
         }), days_el);
     }
 
-    function createResource(day, time) {
-        let resources = resources_map[day.key];
+    function getMonthDays(year, month, add_skip_days = false) {
+        let start_date = dates.create(year, month, 1);
+        let start_week_day = start_date.getWeekDay();
 
-        let prev_res = resources.find(res => res.time === time);
-        if (prev_res) {
-            prev_res.slots++;
-        } else {
-            resources.push({
-                time: time,
-                slots: 1,
-                overbook: 0
-            });
-            resources.sort((res1, res2) => res1.time - res2.time);
+        let days = [];
+        if (add_skip_days) {
+            for (let i = 0; i < start_week_day; i++)
+                days.push(null);
+        }
+        for (let date = start_date; date.year === start_date.year &&
+                                    date.month === start_date.month; date = date.plus(1)) {
+            let day = {
+                key: date.toString(),
+                date: date.toLocaleString(),
+                week_day: week_day_names[date.getWeekDay() - 1]
+            };
+
+            days.push(day);
         }
 
-        self.changeResourcesHandler(day.key, resources);
-
-        renderAll();
+        return days;
     }
 
-    function deleteResource(day, res_idx) {
-        let resources = resources_map[day.key];
-
-        resources.splice(res_idx, 1);
-        self.changeResourcesHandler(day.key, resources);
-
-        renderAll();
-    }
-
-    function closeDay(day) {
-        let resources = resources_map[day.key];
-
-        resources_map[day.key].length = 0;
-        self.changeResourcesHandler(day.key, resources);
-
-        renderAll();
-    }
-
-    function startCopy(day) {
-        copy_resources = resources_map[day.key];
-
-        // Ignore days with same configuration
-        {
-            let json = JSON.stringify(copy_resources);
-            let days = getMonthDays(current_year, current_month);
-
-            copy_ignore.clear();
-            for (let day of days) {
-                // Slow, but does the job
-                if (JSON.stringify(resources_map[day.key]) === json)
-                    copy_ignore.add(day.key);
+    function expandSlots(resources) {
+        let slots = [];
+        for (let res of resources) {
+            for (let j = 0; j < res.slots; j++) {
+                slots.push({
+                    time: res.time,
+                    overbook: false
+                });
+            }
+            for (let j = 0; j < res.overbook; j++) {
+                slots.push({
+                    time: res.time,
+                    overbook: true
+                });
             }
         }
 
-        current_mode = 'copy';
-        renderCopy();
+        return slots;
     }
 
-    function showCreateResourceDialog(e, day) {
-        goupil.popup(e, form => {
-            let time = form.text('time', 'Horaire :', {mandatory: true});
+    function createMeeting(slot_ref, identity) {
+        slot_ref.meetings.splice(slot_ref.splice_idx, 0, {
+            time: slot_ref.time,
+            identity: identity
+        });
+        self.changeMeetingsHandler(slot_ref.day.key, slot_ref.meetings);
 
-            // Check value
-            let time2 = parseTime(time.value);
-            if (time.value && time2 == null)
-                time.error('Non valide (ex : 15h30, 7:30)');
+        renderAll();
+    }
+
+    function deleteMeeting(slot_ref) {
+        slot_ref.meetings.splice(slot_ref.splice_idx, 1);
+        self.changeMeetingsHandler(slot_ref.day.key, slot_ref.meetings);
+
+        renderAll();
+    }
+
+    function moveMeeting(src_ref, dest_ref) {
+        if (dest_ref.identity) {
+            // Exchange
+            dest_ref.meetings.splice(dest_ref.splice_idx, 1, {
+                time: dest_ref.time,
+                identity: src_ref.identity
+            });
+            src_ref.meetings.splice(src_ref.splice_idx, 1, {
+                time: src_ref.time,
+                identity: dest_ref.identity
+            });
+        } else if (dest_ref.time < src_ref.time) {
+            // Move to earlier time of day
+            src_ref.meetings.splice(src_ref.splice_idx, 1);
+            dest_ref.meetings.splice(dest_ref.splice_idx, 0, {
+                time: dest_ref.time,
+                identity: src_ref.identity
+            });
+        } else {
+            // Move to later time of day (distinction only matters for same day moves)
+            dest_ref.meetings.splice(dest_ref.splice_idx, 0, {
+                time: dest_ref.time,
+                identity: src_ref.identity
+            });
+            src_ref.meetings.splice(src_ref.splice_idx, 1);
+        }
+
+        self.changeMeetingsHandler(src_ref.day.key, src_ref.meetings);
+        self.changeMeetingsHandler(dest_ref.day.key, dest_ref.meetings);
+
+        renderAll();
+    }
+
+    function showCreateMeetingDialog(e, slot_ref) {
+        goupil.popup(e, form => {
+            let name = form.text('name', 'Nom :', {mandatory: true});
 
             form.submitHandler = () => {
-                createResource(day, time2);
+                createMeeting(slot_ref, name.value);
                 form.close();
             };
             form.buttons(form.buttons.std.ok_cancel('Créer'));
         });
     }
 
-    function showDeleteResourceDialog(e, day, res_idx) {
+    function showDeleteMeetingDialog(e, slot_ref) {
         goupil.popup(e, form => {
-            form.output('Voulez-vous vraiment supprimer ces créneaux ?');
+            form.output('Voulez-vous vraiment supprimer ce rendez-vous ?');
 
             form.submitHandler = () => {
-                deleteResource(day, res_idx);
+                deleteMeeting(slot_ref);
                 form.close();
             };
             form.buttons(form.buttons.std.ok_cancel('Supprimer'));
-        });
-    }
-
-    function showCloseDayDialog(e, day) {
-        goupil.popup(e, form => {
-            form.output('Voulez-vous vraiment fermer cette journée ?',
-                        {help: 'Ceci supprime tous les créneaux'});
-
-            form.submitHandler = () => {
-                closeDay(day);
-                form.close();
-            };
-            form.buttons(form.buttons.std.ok_cancel('Fermer'));
         });
     }
 
@@ -484,23 +375,104 @@ function Schedule(resources_map, meetings_map) {
         }), days_el);
     }
 
-    function executeCopy(dest_day) {
-        copy_ignore.add(dest_day.key);
+    function showCreateResourceDialog(e, day) {
+        goupil.popup(e, form => {
+            let time = form.text('time', 'Horaire :', {mandatory: true});
 
-        resources_map[dest_day.key] = copy_resources.map(res => Object.assign({}, res));
-        self.changeResourcesHandler(dest_day.key, resources_map[dest_day.key]);
+            // Check value
+            let time2 = parseTime(time.value);
+            if (time.value && time2 == null)
+                time.error('Non valide (ex : 15h30, 7:30)');
+
+            form.submitHandler = () => {
+                createResource(day, time2);
+                form.close();
+            };
+            form.buttons(form.buttons.std.ok_cancel('Créer'));
+        });
+    }
+
+    function showDeleteResourceDialog(e, day, res_idx) {
+        goupil.popup(e, form => {
+            form.output('Voulez-vous vraiment supprimer ces créneaux ?');
+
+            form.submitHandler = () => {
+                deleteResource(day, res_idx);
+                form.close();
+            };
+            form.buttons(form.buttons.std.ok_cancel('Supprimer'));
+        });
+    }
+
+    function showCloseDayDialog(e, day) {
+        goupil.popup(e, form => {
+            form.output('Voulez-vous vraiment fermer cette journée ?',
+                        {help: 'Ceci supprime tous les créneaux'});
+
+            form.submitHandler = () => {
+                closeDay(day);
+                form.close();
+            };
+            form.buttons(form.buttons.std.ok_cancel('Fermer'));
+        });
+    }
+
+    function createResource(day, time) {
+        let resources = resources_map[day.key];
+
+        let prev_res = resources.find(res => res.time === time);
+        if (prev_res) {
+            prev_res.slots++;
+        } else {
+            resources.push({
+                time: time,
+                slots: 1,
+                overbook: 0
+            });
+            resources.sort((res1, res2) => res1.time - res2.time);
+        }
+
+        self.changeResourcesHandler(day.key, resources);
 
         renderAll();
     }
 
-    function executeCopyAndEnd(dest_day) {
-        copy_ignore.add(dest_day.key);
+    function deleteResource(day, res_idx) {
+        let resources = resources_map[day.key];
 
-        resources_map[dest_day.key] = copy_resources.map(res => Object.assign({}, res));
-        self.changeResourcesHandler(dest_day.key, resources_map[dest_day.key]);
+        resources.splice(res_idx, 1);
+        self.changeResourcesHandler(day.key, resources);
 
-        current_mode = 'settings';
         renderAll();
+    }
+
+    function closeDay(day) {
+        let resources = resources_map[day.key];
+
+        resources_map[day.key].length = 0;
+        self.changeResourcesHandler(day.key, resources);
+
+        renderAll();
+    }
+
+    function startCopy(day) {
+        copy_resources = resources_map[day.key];
+
+        // Ignore days with same configuration
+        {
+            let json = JSON.stringify(copy_resources);
+            let days = getMonthDays(current_year, current_month);
+
+            copy_ignore.clear();
+            for (let day of days) {
+                // Slow, but does the job
+                if (JSON.stringify(resources_map[day.key]) === json)
+                    copy_ignore.add(day.key);
+            }
+        }
+
+        current_mode = 'copy';
+        renderCopy();
     }
 
     function renderCopy() {
@@ -538,38 +510,22 @@ function Schedule(resources_map, meetings_map) {
         }), days_el);
     }
 
-    function switchToPreviousMonth() {
-        if (--current_month < 1) {
-            current_year--;
-            current_month = 12;
-        }
+    function executeCopy(dest_day) {
+        copy_ignore.add(dest_day.key);
+
+        resources_map[dest_day.key] = copy_resources.map(res => Object.assign({}, res));
+        self.changeResourcesHandler(dest_day.key, resources_map[dest_day.key]);
 
         renderAll();
     }
 
-    function switchToNextMonth() {
-        if (++current_month > 12) {
-            current_year++;
-            current_month = 1;
-        }
+    function executeCopyAndEnd(dest_day) {
+        copy_ignore.add(dest_day.key);
 
-        renderAll();
-    }
+        resources_map[dest_day.key] = copy_resources.map(res => Object.assign({}, res));
+        self.changeResourcesHandler(dest_day.key, resources_map[dest_day.key]);
 
-    function switchToMonth(month) {
-        if (month !== current_month) {
-            current_month = month;
-            renderAll();
-        }
-    }
-
-    function switchToPreviousYear() {
-        current_year--;
-        renderAll();
-    }
-
-    function switchToNextYear() {
-        current_year++;
+        current_mode = 'settings';
         renderAll();
     }
 
@@ -631,29 +587,73 @@ function Schedule(resources_map, meetings_map) {
         `, footer_el);
     }
 
-    function renderAll() {
-        switch (current_mode) {
-            case 'meetings': { renderMeetings(); } break;
-            case 'settings': { renderSettings(); } break;
-            case 'copy': { renderCopy(); } break;
+    function switchToPreviousMonth() {
+        if (--current_month < 1) {
+            current_year--;
+            current_month = 12;
         }
-        renderFooter();
-    }
-
-    this.render = function(year, month, mode, root_el) {
-        current_year = year;
-        current_month = month;
-        current_mode = mode;
-
-        render(html`
-            <div id="sc_header">${week_day_names.map(name => html`<div>${name}</div>`)}</div>
-            <div id="sc_days"></div>
-            <div id="sc_footer" class="gp_toolbar"></div>
-        `, root_el);
-
-        days_el = root_el.querySelector('#sc_days');
-        footer_el = root_el.querySelector('#sc_footer');
 
         renderAll();
-    };
+    }
+
+    function switchToNextMonth() {
+        if (++current_month > 12) {
+            current_year++;
+            current_month = 1;
+        }
+
+        renderAll();
+    }
+
+    function switchToMonth(month) {
+        if (month !== current_month) {
+            current_month = month;
+            renderAll();
+        }
+    }
+
+    function switchToPreviousYear() {
+        current_year--;
+        renderAll();
+    }
+
+    function switchToNextYear() {
+        current_year++;
+        renderAll();
+    }
+
+    function slowDownEvents(delay, func) {
+        return e => {
+            let now = performance.now();
+            if (now - prev_event_time >= delay) {
+                func(e);
+                prev_event_time = now;
+            }
+        };
+    }
+
+    function formatTime(time) {
+        let hour = Math.floor(time / 100);
+        let min = time % 100;
+
+        return `${hour}h${min < 10 ? ('0' + min) : min}`;
+    }
+
+    function parseTime(str) {
+        str = str || '';
+
+        let hours;
+        let min;
+        if (str.match(/^[0-9]{1,2}h(|[0-9]{2})$/)) {
+            [hours, min] = str.split('h').map(str => parseInt(str, 10) || 0);
+        } else if (str.match(/^[0-9]{1,2}:[0-9]{2}$/)) {
+            [hours, min] = str.split(':').map(str => parseInt(str, 10) || 0);
+        } else {
+            return null;
+        }
+        if (hours > 23 || min > 59)
+            return null;
+
+        return hours * 100 + min;
+    }
 }
