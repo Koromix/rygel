@@ -93,7 +93,8 @@ let admin = (function() {
             if (key.value) {
                 if (assets.some(asset => asset.key === key.value))
                     key.error('Existe déjà');
-                validateIdentifierWidget(key);
+                if (!key.value.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
+                    key.error('Autorisé : a-z, _ et 0-9 (sauf initiale)');
             }
 
             form.submitHandler = async () => {
@@ -149,11 +150,6 @@ let admin = (function() {
             };
             form.buttons(form.buttons.std.ok_cancel('Réinitialiser'));
         });
-    }
-
-    function validateIdentifierWidget(widget) {
-        if (widget.value && !widget.value.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
-            widget.error('Autorisé : a-z, _ et 0-9 (sauf initiale)');
     }
 
     function renderEmpty() {
