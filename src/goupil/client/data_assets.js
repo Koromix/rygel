@@ -26,7 +26,7 @@ function AssetManager(db) {
     this.reset = async function() {
         await db.transaction(db => {
             db.clear('assets');
-            for (let asset of demo.assets)
+            for (let asset of help_demo.assets)
                 db.save('assets', asset);
         });
     };
