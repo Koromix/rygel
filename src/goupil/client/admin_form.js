@@ -45,8 +45,10 @@ let admin_form = (function() {
         renderLayout();
         renderModes();
         renderForm();
-        syncEditor();
-        renderRecords(asset.key);
+        switch (left_panel) {
+            case 'editor': { syncEditor(); } break;
+            case 'data': { renderRecords(asset.key); } break;
+        }
     };
 
     async function saveRecordAndReset(values, variables) {
@@ -145,43 +147,41 @@ let admin_form = (function() {
         if (!window.ace)
             await util.loadScript(`${env.base_url}static/ace.js`);
 
-        if (left_panel === 'editor') {
-            if (!editor) {
-                editor = ace.edit(editor_el);
+        if (!editor) {
+            editor = ace.edit(editor_el);
 
-                editor.setTheme('ace/theme/monokai');
-                editor.setShowPrintMargin(false);
-                editor.setFontSize(12);
-                editor.session.setOption('useWorker', false);
-                editor.session.setMode('ace/mode/javascript');
+            editor.setTheme('ace/theme/monokai');
+            editor.setShowPrintMargin(false);
+            editor.setFontSize(12);
+            editor.session.setOption('useWorker', false);
+            editor.session.setMode('ace/mode/javascript');
 
-                editor.on('change', e => {
-                    // If something goes wrong during handleEditorChange(), we don't
-                    // want to break ACE state.
-                    setTimeout(handleEditorChange, 0);
-                });
-            }
+            editor.on('change', e => {
+                // If something goes wrong during handleEditorChange(), we don't
+                // want to break ACE state.
+                setTimeout(handleEditorChange, 0);
+            });
+        }
 
-            if (current_asset) {
-                let history = editor_history_cache[current_asset.key];
+        if (current_asset) {
+            let history = editor_history_cache[current_asset.key];
 
-                if (history !== editor.session.getUndoManager()) {
-                    editor.setValue(current_asset.data);
-                    editor.setReadOnly(false);
-                    editor.clearSelection();
+            if (history !== editor.session.getUndoManager()) {
+                editor.setValue(current_asset.data);
+                editor.setReadOnly(false);
+                editor.clearSelection();
 
-                    if (!history) {
-                        history = new ace.UndoManager();
-                        editor_history_cache[current_asset.key] = history;
-                    }
-                    editor.session.setUndoManager(history);
+                if (!history) {
+                    history = new ace.UndoManager();
+                    editor_history_cache[current_asset.key] = history;
                 }
-            } else {
-                editor.setValue('');
-                editor.setReadOnly(true);
-
-                editor.session.setUndoManager(new ace.UndoManager());
+                editor.session.setUndoManager(history);
             }
+        } else {
+            editor.setValue('');
+            editor.setReadOnly(true);
+
+            editor.session.setUndoManager(new ace.UndoManager());
         }
     }
 
@@ -201,64 +201,62 @@ let admin_form = (function() {
     }
 
     async function renderRecords(table) {
-        if (left_panel === 'data') {
-            let [records, variables] = await g_records.loadAll(table);
-            let columns = orderColumns(variables);
+        let [records, variables] = await g_records.loadAll(table);
+        let columns = orderColumns(variables);
 
-            let empty_msg;
-            if (!records.length) {
-                empty_msg = 'Aucune donnée à afficher';
-            } else if (!columns.length) {
-                empty_msg = 'Impossible d\'afficher les données (colonnes inconnues)';
-                records = [];
-            }
-
-            render(html`
-                <table class="af_records" style=${`min-width: ${30 + 60 * columns.length}px`}>
-                    <thead>
-                        <tr>
-                            <th class="af_head_actions">
-                                ${columns.length ?
-                                    html`<button class="af_excel" @click=${e => exportToExcel(table)}></button>` : ''}
-                            </th>
-                            ${!columns.length ? html`<th></th>` : ''}
-                            ${columns.map(col => html`<th class="af_head_variable">${col.key}</th>`)}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${empty_msg ?
-                            html`<tr><td colspan=${1 + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : ''}
-                        ${records.map(record => html`<tr class=${record.id === current_record.id ? 'af_row_current' : ''}>
-                            <th>
-                                <a href="#" @click=${e => { handleEditClick(e, record); e.preventDefault(); }}>🔍\uFE0E</a>
-                                <a href="#" @click=${e => { showDeleteDialog(e, record); e.preventDefault(); }}>✕</a>
-                            </th>
-
-                            ${columns.map(col => {
-                                let value = record.values[col.key];
-
-                                let tooltip;
-                                let cls;
-                                if (value != null) {
-                                    if (Array.isArray(value))
-                                        value = value.join('|');
-
-                                    tooltip = value;
-                                    cls = `af_record_${col.type}`;
-                                } else {
-                                    value = 'NA';
-
-                                    tooltip = 'Donnée manquante';
-                                    cls = `af_record_missing`;
-                                }
-
-                                return html`<td class=${cls} title=${tooltip}>${value}</td>`;
-                            })}
-                        </tr>`)}
-                    </tbody>
-                </table>
-            `, data_el);
+        let empty_msg;
+        if (!records.length) {
+            empty_msg = 'Aucune donnée à afficher';
+        } else if (!columns.length) {
+            empty_msg = 'Impossible d\'afficher les données (colonnes inconnues)';
+            records = [];
         }
+
+        render(html`
+            <table class="af_records" style=${`min-width: ${30 + 60 * columns.length}px`}>
+                <thead>
+                    <tr>
+                        <th class="af_head_actions">
+                            ${columns.length ?
+                                html`<button class="af_excel" @click=${e => exportToExcel(table)}></button>` : ''}
+                        </th>
+                        ${!columns.length ? html`<th></th>` : ''}
+                        ${columns.map(col => html`<th class="af_head_variable">${col.key}</th>`)}
+                    </tr>
+                </thead>
+                <tbody>
+                    ${empty_msg ?
+                        html`<tr><td colspan=${1 + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : ''}
+                    ${records.map(record => html`<tr class=${record.id === current_record.id ? 'af_row_current' : ''}>
+                        <th>
+                            <a href="#" @click=${e => { handleEditClick(e, record); e.preventDefault(); }}>🔍\uFE0E</a>
+                            <a href="#" @click=${e => { showDeleteDialog(e, record); e.preventDefault(); }}>✕</a>
+                        </th>
+
+                        ${columns.map(col => {
+                            let value = record.values[col.key];
+
+                            let tooltip;
+                            let cls;
+                            if (value != null) {
+                                if (Array.isArray(value))
+                                    value = value.join('|');
+
+                                tooltip = value;
+                                cls = `af_record_${col.type}`;
+                            } else {
+                                value = 'NA';
+
+                                tooltip = 'Donnée manquante';
+                                cls = `af_record_missing`;
+                            }
+
+                            return html`<td class=${cls} title=${tooltip}>${value}</td>`;
+                        })}
+                    </tr>`)}
+                </tbody>
+            </table>
+        `, data_el);
     }
 
     async function exportToExcel(table) {
