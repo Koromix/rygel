@@ -31,14 +31,6 @@ static void AppendGccObjectArguments(const char *src_filename, BuildMode build_m
         case BuildMode::Release: { Fmt(out_buf, " -O2 -flto -DNDEBUG"); } break;
     }
 
-    Fmt(out_buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
-                 " -D_FORTIFY_SOURCE=2");
-#ifdef _WIN32
-    Fmt(out_buf, " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601");
-#else
-    Fmt(out_buf, " -fPIC -fstack-protector-strong --param ssp-buffer-size=4");
-#endif
-
     Fmt(out_buf, " -c %1", src_filename);
     if (pch_filename) {
         Fmt(out_buf, " -include %1", pch_filename);
@@ -109,24 +101,13 @@ fail:
 }
 #endif
 
-static bool AppendGccLinkArguments(Span<const char *const> obj_filenames, BuildMode build_mode,
-                                   LinkType link_type, Span<const char *const> libraries,
-                                   const char *dest_filename, HeapArray<char> *out_buf)
+static bool AppendGccLinkArguments(Span<const char *const> obj_filenames,
+                                   Span<const char *const> libraries, const char *dest_filename,
+                                   HeapArray<char> *out_buf)
 {
     if (LogUsesTerminalOutput()) {
         Fmt(out_buf, " -fdiagnostics-color=always");
     }
-
-    if (build_mode == BuildMode::Release) {
-        Fmt(out_buf, " -flto");
-        if (link_type == LinkType::Executable) {
-            Fmt(out_buf, " -static");
-        }
-    }
-
-#ifndef _WIN32
-    Fmt(out_buf, " -Wl,-z,relro,-z,now");
-#endif
 
 #ifdef _WIN32
     Size rsp_offset = out_buf->len;
@@ -161,14 +142,6 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames, BuildM
     for (const char *lib: libraries) {
         Fmt(out_buf, " -l%1", lib);
     }
-#ifndef _WIN32
-    Fmt(out_buf, " -lrt -ldl -pthread");
-#endif
-
-    switch (link_type) {
-        case LinkType::Executable: { /* Skip */ } break;
-        case LinkType::SharedLibrary: { Fmt(out_buf, " -shared"); } break;
-    }
 
     Fmt(out_buf, " -o %1", dest_filename);
 
@@ -200,41 +173,41 @@ static void AppendPackCommandLine(Span<const char *const> pack_filenames, BuildM
 
 class ClangCompiler: public Compiler {
 public:
-    ClangCompiler(): Compiler("Clang") {}
+    ClangCompiler(const char *name, const char *prefix) : Compiler(name, prefix) {}
 
     const char *MakeObjectCommand(const char *src_filename, SourceType src_type, BuildMode build_mode,
                                   bool warnings, const char *pch_filename, Span<const char *const> definitions,
                                   Span<const char *const> include_directories, const char *dest_filename,
                                   const char *deps_filename, Allocator *alloc) const override
     {
-#ifdef _WIN32
-        static const char *const flags = "-Wno-unknown-warning-option -Wno-unknown-pragmas -Wno-deprecated-declarations "
-                                         "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE";
-#else
-        static const char *const flags = "-pthread";
-#endif
-
         HeapArray<char> buf;
         buf.allocator = alloc;
 
+        // Compiler
         switch (src_type) {
-            case SourceType::C_Source: { Fmt(&buf, "clang -std=gnu11 %1", flags); } break;
-            case SourceType::C_Header: { Fmt(&buf, "clang -std=gnu11 -x c-header %1", flags); } break;
-            case SourceType::CXX_Source: { Fmt(&buf, "clang++ -std=gnu++17 %1", flags); } break;
-            case SourceType::CXX_Header: { Fmt(&buf, "clang++ -std=gnu++17 -x c++-header %1", flags); } break;
+            case SourceType::C_Source: { Fmt(&buf, "%1clang -std=gnu11", prefix); } break;
+            case SourceType::C_Header: { Fmt(&buf, "%1clang -std=gnu11 -x c-header", prefix); } break;
+            case SourceType::CXX_Source: { Fmt(&buf, "%1clang++ -std=gnu++17", prefix); } break;
+            case SourceType::CXX_Header: { Fmt(&buf, "%1clang++ -std=gnu++17 -x c++-header", prefix); } break;
         }
-        if (warnings) {
-            Fmt(&buf, " -Wall");
-        } else {
-            Fmt(&buf, " -Wno-everything");
-        }
+        Fmt(&buf, warnings ? " -Wall" : " -Wno-everything");
+
+        // Platform flags
 #ifdef _WIN32
-        Fmt(&buf, " -D_MT -Xclang --dependent-lib=libcmt -Xclang --dependent-lib=oldnames");
+        Fmt(&buf, " -D_MT -Xclang --dependent-lib=libcmt -Xclang --dependent-lib=oldnames"
+                  " -Wno-unknown-warning-option -Wno-unknown-pragmas -Wno-deprecated-declarations"
+                  " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DNOMINMAX"
+                  " -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE");
+
         if (src_type == SourceType::CXX_Source || src_type == SourceType::CXX_Header) {
             Fmt(&buf, " -Xclang -flto-visibility-public-std");
         }
+#else
+        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -D_FORTIFY_SOURCE=2"
+                  " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4");
 #endif
 
+        // Common flags (source, definitions, include directories, etc.)
         AppendGccObjectArguments(src_filename, build_mode, pch_filename, definitions,
                                  include_directories, dest_filename, deps_filename, &buf);
 
@@ -248,7 +221,7 @@ public:
         buf.allocator = alloc;
 
         AppendPackCommandLine(pack_filenames, build_mode, pack_options, &buf);
-        Fmt(&buf, " | clang -x c -c - -o %1", dest_filename);
+        Fmt(&buf, " | %1clang -x c -c - -o %2", prefix, dest_filename);
 
         return (const char *)buf.Leak().ptr;
     }
@@ -260,13 +233,31 @@ public:
         HeapArray<char> buf;
         buf.allocator = alloc;
 
+        // Linker
+        switch (link_type) {
+            case LinkType::Executable: { Fmt(&buf, "%1clang++", prefix); } break;
+            case LinkType::SharedLibrary: { Fmt(&buf, "%1clang++ -shared", prefix); } break;
+        }
+
+        // Platform flags
 #ifdef _WIN32
-        Fmt(&buf, "clang++ -g -fuse-ld=lld");
+        Fmt(&buf, " -fuse-ld=lld");
 #else
-        Fmt(&buf, "clang++ -g");
+        Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now");
 #endif
-        if (!AppendGccLinkArguments(obj_filenames, build_mode, link_type, libraries,
-                                    dest_filename, &buf))
+
+        // Build mode
+        if (build_mode == BuildMode::Release) {
+            Fmt(&buf, " -flto");
+            if (link_type == LinkType::Executable) {
+                Fmt(&buf, " -static");
+            }
+        } else {
+            Fmt(&buf, " -g");
+        }
+
+        // Objects and libraries
+        if (!AppendGccLinkArguments(obj_filenames, libraries, dest_filename, &buf))
             return (const char *)nullptr;
 
         return (const char *)buf.Leak().ptr;
@@ -275,29 +266,22 @@ public:
 
 class GnuCompiler: public Compiler {
 public:
-    GnuCompiler() : Compiler("GCC") {}
+    GnuCompiler(const char *name, const char *prefix) : Compiler(name, prefix) {}
 
     const char *MakeObjectCommand(const char *src_filename, SourceType src_type, BuildMode build_mode,
                                   bool warnings, const char *pch_filename, Span<const char *const> definitions,
                                   Span<const char *const> include_directories, const char *dest_filename,
                                   const char *deps_filename, Allocator *alloc) const override
     {
-#ifdef _WIN32
-        static const char *const flags = "-D__USE_MINGW_ANSI_STDIO=1";
-#else
-        static const char *const flags = "-pthread";
-#endif
-
         HeapArray<char> buf;
         buf.allocator = alloc;
 
+        // Compiler
         switch (src_type) {
-            case SourceType::C_Source: { Fmt(&buf, "gcc -std=gnu11 %1", flags); } break;
-            case SourceType::C_Header: { Fmt(&buf, "gcc -std=gnu11 -x c-header %1", flags); } break;
-            case SourceType::CXX_Source: { Fmt(&buf, "g++ -std=gnu++17 -fno-exceptions "
-                                                     "%1", flags); } break;
-            case SourceType::CXX_Header: { Fmt(&buf, "g++ -std=gnu++17 -fno-exceptions "
-                                                     "-x c++-header %1", flags); } break;
+            case SourceType::C_Source: { Fmt(&buf, "%1gcc -std=gnu11", prefix); } break;
+            case SourceType::C_Header: { Fmt(&buf, "%1gcc -std=gnu11 -x c-header", prefix); } break;
+            case SourceType::CXX_Source: { Fmt(&buf, "%1g++ -std=gnu++17 -fno-exceptions", prefix); } break;
+            case SourceType::CXX_Header: { Fmt(&buf, "%1g++ -std=gnu++17 -fno-exceptions -x c++-header", prefix); } break;
         }
         if (warnings) {
             Fmt(&buf, " -Wall");
@@ -306,6 +290,16 @@ public:
             }
         }
 
+        // Platform flags
+        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
+                  " -D_FORTIFY_SOURCE=2");
+#ifdef _WIN32
+        Fmt(&buf, " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -D__USE_MINGW_ANSI_STDIO=1");
+#else
+        Fmt(&buf, " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4");
+#endif
+
+        // Common flags (source, definitions, include directories, etc.)
         AppendGccObjectArguments(src_filename, build_mode, pch_filename, definitions,
                                  include_directories, dest_filename, deps_filename, &buf);
 
@@ -319,7 +313,7 @@ public:
         buf.allocator = alloc;
 
         AppendPackCommandLine(pack_filenames, build_mode, pack_options, &buf);
-        Fmt(&buf, " | gcc -x c -c - -o %1", dest_filename);
+        Fmt(&buf, " | %1gcc -x c -c - -o %2", prefix, dest_filename);
 
         return (const char *)buf.Leak().ptr;
     }
@@ -331,30 +325,43 @@ public:
         HeapArray<char> buf;
         buf.allocator = alloc;
 
-        Fmt(&buf, "g++ -g");
+        // Linker
+        switch (link_type) {
+            case LinkType::Executable: { Fmt(&buf, "%1g++", prefix); } break;
+            case LinkType::SharedLibrary: { Fmt(&buf, "%1g++ -shared", prefix); } break;
+        }
 
-        if (!AppendGccLinkArguments(obj_filenames, build_mode, link_type, libraries,
-                                    dest_filename, &buf))
-            return (const char *)nullptr;
-
+        // Platform flags
 #ifdef _WIN32
         Fmt(&buf, " -Wl,--dynamicbase -Wl,--nxcompat -Wl,--high-entropy-va");
 #else
+        Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now");
         if (link_type == LinkType::Executable) {
             Fmt(&buf, " -pie");
         }
 #endif
 
+        // Build mode
         if (build_mode == BuildMode::Release) {
-            Fmt(&buf, " -s");
+            Fmt(&buf, " -flto -s");
+            if (link_type == LinkType::Executable) {
+                Fmt(&buf, " -static");
+            }
+        } else {
+            Fmt(&buf, " -g");
         }
+
+        // Objects and libraries
+        if (!AppendGccLinkArguments(obj_filenames, libraries, dest_filename, &buf))
+            return (const char *)nullptr;
 
         return (const char *)buf.Leak().ptr;
     }
 };
 
-static ClangCompiler ClangCompiler;
-static GnuCompiler GnuCompiler;
+static ClangCompiler ClangCompiler("Clang", "");
+static GnuCompiler GnuCompiler("GCC", "");
+
 static const Compiler *const CompilerTable[] = {
     &ClangCompiler,
     &GnuCompiler
