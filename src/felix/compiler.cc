@@ -200,7 +200,7 @@ static void AppendPackCommandLine(Span<const char *const> pack_filenames, BuildM
 
 class ClangCompiler: public Compiler {
 public:
-    ClangCompiler(): Compiler("Clang", (int)CompilerFlag::PCH) {}
+    ClangCompiler(): Compiler("Clang") {}
 
     const char *MakeObjectCommand(const char *src_filename, SourceType src_type, BuildMode build_mode,
                                   bool warnings, const char *pch_filename, Span<const char *const> definitions,
@@ -275,11 +275,7 @@ public:
 
 class GnuCompiler: public Compiler {
 public:
-#ifdef _WIN32
-    GnuCompiler() : Compiler("GCC", 0) {}
-#else
-    GnuCompiler() : Compiler("GCC", (int)CompilerFlag::PCH) {}
-#endif
+    GnuCompiler() : Compiler("GCC") {}
 
     const char *MakeObjectCommand(const char *src_filename, SourceType src_type, BuildMode build_mode,
                                   bool warnings, const char *pch_filename, Span<const char *const> definitions,

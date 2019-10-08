@@ -299,18 +299,6 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
     }
 
     // Disable PCH?
-    if (enable_pch && !toolchain.compiler->Supports(CompilerFlag::PCH)) {
-        bool using_pch = std::any_of(enabled_targets.begin(), enabled_targets.end(),
-                                     [](const Target *target) {
-            return target->c_pch_filename || target->cxx_pch_filename;
-        });
-
-        if (using_pch) {
-            LogError("PCH does not work correctly with %1 on this platform (disabled)",
-                     toolchain.compiler->name);
-            enable_pch = false;
-        }
-    }
     if (!enable_pch) {
         for (Target &target: target_set.targets) {
             target.c_pch_filename = nullptr;
