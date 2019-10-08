@@ -14,31 +14,37 @@ function FormExecutor() {
     let variables = [];
     let state = new FormState();
 
-    function parseAnonymousErrorLine(err) {
-        if (err.stack) {
-            let m;
-            if (m = err.stack.match(/ > Function:([0-9]+):[0-9]+/) ||
-                    err.stack.match(/, <anonymous>:([0-9]+):[0-9]+/)) {
-                // Can someone explain to me why do I have to offset by -2?
-                let line = parseInt(m[1], 10) - 2;
-                return line;
-            } else if (m = err.stack.match(/Function code:([0-9]+):[0-9]+/)) {
-                let line = parseInt(m[1], 10);
-                return line;
-            }
+    this.setData = function(values) { state = new FormState(values); };
+    this.getData = function() { return state.values; };
+
+    this.setError = function(line, msg) {
+        af_form.classList.add('af_form_broken');
+
+        af_log.textContent = `⚠\uFE0E Line ${line || '?'}: ${msg}`;
+        af_log.style.display = 'block';
+    };
+
+    this.clearError = function() {
+        af_form.classList.remove('af_form_broken');
+
+        af_log.innerHTML = '';
+        af_log.style.display = 'none';
+    };
+
+    this.render = function(root_el, page_key, script) {
+        render(html`
+            <div class="af_form"></div>
+            <div class="af_log" style="display: none;"></div>
+        `, root_el);
+        af_form = root_el.querySelector('.af_form');
+        af_log = root_el.querySelector('.af_log');
+
+        if (script !== undefined) {
+            return renderForm(page_key, script);
+        } else {
+            return true;
         }
-
-        return null;
-    }
-
-    function submitForm() {
-        let variables2 = variables.map(variable => ({
-            key: variable.key,
-            type: variable.type
-        }));
-
-        self.submitHandler(state.values, variables2);
-    }
+    };
 
     function renderForm(page_key, script) {
         let widgets = [];
@@ -86,35 +92,29 @@ instead of:
         }
     }
 
-    this.setData = function(values) { state = new FormState(values); };
-    this.getData = function() { return state.values; };
-
-    this.setError = function(line, msg) {
-        af_form.classList.add('af_form_broken');
-
-        af_log.textContent = `⚠\uFE0E Line ${line || '?'}: ${msg}`;
-        af_log.style.display = 'block';
-    };
-
-    this.clearError = function() {
-        af_form.classList.remove('af_form_broken');
-
-        af_log.innerHTML = '';
-        af_log.style.display = 'none';
-    };
-
-    this.render = function(root_el, page_key, script) {
-        render(html`
-            <div class="af_form"></div>
-            <div class="af_log" style="display: none;"></div>
-        `, root_el);
-        af_form = root_el.querySelector('.af_form');
-        af_log = root_el.querySelector('.af_log');
-
-        if (script !== undefined) {
-            return renderForm(page_key, script);
-        } else {
-            return true;
+    function parseAnonymousErrorLine(err) {
+        if (err.stack) {
+            let m;
+            if (m = err.stack.match(/ > Function:([0-9]+):[0-9]+/) ||
+                    err.stack.match(/, <anonymous>:([0-9]+):[0-9]+/)) {
+                // Can someone explain to me why do I have to offset by -2?
+                let line = parseInt(m[1], 10) - 2;
+                return line;
+            } else if (m = err.stack.match(/Function code:([0-9]+):[0-9]+/)) {
+                let line = parseInt(m[1], 10);
+                return line;
+            }
         }
-    };
+
+        return null;
+    }
+
+    function submitForm() {
+        let variables2 = variables.map(variable => ({
+            key: variable.key,
+            type: variable.type
+        }));
+
+        self.submitHandler(state.values, variables2);
+    }
 }

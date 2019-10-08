@@ -14,9 +14,74 @@ let pilot = (function() {
     let current_key;
     let current_asset;
 
-    function validateIdentifierWidget(widget) {
-        if (widget.value && !widget.value.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
-            widget.error('Autorisé : a-z, _ et 0-9 (sauf initiale)');
+    this.go = async function(key, args = {}) {
+        if (!init) {
+            assets = await g_assets.list();
+            assets_map = {};
+            for (let asset of assets)
+                assets_map[asset.key] = asset;
+
+            init = true;
+        }
+
+        // Select relevant asset
+        if (!key) {
+            if (current_key) {
+                key = current_key;
+            } else {
+                key = assets.length ? assets[0].key : null;
+            }
+        }
+        if (key !== current_key) {
+            if (key) {
+                let asset = await g_assets.load(key);
+
+                current_key = key;
+                current_asset = asset;
+            } else {
+                current_key = null;
+                current_asset = null;
+            }
+        }
+
+        renderMenu();
+        if (current_asset) {
+            document.title = `${current_asset.key} — ${env.project_key}`;
+
+            switch (current_asset.mimetype) {
+                case 'application/x.goupil.form': { admin_form.run(current_asset, args); } break;
+                case 'application/x.goupil.schedule': { admin_schedule.run(current_asset, args); } break;
+                default: {
+                    renderEmpty();
+                    log.error(`Unknown asset type '${current_asset.mimetype}'`);
+                } break;
+            }
+        } else {
+            document.title = env.project_key;
+
+            renderEmpty();
+            log.error('No asset available');
+        }
+    };
+
+    function renderMenu() {
+        let menu_el = document.querySelector('#gp_menu');
+
+        render(html`
+            <div id="adm_modes"></div>
+
+            <select id="adm_pages" @change=${e => self.go(e.target.value)}>
+                ${!current_key && !assets.length ? html`<option>-- No asset available --</option>` : ''}
+                ${current_key && !current_asset ?
+                    html`<option value=${current_key} .selected=${true}>-- Unknown asset '${current_key}' --</option>` : ''}
+                ${assets.map(item =>
+                    html`<option value=${item.key} .selected=${item.key == current_key}>${item.key} (${item.mimetype})</option>`)}
+            </select>
+            <button @click=${showCreateDialog}>Ajouter</button>
+            ${current_asset ?
+                html`<button @click=${e => showDeleteDialog(e, current_asset)}>Supprimer</button>` : ''}
+            <button @click=${showResetDialog}>Réinitialiser</button>
+        `, menu_el);
     }
 
     function showCreateDialog(e) {
@@ -86,24 +151,9 @@ let pilot = (function() {
         });
     }
 
-    function renderMenu() {
-        let menu_el = document.querySelector('#gp_menu');
-
-        render(html`
-            <div id="adm_modes"></div>
-
-            <select id="adm_pages" @change=${e => self.go(e.target.value)}>
-                ${!current_key && !assets.length ? html`<option>-- No asset available --</option>` : ''}
-                ${current_key && !current_asset ?
-                    html`<option value=${current_key} .selected=${true}>-- Unknown asset '${current_key}' --</option>` : ''}
-                ${assets.map(item =>
-                    html`<option value=${item.key} .selected=${item.key == current_key}>${item.key} (${item.mimetype})</option>`)}
-            </select>
-            <button @click=${showCreateDialog}>Ajouter</button>
-            ${current_asset ?
-                html`<button @click=${e => showDeleteDialog(e, current_asset)}>Supprimer</button>` : ''}
-            <button @click=${showResetDialog}>Réinitialiser</button>
-        `, menu_el);
+    function validateIdentifierWidget(widget) {
+        if (widget.value && !widget.value.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
+            widget.error('Autorisé : a-z, _ et 0-9 (sauf initiale)');
     }
 
     function renderEmpty() {
@@ -113,56 +163,6 @@ let pilot = (function() {
         render('', modes_el);
         render('', main_el);
     }
-
-    this.go = async function(key, args = {}) {
-        if (!init) {
-            assets = await g_assets.list();
-            assets_map = {};
-            for (let asset of assets)
-                assets_map[asset.key] = asset;
-
-            init = true;
-        }
-
-        // Select relevant asset
-        if (!key) {
-            if (current_key) {
-                key = current_key;
-            } else {
-                key = assets.length ? assets[0].key : null;
-            }
-        }
-        if (key !== current_key) {
-            if (key) {
-                let asset = await g_assets.load(key);
-
-                current_key = key;
-                current_asset = asset;
-            } else {
-                current_key = null;
-                current_asset = null;
-            }
-        }
-
-        renderMenu();
-        if (current_asset) {
-            document.title = `${current_asset.key} — ${env.project_key}`;
-
-            switch (current_asset.mimetype) {
-                case 'application/x.goupil.form': { admin_form.run(current_asset, args); } break;
-                case 'application/x.goupil.schedule': { admin_schedule.run(current_asset, args); } break;
-                default: {
-                    renderEmpty();
-                    log.error(`Unknown asset type '${current_asset.mimetype}'`);
-                } break;
-            }
-        } else {
-            document.title = env.project_key;
-
-            renderEmpty();
-            log.error('No asset available');
-        }
-    };
 
     return this;
 }).call({});

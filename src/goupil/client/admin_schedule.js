@@ -13,34 +13,6 @@ let admin_schedule = (function() {
     let init = false;
     let schedule;
 
-    function toggleMode() {
-        switch (current_mode) {
-            case 'meetings': { current_mode = 'settings'; } break;
-            case 'settings': { current_mode = 'meetings'; } break;
-            case 'copy': { current_mode = 'settings'; } break;
-        }
-
-        pilot.go();
-    }
-
-    function renderModes() {
-        render(html`
-            <button class=${current_mode === 'meetings' ? 'active' : ''}
-                    @click=${toggleMode}>Agenda</button>
-            <button class=${current_mode === 'meetings' ? '' : 'active'}
-                    @click=${toggleMode}>Créneaux</button>
-        `, modes_el);
-    }
-
-    async function loadSchedule(year, month) {
-        let [resources, meetings] = await Promise.all([
-            fetch(`${env.base_url}api/schedule/resources?schedule=pl&year=${year}&month=${month}`).then(response => response.json()),
-            fetch(`${env.base_url}api/schedule/meetings?schedule=pl&year=${year}&month=${month}`).then(response => response.json())
-        ]);
-
-        return [resources, meetings];
-    }
-
     this.run = async function(asset, args) {
         if (!init) {
             goupil.listenToServerEvent('schedule', e => {
@@ -66,6 +38,34 @@ let admin_schedule = (function() {
         renderModes();
         schedule.render(today.year, today.month, current_mode, view_el);
     };
+
+    async function loadSchedule(year, month) {
+        let [resources, meetings] = await Promise.all([
+            fetch(`${env.base_url}api/schedule/resources?schedule=pl&year=${year}&month=${month}`).then(response => response.json()),
+            fetch(`${env.base_url}api/schedule/meetings?schedule=pl&year=${year}&month=${month}`).then(response => response.json())
+        ]);
+
+        return [resources, meetings];
+    }
+
+    function renderModes() {
+        render(html`
+            <button class=${current_mode === 'meetings' ? 'active' : ''}
+                    @click=${toggleMode}>Agenda</button>
+            <button class=${current_mode === 'meetings' ? '' : 'active'}
+                    @click=${toggleMode}>Créneaux</button>
+        `, modes_el);
+    }
+
+    function toggleMode() {
+        switch (current_mode) {
+            case 'meetings': { current_mode = 'settings'; } break;
+            case 'settings': { current_mode = 'meetings'; } break;
+            case 'copy': { current_mode = 'settings'; } break;
+        }
+
+        pilot.go();
+    }
 
     return this;
 }).call({});
