@@ -17,7 +17,7 @@ let admin_schedule = (function() {
         if (!init) {
             goupil.listenToServerEvent('schedule', e => {
                 schedule = null;
-                pilot.go();
+                admin.go();
             });
 
             init = true;
@@ -64,7 +64,7 @@ let admin_schedule = (function() {
             case 'copy': { current_mode = 'settings'; } break;
         }
 
-        pilot.go();
+        admin.go();
     }
 
     return this;

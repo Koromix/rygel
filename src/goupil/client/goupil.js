@@ -109,7 +109,7 @@ let goupil = (function() {
             asset_key = asset_key.substr(0, asset_key.length - 1);
 
         // Run asset
-        pilot.go(asset_key);
+        admin.go(asset_key);
 
         // Update history
         let full_path = `${env.base_url}${asset_key}${asset_key ? '/' : ''}`;

@@ -23,7 +23,7 @@ let admin_form = (function() {
         // Deal with form executor
         if (!executor) {
             executor = new FormExecutor();
-            executor.goHandler = (key, args) => pilot.go(key, args);
+            executor.goHandler = (key, args) => admin.go(key, args);
             executor.submitHandler = saveRecordAndReset;
         }
 
@@ -56,7 +56,7 @@ let admin_form = (function() {
         await g_records.save(current_record, variables);
         entry.success('Données enregistrées !');
 
-        pilot.go(null, {id: null});
+        admin.go(null, {id: null});
         // TODO: Give focus to first widget
         window.scrollTo(0, 0);
     }
@@ -125,7 +125,7 @@ let admin_form = (function() {
             show_main_panel = true;
         }
 
-        pilot.go();
+        admin.go();
     }
 
     function toggleMainPanel() {
@@ -133,7 +133,7 @@ let admin_form = (function() {
             left_panel = 'editor';
         show_main_panel = !show_main_panel;
 
-        pilot.go();
+        admin.go();
     }
 
     function renderForm() {
@@ -384,9 +384,9 @@ let admin_form = (function() {
 
     function handleEditClick(e, record) {
         if (record.id !== current_record.id) {
-            pilot.go(null, {id: record.id});
+            admin.go(null, {id: record.id});
         } else {
-            pilot.go(null, {id: null});
+            admin.go(null, {id: null});
         }
     }
 
@@ -398,9 +398,9 @@ let admin_form = (function() {
                 await g_records.delete(record.table, record.id);
 
                 if (current_record.id === record.id) {
-                    pilot.go(null, {id: null});
+                    admin.go(null, {id: null});
                 } else {
-                    pilot.go();
+                    admin.go();
                 }
                 form.close();
             };
