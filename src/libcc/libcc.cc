@@ -1185,7 +1185,7 @@ static bool ConvertUtf8ToWide(const char *str, Span<WCHAR> out_str_w)
         switch (GetLastError()) {
             case ERROR_INSUFFICIENT_BUFFER: { LogError("Path '%1' is too large", str); } break;
             case ERROR_NO_UNICODE_TRANSLATION: { LogError("Path '%1' is not valid UTF-8", str); } break;
-            default: { LogError("MultiByteToWideChar() failed: %1", Win32ErrorString()); } break;
+            default: { LogError("MultiByteToWideChar() failed: %1", GetWin32ErrorString()); } break;
         }
         return false;
     }
@@ -1201,14 +1201,14 @@ static bool ConvertWideToUtf8(LPCWSTR str_w, Span<char> out_str)
     if (!len) {
         // This function is mainly used for strings returned by Win32, errors should
         // be rare so there is no need for fancy messages.
-        LogError("WideCharToMultiByte() failed: %1", Win32ErrorString());
+        LogError("WideCharToMultiByte() failed: %1", GetWin32ErrorString());
         return false;
     }
 
     return true;
 }
 
-char *Win32ErrorString(uint32_t error_code)
+char *GetWin32ErrorString(uint32_t error_code)
 {
     static RG_THREAD_LOCAL char str_buf[512];
 
@@ -1269,7 +1269,7 @@ bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
         DWORD err = GetLastError();
         if (error_if_missing ||
                 (err != ERROR_FILE_NOT_FOUND && err != ERROR_PATH_NOT_FOUND)) {
-            LogError("Cannot stat file '%1': %2", filename, Win32ErrorString(err));
+            LogError("Cannot stat file '%1': %2", filename, GetWin32ErrorString(err));
         }
         return false;
     }
@@ -1277,7 +1277,7 @@ bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
 
     BY_HANDLE_FILE_INFORMATION attr;
     if (!GetFileInformationByHandle(h, &attr)) {
-        LogError("Cannot stat file '%1': %2", filename, Win32ErrorString());
+        LogError("Cannot stat file '%1': %2", filename, GetWin32ErrorString());
         return false;
     }
 
@@ -1327,7 +1327,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
         }
 
         LogError("Cannot enumerate directory '%1': %2", dirname,
-                 Win32ErrorString());
+                 GetWin32ErrorString());
         return EnumStatus::Error;
     }
     RG_DEFER { FindClose(handle); };
@@ -1355,7 +1355,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
 
     if (GetLastError() != ERROR_NO_MORE_FILES) {
         LogError("Error while enumerating directory '%1': %2", dirname,
-                 Win32ErrorString());
+                 GetWin32ErrorString());
         return EnumStatus::Error;
     }
 
@@ -1530,7 +1530,7 @@ bool SetWorkingDirectory(const char *directory)
         return false;
 
     if (!SetCurrentDirectoryW(directory_w)) {
-        LogError("Failed to set current directory to '%1': %2", directory, Win32ErrorString());
+        LogError("Failed to set current directory to '%1': %2", directory, GetWin32ErrorString());
         return false;
     }
 #else
@@ -1907,7 +1907,7 @@ static bool InitConsoleCtrlHandler()
     std::call_once(flag, []() { success = SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE); });
 
     if (!success) {
-        LogError("SetConsoleCtrlHandler() failed: %1", Win32ErrorString());
+        LogError("SetConsoleCtrlHandler() failed: %1", GetWin32ErrorString());
     }
     return success;
 }
@@ -1940,7 +1940,7 @@ static bool CreateOverlappedPipe(bool overlap0, bool overlap1, HANDLE *out_h0, H
                                       PIPE_ACCESS_INBOUND | (overlap0 ? FILE_FLAG_OVERLAPPED : 0),
                                       PIPE_TYPE_BYTE | PIPE_WAIT, 1, 8192, 8192, 0, nullptr);
         if (!handles[0] && GetLastError() != ERROR_ACCESS_DENIED) {
-            LogError("Failed to create pipe: %1", Win32ErrorString());
+            LogError("Failed to create pipe: %1", GetWin32ErrorString());
             return false;
         }
     } while (!handles[0]);
@@ -1948,7 +1948,7 @@ static bool CreateOverlappedPipe(bool overlap0, bool overlap1, HANDLE *out_h0, H
     handles[1] = CreateFileA(pipe_name, GENERIC_WRITE, 0, nullptr, OPEN_EXISTING,
                              FILE_ATTRIBUTE_NORMAL | (overlap1 ? FILE_FLAG_OVERLAPPED : 0), nullptr);
     if (handles[1] == INVALID_HANDLE_VALUE) {
-        LogError("Failed to create pipe: %1", Win32ErrorString());
+        LogError("Failed to create pipe: %1", GetWin32ErrorString());
         return false;
     }
 
@@ -2012,7 +2012,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
                              &startup_info.hStdOutput, 0, TRUE, DUPLICATE_SAME_ACCESS) ||
             !DuplicateHandle(GetCurrentProcess(), out_pipe[1], GetCurrentProcess(),
                              &startup_info.hStdError, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
-            LogError("Failed to duplicate handle: %1", Win32ErrorString());
+            LogError("Failed to duplicate handle: %1", GetWin32ErrorString());
             return false;
         }
         startup_info.dwFlags |= STARTF_USESTDHANDLES;
@@ -2020,7 +2020,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
         PROCESS_INFORMATION process_info = {};
         if (!CreateProcessW(nullptr, cmd_line_w.ptr, nullptr, nullptr, TRUE, CREATE_NEW_PROCESS_GROUP,
                             nullptr, nullptr, &startup_info, &process_info)) {
-            LogError("Failed to start process: %1", Win32ErrorString());
+            LogError("Failed to start process: %1", GetWin32ErrorString());
             return false;
         }
         if (!AssignProcessToJobObject(job_handle, process_info.hProcess)) {
@@ -2047,7 +2047,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
             CloseHandleSafe(&events[1]);
         };
         if (!events[0] || !events[1]) {
-            LogError("Failed to create event HANDLE: %1", Win32ErrorString());
+            LogError("Failed to create event HANDLE: %1", GetWin32ErrorString());
             return false;
         }
 
@@ -2064,7 +2064,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
                 CancelIo(in_pipe[1]);
                 SetEvent(events[0]);
             } else {
-                LogError("Failed to write process input: %1", Win32ErrorString());
+                LogError("Failed to write process input: %1", GetWin32ErrorString());
                 CancelIo(in_pipe[1]);
                 SetEvent(events[0]);
             }
@@ -2093,7 +2093,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
                         CancelIo(out_pipe[0]);
                         break;
                     } else {
-                        LogError("Failed to read process output: %1", Win32ErrorString());
+                        LogError("Failed to read process output: %1", GetWin32ErrorString());
                         CancelIo(out_pipe[0]);
                         break;
                     }
@@ -2108,7 +2108,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
                     CancelIo(out_pipe[0]);
                     break;
                 } else {
-                    LogError("Failed to read process output: %1", Win32ErrorString());
+                    LogError("Failed to read process output: %1", GetWin32ErrorString());
                     CancelIo(out_pipe[0]);
                     break;
                 }
@@ -2116,7 +2116,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
                 break;
             } else {
                 // Not sure how this could happen, but who knows?
-                LogError("Read/write for process failed: %1", Win32ErrorString());
+                LogError("Read/write for process failed: %1", GetWin32ErrorString());
                 break;
             }
         } while (in_pipe[1] || out_pipe[0]);
@@ -2134,7 +2134,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
         };
 
         if (WaitForMultipleObjects(RG_LEN(events), events, FALSE, INFINITE) == WAIT_FAILED) {
-            LogError("WaitForMultipleObjects() failed: %1", Win32ErrorString());
+            LogError("WaitForMultipleObjects() failed: %1", GetWin32ErrorString());
             return false;
         }
     }
@@ -2148,7 +2148,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
         }
         exit_code = STATUS_CONTROL_C_EXIT;
     } else if (!GetExitCodeProcess(process_handle, &exit_code)) {
-        LogError("GetExitCodeProcess() failed: %1", Win32ErrorString());
+        LogError("GetExitCodeProcess() failed: %1", GetWin32ErrorString());
         return false;
     }
 
