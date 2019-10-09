@@ -1176,7 +1176,7 @@ void ClearLastLogError()
 
 #ifdef _WIN32
 
-static bool ConvertUtf8ToWide(const char *str, Span<WCHAR> out_str_w)
+static bool ConvertUtf8ToWin32Wide(const char *str, Span<WCHAR> out_str_w)
 {
     RG_ASSERT(out_str_w.len >= 1);
 
@@ -1193,7 +1193,7 @@ static bool ConvertUtf8ToWide(const char *str, Span<WCHAR> out_str_w)
     return true;
 }
 
-static bool ConvertWideToUtf8(LPCWSTR str_w, Span<char> out_str)
+static bool ConvertWin32WideToUtf8(LPCWSTR str_w, Span<char> out_str)
 {
     RG_ASSERT(out_str.len >= 1);
 
@@ -1260,7 +1260,7 @@ static int64_t FileTimeToUnixTime(FILETIME ft)
 bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
 {
     WCHAR filename_w[4096];
-    if (!ConvertUtf8ToWide(filename, filename_w))
+    if (!ConvertUtf8ToWin32Wide(filename, filename_w))
         return false;
 
     HANDLE h = CreateFileW(filename_w, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -1305,7 +1305,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
             return EnumStatus::Error;
         }
 
-        if (!ConvertUtf8ToWide(find_filter, find_filter_w))
+        if (!ConvertUtf8ToWin32Wide(find_filter, find_filter_w))
             return EnumStatus::Error;
     }
 
@@ -1344,7 +1344,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
         }
 
         char filename[512];
-        if (!ConvertWideToUtf8(find_data.cFileName, filename))
+        if (!ConvertWin32WideToUtf8(find_data.cFileName, filename))
             return EnumStatus::Error;
 
         FileType file_type = FileAttributesToType(find_data.dwFileAttributes);
@@ -1526,7 +1526,7 @@ bool SetWorkingDirectory(const char *directory)
 {
 #ifdef _WIN32
     WCHAR directory_w[4096];
-    if (!ConvertUtf8ToWide(directory, directory_w))
+    if (!ConvertUtf8ToWin32Wide(directory, directory_w))
         return false;
 
     if (!SetCurrentDirectoryW(directory_w)) {
@@ -1552,7 +1552,7 @@ const char *GetWorkingDirectory()
     DWORD ret = GetCurrentDirectoryW(RG_SIZE(buf_w), buf_w);
     RG_ASSERT(ret && ret <= RG_SIZE(buf_w));
 
-    RG_ASSERT(ConvertWideToUtf8(buf_w, buf));
+    RG_ASSERT(ConvertWin32WideToUtf8(buf_w, buf));
 #else
     RG_ASSERT(getcwd(buf, RG_SIZE(buf)));
 #endif
@@ -1618,7 +1618,7 @@ const char *GetApplicationExecutable()
         Size path_len = (Size)GetModuleFileNameW(nullptr, path_w, RG_SIZE(path_w));
         RG_ASSERT(path_len && path_len < RG_SIZE(path_w));
 
-        RG_ASSERT(ConvertWideToUtf8(path_w, executable_path));
+        RG_ASSERT(ConvertWin32WideToUtf8(path_w, executable_path));
     }
 
     return executable_path;
@@ -1968,7 +1968,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
     cmd_line_w.len = 4 * strlen(cmd_line) + 2;
     cmd_line_w.ptr = (WCHAR *)Allocator::Allocate(nullptr, cmd_line_w.len);
     RG_DEFER { Allocator::Release(nullptr, cmd_line_w.ptr, cmd_line_w.len); };
-    if (!ConvertUtf8ToWide(cmd_line, cmd_line_w))
+    if (!ConvertUtf8ToWin32Wide(cmd_line, cmd_line_w))
         return false;
 
     // Detect CTRL+C and CTRL+BREAK events
@@ -3720,7 +3720,7 @@ AssetLoadStatus AssetSet::LoadFromLibrary(const char *filename, const char *var_
 
 #ifdef _WIN32
     WCHAR filename_w[4096];
-    if (!ConvertUtf8ToWide(filename, filename_w))
+    if (!ConvertUtf8ToWin32Wide(filename, filename_w))
         return AssetLoadStatus::Error;
 
     HMODULE h = LoadLibraryW(filename_w);
