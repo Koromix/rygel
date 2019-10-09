@@ -27,36 +27,12 @@ DatabaseFile = %2
 # BaseUrl = /
 )";
 
-static const char *const DemoSQL =
-R"(BEGIN TRANSACTION;
-
-INSERT INTO sched_resources VALUES ('pl', '2019-08-01', 730, 1, 1);
-INSERT INTO sched_resources VALUES ('pl', '2019-08-01', 1130, 2, 0);
-INSERT INTO sched_resources VALUES ('pl', '2019-08-02', 730, 1, 1);
-INSERT INTO sched_resources VALUES ('pl', '2019-08-02', 1130, 2, 0);
-INSERT INTO sched_resources VALUES ('pl', '2019-08-05', 730, 1, 1);
-INSERT INTO sched_resources VALUES ('pl', '2019-08-05', 1130, 2, 0);
-INSERT INTO sched_resources VALUES ('pl', '2019-08-06', 730, 1, 1);
-INSERT INTO sched_resources VALUES ('pl', '2019-08-06', 1130, 2, 0);
-INSERT INTO sched_resources VALUES ('pl', '2019-08-07', 730, 1, 1);
-INSERT INTO sched_resources VALUES ('pl', '2019-08-07', 1130, 2, 0);
-
-INSERT INTO sched_meetings VALUES ('pl', '2019-08-01', 730, 'Gwen STACY');
-INSERT INTO sched_meetings VALUES ('pl', '2019-08-01', 730, 'Peter PARKER');
-INSERT INTO sched_meetings VALUES ('pl', '2019-08-01', 730, 'Mary JANE PARKER');
-INSERT INTO sched_meetings VALUES ('pl', '2019-08-02', 730, 'Clark KENT');
-INSERT INTO sched_meetings VALUES ('pl', '2019-08-02', 1130, 'Lex LUTHOR');
-
-END TRANSACTION;
-)";
-
 int RunCreateProfile(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
     // Options
     Span<const char> project_key = {};
-    bool dev = false;
     bool demo = false;
     const char *profile_directory = nullptr;
 
@@ -67,7 +43,6 @@ Options:
     -k, --key <key>              Change project key
                                  (default: directory name)
 
-        --dev                    Create developer-oriented profile
         --demo                   Insert fake data in profile)");
     };
 
@@ -81,8 +56,6 @@ Options:
                 return 0;
             } else if (opt.Test("-k", "--key", OptionType::Value)) {
                 project_key = opt.current_value;
-            } else if (opt.Test("--dev")) {
-                dev = true;
             } else if (opt.Test("--demo")) {
                 demo = true;
             } else {
@@ -122,18 +95,8 @@ Options:
     };
 
     // Create database
-    const char *database_name;
-    if (dev) {
-        database_name = "database_dev.sql";
-
-        const char *filename = Fmt(&temp_alloc, "%1%/%2", profile_directory, database_name).ptr;
-        files.Append(filename);
-
-        if (!WriteFile(demo ? DemoSQL : "", filename))
-            return 1;
-    } else {
-        database_name = "database.db";
-
+    const char *database_name = "database.db";
+    {
         const char *filename = Fmt(&temp_alloc, "%1%/%2", profile_directory, database_name).ptr;
         files.Append(filename);
 
@@ -143,7 +106,7 @@ Options:
         if (!database.CreateSchema())
             return 1;
 
-        if (demo && !database.Execute(DemoSQL))
+        if (demo && !database.InsertDemo())
             return 1;
     }
 
