@@ -11,31 +11,66 @@
 
 namespace RG {
 
-// TODO: Support Make escaping
+static Span<const char> ParseMakeFragment(Span<const char> remain, HeapArray<char> *out_frag)
+{
+    // Skip white spaces
+    remain = TrimStrLeft(remain);
+
+    if (remain.len) {
+        out_frag->Append(remain[0]);
+
+        Size i = 1;
+        for (; i < remain.len && !strchr("\r\n", remain[i]); i++) {
+            char c = remain[i];
+
+            // The 'i > 1' check is for absolute Windows paths
+            if (c == ':' && i > 1)
+                break;
+
+            if (strchr(" $#", c)) {
+                if (remain[i - 1] == '\\') {
+                    (*out_frag)[out_frag->len - 1] = c;
+                } else {
+                    break;
+                }
+            } else {
+                out_frag->Append(c);
+            }
+        }
+
+        remain = remain.Take(i, remain.len - i);
+    }
+
+    return remain;
+}
+
 static bool ParseCompilerMakeRule(const char *filename, Allocator *alloc,
                                   HeapArray<const char *> *out_filenames)
 {
     HeapArray<char> rule_buf;
     if (ReadFile(filename, Megabytes(2), &rule_buf) < 0)
         return false;
-    rule_buf.Append(0);
 
-    // Skip output path
-    Span<const char> rule;
-    {
-        const char *ptr = strstr(rule_buf.ptr, ": ");
-        if (ptr) {
-            rule = Span<const char>(ptr + 2);
-        } else {
-            rule = {};
-        }
+    // Parser state
+    Span<const char> remain = rule_buf;
+    HeapArray<char> frag;
+
+    // Skip outputs
+    while (remain.len) {
+        frag.RemoveFrom(0);
+        remain = ParseMakeFragment(remain, &frag);
+
+        if ((Span<const char>)frag == ":")
+            break;
     }
 
-    while (rule.len) {
-        Span<const char> path = TrimStr(SplitStr(rule, ' ', &rule));
+    // Get dependency filenames
+    while (remain.len) {
+        frag.RemoveFrom(0);
+        remain = ParseMakeFragment(remain, &frag);
 
-        if (path.len && path != "\\") {
-            const char *dep_filename = NormalizePath(path, alloc).ptr;
+        if (frag.len && (Span<const char>)frag != "\\") {
+            const char *dep_filename = NormalizePath(frag, alloc).ptr;
             out_filenames->Append(dep_filename);
         }
     }

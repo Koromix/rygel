@@ -31,9 +31,9 @@ static void AppendGccObjectArguments(const char *src_filename, BuildMode build_m
         case BuildMode::Release: { Fmt(out_buf, " -O2 -flto -DNDEBUG"); } break;
     }
 
-    Fmt(out_buf, " -c %1", src_filename);
+    Fmt(out_buf, " -c \"%1\"", src_filename);
     if (pch_filename) {
-        Fmt(out_buf, " -include %1", pch_filename);
+        Fmt(out_buf, " -include \"%1\"", pch_filename);
     }
     for (const char *definition: definitions) {
         Fmt(out_buf, " -D%1", definition);
@@ -42,10 +42,10 @@ static void AppendGccObjectArguments(const char *src_filename, BuildMode build_m
         Fmt(out_buf, " -I%1", include_directory);
     }
     if (deps_filename) {
-        Fmt(out_buf, " -MMD -MF %1", deps_filename);
+        Fmt(out_buf, " -MMD -MF \"%1\"", deps_filename);
     }
     if (dest_filename) {
-        Fmt(out_buf, " -o %1", dest_filename);
+        Fmt(out_buf, " -o \"%1\"", dest_filename);
     }
 }
 
@@ -113,7 +113,7 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames,
     Size rsp_offset = out_buf->len;
 
     for (const char *obj_filename: obj_filenames) {
-        Fmt(out_buf, " %1", obj_filename);
+        Fmt(out_buf, " \"%1\"", obj_filename);
     }
 
     if (out_buf->len - rsp_offset >= 4096) {
@@ -135,7 +135,7 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames,
     }
 #else
     for (const char *obj_filename: obj_filenames) {
-        Fmt(out_buf, " %1", obj_filename);
+        Fmt(out_buf, " \"%1\"", obj_filename);
     }
 #endif
 
@@ -143,7 +143,7 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames,
         Fmt(out_buf, " -l%1", lib);
     }
 
-    Fmt(out_buf, " -o %1", dest_filename);
+    Fmt(out_buf, " -o \"%1\"", dest_filename);
 
     return true;
 }
@@ -152,7 +152,8 @@ static void AppendPackCommandLine(Span<const char *const> pack_filenames, BuildM
                                   const char *pack_options, HeapArray<char> *out_buf)
 {
 #ifdef _WIN32
-    Fmt(out_buf, "cmd /c \"%1\" pack", GetApplicationExecutable());
+    // For some reason quotes fail here (maybe we need to escape properly), so use short file name
+    Fmt(out_buf, "cmd /c %1 pack", GetApplicationExecutable83());
 #else
     Fmt(out_buf, "\"%1\" pack", GetApplicationExecutable());
 #endif
@@ -167,7 +168,7 @@ static void AppendPackCommandLine(Span<const char *const> pack_filenames, BuildM
         Fmt(out_buf, " %1", pack_options);
     }
     for (const char *pack_filename: pack_filenames) {
-        Fmt(out_buf, " %1", pack_filename);
+        Fmt(out_buf, " \"%1\"", pack_filename);
     }
 }
 
@@ -221,7 +222,7 @@ public:
         buf.allocator = alloc;
 
         AppendPackCommandLine(pack_filenames, build_mode, pack_options, &buf);
-        Fmt(&buf, " | %1clang -x c -c - -o %2", prefix, dest_filename);
+        Fmt(&buf, " | %1clang -x c -c - -o \"%2\"", prefix, dest_filename);
 
         return (const char *)buf.Leak().ptr;
     }
@@ -313,7 +314,7 @@ public:
         buf.allocator = alloc;
 
         AppendPackCommandLine(pack_filenames, build_mode, pack_options, &buf);
-        Fmt(&buf, " | %1gcc -x c -c - -o %2", prefix, dest_filename);
+        Fmt(&buf, " | %1gcc -x c -c - -o \"%2\"", prefix, dest_filename);
 
         return (const char *)buf.Leak().ptr;
     }
