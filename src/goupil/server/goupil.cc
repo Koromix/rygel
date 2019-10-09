@@ -158,18 +158,6 @@ static void InitRoutes()
 
         routes.Append(route);
     };
-    const auto add_redirect_route = [](const char *method, const char *url, int code,
-                                       const char *location) {
-        Route route = {};
-
-        route.method = method;
-        route.url = url;
-        route.type = Route::Type::Redirect;
-        route.u.redirect.code = code;
-        route.u.redirect.location = location;
-
-        routes.Append(route);
-    };
     const auto add_function_route = [&](const char *method, const char *url,
                                         void (*func)(const http_RequestInfo &request, http_IO *io)) {
         Route route = {};
@@ -209,17 +197,11 @@ static void InitRoutes()
     }
     RG_ASSERT(html.name);
 
-    // Main pages
+    // Pages
     add_asset_route("GET", "/", html);
-    add_redirect_route("GET", "/autoform", 301, "autoform/");
-    add_asset_route("GET", "/autoform/", html);
-    add_redirect_route("GET", "/schedule", 301, "schedule/");
-    add_asset_route("GET", "/schedule/", html);
 
-    // General API
+    // API
     add_function_route("GET", "/api/events", ProduceEvents);
-
-    // Schedule API
     add_function_route("GET", "/api/schedule/resources", ProduceScheduleResources);
     add_function_route("GET", "/api/schedule/meetings", ProduceScheduleMeetings);
 
