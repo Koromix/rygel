@@ -52,6 +52,29 @@ CREATE TABLE sched_meetings (
 CREATE INDEX sched_meetings_sd ON sched_meetings (schedule, date, time);
 )";
 
+static const char *const DemoSQL = R"(
+BEGIN TRANSACTION;
+
+INSERT INTO sched_resources VALUES ('pl', '2019-08-01', 730, 1, 1);
+INSERT INTO sched_resources VALUES ('pl', '2019-08-01', 1130, 2, 0);
+INSERT INTO sched_resources VALUES ('pl', '2019-08-02', 730, 1, 1);
+INSERT INTO sched_resources VALUES ('pl', '2019-08-02', 1130, 2, 0);
+INSERT INTO sched_resources VALUES ('pl', '2019-08-05', 730, 1, 1);
+INSERT INTO sched_resources VALUES ('pl', '2019-08-05', 1130, 2, 0);
+INSERT INTO sched_resources VALUES ('pl', '2019-08-06', 730, 1, 1);
+INSERT INTO sched_resources VALUES ('pl', '2019-08-06', 1130, 2, 0);
+INSERT INTO sched_resources VALUES ('pl', '2019-08-07', 730, 1, 1);
+INSERT INTO sched_resources VALUES ('pl', '2019-08-07', 1130, 2, 0);
+
+INSERT INTO sched_meetings VALUES ('pl', '2019-08-01', 730, 'Gwen STACY');
+INSERT INTO sched_meetings VALUES ('pl', '2019-08-01', 730, 'Peter PARKER');
+INSERT INTO sched_meetings VALUES ('pl', '2019-08-01', 730, 'Mary JANE PARKER');
+INSERT INTO sched_meetings VALUES ('pl', '2019-08-02', 730, 'Clark KENT');
+INSERT INTO sched_meetings VALUES ('pl', '2019-08-02', 1130, 'Lex LUTHOR');
+
+END TRANSACTION;
+)";
+
 bool SQLiteDatabase::Open(const char *filename, unsigned int flags)
 {
     static const char *const sql = R"(
@@ -101,6 +124,11 @@ bool SQLiteDatabase::Execute(const char *sql)
 bool SQLiteDatabase::CreateSchema()
 {
     return Execute(SchemaSQL);
+}
+
+bool SQLiteDatabase::InsertDemo()
+{
+    return Execute(DemoSQL);
 }
 
 }

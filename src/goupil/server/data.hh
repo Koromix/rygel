@@ -25,6 +25,7 @@ public:
     bool Execute(const char *sql);
 
     bool CreateSchema();
+    bool InsertDemo();
 
     operator sqlite3 *() { return db; }
 };

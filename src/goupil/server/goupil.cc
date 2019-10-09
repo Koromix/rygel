@@ -139,38 +139,6 @@ static void ProduceEvents(const http_RequestInfo &request, http_IO *io)
     push_count++;
 }
 
-static bool InitDatabase(const char *filename)
-{
-    Span<const char> extension = GetPathExtension(filename);
-
-    if (extension == ".db") {
-        return goupil_db.Open(filename, SQLITE_OPEN_READWRITE);
-    } else if (extension == ".sql") {
-        if (!goupil_db.Open(":memory:", SQLITE_OPEN_READWRITE))
-            return false;
-        if (!goupil_db.CreateSchema())
-            return false;
-
-        HeapArray<char> sql;
-        if (ReadFile(filename, Megabytes(1), &sql) < 0)
-            return false;
-        sql.Append(0);
-
-        char *error = nullptr;
-        if (sqlite3_exec(goupil_db, sql.ptr, nullptr, nullptr, &error) != SQLITE_OK) {
-            LogError("SQLite request failed: %1", error);
-            sqlite3_free(error);
-
-            return false;
-        }
-
-        return true;
-    } else {
-        LogError("Unknown database extension '%1'", extension);
-        return false;
-    }
-}
-
 static void InitRoutes()
 {
     LogInfo("Init routes");
@@ -346,12 +314,15 @@ Options:
         --port <port>            Change web server port
                                  (default: %1))
         --base_url <url>         Change base URL
-                                 (default: %2))",
+                                 (default: %2))
+
+        --dev [<key>]            Run with fake profile and data)",
                 goupil_config.http.port, goupil_config.http.base_url);
     };
 
     // Find config filename
     const char *config_filename = nullptr;
+    const char *dev_key = nullptr;
     {
         OptionParser opt(argc, argv, (int)OptionParser::Flag::SkipNonOptions);
 
@@ -361,17 +332,24 @@ Options:
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::OptionalValue)) {
                 config_filename = opt.current_value;
+            } else if (opt.Test("--dev", OptionType::OptionalValue)) {
+                dev_key = opt.current_value ? opt.current_value : "DEV";
             }
         }
     }
 
     // Load config file
-    if (!config_filename) {
-        LogError("Configuration file not specified");
-        return 1;
+    if (config_filename) {
+        if (dev_key) {
+            LogError("Option '--dev' cannot be used with '--config_file'");
+            return 1;
+        }
+
+        if (!LoadConfig(config_filename, &goupil_config))
+            return 1;
+    } else if (dev_key) {
+        goupil_config.project_key = dev_key;
     }
-    if (!LoadConfig(config_filename, &goupil_config))
-        return 1;
 
     // Parse arguments
     {
@@ -379,6 +357,8 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                // Already handled
+            } else if (opt.Test("--dev", OptionType::OptionalValue)) {
                 // Already handled
             } else if (opt.Test("--port", OptionType::Value)) {
                 if (!ParseDec(opt.current_value, &goupil_config.http.port))
@@ -399,12 +379,20 @@ Options:
     }
 
     // Init database
-    if (!goupil_config.database_filename) {
+    if (goupil_config.database_filename) {
+        if (!goupil_db.Open(goupil_config.database_filename, SQLITE_OPEN_READWRITE))
+            return 1;
+    } else if (dev_key) {
+        if (!goupil_db.Open(":memory:", SQLITE_OPEN_READWRITE))
+            return 1;
+        if (!goupil_db.CreateSchema())
+            return 1;
+        if (!goupil_db.InsertDemo())
+            return 1;
+    } else {
         LogError("Database file not specified");
         return 1;
     }
-    if (!InitDatabase(goupil_config.database_filename))
-        return 1;
 
     // Init routes
 #ifndef NDEBUG
