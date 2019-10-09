@@ -3331,6 +3331,9 @@ const char *GetWorkingDirectory();
 
 const char *GetApplicationExecutable(); // Can be NULL
 const char *GetApplicationDirectory(); // Can be NULL
+#ifdef _WIN32
+const char *GetApplicationExecutable83(); // Can be NULL
+#endif
 
 bool MakeDirectory(const char *dir, bool error_if_exists = true);
 bool MakeDirectoryRec(Span<const char> dir);

@@ -1676,6 +1676,26 @@ const char *GetApplicationDirectory()
 #endif
 }
 
+#ifdef _WIN32
+const char *GetApplicationExecutable83()
+{
+    static char executable_path_83[4096];
+
+    if (!executable_path_83[0]) {
+        WCHAR path_w[RG_SIZE(executable_path_83)];
+        Size path_len = (Size)GetModuleFileNameW(nullptr, path_w, RG_SIZE(path_w));
+        RG_ASSERT(path_len && path_len < RG_SIZE(path_w));
+
+        WCHAR path_w_83[RG_SIZE(executable_path_83)];
+        RG_ASSERT(GetShortPathNameW(path_w, path_w_83, RG_LEN(path_w_83)));
+
+        RG_ASSERT(ConvertWin32WideToUtf8(path_w_83, executable_path_83));
+    }
+
+    return executable_path_83;
+}
+#endif
+
 CompressionType GetPathCompression(Span<const char> filename)
 {
     CompressionType compression_type;
