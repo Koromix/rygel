@@ -181,7 +181,7 @@ static HWND CreateMainWindow(const char *application_name)
         main_cls_atom = RegisterClassExA(&gl_cls);
         if (!main_cls_atom) {
             LogError("Failed to register window class '%1': %2", main_cls_name,
-                     Win32ErrorString());
+                     GetWin32ErrorString());
             return nullptr;
         }
 
@@ -203,7 +203,7 @@ static HWND CreateMainWindow(const char *application_name)
                                    rect.right - rect.left, rect.bottom - rect.top,
                                    nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
         if (!main_wnd) {
-            LogError("Failed to create Win32 window: %s", Win32ErrorString());
+            LogError("Failed to create Win32 window: %s", GetWin32ErrorString());
             return nullptr;
         }
 
@@ -238,7 +238,7 @@ static bool InitWGL(const char *application_name)
 
         if (!RegisterClassExA(&dummy_cls)) {
             LogError("Failed to register window class '%1': %2", dummy_cls_name,
-                     Win32ErrorString());
+                     GetWin32ErrorString());
             return false;
         }
     }
@@ -252,7 +252,7 @@ static bool InitWGL(const char *application_name)
         dummy_dc = GetDC(dummy_wnd);
         if (!dummy_wnd || !dummy_dc) {
             LogError("Failed to create dummy window for OpenGL context: %1",
-                     Win32ErrorString());
+                     GetWin32ErrorString());
             return false;
         }
     }
@@ -266,20 +266,20 @@ static bool InitWGL(const char *application_name)
         pfd.cColorBits = 24;
         int suggested_pixel_fmt = ChoosePixelFormat(dummy_dc, &pfd);
         if (!SetPixelFormat(dummy_dc, suggested_pixel_fmt, &pfd)) {
-            LogError("Failed to set pixel format for dummy window: %1", Win32ErrorString());
+            LogError("Failed to set pixel format for dummy window: %1", GetWin32ErrorString());
             return false;
         }
     }
 
     HGLRC dummy_ctx = wglCreateContext(dummy_dc);
     if (!dummy_ctx) {
-        LogError("Failed to create OpenGL context for dummy window: %1", Win32ErrorString());
+        LogError("Failed to create OpenGL context for dummy window: %1", GetWin32ErrorString());
         return false;
     }
     RG_DEFER { wglDeleteContext(dummy_ctx); };
 
     if (!wglMakeCurrent(dummy_dc, dummy_ctx)) {
-        LogError("Failed to change OpenGL context of dummy window: %1", Win32ErrorString());
+        LogError("Failed to change OpenGL context of dummy window: %1", GetWin32ErrorString());
         return false;
     }
     RG_DEFER { wglMakeCurrent(dummy_dc, nullptr); };
@@ -333,7 +333,7 @@ static HGLRC CreateGLContext(const char *application_name, HDC dc)
         PIXELFORMATDESCRIPTOR pixel_fmt_desc;
         DescribePixelFormat(dc, pixel_fmt_index, RG_SIZE(pixel_fmt_desc), &pixel_fmt_desc);
         if (!SetPixelFormat(dc, pixel_fmt_index, &pixel_fmt_desc)) {
-            LogError("Cannot set pixel format on GL window: %1", Win32ErrorString());
+            LogError("Cannot set pixel format on GL window: %1", GetWin32ErrorString());
             return nullptr;
         }
     }

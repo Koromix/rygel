@@ -3278,7 +3278,7 @@ static inline bool IsPathSeparator(char c)
 }
 
 #ifdef _WIN32
-char *Win32ErrorString(uint32_t error_code = UINT32_MAX);
+char *GetWin32ErrorString(uint32_t error_code = UINT32_MAX);
 #endif
 
 CompressionType GetPathCompression(Span<const char> filename);
