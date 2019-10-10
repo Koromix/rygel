@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <condition_variable>
 #include <errno.h>
 #include <float.h>
@@ -13,7 +14,6 @@
 #include <inttypes.h>
 #include <limits.h>
 #include <limits>
-#include <math.h>
 #include <memory>
 #include <mutex>
 #include <stddef.h>

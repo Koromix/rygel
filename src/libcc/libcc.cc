@@ -2181,6 +2181,30 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
     return true;
 }
 #else
+static bool CreatePipe(int pfd[2])
+{
+#ifdef __APPLE__
+    if (pipe(pfd) < 0) {
+        LogError("Failed to create pipe: %1", strerror(errno));
+        return false;
+    }
+
+    if (fcntl(pfd[0], F_SETFD, FD_CLOEXEC) < 0 || fcntl(pfd[1], F_SETFD, FD_CLOEXEC) < 0) {
+        LogError("Failed to set FD_CLOEXEC on pipe: %1", strerror(errno));
+        return false;
+    }
+
+    return true;
+#else
+    if (pipe2(pfd, O_CLOEXEC) < 0)  {
+        LogError("Failed to create pipe: %1", strerror(errno));
+        return false;
+    }
+
+    return true;
+#endif
+}
+
 static void CloseDescriptorSafe(int *fd_ptr)
 {
     if (*fd_ptr >= 0) {
@@ -2202,9 +2226,10 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
         CloseDescriptorSafe(&out_pfd[0]);
         CloseDescriptorSafe(&out_pfd[1]);
     };
-    if (pipe2(in_pfd, O_CLOEXEC) < 0 || fcntl(in_pfd[1], F_SETFL, O_NONBLOCK) < 0 ||
-            pipe2(out_pfd, O_CLOEXEC) < 0 || fcntl(out_pfd[0], F_SETFL, O_NONBLOCK) < 0)  {
-        LogError("Failed to create pipe: %1", strerror(errno));
+    if (!CreatePipe(in_pfd) || !CreatePipe(out_pfd))
+        return false;
+    if (fcntl(in_pfd[1], F_SETFL, O_NONBLOCK) < 0 || fcntl(out_pfd[0], F_SETFL, O_NONBLOCK) < 0) {
+        LogError("Failed to set O_NONBLOCK on pipe: %1", strerror(errno));
         return false;
     }
 
@@ -3413,8 +3438,11 @@ bool StreamWriter::Close()
             case DestinationType::Memory: {} break;
 
             case DestinationType::File: {
-#ifdef _WIN32
+#if defined(_WIN32)
                 if (fflush(dest.u.file.fp) != 0) {
+#elif defined(__APPLE__)
+                if ((fflush(dest.u.file.fp) != 0 || fsync(fileno(dest.u.file.fp)) < 0) &&
+                        errno != EINVAL && errno != ENOTSUP) {
 #else
                 if ((fflush(dest.u.file.fp) != 0 || fsync(fileno(dest.u.file.fp)) < 0) && errno != EINVAL) {
 #endif
