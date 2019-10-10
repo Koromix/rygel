@@ -194,7 +194,7 @@ public:
         Fmt(&buf, warnings ? " -Wall" : " -Wno-everything");
 
         // Platform flags
-#ifdef _WIN32
+#if defined(_WIN32)
         Fmt(&buf, " -D_MT -Xclang --dependent-lib=libcmt -Xclang --dependent-lib=oldnames"
                   " -Wno-unknown-warning-option -Wno-unknown-pragmas -Wno-deprecated-declarations"
                   " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DNOMINMAX"
@@ -203,6 +203,8 @@ public:
         if (src_type == SourceType::CXX_Source || src_type == SourceType::CXX_Header) {
             Fmt(&buf, " -Xclang -flto-visibility-public-std");
         }
+#elif defined(__APPLE__)
+        Fmt(&buf, " -pthread -fPIC");
 #else
         Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -D_FORTIFY_SOURCE=2"
                   " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4");
@@ -241,8 +243,10 @@ public:
         }
 
         // Platform flags
-#ifdef _WIN32
+#if defined(_WIN32)
         Fmt(&buf, " -fuse-ld=lld");
+#elif defined(__APPLE__)
+        Fmt(&buf, " -ldl -pthread");
 #else
         Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now");
 #endif
@@ -292,12 +296,14 @@ public:
         }
 
         // Platform flags
-        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
-                  " -D_FORTIFY_SOURCE=2");
-#ifdef _WIN32
-        Fmt(&buf, " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -D__USE_MINGW_ANSI_STDIO=1");
+#if defined(_WIN32)
+        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -D_FORTIFY_SOURCE=2"
+                  " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -D__USE_MINGW_ANSI_STDIO=1");
+#elif defined(__APPLE__)
+        Fmt(&buf, " -pthread -fPIC");
 #else
-        Fmt(&buf, " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4");
+        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -D_FORTIFY_SOURCE=2"
+                  " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4");
 #endif
 
         // Common flags (source, definitions, include directories, etc.)
@@ -333,8 +339,10 @@ public:
         }
 
         // Platform flags
-#ifdef _WIN32
+#if defined(_WIN32)
         Fmt(&buf, " -Wl,--dynamicbase -Wl,--nxcompat -Wl,--high-entropy-va");
+#elif defined(__APPLE__)
+        Fmt(&buf, " -ldl -pthread");
 #else
         Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now");
         if (link_type == LinkType::Executable) {

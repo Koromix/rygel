@@ -120,6 +120,16 @@ static bool MatchPlatform(Span<const char> name, bool *out_match)
         *out_match = true;
 #endif
         return true;
+    } else if (name == "macOS") {
+#ifdef __APPLE__
+        *out_match = true;
+#endif
+        return true;
+    } else if (name == "Linux") {
+#ifdef __linux__
+        *out_match = true;
+#endif
+        return true;
     } else {
         LogError("Unknown platform '%1'", name);
         return false;
