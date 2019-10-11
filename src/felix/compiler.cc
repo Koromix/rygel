@@ -27,7 +27,7 @@ static void AppendGccObjectArguments(const char *src_filename, BuildMode build_m
 
     switch (build_mode) {
         case BuildMode::Debug: { Fmt(out_buf, " -O0 -g -ftrapv"); } break;
-        case BuildMode::DebugFast: { Fmt(out_buf, " -Og -g -ftrapv"); } break;
+        case BuildMode::Fast: { Fmt(out_buf, " -O2 -g -DNDEBUG"); } break;
         case BuildMode::Release: { Fmt(out_buf, " -O2 -flto -DNDEBUG"); } break;
     }
 
@@ -160,7 +160,7 @@ static void AppendPackCommandLine(Span<const char *const> pack_filenames, BuildM
 
     switch (build_mode) {
         case BuildMode::Debug:
-        case BuildMode::DebugFast: { Fmt(out_buf, " -m SourceMap"); } break;
+        case BuildMode::Fast: { Fmt(out_buf, " -m SourceMap"); } break;
         case BuildMode::Release: { Fmt(out_buf, " -m RunTransform"); } break;
     }
 
