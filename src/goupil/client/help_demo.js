@@ -98,7 +98,7 @@ form.multi("sommeil", "Présentez-vous un trouble du sommeil ?", [
 ])
 
 if (sexe.value == "F") {
-    form.binary("enceinte", "Êtes-vous enceinte ?");
+    form.binary("enceinte", "Êtes-vous enceinte ?")
 }
 
 form.section("Alcool", () => {
@@ -119,7 +119,7 @@ form.section("Autres", () => {
     form.number("enfants", "Combien avez-vous d'enfants ?", {min: 0, max: 30})
     form.binary("frites", "Aimez-vous les frites ?",
                 {help: "Si si, c'est important, je vous le jure !"})
-});
+})
 
 form.output(html\`On peut aussi mettre du <b>HTML directement</b> si on veut...
                  <button class="af_button" @click=\${e => go("complicated_help")}>Afficher l'aide</button>\`)
