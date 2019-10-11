@@ -294,8 +294,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
         switch (target.pack_link_type) {
             case PackLinkType::Static: { module = false; } break;
             case PackLinkType::Module: { module = true; } break;
-            case PackLinkType::ModuleIfDebug: { module = (build_mode == BuildMode::Debug ||
-                                                          build_mode == BuildMode::DebugFast); } break;
+            case PackLinkType::ModuleIfDebug: { module = (build_mode == BuildMode::Debug); } break;
         }
 
         if (module) {
