@@ -5,7 +5,7 @@
 let admin_form = (function() {
     let self = this;
 
-    let form_el;
+    let page_el;
     let editor_el;
     let data_el;
 
@@ -69,12 +69,12 @@ let admin_form = (function() {
         if (left_panel === 'editor' && show_main_panel) {
             render(html`
                 ${makeEditorElement('adm_panel_left')}
-                <div id="af_form" class="adm_panel_right"></div>
+                <div id="af_page" class="adm_panel_right"></div>
             `, main_el);
         } else if (left_panel === 'data' && show_main_panel) {
             render(html`
                 <div id="af_data" class="adm_panel_left"></div>
-                <div id="af_form" class="adm_panel_right"></div>
+                <div id="af_page" class="adm_panel_right"></div>
             `, main_el);
         } else if (left_panel === 'editor') {
             render(html`
@@ -86,13 +86,13 @@ let admin_form = (function() {
             `, main_el);
         } else {
             render(html`
-                <div id="af_form" class="adm_panel_page"></div>
+                <div id="af_page" class="adm_panel_page"></div>
             `, main_el);
         }
 
         modes_el = document.querySelector('#adm_modes');
         // We still need to render the form to test it, so create a dummy element!
-        form_el = document.querySelector('#af_form') || document.createElement('div');
+        page_el = document.querySelector('#af_page') || document.createElement('div');
         data_el = document.querySelector('#af_data');
     }
 
@@ -139,7 +139,7 @@ let admin_form = (function() {
     }
 
     function renderForm() {
-        return executor.render(form_el, current_asset.key, current_asset.data);
+        return executor.render(page_el, current_asset.key, current_asset.data);
     }
 
     async function syncEditor() {
@@ -389,10 +389,10 @@ let admin_form = (function() {
     }
 
     function showDeleteDialog(e, record) {
-        goupil.popup(e, form => {
-            form.output('Voulez-vous vraiment supprimer cet enregistrement ?');
+        goupil.popup(e, page => {
+            page.output('Voulez-vous vraiment supprimer cet enregistrement ?');
 
-            form.submitHandler = async () => {
+            page.submitHandler = async () => {
                 await g_records.delete(record.table, record.id);
 
                 if (current_record.id === record.id) {
@@ -400,9 +400,9 @@ let admin_form = (function() {
                 } else {
                     admin.go();
                 }
-                form.close();
+                page.close();
             };
-            form.buttons(form.buttons.std.ok_cancel('Supprimer'));
+            page.buttons(page.buttons.std.ok_cancel('Supprimer'));
         });
     }
 

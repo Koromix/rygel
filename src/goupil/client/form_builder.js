@@ -20,8 +20,8 @@ function FormBuilder(state, widgets, variables = []) {
 
     this.errors = [];
 
-    this.changeHandler = form => {};
-    this.validateHandler = form => {
+    this.changeHandler = page => {};
+    this.validateHandler = page => {
         let problems = [];
         if (missing_block)
             problems.push('Informations obligatoires manquantes');

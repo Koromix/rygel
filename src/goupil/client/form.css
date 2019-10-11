@@ -4,11 +4,11 @@
 
 /* -------------------- Form -------------------- */
 
-.af_form {
+.af_page {
     background: #efefef;
     padding: 12px 12px 6px 12px;
 }
-.af_form_broken {
+.af_page_broken {
     filter: grayscale(100%);
     opacity: 0.5;
 }
