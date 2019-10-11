@@ -46,6 +46,7 @@ function AssetManager(db) {
 }
 
 AssetManager.mimetypes = new Map([
+    ['application/x.goupil.script', 'Script'],
     ['application/x.goupil.page', 'Page'],
     ['application/x.goupil.schedule', 'Agenda']
 ]);

@@ -88,7 +88,7 @@ let dev = (function() {
         goupil.popup(e, page => {
             let key = page.text('key', 'Clé :', {mandatory: true});
             let mimetype = page.choice('mimetype', 'Type :', AssetManager.mimetypes.entries(),
-                                       {mandatory: true, untoggle: false, value: 'application/x.goupil.page'});
+                                       {mandatory: true, untoggle: false, value: 'application/x.goupil.script'});
 
             if (key.value) {
                 if (assets.some(asset => asset.key === key.value))
