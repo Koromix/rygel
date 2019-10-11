@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let admin_form = (function() {
+let dev_form = (function() {
     let self = this;
 
     let page_el;
@@ -23,7 +23,7 @@ let admin_form = (function() {
         // Deal with form executor
         if (!executor) {
             executor = new FormExecutor();
-            executor.goHandler = (key, args) => admin.go(key, args);
+            executor.goHandler = (key, args) => dev.go(key, args);
             executor.submitHandler = saveRecordAndReset;
         }
 
@@ -58,7 +58,7 @@ let admin_form = (function() {
         await g_records.save(current_record, variables);
         entry.success('Données enregistrées !');
 
-        admin.go(null, {id: null});
+        dev.go(null, {id: null});
         // TODO: Give focus to first widget
         window.scrollTo(0, 0);
     }
@@ -68,29 +68,29 @@ let admin_form = (function() {
 
         if (left_panel === 'editor' && show_main_panel) {
             render(html`
-                ${makeEditorElement('adm_panel_left')}
-                <div id="af_page" class="adm_panel_right"></div>
+                ${makeEditorElement('dev_panel_left')}
+                <div id="af_page" class="dev_panel_right"></div>
             `, main_el);
         } else if (left_panel === 'data' && show_main_panel) {
             render(html`
-                <div id="af_data" class="adm_panel_left"></div>
-                <div id="af_page" class="adm_panel_right"></div>
+                <div id="af_data" class="dev_panel_left"></div>
+                <div id="af_page" class="dev_panel_right"></div>
             `, main_el);
         } else if (left_panel === 'editor') {
             render(html`
-                ${makeEditorElement('adm_panel_fixed')}
+                ${makeEditorElement('dev_panel_fixed')}
             `, main_el);
         } else if (left_panel === 'data') {
             render(html`
-                <div id="af_data" class="adm_panel_fixed"></div>
+                <div id="af_data" class="dev_panel_fixed"></div>
             `, main_el);
         } else {
             render(html`
-                <div id="af_page" class="adm_panel_page"></div>
+                <div id="af_page" class="dev_panel_page"></div>
             `, main_el);
         }
 
-        modes_el = document.querySelector('#adm_modes');
+        modes_el = document.querySelector('#dev_modes');
         // We still need to render the form to test it, so create a dummy element!
         page_el = document.querySelector('#af_page') || document.createElement('div');
         data_el = document.querySelector('#af_data');
@@ -127,7 +127,7 @@ let admin_form = (function() {
             show_main_panel = true;
         }
 
-        admin.go();
+        dev.go();
     }
 
     function toggleMainPanel() {
@@ -135,7 +135,7 @@ let admin_form = (function() {
             left_panel = 'editor';
         show_main_panel = !show_main_panel;
 
-        admin.go();
+        dev.go();
     }
 
     function renderForm() {
@@ -382,9 +382,9 @@ let admin_form = (function() {
 
     function handleEditClick(e, record) {
         if (record.id !== current_record.id) {
-            admin.go(null, {id: record.id});
+            dev.go(null, {id: record.id});
         } else {
-            admin.go(null, {id: null});
+            dev.go(null, {id: null});
         }
     }
 
@@ -396,9 +396,9 @@ let admin_form = (function() {
                 await g_records.delete(record.table, record.id);
 
                 if (current_record.id === record.id) {
-                    admin.go(null, {id: null});
+                    dev.go(null, {id: null});
                 } else {
-                    admin.go();
+                    dev.go();
                 }
                 page.close();
             };

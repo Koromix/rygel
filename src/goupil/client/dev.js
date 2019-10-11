@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let admin = (function() {
+let dev = (function() {
     let self = this;
 
     let init = false;
@@ -49,8 +49,8 @@ let admin = (function() {
             document.title = `${current_asset.key} — ${env.project_key}`;
 
             switch (current_asset.mimetype) {
-                case 'application/x.goupil.page': { admin_form.run(current_asset, args); } break;
-                case 'application/x.goupil.schedule': { admin_schedule.run(current_asset, args); } break;
+                case 'application/x.goupil.page': { dev_form.run(current_asset, args); } break;
+                case 'application/x.goupil.schedule': { dev_schedule.run(current_asset, args); } break;
                 default: {
                     renderEmpty();
                     log.error(`Unknown asset type '${current_asset.mimetype}'`);
@@ -68,9 +68,9 @@ let admin = (function() {
         let menu_el = document.querySelector('#gp_menu');
 
         render(html`
-            <div id="adm_modes"></div>
+            <div id="dev_modes"></div>
 
-            <select id="adm_pages" @change=${e => self.go(e.target.value)}>
+            <select id="dev_pages" @change=${e => self.go(e.target.value)}>
                 ${!current_key && !assets.length ? html`<option>-- No asset available --</option>` : ''}
                 ${current_key && !current_asset ?
                     html`<option value=${current_key} .selected=${true}>-- Unknown asset '${current_key}' --</option>` : ''}
@@ -153,7 +153,7 @@ let admin = (function() {
     }
 
     function renderEmpty() {
-        let modes_el = document.querySelector('#adm_modes');
+        let modes_el = document.querySelector('#dev_modes');
         let main_el = document.querySelector('main');
 
         render('', modes_el);
