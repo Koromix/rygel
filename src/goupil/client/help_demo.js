@@ -8,31 +8,31 @@ let help_demo = (function() {
     this.assets = [
         {
             key: 'tuto',
-            mimetype: 'application/x.goupil.form',
+            mimetype: 'application/x.goupil.page',
             data: `// Retirer le commentaire de la ligne suivante pour afficher les
 // champs (texte, numérique, etc.) à droite du libellé.
-// form.pushOptions({large: true})
+// page.pushOptions({large: true})
 
-form.output(html\`
+page.output(html\`
     <p>Une <b>fonction</b> est composée d'un <i>nom</i> et de plusieurs <i>paramètres</i> et permet de proposer un outil de saisie (champ texte, menu déroulant ...).
-    <p>Exemple : la fonction form.text("num_patient", "Numéro de patient") propose un champ de saisie texte intitulé <i>Numéro de patient</i> et le stocke dans la variable <i>num_patient</i>.
+    <p>Exemple : la fonction page.text("num_patient", "Numéro de patient") propose un champ de saisie texte intitulé <i>Numéro de patient</i> et le stocke dans la variable <i>num_patient</i>.
     <p>Vous pouvez copier les fonctions présentées dans la section <b>Exemples</b> dans <b>Nouvelle section</b> pour créer votre propre formulaire.
 \`)
 
-form.section("Nouvelle section", () => {
+page.section("Nouvelle section", () => {
     // Copier coller les fonctions dans les lignes vides ci-dessous
 
 
 })
 
-form.section("Exemples", () => {
-    form.text("nom", "Quel est votre nom ?", {mandatory: true})
+page.section("Exemples", () => {
+    page.text("nom", "Quel est votre nom ?", {mandatory: true})
 
-    form.number("age", "Quel est votre âge ?", {min: 0, max: 120})
+    page.number("age", "Quel est votre âge ?", {min: 0, max: 120})
 
-    form.choice("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]])
+    page.choice("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]])
 
-    form.dropdown("csp", "Quelle est votre CSP ?", [
+    page.dropdown("csp", "Quelle est votre CSP ?", [
         [1, "Agriculteur exploitant"],
         [2, "Artisan, commerçant ou chef d'entreprise"],
         [3, "Cadre ou profession intellectuelle supérieure"],
@@ -43,12 +43,12 @@ form.section("Exemples", () => {
         [8, "Autre ou sans activité professionnelle"]
     ])
 
-    form.radio("lieu_vie", "Quel est votre lieu de vie ?", [
+    page.radio("lieu_vie", "Quel est votre lieu de vie ?", [
         ["maison", "Maison"],
         ["appartement", "Appartement"]
     ])
 
-    form.multi("sommeil", "Présentez-vous un trouble du sommeil ?", [
+    page.multi("sommeil", "Présentez-vous un trouble du sommeil ?", [
         [1, "Troubles d’endormissement"],
         [2, "Troubles de maintien du sommeil"],
         [3, "Réveil précoce"],
@@ -57,23 +57,23 @@ form.section("Exemples", () => {
     ])
 })
 
-form.errorList()
-form.buttons("save")
+page.errorList()
+page.buttons("save")
 `
         },
 
         {
             key: 'complicated',
-            mimetype: 'application/x.goupil.form',
-            data: `form.pushOptions({large: true})
+            mimetype: 'application/x.goupil.page',
+            data: `page.pushOptions({large: true})
 
-form.text("nom", "Quel est votre nom ?", {mandatory: true})
-form.number("age", "Quel est votre âge ?", {min: 0, max: 120,
+page.text("nom", "Quel est votre nom ?", {mandatory: true})
+page.number("age", "Quel est votre âge ?", {min: 0, max: 120,
                                             suffix: value => value > 1 ? "ans" : "an"})
 
-let sexe = form.choice("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]])
+let sexe = page.choice("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]])
 
-form.dropdown("csp", "Quelle est votre CSP ?", [
+page.dropdown("csp", "Quelle est votre CSP ?", [
     [1, "Agriculteur exploitant"],
     [2, "Artisan, commerçant ou chef d'entreprise"],
     [3, "Cadre ou profession intellectuelle supérieure"],
@@ -84,12 +84,12 @@ form.dropdown("csp", "Quelle est votre CSP ?", [
     [8, "Autre ou sans activité professionnelle"]
 ])
 
-form.radio("lieu_vie", "Quel est votre lieu de vie ?", [
+page.radio("lieu_vie", "Quel est votre lieu de vie ?", [
     ["maison", "Maison"],
     ["appartement", "Appartement"]
 ])
 
-form.multi("sommeil", "Présentez-vous un trouble du sommeil ?", [
+page.multi("sommeil", "Présentez-vous un trouble du sommeil ?", [
     [1, "Troubles d’endormissement"],
     [2, "Troubles de maintien du sommeil"],
     [3, "Réveil précoce"],
@@ -98,44 +98,44 @@ form.multi("sommeil", "Présentez-vous un trouble du sommeil ?", [
 ])
 
 if (sexe.value == "F") {
-    form.binary("enceinte", "Êtes-vous enceinte ?")
+    page.binary("enceinte", "Êtes-vous enceinte ?")
 }
 
-form.section("Alcool", () => {
-    let alcool = form.binary("alcool", "Consommez-vous de l'alcool ?")
+page.section("Alcool", () => {
+    let alcool = page.binary("alcool", "Consommez-vous de l'alcool ?")
 
-    if (alcool.value && form.value("enceinte")) {
+    if (alcool.value && page.value("enceinte")) {
         alcool.error("Pensez au bébé...");
         alcool.error("On peut mettre plusieurs erreurs");
-        form.error("alcool", "Et de plein de manières différentes !")
+        page.error("alcool", "Et de plein de manières différentes !")
     }
 
     if (alcool.value) {
-        form.number("alcool_qt", "Combien de verres par semaine ?", {min: 1, max: 30})
+        page.number("alcool_qt", "Combien de verres par semaine ?", {min: 1, max: 30})
     }
 })
 
-form.section("Autres", () => {
-    form.number("enfants", "Combien avez-vous d'enfants ?", {min: 0, max: 30})
-    form.binary("frites", "Aimez-vous les frites ?",
+page.section("Autres", () => {
+    page.number("enfants", "Combien avez-vous d'enfants ?", {min: 0, max: 30})
+    page.binary("frites", "Aimez-vous les frites ?",
                 {help: "Si si, c'est important, je vous le jure !"})
 })
 
-form.output(html\`On peut aussi mettre du <b>HTML directement</b> si on veut...
+page.output(html\`On peut aussi mettre du <b>HTML directement</b> si on veut...
                  <button class="af_button" @click=\${e => go("complicated_help")}>Afficher l'aide</button>\`)
-form.output("Ou bien encore mettre du <b>texte brut</b>.")
+page.output("Ou bien encore mettre du <b>texte brut</b>.")
 
-form.errorList()
-form.buttons("save")
+page.errorList()
+page.buttons("save")
 `
         },
 
         {
             key: 'complicated_help',
-            mimetype: 'application/x.goupil.form',
-            data: `form.output("Loreum ipsum")
+            mimetype: 'application/x.goupil.page',
+            data: `page.output("Loreum ipsum")
 
-form.buttons([
+page.buttons([
     ["Donner l'alerte", () => alert("Alerte générale !!")],
     ["Revenir à l'auto-questionnaire", () => go("complicated")]
 ])

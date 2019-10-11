@@ -8,7 +8,7 @@ function FormExecutor() {
     this.goHandler = (key, args) => {};
     this.submitHandler = (values, variables) => {};
 
-    let af_form;
+    let af_page;
     let af_log;
 
     let variables = [];
@@ -18,14 +18,14 @@ function FormExecutor() {
     this.getData = function() { return state.values; };
 
     this.setError = function(line, msg) {
-        af_form.classList.add('af_form_broken');
+        af_page.classList.add('af_page_broken');
 
         af_log.textContent = `⚠\uFE0E Line ${line || '?'}: ${msg}`;
         af_log.style.display = 'block';
     };
 
     this.clearError = function() {
-        af_form.classList.remove('af_form_broken');
+        af_page.classList.remove('af_page_broken');
 
         af_log.innerHTML = '';
         af_log.style.display = 'none';
@@ -33,10 +33,10 @@ function FormExecutor() {
 
     this.render = function(root_el, page_key, script) {
         render(html`
-            <div class="af_form"></div>
+            <div class="af_page"></div>
             <div class="af_log" style="display: none;"></div>
         `, root_el);
-        af_form = root_el.querySelector('.af_form');
+        af_page = root_el.querySelector('.af_page');
         af_log = root_el.querySelector('.af_log');
 
         if (script !== undefined) {
@@ -58,7 +58,7 @@ function FormExecutor() {
         let prev_go_handler = self.goHandler;
         let prev_submit_handler = self.submitHandler;
         self.goHandler = () => {
-            throw new Error(`Navigation functions (go, form.submit, etc.) must be called from a callback (button click, etc.).
+            throw new Error(`Navigation functions (go, page.submit, etc.) must be called from a callback (button click, etc.).
 
 If you are using it for events, make sure you did not use this syntax by accident:
     go('page_key')
@@ -68,9 +68,10 @@ instead of:
         self.submitHandler = self.goHandler;
 
         try {
-            Function('form', 'go', script)(builder, (key, args = {}) => self.goHandler(key, args));
+            let func = Function('page', 'form', 'go', script);
+            func(builder, builder, (key, args = {}) => self.goHandler(key, args));
 
-            render(widgets.map(intf => intf.render(intf)), af_form);
+            render(widgets.map(intf => intf.render(intf)), af_page);
             self.clearError();
 
             return true;

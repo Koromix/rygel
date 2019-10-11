@@ -49,7 +49,7 @@ let admin = (function() {
             document.title = `${current_asset.key} — ${env.project_key}`;
 
             switch (current_asset.mimetype) {
-                case 'application/x.goupil.form': { admin_form.run(current_asset, args); } break;
+                case 'application/x.goupil.page': { admin_form.run(current_asset, args); } break;
                 case 'application/x.goupil.schedule': { admin_schedule.run(current_asset, args); } break;
                 default: {
                     renderEmpty();
@@ -85,10 +85,10 @@ let admin = (function() {
     }
 
     function showCreateDialog(e) {
-        goupil.popup(e, form => {
-            let key = form.text('key', 'Clé :', {mandatory: true});
-            let mimetype = form.choice('mimetype', 'Type :', AssetManager.mimetypes.entries(),
-                                       {mandatory: true, untoggle: false, value: 'application/x.goupil.form'});
+        goupil.popup(e, page => {
+            let key = page.text('key', 'Clé :', {mandatory: true});
+            let mimetype = page.choice('mimetype', 'Type :', AssetManager.mimetypes.entries(),
+                                       {mandatory: true, untoggle: false, value: 'application/x.goupil.page'});
 
             if (key.value) {
                 if (assets.some(asset => asset.key === key.value))
@@ -97,7 +97,7 @@ let admin = (function() {
                     key.error('Autorisé : a-z, _ et 0-9 (sauf initiale)');
             }
 
-            form.submitHandler = async () => {
+            page.submitHandler = async () => {
                 let asset = g_assets.create(key.value, mimetype.value);
                 await g_assets.save(asset);
 
@@ -105,18 +105,18 @@ let admin = (function() {
                 assets.sort((asset1, asset2) => util.compareValues(asset1.key, asset2.key));
                 assets_map[asset.key] = asset;
 
-                form.close();
+                page.close();
                 self.go(asset.key);
             };
-            form.buttons(form.buttons.std.ok_cancel('Créer'));
+            page.buttons(page.buttons.std.ok_cancel('Créer'));
         });
     }
 
     function showDeleteDialog(e, asset) {
-        goupil.popup(e, form => {
-            form.output(`Voulez-vous vraiment supprimer la ressource '${asset.key}' ?`);
+        goupil.popup(e, page => {
+            page.output(`Voulez-vous vraiment supprimer la ressource '${asset.key}' ?`);
 
-            form.submitHandler = async () => {
+            page.submitHandler = async () => {
                 await g_assets.delete(asset);
 
                 // Remove from assets array and map
@@ -127,28 +127,28 @@ let admin = (function() {
                 current_key = null;
                 current_asset = null;
 
-                form.close();
+                page.close();
                 self.go();
             };
-            form.buttons(form.buttons.std.ok_cancel('Supprimer'));
+            page.buttons(page.buttons.std.ok_cancel('Supprimer'));
         });
     }
 
     function showResetDialog(e) {
-        goupil.popup(e, form => {
-            form.output('Voulez-vous vraiment réinitialiser toutes les ressources ?');
+        goupil.popup(e, page => {
+            page.output('Voulez-vous vraiment réinitialiser toutes les ressources ?');
 
-            form.submitHandler = async () => {
+            page.submitHandler = async () => {
                 await g_assets.reset();
 
                 init = false;
                 current_key = null;
                 current_asset = null;
 
-                form.close();
+                page.close();
                 self.go();
             };
-            form.buttons(form.buttons.std.ok_cancel('Réinitialiser'));
+            page.buttons(page.buttons.std.ok_cancel('Réinitialiser'));
         });
     }
 
