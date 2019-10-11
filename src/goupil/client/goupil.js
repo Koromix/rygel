@@ -253,15 +253,5 @@ let goupil = (function() {
         }
     }
 
-    function showDummyPage() {
-        document.title = `${env.project_key} — goupil autoform`;
-
-        let main_el = document.querySelector('main');
-
-        render(html`
-            <div class="gp_wip">Page en chantier</div>
-        `, main_el);
-    }
-
     return this;
 }).call({});
