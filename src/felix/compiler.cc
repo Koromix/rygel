@@ -242,15 +242,6 @@ public:
             case LinkType::SharedLibrary: { Fmt(&buf, "%1clang++ -shared", prefix); } break;
         }
 
-        // Platform flags
-#if defined(_WIN32)
-        Fmt(&buf, " -fuse-ld=lld");
-#elif defined(__APPLE__)
-        Fmt(&buf, " -ldl -pthread");
-#else
-        Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now");
-#endif
-
         // Build mode
         if (build_mode == BuildMode::Release) {
             Fmt(&buf, " -flto");
@@ -264,6 +255,15 @@ public:
         // Objects and libraries
         if (!AppendGccLinkArguments(obj_filenames, libraries, dest_filename, &buf))
             return (const char *)nullptr;
+
+        // Platform flags
+#if defined(_WIN32)
+        Fmt(&buf, " -fuse-ld=lld");
+#elif defined(__APPLE__)
+        Fmt(&buf, " -ldl -pthread");
+#else
+        Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now");
+#endif
 
         return (const char *)buf.Leak().ptr;
     }
@@ -338,18 +338,6 @@ public:
             case LinkType::SharedLibrary: { Fmt(&buf, "%1g++ -shared", prefix); } break;
         }
 
-        // Platform flags
-#if defined(_WIN32)
-        Fmt(&buf, " -Wl,--dynamicbase -Wl,--nxcompat -Wl,--high-entropy-va");
-#elif defined(__APPLE__)
-        Fmt(&buf, " -ldl -pthread");
-#else
-        Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now");
-        if (link_type == LinkType::Executable) {
-            Fmt(&buf, " -pie");
-        }
-#endif
-
         // Build mode
         if (build_mode == BuildMode::Release) {
             Fmt(&buf, " -flto -s");
@@ -363,6 +351,18 @@ public:
         // Objects and libraries
         if (!AppendGccLinkArguments(obj_filenames, libraries, dest_filename, &buf))
             return (const char *)nullptr;
+
+        // Platform flags
+#if defined(_WIN32)
+        Fmt(&buf, " -Wl,--dynamicbase -Wl,--nxcompat -Wl,--high-entropy-va");
+#elif defined(__APPLE__)
+        Fmt(&buf, " -ldl -pthread");
+#else
+        Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now");
+        if (link_type == LinkType::Executable) {
+            Fmt(&buf, " -pie");
+        }
+#endif
 
         return (const char *)buf.Leak().ptr;
     }
