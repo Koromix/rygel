@@ -513,7 +513,7 @@ Valid choices include:
                 return;
             }
 
-            self.submitHandler(self, state.values);
+            self.submitHandler.call(self, state.values, variables);
         }
     };
 
