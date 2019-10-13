@@ -11,6 +11,8 @@ let goupil = (function() {
 
     let event_src;
 
+    let runner = dev;
+
     document.addEventListener('readystatechange', e => {
         if (document.readyState === 'complete')
             initGoupil();
@@ -23,6 +25,15 @@ let goupil = (function() {
         let db = await openDatabase();
         g_assets = new AssetManager(db);
         g_records = new RecordManager(db);
+
+        if (typeof app !== 'undefined') {
+            await app.init();
+            runner = app;
+        }
+        if (typeof dev !== 'undefined') {
+            await dev.init();
+            runner = dev;
+        }
 
         self.go(window.location.href, false);
     }
@@ -104,7 +115,7 @@ let goupil = (function() {
             asset_key = asset_key.substr(0, asset_key.length - 1);
 
         // Run asset
-        dev.go(asset_key);
+        runner.go(asset_key);
 
         // Update history
         let full_path = `${env.base_url}${asset_key}${asset_key ? '/' : ''}`;
