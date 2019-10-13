@@ -116,21 +116,11 @@ page.section("Autres", () => {
                 {help: "Si si, c'est important, je vous le jure !"})
 })
 
-page.output(html\`On peut aussi mettre du <b>HTML directement</b> si on veut...
-                 <button class="af_button" @click=\${e => go("help")}>Afficher l'aide</button>\`)
+page.output(html\`On peut aussi mettre du <b>HTML directement</b> si on veut...\`)
 page.output("Ou bien encore mettre du <b>texte brut</b>.")
 
 page.errorList()
 page.buttons("save")
-`,
-
-    'pages/help.js':
-`page.output("Loreum ipsum")
-
-page.buttons([
-    ["Donner l'alerte", () => alert("Alerte générale !!")],
-    ["Revenir à l'auto-questionnaire", () => go("complicated")]
-])
 `
     };
 
