@@ -14,16 +14,15 @@ let dev = (function() {
     let current_key;
     let current_asset;
 
+    this.init = async function() {
+        assets = await g_assets.list();
+
+        assets_map = {};
+        for (let asset of assets)
+            assets_map[asset.key] = asset;
+    };
+
     this.go = async function(key, args = {}) {
-        if (!init) {
-            assets = await g_assets.list();
-            assets_map = {};
-            for (let asset of assets)
-                assets_map[asset.key] = asset;
-
-            init = true;
-        }
-
         // Select relevant asset
         if (!key) {
             if (current_key) {
@@ -146,6 +145,8 @@ let dev = (function() {
                 current_asset = null;
 
                 page.close();
+
+                await self.init();
                 self.go();
             };
             page.buttons(page.buttons.std.ok_cancel('Réinitialiser'));
