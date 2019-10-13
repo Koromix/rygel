@@ -111,7 +111,7 @@ let idb = (function () {
                 let req = obj.get(key);
 
                 req.onsuccess = e => {
-                    if (e.target.result) {
+                    if (e.target.result != null) {
                         resolve(e.target.result);
                     } else {
                         logAndReject(reject, `Value '${key}' in '${store}' does not exist`);
