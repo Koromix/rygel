@@ -20,7 +20,13 @@ let dev_form = (function() {
 
     let form_state = new FormState;
 
-    this.run = async function(asset, args) {
+    this.run = async function(asset = null, args = {}) {
+        if (asset) {
+            current_asset = asset;
+        } else {
+            asset = current_asset;
+        }
+
         // Load record (if needed)
         if (!args.hasOwnProperty('id') && asset.key !== current_record.table)
             current_record = {};
@@ -33,7 +39,6 @@ let dev_form = (function() {
 
             form_state = new FormState(current_record.values);
         }
-        current_asset = asset;
 
         // Render
         renderLayout();
@@ -118,7 +123,7 @@ let dev_form = (function() {
             show_main_panel = true;
         }
 
-        dev.go();
+        self.run();
     }
 
     function toggleMainPanel() {
@@ -126,7 +131,7 @@ let dev_form = (function() {
             left_panel = 'editor';
         show_main_panel = !show_main_panel;
 
-        dev.go();
+        self.run();
     }
 
     function renderForm() {
@@ -153,6 +158,7 @@ let dev_form = (function() {
             log_el.textContent = `⚠\uFE0E Line ${line || '?'}: ${err.message}`;
             log_el.style.display = 'block';
 
+            console.log('FUCK');
             page_el.classList.add('dev_broken');
 
             return false;
@@ -189,7 +195,7 @@ let dev_form = (function() {
         await g_records.save(current_record, variables);
         entry.success('Données enregistrées !');
 
-        dev.go(null, {id: null});
+        self.run(null, {id: null});
         // TODO: Give focus to first widget
         window.scrollTo(0, 0);
     }

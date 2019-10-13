@@ -13,11 +13,11 @@ let dev_schedule = (function() {
     let init = false;
     let schedule;
 
-    this.run = async function(asset, args) {
+    this.run = async function(asset = null, args = {}) {
         if (!init) {
             goupil.listenToServerEvent('schedule', e => {
                 schedule = null;
-                dev.go();
+                self.run();
             });
 
             init = true;
@@ -64,7 +64,7 @@ let dev_schedule = (function() {
             case 'copy': { current_mode = 'settings'; } break;
         }
 
-        dev.go();
+        self.run();
     }
 
     return this;

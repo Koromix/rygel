@@ -108,26 +108,8 @@ let goupil = (function() {
         return db;
     }
 
-    this.go = function(href, history = true) {
-        let window_path = new URL(href, window.location.href).pathname;
-
-        // Asset key
-        let asset_key = window_path;
-        if (asset_key.startsWith(env.base_url))
-            asset_key = asset_key.substr(env.base_url.length);
-        while (asset_key.endsWith('/'))
-            asset_key = asset_key.substr(0, asset_key.length - 1);
-
-        // Run asset
-        runner.go(asset_key);
-
-        // Update history
-        let full_path = `${env.base_url}${asset_key}${asset_key ? '/' : ''}`;
-        if (history && full_path !== window_path) {
-            window.history.pushState(null, null, full_path);
-        } else {
-            window.history.replaceState(null, null, full_path);
-        }
+    this.go = function(url, history = true) {
+        runner.go();
     };
 
     this.listenToServerEvent = function(event, func) {
