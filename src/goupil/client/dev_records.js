@@ -142,11 +142,11 @@ let dev_records = (function() {
 
                     // Avoid infinite loop that may happen in rare cases
                     if (columns.length === frag_start_idx) {
-                        let use_key = str_ptr.values().next().value;
+                        let use_key = set_ptr.values().next().value;
 
                         let col = {
                             key: use_key,
-                            type: variables_map[use_key].type,
+                            type: variables_map[use_key].type
                         };
                         columns.push(col);
                     }
