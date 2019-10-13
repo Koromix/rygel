@@ -61,7 +61,7 @@ function FormPage(state, widgets, variables = []) {
         let value = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
 
         let render = intf => renderWrappedWidget(intf, html`
-            ${label ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
             <input id=${id} type="text" size="${options.size || 30}" .value=${value || ''}
                    placeholder=${options.placeholder || ''} ?disabled=${options.disable}
@@ -83,7 +83,7 @@ function FormPage(state, widgets, variables = []) {
         let value = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
 
         let render = intf => renderWrappedWidget(intf, html`
-            ${label ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
             <input id=${id} type="password" size="${options.size || 30}" .value=${value || ''}
                    ?disabled=${options.disable} @input=${e => handleTextInput(e, key)}/>
@@ -112,7 +112,7 @@ function FormPage(state, widgets, variables = []) {
         let value = parseFloat(state.values.hasOwnProperty(key) ? state.values[key] : options.value);
 
         let render = intf => renderWrappedWidget(intf, html`
-            ${label ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
             <input id=${id} type="number" .value=${value}
                    step=${1 / Math.pow(10, options.decimals || 0)}
@@ -191,7 +191,7 @@ function FormPage(state, widgets, variables = []) {
         let value = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
 
         let render = intf => renderWrappedWidget(intf, html`
-            ${label ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <select id=${id} ?disabled=${options.disable}
                     @change=${e => handleDropdownChange(e, key)}>
                 ${options.untoggle || !props.some(p => p != null && value === p.value) ?
@@ -224,7 +224,7 @@ function FormPage(state, widgets, variables = []) {
         let value = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
 
         let render = intf => renderWrappedWidget(intf, html`
-            ${label ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div class="af_select" id=${id}>
                 ${props.map(p =>
                     html`<button data-value=${util.valueToStr(p.value)}
@@ -274,7 +274,7 @@ function FormPage(state, widgets, variables = []) {
         let value = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
 
         let render = intf => renderWrappedWidget(intf, html`
-            ${label ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div class="af_radio" id=${id}>
                 ${props.map((p, i) =>
                     html`<input type="radio" name=${id} id=${`${id}.${i}`} value=${util.valueToStr(p.value)}
@@ -317,7 +317,7 @@ function FormPage(state, widgets, variables = []) {
         }
 
         let render = intf => renderWrappedWidget(intf, html`
-            ${label ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div class="af_multi" id=${id}>
                 ${props.map((p, idx) =>
                     html`<input type="checkbox" id=${`${id}.${idx}`} value=${util.valueToStr(p.value)}
@@ -371,7 +371,7 @@ function FormPage(state, widgets, variables = []) {
         });
 
         let render = intf => renderWrappedWidget(intf, html`
-            ${label ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <input id=${id} type="file" size="${options.size || 30}" .files=${set_files()}
                    placeholder=${options.placeholder || ''} ?disabled=${options.disable}
                    @input=${e => handleFileInput(e, key)}/>
@@ -461,7 +461,7 @@ instead of:
 
         let render = intf => html`
             <fieldset class="af_section">
-                ${label ? html`<legend @click=${e => handleSectionClick(e, label)}>${label}</legend>` : ''}
+                ${label != null ? html`<legend @click=${e => handleSectionClick(e, label)}>${label}</legend>` : ''}
                 ${deploy ?
                     widgets.map(intf => intf.render(intf)) :
                     html`<a class="af_deploy" href="#"
