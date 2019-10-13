@@ -5,52 +5,43 @@
 function AssetManager(db) {
     let self = this;
 
-    this.createPage = function(key, script) {
+    this.create = function(path, data) {
         let asset = {
-            key: `pages/${key}.js`,
-            data: script
-        };
-
-        return asset;
-    };
-
-    this.createBlob = function(key, blob) {
-        let asset = {
-            key: `static/${key}`,
-            data: blob
+            path: path,
+            data: data
         };
 
         return asset;
     };
 
     this.save = async function(asset) {
-        await db.saveWithKey('assets', asset.key, asset.data);
+        await db.saveWithKey('assets', asset.path, asset.data);
     };
 
-    this.delete = async function(key) {
-        await db.delete('assets', key);
+    this.delete = async function(path) {
+        await db.delete('assets', path);
     };
 
     this.reset = async function() {
         await db.transaction(db => {
             db.clear('assets');
-            for (let key in help_demo.assets)
-                db.saveWithKey('assets', key, help_demo.assets[key]);
+            for (let path in help_demo.assets)
+                db.saveWithKey('assets', path, help_demo.assets[path]);
         });
     };
 
-    this.load = async function(key) {
+    this.load = async function(path) {
         let asset = {
-            key: key,
-            data: await db.load('assets', key)
+            path: path,
+            data: await db.load('assets', path)
         };
 
         return asset;
     };
 
     this.list = async function() {
-        let keys = await db.list('assets');
-        let list = keys.map(key => ({key: key}));
+        let paths = await db.list('assets');
+        let list = paths.map(path => ({path: path}));
         return list;
     };
 

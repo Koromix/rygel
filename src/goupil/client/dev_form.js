@@ -28,13 +28,13 @@ let dev_form = (function() {
         }
 
         // Load record (if needed)
-        if (!args.hasOwnProperty('id') && asset.key !== current_record.table)
+        if (!args.hasOwnProperty('id') && asset.path !== current_record.table)
             current_record = {};
         if (args.hasOwnProperty('id') || current_record.id == null) {
             if (args.id == null) {
-                current_record = g_records.create(asset.key);
+                current_record = g_records.create(asset.path);
             } else if (args.id !== current_record.id) {
-                current_record = await g_records.load(asset.key, args.id);
+                current_record = await g_records.load(asset.path, args.id);
             }
 
             form_state = new FormState(current_record.values);
@@ -45,7 +45,7 @@ let dev_form = (function() {
         renderModes();
         switch (left_panel) {
             case 'editor': { syncEditor(); } break;
-            case 'records': { dev_records.run(asset.key, current_record.id); } break;
+            case 'records': { dev_records.run(asset.path, current_record.id); } break;
         }
         renderForm();
     };
@@ -158,7 +158,6 @@ let dev_form = (function() {
             log_el.textContent = `⚠\uFE0E Line ${line || '?'}: ${err.message}`;
             log_el.style.display = 'block';
 
-            console.log('FUCK');
             page_el.classList.add('dev_broken');
 
             return false;
@@ -239,7 +238,7 @@ let dev_form = (function() {
         }
 
         if (current_asset) {
-            let history = editor_history_cache[current_asset.key];
+            let history = editor_history_cache[current_asset.path];
 
             if (history !== editor.session.getUndoManager()) {
                 editor.setValue(current_asset.data);
@@ -248,7 +247,7 @@ let dev_form = (function() {
 
                 if (!history) {
                     history = new ace.UndoManager();
-                    editor_history_cache[current_asset.key] = history;
+                    editor_history_cache[current_asset.path] = history;
                 }
                 editor.session.setUndoManager(history);
             }
