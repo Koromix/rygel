@@ -10,7 +10,7 @@ let popup = (function() {
     let self = this;
 
     let popup_el;
-    let popup_builder;
+    let popup_page;
     let popup_state;
     let popup_timer;
 
@@ -25,12 +25,12 @@ let popup = (function() {
 
         let widgets = [];
 
-        popup_builder = new FormBuilder(popup_state, widgets);
-        popup_builder.changeHandler = () => openPopup(e, func);
-        popup_builder.close = closePopup;
-        popup_builder.pushOptions({missingMode: 'disable'});
+        popup_page = new FormPage(popup_state, widgets);
+        popup_page.changeHandler = () => openPopup(e, func);
+        popup_page.close = closePopup;
+        popup_page.pushOptions({missingMode: 'disable'});
 
-        func(popup_builder);
+        func(popup_page);
         render(widgets.map(intf => intf.render(intf)), popup_el);
 
         // We need to know popup width and height
@@ -111,8 +111,8 @@ let popup = (function() {
             switch (e.keyCode) {
                 case 13: {
                     if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A' &&
-                            popup_builder.submit)
-                        popup_builder.submit();
+                            popup_page.submit)
+                        popup_page.submit();
                 } break;
                 case 27: { closePopup(); } break;
             }
@@ -127,7 +127,7 @@ let popup = (function() {
 
     function closePopup() {
         popup_state = new FormState();
-        popup_builder = null;
+        popup_page = null;
 
         clearTimeout(popup_timer);
         popup_timer = null;
