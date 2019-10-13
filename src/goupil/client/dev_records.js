@@ -191,9 +191,9 @@ let dev_records = (function() {
 
     function handleEditClick(e, record, current_id) {
         if (record.id !== current_id) {
-            dev.go(null, {id: record.id});
+            dev_form.run(null, {id: record.id});
         } else {
-            dev.go(null, {id: null});
+            dev_form.run(null, {id: null});
         }
     }
 
@@ -205,9 +205,9 @@ let dev_records = (function() {
                 await g_records.delete(record.table, record.id);
 
                 if (record.id === current_id) {
-                    dev.go(null, {id: null});
+                    dev_form.run(null, {id: null});
                 } else {
-                    dev.go();
+                    dev_form.run();
                 }
                 page.close();
             };
