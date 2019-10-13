@@ -167,22 +167,9 @@ let dev_form = (function() {
         page_obj.changeHandler = renderForm;
         page_obj.submitHandler = saveRecordAndReset;
 
-        // Prevent go() call from working if called during script eval
-        /*let prev_go_handler = self.goHandler;
-        let prev_submit_handler = self.submitHandler;
-        self.goHandler = () => {
-            throw new Error(`Navigation functions (go, page.submit, etc.) must be called from a callback (button click, etc.).
-
-If you are using it for events, make sure you did not use this syntax by accident:
-    go('page_key')
-instead of:
-    () => go('page_key')`);
-        };
-        self.submitHandler = self.goHandler;*/
-
         // Execute user script
-        let func = Function('page', 'form', 'go', current_asset.data);
-        func(page_obj, page_obj, (key, args = {}) => self.goHandler(key, args));
+        let func = Function('page', 'form', current_asset.data);
+        func(page_obj, page_obj);
 
         // Render widgets
         elements = widgets.map(intf => intf.render(intf));
