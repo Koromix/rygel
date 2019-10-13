@@ -85,8 +85,11 @@ let popup = (function() {
         // Reveal!
         popup_el.style.visibility = 'visible';
 
-        // Give focus to first input
         if (give_focus) {
+            // Avoid shrinking popups
+            popup_el.style.minWidth = popup_el.offsetWidth + 'px';
+
+            // Give focus to first input
             let first_widget = popup_el.querySelector(`.af_widget input, .af_widget select,
                                                        .af_widget button, .af_widget textarea`);
             if (first_widget)
@@ -134,6 +137,7 @@ let popup = (function() {
 
         if (popup_el) {
             popup_el.classList.remove('active');
+            popup_el.style.minWidth = '';
             render('', popup_el);
         }
     }

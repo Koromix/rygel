@@ -63,9 +63,10 @@ button:not(:disabled) { cursor: pointer; }
 #gp_popup {
     display: none;
     position: fixed;
-    z-index: 9999;
+    box-sizing: border-box;
     padding: 6px;
     border: 1px solid #ddd;
     background: #efefef;
+    z-index: 9999;
 }
 #gp_popup.active { display: block; }
