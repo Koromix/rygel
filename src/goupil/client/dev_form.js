@@ -389,7 +389,7 @@ let dev_form = (function() {
     }
 
     function showDeleteDialog(e, record) {
-        goupil.popup(e, page => {
+        popup.form(e, page => {
             page.output('Voulez-vous vraiment supprimer cet enregistrement ?');
 
             page.submitHandler = async () => {
