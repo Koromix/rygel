@@ -7,19 +7,13 @@ let dev = (function() {
 
     let init = false;
 
-    // TODO: Simplify code with some kind of OrderedMap?
     let assets = [];
-    let assets_map = {};
 
     let current_key;
     let current_asset;
 
     this.init = async function() {
         assets = await g_assets.list();
-
-        assets_map = {};
-        for (let asset of assets)
-            assets_map[asset.key] = asset;
     };
 
     this.go = async function(key, args = {}) {
@@ -43,17 +37,20 @@ let dev = (function() {
             }
         }
 
+        // Update toolbar
         renderMenu();
+
+        // Run appropriate module
         if (current_asset) {
             document.title = `${current_asset.key} — ${env.project_key}`;
 
-            switch (current_asset.mimetype) {
-                case 'application/x.goupil.page': { dev_form.run(current_asset, args); } break;
-                case 'application/x.goupil.schedule': { dev_schedule.run(current_asset, args); } break;
-                default: {
-                    renderEmpty();
-                    log.error(`Unknown asset type '${current_asset.mimetype}'`);
-                } break;
+            if (typeof current_asset.data === 'string') {
+                dev_form.run(current_asset, args);
+            } else if (current_asset.data instanceof Blob) {
+                renderEmpty();
+            } else {
+                renderEmpty();
+                log.error(`Unknown asset type for '${current_asset.key}'`);
             }
         } else {
             document.title = env.project_key;
@@ -73,8 +70,8 @@ let dev = (function() {
                 ${!current_key && !assets.length ? html`<option>-- No asset available --</option>` : ''}
                 ${current_key && !current_asset ?
                     html`<option value=${current_key} .selected=${true}>-- Unknown asset '${current_key}' --</option>` : ''}
-                ${assets.map(item =>
-                    html`<option value=${item.key} .selected=${item.key == current_key}>${item.key} (${item.mimetype})</option>`)}
+                ${assets.map(it =>
+                    html`<option value=${it.key} .selected=${it.key == current_key}>${it.key}</option>`)}
             </select>
             <button @click=${showCreateDialog}>Ajouter</button>
             ${current_asset ?
@@ -85,24 +82,42 @@ let dev = (function() {
 
     function showCreateDialog(e) {
         popup.form(e, page => {
-            let key = page.text('key', 'Clé :', {mandatory: true});
-            let mimetype = page.choice('mimetype', 'Type :', AssetManager.mimetypes.entries(),
-                                       {mandatory: true, untoggle: false, value: 'application/x.goupil.script'});
+            let type = page.choice('type', 'Type :', [['file', 'Fichier'], ['page', 'Page']],
+                                   {mandatory: true, untoggle: false, value: 'file'});
+
+            let file;
+            let key;
+            switch (type.value) {
+                case 'page': {
+                    key = page.text('key', 'Clé :', {mandatory: true});
+                } break;
+                case 'file': {
+                    file = page.file('file', 'Fichier :', {mandatory: true});
+                    key = page.text('key', 'Clé :', {placeholder: file.value ? file.value.name : null});
+                    if (!key.value && file.value)
+                        key.value = file.value.name;
+                } break;
+            }
 
             if (key.value) {
                 if (assets.some(asset => asset.key === key.value))
                     key.error('Existe déjà');
-                if (!key.value.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
-                    key.error('Autorisé : a-z, _ et 0-9 (sauf initiale)');
+                if (!key.value.match(/^[a-zA-Z_\.][a-zA-Z0-9_\.]*$/))
+                    key.error('Autorisé : a-z, _, . et 0-9 (sauf initiale)');
             }
 
             page.submitHandler = async () => {
-                let asset = g_assets.create(key.value, mimetype.value);
+                let asset;
+                switch (type.value) {
+                    case 'page': { asset = g_assets.createPage(key.value, ''); } break;
+                    case 'file': { asset = g_assets.createBlob(key.value, file.value); } break;
+                }
+
                 await g_assets.save(asset);
+                delete asset.data;
 
                 assets.push(asset);
-                assets.sort((asset1, asset2) => util.compareValues(asset1.key, asset2.key));
-                assets_map[asset.key] = asset;
+                assets.sort();
 
                 page.close();
                 self.go(asset.key);
@@ -116,15 +131,16 @@ let dev = (function() {
             page.output(`Voulez-vous vraiment supprimer la ressource '${asset.key}' ?`);
 
             page.submitHandler = async () => {
-                await g_assets.delete(asset);
+                await g_assets.delete(asset.key);
 
                 // Remove from assets array and map
                 let asset_idx = assets.findIndex(it => it.key === asset.key);
                 assets.splice(asset_idx, 1);
-                delete assets_map[asset.key];
 
-                current_key = null;
-                current_asset = null;
+                if (current_key === asset.key) {
+                    current_key = null;
+                    current_asset = null;
+                }
 
                 page.close();
                 self.go();

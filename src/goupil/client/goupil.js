@@ -64,7 +64,7 @@ let goupil = (function() {
         }
 
         let db_name = `goupil_${env.project_key}`;
-        let db = await idb.open(db_name, 7, (db, old_version) => {
+        let db = await idb.open(db_name, 8, (db, old_version) => {
             switch (old_version) {
                 case null: {
                     db.createObjectStore('pages', {keyPath: 'key'});
@@ -97,6 +97,10 @@ let goupil = (function() {
                     db.deleteObjectStore('variables');
                     db.createObjectStore('form_records', {keyPath: 'tkey'});
                     db.createObjectStore('form_variables', {keyPath: 'tkey'});
+                } // fallthrough
+                case 7: {
+                    db.deleteObjectStore('assets');
+                    db.createObjectStore('assets');
                 } // fallthrough
             }
         });

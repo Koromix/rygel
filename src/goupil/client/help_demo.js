@@ -5,11 +5,9 @@
 let help_demo = (function() {
     let self = this;
 
-    this.assets = [
-        {
-            key: 'tuto',
-            mimetype: 'application/x.goupil.page',
-            data: `// Retirer le commentaire de la ligne suivante pour afficher les
+    this.assets = {
+        'pages/tuto.js':
+`// Retirer le commentaire de la ligne suivante pour afficher les
 // champs (texte, numérique, etc.) à droite du libellé.
 // page.pushOptions({large: true})
 
@@ -59,13 +57,10 @@ page.section("Exemples", () => {
 
 page.errorList()
 page.buttons("save")
-`
-        },
+`,
 
-        {
-            key: 'complicated',
-            mimetype: 'application/x.goupil.page',
-            data: `page.pushOptions({large: true})
+        'pages/complicated.js':
+`page.pushOptions({large: true})
 
 page.text("nom", "Quel est votre nom ?", {mandatory: true})
 page.number("age", "Quel est votre âge ?", {min: 0, max: 120,
@@ -122,27 +117,22 @@ page.section("Autres", () => {
 })
 
 page.output(html\`On peut aussi mettre du <b>HTML directement</b> si on veut...
-                 <button class="af_button" @click=\${e => go("complicated_help")}>Afficher l'aide</button>\`)
+                 <button class="af_button" @click=\${e => go("help")}>Afficher l'aide</button>\`)
 page.output("Ou bien encore mettre du <b>texte brut</b>.")
 
 page.errorList()
 page.buttons("save")
-`
-        },
+`,
 
-        {
-            key: 'complicated_help',
-            mimetype: 'application/x.goupil.page',
-            data: `page.output("Loreum ipsum")
+    'pages/help.js':
+`page.output("Loreum ipsum")
 
 page.buttons([
     ["Donner l'alerte", () => alert("Alerte générale !!")],
     ["Revenir à l'auto-questionnaire", () => go("complicated")]
 ])
 `
-        }
-    ];
-    this.assets.sort((page1, page2) => util.compareValues(page1.key, page2.key));
+    };
 
     return this;
 }).call({});
