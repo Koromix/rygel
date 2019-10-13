@@ -5,48 +5,54 @@
 function AssetManager(db) {
     let self = this;
 
-    this.create = function(key, mimetype) {
+    this.createPage = function(key, script) {
         let asset = {
-            key: key,
-            mimetype: mimetype,
-            data: ''
+            key: `pages/${key}.js`,
+            data: script
+        };
+
+        return asset;
+    };
+
+    this.createBlob = function(key, blob) {
+        let asset = {
+            key: `static/${key}`,
+            data: blob
         };
 
         return asset;
     };
 
     this.save = async function(asset) {
-        await db.save('assets', asset);
+        await db.saveWithKey('assets', asset.key, asset.data);
     };
 
-    this.delete = async function(asset) {
-        await db.delete('assets', asset.key);
+    this.delete = async function(key) {
+        await db.delete('assets', key);
     };
 
     this.reset = async function() {
         await db.transaction(db => {
             db.clear('assets');
-            for (let asset of help_demo.assets)
-                db.save('assets', asset);
+            for (let key in help_demo.assets)
+                db.saveWithKey('assets', key, help_demo.assets[key]);
         });
     };
 
     this.load = async function(key) {
-        return await db.load('assets', key);
+        let asset = {
+            key: key,
+            data: await db.load('assets', key)
+        };
+
+        return asset;
     };
 
     this.list = async function() {
-        let assets = await db.loadAll('assets');
-        for (let asset of assets)
-            delete asset.data;
-        return assets;
+        let keys = await db.list('assets');
+        let list = keys.map(key => ({key: key}));
+        return list;
     };
 
     return this;
 }
-
-AssetManager.mimetypes = new Map([
-    ['application/x.goupil.script', 'Script'],
-    ['application/x.goupil.page', 'Page'],
-    ['application/x.goupil.schedule', 'Agenda']
-]);

@@ -122,38 +122,26 @@ let idb = (function () {
         };
 
         this.loadAll = function(store, start = null, end = null) {
+            let query = makeKeyRange(start, end);
+
             return executeQuery(store, false, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
+                let req = obj.getAll(query);
 
-                let query;
-                if (start != null && end != null) {
-                    query = IDBKeyRange.bound(start, end, false, true);
-                } else if (start != null) {
-                    query = IDBKeyRange.lowerBound(start);
-                } else if (end != null) {
-                    query = IDBKeyRange.upperBound(end, true);
-                }
+                req.onsuccess = e => resolve(e.target.result);
+                req.onerror = e => logAndReject(reject, e.target.error);
+            });
+        };
 
-                if (obj.getAll) {
-                    let req = obj.getAll(query);
+        this.list = function(store, start = null, end = null) {
+            let query = makeKeyRange(start, end);
 
-                    req.onsuccess = e => resolve(e.target.result);
-                    req.onerror = e => logAndReject(reject, e.target.error);
-                } else {
-                    let cur = obj.openCursor(query);
-                    let values = [];
+            return executeQuery(store, false, (t, resolve, reject) => {
+                let obj = t.objectStore(store);
+                let req = obj.getAllKeys(query);
 
-                    cur.onsuccess = e => {
-                        let cursor = e.target.result;
-                        if (cursor) {
-                            values.push(cursor.value);
-                            cursor.continue();
-                        } else {
-                            resolve(values);
-                        }
-                    };
-                    cur.onerror = e => logAndReject(reject, e.target.error);
-                }
+                req.onsuccess = e => resolve(e.target.result);
+                req.onerror = e => logAndReject(reject, e.target.error);
             });
         };
 
@@ -168,14 +156,7 @@ let idb = (function () {
         };
 
         this.deleteAll = function(store, start = null, end = null) {
-            let query;
-            if (start != null && end != null) {
-                query = IDBKeyRange.bound(start, end, false, true);
-            } else if (start != null) {
-                query = IDBKeyRange.lowerBound(start);
-            } else if (end != null) {
-                query = IDBKeyRange.upperBound(end, true);
-            }
+            let query = makeKeyRange(start, end);
 
             if (query) {
                 return executeQuery(store, true, (t, resolve, reject) => {
@@ -199,6 +180,18 @@ let idb = (function () {
                 t.addEventListener('abort', e => logAndReject(reject, 'Database transaction failure'));
             });
         };
+
+        function makeKeyRange(start, end) {
+            if (start != null && end != null) {
+                return IDBKeyRange.bound(start, end, false, true);
+            } else if (start != null) {
+                return IDBKeyRange.lowerBound(start);
+            } else if (end != null) {
+                return IDBKeyRange.upperBound(end, true);
+            } else {
+                return null;
+            }
+        }
     }
 
     this.open = function(db_name, version, update_func = () => {}) {
