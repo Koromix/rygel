@@ -58,7 +58,6 @@ button:not(:disabled) { cursor: pointer; }
 .gp_toolbar button:not(.active):hover { background: #376cb5; }
 .gp_toolbar button.active { background: #3b7ad1; }
 
-
 /* -------------------- Paths -------------------- */
 
 .gp_path {
@@ -101,18 +100,6 @@ button:not(:disabled) { cursor: pointer; }
     color: white;
 }
 
-/* -------------------- Popup -------------------- */
-
-#gp_popup {
-    display: none;
-    position: fixed;
-    z-index: 9999;
-    padding: 6px;
-    border: 1px solid #ddd;
-    background: #efefef;
-}
-#gp_popup.active { display: block; }
-
 /* -------------------- Misc -------------------- */
 
 .gp_wip {
@@ -124,3 +111,15 @@ button:not(:disabled) { cursor: pointer; }
     content: '⚠\FE0E';
     padding-right: 10px;
 }
+
+/* -------------------- Popup -------------------- */
+
+#gp_popup {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    padding: 6px;
+    border: 1px solid #ddd;
+    background: #efefef;
+}
+#gp_popup.active { display: block; }

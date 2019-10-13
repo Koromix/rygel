@@ -85,7 +85,7 @@ let dev = (function() {
     }
 
     function showCreateDialog(e) {
-        goupil.popup(e, page => {
+        popup.form(e, page => {
             let key = page.text('key', 'Clé :', {mandatory: true});
             let mimetype = page.choice('mimetype', 'Type :', AssetManager.mimetypes.entries(),
                                        {mandatory: true, untoggle: false, value: 'application/x.goupil.script'});
@@ -113,7 +113,7 @@ let dev = (function() {
     }
 
     function showDeleteDialog(e, asset) {
-        goupil.popup(e, page => {
+        popup.form(e, page => {
             page.output(`Voulez-vous vraiment supprimer la ressource '${asset.key}' ?`);
 
             page.submitHandler = async () => {
@@ -135,7 +135,7 @@ let dev = (function() {
     }
 
     function showResetDialog(e) {
-        goupil.popup(e, page => {
+        popup.form(e, page => {
             page.output('Voulez-vous vraiment réinitialiser toutes les ressources ?');
 
             page.submitHandler = async () => {
