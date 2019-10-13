@@ -2,11 +2,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function FormBuilder(state, widgets, variables = []) {
+function FormPage(state, widgets, variables = []) {
     let self = this;
 
     // Prevent DOM ID conflicts
-    let unique_key = ++FormBuilder.current_unique_key;
+    let unique_key = ++FormPage.current_unique_key;
 
     let variables_map = {};
     let widgets_ref = widgets;
@@ -615,4 +615,4 @@ Valid choices include:
         return key;
     }
 }
-FormBuilder.current_unique_key = 0;
+FormPage.current_unique_key = 0;

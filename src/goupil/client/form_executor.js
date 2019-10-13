@@ -50,9 +50,9 @@ function FormExecutor() {
         let widgets = [];
         variables.length = 0;
 
-        let builder = new FormBuilder(state, widgets, variables);
-        builder.changeHandler = () => renderForm(page_key, script);
-        builder.submitHandler = submitForm;
+        let page = new FormPage(state, widgets, variables);
+        page.changeHandler = () => renderForm(page_key, script);
+        page.submitHandler = submitForm;
 
         // Prevent go() call from working if called during script eval
         let prev_go_handler = self.goHandler;
@@ -69,7 +69,7 @@ instead of:
 
         try {
             let func = Function('page', 'form', 'go', script);
-            func(builder, builder, (key, args = {}) => self.goHandler(key, args));
+            func(page, page, (key, args = {}) => self.goHandler(key, args));
 
             render(widgets.map(intf => intf.render(intf)), af_page);
             self.clearError();
