@@ -351,6 +351,47 @@ function FormPage(state, widgets, variables = []) {
         self.changeHandler(self);
     }
 
+    this.file = function(key, label, options = {}) {
+        options = expandOptions(options);
+        key = decodeKey(key, options);
+
+        let id = makeID(key);
+        let file = state.values.hasOwnProperty(key) ? state.values[key] : null;
+
+        // Setting files on input file elements is fragile. At least on Firefox, assigning
+        // its own value to the property results in an empty FileList for some reason.
+        let set_files = lithtml.directive(() => part => {
+            let file_list = state.file_lists.get(key);
+
+            if (file_list == null) {
+                part.committer.element.value = '';
+            } else if (file_list !== part.committer.element.files) {
+                part.committer.element.files = file_list;
+            }
+        });
+
+        let render = intf => renderWrappedWidget(intf, html`
+            ${label ? html`<label for=${id}>${label}</label>` : ''}
+            <input id=${id} type="file" size="${options.size || 30}" .files=${set_files()}
+                   placeholder=${options.placeholder || ''} ?disabled=${options.disable}
+                   @input=${e => handleFileInput(e, key)}/>
+        `);
+
+        let intf = addWidget(render, options);
+        fillVariableInfo(intf, key, 'file', label, file, file == null);
+
+        return intf;
+    };
+
+    function handleFileInput(e, key) {
+        let files = e.target.files;
+        state.values[key] = files[0] || null;
+        state.file_lists.set(key, files);
+        state.missing_errors.delete(key);
+
+        self.changeHandler(self);
+    }
+
     this.calc = function(key, label, value, options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
