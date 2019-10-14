@@ -14,7 +14,26 @@ let dev = (function() {
 
     this.init = async function() {
         assets = await g_assets.list();
+
+        // Load default assets if main script is missing
+        if (!assets.find(it => it.path === 'main.js')) {
+            await resetAssets();
+            assets = await g_assets.list();
+        }
     };
+
+    async function resetAssets() {
+        await g_assets.transaction(m => {
+            m.clear();
+
+            for (let path in help_demo.assets) {
+                let data = help_demo.assets[path];
+                let asset = g_assets.create(path, data);
+
+                m.save(asset);
+            }
+        });
+    }
 
     this.go = async function(url = null, args = {}) {
         // Parse URL (kind of)
@@ -163,9 +182,8 @@ let dev = (function() {
             page.output('Voulez-vous vraiment réinitialiser toutes les ressources ?');
 
             page.submitHandler = async () => {
-                await g_assets.reset();
+                await g_assets.clear();
 
-                init = false;
                 current_path = null;
                 current_asset = null;
 
