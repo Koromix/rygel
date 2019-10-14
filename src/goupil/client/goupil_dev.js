@@ -20,6 +20,10 @@ let goupil_dev = (function() {
             await resetAssets();
             assets = await g_assets.list();
         }
+
+
+        current_path = null;
+        current_asset = null;
     };
 
     async function resetAssets() {
@@ -183,13 +187,9 @@ let goupil_dev = (function() {
 
             page.submitHandler = async () => {
                 await g_assets.clear();
-
-                current_path = null;
-                current_asset = null;
+                await self.init();
 
                 page.close();
-
-                await self.init();
                 self.go();
             };
             page.buttons(page.buttons.std.ok_cancel('Réinitialiser'));
