@@ -6,6 +6,8 @@ let help_demo = (function() {
     let self = this;
 
     this.assets = {
+        'main.js': '',
+
         'pages/tuto.js':
 `// Retirer le commentaire de la ligne suivante pour afficher les
 // champs (texte, numérique, etc.) à droite du libellé.

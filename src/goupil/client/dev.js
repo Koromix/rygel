@@ -78,7 +78,8 @@ let dev = (function() {
             </select>
             <button @click=${showCreateDialog}>Ajouter</button>
             ${current_asset ?
-                html`<button @click=${e => showDeleteDialog(e, current_asset)}>Supprimer</button>` : ''}
+                html`<button ?disabled=${current_path === 'main.js'}
+                             @click=${e => showDeleteDialog(e, current_asset)}>Supprimer</button>` : ''}
             <button @click=${showResetDialog}>Réinitialiser</button>
         `, menu_el);
     }
