@@ -2,13 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let help_demo = new function() {
-    let self = this;
+let dev_demo = {
+    'main.js': '',
 
-    this.assets = {
-        'main.js': '',
-
-        'pages/tuto.js':
+    'pages/tuto.js':
 `// Retirer le commentaire de la ligne suivante pour afficher les
 // champs (texte, numérique, etc.) à droite du libellé.
 // page.pushOptions({large: true})
@@ -61,7 +58,7 @@ page.errorList()
 page.buttons("save")
 `,
 
-        'pages/complicated.js':
+    'pages/complicated.js':
 `page.pushOptions({large: true})
 
 page.text("nom", "Quel est votre nom ?", {mandatory: true})
@@ -124,5 +121,4 @@ page.output("Ou bien encore mettre du <b>texte brut</b>.")
 page.errorList()
 page.buttons("save")
 `
-    };
 };
