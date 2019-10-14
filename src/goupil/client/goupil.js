@@ -9,9 +9,9 @@ let g_records = null;
 let goupil = (function() {
     let self = this;
 
-    let event_src;
+    let runner;
 
-    let runner = dev;
+    let event_src;
 
     document.addEventListener('readystatechange', e => {
         if (document.readyState === 'complete')
