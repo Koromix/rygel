@@ -23,6 +23,7 @@ main { margin-top: 30px; }
 /* -------------------- Common elements -------------------- */
 
 a { color: #24579d; }
+
 button {
     font-family: inherit;
     font-size: 1em;
@@ -55,8 +56,9 @@ button:not(:disabled) { cursor: pointer; }
     color: inherit;
     text-decoration: none;
 }
-.gp_toolbar button:not(.active):hover { background: #376cb5; }
+.gp_toolbar button:not(.active):not(:disabled):hover { background: #376cb5; }
 .gp_toolbar button.active { background: #3b7ad1; }
+.gp_toolbar button:disabled { filter: brightness(75%); }
 
 /* -------------------- Popup -------------------- */
 
