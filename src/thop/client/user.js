@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let user = (function() {
+let user = new function() {
     let self = this;
 
     let route = {};
@@ -138,6 +138,4 @@ let user = (function() {
     this.isConnected = function() { return !!url_key; }
     this.getUrlKey = function() { return url_key; }
     this.getUserName = function() { return username; }
-
-    return this;
-}).call({});
+};

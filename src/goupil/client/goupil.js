@@ -6,7 +6,7 @@
 let g_assets = null;
 let g_records = null;
 
-let goupil = (function() {
+let goupil = new function() {
     let self = this;
 
     let runner;
@@ -123,6 +123,4 @@ let goupil = (function() {
 
     this.makePagePath = function(key) { return `pages/${key}.js`; };
     this.makeBlobPath = function(key) { return `static/${key}`; };
-
-    return this;
-}).call({});
+};

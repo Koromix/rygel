@@ -3,12 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 // TODO: Support degraded mode when IDB is not available (e.g. private browsing)
-let idb = (function () {
-    function logAndReject(reject, err) {
-        log.error(err);
-        reject(err);
-    }
-
+let idb = new function () {
     function DatabaseInterface(db) {
         let self = this;
 
@@ -211,5 +206,8 @@ let idb = (function () {
         });
     };
 
-    return this;
-}).call({});
+    function logAndReject(reject, err) {
+        log.error(err);
+        reject(err);
+    }
+};

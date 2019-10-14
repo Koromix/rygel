@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let goupil_dev = (function() {
+let goupil_dev = new function() {
     let self = this;
 
     let init = false;
@@ -203,6 +203,4 @@ let goupil_dev = (function() {
         render('', modes_el);
         render('', main_el);
     }
-
-    return this;
-}).call({});
+};

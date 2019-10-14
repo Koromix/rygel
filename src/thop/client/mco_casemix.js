@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let mco_casemix = (function() {
+let mco_casemix = new function() {
     let self = this;
 
     let route = {};
@@ -394,6 +394,4 @@ let mco_casemix = (function() {
 
         return tsel.render();
     }
-
-    return this;
-}).call({});
+};

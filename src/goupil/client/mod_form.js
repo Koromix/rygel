@@ -78,6 +78,4 @@ function RecordManager(db) {
     function makeTableKey(table, id) {
         return `${table}_${id}`;
     }
-
-    return this;
 }

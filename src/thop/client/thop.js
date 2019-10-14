@@ -5,7 +5,7 @@
 // Fetched from THOP server
 let settings = {};
 
-let thop = (function() {
+let thop = new function() {
     let self = this;
 
     let route_mod;
@@ -230,6 +230,4 @@ let thop = (function() {
         let active = current_url.startsWith(url);
         return html`<a class=${active ? 'active': ''} href=${url}>${label}</a>`;
     }
-
-    return this;
-}).call({});
+};

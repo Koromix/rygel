@@ -6,7 +6,7 @@
 // Popup
 // ------------------------------------------------------------------------
 
-let popup = (function() {
+let popup = new function() {
     let self = this;
 
     let popup_el;
@@ -141,6 +141,4 @@ let popup = (function() {
             render('', popup_el);
         }
     }
-
-    return this;
-}).call({});
+};
