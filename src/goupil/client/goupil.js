@@ -26,13 +26,13 @@ let goupil = (function() {
         g_assets = new AssetManager(db);
         g_records = new RecordManager(db);
 
-        if (typeof app !== 'undefined') {
-            await app.init();
-            runner = app;
+        if (typeof goupil_run !== 'undefined') {
+            await goupil_run.init();
+            runner = goupil_run;
         }
-        if (typeof dev !== 'undefined') {
-            await dev.init();
-            runner = dev;
+        if (typeof goupil_dev !== 'undefined') {
+            await goupil_dev.init();
+            runner = goupil_dev;
         }
 
         self.go(window.location.href, false);
