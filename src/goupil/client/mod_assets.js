@@ -14,6 +14,10 @@ function AssetManager(db) {
         return asset;
     };
 
+    this.transaction = function(func) {
+        return db.transaction(db => func(self));
+    };
+
     this.save = async function(asset) {
         await db.saveWithKey('assets', asset.path, asset.data);
     };
@@ -22,12 +26,8 @@ function AssetManager(db) {
         await db.delete('assets', path);
     };
 
-    this.reset = async function() {
-        await db.transaction(db => {
-            db.clear('assets');
-            for (let path in help_demo.assets)
-                db.saveWithKey('assets', path, help_demo.assets[path]);
-        });
+    this.clear = async function() {
+        await db.clear('assets');
     };
 
     this.load = async function(path) {
