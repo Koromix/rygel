@@ -168,7 +168,7 @@ let dev_form = (function() {
         let widgets = [];
         let variables = [];
 
-        let page_obj = new FormPage(form_state, widgets, variables);
+        let page_obj = new PageForm(form_state, widgets, variables);
         page_obj.changeHandler = renderForm;
         page_obj.submitHandler = saveRecordAndReset;
 
