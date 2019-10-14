@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let dev_form = (function() {
+let dev_form = new function() {
     let self = this;
 
     let current_asset;
@@ -273,6 +273,4 @@ let dev_form = (function() {
             }
         }
     }
-
-    return this;
-}).call({});
+};

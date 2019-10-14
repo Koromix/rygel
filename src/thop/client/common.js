@@ -6,7 +6,7 @@
 // Data
 // ------------------------------------------------------------------------
 
-let data = (function() {
+let data = new function() {
     let self = this;
 
     let cache = new LruMap(32);
@@ -91,15 +91,13 @@ let data = (function() {
     this.clearCache = function() {
         cache.clear();
     };
-
-    return this;
-}).call({});
+};
 
 // ------------------------------------------------------------------------
 // Format
 // ------------------------------------------------------------------------
 
-let format = (function() {
+let format = new function() {
     this.number = function(n, show_plus = false) {
         return (show_plus && n > 0 ? '+' : '') +
                n.toLocaleString('fr-FR');
@@ -149,6 +147,4 @@ let format = (function() {
             return '';
         }
     };
-
-    return this;
-}).call({});
+};

@@ -8,7 +8,7 @@ const {render, html, svg} = lithtml;
 // Utility
 // ------------------------------------------------------------------------
 
-let util = (function() {
+let util = new function() {
     let self = this;
 
     this.mapRange = function(start, end, func) {
@@ -199,7 +199,7 @@ let util = (function() {
         document.body.removeChild(a);
 
         if(URL.revokeObjectURL)
-            setTimeout(function() { URL.revokeObjectURL(url) }, 60000);
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
     };
 
     this.findParent = function(el, func) {
@@ -226,15 +226,13 @@ let util = (function() {
             }
         });
     };
-
-    return this;
-}).call({});
+};
 
 // ------------------------------------------------------------------------
 // Log
 // ------------------------------------------------------------------------
 
-let log = (function() {
+let log = new function() {
     let self = this;
 
     let handlers = [];
@@ -357,9 +355,7 @@ let log = (function() {
     this.info = function(msg, timeout = 6000) { new self.Entry().info(msg, timeout); };
     this.success = function(msg, timeout = 6000) { new self.Entry().success(msg, timeout); };
     this.error = function(msg, timeout = 6000) { new self.Entry().error(msg, timeout); };
-
-    return this;
-}).call({});
+};
 
 // ------------------------------------------------------------------------
 // Containers
@@ -455,7 +451,7 @@ function LruMap(limit) {
 // Date
 // ------------------------------------------------------------------------
 
-let dates = (function() {
+let dates = new function() {
     let self = this;
 
     this.isLeapYear = function(year) {
@@ -627,6 +623,4 @@ let dates = (function() {
 
         return dates.create(year, month, day);
     };
-
-    return this;
-}).call({});
+};

@@ -44,6 +44,4 @@ function AssetManager(db) {
         let list = paths.map(path => ({path: path}));
         return list;
     };
-
-    return this;
 }
