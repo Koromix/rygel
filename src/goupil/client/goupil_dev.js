@@ -30,8 +30,8 @@ let goupil_dev = new function() {
         await g_assets.transaction(m => {
             m.clear();
 
-            for (let path in help_demo.assets) {
-                let data = help_demo.assets[path];
+            for (let path in dev_demo) {
+                let data = dev_demo[path];
                 let asset = g_assets.create(path, data);
 
                 m.save(asset);
