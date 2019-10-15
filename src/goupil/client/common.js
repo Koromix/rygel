@@ -25,7 +25,7 @@ let popup = new function() {
 
         let widgets = [];
 
-        popup_page = new PageForm(popup_state, widgets);
+        popup_page = new FormPage(popup_state, widgets);
         popup_page.changeHandler = () => openPopup(e, func);
         popup_page.close = closePopup;
         popup_page.pushOptions({missingMode: 'disable'});
