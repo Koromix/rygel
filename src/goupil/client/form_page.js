@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function FormPage(state, widgets, variables = []) {
+function FormPage(data, widgets, variables = []) {
     let self = this;
 
     // Prevent DOM ID conflicts
@@ -20,19 +20,34 @@ function FormPage(state, widgets, variables = []) {
 
     this.errors = [];
 
-    this.changeHandler = page => {};
-    this.validateHandler = page => {
-        let problems = [];
-        if (missing_block)
-            problems.push('Informations obligatoires manquantes');
-        if (self.errors.length)
-            problems.push('Présence d\'erreurs sur le formulaire');
+    // Key and value handling
+    this.decodeKey = function(key) {
+        if (!key)
+            throw new Error('Empty keys are not allowed');
+        if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
+            throw new Error('Allowed key characters: a-z, _ and 0-9 (not as first character)');
 
-        return problems;
+        key = {
+            variable: key,
+            toString: () => key
+        };
+
+        return key;
     };
+    this.setValue = function(key, value) { data.values[key] = value; };
+    this.getValue = function(key, default_value) {
+        if (data.values.hasOwnProperty(key)) {
+            return data.values[key];
+        } else {
+            return default_value;
+        }
+    };
+
+    // Change and submission handling
+    this.changeHandler = page => {};
     this.submitHandler = null;
 
-    this.isValid = function() { return !self.validateHandler(self).length; };
+    this.isValid = function() { return !listProblems().length; };
 
     this.pushOptions = function(options = {}) {
         options = expandOptions(options);
@@ -54,12 +69,12 @@ function FormPage(state, widgets, variables = []) {
     this.error = (key, msg) => variables_map[key].error(msg);
 
     this.text = function(key, label, options = {}) {
+        key = self.decodeKey(key);
         options = expandOptions(options);
-        key = decodeKey(key, options);
+
+        let value = self.getValue(key, options.value);
 
         let id = makeID(key);
-        let value = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
-
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
@@ -76,12 +91,12 @@ function FormPage(state, widgets, variables = []) {
     };
 
     this.password = function(key, label, options = {}) {
+        key = self.decodeKey(key);
         options = expandOptions(options);
-        key = decodeKey(key, options);
+
+        let value = self.getValue(key, options.value);
 
         let id = makeID(key);
-        let value = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
-
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
@@ -97,20 +112,19 @@ function FormPage(state, widgets, variables = []) {
     };
 
     function handleTextInput(e, key) {
-        let value = e.target.value;
-        state.values[key] = value || null;
-        state.missing_errors.delete(key);
+        self.setValue(key, e.target.value || null);
+        data.missing_errors.delete(key.toString());
 
         self.changeHandler(self);
     }
 
     this.number = function(key, label, options = {}) {
+        key = self.decodeKey(key);
         options = expandOptions(options);
-        key = decodeKey(key, options);
+
+        let value = parseFloat(self.getValue(key, options.value));
 
         let id = makeID(key);
-        let value = parseFloat(state.values.hasOwnProperty(key) ? state.values[key] : options.value);
-
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
@@ -140,56 +154,21 @@ function FormPage(state, widgets, variables = []) {
     };
 
     function handleNumberChange(e, key) {
-        let value = parseFloat(e.target.value);
+        // TODO: Restore hack for incomplete values
+        self.setValue(key, parseFloat(e.target.value));
+        data.missing_errors.delete(key.toString());
 
-        // Hack to accept incomplete values, mainly in the case of a '-' being typed first,
-        // in which case we don't want to clear the field immediately.
-        if (!isNaN(value) || !isNaN(state.values[key])) {
-            state.values[key] = value;
-            state.missing_errors.delete(key);
-
-            self.changeHandler(self);
-        }
+        self.changeHandler(self);
     }
-
-    function normalizePropositions(props) {
-        if (!Array.isArray(props))
-            props = Array.from(props);
-
-        props = props.filter(c => c != null).map(c => {
-            if (Array.isArray(c)) {
-                return {value: c[0], label: c[1] || c[0]};
-            } else if (typeof c === 'string') {
-                let sep_pos = c.indexOf(':::');
-                if (sep_pos >= 0) {
-                    let value = c.substr(0, sep_pos);
-                    let label = c.substr(sep_pos + 3);
-                    return {value: value, label: label || value};
-                } else {
-                    return {value: c, label: c};
-                }
-            } else if (typeof c === 'number') {
-                return {value: c, label: c};
-            } else {
-                return c;
-            }
-        });
-
-        return props;
-    }
-
-    this.proposition = function(value, label) {
-        return {value: value, label: label || value};
-    };
 
     this.dropdown = function(key, label, props = [], options = {}) {
+        key = self.decodeKey(key);
         options = expandOptions(options);
-        key = decodeKey(key, options);
         props = normalizePropositions(props);
 
-        let id = makeID(key);
-        let value = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
+        let value = self.getValue(key, options.value);
 
+        let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <select id=${id} ?disabled=${options.disable}
@@ -208,21 +187,20 @@ function FormPage(state, widgets, variables = []) {
     };
 
     function handleDropdownChange(e, key) {
-        let value = util.strToValue(e.target.value);
-        state.values[key] = value;
-        state.missing_errors.delete(key);
+        self.setValue(key, util.strToValue(e.target.value));
+        data.missing_errors.delete(key.toString());
 
         self.changeHandler(self);
     }
 
     this.choice = function(key, label, props = [], options = {}) {
+        key = self.decodeKey(key);
         options = expandOptions(options);
-        key = decodeKey(key, options);
         props = normalizePropositions(props);
 
-        let id = makeID(key);
-        let value = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
+        let value = self.getValue(key, options.value);
 
+        let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div class="af_select" id=${id}>
@@ -241,12 +219,13 @@ function FormPage(state, widgets, variables = []) {
 
     function handleChoiceChange(e, key, allow_untoggle) {
         let json = e.target.dataset.value;
+
         if (e.target.classList.contains('active') && allow_untoggle) {
-            state.values[key] = undefined;
+            self.setValue(key, null);
         } else {
-            state.values[key] = util.strToValue(json);
+            self.setValue(key, util.strToValue(json));
         }
-        state.missing_errors.delete(key);
+        data.missing_errors.delete(key.toString());
 
         // This is useless in most cases because the new form will incorporate
         // this change, but who knows. Do it like other browser-native widgets.
@@ -266,13 +245,13 @@ function FormPage(state, widgets, variables = []) {
     };
 
     this.radio = function(key, label, props = [], options = {}) {
+        key = self.decodeKey(key);
         options = expandOptions(options);
-        key = decodeKey(key, options);
         props = normalizePropositions(props);
 
-        let id = makeID(key);
-        let value = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
+        let value = self.getValue(key, options.value);
 
+        let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div class="af_radio" id=${id}>
@@ -291,31 +270,27 @@ function FormPage(state, widgets, variables = []) {
     };
 
     function handleRadioChange(e, key, already_checked) {
-        let value = util.strToValue(e.target.value);
-
         if (already_checked) {
             e.target.checked = false;
-            state.values[key] = undefined;
+            self.setValue(key, null);
         } else {
-            state.values[key] = value;
+            self.setValue(key, util.strToValue(e.target.value));
         }
-        state.missing_errors.delete(key);
+        data.missing_errors.delete(key.toString());
 
         self.changeHandler(self);
     }
 
     this.multi = function(key, label, props = [], options = {}) {
+        key = self.decodeKey(key);
         options = expandOptions(options);
-        key = decodeKey(key, options);
         props = normalizePropositions(props);
 
-        let id = makeID(key);
-        let value;
-        {
-            let candidate = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
-            value = Array.isArray(candidate) ? candidate : [];
-        }
+        let value = self.getValue(key, options.value);
+        if (!Array.isArray(value))
+            value = [];
 
+        let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div class="af_multi" id=${id}>
@@ -345,23 +320,55 @@ function FormPage(state, widgets, variables = []) {
             if (el.checked)
                 value.push(util.strToValue(el.value));
         }
-        state.values[key] = value;
-        state.missing_errors.delete(key);
+
+        self.setValue(key, value);
+        data.missing_errors.delete(key.toString());
 
         self.changeHandler(self);
     }
 
-    this.file = function(key, label, options = {}) {
-        options = expandOptions(options);
-        key = decodeKey(key, options);
+    this.proposition = function(value, label) {
+        return {value: value, label: label || value};
+    };
 
-        let id = makeID(key);
-        let file = state.values.hasOwnProperty(key) ? state.values[key] : null;
+    function normalizePropositions(props) {
+        if (!Array.isArray(props))
+            props = Array.from(props);
+
+        props = props.filter(c => c != null).map(c => {
+            if (Array.isArray(c)) {
+                return {value: c[0], label: c[1] || c[0]};
+            } else if (typeof c === 'string') {
+                let sep_pos = c.indexOf(':::');
+                if (sep_pos >= 0) {
+                    let value = c.substr(0, sep_pos);
+                    let label = c.substr(sep_pos + 3);
+                    return {value: value, label: label || value};
+                } else {
+                    return {value: c, label: c};
+                }
+            } else if (typeof c === 'number') {
+                return {value: c, label: c};
+            } else {
+                return c;
+            }
+        });
+
+        return props;
+    }
+
+    this.file = function(key, label, options = {}) {
+        key = self.decodeKey(key);
+        options = expandOptions(options);
+
+        let value = self.getValue(key, options.value);
+        if (!(value instanceof File))
+            value = null;
 
         // Setting files on input file elements is fragile. At least on Firefox, assigning
         // its own value to the property results in an empty FileList for some reason.
         let set_files = lithtml.directive(() => part => {
-            let file_list = state.file_lists.get(key);
+            let file_list = data.file_lists.get(key);
 
             if (file_list == null) {
                 part.committer.element.value = '';
@@ -370,6 +377,7 @@ function FormPage(state, widgets, variables = []) {
             }
         });
 
+        let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <input id=${id} type="file" size="${options.size || 30}" .files=${set_files()}
@@ -378,25 +386,22 @@ function FormPage(state, widgets, variables = []) {
         `);
 
         let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, 'file', label, file, file == null);
+        fillVariableInfo(intf, key, 'file', label, value, value == null);
 
         return intf;
     };
 
     function handleFileInput(e, key) {
-        let files = e.target.files;
-        state.values[key] = files[0] || null;
-        state.file_lists.set(key, files);
-        state.missing_errors.delete(key);
+        self.setValue(key, e.target.files[0] || null);
+        data.missing_errors.delete(key.toString());
+        data.file_lists.set(key, e.target.files);
 
         self.changeHandler(self);
     }
 
     this.calc = function(key, label, value, options = {}) {
+        key = self.decodeKey(key);
         options = expandOptions(options);
-        key = decodeKey(key, options);
-
-        let id = makeID(key);
 
         let text = value;
         if (!options.raw && typeof value !== 'string') {
@@ -410,9 +415,10 @@ function FormPage(state, widgets, variables = []) {
             }
         }
 
+        let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             <label for=${id}>${label || key}</label>
-            <span class="af_calc">${text}</span>
+            <span id="${id}" class="af_calc">${text}</span>
         `);
 
         let intf = addWidget(render, options);
@@ -453,9 +459,9 @@ instead of:
         func();
         widgets_ref = prev_widgets;
 
-        let deploy = state.sections_state[label];
+        let deploy = data.sections_state[label];
         if (deploy == null) {
-            state.sections_state[label] = options.deploy;
+            data.sections_state[label] = options.deploy;
             deploy = options.deploy;
         }
 
@@ -473,7 +479,7 @@ instead of:
     };
 
     function handleSectionClick(e, label) {
-        state.sections_state[label] = !state.sections_state[label];
+        data.sections_state[label] = !data.sections_state[label];
         self.changeHandler(self);
     }
 
@@ -504,14 +510,15 @@ Valid choices include:
     };
     this.buttons.std = {
         save: (label, options = {}) => {
-            let problems = self.validateHandler(self);
+            let problems = listProblems();
 
             return [
                 [label || 'Enregistrer', self.submitHandler && !problems.length ? self.submit : null, problems.join('\n')]
             ];
         },
         ok_cancel: (label, options = {}) => {
-            let problems = self.validateHandler(self);
+            let problems = listProblems();
+
             return [
                 [label || 'OK', self.submitHandler && !problems.length ? self.submit : null, problems.join('\n')],
                 ['Annuler', self.close]
@@ -546,17 +553,22 @@ Valid choices include:
             if (missing_set.size) {
                 log.error('Impossible d\'enregistrer : données manquantes');
 
-                state.missing_errors.clear();
+                data.missing_errors.clear();
                 for (let key of missing_set)
-                    state.missing_errors.add(key);
+                    data.missing_errors.add(key);
 
                 self.changeHandler(self);
                 return;
             }
 
-            self.submitHandler.call(self, state.values, variables);
+            self.submitHandler.call(self, data.values, variables);
         }
     };
+
+    function expandOptions(options) {
+        options = Object.assign({}, options_stack[options_stack.length - 1], options);
+        return options;
+    }
 
     function makeID(key) {
         return `af_var_${unique_key}_${key}`;
@@ -596,6 +608,9 @@ Valid choices include:
     }
 
     function fillVariableInfo(intf, key, type, label, value, missing) {
+        if (variables_map[key])
+            throw new Error(`Variable '${key}' already exists`);
+
         Object.assign(intf, {
             key: key,
             type: type,
@@ -612,8 +627,8 @@ Valid choices include:
         });
 
         if (intf.options.mandatory && intf.missing) {
-            missing_set.add(key);
-            if (intf.options.missingMode === 'error' || state.missing_errors.has(key))
+            missing_set.add(key.toString());
+            if (intf.options.missingMode === 'error' || data.missing_errors.has(key.toString()))
                 intf.error('Donnée obligatoire manquante');
             if (intf.options.missingMode === 'disable')
                 missing_block |= true;
@@ -635,25 +650,15 @@ Valid choices include:
         }
     }
 
-    function expandOptions(options) {
-        options = Object.assign({}, options_stack[options_stack.length - 1], options);
-        return options;
-    }
+    function listProblems() {
+        let problems = [];
 
-    function decodeKey(key, options) {
-        if (key.startsWith('*')) {
-            key = key.substr(1);
-            options.mandatory = true;
-        }
+        if (missing_block)
+            problems.push('Informations obligatoires manquantes');
+        if (self.errors.length)
+            problems.push('Présence d\'erreurs sur le formulaire');
 
-        if (variables_map[key])
-            throw new Error(`Variable '${key}' already exists`);
-        if (!key)
-            throw new Error('Empty variable keys are not allowed');
-        if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
-            throw new Error('Allowed variable key characters: a-z, _ and 0-9 (not as first character)');
-
-        return key;
+        return problems;
     }
 }
 FormPage.current_unique_key = 0;
