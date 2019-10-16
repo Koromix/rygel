@@ -129,7 +129,7 @@ let popup = new function() {
     }
 
     function closePopup() {
-        popup_state = new FormState();
+        popup_state = new FormData;
         popup_page = null;
 
         clearTimeout(popup_timer);

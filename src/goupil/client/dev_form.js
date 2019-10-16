@@ -18,7 +18,7 @@ let dev_form = new function() {
     let editor;
     let editor_history_cache = {};
 
-    let form_state = new FormState;
+    let form_state;
 
     this.run = async function(asset = null, args = {}) {
         if (asset) {
@@ -37,7 +37,7 @@ let dev_form = new function() {
                 current_record = await g_records.load(asset.path, args.id);
             }
 
-            form_state = new FormState(current_record.values);
+            form_state = new FormData(current_record.values);
         }
 
         // Render
@@ -169,6 +169,7 @@ let dev_form = new function() {
         let variables = [];
 
         let page_obj = new FormPage(form_state, widgets, variables);
+        page_obj.decodeKey = decodeFormKey;
         page_obj.changeHandler = renderForm;
         page_obj.submitHandler = saveRecordAndReset;
 
@@ -182,9 +183,56 @@ let dev_form = new function() {
         return elements;
     }
 
+    function decodeFormKey(key) {
+        let record_ids = ['foo'];
+        let table_names = ['bar'];
+
+        if (typeof key === 'string') {
+            let split_idx = key.indexOf('.');
+
+            if (split_idx >= 0) {
+                key = {
+                    record_id: null,
+                    table: key.substr(0, key_idx),
+                    variable: key.substr(key_idx + 1),
+
+                    toString: null
+                }
+            } else {
+                key = {
+                    record_id: null,
+                    table: null,
+                    variable: key,
+
+                    toString: null
+                };
+            }
+        }
+
+        if (!key.record_id) {
+            if (record_ids.length > 1)
+                throw new Error('Ambiguous key (multiple record IDs are available)');
+
+            key.record_id = record_ids[0];
+        }
+        if (!key.table)
+            key.table = table_names[0];
+
+        if (!key.variable)
+            throw new Error('Empty keys are not allowed');
+        if (!key.table.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/) ||
+                !key.variable.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
+            throw new Error('Allowed key characters: a-z, _ and 0-9 (not as first character)');
+
+        let str = `${key.record_id}+${key.table}.${key.variable}`;
+        key.toString = () => str;
+
+        return Object.freeze(key);
+    }
+
     async function saveRecordAndReset(values, variables) {
         variables = variables.map(variable => ({
-            key: variable.key,
+            key: variable.key.toString(),
             type: variable.type
         }));
 
