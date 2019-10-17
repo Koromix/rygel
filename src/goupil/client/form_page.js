@@ -154,11 +154,14 @@ function FormPage(data, widgets, variables = []) {
     };
 
     function handleNumberChange(e, key) {
-        // TODO: Restore hack for incomplete values
-        self.setValue(key, parseFloat(e.target.value));
-        data.missing_errors.delete(key.toString());
+        // Hack to accept incomplete values, mainly in the case of a '-' being typed first,
+        // in which case we don't want to clear the field immediately.
+        if (e.target.validity.valid) {
+            self.setValue(key, parseFloat(e.target.value));
+            data.missing_errors.delete(key.toString());
 
-        self.changeHandler(self);
+            self.changeHandler(self);
+        }
     }
 
     this.dropdown = function(key, label, props = [], options = {}) {
