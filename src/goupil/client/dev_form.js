@@ -231,11 +231,6 @@ let dev_form = new function() {
     }
 
     async function saveRecordAndReset(values, variables) {
-        variables = variables.map(variable => ({
-            key: variable.key.toString(),
-            type: variable.type
-        }));
-
         let entry = new log.Entry();
         entry.progress('Enregistrement en cours');
 
