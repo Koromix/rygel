@@ -21,22 +21,29 @@ function RecordManager(db) {
     };
 
     this.save = async function(record, variables) {
+        // We need to keep only valid values listed in variables
+        let record2 = Object.assign({}, record, {values: {}});
+        for (let variable of variables) {
+            if (!variable.missing)
+                record2.values[variable.key] = record.values[variable.key];
+        }
+
         variables = variables.map((variable, idx) => {
             let ret = {
-                tkey: makeTableKey(record.table, variable.key),
+                tkey: makeTableKey(record2.table, variable.key),
 
-                key: variable.key,
-                table: record.table,
+                key: variable.key.toString(),
+                table: record2.table,
                 type: variable.type,
-                before: variables[idx - 1] ? variables[idx - 1].key : null,
-                after: variables[idx + 1] ? variables[idx + 1].key : null
+                before: variables[idx - 1] ? variables[idx - 1].key.toString() : null,
+                after: variables[idx + 1] ? variables[idx + 1].key.toString() : null
             };
 
             return ret;
         });
 
         return await db.transaction(db => {
-            db.save('form_records', record);
+            db.save('form_records', record2);
             db.saveAll('form_variables', variables);
         });
     };
