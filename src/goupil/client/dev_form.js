@@ -168,14 +168,14 @@ let dev_form = new function() {
         let widgets = [];
         let variables = [];
 
-        let page_obj = new FormPage(form_state, widgets, variables);
-        page_obj.decodeKey = decodeFormKey;
-        page_obj.changeHandler = renderForm;
-        page_obj.submitHandler = saveRecordAndReset;
+        let page_builder = new FormPage(form_state, widgets, variables);
+        page_builder.decodeKey = decodeFormKey;
+        page_builder.changeHandler = renderForm;
+        page_builder.submitHandler = saveRecordAndReset;
 
         // Execute user script
         let func = Function('page', 'form', current_asset.data);
-        func(page_obj, page_obj);
+        func(page_builder, page_builder);
 
         // Render widgets
         elements = widgets.map(intf => intf.render(intf));
