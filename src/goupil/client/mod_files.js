@@ -2,46 +2,44 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function AssetManager(db) {
+function FileManager(db) {
     let self = this;
 
     this.create = function(path, data) {
-        let asset = {
+        let file = {
             path: path,
             data: data
         };
 
-        return asset;
+        return file;
     };
 
     this.transaction = function(func) {
         return db.transaction(db => func(self));
     };
 
-    this.save = async function(asset) {
-        await db.saveWithKey('assets', asset.path, asset.data);
+    this.save = async function(file) {
+        await db.saveWithKey('files', file.path, file.data);
     };
 
     this.delete = async function(path) {
-        await db.delete('assets', path);
+        await db.delete('files', path);
     };
 
     this.clear = async function() {
-        await db.clear('assets');
+        await db.clear('files');
     };
 
     this.load = async function(path) {
-        let asset = {
+        let file = {
             path: path,
-            data: await db.load('assets', path)
+            data: await db.load('files', path)
         };
 
-        return asset;
+        return file;
     };
 
     this.list = async function() {
-        let paths = await db.list('assets');
-        let list = paths.map(path => ({path: path}));
-        return list;
+        return await db.list('files');
     };
 }
