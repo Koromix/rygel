@@ -168,6 +168,11 @@ class json_Writer: public rapidjson::Writer<json_StreamWriter> {
 public:
     json_Writer(StreamWriter *st) : rapidjson::Writer<json_StreamWriter>(writer), writer(st) {}
 
+    // Hacky helpers to write long strings: call StartString() and write directly to
+    // the stream. Call EndString() when done. Make sure you escape properly!
+    bool StartString();
+    bool EndString();
+
     void Flush() { writer.Flush(); }
 };
 

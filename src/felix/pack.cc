@@ -113,7 +113,7 @@ static bool BuildJavaScriptMap3(Span<const PackSourceInfo> sources, StreamWriter
     writer.EndArray();
     writer.Key("names"); writer.StartArray(); writer.EndArray();
 
-    writer.Key("mappings"); writer.Flush(); out_writer->Write(":\"");
+    writer.Key("mappings"); writer.StartString();
     for (Size i = 0, prev_lines = 0; i < sources.len; i++) {
         const PackSourceInfo &src = sources[i];
 
@@ -143,7 +143,7 @@ static bool BuildJavaScriptMap3(Span<const PackSourceInfo> sources, StreamWriter
 
         prev_lines = lines;
     }
-    out_writer->Write('"');
+    writer.EndString();
 
     writer.EndObject();
 
