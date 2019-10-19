@@ -29,7 +29,7 @@ function FormPage(data, widgets, variables = []) {
 
         key = {
             variable: key,
-            toString: () => key
+            toString: () => key.variable
         };
 
         return key;
