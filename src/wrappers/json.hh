@@ -46,34 +46,6 @@ private:
     void ReadByte();
 };
 
-template <typename Handler>
-bool json_Parse(StreamReader *st, Handler *handler)
-{
-    json_StreamReader json_reader(st);
-    rapidjson::Reader parser;
-
-    PushLogHandler([&](LogLevel level, const char *ctx, const char *msg) {
-        StartConsoleLog(level);
-        Print(stderr, "%1%2(%3:%4): %5", ctx, st->GetFileName(), json_reader.GetLineNumber(),
-                                         json_reader.GetLineOffset(), msg);
-        EndConsoleLog();
-    });
-    RG_DEFER { PopLogHandler(); };
-
-    rapidjson::ParseErrorCode err = parser.Parse(json_reader, *handler).Code();
-    if (err != rapidjson::kParseErrorNone) {
-        // Parse error is likely after I/O error (missing token, etc.) but it's irrelevant,
-        // the I/O error has already been issued. So don't log it.
-        if (st->IsValid() && err != rapidjson::kParseErrorTermination) {
-            LogError("%1", GetParseError_En(err));
-        }
-
-        return false;
-    }
-
-    return true;
-}
-
 enum class json_TokenType {
     Invalid,
 
