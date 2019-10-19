@@ -45,7 +45,7 @@ let dev_form = new function() {
         renderModes();
         switch (left_panel) {
             case 'editor': { syncEditor(); } break;
-            case 'records': { dev_records.run(asset.path, current_record.id); } break;
+            case 'data': { dev_data.run(asset.path, current_record.id); } break;
         }
         renderForm();
     };
@@ -59,9 +59,9 @@ let dev_form = new function() {
                 <div id="dev_page" class="dev_panel_right"></div>
                 <div id="dev_log" style="display: none;"></div>
             `, main_el);
-        } else if (left_panel === 'records' && show_main_panel) {
+        } else if (left_panel === 'data' && show_main_panel) {
             render(html`
-                <div id="dev_records" class="dev_panel_left"></div>
+                <div id="dev_data" class="dev_panel_left"></div>
                 <div id="dev_page" class="dev_panel_right"></div>
                 <div id="dev_log" style="display: none;"></div>
             `, main_el);
@@ -70,9 +70,9 @@ let dev_form = new function() {
                 ${makeEditorElement('dev_panel_fixed')}
                 <div id="dev_log" style="display: none;"></div>
             `, main_el);
-        } else if (left_panel === 'records') {
+        } else if (left_panel === 'data') {
             render(html`
-                <div id="dev_records" class="dev_panel_fixed"></div>
+                <div id="dev_data" class="dev_panel_fixed"></div>
                 <div id="dev_log" style="display: none;"></div>
             `, main_el);
         } else {
@@ -110,7 +110,7 @@ let dev_form = new function() {
     function renderModes() {
         render(html`
             <button class=${left_panel === 'editor' ? 'active' : ''} @click=${e => toggleLeftPanel('editor')}>Éditeur</button>
-            <button class=${left_panel === 'records' ? 'active' : ''} @click=${e => toggleLeftPanel('records')}>Données</button>
+            <button class=${left_panel === 'data' ? 'active' : ''} @click=${e => toggleLeftPanel('data')}>Données</button>
             <button class=${show_main_panel ? 'active': ''} @click=${e => toggleMainPanel()}>Aperçu</button>
         `, modes_el);
     }

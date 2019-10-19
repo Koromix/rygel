@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let dev_records = new function() {
+let dev_data = new function() {
     let self = this;
 
     this.run = async function(table, current_id) {
@@ -65,7 +65,7 @@ let dev_records = new function() {
                     </tr>`)}
                 </tbody>
             </table>
-        `, document.querySelector('#dev_records'));
+        `, document.querySelector('#dev_data'));
     }
 
     async function exportToExcel(table) {
