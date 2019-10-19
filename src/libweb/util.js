@@ -202,6 +202,26 @@ let util = new function() {
             setTimeout(() => URL.revokeObjectURL(url), 60000);
     };
 
+    this.parseEvalErrorLine = function(err) {
+        if (err instanceof SyntaxError) {
+            // At least Firefox seems to do well in this case, it's better than nothing
+            return err.lineNumber - 2;
+        } else if (err.stack) {
+            let m;
+            if (m = err.stack.match(/ > Function:([0-9]+):[0-9]+/) ||
+                    err.stack.match(/, <anonymous>:([0-9]+):[0-9]+/)) {
+                // Can someone explain to me why do I have to offset by -2?
+                let line = parseInt(m[1], 10) - 2;
+                return line;
+            } else if (m = err.stack.match(/Function code:([0-9]+):[0-9]+/)) {
+                let line = parseInt(m[1], 10);
+                return line;
+            }
+        } else {
+            return null;
+        }
+    };
+
     this.findParent = function(el, func) {
         while (el && !func(el))
             el = el.parentElement;

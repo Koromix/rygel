@@ -147,15 +147,9 @@ let dev_form = new function() {
 
             return true;
         } catch (err) {
-            let line;
-            if (err instanceof SyntaxError) {
-                // At least Firefox seems to do well in this case, it's better than nothing
-                line = err.lineNumber - 2;
-            } else if (err.stack) {
-                line = parseAnonymousErrorLine(err);
-            }
+            let err_line = util.parseEvalErrorLine(err);
 
-            log_el.textContent = `⚠\uFE0E Line ${line || '?'}: ${err.message}`;
+            log_el.textContent = `⚠\uFE0E Line ${err_line || '?'}: ${err.message}`;
             log_el.style.display = 'block';
 
             page_el.classList.add('dev_broken');
@@ -240,23 +234,6 @@ let dev_form = new function() {
         self.run(null, {id: null});
         // TODO: Give focus to first widget
         window.scrollTo(0, 0);
-    }
-
-    function parseAnonymousErrorLine(err) {
-        if (err.stack) {
-            let m;
-            if (m = err.stack.match(/ > Function:([0-9]+):[0-9]+/) ||
-                    err.stack.match(/, <anonymous>:([0-9]+):[0-9]+/)) {
-                // Can someone explain to me why do I have to offset by -2?
-                let line = parseInt(m[1], 10) - 2;
-                return line;
-            } else if (m = err.stack.match(/Function code:([0-9]+):[0-9]+/)) {
-                let line = parseInt(m[1], 10);
-                return line;
-            }
-        }
-
-        return null;
     }
 
     async function syncEditor() {
