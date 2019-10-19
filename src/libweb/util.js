@@ -172,6 +172,63 @@ let util = new function() {
         buf[offset + 5] = characters[value & 0x1F];
     }
 
+    this.decodeULIDTime = function(ulid) {
+        if (ulid.length !== 26)
+            throw new Error('Invalid ULID string (must have 26 characters)');
+
+        let time = decodeByte(ulid[0]) * 35184372088832 +
+                   decodeByte(ulid[1]) * 1099511627776 +
+                   decodeByte(ulid[2]) * 34359738368 +
+                   decodeByte(ulid[3]) * 1073741824 +
+                   decodeByte(ulid[4]) * 33554432 +
+                   decodeByte(ulid[5]) * 1048576 +
+                   decodeByte(ulid[6]) * 32768 +
+                   decodeByte(ulid[7]) * 1024 +
+                   decodeByte(ulid[8]) * 32 +
+                   decodeByte(ulid[9]);
+
+        return time;
+    };
+
+    function decodeByte(c) {
+        switch (c) {
+            case '0': return 0;
+            case '1': return 1;
+            case '2': return 2;
+            case '3': return 3;
+            case '4': return 4;
+            case '5': return 5;
+            case '6': return 6;
+            case '7': return 7;
+            case '8': return 8;
+            case '9': return 9;
+            case 'A': return 10;
+            case 'B': return 11;
+            case 'C': return 12;
+            case 'D': return 13;
+            case 'E': return 14;
+            case 'F': return 15;
+            case 'G': return 16;
+            case 'H': return 17;
+            case 'J': return 18;
+            case 'K': return 19;
+            case 'M': return 20;
+            case 'N': return 21;
+            case 'P': return 22;
+            case 'Q': return 23;
+            case 'R': return 24;
+            case 'S': return 25;
+            case 'T': return 26;
+            case 'V': return 27;
+            case 'W': return 28;
+            case 'X': return 29;
+            case 'Y': return 30;
+            case 'Z': return 31;
+        }
+
+        throw new Error('Invalid ULID string (incorrect character)');
+    }
+
     this.loadScript = function(url) {
         let head = document.querySelector('script');
         let script = document.createElement('script');
