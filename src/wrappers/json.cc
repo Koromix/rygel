@@ -293,4 +293,19 @@ void json_StreamWriter::Flush()
     buf.Clear();
 }
 
+bool json_Writer::StartString()
+{
+    Prefix(rapidjson::kStringType);
+    writer.Put('"');
+    writer.Flush();
+
+    return true;
+}
+
+bool json_Writer::EndString()
+{
+    writer.Put('"');
+    return true;
+}
+
 }
