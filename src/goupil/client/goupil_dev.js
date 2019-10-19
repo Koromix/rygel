@@ -8,36 +8,27 @@ let goupil_dev = new function() {
     let init = false;
 
     let assets = [];
+    let assets_map = {};
 
     let current_path;
     let current_asset;
 
     this.init = async function() {
-        assets = await g_assets.list();
+        assets = await listAssets();
 
         // Load default assets if main script is missing
-        if (!assets.find(it => it.path === 'main.js')) {
+        if (!assets.find(asset => asset.path === 'main.js')) {
             await resetAssets();
-            assets = await g_assets.list();
+            assets = await listAssets();
         }
 
+        assets_map = {};
+        for (let asset of assets)
+            assets_map[asset.path] = asset;
 
         current_path = null;
         current_asset = null;
     };
-
-    async function resetAssets() {
-        await g_assets.transaction(m => {
-            m.clear();
-
-            for (let path in dev_demo) {
-                let data = dev_demo[path];
-                let asset = g_assets.create(path, data);
-
-                m.save(asset);
-            }
-        });
-    }
 
     this.go = async function(url = null, args = {}) {
         // Parse URL (kind of)
@@ -50,41 +41,83 @@ let goupil_dev = new function() {
             path = assets[0].path;
         }
 
-        // Find relevant asset
+        // Load it (if needed)
         if (path !== current_path) {
-            if (path) {
-                let asset = await g_assets.load(path);
-
-                current_path = path;
-                current_asset = asset;
-            } else {
-                current_path = null;
-                current_asset = null;
-            }
+            current_asset = await loadAsset(path);
+            current_path = path;
         }
-
-        // Update toolbar
-        renderMenu();
 
         // Run appropriate module
         if (current_asset) {
             document.title = `${current_asset.path} — ${env.project_key}`;
 
-            if (typeof current_asset.data === 'string') {
-                dev_form.run(current_asset, args);
-            } else if (current_asset.data instanceof Blob) {
-                renderEmpty();
-            } else {
-                renderEmpty();
-                log.error(`Unknown asset type for '${current_asset.path}'`);
+            renderMenu();
+            switch (current_asset.type) {
+                case 'main':
+                case 'page': { dev_form.run(current_asset, args); } break;
+                case 'blob': { renderEmpty(); } break;
+
+                default: {
+                    renderEmpty();
+                    log.error(`Unknown asset type for '${current_asset.path}'`);
+                } break;
             }
         } else {
             document.title = env.project_key;
 
+            renderMenu();
             renderEmpty();
-            log.error('No asset available');
+            log.error(current_path ? `Asset '${current_path}' does not exist` : 'No asset available');
         }
     };
+
+    async function listAssets() {
+        let paths = await g_files.list();
+
+        let assets = paths.map(path => {
+            let type;
+            if (path === 'main.js') {
+                type = 'main';
+            } else if (path.match(/^pages\/.*\.js$/)) {
+                type = 'page';
+            } else if (path.match(/^static\//)) {
+                type = 'blob';
+            }
+
+            let asset = {
+                path: path,
+                type: type
+            };
+
+            return asset;
+        });
+
+        return assets;
+    }
+
+    async function loadAsset(path) {
+        let asset = assets_map[path];
+        if (!asset)
+            return null;
+
+        let file = await g_files.load(path);
+        asset = Object.assign({}, asset, {data: file.data});
+
+        return asset;
+    }
+
+    async function resetAssets() {
+        await g_files.transaction(m => {
+            m.clear();
+
+            for (let path in dev_demo) {
+                let data = dev_demo[path];
+                let file = g_files.create(path, data);
+
+                m.save(file);
+            }
+        });
+    }
 
     function renderMenu() {
         let menu_el = document.querySelector('#gp_menu');
@@ -109,25 +142,26 @@ let goupil_dev = new function() {
 
     function showCreateDialog(e) {
         popup.form(e, page => {
-            let type = page.choice('type', 'Type :', [['file', 'Fichier'], ['page', 'Page']],
-                                   {mandatory: true, untoggle: false, value: 'file'});
+            let type = page.choice('type', 'Type :', [['blob', 'Fichier'], ['page', 'Page']],
+                                   {mandatory: true, untoggle: false, value: 'blob'});
 
-            let file;
+            let blob;
             let key;
             let path;
             switch (type.value) {
+                case 'blob': {
+                    blob = page.file('file', 'Fichier :', {mandatory: true});
+                    key = page.text('key', 'Clé :', {placeholder: blob.value ? blob.value.name : null});
+                    if (!key.value && blob.value)
+                        key.value = blob.value.name;
+                    if (key.value)
+                        path = goupil.makeBlobPath(key.value);
+                } break;
+
                 case 'page': {
                     key = page.text('key', 'Clé :', {mandatory: true});
                     if (key.value)
                         path = goupil.makePagePath(key.value);
-                } break;
-                case 'file': {
-                    file = page.file('file', 'Fichier :', {mandatory: true});
-                    key = page.text('key', 'Clé :', {placeholder: file.value ? file.value.name : null});
-                    if (!key.value && file.value)
-                        key.value = file.value.name;
-                    if (key.value)
-                        path = goupil.makeBlobPath(key.value);
                 } break;
             }
 
@@ -139,20 +173,21 @@ let goupil_dev = new function() {
             }
 
             page.submitHandler = async () => {
-                let asset;
                 switch (type.value) {
-                    case 'page': { asset = g_assets.create(path, ''); } break;
-                    case 'file': { asset = g_assets.create(path, file.value); } break;
+                    case 'blob': { g_files.save(g_files.create(path, blob.value)); } break;
+                    case 'page': { g_files.save(g_files.create(path, '')); } break;
                 }
 
-                await g_assets.save(asset);
-                delete asset.data;
-
+                let asset = {
+                    path: path,
+                    type: type.value
+                };
                 assets.push(asset);
                 assets.sort();
+                assets_map[path] = asset;
 
                 page.close();
-                self.go(asset.path);
+                self.go(path);
             };
             page.buttons(page.buttons.std.ok_cancel('Créer'));
         });
@@ -163,11 +198,12 @@ let goupil_dev = new function() {
             page.output(`Voulez-vous vraiment supprimer la ressource '${asset.path}' ?`);
 
             page.submitHandler = async () => {
-                await g_assets.delete(asset.path);
+                await g_files.delete(asset.path);
 
                 // Remove from assets array and map
                 let asset_idx = assets.findIndex(it => it.path === asset.path);
                 assets.splice(asset_idx, 1);
+                delete assets_map[asset.path];
 
                 if (current_path === asset.path) {
                     current_path = null;
@@ -186,7 +222,7 @@ let goupil_dev = new function() {
             page.output('Voulez-vous vraiment réinitialiser toutes les ressources ?');
 
             page.submitHandler = async () => {
-                await g_assets.clear();
+                await g_files.clear();
                 await self.init();
 
                 page.close();

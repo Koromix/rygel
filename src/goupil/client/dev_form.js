@@ -286,7 +286,7 @@ let dev_form = new function() {
             current_asset.data = editor.getValue();
 
             if (renderForm()) {
-                g_assets.save(current_asset);
+                g_files.save(current_asset);
             } else {
                 // Restore working script
                 current_asset.data = prev_script;

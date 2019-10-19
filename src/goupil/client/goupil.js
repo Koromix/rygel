@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 // These globals are initialized below
-let g_assets = null;
+let g_files = null;
 let g_records = null;
 
 let goupil = new function() {
@@ -23,7 +23,7 @@ let goupil = new function() {
         initNavigation();
 
         let db = await openDatabase();
-        g_assets = new AssetManager(db);
+        g_files = new FileManager(db);
         g_records = new RecordManager(db);
 
         if (typeof goupil_run !== 'undefined') {
@@ -64,7 +64,7 @@ let goupil = new function() {
         }
 
         let db_name = `goupil_${env.project_key}`;
-        let db = await idb.open(db_name, 8, (db, old_version) => {
+        let db = await idb.open(db_name, 9, (db, old_version) => {
             switch (old_version) {
                 case null: {
                     db.createObjectStore('pages', {keyPath: 'key'});
@@ -101,6 +101,10 @@ let goupil = new function() {
                 case 7: {
                     db.deleteObjectStore('assets');
                     db.createObjectStore('assets');
+                } // fallthrough
+                case 8: {
+                    db.deleteObjectStore('assets');
+                    db.createObjectStore('files');
                 } // fallthrough
             }
         });
