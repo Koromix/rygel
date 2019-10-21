@@ -21,17 +21,19 @@ let util = new function() {
         return arr;
     };
 
-    this.mapRLE = function(arr, func) {
+    this.mapRLE = function(arr, key_func, func) {
         let arr2 = Array.from({length: arr.length});
 
         let arr2_len = 0;
         for (let i = 0; i < arr.length;) {
+            let current_key = key_func(arr[i]);
+
             let j = i + 1;
-            while (j < arr.length && arr[j] === arr[i]) {
+            while (j < arr.length && key_func(arr[j]) === current_key) {
                 j++;
             }
 
-            arr2[arr2_len++] = func(arr[i], j - i);
+            arr2[arr2_len++] = func(current_key, i, j - i);
             i = j;
         }
         arr2.length = arr2_len;
