@@ -16,8 +16,8 @@ let dev = new function() {
 
     let editor_el;
     let editor;
-    let editor_history_cache = new LruMap(32);
-    let editor_path;
+    let editor_timer_id;
+    let editor_sessions = new LruMap(32);
 
     this.init = async function() {
         try {
@@ -88,7 +88,7 @@ let dev = new function() {
         }];
 
         try {
-            let main_script = await loadScript('main.js');
+            let main_script = await loadFileData('main.js');
 
             await listMainAssets(main_script, assets);
             await listBlobAssets(assets);
@@ -333,10 +333,9 @@ let dev = new function() {
                         m.save(file);
                     }
                 });
-                editor_history_cache.clear();
 
                 await self.init();
-                editor_path = null;
+                editor_sessions.clear();
 
                 page.close();
                 self.go();
@@ -361,74 +360,68 @@ let dev = new function() {
     }
 
     async function syncEditor() {
-        // FIXME: Make sure we don't run loadScript more than once
-        if (!window.ace)
-            await util.loadScript(`${env.base_url}static/ace.js`);
-
         if (!editor) {
+            // FIXME: Make sure we don't run loadScript more than once
+            if (!window.ace)
+                await util.loadScript(`${env.base_url}static/ace.js`);
+
             editor = ace.edit(editor_el);
 
             editor.setTheme('ace/theme/monokai');
             editor.setShowPrintMargin(false);
             editor.setFontSize(12);
-            editor.session.setOption('useWorker', false);
-            editor.session.setMode('ace/mode/javascript');
-
-            editor.on('change', handleEditorChange);
         }
 
-        if (current_asset) {
-            let history = editor_history_cache.get(current_asset.path);
+        let session = editor_sessions.get(current_asset.path);
+        if (!session) {
+            let script = await loadFileData(current_asset.path);
 
-            if (history !== editor.session.getUndoManager()) {
-                if (editor_path !== current_asset.path) {
-                    let script = await loadScript(current_asset.path);
-                    editor.setValue(script);
-                }
-                editor.setReadOnly(false);
-                editor.clearSelection();
+            session = new ace.EditSession(script, 'ace/mode/javascript');
+            session.setOption('useWorker', false);
+            session.setUndoManager(new ace.UndoManager());
 
-                if (!history) {
-                    history = new ace.UndoManager();
-                    editor_history_cache.set(current_asset.path, history);
-                }
-                editor.session.setUndoManager(history);
-            }
+            session.on('change', e => handleEditorChange(current_asset.path, session.getValue()));
 
-            editor_path = current_asset.path;
-        } else {
-            editor.setValue('');
-            editor.setReadOnly(true);
+            editor_sessions.set(current_asset.path, session);
+        }
 
-            editor.session.setUndoManager(new ace.UndoManager());
-
-            editor_path = null;
+        if (session !== editor.session) {
+            editor.setSession(session);
+            editor.setReadOnly(false);
         }
     }
 
-    async function handleEditorChange() {
-        // This test saves us from events after setValue() calls
-        if (editor_path === current_asset.path) {
-            let success;
-            if (current_asset.path === 'main.js') {
-                success = await wrapWithLog(async () => {
-                    await loadApplication();
-                    await self.go();
-                });
-            } else {
-                success = await wrapWithLog(runAsset);
-            }
+    function handleEditorChange(path, value) {
+        clearTimeout(editor_timer_id);
 
-            if (success) {
-                let file = g_files.create(current_asset.path, editor.getValue());
-                await g_files.save(file);
+        editor_timer_id = setTimeout(async () => {
+            editor_timer_id = null;
+
+            // The user may have changed document (async + timer)
+            if (current_asset && current_asset.path === path) {
+                let success;
+                if (path === 'main.js') {
+                    success = await wrapWithLog(async () => {
+                        await loadApplication();
+                        await self.go();
+                    });
+                } else {
+                    success = await wrapWithLog(runAsset);
+                }
+
+                if (success) {
+                    let file = g_files.create(path, value);
+                    await g_files.save(file);
+                }
             }
-        }
+        }, 60);
     }
 
-    async function loadScript(path) {
-        if (path === editor_path) {
-            return editor.getValue();
+    async function loadFileData(path) {
+        let session = editor_sessions.get(path);
+
+        if (session) {
+            return session.getValue();
         } else {
             let file = await g_files.load(path);
             return file ? file.data : '';
@@ -463,7 +456,7 @@ let dev = new function() {
     async function runAsset() {
         switch (current_asset.type) {
             case 'page': {
-                let script = await loadScript(current_asset.path);
+                let script = await loadFileData(current_asset.path);
                 await dev_form.runPageScript(script, current_record);
             } break;
 
