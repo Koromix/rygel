@@ -4,9 +4,7 @@
 
 /* -------------------- Header -------------------- */
 
-#dev_modes { display: flex; }
-
-#dev_pages {
+#dev_assets {
     flex-grow: 1;
     background: inherit;
     -webkit-appearance: none;
