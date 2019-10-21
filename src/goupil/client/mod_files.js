@@ -31,12 +31,18 @@ function FileManager(db) {
     };
 
     this.load = async function(path) {
-        let file = {
-            path: path,
-            data: await db.load('files', path)
-        };
+        let data = await db.load('files', path);
 
-        return file;
+        if (data) {
+            let file = {
+                path: path,
+                data: data
+            };
+
+            return file;
+        } else {
+            return null;
+        }
     };
 
     this.list = async function() {

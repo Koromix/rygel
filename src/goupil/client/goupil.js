@@ -26,13 +26,13 @@ let goupil = new function() {
         g_files = new FileManager(db);
         g_records = new RecordManager(db);
 
-        if (typeof goupil_run !== 'undefined') {
-            await goupil_run.init();
-            runner = goupil_run;
+        if (typeof run !== 'undefined') {
+            await run.init();
+            runner = run;
         }
-        if (typeof goupil_dev !== 'undefined') {
-            await goupil_dev.init();
-            runner = goupil_dev;
+        if (typeof dev !== 'undefined') {
+            await dev.init();
+            runner = dev;
         }
 
         self.go(window.location.href, false);

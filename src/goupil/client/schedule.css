@@ -30,6 +30,11 @@
     justify-content: center;
 }
 
+#sc_modes {
+    position: relative;
+    left: 0;
+}
+
 .sc_selector { margin: 0 1em; }
 .sc_selector > b {
     display: inline-block;

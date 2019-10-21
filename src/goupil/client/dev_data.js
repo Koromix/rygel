@@ -5,7 +5,7 @@
 let dev_data = new function() {
     let self = this;
 
-    this.run = async function(table, current_id) {
+    this.runTable = async function(table, current_id) {
         let [records, variables] = await g_records.loadAll(table);
         let columns = orderColumns(variables);
 
@@ -191,9 +191,9 @@ let dev_data = new function() {
 
     function handleEditClick(e, record, current_id) {
         if (record.id !== current_id) {
-            dev_form.run(null, {id: record.id});
+            dev.go(null, {id: record.id});
         } else {
-            dev_form.run(null, {id: null});
+            dev.go(null, {id: null});
         }
     }
 
@@ -205,9 +205,9 @@ let dev_data = new function() {
                 await g_records.delete(record.table, record.id);
 
                 if (record.id === current_id) {
-                    dev_form.run(null, {id: null});
+                    dev.go(null, {id: null});
                 } else {
-                    dev_form.run();
+                    dev.go();
                 }
                 page.close();
             };

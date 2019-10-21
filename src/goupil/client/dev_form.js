@@ -5,176 +5,34 @@
 let dev_form = new function() {
     let self = this;
 
-    let current_asset;
-    let current_record = {};
+    let current_record;
+    let form_data;
 
-    let editor_el;
-    let page_el;
-    let log_el;
-
-    let left_panel = 'editor';
-    let show_main_panel = true;
-
-    let editor;
-    let editor_history_cache = {};
-
-    let form_state;
-
-    this.run = async function(asset = null, args = {}) {
-        if (asset) {
-            current_asset = asset;
-        } else {
-            asset = current_asset;
-        }
-
-        // Load record (if needed)
-        if (!args.hasOwnProperty('id') && asset.path !== current_record.table)
-            current_record = {};
-        if (args.hasOwnProperty('id') || current_record.id == null) {
-            if (args.id == null) {
-                current_record = g_records.create(asset.path);
-            } else if (args.id !== current_record.id) {
-                current_record = await g_records.load(asset.path, args.id);
-            }
-
-            form_state = new FormData(current_record.values);
+    this.runPageScript = async function(script, record) {
+        if (record !== current_record) {
+            form_data = new FormData(record.values);
+            current_record = record;
         }
 
         // Render
-        renderLayout();
-        renderModes();
-        switch (left_panel) {
-            case 'editor': { syncEditor(); } break;
-            case 'data': { dev_data.run(asset.path, current_record.id); } break;
-        }
-        renderForm();
+        runScript(script);
     };
 
-    function renderLayout() {
-        let main_el = document.querySelector('main');
-
-        if (left_panel === 'editor' && show_main_panel) {
-            render(html`
-                ${makeEditorElement('dev_panel_left')}
-                <div id="dev_page" class="dev_panel_right"></div>
-                <div id="dev_log" style="display: none;"></div>
-            `, main_el);
-        } else if (left_panel === 'data' && show_main_panel) {
-            render(html`
-                <div id="dev_data" class="dev_panel_left"></div>
-                <div id="dev_page" class="dev_panel_right"></div>
-                <div id="dev_log" style="display: none;"></div>
-            `, main_el);
-        } else if (left_panel === 'editor') {
-            render(html`
-                ${makeEditorElement('dev_panel_fixed')}
-                <div id="dev_log" style="display: none;"></div>
-            `, main_el);
-        } else if (left_panel === 'data') {
-            render(html`
-                <div id="dev_data" class="dev_panel_fixed"></div>
-                <div id="dev_log" style="display: none;"></div>
-            `, main_el);
-        } else {
-            render(html`
-                <div id="dev_page" class="dev_panel_page"></div>
-                <div id="dev_log" style="display: none;"></div>
-            `, main_el);
-        }
-
-        modes_el = document.querySelector('#dev_modes');
-        log_el = document.querySelector('#dev_log');
-        if (show_main_panel) {
-            page_el = document.querySelector('#dev_page');
-        } else {
-            // We still need to render the form to test it, so create a dummy element!
-            page_el = document.createElement('div');
-        }
-    }
-
-    function makeEditorElement(cls) {
-        if (!editor_el) {
-            editor_el = document.createElement('div');
-            editor_el.id = 'dev_editor';
-        }
-
-        for (let cls of editor_el.classList) {
-            if (!cls.startsWith('ace_') && !cls.startsWith('ace-'))
-                editor_el.classList.remove(cls);
-        }
-        editor_el.classList.add(cls);
-
-        return editor_el;
-    }
-
-    function renderModes() {
-        render(html`
-            <button class=${left_panel === 'editor' ? 'active' : ''} @click=${e => toggleLeftPanel('editor')}>Éditeur</button>
-            <button class=${left_panel === 'data' ? 'active' : ''} @click=${e => toggleLeftPanel('data')}>Données</button>
-            <button class=${show_main_panel ? 'active': ''} @click=${e => toggleMainPanel()}>Aperçu</button>
-        `, modes_el);
-    }
-
-    function toggleLeftPanel(type) {
-        if (left_panel !== type) {
-            left_panel = type;
-        } else {
-            left_panel = null;
-            show_main_panel = true;
-        }
-
-        self.run();
-    }
-
-    function toggleMainPanel() {
-        if (!left_panel)
-            left_panel = 'editor';
-        show_main_panel = !show_main_panel;
-
-        self.run();
-    }
-
-    function renderForm() {
-        try {
-            let elements = executeScript();
-
-            // Things are OK!
-            log_el.innerHTML = '';
-            log_el.style.display = 'none';
-
-            page_el.classList.remove('dev_broken');
-            render(elements, page_el);
-
-            return true;
-        } catch (err) {
-            let err_line = util.parseEvalErrorLine(err);
-
-            log_el.textContent = `⚠\uFE0E Line ${err_line || '?'}: ${err.message}`;
-            log_el.style.display = 'block';
-
-            page_el.classList.add('dev_broken');
-
-            return false;
-        }
-    }
-
-    function executeScript() {
+    function runScript(script) {
         let widgets = [];
-        let variables = [];
 
-        let page_builder = new FormPage(form_state, widgets, variables);
+        let page_builder = new PageBuilder(form_data, widgets);
         page_builder.decodeKey = decodeFormKey;
-        page_builder.changeHandler = renderForm;
+        page_builder.changeHandler = () => runScript(script);
         page_builder.submitHandler = saveRecordAndReset;
 
         // Execute user script
-        let func = Function('page', 'form', current_asset.data);
+        let func = Function('page', 'form', script);
         func(page_builder, page_builder);
 
-        // Render widgets
-        elements = widgets.map(intf => intf.render(intf));
-
-        return elements;
+        // Render widgets (even if overview is disabled)
+        let page_el = document.querySelector('#dev_overview') || document.createElement('div');
+        render(widgets.map(intf => intf.render(intf)), page_el);
     }
 
     function decodeFormKey(key) {
@@ -231,66 +89,8 @@ let dev_form = new function() {
         await g_records.save(current_record, variables);
         entry.success('Données enregistrées !');
 
-        self.run(null, {id: null});
+        dev.go(null, {id: null});
         // TODO: Give focus to first widget
         window.scrollTo(0, 0);
-    }
-
-    async function syncEditor() {
-        // FIXME: Make sure we don't run loadScript more than once
-        if (!window.ace)
-            await util.loadScript(`${env.base_url}static/ace.js`);
-
-        if (!editor) {
-            editor = ace.edit(editor_el);
-
-            editor.setTheme('ace/theme/monokai');
-            editor.setShowPrintMargin(false);
-            editor.setFontSize(12);
-            editor.session.setOption('useWorker', false);
-            editor.session.setMode('ace/mode/javascript');
-
-            editor.on('change', e => {
-                // If something goes wrong during handleEditorChange(), we don't
-                // want to break ACE state.
-                setTimeout(handleEditorChange, 0);
-            });
-        }
-
-        if (current_asset) {
-            let history = editor_history_cache[current_asset.path];
-
-            if (history !== editor.session.getUndoManager()) {
-                editor.setValue(current_asset.data);
-                editor.setReadOnly(false);
-                editor.clearSelection();
-
-                if (!history) {
-                    history = new ace.UndoManager();
-                    editor_history_cache[current_asset.path] = history;
-                }
-                editor.session.setUndoManager(history);
-            }
-        } else {
-            editor.setValue('');
-            editor.setReadOnly(true);
-
-            editor.session.setUndoManager(new ace.UndoManager());
-        }
-    }
-
-    function handleEditorChange() {
-        if (current_asset) {
-            let prev_script = current_asset.data;
-
-            current_asset.data = editor.getValue();
-
-            if (renderForm()) {
-                g_files.save(current_asset);
-            } else {
-                // Restore working script
-                current_asset.data = prev_script;
-            }
-        }
     }
 };

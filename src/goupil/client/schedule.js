@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function Schedule(resources_map, meetings_map) {
+function ScheduleView(resources_map, meetings_map) {
     let self = this;
 
     this.changeResourcesHandler = (key, resources) => {};
@@ -17,7 +17,7 @@ function Schedule(resources_map, meetings_map) {
 
     let current_month;
     let current_year;
-    let current_mode;
+    let current_mode = 'meetings';
 
     let drag_slot_ref;
 
@@ -26,10 +26,9 @@ function Schedule(resources_map, meetings_map) {
     let copy_resources;
     let copy_ignore = new Set;
 
-    this.render = function(year, month, mode, root_el) {
+    this.render = function(year, month, root_el) {
         current_year = year;
         current_month = month;
-        current_mode = mode;
 
         render(html`
             <div id="sc_header">${week_day_names.map(name => html`<div>${name}</div>`)}</div>
@@ -531,6 +530,11 @@ function Schedule(resources_map, meetings_map) {
 
     function renderFooter() {
         render(html`
+            <div id="sc_modes">
+                <button class=${current_mode === 'meetings' ? 'active' : ''} @click=${toggleMode}>Agenda</button>
+                <button class=${current_mode === 'meetings' ? '' : 'active'} @click=${toggleMode}>Créneaux</button>
+            </div>
+
             <div class="sc_selector">
                 <button @click=${switchToPreviousMonth}
                         @dragover=${slowDownEvents(300, switchToPreviousMonth)}>≪</button>
@@ -585,6 +589,16 @@ function Schedule(resources_map, meetings_map) {
                         @dragover=${slowDownEvents(300, switchToNextYear)}>≫</button>
             </div>
         `, footer_el);
+    }
+
+    function toggleMode() {
+        switch (current_mode) {
+            case 'meetings': { current_mode = 'settings'; } break;
+            case 'settings': { current_mode = 'meetings'; } break;
+            case 'copy': { current_mode = 'settings'; } break;
+        }
+
+        renderAll();
     }
 
     function switchToPreviousMonth() {
