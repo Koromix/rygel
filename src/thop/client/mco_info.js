@@ -490,42 +490,43 @@ let mco_info = new function() {
         return html`
             <table class="pr_grid">
                 <thead>
-                    <tr><th>GHM</th>${util.mapRLE(columns.map(col => col.ghm),
-                        (ghm, colspan) => html`<td class="desc" colspan=${colspan}>${ghm}</td>`)}</tr>
-                    <tr><th>Niveau</th>${util.mapRLE(columns.map(col => col.ghm.substr(5, 1)),
-                        (mode, colspan) => html`<td class="desc" colspan=${colspan}>Niveau ${mode}</td>`)}</tr>
+                    <tr><th>GHM</th>${util.mapRLE(columns, col => col.ghm,
+                        (ghm, _, colspan) => html`<td class="desc" colspan=${colspan}>${ghm}</td>`)}</tr>
+                    <tr><th>Niveau</th>${util.mapRLE(columns, col => col.ghm.substr(5, 1),
+                        (mode, _, colspan) => html`<td class="desc" colspan=${colspan}>Niveau ${mode}</td>`)}</tr>
                     <tr><th>GHS</th>${columns.map((col, idx) =>
                         html`<td class="desc">${col.ghs}${conditions[idx].length ? '*' : ''}</td>`)}</tr>
                     <tr><th>Conditions</th>${columns.map((col, idx) =>
                         html`<td class="conditions">${conditions[idx].map(cond => html`${self.addSpecLinks(cond)}<br/>`)}</td>`)}</tr>
-                    <tr><th>Borne basse</th>${util.mapRLE(columns.map(col => col.exb_treshold),
-                        (treshold, colspan) => html`<td class="exb" colspan=${colspan}>${format.duration(treshold)}</td>`)}</tr>
-                    <tr><th>Borne haute</th>${util.mapRLE(columns.map(col => col.exh_treshold ? (col.exh_treshold - 1) : null),
-                        (treshold, colspan) => html`<td class="exh" colspan=${colspan}>${format.duration(treshold)}</td>`)}</tr>
-                    <tr><th>Tarif €</th>${util.mapRLE(columns.map(col =>
-                        applyGhsCoefficient(col.ghs_cents, !apply_coeff || col.ghs_coefficient)),
-                        (cents, colspan) => html`<td class="noex" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
-                    <tr><th>Forfait EXB €</th>${util.mapRLE(columns.map(col =>
-                        applyGhsCoefficient(col.exb_once ? col.exb_cents : null, !apply_coeff || col.ghs_coefficient)),
-                        (cents, colspan) => html`<td class="exb" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
-                    <tr><th>Tarif EXB €</th>${util.mapRLE(columns.map(col =>
-                        applyGhsCoefficient(col.exb_once ? null : col.exb_cents, !apply_coeff || col.ghs_coefficient)),
-                        (cents, colspan) => html`<td class="exb" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
-                    <tr><th>Tarif EXH €</th>${util.mapRLE(columns.map(col =>
-                        applyGhsCoefficient(col.exh_cents, !apply_coeff || col.ghs_coefficient)),
-                        (cents, colspan) => html`<td class="exh" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
-                    <tr><th>Age</th>${util.mapRLE(columns.map(col => {
-                        let texts = [];
-                        let severity = col.ghm.charCodeAt(5) - '1'.charCodeAt(0);
-                        if (severity >= 0 && severity < 4) {
-                            if (severity < col.young_severity_limit)
-                                texts.push('< ' + col.young_age_treshold.toString());
-                            if (severity < col.old_severity_limit)
-                                texts.push('≥ ' + col.old_age_treshold.toString());
-                        }
+                    <tr><th>Borne basse</th>${util.mapRLE(columns, col => col.exb_treshold,
+                        (treshold, _, colspan) => html`<td class="exb" colspan=${colspan}>${format.duration(treshold)}</td>`)}</tr>
+                    <tr><th>Borne haute</th>${util.mapRLE(columns, col => col.exh_treshold ? (col.exh_treshold - 1) : null,
+                        (treshold, _, colspan) => html`<td class="exh" colspan=${colspan}>${format.duration(treshold)}</td>`)}</tr>
+                    <tr><th>Tarif €</th>${util.mapRLE(columns, col =>
+                            applyGhsCoefficient(col.ghs_cents, !apply_coeff || col.ghs_coefficient),
+                        (cents, _, colspan) => html`<td class="noex" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
+                    <tr><th>Forfait EXB €</th>${util.mapRLE(columns, col =>
+                            applyGhsCoefficient(col.exb_once ? col.exb_cents : null, !apply_coeff || col.ghs_coefficient),
+                        (cents, _, colspan) => html`<td class="exb" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
+                    <tr><th>Tarif EXB €</th>${util.mapRLE(columns, col =>
+                            applyGhsCoefficient(col.exb_once ? null : col.exb_cents, !apply_coeff || col.ghs_coefficient),
+                        (cents, _, colspan) => html`<td class="exb" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
+                    <tr><th>Tarif EXH €</th>${util.mapRLE(columns, col =>
+                            applyGhsCoefficient(col.exh_cents, !apply_coeff || col.ghs_coefficient),
+                        (cents, _, colspan) => html`<td class="exh" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
+                    <tr><th>Age</th>${util.mapRLE(columns, col => {
+                            let texts = [];
+                            let severity = col.ghm.charCodeAt(5) - '1'.charCodeAt(0);
+                            if (severity >= 0 && severity < 4) {
+                                if (severity < col.young_severity_limit)
+                                    texts.push('< ' + col.young_age_treshold.toString());
+                                if (severity < col.old_severity_limit)
+                                    texts.push('≥ ' + col.old_age_treshold.toString());
+                            }
 
-                        return texts.join(', ');
-                    }), (text, colspan) => html`<td class="age" colspan=${colspan}>${text}</td>`)}</tr>
+                            return texts.join(', ');
+                        },
+                        (text, _, colspan) => html`<td class="age" colspan=${colspan}>${text}</td>`)}</tr>
                 </thead>
 
                 <tbody>${util.mapRange(0, max_duration, duration =>
