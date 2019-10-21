@@ -86,7 +86,7 @@ let dev_form = new function() {
         let entry = new log.Entry();
         entry.progress('Enregistrement en cours');
 
-        await g_records.save(current_record, variables);
+        await record_manager.save(current_record, variables);
         entry.success('Données enregistrées !');
 
         dev.go(null, {id: null});

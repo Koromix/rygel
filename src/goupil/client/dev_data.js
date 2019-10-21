@@ -6,7 +6,7 @@ let dev_data = new function() {
     let self = this;
 
     this.runTable = async function(table, current_id) {
-        let [records, variables] = await g_records.loadAll(table);
+        let [records, variables] = await record_manager.loadAll(table);
         let columns = orderColumns(variables);
 
         renderRecords(records, columns, current_id);
@@ -72,7 +72,7 @@ let dev_data = new function() {
         if (!window.XLSX)
             await util.loadScript(`${env.base_url}static/xlsx.core.min.js`);
 
-        let [records, variables] = await g_records.loadAll(table);
+        let [records, variables] = await record_manager.loadAll(table);
         let columns = orderColumns(variables);
 
         let export_name = `${env.project_key}_${dates.today()}`;
@@ -202,7 +202,7 @@ let dev_data = new function() {
             page.output('Voulez-vous vraiment supprimer cet enregistrement ?');
 
             page.submitHandler = async () => {
-                await g_records.delete(record.table, record.id);
+                await record_manager.delete(record.table, record.id);
 
                 if (record.id === current_id) {
                     dev.go(null, {id: null});
