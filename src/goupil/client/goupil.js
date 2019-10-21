@@ -3,13 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 // These globals are initialized below
-let g_files = null;
-let g_records = null;
+let app = null;
+let file_manager = null;
+let record_manager = null;
 
 let goupil = new function() {
     let self = this;
-
-    let runner;
 
     let event_src;
 
@@ -23,26 +22,26 @@ let goupil = new function() {
         initNavigation();
 
         let db = await openDatabase();
-        g_files = new FileManager(db);
-        g_records = new RecordManager(db);
+        file_manager = new FileManager(db);
+        record_manager = new RecordManager(db);
 
         if (typeof run !== 'undefined') {
             await run.init();
-            runner = run;
+            app = run;
         }
         if (typeof dev !== 'undefined') {
             await dev.init();
-            runner = dev;
+            app = dev;
         }
 
-        self.go(window.location.href, false);
+        app.go(window.location.href, false);
     }
 
     function initNavigation() {
-        window.addEventListener('popstate', e => self.go(window.location.href, false));
+        window.addEventListener('popstate', e => app.go(window.location.href, false));
 
         util.interceptLocalAnchors((e, href) => {
-            self.go(href);
+            app.go(href);
             e.preventDefault();
         });
     }
@@ -111,10 +110,6 @@ let goupil = new function() {
 
         return db;
     }
-
-    this.go = function(url, history = true) {
-        runner.go();
-    };
 
     this.listenToServerEvent = function(event, func) {
         if (!event_src) {

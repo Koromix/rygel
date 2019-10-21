@@ -42,11 +42,11 @@ let dev = new function() {
                 current_record = {};
             if (args.hasOwnProperty('id') || current_record.id == null) {
                 if (args.id == null) {
-                    current_record = g_records.create(current_asset.form.key);
+                    current_record = record_manager.create(current_asset.form.key);
                 } else if (args.id !== current_record.id) {
-                    current_record = await g_records.load(current_asset.form.key, args.id);
+                    current_record = await record_manager.load(current_asset.form.key, args.id);
                     if (!current_record)
-                        current_record = g_records.create(current_asset.form.key);
+                        current_record = record_manager.create(current_asset.form.key);
                 }
             }
         }
@@ -146,7 +146,7 @@ let dev = new function() {
     }
 
     async function listBlobAssets(assets) {
-        let paths = await g_files.list();
+        let paths = await file_manager.list();
         let known_paths = new Set(assets.map(asset => asset.path));
 
         for (let path of paths) {
@@ -257,7 +257,7 @@ let dev = new function() {
             }
 
             page.submitHandler = async () => {
-                await g_files.save(g_files.create(path.value, blob.value || ''));
+                await file_manager.save(file_manager.create(path.value, blob.value || ''));
 
                 let asset = {
                     type: 'blob',
@@ -283,7 +283,7 @@ let dev = new function() {
 
             page.submitHandler = async () => {
                 if (asset.path)
-                    await g_files.delete(asset.path);
+                    await file_manager.delete(asset.path);
 
                 // Remove from assets array and map
                 let asset_idx = assets.findIndex(it => it.key === asset.key);
@@ -307,12 +307,12 @@ let dev = new function() {
             page.output('Voulez-vous vraiment réinitialiser toutes les ressources ?');
 
             page.submitHandler = async () => {
-                await g_files.transaction(m => {
+                await file_manager.transaction(m => {
                     m.clear();
 
                     for (let path in help_demo) {
                         let data = help_demo[path];
-                        let file = g_files.create(path, data);
+                        let file = file_manager.create(path, data);
 
                         m.save(file);
                     }
@@ -394,8 +394,8 @@ let dev = new function() {
                 }
 
                 if (success) {
-                    let file = g_files.create(path, value);
-                    await g_files.save(file);
+                    let file = file_manager.create(path, value);
+                    await file_manager.save(file);
                 }
             }
         }, 60);
@@ -407,7 +407,7 @@ let dev = new function() {
         if (session) {
             return session.getValue();
         } else {
-            let file = await g_files.load(path);
+            let file = await file_manager.load(path);
             return file ? file.data : '';
         }
     }
