@@ -244,52 +244,39 @@ let dev = new function() {
 
     function showCreateDialog(e) {
         popup.form(e, page => {
-            let type = page.choice('type', 'Type :', [['blob', 'Fichier'], ['page', 'Page']],
-                                   {mandatory: true, untoggle: false, value: 'blob'});
+            let blob = page.file('file', 'Fichier :');
 
-            let blob;
-            let key;
-            let path;
-            switch (type.value) {
-                case 'blob': {
-                    blob = page.file('file', 'Fichier :', {mandatory: true});
-                    key = page.text('key', 'Clé :', {placeholder: blob.value ? blob.value.name : null});
-                    if (!key.value && blob.value)
-                        key.value = blob.value.name;
-                    if (key.value)
-                        path = goupil.makeBlobPath(key.value);
-                } break;
+            let default_path = blob.value ? `static/${blob.value.name}` : null;
+            let path = page.text('path', 'Chemin :', {placeholder: default_path});
+            if (!path.value)
+                path.value = default_path;
 
-                case 'page': {
-                    key = page.text('key', 'Clé :', {mandatory: true});
-                    if (key.value)
-                        path = goupil.makePagePath(key.value);
-                } break;
-            }
-
-            if (path) {
-                if (assets.some(asset => asset.path === path))
-                    key.error('Cette ressource existe déjà');
-                if (!key.value.match(/^[a-zA-Z_\.][a-zA-Z0-9_\.]*$/))
-                    key.error('Autorisé : a-z, _, . et 0-9 (sauf initiale)');
+            if (path.value) {
+                if (!path.value.match(/static\/./)) {
+                    path.error('Le chemin doit commencer par \'static/\'');
+                } else if (path.value.includes('/../') || path.value.endsWith('/..')) {
+                    path.error('Le chemin ne doit pas contenir de composants \'..\'');
+                } else if (assets.some(asset => asset.path === path.value)) {
+                    path.error('Ce chemin est déjà utilisé');
+                }
             }
 
             page.submitHandler = async () => {
-                switch (type.value) {
-                    case 'blob': { g_files.save(g_files.create(path, blob.value)); } break;
-                    case 'page': { g_files.save(g_files.create(path, '')); } break;
-                }
+                await g_files.save(g_files.create(path.value, blob.value || ''));
 
                 let asset = {
-                    path: path,
-                    type: type.value
+                    type: 'blob',
+                    key: path.value,
+                    category: 'Fichiers',
+                    label: path.value,
+
+                    path: path.value
                 };
                 assets.push(asset);
-                assets.sort();
-                assets_map[path] = asset;
+                assets_map[asset.key] = asset;
 
                 page.close();
-                self.go(path);
+                self.go(asset.key);
             };
             page.buttons(page.buttons.std.ok_cancel('Créer'));
         });
@@ -308,11 +295,13 @@ let dev = new function() {
                 assets.splice(asset_idx, 1);
                 delete assets_map[asset.key];
 
-                if (asset === current_asset)
-                    current_asset = assets[0];
-
                 page.close();
-                self.go();
+                if (asset === current_asset) {
+                    let new_asset = assets[Math.max(0, asset_idx - 1)];
+                    self.go(new_asset ? new_asset.key : null);
+                } else {
+                    self.go();
+                }
             };
             page.buttons(page.buttons.std.ok_cancel('Supprimer'));
         });
