@@ -82,7 +82,7 @@ let dev = new function() {
         assets = [{
             type: 'main',
             key: 'main',
-            label: 'Script CRF',
+            label: 'Script principal',
 
             path: 'main.js'
         }];
