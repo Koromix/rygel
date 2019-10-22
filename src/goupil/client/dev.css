@@ -21,6 +21,12 @@
     text-align: center;
     text-align-last: center;
 }
+@-moz-document url-prefix() {
+    #dev_assets > optgroup {
+        background: DodgerBlue;
+        color: white;
+    }
+}
 
 /* -------------------- Panels -------------------- */
 
