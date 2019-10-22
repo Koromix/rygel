@@ -2,7 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// These globals are initialized below
+// These globals are initialized below or in dev.js
+let app = null;
 let file_manager = null;
 let record_manager = null;
 
