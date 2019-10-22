@@ -6,7 +6,8 @@ let dev_data = new function() {
     let self = this;
 
     this.runTable = async function(table, current_id) {
-        let [records, variables] = await record_manager.loadAll(table);
+        let records = await record_manager.loadAll(table);
+        let variables = await record_manager.listVariables(table);
         let columns = orderColumns(variables);
 
         renderRecords(records, columns, current_id);
@@ -72,7 +73,8 @@ let dev_data = new function() {
         if (!window.XLSX)
             await util.loadScript(`${env.base_url}static/xlsx.core.min.js`);
 
-        let [records, variables] = await record_manager.loadAll(table);
+        let records = await record_manager.loadAll(table);
+        let variables = await record_manager.listVariables(table);
         let columns = orderColumns(variables);
 
         let export_name = `${env.project_key}_${dates.today()}`;
