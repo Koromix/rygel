@@ -85,7 +85,6 @@
 .dev_wip {
     padding: 5px;
     font-size: 2em;
-    color: #24579d;
     text-align: center;
 }
 .dev_wip:before {
