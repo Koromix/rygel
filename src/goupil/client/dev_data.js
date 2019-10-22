@@ -46,22 +46,16 @@ let dev_data = new function() {
                         ${columns.map(col => {
                             let value = record.values[col.key];
 
-                            let tooltip;
-                            let cls;
-                            if (value != null) {
-                                if (Array.isArray(value))
-                                    value = value.join('|');
-
-                                tooltip = value;
-                                cls = `af_record_${col.type}`;
+                            if (value == null) {
+                                return html`<td class="af_record_missing" title="Donnée manquante">NA</td>`;
+                            } else if (Array.isArray(value)) {
+                                let text = value.join('|');
+                                return html`<td title=${text}>${text}</td>`;
+                            } else if (typeof value === 'number') {
+                                return html`<td class="af_record_number" title=${value}>${value}</td>`;
                             } else {
-                                value = 'NA';
-
-                                tooltip = 'Donnée manquante';
-                                cls = `af_record_missing`;
+                                return html`<td title=${value}>${value}</td>`;
                             }
-
-                            return html`<td class=${cls} title=${tooltip}>${value}</td>`;
                         })}
                     </tr>`)}
                 </tbody>

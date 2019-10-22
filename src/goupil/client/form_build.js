@@ -107,7 +107,7 @@ function PageBuilder(data, widgets, variables = []) {
         `);
 
         let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, 'string', label, value, value == null);
+        fillVariableInfo(intf, key, label, value, value == null);
 
         return intf;
     };
@@ -128,7 +128,7 @@ function PageBuilder(data, widgets, variables = []) {
         `);
 
         let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, 'string', label, value, value == null);
+        fillVariableInfo(intf, key, label, value, value == null);
 
         return intf;
     };
@@ -158,7 +158,7 @@ function PageBuilder(data, widgets, variables = []) {
         `);
 
         let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, 'number', label, value, Number.isNaN(value));
+        fillVariableInfo(intf, key, label, value, Number.isNaN(value));
 
         if (value != null &&
                 (options.min !== undefined && value < options.min) ||
@@ -206,7 +206,7 @@ function PageBuilder(data, widgets, variables = []) {
         `);
 
         let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, 'enum', label, value, value == null);
+        fillVariableInfo(intf, key, label, value, value == null);
 
         return intf;
     };
@@ -237,7 +237,7 @@ function PageBuilder(data, widgets, variables = []) {
         `);
 
         let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, 'enum', label, value, value == null);
+        fillVariableInfo(intf, key, label, value, value == null);
 
         return intf;
     };
@@ -289,7 +289,7 @@ function PageBuilder(data, widgets, variables = []) {
         `);
 
         let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, 'enum', label, value, value == null);
+        fillVariableInfo(intf, key, label, value, value == null);
 
         return intf;
     };
@@ -329,7 +329,7 @@ function PageBuilder(data, widgets, variables = []) {
 
         let intf = addWidget(render, options);
         let missing = !value.length && props.some(p => p.value == null);
-        fillVariableInfo(intf, key, 'multi', label, value, missing);
+        fillVariableInfo(intf, key, label, value, missing);
 
         return intf;
     };
@@ -411,7 +411,7 @@ function PageBuilder(data, widgets, variables = []) {
         `);
 
         let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, 'file', label, value, value == null);
+        fillVariableInfo(intf, key, label, value, value == null);
 
         return intf;
     };
@@ -447,8 +447,7 @@ function PageBuilder(data, widgets, variables = []) {
         `);
 
         let intf = addWidget(render, options);
-        let type = options.type || 'string';
-        fillVariableInfo(intf, key, type, label, value);
+        fillVariableInfo(intf, key, label, value, value == null || Number.isNaN(value));
 
         return intf;
     };
@@ -632,13 +631,12 @@ Valid choices include:
         return intf;
     }
 
-    function fillVariableInfo(intf, key, type, label, value, missing) {
+    function fillVariableInfo(intf, key, label, value, missing) {
         if (variables_map[key])
             throw new Error(`Variable '${key}' already exists`);
 
         Object.assign(intf, {
             key: key,
-            type: type,
             label: label,
             value: value,
             missing: missing || intf.options.missing,
