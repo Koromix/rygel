@@ -179,48 +179,46 @@ let dev = new function() {
             show_overview = true;
 
         render(html`
-            <nav id="gp_menu" class="gp_toolbar">
-                ${modes.map(mode =>
-                    html`<button class=${left_panel === mode[0] ? 'active' : ''} @click=${e => toggleLeftPanel(mode[0])}>${mode[1]}</button>`)}
-                ${modes.length ?
-                    html`<button class=${show_overview ? 'active': ''} @click=${e => toggleOverview()}>Aperçu</button>` : ''}
+            ${modes.map(mode =>
+                html`<button class=${left_panel === mode[0] ? 'active' : ''} @click=${e => toggleLeftPanel(mode[0])}>${mode[1]}</button>`)}
+            ${modes.length ?
+                html`<button class=${show_overview ? 'active': ''} @click=${e => toggleOverview()}>Aperçu</button>` : ''}
 
-                <select id="dev_assets" @change=${e => self.go(e.target.value)}>
-                    ${!current_asset ? html`<option>-- Select an asset --</option>` : ''}
-                    ${util.mapRLE(assets, asset => asset.category, (category, offset, len) => {
-                        if (category) {
-                            return html`<optgroup label=${category}>${util.mapRange(offset, offset + len, idx => {
-                                let asset = assets[idx];
-                                return html`<option value=${'/' + asset.key}
-                                                    .selected=${asset === current_asset}>${asset.label}</option>`;
-                            })}</optgroup>`;
-                        } else {
-                            return util.mapRange(offset, offset + len, idx => {
-                                let asset = assets[idx];
-                                return html`<option value=${asset.key}
-                                                    .selected=${asset === current_asset}>${asset.label}</option>`;
-                            });
-                        }
-                    })}
-                </select>
+            <select id="dev_assets" @change=${e => self.go(e.target.value)}>
+                ${!current_asset ? html`<option>-- Select an asset --</option>` : ''}
+                ${util.mapRLE(assets, asset => asset.category, (category, offset, len) => {
+                    if (category) {
+                        return html`<optgroup label=${category}>${util.mapRange(offset, offset + len, idx => {
+                            let asset = assets[idx];
+                            return html`<option value=${'/' + asset.key}
+                                                .selected=${asset === current_asset}>${asset.label}</option>`;
+                        })}</optgroup>`;
+                    } else {
+                        return util.mapRange(offset, offset + len, idx => {
+                            let asset = assets[idx];
+                            return html`<option value=${asset.key}
+                                                .selected=${asset === current_asset}>${asset.label}</option>`;
+                        });
+                    }
+                })}
+            </select>
 
-                <button @click=${showCreateDialog}>Ajouter</button>
-                <button ?disabled=${!current_asset || current_asset.type !== 'blob'}
-                        @click=${e => showDeleteDialog(e, current_asset)}>Supprimer</button>
-                <button @click=${showResetDialog}>Réinitialiser</button>
-            </nav>
+            <button @click=${showCreateDialog}>Ajouter</button>
+            <button ?disabled=${!current_asset || current_asset.type !== 'blob'}
+                    @click=${e => showDeleteDialog(e, current_asset)}>Supprimer</button>
+            <button @click=${showResetDialog}>Réinitialiser</button>
+        `, document.querySelector('#gp_menu'));
 
-            <main>
-                ${left_panel === 'editor' ?
-                    makeEditorElement(show_overview ? 'dev_panel_left' : 'dev_panel_fixed') : ''}
-                ${left_panel === 'data' ?
-                    html`<div id="dev_data" class=${show_overview ? 'dev_panel_left' : 'dev_panel_fixed'}></div>` : ''}
-                ${show_overview ?
-                    html`<div id="dev_overview" class=${left_panel ? 'dev_panel_right' : 'dev_panel_page'}></div>` : ''}
+        render(html`
+            ${left_panel === 'editor' ?
+                makeEditorElement(show_overview ? 'dev_panel_left' : 'dev_panel_fixed') : ''}
+            ${left_panel === 'data' ?
+                html`<div id="dev_data" class=${show_overview ? 'dev_panel_left' : 'dev_panel_fixed'}></div>` : ''}
+            <div id="dev_overview" class=${left_panel ? 'dev_panel_right' : 'dev_panel_page'}
+                 style=${show_overview ? '' : 'display: none;'}></div>
 
-                <div id="dev_log" style="display: none;"></div>
-            </main>
-        `, document.body);
+            <div id="dev_log" style="display: none;"></div>
+        `, document.querySelector('main'));
     }
 
     function toggleLeftPanel(mode) {
