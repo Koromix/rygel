@@ -158,7 +158,7 @@ let dev = new function() {
                 case 'data': { await dev_data.runTable(current_asset.form.key, current_record.id); } break;
             }
 
-            await wrapWithLog(runAsset);
+            await runAssetSafe();
         } else {
             document.title = env.project_key;
             log.error('Asset not available');
@@ -390,7 +390,7 @@ let dev = new function() {
                 if (path === 'main.js')
                     reload_app = true;
 
-                if (await wrapWithLog(runAsset)) {
+                if (await runAssetSafe()) {
                     let file = file_manager.create(path, value);
                     await file_manager.save(file);
                 }
@@ -409,17 +409,46 @@ let dev = new function() {
         }
     }
 
-    async function wrapWithLog(func) {
+    async function runAssetSafe() {
         let log_el = document.querySelector('#dev_log');
-        let page_el = document.querySelector('#dev_overview');
+        let overview_el = document.querySelector('#dev_overview');
 
         try {
-            await func();
+            switch (current_asset.type) {
+                case 'main': {
+                    if (reload_app) {
+                        app = await loadApplication();
+
+                        assets = await listAssets(app);
+                        assets_map = {};
+                        for (let asset of assets)
+                            assets_map[asset.key] = asset;
+
+                        // Old assets must not be used anymore, tell go() to fix current_asset
+                        reload_app = false;
+                        await self.go('main');
+                    }
+
+                    render(html`<div class="dev_wip">Aperçu non disponible pour le moment</div>`,
+                           document.querySelector('#dev_overview'));
+                } break;
+
+                case 'page': {
+                    let script = await loadFileData(current_asset.path);
+                    await dev_form.runPageScript(script, current_record);
+                } break;
+                case 'schedule': { await dev_schedule.run(current_asset.schedule); } break;
+
+                default: {
+                    render(html`<div class="dev_wip">Aperçu non disponible pour le moment</div>`,
+                           document.querySelector('#dev_overview'));
+                } break;
+            }
 
             // Things are OK!
             log_el.innerHTML = '';
             log_el.style.display = 'none';
-            page_el.classList.remove('dev_broken');
+            overview_el.classList.remove('dev_broken');
 
             return true;
         } catch (err) {
@@ -427,42 +456,9 @@ let dev = new function() {
 
             log_el.textContent = `⚠\uFE0E Line ${err_line || '?'}: ${err.message}`;
             log_el.style.display = 'block';
-            page_el.classList.add('dev_broken');
+            overview_el.classList.add('dev_broken');
 
             return false;
-        }
-    }
-
-    async function runAsset() {
-        switch (current_asset.type) {
-            case 'main': {
-                if (reload_app) {
-                    app = await loadApplication();
-
-                    assets = await listAssets(app);
-                    assets_map = {};
-                    for (let asset of assets)
-                        assets_map[asset.key] = asset;
-
-                    // Old assets must not be used anymore, tell go() to fix current_asset
-                    reload_app = false;
-                    await self.go('main');
-                }
-
-                render(html`<div class="dev_wip">Aperçu non disponible pour le moment</div>`,
-                       document.querySelector('#dev_overview'));
-            } break;
-
-            case 'page': {
-                let script = await loadFileData(current_asset.path);
-                await dev_form.runPageScript(script, current_record);
-            } break;
-            case 'schedule': { await dev_schedule.run(current_asset.schedule); } break;
-
-            default: {
-                render(html`<div class="dev_wip">Aperçu non disponible pour le moment</div>`,
-                       document.querySelector('#dev_overview'));
-            } break;
         }
     }
 };
