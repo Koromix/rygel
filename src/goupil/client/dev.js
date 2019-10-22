@@ -22,6 +22,8 @@ let dev = new function() {
     let editor_sessions = new LruMap(32);
     let editor_timer_id;
 
+    let reload_app;
+
     this.init = async function() {
         try {
             app = await loadApplication();
@@ -43,6 +45,8 @@ let dev = new function() {
 
         editor_sessions.clear();
         editor_timer_id = null;
+
+        reload_app = false;
     };
 
     // Can be launched multiple times (e.g. when main.js is edited)
@@ -320,9 +324,8 @@ let dev = new function() {
                         m.save(file);
                     }
                 });
-
-                // Clear buffers first to make sure nothing gets read from them
                 editor_sessions.clear();
+
                 await self.init();
 
                 page.close();
@@ -387,24 +390,10 @@ let dev = new function() {
 
             // The user may have changed document (async + timer)
             if (current_asset && current_asset.path === path) {
-                let success;
-                if (path === 'main.js') {
-                    success = await wrapWithLog(async () => {
-                        app = await loadApplication();
+                if (path === 'main.js')
+                    reload_app = true;
 
-                        assets = await listAssets(app);
-                        assets_map = {};
-                        for (let asset of assets)
-                            assets_map[asset.key] = asset;
-
-                        // Old assets must not be used anymore, tell go() to fix current_asset
-                        await self.go('main');
-                    });
-                } else {
-                    success = await wrapWithLog(runAsset);
-                }
-
-                if (success) {
+                if (await wrapWithLog(runAsset)) {
                     let file = file_manager.create(path, value);
                     await file_manager.save(file);
                 }
@@ -449,14 +438,31 @@ let dev = new function() {
 
     async function runAsset() {
         switch (current_asset.type) {
+            case 'main': {
+                if (reload_app) {
+                    app = await loadApplication();
+
+                    assets = await listAssets(app);
+                    assets_map = {};
+                    for (let asset of assets)
+                        assets_map[asset.key] = asset;
+
+                    // Old assets must not be used anymore, tell go() to fix current_asset
+                    reload_app = false;
+                    await self.go('main');
+                }
+
+                render(html`<div class="dev_wip">Aperçu non disponible pour le moment</div>`,
+                       document.querySelector('#dev_overview'));
+            } break;
+
             case 'page': {
                 let script = await loadFileData(current_asset.path);
                 await dev_form.runPageScript(script, current_record);
             } break;
             case 'schedule': { await dev_schedule.run(current_asset.schedule); } break;
 
-            case 'main': 
-            case 'blob': {
+            default: {
                 render(html`<div class="dev_wip">Aperçu non disponible pour le moment</div>`,
                        document.querySelector('#dev_overview'));
             } break;
