@@ -10,7 +10,7 @@
 namespace RG {
 
 struct Config {
-    const char *project_key = nullptr;
+    const char *app_key = nullptr;
     const char *database_filename = nullptr;
 
     http_Config http;

@@ -71,7 +71,7 @@ let dev_data = new function() {
         let variables = await record_manager.listVariables(table);
         let columns = orderColumns(variables);
 
-        let export_name = `${env.project_key}_${dates.today()}`;
+        let export_name = `${env.app_key}_${dates.today()}`;
         let filename = `export_${export_name}.xlsx`;
 
         let wb = XLSX.utils.book_new();
