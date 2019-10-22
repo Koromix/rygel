@@ -22,7 +22,7 @@ let dev_form = new function() {
         let widgets = [];
 
         let page_builder = new PageBuilder(form_data, widgets);
-        page_builder.decodeKey = decodeFormKey;
+        // page_builder.decodeKey = decodeFormKey;
         page_builder.changeHandler = () => runScript(script);
         page_builder.submitHandler = saveRecordAndReset;
 
