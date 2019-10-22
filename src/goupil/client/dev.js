@@ -2,9 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// These globals are initialized below
-let app = null;
-
 let dev = new function() {
     let self = this;
 
