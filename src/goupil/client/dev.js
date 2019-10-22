@@ -67,7 +67,6 @@ let dev = new function() {
                 case 'data': { await dev_data.runTable(current_asset.form.key, current_record.id); } break;
             }
 
-            // TODO: Deal with unknown type / renderEmpty()
             await wrapWithLog(runAsset);
         } else {
             document.title = env.project_key;
@@ -415,8 +414,7 @@ let dev = new function() {
 
     async function wrapWithLog(func) {
         let log_el = document.querySelector('#dev_log');
-        // We still need to render the form to test it, so create a dummy element!
-        let page_el = document.querySelector('#dev_overview') || document.createElement('div');
+        let page_el = document.querySelector('#dev_overview');
 
         try {
             await func();
@@ -444,8 +442,13 @@ let dev = new function() {
                 let script = await loadFileData(current_asset.path);
                 await dev_form.runPageScript(script, current_record);
             } break;
-
             case 'schedule': { await dev_schedule.run(current_asset.schedule); } break;
+
+            case 'main': 
+            case 'blob': {
+                render(html`<div class="dev_wip">Aperçu non disponible pour le moment</div>`,
+                       document.querySelector('#dev_overview'));
+            } break;
         }
     }
 };
