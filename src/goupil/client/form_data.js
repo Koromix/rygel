@@ -8,4 +8,7 @@ function FormData(values = {}) {
     this.missing_errors = new Set;
     this.sections_state = {};
     this.file_lists = new Map;
+
+    // Storage for user scripts
+    this.memory = {};
 }
