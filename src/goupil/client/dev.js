@@ -16,8 +16,8 @@ let dev = new function() {
 
     let editor_el;
     let editor;
-    let editor_timer_id;
     let editor_sessions = new LruMap(32);
+    let editor_timer_id;
 
     this.init = async function() {
         try {
@@ -156,9 +156,7 @@ let dev = new function() {
                     type: 'blob',
                     key: path,
                     category: 'Fichiers',
-                    label: path,
-
-                    path: path
+                    label: path
                 });
             }
         }
@@ -173,8 +171,8 @@ let dev = new function() {
                 modes.push(['data', 'Données']);
         }
 
-        if (left_panel && modes.length && !modes.find(mode => mode[0] === left_panel))
-            left_panel = modes[0][0] || null;
+        if (left_panel && !modes.find(mode => mode[0] === left_panel))
+            left_panel = modes[0] ? modes[0][0] : null;
         if (!left_panel)
             show_overview = true;
 
