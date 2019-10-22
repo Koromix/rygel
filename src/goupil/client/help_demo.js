@@ -5,8 +5,8 @@
 let help_demo = {
     'main.js':
 `app.form("tuto", form => {
-    form.page("tuto");
-});
+    form.page("tuto")
+})
 `,
 
     'pages/tuto.js':
