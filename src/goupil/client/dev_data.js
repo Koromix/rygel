@@ -10,10 +10,10 @@ let dev_data = new function() {
         let variables = await record_manager.listVariables(table);
         let columns = orderColumns(variables);
 
-        renderRecords(records, columns, current_id);
+        renderRecords(table, records, columns, current_id);
     }
 
-    function renderRecords(records, columns, current_id) {
+    function renderRecords(table, records, columns, current_id) {
         let empty_msg;
         if (!records.length) {
             empty_msg = 'Aucune donnée à afficher';
