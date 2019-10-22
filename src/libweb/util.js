@@ -71,6 +71,18 @@ let util = new function() {
         return !!value && value.constructor === Object;
     }
 
+    this.deepFreeze = function(obj) {
+        Object.freeze(obj);
+
+        for (key in obj) {
+            let value = obj[key];
+            if ((typeof value === 'object' || typeof value === 'function') && !Object.isFrozen(value))
+                self.deepFreeze(value);
+        }
+
+        return obj;
+    };
+
     this.pasteURL = function(url, params = {}, hash = null) {
         for (let key in params) {
             if (params[key] == null)
