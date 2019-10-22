@@ -71,11 +71,6 @@ let util = new function() {
         return !!value && value.constructor === Object;
     }
 
-    this.clearObject = function(obj) {
-        for (let key in obj)
-            delete obj[key];
-    }
-
     this.pasteURL = function(url, params = {}, hash = null) {
         for (let key in params) {
             if (params[key] == null)
