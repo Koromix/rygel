@@ -183,8 +183,8 @@ static void InitRoutes()
                 } else if (TestStr(key, "BASE_URL")) {
                     writer->Write(goupil_config.http.base_url);
                     return true;
-                } else if (TestStr(key, "PROJECT_KEY")) {
-                    writer->Write(goupil_config.project_key);
+                } else if (TestStr(key, "APP_KEY")) {
+                    writer->Write(goupil_config.app_key);
                     return true;
                 } else {
                     return false;
@@ -330,7 +330,7 @@ Options:
         if (!LoadConfig(config_filename, &goupil_config))
             return 1;
     } else if (dev_key) {
-        goupil_config.project_key = dev_key;
+        goupil_config.app_key = dev_key;
     }
 
     // Parse arguments
@@ -355,7 +355,7 @@ Options:
     }
 
     // Check project configuration
-    if (!goupil_config.project_key || !goupil_config.project_key[0]) {
+    if (!goupil_config.app_key || !goupil_config.app_key[0]) {
         LogError("Project key must not be empty");
         return 1;
     }

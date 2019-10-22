@@ -64,7 +64,7 @@ let goupil = new function() {
             log.error(storage_warning);
         }
 
-        let db_name = `goupil_${env.project_key}`;
+        let db_name = `goupil_${env.app_key}`;
         let db = await idb.open(db_name, 9, (db, old_version) => {
             switch (old_version) {
                 case null: {

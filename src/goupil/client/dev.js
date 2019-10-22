@@ -148,9 +148,9 @@ let dev = new function() {
         // Run appropriate module
         if (current_asset) {
             if (current_asset.category) {
-                document.title = `${current_asset.category} :: ${current_asset.label} — ${env.project_key}`;
+                document.title = `${current_asset.category} :: ${current_asset.label} — ${env.app_key}`;
             } else {
-                document.title = `${current_asset.label} — ${env.project_key}`;
+                document.title = `${current_asset.label} — ${env.app_key}`;
             }
 
             switch (left_panel) {
@@ -160,7 +160,7 @@ let dev = new function() {
 
             await runAssetSafe();
         } else {
-            document.title = env.project_key;
+            document.title = env.app_key;
             log.error('Asset not available');
         }
     };

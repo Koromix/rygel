@@ -32,7 +32,7 @@ int RunCreateProfile(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    Span<const char> project_key = {};
+    Span<const char> app_key = {};
     bool demo = false;
     const char *profile_directory = nullptr;
 
@@ -55,7 +55,7 @@ Options:
                 print_usage(stdout);
                 return 0;
             } else if (opt.Test("-k", "--key", OptionType::Value)) {
-                project_key = opt.current_value;
+                app_key = opt.current_value;
             } else if (opt.Test("--demo")) {
                 demo = true;
             } else {
@@ -71,9 +71,9 @@ Options:
         LogError("Profile directory is missing");
         return 1;
     }
-    if (!project_key.len) {
-        project_key = TrimStrRight((Span<const char>)profile_directory, RG_PATH_SEPARATORS);
-        project_key = SplitStrReverseAny(project_key, RG_PATH_SEPARATORS);
+    if (!app_key.len) {
+        app_key = TrimStrRight((Span<const char>)profile_directory, RG_PATH_SEPARATORS);
+        app_key = SplitStrReverseAny(app_key, RG_PATH_SEPARATORS);
     }
 
     if (!MakeDirectory(profile_directory))
@@ -116,7 +116,7 @@ Options:
         files.Append(filename);
 
         StreamWriter st(filename);
-        Print(&st, DefaultConfig, project_key, database_name);
+        Print(&st, DefaultConfig, app_key, database_name);
         if (!st.Close())
             return 1;
     }
