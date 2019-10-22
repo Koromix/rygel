@@ -320,6 +320,9 @@ let dev = new function() {
                         m.save(file);
                     }
                 });
+
+                // Clear buffers first to make sure nothing gets read from them
+                editor_sessions.clear();
                 await self.init();
 
                 page.close();
