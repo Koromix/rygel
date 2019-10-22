@@ -74,12 +74,15 @@ function RecordManager(db) {
         let start_key = table + '_';
         let end_key = table + '`';
 
-        let [records, variables] = await Promise.all([
-            db.loadAll('form_records', start_key, end_key),
-            db.loadAll('form_variables', start_key, end_key)
-        ]);
+        return db.loadAll('form_records', start_key, end_key);
+    };
 
-        return [records, variables];
+    this.listVariables = async function(table) {
+        // Works for ASCII names, which we enforce
+        let start_key = table + '_';
+        let end_key = table + '`';
+
+        return db.loadAll('form_variables', start_key, end_key);
     };
 
     function makeTableKey(table, id) {
