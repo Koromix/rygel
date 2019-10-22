@@ -428,6 +428,8 @@ function PageBuilder(data, widgets, variables = []) {
         key = self.decodeKey(key);
         options = expandOptions(options);
 
+        self.setValue(key, value);
+
         let text = value;
         if (!options.raw && typeof value !== 'string') {
             if (value == null || Number.isNaN(value)) {
