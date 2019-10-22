@@ -2,6 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+// These globals are initialized below
+let app = null;
+
 let dev = new function() {
     let self = this;
 
@@ -21,11 +24,98 @@ let dev = new function() {
 
     this.init = async function() {
         try {
-            await loadApplication();
+            app = await loadApplication();
         } catch (err) {
-            // The user can still fix main.js or reset the project
+            // Empty application, so that the user can still fix main.js or reset everything
+            app = util.deepFreeze(new Application);
         }
+
+        assets = await listAssets(app);
+        assets_map = {};
+        for (let asset of assets)
+            assets_map[asset.key] = asset;
+        current_asset = assets[0];
+
+        current_record = {};
+
+        left_panel = 'editor';
+        show_overview = true;
+
+        editor_sessions.clear();
+        editor_timer_id = null;
     };
+
+    // Can be launched multiple times (e.g. when main.js is edited)
+    async function loadApplication() {
+        let app = new Application;
+        let app_builder = new ApplicationBuilder(app);
+
+        let main_script = await loadFileData('main.js');
+        let func = Function('app', main_script);
+        func(app_builder);
+
+        // Application loaded!
+        return util.deepFreeze(app);
+    }
+
+    async function listAssets(app) {
+        // Always add this one, which we need to edit even if is broken and
+        // the application cannot be loaded.
+        let assets = [{
+            type: 'main',
+            key: 'main',
+            label: 'Script principal',
+
+            path: 'main.js'
+        }];
+
+        // Application assets
+        for (let form of app.forms) {
+            for (let page of form.pages) {
+                assets.push({
+                    type: 'page',
+                    key: `${form.key}/${page.key}`,
+                    category: `Formulaire '${form.key}'`,
+                    label: `Page '${page.key}'`,
+
+                    form: form,
+                    page: page,
+                    path: goupil.makePagePath(page.key)
+                });
+            }
+        }
+        for (let schedule of app.schedules) {
+            assets.push({
+                type: 'schedule',
+                key: schedule.key,
+                category: 'Agendas',
+                label: `Agenda '${schedule.key}'`,
+
+                schedule: schedule
+            });
+        }
+
+        // Unused (by main.js) files
+        try {
+            let paths = await file_manager.list();
+            let known_paths = new Set(assets.map(asset => asset.path));
+
+            for (let path of paths) {
+                if (!known_paths.has(path)) {
+                    assets.push({
+                        type: 'blob',
+                        key: path,
+                        category: 'Fichiers',
+                        label: path
+                    });
+                }
+            }
+        } catch (err) {
+            log.error(`Failed to list files: ${err.message}`);
+        }
+
+        return assets;
+    }
 
     this.go = async function(url = null, args = {}) {
         // Find relevant asset
@@ -73,93 +163,6 @@ let dev = new function() {
             log.error('Asset not available');
         }
     };
-
-    async function loadApplication() {
-        let prev_assets = assets;
-
-        // Main script, it must always be there
-        assets = [{
-            type: 'main',
-            key: 'main',
-            label: 'Script principal',
-
-            path: 'main.js'
-        }];
-
-        try {
-            let main_script = await loadFileData('main.js');
-
-            await listMainAssets(main_script, assets);
-            await listBlobAssets(assets);
-        } catch (err) {
-            if (prev_assets.length)
-                assets = prev_assets;
-
-            throw err;
-        } finally {
-            assets_map = {};
-            for (let asset of assets)
-                assets_map[asset.key] = asset;
-            current_asset = assets[0];
-
-            current_record = {};
-
-            left_panel = 'editor';
-            show_overview = true;
-        }
-    }
-
-    async function listMainAssets(script, assets) {
-        let forms = [];
-        let schedules = [];
-
-        let app_builder = new ApplicationBuilder(forms, schedules);
-
-        let func = Function('app', script);
-        func(app_builder);
-
-        for (let form of forms) {
-            for (let page of form.pages) {
-                assets.push({
-                    type: 'page',
-                    key: `${form.key}/${page.key}`,
-                    category: `Formulaire '${form.key}'`,
-                    label: `Page '${page.key}'`,
-
-                    form: form,
-                    page: page,
-                    path: goupil.makePagePath(page.key)
-                });
-            }
-        }
-
-        for (let schedule of schedules) {
-            assets.push({
-                type: 'schedule',
-                key: schedule.key,
-                category: 'Agendas',
-                label: `Agenda '${schedule.key}'`,
-
-                schedule: schedule
-            });
-        }
-    }
-
-    async function listBlobAssets(assets) {
-        let paths = await file_manager.list();
-        let known_paths = new Set(assets.map(asset => asset.path));
-
-        for (let path of paths) {
-            if (!known_paths.has(path)) {
-                assets.push({
-                    type: 'blob',
-                    key: path,
-                    category: 'Fichiers',
-                    label: path
-                });
-            }
-        }
-    }
 
     function renderDev() {
         let modes = [];
@@ -317,9 +320,7 @@ let dev = new function() {
                         m.save(file);
                     }
                 });
-
                 await self.init();
-                editor_sessions.clear();
 
                 page.close();
                 self.go();
@@ -386,8 +387,15 @@ let dev = new function() {
                 let success;
                 if (path === 'main.js') {
                     success = await wrapWithLog(async () => {
-                        await loadApplication();
-                        await self.go();
+                        app = await loadApplication();
+
+                        assets = await listAssets(app);
+                        assets_map = {};
+                        for (let asset of assets)
+                            assets_map[asset.key] = asset;
+
+                        // Old assets must not be used anymore, tell go() to fix current_asset
+                        await self.go('main');
                     });
                 } else {
                     success = await wrapWithLog(runAsset);
