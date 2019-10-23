@@ -143,6 +143,14 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames,
         Fmt(out_buf, " -l%1", lib);
     }
 
+    // Platform libraries
+#if defined(_WIN32)
+#elif defined(__APPLE__)
+    Fmt(out_buf, " -ldl -pthread");
+#else
+    Fmt(out_buf, " -lrt -ldl -pthread");
+#endif
+
     Fmt(out_buf, " -o \"%1\"", dest_filename);
 
     return true;
@@ -252,18 +260,17 @@ public:
             Fmt(&buf, " -g");
         }
 
-        // Objects and libraries
-        if (!AppendGccLinkArguments(obj_filenames, libraries, dest_filename, &buf))
-            return (const char *)nullptr;
-
         // Platform flags
 #if defined(_WIN32)
         Fmt(&buf, " -fuse-ld=lld");
 #elif defined(__APPLE__)
-        Fmt(&buf, " -ldl -pthread");
 #else
-        Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now");
+        Fmt(&buf, " -Wl,-z,relro,-z,now");
 #endif
+
+        // Objects and libraries
+        if (!AppendGccLinkArguments(obj_filenames, libraries, dest_filename, &buf))
+            return (const char *)nullptr;
 
         return (const char *)buf.Leak().ptr;
     }
@@ -348,21 +355,20 @@ public:
             Fmt(&buf, " -g");
         }
 
-        // Objects and libraries
-        if (!AppendGccLinkArguments(obj_filenames, libraries, dest_filename, &buf))
-            return (const char *)nullptr;
-
         // Platform flags
 #if defined(_WIN32)
         Fmt(&buf, " -Wl,--dynamicbase -Wl,--nxcompat -Wl,--high-entropy-va");
 #elif defined(__APPLE__)
-        Fmt(&buf, " -ldl -pthread");
 #else
-        Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now");
+        Fmt(&buf, " -Wl,-z,relro,-z,now");
         if (link_type == LinkType::Executable) {
             Fmt(&buf, " -pie");
         }
 #endif
+
+        // Objects and libraries
+        if (!AppendGccLinkArguments(obj_filenames, libraries, dest_filename, &buf))
+            return (const char *)nullptr;
 
         return (const char *)buf.Leak().ptr;
     }
