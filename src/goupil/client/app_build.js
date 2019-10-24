@@ -7,18 +7,22 @@ function ApplicationBuilder(app) {
 
     let keys_set = new Set;
 
-    this.form = function(key, func) {
-        let pages = [];
-
-        let form_builder = new FormBuilder(pages);
-        func(form_builder);
-
+    this.form = function(key, func = null) {
         if (!key)
             throw new Error('Empty keys are not allowed');
         if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
             throw new Error('Allowed key characters: a-z, _ and 0-9 (not as first character)');
         if (keys_set.has(key))
             throw new Error(`Asset '${key}' already exists`);
+
+        let pages = [];
+
+        let form_builder = new FormBuilder(pages);
+        if (func) {
+            func(form_builder);
+        } else {
+            form_builder.page(key);
+        }
 
         let form = {
             key: key,
