@@ -37,7 +37,7 @@ let dev = new function() {
 
         current_record = {};
 
-        left_panel = 'editor';
+        left_panel = null;
         show_overview = true;
 
         editor_sessions.clear();
