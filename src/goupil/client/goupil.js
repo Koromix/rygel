@@ -119,7 +119,7 @@ let goupil = new function() {
 
     this.listenToServerEvent = function(event, func) {
         if (!event_src) {
-            event_src = new EventSource(`${env.base_url}api/events`);
+            event_src = new EventSource(`${env.base_url}api/events.json`);
             event_src.onerror = e => event_src = null;
         }
 
