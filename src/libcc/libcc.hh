@@ -3456,6 +3456,8 @@ public:
 
     void PushLogHandler() { reader.PushLogHandler(); }
 
+    static bool ParseBoolValue(Span<const char> value, bool *out_value);
+
 private:
     LineType FindNextLine(IniProperty *out_prop);
 };

@@ -3747,6 +3747,20 @@ bool IniParser::NextInSection(IniProperty *out_prop)
     return type == LineType::KeyValue;
 }
 
+bool IniParser::ParseBoolValue(Span<const char> value, bool *out_value)
+{
+    if (value == "1" || value == "On" || value == "Y") {
+        *out_value = true;
+        return true;
+    } else if (value == "0" || value == "Off" || value == "N") {
+        *out_value = false;
+        return true;
+    } else {
+        LogError("Invalid boolean value '%1'", value);
+        return false;
+    }
+}
+
 // ------------------------------------------------------------------------
 // Assets
 // ------------------------------------------------------------------------
