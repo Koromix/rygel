@@ -169,7 +169,7 @@ let dev = new function() {
         let modes = [];
         if (current_asset) {
             if (current_asset.path)
-                modes.push(['editor', 'Editeur']);
+                modes.push(['editor', 'Éditeur']);
             if (current_asset.form)
                 modes.push(['data', 'Données']);
         }
