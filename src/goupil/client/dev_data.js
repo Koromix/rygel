@@ -187,9 +187,9 @@ let dev_data = new function() {
 
     function handleEditClick(e, record, current_id) {
         if (record.id !== current_id) {
-            dev.go(null, {id: record.id});
+            dev.run(null, {id: record.id});
         } else {
-            dev.go(null, {id: null});
+            dev.run(null, {id: null});
         }
     }
 
@@ -201,9 +201,9 @@ let dev_data = new function() {
                 await record_manager.delete(record.table, record.id);
 
                 if (record.id === current_id) {
-                    dev.go(null, {id: null});
+                    dev.run(null, {id: null});
                 } else {
-                    dev.go();
+                    dev.run();
                 }
                 page.close();
             };

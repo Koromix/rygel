@@ -89,7 +89,7 @@ let dev_form = new function() {
         await record_manager.save(current_record, variables);
         entry.success('Données enregistrées !');
 
-        dev.go(null, {id: null});
+        dev.run(null, {id: null});
         // TODO: Give focus to first widget
         window.scrollTo(0, 0);
     }
