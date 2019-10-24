@@ -66,6 +66,36 @@ static std::atomic_bool push_run = true;
 static std::atomic<PushContext *> push_head;
 static std::atomic_int push_count;
 
+static void ProduceManifest(const http_RequestInfo &request, http_IO *io)
+{
+    http_JsonPageBuilder json(request.compression_type);
+
+    json.StartObject();
+    json.Key("short_name"); json.String("goupil");
+    json.Key("name"); json.String("goupil");
+    json.Key("icons"); json.StartArray();
+    json.StartObject();
+        json.Key("src"); json.String("static/fox192.png");
+        json.Key("type"); json.String("image/png");
+        json.Key("sizes"); json.String("192x192");
+    json.EndObject();
+    json.StartObject();
+        json.Key("src"); json.String("static/fox512.png");
+        json.Key("type"); json.String("image/png");
+        json.Key("sizes"); json.String("512x512");
+    json.EndObject();
+    json.EndArray();
+    json.Key("start_url"); json.String(goupil_config.http.base_url);
+    json.Key("display"); json.String("standalone");
+    json.Key("scope"); json.String(goupil_config.http.base_url);
+    json.Key("background_color"); json.String("#24579d");
+    json.Key("theme_color"); json.String("#24579d");
+    json.EndObject();
+
+    io->flags |= (int)http_IO::Flag::EnableCache;
+    return json.Finish(io);
+}
+
 static void PushEvents(unsigned int events)
 {
     static std::mutex push_mutex;
@@ -186,10 +216,15 @@ static void InitRoutes()
                 } else if (TestStr(key, "APP_KEY")) {
                     writer->Write(goupil_config.app_key);
                     return true;
+                } else if (TestStr(key, "ENABLE_PWA")) {
+                    writer->Write(goupil_config.enable_pwa ? "true" : "false");
+                    return true;
                 } else {
                     return false;
                 }
             });
+        } else if (TestStr(asset.name, "pwa.js")) {
+            add_asset_route("GET", "/pwa.js", asset);
         } else {
             const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
             add_asset_route("GET", url, asset);
@@ -201,6 +236,7 @@ static void InitRoutes()
     add_asset_route("GET", "/", html);
 
     // API
+    add_function_route("GET", "/manifest.json", ProduceManifest);
     add_function_route("GET", "/api/events.json", ProduceEvents);
     add_function_route("GET", "/api/schedule/resources.json", ProduceScheduleResources);
     add_function_route("GET", "/api/schedule/meetings.json", ProduceScheduleMeetings);

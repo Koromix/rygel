@@ -16,8 +16,11 @@
 namespace RG {
 
 static const char *const DefaultConfig =
-R"([Data]
-ProjectKey = %1
+R"([Application]
+Key = %1
+# PWA = Off
+
+[Data]
 DatabaseFile = %2
 
 # [HTTP]

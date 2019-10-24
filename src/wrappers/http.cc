@@ -318,13 +318,13 @@ void http_IO::AttachResponse(int new_code, MHD_Response *new_response)
     response = new_response;
 }
 
-void http_IO::AttachText(int code, Span<const char> str)
+void http_IO::AttachText(int code, Span<const char> str, const char *mime_type)
 {
     MHD_Response *response =
         MHD_create_response_from_buffer(str.len, (void *)str.ptr, MHD_RESPMEM_PERSISTENT);
 
     AttachResponse(code, response);
-    AddHeader("Content-Type", "text/plain");
+    AddHeader("Content-Type", mime_type);
 }
 
 bool http_IO::AttachBinary(int code, Span<const uint8_t> data, const char *mime_type,
@@ -491,7 +491,9 @@ void http_IO::Resume()
 
 const char *http_GetMimeType(Span<const char> extension)
 {
-    if (extension == ".css") {
+    if (extension == ".txt") {
+        return "text/plain";
+    } else if (extension == ".css") {
         return "text/css";
     } else if (extension == ".html") {
         return "text/html";
@@ -511,6 +513,10 @@ const char *http_GetMimeType(Span<const char> extension)
         return "font/woff";
     } else if (extension == ".woff2") {
         return "font/woff2";
+    } else if (extension == ".manifest") {
+        return "application/manifest+json";
+    } else if (extension == "") {
+        return "application/octet-stream";
     } else {
         LogError("Unknown MIME type for extension '%1'", extension);
         return "application/octet-stream";

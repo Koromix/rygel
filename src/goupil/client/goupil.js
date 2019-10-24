@@ -22,6 +22,7 @@ let goupil = new function() {
     async function initGoupil() {
         log.pushHandler(log.notifyHandler);
         initNavigation();
+        initWebApp();
 
         let db = await openDatabase();
         file_manager = new FileManager(db);
@@ -46,6 +47,11 @@ let goupil = new function() {
             self.go(href);
             e.preventDefault();
         });
+    }
+
+    function initWebApp() {
+        if (env.enable_pwa)
+            navigator.serviceWorker.register(`${env.base_url}pwa.js`);
     }
 
     async function openDatabase() {

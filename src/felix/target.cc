@@ -211,14 +211,7 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
                     }
 
                     if (prop.key == "EnableByDefault") {
-                        if (prop.value == "1" || prop.value == "On" || prop.value == "Y") {
-                            target_config.enable_by_default = true;
-                        } else if (prop.value == "0" || prop.value == "Off" || prop.value == "N") {
-                            target_config.enable_by_default = false;
-                        } else {
-                            LogError("Invalid EnableByDefault value '%1'", prop.value);
-                            valid = false;
-                        }
+                        valid &= IniParser::ParseBoolValue(prop.value, &target_config.enable_by_default);
                     } else if (prop.key == "SourceDirectory") {
                         valid &= AppendNormalizedPath(prop.value,
                                                       &set.str_alloc, &target_config.src_file_set.directories);
