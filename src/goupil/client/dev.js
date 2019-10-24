@@ -32,7 +32,7 @@ let dev = new function() {
         assets = await listAssets(app);
         assets_map = {};
         for (let asset of assets)
-            assets_map[asset.key] = asset;
+            assets_map[asset.route] = asset;
         current_asset = assets[0];
 
         current_record = {};
@@ -64,7 +64,7 @@ let dev = new function() {
         // the application cannot be loaded.
         let assets = [{
             type: 'main',
-            key: 'main',
+            route: env.base_url,
             label: 'Script principal',
 
             path: 'main.js'
@@ -75,7 +75,7 @@ let dev = new function() {
             for (let page of form.pages) {
                 assets.push({
                     type: 'page',
-                    key: `${form.key}/${page.key}`,
+                    route: `${env.base_url}${form.key}/${page.key}/`,
                     category: `Formulaire '${form.key}'`,
                     label: `Page '${page.key}'`,
 
@@ -88,7 +88,7 @@ let dev = new function() {
         for (let schedule of app.schedules) {
             assets.push({
                 type: 'schedule',
-                key: schedule.key,
+                route: `${env.base_url}${schedule.key}/`,
                 category: 'Agendas',
                 label: `Agenda '${schedule.key}'`,
 
@@ -105,7 +105,7 @@ let dev = new function() {
                 if (!known_paths.has(path)) {
                     assets.push({
                         type: 'blob',
-                        key: path,
+                        route: `${env.base_url}${path}`,
                         category: 'Fichiers',
                         label: path
                     });
@@ -118,13 +118,12 @@ let dev = new function() {
         return assets;
     }
 
-    this.go = async function(url = null, args = {}) {
+    this.run = async function(url = null, args = {}) {
         // Find relevant asset
         if (url) {
-            url = new URL(url, window.location.href);
-
-            let path = url.pathname.substr(env.base_url.length);
-            current_asset = path ? assets_map[path] : assets[0];
+            current_asset = assets_map[url];
+            if (!current_asset && !url.endsWith('/'))
+                current_asset = assets_map[url + '/'];
         }
 
         // Load record (if needed)
@@ -165,6 +164,10 @@ let dev = new function() {
         }
     };
 
+    this.makeURL = function() {
+        return current_asset ? current_asset.route : null;
+    };
+
     function renderDev() {
         let modes = [];
         if (current_asset) {
@@ -185,19 +188,19 @@ let dev = new function() {
             ${modes.length ?
                 html`<button class=${show_overview ? 'active': ''} @click=${e => toggleOverview()}>Aperçu</button>` : ''}
 
-            <select id="dev_assets" @change=${e => self.go(e.target.value)}>
+            <select id="dev_assets" @change=${e => goupil.go(e.target.value)}>
                 ${!current_asset ? html`<option>-- Select an asset --</option>` : ''}
                 ${util.mapRLE(assets, asset => asset.category, (category, offset, len) => {
                     if (category) {
                         return html`<optgroup label=${category}>${util.mapRange(offset, offset + len, idx => {
                             let asset = assets[idx];
-                            return html`<option value=${'/' + asset.key}
+                            return html`<option value=${asset.route}
                                                 .selected=${asset === current_asset}>${asset.label}</option>`;
                         })}</optgroup>`;
                     } else {
                         return util.mapRange(offset, offset + len, idx => {
                             let asset = assets[idx];
-                            return html`<option value=${asset.key}
+                            return html`<option value=${asset.route}
                                                 .selected=${asset === current_asset}>${asset.label}</option>`;
                         });
                     }
@@ -230,7 +233,7 @@ let dev = new function() {
             show_overview = true;
         }
 
-        self.go();
+        goupil.go();
     }
 
     function toggleOverview() {
@@ -238,7 +241,7 @@ let dev = new function() {
             left_panel = 'editor';
         show_overview = !show_overview;
 
-        self.go();
+        goupil.go();
     }
 
     function showCreateDialog(e) {
@@ -265,17 +268,17 @@ let dev = new function() {
 
                 let asset = {
                     type: 'blob',
-                    key: path.value,
+                    route: `${env.base_url}${path.value}`,
                     category: 'Fichiers',
                     label: path.value,
 
                     path: path.value
                 };
                 assets.push(asset);
-                assets_map[asset.key] = asset;
+                assets_map[asset.route] = asset;
 
                 page.close();
-                self.go(asset.key);
+                goupil.go(asset.route);
             };
             page.buttons(page.buttons.std.ok_cancel('Créer'));
         });
@@ -290,16 +293,16 @@ let dev = new function() {
                     await file_manager.delete(asset.path);
 
                 // Remove from assets array and map
-                let asset_idx = assets.findIndex(it => it.key === asset.key);
+                let asset_idx = assets.findIndex(it => it.route === asset.route);
                 assets.splice(asset_idx, 1);
-                delete assets_map[asset.key];
+                delete assets_map[asset.route];
 
                 page.close();
                 if (asset === current_asset) {
                     let new_asset = assets[Math.max(0, asset_idx - 1)];
-                    self.go(new_asset ? new_asset.key : null);
+                    goupil.go(new_asset ? new_asset.route : null);
                 } else {
-                    self.go();
+                    goupil.go();
                 }
             };
             page.buttons(page.buttons.std.ok_cancel('Supprimer'));
@@ -326,7 +329,7 @@ let dev = new function() {
                 await self.init();
 
                 page.close();
-                self.go();
+                goupil.go();
             };
             page.buttons(page.buttons.std.ok_cancel('Réinitialiser'));
         });
@@ -422,11 +425,11 @@ let dev = new function() {
                         assets = await listAssets(app);
                         assets_map = {};
                         for (let asset of assets)
-                            assets_map[asset.key] = asset;
+                            assets_map[asset.route] = asset;
 
                         // Old assets must not be used anymore, tell go() to fix current_asset
                         reload_app = false;
-                        await self.go('main');
+                        await goupil.go(env.base_url);
                     }
 
                     render(html`<div class="dev_wip">Aperçu non disponible pour le moment</div>`,

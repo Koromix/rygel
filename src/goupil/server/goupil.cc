@@ -240,8 +240,12 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     // Find appropriate route
     Route *route = routes.Find(request.url);
     if (!route || !TestStr(route->method, request.method)) {
-        io->AttachError(404);
-        return;
+        if (TestStr(request.method, "GET") && !GetPathExtension(request.url).len) {
+            route = routes.Find("/");
+        } else {
+            io->AttachError(404);
+            return;
+        }
     }
 
     // Execute route
