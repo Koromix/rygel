@@ -6,11 +6,11 @@ let dev_form = new function() {
     let self = this;
 
     let current_record;
-    let form_data;
+    let form;
 
     this.runPageScript = async function(script, record) {
         if (record !== current_record) {
-            form_data = new FormData(record.values);
+            form = new Form(record.values);
             current_record = record;
         }
 
@@ -21,14 +21,14 @@ let dev_form = new function() {
     function runScript(script) {
         let widgets = [];
 
-        let page_builder = new PageBuilder(form_data, widgets);
+        let page_builder = new PageBuilder(form, widgets);
         // page_builder.decodeKey = decodeFormKey;
         page_builder.changeHandler = () => runScript(script);
         page_builder.submitHandler = saveRecordAndReset;
 
         // Execute user script
-        let func = Function('page', 'form', 'memory', script);
-        func(page_builder, page_builder, form_data.memory);
+        let func = Function('form', 'page', 'memory', script);
+        func(page_builder, page_builder, form.memory);
 
         // Render widgets (even if overview is disabled)
         let page_el = document.querySelector('#dev_overview') || document.createElement('div');
@@ -82,7 +82,7 @@ let dev_form = new function() {
         return Object.freeze(key);
     }
 
-    async function saveRecordAndReset(values, variables) {
+    async function saveRecordAndReset(form, variables) {
         let entry = new log.Entry();
         entry.progress('Enregistrement en cours');
 

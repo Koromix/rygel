@@ -11,7 +11,7 @@ let popup = new function() {
 
     let popup_el;
     let popup_builder;
-    let popup_state;
+    let popup_form;
     let popup_timer;
 
     this.form = function(e, func) {
@@ -25,7 +25,7 @@ let popup = new function() {
 
         let widgets = [];
 
-        popup_builder = new PageBuilder(popup_state, widgets);
+        popup_builder = new PageBuilder(popup_form, widgets);
         popup_builder.changeHandler = () => openPopup(e, func);
         popup_builder.close = closePopup;
         popup_builder.pushOptions({missingMode: 'disable'});
@@ -129,7 +129,7 @@ let popup = new function() {
     }
 
     function closePopup() {
-        popup_state = new FormData;
+        popup_form = new Form;
         popup_builder = null;
 
         clearTimeout(popup_timer);
