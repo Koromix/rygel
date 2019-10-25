@@ -10,7 +10,7 @@ let dev_form = new function() {
 
     this.runPageScript = async function(script, record) {
         if (record !== current_record) {
-            form = new Form(record.values);
+            form = new FormInstance(record.values);
             current_record = record;
         }
 

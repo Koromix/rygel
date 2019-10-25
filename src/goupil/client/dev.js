@@ -26,7 +26,7 @@ let dev = new function() {
             app = await loadApplication();
         } catch (err) {
             // Empty application, so that the user can still fix main.js or reset everything
-            app = util.deepFreeze(new Application);
+            app = util.deepFreeze(new ApplicationInfo);
         }
 
         assets = await listAssets(app);
@@ -48,7 +48,7 @@ let dev = new function() {
 
     // Can be launched multiple times (e.g. when main.js is edited)
     async function loadApplication() {
-        let app = new Application;
+        let app = new ApplicationInfo;
         let app_builder = new ApplicationBuilder(app);
 
         let main_script = await loadFileData('main.js');
