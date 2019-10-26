@@ -129,7 +129,7 @@ let popup = new function() {
     }
 
     function closePopup() {
-        popup_form = new FormInstance;
+        popup_form = new FormExecutor;
         popup_builder = null;
 
         clearTimeout(popup_timer);
