@@ -365,7 +365,7 @@ let dev = new function() {
 
             editor.setTheme('ace/theme/monokai');
             editor.setShowPrintMargin(false);
-            editor.setFontSize(12);
+            editor.setFontSize(13);
         }
 
         let session = editor_sessions.get(current_asset.path);
