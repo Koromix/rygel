@@ -22,6 +22,9 @@ let dev = new function() {
     let reload_app;
 
     this.init = async function() {
+        if (env.enable_pwa)
+            navigator.serviceWorker.register(`${env.base_url}sw.js`);
+
         try {
             app = await loadApplication();
         } catch (err) {
