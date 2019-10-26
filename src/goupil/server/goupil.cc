@@ -15,7 +15,6 @@ namespace RG {
 struct Route {
     enum class Type {
         Asset,
-        Redirect,
         Function
     };
 
@@ -299,15 +298,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             if (route->u.st.asset.source_map) {
                 io->AddHeader("SourceMap", route->u.st.asset.source_map);
             }
-        } break;
-
-        case Route::Type::Redirect: {
-            MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-            io->AddHeader("Location", route->u.redirect.location);
-            io->AttachResponse(301, response);
-
-            // Avoid cache headers
-            return;
         } break;
 
         case Route::Type::Function: {
