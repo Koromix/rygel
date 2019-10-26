@@ -2,7 +2,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-const {render, html, svg} = lithtml;
+if (typeof lithtml !== 'undefined') {
+    window.render = lithtml.render;
+    window.html = lithtml.html;
+    window.svg = lithtml.svg;
+}
 
 // ------------------------------------------------------------------------
 // Utility
@@ -340,7 +344,7 @@ let log = new function() {
 
     // Show to user
     this.notifyHandler = function(action, entry) {
-        if (entry.type !== 'debug') {
+        if (typeof lithtml !== 'undefined' && entry.type !== 'debug') {
             switch (action) {
                 case 'open': {
                     entries.unshift(entry);
