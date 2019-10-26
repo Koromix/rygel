@@ -102,10 +102,7 @@
     table-layout: fixed;
 }
 
-.dev_records thead {
-    height: 2.5em;
-    background: #ddd;
-}
+.dev_records thead { background: #ddd; }
 .dev_head_actions { width: 2.5em; }
 
 .dev_records tbody tr:nth-child(2n + 1) { background: #efefef; }

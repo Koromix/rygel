@@ -30,7 +30,7 @@ let dev_data = new function() {
                             ${columns.length ?
                                 html`<button class="dev_excel" @click=${e => exportToExcel(table)}></button>` : ''}
                         </th>
-                        ${!columns.length ? html`<th></th>` : ''}
+                        ${!columns.length ? html`<th>&nbsp;</th>` : ''}
                         ${columns.map(col => html`<th class="dev_head_variable">${col.key}</th>`)}
                     </tr>
                 </thead>
