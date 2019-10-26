@@ -23,21 +23,21 @@ let dev_data = new function() {
         }
 
         render(html`
-            <table class="af_records" style=${`min-width: ${30 + 60 * columns.length}px`}>
+            <table class="dev_records" style=${`min-width: ${30 + 60 * columns.length}px`}>
                 <thead>
                     <tr>
-                        <th class="af_head_actions">
+                        <th class="dev_head_actions">
                             ${columns.length ?
-                                html`<button class="af_excel" @click=${e => exportToExcel(table)}></button>` : ''}
+                                html`<button class="dev_excel" @click=${e => exportToExcel(table)}></button>` : ''}
                         </th>
                         ${!columns.length ? html`<th></th>` : ''}
-                        ${columns.map(col => html`<th class="af_head_variable">${col.key}</th>`)}
+                        ${columns.map(col => html`<th class="dev_head_variable">${col.key}</th>`)}
                     </tr>
                 </thead>
                 <tbody>
                     ${empty_msg ?
                         html`<tr><td colspan=${1 + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : ''}
-                    ${records.map(record => html`<tr class=${record.id === current_id ? 'af_row_current' : ''}>
+                    ${records.map(record => html`<tr class=${record.id === current_id ? 'dev_row_current' : ''}>
                         <th>
                             <a href="#" @click=${e => { handleEditClick(e, record, current_id); e.preventDefault(); }}>🔍\uFE0E</a>
                             <a href="#" @click=${e => { showDeleteDialog(e, record, current_id); e.preventDefault(); }}>✕</a>
@@ -47,12 +47,12 @@ let dev_data = new function() {
                             let value = record.values[col.key];
 
                             if (value == null) {
-                                return html`<td class="af_record_missing" title="Donnée manquante">NA</td>`;
+                                return html`<td class="dev_record_missing" title="Donnée manquante">NA</td>`;
                             } else if (Array.isArray(value)) {
                                 let text = value.join('|');
                                 return html`<td title=${text}>${text}</td>`;
                             } else if (typeof value === 'number') {
-                                return html`<td class="af_record_number" title=${value}>${value}</td>`;
+                                return html`<td class="dev_record_number" title=${value}>${value}</td>`;
                             } else {
                                 return html`<td title=${value}>${value}</td>`;
                             }
