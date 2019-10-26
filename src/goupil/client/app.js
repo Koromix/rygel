@@ -10,14 +10,16 @@ function ApplicationInfo() {
 function ApplicationBuilder(app) {
     let self = this;
 
-    let keys_set = new Set;
+    let used_keys = new Set;
+    let forms_map = {};
+    let used_links = new Set;
 
     this.form = function(key, func = null) {
         if (!key)
             throw new Error('Empty keys are not allowed');
         if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
             throw new Error('Allowed key characters: a-z, _ and 0-9 (not as first character)');
-        if (keys_set.has(key))
+        if (used_keys.has(key))
             throw new Error(`Asset '${key}' already exists`);
 
         let form = new FormInfo(key);
@@ -28,18 +30,54 @@ function ApplicationBuilder(app) {
         } else {
             form_builder.page(key);
         }
-        util.deepFreeze(form);
 
         app.forms.push(form);
-        keys_set.add(key);
+        forms_map[key] = form;
+        used_keys.add(key);
     };
+
+    this.link = function(key1, key2) {
+        let [form1, form2] = findLinkForms(key1, key2);
+
+        form1.links.push(form2);
+        form2.links.push(form1);
+    };
+
+    this.linkMany = function(key1, key2) {
+        let [form1, form2] = findLinkForms(key1, key2);
+
+        // TODO: Handle the reverse link (one-to-many)
+        form2.links.push(form1);
+    };
+
+    function findLinkForms(key1, key2) {
+        if (!key1 || !key2)
+            throw new Error('Form key is missing');
+        if (key1 === key2)
+            throw new Error(`Cannot link form '${key1}' to itself`);
+
+        if (key1 > key2)
+            [key1, key2] = [key2, key1];
+        if (used_links.has(`${key1}::${key2}`))
+            throw new Error(`There is already a link between '${key1}' and '${key2}'`);
+
+        let form1 = forms_map[key1];
+        let form2 = forms_map[key2];
+        if (!form1)
+            throw new Error(`Form '${key1}' does not exist`);
+        if (!form2)
+            throw new Error(`Form '${key2}' does not exist`);
+
+        used_links.add(`${key1}::${key2}`);
+        return [form1, form2];
+    }
 
     this.schedule = function(key) {
         if (!key)
             throw new Error('Empty keys are not allowed');
         if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
             throw new Error('Allowed key characters: a-z, _ and 0-9 (not as first character)');
-        if (keys_set.has(key))
+        if (used_keys.has(key))
             throw new Error(`Asset '${key}' already exists`);
 
         let schedule = Object.freeze({
@@ -47,6 +85,6 @@ function ApplicationBuilder(app) {
         });
 
         app.schedules.push(schedule);
-        keys_set.add(key);
+        used_keys.add(key);
     };
 }

@@ -5,19 +5,20 @@
 function FormInfo(key) {
     this.key = key;
     this.pages = [];
+    this.links = [];
 }
 
 function FormBuilder(form) {
     let self = this;
 
-    let keys_set = new Set;
+    let used_keys = new Set;
 
     this.page = function(key) {
         if (!key)
             throw new Error('Empty keys are not allowed');
         if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
             throw new Error('Allowed key characters: a-z, _ and 0-9 (not as first character)');
-        if (keys_set.has(key))
+        if (used_keys.has(key))
             throw new Error(`Page '${key}' is already used in this form`);
 
         let page = Object.freeze({
@@ -25,6 +26,6 @@ function FormBuilder(form) {
         });
 
         form.pages.push(page);
-        keys_set.add(key);
+        used_keys.add(key);
     };
 }
