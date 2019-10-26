@@ -48,37 +48,41 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
     let url = new URL(e.request.url);
 
-    if (e.request.method === 'GET' && url.pathname.startsWith(env.base_url)) {
+    if (e.request.method === 'GET' && url.pathname.startsWith(`${env.base_url}app/`)) {
         e.respondWith(async function() {
-            // Try user assets first
-            {
-                let db_name = `goupil_${env.app_key}`;
-                let db = await idb.open(db_name);
+            let db_name = `goupil_${env.app_key}`;
+            let db = await idb.open(db_name);
 
-                let file_path = url.pathname.substr(env.base_url.length);
-                let file = await db.load('files', file_path);
+            let file_path = url.pathname.substr(env.base_url.length);
+            let data = await db.load('files', file_path);
 
-                if (file)
-                    return new Response(file);
+            if (data) {
+                return new Response(data);
+            } else {
+                return new Response('Error 404: Asset does not exist', {
+                    status: 404,
+                    statusText: 'Not found'
+                });
             }
-
-            // Try cached responses
+        }());
+    } else if (e.request.method === 'GET' && url.pathname.startsWith(env.base_url)) {
+        e.respondWith(async function() {
+            let response;
             {
                 let name = url.pathname.substr(url.pathname.lastIndexOf('/') + 1);
 
-                let response;
                 if (name.lastIndexOf('.') > 0) {
                     response = await caches.match(e.request);
                 } else {
                     // Serve extension-less paths with goupil.html, just like the server does
                     response = await caches.match('/');
                 }
-
-                if (response)
-                    return response;
             }
 
-            return await fetch(e.request);
+            if (!response)
+                response = await fetch(e.request);
+
+            return response;
         }());
     } else {
         e.respondWith(fetch(e.request));
