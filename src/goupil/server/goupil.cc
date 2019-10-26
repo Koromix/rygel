@@ -87,7 +87,7 @@ static void ProduceManifest(const http_RequestInfo &request, http_IO *io)
     json.Key("start_url"); json.String(goupil_config.http.base_url);
     json.Key("display"); json.String("standalone");
     json.Key("scope"); json.String(goupil_config.http.base_url);
-    json.Key("background_color"); json.String("#24579d");
+    json.Key("background_color"); json.String("#f8f8f8");
     json.Key("theme_color"); json.String("#24579d");
     json.EndObject();
 
