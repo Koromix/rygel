@@ -279,8 +279,9 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     // Find appropriate route
     Route *route = routes.Find(request.url);
     if (!route || !TestStr(route->method, request.method)) {
-        if (TestStr(request.method, "GET") && !GetPathExtension(request.url).len) {
+        if (TestStr(request.method, "GET") && !strncmp(request.url, "/dev/", 5)) {
             route = routes.Find("/");
+            RG_ASSERT(route);
         } else {
             io->AttachError(404);
             return;
