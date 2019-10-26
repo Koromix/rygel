@@ -22,7 +22,7 @@ let dev = new function() {
     let reload_app;
 
     this.init = async function() {
-        navigator.serviceWorker.register(`${env.base_url}sw.js`);
+        navigator.serviceWorker.register(`${env.base_url}sw.pk.js`);
 
         try {
             app = await loadApplication();

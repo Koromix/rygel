@@ -236,9 +236,9 @@ static void InitRoutes()
         if (TestStr(asset.name, "goupil.html")) {
             AssetInfo asset2 = PatchGoupilVariables(asset, &routes_alloc);
             add_asset_route("GET", "/", asset2);
-        } else if (TestStr(asset.name, "sw.js")) {
+        } else if (TestStr(asset.name, "sw.pk.js")) {
             AssetInfo asset2 = PatchGoupilVariables(asset, &routes_alloc);
-            add_asset_route("GET", "/sw.js", asset2);
+            add_asset_route("GET", "/sw.pk.js", asset2);
         } else {
             const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
             add_asset_route("GET", url, asset);

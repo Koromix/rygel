@@ -46,26 +46,41 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-    if (e.request.method === 'GET') {
-        e.respondWith(async function() {
-            let response;
-            {
-                let url = e.request.url;
-                let name = url.substr(url.lastIndexOf('/') + 1);
+    let url = new URL(e.request.url);
 
+    if (e.request.method === 'GET' && url.pathname.startsWith(env.base_url)) {
+        e.respondWith(async function() {
+            // Try user assets first
+            {
+                let db_name = `goupil_${env.app_key}`;
+                let db = await idb.open(db_name);
+
+                let file_path = url.pathname.substr(env.base_url.length);
+                let file = await db.load('files', file_path);
+
+                if (file)
+                    return new Response(file);
+            }
+
+            // Try cached responses
+            {
+                let name = url.pathname.substr(url.pathname.lastIndexOf('/') + 1);
+
+                let response;
                 if (name.lastIndexOf('.') > 0) {
                     response = await caches.match(e.request);
                 } else {
                     // Serve extension-less paths with goupil.html, just like the server does
                     response = await caches.match('/');
                 }
+
+                if (response)
+                    return response;
             }
 
-            // Should we fail directly when the asset is supposed to in cache?
-            if (!response)
-                response = await fetch(e.request);
-
-            return response;
+            return await fetch(e.request);
         }());
+    } else {
+        e.respondWith(fetch(e.request));
     }
 });
