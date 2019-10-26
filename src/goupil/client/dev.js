@@ -137,6 +137,10 @@ let dev = new function() {
                     current_record = await record_manager.load(current_asset.form.key, args.id);
                     if (!current_record)
                         current_record = record_manager.create(current_asset.form.key);
+
+                    // The user asked for this record, make sure it is visible
+                    if (!show_overview)
+                        toggleOverview();
                 }
             }
         }
