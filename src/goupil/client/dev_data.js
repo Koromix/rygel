@@ -64,7 +64,7 @@ let dev_data = new function() {
     }
 
     async function exportToExcel(table) {
-        if (!window.XLSX)
+        if (typeof XSLX === 'undefined')
             await util.loadScript(`${env.base_url}static/xlsx.core.min.js`);
 
         let records = await record_manager.loadAll(table);

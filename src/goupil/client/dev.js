@@ -364,7 +364,7 @@ let dev = new function() {
     async function syncEditor() {
         if (!editor) {
             // FIXME: Make sure we don't run loadScript more than once
-            if (!window.ace)
+            if (typeof ace === 'undefined')
                 await util.loadScript(`${env.base_url}static/ace.js`);
 
             editor = ace.edit(editor_el.children[0]);
