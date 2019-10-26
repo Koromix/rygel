@@ -6,9 +6,9 @@
 
 #ut_log {
     position: fixed;
-    left: calc(50% - 200px);
+    left: calc(50% - 16em);
     top: 10px;
-    width: 400px;
+    width: 32em;
     z-index: 99999;
     user-select: none;
     -moz-user-select: none;
