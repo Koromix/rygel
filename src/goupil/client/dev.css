@@ -33,16 +33,16 @@
 .dev_panel_left {
     position: fixed;
     left: 0;
-    top: 30px;
+    top: 2.5em;
     width: 50%;
-    height: calc(100% - 30px);
+    height: calc(100% - 2.5em);
     box-sizing: border-box;
     z-index: 999;
     overflow: auto;
     border-right: 1px solid #ddd;
 }
 .dev_panel_right {
-    margin: 30px 0 0 50%;
+    margin: 2.5em 0 0 50%;
     padding: 12px;
     background: #efefef;
 }
@@ -50,16 +50,17 @@
 .dev_panel_fixed {
     position: fixed;
     left: 0;
-    top: 30px;
+    top: 2.5em;
     width: 100%;
-    height: calc(100% - 30px);
+    height: calc(100% - 2.5em);
     box-sizing: border-box;
     z-index: 999;
     overflow: auto;
 }
 .dev_panel_page {
     max-width: 800px;
-    margin: 40px auto 10px auto;
+    border: 10px solid #f8f8f8;
+    margin: auto;
     padding: 12px;
     background: #efefef;
 }
