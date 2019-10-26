@@ -263,14 +263,14 @@ let dev = new function() {
         popup.form(e, page => {
             let blob = page.file('file', 'Fichier :');
 
-            let default_path = blob.value ? `static/${blob.value.name}` : null;
+            let default_path = blob.value ? `app/${blob.value.name}` : null;
             let path = page.text('path', 'Chemin :', {placeholder: default_path});
             if (!path.value)
                 path.value = default_path;
 
             if (path.value) {
-                if (!path.value.match(/static\/./)) {
-                    path.error('Le chemin doit commencer par \'static/\'');
+                if (!path.value.match(/app\/./)) {
+                    path.error('Le chemin doit commencer par \'app/\'');
                 } else if (path.value.includes('/../') || path.value.endsWith('/..')) {
                     path.error('Le chemin ne doit pas contenir de composants \'..\'');
                 } else if (assets.some(asset => asset.path === path.value)) {
