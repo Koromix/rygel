@@ -339,14 +339,10 @@ let dev = new function() {
         if (!editor_el) {
             editor_el = document.createElement('div');
             editor_el.id = 'dev_editor';
+            render(html`<div style="height: 100%;"></div>`, editor_el);
         }
 
-        for (let cls of editor_el.classList) {
-            if (!cls.startsWith('ace_') && !cls.startsWith('ace-'))
-                editor_el.classList.remove(cls);
-        }
-        editor_el.classList.add(cls);
-
+        editor_el.className = cls;
         return editor_el;
     }
 
@@ -356,7 +352,7 @@ let dev = new function() {
             if (!window.ace)
                 await util.loadScript(`${env.base_url}static/ace.js`);
 
-            editor = ace.edit(editor_el);
+            editor = ace.edit(editor_el.children[0]);
 
             editor.setTheme('ace/theme/monokai');
             editor.setShowPrintMargin(false);

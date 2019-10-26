@@ -139,10 +139,10 @@
 }
 
 .af_records thead {
-    height: 30px;
+    height: 2.5em;
     background: #ddd;
 }
-.af_head_actions { width: 30px; }
+.af_head_actions { width: 2.5em; }
 
 .af_records tbody tr:nth-child(2n + 1) { background: #efefef; }
 .af_records tbody tr:nth-child(2n) { background: #f4f4f4; }
