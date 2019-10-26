@@ -392,6 +392,8 @@ let dev = new function() {
             editor.setSession(session);
             editor.setReadOnly(false);
         }
+
+        editor.resize(false);
     }
 
     function handleEditorChange(path, value) {
