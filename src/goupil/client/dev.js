@@ -374,6 +374,7 @@ let dev = new function() {
 
             session = new ace.EditSession(script, 'ace/mode/javascript');
             session.setOption('useWorker', false);
+            session.setUseWrapMode(true);
             session.setUndoManager(new ace.UndoManager());
 
             session.on('change', e => handleEditorChange(current_asset.path, session.getValue()));
