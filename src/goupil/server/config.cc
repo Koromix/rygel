@@ -10,13 +10,11 @@ namespace RG {
 bool ConfigBuilder::LoadIni(StreamReader &st)
 {
     RG_DEFER_NC(out_guard, app_key = config.app_key,
-                           enable_pwa = config.enable_pwa,
                            database_filename = config.database_filename,
                            http = config.http,
                            max_age = config.max_age,
                            sse_keep_alive = config.sse_keep_alive) {
         config.app_key = app_key;
-        config.enable_pwa = enable_pwa;
         config.database_filename = database_filename;
         config.http = http;
         config.max_age = max_age;
@@ -34,20 +32,11 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
     {
         IniProperty prop;
         while (ini.Next(&prop)) {
-            if (prop.section == "Application") {
+            if (prop.section == "Data") {
                 do {
-                    if (prop.key == "Key") {
+                    if (prop.key == "AppKey") {
                         config.app_key = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "PWA") {
-                        valid &= IniParser::ParseBoolValue(prop.value, &config.enable_pwa);
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
-                        valid = false;
-                    }
-                } while (ini.NextInSection(&prop));
-            } else if (prop.section == "Data") {
-                do {
-                    if (prop.key == "DatabaseFile") {
+                    } else if (prop.key == "DatabaseFile") {
                         config.database_filename = NormalizePath(prop.value, root_directory,
                                                                  &config.str_alloc).ptr;
                     } else {

@@ -3490,7 +3490,7 @@ struct AssetSet {
     AssetLoadStatus LoadFromLibrary(const char *filename, const char *var_name = "pack_assets");
 };
 
-Span<const uint8_t> PatchAssetVariables(AssetInfo &asset, Allocator *alloc,
+Span<const uint8_t> PatchAssetVariables(const AssetInfo &asset, Allocator *alloc,
                                         FunctionRef<bool(const char *, StreamWriter *)> func);
 
 // ------------------------------------------------------------------------

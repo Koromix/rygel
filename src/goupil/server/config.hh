@@ -11,8 +11,6 @@ namespace RG {
 
 struct Config {
     const char *app_key = nullptr;
-    bool enable_pwa = false;
-
     const char *database_filename = nullptr;
 
     http_Config http;
