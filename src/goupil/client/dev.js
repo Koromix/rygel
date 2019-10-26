@@ -226,7 +226,10 @@ let dev = new function() {
     }
 
     function toggleLeftPanel(mode) {
-        if (left_panel !== mode) {
+        if (window.matchMedia('(pointer: coarse)').matches) {
+            left_panel = mode;
+            show_overview = false;
+        } else if (left_panel !== mode) {
             left_panel = mode;
         } else {
             left_panel = null;
@@ -237,9 +240,15 @@ let dev = new function() {
     }
 
     function toggleOverview() {
-        if (!left_panel)
-            left_panel = 'editor';
-        show_overview = !show_overview;
+        if (window.matchMedia('(pointer: coarse)').matches) {
+            left_panel = null;
+            show_overview = true;
+        } else if (!show_overview) {
+            show_overview = true;
+        } else {
+            left_panel = left_panel || 'editor';
+            show_overview = false;
+        }
 
         goupil.go();
     }
