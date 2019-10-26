@@ -46,45 +46,35 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-    let url = new URL(e.request.url);
+    e.respondWith(async function() {
+        let url = new URL(e.request.url);
 
-    if (e.request.method === 'GET' && url.pathname.startsWith(`${env.base_url}app/`)) {
-        e.respondWith(async function() {
-            let db_name = `goupil_${env.app_key}`;
-            let db = await idb.open(db_name);
+        if (e.request.method === 'GET' && url.pathname.startsWith(env.base_url)) {
+            let short_path = url.pathname.substr(env.base_url.length);
 
-            let file_path = url.pathname.substr(env.base_url.length);
-            let data = await db.load('files', file_path);
+            if (short_path.startsWith('app/')) {
+                let db_name = `goupil_${env.app_key}`;
+                let db = await idb.open(db_name);
 
-            if (data) {
-                return new Response(data);
-            } else {
-                return new Response('Error 404: Asset does not exist', {
-                    status: 404,
-                    statusText: 'Not found'
-                });
-            }
-        }());
-    } else if (e.request.method === 'GET' && url.pathname.startsWith(env.base_url)) {
-        e.respondWith(async function() {
-            let response;
-            {
-                let name = url.pathname.substr(url.pathname.lastIndexOf('/') + 1);
+                let file_path = url.pathname.substr(env.base_url.length);
+                let data = await db.load('files', file_path);
 
-                if (name.lastIndexOf('.') > 0) {
-                    response = await caches.match(e.request);
+                if (data) {
+                    return new Response(data);
                 } else {
-                    // Serve extension-less paths with goupil.html, just like the server does
-                    response = await caches.match('/');
+                    return new Response('Error 404: Asset does not exist', {
+                        status: 404,
+                        statusText: 'Not found'
+                    });
                 }
-            }
+            } else if (short_path.startsWith('dev/')) {
+                return await caches.match(env.base_url) || await fetch(env.base_url);
+            } else if (url.pathname.startsWith(env.base_url)) {
+                return await caches.match(e.request) || await fetch(e.request);
+           }
+        }
 
-            if (!response)
-                response = await fetch(e.request);
-
-            return response;
-        }());
-    } else {
-        e.respondWith(fetch(e.request));
-    }
+        // Nothing matched, do the usual
+        return await fetch(e.request);
+    }());
 });

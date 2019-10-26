@@ -34,7 +34,7 @@ let dev = new function() {
         assets = await listAssets(app);
         assets_map = {};
         for (let asset of assets)
-            assets_map[asset.route] = asset;
+            assets_map[asset.url] = asset;
         current_asset = assets[0];
 
         current_record = {};
@@ -66,7 +66,7 @@ let dev = new function() {
         // the application cannot be loaded.
         let assets = [{
             type: 'main',
-            route: env.base_url,
+            url: `${env.base_url}dev/`,
             label: 'Script principal',
 
             path: 'main.js'
@@ -77,7 +77,7 @@ let dev = new function() {
             for (let page of form.pages) {
                 assets.push({
                     type: 'page',
-                    route: `${env.base_url}${form.key}/${page.key}/`,
+                    url: `${env.base_url}dev/${form.key}/${page.key}/`,
                     category: `Formulaire '${form.key}'`,
                     label: `Page '${page.key}'`,
 
@@ -90,7 +90,7 @@ let dev = new function() {
         for (let schedule of app.schedules) {
             assets.push({
                 type: 'schedule',
-                route: `${env.base_url}${schedule.key}/`,
+                url: `${env.base_url}dev/${schedule.key}/`,
                 category: 'Agendas',
                 label: `Agenda '${schedule.key}'`,
 
@@ -107,7 +107,7 @@ let dev = new function() {
                 if (!known_paths.has(path)) {
                     assets.push({
                         type: 'blob',
-                        route: `${env.base_url}${path}`,
+                        url: `${env.base_url}dev/${path}`,
                         category: 'Fichiers',
                         label: path
                     });
@@ -171,7 +171,7 @@ let dev = new function() {
     };
 
     this.makeURL = function() {
-        return current_asset ? current_asset.route : null;
+        return current_asset ? current_asset.url : null;
     };
 
     function renderDev() {
@@ -200,13 +200,13 @@ let dev = new function() {
                     if (category) {
                         return html`<optgroup label=${category}>${util.mapRange(offset, offset + len, idx => {
                             let asset = assets[idx];
-                            return html`<option value=${asset.route}
+                            return html`<option value=${asset.url}
                                                 .selected=${asset === current_asset}>${asset.label}</option>`;
                         })}</optgroup>`;
                     } else {
                         return util.mapRange(offset, offset + len, idx => {
                             let asset = assets[idx];
-                            return html`<option value=${asset.route}
+                            return html`<option value=${asset.url}
                                                 .selected=${asset === current_asset}>${asset.label}</option>`;
                         });
                     }
@@ -283,17 +283,17 @@ let dev = new function() {
 
                 let asset = {
                     type: 'blob',
-                    route: `${env.base_url}${path.value}`,
+                    url: `${env.base_url}dev/${path.value}`,
                     category: 'Fichiers',
                     label: path.value,
 
                     path: path.value
                 };
                 assets.push(asset);
-                assets_map[asset.route] = asset;
+                assets_map[asset.url] = asset;
 
                 page.close();
-                goupil.go(asset.route);
+                goupil.go(asset.url);
             };
             page.buttons(page.buttons.std.ok_cancel('Créer'));
         });
@@ -308,14 +308,14 @@ let dev = new function() {
                     await file_manager.delete(asset.path);
 
                 // Remove from assets array and map
-                let asset_idx = assets.findIndex(it => it.route === asset.route);
+                let asset_idx = assets.findIndex(it => it.url === asset.url);
                 assets.splice(asset_idx, 1);
-                delete assets_map[asset.route];
+                delete assets_map[asset.url];
 
                 page.close();
                 if (asset === current_asset) {
                     let new_asset = assets[Math.max(0, asset_idx - 1)];
-                    goupil.go(new_asset ? new_asset.route : null);
+                    goupil.go(new_asset ? new_asset.url : null);
                 } else {
                     goupil.go();
                 }
@@ -439,7 +439,7 @@ let dev = new function() {
                         assets = await listAssets(app);
                         assets_map = {};
                         for (let asset of assets)
-                            assets_map[asset.route] = asset;
+                            assets_map[asset.url] = asset;
 
                         // Old assets must not be used anymore, tell go() to fix current_asset
                         reload_app = false;
