@@ -4,7 +4,7 @@
 
 let base_url = (new URL(self.registration.scope)).pathname;
 
-let cache_key = 'goupil1';
+let cache_key = 'v1';
 let cache_urls = [
     base_url,
     `${base_url}static/goupil.pk.css`,
@@ -25,6 +25,17 @@ self.addEventListener('install', e => {
 
         await cache.addAll(cache_urls);
         await self.skipWaiting();
+    }());
+});
+
+self.addEventListener('activate', e => {
+    e.waitUntil(async function() {
+        let keys = await caches.keys();
+
+        for (let key of keys) {
+            if (key !== cache_key)
+                await caches.delete(key);
+        }
     }());
 });
 
