@@ -183,13 +183,18 @@ let idb = new function () {
         }
     }
 
-    this.open = function(db_name, version, update_func = () => {}) {
-        let req = indexedDB.open(db_name, version);
+    this.open = function(db_name, version = null, update_func = () => {}) {
+        let req;
+        if (version != null) {
+            req = indexedDB.open(db_name, version);
 
-        req.onupgradeneeded = e => {
-            let db = e.target.result;
-            update_func(db, e.oldVersion || null);
-        };
+            req.onupgradeneeded = e => {
+                let db = e.target.result;
+                update_func(db, e.oldVersion || null);
+            };
+        } else {
+            req = indexedDB.open(db_name);
+        }
 
         return new Promise((resolve, reject) => {
             req.onsuccess = e => {
