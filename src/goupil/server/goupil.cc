@@ -216,14 +216,14 @@ static void InitRoutes()
                     writer->Write(goupil_config.app_key);
                     return true;
                 } else if (TestStr(key, "ENABLE_PWA")) {
-                    writer->Write(goupil_config.enable_pwa ? "true" : "false");
+                    writer->Write(1 || goupil_config.enable_pwa ? "true" : "false");
                     return true;
                 } else {
                     return false;
                 }
             });
-        } else if (TestStr(asset.name, "pwa.js")) {
-            add_asset_route("GET", "/pwa.js", asset);
+        } else if (TestStr(asset.name, "sw.js")) {
+            add_asset_route("GET", "/sw.js", asset);
         } else {
             const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
             add_asset_route("GET", url, asset);
