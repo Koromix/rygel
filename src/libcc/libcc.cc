@@ -3828,7 +3828,7 @@ AssetLoadStatus AssetSet::LoadFromLibrary(const char *filename, const char *var_
 
 // This won't win any beauty or speed contest (especially when writing
 // a compressed stream) but whatever.
-Span<const uint8_t> PatchAssetVariables(AssetInfo &asset, Allocator *alloc,
+Span<const uint8_t> PatchAssetVariables(const AssetInfo &asset, Allocator *alloc,
                                         FunctionRef<bool(const char *, StreamWriter *)> func)
 {
     HeapArray<uint8_t> buf;

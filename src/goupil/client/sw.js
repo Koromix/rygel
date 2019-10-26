@@ -2,28 +2,34 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let base_url = (new URL(self.registration.scope)).pathname;
+let env = {
+    app_key: '{APP_KEY}',
+    base_url: '{BASE_URL}',
 
-let cache_key = 'v1';
+    cache_key: '{CACHE_KEY}'
+};
+
 let cache_urls = [
-    base_url,
-    `${base_url}static/goupil.pk.css`,
-    `${base_url}static/goupil.pk.js`,
-    `${base_url}static/ace.js`,
-    `${base_url}static/theme-monokai.js`,
-    `${base_url}static/mode-javascript.js`,
-    `${base_url}static/xlsx.core.min.js`,
-    `${base_url}static/NotoSans-Regular.woff2`,
-    `${base_url}manifest.json`,
-    `${base_url}static/fox192.png`,
-    `${base_url}static/fox512.png`
+    env.base_url,
+    `${env.base_url}static/goupil.pk.css`,
+    `${env.base_url}static/goupil.pk.js`,
+    `${env.base_url}static/ace.js`,
+    `${env.base_url}static/theme-monokai.js`,
+    `${env.base_url}static/mode-javascript.js`,
+    `${env.base_url}static/xlsx.core.min.js`,
+    `${env.base_url}static/NotoSans-Regular.woff2`,
+    `${env.base_url}manifest.json`,
+    `${env.base_url}static/fox192.png`,
+    `${env.base_url}static/fox512.png`
 ];
 
 self.addEventListener('install', e => {
     e.waitUntil(async function() {
-        let cache = await caches.open(cache_key);
+        if (env.cache_key) {
+            let cache = await caches.open(env.cache_key);
+            await cache.addAll(cache_urls);
+        }
 
-        await cache.addAll(cache_urls);
         await self.skipWaiting();
     }());
 });
@@ -33,7 +39,7 @@ self.addEventListener('activate', e => {
         let keys = await caches.keys();
 
         for (let key of keys) {
-            if (key !== cache_key)
+            if (key !== env.cache_key)
                 await caches.delete(key);
         }
     }());

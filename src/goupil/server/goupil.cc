@@ -168,6 +168,31 @@ static void ProduceEvents(const http_RequestInfo &request, http_IO *io)
     push_count++;
 }
 
+static AssetInfo PatchGoupilVariables(const AssetInfo &asset, Allocator *alloc)
+{
+    AssetInfo asset2 = asset;
+    asset2.data = PatchAssetVariables(asset, alloc,
+                                      [](const char *key, StreamWriter *writer) {
+        if (TestStr(key, "VERSION")) {
+            writer->Write(BuildVersion);
+            return true;
+        } else if (TestStr(key, "BASE_URL")) {
+            writer->Write(goupil_config.http.base_url);
+            return true;
+        } else if (TestStr(key, "APP_KEY")) {
+            writer->Write(goupil_config.app_key);
+            return true;
+        } else if (TestStr(key, "CACHE_KEY")) {
+            writer->Write(goupil_config.database_filename ? etag : "");
+            return true;
+        } else {
+            return false;
+        }
+    });
+
+    return asset2;
+}
+
 static void InitRoutes()
 {
     LogInfo("Init routes");
@@ -199,53 +224,32 @@ static void InitRoutes()
         routes.Append(route);
     };
 
-    // Static assets
-    AssetInfo html = {};
-    for (const AssetInfo &asset: assets) {
-        if (TestStr(asset.name, "goupil.html")) {
-            html = asset;
-            html.data = PatchAssetVariables(html, &routes_alloc,
-                                            [](const char *key, StreamWriter *writer) {
-                if (TestStr(key, "VERSION")) {
-                    writer->Write(BuildVersion);
-                    return true;
-                } else if (TestStr(key, "BASE_URL")) {
-                    writer->Write(goupil_config.http.base_url);
-                    return true;
-                } else if (TestStr(key, "APP_KEY")) {
-                    writer->Write(goupil_config.app_key);
-                    return true;
-                } else if (TestStr(key, "ENABLE_PWA")) {
-                    writer->Write(1 || goupil_config.enable_pwa ? "true" : "false");
-                    return true;
-                } else {
-                    return false;
-                }
-            });
-        } else if (TestStr(asset.name, "sw.js")) {
-            add_asset_route("GET", "/sw.js", asset);
-        } else {
-            const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
-            add_asset_route("GET", url, asset);
-        }
-    }
-    RG_ASSERT(html.name);
-
-    // Pages
-    add_asset_route("GET", "/", html);
-
-    // API
-    add_function_route("GET", "/manifest.json", ProduceManifest);
-    add_function_route("GET", "/api/events.json", ProduceEvents);
-    add_function_route("GET", "/api/schedule/resources.json", ProduceScheduleResources);
-    add_function_route("GET", "/api/schedule/meetings.json", ProduceScheduleMeetings);
-
     // We can use a global ETag because everything is in the binary
     {
         uint64_t buf[2];
         randombytes_buf(&buf, RG_SIZE(buf));
         Fmt(etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
     }
+
+    // Static assets
+    for (const AssetInfo &asset: assets) {
+        if (TestStr(asset.name, "goupil.html")) {
+            AssetInfo asset2 = PatchGoupilVariables(asset, &routes_alloc);
+            add_asset_route("GET", "/", asset2);
+        } else if (TestStr(asset.name, "sw.js")) {
+            AssetInfo asset2 = PatchGoupilVariables(asset, &routes_alloc);
+            add_asset_route("GET", "/sw.js", asset2);
+        } else {
+            const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
+            add_asset_route("GET", url, asset);
+        }
+    }
+
+    // API
+    add_function_route("GET", "/manifest.json", ProduceManifest);
+    add_function_route("GET", "/api/events.json", ProduceEvents);
+    add_function_route("GET", "/api/schedule/resources.json", ProduceScheduleResources);
+    add_function_route("GET", "/api/schedule/meetings.json", ProduceScheduleMeetings);
 }
 
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
