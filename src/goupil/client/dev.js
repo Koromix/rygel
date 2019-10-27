@@ -57,8 +57,8 @@ let dev = new function() {
         let app_builder = new ApplicationBuilder(app);
 
         let main_script = await loadFileData('main.js');
-        let func = Function('app', main_script);
-        func(app_builder);
+        let func = Function('app', 'data', main_script);
+        func(app_builder, app.data);
 
         app.go = handleGo;
 
