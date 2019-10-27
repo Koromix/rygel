@@ -5,9 +5,6 @@
 function FormExecutor(values = {}) {
     let self = this;
 
-    // Storage for user scripts
-    this.memory = {};
-
     // Page state
     this.missing_errors = new Set;
     this.changed_variables = new Set;
@@ -15,6 +12,9 @@ function FormExecutor(values = {}) {
     this.file_lists = new Map;
     this.pressed_buttons = new Set;
     this.clicked_buttons = new Set;
+
+    // Storage for user scripts
+    this.scratch = {};
 
     // Key handling
     this.decodeKey = function(key) {
