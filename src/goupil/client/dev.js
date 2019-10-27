@@ -467,10 +467,6 @@ Navigation functions should only be called in reaction to user events, such as b
         let overview_el = document.querySelector('#dev_overview');
 
         try {
-            // We don't want go() to be fired when a script is opened or changed in the editor,
-            // because then we wouldn't be able to come back to the script to fix the code.
-            allow_go = false;
-
             switch (current_asset.type) {
                 case 'main': {
                     if (reload_app) {
@@ -483,7 +479,7 @@ Navigation functions should only be called in reaction to user events, such as b
 
                         // Old assets must not be used anymore, tell go() to fix current_asset
                         reload_app = false;
-                        await app.go(env.base_url);
+                        await app.go(assets[0].url);
                     }
 
                     render(html`<div class="dev_wip">Aperçu non disponible pour le moment</div>`,
@@ -491,6 +487,10 @@ Navigation functions should only be called in reaction to user events, such as b
                 } break;
 
                 case 'page': {
+                    // We don't want go() to be fired when a script is opened or changed in the editor,
+                    // because then we wouldn't be able to come back to the script to fix the code.
+                    allow_go = false;
+
                     let script = await loadFileData(current_asset.path);
                     await dev_form.runPageScript(script, current_record);
                 } break;
