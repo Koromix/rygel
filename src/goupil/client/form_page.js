@@ -98,6 +98,7 @@ function PageBuilder(form, widgets, variables = []) {
         options = expandOptions(options);
 
         let value = parseFloat(form.getValue(key, options.value));
+        let missing = (value == null || Number.isNaN(value));
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
@@ -111,7 +112,64 @@ function PageBuilder(form, widgets, variables = []) {
         `);
 
         let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, label, value, Number.isNaN(value));
+        fillVariableInfo(intf, key, label, value, missing);
+
+        validateNumber(intf);
+
+        return intf;
+    };
+
+    this.slider = function(key, label, options = {}) {
+        key = form.decodeKey(key);
+        options = expandOptions(options);
+
+        // Default options
+        options.decimals = options.decimals || 0;
+        options.min = options.min || 0;
+        options.max = (options.max != null) ? options.max : 10;
+
+        let range = options.max - options.min;
+        if (range <= 0)
+            throw new Error('Range (options.max - options.min) must be positive');
+
+        let value = parseFloat(form.getValue(key, options.value));
+        let missing = (value == null || Number.isNaN(value));
+
+        let id = makeID(key);
+        let render = intf => renderWrappedWidget(intf, html`
+            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            <div class=${missing ? 'af_slider missing' : 'af_slider'}>
+                <div style=${`left: ${!missing ? ((value - options.min) / range * 100) : 50}%;` +
+                             (options.untoggle ? ' cursor: pointer;': '')}
+                      @click=${e => options.untoggle && handleNumberChange(e, key)}>${value.toFixed(options.decimals)}</div>
+                <input id=${id} type="range"
+                       min=${options.min} max=${options.max} step=${1 / Math.pow(10, options.decimals)}
+                       .value=${!missing ? value : ((options.max + options.min) / 2)}
+                       placeholder=${options.placeholder || ''} ?disabled=${options.disable}
+                       @input=${e => handleNumberChange(e, key)}/>
+            </div>
+        `);
+
+        let intf = addWidget(render, options);
+        fillVariableInfo(intf, key, label, value, missing);
+
+        validateNumber(intf);
+
+        return intf;
+    }
+
+    function handleNumberChange(e, key) {
+        // Hack to accept incomplete values, mainly in the case of a '-' being typed first,
+        // in which case we don't want to clear the field immediately.
+        if (!e.target.validity || e.target.validity.valid) {
+            form.setValue(key, parseFloat(e.target.value));
+            self.changeHandler(self);
+        }
+    }
+
+    function validateNumber(intf) {
+        let value = intf.value;
+        let options = intf.options;
 
         if (value != null &&
                 (options.min !== undefined && value < options.min) ||
@@ -123,17 +181,6 @@ function PageBuilder(form, widgets, variables = []) {
             } else {
                 intf.error(`Doit être ≤ ${options.max}`);
             }
-        }
-
-        return intf;
-    };
-
-    function handleNumberChange(e, key) {
-        // Hack to accept incomplete values, mainly in the case of a '-' being typed first,
-        // in which case we don't want to clear the field immediately.
-        if (e.target.validity.valid) {
-            form.setValue(key, parseFloat(e.target.value));
-            self.changeHandler(self);
         }
     }
 
