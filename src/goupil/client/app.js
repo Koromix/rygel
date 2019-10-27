@@ -8,6 +8,9 @@ function Application() {
     this.forms = [];
     this.schedules = [];
 
+    // Used for user globals
+    this.data = {};
+
     this.go = (url = null, push_history = true) => {};
 }
 
