@@ -387,7 +387,7 @@ Navigation functions should only be called in reaction to user events, such as b
                 await self.init();
 
                 page.close();
-                app.go(env.base_url);
+                app.go(assets[0].url);
             };
             page.buttons(page.buttons.std.ok_cancel('Réinitialiser'));
         });
