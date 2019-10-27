@@ -10,8 +10,6 @@ let record_manager = null;
 let goupil = new function() {
     let self = this;
 
-    let runner;
-
     let event_src;
 
     document.addEventListener('readystatechange', e => {
@@ -27,23 +25,17 @@ let goupil = new function() {
         file_manager = new FileManager(db);
         record_manager = new RecordManager(db);
 
-        if (typeof run !== 'undefined') {
-            await run.init();
-            runner = run;
-        }
-        if (typeof dev !== 'undefined') {
+        if (typeof dev !== 'undefined')
             await dev.init();
-            runner = dev;
-        }
 
-        self.go(window.location.href, false);
+        app.go(window.location.href, false);
     }
 
     function initNavigation() {
-        window.addEventListener('popstate', e => self.go(window.location.href, false));
+        window.addEventListener('popstate', e => app.go(window.location.href, false));
 
         util.interceptLocalAnchors((e, href) => {
-            self.go(href);
+            app.go(href);
             e.preventDefault();
         });
     }
@@ -111,30 +103,6 @@ let goupil = new function() {
         });
 
         return db;
-    }
-
-    this.go = async function(url = null, push_history = true) {
-        if (url) {
-            url = new URL(url, window.location.href);
-
-            try {
-                await runner.run(url.pathname);
-                updateHistory(runner.makeURL() || url.pathname, push_history);
-            } catch (err) {
-                updateHistory(url.pathname, push_history);
-                throw err;
-            }
-        } else {
-            await runner.run();
-        }
-    };
-
-    function updateHistory(url, push_history) {
-        if (push_history) {
-            window.history.pushState(null, null, url);
-        } else {
-            window.history.replaceState(null, null, url);
-        }
     }
 
     this.listenToServerEvent = function(event, func) {
