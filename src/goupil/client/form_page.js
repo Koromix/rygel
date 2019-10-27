@@ -640,8 +640,8 @@ Valid choices include:
 
     function renderWrappedWidget(intf, frag) {
         let cls = 'af_widget';
-        if (intf.options.large)
-            cls += ' af_widget_large';
+        if (intf.options.wide)
+            cls += ' af_widget_wide';
         if (intf.errors.length)
             cls += ' af_widget_error';
         if (intf.options.disable)

@@ -77,17 +77,17 @@
 .af_help:before { content: '☞\FE0E  '; }
 .af_prefix, .af_suffix { font-size: 0.85em; }
 
-.af_widget_large:after {
+.af_widget_wide:after {
     display: table;
     content: " ";
     clear: both;
 }
-.af_widget_large > label {
+.af_widget_wide > label {
     display: inline-block;
     width: 250px;
     margin-bottom: 0;
 }
-.af_widget_large .af_error {
+.af_widget_wide .af_error {
     float: right;
     clear: both;
     margin-top: 3px;
