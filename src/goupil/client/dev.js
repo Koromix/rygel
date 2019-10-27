@@ -79,10 +79,12 @@ let dev = new function() {
 
         // Application assets
         for (let form of app.forms) {
-            for (let page of form.pages) {
+            for (let i = 0; i < form.pages.length; i++) {
+                let page = form.pages[i];
+
                 assets.push({
                     type: 'page',
-                    url: `${env.base_url}dev/${form.key}/${page.key}/`,
+                    url: i ? `${env.base_url}dev/${form.key}/${page.key}/` : `${env.base_url}dev/${form.key}/`,
                     category: `Formulaire '${form.key}'`,
                     label: `Page '${page.key}'`,
 
