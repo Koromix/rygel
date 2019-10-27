@@ -137,37 +137,7 @@ function PageBuilder(form, widgets, variables = []) {
         }
     }
 
-    this.dropdown = function(key, label, props = [], options = {}) {
-        key = form.decodeKey(key);
-        options = expandOptions(options);
-        props = normalizePropositions(props);
-
-        let value = form.getValue(key, options.value);
-
-        let id = makeID(key);
-        let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <select id=${id} ?disabled=${options.disable}
-                    @change=${e => handleDropdownChange(e, key)}>
-                ${options.untoggle || !props.some(p => p != null && value === p.value) ?
-                    html`<option value="null" .selected=${value == null}>-- Choisissez une option --</option>` : ''}
-                ${props.map(p =>
-                    html`<option value=${util.valueToStr(p.value)} .selected=${value === p.value}>${p.label}</option>`)}
-            </select>
-        `);
-
-        let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, label, value, value == null);
-
-        return intf;
-    };
-
-    function handleDropdownChange(e, key) {
-        form.setValue(key, util.strToValue(e.target.value));
-        self.changeHandler(self);
-    }
-
-    this.choice = function(key, label, props = [], options = {}) {
+    this.enum = function(key, label, props = [], options = {}) {
         key = form.decodeKey(key);
         options = expandOptions(options);
         props = normalizePropositions(props);
@@ -181,7 +151,7 @@ function PageBuilder(form, widgets, variables = []) {
                 ${props.map(p =>
                     html`<button data-value=${util.valueToStr(p.value)}
                                  ?disabled=${options.disable} .className=${value === p.value ? 'af_button active' : 'af_button'}
-                                 @click=${e => handleChoiceChange(e, key, options.untoggle)}>${p.label}</button>`)}
+                                 @click=${e => handleEnumChange(e, key, options.untoggle)}>${p.label}</button>`)}
             </div>
         `);
 
@@ -191,7 +161,7 @@ function PageBuilder(form, widgets, variables = []) {
         return intf;
     };
 
-    function handleChoiceChange(e, key, allow_untoggle) {
+    function handleEnumChange(e, key, allow_untoggle) {
         let json = e.target.dataset.value;
 
         if (e.target.classList.contains('active') && allow_untoggle) {
@@ -211,13 +181,43 @@ function PageBuilder(form, widgets, variables = []) {
     }
 
     this.binary = function(key, label, options = {}) {
-        return self.choice(key, label, [[1, 'Oui'], [0, 'Non']], options);
+        return self.enum(key, label, [[1, 'Oui'], [0, 'Non']], options);
     };
     this.boolean = function(key, label, options = {}) {
-        return self.choice(key, label, [[true, 'Oui'], [false, 'Non']], options);
+        return self.enum(key, label, [[true, 'Oui'], [false, 'Non']], options);
     };
 
-    this.radio = function(key, label, props = [], options = {}) {
+    this.enumDrop = function(key, label, props = [], options = {}) {
+        key = form.decodeKey(key);
+        options = expandOptions(options);
+        props = normalizePropositions(props);
+
+        let value = form.getValue(key, options.value);
+
+        let id = makeID(key);
+        let render = intf => renderWrappedWidget(intf, html`
+            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            <select id=${id} ?disabled=${options.disable}
+                    @change=${e => handleEnumDropChange(e, key)}>
+                ${options.untoggle || !props.some(p => p != null && value === p.value) ?
+                    html`<option value="null" .selected=${value == null}>-- Choisissez une option --</option>` : ''}
+                ${props.map(p =>
+                    html`<option value=${util.valueToStr(p.value)} .selected=${value === p.value}>${p.label}</option>`)}
+            </select>
+        `);
+
+        let intf = addWidget(render, options);
+        fillVariableInfo(intf, key, label, value, value == null);
+
+        return intf;
+    };
+
+    function handleEnumDropChange(e, key) {
+        form.setValue(key, util.strToValue(e.target.value));
+        self.changeHandler(self);
+    }
+
+    this.enumRadio = function(key, label, props = [], options = {}) {
         key = form.decodeKey(key);
         options = expandOptions(options);
         props = normalizePropositions(props);
@@ -231,7 +231,7 @@ function PageBuilder(form, widgets, variables = []) {
                 ${props.map((p, i) =>
                     html`<input type="radio" name=${id} id=${`${id}.${i}`} value=${util.valueToStr(p.value)}
                                 ?disabled=${options.disable} .checked=${value === p.value}
-                                @click=${e => handleRadioChange(e, key, options.untoggle && value === p.value)}/>
+                                @click=${e => handleEnumRadioChange(e, key, options.untoggle && value === p.value)}/>
                          <label for=${`${id}.${i}`}>${p.label}</label><br/>`)}
             </div>
         `);
@@ -242,7 +242,7 @@ function PageBuilder(form, widgets, variables = []) {
         return intf;
     };
 
-    function handleRadioChange(e, key, already_checked) {
+    function handleEnumRadioChange(e, key, already_checked) {
         if (already_checked) {
             e.target.checked = false;
             form.setValue(key, null);
@@ -265,12 +265,11 @@ function PageBuilder(form, widgets, variables = []) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <div class="af_multi" id=${id}>
-                ${props.map((p, idx) =>
-                    html`<input type="checkbox" id=${`${id}.${idx}`} value=${util.valueToStr(p.value)}
-                                ?disabled=${options.disable} .checked=${value.includes(p.value)}
-                                @click=${e => handleMultiChange(e, key)}/>
-                         <label for=${`${id}.${idx}`}>${p.label}</label><br/>`)}
+            <div class="af_select" id=${id}>
+                ${props.map(p =>
+                    html`<button data-value=${util.valueToStr(p.value)}
+                                 ?disabled=${options.disable} .className=${value.includes(p.value) ? 'af_button active' : 'af_button'}
+                                 @click=${e => handleMultiChange(e, key)}>${p.label}</button>`)}
             </div>
         `);
 
@@ -282,6 +281,53 @@ function PageBuilder(form, widgets, variables = []) {
     };
 
     function handleMultiChange(e, key) {
+        e.target.classList.toggle('active');
+
+        let els = e.target.parentNode.querySelectorAll('button');
+
+        let nullify = (e.target.classList.contains('active') && e.target.dataset.value === 'null');
+        let value = [];
+        for (let el of els) {
+            if ((el.dataset.value === 'null') != nullify)
+                el.classList.remove('active');
+            if (el.classList.contains('active'))
+                value.push(util.strToValue(el.dataset.value));
+        }
+
+        form.setValue(key, value);
+
+        self.changeHandler(self);
+    }
+
+    this.multiCheck = function(key, label, props = [], options = {}) {
+        key = form.decodeKey(key);
+        options = expandOptions(options);
+        props = normalizePropositions(props);
+
+        let value = form.getValue(key, options.value);
+        if (!Array.isArray(value))
+            value = [];
+
+        let id = makeID(key);
+        let render = intf => renderWrappedWidget(intf, html`
+            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            <div class="af_multi" id=${id}>
+                ${props.map((p, idx) =>
+                    html`<input type="checkbox" id=${`${id}.${idx}`} value=${util.valueToStr(p.value)}
+                                ?disabled=${options.disable} .checked=${value.includes(p.value)}
+                                @click=${e => handleMultiCheckChange(e, key)}/>
+                         <label for=${`${id}.${idx}`}>${p.label}</label><br/>`)}
+            </div>
+        `);
+
+        let intf = addWidget(render, options);
+        let missing = !value.length && props.some(p => p.value == null);
+        fillVariableInfo(intf, key, label, value, missing);
+
+        return intf;
+    };
+
+    function handleMultiCheckChange(e, key) {
         let els = e.target.parentNode.querySelectorAll('input');
 
         let nullify = (e.target.checked && e.target.value === 'null');
