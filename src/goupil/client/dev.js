@@ -148,9 +148,9 @@ Navigation functions should only be called in reaction to user events, such as b
 
             self.run(url.pathname).then(canonical_url => {
                 if (push_history) {
-                    window.history.pushState(canonical_url, null, url);
+                    window.history.pushState(null, null, canonical_url);
                 } else {
-                    window.history.replaceState(canonical_url, null, url);
+                    window.history.replaceState(null, null, canonical_url);
                 }
             });
         } else {
