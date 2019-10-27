@@ -432,7 +432,7 @@ function PageBuilder(form, widgets, variables = []) {
         // Setting files on input file elements is fragile. At least on Firefox, assigning
         // its own value to the property results in an empty FileList for some reason.
         let set_files = lithtml.directive(() => part => {
-            let file_list = form.file_lists.get(key);
+            let file_list = form.file_lists.get(key.toString());
 
             if (file_list == null) {
                 part.committer.element.value = '';
@@ -457,7 +457,7 @@ function PageBuilder(form, widgets, variables = []) {
 
     function handleFileInput(e, key) {
         form.setValue(key, e.target.files[0] || null);
-        form.file_lists.set(key, e.target.files);
+        form.file_lists.set(key.toString(), e.target.files);
 
         self.changeHandler(self);
     }
