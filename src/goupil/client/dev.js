@@ -305,7 +305,7 @@ Navigation functions should only be called in reaction to user events, such as b
 
     function showCreateDialog(e) {
         popup.form(e, page => {
-            let blob = page.file('file', 'Fichier :');
+            let blob = page.file('file', 'Fichier :', {mandatory: true});
 
             let default_path = blob.value ? `app/${blob.value.name}` : null;
             let path = page.text('path', 'Chemin :', {placeholder: default_path});
