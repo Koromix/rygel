@@ -69,7 +69,8 @@ let dev = new function() {
             url: `${env.base_url}dev/`,
             label: 'Script principal',
 
-            path: 'main.js'
+            path: 'main.js',
+            edit: true
         }];
 
         // Application assets
@@ -83,7 +84,9 @@ let dev = new function() {
 
                     form: form,
                     page: page,
-                    path: goupil.makePagePath(page.key)
+
+                    path: goupil.makePagePath(page.key),
+                    edit: true
                 });
             }
         }
@@ -109,7 +112,9 @@ let dev = new function() {
                         type: 'blob',
                         url: `${env.base_url}dev/${path}`,
                         category: 'Fichiers',
-                        label: path
+                        label: path,
+
+                        path: path
                     });
                 }
             }
@@ -177,7 +182,7 @@ let dev = new function() {
     function renderDev() {
         let modes = [];
         if (current_asset) {
-            if (current_asset.path)
+            if (current_asset.edit)
                 modes.push(['editor', 'Éditeur']);
             if (current_asset.form)
                 modes.push(['data', 'Données']);
