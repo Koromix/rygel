@@ -383,10 +383,10 @@ let log = new function() {
         }
 
         render(entries.map((entry, idx) => {
-            return html`<div class=${'ut_log_entry ' + entry.type}>
+            return html`<div class=${'ut_log_entry ' + entry.type} @click=${e => closeLogEntry(idx)}>
                 ${entry.type === 'progress' ?
                     html`<div class="ut_log_spin"></div>` :
-                    html`<button class="ut_log_close" @click=${e => closeLogEntry(idx)}>X</button>`}
+                    html`<button class="ut_log_close">X</button>`}
                 ${entry.msg}
              </div>`;
         }), log_el);

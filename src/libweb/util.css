@@ -34,7 +34,9 @@ button, input, optgroup, select, textarea {
     text-align: center;
     filter: opacity(96%);
 }
-.ut_log_entry:hover { filter: opacity(30%); }
+@media (hover: hover) {
+    .ut_log_entry:hover { filter: opacity(40%); }
+}
 .ut_log_entry.success { background: #016a27; }
 .ut_log_entry.error { background: #d72a2a; }
 
