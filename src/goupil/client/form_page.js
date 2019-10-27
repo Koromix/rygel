@@ -547,6 +547,33 @@ instead of:
         self.changeHandler(self);
     }
 
+    this.button = function(label, options = {}) {
+        options = expandOptions(options);
+
+        let intf = {
+            pressed: form.pressed_buttons.has(label),
+            clicked: form.clicked_buttons.has(label)
+        };
+        form.clicked_buttons.delete(label);
+
+
+        let render = intf => renderWrappedWidget(intf, html`
+            <button @click=${e => handleButtonClick(e, label)}>${label}</button>
+        `);
+
+        addWidget(render, options);
+
+
+        return intf;
+    };
+
+    function handleButtonClick(e, label) {
+        form.pressed_buttons.add(label);
+        form.clicked_buttons.add(label);
+
+        self.changeHandler(self);
+    }
+
     this.buttons = function(buttons, options = {}) {
         options = expandOptions(options);
 
