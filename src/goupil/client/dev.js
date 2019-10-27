@@ -233,8 +233,13 @@ Navigation functions should only be called in reaction to user events, such as b
             <select id="dev_assets" @change=${e => app.go(e.target.value)}>
                 ${!current_asset ? html`<option>-- Select an asset --</option>` : ''}
                 ${util.mapRLE(assets, asset => asset.category, (category, offset, len) => {
-                    if (category) {
-                        return html`<optgroup label=${category}>${util.mapRange(offset, offset + len, idx => {
+                    if (category && len == 1) {
+                        let asset = assets[offset];
+                        return html`<option value=${asset.url}
+                                            .selected=${asset === current_asset}>${asset.category} :: ${asset.label}</option>`;
+                    } else if (category) {
+                        let label = `${category} (${len})`;
+                        return html`<optgroup label=${label}>${util.mapRange(offset, offset + len, idx => {
                             let asset = assets[idx];
                             return html`<option value=${asset.url}
                                                 .selected=${asset === current_asset}>${asset.label}</option>`;
