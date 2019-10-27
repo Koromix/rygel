@@ -31,9 +31,9 @@ page.section("Exemples", () => {
 
     page.number("age", "Quel est votre âge ?", {min: 0, max: 120})
 
-    page.choice("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]])
+    page.enum("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]])
 
-    page.dropdown("csp", "Quelle est votre CSP ?", [
+    page.enumDrop("csp", "Quelle est votre CSP ?", [
         [1, "Agriculteur exploitant"],
         [2, "Artisan, commerçant ou chef d'entreprise"],
         [3, "Cadre ou profession intellectuelle supérieure"],
@@ -44,12 +44,12 @@ page.section("Exemples", () => {
         [8, "Autre ou sans activité professionnelle"]
     ])
 
-    page.radio("lieu_vie", "Quel est votre lieu de vie ?", [
+    page.enumRadio("lieu_vie", "Quel est votre lieu de vie ?", [
         ["maison", "Maison"],
         ["appartement", "Appartement"]
     ])
 
-    page.multi("sommeil", "Présentez-vous un trouble du sommeil ?", [
+    page.multiCheck("sommeil", "Présentez-vous un trouble du sommeil ?", [
         [1, "Troubles d’endormissement"],
         [2, "Troubles de maintien du sommeil"],
         [3, "Réveil précoce"],
@@ -69,9 +69,9 @@ page.text("nom", "Quel est votre nom ?", {mandatory: true})
 page.number("age", "Quel est votre âge ?", {min: 0, max: 120,
                                             suffix: value => value > 1 ? "ans" : "an"})
 
-let sexe = page.choice("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]])
+let sexe = page.enum("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]])
 
-page.dropdown("csp", "Quelle est votre CSP ?", [
+page.enumDrop("csp", "Quelle est votre CSP ?", [
     [1, "Agriculteur exploitant"],
     [2, "Artisan, commerçant ou chef d'entreprise"],
     [3, "Cadre ou profession intellectuelle supérieure"],
@@ -82,12 +82,12 @@ page.dropdown("csp", "Quelle est votre CSP ?", [
     [8, "Autre ou sans activité professionnelle"]
 ])
 
-page.radio("lieu_vie", "Quel est votre lieu de vie ?", [
+page.enumRadio("lieu_vie", "Quel est votre lieu de vie ?", [
     ["maison", "Maison"],
     ["appartement", "Appartement"]
 ])
 
-page.multi("sommeil", "Présentez-vous un trouble du sommeil ?", [
+page.multiCheck("sommeil", "Présentez-vous un trouble du sommeil ?", [
     [1, "Troubles d’endormissement"],
     [2, "Troubles de maintien du sommeil"],
     [3, "Réveil précoce"],
