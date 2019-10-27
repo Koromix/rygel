@@ -5,6 +5,8 @@
 let dev = new function() {
     let self = this;
 
+    let allow_go = true;
+
     let assets;
     let assets_map;
     let current_asset;
@@ -28,7 +30,7 @@ let dev = new function() {
             app = await loadApplication();
         } catch (err) {
             // Empty application, so that the user can still fix main.js or reset everything
-            app = util.deepFreeze(new ApplicationInfo);
+            app = util.deepFreeze(new Application);
         }
 
         assets = await listAssets(app);
@@ -50,12 +52,14 @@ let dev = new function() {
 
     // Can be launched multiple times (e.g. when main.js is edited)
     async function loadApplication() {
-        let app = new ApplicationInfo;
+        let app = new Application;
         let app_builder = new ApplicationBuilder(app);
 
         let main_script = await loadFileData('main.js');
         let func = Function('app', main_script);
         func(app_builder);
+
+        app.go = handleGo;
 
         // Application loaded!
         return util.deepFreeze(app);
@@ -125,6 +129,33 @@ let dev = new function() {
         return assets;
     }
 
+    // Avoid async here, because it may fail (see allow_go) and the called may need
+    // to catch that synchronously.
+    function handleGo(url = null, push_history = true) {
+        if (!allow_go) {
+            throw new Error(`A navigation function (e.g. go()) has been interrupted.
+Navigation functions should only be called in reaction to user events, such as button clicks.`);
+        }
+
+        if (url) {
+            if (url.match(/(http|ftp|https):\/\//g) || url.startsWith('/')) {
+                url = new URL(url, window.location.href);
+            } else {
+                url = new URL(`${env.base_url}dev/${url}`, window.location.href);
+            }
+
+            self.run(url.pathname).then(canonical_url => {
+                if (push_history) {
+                    window.history.pushState(canonical_url, null, url);
+                } else {
+                    window.history.replaceState(canonical_url, null, url);
+                }
+            });
+        } else {
+            self.run();
+        }
+    }
+
     this.run = async function(url = null, args = {}) {
         // Find relevant asset
         if (url) {
@@ -167,16 +198,16 @@ let dev = new function() {
                 case 'editor': { syncEditor(); } break;
                 case 'data': { await dev_data.runTable(current_asset.form.key, current_record.id); } break;
             }
-
             await runAssetSafe();
+
+            return current_asset.url;
         } else {
             document.title = env.app_key;
             log.error('Asset not available');
-        }
-    };
 
-    this.makeURL = function() {
-        return current_asset ? current_asset.url : null;
+            // Better than nothing!
+            return url;
+        }
     };
 
     function renderDev() {
@@ -199,7 +230,7 @@ let dev = new function() {
             ${modes.length ?
                 html`<button class=${show_overview ? 'active': ''} @click=${e => toggleOverview()}>Aperçu</button>` : ''}
 
-            <select id="dev_assets" @change=${e => goupil.go(e.target.value)}>
+            <select id="dev_assets" @change=${e => app.go(e.target.value)}>
                 ${!current_asset ? html`<option>-- Select an asset --</option>` : ''}
                 ${util.mapRLE(assets, asset => asset.category, (category, offset, len) => {
                     if (category) {
@@ -247,7 +278,7 @@ let dev = new function() {
             show_overview = true;
         }
 
-        goupil.go();
+        app.go();
     }
 
     function toggleOverview() {
@@ -261,7 +292,7 @@ let dev = new function() {
             show_overview = false;
         }
 
-        goupil.go();
+        app.go();
     }
 
     function showCreateDialog(e) {
@@ -298,7 +329,7 @@ let dev = new function() {
                 assets_map[asset.url] = asset;
 
                 page.close();
-                goupil.go(asset.url);
+                app.go(asset.url);
             };
             page.buttons(page.buttons.std.ok_cancel('Créer'));
         });
@@ -320,9 +351,9 @@ let dev = new function() {
                 page.close();
                 if (asset === current_asset) {
                     let new_asset = assets[Math.max(0, asset_idx - 1)];
-                    goupil.go(new_asset ? new_asset.url : null);
+                    app.go(new_asset ? new_asset.url : null);
                 } else {
-                    goupil.go();
+                    app.go();
                 }
             };
             page.buttons(page.buttons.std.ok_cancel('Supprimer'));
@@ -349,7 +380,7 @@ let dev = new function() {
                 await self.init();
 
                 page.close();
-                goupil.go();
+                app.go(env.base_url);
             };
             page.buttons(page.buttons.std.ok_cancel('Réinitialiser'));
         });
@@ -436,6 +467,10 @@ let dev = new function() {
         let overview_el = document.querySelector('#dev_overview');
 
         try {
+            // We don't want go() to be fired when a script is opened or changed in the editor,
+            // because then we wouldn't be able to come back to the script to fix the code.
+            allow_go = false;
+
             switch (current_asset.type) {
                 case 'main': {
                     if (reload_app) {
@@ -448,7 +483,7 @@ let dev = new function() {
 
                         // Old assets must not be used anymore, tell go() to fix current_asset
                         reload_app = false;
-                        await goupil.go(env.base_url);
+                        await app.go(env.base_url);
                     }
 
                     render(html`<div class="dev_wip">Aperçu non disponible pour le moment</div>`,
@@ -481,6 +516,8 @@ let dev = new function() {
             overview_el.classList.add('dev_broken');
 
             return false;
+        } finally {
+            allow_go = true;
         }
     }
 };

@@ -27,8 +27,8 @@ let dev_form = new function() {
         page_builder.submitHandler = saveRecordAndReset;
 
         // Execute user script
-        let func = Function('form', 'page', 'memory', script);
-        func(page_builder, page_builder, form.memory);
+        let func = Function('form', 'page', 'memory', 'go', script);
+        func(page_builder, page_builder, form.memory, app.go);
 
         // Render widgets (even if overview is disabled)
         let page_el = document.querySelector('#dev_overview') || document.createElement('div');
