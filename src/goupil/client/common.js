@@ -12,7 +12,6 @@ let popup = new function() {
     let popup_el;
     let popup_builder;
     let popup_form;
-    let popup_timer;
 
     this.form = function(e, func) {
         closePopup();
@@ -51,7 +50,7 @@ let popup = new function() {
                 origin = {
                     x: (rect.left + rect.right) / 2,
                     y: (rect.top + rect.bottom) / 2
-                }
+                };
             }
 
             let pos = {
@@ -79,8 +78,6 @@ let popup = new function() {
 
         if (e.stopPropagation)
             e.stopPropagation();
-        clearTimeout(popup_timer);
-        popup_timer = null;
 
         // Reveal!
         popup_el.style.visibility = 'visible';
@@ -102,14 +99,6 @@ let popup = new function() {
         popup_el.setAttribute('id', 'gp_popup');
         document.body.appendChild(popup_el);
 
-        popup_el.addEventListener('mouseleave', e => {
-            popup_timer = setTimeout(closePopup, 3000);
-        });
-        popup_el.addEventListener('mouseenter', e => {
-            clearTimeout(popup_timer);
-            popup_timer = null;
-        });
-
         popup_el.addEventListener('keydown', e => {
             switch (e.keyCode) {
                 case 13: {
@@ -119,9 +108,6 @@ let popup = new function() {
                 } break;
                 case 27: { closePopup(); } break;
             }
-
-            clearTimeout(popup_timer);
-            popup_timer = null;
         });
 
         popup_el.addEventListener('click', e => e.stopPropagation());
@@ -131,9 +117,6 @@ let popup = new function() {
     function closePopup() {
         popup_form = new FormExecutor;
         popup_builder = null;
-
-        clearTimeout(popup_timer);
-        popup_timer = null;
 
         if (popup_el) {
             popup_el.classList.remove('active');
