@@ -90,8 +90,6 @@ function PageBuilder(form, widgets, variables = []) {
 
     function handleTextInput(e, key) {
         form.setValue(key, e.target.value || null);
-        form.missing_errors.delete(key.toString());
-
         self.changeHandler(self);
     }
 
@@ -135,8 +133,6 @@ function PageBuilder(form, widgets, variables = []) {
         // in which case we don't want to clear the field immediately.
         if (e.target.validity.valid) {
             form.setValue(key, parseFloat(e.target.value));
-            form.missing_errors.delete(key.toString());
-
             self.changeHandler(self);
         }
     }
@@ -168,8 +164,6 @@ function PageBuilder(form, widgets, variables = []) {
 
     function handleDropdownChange(e, key) {
         form.setValue(key, util.strToValue(e.target.value));
-        form.missing_errors.delete(key.toString());
-
         self.changeHandler(self);
     }
 
@@ -205,7 +199,6 @@ function PageBuilder(form, widgets, variables = []) {
         } else {
             form.setValue(key, util.strToValue(json));
         }
-        form.missing_errors.delete(key.toString());
 
         // This is useless in most cases because the new form will incorporate
         // this change, but who knows. Do it like other browser-native widgets.
@@ -256,7 +249,6 @@ function PageBuilder(form, widgets, variables = []) {
         } else {
             form.setValue(key, util.strToValue(e.target.value));
         }
-        form.missing_errors.delete(key.toString());
 
         self.changeHandler(self);
     }
@@ -302,7 +294,6 @@ function PageBuilder(form, widgets, variables = []) {
         }
 
         form.setValue(key, value);
-        form.missing_errors.delete(key.toString());
 
         self.changeHandler(self);
     }
@@ -373,7 +364,6 @@ function PageBuilder(form, widgets, variables = []) {
 
     function handleFileInput(e, key) {
         form.setValue(key, e.target.files[0] || null);
-        form.missing_errors.delete(key.toString());
         form.file_lists.set(key, e.target.files);
 
         self.changeHandler(self);
@@ -596,7 +586,10 @@ Valid choices include:
             key: key,
             label: label,
             value: value,
+
             missing: missing || intf.options.missing,
+            changed: form.changed_variables.has(key.toString()),
+
             error: msg => {
                 if (!intf.errors.length)
                     self.errors.push(intf);
@@ -605,6 +598,7 @@ Valid choices include:
                 return intf;
             }
         });
+        form.changed_variables.delete(key.toString());
 
         if (intf.options.mandatory && intf.missing) {
             missing_set.add(key.toString());
