@@ -13,6 +13,8 @@ function FormExecutor(values = {}) {
     this.changed_variables = new Set;
     this.sections_state = {};
     this.file_lists = new Map;
+    this.pressed_buttons = new Set;
+    this.clicked_buttons = new Set;
 
     // Key handling
     this.decodeKey = function(key) {
