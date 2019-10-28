@@ -99,12 +99,14 @@
 
 .af_slider {
     display: inline-block;
-    position: relative;
     width: 18em;
     height: 3.1em;
-    margin: 0 0.7em;
 }
 .af_slider div {
+    position: relative;
+    margin: 0 0.7em;
+}
+.af_slider span {
     position: absolute;
     top: 2.15em;
     transform: translateX(-50%);
@@ -114,8 +116,8 @@
     font-size: 0.9em;
 }
 .af_slider input {
-    width: calc(100% + 1.4em);
-    margin: 0.3em -0.7em 0 -0.7em;
+    width: 100%;
+    margin-top: 0.3em;
     -webkit-appearance: none;
     background: none;
 }

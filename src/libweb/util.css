@@ -5,6 +5,7 @@
 /* -------------------- Normalization -------------------- */
 
 button, input, optgroup, select, textarea {
+    box-sizing: border-box;
     font-family: inherit;
     font-size: 100%;
     line-height: 1.15;
