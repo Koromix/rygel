@@ -92,7 +92,7 @@ let dev = new function() {
                     form: form,
                     page: page,
 
-                    path: goupil.makePagePath(page.key),
+                    path: `pages/${page.key}.js`,
                     edit: true
                 });
             }

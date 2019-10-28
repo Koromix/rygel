@@ -113,7 +113,4 @@ let goupil = new function() {
 
         event_src.addEventListener(event, func);
     };
-
-    this.makePagePath = function(key) { return `pages/${key}.js`; };
-    this.makeBlobPath = function(key) { return `static/${key}`; };
 };
