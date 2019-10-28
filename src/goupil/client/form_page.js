@@ -55,8 +55,9 @@ function PageBuilder(form, widgets, variables = []) {
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
-            <input id=${id} type="text" size="${options.size || 30}" .value=${value || ''}
-                   placeholder=${options.placeholder || ''} ?disabled=${options.disable}
+            <input id=${id} type="text" style=${makeInputStyle(options)}
+                   placeholder=${options.placeholder || ''}
+                   .value=${value || ''} ?disabled=${options.disable}
                    @input=${e => handleTextInput(e, key)}/>
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
@@ -77,8 +78,9 @@ function PageBuilder(form, widgets, variables = []) {
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
-            <input id=${id} type="password" size="${options.size || 30}" .value=${value || ''}
-                   ?disabled=${options.disable} @input=${e => handleTextInput(e, key)}/>
+            <input id=${id} type="password" style=${makeInputStyle(options)}
+                   .value=${value || ''} ?disabled=${options.disable}
+                   @input=${e => handleTextInput(e, key)}/>
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
 
@@ -104,8 +106,8 @@ function PageBuilder(form, widgets, variables = []) {
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
-            <input id=${id} type="number" .value=${value}
-                   step=${1 / Math.pow(10, options.decimals || 0)}
+            <input id=${id} type="number" style=${makeInputStyle(options)}
+                   step=${1 / Math.pow(10, options.decimals || 0)} .value=${value}
                    placeholder=${options.placeholder || ''} ?disabled=${options.disable}
                    @input=${e => handleNumberChange(e, key)}/>
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
@@ -138,10 +140,12 @@ function PageBuilder(form, widgets, variables = []) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <div class=${missing ? 'af_slider missing' : 'af_slider'}>
-                <div style=${`left: ${!missing ? ((value - options.min) / range * 100) : 50}%;` +
-                             (options.untoggle ? ' cursor: pointer;': '')}
-                      @click=${e => options.untoggle && handleNumberChange(e, key)}>${value.toFixed(options.decimals)}</div>
+            <div class=${missing ? 'af_slider missing' : 'af_slider'} style=${makeInputStyle(options)}>
+                <div>
+                    <span style=${`left: ${!missing ? ((value - options.min) / range * 100) : 50}%;` +
+                                  (options.untoggle ? ' cursor: pointer;': '')}
+                          @click=${e => options.untoggle && handleNumberChange(e, key)}>${value.toFixed(options.decimals)}</span>
+                </div>
                 <input id=${id} type="range"
                        min=${options.min} max=${options.max} step=${1 / Math.pow(10, options.decimals)}
                        .value=${!missing ? value : ((options.max + options.min) / 2)}
@@ -244,7 +248,7 @@ function PageBuilder(form, widgets, variables = []) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <select id=${id} ?disabled=${options.disable}
+            <select id=${id} style=${makeInputStyle(options)} ?disabled=${options.disable}
                     @change=${e => handleEnumDropChange(e, key)}>
                 ${options.untoggle || !props.some(p => p != null && value === p.value) ?
                     html`<option value="null" .selected=${value == null}>-- Choisissez une option --</option>` : ''}
@@ -684,6 +688,10 @@ Valid choices include:
                 ${intf.options.help ? html`<p class="af_help">${intf.options.help}</p>` : ''}
             </div>
         `;
+    }
+
+    function makeInputStyle(options) {
+        return options.wide ? 'width: 100%;' : '';
     }
 
     function addWidget(render, options = {}) {
