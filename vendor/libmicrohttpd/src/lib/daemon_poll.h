@@ -37,8 +37,8 @@
  */
 enum MHD_StatusCode
 MHD_daemon_poll_all_ (struct MHD_Daemon *daemon,
-		      bool may_block)
-  MHD_NONNULL(1);
+                      bool may_block)
+MHD_NONNULL (1);
 
 
 /**
@@ -50,8 +50,8 @@ MHD_daemon_poll_all_ (struct MHD_Daemon *daemon,
  */
 enum MHD_StatusCode
 MHD_daemon_poll_listen_socket_ (struct MHD_Daemon *daemon,
-				bool may_block)
-  MHD_NONNULL (1);
+                                bool may_block)
+MHD_NONNULL (1);
 
 
 /**
@@ -63,8 +63,8 @@ MHD_daemon_poll_listen_socket_ (struct MHD_Daemon *daemon,
  */
 enum MHD_StatusCode
 MHD_daemon_poll_ (struct MHD_Daemon *daemon,
-		  bool may_block)
-  MHD_NONNULL (1);
+                  bool may_block)
+MHD_NONNULL (1);
 #endif
 
 
@@ -78,7 +78,7 @@ MHD_daemon_poll_ (struct MHD_Daemon *daemon,
  */
 void
 MHD_daemon_upgrade_connection_with_poll_ (struct MHD_Connection *con)
-  MHD_NONNULL(1);
+MHD_NONNULL (1);
 #endif
 #endif
 

@@ -44,33 +44,33 @@ ahc_echo (void *cls,
           const char *upload_data, size_t *upload_data_size,
           void **unused)
 {
-  (void)cls;
-  (void)connection;
-  (void)url;
-  (void)method;
-  (void)version;
-  (void)upload_data;
-  (void)upload_data_size;
-  (void)unused;
+  (void) cls;
+  (void) connection;
+  (void) url;
+  (void) method;
+  (void) version;
+  (void) upload_data;
+  (void) upload_data_size;
+  (void) unused;
 
   return 0;
 }
 
 static int
-test_wrap_loc (char *test_name, int (*test) (void))
+test_wrap_loc (char *test_name, int (*test)(void))
 {
   int ret;
 
   fprintf (stdout, "running test: %s ", test_name);
   ret = test ();
   if (ret == 0)
-    {
-      fprintf (stdout, "[pass]\n");
-    }
+  {
+    fprintf (stdout, "[pass]\n");
+  }
   else
-    {
-      fprintf (stdout, "[fail]\n");
-    }
+  {
+    fprintf (stdout, "[fail]\n");
+  }
   return ret;
 }
 
@@ -127,7 +127,7 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
-  (void)argc; (void)argv; /* Unused. Silent compiler warning. */
+  (void) argc; (void) argv; /* Unused. Silent compiler warning. */
 
   errorCount += test_wrap_loc ("ip addr option", &test_ip_addr_option);
 

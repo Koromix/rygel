@@ -51,9 +51,11 @@
 
 #include "test_helpers.h"
 
-#define LARGE_STRING "HelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHello"
+#define LARGE_STRING \
+  "HelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHelloHello"
 
-#define LARGE_REPLY_STRING "WorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorld"
+#define LARGE_REPLY_STRING \
+  "WorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorldWorld"
 
 #ifdef HTTPS_SUPPORT
 #include <gnutls/gnutls.h>
@@ -67,7 +69,7 @@
 
 static int verbose = 0;
 
-static int kicker[2] = {-1, -1} ;
+static int kicker[2] = {-1, -1};
 
 enum tls_tool
 {
@@ -90,7 +92,7 @@ enum tls_tool use_tls_tool;
  */
 static pid_t
 gnutlscli_connect (int *sock,
-                 uint16_t port)
+                   uint16_t port)
 {
   pid_t chld;
   int sp[2];
@@ -103,11 +105,11 @@ gnutlscli_connect (int *sock,
     return -1;
   chld = fork ();
   if (0 != chld)
-    {
-      *sock = sp[1];
-      MHD_socket_close_chk_ (sp[0]);
-      return chld;
-    }
+  {
+    *sock = sp[1];
+    MHD_socket_close_chk_ (sp[0]);
+    return chld;
+  }
   MHD_socket_close_chk_ (sp[1]);
   (void) close (0);
   (void) close (1);
@@ -117,34 +119,34 @@ gnutlscli_connect (int *sock,
     abort ();
   MHD_socket_close_chk_ (sp[0]);
   if (TLS_CLI_GNUTLS == use_tls_tool)
-    {
-      snprintf (destination,
-                sizeof(destination),
-                "%u",
-                (unsigned int) port);
-      execlp ("gnutls-cli",
-              "gnutls-cli",
-              "--insecure",
-              "-p",
-              destination,
-              "127.0.0.1",
-              (char *) NULL);
-    }
+  {
+    snprintf (destination,
+              sizeof(destination),
+              "%u",
+              (unsigned int) port);
+    execlp ("gnutls-cli",
+            "gnutls-cli",
+            "--insecure",
+            "-p",
+            destination,
+            "127.0.0.1",
+            (char *) NULL);
+  }
   else if (TLS_CLI_OPENSSL == use_tls_tool)
-    {
-      snprintf (destination,
-                sizeof(destination),
-                "127.0.0.1:%u",
-                (unsigned int) port);
-      execlp ("openssl",
-              "openssl",
-              "s_client",
-              "-connect",
-              destination,
-              "-verify",
-              "1",
-              (char *) NULL);
-    }
+  {
+    snprintf (destination,
+              sizeof(destination),
+              "127.0.0.1:%u",
+              (unsigned int) port);
+    execlp ("openssl",
+            "openssl",
+            "s_client",
+            "-connect",
+            destination,
+            "-verify",
+            "1",
+            (char *) NULL);
+  }
   _exit (1);
 }
 #endif /* HTTPS_SUPPORT && HAVE_FORK && HAVE_WAITPID */
@@ -200,16 +202,16 @@ struct wr_socket
  * @return created socket on success, NULL otherwise
  */
 static struct wr_socket *
-wr_create_plain_sckt(void)
+wr_create_plain_sckt (void)
 {
-  struct wr_socket *s = malloc(sizeof(struct wr_socket));
+  struct wr_socket *s = malloc (sizeof(struct wr_socket));
   if (NULL == s)
     return NULL;
   s->t = wr_plain;
   s->fd = socket (AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (MHD_INVALID_SOCKET != s->fd)
     return s;
-  free(s);
+  free (s);
   return NULL;
 }
 
@@ -219,40 +221,44 @@ wr_create_plain_sckt(void)
  * @return created socket on success, NULL otherwise
  */
 static struct wr_socket *
-wr_create_tls_sckt(void)
+wr_create_tls_sckt (void)
 {
 #ifdef HTTPS_SUPPORT
-  struct wr_socket *s = malloc(sizeof(struct wr_socket));
+  struct wr_socket *s = malloc (sizeof(struct wr_socket));
   if (NULL == s)
     return NULL;
   s->t = wr_tls;
   s->tls_connected = 0;
   s->fd = socket (AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (MHD_INVALID_SOCKET != s->fd)
+  {
+    if (GNUTLS_E_SUCCESS == gnutls_init (&(s->tls_s), GNUTLS_CLIENT))
     {
-      if (GNUTLS_E_SUCCESS == gnutls_init (&(s->tls_s), GNUTLS_CLIENT))
+      if (GNUTLS_E_SUCCESS == gnutls_set_default_priority (s->tls_s))
+      {
+        if (GNUTLS_E_SUCCESS == gnutls_certificate_allocate_credentials (
+              &(s->tls_crd)))
         {
-          if (GNUTLS_E_SUCCESS == gnutls_set_default_priority (s->tls_s))
-            {
-              if (GNUTLS_E_SUCCESS == gnutls_certificate_allocate_credentials (&(s->tls_crd)))
-                {
-                  if (GNUTLS_E_SUCCESS == gnutls_credentials_set (s->tls_s, GNUTLS_CRD_CERTIFICATE, s->tls_crd))
-                    {
-#if GNUTLS_VERSION_NUMBER+0 >= 0x030109
-                      gnutls_transport_set_int (s->tls_s, (int)(s->fd));
+          if (GNUTLS_E_SUCCESS == gnutls_credentials_set (s->tls_s,
+                                                          GNUTLS_CRD_CERTIFICATE,
+                                                          s->tls_crd))
+          {
+#if GNUTLS_VERSION_NUMBER + 0 >= 0x030109
+            gnutls_transport_set_int (s->tls_s, (int) (s->fd));
 #else  /* GnuTLS before 3.1.9 */
-                      gnutls_transport_set_ptr (s->tls_s, (gnutls_transport_ptr_t)(intptr_t)(s->fd));
+            gnutls_transport_set_ptr (s->tls_s,
+                                      (gnutls_transport_ptr_t) (intptr_t) (s->fd));
 #endif /* GnuTLS before 3.1.9 */
-                      return s;
-                    }
-                  gnutls_certificate_free_credentials (s->tls_crd);
-                }
-            }
-          gnutls_deinit (s->tls_s);
+            return s;
+          }
+          gnutls_certificate_free_credentials (s->tls_crd);
         }
-      (void)MHD_socket_close_ (s->fd);
+      }
+      gnutls_deinit (s->tls_s);
     }
-  free(s);
+    (void) MHD_socket_close_ (s->fd);
+  }
+  free (s);
 #endif /* HTTPS_SUPPORT */
   return NULL;
 }
@@ -265,9 +271,9 @@ wr_create_tls_sckt(void)
  * @return created socket on success, NULL otherwise
  */
 static struct wr_socket *
-wr_create_from_plain_sckt(MHD_socket plain_sk)
+wr_create_from_plain_sckt (MHD_socket plain_sk)
 {
-  struct wr_socket *s = malloc(sizeof(struct wr_socket));
+  struct wr_socket *s = malloc (sizeof(struct wr_socket));
 
   if (NULL == s)
     return NULL;
@@ -285,9 +291,9 @@ wr_create_from_plain_sckt(MHD_socket plain_sk)
  * @return zero on success, -1 otherwise.
  */
 static int
-wr_connect(struct wr_socket *s,
-           const struct sockaddr *addr,
-           int length)
+wr_connect (struct wr_socket *s,
+            const struct sockaddr *addr,
+            int length)
 {
   if (0 != connect (s->fd, addr, length))
     return -1;
@@ -295,15 +301,15 @@ wr_connect(struct wr_socket *s,
     return 0;
 #ifdef HTTPS_SUPPORT
   if (wr_tls == s->t)
-    {
-      /* Do not try handshake here as
-       * it require processing on MHD side and
-       * when testing with "external" polling,
-       * test will call MHD processing only
-       * after return from wr_connect(). */
-      s->tls_connected = 0;
-      return 0;
-    }
+  {
+    /* Do not try handshake here as
+     * it require processing on MHD side and
+     * when testing with "external" polling,
+     * test will call MHD processing only
+     * after return from wr_connect(). */
+    s->tls_connected = 0;
+    return 0;
+  }
 #endif /* HTTPS_SUPPORT */
   return -1;
 }
@@ -311,7 +317,7 @@ wr_connect(struct wr_socket *s,
 #ifdef HTTPS_SUPPORT
 /* Only to be called from wr_send() and wr_recv() ! */
 static bool
-wr_handshake(struct wr_socket *s)
+wr_handshake (struct wr_socket *s)
 {
   int res = gnutls_handshake (s->tls_s);
   if (GNUTLS_E_SUCCESS == res)
@@ -340,22 +346,22 @@ wr_send (struct wr_socket *s,
          size_t len)
 {
   if (wr_plain == s->t)
-    return MHD_send_(s->fd, buf, len);
+    return MHD_send_ (s->fd, buf, len);
 #ifdef HTTPS_SUPPORT
   if (wr_tls == s->t)
-    {
-      ssize_t ret;
-      if (!s->tls_connected && !wr_handshake (s))
-        return -1;
+  {
+    ssize_t ret;
+    if (! s->tls_connected && ! wr_handshake (s))
+      return -1;
 
-      ret = gnutls_record_send (s->tls_s, buf, len);
-      if (ret > 0)
-        return ret;
-      if (GNUTLS_E_AGAIN == ret)
-        MHD_socket_set_error_ (MHD_SCKT_EAGAIN_);
-      else
-        MHD_socket_set_error_ (MHD_SCKT_ECONNABORTED_); /* hard error */
-    }
+    ret = gnutls_record_send (s->tls_s, buf, len);
+    if (ret > 0)
+      return ret;
+    if (GNUTLS_E_AGAIN == ret)
+      MHD_socket_set_error_ (MHD_SCKT_EAGAIN_);
+    else
+      MHD_socket_set_error_ (MHD_SCKT_ECONNABORTED_);   /* hard error */
+  }
 #endif /* HTTPS_SUPPORT */
   return -1;
 }
@@ -379,19 +385,19 @@ wr_recv (struct wr_socket *s,
     return MHD_recv_ (s->fd, buf, len);
 #ifdef HTTPS_SUPPORT
   if (wr_tls == s->t)
-    {
-      ssize_t ret;
-      if (!s->tls_connected && !wr_handshake (s))
-        return -1;
+  {
+    ssize_t ret;
+    if (! s->tls_connected && ! wr_handshake (s))
+      return -1;
 
-      ret = gnutls_record_recv (s->tls_s, buf, len);
-      if (ret > 0)
-        return ret;
-      if (GNUTLS_E_AGAIN == ret)
-        MHD_socket_set_error_ (MHD_SCKT_EAGAIN_);
-      else
-        MHD_socket_set_error_ (MHD_SCKT_ECONNABORTED_); /* hard error */
-    }
+    ret = gnutls_record_recv (s->tls_s, buf, len);
+    if (ret > 0)
+      return ret;
+    if (GNUTLS_E_AGAIN == ret)
+      MHD_socket_set_error_ (MHD_SCKT_EAGAIN_);
+    else
+      MHD_socket_set_error_ (MHD_SCKT_ECONNABORTED_);   /* hard error */
+  }
 #endif /* HTTPS_SUPPORT */
   return -1;
 }
@@ -405,13 +411,13 @@ wr_recv (struct wr_socket *s,
 static int
 wr_close (struct wr_socket *s)
 {
-  int ret = (MHD_socket_close_(s->fd)) ? 0 : -1;
+  int ret = (MHD_socket_close_ (s->fd)) ? 0 : -1;
 #ifdef HTTPS_SUPPORT
   if (wr_tls == s->t)
-    {
-      gnutls_deinit (s->tls_s);
-      gnutls_certificate_free_credentials (s->tls_crd);
-    }
+  {
+    gnutls_deinit (s->tls_s);
+    gnutls_certificate_free_credentials (s->tls_crd);
+  }
 #endif /* HTTPS_SUPPORT */
   free (s);
   return ret;
@@ -455,7 +461,7 @@ notify_completed_cb (void *cls,
                      void **con_cls,
                      enum MHD_RequestTerminationCode toe)
 {
-  pthread_t* ppth = *con_cls;
+  pthread_t*ppth = *con_cls;
 
   (void) cls;
   (void) connection;  /* Unused. Silent compiler warning. */
@@ -463,7 +469,7 @@ notify_completed_cb (void *cls,
        (toe != MHD_REQUEST_TERMINATED_CLIENT_ABORT) &&
        (toe != MHD_REQUEST_TERMINATED_DAEMON_SHUTDOWN) )
     abort ();
-  if (! pthread_equal (**((pthread_t**)con_cls),
+  if (! pthread_equal (**((pthread_t**) con_cls),
                        pthread_self ()))
     abort ();
   if (NULL != ppth)
@@ -494,7 +500,7 @@ log_cb (void *cls,
     abort ();
   ppth = malloc (sizeof (pthread_t));
   if (NULL == ppth)
-    abort();
+    abort ();
   *ppth = pthread_self ();
   return (void *) ppth;
 }
@@ -580,8 +586,7 @@ kick_select ()
 {
   if (-1 != kicker[1])
   {
-    write (kicker[1], "K", 1);
-    fprintf (stderr, "KICKING\n");
+    (void) write (kicker[1], "K", 1);
   }
 }
 
@@ -596,21 +601,21 @@ send_all (struct wr_socket *sock,
 
   make_blocking (wr_fd (sock));
   for (off = 0; off < len; off += ret)
+  {
+    ret = wr_send (sock,
+                   &text[off],
+                   len - off);
+    kick_select ();
+    if (0 > ret)
     {
-      ret = wr_send (sock,
-                     &text[off],
-                     len - off);
-      kick_select ();
-      if (0 > ret)
-        {
-          if (MHD_SCKT_ERR_IS_EAGAIN_ (MHD_socket_get_error_ ()))
-            {
-              ret = 0;
-              continue;
-            }
-          abort ();
-        }
+      if (MHD_SCKT_ERR_IS_EAGAIN_ (MHD_socket_get_error_ ()))
+      {
+        ret = 0;
+        continue;
+      }
+      abort ();
     }
+  }
 }
 
 
@@ -630,37 +635,40 @@ recv_hdr (struct wr_socket *sock)
   next = '\r';
   i = 0;
   while (i < 4)
+  {
+    ret = wr_recv (sock,
+                   &c,
+                   1);
+    if (0 > ret)
     {
-      ret = wr_recv (sock,
-                       &c,
-                       1);
-      kick_select ();
-      if (0 > ret)
-        {
-          if (MHD_SCKT_ERR_IS_EAGAIN_ (MHD_socket_get_error_ ()))
-            continue;
-          abort ();
-        }
-      if (0 == ret)
+      if (MHD_SCKT_ERR_IS_EAGAIN_ (MHD_socket_get_error_ ()))
         continue;
-      if (c == next)
-        {
-          i++;
-          if (next == '\r')
-            next = '\n';
-          else
-            next = '\r';
-          continue;
-        }
-      if (c == '\r')
-        {
-          i = 1;
-          next = '\n';
-          continue;
-        }
-      i = 0;
-      next = '\r';
+      fprintf (stderr,
+               "recv failed unexpectedly: %s\n",
+               strerror (errno));
+      abort ();
     }
+    if (0 == ret)
+      continue;
+    kick_select ();
+    if (c == next)
+    {
+      i++;
+      if (next == '\r')
+        next = '\n';
+      else
+        next = '\r';
+      continue;
+    }
+    if (c == '\r')
+    {
+      i = 1;
+      next = '\n';
+      continue;
+    }
+    i = 0;
+    next = '\r';
+  }
 }
 
 
@@ -675,22 +683,22 @@ recv_all (struct wr_socket *sock,
 
   make_blocking (wr_fd (sock));
   for (off = 0; off < len; off += ret)
+  {
+    ret = wr_recv (sock,
+                   &buf[off],
+                   len - off);
+    if (0 > ret)
     {
-      ret = wr_recv (sock,
-                       &buf[off],
-                       len - off);
-      if (0 > ret)
-        {
-          if (MHD_SCKT_ERR_IS_EAGAIN_ (MHD_socket_get_error_ ()))
-            {
-              ret = 0;
-              continue;
-            }
-          abort ();
-        }
+      if (MHD_SCKT_ERR_IS_EAGAIN_ (MHD_socket_get_error_ ()))
+      {
+        ret = 0;
+        continue;
+      }
+      abort ();
     }
+  }
   if (0 != strncmp (text, buf, len))
-    abort();
+    abort ();
 }
 
 
@@ -705,6 +713,8 @@ run_usock (void *cls)
 {
   struct MHD_UpgradeResponseHandle *urh = cls;
 
+  MHD_upgrade_action (urh,
+                      MHD_UPGRADE_ACTION_CORK_OFF);
   send_all (usock,
             LARGE_STRING);
   recv_all (usock,
@@ -874,7 +884,7 @@ ahc_upgrade (void *cls,
 
   if (NULL == *con_cls)
     abort ();
-  if (! pthread_equal (**((pthread_t**)con_cls), pthread_self ()))
+  if (! pthread_equal (**((pthread_t**) con_cls), pthread_self ()))
     abort ();
   resp = MHD_create_response_for_upgrade (&upgrade_cb,
                                           NULL);
@@ -908,40 +918,40 @@ run_mhd_select_loop (struct MHD_Daemon *daemon)
   if (0 != pipe (kicker))
     abort ();
   while (! done)
-    {
-      FD_ZERO (&rs);
-      FD_ZERO (&ws);
-      FD_ZERO (&es);
-      max_fd = -1;
-      to = 1000;
+  {
+    FD_ZERO (&rs);
+    FD_ZERO (&ws);
+    FD_ZERO (&es);
+    max_fd = -1;
+    to = 1000;
 
-      FD_SET (kicker[0], &rs);
-      if (MHD_YES !=
-          MHD_get_fdset (daemon,
+    FD_SET (kicker[0], &rs);
+    if (MHD_YES !=
+        MHD_get_fdset (daemon,
+                       &rs,
+                       &ws,
+                       &es,
+                       &max_fd))
+      abort ();
+    (void) MHD_get_timeout (daemon,
+                            &to);
+    if (1000 < to)
+      to = 1000;
+    tv.tv_sec = to / 1000;
+    tv.tv_usec = 1000 * (to % 1000);
+    if (0 > MHD_SYS_select_ (max_fd + 1,
+                             &rs,
+                             &ws,
+                             &es,
+                             &tv))
+      abort ();
+    if (FD_ISSET (kicker[0], &rs))
+      (void) read (kicker[0], drain, sizeof (drain));
+    MHD_run_from_select (daemon,
                          &rs,
                          &ws,
-                         &es,
-                         &max_fd))
-        abort ();
-      (void) MHD_get_timeout (daemon,
-                              &to);
-      if (1000 < to)
-        to = 1000;
-      tv.tv_sec = to / 1000;
-      tv.tv_usec = 1000 * (to % 1000);
-      if (0 > MHD_SYS_select_ (max_fd + 1,
-                               &rs,
-                               &ws,
-                               &es,
-                               &tv))
-        abort ();
-      if (FD_ISSET (kicker[0], &rs))
-        (void) read (kicker[0], drain, sizeof (drain));
-      MHD_run_from_select (daemon,
-                           &rs,
-                           &ws,
-                           &es);
-    }
+                         &es);
+  }
   close (kicker[0]);
   close (kicker[1]);
   kicker[0] = -1;
@@ -958,7 +968,7 @@ run_mhd_select_loop (struct MHD_Daemon *daemon)
 static void
 run_mhd_poll_loop (struct MHD_Daemon *daemon)
 {
-  (void)daemon; /* Unused. Silent compiler warning. */
+  (void) daemon; /* Unused. Silent compiler warning. */
   abort (); /* currently not implementable with existing MHD API */
 }
 #endif /* HAVE_POLL */
@@ -987,30 +997,30 @@ run_mhd_epoll_loop (struct MHD_Daemon *daemon)
   if (0 != pipe (kicker))
     abort ();
   while (! done)
-    {
-      FD_ZERO (&rs);
+  {
+    FD_ZERO (&rs);
+    to = 1000;
+    FD_SET (kicker[0], &rs);
+    FD_SET (ep, &rs);
+    (void) MHD_get_timeout (daemon,
+                            &to);
+    if (1000 < to)
       to = 1000;
-      FD_SET (kicker[0], &rs);
-      FD_SET (ep, &rs);
-      (void) MHD_get_timeout (daemon,
-                              &to);
-      if (1000 < to)
-        to = 1000;
-      tv.tv_sec = to / 1000;
-      tv.tv_usec = 1000 * (to % 1000);
-      ret = select (ep + 1,
-                    &rs,
-                    NULL,
-                    NULL,
-                    &tv);
-      if ( (-1 == ret) &&
-           (EAGAIN != errno) &&
-           (EINTR != errno) )
-        abort ();
-      if (FD_ISSET (kicker[0], &rs))
-        (void) read (kicker[0], drain, sizeof (drain));
-      MHD_run (daemon);
-    }
+    tv.tv_sec = to / 1000;
+    tv.tv_usec = 1000 * (to % 1000);
+    ret = select (ep + 1,
+                  &rs,
+                  NULL,
+                  NULL,
+                  &tv);
+    if ( (-1 == ret) &&
+         (EAGAIN != errno) &&
+         (EINTR != errno) )
+      abort ();
+    if (FD_ISSET (kicker[0], &rs))
+      (void) read (kicker[0], drain, sizeof (drain));
+    MHD_run (daemon);
+  }
   close (kicker[0]);
   close (kicker[1]);
   kicker[0] = -1;
@@ -1067,27 +1077,34 @@ test_upgrade (int flags,
 
   if (! test_tls)
     d = MHD_start_daemon (flags | MHD_USE_ERROR_LOG | MHD_ALLOW_UPGRADE,
-                          MHD_is_feature_supported(MHD_FEATURE_AUTODETECT_BIND_PORT) ?
+                          MHD_is_feature_supported (
+                            MHD_FEATURE_AUTODETECT_BIND_PORT) ?
                           0 : 1090,
                           NULL, NULL,
                           &ahc_upgrade, NULL,
-                          MHD_OPTION_CONNECTION_MEMORY_LIMIT, 512,
+                          MHD_OPTION_CONNECTION_MEMORY_LIMIT, (size_t) 512,
                           MHD_OPTION_URI_LOG_CALLBACK, &log_cb, NULL,
-                          MHD_OPTION_NOTIFY_COMPLETED, &notify_completed_cb, NULL,
-                          MHD_OPTION_NOTIFY_CONNECTION, &notify_connection_cb, NULL,
+                          MHD_OPTION_NOTIFY_COMPLETED, &notify_completed_cb,
+                          NULL,
+                          MHD_OPTION_NOTIFY_CONNECTION, &notify_connection_cb,
+                          NULL,
                           MHD_OPTION_THREAD_POOL_SIZE, pool,
                           MHD_OPTION_END);
 #ifdef HTTPS_SUPPORT
   else
-    d = MHD_start_daemon (flags | MHD_USE_ERROR_LOG | MHD_ALLOW_UPGRADE | MHD_USE_TLS,
-                          MHD_is_feature_supported(MHD_FEATURE_AUTODETECT_BIND_PORT) ?
-                              0 : 1090,
+    d = MHD_start_daemon (flags | MHD_USE_ERROR_LOG | MHD_ALLOW_UPGRADE
+                          | MHD_USE_TLS,
+                          MHD_is_feature_supported (
+                            MHD_FEATURE_AUTODETECT_BIND_PORT) ?
+                          0 : 1090,
                           NULL, NULL,
                           &ahc_upgrade, NULL,
-                          MHD_OPTION_CONNECTION_MEMORY_LIMIT, 512,
+                          MHD_OPTION_CONNECTION_MEMORY_LIMIT, (size_t) 512,
                           MHD_OPTION_URI_LOG_CALLBACK, &log_cb, NULL,
-                          MHD_OPTION_NOTIFY_COMPLETED, &notify_completed_cb, NULL,
-                          MHD_OPTION_NOTIFY_CONNECTION, &notify_connection_cb, NULL,
+                          MHD_OPTION_NOTIFY_COMPLETED, &notify_completed_cb,
+                          NULL,
+                          MHD_OPTION_NOTIFY_CONNECTION, &notify_connection_cb,
+                          NULL,
                           MHD_OPTION_HTTPS_MEM_KEY, srv_signed_key_pem,
                           MHD_OPTION_HTTPS_MEM_CERT, srv_signed_cert_pem,
                           MHD_OPTION_THREAD_POOL_SIZE, pool,
@@ -1104,43 +1121,43 @@ test_upgrade (int flags,
   if ( (NULL == dinfo) ||
        (0 == dinfo->port) )
     abort ();
-  if (!test_tls || TLS_LIB_GNUTLS == use_tls_tool)
-    {
-      sock = test_tls ? wr_create_tls_sckt () : wr_create_plain_sckt ();
-      if (NULL == sock)
-        abort ();
-      sa.sin_family = AF_INET;
-      sa.sin_port = htons (dinfo->port);
-      sa.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
-      if (0 != wr_connect (sock,
-                           (struct sockaddr *) &sa,
-                           sizeof (sa)))
-        abort ();
-    }
-  else
-    {
-#if defined(HTTPS_SUPPORT) && defined(HAVE_FORK) && defined(HAVE_WAITPID)
-      MHD_socket tls_fork_sock;
-      uint16_t port;
-
-      /* make address sanitizer happy */
-      memcpy (&port,
-              dinfo /* ->port */,
-              sizeof (port));
-      if (-1 == (pid = gnutlscli_connect (&tls_fork_sock,
-                                          port)))
-        {
-          MHD_stop_daemon (d);
-          return 4;
-        }
-
-      sock =  wr_create_from_plain_sckt (tls_fork_sock);
-      if (NULL == sock)
-        abort ();
-#else  /* !HTTPS_SUPPORT || !HAVE_FORK || !HAVE_WAITPID */
+  if (! test_tls ||(TLS_LIB_GNUTLS == use_tls_tool))
+  {
+    sock = test_tls ? wr_create_tls_sckt () : wr_create_plain_sckt ();
+    if (NULL == sock)
       abort ();
-#endif /* !HTTPS_SUPPORT || !HAVE_FORK || !HAVE_WAITPID */
+    sa.sin_family = AF_INET;
+    sa.sin_port = htons (dinfo->port);
+    sa.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
+    if (0 != wr_connect (sock,
+                         (struct sockaddr *) &sa,
+                         sizeof (sa)))
+      abort ();
+  }
+  else
+  {
+#if defined(HTTPS_SUPPORT) && defined(HAVE_FORK) && defined(HAVE_WAITPID)
+    MHD_socket tls_fork_sock;
+    uint16_t port;
+
+    /* make address sanitizer happy */
+    memcpy (&port,
+            dinfo /* ->port */,
+            sizeof (port));
+    if (-1 == (pid = gnutlscli_connect (&tls_fork_sock,
+                                        port)))
+    {
+      MHD_stop_daemon (d);
+      return 4;
     }
+
+    sock =  wr_create_from_plain_sckt (tls_fork_sock);
+    if (NULL == sock)
+      abort ();
+#else  /* !HTTPS_SUPPORT || !HAVE_FORK || !HAVE_WAITPID */
+    abort ();
+#endif /* !HTTPS_SUPPORT || !HAVE_FORK || !HAVE_WAITPID */
+  }
 
   if (0 != pthread_create (&pt_client,
                            NULL,
@@ -1148,21 +1165,21 @@ test_upgrade (int flags,
                            sock))
     abort ();
   if (0 == (flags & MHD_USE_INTERNAL_POLLING_THREAD) )
-    {
-      enum MHD_FLAG flags;
+  {
+    enum MHD_FLAG flags;
 
-      /* make address sanitizer happy */
-      memcpy (&flags,
-              real_flags /* ->flags */,
-              sizeof (flags));
-      run_mhd_loop (d, flags);
-    }
+    /* make address sanitizer happy */
+    memcpy (&flags,
+            real_flags /* ->flags */,
+            sizeof (flags));
+    run_mhd_loop (d, flags);
+  }
   pthread_join (pt_client,
                 NULL);
   pthread_join (pt,
                 NULL);
 #if defined(HTTPS_SUPPORT) && defined(HAVE_FORK) && defined(HAVE_WAITPID)
-  if (test_tls && TLS_LIB_GNUTLS != use_tls_tool)
+  if (test_tls &&(TLS_LIB_GNUTLS != use_tls_tool))
     waitpid (pid, NULL, 0);
 #endif /* HTTPS_SUPPORT && HAVE_FORK && HAVE_WAITPID */
   MHD_stop_daemon (d);
@@ -1178,56 +1195,56 @@ main (int argc,
   int res;
 
   use_tls_tool = TLS_CLI_NO_TOOL;
-  test_tls = has_in_name(argv[0], "_tls");
+  test_tls = has_in_name (argv[0], "_tls");
 
   verbose = 1;
-  if (has_param(argc, argv, "-q") ||
-      has_param(argc, argv, "--quiet"))
+  if (has_param (argc, argv, "-q") ||
+      has_param (argc, argv, "--quiet"))
     verbose = 0;
 
   if (test_tls)
-    {
+  {
 #ifdef HTTPS_SUPPORT
-      if (has_param(argc, argv, "--use-gnutls-cli"))
-        use_tls_tool = TLS_CLI_GNUTLS;
-      else if (has_param(argc, argv, "--use-openssl"))
-        use_tls_tool = TLS_CLI_OPENSSL;
-      else if (has_param(argc, argv, "--use-gnutls-lib"))
-        use_tls_tool = TLS_LIB_GNUTLS;
+    if (has_param (argc, argv, "--use-gnutls-cli"))
+      use_tls_tool = TLS_CLI_GNUTLS;
+    else if (has_param (argc, argv, "--use-openssl"))
+      use_tls_tool = TLS_CLI_OPENSSL;
+    else if (has_param (argc, argv, "--use-gnutls-lib"))
+      use_tls_tool = TLS_LIB_GNUTLS;
 #if defined(HAVE_FORK) && defined(HAVE_WAITPID)
-      else if (0 == system ("gnutls-cli --version 1> /dev/null 2> /dev/null"))
-        use_tls_tool = TLS_CLI_GNUTLS;
-      else if (0 == system ("openssl version 1> /dev/null 2> /dev/null"))
-        use_tls_tool = TLS_CLI_OPENSSL;
+    else if (0 == system ("gnutls-cli --version 1> /dev/null 2> /dev/null"))
+      use_tls_tool = TLS_CLI_GNUTLS;
+    else if (0 == system ("openssl version 1> /dev/null 2> /dev/null"))
+      use_tls_tool = TLS_CLI_OPENSSL;
 #endif /* HAVE_FORK && HAVE_WAITPID */
-      else
-        use_tls_tool = TLS_LIB_GNUTLS; /* Should be available as MHD use it. */
-      if (verbose)
-        {
-          switch (use_tls_tool)
-          {
-            case TLS_CLI_GNUTLS:
-              printf ("GnuTLS-CLI will be used for testing.\n");
-              break;
-            case TLS_CLI_OPENSSL:
-              printf ("Command line version of OpenSSL will be used for testing.\n");
-              break;
-            case TLS_LIB_GNUTLS:
-              printf ("GnuTLS library will be used for testing.\n");
-              break;
-            default:
-              abort ();
-          }
-        }
-      if ( (TLS_LIB_GNUTLS == use_tls_tool) &&
-           (GNUTLS_E_SUCCESS != gnutls_global_init()) )
+    else
+      use_tls_tool = TLS_LIB_GNUTLS;   /* Should be available as MHD use it. */
+    if (verbose)
+    {
+      switch (use_tls_tool)
+      {
+      case TLS_CLI_GNUTLS:
+        printf ("GnuTLS-CLI will be used for testing.\n");
+        break;
+      case TLS_CLI_OPENSSL:
+        printf ("Command line version of OpenSSL will be used for testing.\n");
+        break;
+      case TLS_LIB_GNUTLS:
+        printf ("GnuTLS library will be used for testing.\n");
+        break;
+      default:
         abort ();
+      }
+    }
+    if ( (TLS_LIB_GNUTLS == use_tls_tool) &&
+         (GNUTLS_E_SUCCESS != gnutls_global_init ()) )
+      abort ();
 
 #else  /* ! HTTPS_SUPPORT */
-      fprintf (stderr, "HTTPS support was disabled by configure.\n");
-      return 77;
+    fprintf (stderr, "HTTPS support was disabled by configure.\n");
+    return 77;
 #endif /* ! HTTPS_SUPPORT */
-    }
+  }
 
   /* run tests */
   if (verbose)
@@ -1268,7 +1285,8 @@ main (int argc,
 #endif
 
   /* Test thread-per-connection */
-  res = test_upgrade (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_THREAD_PER_CONNECTION,
+  res = test_upgrade (MHD_USE_INTERNAL_POLLING_THREAD
+                      | MHD_USE_THREAD_PER_CONNECTION,
                       0);
   error_count += res;
   if (res)
@@ -1278,7 +1296,8 @@ main (int argc,
   else if (verbose)
     printf ("PASSED: Upgrade with thread per connection.\n");
 
-  res = test_upgrade (MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_THREAD_PER_CONNECTION,
+  res = test_upgrade (MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD
+                      | MHD_USE_THREAD_PER_CONNECTION,
                       0);
   error_count += res;
   if (res)
@@ -1288,7 +1307,8 @@ main (int argc,
   else if (verbose)
     printf ("PASSED: Upgrade with thread per connection and 'auto'.\n");
 #ifdef HAVE_POLL
-  res = test_upgrade (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_THREAD_PER_CONNECTION | MHD_USE_POLL,
+  res = test_upgrade (MHD_USE_INTERNAL_POLLING_THREAD
+                      | MHD_USE_THREAD_PER_CONNECTION | MHD_USE_POLL,
                       0);
   error_count += res;
   if (res)
@@ -1380,7 +1400,7 @@ main (int argc,
              error_count);
 #ifdef HTTPS_SUPPORT
   if (test_tls && (TLS_LIB_GNUTLS == use_tls_tool))
-    gnutls_global_deinit();
+    gnutls_global_deinit ();
 #endif /* HTTPS_SUPPORT */
   return error_count != 0;       /* 0 == pass */
 }

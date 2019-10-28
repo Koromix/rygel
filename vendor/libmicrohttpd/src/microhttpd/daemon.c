@@ -115,7 +115,7 @@ close_all_connections (struct MHD_Daemon *daemon);
  */
 static int
 MHD_epoll (struct MHD_Daemon *daemon,
-	   int may_block);
+           int may_block);
 
 #endif /* EPOLL_SUPPORT */
 
@@ -130,21 +130,21 @@ MHD_epoll (struct MHD_Daemon *daemon,
  */
 static void
 mhd_panic_std (void *cls,
-	       const char *file,
-	       unsigned int line,
-	       const char *reason)
+               const char *file,
+               unsigned int line,
+               const char *reason)
 {
-  (void)cls; /* Mute compiler warning. */
+  (void) cls; /* Mute compiler warning. */
 #ifdef HAVE_MESSAGES
   fprintf (stderr,
-           _("Fatal error in GNU libmicrohttpd %s:%u: %s\n"),
-	   file,
+           _ ("Fatal error in GNU libmicrohttpd %s:%u: %s\n"),
+           file,
            line,
            reason);
 #else  /* ! HAVE_MESSAGES */
-  (void)file;   /* Mute compiler warning. */
-  (void)line;   /* Mute compiler warning. */
-  (void)reason; /* Mute compiler warning. */
+  (void) file;   /* Mute compiler warning. */
+  (void) line;   /* Mute compiler warning. */
+  (void) reason; /* Mute compiler warning. */
 #endif
   abort ();
 }
@@ -164,7 +164,7 @@ void *mhd_panic_cls = NULL;
  * Globally initialise library.
  */
 void
-MHD_init(void);
+MHD_init (void);
 
 
 #if defined(MHD_WINSOCK_SOCKETS)
@@ -179,7 +179,7 @@ static int mhd_winsock_inited_ = 0;
  * Do nothing - global initialisation is
  * performed by library constructor.
  */
-#define MHD_check_global_init_() (void)0
+#define MHD_check_global_init_() (void) 0
 #else  /* ! _AUTOINIT_FUNCS_ARE_SUPPORTED */
 /**
  * Track global initialisation
@@ -191,7 +191,7 @@ volatile int global_init_count = 0;
 /**
  * Global initialisation mutex
  */
-MHD_MUTEX_STATIC_DEFN_INIT_(global_init_mutex_);
+MHD_MUTEX_STATIC_DEFN_INIT_ (global_init_mutex_);
 #endif /* MHD_MUTEX_STATIC_DEFN_INIT_ */
 #endif
 
@@ -205,14 +205,14 @@ MHD_check_global_init_ (void)
 {
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
 #ifdef MHD_MUTEX_STATIC_DEFN_INIT_
-  MHD_mutex_lock_chk_(&global_init_mutex_);
+  MHD_mutex_lock_chk_ (&global_init_mutex_);
 #endif /* MHD_MUTEX_STATIC_DEFN_INIT_ */
 #endif
   if (0 == global_init_count++)
     MHD_init ();
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
 #ifdef MHD_MUTEX_STATIC_DEFN_INIT_
-  MHD_mutex_unlock_chk_(&global_init_mutex_);
+  MHD_mutex_unlock_chk_ (&global_init_mutex_);
 #endif /* MHD_MUTEX_STATIC_DEFN_INIT_ */
 #endif
 }
@@ -227,9 +227,9 @@ MHD_default_logger_ (void *cls,
                      const char *fm,
                      va_list ap)
 {
-  vfprintf ((FILE*)cls, fm, ap);
+  vfprintf ((FILE*) cls, fm, ap);
 #ifdef _DEBUG
-  fflush ((FILE*)cls);
+  fflush ((FILE*) cls);
 #endif /* _DEBUG */
 }
 
@@ -308,7 +308,7 @@ static void
 MHD_ip_count_lock (struct MHD_Daemon *daemon)
 {
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-  MHD_mutex_lock_chk_(&daemon->per_ip_connection_mutex);
+  MHD_mutex_lock_chk_ (&daemon->per_ip_connection_mutex);
 #else
   (void) daemon;
 #endif
@@ -324,7 +324,7 @@ static void
 MHD_ip_count_unlock (struct MHD_Daemon *daemon)
 {
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-  MHD_mutex_unlock_chk_(&daemon->per_ip_connection_mutex);
+  MHD_mutex_unlock_chk_ (&daemon->per_ip_connection_mutex);
 #else
   (void) daemon;
 #endif
@@ -361,37 +361,37 @@ MHD_ip_addr_compare (const void *a1,
  */
 static int
 MHD_ip_addr_to_key (const struct sockaddr *addr,
-		    socklen_t addrlen,
-		    struct MHD_IPCount *key)
+                    socklen_t addrlen,
+                    struct MHD_IPCount *key)
 {
-  memset(key,
-         0,
-         sizeof(*key));
+  memset (key,
+          0,
+          sizeof(*key));
 
   /* IPv4 addresses */
   if (sizeof (struct sockaddr_in) == addrlen)
-    {
-      const struct sockaddr_in *addr4 = (const struct sockaddr_in*) addr;
+  {
+    const struct sockaddr_in *addr4 = (const struct sockaddr_in*) addr;
 
-      key->family = AF_INET;
-      memcpy (&key->addr.ipv4,
-              &addr4->sin_addr,
-              sizeof(addr4->sin_addr));
-      return MHD_YES;
-    }
+    key->family = AF_INET;
+    memcpy (&key->addr.ipv4,
+            &addr4->sin_addr,
+            sizeof(addr4->sin_addr));
+    return MHD_YES;
+  }
 
 #if HAVE_INET6
   /* IPv6 addresses */
   if (sizeof (struct sockaddr_in6) == addrlen)
-    {
-      const struct sockaddr_in6 *addr6 = (const struct sockaddr_in6*) addr;
+  {
+    const struct sockaddr_in6 *addr6 = (const struct sockaddr_in6*) addr;
 
-      key->family = AF_INET6;
-      memcpy (&key->addr.ipv6,
-              &addr6->sin6_addr,
-              sizeof(addr6->sin6_addr));
-      return MHD_YES;
-    }
+    key->family = AF_INET6;
+    memcpy (&key->addr.ipv6,
+            &addr6->sin6_addr,
+            sizeof(addr6->sin6_addr));
+    return MHD_YES;
+  }
 #endif
 
   /* Some other address */
@@ -412,8 +412,8 @@ MHD_ip_addr_to_key (const struct sockaddr *addr,
  */
 static int
 MHD_ip_limit_add (struct MHD_Daemon *daemon,
-		  const struct sockaddr *addr,
-		  socklen_t addrlen)
+                  const struct sockaddr *addr,
+                  socklen_t addrlen)
 {
   struct MHD_IPCount *key;
   void **nodep;
@@ -432,30 +432,30 @@ MHD_ip_limit_add (struct MHD_Daemon *daemon,
   if (MHD_NO == MHD_ip_addr_to_key (addr,
                                     addrlen,
                                     key))
-    {
-      /* Allow unhandled address types through */
-      free (key);
-      return MHD_YES;
-    }
+  {
+    /* Allow unhandled address types through */
+    free (key);
+    return MHD_YES;
+  }
   MHD_ip_count_lock (daemon);
 
   /* Search for the IP address */
   if (NULL == (nodep = tsearch (key,
-				&daemon->per_ip_connection_count,
-				&MHD_ip_addr_compare)))
-    {
+                                &daemon->per_ip_connection_count,
+                                &MHD_ip_addr_compare)))
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-		_("Failed to add IP connection count node\n"));
+    MHD_DLOG (daemon,
+              _ ("Failed to add IP connection count node\n"));
 #endif
-      MHD_ip_count_unlock (daemon);
-      free (key);
-      return MHD_NO;
-    }
+    MHD_ip_count_unlock (daemon);
+    free (key);
+    return MHD_NO;
+  }
   node = *nodep;
   /* If we got an existing node back, free the one we created */
   if (node != key)
-    free(key);
+    free (key);
   key = (struct MHD_IPCount *) node;
   /* Test if there is room for another connection; if so,
    * increment count */
@@ -478,8 +478,8 @@ MHD_ip_limit_add (struct MHD_Daemon *daemon,
  */
 static void
 MHD_ip_limit_del (struct MHD_Daemon *daemon,
-		  const struct sockaddr *addr,
-		  socklen_t addrlen)
+                  const struct sockaddr *addr,
+                  socklen_t addrlen)
 {
   struct MHD_IPCount search_key;
   struct MHD_IPCount *found_key;
@@ -499,27 +499,27 @@ MHD_ip_limit_del (struct MHD_Daemon *daemon,
 
   /* Search for the IP address */
   if (NULL == (nodep = tfind (&search_key,
-			      &daemon->per_ip_connection_count,
-			      &MHD_ip_addr_compare)))
-    {
-      /* Something's wrong if we couldn't find an IP address
-       * that was previously added */
-      MHD_PANIC (_("Failed to find previously-added IP address\n"));
-    }
+                              &daemon->per_ip_connection_count,
+                              &MHD_ip_addr_compare)))
+  {
+    /* Something's wrong if we couldn't find an IP address
+     * that was previously added */
+    MHD_PANIC (_ ("Failed to find previously-added IP address\n"));
+  }
   found_key = (struct MHD_IPCount *) *nodep;
   /* Validate existing count for IP address */
   if (0 == found_key->count)
-    {
-      MHD_PANIC (_("Previously-added IP address had counter of zero\n"));
-    }
+  {
+    MHD_PANIC (_ ("Previously-added IP address had counter of zero\n"));
+  }
   /* Remove the node entirely if count reduces to 0 */
   if (0 == --found_key->count)
-    {
-      tdelete (found_key,
-	       &daemon->per_ip_connection_count,
-	       &MHD_ip_addr_compare);
-      free (found_key);
-    }
+  {
+    tdelete (found_key,
+             &daemon->per_ip_connection_count,
+             &MHD_ip_addr_compare);
+    free (found_key);
+  }
 
   MHD_ip_count_unlock (daemon);
 }
@@ -541,103 +541,104 @@ MHD_init_daemon_certificate (struct MHD_Daemon *daemon)
 
 #if GNUTLS_VERSION_MAJOR >= 3
   if (NULL != daemon->cert_callback)
-    {
-      gnutls_certificate_set_retrieve_function2 (daemon->x509_cred,
-                                                 daemon->cert_callback);
-    }
+  {
+    gnutls_certificate_set_retrieve_function2 (daemon->x509_cred,
+                                               daemon->cert_callback);
+  }
 #endif
 #if GNUTLS_VERSION_NUMBER >= 0x030603
   else if (NULL != daemon->cert_callback2)
-    {
-      gnutls_certificate_set_retrieve_function3 (daemon->x509_cred,
-                                                 daemon->cert_callback2);
-    }
+  {
+    gnutls_certificate_set_retrieve_function3 (daemon->x509_cred,
+                                               daemon->cert_callback2);
+  }
 #endif
 
   if (NULL != daemon->https_mem_trust)
+  {
+    size_t paramlen;
+    paramlen = strlen (daemon->https_mem_trust);
+    if (UINT_MAX < paramlen)
     {
-      size_t paramlen;
-      paramlen = strlen (daemon->https_mem_trust);
-      if (UINT_MAX < paramlen)
-        {
 #ifdef HAVE_MESSAGES
-          MHD_DLOG(daemon,
-                   "Too long trust certificate\n");
+      MHD_DLOG (daemon,
+                "Too long trust certificate\n");
 #endif
-          return -1;
-        }
-      cert.data = (unsigned char *) daemon->https_mem_trust;
-      cert.size = (unsigned int) paramlen;
-      if (gnutls_certificate_set_x509_trust_mem (daemon->x509_cred,
-                                                 &cert,
-						 GNUTLS_X509_FMT_PEM) < 0)
-	{
-#ifdef HAVE_MESSAGES
-	  MHD_DLOG(daemon,
-		   "Bad trust certificate format\n");
-#endif
-	  return -1;
-	}
+      return -1;
     }
+    cert.data = (unsigned char *) daemon->https_mem_trust;
+    cert.size = (unsigned int) paramlen;
+    if (gnutls_certificate_set_x509_trust_mem (daemon->x509_cred,
+                                               &cert,
+                                               GNUTLS_X509_FMT_PEM) < 0)
+    {
+#ifdef HAVE_MESSAGES
+      MHD_DLOG (daemon,
+                "Bad trust certificate format\n");
+#endif
+      return -1;
+    }
+  }
 
   if (daemon->have_dhparams)
-    {
-      gnutls_certificate_set_dh_params (daemon->x509_cred,
-                                        daemon->https_mem_dhparams);
-    }
+  {
+    gnutls_certificate_set_dh_params (daemon->x509_cred,
+                                      daemon->https_mem_dhparams);
+  }
   /* certificate & key loaded from memory */
   if ( (NULL != daemon->https_mem_cert) &&
        (NULL != daemon->https_mem_key) )
+  {
+    size_t param1len;
+    size_t param2len;
+
+    param1len = strlen (daemon->https_mem_key);
+    param2len = strlen (daemon->https_mem_cert);
+    if ( (UINT_MAX < param1len) ||
+         (UINT_MAX < param2len) )
     {
-      size_t param1len;
-      size_t param2len;
-
-      param1len = strlen (daemon->https_mem_key);
-      param2len = strlen (daemon->https_mem_cert);
-      if ( (UINT_MAX < param1len) ||
-           (UINT_MAX < param2len) )
-        {
 #ifdef HAVE_MESSAGES
-          MHD_DLOG(daemon,
-                   "Too long key or certificate\n");
+      MHD_DLOG (daemon,
+                "Too long key or certificate\n");
 #endif
-          return -1;
-        }
-      key.data = (unsigned char *) daemon->https_mem_key;
-      key.size = (unsigned int)param1len;
-      cert.data = (unsigned char *) daemon->https_mem_cert;
-      cert.size = (unsigned int)param2len;
+      return -1;
+    }
+    key.data = (unsigned char *) daemon->https_mem_key;
+    key.size = (unsigned int) param1len;
+    cert.data = (unsigned char *) daemon->https_mem_cert;
+    cert.size = (unsigned int) param2len;
 
-      if (NULL != daemon->https_key_password) {
+    if (NULL != daemon->https_key_password)
+    {
 #if GNUTLS_VERSION_NUMBER >= 0x030111
-        ret = gnutls_certificate_set_x509_key_mem2 (daemon->x509_cred,
-                                                    &cert,
-                                                    &key,
-                                                    GNUTLS_X509_FMT_PEM,
-                                                    daemon->https_key_password,
-                                                    0);
+      ret = gnutls_certificate_set_x509_key_mem2 (daemon->x509_cred,
+                                                  &cert,
+                                                  &key,
+                                                  GNUTLS_X509_FMT_PEM,
+                                                  daemon->https_key_password,
+                                                  0);
 #else
 #ifdef HAVE_MESSAGES
-	MHD_DLOG (daemon,
-                  _("Failed to setup x509 certificate/key: pre 3.X.X version " \
-                    "of GnuTLS does not support setting key password"));
+      MHD_DLOG (daemon,
+                _ ("Failed to setup x509 certificate/key: pre 3.X.X version " \
+                   "of GnuTLS does not support setting key password"));
 #endif
-	return -1;
+      return -1;
 #endif
-      }
-      else
-        ret = gnutls_certificate_set_x509_key_mem (daemon->x509_cred,
-                                                   &cert,
-                                                   &key,
-                                                   GNUTLS_X509_FMT_PEM);
-#ifdef HAVE_MESSAGES
-      if (0 != ret)
-        MHD_DLOG (daemon,
-                  "GnuTLS failed to setup x509 certificate/key: %s\n",
-                  gnutls_strerror (ret));
-#endif
-      return ret;
     }
+    else
+      ret = gnutls_certificate_set_x509_key_mem (daemon->x509_cred,
+                                                 &cert,
+                                                 &key,
+                                                 GNUTLS_X509_FMT_PEM);
+#ifdef HAVE_MESSAGES
+    if (0 != ret)
+      MHD_DLOG (daemon,
+                "GnuTLS failed to setup x509 certificate/key: %s\n",
+                gnutls_strerror (ret));
+#endif
+    return ret;
+  }
 #if GNUTLS_VERSION_MAJOR >= 3
   if (NULL != daemon->cert_callback)
     return 0;
@@ -663,25 +664,25 @@ static int
 MHD_TLS_init (struct MHD_Daemon *daemon)
 {
   switch (daemon->cred_type)
-    {
-    case GNUTLS_CRD_CERTIFICATE:
-      if (0 !=
-          gnutls_certificate_allocate_credentials (&daemon->x509_cred))
-        return GNUTLS_E_MEMORY_ERROR;
-      return MHD_init_daemon_certificate (daemon);
-    case GNUTLS_CRD_PSK:
-      if (0 !=
-          gnutls_psk_allocate_server_credentials (&daemon->psk_cred))
-        return GNUTLS_E_MEMORY_ERROR;
-      return 0;
-    default:
+  {
+  case GNUTLS_CRD_CERTIFICATE:
+    if (0 !=
+        gnutls_certificate_allocate_credentials (&daemon->x509_cred))
+      return GNUTLS_E_MEMORY_ERROR;
+    return MHD_init_daemon_certificate (daemon);
+  case GNUTLS_CRD_PSK:
+    if (0 !=
+        gnutls_psk_allocate_server_credentials (&daemon->psk_cred))
+      return GNUTLS_E_MEMORY_ERROR;
+    return 0;
+  default:
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("Error: invalid credentials type %d specified.\n"),
-                daemon->cred_type);
+    MHD_DLOG (daemon,
+              _ ("Error: invalid credentials type %d specified.\n"),
+              daemon->cred_type);
 #endif
-      return -1;
-    }
+    return -1;
+  }
 }
 #endif /* HTTPS_SUPPORT */
 
@@ -761,55 +762,55 @@ urh_to_fdset (struct MHD_UpgradeResponseHandle *urh,
   /* Do not add to 'es' only if socket is closed
    * or not used anymore. */
   if (MHD_INVALID_SOCKET != conn_sckt)
-    {
-      if ( (urh->in_buffer_used < urh->in_buffer_size) &&
-           (! MHD_add_to_fd_set_ (conn_sckt,
-                                  rs,
-                                  max_fd,
-                                  fd_setsize)) )
-        res = false;
-      if ( (0 != urh->out_buffer_used) &&
-           (! MHD_add_to_fd_set_ (conn_sckt,
-                                  ws,
-                                  max_fd,
-                                  fd_setsize)) )
-        res = false;
-      /* Do not monitor again for errors if error was detected before as
-       * error state is remembered. */
-      if ((0 == (urh->app.celi & MHD_EPOLL_STATE_ERROR)) &&
-          ((0 != urh->in_buffer_size) ||
-           (0 != urh->out_buffer_size) ||
-           (0 != urh->out_buffer_used)))
-        MHD_add_to_fd_set_ (conn_sckt,
-                            es,
-                            max_fd,
-                            fd_setsize);
-    }
+  {
+    if ( (urh->in_buffer_used < urh->in_buffer_size) &&
+         (! MHD_add_to_fd_set_ (conn_sckt,
+                                rs,
+                                max_fd,
+                                fd_setsize)) )
+      res = false;
+    if ( (0 != urh->out_buffer_used) &&
+         (! MHD_add_to_fd_set_ (conn_sckt,
+                                ws,
+                                max_fd,
+                                fd_setsize)) )
+      res = false;
+    /* Do not monitor again for errors if error was detected before as
+     * error state is remembered. */
+    if ((0 == (urh->app.celi & MHD_EPOLL_STATE_ERROR)) &&
+        ((0 != urh->in_buffer_size) ||
+         (0 != urh->out_buffer_size) ||
+         (0 != urh->out_buffer_used)))
+      MHD_add_to_fd_set_ (conn_sckt,
+                          es,
+                          max_fd,
+                          fd_setsize);
+  }
   if (MHD_INVALID_SOCKET != mhd_sckt)
-    {
-      if ( (urh->out_buffer_used < urh->out_buffer_size) &&
-           (! MHD_add_to_fd_set_ (mhd_sckt,
-                                  rs,
-                                  max_fd,
-                                  fd_setsize)) )
-        res = false;
-      if ( (0 != urh->in_buffer_used) &&
-           (! MHD_add_to_fd_set_ (mhd_sckt,
-                                  ws,
-                                  max_fd,
-                                  fd_setsize)) )
-        res = false;
-      /* Do not monitor again for errors if error was detected before as
-       * error state is remembered. */
-      if ((0 == (urh->mhd.celi & MHD_EPOLL_STATE_ERROR)) &&
-          ((0 != urh->out_buffer_size) ||
-           (0 != urh->in_buffer_size) ||
-           (0 != urh->in_buffer_used)))
-        MHD_add_to_fd_set_ (mhd_sckt,
-                            es,
-                            max_fd,
-                            fd_setsize);
-    }
+  {
+    if ( (urh->out_buffer_used < urh->out_buffer_size) &&
+         (! MHD_add_to_fd_set_ (mhd_sckt,
+                                rs,
+                                max_fd,
+                                fd_setsize)) )
+      res = false;
+    if ( (0 != urh->in_buffer_used) &&
+         (! MHD_add_to_fd_set_ (mhd_sckt,
+                                ws,
+                                max_fd,
+                                fd_setsize)) )
+      res = false;
+    /* Do not monitor again for errors if error was detected before as
+     * error state is remembered. */
+    if ((0 == (urh->mhd.celi & MHD_EPOLL_STATE_ERROR)) &&
+        ((0 != urh->out_buffer_size) ||
+         (0 != urh->in_buffer_size) ||
+         (0 != urh->in_buffer_used)))
+      MHD_add_to_fd_set_ (mhd_sckt,
+                          es,
+                          max_fd,
+                          fd_setsize);
+  }
 
   return res;
 }
@@ -838,23 +839,23 @@ urh_from_fdset (struct MHD_UpgradeResponseHandle *urh,
   urh->mhd.celi &= (~MHD_EPOLL_STATE_READ_READY & ~MHD_EPOLL_STATE_WRITE_READY);
 
   if (MHD_INVALID_SOCKET != conn_sckt)
-    {
-      if (FD_ISSET (conn_sckt, rs))
-        urh->app.celi |= MHD_EPOLL_STATE_READ_READY;
-      if (FD_ISSET (conn_sckt, ws))
-        urh->app.celi |= MHD_EPOLL_STATE_WRITE_READY;
-      if (FD_ISSET (conn_sckt, es))
-        urh->app.celi |= MHD_EPOLL_STATE_ERROR;
-    }
+  {
+    if (FD_ISSET (conn_sckt, rs))
+      urh->app.celi |= MHD_EPOLL_STATE_READ_READY;
+    if (FD_ISSET (conn_sckt, ws))
+      urh->app.celi |= MHD_EPOLL_STATE_WRITE_READY;
+    if (FD_ISSET (conn_sckt, es))
+      urh->app.celi |= MHD_EPOLL_STATE_ERROR;
+  }
   if ((MHD_INVALID_SOCKET != mhd_sckt))
-    {
-      if (FD_ISSET (mhd_sckt, rs))
-        urh->mhd.celi |= MHD_EPOLL_STATE_READ_READY;
-      if (FD_ISSET (mhd_sckt, ws))
-        urh->mhd.celi |= MHD_EPOLL_STATE_WRITE_READY;
-      if (FD_ISSET (mhd_sckt, es))
-        urh->mhd.celi |= MHD_EPOLL_STATE_ERROR;
-    }
+  {
+    if (FD_ISSET (mhd_sckt, rs))
+      urh->mhd.celi |= MHD_EPOLL_STATE_READ_READY;
+    if (FD_ISSET (mhd_sckt, ws))
+      urh->mhd.celi |= MHD_EPOLL_STATE_WRITE_READY;
+    if (FD_ISSET (mhd_sckt, es))
+      urh->mhd.celi |= MHD_EPOLL_STATE_ERROR;
+  }
 }
 
 #ifdef HAVE_POLL
@@ -869,7 +870,7 @@ urh_from_fdset (struct MHD_UpgradeResponseHandle *urh,
  */
 static void
 urh_update_pollfd (struct MHD_UpgradeResponseHandle *urh,
-		   struct pollfd p[2])
+                   struct pollfd p[2])
 {
   p[0].events = 0;
   p[1].events = 0;
@@ -910,12 +911,12 @@ urh_update_pollfd (struct MHD_UpgradeResponseHandle *urh,
  */
 static void
 urh_to_pollfd (struct MHD_UpgradeResponseHandle *urh,
-	       struct pollfd p[2])
+               struct pollfd p[2])
 {
   p[0].fd = urh->connection->socket_fd;
   p[1].fd = urh->mhd.socket;
   urh_update_pollfd (urh,
-		     p);
+                     p);
 }
 
 
@@ -926,7 +927,7 @@ urh_to_pollfd (struct MHD_UpgradeResponseHandle *urh,
  */
 static void
 urh_from_pollfd (struct MHD_UpgradeResponseHandle *urh,
-		 struct pollfd p[2])
+                 struct pollfd p[2])
 {
   /* Reset read/write ready, preserve error state. */
   urh->app.celi &= (~MHD_EPOLL_STATE_READ_READY & ~MHD_EPOLL_STATE_WRITE_READY);
@@ -998,85 +999,85 @@ internal_get_fdset2 (struct MHD_Daemon *daemon,
    * or INFO_WRITE sockets will not fit 'except_fd_set'. */
   /* Start from oldest connections. Make sense for W32 FDSETs. */
   for (pos = daemon->connections_tail; NULL != pos; pos = posn)
-    {
-      posn = pos->prev;
+  {
+    posn = pos->prev;
 
-      switch (pos->event_loop_info)
-	{
-	case MHD_EVENT_LOOP_INFO_READ:
-	  if (! MHD_add_to_fd_set_ (pos->socket_fd,
-                                    read_fd_set,
-                                    max_fd,
-                                    fd_setsize))
-	    result = MHD_NO;
+    switch (pos->event_loop_info)
+    {
+    case MHD_EVENT_LOOP_INFO_READ:
+      if (! MHD_add_to_fd_set_ (pos->socket_fd,
+                                read_fd_set,
+                                max_fd,
+                                fd_setsize))
+        result = MHD_NO;
 #ifdef MHD_POSIX_SOCKETS
-          MHD_add_to_fd_set_ (pos->socket_fd,
-                              except_fd_set,
-                              max_fd,
-                              fd_setsize);
+      MHD_add_to_fd_set_ (pos->socket_fd,
+                          except_fd_set,
+                          max_fd,
+                          fd_setsize);
 #endif /* MHD_POSIX_SOCKETS */
-	  break;
-	case MHD_EVENT_LOOP_INFO_WRITE:
-	  if (! MHD_add_to_fd_set_ (pos->socket_fd,
-                                    write_fd_set,
-                                    max_fd,
-                                    fd_setsize))
-	    result = MHD_NO;
+      break;
+    case MHD_EVENT_LOOP_INFO_WRITE:
+      if (! MHD_add_to_fd_set_ (pos->socket_fd,
+                                write_fd_set,
+                                max_fd,
+                                fd_setsize))
+        result = MHD_NO;
 #ifdef MHD_POSIX_SOCKETS
-          MHD_add_to_fd_set_ (pos->socket_fd,
-                              except_fd_set,
-                              max_fd,
-                              fd_setsize);
+      MHD_add_to_fd_set_ (pos->socket_fd,
+                          except_fd_set,
+                          max_fd,
+                          fd_setsize);
 #endif /* MHD_POSIX_SOCKETS */
-	  break;
-	case MHD_EVENT_LOOP_INFO_BLOCK:
-	  if ( (NULL == except_fd_set) ||
-	      ! MHD_add_to_fd_set_ (pos->socket_fd,
-	                            except_fd_set,
-                                    max_fd,
-                                    fd_setsize))
-            result = MHD_NO;
-	  break;
-	case MHD_EVENT_LOOP_INFO_CLEANUP:
-	  /* this should never happen */
-	  break;
-	}
+      break;
+    case MHD_EVENT_LOOP_INFO_BLOCK:
+      if ( (NULL == except_fd_set) ||
+           ! MHD_add_to_fd_set_ (pos->socket_fd,
+                                 except_fd_set,
+                                 max_fd,
+                                 fd_setsize))
+        result = MHD_NO;
+      break;
+    case MHD_EVENT_LOOP_INFO_CLEANUP:
+      /* this should never happen */
+      break;
     }
+  }
 #ifdef MHD_WINSOCK_SOCKETS
   /* W32 use limited array for fd_set so add INFO_READ/INFO_WRITE sockets
    * only after INFO_BLOCK sockets to ensure that INFO_BLOCK sockets will
    * not be pushed out. */
   for (pos = daemon->connections_tail; NULL != pos; pos = posn)
-    {
-      posn = pos->prev;
-      MHD_add_to_fd_set_ (pos->socket_fd,
-                          except_fd_set,
-                          max_fd,
-                          fd_setsize);
-    }
+  {
+    posn = pos->prev;
+    MHD_add_to_fd_set_ (pos->socket_fd,
+                        except_fd_set,
+                        max_fd,
+                        fd_setsize);
+  }
 #endif /* MHD_WINSOCK_SOCKETS */
 #if defined(HTTPS_SUPPORT) && defined(UPGRADE_SUPPORT)
   {
     struct MHD_UpgradeResponseHandle *urh;
 
     for (urh = daemon->urh_tail; NULL != urh; urh = urh->prev)
-      {
-        if (MHD_NO ==
-            urh_to_fdset (urh,
-                          read_fd_set,
-                          write_fd_set,
-                          except_fd_set,
-                          max_fd,
-                          fd_setsize))
-          result = MHD_NO;
-      }
+    {
+      if (MHD_NO ==
+          urh_to_fdset (urh,
+                        read_fd_set,
+                        write_fd_set,
+                        except_fd_set,
+                        max_fd,
+                        fd_setsize))
+        result = MHD_NO;
+    }
   }
 #endif
 #if DEBUG_CONNECT
 #ifdef HAVE_MESSAGES
   if (NULL != max_fd)
     MHD_DLOG (daemon,
-              _("Maximum socket in select set: %d\n"),
+              _ ("Maximum socket in select set: %d\n"),
               *max_fd);
 #endif
 #endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
@@ -1118,11 +1119,11 @@ internal_get_fdset2 (struct MHD_Daemon *daemon,
  */
 int
 MHD_get_fdset2 (struct MHD_Daemon *daemon,
-               fd_set *read_fd_set,
-               fd_set *write_fd_set,
-               fd_set *except_fd_set,
-               MHD_socket *max_fd,
-               unsigned int fd_setsize)
+                fd_set *read_fd_set,
+                fd_set *write_fd_set,
+                fd_set *except_fd_set,
+                MHD_socket *max_fd,
+                unsigned int fd_setsize)
 {
   fd_set es;
 
@@ -1134,38 +1135,38 @@ MHD_get_fdset2 (struct MHD_Daemon *daemon,
     return MHD_NO;
 
   if (NULL == except_fd_set)
-    { /* Workaround to maintain backward compatibility. */
+  {   /* Workaround to maintain backward compatibility. */
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("MHD_get_fdset2() called with except_fd_set "
-                  "set to NULL. Such behavior is unsupported.\n"));
+    MHD_DLOG (daemon,
+              _ ("MHD_get_fdset2() called with except_fd_set "
+                 "set to NULL. Such behavior is unsupported.\n"));
 #endif
-      FD_ZERO (&es);
-      except_fd_set = &es;
-    }
+    FD_ZERO (&es);
+    except_fd_set = &es;
+  }
 
 #ifdef EPOLL_SUPPORT
   if (0 != (daemon->options & MHD_USE_EPOLL))
-    {
-      if (daemon->shutdown)
-        return MHD_NO;
+  {
+    if (daemon->shutdown)
+      return MHD_NO;
 
-      /* we're in epoll mode, use the epoll FD as a stand-in for
-         the entire event set */
+    /* we're in epoll mode, use the epoll FD as a stand-in for
+       the entire event set */
 
-      return MHD_add_to_fd_set_ (daemon->epoll_fd,
-                                 read_fd_set,
-                                 max_fd,
-                                 fd_setsize) ? MHD_YES : MHD_NO;
-    }
+    return MHD_add_to_fd_set_ (daemon->epoll_fd,
+                               read_fd_set,
+                               max_fd,
+                               fd_setsize) ? MHD_YES : MHD_NO;
+  }
 #endif
 
   return internal_get_fdset2 (daemon,
-			      read_fd_set,
+                              read_fd_set,
                               write_fd_set,
-			      except_fd_set,
+                              except_fd_set,
                               max_fd,
-			      fd_setsize);
+                              fd_setsize);
 }
 
 
@@ -1197,37 +1198,37 @@ call_handlers (struct MHD_Connection *con,
   if (con->tls_read_ready)
     read_ready = true;
 #endif /* HTTPS_SUPPORT */
-  if (!force_close)
+  if (! force_close)
+  {
+    if ( (MHD_EVENT_LOOP_INFO_READ == con->event_loop_info) &&
+         read_ready)
     {
-      if ( (MHD_EVENT_LOOP_INFO_READ == con->event_loop_info) &&
-	   read_ready)
-        {
-          MHD_connection_handle_read (con);
-          ret = MHD_connection_handle_idle (con);
-          states_info_processed = true;
-        }
-      /* No need to check value of 'ret' here as closed connection
-       * cannot be in MHD_EVENT_LOOP_INFO_WRITE state. */
-      if ( (MHD_EVENT_LOOP_INFO_WRITE == con->event_loop_info) &&
-	   write_ready)
-        {
-          MHD_connection_handle_write (con);
-          ret = MHD_connection_handle_idle (con);
-          states_info_processed = true;
-        }
-    }
-  else
-    {
-      MHD_connection_close_ (con,
-                             MHD_REQUEST_TERMINATED_WITH_ERROR);
-      return MHD_connection_handle_idle (con);
-    }
-
-  if (!states_info_processed)
-    { /* Connection is not read or write ready, but external conditions
-       * may be changed and need to be processed. */
+      MHD_connection_handle_read (con);
       ret = MHD_connection_handle_idle (con);
+      states_info_processed = true;
     }
+    /* No need to check value of 'ret' here as closed connection
+     * cannot be in MHD_EVENT_LOOP_INFO_WRITE state. */
+    if ( (MHD_EVENT_LOOP_INFO_WRITE == con->event_loop_info) &&
+         write_ready)
+    {
+      MHD_connection_handle_write (con);
+      ret = MHD_connection_handle_idle (con);
+      states_info_processed = true;
+    }
+  }
+  else
+  {
+    MHD_connection_close_ (con,
+                           MHD_REQUEST_TERMINATED_WITH_ERROR);
+    return MHD_connection_handle_idle (con);
+  }
+
+  if (! states_info_processed)
+  {   /* Connection is not read or write ready, but external conditions
+       * may be changed and need to be processed. */
+    ret = MHD_connection_handle_idle (con);
+  }
   /* Fast track for fast connections. */
   /* If full request was read by single read_handler() invocation
      and headers were completely prepared by single MHD_connection_handle_idle()
@@ -1239,23 +1240,23 @@ call_handlers (struct MHD_Connection *con,
   /* No need to check 'ret' as connection is always in
    * MHD_CONNECTION_CLOSED state if 'ret' is equal 'MHD_NO'. */
   else if (on_fasttrack && con->sk_nonblck)
+  {
+    if (MHD_CONNECTION_HEADERS_SENDING == con->state)
     {
-      if (MHD_CONNECTION_HEADERS_SENDING == con->state)
-        {
-          MHD_connection_handle_write (con);
-          /* Always call 'MHD_connection_handle_idle()' after each read/write. */
-          ret = MHD_connection_handle_idle (con);
-        }
-      /* If all headers were sent by single write_handler() and
-       * response body is prepared by single MHD_connection_handle_idle()
-       * call - continue. */
-      if ((MHD_CONNECTION_NORMAL_BODY_READY == con->state) ||
-          (MHD_CONNECTION_CHUNKED_BODY_READY == con->state))
-        {
-          MHD_connection_handle_write (con);
-          ret = MHD_connection_handle_idle (con);
-        }
+      MHD_connection_handle_write (con);
+      /* Always call 'MHD_connection_handle_idle()' after each read/write. */
+      ret = MHD_connection_handle_idle (con);
     }
+    /* If all headers were sent by single write_handler() and
+     * response body is prepared by single MHD_connection_handle_idle()
+     * call - continue. */
+    if ((MHD_CONNECTION_NORMAL_BODY_READY == con->state) ||
+        (MHD_CONNECTION_CHUNKED_BODY_READY == con->state))
+    {
+      MHD_connection_handle_write (con);
+      ret = MHD_connection_handle_idle (con);
+    }
+  }
 
   /* All connection's data and states are processed for this turn.
    * If connection already has more data to be processed - use
@@ -1267,15 +1268,15 @@ call_handlers (struct MHD_Connection *con,
    * without space in read buffer will be marked as 'info block'. */
   if ( (! con->daemon->data_already_pending) &&
        (0 == (con->daemon->options & MHD_USE_THREAD_PER_CONNECTION)) )
-    {
-      if (MHD_EVENT_LOOP_INFO_BLOCK == con->event_loop_info)
-        con->daemon->data_already_pending = true;
+  {
+    if (MHD_EVENT_LOOP_INFO_BLOCK == con->event_loop_info)
+      con->daemon->data_already_pending = true;
 #ifdef HTTPS_SUPPORT
-      else if ( (con->tls_read_ready) &&
-                (MHD_EVENT_LOOP_INFO_READ == con->event_loop_info) )
-        con->daemon->data_already_pending = true;
+    else if ( (con->tls_read_ready) &&
+              (MHD_EVENT_LOOP_INFO_READ == con->event_loop_info) )
+      con->daemon->data_already_pending = true;
 #endif /* HTTPS_SUPPORT */
-    }
+  }
   return ret;
 }
 
@@ -1330,55 +1331,58 @@ process_urh (struct MHD_UpgradeResponseHandle *urh)
    * pointers to 'connection' and 'daemon' are not changed
    * during this processing, so no need to chain dereference
    * each time. */
-  struct MHD_Connection * const connection = urh->connection;
-  struct MHD_Daemon * const daemon = connection->daemon;
+  struct MHD_Connection *const connection = urh->connection;
+  struct MHD_Daemon *const daemon = connection->daemon;
   /* Prevent data races: use same value of 'was_closed' throughout
    * this function. If 'was_closed' changed externally in the middle
    * of processing - it will be processed on next iteration. */
   bool was_closed;
   if (daemon->shutdown)
-    {
-      /* Daemon shutting down, application will not receive any more data. */
+  {
+    /* Daemon shutting down, application will not receive any more data. */
 #ifdef HAVE_MESSAGES
-      if (! urh->was_closed)
-        {
-          MHD_DLOG (daemon,
-                    _("Initiated daemon shutdown while \"upgraded\" connection was not closed.\n"));
-        }
-#endif
-      urh->was_closed = true;
+    if (! urh->was_closed)
+    {
+      MHD_DLOG (daemon,
+                _ (
+                  "Initiated daemon shutdown while \"upgraded\" connection was not closed.\n"));
     }
+#endif
+    urh->was_closed = true;
+  }
   was_closed = urh->was_closed;
   if (was_closed)
+  {
+    /* Application was closed connections: no more data
+     * can be forwarded to application socket. */
+    if (0 < urh->in_buffer_used)
     {
-      /* Application was closed connections: no more data
-       * can be forwarded to application socket. */
-      if (0 < urh->in_buffer_used)
-        {
 #ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("Failed to forward to application " MHD_UNSIGNED_LONG_LONG_PRINTF \
-                        " bytes of data received from remote side: application shut down socket\n"),
-                    (MHD_UNSIGNED_LONG_LONG) urh->in_buffer_used);
+      MHD_DLOG (daemon,
+                _ (
+                  "Failed to forward to application "
+                  MHD_UNSIGNED_LONG_LONG_PRINTF \
+                  " bytes of data received from remote side: application shut down socket\n"),
+                (MHD_UNSIGNED_LONG_LONG) urh->in_buffer_used);
 #endif
 
-        }
-      /* If application signaled MHD about socket closure then
-       * check for any pending data even if socket is not marked
-       * as 'ready' (signal may arrive after poll()/select()).
-       * Socketpair for forwarding is always in non-blocking mode
-       * so no risk that recv() will block the thread. */
-      if (0 != urh->out_buffer_size)
-        urh->mhd.celi |= MHD_EPOLL_STATE_READ_READY;
-      /* Discard any data received form remote. */
-      urh->in_buffer_used = 0;
-      /* Do not try to push data to application. */
-      urh->mhd.celi &= ~MHD_EPOLL_STATE_WRITE_READY;
-      /* Reading from remote client is not required anymore. */
-      urh->in_buffer_size = 0;
-      urh->app.celi &= ~MHD_EPOLL_STATE_READ_READY;
-      connection->tls_read_ready = false;
     }
+    /* If application signaled MHD about socket closure then
+     * check for any pending data even if socket is not marked
+     * as 'ready' (signal may arrive after poll()/select()).
+     * Socketpair for forwarding is always in non-blocking mode
+     * so no risk that recv() will block the thread. */
+    if (0 != urh->out_buffer_size)
+      urh->mhd.celi |= MHD_EPOLL_STATE_READ_READY;
+    /* Discard any data received form remote. */
+    urh->in_buffer_used = 0;
+    /* Do not try to push data to application. */
+    urh->mhd.celi &= ~MHD_EPOLL_STATE_WRITE_READY;
+    /* Reading from remote client is not required anymore. */
+    urh->in_buffer_size = 0;
+    urh->app.celi &= ~MHD_EPOLL_STATE_READ_READY;
+    connection->tls_read_ready = false;
+  }
 
   /* On some platforms (W32, possibly Darwin) failed send() (send() will always
    * fail after remote disconnect was detected) may discard data in system
@@ -1399,237 +1403,241 @@ process_urh (struct MHD_UpgradeResponseHandle *urh)
   if ( ( (0 != (MHD_EPOLL_STATE_READ_READY & urh->app.celi)) ||
          (connection->tls_read_ready) ) &&
        (urh->in_buffer_used < urh->in_buffer_size) )
+  {
+    ssize_t res;
+    size_t buf_size;
+
+    buf_size = urh->in_buffer_size - urh->in_buffer_used;
+    if (buf_size > SSIZE_MAX)
+      buf_size = SSIZE_MAX;
+
+    connection->tls_read_ready = false;
+    res = gnutls_record_recv (connection->tls_session,
+                              &urh->in_buffer[urh->in_buffer_used],
+                              buf_size);
+    if (0 >= res)
     {
-      ssize_t res;
-      size_t buf_size;
-
-      buf_size = urh->in_buffer_size - urh->in_buffer_used;
-      if (buf_size > SSIZE_MAX)
-        buf_size = SSIZE_MAX;
-
-      connection->tls_read_ready = false;
-      res = gnutls_record_recv (connection->tls_session,
-                                &urh->in_buffer[urh->in_buffer_used],
-                                buf_size);
-      if (0 >= res)
+      if (GNUTLS_E_INTERRUPTED != res)
+      {
+        urh->app.celi &= ~MHD_EPOLL_STATE_READ_READY;
+        if (GNUTLS_E_AGAIN != res)
         {
-          if (GNUTLS_E_INTERRUPTED != res)
-            {
-              urh->app.celi &= ~MHD_EPOLL_STATE_READ_READY;
-              if (GNUTLS_E_AGAIN != res)
-                {
-                  /* Unrecoverable error on socket was detected or
-                   * socket was disconnected/shut down. */
-                  /* Stop trying to read from this TLS socket. */
-                  urh->in_buffer_size = 0;
-                }
-            }
-        }
-      else /* 0 < res */
-        {
-          urh->in_buffer_used += res;
-          if (buf_size > (size_t)res)
-            urh->app.celi &= ~MHD_EPOLL_STATE_READ_READY;
-          else if (0 < gnutls_record_check_pending (connection->tls_session))
-            connection->tls_read_ready = true;
-        }
-      if (MHD_EPOLL_STATE_ERROR ==
-          ((MHD_EPOLL_STATE_ERROR | MHD_EPOLL_STATE_READ_READY) & urh->app.celi))
-        {
-          /* Unrecoverable error on socket was detected and all
-           * pending data was read from system buffers. */
+          /* Unrecoverable error on socket was detected or
+           * socket was disconnected/shut down. */
           /* Stop trying to read from this TLS socket. */
           urh->in_buffer_size = 0;
         }
+      }
     }
+    else   /* 0 < res */
+    {
+      urh->in_buffer_used += res;
+      if (buf_size > (size_t) res)
+        urh->app.celi &= ~MHD_EPOLL_STATE_READ_READY;
+      else if (0 < gnutls_record_check_pending (connection->tls_session))
+        connection->tls_read_ready = true;
+    }
+    if (MHD_EPOLL_STATE_ERROR ==
+        ((MHD_EPOLL_STATE_ERROR | MHD_EPOLL_STATE_READ_READY) & urh->app.celi))
+    {
+      /* Unrecoverable error on socket was detected and all
+       * pending data was read from system buffers. */
+      /* Stop trying to read from this TLS socket. */
+      urh->in_buffer_size = 0;
+    }
+  }
 
   /*
    * handle reading from application
    */
   if ( (0 != (MHD_EPOLL_STATE_READ_READY & urh->mhd.celi)) &&
        (urh->out_buffer_used < urh->out_buffer_size) )
+  {
+    ssize_t res;
+    size_t buf_size;
+
+    buf_size = urh->out_buffer_size - urh->out_buffer_used;
+    if (buf_size > MHD_SCKT_SEND_MAX_SIZE_)
+      buf_size = MHD_SCKT_SEND_MAX_SIZE_;
+
+    res = MHD_recv_ (urh->mhd.socket,
+                     &urh->out_buffer[urh->out_buffer_used],
+                     buf_size);
+    if (0 >= res)
     {
-      ssize_t res;
-      size_t buf_size;
-
-      buf_size = urh->out_buffer_size - urh->out_buffer_used;
-      if (buf_size > MHD_SCKT_SEND_MAX_SIZE_)
-        buf_size = MHD_SCKT_SEND_MAX_SIZE_;
-
-      res = MHD_recv_ (urh->mhd.socket,
-                       &urh->out_buffer[urh->out_buffer_used],
-                       buf_size);
-      if (0 >= res)
+      const int err = MHD_socket_get_error_ ();
+      if ((0 == res) ||
+          ((! MHD_SCKT_ERR_IS_EINTR_ (err)) &&
+           (! MHD_SCKT_ERR_IS_LOW_RESOURCES_ (err))))
+      {
+        urh->mhd.celi &= ~MHD_EPOLL_STATE_READ_READY;
+        if ((0 == res) ||
+            (was_closed) ||
+            (0 != (MHD_EPOLL_STATE_ERROR & urh->mhd.celi)) ||
+            (! MHD_SCKT_ERR_IS_EAGAIN_ (err)))
         {
-          const int err = MHD_socket_get_error_ ();
-          if ((0 == res) ||
-              ((! MHD_SCKT_ERR_IS_EINTR_ (err)) &&
-               (! MHD_SCKT_ERR_IS_LOW_RESOURCES_(err))))
-            {
-              urh->mhd.celi &= ~MHD_EPOLL_STATE_READ_READY;
-              if ((0 == res) ||
-                  (was_closed) ||
-                  (0 != (MHD_EPOLL_STATE_ERROR & urh->mhd.celi)) ||
-                  (! MHD_SCKT_ERR_IS_EAGAIN_ (err)))
-                {
-                  /* Socket disconnect/shutdown was detected;
-                   * Application signaled about closure of 'upgraded' socket;
-                   * or persistent / unrecoverable error. */
-                  /* Do not try to pull more data from application. */
-                  urh->out_buffer_size = 0;
-                }
-            }
-        }
-      else /* 0 < res */
-        {
-          urh->out_buffer_used += res;
-          if (buf_size > (size_t)res)
-            urh->mhd.celi &= ~MHD_EPOLL_STATE_READ_READY;
-        }
-      if ( (0 == (MHD_EPOLL_STATE_READ_READY & urh->mhd.celi)) &&
-           ( (0 != (MHD_EPOLL_STATE_ERROR & urh->mhd.celi)) ||
-             (was_closed) ) )
-        {
-          /* Unrecoverable error on socket was detected and all
-           * pending data was read from system buffers. */
+          /* Socket disconnect/shutdown was detected;
+           * Application signaled about closure of 'upgraded' socket;
+           * or persistent / unrecoverable error. */
           /* Do not try to pull more data from application. */
           urh->out_buffer_size = 0;
         }
+      }
     }
+    else   /* 0 < res */
+    {
+      urh->out_buffer_used += res;
+      if (buf_size > (size_t) res)
+        urh->mhd.celi &= ~MHD_EPOLL_STATE_READ_READY;
+    }
+    if ( (0 == (MHD_EPOLL_STATE_READ_READY & urh->mhd.celi)) &&
+         ( (0 != (MHD_EPOLL_STATE_ERROR & urh->mhd.celi)) ||
+           (was_closed) ) )
+    {
+      /* Unrecoverable error on socket was detected and all
+       * pending data was read from system buffers. */
+      /* Do not try to pull more data from application. */
+      urh->out_buffer_size = 0;
+    }
+  }
 
   /*
    * handle writing to remote HTTPS client
    */
   if ( (0 != (MHD_EPOLL_STATE_WRITE_READY & urh->app.celi)) &&
        (urh->out_buffer_used > 0) )
+  {
+    ssize_t res;
+    size_t data_size;
+
+    data_size = urh->out_buffer_used;
+    if (data_size > SSIZE_MAX)
+      data_size = SSIZE_MAX;
+
+    res = gnutls_record_send (connection->tls_session,
+                              urh->out_buffer,
+                              data_size);
+    if (0 >= res)
     {
-      ssize_t res;
-      size_t data_size;
-
-      data_size = urh->out_buffer_used;
-      if (data_size > SSIZE_MAX)
-        data_size = SSIZE_MAX;
-
-      res = gnutls_record_send (connection->tls_session,
-                                urh->out_buffer,
-                                data_size);
-      if (0 >= res)
+      if (GNUTLS_E_INTERRUPTED != res)
+      {
+        urh->app.celi &= ~MHD_EPOLL_STATE_WRITE_READY;
+        if (GNUTLS_E_AGAIN != res)
         {
-          if (GNUTLS_E_INTERRUPTED != res)
-            {
-              urh->app.celi &= ~MHD_EPOLL_STATE_WRITE_READY;
-              if (GNUTLS_E_AGAIN != res)
-                {
-                  /* TLS connection shut down or
-                   * persistent / unrecoverable error. */
+          /* TLS connection shut down or
+           * persistent / unrecoverable error. */
 #ifdef HAVE_MESSAGES
-                  MHD_DLOG (daemon,
-                            _("Failed to forward to remote client " MHD_UNSIGNED_LONG_LONG_PRINTF \
-                                " bytes of data received from application: %s\n"),
-                            (MHD_UNSIGNED_LONG_LONG) urh->out_buffer_used,
-                            gnutls_strerror(res));
+          MHD_DLOG (daemon,
+                    _ (
+                      "Failed to forward to remote client "
+                      MHD_UNSIGNED_LONG_LONG_PRINTF \
+                      " bytes of data received from application: %s\n"),
+                    (MHD_UNSIGNED_LONG_LONG) urh->out_buffer_used,
+                    gnutls_strerror (res));
 #endif
-                  /* Discard any data unsent to remote. */
-                  urh->out_buffer_used = 0;
-                  /* Do not try to pull more data from application. */
-                  urh->out_buffer_size = 0;
-                  urh->mhd.celi &= ~MHD_EPOLL_STATE_READ_READY;
-                }
-            }
-        }
-      else /* 0 < res */
-        {
-          const size_t next_out_buffer_used = urh->out_buffer_used - res;
-          if (0 != next_out_buffer_used)
-            {
-              memmove (urh->out_buffer,
-                       &urh->out_buffer[res],
-                       next_out_buffer_used);
-              if (data_size > (size_t)res)
-                urh->app.celi &= ~MHD_EPOLL_STATE_WRITE_READY;
-            }
-          urh->out_buffer_used = next_out_buffer_used;
-        }
-      if ( (0 == urh->out_buffer_used) &&
-           (0 != (MHD_EPOLL_STATE_ERROR & urh->app.celi)) )
-        {
-          /* Unrecoverable error on socket was detected and all
-           * pending data was sent to remote. */
-          /* Do not try to send to remote anymore. */
-          urh->app.celi &= ~MHD_EPOLL_STATE_WRITE_READY;
+          /* Discard any data unsent to remote. */
+          urh->out_buffer_used = 0;
           /* Do not try to pull more data from application. */
           urh->out_buffer_size = 0;
           urh->mhd.celi &= ~MHD_EPOLL_STATE_READ_READY;
         }
+      }
     }
+    else   /* 0 < res */
+    {
+      const size_t next_out_buffer_used = urh->out_buffer_used - res;
+      if (0 != next_out_buffer_used)
+      {
+        memmove (urh->out_buffer,
+                 &urh->out_buffer[res],
+                 next_out_buffer_used);
+        if (data_size > (size_t) res)
+          urh->app.celi &= ~MHD_EPOLL_STATE_WRITE_READY;
+      }
+      urh->out_buffer_used = next_out_buffer_used;
+    }
+    if ( (0 == urh->out_buffer_used) &&
+         (0 != (MHD_EPOLL_STATE_ERROR & urh->app.celi)) )
+    {
+      /* Unrecoverable error on socket was detected and all
+       * pending data was sent to remote. */
+      /* Do not try to send to remote anymore. */
+      urh->app.celi &= ~MHD_EPOLL_STATE_WRITE_READY;
+      /* Do not try to pull more data from application. */
+      urh->out_buffer_size = 0;
+      urh->mhd.celi &= ~MHD_EPOLL_STATE_READ_READY;
+    }
+  }
 
   /*
    * handle writing to application
    */
   if ( (0 != (MHD_EPOLL_STATE_WRITE_READY & urh->mhd.celi)) &&
-         (urh->in_buffer_used > 0) )
+       (urh->in_buffer_used > 0) )
+  {
+    ssize_t res;
+    size_t data_size;
+
+    data_size = urh->in_buffer_used;
+    if (data_size > MHD_SCKT_SEND_MAX_SIZE_)
+      data_size = MHD_SCKT_SEND_MAX_SIZE_;
+
+    res = MHD_send_ (urh->mhd.socket,
+                     urh->in_buffer,
+                     data_size);
+    if (0 >= res)
     {
-      ssize_t res;
-      size_t data_size;
-
-      data_size = urh->in_buffer_used;
-      if (data_size > MHD_SCKT_SEND_MAX_SIZE_)
-        data_size = MHD_SCKT_SEND_MAX_SIZE_;
-
-      res = MHD_send_ (urh->mhd.socket,
-                       urh->in_buffer,
-                       data_size);
-      if (0 >= res)
+      const int err = MHD_socket_get_error_ ();
+      if ( (! MHD_SCKT_ERR_IS_EINTR_ (err)) &&
+           (! MHD_SCKT_ERR_IS_LOW_RESOURCES_ (err)) )
+      {
+        urh->mhd.celi &= ~MHD_EPOLL_STATE_WRITE_READY;
+        if (! MHD_SCKT_ERR_IS_EAGAIN_ (err))
         {
-          const int err = MHD_socket_get_error_ ();
-          if ( (! MHD_SCKT_ERR_IS_EINTR_ (err)) &&
-               (! MHD_SCKT_ERR_IS_LOW_RESOURCES_(err)) )
-            {
-              urh->mhd.celi &= ~MHD_EPOLL_STATE_WRITE_READY;
-              if (! MHD_SCKT_ERR_IS_EAGAIN_ (err))
-                {
-                  /* Socketpair connection shut down or
-                   * persistent / unrecoverable error. */
+          /* Socketpair connection shut down or
+           * persistent / unrecoverable error. */
 #ifdef HAVE_MESSAGES
-                  MHD_DLOG (daemon,
-                            _("Failed to forward to application " MHD_UNSIGNED_LONG_LONG_PRINTF \
-                                " bytes of data received from remote side: %s\n"),
-                            (MHD_UNSIGNED_LONG_LONG) urh->in_buffer_used,
-                            MHD_socket_strerr_ (err));
+          MHD_DLOG (daemon,
+                    _ (
+                      "Failed to forward to application "
+                      MHD_UNSIGNED_LONG_LONG_PRINTF \
+                      " bytes of data received from remote side: %s\n"),
+                    (MHD_UNSIGNED_LONG_LONG) urh->in_buffer_used,
+                    MHD_socket_strerr_ (err));
 #endif
-                  /* Discard any data received form remote. */
-                  urh->in_buffer_used = 0;
-                  /* Reading from remote client is not required anymore. */
-                  urh->in_buffer_size = 0;
-                  urh->app.celi &= ~MHD_EPOLL_STATE_READ_READY;
-                  connection->tls_read_ready = false;
-                }
-            }
-        }
-      else /* 0 < res */
-        {
-          const size_t next_in_buffer_used = urh->in_buffer_used - res;
-          if (0 != next_in_buffer_used)
-            {
-              memmove (urh->in_buffer,
-                       &urh->in_buffer[res],
-                       next_in_buffer_used);
-              if (data_size > (size_t)res)
-                urh->mhd.celi &= ~MHD_EPOLL_STATE_WRITE_READY;
-            }
-          urh->in_buffer_used = next_in_buffer_used;
-        }
-      if ( (0 == urh->in_buffer_used) &&
-           (0 != (MHD_EPOLL_STATE_ERROR & urh->mhd.celi)) )
-        {
-          /* Do not try to push data to application. */
-          urh->mhd.celi &= ~MHD_EPOLL_STATE_WRITE_READY;
+          /* Discard any data received form remote. */
+          urh->in_buffer_used = 0;
           /* Reading from remote client is not required anymore. */
           urh->in_buffer_size = 0;
           urh->app.celi &= ~MHD_EPOLL_STATE_READ_READY;
           connection->tls_read_ready = false;
         }
+      }
     }
+    else   /* 0 < res */
+    {
+      const size_t next_in_buffer_used = urh->in_buffer_used - res;
+      if (0 != next_in_buffer_used)
+      {
+        memmove (urh->in_buffer,
+                 &urh->in_buffer[res],
+                 next_in_buffer_used);
+        if (data_size > (size_t) res)
+          urh->mhd.celi &= ~MHD_EPOLL_STATE_WRITE_READY;
+      }
+      urh->in_buffer_used = next_in_buffer_used;
+    }
+    if ( (0 == urh->in_buffer_used) &&
+         (0 != (MHD_EPOLL_STATE_ERROR & urh->mhd.celi)) )
+    {
+      /* Do not try to push data to application. */
+      urh->mhd.celi &= ~MHD_EPOLL_STATE_WRITE_READY;
+      /* Reading from remote client is not required anymore. */
+      urh->in_buffer_size = 0;
+      urh->app.celi &= ~MHD_EPOLL_STATE_READ_READY;
+      connection->tls_read_ready = false;
+    }
+  }
 
   /* Check whether data is present in TLS buffers
    * and incoming forward buffer have some space. */
@@ -1641,23 +1649,25 @@ process_urh (struct MHD_UpgradeResponseHandle *urh)
   if ( (daemon->shutdown) &&
        ( (0 != urh->out_buffer_size) ||
          (0 != urh->out_buffer_used) ) )
-    {
-      /* Daemon shutting down, discard any remaining forward data. */
+  {
+    /* Daemon shutting down, discard any remaining forward data. */
 #ifdef HAVE_MESSAGES
-      if (0 < urh->out_buffer_used)
-        MHD_DLOG (daemon,
-                  _("Failed to forward to remote client " MHD_UNSIGNED_LONG_LONG_PRINTF \
-                      " bytes of data received from application: daemon shut down\n"),
-                  (MHD_UNSIGNED_LONG_LONG) urh->out_buffer_used);
+    if (0 < urh->out_buffer_used)
+      MHD_DLOG (daemon,
+                _ (
+                  "Failed to forward to remote client "
+                  MHD_UNSIGNED_LONG_LONG_PRINTF \
+                  " bytes of data received from application: daemon shut down\n"),
+                (MHD_UNSIGNED_LONG_LONG) urh->out_buffer_used);
 #endif
-      /* Discard any data unsent to remote. */
-      urh->out_buffer_used = 0;
-      /* Do not try to sent to remote anymore. */
-      urh->app.celi &= ~MHD_EPOLL_STATE_WRITE_READY;
-      /* Do not try to pull more data from application. */
-      urh->out_buffer_size = 0;
-      urh->mhd.celi &= ~MHD_EPOLL_STATE_READ_READY;
-    }
+    /* Discard any data unsent to remote. */
+    urh->out_buffer_used = 0;
+    /* Do not try to sent to remote anymore. */
+    urh->app.celi &= ~MHD_EPOLL_STATE_WRITE_READY;
+    /* Do not try to pull more data from application. */
+    urh->out_buffer_size = 0;
+    urh->mhd.celi &= ~MHD_EPOLL_STATE_READ_READY;
+  }
 }
 #endif /* HTTPS_SUPPORT  && UPGRADE_SUPPORT */
 
@@ -1682,128 +1692,128 @@ thread_main_connection_upgrade (struct MHD_Connection *con)
      until the application tells us that it is done
      with the socket; */
   if ( (0 != (daemon->options & MHD_USE_TLS)) &&
-      (0 == (daemon->options & MHD_USE_POLL)))
+       (0 == (daemon->options & MHD_USE_POLL)))
+  {
+    while ( (0 != urh->in_buffer_size) ||
+            (0 != urh->out_buffer_size) ||
+            (0 != urh->in_buffer_used) ||
+            (0 != urh->out_buffer_used) )
     {
-      while ( (0 != urh->in_buffer_size) ||
-              (0 != urh->out_buffer_size) ||
-              (0 != urh->in_buffer_used) ||
-              (0 != urh->out_buffer_used) )
-        {
-          /* use select */
-          fd_set rs;
-          fd_set ws;
-          fd_set es;
-          MHD_socket max_fd;
-          int num_ready;
-          bool result;
+      /* use select */
+      fd_set rs;
+      fd_set ws;
+      fd_set es;
+      MHD_socket max_fd;
+      int num_ready;
+      bool result;
 
-          FD_ZERO (&rs);
-          FD_ZERO (&ws);
-          FD_ZERO (&es);
-          max_fd = MHD_INVALID_SOCKET;
-          result = urh_to_fdset (urh,
-                                 &rs,
-                                 &ws,
-                                 &es,
-                                 &max_fd,
-                                 FD_SETSIZE);
-          if (! result)
-            {
+      FD_ZERO (&rs);
+      FD_ZERO (&ws);
+      FD_ZERO (&es);
+      max_fd = MHD_INVALID_SOCKET;
+      result = urh_to_fdset (urh,
+                             &rs,
+                             &ws,
+                             &es,
+                             &max_fd,
+                             FD_SETSIZE);
+      if (! result)
+      {
 #ifdef HAVE_MESSAGES
-              MHD_DLOG (con->daemon,
-                        _("Error preparing select\n"));
+        MHD_DLOG (con->daemon,
+                  _ ("Error preparing select\n"));
 #endif
-              break;
-            }
-          /* FIXME: does this check really needed? */
-          if (MHD_INVALID_SOCKET != max_fd)
-            {
-              struct timeval* tvp;
-              struct timeval tv;
-              if ( (con->tls_read_ready) &&
-                   (urh->in_buffer_used < urh->in_buffer_size))
-                { /* No need to wait if incoming data is already pending in TLS buffers. */
-                  tv.tv_sec = 0;
-                  tv.tv_usec = 0;
-                  tvp = &tv;
-                }
-              else
-                tvp = NULL;
-              num_ready = MHD_SYS_select_ (max_fd + 1,
-                                           &rs,
-                                           &ws,
-                                           &es,
-                                           tvp);
-            }
-          else
-            num_ready = 0;
-          if (num_ready < 0)
-            {
-              const int err = MHD_socket_get_error_();
-
-              if (MHD_SCKT_ERR_IS_EINTR_(err))
-                continue;
-#ifdef HAVE_MESSAGES
-              MHD_DLOG (con->daemon,
-                        _("Error during select (%d): `%s'\n"),
-                        err,
-                        MHD_socket_strerr_ (err));
-#endif
-              break;
-            }
-          urh_from_fdset (urh,
-                          &rs,
-                          &ws,
-                          &es);
-          process_urh (urh);
+        break;
+      }
+      /* FIXME: does this check really needed? */
+      if (MHD_INVALID_SOCKET != max_fd)
+      {
+        struct timeval*tvp;
+        struct timeval tv;
+        if ( (con->tls_read_ready) &&
+             (urh->in_buffer_used < urh->in_buffer_size))
+        {         /* No need to wait if incoming data is already pending in TLS buffers. */
+          tv.tv_sec = 0;
+          tv.tv_usec = 0;
+          tvp = &tv;
         }
+        else
+          tvp = NULL;
+        num_ready = MHD_SYS_select_ (max_fd + 1,
+                                     &rs,
+                                     &ws,
+                                     &es,
+                                     tvp);
+      }
+      else
+        num_ready = 0;
+      if (num_ready < 0)
+      {
+        const int err = MHD_socket_get_error_ ();
+
+        if (MHD_SCKT_ERR_IS_EINTR_ (err))
+          continue;
+#ifdef HAVE_MESSAGES
+        MHD_DLOG (con->daemon,
+                  _ ("Error during select (%d): `%s'\n"),
+                  err,
+                  MHD_socket_strerr_ (err));
+#endif
+        break;
+      }
+      urh_from_fdset (urh,
+                      &rs,
+                      &ws,
+                      &es);
+      process_urh (urh);
     }
+  }
 #ifdef HAVE_POLL
   else if (0 != (daemon->options & MHD_USE_TLS))
+  {
+    /* use poll() */
+    struct pollfd p[2];
+    memset (p,
+            0,
+            sizeof (p));
+    p[0].fd = urh->connection->socket_fd;
+    p[1].fd = urh->mhd.socket;
+
+    while ( (0 != urh->in_buffer_size) ||
+            (0 != urh->out_buffer_size) ||
+            (0 != urh->in_buffer_used) ||
+            (0 != urh->out_buffer_used) )
     {
-      /* use poll() */
-      struct pollfd p[2];
-      memset (p,
-              0,
-              sizeof (p));
-      p[0].fd = urh->connection->socket_fd;
-      p[1].fd = urh->mhd.socket;
+      int timeout;
 
-      while ( (0 != urh->in_buffer_size) ||
-              (0 != urh->out_buffer_size) ||
-              (0 != urh->in_buffer_used) ||
-              (0 != urh->out_buffer_used) )
-        {
-          int timeout;
+      urh_update_pollfd (urh, p);
 
-          urh_update_pollfd(urh, p);
+      if ( (con->tls_read_ready) &&
+           (urh->in_buffer_used < urh->in_buffer_size))
+        timeout = 0;     /* No need to wait if incoming data is already pending in TLS buffers. */
+      else
+        timeout = -1;
 
-          if ( (con->tls_read_ready) &&
-               (urh->in_buffer_used < urh->in_buffer_size))
-            timeout = 0; /* No need to wait if incoming data is already pending in TLS buffers. */
-          else
-            timeout = -1;
+      if (MHD_sys_poll_ (p,
+                         2,
+                         timeout) < 0)
+      {
+        const int err = MHD_socket_get_error_ ();
 
-          if (MHD_sys_poll_ (p,
-                             2,
-                             timeout) < 0)
-            {
-              const int err = MHD_socket_get_error_ ();
-
-              if (MHD_SCKT_ERR_IS_EINTR_ (err))
-                continue;
+        if (MHD_SCKT_ERR_IS_EINTR_ (err))
+          continue;
 #ifdef HAVE_MESSAGES
-              MHD_DLOG (con->daemon,
-                        _("Error during poll: `%s'\n"),
-                        MHD_socket_strerr_ (err));
+        MHD_DLOG (con->daemon,
+                  _ ("Error during poll: `%s'\n"),
+                  MHD_socket_strerr_ (err));
 #endif
-              break;
-            }
-          urh_from_pollfd (urh,
-                           p);
-          process_urh (urh);
-        }
+        break;
+      }
+      urh_from_pollfd (urh,
+                       p);
+      process_urh (urh);
     }
+  }
   /* end POLL */
 #endif
   /* end HTTPS */
@@ -1854,346 +1864,348 @@ thread_main_handle_connection (void *data)
   const bool use_poll = 0;
 #endif /* ! HAVE_POLL */
   bool was_suspended = false;
-  MHD_thread_init_(&(con->pid));
+  MHD_thread_init_ (&(con->pid));
 
   while ( (! daemon->shutdown) &&
-	  (MHD_CONNECTION_CLOSED != con->state) )
-    {
-      const time_t timeout = daemon->connection_timeout;
+          (MHD_CONNECTION_CLOSED != con->state) )
+  {
+    const time_t timeout = daemon->connection_timeout;
 #ifdef UPGRADE_SUPPORT
-      struct MHD_UpgradeResponseHandle * const urh = con->urh;
+    struct MHD_UpgradeResponseHandle *const urh = con->urh;
 #else  /* ! UPGRADE_SUPPORT */
-      static const void * const urh = NULL;
+    static const void *const urh = NULL;
 #endif /* ! UPGRADE_SUPPORT */
 
-      if ( (con->suspended) &&
-           (NULL == urh) )
+    if ( (con->suspended) &&
+         (NULL == urh) )
+    {
+      /* Connection was suspended, wait for resume. */
+      was_suspended = true;
+      if (! use_poll)
+      {
+        FD_ZERO (&rs);
+        if (! MHD_add_to_fd_set_ (MHD_itc_r_fd_ (daemon->itc),
+                                  &rs,
+                                  NULL,
+                                  FD_SETSIZE))
         {
-          /* Connection was suspended, wait for resume. */
-          was_suspended = true;
-          if (! use_poll)
-            {
-              FD_ZERO (&rs);
-              if (! MHD_add_to_fd_set_ (MHD_itc_r_fd_ (daemon->itc),
-                                        &rs,
-                                        NULL,
-                                        FD_SETSIZE))
-                {
   #ifdef HAVE_MESSAGES
-                  MHD_DLOG (con->daemon,
-                            _("Failed to add FD to fd_set\n"));
+          MHD_DLOG (con->daemon,
+                    _ ("Failed to add FD to fd_set\n"));
   #endif
-                  goto exit;
-                }
-              if (0 > MHD_SYS_select_ (MHD_itc_r_fd_ (daemon->itc) + 1,
-                                       &rs,
-                                       NULL,
-                                       NULL,
-                                       NULL))
-                {
-                  const int err = MHD_socket_get_error_();
-
-                  if (MHD_SCKT_ERR_IS_EINTR_(err))
-                    continue;
-#ifdef HAVE_MESSAGES
-                  MHD_DLOG (con->daemon,
-                            _("Error during select (%d): `%s'\n"),
-                            err,
-                            MHD_socket_strerr_ (err));
-#endif
-                  break;
-                }
-            }
-#ifdef HAVE_POLL
-          else /* use_poll */
-            {
-              p[0].events = POLLIN;
-              p[0].fd = MHD_itc_r_fd_ (daemon->itc);
-              p[0].revents = 0;
-              if (0 > MHD_sys_poll_ (p,
-                                     1,
-                                     -1))
-                {
-                  if (MHD_SCKT_LAST_ERR_IS_(MHD_SCKT_EINTR_))
-                    continue;
-#ifdef HAVE_MESSAGES
-                  MHD_DLOG (con->daemon,
-                            _("Error during poll: `%s'\n"),
-                            MHD_socket_last_strerr_ ());
-#endif
-                  break;
-                }
-            }
-#endif /* HAVE_POLL */
-          MHD_itc_clear_ (daemon->itc);
-          continue; /* Check again for resume. */
-        } /* End of "suspended" branch. */
-
-      if (was_suspended)
-        {
-          MHD_update_last_activity_ (con); /* Reset timeout timer. */
-          /* Process response queued during suspend and update states. */
-          MHD_connection_handle_idle (con);
-          was_suspended = false;
+          goto exit;
         }
+        if (0 > MHD_SYS_select_ (MHD_itc_r_fd_ (daemon->itc) + 1,
+                                 &rs,
+                                 NULL,
+                                 NULL,
+                                 NULL))
+        {
+          const int err = MHD_socket_get_error_ ();
 
-      tvp = NULL;
+          if (MHD_SCKT_ERR_IS_EINTR_ (err))
+            continue;
+#ifdef HAVE_MESSAGES
+          MHD_DLOG (con->daemon,
+                    _ ("Error during select (%d): `%s'\n"),
+                    err,
+                    MHD_socket_strerr_ (err));
+#endif
+          break;
+        }
+      }
+#ifdef HAVE_POLL
+      else     /* use_poll */
+      {
+        p[0].events = POLLIN;
+        p[0].fd = MHD_itc_r_fd_ (daemon->itc);
+        p[0].revents = 0;
+        if (0 > MHD_sys_poll_ (p,
+                               1,
+                               -1))
+        {
+          if (MHD_SCKT_LAST_ERR_IS_ (MHD_SCKT_EINTR_))
+            continue;
+#ifdef HAVE_MESSAGES
+          MHD_DLOG (con->daemon,
+                    _ ("Error during poll: `%s'\n"),
+                    MHD_socket_last_strerr_ ());
+#endif
+          break;
+        }
+      }
+#endif /* HAVE_POLL */
+      MHD_itc_clear_ (daemon->itc);
+      continue;     /* Check again for resume. */
+    }     /* End of "suspended" branch. */
 
-      if ( (MHD_EVENT_LOOP_INFO_BLOCK == con->event_loop_info)
+    if (was_suspended)
+    {
+      MHD_update_last_activity_ (con);     /* Reset timeout timer. */
+      /* Process response queued during suspend and update states. */
+      MHD_connection_handle_idle (con);
+      was_suspended = false;
+    }
+
+    tvp = NULL;
+
+    if ( (MHD_EVENT_LOOP_INFO_BLOCK == con->event_loop_info)
 #ifdef HTTPS_SUPPORT
-           || ( (con->tls_read_ready) &&
-                (MHD_EVENT_LOOP_INFO_READ == con->event_loop_info) )
+         || ( (con->tls_read_ready) &&
+              (MHD_EVENT_LOOP_INFO_READ == con->event_loop_info) )
 #endif /* HTTPS_SUPPORT */
          )
-	{
-	  /* do not block: more data may be inside of TLS buffers waiting or
-	   * application must provide response data */
-	  tv.tv_sec = 0;
-	  tv.tv_usec = 0;
-	  tvp = &tv;
-	}
-      if ( (NULL == tvp) &&
-           (timeout > 0) )
-	{
-	  now = MHD_monotonic_sec_counter();
-	  if (now - con->last_activity > timeout)
-	    tv.tv_sec = 0;
-          else
-            {
-              const time_t seconds_left = timeout - (now - con->last_activity);
-#if !defined(_WIN32) || defined(__CYGWIN__)
-              tv.tv_sec = seconds_left;
-#else  /* _WIN32 && !__CYGWIN__ */
-              if (seconds_left > TIMEVAL_TV_SEC_MAX)
-                tv.tv_sec = TIMEVAL_TV_SEC_MAX;
-              else
-                tv.tv_sec = (_MHD_TIMEVAL_TV_SEC_TYPE) seconds_left;
-#endif /* _WIN32 && ! __CYGWIN__  */
-            }
-	  tv.tv_usec = 0;
-	  tvp = &tv;
-	}
-      if (! use_poll)
-	{
-	  /* use select */
-	  bool err_state = false;
-
-	  FD_ZERO (&rs);
-	  FD_ZERO (&ws);
-          FD_ZERO (&es);
-	  maxsock = MHD_INVALID_SOCKET;
-	  switch (con->event_loop_info)
-	    {
-	    case MHD_EVENT_LOOP_INFO_READ:
-	      if (! MHD_add_to_fd_set_ (con->socket_fd,
-                                        &rs,
-                                        &maxsock,
-                                        FD_SETSIZE))
-	        err_state = true;
-	      break;
-	    case MHD_EVENT_LOOP_INFO_WRITE:
-	      if (! MHD_add_to_fd_set_ (con->socket_fd,
-                                        &ws,
-                                        &maxsock,
-                                        FD_SETSIZE))
-                err_state = true;
-	      break;
-	    case MHD_EVENT_LOOP_INFO_BLOCK:
-	      if (! MHD_add_to_fd_set_ (con->socket_fd,
-                                        &es,
-                                        &maxsock,
-                                        FD_SETSIZE))
-	        err_state = true;
-	      break;
-	    case MHD_EVENT_LOOP_INFO_CLEANUP:
-	      /* how did we get here!? */
-	      goto exit;
-	    }
-#if WINDOWS
-          if (MHD_ITC_IS_VALID_(daemon->itc) )
-            {
-              if (! MHD_add_to_fd_set_ (MHD_itc_r_fd_ (daemon->itc),
-                                        &rs,
-                                        &maxsock,
-                                        FD_SETSIZE))
-                err_state = 1;
-            }
-#endif
-            if (err_state)
-              {
-#ifdef HAVE_MESSAGES
-                MHD_DLOG (con->daemon,
-                          _("Failed to add FD to fd_set\n"));
-#endif
-                goto exit;
-              }
-
-	  num_ready = MHD_SYS_select_ (maxsock + 1,
-                                       &rs,
-                                       &ws,
-                                       &es,
-                                       tvp);
-	  if (num_ready < 0)
-	    {
-	      const int err = MHD_socket_get_error_();
-
-	      if (MHD_SCKT_ERR_IS_EINTR_(err))
-		continue;
-#ifdef HAVE_MESSAGES
-	      MHD_DLOG (con->daemon,
-			_("Error during select (%d): `%s'\n"),
-			err,
-			MHD_socket_strerr_ (err));
-#endif
-	      break;
-	    }
-#if WINDOWS
-          /* Clear ITC before other processing so additional
-           * signals will trigger select() again */
-          if ( (MHD_ITC_IS_VALID_(daemon->itc)) &&
-               (FD_ISSET (MHD_itc_r_fd_ (daemon->itc),
-                          &rs)) )
-            MHD_itc_clear_ (daemon->itc);
-#endif
-          if (MHD_NO ==
-              call_handlers (con,
-                             FD_ISSET (con->socket_fd,
-                                       &rs),
-                             FD_ISSET (con->socket_fd,
-                                       &ws),
-                             FD_ISSET (con->socket_fd,
-                                       &es)) )
-            goto exit;
-	}
-#ifdef HAVE_POLL
+    {
+      /* do not block: more data may be inside of TLS buffers waiting or
+       * application must provide response data */
+      tv.tv_sec = 0;
+      tv.tv_usec = 0;
+      tvp = &tv;
+    }
+    if ( (NULL == tvp) &&
+         (timeout > 0) )
+    {
+      now = MHD_monotonic_sec_counter ();
+      if (now - con->last_activity > timeout)
+        tv.tv_sec = 0;
       else
-	{
-	  /* use poll */
-	  memset (&p,
-                  0,
-                  sizeof (p));
-	  p[0].fd = con->socket_fd;
-	  switch (con->event_loop_info)
-	    {
-	    case MHD_EVENT_LOOP_INFO_READ:
-	      p[0].events |= POLLIN | MHD_POLL_EVENTS_ERR_DISC;
-	      break;
-	    case MHD_EVENT_LOOP_INFO_WRITE:
-	      p[0].events |= POLLOUT | MHD_POLL_EVENTS_ERR_DISC;
-	      break;
-	    case MHD_EVENT_LOOP_INFO_BLOCK:
-	      p[0].events |= MHD_POLL_EVENTS_ERR_DISC;
-	      break;
-	    case MHD_EVENT_LOOP_INFO_CLEANUP:
-	      /* how did we get here!? */
-	      goto exit;
-	    }
+      {
+        const time_t seconds_left = timeout - (now - con->last_activity);
+#if ! defined(_WIN32) || defined(__CYGWIN__)
+        tv.tv_sec = seconds_left;
+#else  /* _WIN32 && !__CYGWIN__ */
+        if (seconds_left > TIMEVAL_TV_SEC_MAX)
+          tv.tv_sec = TIMEVAL_TV_SEC_MAX;
+        else
+          tv.tv_sec = (_MHD_TIMEVAL_TV_SEC_TYPE) seconds_left;
+#endif /* _WIN32 && ! __CYGWIN__  */
+      }
+      tv.tv_usec = 0;
+      tvp = &tv;
+    }
+    if (! use_poll)
+    {
+      /* use select */
+      bool err_state = false;
+
+      FD_ZERO (&rs);
+      FD_ZERO (&ws);
+      FD_ZERO (&es);
+      maxsock = MHD_INVALID_SOCKET;
+      switch (con->event_loop_info)
+      {
+      case MHD_EVENT_LOOP_INFO_READ:
+        if (! MHD_add_to_fd_set_ (con->socket_fd,
+                                  &rs,
+                                  &maxsock,
+                                  FD_SETSIZE))
+          err_state = true;
+        break;
+      case MHD_EVENT_LOOP_INFO_WRITE:
+        if (! MHD_add_to_fd_set_ (con->socket_fd,
+                                  &ws,
+                                  &maxsock,
+                                  FD_SETSIZE))
+          err_state = true;
+        break;
+      case MHD_EVENT_LOOP_INFO_BLOCK:
+        if (! MHD_add_to_fd_set_ (con->socket_fd,
+                                  &es,
+                                  &maxsock,
+                                  FD_SETSIZE))
+          err_state = true;
+        break;
+      case MHD_EVENT_LOOP_INFO_CLEANUP:
+        /* how did we get here!? */
+        goto exit;
+      }
 #if WINDOWS
-          extra_slot = 0;
-          if (MHD_ITC_IS_VALID_(daemon->itc))
-            {
-              p[1].events |= POLLIN;
-              p[1].fd = MHD_itc_r_fd_ (daemon->itc);
-              p[1].revents = 0;
-              extra_slot = 1;
-            }
+      if (MHD_ITC_IS_VALID_ (daemon->itc) )
+      {
+        if (! MHD_add_to_fd_set_ (MHD_itc_r_fd_ (daemon->itc),
+                                  &rs,
+                                  &maxsock,
+                                  FD_SETSIZE))
+          err_state = 1;
+      }
 #endif
-	  if (MHD_sys_poll_ (p,
-#if WINDOWS
-                             1 + extra_slot,
-#else
-                             1,
-#endif
-                             (NULL == tvp) ? -1 : tv.tv_sec * 1000) < 0)
-	    {
-	      if (MHD_SCKT_LAST_ERR_IS_(MHD_SCKT_EINTR_))
-		continue;
+      if (err_state)
+      {
 #ifdef HAVE_MESSAGES
-	      MHD_DLOG (con->daemon,
-                        _("Error during poll: `%s'\n"),
-			MHD_socket_last_strerr_ ());
+        MHD_DLOG (con->daemon,
+                  _ ("Failed to add FD to fd_set\n"));
 #endif
-	      break;
-	    }
+        goto exit;
+      }
+
+      num_ready = MHD_SYS_select_ (maxsock + 1,
+                                   &rs,
+                                   &ws,
+                                   &es,
+                                   tvp);
+      if (num_ready < 0)
+      {
+        const int err = MHD_socket_get_error_ ();
+
+        if (MHD_SCKT_ERR_IS_EINTR_ (err))
+          continue;
+#ifdef HAVE_MESSAGES
+        MHD_DLOG (con->daemon,
+                  _ ("Error during select (%d): `%s'\n"),
+                  err,
+                  MHD_socket_strerr_ (err));
+#endif
+        break;
+      }
 #if WINDOWS
-          /* Clear ITC before other processing so additional
-           * signals will trigger poll() again */
-          if ( (MHD_ITC_IS_VALID_(daemon->itc)) &&
-               (0 != (p[1].revents & (POLLERR | POLLHUP | POLLIN))) )
-            MHD_itc_clear_ (daemon->itc);
+      /* Clear ITC before other processing so additional
+       * signals will trigger select() again */
+      if ( (MHD_ITC_IS_VALID_ (daemon->itc)) &&
+           (FD_ISSET (MHD_itc_r_fd_ (daemon->itc),
+                      &rs)) )
+        MHD_itc_clear_ (daemon->itc);
 #endif
-          if (MHD_NO ==
-              call_handlers (con,
-                             0 != (p[0].revents & POLLIN),
-                             0 != (p[0].revents & POLLOUT),
-                             0 != (p[0].revents & (POLLERR | MHD_POLL_REVENTS_ERR_DISC))))
-            goto exit;
-	}
+      if (MHD_NO ==
+          call_handlers (con,
+                         FD_ISSET (con->socket_fd,
+                                   &rs),
+                         FD_ISSET (con->socket_fd,
+                                   &ws),
+                         FD_ISSET (con->socket_fd,
+                                   &es)) )
+        goto exit;
+    }
+#ifdef HAVE_POLL
+    else
+    {
+      /* use poll */
+      memset (&p,
+              0,
+              sizeof (p));
+      p[0].fd = con->socket_fd;
+      switch (con->event_loop_info)
+      {
+      case MHD_EVENT_LOOP_INFO_READ:
+        p[0].events |= POLLIN | MHD_POLL_EVENTS_ERR_DISC;
+        break;
+      case MHD_EVENT_LOOP_INFO_WRITE:
+        p[0].events |= POLLOUT | MHD_POLL_EVENTS_ERR_DISC;
+        break;
+      case MHD_EVENT_LOOP_INFO_BLOCK:
+        p[0].events |= MHD_POLL_EVENTS_ERR_DISC;
+        break;
+      case MHD_EVENT_LOOP_INFO_CLEANUP:
+        /* how did we get here!? */
+        goto exit;
+      }
+#if WINDOWS
+      extra_slot = 0;
+      if (MHD_ITC_IS_VALID_ (daemon->itc))
+      {
+        p[1].events |= POLLIN;
+        p[1].fd = MHD_itc_r_fd_ (daemon->itc);
+        p[1].revents = 0;
+        extra_slot = 1;
+      }
+#endif
+      if (MHD_sys_poll_ (p,
+#if WINDOWS
+                         1 + extra_slot,
+#else
+                         1,
+#endif
+                         (NULL == tvp) ? -1 : tv.tv_sec * 1000) < 0)
+      {
+        if (MHD_SCKT_LAST_ERR_IS_ (MHD_SCKT_EINTR_))
+          continue;
+#ifdef HAVE_MESSAGES
+        MHD_DLOG (con->daemon,
+                  _ ("Error during poll: `%s'\n"),
+                  MHD_socket_last_strerr_ ());
+#endif
+        break;
+      }
+#if WINDOWS
+      /* Clear ITC before other processing so additional
+       * signals will trigger poll() again */
+      if ( (MHD_ITC_IS_VALID_ (daemon->itc)) &&
+           (0 != (p[1].revents & (POLLERR | POLLHUP | POLLIN))) )
+        MHD_itc_clear_ (daemon->itc);
+#endif
+      if (MHD_NO ==
+          call_handlers (con,
+                         (0 != (p[0].revents & POLLIN)),
+                         (0 != (p[0].revents & POLLOUT)),
+                         (0 != (p[0].revents & (POLLERR
+                                                | MHD_POLL_REVENTS_ERR_DISC))) ))
+        goto exit;
+    }
 #endif
 #ifdef UPGRADE_SUPPORT
-      if (MHD_CONNECTION_UPGRADE == con->state)
-        {
-          /* Normal HTTP processing is finished,
-           * notify application. */
-          if ( (NULL != daemon->notify_completed) &&
-               (con->client_aware) )
-            daemon->notify_completed (daemon->notify_completed_cls,
-                                      con,
-                                      &con->client_context,
-                                      MHD_REQUEST_TERMINATED_COMPLETED_OK);
-          con->client_aware = false;
+    if (MHD_CONNECTION_UPGRADE == con->state)
+    {
+      /* Normal HTTP processing is finished,
+       * notify application. */
+      if ( (NULL != daemon->notify_completed) &&
+           (con->client_aware) )
+        daemon->notify_completed (daemon->notify_completed_cls,
+                                  con,
+                                  &con->client_context,
+                                  MHD_REQUEST_TERMINATED_COMPLETED_OK);
+      con->client_aware = false;
 
-          thread_main_connection_upgrade (con);
-          /* MHD_connection_finish_forward_() was called by thread_main_connection_upgrade(). */
+      thread_main_connection_upgrade (con);
+      /* MHD_connection_finish_forward_() was called by thread_main_connection_upgrade(). */
 
-          /* "Upgraded" data will not be used in this thread from this point. */
-          con->urh->clean_ready = true;
-          /* If 'urh->was_closed' set to true, connection will be
-           * moved immediately to cleanup list. Otherwise connection
-           * will stay in suspended list until 'urh' will be marked
-           * with 'was_closed' by application. */
-          MHD_resume_connection(con);
+      /* "Upgraded" data will not be used in this thread from this point. */
+      con->urh->clean_ready = true;
+      /* If 'urh->was_closed' set to true, connection will be
+       * moved immediately to cleanup list. Otherwise connection
+       * will stay in suspended list until 'urh' will be marked
+       * with 'was_closed' by application. */
+      MHD_resume_connection (con);
 
-          /* skip usual clean up  */
-          return (MHD_THRD_RTRN_TYPE_) 0;
-        }
-#endif /* UPGRADE_SUPPORT */
+      /* skip usual clean up  */
+      return (MHD_THRD_RTRN_TYPE_) 0;
     }
+#endif /* UPGRADE_SUPPORT */
+  }
 #if DEBUG_CLOSE
 #ifdef HAVE_MESSAGES
   MHD_DLOG (con->daemon,
-            _("Processing thread terminating. Closing connection\n"));
+            _ ("Processing thread terminating. Closing connection\n"));
 #endif
 #endif
   if (MHD_CONNECTION_CLOSED != con->state)
     MHD_connection_close_ (con,
                            (daemon->shutdown) ?
-                           MHD_REQUEST_TERMINATED_DAEMON_SHUTDOWN:
+                           MHD_REQUEST_TERMINATED_DAEMON_SHUTDOWN :
                            MHD_REQUEST_TERMINATED_WITH_ERROR);
   MHD_connection_handle_idle (con);
-exit:
+  exit:
   if (NULL != con->response)
-    {
-      MHD_destroy_response (con->response);
-      con->response = NULL;
-    }
+  {
+    MHD_destroy_response (con->response);
+    con->response = NULL;
+  }
 
   if (MHD_INVALID_SOCKET != con->socket_fd)
-    {
-      shutdown (con->socket_fd,
-                SHUT_WR);
-      /* 'socket_fd' can be used in other thread to signal shutdown.
-       * To avoid data races, do not close socket here. Daemon will
-       * use more connections only after cleanup anyway. */
-    }
-  if ( (MHD_ITC_IS_VALID_(daemon->itc)) &&
+  {
+    shutdown (con->socket_fd,
+              SHUT_WR);
+    /* 'socket_fd' can be used in other thread to signal shutdown.
+     * To avoid data races, do not close socket here. Daemon will
+     * use more connections only after cleanup anyway. */
+  }
+  if ( (MHD_ITC_IS_VALID_ (daemon->itc)) &&
        (! MHD_itc_activate_ (daemon->itc, "t")) )
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("Failed to signal thread termination via inter-thread communication channel."));
+    MHD_DLOG (daemon,
+              _ (
+                "Failed to signal thread termination via inter-thread communication channel."));
 #endif
-    }
+  }
   return (MHD_THRD_RTRN_TYPE_) 0;
 }
 #endif
@@ -2210,8 +2222,8 @@ static void
 MHD_cleanup_connections (struct MHD_Daemon *daemon);
 
 #if defined(HTTPS_SUPPORT)
-#if !defined(MHD_WINSOCK_SOCKETS) && !defined(MHD_socket_nosignal_) && \
-    (GNUTLS_VERSION_NUMBER+0 < 0x030402) && defined(MSG_NOSIGNAL)
+#if ! defined(MHD_WINSOCK_SOCKETS) && ! defined(MHD_socket_nosignal_) && \
+  (GNUTLS_VERSION_NUMBER + 0 < 0x030402) && defined(MSG_NOSIGNAL)
 /**
  * Older version of GnuTLS do not support suppressing of SIGPIPE signal.
  * Use push function replacement with suppressing SIGPIPE signal where necessary
@@ -2226,15 +2238,15 @@ MHD_cleanup_connections (struct MHD_Daemon *daemon);
  * for TLS library.
  */
 static ssize_t
-MHD_tls_push_func_(gnutls_transport_ptr_t trnsp,
-                   const void *data,
-                   size_t data_size)
+MHD_tls_push_func_ (gnutls_transport_ptr_t trnsp,
+                    const void *data,
+                    size_t data_size)
 {
 #if (MHD_SCKT_SEND_MAX_SIZE_ < SSIZE_MAX) || (0 == SSIZE_MAX)
   if (data_size > MHD_SCKT_SEND_MAX_SIZE_)
     data_size = MHD_SCKT_SEND_MAX_SIZE_;
 #endif /* (MHD_SCKT_SEND_MAX_SIZE_ < SSIZE_MAX) || (0 == SSIZE_MAX) */
-  return MHD_send_ ((MHD_socket)(intptr_t)(trnsp), data, data_size);
+  return MHD_send_ ((MHD_socket) (intptr_t) (trnsp), data, data_size);
 }
 #endif /* MHD_TLSLIB_DONT_SUPPRESS_SIGPIPE */
 
@@ -2249,8 +2261,8 @@ MHD_tls_push_func_(gnutls_transport_ptr_t trnsp,
  */
 static int
 psk_gnutls_adapter (gnutls_session_t session,
-		    const char *username,
-		    gnutls_datum_t *key)
+                    const char *username,
+                    gnutls_datum_t *key)
 {
   struct MHD_Connection *connection;
   struct MHD_Daemon *daemon;
@@ -2262,7 +2274,7 @@ psk_gnutls_adapter (gnutls_session_t session,
   {
 #ifdef HAVE_MESSAGES
     /* Cannot use our logger, we don't even have "daemon" */
-    MHD_PANIC (_("Internal server error. This should be impossible.\n"));
+    MHD_PANIC (_ ("Internal server error. This should be impossible.\n"));
 #endif
     return -1;
   }
@@ -2272,46 +2284,47 @@ psk_gnutls_adapter (gnutls_session_t session,
   {
 #ifdef HAVE_MESSAGES
     MHD_DLOG (daemon,
-	      _("PSK not supported by this server.\n"));
+              _ ("PSK not supported by this server.\n"));
 #endif
     return -1;
   }
   if (0 != daemon->cred_callback (daemon->cred_callback_cls,
-				  connection,
-				  username,
-				  &app_psk,
-				  &app_psk_size))
+                                  connection,
+                                  username,
+                                  &app_psk,
+                                  &app_psk_size))
     return -1;
   if (NULL == (key->data = gnutls_malloc (app_psk_size)))
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-		_("PSK authentication failed: gnutls_malloc failed to allocate memory\n"));
+    MHD_DLOG (daemon,
+              _ (
+                "PSK authentication failed: gnutls_malloc failed to allocate memory\n"));
 #endif
-      free (app_psk);
-      return -1;
-    }
+    free (app_psk);
+    return -1;
+  }
   if (UINT_MAX < app_psk_size)
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("PSK authentication failed: PSK too long\n"));
+    MHD_DLOG (daemon,
+              _ ("PSK authentication failed: PSK too long\n"));
 #endif
-      free (app_psk);
-      return -1;
-    }
-  key->size = (unsigned int)app_psk_size;
+    free (app_psk);
+    return -1;
+  }
+  key->size = (unsigned int) app_psk_size;
   memcpy (key->data,
-	  app_psk,
-	  app_psk_size);
+          app_psk,
+          app_psk_size);
   free (app_psk);
   return 0;
 #else
 #ifdef HAVE_MESSAGES
-    MHD_DLOG (daemon,
-	      _("PSK not supported by this server.\n"));
+  MHD_DLOG (daemon,
+            _ ("PSK not supported by this server.\n"));
 #endif
-    return -1;
+  return -1;
 #endif
 }
 #endif /* HTTPS_SUPPORT */
@@ -2360,71 +2373,71 @@ internal_add_connection (struct MHD_Daemon *daemon,
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   mhd_assert ((NULL == daemon->worker_pool) || (external_add));
   if ((external_add) && (NULL != daemon->worker_pool))
+  {
+    /* have a pool, try to find a pool with capacity; we use the
+       socket as the initial offset into the pool for load
+       balancing */
+    for (i = 0; i < daemon->worker_pool_size; ++i)
     {
-      /* have a pool, try to find a pool with capacity; we use the
-         socket as the initial offset into the pool for load
-         balancing */
-      for (i = 0; i < daemon->worker_pool_size; ++i)
-        {
-          struct MHD_Daemon * const worker =
-                &daemon->worker_pool[(i + client_socket) % daemon->worker_pool_size];
-          if (worker->connections < worker->connection_limit)
-            return internal_add_connection (worker,
-                                            client_socket,
-                                            addr,
-                                            addrlen,
-                                            true,
-                                            non_blck);
-        }
-      /* all pools are at their connection limit, must refuse */
-      MHD_socket_close_chk_ (client_socket);
-#if ENFILE
-      errno = ENFILE;
-#endif
-      return MHD_NO;
+      struct MHD_Daemon *const worker =
+        &daemon->worker_pool[(i + client_socket) % daemon->worker_pool_size];
+      if (worker->connections < worker->connection_limit)
+        return internal_add_connection (worker,
+                                        client_socket,
+                                        addr,
+                                        addrlen,
+                                        true,
+                                        non_blck);
     }
+    /* all pools are at their connection limit, must refuse */
+    MHD_socket_close_chk_ (client_socket);
+#if ENFILE
+    errno = ENFILE;
+#endif
+    return MHD_NO;
+  }
 #endif
 
-  if ( (! MHD_SCKT_FD_FITS_FDSET_(client_socket,
-                                  NULL)) &&
+  if ( (! MHD_SCKT_FD_FITS_FDSET_ (client_socket,
+                                   NULL)) &&
        (0 == (daemon->options & (MHD_USE_POLL | MHD_USE_EPOLL))) )
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-		_("Socket descriptor larger than FD_SETSIZE: %d > %d\n"),
-		(int) client_socket,
-		(int) FD_SETSIZE);
+    MHD_DLOG (daemon,
+              _ ("Socket descriptor larger than FD_SETSIZE: %d > %d\n"),
+              (int) client_socket,
+              (int) FD_SETSIZE);
 #endif
-      MHD_socket_close_chk_ (client_socket);
+    MHD_socket_close_chk_ (client_socket);
 #if EINVAL
-      errno = EINVAL;
+    errno = EINVAL;
 #endif
-      return MHD_NO;
-    }
+    return MHD_NO;
+  }
 
 #ifdef MHD_socket_nosignal_
   if (! MHD_socket_nosignal_ (client_socket))
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("Failed to set SO_NOSIGPIPE on accepted socket: %s\n"),
-                MHD_socket_last_strerr_());
+    MHD_DLOG (daemon,
+              _ ("Failed to set SO_NOSIGPIPE on accepted socket: %s\n"),
+              MHD_socket_last_strerr_ ());
 #endif
 #ifndef MSG_NOSIGNAL
-      /* Cannot use socket as it can produce SIGPIPE. */
+    /* Cannot use socket as it can produce SIGPIPE. */
 #ifdef ENOTSOCK
-      errno = ENOTSOCK;
+    errno = ENOTSOCK;
 #endif /* ENOTSOCK */
-      return MHD_NO;
+    return MHD_NO;
 #endif /* ! MSG_NOSIGNAL */
-    }
+  }
 #endif /* MHD_socket_nosignal_ */
 
 
 #ifdef HAVE_MESSAGES
 #if DEBUG_CONNECT
   MHD_DLOG (daemon,
-            _("Accepted connection on socket %d\n"),
+            _ ("Accepted connection on socket %d\n"),
             client_socket);
 #endif
 #endif
@@ -2432,93 +2445,94 @@ internal_add_connection (struct MHD_Daemon *daemon,
        (MHD_NO == MHD_ip_limit_add (daemon,
                                     addr,
                                     addrlen)) )
-    {
-      /* above connection limit - reject */
+  {
+    /* above connection limit - reject */
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("Server reached connection limit. Closing inbound connection.\n"));
+    MHD_DLOG (daemon,
+              _ (
+                "Server reached connection limit. Closing inbound connection.\n"));
 #endif
-      MHD_socket_close_chk_ (client_socket);
+    MHD_socket_close_chk_ (client_socket);
 #if ENFILE
-      errno = ENFILE;
+    errno = ENFILE;
 #endif
-      return MHD_NO;
-    }
+    return MHD_NO;
+  }
 
   /* apply connection acceptance policy if present */
   if ( (NULL != daemon->apc) &&
        (MHD_NO == daemon->apc (daemon->apc_cls,
                                addr,
                                addrlen)) )
-    {
+  {
 #if DEBUG_CLOSE
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("Connection rejected by application. Closing connection.\n"));
+    MHD_DLOG (daemon,
+              _ ("Connection rejected by application. Closing connection.\n"));
 #endif
 #endif
-      MHD_socket_close_chk_ (client_socket);
-      MHD_ip_limit_del (daemon,
-                        addr,
-                        addrlen);
+    MHD_socket_close_chk_ (client_socket);
+    MHD_ip_limit_del (daemon,
+                      addr,
+                      addrlen);
 #if EACCESS
-      errno = EACCESS;
+    errno = EACCESS;
 #endif
-      return MHD_NO;
-    }
+    return MHD_NO;
+  }
 
   if (NULL == (connection = MHD_calloc_ (1, sizeof (struct MHD_Connection))))
-    {
-      eno = errno;
+  {
+    eno = errno;
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                "Error allocating memory: %s\n",
-                MHD_strerror_ (errno));
+    MHD_DLOG (daemon,
+              "Error allocating memory: %s\n",
+              MHD_strerror_ (errno));
 #endif
-      MHD_socket_close_chk_ (client_socket);
-      MHD_ip_limit_del (daemon,
-                        addr,
-                        addrlen);
-      errno = eno;
-      return MHD_NO;
-    }
+    MHD_socket_close_chk_ (client_socket);
+    MHD_ip_limit_del (daemon,
+                      addr,
+                      addrlen);
+    errno = eno;
+    return MHD_NO;
+  }
   connection->pool = MHD_pool_create (daemon->pool_size);
   if (NULL == connection->pool)
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("Error allocating memory: %s\n"),
-                MHD_strerror_ (errno));
+    MHD_DLOG (daemon,
+              _ ("Error allocating memory: %s\n"),
+              MHD_strerror_ (errno));
 #endif
-      MHD_socket_close_chk_ (client_socket);
-      MHD_ip_limit_del (daemon,
-                        addr,
-                        addrlen);
-      free (connection);
+    MHD_socket_close_chk_ (client_socket);
+    MHD_ip_limit_del (daemon,
+                      addr,
+                      addrlen);
+    free (connection);
 #if ENOMEM
-      errno = ENOMEM;
+    errno = ENOMEM;
 #endif
-      return MHD_NO;
-    }
+    return MHD_NO;
+  }
 
   connection->connection_timeout = daemon->connection_timeout;
   if (NULL == (connection->addr = malloc (addrlen)))
-    {
-      eno = errno;
+  {
+    eno = errno;
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("Error allocating memory: %s\n"),
-                MHD_strerror_ (errno));
+    MHD_DLOG (daemon,
+              _ ("Error allocating memory: %s\n"),
+              MHD_strerror_ (errno));
 #endif
-      MHD_socket_close_chk_ (client_socket);
-      MHD_ip_limit_del (daemon,
-                        addr,
-                        addrlen);
-      MHD_pool_destroy (connection->pool);
-      free (connection);
-      errno = eno;
-      return MHD_NO;
-    }
+    MHD_socket_close_chk_ (client_socket);
+    MHD_ip_limit_del (daemon,
+                      addr,
+                      addrlen);
+    MHD_pool_destroy (connection->pool);
+    free (connection);
+    errno = eno;
+    return MHD_NO;
+  }
   memcpy (connection->addr,
           addr,
           addrlen);
@@ -2526,120 +2540,127 @@ internal_add_connection (struct MHD_Daemon *daemon,
   connection->socket_fd = client_socket;
   connection->sk_nonblck = non_blck;
   connection->daemon = daemon;
-  connection->last_activity = MHD_monotonic_sec_counter();
+  connection->last_activity = MHD_monotonic_sec_counter ();
 
   if (0 == (daemon->options & MHD_USE_TLS))
-    {
-      /* set default connection handlers  */
-      MHD_set_http_callbacks_ (connection);
-    }
+  {
+    /* set default connection handlers  */
+    MHD_set_http_callbacks_ (connection);
+  }
   else
-    {
+  {
 #ifdef HTTPS_SUPPORT
-      gnutls_init_flags_t flags;
+#if (GNUTLS_VERSION_NUMBER + 0 >= 0x030500)
+    gnutls_init_flags_t
+#else
+    unsigned int
+#endif
+    flags;
 
-      flags = GNUTLS_SERVER;
-#if (GNUTLS_VERSION_NUMBER+0 >= 0x030402)
-      flags |= GNUTLS_NO_SIGNAL;
+    flags = GNUTLS_SERVER;
+#if (GNUTLS_VERSION_NUMBER + 0 >= 0x030402)
+    flags |= GNUTLS_NO_SIGNAL;
 #endif /* GNUTLS_VERSION_NUMBER >= 0x030402 */
 #if GNUTLS_VERSION_MAJOR >= 3
-      flags |= GNUTLS_NONBLOCK;
+    flags |= GNUTLS_NONBLOCK;
 #endif /* GNUTLS_VERSION_MAJOR >= 3*/
-#if (GNUTLS_VERSION_NUMBER+0 >= 0x030603)
-      if (0 != (daemon->options & MHD_USE_POST_HANDSHAKE_AUTH_SUPPORT))
-	flags |= GNUTLS_POST_HANDSHAKE_AUTH;
+#if (GNUTLS_VERSION_NUMBER + 0 >= 0x030603)
+    if (0 != (daemon->options & MHD_USE_POST_HANDSHAKE_AUTH_SUPPORT))
+      flags |= GNUTLS_POST_HANDSHAKE_AUTH;
 #endif
-#if (GNUTLS_VERSION_NUMBER+0 >= 0x030605)
-      if (0 != (daemon->options & MHD_USE_INSECURE_TLS_EARLY_DATA))
-	flags |= GNUTLS_ENABLE_EARLY_DATA;
+#if (GNUTLS_VERSION_NUMBER + 0 >= 0x030605)
+    if (0 != (daemon->options & MHD_USE_INSECURE_TLS_EARLY_DATA))
+      flags |= GNUTLS_ENABLE_EARLY_DATA;
 #endif
-      connection->tls_state = MHD_TLS_CONN_INIT;
-      MHD_set_https_callbacks (connection);
-      gnutls_init (&connection->tls_session,
-		   flags);
-      gnutls_priority_set (connection->tls_session,
-			   daemon->priority_cache);
-      gnutls_session_set_ptr (connection->tls_session,
-			      connection);
-      switch (daemon->cred_type)
-        {
-          /* set needed credentials for certificate authentication. */
-        case GNUTLS_CRD_CERTIFICATE:
-          gnutls_credentials_set (connection->tls_session,
-                                  GNUTLS_CRD_CERTIFICATE,
-                                  daemon->x509_cred);
-	  break;
-        case GNUTLS_CRD_PSK:
-          gnutls_credentials_set (connection->tls_session,
-                                  GNUTLS_CRD_PSK,
-                                  daemon->psk_cred);
-          gnutls_psk_set_server_credentials_function (daemon->psk_cred,
-                                                      &psk_gnutls_adapter);
-          break;
-        default:
+    connection->tls_state = MHD_TLS_CONN_INIT;
+    MHD_set_https_callbacks (connection);
+    gnutls_init (&connection->tls_session,
+                 flags);
+    gnutls_priority_set (connection->tls_session,
+                         daemon->priority_cache);
+    gnutls_session_set_ptr (connection->tls_session,
+                            connection);
+    switch (daemon->cred_type)
+    {
+    /* set needed credentials for certificate authentication. */
+    case GNUTLS_CRD_CERTIFICATE:
+      gnutls_credentials_set (connection->tls_session,
+                              GNUTLS_CRD_CERTIFICATE,
+                              daemon->x509_cred);
+      break;
+    case GNUTLS_CRD_PSK:
+      gnutls_credentials_set (connection->tls_session,
+                              GNUTLS_CRD_PSK,
+                              daemon->psk_cred);
+      gnutls_psk_set_server_credentials_function (daemon->psk_cred,
+                                                  &psk_gnutls_adapter);
+      break;
+    default:
 #ifdef HAVE_MESSAGES
-          MHD_DLOG (connection->daemon,
-                    _("Failed to setup TLS credentials: unknown credential type %d\n"),
-                    daemon->cred_type);
+      MHD_DLOG (connection->daemon,
+                _ (
+                  "Failed to setup TLS credentials: unknown credential type %d\n"),
+                daemon->cred_type);
 #endif
-          MHD_socket_close_chk_ (client_socket);
-          MHD_ip_limit_del (daemon,
-                            addr,
-                            addrlen);
-          free (connection->addr);
-          free (connection);
-          MHD_PANIC (_("Unknown credential type"));
+      MHD_socket_close_chk_ (client_socket);
+      MHD_ip_limit_del (daemon,
+                        addr,
+                        addrlen);
+      free (connection->addr);
+      free (connection);
+      MHD_PANIC (_ ("Unknown credential type"));
 #if EINVAL
-	  errno = EINVAL;
+      errno = EINVAL;
 #endif
- 	  return MHD_NO;
-        }
-#if (GNUTLS_VERSION_NUMBER+0 >= 0x030109) && !defined(_WIN64)
-      gnutls_transport_set_int (connection->tls_session,
-                                (int)(client_socket));
+      return MHD_NO;
+    }
+#if (GNUTLS_VERSION_NUMBER + 0 >= 0x030109) && ! defined(_WIN64)
+    gnutls_transport_set_int (connection->tls_session,
+                              (int) (client_socket));
 #else  /* GnuTLS before 3.1.9 or Win x64 */
-      gnutls_transport_set_ptr (connection->tls_session,
-                                (gnutls_transport_ptr_t)(intptr_t)(client_socket));
+    gnutls_transport_set_ptr (connection->tls_session,
+                              (gnutls_transport_ptr_t) (intptr_t) (client_socket));
 #endif /* GnuTLS before 3.1.9 */
 #ifdef MHD_TLSLIB_NEED_PUSH_FUNC
-      gnutls_transport_set_push_function (connection->tls_session,
-                                          MHD_tls_push_func_);
+    gnutls_transport_set_push_function (connection->tls_session,
+                                        MHD_tls_push_func_);
 #endif /* MHD_TLSLIB_NEED_PUSH_FUNC */
-      if (daemon->https_mem_trust)
-	  gnutls_certificate_server_set_request (connection->tls_session,
+    if (daemon->https_mem_trust)
+      gnutls_certificate_server_set_request (connection->tls_session,
                                              GNUTLS_CERT_REQUEST);
 #else  /* ! HTTPS_SUPPORT */
-      eno = EINVAL;
-      goto cleanup;
+    eno = EINVAL;
+    goto cleanup;
 #endif /* ! HTTPS_SUPPORT */
-    }
+  }
 
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   MHD_mutex_lock_chk_ (&daemon->cleanup_connection_mutex);
 #endif
   /* Firm check under lock. */
   if (daemon->connections >= daemon->connection_limit)
-    {
+  {
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-      MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
+    MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
 #endif
-      /* above connection limit - reject */
+    /* above connection limit - reject */
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("Server reached connection limit. Closing inbound connection.\n"));
+    MHD_DLOG (daemon,
+              _ (
+                "Server reached connection limit. Closing inbound connection.\n"));
 #endif
 #if ENFILE
-      eno = ENFILE;
+    eno = ENFILE;
 #endif
-      goto cleanup;
-    }
+    goto cleanup;
+  }
   daemon->connections++;
   if (0 == (daemon->options & MHD_USE_THREAD_PER_CONNECTION))
-    {
-      XDLL_insert (daemon->normal_timeout_head,
-                   daemon->normal_timeout_tail,
-                   connection);
-    }
+  {
+    XDLL_insert (daemon->normal_timeout_head,
+                 daemon->normal_timeout_tail,
+                 connection);
+  }
   DLL_insert (daemon->connections_head,
               daemon->connections_tail,
               connection);
@@ -2654,80 +2675,82 @@ internal_add_connection (struct MHD_Daemon *daemon,
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   /* attempt to create handler thread */
   if (0 != (daemon->options & MHD_USE_THREAD_PER_CONNECTION))
+  {
+    if (! MHD_create_named_thread_ (&connection->pid,
+                                    "MHD-connection",
+                                    daemon->thread_stack_size,
+                                    &thread_main_handle_connection,
+                                    connection))
     {
-      if (! MHD_create_named_thread_ (&connection->pid,
-                                      "MHD-connection",
-                                      daemon->thread_stack_size,
-                                      &thread_main_handle_connection,
-                                      connection))
-        {
-          eno = errno;
+      eno = errno;
 #ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    "Failed to create a thread: %s\n",
-                    MHD_strerror_ (eno));
+      MHD_DLOG (daemon,
+                "Failed to create a thread: %s\n",
+                MHD_strerror_ (eno));
 #endif
-          goto cleanup;
-        }
+      goto cleanup;
     }
+  }
   else
     connection->pid = daemon->pid;
 #endif
 #ifdef EPOLL_SUPPORT
   if (0 != (daemon->options & MHD_USE_EPOLL))
-    {
-      if ((0 == (daemon->options & MHD_USE_TURBO)) || (external_add))
-	{ /* Do not manipulate EReady DL-list in 'external_add' mode. */
-	  struct epoll_event event;
+  {
+    if ((0 == (daemon->options & MHD_USE_TURBO)) || (external_add))
+    { /* Do not manipulate EReady DL-list in 'external_add' mode. */
+      struct epoll_event event;
 
-	  event.events = EPOLLIN | EPOLLOUT | EPOLLPRI | EPOLLET;
-	  event.data.ptr = connection;
-	  if (0 != epoll_ctl (daemon->epoll_fd,
+      event.events = EPOLLIN | EPOLLOUT | EPOLLPRI | EPOLLET;
+      event.data.ptr = connection;
+      if (0 != epoll_ctl (daemon->epoll_fd,
                           EPOLL_CTL_ADD,
                           client_socket,
                           &event))
-	    {
-	      eno = errno;
+      {
+        eno = errno;
 #ifdef HAVE_MESSAGES
-              MHD_DLOG (daemon,
-                        _("Call to epoll_ctl failed: %s\n"),
-                        MHD_socket_last_strerr_ ());
+        MHD_DLOG (daemon,
+                  _ ("Call to epoll_ctl failed: %s\n"),
+                  MHD_socket_last_strerr_ ());
 #endif
-	      goto cleanup;
-	    }
-	  connection->epoll_state |= MHD_EPOLL_STATE_IN_EPOLL_SET;
-	}
-      else
-	{
-	  connection->epoll_state |= MHD_EPOLL_STATE_READ_READY | MHD_EPOLL_STATE_WRITE_READY
-	    | MHD_EPOLL_STATE_IN_EREADY_EDLL;
-	  EDLL_insert (daemon->eready_head,
+        goto cleanup;
+      }
+      connection->epoll_state |= MHD_EPOLL_STATE_IN_EPOLL_SET;
+    }
+    else
+    {
+      connection->epoll_state |= MHD_EPOLL_STATE_READ_READY
+                                 | MHD_EPOLL_STATE_WRITE_READY
+                                 | MHD_EPOLL_STATE_IN_EREADY_EDLL;
+      EDLL_insert (daemon->eready_head,
                    daemon->eready_tail,
                    connection);
-	}
     }
+  }
   else /* This 'else' is combined with next 'if'. */
 #endif
   if ( (0 == (daemon->options & MHD_USE_THREAD_PER_CONNECTION)) &&
        (external_add) &&
-       (MHD_ITC_IS_VALID_(daemon->itc)) &&
+       (MHD_ITC_IS_VALID_ (daemon->itc)) &&
        (! MHD_itc_activate_ (daemon->itc, "n")) )
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("Failed to signal new connection via inter-thread communication channel."));
+    MHD_DLOG (daemon,
+              _ (
+                "Failed to signal new connection via inter-thread communication channel."));
 #endif
-    }
+  }
   return MHD_YES;
- cleanup:
+  cleanup:
   if (NULL != daemon->notify_connection)
     daemon->notify_connection (daemon->notify_connection_cls,
                                connection,
                                &connection->socket_context,
                                MHD_CONNECTION_NOTIFY_CLOSED);
 #ifdef HTTPS_SUPPORT
- if (NULL != connection->tls_session)
-   gnutls_deinit (connection->tls_session);
+  if (NULL != connection->tls_session)
+    gnutls_deinit (connection->tls_session);
 #endif /* HTTPS_SUPPORT */
   MHD_socket_close_chk_ (client_socket);
   MHD_ip_limit_del (daemon,
@@ -2737,14 +2760,14 @@ internal_add_connection (struct MHD_Daemon *daemon,
   MHD_mutex_lock_chk_ (&daemon->cleanup_connection_mutex);
 #endif
   if (0 == (daemon->options & MHD_USE_THREAD_PER_CONNECTION))
-    {
-      XDLL_remove (daemon->normal_timeout_head,
-                   daemon->normal_timeout_tail,
-                   connection);
-    }
+  {
+    XDLL_remove (daemon->normal_timeout_head,
+                 daemon->normal_timeout_tail,
+                 connection);
+  }
   DLL_remove (daemon->connections_head,
-	      daemon->connections_tail,
-	      connection);
+              daemon->connections_tail,
+              connection);
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
 #endif
@@ -2777,25 +2800,25 @@ internal_suspend_connection_ (struct MHD_Connection *connection)
   MHD_mutex_lock_chk_ (&daemon->cleanup_connection_mutex);
 #endif
   if (connection->resuming)
-    {
-      /* suspending again while we didn't even complete resuming yet */
-      connection->resuming = false;
+  {
+    /* suspending again while we didn't even complete resuming yet */
+    connection->resuming = false;
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-      MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
+    MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
 #endif
-      return;
-    }
+    return;
+  }
   if (0 == (daemon->options & MHD_USE_THREAD_PER_CONNECTION))
-    {
-      if (connection->connection_timeout == daemon->connection_timeout)
-        XDLL_remove (daemon->normal_timeout_head,
-                     daemon->normal_timeout_tail,
-                     connection);
-      else
-        XDLL_remove (daemon->manual_timeout_head,
-                     daemon->manual_timeout_tail,
-                     connection);
-    }
+  {
+    if (connection->connection_timeout == daemon->connection_timeout)
+      XDLL_remove (daemon->normal_timeout_head,
+                   daemon->normal_timeout_tail,
+                   connection);
+    else
+      XDLL_remove (daemon->manual_timeout_head,
+                   daemon->manual_timeout_tail,
+                   connection);
+  }
   DLL_remove (daemon->connections_head,
               daemon->connections_tail,
               connection);
@@ -2806,25 +2829,25 @@ internal_suspend_connection_ (struct MHD_Connection *connection)
   connection->suspended = true;
 #ifdef EPOLL_SUPPORT
   if (0 != (daemon->options & MHD_USE_EPOLL))
+  {
+    if (0 != (connection->epoll_state & MHD_EPOLL_STATE_IN_EREADY_EDLL))
     {
-      if (0 != (connection->epoll_state & MHD_EPOLL_STATE_IN_EREADY_EDLL))
-        {
-          EDLL_remove (daemon->eready_head,
-                       daemon->eready_tail,
-                       connection);
-          connection->epoll_state &= ~MHD_EPOLL_STATE_IN_EREADY_EDLL;
-        }
-      if (0 != (connection->epoll_state & MHD_EPOLL_STATE_IN_EPOLL_SET))
-        {
-          if (0 != epoll_ctl (daemon->epoll_fd,
-                              EPOLL_CTL_DEL,
-                              connection->socket_fd,
-                              NULL))
-            MHD_PANIC (_("Failed to remove FD from epoll set\n"));
-          connection->epoll_state &= ~MHD_EPOLL_STATE_IN_EPOLL_SET;
-        }
-      connection->epoll_state |= MHD_EPOLL_STATE_SUSPENDED;
+      EDLL_remove (daemon->eready_head,
+                   daemon->eready_tail,
+                   connection);
+      connection->epoll_state &= ~MHD_EPOLL_STATE_IN_EREADY_EDLL;
     }
+    if (0 != (connection->epoll_state & MHD_EPOLL_STATE_IN_EPOLL_SET))
+    {
+      if (0 != epoll_ctl (daemon->epoll_fd,
+                          EPOLL_CTL_DEL,
+                          connection->socket_fd,
+                          NULL))
+        MHD_PANIC (_ ("Failed to remove FD from epoll set\n"));
+      connection->epoll_state &= ~MHD_EPOLL_STATE_IN_EPOLL_SET;
+    }
+    connection->epoll_state |= MHD_EPOLL_STATE_SUSPENDED;
+  }
 #endif
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
@@ -2866,19 +2889,21 @@ internal_suspend_connection_ (struct MHD_Connection *connection)
 void
 MHD_suspend_connection (struct MHD_Connection *connection)
 {
-  struct MHD_Daemon * const daemon = connection->daemon;
+  struct MHD_Daemon *const daemon = connection->daemon;
 
   if (0 == (daemon->options & MHD_TEST_ALLOW_SUSPEND_RESUME))
-    MHD_PANIC (_("Cannot suspend connections without enabling MHD_ALLOW_SUSPEND_RESUME!\n"));
+    MHD_PANIC (_ (
+                 "Cannot suspend connections without enabling MHD_ALLOW_SUSPEND_RESUME!\n"));
 #ifdef UPGRADE_SUPPORT
   if (NULL != connection->urh)
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("Error: connection scheduled for \"upgrade\" cannot be suspended"));
+    MHD_DLOG (daemon,
+              _ (
+                "Error: connection scheduled for \"upgrade\" cannot be suspended"));
 #endif /* HAVE_MESSAGES */
-      return;
-    }
+    return;
+  }
 #endif /* UPGRADE_SUPPORT */
   internal_suspend_connection_ (connection);
 }
@@ -2898,7 +2923,8 @@ MHD_resume_connection (struct MHD_Connection *connection)
   struct MHD_Daemon *daemon = connection->daemon;
 
   if (0 == (daemon->options & MHD_TEST_ALLOW_SUSPEND_RESUME))
-    MHD_PANIC (_("Cannot resume connections without enabling MHD_ALLOW_SUSPEND_RESUME!\n"));
+    MHD_PANIC (_ (
+                 "Cannot resume connections without enabling MHD_ALLOW_SUSPEND_RESUME!\n"));
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   MHD_mutex_lock_chk_ (&daemon->cleanup_connection_mutex);
 #endif
@@ -2907,14 +2933,15 @@ MHD_resume_connection (struct MHD_Connection *connection)
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
 #endif
-  if ( (MHD_ITC_IS_VALID_(daemon->itc)) &&
+  if ( (MHD_ITC_IS_VALID_ (daemon->itc)) &&
        (! MHD_itc_activate_ (daemon->itc, "r")) )
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("Failed to signal resume via inter-thread communication channel."));
+    MHD_DLOG (daemon,
+              _ (
+                "Failed to signal resume via inter-thread communication channel."));
 #endif
-    }
+  }
 }
 
 
@@ -2933,7 +2960,8 @@ resume_suspended_connections (struct MHD_Daemon *daemon)
   struct MHD_Connection *pos;
   struct MHD_Connection *prev = NULL;
   int ret;
-  const bool used_thr_p_c = (0 != (daemon->options & MHD_USE_THREAD_PER_CONNECTION));
+  const bool used_thr_p_c = (0 != (daemon->options
+                                   & MHD_USE_THREAD_PER_CONNECTION));
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   mhd_assert (NULL == daemon->worker_pool);
 #endif
@@ -2942,112 +2970,114 @@ resume_suspended_connections (struct MHD_Daemon *daemon)
   MHD_mutex_lock_chk_ (&daemon->cleanup_connection_mutex);
 #endif
   if (daemon->resuming)
-    {
-      prev = daemon->suspended_connections_tail;
-      /* During shutdown check for resuming is forced. */
-      mhd_assert((NULL != prev) || (daemon->shutdown));
-    }
+  {
+    prev = daemon->suspended_connections_tail;
+    /* During shutdown check for resuming is forced. */
+    mhd_assert ((NULL != prev) || (daemon->shutdown));
+  }
 
   daemon->resuming = false;
 
   while (NULL != (pos = prev))
-    {
+  {
 #ifdef UPGRADE_SUPPORT
-      struct MHD_UpgradeResponseHandle * const urh = pos->urh;
+    struct MHD_UpgradeResponseHandle *const urh = pos->urh;
 #else  /* ! UPGRADE_SUPPORT */
-      static const void * const urh = NULL;
+    static const void *const urh = NULL;
 #endif /* ! UPGRADE_SUPPORT */
-      prev = pos->prev;
-      if ( (! pos->resuming)
+    prev = pos->prev;
+    if ( (! pos->resuming)
 #ifdef UPGRADE_SUPPORT
-          || ( (NULL != urh) &&
-               ( (! urh->was_closed) ||
-                 (! urh->clean_ready) ) )
+         || ( (NULL != urh) &&
+              ( (! urh->was_closed) ||
+                (! urh->clean_ready) ) )
 #endif /* UPGRADE_SUPPORT */
          )
-        continue;
-      ret = MHD_YES;
-      mhd_assert (pos->suspended);
-      DLL_remove (daemon->suspended_connections_head,
-                  daemon->suspended_connections_tail,
+      continue;
+    ret = MHD_YES;
+    mhd_assert (pos->suspended);
+    DLL_remove (daemon->suspended_connections_head,
+                daemon->suspended_connections_tail,
+                pos);
+    pos->suspended = false;
+    if (NULL == urh)
+    {
+      DLL_insert (daemon->connections_head,
+                  daemon->connections_tail,
                   pos);
-      pos->suspended = false;
-      if (NULL == urh)
-        {
-          DLL_insert (daemon->connections_head,
-                      daemon->connections_tail,
-                      pos);
-          if (! used_thr_p_c)
-            {
-              /* Reset timeout timer on resume. */
-              if (0 != pos->connection_timeout)
-                pos->last_activity = MHD_monotonic_sec_counter();
+      if (! used_thr_p_c)
+      {
+        /* Reset timeout timer on resume. */
+        if (0 != pos->connection_timeout)
+          pos->last_activity = MHD_monotonic_sec_counter ();
 
-              if (pos->connection_timeout == daemon->connection_timeout)
-                XDLL_insert (daemon->normal_timeout_head,
-                             daemon->normal_timeout_tail,
-                             pos);
-              else
-                XDLL_insert (daemon->manual_timeout_head,
-                             daemon->manual_timeout_tail,
-                             pos);
-            }
+        if (pos->connection_timeout == daemon->connection_timeout)
+          XDLL_insert (daemon->normal_timeout_head,
+                       daemon->normal_timeout_tail,
+                       pos);
+        else
+          XDLL_insert (daemon->manual_timeout_head,
+                       daemon->manual_timeout_tail,
+                       pos);
+      }
 #ifdef EPOLL_SUPPORT
-          if (0 != (daemon->options & MHD_USE_EPOLL))
-            {
-              if (0 != (pos->epoll_state & MHD_EPOLL_STATE_IN_EREADY_EDLL))
-                MHD_PANIC ("Resumed connection was already in EREADY set\n");
-              /* we always mark resumed connections as ready, as we
-                 might have missed the edge poll event during suspension */
-              EDLL_insert (daemon->eready_head,
-                           daemon->eready_tail,
-                           pos);
-              pos->epoll_state |= MHD_EPOLL_STATE_IN_EREADY_EDLL | \
-                  MHD_EPOLL_STATE_READ_READY | MHD_EPOLL_STATE_WRITE_READY;
-              pos->epoll_state &= ~MHD_EPOLL_STATE_SUSPENDED;
-            }
+      if (0 != (daemon->options & MHD_USE_EPOLL))
+      {
+        if (0 != (pos->epoll_state & MHD_EPOLL_STATE_IN_EREADY_EDLL))
+          MHD_PANIC ("Resumed connection was already in EREADY set\n");
+        /* we always mark resumed connections as ready, as we
+           might have missed the edge poll event during suspension */
+        EDLL_insert (daemon->eready_head,
+                     daemon->eready_tail,
+                     pos);
+        pos->epoll_state |= MHD_EPOLL_STATE_IN_EREADY_EDLL   \
+                            | MHD_EPOLL_STATE_READ_READY
+                            | MHD_EPOLL_STATE_WRITE_READY;
+        pos->epoll_state &= ~MHD_EPOLL_STATE_SUSPENDED;
+      }
 #endif
-        }
-#ifdef UPGRADE_SUPPORT
-      else
-        {
-          /* Data forwarding was finished (for TLS connections) AND
-           * application was closed upgraded connection.
-           * Insert connection into cleanup list. */
-
-          if ( (NULL != daemon->notify_completed) &&
-               (0 == (daemon->options & MHD_USE_THREAD_PER_CONNECTION)) &&
-               (pos->client_aware) )
-	    {
-	      daemon->notify_completed (daemon->notify_completed_cls,
-					pos,
-					&pos->client_context,
-					MHD_REQUEST_TERMINATED_COMPLETED_OK);
-	      pos->client_aware = false;
-	    }
-          DLL_insert (daemon->cleanup_head,
-                      daemon->cleanup_tail,
-                      pos);
-
-        }
-#endif /* UPGRADE_SUPPORT */
-      pos->resuming = false;
     }
+#ifdef UPGRADE_SUPPORT
+    else
+    {
+      /* Data forwarding was finished (for TLS connections) AND
+       * application was closed upgraded connection.
+       * Insert connection into cleanup list. */
+
+      if ( (NULL != daemon->notify_completed) &&
+           (0 == (daemon->options & MHD_USE_THREAD_PER_CONNECTION)) &&
+           (pos->client_aware) )
+      {
+        daemon->notify_completed (daemon->notify_completed_cls,
+                                  pos,
+                                  &pos->client_context,
+                                  MHD_REQUEST_TERMINATED_COMPLETED_OK);
+        pos->client_aware = false;
+      }
+      DLL_insert (daemon->cleanup_head,
+                  daemon->cleanup_tail,
+                  pos);
+
+    }
+#endif /* UPGRADE_SUPPORT */
+    pos->resuming = false;
+  }
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
 #endif
   if ( (used_thr_p_c) &&
        (MHD_NO != ret) )
-    { /* Wake up suspended connections. */
-      if (! MHD_itc_activate_(daemon->itc,
-                              "w"))
-        {
+  {   /* Wake up suspended connections. */
+    if (! MHD_itc_activate_ (daemon->itc,
+                             "w"))
+    {
 #ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("Failed to signal resume of connection via inter-thread communication channel."));
+      MHD_DLOG (daemon,
+                _ (
+                  "Failed to signal resume of connection via inter-thread communication channel."));
 #endif
-        }
     }
+  }
   return ret;
 }
 
@@ -3088,34 +3118,34 @@ MHD_add_connection (struct MHD_Daemon *daemon,
   bool sk_nonbl;
 
   if (! MHD_socket_nonblocking_ (client_socket))
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("Failed to set nonblocking mode on new client socket: %s\n"),
-                MHD_socket_last_strerr_());
+    MHD_DLOG (daemon,
+              _ ("Failed to set nonblocking mode on new client socket: %s\n"),
+              MHD_socket_last_strerr_ ());
 #endif
-      sk_nonbl = 0;
-    }
+    sk_nonbl = false;
+  }
   else
-    sk_nonbl = !0;
+    sk_nonbl = true;
 
   if ( (0 != (daemon->options & MHD_USE_TURBO)) &&
        (! MHD_socket_noninheritable_ (client_socket)) )
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("Failed to set noninheritable mode on new client socket.\n"));
+    MHD_DLOG (daemon,
+              _ ("Failed to set noninheritable mode on new client socket.\n"));
 #endif
-    }
+  }
 
   if ( (0 == (daemon->options & MHD_USE_TURBO)) &&
        (! MHD_socket_buffering_reset_ (client_socket)) )
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("Failed to reset buffering mode on new client socket.\n"));
+    MHD_DLOG (daemon,
+              _ ("Failed to reset buffering mode on new client socket.\n"));
 #endif
-    }
+  }
   return internal_add_connection (daemon,
                                   client_socket,
                                   addr,
@@ -3170,85 +3200,103 @@ MHD_accept_connection (struct MHD_Daemon *daemon)
   s = accept (fd,
               addr,
               &addrlen);
-  sk_nonbl = 0;
+  sk_nonbl = false;
 #endif /* ! USE_ACCEPT4 */
   if ( (MHD_INVALID_SOCKET == s) ||
        (addrlen <= 0) )
-    {
-      const int err = MHD_socket_get_error_ ();
+  {
+    const int err = MHD_socket_get_error_ ();
 
-      /* This could be a common occurance with multiple worker threads */
-      if (MHD_SCKT_ERR_IS_ (err,
-                            MHD_SCKT_EINVAL_))
-        return MHD_NO; /* can happen during shutdown */
-      if (MHD_SCKT_ERR_IS_DISCNN_BEFORE_ACCEPT_(err))
-        return MHD_NO; /* do not print error if client just disconnected early */
+    /* This could be a common occurance with multiple worker threads */
+    if (MHD_SCKT_ERR_IS_ (err,
+                          MHD_SCKT_EINVAL_))
+      return MHD_NO;   /* can happen during shutdown */
+    if (MHD_SCKT_ERR_IS_DISCNN_BEFORE_ACCEPT_ (err))
+      return MHD_NO;   /* do not print error if client just disconnected early */
 #ifdef HAVE_MESSAGES
-      if (! MHD_SCKT_ERR_IS_EAGAIN_ (err) )
+    if (! MHD_SCKT_ERR_IS_EAGAIN_ (err) )
+      MHD_DLOG (daemon,
+                _ ("Error accepting connection: %s\n"),
+                MHD_socket_strerr_ (err));
+#endif
+    if (MHD_INVALID_SOCKET != s)
+    {
+      MHD_socket_close_chk_ (s);
+    }
+    if ( MHD_SCKT_ERR_IS_LOW_RESOURCES_ (err) )
+    {
+      /* system/process out of resources */
+      if (0 == daemon->connections)
+      {
+#ifdef HAVE_MESSAGES
+        /* Not setting 'at_limit' flag, as there is no way it
+           would ever be cleared.  Instead trying to produce
+           bit fat ugly warning. */
         MHD_DLOG (daemon,
-		  _("Error accepting connection: %s\n"),
-		  MHD_socket_strerr_(err));
+                  _ (
+                    "Hit process or system resource limit at FIRST connection. This is really bad as there is no sane way to proceed. Will try busy waiting for system resources to become magically available.\n"));
 #endif
-      if (MHD_INVALID_SOCKET != s)
-        {
-          MHD_socket_close_chk_ (s);
-        }
-      if ( MHD_SCKT_ERR_IS_LOW_RESOURCES_ (err) )
-        {
-          /* system/process out of resources */
-          if (0 == daemon->connections)
-            {
-#ifdef HAVE_MESSAGES
-              /* Not setting 'at_limit' flag, as there is no way it
-                 would ever be cleared.  Instead trying to produce
-                 bit fat ugly warning. */
-              MHD_DLOG (daemon,
-                        _("Hit process or system resource limit at FIRST connection. This is really bad as there is no sane way to proceed. Will try busy waiting for system resources to become magically available.\n"));
-#endif
-            }
-          else
-            {
+      }
+      else
+      {
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-              MHD_mutex_lock_chk_ (&daemon->cleanup_connection_mutex);
+        MHD_mutex_lock_chk_ (&daemon->cleanup_connection_mutex);
 #endif
-              daemon->at_limit = true;
+        daemon->at_limit = true;
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-              MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
+        MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
 #endif
 #ifdef HAVE_MESSAGES
-              MHD_DLOG (daemon,
-                        _("Hit process or system resource limit at %u connections, temporarily suspending accept(). Consider setting a lower MHD_OPTION_CONNECTION_LIMIT.\n"),
-                        (unsigned int) daemon->connections);
+        MHD_DLOG (daemon,
+                  _ (
+                    "Hit process or system resource limit at %u connections, temporarily suspending accept(). Consider setting a lower MHD_OPTION_CONNECTION_LIMIT.\n"),
+                  (unsigned int) daemon->connections);
 #endif
-            }
-        }
-      return MHD_NO;
+      }
     }
-#if !defined(USE_ACCEPT4) || !defined(HAVE_SOCK_NONBLOCK)
+    return MHD_NO;
+  }
+#if defined(MHD_TCP_CORK_NOPUSH) || defined(HAVE_MSG_MORE)
+  /* We will use TCP_CORK or TCP_NOPUSH or MSG_MORE to control
+     transmission, disable Nagle's algorithm (always) */
+  if ( (0 != MHD_socket_set_nodelay_ (s,
+                                      true)) &&
+       (EOPNOTSUPP != errno) )
+  {
+#ifdef HAVE_MESSAGES
+    MHD_DLOG (daemon,
+              _ ("Failed to disable TCP Nagle on socket: %s\n"),
+              MHD_socket_last_strerr_ ());
+  }
+#endif
+#endif
+#if ! defined(USE_ACCEPT4) || ! defined(HAVE_SOCK_NONBLOCK)
   if (! MHD_socket_nonblocking_ (s))
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("Failed to set nonblocking mode on incoming connection socket: %s\n"),
-                MHD_socket_last_strerr_());
+    MHD_DLOG (daemon,
+              _ (
+                "Failed to set nonblocking mode on incoming connection socket: %s\n"),
+              MHD_socket_last_strerr_ ());
 #endif
-    }
+  }
   else
-    sk_nonbl = !0;
+    sk_nonbl = true;
 #endif /* !USE_ACCEPT4 || !HAVE_SOCK_NONBLOCK */
-#if !defined(USE_ACCEPT4) || !defined(SOCK_CLOEXEC)
+#if ! defined(USE_ACCEPT4) || ! defined(SOCK_CLOEXEC)
   if (! MHD_socket_noninheritable_ (s))
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("Failed to set noninheritable mode on incoming connection socket.\n"));
+    MHD_DLOG (daemon,
+              _ (
+                "Failed to set noninheritable mode on incoming connection socket.\n"));
 #endif
-    }
+  }
 #endif /* !USE_ACCEPT4 || !SOCK_CLOEXEC */
 #ifdef HAVE_MESSAGES
 #if DEBUG_CONNECT
   MHD_DLOG (daemon,
-            _("Accepted connection on socket %d\n"),
+            _ ("Accepted connection on socket %d\n"),
             s);
 #endif
 #endif
@@ -3280,80 +3328,80 @@ MHD_cleanup_connections (struct MHD_Daemon *daemon)
   MHD_mutex_lock_chk_ (&daemon->cleanup_connection_mutex);
 #endif
   while (NULL != (pos = daemon->cleanup_tail))
-    {
-      DLL_remove (daemon->cleanup_head,
-		  daemon->cleanup_tail,
-		  pos);
+  {
+    DLL_remove (daemon->cleanup_head,
+                daemon->cleanup_tail,
+                pos);
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-      MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
-      if ( (0 != (daemon->options & MHD_USE_THREAD_PER_CONNECTION)) &&
-	   (! pos->thread_joined) &&
-           (! MHD_join_thread_ (pos->pid.handle)) )
-        MHD_PANIC (_("Failed to join a thread\n"));
+    MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
+    if ( (0 != (daemon->options & MHD_USE_THREAD_PER_CONNECTION)) &&
+         (! pos->thread_joined) &&
+         (! MHD_join_thread_ (pos->pid.handle)) )
+      MHD_PANIC (_ ("Failed to join a thread\n"));
 #endif
 #ifdef UPGRADE_SUPPORT
-      cleanup_upgraded_connection (pos);
+    cleanup_upgraded_connection (pos);
 #endif /* UPGRADE_SUPPORT */
-      MHD_pool_destroy (pos->pool);
+    MHD_pool_destroy (pos->pool);
 #ifdef HTTPS_SUPPORT
-      if (NULL != pos->tls_session)
-	gnutls_deinit (pos->tls_session);
+    if (NULL != pos->tls_session)
+      gnutls_deinit (pos->tls_session);
 #endif /* HTTPS_SUPPORT */
 
-      /* clean up the connection */
-      if (NULL != daemon->notify_connection)
-        daemon->notify_connection (daemon->notify_connection_cls,
-                                   pos,
-                                   &pos->socket_context,
-                                   MHD_CONNECTION_NOTIFY_CLOSED);
-      MHD_ip_limit_del (daemon,
-                        pos->addr,
-                        pos->addr_len);
+    /* clean up the connection */
+    if (NULL != daemon->notify_connection)
+      daemon->notify_connection (daemon->notify_connection_cls,
+                                 pos,
+                                 &pos->socket_context,
+                                 MHD_CONNECTION_NOTIFY_CLOSED);
+    MHD_ip_limit_del (daemon,
+                      pos->addr,
+                      pos->addr_len);
 #ifdef EPOLL_SUPPORT
-      if (0 != (daemon->options & MHD_USE_EPOLL))
-        {
-          if (0 != (pos->epoll_state & MHD_EPOLL_STATE_IN_EREADY_EDLL))
-            {
-              EDLL_remove (daemon->eready_head,
-                           daemon->eready_tail,
-                           pos);
-              pos->epoll_state &= ~MHD_EPOLL_STATE_IN_EREADY_EDLL;
-            }
-          if ( (-1 != daemon->epoll_fd) &&
-               (0 != (pos->epoll_state & MHD_EPOLL_STATE_IN_EPOLL_SET)) )
-            {
-              /* epoll documentation suggests that closing a FD
-                 automatically removes it from the epoll set; however,
-                 this is not true as if we fail to do manually remove it,
-                 we are still seeing an event for this fd in epoll,
-                 causing grief (use-after-free...) --- at least on my
-                 system. */
-              if (0 != epoll_ctl (daemon->epoll_fd,
-                                  EPOLL_CTL_DEL,
-                                  pos->socket_fd,
-                                  NULL))
-                MHD_PANIC (_("Failed to remove FD from epoll set\n"));
-              pos->epoll_state &= ~MHD_EPOLL_STATE_IN_EPOLL_SET;
-            }
-        }
+    if (0 != (daemon->options & MHD_USE_EPOLL))
+    {
+      if (0 != (pos->epoll_state & MHD_EPOLL_STATE_IN_EREADY_EDLL))
+      {
+        EDLL_remove (daemon->eready_head,
+                     daemon->eready_tail,
+                     pos);
+        pos->epoll_state &= ~MHD_EPOLL_STATE_IN_EREADY_EDLL;
+      }
+      if ( (-1 != daemon->epoll_fd) &&
+           (0 != (pos->epoll_state & MHD_EPOLL_STATE_IN_EPOLL_SET)) )
+      {
+        /* epoll documentation suggests that closing a FD
+           automatically removes it from the epoll set; however,
+           this is not true as if we fail to do manually remove it,
+           we are still seeing an event for this fd in epoll,
+           causing grief (use-after-free...) --- at least on my
+           system. */
+        if (0 != epoll_ctl (daemon->epoll_fd,
+                            EPOLL_CTL_DEL,
+                            pos->socket_fd,
+                            NULL))
+          MHD_PANIC (_ ("Failed to remove FD from epoll set\n"));
+        pos->epoll_state &= ~MHD_EPOLL_STATE_IN_EPOLL_SET;
+      }
+    }
 #endif
-      if (NULL != pos->response)
-	{
-	  MHD_destroy_response (pos->response);
-	  pos->response = NULL;
-	}
-      if (MHD_INVALID_SOCKET != pos->socket_fd)
-        MHD_socket_close_chk_ (pos->socket_fd);
-      if (NULL != pos->addr)
-	free (pos->addr);
-      free (pos);
+    if (NULL != pos->response)
+    {
+      MHD_destroy_response (pos->response);
+      pos->response = NULL;
+    }
+    if (MHD_INVALID_SOCKET != pos->socket_fd)
+      MHD_socket_close_chk_ (pos->socket_fd);
+    if (NULL != pos->addr)
+      free (pos->addr);
+    free (pos);
 
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-      MHD_mutex_lock_chk_ (&daemon->cleanup_connection_mutex);
+    MHD_mutex_lock_chk_ (&daemon->cleanup_connection_mutex);
 #endif
-      daemon->connections--;
-      daemon->at_limit = false;
-    }
+    daemon->connections--;
+    daemon->at_limit = false;
+  }
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
 #endif
@@ -3390,71 +3438,71 @@ MHD_get_timeout (struct MHD_Daemon *daemon,
   bool have_timeout;
 
   if (0 != (daemon->options & MHD_USE_THREAD_PER_CONNECTION))
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("Illegal call to MHD_get_timeout\n"));
+    MHD_DLOG (daemon,
+              _ ("Illegal call to MHD_get_timeout\n"));
 #endif
-      return MHD_NO;
-    }
+    return MHD_NO;
+  }
 
   if (daemon->data_already_pending)
-    {
-      /* Some data already waiting to be processed. */
-      *timeout = 0;
-      return MHD_YES;
-    }
+  {
+    /* Some data already waiting to be processed. */
+    *timeout = 0;
+    return MHD_YES;
+  }
 
 #ifdef EPOLL_SUPPORT
   if ( (0 != (daemon->options & MHD_USE_EPOLL)) &&
        ((NULL != daemon->eready_head)
 #if defined(UPGRADE_SUPPORT) && defined(HTTPS_SUPPORT)
-	 || (NULL != daemon->eready_urh_head)
+        || (NULL != daemon->eready_urh_head)
 #endif /* UPGRADE_SUPPORT && HTTPS_SUPPORT */
-	 ) )
-    {
-	  /* Some connection(s) already have some data pending. */
-      *timeout = 0;
-      return MHD_YES;
-    }
+       ) )
+  {
+    /* Some connection(s) already have some data pending. */
+    *timeout = 0;
+    return MHD_YES;
+  }
 #endif /* EPOLL_SUPPORT */
 
   have_timeout = false;
   earliest_deadline = 0; /* avoid compiler warnings */
   for (pos = daemon->manual_timeout_tail; NULL != pos; pos = pos->prevX)
+  {
+    if (0 != pos->connection_timeout)
     {
-      if (0 != pos->connection_timeout)
-	{
-	  if ( (! have_timeout) ||
-	       (earliest_deadline - pos->last_activity > pos->connection_timeout) )
-	    earliest_deadline = pos->last_activity + pos->connection_timeout;
-	  have_timeout = true;
-	}
+      if ( (! have_timeout) ||
+           (earliest_deadline - pos->last_activity > pos->connection_timeout) )
+        earliest_deadline = pos->last_activity + pos->connection_timeout;
+      have_timeout = true;
     }
+  }
   /* normal timeouts are sorted, so we only need to look at the 'tail' (oldest) */
   pos = daemon->normal_timeout_tail;
   if ( (NULL != pos) &&
        (0 != pos->connection_timeout) )
-    {
-      if ( (! have_timeout) ||
-	   (earliest_deadline - pos->connection_timeout > pos->last_activity) )
-	earliest_deadline = pos->last_activity + pos->connection_timeout;
-      have_timeout = true;
-    }
+  {
+    if ( (! have_timeout) ||
+         (earliest_deadline - pos->connection_timeout > pos->last_activity) )
+      earliest_deadline = pos->last_activity + pos->connection_timeout;
+    have_timeout = true;
+  }
 
   if (! have_timeout)
     return MHD_NO;
-  now = MHD_monotonic_sec_counter();
+  now = MHD_monotonic_sec_counter ();
   if (earliest_deadline < now)
     *timeout = 0;
   else
-    {
-      const time_t second_left = earliest_deadline - now;
+  {
+    const time_t second_left = earliest_deadline - now;
 
-      if (((unsigned long long)second_left) > ULLONG_MAX / 1000)
-        *timeout = ULLONG_MAX;
-      else
-        *timeout = 1000LLU * (unsigned long long) second_left;
+    if (((unsigned long long) second_left) > ULLONG_MAX / 1000)
+      *timeout = ULLONG_MAX;
+    else
+      *timeout = 1000LLU * (unsigned long long) second_left;
   }
   return MHD_YES;
 }
@@ -3490,7 +3538,7 @@ internal_run_from_select (struct MHD_Daemon *daemon,
   /* Clear ITC to avoid spinning select */
   /* Do it before any other processing so new signals
      will trigger select again and will be processed */
-  if ( (MHD_ITC_IS_VALID_(daemon->itc)) &&
+  if ( (MHD_ITC_IS_VALID_ (daemon->itc)) &&
        (FD_ISSET (MHD_itc_r_fd_ (daemon->itc),
                   read_fd_set)) )
     MHD_itc_clear_ (daemon->itc);
@@ -3503,49 +3551,49 @@ internal_run_from_select (struct MHD_Daemon *daemon,
     (void) MHD_accept_connection (daemon);
 
   if (0 == (daemon->options & MHD_USE_THREAD_PER_CONNECTION))
+  {
+    /* do not have a thread per connection, process all connections now */
+    prev = daemon->connections_tail;
+    while (NULL != (pos = prev))
     {
-      /* do not have a thread per connection, process all connections now */
-      prev = daemon->connections_tail;
-      while (NULL != (pos = prev))
-        {
-	  prev = pos->prev;
-          ds = pos->socket_fd;
-          if (MHD_INVALID_SOCKET == ds)
-	    continue;
-          call_handlers (pos,
-                         FD_ISSET (ds,
-                                   read_fd_set),
-                         FD_ISSET (ds,
-                                   write_fd_set),
-                         FD_ISSET (ds,
-                                   except_fd_set));
-        }
+      prev = pos->prev;
+      ds = pos->socket_fd;
+      if (MHD_INVALID_SOCKET == ds)
+        continue;
+      call_handlers (pos,
+                     FD_ISSET (ds,
+                               read_fd_set),
+                     FD_ISSET (ds,
+                               write_fd_set),
+                     FD_ISSET (ds,
+                               except_fd_set));
     }
+  }
 
 #if defined(HTTPS_SUPPORT) && defined(UPGRADE_SUPPORT)
   /* handle upgraded HTTPS connections */
   for (urh = daemon->urh_tail; NULL != urh; urh = urhn)
+  {
+    urhn = urh->prev;
+    /* update urh state based on select() output */
+    urh_from_fdset (urh,
+                    read_fd_set,
+                    write_fd_set,
+                    except_fd_set);
+    /* call generic forwarding function for passing data */
+    process_urh (urh);
+    /* Finished forwarding? */
+    if ( (0 == urh->in_buffer_size) &&
+         (0 == urh->out_buffer_size) &&
+         (0 == urh->in_buffer_used) &&
+         (0 == urh->out_buffer_used) )
     {
-      urhn = urh->prev;
-      /* update urh state based on select() output */
-      urh_from_fdset (urh,
-                      read_fd_set,
-                      write_fd_set,
-                      except_fd_set);
-      /* call generic forwarding function for passing data */
-      process_urh (urh);
-      /* Finished forwarding? */
-      if ( (0 == urh->in_buffer_size) &&
-           (0 == urh->out_buffer_size) &&
-           (0 == urh->in_buffer_used) &&
-           (0 == urh->out_buffer_used) )
-        {
-          MHD_connection_finish_forward_ (urh->connection);
-          urh->clean_ready = true;
-          /* Resuming will move connection to cleanup list. */
-          MHD_resume_connection(urh->connection);
-        }
+      MHD_connection_finish_forward_ (urh->connection);
+      urh->clean_ready = true;
+      /* Resuming will move connection to cleanup list. */
+      MHD_resume_connection (urh->connection);
     }
+  }
 #endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
   MHD_cleanup_connections (daemon);
   return MHD_YES;
@@ -3581,33 +3629,33 @@ MHD_run_from_select (struct MHD_Daemon *daemon,
                      const fd_set *except_fd_set)
 {
   fd_set es;
-  if (0 != (daemon->options &
-        (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_POLL)) )
+  if (0 != (daemon->options
+            & (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_POLL)) )
     return MHD_NO;
-  if (NULL == read_fd_set || NULL == write_fd_set)
+  if ((NULL == read_fd_set)||(NULL == write_fd_set))
     return MHD_NO;
   if (NULL == except_fd_set)
-    { /* Workaround to maintain backward compatibility. */
+  {   /* Workaround to maintain backward compatibility. */
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("MHD_run_from_select() called with except_fd_set "
-                  "set to NULL. Such behavior is deprecated.\n"));
+    MHD_DLOG (daemon,
+              _ ("MHD_run_from_select() called with except_fd_set "
+                 "set to NULL. Such behavior is deprecated.\n"));
 #endif
-      FD_ZERO (&es);
-      except_fd_set = &es;
-    }
+    FD_ZERO (&es);
+    except_fd_set = &es;
+  }
   if (0 != (daemon->options & MHD_USE_EPOLL))
-    {
+  {
 #ifdef EPOLL_SUPPORT
-      int ret = MHD_epoll (daemon,
-			   MHD_NO);
+    int ret = MHD_epoll (daemon,
+                         MHD_NO);
 
-      MHD_cleanup_connections (daemon);
-      return ret;
+    MHD_cleanup_connections (daemon);
+    return ret;
 #else  /* ! EPOLL_SUPPORT */
-      return MHD_NO;
+    return MHD_NO;
 #endif /* ! EPOLL_SUPPORT */
-    }
+  }
 
   /* Resuming external connections when using an extern mainloop  */
   if (0 != (daemon->options & MHD_TEST_ALLOW_SUSPEND_RESUME))
@@ -3630,7 +3678,7 @@ MHD_run_from_select (struct MHD_Daemon *daemon,
  */
 static int
 MHD_select (struct MHD_Daemon *daemon,
-	    int may_block)
+            int may_block)
 {
   int num_ready;
   fd_set rs;
@@ -3658,71 +3706,72 @@ MHD_select (struct MHD_Daemon *daemon,
     may_block = MHD_NO;
 
   if (0 == (daemon->options & MHD_USE_THREAD_PER_CONNECTION))
+  {
+    /* single-threaded, go over everything */
+    if (MHD_NO ==
+        internal_get_fdset2 (daemon,
+                             &rs,
+                             &ws,
+                             &es,
+                             &maxsock,
+                             FD_SETSIZE))
     {
-      /* single-threaded, go over everything */
-      if (MHD_NO ==
-          internal_get_fdset2 (daemon,
-                               &rs,
-                               &ws,
-                               &es,
-                               &maxsock,
-                               FD_SETSIZE))
-        {
 #ifdef HAVE_MESSAGES
-        MHD_DLOG (daemon,
-                  _("Could not obtain daemon fdsets"));
+      MHD_DLOG (daemon,
+                _ ("Could not obtain daemon fdsets"));
 #endif
-          err_state = MHD_YES;
-        }
+      err_state = MHD_YES;
     }
+  }
   else
+  {
+    /* accept only, have one thread per connection */
+    if ( (MHD_INVALID_SOCKET != (ls = daemon->listen_fd)) &&
+         (! daemon->was_quiesced) &&
+         (! MHD_add_to_fd_set_ (ls,
+                                &rs,
+                                &maxsock,
+                                FD_SETSIZE)) )
     {
-      /* accept only, have one thread per connection */
-      if ( (MHD_INVALID_SOCKET != (ls = daemon->listen_fd)) &&
-           (! daemon->was_quiesced) &&
-           (! MHD_add_to_fd_set_ (ls,
-                                  &rs,
-                                  &maxsock,
-                                  FD_SETSIZE)) )
-        {
 #ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("Could not add listen socket to fdset"));
+      MHD_DLOG (daemon,
+                _ ("Could not add listen socket to fdset"));
 #endif
-          return MHD_NO;
-        }
+      return MHD_NO;
     }
-  if ( (MHD_ITC_IS_VALID_(daemon->itc)) &&
+  }
+  if ( (MHD_ITC_IS_VALID_ (daemon->itc)) &&
        (! MHD_add_to_fd_set_ (MHD_itc_r_fd_ (daemon->itc),
                               &rs,
                               &maxsock,
                               FD_SETSIZE)) )
-    {
+  {
 #if defined(MHD_WINSOCK_SOCKETS)
-      /* fdset limit reached, new connections
-         cannot be handled. Remove listen socket FD
-         from fdset and retry to add ITC FD. */
-      if ( (MHD_INVALID_SOCKET != (ls = daemon->listen_fd)) &&
-           (! daemon->was_quiesced) )
-        {
-          FD_CLR (ls,
-                  &rs);
-          if (! MHD_add_to_fd_set_ (MHD_itc_r_fd_(daemon->itc),
-                                    &rs,
-                                    &maxsock,
-                                    FD_SETSIZE))
-            {
+    /* fdset limit reached, new connections
+       cannot be handled. Remove listen socket FD
+       from fdset and retry to add ITC FD. */
+    if ( (MHD_INVALID_SOCKET != (ls = daemon->listen_fd)) &&
+         (! daemon->was_quiesced) )
+    {
+      FD_CLR (ls,
+              &rs);
+      if (! MHD_add_to_fd_set_ (MHD_itc_r_fd_ (daemon->itc),
+                                &rs,
+                                &maxsock,
+                                FD_SETSIZE))
+      {
 #endif /* MHD_WINSOCK_SOCKETS */
 #ifdef HAVE_MESSAGES
-              MHD_DLOG (daemon,
-                        _("Could not add control inter-thread communication channel FD to fdset"));
+    MHD_DLOG (daemon,
+              _ (
+                "Could not add control inter-thread communication channel FD to fdset"));
 #endif
-              err_state = MHD_YES;
+    err_state = MHD_YES;
 #if defined(MHD_WINSOCK_SOCKETS)
-            }
-        }
+  }
+}
 #endif /* MHD_WINSOCK_SOCKETS */
-    }
+  }
   /* Stop listening if we are at the configured connection limit */
   /* If we're at the connection limit, no point in really
      accepting new connections; however, make sure we do not miss
@@ -3730,33 +3779,33 @@ MHD_select (struct MHD_Daemon *daemon,
      only do this optimization if we have a signaling ITC in
      place. */
   if ( (MHD_INVALID_SOCKET != (ls = daemon->listen_fd)) &&
-       (MHD_ITC_IS_VALID_(daemon->itc)) &&
+       (MHD_ITC_IS_VALID_ (daemon->itc)) &&
        ( (daemon->connections == daemon->connection_limit) ||
          (daemon->at_limit) ) )
-    {
-      FD_CLR (ls,
-              &rs);
-    }
+  {
+    FD_CLR (ls,
+            &rs);
+  }
   tv = NULL;
   if (MHD_YES == err_state)
     may_block = MHD_NO;
   if (MHD_NO == may_block)
-    {
-      timeout.tv_usec = 0;
-      timeout.tv_sec = 0;
-      tv = &timeout;
-    }
+  {
+    timeout.tv_usec = 0;
+    timeout.tv_sec = 0;
+    tv = &timeout;
+  }
   else if ( (0 == (daemon->options & MHD_USE_THREAD_PER_CONNECTION)) &&
-	    (MHD_YES == MHD_get_timeout (daemon, &ltimeout)) )
-    {
-      /* ltimeout is in ms */
-      timeout.tv_usec = (ltimeout % 1000) * 1000;
-      if (ltimeout / 1000 > TIMEVAL_TV_SEC_MAX)
-        timeout.tv_sec = TIMEVAL_TV_SEC_MAX;
-      else
-        timeout.tv_sec = (_MHD_TIMEVAL_TV_SEC_TYPE)(ltimeout / 1000);
-      tv = &timeout;
-    }
+            (MHD_YES == MHD_get_timeout (daemon, &ltimeout)) )
+  {
+    /* ltimeout is in ms */
+    timeout.tv_usec = (ltimeout % 1000) * 1000;
+    if (ltimeout / 1000 > TIMEVAL_TV_SEC_MAX)
+      timeout.tv_sec = TIMEVAL_TV_SEC_MAX;
+    else
+      timeout.tv_sec = (_MHD_TIMEVAL_TV_SEC_TYPE) (ltimeout / 1000);
+    tv = &timeout;
+  }
   num_ready = MHD_SYS_select_ (maxsock + 1,
                                &rs,
                                &ws,
@@ -3765,17 +3814,17 @@ MHD_select (struct MHD_Daemon *daemon,
   if (daemon->shutdown)
     return MHD_NO;
   if (num_ready < 0)
-    {
-      const int err = MHD_socket_get_error_ ();
-      if (MHD_SCKT_ERR_IS_EINTR_(err))
-        return (MHD_NO == err_state) ? MHD_YES : MHD_NO;
+  {
+    const int err = MHD_socket_get_error_ ();
+    if (MHD_SCKT_ERR_IS_EINTR_ (err))
+      return (MHD_NO == err_state) ? MHD_YES : MHD_NO;
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("select failed: %s\n"),
-                MHD_socket_strerr_ (err));
+    MHD_DLOG (daemon,
+              _ ("select failed: %s\n"),
+              MHD_socket_strerr_ (err));
 #endif
-      return MHD_NO;
-    }
+    return MHD_NO;
+  }
   if (MHD_YES == internal_run_from_select (daemon,
                                            &rs,
                                            &ws,
@@ -3796,7 +3845,7 @@ MHD_select (struct MHD_Daemon *daemon,
  */
 static int
 MHD_poll_all (struct MHD_Daemon *daemon,
-	      int may_block)
+              int may_block)
 {
   unsigned int num_connections;
   struct MHD_Connection *pos;
@@ -3828,44 +3877,44 @@ MHD_poll_all (struct MHD_Daemon *daemon,
     struct pollfd *p;
     MHD_socket ls;
 
-    p = MHD_calloc_ ((2 + (size_t)num_connections),
+    p = MHD_calloc_ ((2 + (size_t) num_connections),
                      sizeof (struct pollfd));
     if (NULL == p)
-      {
+    {
 #ifdef HAVE_MESSAGES
-        MHD_DLOG (daemon,
-                  _("Error allocating memory: %s\n"),
-                  MHD_strerror_(errno));
+      MHD_DLOG (daemon,
+                _ ("Error allocating memory: %s\n"),
+                MHD_strerror_ (errno));
 #endif
-        return MHD_NO;
-      }
+      return MHD_NO;
+    }
     poll_server = 0;
     poll_listen = -1;
     if ( (MHD_INVALID_SOCKET != (ls = daemon->listen_fd)) &&
          (! daemon->was_quiesced) &&
-	 (daemon->connections < daemon->connection_limit) &&
+         (daemon->connections < daemon->connection_limit) &&
          (! daemon->at_limit) )
-      {
-	/* only listen if we are not at the connection limit */
-	p[poll_server].fd = ls;
-	p[poll_server].events = POLLIN;
-	p[poll_server].revents = 0;
-	poll_listen = (int) poll_server;
-	poll_server++;
-      }
+    {
+      /* only listen if we are not at the connection limit */
+      p[poll_server].fd = ls;
+      p[poll_server].events = POLLIN;
+      p[poll_server].revents = 0;
+      poll_listen = (int) poll_server;
+      poll_server++;
+    }
     poll_itc_idx = -1;
-    if (MHD_ITC_IS_VALID_(daemon->itc))
-      {
-	p[poll_server].fd = MHD_itc_r_fd_ (daemon->itc);
-	p[poll_server].events = POLLIN;
-	p[poll_server].revents = 0;
-        poll_itc_idx = (int) poll_server;
-	poll_server++;
-      }
+    if (MHD_ITC_IS_VALID_ (daemon->itc))
+    {
+      p[poll_server].fd = MHD_itc_r_fd_ (daemon->itc);
+      p[poll_server].events = POLLIN;
+      p[poll_server].revents = 0;
+      poll_itc_idx = (int) poll_server;
+      poll_server++;
+    }
     if (may_block == MHD_NO)
       timeout = 0;
     else if ( (0 != (daemon->options & MHD_USE_THREAD_PER_CONNECTION)) ||
-	      (MHD_YES != MHD_get_timeout (daemon,
+              (MHD_YES != MHD_get_timeout (daemon,
                                            &ltimeout)) )
       timeout = -1;
     else
@@ -3873,55 +3922,55 @@ MHD_poll_all (struct MHD_Daemon *daemon,
 
     i = 0;
     for (pos = daemon->connections_tail; NULL != pos; pos = pos->prev)
+    {
+      p[poll_server + i].fd = pos->socket_fd;
+      switch (pos->event_loop_info)
       {
-	p[poll_server+i].fd = pos->socket_fd;
-	switch (pos->event_loop_info)
-	  {
-	  case MHD_EVENT_LOOP_INFO_READ:
-	    p[poll_server+i].events |= POLLIN | MHD_POLL_EVENTS_ERR_DISC;
-	    break;
-	  case MHD_EVENT_LOOP_INFO_WRITE:
-	    p[poll_server+i].events |= POLLOUT | MHD_POLL_EVENTS_ERR_DISC;
-	    break;
-	  case MHD_EVENT_LOOP_INFO_BLOCK:
-	    p[poll_server+i].events |=  MHD_POLL_EVENTS_ERR_DISC;
-	    break;
-	  case MHD_EVENT_LOOP_INFO_CLEANUP:
-	    timeout = 0; /* clean up "pos" immediately */
-	    break;
-	  }
-	i++;
+      case MHD_EVENT_LOOP_INFO_READ:
+        p[poll_server + i].events |= POLLIN | MHD_POLL_EVENTS_ERR_DISC;
+        break;
+      case MHD_EVENT_LOOP_INFO_WRITE:
+        p[poll_server + i].events |= POLLOUT | MHD_POLL_EVENTS_ERR_DISC;
+        break;
+      case MHD_EVENT_LOOP_INFO_BLOCK:
+        p[poll_server + i].events |=  MHD_POLL_EVENTS_ERR_DISC;
+        break;
+      case MHD_EVENT_LOOP_INFO_CLEANUP:
+        timeout = 0; /* clean up "pos" immediately */
+        break;
       }
+      i++;
+    }
 #if defined(HTTPS_SUPPORT) && defined(UPGRADE_SUPPORT)
     for (urh = daemon->urh_tail; NULL != urh; urh = urh->prev)
-      {
-        urh_to_pollfd(urh, &(p[poll_server+i]));
-        i += 2;
-      }
+    {
+      urh_to_pollfd (urh, &(p[poll_server + i]));
+      i += 2;
+    }
 #endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
     if (0 == poll_server + num_connections)
+    {
+      free (p);
+      return MHD_YES;
+    }
+    if (MHD_sys_poll_ (p,
+                       poll_server + num_connections,
+                       timeout) < 0)
+    {
+      const int err = MHD_socket_get_error_ ();
+      if (MHD_SCKT_ERR_IS_EINTR_ (err))
       {
-        free(p);
-        return MHD_YES;
-      }
-    if (MHD_sys_poll_(p,
-                      poll_server + num_connections,
-                      timeout) < 0)
-      {
-        const int err = MHD_socket_get_error_ ();
-	if (MHD_SCKT_ERR_IS_EINTR_ (err))
-      {
-        free(p);
+        free (p);
         return MHD_YES;
       }
 #ifdef HAVE_MESSAGES
-	MHD_DLOG (daemon,
-		  _("poll failed: %s\n"),
-		  MHD_socket_strerr_ (err));
+      MHD_DLOG (daemon,
+                _ ("poll failed: %s\n"),
+                MHD_socket_strerr_ (err));
 #endif
-        free(p);
-	return MHD_NO;
-      }
+      free (p);
+      return MHD_NO;
+    }
 
     /* Reset. New value will be set when connections are processed. */
     daemon->data_already_pending = false;
@@ -3935,67 +3984,68 @@ MHD_poll_all (struct MHD_Daemon *daemon,
 
     /* handle shutdown */
     if (daemon->shutdown)
-      {
-        free(p);
-        return MHD_NO;
-      }
+    {
+      free (p);
+      return MHD_NO;
+    }
     i = 0;
     prev = daemon->connections_tail;
     while (NULL != (pos = prev))
-      {
-	prev = pos->prev;
-        /* first, sanity checks */
-        if (i >= num_connections)
-          break; /* connection list changed somehow, retry later ... */
-        if (p[poll_server+i].fd != pos->socket_fd)
-          continue; /* fd mismatch, something else happened, retry later ... */
-        call_handlers (pos,
-                       0 != (p[poll_server+i].revents & POLLIN),
-                       0 != (p[poll_server+i].revents & POLLOUT),
-                       0 != (p[poll_server+i].revents & MHD_POLL_REVENTS_ERR_DISC));
-        i++;
-      }
+    {
+      prev = pos->prev;
+      /* first, sanity checks */
+      if (i >= num_connections)
+        break;   /* connection list changed somehow, retry later ... */
+      if (p[poll_server + i].fd != pos->socket_fd)
+        continue;   /* fd mismatch, something else happened, retry later ... */
+      call_handlers (pos,
+                     0 != (p[poll_server + i].revents & POLLIN),
+                     0 != (p[poll_server + i].revents & POLLOUT),
+                     0 != (p[poll_server + i].revents
+                           & MHD_POLL_REVENTS_ERR_DISC));
+      i++;
+    }
 #if defined(HTTPS_SUPPORT) && defined(UPGRADE_SUPPORT)
     for (urh = daemon->urh_tail; NULL != urh; urh = urhn)
-      {
-        if (i >= num_connections)
-          break; /* connection list changed somehow, retry later ... */
+    {
+      if (i >= num_connections)
+        break;   /* connection list changed somehow, retry later ... */
 
-        /* Get next connection here as connection can be removed
-         * from 'daemon->urh_head' list. */
-        urhn = urh->prev;
-        /* Check for fd mismatch. FIXME: required for safety? */
-        if ((p[poll_server+i].fd != urh->connection->socket_fd) ||
-            (p[poll_server+i+1].fd != urh->mhd.socket))
-          break;
-        urh_from_pollfd (urh,
-                         &p[poll_server+i]);
-        i += 2;
-        process_urh (urh);
-        /* Finished forwarding? */
-        if ( (0 == urh->in_buffer_size) &&
-             (0 == urh->out_buffer_size) &&
-             (0 == urh->in_buffer_used) &&
-             (0 == urh->out_buffer_used) )
-          {
-            /* MHD_connection_finish_forward_() will remove connection from
-             * 'daemon->urh_head' list. */
-            MHD_connection_finish_forward_ (urh->connection);
-            urh->clean_ready = true;
-            /* If 'urh->was_closed' already was set to true, connection will be
-             * moved immediately to cleanup list. Otherwise connection
-             * will stay in suspended list until 'urh' will be marked
-             * with 'was_closed' by application. */
-            MHD_resume_connection(urh->connection);
-          }
+      /* Get next connection here as connection can be removed
+       * from 'daemon->urh_head' list. */
+      urhn = urh->prev;
+      /* Check for fd mismatch. FIXME: required for safety? */
+      if ((p[poll_server + i].fd != urh->connection->socket_fd) ||
+          (p[poll_server + i + 1].fd != urh->mhd.socket))
+        break;
+      urh_from_pollfd (urh,
+                       &p[poll_server + i]);
+      i += 2;
+      process_urh (urh);
+      /* Finished forwarding? */
+      if ( (0 == urh->in_buffer_size) &&
+           (0 == urh->out_buffer_size) &&
+           (0 == urh->in_buffer_used) &&
+           (0 == urh->out_buffer_used) )
+      {
+        /* MHD_connection_finish_forward_() will remove connection from
+         * 'daemon->urh_head' list. */
+        MHD_connection_finish_forward_ (urh->connection);
+        urh->clean_ready = true;
+        /* If 'urh->was_closed' already was set to true, connection will be
+         * moved immediately to cleanup list. Otherwise connection
+         * will stay in suspended list until 'urh' will be marked
+         * with 'was_closed' by application. */
+        MHD_resume_connection (urh->connection);
       }
+    }
 #endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
     /* handle 'listen' FD */
     if ( (-1 != poll_listen) &&
-	 (0 != (p[poll_listen].revents & POLLIN)) )
+         (0 != (p[poll_listen].revents & POLLIN)) )
       (void) MHD_accept_connection (daemon);
 
-    free(p);
+    free (p);
   }
   return MHD_YES;
 }
@@ -4010,7 +4060,7 @@ MHD_poll_all (struct MHD_Daemon *daemon,
  */
 static int
 MHD_poll_listen_socket (struct MHD_Daemon *daemon,
-			int may_block)
+                        int may_block)
 {
   struct pollfd p[2];
   int timeout;
@@ -4028,21 +4078,21 @@ MHD_poll_listen_socket (struct MHD_Daemon *daemon,
   if ( (MHD_INVALID_SOCKET != (ls = daemon->listen_fd)) &&
        (! daemon->was_quiesced) )
 
-    {
-      p[poll_count].fd = ls;
-      p[poll_count].events = POLLIN;
-      p[poll_count].revents = 0;
-      poll_listen = poll_count;
-      poll_count++;
-    }
-  if (MHD_ITC_IS_VALID_(daemon->itc))
-    {
-      p[poll_count].fd = MHD_itc_r_fd_ (daemon->itc);
-      p[poll_count].events = POLLIN;
-      p[poll_count].revents = 0;
-      poll_itc_idx = poll_count;
-      poll_count++;
-    }
+  {
+    p[poll_count].fd = ls;
+    p[poll_count].events = POLLIN;
+    p[poll_count].revents = 0;
+    poll_listen = poll_count;
+    poll_count++;
+  }
+  if (MHD_ITC_IS_VALID_ (daemon->itc))
+  {
+    p[poll_count].fd = MHD_itc_r_fd_ (daemon->itc);
+    p[poll_count].events = POLLIN;
+    p[poll_count].revents = 0;
+    poll_itc_idx = poll_count;
+    poll_count++;
+  }
 
   if (0 != (daemon->options & MHD_TEST_ALLOW_SUSPEND_RESUME))
     (void) resume_suspended_connections (daemon);
@@ -4053,21 +4103,21 @@ MHD_poll_listen_socket (struct MHD_Daemon *daemon,
     timeout = -1;
   if (0 == poll_count)
     return MHD_YES;
-  if (MHD_sys_poll_(p,
-                    poll_count,
-                    timeout) < 0)
-    {
-      const int err = MHD_socket_get_error_ ();
+  if (MHD_sys_poll_ (p,
+                     poll_count,
+                     timeout) < 0)
+  {
+    const int err = MHD_socket_get_error_ ();
 
-      if (MHD_SCKT_ERR_IS_EINTR_ (err))
-	return MHD_YES;
+    if (MHD_SCKT_ERR_IS_EINTR_ (err))
+      return MHD_YES;
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("poll failed: %s\n"),
-                MHD_socket_strerr_ (err));
+    MHD_DLOG (daemon,
+              _ ("poll failed: %s\n"),
+              MHD_socket_strerr_ (err));
 #endif
-      return MHD_NO;
-    }
+    return MHD_NO;
+  }
   if ( (-1 != poll_itc_idx) &&
        (0 != (p[poll_itc_idx].revents & POLLIN)) )
     MHD_itc_clear_ (daemon->itc);
@@ -4092,7 +4142,7 @@ MHD_poll_listen_socket (struct MHD_Daemon *daemon,
  */
 static int
 MHD_poll (struct MHD_Daemon *daemon,
-	  int may_block)
+          int may_block)
 {
 #ifdef HAVE_POLL
   if (daemon->shutdown)
@@ -4133,9 +4183,9 @@ MHD_poll (struct MHD_Daemon *daemon,
  *         'false' otherwise
  */
 static bool
-is_urh_ready(struct MHD_UpgradeResponseHandle * const urh)
+is_urh_ready (struct MHD_UpgradeResponseHandle *const urh)
 {
-  const struct MHD_Connection * const connection = urh->connection;
+  const struct MHD_Connection *const connection = urh->connection;
 
   if ( (0 == urh->in_buffer_size) &&
        (0 == urh->out_buffer_size) &&
@@ -4155,7 +4205,7 @@ is_urh_ready(struct MHD_UpgradeResponseHandle * const urh)
        (urh->out_buffer_used > 0) )
     return true;
   if ( (0 != (MHD_EPOLL_STATE_WRITE_READY & urh->mhd.celi)) &&
-         (urh->in_buffer_used > 0) )
+       (urh->in_buffer_used > 0) )
     return true;
   return false;
 }
@@ -4174,98 +4224,98 @@ run_epoll_for_upgrade (struct MHD_Daemon *daemon)
 {
   struct epoll_event events[MAX_EVENTS];
   int num_events;
-  struct MHD_UpgradeResponseHandle * pos;
-  struct MHD_UpgradeResponseHandle * prev;
+  struct MHD_UpgradeResponseHandle *pos;
+  struct MHD_UpgradeResponseHandle *prev;
 
   num_events = MAX_EVENTS;
   while (0 != num_events)
+  {
+    unsigned int i;
+    /* update event masks */
+    num_events = epoll_wait (daemon->epoll_upgrade_fd,
+                             events,
+                             MAX_EVENTS,
+                             0);
+    if (-1 == num_events)
     {
-      unsigned int i;
-      /* update event masks */
-      num_events = epoll_wait (daemon->epoll_upgrade_fd,
-                               events,
-                               MAX_EVENTS,
-                               0);
-      if (-1 == num_events)
-        {
-          const int err = MHD_socket_get_error_ ();
+      const int err = MHD_socket_get_error_ ();
 
-          if (MHD_SCKT_ERR_IS_EINTR_ (err))
-            return MHD_YES;
+      if (MHD_SCKT_ERR_IS_EINTR_ (err))
+        return MHD_YES;
 #ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("Call to epoll_wait failed: %s\n"),
-                    MHD_socket_strerr_ (err));
+      MHD_DLOG (daemon,
+                _ ("Call to epoll_wait failed: %s\n"),
+                MHD_socket_strerr_ (err));
 #endif
-          return MHD_NO;
-        }
-      for (i = 0; i < (unsigned int) num_events; i++)
-        {
-          struct UpgradeEpollHandle * const ueh = events[i].data.ptr;
-          struct MHD_UpgradeResponseHandle * const urh = ueh->urh;
-          bool new_err_state = false;
-
-          if (urh->clean_ready)
-            continue;
-
-          /* Update ueh state based on what is ready according to epoll() */
-          if (0 != (events[i].events & EPOLLIN))
-            ueh->celi |= MHD_EPOLL_STATE_READ_READY;
-          if (0 != (events[i].events & EPOLLOUT))
-            ueh->celi |= MHD_EPOLL_STATE_WRITE_READY;
-          if (0 != (events[i].events & EPOLLHUP))
-            ueh->celi |= MHD_EPOLL_STATE_READ_READY | MHD_EPOLL_STATE_WRITE_READY;
-
-          if ( (0 == (ueh->celi & MHD_EPOLL_STATE_ERROR)) &&
-               (0 != (events[i].events & (EPOLLERR | EPOLLPRI))) )
-            {
-              /* Process new error state only one time
-               * and avoid continuously marking this connection
-               * as 'ready'. */
-              ueh->celi |= MHD_EPOLL_STATE_ERROR;
-              new_err_state = true;
-            }
-
-          if (! urh->in_eready_list)
-            {
-              if (new_err_state ||
-                  is_urh_ready(urh))
-                {
-                  EDLL_insert (daemon->eready_urh_head,
-                               daemon->eready_urh_tail,
-                               urh);
-                  urh->in_eready_list = true;
-                }
-            }
-        }
+      return MHD_NO;
     }
+    for (i = 0; i < (unsigned int) num_events; i++)
+    {
+      struct UpgradeEpollHandle *const ueh = events[i].data.ptr;
+      struct MHD_UpgradeResponseHandle *const urh = ueh->urh;
+      bool new_err_state = false;
+
+      if (urh->clean_ready)
+        continue;
+
+      /* Update ueh state based on what is ready according to epoll() */
+      if (0 != (events[i].events & EPOLLIN))
+        ueh->celi |= MHD_EPOLL_STATE_READ_READY;
+      if (0 != (events[i].events & EPOLLOUT))
+        ueh->celi |= MHD_EPOLL_STATE_WRITE_READY;
+      if (0 != (events[i].events & EPOLLHUP))
+        ueh->celi |= MHD_EPOLL_STATE_READ_READY | MHD_EPOLL_STATE_WRITE_READY;
+
+      if ( (0 == (ueh->celi & MHD_EPOLL_STATE_ERROR)) &&
+           (0 != (events[i].events & (EPOLLERR | EPOLLPRI))) )
+      {
+        /* Process new error state only one time
+         * and avoid continuously marking this connection
+         * as 'ready'. */
+        ueh->celi |= MHD_EPOLL_STATE_ERROR;
+        new_err_state = true;
+      }
+
+      if (! urh->in_eready_list)
+      {
+        if (new_err_state ||
+            is_urh_ready (urh))
+        {
+          EDLL_insert (daemon->eready_urh_head,
+                       daemon->eready_urh_tail,
+                       urh);
+          urh->in_eready_list = true;
+        }
+      }
+    }
+  }
   prev = daemon->eready_urh_tail;
   while (NULL != (pos = prev))
+  {
+    prev = pos->prevE;
+    process_urh (pos);
+    if (! is_urh_ready (pos))
     {
-      prev = pos->prevE;
-      process_urh (pos);
-      if (! is_urh_ready(pos))
-      	{
-      	  EDLL_remove (daemon->eready_urh_head,
-                       daemon->eready_urh_tail,
-                       pos);
-      	  pos->in_eready_list = false;
-      	}
-      /* Finished forwarding? */
-      if ( (0 == pos->in_buffer_size) &&
-           (0 == pos->out_buffer_size) &&
-           (0 == pos->in_buffer_used) &&
-           (0 == pos->out_buffer_used) )
-        {
-          MHD_connection_finish_forward_ (pos->connection);
-          pos->clean_ready = true;
-          /* If 'pos->was_closed' already was set to true, connection
-           * will be moved immediately to cleanup list. Otherwise
-           * connection will stay in suspended list until 'pos' will
-           * be marked with 'was_closed' by application. */
-          MHD_resume_connection (pos->connection);
-        }
+      EDLL_remove (daemon->eready_urh_head,
+                   daemon->eready_urh_tail,
+                   pos);
+      pos->in_eready_list = false;
     }
+    /* Finished forwarding? */
+    if ( (0 == pos->in_buffer_size) &&
+         (0 == pos->out_buffer_size) &&
+         (0 == pos->in_buffer_used) &&
+         (0 == pos->out_buffer_used) )
+    {
+      MHD_connection_finish_forward_ (pos->connection);
+      pos->clean_ready = true;
+      /* If 'pos->was_closed' already was set to true, connection
+       * will be moved immediately to cleanup list. Otherwise
+       * connection will stay in suspended list until 'pos' will
+       * be marked with 'was_closed' by application. */
+      MHD_resume_connection (pos->connection);
+    }
+  }
 
   return MHD_YES;
 }
@@ -4275,7 +4325,7 @@ run_epoll_for_upgrade (struct MHD_Daemon *daemon)
 /**
  * Pointer-marker to distinguish ITC slot in epoll sets.
  */
-static const char * const epoll_itc_marker = "itc_marker";
+static const char *const epoll_itc_marker = "itc_marker";
 
 
 /**
@@ -4291,7 +4341,7 @@ MHD_epoll (struct MHD_Daemon *daemon,
            int may_block)
 {
 #if defined(HTTPS_SUPPORT) && defined(UPGRADE_SUPPORT)
-  static const char * const upgrade_marker = "upgrade_ptr";
+  static const char *const upgrade_marker = "upgrade_ptr";
 #endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
   struct MHD_Connection *pos;
   struct MHD_Connection *prev;
@@ -4315,89 +4365,89 @@ MHD_epoll (struct MHD_Daemon *daemon,
        (daemon->connections < daemon->connection_limit) &&
        (! daemon->listen_socket_in_epoll) &&
        (! daemon->at_limit) )
+  {
+    event.events = EPOLLIN;
+    event.data.ptr = daemon;
+    if (0 != epoll_ctl (daemon->epoll_fd,
+                        EPOLL_CTL_ADD,
+                        ls,
+                        &event))
     {
-      event.events = EPOLLIN;
-      event.data.ptr = daemon;
-      if (0 != epoll_ctl (daemon->epoll_fd,
-                          EPOLL_CTL_ADD,
-                          ls,
-                          &event))
-        {
 #ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("Call to epoll_ctl failed: %s\n"),
-                    MHD_socket_last_strerr_ ());
+      MHD_DLOG (daemon,
+                _ ("Call to epoll_ctl failed: %s\n"),
+                MHD_socket_last_strerr_ ());
 #endif
-          return MHD_NO;
-        }
-      daemon->listen_socket_in_epoll = true;
+      return MHD_NO;
     }
+    daemon->listen_socket_in_epoll = true;
+  }
   if ( (daemon->was_quiesced) &&
        (daemon->listen_socket_in_epoll) )
-    {
-      if ( (0 != epoll_ctl (daemon->epoll_fd,
-                            EPOLL_CTL_DEL,
-                            ls,
-                            NULL)) &&
-           (ENOENT != errno) ) /* ENOENT can happen due to race with
+  {
+    if ( (0 != epoll_ctl (daemon->epoll_fd,
+                          EPOLL_CTL_DEL,
+                          ls,
+                          NULL)) &&
+         (ENOENT != errno) )   /* ENOENT can happen due to race with
                                   #MHD_quiesce_daemon() */
-        MHD_PANIC ("Failed to remove listen FD from epoll set\n");
-      daemon->listen_socket_in_epoll = false;
-    }
+      MHD_PANIC ("Failed to remove listen FD from epoll set\n");
+    daemon->listen_socket_in_epoll = false;
+  }
 
 #if defined(HTTPS_SUPPORT) && defined(UPGRADE_SUPPORT)
   if ( ( (! daemon->upgrade_fd_in_epoll) &&
          (-1 != daemon->epoll_upgrade_fd) ) )
+  {
+    event.events = EPOLLIN | EPOLLOUT;
+    event.data.ptr = (void *) upgrade_marker;
+    if (0 != epoll_ctl (daemon->epoll_fd,
+                        EPOLL_CTL_ADD,
+                        daemon->epoll_upgrade_fd,
+                        &event))
     {
-      event.events = EPOLLIN | EPOLLOUT;
-      event.data.ptr = (void *) upgrade_marker;
-      if (0 != epoll_ctl (daemon->epoll_fd,
-                          EPOLL_CTL_ADD,
-                          daemon->epoll_upgrade_fd,
-                          &event))
-        {
 #ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("Call to epoll_ctl failed: %s\n"),
-                    MHD_socket_last_strerr_ ());
+      MHD_DLOG (daemon,
+                _ ("Call to epoll_ctl failed: %s\n"),
+                MHD_socket_last_strerr_ ());
 #endif
-          return MHD_NO;
-        }
-      daemon->upgrade_fd_in_epoll = true;
+      return MHD_NO;
     }
+    daemon->upgrade_fd_in_epoll = true;
+  }
 #endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
   if ( (daemon->listen_socket_in_epoll) &&
        ( (daemon->connections == daemon->connection_limit) ||
          (daemon->at_limit) ||
          (daemon->was_quiesced) ) )
-    {
-      /* we're at the connection limit, disable listen socket
-	 for event loop for now */
-      if (0 != epoll_ctl (daemon->epoll_fd,
-                          EPOLL_CTL_DEL,
-                          ls,
-                          NULL))
-        MHD_PANIC (_("Failed to remove listen FD from epoll set\n"));
-      daemon->listen_socket_in_epoll = false;
-    }
+  {
+    /* we're at the connection limit, disable listen socket
+ for event loop for now */
+    if (0 != epoll_ctl (daemon->epoll_fd,
+                        EPOLL_CTL_DEL,
+                        ls,
+                        NULL))
+      MHD_PANIC (_ ("Failed to remove listen FD from epoll set\n"));
+    daemon->listen_socket_in_epoll = false;
+  }
 
   if ( (0 != (daemon->options & MHD_TEST_ALLOW_SUSPEND_RESUME)) &&
        (MHD_YES == resume_suspended_connections (daemon)) )
     may_block = MHD_NO;
 
   if (MHD_YES == may_block)
+  {
+    if (MHD_YES == MHD_get_timeout (daemon,
+                                    &timeout_ll))
     {
-      if (MHD_YES == MHD_get_timeout (daemon,
-                                      &timeout_ll))
-        {
-          if (timeout_ll >= (MHD_UNSIGNED_LONG_LONG) INT_MAX)
-            timeout_ms = INT_MAX;
-          else
-            timeout_ms = (int) timeout_ll;
-        }
+      if (timeout_ll >= (MHD_UNSIGNED_LONG_LONG) INT_MAX)
+        timeout_ms = INT_MAX;
       else
-        timeout_ms = -1;
+        timeout_ms = (int) timeout_ll;
     }
+    else
+      timeout_ms = -1;
+  }
   else
     timeout_ms = 0;
 
@@ -4412,111 +4462,111 @@ MHD_epoll (struct MHD_Daemon *daemon,
      than unfair behavior... */
   num_events = MAX_EVENTS;
   while (MAX_EVENTS == num_events)
+  {
+    /* update event masks */
+    num_events = epoll_wait (daemon->epoll_fd,
+                             events,
+                             MAX_EVENTS,
+                             timeout_ms);
+    if (-1 == num_events)
     {
-      /* update event masks */
-      num_events = epoll_wait (daemon->epoll_fd,
-                               events,
-                               MAX_EVENTS,
-                               timeout_ms);
-      if (-1 == num_events)
-        {
-          const int err = MHD_socket_get_error_ ();
-          if (MHD_SCKT_ERR_IS_EINTR_ (err))
-            return MHD_YES;
+      const int err = MHD_socket_get_error_ ();
+      if (MHD_SCKT_ERR_IS_EINTR_ (err))
+        return MHD_YES;
 #ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("Call to epoll_wait failed: %s\n"),
-                    MHD_socket_strerr_ (err));
+      MHD_DLOG (daemon,
+                _ ("Call to epoll_wait failed: %s\n"),
+                MHD_socket_strerr_ (err));
 #endif
-          return MHD_NO;
-        }
-      for (i=0;i<(unsigned int) num_events;i++)
-        {
-          /* First, check for the values of `ptr` that would indicate
-             that this event is not about a normal connection. */
-          if (NULL == events[i].data.ptr)
-            continue; /* shutdown signal! */
-#if defined(HTTPS_SUPPORT) && defined(UPGRADE_SUPPORT)
-          if (upgrade_marker == events[i].data.ptr)
-            {
-              /* activity on an upgraded connection, we process
-                 those in a separate epoll() */
-              run_upgraded = true;
-              continue;
-            }
-#endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
-          if (epoll_itc_marker == events[i].data.ptr)
-            {
-              /* It's OK to clear ITC here as all external
-                 conditions will be processed later. */
-              MHD_itc_clear_ (daemon->itc);
-              continue;
-            }
-          if (daemon == events[i].data.ptr)
-            {
-              /* Check for error conditions on listen socket. */
-              /* FIXME: Initiate MHD_quiesce_daemon() to prevent busy waiting? */
-              if (0 == (events[i].events & (EPOLLERR | EPOLLHUP)))
-                {
-                  unsigned int series_length = 0;
-                  /* Run 'accept' until it fails or daemon at limit of connections.
-                   * Do not accept more then 10 connections at once. The rest will
-                   * be accepted on next turn (level trigger is used for listen
-                   * socket). */
-                  while ( (MHD_YES == MHD_accept_connection (daemon)) &&
-                          (series_length < 10) &&
-                          (daemon->connections < daemon->connection_limit) &&
-                          (! daemon->at_limit) )
-                    series_length++;
-                }
-              continue;
-            }
-          /* this is an event relating to a 'normal' connection,
-             remember the event and if appropriate mark the
-             connection as 'eready'. */
-          pos = events[i].data.ptr;
-          /* normal processing: update read/write data */
-          if (0 != (events[i].events & (EPOLLPRI | EPOLLERR | EPOLLHUP)))
-            {
-              pos->epoll_state |= MHD_EPOLL_STATE_ERROR;
-              if (0 == (pos->epoll_state & MHD_EPOLL_STATE_IN_EREADY_EDLL))
-                {
-                  EDLL_insert (daemon->eready_head,
-                               daemon->eready_tail,
-                               pos);
-                  pos->epoll_state |= MHD_EPOLL_STATE_IN_EREADY_EDLL;
-                }
-            }
-          else
-            {
-              if (0 != (events[i].events & EPOLLIN))
-                {
-                  pos->epoll_state |= MHD_EPOLL_STATE_READ_READY;
-                  if ( ( (MHD_EVENT_LOOP_INFO_READ == pos->event_loop_info) ||
-                         (pos->read_buffer_size > pos->read_buffer_offset) ) &&
-                       (0 == (pos->epoll_state & MHD_EPOLL_STATE_IN_EREADY_EDLL) ) )
-                    {
-                      EDLL_insert (daemon->eready_head,
-                                   daemon->eready_tail,
-                                   pos);
-                      pos->epoll_state |= MHD_EPOLL_STATE_IN_EREADY_EDLL;
-                    }
-                }
-              if (0 != (events[i].events & EPOLLOUT))
-                {
-                  pos->epoll_state |= MHD_EPOLL_STATE_WRITE_READY;
-                  if ( (MHD_EVENT_LOOP_INFO_WRITE == pos->event_loop_info) &&
-                       (0 == (pos->epoll_state & MHD_EPOLL_STATE_IN_EREADY_EDLL) ) )
-                    {
-                      EDLL_insert (daemon->eready_head,
-                                   daemon->eready_tail,
-                                   pos);
-                      pos->epoll_state |= MHD_EPOLL_STATE_IN_EREADY_EDLL;
-                    }
-                }
-            }
-        }
+      return MHD_NO;
     }
+    for (i = 0; i<(unsigned int) num_events; i++)
+    {
+      /* First, check for the values of `ptr` that would indicate
+         that this event is not about a normal connection. */
+      if (NULL == events[i].data.ptr)
+        continue;     /* shutdown signal! */
+#if defined(HTTPS_SUPPORT) && defined(UPGRADE_SUPPORT)
+      if (upgrade_marker == events[i].data.ptr)
+      {
+        /* activity on an upgraded connection, we process
+           those in a separate epoll() */
+        run_upgraded = true;
+        continue;
+      }
+#endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
+      if (epoll_itc_marker == events[i].data.ptr)
+      {
+        /* It's OK to clear ITC here as all external
+           conditions will be processed later. */
+        MHD_itc_clear_ (daemon->itc);
+        continue;
+      }
+      if (daemon == events[i].data.ptr)
+      {
+        /* Check for error conditions on listen socket. */
+        /* FIXME: Initiate MHD_quiesce_daemon() to prevent busy waiting? */
+        if (0 == (events[i].events & (EPOLLERR | EPOLLHUP)))
+        {
+          unsigned int series_length = 0;
+          /* Run 'accept' until it fails or daemon at limit of connections.
+           * Do not accept more then 10 connections at once. The rest will
+           * be accepted on next turn (level trigger is used for listen
+           * socket). */
+          while ( (MHD_YES == MHD_accept_connection (daemon)) &&
+                  (series_length < 10) &&
+                  (daemon->connections < daemon->connection_limit) &&
+                  (! daemon->at_limit) )
+            series_length++;
+        }
+        continue;
+      }
+      /* this is an event relating to a 'normal' connection,
+         remember the event and if appropriate mark the
+         connection as 'eready'. */
+      pos = events[i].data.ptr;
+      /* normal processing: update read/write data */
+      if (0 != (events[i].events & (EPOLLPRI | EPOLLERR | EPOLLHUP)))
+      {
+        pos->epoll_state |= MHD_EPOLL_STATE_ERROR;
+        if (0 == (pos->epoll_state & MHD_EPOLL_STATE_IN_EREADY_EDLL))
+        {
+          EDLL_insert (daemon->eready_head,
+                       daemon->eready_tail,
+                       pos);
+          pos->epoll_state |= MHD_EPOLL_STATE_IN_EREADY_EDLL;
+        }
+      }
+      else
+      {
+        if (0 != (events[i].events & EPOLLIN))
+        {
+          pos->epoll_state |= MHD_EPOLL_STATE_READ_READY;
+          if ( ( (MHD_EVENT_LOOP_INFO_READ == pos->event_loop_info) ||
+                 (pos->read_buffer_size > pos->read_buffer_offset) ) &&
+               (0 == (pos->epoll_state & MHD_EPOLL_STATE_IN_EREADY_EDLL) ) )
+          {
+            EDLL_insert (daemon->eready_head,
+                         daemon->eready_tail,
+                         pos);
+            pos->epoll_state |= MHD_EPOLL_STATE_IN_EREADY_EDLL;
+          }
+        }
+        if (0 != (events[i].events & EPOLLOUT))
+        {
+          pos->epoll_state |= MHD_EPOLL_STATE_WRITE_READY;
+          if ( (MHD_EVENT_LOOP_INFO_WRITE == pos->event_loop_info) &&
+               (0 == (pos->epoll_state & MHD_EPOLL_STATE_IN_EREADY_EDLL) ) )
+          {
+            EDLL_insert (daemon->eready_head,
+                         daemon->eready_tail,
+                         pos);
+            pos->epoll_state |= MHD_EPOLL_STATE_IN_EREADY_EDLL;
+          }
+        }
+      }
+    }
+  }
 
 #if defined(HTTPS_SUPPORT) && defined(UPGRADE_SUPPORT)
   if (run_upgraded || (NULL != daemon->eready_urh_head))
@@ -4526,28 +4576,29 @@ MHD_epoll (struct MHD_Daemon *daemon,
   /* process events for connections */
   prev = daemon->eready_tail;
   while (NULL != (pos = prev))
+  {
+    prev = pos->prevE;
+    call_handlers (pos,
+                   0 != (pos->epoll_state & MHD_EPOLL_STATE_READ_READY),
+                   0 != (pos->epoll_state & MHD_EPOLL_STATE_WRITE_READY),
+                   0 != (pos->epoll_state & MHD_EPOLL_STATE_ERROR));
+    if (MHD_EPOLL_STATE_IN_EREADY_EDLL ==
+        (pos->epoll_state & (MHD_EPOLL_STATE_SUSPENDED
+                             | MHD_EPOLL_STATE_IN_EREADY_EDLL)))
     {
-	  prev = pos->prevE;
-      call_handlers (pos,
-                     0 != (pos->epoll_state & MHD_EPOLL_STATE_READ_READY),
-                     0 != (pos->epoll_state & MHD_EPOLL_STATE_WRITE_READY),
-                     0 != (pos->epoll_state & MHD_EPOLL_STATE_ERROR));
-      if (MHD_EPOLL_STATE_IN_EREADY_EDLL ==
-            (pos->epoll_state & (MHD_EPOLL_STATE_SUSPENDED | MHD_EPOLL_STATE_IN_EREADY_EDLL)))
-        {
-          if ( (MHD_EVENT_LOOP_INFO_READ == pos->event_loop_info &&
-                  0 == (pos->epoll_state & MHD_EPOLL_STATE_READ_READY) ) ||
-               (MHD_EVENT_LOOP_INFO_WRITE == pos->event_loop_info &&
-                 0 == (pos->epoll_state & MHD_EPOLL_STATE_WRITE_READY) ) ||
-               MHD_EVENT_LOOP_INFO_CLEANUP == pos->event_loop_info)
-            {
-              EDLL_remove (daemon->eready_head,
-                           daemon->eready_tail,
-                           pos);
-              pos->epoll_state &= ~MHD_EPOLL_STATE_IN_EREADY_EDLL;
-            }
-        }
+      if ( ((MHD_EVENT_LOOP_INFO_READ == pos->event_loop_info) &&
+            (0 == (pos->epoll_state & MHD_EPOLL_STATE_READ_READY)) ) ||
+           ((MHD_EVENT_LOOP_INFO_WRITE == pos->event_loop_info) &&
+            (0 == (pos->epoll_state & MHD_EPOLL_STATE_WRITE_READY)) ) ||
+           (MHD_EVENT_LOOP_INFO_CLEANUP == pos->event_loop_info) )
+      {
+        EDLL_remove (daemon->eready_head,
+                     daemon->eready_tail,
+                     pos);
+        pos->epoll_state &= ~MHD_EPOLL_STATE_IN_EREADY_EDLL;
+      }
     }
+  }
 
   /* Finally, handle timed-out connections; we need to do this here
      as the epoll mechanism won't call the 'MHD_connection_handle_idle()' on everything,
@@ -4559,22 +4610,22 @@ MHD_epoll (struct MHD_Daemon *daemon,
      do not bother to sort that (presumably very short) list. */
   prev = daemon->manual_timeout_tail;
   while (NULL != (pos = prev))
-    {
-      prev = pos->prevX;
-      MHD_connection_handle_idle (pos);
-    }
+  {
+    prev = pos->prevX;
+    MHD_connection_handle_idle (pos);
+  }
   /* Connections with the default timeout are sorted by prepending
      them to the head of the list whenever we touch the connection;
      thus it suffices to iterate from the tail until the first
      connection is NOT timed out */
   prev = daemon->normal_timeout_tail;
   while (NULL != (pos = prev))
-    {
-      prev = pos->prevX;
-      MHD_connection_handle_idle (pos);
-      if (MHD_CONNECTION_CLOSED != pos->state)
-	break; /* sorted by timeout, no need to visit the rest! */
-    }
+  {
+    prev = pos->prevX;
+    MHD_connection_handle_idle (pos);
+    if (MHD_CONNECTION_CLOSED != pos->state)
+      break; /* sorted by timeout, no need to visit the rest! */
+  }
   return MHD_YES;
 }
 #endif
@@ -4607,22 +4658,22 @@ MHD_run (struct MHD_Daemon *daemon)
        (0 != (daemon->options & MHD_USE_INTERNAL_POLLING_THREAD)) )
     return MHD_NO;
   if (0 != (daemon->options & MHD_USE_POLL))
-    {
-      MHD_poll (daemon, MHD_NO);
-      MHD_cleanup_connections (daemon);
-    }
+  {
+    MHD_poll (daemon, MHD_NO);
+    MHD_cleanup_connections (daemon);
+  }
 #ifdef EPOLL_SUPPORT
   else if (0 != (daemon->options & MHD_USE_EPOLL))
-    {
-      MHD_epoll (daemon, MHD_NO);
-      MHD_cleanup_connections (daemon);
-    }
+  {
+    MHD_epoll (daemon, MHD_NO);
+    MHD_cleanup_connections (daemon);
+  }
 #endif
   else
-    {
-      MHD_select (daemon, MHD_NO);
-      /* MHD_select does MHD_cleanup_connections already */
-    }
+  {
+    MHD_select (daemon, MHD_NO);
+    /* MHD_select does MHD_cleanup_connections already */
+  }
   return MHD_YES;
 }
 
@@ -4641,10 +4692,10 @@ close_connection (struct MHD_Connection *pos)
   struct MHD_Daemon *daemon = pos->daemon;
 
   if (0 != (daemon->options & MHD_USE_THREAD_PER_CONNECTION))
-    {
-      MHD_connection_mark_closed_ (pos);
-      return; /* must let thread to do the rest */
-    }
+  {
+    MHD_connection_mark_closed_ (pos);
+    return;   /* must let thread to do the rest */
+  }
   MHD_connection_close_ (pos,
                          MHD_REQUEST_TERMINATED_DAEMON_SHUTDOWN);
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
@@ -4654,18 +4705,18 @@ close_connection (struct MHD_Connection *pos)
   mhd_assert (! pos->resuming);
   if (pos->connection_timeout == daemon->connection_timeout)
     XDLL_remove (daemon->normal_timeout_head,
-		 daemon->normal_timeout_tail,
-		 pos);
+                 daemon->normal_timeout_tail,
+                 pos);
   else
     XDLL_remove (daemon->manual_timeout_head,
-		 daemon->manual_timeout_tail,
-		 pos);
+                 daemon->manual_timeout_tail,
+                 pos);
   DLL_remove (daemon->connections_head,
-	      daemon->connections_tail,
-	      pos);
+              daemon->connections_tail,
+              pos);
   DLL_insert (daemon->cleanup_head,
-	      daemon->cleanup_tail,
-	      pos);
+              daemon->cleanup_tail,
+              pos);
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
 #endif
@@ -4685,19 +4736,19 @@ MHD_polling_thread (void *cls)
 {
   struct MHD_Daemon *daemon = cls;
 
-  MHD_thread_init_(&(daemon->pid));
+  MHD_thread_init_ (&(daemon->pid));
   while (! daemon->shutdown)
-    {
-      if (0 != (daemon->options & MHD_USE_POLL))
-	MHD_poll (daemon, MHD_YES);
+  {
+    if (0 != (daemon->options & MHD_USE_POLL))
+      MHD_poll (daemon, MHD_YES);
 #ifdef EPOLL_SUPPORT
-      else if (0 != (daemon->options & MHD_USE_EPOLL))
-	MHD_epoll (daemon, MHD_YES);
+    else if (0 != (daemon->options & MHD_USE_EPOLL))
+      MHD_epoll (daemon, MHD_YES);
 #endif
-      else
-	MHD_select (daemon, MHD_YES);
-      MHD_cleanup_connections (daemon);
-    }
+    else
+      MHD_select (daemon, MHD_YES);
+    MHD_cleanup_connections (daemon);
+  }
 
   /* Resume any pending for resume connections, join
    * all connection's threads (if any) and finally cleanup
@@ -4706,7 +4757,7 @@ MHD_polling_thread (void *cls)
     resume_suspended_connections (daemon);
   close_all_connections (daemon);
 
-  return (MHD_THRD_RTRN_TYPE_)0;
+  return (MHD_THRD_RTRN_TYPE_) 0;
 }
 #endif
 
@@ -4812,59 +4863,61 @@ MHD_quiesce_daemon (struct MHD_Daemon *daemon)
     return MHD_INVALID_SOCKET;
   if ( (0 == (daemon->options & (MHD_USE_ITC))) &&
        (0 != (daemon->options & (MHD_USE_INTERNAL_POLLING_THREAD))) )
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-		"Using MHD_quiesce_daemon in this mode requires MHD_USE_ITC\n");
+    MHD_DLOG (daemon,
+              "Using MHD_quiesce_daemon in this mode requires MHD_USE_ITC\n");
 #endif
-      return MHD_INVALID_SOCKET;
-    }
+    return MHD_INVALID_SOCKET;
+  }
 
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   if (NULL != daemon->worker_pool)
     for (i = 0; i < daemon->worker_pool_size; i++)
-      {
-        daemon->worker_pool[i].was_quiesced = true;
+    {
+      daemon->worker_pool[i].was_quiesced = true;
 #ifdef EPOLL_SUPPORT
-        if ( (0 != (daemon->options & MHD_USE_EPOLL)) &&
-             (-1 != daemon->worker_pool[i].epoll_fd) &&
-             (daemon->worker_pool[i].listen_socket_in_epoll) )
-          {
-            if (0 != epoll_ctl (daemon->worker_pool[i].epoll_fd,
-                                EPOLL_CTL_DEL,
-                                ret,
-                                NULL))
-              MHD_PANIC (_("Failed to remove listen FD from epoll set\n"));
-            daemon->worker_pool[i].listen_socket_in_epoll = false;
-          }
-        else
-#endif
-          if (MHD_ITC_IS_VALID_(daemon->worker_pool[i].itc))
-            {
-              if (! MHD_itc_activate_ (daemon->worker_pool[i].itc, "q"))
-                MHD_PANIC (_("Failed to signal quiesce via inter-thread communication channel"));
-            }
+      if ( (0 != (daemon->options & MHD_USE_EPOLL)) &&
+           (-1 != daemon->worker_pool[i].epoll_fd) &&
+           (daemon->worker_pool[i].listen_socket_in_epoll) )
+      {
+        if (0 != epoll_ctl (daemon->worker_pool[i].epoll_fd,
+                            EPOLL_CTL_DEL,
+                            ret,
+                            NULL))
+          MHD_PANIC (_ ("Failed to remove listen FD from epoll set\n"));
+        daemon->worker_pool[i].listen_socket_in_epoll = false;
       }
+      else
+#endif
+      if (MHD_ITC_IS_VALID_ (daemon->worker_pool[i].itc))
+      {
+        if (! MHD_itc_activate_ (daemon->worker_pool[i].itc, "q"))
+          MHD_PANIC (_ (
+                       "Failed to signal quiesce via inter-thread communication channel"));
+      }
+    }
 #endif
   daemon->was_quiesced = true;
 #ifdef EPOLL_SUPPORT
   if ( (0 != (daemon->options & MHD_USE_EPOLL)) &&
        (-1 != daemon->epoll_fd) &&
        (daemon->listen_socket_in_epoll) )
-    {
-      if ( (0 != epoll_ctl (daemon->epoll_fd,
-                            EPOLL_CTL_DEL,
-                            ret,
-                            NULL)) &&
-           (ENOENT != errno) ) /* ENOENT can happen due to race with
+  {
+    if ( (0 != epoll_ctl (daemon->epoll_fd,
+                          EPOLL_CTL_DEL,
+                          ret,
+                          NULL)) &&
+         (ENOENT != errno) )   /* ENOENT can happen due to race with
                                   #MHD_epoll() */
-        MHD_PANIC ("Failed to remove listen FD from epoll set\n");
-      daemon->listen_socket_in_epoll = false;
-    }
+      MHD_PANIC ("Failed to remove listen FD from epoll set\n");
+    daemon->listen_socket_in_epoll = false;
+  }
 #endif
-  if ( (MHD_ITC_IS_VALID_(daemon->itc)) &&
+  if ( (MHD_ITC_IS_VALID_ (daemon->itc)) &&
        (! MHD_itc_activate_ (daemon->itc, "q")) )
-    MHD_PANIC (_("failed to signal quiesce via inter-thread communication channel"));
+    MHD_PANIC (_ (
+                 "failed to signal quiesce via inter-thread communication channel"));
   return ret;
 }
 
@@ -4906,8 +4959,8 @@ parse_options_va (struct MHD_Daemon *daemon,
  */
 static int
 parse_options (struct MHD_Daemon *daemon,
-	       const struct sockaddr **servaddr,
-	       ...)
+               const struct sockaddr **servaddr,
+               ...)
 {
   va_list ap;
   int ret;
@@ -4950,521 +5003,543 @@ parse_options_va (struct MHD_Daemon *daemon,
 #endif /* HTTPS_SUPPORT */
 
   while (MHD_OPTION_END != (opt = (enum MHD_OPTION) va_arg (ap, int)))
+  {
+    switch (opt)
     {
-      switch (opt)
-        {
-        case MHD_OPTION_CONNECTION_MEMORY_LIMIT:
-          daemon->pool_size = va_arg (ap,
-                                      size_t);
-          break;
-        case MHD_OPTION_CONNECTION_MEMORY_INCREMENT:
-          daemon->pool_increment= va_arg (ap,
-                                          size_t);
-          break;
-        case MHD_OPTION_CONNECTION_LIMIT:
-          daemon->connection_limit = va_arg (ap,
-                                             unsigned int);
-          break;
-        case MHD_OPTION_CONNECTION_TIMEOUT:
-          uv = va_arg (ap,
-                       unsigned int);
-          daemon->connection_timeout = (time_t)uv;
-          /* Next comparison could be always false on some platforms and whole branch will
-           * be optimized out on those platforms. On others it will be compiled into real
-           * check. */
-          if ( ( (MHD_TYPE_IS_SIGNED_(time_t)) &&
-                 (daemon->connection_timeout < 0) ) || /* Compiler may warn on some platforms, ignore warning. */
-               (uv != (unsigned int)daemon->connection_timeout) )
-            {
+    case MHD_OPTION_CONNECTION_MEMORY_LIMIT:
+      daemon->pool_size = va_arg (ap,
+                                  size_t);
+      break;
+    case MHD_OPTION_CONNECTION_MEMORY_INCREMENT:
+      daemon->pool_increment = va_arg (ap,
+                                       size_t);
+      break;
+    case MHD_OPTION_CONNECTION_LIMIT:
+      daemon->connection_limit = va_arg (ap,
+                                         unsigned int);
+      break;
+    case MHD_OPTION_CONNECTION_TIMEOUT:
+      uv = va_arg (ap,
+                   unsigned int);
+      daemon->connection_timeout = (time_t) uv;
+      /* Next comparison could be always false on some platforms and whole branch will
+       * be optimized out on those platforms. On others it will be compiled into real
+       * check. */
+      if ( ( (MHD_TYPE_IS_SIGNED_ (time_t)) &&
+             (daemon->connection_timeout < 0) ) ||     /* Compiler may warn on some platforms, ignore warning. */
+           (uv != (unsigned int) daemon->connection_timeout) )
+      {
 #ifdef HAVE_MESSAGES
-              MHD_DLOG (daemon,
-                        _("Warning: Too large timeout value, ignored.\n"));
+        MHD_DLOG (daemon,
+                  _ ("Warning: Too large timeout value, ignored.\n"));
 #endif
-              daemon->connection_timeout = 0;
-            }
-          break;
-        case MHD_OPTION_NOTIFY_COMPLETED:
-          daemon->notify_completed = va_arg (ap,
-                                             MHD_RequestCompletedCallback);
-          daemon->notify_completed_cls = va_arg (ap,
-                                                 void *);
-          break;
-        case MHD_OPTION_NOTIFY_CONNECTION:
-          daemon->notify_connection = va_arg (ap,
-                                              MHD_NotifyConnectionCallback);
-          daemon->notify_connection_cls = va_arg (ap,
-                                                  void *);
-          break;
-        case MHD_OPTION_PER_IP_CONNECTION_LIMIT:
-          daemon->per_ip_connection_limit = va_arg (ap,
-                                                    unsigned int);
-          break;
-        case MHD_OPTION_SOCK_ADDR:
-          *servaddr = va_arg (ap,
-                              const struct sockaddr *);
-          break;
-        case MHD_OPTION_URI_LOG_CALLBACK:
-          daemon->uri_log_callback = va_arg (ap,
-                                             LogCallback);
-          daemon->uri_log_callback_cls = va_arg (ap,
-                                                 void *);
-          break;
+        daemon->connection_timeout = 0;
+      }
+      break;
+    case MHD_OPTION_NOTIFY_COMPLETED:
+      daemon->notify_completed = va_arg (ap,
+                                         MHD_RequestCompletedCallback);
+      daemon->notify_completed_cls = va_arg (ap,
+                                             void *);
+      break;
+    case MHD_OPTION_NOTIFY_CONNECTION:
+      daemon->notify_connection = va_arg (ap,
+                                          MHD_NotifyConnectionCallback);
+      daemon->notify_connection_cls = va_arg (ap,
+                                              void *);
+      break;
+    case MHD_OPTION_PER_IP_CONNECTION_LIMIT:
+      daemon->per_ip_connection_limit = va_arg (ap,
+                                                unsigned int);
+      break;
+    case MHD_OPTION_SOCK_ADDR:
+      *servaddr = va_arg (ap,
+                          const struct sockaddr *);
+      break;
+    case MHD_OPTION_URI_LOG_CALLBACK:
+      daemon->uri_log_callback = va_arg (ap,
+                                         LogCallback);
+      daemon->uri_log_callback_cls = va_arg (ap,
+                                             void *);
+      break;
+    case MHD_OPTION_SERVER_INSANITY:
+      daemon->insanity_level = (enum MHD_DisableSanityCheck)
+                               va_arg (ap,
+                                       unsigned int);
+      break;
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-        case MHD_OPTION_THREAD_POOL_SIZE:
-          daemon->worker_pool_size = va_arg (ap,
-                                             unsigned int);
-          if (0 == daemon->worker_pool_size)
-            {
+    case MHD_OPTION_THREAD_POOL_SIZE:
+      daemon->worker_pool_size = va_arg (ap,
+                                         unsigned int);
+      if (0 == daemon->worker_pool_size)
+      {
 #ifdef HAVE_MESSAGES
-              MHD_DLOG (daemon,
-                        _("Warning: Zero size, specified for thread pool size, is ignored. "
-                          "Thread pool is not used.\n"));
+        MHD_DLOG (daemon,
+                  _ (
+                    "Warning: Zero size, specified for thread pool size, is ignored. "
+                    "Thread pool is not used.\n"));
 #endif
-            }
-          else if (1 == daemon->worker_pool_size)
-            {
+      }
+      else if (1 == daemon->worker_pool_size)
+      {
 #ifdef HAVE_MESSAGES
-              MHD_DLOG (daemon,
-                        _("Warning: \"1\", specified for thread pool size, is ignored. "
-                          "Thread pool is not used.\n"));
+        MHD_DLOG (daemon,
+                  _ (
+                    "Warning: \"1\", specified for thread pool size, is ignored. "
+                    "Thread pool is not used.\n"));
 #endif
-              daemon->worker_pool_size = 0;
-            }
-          /* Next comparison could be always false on some platforms and whole branch will
-           * be optimized out on those platforms. On others it will be compiled into real
-           * check. */
-          else if (daemon->worker_pool_size >= (SIZE_MAX / sizeof (struct MHD_Daemon))) /* Compiler may warn on some platforms, ignore warning. */
-	    {
+        daemon->worker_pool_size = 0;
+      }
+      /* Next comparison could be always false on some platforms and whole branch will
+       * be optimized out on those platforms. On others it will be compiled into real
+       * check. */
+      else if (daemon->worker_pool_size >= (SIZE_MAX / sizeof (struct
+                                                               MHD_Daemon)))            /* Compiler may warn on some platforms, ignore warning. */
+      {
 #ifdef HAVE_MESSAGES
-	      MHD_DLOG (daemon,
-			_("Specified thread pool size (%u) too big\n"),
-			daemon->worker_pool_size);
+        MHD_DLOG (daemon,
+                  _ ("Specified thread pool size (%u) too big\n"),
+                  daemon->worker_pool_size);
 #endif
-	      return MHD_NO;
-	    }
-	  else
-	    {
-	      if (0 == (daemon->options & MHD_USE_INTERNAL_POLLING_THREAD))
-		{
+        return MHD_NO;
+      }
+      else
+      {
+        if (0 == (daemon->options & MHD_USE_INTERNAL_POLLING_THREAD))
+        {
 #ifdef HAVE_MESSAGES
-		  MHD_DLOG (daemon,
-			    _("MHD_OPTION_THREAD_POOL_SIZE option is specified but "
-			      "MHD_USE_INTERNAL_POLLING_THREAD flag is not specified.\n"));
+          MHD_DLOG (daemon,
+                    _ ("MHD_OPTION_THREAD_POOL_SIZE option is specified but "
+                       "MHD_USE_INTERNAL_POLLING_THREAD flag is not specified.\n"));
 #endif
-		  return MHD_NO;
-		}
-	      if (0 != (daemon->options & MHD_USE_THREAD_PER_CONNECTION))
-		{
+          return MHD_NO;
+        }
+        if (0 != (daemon->options & MHD_USE_THREAD_PER_CONNECTION))
+        {
 #ifdef HAVE_MESSAGES
-		  MHD_DLOG (daemon,
-			    _("Both MHD_OPTION_THREAD_POOL_SIZE option and "
-			      "MHD_USE_THREAD_PER_CONNECTION flag are specified.\n"));
+          MHD_DLOG (daemon,
+                    _ ("Both MHD_OPTION_THREAD_POOL_SIZE option and "
+                       "MHD_USE_THREAD_PER_CONNECTION flag are specified.\n"));
 #endif
-		  return MHD_NO;
-		}
-	    }
-          break;
+          return MHD_NO;
+        }
+      }
+      break;
 #endif
 #ifdef HTTPS_SUPPORT
-        case MHD_OPTION_HTTPS_MEM_KEY:
-          pstr = va_arg (ap,
-                         const char *);
-	  if (0 != (daemon->options & MHD_USE_TLS))
-	    daemon->https_mem_key = pstr;
+    case MHD_OPTION_HTTPS_MEM_KEY:
+      pstr = va_arg (ap,
+                     const char *);
+      if (0 != (daemon->options & MHD_USE_TLS))
+        daemon->https_mem_key = pstr;
 #ifdef HAVE_MESSAGES
-	  else
-	    MHD_DLOG (daemon,
-		      _("MHD HTTPS option %d passed to MHD but MHD_USE_TLS not set\n"),
-		      opt);
+      else
+        MHD_DLOG (daemon,
+                  _ (
+                    "MHD HTTPS option %d passed to MHD but MHD_USE_TLS not set\n"),
+                  opt);
 #endif
-          break;
-        case MHD_OPTION_HTTPS_KEY_PASSWORD:
-          pstr = va_arg (ap,
-                         const char *);
-	  if (0 != (daemon->options & MHD_USE_TLS))
-	    daemon->https_key_password = pstr;
+      break;
+    case MHD_OPTION_HTTPS_KEY_PASSWORD:
+      pstr = va_arg (ap,
+                     const char *);
+      if (0 != (daemon->options & MHD_USE_TLS))
+        daemon->https_key_password = pstr;
 #ifdef HAVE_MESSAGES
-	  else
-	    MHD_DLOG (daemon,
-		      _("MHD HTTPS option %d passed to MHD but MHD_USE_TLS not set\n"),
-		      opt);
+      else
+        MHD_DLOG (daemon,
+                  _ (
+                    "MHD HTTPS option %d passed to MHD but MHD_USE_TLS not set\n"),
+                  opt);
 #endif
-          break;
-        case MHD_OPTION_HTTPS_MEM_CERT:
-          pstr = va_arg (ap,
-                         const char *);
-	  if (0 != (daemon->options & MHD_USE_TLS))
-	    daemon->https_mem_cert = pstr;
+      break;
+    case MHD_OPTION_HTTPS_MEM_CERT:
+      pstr = va_arg (ap,
+                     const char *);
+      if (0 != (daemon->options & MHD_USE_TLS))
+        daemon->https_mem_cert = pstr;
 #ifdef HAVE_MESSAGES
-	  else
-	    MHD_DLOG (daemon,
-		      _("MHD HTTPS option %d passed to MHD but MHD_USE_TLS not set\n"),
-		      opt);
+      else
+        MHD_DLOG (daemon,
+                  _ (
+                    "MHD HTTPS option %d passed to MHD but MHD_USE_TLS not set\n"),
+                  opt);
 #endif
-          break;
-        case MHD_OPTION_HTTPS_MEM_TRUST:
-          pstr = va_arg (ap,
-                         const char *);
-	  if (0 != (daemon->options & MHD_USE_TLS))
-	    daemon->https_mem_trust = pstr;
+      break;
+    case MHD_OPTION_HTTPS_MEM_TRUST:
+      pstr = va_arg (ap,
+                     const char *);
+      if (0 != (daemon->options & MHD_USE_TLS))
+        daemon->https_mem_trust = pstr;
 #ifdef HAVE_MESSAGES
-	  else
-	    MHD_DLOG (daemon,
-		      _("MHD HTTPS option %d passed to MHD but MHD_USE_TLS not set\n"),
-		      opt);
+      else
+        MHD_DLOG (daemon,
+                  _ (
+                    "MHD HTTPS option %d passed to MHD but MHD_USE_TLS not set\n"),
+                  opt);
 #endif
-          break;
-	case MHD_OPTION_HTTPS_CRED_TYPE:
-	  daemon->cred_type = (gnutls_credentials_type_t) va_arg (ap,
-                                                                  int);
-	  break;
-        case MHD_OPTION_HTTPS_MEM_DHPARAMS:
-          pstr = va_arg (ap,
-                         const char *);
-          if (0 != (daemon->options & MHD_USE_TLS))
-            {
-              gnutls_datum_t dhpar;
-              size_t pstr_len;
+      break;
+    case MHD_OPTION_HTTPS_CRED_TYPE:
+      daemon->cred_type = (gnutls_credentials_type_t) va_arg (ap,
+                                                              int);
+      break;
+    case MHD_OPTION_HTTPS_MEM_DHPARAMS:
+      pstr = va_arg (ap,
+                     const char *);
+      if (0 != (daemon->options & MHD_USE_TLS))
+      {
+        gnutls_datum_t dhpar;
+        size_t pstr_len;
 
-              if (gnutls_dh_params_init (&daemon->https_mem_dhparams) < 0)
-                {
+        if (gnutls_dh_params_init (&daemon->https_mem_dhparams) < 0)
+        {
 #ifdef HAVE_MESSAGES
-                  MHD_DLOG (daemon,
-                            _("Error initializing DH parameters\n"));
+          MHD_DLOG (daemon,
+                    _ ("Error initializing DH parameters\n"));
 #endif
-                  return MHD_NO;
-                }
-              dhpar.data = (unsigned char *) pstr;
-              pstr_len = strlen (pstr);
-              if (UINT_MAX < pstr_len)
-                {
+          return MHD_NO;
+        }
+        dhpar.data = (unsigned char *) pstr;
+        pstr_len = strlen (pstr);
+        if (UINT_MAX < pstr_len)
+        {
 #ifdef HAVE_MESSAGES
-                  MHD_DLOG (daemon,
-                            _("Diffie-Hellman parameters string too long\n"));
+          MHD_DLOG (daemon,
+                    _ ("Diffie-Hellman parameters string too long\n"));
 #endif
-                  return MHD_NO;
-                }
-              dhpar.size = (unsigned int) pstr_len;
-              if (gnutls_dh_params_import_pkcs3 (daemon->https_mem_dhparams,
-                                                 &dhpar,
-                                                 GNUTLS_X509_FMT_PEM) < 0)
-                {
+          return MHD_NO;
+        }
+        dhpar.size = (unsigned int) pstr_len;
+        if (gnutls_dh_params_import_pkcs3 (daemon->https_mem_dhparams,
+                                           &dhpar,
+                                           GNUTLS_X509_FMT_PEM) < 0)
+        {
 #ifdef HAVE_MESSAGES
-                  MHD_DLOG (daemon,
-                            _("Bad Diffie-Hellman parameters format\n"));
+          MHD_DLOG (daemon,
+                    _ ("Bad Diffie-Hellman parameters format\n"));
 #endif
-                  gnutls_dh_params_deinit (daemon->https_mem_dhparams);
-                  return MHD_NO;
-                }
-              daemon->have_dhparams = true;
-            }
+          gnutls_dh_params_deinit (daemon->https_mem_dhparams);
+          return MHD_NO;
+        }
+        daemon->have_dhparams = true;
+      }
 #ifdef HAVE_MESSAGES
-          else
-              MHD_DLOG (daemon,
-                        _("MHD HTTPS option %d passed to MHD but MHD_USE_TLS not set\n"),
-                        opt);
+      else
+        MHD_DLOG (daemon,
+                  _ (
+                    "MHD HTTPS option %d passed to MHD but MHD_USE_TLS not set\n"),
+                  opt);
 #endif
-          break;
-        case MHD_OPTION_HTTPS_PRIORITIES:
-          pstr = va_arg (ap,
-                         const char *);
-	  if (0 != (daemon->options & MHD_USE_TLS))
-	    {
-	      gnutls_priority_deinit (daemon->priority_cache);
-	      ret = gnutls_priority_init (&daemon->priority_cache,
-					  pstr,
-					  NULL);
-	      if (GNUTLS_E_SUCCESS != ret)
-	      {
+      break;
+    case MHD_OPTION_HTTPS_PRIORITIES:
+      pstr = va_arg (ap,
+                     const char *);
+      if (0 != (daemon->options & MHD_USE_TLS))
+      {
+        gnutls_priority_deinit (daemon->priority_cache);
+        ret = gnutls_priority_init (&daemon->priority_cache,
+                                    pstr,
+                                    NULL);
+        if (GNUTLS_E_SUCCESS != ret)
+        {
 #ifdef HAVE_MESSAGES
-		MHD_DLOG (daemon,
-			  _("Setting priorities to `%s' failed: %s\n"),
-			  pstr,
-			  gnutls_strerror (ret));
+          MHD_DLOG (daemon,
+                    _ ("Setting priorities to `%s' failed: %s\n"),
+                    pstr,
+                    gnutls_strerror (ret));
 #endif
-		daemon->priority_cache = NULL;
-		return MHD_NO;
-	      }
-	    }
+          daemon->priority_cache = NULL;
+          return MHD_NO;
+        }
+      }
 #ifdef HAVE_MESSAGES
-          else
-              MHD_DLOG (daemon,
-                        _("MHD HTTPS option %d passed to MHD but MHD_USE_TLS not set\n"),
-                        opt);
+      else
+        MHD_DLOG (daemon,
+                  _ (
+                    "MHD HTTPS option %d passed to MHD but MHD_USE_TLS not set\n"),
+                  opt);
 #endif
-          break;
-        case MHD_OPTION_HTTPS_CERT_CALLBACK:
+      break;
+    case MHD_OPTION_HTTPS_CERT_CALLBACK:
 #if GNUTLS_VERSION_MAJOR < 3
 #ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("MHD_OPTION_HTTPS_CERT_CALLBACK requires building MHD with GnuTLS >= 3.0\n"));
+      MHD_DLOG (daemon,
+                _ (
+                  "MHD_OPTION_HTTPS_CERT_CALLBACK requires building MHD with GnuTLS >= 3.0\n"));
 #endif
-          return MHD_NO;
+      return MHD_NO;
 #else
-          pgcrf = va_arg (ap,
-                          gnutls_certificate_retrieve_function2 *);
-          if (0 != (daemon->options & MHD_USE_TLS))
-            daemon->cert_callback = pgcrf;
-          else
+      pgcrf = va_arg (ap,
+                      gnutls_certificate_retrieve_function2 *);
+      if (0 != (daemon->options & MHD_USE_TLS))
+        daemon->cert_callback = pgcrf;
+      else
 #ifdef HAVE_MESSAGES
-              MHD_DLOG (daemon,
-                        _("MHD HTTPS option %d passed to MHD but MHD_USE_TLS not set\n"),
-                        opt);
+        MHD_DLOG (daemon,
+                  _ (
+                    "MHD HTTPS option %d passed to MHD but MHD_USE_TLS not set\n"),
+                  opt);
 #endif
-          break;
+        break;
 #endif
-        case MHD_OPTION_HTTPS_CERT_CALLBACK2:
+    case MHD_OPTION_HTTPS_CERT_CALLBACK2:
 #if GNUTLS_VERSION_NUMBER < 0x030603
 #ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("MHD_OPTION_HTTPS_CERT_CALLBACK2 requires building MHD with GnuTLS >= 3.6.3\n"));
+      MHD_DLOG (daemon,
+                _ (
+                  "MHD_OPTION_HTTPS_CERT_CALLBACK2 requires building MHD with GnuTLS >= 3.6.3\n"));
 #endif
-          return MHD_NO;
+      return MHD_NO;
 #else
-          pgcrf2 = va_arg (ap,
-                          gnutls_certificate_retrieve_function3 *);
-          if (0 != (daemon->options & MHD_USE_TLS))
-            daemon->cert_callback2 = pgcrf2;
-          else
+      pgcrf2 = va_arg (ap,
+                       gnutls_certificate_retrieve_function3 *);
+      if (0 != (daemon->options & MHD_USE_TLS))
+        daemon->cert_callback2 = pgcrf2;
+      else
 #ifdef HAVE_MESSAGES
-              MHD_DLOG (daemon,
-                        _("MHD HTTPS option %d passed to MHD but MHD_USE_TLS not set\n"),
-                        opt);
+        MHD_DLOG (daemon,
+                  _ (
+                    "MHD HTTPS option %d passed to MHD but MHD_USE_TLS not set\n"),
+                  opt);
 #endif
-          break;
+        break;
 #endif
 #endif /* HTTPS_SUPPORT */
 #ifdef DAUTH_SUPPORT
-	case MHD_OPTION_DIGEST_AUTH_RANDOM:
-	  daemon->digest_auth_rand_size = va_arg (ap,
-                                                  size_t);
-	  daemon->digest_auth_random = va_arg (ap,
-                                               const char *);
-	  break;
-	case MHD_OPTION_NONCE_NC_SIZE:
-	  daemon->nonce_nc_size = va_arg (ap,
-                                          unsigned int);
-	  break;
-#endif
-	case MHD_OPTION_LISTEN_SOCKET:
-          if (0 != (daemon->options & MHD_USE_NO_LISTEN_SOCKET))
-            {
-#ifdef HAVE_MESSAGES
-                MHD_DLOG (daemon,
-                          _("MHD_OPTION_LISTEN_SOCKET specified for daemon "
-                            "with MHD_USE_NO_LISTEN_SOCKET flag set.\n"));
-#endif
-                return MHD_NO;
-            }
-          else
-            daemon->listen_fd = va_arg (ap,
-                                        MHD_socket);
-	  break;
-        case MHD_OPTION_EXTERNAL_LOGGER:
-#ifdef HAVE_MESSAGES
-          daemon->custom_error_log = va_arg (ap,
-                                             VfprintfFunctionPointerType);
-          daemon->custom_error_log_cls = va_arg (ap,
-                                                 void *);
-#else
-          va_arg (ap,
-                  VfprintfFunctionPointerType);
-          va_arg (ap,
-                  void *);
-#endif
-          break;
-#if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-        case MHD_OPTION_THREAD_STACK_SIZE:
-          daemon->thread_stack_size = va_arg (ap,
+    case MHD_OPTION_DIGEST_AUTH_RANDOM:
+      daemon->digest_auth_rand_size = va_arg (ap,
                                               size_t);
-          break;
+      daemon->digest_auth_random = va_arg (ap,
+                                           const char *);
+      break;
+    case MHD_OPTION_NONCE_NC_SIZE:
+      daemon->nonce_nc_size = va_arg (ap,
+                                      unsigned int);
+      break;
 #endif
-        case MHD_OPTION_TCP_FASTOPEN_QUEUE_SIZE:
+    case MHD_OPTION_LISTEN_SOCKET:
+      if (0 != (daemon->options & MHD_USE_NO_LISTEN_SOCKET))
+      {
+#ifdef HAVE_MESSAGES
+        MHD_DLOG (daemon,
+                  _ ("MHD_OPTION_LISTEN_SOCKET specified for daemon "
+                     "with MHD_USE_NO_LISTEN_SOCKET flag set.\n"));
+#endif
+        return MHD_NO;
+      }
+      else
+        daemon->listen_fd = va_arg (ap,
+                                    MHD_socket);
+      break;
+    case MHD_OPTION_EXTERNAL_LOGGER:
+#ifdef HAVE_MESSAGES
+      daemon->custom_error_log = va_arg (ap,
+                                         VfprintfFunctionPointerType);
+      daemon->custom_error_log_cls = va_arg (ap,
+                                             void *);
+#else
+      va_arg (ap,
+              VfprintfFunctionPointerType);
+      va_arg (ap,
+              void *);
+#endif
+      break;
+#if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
+    case MHD_OPTION_THREAD_STACK_SIZE:
+      daemon->thread_stack_size = va_arg (ap,
+                                          size_t);
+      break;
+#endif
+    case MHD_OPTION_TCP_FASTOPEN_QUEUE_SIZE:
 #ifdef TCP_FASTOPEN
-          daemon->fastopen_queue_size = va_arg (ap,
-                                                unsigned int);
-          break;
+      daemon->fastopen_queue_size = va_arg (ap,
+                                            unsigned int);
+      break;
 #else  /* ! TCP_FASTOPEN */
 #ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("TCP fastopen is not supported on this platform\n"));
-          return MHD_NO;
+      MHD_DLOG (daemon,
+                _ ("TCP fastopen is not supported on this platform\n"));
+      return MHD_NO;
 #endif /* HAVE_MESSAGES */
 #endif /* ! TCP_FASTOPEN */
-	case MHD_OPTION_LISTENING_ADDRESS_REUSE:
-	  daemon->listening_address_reuse = va_arg (ap,
-                                                    unsigned int) ? 1 : -1;
-	  break;
-	case MHD_OPTION_LISTEN_BACKLOG_SIZE:
-	  daemon->listen_backlog_size = va_arg (ap,
-                                                unsigned int);
-	  break;
-	case MHD_OPTION_STRICT_FOR_CLIENT:
-          daemon->strict_for_client = va_arg (ap, int);
+    case MHD_OPTION_LISTENING_ADDRESS_REUSE:
+      daemon->listening_address_reuse = va_arg (ap,
+                                                unsigned int) ? 1 : -1;
+      break;
+    case MHD_OPTION_LISTEN_BACKLOG_SIZE:
+      daemon->listen_backlog_size = va_arg (ap,
+                                            unsigned int);
+      break;
+    case MHD_OPTION_STRICT_FOR_CLIENT:
+      daemon->strict_for_client = va_arg (ap, int);
 #ifdef HAVE_MESSAGES
-	  if ( (0 != (daemon->options & MHD_USE_PEDANTIC_CHECKS)) &&
-	       (1 != daemon->strict_for_client) )
-            {
-              MHD_DLOG (daemon,
-                        _("Flag MHD_USE_PEDANTIC_CHECKS is ignored because "
-                          "another behavior is specified by MHD_OPTION_STRICT_CLIENT.\n"));
-            }
+      if ( (0 != (daemon->options & MHD_USE_PEDANTIC_CHECKS)) &&
+           (1 != daemon->strict_for_client) )
+      {
+        MHD_DLOG (daemon,
+                  _ ("Flag MHD_USE_PEDANTIC_CHECKS is ignored because "
+                     "another behavior is specified by MHD_OPTION_STRICT_CLIENT.\n"));
+      }
 #endif /* HAVE_MESSAGES */
-	  break;
-	case MHD_OPTION_ARRAY:
-	  oa = va_arg (ap, struct MHD_OptionItem*);
-	  i = 0;
-	  while (MHD_OPTION_END != (opt = oa[i].option))
-	    {
-	      switch (opt)
-		{
-		  /* all options taking 'size_t' */
-		case MHD_OPTION_CONNECTION_MEMORY_LIMIT:
-		case MHD_OPTION_CONNECTION_MEMORY_INCREMENT:
-		case MHD_OPTION_THREAD_STACK_SIZE:
-		  if (MHD_YES != parse_options (daemon,
-						servaddr,
-						opt,
-						(size_t) oa[i].value,
-						MHD_OPTION_END))
-		    return MHD_NO;
-		  break;
-		  /* all options taking 'unsigned int' */
-		case MHD_OPTION_NONCE_NC_SIZE:
-		case MHD_OPTION_CONNECTION_LIMIT:
-		case MHD_OPTION_CONNECTION_TIMEOUT:
-		case MHD_OPTION_PER_IP_CONNECTION_LIMIT:
-		case MHD_OPTION_THREAD_POOL_SIZE:
-                case MHD_OPTION_TCP_FASTOPEN_QUEUE_SIZE:
-		case MHD_OPTION_LISTENING_ADDRESS_REUSE:
-		case MHD_OPTION_LISTEN_BACKLOG_SIZE:
-		  if (MHD_YES != parse_options (daemon,
-						servaddr,
-						opt,
-						(unsigned int) oa[i].value,
-						MHD_OPTION_END))
-		    return MHD_NO;
-		  break;
-		  /* all options taking 'enum' */
+      break;
+    case MHD_OPTION_ARRAY:
+      oa = va_arg (ap, struct MHD_OptionItem*);
+      i = 0;
+      while (MHD_OPTION_END != (opt = oa[i].option))
+      {
+        switch (opt)
+        {
+        /* all options taking 'size_t' */
+        case MHD_OPTION_CONNECTION_MEMORY_LIMIT:
+        case MHD_OPTION_CONNECTION_MEMORY_INCREMENT:
+        case MHD_OPTION_THREAD_STACK_SIZE:
+          if (MHD_YES != parse_options (daemon,
+                                        servaddr,
+                                        opt,
+                                        (size_t) oa[i].value,
+                                        MHD_OPTION_END))
+            return MHD_NO;
+          break;
+        /* all options taking 'unsigned int' */
+        case MHD_OPTION_NONCE_NC_SIZE:
+        case MHD_OPTION_CONNECTION_LIMIT:
+        case MHD_OPTION_CONNECTION_TIMEOUT:
+        case MHD_OPTION_PER_IP_CONNECTION_LIMIT:
+        case MHD_OPTION_THREAD_POOL_SIZE:
+        case MHD_OPTION_TCP_FASTOPEN_QUEUE_SIZE:
+        case MHD_OPTION_LISTENING_ADDRESS_REUSE:
+        case MHD_OPTION_LISTEN_BACKLOG_SIZE:
+        case MHD_OPTION_SERVER_INSANITY:
+          if (MHD_YES != parse_options (daemon,
+                                        servaddr,
+                                        opt,
+                                        (unsigned int) oa[i].value,
+                                        MHD_OPTION_END))
+            return MHD_NO;
+          break;
+          /* all options taking 'enum' */
 #ifdef HTTPS_SUPPORT
-		case MHD_OPTION_HTTPS_CRED_TYPE:
-		  if (MHD_YES != parse_options (daemon,
-						servaddr,
-						opt,
-						(gnutls_credentials_type_t) oa[i].value,
-						MHD_OPTION_END))
-		    return MHD_NO;
-		  break;
+        case MHD_OPTION_HTTPS_CRED_TYPE:
+          if (MHD_YES != parse_options (daemon,
+                                        servaddr,
+                                        opt,
+                                        (gnutls_credentials_type_t) oa[i].value,
+                                        MHD_OPTION_END))
+            return MHD_NO;
+          break;
 #endif /* HTTPS_SUPPORT */
-                  /* all options taking 'MHD_socket' */
-                case MHD_OPTION_LISTEN_SOCKET:
-                  if (MHD_YES != parse_options (daemon,
-                                                servaddr,
-                                                opt,
-                                                (MHD_socket) oa[i].value,
-                                                MHD_OPTION_END))
-                    return MHD_NO;
-                  break;
-                  /* all options taking 'int' */
-                case MHD_OPTION_STRICT_FOR_CLIENT:
-                  if (MHD_YES != parse_options (daemon,
-                                                servaddr,
-                                                opt,
-                                                (int) oa[i].value,
-                                                MHD_OPTION_END))
-                    return MHD_NO;
-                  break;
-		  /* all options taking one pointer */
-		case MHD_OPTION_SOCK_ADDR:
-		case MHD_OPTION_HTTPS_MEM_KEY:
-		case MHD_OPTION_HTTPS_KEY_PASSWORD:
-		case MHD_OPTION_HTTPS_MEM_CERT:
-		case MHD_OPTION_HTTPS_MEM_TRUST:
-	        case MHD_OPTION_HTTPS_MEM_DHPARAMS:
-		case MHD_OPTION_HTTPS_PRIORITIES:
-		case MHD_OPTION_ARRAY:
-                case MHD_OPTION_HTTPS_CERT_CALLBACK:
-                case MHD_OPTION_HTTPS_CERT_CALLBACK2:
-		  if (MHD_YES != parse_options (daemon,
-						servaddr,
-						opt,
-						oa[i].ptr_value,
-						MHD_OPTION_END))
-		    return MHD_NO;
-		  break;
-		  /* all options taking two pointers */
-		case MHD_OPTION_NOTIFY_COMPLETED:
-		case MHD_OPTION_NOTIFY_CONNECTION:
-		case MHD_OPTION_URI_LOG_CALLBACK:
-		case MHD_OPTION_EXTERNAL_LOGGER:
-		case MHD_OPTION_UNESCAPE_CALLBACK:
-		case MHD_OPTION_GNUTLS_PSK_CRED_HANDLER:
-		  if (MHD_YES != parse_options (daemon,
-						servaddr,
-						opt,
-						(void *) oa[i].value,
-						oa[i].ptr_value,
-						MHD_OPTION_END))
-		    return MHD_NO;
-		  break;
-		  /* options taking size_t-number followed by pointer */
-		case MHD_OPTION_DIGEST_AUTH_RANDOM:
-		  if (MHD_YES != parse_options (daemon,
-						servaddr,
-						opt,
-						(size_t) oa[i].value,
-						oa[i].ptr_value,
-						MHD_OPTION_END))
-		    return MHD_NO;
-		  break;
-		default:
-		  return MHD_NO;
-		}
-	      i++;
-	    }
-	  break;
+        /* all options taking 'MHD_socket' */
+        case MHD_OPTION_LISTEN_SOCKET:
+          if (MHD_YES != parse_options (daemon,
+                                        servaddr,
+                                        opt,
+                                        (MHD_socket) oa[i].value,
+                                        MHD_OPTION_END))
+            return MHD_NO;
+          break;
+        /* all options taking 'int' */
+        case MHD_OPTION_STRICT_FOR_CLIENT:
+          if (MHD_YES != parse_options (daemon,
+                                        servaddr,
+                                        opt,
+                                        (int) oa[i].value,
+                                        MHD_OPTION_END))
+            return MHD_NO;
+          break;
+        /* all options taking one pointer */
+        case MHD_OPTION_SOCK_ADDR:
+        case MHD_OPTION_HTTPS_MEM_KEY:
+        case MHD_OPTION_HTTPS_KEY_PASSWORD:
+        case MHD_OPTION_HTTPS_MEM_CERT:
+        case MHD_OPTION_HTTPS_MEM_TRUST:
+        case MHD_OPTION_HTTPS_MEM_DHPARAMS:
+        case MHD_OPTION_HTTPS_PRIORITIES:
+        case MHD_OPTION_ARRAY:
+        case MHD_OPTION_HTTPS_CERT_CALLBACK:
+        case MHD_OPTION_HTTPS_CERT_CALLBACK2:
+          if (MHD_YES != parse_options (daemon,
+                                        servaddr,
+                                        opt,
+                                        oa[i].ptr_value,
+                                        MHD_OPTION_END))
+            return MHD_NO;
+          break;
+        /* all options taking two pointers */
+        case MHD_OPTION_NOTIFY_COMPLETED:
+        case MHD_OPTION_NOTIFY_CONNECTION:
+        case MHD_OPTION_URI_LOG_CALLBACK:
+        case MHD_OPTION_EXTERNAL_LOGGER:
         case MHD_OPTION_UNESCAPE_CALLBACK:
-          daemon->unescape_callback = va_arg (ap,
-                                              UnescapeCallback);
-          daemon->unescape_callback_cls = va_arg (ap,
-                                                  void *);
-          break;
-#ifdef HTTPS_SUPPORT
         case MHD_OPTION_GNUTLS_PSK_CRED_HANDLER:
-#if GNUTLS_VERSION_MAJOR >= 3
-          daemon->cred_callback = va_arg (ap,
-                                          MHD_PskServerCredentialsCallback);
-	  daemon->cred_callback_cls = va_arg (ap,
-					      void *);
+          if (MHD_YES != parse_options (daemon,
+                                        servaddr,
+                                        opt,
+                                        (void *) oa[i].value,
+                                        oa[i].ptr_value,
+                                        MHD_OPTION_END))
+            return MHD_NO;
           break;
-#else
-          MHD_DLOG (daemon,
-                    _("MHD HTTPS option %d passed to MHD compiled without GNUtls >= 3\n"),
-                    opt);
+        /* options taking size_t-number followed by pointer */
+        case MHD_OPTION_DIGEST_AUTH_RANDOM:
+          if (MHD_YES != parse_options (daemon,
+                                        servaddr,
+                                        opt,
+                                        (size_t) oa[i].value,
+                                        oa[i].ptr_value,
+                                        MHD_OPTION_END))
+            return MHD_NO;
+          break;
+        default:
           return MHD_NO;
+        }
+        i++;
+      }
+      break;
+    case MHD_OPTION_UNESCAPE_CALLBACK:
+      daemon->unescape_callback = va_arg (ap,
+                                          UnescapeCallback);
+      daemon->unescape_callback_cls = va_arg (ap,
+                                              void *);
+      break;
+#ifdef HTTPS_SUPPORT
+    case MHD_OPTION_GNUTLS_PSK_CRED_HANDLER:
+#if GNUTLS_VERSION_MAJOR >= 3
+      daemon->cred_callback = va_arg (ap,
+                                      MHD_PskServerCredentialsCallback);
+      daemon->cred_callback_cls = va_arg (ap,
+                                          void *);
+      break;
+#else
+      MHD_DLOG (daemon,
+                _ (
+                  "MHD HTTPS option %d passed to MHD compiled without GNUtls >= 3\n"),
+                opt);
+      return MHD_NO;
 #endif
 #endif /* HTTPS_SUPPORT */
-        default:
+    default:
 #ifdef HAVE_MESSAGES
-          if ( ( (opt >= MHD_OPTION_HTTPS_MEM_KEY) &&
-                 (opt <= MHD_OPTION_HTTPS_PRIORITIES) ) ||
-               (opt == MHD_OPTION_HTTPS_MEM_TRUST) ||
-			   (opt == MHD_OPTION_GNUTLS_PSK_CRED_HANDLER) )
-            {
-              MHD_DLOG (daemon,
-			_("MHD HTTPS option %d passed to MHD compiled without HTTPS support\n"),
-			opt);
-            }
-          else
-            {
-              MHD_DLOG (daemon,
-			_("Invalid option %d! (Did you terminate the list with MHD_OPTION_END?)\n"),
-			opt);
-            }
+      if ( ( (opt >= MHD_OPTION_HTTPS_MEM_KEY) &&
+             (opt <= MHD_OPTION_HTTPS_PRIORITIES) ) ||
+           (opt == MHD_OPTION_HTTPS_MEM_TRUST) ||
+           (opt == MHD_OPTION_GNUTLS_PSK_CRED_HANDLER) )
+      {
+        MHD_DLOG (daemon,
+                  _ (
+                    "MHD HTTPS option %d passed to MHD compiled without HTTPS support\n"),
+                  opt);
+      }
+      else
+      {
+        MHD_DLOG (daemon,
+                  _ (
+                    "Invalid option %d! (Did you terminate the list with MHD_OPTION_END?)\n"),
+                  opt);
+      }
 #endif
-	  return MHD_NO;
-        }
+      return MHD_NO;
     }
+  }
   return MHD_YES;
 }
 
@@ -5476,7 +5551,7 @@ setup_epoll_fd (struct MHD_Daemon *daemon)
   int fd;
 
 #ifndef HAVE_MESSAGES
-  (void)daemon; /* Mute compiler warning. */
+  (void) daemon; /* Mute compiler warning. */
 #endif /* ! HAVE_MESSAGES */
 
 #ifdef USE_EPOLL_CREATE1
@@ -5485,22 +5560,22 @@ setup_epoll_fd (struct MHD_Daemon *daemon)
   fd = epoll_create (MAX_EVENTS);
 #endif /* ! USE_EPOLL_CREATE1 */
   if (MHD_INVALID_SOCKET == fd)
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("Call to epoll_create1 failed: %s\n"),
-                MHD_socket_last_strerr_ ());
+    MHD_DLOG (daemon,
+              _ ("Call to epoll_create1 failed: %s\n"),
+              MHD_socket_last_strerr_ ());
 #endif
-      return MHD_INVALID_SOCKET;
-    }
-#if !defined(USE_EPOLL_CREATE1)
+    return MHD_INVALID_SOCKET;
+  }
+#if ! defined(USE_EPOLL_CREATE1)
   if (! MHD_socket_noninheritable_ (fd))
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("Failed to set noninheritable mode on epoll FD.\n"));
+    MHD_DLOG (daemon,
+              _ ("Failed to set noninheritable mode on epoll FD.\n"));
 #endif
-    }
+  }
 #endif /* ! USE_EPOLL_CREATE1 */
   return fd;
 }
@@ -5526,11 +5601,11 @@ setup_epoll_to_listen (struct MHD_Daemon *daemon)
     return MHD_NO;
 #if defined(HTTPS_SUPPORT) && defined(UPGRADE_SUPPORT)
   if (0 != (MHD_ALLOW_UPGRADE & daemon->options))
-    {
-       daemon->epoll_upgrade_fd = setup_epoll_fd (daemon);
-       if (MHD_INVALID_SOCKET == daemon->epoll_upgrade_fd)
-         return MHD_NO;
-    }
+  {
+    daemon->epoll_upgrade_fd = setup_epoll_fd (daemon);
+    if (MHD_INVALID_SOCKET == daemon->epoll_upgrade_fd)
+      return MHD_NO;
+  }
 #endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
   if ( (MHD_INVALID_SOCKET == (ls = daemon->listen_fd)) ||
        (daemon->was_quiesced) )
@@ -5538,35 +5613,35 @@ setup_epoll_to_listen (struct MHD_Daemon *daemon)
   event.events = EPOLLIN;
   event.data.ptr = daemon;
   if (0 != epoll_ctl (daemon->epoll_fd,
-		      EPOLL_CTL_ADD,
-		      ls,
-		      &event))
+                      EPOLL_CTL_ADD,
+                      ls,
+                      &event))
+  {
+#ifdef HAVE_MESSAGES
+    MHD_DLOG (daemon,
+              _ ("Call to epoll_ctl failed: %s\n"),
+              MHD_socket_last_strerr_ ());
+#endif
+    return MHD_NO;
+  }
+  daemon->listen_socket_in_epoll = true;
+  if (MHD_ITC_IS_VALID_ (daemon->itc))
+  {
+    event.events = EPOLLIN;
+    event.data.ptr = (void *) epoll_itc_marker;
+    if (0 != epoll_ctl (daemon->epoll_fd,
+                        EPOLL_CTL_ADD,
+                        MHD_itc_r_fd_ (daemon->itc),
+                        &event))
     {
 #ifdef HAVE_MESSAGES
       MHD_DLOG (daemon,
-                _("Call to epoll_ctl failed: %s\n"),
+                _ ("Call to epoll_ctl failed: %s\n"),
                 MHD_socket_last_strerr_ ());
 #endif
       return MHD_NO;
     }
-  daemon->listen_socket_in_epoll = true;
-  if (MHD_ITC_IS_VALID_(daemon->itc))
-    {
-      event.events = EPOLLIN;
-      event.data.ptr = (void *) epoll_itc_marker;
-      if (0 != epoll_ctl (daemon->epoll_fd,
-                          EPOLL_CTL_ADD,
-                          MHD_itc_r_fd_ (daemon->itc),
-                          &event))
-        {
-#ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("Call to epoll_ctl failed: %s\n"),
-                    MHD_socket_last_strerr_ ());
-#endif
-          return MHD_NO;
-        }
-    }
+  }
   return MHD_YES;
 }
 #endif
@@ -5600,7 +5675,7 @@ MHD_start_daemon_va (unsigned int flags,
                      void *apc_cls,
                      MHD_AccessHandlerCallback dh,
                      void *dh_cls,
-		     va_list ap)
+                     va_list ap)
 {
   const MHD_SCKT_OPT_BOOL_ on = 1;
   struct MHD_Daemon *daemon;
@@ -5617,7 +5692,7 @@ MHD_start_daemon_va (unsigned int flags,
   enum MHD_FLAG eflags; /* same type as in MHD_Daemon */
   enum MHD_FLAG *pflags;
 
-  MHD_check_global_init_();
+  MHD_check_global_init_ ();
   eflags = (enum MHD_FLAG) flags;
   pflags = &eflags;
 #ifndef HAVE_INET6
@@ -5641,56 +5716,61 @@ MHD_start_daemon_va (unsigned int flags,
     return NULL;
 #endif
   if (0 != (*pflags & MHD_ALLOW_UPGRADE))
-    {
+  {
 #ifdef UPGRADE_SUPPORT
-      *pflags |= MHD_ALLOW_SUSPEND_RESUME;
+    *pflags |= MHD_ALLOW_SUSPEND_RESUME;
 #else  /* ! UPGRADE_SUPPORT */
-      return NULL;
+    return NULL;
 #endif /* ! UPGRADE_SUPPORT */
-    }
+  }
   if (NULL == dh)
     return NULL;
 
   /* Check for invalid combinations of flags. */
   if ( ((0 != (*pflags & MHD_USE_POLL)) && (0 != (*pflags & MHD_USE_EPOLL))) ||
-       ((0 != (*pflags & MHD_USE_EPOLL)) && (0 != (*pflags & MHD_USE_THREAD_PER_CONNECTION))) ||
+       ((0 != (*pflags & MHD_USE_EPOLL)) && (0 != (*pflags
+                                                   &
+                                                   MHD_USE_THREAD_PER_CONNECTION)))
+       ||
        ((0 != (*pflags & MHD_USE_POLL)) &&
-           (0 == (*pflags & (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_THREAD_PER_CONNECTION)))) ||
-       ((0 != (*pflags & MHD_USE_AUTO)) && (0 != (*pflags & (MHD_USE_POLL | MHD_USE_EPOLL)))) )
+        (0 == (*pflags & (MHD_USE_INTERNAL_POLLING_THREAD
+                          | MHD_USE_THREAD_PER_CONNECTION)))) ||
+       ((0 != (*pflags & MHD_USE_AUTO)) && (0 != (*pflags & (MHD_USE_POLL
+                                                             | MHD_USE_EPOLL)))) )
     return NULL;
 
   if (0 != (*pflags & MHD_USE_AUTO))
+  {
+    if (0 != (*pflags & MHD_USE_THREAD_PER_CONNECTION))
     {
-      if (0 != (*pflags & MHD_USE_THREAD_PER_CONNECTION))
-        {
-          /* Thread per connection with internal polling thread. */
+      /* Thread per connection with internal polling thread. */
 #ifdef HAVE_POLL
-          *pflags |= MHD_USE_POLL;
+      *pflags |= MHD_USE_POLL;
 #else  /* ! HAVE_POLL */
-          /* use select() - do not modify flags */
+       /* use select() - do not modify flags */
 #endif /* ! HAVE_POLL */
-        }
-      else if (0 != (*pflags & MHD_USE_INTERNAL_POLLING_THREAD))
-        {
-          /* Internal polling thread. */
-#if defined(EPOLL_SUPPORT)
-          *pflags |= MHD_USE_EPOLL;
-#elif defined(HAVE_POLL)
-          *pflags |= MHD_USE_POLL;
-#else  /* !HAVE_POLL && !EPOLL_SUPPORT */
-          /* use select() - do not modify flags */
-#endif /* !HAVE_POLL && !EPOLL_SUPPORT */
-        }
-      else
-        {
-          /* Internal threads are not used - "external" polling mode. */
-#if defined(EPOLL_SUPPORT)
-          *pflags |= MHD_USE_EPOLL;
-#else  /* ! EPOLL_SUPPORT */
-          /* use select() - do not modify flags */
-#endif /* ! EPOLL_SUPPORT */
-        }
     }
+    else if (0 != (*pflags & MHD_USE_INTERNAL_POLLING_THREAD))
+    {
+      /* Internal polling thread. */
+#if defined(EPOLL_SUPPORT)
+      *pflags |= MHD_USE_EPOLL;
+#elif defined(HAVE_POLL)
+      *pflags |= MHD_USE_POLL;
+#else  /* !HAVE_POLL && !EPOLL_SUPPORT */
+       /* use select() - do not modify flags */
+#endif /* !HAVE_POLL && !EPOLL_SUPPORT */
+    }
+    else
+    {
+      /* Internal threads are not used - "external" polling mode. */
+#if defined(EPOLL_SUPPORT)
+      *pflags |= MHD_USE_EPOLL;
+#else  /* ! EPOLL_SUPPORT */
+       /* use select() - do not modify flags */
+#endif /* ! EPOLL_SUPPORT */
+    }
+  }
 
   if (NULL == (daemon = MHD_calloc_ (1, sizeof (struct MHD_Daemon))))
     return NULL;
@@ -5704,17 +5784,18 @@ MHD_start_daemon_va (unsigned int flags,
 #ifdef HTTPS_SUPPORT
   daemon->priority_cache = NULL;
   if (0 != (*pflags & MHD_USE_TLS))
-    {
-      gnutls_priority_init (&daemon->priority_cache,
-			    "NORMAL",
-			    NULL);
-    }
+  {
+    gnutls_priority_init (&daemon->priority_cache,
+                          "NORMAL",
+                          NULL);
+  }
 #endif /* HTTPS_SUPPORT */
   daemon->listen_fd = MHD_INVALID_SOCKET;
   daemon->listening_address_reuse = 0;
   daemon->options = *pflags;
   pflags = &daemon->options;
-  daemon->strict_for_client = (0 != (*pflags & MHD_USE_PEDANTIC_CHECKS)) ? 1 : 0;
+  daemon->strict_for_client = (0 != (*pflags & MHD_USE_PEDANTIC_CHECKS)) ? 1 :
+                              0;
   daemon->port = port;
   daemon->apc = apc;
   daemon->apc_cls = apc_cls;
@@ -5738,24 +5819,25 @@ MHD_start_daemon_va (unsigned int flags,
 #endif
   if ( (0 != (*pflags & MHD_USE_THREAD_PER_CONNECTION)) &&
        (0 == (*pflags & MHD_USE_INTERNAL_POLLING_THREAD)) )
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("Warning: MHD_USE_THREAD_PER_CONNECTION must be used only with "
-                  "MHD_USE_INTERNAL_POLLING_THREAD. Flag MHD_USE_INTERNAL_POLLING_THREAD "
-                   "was added. Consider setting MHD_USE_INTERNAL_POLLING_THREAD explicitly.\n"));
+    MHD_DLOG (daemon,
+              _ (
+                "Warning: MHD_USE_THREAD_PER_CONNECTION must be used only with "
+                "MHD_USE_INTERNAL_POLLING_THREAD. Flag MHD_USE_INTERNAL_POLLING_THREAD "
+                "was added. Consider setting MHD_USE_INTERNAL_POLLING_THREAD explicitly.\n"));
 #endif
-      *pflags |= MHD_USE_INTERNAL_POLLING_THREAD;
-    }
+    *pflags |= MHD_USE_INTERNAL_POLLING_THREAD;
+  }
   if (0 == (*pflags & MHD_USE_INTERNAL_POLLING_THREAD))
     *pflags &= ~MHD_USE_ITC; /* useless if we are using 'external' select */
   else
-    {
+  {
 #ifdef HAVE_LISTEN_SHUTDOWN
-      if (0 != (*pflags & MHD_USE_NO_LISTEN_SOCKET))
+    if (0 != (*pflags & MHD_USE_NO_LISTEN_SOCKET))
 #endif
-        *pflags |= MHD_USE_ITC; /* yes, must use ITC to signal thread */
-    }
+    *pflags |= MHD_USE_ITC;     /* yes, must use ITC to signal thread */
+  }
 #ifdef DAUTH_SUPPORT
   daemon->digest_auth_rand_size = 0;
   daemon->digest_auth_random = NULL;
@@ -5763,24 +5845,24 @@ MHD_start_daemon_va (unsigned int flags,
 #endif
 #ifdef HTTPS_SUPPORT
   if (0 != (*pflags & MHD_USE_TLS))
-    {
-      daemon->cred_type = GNUTLS_CRD_CERTIFICATE;
-    }
+  {
+    daemon->cred_type = GNUTLS_CRD_CERTIFICATE;
+  }
 #endif /* HTTPS_SUPPORT */
 
 
   if (MHD_YES != parse_options_va (daemon,
                                    &servaddr,
                                    ap))
-    {
+  {
 #ifdef HTTPS_SUPPORT
-      if ( (0 != (*pflags & MHD_USE_TLS)) &&
-	   (NULL != daemon->priority_cache) )
-	gnutls_priority_deinit (daemon->priority_cache);
+    if ( (0 != (*pflags & MHD_USE_TLS)) &&
+         (NULL != daemon->priority_cache) )
+      gnutls_priority_deinit (daemon->priority_cache);
 #endif /* HTTPS_SUPPORT */
-      free (daemon);
-      return NULL;
-    }
+    free (daemon);
+    return NULL;
+  }
 
   if ( (NULL != daemon->notify_completed) &&
        (0 != (daemon->options & MHD_USE_THREAD_PER_CONNECTION)) )
@@ -5789,7 +5871,7 @@ MHD_start_daemon_va (unsigned int flags,
 #ifndef NDEBUG
 #ifdef HAVE_MESSAGES
   MHD_DLOG (daemon,
-	    _("Using debug build of libmicrohttpd.\n") );
+            _ ("Using debug build of libmicrohttpd.\n") );
 #endif /* HAVE_MESSAGES */
 #endif /* ! NDEBUG */
 
@@ -5798,467 +5880,471 @@ MHD_start_daemon_va (unsigned int flags,
        && (0 == daemon->worker_pool_size)
 #endif
        )
-    {
-      if (! MHD_itc_init_ (daemon->itc))
-        {
-#ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("Failed to create inter-thread communication channel: %s\n"),
-                    MHD_itc_last_strerror_ ());
-#endif
-#ifdef HTTPS_SUPPORT
-          if (NULL != daemon->priority_cache)
-            gnutls_priority_deinit (daemon->priority_cache);
-#endif /* HTTPS_SUPPORT */
-          free (daemon);
-          return NULL;
-        }
-      if ( (0 == (*pflags & (MHD_USE_POLL | MHD_USE_EPOLL))) &&
-           (! MHD_SCKT_FD_FITS_FDSET_(MHD_itc_r_fd_ (daemon->itc),
-                                      NULL)) )
-        {
-#ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("file descriptor for inter-thread communication channel exceeds maximum value\n"));
-#endif
-          MHD_itc_destroy_chk_ (daemon->itc);
-#ifdef HTTPS_SUPPORT
-          if (NULL != daemon->priority_cache)
-            gnutls_priority_deinit (daemon->priority_cache);
-#endif /* HTTPS_SUPPORT */
-          free (daemon);
-          return NULL;
-        }
-    }
-
-#ifdef DAUTH_SUPPORT
-  if (daemon->nonce_nc_size > 0)
-    {
-      if ( ( (size_t) (daemon->nonce_nc_size * sizeof (struct MHD_NonceNc))) /
-	   sizeof(struct MHD_NonceNc) != daemon->nonce_nc_size)
-	{
-#ifdef HAVE_MESSAGES
-	  MHD_DLOG (daemon,
-		    _("Specified value for NC_SIZE too large\n"));
-#endif
-#ifdef HTTPS_SUPPORT
-	  if (0 != (*pflags & MHD_USE_TLS))
-	    gnutls_priority_deinit (daemon->priority_cache);
-#endif /* HTTPS_SUPPORT */
-	  free (daemon);
-	  return NULL;
-	}
-      daemon->nnc = malloc (daemon->nonce_nc_size * sizeof (struct MHD_NonceNc));
-      if (NULL == daemon->nnc)
-	{
-#ifdef HAVE_MESSAGES
-	  MHD_DLOG (daemon,
-		    _("Failed to allocate memory for nonce-nc map: %s\n"),
-		    MHD_strerror_ (errno));
-#endif
-#ifdef HTTPS_SUPPORT
-	  if (0 != (*pflags & MHD_USE_TLS))
-	    gnutls_priority_deinit (daemon->priority_cache);
-#endif /* HTTPS_SUPPORT */
-	  free (daemon);
-	  return NULL;
-	}
-    }
-
-#if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-  if (! MHD_mutex_init_ (&daemon->nnc_lock))
+  {
+    if (! MHD_itc_init_ (daemon->itc))
     {
 #ifdef HAVE_MESSAGES
       MHD_DLOG (daemon,
-		_("MHD failed to initialize nonce-nc mutex\n"));
+                _ ("Failed to create inter-thread communication channel: %s\n"),
+                MHD_itc_last_strerror_ ());
 #endif
 #ifdef HTTPS_SUPPORT
-      if (0 != (*pflags & MHD_USE_TLS))
-	gnutls_priority_deinit (daemon->priority_cache);
+      if (NULL != daemon->priority_cache)
+        gnutls_priority_deinit (daemon->priority_cache);
 #endif /* HTTPS_SUPPORT */
-      free (daemon->nnc);
       free (daemon);
       return NULL;
     }
+    if ( (0 == (*pflags & (MHD_USE_POLL | MHD_USE_EPOLL))) &&
+         (! MHD_SCKT_FD_FITS_FDSET_ (MHD_itc_r_fd_ (daemon->itc),
+                                     NULL)) )
+    {
+#ifdef HAVE_MESSAGES
+      MHD_DLOG (daemon,
+                _ (
+                  "file descriptor for inter-thread communication channel exceeds maximum value\n"));
+#endif
+      MHD_itc_destroy_chk_ (daemon->itc);
+#ifdef HTTPS_SUPPORT
+      if (NULL != daemon->priority_cache)
+        gnutls_priority_deinit (daemon->priority_cache);
+#endif /* HTTPS_SUPPORT */
+      free (daemon);
+      return NULL;
+    }
+  }
+
+#ifdef DAUTH_SUPPORT
+  if (daemon->nonce_nc_size > 0)
+  {
+    if ( ( (size_t) (daemon->nonce_nc_size * sizeof (struct MHD_NonceNc)))
+         / sizeof(struct MHD_NonceNc) != daemon->nonce_nc_size)
+    {
+#ifdef HAVE_MESSAGES
+      MHD_DLOG (daemon,
+                _ ("Specified value for NC_SIZE too large\n"));
+#endif
+#ifdef HTTPS_SUPPORT
+      if (0 != (*pflags & MHD_USE_TLS))
+        gnutls_priority_deinit (daemon->priority_cache);
+#endif /* HTTPS_SUPPORT */
+      free (daemon);
+      return NULL;
+    }
+    daemon->nnc = malloc (daemon->nonce_nc_size * sizeof (struct MHD_NonceNc));
+    if (NULL == daemon->nnc)
+    {
+#ifdef HAVE_MESSAGES
+      MHD_DLOG (daemon,
+                _ ("Failed to allocate memory for nonce-nc map: %s\n"),
+                MHD_strerror_ (errno));
+#endif
+#ifdef HTTPS_SUPPORT
+      if (0 != (*pflags & MHD_USE_TLS))
+        gnutls_priority_deinit (daemon->priority_cache);
+#endif /* HTTPS_SUPPORT */
+      free (daemon);
+      return NULL;
+    }
+  }
+
+#if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
+  if (! MHD_mutex_init_ (&daemon->nnc_lock))
+  {
+#ifdef HAVE_MESSAGES
+    MHD_DLOG (daemon,
+              _ ("MHD failed to initialize nonce-nc mutex\n"));
+#endif
+#ifdef HTTPS_SUPPORT
+    if (0 != (*pflags & MHD_USE_TLS))
+      gnutls_priority_deinit (daemon->priority_cache);
+#endif /* HTTPS_SUPPORT */
+    free (daemon->nnc);
+    free (daemon);
+    return NULL;
+  }
 #endif
 #endif
 
   /* Thread pooling currently works only with internal select thread mode */
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   if ( (0 == (*pflags & MHD_USE_INTERNAL_POLLING_THREAD)) &&
-        (daemon->worker_pool_size > 0) )
-    {
+       (daemon->worker_pool_size > 0) )
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-		_("MHD thread pooling only works with MHD_USE_INTERNAL_POLLING_THREAD\n"));
+    MHD_DLOG (daemon,
+              _ (
+                "MHD thread pooling only works with MHD_USE_INTERNAL_POLLING_THREAD\n"));
 #endif
-      goto free_and_fail;
-    }
+    goto free_and_fail;
+  }
 #endif
   if ( (MHD_INVALID_SOCKET == daemon->listen_fd) &&
        (0 == (*pflags & MHD_USE_NO_LISTEN_SOCKET)) )
-    {
-      /* try to open listen socket */
-      int domain;
+  {
+    /* try to open listen socket */
+    int domain;
 
 #ifdef HAVE_INET6
-      domain = (*pflags & MHD_USE_IPv6) ? PF_INET6 : PF_INET;
+    domain = (*pflags & MHD_USE_IPv6) ? PF_INET6 : PF_INET;
 #else  /* ! HAVE_INET6 */
-      if (*pflags & MHD_USE_IPv6)
-	goto free_and_fail;
-      domain = PF_INET;
+    if (*pflags & MHD_USE_IPv6)
+      goto free_and_fail;
+    domain = PF_INET;
 #endif /* ! HAVE_INET6 */
 
-      listen_fd = MHD_socket_create_listen_(domain);
-      if (MHD_INVALID_SOCKET == listen_fd)
-	{
-#ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("Failed to create socket for listening: %s\n"),
-                    MHD_socket_last_strerr_ ());
-#endif
-	  goto free_and_fail;
-	}
-
-      /* Apply the socket options according to listening_address_reuse. */
-      if (0 == daemon->listening_address_reuse)
-        {
-#ifndef MHD_WINSOCK_SOCKETS
-          /* No user requirement, use "traditional" default SO_REUSEADDR
-           * on non-W32 platforms, and do not fail if it doesn't work.
-           * Don't use it on W32, because on W32 it will allow multiple
-           * bind to the same address:port, like SO_REUSEPORT on others. */
-          if (0 > setsockopt (listen_fd,
-                              SOL_SOCKET,
-                              SO_REUSEADDR,
-                              (void*)&on, sizeof (on)))
-          {
-#ifdef HAVE_MESSAGES
-            MHD_DLOG (daemon,
-                      _("setsockopt failed: %s\n"),
-                      MHD_socket_last_strerr_ ());
-#endif
-          }
-#endif /* ! MHD_WINSOCK_SOCKETS */
-        }
-      else if (daemon->listening_address_reuse > 0)
-        {
-          /* User requested to allow reusing listening address:port. */
-#ifndef MHD_WINSOCK_SOCKETS
-          /* Use SO_REUSEADDR on non-W32 platforms, and do not fail if
-           * it doesn't work. */
-          if (0 > setsockopt (listen_fd,
-                              SOL_SOCKET,
-                              SO_REUSEADDR,
-                              (void*)&on, sizeof (on)))
-            {
-#ifdef HAVE_MESSAGES
-              MHD_DLOG (daemon,
-                        _("setsockopt failed: %s\n"),
-                        MHD_socket_last_strerr_ ());
-#endif
-            }
-#endif /* ! MHD_WINSOCK_SOCKETS */
-          /* Use SO_REUSEADDR on Windows and SO_REUSEPORT on most platforms.
-           * Fail if SO_REUSEPORT is not defined or setsockopt fails.
-           */
-          /* SO_REUSEADDR on W32 has the same semantics
-             as SO_REUSEPORT on BSD/Linux */
-#if defined(MHD_WINSOCK_SOCKETS) || defined(SO_REUSEPORT)
-          if (0 > setsockopt (listen_fd,
-                              SOL_SOCKET,
-#ifndef MHD_WINSOCK_SOCKETS
-                              SO_REUSEPORT,
-#else  /* MHD_WINSOCK_SOCKETS */
-                              SO_REUSEADDR,
-#endif /* MHD_WINSOCK_SOCKETS */
-                              (void *) &on,
-                              sizeof (on)))
-            {
-#ifdef HAVE_MESSAGES
-              MHD_DLOG (daemon,
-                        _("setsockopt failed: %s\n"),
-                        MHD_socket_last_strerr_ ());
-#endif
-              goto free_and_fail;
-            }
-#else  /* !MHD_WINSOCK_SOCKETS && !SO_REUSEPORT */
-          /* we're supposed to allow address:port re-use, but
-             on this platform we cannot; fail hard */
-#ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("Cannot allow listening address reuse: SO_REUSEPORT not defined\n"));
-#endif
-          goto free_and_fail;
-#endif /* !MHD_WINSOCK_SOCKETS && !SO_REUSEPORT */
-        }
-      else /* if (daemon->listening_address_reuse < 0) */
-        {
-          /* User requested to disallow reusing listening address:port.
-           * Do nothing except for Windows where SO_EXCLUSIVEADDRUSE
-           * is used and Solaris with SO_EXCLBIND.
-           * Fail if MHD was compiled for W32 without SO_EXCLUSIVEADDRUSE
-           * or setsockopt fails.
-           */
-#if (defined(MHD_WINSOCK_SOCKETS) && defined(SO_EXCLUSIVEADDRUSE)) || \
-    (defined(__sun) && defined(SO_EXCLBIND))
-          if (0 > setsockopt (listen_fd,
-                              SOL_SOCKET,
-#ifdef SO_EXCLUSIVEADDRUSE
-                              SO_EXCLUSIVEADDRUSE,
-#else  /* SO_EXCLBIND */
-                              SO_EXCLBIND,
-#endif /* SO_EXCLBIND */
-                              (void *) &on,
-                              sizeof (on)))
-            {
-#ifdef HAVE_MESSAGES
-              MHD_DLOG (daemon,
-                        _("setsockopt failed: %s\n"),
-                        MHD_socket_last_strerr_ ());
-#endif
-              goto free_and_fail;
-            }
-#elif defined(MHD_WINSOCK_SOCKETS) /* SO_EXCLUSIVEADDRUSE not defined on W32? */
-#ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("Cannot disallow listening address reuse: SO_EXCLUSIVEADDRUSE not defined\n"));
-#endif
-          goto free_and_fail;
-#endif /* MHD_WINSOCK_SOCKETS */
-        }
-
-      /* check for user supplied sockaddr */
-#if HAVE_INET6
-      if (0 != (*pflags & MHD_USE_IPv6))
-	addrlen = sizeof (struct sockaddr_in6);
-      else
-#endif
-	addrlen = sizeof (struct sockaddr_in);
-      if (NULL == servaddr)
-	{
-#if HAVE_INET6
-	  if (0 != (*pflags & MHD_USE_IPv6))
-	    {
-#ifdef IN6ADDR_ANY_INIT
-	      static const struct in6_addr static_in6any = IN6ADDR_ANY_INIT;
-#endif
-              memset (&servaddr6,
-                      0,
-                      sizeof (struct sockaddr_in6));
-	      servaddr6.sin6_family = AF_INET6;
-	      servaddr6.sin6_port = htons (port);
-#ifdef IN6ADDR_ANY_INIT
-	      servaddr6.sin6_addr = static_in6any;
-#endif
-#if HAVE_STRUCT_SOCKADDR_IN6_SIN6_LEN
-	      servaddr6.sin6_len = sizeof (struct sockaddr_in6);
-#endif
-	      servaddr = (struct sockaddr *) &servaddr6;
-	    }
-	  else
-#endif
-	    {
-	      memset (&servaddr4,
-                      0,
-                      sizeof (struct sockaddr_in));
-	      servaddr4.sin_family = AF_INET;
-	      servaddr4.sin_port = htons (port);
-	      if (0 != INADDR_ANY)
-	        servaddr4.sin_addr.s_addr = htonl (INADDR_ANY);
-#if HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
-	      servaddr4.sin_len = sizeof (struct sockaddr_in);
-#endif
-	      servaddr = (struct sockaddr *) &servaddr4;
-	    }
-	}
-      daemon->listen_fd = listen_fd;
-
-      if (0 != (*pflags & MHD_USE_IPv6))
-	{
-#ifdef IPPROTO_IPV6
-#ifdef IPV6_V6ONLY
-	  /* Note: "IPV6_V6ONLY" is declared by Windows Vista ff., see "IPPROTO_IPV6 Socket Options"
-	     (http://msdn.microsoft.com/en-us/library/ms738574%28v=VS.85%29.aspx);
-	     and may also be missing on older POSIX systems; good luck if you have any of those,
-	     your IPv6 socket may then also bind against IPv4 anyway... */
-	  const MHD_SCKT_OPT_BOOL_ v6_only =
-            (MHD_USE_DUAL_STACK != (*pflags & MHD_USE_DUAL_STACK));
-	  if (0 > setsockopt (listen_fd,
-                              IPPROTO_IPV6, IPV6_V6ONLY,
-                              (const void *) &v6_only,
-                              sizeof (v6_only)))
-      {
-#ifdef HAVE_MESSAGES
-            MHD_DLOG (daemon,
-                      _("setsockopt failed: %s\n"),
-                      MHD_socket_last_strerr_ ());
-#endif
-      }
-#endif
-#endif
-	}
-      if (-1 == bind (listen_fd, servaddr, addrlen))
-	{
-#ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("Failed to bind to port %u: %s\n"),
-                    (unsigned int) port,
-                    MHD_socket_last_strerr_ ());
-#endif
-	  MHD_socket_close_chk_ (listen_fd);
-	  goto free_and_fail;
-	}
-#ifdef TCP_FASTOPEN
-      if (0 != (*pflags & MHD_USE_TCP_FASTOPEN))
-      {
-        if (0 == daemon->fastopen_queue_size)
-          daemon->fastopen_queue_size = MHD_TCP_FASTOPEN_QUEUE_SIZE_DEFAULT;
-        if (0 != setsockopt (listen_fd,
-                             IPPROTO_TCP,
-                             TCP_FASTOPEN,
-                             (const void*)&daemon->fastopen_queue_size,
-                             sizeof (daemon->fastopen_queue_size)))
-        {
-#ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("setsockopt failed: %s\n"),
-                    MHD_socket_last_strerr_ ());
-#endif
-        }
-      }
-#endif
-      if (listen (listen_fd,
-                  daemon->listen_backlog_size) < 0)
-	{
-#ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("Failed to listen for connections: %s\n"),
-                    MHD_socket_last_strerr_ ());
-#endif
-	  MHD_socket_close_chk_ (listen_fd);
-	  goto free_and_fail;
-	}
-    }
-  else
+    listen_fd = MHD_socket_create_listen_ (domain);
+    if (MHD_INVALID_SOCKET == listen_fd)
     {
-      listen_fd = daemon->listen_fd;
+#ifdef HAVE_MESSAGES
+      MHD_DLOG (daemon,
+                _ ("Failed to create socket for listening: %s\n"),
+                MHD_socket_last_strerr_ ());
+#endif
+      goto free_and_fail;
     }
 
-#ifdef HAVE_GETSOCKNAME
-  if ( (0 == daemon->port) &&
-       (0 == (*pflags & MHD_USE_NO_LISTEN_SOCKET)) )
-    { /* Get port number. */
-      struct sockaddr_storage bindaddr;
-
-      memset (&bindaddr,
-              0,
-              sizeof (struct sockaddr_storage));
-      addrlen = sizeof (struct sockaddr_storage);
-#ifdef HAVE_STRUCT_SOCKADDR_STORAGE_SS_LEN
-      bindaddr.ss_len = addrlen;
-#endif
-      if (0 != getsockname (listen_fd,
-                            (struct sockaddr *) &bindaddr,
-                            &addrlen))
+    /* Apply the socket options according to listening_address_reuse. */
+    if (0 == daemon->listening_address_reuse)
+    {
+#ifndef MHD_WINSOCK_SOCKETS
+      /* No user requirement, use "traditional" default SO_REUSEADDR
+       * on non-W32 platforms, and do not fail if it doesn't work.
+       * Don't use it on W32, because on W32 it will allow multiple
+       * bind to the same address:port, like SO_REUSEPORT on others. */
+      if (0 > setsockopt (listen_fd,
+                          SOL_SOCKET,
+                          SO_REUSEADDR,
+                          (void*) &on, sizeof (on)))
       {
 #ifdef HAVE_MESSAGES
         MHD_DLOG (daemon,
-                  _("Failed to get listen port number: %s\n"),
+                  _ ("setsockopt failed: %s\n"),
                   MHD_socket_last_strerr_ ());
-#endif /* HAVE_MESSAGES */
-        }
-#ifdef MHD_POSIX_SOCKETS
-      else if (sizeof (bindaddr) < addrlen)
-        {
-          /* should be impossible with `struct sockaddr_storage` */
+#endif
+      }
+#endif /* ! MHD_WINSOCK_SOCKETS */
+    }
+    else if (daemon->listening_address_reuse > 0)
+    {
+      /* User requested to allow reusing listening address:port. */
+#ifndef MHD_WINSOCK_SOCKETS
+      /* Use SO_REUSEADDR on non-W32 platforms, and do not fail if
+       * it doesn't work. */
+      if (0 > setsockopt (listen_fd,
+                          SOL_SOCKET,
+                          SO_REUSEADDR,
+                          (void*) &on, sizeof (on)))
+      {
 #ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("Failed to get listen port number (`struct sockaddr_storage` too small!?)\n"));
-#endif /* HAVE_MESSAGES */
-        }
-#ifndef __linux__
-      else if (0 == addrlen)
-        {
-          /* Many non-Linux-based platforms return zero addrlen
-           * for AF_UNIX sockets */
-          daemon->port = 0; /* special value for UNIX domain sockets */
-        }
-#endif /* __linux__ */
-#endif /* MHD_POSIX_SOCKETS */
+        MHD_DLOG (daemon,
+                  _ ("setsockopt failed: %s\n"),
+                  MHD_socket_last_strerr_ ());
+#endif
+      }
+#endif /* ! MHD_WINSOCK_SOCKETS */
+       /* Use SO_REUSEADDR on Windows and SO_REUSEPORT on most platforms.
+        * Fail if SO_REUSEPORT is not defined or setsockopt fails.
+        */
+       /* SO_REUSEADDR on W32 has the same semantics
+          as SO_REUSEPORT on BSD/Linux */
+#if defined(MHD_WINSOCK_SOCKETS) || defined(SO_REUSEPORT)
+      if (0 > setsockopt (listen_fd,
+                          SOL_SOCKET,
+#ifndef MHD_WINSOCK_SOCKETS
+                          SO_REUSEPORT,
+#else  /* MHD_WINSOCK_SOCKETS */
+                          SO_REUSEADDR,
+#endif /* MHD_WINSOCK_SOCKETS */
+                          (void *) &on,
+                          sizeof (on)))
+      {
+#ifdef HAVE_MESSAGES
+        MHD_DLOG (daemon,
+                  _ ("setsockopt failed: %s\n"),
+                  MHD_socket_last_strerr_ ());
+#endif
+        goto free_and_fail;
+      }
+#else  /* !MHD_WINSOCK_SOCKETS && !SO_REUSEPORT */
+       /* we're supposed to allow address:port re-use, but
+          on this platform we cannot; fail hard */
+#ifdef HAVE_MESSAGES
+      MHD_DLOG (daemon,
+                _ (
+                  "Cannot allow listening address reuse: SO_REUSEPORT not defined\n"));
+#endif
+      goto free_and_fail;
+#endif /* !MHD_WINSOCK_SOCKETS && !SO_REUSEPORT */
+    }
+    else   /* if (daemon->listening_address_reuse < 0) */
+    {
+      /* User requested to disallow reusing listening address:port.
+       * Do nothing except for Windows where SO_EXCLUSIVEADDRUSE
+       * is used and Solaris with SO_EXCLBIND.
+       * Fail if MHD was compiled for W32 without SO_EXCLUSIVEADDRUSE
+       * or setsockopt fails.
+       */
+#if (defined(MHD_WINSOCK_SOCKETS) && defined(SO_EXCLUSIVEADDRUSE)) || \
+      (defined(__sun) && defined(SO_EXCLBIND))
+      if (0 > setsockopt (listen_fd,
+                          SOL_SOCKET,
+#ifdef SO_EXCLUSIVEADDRUSE
+                          SO_EXCLUSIVEADDRUSE,
+#else  /* SO_EXCLBIND */
+                          SO_EXCLBIND,
+#endif /* SO_EXCLBIND */
+                          (void *) &on,
+                          sizeof (on)))
+      {
+#ifdef HAVE_MESSAGES
+        MHD_DLOG (daemon,
+                  _ ("setsockopt failed: %s\n"),
+                  MHD_socket_last_strerr_ ());
+#endif
+        goto free_and_fail;
+      }
+#elif defined(MHD_WINSOCK_SOCKETS) /* SO_EXCLUSIVEADDRUSE not defined on W32? */
+#ifdef HAVE_MESSAGES
+      MHD_DLOG (daemon,
+                _ (
+                  "Cannot disallow listening address reuse: SO_EXCLUSIVEADDRUSE not defined\n"));
+#endif
+      goto free_and_fail;
+#endif /* MHD_WINSOCK_SOCKETS */
+    }
+
+    /* check for user supplied sockaddr */
+#if HAVE_INET6
+    if (0 != (*pflags & MHD_USE_IPv6))
+      addrlen = sizeof (struct sockaddr_in6);
+    else
+#endif
+    addrlen = sizeof (struct sockaddr_in);
+    if (NULL == servaddr)
+    {
+#if HAVE_INET6
+      if (0 != (*pflags & MHD_USE_IPv6))
+      {
+#ifdef IN6ADDR_ANY_INIT
+        static const struct in6_addr static_in6any = IN6ADDR_ANY_INIT;
+#endif
+        memset (&servaddr6,
+                0,
+                sizeof (struct sockaddr_in6));
+        servaddr6.sin6_family = AF_INET6;
+        servaddr6.sin6_port = htons (port);
+#ifdef IN6ADDR_ANY_INIT
+        servaddr6.sin6_addr = static_in6any;
+#endif
+#if HAVE_STRUCT_SOCKADDR_IN6_SIN6_LEN
+        servaddr6.sin6_len = sizeof (struct sockaddr_in6);
+#endif
+        servaddr = (struct sockaddr *) &servaddr6;
+      }
       else
-        {
-          switch (bindaddr.ss_family)
-          {
-          case AF_INET:
-            {
-              struct sockaddr_in *s4 = (struct sockaddr_in *) &bindaddr;
-
-              daemon->port = ntohs (s4->sin_port);
-              break;
-            }
-#ifdef HAVE_INET6
-          case AF_INET6:
-            {
-              struct sockaddr_in6 *s6 = (struct sockaddr_in6 *) &bindaddr;
-
-              daemon->port = ntohs(s6->sin6_port);
-              mhd_assert (0 != (*pflags & MHD_USE_IPv6));
-              break;
-            }
-#endif /* HAVE_INET6 */
-#ifdef AF_UNIX
-          case AF_UNIX:
-            daemon->port = 0; /* special value for UNIX domain sockets */
-            break;
 #endif
-          default:
-#ifdef HAVE_MESSAGES
-            MHD_DLOG (daemon,
-                      _("Unknown address family!\n"));
+      {
+        memset (&servaddr4,
+                0,
+                sizeof (struct sockaddr_in));
+        servaddr4.sin_family = AF_INET;
+        servaddr4.sin_port = htons (port);
+        if (0 != INADDR_ANY)
+          servaddr4.sin_addr.s_addr = htonl (INADDR_ANY);
+#if HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
+        servaddr4.sin_len = sizeof (struct sockaddr_in);
 #endif
-            daemon->port = 0; /* ugh */
-            break;
-          }
-        }
+        servaddr = (struct sockaddr *) &servaddr4;
+      }
     }
-#endif /* HAVE_GETSOCKNAME */
+    daemon->listen_fd = listen_fd;
 
-  if ( (MHD_INVALID_SOCKET != listen_fd) &&
-       (! MHD_socket_nonblocking_ (listen_fd)) )
+    if (0 != (*pflags & MHD_USE_IPv6))
+    {
+#ifdef IPPROTO_IPV6
+#ifdef IPV6_V6ONLY
+      /* Note: "IPV6_V6ONLY" is declared by Windows Vista ff., see "IPPROTO_IPV6 Socket Options"
+         (http://msdn.microsoft.com/en-us/library/ms738574%28v=VS.85%29.aspx);
+         and may also be missing on older POSIX systems; good luck if you have any of those,
+         your IPv6 socket may then also bind against IPv4 anyway... */
+      const MHD_SCKT_OPT_BOOL_ v6_only =
+        (MHD_USE_DUAL_STACK != (*pflags & MHD_USE_DUAL_STACK));
+      if (0 > setsockopt (listen_fd,
+                          IPPROTO_IPV6, IPV6_V6ONLY,
+                          (const void *) &v6_only,
+                          sizeof (v6_only)))
+      {
+#ifdef HAVE_MESSAGES
+        MHD_DLOG (daemon,
+                  _ ("setsockopt failed: %s\n"),
+                  MHD_socket_last_strerr_ ());
+#endif
+      }
+#endif
+#endif
+    }
+    if (-1 == bind (listen_fd, servaddr, addrlen))
     {
 #ifdef HAVE_MESSAGES
       MHD_DLOG (daemon,
-                _("Failed to set nonblocking mode on listening socket: %s\n"),
-                MHD_socket_last_strerr_());
-#endif
-      if (0 != (*pflags & MHD_USE_EPOLL)
-#if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-          || (daemon->worker_pool_size > 0)
-#endif
-	  )
-        {
-           /* Accept must be non-blocking. Multiple children may wake up
-            * to handle a new connection, but only one will win the race.
-            * The others must immediately return. */
-          MHD_socket_close_chk_ (listen_fd);
-          goto free_and_fail;
-        }
-    }
-  if ( (MHD_INVALID_SOCKET != listen_fd) &&
-       (! MHD_SCKT_FD_FITS_FDSET_(listen_fd,
-                                  NULL)) &&
-       (0 == (*pflags & (MHD_USE_POLL | MHD_USE_EPOLL)) ) )
-    {
-#ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("Socket descriptor larger than FD_SETSIZE: %d > %d\n"),
-                listen_fd,
-                FD_SETSIZE);
+                _ ("Failed to bind to port %u: %s\n"),
+                (unsigned int) port,
+                MHD_socket_last_strerr_ ());
 #endif
       MHD_socket_close_chk_ (listen_fd);
       goto free_and_fail;
     }
+#ifdef TCP_FASTOPEN
+    if (0 != (*pflags & MHD_USE_TCP_FASTOPEN))
+    {
+      if (0 == daemon->fastopen_queue_size)
+        daemon->fastopen_queue_size = MHD_TCP_FASTOPEN_QUEUE_SIZE_DEFAULT;
+      if (0 != setsockopt (listen_fd,
+                           IPPROTO_TCP,
+                           TCP_FASTOPEN,
+                           (const void*) &daemon->fastopen_queue_size,
+                           sizeof (daemon->fastopen_queue_size)))
+      {
+#ifdef HAVE_MESSAGES
+        MHD_DLOG (daemon,
+                  _ ("setsockopt failed: %s\n"),
+                  MHD_socket_last_strerr_ ());
+#endif
+      }
+    }
+#endif
+    if (listen (listen_fd,
+                daemon->listen_backlog_size) < 0)
+    {
+#ifdef HAVE_MESSAGES
+      MHD_DLOG (daemon,
+                _ ("Failed to listen for connections: %s\n"),
+                MHD_socket_last_strerr_ ());
+#endif
+      MHD_socket_close_chk_ (listen_fd);
+      goto free_and_fail;
+    }
+  }
+  else
+  {
+    listen_fd = daemon->listen_fd;
+  }
+
+#ifdef HAVE_GETSOCKNAME
+  if ( (0 == daemon->port) &&
+       (0 == (*pflags & MHD_USE_NO_LISTEN_SOCKET)) )
+  {   /* Get port number. */
+    struct sockaddr_storage bindaddr;
+
+    memset (&bindaddr,
+            0,
+            sizeof (struct sockaddr_storage));
+    addrlen = sizeof (struct sockaddr_storage);
+#ifdef HAVE_STRUCT_SOCKADDR_STORAGE_SS_LEN
+    bindaddr.ss_len = addrlen;
+#endif
+    if (0 != getsockname (listen_fd,
+                          (struct sockaddr *) &bindaddr,
+                          &addrlen))
+    {
+#ifdef HAVE_MESSAGES
+      MHD_DLOG (daemon,
+                _ ("Failed to get listen port number: %s\n"),
+                MHD_socket_last_strerr_ ());
+#endif /* HAVE_MESSAGES */
+    }
+#ifdef MHD_POSIX_SOCKETS
+    else if (sizeof (bindaddr) < addrlen)
+    {
+      /* should be impossible with `struct sockaddr_storage` */
+#ifdef HAVE_MESSAGES
+      MHD_DLOG (daemon,
+                _ (
+                  "Failed to get listen port number (`struct sockaddr_storage` too small!?)\n"));
+#endif /* HAVE_MESSAGES */
+    }
+#ifndef __linux__
+    else if (0 == addrlen)
+    {
+      /* Many non-Linux-based platforms return zero addrlen
+       * for AF_UNIX sockets */
+      daemon->port = 0;     /* special value for UNIX domain sockets */
+    }
+#endif /* __linux__ */
+#endif /* MHD_POSIX_SOCKETS */
+    else
+    {
+      switch (bindaddr.ss_family)
+      {
+      case AF_INET:
+        {
+          struct sockaddr_in *s4 = (struct sockaddr_in *) &bindaddr;
+
+          daemon->port = ntohs (s4->sin_port);
+          break;
+        }
+#ifdef HAVE_INET6
+      case AF_INET6:
+        {
+          struct sockaddr_in6 *s6 = (struct sockaddr_in6 *) &bindaddr;
+
+          daemon->port = ntohs (s6->sin6_port);
+          mhd_assert (0 != (*pflags & MHD_USE_IPv6));
+          break;
+        }
+#endif /* HAVE_INET6 */
+#ifdef AF_UNIX
+      case AF_UNIX:
+        daemon->port = 0;     /* special value for UNIX domain sockets */
+        break;
+#endif
+      default:
+#ifdef HAVE_MESSAGES
+        MHD_DLOG (daemon,
+                  _ ("Unknown address family!\n"));
+#endif
+        daemon->port = 0;     /* ugh */
+        break;
+      }
+    }
+  }
+#endif /* HAVE_GETSOCKNAME */
+  if ( (MHD_INVALID_SOCKET != listen_fd) &&
+       (! MHD_socket_nonblocking_ (listen_fd)) )
+  {
+#ifdef HAVE_MESSAGES
+    MHD_DLOG (daemon,
+              _ ("Failed to set nonblocking mode on listening socket: %s\n"),
+              MHD_socket_last_strerr_ ());
+#endif
+    if (0 != (*pflags & MHD_USE_EPOLL)
+#if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
+        || (daemon->worker_pool_size > 0)
+#endif
+        )
+    {
+      /* Accept must be non-blocking. Multiple children may wake up
+       * to handle a new connection, but only one will win the race.
+       * The others must immediately return. */
+      MHD_socket_close_chk_ (listen_fd);
+      goto free_and_fail;
+    }
+  }
+  if ( (MHD_INVALID_SOCKET != listen_fd) &&
+       (! MHD_SCKT_FD_FITS_FDSET_ (listen_fd,
+                                   NULL)) &&
+       (0 == (*pflags & (MHD_USE_POLL | MHD_USE_EPOLL)) ) )
+  {
+#ifdef HAVE_MESSAGES
+    MHD_DLOG (daemon,
+              _ ("Socket descriptor larger than FD_SETSIZE: %d > %d\n"),
+              listen_fd,
+              FD_SETSIZE);
+#endif
+    MHD_socket_close_chk_ (listen_fd);
+    goto free_and_fail;
+  }
 
 #ifdef EPOLL_SUPPORT
   if ( (0 != (*pflags & MHD_USE_EPOLL))
@@ -6266,193 +6352,197 @@ MHD_start_daemon_va (unsigned int flags,
        && (0 == daemon->worker_pool_size)
 #endif
        )
+  {
+    if (0 != (*pflags & MHD_USE_THREAD_PER_CONNECTION))
     {
-      if (0 != (*pflags & MHD_USE_THREAD_PER_CONNECTION))
-	{
 #ifdef HAVE_MESSAGES
-	  MHD_DLOG (daemon,
-		    _("Combining MHD_USE_THREAD_PER_CONNECTION and MHD_USE_EPOLL is not supported.\n"));
+      MHD_DLOG (daemon,
+                _ (
+                  "Combining MHD_USE_THREAD_PER_CONNECTION and MHD_USE_EPOLL is not supported.\n"));
 #endif
-	  goto free_and_fail;
-	}
-      if (MHD_YES != setup_epoll_to_listen (daemon))
-	goto free_and_fail;
+      goto free_and_fail;
     }
+    if (MHD_YES != setup_epoll_to_listen (daemon))
+      goto free_and_fail;
+  }
 #endif /* EPOLL_SUPPORT */
 
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   if (! MHD_mutex_init_ (&daemon->per_ip_connection_mutex))
+  {
+#ifdef HAVE_MESSAGES
+    MHD_DLOG (daemon,
+              _ ("MHD failed to initialize IP connection limit mutex\n"));
+#endif
+    if (MHD_INVALID_SOCKET != listen_fd)
+      MHD_socket_close_chk_ (listen_fd);
+    goto free_and_fail;
+  }
+  if (0 == daemon->worker_pool_size)
+  {   /* Initialise connection mutex only if this daemon will handle
+       * any connections by itself. */
+    if (! MHD_mutex_init_ (&daemon->cleanup_connection_mutex))
     {
 #ifdef HAVE_MESSAGES
       MHD_DLOG (daemon,
-                _("MHD failed to initialize IP connection limit mutex\n"));
+                _ ("MHD failed to initialize IP connection limit mutex\n"));
+#endif
+#if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
+      MHD_mutex_destroy_chk_ (&daemon->cleanup_connection_mutex);
 #endif
       if (MHD_INVALID_SOCKET != listen_fd)
         MHD_socket_close_chk_ (listen_fd);
       goto free_and_fail;
     }
-  if (0 == daemon->worker_pool_size)
-    { /* Initialise connection mutex only if this daemon will handle
-       * any connections by itself. */
-      if (! MHD_mutex_init_ (&daemon->cleanup_connection_mutex))
-        {
-#ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-                    _("MHD failed to initialize IP connection limit mutex\n"));
-#endif
-#if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-          MHD_mutex_destroy_chk_ (&daemon->cleanup_connection_mutex);
-#endif
-          if (MHD_INVALID_SOCKET != listen_fd)
-            MHD_socket_close_chk_ (listen_fd);
-          goto free_and_fail;
-        }
-    }
+  }
 #endif
 
 #ifdef HTTPS_SUPPORT
   /* initialize HTTPS daemon certificate aspects & send / recv functions */
   if ( (0 != (*pflags & MHD_USE_TLS)) &&
        (0 != MHD_TLS_init (daemon)) )
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-		_("Failed to initialize TLS support\n"));
+    MHD_DLOG (daemon,
+              _ ("Failed to initialize TLS support\n"));
 #endif
-      if (MHD_INVALID_SOCKET != listen_fd)
-        MHD_socket_close_chk_ (listen_fd);
+    if (MHD_INVALID_SOCKET != listen_fd)
+      MHD_socket_close_chk_ (listen_fd);
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-      if (0 == daemon->worker_pool_size)
-        MHD_mutex_destroy_chk_ (&daemon->cleanup_connection_mutex);
-      MHD_mutex_destroy_chk_ (&daemon->per_ip_connection_mutex);
+    if (0 == daemon->worker_pool_size)
+      MHD_mutex_destroy_chk_ (&daemon->cleanup_connection_mutex);
+    MHD_mutex_destroy_chk_ (&daemon->per_ip_connection_mutex);
 #endif
-      goto free_and_fail;
-    }
+    goto free_and_fail;
+  }
 #endif /* HTTPS_SUPPORT */
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   if ( (0 != (*pflags & MHD_USE_INTERNAL_POLLING_THREAD)) &&
        (0 == (*pflags & MHD_USE_NO_LISTEN_SOCKET)) )
+  {
+    if (0 == daemon->worker_pool_size)
     {
-      if (0 == daemon->worker_pool_size)
-        {
-          if (! MHD_create_named_thread_ (&daemon->pid,
-                (*pflags & MHD_USE_THREAD_PER_CONNECTION) ?
-                  "MHD-listen" : "MHD-single",
-                daemon->thread_stack_size,
-                &MHD_polling_thread,
-                daemon) )
-            {
+      if (! MHD_create_named_thread_ (&daemon->pid,
+                                      (*pflags
+                                       & MHD_USE_THREAD_PER_CONNECTION) ?
+                                      "MHD-listen" : "MHD-single",
+                                      daemon->thread_stack_size,
+                                      &MHD_polling_thread,
+                                      daemon) )
+      {
 #ifdef HAVE_MESSAGES
-              MHD_DLOG (daemon,
-                        _("Failed to create listen thread: %s\n"),
-                        MHD_strerror_ (errno));
+        MHD_DLOG (daemon,
+                  _ ("Failed to create listen thread: %s\n"),
+                  MHD_strerror_ (errno));
 #endif
-              MHD_mutex_destroy_chk_ (&daemon->cleanup_connection_mutex);
-              MHD_mutex_destroy_chk_ (&daemon->per_ip_connection_mutex);
-              if (MHD_INVALID_SOCKET != listen_fd)
-                MHD_socket_close_chk_ (listen_fd);
-              goto free_and_fail;
-            }
-        }
-      else /* 0 < daemon->worker_pool_size */
-        {
-          /* Coarse-grained count of connections per thread (note error
-           * due to integer division). Also keep track of how many
-           * connections are leftover after an equal split. */
-          unsigned int conns_per_thread = daemon->connection_limit
-                                          / daemon->worker_pool_size;
-          unsigned int leftover_conns = daemon->connection_limit
-                                        % daemon->worker_pool_size;
-
-          i = 0; /* we need this in case fcntl or malloc fails */
-
-          /* Allocate memory for pooled objects */
-          daemon->worker_pool = malloc (sizeof (struct MHD_Daemon)
-                                        * daemon->worker_pool_size);
-          if (NULL == daemon->worker_pool)
-            goto thread_failed;
-
-          /* Start the workers in the pool */
-          for (i = 0; i < daemon->worker_pool_size; ++i)
-            {
-              /* Create copy of the Daemon object for each worker */
-              struct MHD_Daemon *d = &daemon->worker_pool[i];
-
-              memcpy (d, daemon, sizeof (struct MHD_Daemon));
-              /* Adjust pooling params for worker daemons; note that memcpy()
-                 has already copied MHD_USE_INTERNAL_POLLING_THREAD thread mode into
-                 the worker threads. */
-              d->master = daemon;
-              d->worker_pool_size = 0;
-              d->worker_pool = NULL;
-
-              if (0 != (*pflags & MHD_USE_ITC))
-                {
-                  if (! MHD_itc_init_ (d->itc))
-                    {
-#ifdef HAVE_MESSAGES
-                      MHD_DLOG (daemon,
-                                _("Failed to create worker inter-thread communication channel: %s\n"),
-                                MHD_itc_last_strerror_() );
-#endif
-                      goto thread_failed;
-                    }
-                  if ( (0 == (*pflags & (MHD_USE_POLL | MHD_USE_EPOLL))) &&
-                       (! MHD_SCKT_FD_FITS_FDSET_(MHD_itc_r_fd_ (d->itc),
-                                                  NULL)) )
-                    {
-#ifdef HAVE_MESSAGES
-                      MHD_DLOG (daemon,
-                                _("File descriptor for worker inter-thread communication channel exceeds maximum value\n"));
-#endif
-                      MHD_itc_destroy_chk_ (d->itc);
-                      goto thread_failed;
-                    }
-                }
-              else
-                MHD_itc_set_invalid_ (d->itc);
-
-              /* Divide available connections evenly amongst the threads.
-               * Thread indexes in [0, leftover_conns) each get one of the
-               * leftover connections. */
-              d->connection_limit = conns_per_thread;
-              if (i < leftover_conns)
-                ++d->connection_limit;
-#ifdef EPOLL_SUPPORT
-              if ( (0 != (*pflags & MHD_USE_EPOLL)) &&
-                   (MHD_YES != setup_epoll_to_listen (d)) )
-                goto thread_failed;
-#endif
-              /* Must init cleanup connection mutex for each worker */
-              if (! MHD_mutex_init_ (&d->cleanup_connection_mutex))
-                {
-#ifdef HAVE_MESSAGES
-                  MHD_DLOG (daemon,
-                            _("MHD failed to initialize cleanup connection mutex\n"));
-#endif
-                  goto thread_failed;
-                }
-
-              /* Spawn the worker thread */
-              if (! MHD_create_named_thread_ (&d->pid,
-                                              "MHD-worker",
-                                              daemon->thread_stack_size,
-                                              &MHD_polling_thread,
-                                              d))
-                {
-#ifdef HAVE_MESSAGES
-                  MHD_DLOG (daemon,
-                            _("Failed to create pool thread: %s\n"),
-                            MHD_strerror_ (errno));
-#endif
-                  /* Free memory for this worker; cleanup below handles
-                   * all previously-created workers. */
-                  MHD_mutex_destroy_chk_ (&d->cleanup_connection_mutex);
-                  goto thread_failed;
-                }
-            }
-        }
+        MHD_mutex_destroy_chk_ (&daemon->cleanup_connection_mutex);
+        MHD_mutex_destroy_chk_ (&daemon->per_ip_connection_mutex);
+        if (MHD_INVALID_SOCKET != listen_fd)
+          MHD_socket_close_chk_ (listen_fd);
+        goto free_and_fail;
+      }
     }
+    else   /* 0 < daemon->worker_pool_size */
+    {
+      /* Coarse-grained count of connections per thread (note error
+       * due to integer division). Also keep track of how many
+       * connections are leftover after an equal split. */
+      unsigned int conns_per_thread = daemon->connection_limit
+                                      / daemon->worker_pool_size;
+      unsigned int leftover_conns = daemon->connection_limit
+                                    % daemon->worker_pool_size;
+
+      i = 0;     /* we need this in case fcntl or malloc fails */
+
+      /* Allocate memory for pooled objects */
+      daemon->worker_pool = malloc (sizeof (struct MHD_Daemon)
+                                    * daemon->worker_pool_size);
+      if (NULL == daemon->worker_pool)
+        goto thread_failed;
+
+      /* Start the workers in the pool */
+      for (i = 0; i < daemon->worker_pool_size; ++i)
+      {
+        /* Create copy of the Daemon object for each worker */
+        struct MHD_Daemon *d = &daemon->worker_pool[i];
+
+        memcpy (d, daemon, sizeof (struct MHD_Daemon));
+        /* Adjust pooling params for worker daemons; note that memcpy()
+           has already copied MHD_USE_INTERNAL_POLLING_THREAD thread mode into
+           the worker threads. */
+        d->master = daemon;
+        d->worker_pool_size = 0;
+        d->worker_pool = NULL;
+
+        if (0 != (*pflags & MHD_USE_ITC))
+        {
+          if (! MHD_itc_init_ (d->itc))
+          {
+#ifdef HAVE_MESSAGES
+            MHD_DLOG (daemon,
+                      _ (
+                        "Failed to create worker inter-thread communication channel: %s\n"),
+                      MHD_itc_last_strerror_ () );
+#endif
+            goto thread_failed;
+          }
+          if ( (0 == (*pflags & (MHD_USE_POLL | MHD_USE_EPOLL))) &&
+               (! MHD_SCKT_FD_FITS_FDSET_ (MHD_itc_r_fd_ (d->itc),
+                                           NULL)) )
+          {
+#ifdef HAVE_MESSAGES
+            MHD_DLOG (daemon,
+                      _ (
+                        "File descriptor for worker inter-thread communication channel exceeds maximum value\n"));
+#endif
+            MHD_itc_destroy_chk_ (d->itc);
+            goto thread_failed;
+          }
+        }
+        else
+          MHD_itc_set_invalid_ (d->itc);
+
+        /* Divide available connections evenly amongst the threads.
+         * Thread indexes in [0, leftover_conns) each get one of the
+         * leftover connections. */
+        d->connection_limit = conns_per_thread;
+        if (i < leftover_conns)
+          ++d->connection_limit;
+#ifdef EPOLL_SUPPORT
+        if ( (0 != (*pflags & MHD_USE_EPOLL)) &&
+             (MHD_YES != setup_epoll_to_listen (d)) )
+          goto thread_failed;
+#endif
+        /* Must init cleanup connection mutex for each worker */
+        if (! MHD_mutex_init_ (&d->cleanup_connection_mutex))
+        {
+#ifdef HAVE_MESSAGES
+          MHD_DLOG (daemon,
+                    _ ("MHD failed to initialize cleanup connection mutex\n"));
+#endif
+          goto thread_failed;
+        }
+
+        /* Spawn the worker thread */
+        if (! MHD_create_named_thread_ (&d->pid,
+                                        "MHD-worker",
+                                        daemon->thread_stack_size,
+                                        &MHD_polling_thread,
+                                        d))
+        {
+#ifdef HAVE_MESSAGES
+          MHD_DLOG (daemon,
+                    _ ("Failed to create pool thread: %s\n"),
+                    MHD_strerror_ (errno));
+#endif
+          /* Free memory for this worker; cleanup below handles
+           * all previously-created workers. */
+          MHD_mutex_destroy_chk_ (&d->cleanup_connection_mutex);
+          goto thread_failed;
+        }
+      }
+    }
+  }
 #endif
 #ifdef HTTPS_SUPPORT
   /* API promises to never use the password after initialization,
@@ -6463,20 +6553,20 @@ MHD_start_daemon_va (unsigned int flags,
   return daemon;
 
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-thread_failed:
+  thread_failed:
   /* If no worker threads created, then shut down normally. Calling
      MHD_stop_daemon (as we do below) doesn't work here since it
      assumes a 0-sized thread pool means we had been in the default
      MHD_USE_INTERNAL_POLLING_THREAD mode. */
   if (0 == i)
-    {
-      if (MHD_INVALID_SOCKET != listen_fd)
-        MHD_socket_close_chk_ (listen_fd);
-      MHD_mutex_destroy_chk_ (&daemon->per_ip_connection_mutex);
-      if (NULL != daemon->worker_pool)
-        free (daemon->worker_pool);
-      goto free_and_fail;
-    }
+  {
+    if (MHD_INVALID_SOCKET != listen_fd)
+      MHD_socket_close_chk_ (listen_fd);
+    MHD_mutex_destroy_chk_ (&daemon->per_ip_connection_mutex);
+    if (NULL != daemon->worker_pool)
+      free (daemon->worker_pool);
+    goto free_and_fail;
+  }
 
   /* Shutdown worker threads we've already created. Pretend
      as though we had fully initialized our daemon, but
@@ -6487,20 +6577,20 @@ thread_failed:
   return NULL;
 #endif
 
- free_and_fail:
+  free_and_fail:
   /* clean up basic memory state in 'daemon' and return NULL to
      indicate failure */
 #ifdef EPOLL_SUPPORT
 #if defined(HTTPS_SUPPORT) && defined(UPGRADE_SUPPORT)
   if (daemon->upgrade_fd_in_epoll)
-    {
-      if (0 != epoll_ctl (daemon->epoll_fd,
-                          EPOLL_CTL_DEL,
-                          daemon->epoll_upgrade_fd,
-                          NULL))
-        MHD_PANIC (_("Failed to remove FD from epoll set\n"));
-      daemon->upgrade_fd_in_epoll = false;
-    }
+  {
+    if (0 != epoll_ctl (daemon->epoll_fd,
+                        EPOLL_CTL_DEL,
+                        daemon->epoll_upgrade_fd,
+                        NULL))
+      MHD_PANIC (_ ("Failed to remove FD from epoll set\n"));
+    daemon->upgrade_fd_in_epoll = false;
+  }
 #endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
   if (-1 != daemon->epoll_fd)
     close (daemon->epoll_fd);
@@ -6525,7 +6615,7 @@ thread_failed:
       gnutls_psk_free_server_credentials (daemon->psk_cred);
   }
 #endif /* HTTPS_SUPPORT */
-  if (MHD_ITC_IS_VALID_(daemon->itc))
+  if (MHD_ITC_IS_VALID_ (daemon->itc))
     MHD_itc_destroy_chk_ (daemon->itc);
   free (daemon);
   return NULL;
@@ -6544,7 +6634,8 @@ static void
 close_all_connections (struct MHD_Daemon *daemon)
 {
   struct MHD_Connection *pos;
-  const bool used_thr_p_c = (0 != (daemon->options & MHD_USE_THREAD_PER_CONNECTION));
+  const bool used_thr_p_c = (0 != (daemon->options
+                                   & MHD_USE_THREAD_PER_CONNECTION));
 #ifdef UPGRADE_SUPPORT
   const bool upg_allowed = (0 != (daemon->options & MHD_ALLOW_UPGRADE));
 #endif /* UPGRADE_SUPPORT */
@@ -6560,16 +6651,16 @@ close_all_connections (struct MHD_Daemon *daemon)
   /* give upgraded HTTPS connections a chance to finish */
   /* 'daemon->urh_head' is not used in thread-per-connection mode. */
   for (urh = daemon->urh_tail; NULL != urh; urh = urhn)
-    {
-      urhn = urh->prev;
-      /* call generic forwarding function for passing data
-         with chance to detect that application is done. */
-      process_urh (urh);
-      MHD_connection_finish_forward_ (urh->connection);
-      urh->clean_ready = true;
-      /* Resuming will move connection to cleanup list. */
-      MHD_resume_connection(urh->connection);
-    }
+  {
+    urhn = urh->prev;
+    /* call generic forwarding function for passing data
+       with chance to detect that application is done. */
+    process_urh (urh);
+    MHD_connection_finish_forward_ (urh->connection);
+    urh->clean_ready = true;
+    /* Resuming will move connection to cleanup list. */
+    MHD_resume_connection (urh->connection);
+  }
 #endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
 
   /* Give suspended connections a chance to resume to avoid
@@ -6577,10 +6668,10 @@ close_all_connections (struct MHD_Daemon *daemon)
      connections left in case of a tight race with a recently
      resumed connection. */
   if (0 != (MHD_TEST_ALLOW_SUSPEND_RESUME & daemon->options))
-    {
-      daemon->resuming = true; /* Force check for pending resume. */
-      resume_suspended_connections (daemon);
-    }
+  {
+    daemon->resuming = true;   /* Force check for pending resume. */
+    resume_suspended_connections (daemon);
+  }
   /* first, make sure all threads are aware of shutdown; need to
      traverse DLLs in peace... */
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
@@ -6588,79 +6679,83 @@ close_all_connections (struct MHD_Daemon *daemon)
 #endif
 #ifdef UPGRADE_SUPPORT
   if (upg_allowed)
-    {
-      struct MHD_Connection * susp;
+  {
+    struct MHD_Connection *susp;
 
-      susp = daemon->suspended_connections_tail;
-      while (NULL != susp)
-        {
-          if (NULL == susp->urh) /* "Upgraded" connection? */
-            MHD_PANIC (_("MHD_stop_daemon() called while we have suspended connections.\n"));
+    susp = daemon->suspended_connections_tail;
+    while (NULL != susp)
+    {
+      if (NULL == susp->urh)     /* "Upgraded" connection? */
+        MHD_PANIC (_ (
+                     "MHD_stop_daemon() called while we have suspended connections.\n"));
 #ifdef HTTPS_SUPPORT
-          else if (used_tls &&
-                   used_thr_p_c &&
-                   (! susp->urh->clean_ready) )
-            shutdown (susp->urh->app.socket,
-                      SHUT_RDWR); /* Wake thread by shutdown of app socket. */
+      else if (used_tls &&
+               used_thr_p_c &&
+               (! susp->urh->clean_ready) )
+        shutdown (susp->urh->app.socket,
+                  SHUT_RDWR);     /* Wake thread by shutdown of app socket. */
 #endif /* HTTPS_SUPPORT */
-          else
-            {
+      else
+      {
 #ifdef HAVE_MESSAGES
-              if (! susp->urh->was_closed)
-                MHD_DLOG (daemon,
-                          _("Initiated daemon shutdown while \"upgraded\" connection was not closed.\n"));
+        if (! susp->urh->was_closed)
+          MHD_DLOG (daemon,
+                    _ (
+                      "Initiated daemon shutdown while \"upgraded\" connection was not closed.\n"));
 #endif
-              susp->urh->was_closed = true;
-              /* If thread-per-connection is used, connection's thread
-               * may still processing "upgrade" (exiting). */
-              if (! used_thr_p_c)
-                MHD_connection_finish_forward_ (susp);
-              /* Do not use MHD_resume_connection() as mutex is
-               * already locked. */
-              susp->resuming = true;
-              daemon->resuming = true;
-            }
-          susp = susp->prev;
-        }
+        susp->urh->was_closed = true;
+        /* If thread-per-connection is used, connection's thread
+         * may still processing "upgrade" (exiting). */
+        if (! used_thr_p_c)
+          MHD_connection_finish_forward_ (susp);
+        /* Do not use MHD_resume_connection() as mutex is
+         * already locked. */
+        susp->resuming = true;
+        daemon->resuming = true;
+      }
+      susp = susp->prev;
     }
+  }
   else /* This 'else' is combined with next 'if' */
 #endif /* UPGRADE_SUPPORT */
   if (NULL != daemon->suspended_connections_head)
-    MHD_PANIC (_("MHD_stop_daemon() called while we have suspended connections.\n"));
+    MHD_PANIC (_ (
+                 "MHD_stop_daemon() called while we have suspended connections.\n"));
   for (pos = daemon->connections_tail; NULL != pos; pos = pos->prev)
-    {
-      shutdown (pos->socket_fd,
-                SHUT_RDWR);
+  {
+    shutdown (pos->socket_fd,
+              SHUT_RDWR);
 #if MHD_WINSOCK_SOCKETS
-      if ( (0 != (daemon->options & MHD_USE_THREAD_PER_CONNECTION)) &&
-           (MHD_ITC_IS_VALID_(daemon->itc)) &&
-           (! MHD_itc_activate_ (daemon->itc, "e")) )
-        MHD_PANIC (_("Failed to signal shutdown via inter-thread communication channel"));
+    if ( (0 != (daemon->options & MHD_USE_THREAD_PER_CONNECTION)) &&
+         (MHD_ITC_IS_VALID_ (daemon->itc)) &&
+         (! MHD_itc_activate_ (daemon->itc, "e")) )
+      MHD_PANIC (_ (
+                   "Failed to signal shutdown via inter-thread communication channel"));
 #endif
-    }
+  }
 
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   /* now, collect per-connection threads */
   if (used_thr_p_c)
+  {
+    pos = daemon->connections_tail;
+    while (NULL != pos)
     {
-      pos = daemon->connections_tail;
-      while (NULL != pos)
+      if (! pos->thread_joined)
       {
-        if (! pos->thread_joined)
-          {
-            MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
-            if (! MHD_join_thread_ (pos->pid.handle))
-              MHD_PANIC (_("Failed to join a thread\n"));
-            MHD_mutex_lock_chk_ (&daemon->cleanup_connection_mutex);
-            pos->thread_joined = true;
-            /* The thread may have concurrently modified the DLL,
-               need to restart from the beginning */
-            pos = daemon->connections_tail;
-            continue;
-          }
-        pos = pos->prev;
+        MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
+        if (! MHD_join_thread_ (pos->pid.handle))
+          MHD_PANIC (_ ("Failed to join a thread\n"));
+        MHD_mutex_lock_chk_ (&daemon->cleanup_connection_mutex);
+        pos->thread_joined = true;
+        /* The thread may have concurrently modified the DLL,
+           need to restart from the beginning */
+        pos = daemon->connections_tail;
+        continue;
       }
+      pos = pos->prev;
     }
+  }
   MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
 #endif
 
@@ -6670,10 +6765,10 @@ close_all_connections (struct MHD_Daemon *daemon)
   /* "Upgraded" connections that were not closed explicitly by
    * application should be moved to cleanup list too. */
   if (upg_allowed)
-    {
-      daemon->resuming = true; /* Force check for pending resume. */
-      resume_suspended_connections (daemon);
-    }
+  {
+    daemon->resuming = true;   /* Force check for pending resume. */
+    resume_suspended_connections (daemon);
+  }
 #endif /* UPGRADE_SUPPORT */
 
   /* now that we're alone, move everyone to cleanup */
@@ -6682,7 +6777,7 @@ close_all_connections (struct MHD_Daemon *daemon)
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
     if ( (0 != (daemon->options & MHD_USE_THREAD_PER_CONNECTION)) &&
          (! pos->thread_joined) )
-      MHD_PANIC (_("Failed to join a thread\n"));
+      MHD_PANIC (_ ("Failed to join a thread\n"));
 #endif
     close_connection (pos);
   }
@@ -6715,137 +6810,139 @@ MHD_stop_daemon (struct MHD_Daemon *daemon)
 
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   if (NULL != daemon->worker_pool)
-    { /* Master daemon with worker pool. */
-      mhd_assert (1 < daemon->worker_pool_size);
-      mhd_assert (0 != (daemon->options & MHD_USE_INTERNAL_POLLING_THREAD));
+  {   /* Master daemon with worker pool. */
+    mhd_assert (1 < daemon->worker_pool_size);
+    mhd_assert (0 != (daemon->options & MHD_USE_INTERNAL_POLLING_THREAD));
 
-      /* Let workers shutdown in parallel. */
-      for (i = 0; i < daemon->worker_pool_size; ++i)
-        {
-          daemon->worker_pool[i].shutdown = true;
-          if (MHD_ITC_IS_VALID_(daemon->worker_pool[i].itc))
-            {
-              if (! MHD_itc_activate_ (daemon->worker_pool[i].itc,
-                                       "e"))
-                MHD_PANIC (_("Failed to signal shutdown via inter-thread communication channel."));
-            }
-          else
-            mhd_assert (MHD_INVALID_SOCKET != fd);
-        }
+    /* Let workers shutdown in parallel. */
+    for (i = 0; i < daemon->worker_pool_size; ++i)
+    {
+      daemon->worker_pool[i].shutdown = true;
+      if (MHD_ITC_IS_VALID_ (daemon->worker_pool[i].itc))
+      {
+        if (! MHD_itc_activate_ (daemon->worker_pool[i].itc,
+                                 "e"))
+          MHD_PANIC (_ (
+                       "Failed to signal shutdown via inter-thread communication channel."));
+      }
+      else
+        mhd_assert (MHD_INVALID_SOCKET != fd);
+    }
 #ifdef HAVE_LISTEN_SHUTDOWN
-      if (MHD_INVALID_SOCKET != fd)
-        {
-          (void) shutdown (fd,
-                           SHUT_RDWR);
-        }
+    if (MHD_INVALID_SOCKET != fd)
+    {
+      (void) shutdown (fd,
+                       SHUT_RDWR);
+    }
 #endif /* HAVE_LISTEN_SHUTDOWN */
-      for (i = 0; i < daemon->worker_pool_size; ++i)
-        {
-          MHD_stop_daemon (&daemon->worker_pool[i]);
-        }
-      free (daemon->worker_pool);
-      mhd_assert (MHD_ITC_IS_INVALID_(daemon->itc));
+    for (i = 0; i < daemon->worker_pool_size; ++i)
+    {
+      MHD_stop_daemon (&daemon->worker_pool[i]);
+    }
+    free (daemon->worker_pool);
+    mhd_assert (MHD_ITC_IS_INVALID_ (daemon->itc));
 #ifdef EPOLL_SUPPORT
-      mhd_assert (-1 == daemon->epoll_fd);
+    mhd_assert (-1 == daemon->epoll_fd);
 #if defined(HTTPS_SUPPORT) && defined(UPGRADE_SUPPORT)
-      mhd_assert (-1 == daemon->epoll_upgrade_fd);
+    mhd_assert (-1 == daemon->epoll_upgrade_fd);
 #endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
 #endif /* EPOLL_SUPPORT */
-    }
+  }
   else
 #endif
-    { /* Worker daemon or single daemon. */
+  {   /* Worker daemon or single daemon. */
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-      if (0 != (daemon->options & MHD_USE_INTERNAL_POLLING_THREAD))
-        { /* Worker daemon or single daemon with internal thread(s). */
-          mhd_assert (0 == daemon->worker_pool_size);
-	  /* Separate thread(s) is used for polling sockets. */
-	  if (MHD_ITC_IS_VALID_ (daemon->itc))
-	    {
-	      if (! MHD_itc_activate_ (daemon->itc,
-                                       "e"))
-		MHD_PANIC (_("Failed to signal shutdown via inter-thread communication channel"));
-	    }
-	  else
-	    {
-#ifdef HAVE_LISTEN_SHUTDOWN
-	      if (MHD_INVALID_SOCKET != fd)
-		{
-		  if (NULL == daemon->master)
-		    (void) shutdown (fd,
-				     SHUT_RDWR);
-		}
-	      else
-#endif /* HAVE_LISTEN_SHUTDOWN */
-		mhd_assert (false); /* Should never happen */
-	    }
-
-	  if (! MHD_join_thread_ (daemon->pid.handle))
-	    {
-	      MHD_PANIC (_("Failed to join a thread\n"));
-	    }
-	  /* close_all_connections() was called in daemon thread. */
-        }
-      else
-#endif
-        {
-          /* No internal threads are used for polling sockets. */
-          close_all_connections (daemon);
-        }
+    if (0 != (daemon->options & MHD_USE_INTERNAL_POLLING_THREAD))
+    {     /* Worker daemon or single daemon with internal thread(s). */
+      mhd_assert (0 == daemon->worker_pool_size);
+      /* Separate thread(s) is used for polling sockets. */
       if (MHD_ITC_IS_VALID_ (daemon->itc))
-        MHD_itc_destroy_chk_ (daemon->itc);
+      {
+        if (! MHD_itc_activate_ (daemon->itc,
+                                 "e"))
+          MHD_PANIC (_ (
+                       "Failed to signal shutdown via inter-thread communication channel"));
+      }
+      else
+      {
+#ifdef HAVE_LISTEN_SHUTDOWN
+        if (MHD_INVALID_SOCKET != fd)
+        {
+          if (NULL == daemon->master)
+            (void) shutdown (fd,
+                             SHUT_RDWR);
+        }
+        else
+#endif /* HAVE_LISTEN_SHUTDOWN */
+        mhd_assert (false); /* Should never happen */
+      }
+
+      if (! MHD_join_thread_ (daemon->pid.handle))
+      {
+        MHD_PANIC (_ ("Failed to join a thread\n"));
+      }
+      /* close_all_connections() was called in daemon thread. */
+    }
+    else
+#endif
+    {
+      /* No internal threads are used for polling sockets. */
+      close_all_connections (daemon);
+    }
+    if (MHD_ITC_IS_VALID_ (daemon->itc))
+      MHD_itc_destroy_chk_ (daemon->itc);
 
 #ifdef EPOLL_SUPPORT
-      if ( (0 != (daemon->options & MHD_USE_EPOLL)) &&
-           (-1 != daemon->epoll_fd) )
-        MHD_socket_close_chk_ (daemon->epoll_fd);
+    if ( (0 != (daemon->options & MHD_USE_EPOLL)) &&
+         (-1 != daemon->epoll_fd) )
+      MHD_socket_close_chk_ (daemon->epoll_fd);
 #if defined(HTTPS_SUPPORT) && defined(UPGRADE_SUPPORT)
-      if ( (0 != (daemon->options & MHD_USE_EPOLL)) &&
-           (-1 != daemon->epoll_upgrade_fd) )
-        MHD_socket_close_chk_ (daemon->epoll_upgrade_fd);
+    if ( (0 != (daemon->options & MHD_USE_EPOLL)) &&
+         (-1 != daemon->epoll_upgrade_fd) )
+      MHD_socket_close_chk_ (daemon->epoll_upgrade_fd);
 #endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
 #endif /* EPOLL_SUPPORT */
 
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-      MHD_mutex_destroy_chk_ (&daemon->cleanup_connection_mutex);
+    MHD_mutex_destroy_chk_ (&daemon->cleanup_connection_mutex);
 #endif
-    }
+  }
 
   if (NULL == daemon->master)
-    { /* Cleanup that should be done only one time in master/single daemon.
+  {   /* Cleanup that should be done only one time in master/single daemon.
        * Do not perform this cleanup in worker daemons. */
 
-      if (MHD_INVALID_SOCKET != fd)
-        MHD_socket_close_chk_ (fd);
+    if (MHD_INVALID_SOCKET != fd)
+      MHD_socket_close_chk_ (fd);
 
-      /* TLS clean up */
+    /* TLS clean up */
 #ifdef HTTPS_SUPPORT
-      if (daemon->have_dhparams)
-        {
-          gnutls_dh_params_deinit (daemon->https_mem_dhparams);
-          daemon->have_dhparams = false;
-        }
-      if (0 != (daemon->options & MHD_USE_TLS))
-        {
-          gnutls_priority_deinit (daemon->priority_cache);
-          if (daemon->x509_cred)
-            gnutls_certificate_free_credentials (daemon->x509_cred);
-          if (daemon->psk_cred)
-              gnutls_psk_free_server_credentials (daemon->psk_cred);
-        }
+    if (daemon->have_dhparams)
+    {
+      gnutls_dh_params_deinit (daemon->https_mem_dhparams);
+      daemon->have_dhparams = false;
+    }
+    if (0 != (daemon->options & MHD_USE_TLS))
+    {
+      gnutls_priority_deinit (daemon->priority_cache);
+      if (daemon->x509_cred)
+        gnutls_certificate_free_credentials (daemon->x509_cred);
+      if (daemon->psk_cred)
+        gnutls_psk_free_server_credentials (daemon->psk_cred);
+    }
 #endif /* HTTPS_SUPPORT */
 
 #ifdef DAUTH_SUPPORT
-      free (daemon->nnc);
+    free (daemon->nnc);
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-      MHD_mutex_destroy_chk_ (&daemon->nnc_lock);
+    MHD_mutex_destroy_chk_ (&daemon->nnc_lock);
 #endif
 #endif
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-      MHD_mutex_destroy_chk_ (&daemon->per_ip_connection_mutex);
+    MHD_mutex_destroy_chk_ (&daemon->per_ip_connection_mutex);
 #endif
-      free (daemon);
-    }
+    free (daemon);
+  }
 }
 
 
@@ -6862,51 +6959,51 @@ MHD_stop_daemon (struct MHD_Daemon *daemon)
  */
 const union MHD_DaemonInfo *
 MHD_get_daemon_info (struct MHD_Daemon *daemon,
-		     enum MHD_DaemonInfoType info_type,
-		     ...)
+                     enum MHD_DaemonInfoType info_type,
+                     ...)
 {
   if (NULL == daemon)
     return NULL;
   switch (info_type)
-    {
-    case MHD_DAEMON_INFO_KEY_SIZE:
-      return NULL; /* no longer supported */
-    case MHD_DAEMON_INFO_MAC_KEY_SIZE:
-      return NULL; /* no longer supported */
-    case MHD_DAEMON_INFO_LISTEN_FD:
-      return (const union MHD_DaemonInfo *) &daemon->listen_fd;
+  {
+  case MHD_DAEMON_INFO_KEY_SIZE:
+    return NULL;   /* no longer supported */
+  case MHD_DAEMON_INFO_MAC_KEY_SIZE:
+    return NULL;   /* no longer supported */
+  case MHD_DAEMON_INFO_LISTEN_FD:
+    return (const union MHD_DaemonInfo *) &daemon->listen_fd;
 #ifdef EPOLL_SUPPORT
-    case MHD_DAEMON_INFO_EPOLL_FD:
-      return (const union MHD_DaemonInfo *) &daemon->epoll_fd;
+  case MHD_DAEMON_INFO_EPOLL_FD:
+    return (const union MHD_DaemonInfo *) &daemon->epoll_fd;
 #endif
-    case MHD_DAEMON_INFO_CURRENT_CONNECTIONS:
-      if (0 == (daemon->options & MHD_USE_INTERNAL_POLLING_THREAD))
-        {
-          /* Assume that MHD_run() in not called in other thread
-           * at the same time. */
-          MHD_cleanup_connections (daemon);
-        }
-#if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-      else if (daemon->worker_pool)
-        {
-          unsigned int i;
-          /* Collect the connection information stored in the workers. */
-          daemon->connections = 0;
-          for (i = 0; i < daemon->worker_pool_size; i++)
-            {
-              /* FIXME: next line is thread-safe only if read is atomic. */
-              daemon->connections += daemon->worker_pool[i].connections;
-            }
-        }
-#endif
-      return (const union MHD_DaemonInfo *) &daemon->connections;
-    case MHD_DAEMON_INFO_FLAGS:
-      return (const union MHD_DaemonInfo *) &daemon->options;
-    case MHD_DAEMON_INFO_BIND_PORT:
-      return (const union MHD_DaemonInfo *) &daemon->port;
-    default:
-      return NULL;
+  case MHD_DAEMON_INFO_CURRENT_CONNECTIONS:
+    if (0 == (daemon->options & MHD_USE_INTERNAL_POLLING_THREAD))
+    {
+      /* Assume that MHD_run() in not called in other thread
+       * at the same time. */
+      MHD_cleanup_connections (daemon);
     }
+#if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
+    else if (daemon->worker_pool)
+    {
+      unsigned int i;
+      /* Collect the connection information stored in the workers. */
+      daemon->connections = 0;
+      for (i = 0; i < daemon->worker_pool_size; i++)
+      {
+        /* FIXME: next line is thread-safe only if read is atomic. */
+        daemon->connections += daemon->worker_pool[i].connections;
+      }
+    }
+#endif
+    return (const union MHD_DaemonInfo *) &daemon->connections;
+  case MHD_DAEMON_INFO_FLAGS:
+    return (const union MHD_DaemonInfo *) &daemon->options;
+  case MHD_DAEMON_INFO_BIND_PORT:
+    return (const union MHD_DaemonInfo *) &daemon->port;
+  default:
+    return NULL;
+  }
 }
 
 
@@ -6950,13 +7047,13 @@ MHD_get_version (void)
   static char ver[12] = "\0\0\0\0\0\0\0\0\0\0\0";
   if (0 == ver[0])
   {
-    int res = MHD_snprintf_(ver,
-                            sizeof(ver),
-                            "%x.%x.%x",
-                            (((int)MHD_VERSION >> 24) & 0xFF),
-                            (((int)MHD_VERSION >> 16) & 0xFF),
-                            (((int)MHD_VERSION >> 8) & 0xFF));
-    if (0 >= res || sizeof(ver) <= res)
+    int res = MHD_snprintf_ (ver,
+                             sizeof(ver),
+                             "%x.%x.%x",
+                             (((int) MHD_VERSION >> 24) & 0xFF),
+                             (((int) MHD_VERSION >> 16) & 0xFF),
+                             (((int) MHD_VERSION >> 8) & 0xFF));
+    if ((0 >= res)||(sizeof(ver) <= res))
       return "0.0.0"; /* Can't return real version*/
   }
   return ver;
@@ -6976,154 +7073,155 @@ MHD_get_version (void)
  * @ingroup specialized
  */
 _MHD_EXTERN int
-MHD_is_feature_supported(enum MHD_FEATURE feature)
+MHD_is_feature_supported (enum MHD_FEATURE feature)
 {
-  switch(feature)
-    {
-    case MHD_FEATURE_MESSAGES:
+  switch (feature)
+  {
+  case MHD_FEATURE_MESSAGES:
 #ifdef HAVE_MESSAGES
-      return MHD_YES;
+    return MHD_YES;
 #else
-      return MHD_NO;
+    return MHD_NO;
 #endif
-    case MHD_FEATURE_TLS:
+  case MHD_FEATURE_TLS:
 #ifdef HTTPS_SUPPORT
-      return MHD_YES;
+    return MHD_YES;
 #else  /* ! HTTPS_SUPPORT */
-      return MHD_NO;
+    return MHD_NO;
 #endif  /* ! HTTPS_SUPPORT */
-    case MHD_FEATURE_HTTPS_CERT_CALLBACK:
+  case MHD_FEATURE_HTTPS_CERT_CALLBACK:
 #if defined(HTTPS_SUPPORT) && GNUTLS_VERSION_MAJOR >= 3
-      return MHD_YES;
+    return MHD_YES;
 #else  /* !HTTPS_SUPPORT || GNUTLS_VERSION_MAJOR < 3 */
-      return MHD_NO;
+    return MHD_NO;
 #endif /* !HTTPS_SUPPORT || GNUTLS_VERSION_MAJOR < 3 */
-    case MHD_FEATURE_HTTPS_CERT_CALLBACK2:
+  case MHD_FEATURE_HTTPS_CERT_CALLBACK2:
 #if defined(HTTPS_SUPPORT) && GNUTLS_VERSION_NUMBER >= 0x030603
-      return MHD_YES;
+    return MHD_YES;
 #else  /* !HTTPS_SUPPORT || GNUTLS_VERSION_NUMBER < 0x030603 */
-      return MHD_NO;
+    return MHD_NO;
 #endif /* !HTTPS_SUPPORT || GNUTLS_VERSION_NUMBER < 0x030603 */
-    case MHD_FEATURE_IPv6:
+  case MHD_FEATURE_IPv6:
 #ifdef HAVE_INET6
-      return MHD_YES;
+    return MHD_YES;
 #else
-      return MHD_NO;
+    return MHD_NO;
 #endif
-    case MHD_FEATURE_IPv6_ONLY:
+  case MHD_FEATURE_IPv6_ONLY:
 #if defined(IPPROTO_IPV6) && defined(IPV6_V6ONLY)
-      return MHD_YES;
+    return MHD_YES;
 #else
-      return MHD_NO;
+    return MHD_NO;
 #endif
-    case MHD_FEATURE_POLL:
+  case MHD_FEATURE_POLL:
 #ifdef HAVE_POLL
-      return MHD_YES;
+    return MHD_YES;
 #else
-      return MHD_NO;
+    return MHD_NO;
 #endif
-    case MHD_FEATURE_EPOLL:
+  case MHD_FEATURE_EPOLL:
 #ifdef EPOLL_SUPPORT
-      return MHD_YES;
+    return MHD_YES;
 #else
-      return MHD_NO;
+    return MHD_NO;
 #endif
-    case MHD_FEATURE_SHUTDOWN_LISTEN_SOCKET:
+  case MHD_FEATURE_SHUTDOWN_LISTEN_SOCKET:
 #ifdef HAVE_LISTEN_SHUTDOWN
-      return MHD_YES;
+    return MHD_YES;
 #else
-      return MHD_NO;
+    return MHD_NO;
 #endif
-    case MHD_FEATURE_SOCKETPAIR:
+  case MHD_FEATURE_SOCKETPAIR:
 #ifdef _MHD_ITC_SOCKETPAIR
-      return MHD_YES;
+    return MHD_YES;
 #else
-      return MHD_NO;
+    return MHD_NO;
 #endif
-    case MHD_FEATURE_TCP_FASTOPEN:
+  case MHD_FEATURE_TCP_FASTOPEN:
 #ifdef TCP_FASTOPEN
-      return MHD_YES;
+    return MHD_YES;
 #else
-      return MHD_NO;
+    return MHD_NO;
 #endif
-    case MHD_FEATURE_BASIC_AUTH:
+  case MHD_FEATURE_BASIC_AUTH:
 #ifdef BAUTH_SUPPORT
-      return MHD_YES;
+    return MHD_YES;
 #else
-      return MHD_NO;
+    return MHD_NO;
 #endif
-    case MHD_FEATURE_DIGEST_AUTH:
+  case MHD_FEATURE_DIGEST_AUTH:
 #ifdef DAUTH_SUPPORT
-      return MHD_YES;
+    return MHD_YES;
 #else
-      return MHD_NO;
+    return MHD_NO;
 #endif
-    case MHD_FEATURE_POSTPROCESSOR:
+  case MHD_FEATURE_POSTPROCESSOR:
 #ifdef HAVE_POSTPROCESSOR
-      return MHD_YES;
+    return MHD_YES;
 #else
-      return MHD_NO;
+    return MHD_NO;
 #endif
-    case MHD_FEATURE_HTTPS_KEY_PASSWORD:
+  case MHD_FEATURE_HTTPS_KEY_PASSWORD:
 #if defined(HTTPS_SUPPORT) && GNUTLS_VERSION_NUMBER >= 0x030111
-      return MHD_YES;
+    return MHD_YES;
 #else  /* !HTTPS_SUPPORT || GNUTLS_VERSION_NUMBER < 0x030111 */
-      return MHD_NO;
+    return MHD_NO;
 #endif /* !HTTPS_SUPPORT || GNUTLS_VERSION_NUMBER < 0x030111 */
-    case MHD_FEATURE_LARGE_FILE:
+  case MHD_FEATURE_LARGE_FILE:
 #if defined(HAVE_PREAD64) || defined(_WIN32)
-      return MHD_YES;
+    return MHD_YES;
 #elif defined(HAVE_PREAD)
-      return (sizeof(uint64_t) > sizeof(off_t)) ? MHD_NO : MHD_YES;
+    return (sizeof(uint64_t) > sizeof(off_t)) ? MHD_NO : MHD_YES;
 #elif defined(HAVE_LSEEK64)
-      return MHD_YES;
+    return MHD_YES;
 #else
-      return (sizeof(uint64_t) > sizeof(off_t)) ? MHD_NO : MHD_YES;
+    return (sizeof(uint64_t) > sizeof(off_t)) ? MHD_NO : MHD_YES;
 #endif
-    case MHD_FEATURE_THREAD_NAMES:
+  case MHD_FEATURE_THREAD_NAMES:
 #if defined(MHD_USE_THREAD_NAME_)
-      return MHD_YES;
+    return MHD_YES;
 #else
-      return MHD_NO;
+    return MHD_NO;
 #endif
-    case MHD_FEATURE_UPGRADE:
+  case MHD_FEATURE_UPGRADE:
 #if defined(UPGRADE_SUPPORT)
-      return MHD_YES;
+    return MHD_YES;
 #else
-      return MHD_NO;
+    return MHD_NO;
 #endif
-    case MHD_FEATURE_RESPONSES_SHARED_FD:
+  case MHD_FEATURE_RESPONSES_SHARED_FD:
 #if defined(HAVE_PREAD64) || defined(HAVE_PREAD) || defined(_WIN32)
-      return MHD_YES;
+    return MHD_YES;
 #else
-      return MHD_NO;
+    return MHD_NO;
 #endif
-    case MHD_FEATURE_AUTODETECT_BIND_PORT:
+  case MHD_FEATURE_AUTODETECT_BIND_PORT:
 #ifdef MHD_USE_GETSOCKNAME
-      return MHD_YES;
+    return MHD_YES;
 #else
-      return MHD_NO;
+    return MHD_NO;
 #endif
-    case MHD_FEATURE_AUTOSUPPRESS_SIGPIPE:
-#if defined(MHD_WINSOCK_SOCKETS) || defined(MHD_socket_nosignal_) || defined (MSG_NOSIGNAL)
-      return MHD_YES;
+  case MHD_FEATURE_AUTOSUPPRESS_SIGPIPE:
+#if defined(MHD_WINSOCK_SOCKETS) || defined(MHD_socket_nosignal_) || \
+    defined (MSG_NOSIGNAL)
+    return MHD_YES;
 #else
-      return MHD_NO;
+    return MHD_NO;
 #endif
-    case MHD_FEATURE_SENDFILE:
+  case MHD_FEATURE_SENDFILE:
 #ifdef _MHD_HAVE_SENDFILE
-      return MHD_YES;
+    return MHD_YES;
 #else
-      return MHD_NO;
+    return MHD_NO;
 #endif
-    case MHD_FEATURE_THREADS:
+  case MHD_FEATURE_THREADS:
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-      return MHD_YES;
+    return MHD_YES;
 #else
-      return MHD_NO;
+    return MHD_NO;
 #endif
 
-    }
+  }
   return MHD_NO;
 }
 
@@ -7141,12 +7239,12 @@ gcry_w32_mutex_init (void **ppmtx)
 
   if (NULL == *ppmtx)
     return ENOMEM;
-  if (!MHD_mutex_init_ ((MHD_mutex_*)*ppmtx))
-    {
-      free (*ppmtx);
-      *ppmtx = NULL;
-      return EPERM;
-    }
+  if (! MHD_mutex_init_ ((MHD_mutex_*) *ppmtx))
+  {
+    free (*ppmtx);
+    *ppmtx = NULL;
+    return EPERM;
+  }
 
   return 0;
 }
@@ -7155,7 +7253,7 @@ gcry_w32_mutex_init (void **ppmtx)
 static int
 gcry_w32_mutex_destroy (void **ppmtx)
 {
-  int res = (MHD_mutex_destroy_ ((MHD_mutex_*)*ppmtx)) ? 0 : EINVAL;
+  int res = (MHD_mutex_destroy_ ((MHD_mutex_*) *ppmtx)) ? 0 : EINVAL;
   free (*ppmtx);
   return res;
 }
@@ -7164,14 +7262,14 @@ gcry_w32_mutex_destroy (void **ppmtx)
 static int
 gcry_w32_mutex_lock (void **ppmtx)
 {
-  return MHD_mutex_lock_ ((MHD_mutex_*)*ppmtx) ? 0 : EINVAL;
+  return MHD_mutex_lock_ ((MHD_mutex_*) *ppmtx) ? 0 : EINVAL;
 }
 
 
 static int
 gcry_w32_mutex_unlock (void **ppmtx)
 {
-  return MHD_mutex_unlock_ ((MHD_mutex_*)*ppmtx) ? 0 : EINVAL;
+  return MHD_mutex_unlock_ ((MHD_mutex_*) *ppmtx) ? 0 : EINVAL;
 }
 
 
@@ -7179,7 +7277,8 @@ static struct gcry_thread_cbs gcry_threads_w32 = {
   (GCRY_THREAD_OPTION_USER | (GCRY_THREAD_OPTION_VERSION << 8)),
   NULL, gcry_w32_mutex_init, gcry_w32_mutex_destroy,
   gcry_w32_mutex_lock, gcry_w32_mutex_unlock,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+};
 
 #endif /* defined(MHD_W32_MUTEX_) */
 #endif /* HTTPS_SUPPORT && GCRYPT_VERSION_NUMBER < 0x010600 */
@@ -7189,7 +7288,7 @@ static struct gcry_thread_cbs gcry_threads_w32 = {
  * Initialize do setup work.
  */
 void
-MHD_init(void)
+MHD_init (void)
 {
 #if defined(MHD_WINSOCK_SOCKETS)
   WSADATA wsd;
@@ -7199,11 +7298,11 @@ MHD_init(void)
     mhd_panic = &mhd_panic_std;
 
 #if defined(MHD_WINSOCK_SOCKETS)
-  if (0 != WSAStartup(MAKEWORD(2, 2), &wsd))
-    MHD_PANIC (_("Failed to initialize winsock\n"));
+  if (0 != WSAStartup (MAKEWORD (2, 2), &wsd))
+    MHD_PANIC (_ ("Failed to initialize winsock\n"));
   mhd_winsock_inited_ = 1;
-  if (2 != LOBYTE(wsd.wVersion) && 2 != HIBYTE(wsd.wVersion))
-    MHD_PANIC (_("Winsock version 2.2 is not available\n"));
+  if ((2 != LOBYTE (wsd.wVersion))&&(2 != HIBYTE (wsd.wVersion)))
+    MHD_PANIC (_ ("Winsock version 2.2 is not available\n"));
 #endif /* MHD_WINSOCK_SOCKETS */
 #ifdef HTTPS_SUPPORT
 #ifdef MHD_HTTPS_REQUIRE_GRYPT
@@ -7211,21 +7310,22 @@ MHD_init(void)
 #if defined(MHD_USE_POSIX_THREADS)
   if (0 != gcry_control (GCRYCTL_SET_THREAD_CBS,
                          &gcry_threads_pthread))
-    MHD_PANIC (_("Failed to initialise multithreading in libgcrypt\n"));
+    MHD_PANIC (_ ("Failed to initialise multithreading in libgcrypt\n"));
 #elif defined(MHD_W32_MUTEX_)
   if (0 != gcry_control (GCRYCTL_SET_THREAD_CBS,
                          &gcry_threads_w32))
-    MHD_PANIC (_("Failed to initialise multithreading in libgcrypt\n"));
+    MHD_PANIC (_ ("Failed to initialise multithreading in libgcrypt\n"));
 #endif /* defined(MHD_W32_MUTEX_) */
   gcry_check_version (NULL);
 #else
   if (NULL == gcry_check_version ("1.6.0"))
-    MHD_PANIC (_("libgcrypt is too old. MHD was compiled for libgcrypt 1.6.0 or newer\n"));
+    MHD_PANIC (_ (
+                 "libgcrypt is too old. MHD was compiled for libgcrypt 1.6.0 or newer\n"));
 #endif
 #endif /* MHD_HTTPS_REQUIRE_GRYPT */
   gnutls_global_init ();
 #endif /* HTTPS_SUPPORT */
-  MHD_monotonic_sec_counter_init();
+  MHD_monotonic_sec_counter_init ();
 #ifdef HAVE_FREEBSD_SENDFILE
   MHD_conn_init_static_ ();
 #endif /* HAVE_FREEBSD_SENDFILE */
@@ -7234,20 +7334,20 @@ MHD_init(void)
 
 
 void
-MHD_fini(void)
+MHD_fini (void)
 {
 #ifdef HTTPS_SUPPORT
   gnutls_global_deinit ();
 #endif /* HTTPS_SUPPORT */
 #if defined(MHD_WINSOCK_SOCKETS)
   if (mhd_winsock_inited_)
-    WSACleanup();
+    WSACleanup ();
 #endif /* MHD_WINSOCK_SOCKETS */
-  MHD_monotonic_sec_counter_finish();
+  MHD_monotonic_sec_counter_finish ();
 }
 
 #ifdef _AUTOINIT_FUNCS_ARE_SUPPORTED
-_SET_INIT_AND_DEINIT_FUNCS(MHD_init, MHD_fini);
+_SET_INIT_AND_DEINIT_FUNCS (MHD_init, MHD_fini);
 #endif /* _AUTOINIT_FUNCS_ARE_SUPPORTED */
 
 /* end of daemon.c */

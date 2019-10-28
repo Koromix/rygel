@@ -43,7 +43,8 @@
 #define CAFILE "ca.pem"
 #define CRLFILE "crl.pem"
 
-#define EMPTY_PAGE "<html><head><title>File not found</title></head><body>File not found</body></html>"
+#define EMPTY_PAGE \
+  "<html><head><title>File not found</title></head><body>File not found</body></html>"
 
 /* Test Certificate */
 const char cert_pem[] =
@@ -117,7 +118,7 @@ http_ahc (void *cls,
           const char *method,
           const char *version,
           const char *upload_data,
-	  size_t *upload_data_size, void **ptr)
+          size_t *upload_data_size, void **ptr)
 {
   static int aptr;
   struct MHD_Response *response;
@@ -125,60 +126,60 @@ http_ahc (void *cls,
   FILE *file;
   int fd;
   struct stat buf;
-  (void)cls;               /* Unused. Silent compiler warning. */
-  (void)version;           /* Unused. Silent compiler warning. */
-  (void)upload_data;       /* Unused. Silent compiler warning. */
-  (void)upload_data_size;  /* Unused. Silent compiler warning. */
+  (void) cls;               /* Unused. Silent compiler warning. */
+  (void) version;           /* Unused. Silent compiler warning. */
+  (void) upload_data;       /* Unused. Silent compiler warning. */
+  (void) upload_data_size;  /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (method, MHD_HTTP_METHOD_GET))
     return MHD_NO;              /* unexpected method */
   if (&aptr != *ptr)
-    {
-      /* do never respond on first call */
-      *ptr = &aptr;
-      return MHD_YES;
-    }
+  {
+    /* do never respond on first call */
+    *ptr = &aptr;
+    return MHD_YES;
+  }
   *ptr = NULL;                  /* reset when done */
 
   file = fopen (&url[1], "rb");
   if (NULL != file)
+  {
+    fd = fileno (file);
+    if (-1 == fd)
     {
-      fd = fileno (file);
-      if (-1 == fd)
-        {
-          (void) fclose (file);
-          return MHD_NO; /* internal error */
-        }
-      if ( (0 != fstat (fd, &buf)) ||
-           (! S_ISREG (buf.st_mode)) )
-        {
-          /* not a regular file, refuse to serve */
-          fclose (file);
-          file = NULL;
-        }
+      (void) fclose (file);
+      return MHD_NO;     /* internal error */
     }
+    if ( (0 != fstat (fd, &buf)) ||
+         (! S_ISREG (buf.st_mode)) )
+    {
+      /* not a regular file, refuse to serve */
+      fclose (file);
+      file = NULL;
+    }
+  }
 
   if (NULL == file)
-    {
-      response = MHD_create_response_from_buffer (strlen (EMPTY_PAGE),
-						  (void *) EMPTY_PAGE,
-						  MHD_RESPMEM_PERSISTENT);
-      ret = MHD_queue_response (connection, MHD_HTTP_NOT_FOUND, response);
-      MHD_destroy_response (response);
-    }
+  {
+    response = MHD_create_response_from_buffer (strlen (EMPTY_PAGE),
+                                                (void *) EMPTY_PAGE,
+                                                MHD_RESPMEM_PERSISTENT);
+    ret = MHD_queue_response (connection, MHD_HTTP_NOT_FOUND, response);
+    MHD_destroy_response (response);
+  }
   else
+  {
+    response = MHD_create_response_from_callback (buf.st_size, 32 * 1024,       /* 32k PAGE_NOT_FOUND size */
+                                                  &file_reader, file,
+                                                  &file_free_callback);
+    if (NULL == response)
     {
-      response = MHD_create_response_from_callback (buf.st_size, 32 * 1024,     /* 32k PAGE_NOT_FOUND size */
-                                                    &file_reader, file,
-                                                    &file_free_callback);
-      if (NULL == response)
-	{
-	  fclose (file);
-	  return MHD_NO;
-	}
-      ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
-      MHD_destroy_response (response);
+      fclose (file);
+      return MHD_NO;
     }
+    ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
+    MHD_destroy_response (response);
+  }
   return ret;
 }
 
@@ -190,22 +191,23 @@ main (int argc, char *const *argv)
   int port;
 
   if (argc != 2)
-    {
-      printf ("%s PORT\n", argv[0]);
-      return 1;
-    }
+  {
+    printf ("%s PORT\n", argv[0]);
+    return 1;
+  }
   port = atoi (argv[1]);
   if ( (1 > port) ||
        (port > UINT16_MAX) )
-    {
-      fprintf (stderr,
-               "Port must be a number between 1 and 65535\n");
-      return 1;
-    }
+  {
+    fprintf (stderr,
+             "Port must be a number between 1 and 65535\n");
+    return 1;
+  }
 
   TLS_daemon =
-    MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG |
-                      MHD_USE_TLS,
+    MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION
+                      | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG
+                      | MHD_USE_TLS,
                       (uint16_t) port,
                       NULL, NULL,
                       &http_ahc, NULL,
@@ -214,10 +216,10 @@ main (int argc, char *const *argv)
                       MHD_OPTION_HTTPS_MEM_CERT, cert_pem,
                       MHD_OPTION_END);
   if (NULL == TLS_daemon)
-    {
-      fprintf (stderr, "Error: failed to start TLS_daemon\n");
-      return 1;
-    }
+  {
+    fprintf (stderr, "Error: failed to start TLS_daemon\n");
+    return 1;
+  }
   printf ("MHD daemon listening on port %u\n",
           (unsigned int) port);
 

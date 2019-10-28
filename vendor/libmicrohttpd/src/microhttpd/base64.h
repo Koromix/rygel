@@ -12,6 +12,6 @@
 #include "platform.h"
 
 char *
-BASE64Decode(const char* src);
+BASE64Decode (const char*src);
 
 #endif /* !BASE64_H */

@@ -32,7 +32,8 @@
 #include <microhttpd.h>
 #include <pthread.h>
 
-#define PAGE "<html><head><title>libmicrohttpd demo</title></head><body>libmicrohttpd demo</body></html>"
+#define PAGE \
+  "<html><head><title>libmicrohttpd demo</title></head><body>libmicrohttpd demo</body></html>"
 
 
 /**
@@ -72,23 +73,23 @@ send_all (MHD_socket sock,
 
   make_blocking (sock);
   for (off = 0; off < len; off += ret)
+  {
+    ret = send (sock,
+                &buf[off],
+                len - off,
+                0);
+    if (0 > ret)
     {
-      ret = send (sock,
-                  &buf[off],
-                  len - off,
-                  0);
-      if (0 > ret)
-        {
-          if (EAGAIN == errno)
-            {
-              ret = 0;
-              continue;
-            }
-          break;
-        }
-      if (0 == ret)
-        break;
+      if (EAGAIN == errno)
+      {
+        ret = 0;
+        continue;
+      }
+      break;
     }
+    if (0 == ret)
+      break;
+  }
 }
 
 
@@ -118,25 +119,25 @@ run_usock (void *cls)
   make_blocking (md->sock);
   /* start by sending extra data MHD may have already read, if any */
   if (0 != md->extra_in_size)
-    {
-      send_all (md->sock,
-                md->extra_in,
-                md->extra_in_size);
-      free (md->extra_in);
-    }
+  {
+    send_all (md->sock,
+              md->extra_in,
+              md->extra_in_size);
+    free (md->extra_in);
+  }
   /* now echo in a loop */
   while (1)
-    {
-      got = recv (md->sock,
-                  buf,
-                  sizeof (buf),
-                  0);
-      if (0 >= got)
-        break;
-      send_all (md->sock,
+  {
+    got = recv (md->sock,
                 buf,
-                got);
-    }
+                sizeof (buf),
+                0);
+    if (0 >= got)
+      break;
+    send_all (md->sock,
+              buf,
+              got);
+  }
   free (md);
   MHD_upgrade_action (urh,
                       MHD_UPGRADE_ACTION_CLOSE);
@@ -202,23 +203,23 @@ uh_cb (void *cls,
 {
   struct MyData *md;
   pthread_t pt;
-  (void)cls;         /* Unused. Silent compiler warning. */
-  (void)connection;  /* Unused. Silent compiler warning. */
-  (void)con_cls;     /* Unused. Silent compiler warning. */
+  (void) cls;         /* Unused. Silent compiler warning. */
+  (void) connection;  /* Unused. Silent compiler warning. */
+  (void) con_cls;     /* Unused. Silent compiler warning. */
 
   md = malloc (sizeof (struct MyData));
   if (NULL == md)
     abort ();
   memset (md, 0, sizeof (struct MyData));
   if (0 != extra_in_size)
-    {
-      md->extra_in = malloc (extra_in_size);
-      if (NULL == md->extra_in)
-        abort ();
-      memcpy (md->extra_in,
-              extra_in,
-              extra_in_size);
-    }
+  {
+    md->extra_in = malloc (extra_in_size);
+    if (NULL == md->extra_in)
+      abort ();
+    memcpy (md->extra_in,
+            extra_in,
+            extra_in_size);
+  }
   md->extra_in_size = extra_in_size;
   md->sock = sock;
   md->urh = urh;
@@ -252,20 +253,20 @@ ahc_echo (void *cls,
   static int aptr;
   struct MHD_Response *response;
   int ret;
-  (void)cls;               /* Unused. Silent compiler warning. */
-  (void)url;               /* Unused. Silent compiler warning. */
-  (void)version;           /* Unused. Silent compiler warning. */
-  (void)upload_data;       /* Unused. Silent compiler warning. */
-  (void)upload_data_size;  /* Unused. Silent compiler warning. */
+  (void) cls;               /* Unused. Silent compiler warning. */
+  (void) url;               /* Unused. Silent compiler warning. */
+  (void) version;           /* Unused. Silent compiler warning. */
+  (void) upload_data;       /* Unused. Silent compiler warning. */
+  (void) upload_data_size;  /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (method, "GET"))
     return MHD_NO;              /* unexpected method */
   if (&aptr != *ptr)
-    {
-      /* do never respond on first call */
-      *ptr = &aptr;
-      return MHD_YES;
-    }
+  {
+    /* do never respond on first call */
+    *ptr = &aptr;
+    return MHD_YES;
+  }
   *ptr = NULL;                  /* reset when done */
   response = MHD_create_response_for_upgrade (&uh_cb,
                                               NULL);
@@ -288,11 +289,12 @@ main (int argc,
   struct MHD_Daemon *d;
 
   if (argc != 2)
-    {
-      printf ("%s PORT\n", argv[0]);
-      return 1;
-    }
-  d = MHD_start_daemon (MHD_ALLOW_UPGRADE | MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
+  {
+    printf ("%s PORT\n", argv[0]);
+    return 1;
+  }
+  d = MHD_start_daemon (MHD_ALLOW_UPGRADE | MHD_USE_AUTO
+                        | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
                         atoi (argv[1]),
                         NULL, NULL,
                         &ahc_echo, NULL,

@@ -28,8 +28,8 @@
 static ssize_t
 data_generator (void *cls, uint64_t pos, char *buf, size_t max)
 {
-  (void)cls; /* Unused. Silent compiler warning. */
-  (void)pos; /* Unused. Silent compiler warning. */
+  (void) cls; /* Unused. Silent compiler warning. */
+  (void) pos; /* Unused. Silent compiler warning. */
   if (max < 80)
     return 0;
   memset (buf, 'A', max - 1);
@@ -48,20 +48,20 @@ ahc_echo (void *cls,
   static int aptr;
   struct MHD_Response *response;
   int ret;
-  (void)cls;               /* Unused. Silent compiler warning. */
-  (void)url;               /* Unused. Silent compiler warning. */
-  (void)version;           /* Unused. Silent compiler warning. */
-  (void)upload_data;       /* Unused. Silent compiler warning. */
-  (void)upload_data_size;  /* Unused. Silent compiler warning. */
+  (void) cls;               /* Unused. Silent compiler warning. */
+  (void) url;               /* Unused. Silent compiler warning. */
+  (void) version;           /* Unused. Silent compiler warning. */
+  (void) upload_data;       /* Unused. Silent compiler warning. */
+  (void) upload_data_size;  /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (method, "GET"))
     return MHD_NO;              /* unexpected method */
   if (&aptr != *ptr)
-    {
-      /* do never respond on first call */
-      *ptr = &aptr;
-      return MHD_YES;
-    }
+  {
+    /* do never respond on first call */
+    *ptr = &aptr;
+    return MHD_YES;
+  }
   *ptr = NULL;                  /* reset when done */
   response = MHD_create_response_from_callback (MHD_SIZE_UNKNOWN,
                                                 80,
@@ -77,11 +77,12 @@ main (int argc, char *const *argv)
   struct MHD_Daemon *d;
 
   if (argc != 2)
-    {
-      printf ("%s PORT\n", argv[0]);
-      return 1;
-    }
-  d = MHD_start_daemon (MHD_USE_AUTO | MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
+  {
+    printf ("%s PORT\n", argv[0]);
+    return 1;
+  }
+  d = MHD_start_daemon (MHD_USE_AUTO | MHD_USE_THREAD_PER_CONNECTION
+                        | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
                         atoi (argv[1]),
                         NULL, NULL, &ahc_echo, NULL, MHD_OPTION_END);
   if (d == NULL)

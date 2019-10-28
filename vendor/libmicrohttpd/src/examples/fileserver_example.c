@@ -34,7 +34,8 @@
 #include <fcntl.h>
 #endif /* HAVE_FCNTL_H */
 
-#define PAGE "<html><head><title>File not found</title></head><body>File not found</body></html>"
+#define PAGE \
+  "<html><head><title>File not found</title></head><body>File not found</body></html>"
 
 #ifndef S_ISREG
 #define S_ISREG(x) (S_IFREG == (x & S_IFREG))
@@ -47,67 +48,67 @@ ahc_echo (void *cls,
           const char *method,
           const char *version,
           const char *upload_data,
-	  size_t *upload_data_size, void **ptr)
+          size_t *upload_data_size, void **ptr)
 {
   static int aptr;
   struct MHD_Response *response;
   int ret;
   int fd;
   struct stat buf;
-  (void)cls;               /* Unused. Silent compiler warning. */
-  (void)version;           /* Unused. Silent compiler warning. */
-  (void)upload_data;       /* Unused. Silent compiler warning. */
-  (void)upload_data_size;  /* Unused. Silent compiler warning. */
+  (void) cls;               /* Unused. Silent compiler warning. */
+  (void) version;           /* Unused. Silent compiler warning. */
+  (void) upload_data;       /* Unused. Silent compiler warning. */
+  (void) upload_data_size;  /* Unused. Silent compiler warning. */
 
   if ( (0 != strcmp (method, MHD_HTTP_METHOD_GET)) &&
        (0 != strcmp (method, MHD_HTTP_METHOD_HEAD)) )
     return MHD_NO;              /* unexpected method */
   if (&aptr != *ptr)
-    {
-      /* do never respond on first call */
-      *ptr = &aptr;
-      return MHD_YES;
-    }
+  {
+    /* do never respond on first call */
+    *ptr = &aptr;
+    return MHD_YES;
+  }
   *ptr = NULL;                  /* reset when done */
   /* WARNING: direct usage of url as filename is for example only!
    * NEVER pass received data directly as parameter to file manipulation
    * functions. Always check validity of data before using.
    */
-  if (NULL != strstr(url, "../")) /* Very simplified check! */
+  if (NULL != strstr (url, "../")) /* Very simplified check! */
     fd = -1; /* Do not allow usage of parent directories. */
   else
     fd = open (url + 1, O_RDONLY);
   if (-1 != fd)
+  {
+    if ( (0 != fstat (fd, &buf)) ||
+         (! S_ISREG (buf.st_mode)) )
     {
-      if ( (0 != fstat (fd, &buf)) ||
-           (! S_ISREG (buf.st_mode)) )
-        {
-          /* not a regular file, refuse to serve */
-          if (0 != close (fd))
-            abort ();
-          fd = -1;
-        }
+      /* not a regular file, refuse to serve */
+      if (0 != close (fd))
+        abort ();
+      fd = -1;
     }
+  }
   if (-1 == fd)
-    {
-      response = MHD_create_response_from_buffer (strlen (PAGE),
-						  (void *) PAGE,
-						  MHD_RESPMEM_PERSISTENT);
-      ret = MHD_queue_response (connection, MHD_HTTP_NOT_FOUND, response);
-      MHD_destroy_response (response);
-    }
+  {
+    response = MHD_create_response_from_buffer (strlen (PAGE),
+                                                (void *) PAGE,
+                                                MHD_RESPMEM_PERSISTENT);
+    ret = MHD_queue_response (connection, MHD_HTTP_NOT_FOUND, response);
+    MHD_destroy_response (response);
+  }
   else
+  {
+    response = MHD_create_response_from_fd64 (buf.st_size, fd);
+    if (NULL == response)
     {
-      response = MHD_create_response_from_fd64 (buf.st_size, fd);
-      if (NULL == response)
-	{
-	  if (0 != close (fd))
-            abort ();
-	  return MHD_NO;
-	}
-      ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
-      MHD_destroy_response (response);
+      if (0 != close (fd))
+        abort ();
+      return MHD_NO;
     }
+    ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
+    MHD_destroy_response (response);
+  }
   return ret;
 }
 
@@ -118,11 +119,12 @@ main (int argc, char *const *argv)
   struct MHD_Daemon *d;
 
   if (argc != 2)
-    {
-      printf ("%s PORT\n", argv[0]);
-      return 1;
-    }
-  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
+  {
+    printf ("%s PORT\n", argv[0]);
+    return 1;
+  }
+  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION
+                        | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
                         atoi (argv[1]),
                         NULL, NULL, &ahc_echo, PAGE, MHD_OPTION_END);
   if (d == NULL)

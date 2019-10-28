@@ -48,13 +48,15 @@ const char *want[] = {
   "x", NULL, NULL, NULL, "5",
 #define URL_END (URL_START + 10)
   NULL, NULL, NULL, NULL, NULL,
-#define FORM_DATA "--AaB03x\r\ncontent-disposition: form-data; name=\"field1\"\r\n\r\nJoe Blow\r\n--AaB03x\r\ncontent-disposition: form-data; name=\"pics\"; filename=\"file1.txt\"\r\nContent-Type: text/plain\r\nContent-Transfer-Encoding: binary\r\n\r\nfiledata\r\n--AaB03x--\r\n"
+#define FORM_DATA \
+  "--AaB03x\r\ncontent-disposition: form-data; name=\"field1\"\r\n\r\nJoe Blow\r\n--AaB03x\r\ncontent-disposition: form-data; name=\"pics\"; filename=\"file1.txt\"\r\nContent-Type: text/plain\r\nContent-Transfer-Encoding: binary\r\n\r\nfiledata\r\n--AaB03x--\r\n"
 #define FORM_START (URL_END + 5)
   "field1", NULL, NULL, NULL, "Joe Blow",
   "pics", "file1.txt", "text/plain", "binary", "filedata",
 #define FORM_END (FORM_START + 10)
   NULL, NULL, NULL, NULL, NULL,
-#define FORM_NESTED_DATA "--AaB03x\r\ncontent-disposition: form-data; name=\"field1\"\r\n\r\nJane Blow\r\n--AaB03x\r\ncontent-disposition: form-data; name=\"pics\"\r\nContent-type: multipart/mixed, boundary=BbC04y\r\n\r\n--BbC04y\r\nContent-disposition: attachment; filename=\"file1.txt\"\r\nContent-Type: text/plain\r\n\r\nfiledata1\r\n--BbC04y\r\nContent-disposition: attachment; filename=\"file2.gif\"\r\nContent-type: image/gif\r\nContent-Transfer-Encoding: binary\r\n\r\nfiledata2\r\n--BbC04y--\r\n--AaB03x--"
+#define FORM_NESTED_DATA \
+  "--AaB03x\r\ncontent-disposition: form-data; name=\"field1\"\r\n\r\nJane Blow\r\n--AaB03x\r\ncontent-disposition: form-data; name=\"pics\"\r\nContent-type: multipart/mixed, boundary=BbC04y\r\n\r\n--BbC04y\r\nContent-disposition: attachment; filename=\"file1.txt\"\r\nContent-Type: text/plain\r\n\r\nfiledata1\r\n--BbC04y\r\nContent-disposition: attachment; filename=\"file2.gif\"\r\nContent-type: image/gif\r\nContent-Transfer-Encoding: binary\r\n\r\nfiledata2\r\n--BbC04y--\r\n--AaB03x--"
 #define FORM_NESTED_START (FORM_END + 5)
   "field1", NULL, NULL, NULL, "Jane Blow",
   "pics", "file1.txt", "text/plain", NULL, "filedata1",
@@ -91,7 +93,7 @@ value_checker (void *cls,
 {
   int *want_off = cls;
   int idx = *want_off;
-  (void)kind;  /* Unused. Silent compiler warning. */
+  (void) kind;  /* Unused. Silent compiler warning. */
 
 
 #if 0
@@ -110,10 +112,10 @@ value_checker (void *cls,
       (mismatch (content_type, want[idx + 2])) ||
       (mismatch (transfer_encoding, want[idx + 3])) ||
       (0 != memcmp (data, &want[idx + 4][off], size)))
-    {
-      *want_off = -1;
-      return MHD_NO;
-    }
+  {
+    *want_off = -1;
+    return MHD_NO;
+  }
   if (off + size == strlen (want[idx + 4]))
     *want_off = idx + 5;
   return MHD_YES;
@@ -137,19 +139,20 @@ test_urlencoding (void)
   connection.headers_received = &header;
   header.header = MHD_HTTP_HEADER_CONTENT_TYPE;
   header.value = MHD_HTTP_POST_ENCODING_FORM_URLENCODED;
-  header.header_size = MHD_STATICSTR_LEN_(MHD_HTTP_HEADER_CONTENT_TYPE);
-  header.value_size = MHD_STATICSTR_LEN_(MHD_HTTP_POST_ENCODING_FORM_URLENCODED);
+  header.header_size = MHD_STATICSTR_LEN_ (MHD_HTTP_HEADER_CONTENT_TYPE);
+  header.value_size = MHD_STATICSTR_LEN_ (
+    MHD_HTTP_POST_ENCODING_FORM_URLENCODED);
   header.kind = MHD_HEADER_KIND;
   pp = MHD_create_post_processor (&connection,
                                   1024, &value_checker, &want_off);
   i = 0;
   size = strlen (URL_DATA);
   while (i < size)
-    {
-      delta = 1 + MHD_random_ () % (size - i);
-      MHD_post_process (pp, &URL_DATA[i], delta);
-      i += delta;
-    }
+  {
+    delta = 1 + MHD_random_ () % (size - i);
+    MHD_post_process (pp, &URL_DATA[i], delta);
+    i += delta;
+  }
   MHD_destroy_post_processor (pp);
   if (want_off != URL_END)
     return 1;
@@ -183,8 +186,9 @@ test_multipart_garbage (void)
     header.header = MHD_HTTP_HEADER_CONTENT_TYPE;
     header.value =
       MHD_HTTP_POST_ENCODING_MULTIPART_FORMDATA ", boundary=AaB03x";
-    header.header_size = MHD_STATICSTR_LEN_(MHD_HTTP_HEADER_CONTENT_TYPE);
-    header.value_size = MHD_STATICSTR_LEN_(MHD_HTTP_POST_ENCODING_MULTIPART_FORMDATA ", boundary=AaB03x");
+    header.header_size = MHD_STATICSTR_LEN_ (MHD_HTTP_HEADER_CONTENT_TYPE);
+    header.value_size = MHD_STATICSTR_LEN_ (
+      MHD_HTTP_POST_ENCODING_MULTIPART_FORMDATA ", boundary=AaB03x");
     header.kind = MHD_HEADER_KIND;
     pp = MHD_create_post_processor (&connection,
                                     1024, &value_checker, &want_off);
@@ -258,11 +262,11 @@ test_multipart (void)
   i = 0;
   size = strlen (FORM_DATA);
   while (i < size)
-    {
-      delta = 1 + MHD_random_ () % (size - i);
-      MHD_post_process (pp, &FORM_DATA[i], delta);
-      i += delta;
-    }
+  {
+    delta = 1 + MHD_random_ () % (size - i);
+    MHD_post_process (pp, &FORM_DATA[i], delta);
+    i += delta;
+  }
   MHD_destroy_post_processor (pp);
   if (want_off != FORM_END)
     return 2;
@@ -295,11 +299,11 @@ test_nested_multipart (void)
   i = 0;
   size = strlen (FORM_NESTED_DATA);
   while (i < size)
-    {
-      delta = 1 + MHD_random_ () % (size - i);
-      MHD_post_process (pp, &FORM_NESTED_DATA[i], delta);
-      i += delta;
-    }
+  {
+    delta = 1 + MHD_random_ () % (size - i);
+    MHD_post_process (pp, &FORM_NESTED_DATA[i], delta);
+    i += delta;
+  }
   MHD_destroy_post_processor (pp);
   if (want_off != FORM_NESTED_END)
     return 4;
@@ -331,11 +335,11 @@ test_empty_value (void)
   i = 0;
   size = strlen (URL_EMPTY_VALUE_DATA);
   while (i < size)
-    {
-      delta = 1 + MHD_random_ () % (size - i);
-      MHD_post_process (pp, &URL_EMPTY_VALUE_DATA[i], delta);
-      i += delta;
-    }
+  {
+    delta = 1 + MHD_random_ () % (size - i);
+    MHD_post_process (pp, &URL_EMPTY_VALUE_DATA[i], delta);
+    i += delta;
+  }
   MHD_destroy_post_processor (pp);
   if (want_off != URL_EMPTY_VALUE_END)
     return 8;
@@ -349,7 +353,7 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
-  (void)argc; (void)argv;  /* Unused. Silent compiler warning. */
+  (void) argc; (void) argv;  /* Unused. Silent compiler warning. */
 
   errorCount += test_multipart_splits ();
   errorCount += test_multipart_garbage ();

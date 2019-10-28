@@ -45,29 +45,29 @@
 
 static int
 ahc_echo (void *cls,
-	  struct MHD_Connection *cnc,
-	  const char *url,
-	  const char *mt,
-	  const char *ver,
-	  const char *upd,
-	  size_t *upsz,
-	  void **ptr)
-{  
+          struct MHD_Connection *cnc,
+          const char *url,
+          const char *mt,
+          const char *ver,
+          const char *upd,
+          size_t *upsz,
+          void **ptr)
+{
   return MHD_NO;
 }
 
 
 static void
 error_handler (void *cls,
-	       const char *fm,
-	       va_list ap)
+               const char *fm,
+               va_list ap)
 {
   /* Here we do the translation using GNU gettext.
      As the error message is from libmicrohttpd, we specify
      "libmicrohttpd" as the translation domain here. */
   vprintf (dgettext ("libmicrohttpd",
-		     fm),
-	  ap);
+                     fm),
+           ap);
 }
 
 
@@ -75,21 +75,22 @@ int
 main (int argc,
       char **argv)
 {
-  setlocale(LC_ALL, "");
+  setlocale (LC_ALL, "");
 
-  /* The example uses PO files in the directory 
+  /* The example uses PO files in the directory
      "libmicrohttpd/src/examples/locale".  This
      needs to be adapted to match
      where the MHD PO files are installed. */
   bindtextdomain ("libmicrohttpd",
-		  "locale");
-  MHD_start_daemon (MHD_USE_SELECT_INTERNALLY | MHD_FEATURE_MESSAGES | MHD_USE_ERROR_LOG,
-		    8080,
-		    NULL, NULL,
-		    &ahc_echo, NULL,
-		    MHD_OPTION_EXTERNAL_LOGGER, &error_handler, NULL,
-		    99999 /* invalid option, to raise the error 
-			     "Invalid option ..." which we are going 
-			     to translate */);
+                  "locale");
+  MHD_start_daemon (MHD_USE_SELECT_INTERNALLY | MHD_FEATURE_MESSAGES
+                    | MHD_USE_ERROR_LOG,
+                    8080,
+                    NULL, NULL,
+                    &ahc_echo, NULL,
+                    MHD_OPTION_EXTERNAL_LOGGER, &error_handler, NULL,
+                    99999 /* invalid option, to raise the error
+           "Invalid option ..." which we are going
+           to translate */);
   return 1; /* This program won't "succeed"... */
 }

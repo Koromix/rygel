@@ -57,26 +57,26 @@ MHD_daemon_run (struct MHD_Daemon *daemon)
   if (MHD_TM_EXTERNAL_EVENT_LOOP != daemon->threading_mode)
     return MHD_SC_CONFIGURATION_MISMATCH_FOR_RUN_EXTERNAL;
   switch (daemon->event_loop_syscall)
-    {
-    case MHD_ELS_POLL:
-      sc = MHD_daemon_poll_ (daemon,
- 			     MHD_NO);
-      MHD_connection_cleanup_ (daemon);
-      return sc;
+  {
+  case MHD_ELS_POLL:
+    sc = MHD_daemon_poll_ (daemon,
+                           MHD_NO);
+    MHD_connection_cleanup_ (daemon);
+    return sc;
 #ifdef EPOLL_SUPPORT
-    case MHD_ELS_EPOLL:
-      sc = MHD_daemon_epoll_ (daemon,
-  	 	              MHD_NO);
-      MHD_connection_cleanup_ (daemon);
-      return sc;
+  case MHD_ELS_EPOLL:
+    sc = MHD_daemon_epoll_ (daemon,
+                            MHD_NO);
+    MHD_connection_cleanup_ (daemon);
+    return sc;
 #endif
-    case MHD_ELS_SELECT:
-      return MHD_daemon_select_ (daemon,
- 			         MHD_NO);
-      /* MHD_select does MHD_connection_cleanup_ already */
-    default:
-      return MHD_SC_CONFIGURATION_UNEXPECTED_ELS;
-    }
+  case MHD_ELS_SELECT:
+    return MHD_daemon_select_ (daemon,
+                               MHD_NO);
+  /* MHD_select does MHD_connection_cleanup_ already */
+  default:
+    return MHD_SC_CONFIGURATION_UNEXPECTED_ELS;
+  }
 }
 
 /* end of daemon_run.c */

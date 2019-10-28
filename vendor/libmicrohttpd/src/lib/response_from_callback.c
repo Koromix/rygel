@@ -44,11 +44,11 @@
  */
 struct MHD_Response *
 MHD_response_from_callback (enum MHD_HTTP_StatusCode sc,
-			    uint64_t size,
-			    size_t block_size,
-			    MHD_ContentReaderCallback crc,
-			    void *crc_cls,
-			    MHD_ContentReaderFreeCallback crfc)
+                            uint64_t size,
+                            size_t block_size,
+                            MHD_ContentReaderCallback crc,
+                            void *crc_cls,
+                            MHD_ContentReaderFreeCallback crfc)
 {
   struct MHD_Response *response;
 
@@ -56,8 +56,8 @@ MHD_response_from_callback (enum MHD_HTTP_StatusCode sc,
   mhd_assert (0 != block_size);
   if (NULL ==
       (response = MHD_calloc_ (1,
-			       sizeof (struct MHD_Response) +
-			       block_size)))
+                               sizeof (struct MHD_Response)
+                               + block_size)))
     return NULL;
   response->fd = -1;
   response->status_code = sc;

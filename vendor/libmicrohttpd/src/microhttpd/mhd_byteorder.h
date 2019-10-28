@@ -73,7 +73,8 @@
 #if defined(__BYTE_ORDER__)
 #if defined(__ORDER_BIG_ENDIAN__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 #define _MHD_BYTE_ORDER _MHD_BIG_ENDIAN
-#elif defined(__ORDER_LITTLE_ENDIAN__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#elif defined(__ORDER_LITTLE_ENDIAN__) && __BYTE_ORDER__ == \
+  __ORDER_LITTLE_ENDIAN__
 #define _MHD_BYTE_ORDER _MHD_LITTLE_ENDIAN
 #elif defined(__ORDER_PDP_ENDIAN__) && __BYTE_ORDER__ == __ORDER_PDP_ENDIAN__
 #define _MHD_BYTE_ORDER _MHD_PDP_ENDIAN
@@ -108,36 +109,40 @@
 /* Byte order specification didn't detected in system headers */
 /* Try some guessing */
 
-#if   (defined(__BIG_ENDIAN__) && !defined(__LITTLE_ENDIAN__)) || \
-      (defined(_BIG_ENDIAN) && !defined(_LITTLE_ENDIAN))
+#if   (defined(__BIG_ENDIAN__) && ! defined(__LITTLE_ENDIAN__)) || \
+  (defined(_BIG_ENDIAN) && ! defined(_LITTLE_ENDIAN))
 /* Seems that we are on big endian platform */
 #define _MHD_BYTE_ORDER _MHD_BIG_ENDIAN
-#elif (defined(__LITTLE_ENDIAN__) && !defined(__BIG_ENDIAN__)) || \
-      (defined(_LITTLE_ENDIAN) && !defined(_BIG_ENDIAN))
+#elif (defined(__LITTLE_ENDIAN__) && ! defined(__BIG_ENDIAN__)) || \
+  (defined(_LITTLE_ENDIAN) && ! defined(_BIG_ENDIAN))
 /* Seems that we are on little endian platform */
 #define _MHD_BYTE_ORDER _MHD_LITTLE_ENDIAN
-#elif defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64) || \
-      defined(_M_X64) || defined(_M_AMD64) || defined(i386) || defined(__i386) || \
-      defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__) || \
-      defined(_M_IX86) || defined(_X86_) || defined (__THW_INTEL__)
+#elif defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || \
+  defined(__x86_64) || \
+  defined(_M_X64) || defined(_M_AMD64) || defined(i386) || defined(__i386) || \
+  defined(__i386__) || defined(__i486__) || defined(__i586__) || \
+  defined(__i686__) || \
+  defined(_M_IX86) || defined(_X86_) || defined (__THW_INTEL__)
 /* x86 family is little endian */
 #define _MHD_BYTE_ORDER _MHD_LITTLE_ENDIAN
 #elif defined(__ARMEB__) || defined(__THUMBEB__) ||  defined(__AARCH64EB__) || \
-      defined(_MIPSEB) || defined(__MIPSEB) || defined(__MIPSEB__)
+  defined(_MIPSEB) || defined(__MIPSEB) || defined(__MIPSEB__)
 /* Looks like we are on ARM/MIPS in big endian mode */
 #define _MHD_BYTE_ORDER _MHD_BIG_ENDIAN
 #elif defined(__ARMEL__) || defined(__THUMBEL__) || defined(__AARCH64EL__) || \
-      defined(_MIPSEL) || defined(__MIPSEL) || defined(__MIPSEL__)
+  defined(_MIPSEL) || defined(__MIPSEL) || defined(__MIPSEL__)
 /* Looks like we are on ARM/MIPS in little endian mode */
 #define _MHD_BYTE_ORDER _MHD_LITTLE_ENDIAN
-#elif defined(__m68k__) || defined(M68000) || defined(__hppa__) || defined(__hppa) || \
-      defined(__HPPA__) || defined(__370__) || defined(__THW_370__) || \
-      defined(__s390__) || defined(__s390x__) || defined(__SYSC_ZARCH__)
+#elif defined(__m68k__) || defined(M68000) || defined(__hppa__) || \
+  defined(__hppa) || \
+  defined(__HPPA__) || defined(__370__) || defined(__THW_370__) || \
+  defined(__s390__) || defined(__s390x__) || defined(__SYSC_ZARCH__)
 /* Looks like we are on big endian platform */
 #define _MHD_BYTE_ORDER _MHD_BIG_ENDIAN
-#elif defined(__ia64__) || defined(_IA64) || defined(__IA64__) || defined(__ia64) || \
-      defined(_M_IA64) || defined(__itanium__) || defined(__bfin__) || \
-      defined(__BFIN__) || defined(bfin) || defined(BFIN)
+#elif defined(__ia64__) || defined(_IA64) || defined(__IA64__) || \
+  defined(__ia64) || \
+  defined(_M_IA64) || defined(__itanium__) || defined(__bfin__) || \
+  defined(__BFIN__) || defined(bfin) || defined(BFIN)
 /* Looks like we are on little endian platform */
 #define _MHD_BYTE_ORDER _MHD_LITTLE_ENDIAN
 #elif defined(_WIN32)
@@ -153,9 +158,11 @@
 #ifdef _MHD_BYTE_ORDER
 /* Some safety checks */
 #if defined(WORDS_BIGENDIAN) && _MHD_BYTE_ORDER != _MHD_BIG_ENDIAN
-#error Configure detected big endian byte order but headers specify different byte order
-#elif !defined(WORDS_BIGENDIAN) && _MHD_BYTE_ORDER == _MHD_BIG_ENDIAN
-#error Configure did not detect big endian byte order but headers specify big endian byte order
+#error \
+  Configure detected big endian byte order but headers specify different byte order
+#elif ! defined(WORDS_BIGENDIAN) && _MHD_BYTE_ORDER == _MHD_BIG_ENDIAN
+#error \
+  Configure did not detect big endian byte order but headers specify big endian byte order
 #endif /* !WORDS_BIGENDIAN && _MHD_BYTE_ORDER == _MHD_BIG_ENDIAN */
 #endif /* _MHD_BYTE_ORDER */
 

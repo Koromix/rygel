@@ -36,7 +36,7 @@
  */
 void
 MHD_upgrade_response_handle_process_ (struct MHD_UpgradeResponseHandle *urh)
-  MHD_NONNULL(1);
+MHD_NONNULL (1);
 
 
 #endif

@@ -89,7 +89,7 @@ get_master (struct MHD_Daemon *daemon)
 static void
 MHD_ip_count_lock (struct MHD_Daemon *daemon)
 {
-  MHD_mutex_lock_chk_(&daemon->per_ip_connection_mutex);
+  MHD_mutex_lock_chk_ (&daemon->per_ip_connection_mutex);
 }
 
 
@@ -101,7 +101,7 @@ MHD_ip_count_lock (struct MHD_Daemon *daemon)
 static void
 MHD_ip_count_unlock (struct MHD_Daemon *daemon)
 {
-  MHD_mutex_unlock_chk_(&daemon->per_ip_connection_mutex);
+  MHD_mutex_unlock_chk_ (&daemon->per_ip_connection_mutex);
 }
 
 
@@ -135,37 +135,37 @@ MHD_ip_addr_compare (const void *a1,
  */
 static int
 MHD_ip_addr_to_key (const struct sockaddr *addr,
-		    socklen_t addrlen,
-		    struct MHD_IPCount *key)
+                    socklen_t addrlen,
+                    struct MHD_IPCount *key)
 {
-  memset(key,
-         0,
-         sizeof(*key));
+  memset (key,
+          0,
+          sizeof(*key));
 
   /* IPv4 addresses */
   if (sizeof (struct sockaddr_in) == addrlen)
-    {
-      const struct sockaddr_in *addr4 = (const struct sockaddr_in*) addr;
+  {
+    const struct sockaddr_in *addr4 = (const struct sockaddr_in*) addr;
 
-      key->family = AF_INET;
-      memcpy (&key->addr.ipv4,
-              &addr4->sin_addr,
-              sizeof(addr4->sin_addr));
-      return MHD_YES;
-    }
+    key->family = AF_INET;
+    memcpy (&key->addr.ipv4,
+            &addr4->sin_addr,
+            sizeof(addr4->sin_addr));
+    return MHD_YES;
+  }
 
 #if HAVE_INET6
   /* IPv6 addresses */
   if (sizeof (struct sockaddr_in6) == addrlen)
-    {
-      const struct sockaddr_in6 *addr6 = (const struct sockaddr_in6*) addr;
+  {
+    const struct sockaddr_in6 *addr6 = (const struct sockaddr_in6*) addr;
 
-      key->family = AF_INET6;
-      memcpy (&key->addr.ipv6,
-              &addr6->sin6_addr,
-              sizeof(addr6->sin6_addr));
-      return MHD_YES;
-    }
+    key->family = AF_INET6;
+    memcpy (&key->addr.ipv6,
+            &addr6->sin6_addr,
+            sizeof(addr6->sin6_addr));
+    return MHD_YES;
+  }
 #endif
 
   /* Some other address */
@@ -186,8 +186,8 @@ MHD_ip_addr_to_key (const struct sockaddr *addr,
  */
 int
 MHD_ip_limit_add (struct MHD_Daemon *daemon,
-		  const struct sockaddr *addr,
-		  socklen_t addrlen)
+                  const struct sockaddr *addr,
+                  socklen_t addrlen)
 {
   struct MHD_IPCount *key;
   void **nodep;
@@ -206,31 +206,31 @@ MHD_ip_limit_add (struct MHD_Daemon *daemon,
   if (MHD_NO == MHD_ip_addr_to_key (addr,
                                     addrlen,
                                     key))
-    {
-      /* Allow unhandled address types through */
-      free (key);
-      return MHD_YES;
-    }
+  {
+    /* Allow unhandled address types through */
+    free (key);
+    return MHD_YES;
+  }
   MHD_ip_count_lock (daemon);
 
   /* Search for the IP address */
   if (NULL == (nodep = tsearch (key,
-				&daemon->per_ip_connection_count,
-				&MHD_ip_addr_compare)))
-    {
+                                &daemon->per_ip_connection_count,
+                                &MHD_ip_addr_compare)))
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-		MHD_SC_IP_COUNTER_FAILURE,
-		_("Failed to add IP connection count node\n"));
+    MHD_DLOG (daemon,
+              MHD_SC_IP_COUNTER_FAILURE,
+              _ ("Failed to add IP connection count node\n"));
 #endif
-      MHD_ip_count_unlock (daemon);
-      free (key);
-      return MHD_NO;
-    }
+    MHD_ip_count_unlock (daemon);
+    free (key);
+    return MHD_NO;
+  }
   node = *nodep;
   /* If we got an existing node back, free the one we created */
   if (node != key)
-    free(key);
+    free (key);
   key = (struct MHD_IPCount *) node;
   /* Test if there is room for another connection; if so,
    * increment count */
@@ -253,8 +253,8 @@ MHD_ip_limit_add (struct MHD_Daemon *daemon,
  */
 void
 MHD_ip_limit_del (struct MHD_Daemon *daemon,
-		  const struct sockaddr *addr,
-		  socklen_t addrlen)
+                  const struct sockaddr *addr,
+                  socklen_t addrlen)
 {
   struct MHD_IPCount search_key;
   struct MHD_IPCount *found_key;
@@ -274,27 +274,27 @@ MHD_ip_limit_del (struct MHD_Daemon *daemon,
 
   /* Search for the IP address */
   if (NULL == (nodep = tfind (&search_key,
-			      &daemon->per_ip_connection_count,
-			      &MHD_ip_addr_compare)))
-    {
-      /* Something's wrong if we couldn't find an IP address
-       * that was previously added */
-      MHD_PANIC (_("Failed to find previously-added IP address\n"));
-    }
+                              &daemon->per_ip_connection_count,
+                              &MHD_ip_addr_compare)))
+  {
+    /* Something's wrong if we couldn't find an IP address
+     * that was previously added */
+    MHD_PANIC (_ ("Failed to find previously-added IP address\n"));
+  }
   found_key = (struct MHD_IPCount *) *nodep;
   /* Validate existing count for IP address */
   if (0 == found_key->count)
-    {
-      MHD_PANIC (_("Previously-added IP address had counter of zero\n"));
-    }
+  {
+    MHD_PANIC (_ ("Previously-added IP address had counter of zero\n"));
+  }
   /* Remove the node entirely if count reduces to 0 */
   if (0 == --found_key->count)
-    {
-      tdelete (found_key,
-	       &daemon->per_ip_connection_count,
-	       &MHD_ip_addr_compare);
-      free (found_key);
-    }
+  {
+    tdelete (found_key,
+             &daemon->per_ip_connection_count,
+             &MHD_ip_addr_compare);
+    free (found_key);
+  }
 
   MHD_ip_count_unlock (daemon);
 }

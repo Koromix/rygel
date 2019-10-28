@@ -165,6 +165,9 @@
 /* Define to 1 to enable support for error messages. */
 #undef HAVE_MESSAGES
 
+/* have MSG_MORE */
+#undef HAVE_MSG_MORE
+
 /* Define to 1 if you have the `[nanosleep]' function. */
 #undef HAVE_NANOSLEEP
 
@@ -245,6 +248,9 @@
 
 /* Define to 1 if you have the `sendfile64' function. */
 #undef HAVE_SENDFILE64
+
+/* Define if your platform supports sendmsg */
+#undef HAVE_SENDMSG
 
 /* Define to 1 if you have the `snprintf' function. */
 #undef HAVE_SNPRINTF
@@ -354,6 +360,9 @@
 
 /* Define to 1 if you have the <winsock2.h> header file. */
 #undef HAVE_WINSOCK2_H
+
+/* Define to 1 if you have the `writev' function. */
+#undef HAVE_WRITEV
 
 /* Define to 1 if you have the <ws2tcpip.h> header file. */
 #undef HAVE_WS2TCPIP_H

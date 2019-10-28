@@ -35,7 +35,7 @@
  */
 static enum MHD_StatusCode
 suspend_action (void *cls,
-		struct MHD_Request *request)
+                struct MHD_Request *request)
 {
   (void) cls;
   struct MHD_Connection *connection = request->connection;
@@ -43,24 +43,24 @@ suspend_action (void *cls,
 
   MHD_mutex_lock_chk_ (&daemon->cleanup_connection_mutex);
   if (connection->resuming)
-    {
-      /* suspending again while we didn't even complete resuming yet */
-      connection->resuming = false;
-      MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
-      return MHD_SC_OK;
-    }
+  {
+    /* suspending again while we didn't even complete resuming yet */
+    connection->resuming = false;
+    MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
+    return MHD_SC_OK;
+  }
   if (daemon->threading_mode != MHD_TM_THREAD_PER_CONNECTION)
-    {
-      if (connection->connection_timeout ==
-	  daemon->connection_default_timeout)
-        XDLL_remove (daemon->normal_timeout_head,
-                     daemon->normal_timeout_tail,
-                     connection);
-      else
-        XDLL_remove (daemon->manual_timeout_head,
-                     daemon->manual_timeout_tail,
-                     connection);
-    }
+  {
+    if (connection->connection_timeout ==
+        daemon->connection_default_timeout)
+      XDLL_remove (daemon->normal_timeout_head,
+                   daemon->normal_timeout_tail,
+                   connection);
+    else
+      XDLL_remove (daemon->manual_timeout_head,
+                   daemon->manual_timeout_tail,
+                   connection);
+  }
   DLL_remove (daemon->connections_head,
               daemon->connections_tail,
               connection);
@@ -71,25 +71,25 @@ suspend_action (void *cls,
   connection->suspended = true;
 #ifdef EPOLL_SUPPORT
   if (MHD_ELS_EPOLL == daemon->event_loop_syscall)
+  {
+    if (0 != (connection->epoll_state & MHD_EPOLL_STATE_IN_EREADY_EDLL))
     {
-      if (0 != (connection->epoll_state & MHD_EPOLL_STATE_IN_EREADY_EDLL))
-        {
-          EDLL_remove (daemon->eready_head,
-                       daemon->eready_tail,
-                       connection);
-          connection->epoll_state &= ~MHD_EPOLL_STATE_IN_EREADY_EDLL;
-        }
-      if (0 != (connection->epoll_state & MHD_EPOLL_STATE_IN_EPOLL_SET))
-        {
-          if (0 != epoll_ctl (daemon->epoll_fd,
-                              EPOLL_CTL_DEL,
-                              connection->socket_fd,
-                              NULL))
-            MHD_PANIC (_("Failed to remove FD from epoll set\n"));
-          connection->epoll_state &= ~MHD_EPOLL_STATE_IN_EPOLL_SET;
-        }
-      connection->epoll_state |= MHD_EPOLL_STATE_SUSPENDED;
+      EDLL_remove (daemon->eready_head,
+                   daemon->eready_tail,
+                   connection);
+      connection->epoll_state &= ~MHD_EPOLL_STATE_IN_EREADY_EDLL;
     }
+    if (0 != (connection->epoll_state & MHD_EPOLL_STATE_IN_EPOLL_SET))
+    {
+      if (0 != epoll_ctl (daemon->epoll_fd,
+                          EPOLL_CTL_DEL,
+                          connection->socket_fd,
+                          NULL))
+        MHD_PANIC (_ ("Failed to remove FD from epoll set\n"));
+      connection->epoll_state &= ~MHD_EPOLL_STATE_IN_EPOLL_SET;
+    }
+    connection->epoll_state |= MHD_EPOLL_STATE_SUSPENDED;
+  }
 #endif
   MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
   return MHD_SC_OK;

@@ -46,7 +46,7 @@
  */
 enum MHD_StatusCode
 MHD_daemon_get_timeout (struct MHD_Daemon *daemon,
-			MHD_UNSIGNED_LONG_LONG *timeout)
+                        MHD_UNSIGNED_LONG_LONG *timeout)
 {
   time_t earliest_deadline;
   time_t now;
@@ -54,71 +54,71 @@ MHD_daemon_get_timeout (struct MHD_Daemon *daemon,
   bool have_timeout;
 
   if (MHD_TM_EXTERNAL_EVENT_LOOP != daemon->threading_mode)
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-		MHD_SC_CONFIGURATION_MISMATCH_FOR_GET_TIMEOUT,
-                _("Illegal call to MHD_get_timeout\n"));
+    MHD_DLOG (daemon,
+              MHD_SC_CONFIGURATION_MISMATCH_FOR_GET_TIMEOUT,
+              _ ("Illegal call to MHD_get_timeout\n"));
 #endif
-      return MHD_SC_CONFIGURATION_MISSMATCH_FOR_GET_TIMEOUT;
-    }
+    return MHD_SC_CONFIGURATION_MISSMATCH_FOR_GET_TIMEOUT;
+  }
 
   if (daemon->data_already_pending)
-    {
-      /* Some data already waiting to be processed. */
-      *timeout = 0;
-      return MHD_SC_OK;
-    }
+  {
+    /* Some data already waiting to be processed. */
+    *timeout = 0;
+    return MHD_SC_OK;
+  }
 
 #ifdef EPOLL_SUPPORT
   if ( (MHD_ELS_EPOLL == daemon->event_loop_syscall) &&
        ((NULL != daemon->eready_head)
 #if defined(UPGRADE_SUPPORT) && defined(HTTPS_SUPPORT)
-	 || (NULL != daemon->eready_urh_head)
+        || (NULL != daemon->eready_urh_head)
 #endif /* UPGRADE_SUPPORT && HTTPS_SUPPORT */
-	 ) )
-    {
-	  /* Some connection(s) already have some data pending. */
-      *timeout = 0;
-      return MHD_SC_OK;
-    }
+       ) )
+  {
+    /* Some connection(s) already have some data pending. */
+    *timeout = 0;
+    return MHD_SC_OK;
+  }
 #endif /* EPOLL_SUPPORT */
 
   have_timeout = false;
   earliest_deadline = 0; /* avoid compiler warnings */
   for (pos = daemon->manual_timeout_tail; NULL != pos; pos = pos->prevX)
+  {
+    if (0 != pos->connection_timeout)
     {
-      if (0 != pos->connection_timeout)
-	{
-	  if ( (! have_timeout) ||
-	       (earliest_deadline - pos->last_activity > pos->connection_timeout) )
-	    earliest_deadline = pos->last_activity + pos->connection_timeout;
-	  have_timeout = true;
-	}
+      if ( (! have_timeout) ||
+           (earliest_deadline - pos->last_activity > pos->connection_timeout) )
+        earliest_deadline = pos->last_activity + pos->connection_timeout;
+      have_timeout = true;
     }
+  }
   /* normal timeouts are sorted, so we only need to look at the 'tail' (oldest) */
   pos = daemon->normal_timeout_tail;
   if ( (NULL != pos) &&
        (0 != pos->connection_timeout) )
-    {
-      if ( (! have_timeout) ||
-	   (earliest_deadline - pos->connection_timeout > pos->last_activity) )
-	earliest_deadline = pos->last_activity + pos->connection_timeout;
-      have_timeout = true;
-    }
+  {
+    if ( (! have_timeout) ||
+         (earliest_deadline - pos->connection_timeout > pos->last_activity) )
+      earliest_deadline = pos->last_activity + pos->connection_timeout;
+    have_timeout = true;
+  }
 
   if (! have_timeout)
     return MHD_SC_NO_TIMEOUT;
-  now = MHD_monotonic_sec_counter();
+  now = MHD_monotonic_sec_counter ();
   if (earliest_deadline < now)
     *timeout = 0;
   else
-    {
-      const time_t second_left = earliest_deadline - now;
-      if (second_left > ULLONG_MAX / 1000) /* Ignore compiler warning: 'second_left' is always positive. */
-        *timeout = ULLONG_MAX;
-      else
-        *timeout = 1000LL * second_left;
+  {
+    const time_t second_left = earliest_deadline - now;
+    if (second_left > ULLONG_MAX / 1000)   /* Ignore compiler warning: 'second_left' is always positive. */
+      *timeout = ULLONG_MAX;
+    else
+      *timeout = 1000LL * second_left;
   }
   return MHD_SC_OK;
 }

@@ -77,11 +77,11 @@ body_compress (void **buf,
                   *buf_size);
   if ((Z_OK != ret) ||
       (cbuf_size >= *buf_size))
-    {
-      /* compression failed */
-      free (cbuf);
-      return MHD_NO;
-    }
+  {
+    /* compression failed */
+    free (cbuf);
+    return MHD_NO;
+  }
   free (*buf);
   *buf = (void *) cbuf;
   *buf_size = (size_t) cbuf_size;
@@ -109,18 +109,18 @@ ahc_echo (void *cls,
 
   if (0 != strcmp (method, "GET"))
     return MHD_NO; /* unexpected method */
-  if (!*ptr)
-    {
-      *ptr = (void *) 1;
-      return MHD_YES;
-    }
+  if (! *ptr)
+  {
+    *ptr = (void *) 1;
+    return MHD_YES;
+  }
   *ptr = NULL;
 
   body_str = strdup (PAGE);
   if (NULL == body_str)
-    {
-      return MHD_NO;
-    }
+  {
+    return MHD_NO;
+  }
   body_len = strlen (body_str);
   /* try to compress the body */
   comp = MHD_NO;
@@ -132,23 +132,23 @@ ahc_echo (void *cls,
                                               body_str,
                                               MHD_RESPMEM_MUST_FREE);
   if (NULL == response)
-    {
-      free (body_str);
-      return MHD_NO;
-    }
+  {
+    free (body_str);
+    return MHD_NO;
+  }
 
   if (MHD_YES == comp)
+  {
+    /* Need to indicate to client that body is compressed */
+    if (MHD_NO ==
+        MHD_add_response_header (response,
+                                 MHD_HTTP_HEADER_CONTENT_ENCODING,
+                                 "deflate"))
     {
-      /* Need to indicate to client that body is compressed */
-      if (MHD_NO ==
-          MHD_add_response_header (response,
-                                   MHD_HTTP_HEADER_CONTENT_ENCODING,
-                                   "deflate"))
-        {
-          MHD_destroy_response (response);
-          return MHD_NO;
-        }
+      MHD_destroy_response (response);
+      return MHD_NO;
     }
+  }
   ret = MHD_queue_response (connection,
                             200,
                             response);
@@ -162,11 +162,12 @@ main (int argc, char *const *argv)
   struct MHD_Daemon *d;
 
   if (argc != 2)
-    {
-      printf ("%s PORT\n", argv[0]);
-      return 1;
-    }
-  d = MHD_start_daemon (MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
+  {
+    printf ("%s PORT\n", argv[0]);
+    return 1;
+  }
+  d = MHD_start_daemon (MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD
+                        | MHD_USE_ERROR_LOG,
                         atoi (argv[1]), NULL, NULL,
                         &ahc_echo, NULL,
                         MHD_OPTION_END);

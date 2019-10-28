@@ -54,75 +54,76 @@ MHD_daemon_quiesce (struct MHD_Daemon *daemon)
     return MHD_INVALID_SOCKET;
   if ( (daemon->disable_itc) &&
        (MHD_TM_EXTERNAL_EVENT_LOOP != daemon->threading_mode) )
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-		MHD_SC_SYSCALL_QUIESCE_REQUIRES_ITC,
-		"Using MHD_quiesce_daemon in this mode requires ITC\n");
+    MHD_DLOG (daemon,
+              MHD_SC_SYSCALL_QUIESCE_REQUIRES_ITC,
+              "Using MHD_quiesce_daemon in this mode requires ITC\n");
 #endif
-      return MHD_INVALID_SOCKET;
-    }
+    return MHD_INVALID_SOCKET;
+  }
 
   if (NULL != daemon->worker_pool)
-    {
-      unsigned int i;
+  {
+    unsigned int i;
 
-      for (i = 0; i < daemon->worker_pool_size; i++)
-	{
-	  struct MHD_Daemon *worker = &daemon->worker_pool[i];
-	  
-	  worker->was_quiesced = true;
-#ifdef EPOLL_SUPPORT
-	  if ( (MHD_ELS_EPOLL == daemon->event_loop_syscall) &&
-	       (-1 != worker->epoll_fd) &&
-	       (worker->listen_socket_in_epoll) )
-	    {
-	      if (0 != epoll_ctl (worker->epoll_fd,
-				  EPOLL_CTL_DEL,
-				  listen_socket,
-				  NULL))
-		MHD_PANIC (_("Failed to remove listen FD from epoll set\n"));
-	      worker->listen_socket_in_epoll = false;
-	    }
-	  else
-#endif
-	    if (MHD_ITC_IS_VALID_(worker->itc))
-	      {
-		if (! MHD_itc_activate_ (worker->itc,
-					 "q"))
-		  MHD_PANIC (_("Failed to signal quiesce via inter-thread communication channel"));
-	      }
-	}
-      daemon->was_quiesced = true;
+    for (i = 0; i < daemon->worker_pool_size; i++)
+    {
+      struct MHD_Daemon *worker = &daemon->worker_pool[i];
+
+      worker->was_quiesced = true;
 #ifdef EPOLL_SUPPORT
       if ( (MHD_ELS_EPOLL == daemon->event_loop_syscall) &&
-	   (-1 != daemon->epoll_fd) &&
-	   (daemon->listen_socket_in_epoll) )
-	{
-	  if (0 != epoll_ctl (daemon->epoll_fd,
-			      EPOLL_CTL_DEL,
-			      listen_socket,
-			      NULL))
-	    MHD_PANIC ("Failed to remove listen FD from epoll set\n");
-	  daemon->listen_socket_in_epoll = false;
-	}
+           (-1 != worker->epoll_fd) &&
+           (worker->listen_socket_in_epoll) )
+      {
+        if (0 != epoll_ctl (worker->epoll_fd,
+                            EPOLL_CTL_DEL,
+                            listen_socket,
+                            NULL))
+          MHD_PANIC (_ ("Failed to remove listen FD from epoll set\n"));
+        worker->listen_socket_in_epoll = false;
+      }
+      else
 #endif
+      if (MHD_ITC_IS_VALID_ (worker->itc))
+      {
+        if (! MHD_itc_activate_ (worker->itc,
+                                 "q"))
+          MHD_PANIC (_ (
+                       "Failed to signal quiesce via inter-thread communication channel"));
+      }
     }
-  
-  if ( (MHD_ITC_IS_VALID_(daemon->itc)) &&
+    daemon->was_quiesced = true;
+#ifdef EPOLL_SUPPORT
+    if ( (MHD_ELS_EPOLL == daemon->event_loop_syscall) &&
+         (-1 != daemon->epoll_fd) &&
+         (daemon->listen_socket_in_epoll) )
+    {
+      if (0 != epoll_ctl (daemon->epoll_fd,
+                          EPOLL_CTL_DEL,
+                          listen_socket,
+                          NULL))
+        MHD_PANIC ("Failed to remove listen FD from epoll set\n");
+      daemon->listen_socket_in_epoll = false;
+    }
+#endif
+  }
+
+  if ( (MHD_ITC_IS_VALID_ (daemon->itc)) &&
        (! MHD_itc_activate_ (daemon->itc,
-			     "q")) )
-    MHD_PANIC (_("Failed to signal quiesce via inter-thread communication channel"));
+                             "q")) )
+    MHD_PANIC (_ (
+                 "Failed to signal quiesce via inter-thread communication channel"));
 
   /* FIXME: we might want some bi-directional communication here
-     (in both the thread-pool and single-thread case!) 
+     (in both the thread-pool and single-thread case!)
      to be sure that the threads have stopped using the listen
      socket, otherwise there is still the possibility of a race
      between a thread accept()ing and the caller closing and
      re-binding the socket. */
-  
+
   return listen_socket;
 }
 
 /* end of daemon_quiesce.c */
-

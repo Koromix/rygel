@@ -45,10 +45,10 @@ close_connection (struct MHD_Connection *pos)
   struct MHD_Daemon *daemon = pos->daemon;
 
   if (MHD_TM_THREAD_PER_CONNECTION == daemon->threading_mode)
-    {
-      MHD_connection_mark_closed_ (pos);
-      return; /* must let thread to do the rest */
-    }
+  {
+    MHD_connection_mark_closed_ (pos);
+    return;   /* must let thread to do the rest */
+  }
   MHD_connection_close_ (pos,
                          MHD_REQUEST_TERMINATED_DAEMON_SHUTDOWN);
 
@@ -59,18 +59,18 @@ close_connection (struct MHD_Connection *pos)
   if (pos->connection_timeout ==
       pos->daemon->connection_default_timeout)
     XDLL_remove (daemon->normal_timeout_head,
-		 daemon->normal_timeout_tail,
-		 pos);
+                 daemon->normal_timeout_tail,
+                 pos);
   else
     XDLL_remove (daemon->manual_timeout_head,
-		 daemon->manual_timeout_tail,
-		 pos);
+                 daemon->manual_timeout_tail,
+                 pos);
   DLL_remove (daemon->connections_head,
-	      daemon->connections_tail,
-	      pos);
+              daemon->connections_tail,
+              pos);
   DLL_insert (daemon->cleanup_head,
-	      daemon->cleanup_tail,
-	      pos);
+              daemon->cleanup_tail,
+              pos);
 
   MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
 }
@@ -89,7 +89,8 @@ void
 MHD_daemon_close_all_connections_ (struct MHD_Daemon *daemon)
 {
   struct MHD_Connection *pos;
-  const bool used_thr_p_c = (MHD_TM_THREAD_PER_CONNECTION == daemon->threading_mode);
+  const bool used_thr_p_c = (MHD_TM_THREAD_PER_CONNECTION ==
+                             daemon->threading_mode);
 #ifdef UPGRADE_SUPPORT
   const bool upg_allowed = (! daemon->disallow_upgrade);
 #endif /* UPGRADE_SUPPORT */
@@ -103,16 +104,16 @@ MHD_daemon_close_all_connections_ (struct MHD_Daemon *daemon)
   /* give upgraded HTTPS connections a chance to finish */
   /* 'daemon->urh_head' is not used in thread-per-connection mode. */
   for (urh = daemon->urh_tail; NULL != urh; urh = urhn)
-    {
-      urhn = urh->prev;
-      /* call generic forwarding function for passing data
-         with chance to detect that application is done. */
-      MHD_upgrade_response_handle_process_ (urh);
-      MHD_connection_finish_forward_ (urh->connection);
-      urh->clean_ready = true;
-      /* Resuming will move connection to cleanup list. */
-      MHD_request_resume (&urh->connection->request);
-    }
+  {
+    urhn = urh->prev;
+    /* call generic forwarding function for passing data
+       with chance to detect that application is done. */
+    MHD_upgrade_response_handle_process_ (urh);
+    MHD_connection_finish_forward_ (urh->connection);
+    urh->clean_ready = true;
+    /* Resuming will move connection to cleanup list. */
+    MHD_request_resume (&urh->connection->request);
+  }
 #endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
 
   /* Give suspended connections a chance to resume to avoid
@@ -120,89 +121,93 @@ MHD_daemon_close_all_connections_ (struct MHD_Daemon *daemon)
      connections left in case of a tight race with a recently
      resumed connection. */
   if (! daemon->disallow_suspend_resume)
-    {
-      daemon->resuming = true; /* Force check for pending resume. */
-      MHD_resume_suspended_connections_ (daemon);
-    }
+  {
+    daemon->resuming = true;   /* Force check for pending resume. */
+    MHD_resume_suspended_connections_ (daemon);
+  }
   /* first, make sure all threads are aware of shutdown; need to
      traverse DLLs in peace... */
   MHD_mutex_lock_chk_ (&daemon->cleanup_connection_mutex);
 #ifdef UPGRADE_SUPPORT
   if (upg_allowed)
-    {
-      struct MHD_Connection * susp;
+  {
+    struct MHD_Connection *susp;
 
-      susp = daemon->suspended_connections_tail;
-      while (NULL != susp)
-        {
-          if (NULL == susp->request.urh) /* "Upgraded" connection? */
-            MHD_PANIC (_("MHD_stop_daemon() called while we have suspended connections.\n"));
+    susp = daemon->suspended_connections_tail;
+    while (NULL != susp)
+    {
+      if (NULL == susp->request.urh)     /* "Upgraded" connection? */
+        MHD_PANIC (_ (
+                     "MHD_stop_daemon() called while we have suspended connections.\n"));
 #ifdef HTTPS_SUPPORT
-          else if (used_tls &&
-                   used_thr_p_c &&
-                   (! susp->request.urh->clean_ready) )
-            shutdown (susp->request.urh->app.socket,
-                      SHUT_RDWR); /* Wake thread by shutdown of app socket. */
+      else if (used_tls &&
+               used_thr_p_c &&
+               (! susp->request.urh->clean_ready) )
+        shutdown (susp->request.urh->app.socket,
+                  SHUT_RDWR);     /* Wake thread by shutdown of app socket. */
 #endif /* HTTPS_SUPPORT */
-          else
-            {
+      else
+      {
 #ifdef HAVE_MESSAGES
-              if (! susp->request.urh->was_closed)
-                MHD_DLOG (daemon,
-			  MHD_SC_SHUTDOWN_WITH_OPEN_UPGRADED_CONNECTION,
-                          _("Initiated daemon shutdown while \"upgraded\" connection was not closed.\n"));
+        if (! susp->request.urh->was_closed)
+          MHD_DLOG (daemon,
+                    MHD_SC_SHUTDOWN_WITH_OPEN_UPGRADED_CONNECTION,
+                    _ (
+                      "Initiated daemon shutdown while \"upgraded\" connection was not closed.\n"));
 #endif
-              susp->request.urh->was_closed = true;
-              /* If thread-per-connection is used, connection's thread
-               * may still processing "upgrade" (exiting). */
-              if (! used_thr_p_c)
-                MHD_connection_finish_forward_ (susp);
-              /* Do not use MHD_resume_connection() as mutex is
-               * already locked. */
-              susp->resuming = true;
-              daemon->resuming = true;
-            }
-          susp = susp->prev;
-        }
+        susp->request.urh->was_closed = true;
+        /* If thread-per-connection is used, connection's thread
+         * may still processing "upgrade" (exiting). */
+        if (! used_thr_p_c)
+          MHD_connection_finish_forward_ (susp);
+        /* Do not use MHD_resume_connection() as mutex is
+         * already locked. */
+        susp->resuming = true;
+        daemon->resuming = true;
+      }
+      susp = susp->prev;
     }
+  }
   else /* This 'else' is combined with next 'if' */
 #endif /* UPGRADE_SUPPORT */
   if (NULL != daemon->suspended_connections_head)
-    MHD_PANIC (_("MHD_stop_daemon() called while we have suspended connections.\n"));
+    MHD_PANIC (_ (
+                 "MHD_stop_daemon() called while we have suspended connections.\n"));
   for (pos = daemon->connections_tail; NULL != pos; pos = pos->prev)
-    {
-      shutdown (pos->socket_fd,
-                SHUT_RDWR);
+  {
+    shutdown (pos->socket_fd,
+              SHUT_RDWR);
 #if MHD_WINSOCK_SOCKETS
-      if ( (used_thr_p_c) &&
-           (MHD_ITC_IS_VALID_(daemon->itc)) &&
-           (! MHD_itc_activate_ (daemon->itc,
-				 "e")) )
-        MHD_PANIC (_("Failed to signal shutdown via inter-thread communication channel"));
+    if ( (used_thr_p_c) &&
+         (MHD_ITC_IS_VALID_ (daemon->itc)) &&
+         (! MHD_itc_activate_ (daemon->itc,
+                               "e")) )
+      MHD_PANIC (_ (
+                   "Failed to signal shutdown via inter-thread communication channel"));
 #endif
-    }
+  }
 
   /* now, collect per-connection threads */
   if (used_thr_p_c)
+  {
+    pos = daemon->connections_tail;
+    while (NULL != pos)
     {
-      pos = daemon->connections_tail;
-      while (NULL != pos)
+      if (! pos->thread_joined)
       {
-        if (! pos->thread_joined)
-          {
-            MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
-            if (! MHD_join_thread_ (pos->pid.handle))
-              MHD_PANIC (_("Failed to join a thread\n"));
-            MHD_mutex_lock_chk_ (&daemon->cleanup_connection_mutex);
-            pos->thread_joined = true;
-            /* The thread may have concurrently modified the DLL,
-               need to restart from the beginning */
-            pos = daemon->connections_tail;
-            continue;
-          }
-        pos = pos->prev;
+        MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
+        if (! MHD_join_thread_ (pos->pid.handle))
+          MHD_PANIC (_ ("Failed to join a thread\n"));
+        MHD_mutex_lock_chk_ (&daemon->cleanup_connection_mutex);
+        pos->thread_joined = true;
+        /* The thread may have concurrently modified the DLL,
+           need to restart from the beginning */
+        pos = daemon->connections_tail;
+        continue;
       }
+      pos = pos->prev;
     }
+  }
   MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
 
 #ifdef UPGRADE_SUPPORT
@@ -211,10 +216,10 @@ MHD_daemon_close_all_connections_ (struct MHD_Daemon *daemon)
   /* "Upgraded" connections that were not closed explicitly by
    * application should be moved to cleanup list too. */
   if (upg_allowed)
-    {
-      daemon->resuming = true; /* Force check for pending resume. */
-      MHD_resume_suspended_connections_ (daemon);
-    }
+  {
+    daemon->resuming = true;   /* Force check for pending resume. */
+    MHD_resume_suspended_connections_ (daemon);
+  }
 #endif /* UPGRADE_SUPPORT */
 
   /* now that we're alone, move everyone to cleanup */
@@ -222,7 +227,7 @@ MHD_daemon_close_all_connections_ (struct MHD_Daemon *daemon)
   {
     if ( (used_thr_p_c) &&
          (! pos->thread_joined) )
-      MHD_PANIC (_("Failed to join a thread\n"));
+      MHD_PANIC (_ ("Failed to join a thread\n"));
     close_connection (pos);
   }
   MHD_connection_cleanup_ (daemon);

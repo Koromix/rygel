@@ -38,9 +38,9 @@
  */
 int
 MHD_ip_limit_add (struct MHD_Daemon *daemon,
-		  const struct sockaddr *addr,
-		  socklen_t addrlen)
-  MHD_NONNULL (1,2);
+                  const struct sockaddr *addr,
+                  socklen_t addrlen)
+MHD_NONNULL (1,2);
 
 
 /**
@@ -53,8 +53,8 @@ MHD_ip_limit_add (struct MHD_Daemon *daemon,
  */
 void
 MHD_ip_limit_del (struct MHD_Daemon *daemon,
-		  const struct sockaddr *addr,
-		  socklen_t addrlen)
-  MHD_NONNULL (1,2);
+                  const struct sockaddr *addr,
+                  socklen_t addrlen)
+MHD_NONNULL (1,2);
 
 #endif

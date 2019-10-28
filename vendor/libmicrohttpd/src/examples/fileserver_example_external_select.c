@@ -27,7 +27,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define PAGE "<html><head><title>File not found</title></head><body>File not found</body></html>"
+#define PAGE \
+  "<html><head><title>File not found</title></head><body>File not found</body></html>"
 
 static ssize_t
 file_reader (void *cls, uint64_t pos, char *buf, size_t max)
@@ -54,7 +55,7 @@ ahc_echo (void *cls,
           const char *method,
           const char *version,
           const char *upload_data,
-	  size_t *upload_data_size, void **ptr)
+          size_t *upload_data_size, void **ptr)
 {
   static int aptr;
   struct MHD_Response *response;
@@ -62,61 +63,61 @@ ahc_echo (void *cls,
   FILE *file;
   int fd;
   struct stat buf;
-  (void)cls;               /* Unused. Silent compiler warning. */
-  (void)version;           /* Unused. Silent compiler warning. */
-  (void)upload_data;       /* Unused. Silent compiler warning. */
-  (void)upload_data_size;  /* Unused. Silent compiler warning. */
+  (void) cls;               /* Unused. Silent compiler warning. */
+  (void) version;           /* Unused. Silent compiler warning. */
+  (void) upload_data;       /* Unused. Silent compiler warning. */
+  (void) upload_data_size;  /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (method, MHD_HTTP_METHOD_GET))
     return MHD_NO;              /* unexpected method */
   if (&aptr != *ptr)
-    {
-      /* do never respond on first call */
-      *ptr = &aptr;
-      return MHD_YES;
-    }
+  {
+    /* do never respond on first call */
+    *ptr = &aptr;
+    return MHD_YES;
+  }
   *ptr = NULL;                  /* reset when done */
 
   file = fopen (&url[1], "rb");
   if (NULL != file)
+  {
+    fd = fileno (file);
+    if (-1 == fd)
     {
-      fd = fileno (file);
-      if (-1 == fd)
-        {
-          (void) fclose (file);
-          return MHD_NO; /* internal error */
-        }
-      if ( (0 != fstat (fd, &buf)) ||
-           (! S_ISREG (buf.st_mode)) )
-        {
-          /* not a regular file, refuse to serve */
-          fclose (file);
-          file = NULL;
-        }
+      (void) fclose (file);
+      return MHD_NO;     /* internal error */
     }
+    if ( (0 != fstat (fd, &buf)) ||
+         (! S_ISREG (buf.st_mode)) )
+    {
+      /* not a regular file, refuse to serve */
+      fclose (file);
+      file = NULL;
+    }
+  }
 
   if (NULL == file)
-    {
-      response = MHD_create_response_from_buffer (strlen (PAGE),
-						  (void *) PAGE,
-						  MHD_RESPMEM_PERSISTENT);
-      ret = MHD_queue_response (connection, MHD_HTTP_NOT_FOUND, response);
-      MHD_destroy_response (response);
-    }
+  {
+    response = MHD_create_response_from_buffer (strlen (PAGE),
+                                                (void *) PAGE,
+                                                MHD_RESPMEM_PERSISTENT);
+    ret = MHD_queue_response (connection, MHD_HTTP_NOT_FOUND, response);
+    MHD_destroy_response (response);
+  }
   else
+  {
+    response = MHD_create_response_from_callback (buf.st_size, 32 * 1024,       /* 32k page size */
+                                                  &file_reader,
+                                                  file,
+                                                  &free_callback);
+    if (NULL == response)
     {
-      response = MHD_create_response_from_callback (buf.st_size, 32 * 1024,     /* 32k page size */
-                                                    &file_reader,
-                                                    file,
-                                                    &free_callback);
-      if (NULL == response)
-	{
-	  fclose (file);
-	  return MHD_NO;
-	}
-      ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
-      MHD_destroy_response (response);
+      fclose (file);
+      return MHD_NO;
     }
+    ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
+    MHD_destroy_response (response);
+  }
   return ret;
 }
 
@@ -135,10 +136,10 @@ main (int argc, char *const *argv)
   MHD_UNSIGNED_LONG_LONG mhd_timeout;
 
   if (argc != 3)
-    {
-      printf ("%s PORT SECONDS-TO-RUN\n", argv[0]);
-      return 1;
-    }
+  {
+    printf ("%s PORT SECONDS-TO-RUN\n", argv[0]);
+    return 1;
+  }
   d = MHD_start_daemon (MHD_USE_ERROR_LOG,
                         atoi (argv[1]),
                         NULL, NULL, &ahc_echo, PAGE, MHD_OPTION_END);
@@ -146,30 +147,30 @@ main (int argc, char *const *argv)
     return 1;
   end = time (NULL) + atoi (argv[2]);
   while ((t = time (NULL)) < end)
+  {
+    tv.tv_sec = end - t;
+    tv.tv_usec = 0;
+    max = 0;
+    FD_ZERO (&rs);
+    FD_ZERO (&ws);
+    FD_ZERO (&es);
+    if (MHD_YES != MHD_get_fdset (d, &rs, &ws, &es, &max))
+      break; /* fatal internal error */
+    if (MHD_get_timeout (d, &mhd_timeout) == MHD_YES)
     {
-      tv.tv_sec = end - t;
-      tv.tv_usec = 0;
-      max = 0;
-      FD_ZERO (&rs);
-      FD_ZERO (&ws);
-      FD_ZERO (&es);
-      if (MHD_YES != MHD_get_fdset (d, &rs, &ws, &es, &max))
-	break; /* fatal internal error */
-      if (MHD_get_timeout (d, &mhd_timeout) == MHD_YES)
-        {
-          if (((MHD_UNSIGNED_LONG_LONG)tv.tv_sec) < mhd_timeout / 1000LL)
-            {
-              tv.tv_sec = mhd_timeout / 1000LL;
-              tv.tv_usec = (mhd_timeout - (tv.tv_sec * 1000LL)) * 1000LL;
-            }
-        }
-      if (-1 == select (max + 1, &rs, &ws, &es, &tv))
-        {
-          if (EINTR != errno)
-            abort ();
-        }
-      MHD_run (d);
+      if (((MHD_UNSIGNED_LONG_LONG) tv.tv_sec) < mhd_timeout / 1000LL)
+      {
+        tv.tv_sec = mhd_timeout / 1000LL;
+        tv.tv_usec = (mhd_timeout - (tv.tv_sec * 1000LL)) * 1000LL;
+      }
     }
+    if (-1 == select (max + 1, &rs, &ws, &es, &tv))
+    {
+      if (EINTR != errno)
+        abort ();
+    }
+    MHD_run (d);
+  }
   MHD_stop_daemon (d);
   return 0;
 }

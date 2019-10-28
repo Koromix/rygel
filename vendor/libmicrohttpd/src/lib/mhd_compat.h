@@ -40,8 +40,8 @@
 #include <string.h>
 #endif /* HAVE_STRING_H */
 
- /* MHD_strerror_ is strerror */
-#define MHD_strerror_(errnum) strerror((errnum))
+/* MHD_strerror_ is strerror */
+#define MHD_strerror_(errnum) strerror ((errnum))
 
 /* Platform-independent snprintf name */
 #if defined(HAVE_SNPRINTF)
@@ -49,10 +49,12 @@
 #else  /* ! HAVE_SNPRINTF */
 #if defined(_WIN32) && ! defined(__CYGWIN__)
 /* Emulate snprintf function on W32 */
-int W32_snprintf(char *__restrict s, size_t n, const char *__restrict format, ...);
+int W32_snprintf (char *__restrict s, size_t n, const char *__restrict format,
+                  ...);
 #define MHD_snprintf_ W32_snprintf
 #else  /* ! _WIN32 || __CYGWIN__ */
-#error Your platform does not support snprintf() and MHD does not know how to emulate it on your platform.
+#error \
+  Your platform does not support snprintf() and MHD does not know how to emulate it on your platform.
 #endif /* ! _WIN32 || __CYGWIN__ */
 #endif /* ! HAVE_SNPRINTF */
 
@@ -61,14 +63,14 @@ int W32_snprintf(char *__restrict s, size_t n, const char *__restrict format, ..
  * Generate pseudo random number at least 30-bit wide.
  * @return pseudo random number at least 30-bit wide.
  */
-#define MHD_random_() random()
+#define MHD_random_() random ()
 #else  /* HAVE_RANDOM */
 #ifdef HAVE_RAND
 /**
  * Generate pseudo random number at least 30-bit wide.
  * @return pseudo random number at least 30-bit wide.
  */
-#define MHD_random_() ( (((long)rand()) << 15) + (long)rand() )
+#define MHD_random_() ( (((long) rand ()) << 15) + (long) rand () )
 #endif /* HAVE_RAND */
 #endif /* HAVE_RANDOM */
 
@@ -76,12 +78,12 @@ int W32_snprintf(char *__restrict s, size_t n, const char *__restrict format, ..
 /**
  * MHD_calloc_ is platform-independent calloc()
  */
-#define MHD_calloc_(n,s) calloc((n),(s))
+#define MHD_calloc_(n,s) calloc ((n),(s))
 #else  /* ! HAVE_CALLOC */
 /**
  * MHD_calloc_ is platform-independent calloc()
  */
-void *MHD_calloc_(size_t nelem, size_t elsize);
+void *MHD_calloc_ (size_t nelem, size_t elsize);
 #endif /* ! HAVE_CALLOC */
 
 #endif /* MHD_COMPAT_H */

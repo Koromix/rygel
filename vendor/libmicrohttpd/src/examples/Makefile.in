@@ -91,9 +91,10 @@ host_triplet = @host@
 @USE_COVERAGE_TRUE@am__append_1 = --coverage
 noinst_PROGRAMS = benchmark$(EXEEXT) benchmark_https$(EXEEXT) \
 	chunked_example$(EXEEXT) minimal_example$(EXEEXT) \
-	dual_stack_example$(EXEEXT) minimal_example_comet$(EXEEXT) \
-	querystring_example$(EXEEXT) timeout$(EXEEXT) \
-	fileserver_example$(EXEEXT) fileserver_example_dirs$(EXEEXT) \
+	minimal_example_empty$(EXEEXT) dual_stack_example$(EXEEXT) \
+	minimal_example_comet$(EXEEXT) querystring_example$(EXEEXT) \
+	timeout$(EXEEXT) fileserver_example$(EXEEXT) \
+	fileserver_example_dirs$(EXEEXT) \
 	fileserver_example_external_select$(EXEEXT) \
 	refuse_post_example$(EXEEXT) $(am__EXEEXT_1) $(am__EXEEXT_2) \
 	$(am__EXEEXT_3) $(am__EXEEXT_4) $(am__EXEEXT_5) \
@@ -102,7 +103,10 @@ noinst_PROGRAMS = benchmark$(EXEEXT) benchmark_https$(EXEEXT) \
 @MHD_HAVE_EPOLL_TRUE@am__append_2 = \
 @MHD_HAVE_EPOLL_TRUE@  suspend_resume_epoll
 
-@ENABLE_HTTPS_TRUE@am__append_3 = https_fileserver_example
+@ENABLE_HTTPS_TRUE@am__append_3 = \
+@ENABLE_HTTPS_TRUE@ https_fileserver_example \
+@ENABLE_HTTPS_TRUE@ minimal_example_empty_tls
+
 @HAVE_POSTPROCESSOR_TRUE@am__append_4 = \
 @HAVE_POSTPROCESSOR_TRUE@  post_example
 
@@ -159,7 +163,8 @@ CONFIG_HEADER = $(top_builddir)/MHD_config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 @MHD_HAVE_EPOLL_TRUE@am__EXEEXT_1 = suspend_resume_epoll$(EXEEXT)
-@ENABLE_HTTPS_TRUE@am__EXEEXT_2 = https_fileserver_example$(EXEEXT)
+@ENABLE_HTTPS_TRUE@am__EXEEXT_2 = https_fileserver_example$(EXEEXT) \
+@ENABLE_HTTPS_TRUE@	minimal_example_empty_tls$(EXEEXT)
 @HAVE_POSTPROCESSOR_TRUE@am__EXEEXT_3 = post_example$(EXEEXT)
 @HAVE_POSIX_THREADS_TRUE@@HAVE_POSTPROCESSOR_TRUE@am__EXEEXT_4 = demo$(EXEEXT)
 @ENABLE_HTTPS_TRUE@@HAVE_POSIX_THREADS_TRUE@@HAVE_POSTPROCESSOR_TRUE@am__EXEEXT_5 = demo_https$(EXEEXT)
@@ -256,6 +261,16 @@ am_minimal_example_comet_OBJECTS = minimal_example_comet.$(OBJEXT)
 minimal_example_comet_OBJECTS = $(am_minimal_example_comet_OBJECTS)
 minimal_example_comet_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_minimal_example_empty_OBJECTS = minimal_example_empty.$(OBJEXT)
+minimal_example_empty_OBJECTS = $(am_minimal_example_empty_OBJECTS)
+minimal_example_empty_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_minimal_example_empty_tls_OBJECTS =  \
+	minimal_example_empty_tls.$(OBJEXT)
+minimal_example_empty_tls_OBJECTS =  \
+	$(am_minimal_example_empty_tls_OBJECTS)
+minimal_example_empty_tls_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_post_example_OBJECTS = post_example.$(OBJEXT)
 post_example_OBJECTS = $(am_post_example_OBJECTS)
 post_example_DEPENDENCIES =  \
@@ -317,6 +332,8 @@ am__depfiles_remade = ./$(DEPDIR)/authorization_example.Po \
 	./$(DEPDIR)/https_fileserver_example-https_fileserver_example.Po \
 	./$(DEPDIR)/minimal_example.Po \
 	./$(DEPDIR)/minimal_example_comet.Po \
+	./$(DEPDIR)/minimal_example_empty.Po \
+	./$(DEPDIR)/minimal_example_empty_tls.Po \
 	./$(DEPDIR)/post_example.Po ./$(DEPDIR)/querystring_example.Po \
 	./$(DEPDIR)/refuse_post_example.Po \
 	./$(DEPDIR)/suspend_resume_epoll-suspend_resume_epoll.Po \
@@ -351,7 +368,9 @@ SOURCES = $(authorization_example_SOURCES) $(benchmark_SOURCES) \
 	$(http_chunked_compression_SOURCES) \
 	$(http_compression_SOURCES) \
 	$(https_fileserver_example_SOURCES) $(minimal_example_SOURCES) \
-	$(minimal_example_comet_SOURCES) $(post_example_SOURCES) \
+	$(minimal_example_comet_SOURCES) \
+	$(minimal_example_empty_SOURCES) \
+	$(minimal_example_empty_tls_SOURCES) $(post_example_SOURCES) \
 	$(querystring_example_SOURCES) $(refuse_post_example_SOURCES) \
 	$(suspend_resume_epoll_SOURCES) $(timeout_SOURCES) \
 	$(upgrade_example_SOURCES)
@@ -365,7 +384,9 @@ DIST_SOURCES = $(authorization_example_SOURCES) $(benchmark_SOURCES) \
 	$(http_chunked_compression_SOURCES) \
 	$(http_compression_SOURCES) \
 	$(https_fileserver_example_SOURCES) $(minimal_example_SOURCES) \
-	$(minimal_example_comet_SOURCES) $(post_example_SOURCES) \
+	$(minimal_example_comet_SOURCES) \
+	$(minimal_example_empty_SOURCES) \
+	$(minimal_example_empty_tls_SOURCES) $(post_example_SOURCES) \
 	$(querystring_example_SOURCES) $(refuse_post_example_SOURCES) \
 	$(suspend_resume_epoll_SOURCES) $(timeout_SOURCES) \
 	$(upgrade_example_SOURCES)
@@ -638,6 +659,18 @@ minimal_example_SOURCES = \
 minimal_example_LDADD = \
  $(top_builddir)/src/microhttpd/libmicrohttpd.la
 
+minimal_example_empty_SOURCES = \
+ minimal_example_empty.c
+
+minimal_example_empty_LDADD = \
+ $(top_builddir)/src/microhttpd/libmicrohttpd.la
+
+minimal_example_empty_tls_SOURCES = \
+ minimal_example_empty_tls.c
+
+minimal_example_empty_tls_LDADD = \
+ $(top_builddir)/src/microhttpd/libmicrohttpd.la
+
 upgrade_example_SOURCES = \
  upgrade_example.c
 
@@ -897,6 +930,14 @@ minimal_example_comet$(EXEEXT): $(minimal_example_comet_OBJECTS) $(minimal_examp
 	@rm -f minimal_example_comet$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(minimal_example_comet_OBJECTS) $(minimal_example_comet_LDADD) $(LIBS)
 
+minimal_example_empty$(EXEEXT): $(minimal_example_empty_OBJECTS) $(minimal_example_empty_DEPENDENCIES) $(EXTRA_minimal_example_empty_DEPENDENCIES) 
+	@rm -f minimal_example_empty$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(minimal_example_empty_OBJECTS) $(minimal_example_empty_LDADD) $(LIBS)
+
+minimal_example_empty_tls$(EXEEXT): $(minimal_example_empty_tls_OBJECTS) $(minimal_example_empty_tls_DEPENDENCIES) $(EXTRA_minimal_example_empty_tls_DEPENDENCIES) 
+	@rm -f minimal_example_empty_tls$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(minimal_example_empty_tls_OBJECTS) $(minimal_example_empty_tls_LDADD) $(LIBS)
+
 post_example$(EXEEXT): $(post_example_OBJECTS) $(post_example_DEPENDENCIES) $(EXTRA_post_example_DEPENDENCIES) 
 	@rm -f post_example$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(post_example_OBJECTS) $(post_example_LDADD) $(LIBS)
@@ -943,6 +984,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/https_fileserver_example-https_fileserver_example.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/minimal_example.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/minimal_example_comet.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/minimal_example_empty.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/minimal_example_empty_tls.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/post_example.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/querystring_example.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/refuse_post_example.Po@am__quote@ # am--include-marker
@@ -1298,6 +1341,8 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/https_fileserver_example-https_fileserver_example.Po
 	-rm -f ./$(DEPDIR)/minimal_example.Po
 	-rm -f ./$(DEPDIR)/minimal_example_comet.Po
+	-rm -f ./$(DEPDIR)/minimal_example_empty.Po
+	-rm -f ./$(DEPDIR)/minimal_example_empty_tls.Po
 	-rm -f ./$(DEPDIR)/post_example.Po
 	-rm -f ./$(DEPDIR)/querystring_example.Po
 	-rm -f ./$(DEPDIR)/refuse_post_example.Po
@@ -1365,6 +1410,8 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/https_fileserver_example-https_fileserver_example.Po
 	-rm -f ./$(DEPDIR)/minimal_example.Po
 	-rm -f ./$(DEPDIR)/minimal_example_comet.Po
+	-rm -f ./$(DEPDIR)/minimal_example_empty.Po
+	-rm -f ./$(DEPDIR)/minimal_example_empty_tls.Po
 	-rm -f ./$(DEPDIR)/post_example.Po
 	-rm -f ./$(DEPDIR)/querystring_example.Po
 	-rm -f ./$(DEPDIR)/refuse_post_example.Po

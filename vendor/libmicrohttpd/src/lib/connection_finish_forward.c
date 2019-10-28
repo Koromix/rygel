@@ -55,34 +55,34 @@ MHD_connection_finish_forward_ (struct MHD_Connection *connection)
                         EPOLL_CTL_DEL,
                         connection->socket_fd,
                         NULL)) )
-    {
-      MHD_PANIC (_("Failed to remove FD from epoll set\n"));
-    }
+  {
+    MHD_PANIC (_ ("Failed to remove FD from epoll set\n"));
+  }
   if (urh->in_eready_list)
-    {
-      EDLL_remove (daemon->eready_urh_head,
-		   daemon->eready_urh_tail,
-		   urh);
-      urh->in_eready_list = false;
-    }
+  {
+    EDLL_remove (daemon->eready_urh_head,
+                 daemon->eready_urh_tail,
+                 urh);
+    urh->in_eready_list = false;
+  }
 #endif /* EPOLL_SUPPORT */
   if (MHD_INVALID_SOCKET != urh->mhd.socket)
-    {
+  {
 #if EPOLL_SUPPORT
-      if ( (MHD_ELS_EPOLL == daemon->event_loop_syscall) &&
-           (0 != epoll_ctl (daemon->epoll_upgrade_fd,
-                            EPOLL_CTL_DEL,
-                            urh->mhd.socket,
-                            NULL)) )
-        {
-          MHD_PANIC (_("Failed to remove FD from epoll set\n"));
-        }
-#endif /* EPOLL_SUPPORT */
-      /* Reflect remote disconnect to application by breaking
-       * socketpair connection. */
-      shutdown (urh->mhd.socket,
-		SHUT_RDWR);
+    if ( (MHD_ELS_EPOLL == daemon->event_loop_syscall) &&
+         (0 != epoll_ctl (daemon->epoll_upgrade_fd,
+                          EPOLL_CTL_DEL,
+                          urh->mhd.socket,
+                          NULL)) )
+    {
+      MHD_PANIC (_ ("Failed to remove FD from epoll set\n"));
     }
+#endif /* EPOLL_SUPPORT */
+    /* Reflect remote disconnect to application by breaking
+     * socketpair connection. */
+    shutdown (urh->mhd.socket,
+              SHUT_RDWR);
+  }
   /* Socketpair sockets will remain open as they will be
    * used with MHD_UPGRADE_ACTION_CLOSE. They will be
    * closed by MHD_cleanup_upgraded_connection_() during

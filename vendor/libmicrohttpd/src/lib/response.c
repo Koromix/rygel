@@ -38,9 +38,9 @@
  */
 static bool
 add_response_entry (struct MHD_Response *response,
-		    enum MHD_ValueKind kind,
-		    const char *header,
-		    const char *content)
+                    enum MHD_ValueKind kind,
+                    const char *header,
+                    const char *content)
 {
   struct MHD_HTTP_Header *hdr;
 
@@ -58,16 +58,16 @@ add_response_entry (struct MHD_Response *response,
   if (NULL == (hdr = malloc (sizeof (struct MHD_HTTP_Header))))
     return false;
   if (NULL == (hdr->header = strdup (header)))
-    {
-      free (hdr);
-      return false;
-    }
+  {
+    free (hdr);
+    return false;
+  }
   if (NULL == (hdr->value = strdup (content)))
-    {
-      free (hdr->header);
-      free (hdr);
-      return false;
-    }
+  {
+    free (hdr->header);
+    free (hdr);
+    return false;
+  }
   hdr->kind = kind;
   hdr->next = response->first_header;
   response->first_header = hdr;
@@ -91,22 +91,22 @@ MHD_response_queue_for_destroy (struct MHD_Response *response)
 
   MHD_mutex_lock_chk_ (&response->mutex);
   if (0 != --(response->reference_count))
-    {
-      MHD_mutex_unlock_chk_ (&response->mutex);
-      return;
-    }
+  {
+    MHD_mutex_unlock_chk_ (&response->mutex);
+    return;
+  }
   MHD_mutex_unlock_chk_ (&response->mutex);
   MHD_mutex_destroy_chk_ (&response->mutex);
   if (NULL != response->crfc)
     response->crfc (response->crc_cls);
   while (NULL != response->first_header)
-    {
-      pos = response->first_header;
-      response->first_header = pos->next;
-      free (pos->header);
-      free (pos->value);
-      free (pos);
-    }
+  {
+    pos = response->first_header;
+    response->first_header = pos->next;
+    free (pos->header);
+    free (pos->value);
+    free (pos);
+  }
   free (response);
 }
 
@@ -124,12 +124,12 @@ MHD_response_queue_for_destroy (struct MHD_Response *response)
 enum MHD_Bool
 MHD_response_add_header (struct MHD_Response *response,
                          const char *header,
-			 const char *content)
+                         const char *content)
 {
   return add_response_entry (response,
-			     MHD_HEADER_KIND,
-			     header,
-			     content) ? MHD_YES : MHD_NO;
+                             MHD_HEADER_KIND,
+                             header,
+                             content) ? MHD_YES : MHD_NO;
 }
 
 
@@ -149,9 +149,9 @@ MHD_response_add_trailer (struct MHD_Response *response,
                           const char *content)
 {
   return add_response_entry (response,
-			     MHD_FOOTER_KIND,
-			     footer,
-			     content) ? MHD_YES : MHD_NO;
+                             MHD_FOOTER_KIND,
+                             footer,
+                             content) ? MHD_YES : MHD_NO;
 }
 
 
@@ -167,7 +167,7 @@ MHD_response_add_trailer (struct MHD_Response *response,
 enum MHD_Bool
 MHD_response_del_header (struct MHD_Response *response,
                          const char *header,
-			 const char *content)
+                         const char *content)
 {
   struct MHD_HTTP_Header *pos;
   struct MHD_HTTP_Header *prev;
@@ -175,24 +175,24 @@ MHD_response_del_header (struct MHD_Response *response,
   prev = NULL;
   pos = response->first_header;
   while (NULL != pos)
+  {
+    if ((0 == strcmp (header,
+                      pos->header)) &&
+        (0 == strcmp (content,
+                      pos->value)))
     {
-      if ((0 == strcmp (header,
-                        pos->header)) &&
-          (0 == strcmp (content,
-                        pos->value)))
-        {
-          free (pos->header);
-          free (pos->value);
-          if (NULL == prev)
-            response->first_header = pos->next;
-          else
-            prev->next = pos->next;
-          free (pos);
-          return MHD_YES;
-        }
-      prev = pos;
-      pos = pos->next;
+      free (pos->header);
+      free (pos->value);
+      if (NULL == prev)
+        response->first_header = pos->next;
+      else
+        prev->next = pos->next;
+      free (pos);
+      return MHD_YES;
     }
+    prev = pos;
+    pos = pos->next;
+  }
   return MHD_NO;
 }
 
@@ -210,7 +210,7 @@ MHD_response_del_header (struct MHD_Response *response,
 unsigned int
 MHD_response_get_headers (struct MHD_Response *response,
                           MHD_KeyValueIterator iterator,
-			  void *iterator_cls)
+                          void *iterator_cls)
 {
   unsigned int numHeaders = 0;
   struct MHD_HTTP_Header *pos;
@@ -218,15 +218,15 @@ MHD_response_get_headers (struct MHD_Response *response,
   for (pos = response->first_header;
        NULL != pos;
        pos = pos->next)
-    {
-      numHeaders++;
-      if ( (NULL != iterator) &&
-	   (MHD_YES != iterator (iterator_cls,
-				 pos->kind,
-				 pos->header,
-				 pos->value)) )
-        break;
-    }
+  {
+    numHeaders++;
+    if ( (NULL != iterator) &&
+         (MHD_YES != iterator (iterator_cls,
+                               pos->kind,
+                               pos->header,
+                               pos->value)) )
+      break;
+  }
   return numHeaders;
 }
 
@@ -241,18 +241,18 @@ MHD_response_get_headers (struct MHD_Response *response,
  */
 const char *
 MHD_response_get_header (struct MHD_Response *response,
-			 const char *key)
+                         const char *key)
 {
   struct MHD_HTTP_Header *pos;
 
   for (pos = response->first_header;
        NULL != pos;
        pos = pos->next)
-    {
-      if (MHD_str_equal_caseless_ (pos->header,
-				   key))
-        return pos->value;
-    }
+  {
+    if (MHD_str_equal_caseless_ (pos->header,
+                                 key))
+      return pos->value;
+  }
   return NULL;
 }
 

@@ -38,10 +38,10 @@
 
 #include "test_helpers.h"
 
-#if defined(CPU_COUNT) && (CPU_COUNT+0) < 2
+#if defined(CPU_COUNT) && (CPU_COUNT + 0) < 2
 #undef CPU_COUNT
 #endif
-#if !defined(CPU_COUNT)
+#if ! defined(CPU_COUNT)
 #define CPU_COUNT 2
 #endif
 
@@ -61,34 +61,35 @@ struct CBC
 };
 
 char*
-alloc_init(size_t buf_size)
+alloc_init (size_t buf_size)
 {
-  static const char template[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmnopqrstuvwxyz";
+  static const char template[] =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmnopqrstuvwxyz";
   static const size_t templ_size = sizeof(template) / sizeof(char) - 1;
   char *buf;
   char *fill_ptr;
   size_t to_fill;
 
-  buf = malloc(buf_size);
+  buf = malloc (buf_size);
   if (NULL == buf)
     return NULL;
 
   fill_ptr = buf;
   to_fill = buf_size;
   while (to_fill > 0)
-    {
-      const size_t to_copy = to_fill > templ_size ? templ_size : to_fill;
-      memcpy (fill_ptr, template, to_copy);
-      fill_ptr += to_copy;
-      to_fill -= to_copy;
-    }
+  {
+    const size_t to_copy = to_fill > templ_size ? templ_size : to_fill;
+    memcpy (fill_ptr, template, to_copy);
+    fill_ptr += to_copy;
+    to_fill -= to_copy;
+  }
   return buf;
 }
 
 static size_t
 putBuffer (void *stream, size_t size, size_t nmemb, void *ptr)
 {
-  size_t *pos = (size_t *)ptr;
+  size_t *pos = (size_t *) ptr;
   size_t wrt;
 
   wrt = size * nmemb;
@@ -127,46 +128,46 @@ ahc_echo (void *cls,
   struct MHD_Response *response;
   int ret;
   static size_t processed;
-  (void)version;        /* Unused. Silent compiler warning. */
+  (void) version;        /* Unused. Silent compiler warning. */
 
   if (0 != strcmp ("PUT", method))
     return MHD_NO;              /* unexpected method */
   if ((*done) == 0)
+  {
+    size_t *pproc;
+    if (NULL == *pparam)
     {
-      size_t *pproc;
-      if (NULL == *pparam)
-        {
-          processed = 0;
-          *pparam = &processed; /* Safe as long as only one parallel request served. */
-        }
-      pproc = (size_t*) *pparam;
-
-      if (0 == *upload_data_size)
-        return MHD_YES; /* No data to process. */
-
-      if (*pproc + *upload_data_size > PUT_SIZE)
-        {
-          fprintf (stderr, "Incoming data larger than expected.\n");
-          return MHD_NO;
-        }
-      if ( (!incr_read) && (*upload_data_size != PUT_SIZE) )
-        return MHD_YES; /* Wait until whole request is received. */
-
-      if (0 != memcmp(upload_data, put_buffer + (*pproc), *upload_data_size))
-        {
-          fprintf (stderr, "Incoming data does not match sent data.\n");
-          return MHD_NO;
-        }
-      *pproc += *upload_data_size;
-      *upload_data_size = 0; /* Current block of data is fully processed. */
-
-      if (PUT_SIZE == *pproc)
-        *done = 1; /* Whole request is processed. */
-      return MHD_YES;
+      processed = 0;
+      *pparam = &processed;     /* Safe as long as only one parallel request served. */
     }
+    pproc = (size_t*) *pparam;
+
+    if (0 == *upload_data_size)
+      return MHD_YES;   /* No data to process. */
+
+    if (*pproc + *upload_data_size > PUT_SIZE)
+    {
+      fprintf (stderr, "Incoming data larger than expected.\n");
+      return MHD_NO;
+    }
+    if ( (! incr_read) && (*upload_data_size != PUT_SIZE) )
+      return MHD_YES;   /* Wait until whole request is received. */
+
+    if (0 != memcmp (upload_data, put_buffer + (*pproc), *upload_data_size))
+    {
+      fprintf (stderr, "Incoming data does not match sent data.\n");
+      return MHD_NO;
+    }
+    *pproc += *upload_data_size;
+    *upload_data_size = 0;   /* Current block of data is fully processed. */
+
+    if (PUT_SIZE == *pproc)
+      *done = 1;   /* Whole request is processed. */
+    return MHD_YES;
+  }
   response = MHD_create_response_from_buffer (strlen (url),
-					      (void *) url,
-					      MHD_RESPMEM_MUST_COPY);
+                                              (void *) url,
+                                              MHD_RESPMEM_MUST_COPY);
   ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
   MHD_destroy_response (response);
   return ret;
@@ -188,35 +189,39 @@ testPutInternalThread (unsigned int add_flag)
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
-    {
-      port = 1270;
-      if (oneone)
-        port += 10;
-      if (incr_read)
-        port += 20;
-    }
+  {
+    port = 1270;
+    if (oneone)
+      port += 10;
+    if (incr_read)
+      port += 20;
+  }
 
   cbc.buf = buf;
   cbc.size = 2048;
   cbc.pos = 0;
-  d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | add_flag,
+  d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG
+                        | add_flag,
                         port,
                         NULL, NULL, &ahc_echo, &done_flag,
-			MHD_OPTION_CONNECTION_MEMORY_LIMIT, (size_t)(incr_read ? 1024 : (PUT_SIZE * 4 / 3)),
-			MHD_OPTION_END);
+                        MHD_OPTION_CONNECTION_MEMORY_LIMIT,
+                        (size_t) (incr_read ? 1024 : (PUT_SIZE * 4 / 3)),
+                        MHD_OPTION_END);
   if (d == NULL)
     return 1;
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return 32;
     }
+    port = (int) dinfo->port;
+  }
   c = curl_easy_init ();
   curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
+  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   curl_easy_setopt (c, CURLOPT_READFUNCTION, &putBuffer);
@@ -235,14 +240,14 @@ testPutInternalThread (unsigned int add_flag)
    *   crashes on my system! */
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
-    {
-      fprintf (stderr,
-               "curl_easy_perform failed: `%s'\n",
-               curl_easy_strerror (errornum));
-      curl_easy_cleanup (c);
-      MHD_stop_daemon (d);
-      return 2;
-    }
+  {
+    fprintf (stderr,
+             "curl_easy_perform failed: `%s'\n",
+             curl_easy_strerror (errornum));
+    curl_easy_cleanup (c);
+    MHD_stop_daemon (d);
+    return 2;
+  }
   curl_easy_cleanup (c);
   MHD_stop_daemon (d);
   if (cbc.pos != strlen ("/hello_world"))
@@ -267,36 +272,40 @@ testPutThreadPerConn (unsigned int add_flag)
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
-    {
-      port = 1271;
-      if (oneone)
-        port += 10;
-      if (incr_read)
-        port += 20;
-    }
+  {
+    port = 1271;
+    if (oneone)
+      port += 10;
+    if (incr_read)
+      port += 20;
+  }
 
   cbc.buf = buf;
   cbc.size = 2048;
   cbc.pos = 0;
-  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD |
-                          MHD_USE_ERROR_LOG | add_flag,
+  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION
+                        | MHD_USE_INTERNAL_POLLING_THREAD
+                        | MHD_USE_ERROR_LOG | add_flag,
                         port,
                         NULL, NULL, &ahc_echo, &done_flag,
-                        MHD_OPTION_CONNECTION_MEMORY_LIMIT, (size_t)(incr_read ? 1024 : (PUT_SIZE * 4)),
-			MHD_OPTION_END);
+                        MHD_OPTION_CONNECTION_MEMORY_LIMIT,
+                        (size_t) (incr_read ? 1024 : (PUT_SIZE * 4)),
+                        MHD_OPTION_END);
   if (d == NULL)
     return 16;
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return 32;
     }
+    port = (int) dinfo->port;
+  }
   c = curl_easy_init ();
   curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
+  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   curl_easy_setopt (c, CURLOPT_READFUNCTION, &putBuffer);
@@ -315,21 +324,21 @@ testPutThreadPerConn (unsigned int add_flag)
    *   crashes on my system! */
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
-    {
-      fprintf (stderr,
-               "curl_easy_perform failed: `%s'\n",
-               curl_easy_strerror (errornum));
-      curl_easy_cleanup (c);
-      MHD_stop_daemon (d);
-      return 32;
-    }
+  {
+    fprintf (stderr,
+             "curl_easy_perform failed: `%s'\n",
+             curl_easy_strerror (errornum));
+    curl_easy_cleanup (c);
+    MHD_stop_daemon (d);
+    return 32;
+  }
   curl_easy_cleanup (c);
   MHD_stop_daemon (d);
   if (cbc.pos != strlen ("/hello_world"))
-    {
-      fprintf (stderr, "Got invalid response `%.*s'\n", (int)cbc.pos, cbc.buf);
-      return 64;
-    }
+  {
+    fprintf (stderr, "Got invalid response `%.*s'\n", (int) cbc.pos, cbc.buf);
+    return 64;
+  }
   if (0 != strncmp ("/hello_world", cbc.buf, strlen ("/hello_world")))
     return 128;
   return 0;
@@ -350,36 +359,40 @@ testPutThreadPool (unsigned int add_flag)
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
-    {
-      port = 1272;
-      if (oneone)
-        port += 10;
-      if (incr_read)
-        port += 20;
-    }
+  {
+    port = 1272;
+    if (oneone)
+      port += 10;
+    if (incr_read)
+      port += 20;
+  }
 
   cbc.buf = buf;
   cbc.size = 2048;
   cbc.pos = 0;
-  d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | add_flag,
+  d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG
+                        | add_flag,
                         port,
                         NULL, NULL, &ahc_echo, &done_flag,
                         MHD_OPTION_THREAD_POOL_SIZE, CPU_COUNT,
-                        MHD_OPTION_CONNECTION_MEMORY_LIMIT, (size_t)(incr_read ? 1024 : (PUT_SIZE * 4)),
-			MHD_OPTION_END);
+                        MHD_OPTION_CONNECTION_MEMORY_LIMIT,
+                        (size_t) (incr_read ? 1024 : (PUT_SIZE * 4)),
+                        MHD_OPTION_END);
   if (d == NULL)
     return 16;
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return 32;
     }
+    port = (int) dinfo->port;
+  }
   c = curl_easy_init ();
   curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
+  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   curl_easy_setopt (c, CURLOPT_READFUNCTION, &putBuffer);
@@ -398,21 +411,21 @@ testPutThreadPool (unsigned int add_flag)
    *   crashes on my system! */
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
-    {
-      fprintf (stderr,
-               "curl_easy_perform failed: `%s'\n",
-               curl_easy_strerror (errornum));
-      curl_easy_cleanup (c);
-      MHD_stop_daemon (d);
-      return 32;
-    }
+  {
+    fprintf (stderr,
+             "curl_easy_perform failed: `%s'\n",
+             curl_easy_strerror (errornum));
+    curl_easy_cleanup (c);
+    MHD_stop_daemon (d);
+    return 32;
+  }
   curl_easy_cleanup (c);
   MHD_stop_daemon (d);
   if (cbc.pos != strlen ("/hello_world"))
-    {
-      fprintf (stderr, "Got invalid response `%.*s'\n", (int)cbc.pos, cbc.buf);
-      return 64;
-    }
+  {
+    fprintf (stderr, "Got invalid response `%.*s'\n", (int) cbc.pos, cbc.buf);
+    return 64;
+  }
   if (0 != strncmp ("/hello_world", cbc.buf, strlen ("/hello_world")))
     return 128;
   return 0;
@@ -447,13 +460,13 @@ testPutExternal (void)
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
-    {
-      port = 1273;
-      if (oneone)
-        port += 10;
-      if (incr_read)
-        port += 20;
-    }
+  {
+    port = 1273;
+    if (oneone)
+      port += 10;
+    if (incr_read)
+      port += 20;
+  }
 
   cbc.buf = buf;
   cbc.size = 2048;
@@ -462,21 +475,24 @@ testPutExternal (void)
   d = MHD_start_daemon (MHD_USE_ERROR_LOG,
                         port,
                         NULL, NULL, &ahc_echo, &done_flag,
-                        MHD_OPTION_CONNECTION_MEMORY_LIMIT, (size_t)(incr_read ? 1024 : (PUT_SIZE * 4)),
+                        MHD_OPTION_CONNECTION_MEMORY_LIMIT,
+                        (size_t) (incr_read ? 1024 : (PUT_SIZE * 4)),
                         MHD_OPTION_END);
   if (d == NULL)
     return 256;
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return 32;
     }
+    port = (int) dinfo->port;
+  }
   c = curl_easy_init ();
   curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
+  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   curl_easy_setopt (c, CURLOPT_READFUNCTION, &putBuffer);
@@ -498,92 +514,94 @@ testPutExternal (void)
 
   multi = curl_multi_init ();
   if (multi == NULL)
-    {
-      curl_easy_cleanup (c);
-      MHD_stop_daemon (d);
-      return 512;
-    }
+  {
+    curl_easy_cleanup (c);
+    MHD_stop_daemon (d);
+    return 512;
+  }
   mret = curl_multi_add_handle (multi, c);
   if (mret != CURLM_OK)
+  {
+    curl_multi_cleanup (multi);
+    curl_easy_cleanup (c);
+    MHD_stop_daemon (d);
+    return 1024;
+  }
+  start = time (NULL);
+  while ((time (NULL) - start < 5) && (multi != NULL))
+  {
+    maxsock = MHD_INVALID_SOCKET;
+    maxposixs = -1;
+    FD_ZERO (&rs);
+    FD_ZERO (&ws);
+    FD_ZERO (&es);
+    curl_multi_perform (multi, &running);
+    mret = curl_multi_fdset (multi, &rs, &ws, &es, &maxposixs);
+    if (mret != CURLM_OK)
     {
+      curl_multi_remove_handle (multi, c);
       curl_multi_cleanup (multi);
       curl_easy_cleanup (c);
       MHD_stop_daemon (d);
-      return 1024;
+      return 2048;
     }
-  start = time (NULL);
-  while ((time (NULL) - start < 5) && (multi != NULL))
-    {
-      maxsock = MHD_INVALID_SOCKET;
-      maxposixs = -1;
-      FD_ZERO (&rs);
-      FD_ZERO (&ws);
-      FD_ZERO (&es);
-      curl_multi_perform (multi, &running);
-      mret = curl_multi_fdset (multi, &rs, &ws, &es, &maxposixs);
-      if (mret != CURLM_OK)
-        {
-          curl_multi_remove_handle (multi, c);
-          curl_multi_cleanup (multi);
-          curl_easy_cleanup (c);
-          MHD_stop_daemon (d);
-          return 2048;
-        }
-      if (MHD_YES != MHD_get_fdset (d, &rs, &ws, &es, &maxsock))
-        {
-          curl_multi_remove_handle (multi, c);
-          curl_multi_cleanup (multi);
-          curl_easy_cleanup (c);
-          MHD_stop_daemon (d);
-          return 4096;
-        }
-      tv.tv_sec = 0;
-      tv.tv_usec = 1000;
-      if (-1 == select (maxposixs + 1, &rs, &ws, &es, &tv))
-        {
-#ifdef MHD_POSIX_SOCKETS
-          if (EINTR != errno)
-            abort ();
-#else
-          if (WSAEINVAL != WSAGetLastError() || 0 != rs.fd_count || 0 != ws.fd_count || 0 != es.fd_count)
-            abort ();
-          Sleep (1000);
-#endif
-        }
-      curl_multi_perform (multi, &running);
-      if (running == 0)
-        {
-          msg = curl_multi_info_read (multi, &running);
-          if (msg == NULL)
-            break;
-          if (msg->msg == CURLMSG_DONE)
-            {
-              if (msg->data.result != CURLE_OK)
-                printf ("%s failed at %s:%d: `%s'\n",
-                        "curl_multi_perform",
-                        __FILE__,
-                        __LINE__, curl_easy_strerror (msg->data.result));
-              curl_multi_remove_handle (multi, c);
-              curl_multi_cleanup (multi);
-              curl_easy_cleanup (c);
-              c = NULL;
-              multi = NULL;
-            }
-        }
-      MHD_run (d);
-    }
-  if (multi != NULL)
+    if (MHD_YES != MHD_get_fdset (d, &rs, &ws, &es, &maxsock))
     {
       curl_multi_remove_handle (multi, c);
-      curl_easy_cleanup (c);
       curl_multi_cleanup (multi);
+      curl_easy_cleanup (c);
+      MHD_stop_daemon (d);
+      return 4096;
     }
+    tv.tv_sec = 0;
+    tv.tv_usec = 1000;
+    if (-1 == select (maxposixs + 1, &rs, &ws, &es, &tv))
+    {
+#ifdef MHD_POSIX_SOCKETS
+      if (EINTR != errno)
+        abort ();
+#else
+      if ((WSAEINVAL != WSAGetLastError ()) ||(0 != rs.fd_count) ||(0 !=
+                                                                    ws.fd_count)
+          ||(0 != es.fd_count) )
+        abort ();
+      Sleep (1000);
+#endif
+    }
+    curl_multi_perform (multi, &running);
+    if (running == 0)
+    {
+      msg = curl_multi_info_read (multi, &running);
+      if (msg == NULL)
+        break;
+      if (msg->msg == CURLMSG_DONE)
+      {
+        if (msg->data.result != CURLE_OK)
+          printf ("%s failed at %s:%d: `%s'\n",
+                  "curl_multi_perform",
+                  __FILE__,
+                  __LINE__, curl_easy_strerror (msg->data.result));
+        curl_multi_remove_handle (multi, c);
+        curl_multi_cleanup (multi);
+        curl_easy_cleanup (c);
+        c = NULL;
+        multi = NULL;
+      }
+    }
+    MHD_run (d);
+  }
+  if (multi != NULL)
+  {
+    curl_multi_remove_handle (multi, c);
+    curl_easy_cleanup (c);
+    curl_multi_cleanup (multi);
+  }
   MHD_stop_daemon (d);
   if (cbc.pos != strlen ("/hello_world"))
-    {
-      fprintf (stderr, "Got invalid response `%.*s'\n", (int)cbc.pos, cbc.buf);
-      return 8192;
-    }
+  {
+    fprintf (stderr, "Got invalid response `%.*s'\n", (int) cbc.pos, cbc.buf);
+    return 8192;
+  }
   if (0 != strncmp ("/hello_world", cbc.buf, strlen ("/hello_world")))
     return 16384;
   return 0;
@@ -597,59 +615,67 @@ main (int argc, char *const *argv)
   unsigned int errorCount = 0;
   unsigned int lastErr;
 
-  oneone = has_in_name(argv[0], "11");
-  incr_read = has_in_name(argv[0], "_inc");
-  verbose = has_param(argc, argv, "-v");
+  oneone = has_in_name (argv[0], "11");
+  incr_read = has_in_name (argv[0], "_inc");
+  verbose = has_param (argc, argv, "-v");
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 99;
   put_buffer = alloc_init (PUT_SIZE);
   if (NULL == put_buffer)
     return 99;
   lastErr = testPutExternal ();
-  if (verbose && 0 != lastErr)
+  if (verbose &&(0 != lastErr))
     fprintf (stderr, "Error during testing with external select().\n");
   errorCount += lastErr;
-  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_THREADS))
+  if (MHD_YES == MHD_is_feature_supported (MHD_FEATURE_THREADS))
+  {
+    lastErr = testPutInternalThread (0);
+    if (verbose &&(0 != lastErr) )
+      fprintf (stderr,
+               "Error during testing with internal thread with select().\n");
+    errorCount += lastErr;
+    lastErr = testPutThreadPerConn (0);
+    if (verbose &&(0 != lastErr) )
+      fprintf (stderr,
+               "Error during testing with internal thread per connection with select().\n");
+    errorCount += lastErr;
+    lastErr = testPutThreadPool (0);
+    if (verbose &&(0 != lastErr) )
+      fprintf (stderr,
+               "Error during testing with thread pool per connection with select().\n");
+    errorCount += lastErr;
+    if (MHD_is_feature_supported (MHD_FEATURE_POLL))
     {
-      lastErr = testPutInternalThread (0);
-      if (verbose && 0 != lastErr)
-	fprintf (stderr, "Error during testing with internal thread with select().\n");
+      lastErr = testPutInternalThread (MHD_USE_POLL);
+      if (verbose &&(0 != lastErr) )
+        fprintf (stderr,
+                 "Error during testing with internal thread with poll().\n");
       errorCount += lastErr;
-      lastErr = testPutThreadPerConn (0);
-      if (verbose && 0 != lastErr)
-	fprintf (stderr, "Error during testing with internal thread per connection with select().\n");
+      lastErr = testPutThreadPerConn (MHD_USE_POLL);
+      if (verbose &&(0 != lastErr) )
+        fprintf (stderr,
+                 "Error during testing with internal thread per connection with poll().\n");
       errorCount += lastErr;
-      lastErr = testPutThreadPool (0);
-      if (verbose && 0 != lastErr)
-	fprintf (stderr, "Error during testing with thread pool per connection with select().\n");
+      lastErr = testPutThreadPool (MHD_USE_POLL);
+      if (verbose &&(0 != lastErr) )
+        fprintf (stderr,
+                 "Error during testing with thread pool per connection with poll().\n");
       errorCount += lastErr;
-      if (MHD_is_feature_supported(MHD_FEATURE_POLL))
-	{
-	  lastErr = testPutInternalThread (MHD_USE_POLL);
-	  if (verbose && 0 != lastErr)
-	    fprintf (stderr, "Error during testing with internal thread with poll().\n");
-	  errorCount += lastErr;
-	  lastErr = testPutThreadPerConn (MHD_USE_POLL);
-	  if (verbose && 0 != lastErr)
-	    fprintf (stderr, "Error during testing with internal thread per connection with poll().\n");
-	  errorCount += lastErr;
-	  lastErr = testPutThreadPool (MHD_USE_POLL);
-	  if (verbose && 0 != lastErr)
-	    fprintf (stderr, "Error during testing with thread pool per connection with poll().\n");
-	  errorCount += lastErr;
-	}
-      if (MHD_is_feature_supported(MHD_FEATURE_EPOLL))
-	{
-	  lastErr = testPutInternalThread (MHD_USE_EPOLL);
-	  if (verbose && 0 != lastErr)
-	    fprintf (stderr, "Error during testing with internal thread with epoll.\n");
-	  errorCount += lastErr;
-	  lastErr = testPutThreadPool (MHD_USE_EPOLL);
-	  if (verbose && 0 != lastErr)
-	    fprintf (stderr, "Error during testing with thread pool per connection with epoll.\n");
-	  errorCount += lastErr;
-	}
     }
+    if (MHD_is_feature_supported (MHD_FEATURE_EPOLL))
+    {
+      lastErr = testPutInternalThread (MHD_USE_EPOLL);
+      if (verbose &&(0 != lastErr) )
+        fprintf (stderr,
+                 "Error during testing with internal thread with epoll.\n");
+      errorCount += lastErr;
+      lastErr = testPutThreadPool (MHD_USE_EPOLL);
+      if (verbose &&(0 != lastErr) )
+        fprintf (stderr,
+                 "Error during testing with thread pool per connection with epoll.\n");
+      errorCount += lastErr;
+    }
+  }
   free (put_buffer);
   if (errorCount != 0)
     fprintf (stderr, "Error (code: %u)\n", errorCount);

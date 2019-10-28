@@ -35,44 +35,44 @@
  */
 void
 MHD_connection_set_timeout (struct MHD_Connection *connection,
-			    unsigned int timeout_s)
+                            unsigned int timeout_s)
 {
   struct MHD_Daemon *daemon = connection->daemon;
-  
-  connection->last_activity = MHD_monotonic_sec_counter();
+
+  connection->last_activity = MHD_monotonic_sec_counter ();
   if (MHD_TM_THREAD_PER_CONNECTION == daemon->threading_mode)
-    {
-      /* Simple case, no need to lock to update DLLs */
-      connection->connection_timeout = (time_t) timeout_s;
-      return;
-    }
+  {
+    /* Simple case, no need to lock to update DLLs */
+    connection->connection_timeout = (time_t) timeout_s;
+    return;
+  }
 
   MHD_mutex_lock_chk_ (&daemon->cleanup_connection_mutex);
   if (! connection->suspended)
-    {
-      if (connection->connection_timeout ==
-	  daemon->connection_default_timeout)
-	XDLL_remove (daemon->normal_timeout_head,
-		     daemon->normal_timeout_tail,
-		     connection);
-      else
-	XDLL_remove (daemon->manual_timeout_head,
-		     daemon->manual_timeout_tail,
-		     connection);
-    }  
+  {
+    if (connection->connection_timeout ==
+        daemon->connection_default_timeout)
+      XDLL_remove (daemon->normal_timeout_head,
+                   daemon->normal_timeout_tail,
+                   connection);
+    else
+      XDLL_remove (daemon->manual_timeout_head,
+                   daemon->manual_timeout_tail,
+                   connection);
+  }
   connection->connection_timeout = (time_t) timeout_s;
   if (! connection->suspended)
-    {
-      if (connection->connection_timeout ==
-	  daemon->connection_default_timeout)
-	XDLL_insert (daemon->normal_timeout_head,
-		     daemon->normal_timeout_tail,
-		     connection);
-      else
-	XDLL_insert (daemon->manual_timeout_head,
-		     daemon->manual_timeout_tail,
-		     connection);
-    }
+  {
+    if (connection->connection_timeout ==
+        daemon->connection_default_timeout)
+      XDLL_insert (daemon->normal_timeout_head,
+                   daemon->normal_timeout_tail,
+                   connection);
+    else
+      XDLL_insert (daemon->manual_timeout_head,
+                   daemon->manual_timeout_tail,
+                   connection);
+  }
   MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
 }
 
@@ -95,7 +95,7 @@ MHD_update_last_activity_ (struct MHD_Connection *connection)
   if (connection->suspended)
     return; /* no activity on suspended connections */
 
-  connection->last_activity = MHD_monotonic_sec_counter();
+  connection->last_activity = MHD_monotonic_sec_counter ();
   if (MHD_TM_THREAD_PER_CONNECTION == daemon->threading_mode)
     return; /* each connection has personal timeout */
 
@@ -106,11 +106,11 @@ MHD_update_last_activity_ (struct MHD_Connection *connection)
   MHD_mutex_lock_chk_ (&daemon->cleanup_connection_mutex);
   /* move connection to head of timeout list (by remove + add operation) */
   XDLL_remove (daemon->normal_timeout_head,
-	       daemon->normal_timeout_tail,
-	       connection);
+               daemon->normal_timeout_tail,
+               connection);
   XDLL_insert (daemon->normal_timeout_head,
-	       daemon->normal_timeout_tail,
-	       connection);
+               daemon->normal_timeout_tail,
+               connection);
   MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
 }
 

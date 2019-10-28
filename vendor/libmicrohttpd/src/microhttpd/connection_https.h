@@ -35,7 +35,7 @@
  *
  * @param connection which callbacks should be modified
  */
-void 
+void
 MHD_set_https_callbacks (struct MHD_Connection *connection);
 
 
@@ -60,6 +60,20 @@ MHD_run_tls_handshake_ (struct MHD_Connection *connection);
  */
 bool
 MHD_tls_connection_shutdown (struct MHD_Connection *connection);
+
+/**
+ * Callback for writing data to the socket.
+ *
+ * @param connection the MHD connection structure
+ * @param other data to write
+ * @param i number of bytes to write
+ * @return positive value for number of bytes actually sent or
+ *         negative value for error number MHD_ERR_xxx_
+ */
+ssize_t
+send_tls_adapter (struct MHD_Connection *connection,
+                  const void *other,
+                  size_t i);
 #endif /* HTTPS_SUPPORT */
 
 #endif

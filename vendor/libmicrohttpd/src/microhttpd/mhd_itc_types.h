@@ -32,7 +32,7 @@
 #include "mhd_options.h"
 
 /* Force socketpair on native W32 */
-#if defined(_WIN32) && !defined(__CYGWIN__) && !defined(_MHD_ITC_SOCKETPAIR)
+#if defined(_WIN32) && ! defined(__CYGWIN__) && ! defined(_MHD_ITC_SOCKETPAIR)
 #error _MHD_ITC_SOCKETPAIR is not defined on naitive W32 platform
 #endif /* _WIN32 && !__CYGWIN__ && !_MHD_ITC_SOCKETPAIR */
 

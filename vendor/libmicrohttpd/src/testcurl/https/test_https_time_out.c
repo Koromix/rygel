@@ -55,10 +55,10 @@ test_tls_session_time_out (gnutls_session_t session, int port)
 
   sd = socket (AF_INET, SOCK_STREAM, 0);
   if (sd == MHD_INVALID_SOCKET)
-    {
-      fprintf (stderr, "Failed to create socket: %s\n", strerror (errno));
-      return -1;
-    }
+  {
+    fprintf (stderr, "Failed to create socket: %s\n", strerror (errno));
+    return -1;
+  }
 
   memset (&sa, '\0', sizeof (struct sockaddr_in));
   sa.sin_family = AF_INET;
@@ -70,30 +70,30 @@ test_tls_session_time_out (gnutls_session_t session, int port)
   ret = connect (sd, (struct sockaddr *) &sa, sizeof (struct sockaddr_in));
 
   if (ret < 0)
-    {
-      fprintf (stderr, "Error: %s\n", MHD_E_FAILED_TO_CONNECT);
-      MHD_socket_close_chk_ (sd);
-      return -1;
-    }
+  {
+    fprintf (stderr, "Error: %s\n", MHD_E_FAILED_TO_CONNECT);
+    MHD_socket_close_chk_ (sd);
+    return -1;
+  }
 
   ret = gnutls_handshake (session);
   if (ret < 0)
-    {
-      fprintf (stderr, "Handshake failed\n");
-      MHD_socket_close_chk_ (sd);
-      return -1;
-    }
+  {
+    fprintf (stderr, "Handshake failed\n");
+    MHD_socket_close_chk_ (sd);
+    return -1;
+  }
 
-  (void)sleep (TIME_OUT + 1);
+  (void) sleep (TIME_OUT + 1);
 
   /* check that server has closed the connection */
   /* TODO better RST trigger */
   if (send (sd, "", 1, 0) == 0)
-    {
-      fprintf (stderr, "Connection failed to time-out\n");
-      MHD_socket_close_chk_ (sd);
-      return -1;
-    }
+  {
+    fprintf (stderr, "Connection failed to time-out\n");
+    MHD_socket_close_chk_ (sd);
+    return -1;
+  }
 
   MHD_socket_close_chk_ (sd);
   return 0;
@@ -110,7 +110,7 @@ main (int argc, char *const *argv)
   gnutls_datum_t cert;
   gnutls_certificate_credentials_t xcred;
   int port;
-  (void)argc;   /* Unused. Silent compiler warning. */
+  (void) argc;   /* Unused. Silent compiler warning. */
 
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
@@ -126,8 +126,9 @@ main (int argc, char *const *argv)
   gnutls_global_init ();
   gnutls_global_set_log_level (11);
 
-  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_TLS |
-                        MHD_USE_ERROR_LOG, port,
+  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION
+                        | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_TLS
+                        | MHD_USE_ERROR_LOG, port,
                         NULL, NULL, &http_dummy_ahc, NULL,
                         MHD_OPTION_CONNECTION_TIMEOUT, TIME_OUT,
                         MHD_OPTION_HTTPS_MEM_KEY, srv_key_pem,
@@ -135,24 +136,26 @@ main (int argc, char *const *argv)
                         MHD_OPTION_END);
 
   if (NULL == d)
-    {
-      fprintf (stderr, MHD_E_SERVER_INIT);
-      return -1;
-    }
+  {
+    fprintf (stderr, MHD_E_SERVER_INIT);
+    return -1;
+  }
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return -1; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return -1;
     }
+    port = (int) dinfo->port;
+  }
 
   if (0 != setup_session (&session, &key, &cert, &xcred))
-    {
-      fprintf (stderr, "failed to setup session\n");
-      return 1;
-    }
+  {
+    fprintf (stderr, "failed to setup session\n");
+    return 1;
+  }
   errorCount += test_tls_session_time_out (session, port);
   teardown_session (session, &key, &cert, xcred);
 

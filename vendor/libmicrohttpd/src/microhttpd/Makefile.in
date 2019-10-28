@@ -233,12 +233,12 @@ am__libmicrohttpd_la_SOURCES_DIST = connection.c connection.h \
 	reason_phrase.c daemon.c internal.c internal.h memorypool.c \
 	memorypool.h mhd_mono_clock.c mhd_mono_clock.h mhd_limits.h \
 	mhd_byteorder.h sysfdsetsize.c sysfdsetsize.h mhd_str.c \
-	mhd_str.h mhd_assert.h mhd_sockets.c mhd_sockets.h mhd_itc.c \
-	mhd_itc.h mhd_itc_types.h mhd_compat.c mhd_compat.h response.c \
-	response.h mhd_threads.c mhd_threads.h mhd_locks.h tsearch.c \
-	tsearch.h postprocessor.c digestauth.c mhd_bithelpers.h md5.c \
-	md5.h sha256.c sha256.h basicauth.c base64.c base64.h \
-	connection_https.c connection_https.h
+	mhd_str.h mhd_send.h mhd_send.c mhd_assert.h mhd_sockets.c \
+	mhd_sockets.h mhd_itc.c mhd_itc.h mhd_itc_types.h mhd_compat.c \
+	mhd_compat.h response.c response.h mhd_threads.c mhd_threads.h \
+	mhd_locks.h tsearch.c tsearch.h postprocessor.c digestauth.c \
+	mhd_bithelpers.h md5.c md5.h sha256.c sha256.h basicauth.c \
+	base64.c base64.h connection_https.c connection_https.h
 @USE_POSIX_THREADS_TRUE@am__objects_1 =  \
 @USE_POSIX_THREADS_TRUE@	libmicrohttpd_la-mhd_threads.lo
 @USE_W32_THREADS_TRUE@am__objects_2 = libmicrohttpd_la-mhd_threads.lo
@@ -257,11 +257,11 @@ am_libmicrohttpd_la_OBJECTS = libmicrohttpd_la-connection.lo \
 	libmicrohttpd_la-internal.lo libmicrohttpd_la-memorypool.lo \
 	libmicrohttpd_la-mhd_mono_clock.lo \
 	libmicrohttpd_la-sysfdsetsize.lo libmicrohttpd_la-mhd_str.lo \
-	libmicrohttpd_la-mhd_sockets.lo libmicrohttpd_la-mhd_itc.lo \
-	libmicrohttpd_la-mhd_compat.lo libmicrohttpd_la-response.lo \
-	$(am__objects_1) $(am__objects_2) $(am__objects_3) \
-	$(am__objects_4) $(am__objects_5) $(am__objects_6) \
-	$(am__objects_7)
+	libmicrohttpd_la-mhd_send.lo libmicrohttpd_la-mhd_sockets.lo \
+	libmicrohttpd_la-mhd_itc.lo libmicrohttpd_la-mhd_compat.lo \
+	libmicrohttpd_la-response.lo $(am__objects_1) $(am__objects_2) \
+	$(am__objects_3) $(am__objects_4) $(am__objects_5) \
+	$(am__objects_6) $(am__objects_7)
 libmicrohttpd_la_OBJECTS = $(am_libmicrohttpd_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -436,6 +436,7 @@ am__depfiles_remade = ./$(DEPDIR)/libmicrohttpd_la-base64.Plo \
 	./$(DEPDIR)/libmicrohttpd_la-mhd_compat.Plo \
 	./$(DEPDIR)/libmicrohttpd_la-mhd_itc.Plo \
 	./$(DEPDIR)/libmicrohttpd_la-mhd_mono_clock.Plo \
+	./$(DEPDIR)/libmicrohttpd_la-mhd_send.Plo \
 	./$(DEPDIR)/libmicrohttpd_la-mhd_sockets.Plo \
 	./$(DEPDIR)/libmicrohttpd_la-mhd_str.Plo \
 	./$(DEPDIR)/libmicrohttpd_la-mhd_threads.Plo \
@@ -916,9 +917,9 @@ MOSTLYCLEANFILES = $(am__append_2) $(am__append_4)
 libmicrohttpd_la_SOURCES = connection.c connection.h reason_phrase.c \
 	daemon.c internal.c internal.h memorypool.c memorypool.h \
 	mhd_mono_clock.c mhd_mono_clock.h mhd_limits.h mhd_byteorder.h \
-	sysfdsetsize.c sysfdsetsize.h mhd_str.c mhd_str.h mhd_assert.h \
-	mhd_sockets.c mhd_sockets.h mhd_itc.c mhd_itc.h \
-	mhd_itc_types.h mhd_compat.c mhd_compat.h response.c \
+	sysfdsetsize.c sysfdsetsize.h mhd_str.c mhd_str.h mhd_send.h \
+	mhd_send.c mhd_assert.h mhd_sockets.c mhd_sockets.h mhd_itc.c \
+	mhd_itc.h mhd_itc_types.h mhd_compat.c mhd_compat.h response.c \
 	response.h $(am__append_5) $(am__append_6) $(am__append_9) \
 	$(am__append_10) $(am__append_11) $(am__append_12) \
 	$(am__append_13)
@@ -1300,6 +1301,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmicrohttpd_la-mhd_compat.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmicrohttpd_la-mhd_itc.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmicrohttpd_la-mhd_mono_clock.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmicrohttpd_la-mhd_send.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmicrohttpd_la-mhd_sockets.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmicrohttpd_la-mhd_str.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmicrohttpd_la-mhd_threads.Plo@am__quote@ # am--include-marker
@@ -1418,6 +1420,13 @@ libmicrohttpd_la-mhd_str.lo: mhd_str.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='mhd_str.c' object='libmicrohttpd_la-mhd_str.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmicrohttpd_la_CPPFLAGS) $(CPPFLAGS) $(libmicrohttpd_la_CFLAGS) $(CFLAGS) -c -o libmicrohttpd_la-mhd_str.lo `test -f 'mhd_str.c' || echo '$(srcdir)/'`mhd_str.c
+
+libmicrohttpd_la-mhd_send.lo: mhd_send.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmicrohttpd_la_CPPFLAGS) $(CPPFLAGS) $(libmicrohttpd_la_CFLAGS) $(CFLAGS) -MT libmicrohttpd_la-mhd_send.lo -MD -MP -MF $(DEPDIR)/libmicrohttpd_la-mhd_send.Tpo -c -o libmicrohttpd_la-mhd_send.lo `test -f 'mhd_send.c' || echo '$(srcdir)/'`mhd_send.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmicrohttpd_la-mhd_send.Tpo $(DEPDIR)/libmicrohttpd_la-mhd_send.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='mhd_send.c' object='libmicrohttpd_la-mhd_send.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmicrohttpd_la_CPPFLAGS) $(CPPFLAGS) $(libmicrohttpd_la_CFLAGS) $(CFLAGS) -c -o libmicrohttpd_la-mhd_send.lo `test -f 'mhd_send.c' || echo '$(srcdir)/'`mhd_send.c
 
 libmicrohttpd_la-mhd_sockets.lo: mhd_sockets.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmicrohttpd_la_CPPFLAGS) $(CPPFLAGS) $(libmicrohttpd_la_CFLAGS) $(CFLAGS) -MT libmicrohttpd_la-mhd_sockets.lo -MD -MP -MF $(DEPDIR)/libmicrohttpd_la-mhd_sockets.Tpo -c -o libmicrohttpd_la-mhd_sockets.lo `test -f 'mhd_sockets.c' || echo '$(srcdir)/'`mhd_sockets.c
@@ -2112,6 +2121,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/libmicrohttpd_la-mhd_compat.Plo
 	-rm -f ./$(DEPDIR)/libmicrohttpd_la-mhd_itc.Plo
 	-rm -f ./$(DEPDIR)/libmicrohttpd_la-mhd_mono_clock.Plo
+	-rm -f ./$(DEPDIR)/libmicrohttpd_la-mhd_send.Plo
 	-rm -f ./$(DEPDIR)/libmicrohttpd_la-mhd_sockets.Plo
 	-rm -f ./$(DEPDIR)/libmicrohttpd_la-mhd_str.Plo
 	-rm -f ./$(DEPDIR)/libmicrohttpd_la-mhd_threads.Plo
@@ -2201,6 +2211,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/libmicrohttpd_la-mhd_compat.Plo
 	-rm -f ./$(DEPDIR)/libmicrohttpd_la-mhd_itc.Plo
 	-rm -f ./$(DEPDIR)/libmicrohttpd_la-mhd_mono_clock.Plo
+	-rm -f ./$(DEPDIR)/libmicrohttpd_la-mhd_send.Plo
 	-rm -f ./$(DEPDIR)/libmicrohttpd_la-mhd_sockets.Plo
 	-rm -f ./$(DEPDIR)/libmicrohttpd_la-mhd_str.Plo
 	-rm -f ./$(DEPDIR)/libmicrohttpd_la-mhd_threads.Plo

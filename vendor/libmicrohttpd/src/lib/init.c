@@ -36,7 +36,7 @@ volatile unsigned int global_init_count = 0;
 /**
  * Global initialisation mutex
  */
-MHD_MUTEX_STATIC_DEFN_INIT_(global_init_mutex_);
+MHD_MUTEX_STATIC_DEFN_INIT_ (global_init_mutex_);
 #endif /* MHD_MUTEX_STATIC_DEFN_INIT_ */
 
 #endif
@@ -59,21 +59,21 @@ static int mhd_winsock_inited_ = 0;
  */
 static void
 mhd_panic_std (void *cls,
-	       const char *file,
-	       unsigned int line,
-	       const char *reason)
+               const char *file,
+               unsigned int line,
+               const char *reason)
 {
-  (void)cls; /* Mute compiler warning. */
+  (void) cls; /* Mute compiler warning. */
 #ifdef HAVE_MESSAGES
   fprintf (stderr,
-           _("Fatal error in GNU libmicrohttpd %s:%u: %s\n"),
-	   file,
+           _ ("Fatal error in GNU libmicrohttpd %s:%u: %s\n"),
+           file,
            line,
            reason);
 #else  /* ! HAVE_MESSAGES */
-  (void)file;   /* Mute compiler warning. */
-  (void)line;   /* Mute compiler warning. */
-  (void)reason; /* Mute compiler warning. */
+  (void) file;   /* Mute compiler warning. */
+  (void) line;   /* Mute compiler warning. */
+  (void) reason; /* Mute compiler warning. */
 #endif
   abort ();
 }
@@ -93,13 +93,13 @@ MHD_init (void)
     mhd_panic = &mhd_panic_std;
 
 #if defined(_WIN32) && ! defined(__CYGWIN__)
-  if (0 != WSAStartup (MAKEWORD(2, 2),
-		       &wsd))
-    MHD_PANIC (_("Failed to initialize winsock\n"));
+  if (0 != WSAStartup (MAKEWORD (2, 2),
+                       &wsd))
+    MHD_PANIC (_ ("Failed to initialize winsock\n"));
   mhd_winsock_inited_ = 1;
-  if ( (2 != LOBYTE(wsd.wVersion)) &&
-       (2 != HIBYTE(wsd.wVersion)) )
-    MHD_PANIC (_("Winsock version 2.2 is not available\n"));
+  if ( (2 != LOBYTE (wsd.wVersion)) &&
+       (2 != HIBYTE (wsd.wVersion)) )
+    MHD_PANIC (_ ("Winsock version 2.2 is not available\n"));
 #endif
   MHD_monotonic_sec_counter_init ();
 #ifdef HAVE_FREEBSD_SENDFILE
@@ -116,14 +116,14 @@ MHD_fini (void)
 {
 #if defined(_WIN32) && ! defined(__CYGWIN__)
   if (mhd_winsock_inited_)
-    WSACleanup();
+    WSACleanup ();
 #endif
   MHD_monotonic_sec_counter_finish ();
 }
 
 #ifdef _AUTOINIT_FUNCS_ARE_SUPPORTED
 
-_SET_INIT_AND_DEINIT_FUNCS(MHD_init, MHD_fini);
+_SET_INIT_AND_DEINIT_FUNCS (MHD_init, MHD_fini);
 
 #else
 
@@ -135,12 +135,12 @@ void
 MHD_check_global_init_ (void)
 {
 #ifdef MHD_MUTEX_STATIC_DEFN_INIT_
-  MHD_mutex_lock_chk_(&global_init_mutex_);
+  MHD_mutex_lock_chk_ (&global_init_mutex_);
 #endif /* MHD_MUTEX_STATIC_DEFN_INIT_ */
   if (0 == global_init_count++)
     MHD_init ();
 #ifdef MHD_MUTEX_STATIC_DEFN_INIT_
-  MHD_mutex_unlock_chk_(&global_init_mutex_);
+  MHD_mutex_unlock_chk_ (&global_init_mutex_);
 #endif /* MHD_MUTEX_STATIC_DEFN_INIT_ */
 }
 #endif

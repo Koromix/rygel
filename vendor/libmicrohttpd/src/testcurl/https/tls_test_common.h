@@ -35,15 +35,18 @@
 #define test_data "Hello World\n"
 #define ca_cert_file_name "tmp_ca_cert.pem"
 
-#define EMPTY_PAGE "<html><head><title>Empty page</title></head><body>Empty page</body></html>"
-#define PAGE_NOT_FOUND "<html><head><title>File not found</title></head><body>File not found</body></html>"
+#define EMPTY_PAGE \
+  "<html><head><title>Empty page</title></head><body>Empty page</body></html>"
+#define PAGE_NOT_FOUND \
+  "<html><head><title>File not found</title></head><body>File not found</body></html>"
 
 #define MHD_E_MEM "Error: memory error\n"
 #define MHD_E_SERVER_INIT "Error: failed to start server\n"
 #define MHD_E_TEST_FILE_CREAT "Error: failed to setup test file\n"
 #define MHD_E_CERT_FILE_CREAT "Error: failed to setup test certificate\n"
 #define MHD_E_KEY_FILE_CREAT "Error: failed to setup test certificate\n"
-#define MHD_E_FAILED_TO_CONNECT "Error: server connection could not be established\n"
+#define MHD_E_FAILED_TO_CONNECT \
+  "Error: server connection could not be established\n"
 
 /* TODO rm if unused */
 struct https_test_data
@@ -82,8 +85,8 @@ setup_ca_cert (void);
  * perform cURL request for file
  */
 int
-test_daemon_get (void * cls,
-		 const char *cipher_suite, int proto_version,
+test_daemon_get (void *cls,
+                 const char *cipher_suite, int proto_version,
                  int port, int ver_peer);
 
 void
@@ -122,31 +125,33 @@ send_curl_req (char *url, struct CBC *cbc, const char *cipher_suite,
                int proto_version);
 
 int
-test_https_transfer (void *cls, int port, const char *cipher_suite, int proto_version);
+test_https_transfer (void *cls, int port, const char *cipher_suite, int
+                     proto_version);
 
 int
-setup_testcase (struct MHD_Daemon **d, int port, int daemon_flags, va_list arg_list);
+setup_testcase (struct MHD_Daemon **d, int port, int daemon_flags, va_list
+                arg_list);
 
 void
 teardown_testcase (struct MHD_Daemon *d);
 
 
 int
-setup_session (gnutls_session_t * session,
-               gnutls_datum_t * key,
-               gnutls_datum_t * cert,
-               gnutls_certificate_credentials_t * xcred);
+setup_session (gnutls_session_t *session,
+               gnutls_datum_t *key,
+               gnutls_datum_t *cert,
+               gnutls_certificate_credentials_t *xcred);
 
 int
 teardown_session (gnutls_session_t session,
-                  gnutls_datum_t * key,
-                  gnutls_datum_t * cert,
+                  gnutls_datum_t *key,
+                  gnutls_datum_t *cert,
                   gnutls_certificate_credentials_t xcred);
 
 int
 test_wrap (const char *test_name, int
-           (*test_function) (void * cls, int port, const char *cipher_suite,
-                             int proto_version), void * cls,
+           (*test_function)(void *cls, int port, const char *cipher_suite,
+                            int proto_version), void *cls,
            int port,
            int daemon_flags, const char *cipher_suite, int proto_version, ...);
 

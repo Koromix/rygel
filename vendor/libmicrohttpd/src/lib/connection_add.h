@@ -32,10 +32,10 @@
  * that process daemon's select()/poll()/etc.
  *
  * @param daemon handle with the listen socket
- * @return #MHD_SC_OK on success 
+ * @return #MHD_SC_OK on success
  */
 enum MHD_StatusCode
 MHD_accept_connection_ (struct MHD_Daemon *daemon)
-  MHD_NONNULL (1);
+MHD_NONNULL (1);
 
 #endif

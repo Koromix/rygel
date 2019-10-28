@@ -40,10 +40,10 @@
  */
 int
 MHD_connection_call_handlers_ (struct MHD_Connection *con,
-			       bool read_ready,
-			       bool write_ready,
-			       bool force_close)
-  MHD_NONNULL (1);
+                               bool read_ready,
+                               bool write_ready,
+                               bool force_close)
+MHD_NONNULL (1);
 
 
 /**
@@ -58,7 +58,7 @@ MHD_connection_call_handlers_ (struct MHD_Connection *con,
  */
 bool
 MHD_request_handle_idle_ (struct MHD_Request *request)
-  MHD_NONNULL (1);
+MHD_NONNULL (1);
 
-  
+
 #endif

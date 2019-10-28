@@ -38,6 +38,6 @@
  */
 bool
 MHD_resume_suspended_connections_ (struct MHD_Daemon *daemon)
-  MHD_NONNULL(1);
+MHD_NONNULL (1);
 
 #endif

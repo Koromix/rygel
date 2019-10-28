@@ -42,11 +42,11 @@
  */
 enum MHD_Bool
 MHD_request_get_information_sz (struct MHD_Request *request,
-			        enum MHD_RequestInformationType info_type,
-			        union MHD_RequestInformation *return_value,
-			        size_t return_value_size)
+                                enum MHD_RequestInformationType info_type,
+                                union MHD_RequestInformation *return_value,
+                                size_t return_value_size)
 {
-#define CHECK_SIZE(type) if (sizeof(type) < return_value_size)	\
+#define CHECK_SIZE(type) if (sizeof(type) < return_value_size)  \
     return MHD_NO
 
   switch (info_type)
@@ -70,8 +70,8 @@ MHD_request_get_information_sz (struct MHD_Request *request,
   case MHD_REQUEST_INFORMATION_HEADER_SIZE:
     CHECK_SIZE (size_t);
     if ( (MHD_REQUEST_HEADERS_RECEIVED > request->state) ||
-	 (MHD_REQUEST_CLOSED == request->state) )
-        return MHD_NO; /* invalid, too early! */
+         (MHD_REQUEST_CLOSED == request->state) )
+      return MHD_NO;   /* invalid, too early! */
     return_value->header_size = request->header_size;
     return MHD_YES;
 

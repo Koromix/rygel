@@ -36,8 +36,8 @@
  */
 enum MHD_StatusCode
 MHD_daemon_select_ (struct MHD_Daemon *daemon,
-		    int may_block)
-  MHD_NONNULL(1);
+                    int may_block)
+MHD_NONNULL (1);
 
 
 #if defined(HTTPS_SUPPORT) && defined(UPGRADE_SUPPORT)
@@ -49,7 +49,7 @@ MHD_daemon_select_ (struct MHD_Daemon *daemon,
  */
 void
 MHD_daemon_upgrade_connection_with_select_ (struct MHD_Connection *con)
-  MHD_NONNULL(1);
+MHD_NONNULL (1);
 #endif
 
 #endif

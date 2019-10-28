@@ -54,9 +54,9 @@ struct MHD_TLS_Plugin
 {
   /**
    * Closure with plugin's internal state, opaque to MHD.
-   */ 
+   */
   void *cls;
-  
+
   /**
    * Destroy the plugin, we are done with it.
    */
@@ -77,9 +77,9 @@ struct MHD_TLS_Plugin
    */
   enum MHD_StatusCode
   (*init_kcp)(void *cls,
-	      const char *mem_key,
-	      const char *mem_cert,
-	      const char *pass);
+              const char *mem_key,
+              const char *mem_cert,
+              const char *pass);
 
 
   /**
@@ -91,7 +91,7 @@ struct MHD_TLS_Plugin
    */
   enum MHD_StatusCode
   (*init_dhparams)(void *cls,
-		   const char *dh);
+                   const char *dh);
 
 
   /**
@@ -103,7 +103,7 @@ struct MHD_TLS_Plugin
    */
   enum MHD_StatusCode
   (*init_mem_trust)(void *cls,
-		    const char *mem_trust);
+                    const char *mem_trust);
 
 
   /**
@@ -116,59 +116,59 @@ struct MHD_TLS_Plugin
    */
   struct MHD_TLS_ConnectionState *
   (*setup_connection)(void *cls,
-		      ...);
+                      ...);
 
 
   enum MHD_Bool
   (*handshake)(void *cls,
-	       struct MHD_TLS_ConnectionState *cs);
+               struct MHD_TLS_ConnectionState *cs);
 
 
   enum MHD_Bool
   (*idle_ready)(void *cls,
-		struct MHD_TLS_ConnectionState *cs);
+                struct MHD_TLS_ConnectionState *cs);
 
 
   enum MHD_Bool
   (*update_event_loop_info)(void *cls,
-			    struct MHD_TLS_ConnectionState *cs,
-			    enum MHD_RequestEventLoopInfo *eli);
-  
+                            struct MHD_TLS_ConnectionState *cs,
+                            enum MHD_RequestEventLoopInfo *eli);
+
   ssize_t
   (*send)(void *cls,
-	  struct MHD_TLS_ConnectionState *cs,
-	  const void *buf,
-	  size_t buf_size);
+          struct MHD_TLS_ConnectionState *cs,
+          const void *buf,
+          size_t buf_size);
 
 
   ssize_t
   (*recv)(void *cls,
-	  struct MHD_TLS_ConnectionState *cs,
-	  void *buf,
-	  size_t buf_size);
+          struct MHD_TLS_ConnectionState *cs,
+          void *buf,
+          size_t buf_size);
 
 
   const char *
   (*strerror)(void *cls,
-	      int ec);
+              int ec);
 
   enum MHD_Bool
   (*check_record_pending)(void *cls,
-			  struct MHD_TLS_ConnectionState *cs);
+                          struct MHD_TLS_ConnectionState *cs);
 
   enum MHD_Bool
-  (*shutdown_connection) (void *cls,
-			  struct MHD_TLS_ConnectionState *cs);
+  (*shutdown_connection)(void *cls,
+                         struct MHD_TLS_ConnectionState *cs);
 
-  
+
   void
   (*teardown_connection)(void *cls,
-			 struct MHD_TLS_ConnectionState *cs);
-  
+                         struct MHD_TLS_ConnectionState *cs);
+
   /**
    * TODO: More functions here....
    */
-  
+
 };
 
 
@@ -191,7 +191,7 @@ typedef struct MHD_TLS_Plugin *
  */
 #define MHD_TLS_INIT(body) \
   struct MHD_TLS_Plugin * \
-  MHD_TLS_init_ ## MHD_TLS_ABI_VERSION (const char *ciphers) \\
+    MHD_TLS_init_ ## MHD_TLS_ABI_VERSION (const char *ciphers) \ \
   {  body  }
 
 #endif

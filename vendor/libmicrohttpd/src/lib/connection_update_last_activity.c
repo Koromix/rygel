@@ -43,7 +43,7 @@ MHD_connection_update_last_activity_ (struct MHD_Connection *connection)
   if (connection->suspended)
     return; /* no activity on suspended connections */
 
-  connection->last_activity = MHD_monotonic_sec_counter();
+  connection->last_activity = MHD_monotonic_sec_counter ();
   if (MHD_TM_THREAD_PER_CONNECTION == daemon->threading_mode)
     return; /* each connection has personal timeout */
 
@@ -53,13 +53,12 @@ MHD_connection_update_last_activity_ (struct MHD_Connection *connection)
   MHD_mutex_lock_chk_ (&daemon->cleanup_connection_mutex);
   /* move connection to head of timeout list (by remove + add operation) */
   XDLL_remove (daemon->normal_timeout_head,
-	       daemon->normal_timeout_tail,
-	       connection);
+               daemon->normal_timeout_tail,
+               connection);
   XDLL_insert (daemon->normal_timeout_head,
-	       daemon->normal_timeout_tail,
-	       connection);
+               daemon->normal_timeout_tail,
+               connection);
   MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
 }
 
 /* end of connection_update_last_activity.c */
-

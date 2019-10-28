@@ -51,37 +51,37 @@ struct CBC
 };
 
 
-static void 
+static void
 termination_cb (void *cls,
-		struct MHD_Connection *connection,
-		void **con_cls,
-		enum MHD_RequestTerminationCode toe)
+                struct MHD_Connection *connection,
+                void **con_cls,
+                enum MHD_RequestTerminationCode toe)
 {
   int *test = cls;
-  (void)connection;(void)con_cls;       /* Unused. Silent compiler warning. */
+  (void) connection; (void) con_cls;       /* Unused. Silent compiler warning. */
 
   switch (toe)
+  {
+  case MHD_REQUEST_TERMINATED_COMPLETED_OK:
+    if (test == &withoutTimeout)
     {
-    case MHD_REQUEST_TERMINATED_COMPLETED_OK :
-      if (test == &withoutTimeout)
-	{
-	  withoutTimeout = 0;
-	}
-      break;
-    case MHD_REQUEST_TERMINATED_WITH_ERROR :
-    case MHD_REQUEST_TERMINATED_READ_ERROR :
-      break;
-    case MHD_REQUEST_TERMINATED_TIMEOUT_REACHED :
-      if (test == &withTimeout)
-	{
-	  withTimeout = 0;
-	}
-      break;
-    case MHD_REQUEST_TERMINATED_DAEMON_SHUTDOWN:
-      break;
-    case MHD_REQUEST_TERMINATED_CLIENT_ABORT:
-      break;
+      withoutTimeout = 0;
     }
+    break;
+  case MHD_REQUEST_TERMINATED_WITH_ERROR:
+  case MHD_REQUEST_TERMINATED_READ_ERROR:
+    break;
+  case MHD_REQUEST_TERMINATED_TIMEOUT_REACHED:
+    if (test == &withTimeout)
+    {
+      withTimeout = 0;
+    }
+    break;
+  case MHD_REQUEST_TERMINATED_DAEMON_SHUTDOWN:
+    break;
+  case MHD_REQUEST_TERMINATED_CLIENT_ABORT:
+    break;
+  }
 }
 
 
@@ -93,7 +93,7 @@ putBuffer (void *stream, size_t size, size_t nmemb, void *ptr)
 
   wrt = size * nmemb;
   if (wrt > 8 - (*pos))
-	wrt = 8 - (*pos);
+    wrt = 8 - (*pos);
   memcpy (stream, &("Hello123"[*pos]), wrt);
   (*pos) += wrt;
   return wrt;
@@ -103,7 +103,7 @@ putBuffer (void *stream, size_t size, size_t nmemb, void *ptr)
 static size_t
 putBuffer_fail (void *stream, size_t size, size_t nmemb, void *ptr)
 {
-  (void)stream;(void)size;(void)nmemb;(void)ptr;        /* Unused. Silent compiler warning. */
+  (void) stream; (void) size; (void) nmemb; (void) ptr;        /* Unused. Silent compiler warning. */
   return 0;
 }
 
@@ -133,29 +133,29 @@ ahc_echo (void *cls,
   int *done = cls;
   struct MHD_Response *response;
   int ret;
-  (void)version;(void)unused;   /* Unused. Silent compiler warning. */
+  (void) version; (void) unused;   /* Unused. Silent compiler warning. */
 
   if (0 != strcmp ("PUT", method))
     return MHD_NO;              /* unexpected method */
   if ((*done) == 0)
+  {
+    if (*upload_data_size != 8)
+      return MHD_YES;           /* not yet ready */
+    if (0 == memcmp (upload_data, "Hello123", 8))
     {
-      if (*upload_data_size != 8)
-        return MHD_YES;         /* not yet ready */
-      if (0 == memcmp (upload_data, "Hello123", 8))
-        {
-          *upload_data_size = 0;
-        }
-      else
-        {
-          printf ("Invalid upload data `%8s'!\n", upload_data);
-          return MHD_NO;
-        }
-      *done = 1;
-      return MHD_YES;
+      *upload_data_size = 0;
     }
+    else
+    {
+      printf ("Invalid upload data `%8s'!\n", upload_data);
+      return MHD_NO;
+    }
+    *done = 1;
+    return MHD_YES;
+  }
   response = MHD_create_response_from_buffer (strlen (url),
-					      (void *) url, 
-					      MHD_RESPMEM_MUST_COPY);
+                                              (void *) url,
+                                              MHD_RESPMEM_MUST_COPY);
   ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
   MHD_destroy_response (response);
   return ret;
@@ -177,11 +177,11 @@ testWithoutTimeout ()
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
-    {
-      port = 1500;
-      if (oneone)
-        port += 5;
-    }
+  {
+    port = 1500;
+    if (oneone)
+      port += 5;
+  }
 
   cbc.buf = buf;
   cbc.size = 2048;
@@ -190,21 +190,24 @@ testWithoutTimeout ()
                         port,
                         NULL, NULL, &ahc_echo, &done_flag,
                         MHD_OPTION_CONNECTION_TIMEOUT, 2,
-                        MHD_OPTION_NOTIFY_COMPLETED, &termination_cb, &withTimeout,
+                        MHD_OPTION_NOTIFY_COMPLETED, &termination_cb,
+                        &withTimeout,
                         MHD_OPTION_END);
   if (d == NULL)
     return 1;
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return 32;
     }
+    port = (int) dinfo->port;
+  }
   c = curl_easy_init ();
   curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
+  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   curl_easy_setopt (c, CURLOPT_READFUNCTION, &putBuffer);
@@ -223,11 +226,11 @@ testWithoutTimeout ()
    *   crashes on my system! */
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
-    {
-      curl_easy_cleanup (c);
-      MHD_stop_daemon (d);
-      return 2;
-    }
+  {
+    curl_easy_cleanup (c);
+    MHD_stop_daemon (d);
+    return 2;
+  }
   curl_easy_cleanup (c);
   MHD_stop_daemon (d);
   if (cbc.pos != strlen ("/hello_world"))
@@ -251,11 +254,11 @@ testWithTimeout ()
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
-    {
-      port = 1501;
-      if (oneone)
-        port += 5;
-    }
+  {
+    port = 1501;
+    if (oneone)
+      port += 5;
+  }
 
   cbc.buf = buf;
   cbc.size = 2048;
@@ -264,21 +267,24 @@ testWithTimeout ()
                         port,
                         NULL, NULL, &ahc_echo, &done_flag,
                         MHD_OPTION_CONNECTION_TIMEOUT, 2,
-                        MHD_OPTION_NOTIFY_COMPLETED, &termination_cb, &withoutTimeout,
+                        MHD_OPTION_NOTIFY_COMPLETED, &termination_cb,
+                        &withoutTimeout,
                         MHD_OPTION_END);
   if (d == NULL)
     return 16;
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return 32;
     }
+    port = (int) dinfo->port;
+  }
   c = curl_easy_init ();
   curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
+  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   curl_easy_setopt (c, CURLOPT_READFUNCTION, &putBuffer_fail);
@@ -297,16 +303,16 @@ testWithTimeout ()
    *   crashes on my system! */
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
-    {
-      curl_easy_cleanup (c);
-      MHD_stop_daemon (d);
-      if (errornum == CURLE_GOT_NOTHING)
-    	  /* mhd had the timeout */
-    	  return 0;
-      else
-    	  /* curl had the timeout first */
-    	  return 32;
-    }
+  {
+    curl_easy_cleanup (c);
+    MHD_stop_daemon (d);
+    if (errornum == CURLE_GOT_NOTHING)
+      /* mhd had the timeout */
+      return 0;
+    else
+      /* curl had the timeout first */
+      return 32;
+  }
   curl_easy_cleanup (c);
   MHD_stop_daemon (d);
   return 64;
@@ -317,9 +323,9 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
-  (void)argc;   /* Unused. Silent compiler warning. */
+  (void) argc;   /* Unused. Silent compiler warning. */
 
-  if (NULL == argv || 0 == argv[0])
+  if ((NULL == argv)||(0 == argv[0]))
     return 99;
   oneone = has_in_name (argv[0], "11");
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))
@@ -327,9 +333,9 @@ main (int argc, char *const *argv)
   errorCount += testWithoutTimeout ();
   errorCount += testWithTimeout ();
   if (errorCount != 0)
-    fprintf (stderr, 
-	     "Error during test execution (code: %u)\n",
-	     errorCount);
+    fprintf (stderr,
+             "Error during test execution (code: %u)\n",
+             errorCount);
   curl_global_cleanup ();
   if ((withTimeout == 0) && (withoutTimeout == 0))
     return 0;

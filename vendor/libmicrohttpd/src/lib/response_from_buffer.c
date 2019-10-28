@@ -39,44 +39,44 @@
  */
 struct MHD_Response *
 MHD_response_from_buffer (enum MHD_HTTP_StatusCode sc,
-			  size_t size,
-			  void *buffer,
-			  enum MHD_ResponseMemoryMode mode)
+                          size_t size,
+                          void *buffer,
+                          enum MHD_ResponseMemoryMode mode)
 {
   struct MHD_Response *response;
   void *tmp;
 
   mhd_assert ( (NULL != buffer) ||
-	       (0 == size) );
+               (0 == size) );
   if (NULL ==
       (response = MHD_calloc_ (1,
-			       sizeof (struct MHD_Response))))
+                               sizeof (struct MHD_Response))))
     return NULL;
   response->fd = -1;
   if (! MHD_mutex_init_ (&response->mutex))
+  {
+    free (response);
+    return NULL;
+  }
+  if ( (MHD_RESPMEM_MUST_COPY == mode) &&
+       (size > 0) )
+  {
+    if (NULL == (tmp = malloc (size)))
     {
+      MHD_mutex_destroy_chk_ (&response->mutex);
       free (response);
       return NULL;
     }
-  if ( (MHD_RESPMEM_MUST_COPY == mode) &&
-       (size > 0) )
-    {
-      if (NULL == (tmp = malloc (size)))
-        {
-          MHD_mutex_destroy_chk_ (&response->mutex);
-          free (response);
-          return NULL;
-        }
-      memcpy (tmp,
-	      buffer,
-	      size);
-      buffer = tmp;
-    }
+    memcpy (tmp,
+            buffer,
+            size);
+    buffer = tmp;
+  }
   if (MHD_RESPMEM_PERSISTENT != mode)
-    {
-      response->crfc = &free;
-      response->crc_cls = buffer;
-    }
+  {
+    response->crfc = &free;
+    response->crc_cls = buffer;
+  }
   response->status_code = sc;
   response->reference_count = 1;
   response->total_size = size;

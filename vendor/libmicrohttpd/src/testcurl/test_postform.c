@@ -43,10 +43,10 @@
 
 #include "mhd_has_in_name.h"
 
-#if defined(CPU_COUNT) && (CPU_COUNT+0) < 2
+#if defined(CPU_COUNT) && (CPU_COUNT + 0) < 2
 #undef CPU_COUNT
 #endif
-#if !defined(CPU_COUNT)
+#if ! defined(CPU_COUNT)
 #define CPU_COUNT 2
 #endif
 
@@ -62,12 +62,12 @@ struct CBC
 
 static void
 completed_cb (void *cls,
-	      struct MHD_Connection *connection,
-	      void **con_cls,
-	      enum MHD_RequestTerminationCode toe)
+              struct MHD_Connection *connection,
+              void **con_cls,
+              enum MHD_RequestTerminationCode toe)
 {
   struct MHD_PostProcessor *pp = *con_cls;
-  (void)cls;(void)connection;(void)toe;            /* Unused. Silent compiler warning. */
+  (void) cls; (void) connection; (void) toe;            /* Unused. Silent compiler warning. */
 
   if (NULL != pp)
     MHD_destroy_post_processor (pp);
@@ -103,8 +103,8 @@ post_iterator (void *cls,
                const char *value, uint64_t off, size_t size)
 {
   int *eok = cls;
-  (void)kind;(void)filename;(void)content_type; /* Unused. Silent compiler warning. */
-  (void)transfer_encoding;(void)off;            /* Unused. Silent compiler warning. */
+  (void) kind; (void) filename; (void) content_type; /* Unused. Silent compiler warning. */
+  (void) transfer_encoding; (void) off;            /* Unused. Silent compiler warning. */
 
 #if 0
   fprintf (stderr, "PI sees %s-%.*s\n", key, size, value);
@@ -132,34 +132,34 @@ ahc_echo (void *cls,
   struct MHD_Response *response;
   struct MHD_PostProcessor *pp;
   int ret;
-  (void)cls;(void)version;      /* Unused. Silent compiler warning. */
+  (void) cls; (void) version;      /* Unused. Silent compiler warning. */
 
   if (0 != strcmp ("POST", method))
-    {
-      printf ("METHOD: %s\n", method);
-      return MHD_NO;            /* unexpected method */
-    }
+  {
+    printf ("METHOD: %s\n", method);
+    return MHD_NO;              /* unexpected method */
+  }
   pp = *unused;
   if (pp == NULL)
-    {
-      eok = 0;
-      pp = MHD_create_post_processor (connection, 1024, &post_iterator, &eok);
-      if (pp == NULL)
-        abort ();
-      *unused = pp;
-    }
+  {
+    eok = 0;
+    pp = MHD_create_post_processor (connection, 1024, &post_iterator, &eok);
+    if (pp == NULL)
+      abort ();
+    *unused = pp;
+  }
   MHD_post_process (pp, upload_data, *upload_data_size);
   if ((eok == 3) && (0 == *upload_data_size))
-    {
-      response = MHD_create_response_from_buffer (strlen (url),
-						  (void *) url,
-						  MHD_RESPMEM_MUST_COPY);
-      ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
-      MHD_destroy_response (response);
-      MHD_destroy_post_processor (pp);
-      *unused = NULL;
-      return ret;
-    }
+  {
+    response = MHD_create_response_from_buffer (strlen (url),
+                                                (void *) url,
+                                                MHD_RESPMEM_MUST_COPY);
+    ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
+    MHD_destroy_response (response);
+    MHD_destroy_post_processor (pp);
+    *unused = NULL;
+    return ret;
+  }
   *upload_data_size = 0;
   return MHD_YES;
 }
@@ -192,32 +192,34 @@ testInternalPost ()
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
-    {
-      port = 1390;
-      if (oneone)
-        port += 10;
-    }
+  {
+    port = 1390;
+    if (oneone)
+      port += 10;
+  }
 
   cbc.buf = buf;
   cbc.size = 2048;
   cbc.pos = 0;
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
                         port, NULL, NULL, &ahc_echo, NULL,
-			MHD_OPTION_NOTIFY_COMPLETED, &completed_cb, NULL,
-			MHD_OPTION_END);
+                        MHD_OPTION_NOTIFY_COMPLETED, &completed_cb, NULL,
+                        MHD_OPTION_END);
   if (d == NULL)
     return 1;
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return 32;
     }
+    port = (int) dinfo->port;
+  }
   c = curl_easy_init ();
   curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
+  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   pd = make_form ();
@@ -234,15 +236,15 @@ testInternalPost ()
    *   crashes on my system! */
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
-    {
-      fprintf (stderr,
-               "curl_easy_perform failed: `%s'\n",
-               curl_easy_strerror (errornum));
-      curl_easy_cleanup (c);
-      curl_formfree (pd);
-      MHD_stop_daemon (d);
-      return 2;
-    }
+  {
+    fprintf (stderr,
+             "curl_easy_perform failed: `%s'\n",
+             curl_easy_strerror (errornum));
+    curl_easy_cleanup (c);
+    curl_formfree (pd);
+    MHD_stop_daemon (d);
+    return 2;
+  }
   curl_easy_cleanup (c);
   curl_formfree (pd);
   MHD_stop_daemon (d);
@@ -267,32 +269,35 @@ testMultithreadedPost ()
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
-    {
-      port = 1390;
-      if (oneone)
-        port += 10;
-    }
+  {
+    port = 1390;
+    if (oneone)
+      port += 10;
+  }
 
   cbc.buf = buf;
   cbc.size = 2048;
   cbc.pos = 0;
-  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
+  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION
+                        | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
                         port, NULL, NULL, &ahc_echo, NULL,
-			MHD_OPTION_NOTIFY_COMPLETED, &completed_cb, NULL,
-			MHD_OPTION_END);
+                        MHD_OPTION_NOTIFY_COMPLETED, &completed_cb, NULL,
+                        MHD_OPTION_END);
   if (d == NULL)
     return 16;
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return 32;
     }
+    port = (int) dinfo->port;
+  }
   c = curl_easy_init ();
   curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
+  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   pd = make_form ();
@@ -309,15 +314,15 @@ testMultithreadedPost ()
    *   crashes on my system! */
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
-    {
-      fprintf (stderr,
-               "curl_easy_perform failed: `%s'\n",
-               curl_easy_strerror (errornum));
-      curl_easy_cleanup (c);
-      curl_formfree (pd);
-      MHD_stop_daemon (d);
-      return 32;
-    }
+  {
+    fprintf (stderr,
+             "curl_easy_perform failed: `%s'\n",
+             curl_easy_strerror (errornum));
+    curl_easy_cleanup (c);
+    curl_formfree (pd);
+    MHD_stop_daemon (d);
+    return 32;
+  }
   curl_easy_cleanup (c);
   curl_formfree (pd);
   MHD_stop_daemon (d);
@@ -342,11 +347,11 @@ testMultithreadedPoolPost ()
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
-    {
-      port = 1391;
-      if (oneone)
-        port += 10;
-    }
+  {
+    port = 1391;
+    if (oneone)
+      port += 10;
+  }
 
   cbc.buf = buf;
   cbc.size = 2048;
@@ -354,21 +359,23 @@ testMultithreadedPoolPost ()
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
                         port, NULL, NULL, &ahc_echo, NULL,
                         MHD_OPTION_THREAD_POOL_SIZE, CPU_COUNT,
-			MHD_OPTION_NOTIFY_COMPLETED, &completed_cb, NULL,
-			MHD_OPTION_END);
+                        MHD_OPTION_NOTIFY_COMPLETED, &completed_cb, NULL,
+                        MHD_OPTION_END);
   if (d == NULL)
     return 16;
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return 32;
     }
+    port = (int) dinfo->port;
+  }
   c = curl_easy_init ();
   curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
+  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   pd = make_form ();
@@ -385,15 +392,15 @@ testMultithreadedPoolPost ()
    *   crashes on my system! */
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
-    {
-      fprintf (stderr,
-               "curl_easy_perform failed: `%s'\n",
-               curl_easy_strerror (errornum));
-      curl_easy_cleanup (c);
-      curl_formfree (pd);
-      MHD_stop_daemon (d);
-      return 32;
-    }
+  {
+    fprintf (stderr,
+             "curl_easy_perform failed: `%s'\n",
+             curl_easy_strerror (errornum));
+    curl_easy_cleanup (c);
+    curl_formfree (pd);
+    MHD_stop_daemon (d);
+    return 32;
+  }
   curl_easy_cleanup (c);
   curl_formfree (pd);
   MHD_stop_daemon (d);
@@ -432,11 +439,11 @@ testExternalPost ()
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
-    {
-      port = 1392;
-      if (oneone)
-        port += 10;
-    }
+  {
+    port = 1392;
+    if (oneone)
+      port += 10;
+  }
 
   multi = NULL;
   cbc.buf = buf;
@@ -444,21 +451,23 @@ testExternalPost ()
   cbc.pos = 0;
   d = MHD_start_daemon (MHD_USE_ERROR_LOG,
                         port, NULL, NULL, &ahc_echo, NULL,
-			MHD_OPTION_NOTIFY_COMPLETED, &completed_cb, NULL,
-			MHD_OPTION_END);
+                        MHD_OPTION_NOTIFY_COMPLETED, &completed_cb, NULL,
+                        MHD_OPTION_END);
   if (d == NULL)
     return 256;
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return 32;
     }
+    port = (int) dinfo->port;
+  }
   c = curl_easy_init ();
   curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
+  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   pd = make_form ();
@@ -478,91 +487,93 @@ testExternalPost ()
 
   multi = curl_multi_init ();
   if (multi == NULL)
-    {
-      curl_easy_cleanup (c);
-      curl_formfree (pd);
-      MHD_stop_daemon (d);
-      return 512;
-    }
+  {
+    curl_easy_cleanup (c);
+    curl_formfree (pd);
+    MHD_stop_daemon (d);
+    return 512;
+  }
   mret = curl_multi_add_handle (multi, c);
   if (mret != CURLM_OK)
-    {
-      curl_multi_cleanup (multi);
-      curl_formfree (pd);
-      curl_easy_cleanup (c);
-      MHD_stop_daemon (d);
-      return 1024;
-    }
+  {
+    curl_multi_cleanup (multi);
+    curl_formfree (pd);
+    curl_easy_cleanup (c);
+    MHD_stop_daemon (d);
+    return 1024;
+  }
   start = time (NULL);
   while ((time (NULL) - start < 5) && (multi != NULL))
-    {
-      maxsock = MHD_INVALID_SOCKET;
-      maxposixs = -1;
-      FD_ZERO (&rs);
-      FD_ZERO (&ws);
-      FD_ZERO (&es);
-      curl_multi_perform (multi, &running);
-      mret = curl_multi_fdset (multi, &rs, &ws, &es, &maxposixs);
-      if (mret != CURLM_OK)
-        {
-          curl_multi_remove_handle (multi, c);
-          curl_multi_cleanup (multi);
-          curl_easy_cleanup (c);
-          MHD_stop_daemon (d);
-          curl_formfree (pd);
-          return 2048;
-        }
-      if (MHD_YES != MHD_get_fdset (d, &rs, &ws, &es, &maxsock))
-        {
-          curl_multi_remove_handle (multi, c);
-          curl_multi_cleanup (multi);
-          curl_easy_cleanup (c);
-          curl_formfree (pd);
-          MHD_stop_daemon (d);
-          return 4096;
-        }
-      tv.tv_sec = 0;
-      tv.tv_usec = 1000;
-      if (-1 == select (maxposixs + 1, &rs, &ws, &es, &tv))
-        {
-#ifdef MHD_POSIX_SOCKETS
-          if (EINTR != errno)
-            abort ();
-#else
-          if (WSAEINVAL != WSAGetLastError() || 0 != rs.fd_count || 0 != ws.fd_count || 0 != es.fd_count)
-            abort ();
-          Sleep (1000);
-#endif
-        }
-      curl_multi_perform (multi, &running);
-      if (running == 0)
-        {
-          msg = curl_multi_info_read (multi, &running);
-          if (msg == NULL)
-            break;
-          if (msg->msg == CURLMSG_DONE)
-            {
-              if (msg->data.result != CURLE_OK)
-                printf ("%s failed at %s:%d: `%s'\n",
-                        "curl_multi_perform",
-                        __FILE__,
-                        __LINE__,
-                        curl_easy_strerror (msg->data.result));
-              curl_multi_remove_handle (multi, c);
-              curl_multi_cleanup (multi);
-              curl_easy_cleanup (c);
-              c = NULL;
-              multi = NULL;
-            }
-        }
-      MHD_run (d);
-    }
-  if (multi != NULL)
+  {
+    maxsock = MHD_INVALID_SOCKET;
+    maxposixs = -1;
+    FD_ZERO (&rs);
+    FD_ZERO (&ws);
+    FD_ZERO (&es);
+    curl_multi_perform (multi, &running);
+    mret = curl_multi_fdset (multi, &rs, &ws, &es, &maxposixs);
+    if (mret != CURLM_OK)
     {
       curl_multi_remove_handle (multi, c);
-      curl_easy_cleanup (c);
       curl_multi_cleanup (multi);
+      curl_easy_cleanup (c);
+      MHD_stop_daemon (d);
+      curl_formfree (pd);
+      return 2048;
     }
+    if (MHD_YES != MHD_get_fdset (d, &rs, &ws, &es, &maxsock))
+    {
+      curl_multi_remove_handle (multi, c);
+      curl_multi_cleanup (multi);
+      curl_easy_cleanup (c);
+      curl_formfree (pd);
+      MHD_stop_daemon (d);
+      return 4096;
+    }
+    tv.tv_sec = 0;
+    tv.tv_usec = 1000;
+    if (-1 == select (maxposixs + 1, &rs, &ws, &es, &tv))
+    {
+#ifdef MHD_POSIX_SOCKETS
+      if (EINTR != errno)
+        abort ();
+#else
+      if ((WSAEINVAL != WSAGetLastError ()) ||(0 != rs.fd_count) ||(0 !=
+                                                                    ws.fd_count)
+          ||(0 != es.fd_count) )
+        abort ();
+      Sleep (1000);
+#endif
+    }
+    curl_multi_perform (multi, &running);
+    if (running == 0)
+    {
+      msg = curl_multi_info_read (multi, &running);
+      if (msg == NULL)
+        break;
+      if (msg->msg == CURLMSG_DONE)
+      {
+        if (msg->data.result != CURLE_OK)
+          printf ("%s failed at %s:%d: `%s'\n",
+                  "curl_multi_perform",
+                  __FILE__,
+                  __LINE__,
+                  curl_easy_strerror (msg->data.result));
+        curl_multi_remove_handle (multi, c);
+        curl_multi_cleanup (multi);
+        curl_easy_cleanup (c);
+        c = NULL;
+        multi = NULL;
+      }
+    }
+    MHD_run (d);
+  }
+  if (multi != NULL)
+  {
+    curl_multi_remove_handle (multi, c);
+    curl_easy_cleanup (c);
+    curl_multi_cleanup (multi);
+  }
   curl_formfree (pd);
   MHD_stop_daemon (d);
   if (cbc.pos != strlen ("/hello_world"))
@@ -577,7 +588,7 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
-  (void)argc;   /* Unused. Silent compiler warning. */
+  (void) argc;   /* Unused. Silent compiler warning. */
 
 #ifdef MHD_HTTPS_REQUIRE_GRYPT
 #ifdef HAVE_GCRYPT_H
@@ -587,17 +598,17 @@ main (int argc, char *const *argv)
 #endif
 #endif
 #endif /* MHD_HTTPS_REQUIRE_GRYPT */
-  if (NULL == argv || 0 == argv[0])
+  if ((NULL == argv)||(0 == argv[0]))
     return 99;
   oneone = has_in_name (argv[0], "11");
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 2;
-  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_THREADS))
-    {
-      errorCount += testInternalPost ();
-      errorCount += testMultithreadedPost ();
-      errorCount += testMultithreadedPoolPost ();
-    }
+  if (MHD_YES == MHD_is_feature_supported (MHD_FEATURE_THREADS))
+  {
+    errorCount += testInternalPost ();
+    errorCount += testMultithreadedPost ();
+    errorCount += testMultithreadedPoolPost ();
+  }
   errorCount += testExternalPost ();
   if (errorCount != 0)
     fprintf (stderr, "Error (code: %u)\n", errorCount);

@@ -60,9 +60,9 @@ static struct Hosts *hosts;
  * (This code is largely taken from GnuTLS).
  */
 static void
-load_keys(const char *hostname,
-          const char *CERT_FILE,
-          const char *KEY_FILE)
+load_keys (const char *hostname,
+           const char *CERT_FILE,
+           const char *KEY_FILE)
 {
   int ret;
   gnutls_datum_t data;
@@ -77,32 +77,32 @@ load_keys(const char *hostname,
 
   ret = gnutls_load_file (CERT_FILE, &data);
   if (ret < 0)
-    {
-      fprintf (stderr,
-               "*** Error loading certificate file %s.\n",
-               CERT_FILE);
-      exit (1);
-    }
+  {
+    fprintf (stderr,
+             "*** Error loading certificate file %s.\n",
+             CERT_FILE);
+    exit (1);
+  }
   ret =
     gnutls_pcert_import_x509_raw (&host->pcrt, &data, GNUTLS_X509_FMT_PEM,
                                   0);
   if (ret < 0)
-    {
-      fprintf (stderr,
-               "*** Error loading certificate file: %s\n",
-               gnutls_strerror (ret));
-      exit (1);
-    }
+  {
+    fprintf (stderr,
+             "*** Error loading certificate file: %s\n",
+             gnutls_strerror (ret));
+    exit (1);
+  }
   gnutls_free (data.data);
 
   ret = gnutls_load_file (KEY_FILE, &data);
   if (ret < 0)
-    {
-      fprintf (stderr,
-               "*** Error loading key file %s.\n",
-               KEY_FILE);
-      exit (1);
-    }
+  {
+    fprintf (stderr,
+             "*** Error loading key file %s.\n",
+             KEY_FILE);
+    exit (1);
+  }
 
   gnutls_privkey_init (&host->key);
   ret =
@@ -110,12 +110,12 @@ load_keys(const char *hostname,
                                     &data, GNUTLS_X509_FMT_PEM,
                                     NULL, 0);
   if (ret < 0)
-    {
-      fprintf (stderr,
-               "*** Error loading key file: %s\n",
-               gnutls_strerror (ret));
-      exit (1);
-    }
+  {
+    fprintf (stderr,
+             "*** Error loading key file: %s\n",
+             gnutls_strerror (ret));
+    exit (1);
+  }
   gnutls_free (data.data);
 }
 
@@ -133,19 +133,19 @@ load_keys(const char *hostname,
  */
 static int
 sni_callback (gnutls_session_t session,
-              const gnutls_datum_t* req_ca_dn,
+              const gnutls_datum_t*req_ca_dn,
               int nreqs,
-              const gnutls_pk_algorithm_t* pk_algos,
+              const gnutls_pk_algorithm_t*pk_algos,
               int pk_algos_length,
-              gnutls_pcert_st** pcert,
+              gnutls_pcert_st**pcert,
               unsigned int *pcert_length,
-              gnutls_privkey_t * pkey)
+              gnutls_privkey_t *pkey)
 {
   char name[256];
   size_t name_len;
   struct Hosts *host;
   unsigned int type;
-  (void)req_ca_dn;(void)nreqs;(void)pk_algos;(void)pk_algos_length;   /* Unused. Silent compiler warning. */
+  (void) req_ca_dn; (void) nreqs; (void) pk_algos; (void) pk_algos_length;   /* Unused. Silent compiler warning. */
 
   name_len = sizeof (name);
   if (GNUTLS_E_SUCCESS !=
@@ -159,13 +159,13 @@ sni_callback (gnutls_session_t session,
     if (0 == strncmp (name, host->hostname, name_len))
       break;
   if (NULL == host)
-    {
-      fprintf (stderr,
-               "Need certificate for %.*s\n",
-               (int) name_len,
-               name);
-      return -1;
-    }
+  {
+    fprintf (stderr,
+             "Need certificate for %.*s\n",
+             (int) name_len,
+             name);
+    return -1;
+  }
 #if 0
   fprintf (stderr,
            "Returning certificate for %.*s\n",
@@ -192,10 +192,10 @@ do_get (const char *url, int port)
 
   len = strlen (test_data);
   if (NULL == (cbc.buf = malloc (sizeof (char) * len)))
-    {
-      fprintf (stderr, MHD_E_MEM);
-      return -1;
-    }
+  {
+    fprintf (stderr, MHD_E_MEM);
+    return -1;
+  }
   cbc.size = len;
   cbc.pos = 0;
 
@@ -204,7 +204,7 @@ do_get (const char *url, int port)
   curl_easy_setopt (c, CURLOPT_VERBOSE, 1L);
 #endif
   curl_easy_setopt (c, CURLOPT_URL, url);
-  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
+  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
   curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
   curl_easy_setopt (c, CURLOPT_TIMEOUT, 10L);
   curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 10L);
@@ -215,9 +215,9 @@ do_get (const char *url, int port)
   /* TODO merge into send_curl_req */
   curl_easy_setopt (c, CURLOPT_SSL_VERIFYPEER, 0L);
   curl_easy_setopt (c, CURLOPT_SSL_VERIFYHOST, 2L);
-  sprintf(buf, "host1:%d:127.0.0.1", port);
+  sprintf (buf, "host1:%d:127.0.0.1", port);
   dns_info = curl_slist_append (NULL, buf);
-  sprintf(buf, "host2:%d:127.0.0.1", port);
+  sprintf (buf, "host2:%d:127.0.0.1", port);
   dns_info = curl_slist_append (dns_info, buf);
   curl_easy_setopt (c, CURLOPT_RESOLVE, dns_info);
   curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
@@ -227,23 +227,23 @@ do_get (const char *url, int port)
      crashes on my system! */
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
-    {
-      fprintf (stderr, "curl_easy_perform failed: `%s'\n",
-               curl_easy_strerror (errornum));
-      curl_easy_cleanup (c);
-      free (cbc.buf);
-      curl_slist_free_all (dns_info);
-      return errornum;
-    }
+  {
+    fprintf (stderr, "curl_easy_perform failed: `%s'\n",
+             curl_easy_strerror (errornum));
+    curl_easy_cleanup (c);
+    free (cbc.buf);
+    curl_slist_free_all (dns_info);
+    return errornum;
+  }
 
   curl_easy_cleanup (c);
   curl_slist_free_all (dns_info);
   if (memcmp (cbc.buf, test_data, len) != 0)
-    {
-      fprintf (stderr, "Error: local file & received file differ.\n");
-      free (cbc.buf);
-      return -1;
-    }
+  {
+    fprintf (stderr, "Error: local file & received file differ.\n");
+    free (cbc.buf);
+    return -1;
+  }
 
   free (cbc.buf);
   return 0;
@@ -256,7 +256,7 @@ main (int argc, char *const *argv)
   unsigned int error_count = 0;
   struct MHD_Daemon *d;
   int port;
-  (void)argc;   /* Unused. Silent compiler warning. */
+  (void) argc;   /* Unused. Silent compiler warning. */
 
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
@@ -269,36 +269,40 @@ main (int argc, char *const *argv)
   gcry_control (GCRYCTL_INITIALIZATION_FINISHED, 0);
 #endif
 #endif /* MHD_HTTPS_REQUIRE_GRYPT */
-  if (!testsuite_curl_global_init ())
+  if (! testsuite_curl_global_init ())
     return 99;
   if (NULL == curl_version_info (CURLVERSION_NOW)->ssl_version)
-    {
-      fprintf (stderr, "Curl does not support SSL.  Cannot run the test.\n");
-      curl_global_cleanup ();
-      return 77;
-    }
+  {
+    fprintf (stderr, "Curl does not support SSL.  Cannot run the test.\n");
+    curl_global_cleanup ();
+    return 77;
+  }
 
   load_keys ("host1", ABS_SRCDIR "/host1.crt", ABS_SRCDIR "/host1.key");
   load_keys ("host2", ABS_SRCDIR "/host2.crt", ABS_SRCDIR "/host2.key");
-  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_TLS | MHD_USE_ERROR_LOG,
+  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION
+                        | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_TLS
+                        | MHD_USE_ERROR_LOG,
                         port,
                         NULL, NULL,
                         &http_ahc, NULL,
                         MHD_OPTION_HTTPS_CERT_CALLBACK, &sni_callback,
                         MHD_OPTION_END);
   if (d == NULL)
-    {
-      fprintf (stderr, MHD_E_SERVER_INIT);
-      return -1;
-    }
+  {
+    fprintf (stderr, MHD_E_SERVER_INIT);
+    return -1;
+  }
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return -1; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return -1;
     }
+    port = (int) dinfo->port;
+  }
   if (0 != do_get ("https://host1/", port))
     error_count++;
   if (0 != do_get ("https://host2/", port))

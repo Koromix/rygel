@@ -37,6 +37,6 @@
  */
 void
 MHD_daemon_close_all_connections_ (struct MHD_Daemon *daemon)
-  MHD_NONNULL (1);
+MHD_NONNULL (1);
 
 #endif

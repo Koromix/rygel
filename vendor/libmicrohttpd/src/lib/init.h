@@ -31,7 +31,7 @@
  * Do nothing - global initialisation is
  * performed by library constructor.
  */
-#define MHD_check_global_init_() (void)0
+#define MHD_check_global_init_() (void) 0
 #else  /* ! _AUTOINIT_FUNCS_ARE_SUPPORTED */
 /**
  * Check whether global initialisation was performed

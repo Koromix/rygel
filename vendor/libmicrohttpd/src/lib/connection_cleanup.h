@@ -18,7 +18,7 @@
 */
 /**
  * @file lib/connection_cleanup.h
- * @brief functions to cleanup completed connection 
+ * @brief functions to cleanup completed connection
  * @author Christian Grothoff
  */
 #ifndef CONNECTION_CLEANUP_H
@@ -28,7 +28,7 @@
 /**
  * Free resources associated with all closed connections.  (destroy
  * responses, free buffers, etc.).  All closed connections are kept in
- * the "cleanup" doubly-linked list. 
+ * the "cleanup" doubly-linked list.
  *
  * @remark To be called only from thread that process daemon's
  * select()/poll()/etc.
@@ -37,6 +37,6 @@
  */
 void
 MHD_connection_cleanup_ (struct MHD_Daemon *daemon)
-  MHD_NONNULL (1);
+MHD_NONNULL (1);
 
 #endif

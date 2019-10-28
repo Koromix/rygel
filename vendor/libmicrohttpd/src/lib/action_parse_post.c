@@ -52,8 +52,8 @@
  */
 const struct MHD_Action *
 MHD_action_parse_post (size_t buffer_size,
-		       MHD_PostDataIterator iter,
-		       void *iter_cls)
+                       MHD_PostDataIterator iter,
+                       void *iter_cls)
 {
   return NULL; /* not yet implemented */
 }

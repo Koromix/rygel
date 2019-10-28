@@ -39,6 +39,6 @@
  */
 void
 MHD_connection_finish_forward_ (struct MHD_Connection *connection)
-  MHD_NONNULL (1);
+MHD_NONNULL (1);
 
 #endif

@@ -72,8 +72,8 @@ Appendices
 
 * GNU-LGPL::                     The GNU Lesser General Public License says how you
                                  can copy and share almost all of `libmicrohttpd'.
-* GNU GPL with eCos Extension::  The GNU General Public License with eCos extension says how you
-                                 can copy and share some parts of `libmicrohttpd'.
+* eCos License::                 The eCos License says how you can copy and share some parts of `libmicrohttpd'.
+* GNU-GPL::                      The GNU General Public License (with eCos extension) says how you can copy and share some parts of `libmicrohttpd'.
 * GNU-FDL::                     The GNU Free Documentation License says how you
                                 can copy and share the documentation of `libmicrohttpd'.
 
@@ -776,6 +776,15 @@ in header field names. This is disallowed by the standard.
 It is not recommended to set it to -1 on publicly available servers as
 it may potentially lower level of protection.
 
+@item MHD_OPTION_SERVER_INSANITY
+@cindex testing
+Allows the application to disable certain sanity precautions in MHD. With
+these, the client can break the HTTP protocol, so this should never be used in
+production. The options are, however, useful for testing HTTP clients against
+"broken" server implementations.  This argument must be followed by an
+@code{unsigned int}, corresponding to an @code{enum MHD_DisableSanityCheck}.
+
+Right now, no sanity checks can be disabled.
 
 @item MHD_OPTION_SOCK_ADDR
 @cindex bind, restricting bind
@@ -1207,6 +1216,11 @@ GET / HTTP/1.1
 
 as the ``Host'' header is missing and is mandatory in HTTP 1.1, but it
 should succeed when interpreted with HTTP 1.0.
+
+@item MHD_RF_INSANITY_HEADER_CONTENT_LENGTH
+Disable sanity check preventing clients from manually
+setting the HTTP content length option.
+
 @end table
 @end deftp
 
@@ -2329,6 +2343,10 @@ Set of actions to be performed on upgraded connections.  Passed as an argument t
 @table @code
 @item MHD_UPGRADE_ACTION_CLOSE
 Closes the connection.  Must be called once the application is done with the client.  Takes no additional arguments.
+@item MHD_UPGRADE_ACTION_CORK_ON
+Enable corking on the underlying socket.
+@item MHD_UPGRADE_ACTION_CORK_OFF
+Disable corking on the underlying socket.
 
 @end table
 @end deftp
@@ -3277,10 +3295,15 @@ shorter afterwards due to elimination of escape sequences).
 @cindex license
 @include lgpl.texi
 
-@node GNU GPL with eCos Extension
-@unnumbered GNU GPL with eCos Extension
+@node eCos License
+@unnumbered eCos License
 @cindex license
 @include ecos.texi
+
+@node GNU-GPL
+@unnumbered GNU General Public License
+@cindex license
+@include gpl-2.0.texi
 
 @node GNU-FDL
 @unnumbered GNU-FDL

@@ -58,14 +58,16 @@
  *
  * @param msg error message (const char *)
  */
-#define MHD_PANIC(msg) do { mhd_panic (mhd_panic_cls, __FILE__, __LINE__, msg); BUILTIN_NOT_REACHED; } while (0)
+#define MHD_PANIC(msg) do { mhd_panic (mhd_panic_cls, __FILE__, __LINE__, msg); \
+                            BUILTIN_NOT_REACHED; } while (0)
 #else
 /**
  * Trigger 'panic' action based on fatal errors.
  *
  * @param msg error message (const char *)
  */
-#define MHD_PANIC(msg) do { mhd_panic (mhd_panic_cls, __FILE__, __LINE__, NULL); BUILTIN_NOT_REACHED; } while (0)
+#define MHD_PANIC(msg) do { mhd_panic (mhd_panic_cls, __FILE__, __LINE__, NULL); \
+                            BUILTIN_NOT_REACHED; } while (0)
 #endif
 
 #include "mhd_threads.h"
@@ -82,8 +84,8 @@
  */
 void
 MHD_DLOG (const struct MHD_Daemon *daemon,
-	  enum MHD_StatusCode sc,
-	  const char *format,
+          enum MHD_StatusCode sc,
+          const char *format,
           ...);
 #endif
 
@@ -93,9 +95,9 @@ MHD_DLOG (const struct MHD_Daemon *daemon,
  * @param fd the FD to close
  */
 #define MHD_fd_close_chk_(fd) do {                      \
-    if ( (0 != close ((fd)) && (EBADF == errno)) )	\
-      MHD_PANIC(_("Failed to close FD.\n"));            \
-  } while(0)
+    if ( (0 != close ((fd)) && (EBADF == errno)) )  \
+      MHD_PANIC (_ ("Failed to close FD.\n"));            \
+} while (0)
 
 /**
  * Should we perform additional sanity checks at runtime (on our internal
@@ -128,10 +130,11 @@ extern MHD_PanicCallback mhd_panic;
 extern void *mhd_panic_cls;
 
 /* If we have Clang or gcc >= 4.5, use __buildin_unreachable() */
-#if defined(__clang__) || (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 5)
-#define BUILTIN_NOT_REACHED __builtin_unreachable()
+#if defined(__clang__) || (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= \
+                                             5)
+#define BUILTIN_NOT_REACHED __builtin_unreachable ()
 #elif defined(_MSC_FULL_VER)
-#define BUILTIN_NOT_REACHED __assume(0)
+#define BUILTIN_NOT_REACHED __assume (0)
 #else
 #define BUILTIN_NOT_REACHED
 #endif
@@ -140,7 +143,7 @@ extern void *mhd_panic_cls;
 /**
  * Determine length of static string / macro strings at compile time.
  */
-#define MHD_STATICSTR_LEN_(macro) (sizeof(macro)/sizeof(char) - 1)
+#define MHD_STATICSTR_LEN_(macro) (sizeof(macro) / sizeof(char) - 1)
 #endif /* ! MHD_STATICSTR_LEN_ */
 
 
@@ -1534,8 +1537,8 @@ struct MHD_Daemon
  * @return #MHD_SC_OK on success, otherwise an error code
  */
 typedef enum MHD_StatusCode
-(*ActionCallback) (void *cls,
-		   struct MHD_Request *request);
+(*ActionCallback)(void *cls,
+                  struct MHD_Request *request);
 
 
 /**
@@ -1703,9 +1706,9 @@ struct MHD_Response
  */
 typedef bool
 (*MHD_ArgumentIterator_)(struct MHD_Request *request,
-			 const char *key,
-			 const char *value,
-			 enum MHD_ValueKind kind);
+                         const char *key,
+                         const char *value,
+                         enum MHD_ValueKind kind);
 
 
 /**
@@ -1724,10 +1727,10 @@ typedef bool
  */
 bool
 MHD_parse_arguments_ (struct MHD_Request *request,
-		      enum MHD_ValueKind kind,
-		      char *args,
-		      MHD_ArgumentIterator_ cb,
-		      unsigned int *num_headers);
+                      enum MHD_ValueKind kind,
+                      char *args,
+                      MHD_ArgumentIterator_ cb,
+                      unsigned int *num_headers);
 
 
 
@@ -1740,15 +1743,15 @@ MHD_parse_arguments_ (struct MHD_Request *request,
  * @param element element to insert
  */
 #define DLL_insert(head,tail,element) do { \
-  mhd_assert (NULL == (element)->next); \
-  mhd_assert (NULL == (element)->prev); \
-  (element)->next = (head); \
-  (element)->prev = NULL; \
-  if ((tail) == NULL) \
-    (tail) = element; \
-  else \
-    (head)->prev = element; \
-  (head) = (element); } while (0)
+    mhd_assert (NULL == (element)->next); \
+    mhd_assert (NULL == (element)->prev); \
+    (element)->next = (head); \
+    (element)->prev = NULL; \
+    if ((tail) == NULL) \
+      (tail) = element; \
+    else \
+      (head)->prev = element; \
+    (head) = (element); } while (0)
 
 
 /**
@@ -1760,18 +1763,18 @@ MHD_parse_arguments_ (struct MHD_Request *request,
  * @param element element to remove
  */
 #define DLL_remove(head,tail,element) do { \
-  mhd_assert ( (NULL != (element)->next) || ((element) == (tail)));  \
-  mhd_assert ( (NULL != (element)->prev) || ((element) == (head)));  \
-  if ((element)->prev == NULL) \
-    (head) = (element)->next;  \
-  else \
-    (element)->prev->next = (element)->next; \
-  if ((element)->next == NULL) \
-    (tail) = (element)->prev;  \
-  else \
-    (element)->next->prev = (element)->prev; \
-  (element)->next = NULL; \
-  (element)->prev = NULL; } while (0)
+    mhd_assert ( (NULL != (element)->next) || ((element) == (tail)));  \
+    mhd_assert ( (NULL != (element)->prev) || ((element) == (head)));  \
+    if ((element)->prev == NULL) \
+      (head) = (element)->next;  \
+    else \
+      (element)->prev->next = (element)->next; \
+    if ((element)->next == NULL) \
+      (tail) = (element)->prev;  \
+    else \
+      (element)->next->prev = (element)->prev; \
+    (element)->next = NULL; \
+    (element)->prev = NULL; } while (0)
 
 
 
@@ -1784,15 +1787,15 @@ MHD_parse_arguments_ (struct MHD_Request *request,
  * @param element element to insert
  */
 #define XDLL_insert(head,tail,element) do { \
-  mhd_assert (NULL == (element)->nextX); \
-  mhd_assert (NULL == (element)->prevX); \
-  (element)->nextX = (head); \
-  (element)->prevX = NULL; \
-  if (NULL == (tail)) \
-    (tail) = element; \
-  else \
-    (head)->prevX = element; \
-  (head) = (element); } while (0)
+    mhd_assert (NULL == (element)->nextX); \
+    mhd_assert (NULL == (element)->prevX); \
+    (element)->nextX = (head); \
+    (element)->prevX = NULL; \
+    if (NULL == (tail)) \
+      (tail) = element; \
+    else \
+      (head)->prevX = element; \
+    (head) = (element); } while (0)
 
 
 /**
@@ -1804,18 +1807,18 @@ MHD_parse_arguments_ (struct MHD_Request *request,
  * @param element element to remove
  */
 #define XDLL_remove(head,tail,element) do { \
-  mhd_assert ( (NULL != (element)->nextX) || ((element) == (tail)));  \
-  mhd_assert ( (NULL != (element)->prevX) || ((element) == (head)));  \
-  if (NULL == (element)->prevX) \
-    (head) = (element)->nextX;  \
-  else \
-    (element)->prevX->nextX = (element)->nextX; \
-  if (NULL == (element)->nextX) \
-    (tail) = (element)->prevX;  \
-  else \
-    (element)->nextX->prevX = (element)->prevX; \
-  (element)->nextX = NULL; \
-  (element)->prevX = NULL; } while (0)
+    mhd_assert ( (NULL != (element)->nextX) || ((element) == (tail)));  \
+    mhd_assert ( (NULL != (element)->prevX) || ((element) == (head)));  \
+    if (NULL == (element)->prevX) \
+      (head) = (element)->nextX;  \
+    else \
+      (element)->prevX->nextX = (element)->nextX; \
+    if (NULL == (element)->nextX) \
+      (tail) = (element)->prevX;  \
+    else \
+      (element)->nextX->prevX = (element)->prevX; \
+    (element)->nextX = NULL; \
+    (element)->prevX = NULL; } while (0)
 
 
 /**
@@ -1827,13 +1830,13 @@ MHD_parse_arguments_ (struct MHD_Request *request,
  * @param element element to insert
  */
 #define EDLL_insert(head,tail,element) do { \
-  (element)->nextE = (head); \
-  (element)->prevE = NULL; \
-  if ((tail) == NULL) \
-    (tail) = element; \
-  else \
-    (head)->prevE = element; \
-  (head) = (element); } while (0)
+    (element)->nextE = (head); \
+    (element)->prevE = NULL; \
+    if ((tail) == NULL) \
+      (tail) = element; \
+    else \
+      (head)->prevE = element; \
+    (head) = (element); } while (0)
 
 
 /**
@@ -1845,16 +1848,16 @@ MHD_parse_arguments_ (struct MHD_Request *request,
  * @param element element to remove
  */
 #define EDLL_remove(head,tail,element) do { \
-  if ((element)->prevE == NULL) \
-    (head) = (element)->nextE;  \
-  else \
-    (element)->prevE->nextE = (element)->nextE; \
-  if ((element)->nextE == NULL) \
-    (tail) = (element)->prevE;  \
-  else \
-    (element)->nextE->prevE = (element)->prevE; \
-  (element)->nextE = NULL; \
-  (element)->prevE = NULL; } while (0)
+    if ((element)->prevE == NULL) \
+      (head) = (element)->nextE;  \
+    else \
+      (element)->prevE->nextE = (element)->nextE; \
+    if ((element)->nextE == NULL) \
+      (tail) = (element)->prevE;  \
+    else \
+      (element)->nextE->prevE = (element)->prevE; \
+    (element)->nextE = NULL; \
+    (element)->prevE = NULL; } while (0)
 
 
 

@@ -45,9 +45,11 @@
 #include <wincrypt.h>
 #endif
 
-#define PAGE "<html><head><title>libmicrohttpd demo</title></head><body>Access granted</body></html>"
+#define PAGE \
+  "<html><head><title>libmicrohttpd demo</title></head><body>Access granted</body></html>"
 
-#define DENIED "<html><head><title>libmicrohttpd demo</title></head><body>Access denied</body></html>"
+#define DENIED \
+  "<html><head><title>libmicrohttpd demo</title></head><body>Access denied</body></html>"
 
 #define MY_OPAQUE "11733b200778ce33060f31c9af70a870ba96ddd4"
 
@@ -90,26 +92,26 @@ ahc_echo (void *cls,
   const char *password = "testpass";
   const char *realm = "test@example.com";
   int ret;
-  (void)cls;(void)url;                          /* Unused. Silent compiler warning. */
-  (void)method;(void)version;(void)upload_data; /* Unused. Silent compiler warning. */
-  (void)upload_data_size;(void)unused;         /* Unused. Silent compiler warning. */
+  (void) cls; (void) url;                          /* Unused. Silent compiler warning. */
+  (void) method; (void) version; (void) upload_data; /* Unused. Silent compiler warning. */
+  (void) upload_data_size; (void) unused;         /* Unused. Silent compiler warning. */
 
   username = MHD_digest_auth_get_username (connection);
   if ( (username == NULL) ||
        (0 != strcmp (username, "testuser")) )
-    {
-      response = MHD_create_response_from_buffer (strlen (DENIED),
-                                                  DENIED,
-                                                  MHD_RESPMEM_PERSISTENT);
-      ret = MHD_queue_auth_fail_response2 (connection,
-                                           realm,
-                                           MY_OPAQUE,
-                                           response,
-                                           MHD_NO,
-                                           MHD_DIGEST_ALG_SHA256);
-      MHD_destroy_response(response);
-      return ret;
-    }
+  {
+    response = MHD_create_response_from_buffer (strlen (DENIED),
+                                                DENIED,
+                                                MHD_RESPMEM_PERSISTENT);
+    ret = MHD_queue_auth_fail_response2 (connection,
+                                         realm,
+                                         MY_OPAQUE,
+                                         response,
+                                         MHD_NO,
+                                         MHD_DIGEST_ALG_SHA256);
+    MHD_destroy_response (response);
+    return ret;
+  }
   ret = MHD_digest_auth_check2 (connection,
                                 realm,
                                 username,
@@ -119,22 +121,23 @@ ahc_echo (void *cls,
   free (username);
   if ( (ret == MHD_INVALID_NONCE) ||
        (ret == MHD_NO) )
-    {
-      response = MHD_create_response_from_buffer (strlen (DENIED),
-                                                  DENIED,
-                                                  MHD_RESPMEM_PERSISTENT);
-      if (NULL == response)
-	return MHD_NO;
-      ret = MHD_queue_auth_fail_response2 (connection,
-                                           realm,
-                                           MY_OPAQUE,
-                                           response,
-                                           (MHD_INVALID_NONCE == ret) ? MHD_YES : MHD_NO,
-                                           MHD_DIGEST_ALG_SHA256);
-      MHD_destroy_response(response);
-      return ret;
-    }
-  response = MHD_create_response_from_buffer (strlen(PAGE),
+  {
+    response = MHD_create_response_from_buffer (strlen (DENIED),
+                                                DENIED,
+                                                MHD_RESPMEM_PERSISTENT);
+    if (NULL == response)
+      return MHD_NO;
+    ret = MHD_queue_auth_fail_response2 (connection,
+                                         realm,
+                                         MY_OPAQUE,
+                                         response,
+                                         (MHD_INVALID_NONCE == ret) ? MHD_YES :
+                                         MHD_NO,
+                                         MHD_DIGEST_ALG_SHA256);
+    MHD_destroy_response (response);
+    return ret;
+  }
+  response = MHD_create_response_from_buffer (strlen (PAGE),
                                               PAGE,
                                               MHD_RESPMEM_PERSISTENT);
   ret = MHD_queue_response (connection,
@@ -174,30 +177,30 @@ testDigestAuth ()
   fd = open ("/dev/urandom",
              O_RDONLY);
   if (-1 == fd)
+  {
+    fprintf (stderr,
+             "Failed to open `%s': %s\n",
+             "/dev/urandom",
+             strerror (errno));
+    return 1;
+  }
+  while (off < 8)
+  {
+    len = read (fd,
+                rnd,
+                8);
+    if (len == (size_t) -1)
     {
       fprintf (stderr,
-               "Failed to open `%s': %s\n",
+               "Failed to read `%s': %s\n",
                "/dev/urandom",
-               strerror(errno));
+               strerror (errno));
+      (void) close (fd);
       return 1;
     }
-  while (off < 8)
-    {
-      len = read (fd,
-                  rnd,
-                  8);
-      if (len == (size_t)-1)
-        {
-          fprintf (stderr,
-                   "Failed to read `%s': %s\n",
-                   "/dev/urandom",
-                   strerror(errno));
-          (void) close(fd);
-          return 1;
-        }
-      off += len;
-    }
-  (void) close(fd);
+    off += len;
+  }
+  (void) close (fd);
 #else
   {
     HCRYPTPROV cc;
@@ -215,7 +218,7 @@ testDigestAuth ()
                GetLastError ());
       return 1;
     }
-    b = CryptGenRandom (cc, 8, (BYTE*)rnd);
+    b = CryptGenRandom (cc, 8, (BYTE*) rnd);
     if (b == 0)
     {
       fprintf (stderr,
@@ -230,25 +233,25 @@ testDigestAuth ()
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
                         port, NULL, NULL,
                         &ahc_echo, PAGE,
-			MHD_OPTION_DIGEST_AUTH_RANDOM, sizeof (rnd), rnd,
-			MHD_OPTION_NONCE_NC_SIZE, 300,
-			MHD_OPTION_END);
+                        MHD_OPTION_DIGEST_AUTH_RANDOM, sizeof (rnd), rnd,
+                        MHD_OPTION_NONCE_NC_SIZE, 300,
+                        MHD_OPTION_END);
   if (d == NULL)
     return 1;
   if (0 == port)
-    {
-      const union MHD_DaemonInfo *dinfo;
+  {
+    const union MHD_DaemonInfo *dinfo;
 
-      dinfo = MHD_get_daemon_info (d,
-                                   MHD_DAEMON_INFO_BIND_PORT);
-      if ( (NULL == dinfo) ||
-           (0 == dinfo->port) )
-        {
-          MHD_stop_daemon (d);
-          return 32;
-        }
-      port = (int)dinfo->port;
+    dinfo = MHD_get_daemon_info (d,
+                                 MHD_DAEMON_INFO_BIND_PORT);
+    if ( (NULL == dinfo) ||
+         (0 == dinfo->port) )
+    {
+      MHD_stop_daemon (d);
+      return 32;
     }
+    port = (int) dinfo->port;
+  }
   snprintf (url,
             sizeof (url),
             "http://127.0.0.1:%d/bar%%20foo%%3Fkey%%3Dvalue",
@@ -268,14 +271,14 @@ testDigestAuth ()
      crashes on my system!*/
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
-    {
-      fprintf (stderr,
-               "curl_easy_perform failed: `%s'\n",
-               curl_easy_strerror (errornum));
-      curl_easy_cleanup (c);
-      MHD_stop_daemon (d);
-      return 2;
-    }
+  {
+    fprintf (stderr,
+             "curl_easy_perform failed: `%s'\n",
+             curl_easy_strerror (errornum));
+    curl_easy_cleanup (c);
+    MHD_stop_daemon (d);
+    return 2;
+  }
   curl_easy_cleanup (c);
   MHD_stop_daemon (d);
   if (cbc.pos != strlen (PAGE))
@@ -291,7 +294,7 @@ main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
   curl_version_info_data *d = curl_version_info (CURLVERSION_NOW);
-  (void)argc; (void)argv; /* Unused. Silent compiler warning. */
+  (void) argc; (void) argv; /* Unused. Silent compiler warning. */
 
   /* curl added SHA256 support in 7.57 = 7.0x39 */
   if (d->version_num < 0x073900)
@@ -304,7 +307,7 @@ main (int argc, char *const *argv)
 #endif
 #endif
 #endif /* MHD_HTTPS_REQUIRE_GRYPT */
-if (0 != curl_global_init (CURL_GLOBAL_WIN32))
+  if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 2;
   errorCount += testDigestAuth ();
   if (errorCount != 0)

@@ -38,8 +38,8 @@
  */
 enum MHD_StatusCode
 MHD_daemon_epoll_ (struct MHD_Daemon *daemon,
-		   bool may_block)
-  MHD_NONNULL (1);
+                   bool may_block)
+MHD_NONNULL (1);
 
 #endif
 

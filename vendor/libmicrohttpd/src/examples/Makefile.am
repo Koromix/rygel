@@ -20,6 +20,7 @@ noinst_PROGRAMS = \
  benchmark_https \
  chunked_example \
  minimal_example \
+ minimal_example_empty \
  dual_stack_example \
  minimal_example_comet \
  querystring_example \
@@ -38,7 +39,9 @@ EXTRA_DIST = msgs_i18n.c
 noinst_EXTRA_DIST = msgs_i18n.c
 
 if ENABLE_HTTPS
-noinst_PROGRAMS += https_fileserver_example
+noinst_PROGRAMS += \
+ https_fileserver_example \
+ minimal_example_empty_tls
 endif
 if HAVE_POSTPROCESSOR
 noinst_PROGRAMS += \
@@ -81,6 +84,16 @@ endif
 minimal_example_SOURCES = \
  minimal_example.c
 minimal_example_LDADD = \
+ $(top_builddir)/src/microhttpd/libmicrohttpd.la
+
+minimal_example_empty_SOURCES = \
+ minimal_example_empty.c
+minimal_example_empty_LDADD = \
+ $(top_builddir)/src/microhttpd/libmicrohttpd.la
+
+minimal_example_empty_tls_SOURCES = \
+ minimal_example_empty_tls.c
+minimal_example_empty_tls_LDADD = \
  $(top_builddir)/src/microhttpd/libmicrohttpd.la
 
 upgrade_example_SOURCES = \

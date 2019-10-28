@@ -39,29 +39,29 @@
  *         name.
  */
 static int
-has_in_name(const char *prog_name, const char *marker)
+has_in_name (const char *prog_name, const char *marker)
 {
   size_t name_pos;
   size_t pos;
 
-  if (!prog_name || !marker || !prog_name[0] || !marker[0])
+  if (! prog_name || ! marker || ! prog_name[0] || ! marker[0])
     return 0;
 
   pos = 0;
   name_pos = 0;
   while (prog_name[pos])
-    {
-      if ('/' == prog_name[pos])
-        name_pos = pos + 1;
+  {
+    if ('/' == prog_name[pos])
+      name_pos = pos + 1;
 #if defined(_WIN32) || defined(__CYGWIN__)
-      else if ('\\' == prog_name[pos])
-        name_pos = pos + 1;
+    else if ('\\' == prog_name[pos])
+      name_pos = pos + 1;
 #endif /* _WIN32 || __CYGWIN__ */
-      pos++;
-    }
+    pos++;
+  }
   if (name_pos == pos)
     return 0;
-  return strstr(prog_name + name_pos, marker) != (char*)0;
+  return strstr (prog_name + name_pos, marker) != (char*) 0;
 }
 
 /**
@@ -75,17 +75,17 @@ has_in_name(const char *prog_name, const char *marker)
  *         non-zero if one of strings in @a argv is equal to @a param.
  */
 static int
-has_param(int argc, char * const argv[], const char * param)
+has_param (int argc, char *const argv[], const char *param)
 {
   int i;
-  if (!argv || !param || !param[0])
+  if (! argv || ! param || ! param[0])
     return 0;
 
-  for(i = 1; i < argc; i++)
-    {
-      if(argv[i] && strcmp(argv[i], param) == 0)
-        return !0;
-    }
+  for (i = 1; i < argc; i++)
+  {
+    if (argv[i] &&(strcmp (argv[i], param) == 0) )
+      return ! 0;
+  }
 
   return 0;
 }
