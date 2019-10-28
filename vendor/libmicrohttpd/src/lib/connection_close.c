@@ -40,33 +40,33 @@ MHD_connection_mark_closed_ (struct MHD_Connection *connection)
   connection->request.state = MHD_REQUEST_CLOSED;
   connection->request.event_loop_info = MHD_EVENT_LOOP_INFO_CLEANUP;
   if (! daemon->enable_turbo)
-    {
+  {
 #ifdef HTTPS_SUPPORT
-      struct MHD_TLS_Plugin *tls;
+    struct MHD_TLS_Plugin *tls;
 
-      /* For TLS connection use shutdown of TLS layer
-       * and do not shutdown TCP socket. This give more
-       * chances to send TLS closure data to remote side.
-       * Closure of TLS layer will be interpreted by
-       * remote side as end of transmission. */
-      if (NULL != (tls = daemon->tls_api))
-        {
-          if (MHD_YES !=
-	      tls->shutdown_connection (tls->cls,
-					connection->tls_cs))
-	    {
-	      (void) shutdown (connection->socket_fd,
-			       SHUT_WR);
-	      /* FIXME: log errors */
-	    }
-        }
-      else /* Combined with next 'shutdown()'. */
-#endif /* HTTPS_SUPPORT */
-	{
-	  (void) shutdown (connection->socket_fd,
-			   SHUT_WR); /* FIXME: log errors */
-	}
+    /* For TLS connection use shutdown of TLS layer
+     * and do not shutdown TCP socket. This give more
+     * chances to send TLS closure data to remote side.
+     * Closure of TLS layer will be interpreted by
+     * remote side as end of transmission. */
+    if (NULL != (tls = daemon->tls_api))
+    {
+      if (MHD_YES !=
+          tls->shutdown_connection (tls->cls,
+                                    connection->tls_cs))
+      {
+        (void) shutdown (connection->socket_fd,
+                         SHUT_WR);
+        /* FIXME: log errors */
+      }
     }
+    else   /* Combined with next 'shutdown()'. */
+#endif /* HTTPS_SUPPORT */
+    {
+      (void) shutdown (connection->socket_fd,
+                       SHUT_WR); /* FIXME: log errors */
+    }
+  }
 }
 
 
@@ -90,14 +90,14 @@ MHD_connection_close_ (struct MHD_Connection *connection,
   (void) rtc; // FIXME
   MHD_connection_mark_closed_ (connection);
   if (NULL != resp)
-    {
-      connection->request.response = NULL;
-      MHD_response_queue_for_destroy (resp);
-    }
+  {
+    connection->request.response = NULL;
+    MHD_response_queue_for_destroy (resp);
+  }
   if (NULL != daemon->notify_connection_cb)
     daemon->notify_connection_cb (daemon->notify_connection_cb_cls,
-				  connection,
-				  MHD_CONNECTION_NOTIFY_CLOSED);
+                                  connection,
+                                  MHD_CONNECTION_NOTIFY_CLOSED);
 }
 
 /* end of connection_close.c */

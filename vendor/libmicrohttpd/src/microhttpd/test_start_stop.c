@@ -27,10 +27,10 @@
 #include "platform.h"
 #include <microhttpd.h>
 
-#if defined(CPU_COUNT) && (CPU_COUNT+0) < 2
+#if defined(CPU_COUNT) && (CPU_COUNT + 0) < 2
 #undef CPU_COUNT
 #endif
-#if !defined(CPU_COUNT)
+#if ! defined(CPU_COUNT)
 #define CPU_COUNT 2
 #endif
 
@@ -44,9 +44,9 @@ ahc_echo (void *cls,
           const char *upload_data, size_t *upload_data_size,
           void **unused)
 {
-  (void)cls;(void)connection;(void)url;          /* Unused. Silent compiler warning. */
-  (void)method;(void)version;(void)upload_data;  /* Unused. Silent compiler warning. */
-  (void)upload_data_size;(void)unused;           /* Unused. Silent compiler warning. */
+  (void) cls; (void) connection; (void) url;          /* Unused. Silent compiler warning. */
+  (void) method; (void) version; (void) upload_data;  /* Unused. Silent compiler warning. */
+  (void) upload_data_size; (void) unused;           /* Unused. Silent compiler warning. */
 
   return MHD_NO;
 }
@@ -58,7 +58,8 @@ testInternalGet (int poll_flag)
 {
   struct MHD_Daemon *d;
 
-  d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | poll_flag,
+  d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG
+                        | poll_flag,
                         0, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
   if (d == NULL)
     return 1;
@@ -71,7 +72,9 @@ testMultithreadedGet (int poll_flag)
 {
   struct MHD_Daemon *d;
 
-  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG  | poll_flag,
+  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION
+                        | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG
+                        | poll_flag,
                         0, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
   if (d == NULL)
     return 2;
@@ -85,7 +88,8 @@ testMultithreadedPoolGet (int poll_flag)
 {
   struct MHD_Daemon *d;
 
-  d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | poll_flag,
+  d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG
+                        | poll_flag,
                         0, NULL, NULL, &ahc_echo, "GET",
                         MHD_OPTION_THREAD_POOL_SIZE, CPU_COUNT, MHD_OPTION_END);
   if (d == NULL)
@@ -103,8 +107,8 @@ testExternalGet ()
 
   d = MHD_start_daemon (MHD_USE_ERROR_LOG,
                         0, NULL, NULL,
-			&ahc_echo, "GET",
-			MHD_OPTION_END);
+                        &ahc_echo, "GET",
+                        MHD_OPTION_END);
   if (NULL == d)
     return 8;
   MHD_stop_daemon (d);
@@ -127,21 +131,21 @@ main (int argc,
 #endif
   errorCount += testExternalGet ();
 #if defined (MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_POLL))
-    {
-      errorCount += testInternalGet(MHD_USE_POLL);
-      errorCount += testMultithreadedGet(MHD_USE_POLL);
-      errorCount += testMultithreadedPoolGet(MHD_USE_POLL);
-    }
-  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_EPOLL))
-    {
-      errorCount += testInternalGet(MHD_USE_EPOLL);
-      errorCount += testMultithreadedPoolGet(MHD_USE_EPOLL);
-    }
+  if (MHD_YES == MHD_is_feature_supported (MHD_FEATURE_POLL))
+  {
+    errorCount += testInternalGet (MHD_USE_POLL);
+    errorCount += testMultithreadedGet (MHD_USE_POLL);
+    errorCount += testMultithreadedPoolGet (MHD_USE_POLL);
+  }
+  if (MHD_YES == MHD_is_feature_supported (MHD_FEATURE_EPOLL))
+  {
+    errorCount += testInternalGet (MHD_USE_EPOLL);
+    errorCount += testMultithreadedPoolGet (MHD_USE_EPOLL);
+  }
 #endif
   if (0 != errorCount)
     fprintf (stderr,
-	     "Error (code: %u)\n",
-	     errorCount);
+             "Error (code: %u)\n",
+             errorCount);
   return errorCount != 0;       /* 0 == pass */
 }

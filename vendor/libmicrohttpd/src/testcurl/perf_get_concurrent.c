@@ -43,10 +43,10 @@
 #include "gauger.h"
 #include "mhd_has_in_name.h"
 
-#if defined(CPU_COUNT) && (CPU_COUNT+0) < 2
+#if defined(CPU_COUNT) && (CPU_COUNT + 0) < 2
 #undef CPU_COUNT
 #endif
-#if !defined(CPU_COUNT)
+#if ! defined(CPU_COUNT)
 #define CPU_COUNT 2
 #endif
 
@@ -98,8 +98,8 @@ now ()
   struct timeval tv;
 
   gettimeofday (&tv, NULL);
-  return (((unsigned long long) tv.tv_sec * 1000LL) +
-	  ((unsigned long long) tv.tv_usec / 1000LL));
+  return (((unsigned long long) tv.tv_sec * 1000LL)
+          + ((unsigned long long) tv.tv_usec / 1000LL));
 }
 
 
@@ -107,7 +107,7 @@ now ()
  * Start the timer.
  */
 static void
-start_timer()
+start_timer ()
 {
   start_time = now ();
 }
@@ -121,26 +121,27 @@ start_timer()
 static void
 stop (const char *desc)
 {
-  double rps = ((double) (PAR * ROUNDS * 1000)) / ((double) (now() - start_time));
+  double rps = ((double) (PAR * ROUNDS * 1000)) / ((double) (now ()
+                                                             - start_time));
 
   fprintf (stderr,
-	   "Parallel GETs using %s: %f %s\n",
-	   desc,
-	   rps,
-	   "requests/s");
+           "Parallel GETs using %s: %f %s\n",
+           desc,
+           rps,
+           "requests/s");
   GAUGER (desc,
-	  "Parallel GETs",
-	  rps,
-	  "requests/s");
+          "Parallel GETs",
+          rps,
+          "requests/s");
 }
 
 
 static size_t
 copyBuffer (void *ptr,
-	    size_t size, size_t nmemb,
-	    void *ctx)
+            size_t size, size_t nmemb,
+            void *ctx)
 {
-  (void)ptr;(void)ctx;          /* Unused. Silent compiler warning. */
+  (void) ptr; (void) ctx;          /* Unused. Silent compiler warning. */
   return size * nmemb;
 }
 
@@ -157,16 +158,16 @@ ahc_echo (void *cls,
   static int ptr;
   const char *me = cls;
   int ret;
-  (void)url;(void)version;                      /* Unused. Silent compiler warning. */
-  (void)upload_data;(void)upload_data_size;     /* Unused. Silent compiler warning. */
+  (void) url; (void) version;                      /* Unused. Silent compiler warning. */
+  (void) upload_data; (void) upload_data_size;     /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (me, method))
     return MHD_NO;              /* unexpected method */
   if (&ptr != *unused)
-    {
-      *unused = &ptr;
-      return MHD_YES;
-    }
+  {
+    *unused = &ptr;
+    return MHD_YES;
+  }
   *unused = NULL;
   ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
   if (ret == MHD_NO)
@@ -181,7 +182,7 @@ thread_gets (void *param)
   CURL *c;
   CURLcode errornum;
   unsigned int i;
-  char * const url = (char*) param;
+  char *const url = (char*) param;
 
   c = curl_easy_init ();
   curl_easy_setopt (c, CURLOPT_URL, url);
@@ -198,17 +199,17 @@ thread_gets (void *param)
      setting NOSIGNAL results in really weird
      crashes on my system! */
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
-  for (i=0;i<ROUNDS;i++)
+  for (i = 0; i<ROUNDS; i++)
+  {
+    if (CURLE_OK != (errornum = curl_easy_perform (c)))
     {
-      if (CURLE_OK != (errornum = curl_easy_perform (c)))
-        {
-          fprintf (stderr,
-                   "curl_easy_perform failed: `%s'\n",
-                   curl_easy_strerror (errornum));
-          curl_easy_cleanup (c);
-          return "curl error";
-        }
+      fprintf (stderr,
+               "curl_easy_perform failed: `%s'\n",
+               curl_easy_strerror (errornum));
+      curl_easy_cleanup (c);
+      return "curl error";
     }
+  }
   curl_easy_cleanup (c);
 
   return NULL;
@@ -216,34 +217,34 @@ thread_gets (void *param)
 
 
 static void *
-do_gets (void * param)
+do_gets (void *param)
 {
   int j;
   pthread_t par[PAR];
   char url[64];
-  int port = (int)(intptr_t)param;
+  int port = (int) (intptr_t) param;
   char *err = NULL;
 
   snprintf (url,
             sizeof (url),
             "http://127.0.0.1:%d/hello_world",
             port);
-  for (j=0;j<PAR;j++)
+  for (j = 0; j<PAR; j++)
+  {
+    if (0 != pthread_create (&par[j], NULL, &thread_gets, (void*) url))
     {
-      if (0 != pthread_create(&par[j], NULL, &thread_gets, (void*)url))
-        {
-          for (j--; j >= 0; j--)
-            pthread_join(par[j], NULL);
-          return "pthread_create error";
-        }
+      for (j--; j >= 0; j--)
+        pthread_join (par[j], NULL);
+      return "pthread_create error";
     }
-  for (j=0;j<PAR;j++)
-    {
-      char *ret_val;
-      if (0 != pthread_join(par[j], (void**)&ret_val) ||
-          NULL != ret_val)
-        err = ret_val;
-    }
+  }
+  for (j = 0; j<PAR; j++)
+  {
+    char *ret_val;
+    if ((0 != pthread_join (par[j], (void**) &ret_val)) ||
+        (NULL != ret_val) )
+      err = ret_val;
+  }
   signal_done = 1;
   return err;
 }
@@ -253,38 +254,45 @@ static int
 testInternalGet (int port, int poll_flag)
 {
   struct MHD_Daemon *d;
-  const char * const test_desc = ((poll_flag & MHD_USE_AUTO) ? "internal thread with 'auto'" :
-                                  (poll_flag & MHD_USE_POLL) ? "internal thread with poll()" :
-                                  (poll_flag & MHD_USE_EPOLL) ? "internal thread with epoll" : "internal thread with select()");
-  const char * ret_val;
+  const char *const test_desc = ((poll_flag & MHD_USE_AUTO) ?
+                                 "internal thread with 'auto'" :
+                                 (poll_flag & MHD_USE_POLL) ?
+                                 "internal thread with poll()" :
+                                 (poll_flag & MHD_USE_EPOLL) ?
+                                 "internal thread with epoll" :
+                                 "internal thread with select()");
+  const char *ret_val;
 
-  if (MHD_NO != MHD_is_feature_supported(MHD_FEATURE_AUTODETECT_BIND_PORT))
+  if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
 
   signal_done = 0;
-  d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG  | poll_flag,
+  d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG
+                        | poll_flag,
                         port, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
   if (d == NULL)
     return 1;
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return 32;
     }
+    port = (int) dinfo->port;
+  }
   start_timer ();
-  ret_val = do_gets ((void*)(intptr_t)port);
-  if (!ret_val)
+  ret_val = do_gets ((void*) (intptr_t) port);
+  if (! ret_val)
     stop (test_desc);
   MHD_stop_daemon (d);
   if (ret_val)
-    {
-      fprintf (stderr,
-               "Error performing %s test: %s\n", test_desc, ret_val);
-      return 4;
-    }
+  {
+    fprintf (stderr,
+             "Error performing %s test: %s\n", test_desc, ret_val);
+    return 4;
+  }
   return 0;
 }
 
@@ -293,39 +301,49 @@ static int
 testMultithreadedGet (int port, int poll_flag)
 {
   struct MHD_Daemon *d;
-  const char * const test_desc = ((poll_flag & MHD_USE_AUTO) ? "internal thread with 'auto' and thread per connection" :
-                                  (poll_flag & MHD_USE_POLL) ? "internal thread with poll() and thread per connection" :
-                                  (poll_flag & MHD_USE_EPOLL) ? "internal thread with epoll and thread per connection"
-                                      : "internal thread with select() and thread per connection");
-  const char * ret_val;
+  const char *const test_desc = ((poll_flag & MHD_USE_AUTO) ?
+                                 "internal thread with 'auto' and thread per connection"
+                                 :
+                                 (poll_flag & MHD_USE_POLL) ?
+                                 "internal thread with poll() and thread per connection"
+                                 :
+                                 (poll_flag & MHD_USE_EPOLL) ?
+                                 "internal thread with epoll and thread per connection"
+                                 :
+                                 "internal thread with select() and thread per connection");
+  const char *ret_val;
 
-  if (MHD_NO != MHD_is_feature_supported(MHD_FEATURE_AUTODETECT_BIND_PORT))
+  if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
 
   signal_done = 0;
-  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG  | poll_flag,
+  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION
+                        | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG
+                        | poll_flag,
                         port, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
   if (d == NULL)
     return 16;
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return 32;
     }
+    port = (int) dinfo->port;
+  }
   start_timer ();
-  ret_val = do_gets ((void*)(intptr_t)port);
-  if (!ret_val)
+  ret_val = do_gets ((void*) (intptr_t) port);
+  if (! ret_val)
     stop (test_desc);
   MHD_stop_daemon (d);
   if (ret_val)
-    {
-      fprintf (stderr,
-               "Error performing %s test: %s\n", test_desc, ret_val);
-      return 4;
-    }
+  {
+    fprintf (stderr,
+             "Error performing %s test: %s\n", test_desc, ret_val);
+    return 4;
+  }
   return 0;
 }
 
@@ -334,39 +352,46 @@ static int
 testMultithreadedPoolGet (int port, int poll_flag)
 {
   struct MHD_Daemon *d;
-  const char * const test_desc = ((poll_flag & MHD_USE_AUTO) ? "internal thread pool with 'auto'" :
-                                  (poll_flag & MHD_USE_POLL) ? "internal thread pool with poll()" :
-                                  (poll_flag & MHD_USE_EPOLL) ? "internal thread poll with epoll" : "internal thread pool with select()");
-  const char * ret_val;
+  const char *const test_desc = ((poll_flag & MHD_USE_AUTO) ?
+                                 "internal thread pool with 'auto'" :
+                                 (poll_flag & MHD_USE_POLL) ?
+                                 "internal thread pool with poll()" :
+                                 (poll_flag & MHD_USE_EPOLL) ?
+                                 "internal thread poll with epoll" :
+                                 "internal thread pool with select()");
+  const char *ret_val;
 
-  if (MHD_NO != MHD_is_feature_supported(MHD_FEATURE_AUTODETECT_BIND_PORT))
+  if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
 
-  signal_done = 0 ;
-  d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | poll_flag,
+  signal_done = 0;
+  d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG
+                        | poll_flag,
                         port, NULL, NULL, &ahc_echo, "GET",
                         MHD_OPTION_THREAD_POOL_SIZE, CPU_COUNT, MHD_OPTION_END);
   if (d == NULL)
     return 16;
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return 32;
     }
+    port = (int) dinfo->port;
+  }
   start_timer ();
-  ret_val = do_gets ((void*)(intptr_t)port);
-  if (!ret_val)
+  ret_val = do_gets ((void*) (intptr_t) port);
+  if (! ret_val)
     stop (test_desc);
   MHD_stop_daemon (d);
   if (ret_val)
-    {
-      fprintf (stderr,
-               "Error performing %s test: %s\n", test_desc, ret_val);
-      return 4;
-    }
+  {
+    fprintf (stderr,
+             "Error performing %s test: %s\n", test_desc, ret_val);
+    return 4;
+  }
   return 0;
 }
 
@@ -386,7 +411,7 @@ testExternalGet (int port)
   char *ret_val;
   int ret = 0;
 
-  if (MHD_NO != MHD_is_feature_supported(MHD_FEATURE_AUTODETECT_BIND_PORT))
+  if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
 
   signal_done = 0;
@@ -395,66 +420,71 @@ testExternalGet (int port)
   if (d == NULL)
     return 256;
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return 32;
     }
+    port = (int) dinfo->port;
+  }
   if (0 != pthread_create (&pid, NULL,
-			   &do_gets, (void*)(intptr_t)port))
-    {
-      MHD_stop_daemon(d);
-      return 512;
-    }
+                           &do_gets, (void*) (intptr_t) port))
+  {
+    MHD_stop_daemon (d);
+    return 512;
+  }
   start_timer ();
 
   while (0 == signal_done)
+  {
+    max = 0;
+    FD_ZERO (&rs);
+    FD_ZERO (&ws);
+    FD_ZERO (&es);
+    if (MHD_YES != MHD_get_fdset (d, &rs, &ws, &es, &max))
     {
-      max = 0;
-      FD_ZERO (&rs);
-      FD_ZERO (&ws);
-      FD_ZERO (&es);
-      if (MHD_YES != MHD_get_fdset (d, &rs, &ws, &es, &max))
-	{
-	  MHD_stop_daemon (d);
-	  return 4096;
-	}
-      tret = MHD_get_timeout (d, &tt);
-      if (MHD_YES != tret) tt = 1;
-      tv.tv_sec = tt / 1000;
-      tv.tv_usec = 1000 * (tt % 1000);
-      if (-1 == select (max + 1, &rs, &ws, &es, &tv))
-	{
-#ifdef MHD_POSIX_SOCKETS
-          if (EINTR == errno)
-            continue;
-          fprintf (stderr,
-                   "select failed: %s\n",
-                   strerror (errno));
-#else
-          if (WSAEINVAL == WSAGetLastError() && 0 == rs.fd_count && 0 == ws.fd_count && 0 == es.fd_count)
-            {
-              Sleep (1000);
-              continue;
-            }
-#endif
-	  ret |= 1024;
-	  break;
-	}
-      MHD_run_from_select(d, &rs, &ws, &es);
+      MHD_stop_daemon (d);
+      return 4096;
     }
+    tret = MHD_get_timeout (d, &tt);
+    if (MHD_YES != tret)
+      tt = 1;
+    tv.tv_sec = tt / 1000;
+    tv.tv_usec = 1000 * (tt % 1000);
+    if (-1 == select (max + 1, &rs, &ws, &es, &tv))
+    {
+#ifdef MHD_POSIX_SOCKETS
+      if (EINTR == errno)
+        continue;
+      fprintf (stderr,
+               "select failed: %s\n",
+               strerror (errno));
+#else
+      if ((WSAEINVAL == WSAGetLastError ()) &&(0 == rs.fd_count) &&(0 ==
+                                                                    ws.fd_count)
+          &&(0 == es.fd_count) )
+      {
+        Sleep (1000);
+        continue;
+      }
+#endif
+      ret |= 1024;
+      break;
+    }
+    MHD_run_from_select (d, &rs, &ws, &es);
+  }
 
   stop ("external select");
   MHD_stop_daemon (d);
-  if (0 != pthread_join(pid, (void**)&ret_val) ||
-      NULL != ret_val)
-    {
-      fprintf (stderr,
-               "%s\n", ret_val);
-      ret |= 8;
-    }
+  if ((0 != pthread_join (pid, (void**) &ret_val))||
+      (NULL != ret_val) )
+  {
+    fprintf (stderr,
+             "%s\n", ret_val);
+    ret |= 8;
+  }
   if (ret)
     fprintf (stderr, "Error performing test.\n");
   return 0;
@@ -466,9 +496,9 @@ main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
   int port = 1100;
-  (void)argc;   /* Unused. Silent compiler warning. */
+  (void) argc;   /* Unused. Silent compiler warning. */
 
-  if (NULL == argv || 0 == argv[0])
+  if ((NULL == argv)||(0 == argv[0]))
     return 99;
   oneone = has_in_name (argv[0], "11");
   if (oneone)
@@ -476,8 +506,8 @@ main (int argc, char *const *argv)
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 2;
   response = MHD_create_response_from_buffer (strlen ("/hello_world"),
-					      "/hello_world",
-					      MHD_RESPMEM_MUST_COPY);
+                                              "/hello_world",
+                                              MHD_RESPMEM_MUST_COPY);
   errorCount += testInternalGet (port++, 0);
   errorCount += testMultithreadedGet (port++, 0);
   errorCount += testMultithreadedPoolGet (port++, 0);
@@ -485,17 +515,17 @@ main (int argc, char *const *argv)
   errorCount += testInternalGet (port++, MHD_USE_AUTO);
   errorCount += testMultithreadedGet (port++, MHD_USE_AUTO);
   errorCount += testMultithreadedPoolGet (port++, MHD_USE_AUTO);
-  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_POLL))
-    {
-      errorCount += testInternalGet (port++, MHD_USE_POLL);
-      errorCount += testMultithreadedGet (port++, MHD_USE_POLL);
-      errorCount += testMultithreadedPoolGet (port++, MHD_USE_POLL);
-    }
-  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_EPOLL))
-    {
-      errorCount += testInternalGet (port++, MHD_USE_EPOLL);
-      errorCount += testMultithreadedPoolGet (port++, MHD_USE_EPOLL);
-    }
+  if (MHD_YES == MHD_is_feature_supported (MHD_FEATURE_POLL))
+  {
+    errorCount += testInternalGet (port++, MHD_USE_POLL);
+    errorCount += testMultithreadedGet (port++, MHD_USE_POLL);
+    errorCount += testMultithreadedPoolGet (port++, MHD_USE_POLL);
+  }
+  if (MHD_YES == MHD_is_feature_supported (MHD_FEATURE_EPOLL))
+  {
+    errorCount += testInternalGet (port++, MHD_USE_EPOLL);
+    errorCount += testMultithreadedPoolGet (port++, MHD_USE_EPOLL);
+  }
   MHD_destroy_response (response);
   if (errorCount != 0)
     fprintf (stderr, "Error (code: %u)\n", errorCount);

@@ -53,9 +53,9 @@
  *         'false' otherwise
  */
 static bool
-is_urh_ready (struct MHD_UpgradeResponseHandle * const urh)
+is_urh_ready (struct MHD_UpgradeResponseHandle *const urh)
 {
-  const struct MHD_Connection * const connection = urh->connection;
+  const struct MHD_Connection *const connection = urh->connection;
 
   if ( (0 == urh->in_buffer_size) &&
        (0 == urh->out_buffer_size) &&
@@ -80,7 +80,7 @@ is_urh_ready (struct MHD_UpgradeResponseHandle * const urh)
     return true;
 
   if ( (0 != (MHD_EPOLL_STATE_WRITE_READY & urh->mhd.celi)) &&
-         (urh->in_buffer_used > 0) )
+       (urh->in_buffer_used > 0) )
     return true;
 
   return false;
@@ -103,99 +103,99 @@ run_epoll_for_upgrade (struct MHD_Daemon *daemon)
 {
   struct epoll_event events[MAX_EVENTS];
   int num_events;
-  struct MHD_UpgradeResponseHandle * pos;
-  struct MHD_UpgradeResponseHandle * prev;
+  struct MHD_UpgradeResponseHandle *pos;
+  struct MHD_UpgradeResponseHandle *prev;
 
   num_events = MAX_EVENTS;
   while (MAX_EVENTS == num_events)
+  {
+    unsigned int i;
+
+    /* update event masks */
+    num_events = epoll_wait (daemon->epoll_upgrade_fd,
+                             events,
+                             MAX_EVENTS,
+                             0);
+    if (-1 == num_events)
     {
-      unsigned int i;
-      
-      /* update event masks */
-      num_events = epoll_wait (daemon->epoll_upgrade_fd,
-			       events,
-                               MAX_EVENTS,
-                               0);
-      if (-1 == num_events)
-	{
-          const int err = MHD_socket_get_error_ ();
-          if (MHD_SCKT_ERR_IS_EINTR_ (err))
-	    return MHD_SC_OK;
+      const int err = MHD_socket_get_error_ ();
+      if (MHD_SCKT_ERR_IS_EINTR_ (err))
+        return MHD_SC_OK;
 #ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-		    MHD_SC_UNEXPECTED_EPOLL_WAIT_ERROR,
-                    _("Call to epoll_wait failed: %s\n"),
-                    MHD_socket_strerr_ (err));
+      MHD_DLOG (daemon,
+                MHD_SC_UNEXPECTED_EPOLL_WAIT_ERROR,
+                _ ("Call to epoll_wait failed: %s\n"),
+                MHD_socket_strerr_ (err));
 #endif
-	  return MHD_SC_UNEXPECTED_EPOLL_WAIT_ERROR;
-	}
-      for (i = 0; i < (unsigned int) num_events; i++)
-	{
-          struct UpgradeEpollHandle * const ueh = events[i].data.ptr;
-          struct MHD_UpgradeResponseHandle * const urh = ueh->urh;
-          bool new_err_state = false;
-
-          if (urh->clean_ready)
-            continue;
-
-          /* Update ueh state based on what is ready according to epoll() */
-          if (0 != (events[i].events & EPOLLIN))
-            ueh->celi |= MHD_EPOLL_STATE_READ_READY;
-          if (0 != (events[i].events & EPOLLOUT))
-            ueh->celi |= MHD_EPOLL_STATE_WRITE_READY;
-          if (0 != (events[i].events & EPOLLHUP))
-            ueh->celi |= MHD_EPOLL_STATE_READ_READY | MHD_EPOLL_STATE_WRITE_READY;
-
-          if ( (0 == (ueh->celi & MHD_EPOLL_STATE_ERROR)) &&
-               (0 != (events[i].events & (EPOLLERR | EPOLLPRI))) )
-	    {
-              /* Process new error state only one time
-               * and avoid continuously marking this connection
-               * as 'ready'. */
-              ueh->celi |= MHD_EPOLL_STATE_ERROR;
-              new_err_state = true;
-	    }
-
-          if (! urh->in_eready_list)
-            {
-              if (new_err_state ||
-        	  is_urh_ready(urh))
-        	{
-        	  EDLL_insert (daemon->eready_urh_head,
-			       daemon->eready_urh_tail,
-			       urh);
-        	  urh->in_eready_list = true;
-        	}
-            }
-        }
+      return MHD_SC_UNEXPECTED_EPOLL_WAIT_ERROR;
     }
+    for (i = 0; i < (unsigned int) num_events; i++)
+    {
+      struct UpgradeEpollHandle *const ueh = events[i].data.ptr;
+      struct MHD_UpgradeResponseHandle *const urh = ueh->urh;
+      bool new_err_state = false;
+
+      if (urh->clean_ready)
+        continue;
+
+      /* Update ueh state based on what is ready according to epoll() */
+      if (0 != (events[i].events & EPOLLIN))
+        ueh->celi |= MHD_EPOLL_STATE_READ_READY;
+      if (0 != (events[i].events & EPOLLOUT))
+        ueh->celi |= MHD_EPOLL_STATE_WRITE_READY;
+      if (0 != (events[i].events & EPOLLHUP))
+        ueh->celi |= MHD_EPOLL_STATE_READ_READY | MHD_EPOLL_STATE_WRITE_READY;
+
+      if ( (0 == (ueh->celi & MHD_EPOLL_STATE_ERROR)) &&
+           (0 != (events[i].events & (EPOLLERR | EPOLLPRI))) )
+      {
+        /* Process new error state only one time
+         * and avoid continuously marking this connection
+         * as 'ready'. */
+        ueh->celi |= MHD_EPOLL_STATE_ERROR;
+        new_err_state = true;
+      }
+
+      if (! urh->in_eready_list)
+      {
+        if (new_err_state ||
+            is_urh_ready (urh))
+        {
+          EDLL_insert (daemon->eready_urh_head,
+                       daemon->eready_urh_tail,
+                       urh);
+          urh->in_eready_list = true;
+        }
+      }
+    }
+  }
   prev = daemon->eready_urh_tail;
   while (NULL != (pos = prev))
+  {
+    prev = pos->prevE;
+    MHD_upgrade_response_handle_process_ (pos);
+    if (! is_urh_ready (pos))
     {
-      prev = pos->prevE;
-      MHD_upgrade_response_handle_process_ (pos);
-      if (! is_urh_ready(pos))
-      	{
-      	  EDLL_remove (daemon->eready_urh_head,
-      		       daemon->eready_urh_tail,
-      		       pos);
-      	  pos->in_eready_list = false;
-      	}
-      /* Finished forwarding? */
-      if ( (0 == pos->in_buffer_size) &&
-           (0 == pos->out_buffer_size) &&
-           (0 == pos->in_buffer_used) &&
-           (0 == pos->out_buffer_used) )
-        {
-          MHD_connection_finish_forward_ (pos->connection);
-          pos->clean_ready = true;
-          /* If 'pos->was_closed' already was set to true, connection
-           * will be moved immediately to cleanup list. Otherwise
-           * connection will stay in suspended list until 'pos' will
-           * be marked with 'was_closed' by application. */
-          MHD_request_resume (&pos->connection->request);
-        }
+      EDLL_remove (daemon->eready_urh_head,
+                   daemon->eready_urh_tail,
+                   pos);
+      pos->in_eready_list = false;
     }
+    /* Finished forwarding? */
+    if ( (0 == pos->in_buffer_size) &&
+         (0 == pos->out_buffer_size) &&
+         (0 == pos->in_buffer_used) &&
+         (0 == pos->out_buffer_used) )
+    {
+      MHD_connection_finish_forward_ (pos->connection);
+      pos->clean_ready = true;
+      /* If 'pos->was_closed' already was set to true, connection
+       * will be moved immediately to cleanup list. Otherwise
+       * connection will stay in suspended list until 'pos' will
+       * be marked with 'was_closed' by application. */
+      MHD_request_resume (&pos->connection->request);
+    }
+  }
 
   return MHD_SC_OK;
 }
@@ -212,10 +212,10 @@ run_epoll_for_upgrade (struct MHD_Daemon *daemon)
  */
 enum MHD_StatusCode
 MHD_daemon_epoll_ (struct MHD_Daemon *daemon,
-		   bool may_block)
+                   bool may_block)
 {
 #if defined(HTTPS_SUPPORT) && defined(UPGRADE_SUPPORT)
-  static const char * const upgrade_marker = "upgrade_ptr";
+  static const char *const upgrade_marker = "upgrade_ptr";
 #endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
   struct MHD_Connection *pos;
   struct MHD_Connection *prev;
@@ -239,24 +239,24 @@ MHD_daemon_epoll_ (struct MHD_Daemon *daemon,
        (daemon->connections < daemon->global_connection_limit) &&
        (! daemon->listen_socket_in_epoll) &&
        (! daemon->at_limit) )
+  {
+    event.events = EPOLLIN;
+    event.data.ptr = daemon;
+    if (0 != epoll_ctl (daemon->epoll_fd,
+                        EPOLL_CTL_ADD,
+                        ls,
+                        &event))
     {
-      event.events = EPOLLIN;
-      event.data.ptr = daemon;
-      if (0 != epoll_ctl (daemon->epoll_fd,
-			  EPOLL_CTL_ADD,
-			  ls,
-			  &event))
-	{
 #ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-		    MHD_SC_EPOLL_CTL_ADD_FAILED,
-                    _("Call to epoll_ctl failed: %s\n"),
-                    MHD_socket_last_strerr_ ());
+      MHD_DLOG (daemon,
+                MHD_SC_EPOLL_CTL_ADD_FAILED,
+                _ ("Call to epoll_ctl failed: %s\n"),
+                MHD_socket_last_strerr_ ());
 #endif
-	  return MHD_SC_EPOLL_CTL_ADD_FAILED;
-	}
-      daemon->listen_socket_in_epoll = true;
+      return MHD_SC_EPOLL_CTL_ADD_FAILED;
     }
+    daemon->listen_socket_in_epoll = true;
+  }
   if ( (daemon->was_quiesced) &&
        (daemon->listen_socket_in_epoll) )
   {
@@ -271,58 +271,58 @@ MHD_daemon_epoll_ (struct MHD_Daemon *daemon,
 #if defined(HTTPS_SUPPORT) && defined(UPGRADE_SUPPORT)
   if ( (! daemon->upgrade_fd_in_epoll) &&
        (-1 != daemon->epoll_upgrade_fd) )
+  {
+    event.events = EPOLLIN | EPOLLOUT;
+    event.data.ptr = (void *) upgrade_marker;
+    if (0 != epoll_ctl (daemon->epoll_fd,
+                        EPOLL_CTL_ADD,
+                        daemon->epoll_upgrade_fd,
+                        &event))
     {
-      event.events = EPOLLIN | EPOLLOUT;
-      event.data.ptr = (void *) upgrade_marker;
-      if (0 != epoll_ctl (daemon->epoll_fd,
-			  EPOLL_CTL_ADD,
-			  daemon->epoll_upgrade_fd,
-			  &event))
-	{
 #ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-		    MHD_SC_EPOLL_CTL_ADD_FAILED,
-                    _("Call to epoll_ctl failed: %s\n"),
-                    MHD_socket_last_strerr_ ());
+      MHD_DLOG (daemon,
+                MHD_SC_EPOLL_CTL_ADD_FAILED,
+                _ ("Call to epoll_ctl failed: %s\n"),
+                MHD_socket_last_strerr_ ());
 #endif
-	  return MHD_SC_EPOLL_CTL_ADD_FAILED;
-	}
-      daemon->upgrade_fd_in_epoll = true;
+      return MHD_SC_EPOLL_CTL_ADD_FAILED;
     }
+    daemon->upgrade_fd_in_epoll = true;
+  }
 #endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
   if ( (daemon->listen_socket_in_epoll) &&
        ( (daemon->connections == daemon->global_connection_limit) ||
          (daemon->at_limit) ||
          (daemon->was_quiesced) ) )
-    {
-      /* we're at the connection limit, disable listen socket
-	 for event loop for now */
-      if (0 != epoll_ctl (daemon->epoll_fd,
-			  EPOLL_CTL_DEL,
-			  ls,
-			  NULL))
-	MHD_PANIC (_("Failed to remove listen FD from epoll set\n"));
-      daemon->listen_socket_in_epoll = false;
-    }
+  {
+    /* we're at the connection limit, disable listen socket
+ for event loop for now */
+    if (0 != epoll_ctl (daemon->epoll_fd,
+                        EPOLL_CTL_DEL,
+                        ls,
+                        NULL))
+      MHD_PANIC (_ ("Failed to remove listen FD from epoll set\n"));
+    daemon->listen_socket_in_epoll = false;
+  }
 
   if ( (! daemon->disallow_suspend_resume) &&
        (MHD_resume_suspended_connections_ (daemon)) )
     may_block = false;
 
   if (may_block)
+  {
+    if (MHD_SC_OK ==   /* FIXME: distinguish between NO_TIMEOUT and errors */
+        MHD_daemon_get_timeout (daemon,
+                                &timeout_ll))
     {
-      if (MHD_SC_OK == /* FIXME: distinguish between NO_TIMEOUT and errors */
-	  MHD_daemon_get_timeout (daemon,
-				  &timeout_ll))
-	{
-	  if (timeout_ll >= (MHD_UNSIGNED_LONG_LONG) INT_MAX)
-	    timeout_ms = INT_MAX;
-	  else
-	    timeout_ms = (int) timeout_ll;
-	}
+      if (timeout_ll >= (MHD_UNSIGNED_LONG_LONG) INT_MAX)
+        timeout_ms = INT_MAX;
       else
-	timeout_ms = -1;
+        timeout_ms = (int) timeout_ll;
     }
+    else
+      timeout_ms = -1;
+  }
   else
     timeout_ms = 0;
 
@@ -337,113 +337,114 @@ MHD_daemon_epoll_ (struct MHD_Daemon *daemon,
      than unfair behavior... */
   num_events = MAX_EVENTS;
   while (MAX_EVENTS == num_events)
+  {
+    /* update event masks */
+    num_events = epoll_wait (daemon->epoll_fd,
+                             events,
+                             MAX_EVENTS,
+                             timeout_ms);
+    if (-1 == num_events)
     {
-      /* update event masks */
-      num_events = epoll_wait (daemon->epoll_fd,
-			       events,
-                               MAX_EVENTS,
-                               timeout_ms);
-      if (-1 == num_events)
-	{
-          const int err = MHD_socket_get_error_ ();
-          if (MHD_SCKT_ERR_IS_EINTR_ (err))
-	    return MHD_SC_OK;
+      const int err = MHD_socket_get_error_ ();
+      if (MHD_SCKT_ERR_IS_EINTR_ (err))
+        return MHD_SC_OK;
 #ifdef HAVE_MESSAGES
-          MHD_DLOG (daemon,
-		    MHD_SC_UNEXPECTED_EPOLL_WAIT_ERROR,
-                    _("Call to epoll_wait failed: %s\n"),
-                    MHD_socket_strerr_ (err));
+      MHD_DLOG (daemon,
+                MHD_SC_UNEXPECTED_EPOLL_WAIT_ERROR,
+                _ ("Call to epoll_wait failed: %s\n"),
+                MHD_socket_strerr_ (err));
 #endif
-	  return MHD_SC_UNEXPECTED_EPOLL_WAIT_ERROR;
-	}
-      for (i=0;i<(unsigned int) num_events;i++)
-	{
-          /* First, check for the values of `ptr` that would indicate
-             that this event is not about a normal connection. */
-	  if (NULL == events[i].data.ptr)
-	    continue; /* shutdown signal! */
-#if defined(HTTPS_SUPPORT) && defined(UPGRADE_SUPPORT)
-          if (upgrade_marker == events[i].data.ptr)
-            {
-              /* activity on an upgraded connection, we process
-                 those in a separate epoll() */
-              run_upgraded = true;
-              continue;
-            }
-#endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
-          if (daemon->epoll_itc_marker == events[i].data.ptr)
-            {
-              /* It's OK to clear ITC here as all external
-                 conditions will be processed later. */
-              MHD_itc_clear_ (daemon->itc);
-              continue;
-            }
-	  if (daemon == events[i].data.ptr)
-	    {
-              /* Check for error conditions on listen socket. */
-              /* FIXME: Initiate MHD_quiesce_daemon() to prevent busy waiting? */
-              if (0 == (events[i].events & (EPOLLERR | EPOLLHUP)))
-                {
-                  unsigned int series_length = 0;
-                  /* Run 'accept' until it fails or daemon at limit of connections.
-                   * Do not accept more then 10 connections at once. The rest will
-                   * be accepted on next turn (level trigger is used for listen
-                   * socket). */
-                  while ( (MHD_SC_OK ==
-			   MHD_accept_connection_ (daemon)) &&
-                          (series_length < 10) &&
-                          (daemon->connections < daemon->global_connection_limit) &&
-                          (! daemon->at_limit) )
-                    series_length++;
-	        }
-              continue;
-	    }
-          /* this is an event relating to a 'normal' connection,
-             remember the event and if appropriate mark the
-             connection as 'eready'. */
-          pos = events[i].data.ptr;
-          /* normal processing: update read/write data */
-          if (0 != (events[i].events & (EPOLLPRI | EPOLLERR | EPOLLHUP)))
-            {
-              pos->epoll_state |= MHD_EPOLL_STATE_ERROR;
-              if (0 == (pos->epoll_state & MHD_EPOLL_STATE_IN_EREADY_EDLL))
-                {
-                  EDLL_insert (daemon->eready_head,
-                               daemon->eready_tail,
-                               pos);
-                  pos->epoll_state |= MHD_EPOLL_STATE_IN_EREADY_EDLL;
-                }
-            }
-          else
-            {
-              if (0 != (events[i].events & EPOLLIN))
-                {
-                  pos->epoll_state |= MHD_EPOLL_STATE_READ_READY;
-                  if ( ( (MHD_EVENT_LOOP_INFO_READ == pos->request.event_loop_info) ||
-                         (pos->request.read_buffer_size > pos->request.read_buffer_offset) ) &&
-                       (0 == (pos->epoll_state & MHD_EPOLL_STATE_IN_EREADY_EDLL) ) )
-                    {
-                      EDLL_insert (daemon->eready_head,
-                                   daemon->eready_tail,
-                                   pos);
-                      pos->epoll_state |= MHD_EPOLL_STATE_IN_EREADY_EDLL;
-                    }
-                }
-              if (0 != (events[i].events & EPOLLOUT))
-                {
-                  pos->epoll_state |= MHD_EPOLL_STATE_WRITE_READY;
-                  if ( (MHD_EVENT_LOOP_INFO_WRITE == pos->request.event_loop_info) &&
-                       (0 == (pos->epoll_state & MHD_EPOLL_STATE_IN_EREADY_EDLL) ) )
-                    {
-                      EDLL_insert (daemon->eready_head,
-                                   daemon->eready_tail,
-                                   pos);
-                      pos->epoll_state |= MHD_EPOLL_STATE_IN_EREADY_EDLL;
-                    }
-                }
-            }
-        }
+      return MHD_SC_UNEXPECTED_EPOLL_WAIT_ERROR;
     }
+    for (i = 0; i<(unsigned int) num_events; i++)
+    {
+      /* First, check for the values of `ptr` that would indicate
+         that this event is not about a normal connection. */
+      if (NULL == events[i].data.ptr)
+        continue; /* shutdown signal! */
+#if defined(HTTPS_SUPPORT) && defined(UPGRADE_SUPPORT)
+      if (upgrade_marker == events[i].data.ptr)
+      {
+        /* activity on an upgraded connection, we process
+           those in a separate epoll() */
+        run_upgraded = true;
+        continue;
+      }
+#endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
+      if (daemon->epoll_itc_marker == events[i].data.ptr)
+      {
+        /* It's OK to clear ITC here as all external
+           conditions will be processed later. */
+        MHD_itc_clear_ (daemon->itc);
+        continue;
+      }
+      if (daemon == events[i].data.ptr)
+      {
+        /* Check for error conditions on listen socket. */
+        /* FIXME: Initiate MHD_quiesce_daemon() to prevent busy waiting? */
+        if (0 == (events[i].events & (EPOLLERR | EPOLLHUP)))
+        {
+          unsigned int series_length = 0;
+          /* Run 'accept' until it fails or daemon at limit of connections.
+           * Do not accept more then 10 connections at once. The rest will
+           * be accepted on next turn (level trigger is used for listen
+           * socket). */
+          while ( (MHD_SC_OK ==
+                   MHD_accept_connection_ (daemon)) &&
+                  (series_length < 10) &&
+                  (daemon->connections < daemon->global_connection_limit) &&
+                  (! daemon->at_limit) )
+            series_length++;
+        }
+        continue;
+      }
+      /* this is an event relating to a 'normal' connection,
+         remember the event and if appropriate mark the
+         connection as 'eready'. */
+      pos = events[i].data.ptr;
+      /* normal processing: update read/write data */
+      if (0 != (events[i].events & (EPOLLPRI | EPOLLERR | EPOLLHUP)))
+      {
+        pos->epoll_state |= MHD_EPOLL_STATE_ERROR;
+        if (0 == (pos->epoll_state & MHD_EPOLL_STATE_IN_EREADY_EDLL))
+        {
+          EDLL_insert (daemon->eready_head,
+                       daemon->eready_tail,
+                       pos);
+          pos->epoll_state |= MHD_EPOLL_STATE_IN_EREADY_EDLL;
+        }
+      }
+      else
+      {
+        if (0 != (events[i].events & EPOLLIN))
+        {
+          pos->epoll_state |= MHD_EPOLL_STATE_READ_READY;
+          if ( ( (MHD_EVENT_LOOP_INFO_READ == pos->request.event_loop_info) ||
+                 (pos->request.read_buffer_size >
+                  pos->request.read_buffer_offset) ) &&
+               (0 == (pos->epoll_state & MHD_EPOLL_STATE_IN_EREADY_EDLL) ) )
+          {
+            EDLL_insert (daemon->eready_head,
+                         daemon->eready_tail,
+                         pos);
+            pos->epoll_state |= MHD_EPOLL_STATE_IN_EREADY_EDLL;
+          }
+        }
+        if (0 != (events[i].events & EPOLLOUT))
+        {
+          pos->epoll_state |= MHD_EPOLL_STATE_WRITE_READY;
+          if ( (MHD_EVENT_LOOP_INFO_WRITE == pos->request.event_loop_info) &&
+               (0 == (pos->epoll_state & MHD_EPOLL_STATE_IN_EREADY_EDLL) ) )
+          {
+            EDLL_insert (daemon->eready_head,
+                         daemon->eready_tail,
+                         pos);
+            pos->epoll_state |= MHD_EPOLL_STATE_IN_EREADY_EDLL;
+          }
+        }
+      }
+    }
+  }
 
 #if defined(HTTPS_SUPPORT) && defined(UPGRADE_SUPPORT)
   if (run_upgraded)
@@ -453,28 +454,32 @@ MHD_daemon_epoll_ (struct MHD_Daemon *daemon,
   /* process events for connections */
   prev = daemon->eready_tail;
   while (NULL != (pos = prev))
+  {
+    prev = pos->prevE;
+    MHD_connection_call_handlers_ (pos,
+                                   0 != (pos->epoll_state
+                                         & MHD_EPOLL_STATE_READ_READY),
+                                   0 != (pos->epoll_state
+                                         & MHD_EPOLL_STATE_WRITE_READY),
+                                   0 != (pos->epoll_state
+                                         & MHD_EPOLL_STATE_ERROR));
+    if (MHD_EPOLL_STATE_IN_EREADY_EDLL ==
+        (pos->epoll_state & (MHD_EPOLL_STATE_SUSPENDED
+                             | MHD_EPOLL_STATE_IN_EREADY_EDLL)))
     {
-      prev = pos->prevE;
-      MHD_connection_call_handlers_ (pos,
-				     0 != (pos->epoll_state & MHD_EPOLL_STATE_READ_READY),
-				     0 != (pos->epoll_state & MHD_EPOLL_STATE_WRITE_READY),
-				     0 != (pos->epoll_state & MHD_EPOLL_STATE_ERROR));
-      if (MHD_EPOLL_STATE_IN_EREADY_EDLL ==
-            (pos->epoll_state & (MHD_EPOLL_STATE_SUSPENDED | MHD_EPOLL_STATE_IN_EREADY_EDLL)))
-        {
-          if ( (MHD_EVENT_LOOP_INFO_READ == pos->request.event_loop_info &&
-		0 == (pos->epoll_state & MHD_EPOLL_STATE_READ_READY) ) ||
-               (MHD_EVENT_LOOP_INFO_WRITE == pos->request.event_loop_info &&
-		0 == (pos->epoll_state & MHD_EPOLL_STATE_WRITE_READY) ) ||
-               MHD_EVENT_LOOP_INFO_CLEANUP == pos->request.event_loop_info)
-            {
-              EDLL_remove (daemon->eready_head,
-                           daemon->eready_tail,
-                           pos);
-              pos->epoll_state &= ~MHD_EPOLL_STATE_IN_EREADY_EDLL;
-            }
-        }
+      if ( ((MHD_EVENT_LOOP_INFO_READ == pos->request.event_loop_info) &&
+            (0 == (pos->epoll_state & MHD_EPOLL_STATE_READ_READY)) ) ||
+           ((MHD_EVENT_LOOP_INFO_WRITE == pos->request.event_loop_info) &&
+            (0 == (pos->epoll_state & MHD_EPOLL_STATE_WRITE_READY)) ) ||
+           (MHD_EVENT_LOOP_INFO_CLEANUP == pos->request.event_loop_info) )
+      {
+        EDLL_remove (daemon->eready_head,
+                     daemon->eready_tail,
+                     pos);
+        pos->epoll_state &= ~MHD_EPOLL_STATE_IN_EREADY_EDLL;
+      }
     }
+  }
 
   /* Finally, handle timed-out connections; we need to do this here
      as the epoll mechanism won't call the 'MHD_request_handle_idle_()' on everything,
@@ -486,22 +491,22 @@ MHD_daemon_epoll_ (struct MHD_Daemon *daemon,
      do not bother to sort that (presumably very short) list. */
   prev = daemon->manual_timeout_tail;
   while (NULL != (pos = prev))
-    {
-      prev = pos->prevX;
-      MHD_request_handle_idle_ (&pos->request);
-    }
+  {
+    prev = pos->prevX;
+    MHD_request_handle_idle_ (&pos->request);
+  }
   /* Connections with the default timeout are sorted by prepending
      them to the head of the list whenever we touch the connection;
      thus it suffices to iterate from the tail until the first
      connection is NOT timed out */
   prev = daemon->normal_timeout_tail;
   while (NULL != (pos = prev))
-    {
-      prev = pos->prevX;
-      MHD_request_handle_idle_ (&pos->request);
-      if (MHD_REQUEST_CLOSED != pos->request.state)
-	break; /* sorted by timeout, no need to visit the rest! */
-    }
+  {
+    prev = pos->prevX;
+    MHD_request_handle_idle_ (&pos->request);
+    if (MHD_REQUEST_CLOSED != pos->request.state)
+      break; /* sorted by timeout, no need to visit the rest! */
+  }
   return MHD_SC_OK;
 }
 #endif

@@ -32,9 +32,11 @@
 #include <windows.h>
 #endif
 
-#define PAGE "<html><head><title>libmicrohttpd demo</title></head><body>libmicrohttpd demo</body></html>"
+#define PAGE \
+  "<html><head><title>libmicrohttpd demo</title></head><body>libmicrohttpd demo</body></html>"
 
-#define DENIED "<html><head><title>Access denied</title></head><body>Access denied</body></html>"
+#define DENIED \
+  "<html><head><title>Access denied</title></head><body>Access denied</body></html>"
 
 
 
@@ -53,19 +55,19 @@ ahc_echo (void *cls,
   char *user;
   char *pass;
   int fail;
-  (void)url;               /* Unused. Silent compiler warning. */
-  (void)version;           /* Unused. Silent compiler warning. */
-  (void)upload_data;       /* Unused. Silent compiler warning. */
-  (void)upload_data_size;  /* Unused. Silent compiler warning. */
+  (void) url;               /* Unused. Silent compiler warning. */
+  (void) version;           /* Unused. Silent compiler warning. */
+  (void) upload_data;       /* Unused. Silent compiler warning. */
+  (void) upload_data_size;  /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (method, "GET"))
     return MHD_NO;              /* unexpected method */
   if (&aptr != *ptr)
-    {
-      /* do never respond on first call */
-      *ptr = &aptr;
-      return MHD_YES;
-    }
+  {
+    /* do never respond on first call */
+    *ptr = &aptr;
+    return MHD_YES;
+  }
   *ptr = NULL;                  /* reset when done */
 
   /* require: "Aladdin" with password "open sesame" */
@@ -77,18 +79,18 @@ ahc_echo (void *cls,
            (0 != strcmp (pass, "open sesame") ) );
   if (fail)
   {
-      response = MHD_create_response_from_buffer (strlen (DENIED),
-						  (void *) DENIED,
-						  MHD_RESPMEM_PERSISTENT);
-      ret = MHD_queue_basic_auth_fail_response (connection,"TestRealm",response);
-    }
+    response = MHD_create_response_from_buffer (strlen (DENIED),
+                                                (void *) DENIED,
+                                                MHD_RESPMEM_PERSISTENT);
+    ret = MHD_queue_basic_auth_fail_response (connection,"TestRealm",response);
+  }
   else
-    {
-      response = MHD_create_response_from_buffer (strlen (me),
-						  (void *) me,
-						  MHD_RESPMEM_PERSISTENT);
-      ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
-    }
+  {
+    response = MHD_create_response_from_buffer (strlen (me),
+                                                (void *) me,
+                                                MHD_RESPMEM_PERSISTENT);
+    ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
+  }
   if (NULL != user)
     MHD_free (user);
   if (NULL != pass)
@@ -107,13 +109,14 @@ main (int argc, char *const *argv)
   if ( (argc != 2) ||
        (1 != sscanf (argv[1], "%u", &port)) ||
        (UINT16_MAX < port) )
-    {
-      fprintf (stderr,
-	       "%s PORT\n", argv[0]);
-      return 1;
-    }
+  {
+    fprintf (stderr,
+             "%s PORT\n", argv[0]);
+    return 1;
+  }
 
-  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
+  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION
+                        | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
                         atoi (argv[1]),
                         NULL, NULL, &ahc_echo, PAGE, MHD_OPTION_END);
   if (d == NULL)

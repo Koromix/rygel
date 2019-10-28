@@ -36,7 +36,7 @@
  */
 static enum MHD_StatusCode
 response_action (void *cls,
-		 struct MHD_Request *request)
+                 struct MHD_Request *request)
 {
   struct MHD_Response *response = cls;
   struct MHD_Daemon *daemon = request->daemon;
@@ -49,14 +49,15 @@ response_action (void *cls,
 #ifdef UPGRADE_SUPPORT
   if ( (NULL != response->upgrade_handler) &&
        daemon->disallow_upgrade )
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-		MHD_SC_UPGRADE_ON_DAEMON_WITH_UPGRADE_DISALLOWED,
-                _("Attempted 'upgrade' connection on daemon without MHD_ALLOW_UPGRADE option!\n"));
+    MHD_DLOG (daemon,
+              MHD_SC_UPGRADE_ON_DAEMON_WITH_UPGRADE_DISALLOWED,
+              _ (
+                "Attempted 'upgrade' connection on daemon without MHD_ALLOW_UPGRADE option!\n"));
 #endif
-      return MHD_SC_UPGRADE_ON_DAEMON_WITH_UPGRADE_DISALLOWED;
-    }
+    return MHD_SC_UPGRADE_ON_DAEMON_WITH_UPGRADE_DISALLOWED;
+  }
 #endif /* UPGRADE_SUPPORT */
   request->response = response;
 #if defined(_MHD_HAVE_SENDFILE)
@@ -74,21 +75,21 @@ response_action (void *cls,
        (MHD_HTTP_OK > response->status_code) ||
        (MHD_HTTP_NO_CONTENT == response->status_code) ||
        (MHD_HTTP_NOT_MODIFIED == response->status_code) )
-    {
-      /* if this is a "HEAD" request, or a status code for
-         which a body is not allowed, pretend that we
-         have already sent the full message body. */
-      request->response_write_position = response->total_size;
-    }
+  {
+    /* if this is a "HEAD" request, or a status code for
+       which a body is not allowed, pretend that we
+       have already sent the full message body. */
+    request->response_write_position = response->total_size;
+  }
   if ( (MHD_REQUEST_HEADERS_PROCESSED == request->state) &&
        ( (MHD_METHOD_POST == request->method) ||
-	 (MHD_METHOD_PUT == request->method) ) )
-    {
-      /* response was queued "early", refuse to read body / footers or
-         further requests! */
-      request->connection->read_closed = true;
-      request->state = MHD_REQUEST_FOOTERS_RECEIVED;
-    }
+         (MHD_METHOD_PUT == request->method) ) )
+  {
+    /* response was queued "early", refuse to read body / footers or
+       further requests! */
+    request->connection->read_closed = true;
+    request->state = MHD_REQUEST_FOOTERS_RECEIVED;
+  }
   if (! request->in_idle)
     (void) MHD_request_handle_idle_ (request);
   return MHD_SC_OK;
@@ -114,16 +115,16 @@ response_action (void *cls,
  */
 _MHD_EXTERN const struct MHD_Action *
 MHD_action_from_response (struct MHD_Response *response,
-			  enum MHD_Bool destroy_after_use)
+                          enum MHD_Bool destroy_after_use)
 {
   response->action.action = &response_action;
   response->action.action_cls = response;
   if (! destroy_after_use)
-    {
-      MHD_mutex_lock_chk_ (&response->mutex);
-      response->reference_count++;
-      MHD_mutex_unlock_chk_ (&response->mutex);
-    }
+  {
+    MHD_mutex_lock_chk_ (&response->mutex);
+    response->reference_count++;
+    MHD_mutex_unlock_chk_ (&response->mutex);
+  }
   return &response->action;
 }
 

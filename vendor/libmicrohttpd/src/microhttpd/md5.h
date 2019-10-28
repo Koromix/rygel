@@ -22,15 +22,15 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define	MD5_BLOCK_SIZE              64
-#define	MD5_DIGEST_SIZE             16
-#define	MD5_DIGEST_STRING_LENGTH    (MD5_DIGEST_SIZE * 2 + 1)
+#define MD5_BLOCK_SIZE              64
+#define MD5_DIGEST_SIZE             16
+#define MD5_DIGEST_STRING_LENGTH    (MD5_DIGEST_SIZE * 2 + 1)
 
 struct MD5Context
 {
-  uint32_t state[4];			/* state */
-  uint64_t count;			/* number of bytes, mod 2^64 */
-  uint8_t buffer[MD5_BLOCK_SIZE];	/* input buffer */
+  uint32_t state[4];      /* state */
+  uint64_t count;     /* number of bytes, mod 2^64 */
+  uint8_t buffer[MD5_BLOCK_SIZE]; /* input buffer */
 };
 
 
@@ -52,8 +52,8 @@ MHD_MD5Init (void *ctx_);
  */
 void
 MHD_MD5Update (void *ctx_,
-           const uint8_t *input,
-           size_t len);
+               const uint8_t *input,
+               size_t len);
 
 
 /**
@@ -63,7 +63,7 @@ MHD_MD5Update (void *ctx_,
  */
 void
 MHD_MD5Final (void *ctx_,
-          uint8_t digest[MD5_DIGEST_SIZE]);
+              uint8_t digest[MD5_DIGEST_SIZE]);
 
 
 #endif /* !MHD_MD5_H */

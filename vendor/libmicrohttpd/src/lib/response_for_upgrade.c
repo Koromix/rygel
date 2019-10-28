@@ -57,21 +57,21 @@
  */
 struct MHD_Response *
 MHD_response_for_upgrade (MHD_UpgradeHandler upgrade_handler,
-			  void *upgrade_handler_cls)
+                          void *upgrade_handler_cls)
 {
 #ifdef UPGRADE_SUPPORT
   struct MHD_Response *response;
 
   mhd_assert (NULL != upgrade_handler);
   response = MHD_calloc_ (1,
-			  sizeof (struct MHD_Response));
+                          sizeof (struct MHD_Response));
   if (NULL == response)
     return NULL;
   if (! MHD_mutex_init_ (&response->mutex))
-    {
-      free (response);
-      return NULL;
-    }
+  {
+    free (response);
+    return NULL;
+  }
   response->upgrade_handler = upgrade_handler;
   response->upgrade_handler_cls = upgrade_handler_cls;
   response->status_code = MHD_HTTP_SWITCHING_PROTOCOLS;
@@ -81,10 +81,10 @@ MHD_response_for_upgrade (MHD_UpgradeHandler upgrade_handler,
       MHD_response_add_header (response,
                                MHD_HTTP_HEADER_CONNECTION,
                                "Upgrade"))
-    {
-      MHD_response_queue_for_destroy (response);
-      return NULL;
-    }
+  {
+    MHD_response_queue_for_destroy (response);
+    return NULL;
+  }
   return response;
 #else
   return NULL;

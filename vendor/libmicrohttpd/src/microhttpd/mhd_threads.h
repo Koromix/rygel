@@ -58,23 +58,26 @@
 
 #ifndef MHD_NO_THREAD_NAMES
 #  if defined(MHD_USE_POSIX_THREADS)
-#    if defined(HAVE_PTHREAD_SETNAME_NP_GNU) || defined(HAVE_PTHREAD_SET_NAME_NP_FREEBSD) || \
-        defined(HAVE_PTHREAD_SETNAME_NP_DARWIN) || defined(HAVE_PTHREAD_SETNAME_NP_NETBSD) || \
-        defined(HAVE_PTHREAD_ATTR_SETNAME_NP_NETBSD) || defined(HAVE_PTHREAD_ATTR_SETNAME_NP_IBMI)
+#    if defined(HAVE_PTHREAD_SETNAME_NP_GNU) || \
+  defined(HAVE_PTHREAD_SET_NAME_NP_FREEBSD) || \
+  defined(HAVE_PTHREAD_SETNAME_NP_DARWIN) || \
+  defined(HAVE_PTHREAD_SETNAME_NP_NETBSD) || \
+  defined(HAVE_PTHREAD_ATTR_SETNAME_NP_NETBSD) || \
+  defined(HAVE_PTHREAD_ATTR_SETNAME_NP_IBMI)
 #      define MHD_USE_THREAD_NAME_
 #    endif /* HAVE_PTHREAD_SETNAME_NP */
 #  elif defined(MHD_USE_W32_THREADS)
 #    ifdef _MSC_FULL_VER
-       /* Thread names only available with VC compiler */
+/* Thread names only available with VC compiler */
 #      define MHD_USE_THREAD_NAME_
 #    endif /* _MSC_FULL_VER */
 #  endif
 #endif
 
 #if defined(MHD_USE_POSIX_THREADS)
-  typedef pthread_t MHD_thread_handle_;
+typedef pthread_t MHD_thread_handle_;
 #elif defined(MHD_USE_W32_THREADS)
-  typedef HANDLE MHD_thread_handle_;
+typedef HANDLE MHD_thread_handle_;
 #endif
 
 #if defined(MHD_USE_POSIX_THREADS)
@@ -86,9 +89,9 @@
 #endif
 
 #if defined(MHD_USE_POSIX_THREADS)
-  typedef pthread_t MHD_thread_ID_;
+typedef pthread_t MHD_thread_ID_;
 #elif defined(MHD_USE_W32_THREADS)
-  typedef DWORD MHD_thread_ID_;
+typedef DWORD MHD_thread_ID_;
 #endif
 
 /* Depending on implementation, pthread_create() MAY set thread ID into
@@ -100,27 +103,27 @@
  * to save some resources. */
 #if defined(MHD_USE_POSIX_THREADS)
 #  ifdef MHD_PTHREAD_CREATE__SET_ID_BEFORE_START_THREAD
-  union _MHD_thread_handle_ID_
-  {
-    MHD_thread_handle_  handle; /**< To be used in other threads */
-    MHD_thread_ID_      ID;     /**< To be used in thread itself */
-  };
-  typedef union _MHD_thread_handle_ID_ MHD_thread_handle_ID_;
+union _MHD_thread_handle_ID_
+{
+  MHD_thread_handle_ handle;    /**< To be used in other threads */
+  MHD_thread_ID_ ID;            /**< To be used in thread itself */
+};
+typedef union _MHD_thread_handle_ID_ MHD_thread_handle_ID_;
 #  else  /* ! MHD_PTHREAD_CREATE__SET_ID_BEFORE_START_THREAD */
-  struct _MHD_thread_handle_ID_
-  {
-    MHD_thread_handle_  handle; /**< To be used in other threads */
-    MHD_thread_ID_      ID;     /**< To be used in thread itself */
-  };
-  typedef struct _MHD_thread_handle_ID_ MHD_thread_handle_ID_;
+struct _MHD_thread_handle_ID_
+{
+  MHD_thread_handle_ handle;    /**< To be used in other threads */
+  MHD_thread_ID_ ID;            /**< To be used in thread itself */
+};
+typedef struct _MHD_thread_handle_ID_ MHD_thread_handle_ID_;
 #  endif /* ! MHD_PTHREAD_CREATE__SET_ID_BEFORE_START_THREAD */
 #elif defined(MHD_USE_W32_THREADS)
-  struct _MHD_thread_handle_ID_
-  {
-    MHD_thread_handle_  handle; /**< To be used in other threads */
-    MHD_thread_ID_      ID;     /**< To be used in thread itself */
-  };
-  typedef struct _MHD_thread_handle_ID_ MHD_thread_handle_ID_;
+struct _MHD_thread_handle_ID_
+{
+  MHD_thread_handle_ handle;    /**< To be used in other threads */
+  MHD_thread_ID_ ID;            /**< To be used in thread itself */
+};
+typedef struct _MHD_thread_handle_ID_ MHD_thread_handle_ID_;
 #endif
 
 #if defined(MHD_USE_POSIX_THREADS)
@@ -129,14 +132,17 @@
  * @param thread handle to watch
  * @return nonzero on success, zero otherwise
  */
-#define MHD_join_thread_(thread) (!pthread_join((thread), NULL))
+#define MHD_join_thread_(thread) (! pthread_join ((thread), NULL))
 #elif defined(MHD_USE_W32_THREADS)
 /**
  * Wait until specified thread is ended and free thread handle on success.
  * @param thread handle to watch
  * @return nonzero on success, zero otherwise
  */
-#define MHD_join_thread_(thread) (WAIT_OBJECT_0 == WaitForSingleObject((thread), INFINITE) ? (CloseHandle((thread)), !0) : 0)
+#define MHD_join_thread_(thread) (WAIT_OBJECT_0 == WaitForSingleObject ( \
+                                    (thread), INFINITE) ? (CloseHandle ( \
+                                                             (thread)), ! 0) : \
+                                  0)
 #endif
 
 #if defined(MHD_USE_POSIX_THREADS)
@@ -145,14 +151,14 @@
  * @param ID thread ID to match
  * @return nonzero on match, zero otherwise
  */
-#define MHD_thread_ID_match_current_(ID) (pthread_equal((ID), pthread_self()))
+#define MHD_thread_ID_match_current_(ID) (pthread_equal ((ID), pthread_self ()))
 #elif defined(MHD_USE_W32_THREADS)
 /**
  * Check whether provided thread ID match current thread.
  * @param ID thread ID to match
  * @return nonzero on match, zero otherwise
  */
-#define MHD_thread_ID_match_current_(ID) (GetCurrentThreadId() == (ID))
+#define MHD_thread_ID_match_current_(ID) (GetCurrentThreadId () == (ID))
 #endif
 
 #if defined(MHD_USE_POSIX_THREADS)
@@ -161,20 +167,22 @@
  * Initialise thread ID.
  * @param thread_handle_ID_ptr pointer to thread handle-ID
  */
-#define MHD_thread_init_(thread_handle_ID_ptr) (void)0
+#define MHD_thread_init_(thread_handle_ID_ptr) (void) 0
 #  else  /* ! MHD_PTHREAD_CREATE__SET_ID_BEFORE_START_THREAD */
 /**
  * Initialise thread ID.
  * @param thread_handle_ID_ptr pointer to thread handle-ID
  */
-#define MHD_thread_init_(thread_handle_ID_ptr) ((thread_handle_ID_ptr)->ID=pthread_self())
+#define MHD_thread_init_(thread_handle_ID_ptr) ((thread_handle_ID_ptr)->ID = \
+                                                  pthread_self ())
 #  endif /* ! MHD_PTHREAD_CREATE__SET_ID_BEFORE_START_THREAD */
 #elif defined(MHD_USE_W32_THREADS)
 /**
  * Initialise thread ID.
  * @param thread_handle_ID_ptr pointer to thread handle-ID
  */
-#define MHD_thread_init_(thread_handle_ID_ptr) ((thread_handle_ID_ptr)->ID=GetCurrentThreadId())
+#define MHD_thread_init_(thread_handle_ID_ptr) ((thread_handle_ID_ptr)->ID = \
+                                                  GetCurrentThreadId ())
 #endif
 
 /**
@@ -205,7 +213,7 @@ MHD_create_thread_ (MHD_thread_handle_ID_ *thread,
                     void *arg);
 
 #ifndef MHD_USE_THREAD_NAME_
-#define MHD_create_named_thread_(t,n,s,r,a) MHD_create_thread_((t),(s),(r),(a))
+#define MHD_create_named_thread_(t,n,s,r,a) MHD_create_thread_ ((t),(s),(r),(a))
 #else  /* MHD_USE_THREAD_NAME_ */
 /**
  * Create a named thread and set the attributes according to our options.
@@ -219,7 +227,7 @@ MHD_create_thread_ (MHD_thread_handle_ID_ *thread,
  */
 int
 MHD_create_named_thread_ (MHD_thread_handle_ID_ *thread,
-                          const char* thread_name,
+                          const char*thread_name,
                           size_t stack_size,
                           MHD_THREAD_START_ROUTINE_ start_routine,
                           void *arg);

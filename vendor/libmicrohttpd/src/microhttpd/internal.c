@@ -36,50 +36,50 @@ const char *
 MHD_state_to_string (enum MHD_CONNECTION_STATE state)
 {
   switch (state)
-    {
-    case MHD_CONNECTION_INIT:
-      return "connection init";
-    case MHD_CONNECTION_URL_RECEIVED:
-      return "connection url received";
-    case MHD_CONNECTION_HEADER_PART_RECEIVED:
-      return "header partially received";
-    case MHD_CONNECTION_HEADERS_RECEIVED:
-      return "headers received";
-    case MHD_CONNECTION_HEADERS_PROCESSED:
-      return "headers processed";
-    case MHD_CONNECTION_CONTINUE_SENDING:
-      return "continue sending";
-    case MHD_CONNECTION_CONTINUE_SENT:
-      return "continue sent";
-    case MHD_CONNECTION_BODY_RECEIVED:
-      return "body received";
-    case MHD_CONNECTION_FOOTER_PART_RECEIVED:
-      return "footer partially received";
-    case MHD_CONNECTION_FOOTERS_RECEIVED:
-      return "footers received";
-    case MHD_CONNECTION_HEADERS_SENDING:
-      return "headers sending";
-    case MHD_CONNECTION_HEADERS_SENT:
-      return "headers sent";
-    case MHD_CONNECTION_NORMAL_BODY_READY:
-      return "normal body ready";
-    case MHD_CONNECTION_NORMAL_BODY_UNREADY:
-      return "normal body unready";
-    case MHD_CONNECTION_CHUNKED_BODY_READY:
-      return "chunked body ready";
-    case MHD_CONNECTION_CHUNKED_BODY_UNREADY:
-      return "chunked body unready";
-    case MHD_CONNECTION_BODY_SENT:
-      return "body sent";
-    case MHD_CONNECTION_FOOTERS_SENDING:
-      return "footers sending";
-    case MHD_CONNECTION_FOOTERS_SENT:
-      return "footers sent";
-    case MHD_CONNECTION_CLOSED:
-      return "closed";
-    default:
-      return "unrecognized connection state";
-    }
+  {
+  case MHD_CONNECTION_INIT:
+    return "connection init";
+  case MHD_CONNECTION_URL_RECEIVED:
+    return "connection url received";
+  case MHD_CONNECTION_HEADER_PART_RECEIVED:
+    return "header partially received";
+  case MHD_CONNECTION_HEADERS_RECEIVED:
+    return "headers received";
+  case MHD_CONNECTION_HEADERS_PROCESSED:
+    return "headers processed";
+  case MHD_CONNECTION_CONTINUE_SENDING:
+    return "continue sending";
+  case MHD_CONNECTION_CONTINUE_SENT:
+    return "continue sent";
+  case MHD_CONNECTION_BODY_RECEIVED:
+    return "body received";
+  case MHD_CONNECTION_FOOTER_PART_RECEIVED:
+    return "footer partially received";
+  case MHD_CONNECTION_FOOTERS_RECEIVED:
+    return "footers received";
+  case MHD_CONNECTION_HEADERS_SENDING:
+    return "headers sending";
+  case MHD_CONNECTION_HEADERS_SENT:
+    return "headers sent";
+  case MHD_CONNECTION_NORMAL_BODY_READY:
+    return "normal body ready";
+  case MHD_CONNECTION_NORMAL_BODY_UNREADY:
+    return "normal body unready";
+  case MHD_CONNECTION_CHUNKED_BODY_READY:
+    return "chunked body ready";
+  case MHD_CONNECTION_CHUNKED_BODY_UNREADY:
+    return "chunked body unready";
+  case MHD_CONNECTION_BODY_SENT:
+    return "body sent";
+  case MHD_CONNECTION_FOOTERS_SENDING:
+    return "footers sending";
+  case MHD_CONNECTION_FOOTERS_SENT:
+    return "footers sent";
+  case MHD_CONNECTION_CLOSED:
+    return "closed";
+  default:
+    return "unrecognized connection state";
+  }
 }
 #endif
 #endif
@@ -118,7 +118,7 @@ MHD_unescape_plus (char *arg)
 {
   char *p;
 
-  for (p=strchr (arg, '+'); NULL != p; p = strchr (p + 1, '+'))
+  for (p = strchr (arg, '+'); NULL != p; p = strchr (p + 1, '+'))
     *p = ' ';
 }
 
@@ -139,28 +139,28 @@ MHD_http_unescape (char *val)
   char *wpos = val;
 
   while ('\0' != *rpos)
+  {
+    uint32_t num;
+    switch (*rpos)
     {
-      uint32_t num;
-      switch (*rpos)
-	{
-	case '%':
-          if (2 == MHD_strx_to_uint32_n_ (rpos + 1,
-                                          2,
-                                          &num))
-	    {
-	      *wpos = (char)((unsigned char) num);
-	      wpos++;
-	      rpos += 3;
-	      break;
-	    }
-          /* TODO: add bad sequence handling */
-	  /* intentional fall through! */
-	default:
-	  *wpos = *rpos;
-	  wpos++;
-	  rpos++;
-	}
+    case '%':
+      if (2 == MHD_strx_to_uint32_n_ (rpos + 1,
+                                      2,
+                                      &num))
+      {
+        *wpos = (char) ((unsigned char) num);
+        wpos++;
+        rpos += 3;
+        break;
+      }
+    /* TODO: add bad sequence handling */
+    /* intentional fall through! */
+    default:
+      *wpos = *rpos;
+      wpos++;
+      rpos++;
     }
+  }
   *wpos = '\0'; /* add 0-terminator */
   return wpos - val;
 }
@@ -182,10 +182,10 @@ MHD_http_unescape (char *val)
  */
 int
 MHD_parse_arguments_ (struct MHD_Connection *connection,
-		      enum MHD_ValueKind kind,
-		      char *args,
-		      MHD_ArgumentIterator_ cb,
-		      unsigned int *num_headers)
+                      enum MHD_ValueKind kind,
+                      char *args,
+                      MHD_ArgumentIterator_ cb,
+                      unsigned int *num_headers)
 {
   struct MHD_Daemon *daemon = connection->daemon;
   char *equals;
@@ -193,78 +193,33 @@ MHD_parse_arguments_ (struct MHD_Connection *connection,
 
   *num_headers = 0;
   while ( (NULL != args) &&
-	  ('\0' != args[0]) )
+          ('\0' != args[0]) )
+  {
+    size_t key_len;
+    size_t value_len;
+    equals = strchr (args, '=');
+    amper = strchr (args, '&');
+    if (NULL == amper)
     {
-      size_t key_len;
-      size_t value_len;
-      equals = strchr (args, '=');
-      amper = strchr (args, '&');
-      if (NULL == amper)
-	{
-	  /* last argument */
-	  if (NULL == equals)
-	    {
-	      /* last argument, without '=' */
-              MHD_unescape_plus (args);
-	      key_len = daemon->unescape_callback (daemon->unescape_callback_cls,
-			                           connection,
-                                                   args);
-	      if (MHD_YES != cb (connection,
-				 args,
-				 key_len,
-				 NULL,
-				 0,
-				 kind))
-		return MHD_NO;
-	      (*num_headers)++;
-	      break;
-	    }
-	  /* got 'foo=bar' */
-	  equals[0] = '\0';
-	  equals++;
-          MHD_unescape_plus (args);
-	  key_len = daemon->unescape_callback (daemon->unescape_callback_cls,
-                                               connection,
-                                               args);
-          MHD_unescape_plus (equals);
-	  value_len = daemon->unescape_callback (daemon->unescape_callback_cls,
-                                                 connection,
-                                                 equals);
-	  if (MHD_YES != cb (connection,
-			     args,
-			     key_len,
-			     equals,
-			     value_len,
-			     kind))
-	    return MHD_NO;
-	  (*num_headers)++;
-	  break;
-	}
-      /* amper is non-NULL here */
-      amper[0] = '\0';
-      amper++;
-      if ( (NULL == equals) ||
-	   (equals >= amper) )
-	{
-	  /* got 'foo&bar' or 'foo&bar=val', add key 'foo' with NULL for value */
-          MHD_unescape_plus (args);
-          key_len = daemon->unescape_callback (daemon->unescape_callback_cls,
-                                               connection,
-                                               args);
-	  if (MHD_YES != cb (connection,
-			     args,
-			     key_len,
-			     NULL,
-			     0,
-			     kind))
-	    return MHD_NO;
-	  /* continue with 'bar' */
-	  (*num_headers)++;
-	  args = amper;
-	  continue;
-	}
-      /* equals and amper are non-NULL here, and equals < amper,
-	 so we got regular 'foo=value&bar...'-kind of argument */
+      /* last argument */
+      if (NULL == equals)
+      {
+        /* last argument, without '=' */
+        MHD_unescape_plus (args);
+        key_len = daemon->unescape_callback (daemon->unescape_callback_cls,
+                                             connection,
+                                             args);
+        if (MHD_YES != cb (connection,
+                           args,
+                           key_len,
+                           NULL,
+                           0,
+                           kind))
+          return MHD_NO;
+        (*num_headers)++;
+        break;
+      }
+      /* got 'foo=bar' */
       equals[0] = '\0';
       equals++;
       MHD_unescape_plus (args);
@@ -276,15 +231,60 @@ MHD_parse_arguments_ (struct MHD_Connection *connection,
                                              connection,
                                              equals);
       if (MHD_YES != cb (connection,
-			 args,
-			 key_len,
-			 equals,
-			 value_len,
-			 kind))
+                         args,
+                         key_len,
+                         equals,
+                         value_len,
+                         kind))
         return MHD_NO;
       (*num_headers)++;
-      args = amper;
+      break;
     }
+    /* amper is non-NULL here */
+    amper[0] = '\0';
+    amper++;
+    if ( (NULL == equals) ||
+         (equals >= amper) )
+    {
+      /* got 'foo&bar' or 'foo&bar=val', add key 'foo' with NULL for value */
+      MHD_unescape_plus (args);
+      key_len = daemon->unescape_callback (daemon->unescape_callback_cls,
+                                           connection,
+                                           args);
+      if (MHD_YES != cb (connection,
+                         args,
+                         key_len,
+                         NULL,
+                         0,
+                         kind))
+        return MHD_NO;
+      /* continue with 'bar' */
+      (*num_headers)++;
+      args = amper;
+      continue;
+    }
+    /* equals and amper are non-NULL here, and equals < amper,
+ so we got regular 'foo=value&bar...'-kind of argument */
+    equals[0] = '\0';
+    equals++;
+    MHD_unescape_plus (args);
+    key_len = daemon->unescape_callback (daemon->unescape_callback_cls,
+                                         connection,
+                                         args);
+    MHD_unescape_plus (equals);
+    value_len = daemon->unescape_callback (daemon->unescape_callback_cls,
+                                           connection,
+                                           equals);
+    if (MHD_YES != cb (connection,
+                       args,
+                       key_len,
+                       equals,
+                       value_len,
+                       kind))
+      return MHD_NO;
+    (*num_headers)++;
+    args = amper;
+  }
   return MHD_YES;
 }
 

@@ -35,7 +35,7 @@
 #include <unistd.h>
 #elif defined(_WIN32)
 #include <windows.h>
-#define sleep(s) (Sleep((s)*1000), 0)
+#define sleep(s) (Sleep ((s) * 1000), 0)
 #endif /* _WIN32 */
 
 
@@ -48,8 +48,8 @@ http_PanicCallback (void *cls,
                     unsigned int line,
                     const char *reason)
 {
-  (void)cls;    /* Unused. Silent compiler warning. */
-  fprintf( stderr,
+  (void) cls;    /* Unused. Silent compiler warning. */
+  fprintf (stderr,
            "PANIC: exit process: %s at %s:%u\n",
            reason,
            file,
@@ -81,11 +81,11 @@ suspend_connection (struct MHD_Connection *connection)
                                &resume_connection,
                                connection);
   if (0 != status)
-    {
-      fprintf (stderr,
-               "Could not create thead\n");
-      exit( EXIT_FAILURE );
-    }
+  {
+    fprintf (stderr,
+             "Could not create thead\n");
+    exit (EXIT_FAILURE);
+  }
   pthread_detach (thread_id);
 }
 
@@ -103,17 +103,18 @@ http_ContentReaderCallback (void *cls,
                             char *buf,
                             size_t max)
 {
-  static const char alphabet[] = "\nABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  static const char alphabet[] =
+    "\nABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   struct ContentReaderUserdata *userdata = cls;
-  (void)pos;(void)max;  /* Unused. Silent compiler warning. */
+  (void) pos; (void) max;  /* Unused. Silent compiler warning. */
 
-  if( userdata->bytes_written >= 1024)
-    {
-      fprintf( stderr,
-               "finish: %d\n",
-               request_counter);
-      return MHD_CONTENT_READER_END_OF_STREAM;
-    }
+  if ( userdata->bytes_written >= 1024)
+  {
+    fprintf (stderr,
+             "finish: %d\n",
+             request_counter);
+    return MHD_CONTENT_READER_END_OF_STREAM;
+  }
   userdata->bytes_written++;
   buf[0] = alphabet[userdata->bytes_written % (sizeof(alphabet) - 1)];
   suspend_connection (userdata->connection);
@@ -139,21 +140,22 @@ http_AccessHandlerCallback (void *cls,
                             const char *version,
                             const char *upload_data,
                             size_t *upload_data_size,
-                            void **con_cls )
+                            void **con_cls)
 {
   int ret;
-  (void)cls;(void)url;                          /* Unused. Silent compiler warning. */
-  (void)method;(void)version;(void)upload_data; /* Unused. Silent compiler warning. */
-  (void)upload_data_size;                       /* Unused. Silent compiler warning. */
+  (void) cls; (void) url;                          /* Unused. Silent compiler warning. */
+  (void) method; (void) version; (void) upload_data; /* Unused. Silent compiler warning. */
+  (void) upload_data_size;                       /* Unused. Silent compiler warning. */
 
   /* Never respond on first call */
   if (NULL == *con_cls)
   {
     fprintf (stderr,
              "start: %d\n",
-              ++request_counter);
+             ++request_counter);
 
-    struct ContentReaderUserdata *userdata = malloc (sizeof(struct ContentReaderUserdata));
+    struct ContentReaderUserdata *userdata = malloc (sizeof(struct
+                                                            ContentReaderUserdata));
 
     if (NULL == userdata)
       return MHD_NO;
@@ -181,7 +183,7 @@ http_AccessHandlerCallback (void *cls,
 
 
 int
-main(void)
+main (void)
 {
   int port;
   char command_line[1024];
@@ -198,9 +200,9 @@ main(void)
   /* Flags */
   unsigned int daemon_flags
     = MHD_USE_INTERNAL_POLLING_THREAD
-    | MHD_USE_AUTO
-    | MHD_ALLOW_SUSPEND_RESUME
-    | MHD_USE_ITC;
+      | MHD_USE_AUTO
+      | MHD_ALLOW_SUSPEND_RESUME
+      | MHD_USE_ITC;
 
   /* Create daemon */
   struct MHD_Daemon *daemon = MHD_start_daemon (daemon_flags,
@@ -213,33 +215,35 @@ main(void)
   if (NULL == daemon)
     return 1;
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (daemon, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (daemon, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (daemon); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (daemon); return 32;
     }
+    port = (int) dinfo->port;
+  }
   snprintf (command_line,
             sizeof (command_line),
             "curl -s http://127.0.0.1:%d",
             port);
 
   if (0 != system (command_line))
-    {
-      MHD_stop_daemon (daemon);
-      return 1;
-    }
+  {
+    MHD_stop_daemon (daemon);
+    return 1;
+  }
   /* wait for a request */
   while (0 == request_counter)
-    (void)sleep (1);
+    (void) sleep (1);
 
   fprintf (stderr,
            "quiesce\n");
   MHD_quiesce_daemon (daemon);
 
   /* wait a second */
-  (void)sleep (1);
+  (void) sleep (1);
 
   fprintf (stderr,
            "stopping daemon\n");

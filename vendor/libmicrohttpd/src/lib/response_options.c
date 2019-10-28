@@ -49,8 +49,9 @@ MHD_response_option_v10_only (struct MHD_Response *response)
  */
 void
 MHD_response_option_termination_callback (struct MHD_Response *response,
-					  MHD_RequestTerminationCallback termination_cb,
-					  void *termination_cb_cls)
+                                          MHD_RequestTerminationCallback
+                                          termination_cb,
+                                          void *termination_cb_cls)
 {
   /* Q: should we assert termination_cb non-NULL? */
   response->termination_cb = termination_cb;

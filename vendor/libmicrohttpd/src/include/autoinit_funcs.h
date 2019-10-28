@@ -20,7 +20,7 @@
 /*
    General usage is simple: include this header, declare or define two
    functions with zero parameters (void) and any return type: one for
-   initialization and one for deinitialization, add 
+   initialization and one for deinitialization, add
    _SET_INIT_AND_DEINIT_FUNCS(FuncInitName, FuncDeInitName) to the code
    and functions will be automatically called during application startup
    and shutdown.
@@ -70,9 +70,9 @@
 #define AUTOINIT_FUNCS_VERSION 0x01000100
 
 #if defined(__GNUC__)
- /* if possible - check for supported attribute */
+/* if possible - check for supported attribute */
 #ifdef __has_attribute
-#if !__has_attribute(constructor) || !__has_attribute(destructor)
+#if ! __has_attribute (constructor) || ! __has_attribute (destructor)
 #define _GNUC_ATTR_CONSTR_NOT_SUPPORTED 1
 #endif /* !__has_attribute(constructor) || !__has_attribute(destructor) */
 #endif /* __has_attribute */
@@ -80,20 +80,20 @@
 
 /* "_attribute__ ((constructor))" is supported by GCC, clang and
    Sun/Oracle compiler starting from version 12.1. */
-#if (defined(__GNUC__) && !defined(_GNUC_ATTR_CONSTR_NOT_SUPPORTED)) || \
-    (defined(__SUNPRO_C) && __SUNPRO_C+0 >= 0x5100)
+#if (defined(__GNUC__) && ! defined(_GNUC_ATTR_CONSTR_NOT_SUPPORTED)) || \
+  (defined(__SUNPRO_C) && __SUNPRO_C + 0 >= 0x5100)
 
 #define GNUC_SET_INIT_AND_DEINIT(FI,FD) \
-  void __attribute__ ((constructor)) _GNUC_init_helper_##FI(void) \
-    { (void)(FI)(); } \
-  void __attribute__ ((destructor)) _GNUC_deinit_helper_##FD(void) \
-    { (void)(FD)(); } \
-  struct _GNUC_dummy_str_##FI{int i;}
+  void __attribute__ ((constructor)) _GNUC_init_helper_ ## FI (void) \
+  { (void) (FI) (); } \
+  void __attribute__ ((destructor)) _GNUC_deinit_helper_ ## FD (void) \
+  { (void) (FD) (); } \
+  struct _GNUC_dummy_str_ ## FI {int i;}
 
-#define _SET_INIT_AND_DEINIT_FUNCS(FI,FD) GNUC_SET_INIT_AND_DEINIT(FI,FD)
+#define _SET_INIT_AND_DEINIT_FUNCS(FI,FD) GNUC_SET_INIT_AND_DEINIT (FI,FD)
 #define _AUTOINIT_FUNCS_ARE_SUPPORTED 1
 
-#elif defined (_MSC_FULL_VER) && _MSC_VER+0 >= 1600
+#elif defined (_MSC_FULL_VER) && _MSC_VER + 0 >= 1600
 
 /* Make sure that your project/sources define:
    _LIB if building a static library (_LIB is ignored if _CONSOLE is defined);
@@ -107,9 +107,9 @@
 
 /* Stringify macros */
 #define _INSTRMACRO(a) #a
-#define _STRMACRO(a) _INSTRMACRO(a)
+#define _STRMACRO(a) _INSTRMACRO (a)
 
-#if !defined(_USRDLL) || defined(AUTOINIT_FUNCS_DECLARE_STATIC_REG)
+#if ! defined(_USRDLL) || defined(AUTOINIT_FUNCS_DECLARE_STATIC_REG)
 
 /* required for atexit() */
 #include <stdlib.h>
@@ -128,15 +128,16 @@
 #define W32_VARDECORPEFIXSTR ""
 #elif defined(_M_IX86) || defined(_X86_)
 #define W32_VARDECORPREFIX _
-#define W32_DECORVARNAME(v) _##v
+#define W32_DECORVARNAME(v) _ ## v
 #define W32_VARDECORPEFIXSTR "_"
 #else
 #error Do not know how to decorate symbols for this architecture
 #endif
 
 /* Internal variable prefix (can be any) */
-#define W32_INITHELPERVARNAME(f) _initHelperDummy_##f
-#define W32_INITHELPERVARNAMEDECORSTR(f) W32_VARDECORPEFIXSTR _STRMACRO(W32_INITHELPERVARNAME(f))
+#define W32_INITHELPERVARNAME(f) _initHelperDummy_ ## f
+#define W32_INITHELPERVARNAMEDECORSTR(f) W32_VARDECORPEFIXSTR _STRMACRO ( \
+    W32_INITHELPERVARNAME (f))
 
 /* Declare section (segment), put variable pointing to init function to chosen segment,
    force linker to include variable to avoid omitting by optimizer */
@@ -145,9 +146,10 @@
 /* Return value is ignored for C++ initializers */
 /* For C initializers: startup process is aborted if initializer return non-zero */
 #define W32_FPTR_IN_SEG(S,F) \
-  __pragma(section(S,long,read)) \
-  __pragma(comment(linker, "/INCLUDE:" W32_INITHELPERVARNAMEDECORSTR(F))) \
-  W32_INITVARDECL __declspec(allocate(S)) int(__cdecl *W32_INITHELPERVARNAME(F))(void) = &F
+  __pragma (section (S,long,read)) \
+  __pragma (comment (linker, "/INCLUDE:" W32_INITHELPERVARNAMEDECORSTR (F))) \
+  W32_INITVARDECL __declspec(allocate (S))int (__cdecl * W32_INITHELPERVARNAME ( \
+                                                 F))(void) = &F
 
 /* Section (segment) names for pointers to initializers */
 #define W32_SEG_INIT_C_USER   ".CRT$XCU"
@@ -161,10 +163,10 @@
    during application startup */
 /* "lib" initializers are called before "user" initializers */
 /* "C" initializers are called before "C++" initializers */
-#define W32_REG_INIT_C_USER(F) W32_FPTR_IN_SEG(W32_SEG_INIT_C_USER,F)
-#define W32_REG_INIT_C_LIB(F) W32_FPTR_IN_SEG(W32_SEG_INIT_C_LIB,F)
-#define W32_REG_INIT_CXX_USER(F) W32_FPTR_IN_SEG(W32_SEG_INIT_CXX_USER,F)
-#define W32_REG_INIT_CXX_LIB(F) W32_FPTR_IN_SEG(W32_SEG_INIT_CXX_LIB,F)
+#define W32_REG_INIT_C_USER(F) W32_FPTR_IN_SEG (W32_SEG_INIT_C_USER,F)
+#define W32_REG_INIT_C_LIB(F) W32_FPTR_IN_SEG (W32_SEG_INIT_C_LIB,F)
+#define W32_REG_INIT_CXX_USER(F) W32_FPTR_IN_SEG (W32_SEG_INIT_CXX_USER,F)
+#define W32_REG_INIT_CXX_LIB(F) W32_FPTR_IN_SEG (W32_SEG_INIT_CXX_LIB,F)
 
 /* Choose main register macro based on language and program type */
 /* Assuming that _LIB or _USRDLL is defined for static or DLL-library */
@@ -174,16 +176,18 @@
 /* Define AUTOINIT_FUNCS_FORCE_USER_LVL_INIT to register initializers
    at user level even if building library */
 #ifdef __cplusplus
-#if ((defined(_LIB) && !defined(_CONSOLE)) || defined(_USRDLL)) && !defined(AUTOINIT_FUNCS_FORCE_USER_LVL_INIT)
-#define W32_REGISTER_INIT(F) W32_REG_INIT_CXX_LIB(F)
+#if ((defined(_LIB) && ! defined(_CONSOLE)) || defined(_USRDLL)) && \
+  ! defined(AUTOINIT_FUNCS_FORCE_USER_LVL_INIT)
+#define W32_REGISTER_INIT(F) W32_REG_INIT_CXX_LIB (F)
 #else  /* ! _LIB && ! _DLL */
-#define W32_REGISTER_INIT(F) W32_REG_INIT_CXX_USER(F)
+#define W32_REGISTER_INIT(F) W32_REG_INIT_CXX_USER (F)
 #endif /* ! _LIB && ! _DLL */
 #else  /* !__cplusplus*/
-#if ((defined(_LIB) && !defined(_CONSOLE)) || defined(_USRDLL)) && !defined(AUTOINIT_FUNCS_FORCE_USER_LVL_INIT)
-#define W32_REGISTER_INIT(F) W32_REG_INIT_C_LIB(F)
+#if ((defined(_LIB) && ! defined(_CONSOLE)) || defined(_USRDLL)) && \
+  ! defined(AUTOINIT_FUNCS_FORCE_USER_LVL_INIT)
+#define W32_REGISTER_INIT(F) W32_REG_INIT_C_LIB (F)
 #else  /* ! _LIB && ! _DLL */
-#define W32_REGISTER_INIT(F) W32_REG_INIT_C_USER(F)
+#define W32_REGISTER_INIT(F) W32_REG_INIT_C_USER (F)
 #endif /* ! _LIB && ! _DLL */
 #endif /* !__cplusplus*/
 
@@ -197,36 +201,36 @@
 #endif /* _USRDLL */
 
 
-#if !defined(_USRDLL) || defined(AUTOINIT_FUNCS_FORCE_STATIC_REG)
+#if ! defined(_USRDLL) || defined(AUTOINIT_FUNCS_FORCE_STATIC_REG)
 #define W32_SET_INIT_AND_DEINIT(FI,FD) \
-  void __cdecl _W32_deinit_helper_##FD(void) \
-   { (void)(FD)(); } \
-  int __cdecl _W32_init_helper_##FI(void) \
-   { (void)(FI)(); atexit(_W32_deinit_helper_##FD); return 0; } \
-  W32_REGISTER_INIT(_W32_init_helper_##FI)
+  void __cdecl _W32_deinit_helper_ ## FD (void) \
+  { (void) (FD) (); } \
+  int __cdecl _W32_init_helper_ ## FI (void) \
+  { (void) (FI) (); atexit (_W32_deinit_helper_ ## FD); return 0; } \
+  W32_REGISTER_INIT (_W32_init_helper_ ## FI)
 #else  /* _USRDLL */
 
-/* If DllMain is already present in code, define AUTOINIT_FUNCS_CALL_USR_DLLMAIN 
+/* If DllMain is already present in code, define AUTOINIT_FUNCS_CALL_USR_DLLMAIN
    and rename DllMain to usr_DllMain */
 #ifndef AUTOINIT_FUNCS_CALL_USR_DLLMAIN
 #define W32_SET_INIT_AND_DEINIT(FI,FD) \
-  BOOL WINAPI DllMain(HINSTANCE hinst,DWORD reason,LPVOID unused) \
-    { if(DLL_PROCESS_ATTACH==reason) {(void)(FI)();} \
-      else if(DLL_PROCESS_DETACH==reason) {(void)(FD)();} \
-      return TRUE; \
-    } struct _W32_dummy_strc_##FI{int i;}
+  BOOL WINAPI DllMain (HINSTANCE hinst,DWORD reason,LPVOID unused) \
+  { if (DLL_PROCESS_ATTACH==reason) {(void) (FI) ();} \
+    else if (DLL_PROCESS_DETACH==reason) {(void) (FD) ();} \
+    return TRUE; \
+  } struct _W32_dummy_strc_ ## FI {int i;}
 #else  /* AUTOINIT_FUNCS_CALL_USR_DLLMAIN */
 #define W32_SET_INIT_AND_DEINIT(FI,FD) \
-  BOOL WINAPI usr_DllMain(HINSTANCE hinst,DWORD reason,LPVOID unused); \
-  BOOL WINAPI DllMain(HINSTANCE hinst,DWORD reason,LPVOID unused) \
-    { if(DLL_PROCESS_ATTACH==reason) {(void)(FI)();} \
-      else if(DLL_PROCESS_DETACH==reason) {(void)(FD)();} \
-      return usr_DllMain(hinst,reason,unused); \
-    } struct _W32_dummy_strc_##FI{int i;}
+  BOOL WINAPI usr_DllMain (HINSTANCE hinst,DWORD reason,LPVOID unused); \
+  BOOL WINAPI DllMain (HINSTANCE hinst,DWORD reason,LPVOID unused) \
+  { if (DLL_PROCESS_ATTACH==reason) {(void) (FI) ();} \
+    else if (DLL_PROCESS_DETACH==reason) {(void) (FD) ();} \
+    return usr_DllMain (hinst,reason,unused); \
+  } struct _W32_dummy_strc_ ## FI {int i;}
 #endif /* AUTOINIT_FUNCS_CALL_USR_DLLMAIN */
 #endif /* _USRDLL */
 
-#define _SET_INIT_AND_DEINIT_FUNCS(FI,FD) W32_SET_INIT_AND_DEINIT(FI,FD)
+#define _SET_INIT_AND_DEINIT_FUNCS(FI,FD) W32_SET_INIT_AND_DEINIT (FI,FD)
 /* Indicate that automatic initializers/deinitializers are supported */
 #define _AUTOINIT_FUNCS_ARE_SUPPORTED 1
 
@@ -235,7 +239,8 @@
 /* Define EMIT_ERROR_IF_AUTOINIT_FUNCS_ARE_NOT_SUPPORTED before inclusion of header to
    abort compilation if automatic initializers/deinitializers are not supported */
 #ifdef EMIT_ERROR_IF_AUTOINIT_FUNCS_ARE_NOT_SUPPORTED
-#error Compiler/platform don not support automatic calls of user-defined initializer and deinitializer
+#error \
+  Compiler/platform don not support automatic calls of user-defined initializer and deinitializer
 #endif /* EMIT_ERROR_IF_AUTOINIT_FUNCS_ARE_NOT_SUPPORTED */
 
 /* Do nothing */

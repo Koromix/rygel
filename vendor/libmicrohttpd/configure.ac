@@ -1,5 +1,5 @@
 # This file is part of libmicrohttpd.
-# (C) 2006-2018 Christian Grothoff (and other contributing authors)
+# (C) 2006-2019 Christian Grothoff (and other contributing authors)
 #
 # libmicrohttpd is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published
@@ -22,15 +22,15 @@
 #
 AC_PREREQ([2.64])
 LT_PREREQ([2.4.0])
-AC_INIT([GNU Libmicrohttpd],[0.9.66],[libmicrohttpd@gnu.org])
+AC_INIT([GNU Libmicrohttpd],[0.9.68],[libmicrohttpd@gnu.org])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([silent-rules] [subdir-objects])
 AC_CONFIG_HEADERS([MHD_config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
-LIB_VERSION_CURRENT=65
+LIB_VERSION_CURRENT=67
 LIB_VERSION_REVISION=0
-LIB_VERSION_AGE=53
+LIB_VERSION_AGE=55
 AC_SUBST(LIB_VERSION_CURRENT)
 AC_SUBST(LIB_VERSION_REVISION)
 AC_SUBST(LIB_VERSION_AGE)
@@ -78,6 +78,34 @@ m4_ifdef([AM_GNU_GETTEXT_VERSION], [
 AM_GNU_GETTEXT_VERSION([0.19.8])
 ])
 AM_CONDITIONAL([HAVE_PO], [ test "$have_po" = yes ])
+
+
+
+
+# Adam shostack suggests the following for Windows:
+# -D_FORTIFY_SOURCE=2 -fstack-protector-all
+AC_ARG_ENABLE(gcc-hardening,
+   AS_HELP_STRING(--enable-gcc-hardening, enable compiler security checks),
+[AS_IF([test x$enableval = xyes],[
+    CFLAGS="$CFLAGS -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-all"
+    CFLAGS="$CFLAGS -fwrapv -fPIE -Wstack-protector"
+    CFLAGS="$CFLAGS --param ssp-buffer-size=1"
+    LDFLAGS="$LDFLAGS -pie"
+ ])])
+
+# Linker hardening options
+# Currently these options are ELF specific - you can't use this with MacOSX
+AC_ARG_ENABLE(linker-hardening,
+  AS_HELP_STRING(--enable-linker-hardening, enable linker security fixups),
+[AS_IF([test x$enableval = xyes],
+   [LDFLAGS="$LDFLAGS -z relro -z now"])])
+
+
+AC_ARG_ENABLE(sanitizer,
+  AS_HELP_STRING(--enable-sanitizer, enable Address Sanitizer and Undefined Behavior Sanitizer),
+[AS_IF([test x$enableval = xyes],[
+   LDFLAGS="$CFLAGS -fsanitize=address,undefined -fno-omit-frame-pointer"
+ ])])
 
 
 
@@ -642,6 +670,28 @@ AM_CONDITIONAL(USE_MS_LIB_TOOL, [test "x$ac_cv_use_ms_lib_tool" = "xyes"])
 MHD_CHECK_SOCKET_SHUTDOWN_TRIGGER([AC_DEFINE([HAVE_LISTEN_SHUTDOWN],[1],[can use shutdown on listen sockets])])
 AM_CONDITIONAL([HAVE_LISTEN_SHUTDOWN], [test "x$mhd_cv_host_shtdwn_trgr_select" = "xyes"])
 
+# SENDMSG. Should we check for SCM_RIGHTS instead?
+# https://lists.x.org/archives/xorg-devel/2013-November/038687.html
+AC_MSG_CHECKING([whether sendmsg is available])
+AC_SEARCH_LIBS(sendmsg, socket, AC_DEFINE([HAVE_SENDMSG],1,[Define if your platform supports sendmsg]))
+AC_MSG_CHECKING([whether writev is available])
+AC_CHECK_FUNCS([writev])
+
+# check MSG_MORE defined
+AC_MSG_CHECKING([whether MSG_MORE is defined])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#include <sys/types.h>
+#include <sys/socket.h>
+]],[[return MSG_MORE;]]
+    )],
+    [
+      AC_MSG_RESULT(yes)
+      AC_DEFINE(HAVE_MSG_MORE, [1], [have MSG_MORE])
+    ],
+    [
+      AC_MSG_RESULT(no)
+    ])
+
 # set GCC options
 # use '-fno-strict-aliasing', but only if the compiler
 # and linker can take it
@@ -790,7 +840,7 @@ AC_INCLUDES_DEFAULT
   ]
 )
 
-AC_CHECK_MEMBERS([struct sockaddr_in.sin_len, struct sockaddr_in6.sin6_len, 
+AC_CHECK_MEMBERS([struct sockaddr_in.sin_len, struct sockaddr_in6.sin6_len,
                   struct sockaddr_storage.ss_len],
    [], [],
    [

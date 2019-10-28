@@ -68,13 +68,13 @@ copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
   return size * nmemb;
 }
 
-static int 
+static int
 test_values (void *cls,
-	     enum MHD_ValueKind kind,
-	     const char *key,
-	     const char *value)
+             enum MHD_ValueKind kind,
+             const char *key,
+             const char *value)
 {
-  (void)cls;(void)kind;         /* Unused. Silent compiler warning. */
+  (void) cls; (void) kind;         /* Unused. Silent compiler warning. */
   if ( (0 == strcmp (key, "a")) &&
        (0 == strcmp (value, "b")) )
     matches += 1;
@@ -100,23 +100,23 @@ ahc_echo (void *cls,
   const char *me = cls;
   struct MHD_Response *response;
   int ret;
-  (void)version;(void)upload_data;(void)upload_data_size;       /* Unused. Silent compiler warning. */
+  (void) version; (void) upload_data; (void) upload_data_size;       /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (me, method))
     return MHD_NO;              /* unexpected method */
   if (&ptr != *unused)
-    {
-      *unused = &ptr;
-      return MHD_YES;
-    }
+  {
+    *unused = &ptr;
+    return MHD_YES;
+  }
   MHD_get_connection_values (connection,
-			     MHD_GET_ARGUMENT_KIND,
-			     &test_values,
-			     NULL);
+                             MHD_GET_ARGUMENT_KIND,
+                             &test_values,
+                             NULL);
   *unused = NULL;
   response = MHD_create_response_from_buffer (strlen (url),
-					      (void *) url,
-					      MHD_RESPMEM_MUST_COPY);
+                                              (void *) url,
+                                              MHD_RESPMEM_MUST_COPY);
   ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
   MHD_destroy_response (response);
   if (ret == MHD_NO)
@@ -138,30 +138,33 @@ testInternalGet (int poll_flag)
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
-    {
-      port = 1510;
-      if (oneone)
-        port += 5;
-    }
+  {
+    port = 1510;
+    if (oneone)
+      port += 5;
+  }
 
   cbc.buf = buf;
   cbc.size = 2048;
   cbc.pos = 0;
-  d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG  | poll_flag,
+  d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG
+                        | poll_flag,
                         port, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
   if (d == NULL)
     return 1;
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return 32;
     }
+    port = (int) dinfo->port;
+  }
   c = curl_easy_init ();
   curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world?a=b&c=&d");
-  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
+  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
@@ -176,14 +179,14 @@ testInternalGet (int poll_flag)
      crashes on my system!*/
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
-    {
-      fprintf (stderr,
-               "curl_easy_perform failed: `%s'\n",
-               curl_easy_strerror (errornum));
-      curl_easy_cleanup (c);
-      MHD_stop_daemon (d);
-      return 2;
-    }
+  {
+    fprintf (stderr,
+             "curl_easy_perform failed: `%s'\n",
+             curl_easy_strerror (errornum));
+    curl_easy_cleanup (c);
+    MHD_stop_daemon (d);
+    return 2;
+  }
   curl_easy_cleanup (c);
   MHD_stop_daemon (d);
   if (cbc.pos != strlen ("/hello_world"))
@@ -200,9 +203,9 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
-  (void)argc;   /* Unused. Silent compiler warning. */
+  (void) argc;   /* Unused. Silent compiler warning. */
 
-  if (NULL == argv || 0 == argv[0])
+  if ((NULL == argv)||(0 == argv[0]))
     return 99;
   oneone = has_in_name (argv[0], "11");
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))

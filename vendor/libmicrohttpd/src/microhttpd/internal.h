@@ -55,14 +55,16 @@
  *
  * @param msg error message (const char *)
  */
-#define MHD_PANIC(msg) do { mhd_panic (mhd_panic_cls, __FILE__, __LINE__, msg); BUILTIN_NOT_REACHED; } while (0)
+#define MHD_PANIC(msg) do { mhd_panic (mhd_panic_cls, __FILE__, __LINE__, msg); \
+                            BUILTIN_NOT_REACHED; } while (0)
 #else
 /**
  * Trigger 'panic' action based on fatal errors.
  *
  * @param msg error message (const char *)
  */
-#define MHD_PANIC(msg) do { mhd_panic (mhd_panic_cls, __FILE__, __LINE__, NULL); BUILTIN_NOT_REACHED; } while (0)
+#define MHD_PANIC(msg) do { mhd_panic (mhd_panic_cls, __FILE__, __LINE__, NULL); \
+                            BUILTIN_NOT_REACHED; } while (0)
 #endif
 
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
@@ -78,9 +80,9 @@
  * @param fd the FD to close
  */
 #define MHD_fd_close_chk_(fd) do {                      \
-    if ( (0 != close ((fd)) && (EBADF == errno)) )	\
-      MHD_PANIC(_("Failed to close FD.\n"));            \
-  } while(0)
+    if ( (0 != close ((fd)) && (EBADF == errno)) )  \
+      MHD_PANIC (_ ("Failed to close FD.\n"));            \
+} while (0)
 
 /**
  * Should we perform additional sanity checks at runtime (on our internal
@@ -113,10 +115,11 @@ extern MHD_PanicCallback mhd_panic;
 extern void *mhd_panic_cls;
 
 /* If we have Clang or gcc >= 4.5, use __buildin_unreachable() */
-#if defined(__clang__) || (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 5)
-#define BUILTIN_NOT_REACHED __builtin_unreachable()
+#if defined(__clang__) || (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= \
+                                             5)
+#define BUILTIN_NOT_REACHED __builtin_unreachable ()
 #elif defined(_MSC_FULL_VER)
-#define BUILTIN_NOT_REACHED __assume(0)
+#define BUILTIN_NOT_REACHED __assume (0)
 #else
 #define BUILTIN_NOT_REACHED
 #endif
@@ -125,7 +128,7 @@ extern void *mhd_panic_cls;
 /**
  * Determine length of static string / macro strings at compile time.
  */
-#define MHD_STATICSTR_LEN_(macro) (sizeof(macro)/sizeof(char) - 1)
+#define MHD_STATICSTR_LEN_(macro) (sizeof(macro) / sizeof(char) - 1)
 #endif /* ! MHD_STATICSTR_LEN_ */
 
 
@@ -250,7 +253,7 @@ struct MHD_NonceNc
  */
 void
 MHD_DLOG (const struct MHD_Daemon *daemon,
-	  const char *format,
+          const char *format,
           ...);
 #endif
 
@@ -874,16 +877,10 @@ struct MHD_Connection
   bool sk_nonblck;
 
   /**
-   * Indicate whether connection socket has TCP_NODELAY turned on / Nagle’s algorithm turned off.
-   * TCP_NODELAY should not be turned on when TCP_CORK/TCP_NOPUSH is turned off.
+   * Indicate whether connection socket has TCP_CORK / Nagle’s algorithm turned on/off
+   * on this socket.
    */
-  bool sk_tcp_nodelay_on;
-
-  /**
-   * Indicate whether connection socket has TCP_CORK/TCP_NOPUSH turned on.
-   * TCP_CORK/TCP_NOPUSH should not be turned on when TCP_NODELAY is turned off.
-   */
-  bool sk_tcp_cork_nopush_on;
+  bool sk_cork_on;
 
   /**
    * Has this socket been closed for reading (i.e.  other side closed
@@ -1464,6 +1461,12 @@ struct MHD_Daemon
   size_t thread_stack_size;
 
   /**
+   * Our #MHD_OPTION_SERVER_INSANITY level, bits indicating
+   * which sanity checks are off.
+   */
+  enum MHD_DisableSanityCheck insanity_level;
+
+  /**
    * Number of worker daemons
    */
   unsigned int worker_pool_size;
@@ -1764,15 +1767,15 @@ struct MHD_Daemon
  * @param element element to insert
  */
 #define DLL_insert(head,tail,element) do { \
-  mhd_assert (NULL == (element)->next); \
-  mhd_assert (NULL == (element)->prev); \
-  (element)->next = (head); \
-  (element)->prev = NULL; \
-  if ((tail) == NULL) \
-    (tail) = element; \
-  else \
-    (head)->prev = element; \
-  (head) = (element); } while (0)
+    mhd_assert (NULL == (element)->next); \
+    mhd_assert (NULL == (element)->prev); \
+    (element)->next = (head); \
+    (element)->prev = NULL; \
+    if ((tail) == NULL) \
+      (tail) = element; \
+    else \
+      (head)->prev = element; \
+    (head) = (element); } while (0)
 
 
 /**
@@ -1785,18 +1788,18 @@ struct MHD_Daemon
  * @param element element to remove
  */
 #define DLL_remove(head,tail,element) do { \
-  mhd_assert ( (NULL != (element)->next) || ((element) == (tail)));  \
-  mhd_assert ( (NULL != (element)->prev) || ((element) == (head)));  \
-  if ((element)->prev == NULL) \
-    (head) = (element)->next;  \
-  else \
-    (element)->prev->next = (element)->next; \
-  if ((element)->next == NULL) \
-    (tail) = (element)->prev;  \
-  else \
-    (element)->next->prev = (element)->prev; \
-  (element)->next = NULL; \
-  (element)->prev = NULL; } while (0)
+    mhd_assert ( (NULL != (element)->next) || ((element) == (tail)));  \
+    mhd_assert ( (NULL != (element)->prev) || ((element) == (head)));  \
+    if ((element)->prev == NULL) \
+      (head) = (element)->next;  \
+    else \
+      (element)->prev->next = (element)->next; \
+    if ((element)->next == NULL) \
+      (tail) = (element)->prev;  \
+    else \
+      (element)->next->prev = (element)->prev; \
+    (element)->next = NULL; \
+    (element)->prev = NULL; } while (0)
 
 
 
@@ -1809,15 +1812,15 @@ struct MHD_Daemon
  * @param element element to insert
  */
 #define XDLL_insert(head,tail,element) do { \
-  mhd_assert (NULL == (element)->nextX); \
-  mhd_assert (NULL == (element)->prevX); \
-  (element)->nextX = (head); \
-  (element)->prevX = NULL; \
-  if (NULL == (tail)) \
-    (tail) = element; \
-  else \
-    (head)->prevX = element; \
-  (head) = (element); } while (0)
+    mhd_assert (NULL == (element)->nextX); \
+    mhd_assert (NULL == (element)->prevX); \
+    (element)->nextX = (head); \
+    (element)->prevX = NULL; \
+    if (NULL == (tail)) \
+      (tail) = element; \
+    else \
+      (head)->prevX = element; \
+    (head) = (element); } while (0)
 
 
 /**
@@ -1830,18 +1833,18 @@ struct MHD_Daemon
  * @param element element to remove
  */
 #define XDLL_remove(head,tail,element) do { \
-  mhd_assert ( (NULL != (element)->nextX) || ((element) == (tail)));  \
-  mhd_assert ( (NULL != (element)->prevX) || ((element) == (head)));  \
-  if (NULL == (element)->prevX) \
-    (head) = (element)->nextX;  \
-  else \
-    (element)->prevX->nextX = (element)->nextX; \
-  if (NULL == (element)->nextX) \
-    (tail) = (element)->prevX;  \
-  else \
-    (element)->nextX->prevX = (element)->prevX; \
-  (element)->nextX = NULL; \
-  (element)->prevX = NULL; } while (0)
+    mhd_assert ( (NULL != (element)->nextX) || ((element) == (tail)));  \
+    mhd_assert ( (NULL != (element)->prevX) || ((element) == (head)));  \
+    if (NULL == (element)->prevX) \
+      (head) = (element)->nextX;  \
+    else \
+      (element)->prevX->nextX = (element)->nextX; \
+    if (NULL == (element)->nextX) \
+      (tail) = (element)->prevX;  \
+    else \
+      (element)->nextX->prevX = (element)->prevX; \
+    (element)->nextX = NULL; \
+    (element)->prevX = NULL; } while (0)
 
 
 /**
@@ -1853,13 +1856,13 @@ struct MHD_Daemon
  * @param element element to insert
  */
 #define EDLL_insert(head,tail,element) do { \
-  (element)->nextE = (head); \
-  (element)->prevE = NULL; \
-  if ((tail) == NULL) \
-    (tail) = element; \
-  else \
-    (head)->prevE = element; \
-  (head) = (element); } while (0)
+    (element)->nextE = (head); \
+    (element)->prevE = NULL; \
+    if ((tail) == NULL) \
+      (tail) = element; \
+    else \
+      (head)->prevE = element; \
+    (head) = (element); } while (0)
 
 
 /**
@@ -1872,16 +1875,16 @@ struct MHD_Daemon
  * @param element element to remove
  */
 #define EDLL_remove(head,tail,element) do { \
-  if ((element)->prevE == NULL) \
-    (head) = (element)->nextE;  \
-  else \
-    (element)->prevE->nextE = (element)->nextE; \
-  if ((element)->nextE == NULL) \
-    (tail) = (element)->prevE;  \
-  else \
-    (element)->nextE->prevE = (element)->prevE; \
-  (element)->nextE = NULL; \
-  (element)->prevE = NULL; } while (0)
+    if ((element)->prevE == NULL) \
+      (head) = (element)->nextE;  \
+    else \
+      (element)->prevE->nextE = (element)->nextE; \
+    if ((element)->nextE == NULL) \
+      (tail) = (element)->prevE;  \
+    else \
+      (element)->nextE->prevE = (element)->prevE; \
+    (element)->nextE = NULL; \
+    (element)->prevE = NULL; } while (0)
 
 
 /**
@@ -1908,11 +1911,11 @@ MHD_unescape_plus (char *arg);
  */
 typedef int
 (*MHD_ArgumentIterator_)(struct MHD_Connection *connection,
-			 const char *key,
+                         const char *key,
                          size_t key_size,
-			 const char *value,
-			 size_t value_size,
-			 enum MHD_ValueKind kind);
+                         const char *value,
+                         size_t value_size,
+                         enum MHD_ValueKind kind);
 
 
 /**
@@ -1931,10 +1934,10 @@ typedef int
  */
 int
 MHD_parse_arguments_ (struct MHD_Connection *connection,
-		      enum MHD_ValueKind kind,
-		      char *args,
-		      MHD_ArgumentIterator_ cb,
-		      unsigned int *num_headers);
+                      enum MHD_ValueKind kind,
+                      char *args,
+                      MHD_ArgumentIterator_ cb,
+                      unsigned int *num_headers);
 
 
 /**
@@ -1972,8 +1975,8 @@ MHD_check_response_header_token_ci (const struct MHD_Response *response,
  *         false otherwise
  */
 #define MHD_check_response_header_s_token_ci(r,k,tkn) \
-    MHD_check_response_header_token_ci((r),(k),MHD_STATICSTR_LEN_(k),\
-                  (tkn),MHD_STATICSTR_LEN_(tkn))
+  MHD_check_response_header_token_ci ((r),(k),MHD_STATICSTR_LEN_ (k), \
+                                      (tkn),MHD_STATICSTR_LEN_ (tkn))
 
 
 /**

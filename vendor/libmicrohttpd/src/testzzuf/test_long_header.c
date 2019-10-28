@@ -43,14 +43,14 @@
  * half of this value, so the actual value does not have
  * to be big at all...
  */
-#define VERY_LONG (1024*10)
+#define VERY_LONG (1024 * 10)
 
 static int oneone;
 
 static int
 apc_all (void *cls, const struct sockaddr *addr, socklen_t addrlen)
 {
-  (void)cls;(void)addr;(void)addrlen;   /* Unused. Silent compiler warning. */
+  (void) cls; (void) addr; (void) addrlen;   /* Unused. Silent compiler warning. */
   return MHD_YES;
 }
 
@@ -64,7 +64,7 @@ struct CBC
 static size_t
 copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
 {
-  (void)ptr;(void)ctx;  /* Unused. Silent compiler warning. */
+  (void) ptr; (void) ctx;  /* Unused. Silent compiler warning. */
   return size * nmemb;
 }
 
@@ -80,14 +80,14 @@ ahc_echo (void *cls,
   const char *me = cls;
   struct MHD_Response *response;
   int ret;
-  (void)version;(void)upload_data;      /* Unused. Silent compiler warning. */
-  (void)upload_data_size;(void)unused;  /* Unused. Silent compiler warning. */
+  (void) version; (void) upload_data;      /* Unused. Silent compiler warning. */
+  (void) upload_data_size; (void) unused;  /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (me, method))
     return MHD_NO;              /* unexpected method */
   response = MHD_create_response_from_buffer (strlen (url),
-					      (void *) url,
-					      MHD_RESPMEM_MUST_COPY);
+                                              (void *) url,
+                                              MHD_RESPMEM_MUST_COPY);
   ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
   MHD_destroy_response (response);
   return ret;
@@ -107,46 +107,47 @@ testLongUrlGet ()
   cbc.buf = buf;
   cbc.size = 2048;
   cbc.pos = 0;
-  d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD /* | MHD_USE_ERROR_LOG */ ,
-                        11080,
-                        &apc_all,
-                        NULL,
-                        &ahc_echo,
-                        "GET",
-                        MHD_OPTION_CONNECTION_MEMORY_LIMIT,
-                        (size_t) (VERY_LONG / 2), MHD_OPTION_END);
+  d = MHD_start_daemon (
+    MHD_USE_INTERNAL_POLLING_THREAD /* | MHD_USE_ERROR_LOG */,
+    11080,
+    &apc_all,
+    NULL,
+    &ahc_echo,
+    "GET",
+    MHD_OPTION_CONNECTION_MEMORY_LIMIT,
+    (size_t) (VERY_LONG / 2), MHD_OPTION_END);
 
   if (d == NULL)
     return 1;
   zzuf_socat_start ();
   for (i = 0; i < LOOP_COUNT; i++)
-    {
-      fprintf (stderr, ".");
+  {
+    fprintf (stderr, ".");
 
-      c = curl_easy_init ();
-      url = malloc (VERY_LONG);
-      memset (url, 'a', VERY_LONG);
-      url[VERY_LONG - 1] = '\0';
-      memcpy (url, "http://127.0.0.1:11081/",
-              strlen ("http://127.0.0.1:11081/"));
-      curl_easy_setopt (c, CURLOPT_URL, url);
-      curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
-      curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-      curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
-      curl_easy_setopt (c, CURLOPT_TIMEOUT_MS, CURL_TIMEOUT);
-      curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT_MS, CURL_TIMEOUT);
-      if (oneone)
-        curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-      else
-        curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
-      /* NOTE: use of CONNECTTIMEOUT without also
-       *   setting NOSIGNAL results in really weird
-       *   crashes on my system! */
-      curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
-      curl_easy_perform (c);
-      curl_easy_cleanup (c);
-      free (url);
-    }
+    c = curl_easy_init ();
+    url = malloc (VERY_LONG);
+    memset (url, 'a', VERY_LONG);
+    url[VERY_LONG - 1] = '\0';
+    memcpy (url, "http://127.0.0.1:11081/",
+            strlen ("http://127.0.0.1:11081/"));
+    curl_easy_setopt (c, CURLOPT_URL, url);
+    curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
+    curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
+    curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
+    curl_easy_setopt (c, CURLOPT_TIMEOUT_MS, CURL_TIMEOUT);
+    curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT_MS, CURL_TIMEOUT);
+    if (oneone)
+      curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+    else
+      curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
+    /* NOTE: use of CONNECTTIMEOUT without also
+     *   setting NOSIGNAL results in really weird
+     *   crashes on my system! */
+    curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
+    curl_easy_perform (c);
+    curl_easy_cleanup (c);
+    free (url);
+  }
   fprintf (stderr, "\n");
   zzuf_socat_stop ();
 
@@ -169,49 +170,50 @@ testLongHeaderGet ()
   cbc.buf = buf;
   cbc.size = 2048;
   cbc.pos = 0;
-  d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD /* | MHD_USE_ERROR_LOG */ ,
-                        11080,
-                        &apc_all,
-                        NULL,
-                        &ahc_echo,
-                        "GET",
-                        MHD_OPTION_CONNECTION_MEMORY_LIMIT,
-                        (size_t) (VERY_LONG / 2), MHD_OPTION_END);
+  d = MHD_start_daemon (
+    MHD_USE_INTERNAL_POLLING_THREAD /* | MHD_USE_ERROR_LOG */,
+    11080,
+    &apc_all,
+    NULL,
+    &ahc_echo,
+    "GET",
+    MHD_OPTION_CONNECTION_MEMORY_LIMIT,
+    (size_t) (VERY_LONG / 2), MHD_OPTION_END);
   if (d == NULL)
     return 16;
   zzuf_socat_start ();
   for (i = 0; i < LOOP_COUNT; i++)
-    {
-      fprintf (stderr, ".");
-      c = curl_easy_init ();
-      url = malloc (VERY_LONG);
-      memset (url, 'a', VERY_LONG);
-      url[VERY_LONG - 1] = '\0';
-      url[VERY_LONG / 2] = ':';
-      url[VERY_LONG / 2 + 1] = ' ';
-      header = curl_slist_append (header, url);
+  {
+    fprintf (stderr, ".");
+    c = curl_easy_init ();
+    url = malloc (VERY_LONG);
+    memset (url, 'a', VERY_LONG);
+    url[VERY_LONG - 1] = '\0';
+    url[VERY_LONG / 2] = ':';
+    url[VERY_LONG / 2 + 1] = ' ';
+    header = curl_slist_append (header, url);
 
-      curl_easy_setopt (c, CURLOPT_HTTPHEADER, header);
-      curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1:11081/hello_world");
-      curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
-      curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-      curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
-      curl_easy_setopt (c, CURLOPT_TIMEOUT_MS, CURL_TIMEOUT);
-      curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT_MS, CURL_TIMEOUT);
-      if (oneone)
-        curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-      else
-        curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
-      /* NOTE: use of CONNECTTIMEOUT without also
-       *   setting NOSIGNAL results in really weird
-       *   crashes on my system! */
-      curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
-      curl_easy_perform (c);
-      curl_slist_free_all (header);
-      header = NULL;
-      curl_easy_cleanup (c);
-      free (url);
-    }
+    curl_easy_setopt (c, CURLOPT_HTTPHEADER, header);
+    curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1:11081/hello_world");
+    curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
+    curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
+    curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
+    curl_easy_setopt (c, CURLOPT_TIMEOUT_MS, CURL_TIMEOUT);
+    curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT_MS, CURL_TIMEOUT);
+    if (oneone)
+      curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+    else
+      curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
+    /* NOTE: use of CONNECTTIMEOUT without also
+     *   setting NOSIGNAL results in really weird
+     *   crashes on my system! */
+    curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
+    curl_easy_perform (c);
+    curl_slist_free_all (header);
+    header = NULL;
+    curl_easy_cleanup (c);
+    free (url);
+  }
   fprintf (stderr, "\n");
   zzuf_socat_stop ();
 

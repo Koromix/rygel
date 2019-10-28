@@ -35,7 +35,7 @@
  */
 void
 MHD_connection_mark_closed_ (struct MHD_Connection *connection)
-  MHD_NONNULL (1);
+MHD_NONNULL (1);
 
 
 /**
@@ -51,6 +51,6 @@ MHD_connection_mark_closed_ (struct MHD_Connection *connection)
 void
 MHD_connection_close_ (struct MHD_Connection *connection,
                        enum MHD_RequestTerminationCode rtc)
-  MHD_NONNULL (1);
+MHD_NONNULL (1);
 
 #endif

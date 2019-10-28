@@ -49,41 +49,41 @@ query_session_ahc (void *cls, struct MHD_Connection *connection,
 {
   struct MHD_Response *response;
   int ret;
-  (void)cls;(void)url;(void)method;(void)version;       /* Unused. Silent compiler warning. */
-  (void)upload_data;(void)upload_data_size;             /* Unused. Silent compiler warning. */
+  (void) cls; (void) url; (void) method; (void) version;       /* Unused. Silent compiler warning. */
+  (void) upload_data; (void) upload_data_size;             /* Unused. Silent compiler warning. */
 
   if (NULL == *ptr)
-    {
-      *ptr = (void*)&query_session_ahc;
-      return MHD_YES;
-    }
+  {
+    *ptr = (void*) &query_session_ahc;
+    return MHD_YES;
+  }
 
   if (GNUTLS_TLS1_1 !=
       (ret = MHD_get_connection_info
-       (connection,
-	MHD_CONNECTION_INFO_PROTOCOL)->protocol))
+               (connection,
+               MHD_CONNECTION_INFO_PROTOCOL)->protocol))
+  {
+    if (GNUTLS_TLS1_2 == ret)
     {
-      if (GNUTLS_TLS1_2 == ret)
-      {
-        /* as usual, TLS implementations sometimes don't
-           quite do what was asked, just mildly complain... */
-        fprintf (stderr,
-                 "Warning: requested TLS 1.1, got TLS 1.2\n");
-      }
-      else
-      {
-        /* really different version... */
-        fprintf (stderr,
-                 "Error: requested protocol mismatch (wanted %d, got %d)\n",
-                 GNUTLS_TLS1_1,
-                 ret);
-        return -1;
-      }
+      /* as usual, TLS implementations sometimes don't
+         quite do what was asked, just mildly complain... */
+      fprintf (stderr,
+               "Warning: requested TLS 1.1, got TLS 1.2\n");
     }
+    else
+    {
+      /* really different version... */
+      fprintf (stderr,
+               "Error: requested protocol mismatch (wanted %d, got %d)\n",
+               GNUTLS_TLS1_1,
+               ret);
+      return -1;
+    }
+  }
 
   response = MHD_create_response_from_buffer (strlen (EMPTY_PAGE),
-					      (void *) EMPTY_PAGE,
-					      MHD_RESPMEM_PERSISTENT);
+                                              (void *) EMPTY_PAGE,
+                                              MHD_RESPMEM_PERSISTENT);
   ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
   MHD_destroy_response (response);
   return ret;
@@ -114,37 +114,38 @@ test_query_session ()
   cbc.pos = 0;
 
   /* setup test */
-  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_TLS |
-                        MHD_USE_ERROR_LOG, port,
+  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION
+                        | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_TLS
+                        | MHD_USE_ERROR_LOG, port,
                         NULL, NULL, &query_session_ahc, NULL,
-			MHD_OPTION_HTTPS_PRIORITIES, "NORMAL:+ARCFOUR-128",
+                        MHD_OPTION_HTTPS_PRIORITIES, "NORMAL:+ARCFOUR-128",
                         MHD_OPTION_HTTPS_MEM_KEY, srv_key_pem,
                         MHD_OPTION_HTTPS_MEM_CERT, srv_self_signed_cert_pem,
                         MHD_OPTION_END);
 
   if (d == NULL)
-    {
-      free (cbc.buf);
-      return 2;
-    }
+  {
+    free (cbc.buf);
+    return 2;
+  }
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        {
-          MHD_stop_daemon (d);
-          free (cbc.buf);
-          return 32;
-        }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d);
+      free (cbc.buf);
+      return 32;
     }
+    port = (int) dinfo->port;
+  }
 
   const char *aes256_sha = "AES256-SHA";
-  if (curl_uses_nss_ssl() == 0)
-    {
-      aes256_sha = "rsa_aes_256_sha";
-    }
+  if (curl_uses_nss_ssl () == 0)
+  {
+    aes256_sha = "rsa_aes_256_sha";
+  }
 
   gen_test_file_url (url,
                      sizeof (url),
@@ -172,15 +173,15 @@ test_query_session ()
    * crashes on my system! */
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
-    {
-      fprintf (stderr, "curl_easy_perform failed: `%s'\n",
-               curl_easy_strerror (errornum));
+  {
+    fprintf (stderr, "curl_easy_perform failed: `%s'\n",
+             curl_easy_strerror (errornum));
 
-      MHD_stop_daemon (d);
-      curl_easy_cleanup (c);
-      free (cbc.buf);
-      return -1;
-    }
+    MHD_stop_daemon (d);
+    curl_easy_cleanup (c);
+    free (cbc.buf);
+    return -1;
+  }
 
   curl_easy_cleanup (c);
   MHD_stop_daemon (d);
@@ -195,7 +196,7 @@ main (int argc, char *const *argv)
 #if LIBCURL_VERSION_NUM >= 0x072200
   unsigned int errorCount = 0;
   const char *ssl_version;
-  (void)argc;   /* Unused. Silent compiler warning. */
+  (void) argc;   /* Unused. Silent compiler warning. */
 
 #ifdef MHD_HTTPS_REQUIRE_GRYPT
   gcry_control (GCRYCTL_ENABLE_QUICK_RANDOM, 0);
@@ -203,7 +204,7 @@ main (int argc, char *const *argv)
   gcry_control (GCRYCTL_INITIALIZATION_FINISHED, 0);
 #endif
 #endif /* MHD_HTTPS_REQUIRE_GRYPT */
-  if (!testsuite_curl_global_init ())
+  if (! testsuite_curl_global_init ())
     return 99;
 
   ssl_version = curl_version_info (CURLVERSION_NOW)->ssl_version;

@@ -82,13 +82,15 @@
 /**
  * Check that @a n is below #MAX_NONCE
  */
-#define VLA_CHECK_LEN_DIGEST(n) do { if ((n) > MAX_DIGEST) mhd_panic(mhd_panic_cls, __FILE__, __LINE__, "VLA too big"); } while (0)
+#define VLA_CHECK_LEN_DIGEST(n) do { if ((n) > MAX_DIGEST) mhd_panic ( \
+                                         mhd_panic_cls, __FILE__, __LINE__, \
+                                         "VLA too big"); } while (0)
 
 
 /**
  * Beginning string for any valid Digest authentication header.
  */
-#define _BASE		"Digest "
+#define _BASE   "Digest "
 
 /**
  * Maximum length of a username for digest authentication.
@@ -149,7 +151,7 @@ struct DigestAlgorithm
    */
   void
   (*update)(void *ctx,
-	    const uint8_t *data,
+            const uint8_t *data,
             size_t length);
 
   /**
@@ -161,7 +163,7 @@ struct DigestAlgorithm
    */
   void
   (*digest)(void *ctx,
-	    uint8_t *digest);
+            uint8_t *digest);
 };
 
 
@@ -174,19 +176,19 @@ struct DigestAlgorithm
  */
 static void
 cvthex (const unsigned char *bin,
-	size_t len,
-	char *hex)
+        size_t len,
+        char *hex)
 {
   size_t i;
   unsigned int j;
 
   for (i = 0; i < len; ++i)
-    {
-      j = (bin[i] >> 4) & 0x0f;
-      hex[i * 2] = (char)((j <= 9) ? (j + '0') : (j - 10 + 'a'));
-      j = bin[i] & 0x0f;
-      hex[i * 2 + 1] = (char)((j <= 9) ? (j + '0') : (j - 10 + 'a'));
-    }
+  {
+    j = (bin[i] >> 4) & 0x0f;
+    hex[i * 2] = (char) ((j <= 9) ? (j + '0') : (j - 10 + 'a'));
+    j = bin[i] & 0x0f;
+    hex[i * 2 + 1] = (char) ((j <= 9) ? (j + '0') : (j - 10 + 'a'));
+  }
   hex[len * 2] = '\0';
 }
 
@@ -201,54 +203,54 @@ cvthex (const unsigned char *bin,
  * @param[in,out] da digest implementation, must match @a alg; the
  *          da->sessionkey will be initialized to the digest in HEX
  * @param digest An `unsigned char *' pointer to the binary MD5 sum
- * 			for the precalculated hash value "username:realm:password"
- * 			of #MHD_MD5_DIGEST_SIZE or #MHD_SHA256_DIGEST_SIZE bytes
+ *      for the precalculated hash value "username:realm:password"
+ *      of #MHD_MD5_DIGEST_SIZE or #MHD_SHA256_DIGEST_SIZE bytes
  * @param nonce A `char *' pointer to the nonce value
  * @param cnonce A `char *' pointer to the cnonce value
  */
 static void
 digest_calc_ha1_from_digest (const char *alg,
                              struct DigestAlgorithm *da,
-			     const uint8_t *digest,
-			     const char *nonce,
-			     const char *cnonce)
+                             const uint8_t *digest,
+                             const char *nonce,
+                             const char *cnonce)
 {
-  if ( (MHD_str_equal_caseless_(alg,
-                                "md5-sess")) ||
-       (MHD_str_equal_caseless_(alg,
-                                "sha-256-sess")) )
-    {
-      uint8_t dig[VLA_ARRAY_LEN_DIGEST(da->digest_size)];
+  if ( (MHD_str_equal_caseless_ (alg,
+                                 "md5-sess")) ||
+       (MHD_str_equal_caseless_ (alg,
+                                 "sha-256-sess")) )
+  {
+    uint8_t dig[VLA_ARRAY_LEN_DIGEST (da->digest_size)];
 
-      VLA_CHECK_LEN_DIGEST(da->digest_size);
-      da->init (da->ctx);
-      da->update (da->ctx,
-                  digest,
-                  MHD_MD5_DIGEST_SIZE);
-      da->update (da->ctx,
-                  (const unsigned char *) ":",
-                  1);
-      da->update (da->ctx,
-                  (const unsigned char *) nonce,
-                  strlen (nonce));
-      da->update (da->ctx,
-                 (const unsigned char *) ":",
-                 1);
-      da->update (da->ctx,
-                  (const unsigned char *) cnonce,
-                  strlen (cnonce));
-      da->digest (da->ctx,
-                  dig);
-      cvthex (dig,
-              sizeof (dig),
-              da->sessionkey);
-    }
+    VLA_CHECK_LEN_DIGEST (da->digest_size);
+    da->init (da->ctx);
+    da->update (da->ctx,
+                digest,
+                MHD_MD5_DIGEST_SIZE);
+    da->update (da->ctx,
+                (const unsigned char *) ":",
+                1);
+    da->update (da->ctx,
+                (const unsigned char *) nonce,
+                strlen (nonce));
+    da->update (da->ctx,
+                (const unsigned char *) ":",
+                1);
+    da->update (da->ctx,
+                (const unsigned char *) cnonce,
+                strlen (cnonce));
+    da->digest (da->ctx,
+                dig);
+    cvthex (dig,
+            sizeof (dig),
+            da->sessionkey);
+  }
   else
-    {
-      cvthex (digest,
-	      da->digest_size,
-	      da->sessionkey);
-    }
+  {
+    cvthex (digest,
+            da->digest_size,
+            da->sessionkey);
+  }
 }
 
 
@@ -268,20 +270,20 @@ digest_calc_ha1_from_digest (const char *alg,
  */
 static void
 digest_calc_ha1_from_user (const char *alg,
-			   const char *username,
-			   const char *realm,
-			   const char *password,
-			   const char *nonce,
-			   const char *cnonce,
+                           const char *username,
+                           const char *realm,
+                           const char *password,
+                           const char *nonce,
+                           const char *cnonce,
                            struct DigestAlgorithm *da)
 {
-  unsigned char ha1[VLA_ARRAY_LEN_DIGEST(da->digest_size)];
+  unsigned char ha1[VLA_ARRAY_LEN_DIGEST (da->digest_size)];
 
-  VLA_CHECK_LEN_DIGEST(da->digest_size);
+  VLA_CHECK_LEN_DIGEST (da->digest_size);
   da->init (da->ctx);
   da->update (da->ctx,
-             (const unsigned char *) username,
-             strlen (username));
+              (const unsigned char *) username,
+              strlen (username));
   da->update (da->ctx,
               (const unsigned char *) ":",
               1);
@@ -322,20 +324,20 @@ digest_calc_ha1_from_user (const char *alg,
  */
 static void
 digest_calc_response (const char *ha1,
-		      const char *nonce,
-		      const char *noncecount,
-		      const char *cnonce,
-		      const char *qop,
-		      const char *method,
-		      const char *uri,
-		      const char *hentity,
-		      struct DigestAlgorithm *da)
+                      const char *nonce,
+                      const char *noncecount,
+                      const char *cnonce,
+                      const char *qop,
+                      const char *method,
+                      const char *uri,
+                      const char *hentity,
+                      struct DigestAlgorithm *da)
 {
-  unsigned char ha2[VLA_ARRAY_LEN_DIGEST(da->digest_size)];
-  unsigned char resphash[VLA_ARRAY_LEN_DIGEST(da->digest_size)];
-  (void)hentity; /* Unused. Silence compiler warning. */
+  unsigned char ha2[VLA_ARRAY_LEN_DIGEST (da->digest_size)];
+  unsigned char resphash[VLA_ARRAY_LEN_DIGEST (da->digest_size)];
+  (void) hentity; /* Unused. Silence compiler warning. */
 
-  VLA_CHECK_LEN_DIGEST(da->digest_size);
+  VLA_CHECK_LEN_DIGEST (da->digest_size);
   da->init (da->ctx);
   da->update (da->ctx,
               (const unsigned char *) method,
@@ -344,22 +346,22 @@ digest_calc_response (const char *ha1,
               (const unsigned char *) ":",
               1);
   da->update (da->ctx,
-             (const unsigned char *) uri,
-             strlen (uri));
+              (const unsigned char *) uri,
+              strlen (uri));
 #if 0
   if (0 == strcasecmp (qop,
                        "auth-int"))
-    {
-      /* This is dead code since the rest of this module does
-	 not support auth-int. */
+  {
+    /* This is dead code since the rest of this module does
+ not support auth-int. */
+    da->update (da->ctx,
+                ":",
+                1);
+    if (NULL != hentity)
       da->update (da->ctx,
-                  ":",
-                  1);
-      if (NULL != hentity)
-	da->update (da->ctx,
-                    hentity,
-                    strlen (hentity));
-    }
+                  hentity,
+                  strlen (hentity));
+  }
 #endif
   da->digest (da->ctx,
               ha2);
@@ -381,26 +383,26 @@ digest_calc_response (const char *ha1,
               (const unsigned char*) ":",
               1);
   if ('\0' != *qop)
-    {
-      da->update (da->ctx,
-                  (const unsigned char *) noncecount,
-                  strlen (noncecount));
-      da->update (da->ctx,
-                  (const unsigned char *) ":",
-                  1);
-      da->update (da->ctx,
-                  (const unsigned char *) cnonce,
-                  strlen (cnonce));
-      da->update (da->ctx,
-                  (const unsigned char *) ":",
-                  1);
-      da->update (da->ctx,
-                  (const unsigned char *) qop,
-                  strlen (qop));
-      da->update (da->ctx,
-                  (const unsigned char *) ":",
-                  1);
-    }
+  {
+    da->update (da->ctx,
+                (const unsigned char *) noncecount,
+                strlen (noncecount));
+    da->update (da->ctx,
+                (const unsigned char *) ":",
+                1);
+    da->update (da->ctx,
+                (const unsigned char *) cnonce,
+                strlen (cnonce));
+    da->update (da->ctx,
+                (const unsigned char *) ":",
+                1);
+    da->update (da->ctx,
+                (const unsigned char *) qop,
+                strlen (qop));
+    da->update (da->ctx,
+                (const unsigned char *) ":",
+                1);
+  }
   da->update (da->ctx,
               (const unsigned char *) da->sessionkey,
               da->digest_size * 2);
@@ -428,9 +430,9 @@ digest_calc_response (const char *ha1,
  */
 static size_t
 lookup_sub_value (char *dest,
-		  size_t size,
-		  const char *data,
-		  const char *key)
+                  size_t size,
+                  const char *data,
+                  const char *key)
 {
   size_t keylen;
   size_t len;
@@ -445,67 +447,67 @@ lookup_sub_value (char *dest,
   keylen = strlen (key);
   ptr = data;
   while ('\0' != *ptr)
+  {
+    if (NULL == (eq = strchr (ptr,
+                              '=')))
+      return 0;
+    q1 = eq + 1;
+    while (' ' == *q1)
+      q1++;
+    if ('\"' != *q1)
     {
-      if (NULL == (eq = strchr (ptr,
-                                '=')))
-	return 0;
-      q1 = eq + 1;
-      while (' ' == *q1)
-	q1++;
-      if ('\"' != *q1)
-	{
-	  q2 = strchr (q1,
-                       ',');
-	  qn = q2;
-	}
-      else
-	{
-	  q1++;
-	  q2 = strchr (q1,
-                       '\"');
-	  if (NULL == q2)
-	    return 0; /* end quote not found */
-	  qn = q2 + 1;
-	}
-      if ( (MHD_str_equal_caseless_n_(ptr,
-                                      key,
-                                      keylen)) &&
-	   (eq == &ptr[keylen]) )
-	{
-	  if (NULL == q2)
-	    {
-	      len = strlen (q1) + 1;
-	      if (size > len)
-		size = len;
-	      size--;
-	      strncpy (dest,
-		       q1,
-		       size);
-	      dest[size] = '\0';
-	      return size;
-	    }
-	  else
-	    {
-	      if (size > (size_t) ((q2 - q1) + 1))
-		size = (q2 - q1) + 1;
-	      size--;
-	      memcpy (dest,
-		      q1,
-		      size);
-	      dest[size] = '\0';
-	      return size;
-	    }
-	}
-      if (NULL == qn)
-	return 0;
-      ptr = strchr (qn,
-                    ',');
-      if (NULL == ptr)
-	return 0;
-      ptr++;
-      while (' ' == *ptr)
-	ptr++;
+      q2 = strchr (q1,
+                   ',');
+      qn = q2;
     }
+    else
+    {
+      q1++;
+      q2 = strchr (q1,
+                   '\"');
+      if (NULL == q2)
+        return 0; /* end quote not found */
+      qn = q2 + 1;
+    }
+    if ( (MHD_str_equal_caseless_n_ (ptr,
+                                     key,
+                                     keylen)) &&
+         (eq == &ptr[keylen]) )
+    {
+      if (NULL == q2)
+      {
+        len = strlen (q1) + 1;
+        if (size > len)
+          size = len;
+        size--;
+        strncpy (dest,
+                 q1,
+                 size);
+        dest[size] = '\0';
+        return size;
+      }
+      else
+      {
+        if (size > (size_t) ((q2 - q1) + 1))
+          size = (q2 - q1) + 1;
+        size--;
+        memcpy (dest,
+                q1,
+                size);
+        dest[size] = '\0';
+        return size;
+      }
+    }
+    if (NULL == qn)
+      return 0;
+    ptr = strchr (qn,
+                  ',');
+    if (NULL == ptr)
+      return 0;
+    ptr++;
+    while (' ' == *ptr)
+      ptr++;
+  }
   return 0;
 }
 
@@ -521,8 +523,8 @@ lookup_sub_value (char *dest,
  */
 static int
 check_nonce_nc (struct MHD_Connection *connection,
-		const char *nonce,
-		uint64_t nc)
+                const char *nonce,
+                uint64_t nc)
 {
   struct MHD_Daemon *daemon = connection->daemon;
   struct MHD_NonceNc *nn;
@@ -544,10 +546,10 @@ check_nonce_nc (struct MHD_Connection *connection,
   off = 0;
   np = nonce;
   while ('\0' != *np)
-    {
-      off = (off << 8) | (*np ^ (off >> 24));
-      np++;
-    }
+  {
+    off = (off << 8) | (*np ^ (off >> 24));
+    np++;
+  }
   off = off % mod;
   /*
    * Look for the nonce, if it does exist and its corresponding
@@ -559,47 +561,48 @@ check_nonce_nc (struct MHD_Connection *connection,
   MHD_mutex_lock_chk_ (&daemon->nnc_lock);
 #endif
   if (0 == nc)
-    {
-      /* Fresh nonce, reinitialize array */
-      memcpy (nn->nonce,
-	      nonce,
-	      noncelen);
-      nn->nc = 0;
-      nn->nmask = 0;
+  {
+    /* Fresh nonce, reinitialize array */
+    memcpy (nn->nonce,
+            nonce,
+            noncelen);
+    nn->nc = 0;
+    nn->nmask = 0;
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-      MHD_mutex_unlock_chk_ (&daemon->nnc_lock);
+    MHD_mutex_unlock_chk_ (&daemon->nnc_lock);
 #endif
-      return MHD_YES;
-    }
+    return MHD_YES;
+  }
   /* Note that we use 64 here, as we do not store the
      bit for 'nn->nc' itself in 'nn->nmask' */
   if ( (nc < nn->nc) &&
        (nc + 64 > nc /* checking for overflow */) &&
        (nc + 64 >= nn->nc) &&
        (0 == ((1LLU << (nn->nc - nc - 1)) & nn->nmask)) )
-    {
-      /* Out-of-order nonce, but within 64-bit bitmask, set bit */
-      nn->nmask |= (1LLU << (nn->nc - nc - 1));
+  {
+    /* Out-of-order nonce, but within 64-bit bitmask, set bit */
+    nn->nmask |= (1LLU << (nn->nc - nc - 1));
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-      MHD_mutex_unlock_chk_ (&daemon->nnc_lock);
+    MHD_mutex_unlock_chk_ (&daemon->nnc_lock);
 #endif
-      return MHD_YES;
-    }
+    return MHD_YES;
+  }
 
   if ( (nc <= nn->nc) ||
        (0 != strcmp (nn->nonce,
                      nonce)) )
-    {
-      /* Nonce does not match, fail */
+  {
+    /* Nonce does not match, fail */
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-      MHD_mutex_unlock_chk_ (&daemon->nnc_lock);
+    MHD_mutex_unlock_chk_ (&daemon->nnc_lock);
 #endif
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-		_("Stale nonce received.  If this happens a lot, you should probably increase the size of the nonce array.\n"));
+    MHD_DLOG (daemon,
+              _ (
+                "Stale nonce received.  If this happens a lot, you should probably increase the size of the nonce array.\n"));
 #endif
-      return MHD_NO;
-    }
+    return MHD_NO;
+  }
   /* Nonce is larger, shift bitmask and bump limit */
   if (64 > nc - nn->nc)
     nn->nmask <<= (nc - nn->nc); /* small jump, less than mask width */
@@ -618,12 +621,12 @@ check_nonce_nc (struct MHD_Connection *connection,
  *
  * @param connection The MHD connection structure
  * @return NULL if no username could be found, a pointer
- * 			to the username if found
+ *      to the username if found
  * @warning Returned value must be freed by #MHD_free().
  * @ingroup authentication
  */
 char *
-MHD_digest_auth_get_username(struct MHD_Connection *connection)
+MHD_digest_auth_get_username (struct MHD_Connection *connection)
 {
   size_t len;
   char user[MAX_USERNAME_LENGTH];
@@ -632,7 +635,8 @@ MHD_digest_auth_get_username(struct MHD_Connection *connection)
   if (MHD_NO == MHD_lookup_connection_value_n (connection,
                                                MHD_HEADER_KIND,
                                                MHD_HTTP_HEADER_AUTHORIZATION,
-                                               MHD_STATICSTR_LEN_ (MHD_HTTP_HEADER_AUTHORIZATION),
+                                               MHD_STATICSTR_LEN_ (
+                                                 MHD_HTTP_HEADER_AUTHORIZATION),
                                                &header,
                                                NULL))
     return NULL;
@@ -642,9 +646,9 @@ MHD_digest_auth_get_username(struct MHD_Connection *connection)
     return NULL;
   header += MHD_STATICSTR_LEN_ (_BASE);
   if (0 == (len = lookup_sub_value (user,
-				    sizeof (user),
-				    header,
-				    "username")))
+                                    sizeof (user),
+                                    header,
+                                    "username")))
     return NULL;
   return strdup (user);
 }
@@ -667,24 +671,24 @@ MHD_digest_auth_get_username(struct MHD_Connection *connection)
  */
 static void
 calculate_nonce (uint32_t nonce_time,
-		 const char *method,
-		 const char *rnd,
-		 size_t rnd_size,
-		 const char *uri,
-		 const char *realm,
+                 const char *method,
+                 const char *rnd,
+                 size_t rnd_size,
+                 const char *uri,
+                 const char *realm,
                  struct DigestAlgorithm *da,
-		 char *nonce)
+                 char *nonce)
 {
   unsigned char timestamp[TIMESTAMP_BIN_SIZE];
-  unsigned char tmpnonce[VLA_ARRAY_LEN_DIGEST(da->digest_size)];
+  unsigned char tmpnonce[VLA_ARRAY_LEN_DIGEST (da->digest_size)];
   char timestamphex[TIMESTAMP_BIN_SIZE * 2 + 1];
 
-  VLA_CHECK_LEN_DIGEST(da->digest_size);
+  VLA_CHECK_LEN_DIGEST (da->digest_size);
   da->init (da->ctx);
-  timestamp[0] = (unsigned char)((nonce_time & 0xff000000) >> 0x18);
-  timestamp[1] = (unsigned char)((nonce_time & 0x00ff0000) >> 0x10);
-  timestamp[2] = (unsigned char)((nonce_time & 0x0000ff00) >> 0x08);
-  timestamp[3] = (unsigned char)((nonce_time & 0x000000ff));
+  timestamp[0] = (unsigned char) ((nonce_time & 0xff000000) >> 0x18);
+  timestamp[1] = (unsigned char) ((nonce_time & 0x00ff0000) >> 0x10);
+  timestamp[2] = (unsigned char) ((nonce_time & 0x0000ff00) >> 0x08);
+  timestamp[3] = (unsigned char) ((nonce_time & 0x000000ff));
   da->update (da->ctx,
               timestamp,
               sizeof (timestamp));
@@ -742,37 +746,37 @@ calculate_nonce (uint32_t nonce_time,
  */
 static int
 test_header (struct MHD_Connection *connection,
-	     const char *key,
+             const char *key,
              size_t key_size,
-	     const char *value,
-	     size_t value_size,
-	     enum MHD_ValueKind kind)
+             const char *value,
+             size_t value_size,
+             enum MHD_ValueKind kind)
 {
   struct MHD_HTTP_Header *pos;
 
   for (pos = connection->headers_received; NULL != pos; pos = pos->next)
-    {
-      if (kind != pos->kind)
-	continue;
-      if (key_size != pos->header_size)
-	continue;
-      if (value_size != pos->value_size)
-        continue;
-      if (0 != memcmp (key,
-                       pos->header,
-                       key_size))
-	continue;
-      if ( (NULL == value) &&
-	   (NULL == pos->value) )
-	return MHD_YES;
-      if ( (NULL == value) ||
-	   (NULL == pos->value) ||
-	   (0 != memcmp (value,
-                         pos->value,
-			 value_size)) )
-	continue;
+  {
+    if (kind != pos->kind)
+      continue;
+    if (key_size != pos->header_size)
+      continue;
+    if (value_size != pos->value_size)
+      continue;
+    if (0 != memcmp (key,
+                     pos->header,
+                     key_size))
+      continue;
+    if ( (NULL == value) &&
+         (NULL == pos->value) )
       return MHD_YES;
-    }
+    if ( (NULL == value) ||
+         (NULL == pos->value) ||
+         (0 != memcmp (value,
+                       pos->value,
+                       value_size)) )
+      continue;
+    return MHD_YES;
+  }
   return MHD_NO;
 }
 
@@ -789,7 +793,7 @@ test_header (struct MHD_Connection *connection,
  */
 static int
 check_argument_match (struct MHD_Connection *connection,
-		      const char *args)
+                      const char *args)
 {
   struct MHD_HTTP_Header *pos;
   char *argb;
@@ -798,35 +802,35 @@ check_argument_match (struct MHD_Connection *connection,
 
   argb = strdup (args);
   if (NULL == argb)
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (connection->daemon,
-		_("Failed to allocate memory for copy of URI arguments\n"));
+    MHD_DLOG (connection->daemon,
+              _ ("Failed to allocate memory for copy of URI arguments\n"));
 #endif /* HAVE_MESSAGES */
-      return MHD_NO;
-    }
+    return MHD_NO;
+  }
   ret = MHD_parse_arguments_ (connection,
-			      MHD_GET_ARGUMENT_KIND,
-			      argb,
-			      &test_header,
-			      &num_headers);
+                              MHD_GET_ARGUMENT_KIND,
+                              argb,
+                              &test_header,
+                              &num_headers);
   free (argb);
   if (MHD_YES != ret)
-    {
-      return MHD_NO;
-    }
+  {
+    return MHD_NO;
+  }
   /* also check that the number of headers matches */
   for (pos = connection->headers_received; NULL != pos; pos = pos->next)
-    {
-      if (MHD_GET_ARGUMENT_KIND != pos->kind)
-	continue;
-      num_headers--;
-    }
+  {
+    if (MHD_GET_ARGUMENT_KIND != pos->kind)
+      continue;
+    num_headers--;
+  }
   if (0 != num_headers)
-    {
-      /* argument count mismatch */
-      return MHD_NO;
-    }
+  {
+    /* argument count mismatch */
+    return MHD_NO;
+  }
   return MHD_YES;
 }
 
@@ -842,51 +846,52 @@ check_argument_match (struct MHD_Connection *connection,
  * @param username The username needs to be authenticated
  * @param password The password used in the authentication
  * @param digest An optional binary hash
- * 		 of the precalculated hash value "username:realm:password"
- * 		 (must contain "da->digest_size" bytes or be NULL)
+ *     of the precalculated hash value "username:realm:password"
+ *     (must contain "da->digest_size" bytes or be NULL)
  * @param nonce_timeout The amount of time for a nonce to be
- * 			invalid in seconds
+ *      invalid in seconds
  * @return #MHD_YES if authenticated, #MHD_NO if not,
- * 			#MHD_INVALID_NONCE if nonce is invalid
+ *      #MHD_INVALID_NONCE if nonce is invalid
  * @ingroup authentication
  */
 static int
 digest_auth_check_all (struct MHD_Connection *connection,
                        struct DigestAlgorithm *da,
-		       const char *realm,
-		       const char *username,
-		       const char *password,
-		       const uint8_t *digest,
-		       unsigned int nonce_timeout)
+                       const char *realm,
+                       const char *username,
+                       const char *password,
+                       const uint8_t *digest,
+                       unsigned int nonce_timeout)
 {
   struct MHD_Daemon *daemon = connection->daemon;
   size_t len;
   const char *header;
   char nonce[MAX_NONCE_LENGTH];
   char cnonce[MAX_NONCE_LENGTH];
-  char ha1[VLA_ARRAY_LEN_DIGEST(da->digest_size) * 2 + 1];
+  char ha1[VLA_ARRAY_LEN_DIGEST (da->digest_size) * 2 + 1];
   char qop[15]; /* auth,auth-int */
   char nc[20];
   char response[MAX_AUTH_RESPONSE_LENGTH];
   const char *hentity = NULL; /* "auth-int" is not supported */
-  char noncehashexp[NONCE_STD_LEN(VLA_ARRAY_LEN_DIGEST(da->digest_size)) + 1];
+  char noncehashexp[NONCE_STD_LEN (VLA_ARRAY_LEN_DIGEST (da->digest_size)) + 1];
   uint32_t nonce_time;
   uint32_t t;
   size_t left; /* number of characters left in 'header' for 'uri' */
   uint64_t nci;
   char *qmark;
 
-  VLA_CHECK_LEN_DIGEST(da->digest_size);
+  VLA_CHECK_LEN_DIGEST (da->digest_size);
   if (MHD_NO == MHD_lookup_connection_value_n (connection,
                                                MHD_HEADER_KIND,
                                                MHD_HTTP_HEADER_AUTHORIZATION,
-                                               MHD_STATICSTR_LEN_ (MHD_HTTP_HEADER_AUTHORIZATION),
+                                               MHD_STATICSTR_LEN_ (
+                                                 MHD_HTTP_HEADER_AUTHORIZATION),
                                                &header,
                                                NULL))
     return MHD_NO;
   if (0 != strncmp (header,
                     _BASE,
-                    MHD_STATICSTR_LEN_(_BASE)))
+                    MHD_STATICSTR_LEN_ (_BASE)))
     return MHD_NO;
   header += MHD_STATICSTR_LEN_ (_BASE);
   left = strlen (header);
@@ -895,11 +900,11 @@ digest_auth_check_all (struct MHD_Connection *connection,
     char un[MAX_USERNAME_LENGTH];
 
     len = lookup_sub_value (un,
-			    sizeof (un),
-			    header,
+                            sizeof (un),
+                            header,
                             "username");
     if ( (0 == len) ||
-	 (0 != strcmp (username,
+         (0 != strcmp (username,
                        un)) )
       return MHD_NO;
     left -= strlen ("username") + len;
@@ -913,15 +918,15 @@ digest_auth_check_all (struct MHD_Connection *connection,
                             header,
                             "realm");
     if ( (0 == len) ||
-	 (0 != strcmp (realm,
+         (0 != strcmp (realm,
                        r)) )
       return MHD_NO;
     left -= strlen ("realm") + len;
   }
 
   if (0 == (len = lookup_sub_value (nonce,
-				    sizeof (nonce),
-				    header,
+                                    sizeof (nonce),
+                                    header,
                                     "nonce")))
     return MHD_NO;
   left -= strlen ("nonce") + len;
@@ -940,14 +945,14 @@ digest_auth_check_all (struct MHD_Connection *connection,
       MHD_strx_to_uint32_n_ (nonce + len - TIMESTAMP_BIN_SIZE * 2,
                              TIMESTAMP_BIN_SIZE * 2,
                              &nonce_time))
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-                _("Authentication failed, invalid timestamp format.\n"));
+    MHD_DLOG (daemon,
+              _ ("Authentication failed, invalid timestamp format.\n"));
 #endif
-      return MHD_NO;
-    }
-  t = (uint32_t) MHD_monotonic_sec_counter();
+    return MHD_NO;
+  }
+  t = (uint32_t) MHD_monotonic_sec_counter ();
   /*
    * First level vetting for the nonce validity: if the timestamp
    * attached to the nonce exceeds `nonce_timeout', then the nonce is
@@ -955,10 +960,10 @@ digest_auth_check_all (struct MHD_Connection *connection,
    */
   if ( (t > nonce_time + nonce_timeout) ||
        (nonce_time + nonce_timeout < nonce_time) )
-    {
-      /* too old */
-      return MHD_INVALID_NONCE;
-    }
+  {
+    /* too old */
+    return MHD_INVALID_NONCE;
+  }
 
   calculate_nonce (nonce_time,
                    connection->method,
@@ -980,9 +985,9 @@ digest_auth_check_all (struct MHD_Connection *connection,
 
   if (0 != strcmp (nonce,
                    noncehashexp))
-    {
-      return MHD_INVALID_NONCE;
-    }
+  {
+    return MHD_INVALID_NONCE;
+  }
   if ( (0 == lookup_sub_value (cnonce,
                                sizeof (cnonce),
                                header,
@@ -1003,23 +1008,23 @@ digest_auth_check_all (struct MHD_Connection *connection,
                                sizeof (response),
                                header,
                                "response")) )
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-		_("Authentication failed, invalid format.\n"));
+    MHD_DLOG (daemon,
+              _ ("Authentication failed, invalid format.\n"));
 #endif
-      return MHD_NO;
-    }
+    return MHD_NO;
+  }
   if (len != MHD_strx_to_uint64_n_ (nc,
                                     len,
                                     &nci))
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (daemon,
-		_("Authentication failed, invalid nc format.\n"));
+    MHD_DLOG (daemon,
+              _ ("Authentication failed, invalid nc format.\n"));
 #endif
-      return MHD_NO; /* invalid nonce format */
-    }
+    return MHD_NO;   /* invalid nonce format */
+  }
 
   /*
    * Checking if that combination of nonce and nc is sound
@@ -1030,64 +1035,64 @@ digest_auth_check_all (struct MHD_Connection *connection,
       check_nonce_nc (connection,
                       nonce,
                       nci))
-    {
-      return MHD_NO;
-    }
+  {
+    return MHD_NO;
+  }
 
   {
     char *uri;
 
     uri = malloc (left + 1);
     if (NULL == uri)
-      {
+    {
 #ifdef HAVE_MESSAGES
-        MHD_DLOG(daemon,
-                 _("Failed to allocate memory for auth header processing\n"));
+      MHD_DLOG (daemon,
+                _ ("Failed to allocate memory for auth header processing\n"));
 #endif /* HAVE_MESSAGES */
-        return MHD_NO;
-      }
+      return MHD_NO;
+    }
     if (0 == lookup_sub_value (uri,
                                left + 1,
                                header,
                                "uri"))
-      {
-        free (uri);
-        return MHD_NO;
-      }
+    {
+      free (uri);
+      return MHD_NO;
+    }
     if (NULL != digest)
-      {
-        /* This will initialize da->sessionkey (ha1) */
-	digest_calc_ha1_from_digest (da->alg,
-                                     da,
-				     digest,
-				     nonce,
-				     cnonce);
-      }
+    {
+      /* This will initialize da->sessionkey (ha1) */
+      digest_calc_ha1_from_digest (da->alg,
+                                   da,
+                                   digest,
+                                   nonce,
+                                   cnonce);
+    }
     else
-      {
-        /* This will initialize da->sessionkey (ha1) */
-        mhd_assert (NULL != password); /* NULL == digest => password != NULL */
-	digest_calc_ha1_from_user (da->alg,
-				   username,
-				   realm,
-				   password,
-				   nonce,
-				   cnonce,
-                                   da);
-      }
+    {
+      /* This will initialize da->sessionkey (ha1) */
+      mhd_assert (NULL != password);   /* NULL == digest => password != NULL */
+      digest_calc_ha1_from_user (da->alg,
+                                 username,
+                                 realm,
+                                 password,
+                                 nonce,
+                                 cnonce,
+                                 da);
+    }
     memcpy (ha1,
             da->sessionkey,
             sizeof (ha1));
     /* This will initialize da->sessionkey (respexp) */
     digest_calc_response (ha1,
-			  nonce,
-			  nc,
-			  cnonce,
-			  qop,
-			  connection->method,
-			  uri,
-			  hentity,
-			  da);
+                          nonce,
+                          nc,
+                          cnonce,
+                          qop,
+                          connection->method,
+                          uri,
+                          hentity,
+                          da);
     qmark = strchr (uri,
                     '?');
     if (NULL != qmark)
@@ -1102,7 +1107,7 @@ digest_auth_check_all (struct MHD_Connection *connection,
     {
 #ifdef HAVE_MESSAGES
       MHD_DLOG (daemon,
-		_("Authentication failed, URI does not match.\n"));
+                _ ("Authentication failed, URI does not match.\n"));
 #endif
       free (uri);
       return MHD_NO;
@@ -1112,26 +1117,26 @@ digest_auth_check_all (struct MHD_Connection *connection,
       const char *args = qmark;
 
       if (NULL == args)
-	args = "";
+        args = "";
       else
-	args++;
+        args++;
       if (MHD_YES !=
-	  check_argument_match (connection,
-				args) )
+          check_argument_match (connection,
+                                args) )
       {
 #ifdef HAVE_MESSAGES
-	MHD_DLOG (daemon,
-		  _("Authentication failed, arguments do not match.\n"));
+        MHD_DLOG (daemon,
+                  _ ("Authentication failed, arguments do not match.\n"));
 #endif
-       free (uri);
-       return MHD_NO;
+        free (uri);
+        return MHD_NO;
       }
     }
     free (uri);
     return (0 == strcmp (response,
                          da->sessionkey))
-      ? MHD_YES
-      : MHD_NO;
+           ? MHD_YES
+           : MHD_NO;
   }
 }
 
@@ -1148,17 +1153,17 @@ digest_auth_check_all (struct MHD_Connection *connection,
  * @param username The username needs to be authenticated
  * @param password The password used in the authentication
  * @param nonce_timeout The amount of time for a nonce to be
- * 			invalid in seconds
+ *      invalid in seconds
  * @return #MHD_YES if authenticated, #MHD_NO if not,
- * 			#MHD_INVALID_NONCE if nonce is invalid
+ *      #MHD_INVALID_NONCE if nonce is invalid
  * @ingroup authentication
  */
 _MHD_EXTERN int
 MHD_digest_auth_check (struct MHD_Connection *connection,
-		       const char *realm,
-		       const char *username,
-		       const char *password,
-		       unsigned int nonce_timeout)
+                       const char *realm,
+                       const char *username,
+                       const char *password,
+                       unsigned int nonce_timeout)
 {
   return MHD_digest_auth_check2 (connection,
                                  realm,
@@ -1189,29 +1194,29 @@ MHD_digest_auth_check (struct MHD_Connection *connection,
   struct DigestAlgorithm da;                      \
                                                   \
   do {                                            \
-  switch (algo) {                                 \
-  case MHD_DIGEST_ALG_MD5:                        \
-    da.digest_size = MD5_DIGEST_SIZE;             \
-    da.ctx = &ctx.md5;                            \
-    da.alg = "md5";                               \
-    da.sessionkey = skey.md5;                     \
-    da.init = &MHD_MD5Init;                           \
-    da.update = &MHD_MD5Update;                       \
-    da.digest = &MHD_MD5Final;                        \
-    break;                                        \
-  case MHD_DIGEST_ALG_AUTO:                             \
+    switch (algo) {                                 \
+    case MHD_DIGEST_ALG_MD5:                        \
+      da.digest_size = MD5_DIGEST_SIZE;             \
+      da.ctx = &ctx.md5;                            \
+      da.alg = "md5";                               \
+      da.sessionkey = skey.md5;                     \
+      da.init = &MHD_MD5Init;                           \
+      da.update = &MHD_MD5Update;                       \
+      da.digest = &MHD_MD5Final;                        \
+      break;                                        \
+    case MHD_DIGEST_ALG_AUTO:                             \
     /* auto == SHA256, fall-though thus intentional! */ \
-  case MHD_DIGEST_ALG_SHA256:                           \
-    da.digest_size = SHA256_DIGEST_SIZE;                \
-    da.ctx = &ctx.sha256;                               \
-    da.alg = "sha-256";                                 \
-    da.sessionkey = skey.sha256;                        \
-    da.init = &MHD_SHA256_init;                             \
-    da.update = &MHD_SHA256_update;                         \
-    da.digest = &sha256_finish;                         \
-    break;                                              \
-  }                                                     \
-  } while(0)
+    case MHD_DIGEST_ALG_SHA256:                           \
+      da.digest_size = SHA256_DIGEST_SIZE;                \
+      da.ctx = &ctx.sha256;                               \
+      da.alg = "sha-256";                                 \
+      da.sessionkey = skey.sha256;                        \
+      da.init = &MHD_SHA256_init;                             \
+      da.update = &MHD_SHA256_update;                         \
+      da.digest = &sha256_finish;                         \
+      break;                                              \
+    }                                                     \
+  } while (0)
 
 
 
@@ -1223,19 +1228,19 @@ MHD_digest_auth_check (struct MHD_Connection *connection,
  * @param username The username needs to be authenticated
  * @param password The password used in the authentication
  * @param nonce_timeout The amount of time for a nonce to be
- * 			invalid in seconds
+ *      invalid in seconds
  * @param algo digest algorithms allowed for verification
  * @return #MHD_YES if authenticated, #MHD_NO if not,
- * 			#MHD_INVALID_NONCE if nonce is invalid
+ *      #MHD_INVALID_NONCE if nonce is invalid
  * @ingroup authentication
  */
 _MHD_EXTERN int
 MHD_digest_auth_check2 (struct MHD_Connection *connection,
-			const char *realm,
-			const char *username,
-			const char *password,
-			unsigned int nonce_timeout,
-			enum MHD_DigestAuthAlgorithm algo)
+                        const char *realm,
+                        const char *username,
+                        const char *password,
+                        unsigned int nonce_timeout,
+                        enum MHD_DigestAuthAlgorithm algo)
 {
   SETUP_DA (algo, da);
 
@@ -1256,36 +1261,36 @@ MHD_digest_auth_check2 (struct MHD_Connection *connection,
  * @param realm The realm presented to the client
  * @param username The username needs to be authenticated
  * @param digest An `unsigned char *' pointer to the binary MD5 sum
- * 			for the precalculated hash value "username:realm:password"
- * 			of #MHD_MD5_DIGEST_SIZE bytes
+ *      for the precalculated hash value "username:realm:password"
+ *      of #MHD_MD5_DIGEST_SIZE bytes
  * @param digest_size number of bytes in @a digest
  * @param nonce_timeout The amount of time for a nonce to be
- * 			invalid in seconds
+ *      invalid in seconds
  * @param algo digest algorithms allowed for verification
  * @return #MHD_YES if authenticated, #MHD_NO if not,
- * 			#MHD_INVALID_NONCE if nonce is invalid
+ *      #MHD_INVALID_NONCE if nonce is invalid
  * @ingroup authentication
  */
 _MHD_EXTERN int
 MHD_digest_auth_check_digest2 (struct MHD_Connection *connection,
-			       const char *realm,
-			       const char *username,
-			       const uint8_t *digest,
+                               const char *realm,
+                               const char *username,
+                               const uint8_t *digest,
                                size_t digest_size,
-			       unsigned int nonce_timeout,
-			       enum MHD_DigestAuthAlgorithm algo)
+                               unsigned int nonce_timeout,
+                               enum MHD_DigestAuthAlgorithm algo)
 {
   SETUP_DA (algo, da);
 
   if (da.digest_size != digest_size)
-    MHD_PANIC (_("digest size missmatch")); /* API violation! */
+    MHD_PANIC (_ ("digest size missmatch")); /* API violation! */
   return digest_auth_check_all (connection,
                                 &da,
-				realm,
-				username,
-				NULL,
-				digest,
-				nonce_timeout);
+                                realm,
+                                username,
+                                NULL,
+                                digest,
+                                nonce_timeout);
 }
 
 
@@ -1298,20 +1303,20 @@ MHD_digest_auth_check_digest2 (struct MHD_Connection *connection,
  * @param realm The realm presented to the client
  * @param username The username needs to be authenticated
  * @param digest An `unsigned char *' pointer to the binary digest
- * 			for the precalculated hash value "username:realm:password"
- * 			of @a digest_size bytes
+ *      for the precalculated hash value "username:realm:password"
+ *      of @a digest_size bytes
  * @param nonce_timeout The amount of time for a nonce to be
- * 			invalid in seconds
+ *      invalid in seconds
  * @return #MHD_YES if authenticated, #MHD_NO if not,
- * 			#MHD_INVALID_NONCE if nonce is invalid
+ *      #MHD_INVALID_NONCE if nonce is invalid
  * @ingroup authentication
  */
 _MHD_EXTERN int
 MHD_digest_auth_check_digest (struct MHD_Connection *connection,
-			      const char *realm,
-			      const char *username,
-			      const uint8_t digest[MHD_MD5_DIGEST_SIZE],
-			      unsigned int nonce_timeout)
+                              const char *realm,
+                              const char *username,
+                              const uint8_t digest[MHD_MD5_DIGEST_SIZE],
+                              unsigned int nonce_timeout)
 {
   return MHD_digest_auth_check_digest2 (connection,
                                         realm,
@@ -1333,29 +1338,29 @@ MHD_digest_auth_check_digest (struct MHD_Connection *connection,
  *        body; note that this function will set the "WWW Authenticate"
  *        header and that the caller should not do this
  * @param signal_stale #MHD_YES if the nonce is invalid to add
- * 			'stale=true' to the authentication header
+ *      'stale=true' to the authentication header
  * @param algo digest algorithm to use
  * @return #MHD_YES on success, #MHD_NO otherwise
  * @ingroup authentication
  */
 int
 MHD_queue_auth_fail_response2 (struct MHD_Connection *connection,
-			       const char *realm,
-			       const char *opaque,
-			       struct MHD_Response *response,
-			       int signal_stale,
-			       enum MHD_DigestAuthAlgorithm algo)
+                               const char *realm,
+                               const char *opaque,
+                               struct MHD_Response *response,
+                               int signal_stale,
+                               enum MHD_DigestAuthAlgorithm algo)
 {
   int ret;
   int hlen;
   SETUP_DA (algo, da);
 
   {
-    char nonce[NONCE_STD_LEN(VLA_ARRAY_LEN_DIGEST (da.digest_size)) + 1];
+    char nonce[NONCE_STD_LEN (VLA_ARRAY_LEN_DIGEST (da.digest_size)) + 1];
 
-    VLA_CHECK_LEN_DIGEST(da.digest_size);
+    VLA_CHECK_LEN_DIGEST (da.digest_size);
     /* Generating the server nonce */
-    calculate_nonce ((uint32_t) MHD_monotonic_sec_counter(),
+    calculate_nonce ((uint32_t) MHD_monotonic_sec_counter (),
                      connection->method,
                      connection->daemon->digest_auth_random,
                      connection->daemon->digest_auth_rand_size,
@@ -1367,13 +1372,14 @@ MHD_queue_auth_fail_response2 (struct MHD_Connection *connection,
         check_nonce_nc (connection,
                         nonce,
                         0))
-      {
+    {
 #ifdef HAVE_MESSAGES
-        MHD_DLOG (connection->daemon,
-                  _("Could not register nonce (is the nonce array size zero?).\n"));
+      MHD_DLOG (connection->daemon,
+                _ (
+                  "Could not register nonce (is the nonce array size zero?).\n"));
 #endif
-        return MHD_NO;
-      }
+      return MHD_NO;
+    }
     /* Building the authentication header */
     hlen = MHD_snprintf_ (NULL,
                           0,
@@ -1386,54 +1392,54 @@ MHD_queue_auth_fail_response2 (struct MHD_Connection *connection,
                           ? ",stale=\"true\""
                           : "");
     if (hlen > 0)
+    {
+      char *header;
+
+      header = MHD_calloc_ (1,
+                            hlen + 1);
+      if (NULL == header)
       {
-        char *header;
-
-        header = MHD_calloc_ (1,
-                              hlen + 1);
-        if (NULL == header)
-          {
 #ifdef HAVE_MESSAGES
-            MHD_DLOG(connection->daemon,
-                     _("Failed to allocate memory for auth response header\n"));
+        MHD_DLOG (connection->daemon,
+                  _ ("Failed to allocate memory for auth response header\n"));
 #endif /* HAVE_MESSAGES */
-            return MHD_NO;
-          }
-
-        if (MHD_snprintf_ (header,
-                           hlen + 1,
-                           "Digest realm=\"%s\",qop=\"auth\",nonce=\"%s\",opaque=\"%s\",algorithm=%s%s",
-                           realm,
-                           nonce,
-                           opaque,
-                           da.alg,
-                           signal_stale
-                           ? ",stale=\"true\""
-                           : "") == hlen)
-          ret = MHD_add_response_header(response,
-                                        MHD_HTTP_HEADER_WWW_AUTHENTICATE,
-                                        header);
-        else
-          ret = MHD_NO;
-        free (header);
+        return MHD_NO;
       }
+
+      if (MHD_snprintf_ (header,
+                         hlen + 1,
+                         "Digest realm=\"%s\",qop=\"auth\",nonce=\"%s\",opaque=\"%s\",algorithm=%s%s",
+                         realm,
+                         nonce,
+                         opaque,
+                         da.alg,
+                         signal_stale
+                         ? ",stale=\"true\""
+                         : "") == hlen)
+        ret = MHD_add_response_header (response,
+                                       MHD_HTTP_HEADER_WWW_AUTHENTICATE,
+                                       header);
+      else
+        ret = MHD_NO;
+      free (header);
+    }
     else
       ret = MHD_NO;
   }
 
   if (MHD_YES == ret)
-    {
-      ret = MHD_queue_response (connection,
-                                MHD_HTTP_UNAUTHORIZED,
-                                response);
-    }
+  {
+    ret = MHD_queue_response (connection,
+                              MHD_HTTP_UNAUTHORIZED,
+                              response);
+  }
   else
-    {
+  {
 #ifdef HAVE_MESSAGES
-      MHD_DLOG (connection->daemon,
-                _("Failed to add Digest auth header\n"));
+    MHD_DLOG (connection->daemon,
+              _ ("Failed to add Digest auth header\n"));
 #endif /* HAVE_MESSAGES */
-    }
+  }
   return ret;
 }
 
@@ -1450,16 +1456,16 @@ MHD_queue_auth_fail_response2 (struct MHD_Connection *connection,
  *        body; note that this function will set the "WWW Authenticate"
  *        header and that the caller should not do this
  * @param signal_stale #MHD_YES if the nonce is invalid to add
- * 			'stale=true' to the authentication header
+ *      'stale=true' to the authentication header
  * @return #MHD_YES on success, #MHD_NO otherwise
  * @ingroup authentication
  */
 int
 MHD_queue_auth_fail_response (struct MHD_Connection *connection,
-			      const char *realm,
-			      const char *opaque,
-			      struct MHD_Response *response,
-			      int signal_stale)
+                              const char *realm,
+                              const char *opaque,
+                              struct MHD_Response *response,
+                              int signal_stale)
 {
   return MHD_queue_auth_fail_response2 (connection,
                                         realm,

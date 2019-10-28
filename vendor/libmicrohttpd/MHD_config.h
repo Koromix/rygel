@@ -1,11 +1,11 @@
 #define PACKAGE "libmicrohttpd"
 #define PACKAGE_BUGREPORT "libmicrohttpd@gnu.org"
 #define PACKAGE_NAME "GNU Libmicrohttpd"
-#define PACKAGE_STRING "GNU Libmicrohttpd 0.9.66"
+#define PACKAGE_STRING "GNU Libmicrohttpd 0.9.68"
 #define PACKAGE_TARNAME "libmicrohttpd"
 #define PACKAGE_URL "http://www.gnu.org/software/libmicrohttpd/"
-#define PACKAGE_VERSION "0.9.66"
-#define VERSION "0.9.66"
+#define PACKAGE_VERSION "0.9.68"
+#define VERSION "0.9.68"
 
 #if defined(__MINGW32__)
     #define BAUTH_SUPPORT 1
@@ -165,6 +165,7 @@
     #define HAVE_RANDOM 1
     #define HAVE_REAL_BOOL 1
     #define HAVE_SEARCH_H 1
+    #define HAVE_SENDMSG 1
     #define HAVE_SNPRINTF 1
     #define HAVE_SOCKADDR_IN_SIN_LEN 1
     #define HAVE_STDBOOL_H 1
@@ -188,6 +189,7 @@
     #define HAVE_UNISTD_H 1
     #define HAVE_USLEEP 1
     #define HAVE_WAITPID 1
+    #define HAVE_WRITEV 1
     #define INLINE_FUNC 1
     #define OSX 1
     #define LT_OBJDIR ".libs/"
@@ -235,6 +237,7 @@
     #define HAVE_MEMMEM 1
     #define HAVE_MEMORY_H 1
     #define HAVE_MESSAGES 1
+    #define HAVE_MSG_MORE 1
     #define HAVE_NANOSLEEP 1
     #define HAVE_NETDB_H 1
     #define HAVE_NETINET_IN_H 1
@@ -253,6 +256,7 @@
     #define HAVE_RANDOM 1
     #define HAVE_REAL_BOOL 1
     #define HAVE_SEARCH_H 1
+    #define HAVE_SENDMSG 1
     #define HAVE_SENDFILE64 1
     #define HAVE_SNPRINTF 1
     #define HAVE_SOCK_NONBLOCK 1
@@ -279,6 +283,7 @@
     #define HAVE_UNISTD_H 1
     #define HAVE_USLEEP 1
     #define HAVE_WAITPID 1
+    #define HAVE_WRITEV 1
     #define INLINE_FUNC 1
     #define LINUX 1
     #define LT_OBJDIR ".libs/"

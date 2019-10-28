@@ -39,11 +39,11 @@ parse_version_number (const char **s)
   char num[17];
 
   while (i < 16 && ((**s >= '0') & (**s <= '9')))
-    {
-      num[i] = **s;
-      (*s)++;
-      i++;
-    }
+  {
+    num[i] = **s;
+    (*s)++;
+    i++;
+  }
 
   num[i] = '\0';
 
@@ -53,7 +53,7 @@ parse_version_number (const char **s)
 const char *
 parse_version_string (const char *s, int *major, int *minor, int *micro)
 {
-  if (!s)
+  if (! s)
     return NULL;
   *major = parse_version_number (&s);
   if (*s != '.')
@@ -69,9 +69,9 @@ parse_version_string (const char *s, int *major, int *minor, int *micro)
 
 #ifdef HTTPS_SUPPORT
 int
-curl_uses_nss_ssl()
+curl_uses_nss_ssl ()
 {
-  return (strstr(curl_version(), " NSS/") != NULL) ? 0 : -1;
+  return (strstr (curl_version (), " NSS/") != NULL) ? 0 : -1;
 }
 #endif /* HTTPS_SUPPORT */
 
@@ -105,23 +105,25 @@ curl_check_version (const char *req_version)
     return -1;
   curl_ver++;
   /* Parse version numbers */
-  if ( (NULL == parse_version_string (req_version, &rq_major, &rq_minor, &rq_micro)) ||
-       (NULL == parse_version_string (curl_ver, &loc_major, &loc_minor, &loc_micro)) )
+  if ( (NULL == parse_version_string (req_version, &rq_major, &rq_minor,
+                                      &rq_micro)) ||
+       (NULL == parse_version_string (curl_ver, &loc_major, &loc_minor,
+                                      &loc_micro)) )
     return -1;
 
   /* Compare version numbers.  */
-  if ((loc_major > rq_major
-       || (loc_major == rq_major && loc_minor > rq_minor)
-       || (loc_major == rq_major && loc_minor == rq_minor
-           && loc_micro > rq_micro) || (loc_major == rq_major
-                                        && loc_minor == rq_minor
-                                        && loc_micro == rq_micro)) == 0)
-    {
-      fprintf (stderr,
-               "Error: running curl test depends on local libcurl version > %s\n",
-               req_version);
-      return -1;
-    }
+  if (((loc_major > rq_major)
+       || ((loc_major == rq_major)&&(loc_minor > rq_minor))
+       || ((loc_major == rq_major)&&(loc_minor == rq_minor)
+           &&(loc_micro > rq_micro)) || ((loc_major == rq_major)
+                                         &&(loc_minor == rq_minor)
+                                         &&(loc_micro == rq_micro) )) == 0)
+  {
+    fprintf (stderr,
+             "Error: running curl test depends on local libcurl version > %s\n",
+             req_version);
+    return -1;
+  }
 
   /*
    * enforce required gnutls/openssl version.
@@ -133,44 +135,46 @@ curl_check_version (const char *req_version)
     return -1;
   ssl_ver++;
   if (strncmp ("GnuTLS", ssl_ver, strlen ("GNUtls")) == 0)
-    {
-      ssl_ver = strchr (ssl_ver, '/');
-      req_ssl_ver = MHD_REQ_CURL_GNUTLS_VERSION;
-    }
+  {
+    ssl_ver = strchr (ssl_ver, '/');
+    req_ssl_ver = MHD_REQ_CURL_GNUTLS_VERSION;
+  }
   else if (strncmp ("OpenSSL", ssl_ver, strlen ("OpenSSL")) == 0)
-    {
-      ssl_ver = strchr (ssl_ver, '/');
-      req_ssl_ver = MHD_REQ_CURL_OPENSSL_VERSION;
-    }
+  {
+    ssl_ver = strchr (ssl_ver, '/');
+    req_ssl_ver = MHD_REQ_CURL_OPENSSL_VERSION;
+  }
   else if (strncmp ("NSS", ssl_ver, strlen ("NSS")) == 0)
-    {
-      ssl_ver = strchr (ssl_ver, '/');
-      req_ssl_ver = MHD_REQ_CURL_NSS_VERSION;
-    }
+  {
+    ssl_ver = strchr (ssl_ver, '/');
+    req_ssl_ver = MHD_REQ_CURL_NSS_VERSION;
+  }
   else
-    {
-      fprintf (stderr, "Error: unrecognized curl ssl library\n");
-      return -1;
-    }
+  {
+    fprintf (stderr, "Error: unrecognized curl ssl library\n");
+    return -1;
+  }
   if (ssl_ver == NULL)
     return -1;
   ssl_ver++;
-  if ( (NULL == parse_version_string (req_ssl_ver, &rq_major, &rq_minor, &rq_micro)) ||
-       (NULL == parse_version_string (ssl_ver, &loc_major, &loc_minor, &loc_micro)) )
+  if ( (NULL == parse_version_string (req_ssl_ver, &rq_major, &rq_minor,
+                                      &rq_micro)) ||
+       (NULL == parse_version_string (ssl_ver, &loc_major, &loc_minor,
+                                      &loc_micro)) )
     return -1;
 
-  if ((loc_major > rq_major
-       || (loc_major == rq_major && loc_minor > rq_minor)
-       || (loc_major == rq_major && loc_minor == rq_minor
-           && loc_micro > rq_micro) || (loc_major == rq_major
-                                        && loc_minor == rq_minor
-                                        && loc_micro == rq_micro)) == 0)
-    {
-      fprintf (stderr,
-               "Error: running curl test depends on local libcurl SSL version > %s\n",
-               req_ssl_ver);
-      return -1;
-    }
+  if (((loc_major > rq_major)
+       || ((loc_major == rq_major)&&(loc_minor > rq_minor))
+       || ((loc_major == rq_major)&&(loc_minor == rq_minor)
+           &&(loc_micro > rq_micro)) || ((loc_major == rq_major)
+                                         &&(loc_minor == rq_minor)
+                                         &&(loc_micro == rq_micro) )) == 0)
+  {
+    fprintf (stderr,
+             "Error: running curl test depends on local libcurl SSL version > %s\n",
+             req_ssl_ver);
+    return -1;
+  }
 #endif /* HTTPS_SUPPORT */
   return 0;
 }

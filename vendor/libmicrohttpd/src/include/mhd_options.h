@@ -45,7 +45,7 @@
 
 #ifndef _MHD_EXTERN
 #if defined(BUILDING_MHD_LIB) && defined(_WIN32) && \
-    (defined(DLL_EXPORT) || defined(MHD_W32DLL))
+  (defined(DLL_EXPORT) || defined(MHD_W32DLL))
 #define _MHD_EXTERN __declspec(dllexport) extern
 #else   /* !BUILDING_MHD_LIB || !_WIN32 || (!DLL_EXPORT && !MHD_W32DLL) */
 #define _MHD_EXTERN extern
@@ -66,7 +66,7 @@
 #endif /* !FD_SETSIZE && !W32 */
 
 #if defined(HAVE_LINUX_SENDFILE) || defined(HAVE_FREEBSD_SENDFILE) || \
-    defined(HAVE_DARWIN_SENDFILE) || defined(HAVE_SOLARIS_SENDFILE)
+  defined(HAVE_DARWIN_SENDFILE) || defined(HAVE_SOLARIS_SENDFILE)
 /* Have any supported sendfile() function. */
 #define _MHD_HAVE_SENDFILE
 #endif /* HAVE_LINUX_SENDFILE || HAVE_FREEBSD_SENDFILE ||
@@ -104,7 +104,8 @@
 #define RESTRICT __restrict__
 #endif /* __VXWORKS__ || __vxworks || OS_VXWORKS */
 
-#if LINUX+0 && (defined(HAVE_SENDFILE64) || defined(HAVE_LSEEK64)) && ! defined(_LARGEFILE64_SOURCE)
+#if LINUX + 0 && (defined(HAVE_SENDFILE64) || defined(HAVE_LSEEK64)) && \
+  ! defined(_LARGEFILE64_SOURCE)
 /* On Linux, special macro is required to enable definitions of some xxx64 functions */
 #define _LARGEFILE64_SOURCE 1
 #endif
@@ -115,12 +116,13 @@
 #endif /* HAVE_C11_GMTIME_S */
 
 #if defined(MHD_FAVOR_FAST_CODE) && defined(MHD_FAVOR_SMALL_CODE)
-#error MHD_FAVOR_FAST_CODE and MHD_FAVOR_SMALL_CODE are both defined. Cannot favor speed and size at the same time.
+#error \
+  MHD_FAVOR_FAST_CODE and MHD_FAVOR_SMALL_CODE are both defined. Cannot favor speed and size at the same time.
 #endif /* MHD_FAVOR_FAST_CODE && MHD_FAVOR_SMALL_CODE */
 
 /* Define MHD_FAVOR_FAST_CODE to force fast code path or
    define MHD_FAVOR_SMALL_CODE to choose compact code path */
-#if !defined(MHD_FAVOR_FAST_CODE) && !defined(MHD_FAVOR_SMALL_CODE)
+#if ! defined(MHD_FAVOR_FAST_CODE) && ! defined(MHD_FAVOR_SMALL_CODE)
 /* Try to detect user preferences */
 /* Defined by GCC and many compatible compilers */
 #if defined(__OPTIMIZE_SIZE__)
@@ -130,7 +132,7 @@
 #endif /* __OPTIMIZE__ */
 #endif /* !MHD_FAVOR_FAST_CODE && !MHD_FAVOR_SMALL_CODE */
 
-#if !defined(MHD_FAVOR_FAST_CODE) && !defined(MHD_FAVOR_SMALL_CODE)
+#if ! defined(MHD_FAVOR_FAST_CODE) && ! defined(MHD_FAVOR_SMALL_CODE)
 /* Use faster code by default */
 #define MHD_FAVOR_FAST_CODE 1
 #endif /* !MHD_FAVOR_FAST_CODE && !MHD_FAVOR_SMALL_CODE */

@@ -40,15 +40,15 @@ callback (void *cls,
           size_t buf_size)
 {
   size_t size_to_copy;
-  struct ResponseContentCallbackParam * const param =
-      (struct ResponseContentCallbackParam *)cls;
+  struct ResponseContentCallbackParam *const param =
+    (struct ResponseContentCallbackParam *) cls;
 
   /* Note: 'pos' will never exceed size of transmitted data. */
   /* You can use 'pos == param->response_size' in next check. */
   if (pos >= param->response_size)
-    { /* Whole response was sent. Signal end of response. */
-      return MHD_CONTENT_READER_END_OF_STREAM;
-    }
+  {   /* Whole response was sent. Signal end of response. */
+    return MHD_CONTENT_READER_END_OF_STREAM;
+  }
 
   /* Pseudo code.        *
   if (data_not_ready)
@@ -82,12 +82,13 @@ callback (void *cls,
 static void
 free_callback_param (void *cls)
 {
-  free(cls);
+  free (cls);
 }
 
 
-static const char simple_response_text[] = "<html><head><title>Simple response</title></head>"
-                                           "<body>Simple response text</body></html>";
+static const char simple_response_text[] =
+  "<html><head><title>Simple response</title></head>"
+  "<body>Simple response text</body></html>";
 
 
 static int
@@ -104,27 +105,28 @@ ahc_echo (void *cls,
   struct ResponseContentCallbackParam *callback_param;
   struct MHD_Response *response;
   int ret;
-  (void)cls;               /* Unused. Silent compiler warning. */
-  (void)url;               /* Unused. Silent compiler warning. */
-  (void)version;           /* Unused. Silent compiler warning. */
-  (void)upload_data;       /* Unused. Silent compiler warning. */
-  (void)upload_data_size;  /* Unused. Silent compiler warning. */
+  (void) cls;               /* Unused. Silent compiler warning. */
+  (void) url;               /* Unused. Silent compiler warning. */
+  (void) version;           /* Unused. Silent compiler warning. */
+  (void) upload_data;       /* Unused. Silent compiler warning. */
+  (void) upload_data_size;  /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (method, "GET"))
     return MHD_NO;              /* unexpected method */
   if (&aptr != *ptr)
-    {
-      /* do never respond on first call */
-      *ptr = &aptr;
-      return MHD_YES;
-    }
+  {
+    /* do never respond on first call */
+    *ptr = &aptr;
+    return MHD_YES;
+  }
 
   callback_param = malloc (sizeof(struct ResponseContentCallbackParam));
   if (NULL == callback_param)
     return MHD_NO; /* Not enough memory. */
 
   callback_param->response_data = simple_response_text;
-  callback_param->response_size = (sizeof(simple_response_text)/sizeof(char)) - 1;
+  callback_param->response_size = (sizeof(simple_response_text)
+                                   / sizeof(char)) - 1;
 
   *ptr = NULL;                  /* reset when done */
   response = MHD_create_response_from_callback (MHD_SIZE_UNKNOWN,
@@ -150,28 +152,28 @@ main (int argc, char *const *argv)
   int port;
 
   if (argc != 2)
-    {
-      printf ("%s PORT\n", argv[0]);
-      return 1;
-    }
+  {
+    printf ("%s PORT\n", argv[0]);
+    return 1;
+  }
   port = atoi (argv[1]);
   if ( (1 > port) ||
        (port > UINT16_MAX) )
-    {
-      fprintf (stderr,
-               "Port must be a number between 1 and 65535\n");
-      return 1;
-    }
+  {
+    fprintf (stderr,
+             "Port must be a number between 1 and 65535\n");
+    return 1;
+  }
   d = MHD_start_daemon (/* MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG, */
-                        MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
-                        /* MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_POLL, */
-			/* MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_POLL, */
-			/* MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG, */
-                        (uint16_t) port,
-                        NULL, NULL,
-                        &ahc_echo, NULL,
-			MHD_OPTION_CONNECTION_TIMEOUT, (unsigned int) 120,
-			MHD_OPTION_END);
+    MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
+    /* MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_POLL, */
+    /* MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_POLL, */
+    /* MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG, */
+    (uint16_t) port,
+    NULL, NULL,
+    &ahc_echo, NULL,
+    MHD_OPTION_CONNECTION_TIMEOUT, (unsigned int) 120,
+    MHD_OPTION_END);
   if (NULL == d)
     return 1;
   (void) getc (stdin);

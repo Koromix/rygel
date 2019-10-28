@@ -94,7 +94,7 @@
 #if HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
-#if defined(_WIN32) && !defined(__CYGWIN__)
+#if defined(_WIN32) && ! defined(__CYGWIN__)
 #ifndef WIN32_LEAN_AND_MEAN
 /* Do not include unneeded parts of W32 headers. */
 #define WIN32_LEAN_AND_MEAN 1
@@ -103,28 +103,28 @@
 #include <ws2tcpip.h>
 #endif /* _WIN32 && !__CYGWIN__ */
 
-#if defined(__CYGWIN__) && !defined(_SYS_TYPES_FD_SET)
+#if defined(__CYGWIN__) && ! defined(_SYS_TYPES_FD_SET)
 /* Do not define __USE_W32_SOCKETS under Cygwin! */
 #error Cygwin with winsock fd_set is not supported
 #endif
 
-#if defined(_WIN32) && !defined(__CYGWIN__)
-#define sleep(seconds) ((SleepEx((seconds)*1000, 1)==0)?0:(seconds))
-#define usleep(useconds) ((SleepEx((useconds)/1000, 1)==0)?0:-1)
+#if defined(_WIN32) && ! defined(__CYGWIN__)
+#define sleep(seconds) ((SleepEx ((seconds) * 1000, 1)==0) ? 0 : (seconds))
+#define usleep(useconds) ((SleepEx ((useconds) / 1000, 1)==0) ? 0 : -1)
 #endif
 
-#if defined(_MSC_FULL_VER) && !defined (_SSIZE_T_DEFINED)
+#if defined(_MSC_FULL_VER) && ! defined (_SSIZE_T_DEFINED)
 #define _SSIZE_T_DEFINED
 typedef intptr_t ssize_t;
 #endif /* !_SSIZE_T_DEFINED */
 
-#if !defined(_WIN32) || defined(__CYGWIN__)
+#if ! defined(_WIN32) || defined(__CYGWIN__)
 typedef time_t _MHD_TIMEVAL_TV_SEC_TYPE;
 #else  /* _WIN32 && ! __CYGWIN__ */
 typedef long _MHD_TIMEVAL_TV_SEC_TYPE;
 #endif /* _WIN32 && ! __CYGWIN__ */
 
-#if !defined(IPPROTO_IPV6) && defined(_MSC_FULL_VER) && _WIN32_WINNT >= 0x0501
+#if ! defined(IPPROTO_IPV6) && defined(_MSC_FULL_VER) && _WIN32_WINNT >= 0x0501
 /* VC use IPPROTO_IPV6 as part of enum */
 #define IPPROTO_IPV6 IPPROTO_IPV6
 #endif

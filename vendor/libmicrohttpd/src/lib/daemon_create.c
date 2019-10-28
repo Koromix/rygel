@@ -38,16 +38,16 @@
  */
 static void
 file_logger (void *cls,
-	     enum MHD_StatusCode sc,
-	     const char *fm,
-	     va_list ap)
+             enum MHD_StatusCode sc,
+             const char *fm,
+             va_list ap)
 {
   FILE *f = cls;
 
   (void) sc;
   (void) vfprintf (f,
-		   fm,
-		   ap);
+                   fm,
+                   ap);
 }
 
 
@@ -84,16 +84,16 @@ unescape_wrapper (void *cls,
  */
 struct MHD_Daemon *
 MHD_daemon_create (MHD_RequestCallback cb,
-		   void *cb_cls)
+                   void *cb_cls)
 {
   struct MHD_Daemon *daemon;
 
-  MHD_check_global_init_();
+  MHD_check_global_init_ ();
   if (NULL == (daemon = malloc (sizeof (struct MHD_Daemon))))
     return NULL;
   memset (daemon,
-	  0,
-	  sizeof (struct MHD_Daemon));
+          0,
+          sizeof (struct MHD_Daemon));
 #ifdef EPOLL_SUPPORT
   daemon->epoll_itc_marker = "itc_marker";
 #endif
@@ -107,29 +107,29 @@ MHD_daemon_create (MHD_RequestCallback cb,
 #if ENABLE_DAUTH
   daemon->digest_nc_length = DIGEST_NC_LENGTH_DEFAULT;
 #endif
-  daemon->listen_backlog = LISTEN_BACKLOG_DEFAULT;  
+  daemon->listen_backlog = LISTEN_BACKLOG_DEFAULT;
   daemon->fo_queue_length = FO_QUEUE_LENGTH_DEFAULT;
   daemon->listen_socket = MHD_INVALID_SOCKET;
 
   if (! MHD_mutex_init_ (&daemon->cleanup_connection_mutex))
-    {
-      free (daemon);
-      return NULL;
-    }  
+  {
+    free (daemon);
+    return NULL;
+  }
   if (! MHD_mutex_init_ (&daemon->per_ip_connection_mutex))
-    {
-      (void) MHD_mutex_destroy_ (&daemon->cleanup_connection_mutex);
-      free (daemon);
-      return NULL;
-    }
+  {
+    (void) MHD_mutex_destroy_ (&daemon->cleanup_connection_mutex);
+    free (daemon);
+    return NULL;
+  }
 #ifdef DAUTH_SUPPORT
   if (! MHD_mutex_init_ (&daemon->nnc_lock))
-    {
-      (void) MHD_mutex_destroy_ (&daemon->cleanup_connection_mutex);
-      (void) MHD_mutex_destroy_ (&daemon->per_ip_connection_mutex);
-      free (daemon);
-      return NULL;
-    }
+  {
+    (void) MHD_mutex_destroy_ (&daemon->cleanup_connection_mutex);
+    (void) MHD_mutex_destroy_ (&daemon->per_ip_connection_mutex);
+    free (daemon);
+    return NULL;
+  }
 #endif
   return daemon;
 }

@@ -28,6 +28,7 @@ microhttpd_TEXINFOS = \
   chapters/tlsauthentication.inc \
   chapters/sessions.inc \
   fdl-1.3.texi \
+  gpl-2.0.texi \
   lgpl.texi \
   ecos.texi
 

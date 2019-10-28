@@ -24,14 +24,16 @@
 #include "platform.h"
 #include <microhttpd.h>
 
-const char *askpage = "<html><body>\n\
+const char *askpage =
+  "<html><body>\n\
                        Upload a file, please!<br>\n\
                        <form action=\"/filepost\" method=\"post\" enctype=\"multipart/form-data\">\n\
                        <input name=\"file\" type=\"file\">\n\
                        <input type=\"submit\" value=\" Send \"></form>\n\
                        </body></html>";
 
-#define BUSYPAGE "<html><head><title>Webserver busy</title></head><body>We are too busy to process POSTs right now.</body></html>"
+#define BUSYPAGE \
+  "<html><head><title>Webserver busy</title></head><body>We are too busy to process POSTs right now.</body></html>"
 
 static int
 ahc_echo (void *cls,
@@ -45,37 +47,37 @@ ahc_echo (void *cls,
   const char *me = cls;
   struct MHD_Response *response;
   int ret;
-  (void)cls;               /* Unused. Silent compiler warning. */
-  (void)url;               /* Unused. Silent compiler warning. */
-  (void)version;           /* Unused. Silent compiler warning. */
-  (void)upload_data;       /* Unused. Silent compiler warning. */
-  (void)upload_data_size;  /* Unused. Silent compiler warning. */
+  (void) cls;               /* Unused. Silent compiler warning. */
+  (void) url;               /* Unused. Silent compiler warning. */
+  (void) version;           /* Unused. Silent compiler warning. */
+  (void) upload_data;       /* Unused. Silent compiler warning. */
+  (void) upload_data_size;  /* Unused. Silent compiler warning. */
 
   if ((0 != strcmp (method, "GET")) && (0 != strcmp (method, "POST")))
     return MHD_NO;              /* unexpected method */
 
   if (&aptr != *ptr)
-    {
-      *ptr = &aptr;
+  {
+    *ptr = &aptr;
 
-      /* always to busy for POST requests */
-      if (0 == strcmp (method, "POST"))
-        {
-          response = MHD_create_response_from_buffer (strlen (BUSYPAGE),
-						      (void *) BUSYPAGE, 
-						      MHD_RESPMEM_PERSISTENT);
-          ret =
-            MHD_queue_response (connection, MHD_HTTP_SERVICE_UNAVAILABLE,
-                                response);
-          MHD_destroy_response (response);
-          return ret;
-        }
+    /* always to busy for POST requests */
+    if (0 == strcmp (method, "POST"))
+    {
+      response = MHD_create_response_from_buffer (strlen (BUSYPAGE),
+                                                  (void *) BUSYPAGE,
+                                                  MHD_RESPMEM_PERSISTENT);
+      ret =
+        MHD_queue_response (connection, MHD_HTTP_SERVICE_UNAVAILABLE,
+                            response);
+      MHD_destroy_response (response);
+      return ret;
     }
+  }
 
   *ptr = NULL;                  /* reset when done */
   response = MHD_create_response_from_buffer (strlen (me),
-					      (void *) me,
-					      MHD_RESPMEM_PERSISTENT);
+                                              (void *) me,
+                                              MHD_RESPMEM_PERSISTENT);
   ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
   MHD_destroy_response (response);
   return ret;
@@ -87,11 +89,12 @@ main (int argc, char *const *argv)
   struct MHD_Daemon *d;
 
   if (argc != 2)
-    {
-      printf ("%s PORT\n", argv[0]);
-      return 1;
-    }
-  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
+  {
+    printf ("%s PORT\n", argv[0]);
+    return 1;
+  }
+  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION
+                        | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
                         atoi (argv[1]),
                         NULL, NULL, &ahc_echo, (void *) askpage,
                         MHD_OPTION_END);

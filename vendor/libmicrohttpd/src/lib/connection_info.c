@@ -42,13 +42,13 @@
  */
 enum MHD_Bool
 MHD_connection_get_information_sz (struct MHD_Connection *connection,
-				   enum MHD_ConnectionInformationType info_type,
-				   union MHD_ConnectionInformation *return_value,
-				   size_t return_value_size)
+                                   enum MHD_ConnectionInformationType info_type,
+                                   union MHD_ConnectionInformation *return_value,
+                                   size_t return_value_size)
 {
 #define CHECK_SIZE(type) if (sizeof(type) < return_value_size) \
     return MHD_NO
-  
+
   switch (info_type)
   {
 #ifdef HTTPS_SUPPORT
@@ -63,7 +63,7 @@ MHD_connection_get_information_sz (struct MHD_Connection *connection,
     CHECK_SIZE (int);
     if (NULL == connection->tls_cs)
       return MHD_NO;
-    //return_value->protocol
+    // return_value->protocol
     //  = gnutls_protocol_get_version (connection->tls_session);
     return MHD_NO; // FIXME: to be implemented
   case MHD_CONNECTION_INFORMATION_GNUTLS_SESSION:
@@ -103,7 +103,7 @@ MHD_connection_get_information_sz (struct MHD_Connection *connection,
   default:
     return MHD_NO;
   }
-  
+
 #undef CHECK_SIZE
 }
 

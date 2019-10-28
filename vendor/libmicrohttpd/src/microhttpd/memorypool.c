@@ -45,13 +45,13 @@
 #endif /* HAVE_SYSCONF */
 
 /* define MAP_ANONYMOUS for Mac OS X */
-#if defined(MAP_ANON) && !defined(MAP_ANONYMOUS)
+#if defined(MAP_ANON) && ! defined(MAP_ANONYMOUS)
 #define MAP_ANONYMOUS MAP_ANON
 #endif
 #if defined(_WIN32)
 #define MAP_FAILED NULL
-#elif !defined(MAP_FAILED)
-#define MAP_FAILED ((void*)-1)
+#elif ! defined(MAP_FAILED)
+#define MAP_FAILED ((void*) -1)
 #endif
 
 /**
@@ -62,7 +62,8 @@
 /**
  * Round up 'n' to a multiple of ALIGN_SIZE.
  */
-#define ROUND_TO_ALIGN(n) (((n)+(ALIGN_SIZE-1)) / (ALIGN_SIZE) * (ALIGN_SIZE))
+#define ROUND_TO_ALIGN(n) (((n) + (ALIGN_SIZE - 1)) \
+                           / (ALIGN_SIZE) *(ALIGN_SIZE))
 
 #if defined(PAGE_SIZE)
 #define MHD_DEF_PAGE_SIZE_ PAGE_SIZE
@@ -78,7 +79,7 @@
 static size_t MHD_sys_page_size_ = MHD_DEF_PAGE_SIZE_; /* Default fallback value */
 
 /**
- * Initilise values for memory pools
+ * Initialise values for memory pools
  */
 void
 MHD_init_mem_pools_ (void)
@@ -93,7 +94,7 @@ MHD_init_mem_pools_ (void)
 #elif defined(_WIN32)
   SYSTEM_INFO si;
   GetSystemInfo (&si);
-  MHD_sys_page_size_ = (size_t)si.dwPageSize;
+  MHD_sys_page_size_ = (size_t) si.dwPageSize;
 #else
   MHD_sys_page_size_ = MHD_DEF_PAGE_SIZE_;
 #endif /* _WIN32 */
@@ -151,45 +152,47 @@ MHD_pool_create (size_t max)
 #if defined(MAP_ANONYMOUS) || defined(_WIN32)
   if ( (max <= 32 * 1024) ||
        (max < MHD_sys_page_size_ * 4 / 3) )
+  {
     pool->memory = MAP_FAILED;
+  }
   else
-    {
-      /* Round up allocation to page granularity. */
-      alloc_size = max + MHD_sys_page_size_ - 1;
-      alloc_size -= alloc_size % MHD_sys_page_size_;
-#if defined(MAP_ANONYMOUS) && !defined(_WIN32)
-      pool->memory = mmap (NULL,
-                           alloc_size,
-                           PROT_READ | PROT_WRITE,
-                           MAP_PRIVATE | MAP_ANONYMOUS,
-                           -1,
-                           0);
+  {
+    /* Round up allocation to page granularity. */
+    alloc_size = max + MHD_sys_page_size_ - 1;
+    alloc_size -= alloc_size % MHD_sys_page_size_;
+#if defined(MAP_ANONYMOUS) && ! defined(_WIN32)
+    pool->memory = mmap (NULL,
+                         alloc_size,
+                         PROT_READ | PROT_WRITE,
+                         MAP_PRIVATE | MAP_ANONYMOUS,
+                         -1,
+                         0);
 #elif defined(_WIN32)
-      pool->memory = VirtualAlloc (NULL,
-                                   alloc_size,
-                                   MEM_COMMIT | MEM_RESERVE,
-                                   PAGE_READWRITE);
+    pool->memory = VirtualAlloc (NULL,
+                                 alloc_size,
+                                 MEM_COMMIT | MEM_RESERVE,
+                                 PAGE_READWRITE);
 #endif /* _WIN32 */
-    }
+  }
 #else  /* ! _WIN32 && ! MAP_ANONYMOUS */
   pool->memory = MAP_FAILED;
 #endif /* ! _WIN32 && ! MAP_ANONYMOUS */
   if (MAP_FAILED == pool->memory)
+  {
+    alloc_size = ROUND_TO_ALIGN (max);
+    pool->memory = malloc (alloc_size);
+    if (NULL == pool->memory)
     {
-      alloc_size = ROUND_TO_ALIGN(max);
-      pool->memory = malloc (alloc_size);
-      if (NULL == pool->memory)
-        {
-          free (pool);
-          return NULL;
-        }
-      pool->is_mmap = false;
+      free (pool);
+      return NULL;
     }
+    pool->is_mmap = false;
+  }
 #if defined(MAP_ANONYMOUS) || defined(_WIN32)
   else
-    {
-      pool->is_mmap = true;
-    }
+  {
+    pool->is_mmap = true;
+  }
 #endif /* _WIN32 || MAP_ANONYMOUS */
   pool->pos = 0;
   pool->end = alloc_size;
@@ -211,10 +214,10 @@ MHD_pool_destroy (struct MemoryPool *pool)
 
   mhd_assert (pool->end >= pool->pos);
   mhd_assert (pool->size >= pool->end - pool->pos);
-  if (!pool->is_mmap)
+  if (! pool->is_mmap)
     free (pool->memory);
   else
-#if defined(MAP_ANONYMOUS) && !defined(_WIN32)
+#if defined(MAP_ANONYMOUS) && ! defined(_WIN32)
     munmap (pool->memory,
             pool->size);
 #elif defined(_WIN32)
@@ -256,7 +259,7 @@ MHD_pool_get_free (struct MemoryPool *pool)
  */
 void *
 MHD_pool_allocate (struct MemoryPool *pool,
-		   size_t size,
+                   size_t size,
                    bool from_end)
 {
   void *ret;
@@ -271,15 +274,15 @@ MHD_pool_allocate (struct MemoryPool *pool,
        (pool->pos + asize < pool->pos))
     return NULL;
   if (from_end)
-    {
-      ret = &pool->memory[pool->end - asize];
-      pool->end -= asize;
-    }
+  {
+    ret = &pool->memory[pool->end - asize];
+    pool->end -= asize;
+  }
   else
-    {
-      ret = &pool->memory[pool->pos];
-      pool->pos += asize;
-    }
+  {
+    ret = &pool->memory[pool->pos];
+    pool->pos += asize;
+  }
   return ret;
 }
 
@@ -304,8 +307,8 @@ MHD_pool_allocate (struct MemoryPool *pool,
 void *
 MHD_pool_reallocate (struct MemoryPool *pool,
                      void *old,
-		     size_t old_size,
-		     size_t new_size)
+                     size_t old_size,
+                     size_t new_size)
 {
   size_t asize;
   uint8_t *new_blc;
@@ -313,36 +316,37 @@ MHD_pool_reallocate (struct MemoryPool *pool,
   mhd_assert (pool->end >= pool->pos);
   mhd_assert (pool->size >= pool->end - pool->pos);
   mhd_assert (old != NULL || old_size == 0);
-  mhd_assert (old == NULL || pool->memory <= (uint8_t*)old);
-  mhd_assert (old == NULL || pool->memory + pool->size >= (uint8_t*)old + old_size);
+  mhd_assert (old == NULL || pool->memory <= (uint8_t*) old);
+  mhd_assert (old == NULL || pool->memory + pool->size >= (uint8_t*) old
+              + old_size);
   /* Blocks "from the end" must not be reallocated */
-  mhd_assert (old == NULL || pool->memory + pool->pos > (uint8_t*)old);
+  mhd_assert (old == NULL || pool->memory + pool->pos > (uint8_t*) old);
 
   if (0 != old_size)
-    { /* Need to save some data */
-      const size_t old_offset = (uint8_t*)old - pool->memory;
-      const bool shrinking = (old_size > new_size);
-      /* Try resizing in-place */
-      if (shrinking)
-        { /* Shrinking in-place, zero-out freed part */
-          memset ((uint8_t*)old + new_size, 0, old_size - new_size);
-        }
-      if (pool->pos == ROUND_TO_ALIGN (old_offset + old_size))
-        { /* "old" block is the last allocated block */
-          const size_t new_apos = ROUND_TO_ALIGN (old_offset + new_size);
-          if (!shrinking)
-            { /* Grow in-place, check for enough space. */
-              if ( (new_apos > pool->end) ||
-                   (new_apos < pool->pos) ) /* Value wrap */
-                return NULL; /* No space */
-            }
-          /* Resized in-place */
-          pool->pos = new_apos;
-          return old;
-        }
-      if (shrinking)
-        return old; /* Resized in-place, freed part remains allocated */
+  {   /* Need to save some data */
+    const size_t old_offset = (uint8_t*) old - pool->memory;
+    const bool shrinking = (old_size > new_size);
+    /* Try resizing in-place */
+    if (shrinking)
+    {     /* Shrinking in-place, zero-out freed part */
+      memset ((uint8_t*) old + new_size, 0, old_size - new_size);
     }
+    if (pool->pos == ROUND_TO_ALIGN (old_offset + old_size))
+    {     /* "old" block is the last allocated block */
+      const size_t new_apos = ROUND_TO_ALIGN (old_offset + new_size);
+      if (! shrinking)
+      {       /* Grow in-place, check for enough space. */
+        if ( (new_apos > pool->end) ||
+             (new_apos < pool->pos) )       /* Value wrap */
+          return NULL;       /* No space */
+      }
+      /* Resized in-place */
+      pool->pos = new_apos;
+      return old;
+    }
+    if (shrinking)
+      return old;   /* Resized in-place, freed part remains allocated */
+  }
   /* Need to allocate new block */
   asize = ROUND_TO_ALIGN (new_size);
   if ( ( (0 == asize) &&
@@ -354,12 +358,12 @@ MHD_pool_reallocate (struct MemoryPool *pool,
   pool->pos += asize;
 
   if (0 != old_size)
-    {
-      /* Move data to new block, old block remains allocated */
-      memcpy (new_blc, old, old_size);
-      /* Zero-out old block */
-      memset (old, 0, old_size);
-    }
+  {
+    /* Move data to new block, old block remains allocated */
+    memcpy (new_blc, old, old_size);
+    /* Zero-out old block */
+    memset (old, 0, old_size);
+  }
   return new_blc;
 }
 
@@ -379,59 +383,60 @@ MHD_pool_reallocate (struct MemoryPool *pool,
  */
 void *
 MHD_pool_reset (struct MemoryPool *pool,
-		void *keep,
-		size_t copy_bytes,
+                void *keep,
+                size_t copy_bytes,
                 size_t new_size)
 {
   mhd_assert (pool->end >= pool->pos);
   mhd_assert (pool->size >= pool->end - pool->pos);
   mhd_assert (copy_bytes < new_size);
   mhd_assert (keep != NULL || copy_bytes == 0);
-  mhd_assert (keep == NULL || pool->memory <= (uint8_t*)keep);
-  mhd_assert (keep == NULL || pool->memory + pool->size >= (uint8_t*)keep + copy_bytes);
+  mhd_assert (keep == NULL || pool->memory <= (uint8_t*) keep);
+  mhd_assert (keep == NULL || pool->memory + pool->size >= (uint8_t*) keep
+              + copy_bytes);
   if ( (NULL != keep) &&
        (keep != pool->memory) )
-    {
-      if (0 != copy_bytes)
-        memmove (pool->memory,
-                 keep,
-                 copy_bytes);
-    }
+  {
+    if (0 != copy_bytes)
+      memmove (pool->memory,
+               keep,
+               copy_bytes);
+  }
   /* technically not needed, but safer to zero out */
   if (pool->size > copy_bytes)
-    {
-      size_t to_zero; /** Size of area to zero-out */
+  {
+    size_t to_zero;   /** Size of area to zero-out */
 
-      to_zero = pool->size - copy_bytes;
+    to_zero = pool->size - copy_bytes;
 #ifdef _WIN32
-      if (pool->is_mmap)
-        {
-          size_t to_recommit; /** Size of decommitted and re-committed area. */
-          uint8_t *recommit_addr;
-          /* Round down to page size */
-          to_recommit = to_zero - to_zero % MHD_sys_page_size_;
-          recommit_addr = pool->memory + pool->size - to_recommit;
+    if (pool->is_mmap)
+    {
+      size_t to_recommit;     /** Size of decommitted and re-committed area. */
+      uint8_t *recommit_addr;
+      /* Round down to page size */
+      to_recommit = to_zero - to_zero % MHD_sys_page_size_;
+      recommit_addr = pool->memory + pool->size - to_recommit;
 
-          /* De-committing and re-committing again clear memory and make
-           * pages free / available for other needs until accessed. */
-          if (VirtualFree (recommit_addr,
-                           to_recommit,
-                           MEM_DECOMMIT))
-            {
-              to_zero -= to_recommit;
+      /* De-committing and re-committing again clear memory and make
+       * pages free / available for other needs until accessed. */
+      if (VirtualFree (recommit_addr,
+                       to_recommit,
+                       MEM_DECOMMIT))
+      {
+        to_zero -= to_recommit;
 
-              if (recommit_addr != VirtualAlloc (recommit_addr,
-                                                 to_recommit,
-                                                 MEM_COMMIT,
-                                                 PAGE_READWRITE))
-                abort(); /* Serious error, must never happen */
-            }
-        }
-#endif /* _WIN32 */
-      memset (&pool->memory[copy_bytes],
-              0,
-              to_zero);
+        if (recommit_addr != VirtualAlloc (recommit_addr,
+                                           to_recommit,
+                                           MEM_COMMIT,
+                                           PAGE_READWRITE))
+          abort ();      /* Serious error, must never happen */
+      }
     }
+#endif /* _WIN32 */
+    memset (&pool->memory[copy_bytes],
+            0,
+            to_zero);
+  }
   pool->pos = ROUND_TO_ALIGN (new_size);
   pool->end = pool->size;
   return pool->memory;

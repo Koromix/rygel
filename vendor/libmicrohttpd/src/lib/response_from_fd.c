@@ -57,34 +57,34 @@ file_reader (void *cls,
              size_t max)
 {
   struct MHD_Response *response = cls;
-#if !defined(_WIN32) || defined(__CYGWIN__)
+#if ! defined(_WIN32) || defined(__CYGWIN__)
   ssize_t n;
 #else  /* _WIN32 && !__CYGWIN__ */
   const HANDLE fh = (HANDLE) _get_osfhandle (response->fd);
 #endif /* _WIN32 && !__CYGWIN__ */
-  const int64_t offset64 = (int64_t)(pos + response->fd_off);
+  const int64_t offset64 = (int64_t) (pos + response->fd_off);
 
   if (offset64 < 0)
     return MHD_CONTENT_READER_END_WITH_ERROR; /* seek to required position is not possible */
 
-#if !defined(_WIN32) || defined(__CYGWIN__)
+#if ! defined(_WIN32) || defined(__CYGWIN__)
   if (max > SSIZE_MAX)
     max = SSIZE_MAX; /* Clamp to maximum return value. */
 
 #if defined(HAVE_PREAD64)
   n = pread64 (response->fd,
-	       buf,
-	       max,
-	       offset64);
+               buf,
+               max,
+               offset64);
 #elif defined(HAVE_PREAD)
   if ( (sizeof(off_t) < sizeof (uint64_t)) &&
-       (offset64 > (uint64_t)INT32_MAX) )
+       (offset64 > (uint64_t) INT32_MAX) )
     return MHD_CONTENT_READER_END_WITH_ERROR; /* Read at required position is not possible. */
 
   n = pread (response->fd,
-	     buf,
-	     max,
-	     (off_t) offset64);
+             buf,
+             max,
+             (off_t) offset64);
 #else  /* ! HAVE_PREAD */
 #if defined(HAVE_LSEEK64)
   if (lseek64 (response->fd,
@@ -93,7 +93,7 @@ file_reader (void *cls,
     return MHD_CONTENT_READER_END_WITH_ERROR; /* can't seek to required position */
 #else  /* ! HAVE_LSEEK64 */
   if ( (sizeof(off_t) < sizeof (uint64_t)) &&
-       (offset64 > (uint64_t)INT32_MAX) )
+       (offset64 > (uint64_t) INT32_MAX) )
     return MHD_CONTENT_READER_END_WITH_ERROR; /* seek to required position is not possible */
 
   if (lseek (response->fd,
@@ -115,25 +115,25 @@ file_reader (void *cls,
   if (INVALID_HANDLE_VALUE == fh)
     return MHD_CONTENT_READER_END_WITH_ERROR; /* Value of 'response->fd' is not valid. */
   else
-    {
-      OVERLAPPED f_ol = {0, 0, {{0, 0}}, 0}; /* Initialize to zero. */
-      ULARGE_INTEGER pos_uli;
-      DWORD toRead = (max > INT32_MAX) ? INT32_MAX : (DWORD) max;
-      DWORD resRead;
+  {
+    OVERLAPPED f_ol = {0, 0, {{0, 0}}, 0};   /* Initialize to zero. */
+    ULARGE_INTEGER pos_uli;
+    DWORD toRead = (max > INT32_MAX) ? INT32_MAX : (DWORD) max;
+    DWORD resRead;
 
-      pos_uli.QuadPart = (uint64_t) offset64; /* Simple transformation 64bit -> 2x32bit. */
-      f_ol.Offset = pos_uli.LowPart;
-      f_ol.OffsetHigh = pos_uli.HighPart;
-      if (! ReadFile (fh,
-		      (void*)buf,
-		      toRead,
-		      &resRead,
-		      &f_ol))
-        return MHD_CONTENT_READER_END_WITH_ERROR; /* Read error. */
-      if (0 == resRead)
-        return MHD_CONTENT_READER_END_OF_STREAM;
-      return (ssize_t) resRead;
-    }
+    pos_uli.QuadPart = (uint64_t) offset64;   /* Simple transformation 64bit -> 2x32bit. */
+    f_ol.Offset = pos_uli.LowPart;
+    f_ol.OffsetHigh = pos_uli.HighPart;
+    if (! ReadFile (fh,
+                    (void*) buf,
+                    toRead,
+                    &resRead,
+                    &f_ol))
+      return MHD_CONTENT_READER_END_WITH_ERROR;   /* Read error. */
+    if (0 == resRead)
+      return MHD_CONTENT_READER_END_OF_STREAM;
+    return (ssize_t) resRead;
+  }
 #endif /* _WIN32 && !__CYGWIN__ */
 }
 
@@ -174,18 +174,18 @@ free_callback (void *cls)
  */
 struct MHD_Response *
 MHD_response_from_fd (enum MHD_HTTP_StatusCode sc,
-		      int fd,
-		      uint64_t offset,
-		      uint64_t size)
+                      int fd,
+                      uint64_t offset,
+                      uint64_t size)
 {
   struct MHD_Response *response;
 
   mhd_assert (-1 != fd);
-#if !defined(HAVE___LSEEKI64) && !defined(HAVE_LSEEK64)
+#if ! defined(HAVE___LSEEKI64) && ! defined(HAVE_LSEEK64)
   if ( (sizeof (uint64_t) > sizeof (off_t)) &&
-       ( (size > (uint64_t)INT32_MAX) ||
-         (offset > (uint64_t)INT32_MAX) ||
-         ((size + offset) >= (uint64_t)INT32_MAX) ) )
+       ( (size > (uint64_t) INT32_MAX) ||
+         (offset > (uint64_t) INT32_MAX) ||
+         ((size + offset) >= (uint64_t) INT32_MAX) ) )
     return NULL;
 #endif
   if ( ((int64_t) size < 0) ||
@@ -194,11 +194,11 @@ MHD_response_from_fd (enum MHD_HTTP_StatusCode sc,
     return NULL;
 
   response = MHD_response_from_callback (sc,
-					 size,
-					 MHD_FILE_READ_BLOCK_SIZE,
-					 &file_reader,
-					 NULL,
-					 &free_callback);
+                                         size,
+                                         MHD_FILE_READ_BLOCK_SIZE,
+                                         &file_reader,
+                                         NULL,
+                                         &free_callback);
   if (NULL == response)
     return NULL;
   response->fd = fd;
@@ -208,4 +208,3 @@ MHD_response_from_fd (enum MHD_HTTP_StatusCode sc,
 }
 
 /* end of response_from_fd.c */
-

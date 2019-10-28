@@ -38,8 +38,8 @@
  */
 void
 MHD_daemon_set_logger (struct MHD_Daemon *daemon,
-		       MHD_LoggingCallback logger,
-		       void *logger_cls)
+                       MHD_LoggingCallback logger,
+                       void *logger_cls)
 {
   daemon->logger = logger;
   daemon->logger_cls = logger_cls;
@@ -148,8 +148,8 @@ MHD_daemon_disallow_upgrade (struct MHD_Daemon *daemon)
  */
 enum MHD_Bool
 MHD_daemon_tcp_fastopen (struct MHD_Daemon *daemon,
-			 enum MHD_FastOpenMethod fom,
-			 unsigned int queue_length)
+                         enum MHD_FastOpenMethod fom,
+                         unsigned int queue_length)
 {
   daemon->fast_open_method = fom;
   daemon->fo_queue_length = queue_length;
@@ -185,8 +185,8 @@ MHD_daemon_tcp_fastopen (struct MHD_Daemon *daemon,
  */
 void
 MHD_daemon_bind_port (struct MHD_Daemon *daemon,
-		      enum MHD_AddressFamily af,
-		      uint16_t port)
+                      enum MHD_AddressFamily af,
+                      uint16_t port)
 {
   daemon->listen_af = af;
   daemon->listen_port = port;
@@ -204,12 +204,12 @@ MHD_daemon_bind_port (struct MHD_Daemon *daemon,
  */
 void
 MHD_daemon_bind_socket_address (struct MHD_Daemon *daemon,
-				const struct sockaddr *sa,
-				size_t sa_len)
+                                const struct sockaddr *sa,
+                                size_t sa_len)
 {
   memcpy (&daemon->listen_sa,
-	  sa,
-	  sa_len);
+          sa,
+          sa_len);
   daemon->listen_sa_len = sa_len;
 }
 
@@ -223,7 +223,7 @@ MHD_daemon_bind_socket_address (struct MHD_Daemon *daemon,
  */
 void
 MHD_daemon_listen_backlog (struct MHD_Daemon *daemon,
-			   int listen_backlog)
+                           int listen_backlog)
 {
   daemon->listen_backlog = listen_backlog;
 }
@@ -275,7 +275,7 @@ MHD_daemon_enable_shoutcast (struct MHD_Daemon *daemon)
  */
 void
 MHD_daemon_listen_socket (struct MHD_Daemon *daemon,
-			  MHD_socket listen_socket)
+                          MHD_socket listen_socket)
 {
   daemon->listen_socket = listen_socket;
 }
@@ -290,7 +290,7 @@ MHD_daemon_listen_socket (struct MHD_Daemon *daemon,
  */
 enum MHD_Bool
 MHD_daemon_event_loop (struct MHD_Daemon *daemon,
-		       enum MHD_EventLoopSyscall els)
+                       enum MHD_EventLoopSyscall els)
 {
   switch (els)
   {
@@ -326,7 +326,7 @@ MHD_daemon_event_loop (struct MHD_Daemon *daemon,
  */
 void
 MHD_daemon_protocol_strict_level (struct MHD_Daemon *daemon,
-				  enum MHD_ProtocolStrictLevel sl)
+                                  enum MHD_ProtocolStrictLevel sl)
 {
   daemon->protocol_strict_level = sl;
 }
@@ -349,8 +349,8 @@ MHD_daemon_protocol_strict_level (struct MHD_Daemon *daemon,
  */
 enum MHD_StatusCode
 MHD_daemon_set_tls_backend (struct MHD_Daemon *daemon,
-			    const char *tls_backend,
-			    const char *ciphers)
+                            const char *tls_backend,
+                            const char *ciphers)
 {
 #if ! (defined(HTTPS_SUPPORT) && defined (HAVE_DLFCN_H))
   return MHD_SC_TLS_DISABLED;
@@ -361,18 +361,18 @@ MHD_daemon_set_tls_backend (struct MHD_Daemon *daemon,
 
   /* todo: .dll on W32? */
   res = MHD_snprintf_ (filename,
-		       sizeof (filename),
-		       "%s/libmicrohttpd_tls_%s.so",
-		       MHD_PLUGIN_INSTALL_PREFIX,
-		       tls_backend);
+                       sizeof (filename),
+                       "%s/libmicrohttpd_tls_%s.so",
+                       MHD_PLUGIN_INSTALL_PREFIX,
+                       tls_backend);
   if (0 >= res)
     return MHD_SC_TLS_BACKEND_UNSUPPORTED; /* string too long? */
   if (NULL ==
       (daemon->tls_backend_lib = dlopen (filename,
-					 RTLD_NOW | RTLD_LOCAL)))
+                                         RTLD_NOW | RTLD_LOCAL)))
     return MHD_SC_TLS_BACKEND_UNSUPPORTED; /* plugin not found */
   if (NULL == (init = dlsym (daemon->tls_backend_lib,
-			     "MHD_TLS_init_" MHD_TLS_ABI_VERSION_STR)))
+                             "MHD_TLS_init_" MHD_TLS_ABI_VERSION_STR)))
 
   {
     dlclose (daemon->tls_backend_lib);
@@ -405,9 +405,9 @@ MHD_daemon_set_tls_backend (struct MHD_Daemon *daemon,
  */
 enum MHD_StatusCode
 MHD_daemon_tls_key_and_cert_from_memory (struct MHD_Daemon *daemon,
-					 const char *mem_key,
-					 const char *mem_cert,
-					 const char *pass)
+                                         const char *mem_key,
+                                         const char *mem_cert,
+                                         const char *pass)
 {
 #ifndef HTTPS_SUPPORT
   return MHD_SC_TLS_DISABLED;
@@ -417,9 +417,9 @@ MHD_daemon_tls_key_and_cert_from_memory (struct MHD_Daemon *daemon,
   if (NULL == (plugin = daemon->tls_api))
     return MHD_SC_TLS_BACKEND_UNINITIALIZED;
   return plugin->init_kcp (plugin->cls,
-			   mem_key,
-			   mem_cert,
-			   pass);
+                           mem_key,
+                           mem_cert,
+                           pass);
 #endif
 }
 
@@ -435,7 +435,7 @@ MHD_daemon_tls_key_and_cert_from_memory (struct MHD_Daemon *daemon,
  */
 enum MHD_StatusCode
 MHD_daemon_tls_mem_dhparams (struct MHD_Daemon *daemon,
-			     const char *dh)
+                             const char *dh)
 {
 #ifndef HTTPS_SUPPORT
   return MHD_SC_TLS_DISABLED;
@@ -445,7 +445,7 @@ MHD_daemon_tls_mem_dhparams (struct MHD_Daemon *daemon,
   if (NULL == (plugin = daemon->tls_api))
     return MHD_SC_TLS_BACKEND_UNINITIALIZED;
   return plugin->init_dhparams (plugin->cls,
-				dh);
+                                dh);
 #endif
 }
 
@@ -461,7 +461,7 @@ MHD_daemon_tls_mem_dhparams (struct MHD_Daemon *daemon,
  */
 enum MHD_StatusCode
 MHD_daemon_tls_mem_trust (struct MHD_Daemon *daemon,
-			  const char *mem_trust)
+                          const char *mem_trust)
 {
 #ifndef HTTPS_SUPPORT
   return MHD_SC_TLS_DISABLED;
@@ -471,7 +471,7 @@ MHD_daemon_tls_mem_trust (struct MHD_Daemon *daemon,
   if (NULL == (plugin = daemon->tls_api))
     return MHD_SC_TLS_BACKEND_UNINITIALIZED;
   return plugin->init_mem_trust (plugin->cls,
-				 mem_trust);
+                                 mem_trust);
 #endif
 }
 
@@ -485,7 +485,7 @@ MHD_daemon_tls_mem_trust (struct MHD_Daemon *daemon,
  */
 enum MHD_StatusCode
 MHD_daemon_gnutls_credentials (struct MHD_Daemon *daemon,
-			       int gnutls_credentials)
+                               int gnutls_credentials)
 {
 #ifndef HTTPS_SUPPORT
   return MHD_SC_TLS_DISABLED;
@@ -518,7 +518,7 @@ MHD_daemon_gnutls_credentials (struct MHD_Daemon *daemon,
  */
 enum MHD_StatusCode
 MHD_daemon_gnutls_key_and_cert_from_callback (struct MHD_Daemon *daemon,
-					      void *cb)
+                                              void *cb)
 {
 #ifndef HTTPS_SUPPORT
   return MHD_SC_TLS_DISABLED;
@@ -541,7 +541,7 @@ MHD_daemon_gnutls_key_and_cert_from_callback (struct MHD_Daemon *daemon,
  */
 void
 MHD_daemon_threading_mode (struct MHD_Daemon *daemon,
-			    enum MHD_ThreadingMode tm)
+                           enum MHD_ThreadingMode tm)
 {
   daemon->threading_mode = tm;
 }
@@ -558,8 +558,8 @@ MHD_daemon_threading_mode (struct MHD_Daemon *daemon,
  */
 void
 MHD_daemon_accept_policy (struct MHD_Daemon *daemon,
-			  MHD_AcceptPolicyCallback apc,
-			  void *apc_cls)
+                          MHD_AcceptPolicyCallback apc,
+                          void *apc_cls)
 {
   daemon->accept_policy_cb = apc;
   daemon->accept_policy_cb_cls = apc_cls;
@@ -577,8 +577,8 @@ MHD_daemon_accept_policy (struct MHD_Daemon *daemon,
  */
 void
 MHD_daemon_set_early_uri_logger (struct MHD_Daemon *daemon,
-				 MHD_EarlyUriLogCallback cb,
-				 void *cb_cls)
+                                 MHD_EarlyUriLogCallback cb,
+                                 void *cb_cls)
 {
   daemon->early_uri_logger_cb = cb;
   daemon->early_uri_logger_cb_cls = cb_cls;
@@ -595,8 +595,8 @@ MHD_daemon_set_early_uri_logger (struct MHD_Daemon *daemon,
  */
 void
 MHD_daemon_set_notify_connection (struct MHD_Daemon *daemon,
-				  MHD_NotifyConnectionCallback ncc,
-				  void *ncc_cls)
+                                  MHD_NotifyConnectionCallback ncc,
+                                  void *ncc_cls)
 {
   daemon->notify_connection_cb = ncc;
   daemon->notify_connection_cb_cls = ncc_cls;
@@ -616,8 +616,8 @@ MHD_daemon_set_notify_connection (struct MHD_Daemon *daemon,
  */
 void
 MHD_daemon_connection_memory_limit (struct MHD_Daemon *daemon,
-				    size_t memory_limit_b,
-				    size_t memory_increment_b)
+                                    size_t memory_limit_b,
+                                    size_t memory_increment_b)
 {
   if (memory_increment_b >= memory_limit_b)
     MHD_PANIC ("sane memory increment must be below memory limit");
@@ -636,7 +636,7 @@ MHD_daemon_connection_memory_limit (struct MHD_Daemon *daemon,
  */
 void
 MHD_daemon_thread_stack_size (struct MHD_Daemon *daemon,
-			      size_t stack_limit_b)
+                              size_t stack_limit_b)
 {
   daemon->thread_stack_limit_b = stack_limit_b;
 }
@@ -659,8 +659,8 @@ MHD_daemon_thread_stack_size (struct MHD_Daemon *daemon,
  */
 void
 MHD_daemon_connection_limits (struct MHD_Daemon *daemon,
-			      unsigned int global_connection_limit,
-			      unsigned int ip_connection_limit)
+                              unsigned int global_connection_limit,
+                              unsigned int ip_connection_limit)
 {
   daemon->global_connection_limit = global_connection_limit;
   daemon->ip_connection_limit = ip_connection_limit;
@@ -677,7 +677,7 @@ MHD_daemon_connection_limits (struct MHD_Daemon *daemon,
  */
 void
 MHD_daemon_connection_default_timeout (struct MHD_Daemon *daemon,
-				       unsigned int timeout_s)
+                                       unsigned int timeout_s)
 {
   daemon->connection_default_timeout = (time_t) timeout_s;
 }
@@ -696,8 +696,8 @@ MHD_daemon_connection_default_timeout (struct MHD_Daemon *daemon,
  */
 void
 MHD_daemon_unescape_cb (struct MHD_Daemon *daemon,
-			MHD_UnescapeCallback unescape_cb,
-			void *unescape_cb_cls)
+                        MHD_UnescapeCallback unescape_cb,
+                        void *unescape_cb_cls)
 {
   daemon->unescape_cb = unescape_cb;
   daemon->unescape_cb_cls = unescape_cb_cls;
@@ -715,8 +715,8 @@ MHD_daemon_unescape_cb (struct MHD_Daemon *daemon,
  */
 void
 MHD_daemon_digest_auth_random (struct MHD_Daemon *daemon,
-			       size_t buf_size,
-			       const void *buf)
+                               size_t buf_size,
+                               const void *buf)
 {
 #if ENABLE_DAUTH
   daemon->digest_auth_random_buf = buf;
@@ -739,34 +739,34 @@ MHD_daemon_digest_auth_random (struct MHD_Daemon *daemon,
  */
 enum MHD_StatusCode
 MHD_daemon_digest_auth_nc_length (struct MHD_Daemon *daemon,
-				  size_t nc_length)
+                                  size_t nc_length)
 {
 #if ENABLE_DAUTH
-  if ( ( (size_t) (nc_length * sizeof (struct MHD_NonceNc))) /
-       sizeof (struct MHD_NonceNc) != nc_length)
+  if ( ( (size_t) (nc_length * sizeof (struct MHD_NonceNc)))
+       / sizeof (struct MHD_NonceNc) != nc_length)
+  {
+#ifdef HAVE_MESSAGES
+    MHD_DLOG (daemon,
+              _ ("Specified value for NC_SIZE too large\n"));
+#endif
+    return MHD_SC_DIGEST_AUTH_NC_LENGTH_TOO_BIG;
+  }
+  if (0 < nc_length)
+  {
+    if (NULL != daemon->nnc)
+      free (daemon->nnc);
+    daemon->nnc = malloc (daemon->nonce_nc_size
+                          * sizeof (struct MHD_NonceNc));
+    if (NULL == daemon->nnc)
     {
 #ifdef HAVE_MESSAGES
       MHD_DLOG (daemon,
-		_("Specified value for NC_SIZE too large\n"));
+                _ ("Failed to allocate memory for nonce-nc map: %s\n"),
+                MHD_strerror_ (errno));
 #endif
-      return MHD_SC_DIGEST_AUTH_NC_LENGTH_TOO_BIG;
+      return MHD_SC_DIGEST_AUTH_NC_ALLOCATION_FAILURE;
     }
-  if (0 < nc_length)
-    {
-      if (NULL != daemon->nnc)
-	free (daemon->nnc);
-      daemon->nnc = malloc (daemon->nonce_nc_size *
-			    sizeof (struct MHD_NonceNc));
-      if (NULL == daemon->nnc)
-	{
-#ifdef HAVE_MESSAGES
-	  MHD_DLOG (daemon,
-		    _("Failed to allocate memory for nonce-nc map: %s\n"),
-		    MHD_strerror_ (errno));
-#endif
-	  return MHD_SC_DIGEST_AUTH_NC_ALLOCATION_FAILURE;
-	}
-    }
+  }
   daemon->digest_nc_length = nc_length;
   return MHD_SC_OK;
 #else

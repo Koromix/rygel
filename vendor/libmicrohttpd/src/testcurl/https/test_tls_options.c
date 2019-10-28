@@ -43,17 +43,17 @@ int curl_check_version (const char *req_version, ...);
  *
  */
 static int
-test_unmatching_ssl_version (void * cls, int port, const char *cipher_suite,
+test_unmatching_ssl_version (void *cls, int port, const char *cipher_suite,
                              int curl_req_ssl_version)
 {
   struct CBC cbc;
-  (void)cls;    /* Unused. Silent compiler warning. */
+  (void) cls;    /* Unused. Silent compiler warning. */
   if (NULL == (cbc.buf = malloc (sizeof (char) * 256)))
-    {
-      fprintf (stderr, "Error: failed to allocate: %s\n",
-               strerror (errno));
-      return -1;
-    }
+  {
+    fprintf (stderr, "Error: failed to allocate: %s\n",
+             strerror (errno));
+    return -1;
+  }
   cbc.size = 256;
   cbc.pos = 0;
 
@@ -61,21 +61,22 @@ test_unmatching_ssl_version (void * cls, int port, const char *cipher_suite,
   if (gen_test_file_url (url,
                          sizeof (url),
                          port))
-    {
-      free (cbc.buf);
-      fprintf (stderr,
-               "Internal error in gen_test_file_url\n");
-      return -1;
-    }
+  {
+    free (cbc.buf);
+    fprintf (stderr,
+             "Internal error in gen_test_file_url\n");
+    return -1;
+  }
 
   /* assert daemon *rejected* request */
   if (CURLE_OK ==
       send_curl_req (url, &cbc, cipher_suite, curl_req_ssl_version))
-    {
-      free (cbc.buf);
-      fprintf (stderr, "cURL failed to reject request despite SSL version mismatch!\n");
-      return -1;
-    }
+  {
+    free (cbc.buf);
+    fprintf (stderr,
+             "cURL failed to reject request despite SSL version mismatch!\n");
+    return -1;
+  }
 
   free (cbc.buf);
   return 0;
@@ -89,9 +90,10 @@ main (int argc, char *const *argv)
   unsigned int errorCount = 0;
   const char *ssl_version;
   int daemon_flags =
-    MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_TLS | MHD_USE_ERROR_LOG;
+    MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD
+    | MHD_USE_TLS | MHD_USE_ERROR_LOG;
   int port;
-  (void)argc; (void)argv;       /* Unused. Silent compiler warning. */
+  (void) argc; (void) argv;       /* Unused. Silent compiler warning. */
 
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
@@ -105,10 +107,10 @@ main (int argc, char *const *argv)
   gcry_control (GCRYCTL_INITIALIZATION_FINISHED, 0);
 #endif
 #endif /* MHD_HTTPS_REQUIRE_GRYPT */
- if (curl_check_version (MHD_REQ_CURL_VERSION))
-    {
-      return 77;
-    }
+  if (curl_check_version (MHD_REQ_CURL_VERSION))
+  {
+    return 77;
+  }
   ssl_version = curl_version_info (CURLVERSION_NOW)->ssl_version;
   if (NULL == ssl_version)
   {
@@ -121,46 +123,48 @@ main (int argc, char *const *argv)
     return 77;
   }
 
-  if (!testsuite_curl_global_init ())
+  if (! testsuite_curl_global_init ())
     return 99;
 
   const char *aes128_sha = "AES128-SHA";
   const char *aes256_sha = "AES256-SHA";
-  if (curl_uses_nss_ssl() == 0)
-    {
-      aes128_sha = "rsa_aes_128_sha";
-      aes256_sha = "rsa_aes_256_sha";
-    }
+  if (curl_uses_nss_ssl () == 0)
+  {
+    aes128_sha = "rsa_aes_128_sha";
+    aes256_sha = "rsa_aes_256_sha";
+  }
 
 
   if (0 !=
-    test_wrap ("TLS1.0-AES-SHA1",
-	       &test_https_transfer, NULL, port, daemon_flags,
-	       aes128_sha,
-	       CURL_SSLVERSION_TLSv1,
-	       MHD_OPTION_HTTPS_MEM_KEY, srv_key_pem,
-	       MHD_OPTION_HTTPS_MEM_CERT, srv_self_signed_cert_pem,
-	       MHD_OPTION_HTTPS_PRIORITIES, "NONE:+VERS-TLS1.0:+AES-128-CBC:+SHA1:+RSA:+COMP-NULL",
-	       MHD_OPTION_END))
-    {
-      fprintf (stderr, "TLS1.0-AES-SHA1 test failed\n");
-      errorCount++;
-    }
+      test_wrap ("TLS1.0-AES-SHA1",
+                 &test_https_transfer, NULL, port, daemon_flags,
+                 aes128_sha,
+                 CURL_SSLVERSION_TLSv1,
+                 MHD_OPTION_HTTPS_MEM_KEY, srv_key_pem,
+                 MHD_OPTION_HTTPS_MEM_CERT, srv_self_signed_cert_pem,
+                 MHD_OPTION_HTTPS_PRIORITIES,
+                 "NONE:+VERS-TLS1.0:+AES-128-CBC:+SHA1:+RSA:+COMP-NULL",
+                 MHD_OPTION_END))
+  {
+    fprintf (stderr, "TLS1.0-AES-SHA1 test failed\n");
+    errorCount++;
+  }
   fprintf (stderr,
-	   "The following handshake should fail (and print an error message)...\n");
+           "The following handshake should fail (and print an error message)...\n");
   if (0 !=
-    test_wrap ("TLS1.0 vs SSL3",
-	       &test_unmatching_ssl_version, NULL, port, daemon_flags,
-	       aes256_sha,
-	       CURL_SSLVERSION_SSLv3,
-	       MHD_OPTION_HTTPS_MEM_KEY, srv_key_pem,
-	       MHD_OPTION_HTTPS_MEM_CERT, srv_self_signed_cert_pem,
-	       MHD_OPTION_HTTPS_PRIORITIES, "NONE:+VERS-TLS1.0:+AES-256-CBC:+SHA1:+RSA:+COMP-NULL",
-	       MHD_OPTION_END))
-    {
-      fprintf (stderr, "TLS1.0 vs SSL3 test failed\n");
-      errorCount++;
-    }
+      test_wrap ("TLS1.0 vs SSL3",
+                 &test_unmatching_ssl_version, NULL, port, daemon_flags,
+                 aes256_sha,
+                 CURL_SSLVERSION_SSLv3,
+                 MHD_OPTION_HTTPS_MEM_KEY, srv_key_pem,
+                 MHD_OPTION_HTTPS_MEM_CERT, srv_self_signed_cert_pem,
+                 MHD_OPTION_HTTPS_PRIORITIES,
+                 "NONE:+VERS-TLS1.0:+AES-256-CBC:+SHA1:+RSA:+COMP-NULL",
+                 MHD_OPTION_END))
+  {
+    fprintf (stderr, "TLS1.0 vs SSL3 test failed\n");
+    errorCount++;
+  }
   curl_global_cleanup ();
 
   return errorCount != 0 ? 1 : 0;

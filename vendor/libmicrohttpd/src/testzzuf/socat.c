@@ -67,27 +67,27 @@ zzuf_socat_start ()
   };
   zzuf_pid = fork ();
   if (zzuf_pid == -1)
+  {
+    fprintf (stderr, "fork failed: %s\n", strerror (errno));
+    exit (1);
+  }
+  if (zzuf_pid != 0)
+  {
+    (void) sleep (1);                 /* allow zzuf and socat to start */
+    status = 0;
+    if (0 < waitpid (zzuf_pid, &status, WNOHANG))
     {
-      fprintf (stderr, "fork failed: %s\n", strerror (errno));
+      if (WIFEXITED (status))
+        fprintf (stderr,
+                 "zzuf died with status code %d!\n",
+                 WEXITSTATUS (status));
+      if (WIFSIGNALED (status))
+        fprintf (stderr,
+                 "zzuf died from signal %d!\n", WTERMSIG (status));
       exit (1);
     }
-  if (zzuf_pid != 0)
-    {
-      (void)sleep (1);                /* allow zzuf and socat to start */
-      status = 0;
-      if (0 < waitpid (zzuf_pid, &status, WNOHANG))
-        {
-          if (WIFEXITED (status))
-            fprintf (stderr,
-                     "zzuf died with status code %d!\n",
-                     WEXITSTATUS (status));
-          if (WIFSIGNALED (status))
-            fprintf (stderr,
-                     "zzuf died from signal %d!\n", WTERMSIG (status));
-          exit (1);
-        }
-      return;
-    }
+    return;
+  }
   setpgid (0, 0);
   execvp ("zzuf", args);
   fprintf (stderr, "execution of `zzuf' failed: %s\n", strerror (errno));
@@ -100,13 +100,13 @@ zzuf_socat_stop ()
 {
   int status;
   if (zzuf_pid != 0)
-    {
-      if (0 != killpg (zzuf_pid, SIGINT))
-        fprintf (stderr, "Failed to killpg: %s\n", strerror (errno));
-      kill (zzuf_pid, SIGINT);
-      waitpid (zzuf_pid, &status, 0);
-      (void)sleep (1);                /* allow socat to also die in peace */
-    }
+  {
+    if (0 != killpg (zzuf_pid, SIGINT))
+      fprintf (stderr, "Failed to killpg: %s\n", strerror (errno));
+    kill (zzuf_pid, SIGINT);
+    waitpid (zzuf_pid, &status, 0);
+    (void) sleep (1);                 /* allow socat to also die in peace */
+  }
 }
 
 /* end of socat.c */

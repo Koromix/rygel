@@ -105,9 +105,9 @@ MHD_pool_allocate (struct MemoryPool *pool,
  */
 void *
 MHD_pool_reallocate (struct MemoryPool *pool,
-		     void *old,
-		     size_t old_size,
-		     size_t new_size);
+                     void *old,
+                     size_t old_size,
+                     size_t new_size);
 
 
 /**
@@ -135,8 +135,8 @@ MHD_pool_get_free (struct MemoryPool *pool);
  */
 void *
 MHD_pool_reset (struct MemoryPool *pool,
-		void *keep,
-		size_t copy_bytes,
+                void *keep,
+                size_t copy_bytes,
                 size_t new_size);
 
 #endif

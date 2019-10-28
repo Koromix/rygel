@@ -35,6 +35,6 @@
  */
 void
 MHD_connection_update_last_activity_ (struct MHD_Connection *connection)
-  MHD_NONNULL (1);
+MHD_NONNULL (1);
 
 #endif

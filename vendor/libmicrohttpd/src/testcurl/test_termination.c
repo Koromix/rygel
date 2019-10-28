@@ -53,29 +53,29 @@ connection_handler (void *cls,
                     const char *url,
                     const char *method,
                     const char *version,
-                    const char *upload_data, size_t * upload_data_size,
+                    const char *upload_data, size_t *upload_data_size,
                     void **ptr)
 {
   static int i;
-  (void)cls;(void)url;                          /* Unused. Silent compiler warning. */
-  (void)method;(void)version;(void)upload_data; /* Unused. Silent compiler warning. */
-  (void)upload_data_size;                       /* Unused. Silent compiler warning. */
+  (void) cls; (void) url;                          /* Unused. Silent compiler warning. */
+  (void) method; (void) version; (void) upload_data; /* Unused. Silent compiler warning. */
+  (void) upload_data_size;                       /* Unused. Silent compiler warning. */
 
   if (*ptr == NULL)
-    {
-      *ptr = &i;
-      return MHD_YES;
-    }
+  {
+    *ptr = &i;
+    return MHD_YES;
+  }
 
   if (*upload_data_size != 0)
-    {
-      (*upload_data_size) = 0;
-      return MHD_YES;
-    }
+  {
+    (*upload_data_size) = 0;
+    return MHD_YES;
+  }
 
   struct MHD_Response *response =
     MHD_create_response_from_buffer (strlen ("Response"), "Response",
-				     MHD_RESPMEM_PERSISTENT);
+                                     MHD_RESPMEM_PERSISTENT);
   int ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
   MHD_destroy_response (response);
 
@@ -85,7 +85,7 @@ connection_handler (void *cls,
 static size_t
 write_data (void *ptr, size_t size, size_t nmemb, void *stream)
 {
-  (void)ptr;(void)stream;       /* Unused. Silent compiler warning. */
+  (void) ptr; (void) stream;       /* Unused. Silent compiler warning. */
   return size * nmemb;
 }
 
@@ -103,24 +103,28 @@ main (void)
     port = 1490;
 
 
-  daemon = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
+  daemon = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION
+                             | MHD_USE_INTERNAL_POLLING_THREAD
+                             | MHD_USE_ERROR_LOG,
                              port,
                              NULL,
                              NULL, connection_handler, NULL, MHD_OPTION_END);
 
   if (daemon == NULL)
-    {
-      fprintf (stderr, "Daemon cannot be started!");
-      exit (1);
-    }
+  {
+    fprintf (stderr, "Daemon cannot be started!");
+    exit (1);
+  }
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (daemon, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (daemon, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (daemon); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (daemon); return 32;
     }
+    port = (int) dinfo->port;
+  }
 
   curl = curl_easy_init ();
   /* curl_easy_setopt(curl, CURLOPT_POST, 1L); */
@@ -133,12 +137,12 @@ main (void)
 
   CURLcode success = curl_easy_perform (curl);
   if (success != 0)
-    {
-      fprintf (stderr, "CURL Error");
-      exit (1);
-    }
+  {
+    fprintf (stderr, "CURL Error");
+    exit (1);
+  }
   /* CPU used to go crazy here */
-  (void)sleep (1);
+  (void) sleep (1);
 
   curl_easy_cleanup (curl);
   MHD_stop_daemon (daemon);

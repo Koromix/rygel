@@ -62,6 +62,7 @@ libmicrohttpd_la_SOURCES = \
   mhd_limits.h mhd_byteorder.h \
   sysfdsetsize.c sysfdsetsize.h \
   mhd_str.c mhd_str.h \
+  mhd_send.h mhd_send.c \
   mhd_assert.h \
   mhd_sockets.c mhd_sockets.h \
   mhd_itc.c mhd_itc.h mhd_itc_types.h \

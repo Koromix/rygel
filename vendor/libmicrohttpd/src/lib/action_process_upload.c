@@ -49,13 +49,13 @@ struct UploadAction
  *
  * @param cls the `struct UploadAction` with the
  *    function we are to call for upload data
- * @param request the request for which we are to process 
+ * @param request the request for which we are to process
  *    upload data
  * @return #MHD_SC_OK on success
  */
 static enum MHD_StatusCode
 upload_action (void *cls,
-	       struct MHD_Request *request)
+               struct MHD_Request *request)
 {
   struct UploadAction *ua = cls;
 
@@ -75,7 +75,7 @@ upload_action (void *cls,
  */
 const struct MHD_Action *
 MHD_action_process_upload (MHD_UploadCallback uc,
-			   void *uc_cls)
+                           void *uc_cls)
 {
   struct UploadAction *ua;
 
@@ -90,5 +90,3 @@ MHD_action_process_upload (MHD_UploadCallback uc,
 
 
 /* end of action_process_upload.c */
-
-

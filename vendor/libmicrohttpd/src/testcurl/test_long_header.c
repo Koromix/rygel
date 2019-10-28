@@ -42,14 +42,14 @@
  * half of this value, so the actual value does not have
  * to be big at all...
  */
-#define VERY_LONG (1024*8)
+#define VERY_LONG (1024 * 8)
 
 static int oneone;
 
 static int
 apc_all (void *cls, const struct sockaddr *addr, socklen_t addrlen)
 {
-  (void)cls;(void)addr;(void)addrlen;   /* Unused. Silent compiler warning. */
+  (void) cls; (void) addr; (void) addrlen;   /* Unused. Silent compiler warning. */
   return MHD_YES;
 }
 
@@ -63,7 +63,7 @@ struct CBC
 static size_t
 copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
 {
-  (void)ptr;(void)ctx;  /* Unused. Silent compiler warning. */
+  (void) ptr; (void) ctx;  /* Unused. Silent compiler warning. */
   return size * nmemb;
 }
 
@@ -79,14 +79,14 @@ ahc_echo (void *cls,
   const char *me = cls;
   struct MHD_Response *response;
   int ret;
-  (void)version;(void)upload_data;      /* Unused. Silent compiler warning. */
-  (void)upload_data_size;(void)unused;  /* Unused. Silent compiler warning. */
+  (void) version; (void) upload_data;      /* Unused. Silent compiler warning. */
+  (void) upload_data_size; (void) unused;  /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (me, method))
     return MHD_NO;              /* unexpected method */
   response = MHD_create_response_from_buffer (strlen (url),
-					      (void *) url,
-					      MHD_RESPMEM_MUST_COPY);
+                                              (void *) url,
+                                              MHD_RESPMEM_MUST_COPY);
   ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
   MHD_destroy_response (response);
   return ret;
@@ -107,44 +107,47 @@ testLongUrlGet (size_t buff_size)
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
-    {
-      port = 1330 + buff_size % 20;
-      if (oneone)
-        port += 5;
-    }
+  {
+    port = 1330 + buff_size % 20;
+    if (oneone)
+      port += 5;
+  }
   cbc.buf = buf;
   cbc.size = 2048;
   cbc.pos = 0;
-  d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD /* | MHD_USE_ERROR_LOG */ ,
-                        port,
-                        &apc_all,
-                        NULL,
-                        &ahc_echo,
-                        "GET",
-                        MHD_OPTION_CONNECTION_MEMORY_LIMIT,
-                        (size_t) buff_size, MHD_OPTION_END);
+  d = MHD_start_daemon (
+    MHD_USE_INTERNAL_POLLING_THREAD /* | MHD_USE_ERROR_LOG */,
+    port,
+    &apc_all,
+    NULL,
+    &ahc_echo,
+    "GET",
+    MHD_OPTION_CONNECTION_MEMORY_LIMIT,
+    (size_t) buff_size, MHD_OPTION_END);
   if (d == NULL)
     return 1;
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return 32;
     }
+    port = (int) dinfo->port;
+  }
   c = curl_easy_init ();
   url = malloc (VERY_LONG);
   if (url == NULL)
-    {
-	MHD_stop_daemon (d);
- 	return 1;
-    }
+  {
+    MHD_stop_daemon (d);
+    return 1;
+  }
   memset (url, 'a', VERY_LONG);
   url[VERY_LONG - 1] = '\0';
   memcpy (url, "http://127.0.0.1/", strlen ("http://127.0.0.1/"));
   curl_easy_setopt (c, CURLOPT_URL, url);
-  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
+  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
@@ -159,19 +162,19 @@ testLongUrlGet (size_t buff_size)
      crashes on my system! */
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK == curl_easy_perform (c))
-    {
-      curl_easy_cleanup (c);
-      MHD_stop_daemon (d);
-      free (url);
-      return 2;
-    }
+  {
+    curl_easy_cleanup (c);
+    MHD_stop_daemon (d);
+    free (url);
+    return 2;
+  }
   if (CURLE_OK != curl_easy_getinfo (c, CURLINFO_RESPONSE_CODE, &code))
-    {
-      curl_easy_cleanup (c);
-      MHD_stop_daemon (d);
-      free (url);
-      return 4;
-    }
+  {
+    curl_easy_cleanup (c);
+    MHD_stop_daemon (d);
+    free (url);
+    return 4;
+  }
   curl_easy_cleanup (c);
   MHD_stop_daemon (d);
   free (url);
@@ -196,40 +199,43 @@ testLongHeaderGet (size_t buff_size)
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
-    {
-      port = 1331 + buff_size % 20;
-      if (oneone)
-        port += 5;
-    }
+  {
+    port = 1331 + buff_size % 20;
+    if (oneone)
+      port += 5;
+  }
 
   cbc.buf = buf;
   cbc.size = 2048;
   cbc.pos = 0;
-  d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD /* | MHD_USE_ERROR_LOG */ ,
-                        port,
-                        &apc_all,
-                        NULL,
-                        &ahc_echo,
-                        "GET",
-                        MHD_OPTION_CONNECTION_MEMORY_LIMIT,
-                        (size_t) buff_size, MHD_OPTION_END);
+  d = MHD_start_daemon (
+    MHD_USE_INTERNAL_POLLING_THREAD /* | MHD_USE_ERROR_LOG */,
+    port,
+    &apc_all,
+    NULL,
+    &ahc_echo,
+    "GET",
+    MHD_OPTION_CONNECTION_MEMORY_LIMIT,
+    (size_t) buff_size, MHD_OPTION_END);
   if (d == NULL)
     return 16;
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return 32;
     }
+    port = (int) dinfo->port;
+  }
   c = curl_easy_init ();
   url = malloc (VERY_LONG);
   if (url == NULL)
-     {
-	MHD_stop_daemon (d);
-	return 16;
-     }
+  {
+    MHD_stop_daemon (d);
+    return 16;
+  }
   memset (url, 'a', VERY_LONG);
   url[VERY_LONG - 1] = '\0';
   url[VERY_LONG / 2] = ':';
@@ -238,7 +244,7 @@ testLongHeaderGet (size_t buff_size)
 
   curl_easy_setopt (c, CURLOPT_HTTPHEADER, header);
   curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
+  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
@@ -253,21 +259,21 @@ testLongHeaderGet (size_t buff_size)
      crashes on my system! */
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK == curl_easy_perform (c))
-    {
-      curl_easy_cleanup (c);
-      MHD_stop_daemon (d);
-      curl_slist_free_all (header);
-      free (url);
-      return 32;
-    }
+  {
+    curl_easy_cleanup (c);
+    MHD_stop_daemon (d);
+    curl_slist_free_all (header);
+    free (url);
+    return 32;
+  }
   if (CURLE_OK != curl_easy_getinfo (c, CURLINFO_RESPONSE_CODE, &code))
-    {
-      curl_slist_free_all (header);
-      curl_easy_cleanup (c);
-      MHD_stop_daemon (d);
-      free (url);
-      return 64;
-    }
+  {
+    curl_slist_free_all (header);
+    curl_easy_cleanup (c);
+    MHD_stop_daemon (d);
+    free (url);
+    return 64;
+  }
   curl_slist_free_all (header);
   curl_easy_cleanup (c);
   MHD_stop_daemon (d);
@@ -281,9 +287,9 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
-  (void)argc;   /* Unused. Silent compiler warning. */
+  (void) argc;   /* Unused. Silent compiler warning. */
 
-  if (NULL == argv || 0 == argv[0])
+  if ((NULL == argv)||(0 == argv[0]))
     return 99;
   oneone = has_in_name (argv[0], "11");
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))

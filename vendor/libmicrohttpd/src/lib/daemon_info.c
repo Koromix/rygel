@@ -43,62 +43,62 @@
  */
 enum MHD_Bool
 MHD_daemon_get_information_sz (struct MHD_Daemon *daemon,
-			       enum MHD_DaemonInformationType info_type,
-			       union MHD_DaemonInformation *return_value,
-			       size_t return_value_size)
+                               enum MHD_DaemonInformationType info_type,
+                               union MHD_DaemonInformation *return_value,
+                               size_t return_value_size)
 {
-#define CHECK_SIZE(type) if (sizeof(type) < return_value_size)	\
+#define CHECK_SIZE(type) if (sizeof(type) < return_value_size)  \
     return MHD_NO
 
   switch (info_type)
-    {
-    case MHD_DAEMON_INFORMATION_LISTEN_SOCKET:
-      CHECK_SIZE (MHD_socket);
-      return_value->listen_socket
-	= daemon->listen_socket;
-      return MHD_YES;
+  {
+  case MHD_DAEMON_INFORMATION_LISTEN_SOCKET:
+    CHECK_SIZE (MHD_socket);
+    return_value->listen_socket
+      = daemon->listen_socket;
+    return MHD_YES;
 #ifdef EPOLL_SUPPORT
-    case MHD_DAEMON_INFORMATION_EPOLL_FD:
-      CHECK_SIZE (int);
-      // FIXME: maybe return MHD_NO if we are not using EPOLL?
-      return_value->epoll_fd = daemon->epoll_fd;
-      return MHD_YES;
+  case MHD_DAEMON_INFORMATION_EPOLL_FD:
+    CHECK_SIZE (int);
+    // FIXME: maybe return MHD_NO if we are not using EPOLL?
+    return_value->epoll_fd = daemon->epoll_fd;
+    return MHD_YES;
 #endif
-    case MHD_DAEMON_INFORMATION_CURRENT_CONNECTIONS:
-      CHECK_SIZE (unsigned int);
-      if (MHD_TM_EXTERNAL_EVENT_LOOP == daemon->threading_mode)
-        {
-          /* Assumes that MHD_run() in not called in other thread
-	     (of the application) at the same time. */
-          MHD_connection_cleanup_ (daemon);
-	  return_value->num_connections
-	    = daemon->connections;
-        }
-      else if (daemon->worker_pool)
-        {
-          unsigned int i;
-          /* Collect the connection information stored in the workers. */
-	  return_value->num_connections = 0;
-	  for (i = 0; i < daemon->worker_pool_size; i++)
-            {
-              /* FIXME: next line is thread-safe only if read is atomic. */
-              return_value->num_connections
-		+= daemon->worker_pool[i].connections;
-            }
-        }
-      else
-	return_value->num_connections
-	  = daemon->connections;
-      return MHD_YES;
-    case MHD_DAEMON_INFORMATION_BIND_PORT:
-      CHECK_SIZE (uint16_t);
-      // FIXME: return MHD_NO if port is not known/UNIX?
-      return_value->port = daemon->listen_port;
-      return MHD_YES;
-    default:
-      return MHD_NO;
+  case MHD_DAEMON_INFORMATION_CURRENT_CONNECTIONS:
+    CHECK_SIZE (unsigned int);
+    if (MHD_TM_EXTERNAL_EVENT_LOOP == daemon->threading_mode)
+    {
+      /* Assumes that MHD_run() in not called in other thread
+   (of the application) at the same time. */
+      MHD_connection_cleanup_ (daemon);
+      return_value->num_connections
+        = daemon->connections;
     }
-  
+    else if (daemon->worker_pool)
+    {
+      unsigned int i;
+      /* Collect the connection information stored in the workers. */
+      return_value->num_connections = 0;
+      for (i = 0; i < daemon->worker_pool_size; i++)
+      {
+        /* FIXME: next line is thread-safe only if read is atomic. */
+        return_value->num_connections
+          += daemon->worker_pool[i].connections;
+      }
+    }
+    else
+      return_value->num_connections
+        = daemon->connections;
+    return MHD_YES;
+  case MHD_DAEMON_INFORMATION_BIND_PORT:
+    CHECK_SIZE (uint16_t);
+    // FIXME: return MHD_NO if port is not known/UNIX?
+    return_value->port = daemon->listen_port;
+    return MHD_YES;
+  default:
+    return MHD_NO;
+  }
+
 #undef CHECK_SIZE
 }
 

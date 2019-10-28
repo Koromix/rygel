@@ -94,35 +94,35 @@ ahc_echo (void *cls,
   int *done = cls;
   struct MHD_Response *response;
   int ret;
-  (void)version;(void)unused;	/* Unused. Silent compiler warning. */
+  (void) version; (void) unused; /* Unused. Silent compiler warning. */
 
   if (0 != strcmp ("PUT", method))
     return MHD_NO;              /* unexpected method */
   if ((*done) == 0)
+  {
+    if (*upload_data_size != PUT_SIZE)
     {
-      if (*upload_data_size != PUT_SIZE)
-        {
 #if 0
-          fprintf (stderr,
-                   "Waiting for more data (%u/%u)...\n",
-                   *upload_data_size, PUT_SIZE);
+      fprintf (stderr,
+               "Waiting for more data (%u/%u)...\n",
+               *upload_data_size, PUT_SIZE);
 #endif
-          return MHD_YES;       /* not yet ready */
-        }
-      if (0 == memcmp (upload_data, put_buffer, PUT_SIZE))
-        {
-          *upload_data_size = 0;
-        }
-      else
-        {
-          return MHD_NO;
-        }
-      *done = 1;
-      return MHD_YES;
+      return MHD_YES;           /* not yet ready */
     }
+    if (0 == memcmp (upload_data, put_buffer, PUT_SIZE))
+    {
+      *upload_data_size = 0;
+    }
+    else
+    {
+      return MHD_NO;
+    }
+    *done = 1;
+    return MHD_YES;
+  }
   response = MHD_create_response_from_buffer (strlen (url),
-					      (void *) url, 
-					      MHD_RESPMEM_MUST_COPY);
+                                              (void *) url,
+                                              MHD_RESPMEM_MUST_COPY);
   ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
   MHD_destroy_response (response);
   return ret;
@@ -143,38 +143,39 @@ testInternalPut ()
   cbc.buf = buf;
   cbc.size = 2048;
   cbc.pos = 0;
-  d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD /* | MHD_USE_ERROR_LOG */ ,
-                        11080,
-                        NULL, NULL, &ahc_echo, &done_flag, MHD_OPTION_END);
+  d = MHD_start_daemon (
+    MHD_USE_INTERNAL_POLLING_THREAD /* | MHD_USE_ERROR_LOG */,
+    11080,
+    NULL, NULL, &ahc_echo, &done_flag, MHD_OPTION_END);
   if (d == NULL)
     return 1;
   zzuf_socat_start ();
   for (i = 0; i < LOOP_COUNT; i++)
-    {
-      fprintf (stderr, ".");
+  {
+    fprintf (stderr, ".");
 
-      c = curl_easy_init ();
-      curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1:11081/hello_world");
-      curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
-      curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-      curl_easy_setopt (c, CURLOPT_READFUNCTION, &putBuffer);
-      curl_easy_setopt (c, CURLOPT_READDATA, &pos);
-      curl_easy_setopt (c, CURLOPT_UPLOAD, 1L);
-      curl_easy_setopt (c, CURLOPT_INFILESIZE, (long) PUT_SIZE);
-      curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
-      curl_easy_setopt (c, CURLOPT_TIMEOUT_MS, CURL_TIMEOUT);
-      if (oneone)
-        curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-      else
-        curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
-      curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT_MS, CURL_TIMEOUT);
-      /* NOTE: use of CONNECTTIMEOUT without also
-       *   setting NOSIGNAL results in really weird
-       *   crashes on my system! */
-      curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
-      curl_easy_perform (c);
-      curl_easy_cleanup (c);
-    }
+    c = curl_easy_init ();
+    curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1:11081/hello_world");
+    curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
+    curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
+    curl_easy_setopt (c, CURLOPT_READFUNCTION, &putBuffer);
+    curl_easy_setopt (c, CURLOPT_READDATA, &pos);
+    curl_easy_setopt (c, CURLOPT_UPLOAD, 1L);
+    curl_easy_setopt (c, CURLOPT_INFILESIZE, (long) PUT_SIZE);
+    curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
+    curl_easy_setopt (c, CURLOPT_TIMEOUT_MS, CURL_TIMEOUT);
+    if (oneone)
+      curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+    else
+      curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
+    curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT_MS, CURL_TIMEOUT);
+    /* NOTE: use of CONNECTTIMEOUT without also
+     *   setting NOSIGNAL results in really weird
+     *   crashes on my system! */
+    curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
+    curl_easy_perform (c);
+    curl_easy_cleanup (c);
+  }
   fprintf (stderr, "\n");
   zzuf_socat_stop ();
   MHD_stop_daemon (d);
@@ -195,38 +196,39 @@ testMultithreadedPut ()
   cbc.buf = buf;
   cbc.size = 2048;
   cbc.pos = 0;
-  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD /* | MHD_USE_ERROR_LOG */ ,
+  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION
+                        | MHD_USE_INTERNAL_POLLING_THREAD /* | MHD_USE_ERROR_LOG */,
                         11080,
                         NULL, NULL, &ahc_echo, &done_flag, MHD_OPTION_END);
   if (d == NULL)
     return 16;
   zzuf_socat_start ();
   for (i = 0; i < LOOP_COUNT; i++)
-    {
-      fprintf (stderr, ".");
+  {
+    fprintf (stderr, ".");
 
-      c = curl_easy_init ();
-      curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1:11081/hello_world");
-      curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
-      curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-      curl_easy_setopt (c, CURLOPT_READFUNCTION, &putBuffer);
-      curl_easy_setopt (c, CURLOPT_READDATA, &pos);
-      curl_easy_setopt (c, CURLOPT_UPLOAD, 1L);
-      curl_easy_setopt (c, CURLOPT_INFILESIZE, (long) PUT_SIZE);
-      curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
-      curl_easy_setopt (c, CURLOPT_TIMEOUT_MS, CURL_TIMEOUT);
-      if (oneone)
-        curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-      else
-        curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
-      curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT_MS, CURL_TIMEOUT);
-      /* NOTE: use of CONNECTTIMEOUT without also
-       *   setting NOSIGNAL results in really weird
-       *   crashes on my system! */
-      curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
-      curl_easy_perform (c);
-      curl_easy_cleanup (c);
-    }
+    c = curl_easy_init ();
+    curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1:11081/hello_world");
+    curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
+    curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
+    curl_easy_setopt (c, CURLOPT_READFUNCTION, &putBuffer);
+    curl_easy_setopt (c, CURLOPT_READDATA, &pos);
+    curl_easy_setopt (c, CURLOPT_UPLOAD, 1L);
+    curl_easy_setopt (c, CURLOPT_INFILESIZE, (long) PUT_SIZE);
+    curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
+    curl_easy_setopt (c, CURLOPT_TIMEOUT_MS, CURL_TIMEOUT);
+    if (oneone)
+      curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+    else
+      curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
+    curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT_MS, CURL_TIMEOUT);
+    /* NOTE: use of CONNECTTIMEOUT without also
+     *   setting NOSIGNAL results in really weird
+     *   crashes on my system! */
+    curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
+    curl_easy_perform (c);
+    curl_easy_cleanup (c);
+  }
   fprintf (stderr, "\n");
   zzuf_socat_stop ();
   MHD_stop_daemon (d);
@@ -267,92 +269,92 @@ testExternalPut ()
     return 256;
   multi = curl_multi_init ();
   if (multi == NULL)
-    {
-      MHD_stop_daemon (d);
-      return 512;
-    }
+  {
+    MHD_stop_daemon (d);
+    return 512;
+  }
   zzuf_socat_start ();
   for (i = 0; i < LOOP_COUNT; i++)
+  {
+    fprintf (stderr, ".");
+
+    c = curl_easy_init ();
+    curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1:11081/hello_world");
+    curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
+    curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
+    curl_easy_setopt (c, CURLOPT_READFUNCTION, &putBuffer);
+    curl_easy_setopt (c, CURLOPT_READDATA, &pos);
+    curl_easy_setopt (c, CURLOPT_UPLOAD, 1L);
+    curl_easy_setopt (c, CURLOPT_INFILESIZE, (long) PUT_SIZE);
+    curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
+    curl_easy_setopt (c, CURLOPT_TIMEOUT_MS, CURL_TIMEOUT);
+    if (oneone)
+      curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+    else
+      curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
+    curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT_MS, CURL_TIMEOUT);
+    /* NOTE: use of CONNECTTIMEOUT without also
+     *   setting NOSIGNAL results in really weird
+     *   crashes on my system! */
+    curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
+
+
+
+    mret = curl_multi_add_handle (multi, c);
+    if (mret != CURLM_OK)
     {
-      fprintf (stderr, ".");
-
-      c = curl_easy_init ();
-      curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1:11081/hello_world");
-      curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
-      curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-      curl_easy_setopt (c, CURLOPT_READFUNCTION, &putBuffer);
-      curl_easy_setopt (c, CURLOPT_READDATA, &pos);
-      curl_easy_setopt (c, CURLOPT_UPLOAD, 1L);
-      curl_easy_setopt (c, CURLOPT_INFILESIZE, (long) PUT_SIZE);
-      curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
-      curl_easy_setopt (c, CURLOPT_TIMEOUT_MS, CURL_TIMEOUT);
-      if (oneone)
-        curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-      else
-        curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
-      curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT_MS, CURL_TIMEOUT);
-      /* NOTE: use of CONNECTTIMEOUT without also
-       *   setting NOSIGNAL results in really weird
-       *   crashes on my system! */
-      curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
-
-
-
-      mret = curl_multi_add_handle (multi, c);
-      if (mret != CURLM_OK)
-        {
-          curl_multi_cleanup (multi);
-          curl_easy_cleanup (c);
-          zzuf_socat_stop ();
-          MHD_stop_daemon (d);
-          return 1024;
-        }
-      start = time (NULL);
-      while ((time (NULL) - start < 5) && (c != NULL))
-        {
-          max = 0;
-          FD_ZERO (&rs);
-          FD_ZERO (&ws);
-          FD_ZERO (&es);
-          curl_multi_perform (multi, &running);
-          mret = curl_multi_fdset (multi, &rs, &ws, &es, &max);
-          if (mret != CURLM_OK)
-            {
-              curl_multi_remove_handle (multi, c);
-              curl_multi_cleanup (multi);
-              curl_easy_cleanup (c);
-              zzuf_socat_stop ();
-              MHD_stop_daemon (d);
-              return 2048;
-            }
-          if (MHD_YES != MHD_get_fdset (d, &rs, &ws, &es, &max))
-            {
-              curl_multi_remove_handle (multi, c);
-              curl_multi_cleanup (multi);
-              curl_easy_cleanup (c);
-              zzuf_socat_stop ();
-              MHD_stop_daemon (d);
-              return 4096;
-            }
-          tv.tv_sec = 0;
-          tv.tv_usec = 1000;
-          select (max + 1, &rs, &ws, &es, &tv);
-          curl_multi_perform (multi, &running);
-          if (running == 0)
-            {
-              curl_multi_info_read (multi, &running);
-              curl_multi_remove_handle (multi, c);
-              curl_easy_cleanup (c);
-              c = NULL;
-            }
-          MHD_run (d);
-        }
-      if (c != NULL)
-        {
-          curl_multi_remove_handle (multi, c);
-          curl_easy_cleanup (c);
-        }
+      curl_multi_cleanup (multi);
+      curl_easy_cleanup (c);
+      zzuf_socat_stop ();
+      MHD_stop_daemon (d);
+      return 1024;
     }
+    start = time (NULL);
+    while ((time (NULL) - start < 5) && (c != NULL))
+    {
+      max = 0;
+      FD_ZERO (&rs);
+      FD_ZERO (&ws);
+      FD_ZERO (&es);
+      curl_multi_perform (multi, &running);
+      mret = curl_multi_fdset (multi, &rs, &ws, &es, &max);
+      if (mret != CURLM_OK)
+      {
+        curl_multi_remove_handle (multi, c);
+        curl_multi_cleanup (multi);
+        curl_easy_cleanup (c);
+        zzuf_socat_stop ();
+        MHD_stop_daemon (d);
+        return 2048;
+      }
+      if (MHD_YES != MHD_get_fdset (d, &rs, &ws, &es, &max))
+      {
+        curl_multi_remove_handle (multi, c);
+        curl_multi_cleanup (multi);
+        curl_easy_cleanup (c);
+        zzuf_socat_stop ();
+        MHD_stop_daemon (d);
+        return 4096;
+      }
+      tv.tv_sec = 0;
+      tv.tv_usec = 1000;
+      select (max + 1, &rs, &ws, &es, &tv);
+      curl_multi_perform (multi, &running);
+      if (running == 0)
+      {
+        curl_multi_info_read (multi, &running);
+        curl_multi_remove_handle (multi, c);
+        curl_easy_cleanup (c);
+        c = NULL;
+      }
+      MHD_run (d);
+    }
+    if (c != NULL)
+    {
+      curl_multi_remove_handle (multi, c);
+      curl_easy_cleanup (c);
+    }
+  }
   fprintf (stderr, "\n");
   zzuf_socat_stop ();
   curl_multi_cleanup (multi);
@@ -365,19 +367,19 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
-  (void)argc;	/* Unused. Silent compiler warning. */
+  (void) argc; /* Unused. Silent compiler warning. */
 
   oneone = (NULL != strrchr (argv[0], (int) '/')) ?
-    (NULL != strstr (strrchr (argv[0], (int) '/'), "11")) : 0;
+           (NULL != strstr (strrchr (argv[0], (int) '/'), "11")) : 0;
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 2;
   put_buffer = malloc (PUT_SIZE);
   memset (put_buffer, 1, PUT_SIZE);
-  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_THREADS))
-    {
-      errorCount += testInternalPut ();
-      errorCount += testMultithreadedPut ();
-    }
+  if (MHD_YES == MHD_is_feature_supported (MHD_FEATURE_THREADS))
+  {
+    errorCount += testInternalPut ();
+    errorCount += testMultithreadedPut ();
+  }
   errorCount += testExternalPut ();
   free (put_buffer);
   if (errorCount != 0)

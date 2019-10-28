@@ -34,7 +34,7 @@
 
 
 #if defined(_MHD_ITC_PIPE)
-#if !defined(_WIN32) || defined(__CYGWIN__)
+#if ! defined(_WIN32) || defined(__CYGWIN__)
 
 #ifndef HAVE_PIPE2_FUNC
 /**
@@ -48,7 +48,7 @@ MHD_itc_nonblocking_ (struct MHD_itc_ itc)
 {
   unsigned int i;
 
-  for (i=0;i<2;i++)
+  for (i = 0; i<2; i++)
   {
     int flags;
 
@@ -63,7 +63,7 @@ MHD_itc_nonblocking_ (struct MHD_itc_ itc)
                       flags | O_NONBLOCK)) )
       return 0;
   }
-  return !0;
+  return ! 0;
 }
 #endif /* ! HAVE_PIPE2_FUNC */
 #endif /* !_WIN32 || __CYGWIN__ */

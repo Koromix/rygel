@@ -25,11 +25,11 @@
 #include "memorypool.h"
 
 /* define MAP_ANONYMOUS for Mac OS X */
-#if defined(MAP_ANON) && !defined(MAP_ANONYMOUS)
+#if defined(MAP_ANON) && ! defined(MAP_ANONYMOUS)
 #define MAP_ANONYMOUS MAP_ANON
 #endif
 #ifndef MAP_FAILED
-#define MAP_FAILED ((void*)-1)
+#define MAP_FAILED ((void*) -1)
 #endif
 
 /**
@@ -40,7 +40,7 @@
 /**
  * Round up 'n' to a multiple of ALIGN_SIZE.
  */
-#define ROUND_TO_ALIGN(n) ((n+(ALIGN_SIZE-1)) & (~(ALIGN_SIZE-1)))
+#define ROUND_TO_ALIGN(n) ((n + (ALIGN_SIZE - 1)) & (~(ALIGN_SIZE - 1)))
 
 
 /**
@@ -110,11 +110,11 @@ MHD_pool_create (size_t max)
   if (max <= 32 * 1024)
     pool->memory = MAP_FAILED;
   else
-#if defined(MAP_ANONYMOUS) && !defined(_WIN32)
+#if defined(MAP_ANONYMOUS) && ! defined(_WIN32)
     pool->memory = mmap (NULL,
                          max,
                          PROT_READ | PROT_WRITE,
-			 MAP_PRIVATE | MAP_ANONYMOUS,
+                         MAP_PRIVATE | MAP_ANONYMOUS,
                          -1,
                          0);
 #elif defined(_WIN32)
@@ -128,19 +128,19 @@ MHD_pool_create (size_t max)
 #endif
   if ( (MAP_FAILED == pool->memory) ||
        (NULL == pool->memory))
+  {
+    pool->memory = malloc (max);
+    if (NULL == pool->memory)
     {
-      pool->memory = malloc (max);
-      if (NULL == pool->memory)
-        {
-          free (pool);
-          return NULL;
-        }
-      pool->is_mmap = false;
+      free (pool);
+      return NULL;
     }
+    pool->is_mmap = false;
+  }
   else
-    {
-      pool->is_mmap = true;
-    }
+  {
+    pool->is_mmap = true;
+  }
   pool->pos = 0;
   pool->end = max;
   pool->size = max;
@@ -161,7 +161,7 @@ MHD_pool_destroy (struct MemoryPool *pool)
   if (! pool->is_mmap)
     free (pool->memory);
   else
-#if defined(MAP_ANONYMOUS) && !defined(_WIN32)
+#if defined(MAP_ANONYMOUS) && ! defined(_WIN32)
     munmap (pool->memory,
             pool->size);
 #elif defined(_WIN32)
@@ -201,7 +201,7 @@ MHD_pool_get_free (struct MemoryPool *pool)
  */
 void *
 MHD_pool_allocate (struct MemoryPool *pool,
-		   size_t size,
+                   size_t size,
                    int from_end)
 {
   void *ret;
@@ -214,15 +214,15 @@ MHD_pool_allocate (struct MemoryPool *pool,
        (pool->pos + asize < pool->pos))
     return NULL;
   if (from_end == MHD_YES)
-    {
-      ret = &pool->memory[pool->end - asize];
-      pool->end -= asize;
-    }
+  {
+    ret = &pool->memory[pool->end - asize];
+    pool->end -= asize;
+  }
   else
-    {
-      ret = &pool->memory[pool->pos];
-      pool->pos += asize;
-    }
+  {
+    ret = &pool->memory[pool->pos];
+    pool->pos += asize;
+  }
   return ret;
 }
 
@@ -247,8 +247,8 @@ MHD_pool_allocate (struct MemoryPool *pool,
 void *
 MHD_pool_reallocate (struct MemoryPool *pool,
                      void *old,
-		     size_t old_size,
-		     size_t new_size)
+                     size_t old_size,
+                     size_t new_size)
 {
   void *ret;
   size_t asize;
@@ -263,35 +263,35 @@ MHD_pool_reallocate (struct MemoryPool *pool,
 
   if ( (pool->pos >= old_size) &&
        (&pool->memory[pool->pos - old_size] == old) )
+  {
+    /* was the previous allocation - optimize! */
+    if (pool->pos + asize - old_size <= pool->end)
     {
-      /* was the previous allocation - optimize! */
-      if (pool->pos + asize - old_size <= pool->end)
-        {
-          /* fits */
-          pool->pos += asize - old_size;
-          if (asize < old_size)      /* shrinking - zero again! */
-            memset (&pool->memory[pool->pos],
-                    0,
-                    old_size - asize);
-          return old;
-        }
-      /* does not fit */
-      return NULL;
+      /* fits */
+      pool->pos += asize - old_size;
+      if (asize < old_size)          /* shrinking - zero again! */
+        memset (&pool->memory[pool->pos],
+                0,
+                old_size - asize);
+      return old;
     }
+    /* does not fit */
+    return NULL;
+  }
   if (asize <= old_size)
     return old;                 /* cannot shrink, no need to move */
   if ((pool->pos + asize >= pool->pos) &&
       (pool->pos + asize <= pool->end))
-    {
-      /* fits */
-      ret = &pool->memory[pool->pos];
-      if (0 != old_size)
-        memmove (ret,
-                 old,
-                 old_size);
-      pool->pos += asize;
-      return ret;
-    }
+  {
+    /* fits */
+    ret = &pool->memory[pool->pos];
+    if (0 != old_size)
+      memmove (ret,
+               old,
+               old_size);
+    pool->pos += asize;
+    return ret;
+  }
   /* does not fit */
   return NULL;
 }
@@ -312,19 +312,19 @@ MHD_pool_reallocate (struct MemoryPool *pool,
  */
 void *
 MHD_pool_reset (struct MemoryPool *pool,
-		void *keep,
-		size_t copy_bytes,
+                void *keep,
+                size_t copy_bytes,
                 size_t new_size)
 {
   if ( (NULL != keep) &&
        (keep != pool->memory) )
-    {
-      if (0 != copy_bytes)
-        memmove (pool->memory,
-                 keep,
-                 copy_bytes);
-      keep = pool->memory;
-    }
+  {
+    if (0 != copy_bytes)
+      memmove (pool->memory,
+               keep,
+               copy_bytes);
+    keep = pool->memory;
+  }
   pool->end = pool->size;
   /* technically not needed, but safer to zero out */
   if (pool->size > copy_bytes)

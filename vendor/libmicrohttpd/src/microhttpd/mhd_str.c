@@ -117,8 +117,8 @@ _MHD_static_inline bool
 isasciixdigit (char c)
 {
   return isasciidigit (c) ||
-    ( (c >= 'A') && (c <= 'F') ) ||
-    ( (c >= 'a') && (c <= 'f') );
+         ( (c >= 'A') && (c <= 'F') ) ||
+         ( (c >= 'a') && (c <= 'f') );
 }
 
 
@@ -181,7 +181,7 @@ _MHD_static_inline int
 todigitvalue (char c)
 {
   if (isasciidigit (c))
-    return (unsigned char)(c - '0');
+    return (unsigned char) (c - '0');
 
   return -1;
 }
@@ -198,11 +198,11 @@ _MHD_static_inline int
 toxdigitvalue (char c)
 {
   if (isasciidigit (c))
-    return (unsigned char)(c - '0');
+    return (unsigned char) (c - '0');
   if ( (c >= 'A') && (c <= 'F') )
-    return (unsigned char)(c - 'A' + 10);
+    return (unsigned char) (c - 'A' + 10);
   if ( (c >= 'a') && (c <= 'f') )
-    return (unsigned char)(c - 'a' + 10);
+    return (unsigned char) (c - 'a' + 10);
 
   return -1;
 }
@@ -216,7 +216,7 @@ toxdigitvalue (char c)
  * @return boolean true if character is lower case letter,
  *         boolean false otherwise
  */
-#define isasciilower(c) (((char)(c)) >= 'a' && ((char)(c)) <= 'z')
+#define isasciilower(c) (((char) (c)) >= 'a' && ((char) (c)) <= 'z')
 
 
 /**
@@ -226,7 +226,7 @@ toxdigitvalue (char c)
  * @return boolean true if character is upper case letter,
  *         boolean false otherwise
  */
-#define isasciiupper(c) (((char)(c)) >= 'A' && ((char)(c)) <= 'Z')
+#define isasciiupper(c) (((char) (c)) >= 'A' && ((char) (c)) <= 'Z')
 
 
 /**
@@ -236,7 +236,7 @@ toxdigitvalue (char c)
  * @return boolean true if character is letter, boolean false
  *         otherwise
  */
-#define isasciialpha(c) (isasciilower(c) || isasciiupper(c))
+#define isasciialpha(c) (isasciilower (c) || isasciiupper (c))
 
 
 /**
@@ -246,7 +246,7 @@ toxdigitvalue (char c)
  * @return boolean true if character is decimal digit, boolean false
  *         otherwise
  */
-#define isasciidigit(c) (((char)(c)) >= '0' && ((char)(c)) <= '9')
+#define isasciidigit(c) (((char) (c)) >= '0' && ((char) (c)) <= '9')
 
 
 /**
@@ -256,9 +256,9 @@ toxdigitvalue (char c)
  * @return boolean true if character is hexadecimal digit,
  *         boolean false otherwise
  */
-#define isasciixdigit(c) (isasciidigit((c)) || \
-                          (((char)(c)) >= 'A' && ((char)(c)) <= 'F') || \
-                          (((char)(c)) >= 'a' && ((char)(c)) <= 'f') )
+#define isasciixdigit(c) (isasciidigit ((c)) || \
+                          (((char) (c)) >= 'A' && ((char) (c)) <= 'F') || \
+                          (((char) (c)) >= 'a' && ((char) (c)) <= 'f') )
 
 
 /**
@@ -268,7 +268,7 @@ toxdigitvalue (char c)
  * @return boolean true if character is decimal digit or letter,
  *         boolean false otherwise
  */
-#define isasciialnum(c) (isasciialpha(c) || isasciidigit(c))
+#define isasciialnum(c) (isasciialpha (c) || isasciidigit (c))
 
 
 /**
@@ -280,7 +280,8 @@ toxdigitvalue (char c)
  * @param c character to convert
  * @return converted to lower case character
  */
-#define toasciilower(c) ((isasciiupper(c)) ? (((char)(c)) - 'A' + 'a') : ((char)(c)))
+#define toasciilower(c) ((isasciiupper (c)) ? (((char) (c)) - 'A' + 'a') : \
+                         ((char) (c)))
 
 
 /**
@@ -292,7 +293,8 @@ toxdigitvalue (char c)
  * @param c character to convert
  * @return converted to upper case character
  */
-#define toasciiupper(c) ((isasciilower(c)) ? (((char)(c)) - 'a' + 'A') : ((char)(c)))
+#define toasciiupper(c) ((isasciilower (c)) ? (((char) (c)) - 'a' + 'A') : \
+                         ((char) (c)))
 
 
 /**
@@ -301,7 +303,8 @@ toxdigitvalue (char c)
  * @param c character to convert
  * @return value of hexadecimal digit or -1 if @ c is not hexadecimal digit
  */
-#define todigitvalue(c) (isasciidigit(c) ? (int)(((char)(c)) - '0') : (int)(-1))
+#define todigitvalue(c) (isasciidigit (c) ? (int) (((char) (c)) - '0') : \
+                         (int) (-1))
 
 
 /**
@@ -309,11 +312,12 @@ toxdigitvalue (char c)
  * @param c character to convert
  * @return value of hexadecimal digit or -1 if @ c is not hexadecimal digit
  */
-#define toxdigitvalue(c) ( isasciidigit(c) ? (int)(((char)(c)) - '0') : \
-                           ( (((char)(c)) >= 'A' && ((char)(c)) <= 'F') ? \
-                             (int)(((unsigned char)(c)) - 'A' + 10) : \
-                             ( (((char)(c)) >= 'a' && ((char)(c)) <= 'f') ? \
-                               (int)(((unsigned char)(c)) - 'a' + 10) : (int)(-1) )))
+#define toxdigitvalue(c) (isasciidigit (c) ? (int) (((char) (c)) - '0') : \
+                          ( (((char) (c)) >= 'A' && ((char) (c)) <= 'F') ? \
+                            (int) (((unsigned char) (c)) - 'A' + 10) : \
+                            ( (((char) (c)) >= 'a' && ((char) (c)) <= 'f') ? \
+                              (int) (((unsigned char) (c)) - 'a' + 10) : \
+                              (int) (-1) )))
 #endif /* !INLINE_FUNC */
 
 
@@ -326,19 +330,19 @@ toxdigitvalue (char c)
  * @return non-zero if two strings are equal, zero otherwise.
  */
 int
-MHD_str_equal_caseless_ (const char * str1,
-                         const char * str2)
+MHD_str_equal_caseless_ (const char *str1,
+                         const char *str2)
 {
   while (0 != (*str1))
-    {
-      const char c1 = *str1;
-      const char c2 = *str2;
-      if ( (c1 != c2) &&
-           (toasciilower (c1) != toasciilower (c2)) )
-        return 0;
-      str1++;
-      str2++;
-    }
+  {
+    const char c1 = *str1;
+    const char c2 = *str2;
+    if ( (c1 != c2) &&
+         (toasciilower (c1) != toasciilower (c2)) )
+      return 0;
+    str1++;
+    str2++;
+  }
   return 0 == (*str2);
 }
 #endif /* ! MHD_FAVOR_SMALL_CODE */
@@ -356,23 +360,23 @@ MHD_str_equal_caseless_ (const char * str1,
  * @return non-zero if two strings are equal, zero otherwise.
  */
 int
-MHD_str_equal_caseless_n_ (const char * const str1,
-                           const char * const str2,
+MHD_str_equal_caseless_n_ (const char *const str1,
+                           const char *const str2,
                            size_t maxlen)
 {
   size_t i;
 
   for (i = 0; i < maxlen; ++i)
-    {
-      const char c1 = str1[i];
-      const char c2 = str2[i];
-      if (0 == c2)
-        return 0 == c1;
-      if ( (c1 != c2) &&
-           (toasciilower (c1) != toasciilower (c2)) )
-        return 0;
-    }
-  return !0;
+  {
+    const char c1 = str1[i];
+    const char c2 = str2[i];
+    if (0 == c2)
+      return 0 == c1;
+    if ( (c1 != c2) &&
+         (toasciilower (c1) != toasciilower (c2)) )
+      return 0;
+  }
+  return ! 0;
 }
 
 
@@ -386,21 +390,21 @@ MHD_str_equal_caseless_n_ (const char * const str1,
  * @return non-zero if two strings are equal, zero otherwise.
  */
 bool
-MHD_str_equal_caseless_bin_n_ (const char * const str1,
-                  const char * const str2,
-                  size_t len)
+MHD_str_equal_caseless_bin_n_ (const char *const str1,
+                               const char *const str2,
+                               size_t len)
 {
   size_t i;
 
   for (i = 0; i < len; ++i)
-    {
-      const char c1 = str1[i];
-      const char c2 = str2[i];
-      if ( (c1 != c2) &&
-           (toasciilower (c1) != toasciilower (c2)) )
-        return 0;
-    }
-  return !0;
+  {
+    const char c1 = str1[i];
+    const char c2 = str2[i];
+    if ( (c1 != c2) &&
+         (toasciilower (c1) != toasciilower (c2)) )
+      return 0;
+  }
+  return ! 0;
 }
 
 
@@ -419,46 +423,49 @@ MHD_str_equal_caseless_bin_n_ (const char * const str1,
  * @return non-zero if two strings are equal, zero otherwise.
  */
 bool
-MHD_str_has_token_caseless_ (const char * str,
-                             const char * const token,
+MHD_str_has_token_caseless_ (const char *str,
+                             const char *const token,
                              size_t token_len)
 {
   if (0 == token_len)
     return false;
 
   while (0 != *str)
+  {
+    size_t i;
+    /* Skip all whitespaces and empty tokens. */
+    while (' ' == *str || '\t' == *str || ',' == *str)
+      str++;
+
+    /* Check for token match. */
+    i = 0;
+    while (1)
     {
-      size_t i;
-      /* Skip all whitespaces and empty tokens. */
-      while (' ' == *str || '\t' == *str || ',' == *str) str++;
+      const char sc = *(str++);
+      const char tc = token[i++];
 
-      /* Check for token match. */
-      i = 0;
-      while (1)
-        {
-          const char sc = *(str++);
-          const char tc = token[i++];
-
-          if (0 == sc)
-            return false;
-          if ( (sc != tc) &&
-               (toasciilower (sc) != toasciilower (tc)) )
-            break;
-          if (i >= token_len)
-            {
-              /* Check whether substring match token fully or
-               * has additional unmatched chars at tail. */
-              while (' ' == *str || '\t' == *str) str++;
-              /* End of (sub)string? */
-              if (0 == *str || ',' == *str)
-                return true;
-              /* Unmatched chars at end of substring. */
-              break;
-            }
-        }
-       /* Find next substring. */
-      while (0 != *str && ',' != *str) str++;
+      if (0 == sc)
+        return false;
+      if ( (sc != tc) &&
+           (toasciilower (sc) != toasciilower (tc)) )
+        break;
+      if (i >= token_len)
+      {
+        /* Check whether substring match token fully or
+         * has additional unmatched chars at tail. */
+        while (' ' == *str || '\t' == *str)
+          str++;
+        /* End of (sub)string? */
+        if ((0 == *str) ||(',' == *str) )
+          return true;
+        /* Unmatched chars at end of substring. */
+        break;
+      }
     }
+    /* Find next substring. */
+    while (0 != *str && ',' != *str)
+      str++;
+  }
   return false;
 }
 
@@ -479,25 +486,25 @@ size_t
 MHD_str_to_uint64_ (const char *str,
                     uint64_t *out_val)
 {
-  const char * const start = str;
+  const char *const start = str;
   uint64_t res;
 
-  if (!str || !out_val || !isasciidigit(str[0]))
+  if (! str || ! out_val || ! isasciidigit (str[0]))
     return 0;
 
   res = 0;
   do
-    {
-      const int digit = (unsigned char)(*str) - '0';
-      if ( (res > (UINT64_MAX / 10)) ||
-           ( (res == (UINT64_MAX / 10)) &&
-             ((uint64_t)digit > (UINT64_MAX % 10)) ) )
-        return 0;
+  {
+    const int digit = (unsigned char) (*str) - '0';
+    if ( (res > (UINT64_MAX / 10)) ||
+         ( (res == (UINT64_MAX / 10)) &&
+           ((uint64_t) digit > (UINT64_MAX % 10)) ) )
+      return 0;
 
-      res *= 10;
-      res += digit;
-      str++;
-    } while (isasciidigit (*str));
+    res *= 10;
+    res += digit;
+    str++;
+  } while (isasciidigit (*str));
 
   *out_val = res;
   return str - start;
@@ -518,34 +525,34 @@ MHD_str_to_uint64_ (const char *str,
  *         then possible to store in uint64_t or @a out_val is NULL
  */
 size_t
-MHD_str_to_uint64_n_ (const char * str,
+MHD_str_to_uint64_n_ (const char *str,
                       size_t maxlen,
                       uint64_t *out_val)
 {
   uint64_t res;
   size_t i;
 
-  if (!str || !maxlen || !out_val || !isasciidigit (str[0]))
+  if (! str || ! maxlen || ! out_val || ! isasciidigit (str[0]))
     return 0;
 
   res = 0;
   i = 0;
   do
-    {
-      const int digit = (unsigned char)str[i] - '0';
+  {
+    const int digit = (unsigned char) str[i] - '0';
 
-      if ( (res > (UINT64_MAX / 10)) ||
-           ( (res == (UINT64_MAX / 10)) &&
-             ((uint64_t)digit > (UINT64_MAX % 10)) ) )
-        return 0;
+    if ( (res > (UINT64_MAX / 10)) ||
+         ( (res == (UINT64_MAX / 10)) &&
+           ((uint64_t) digit > (UINT64_MAX % 10)) ) )
+      return 0;
 
-      res *= 10;
-      res += digit;
-      i++;
-    } while ( (i < maxlen) &&
-              isasciidigit (str[i]) );
+    res *= 10;
+    res += digit;
+    i++;
+  } while ( (i < maxlen) &&
+            isasciidigit (str[i]) );
 
-  *out_val= res;
+  *out_val = res;
   return i;
 }
 
@@ -561,31 +568,32 @@ MHD_str_to_uint64_n_ (const char * str,
  *         then possible to store in uint32_t or @a out_val is NULL
  */
 size_t
-MHD_strx_to_uint32_ (const char * str,
+MHD_strx_to_uint32_ (const char *str,
                      uint32_t *out_val)
 {
-  const char * const start = str;
+  const char *const start = str;
   uint32_t res;
   int digit;
 
-  if (!str || !out_val)
+  if (! str || ! out_val)
     return 0;
 
   res = 0;
   digit = toxdigitvalue (*str);
   while (digit >= 0)
+  {
+    if ( (res < (UINT32_MAX / 16)) ||
+         ((res == (UINT32_MAX / 16)) &&( (uint32_t) digit <= (UINT32_MAX
+                                                              % 16)) ) )
     {
-      if ( (res < (UINT32_MAX / 16)) ||
-           (res == (UINT32_MAX / 16) && (uint32_t)digit <= (UINT32_MAX % 16)) )
-        {
-          res *= 16;
-          res += digit;
-        }
-      else
-        return 0;
-      str++;
-      digit = toxdigitvalue (*str);
+      res *= 16;
+      res += digit;
     }
+    else
+      return 0;
+    str++;
+    digit = toxdigitvalue (*str);
+  }
 
   if (str - start > 0)
     *out_val = res;
@@ -614,21 +622,22 @@ MHD_strx_to_uint32_n_ (const char *str,
   size_t i;
   uint32_t res;
   int digit;
-  if (!str || !out_val)
+  if (! str || ! out_val)
     return 0;
 
   res = 0;
   i = 0;
   while (i < maxlen && (digit = toxdigitvalue (str[i])) >= 0)
-    {
-      if ( (res > (UINT32_MAX / 16)) ||
-           (res == (UINT32_MAX / 16) && (uint32_t)digit > (UINT32_MAX % 16)) )
-        return 0;
+  {
+    if ( (res > (UINT32_MAX / 16)) ||
+         ((res == (UINT32_MAX / 16)) &&( (uint32_t) digit > (UINT32_MAX
+                                                             % 16)) ) )
+      return 0;
 
-      res *= 16;
-      res += digit;
-      i++;
-    }
+    res *= 16;
+    res += digit;
+    i++;
+  }
 
   if (i)
     *out_val = res;
@@ -650,27 +659,28 @@ size_t
 MHD_strx_to_uint64_ (const char *str,
                      uint64_t *out_val)
 {
-  const char * const start = str;
+  const char *const start = str;
   uint64_t res;
   int digit;
-  if (!str || !out_val)
+  if (! str || ! out_val)
     return 0;
 
   res = 0;
   digit = toxdigitvalue (*str);
   while (digit >= 0)
+  {
+    if ( (res < (UINT64_MAX / 16)) ||
+         ((res == (UINT64_MAX / 16)) &&( (uint64_t) digit <= (UINT64_MAX
+                                                              % 16)) ) )
     {
-      if ( (res < (UINT64_MAX / 16)) ||
-           (res == (UINT64_MAX / 16) && (uint64_t)digit <= (UINT64_MAX % 16)) )
-        {
-          res *= 16;
-          res += digit;
-        }
-      else
-        return 0;
-      str++;
-      digit = toxdigitvalue (*str);
+      res *= 16;
+      res += digit;
     }
+    else
+      return 0;
+    str++;
+    digit = toxdigitvalue (*str);
+  }
 
   if (str - start > 0)
     *out_val = res;
@@ -692,28 +702,29 @@ MHD_strx_to_uint64_ (const char *str,
  *         then possible to store in uint64_t or @a out_val is NULL
  */
 size_t
-MHD_strx_to_uint64_n_ (const char * str,
+MHD_strx_to_uint64_n_ (const char *str,
                        size_t maxlen,
                        uint64_t *out_val)
 {
   size_t i;
   uint64_t res;
   int digit;
-  if (!str || !out_val)
+  if (! str || ! out_val)
     return 0;
 
   res = 0;
   i = 0;
   while (i < maxlen && (digit = toxdigitvalue (str[i])) >= 0)
-    {
-      if ( (res > (UINT64_MAX / 16)) ||
-           (res == (UINT64_MAX / 16) && (uint64_t)digit > (UINT64_MAX % 16)) )
-        return 0;
+  {
+    if ( (res > (UINT64_MAX / 16)) ||
+         ((res == (UINT64_MAX / 16)) &&( (uint64_t) digit > (UINT64_MAX
+                                                             % 16)) ) )
+      return 0;
 
-      res *= 16;
-      res += digit;
-      i++;
-    }
+    res *= 16;
+    res += digit;
+    i++;
+  }
 
   if (i)
     *out_val = res;
@@ -742,7 +753,7 @@ MHD_strx_to_uint64_n_ (const char * str,
 size_t
 MHD_str_to_uvalue_n_ (const char *str,
                       size_t maxlen,
-                      void * out_val,
+                      void *out_val,
                       size_t val_size,
                       uint64_t max_val,
                       int base)
@@ -754,34 +765,34 @@ MHD_str_to_uvalue_n_ (const char *str,
   const uint64_t max_v_mod_b = max_val % base;
   /* 'digit->value' must be function, not macro */
   int (*const dfunc)(char) = (base == 16) ?
-                              toxdigitvalue : todigitvalue;
+                             toxdigitvalue : todigitvalue;
 
-  if ( !str || !out_val ||
-       (base != 16 && base != 10) )
+  if ( ! str || ! out_val ||
+       ((base != 16)&&(base != 10)) )
     return 0;
 
   res = 0;
   i = 0;
   while (maxlen > i && 0 <= (digit = dfunc (str[i])))
-    {
-      if ( ((max_v_div_b) < res) ||
-          ((max_v_div_b) == res && (max_v_mod_b) < (uint64_t)digit) )
-        return 0;
+  {
+    if ( ((max_v_div_b) < res) ||
+         (( (max_v_div_b) == res) &&( (max_v_mod_b) < (uint64_t) digit) ) )
+      return 0;
 
-      res *= base;
-      res += digit;
-      i++;
-    }
+    res *= base;
+    res += digit;
+    i++;
+  }
 
   if (i)
-    {
-      if (8 == val_size)
-        *(uint64_t*)out_val = res;
-      else if (4 == val_size)
-        *(uint32_t*)out_val = (uint32_t)res;
-      else
-        return 0;
-    }
+  {
+    if (8 == val_size)
+      *(uint64_t*) out_val = res;
+    else if (4 == val_size)
+      *(uint32_t*) out_val = (uint32_t) res;
+    else
+      return 0;
+  }
   return i;
 }
 #endif /* MHD_FAVOR_SMALL_CODE */

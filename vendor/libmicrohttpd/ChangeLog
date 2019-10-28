@@ -1,3 +1,31 @@
+Sat 26 Oct 2019 06:53:05 PM CEST
+    Fix regression where MHD would fail to return an empty response
+    when used with HTTPS.
+    Releasing libmicrohttpd 0.9.68. -CG/TR
+
+Fri 25 Oct 2019 02:31:59 PM CEST
+    Introduce MHD_RF_INSANITY_HEADER_CONTENT_LENGTH. -CG
+
+Thu 17 Oct 2019 04:50:52 PM CEST
+    Integrate 0-byte send() method for uncorking for old FreeBSD/OS X
+    systems into new mhd_send.c logic for uncorking.
+    Releasing libmicrohttpd 0.9.67. -CG
+
+Fri 18 Aug 2019 00:00:00 PM UTC
+    Fixes and optimizations for the setsockopt handling:
+    * Added: MHD_UPGRADE_ACTION_CORK_ON and MHD_UPGRADE_ACTION_CORK_OFF
+      to enum MHD_UpgradeAction (turn corking on/off on the underlying
+      socket).
+    * Use calls and flags native to the system for corking and
+      other operations, tested with performance improvements on
+      FreeBSD, Debian Linux, NetBSD, and cygwin. In particular,
+      this adds selective usage of MSG_MORE, NODELAY, TCP_NOPUSH,
+      TCP_CORK. -ng0
+
+Fri 09 Aug 2019 10:07:27 AM CEST
+    Copy compiler and linker hardening flags from GNUnet (updating
+    configure.ac). -CG
+
 Thu 01 Aug 2019 01:23:36 PM CEST
     Releasing libmicrohttpd 0.9.66. -CG
 

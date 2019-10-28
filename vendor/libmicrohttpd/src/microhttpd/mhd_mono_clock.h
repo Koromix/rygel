@@ -37,14 +37,14 @@
  * Initialise monotonic seconds counter.
  */
 void
-MHD_monotonic_sec_counter_init(void);
+MHD_monotonic_sec_counter_init (void);
 
 
 /**
  * Deinitialise monotonic seconds counter by freeing any allocated resources
  */
 void
-MHD_monotonic_sec_counter_finish(void);
+MHD_monotonic_sec_counter_finish (void);
 
 
 /**
@@ -55,6 +55,6 @@ MHD_monotonic_sec_counter_finish(void);
  * @return number of seconds from some fixed moment
  */
 time_t
-MHD_monotonic_sec_counter(void);
+MHD_monotonic_sec_counter (void);
 
 #endif /* MHD_MONO_CLOCK_H */

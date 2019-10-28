@@ -49,11 +49,11 @@ ahc_echo (void *cls,
 {
   struct MHD_Response *response;
   int ret;
-  (void)cls;(void)url;(void)method;(void)version;               /* Unused. Silent compiler warning. */
-  (void)upload_data;(void)upload_data_size;(void)unused;        /* Unused. Silent compiler warning. */
+  (void) cls; (void) url; (void) method; (void) version;               /* Unused. Silent compiler warning. */
+  (void) upload_data; (void) upload_data_size; (void) unused;        /* Unused. Silent compiler warning. */
 
   response = MHD_create_response_from_buffer (0, NULL,
-					      MHD_RESPMEM_PERSISTENT);
+                                              MHD_RESPMEM_PERSISTENT);
   ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
   MHD_destroy_response (response);
   return ret;
@@ -88,31 +88,34 @@ testInternalSelectGet ()
   cbc.buf = buf;
   cbc.size = 2048;
   cbc.pos = 0;
-  d = MHD_start_daemon (MHD_USE_ERROR_LOG | MHD_USE_TLS | MHD_USE_INTERNAL_POLLING_THREAD,
+  d = MHD_start_daemon (MHD_USE_ERROR_LOG | MHD_USE_TLS
+                        | MHD_USE_INTERNAL_POLLING_THREAD,
                         port, NULL, NULL, &ahc_echo, "GET",
                         MHD_OPTION_HTTPS_MEM_KEY, srv_key_pem,
                         MHD_OPTION_HTTPS_MEM_CERT, srv_self_signed_cert_pem,
-			MHD_OPTION_END);
+                        MHD_OPTION_END);
   if (d == NULL)
     return 256;
 
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return 32;
     }
+    port = (int) dinfo->port;
+  }
   char *aes256_sha = "AES256-SHA";
-  if (curl_uses_nss_ssl() == 0)
-    {
-      aes256_sha = "rsa_aes_256_sha";
-    }
+  if (curl_uses_nss_ssl () == 0)
+  {
+    aes256_sha = "rsa_aes_256_sha";
+  }
 
   c = curl_easy_init ();
   curl_easy_setopt (c, CURLOPT_URL, "https://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
+  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   /* TLS options */
@@ -135,80 +138,83 @@ testInternalSelectGet ()
 
   multi = curl_multi_init ();
   if (multi == NULL)
-    {
-      curl_easy_cleanup (c);
-      MHD_stop_daemon (d);
-      return 512;
-    }
+  {
+    curl_easy_cleanup (c);
+    MHD_stop_daemon (d);
+    return 512;
+  }
   mret = curl_multi_add_handle (multi, c);
   if (mret != CURLM_OK)
+  {
+    curl_multi_cleanup (multi);
+    curl_easy_cleanup (c);
+    MHD_stop_daemon (d);
+    return 1024;
+  }
+  start = time (NULL);
+  while ((time (NULL) - start < 5) && (multi != NULL))
+  {
+    maxposixs = -1;
+    FD_ZERO (&rs);
+    FD_ZERO (&ws);
+    FD_ZERO (&es);
+    mret = curl_multi_fdset (multi, &rs, &ws, &es, &maxposixs);
+    if (mret != CURLM_OK)
     {
+      curl_multi_remove_handle (multi, c);
       curl_multi_cleanup (multi);
       curl_easy_cleanup (c);
       MHD_stop_daemon (d);
-      return 1024;
+      return 2048;
     }
-  start = time (NULL);
-  while ((time (NULL) - start < 5) && (multi != NULL))
+    tv.tv_sec = 0;
+    tv.tv_usec = 1000;
+    if (-1 != maxposixs)
     {
-      maxposixs = -1;
-      FD_ZERO (&rs);
-      FD_ZERO (&ws);
-      FD_ZERO (&es);
-      mret = curl_multi_fdset (multi, &rs, &ws, &es, &maxposixs);
-      if (mret != CURLM_OK)
-        {
-          curl_multi_remove_handle (multi, c);
-          curl_multi_cleanup (multi);
-          curl_easy_cleanup (c);
-          MHD_stop_daemon (d);
-          return 2048;
-        }
-      tv.tv_sec = 0;
-      tv.tv_usec = 1000;
-      if (-1 != maxposixs)
-        {
-          if (-1 == select (maxposixs + 1, &rs, &ws, &es, &tv))
-            {
+      if (-1 == select (maxposixs + 1, &rs, &ws, &es, &tv))
+      {
 #ifdef MHD_POSIX_SOCKETS
-              if (EINTR != errno)
-                abort ();
+        if (EINTR != errno)
+          abort ();
 #else
-              if (WSAEINVAL != WSAGetLastError() || 0 != rs.fd_count || 0 != ws.fd_count || 0 != es.fd_count)
-                abort ();
-              Sleep (1000);
+        if ((WSAEINVAL != WSAGetLastError ()) ||(0 != rs.fd_count) ||(0 !=
+                                                                      ws.
+                                                                      fd_count)
+            ||(0 != es.fd_count) )
+          abort ();
+        Sleep (1000);
 #endif
-            }
-        }
-      else
-        (void)sleep (1);
-      curl_multi_perform (multi, &running);
-      if (running == 0)
-        {
-          msg = curl_multi_info_read (multi, &running);
-          if (msg == NULL)
-            break;
-          if (msg->msg == CURLMSG_DONE)
-            {
-              if (msg->data.result != CURLE_OK)
-                printf ("%s failed at %s:%d: `%s'\n",
-                        "curl_multi_perform",
-                        __FILE__,
-                        __LINE__, curl_easy_strerror (msg->data.result));
-              curl_multi_remove_handle (multi, c);
-              curl_multi_cleanup (multi);
-              curl_easy_cleanup (c);
-              c = NULL;
-              multi = NULL;
-            }
-        }
+      }
     }
-  if (multi != NULL)
+    else
+      (void) sleep (1);
+    curl_multi_perform (multi, &running);
+    if (running == 0)
     {
-      curl_multi_remove_handle (multi, c);
-      curl_easy_cleanup (c);
-      curl_multi_cleanup (multi);
+      msg = curl_multi_info_read (multi, &running);
+      if (msg == NULL)
+        break;
+      if (msg->msg == CURLMSG_DONE)
+      {
+        if (msg->data.result != CURLE_OK)
+          printf ("%s failed at %s:%d: `%s'\n",
+                  "curl_multi_perform",
+                  __FILE__,
+                  __LINE__, curl_easy_strerror (msg->data.result));
+        curl_multi_remove_handle (multi, c);
+        curl_multi_cleanup (multi);
+        curl_easy_cleanup (c);
+        c = NULL;
+        multi = NULL;
+      }
     }
+  }
+  if (multi != NULL)
+  {
+    curl_multi_remove_handle (multi, c);
+    curl_easy_cleanup (c);
+    curl_multi_cleanup (multi);
+  }
   MHD_stop_daemon (d);
   if (cbc.pos != 0)
     return 8192;
@@ -220,16 +226,16 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
-  (void)argc;   /* Unused. Silent compiler warning. */
+  (void) argc;   /* Unused. Silent compiler warning. */
 
-  if (!testsuite_curl_global_init ())
+  if (! testsuite_curl_global_init ())
     return 99;
   if (NULL == curl_version_info (CURLVERSION_NOW)->ssl_version)
-    {
-      fprintf (stderr, "Curl does not support SSL.  Cannot run the test.\n");
-      curl_global_cleanup ();
-      return 77;
-    }
+  {
+    fprintf (stderr, "Curl does not support SSL.  Cannot run the test.\n");
+    curl_global_cleanup ();
+    return 77;
+  }
   if (0 != (errorCount = testInternalSelectGet ()))
     fprintf (stderr, "Failed test: %s, error: %u.\n", argv[0], errorCount);
   curl_global_cleanup ();

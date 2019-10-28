@@ -28,21 +28,21 @@
 
 #include "mhd_options.h"
 #ifdef NDEBUG
-#  define mhd_assert(ignore) ((void)0)
+#  define mhd_assert(ignore) ((void) 0)
 #else  /* _DEBUG */
 #  ifdef HAVE_ASSERT
 #    include <assert.h>
-#    define mhd_assert(CHK) assert(CHK)
+#    define mhd_assert(CHK) assert (CHK)
 #  else  /* ! HAVE_ASSERT */
 #    include <stdio.h>
 #    include <stdlib.h>
 #    define mhd_assert(CHK) \
-       do { \
-           if (!(CHK)) { \
-             fprintf(stderr, "%s:%u Assertion failed: %s\nProgram aborted.\n", \
-                     __FILE__, (unsigned)__LINE__, #CHK); \
-             fflush(stderr); abort(); } \
-          } while(0)
+  do { \
+    if (! (CHK)) { \
+      fprintf (stderr, "%s:%u Assertion failed: %s\nProgram aborted.\n", \
+               __FILE__, (unsigned) __LINE__, #CHK); \
+      fflush (stderr); abort (); } \
+  } while (0)
 #  endif /* ! HAVE_ASSERT */
 #endif /* _DEBUG */
 

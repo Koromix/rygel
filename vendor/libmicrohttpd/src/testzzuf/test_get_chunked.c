@@ -67,10 +67,10 @@ crc (void *cls, uint64_t pos, char *buf, size_t max)
   struct MHD_Response **responseptr = cls;
 
   if (pos == 128 * 10)
-    {
-      MHD_add_response_header (*responseptr, "Footer", "working");
-      return MHD_CONTENT_READER_END_OF_STREAM;
-    }
+  {
+    MHD_add_response_header (*responseptr, "Footer", "working");
+    return MHD_CONTENT_READER_END_OF_STREAM;
+  }
   if (max < 128)
     abort ();                   /* should not happen in this testcase... */
   memset (buf, 'A' + (pos / 128), 128);
@@ -108,11 +108,11 @@ ahc_echo (void *cls,
   if (0 != strcmp (me, method))
     return MHD_NO;              /* unexpected method */
   if (&aptr != *ptr)
-    {
-      /* do never respond on first call */
-      *ptr = &aptr;
-      return MHD_YES;
-    }
+  {
+    /* do never respond on first call */
+    *ptr = &aptr;
+    return MHD_YES;
+  }
   responseptr = malloc (sizeof (struct MHD_Response *));
   if (NULL == responseptr)
     return MHD_NO;
@@ -144,29 +144,30 @@ testInternalGet ()
   cbc.buf = buf;
   cbc.size = 2048;
   cbc.pos = 0;
-  d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD /* | MHD_USE_ERROR_LOG */ ,
-                        11080, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
+  d = MHD_start_daemon (
+    MHD_USE_INTERNAL_POLLING_THREAD /* | MHD_USE_ERROR_LOG */,
+    11080, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
   if (d == NULL)
     return 1;
   zzuf_socat_start ();
   for (i = 0; i < LOOP_COUNT; i++)
-    {
-      fprintf (stderr, ".");
-      c = curl_easy_init ();
-      curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1:11081/hello_world");
-      curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
-      curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-      curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
-      curl_easy_setopt (c, CURLOPT_TIMEOUT_MS, CURL_TIMEOUT);
-      curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT_MS, CURL_TIMEOUT);
-      curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-      /* NOTE: use of CONNECTTIMEOUT without also
-       *   setting NOSIGNAL results in really weird
-       *   crashes on my system! */
-      curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
-      curl_easy_perform (c);
-      curl_easy_cleanup (c);
-    }
+  {
+    fprintf (stderr, ".");
+    c = curl_easy_init ();
+    curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1:11081/hello_world");
+    curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
+    curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
+    curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
+    curl_easy_setopt (c, CURLOPT_TIMEOUT_MS, CURL_TIMEOUT);
+    curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT_MS, CURL_TIMEOUT);
+    curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+    /* NOTE: use of CONNECTTIMEOUT without also
+     *   setting NOSIGNAL results in really weird
+     *   crashes on my system! */
+    curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
+    curl_easy_perform (c);
+    curl_easy_cleanup (c);
+  }
   fprintf (stderr, "\n");
   zzuf_socat_stop ();
   MHD_stop_daemon (d);
@@ -185,29 +186,30 @@ testMultithreadedGet ()
   cbc.buf = buf;
   cbc.size = 2048;
   cbc.pos = 0;
-  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD /* | MHD_USE_ERROR_LOG */ ,
+  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION
+                        | MHD_USE_INTERNAL_POLLING_THREAD /* | MHD_USE_ERROR_LOG */,
                         11080, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
   if (d == NULL)
     return 16;
   zzuf_socat_start ();
   for (i = 0; i < LOOP_COUNT; i++)
-    {
-      fprintf (stderr, ".");
-      c = curl_easy_init ();
-      curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1:11081/hello_world");
-      curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
-      curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-      curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
-      curl_easy_setopt (c, CURLOPT_TIMEOUT_MS, CURL_TIMEOUT);
-      curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-      curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT_MS, CURL_TIMEOUT);
-      /* NOTE: use of CONNECTTIMEOUT without also
-       *   setting NOSIGNAL results in really weird
-       *   crashes on my system! */
-      curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
-      curl_easy_perform (c);
-      curl_easy_cleanup (c);
-    }
+  {
+    fprintf (stderr, ".");
+    c = curl_easy_init ();
+    curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1:11081/hello_world");
+    curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
+    curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
+    curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
+    curl_easy_setopt (c, CURLOPT_TIMEOUT_MS, CURL_TIMEOUT);
+    curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+    curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT_MS, CURL_TIMEOUT);
+    /* NOTE: use of CONNECTTIMEOUT without also
+     *   setting NOSIGNAL results in really weird
+     *   crashes on my system! */
+    curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
+    curl_easy_perform (c);
+    curl_easy_cleanup (c);
+  }
   fprintf (stderr, "\n");
   zzuf_socat_stop ();
   MHD_stop_daemon (d);
@@ -237,87 +239,87 @@ testExternalGet ()
   cbc.buf = buf;
   cbc.size = 2048;
   cbc.pos = 0;
-  d = MHD_start_daemon (MHD_NO_FLAG /* | MHD_USE_ERROR_LOG */ ,
+  d = MHD_start_daemon (MHD_NO_FLAG /* | MHD_USE_ERROR_LOG */,
                         11080, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
   if (d == NULL)
     return 256;
   multi = curl_multi_init ();
   if (multi == NULL)
-    {
-      MHD_stop_daemon (d);
-      return 512;
-    }
+  {
+    MHD_stop_daemon (d);
+    return 512;
+  }
   zzuf_socat_start ();
   for (i = 0; i < LOOP_COUNT; i++)
+  {
+    fprintf (stderr, ".");
+    c = curl_easy_init ();
+    curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1:11081/hello_world");
+    curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
+    curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
+    curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
+    curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+    curl_easy_setopt (c, CURLOPT_TIMEOUT_MS, CURL_TIMEOUT);
+    curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT_MS, CURL_TIMEOUT);
+    /* NOTE: use of CONNECTTIMEOUT without also
+     *   setting NOSIGNAL results in really weird
+     *   crashes on my system! */
+    curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
+    mret = curl_multi_add_handle (multi, c);
+    if (mret != CURLM_OK)
     {
-      fprintf (stderr, ".");
-      c = curl_easy_init ();
-      curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1:11081/hello_world");
-      curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
-      curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-      curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
-      curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-      curl_easy_setopt (c, CURLOPT_TIMEOUT_MS, CURL_TIMEOUT);
-      curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT_MS, CURL_TIMEOUT);
-      /* NOTE: use of CONNECTTIMEOUT without also
-       *   setting NOSIGNAL results in really weird
-       *   crashes on my system! */
-      curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
-      mret = curl_multi_add_handle (multi, c);
-      if (mret != CURLM_OK)
-        {
-          curl_multi_cleanup (multi);
-          curl_easy_cleanup (c);
-          zzuf_socat_stop ();
-          MHD_stop_daemon (d);
-          return 1024;
-        }
-      start = time (NULL);
-      while ((time (NULL) - start < 5) && (c != NULL))
-        {
-          max = 0;
-          FD_ZERO (&rs);
-          FD_ZERO (&ws);
-          FD_ZERO (&es);
-          curl_multi_perform (multi, &running);
-          mret = curl_multi_fdset (multi, &rs, &ws, &es, &max);
-          if (mret != CURLM_OK)
-            {
-              curl_multi_remove_handle (multi, c);
-              curl_multi_cleanup (multi);
-              curl_easy_cleanup (c);
-              zzuf_socat_stop ();
-              MHD_stop_daemon (d);
-              return 2048;
-            }
-          if (MHD_YES != MHD_get_fdset (d, &rs, &ws, &es, &max))
-            {
-              curl_multi_remove_handle (multi, c);
-              curl_multi_cleanup (multi);
-              curl_easy_cleanup (c);
-              zzuf_socat_stop ();
-              MHD_stop_daemon (d);
-              return 4096;
-            }
-          tv.tv_sec = 0;
-          tv.tv_usec = 1000;
-          select (max + 1, &rs, &ws, &es, &tv);
-          curl_multi_perform (multi, &running);
-          if (running == 0)
-            {
-              curl_multi_info_read (multi, &running);
-              curl_multi_remove_handle (multi, c);
-              curl_easy_cleanup (c);
-              c = NULL;
-            }
-          MHD_run (d);
-        }
-      if (c != NULL)
-        {
-          curl_multi_remove_handle (multi, c);
-          curl_easy_cleanup (c);
-        }
+      curl_multi_cleanup (multi);
+      curl_easy_cleanup (c);
+      zzuf_socat_stop ();
+      MHD_stop_daemon (d);
+      return 1024;
     }
+    start = time (NULL);
+    while ((time (NULL) - start < 5) && (c != NULL))
+    {
+      max = 0;
+      FD_ZERO (&rs);
+      FD_ZERO (&ws);
+      FD_ZERO (&es);
+      curl_multi_perform (multi, &running);
+      mret = curl_multi_fdset (multi, &rs, &ws, &es, &max);
+      if (mret != CURLM_OK)
+      {
+        curl_multi_remove_handle (multi, c);
+        curl_multi_cleanup (multi);
+        curl_easy_cleanup (c);
+        zzuf_socat_stop ();
+        MHD_stop_daemon (d);
+        return 2048;
+      }
+      if (MHD_YES != MHD_get_fdset (d, &rs, &ws, &es, &max))
+      {
+        curl_multi_remove_handle (multi, c);
+        curl_multi_cleanup (multi);
+        curl_easy_cleanup (c);
+        zzuf_socat_stop ();
+        MHD_stop_daemon (d);
+        return 4096;
+      }
+      tv.tv_sec = 0;
+      tv.tv_usec = 1000;
+      select (max + 1, &rs, &ws, &es, &tv);
+      curl_multi_perform (multi, &running);
+      if (running == 0)
+      {
+        curl_multi_info_read (multi, &running);
+        curl_multi_remove_handle (multi, c);
+        curl_easy_cleanup (c);
+        c = NULL;
+      }
+      MHD_run (d);
+    }
+    if (c != NULL)
+    {
+      curl_multi_remove_handle (multi, c);
+      curl_easy_cleanup (c);
+    }
+  }
   fprintf (stderr, "\n");
   curl_multi_cleanup (multi);
   zzuf_socat_stop ();
@@ -331,15 +333,15 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
-  (void)argc; (void)argv; /* Unused. Silent compiler warning. */
+  (void) argc; (void) argv; /* Unused. Silent compiler warning. */
 
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 2;
-  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_THREADS))
-    {
-      errorCount += testInternalGet ();
-      errorCount += testMultithreadedGet ();
-    }
+  if (MHD_YES == MHD_is_feature_supported (MHD_FEATURE_THREADS))
+  {
+    errorCount += testInternalGet ();
+    errorCount += testMultithreadedGet ();
+  }
   errorCount += testExternalGet ();
   if (errorCount != 0)
     fprintf (stderr, "Error (code: %u)\n", errorCount);

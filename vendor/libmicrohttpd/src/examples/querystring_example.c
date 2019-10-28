@@ -26,7 +26,8 @@
 #include "platform.h"
 #include <microhttpd.h>
 
-#define PAGE "<html><head><title>libmicrohttpd demo</title></head><body>Query string for &quot;%s&quot; was &quot;%s&quot;</body></html>"
+#define PAGE \
+  "<html><head><title>libmicrohttpd demo</title></head><body>Query string for &quot;%s&quot; was &quot;%s&quot;</body></html>"
 
 static int
 ahc_echo (void *cls,
@@ -42,19 +43,19 @@ ahc_echo (void *cls,
   char *me;
   struct MHD_Response *response;
   int ret;
-  (void)url;               /* Unused. Silent compiler warning. */
-  (void)version;           /* Unused. Silent compiler warning. */
-  (void)upload_data;       /* Unused. Silent compiler warning. */
-  (void)upload_data_size;  /* Unused. Silent compiler warning. */
+  (void) url;               /* Unused. Silent compiler warning. */
+  (void) version;           /* Unused. Silent compiler warning. */
+  (void) upload_data;       /* Unused. Silent compiler warning. */
+  (void) upload_data_size;  /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (method, "GET"))
     return MHD_NO;              /* unexpected method */
   if (&aptr != *ptr)
-    {
-      /* do never respond on first call */
-      *ptr = &aptr;
-      return MHD_YES;
-    }
+  {
+    /* do never respond on first call */
+    *ptr = &aptr;
+    return MHD_YES;
+  }
   *ptr = NULL;                  /* reset when done */
   val = MHD_lookup_connection_value (connection, MHD_GET_ARGUMENT_KIND, "q");
   me = malloc (snprintf (NULL, 0, fmt, "q", val) + 1);
@@ -62,12 +63,12 @@ ahc_echo (void *cls,
     return MHD_NO;
   sprintf (me, fmt, "q", val);
   response = MHD_create_response_from_buffer (strlen (me), me,
-					      MHD_RESPMEM_MUST_FREE);
+                                              MHD_RESPMEM_MUST_FREE);
   if (response == NULL)
-    {
-      free (me);
-      return MHD_NO;
-    }
+  {
+    free (me);
+    return MHD_NO;
+  }
   ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
   MHD_destroy_response (response);
   return ret;
@@ -80,18 +81,19 @@ main (int argc, char *const *argv)
   int port;
 
   if (argc != 2)
-    {
-      printf ("%s PORT\n", argv[0]);
-      return 1;
-    }
+  {
+    printf ("%s PORT\n", argv[0]);
+    return 1;
+  }
   port = atoi (argv[1]);
   if ( (port < 0) ||
        (port > UINT16_MAX) )
-    {
-      printf ("%s PORT\n", argv[0]);
-      return 1;
-    }
-  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
+  {
+    printf ("%s PORT\n", argv[0]);
+    return 1;
+  }
+  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION
+                        | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
                         (uint16_t) port,
                         NULL, NULL, &ahc_echo, PAGE, MHD_OPTION_END);
   if (NULL == d)

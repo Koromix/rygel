@@ -40,9 +40,9 @@
  */
 unsigned int
 MHD_request_get_values (struct MHD_Request *request,
-			enum MHD_ValueKind kind,
-			MHD_KeyValueIterator iterator,
-			void *iterator_cls)
+                        enum MHD_ValueKind kind,
+                        MHD_KeyValueIterator iterator,
+                        void *iterator_cls)
 {
   int ret;
   struct MHD_HTTP_Header *pos;
@@ -51,18 +51,18 @@ MHD_request_get_values (struct MHD_Request *request,
   for (pos = request->headers_received;
        NULL != pos;
        pos = pos->next)
+  {
+    if (0 != (pos->kind & kind))
     {
-      if (0 != (pos->kind & kind))
-	{
-	  ret++;
-	  if ( (NULL != iterator) &&
-	       (MHD_YES != iterator (iterator_cls,
-				     pos->kind,
-				     pos->header,
-				     pos->value)) )
-	    return ret;
-	}
+      ret++;
+      if ( (NULL != iterator) &&
+           (MHD_YES != iterator (iterator_cls,
+                                 pos->kind,
+                                 pos->header,
+                                 pos->value)) )
+        return ret;
     }
+  }
   return ret;
 }
 
@@ -94,9 +94,9 @@ MHD_request_get_values (struct MHD_Request *request,
  */
 enum MHD_Bool
 MHD_request_set_value (struct MHD_Request *request,
-		       enum MHD_ValueKind kind,
-		       const char *key,
-		       const char *value)
+                       enum MHD_ValueKind kind,
+                       const char *key,
+                       const char *value)
 {
   struct MHD_HTTP_Header *pos;
 
@@ -111,15 +111,15 @@ MHD_request_set_value (struct MHD_Request *request,
   pos->next = NULL;
   /* append 'pos' to the linked list of headers */
   if (NULL == request->headers_received_tail)
-    {
-      request->headers_received = pos;
-      request->headers_received_tail = pos;
-    }
+  {
+    request->headers_received = pos;
+    request->headers_received_tail = pos;
+  }
   else
-    {
-      request->headers_received_tail->next = pos;
-      request->headers_received_tail = pos;
-    }
+  {
+    request->headers_received_tail->next = pos;
+    request->headers_received_tail = pos;
+  }
   return MHD_YES;
 }
 
@@ -136,27 +136,25 @@ MHD_request_set_value (struct MHD_Request *request,
  */
 const char *
 MHD_request_lookup_value (struct MHD_Request *request,
-			  enum MHD_ValueKind kind,
-			  const char *key)
+                          enum MHD_ValueKind kind,
+                          const char *key)
 {
   struct MHD_HTTP_Header *pos;
 
   for (pos = request->headers_received;
        NULL != pos;
        pos = pos->next)
-    {
-      if ((0 != (pos->kind & kind)) &&
-	  ( (key == pos->header) ||
-	    ( (NULL != pos->header) &&
-	      (NULL != key) &&
-	      (MHD_str_equal_caseless_(key,
-				       pos->header)))))
-	return pos->value;
-    }
+  {
+    if ((0 != (pos->kind & kind)) &&
+        ( (key == pos->header) ||
+          ( (NULL != pos->header) &&
+            (NULL != key) &&
+            (MHD_str_equal_caseless_ (key,
+                                      pos->header)))))
+      return pos->value;
+  }
   return NULL;
 }
 
 
 /* end of request.c */
-
-

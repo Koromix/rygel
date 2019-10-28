@@ -57,7 +57,7 @@ apc_nothing (void *cls,
              const struct sockaddr *addr,
              socklen_t addrlen)
 {
-  (void)cls; (void)addr; (void)addrlen; /* Unused. Silent compiler warning. */
+  (void) cls; (void) addr; (void) addrlen; /* Unused. Silent compiler warning. */
 
   return MHD_NO;
 }
@@ -68,7 +68,7 @@ apc_all (void *cls,
          const struct sockaddr *addr,
          socklen_t addrlen)
 {
-  (void)cls; (void)addr; (void)addrlen; /* Unused. Silent compiler warning. */
+  (void) cls; (void) addr; (void) addrlen; /* Unused. Silent compiler warning. */
 
   return MHD_YES;
 }
@@ -83,9 +83,9 @@ ahc_nothing (void *cls,
              const char *upload_data, size_t *upload_data_size,
              void **unused)
 {
-  (void)cls;(void)connection;(void)url;          /* Unused. Silent compiler warning. */
-  (void)method;(void)version;(void)upload_data;  /* Unused. Silent compiler warning. */
-  (void)upload_data_size;(void)unused;           /* Unused. Silent compiler warning. */
+  (void) cls; (void) connection; (void) url;          /* Unused. Silent compiler warning. */
+  (void) method; (void) version; (void) upload_data;  /* Unused. Silent compiler warning. */
+  (void) upload_data_size; (void) unused;           /* Unused. Silent compiler warning. */
 
   return MHD_NO;
 }
@@ -136,25 +136,25 @@ testExternalRun ()
   }
   i = 0;
   while (i < 15)
+  {
+    maxfd = 0;
+    FD_ZERO (&rs);
+    if (MHD_YES != MHD_get_fdset (d, &rs, &rs, &rs, &maxfd))
     {
-      maxfd = 0;
-      FD_ZERO (&rs);
-      if (MHD_YES != MHD_get_fdset (d, &rs, &rs, &rs, &maxfd))
-        {
-          MHD_stop_daemon (d);
-          fprintf (stderr,
-                   "Failed in MHD_get_fdset()\n");
-          return 256;
-        }
-      if (MHD_run (d) == MHD_NO)
-        {
-          MHD_stop_daemon (d);
-          fprintf (stderr,
-                   "Failed in MHD_run()\n");
-          return 8;
-        }
-      i++;
+      MHD_stop_daemon (d);
+      fprintf (stderr,
+               "Failed in MHD_get_fdset()\n");
+      return 256;
     }
+    if (MHD_run (d) == MHD_NO)
+    {
+      MHD_stop_daemon (d);
+      fprintf (stderr,
+               "Failed in MHD_run()\n");
+      return 8;
+    }
+    i++;
+  }
   MHD_stop_daemon (d);
   return 0;
 }
@@ -179,11 +179,11 @@ testThread ()
     exit (77);
   }
   if (MHD_run (d) != MHD_NO)
-    {
-      fprintf (stderr,
-               "Failed in MHD_run()\n");
-      return 32;
-    }
+  {
+    fprintf (stderr,
+             "Failed in MHD_run()\n");
+    return 32;
+  }
   MHD_stop_daemon (d);
   return 0;
 }
@@ -194,7 +194,8 @@ testMultithread ()
 {
   struct MHD_Daemon *d;
 
-  d = MHD_start_daemon (MHD_USE_ERROR_LOG | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_THREAD_PER_CONNECTION,
+  d = MHD_start_daemon (MHD_USE_ERROR_LOG | MHD_USE_INTERNAL_POLLING_THREAD
+                        | MHD_USE_THREAD_PER_CONNECTION,
                         0,
                         &apc_all, NULL,
                         &ahc_nothing, NULL,
@@ -208,11 +209,11 @@ testMultithread ()
     exit (77);
   }
   if (MHD_run (d) != MHD_NO)
-    {
-      fprintf (stderr,
-               "Failed in MHD_run()\n");
-      return 128;
-    }
+  {
+    fprintf (stderr,
+             "Failed in MHD_run()\n");
+    return 128;
+  }
   MHD_stop_daemon (d);
   return 0;
 }
@@ -223,7 +224,7 @@ main (int argc,
       char *const *argv)
 {
   int errorCount = 0;
-  (void)argc; (void)argv; /* Unused. Silent compiler warning. */
+  (void) argc; (void) argv; /* Unused. Silent compiler warning. */
 
   errorCount += testStartError ();
   errorCount += testStartStop ();

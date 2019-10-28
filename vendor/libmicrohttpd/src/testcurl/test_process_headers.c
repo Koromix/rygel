@@ -1,4 +1,3 @@
-
 /*
      This file is part of libmicrohttpd
      Copyright (C) 2007 Christian Grothoff
@@ -38,10 +37,10 @@
 #include <unistd.h>
 #endif
 
-#if defined(CPU_COUNT) && (CPU_COUNT+0) < 2
+#if defined(CPU_COUNT) && (CPU_COUNT + 0) < 2
 #undef CPU_COUNT
 #endif
-#if !defined(CPU_COUNT)
+#if ! defined(CPU_COUNT)
 #define CPU_COUNT 2
 #endif
 
@@ -70,11 +69,12 @@ static int
 kv_cb (void *cls, enum MHD_ValueKind kind, const char *key, const char *value)
 {
   if ((0 == strcmp (key, MHD_HTTP_HEADER_HOST)) &&
-      (0 == strncmp (value, "127.0.0.1", strlen("127.0.0.1"))) && (kind == MHD_HEADER_KIND))
-    {
-      *((int *) cls) = 1;
-      return MHD_NO;
-    }
+      (0 == strncmp (value, "127.0.0.1", strlen ("127.0.0.1"))) && (kind ==
+                                                                    MHD_HEADER_KIND))
+  {
+    *((int *) cls) = 1;
+    return MHD_NO;
+  }
   return MHD_YES;
 }
 
@@ -92,15 +92,15 @@ ahc_echo (void *cls,
   struct MHD_Response *response;
   int ret;
   const char *hdr;
-  (void)version;(void)upload_data;(void)upload_data_size;       /* Unused. Silent compiler warning. */
+  (void) version; (void) upload_data; (void) upload_data_size;       /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (me, method))
     return MHD_NO;              /* unexpected method */
   if (&ptr != *unused)
-    {
-      *unused = &ptr;
-      return MHD_YES;
-    }
+  {
+    *unused = &ptr;
+    return MHD_YES;
+  }
   *unused = NULL;
   ret = 0;
   MHD_get_connection_values (connection, MHD_HEADER_KIND, &kv_cb, &ret);
@@ -115,7 +115,7 @@ ahc_echo (void *cls,
     abort ();
   hdr = MHD_lookup_connection_value (connection,
                                      MHD_HEADER_KIND, MHD_HTTP_HEADER_HOST);
-  if ((hdr == NULL) || (0 != strncmp (hdr, "127.0.0.1", strlen("127.0.0.1"))))
+  if ((hdr == NULL) || (0 != strncmp (hdr, "127.0.0.1", strlen ("127.0.0.1"))))
     abort ();
   MHD_set_connection_value (connection,
                             MHD_HEADER_KIND, "FakeHeader", "NowPresent");
@@ -125,8 +125,8 @@ ahc_echo (void *cls,
     abort ();
 
   response = MHD_create_response_from_buffer (strlen (url),
-					      (void *) url,
-					      MHD_RESPMEM_MUST_COPY);
+                                              (void *) url,
+                                              MHD_RESPMEM_MUST_COPY);
   if (NULL == response)
     abort ();
   MHD_add_response_header (response, "MyHeader", "MyValue");
@@ -162,11 +162,11 @@ testInternalGet ()
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
-    {
-      port = 1420;
-      if (oneone)
-        port += 10;
-    }
+  {
+    port = 1420;
+    if (oneone)
+      port += 10;
+  }
 
   cbc.buf = buf;
   cbc.size = 2048;
@@ -176,16 +176,18 @@ testInternalGet ()
   if (d == NULL)
     return 1;
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return 32;
     }
+    port = (int) dinfo->port;
+  }
   c = curl_easy_init ();
   curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
+  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
@@ -200,14 +202,14 @@ testInternalGet ()
      crashes on my system! */
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
-    {
-      fprintf (stderr,
-               "curl_easy_perform failed: `%s'\n",
-               curl_easy_strerror (errornum));
-      curl_easy_cleanup (c);
-      MHD_stop_daemon (d);
-      return 2;
-    }
+  {
+    fprintf (stderr,
+             "curl_easy_perform failed: `%s'\n",
+             curl_easy_strerror (errornum));
+    curl_easy_cleanup (c);
+    MHD_stop_daemon (d);
+    return 2;
+  }
   curl_easy_cleanup (c);
   MHD_stop_daemon (d);
   if (cbc.pos != strlen ("/hello_world"))
@@ -230,30 +232,33 @@ testMultithreadedGet ()
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
-    {
-      port = 1421;
-      if (oneone)
-        port += 10;
-    }
+  {
+    port = 1421;
+    if (oneone)
+      port += 10;
+  }
 
   cbc.buf = buf;
   cbc.size = 2048;
   cbc.pos = 0;
-  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
+  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION
+                        | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
                         port, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
   if (d == NULL)
     return 16;
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return 32;
     }
+    port = (int) dinfo->port;
+  }
   c = curl_easy_init ();
   curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
+  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
@@ -268,14 +273,14 @@ testMultithreadedGet ()
      crashes on my system! */
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
-    {
-      fprintf (stderr,
-               "curl_easy_perform failed: `%s'\n",
-               curl_easy_strerror (errornum));
-      curl_easy_cleanup (c);
-      MHD_stop_daemon (d);
-      return 32;
-    }
+  {
+    fprintf (stderr,
+             "curl_easy_perform failed: `%s'\n",
+             curl_easy_strerror (errornum));
+    curl_easy_cleanup (c);
+    MHD_stop_daemon (d);
+    return 32;
+  }
   curl_easy_cleanup (c);
   MHD_stop_daemon (d);
   if (cbc.pos != strlen ("/hello_world"))
@@ -298,11 +303,11 @@ testMultithreadedPoolGet ()
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
-    {
-      port = 1422;
-      if (oneone)
-        port += 10;
-    }
+  {
+    port = 1422;
+    if (oneone)
+      port += 10;
+  }
 
   cbc.buf = buf;
   cbc.size = 2048;
@@ -313,16 +318,18 @@ testMultithreadedPoolGet ()
   if (d == NULL)
     return 16;
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return 32;
     }
+    port = (int) dinfo->port;
+  }
   c = curl_easy_init ();
   curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
+  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
@@ -337,14 +344,14 @@ testMultithreadedPoolGet ()
      crashes on my system! */
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
-    {
-      fprintf (stderr,
-               "curl_easy_perform failed: `%s'\n",
-               curl_easy_strerror (errornum));
-      curl_easy_cleanup (c);
-      MHD_stop_daemon (d);
-      return 32;
-    }
+  {
+    fprintf (stderr,
+             "curl_easy_perform failed: `%s'\n",
+             curl_easy_strerror (errornum));
+    curl_easy_cleanup (c);
+    MHD_stop_daemon (d);
+    return 32;
+  }
   curl_easy_cleanup (c);
   MHD_stop_daemon (d);
   if (cbc.pos != strlen ("/hello_world"))
@@ -381,11 +388,11 @@ testExternalGet ()
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
-    {
-      port = 1423;
-      if (oneone)
-        port += 10;
-    }
+  {
+    port = 1423;
+    if (oneone)
+      port += 10;
+  }
 
   multi = NULL;
   cbc.buf = buf;
@@ -396,16 +403,18 @@ testExternalGet ()
   if (d == NULL)
     return 256;
   if (0 == port)
+  {
+    const union MHD_DaemonInfo *dinfo;
+    dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+    if ((NULL == dinfo) ||(0 == dinfo->port) )
     {
-      const union MHD_DaemonInfo *dinfo;
-      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-      if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
-      port = (int)dinfo->port;
+      MHD_stop_daemon (d); return 32;
     }
+    port = (int) dinfo->port;
+  }
   c = curl_easy_init ();
   curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
+  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
@@ -423,86 +432,88 @@ testExternalGet ()
 
   multi = curl_multi_init ();
   if (multi == NULL)
-    {
-      curl_easy_cleanup (c);
-      MHD_stop_daemon (d);
-      return 512;
-    }
+  {
+    curl_easy_cleanup (c);
+    MHD_stop_daemon (d);
+    return 512;
+  }
   mret = curl_multi_add_handle (multi, c);
   if (mret != CURLM_OK)
+  {
+    curl_multi_cleanup (multi);
+    curl_easy_cleanup (c);
+    MHD_stop_daemon (d);
+    return 1024;
+  }
+  start = time (NULL);
+  while ((time (NULL) - start < 5) && (multi != NULL))
+  {
+    maxsock = MHD_INVALID_SOCKET;
+    maxposixs = -1;
+    FD_ZERO (&rs);
+    FD_ZERO (&ws);
+    FD_ZERO (&es);
+    curl_multi_perform (multi, &running);
+    mret = curl_multi_fdset (multi, &rs, &ws, &es, &maxposixs);
+    if (mret != CURLM_OK)
     {
+      curl_multi_remove_handle (multi, c);
       curl_multi_cleanup (multi);
       curl_easy_cleanup (c);
       MHD_stop_daemon (d);
-      return 1024;
+      return 2048;
     }
-  start = time (NULL);
-  while ((time (NULL) - start < 5) && (multi != NULL))
-    {
-      maxsock = MHD_INVALID_SOCKET;
-      maxposixs = -1;
-      FD_ZERO (&rs);
-      FD_ZERO (&ws);
-      FD_ZERO (&es);
-      curl_multi_perform (multi, &running);
-      mret = curl_multi_fdset (multi, &rs, &ws, &es, &maxposixs);
-      if (mret != CURLM_OK)
-        {
-          curl_multi_remove_handle (multi, c);
-          curl_multi_cleanup (multi);
-          curl_easy_cleanup (c);
-          MHD_stop_daemon (d);
-          return 2048;
-        }
-      if (MHD_YES != MHD_get_fdset (d, &rs, &ws, &es, &maxsock))
-        {
-          curl_multi_remove_handle (multi, c);
-          curl_multi_cleanup (multi);
-          curl_easy_cleanup (c);
-          MHD_stop_daemon (d);
-          return 4096;
-        }
-      tv.tv_sec = 0;
-      tv.tv_usec = 1000;
-      if (-1 == select (maxposixs + 1, &rs, &ws, &es, &tv))
-        {
-#ifdef MHD_POSIX_SOCKETS
-          if (EINTR != errno)
-            abort ();
-#else
-          if (WSAEINVAL != WSAGetLastError() || 0 != rs.fd_count || 0 != ws.fd_count || 0 != es.fd_count)
-            abort ();
-          Sleep (1000);
-#endif
-        }
-      curl_multi_perform (multi, &running);
-      if (running == 0)
-        {
-          msg = curl_multi_info_read (multi, &running);
-          if (msg == NULL)
-            break;
-          if (msg->msg == CURLMSG_DONE)
-            {
-              if (msg->data.result != CURLE_OK)
-                printf ("%s failed at %s:%d: `%s'\n",
-                        "curl_multi_perform",
-                        __FILE__,
-                        __LINE__, curl_easy_strerror (msg->data.result));
-              curl_multi_remove_handle (multi, c);
-              curl_multi_cleanup (multi);
-              curl_easy_cleanup (c);
-              c = NULL;
-              multi = NULL;
-            }
-        }
-      MHD_run (d);
-    }
-  if (multi != NULL)
+    if (MHD_YES != MHD_get_fdset (d, &rs, &ws, &es, &maxsock))
     {
       curl_multi_remove_handle (multi, c);
-      curl_easy_cleanup (c);
       curl_multi_cleanup (multi);
+      curl_easy_cleanup (c);
+      MHD_stop_daemon (d);
+      return 4096;
     }
+    tv.tv_sec = 0;
+    tv.tv_usec = 1000;
+    if (-1 == select (maxposixs + 1, &rs, &ws, &es, &tv))
+    {
+#ifdef MHD_POSIX_SOCKETS
+      if (EINTR != errno)
+        abort ();
+#else
+      if ((WSAEINVAL != WSAGetLastError ()) ||(0 != rs.fd_count) ||(0 !=
+                                                                    ws.fd_count)
+          ||(0 != es.fd_count) )
+        abort ();
+      Sleep (1000);
+#endif
+    }
+    curl_multi_perform (multi, &running);
+    if (running == 0)
+    {
+      msg = curl_multi_info_read (multi, &running);
+      if (msg == NULL)
+        break;
+      if (msg->msg == CURLMSG_DONE)
+      {
+        if (msg->data.result != CURLE_OK)
+          printf ("%s failed at %s:%d: `%s'\n",
+                  "curl_multi_perform",
+                  __FILE__,
+                  __LINE__, curl_easy_strerror (msg->data.result));
+        curl_multi_remove_handle (multi, c);
+        curl_multi_cleanup (multi);
+        curl_easy_cleanup (c);
+        c = NULL;
+        multi = NULL;
+      }
+    }
+    MHD_run (d);
+  }
+  if (multi != NULL)
+  {
+    curl_multi_remove_handle (multi, c);
+    curl_easy_cleanup (c);
+    curl_multi_cleanup (multi);
+  }
   MHD_stop_daemon (d);
   if (cbc.pos != strlen ("/hello_world"))
     return 8192;
@@ -517,17 +528,17 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
-  (void)argc;   /* Unused. Silent compiler warning. */
+  (void) argc;   /* Unused. Silent compiler warning. */
 
-  if (NULL == argv || 0 == argv[0])
+  if ((NULL == argv)||(0 == argv[0]))
     return 99;
   oneone = has_in_name (argv[0], "11");
-  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_THREADS))
-    {
-      errorCount += testInternalGet ();
-      errorCount += testMultithreadedGet ();
-      errorCount += testMultithreadedPoolGet ();
-    }
+  if (MHD_YES == MHD_is_feature_supported (MHD_FEATURE_THREADS))
+  {
+    errorCount += testInternalGet ();
+    errorCount += testMultithreadedGet ();
+    errorCount += testMultithreadedPoolGet ();
+  }
   errorCount += testExternalGet ();
   if (errorCount != 0)
     fprintf (stderr, "Error (code: %u)\n", errorCount);

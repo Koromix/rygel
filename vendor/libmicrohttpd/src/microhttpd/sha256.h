@@ -76,8 +76,8 @@ MHD_SHA256_init (void *ctx_);
  */
 void
 MHD_SHA256_update (void *ctx_,
-               const uint8_t *data,
-               size_t length);
+                   const uint8_t *data,
+                   size_t length);
 
 
 /**
