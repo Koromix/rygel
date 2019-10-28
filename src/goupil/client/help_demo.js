@@ -12,7 +12,7 @@ let help_demo = {
     'pages/tuto.js':
 `// Retirer le commentaire de la ligne suivante pour afficher les
 // champs (texte, numérique, etc.) à droite du libellé.
-// page.pushOptions({wide: true})
+// page.pushOptions({compact: true})
 
 page.output(html\`
     <p>Une <b>fonction</b> est composée d'un <i>nom</i> et de plusieurs <i>paramètres</i> et permet de proposer un outil de saisie (champ texte, menu déroulant ...).
@@ -63,7 +63,7 @@ page.buttons("save")
 `,
 
     'pages/complicated.js':
-`page.pushOptions({wide: true})
+`page.pushOptions({compact: true})
 
 page.text("nom", "Quel est votre nom ?", {mandatory: true})
 page.number("age", "Quel est votre âge ?", {min: 0, max: 120,
