@@ -15,6 +15,10 @@ if (typeof lithtml !== 'undefined') {
 let util = new function() {
     let self = this;
 
+    this.clamp = function(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+    };
+
     this.mapRange = function(start, end, func) {
         let len = end - start;
         let arr = Array.from({length: len});
