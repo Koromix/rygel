@@ -195,9 +195,9 @@ Navigation functions should only be called in reaction to user events, such as b
         // Run appropriate module
         if (current_asset) {
             if (current_asset.category) {
-                document.title = `${current_asset.category} :: ${current_asset.label} — ${env.app_key}`;
+                document.title = `${current_asset.category} :: ${current_asset.label} — ${env.app_name}`;
             } else {
-                document.title = `${current_asset.label} — ${env.app_key}`;
+                document.title = `${current_asset.label} — ${env.app_name}`;
             }
 
             switch (left_panel) {
@@ -208,7 +208,7 @@ Navigation functions should only be called in reaction to user events, such as b
 
             return current_asset.url;
         } else {
-            document.title = env.app_key;
+            document.title = env.app_name;
             log.error('Asset not available');
 
             // Better than nothing!

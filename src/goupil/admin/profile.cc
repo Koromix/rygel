@@ -16,9 +16,12 @@
 namespace RG {
 
 static const char *const DefaultConfig =
-R"([Data]
-AppKey = %1
-DatabaseFile = %2
+R"([Application]
+Key = %1
+Name = %2
+
+[Data]
+DatabaseFile = %3
 
 # [HTTP]
 # IPStack = Dual
@@ -33,6 +36,7 @@ int RunCreateProfile(Span<const char *> arguments)
 
     // Options
     Span<const char> app_key = {};
+    Span<const char> app_name = {};
     bool demo = false;
     const char *profile_directory = nullptr;
 
@@ -40,8 +44,10 @@ int RunCreateProfile(Span<const char *> arguments)
         PrintLn(fp, R"(Usage: goupil_admin create_profile [options] profile_directory
 
 Options:
-    -k, --key <key>              Change project key
+    -k, --key <key>              Change application key
                                  (default: directory name)
+        --name <name>            Change application name
+                                 (default: project key)
 
         --demo                   Insert fake data in profile)");
     };
@@ -56,6 +62,8 @@ Options:
                 return 0;
             } else if (opt.Test("-k", "--key", OptionType::Value)) {
                 app_key = opt.current_value;
+            } else if (opt.Test("--name", OptionType::Value)) {
+                app_name = opt.current_value;
             } else if (opt.Test("--demo")) {
                 demo = true;
             } else {
@@ -74,6 +82,9 @@ Options:
     if (!app_key.len) {
         app_key = TrimStrRight((Span<const char>)profile_directory, RG_PATH_SEPARATORS);
         app_key = SplitStrReverseAny(app_key, RG_PATH_SEPARATORS);
+    }
+    if (!app_name.len) {
+        app_name = app_key;
     }
 
     if (!MakeDirectory(profile_directory))
@@ -116,7 +127,7 @@ Options:
         files.Append(filename);
 
         StreamWriter st(filename);
-        Print(&st, DefaultConfig, app_key, database_name);
+        Print(&st, DefaultConfig, app_key, app_name, database_name);
         if (!st.Close())
             return 1;
     }
