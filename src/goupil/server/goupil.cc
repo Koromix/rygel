@@ -68,10 +68,11 @@ static std::atomic_int push_count;
 static void ProduceManifest(const http_RequestInfo &request, http_IO *io)
 {
     http_JsonPageBuilder json(request.compression_type);
+    char buf[256];
 
     json.StartObject();
-    json.Key("short_name"); json.String("goupil");
-    json.Key("name"); json.String("goupil");
+    json.Key("short_name"); json.String(Fmt(buf, "goupil (%1)", goupil_config.app_key).ptr);
+    json.Key("name"); json.String(Fmt(buf, "goupil (%1)", goupil_config.app_key).ptr);
     json.Key("icons"); json.StartArray();
     json.StartObject();
         json.Key("src"); json.String("static/fox192.png");
