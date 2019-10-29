@@ -276,7 +276,7 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     function toggleLeftPanel(mode) {
-        if (window.matchMedia('(pointer: coarse)').matches) {
+        if (goupil.isTablet()) {
             left_panel = mode;
             show_overview = false;
         } else if (left_panel !== mode) {
@@ -290,7 +290,7 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     function toggleOverview() {
-        if (window.matchMedia('(pointer: coarse)').matches) {
+        if (goupil.isTablet()) {
             left_panel = null;
             show_overview = true;
         } else if (!show_overview) {

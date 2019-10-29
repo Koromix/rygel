@@ -12,6 +12,8 @@ let goupil = new function() {
 
     let event_src;
 
+    let tablet_mq = window.matchMedia('(pointer: coarse)');
+
     document.addEventListener('readystatechange', e => {
         if (document.readyState === 'complete')
             initGoupil();
@@ -112,5 +114,9 @@ let goupil = new function() {
         }
 
         event_src.addEventListener(event, func);
+    };
+
+    this.isTablet = function() {
+        return tablet_mq.matches;
     };
 };
