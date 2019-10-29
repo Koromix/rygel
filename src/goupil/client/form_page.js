@@ -137,19 +137,25 @@ function PageBuilder(form, widgets, variables = []) {
         let value = parseFloat(form.getValue(key, options.value));
         let missing = (value == null || Number.isNaN(value));
 
+        // Used for rendering value box
+        let thumb_value = !missing ? util.clamp(value, options.min, options.max)
+                                   : ((options.min + options.max) / 2);
+        let thumb_pos = (thumb_value - options.min) / range;
+
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div class=${missing ? 'af_slider missing' : 'af_slider'} style=${makeInputStyle(options)}>
                 <div>
-                    <span style=${`left: ${!missing ? ((value - options.min) / range * 100) : 50}%;` +
-                                  (options.untoggle ? ' cursor: pointer;': '')}
-                          @click=${e => options.untoggle && handleNumberChange(e, key)}>${value.toFixed(options.decimals)}</span>
+                    <span style=${`left: ${thumb_pos * 100}%;${options.untoggle ? ' cursor: pointer;': ''}`}
+                          @click=${e => handleSliderClick(e, key, value, options.min, options.max)}>${value.toFixed(options.decimals)}</span>
                 </div>
                 <input id=${id} type="range"
                        min=${options.min} max=${options.max} step=${1 / Math.pow(10, options.decimals)}
                        .value=${!missing ? value : ((options.max + options.min) / 2)}
                        placeholder=${options.placeholder || ''} ?disabled=${options.disable}
+                       @click=${e => { e.target.value = thumb_value; handleNumberChange(e, key); }}
+                       @dblclick=${e => handleSliderClick(e, key, value, options.min, options.max)}
                        @input=${e => handleNumberChange(e, key)}/>
             </div>
         `);
@@ -169,6 +175,20 @@ function PageBuilder(form, widgets, variables = []) {
             form.setValue(key, parseFloat(e.target.value));
             self.changeHandler(self);
         }
+    }
+
+    function handleSliderClick(e, key, value, min, max) {
+        popup.form(e, page => {
+            let number = page.number('number', 'Valeur :', {min: min, max: max, value: value});
+
+            page.submitHandler = () => {
+                form.setValue(key, number.value);
+
+                self.changeHandler(self);
+                page.close();
+            };
+            page.buttons(page.buttons.std.ok_cancel('Modifier'));
+        });
     }
 
     function validateNumber(intf) {
