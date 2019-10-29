@@ -68,11 +68,10 @@ static std::atomic_int push_count;
 static void ProduceManifest(const http_RequestInfo &request, http_IO *io)
 {
     http_JsonPageBuilder json(request.compression_type);
-    char buf[256];
 
     json.StartObject();
-    json.Key("short_name"); json.String(Fmt(buf, "goupil (%1)", goupil_config.app_key).ptr);
-    json.Key("name"); json.String(Fmt(buf, "goupil (%1)", goupil_config.app_key).ptr);
+    json.Key("short_name"); json.String(goupil_config.app_name);
+    json.Key("name"); json.String(goupil_config.app_name);
     json.Key("icons"); json.StartArray();
     json.StartObject();
         json.Key("src"); json.String("static/fox192.png");
@@ -177,11 +176,14 @@ static AssetInfo PatchGoupilVariables(const AssetInfo &asset, Allocator *alloc)
         if (TestStr(key, "VERSION")) {
             writer->Write(BuildVersion);
             return true;
-        } else if (TestStr(key, "BASE_URL")) {
-            writer->Write(goupil_config.http.base_url);
-            return true;
         } else if (TestStr(key, "APP_KEY")) {
             writer->Write(goupil_config.app_key);
+            return true;
+        } else if (TestStr(key, "APP_NAME")) {
+            writer->Write(goupil_config.app_name);
+            return true;
+        } else if (TestStr(key, "BASE_URL")) {
+            writer->Write(goupil_config.http.base_url);
             return true;
         } else if (TestStr(key, "CACHE_KEY")) {
             writer->Write(goupil_config.database_filename ? etag : "");
@@ -365,8 +367,13 @@ Options:
 
         if (!LoadConfig(config_filename, &goupil_config))
             return 1;
+
+        if (!goupil_config.app_name) {
+            goupil_config.app_name = goupil_config.app_key;
+        }
     } else if (dev_key) {
         goupil_config.app_key = dev_key;
+        goupil_config.app_name = Fmt(&temp_alloc, "goupil (%1)", dev_key).ptr;
     }
 
     // Parse arguments

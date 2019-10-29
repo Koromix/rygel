@@ -32,11 +32,20 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
     {
         IniProperty prop;
         while (ini.Next(&prop)) {
-            if (prop.section == "Data") {
+            if (prop.section == "Application") {
                 do {
-                    if (prop.key == "AppKey") {
+                    if (prop.key == "Key") {
                         config.app_key = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "DatabaseFile") {
+                    } else if (prop.key == "Name") {
+                        config.app_name = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
+            } else if (prop.section == "Data") {
+                do {
+                    if (prop.key == "DatabaseFile") {
                         config.database_filename = NormalizePath(prop.value, root_directory,
                                                                  &config.str_alloc).ptr;
                     } else {
