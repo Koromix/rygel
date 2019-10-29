@@ -580,13 +580,11 @@ instead of:
         };
         form.clicked_buttons.delete(label);
 
-
         let render = intf => renderWrappedWidget(intf, html`
-            <button @click=${e => handleButtonClick(e, label)}>${label}</button>
+            <button class="af_button" @click=${e => handleButtonClick(e, label)}>${label}</button>
         `);
 
         addWidget(render, options);
-
 
         return intf;
     };
