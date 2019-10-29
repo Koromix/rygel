@@ -445,6 +445,39 @@ function PageBuilder(form, widgets, variables = []) {
         return props;
     }
 
+    this.date = function(key, label, options = {}) {
+        key = form.decodeKey(key);
+        options = expandOptions(options);
+
+        let value = form.getValue(key, options.value);
+        if (typeof value === 'string') {
+            value = dates.fromString(value);
+        } else if (value == null || value.constructor.name !== 'LocalDate') {
+            value = null;
+        }
+
+        let id = makeID(key);
+        let render = intf => renderWrappedWidget(intf, html`
+            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
+            <input id=${id} type="date" style=${makeInputStyle(options)}
+                   .value=${value ? value.toString() : null} ?disabled=${options.disable}
+                   @input=${e => handleDateInput(e, key)}/>
+            ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
+        `);
+
+        let intf = addWidget(render, options);
+        fillVariableInfo(intf, key, label, value, value == null);
+
+        return intf;
+    };
+
+    function handleDateInput(e, key) {
+        // Store as string, for serialization purposes
+        form.setValue(key, e.target.value);
+        self.changeHandler(self);
+    }
+
     this.file = function(key, label, options = {}) {
         key = form.decodeKey(key);
         options = expandOptions(options);
