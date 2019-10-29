@@ -376,6 +376,8 @@ Navigation functions should only be called in reaction to user events, such as b
             page.output('Voulez-vous vraiment réinitialiser toutes les ressources ?');
 
             page.submitHandler = async () => {
+                let current_url = current_asset ? current_asset.url : null;
+
                 await file_manager.transaction(m => {
                     m.clear();
 
@@ -391,7 +393,7 @@ Navigation functions should only be called in reaction to user events, such as b
                 await self.init();
 
                 page.close();
-                app.go(assets[0].url);
+                app.go(assets_map[current_url] ? current_url : assets[0].url);
             };
             page.buttons(page.buttons.std.ok_cancel('Réinitialiser'));
         });
