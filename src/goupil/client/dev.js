@@ -180,8 +180,11 @@ Navigation functions should only be called in reaction to user events, such as b
                         current_record = record_manager.create(current_asset.form.key);
 
                     // The user asked for this record, make sure it is visible
-                    if (!show_overview)
-                        toggleOverview();
+                    if (!show_overview) {
+                        if (goupil.isTablet())
+                            left_panel = null;
+                        show_overview = true;
+                    }
                 }
             }
         }
