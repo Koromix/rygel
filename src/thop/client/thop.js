@@ -151,7 +151,7 @@ let thop = new function() {
 
             settings = JSON.parse(json, (key, value) => {
                 if (typeof value === 'string' && value.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)) {
-                    return dates.fromString(value);
+                    return dates.parse(value);
                 } else {
                     return value;
                 }
