@@ -451,7 +451,7 @@ function PageBuilder(form, widgets, variables = []) {
 
         let value = form.getValue(key, options.value);
         if (typeof value === 'string') {
-            value = dates.fromString(value);
+            value = dates.parse(value);
         } else if (value == null || value.constructor.name !== 'LocalDate') {
             value = null;
         }

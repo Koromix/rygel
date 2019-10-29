@@ -671,7 +671,7 @@ let dates = new function() {
         return Object.freeze(date);
     };
 
-    this.fromString = function(str, validate = true) {
+    this.parse = function(str, validate = true) {
         if (str == null)
             return null;
 
@@ -680,16 +680,22 @@ let dates = new function() {
             let [year, month, day] = str.split('-').map(x => parseInt(x, 10));
             date = dates.create(year, month, day);
         } catch (err) {
-            log.error(`Date '${str}' is malformed`);
-            return null;
+            throw new Error(`Date '${str}' is malformed`);
         }
 
-        if (validate && !date.isValid()) {
-            log.error(`Date '${str}' is invalid`);
-            return null;
-        }
+        if (validate && !date.isValid())
+            throw new Error(`Date '${str}' is invalid`);
 
         return date;
+    };
+
+    this.parseSafe = function(str, validate = true) {
+        try {
+            return self.parseFatal(str, validate);
+        } catch (err) {
+            log.error(date);
+            return date;
+        }
     };
 
     this.fromJulianDays = function(days) {

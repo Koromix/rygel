@@ -85,8 +85,8 @@ let mco_casemix = new function() {
                 break;
 
             let range = {
-                start_date: dates.fromString(parts[0] || null),
-                end_date: dates.fromString(parts[1] || null)
+                start_date: dates.parseSafe(parts[0] || null),
+                end_date: dates.parseSafe(parts[1] || null)
             };
             if (!range.start_date || !range.end_date)
                 break;
