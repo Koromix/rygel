@@ -17,7 +17,10 @@ let cache_urls = [
     `${env.base_url}static/theme-monokai.js`,
     `${env.base_url}static/mode-javascript.js`,
     `${env.base_url}static/xlsx.core.min.js`,
-    `${env.base_url}static/NotoSans-Regular.woff2`,
+    `${env.base_url}static/OpenSans-Regular.woff2`,
+    `${env.base_url}static/OpenSans-Bold.woff2`,
+    `${env.base_url}static/OpenSans-Italic.woff2`,
+    `${env.base_url}static/OpenSans-BoldItalic.woff2`,
 
     `${env.base_url}manifest.json`,
     `${env.base_url}favicon.png`
