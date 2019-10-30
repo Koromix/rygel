@@ -2491,7 +2491,7 @@ struct Task {
 
 struct TaskQueue {
     std::mutex queue_mutex;
-    BlockQueue<Task> tasks;
+    BucketArray<Task> tasks;
 };
 
 class AsyncPool {

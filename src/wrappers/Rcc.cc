@@ -8,7 +8,7 @@
 namespace RG {
 
 std::mutex rcc_log_mutex;
-BlockQueue<const char *> rcc_log_messages;
+BucketArray<const char *> rcc_log_messages;
 bool rcc_log_missing_messages = false;
 
 void rcc_DumpWarnings()
