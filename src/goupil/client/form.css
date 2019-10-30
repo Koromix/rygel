@@ -160,8 +160,8 @@
 }
 .af_slider input:focus { outline: none; }
 .af_slider.missing div { display: none; }
-.af_slider.missing input::-webkit-slider-thumb { background: #aaa; }
-.af_slider.missing input::-moz-range-thumb { background: #aaa; }
+.af_slider.missing input::-webkit-slider-thumb { background: #999; }
+.af_slider.missing input::-moz-range-thumb { background: #999; }
 
 .af_button {
     margin: 0 1px 1px 0;
