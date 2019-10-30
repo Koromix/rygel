@@ -167,15 +167,16 @@
     margin: 0 1px 1px 0;
     padding: 0.3em 0.7em;
     background: #f8f8f8;
-    border: 1px solid #aaa;
+    border: 1px solid #999;
+    border-width: 0.5px;
 }
 .af_button::-moz-focus-inner { border: 0; }
-.af_button:not(:disabled):focus { outline: 1px dotted #aaa; }
-.af_button:not(:disabled):hover { border: 1px solid #24579d; }
-.af_button:disabled { background: #aaa; }
+.af_button:not(:disabled):focus { outline: 1px dotted #999; }
+.af_button:not(:disabled):hover { border-color: #24579d; }
+.af_button:disabled { background: #999; }
 .af_button.active {
     background: #24579d;
-    border: 1px solid #24579d;
+    border-color: #24579d;
     color: white;
 }
 
