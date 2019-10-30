@@ -11,7 +11,7 @@
 namespace RG {
 
 extern std::mutex rcc_log_mutex;
-extern BlockQueue<const char *> rcc_log_messages;
+extern BucketArray<const char *> rcc_log_messages;
 extern bool rcc_log_missing_messages;
 
 #define RG_RCC_SETUP_LOG_HANDLER() \
