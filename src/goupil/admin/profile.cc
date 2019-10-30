@@ -21,6 +21,7 @@ Key = %1
 Name = %2
 
 [Data]
+# IconFile = (path to file with .png format / extension)
 DatabaseFile = %3
 
 # [HTTP]

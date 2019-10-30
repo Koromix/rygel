@@ -74,14 +74,9 @@ static void ProduceManifest(const http_RequestInfo &request, http_IO *io)
     json.Key("name"); json.String(goupil_config.app_name);
     json.Key("icons"); json.StartArray();
     json.StartObject();
-        json.Key("src"); json.String("static/fox192.png");
+        json.Key("src"); json.String("favicon.png");
         json.Key("type"); json.String("image/png");
-        json.Key("sizes"); json.String("192x192");
-    json.EndObject();
-    json.StartObject();
-        json.Key("src"); json.String("static/fox512.png");
-        json.Key("type"); json.String("image/png");
-        json.Key("sizes"); json.String("512x512");
+        json.Key("sizes"); json.String("192x192 512x512");
     json.EndObject();
     json.EndArray();
     json.Key("start_url"); json.String(goupil_config.http.base_url);
@@ -196,7 +191,7 @@ static AssetInfo PatchGoupilVariables(const AssetInfo &asset, Allocator *alloc)
     return asset2;
 }
 
-static void InitRoutes()
+static bool InitRoutes()
 {
     LogInfo("Init routes");
 
@@ -234,7 +229,7 @@ static void InitRoutes()
         Fmt(etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
     }
 
-    // Static assets
+    // Packed static assets
     for (const AssetInfo &asset: assets) {
         if (TestStr(asset.name, "goupil.html")) {
             AssetInfo asset2 = PatchGoupilVariables(asset, &routes_alloc);
@@ -248,11 +243,35 @@ static void InitRoutes()
         }
     }
 
+    // Favicon
+    if (goupil_config.icon_filename) {
+        AssetInfo icon = {};
+
+        icon.name = goupil_config.icon_filename;
+        icon.compression_type = CompressionType::None;
+
+        // Load icon
+        {
+            HeapArray<uint8_t> buf(&routes_alloc);
+            if (!ReadFile(goupil_config.icon_filename, Kibibytes(64), CompressionType::None, &buf))
+                return false;
+
+            icon.data = buf.Leak();
+        }
+
+        add_asset_route("GET", "/favicon.png", icon);
+    } else {
+        const Route *icon = routes.Find("/static/goupil.png");
+        add_asset_route("GET", "/favicon.png", icon->u.st.asset);
+    }
+
     // API
     add_function_route("GET", "/manifest.json", ProduceManifest);
     add_function_route("GET", "/api/events.json", ProduceEvents);
     add_function_route("GET", "/api/schedule/resources.json", ProduceScheduleResources);
     add_function_route("GET", "/api/schedule/meetings.json", ProduceScheduleMeetings);
+
+    return true;
 }
 
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
@@ -262,7 +281,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         LogInfo("Reloaded assets from library");
         assets = asset_set.assets;
 
-        InitRoutes();
+        RG_ASSERT(InitRoutes());
     }
 #endif
 
@@ -402,6 +421,10 @@ Options:
         LogError("Project key must not be empty");
         return 1;
     }
+    if (goupil_config.icon_filename && GetPathExtension(goupil_config.icon_filename) != ".png") {
+        LogError("Icon file must be a PNG file with '.png' extension");
+        return 1;
+    }
 
     // Init database
     if (goupil_config.database_filename) {
@@ -429,7 +452,8 @@ Options:
 #else
     assets = pack_assets;
 #endif
-    InitRoutes();
+    if (!InitRoutes())
+        return 1;
 
     // Run!
     http_Daemon daemon;

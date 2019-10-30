@@ -18,9 +18,9 @@ let cache_urls = [
     `${env.base_url}static/mode-javascript.js`,
     `${env.base_url}static/xlsx.core.min.js`,
     `${env.base_url}static/NotoSans-Regular.woff2`,
+
     `${env.base_url}manifest.json`,
-    `${env.base_url}static/fox192.png`,
-    `${env.base_url}static/fox512.png`
+    `${env.base_url}favicon.png`
 ];
 
 self.addEventListener('install', e => {
