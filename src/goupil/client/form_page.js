@@ -268,7 +268,7 @@ function PageBuilder(form, widgets, variables = []) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <select id=${id} class="af_input" style=${makeInputStyle(options)}
+            <select id=${id} style=${makeInputStyle(options)}
                     ?disabled=${options.disable} @change=${e => handleEnumDropChange(e, key)}>
                 ${options.untoggle || !props.some(p => p != null && value === p.value) ?
                     html`<option value="null" .selected=${value == null}>-- Choisissez une option --</option>` : ''}
