@@ -95,6 +95,11 @@
 
 /* -------------------- Widget types -------------------- */
 
+.af_input {
+    border: 1px solid #999;
+    padding: 2px 1px;
+}
+
 .af_select, .af_radio, .af_multi { display: inline-block; }
 
 .af_slider {

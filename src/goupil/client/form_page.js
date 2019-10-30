@@ -55,7 +55,7 @@ function PageBuilder(form, widgets, variables = []) {
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
-            <input id=${id} type="text" style=${makeInputStyle(options)}
+            <input id=${id} type="text" class="af_input" style=${makeInputStyle(options)}
                    placeholder=${options.placeholder || ''}
                    .value=${value || ''} ?disabled=${options.disable}
                    @input=${e => handleTextInput(e, key)}/>
@@ -78,7 +78,7 @@ function PageBuilder(form, widgets, variables = []) {
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
-            <input id=${id} type="password" style=${makeInputStyle(options)}
+            <input id=${id} type="password" class="af_input" style=${makeInputStyle(options)}
                    .value=${value || ''} ?disabled=${options.disable}
                    @input=${e => handleTextInput(e, key)}/>
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
@@ -106,7 +106,7 @@ function PageBuilder(form, widgets, variables = []) {
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
-            <input id=${id} type="number" style=${makeInputStyle(options)}
+            <input id=${id} type="number" class="af_input" style=${makeInputStyle(options)}
                    step=${1 / Math.pow(10, options.decimals || 0)} .value=${value}
                    placeholder=${options.placeholder || ''} ?disabled=${options.disable}
                    @input=${e => handleNumberChange(e, key)}/>
@@ -268,8 +268,8 @@ function PageBuilder(form, widgets, variables = []) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <select id=${id} style=${makeInputStyle(options)} ?disabled=${options.disable}
-                    @change=${e => handleEnumDropChange(e, key)}>
+            <select id=${id} class="af_input" style=${makeInputStyle(options)}
+                    ?disabled=${options.disable} @change=${e => handleEnumDropChange(e, key)}>
                 ${options.untoggle || !props.some(p => p != null && value === p.value) ?
                     html`<option value="null" .selected=${value == null}>-- Choisissez une option --</option>` : ''}
                 ${props.map(p =>
