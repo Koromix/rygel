@@ -691,10 +691,10 @@ let dates = new function() {
 
     this.parseSafe = function(str, validate = true) {
         try {
-            return self.parseFatal(str, validate);
+            return self.parse(str, validate);
         } catch (err) {
-            log.error(date);
-            return date;
+            log.error(err.message);
+            return null;
         }
     };
 
