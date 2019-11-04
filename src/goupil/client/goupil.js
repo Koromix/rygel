@@ -116,7 +116,6 @@ let goupil = new function() {
         event_src.addEventListener(event, func);
     };
 
-    this.isTablet = function() {
-        return tablet_mq.matches;
-    };
+    this.isTablet = function() { return tablet_mq.matches; };
+    this.isOnline = function() { return false; };
 };
