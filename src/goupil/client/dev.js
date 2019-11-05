@@ -535,6 +535,9 @@ Navigation functions should only be called in reaction to user events, such as b
             log_el.style.display = 'block';
             overview_el.classList.add('dev_broken');
 
+            // Make it easier for complex screw ups (which are mine, most of the time)
+            console.log(err);
+
             return false;
         } finally {
             allow_go = true;
