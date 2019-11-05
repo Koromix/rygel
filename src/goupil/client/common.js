@@ -10,8 +10,8 @@ let popup = new function() {
     let self = this;
 
     let popup_el;
-    let popup_builder;
-    let popup_form;
+    let popup_state;
+    let popup_builder;    
 
     this.form = function(e, func) {
         closePopup();
@@ -22,15 +22,15 @@ let popup = new function() {
         if (!popup_el)
             initPopup();
 
-        let widgets = [];
+        let page = new Page;
 
-        popup_builder = new PageBuilder(popup_form, widgets);
+        popup_builder = new PageBuilder(popup_state, page);
         popup_builder.changeHandler = () => openPopup(e, func);
         popup_builder.close = closePopup;
         popup_builder.pushOptions({missingMode: 'disable'});
 
         func(popup_builder);
-        render(widgets.map(intf => intf.render(intf)), popup_el);
+        page.render(popup_el);
 
         // We need to know popup width and height
         let give_focus = !popup_el.classList.contains('active');
@@ -115,7 +115,7 @@ let popup = new function() {
     }
 
     function closePopup() {
-        popup_form = new FormExecutor;
+        popup_state = new PageState;
         popup_builder = null;
 
         if (popup_el) {

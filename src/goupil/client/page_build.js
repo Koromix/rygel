@@ -2,14 +2,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function PageBuilder(form, widgets, variables = []) {
+function PageBuilder(state, page) {
     let self = this;
 
     // Prevent DOM ID conflicts
     let unique_key = ++PageBuilder.current_unique_key;
 
     let variables_map = {};
-    let widgets_ref = widgets;
+    let widgets_ref = page.widgets;
     let options_stack = [{
         deploy: true,
         untoggle: true
@@ -19,6 +19,11 @@ function PageBuilder(form, widgets, variables = []) {
     let missing_block = false;
 
     this.errors = [];
+
+    // Key and value handling
+    this.decodeKey = key => key;
+    this.setValue = (key, value) => {};
+    this.getValue = (key, default_value) => default_value;
 
     // Change and submission handling
     this.changeHandler = page => {};
@@ -46,10 +51,10 @@ function PageBuilder(form, widgets, variables = []) {
     this.error = (key, msg) => variables_map[key].error(msg);
 
     this.text = function(key, label, options = {}) {
-        key = form.decodeKey(key);
+        key = self.decodeKey(key);
         options = expandOptions(options);
 
-        let value = form.getValue(key, options.value);
+        let value = readValue(key, options.value);
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
@@ -69,10 +74,10 @@ function PageBuilder(form, widgets, variables = []) {
     };
 
     this.password = function(key, label, options = {}) {
-        key = form.decodeKey(key);
+        key = self.decodeKey(key);
         options = expandOptions(options);
 
-        let value = form.getValue(key, options.value);
+        let value = readValue(key, options.value);
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
@@ -91,15 +96,15 @@ function PageBuilder(form, widgets, variables = []) {
     };
 
     function handleTextInput(e, key) {
-        form.setValue(key, e.target.value || null);
+        updateValue(key, e.target.value || null);
         self.changeHandler(self);
     }
 
     this.number = function(key, label, options = {}) {
-        key = form.decodeKey(key);
+        key = self.decodeKey(key);
         options = expandOptions(options);
 
-        let value = parseFloat(form.getValue(key, options.value));
+        let value = parseFloat(readValue(key, options.value));
         let missing = (value == null || Number.isNaN(value));
 
         let id = makeID(key);
@@ -122,7 +127,7 @@ function PageBuilder(form, widgets, variables = []) {
     };
 
     this.slider = function(key, label, options = {}) {
-        key = form.decodeKey(key);
+        key = self.decodeKey(key);
         options = expandOptions(options);
 
         // Default options
@@ -134,7 +139,7 @@ function PageBuilder(form, widgets, variables = []) {
         if (range <= 0)
             throw new Error('Range (options.max - options.min) must be positive');
 
-        let value = parseFloat(form.getValue(key, options.value));
+        let value = parseFloat(readValue(key, options.value));
         let missing = (value == null || Number.isNaN(value));
 
         // Used for rendering value box
@@ -172,7 +177,7 @@ function PageBuilder(form, widgets, variables = []) {
         // Hack to accept incomplete values, mainly in the case of a '-' being typed first,
         // in which case we don't want to clear the field immediately.
         if (!e.target.validity || e.target.validity.valid) {
-            form.setValue(key, parseFloat(e.target.value));
+            updateValue(key, parseFloat(e.target.value));
             self.changeHandler(self);
         }
     }
@@ -182,7 +187,7 @@ function PageBuilder(form, widgets, variables = []) {
             let number = page.number('number', 'Valeur :', {min: min, max: max, value: value});
 
             page.submitHandler = () => {
-                form.setValue(key, number.value);
+                updateValue(key, number.value);
 
                 self.changeHandler(self);
                 page.close();
@@ -209,11 +214,11 @@ function PageBuilder(form, widgets, variables = []) {
     }
 
     this.enum = function(key, label, props = [], options = {}) {
-        key = form.decodeKey(key);
+        key = self.decodeKey(key);
         options = expandOptions(options);
         props = normalizePropositions(props);
 
-        let value = form.getValue(key, options.value);
+        let value = readValue(key, options.value);
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
@@ -234,21 +239,21 @@ function PageBuilder(form, widgets, variables = []) {
 
     function handleEnumChange(e, key, allow_untoggle) {
         let json = e.target.dataset.value;
+        let activate = !e.target.classList.contains('active');
 
-        if (e.target.classList.contains('active') && allow_untoggle) {
-            form.setValue(key, null);
-        } else {
-            form.setValue(key, util.strToValue(json));
+        if (activate || allow_untoggle) {
+            // This is useless in most cases because the new form will incorporate
+            // this change, but who knows. Do it like other browser-native widgets.
+            let els = e.target.parentNode.querySelectorAll('button');
+            for (let el of els)
+                el.classList.toggle('active', el.dataset.value === json && activate);
+
+            if (activate) {
+                updateValue(key, util.strToValue(json));
+            } else {
+                updateValue(key, null);
+            }
         }
-
-        // This is useless in most cases because the new form will incorporate
-        // this change, but who knows. Do it like other browser-native widgets.
-        let els = e.target.parentNode.querySelectorAll('button');
-        for (let el of els)
-            el.classList.toggle('active', el.dataset.value === json &&
-                                          (!el.classList.contains('active') || !allow_untoggle));
-
-        self.changeHandler(self);
     }
 
     this.binary = function(key, label, options = {}) {
@@ -259,11 +264,11 @@ function PageBuilder(form, widgets, variables = []) {
     };
 
     this.enumDrop = function(key, label, props = [], options = {}) {
-        key = form.decodeKey(key);
+        key = self.decodeKey(key);
         options = expandOptions(options);
         props = normalizePropositions(props);
 
-        let value = form.getValue(key, options.value);
+        let value = readValue(key, options.value);
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
@@ -284,16 +289,15 @@ function PageBuilder(form, widgets, variables = []) {
     };
 
     function handleEnumDropChange(e, key) {
-        form.setValue(key, util.strToValue(e.target.value));
-        self.changeHandler(self);
+        updateValue(key, util.strToValue(e.target.value));
     }
 
     this.enumRadio = function(key, label, props = [], options = {}) {
-        key = form.decodeKey(key);
+        key = self.decodeKey(key);
         options = expandOptions(options);
         props = normalizePropositions(props);
 
-        let value = form.getValue(key, options.value);
+        let value = readValue(key, options.value);
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
@@ -316,20 +320,18 @@ function PageBuilder(form, widgets, variables = []) {
     function handleEnumRadioChange(e, key, already_checked) {
         if (already_checked) {
             e.target.checked = false;
-            form.setValue(key, null);
+            updateValue(key, null);
         } else {
-            form.setValue(key, util.strToValue(e.target.value));
+            updateValue(key, util.strToValue(e.target.value));
         }
-
-        self.changeHandler(self);
     }
 
     this.multi = function(key, label, props = [], options = {}) {
-        key = form.decodeKey(key);
+        key = self.decodeKey(key);
         options = expandOptions(options);
         props = normalizePropositions(props);
 
-        let value = form.getValue(key, options.value);
+        let value = readValue(key, options.value);
         if (!Array.isArray(value))
             value = [];
 
@@ -365,17 +367,15 @@ function PageBuilder(form, widgets, variables = []) {
                 value.push(util.strToValue(el.dataset.value));
         }
 
-        form.setValue(key, value);
-
-        self.changeHandler(self);
+        updateValue(key, value);
     }
 
     this.multiCheck = function(key, label, props = [], options = {}) {
-        key = form.decodeKey(key);
+        key = self.decodeKey(key);
         options = expandOptions(options);
         props = normalizePropositions(props);
 
-        let value = form.getValue(key, options.value);
+        let value = readValue(key, options.value);
         if (!Array.isArray(value))
             value = [];
 
@@ -410,9 +410,7 @@ function PageBuilder(form, widgets, variables = []) {
                 value.push(util.strToValue(el.value));
         }
 
-        form.setValue(key, value);
-
-        self.changeHandler(self);
+        updateValue(key, value);
     }
 
     this.proposition = function(value, label) {
@@ -446,10 +444,10 @@ function PageBuilder(form, widgets, variables = []) {
     }
 
     this.date = function(key, label, options = {}) {
-        key = form.decodeKey(key);
+        key = self.decodeKey(key);
         options = expandOptions(options);
 
-        let value = form.getValue(key, options.value);
+        let value = readValue(key, options.value);
         if (typeof value === 'string') {
             value = dates.parse(value);
         } else if (value == null || value.constructor.name !== 'LocalDate') {
@@ -474,22 +472,21 @@ function PageBuilder(form, widgets, variables = []) {
 
     function handleDateInput(e, key) {
         // Store as string, for serialization purposes
-        form.setValue(key, e.target.value);
-        self.changeHandler(self);
+        updateValue(key, e.target.value);
     }
 
     this.file = function(key, label, options = {}) {
-        key = form.decodeKey(key);
+        key = self.decodeKey(key);
         options = expandOptions(options);
 
-        let value = form.getValue(key, options.value);
+        let value = readValue(key, options.value);
         if (!(value instanceof File))
             value = null;
 
         // Setting files on input file elements is fragile. At least on Firefox, assigning
         // its own value to the property results in an empty FileList for some reason.
         let set_files = lithtml.directive(() => part => {
-            let file_list = form.file_lists.get(key.toString());
+            let file_list = state.file_lists.get(key.toString());
 
             if (file_list == null) {
                 part.committer.element.value = '';
@@ -513,17 +510,15 @@ function PageBuilder(form, widgets, variables = []) {
     };
 
     function handleFileInput(e, key) {
-        form.setValue(key, e.target.files[0] || null);
-        form.file_lists.set(key.toString(), e.target.files);
-
-        self.changeHandler(self);
+        state.file_lists.set(key.toString(), e.target.files);
+        updateValue(key, e.target.files[0] || null);
     }
 
     this.calc = function(key, label, value, options = {}) {
-        key = form.decodeKey(key);
+        key = self.decodeKey(key);
         options = expandOptions(options);
 
-        form.setValue(key, value);
+        updateValue(key, value, false);
 
         let text = value;
         if (!options.raw && typeof value !== 'string') {
@@ -580,9 +575,9 @@ instead of:
         func();
         widgets_ref = prev_widgets;
 
-        let deploy = form.sections_state[label];
+        let deploy = state.sections_state[label];
         if (deploy == null) {
-            form.sections_state[label] = options.deploy;
+            state.sections_state[label] = options.deploy;
             deploy = options.deploy;
         }
 
@@ -600,7 +595,7 @@ instead of:
     };
 
     function handleSectionClick(e, label) {
-        form.sections_state[label] = !form.sections_state[label];
+        state.sections_state[label] = !state.sections_state[label];
         self.changeHandler(self);
     }
 
@@ -608,10 +603,10 @@ instead of:
         options = expandOptions(options);
 
         let intf = {
-            pressed: form.pressed_buttons.has(label),
-            clicked: form.clicked_buttons.has(label)
+            pressed: state.pressed_buttons.has(label),
+            clicked: state.clicked_buttons.has(label)
         };
-        form.clicked_buttons.delete(label);
+        state.clicked_buttons.delete(label);
 
         let render = intf => renderWrappedWidget(intf, html`
             <button class="af_button" @click=${e => handleButtonClick(e, label)}>${label}</button>
@@ -623,8 +618,8 @@ instead of:
     };
 
     function handleButtonClick(e, label) {
-        form.pressed_buttons.add(label);
-        form.clicked_buttons.add(label);
+        state.pressed_buttons.add(label);
+        state.clicked_buttons.add(label);
 
         self.changeHandler(self);
     }
@@ -656,17 +651,15 @@ Valid choices include:
     };
     this.buttons.std = {
         save: (label, options = {}) => {
-            let problems = listProblems();
-
+            let tooltip = listProblems().join('\n');
             return [
-                [label || 'Enregistrer', self.submitHandler && !problems.length ? self.submit : null, problems.join('\n')]
+                [label || 'Enregistrer', !tooltip ? self.submit : null, tooltip]
             ];
         },
         ok_cancel: (label, options = {}) => {
-            let problems = listProblems();
-
+            let tooltip = listProblems().join('\n');
             return [
-                [label || 'OK', self.submitHandler && !problems.length ? self.submit : null, problems.join('\n')],
+                [label || 'OK', !tooltip ? self.submit : null, tooltip],
                 ['Annuler', self.close]
             ];
         }
@@ -699,15 +692,15 @@ Valid choices include:
             if (missing_set.size) {
                 log.error('Impossible d\'enregistrer : données manquantes');
 
-                form.missing_errors.clear();
+                state.missing_errors.clear();
                 for (let key of missing_set)
-                    form.missing_errors.add(key);
+                    state.missing_errors.add(key);
 
                 self.changeHandler(self);
                 return;
             }
 
-            self.submitHandler(form, variables);
+            self.submitHandler(page);
         }
     };
 
@@ -767,7 +760,7 @@ Valid choices include:
             value: value,
 
             missing: missing || intf.options.missing,
-            changed: form.changed_variables.has(key.toString()),
+            changed: state.changed_variables.has(key.toString()),
 
             error: msg => {
                 if (!intf.errors.length)
@@ -777,17 +770,17 @@ Valid choices include:
                 return intf;
             }
         });
-        form.changed_variables.delete(key.toString());
+        state.changed_variables.delete(key.toString());
 
         if (intf.options.mandatory && intf.missing) {
             missing_set.add(key.toString());
-            if (intf.options.missingMode === 'error' || form.missing_errors.has(key.toString()))
+            if (intf.options.missingMode === 'error' || state.missing_errors.has(key.toString()))
                 intf.error('Donnée obligatoire manquante');
             if (intf.options.missingMode === 'disable')
                 missing_block |= true;
         }
 
-        variables.push(intf);
+        page.variables.push(intf);
         variables_map[key] = intf;
 
         return intf;
@@ -812,6 +805,25 @@ Valid choices include:
             problems.push('Présence d\'erreurs sur le formulaire');
 
         return problems;
+    }
+
+    function readValue(key, default_value) {
+        if (state.values.hasOwnProperty(key)) {
+            return state.values[key];
+        } else {
+            return self.getValue(key, default_value);
+        }
+    }
+
+    function updateValue(key, value, refresh = true) {
+        state.values[key] = value;
+        state.missing_errors.delete(key.toString());
+        state.changed_variables.add(key.toString());
+
+        self.setValue(key, value);
+
+        if (refresh)
+            self.changeHandler(self);
     }
 }
 PageBuilder.current_unique_key = 0;
