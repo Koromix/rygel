@@ -326,8 +326,10 @@ Navigation functions should only be called in reaction to user events, such as b
                 path.value = default_path;
 
             if (path.value) {
-                if (!path.value.match(/app\/./)) {
+                if (!path.value.match(/^app\/./)) {
                     path.error('Le chemin doit commencer par \'app/\'');
+                } else if (!path.value.match(/^app(\/[A-Za-z0-9_\.]+)+$/)) {
+                    path.error('Allowed path characters: a-z, _, 0-9 and / (not at the end)');
                 } else if (path.value.includes('/../') || path.value.endsWith('/..')) {
                     path.error('Le chemin ne doit pas contenir de composants \'..\'');
                 } else if (assets.some(asset => asset.path === path.value)) {
