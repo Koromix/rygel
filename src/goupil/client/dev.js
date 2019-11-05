@@ -10,6 +10,7 @@ let dev = new function() {
     let assets;
     let assets_map;
     let current_asset;
+    let current_url;
 
     let current_record;
     let app_form;
@@ -63,6 +64,7 @@ let dev = new function() {
         func(app_builder, app.data, app.route);
 
         app.go = handleGo;
+        app.makeURL = makeURL;
 
         // Application loaded!
         return util.deepFreeze(app, 'route');
@@ -155,16 +157,20 @@ Navigation functions should only be called in reaction to user events, such as b
                 app.route[key] = Number.isNaN(num) ? value : num;
             }
 
-            self.run(url.pathname).then(canonical_url => {
+            self.run(url.pathname).then(() => {
                 if (push_history) {
-                    window.history.pushState(null, null, canonical_url);
+                    window.history.pushState(null, null, makeURL());
                 } else {
-                    window.history.replaceState(null, null, canonical_url);
+                    window.history.replaceState(null, null, makeURL());
                 }
             });
         } else {
             self.run();
         }
+    }
+
+    function makeURL() {
+        return util.pasteURL(current_url, app.route);
     }
 
     this.run = async function(url = null, args = {}) {
@@ -173,6 +179,8 @@ Navigation functions should only be called in reaction to user events, such as b
             current_asset = assets_map[url];
             if (!current_asset && !url.endsWith('/'))
                 current_asset = assets_map[url + '/'];
+
+            current_url = current_asset ? current_asset.url : url;
         }
 
         // Load record (if needed)
@@ -216,14 +224,10 @@ Navigation functions should only be called in reaction to user events, such as b
                 case 'data': { await dev_data.runTable(current_asset.form.key, current_record.id); } break;
             }
             await runAssetSafe();
-
-            url = current_asset.url;
         } else {
             document.title = env.app_name;
             log.error('Asset not available');
         }
-
-        return util.pasteURL(url, app.route);
     };
 
     function renderDev() {
@@ -388,8 +392,6 @@ Navigation functions should only be called in reaction to user events, such as b
             page.output('Voulez-vous vraiment réinitialiser toutes les ressources ?');
 
             page.submitHandler = async () => {
-                let current_url = current_asset ? current_asset.url : null;
-
                 await file_manager.transaction(m => {
                     m.clear();
 
@@ -405,7 +407,7 @@ Navigation functions should only be called in reaction to user events, such as b
                 await self.init();
 
                 page.close();
-                app.go(assets_map[current_url] ? current_url : assets[0].url);
+                app.go(current_url);
             };
             page.buttons(page.buttons.std.ok_cancel('Réinitialiser'));
         });
@@ -472,9 +474,7 @@ Navigation functions should only be called in reaction to user events, such as b
                     let file = file_manager.create(path, value);
                     await file_manager.save(file);
                 }
-
-                let url = util.pasteURL(current_asset.url, app.route);
-                window.history.replaceState(null, null, url);
+                window.history.replaceState(null, null, app.makeURL());
             }
         }, 60);
     }

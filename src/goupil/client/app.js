@@ -13,6 +13,7 @@ function Application() {
     this.route = {};
 
     this.go = (url = null, push_history = true) => {};
+    this.makeURL = () => {};
 }
 
 function FormInfo(key) {

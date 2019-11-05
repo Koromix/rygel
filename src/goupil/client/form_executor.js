@@ -30,7 +30,10 @@ function FormExecutor(form, record) {
         page_builder.decodeKey = decodeKey;
         page_builder.setValue = setValue;
         page_builder.getValue = getValue;
-        page_builder.changeHandler = () => self.runPageScript(info, script, el);
+        page_builder.changeHandler = () => {
+            self.runPageScript(info, script, el);
+            window.history.replaceState(null, null, app.makeURL());
+        };
         page_builder.submitHandler = saveRecordAndReset;
 
         // Execute user script
