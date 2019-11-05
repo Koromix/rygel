@@ -183,7 +183,7 @@ function PageBuilder(state, page) {
     }
 
     function handleSliderClick(e, key, value, min, max) {
-        popup.form(e, page => {
+        goupil.popup(e, page => {
             let number = page.number('number', 'Valeur :', {min: min, max: max, value: value});
 
             page.submitHandler = () => {
