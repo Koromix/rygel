@@ -321,7 +321,7 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     function showCreateDialog(e) {
-        popup.form(e, page => {
+        goupil.popup(e, page => {
             let blob = page.file('file', 'Fichier :', {mandatory: true});
 
             let default_path = blob.value ? `app/${blob.value.name}` : null;
@@ -363,7 +363,7 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     function showDeleteDialog(e, asset) {
-        popup.form(e, page => {
+        goupil.popup(e, page => {
             page.output(`Voulez-vous vraiment supprimer la ressource '${asset.label}' ?`);
 
             page.submitHandler = async () => {
@@ -388,7 +388,7 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     function showResetDialog(e) {
-        popup.form(e, page => {
+        goupil.popup(e, page => {
             page.output('Voulez-vous vraiment réinitialiser toutes les ressources ?');
 
             page.submitHandler = async () => {
