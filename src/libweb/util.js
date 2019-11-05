@@ -79,12 +79,13 @@ let util = new function() {
         return !!value && value.constructor === Object;
     }
 
-    this.deepFreeze = function(obj) {
+    this.deepFreeze = function(obj, ignore = []) {
         Object.freeze(obj);
 
         for (key in obj) {
             let value = obj[key];
-            if ((typeof value === 'object' || typeof value === 'function') && !Object.isFrozen(value))
+            if (!Object.isFrozen(value) && !ignore.includes(key) && (typeof value === 'object' ||
+                                                                     typeof value === 'function'))
                 self.deepFreeze(value);
         }
 

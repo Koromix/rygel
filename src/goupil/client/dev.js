@@ -32,7 +32,7 @@ let dev = new function() {
             app = await loadApplication();
         } catch (err) {
             // Empty application, so that the user can still fix main.js or reset everything
-            app = util.deepFreeze(new Application);
+            app = util.deepFreeze(new Application, 'route');
         }
 
         assets = await listAssets(app);
@@ -59,13 +59,13 @@ let dev = new function() {
         let app_builder = new ApplicationBuilder(app);
 
         let main_script = await loadFileData('main.js');
-        let func = Function('app', 'data', main_script);
-        func(app_builder, app.data);
+        let func = Function('app', 'data', 'route', main_script);
+        func(app_builder, app.data, app.route);
 
         app.go = handleGo;
 
         // Application loaded!
-        return util.deepFreeze(app);
+        return util.deepFreeze(app, 'route');
     }
 
     async function listAssets(app) {
@@ -149,6 +149,12 @@ Navigation functions should only be called in reaction to user events, such as b
                 url = new URL(`${env.base_url}dev/${url}`, window.location.href);
             }
 
+            // Update route application global
+            for (let [key, value] of url.searchParams) {
+                let num = Number(value);
+                app.route[key] = Number.isNaN(num) ? value : num;
+            }
+
             self.run(url.pathname).then(canonical_url => {
                 if (push_history) {
                     window.history.pushState(null, null, canonical_url);
@@ -211,14 +217,13 @@ Navigation functions should only be called in reaction to user events, such as b
             }
             await runAssetSafe();
 
-            return current_asset.url;
+            url = current_asset.url;
         } else {
             document.title = env.app_name;
             log.error('Asset not available');
-
-            // Better than nothing!
-            return url;
         }
+
+        return util.pasteURL(url, app.route);
     };
 
     function renderDev() {
@@ -465,6 +470,9 @@ Navigation functions should only be called in reaction to user events, such as b
                     let file = file_manager.create(path, value);
                     await file_manager.save(file);
                 }
+
+                let url = util.pasteURL(current_asset.url, app.route);
+                window.history.replaceState(null, null, url);
             }
         }, 60);
     }

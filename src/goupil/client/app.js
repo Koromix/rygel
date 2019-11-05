@@ -10,6 +10,7 @@ function Application() {
 
     // Used for user globals
     this.data = {};
+    this.route = {};
 
     this.go = (url = null, push_history = true) => {};
 }
