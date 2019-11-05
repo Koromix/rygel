@@ -34,8 +34,8 @@ function ApplicationForm(record) {
         page_builder.submitHandler = saveRecordAndReset;
 
         // Execute user script
-        let func = Function('data', 'go', 'form', 'page', 'scratch', script);
-        func(app.data, app.go, page_builder, page_builder, page_scratch);
+        let func = Function('data', 'route', 'go', 'form', 'page', 'scratch', script);
+        func(app.data, app.route, app.go, page_builder, page_builder, page_scratch);
 
         page.render(el);
     }
