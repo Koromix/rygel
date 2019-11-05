@@ -12,6 +12,7 @@ let dev = new function() {
     let current_asset;
 
     let current_record;
+    let app_form;
 
     let left_panel;
     let show_overview;
@@ -41,6 +42,7 @@ let dev = new function() {
         current_asset = assets[0];
 
         current_record = {};
+        app_form = null;
 
         left_panel = null;
         show_overview = true;
@@ -171,6 +173,7 @@ Navigation functions should only be called in reaction to user events, such as b
         if (current_asset && current_asset.form) {
             if (!args.hasOwnProperty('id') && current_asset.form.key !== current_record.table)
                 current_record = {};
+
             if (args.hasOwnProperty('id') || current_record.id == null) {
                 if (args.id == null) {
                     current_record = record_manager.create(current_asset.form.key);
@@ -186,6 +189,8 @@ Navigation functions should only be called in reaction to user events, such as b
                         show_overview = true;
                     }
                 }
+
+                app_form = new ApplicationForm(current_record);
             }
         }
 
@@ -505,7 +510,9 @@ Navigation functions should only be called in reaction to user events, such as b
                     allow_go = false;
 
                     let script = await loadFileData(current_asset.path);
-                    await dev_form.runPageScript(script, current_record);
+                    let page_el = document.querySelector('#dev_overview') || document.createElement('div');
+
+                    app_form.runPageScript(current_asset.page.key, script, page_el);
                 } break;
                 case 'schedule': { await dev_schedule.run(current_asset.schedule); } break;
 
