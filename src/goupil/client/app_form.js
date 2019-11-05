@@ -6,10 +6,8 @@ function ApplicationForm(record) {
     let self = this;
 
     let page_state;
+    let page_scratch;
     let page_key;
-
-    // Storage for user scripts
-    let scratch = {};
 
     this.runPage = async function(key, el) {
         let path = `pages/${key}.js`;
@@ -21,6 +19,7 @@ function ApplicationForm(record) {
     this.runPageScript = function(key, script, el) {
         if (key !== page_key) {
             page_state = new PageState;
+            page_scratch = {};
             page_key = key;
         }
 
@@ -36,7 +35,7 @@ function ApplicationForm(record) {
 
         // Execute user script
         let func = Function('data', 'go', 'form', 'page', 'scratch', script);
-        func(app.data, app.go, page_builder, page_builder, scratch);
+        func(app.data, app.go, page_builder, page_builder, page_scratch);
 
         page.render(el);
     }
