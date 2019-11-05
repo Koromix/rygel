@@ -64,9 +64,7 @@ function ApplicationBuilder(app) {
     this.schedule = function(key) {
         checkKey(key);
 
-        let schedule = Object.freeze({
-            key: key
-        });
+        let schedule = new ScheduleInfo(key);
 
         app.schedules.push(schedule);
     };
@@ -96,9 +94,7 @@ function FormBuilder(form) {
         if (used_keys.has(key))
             throw new Error(`Page '${key}' is already used in this form`);
 
-        let page = Object.freeze({
-            key: key
-        });
+        let page = new PageInfo(key);
 
         form.pages.push(page);
         used_keys.add(key);
