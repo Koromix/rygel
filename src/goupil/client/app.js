@@ -20,3 +20,11 @@ function FormInfo(key) {
     this.pages = [];
     this.links = [];
 }
+
+function PageInfo(key) {
+    this.key = key;
+}
+
+function ScheduleInfo(key) {
+    this.key = key;
+}

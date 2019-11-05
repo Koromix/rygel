@@ -196,7 +196,7 @@ Navigation functions should only be called in reaction to user events, such as b
                     }
                 }
 
-                app_form = new ApplicationForm(current_record);
+                app_form = new FormExecutor(current_asset.form, current_record);
             }
         }
 
@@ -522,7 +522,7 @@ Navigation functions should only be called in reaction to user events, such as b
                     let script = await loadFileData(current_asset.path);
                     let page_el = document.querySelector('#dev_overview') || document.createElement('div');
 
-                    app_form.runPageScript(current_asset.page.key, script, page_el);
+                    app_form.runPageScript(current_asset.page, script, page_el);
                 } break;
                 case 'schedule': { await dev_schedule.run(current_asset.schedule); } break;
 

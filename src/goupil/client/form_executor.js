@@ -2,25 +2,25 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function ApplicationForm(record) {
+function FormExecutor(form, record) {
     let self = this;
 
     let page_state;
     let page_scratch;
     let page_key;
 
-    this.runPage = async function(key, el) {
-        let path = `pages/${key}.js`;
+    this.runPage = async function(info, el) {
+        let path = `pages/${info.key}.js`;
         let script = await file_manager.load(path);
 
-        self.runPageScript(key, script, el);
+        self.runPageScript(page, script, el);
     }
 
-    this.runPageScript = function(key, script, el) {
-        if (key !== page_key) {
+    this.runPageScript = function(info, script, el) {
+        if (info.key !== page_key) {
             page_state = new PageState;
             page_scratch = {};
-            page_key = key;
+            page_key = info.key;
         }
 
         let page = new Page;
@@ -30,7 +30,7 @@ function ApplicationForm(record) {
         page_builder.decodeKey = decodeKey;
         page_builder.setValue = setValue;
         page_builder.getValue = getValue;
-        page_builder.changeHandler = () => self.runPageScript(key, script, el);
+        page_builder.changeHandler = () => self.runPageScript(info, script, el);
         page_builder.submitHandler = saveRecordAndReset;
 
         // Execute user script
