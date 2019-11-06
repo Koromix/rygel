@@ -96,7 +96,7 @@ function PageBuilder(state, page) {
     };
 
     function handleTextInput(e, key) {
-        updateValue(key, e.target.value || null);
+        updateValue(key, e.target.value || undefined);
         self.changeHandler(self);
     }
 
@@ -177,7 +177,7 @@ function PageBuilder(state, page) {
         // Hack to accept incomplete values, mainly in the case of a '-' being typed first,
         // in which case we don't want to clear the field immediately.
         if (!e.target.validity || e.target.validity.valid) {
-            updateValue(key, parseFloat(e.target.value));
+            updateValue(key, parseFloat(e.target.value) || undefined);
             self.changeHandler(self);
         }
     }
@@ -251,7 +251,7 @@ function PageBuilder(state, page) {
             if (activate) {
                 updateValue(key, util.strToValue(json));
             } else {
-                updateValue(key, null);
+                updateValue(key, undefined);
             }
         }
     }
@@ -276,7 +276,7 @@ function PageBuilder(state, page) {
             <select id=${id} style=${makeInputStyle(options)}
                     ?disabled=${options.disable} @change=${e => handleEnumDropChange(e, key)}>
                 ${options.untoggle || !props.some(p => p != null && value === p.value) ?
-                    html`<option value="null" .selected=${value == null}>-- Choisissez une option --</option>` : ''}
+                    html`<option value="undefined" .selected=${value == null}>-- Choisissez une option --</option>` : ''}
                 ${props.map(p =>
                     html`<option value=${util.valueToStr(p.value)} .selected=${value === p.value}>${p.label}</option>`)}
             </select>
@@ -320,7 +320,7 @@ function PageBuilder(state, page) {
     function handleEnumRadioChange(e, key, already_checked) {
         if (already_checked) {
             e.target.checked = false;
-            updateValue(key, null);
+            updateValue(key, undefined);
         } else {
             updateValue(key, util.strToValue(e.target.value));
         }
@@ -472,7 +472,7 @@ function PageBuilder(state, page) {
 
     function handleDateInput(e, key) {
         // Store as string, for serialization purposes
-        updateValue(key, e.target.value);
+        updateValue(key, e.target.value || undefined);
     }
 
     this.file = function(key, label, options = {}) {
@@ -511,7 +511,7 @@ function PageBuilder(state, page) {
 
     function handleFileInput(e, key) {
         state.file_lists.set(key.toString(), e.target.files);
-        updateValue(key, e.target.files[0] || null);
+        updateValue(key, e.target.files[0] || undefined);
     }
 
     this.calc = function(key, label, value, options = {}) {
