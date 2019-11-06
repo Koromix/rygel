@@ -306,9 +306,8 @@ let util = new function() {
     this.interceptLocalAnchors = function(func) {
         document.body.addEventListener('click', e => {
             if (!e.defaultPrevented && !e.ctrlKey) {
-                let target = e.target;
-                if (target.namespaceURI === 'http://www.w3.org/2000/svg')
-                    target = self.findParent(target, el => el.tagName === 'a');
+                let target = self.findParent(e.target, el => el.tagName === 'a' ||
+                                                             el.tagName === 'A');
 
                 if (target && (target.tagName === 'A' || target.tagName === 'a') &&
                         !target.getAttribute('download')) {
