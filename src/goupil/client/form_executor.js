@@ -62,7 +62,12 @@ function FormExecutor(form, record) {
     }
 
     function getValue(key, default_value) {
-        return record.values.hasOwnProperty(key) ? record.values[key] : default_value;
+        if (!record.values.hasOwnProperty(key)) {
+            record.values[key] = default_value;
+            return default_value;
+        }
+
+        return record.values[key];
     }
 
     async function saveRecordAndReset(page) {
