@@ -34,6 +34,8 @@ let dev = new function() {
         } catch (err) {
             // Empty application, so that the user can still fix main.js or reset everything
             app = util.deepFreeze(new Application, 'route');
+
+            console.log(err);
         }
 
         assets = await listAssets(app);
