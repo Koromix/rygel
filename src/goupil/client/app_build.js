@@ -79,6 +79,8 @@ function ApplicationBuilder(app) {
 
         used_keys.add(key);
     }
+
+    this.go = function(url = null, push_history = true) { app.go(url, push_history); }
 }
 
 function FormBuilder(form) {
