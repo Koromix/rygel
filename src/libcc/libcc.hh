@@ -2781,17 +2781,21 @@ static inline FmtArg FmtDiskSize(Size size)
 }
 
 template <typename T>
-FmtArg FmtSpan(Span<T> arr, const char *sep = ", ")
+FmtArg FmtSpan(Span<T> arr, FmtType type, const char *sep = ", ")
 {
     FmtArg arg;
     arg.type = FmtType::Span;
-    arg.u.span.type = FmtArg(T()).type;
+    arg.u.span.type = type;
     arg.u.span.type_len = RG_SIZE(T);
     arg.u.span.ptr = (const void *)arr.ptr;
     arg.u.span.len = arr.len;
     arg.u.span.separator = sep;
     return arg;
 }
+template <typename T>
+FmtArg FmtSpan(Span<T> arr, const char *sep = ", ") { return FmtSpan(arr, FmtArg(T()).type, sep); }
+template <typename T, Size N>
+FmtArg FmtSpan(T (&arr)[N], FmtType type, const char *sep = ", ") { return FmtSpan(MakeSpan(arr), type, sep); }
 template <typename T, Size N>
 FmtArg FmtSpan(T (&arr)[N], const char *sep = ", ") { return FmtSpan(MakeSpan(arr), sep); }
 
