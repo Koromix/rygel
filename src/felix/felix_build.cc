@@ -20,8 +20,8 @@ struct Toolchain {
     operator FmtArg() const
     {
         FmtArg arg = {};
-        arg.type = FmtArg::Type::Buffer;
-        Fmt(arg.value.buf, "%1_%2", compiler->name, BuildModeNames[(int)build_mode]);
+        arg.type = FmtType::Buffer;
+        Fmt(arg.u.buf, "%1_%2", compiler->name, BuildModeNames[(int)build_mode]);
         return arg;
     }
 };

@@ -2668,26 +2668,26 @@ extern StreamWriter stderr_st;
 // Format
 // ------------------------------------------------------------------------
 
+enum class FmtType {
+    Str1,
+    Str2,
+    Buffer,
+    Char,
+    Bool,
+    Integer,
+    Unsigned,
+    Double,
+    Binary,
+    Hexadecimal,
+    MemorySize,
+    DiskSize,
+    Date,
+    Span
+};
+
 class FmtArg {
 public:
-    enum class Type {
-        Str1,
-        Str2,
-        Buffer,
-        Char,
-        Bool,
-        Integer,
-        Unsigned,
-        Double,
-        Binary,
-        Hexadecimal,
-        MemorySize,
-        DiskSize,
-        Date,
-        Span
-    };
-
-    Type type;
+    FmtType type;
     union {
         const char *str1;
         Span<const char> str2;
@@ -2705,36 +2705,36 @@ public:
         Date date;
 
         struct {
-            Type type;
+            FmtType type;
             int type_len;
             const void *ptr;
             Size len;
             const char *separator;
         } span;
-    } value;
+    } u;
 
     int repeat = 1;
     int pad_len = 0;
     char pad_char;
 
     FmtArg() = default;
-    FmtArg(const char *str) : type(Type::Str1) { value.str1 = str ? str : "(null)"; }
-    FmtArg(Span<const char> str) : type(Type::Str2) { value.str2 = str; }
-    FmtArg(char c) : type(Type::Char) { value.ch = c; }
-    FmtArg(bool b) : type(Type::Bool) { value.b = b; }
-    FmtArg(unsigned char u)  : type(Type::Unsigned) { value.u = u; }
-    FmtArg(short i) : type(Type::Integer) { value.i = i; }
-    FmtArg(unsigned short u) : type(Type::Unsigned) { value.u = u; }
-    FmtArg(int i) : type(Type::Integer) { value.i = i; }
-    FmtArg(unsigned int u) : type(Type::Unsigned) { value.u = u; }
-    FmtArg(long i) : type(Type::Integer) { value.i = i; }
-    FmtArg(unsigned long u) : type(Type::Unsigned) { value.u = u; }
-    FmtArg(long long i) : type(Type::Integer) { value.i = i; }
-    FmtArg(unsigned long long u) : type(Type::Unsigned) { value.u = u; }
-    FmtArg(float f) : type(Type::Double) { value.d = { (double)f, -1 }; }
-    FmtArg(double d) : type(Type::Double) { value.d = { d, -1 }; }
-    FmtArg(const void *ptr) : type(Type::Hexadecimal) { value.u = (uint64_t)ptr; }
-    FmtArg(const Date &date) : type(Type::Date) { value.date = date; }
+    FmtArg(const char *str) : type(FmtType::Str1) { u.str1 = str ? str : "(null)"; }
+    FmtArg(Span<const char> str) : type(FmtType::Str2) { u.str2 = str; }
+    FmtArg(char c) : type(FmtType::Char) { u.ch = c; }
+    FmtArg(bool b) : type(FmtType::Bool) { u.b = b; }
+    FmtArg(unsigned char i)  : type(FmtType::Unsigned) { u.u = i; }
+    FmtArg(short i) : type(FmtType::Integer) { u.i = i; }
+    FmtArg(unsigned short i) : type(FmtType::Unsigned) { u.u = i; }
+    FmtArg(int i) : type(FmtType::Integer) { u.i = i; }
+    FmtArg(unsigned int i) : type(FmtType::Unsigned) { u.u = i; }
+    FmtArg(long i) : type(FmtType::Integer) { u.i = i; }
+    FmtArg(unsigned long i) : type(FmtType::Unsigned) { u.u = i; }
+    FmtArg(long long i) : type(FmtType::Integer) { u.i = i; }
+    FmtArg(unsigned long long i) : type(FmtType::Unsigned) { u.u = i; }
+    FmtArg(float f) : type(FmtType::Double) { u.d = { (double)f, -1 }; }
+    FmtArg(double d) : type(FmtType::Double) { u.d = { d, -1 }; }
+    FmtArg(const void *ptr) : type(FmtType::Hexadecimal) { u.u = (uint64_t)ptr; }
+    FmtArg(const Date &date) : type(FmtType::Date) { u.date = date; }
 
     FmtArg &Repeat(int new_repeat) { repeat = new_repeat; return *this; }
     FmtArg &Pad(int len, char c = ' ') { pad_char = c; pad_len = len; return *this; }
@@ -2744,39 +2744,39 @@ public:
 static inline FmtArg FmtBin(uint64_t u)
 {
     FmtArg arg;
-    arg.type = FmtArg::Type::Binary;
-    arg.value.u = u;
+    arg.type = FmtType::Binary;
+    arg.u.u = u;
     return arg;
 }
 static inline FmtArg FmtHex(uint64_t u)
 {
     FmtArg arg;
-    arg.type = FmtArg::Type::Hexadecimal;
-    arg.value.u = u;
+    arg.type = FmtType::Hexadecimal;
+    arg.u.u = u;
     return arg;
 }
 
 static inline FmtArg FmtDouble(double d, int precision = -1)
 {
     FmtArg arg;
-    arg.type = FmtArg::Type::Double;
-    arg.value.d.value = d;
-    arg.value.d.precision = precision;
+    arg.type = FmtType::Double;
+    arg.u.d.value = d;
+    arg.u.d.precision = precision;
     return arg;
 }
 
 static inline FmtArg FmtMemSize(Size size)
 {
     FmtArg arg;
-    arg.type = FmtArg::Type::MemorySize;
-    arg.value.size = size;
+    arg.type = FmtType::MemorySize;
+    arg.u.size = size;
     return arg;
 }
 static inline FmtArg FmtDiskSize(Size size)
 {
     FmtArg arg;
-    arg.type = FmtArg::Type::DiskSize;
-    arg.value.size = size;
+    arg.type = FmtType::DiskSize;
+    arg.u.size = size;
     return arg;
 }
 
@@ -2784,12 +2784,12 @@ template <typename T>
 FmtArg FmtSpan(Span<T> arr, const char *sep = ", ")
 {
     FmtArg arg;
-    arg.type = FmtArg::Type::Span;
-    arg.value.span.type = FmtArg(T()).type;
-    arg.value.span.type_len = RG_SIZE(T);
-    arg.value.span.ptr = (const void *)arr.ptr;
-    arg.value.span.len = arr.len;
-    arg.value.span.separator = sep;
+    arg.type = FmtType::Span;
+    arg.u.span.type = FmtArg(T()).type;
+    arg.u.span.type_len = RG_SIZE(T);
+    arg.u.span.ptr = (const void *)arr.ptr;
+    arg.u.span.len = arr.len;
+    arg.u.span.separator = sep;
     return arg;
 }
 template <typename T, Size N>
