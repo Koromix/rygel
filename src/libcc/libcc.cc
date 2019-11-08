@@ -627,57 +627,57 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
         Size pad_len = arg.pad_len;
 
         switch (arg.type) {
-            case FmtArg::Type::Str1: { out = arg.value.str1; } break;
-            case FmtArg::Type::Str2: { out = arg.value.str2; } break;
-            case FmtArg::Type::Buffer: { out = arg.value.buf; } break;
-            case FmtArg::Type::Char: { out = MakeSpan(&arg.value.ch, 1); } break;
+            case FmtType::Str1: { out = arg.u.str1; } break;
+            case FmtType::Str2: { out = arg.u.str2; } break;
+            case FmtType::Buffer: { out = arg.u.buf; } break;
+            case FmtType::Char: { out = MakeSpan(&arg.u.ch, 1); } break;
 
-            case FmtArg::Type::Bool: {
-                if (arg.value.b) {
+            case FmtType::Bool: {
+                if (arg.u.b) {
                     out = "true";
                 } else {
                     out = "false";
                 }
             } break;
 
-            case FmtArg::Type::Integer: {
-                if (arg.value.i < 0) {
+            case FmtType::Integer: {
+                if (arg.u.i < 0) {
                     if (arg.pad_len < 0 && arg.pad_char == '0') {
                         append('-');
                         pad_len++;
                     } else {
                         out_buf.Append('-');
                     }
-                    out_buf.Append(FormatUnsignedToDecimal((uint64_t)-arg.value.i, num_buf));
+                    out_buf.Append(FormatUnsignedToDecimal((uint64_t)-arg.u.i, num_buf));
                     out = out_buf;
                 } else {
-                    out = FormatUnsignedToDecimal((uint64_t)arg.value.i, num_buf);
+                    out = FormatUnsignedToDecimal((uint64_t)arg.u.i, num_buf);
                 }
             } break;
-            case FmtArg::Type::Unsigned: {
-                out = FormatUnsignedToDecimal(arg.value.u, num_buf);
+            case FmtType::Unsigned: {
+                out = FormatUnsignedToDecimal(arg.u.u, num_buf);
             } break;
-            case FmtArg::Type::Double: {
-                if (arg.value.i < 0 && arg.pad_len < 0 && arg.pad_char == '0') {
+            case FmtType::Double: {
+                if (arg.u.i < 0 && arg.pad_len < 0 && arg.pad_char == '0') {
                     append('-');
                     pad_len++;
 
-                    out = FormatDouble(-arg.value.d.value, arg.value.d.precision, num_buf);
+                    out = FormatDouble(-arg.u.d.value, arg.u.d.precision, num_buf);
                 } else {
-                    out = FormatDouble(arg.value.d.value, arg.value.d.precision, num_buf);
+                    out = FormatDouble(arg.u.d.value, arg.u.d.precision, num_buf);
                 }
             } break;
-            case FmtArg::Type::Binary: {
-                out = FormatUnsignedToBinary(arg.value.u, num_buf);
+            case FmtType::Binary: {
+                out = FormatUnsignedToBinary(arg.u.u, num_buf);
             } break;
-            case FmtArg::Type::Hexadecimal: {
-                out = FormatUnsignedToHex(arg.value.u, num_buf);
+            case FmtType::Hexadecimal: {
+                out = FormatUnsignedToHex(arg.u.u, num_buf);
             } break;
 
-            case FmtArg::Type::MemorySize: {
+            case FmtType::MemorySize: {
                 size_t size_unsigned;
-                if (arg.value.size < 0) {
-                    size_unsigned = (size_t)-arg.value.size;
+                if (arg.u.size < 0) {
+                    size_unsigned = (size_t)-arg.u.size;
                     if (arg.pad_len < 0 && arg.pad_char == '0') {
                         append('-');
                         pad_len++;
@@ -685,7 +685,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                         out_buf.Append('-');
                     }
                 } else {
-                    size_unsigned = (size_t)arg.value.size;
+                    size_unsigned = (size_t)arg.u.size;
                 }
                 if (size_unsigned > 1024 * 1024) {
                     double size_mib = (double)size_unsigned / (1024.0 * 1024.0);
@@ -701,10 +701,10 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 }
                 out = out_buf;
             } break;
-            case FmtArg::Type::DiskSize: {
+            case FmtType::DiskSize: {
                 size_t size_unsigned;
-                if (arg.value.size < 0) {
-                    size_unsigned = (size_t)-arg.value.size;
+                if (arg.u.size < 0) {
+                    size_unsigned = (size_t)-arg.u.size;
                     if (arg.pad_len < 0 && arg.pad_char == '0') {
                         append('-');
                         pad_len++;
@@ -712,7 +712,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                         out_buf.Append('-');
                     }
                 } else {
-                    size_unsigned = (size_t)arg.value.size;
+                    size_unsigned = (size_t)arg.u.size;
                 }
                 if (size_unsigned > 1000 * 1000) {
                     double size_mib = (double)size_unsigned / (1000.0 * 1000.0);
@@ -729,10 +729,10 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 out = out_buf;
             } break;
 
-            case FmtArg::Type::Date: {
-                RG_ASSERT(!arg.value.date.value || arg.value.date.IsValid());
+            case FmtType::Date: {
+                RG_ASSERT(!arg.u.date.value || arg.u.date.IsValid());
 
-                int year = arg.value.date.st.year;
+                int year = arg.u.date.st.year;
                 if (year < 0) {
                     out_buf.Append('-');
                     year = -year;
@@ -746,62 +746,62 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 }
                 out_buf.Append(FormatUnsignedToDecimal((uint64_t)year, num_buf));
                 out_buf.Append('-');
-                if (arg.value.date.st.month < 10) {
+                if (arg.u.date.st.month < 10) {
                     out_buf.Append('0');
                 }
-                out_buf.Append(FormatUnsignedToDecimal((uint64_t)arg.value.date.st.month, num_buf));
+                out_buf.Append(FormatUnsignedToDecimal((uint64_t)arg.u.date.st.month, num_buf));
                 out_buf.Append('-');
-                if (arg.value.date.st.day < 10) {
+                if (arg.u.date.st.day < 10) {
                     out_buf.Append('0');
                 }
-                out_buf.Append(FormatUnsignedToDecimal((uint64_t)arg.value.date.st.day, num_buf));
+                out_buf.Append(FormatUnsignedToDecimal((uint64_t)arg.u.date.st.day, num_buf));
                 out = out_buf;
             } break;
 
-            case FmtArg::Type::Span: {
+            case FmtType::Span: {
                 FmtArg arg2;
-                arg2.type = arg.value.span.type;
+                arg2.type = arg.u.span.type;
                 arg2.repeat = arg.repeat;
                 arg2.pad_len = arg.pad_len;
                 arg2.pad_char = arg.pad_char;
 
-                const uint8_t *ptr = (const uint8_t *)arg.value.span.ptr;
-                for (Size j = 0; j < arg.value.span.len; j++) {
-                    switch (arg.value.span.type) {
-                        case FmtArg::Type::Str1: { arg2.value.str1 = *(const char **)ptr; } break;
-                        case FmtArg::Type::Str2: { arg2.value.str2 = *(const Span<const char> *)ptr; } break;
-                        case FmtArg::Type::Buffer: { RG_ASSERT(false); } break;
-                        case FmtArg::Type::Char: { arg2.value.ch = *(const char *)ptr; } break;
-                        case FmtArg::Type::Bool: { arg2.value.b = *(const bool *)ptr; } break;
-                        case FmtArg::Type::Integer:
-                        case FmtArg::Type::Unsigned:
-                        case FmtArg::Type::Binary:
-                        case FmtArg::Type::Hexadecimal: {
-                            switch (arg.value.span.type_len) {
-                                case 8: { arg2.value.u = *(const uint64_t *)ptr; } break;
-                                case 4: { arg2.value.u = *(const uint32_t *)ptr; } break;
-                                case 2: { arg2.value.u = *(const uint16_t *)ptr; } break;
-                                case 1: { arg2.value.u = *(const uint8_t *)ptr; } break;
+                const uint8_t *ptr = (const uint8_t *)arg.u.span.ptr;
+                for (Size j = 0; j < arg.u.span.len; j++) {
+                    switch (arg.u.span.type) {
+                        case FmtType::Str1: { arg2.u.str1 = *(const char **)ptr; } break;
+                        case FmtType::Str2: { arg2.u.str2 = *(const Span<const char> *)ptr; } break;
+                        case FmtType::Buffer: { RG_ASSERT(false); } break;
+                        case FmtType::Char: { arg2.u.ch = *(const char *)ptr; } break;
+                        case FmtType::Bool: { arg2.u.b = *(const bool *)ptr; } break;
+                        case FmtType::Integer:
+                        case FmtType::Unsigned:
+                        case FmtType::Binary:
+                        case FmtType::Hexadecimal: {
+                            switch (arg.u.span.type_len) {
+                                case 8: { arg2.u.u = *(const uint64_t *)ptr; } break;
+                                case 4: { arg2.u.u = *(const uint32_t *)ptr; } break;
+                                case 2: { arg2.u.u = *(const uint16_t *)ptr; } break;
+                                case 1: { arg2.u.u = *(const uint8_t *)ptr; } break;
                                 default: { RG_ASSERT(false); } break;
                             }
                         } break;
-                        case FmtArg::Type::Double: {
-                            switch (arg.value.span.type_len) {
-                                case RG_SIZE(double): { arg2.value.d.value = *(const double *)ptr; } break;
-                                case RG_SIZE(float): { arg2.value.d.value = *(const float *)ptr; } break;
+                        case FmtType::Double: {
+                            switch (arg.u.span.type_len) {
+                                case RG_SIZE(double): { arg2.u.d.value = *(const double *)ptr; } break;
+                                case RG_SIZE(float): { arg2.u.d.value = *(const float *)ptr; } break;
                                 default: { RG_ASSERT(false); } break;
                             }
-                            arg2.value.d.precision = -1;
+                            arg2.u.d.precision = -1;
                         } break;
-                        case FmtArg::Type::MemorySize: { arg2.value.size = *(const Size *)ptr; } break;
-                        case FmtArg::Type::DiskSize: { arg2.value.size = *(const Size *)ptr; } break;
-                        case FmtArg::Type::Date: { arg2.value.date = *(const Date *)ptr; } break;
-                        case FmtArg::Type::Span: { RG_ASSERT(false); } break;
+                        case FmtType::MemorySize: { arg2.u.size = *(const Size *)ptr; } break;
+                        case FmtType::DiskSize: { arg2.u.size = *(const Size *)ptr; } break;
+                        case FmtType::Date: { arg2.u.date = *(const Date *)ptr; } break;
+                        case FmtType::Span: { RG_ASSERT(false); } break;
                     }
-                    ptr += arg.value.span.type_len;
+                    ptr += arg.u.span.type_len;
 
                     if (j) {
-                        append(arg.value.span.separator);
+                        append(arg.u.span.separator);
                     }
                     ProcessArg(arg2, append);
                 }

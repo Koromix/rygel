@@ -57,20 +57,20 @@ static FmtArg FormatZigzagVLQ64(int value)
     static const char literals[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
     RG_STATIC_ASSERT(RG_SIZE(literals) - 1 == 64);
-    RG_STATIC_ASSERT((RG_SIZE(FmtArg::value.buf) - 1) * 6 - 2 >= RG_SIZE(value) * 16);
+    RG_STATIC_ASSERT((RG_SIZE(FmtArg::u.buf) - 1) * 6 - 2 >= RG_SIZE(value) * 16);
 
     FmtArg arg;
-    arg.type = FmtArg::Type::Buffer;
+    arg.type = FmtType::Buffer;
 
     // First character
     unsigned int u;
     if (value >= 0) {
         u = value >> 4;
-        arg.value.buf[0] = literals[(value & 0xF) << 1 | (u ? 0x20 : 0)];
+        arg.u.buf[0] = literals[(value & 0xF) << 1 | (u ? 0x20 : 0)];
     } else {
         value = -value;
         u = value >> 4;
-        arg.value.buf[0] = literals[((value & 0xF) << 1) | (u ? 0x21 : 0x1)];
+        arg.u.buf[0] = literals[((value & 0xF) << 1) | (u ? 0x21 : 0x1)];
     }
 
     // Remaining characters
@@ -78,10 +78,10 @@ static FmtArg FormatZigzagVLQ64(int value)
     while (u) {
         unsigned int idx = u & 0x1F;
         u >>= 5;
-        arg.value.buf[len++] = literals[idx | (u ? 0x20 : 0)];
+        arg.u.buf[len++] = literals[idx | (u ? 0x20 : 0)];
     }
 
-    arg.value.buf[len] = 0;
+    arg.u.buf[len] = 0;
 
     return arg;
 }

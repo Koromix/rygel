@@ -95,8 +95,8 @@ union mco_GhmRootCode {
     operator FmtArg() const
     {
         FmtArg arg;
-        arg.type = FmtArg::Type::Buffer;
-        ToString(arg.value.buf);
+        arg.type = FmtType::Buffer;
+        ToString(arg.u.buf);
         return arg;
     }
 
@@ -159,7 +159,7 @@ union mco_GhmCode {
 
     bool IsValid() const { return value; }
     bool IsError() const { return parts.cmd == 90; }
-    
+
     int Severity() const
     {
         if (parts.mode >= '1' && parts.mode < '5') {
@@ -204,8 +204,8 @@ union mco_GhmCode {
     operator FmtArg() const
     {
         FmtArg arg;
-        arg.type = FmtArg::Type::Buffer;
-        ToString(arg.value.buf);
+        arg.type = FmtType::Buffer;
+        ToString(arg.u.buf);
         return arg;
     }
 
