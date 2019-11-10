@@ -102,7 +102,7 @@ struct mco_DiagnosisInfo {
     uint16_t exclusion_set_idx;
     drd_ListMask cma_exclusion_mask;
 
-    RG_HASH_TABLE_HANDLER(mco_DiagnosisInfo, diag);
+    RG_HASHTABLE_HANDLER(mco_DiagnosisInfo, diag);
 };
 
 struct mco_ExclusionInfo {
@@ -128,7 +128,7 @@ struct mco_ProcedureInfo {
     Span<const char> ActivitiesToStr(Span<char> out_buf) const;
     Span<const char> ExtensionsToStr(Span<char> out_buf) const;
 
-    RG_HASH_TABLE_HANDLER(mco_ProcedureInfo, proc);
+    RG_HASHTABLE_HANDLER(mco_ProcedureInfo, proc);
 };
 
 struct mco_ProcedureLink {
@@ -172,7 +172,7 @@ struct mco_GhmRootInfo {
 
     drd_ListMask cma_exclusion_mask;
 
-    RG_HASH_TABLE_HANDLER(mco_GhmRootInfo, ghm_root);
+    RG_HASHTABLE_HANDLER(mco_GhmRootInfo, ghm_root);
 };
 
 struct mco_GhmToGhsInfo {
@@ -202,8 +202,8 @@ struct mco_GhmToGhsInfo {
         return ghs[(int)sector];
     }
 
-    RG_HASH_TABLE_HANDLER(mco_GhmToGhsInfo, ghm);
-    RG_HASH_TABLE_HANDLER_N(GhmRootHandler, mco_GhmToGhsInfo, ghm.Root());
+    RG_HASHTABLE_HANDLER(mco_GhmToGhsInfo, ghm);
+    RG_HASHTABLE_HANDLER_N(GhmRootHandler, mco_GhmToGhsInfo, ghm.Root());
 };
 
 struct mco_GhsPriceInfo {
@@ -221,7 +221,7 @@ struct mco_GhsPriceInfo {
     int32_t exb_cents;
     uint16_t flags;
 
-    RG_HASH_TABLE_HANDLER(mco_GhsPriceInfo, ghs);
+    RG_HASHTABLE_HANDLER(mco_GhsPriceInfo, ghs);
 };
 
 enum class mco_AuthorizationScope: int8_t {
@@ -244,14 +244,14 @@ struct mco_AuthorizationInfo {
     } type;
     int8_t function;
 
-    RG_HASH_TABLE_HANDLER(mco_AuthorizationInfo, type.value);
+    RG_HASHTABLE_HANDLER(mco_AuthorizationInfo, type.value);
 };
 
 struct mco_SrcPair {
     drd_DiagnosisCode diag;
     drd_ProcedureCode proc;
 
-    RG_HASH_TABLE_HANDLER(mco_SrcPair, diag);
+    RG_HASHTABLE_HANDLER(mco_SrcPair, diag);
 };
 
 Date mco_ConvertDate1980(uint16_t days);

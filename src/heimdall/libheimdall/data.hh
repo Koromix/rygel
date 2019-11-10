@@ -43,7 +43,7 @@ struct Concept {
     const char *title = nullptr;
     const char *path = nullptr;
 
-    RG_HASH_TABLE_HANDLER(Concept, name);
+    RG_HASHTABLE_HANDLER(Concept, name);
 };
 
 struct ConceptSet {

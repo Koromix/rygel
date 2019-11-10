@@ -44,7 +44,7 @@ struct Route {
         void (*func)(const http_RequestInfo &request, const User *user, http_IO *io);
     } u;
 
-    RG_HASH_TABLE_HANDLER(Route, url);
+    RG_HASHTABLE_HANDLER(Route, url);
 };
 
 Config thop_config;

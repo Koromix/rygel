@@ -2165,7 +2165,7 @@ public:
     static bool Test(Span<const char> key1, const char * key2) { return key1 == key2; }
 };
 
-#define RG_HASH_TABLE_HANDLER_EX_N(Name, ValueType, KeyType, KeyMember, HashFunc, TestFunc) \
+#define RG_HASHTABLE_HANDLER_EX_N(Name, ValueType, KeyType, KeyMember, HashFunc, TestFunc) \
     class Name { \
     public: \
         static KeyType GetKey(const ValueType &value) \
@@ -2177,16 +2177,16 @@ public:
         static bool TestKeys(KeyType key1, KeyType key2) \
             { return TestFunc((key1), (key2)); } \
     }
-#define RG_HASH_TABLE_HANDLER_EX(ValueType, KeyType, KeyMember, HashFunc, TestFunc) \
-    RG_HASH_TABLE_HANDLER_EX_N(HashHandler, ValueType, KeyType, KeyMember, HashFunc, TestFunc)
-#define RG_HASH_TABLE_HANDLER(ValueType, KeyMember) \
-    RG_HASH_TABLE_HANDLER_EX(ValueType, decltype(ValueType::KeyMember), KeyMember, HashTraits<decltype(ValueType::KeyMember)>::Hash, HashTraits<decltype(ValueType::KeyMember)>::Test)
-#define RG_HASH_TABLE_HANDLER_N(Name, ValueType, KeyMember) \
-    RG_HASH_TABLE_HANDLER_EX_N(Name, ValueType, decltype(ValueType::KeyMember), KeyMember, HashTraits<decltype(ValueType::KeyMember)>::Hash, HashTraits<decltype(ValueType::KeyMember)>::Test)
-#define RG_HASH_TABLE_HANDLER_T(ValueType, KeyType, KeyMember) \
-    RG_HASH_TABLE_HANDLER_EX(ValueType, KeyType, KeyMember, HashTraits<KeyType>::Hash, HashTraits<KeyType>::Test)
-#define RG_HASH_TABLE_HANDLER_NT(Name, ValueType, KeyType, KeyMember) \
-    RG_HASH_TABLE_HANDLER_EX_N(Name, ValueType, KeyType, KeyMember, HashTraits<KeyType>::Hash, HashTraits<KeyType>::Test)
+#define RG_HASHTABLE_HANDLER_EX(ValueType, KeyType, KeyMember, HashFunc, TestFunc) \
+    RG_HASHTABLE_HANDLER_EX_N(HashHandler, ValueType, KeyType, KeyMember, HashFunc, TestFunc)
+#define RG_HASHTABLE_HANDLER(ValueType, KeyMember) \
+    RG_HASHTABLE_HANDLER_EX(ValueType, decltype(ValueType::KeyMember), KeyMember, HashTraits<decltype(ValueType::KeyMember)>::Hash, HashTraits<decltype(ValueType::KeyMember)>::Test)
+#define RG_HASHTABLE_HANDLER_N(Name, ValueType, KeyMember) \
+    RG_HASHTABLE_HANDLER_EX_N(Name, ValueType, decltype(ValueType::KeyMember), KeyMember, HashTraits<decltype(ValueType::KeyMember)>::Hash, HashTraits<decltype(ValueType::KeyMember)>::Test)
+#define RG_HASHTABLE_HANDLER_T(ValueType, KeyType, KeyMember) \
+    RG_HASHTABLE_HANDLER_EX(ValueType, KeyType, KeyMember, HashTraits<KeyType>::Hash, HashTraits<KeyType>::Test)
+#define RG_HASHTABLE_HANDLER_NT(Name, ValueType, KeyType, KeyMember) \
+    RG_HASHTABLE_HANDLER_EX_N(Name, ValueType, KeyType, KeyMember, HashTraits<KeyType>::Hash, HashTraits<KeyType>::Test)
 
 template <typename KeyType, typename ValueType>
 class HashMap {
@@ -2195,7 +2195,7 @@ public:
         KeyType key;
         ValueType value;
 
-        RG_HASH_TABLE_HANDLER(Bucket, key);
+        RG_HASHTABLE_HANDLER(Bucket, key);
     };
 
     HashTable<KeyType, Bucket> table;

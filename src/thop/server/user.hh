@@ -38,7 +38,7 @@ struct User {
     bool CheckMcoDispenseMode(mco_DispenseMode dispense_mode) const
         { return mco_dispense_modes & (1 << (int)dispense_mode); }
 
-    RG_HASH_TABLE_HANDLER(User, name);
+    RG_HASHTABLE_HANDLER(User, name);
 };
 
 struct UserSet {
