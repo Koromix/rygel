@@ -21,7 +21,7 @@ struct mco_Authorization {
     Mode mode;
     Date dates[2];
 
-    RG_HASH_TABLE_HANDLER(mco_Authorization, unit);
+    RG_HASHTABLE_HANDLER(mco_Authorization, unit);
 };
 
 struct mco_AuthorizationSet {

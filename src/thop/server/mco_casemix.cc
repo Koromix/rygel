@@ -155,7 +155,7 @@ struct Aggregate {
     int64_t price_cents;
     Span<Part> parts;
 
-    RG_HASH_TABLE_HANDLER(Aggregate, key);
+    RG_HASHTABLE_HANDLER(Aggregate, key);
 };
 
 enum class AggregationFlag {

@@ -140,7 +140,7 @@ struct mco_Test {
     SupplementTest auth_supplements[16];
     int exb_exh;
 
-    RG_HASH_TABLE_HANDLER(mco_Test, bill_id);
+    RG_HASHTABLE_HANDLER(mco_Test, bill_id);
 };
 
 struct mco_StaySet {

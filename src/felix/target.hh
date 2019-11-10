@@ -48,7 +48,7 @@ struct Target {
     const char *pack_options;
     PackLinkType pack_link_type;
 
-    RG_HASH_TABLE_HANDLER(Target, name);
+    RG_HASHTABLE_HANDLER(Target, name);
 };
 
 struct TargetSet {

@@ -35,7 +35,7 @@ struct TargetConfig {
     const char *pack_options;
     PackLinkType pack_link_type;
 
-    RG_HASH_TABLE_HANDLER(TargetConfig, name);
+    RG_HASHTABLE_HANDLER(TargetConfig, name);
 };
 
 static bool AppendNormalizedPath(Span<const char> path,

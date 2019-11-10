@@ -34,7 +34,7 @@ struct Session {
     int64_t login_time;
     int64_t register_time;
 
-    RG_HASH_TABLE_HANDLER_T(Session, const char *, session_key);
+    RG_HASHTABLE_HANDLER_T(Session, const char *, session_key);
 };
 
 static std::shared_mutex sessions_mutex;
