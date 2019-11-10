@@ -1226,12 +1226,12 @@ public:
     }
 };
 
-template <typename T, Size BucketSize = 1024>
+template <typename T, Size BucketSize = 1024, typename AllocatorType = BlockAllocator>
 class BucketArray {
 public:
     struct Bucket {
         T *values;
-        LinkedAllocator allocator;
+        AllocatorType allocator;
     };
 
     template <typename U>
@@ -1503,14 +1503,14 @@ private:
     Bucket *CreateBucket()
     {
         Bucket *new_bucket = (Bucket *)Allocator::Allocate(buckets.allocator, RG_SIZE(Bucket));
-        new (&new_bucket->allocator) LinkedAllocator;
+        new (&new_bucket->allocator) AllocatorType();
         new_bucket->values = (T *)Allocator::Allocate(&new_bucket->allocator, BucketSize * RG_SIZE(T));
         return new_bucket;
     }
 
     void DeleteBucket(Bucket *bucket)
     {
-        bucket->allocator.~LinkedAllocator();
+        bucket->allocator.~AllocatorType();
         Allocator::Release(buckets.allocator, bucket, RG_SIZE(Bucket));
     }
 };
