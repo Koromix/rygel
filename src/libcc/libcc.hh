@@ -3477,6 +3477,8 @@ struct AssetInfo {
     Span<const uint8_t> data;
 
     const char *source_map;
+
+    RG_HASHTABLE_HANDLER(AssetInfo, name);
 };
 
 enum class AssetLoadStatus {
