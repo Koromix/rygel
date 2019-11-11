@@ -120,6 +120,7 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
         io = new http_IO();
         *con_cls = io;
 
+        io->daemon = daemon;
         io->request.conn = conn;
         io->request.method = method;
 
@@ -145,19 +146,104 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
     std::lock_guard<std::mutex> lock(io->mutex);
     http_RequestInfo *request = &io->request;
 
-    // Run first handler synchronously
+    // Run handler (sync first, and than async handlers if any)
     if (io->state == http_IO::State::Sync) {
         daemon->handle_func(*request, io);
         io->state = http_IO::State::Idle;
     }
+    daemon->RunNextAsync(io);
 
-    // Do we have anything async task pending?
+    // Handle read/suspend while async handler is running
+    if (io->state == http_IO::State::Async) {
+        if (*upload_data_size) {
+            if (io->read_len < io->read_buf.len) {
+                // Read upload data and give it to async handler
+                RG_ASSERT(io->read_buf.IsValid());
+
+                Size copy_len = std::min(io->read_buf.len - io->read_len, (Size)*upload_data_size);
+
+                memcpy(io->read_buf.ptr + io->read_len, upload_data, copy_len);
+                io->read_len += copy_len;
+                *upload_data_size -= copy_len;
+            }
+        } else if (io->read_buf.IsValid()) {
+            io->read_eof = true;
+        }
+
+        // Try in all cases, even if not needed... too much spinning beats deadlock
+        io->read_cv.notify_one();
+    }
+
+    // Handle write or attached response (if any)
+    if (io->write_buf.len) {
+        io->Resume();
+
+        MHD_Response *new_response =
+            MHD_create_response_from_callback(MHD_SIZE_UNKNOWN, Kilobytes(16),
+                                              &http_Daemon::HandleWrite, io, nullptr);
+        MHD_move_response_headers(io->response, new_response);
+
+        io->response = new_response;
+        io->AddEncodingHeader(request->compression_type);
+
+        return MHD_queue_response(conn, (unsigned int)io->write_code, io->response);
+    } else if (io->state == http_IO::State::Idle) {
+        if (io->code < 0) {
+            // Default to internal error (if nothing else)
+            io->AttachError(500);
+        }
+        return MHD_queue_response(conn, (unsigned int)io->code, io->response);
+    } else {
+        if (io->read_len == io->read_buf.len) {
+            io->Suspend();
+        }
+        return MHD_YES;
+    }
+}
+
+ssize_t http_Daemon::HandleWrite(void *cls, uint64_t, char *buf, size_t max)
+{
+    http_IO *io = (http_IO *)cls;
+    http_Daemon *daemon = io->daemon;
+
+    std::unique_lock<std::mutex> lock(io->mutex);
+
+    daemon->RunNextAsync(io);
+
+    // Can't read anymore!
+    RG_ASSERT(!io->read_buf.len);
+
+    if (io->write_buf.len) {
+        Size copy_len = std::min(io->write_buf.len - io->write_offset, (Size)max);
+        memcpy(buf, io->write_buf.ptr + io->write_offset, copy_len);
+        io->write_offset += copy_len;
+
+        if (io->write_offset >= io->write_buf.len) {
+            io->write_buf.RemoveFrom(0);
+            io->write_offset = 0;
+
+            io->write_cv.notify_one();
+        }
+
+        return copy_len;
+    } else if (io->write_eof) {
+        return MHD_CONTENT_READER_END_OF_STREAM;
+    } else {
+        // I tried to suspend here, but it triggered assert errors from libmicrohttpd,
+        // and I don't know if it's not allowed, or if there's a bug. Need to investigate.
+        return 0;
+    }
+}
+
+// Call with io->mutex locked
+void http_Daemon::RunNextAsync(http_IO *io)
+{
     if (io->state == http_IO::State::Idle && io->async_func) {
         std::function<void(const http_RequestInfo &request, http_IO *io)> func;
         std::swap(io->async_func, func);
 
-        daemon->async->Run([=]() {
-            func(*request, io);
+        async->Run([=]() {
+            func(io->request, io);
 
             std::unique_lock<std::mutex> lock(io->mutex);
 
@@ -174,44 +260,6 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
 
         io->state = http_IO::State::Async;
     }
-
-    // Read and/or suspend while async handler is running
-    if (io->state == http_IO::State::Async) {
-        if (*upload_data_size) {
-            if (io->read_len < io->read_buf.len) {
-                // Read upload data and give it to async handler
-                RG_ASSERT(io->read_buf.IsValid());
-
-                Size copy_len = std::min(io->read_buf.len - io->read_len, (Size)*upload_data_size);
-
-                memcpy(io->read_buf.ptr + io->read_len, upload_data, copy_len);
-                io->read_len += copy_len;
-                *upload_data_size -= copy_len;
-
-                if (io->read_len == io->read_buf.len) {
-                    io->Suspend();
-                }
-            } else {
-                io->Suspend();
-            }
-        } else {
-            io->read_eof |= io->read_buf.IsValid();
-            io->Suspend();
-        }
-
-        // Try in all cases, even if not needed... too much spinning beats deadlock
-        io->read_cv.notify_one();
-
-        return MHD_YES;
-    }
-
-    // We're done
-    RG_ASSERT(io->state == http_IO::State::Idle);
-    if (io->code < 0) {
-        // Default to internal error (if nothing else)
-        io->AttachError(500);
-    }
-    return MHD_queue_response(conn, (unsigned int)io->code, io->response);
 }
 
 void http_Daemon::RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
@@ -224,7 +272,9 @@ void http_Daemon::RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
 
         if (io->state == http_IO::State::Async) {
             io->state = http_IO::State::Zombie;
+
             io->read_cv.notify_one();
+            io->write_cv.notify_one();
         } else {
             lock.unlock();
             delete io;
@@ -371,16 +421,20 @@ void http_IO::AttachError(int code, const char *details)
     AddHeader("Content-Type", "text/plain");
 }
 
-void http_IO::AddFinalizer(const std::function<void()> &func)
-{
-    finalizers.Append(func);
-}
-
 bool http_IO::OpenForRead(StreamReader *out_st)
 {
     RG_ASSERT(state != State::Sync);
 
     return out_st->Open([this](Span<uint8_t> out_buf) { return Read(out_buf); }, "<http>");
+}
+
+bool http_IO::OpenForWrite(int code, StreamWriter *out_st)
+{
+    RG_ASSERT(state != State::Sync);
+
+    write_code = code;
+    return out_st->Open([this](Span<const uint8_t> buf) { return Write(buf); }, "<http>",
+                        request.compression_type);
 }
 
 bool http_IO::ReadPostValues(Allocator *alloc,
@@ -446,6 +500,11 @@ bool http_IO::ReadPostValues(Allocator *alloc,
     return true;
 }
 
+void http_IO::AddFinalizer(const std::function<void()> &func)
+{
+    finalizers.Append(func);
+}
+
 Size http_IO::Read(Span<uint8_t> out_buf)
 {
     RG_ASSERT(state != State::Sync);
@@ -471,6 +530,30 @@ Size http_IO::Read(Span<uint8_t> out_buf)
     }
 
     return read_len;
+}
+
+bool http_IO::Write(Span<const uint8_t> buf)
+{
+    RG_ASSERT(state != State::Sync);
+    RG_ASSERT(!write_eof);
+
+    std::unique_lock<std::mutex> lock(mutex);    
+
+    // Make sure we switch to write state
+    Resume();
+
+    write_eof |= !buf.len;
+    while (state == State::Async && write_buf.len >= Kilobytes(4)) {
+        write_cv.wait(lock);
+    }
+    write_buf.Append(buf);
+
+    if (state == State::Zombie) {
+        LogError("Connection aborted");
+        return false;
+    }
+
+    return true;
 }
 
 void http_IO::Suspend()

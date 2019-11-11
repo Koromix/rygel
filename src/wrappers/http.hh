@@ -46,6 +46,9 @@ private:
     static int HandleRequest(void *cls, MHD_Connection *conn, const char *url, const char *method,
                              const char *, const char *upload_data, size_t *upload_data_size,
                              void **con_cls);
+    static ssize_t HandleWrite(void *cls, uint64_t pos, char *buf, size_t max);
+    void RunNextAsync(http_IO *io);
+
     static void RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
                                  MHD_RequestTerminationCode toe);
 };
@@ -73,6 +76,7 @@ class http_IO {
         Zombie
     };
 
+    http_Daemon *daemon;
     http_RequestInfo request;
 
     int code = -1;
@@ -88,6 +92,12 @@ class http_IO {
     Span<uint8_t> read_buf = {};
     Size read_len = 0;
     bool read_eof = false;
+
+    int write_code;
+    std::condition_variable write_cv;
+    HeapArray<uint8_t> write_buf;
+    Size write_offset = 0;
+    bool write_eof = false;
 
     HeapArray<std::function<void()>> finalizers;
 
@@ -122,15 +132,17 @@ public:
                       CompressionType compression_type = CompressionType::None);
     void AttachError(int code, const char *details = GetLastLogError());
 
-    void AddFinalizer(const std::function<void()> &func);
-
     // Blocking, do in async context
     bool OpenForRead(StreamReader *out_st);
     bool ReadPostValues(Allocator *alloc,
                         HashMap<const char *, const char *> *out_values);
+    bool OpenForWrite(int code, StreamWriter *out_st);
+
+    void AddFinalizer(const std::function<void()> &func);
 
 private:
     Size Read(Span<uint8_t> out_buf);
+    bool Write(Span<const uint8_t> buf);
 
     // Call with mutex locked
     void Suspend();
