@@ -79,7 +79,7 @@ static sqlite3_stmt *PrepareMonthQuery(const http_RequestInfo &request, const ch
     return stmt;
 }
 
-void ProduceScheduleResources(const http_RequestInfo &request, http_IO *io)
+void HandleScheduleResources(const http_RequestInfo &request, http_IO *io)
 {
     // Execute query
     sqlite3_stmt *stmt;
@@ -131,7 +131,7 @@ void ProduceScheduleResources(const http_RequestInfo &request, http_IO *io)
     json.Finish(io);
 }
 
-void ProduceScheduleMeetings(const http_RequestInfo &request, http_IO *io)
+void HandleScheduleMeetings(const http_RequestInfo &request, http_IO *io)
 {
     // Execute query
     sqlite3_stmt *stmt;
