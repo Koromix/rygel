@@ -228,6 +228,10 @@ ssize_t http_Daemon::HandleWrite(void *cls, uint64_t, char *buf, size_t max)
         return copy_len;
     } else if (io->write_eof) {
         return MHD_CONTENT_READER_END_OF_STREAM;
+    } else if (io->state != http_IO::State::Async) {
+        // StreamWriter::Close() has not be closed, could be a late error
+        LogError("Truncated HTTP response stream");
+        return MHD_CONTENT_READER_END_WITH_ERROR;
     } else {
         // I tried to suspend here, but it triggered assert errors from libmicrohttpd,
         // and I don't know if it's not allowed, or if there's a bug. Need to investigate.
