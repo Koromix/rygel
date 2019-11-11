@@ -40,7 +40,7 @@ static std::atomic_bool push_run = true;
 static std::atomic<PushContext *> push_head;
 static std::atomic_int push_count;
 
-static void ProduceManifest(const http_RequestInfo &request, http_IO *io)
+static void HandleManifest(const http_RequestInfo &request, http_IO *io)
 {
     http_JsonPageBuilder json(request.compression_type);
 
@@ -124,7 +124,7 @@ static void FreePushContext(void *cls)
     push_count--;
 }
 
-static void ProduceEvents(const http_RequestInfo &request, http_IO *io)
+static void HandleEvents(const http_RequestInfo &request, http_IO *io)
 {
     // TODO: Use the allocator buried in http_RequestInfo?
     PushContext *ctx = new PushContext();
@@ -276,15 +276,15 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         void (*func)(const http_RequestInfo &request, http_IO *io) = nullptr;
 
         if (TestStr(request.url, "/manifest.json")) {
-            func = ProduceManifest;
+            func = HandleManifest;
         } else if (TestStr(request.url, "/api/events.json")) {
-            func = ProduceEvents;
+            func = HandleEvents;
         } else if (TestStr(request.url, "/api/files.json")) {
             func = HandleFileList;
         } else if (TestStr(request.url, "/api/schedule/resources.json")) {
-            func = ProduceScheduleResources;
+            func = HandleScheduleResources;
         } else if (TestStr(request.url, "/api/schedule/meetings.json")) {
-            func = ProduceScheduleMeetings;
+            func = HandleScheduleMeetings;
         }
 
         if (func) {
