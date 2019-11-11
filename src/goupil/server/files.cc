@@ -60,12 +60,16 @@ static bool ListRecurse(const char *directory, Size offset)
             case FileType::File: {
                 FileEntry file = {};
 
-                file.filename = DuplicateString(filename, &files_alloc).ptr;
-                if (!StatFile(filename, &file.info))
-                    return false;
-                file.url = file.filename + offset;
+                if (GetPathExtension(filename).len) {
+                    file.filename = DuplicateString(filename, &files_alloc).ptr;
+                    if (!StatFile(filename, &file.info))
+                        return false;
+                    file.url = file.filename + offset;
 
-                app_files.Append(file);
+                    app_files.Append(file);
+                } else {
+                    LogError("Ignoring file '%1' without extension", filename);
+                }
             } break;
 
             case FileType::Unknown: {} break;
