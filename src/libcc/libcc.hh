@@ -2476,7 +2476,7 @@ public:
     StreamReader(const std::function<Size(Span<uint8_t>)> &func, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None)
         : StreamReader() { Open(func, filename, compression_type); }
-    ~StreamReader() { Close(); }
+    ~StreamReader() { ReleaseResources(); }
 
     StreamReader(const StreamReader &other) = delete;
     StreamReader &operator=(const StreamReader &other) = delete;
@@ -2612,7 +2612,7 @@ public:
     StreamWriter(const std::function<bool(Span<const uint8_t>)> &func, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None)
         : StreamWriter() { Open(func, filename, compression_type); }
-    ~StreamWriter() { Close(); }
+    ~StreamWriter() { ReleaseResources(); }
 
     StreamWriter(const StreamWriter &other) = delete;
     StreamWriter &operator=(const StreamWriter &other) = delete;

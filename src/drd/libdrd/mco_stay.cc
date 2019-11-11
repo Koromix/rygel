@@ -72,10 +72,8 @@ bool mco_StaySet::SavePack(StreamWriter &st) const
     for (const mco_Stay &stay: stays) {
         st.Write(stay.procedures.ptr, stay.procedures.len * RG_SIZE(*stay.procedures.ptr));
     }
-    if (!st.Close())
-        return false;
 
-    return true;
+    return st.Close();
 }
 
 bool mco_StaySet::SavePack(const char *filename) const
