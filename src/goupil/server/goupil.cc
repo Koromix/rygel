@@ -12,31 +12,6 @@
 
 namespace RG {
 
-struct Route {
-    enum class Type {
-        Asset,
-        Function
-    };
-
-    const char *method;
-    const char *url;
-
-    Type type;
-    union {
-        struct {
-            AssetInfo asset;
-            const char *mime_type;
-        } st;
-        struct {
-            int code;
-            const char *location;
-        } redirect;
-        void (*func)(const http_RequestInfo &request, http_IO *io);
-    } u;
-
-    RG_HASHTABLE_HANDLER(Route, url);
-};
-
 struct PushContext {
     PushContext *next;
 
@@ -49,17 +24,16 @@ struct PushContext {
 Config goupil_config;
 SQLiteDatabase goupil_db;
 
-static Span<const AssetInfo> assets;
+static char etag[64];
+
 #ifndef NDEBUG
 static const char *assets_filename;
 static AssetSet asset_set;
 #else
 extern "C" const Span<const AssetInfo> pack_assets;
 #endif
-
-static HashTable<const char *, Route> routes;
-static BlockAllocator routes_alloc;
-static char etag[64];
+static HashTable<const char *, AssetInfo> assets_map;
+static BlockAllocator assets_alloc;
 
 static std::atomic_bool push_run = true;
 static std::atomic<PushContext *> push_head;
@@ -191,36 +165,18 @@ static AssetInfo PatchGoupilVariables(const AssetInfo &asset, Allocator *alloc)
     return asset2;
 }
 
-static bool InitRoutes()
+static bool InitAssets()
 {
-    LogInfo("Init routes");
+#ifdef NDEBUG
+    Span<const AssetInfo> assets = pack_assets;
+#else
+    Span<const AssetInfo> assets = asset_set.assets;
+#endif
 
-    routes.Clear();
-    routes_alloc.ReleaseAll();
+    LogInfo(assets_map.count ? "Reload assets" : "Init assets");
 
-    const auto add_asset_route = [](const char *method, const char *url,
-                                    const AssetInfo &asset) {
-        Route route = {};
-
-        route.method = method;
-        route.url = url;
-        route.type = Route::Type::Asset;
-        route.u.st.asset = asset;
-        route.u.st.mime_type = http_GetMimeType(GetPathExtension(asset.name));
-
-        routes.Append(route);
-    };
-    const auto add_function_route = [&](const char *method, const char *url,
-                                        void (*func)(const http_RequestInfo &request, http_IO *io)) {
-        Route route = {};
-
-        route.method = method;
-        route.url = url;
-        route.type = Route::Type::Function;
-        route.u.func = func;
-
-        routes.Append(route);
-    };
+    assets_map.Clear();
+    assets_alloc.ReleaseAll();
 
     // We can use a global ETag because everything is in the binary
     {
@@ -231,45 +187,32 @@ static bool InitRoutes()
 
     // Packed static assets
     for (const AssetInfo &asset: assets) {
-        if (TestStr(asset.name, "goupil.html")) {
-            AssetInfo asset2 = PatchGoupilVariables(asset, &routes_alloc);
-            add_asset_route("GET", "/", asset2);
-        } else if (TestStr(asset.name, "sw.pk.js")) {
-            AssetInfo asset2 = PatchGoupilVariables(asset, &routes_alloc);
-            add_asset_route("GET", "/sw.pk.js", asset2);
+        if (TestStr(asset.name, "goupil.html") || TestStr(asset.name, "sw.pk.js")) {
+            AssetInfo asset2 = PatchGoupilVariables(asset, &assets_alloc);
+            assets_map.Append(asset2);
         } else {
-            const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
-            add_asset_route("GET", url, asset);
+            assets_map.Append(asset);
         }
     }
 
-    // Favicon
+    // Prefer profile favicon (if any)
     if (goupil_config.icon_filename) {
         AssetInfo icon = {};
 
-        icon.name = goupil_config.icon_filename;
+        icon.name = "favicon.png";
         icon.compression_type = CompressionType::None;
 
         // Load icon
         {
-            HeapArray<uint8_t> buf(&routes_alloc);
+            HeapArray<uint8_t> buf(&assets_alloc);
             if (!ReadFile(goupil_config.icon_filename, Kibibytes(64), CompressionType::None, &buf))
                 return false;
 
             icon.data = buf.Leak();
         }
 
-        add_asset_route("GET", "/favicon.png", icon);
-    } else {
-        const Route *icon = routes.Find("/static/goupil.png");
-        add_asset_route("GET", "/favicon.png", icon->u.st.asset);
+        assets_map.Set(icon);
     }
-
-    // API
-    add_function_route("GET", "/manifest.json", ProduceManifest);
-    add_function_route("GET", "/api/events.json", ProduceEvents);
-    add_function_route("GET", "/api/schedule/resources.json", ProduceScheduleResources);
-    add_function_route("GET", "/api/schedule/meetings.json", ProduceScheduleMeetings);
 
     return true;
 }
@@ -278,10 +221,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
 #ifndef NDEBUG
     if (asset_set.LoadFromLibrary(assets_filename) == AssetLoadStatus::Loaded) {
-        LogInfo("Reloaded assets from library");
-        assets = asset_set.assets;
-
-        RG_ASSERT(InitRoutes());
+        RG_ASSERT(InitAssets());
     }
 #endif
 
@@ -298,23 +238,25 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         }
     }
 
-    // Find appropriate route
-    Route *route = routes.Find(request.url);
-    if (!route || !TestStr(route->method, request.method)) {
-        if (TestStr(request.method, "GET") && !strncmp(request.url, "/dev/", 5)) {
-            route = routes.Find("/");
-            RG_ASSERT(route);
-        } else {
-            io->AttachError(404);
-            return;
-        }
-    }
+    // Try static assets first
+    {
+        const AssetInfo *asset = nullptr;
 
-    // Execute route
-    switch (route->type) {
-        case Route::Type::Asset: {
-            io->AttachBinary(200, route->u.st.asset.data, route->u.st.mime_type,
-                             route->u.st.asset.compression_type);
+        if (TestStr(request.url, "/") || !strncmp(request.url, "/dev/", 5)) {
+            asset = assets_map.Find("goupil.html");
+        } else if (TestStr(request.url, "/favicon.png")) {
+            asset = assets_map.Find("favicon.png");
+        } else if (TestStr(request.url, "/sw.pk.js")) {
+            asset = assets_map.Find("sw.pk.js");
+        } else if (!strncmp(request.url, "/static/", 8)) {
+            const char *asset_name = request.url + 8;
+            asset = assets_map.Find(asset_name);
+        }
+
+        if (asset) {
+            const char *mimetype = http_GetMimeType(GetPathExtension(asset->name));
+
+            io->AttachBinary(200, asset->data, mimetype, asset->compression_type);
             io->flags |= (int)http_IO::Flag::EnableCache;
 
 #ifndef NDEBUG
@@ -322,22 +264,44 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 #endif
             io->AddCachingHeaders(goupil_config.max_age, etag);
 
-            if (route->u.st.asset.source_map) {
-                io->AddHeader("SourceMap", route->u.st.asset.source_map);
+            if (asset->source_map) {
+                io->AddHeader("SourceMap", asset->source_map);
             }
-        } break;
 
-        case Route::Type::Function: {
+            return;
+        }
+    }
+
+    // Now try API endpoints
+    {
+        void (*func)(const http_RequestInfo &request, http_IO *io) = nullptr;
+
+        if (TestStr(request.url, "/manifest.json")) {
+            func = ProduceManifest;
+        } else if (TestStr(request.url, "/api/events.json")) {
+            func = ProduceEvents;
+        } else if (TestStr(request.url, "/api/schedule/resources.json")) {
+            func = ProduceScheduleResources;
+        } else if (TestStr(request.url, "/api/schedule/meetings.json")) {
+            func = ProduceScheduleMeetings;
+        }
+
+        if (func) {
             io->RunAsync([=](const http_RequestInfo &request, http_IO *io) {
-                route->u.func(request, io);
+                (*func)(request, io);
 
 #ifndef NDEBUG
                 io->flags &= ~(unsigned int)http_IO::Flag::EnableCache;
 #endif
                 io->AddCachingHeaders(goupil_config.max_age, etag);
             });
-        } break;
+
+            return;
+        }
     }
+
+    // Found nothing
+    io->AttachError(404);
 }
 
 int RunGoupil(int argc, char **argv)
@@ -448,11 +412,8 @@ Options:
                           GetApplicationDirectory(), RG_SHARED_LIBRARY_EXTENSION).ptr;
     if (asset_set.LoadFromLibrary(assets_filename) == AssetLoadStatus::Error)
         return 1;
-    assets = asset_set.assets;
-#else
-    assets = pack_assets;
 #endif
-    if (!InitRoutes())
+    if (!InitAssets())
         return 1;
 
     // Run!
