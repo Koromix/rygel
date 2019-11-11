@@ -30,7 +30,10 @@ self.addEventListener('install', e => {
     e.waitUntil(async function() {
         if (env.cache_key) {
             let cache = await caches.open(env.cache_key);
+            let files = await fetch(`${env.base_url}api/files.json`).then(response => response.json());
+
             await cache.addAll(cache_urls);
+            await cache.addAll(files.map(file => `${env.base_url}${file.path}`));
         }
 
         await self.skipWaiting();
