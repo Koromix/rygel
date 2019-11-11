@@ -11,14 +11,14 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
 {
     RG_DEFER_NC(out_guard, app_key = config.app_key,
                            app_name = config.app_name,
-                           icon_filename = config.icon_filename,
+                           file_directory = config.file_directory,
                            database_filename = config.database_filename,
                            http = config.http,
                            max_age = config.max_age,
                            sse_keep_alive = config.sse_keep_alive) {
         config.app_key = app_key;
         config.app_name = app_name;
-        config.icon_filename = icon_filename;
+        config.file_directory = file_directory;
         config.database_filename = database_filename;
         config.http = http;
         config.max_age = max_age;
@@ -49,10 +49,10 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "Data") {
                 do {
-                    if (prop.key == "IconFile") {
-                        config.icon_filename = NormalizePath(prop.value, root_directory,
-                                                             &config.str_alloc).ptr;
-                    }else if (prop.key == "DatabaseFile") {
+                    if (prop.key == "FileDirectory") {
+                        config.file_directory = NormalizePath(prop.value, root_directory,
+                                                              &config.str_alloc).ptr;
+                    } else if (prop.key == "DatabaseFile") {
                         config.database_filename = NormalizePath(prop.value, root_directory,
                                                                  &config.str_alloc).ptr;
                     } else {
