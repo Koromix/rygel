@@ -21,7 +21,7 @@ Key = %1
 Name = %2
 
 [Data]
-# IconFile = (path to file with .png format / extension)
+FileDirectory = files
 DatabaseFile = %3
 
 # [HTTP]
@@ -105,6 +105,13 @@ Options:
             LogError("Failed to remove directory '%1': %2", profile_directory, strerror(errno));
         }
     };
+
+    // Create files directory
+    {
+        const char *directory = Fmt(&temp_alloc, "%1%/files", profile_directory).ptr;
+        if (!MakeDirectory(directory))
+            return 1;
+    }
 
     // Create database
     const char *database_name = "database.db";

@@ -6,6 +6,7 @@
 #include "../../libcc/libcc.hh"
 #include "config.hh"
 #include "data.hh"
+#include "files.hh"
 #include "goupil.hh"
 #include "schedule.hh"
 #include "../../wrappers/http.hh"
@@ -165,7 +166,7 @@ static AssetInfo PatchGoupilVariables(const AssetInfo &asset, Allocator *alloc)
     return asset2;
 }
 
-static bool InitAssets()
+static void InitAssets()
 {
 #ifdef NDEBUG
     Span<const AssetInfo> assets = pack_assets;
@@ -194,34 +195,21 @@ static bool InitAssets()
             assets_map.Append(asset);
         }
     }
+}
 
-    // Prefer profile favicon (if any)
-    if (goupil_config.icon_filename) {
-        AssetInfo icon = {};
-
-        icon.name = "favicon.png";
-        icon.compression_type = CompressionType::None;
-
-        // Load icon
-        {
-            HeapArray<uint8_t> buf(&assets_alloc);
-            if (!ReadFile(goupil_config.icon_filename, Kibibytes(64), CompressionType::None, &buf))
-                return false;
-
-            icon.data = buf.Leak();
-        }
-
-        assets_map.Set(icon);
-    }
-
-    return true;
+static void AddCachingHeaders(http_IO *io)
+{
+#ifndef NDEBUG
+    io->flags &= ~(unsigned int)http_IO::Flag::EnableCache;
+#endif
+    io->AddCachingHeaders(goupil_config.max_age, etag);
 }
 
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
 #ifndef NDEBUG
     if (asset_set.LoadFromLibrary(assets_filename) == AssetLoadStatus::Loaded) {
-        RG_ASSERT(InitAssets());
+        InitAssets();
     }
 #endif
 
@@ -238,7 +226,22 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         }
     }
 
-    // Try static assets first
+    // Try application files first
+    {
+        const FileEntry *file = app_files_map.FindValue(request.url, nullptr);
+
+        if (file) {
+            io->RunAsync([=](const http_RequestInfo &request, http_IO *io) {
+                HandleFileLoad(request, *file, io);
+                io->flags |= (int)http_IO::Flag::EnableCache;
+
+                AddCachingHeaders(io);
+            });
+            return;
+        }
+    }
+
+    // Now try static assets
     {
         const AssetInfo *asset = nullptr;
 
@@ -259,11 +262,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             io->AttachBinary(200, asset->data, mimetype, asset->compression_type);
             io->flags |= (int)http_IO::Flag::EnableCache;
 
-#ifndef NDEBUG
-            io->flags &= ~(unsigned int)http_IO::Flag::EnableCache;
-#endif
-            io->AddCachingHeaders(goupil_config.max_age, etag);
-
+            AddCachingHeaders(io);
             if (asset->source_map) {
                 io->AddHeader("SourceMap", asset->source_map);
             }
@@ -272,7 +271,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         }
     }
 
-    // Now try API endpoints
+    // And last (but not least), API endpoints
     {
         void (*func)(const http_RequestInfo &request, http_IO *io) = nullptr;
 
@@ -280,6 +279,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             func = ProduceManifest;
         } else if (TestStr(request.url, "/api/events.json")) {
             func = ProduceEvents;
+        } else if (TestStr(request.url, "/api/files.json")) {
+            func = HandleFileList;
         } else if (TestStr(request.url, "/api/schedule/resources.json")) {
             func = ProduceScheduleResources;
         } else if (TestStr(request.url, "/api/schedule/meetings.json")) {
@@ -289,11 +290,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         if (func) {
             io->RunAsync([=](const http_RequestInfo &request, http_IO *io) {
                 (*func)(request, io);
-
-#ifndef NDEBUG
-                io->flags &= ~(unsigned int)http_IO::Flag::EnableCache;
-#endif
-                io->AddCachingHeaders(goupil_config.max_age, etag);
+                AddCachingHeaders(io);
             });
 
             return;
@@ -315,9 +312,9 @@ Options:
     -C, --config_file <file>     Set configuration file
 
         --port <port>            Change web server port
-                                 (default: %1))
+                                 (default: %1)
         --base_url <url>         Change base URL
-                                 (default: %2))
+                                 (default: %2)
 
         --dev [<key>]            Run with fake profile and data)",
                 goupil_config.http.port, goupil_config.http.base_url);
@@ -385,8 +382,9 @@ Options:
         LogError("Project key must not be empty");
         return 1;
     }
-    if (goupil_config.icon_filename && GetPathExtension(goupil_config.icon_filename) != ".png") {
-        LogError("Icon file must be a PNG file with '.png' extension");
+    if (goupil_config.file_directory &&
+            !TestFile(goupil_config.file_directory, FileType::Directory)) {
+        LogError("Directory '%1' does not exist", goupil_config.file_directory);
         return 1;
     }
 
@@ -406,14 +404,15 @@ Options:
         return 1;
     }
 
-    // Init routes
+    // Init assets and files
 #ifndef NDEBUG
     assets_filename = Fmt(&temp_alloc, "%1%/goupil_assets%2",
                           GetApplicationDirectory(), RG_SHARED_LIBRARY_EXTENSION).ptr;
     if (asset_set.LoadFromLibrary(assets_filename) == AssetLoadStatus::Error)
         return 1;
 #endif
-    if (!InitAssets())
+    InitAssets();
+    if (goupil_config.file_directory && !InitFiles())
         return 1;
 
     // Run!
