@@ -3625,7 +3625,7 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
             if (buf.len) {
                 bool ret = dest.u.func(buf);
 
-                error |= ret;
+                error |= !ret;
                 return ret;
             }
         } break;
