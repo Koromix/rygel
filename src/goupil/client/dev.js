@@ -398,9 +398,7 @@ Navigation functions should only be called in reaction to user events, such as b
                     m.clear();
 
                     for (let path in help_demo) {
-                        let data = help_demo[path];
-                        let file = file_manager.create(path, data);
-
+                        let file = file_manager.create(path, new Blob(help_demo[path]));
                         m.save(file);
                     }
                 });
@@ -473,7 +471,7 @@ Navigation functions should only be called in reaction to user events, such as b
                     reload_app = true;
 
                 if (await runAssetSafe()) {
-                    let file = file_manager.create(path, value);
+                    let file = file_manager.create(path, new Blob(value));
                     await file_manager.save(file);
                 }
                 window.history.replaceState(null, null, app.makeURL());
