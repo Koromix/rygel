@@ -33,7 +33,7 @@ self.addEventListener('install', e => {
             let files = await fetch(`${env.base_url}api/files.json`).then(response => response.json());
 
             await cache.addAll(cache_urls);
-            await cache.addAll(files.map(file => `${env.base_url}${file.path}`));
+            await cache.addAll(files.map(file => `${env.base_url}${file.path.substr(1)}`));
         }
 
         await self.skipWaiting();
@@ -56,28 +56,23 @@ self.addEventListener('fetch', e => {
         let url = new URL(e.request.url);
 
         if (e.request.method === 'GET' && url.pathname.startsWith(env.base_url)) {
-            let short_path = url.pathname.substr(env.base_url.length);
+            let path = url.pathname.substr(env.base_url.length - 1);
 
-            if (short_path.startsWith('app/')) {
+            if (path.startsWith('/dev/'))
+                return await caches.match(env.base_url) || await fetch(env.base_url);
+
+            if (path.startsWith('/app/')) {
+                // TODO: Cache database object
                 let db_name = `goupil_${env.app_key}`;
                 let db = await idb.open(db_name);
 
-                let file_path = url.pathname.substr(env.base_url.length);
-                let data = await db.load('files', file_path);
+                let file = await db.load('files', path);
 
-                if (data) {
-                    return new Response(data);
-                } else {
-                    return new Response('Error 404: Asset does not exist', {
-                        status: 404,
-                        statusText: 'Not found'
-                    });
-                }
-            } else if (short_path.startsWith('dev/')) {
-                return await caches.match(env.base_url) || await fetch(env.base_url);
-            } else if (url.pathname.startsWith(env.base_url)) {
-                return await caches.match(e.request) || await fetch(e.request);
-           }
+                if (file)
+                    return new Response(file);
+            }
+
+            return await caches.match(e.request) || await fetch(e.request);
         }
 
         // Nothing matched, do the usual

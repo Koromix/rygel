@@ -61,7 +61,7 @@ let dev = new function() {
         let app = new Application;
         let app_builder = new ApplicationBuilder(app);
 
-        let main_script = await loadFileData('main.js');
+        let main_script = await loadFileData('/app/main.js');
         let func = Function('app', 'data', 'route', main_script);
         func(app_builder, app.data, app.route);
 
@@ -80,7 +80,7 @@ let dev = new function() {
             url: `${env.base_url}dev/`,
             label: 'Script principal',
 
-            path: 'main.js',
+            path: '/app/main.js',
             edit: true
         }];
 
@@ -98,7 +98,7 @@ let dev = new function() {
                     form: form,
                     page: page,
 
-                    path: `pages/${page.key}.js`,
+                    path: `/app/pages/${page.key}.js`,
                     edit: true
                 });
             }
@@ -123,7 +123,7 @@ let dev = new function() {
                 if (!known_paths.has(path)) {
                     assets.push({
                         type: 'blob',
-                        url: `${env.base_url}dev/${path}`,
+                        url: `${env.base_url}dev${path}`,
                         category: 'Fichiers',
                         label: path,
 
@@ -326,15 +326,15 @@ Navigation functions should only be called in reaction to user events, such as b
         goupil.popup(e, page => {
             let blob = page.file('file', 'Fichier :', {mandatory: true});
 
-            let default_path = blob.value ? `app/${blob.value.name}` : null;
+            let default_path = blob.value ? `/app/${blob.value.name}` : null;
             let path = page.text('path', 'Chemin :', {placeholder: default_path});
             if (!path.value)
                 path.value = default_path;
 
             if (path.value) {
-                if (!path.value.match(/^app\/./)) {
-                    path.error('Le chemin doit commencer par \'app/\'');
-                } else if (!path.value.match(/^app(\/[A-Za-z0-9_\.]+)+$/)) {
+                if (!path.value.match(/^\/app\/./)) {
+                    path.error('Le chemin doit commencer par \'/app/\'');
+                } else if (!path.value.match(/^\/app(\/[A-Za-z0-9_\.]+)+$/)) {
                     path.error('Allowed path characters: a-z, _, 0-9 and / (not at the end)');
                 } else if (path.value.includes('/../') || path.value.endsWith('/..')) {
                     path.error('Le chemin ne doit pas contenir de composants \'..\'');
@@ -348,7 +348,7 @@ Navigation functions should only be called in reaction to user events, such as b
 
                 let asset = {
                     type: 'blob',
-                    url: `${env.base_url}dev/${path.value}`,
+                    url: `${env.base_url}dev${path.value}`,
                     category: 'Fichiers',
                     label: path.value,
 
@@ -469,7 +469,7 @@ Navigation functions should only be called in reaction to user events, such as b
 
             // The user may have changed document (async + timer)
             if (current_asset && current_asset.path === path) {
-                if (path === 'main.js')
+                if (path === '/app/main.js')
                     reload_app = true;
 
                 if (await runAssetSafe()) {
