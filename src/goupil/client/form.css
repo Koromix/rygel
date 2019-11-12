@@ -166,7 +166,7 @@
 
 .af_button {
     margin: 0 2px 2px 0;
-    padding: 0.35em 0.7em;
+    padding: 0.3em 0.7em;
     background: #f8f8f8;
     border: 1px solid #999;
     border-width: 0.5px;
@@ -181,7 +181,10 @@
     color: white;
 }
 @media (pointer: coarse) {
-    .af_button { margin: 0 5px 3px 0; }
+    .af_button {
+        margin: 0 5px 3px 0;
+        padding: 0.35em 0.7em;
+    }
 }
 
 .af_buttons {
