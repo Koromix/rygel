@@ -13,7 +13,7 @@ struct Config {
     const char *app_key = nullptr;
     const char *app_name = nullptr;
 
-    const char *file_directory = nullptr;
+    const char *app_directory = nullptr;
     const char *database_filename = nullptr;
 
     http_Config http;

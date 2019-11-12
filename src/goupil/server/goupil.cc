@@ -382,9 +382,9 @@ Options:
         LogError("Project key must not be empty");
         return 1;
     }
-    if (goupil_config.file_directory &&
-            !TestFile(goupil_config.file_directory, FileType::Directory)) {
-        LogError("Directory '%1' does not exist", goupil_config.file_directory);
+    if (goupil_config.app_directory &&
+            !TestFile(goupil_config.app_directory, FileType::Directory)) {
+        LogError("Application directory '%1' does not exist", goupil_config.app_directory);
         return 1;
     }
 
@@ -412,7 +412,7 @@ Options:
         return 1;
 #endif
     InitAssets();
-    if (goupil_config.file_directory && !InitFiles())
+    if (goupil_config.app_directory && !InitFiles())
         return 1;
 
     // Run!

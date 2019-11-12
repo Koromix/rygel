@@ -21,7 +21,7 @@ Key = %1
 Name = %2
 
 [Data]
-FileDirectory = files
+ApplicationDirectory = app
 DatabaseFile = %3
 
 # [HTTP]

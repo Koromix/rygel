@@ -52,23 +52,31 @@ static bool ListRecurse(const char *directory, Size offset)
 {
     EnumStatus status = EnumerateDirectory(directory, nullptr, 1024,
                                            [&](const char *name, FileType file_type) {
-        // Always use '/' for URL mapping
-        const char *filename = Fmt(&files_alloc, "%1/%2", directory, name).ptr;
+        const char *filename = Fmt(&files_alloc, "%1%/%2", directory, name).ptr;
 
         switch (file_type) {
             case FileType::Directory: { return ListRecurse(filename, offset); } break;
             case FileType::File: {
                 FileEntry file = {};
 
-                if (GetPathExtension(filename).len) {
-                    file.filename = DuplicateString(filename, &files_alloc).ptr;
-                    if (!StatFile(filename, &file.info))
-                        return false;
-                    file.url = file.filename + offset;
+                file.filename = DuplicateString(filename, &files_alloc).ptr;
+                if (!StatFile(filename, &file.info))
+                    return false;
 
+                Span<char> url = Fmt(&files_alloc, "/app/%1", file.filename + offset);
+#ifdef _WIN32
+                for (char &c: url) {
+                    c = (c == '\\') ? '/' : c;
+                }
+#endif
+                file.url = url.ptr;
+
+                app_files.Append(file);
+
+                // Deal with special URLs
+                if (TestStr(url, "/app/favicon.png")) {
+                    file.url = "/favicon.png";
                     app_files.Append(file);
-                } else {
-                    LogError("Ignoring file '%1' without extension", filename);
                 }
             } break;
 
@@ -83,8 +91,8 @@ static bool ListRecurse(const char *directory, Size offset)
 
 bool InitFiles()
 {
-    Size url_offset = strlen(goupil_config.file_directory);
-    if (!ListRecurse(goupil_config.file_directory, url_offset))
+    Size url_offset = strlen(goupil_config.app_directory) + 1;
+    if (!ListRecurse(goupil_config.app_directory, url_offset))
         return false;
 
     Async async;
@@ -105,7 +113,7 @@ void HandleFileList(const http_RequestInfo &request, http_IO *io)
     json.StartArray();
     for (const FileEntry &file: app_files) {
         json.StartObject();
-        json.Key("path"); json.String(file.url + 1);
+        json.Key("path"); json.String(file.url);
         json.Key("sha256"); json.String(file.sha256);
         json.EndObject();
     }

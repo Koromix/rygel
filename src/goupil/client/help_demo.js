@@ -3,13 +3,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 let help_demo = {
-    'main.js':
+    '/app/main.js':
 `app.form("tuto", form => {
     form.page("tuto")
 })
 `,
 
-    'pages/tuto.js':
+    '/app/pages/tuto.js':
 `// Retirer le commentaire de la ligne suivante pour afficher les
 // champs (texte, numérique, etc.) à droite du libellé.
 // page.pushOptions({compact: true})
@@ -62,7 +62,7 @@ page.errorList()
 page.buttons("save")
 `,
 
-    'pages/complicated.js':
+    '/app/pages/complicated.js':
 `page.pushOptions({compact: true})
 
 page.text("nom", "Quel est votre nom ?", {mandatory: true})
