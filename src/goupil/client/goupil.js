@@ -137,7 +137,11 @@ let goupil = new function() {
         popup_builder = new PageBuilder(popup_state, page);
         popup_builder.changeHandler = () => openPopup(e, func);
         popup_builder.close = closePopup;
-        popup_builder.pushOptions({missingMode: 'disable'});
+
+        popup_builder.pushOptions({
+            missingMode: 'disable',
+            wide: true
+        });
 
         func(popup_builder);
         page.render(popup_el);
