@@ -6,7 +6,7 @@
 
 #include "util.hh"
 
-void InitMotors();
-void ProcessMotors();
+void InitDrive();
+void ProcessDrive();
 
-void SetMotorSpeed(int idx, int speed);
+void SetDriveSpeed(float x, float y, float w);

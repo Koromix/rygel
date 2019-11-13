@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "util.hh"
-#include "motor.hh"
+#include "drive.hh"
 
 static int ticks[4] = {};
 static int target[4] = {};
@@ -13,7 +13,7 @@ static int speed[4] = {};
 static float error_acc[4] = {};
 static float error_last[4] = {};
 
-void InitMotors()
+void InitDrive()
 {
     attachInterrupt(digitalPinToInterrupt(12), []() { ticks[0]++; }, FALLING);
     attachInterrupt(digitalPinToInterrupt(13), []() { ticks[1]++; }, FALLING);
@@ -26,7 +26,7 @@ void InitMotors()
     pinMode(25, OUTPUT);
 }
 
-void ProcessMotors()
+void ProcessDrive()
 {
     PROCESS_EVERY(5000);
 
@@ -52,7 +52,29 @@ void ProcessMotors()
     analogWrite(25, speed[3]);
 }
 
-void SetMotorSpeed(int idx, int speed)
+void SetDriveSpeed(float x, float y, float w)
 {
-    target[idx] = speed;
+    static const float kl = 1.0f;
+    static const float kw = 1.0f;
+
+    x *= kl;
+    y *= kl;
+    w *= kw;
+
+    // Forward kinematics matrix:
+    // -sin((45 + 90)°)  | cos((45 + 90)°)  | 1
+    // -sin((135 + 90)°) | cos((135 + 90)°) | 1
+    // -sin((225 + 90)°) | cos((225 + 90)°) | 1
+    // -sin((315 + 90)°) | cos((315 + 90)°) | 1
+    //
+    // Inverse kinematics matrix:
+    // -1/sqrt(2) | -1/sqrt(2) | 1
+    //  1/sqrt(2) | -1/sqrt(2) | 1
+    //  1/sqrt(2) |  1/sqrt(2) | 1
+    // -1/sqrt(2) |  1/sqrt(2) | 1
+
+    target[0] = (int)(x * -0.7071f + y * -0.7071f + w * 1.0f);
+    target[1] = (int)(x *  0.7071f + y * -0.7071f + w * 1.0f);
+    target[2] = (int)(x *  0.7071f + y *  0.7071f + w * 1.0f);
+    target[3] = (int)(x * -0.7071f + y *  0.7071f + w * 1.0f);
 }
