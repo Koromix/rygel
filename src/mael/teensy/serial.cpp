@@ -4,7 +4,7 @@
 
 #include "util.hh"
 #include "serial.hh"
-#include "motor.hh"
+#include "drive.hh"
 
 void InitSerial()
 {
@@ -42,15 +42,17 @@ static bool ParseLong(const char *str, long min, long max, long *out_value)
 
 static bool ExecuteCommand(char *cmd, char *arg0, char *arg1, char *arg2, char *arg3)
 {
-    if (!strcmp(cmd, "run") && arg0 && arg1) {
-        long idx;
-        long speed;
-        if (!ParseLong(arg0, 0, 3, &idx))
+    if (!strcmp(cmd, "drive") && arg0 && arg1 && arg2) {
+        long x;
+        long y;
+        long w;
+        if (!ParseLong(arg0, 0, 1000, &x))
             return false;
-        if (!ParseLong(arg1, 0, 255, &speed))
+        if (!ParseLong(arg1, 0, 1000, &y))
             return false;
+        if (!ParseLong(arg2, 0, 1000, &w))
 
-        SetMotorSpeed(idx, speed);
+        SetDriveSpeed((float)x, (float)y, (float)w);
     } else {
         Serial.println("Invalid command or arguments");
         return false;

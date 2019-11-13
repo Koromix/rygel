@@ -3,17 +3,17 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "util.hh"
-#include "motor.hh"
+#include "drive.hh"
 #include "serial.hh"
 
 void setup()
 {
     InitSerial();
-    InitMotors();
+    InitDrive();
 }
 
 void loop()
 {
     ProcessSerial();
-    ProcessMotors();
+    ProcessDrive();
 }
