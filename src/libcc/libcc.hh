@@ -3272,9 +3272,10 @@ static inline bool IsPathSeparator(char c)
 char *GetWin32ErrorString(uint32_t error_code = UINT32_MAX);
 #endif
 
-CompressionType GetPathCompression(Span<const char> filename);
+Span<const char> GetPathDirectory(Span<const char> filename);
 Span<const char> GetPathExtension(Span<const char> filename,
                                   CompressionType *out_compression_type = nullptr);
+CompressionType GetPathCompression(Span<const char> filename);
 
 Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
                          Allocator *alloc);
@@ -3307,6 +3308,8 @@ enum class EnumStatus {
 bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info);
 static inline bool StatFile(const char *filename, FileInfo *out_info)
     { return StatFile(filename, true, out_info); }
+
+bool RenameFile(const char *src_filename, const char *dest_filename);
 
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               FunctionRef<bool(const char *, FileType)> func);

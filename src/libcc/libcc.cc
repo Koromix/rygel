@@ -1288,6 +1288,23 @@ bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
     return true;
 }
 
+bool RenameFile(const char *src_filename, const char *dest_filename)
+{
+    WCHAR src_filename_w[4096];
+    WCHAR dest_filename_w[4096];
+    if (!ConvertUtf8ToWin32Wide(src_filename, src_filename_w))
+        return false;
+    if (!ConvertUtf8ToWin32Wide(dest_filename, dest_filename_w))
+        return false;
+
+    if (!MoveFileExW(src_filename_w, dest_filename_w, MOVEFILE_REPLACE_EXISTING)) {
+        LogError("Failed to rename file '%1' to '%2': %3", src_filename, dest_filename, GetWin32ErrorString());
+        return false;
+    }
+
+    return true;
+}
+
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               FunctionRef<bool(const char *, FileType)> func)
 {
@@ -1392,6 +1409,37 @@ bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
 #else
     out_info->modification_time = (int64_t)sb.st_mtime * 1000;
 #endif
+
+    return true;
+}
+
+bool RenameFile(const char *src_filename, const char *dest_filename)
+{
+    char directory[4096];
+    {
+        Span<const char> directory2 = GetPathDirectory(filename);
+        if (directory2.len >= RG_SIZE(directory)) {
+            LogError("Failed to rename file '%1' to '%2': path too long", src_filename, dest_filename);
+            return false;
+        }
+        memcpy(directory, directory2.ptr, directory2.len);
+        directory[directory2.len] = 0;
+    }
+
+    int dirfd = open(directory, O_RDONLY | O_CLOEXEC);
+    if (dirfd < 0) {
+        LogError("Failed to rename file '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
+        return false;
+    }
+    RG_DEFER { close(dirfd); };
+
+    // Not much we can do if fsync fails (I think), so ignore errors.
+    // Hope for the best: that's the spirit behind the POSIX filesystem API.
+    if (rename(src_filename, dest_filename) < 0) {
+        LogError("Failed to rename file '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
+        return false;
+    }
+    fsync(dirfd);
 
     return true;
 }
@@ -1696,11 +1744,12 @@ const char *GetApplicationExecutable83()
 }
 #endif
 
-CompressionType GetPathCompression(Span<const char> filename)
+Span<const char> GetPathDirectory(Span<const char> filename)
 {
-    CompressionType compression_type;
-    GetPathExtension(filename, &compression_type);
-    return compression_type;
+    Span<const char> directory;
+    SplitStrReverseAny(filename, RG_PATH_SEPARATORS, &directory);
+
+    return directory.len ? directory : ".";
 }
 
 // Names starting with a dot are not considered to be an extension (POSIX hidden files)
@@ -1730,6 +1779,13 @@ Span<const char> GetPathExtension(Span<const char> filename, CompressionType *ou
     }
 
     return extension;
+}
+
+CompressionType GetPathCompression(Span<const char> filename)
+{
+    CompressionType compression_type;
+    GetPathExtension(filename, &compression_type);
+    return compression_type;
 }
 
 Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
@@ -3640,7 +3696,7 @@ bool SpliceStream(StreamReader *reader, Size max_len, StreamWriter *writer)
 
     Size total_len = 0;
     while (!reader->IsEOF()) {
-        LocalArray<char, 16384> buf;
+        LocalArray<uint8_t, 16384> buf;
         buf.len = reader->Read(buf.data);
         if (buf.len < 0)
             return false;
