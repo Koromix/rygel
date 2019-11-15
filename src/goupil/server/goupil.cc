@@ -216,89 +216,106 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     // Send these headers whenever possible
     io->AddHeader("Referrer-Policy", "no-referrer");
 
-    // Handle server-side cache validation (ETag)
-    {
-        const char *client_etag = request.GetHeaderValue("If-None-Match");
-        if (client_etag && TestStr(client_etag, etag)) {
-            MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-            io->AttachResponse(304, response);
-            return;
+    if (TestStr(request.method, "GET")) {
+        // Handle server-side cache validation (ETag)
+        {
+            const char *client_etag = request.GetHeaderValue("If-None-Match");
+            if (client_etag && TestStr(client_etag, etag)) {
+                MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+                io->AttachResponse(304, response);
+                return;
+            }
         }
-    }
 
-    // Try application files first
-    {
-        const FileEntry *file = app_files_map.FindValue(request.url, nullptr);
+        // Try application files first
+        {
+            const FileEntry *file;
+            if (TestStr(request.url, "/favicon.png")) {
+                file = LockFile("/app/favicon.png");
+            } else if (TestStr(request.url, "/manifest.json")) {
+                file = LockFile("/app/manifest.json");
+            } else {
+                file = LockFile(request.url);
+            }
 
-        if (file) {
-            io->RunAsync([=](const http_RequestInfo &request, http_IO *io) {
-                HandleFileLoad(request, *file, io);
+            if (file) {
+                io->RunAsync([=](const http_RequestInfo &request, http_IO *io) {
+                    RG_DEFER { UnlockFile(file); };
+
+                    HandleFileGet(request, *file, io);
+                    io->flags |= (int)http_IO::Flag::EnableCache;
+
+                    AddCachingHeaders(io);
+                });
+                return;
+            }
+        }
+
+        // Now try static assets
+        {
+            const AssetInfo *asset = nullptr;
+
+            if (TestStr(request.url, "/") || !strncmp(request.url, "/dev/", 5)) {
+                asset = assets_map.Find("goupil.html");
+            } else if (TestStr(request.url, "/favicon.png")) {
+                asset = assets_map.Find("favicon.png");
+            } else if (TestStr(request.url, "/sw.pk.js")) {
+                asset = assets_map.Find("sw.pk.js");
+            } else if (!strncmp(request.url, "/static/", 8)) {
+                const char *asset_name = request.url + 8;
+                asset = assets_map.Find(asset_name);
+            }
+
+            if (asset) {
+                const char *mimetype = http_GetMimeType(GetPathExtension(asset->name));
+
+                io->AttachBinary(200, asset->data, mimetype, asset->compression_type);
                 io->flags |= (int)http_IO::Flag::EnableCache;
 
                 AddCachingHeaders(io);
-            });
-            return;
-        }
-    }
+                if (asset->source_map) {
+                    io->AddHeader("SourceMap", asset->source_map);
+                }
 
-    // Now try static assets
-    {
-        const AssetInfo *asset = nullptr;
-
-        if (TestStr(request.url, "/") || !strncmp(request.url, "/dev/", 5)) {
-            asset = assets_map.Find("goupil.html");
-        } else if (TestStr(request.url, "/favicon.png")) {
-            asset = assets_map.Find("favicon.png");
-        } else if (TestStr(request.url, "/sw.pk.js")) {
-            asset = assets_map.Find("sw.pk.js");
-        } else if (!strncmp(request.url, "/static/", 8)) {
-            const char *asset_name = request.url + 8;
-            asset = assets_map.Find(asset_name);
+                return;
+            }
         }
 
-        if (asset) {
-            const char *mimetype = http_GetMimeType(GetPathExtension(asset->name));
+        // And last (but not least), API endpoints
+        {
+            void (*func)(const http_RequestInfo &request, http_IO *io) = nullptr;
 
-            io->AttachBinary(200, asset->data, mimetype, asset->compression_type);
-            io->flags |= (int)http_IO::Flag::EnableCache;
-
-            AddCachingHeaders(io);
-            if (asset->source_map) {
-                io->AddHeader("SourceMap", asset->source_map);
+            if (TestStr(request.url, "/manifest.json")) {
+                func = HandleManifest;
+            } else if (TestStr(request.url, "/api/events.json")) {
+                func = HandleEvents;
+            } else if (TestStr(request.url, "/api/files.json")) {
+                func = HandleFileList;
+            } else if (TestStr(request.url, "/api/schedule/resources.json")) {
+                func = HandleScheduleResources;
+            } else if (TestStr(request.url, "/api/schedule/meetings.json")) {
+                func = HandleScheduleMeetings;
             }
 
-            return;
+            if (func) {
+                io->RunAsync([=](const http_RequestInfo &request, http_IO *io) {
+                    (*func)(request, io);
+                    AddCachingHeaders(io);
+                });
+
+                return;
+            }
         }
+
+        // Found nothing
+        io->AttachError(404);
+    } else if (TestStr(request.method, "PUT")) {
+        io->RunAsync(HandleFilePut);
+    } else if (TestStr(request.method, "DELETE")) {
+        io->RunAsync(HandleFileDelete);
+    } else {
+        io->AttachError(405);
     }
-
-    // And last (but not least), API endpoints
-    {
-        void (*func)(const http_RequestInfo &request, http_IO *io) = nullptr;
-
-        if (TestStr(request.url, "/manifest.json")) {
-            func = HandleManifest;
-        } else if (TestStr(request.url, "/api/events.json")) {
-            func = HandleEvents;
-        } else if (TestStr(request.url, "/api/files.json")) {
-            func = HandleFileList;
-        } else if (TestStr(request.url, "/api/schedule/resources.json")) {
-            func = HandleScheduleResources;
-        } else if (TestStr(request.url, "/api/schedule/meetings.json")) {
-            func = HandleScheduleMeetings;
-        }
-
-        if (func) {
-            io->RunAsync([=](const http_RequestInfo &request, http_IO *io) {
-                (*func)(request, io);
-                AddCachingHeaders(io);
-            });
-
-            return;
-        }
-    }
-
-    // Found nothing
-    io->AttachError(404);
 }
 
 int RunGoupil(int argc, char **argv)

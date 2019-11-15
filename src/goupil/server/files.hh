@@ -8,22 +8,20 @@
 
 namespace RG {
 
-struct FileEntry {
-    const char *url;
-
-    const char *filename;
-    FileInfo info;
-    char sha256[65];
-
-    RG_HASHTABLE_HANDLER(FileEntry, url);
-};
-
-extern HeapArray<FileEntry> app_files;
-extern HashTable<const char *, const FileEntry *> app_files_map;
+// External code can use this type as a handle, see LockFile
+struct FileEntry;
 
 bool InitFiles();
 
 void HandleFileList(const http_RequestInfo &request, http_IO *io);
-void HandleFileLoad(const http_RequestInfo &request, const FileEntry &file, http_IO *io);
+
+const FileEntry *LockFile(const char *url);
+void UnlockFile(const FileEntry *file);
+
+// File needs to be locked (see LockFile and UnlockFile)
+void HandleFileGet(const http_RequestInfo &request, const FileEntry &file, http_IO *io);
+
+void HandleFilePut(const http_RequestInfo &request, http_IO *io);
+void HandleFileDelete(const http_RequestInfo &request, http_IO *io);
 
 }
