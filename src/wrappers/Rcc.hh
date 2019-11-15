@@ -19,8 +19,8 @@ extern bool rcc_log_missing_messages;
         switch (level) { \
             case LogLevel::Error: { \
                 std::lock_guard<std::mutex> lock(rcc_log_mutex); \
-                const char *msg2 = DuplicateString(msg, rcc_log_messages.bucket_allocator).ptr; \
-                rcc_log_messages.Append(msg2); \
+                const char **ptr = rcc_log_messages.AppendDefault(); \
+                *ptr = DuplicateString(msg, rcc_log_messages.GetBucketAllocator()).ptr; \
                 if (rcc_log_messages.len > 100) { \
                     rcc_log_messages.RemoveFirst(); \
                     rcc_log_missing_messages = true; \
