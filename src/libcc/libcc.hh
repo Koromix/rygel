@@ -1321,16 +1321,11 @@ public:
     HeapArray<Bucket *> buckets;
     Size offset = 0;
     Size len = 0;
-    Allocator *bucket_allocator;
 
     typedef T value_type;
     typedef Iterator<BucketArray> iterator_type;
 
-    BucketArray()
-    {
-        Bucket *first_bucket = *buckets.Append(CreateBucket());
-        bucket_allocator = &first_bucket->allocator;
-    }
+    BucketArray() {}
     ~BucketArray() { ClearBucketsAndValues(); }
 
     BucketArray(BucketArray &&other) { *this = std::move(other); }
@@ -1348,10 +1343,8 @@ public:
     {
         ClearBucketsAndValues();
 
-        Bucket *first_bucket = *buckets.Append(CreateBucket());
         offset = 0;
         len = 0;
-        bucket_allocator = &first_bucket->allocator;
     }
 
     iterator_type begin() { return iterator_type(this, 0, offset); }
@@ -1390,14 +1383,18 @@ public:
         Size bucket_idx = (offset + len) / BucketSize;
         Size bucket_offset = (offset + len) % BucketSize;
 
+        if (bucket_idx >= buckets.len) {
+            Bucket *new_bucket = (Bucket *)Allocator::Allocate(buckets.allocator, RG_SIZE(Bucket));
+            new (&new_bucket->allocator) AllocatorType();
+            new_bucket->values = (T *)Allocator::Allocate(&new_bucket->allocator, BucketSize * RG_SIZE(T));
+
+            buckets.Append(new_bucket);
+        }
+
         T *first = buckets[bucket_idx]->values + bucket_offset;
         new (first) T();
 
         len++;
-        if (bucket_offset == BucketSize - 1) {
-            Bucket *new_bucket = *buckets.Append(CreateBucket());
-            bucket_allocator = &new_bucket->allocator;
-        }
 
         return first;
     }
@@ -1429,17 +1426,13 @@ public:
         iterator_type from_it(this, start_bucket_idx, start_bucket_offset);
         DeleteValues(from_it, end());
 
-        for (Size i = start_bucket_idx + 1; i <= end_bucket_idx; i++) {
+        Size delete_idx = start_bucket_idx + !!start_bucket_offset;
+        for (Size i = delete_idx; i <= end_bucket_idx; i++) {
             DeleteBucket(buckets[i]);
         }
-        buckets.RemoveFrom(start_bucket_idx + 1);
-        if (start_idx % BucketSize == 0) {
-            DeleteBucket(buckets[buckets.len - 1]);
-            buckets[buckets.len - 1] = CreateBucket();
-        }
+        buckets.RemoveFrom(delete_idx);
 
         len = from;
-        bucket_allocator = &buckets[buckets.len - 1]->allocator;
     }
     void RemoveLast(Size count = 1)
     {
@@ -1476,6 +1469,8 @@ public:
         len -= count;
     }
 
+    Allocator *GetBucketAllocator() const { return &buckets[buckets.len - 1]->allocator; }
+
 private:
     void ClearBucketsAndValues()
     {
@@ -1498,14 +1493,6 @@ private:
                 it->~T();
             }
         }
-    }
-
-    Bucket *CreateBucket()
-    {
-        Bucket *new_bucket = (Bucket *)Allocator::Allocate(buckets.allocator, RG_SIZE(Bucket));
-        new (&new_bucket->allocator) AllocatorType();
-        new_bucket->values = (T *)Allocator::Allocate(&new_bucket->allocator, BucketSize * RG_SIZE(T));
-        return new_bucket;
     }
 
     void DeleteBucket(Bucket *bucket)
