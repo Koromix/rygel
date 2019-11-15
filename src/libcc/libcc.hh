@@ -1226,7 +1226,7 @@ public:
     }
 };
 
-template <typename T, Size BucketSize = 1024, typename AllocatorType = BlockAllocator>
+template <typename T, Size BucketSize = 64, typename AllocatorType = BlockAllocator>
 class BucketArray {
 public:
     struct Bucket {
