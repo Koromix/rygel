@@ -66,10 +66,9 @@ self.addEventListener('fetch', e => {
                 let db_name = `goupil_${env.app_key}`;
                 let db = await idb.open(db_name);
 
-                let file = await db.load('files', path);
-
-                if (file)
-                    return new Response(file);
+                let file_data = await db.load('files_data', path);
+                if (file_data)
+                    return new Response(file_data);
             }
 
             return await caches.match(e.request) || await fetch(e.request);
