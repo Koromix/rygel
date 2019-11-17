@@ -14,7 +14,7 @@ function FormExecutor(form, record) {
         let file = await file_manager.load(path);
 
         self.runPageScript(page, await file.data.text(), el);
-    }
+    };
 
     this.runPageScript = function(info, script, el) {
         if (info.key !== page_key) {
@@ -41,7 +41,7 @@ function FormExecutor(form, record) {
         func(app.data, app.route, app.go, page_builder, page_builder, page_scratch);
 
         page.render(el);
-    }
+    };
 
     function decodeKey(key) {
         if (!key)

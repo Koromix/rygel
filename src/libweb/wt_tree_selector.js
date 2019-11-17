@@ -88,7 +88,7 @@ function TreeSelector() {
         } else {
             current_values = new Set(values);
         }
-    }
+    };
     this.getValues = function() { return current_values; };
 
     this.render = function() {

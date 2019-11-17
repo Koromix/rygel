@@ -80,7 +80,7 @@ if (!Object.values) {
         }
 
         return values;
-    }
+    };
 }
 
 if (!String.prototype.padStart) {
