@@ -11,9 +11,9 @@ function FormExecutor(form, record) {
 
     this.runPage = async function(info, el) {
         let path = `pages/${info.key}.js`;
-        let script = await file_manager.load(path);
+        let file = await file_manager.load(path);
 
-        self.runPageScript(page, script, el);
+        self.runPageScript(page, await file.data.text(), el);
     }
 
     this.runPageScript = function(info, script, el) {
