@@ -20,27 +20,28 @@ let idb = new function () {
         }
 
         this.transaction = function(func) {
-            if (t_status !== 'none')
-                throw new Error('Ongoing database transaction');
+            if (t_status === 'none') {
+                try {
+                    t_status = 'valid';
+                    func(self);
 
-            try {
-                t_status = 'valid';
+                    let t = db.transaction(Array.from(t_stores),
+                                           t_readwrite ? 'readwrite' : 'readonly');
+
+                    for (let query of t_queries)
+                        query.func(t, query.resolve, query.reject);
+                    if (t_status === 'abort')
+                        t.abort();
+
+                    return new Promise((resolve, reject) => {
+                        t.addEventListener('complete', e => resolve());
+                        t.addEventListener('abort', e => logAndReject(reject, 'Database transaction failure'));
+                    });
+                } finally {
+                    resetTransaction();
+                }
+            } else {
                 func(self);
-
-                let t = db.transaction(Array.from(t_stores),
-                                       t_readwrite ? 'readwrite' : 'readonly');
-
-                for (let query of t_queries)
-                    query.func(t, query.resolve, query.reject);
-                if (t_status === 'abort')
-                    t.abort();
-
-                return new Promise((resolve, reject) => {
-                    t.addEventListener('complete', e => resolve());
-                    t.addEventListener('abort', e => logAndReject(reject, 'Database transaction failure'));
-                });
-            } finally {
-                resetTransaction();
             }
         };
 
