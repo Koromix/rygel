@@ -344,7 +344,8 @@ Navigation functions should only be called in reaction to user events, such as b
             }
 
             page.submitHandler = async () => {
-                await file_manager.save(file_manager.create(path.value, blob.value || ''));
+                let file = await file_manager.create(path.value, blob.value || '');
+                await file_manager.save(file);
 
                 let asset = {
                     type: 'blob',
@@ -394,11 +395,11 @@ Navigation functions should only be called in reaction to user events, such as b
             page.output('Voulez-vous vraiment réinitialiser toutes les ressources ?');
 
             page.submitHandler = async () => {
-                await file_manager.transaction(m => {
+                await file_manager.transaction(async m => {
                     m.clear();
 
                     for (let path in help_demo) {
-                        let file = file_manager.create(path, help_demo[path]);
+                        let file = await file_manager.create(path, help_demo[path]);
                         m.save(file);
                     }
                 });
@@ -471,7 +472,7 @@ Navigation functions should only be called in reaction to user events, such as b
                     reload_app = true;
 
                 if (await runAssetSafe()) {
-                    let file = file_manager.create(path, value);
+                    let file = await file_manager.create(path, value);
                     await file_manager.save(file);
                 }
                 window.history.replaceState(null, null, app.makeURL());

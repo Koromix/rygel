@@ -5,43 +5,82 @@
 function FileManager(db) {
     let self = this;
 
-    this.create = function(path, data) {
+    this.create = async function(path, data) {
         if (!(data instanceof Blob))
             data = new Blob([data]);
 
         let file = {
             path: path,
+            sha256: await computeSha256(data),
             data: data
         };
 
-        return file;
+        return Object.freeze(file);
     };
+
+    // Javascript Blob/File API sucks, plain and simple
+    async function computeSha256(blob) {
+        let sha256 = new Sha256;
+
+        for (let offset = 0; offset < blob.size; offset += 65536) {
+            let piece = blob.slice(offset, offset + 65536);
+            let buf = await new Promise((resolve, reject) => {
+                let reader = new FileReader;
+
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = e => {
+                    reader.abort();
+                    reject(e.target.error);
+                };
+
+                reader.readAsArrayBuffer(piece);
+            });
+
+            sha256.update(buf);
+        }
+
+        sha256.finalize();
+        return sha256.toString();
+    }
 
     this.transaction = function(func) {
         return db.transaction(db => func(self));
     };
 
     this.save = async function(file) {
-        await db.saveWithKey('files', file.path, file.data);
+        await db.transaction(db => {
+            let file2 = {
+                path: file.path,
+                sha256: file.sha256
+            };
+
+            db.save('files', file2);
+            db.saveWithKey('files_data', file.path, file.data);
+        });
     };
 
     this.delete = async function(path) {
-        await db.delete('files', path);
+        await db.transaction(db => {
+            db.delete('files', path);
+            db.delete('files_data', path);
+        });
     };
 
     this.clear = async function() {
-        await db.clear('files');
+        await db.transaction(db => {
+            db.clear('files');
+            db.clear('files_data');
+        });
     };
 
     this.load = async function(path) {
-        let data = await db.load('files', path);
+        let [file, data] = await Promise.all([
+            db.load('files', path),
+            db.load('files_data', path)
+        ]);
 
-        if (data) {
-            let file = {
-                path: path,
-                data: data
-            };
-
+        if (file) {
+            file.data = data;
             return file;
         } else {
             return null;
@@ -49,6 +88,7 @@ function FileManager(db) {
     };
 
     this.list = async function() {
-        return await db.list('files');
+        let files = await db.loadAll('files');
+        return files.map(file => file.path);
     };
 }
