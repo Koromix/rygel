@@ -5,17 +5,35 @@
 function FileManager(db) {
     let self = this;
 
-    this.create = async function(path, data) {
+    this.create = function(path, data) {
         if (!(data instanceof Blob))
             data = new Blob([data]);
 
         let file = {
             path: path,
-            sha256: await computeSha256(data),
             data: data
         };
 
         return Object.freeze(file);
+    };
+
+    this.transaction = function(func) {
+        return db.transaction(db => func(self));
+    };
+
+    this.save = async function(file) {
+        // TODO: Fix race condition between hash computation and file storage
+        let hash = await computeSha256(file.data);
+
+        await db.transaction(db => {
+            let file2 = {
+                path: file.path,
+                sha256: hash
+            };
+
+            db.save('files', file2);
+            db.saveWithKey('files_data', file.path, file.data);
+        });
     };
 
     // Javascript Blob/File API sucks, plain and simple
@@ -43,22 +61,6 @@ function FileManager(db) {
         return sha256.toString();
     }
 
-    this.transaction = function(func) {
-        return db.transaction(db => func(self));
-    };
-
-    this.save = async function(file) {
-        await db.transaction(db => {
-            let file2 = {
-                path: file.path,
-                sha256: file.sha256
-            };
-
-            db.save('files', file2);
-            db.saveWithKey('files_data', file.path, file.data);
-        });
-    };
-
     this.delete = async function(path) {
         await db.transaction(db => {
             db.delete('files', path);
@@ -81,7 +83,7 @@ function FileManager(db) {
 
         if (file) {
             file.data = data;
-            return file;
+            return Object.freeze(file);
         } else {
             return null;
         }
