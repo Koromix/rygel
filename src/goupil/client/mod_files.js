@@ -6,6 +6,9 @@ function FileManager(db) {
     let self = this;
 
     this.create = function(path, data) {
+        if (!(data instanceof Blob))
+            data = new Blob([data]);
+
         let file = {
             path: path,
             data: data
