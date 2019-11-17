@@ -19,11 +19,11 @@ let idb = new function () {
             t_queries.length = 0;
         }
 
-        this.transaction = function(func) {
+        this.transaction = async function(func) {
             if (t_status === 'none') {
                 try {
                     t_status = 'valid';
-                    func(self);
+                    await func(self);
 
                     let t = db.transaction(Array.from(t_stores),
                                            t_readwrite ? 'readwrite' : 'readonly');
@@ -41,7 +41,7 @@ let idb = new function () {
                     resetTransaction();
                 }
             } else {
-                func(self);
+                await func(self);
             }
         };
 
