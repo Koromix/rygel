@@ -100,7 +100,7 @@ let util = new function() {
 
         let query_str = new URLSearchParams(params).toString();
         return `${url}${query_str ? '?' : ''}${query_str || ''}${hash ? '#' : ''}${hash || ''}`;
-    }
+    };
 
     // Why the f*ck is there still no good cookie API?
     this.getCookie = function(name) {
@@ -301,7 +301,7 @@ let util = new function() {
         while (el && !func(el))
             el = el.parentElement;
         return el;
-    }
+    };
 
     this.interceptLocalAnchors = function(func) {
         document.body.addEventListener('click', e => {

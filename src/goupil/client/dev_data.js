@@ -11,7 +11,7 @@ let dev_data = new function() {
         let columns = orderColumns(variables);
 
         renderRecords(table, records, columns, current_id);
-    }
+    };
 
     function renderRecords(table, records, columns, current_id) {
         let empty_msg;

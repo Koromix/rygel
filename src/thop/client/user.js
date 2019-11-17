@@ -135,7 +135,7 @@ let user = new function() {
             log.info('Votre session a expiré');
     };
 
-    this.isConnected = function() { return !!url_key; }
-    this.getUrlKey = function() { return url_key; }
-    this.getUserName = function() { return username; }
+    this.isConnected = function() { return !!url_key; };
+    this.getUrlKey = function() { return url_key; };
+    this.getUserName = function() { return username; };
 };
