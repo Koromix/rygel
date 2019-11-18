@@ -62,7 +62,7 @@ function Sha256(data) {
         0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
     ];
 
-    // global arrays
+    // Global arrays
     let ihash = [
         0x6a09e667,
         0xbb67ae85,
@@ -79,6 +79,7 @@ function Sha256(data) {
 
     // Read the next chunk of data and update the SHA256 computation
     this.update = function(data) {
+        // Support several types in data: strings, ArrayBuffer, Uint8Array, JS array
         if (typeof data === 'string') {
             get_byte = idx => data.charCodeAt(idx);
             data_len = data.length;
@@ -87,57 +88,48 @@ function Sha256(data) {
 
             get_byte = idx => arr[idx];
             data_len = arr.length;
-        } else if (data instanceof Uint8Array) {
+        } else if (data instanceof Uint8Array || Array.isArray(data)) {
             getByte = idx => data[idx];
             data_len = data.length;
         }
 
-        let i, index, curpos = 0;
         // Compute number of bytes mod 64
-        index = ((count[0] >> 3) & 0x3f);
+        let index = ((count[0] >> 3) & 0x3f);
         let remainder = (data_len & 0x3f);
+        let curpos = 0;
 
         // Update number of bits
-        if ((count[0] += (data_len << 3)) < (data_len << 3)) count[1]++;
+        if ((count[0] += (data_len << 3)) < (data_len << 3))
+            count[1]++;
         count[1] += (data_len >> 29);
 
         // Transform as many times as possible
-        for(i=0; i+63<data_len; i+=64) {
-            for(let j=index; j<64; j++)
+        for (let i = 0; i < data_len - 63; i += 64) {
+            for (let j = index; j < 64; j++)
                 buffer[j] = get_byte(curpos++);
-            sha256_transform();
+            transform();
             index = 0;
         }
 
         // Buffer remaining input
-        for(let j=0; j<remainder; j++)
-            buffer[j] = get_byte(curpos++);
+        for (let i = 0; i < remainder; i++)
+            buffer[i] = get_byte(curpos++);
     };
-
-    function makeGetByteFunction(data) {
-        if (typeof data === 'string') {
-            return idx => data.charCodeAt(idx);
-        } else if (data instanceof ArrayBuffer) {
-            let arr = new Uint8Array(data)
-            return idx => arr[idx];
-        } else if (data instanceof Uint8Array) {
-            return idx => data[idx];
-        }
-    }
 
     // Finish the computation by operations such as padding
     this.finalize = function() {
         if (!finalized) {
             let index = ((count[0] >> 3) & 0x3f);
+
             buffer[index++] = 0x80;
-            if(index <= 56) {
-                for(let i=index; i<56; i++)
+            if (index <= 56) {
+                for (let i = index; i < 56; i++)
                     buffer[i] = 0;
             } else {
-                for(let i=index; i<64; i++)
+                for (let i = index; i < 64; i++)
                     buffer[i] = 0;
-                sha256_transform();
-                for(let i=0; i<56; i++)
+                transform();
+                for (let i = 0; i < 56; i++)
                     buffer[i] = 0;
             }
             buffer[56] = (count[1] >>> 24) & 0xff;
@@ -148,7 +140,7 @@ function Sha256(data) {
             buffer[61] = (count[0] >>> 16) & 0xff;
             buffer[62] = (count[0] >>> 8) & 0xff;
             buffer[63] = count[0] & 0xff;
-            sha256_transform();
+            transform();
 
             finalized = true;
         }
@@ -157,38 +149,37 @@ function Sha256(data) {
     };
 
     // Transform a 512-bit message block
-    function sha256_transform() {
-        let a, b, c, d, e, f, g, h, T1, T2;
+    function transform() {
         let W = new Array(16);
 
         // Initialize registers with the previous intermediate value
-        a = ihash[0];
-        b = ihash[1];
-        c = ihash[2];
-        d = ihash[3];
-        e = ihash[4];
-        f = ihash[5];
-        g = ihash[6];
-        h = ihash[7];
+        let a = ihash[0];
+        let b = ihash[1];
+        let c = ihash[2];
+        let d = ihash[3];
+        let e = ihash[4];
+        let f = ihash[5];
+        let g = ihash[6];
+        let h = ihash[7];
 
         // make 32-bit words
-        for(let i=0; i<16; i++)
-            W[i] = (buffer[(i<<2)+3]) | (buffer[(i<<2)+2] << 8) |
-                   (buffer[(i<<2)+1] << 16) | (buffer[i<<2] << 24);
+        for (let i = 0; i < 16; i++)
+            W[i] = (buffer[(i << 2) + 3]) | (buffer[(i << 2) + 2] << 8) |
+                   (buffer[(i << 2) + 1] << 16) | (buffer[i << 2] << 24);
 
-        for(let j=0; j<64; j++) {
-            T1 = h + sha256_Sigma1(e) + choice(e, f, g) + K256[j];
-            if(j < 16) T1 += W[j];
-            else T1 += sha256_expand(W, j);
-            T2 = sha256_Sigma0(a) + majority(a, b, c);
+        for (let i = 0; i < 64; i++) {
+            let T1 = h + Sigma1(e) + choice(e, f, g) + K256[i] +
+                     ((i < 16) ? W[i] : expand(W, i));
+            let T2 = Sigma0(a) + majority(a, b, c);
+
             h = g;
             g = f;
             f = e;
-            e = safe_add(d, T1);
+            e = addSafe(d, T1);
             d = c;
             c = b;
             b = a;
-            a = safe_add(T1, T2);
+            a = addSafe(T1, T2);
         }
 
         // Compute the current intermediate hash value
@@ -203,34 +194,34 @@ function Sha256(data) {
     }
 
     // SHA256 logical functions
-    function rotateRight(n,x) {
+    function rotateRight(n, x) {
         return ((x >>> n) | (x << (32 - n)));
     }
-    function choice(x,y,z) {
+    function choice(x, y, z) {
         return ((x & y) ^ (~x & z));
     }
-    function majority(x,y,z) {
+    function majority(x, y, z) {
         return ((x & y) ^ (x & z) ^ (y & z));
     }
-    function sha256_Sigma0(x) {
+    function Sigma0(x) {
         return (rotateRight(2, x) ^ rotateRight(13, x) ^ rotateRight(22, x));
     }
-    function sha256_Sigma1(x) {
+    function Sigma1(x) {
         return (rotateRight(6, x) ^ rotateRight(11, x) ^ rotateRight(25, x));
     }
-    function sha256_sigma0(x) {
+    function expand(W, j) {
+        return (W[j & 0x0f] += sigma1(W[(j + 14) & 0x0f]) + W[(j + 9) & 0x0f] +
+                               sigma0(W[(j + 1) & 0x0f]));
+    }
+    function sigma0(x) {
         return (rotateRight(7, x) ^ rotateRight(18, x) ^ (x >>> 3));
     }
-    function sha256_sigma1(x) {
+    function sigma1(x) {
         return (rotateRight(17, x) ^ rotateRight(19, x) ^ (x >>> 10));
-    }
-    function sha256_expand(W, j) {
-        return (W[j&0x0f] += sha256_sigma1(W[(j+14)&0x0f]) + W[(j+9)&0x0f] +
-                             sha256_sigma0(W[(j+1)&0x0f]));
     }
 
     // Add 32-bit integers with 16-bit operations (bug in some JS-interpreters: overflow)
-    function safe_add(x, y) {
+    function addSafe(x, y) {
         let lsw = (x & 0xffff) + (y & 0xffff);
         let msw = (x >> 16) + (y >> 16) + (lsw >> 16);
         return (msw << 16) | (lsw & 0xffff);
@@ -238,11 +229,11 @@ function Sha256(data) {
 
     // Get the internal hash as a hex string
     function encodeToHex() {
-        let hex_digits = "0123456789abcdef";
+        let hex_digits = '0123456789abcdef';
 
-        let output = new String();
-        for(let i=0; i<8; i++) {
-            for(let j=28; j>=0; j-=4)
+        let output = '';
+        for (let i = 0; i < 8; i++) {
+            for (let j = 28; j >= 0; j -= 4)
                 output += hex_digits.charAt((ihash[i] >>> j) & 0x0f);
         }
         return output;
