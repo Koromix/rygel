@@ -6,7 +6,7 @@
 #include "../../libcc/libcc.hh"
 #include "config.hh"
 #include "files.hh"
-#include "goupil.hh"
+#include "goupile.hh"
 #include <shared_mutex>
 #ifdef _WIN32
     #include <io.h>
@@ -149,8 +149,8 @@ static bool ComputeFileSha256(const char *filename, char out_sha256[65])
 
 bool InitFiles()
 {
-    Size url_offset = strlen(goupil_config.app_directory) + 1;
-    if (!ListRecurse(goupil_config.app_directory, url_offset))
+    Size url_offset = strlen(goupile_config.app_directory) + 1;
+    if (!ListRecurse(goupile_config.app_directory, url_offset))
         return false;
 
     Async async;
@@ -259,7 +259,7 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
     }
 
     // Construct filenames
-    const char *filename = Fmt(&io->allocator, "%1%/%2", goupil_config.app_directory, request.url + 5).ptr;
+    const char *filename = Fmt(&io->allocator, "%1%/%2", goupile_config.app_directory, request.url + 5).ptr;
     const char *tmp_filename = Fmt(&io->allocator, "%1~", filename).ptr;
 
     if (!EnsureDirectoryExists(filename))
@@ -320,7 +320,7 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
                 return;
             FormatSha256(hash, file->sha256);
         } else {
-            Size url_offset = strlen(goupil_config.app_directory) + 1;
+            Size url_offset = strlen(goupile_config.app_directory) + 1;
             file = AddFileEntry(filename, url_offset);
             if (!file)
                 return;

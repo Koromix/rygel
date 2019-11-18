@@ -6,7 +6,7 @@
 | ---------- | -------------------------------------------------------------------------- | -----------------|
 | _drd_      | Alternative PMSI MCO classifier, subprojects: libdrd, drdc and drdR        | Good             |
 | _felix_    | Small build system made specifically for this repository                   | Good             |
-| _goupil_   | Vastly simplified alternative to Voozanoo (from Epiconcept)                | Work in progress |
+| _goupile_  | Vastly simplified alternative to Voozanoo (from Epiconcept)                | Work in progress |
 | _heimdall_ | Medical timeline visualization (proof-of-concept)                          | Proof-of-concept |
 | _libcc_    | C++ container and system library                                           | Good             |
 | _libgui_   | Simple OpenGL window creation                                              | Average          |

@@ -7,7 +7,7 @@ let app = null;
 let file_manager = null;
 let record_manager = null;
 
-let goupil = new function() {
+let goupile = new function() {
     let self = this;
 
     let event_src;
@@ -62,7 +62,7 @@ let goupil = new function() {
             log.error(storage_warning);
         }
 
-        let db_name = `goupil_${env.app_key}`;
+        let db_name = `goupile_${env.app_key}`;
         let db = await idb.open(db_name, 10, (db, old_version) => {
             switch (old_version) {
                 case null: {

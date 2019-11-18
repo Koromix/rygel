@@ -200,7 +200,7 @@ Navigation functions should only be called in reaction to user events, such as b
 
                     // The user asked for this record, make sure it is visible
                     if (!show_overview) {
-                        if (goupil.isTablet())
+                        if (goupile.isTablet())
                             left_panel = null;
                         show_overview = true;
                     }
@@ -295,7 +295,7 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     function toggleLeftPanel(mode) {
-        if (goupil.isTablet()) {
+        if (goupile.isTablet()) {
             left_panel = mode;
             show_overview = false;
         } else if (left_panel !== mode) {
@@ -309,7 +309,7 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     function toggleOverview() {
-        if (goupil.isTablet()) {
+        if (goupile.isTablet()) {
             left_panel = null;
             show_overview = true;
         } else if (!show_overview) {
@@ -323,7 +323,7 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     function showCreateDialog(e) {
-        goupil.popup(e, page => {
+        goupile.popup(e, page => {
             let blob = page.file('file', 'Fichier :', {mandatory: true});
 
             let default_path = blob.value ? `/app/${blob.value.name}` : null;
@@ -366,7 +366,7 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     function showDeleteDialog(e, asset) {
-        goupil.popup(e, page => {
+        goupile.popup(e, page => {
             page.output(`Voulez-vous vraiment supprimer la ressource '${asset.label}' ?`);
 
             page.submitHandler = async () => {
@@ -391,7 +391,7 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     function showResetDialog(e) {
-        goupil.popup(e, page => {
+        goupile.popup(e, page => {
             page.output('Voulez-vous vraiment réinitialiser toutes les ressources ?');
 
             page.submitHandler = async () => {

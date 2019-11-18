@@ -11,8 +11,8 @@ let env = {
 
 let cache_urls = [
     env.base_url,
-    `${env.base_url}static/goupil.pk.css`,
-    `${env.base_url}static/goupil.pk.js`,
+    `${env.base_url}static/goupile.pk.css`,
+    `${env.base_url}static/goupile.pk.js`,
     `${env.base_url}static/ace.js`,
     `${env.base_url}static/theme-monokai.js`,
     `${env.base_url}static/mode-javascript.js`,
@@ -63,7 +63,7 @@ self.addEventListener('fetch', e => {
 
             if (path.startsWith('/app/')) {
                 // TODO: Cache database object
-                let db_name = `goupil_${env.app_key}`;
+                let db_name = `goupile_${env.app_key}`;
                 let db = await idb.open(db_name);
 
                 let file_data = await db.load('files_data', path);

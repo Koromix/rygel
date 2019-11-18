@@ -194,7 +194,7 @@ let dev_data = new function() {
     }
 
     function showDeleteDialog(e, record, current_id) {
-        goupil.popup(e, page => {
+        goupile.popup(e, page => {
             page.output('Voulez-vous vraiment supprimer cet enregistrement ?');
 
             page.submitHandler = async () => {
