@@ -75,6 +75,7 @@ function Sha256(data) {
     ];
     let count = [0, 0];
     let buffer = new Array(64);
+    let finalized = false;
 
     // Read the next chunk of data and update the SHA256 computation
     this.update = function(data) {
@@ -126,27 +127,33 @@ function Sha256(data) {
 
     // Finish the computation by operations such as padding
     this.finalize = function() {
-        let index = ((count[0] >> 3) & 0x3f);
-        buffer[index++] = 0x80;
-        if(index <= 56) {
-            for(let i=index; i<56; i++)
-                buffer[i] = 0;
-        } else {
-            for(let i=index; i<64; i++)
-                buffer[i] = 0;
+        if (!finalized) {
+            let index = ((count[0] >> 3) & 0x3f);
+            buffer[index++] = 0x80;
+            if(index <= 56) {
+                for(let i=index; i<56; i++)
+                    buffer[i] = 0;
+            } else {
+                for(let i=index; i<64; i++)
+                    buffer[i] = 0;
+                sha256_transform();
+                for(let i=0; i<56; i++)
+                    buffer[i] = 0;
+            }
+            buffer[56] = (count[1] >>> 24) & 0xff;
+            buffer[57] = (count[1] >>> 16) & 0xff;
+            buffer[58] = (count[1] >>> 8) & 0xff;
+            buffer[59] = count[1] & 0xff;
+            buffer[60] = (count[0] >>> 24) & 0xff;
+            buffer[61] = (count[0] >>> 16) & 0xff;
+            buffer[62] = (count[0] >>> 8) & 0xff;
+            buffer[63] = count[0] & 0xff;
             sha256_transform();
-            for(let i=0; i<56; i++)
-                buffer[i] = 0;
+
+            finalized = true;
         }
-        buffer[56] = (count[1] >>> 24) & 0xff;
-        buffer[57] = (count[1] >>> 16) & 0xff;
-        buffer[58] = (count[1] >>> 8) & 0xff;
-        buffer[59] = count[1] & 0xff;
-        buffer[60] = (count[0] >>> 24) & 0xff;
-        buffer[61] = (count[0] >>> 16) & 0xff;
-        buffer[62] = (count[0] >>> 8) & 0xff;
-        buffer[63] = count[0] & 0xff;
-        sha256_transform();
+
+        return encodeToHex();
     };
 
     // Transform a 512-bit message block
@@ -230,7 +237,7 @@ function Sha256(data) {
     }
 
     // Get the internal hash as a hex string
-    this.toString = function() {
+    function encodeToHex() {
         let hex_digits = "0123456789abcdef";
 
         let output = new String();
@@ -244,7 +251,6 @@ function Sha256(data) {
     // Quick API: call Sha256(str) directly
     if (!new.target && data != null) {
         this.update(data);
-        this.finalize();
-        return this.toString();
+        return this.finalize();
     }
 }
