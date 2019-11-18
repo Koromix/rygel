@@ -89,7 +89,6 @@ function FileManager(db) {
     };
 
     this.list = async function() {
-        let files = await db.loadAll('files');
-        return files.map(file => file.path);
+        return await db.loadAll('files');
     };
 }

@@ -116,18 +116,18 @@ let dev = new function() {
 
         // Unused (by main.js) files
         try {
-            let paths = await file_manager.list();
+            let files = await file_manager.list();
             let known_paths = new Set(assets.map(asset => asset.path));
 
-            for (let path of paths) {
-                if (!known_paths.has(path)) {
+            for (let file of files) {
+                if (!known_paths.has(file.path)) {
                     assets.push({
                         type: 'blob',
-                        url: `${env.base_url}dev${path}`,
+                        url: `${env.base_url}dev${file.path}`,
                         category: 'Fichiers',
-                        label: path,
+                        label: file.path,
 
-                        path: path
+                        path: file.path
                     });
                 }
             }
