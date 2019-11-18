@@ -42,7 +42,7 @@ int RunCreateProfile(Span<const char *> arguments)
     const char *profile_directory = nullptr;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: goupil_admin create_profile [options] profile_directory
+        PrintLn(fp, R"(Usage: goupile_admin create_profile [options] profile_directory
 
 Options:
     -k, --key <key>              Change application key
@@ -131,7 +131,7 @@ Options:
 
     // Create configuration file
     {
-        const char *filename = Fmt(&temp_alloc, "%1%/goupil.ini", profile_directory).ptr;
+        const char *filename = Fmt(&temp_alloc, "%1%/goupile.ini", profile_directory).ptr;
         files.Append(filename);
 
         StreamWriter st(filename);

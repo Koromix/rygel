@@ -5,7 +5,7 @@
 #include "../../libcc/libcc.hh"
 #include "schedule.hh"
 #include "data.hh"
-#include "goupil.hh"
+#include "goupile.hh"
 
 namespace RG {
 
@@ -66,8 +66,8 @@ static sqlite3_stmt *PrepareMonthQuery(const http_RequestInfo &request, const ch
     {
         char buf[32];
 
-        if (sqlite3_prepare_v2(goupil_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
-            LogError("SQLite Error: %1", sqlite3_errmsg(goupil_db));
+        if (sqlite3_prepare_v2(goupile_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+            LogError("SQLite Error: %1", sqlite3_errmsg(goupile_db));
             return nullptr;
         }
 
@@ -122,7 +122,7 @@ void HandleScheduleResources(const http_RequestInfo &request, http_IO *io)
             json.EndArray();
         }
         if (rc != SQLITE_DONE) {
-            LogError("SQLite Error: %1", sqlite3_errmsg(goupil_db));
+            LogError("SQLite Error: %1", sqlite3_errmsg(goupile_db));
             return;
         }
     }
@@ -173,7 +173,7 @@ void HandleScheduleMeetings(const http_RequestInfo &request, http_IO *io)
             json.EndArray();
         }
         if (rc != SQLITE_DONE) {
-            LogError("SQLite Error: %1", sqlite3_errmsg(goupil_db));
+            LogError("SQLite Error: %1", sqlite3_errmsg(goupile_db));
             return;
         }
     }

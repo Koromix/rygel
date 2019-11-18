@@ -21,7 +21,7 @@ static const char *const EventTypeNames[] = {
 
 void PushEvent(EventType type);
 
-extern Config goupil_config;
-extern SQLiteDatabase goupil_db;
+extern Config goupile_config;
+extern SQLiteDatabase goupile_db;
 
 }

@@ -7,7 +7,7 @@
 #include "config.hh"
 #include "data.hh"
 #include "files.hh"
-#include "goupil.hh"
+#include "goupile.hh"
 #include "schedule.hh"
 #include "../../wrappers/http.hh"
 
@@ -22,8 +22,8 @@ struct PushContext {
     unsigned int events;
 };
 
-Config goupil_config;
-SQLiteDatabase goupil_db;
+Config goupile_config;
+SQLiteDatabase goupile_db;
 
 static char etag[64];
 
@@ -45,8 +45,8 @@ static void HandleManifest(const http_RequestInfo &request, http_IO *io)
     http_JsonPageBuilder json(request.compression_type);
 
     json.StartObject();
-    json.Key("short_name"); json.String(goupil_config.app_name);
-    json.Key("name"); json.String(goupil_config.app_name);
+    json.Key("short_name"); json.String(goupile_config.app_name);
+    json.Key("name"); json.String(goupile_config.app_name);
     json.Key("icons"); json.StartArray();
     json.StartObject();
         json.Key("src"); json.String("favicon.png");
@@ -54,9 +54,9 @@ static void HandleManifest(const http_RequestInfo &request, http_IO *io)
         json.Key("sizes"); json.String("192x192 512x512");
     json.EndObject();
     json.EndArray();
-    json.Key("start_url"); json.String(goupil_config.http.base_url);
+    json.Key("start_url"); json.String(goupile_config.http.base_url);
     json.Key("display"); json.String("standalone");
-    json.Key("scope"); json.String(goupil_config.http.base_url);
+    json.Key("scope"); json.String(goupile_config.http.base_url);
     json.Key("background_color"); json.String("#f8f8f8");
     json.Key("theme_color"); json.String("#24579d");
     json.EndObject();
@@ -147,16 +147,16 @@ static AssetInfo PatchGoupilVariables(const AssetInfo &asset, Allocator *alloc)
             writer->Write(BuildVersion);
             return true;
         } else if (TestStr(key, "APP_KEY")) {
-            writer->Write(goupil_config.app_key);
+            writer->Write(goupile_config.app_key);
             return true;
         } else if (TestStr(key, "APP_NAME")) {
-            writer->Write(goupil_config.app_name);
+            writer->Write(goupile_config.app_name);
             return true;
         } else if (TestStr(key, "BASE_URL")) {
-            writer->Write(goupil_config.http.base_url);
+            writer->Write(goupile_config.http.base_url);
             return true;
         } else if (TestStr(key, "CACHE_KEY")) {
-            writer->Write(goupil_config.database_filename ? etag : "");
+            writer->Write(goupile_config.database_filename ? etag : "");
             return true;
         } else {
             return false;
@@ -188,7 +188,7 @@ static void InitAssets()
 
     // Packed static assets
     for (const AssetInfo &asset: assets) {
-        if (TestStr(asset.name, "goupil.html") || TestStr(asset.name, "sw.pk.js")) {
+        if (TestStr(asset.name, "goupile.html") || TestStr(asset.name, "sw.pk.js")) {
             AssetInfo asset2 = PatchGoupilVariables(asset, &assets_alloc);
             assets_map.Append(asset2);
         } else {
@@ -202,7 +202,7 @@ static void AddCachingHeaders(http_IO *io)
 #ifndef NDEBUG
     io->flags &= ~(unsigned int)http_IO::Flag::EnableCache;
 #endif
-    io->AddCachingHeaders(goupil_config.max_age, etag);
+    io->AddCachingHeaders(goupile_config.max_age, etag);
 }
 
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
@@ -256,7 +256,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             const AssetInfo *asset = nullptr;
 
             if (TestStr(request.url, "/") || !strncmp(request.url, "/dev/", 5)) {
-                asset = assets_map.Find("goupil.html");
+                asset = assets_map.Find("goupile.html");
             } else if (TestStr(request.url, "/favicon.png")) {
                 asset = assets_map.Find("favicon.png");
             } else if (TestStr(request.url, "/sw.pk.js")) {
@@ -323,7 +323,7 @@ int RunGoupil(int argc, char **argv)
     BlockAllocator temp_alloc;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: goupil [options]
+        PrintLn(fp, R"(Usage: goupile [options]
 
 Options:
     -C, --config_file <file>     Set configuration file
@@ -334,7 +334,7 @@ Options:
                                  (default: %2)
 
         --dev [<key>]            Run with fake profile and data)",
-                goupil_config.http.port, goupil_config.http.base_url);
+                goupile_config.http.port, goupile_config.http.base_url);
     };
 
     // Find config filename
@@ -362,15 +362,15 @@ Options:
             return 1;
         }
 
-        if (!LoadConfig(config_filename, &goupil_config))
+        if (!LoadConfig(config_filename, &goupile_config))
             return 1;
 
-        if (!goupil_config.app_name) {
-            goupil_config.app_name = goupil_config.app_key;
+        if (!goupile_config.app_name) {
+            goupile_config.app_name = goupile_config.app_key;
         }
     } else if (dev_key) {
-        goupil_config.app_key = dev_key;
-        goupil_config.app_name = Fmt(&temp_alloc, "goupil (%1)", dev_key).ptr;
+        goupile_config.app_key = dev_key;
+        goupile_config.app_name = Fmt(&temp_alloc, "goupile (%1)", dev_key).ptr;
     }
 
     // Parse arguments
@@ -383,10 +383,10 @@ Options:
             } else if (opt.Test("--dev", OptionType::OptionalValue)) {
                 // Already handled
             } else if (opt.Test("--port", OptionType::Value)) {
-                if (!ParseDec(opt.current_value, &goupil_config.http.port))
+                if (!ParseDec(opt.current_value, &goupile_config.http.port))
                     return 1;
             } else if (opt.Test("--base_url", OptionType::Value)) {
-                goupil_config.http.base_url = opt.current_value;
+                goupile_config.http.base_url = opt.current_value;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -395,26 +395,26 @@ Options:
     }
 
     // Check project configuration
-    if (!goupil_config.app_key || !goupil_config.app_key[0]) {
+    if (!goupile_config.app_key || !goupile_config.app_key[0]) {
         LogError("Project key must not be empty");
         return 1;
     }
-    if (goupil_config.app_directory &&
-            !TestFile(goupil_config.app_directory, FileType::Directory)) {
-        LogError("Application directory '%1' does not exist", goupil_config.app_directory);
+    if (goupile_config.app_directory &&
+            !TestFile(goupile_config.app_directory, FileType::Directory)) {
+        LogError("Application directory '%1' does not exist", goupile_config.app_directory);
         return 1;
     }
 
     // Init database
-    if (goupil_config.database_filename) {
-        if (!goupil_db.Open(goupil_config.database_filename, SQLITE_OPEN_READWRITE))
+    if (goupile_config.database_filename) {
+        if (!goupile_db.Open(goupile_config.database_filename, SQLITE_OPEN_READWRITE))
             return 1;
     } else if (dev_key) {
-        if (!goupil_db.Open(":memory:", SQLITE_OPEN_READWRITE))
+        if (!goupile_db.Open(":memory:", SQLITE_OPEN_READWRITE))
             return 1;
-        if (!goupil_db.CreateSchema())
+        if (!goupile_db.CreateSchema())
             return 1;
-        if (!goupil_db.InsertDemo())
+        if (!goupile_db.InsertDemo())
             return 1;
     } else {
         LogError("Database file not specified");
@@ -423,24 +423,24 @@ Options:
 
     // Init assets and files
 #ifndef NDEBUG
-    assets_filename = Fmt(&temp_alloc, "%1%/goupil_assets%2",
+    assets_filename = Fmt(&temp_alloc, "%1%/goupile_assets%2",
                           GetApplicationDirectory(), RG_SHARED_LIBRARY_EXTENSION).ptr;
     if (asset_set.LoadFromLibrary(assets_filename) == AssetLoadStatus::Error)
         return 1;
 #endif
     InitAssets();
-    if (goupil_config.app_directory && !InitFiles())
+    if (goupile_config.app_directory && !InitFiles())
         return 1;
 
     // Run!
     http_Daemon daemon;
-    if (!daemon.Start(goupil_config.http, HandleRequest))
+    if (!daemon.Start(goupile_config.http, HandleRequest))
         return 1;
     LogInfo("Listening on port %1 (%2 stack)",
-            goupil_config.http.port, IPStackNames[(int)goupil_config.http.ip_stack]);
+            goupile_config.http.port, IPStackNames[(int)goupile_config.http.ip_stack]);
 
     // We need to send keep-alive notices to SSE clients
-    while (!WaitForInterruption(goupil_config.sse_keep_alive)) {
+    while (!WaitForInterruption(goupile_config.sse_keep_alive)) {
         PushEvent(EventType::KeepAlive);
     }
 

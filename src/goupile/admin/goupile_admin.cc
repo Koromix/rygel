@@ -10,7 +10,7 @@ namespace RG {
 int RunGoupilAdmin(int argc, char **argv)
 {
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: goupil_admin <command> [<args>]
+        PrintLn(fp, R"(Usage: goupile_admin <command> [<args>]
 
 Commands:
     create_profile               Create new profile)");
@@ -24,7 +24,7 @@ Commands:
     const char *cmd = argv[1];
     Span<const char *> arguments((const char **)argv + 2, argc - 2);
 
-    // Handle 'goupil_admin help [command]' and 'goupil_admin --help [command]' invocations
+    // Handle 'goupile_admin help [command]' and 'goupile_admin --help [command]' invocations
     if (TestStr(cmd, "--help") || TestStr(cmd, "help")) {
         if (arguments.len && arguments[0][0] != '-') {
             cmd = arguments[0];

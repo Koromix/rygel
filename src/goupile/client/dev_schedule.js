@@ -10,7 +10,7 @@ let dev_schedule = new function() {
 
     this.run = async function(schedule) {
         if (!init) {
-            goupil.listenToServerEvent('schedule', e => {
+            goupile.listenToServerEvent('schedule', e => {
                 schedule = null;
                 self.run();
             });

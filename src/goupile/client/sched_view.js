@@ -154,11 +154,11 @@ function ScheduleView(resources_map, meetings_map) {
                             function dragStart(e) {
                                 if (slot_ref.identity) {
                                     drag_slot_ref = slot_ref;
-                                    e.dataTransfer.setData('application/x.goupil.meeting', '');
+                                    e.dataTransfer.setData('application/x.goupile.meeting', '');
                                 }
                             }
                             function dragOverSlot(e) {
-                                if (e.dataTransfer.types.includes('application/x.goupil.meeting'))
+                                if (e.dataTransfer.types.includes('application/x.goupile.meeting'))
                                     e.preventDefault();
                             }
                             function dropSlot(e) {
@@ -279,7 +279,7 @@ function ScheduleView(resources_map, meetings_map) {
     }
 
     function showCreateMeetingDialog(e, slot_ref) {
-        goupil.popup(e, form => {
+        goupile.popup(e, form => {
             let name = form.text('name', 'Nom :', {mandatory: true});
 
             form.submitHandler = () => {
@@ -291,7 +291,7 @@ function ScheduleView(resources_map, meetings_map) {
     }
 
     function showDeleteMeetingDialog(e, slot_ref) {
-        goupil.popup(e, form => {
+        goupile.popup(e, form => {
             form.output('Voulez-vous vraiment supprimer ce rendez-vous ?');
 
             form.submitHandler = () => {
@@ -375,7 +375,7 @@ function ScheduleView(resources_map, meetings_map) {
     }
 
     function showCreateResourceDialog(e, day) {
-        goupil.popup(e, form => {
+        goupile.popup(e, form => {
             let time = form.text('time', 'Horaire :', {mandatory: true});
 
             // Check value
@@ -392,7 +392,7 @@ function ScheduleView(resources_map, meetings_map) {
     }
 
     function showDeleteResourceDialog(e, day, res_idx) {
-        goupil.popup(e, form => {
+        goupile.popup(e, form => {
             form.output('Voulez-vous vraiment supprimer ces créneaux ?');
 
             form.submitHandler = () => {
@@ -404,7 +404,7 @@ function ScheduleView(resources_map, meetings_map) {
     }
 
     function showCloseDayDialog(e, day) {
-        goupil.popup(e, form => {
+        goupile.popup(e, form => {
             form.output('Voulez-vous vraiment fermer cette journée ?',
                         {help: 'Ceci supprime tous les créneaux'});
 
