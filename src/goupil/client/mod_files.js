@@ -57,8 +57,7 @@ function FileManager(db) {
             sha256.update(buf);
         }
 
-        sha256.finalize();
-        return sha256.toString();
+        return sha256.finalize();
     }
 
     this.delete = async function(path) {
