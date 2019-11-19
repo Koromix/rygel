@@ -17,6 +17,7 @@ function PageState() {
     this.values = {};
 
     this.sections_state = {};
+    this.tabs_state = {};
     this.file_lists = new Map;
     this.pressed_buttons = new Set;
     this.clicked_buttons = new Set;

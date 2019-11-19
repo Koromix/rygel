@@ -9,11 +9,15 @@ function PageBuilder(state, page) {
     let unique_key = ++PageBuilder.current_unique_key;
 
     let variables_map = {};
-    let widgets_ref = page.widgets;
     let options_stack = [{
         deploy: true,
         untoggle: true
     }];
+    let widgets_ref = page.widgets;
+
+    let tabs_keys = new Set;
+    let tabs_ref;
+    let selected_tab;
 
     let missing_set = new Set;
     let missing_block = false;
@@ -67,8 +71,8 @@ function PageBuilder(state, page) {
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
 
-        let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, label, value, value == null);
+        let intf = addWidget('text', label, render, options);
+        fillVariableInfo(intf, key, value, value == null);
 
         return intf;
     };
@@ -89,8 +93,8 @@ function PageBuilder(state, page) {
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
 
-        let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, label, value, value == null);
+        let intf = addWidget('password', label, render, options);
+        fillVariableInfo(intf, key, value, value == null);
 
         return intf;
     };
@@ -118,8 +122,8 @@ function PageBuilder(state, page) {
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
 
-        let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, label, value, missing);
+        let intf = addWidget('number', label, render, options);
+        fillVariableInfo(intf, key, value, missing);
 
         validateNumber(intf);
 
@@ -165,8 +169,8 @@ function PageBuilder(state, page) {
             </div>
         `);
 
-        let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, label, value, missing);
+        let intf = addWidget('slider', label, render, options);
+        fillVariableInfo(intf, key, value, missing);
 
         validateNumber(intf);
 
@@ -231,8 +235,8 @@ function PageBuilder(state, page) {
             </div>
         `);
 
-        let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, label, value, value == null);
+        let intf = addWidget('enum', label, render, options);
+        fillVariableInfo(intf, key, value, value == null);
 
         return intf;
     };
@@ -282,8 +286,8 @@ function PageBuilder(state, page) {
             </select>
         `);
 
-        let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, label, value, value == null);
+        let intf = addWidget('enumDrop', label, render, options);
+        fillVariableInfo(intf, key, value, value == null);
 
         return intf;
     };
@@ -311,8 +315,8 @@ function PageBuilder(state, page) {
             </div>
         `);
 
-        let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, label, value, value == null);
+        let intf = addWidget('enumRadio', label, render, options);
+        fillVariableInfo(intf, key, value, value == null);
 
         return intf;
     };
@@ -346,9 +350,9 @@ function PageBuilder(state, page) {
             </div>
         `);
 
-        let intf = addWidget(render, options);
+        let intf = addWidget('multi', label, render, options);
         let missing = !value.length && props.some(p => p.value == null);
-        fillVariableInfo(intf, key, label, value, missing);
+        fillVariableInfo(intf, key, value, missing);
 
         return intf;
     };
@@ -391,9 +395,9 @@ function PageBuilder(state, page) {
             </div>
         `);
 
-        let intf = addWidget(render, options);
+        let intf = addWidget('multiCheck', label, render, options);
         let missing = !value.length && props.some(p => p.value == null);
-        fillVariableInfo(intf, key, label, value, missing);
+        fillVariableInfo(intf, key, value, missing);
 
         return intf;
     };
@@ -464,8 +468,8 @@ function PageBuilder(state, page) {
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
 
-        let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, label, value, value == null);
+        let intf = addWidget('date', label, render, options);
+        fillVariableInfo(intf, key, value, value == null);
 
         return intf;
     };
@@ -503,8 +507,8 @@ function PageBuilder(state, page) {
                    @input=${e => handleFileInput(e, key)}/>
         `);
 
-        let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, label, value, value == null);
+        let intf = addWidget('file', label, render, options);
+        fillVariableInfo(intf, key, value, value == null);
 
         return intf;
     };
@@ -538,8 +542,8 @@ function PageBuilder(state, page) {
             <span id="${id}" class="af_calc">${text}</span>
         `);
 
-        let intf = addWidget(render, options);
-        fillVariableInfo(intf, key, label, value, value == null || Number.isNaN(value));
+        let intf = addWidget('calc', label, render, options);
+        fillVariableInfo(intf, key, value, value == null || Number.isNaN(value));
 
         return intf;
     };
@@ -554,32 +558,19 @@ function PageBuilder(state, page) {
 
         let render = intf => renderWrappedWidget(intf, content);
 
-        addWidget(render, options);
+        return addWidget('output', null, render, options);
     };
 
     this.section = function(label, func, options = {}) {
         options = expandOptions(options);
 
-        if (!func)
-            throw new Error(`Section call must contain a function.
-
-Make sure you did not use this syntax by accident:
-    f.section("Title"), () => { /* Do stuff here */ };
-instead of:
-    f.section("Title", () => { /* Do stuff here */ });`);
-
-        let widgets = [];
-        let prev_widgets = widgets_ref;
-
-        widgets_ref = widgets;
-        func();
-        widgets_ref = prev_widgets;
-
         let deploy = state.sections_state[label];
         if (deploy == null) {
-            state.sections_state[label] = options.deploy;
             deploy = options.deploy;
+            state.sections_state[label] = deploy;
         }
+
+        let widgets = captureWidgets('section', func);
 
         let render = intf => html`
             <fieldset class="af_section">
@@ -591,7 +582,7 @@ instead of:
             </fieldset>
         `;
 
-        addWidget(render);
+        return addWidget('section', label, render);
     };
 
     function handleSectionClick(e, label) {
@@ -599,20 +590,130 @@ instead of:
         self.changeHandler(self);
     }
 
+    this.tabs = function(key, func, options = {}) {
+        options = expandOptions(options);
+
+        if (!key)
+            throw new Error('Key parameter must be specified');
+        if (tabs_keys.has(key))
+            throw new Error(`Tabs key '${key}' is already used`);
+        tabs_keys.add(key);
+
+        let tabs = [];
+        let tab_idx;
+        let widgets;
+        {
+            let prev_tabs = tabs_ref;
+            let prev_select = selected_tab;
+
+            tabs_ref = tabs;
+            selected_tab = (state.tabs_state.hasOwnProperty(key) ? state.tabs_state[key] : options.tab) || 0;
+            widgets = captureWidgets('tabs', func);
+
+            // form.tab() can change selected_tab
+            if (typeof selected_tab === 'string') {
+                tab_idx = tabs.findIndex(tab => tab.label === selected_tab);
+            } else {
+                tab_idx = selected_tab;
+            }
+            if (!tabs[tab_idx] || tabs[tab_idx].disable)
+                tab_idx = tabs.findIndex(tab => !tab.disable);
+            state.tabs_state[key] = tab_idx;
+
+            selected_tab = prev_select;
+            tabs_ref = prev_tabs;
+        }
+
+        let render = intf => html`
+            ${tabs.map((tab, idx) => {
+                let cls = 'af_tab_button';
+                if (idx === tab_idx)
+                    cls += ' active';
+                if (tab.disable)
+                    cls += ' disabled';
+
+                return html`<button class=${cls}
+                                    @click=${e => handleTabClick(e, key, idx)}>${tab.label}</button>`;
+            })}
+            <div class="af_tab_content">
+                ${widgets.map(intf => intf.render(intf))}
+            </div>
+        `;
+
+        return addWidget('tabs', null, render, options);
+    };
+
+    this.tab = function(label, options = {}) {
+        options = expandOptions(options);
+
+        if (!tabs_ref)
+            throw new Error('form.tab must be called from inside form.tabs');
+        if (!label)
+            throw new Error('Label must be specified');
+        if (tabs_ref.find(tab => tab.label === label))
+            throw new Error(`Tab label '${label}' is already used`);
+
+        let active;
+        if (selected_tab === tabs_ref.length || selected_tab === label) {
+            if (!options.disable) {
+                active = true;
+            } else {
+                selected_tab = tabs_ref.length + 1;
+                active = false;
+            }
+        } else {
+            active = false;
+        }
+
+        let tab = {
+            label: label,
+            disable: options.disable
+        };
+        tabs_ref.push(tab);
+
+        return active;
+    };
+
+    function handleTabClick(e, key, label) {
+        state.tabs_state[key] = label;
+        self.changeHandler(self);
+    }
+
+    function captureWidgets(type, func) {
+        let widgets = [];
+
+        if (!func) {
+            throw new Error(`This call does not contain a function.
+
+Make sure you did not use this syntax by accident:
+    page.${type}("Title"), () => { /* Do stuff here */ };
+instead of:
+    page.${type}("Title", () => { /* Do stuff here */ });`);
+        }
+
+        let prev_widgets = widgets_ref;
+
+        widgets_ref = widgets;
+        func();
+        widgets_ref = prev_widgets;
+
+        return widgets;
+    }
+
     this.button = function(label, options = {}) {
         options = expandOptions(options);
 
-        let intf = {
-            pressed: state.pressed_buttons.has(label),
-            clicked: state.clicked_buttons.has(label)
-        };
+        let pressed = state.pressed_buttons.has(label);
+        let clicked = state.clicked_buttons.has(label);
         state.clicked_buttons.delete(label);
 
         let render = intf => renderWrappedWidget(intf, html`
             <button class="af_button" @click=${e => handleButtonClick(e, label)}>${label}</button>
         `);
 
-        addWidget(render, options);
+        let intf = addWidget('button', label, render, options);
+        intf.pressed = pressed;
+        intf.clicked = clicked;
 
         return intf;
     };
@@ -647,7 +748,7 @@ Valid choices include:
             </div>
         `);
 
-        addWidget(render);
+        addWidget('buttons', null, render);
     };
     this.buttons.std = {
         save: (label, options = {}) => {
@@ -684,7 +785,7 @@ Valid choices include:
             }
         };
 
-        addWidget(render);
+        addWidget('errorList', null, render);
     };
 
     this.submit = function() {
@@ -738,8 +839,10 @@ Valid choices include:
         return options.wide ? 'width: 100%;' : '';
     }
 
-    function addWidget(render, options = {}) {
+    function addWidget(type, label, render, options = {}) {
         let intf = {
+            type: type,
+            label: label,
             render: render,
             options: options,
             errors: []
@@ -750,13 +853,12 @@ Valid choices include:
         return intf;
     }
 
-    function fillVariableInfo(intf, key, label, value, missing) {
+    function fillVariableInfo(intf, key, value, missing) {
         if (variables_map[key])
             throw new Error(`Variable '${key}' already exists`);
 
         Object.assign(intf, {
             key: key,
-            label: label,
             value: value,
 
             missing: missing || intf.options.missing,
