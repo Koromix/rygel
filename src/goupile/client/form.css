@@ -37,6 +37,37 @@
     text-decoration: none;
 }
 
+/* -------------------- Tabs -------------------- */
+
+.af_tab_button {
+    float: left;
+    margin: 6px 6px 0 0;
+    padding: 4px 0.7em;
+    background: rgba(136, 136, 136, 0.40);
+    border: none;
+    color: #222;
+    font-size: 1.1em;
+}
+.af_tab_button:last-of-type { margin-right: 0; }
+.af_tab_button.active {
+    background: #24579d;
+    color: white;
+}
+.af_tab_button.disabled {
+    background: rgba(136, 136, 136, 0.12);
+    color: #888;
+    pointer-events: none;
+    cursor: inherit;
+}
+
+.af_tab_content {
+    clear: both;
+    height: 100%;
+    margin-bottom: 12px;
+    padding: 0 5px 0 5px;
+    background: rgba(136, 136, 136, 0.18);
+}
+
 /* -------------------- Widgets -------------------- */
 
 .af_widget {
