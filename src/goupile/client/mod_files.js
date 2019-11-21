@@ -61,10 +61,7 @@ function FileManager(db) {
     }
 
     this.delete = async function(path) {
-        await db.transaction(db => {
-            db.delete('files', path);
-            db.delete('files_data', path);
-        });
+        await db.delete('files_data', path);
     };
 
     this.clear = async function() {
@@ -80,7 +77,7 @@ function FileManager(db) {
             db.load('files_data', path)
         ]);
 
-        if (file) {
+        if (file && data) {
             file.data = data;
             return Object.freeze(file);
         } else {
@@ -89,6 +86,11 @@ function FileManager(db) {
     };
 
     this.list = async function() {
-        return await db.loadAll('files');
+        let [files, set] = await Promise.all([
+            db.loadAll('files'),
+            db.list('files_data').then(list => new Set(list))
+        ]);
+
+        return files.filter(file => set.has(file.path));
     };
 }
