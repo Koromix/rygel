@@ -276,10 +276,7 @@ Navigation functions should only be called in reaction to user events, such as b
                 })}
             </select>
 
-            <button @click=${showCreateDialog}>Ajouter</button>
-            <button ?disabled=${!current_asset || current_asset.type !== 'blob'}
-                    @click=${e => showDeleteDialog(e, current_asset)}>Supprimer</button>
-            <button @click=${showResetDialog}>Réinitialiser</button>
+            <button @click=${showFileDialog}>Fichiers</button>
         `, document.querySelector('#gp_menu'));
 
         render(html`
@@ -322,96 +319,104 @@ Navigation functions should only be called in reaction to user events, such as b
         app.go();
     }
 
-    function showCreateDialog(e) {
+    function showFileDialog(e) {
         goupile.popup(e, page => {
-            let blob = page.file('file', 'Fichier :', {mandatory: true});
+            let allow_edit = current_asset && current_asset.type === 'blob';
 
-            let default_path = blob.value ? `/app/${blob.value.name}` : null;
-            let path = page.text('path', 'Chemin :', {placeholder: default_path});
-            if (!path.value)
-                path.value = default_path;
+            page.tabs('Fichiers', () => {
+                if (page.tab('Ajouter')) {
+                    let blob = page.file('file', 'Fichier :', {mandatory: true});
 
-            if (path.value) {
-                if (!path.value.match(/^\/app\/./)) {
-                    path.error('Le chemin doit commencer par \'/app/\'');
-                } else if (!path.value.match(/^\/app(\/[A-Za-z0-9_\.]+)+$/)) {
-                    path.error('Allowed path characters: a-z, _, 0-9 and / (not at the end)');
-                } else if (path.value.includes('/../') || path.value.endsWith('/..')) {
-                    path.error('Le chemin ne doit pas contenir de composants \'..\'');
-                } else if (assets.some(asset => asset.path === path.value)) {
-                    path.error('Ce chemin est déjà utilisé');
-                }
-            }
+                    let default_path = blob.value ? `/app/${blob.value.name}` : null;
+                    let path = page.text('path', 'Chemin :', {placeholder: default_path});
+                    if (!path.value)
+                        path.value = default_path;
 
-            page.submitHandler = async () => {
-                let file = file_manager.create(path.value, blob.value || '');
-                await file_manager.save(file);
-
-                let asset = {
-                    type: 'blob',
-                    url: `${env.base_url}dev${path.value}`,
-                    category: 'Fichiers',
-                    label: path.value,
-
-                    path: path.value
-                };
-                assets.push(asset);
-                assets_map[asset.url] = asset;
-
-                page.close();
-                app.go(asset.url);
-            };
-            page.buttons(page.buttons.std.ok_cancel('Créer'));
-        });
-    }
-
-    function showDeleteDialog(e, asset) {
-        goupile.popup(e, page => {
-            page.output(`Voulez-vous vraiment supprimer la ressource '${asset.label}' ?`);
-
-            page.submitHandler = async () => {
-                if (asset.path)
-                    await file_manager.delete(asset.path);
-
-                // Remove from assets array and map
-                let asset_idx = assets.findIndex(it => it.url === asset.url);
-                assets.splice(asset_idx, 1);
-                delete assets_map[asset.url];
-
-                page.close();
-                if (asset === current_asset) {
-                    let new_asset = assets[Math.max(0, asset_idx - 1)];
-                    app.go(new_asset ? new_asset.url : null);
-                } else {
-                    app.go();
-                }
-            };
-            page.buttons(page.buttons.std.ok_cancel('Supprimer'));
-        });
-    }
-
-    function showResetDialog(e) {
-        goupile.popup(e, page => {
-            page.output('Voulez-vous vraiment réinitialiser toutes les ressources ?');
-
-            page.submitHandler = async () => {
-                await file_manager.transaction(async m => {
-                    m.clear();
-
-                    for (let path in help_demo) {
-                        let file = file_manager.create(path, help_demo[path]);
-                        m.save(file);
+                    if (path.value) {
+                        if (!path.value.match(/^\/app\/./)) {
+                            path.error('Le chemin doit commencer par \'/app/\'');
+                        } else if (!path.value.match(/^\/app(\/[A-Za-z0-9_\.]+)+$/)) {
+                            path.error('Allowed path characters: a-z, _, 0-9 and / (not at the end)');
+                        } else if (path.value.includes('/../') || path.value.endsWith('/..')) {
+                            path.error('Le chemin ne doit pas contenir de composants \'..\'');
+                        } else if (assets.some(asset => asset.path === path.value)) {
+                            path.error('Ce chemin est déjà utilisé');
+                        }
                     }
-                });
-                editor_sessions.clear();
 
-                await self.init();
+                    page.submitHandler = async () => createFile(path.value, blob.value || '');
+                    page.buttons(page.buttons.std.ok_cancel('Créer'));
+                }
 
-                page.close();
-                app.go(current_url);
-            };
-            page.buttons(page.buttons.std.ok_cancel('Réinitialiser'));
+                if (page.tab('Supprimer', {disable: !allow_edit})) {
+                    page.output(`Voulez-vous vraiment supprimer '${current_asset.label}' ?`);
+
+                    page.submitHandler = async () => await deleteAsset(current_asset);
+                    page.buttons(page.buttons.std.ok_cancel('Supprimer'));
+                }
+
+                if (page.tab('Réinitialisation')) {
+                    page.output('Voulez-vous vraiment réinitialiser toutes les ressources ?');
+
+                    page.submitHandler = resetFiles;
+                    page.buttons(page.buttons.std.ok_cancel('Réinitialiser'));
+                }
+            }, {tab: allow_edit ? 'Supprimer' : 'Ajouter'});
         });
+    }
+
+    async function createFile(path, data) {
+        let file = file_manager.create(path, data);
+        await file_manager.save(file);
+
+        let asset = {
+            type: 'blob',
+            url: `${env.base_url}dev${path}`,
+            category: 'Fichiers',
+            label: path,
+
+            path: path
+        };
+        assets.push(asset);
+        assets_map[asset.url] = asset;
+
+        page.close();
+        app.go(asset.url);
+    }
+
+    async function deleteAsset(asset) {
+        if (asset.path)
+            await file_manager.delete(asset.path);
+
+        // Remove from assets array and map
+        let asset_idx = assets.findIndex(it => it.url === asset.url);
+        assets.splice(asset_idx, 1);
+        delete assets_map[asset.url];
+
+        page.close();
+        if (asset === current_asset) {
+            let new_asset = assets[Math.max(0, asset_idx - 1)];
+            app.go(new_asset ? new_asset.url : null);
+        } else {
+            app.go();
+        }
+    }
+
+    async function resetFiles() {
+        await file_manager.transaction(async m => {
+            m.clear();
+
+            for (let path in help_demo) {
+                let file = file_manager.create(path, help_demo[path]);
+                m.save(file);
+            }
+        });
+        editor_sessions.clear();
+
+        await self.init();
+
+        page.close();
+        app.go(current_url);
     }
 
     function makeEditorElement(cls) {
