@@ -1415,31 +1415,50 @@ bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
 
 bool RenameFile(const char *src_filename, const char *dest_filename)
 {
-    char directory[4096];
-    {
-        Span<const char> directory2 = GetPathDirectory(filename);
-        if (directory2.len >= RG_SIZE(directory)) {
-            LogError("Failed to rename file '%1' to '%2': path too long", src_filename, dest_filename);
-            return false;
-        }
-        memcpy(directory, directory2.ptr, directory2.len);
-        directory[directory2.len] = 0;
-    }
+    const auto log_rename_error = [&](const char *msg) {
+        LogError("Failed to rename file '%1' to '%2': %3", src_filename, dest_filename, msg);
+    };
 
-    int dirfd = open(directory, O_RDONLY | O_CLOEXEC);
-    if (dirfd < 0) {
-        LogError("Failed to rename file '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
+    const auto open_file_directory = [&](const char *filename) {
+        char directory0[4096];
+
+        Span<const char> directory = GetPathDirectory(dest_filename);
+        if (directory.len >= RG_SIZE(directory0)) {
+            log_rename_error("path too long");
+            return -1;
+        }
+
+        memcpy(directory0, directory.ptr, directory.len);
+        directory0[directory.len] = 0;
+
+        int dirfd = open(directory0, O_RDONLY | O_CLOEXEC);
+        if (dirfd < 0) {
+            log_rename_error(strerror(errno));
+            return -1;
+        }
+
+        return dirfd;
+    };
+
+    int src_dirfd = open_file_directory(src_filename);
+    int dest_dirfd = open_file_directory(dest_filename);
+    RG_DEFER {
+        close(src_dirfd);
+        close(dest_dirfd);
+    };
+    if (src_dirfd < 0 || dest_dirfd < 0)
+        return false;
+
+    // Actually rename the file
+    if (rename(src_filename, dest_filename) < 0) {
+        log_rename_error(strerror(errno));
         return false;
     }
-    RG_DEFER { close(dirfd); };
 
     // Not much we can do if fsync fails (I think), so ignore errors.
-    // Hope for the best: that's the spirit behind the POSIX filesystem API.
-    if (rename(src_filename, dest_filename) < 0) {
-        LogError("Failed to rename file '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
-        return false;
-    }
-    fsync(dirfd);
+    // Hope for the best: that's the spirit behind the POSIX filesystem API (...).
+    fsync(dest_dirfd);
+    fsync(src_dirfd);
 
     return true;
 }
