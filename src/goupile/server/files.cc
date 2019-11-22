@@ -209,7 +209,7 @@ void HandleFileGet(const http_RequestInfo &request, const FileEntry &file, http_
 #ifdef _WIN32
         int fd = open(file.filename, O_RDONLY | O_BINARY);
 #else
-        int fd = open(file.filename, O_RDONLY | O_BINARY | O_CLOEXEC);
+        int fd = open(file.filename, O_RDONLY | O_CLOEXEC);
 #endif
         if (fd < 0) {
             LogError("Failed to open '%1': %2", file.filename, strerror(errno));
