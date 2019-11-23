@@ -214,8 +214,11 @@ public:
 #elif defined(__APPLE__)
         Fmt(&buf, " -pthread -fPIC");
 #else
-        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -D_FORTIFY_SOURCE=2"
+        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
                   " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4");
+        if (build_mode == BuildMode::Fast || build_mode == BuildMode::Release) {
+            Fmt(&buf, " -D_FORTIFY_SOURCE=2");
+        }
 #endif
 
         // Common flags (source, definitions, include directories, etc.)
@@ -304,13 +307,16 @@ public:
 
         // Platform flags
 #if defined(_WIN32)
-        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -D_FORTIFY_SOURCE=2"
+        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
                   " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -D__USE_MINGW_ANSI_STDIO=1");
 #elif defined(__APPLE__)
         Fmt(&buf, " -pthread -fPIC");
 #else
-        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -D_FORTIFY_SOURCE=2"
+        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
                   " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4");
+        if (build_mode == BuildMode::Fast || build_mode == BuildMode::Release) {
+            Fmt(&buf, " -D_FORTIFY_SOURCE=2");
+        }
 #endif
 
         // Common flags (source, definitions, include directories, etc.)
