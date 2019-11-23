@@ -229,7 +229,7 @@ function Sha256(data) {
 
     // Get the internal hash as a hex string
     function encodeToHex() {
-        let hex_digits = '0123456789abcdef';
+        let hex_digits = '0123456789ABCDEF';
 
         let output = '';
         for (let i = 0; i < 8; i++) {
