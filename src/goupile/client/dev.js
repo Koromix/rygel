@@ -344,14 +344,20 @@ Navigation functions should only be called in reaction to user events, such as b
                         }
                     }
 
-                    page.submitHandler = async () => createFile(path.value, blob.value || '');
+                    page.submitHandler = async () => {
+                        await createFile(path.value, blob.value || '');
+                        page.close();
+                    };
                     page.buttons(page.buttons.std.ok_cancel('Créer'));
                 }
 
                 if (page.tab('Supprimer', {disable: !allow_edit})) {
                     page.output(`Voulez-vous vraiment supprimer '${current_asset.label}' ?`);
 
-                    page.submitHandler = async () => await deleteAsset(current_asset);
+                    page.submitHandler = async () => {
+                        await deleteAsset(current_asset);
+                        page.close();
+                    };
                     page.buttons(page.buttons.std.ok_cancel('Supprimer'));
                 }
 
@@ -365,7 +371,10 @@ Navigation functions should only be called in reaction to user events, such as b
                 if (page.tab('Réinitialisation')) {
                     page.output('Voulez-vous vraiment réinitialiser toutes les ressources ?');
 
-                    page.submitHandler = resetFiles;
+                    page.submitHandler = async () => {
+                        await resetFiles();
+                        page.close();
+                    }
                     page.buttons(page.buttons.std.ok_cancel('Réinitialiser'));
                 }
             }, {tab: allow_edit ? 'Supprimer' : 'Ajouter'});
@@ -387,7 +396,6 @@ Navigation functions should only be called in reaction to user events, such as b
         assets.push(asset);
         assets_map[asset.url] = asset;
 
-        page.close();
         app.go(asset.url);
     }
 
@@ -400,7 +408,6 @@ Navigation functions should only be called in reaction to user events, such as b
         assets.splice(asset_idx, 1);
         delete assets_map[asset.url];
 
-        page.close();
         if (asset === current_asset) {
             let new_asset = assets[Math.max(0, asset_idx - 1)];
             app.go(new_asset ? new_asset.url : null);
@@ -422,7 +429,6 @@ Navigation functions should only be called in reaction to user events, such as b
 
         await self.init();
 
-        page.close();
         app.go(current_url);
     }
 
