@@ -3309,7 +3309,8 @@ bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info);
 static inline bool StatFile(const char *filename, FileInfo *out_info)
     { return StatFile(filename, true, out_info); }
 
-bool RenameFile(const char *src_filename, const char *dest_filename);
+// Sync failures are logged but not reported as errors (function returns true)
+bool RenameFile(const char *src_filename, const char *dest_filename, bool sync = true);
 
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               FunctionRef<bool(const char *, FileType)> func);

@@ -1288,7 +1288,7 @@ bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
     return true;
 }
 
-bool RenameFile(const char *src_filename, const char *dest_filename)
+bool RenameFile(const char *src_filename, const char *dest_filename, bool)
 {
     WCHAR src_filename_w[4096];
     WCHAR dest_filename_w[4096];
@@ -1413,55 +1413,47 @@ bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
     return true;
 }
 
-bool RenameFile(const char *src_filename, const char *dest_filename)
+static bool SyncFileDirectory(const char *filename)
 {
-    const auto log_rename_error = [&](const char *msg) {
-        LogError("Failed to rename file '%1' to '%2': %3", src_filename, dest_filename, msg);
-    };
+    Span<const char> directory = GetPathDirectory(filename);
 
-    const auto open_file_directory = [&](const char *filename) {
-        char directory0[4096];
-
-        Span<const char> directory = GetPathDirectory(dest_filename);
-        if (directory.len >= RG_SIZE(directory0)) {
-            log_rename_error("path too long");
-            return -1;
-        }
-
-        memcpy(directory0, directory.ptr, directory.len);
-        directory0[directory.len] = 0;
-
-        int dirfd = open(directory0, O_RDONLY | O_CLOEXEC);
-        if (dirfd < 0) {
-            log_rename_error(strerror(errno));
-            return -1;
-        }
-
-        return dirfd;
-    };
-
-    // Open source directory
-    int src_dirfd = open_file_directory(src_filename);
-    if (src_dirfd < 0)
+    char directory0[4096];
+    if (directory.len >= RG_SIZE(directory0)) {
+        LogError("Failed to sync directory '%1': path too long", directory);
         return false;
-    RG_DEFER { close(src_dirfd); };
+    }
+    memcpy(directory0, directory.ptr, directory.len);
+    directory0[directory.len] = 0;
 
-    // Open destination directory (which might be the same, but it's not a problem)
-    int dest_dirfd = open_file_directory(dest_filename);
-    if (dest_dirfd < 0)
+    int dirfd = open(directory0, O_RDONLY | O_CLOEXEC);
+    if (dirfd < 0) {
+        LogError("Failed to sync directory '%1': %2", directory, strerror(errno));
         return false;
-    RG_DEFER { close(dest_dirfd); };
+    }
+    RG_DEFER { close(dirfd); };
 
-    // Actually rename the file
+    if (fsync(dirfd) < 0) {
+        LogError("Failed to sync directory '%1': %2", directory, strerror(errno));
+        return false;
+    }
+
+    return true;
+}
+
+bool RenameFile(const char *src_filename, const char *dest_filename, bool sync)
+{
+    // Rename the file
     if (rename(src_filename, dest_filename) < 0) {
-        log_rename_error(strerror(errno));
+        LogError("Failed to rename '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
         return false;
     }
 
     // Not much we can do if fsync fails (I think), so ignore errors.
     // Hope for the best: that's the spirit behind the POSIX filesystem API (...).
-    fsync(dest_dirfd);
-    fsync(src_dirfd);
+    if (sync) {
+        SyncFileDirectory(src_filename);
+        SyncFileDirectory(dest_filename);
+    }
 
     return true;
 }
