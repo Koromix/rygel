@@ -86,11 +86,137 @@ function FileManager(db) {
     };
 
     this.list = async function() {
-        let [files, set] = await Promise.all([
+        let [files, exist_set] = await Promise.all([
             db.loadAll('files'),
             db.list('files_data').then(list => new Set(list))
         ]);
 
-        return files.filter(file => set.has(file.path));
+        return files.filter(file => exist_set.has(file.path));
+    };
+
+    this.status = async function() {
+        let [files, exist_set, cache_files, remote_files] = await Promise.all([
+            db.loadAll('files'),
+            db.list('files_data').then(list => new Set(list)),
+            db.loadAll('files_remote'),
+            fetch(`${env.base_url}api/files.json`).then(response => response.json())
+        ]);
+
+        let files_map = mapFiles(files);
+        let cache_map = mapFiles(cache_files);
+        let remote_map = mapFiles(remote_files);
+
+        let actions = [];
+
+        // Handle local files
+        for (let file of files) {
+            let remote_file = remote_map[file.path];
+            let cache_file = cache_map[file.path];
+
+            if (remote_file && remote_file.sha256 === file.sha256) {
+                if (exist_set.has(file.path)) {
+                    actions.push(makeAction(file.path, file.sha256, remote_file.sha256, 'noop'));
+                } else {
+                    actions.push(makeAction(file.path, null, remote_file.sha256, 'push'));
+                }
+            } else if (remote_file) {
+                if (exist_set.has(file.path)) {
+                    if (cache_file && cache_file.sha256 === file.sha256) {
+                        actions.push(makeAction(file.path, file.sha256, remote_file.sha256, 'pull'));
+                    } else if (cache_file && cache_file.sha256 === remote_file.sha256) {
+                        actions.push(makeAction(file.path, file.sha256, remote_file.sha256, 'push'));
+                    } else {
+                        actions.push(makeAction(file.path, file.sha256, remote_file.sha256, 'conflict'));
+                    }
+                } else {
+                    if (cache_file && cache_file.sha256 === remote_file.sha256) {
+                        actions.push(makeAction(file.path, null, remote_file.sha256, 'push'));
+                    } else {
+                        actions.push(makeAction(file.path, null, remote_file.sha256, 'conflict'));
+                    }
+                }
+            } else {
+                if (!exist_set.has(file.path)) {
+                    actions.push(makeAction(file.path, null, null, 'noop'));
+                } else if (cache_file && cache_file.sha256 === file.sha256) {
+                    actions.push(makeAction(file.path, file.sha256, null, 'pull'));
+                } else {
+                    actions.push(makeAction(file.path, file.sha256, null, 'push'));
+                }
+            }
+        }
+
+        // Pull remote-only files
+        for (let remote_file of remote_files) {
+            if (!files_map[remote_file.path])
+                actions.push(makeAction(remote_file.path, null, remote_file.sha256, 'pull'));
+        }
+
+        actions.sort(action => action.path);
+        return actions;
+    };
+
+    function mapFiles(files) {
+        let map = {};
+        for (let file of files)
+            map[file.path] = file;
+
+        return map;
+    }
+
+    function makeAction(path, local, remote, type) {
+        let action = {
+            path: path,
+            local: local,
+            remote: remote,
+            type: type
+        };
+
+        return action;
+    }
+
+    this.sync = async function(actions) {
+        let entry = new log.Entry;
+
+        entry.progress('Synchronisation en cours');
+        try {
+            // Perform actions
+            await Promise.all(actions.map(action => {
+                switch (action.type) {
+                    case 'push': {
+                        if (action.local) {
+                            return self.load(action.path).then(file =>
+                                fetch(`${env.base_url}${action.path.substr(1)}`, {method: 'PUT', body: file.data}));
+                        } else {
+                            return fetch(`${env.base_url}${action.path.substr(1)}`, {method: 'DELETE'});
+                        }
+                    } break;
+
+                    case 'pull': {
+                        if (action.remote) {
+                            return fetch(`${env.base_url}${action.path.substr(1)}`).then(response =>
+                                response.blob()).then(blob => self.save(self.create(action.path, blob)));
+                        } else {
+                            return db.transaction(db => {
+                                db.delete('files', action.path);
+                                db.delete('files_data', action.path);
+                            });
+                        }
+                    } break;
+                }
+            }));
+
+            // Update information about remote files
+            let remote_files = await fetch(`${env.base_url}api/files.json`).then(response => response.json());
+            await db.transaction(db => {
+                db.clear('files_remote');
+                db.saveAll('files_remote', remote_files);
+            });
+
+            entry.success('Synchronisation terminée !');
+        } catch (err) {
+            entry.error(`Erreur : ${err}`);
+            throw err;
+        }
     };
 }
