@@ -63,7 +63,7 @@ let goupile = new function() {
         }
 
         let db_name = `goupile_${env.app_key}`;
-        let db = await idb.open(db_name, 10, (db, old_version) => {
+        let db = await idb.open(db_name, 11, (db, old_version) => {
             switch (old_version) {
                 case null: {
                     db.createObjectStore('pages', {keyPath: 'key'});
@@ -109,6 +109,9 @@ let goupile = new function() {
                     db.deleteObjectStore('files');
                     db.createObjectStore('files', {keyPath: 'path'});
                     db.createObjectStore('files_data');
+                } // fallthrough
+                case 10: {
+                    db.createObjectStore('files_remote', {keyPath: 'path'});
                 } // fallthrough
             }
         });

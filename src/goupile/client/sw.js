@@ -30,6 +30,8 @@ self.addEventListener('install', e => {
     e.waitUntil(async function() {
         if (env.cache_key) {
             let cache = await caches.open(env.cache_key);
+
+            // We don't cache /api/files.json itself, because we use it to sync with server
             let files = await fetch(`${env.base_url}api/files.json`).then(response => response.json());
 
             await cache.addAll(cache_urls);
