@@ -1440,14 +1440,17 @@ bool RenameFile(const char *src_filename, const char *dest_filename)
         return dirfd;
     };
 
+    // Open source directory
     int src_dirfd = open_file_directory(src_filename);
-    int dest_dirfd = open_file_directory(dest_filename);
-    RG_DEFER {
-        close(src_dirfd);
-        close(dest_dirfd);
-    };
-    if (src_dirfd < 0 || dest_dirfd < 0)
+    if (src_dirfd < 0)
         return false;
+    RG_DEFER { close(src_dirfd); };
+
+    // Open destination directory (which might be the same, but it's not a problem)
+    int dest_dirfd = open_file_directory(dest_filename);
+    if (dest_dirfd < 0)
+        return false;
+    RG_DEFER { close(dest_dirfd); };
 
     // Actually rename the file
     if (rename(src_filename, dest_filename) < 0) {
