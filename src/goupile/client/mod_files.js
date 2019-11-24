@@ -172,6 +172,9 @@ function FileManager(db) {
 
         entry.progress('Synchronisation en cours');
         try {
+            if (actions.some(action => action.type == 'conflict'))
+                throw new Error('Conflits non résolus');
+
             // Perform actions
             await Promise.all(actions.map(action => {
                 switch (action.type) {
