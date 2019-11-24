@@ -207,7 +207,7 @@ function FileManager(db) {
 
             entry.success('Synchronisation terminée !');
         } catch (err) {
-            entry.error(`Erreur : ${err}`);
+            entry.error(err);
             throw err;
         }
     };
