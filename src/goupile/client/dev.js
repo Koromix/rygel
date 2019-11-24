@@ -39,9 +39,7 @@ let dev = new function() {
         }
 
         assets = await listAssets(app);
-        assets_map = {};
-        for (let asset of assets)
-            assets_map[asset.url] = asset;
+        assets_map = util.mapArray(assets, asset => asset.url);
         current_asset = assets[0];
 
         current_record = {};
@@ -520,9 +518,7 @@ Navigation functions should only be called in reaction to user events, such as b
                         app = await loadApplication();
 
                         assets = await listAssets(app);
-                        assets_map = {};
-                        for (let asset of assets)
-                            assets_map[asset.url] = asset;
+                        assets_map = util.mapArray(assets, asset => asset.url);
 
                         // Old assets must not be used anymore, tell go() to fix current_asset
                         reload_app = false;
