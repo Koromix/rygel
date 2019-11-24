@@ -14,12 +14,12 @@
 namespace RG {
 
 struct PushContext {
+    PushContext *prev;
     PushContext *next;
 
-    std::mutex mutex;
     MHD_Connection *conn;
-
-    unsigned int events;
+    bool suspended = false;
+    std::atomic_uint events = 0;
 };
 
 Config goupile_config;
@@ -37,8 +37,8 @@ static HashTable<const char *, AssetInfo> assets_map;
 static BlockAllocator assets_alloc;
 
 static std::atomic_bool push_run = true;
-static std::atomic<PushContext *> push_head;
-static std::atomic_int push_count;
+static std::mutex push_mutex;
+static PushContext push_root = {&push_root, &push_root};
 
 static void HandleManifest(const http_RequestInfo &request, http_IO *io)
 {
@@ -67,20 +67,17 @@ static void HandleManifest(const http_RequestInfo &request, http_IO *io)
 
 static void PushEvents(unsigned int events)
 {
-    static std::mutex push_mutex;
-    std::lock_guard<std::mutex> push_lock(push_mutex);
+    std::lock_guard<std::mutex> lock(push_mutex);
 
-    PushContext *ctx = nullptr;
-    while (!push_head.compare_exchange_strong(ctx, nullptr));
-
-    while (ctx) {
-        std::lock_guard<std::mutex> ctx_lock(ctx->mutex);
-
-        PushContext *next = ctx->next;
+    PushContext *ctx = push_root.next;
+    while (ctx != &push_root) {
         ctx->events |= events;
-        MHD_resume_connection(ctx->conn);
+        if (ctx->suspended) {
+            MHD_resume_connection(ctx->conn);
+            ctx->suspended = false;
+        }
 
-        ctx = next;
+        ctx = ctx->next;
     }
 }
 
@@ -89,11 +86,9 @@ void PushEvent(EventType type)
     PushEvents(1u << (int)type);
 }
 
-static ssize_t SendPendingEvents(void *cls, uint64_t, char *buf, size_t max)
+static ssize_t SendClientEvents(void *cls, uint64_t, char *buf, size_t max)
 {
     PushContext *ctx = (PushContext *)cls;
-
-    std::lock_guard<std::mutex> ctx_lock(ctx->mutex);
 
     if (push_run) {
         if (ctx->events) {
@@ -101,11 +96,12 @@ static ssize_t SendPendingEvents(void *cls, uint64_t, char *buf, size_t max)
             ctx->events &= ~(1u << ctz);
 
             // FIXME: This may result in truncation when max is very low
-            return Fmt(MakeSpan(buf, max), "event: %1\ndata:\n\n", EventTypeNames[ctz]).len;
+            return Fmt(MakeSpan(buf, max), "event: %1\ndata: {}\n\n", EventTypeNames[ctz]).len;
         } else {
-            ctx->next = nullptr;
-            while (!push_head.compare_exchange_strong(ctx->next, ctx));
-            MHD_suspend_connection(ctx->conn);
+            if (!ctx->suspended) {
+                MHD_suspend_connection(ctx->conn);
+                ctx->suspended = true;
+            }
 
             // libmicrohttpd crashes (assert) if you return 0
             buf[0] = '\n';
@@ -116,26 +112,71 @@ static ssize_t SendPendingEvents(void *cls, uint64_t, char *buf, size_t max)
     }
 }
 
-static void FreePushContext(void *cls)
+static void UnregisterEventConnection(PushContext *ctx)
 {
-    PushContext *ctx = (PushContext *)cls;
-    delete ctx;
+    std::lock_guard lock(push_mutex);
 
-    push_count--;
+    ctx->prev->next = ctx->next;
+    ctx->next->prev = ctx->prev;
 }
 
 static void HandleEvents(const http_RequestInfo &request, http_IO *io)
 {
-    // TODO: Use the allocator buried in http_RequestInfo?
-    PushContext *ctx = new PushContext();
+    PushContext *ctx = (PushContext *)Allocator::Allocate(&io->allocator, RG_SIZE(*ctx));
+    new (ctx) PushContext();
     ctx->conn = request.conn;
 
-    MHD_Response *response = MHD_create_response_from_callback(MHD_SIZE_UNKNOWN, 1024,
-                                                               SendPendingEvents, ctx, FreePushContext);
+    // Issuing keepalive is better for Firefox. For a start, the open event gets triggered.
+    ctx->events = 1u << (int)EventType::KeepAlive;
+
+    // Register SSE connection
+    {
+        std::lock_guard lock(push_mutex);
+
+        if (!push_run) {
+            LogError("Server is shutting down");
+            return;
+        }
+
+        push_root.prev->next = ctx;
+        ctx->next = &push_root;
+        ctx->prev = push_root.prev;
+        push_root.prev = ctx;
+    }
+
+    MHD_Response *response =
+        MHD_create_response_from_callback(MHD_SIZE_UNKNOWN, 1024, SendClientEvents, ctx,
+                                          [](void *cls) { UnregisterEventConnection((PushContext *)cls); });
+
     io->AttachResponse(200, response);
     io->AddHeader("Content-Type", "text/event-stream");
+    io->AddHeader("Cache-Control", "no-cache");
+    io->AddHeader("Connection", "keep-alive");
+}
 
-    push_count++;
+static void CloseAllEventConnections()
+{
+    std::unique_lock<std::mutex> lock(push_mutex);
+
+    push_run = false;
+
+    // Wake up all SSE connections
+    PushContext *ctx = push_root.next;
+    while (ctx != &push_root) {
+        if (ctx->suspended) {
+            MHD_resume_connection(ctx->conn);
+            ctx->suspended = false;
+        }
+
+        ctx = ctx->next;
+    }
+
+    // Wait until all SSE connections are over
+    while (push_root.prev != push_root.next) {
+        lock.unlock();
+        WaitForDelay(20);
+        lock.lock();
+    }
 }
 
 static AssetInfo PatchGoupilVariables(const AssetInfo &asset, Allocator *alloc)
@@ -157,6 +198,9 @@ static AssetInfo PatchGoupilVariables(const AssetInfo &asset, Allocator *alloc)
             return true;
         } else if (TestStr(key, "CACHE_KEY")) {
             writer->Write(goupile_config.database_filename ? etag : "");
+            return true;
+        } else if (TestStr(key, "SSE_KEEP_ALIVE")) {
+            Print(writer, "%1", goupile_config.sse_keep_alive);
             return true;
         } else {
             return false;
@@ -443,13 +487,7 @@ Options:
     while (!WaitForInterruption(goupile_config.sse_keep_alive)) {
         PushEvent(EventType::KeepAlive);
     }
-
-    // Resume and disconnect SSE clients
-    push_run = false;
-    while (push_count > 0) {
-        PushEvents(0);
-        WaitForDelay(20);
-    }
+    CloseAllEventConnections();
 
     LogInfo("Exit");
     return 0;

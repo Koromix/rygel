@@ -10,7 +10,10 @@ let record_manager = null;
 let goupile = new function() {
     let self = this;
 
-    let event_src;
+    let sse_src;
+    let sse_timer;
+    let sse_listeners = [];
+    let sse_online = false;
 
     let tablet_mq = window.matchMedia('(pointer: coarse)');
 
@@ -25,25 +28,17 @@ let goupile = new function() {
 
     async function initGoupil() {
         log.pushHandler(log.notifyHandler);
-        initNavigation();
 
         let db = await openDatabase();
         file_manager = new FileManager(db);
         record_manager = new RecordManager(db);
 
+        initNavigation();
+        initEvents();
         if (typeof dev !== 'undefined')
             await dev.init();
 
         app.go(window.location.href, false);
-    }
-
-    function initNavigation() {
-        window.addEventListener('popstate', e => app.go(window.location.href, false));
-
-        util.interceptLocalAnchors((e, href) => {
-            app.go(href);
-            e.preventDefault();
-        });
     }
 
     async function openDatabase() {
@@ -123,17 +118,60 @@ let goupile = new function() {
         return db;
     }
 
-    this.listenToServerEvent = function(event, func) {
-        if (!event_src) {
-            event_src = new EventSource(`${env.base_url}api/events.json`);
-            event_src.onerror = e => event_src = null;
-        }
+    function initNavigation() {
+        window.addEventListener('popstate', e => app.go(window.location.href, false));
 
-        event_src.addEventListener(event, func);
+        util.interceptLocalAnchors((e, href) => {
+            app.go(href);
+            e.preventDefault();
+        });
+    }
+
+    function initEvents() {
+        if (sse_src)
+            sse_src.close();
+
+        sse_src = new EventSource(`${env.base_url}api/events.json`);
+        resetEventTimer();
+
+        sse_src.onopen = e => {
+            resetEventTimer();
+            sse_online = true;
+        };
+        sse_src.onerror = e => {
+            sse_src.close();
+            sse_online = false;
+
+            // Browsers are supposed to retry automatically, but Firefox does weird stuff
+            resetEventTimer(30000);
+        };
+        sse_src.addEventListener('keepalive', e => resetEventTimer());
+
+        for (let listener of sse_listeners)
+            sse_src.addEventListener(listener.event, listener.func);
+    }
+
+    function resetEventTimer(delay = null) {
+        if (delay == null)
+            delay = env.sse_keep_alive * 1.5;
+
+        clearTimeout(sse_timer);
+        sse_timer = setTimeout(initEvents, delay);
+    }
+
+    this.isOnline = function() { return sse_online; };
+
+    this.listenToServerEvent = function(event, func) {
+        let listener = {
+            event: event,
+            func: func
+        };
+        sse_listeners.push(listener);
+
+        sse_src.addEventListener(event, func);
     };
 
     this.isTablet = function() { return tablet_mq.matches; };
-    this.isOnline = function() { return false; };
 
     this.popup = function(e, func) {
         closePopup();
