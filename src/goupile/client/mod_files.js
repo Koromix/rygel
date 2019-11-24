@@ -28,6 +28,8 @@ function FileManager(db) {
         await db.transaction(db => {
             let file2 = {
                 path: file.path,
+                size: file.data.size,
+                mtime: ((new Date).getTime() / 1000) | 0,
                 sha256: hash
             };
 
@@ -98,7 +100,7 @@ function FileManager(db) {
         let [files, exist_set, cache_files, remote_files] = await Promise.all([
             db.loadAll('files'),
             db.list('files_data').then(list => new Set(list)),
-            db.loadAll('files_remote'),
+            db.loadAll('files_cache'),
             fetch(`${env.base_url}api/files.json`).then(response => response.json())
         ]);
 
@@ -113,7 +115,7 @@ function FileManager(db) {
             let remote_file = remote_map[file.path];
             let cache_file = cache_map[file.path];
 
-            if (remote_file && remote_file.sha256 === file.sha256) {
+            if (remote_file && compareFileEntries(remote_file, file)) {
                 if (exist_set.has(file.path)) {
                     actions.push(makeAction(file.path, file.sha256, remote_file.sha256, 'noop'));
                 } else {
@@ -121,15 +123,15 @@ function FileManager(db) {
                 }
             } else if (remote_file) {
                 if (exist_set.has(file.path)) {
-                    if (cache_file && cache_file.sha256 === file.sha256) {
+                    if (cache_file && compareFileEntries(cache_file, file)) {
                         actions.push(makeAction(file.path, file.sha256, remote_file.sha256, 'pull'));
-                    } else if (cache_file && cache_file.sha256 === remote_file.sha256) {
+                    } else if (cache_file && compareFileEntries(cache_file, remote_file)) {
                         actions.push(makeAction(file.path, file.sha256, remote_file.sha256, 'push'));
                     } else {
                         actions.push(makeAction(file.path, file.sha256, remote_file.sha256, 'conflict'));
                     }
                 } else {
-                    if (cache_file && cache_file.sha256 === remote_file.sha256) {
+                    if (cache_file && compareFileEntries(cache_file, remote_file)) {
                         actions.push(makeAction(file.path, null, remote_file.sha256, 'push'));
                     } else {
                         actions.push(makeAction(file.path, null, remote_file.sha256, 'conflict'));
@@ -138,7 +140,7 @@ function FileManager(db) {
             } else {
                 if (!exist_set.has(file.path)) {
                     actions.push(makeAction(file.path, null, null, 'noop'));
-                } else if (cache_file && cache_file.sha256 === file.sha256) {
+                } else if (cache_file && compareFileEntries(cache_file, file)) {
                     actions.push(makeAction(file.path, file.sha256, null, 'pull'));
                 } else {
                     actions.push(makeAction(file.path, file.sha256, null, 'push'));
@@ -155,6 +157,12 @@ function FileManager(db) {
         actions.sort(action => action.path);
         return actions;
     };
+
+    function compareFileEntries(file1, file2) {
+        return file1.size === file2.size &&
+               file1.mtime === file2.size &&
+               file1.sha256 === file2.sha256;
+    }
 
     function makeAction(path, local, remote, type) {
         let action = {
@@ -204,8 +212,8 @@ function FileManager(db) {
             // Update information about remote files
             let remote_files = await fetch(`${env.base_url}api/files.json`).then(response => response.json());
             await db.transaction(db => {
-                db.clear('files_remote');
-                db.saveAll('files_remote', remote_files);
+                db.clear('files_cache');
+                db.saveAll('files_cache', remote_files);
             });
 
             entry.success('Synchronisation terminée !');

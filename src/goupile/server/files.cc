@@ -174,6 +174,8 @@ void HandleFileList(const http_RequestInfo &request, http_IO *io)
     for (const FileEntry &file: files) {
         json.StartObject();
         json.Key("path"); json.String(file.url);
+        json.Key("size"); json.Int64(file.info.size);
+        json.Key("mtime"); json.Int64(file.info.modification_time);
         json.Key("sha256"); json.String(file.sha256);
         json.EndObject();
     }
