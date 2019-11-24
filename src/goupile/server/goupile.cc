@@ -6,21 +6,13 @@
 #include "../../libcc/libcc.hh"
 #include "config.hh"
 #include "data.hh"
+#include "events.hh"
 #include "files.hh"
 #include "goupile.hh"
 #include "schedule.hh"
 #include "../../wrappers/http.hh"
 
 namespace RG {
-
-struct PushContext {
-    PushContext *prev;
-    PushContext *next;
-
-    MHD_Connection *conn;
-    bool suspended = false;
-    std::atomic_uint events = 0;
-};
 
 Config goupile_config;
 SQLiteDatabase goupile_db;
@@ -35,10 +27,6 @@ extern "C" const Span<const AssetInfo> pack_assets;
 #endif
 static HashTable<const char *, AssetInfo> assets_map;
 static BlockAllocator assets_alloc;
-
-static std::atomic_bool push_run = true;
-static std::mutex push_mutex;
-static PushContext push_root = {&push_root, &push_root};
 
 static void HandleManifest(const http_RequestInfo &request, http_IO *io)
 {
@@ -63,120 +51,6 @@ static void HandleManifest(const http_RequestInfo &request, http_IO *io)
 
     io->flags |= (int)http_IO::Flag::EnableCache;
     return json.Finish(io);
-}
-
-static void PushEvents(unsigned int events)
-{
-    std::lock_guard<std::mutex> lock(push_mutex);
-
-    PushContext *ctx = push_root.next;
-    while (ctx != &push_root) {
-        ctx->events |= events;
-        if (ctx->suspended) {
-            MHD_resume_connection(ctx->conn);
-            ctx->suspended = false;
-        }
-
-        ctx = ctx->next;
-    }
-}
-
-void PushEvent(EventType type)
-{
-    PushEvents(1u << (int)type);
-}
-
-static ssize_t SendClientEvents(void *cls, uint64_t, char *buf, size_t max)
-{
-    PushContext *ctx = (PushContext *)cls;
-
-    if (push_run) {
-        if (ctx->events) {
-            int ctz = CountTrailingZeros(ctx->events);
-            ctx->events &= ~(1u << ctz);
-
-            // FIXME: This may result in truncation when max is very low
-            return Fmt(MakeSpan(buf, max), "event: %1\ndata: {}\n\n", EventTypeNames[ctz]).len;
-        } else {
-            if (!ctx->suspended) {
-                MHD_suspend_connection(ctx->conn);
-                ctx->suspended = true;
-            }
-
-            // libmicrohttpd crashes (assert) if you return 0
-            buf[0] = '\n';
-            return 1;
-        }
-    } else {
-        return MHD_CONTENT_READER_END_OF_STREAM;
-    }
-}
-
-static void UnregisterEventConnection(PushContext *ctx)
-{
-    std::lock_guard lock(push_mutex);
-
-    ctx->prev->next = ctx->next;
-    ctx->next->prev = ctx->prev;
-}
-
-static void HandleEvents(const http_RequestInfo &request, http_IO *io)
-{
-    PushContext *ctx = (PushContext *)Allocator::Allocate(&io->allocator, RG_SIZE(*ctx));
-    new (ctx) PushContext();
-    ctx->conn = request.conn;
-
-    // Issuing keepalive is better for Firefox. For a start, the open event gets triggered.
-    ctx->events = 1u << (int)EventType::KeepAlive;
-
-    // Register SSE connection
-    {
-        std::lock_guard lock(push_mutex);
-
-        if (!push_run) {
-            LogError("Server is shutting down");
-            return;
-        }
-
-        push_root.prev->next = ctx;
-        ctx->next = &push_root;
-        ctx->prev = push_root.prev;
-        push_root.prev = ctx;
-    }
-
-    MHD_Response *response =
-        MHD_create_response_from_callback(MHD_SIZE_UNKNOWN, 1024, SendClientEvents, ctx,
-                                          [](void *cls) { UnregisterEventConnection((PushContext *)cls); });
-
-    io->AttachResponse(200, response);
-    io->AddHeader("Content-Type", "text/event-stream");
-    io->AddHeader("Cache-Control", "no-cache");
-    io->AddHeader("Connection", "keep-alive");
-}
-
-static void CloseAllEventConnections()
-{
-    std::unique_lock<std::mutex> lock(push_mutex);
-
-    push_run = false;
-
-    // Wake up all SSE connections
-    PushContext *ctx = push_root.next;
-    while (ctx != &push_root) {
-        if (ctx->suspended) {
-            MHD_resume_connection(ctx->conn);
-            ctx->suspended = false;
-        }
-
-        ctx = ctx->next;
-    }
-
-    // Wait until all SSE connections are over
-    while (push_root.prev != push_root.next) {
-        lock.unlock();
-        WaitForDelay(20);
-        lock.lock();
-    }
 }
 
 static AssetInfo PatchGoupilVariables(const AssetInfo &asset, Allocator *alloc)
