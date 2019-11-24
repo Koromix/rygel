@@ -102,9 +102,9 @@ function FileManager(db) {
             fetch(`${env.base_url}api/files.json`).then(response => response.json())
         ]);
 
-        let files_map = mapFiles(files);
-        let cache_map = mapFiles(cache_files);
-        let remote_map = mapFiles(remote_files);
+        let files_map = util.mapArray(files, file => file.path);
+        let cache_map = util.mapArray(cache_files, file => file.path);
+        let remote_map = util.mapArray(remote_files, file => file.path);
 
         let actions = [];
 
@@ -155,14 +155,6 @@ function FileManager(db) {
         actions.sort(action => action.path);
         return actions;
     };
-
-    function mapFiles(files) {
-        let map = {};
-        for (let file of files)
-            map[file.path] = file;
-
-        return map;
-    }
 
     function makeAction(path, local, remote, type) {
         let action = {

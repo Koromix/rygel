@@ -49,6 +49,16 @@ let util = new function() {
         return arr2;
     };
 
+    this.mapArray = function(arr, key_func) {
+        let obj = {};
+        for (let it of arr) {
+            let key = key_func(it);
+            obj[key] = it;
+        }
+
+        return obj;
+    };
+
     this.assignDeep = function(obj, ...sources) {
         for (let src of sources)
             assignDeep1(obj, src);
