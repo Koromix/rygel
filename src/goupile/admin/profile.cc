@@ -108,7 +108,7 @@ Options:
 
     // Create files directory
     {
-        const char *directory = Fmt(&temp_alloc, "%1%/files", profile_directory).ptr;
+        const char *directory = Fmt(&temp_alloc, "%1%/app", profile_directory).ptr;
         if (!MakeDirectory(directory))
             return 1;
     }
