@@ -573,7 +573,7 @@ function PageBuilder(state, page) {
         let widgets = captureWidgets('section', func);
 
         let render = intf => html`
-            <fieldset class="af_section">
+            <fieldset class="af_container af_section">
                 ${label != null ? html`<legend @click=${e => handleSectionClick(e, label)}>${label}</legend>` : ''}
                 ${deploy ?
                     widgets.map(intf => intf.render(intf)) :
@@ -625,18 +625,21 @@ function PageBuilder(state, page) {
         }
 
         let render = intf => html`
-            ${tabs.map((tab, idx) => {
-                let cls = 'af_tab_button';
-                if (idx === tab_idx)
-                    cls += ' active';
-                if (tab.disable)
-                    cls += ' disabled';
+            <div class="af_container af_tabs">
+                ${tabs.map((tab, idx) => {
+                    let cls = 'af_button';
+                    if (idx === tab_idx)
+                        cls += ' active';
+                    //if (tab.disable)
+                      //  cls += ' disabled';
 
-                return html`<button class=${cls}
-                                    @click=${e => handleTabClick(e, key, idx)}>${tab.label}</button>`;
-            })}
-            <div class="af_tab_content">
-                ${widgets.map(intf => intf.render(intf))}
+                    return html`<button class=${cls} ?disabled=${tab.disable}
+                                        @click=${e => handleTabClick(e, key, idx)}>${tab.label}</button>`;
+                })}
+
+                <div class="af_section">
+                    ${widgets.map(intf => intf.render(intf))}
+                </div>
             </div>
         `;
 
@@ -772,7 +775,7 @@ Valid choices include:
         let render = intf => {
             if (self.errors.length || options.force) {
                 return html`
-                    <fieldset class="af_section af_section_error">
+                    <fieldset class="af_container af_section af_section_error">
                         <legend>${options.label || 'Liste des erreurs'}</legend>
                         ${!self.errors.length ? 'Aucune erreur' : ''}
                         ${self.errors.map(intf =>
