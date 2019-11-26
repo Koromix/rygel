@@ -27,9 +27,7 @@ static bool ParseLong(const char *str, long min, long max, long *out_value)
 
         value = (value * 10) - digit;
     }
-    if (!neg) {
-        value = -value;
-    }
+    value = neg ? value : -value;
 
     if (value < min || value > max) {
         Serial.println("Too small or too big");
@@ -53,6 +51,7 @@ static bool ExecuteCommand(char *cmd, char *arg0, char *arg1, char *arg2, char *
         if (!ParseLong(arg2, 0, 1000, &w))
 
         SetDriveSpeed((float)x, (float)y, (float)w);
+        return true;
     } else {
         Serial.println("Invalid command or arguments");
         return false;
