@@ -5,61 +5,64 @@
 #include "util.hh"
 #include "drive.hh"
 
-static int ticks[4] = {};
-static int target[4] = {};
-static int speed[4] = {};
+// Drive speed
+static float drv_x;
+static float drv_y;
+static float drv_w;
+
+// Motor control
+static float dc_angle = 0.0f;
+static int dc_ticks[4] = {};
+static int dc_speed[4] = {};
 
 // PID state
-static float error_acc[4] = {};
-static float error_last[4] = {};
+static float pid_acc[4] = {};
+static float pid_prev[4] = {};
+
+static inline void IncrementEncoderSpeed(int idx, int dir_pin)
+{
+    if (digitalRead(dir_pin)) {
+        dc_ticks[idx]++;
+    } else {
+        dc_ticks[idx]--;
+    }
+}
 
 void InitDrive()
 {
-    attachInterrupt(digitalPinToInterrupt(12), []() { ticks[0]++; }, FALLING);
-    attachInterrupt(digitalPinToInterrupt(13), []() { ticks[1]++; }, FALLING);
-    attachInterrupt(digitalPinToInterrupt(14), []() { ticks[2]++; }, FALLING);
-    attachInterrupt(digitalPinToInterrupt(15), []() { ticks[3]++; }, FALLING);
+    // Encoder speed
+    attachInterrupt(digitalPinToInterrupt(12), []() { IncrementEncoderSpeed(0, 16); }, FALLING);
+    attachInterrupt(digitalPinToInterrupt(13), []() { IncrementEncoderSpeed(0, 17); }, FALLING);
+    attachInterrupt(digitalPinToInterrupt(14), []() { IncrementEncoderSpeed(0, 18); }, FALLING);
+    attachInterrupt(digitalPinToInterrupt(15), []() { IncrementEncoderSpeed(0, 19); }, FALLING);
 
+    // DC driver direction pins
     pinMode(22, OUTPUT);
     pinMode(23, OUTPUT);
     pinMode(24, OUTPUT);
     pinMode(25, OUTPUT);
+
+    // DC driver PWM pins
+    pinMode(26, OUTPUT);
+    pinMode(27, OUTPUT);
+    pinMode(28, OUTPUT);
+    pinMode(29, OUTPUT);
+}
+
+static void WriteMotorSpeed(int dir_pin, int pwm_pin, int speed)
+{
+    if (speed >= 0) {
+        digitalWrite(dir_pin, 0);
+        analogWrite(pwm_pin, speed);
+    } else {
+        digitalWrite(dir_pin, 1);
+        analogWrite(pwm_pin, -speed);
+    }
 }
 
 void ProcessDrive()
 {
     PROCESS_EVERY(5000);
-
-    static const float kp = 1.0f;
-    static const float ki = 0.0f;
-    static const float kd = 0.0f;
-
-    for (int i = 0; i < 4; i++) {
-        float error = target[i] - ticks[i];
-        float delta = error - error_last[i];
-
-        ticks[i] = 0;
-        error_acc[i] += error;
-        error_last[i] = error;
-
-        speed[i] += (int)(kp * error + ki * error_acc[i] + kd * delta);
-        speed[i] = constrain(speed[i], 0, 255);
-    }
-
-    analogWrite(22, speed[0]);
-    analogWrite(23, speed[1]);
-    analogWrite(24, speed[2]);
-    analogWrite(25, speed[3]);
-}
-
-void SetDriveSpeed(float x, float y, float w)
-{
-    static const float kl = 1.0f;
-    static const float kw = 1.0f;
-
-    x *= kl;
-    y *= kl;
-    w *= kw;
 
     // Forward kinematics matrix:
     // -sin((45 + 90)°)  | cos((45 + 90)°)  | 1
@@ -73,8 +76,64 @@ void SetDriveSpeed(float x, float y, float w)
     //  1/sqrt(2) |  1/sqrt(2) | 1
     // -1/sqrt(2) |  1/sqrt(2) | 1
 
-    target[0] = (int)(x * -0.7071f + y * -0.7071f + w * 1.0f);
-    target[1] = (int)(x *  0.7071f + y * -0.7071f + w * 1.0f);
-    target[2] = (int)(x *  0.7071f + y *  0.7071f + w * 1.0f);
-    target[3] = (int)(x * -0.7071f + y *  0.7071f + w * 1.0f);
+    // DC speed constants
+    static const float kl = 1.0f;
+    static const float kw = 1.0f;
+
+    // PID constants
+    static const float kp = 1.0f;
+    static const float ki = 0.0f;
+    static const float kd = 0.0f;
+
+    int ticks[4];
+    noInterrupts();
+    memcpy(ticks, dc_ticks, sizeof(dc_ticks));
+    memset(dc_ticks, 0, sizeof(dc_ticks));
+    interrupts();
+
+    // Eventually we will integrate gyroscope information (Kalman filter)
+    dc_angle += ticks[0] / kw + ticks[1] / kw + ticks[2] / kw + ticks[3] / kw;
+
+    // World coordinates to robot coordinates
+    float self_x = drv_x * cosf(dc_angle) - drv_y * sinf(dc_angle);
+    float self_y = drv_x * sinf(dc_angle) + drv_y * cosf(dc_angle);
+    float self_w = drv_w;
+
+    // Compute target speed for all 4 motors
+    int target[4] = {};
+    {
+        int x = self_x * kl;
+        int y = self_y * kl;
+        int w = self_w * kw;
+
+        target[0] = (int)(x * -0.7071f + y * -0.7071f + w * 1.0f);
+        target[1] = (int)(x *  0.7071f + y * -0.7071f + w * 1.0f);
+        target[2] = (int)(x *  0.7071f + y *  0.7071f + w * 1.0f);
+        target[3] = (int)(x * -0.7071f + y *  0.7071f + w * 1.0f);
+    }
+
+    // Run target DC speeds through PID controller
+    for (int i = 0; i < 4; i++) {
+        float error = target[i] - ticks[i];
+        float delta = error - pid_prev[i];
+
+        ticks[i] = 0;
+        pid_acc[i] += error;
+        pid_prev[i] = error;
+
+        dc_speed[i] += (int)(kp * error + ki * pid_acc[i] + kd * delta);
+        dc_speed[i] = constrain(dc_speed[i], -255, 255);
+    }
+
+    WriteMotorSpeed(22, 26, dc_speed[0]);
+    WriteMotorSpeed(23, 27, dc_speed[1]);
+    WriteMotorSpeed(24, 28, dc_speed[2]);
+    WriteMotorSpeed(25, 29, dc_speed[3]);
+}
+
+void SetDriveSpeed(float x, float y, float w)
+{
+    drv_x = x;
+    drv_y = y;
+    drv_w = w;
 }
