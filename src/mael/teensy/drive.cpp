@@ -96,8 +96,8 @@ void ProcessDrive()
     dc_angle += ticks[0] / kw + ticks[1] / kw + ticks[2] / kw + ticks[3] / kw;
 
     // World coordinates to robot coordinates
-    float self_x = drv_x * cosf(dc_angle) - drv_y * sinf(dc_angle);
-    float self_y = drv_x * sinf(dc_angle) + drv_y * cosf(dc_angle);
+    float self_x = drv_x * cosf(-dc_angle) - drv_y * sinf(-dc_angle);
+    float self_y = drv_x * sinf(-dc_angle) + drv_y * cosf(-dc_angle);
     float self_w = drv_w;
 
     // Compute target speed for all 4 motors
