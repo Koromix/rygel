@@ -22,11 +22,7 @@ static float pid_prev[4] = {};
 
 static inline void IncrementEncoderSpeed(int idx, int dir_pin)
 {
-    if (digitalRead(dir_pin)) {
-        dc_ticks[idx]++;
-    } else {
-        dc_ticks[idx]--;
-    }
+    dc_ticks[idx] += digitalRead(dir_pin) ? 1 : -1;
 }
 
 void InitDrive()
