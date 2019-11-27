@@ -132,5 +132,5 @@ void SetDriveSpeed(float x, float y, float w)
 {
     drv_x = x;
     drv_y = y;
-    drv_w = fmodf(w, 360.0f) * PI / 180.0f;
+    drv_w = fmodf(-w, 360.0f) * PI / 180.0f;
 }
