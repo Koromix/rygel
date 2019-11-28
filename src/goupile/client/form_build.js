@@ -561,6 +561,11 @@ function PageBuilder(state, page) {
         return addWidget('output', null, render, options);
     };
 
+    this.scope = function(func) {
+        let widgets = captureWidgets('section', func);
+        widgets_ref.push(...widgets);
+    };
+
     this.section = function(label, func, options = {}) {
         options = expandOptions(options);
 
