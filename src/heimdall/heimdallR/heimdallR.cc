@@ -30,7 +30,7 @@ static ImFontAtlas font_atlas;
 RcppExport SEXP heimdallR_Init()
 {
     BEGIN_RCPP
-    RG_RCC_SETUP
+    RG_DEFER { rcc_DumpWarnings(); };
 
     Instance *inst = new Instance;
     RG_DEFER_N(inst_guard) { delete inst; };
@@ -115,7 +115,7 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
 RcppExport SEXP heimdallR_AddEvents(SEXP inst_xp, SEXP source_xp, SEXP values_xp, SEXP keys_xp)
 {
     BEGIN_RCPP
-    RG_RCC_SETUP
+    RG_DEFER { rcc_DumpWarnings(); };
 
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
     Rcpp::String source(source_xp);
@@ -134,7 +134,7 @@ RcppExport SEXP heimdallR_AddEvents(SEXP inst_xp, SEXP source_xp, SEXP values_xp
 RcppExport SEXP heimdallR_AddMeasures(SEXP inst_xp, SEXP source_xp, SEXP values_xp, SEXP keys_xp)
 {
     BEGIN_RCPP
-    RG_RCC_SETUP
+    RG_DEFER { rcc_DumpWarnings(); };
 
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
     Rcpp::String source(source_xp);
@@ -172,7 +172,7 @@ RcppExport SEXP heimdallR_AddMeasures(SEXP inst_xp, SEXP source_xp, SEXP values_
 RcppExport SEXP heimdallR_AddPeriods(SEXP inst_xp, SEXP source_xp, SEXP values_xp, SEXP keys_xp)
 {
     BEGIN_RCPP
-    RG_RCC_SETUP
+    RG_DEFER { rcc_DumpWarnings(); };
 
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
     Rcpp::String source(source_xp);
@@ -199,7 +199,7 @@ RcppExport SEXP heimdallR_AddPeriods(SEXP inst_xp, SEXP source_xp, SEXP values_x
 RcppExport SEXP heimdallR_SetConcepts(SEXP inst_xp, SEXP name_xp, SEXP concepts_xp)
 {
     BEGIN_RCPP
-    RG_RCC_SETUP
+    RG_DEFER { rcc_DumpWarnings(); };
 
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
     Rcpp::String name(name_xp);
@@ -271,7 +271,7 @@ static void InitFontAtlas()
 RcppExport SEXP heimdallR_Run(SEXP inst_xp)
 {
     BEGIN_RCPP
-    RG_RCC_SETUP
+    RG_DEFER { rcc_DumpWarnings(); };
 
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
 
@@ -314,7 +314,7 @@ RcppExport SEXP heimdallR_Run(SEXP inst_xp)
 RcppExport SEXP heimdallR_RunSync(SEXP inst_xp)
 {
     BEGIN_RCPP
-    RG_RCC_SETUP
+    RG_DEFER { rcc_DumpWarnings(); };
 
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
 
@@ -355,7 +355,7 @@ Instance::~Instance() { /* StopInstance(this); */ }
 RcppExport SEXP heimdallR_Stop(SEXP inst_xp)
 {
     BEGIN_RCPP
-    RG_RCC_SETUP
+    RG_DEFER { rcc_DumpWarnings(); };
 
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
     StopInstance(inst);

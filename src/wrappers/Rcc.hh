@@ -14,11 +14,6 @@ extern std::mutex rcc_log_mutex;
 extern BucketArray<const char *> rcc_log_messages;
 extern bool rcc_log_missing_messages;
 
-#define RG_RCC_SETUP \
-    SetLogHandler(rcc_LogHandler); \
-    RG_DEFER { rcc_DumpWarnings(); };
-
-void rcc_LogHandler(LogLevel level, const char *ctx, const char *msg);
 void rcc_DumpWarnings();
 void rcc_StopWithLastError() __attribute__((noreturn));
 
