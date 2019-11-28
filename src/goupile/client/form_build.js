@@ -702,11 +702,15 @@ instead of:
         let prev_widgets = widgets_ref;
         let prev_options = options_stack;
 
-        widgets_ref = widgets;
-        options_stack = [options_stack[options_stack.length - 1]];
-        func();
-        options_stack = prev_options;
-        widgets_ref = prev_widgets;
+        try {
+            widgets_ref = widgets;
+            options_stack = [options_stack[options_stack.length - 1]];
+
+            func();
+        } finally {
+            options_stack = prev_options;
+            widgets_ref = prev_widgets;
+        }
 
         return widgets;
     }
