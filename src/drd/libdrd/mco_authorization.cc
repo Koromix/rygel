@@ -80,7 +80,7 @@ bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader &st)
                 valid &= ParseDec(line.Take(13, 3), &auth.type,
                                   RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::End);
                 ParseDec(line.Take(16, 2), &auth.dates[0].st.day,
-                        RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+                         RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
                 ParseDec(line.Take(18, 2), &auth.dates[0].st.month,
                          RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
                 ParseDec(line.Take(20, 4), &auth.dates[0].st.year,
@@ -99,8 +99,7 @@ bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader &st)
 
                 authorizations->Append(auth);
             } else if (TrimStr(line).len) {
-                LogError("Truncated FICUM line");
-                valid = false;
+                LogError("Truncated FICUM line (ignored)");
             }
         }
     }
