@@ -56,6 +56,8 @@ ccam_dup <- data.table(
     activite5 = 0,
     regroupement = ccam_brute$regroupement,
     gestcomp = NA_character_,
+    tarif1 = round(as.numeric(ccam_brute$tarif1), 2),
+    tarif2 = round(as.numeric(ccam_brute$tarif2), 2),
 
     texte = ccam_brute$texte,
     activite = ccam_brute$activite
