@@ -1172,8 +1172,8 @@ static bool ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &
         IniParser ini(&st);
         bool valid = true;
 
-        ini.PushLogHandler();
-        RG_DEFER { PopLogHandler(); };
+        ini.PushLogFilter();
+        RG_DEFER { PopLogFilter(); };
 
         IniProperty prop;
         while (ini.Next(&prop)) {
@@ -1337,8 +1337,8 @@ bool mco_TableSetBuilder::LoadPrices(StreamReader &st)
         StreamReader mem_st(raw_buf, st.GetFileName());
         IniParser ini(&mem_st);
 
-        ini.PushLogHandler();
-        RG_DEFER { PopLogHandler(); };
+        ini.PushLogFilter();
+        RG_DEFER { PopLogFilter(); };
 
         IniProperty prop;
         bool valid = true;

@@ -812,8 +812,8 @@ bool mco_StaySetBuilder::LoadAtih(StreamReader &st,
     {
         LineReader reader(&st);
 
-        reader.PushLogHandler();
-        RG_DEFER { PopLogHandler(); };
+        reader.PushLogFilter();
+        RG_DEFER { PopLogFilter(); };
 
         Span<const char> line;
         while (reader.Next(&line)) {
@@ -857,8 +857,8 @@ bool mco_StaySetBuilder::LoadFichComp(StreamReader &st, HashTable<int32_t, mco_T
     Size errors = 0;
     {
         LineReader reader(&st);
-        reader.PushLogHandler();
-        RG_DEFER { PopLogHandler(); };
+        reader.PushLogFilter();
+        RG_DEFER { PopLogFilter(); };
 
         Span<const char> line;
         while (reader.Next(&line)) {

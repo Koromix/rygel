@@ -1008,10 +1008,12 @@ void PrintLnFmt(const char *fmt, Span<const FmtArg> args, FILE *fp)
 
 static int64_t start_time = GetMonotonicTime();
 
+static std::function<LogFunc> log_handler = DefaultLogHandler;
+
 // NOTE: LocalArray does not work with __thread, and thread_local is broken on MinGW
 // when destructors are involved. So heap allocation it is, at least for now.
-static RG_THREAD_LOCAL std::function<LogHandlerFunc> *log_handlers[16];
-static RG_THREAD_LOCAL Size log_handlers_len;
+static RG_THREAD_LOCAL std::function<LogFilterFunc> *log_filters[16];
+static RG_THREAD_LOCAL Size log_filters_len;
 
 static RG_THREAD_LOCAL char log_last_error[1024];
 
@@ -1092,12 +1094,33 @@ bool LogUsesTerminalOutput()
     return output_is_terminal;
 }
 
+static void CallLogHandler(LogLevel level, const char *ctx, const char *msg)
+{
+    if (level == LogLevel::Error) {
+        strncpy(log_last_error, msg, RG_SIZE(log_last_error));
+        log_last_error[RG_SIZE(log_last_error) - 1] = 0;
+    }
+
+    log_handler(level, ctx, msg);
+}
+
+static void RunLogFilter(Size idx, LogLevel level, const char *ctx, const char *msg)
+{
+    const std::function<LogFilterFunc> &func = *log_filters[idx];
+
+    func(level, ctx, msg, [&](LogLevel level, const char *ctx, const char *msg) {
+        if (idx > 0) {
+            RunLogFilter(idx - 1, level, ctx, msg);
+        } else {
+            CallLogHandler(level, ctx, msg);
+        }
+    });
+}
+
 void LogFmt(LogLevel level, const char *fmt, Span<const FmtArg> args)
 {
-    static std::mutex log_mutex;
-
     char ctx_buf[128];
-    char msg_buf[16384];
+    char msg_buf[4096];
     {
         double time = (double)(GetMonotonicTime() - start_time) / 1000;
         Fmt(ctx_buf, " [%1] ", FmtDouble(time, 3).Pad(-8));
@@ -1108,56 +1131,44 @@ void LogFmt(LogLevel level, const char *fmt, Span<const FmtArg> args)
         }
     }
 
-    if (level == LogLevel::Error) {
-        strncpy(log_last_error, msg_buf, RG_SIZE(log_last_error));
-        log_last_error[RG_SIZE(log_last_error) - 1] = 0;
-    }
-
-    // FIXME: Avoid need for mutex in Log API
-    std::lock_guard<std::mutex> lock(log_mutex);
-    if (log_handlers_len) {
-        (*log_handlers[log_handlers_len - 1])(level, ctx_buf, msg_buf);
+    if (log_filters_len) {
+        RunLogFilter(log_filters_len - 1, level, ctx_buf, msg_buf);
     } else {
-        DefaultLogHandler(level, ctx_buf, msg_buf);
+        CallLogHandler(level, ctx_buf, msg_buf);
     }
+}
+
+void SetLogHandler(const std::function<LogFunc> &func)
+{
+    log_handler = func;
 }
 
 void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg)
 {
-    StartConsoleLog(level);
-    Print(stderr, "%1%2", ctx, msg);
-    EndConsoleLog();
-}
+    static std::mutex mutex;
+    std::lock_guard<std::mutex> lock(mutex);
 
-void StartConsoleLog(LogLevel level)
-{
     if (LogUsesTerminalOutput()) {
         switch (level)  {
-            case LogLevel::Error: { fputs("\x1B[31m", stderr); } break;
-            case LogLevel::Info: { fputs("\x1B[96m", stderr); } break;
-            case LogLevel::Debug: { fputs("\x1B[90m", stderr); } break;
+            case LogLevel::Error: { PrintLn(stderr, "\x1B[31m%1%2\x1B[0m", ctx, msg); } break;
+            case LogLevel::Info: { PrintLn(stderr, "\x1B[96m%1%2\x1B[0m", ctx, msg); } break;
+            case LogLevel::Debug: { PrintLn(stderr, "\x1B[90m%1%2\x1B[0m", ctx, msg); } break;
         }
+    } else {
+        PrintLn(stderr, "%1%2", ctx, msg);
     }
 }
 
-void EndConsoleLog()
+void PushLogFilter(const std::function<LogFilterFunc> &func)
 {
-    if (LogUsesTerminalOutput()) {
-        fputs("\x1B[0m", stderr);
-    }
-    fputs("\n", stderr);
+    RG_ASSERT(log_filters_len < RG_LEN(log_filters));
+    log_filters[log_filters_len++] = new std::function<LogFilterFunc>(func);
 }
 
-void PushLogHandler(const std::function<LogHandlerFunc> &func)
+void PopLogFilter()
 {
-    RG_ASSERT(log_handlers_len < RG_LEN(log_handlers));
-    log_handlers[log_handlers_len++] = new std::function<LogHandlerFunc>(func);
-}
-
-void PopLogHandler()
-{
-    RG_ASSERT(log_handlers_len > 0);
-    delete log_handlers[--log_handlers_len];
+    RG_ASSERT(log_filters_len > 0);
+    delete log_filters[--log_filters_len];
 }
 
 const char *GetLastLogError()
@@ -3358,12 +3369,13 @@ bool LineReader::Next(Span<char> *out_line)
     }
 }
 
-void LineReader::PushLogHandler()
+void LineReader::PushLogFilter()
 {
-    RG::PushLogHandler([=](LogLevel level, const char *ctx, const char *msg) {
-        StartConsoleLog(level);
-        Print(stderr, "%1%2(%3): %4", ctx, st->GetFileName(), line_number, msg);
-        EndConsoleLog();
+    RG::PushLogFilter([=](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
+        char msg_buf[4096];
+        Fmt(msg_buf, "%1(%2): %3", st->GetFileName(), line_number, msg);
+
+        func(level, ctx, msg_buf);
     });
 }
 

@@ -11,6 +11,28 @@ std::mutex rcc_log_mutex;
 BucketArray<const char *> rcc_log_messages;
 bool rcc_log_missing_messages = false;
 
+void rcc_LogHandler(LogLevel level, const char *ctx, const char *msg)
+{
+    switch (level) {
+        case LogLevel::Error: {
+            std::lock_guard<std::mutex> lock(rcc_log_mutex);
+
+            const char **ptr = rcc_log_messages.AppendDefault();
+            *ptr = DuplicateString(msg, rcc_log_messages.GetBucketAllocator()).ptr;
+
+            if (rcc_log_messages.len > 100) {
+                rcc_log_messages.RemoveFirst();
+                rcc_log_missing_messages = true;
+            }
+        } break;
+
+        case LogLevel::Info:
+        case LogLevel::Debug: {
+            PrintLn("%1%2", ctx, msg);
+        } break;
+    }
+}
+
 void rcc_DumpWarnings()
 {
     for (const char *msg: rcc_log_messages) {

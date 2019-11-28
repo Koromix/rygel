@@ -14,30 +14,11 @@ extern std::mutex rcc_log_mutex;
 extern BucketArray<const char *> rcc_log_messages;
 extern bool rcc_log_missing_messages;
 
-#define RG_RCC_SETUP_LOG_HANDLER() \
-    PushLogHandler([](LogLevel level, const char *ctx, const char *msg) { \
-        switch (level) { \
-            case LogLevel::Error: { \
-                std::lock_guard<std::mutex> lock(rcc_log_mutex); \
-                const char **ptr = rcc_log_messages.AppendDefault(); \
-                *ptr = DuplicateString(msg, rcc_log_messages.GetBucketAllocator()).ptr; \
-                if (rcc_log_messages.len > 100) { \
-                    rcc_log_messages.RemoveFirst(); \
-                    rcc_log_missing_messages = true; \
-                } \
-            } break; \
- \
-            case LogLevel::Info: \
-            case LogLevel::Debug: { \
-                PrintLn("%1%2", ctx, msg); \
-            } break; \
-        } \
-    }); \
-    RG_DEFER { \
-        rcc_DumpWarnings(); \
-        PopLogHandler(); \
-    };
+#define RG_RCC_SETUP \
+    SetLogHandler(rcc_LogHandler); \
+    RG_DEFER { rcc_DumpWarnings(); };
 
+void rcc_LogHandler(LogLevel level, const char *ctx, const char *msg);
 void rcc_DumpWarnings();
 void rcc_StopWithLastError() __attribute__((noreturn));
 

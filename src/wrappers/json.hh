@@ -140,7 +140,7 @@ public:
     bool ParseDouble(double *out_value);
     bool ParseString(Span<const char> *out_str);
 
-    void PushLogHandler();
+    void PushLogFilter();
 
 private:
     json_TokenType PeekToken();

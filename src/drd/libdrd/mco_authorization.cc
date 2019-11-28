@@ -58,8 +58,8 @@ bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader &st)
     };
 
     LineReader reader(&st);
-    reader.PushLogHandler();
-    RG_DEFER { PopLogHandler(); };
+    reader.PushLogFilter();
+    RG_DEFER { PopLogFilter(); };
 
     bool valid = true;
     {
@@ -120,8 +120,8 @@ bool mco_AuthorizationSetBuilder::LoadIni(StreamReader &st)
 
     IniParser ini(&st);
 
-    ini.PushLogHandler();
-    RG_DEFER { PopLogHandler(); };
+    ini.PushLogFilter();
+    RG_DEFER { PopLogFilter(); };
 
     bool valid = true;
     {

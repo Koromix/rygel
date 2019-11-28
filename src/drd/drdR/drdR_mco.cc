@@ -37,7 +37,7 @@ RcppExport SEXP drdR_mco_Init(SEXP table_dirs_xp, SEXP table_filenames_xp,
                               SEXP authorization_filename_xp, SEXP default_sector_xp)
 {
     BEGIN_RCPP
-    RG_RCC_SETUP_LOG_HANDLER();
+    RG_RCC_SETUP
 
     rcc_Vector<const char *> table_dirs(table_dirs_xp);
     rcc_Vector<const char *> table_filenames(table_filenames_xp);
@@ -464,7 +464,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
                                   SEXP apply_coefficient_xp, SEXP supplement_columns_xp)
 {
     BEGIN_RCPP
-    RG_RCC_SETUP_LOG_HANDLER();
+    RG_RCC_SETUP
 
     static const int task_size = 2048;
 
@@ -725,7 +725,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
 RcppExport SEXP drdR_mco_Indexes(SEXP classifier_xp)
 {
     BEGIN_RCPP
-    RG_RCC_SETUP_LOG_HANDLER();
+    RG_RCC_SETUP
 
     const ClassifierInstance *classifier =
         (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
@@ -766,7 +766,7 @@ RcppExport SEXP drdR_mco_Indexes(SEXP classifier_xp)
 RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP sector_xp, SEXP map_xp)
 {
     BEGIN_RCPP
-    RG_RCC_SETUP_LOG_HANDLER();
+    RG_RCC_SETUP
 
     const ClassifierInstance *classifier =
         (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
@@ -955,7 +955,7 @@ static int GetDiagnosisSexSpec(const mco_DiagnosisInfo &diag_info)
 RcppExport SEXP drdR_mco_Diagnoses(SEXP classifier_xp, SEXP date_xp)
 {
     BEGIN_RCPP
-    RG_RCC_SETUP_LOG_HANDLER();
+    RG_RCC_SETUP
 
     const ClassifierInstance *classifier =
         (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
@@ -1000,7 +1000,7 @@ RcppExport SEXP drdR_mco_Diagnoses(SEXP classifier_xp, SEXP date_xp)
 RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
 {
     BEGIN_RCPP
-    RG_RCC_SETUP_LOG_HANDLER();
+    RG_RCC_SETUP
 
     const ClassifierInstance *classifier =
         (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
@@ -1145,7 +1145,7 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
 RcppExport SEXP drdR_mco_Procedures(SEXP classifier_xp, SEXP date_xp)
 {
     BEGIN_RCPP
-    RG_RCC_SETUP_LOG_HANDLER();
+    RG_RCC_SETUP
 
     const ClassifierInstance *classifier =
         (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
@@ -1197,7 +1197,7 @@ RcppExport SEXP drdR_mco_Procedures(SEXP classifier_xp, SEXP date_xp)
 RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
 {
     BEGIN_RCPP
-    RG_RCC_SETUP_LOG_HANDLER();
+    RG_RCC_SETUP
 
     rcc_Vector<const char *> filenames(filenames_xp);
 

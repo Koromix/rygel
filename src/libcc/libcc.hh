@@ -2548,7 +2548,7 @@ public:
     bool Next(Span<char> *out_line);
     bool Next(Span<const char> *out_line) { return Next((Span<char> *)out_line); }
 
-    void PushLogHandler();
+    void PushLogFilter();
 };
 
 class StreamWriter {
@@ -2843,7 +2843,9 @@ static inline void PrintLn() { putchar('\n'); }
 // Debug and errors
 // ------------------------------------------------------------------------
 
-typedef void LogHandlerFunc(LogLevel level, const char *ctx, const char *msg);
+typedef void LogFunc(LogLevel level, const char *ctx, const char *msg);
+typedef void LogFilterFunc(LogLevel level, const char *ctx, const char *msg,
+                           FunctionRef<LogFunc> func);
 
 bool GetDebugFlag(const char *name);
 bool LogUsesTerminalOutput();
@@ -2874,13 +2876,11 @@ static inline void LogInfo(Args... args) { Log(LogLevel::Info, args...); }
 template <typename... Args>
 static inline void LogError(Args... args) { Log(LogLevel::Error, args...); }
 
+void SetLogHandler(const std::function<LogFunc> &func);
 void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg);
 
-void StartConsoleLog(LogLevel level);
-void EndConsoleLog();
-
-void PushLogHandler(const std::function<LogHandlerFunc> &func);
-void PopLogHandler();
+void PushLogFilter(const std::function<LogFilterFunc> &func);
+void PopLogFilter();
 
 const char *GetLastLogError();
 void ClearLastLogError();
@@ -3449,7 +3449,7 @@ public:
     bool Next(IniProperty *out_prop);
     bool NextInSection(IniProperty *out_prop);
 
-    void PushLogHandler() { reader.PushLogHandler(); }
+    void PushLogFilter() { reader.PushLogFilter(); }
 
     static bool ParseBoolValue(Span<const char> value, bool *out_value);
 

@@ -29,8 +29,8 @@ bool LoadMergeRules(const char *filename, unsigned int flags, MergeRuleSet *out_
         return false;
 
     IniParser ini(&st);
-    ini.PushLogHandler();
-    RG_DEFER { PopLogHandler(); };
+    ini.PushLogFilter();
+    RG_DEFER { PopLogFilter(); };
 
     bool valid = true;
     {

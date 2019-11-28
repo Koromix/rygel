@@ -68,8 +68,8 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
     RG_DEFER_NC(out_guard, len = set.users.len) { set.users.RemoveFrom(len); };
 
     IniParser ini(&st);
-    ini.PushLogHandler();
-    RG_DEFER { PopLogHandler(); };
+    ini.PushLogFilter();
+    RG_DEFER { PopLogFilter(); };
 
     bool valid = true;
     {

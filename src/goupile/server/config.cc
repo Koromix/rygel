@@ -29,8 +29,8 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
     SplitStrReverseAny(st.GetFileName(), RG_PATH_SEPARATORS, &root_directory);
 
     IniParser ini(&st);
-    ini.PushLogHandler();
-    RG_DEFER { PopLogHandler(); };
+    ini.PushLogFilter();
+    RG_DEFER { PopLogFilter(); };
 
     bool valid = true;
     {
