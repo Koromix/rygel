@@ -89,7 +89,8 @@ void ProcessDrive()
     interrupts();
 
     // Eventually we will integrate gyroscope information (Kalman filter)
-    dc_angle += ticks[0] / kw + ticks[1] / kw + ticks[2] / kw + ticks[3] / kw;
+    dc_angle += (float)ticks[0] / kw + (float)ticks[1] / kw +
+                (float)ticks[2] / kw + (float)ticks[3] / kw;
 
     // World coordinates to robot coordinates
     float self_x = drv_x * cosf(-dc_angle) - drv_y * sinf(-dc_angle);
@@ -99,9 +100,9 @@ void ProcessDrive()
     // Compute target speed for all 4 motors
     int target[4] = {};
     {
-        int x = self_x * kl;
-        int y = self_y * kl;
-        int w = self_w * kw;
+        float x = self_x * kl;
+        float y = self_y * kl;
+        float w = self_w * kw;
 
         target[0] = (int)(x * -0.7071f + y * -0.7071f + w * 1.0f);
         target[1] = (int)(x *  0.7071f + y * -0.7071f + w * 1.0f);
@@ -111,7 +112,7 @@ void ProcessDrive()
 
     // Run target DC speeds through PID controller
     for (int i = 0; i < 4; i++) {
-        float error = target[i] - ticks[i];
+        float error = (float)(target[i] - ticks[i]);
         float delta = error - pid_prev[i];
 
         ticks[i] = 0;
