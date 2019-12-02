@@ -126,6 +126,7 @@ int RunBuild(Span<const char *> arguments)
     bool verbose = false;
     const char *run_target_name = nullptr;
     Span<const char *> run_arguments = {};
+    bool run_here = false;
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
@@ -149,6 +150,7 @@ Options:
 
         --run <target>           Run target after successful build
                                  (all remaining arguments are passed as-is)
+        --run_here <target>      Same thing, but run from current directory
 
 Available toolchains:)", toolchain, jobs);
         for (const Compiler *compiler: Compilers) {
@@ -195,6 +197,10 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
                 verbose = true;
             } else if (opt.Test("--run", OptionType::Value)) {
                 run_target_name = opt.current_value;
+                break;
+            } else if (opt.Test("--run_here", OptionType::Value)) {
+                run_target_name = opt.current_value;
+                run_here = true;
                 break;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
@@ -341,6 +347,9 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
 
     // Run?
     if (run_target) {
+        if (run_here && !SetWorkingDirectory(start_directory))
+            return 1;
+
         const char *target_filename = build_set.target_filenames.FindValue(run_target->name, nullptr);
         return RunTarget(*run_target, target_filename, run_arguments, verbose);
     } else {
