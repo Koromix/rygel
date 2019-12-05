@@ -9,7 +9,7 @@ function Page() {
     this.variables = [];
 
     this.render = function(el) {
-        render(self.widgets.map(intf => intf.render(intf)), el);
+        render(self.widgets.map(intf => intf.render()), el);
     };
 }
 

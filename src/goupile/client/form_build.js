@@ -581,7 +581,7 @@ function PageBuilder(state, page) {
             <fieldset class="af_container af_section">
                 ${label != null ? html`<legend @click=${e => handleSectionClick(e, label)}>${label}</legend>` : ''}
                 ${deploy ?
-                    widgets.map(intf => intf.render(intf)) :
+                    widgets.map(intf => intf.render()) :
                     html`<a class="af_deploy" href="#"
                             @click=${e => { handleSectionClick(e, label); e.preventDefault(); }}>(ouvrir la section)</a>`}
             </fieldset>
@@ -643,7 +643,7 @@ function PageBuilder(state, page) {
                 })}
 
                 <div class="af_section">
-                    ${widgets.map(intf => intf.render(intf))}
+                    ${widgets.map(intf => intf.render())}
                 </div>
             </div>
         `;
@@ -858,7 +858,10 @@ Valid choices include:
         let intf = {
             type: type,
             label: label,
-            render: render,
+            render: () => {
+                intf.render = () => '';
+                return render(intf);
+            },
             options: options,
             errors: []
         };
