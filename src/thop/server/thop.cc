@@ -11,7 +11,7 @@
 #include "mco_casemix.hh"
 #include "mco_info.hh"
 #include "user.hh"
-#include "../../wrappers/http.hh"
+#include "../../web/libserver/libserver.hh"
 
 namespace RG {
 

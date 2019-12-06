@@ -5,11 +5,9 @@
 #pragma once
 
 #include "../../libcc/libcc.hh"
-#include "../../web/libserver/libserver.hh"
 
 namespace RG {
 
-void HandleScheduleResources(const http_RequestInfo &request, http_IO *io);
-void HandleScheduleMeetings(const http_RequestInfo &request, http_IO *io);
+const char *http_GetMimeType(Span<const char> extension);
 
 }

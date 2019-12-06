@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "../../vendor/libmicrohttpd/src/include/microhttpd.h"
-#include "../libcc/libcc.hh"
-#include "json.hh"
+#include "../../../vendor/libmicrohttpd/src/include/microhttpd.h"
+#include "../../libcc/libcc.hh"
+#include "../../libwrap/json.hh"
 
 namespace RG {
 
@@ -150,8 +150,6 @@ private:
 
     friend http_Daemon;
 };
-
-const char *http_GetMimeType(Span<const char> extension);
 
 uint32_t http_ParseAcceptableEncodings(Span<const char> encodings);
 

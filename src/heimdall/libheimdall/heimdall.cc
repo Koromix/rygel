@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../libcc/libcc.hh"
-#include "../../wrappers/opengl.hh"
+#include "../../libwrap/opengl.hh"
 #include "../../libgui/libgui.hh"
 #include "heimdall.hh"
 #include "data.hh"

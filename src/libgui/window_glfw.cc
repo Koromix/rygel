@@ -14,7 +14,7 @@ namespace RG {
 static std::mutex init_mutex;
 static Size windows_count = 0;
 
-// Including wrappers/opengl.hh goes wrong (duplicate prototypes with GLFW stuff)
+// Including libwrap/opengl.hh goes wrong (duplicate prototypes with GLFW stuff)
 bool ogl_InitFunctions(void *(*get_proc_address)(const char *name));
 
 static bool InitGLFW()

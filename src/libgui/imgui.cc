@@ -4,7 +4,7 @@
 
 #include "../libcc/libcc.hh"
 #include "window.hh"
-#include "../wrappers/opengl.hh"
+#include "../libwrap/opengl.hh"
 RG_PUSH_NO_WARNINGS()
 #include "../../vendor/imgui/imgui.h"
 #include "../../vendor/imgui/imgui_internal.h"

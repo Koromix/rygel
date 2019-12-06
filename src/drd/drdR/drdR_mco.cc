@@ -4,7 +4,7 @@
 
 #include "../../libcc/libcc.hh"
 #include "../libdrd/libdrd.hh"
-#include "../../wrappers/Rcc.hh"
+#include "../../libwrap/Rcc.hh"
 
 namespace RG {
 

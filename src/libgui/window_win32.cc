@@ -12,7 +12,7 @@
 
 #include "../libcc/libcc.hh"
 #include "window.hh"
-#include "../wrappers/opengl.hh"
+#include "../libwrap/opengl.hh"
 
 namespace RG {
 

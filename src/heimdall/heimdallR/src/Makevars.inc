@@ -16,13 +16,13 @@ override OBJECTS := $(addprefix ./${R_ARCH}_, heimdallR.cc.o Rcc.cc.o libcc.cc.o
 
 ./${R_ARCH}_heimdallR.cc.o: ../heimdallR.cc
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
-./${R_ARCH}_Rcc.cc.o: ../../../wrappers/Rcc.cc
+./${R_ARCH}_Rcc.cc.o: ../../../libwrap/Rcc.cc
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
 ./${R_ARCH}_libcc.cc.o: ../../../libcc/libcc.cc
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
 ./${R_ARCH}_libgui.cc.o: ../../../libgui/libgui.cc
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
-./${R_ARCH}_opengl.cc.o: ../../../wrappers/opengl.cc
+./${R_ARCH}_opengl.cc.o: ../../../libwrap/opengl.cc
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
 ./${R_ARCH}_libheimdall.cc.o: ../../libheimdall/libheimdall.cc
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<

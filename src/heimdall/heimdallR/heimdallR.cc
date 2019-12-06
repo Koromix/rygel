@@ -5,7 +5,7 @@
 #include "../../../vendor/imgui/imgui.h"
 #include "../../libcc/libcc.hh"
 #include "../libheimdall/libheimdall.hh"
-#include "../../wrappers/Rcc.hh"
+#include "../../libwrap/Rcc.hh"
 #include <thread>
 
 namespace RG {

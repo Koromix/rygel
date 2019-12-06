@@ -6,7 +6,7 @@
 
 #include "../../libcc/libcc.hh"
 #include "../../drd/libdrd/libdrd.hh"
-#include "../../wrappers/http.hh"
+#include "../../web/libserver/libserver.hh"
 
 namespace RG {
 

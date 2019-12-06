@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../libcc/libcc.hh"
-#include "../wrappers/json.hh"
+#include "../libwrap/json.hh"
 #include "pack.hh"
 
 namespace RG {
