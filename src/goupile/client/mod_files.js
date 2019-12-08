@@ -170,68 +170,58 @@ function FileManager(db) {
     }
 
     this.sync = async function(actions) {
-        let entry = new log.Entry;
+        if (actions.some(action => action.type == 'conflict'))
+            throw new Error('Conflits non résolus');
 
-        entry.progress('Synchronisation en cours');
-        try {
-            if (actions.some(action => action.type == 'conflict'))
-                throw new Error('Conflits non résolus');
+        // Perform actions
+        await Promise.all(actions.map(async action => {
+            let url = `${env.base_url}${action.path.substr(1)}`;
 
-            // Perform actions
-            await Promise.all(actions.map(async action => {
-                let url = `${env.base_url}${action.path.substr(1)}`;
+            switch (action.type) {
+                case 'push': {
+                    if (action.local) {
+                        let file = await self.load(action.path);
+                        let response = await fetch(url, {method: 'PUT', body: file.data});
 
-                switch (action.type) {
-                    case 'push': {
-                        if (action.local) {
-                            let file = await self.load(action.path);
-                            let response = await fetch(url, {method: 'PUT', body: file.data});
-
-                            if (!response.ok) {
-                                let err = (await response.text()).trim();
-                                throw new Error(`Failed to push '${action.path}': ${err}`);
-                            }
-                        } else {
-                            let response = await fetch(url, {method: 'DELETE'});
-
-                            if (!response.ok) {
-                                let err = (await response.text()).trim();
-                                throw new Error(`Failed to push deletion of '${action.path}': ${err}`);
-                            }
+                        if (!response.ok) {
+                            let err = (await response.text()).trim();
+                            throw new Error(`Failed to push '${action.path}': ${err}`);
                         }
-                    } break;
+                    } else {
+                        let response = await fetch(url, {method: 'DELETE'});
 
-                    case 'pull': {
-                        if (action.remote) {
-                            let blob = await fetch(url).then(response => response.blob());
-                            let file = {
-                                path: action.path,
-                                mtime: action.remote.mtime,
-                                data: blob
-                            };
-
-                            await self.save(file);
-                        } else {
-                            await db.transaction(db => {
-                                db.delete('files', action.path);
-                                db.delete('files_data', action.path);
-                            });
+                        if (!response.ok) {
+                            let err = (await response.text()).trim();
+                            throw new Error(`Failed to push deletion of '${action.path}': ${err}`);
                         }
-                    } break;
-                }
-            }));
+                    }
+                } break;
 
-            // Update information about remote files
-            let remote_files = await fetch(`${env.base_url}api/files.json`).then(response => response.json());
-            await db.transaction(db => {
-                db.clear('files_cache');
-                db.saveAll('files_cache', remote_files);
-            });
+                case 'pull': {
+                    if (action.remote) {
+                        let blob = await fetch(url).then(response => response.blob());
+                        let file = {
+                            path: action.path,
+                            mtime: action.remote.mtime,
+                            data: blob
+                        };
 
-            entry.success('Synchronisation terminée !');
-        } catch (err) {
-            entry.error(err);
-            throw err;
-        }
+                        await self.save(file);
+                    } else {
+                        await db.transaction(db => {
+                            db.delete('files', action.path);
+                            db.delete('files_data', action.path);
+                        });
+                    }
+                } break;
+            }
+        }));
+
+        // Update information about remote files
+        let remote_files = await fetch(`${env.base_url}api/files.json`).then(response => response.json());
+        await db.transaction(db => {
+            db.clear('files_cache');
+            db.saveAll('files_cache', remote_files);
+        });
     };
 }
