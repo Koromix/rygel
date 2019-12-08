@@ -267,6 +267,8 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
     if (!EnsureDirectoryExists(filename))
         return;
 
+    RG_DEFER_N(tmp_guard) { unlink(tmp_filename); };
+
     // Write new file
     uint8_t hash[crypto_hash_sha256_BYTES];
     {
@@ -332,6 +334,7 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
         }
     }
 
+    tmp_guard.Disable();
     io->AttachText(200, "Done!");
 }
 
