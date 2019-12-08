@@ -327,6 +327,8 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
             if (!file)
                 return;
             FormatSha256(hash, file->sha256);
+
+            files_map.Set(file);
         }
     }
 
