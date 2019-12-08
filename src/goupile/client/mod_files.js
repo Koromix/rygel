@@ -29,7 +29,7 @@ function FileManager(db) {
             let file2 = {
                 path: file.path,
                 size: file.data.size,
-                mtime: ((new Date).getTime() / 1000) | 0,
+                mtime: file.mtime || (((new Date).getTime() / 1000) | 0),
                 sha256: hash
             };
 
@@ -115,35 +115,35 @@ function FileManager(db) {
             let remote_file = remote_map[file.path];
             let cache_file = cache_map[file.path];
 
-            if (remote_file && compareFileEntries(remote_file, file)) {
+            if (remote_file && remote_file.sha256 === file.sha256) {
                 if (exist_set.has(file.path)) {
-                    actions.push(makeAction(file.path, file.sha256, remote_file.sha256, 'noop'));
+                    actions.push(makeAction(file.path, file, remote_file, 'noop'));
                 } else {
-                    actions.push(makeAction(file.path, null, remote_file.sha256, 'push'));
+                    actions.push(makeAction(file.path, null, remote_file, 'push'));
                 }
             } else if (remote_file) {
                 if (exist_set.has(file.path)) {
-                    if (cache_file && compareFileEntries(cache_file, file)) {
-                        actions.push(makeAction(file.path, file.sha256, remote_file.sha256, 'pull'));
-                    } else if (cache_file && compareFileEntries(cache_file, remote_file)) {
-                        actions.push(makeAction(file.path, file.sha256, remote_file.sha256, 'push'));
+                    if (cache_file && cache_file.sha256 === file.sha256) {
+                        actions.push(makeAction(file.path, file, remote_file, 'pull'));
+                    } else if (cache_file && cache_file.sha256 === remote_file.sha256) {
+                        actions.push(makeAction(file.path, file, remote_file, 'push'));
                     } else {
-                        actions.push(makeAction(file.path, file.sha256, remote_file.sha256, 'conflict'));
+                        actions.push(makeAction(file.path, file, remote_file, 'conflict'));
                     }
                 } else {
-                    if (cache_file && compareFileEntries(cache_file, remote_file)) {
-                        actions.push(makeAction(file.path, null, remote_file.sha256, 'push'));
+                    if (cache_file && cache_file.sha256 === remote_file.sha256) {
+                        actions.push(makeAction(file.path, null, remote_file, 'push'));
                     } else {
-                        actions.push(makeAction(file.path, null, remote_file.sha256, 'conflict'));
+                        actions.push(makeAction(file.path, null, remote_file, 'conflict'));
                     }
                 }
             } else {
                 if (!exist_set.has(file.path)) {
                     actions.push(makeAction(file.path, null, null, 'noop'));
-                } else if (cache_file && compareFileEntries(cache_file, file)) {
-                    actions.push(makeAction(file.path, file.sha256, null, 'pull'));
+                } else if (cache_file && cache_file.sha256 === file.sha256) {
+                    actions.push(makeAction(file.path, file, null, 'pull'));
                 } else {
-                    actions.push(makeAction(file.path, file.sha256, null, 'push'));
+                    actions.push(makeAction(file.path, file, null, 'push'));
                 }
             }
         }
@@ -151,24 +151,18 @@ function FileManager(db) {
         // Pull remote-only files
         for (let remote_file of remote_files) {
             if (!files_map[remote_file.path])
-                actions.push(makeAction(remote_file.path, null, remote_file.sha256, 'pull'));
+                actions.push(makeAction(remote_file.path, null, remote_file, 'pull'));
         }
 
         actions.sort(action => action.path);
         return actions;
     };
 
-    function compareFileEntries(file1, file2) {
-        return file1.size === file2.size &&
-               file1.mtime === file2.size &&
-               file1.sha256 === file2.sha256;
-    }
-
     function makeAction(path, local, remote, type) {
         let action = {
             path: path,
-            local: local,
-            remote: remote,
+            local: local ? {size: local.size, mtime: local.mtime, sha256: local.sha256} : null,
+            remote: remote ? {size: remote.size, mtime: remote.mtime, sha256: remote.sha256} : null,
             type: type
         };
 
@@ -185,20 +179,30 @@ function FileManager(db) {
 
             // Perform actions
             await Promise.all(actions.map(action => {
+                let url = `${env.base_url}${action.path.substr(1)}`;
+
                 switch (action.type) {
                     case 'push': {
                         if (action.local) {
-                            return self.load(action.path).then(file =>
-                                fetch(`${env.base_url}${action.path.substr(1)}`, {method: 'PUT', body: file.data}));
+                            return self.load(action.path).then(file => fetch(url, {method: 'PUT', body: file.data}));
                         } else {
-                            return fetch(`${env.base_url}${action.path.substr(1)}`, {method: 'DELETE'});
+                            return fetch(url, {method: 'DELETE'});
                         }
                     } break;
 
                     case 'pull': {
                         if (action.remote) {
-                            return fetch(`${env.base_url}${action.path.substr(1)}`).then(response =>
-                                response.blob()).then(blob => self.save(self.create(action.path, blob)));
+                            let p = fetch(url).then(response => response.blob());
+
+                            return p.then(blob => {
+                                let file = {
+                                    path: action.path,
+                                    mtime: action.remote.mtime,
+                                    data: blob
+                                };
+
+                                return self.save(file);
+                            });
                         } else {
                             return db.transaction(db => {
                                 db.delete('files', action.path);
