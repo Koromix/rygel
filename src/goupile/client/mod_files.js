@@ -181,19 +181,20 @@ function FileManager(db) {
                 case 'push': {
                     if (action.local) {
                         let file = await self.load(action.path);
-                        let response = await fetch(url, {method: 'PUT', body: file.data});
 
+                        let response = await fetch(url, {method: 'PUT', body: file.data});
                         if (!response.ok) {
                             let err = (await response.text()).trim();
                             throw new Error(`Failed to push '${action.path}': ${err}`);
                         }
                     } else {
                         let response = await fetch(url, {method: 'DELETE'});
-
                         if (!response.ok) {
                             let err = (await response.text()).trim();
                             throw new Error(`Failed to push deletion of '${action.path}': ${err}`);
                         }
+
+                        await db.delete('files', action.path);
                     }
                 } break;
 
