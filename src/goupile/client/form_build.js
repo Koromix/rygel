@@ -19,6 +19,8 @@ function PageBuilder(state, page) {
     let tabs_ref;
     let selected_tab;
 
+    let restart = false;
+
     let missing_set = new Set;
     let missing_block = false;
 
@@ -101,7 +103,7 @@ function PageBuilder(state, page) {
 
     function handleTextInput(e, key) {
         updateValue(key, e.target.value || undefined);
-        self.changeHandler(self);
+        self.restart();
     }
 
     this.number = function(key, label, options = {}) {
@@ -182,7 +184,7 @@ function PageBuilder(state, page) {
         // in which case we don't want to clear the field immediately.
         if (!e.target.validity || e.target.validity.valid) {
             updateValue(key, parseFloat(e.target.value) || undefined);
-            self.changeHandler(self);
+            self.restart();
         }
     }
 
@@ -193,7 +195,7 @@ function PageBuilder(state, page) {
             page.submitHandler = () => {
                 updateValue(key, number.value);
 
-                self.changeHandler(self);
+                self.restart();
                 page.close();
             };
             page.buttons(page.buttons.std.ok_cancel('Modifier'));
@@ -592,7 +594,7 @@ function PageBuilder(state, page) {
 
     function handleSectionClick(e, label) {
         state.sections_state[label] = !state.sections_state[label];
-        self.changeHandler(self);
+        self.restart();
     }
 
     this.tabs = function(key, func, options = {}) {
@@ -684,7 +686,7 @@ function PageBuilder(state, page) {
 
     function handleTabClick(e, key, label) {
         state.tabs_state[key] = label;
-        self.changeHandler(self);
+        self.restart();
     }
 
     function captureWidgets(type, func) {
@@ -737,7 +739,7 @@ instead of:
         state.pressed_buttons.add(label);
         state.clicked_buttons.add(label);
 
-        self.changeHandler(self);
+        self.restart();
     }
 
     this.buttons = function(buttons, options = {}) {
@@ -812,11 +814,18 @@ Valid choices include:
                 for (let key of missing_set)
                     state.missing_errors.add(key);
 
-                self.changeHandler(self);
+                self.restart();
                 return;
             }
 
             self.submitHandler(page);
+        }
+    };
+
+    this.restart = function() {
+        if (!restart) {
+            setTimeout(() => self.changeHandler(self), 0);
+            restart = true;
         }
     };
 
@@ -943,7 +952,7 @@ Valid choices include:
         self.setValue(key, value);
 
         if (refresh)
-            self.changeHandler(self);
+            self.restart();
     }
 }
 PageBuilder.current_unique_key = 0;
