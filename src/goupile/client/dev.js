@@ -220,6 +220,7 @@ Navigation functions should only be called in reaction to user events, such as b
             }
 
             switch (left_panel) {
+                case 'files': { await dev_files.runFiles(); } break;
                 case 'editor': { syncEditor(); } break;
                 case 'data': { await dev_data.runTable(current_asset.form.key, current_record.id); } break;
             }
@@ -231,7 +232,7 @@ Navigation functions should only be called in reaction to user events, such as b
     };
 
     function renderDev() {
-        let modes = [];
+        let modes = [['files', 'Fichiers']];
         if (current_asset) {
             if (current_asset.edit)
                 modes.push(['editor', 'Éditeur']);
@@ -274,10 +275,12 @@ Navigation functions should only be called in reaction to user events, such as b
                 })}
             </select>
 
-            <button @click=${showFileDialog}>Fichiers</button>
+            <button @click=${showFileDialog}>Gestion</button>
         `, document.querySelector('#gp_menu'));
 
         render(html`
+            ${left_panel === 'files' ?
+                html`<div id="dev_files" class=${show_overview ? 'dev_panel_left' : 'dev_panel_fixed'}></div>` : ''}
             ${left_panel === 'editor' ?
                 makeEditorElement(show_overview ? 'dev_panel_left' : 'dev_panel_fixed') : ''}
             ${left_panel === 'data' ?
@@ -357,13 +360,6 @@ Navigation functions should only be called in reaction to user events, such as b
                         page.close();
                     };
                     page.buttons(page.buttons.std.ok_cancel('Supprimer'));
-                }
-
-                if (page.tab('Synchronisation', {disable: !goupile.isOnline()})) {
-                    page.buttons([
-                        ['Déployer la version locale', null]
-                        ['Ecraser les modifications locales', null],
-                    ]);
                 }
 
                 if (page.tab('Réinitialisation')) {

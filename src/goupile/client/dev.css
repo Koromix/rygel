@@ -146,3 +146,24 @@
     background-position: center center;
     border: 0;
 }
+
+/* -------------------- Synchronization -------------------- */
+
+.dev_sync {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.dev_action {
+    width: 1em;
+    text-align: center;
+}
+.dev_action:not(.current) {
+    cursor: pointer;
+    color: #ccc;
+}
+
+.dev_overwrite {
+    color: #d72a2a;
+    font-style: italic;
+}
