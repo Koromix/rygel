@@ -178,33 +178,41 @@ function FileManager(db) {
                 throw new Error('Conflits non résolus');
 
             // Perform actions
-            await Promise.all(actions.map(action => {
+            await Promise.all(actions.map(async action => {
                 let url = `${env.base_url}${action.path.substr(1)}`;
 
                 switch (action.type) {
                     case 'push': {
                         if (action.local) {
-                            return self.load(action.path).then(file => fetch(url, {method: 'PUT', body: file.data}));
+                            let file = await self.load(action.path);
+                            let response = await fetch(url, {method: 'PUT', body: file.data});
+
+                            if (!response.ok) {
+                                let err = (await response.text()).trim();
+                                throw new Error(`Failed to push '${action.path}': ${err}`);
+                            }
                         } else {
-                            return fetch(url, {method: 'DELETE'});
+                            let response = await fetch(url, {method: 'DELETE'});
+
+                            if (!response.ok) {
+                                let err = (await response.text()).trim();
+                                throw new Error(`Failed to push deletion of '${action.path}': ${err}`);
+                            }
                         }
                     } break;
 
                     case 'pull': {
                         if (action.remote) {
-                            let p = fetch(url).then(response => response.blob());
+                            let blob = await fetch(url).then(response => response.blob());
+                            let file = {
+                                path: action.path,
+                                mtime: action.remote.mtime,
+                                data: blob
+                            };
 
-                            return p.then(blob => {
-                                let file = {
-                                    path: action.path,
-                                    mtime: action.remote.mtime,
-                                    data: blob
-                                };
-
-                                return self.save(file);
-                            });
+                            await self.save(file);
                         } else {
-                            return db.transaction(db => {
+                            await db.transaction(db => {
                                 db.delete('files', action.path);
                                 db.delete('files_data', action.path);
                             });

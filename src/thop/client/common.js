@@ -23,8 +23,10 @@ let data = new function() {
 
         if (!resource) {
             let response = await fetch(url);
-            if (!response.ok)
-                throw new Error(await response.text());
+            if (!response.ok) {
+                let err = (await response.text()).trim();
+                throw new Error(err);
+            }
 
             resource = func(await response.json());
             cache.set(key, resource);
