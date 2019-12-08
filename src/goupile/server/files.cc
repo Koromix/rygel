@@ -343,41 +343,39 @@ void HandleFileDelete(const http_RequestInfo &request, http_IO *io)
     std::lock_guard<std::shared_mutex> lock_files(files_mutex);
 
     FileEntry *file = files_map.FindValue(request.url, nullptr);
-    if (!file) {
-        io->AttachError(404);
-        return;
-    }
 
-    file->LockExclusive();
-    RG_DEFER { file->UnlockExclusive(); };
+    if (file) {
+        file->LockExclusive();
+        RG_DEFER { file->UnlockExclusive(); };
 
-    // Deal with the OS first
-    if (unlink(file->filename) < 0) {
-        LogError("Failed to delete '%1': %2", file->filename, strerror(errno));
-        return;
-    }
-
-    // Delete file entry
-    {
-        FileEntry *file0 = &files[0];
-
-        files_map.Remove(file->url);
-        if (file != file0) {
-            file0->LockExclusive();
-            RG_DEFER { file0->UnlockExclusive(); };
-
-            files_map.Remove(file0->url);
-            if (file->allocator != file0->allocator) {
-                file->filename = DuplicateString(file0->filename, file->allocator).ptr;
-                file->info = file0->info;
-                file->url = DuplicateString(file0->url, file->allocator).ptr;
-                strcpy(file->sha256, file0->sha256);
-            } else {
-                SwapMemory(file, file0, RG_SIZE(*file));
-            }
-            files_map.Set(file);
+        // Deal with the OS first
+        if (unlink(file->filename) < 0 && errno != ENOENT) {
+            LogError("Failed to delete '%1': %2", file->filename, strerror(errno));
+            return;
         }
-        files.RemoveFirst(1);
+
+        // Delete file entry
+        {
+            FileEntry *file0 = &files[0];
+
+            files_map.Remove(file->url);
+            if (file != file0) {
+                file0->LockExclusive();
+                RG_DEFER { file0->UnlockExclusive(); };
+
+                files_map.Remove(file0->url);
+                if (file->allocator != file0->allocator) {
+                    file->filename = DuplicateString(file0->filename, file->allocator).ptr;
+                    file->info = file0->info;
+                    file->url = DuplicateString(file0->url, file->allocator).ptr;
+                    strcpy(file->sha256, file0->sha256);
+                } else {
+                    SwapMemory(file, file0, RG_SIZE(*file));
+                }
+                files_map.Set(file);
+            }
+            files.RemoveFirst(1);
+        }
     }
 
     io->AttachText(200, "Done!");
