@@ -154,7 +154,6 @@ function FileManager(db) {
                 actions.push(makeAction(remote_file.path, null, remote_file, 'pull'));
         }
 
-        actions.sort((action1, action2) => util.compareValues(action1.path, action2.path));
         return actions;
     };
 

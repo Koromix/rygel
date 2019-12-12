@@ -9,8 +9,13 @@ let dev_files = new function() {
     let user_actions = {};
 
     this.runFiles = async function() {
-        // Compute actions, and overwrite with user choices (if any)
         actions = await vfs.status();
+
+        // Show locally deleted files last
+        actions.sort((action1, action2) => (!!action2.local - !!action1.local) ||
+                                           util.compareValues(action1.path, action2.path));
+
+        // Overwrite with user actions (if any)
         for (let action of actions)
             action.type = user_actions[action.path] || action.type;
 
