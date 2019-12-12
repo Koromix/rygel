@@ -174,49 +174,10 @@ function FileManager(db) {
             throw new Error('Conflits non résolus');
 
         // Perform actions
-        await Promise.all(actions.map(async action => {
-            let url = `${env.base_url}${action.path.substr(1)}`;
-
-            switch (action.type) {
-                case 'push': {
-                    if (action.local) {
-                        let file = await self.load(action.path);
-
-                        let response = await fetch(url, {method: 'PUT', body: file.data});
-                        if (!response.ok) {
-                            let err = (await response.text()).trim();
-                            throw new Error(`Failed to push '${action.path}': ${err}`);
-                        }
-                    } else {
-                        let response = await fetch(url, {method: 'DELETE'});
-                        if (!response.ok) {
-                            let err = (await response.text()).trim();
-                            throw new Error(`Failed to push deletion of '${action.path}': ${err}`);
-                        }
-
-                        await db.delete('files', action.path);
-                    }
-                } break;
-
-                case 'pull': {
-                    if (action.remote) {
-                        let blob = await fetch(url).then(response => response.blob());
-                        let file = {
-                            path: action.path,
-                            mtime: action.remote.mtime,
-                            data: blob
-                        };
-
-                        await self.save(file);
-                    } else {
-                        await db.transaction(db => {
-                            db.delete('files', action.path);
-                            db.delete('files_data', action.path);
-                        });
-                    }
-                } break;
-            }
-        }));
+        for (let i = 0; i < actions.length; i += 10) {
+            let p = actions.slice(i, i + 10).map(executeAction);
+            await Promise.all(p);
+        }
 
         // Update information about remote files
         let remote_files = await fetch(`${env.base_url}api/files.json`).then(response => response.json());
@@ -225,4 +186,48 @@ function FileManager(db) {
             db.saveAll('files_cache', remote_files);
         });
     };
+
+    async function executeAction(action) {
+        let url = `${env.base_url}${action.path.substr(1)}`;
+
+        switch (action.type) {
+            case 'push': {
+                if (action.local) {
+                    let file = await self.load(action.path);
+
+                    let response = await fetch(url, {method: 'PUT', body: file.data});
+                    if (!response.ok) {
+                        let err = (await response.text()).trim();
+                        throw new Error(err);
+                    }
+                } else {
+                    let response = await fetch(url, {method: 'DELETE'});
+                    if (!response.ok) {
+                        let err = (await response.text()).trim();
+                        throw new Error(err);
+                    }
+
+                    await db.delete('files', action.path);
+                }
+            } break;
+
+            case 'pull': {
+                if (action.remote) {
+                    let blob = await fetch(url).then(response => response.blob());
+                    let file = {
+                        path: action.path,
+                        mtime: action.remote.mtime,
+                        data: blob
+                    };
+
+                    await self.save(file);
+                } else {
+                    await db.transaction(db => {
+                        db.delete('files', action.path);
+                        db.delete('files_data', action.path);
+                    });
+                }
+            } break;
+        }
+    }
 }
