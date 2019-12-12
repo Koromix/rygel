@@ -25,18 +25,20 @@ let idb = new function () {
                     t_status = 'valid';
                     await func(self);
 
-                    let t = db.transaction(Array.from(t_stores),
-                                           t_readwrite ? 'readwrite' : 'readonly');
+                    if (t_stores.size) {
+                        let t = db.transaction(Array.from(t_stores),
+                                               t_readwrite ? 'readwrite' : 'readonly');
 
-                    for (let query of t_queries)
-                        query.func(t, query.resolve, query.reject);
-                    if (t_status === 'abort')
-                        t.abort();
+                        for (let query of t_queries)
+                            query.func(t, query.resolve, query.reject);
+                        if (t_status === 'abort')
+                            t.abort();
 
-                    return new Promise((resolve, reject) => {
-                        t.addEventListener('complete', e => resolve());
-                        t.addEventListener('abort', e => logAndReject(reject, 'Database transaction failure'));
-                    });
+                        return new Promise((resolve, reject) => {
+                            t.addEventListener('complete', e => resolve());
+                            t.addEventListener('abort', e => logAndReject(reject, 'Database transaction failure'));
+                        });
+                    }
                 } finally {
                     resetTransaction();
                 }
