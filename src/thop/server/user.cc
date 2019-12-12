@@ -454,86 +454,88 @@ const User *CheckSessionUser(const http_RequestInfo &request, http_IO *io)
 
 void HandleLogin(const http_RequestInfo &request, const User *, http_IO *io)
 {
-    // Get POST and header values
-    const char *username;
-    const char *password;
-    {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
+    io->RunAsync([=]() {
+        // Get POST and header values
+        const char *username;
+        const char *password;
+        {
+            HashMap<const char *, const char *> values;
+            if (!io->ReadPostValues(&io->allocator, &values)) {
+                io->AttachError(422);
+                return;
+            }
+
+            username = values.FindValue("username", nullptr);
+            password = values.FindValue("password", nullptr);
+            if (!username || !password) {
+                LogError("Missing parameters");
+                io->AttachError(422);
+                return;
+            }
+        }
+
+        int64_t now = GetMonotonicTime();
+
+        // Find and validate user
+        const User *user = thop_user_set.FindUser(username);
+        if (!user || !user->password_hash ||
+                crypto_pwhash_str_verify(user->password_hash, password, strlen(password)) != 0) {
+            int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
+            WaitForDelay(safety_delay);
+
+            LogError("Incorrect username or password");
+            io->AttachError(403);
             return;
         }
 
-        username = values.FindValue("username", nullptr);
-        password = values.FindValue("password", nullptr);
-        if (!username || !password) {
-            LogError("Missing parameters");
-            io->AttachError(422);
-            return;
-        }
-    }
+        // Get main session security values
+        char address[65];
+        const char *user_agent;
+        {
+            RG_STATIC_ASSERT(RG_SIZE(address) == RG_SIZE(Session::client_addr));
 
-    int64_t now = GetMonotonicTime();
+            if (!GetClientAddress(request.conn, address)) {
+                io->AttachError(422);
+                return;
+            }
 
-    // Find and validate user
-    const User *user = thop_user_set.FindUser(username);
-    if (!user || !user->password_hash ||
-            crypto_pwhash_str_verify(user->password_hash, password, strlen(password)) != 0) {
-        int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
-        WaitForDelay(safety_delay);
-
-        LogError("Incorrect username or password");
-        io->AttachError(403);
-        return;
-    }
-
-    // Get main session security values
-    char address[65];
-    const char *user_agent;
-    {
-        RG_STATIC_ASSERT(RG_SIZE(address) == RG_SIZE(Session::client_addr));
-
-        if (!GetClientAddress(request.conn, address)) {
-            io->AttachError(422);
-            return;
+            user_agent = request.GetHeaderValue("User-Agent");
+            if (!user_agent) {
+                LogError("Missing User-Agent header");
+                io->AttachError(422);
+                return;
+            }
         }
 
-        user_agent = request.GetHeaderValue("User-Agent");
-        if (!user_agent) {
-            LogError("Missing User-Agent header");
-            io->AttachError(422);
-            return;
+        // Destroy current session (if any)
+        if (const char *session_key = request.GetCookieValue("session_key"); session_key) {
+            std::unique_lock<std::shared_mutex> lock(sessions_mutex);
+            sessions.Remove(session_key);
         }
-    }
 
-    // Destroy current session (if any)
-    if (const char *session_key = request.GetCookieValue("session_key"); session_key) {
-        std::unique_lock<std::shared_mutex> lock(sessions_mutex);
-        sessions.Remove(session_key);
-    }
+        // Register session
+        Session *session = RegisterNewSession(address, user_agent, user);
+        session->login_time = now;
+        session->register_time = now;
 
-    // Register session
-    Session *session = RegisterNewSession(address, user_agent, user);
-    session->login_time = now;
-    session->register_time = now;
+        // Create URL key
+        char url_key[33];
+        {
+            uint64_t buf[2];
+            randombytes_buf(&buf, RG_SIZE(buf));
+            Fmt(url_key, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
+        }
 
-    // Create URL key
-    char url_key[33];
-    {
-        uint64_t buf[2];
-        randombytes_buf(&buf, RG_SIZE(buf));
-        Fmt(url_key, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
-    }
+        // Build empty page
+        http_JsonPageBuilder json(request.compression_type);
+        json.Null();
+        json.Finish(io);
 
-    // Build empty page
-    http_JsonPageBuilder json(request.compression_type);
-    json.Null();
-    json.Finish(io);
-
-    // Set session cookies
-    io->AddCookieHeader(thop_config.http.base_url, "session_key", session->session_key, true);
-    io->AddCookieHeader(thop_config.http.base_url, "url_key", url_key, false);
-    io->AddCookieHeader(thop_config.http.base_url, "username", user->name, false);
+        // Set session cookies
+        io->AddCookieHeader(thop_config.http.base_url, "session_key", session->session_key, true);
+        io->AddCookieHeader(thop_config.http.base_url, "url_key", url_key, false);
+        io->AddCookieHeader(thop_config.http.base_url, "username", user->name, false);
+    });
 }
 
 void HandleLogout(const http_RequestInfo &request, const User *, http_IO *io)

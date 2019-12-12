@@ -86,7 +86,7 @@ class http_IO {
     State state = State::Sync;
     bool suspended = false;
 
-    std::function<void(const http_RequestInfo &request, http_IO *io)> async_func;
+    std::function<void()> async_func;
 
     std::condition_variable read_cv;
     Span<uint8_t> read_buf = {};
@@ -118,7 +118,7 @@ public:
     http_IO(const http_IO &other) = delete;
     http_IO &operator=(const http_IO &other) = delete;
 
-    void RunAsync(std::function<void(const http_RequestInfo &request, http_IO *io)> func);
+    void RunAsync(std::function<void()> func);
 
     void AddHeader(const char *key, const char *value);
     void AddEncodingHeader(CompressionType compression_type);

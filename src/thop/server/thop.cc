@@ -438,14 +438,12 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         } break;
 
         case Route::Type::Function: {
-            io->RunAsync([=](const http_RequestInfo &request, http_IO *io) {
-                route->u.func(request, user, io);
+            route->u.func(request, user, io);
 
 #ifndef NDEBUG
-                io->flags &= ~(unsigned int)http_IO::Flag::EnableCache;
+            io->flags &= ~(unsigned int)http_IO::Flag::EnableCache;
 #endif
-                io->AddCachingHeaders(thop_config.max_age, etag);
-            });
+            io->AddCachingHeaders(thop_config.max_age, etag);
         } break;
     }
 }

@@ -157,7 +157,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             }
 
             if (file) {
-                io->RunAsync([=](const http_RequestInfo &request, http_IO *io) {
+                io->RunAsync([=]() {
                     RG_DEFER { UnlockFile(file); };
 
                     HandleFileGet(request, *file, io);
@@ -216,11 +216,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             }
 
             if (func) {
-                io->RunAsync([=](const http_RequestInfo &request, http_IO *io) {
-                    (*func)(request, io);
-                    AddCachingHeaders(io);
-                });
-
+                (*func)(request, io);
+                AddCachingHeaders(io);
                 return;
             }
         }
@@ -228,9 +225,9 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         // Found nothing
         io->AttachError(404);
     } else if (TestStr(request.method, "PUT")) {
-        io->RunAsync(HandleFilePut);
+        HandleFilePut(request, io);
     } else if (TestStr(request.method, "DELETE")) {
-        io->RunAsync(HandleFileDelete);
+        HandleFileDelete(request, io);
     } else {
         io->AttachError(405);
     }

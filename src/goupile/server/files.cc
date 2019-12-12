@@ -205,6 +205,7 @@ void UnlockFile(const FileEntry *file)
     }
 }
 
+// Run in async context!
 void HandleFileGet(const http_RequestInfo &request, const FileEntry &file, http_IO *io)
 {
     if (request.compression_type == CompressionType::None) {
@@ -229,25 +230,28 @@ void HandleFileGet(const http_RequestInfo &request, const FileEntry &file, http_
         MHD_Response *response = MHD_create_response_from_fd(sb.st_size, fd);
         io->AttachResponse(200, response);
     } else {
-        // Open source file
         StreamReader reader(file.filename);
         if (!reader.IsValid())
             return;
 
-        // Send to browser
         StreamWriter writer;
         if (!io->OpenForWrite(200, &writer))
             return;
         if (!SpliceStream(&reader, Megabytes(8), &writer))
             return;
 
-        // Done!
         writer.Close();
     }
 }
 
 void HandleFilePut(const http_RequestInfo &request, http_IO *io)
 {
+    if (!goupile_config.app_directory) {
+        LogError("File upload is disabled");
+        io->AttachError(403);
+        return;
+    }
+
     // Security checks
     if (strncmp(request.url, "/app/", 5)) {
         LogError("Cannot write to file outside /app/");
@@ -264,82 +268,90 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
     const char *filename = Fmt(&io->allocator, "%1%/%2", goupile_config.app_directory, request.url + 5).ptr;
     const char *tmp_filename = Fmt(&io->allocator, "%1~", filename).ptr;
 
-    if (!EnsureDirectoryExists(filename))
-        return;
+    io->RunAsync([=]() {
+        RG_DEFER_N(tmp_guard) { unlink(tmp_filename); };
 
-    RG_DEFER_N(tmp_guard) { unlink(tmp_filename); };
-
-    // Write new file
-    uint8_t hash[crypto_hash_sha256_BYTES];
-    {
-        StreamWriter writer(tmp_filename);
-        StreamReader reader;
-        if (!io->OpenForRead(&reader))
+        if (!EnsureDirectoryExists(filename))
             return;
 
-        crypto_hash_sha256_state state;
-        crypto_hash_sha256_init(&state);
-
-        Size total_len = 0;
-        while (!reader.IsEOF()) {
-            LocalArray<uint8_t, 16384> buf;
-            buf.len = reader.Read(buf.data);
-            if (buf.len < 0)
+        // Write new file
+        uint8_t hash[crypto_hash_sha256_BYTES];
+        {
+            StreamWriter writer(tmp_filename);
+            StreamReader reader;
+            if (!io->OpenForRead(&reader))
                 return;
 
-            if (RG_UNLIKELY(buf.len > Megabytes(8) - total_len)) {
-                LogError("File '%1' is too large (limit = %2)", reader.GetFileName(), FmtDiskSize(Megabytes(8)));
-                io->AttachError(422);
-                return;
+            crypto_hash_sha256_state state;
+            crypto_hash_sha256_init(&state);
+
+            Size total_len = 0;
+            while (!reader.IsEOF()) {
+                LocalArray<uint8_t, 16384> buf;
+                buf.len = reader.Read(buf.data);
+                if (buf.len < 0)
+                    return;
+
+                if (RG_UNLIKELY(buf.len > Megabytes(8) - total_len)) {
+                    LogError("File '%1' is too large (limit = %2)", reader.GetFileName(), FmtDiskSize(Megabytes(8)));
+                    io->AttachError(422);
+                    return;
+                }
+                total_len += buf.len;
+
+                if (!writer.Write(buf))
+                    return;
+
+                crypto_hash_sha256_update(&state, buf.data, buf.len);
             }
-            total_len += buf.len;
-
-            if (!writer.Write(buf))
+            if (!writer.Close())
                 return;
 
-            crypto_hash_sha256_update(&state, buf.data, buf.len);
+            crypto_hash_sha256_final(&state, hash);
         }
-        if (!writer.Close())
+
+        // Perform atomic file rename
+        if (!RenameFile(tmp_filename, filename))
             return;
 
-        crypto_hash_sha256_final(&state, hash);
-    }
+        // Create or update file entry. From now on, failures can only come from a failed
+        // StatFile(), which should not happen unless some other process is screwing us up.
+        {
+            std::unique_lock<std::shared_mutex> lock_files(files_mutex);
 
-    // Perform atomic file rename
-    if (!RenameFile(tmp_filename, filename))
-        return;
+            FileEntry *file = files_map.FindValue(request.url, nullptr);
 
-    // Create or update file entry. From now on, failures can only come from a failed
-    // StatFile(), which should not happen unless some other process is screwing us up.
-    {
-        std::unique_lock<std::shared_mutex> lock_files(files_mutex);
+            if (file) {
+                file->LockExclusive();
+                RG_DEFER { file->UnlockExclusive(); };
 
-        FileEntry *file = files_map.FindValue(request.url, nullptr);
+                if (!StatFile(filename, &file->info))
+                    return;
+                FormatSha256(hash, file->sha256);
+            } else {
+                Size url_offset = strlen(goupile_config.app_directory) + 1;
+                file = AddFileEntry(filename, url_offset);
+                if (!file)
+                    return;
+                FormatSha256(hash, file->sha256);
 
-        if (file) {
-            file->LockExclusive();
-            RG_DEFER { file->UnlockExclusive(); };
-
-            if (!StatFile(filename, &file->info))
-                return;
-            FormatSha256(hash, file->sha256);
-        } else {
-            Size url_offset = strlen(goupile_config.app_directory) + 1;
-            file = AddFileEntry(filename, url_offset);
-            if (!file)
-                return;
-            FormatSha256(hash, file->sha256);
-
-            files_map.Set(file);
+                files_map.Set(file);
+            }
         }
-    }
 
-    tmp_guard.Disable();
-    io->AttachText(200, "Done!");
+        tmp_guard.Disable();
+        io->AttachText(200, "Done!");
+    });
 }
 
 void HandleFileDelete(const http_RequestInfo &request, http_IO *io)
 {
+    if (!goupile_config.app_directory) {
+        LogError("File upload is disabled");
+        io->AttachError(403);
+        return;
+    }
+
     std::lock_guard<std::shared_mutex> lock_files(files_mutex);
 
     FileEntry *file = files_map.FindValue(request.url, nullptr);

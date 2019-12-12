@@ -243,11 +243,11 @@ ssize_t http_Daemon::HandleWrite(void *cls, uint64_t, char *buf, size_t max)
 void http_Daemon::RunNextAsync(http_IO *io)
 {
     if (io->state == http_IO::State::Idle && io->async_func) {
-        std::function<void(const http_RequestInfo &request, http_IO *io)> func;
+        std::function<void()> func;
         std::swap(io->async_func, func);
 
         async->Run([=]() {
-            func(io->request, io);
+            func();
 
             std::unique_lock<std::mutex> lock(io->mutex);
 
@@ -300,7 +300,7 @@ http_IO::~http_IO()
     MHD_destroy_response(response);
 }
 
-void http_IO::RunAsync(std::function<void(const http_RequestInfo &request, http_IO *io)> func)
+void http_IO::RunAsync(std::function<void()> func)
 {
     async_func = func;
 }
