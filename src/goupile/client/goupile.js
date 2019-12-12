@@ -4,8 +4,8 @@
 
 // These globals are initialized below or in dev.js
 let app = null;
-let file_manager = null;
-let record_manager = null;
+let vfs = null;
+let recorder = null;
 
 let goupile = new function() {
     let self = this;
@@ -30,8 +30,8 @@ let goupile = new function() {
         log.pushHandler(log.notifyHandler);
 
         let db = await openDatabase();
-        file_manager = new FileManager(db);
-        record_manager = new RecordManager(db);
+        vfs = new FileManager(db);
+        recorder = new RecordManager(db);
 
         initNavigation();
         initEvents();

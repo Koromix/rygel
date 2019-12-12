@@ -11,7 +11,7 @@ function FormExecutor(form, record) {
 
     this.runPage = async function(info, el) {
         let path = `pages/${info.key}.js`;
-        let file = await file_manager.load(path);
+        let file = await vfs.load(path);
 
         self.runPageScript(page, await file.data.text(), el);
     };
@@ -74,7 +74,7 @@ function FormExecutor(form, record) {
         let entry = new log.Entry();
         entry.progress('Enregistrement en cours');
 
-        await record_manager.save(record, page.variables);
+        await recorder.save(record, page.variables);
         entry.success('Données enregistrées !');
 
         dev.run(null, {id: null});

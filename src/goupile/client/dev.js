@@ -113,7 +113,7 @@ let dev = new function() {
 
         // Unused (by main.js) files
         try {
-            let files = await file_manager.list();
+            let files = await vfs.list();
             let known_paths = new Set(assets.map(asset => asset.path));
 
             for (let file of files) {
@@ -189,11 +189,11 @@ Navigation functions should only be called in reaction to user events, such as b
 
             if (args.hasOwnProperty('id') || current_record.id == null) {
                 if (args.id == null) {
-                    current_record = record_manager.create(current_asset.form.key);
+                    current_record = recorder.create(current_asset.form.key);
                 } else if (args.id !== current_record.id) {
-                    current_record = await record_manager.load(current_asset.form.key, args.id);
+                    current_record = await recorder.load(current_asset.form.key, args.id);
                     if (!current_record)
-                        current_record = record_manager.create(current_asset.form.key);
+                        current_record = recorder.create(current_asset.form.key);
 
                     // The user asked for this record, make sure it is visible
                     if (!show_overview) {
@@ -483,8 +483,8 @@ Navigation functions should only be called in reaction to user events, such as b
                     reload_app = true;
 
                 if (await runAssetSafe()) {
-                    let file = file_manager.create(path, value);
-                    await file_manager.save(file);
+                    let file = vfs.create(path, value);
+                    await vfs.save(file);
                 }
                 window.history.replaceState(null, null, app.makeURL());
             }
@@ -497,7 +497,7 @@ Navigation functions should only be called in reaction to user events, such as b
         if (session) {
             return session.getValue();
         } else {
-            let file = await file_manager.load(path);
+            let file = await vfs.load(path);
             return file ? (await file.data.text()) : '';
         }
     }

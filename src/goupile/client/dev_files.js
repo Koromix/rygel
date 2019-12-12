@@ -10,7 +10,7 @@ let dev_files = new function() {
 
     this.runFiles = async function() {
         // Compute actions, and overwrite with user choices (if any)
-        actions = await file_manager.status();
+        actions = await vfs.status();
         for (let action of actions)
             action.type = user_actions[action.path] || action.type;
 
@@ -64,7 +64,7 @@ let dev_files = new function() {
         entry.progress('Synchronisation en cours');
 
         try {
-            await file_manager.sync(actions);
+            await vfs.sync(actions);
             entry.success('Synchronisation terminée !');
         } catch (err) {
             entry.error(err);

@@ -6,8 +6,8 @@ let dev_data = new function() {
     let self = this;
 
     this.runTable = async function(table, current_id) {
-        let records = await record_manager.loadAll(table);
-        let variables = await record_manager.listVariables(table);
+        let records = await recorder.loadAll(table);
+        let variables = await recorder.listVariables(table);
         let columns = orderColumns(variables);
 
         renderRecords(table, records, columns, current_id);
@@ -67,8 +67,8 @@ let dev_data = new function() {
         if (typeof XSLX === 'undefined')
             await util.loadScript(`${env.base_url}static/xlsx.core.min.js`);
 
-        let records = await record_manager.loadAll(table);
-        let variables = await record_manager.listVariables(table);
+        let records = await recorder.loadAll(table);
+        let variables = await recorder.listVariables(table);
         let columns = orderColumns(variables);
 
         let export_name = `${env.app_key}_${dates.today()}`;
@@ -198,7 +198,7 @@ let dev_data = new function() {
             page.output('Voulez-vous vraiment supprimer cet enregistrement ?');
 
             page.submitHandler = async () => {
-                await record_manager.delete(record.table, record.id);
+                await recorder.delete(record.table, record.id);
 
                 if (record.id === current_id) {
                     dev.run(null, {id: null});
