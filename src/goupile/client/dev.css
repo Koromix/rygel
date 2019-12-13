@@ -65,6 +65,12 @@
     background: #efefef;
 }
 
+#dev_tools {
+    position: fixed;
+    bottom: 0;
+    width: inherit;
+}
+
 #dev_log {
     position: fixed;
     bottom: 0;
@@ -95,42 +101,47 @@
 
 /* -------------------- Export -------------------- */
 
-.dev_records {
+.rec_table {
     width: 100%;
     border-collapse: collapse;
     border: 0;
     table-layout: fixed;
 }
 
-.dev_records thead { background: #ddd; }
-.dev_head_actions { width: 2.5em; }
+.rec_table thead { background: #ddd; }
+.rec_actions { width: 2.5em; }
 
-.dev_records tbody tr:nth-child(2n + 1) { background: #efefef; }
-.dev_records tbody tr:nth-child(2n) { background: #f4f4f4; }
-.dev_records tbody tr.dev_row_current {
-    background: #24579d;
-    color: white;
-}
-
-.dev_records tbody th, .dev_records td { border: 1px solid #ddd; }
-.dev_records td {
+.rec_table th, .rec_table td {
     padding: 3px;
+    border: 1px solid #ddd;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.dev_records td:first-child, .dev_records td:first-child { border-left: 0; }
-.dev_records td:last-child, .dev_records td:last-child { border-right: 0; }
+.rec_table td:first-child { border-left: 0; }
+.rec_table td:last-child { border-right: 0; }
 
-.dev_records a {
+.rec_table thead th {
+    font-weight: normal;
+    font-style: italic;
+}
+
+.rec_table tbody tr:nth-child(2n + 1) { background: #efefef; }
+.rec_table tbody tr:nth-child(2n) { background: #f4f4f4; }
+.rec_table tbody tr.current {
+    background: #24579d;
+    color: white;
+}
+
+.rec_table a {
     color: inherit;
     text-decoration: none;
     font-weight: normal;
     font-style: normal;
 }
 
-.dev_record_number { text-align: right; }
-.dev_record_missing {
+.rec_table td.number { text-align: right; }
+.rec_table td.missing {
     text-align: center;
     font-style: italic;
     color: #cbcbcb;

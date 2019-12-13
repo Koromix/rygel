@@ -23,21 +23,19 @@ let dev_data = new function() {
         }
 
         render(html`
-            <table class="dev_records" style=${`min-width: ${30 + 60 * columns.length}px`}>
+            <table class="rec_table" style=${`min-width: ${30 + 60 * columns.length}px`}>
                 <thead>
                     <tr>
-                        <th class="dev_head_actions">
-                            ${columns.length ?
-                                html`<button class="dev_excel" @click=${e => exportToExcel(table)}></button>` : ''}
-                        </th>
+                        <th class="rec_actions"></th>
                         ${!columns.length ? html`<th>&nbsp;</th>` : ''}
-                        ${columns.map(col => html`<th class="dev_head_variable">${col.key}</th>`)}
+                        ${columns.map(col => html`<th title=${col.key}>${col.key}</th>`)}
                     </tr>
                 </thead>
+
                 <tbody>
                     ${empty_msg ?
                         html`<tr><td colspan=${1 + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : ''}
-                    ${records.map(record => html`<tr class=${record.id === current_id ? 'dev_row_current' : ''}>
+                    ${records.map(record => html`<tr class=${record.id === current_id ? 'current' : ''}>
                         <th>
                             <a href="#" @click=${e => { handleEditClick(e, record, current_id); e.preventDefault(); }}>🔍\uFE0E</a>
                             <a href="#" @click=${e => { showDeleteDialog(e, record, current_id); e.preventDefault(); }}>✕</a>
@@ -47,12 +45,12 @@ let dev_data = new function() {
                             let value = record.values[col.key];
 
                             if (value == null) {
-                                return html`<td class="dev_record_missing" title="Donnée manquante">NA</td>`;
+                                return html`<td class="missing" title="Donnée manquante">NA</td>`;
                             } else if (Array.isArray(value)) {
                                 let text = value.join('|');
                                 return html`<td title=${text}>${text}</td>`;
                             } else if (typeof value === 'number') {
-                                return html`<td class="dev_record_number" title=${value}>${value}</td>`;
+                                return html`<td class="number" title=${value}>${value}</td>`;
                             } else {
                                 return html`<td title=${value}>${value}</td>`;
                             }
@@ -60,10 +58,15 @@ let dev_data = new function() {
                     </tr>`)}
                 </tbody>
             </table>
+
+            <div id="dev_tools" class="gp_toolbar">
+                <button ?disabled=${!columns.length} @click=${e => exportSheets(table, 'xlsx')}>Export Excel</button>
+                <button ?disabled=${!columns.length} @click=${e => exportSheets(table, 'csv')}>Export CSV</button>
+            </div>
         `, document.querySelector('#dev_data'));
     }
 
-    async function exportToExcel(table) {
+    async function exportSheets(table, format = 'xlsx') {
         if (typeof XSLX === 'undefined')
             await util.loadScript(`${env.base_url}static/xlsx.core.min.js`);
 
@@ -71,20 +74,23 @@ let dev_data = new function() {
         let variables = await recorder.listVariables(table);
         let columns = orderColumns(variables);
 
-        let export_name = `${env.app_key}_${dates.today()}`;
-        let filename = `export_${export_name}.xlsx`;
-
-        let wb = XLSX.utils.book_new();
-        {
-            let ws = XLSX.utils.aoa_to_sheet([columns.map(col => col.key)]);
-            for (let record of records) {
-                let values = columns.map(col => record.values[col.key]);
-                XLSX.utils.sheet_add_aoa(ws, [values], {origin: -1});
-            }
-            XLSX.utils.book_append_sheet(wb, ws, export_name);
+        // Worksheet
+        let ws = XLSX.utils.aoa_to_sheet([columns.map(col => col.key)]);
+        for (let record of records) {
+            let values = columns.map(col => record.values[col.key]);
+            XLSX.utils.sheet_add_aoa(ws, [values], {origin: -1});
         }
 
-        XLSX.writeFile(wb, filename);
+        // Workbook
+        let wb = XLSX.utils.book_new();
+        let ws_name = `${env.app_key}_${dates.today()}`;
+        XLSX.utils.book_append_sheet(wb, ws, ws_name);
+
+        let filename = `export_${ws_name}.${format}`;
+        switch (format) {
+            case 'xlsx': { XLSX.writeFile(wb, filename); } break;
+            case 'csv': { XLSX.writeFile(wb, filename, {FS: ';'}); } break;
+        }
     }
 
     function orderColumns(variables) {

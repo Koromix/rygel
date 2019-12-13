@@ -18,7 +18,6 @@ body {
 #gp_menu {
     position: fixed;
     top: 0;
-    color: white;
 }
 
 main { margin-top: 2.5em; }
@@ -44,6 +43,7 @@ button:not(:disabled) { cursor: pointer; }
     padding: 0;
     z-index: 999;
     background: #24579d;
+    color: white;
     user-select: none;
     -moz-user-select: none;
     -webkit-user-select: none;
