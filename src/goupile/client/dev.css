@@ -147,34 +147,49 @@
     color: #cbcbcb;
 }
 
-.dev_excel {
-    display: block;
-    width: 100%;
-    height: 20px;
-    background: inherit;
-    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAACX0lEQVQ4jb3Uz0sUYRzHcekv6BoUdFTYedh5+kU/8ZJlI44XMYsyiajcim6l+0zqwV3dXGNX0qLdJLdIMGckavdgSZsZRDLr2qEaocAo3GcrYYJczfbTQZgSZteU6Avv23xf8PDwTEHB/x6H27GBMLHcwZyNAnOeWNGyUC8UErdY7WDUJzBxSGD0M1EorJgY+iuIKGI3YfT7kmWbdlzZ/UlS5WG7ylT5xm+Q0cfLYUSh2NVZjDKtIkfyxxWDteHj8I90QNJk+Ec6rFyxs/bg6W4XPH1eVPsPgygUle1V8PR5UROoBVEo+of7AQB7B0rx52ivBu3Bhh6GbDYL/Y0OolAkJ5OYnZtFVXs1iEJxNHQMrXEfJE1G21MfWuOLnYq6ch/55esxLPxcQEANAgDUuGYdORy7CW5ylKgS0t/S4CYHNzl6xyK5wYP+Q8jMZ5CZy2D6yzTopS0WGLzfCYMb2KdKMNKTMLgBgxu49uJ6bnBT4zbwrxwAkJxMLrmUc5Hz6NUjOKCVo1ePWF14VJ8bfPD8IbLI4tnEKACgrc9ngSu+lLquM5j/MY9xYxw7m/dgxpxBeiaNrU3bQRSKI6EatMS9kDQZnrgXLU8WOxmtswdvD91BwkigrssFolBcHeyC/jaBpkgziEIRioaRMlMoUSVwkyNlppAyU7iV71LydVlthz6lY79ahsSHBPQpHfqUjsBocHXgP396+UBJk99bYOFF50bB7awkTPQQJsYEJk7bgWLT5rulA6Xr7SruqVib95dW1FC0ztHglAijbqKI9wgT3wluMZx3aRWzZrkPfgHaVZ/xKHV1OAAAAABJRU5ErkJggg==');
-    background-repeat: no-repeat;
-    background-position: center center;
-    border: 0;
-}
-
 /* -------------------- Synchronization -------------------- */
 
-.dev_sync {
+.sync_table {
     width: 100%;
+    border-collapse: collapse;
+    border: 0;
     table-layout: fixed;
 }
 
-.dev_action {
-    width: 1em;
-    text-align: center;
+.sync_table thead { background: #ddd; }
+.sync_table thead th { text-align: left; }
+
+.sync_table th, .sync_table td {
+    padding: 3px;
+    border-top: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
-.dev_action:not(.current) {
-    cursor: pointer;
+
+.sync_table tbody tr:nth-child(2n + 1) { background: #efefef; }
+.sync_table tbody tr:nth-child(2n) { background: #f4f4f4; }
+
+.sync_actions { text-align: center; }
+.sync_table a {
+    display: inline-block;
+    text-decoration: none;
+    font-weight: normal;
+    font-style: normal;
+}
+.sync_table a + a { padding-left: 2px; }
+.sync_table a.gray {
     color: #ccc;
 }
 
-.dev_overwrite {
+.sync_path.overwrite {
     color: #d72a2a;
+    font-style: italic;
+}
+
+.sync_size {
+    color: #999;
+    text-align: right;
     font-style: italic;
 }
