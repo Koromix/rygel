@@ -11,7 +11,7 @@ let dev_files = new function() {
     let user_actions = {};
 
     this.runFiles = async function() {
-        actions = await vfs.status();
+        actions = await vfs.status(remote);
 
         // Show locally deleted files last
         actions.sort((action1, action2) => (!!action2.local - !!action1.local) ||
@@ -43,7 +43,7 @@ let dev_files = new function() {
                 </tr></thead>
 
                 <tbody>${actions.map(action => {
-                    if (action.local || action.remote) {
+                    if (action.local || (remote && action.remote)) {
                         return html`<tr>
                             <td>${action.local ?
                                 html`<a href="#" @click=${e => { showDeleteDialog(e, action.path); e.preventDefault(); }}>x</a>` : ''}</td>
@@ -61,9 +61,9 @@ let dev_files = new function() {
                             ` : ''}
                         `;
                     } else {
-                        // Nobody has the file because it was deleted on both sides independently,
-                        // including the operation will clean up our memory but we don't need to
-                        // ask the user about this operation.
+                        // If remote is true, geting here means that nody the file because it was
+                        // deleted on both sides independently. We need to act on it anyway in
+                        // order to clean up any remaining local state about this file.
                         return '';
                     }
                 })}</tbody>
