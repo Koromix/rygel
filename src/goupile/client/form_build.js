@@ -464,7 +464,7 @@ function PageBuilder(state, page) {
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
-            <input id=${id} type="date" style=${makeInputStyle(options)}
+            <input id=${id} type="date" class="af_input" style=${makeInputStyle(options)}
                    .value=${value ? value.toString() : null} ?disabled=${options.disable}
                    @input=${e => handleDateInput(e, key)}/>
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
