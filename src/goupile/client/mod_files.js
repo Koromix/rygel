@@ -96,13 +96,19 @@ function FileManager(db) {
         return files.filter(file => exist_set.has(file.path));
     };
 
-    this.status = async function() {
-        let [files, exist_set, cache_files, remote_files] = await Promise.all([
+    this.status = async function(online = true) {
+        let [files, exist_set, cache_files] = await Promise.all([
             db.loadAll('files'),
             db.list('files_data').then(list => new Set(list)),
-            db.loadAll('files_cache'),
-            fetch(`${env.base_url}api/files.json`).then(response => response.json())
+            db.loadAll('files_cache')
         ]);
+
+        let remote_files;
+        if (online) {
+            remote_files = await fetch(`${env.base_url}api/files.json`).then(response => response.json());
+        } else {
+            remote_files = cache_files;
+        }
 
         let files_map = util.mapArray(files, file => file.path);
         let cache_map = util.mapArray(cache_files, file => file.path);
