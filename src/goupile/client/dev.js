@@ -231,24 +231,24 @@ Navigation functions should only be called in reaction to user events, such as b
     };
 
     function renderDev() {
-        let modes = [['files', 'Fichiers']];
-        if (current_asset) {
-            if (current_asset.edit)
-                modes.push(['editor', 'Éditeur']);
-            if (current_asset.form)
-                modes.push(['data', 'Données']);
-        }
+        let show_editor = current_asset && current_asset.edit;
+        let show_data = current_asset && current_asset.form;
 
-        if (left_panel && !modes.find(mode => mode[0] === left_panel))
-            left_panel = modes[0] ? modes[0][0] : null;
+        let correct_mode = (left_panel == null ||
+                            left_panel === 'files' ||
+                            (left_panel === 'editor' && show_editor) ||
+                            (left_panel === 'data' && show_data));
+        if (!correct_mode)
+            left_panel = show_editor ? 'editor' : null;
         if (!left_panel)
             show_overview = true;
 
         render(html`
-            ${modes.map(mode =>
-                html`<button class=${left_panel === mode[0] ? 'active' : ''} @click=${e => toggleLeftPanel(mode[0])}>${mode[1]}</button>`)}
-            ${modes.length ?
-                html`<button class=${show_overview ? 'active': ''} @click=${e => toggleOverview()}>Aperçu</button>` : ''}
+            ${show_editor ?
+                html`<button class=${left_panel === 'editor' ? 'active' : ''} @click=${e => toggleLeftPanel('editor')}>Éditeur</button>` : ''}
+            ${show_data ?
+                html`<button class=${left_panel === 'data' ? 'active' : ''} @click=${e => toggleLeftPanel('data')}>Données</button>` : ''}
+            <button class=${show_overview ? 'active': ''} @click=${e => toggleOverview()}>Aperçu</button>
 
             <select id="dev_assets" @change=${e => app.go(e.target.value)}>
                 ${!current_asset ? html`<option>-- Select an asset --</option>` : ''}
@@ -274,6 +274,7 @@ Navigation functions should only be called in reaction to user events, such as b
                 })}
             </select>
 
+            <button class=${left_panel === 'files' ? 'active' : ''} @click=${e => toggleLeftPanel('files')}>Ressources</button>
             <button @click=${showLoginDialog}>Connexion</button>
         `, document.querySelector('#gp_menu'));
 
