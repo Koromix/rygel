@@ -180,6 +180,9 @@ Navigation functions should only be called in reaction to user events, such as b
                 current_asset = assets_map[url + '/'];
 
             current_url = current_asset ? current_asset.url : url;
+
+            if (!current_asset && url !== env.base_url)
+                log.error('Asset not available');
         }
 
         // Load record (if needed)
@@ -210,6 +213,13 @@ Navigation functions should only be called in reaction to user events, such as b
         // Render menu and page layout
         renderDev();
 
+        // Run left panel
+        switch (left_panel) {
+            case 'files': { await dev_files.runFiles(); } break;
+            case 'editor': { syncEditor(); } break;
+            case 'data': { await dev_data.runTable(current_asset.form.key, current_record.id); } break;
+        }
+
         // Run appropriate module
         if (current_asset) {
             if (current_asset.category) {
@@ -218,15 +228,9 @@ Navigation functions should only be called in reaction to user events, such as b
                 document.title = `${current_asset.label} — ${env.app_name}`;
             }
 
-            switch (left_panel) {
-                case 'files': { await dev_files.runFiles(); } break;
-                case 'editor': { syncEditor(); } break;
-                case 'data': { await dev_data.runTable(current_asset.form.key, current_record.id); } break;
-            }
             await runAssetSafe();
         } else {
             document.title = env.app_name;
-            log.error('Asset not available');
         }
     };
 
