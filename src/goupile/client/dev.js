@@ -240,15 +240,20 @@ Navigation functions should only be called in reaction to user events, such as b
                             (left_panel === 'data' && show_data));
         if (!correct_mode)
             left_panel = show_editor ? 'editor' : null;
-        if (!left_panel)
+
+        if (!current_asset) {
+            show_overview = false;
+        } else if (!left_panel) {
             show_overview = true;
+        }
 
         render(html`
             ${show_editor ?
                 html`<button class=${left_panel === 'editor' ? 'active' : ''} @click=${e => toggleLeftPanel('editor')}>Éditeur</button>` : ''}
             ${show_data ?
                 html`<button class=${left_panel === 'data' ? 'active' : ''} @click=${e => toggleLeftPanel('data')}>Données</button>` : ''}
-            <button class=${show_overview ? 'active': ''} @click=${e => toggleOverview()}>Aperçu</button>
+            ${current_asset ?
+                html`<button class=${show_overview ? 'active': ''} @click=${e => toggleOverview()}>Aperçu</button>` : ''}
 
             <select id="dev_assets" @change=${e => app.go(e.target.value)}>
                 ${!current_asset ? html`<option>-- Select an asset --</option>` : ''}
