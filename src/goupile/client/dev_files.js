@@ -52,9 +52,12 @@ let dev_files = new function() {
 
                             ${remote ? html`
                                 <td class="sync_actions">
-                                    <a href="#" class=${action.type !== 'pull' ? 'gray' : ''} @click=${e => toggleAction(action, 'pull')}>&lt;</a>
-                                    <a href="#" class=${action.type !== 'noop' ? 'gray' : ''} @click=${e => toggleAction(action, 'noop')}>${action.type === 'conflict' ? '?' : '='}</a>
-                                    <a href="#" class=${action.type !== 'push' ? 'gray' : ''} @click=${e => toggleAction(action, 'push')}>&gt;</a>
+                                    <a href="#" class=${action.type !== 'pull' ? 'gray' : ''}
+                                       @click=${e => { toggleAction(action, 'pull'); e.preventDefault(); }}>&lt;</a>
+                                    <a href="#" class=${action.type !== 'noop' ? 'gray' : ''}
+                                       @click=${e => { toggleAction(action, 'noop'); e.preventDefault(); }}>${action.type === 'conflict' ? '?' : '='}</a>
+                                    <a href="#" class=${action.type !== 'push' ? 'gray' : ''}
+                                       @click=${e => { toggleAction(action, 'push'); e.preventDefault(); }}>&gt;</a>
                                 </td>
                                 <td class=${action.type == 'push' ? 'sync_path overwrite' : 'sync_path'}>${action.remote ? action.path : ''}</td>
                                 <td class="sync_size">${action.remote ? util.formatDiskSize(action.remote.size) : ''}</td>
