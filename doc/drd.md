@@ -130,7 +130,7 @@ En réalité, pour reproduire le groupeur ATIH (MCO) il faut implémenter quatre
 4. Lecture et interprétation des listes/caractéristiques d'actes, de diagnostics et
    de l'arbre stockés dans des fichiers binaires ".tab" distribués par l'ATIH
 
-Le groupeur libdrd reproduit ce fonctionnement. Les fichiers binaires _.tab_ ont été
+Le groupeur libdrd reproduit ce fonctionnement. Les fichiers binaires *.tab* ont été
 récupérés dans GenRSA.
 
 Comme je n'ai pas les sources du groupeur, tout le code de lecture de ces fichiers non
