@@ -11,15 +11,19 @@ let dev_files = new function() {
     let user_actions = {};
 
     this.runFiles = async function() {
-        actions = await vfs.status(remote);
+        if (remote) {
+            actions = await vfs.status();
 
-        // Show locally deleted files last
-        actions.sort((action1, action2) => (!!action2.sha256 - !!action1.sha256) ||
-                                           util.compareValues(action1.path, action2.path));
+            // Overwrite with user actions (if any)
+            for (let action of actions)
+                action.type = user_actions[action.path] || action.type;
 
-        // Overwrite with user actions (if any)
-        for (let action of actions)
-            action.type = user_actions[action.path] || action.type;
+            // Show locally deleted files last
+            actions.sort((action1, action2) => (!!action2.sha256 - !!action1.sha256) ||
+                                               util.compareValues(action1.path, action2.path));
+        } else {
+            actions = await vfs.list();
+        }
 
         renderActions();
     };
@@ -43,7 +47,7 @@ let dev_files = new function() {
                 </tr></thead>
 
                 <tbody>${actions.map(action => {
-                    if (action.sha256 || (remote && action.remote_sha256)) {
+                    if (action.sha256 || action.remote_sha256) {
                         return html`<tr>
                             <td>${action.sha256 ?
                                 html`<a href="#" @click=${e => { showDeleteDialog(e, action.path); e.preventDefault(); }}>x</a>` : ''}</td>
@@ -64,9 +68,9 @@ let dev_files = new function() {
                             ` : ''}
                         `;
                     } else {
-                        // If remote is true, geting here means that nody the file because it was
-                        // deleted on both sides independently. We need to act on it anyway in
-                        // order to clean up any remaining local state about this file.
+                        // Getting here means that nobody has the file because it was deleted
+                        // on both sides independently. We need to act on it anyway in order
+                        // to clean up any remaining local state about this file.
                         return '';
                     }
                 })}</tbody>
