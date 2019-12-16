@@ -166,10 +166,23 @@ function FileManager(db) {
     function makeAction(path, local, remote, type) {
         let action = {
             path: path,
-            local: local ? {size: local.size, mtime: local.mtime, sha256: local.sha256} : null,
-            remote: remote ? {size: remote.size, mtime: remote.mtime, sha256: remote.sha256} : null,
             type: type
         };
+
+        if (local) {
+            Object.assign(action, {
+                size: local.size,
+                mtime: local.mtime,
+                sha256: local.sha256
+            });
+        }
+        if (remote) {
+            Object.assign(action, {
+                remote_size: remote.size,
+                remote_mtime: remote.mtime,
+                remote_sha256: remote.sha256
+            });
+        }
 
         return action;
     }
@@ -197,7 +210,7 @@ function FileManager(db) {
 
         switch (action.type) {
             case 'push': {
-                if (action.local) {
+                if (action.sha256) {
                     let file = await self.load(action.path);
 
                     let response = await fetch(url, {method: 'PUT', body: file.data});
@@ -217,11 +230,11 @@ function FileManager(db) {
             } break;
 
             case 'pull': {
-                if (action.remote) {
+                if (action.remote_sha256) {
                     let blob = await fetch(url).then(response => response.blob());
                     let file = {
                         path: action.path,
-                        mtime: action.remote.mtime,
+                        mtime: action.remote_mtime,
                         data: blob
                     };
 

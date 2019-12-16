@@ -14,7 +14,7 @@ let dev_files = new function() {
         actions = await vfs.status(remote);
 
         // Show locally deleted files last
-        actions.sort((action1, action2) => (!!action2.local - !!action1.local) ||
+        actions.sort((action1, action2) => (!!action2.sha256 - !!action1.sha256) ||
                                            util.compareValues(action1.path, action2.path));
 
         // Overwrite with user actions (if any)
@@ -43,12 +43,12 @@ let dev_files = new function() {
                 </tr></thead>
 
                 <tbody>${actions.map(action => {
-                    if (action.local || (remote && action.remote)) {
+                    if (action.sha256 || (remote && action.remote_sha256)) {
                         return html`<tr>
-                            <td>${action.local ?
+                            <td>${action.sha256 ?
                                 html`<a href="#" @click=${e => { showDeleteDialog(e, action.path); e.preventDefault(); }}>x</a>` : ''}</td>
-                            <td class=${action.type == 'pull' ? 'sync_path overwrite' : 'sync_path'}>${action.local ? action.path : ''}</td>
-                            <td class="sync_size">${action.local ? util.formatDiskSize(action.local.size) : ''}</td>
+                            <td class=${action.type == 'pull' ? 'sync_path overwrite' : 'sync_path'}>${action.sha256 ? action.path : ''}</td>
+                            <td class="sync_size">${action.sha256 ? util.formatDiskSize(action.size) : ''}</td>
 
                             ${remote ? html`
                                 <td class="sync_actions">
@@ -59,8 +59,8 @@ let dev_files = new function() {
                                     <a href="#" class=${action.type !== 'push' ? 'gray' : ''}
                                        @click=${e => { toggleAction(action, 'push'); e.preventDefault(); }}>&gt;</a>
                                 </td>
-                                <td class=${action.type == 'push' ? 'sync_path overwrite' : 'sync_path'}>${action.remote ? action.path : ''}</td>
-                                <td class="sync_size">${action.remote ? util.formatDiskSize(action.remote.size) : ''}</td>
+                                <td class=${action.type == 'push' ? 'sync_path overwrite' : 'sync_path'}>${action.remote_sha256 ? action.path : ''}</td>
+                                <td class="sync_size">${action.remote_sha256 ? util.formatDiskSize(action.remote_size) : ''}</td>
                             ` : ''}
                         `;
                     } else {
@@ -98,7 +98,7 @@ let dev_files = new function() {
                     path.error('Allowed path characters: a-z, _, 0-9 and / (not at the end)');
                 } else if (path.value.includes('/../') || path.value.endsWith('/..')) {
                     path.error('Le chemin ne doit pas contenir de composants \'..\'');
-                } else if (actions.some(action => action.path === path.value && action.local)) {
+                } else if (actions.some(action => action.path === path.value && action.sha256)) {
                     path.error('Ce chemin est déjà utilisé');
                 }
             }
