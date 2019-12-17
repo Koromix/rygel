@@ -15,12 +15,7 @@ bool InitFiles();
 
 void HandleFileList(const http_RequestInfo &request, http_IO *io);
 
-const FileEntry *LockFile(const char *url);
-void UnlockFile(const FileEntry *file);
-
-// File needs to be locked (see LockFile and UnlockFile)
-void HandleFileGet(const http_RequestInfo &request, const FileEntry &file, http_IO *io);
-
+bool HandleFileGet(const http_RequestInfo &request, http_IO *io);
 void HandleFilePut(const http_RequestInfo &request, http_IO *io);
 void HandleFileDelete(const http_RequestInfo &request, http_IO *io);
 

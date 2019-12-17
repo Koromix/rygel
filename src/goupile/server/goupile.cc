@@ -149,28 +149,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         }
 
         // Try application files first
-        {
-            const FileEntry *file;
-            if (TestStr(request.url, "/favicon.png")) {
-                file = LockFile("/app/favicon.png");
-            } else if (TestStr(request.url, "/manifest.json")) {
-                file = LockFile("/app/manifest.json");
-            } else {
-                file = LockFile(request.url);
-            }
-
-            if (file) {
-                io->RunAsync([=]() {
-                    RG_DEFER { UnlockFile(file); };
-
-                    HandleFileGet(request, *file, io);
-                    io->flags |= (int)http_IO::Flag::EnableCache;
-
-                    AddCachingHeaders(io);
-                });
-                return;
-            }
-        }
+        if (HandleFileGet(request, io))
+            return;
 
         // Now try static assets
         {

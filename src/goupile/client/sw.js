@@ -59,7 +59,8 @@ self.addEventListener('fetch', e => {
             if (path.startsWith('/dev/'))
                 return await caches.match(env.base_url) || await fetch(env.base_url);
 
-            if (path.startsWith('/app/')) {
+            // Ignore sync GET requests for app files (for which sha256 is specified)
+            if (path.startsWith('/app/') && !url.params.has('sha256')) {
                 // TODO: Cache database object
                 let db_name = `goupile_${env.app_key}`;
                 let db = await idb.open(db_name);

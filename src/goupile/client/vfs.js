@@ -200,7 +200,8 @@ function FileManager(db) {
     };
 
     async function executeAction(action) {
-        let url = `${env.base_url}${action.path.substr(1)}`;
+        let url = util.pasteURL(`${env.base_url}${action.path.substr(1)}`,
+                                {sha256: action.remote_sha256 || ''});
 
         switch (action.type) {
             case 'push': {

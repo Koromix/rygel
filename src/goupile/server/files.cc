@@ -184,64 +184,75 @@ void HandleFileList(const http_RequestInfo &request, http_IO *io)
     json.Finish(io);
 }
 
-const FileEntry *LockFile(const char *url)
+// Returns false when file does not exist (and another handler needs to be used)
+bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
 {
-    std::shared_lock<std::shared_mutex> lock_files(files_mutex);
+    const char *sha256 = request.GetQueryValue("sha256");
 
-    const FileEntry *file = files_map.FindValue(url, nullptr);
+    const FileEntry *file;
+    {
+        std::shared_lock<std::shared_mutex> lock_files(files_mutex);
 
-    if (file) {
+        if (TestStr(request.url, "/favicon.png")) {
+            file = files_map.FindValue("/app/favicon.png", nullptr);
+        } else if (TestStr(request.url, "/manifest.json")) {
+            file = files_map.FindValue("/app/manifest.json", nullptr);
+        } else {
+            file = files_map.FindValue(request.url, nullptr);
+        }
+        if (!file)
+            return false;
+
         file->Lock();
-        return file;
-    } else {
-        return nullptr;
     }
-}
+    io->AddFinalizer([=]() { file->Unlock(); });
 
-void UnlockFile(const FileEntry *file)
-{
-    if (file) {
-        file->Unlock();
+    if (sha256 && !TestStr(sha256, file->sha256)) {
+        LogError("Fetch refused because of sha256 mismatch");
+        io->AttachError(409);
+        return true;
     }
-}
 
-// Run in async context!
-void HandleFileGet(const http_RequestInfo &request, const FileEntry &file, http_IO *io)
-{
-    if (request.compression_type == CompressionType::None) {
+    io->RunAsync([=]() {
+        if (request.compression_type == CompressionType::None) {
 #ifdef _WIN32
-        int fd = open(file.filename, O_RDONLY | O_BINARY);
+            int fd = open(file->filename, O_RDONLY | O_BINARY);
 #else
-        int fd = open(file.filename, O_RDONLY | O_CLOEXEC);
+            int fd = open(file->filename, O_RDONLY | O_CLOEXEC);
 #endif
-        if (fd < 0) {
-            LogError("Failed to open '%1': %2", file.filename, strerror(errno));
-            return;
+            if (fd < 0) {
+                LogError("Failed to open '%1': %2", file->filename, strerror(errno));
+                return;
+            }
+
+            // libmicrohttpd wants to know the file size
+            struct stat sb;
+            if (fstat(fd, &sb) < 0) {
+                LogError("Failed to stat '%1': %2", file->filename, strerror(errno));
+                return;
+            }
+
+            // Let libmicrohttpd handle the rest, and maybe use sendfile
+            MHD_Response *response = MHD_create_response_from_fd(sb.st_size, fd);
+            io->AttachResponse(200, response);
+        } else {
+            StreamReader reader(file->filename);
+            if (!reader.IsValid())
+                return;
+
+            StreamWriter writer;
+            if (!io->OpenForWrite(200, &writer))
+                return;
+            if (!SpliceStream(&reader, Megabytes(8), &writer))
+                return;
+
+            writer.Close();
         }
 
-        // libmicrohttpd wants to know the file size
-        struct stat sb;
-        if (fstat(fd, &sb) < 0) {
-            LogError("Failed to stat '%1': %2", file.filename, strerror(errno));
-            return;
-        }
+        io->AddEncodingHeader(request.compression_type);
+    });
 
-        // Let libmicrohttpd handle the rest, and maybe use sendfile
-        MHD_Response *response = MHD_create_response_from_fd(sb.st_size, fd);
-        io->AttachResponse(200, response);
-    } else {
-        StreamReader reader(file.filename);
-        if (!reader.IsValid())
-            return;
-
-        StreamWriter writer;
-        if (!io->OpenForWrite(200, &writer))
-            return;
-        if (!SpliceStream(&reader, Megabytes(8), &writer))
-            return;
-
-        writer.Close();
-    }
+    return true;
 }
 
 void HandleFilePut(const http_RequestInfo &request, http_IO *io)
@@ -267,6 +278,8 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
     // Construct filenames
     const char *filename = Fmt(&io->allocator, "%1%/%2", goupile_config.app_directory, request.url + 5).ptr;
     const char *tmp_filename = Fmt(&io->allocator, "%1~", filename).ptr;
+
+    const char *sha256 = request.GetQueryValue("sha256");
 
     io->RunAsync([=]() {
         RG_DEFER_N(tmp_guard) { unlink(tmp_filename); };
@@ -325,10 +338,22 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
                 file->LockExclusive();
                 RG_DEFER { file->UnlockExclusive(); };
 
+                if (sha256 && !TestStr(sha256, file->sha256)) {
+                    LogError("Update refused because of sha256 mismatch");
+                    io->AttachError(409);
+                    return;
+                }
+
                 if (!StatFile(filename, &file->info))
                     return;
                 FormatSha256(hash, file->sha256);
             } else {
+                if (sha256 && sha256[0]) {
+                    LogError("Update refused because file does not exist");
+                    io->AttachError(409);
+                    return;
+                }
+
                 Size url_offset = strlen(goupile_config.app_directory) + 1;
                 file = AddFileEntry(filename, url_offset);
                 if (!file)
@@ -352,6 +377,8 @@ void HandleFileDelete(const http_RequestInfo &request, http_IO *io)
         return;
     }
 
+    const char *sha256 = request.GetQueryValue("sha256");
+
     std::lock_guard<std::shared_mutex> lock_files(files_mutex);
 
     FileEntry *file = files_map.FindValue(request.url, nullptr);
@@ -359,6 +386,12 @@ void HandleFileDelete(const http_RequestInfo &request, http_IO *io)
     if (file) {
         file->LockExclusive();
         RG_DEFER { file->UnlockExclusive(); };
+
+        if (sha256 && !TestStr(sha256, file->sha256)) {
+            LogError("Deletion refused because of sha256 mismatch");
+            io->AttachError(409);
+            return;
+        }
 
         // Deal with the OS first
         if (unlink(file->filename) < 0 && errno != ENOENT) {
