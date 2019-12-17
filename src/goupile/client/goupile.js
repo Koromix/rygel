@@ -33,7 +33,7 @@ let goupile = new function() {
 
         let db = await openDatabase();
         vfs = new FileManager(db);
-        recorder = new RecordManager(db);
+        recorder = new FormRecorder(db);
 
         initNavigation();
         initEvents();
