@@ -70,8 +70,11 @@ static AssetInfo PatchGoupilVariables(const AssetInfo &asset, Allocator *alloc)
         } else if (TestStr(key, "BASE_URL")) {
             writer->Write(goupile_config.http.base_url);
             return true;
+        } else if (TestStr(key, "USE_OFFLINE")) {
+            writer->Write(goupile_config.use_offline ? "true" : "false");
+            return true;
         } else if (TestStr(key, "CACHE_KEY")) {
-            writer->Write(goupile_config.database_filename ? etag : "");
+            writer->Write(etag);
             return true;
         } else if (TestStr(key, "SSE_KEEP_ALIVE")) {
             Print(writer, "%1", goupile_config.sse_keep_alive);

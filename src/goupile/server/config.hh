@@ -15,6 +15,7 @@ struct Config {
 
     const char *app_directory = nullptr;
     const char *database_filename = nullptr;
+    bool use_offline = false;
 
     http_Config http;
     int max_age = 3600;

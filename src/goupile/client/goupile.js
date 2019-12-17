@@ -29,6 +29,8 @@ let goupile = new function() {
     async function initGoupil() {
         log.pushHandler(log.notifyHandler);
 
+        initOffline();
+
         let db = await openDatabase();
         vfs = new FileManager(db);
         recorder = new RecordManager(db);
@@ -39,6 +41,19 @@ let goupile = new function() {
             await dev.init();
 
         app.go(window.location.href, false);
+    }
+
+    function initOffline() {
+        if (navigator.serviceWorker) {
+            navigator.serviceWorker.register(`${env.base_url}sw.pk.js`);
+
+            if (env.use_offline) {
+                let link = document.createElement('link');
+                link.setAttribute('rel', 'manifest');
+                link.setAttribute('href', `${env.base_url}manifest.json`);
+                document.head.appendChild(link);
+            }
+        }
     }
 
     async function openDatabase() {

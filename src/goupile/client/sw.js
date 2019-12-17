@@ -6,6 +6,7 @@ let env = {
     app_key: '{APP_KEY}',
     base_url: '{BASE_URL}',
 
+    use_offline: {USE_OFFLINE},
     cache_key: '{CACHE_KEY}'
 };
 
@@ -28,7 +29,7 @@ let cache_urls = [
 
 self.addEventListener('install', e => {
     e.waitUntil(async function() {
-        if (env.cache_key) {
+        if (env.use_offline) {
             let cache = await caches.open(env.cache_key);
             await cache.addAll(cache_urls);
         }

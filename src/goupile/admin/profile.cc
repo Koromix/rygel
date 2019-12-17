@@ -21,8 +21,9 @@ Key = %1
 Name = %2
 
 [Data]
+# UseOffline = On
 ApplicationDirectory = app
-DatabaseFile = %3
+DatabaseFile = database.db
 
 # [HTTP]
 # IPStack = Dual
@@ -114,9 +115,8 @@ Options:
     }
 
     // Create database
-    const char *database_name = "database.db";
     {
-        const char *filename = Fmt(&temp_alloc, "%1%/%2", profile_directory, database_name).ptr;
+        const char *filename = Fmt(&temp_alloc, "%1%/database.db", profile_directory).ptr;
         files.Append(filename);
 
         SQLiteDatabase database;
@@ -135,7 +135,7 @@ Options:
         files.Append(filename);
 
         StreamWriter st(filename);
-        Print(&st, DefaultConfig, app_key, app_name, database_name);
+        Print(&st, DefaultConfig, app_key, app_name);
         if (!st.Close())
             return 1;
     }

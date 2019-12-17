@@ -55,6 +55,8 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                     } else if (prop.key == "DatabaseFile") {
                         config.database_filename = NormalizePath(prop.value, root_directory,
                                                                  &config.str_alloc).ptr;
+                    } else if (prop.key == "UseOffline") {
+                        valid &= IniParser::ParseBoolValue(prop.value, &config.use_offline);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
