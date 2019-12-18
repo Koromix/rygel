@@ -307,7 +307,7 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
 
                 if (RG_UNLIKELY(buf.len > Megabytes(8) - total_len)) {
                     LogError("File '%1' is too large (limit = %2)", reader.GetFileName(), FmtDiskSize(Megabytes(8)));
-                    io->AttachError(422);
+                    io->AttachError(413);
                     return;
                 }
                 total_len += buf.len;
