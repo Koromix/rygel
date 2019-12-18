@@ -73,6 +73,7 @@ let dev = new function() {
             type: 'main',
             url: `${env.base_url}dev/`,
             label: 'Script principal',
+            overview: 'Application',
 
             path: '/app/main.js',
             edit: true
@@ -88,6 +89,7 @@ let dev = new function() {
                     url: i ? `${env.base_url}dev/${form.key}/${page.key}/` : `${env.base_url}dev/${form.key}/`,
                     category: `Formulaire '${form.key}'`,
                     label: `Page '${page.key}'`,
+                    overview: 'Formulaire',
 
                     form: form,
                     page: page,
@@ -103,6 +105,7 @@ let dev = new function() {
                 url: `${env.base_url}dev/${schedule.key}/`,
                 category: 'Agendas',
                 label: `Agenda '${schedule.key}'`,
+                overview: 'Agenda',
 
                 schedule: schedule
             });
@@ -120,6 +123,7 @@ let dev = new function() {
                         url: `${env.base_url}dev${file.path}`,
                         category: 'Fichiers',
                         label: file.path,
+                        overview: 'Contenu',
 
                         path: file.path
                     });
@@ -242,7 +246,7 @@ Navigation functions should only be called in reaction to user events, such as b
         if (!correct_mode)
             left_panel = show_editor ? 'editor' : null;
 
-        if (!current_asset) {
+        if (!current_asset || !current_asset.overview) {
             show_overview = false;
         } else if (!left_panel) {
             show_overview = true;
@@ -254,7 +258,7 @@ Navigation functions should only be called in reaction to user events, such as b
             ${show_data ?
                 html`<button class=${left_panel === 'data' ? 'active' : ''} @click=${e => toggleLeftPanel('data')}>Données</button>` : ''}
             ${current_asset ?
-                html`<button class=${show_overview ? 'active': ''} @click=${e => toggleOverview()}>Aperçu</button>` : ''}
+                html`<button class=${show_overview ? 'active': ''} @click=${e => toggleOverview()}>${current_asset.overview}</button>` : ''}
 
             <select id="dev_assets" @change=${e => app.go(e.target.value)}>
                 ${!current_asset ? html`<option>-- Select an asset --</option>` : ''}
