@@ -72,8 +72,8 @@ bundle_drdR <- function(project_dir, version, build_dir) {
                  'src/drd/drdR/drdR_mco.R'), 'R')
     copy_files(list_files('src/drd/libdrd'), 'src/drd/libdrd')
     copy_files(list_files('src/libcc'), 'src/libcc')
-    copy_files(c('src/wrappers/Rcc.cc',
-                 'src/wrappers/Rcc.hh'), 'src/wrappers')
+    copy_files(c('src/libwrap/Rcc.cc',
+                 'src/libwrap/Rcc.hh'), 'src/libwrap')
     copy_files(list_files('vendor/miniz'), 'vendor/miniz')
 
     return (build_dir)
