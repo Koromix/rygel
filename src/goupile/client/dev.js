@@ -349,7 +349,7 @@ Navigation functions should only be called in reaction to user events, such as b
             editor_el.id = 'dev_editor';
             render(html`
                 <div style="height: 100%;"></div>
-                <div id="dev_tools" class="gp_toolbar"></div>
+                <div id="dev_toolbar"></div>
             `, editor_el);
         }
 

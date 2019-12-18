@@ -6,7 +6,7 @@
 
 .pr_grid {
     width: 100%;
-    border: 1px solid #ddd;
+    border: 1px solid #dfdfdf;
     border-collapse: collapse;
 }
 .pr_grid th, .pr_grid td {
@@ -19,7 +19,7 @@
 }
 .pr_grid th {
     background: white;
-    border: 1px solid #ddd;
+    border: 1px solid #dfdfdf;
     text-align: left;
     font-style: italic;
     font-weight: normal;
@@ -131,7 +131,7 @@
 
 .tr_tree ul {
     margin-left: 4px;
-    border-left: 1px solid #ddd;
+    border-left: 1px solid #dfdfdf;
 }
 .tr_tree li.collapse ul { display: none !important; }
 

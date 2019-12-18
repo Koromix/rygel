@@ -76,7 +76,7 @@ let dev_files = new function() {
                 })}</tbody>
             </table>
 
-            <div id="dev_tools" class="gp_toolbar">
+            <div id="dev_toolbar">
                 <button @click=${showCreateDialog}>Ajouter</button>
                 <div style="flex: 1;"></div>
                 ${remote ?

@@ -89,7 +89,7 @@ button { cursor: pointer; }
     color: white;
 }
 #th_menu a:not(.category):not(.active):hover {
-    background: #ddd !important;
+    background: #dfdfdf !important;
     color: black !important;
 }
 

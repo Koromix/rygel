@@ -33,7 +33,7 @@ function ScheduleView(resources_map, meetings_map) {
         render(html`
             <div id="sc_header">${week_day_names.map(name => html`<div>${name}</div>`)}</div>
             <div id="sc_days"></div>
-            <div id="sc_footer" class="gp_toolbar"></div>
+            <div id="sc_footer"></div>
         `, root_el);
 
         days_el = root_el.querySelector('#sc_days');

@@ -15,11 +15,6 @@ body {
     body { font-size: 16px; }
 }
 
-#gp_menu {
-    position: fixed;
-    top: 0;
-}
-
 main { margin-top: 2.5em; }
 
 /* -------------------- Common elements -------------------- */
@@ -32,10 +27,12 @@ button {
 }
 button:not(:disabled) { cursor: pointer; }
 
-/* -------------------- Toolbars -------------------- */
+/* -------------------- Main toolbar -------------------- */
 
-.gp_toolbar {
+#gp_menu {
+    position: fixed;
     display: flex;
+    top: 0;
     box-sizing: border-box;
     width: 100%;
     height: 2.5em;
@@ -50,7 +47,7 @@ button:not(:disabled) { cursor: pointer; }
     -ms-user-select: none;
 }
 
-.gp_toolbar button {
+#gp_menu button {
     display: inline-block;
     height: 100%;
     box-sizing: border-box;
@@ -59,9 +56,9 @@ button:not(:disabled) { cursor: pointer; }
     color: inherit;
     text-decoration: none;
 }
-.gp_toolbar button:not(.active):not(:disabled):hover { background: #376cb5; }
-.gp_toolbar button.active { background: #3b7ad1; }
-.gp_toolbar button:disabled { filter: brightness(75%); }
+#gp_menu button:not(.active):not(:disabled):hover { background: #376cb5; }
+#gp_menu button.active { background: #3b7ad1; }
+#gp_menu button:disabled { filter: brightness(75%); }
 
 /* -------------------- Popup -------------------- */
 
@@ -70,7 +67,7 @@ button:not(:disabled) { cursor: pointer; }
     position: fixed;
     box-sizing: border-box;
     padding: 6px;
-    border: 1px solid #ddd;
+    border: 1px solid #dfdfdf;
     background: #efefef;
     box-shadow: 2px 2px rgba(136, 136, 136, 0.12);
     z-index: 9999;

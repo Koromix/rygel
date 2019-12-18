@@ -45,7 +45,7 @@
     text-align: center;
     font-weight: normal;
 }
-.etab_table td { border: 1px solid #ddd; }
+.etab_table td { border: 1px solid #dfdfdf; }
 .etab_table .parent { background: #e9e9e9; }
 
 .etab_table .ascending {

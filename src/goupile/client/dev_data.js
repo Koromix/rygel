@@ -59,7 +59,7 @@ let dev_data = new function() {
                 </tbody>
             </table>
 
-            <div id="dev_tools" class="gp_toolbar">
+            <div id="dev_toolbar">
                 <button ?disabled=${!columns.length} @click=${e => exportSheets(table, 'xlsx')}>Export Excel</button>
                 <button ?disabled=${!columns.length} @click=${e => exportSheets(table, 'csv')}>Export CSV</button>
             </div>
