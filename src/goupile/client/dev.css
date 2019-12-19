@@ -63,17 +63,6 @@
     background: #efefef;
 }
 
-#dev_log {
-    position: fixed;
-    bottom: 0;
-    right: 0;
-    padding: 5px;
-    background: #db0a0a;
-    color: white;
-    white-space: pre-wrap;
-    z-index: 9999;
-}
-
 /* -------------------- Toolbar -------------------- */
 
 #dev_toolbar {
@@ -109,6 +98,16 @@
 
 /* -------------------- Utility -------------------- */
 
+#dev_log {
+    position: fixed;
+    top: 2.5em;
+    right: 0;
+    padding: 6px;
+    background: #db0a0a;
+    color: white;
+    white-space: pre-wrap;
+    z-index: 9999;
+}
 .dev_broken {
     filter: grayscale(100%);
     opacity: 0.5;
