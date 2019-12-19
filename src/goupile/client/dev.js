@@ -368,6 +368,10 @@ Navigation functions should only be called in reaction to user events, such as b
             editor.setTheme('ace/theme/monokai');
             editor.setShowPrintMargin(false);
             editor.setFontSize(13);
+
+            // Auto-pairing of parentheses is problematic when doing execute-as-you-type,
+            // because it easily leads to infinite for loops.
+            editor.setBehavioursEnabled(false);
         }
 
         let session = editor_sessions.get(current_asset.path);
