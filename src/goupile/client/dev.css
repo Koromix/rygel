@@ -36,7 +36,6 @@
     top: 2.5em;
     width: 50%;
     height: calc(100% - 5em);
-    box-sizing: border-box;
     z-index: 999;
     overflow: auto;
     border-right: 1px solid #dfdfdf;
@@ -53,7 +52,6 @@
     top: 2.5em;
     width: 100%;
     height: calc(100% - 5em);
-    box-sizing: border-box;
     z-index: 999;
     overflow: auto;
 }
