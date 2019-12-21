@@ -573,6 +573,14 @@ function LruMap(limit) {
         map = {};
         count = 0;
     };
+
+    this[Symbol.iterator] = function*() {
+        let it = root_bucket.next;
+        while (it !== root_bucket) {
+            yield [it.key, it.value];
+            it = it.next;
+        }
+    };
 }
 
 // ------------------------------------------------------------------------
