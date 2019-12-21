@@ -22,20 +22,20 @@ function FileManager(db) {
     };
 
     this.save = async function(file) {
-        // TODO: Fix race condition between hash computation and file storage
-        let hash = await computeSha256(file.data);
+        let file2 = {
+            path: file.path,
+            size: file.data.size,
+            mtime: file.mtime || (((new Date).getTime() / 1000) | 0),
+            // TODO: Fix race condition between hash computation and file storage
+            sha256: await computeSha256(file.data)
+        };
 
         await db.transaction(db => {
-            let file2 = {
-                path: file.path,
-                size: file.data.size,
-                mtime: file.mtime || (((new Date).getTime() / 1000) | 0),
-                sha256: hash
-            };
-
             db.save('files', file2);
             db.saveWithKey('files_data', file.path, file.data);
         });
+
+        return file2;
     };
 
     // Javascript Blob/File API sucks, plain and simple

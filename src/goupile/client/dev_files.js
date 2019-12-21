@@ -110,16 +110,15 @@ let dev_files = new function() {
             page.submitHandler = async () => {
                 page.close();
 
-                // FIXME: Need to refresh list of assets in dev
                 let entry = new log.Entry;
 
                 entry.progress('Enregistrement du fichier');
                 try {
                     let file = vfs.create(path.value, blob.value || '');
                     await vfs.save(file);
+                    await dev.init();
 
                     entry.success('Fichier enregistré !');
-                    app.go();
                 } catch (err) {
                     entry.error(`Echec de l'enregistrement : ${err}`);
                 }
@@ -141,7 +140,7 @@ let dev_files = new function() {
                 page.close();
 
                 await syncFiles();
-                app.go();
+                await dev.init();
             };
             page.buttons(page.buttons.std.ok_cancel('Synchroniser'));
         });
@@ -154,9 +153,8 @@ let dev_files = new function() {
             page.submitHandler = async () => {
                 page.close();
 
-                // FIXME: Need to refresh list of assets in dev
                 await vfs.delete(path);
-                app.go();
+                await dev.init();
             };
             page.buttons(page.buttons.std.ok_cancel('Supprimer'));
         });
@@ -181,6 +179,5 @@ let dev_files = new function() {
         }
 
         user_actions = {};
-        await self.runFiles();
     }
 };

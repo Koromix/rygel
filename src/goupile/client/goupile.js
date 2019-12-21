@@ -37,10 +37,9 @@ let goupile = new function() {
 
         initNavigation();
         initEvents();
+
         if (typeof dev !== 'undefined')
             await dev.init();
-
-        app.go(window.location.href, false);
     }
 
     function initOffline() {

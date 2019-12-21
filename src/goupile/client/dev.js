@@ -12,61 +12,61 @@ let dev = new function() {
     let current_asset;
     let current_url;
 
-    let current_record;
+    let current_record = {};
     let app_form;
 
     let left_panel;
-    let show_overview;
+    let show_overview = true;
 
     let editor_el;
     let editor;
-    let editor_sessions = new LruMap(32);
+    let editor_buffers = new LruMap(32);
     let editor_timer_id;
+    let editor_ignore_change = false;
 
-    let reload_app;
-
-    this.init = async function() {
-        try {
-            app = await loadApplication();
-        } catch (err) {
-            // Empty application, so that the user can still fix main.js or reset everything
-            app = util.deepFreeze(new Application, 'route');
-            console.log(err);
-        }
-
-        assets = await listAssets(app);
-        assets_map = util.mapArray(assets, asset => asset.url);
-        current_asset = assets[0];
-
-        current_record = {};
-        app_form = null;
-
-        left_panel = null;
-        show_overview = true;
-
-        editor_sessions.clear();
-        editor_timer_id = null;
-
-        reload_app = false;
-    };
+    let reload_app = false;
 
     // Can be launched multiple times (e.g. when main.js is edited)
-    async function loadApplication() {
-        let app = new Application;
-        let app_builder = new ApplicationBuilder(app);
+    this.init = async function() {
+        let files = await vfs.list();
+        let files_map = util.mapArray(files, file => file.path);
 
-        let main_script = await loadFileData('/app/main.js');
-        let func = Function('app', 'data', 'route', main_script);
-        func(app_builder, app.data, app.route);
+        // Detect file changes made outside editor
+        for (let [path, buffer] of editor_buffers) {
+            let file = files_map[path];
+            buffer.reload = (file && file.sha256 !== buffer.sha256) || (!file && buffer.sha256);
+        }
+
+        try {
+            let new_app = new Application;
+            let app_builder = new ApplicationBuilder(new_app);
+
+            let main_script = await loadFileData('/app/main.js');
+            let func = Function('app', 'data', 'route', main_script);
+            func(app_builder, new_app.data, new_app.route);
+
+            app = new_app;
+        } catch (err) {
+            if (app) {
+                throw err;
+            } else {
+                // Empty application, so that the user can still fix main.js or reset everything
+                app = new Application;
+                console.log(err);
+            }
+        }
 
         app.go = handleGo;
         app.makeURL = makeURL;
+        util.deepFreeze(app, 'route');
 
-        // Application loaded!
-        return util.deepFreeze(app, 'route');
-    }
+        assets = listAssets(app, files);
+        assets_map = util.mapArray(assets, asset => asset.url);
 
-    async function listAssets(app) {
+        app.go(current_url || window.location.href, false);
+    };
+
+    function listAssets(app, files) {
         // Always add this one, which we need to edit even if is broken and
         // the application cannot be loaded.
         let assets = [{
@@ -113,7 +113,6 @@ let dev = new function() {
 
         // Unused (by main.js) files
         try {
-            let files = await vfs.list();
             let known_paths = new Set(assets.map(asset => asset.path));
 
             for (let file of files) {
@@ -374,31 +373,49 @@ Navigation functions should only be called in reaction to user events, such as b
             editor.setBehavioursEnabled(false);
         }
 
-        let session = editor_sessions.get(current_asset.path);
-        if (!session) {
-            let script = await loadFileData(current_asset.path);
+        let buffer = editor_buffers.get(current_asset.path);
 
-            session = new ace.EditSession(script, 'ace/mode/javascript');
-            session.setOption('useWorker', false);
-            session.setUseWrapMode(true);
-            session.setUndoManager(new ace.UndoManager());
+        if (!buffer || buffer.reload) {
+            let file = await vfs.load(current_asset.path);
+            let script = file ? await file.data.text() : '';
 
-            session.on('change', e => handleEditorChange(current_asset.path, session.getValue()));
+            if (buffer) {
+                buffer.sha256 = file ? file.sha256 : null;
+                buffer.reload = false;
 
-            editor_sessions.set(current_asset.path, session);
+                editor_ignore_change = true;
+                editor.session.doc.setValue(script);
+                editor_ignore_change = false;
+            } else {
+                let session = new ace.EditSession(script, 'ace/mode/javascript');
+                session.setOption('useWorker', false);
+                session.setUseWrapMode(true);
+                session.setUndoManager(buffer ? buffer.session.getUndoManager() : new ace.UndoManager());
+                session.on('change', e => handleEditorChange(current_asset.path));
+
+                buffer = {
+                    session: session,
+                    sha256: file ? file.sha256 : null,
+                    reload: false
+                };
+
+                editor_buffers.set(current_asset.path, buffer);
+            }
         }
 
-        if (session !== editor.session) {
-            editor.setSession(session);
+        if (buffer.session !== editor.session) {
+            editor.setSession(buffer.session);
             editor.setReadOnly(false);
         }
 
         editor.resize(false);
     }
 
-    function handleEditorChange(path, value) {
-        clearTimeout(editor_timer_id);
+    function handleEditorChange(path) {
+        if (editor_ignore_change)
+            return;
 
+        clearTimeout(editor_timer_id);
         editor_timer_id = setTimeout(async () => {
             editor_timer_id = null;
 
@@ -408,8 +425,12 @@ Navigation functions should only be called in reaction to user events, such as b
                     reload_app = true;
 
                 if (await runAssetSafe()) {
-                    let file = vfs.create(path, value);
-                    await vfs.save(file);
+                    let file = vfs.create(path, editor.getValue());
+                    let file2 = await vfs.save(file);
+
+                    let buffer = editor_buffers.get(path);
+                    if (buffer)
+                        buffer.sha256 = file2.sha256;
                 }
                 window.history.replaceState(null, null, app.makeURL());
             }
@@ -417,10 +438,10 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     async function loadFileData(path) {
-        let session = editor_sessions.get(path);
+        let buffer = editor_buffers.get(path);
 
-        if (session) {
-            return session.getValue();
+        if (buffer && !buffer.reload) {
+            return buffer.session.getValue();
         } else {
             let file = await vfs.load(path);
             return file ? (await file.data.text()) : '';
@@ -435,14 +456,10 @@ Navigation functions should only be called in reaction to user events, such as b
             switch (current_asset.type) {
                 case 'main': {
                     if (reload_app) {
-                        app = await loadApplication();
-
-                        assets = await listAssets(app);
-                        assets_map = util.mapArray(assets, asset => asset.url);
-
-                        // Old assets must not be used anymore, tell go() to fix current_asset
                         reload_app = false;
-                        await app.go(assets[0].url);
+
+                        await self.init();
+                        return true;
                     }
 
                     render(html`<div class="dev_wip">Aperçu non disponible pour le moment</div>`,
