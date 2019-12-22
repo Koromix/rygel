@@ -63,6 +63,15 @@ let dev = new function() {
         assets = listAssets(app, files);
         assets_map = util.mapArray(assets, asset => asset.url);
 
+        // Select default page
+        if (app.home) {
+            assets_map[env.base_url] = assets_map[app.home];
+        } else if (assets.length >= 2 && assets[1].type !== 'blob') {
+            assets_map[env.base_url] = assets[1];
+        } else {
+            assets_map[env.base_url] = assets[0];
+        }
+
         app.go(current_url || window.location.href, false);
     };
 
@@ -178,11 +187,10 @@ Navigation functions should only be called in reaction to user events, such as b
             current_asset = assets_map[url];
             if (!current_asset && !url.endsWith('/'))
                 current_asset = assets_map[url + '/'];
-
             current_url = current_asset ? current_asset.url : url;
 
-            if (!current_asset && url !== env.base_url)
-                log.error('Asset not available');
+            if (!current_asset)
+                log.error(`URL inconnue '${url}'`);
         }
 
         // Load record (if needed)
@@ -260,7 +268,7 @@ Navigation functions should only be called in reaction to user events, such as b
                 html`<button class=${show_overview ? 'active': ''} @click=${e => toggleOverview()}>${current_asset.overview}</button>` : ''}
 
             <select id="dev_assets" @change=${e => app.go(e.target.value)}>
-                ${!current_asset ? html`<option>-- Select an asset --</option>` : ''}
+                ${!current_asset ? html`<option>-- Sélectionnez une page --</option>` : ''}
                 ${util.mapRLE(assets, asset => asset.category, (category, offset, len) => {
                     if (category && len == 1) {
                         let asset = assets[offset];

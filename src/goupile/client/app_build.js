@@ -9,6 +9,10 @@ function ApplicationBuilder(app) {
     let forms_map = {};
     let used_links = new Set;
 
+    this.start = function(url) {
+        app.home = url;
+    };
+
     this.form = function(key, func = null) {
         checkKey(key);
 

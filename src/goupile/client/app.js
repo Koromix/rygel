@@ -5,6 +5,8 @@
 function Application() {
     let self = this;
 
+    this.home = null;
+
     this.forms = [];
     this.schedules = [];
 
