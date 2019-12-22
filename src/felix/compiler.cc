@@ -303,6 +303,8 @@ public:
             if (src_type == SourceType::CXX_Source || src_type == SourceType::CXX_Header) {
                 Fmt(&buf, " -Wno-class-memaccess");
             }
+        } else {
+            Fmt(&buf, " -w");
         }
 
         // Platform flags

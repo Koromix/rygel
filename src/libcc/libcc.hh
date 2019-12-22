@@ -106,6 +106,9 @@ enum class Endianness {
         _Pragma("GCC diagnostic ignored \"-Wextra\"")
         _Pragma("GCC diagnostic ignored \"-Wconversion\"")
         _Pragma("GCC diagnostic ignored \"-Wsign-conversion\"")
+        _Pragma("GCC diagnostic ignored \"-Wunused-function\"")
+        _Pragma("GCC diagnostic ignored \"-Wunused-variable\"")
+        _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
     #define RG_POP_NO_WARNINGS() \
         _Pragma("GCC diagnostic pop")
 
