@@ -1,5 +1,3 @@
-![Rygel](/doc/images/rygel.jpg)
-
 # Projects
 
 | Project    | Description                                                                | Quality          |
