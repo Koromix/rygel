@@ -107,7 +107,7 @@ void ProduceMcoDiagnoses(const http_RequestInfo &request, const User *, http_IO 
     }
     json.EndArray();
 
-    io->flags |= (int)http_IO::Flag::EnableCache;
+    io->AddCachingHeaders(thop_config.max_age, thop_etag);
     return json.Finish(io);
 }
 
@@ -152,7 +152,7 @@ void ProduceMcoProcedures(const http_RequestInfo &request, const User *, http_IO
     }
     json.EndArray();
 
-    io->flags |= (int)http_IO::Flag::EnableCache;
+    io->AddCachingHeaders(thop_config.max_age, thop_etag);
     return json.Finish(io);
 }
 
@@ -274,7 +274,7 @@ void ProduceMcoGhmGhs(const http_RequestInfo &request, const User *, http_IO *io
     }
     json.EndArray();
 
-    io->flags |= (int)http_IO::Flag::EnableCache;
+    io->AddCachingHeaders(thop_config.max_age, thop_etag);
     return json.Finish(io);
 }
 
@@ -653,7 +653,7 @@ void ProduceMcoTree(const http_RequestInfo &request, const User *, http_IO *io)
     }
     json.EndArray();
 
-    io->flags |= (int)http_IO::Flag::EnableCache;
+    io->AddCachingHeaders(thop_config.max_age, thop_etag);
     return json.Finish(io);
 }
 

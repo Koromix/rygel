@@ -341,18 +341,14 @@ void http_IO::AddCachingHeaders(int max_age, const char *etag)
 {
     RG_ASSERT(max_age >= 0);
 
-    if (!(flags & (int)Flag::EnableCacheControl)) {
-        max_age = 0;
-    }
-    if (!(flags & (int)Flag::EnableETag)) {
-        etag = nullptr;
-    }
+#ifndef NDEBUG
+    max_age = 0;
+#endif
 
     if (max_age || etag) {
-        char buf[512];
-        Fmt(buf, "max-age=%1", max_age);
-        AddHeader("Cache-Control", buf);
+        char buf[128];
 
+        AddHeader("Cache-Control", Fmt(buf, "max-age=%1", max_age).ptr);
         if (etag) {
             AddHeader("ETag", etag);
         }

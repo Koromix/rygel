@@ -53,6 +53,8 @@ bool thop_has_casemix;
 StructureSet thop_structure_set;
 UserSet thop_user_set;
 
+char thop_etag[33];
+
 static Span<const AssetInfo> assets;
 #ifndef NDEBUG
 static const char *assets_filename;
@@ -64,7 +66,6 @@ static DictionarySet dictionary_set;
 
 static HashTable<Span<const char>, Route> routes;
 static BlockAllocator routes_alloc;
-static char etag[64];
 
 static Size ConvertToJsName(const char *name, Span<char> out_buf)
 {
@@ -94,10 +95,6 @@ static Size ConvertToJsName(const char *name, Span<char> out_buf)
 
 static void ProduceSettings(const http_RequestInfo &request, const User *user, http_IO *io)
 {
-    if (!user) {
-        io->flags |= (int)http_IO::Flag::EnableCache;
-    }
-
     http_JsonPageBuilder json(request.compression_type);
     char buf[32];
 
@@ -160,6 +157,9 @@ static void ProduceSettings(const http_RequestInfo &request, const User *user, h
 
     json.EndObject();
 
+    if (!user) {
+        io->AddCachingHeaders(thop_config.max_age, thop_etag);
+    }
     json.Finish(io);
 }
 
@@ -364,7 +364,7 @@ static void InitRoutes()
     {
         uint64_t buf[2];
         randombytes_buf(&buf, RG_SIZE(buf));
-        Fmt(etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
+        Fmt(thop_etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
     }
 }
 
@@ -387,8 +387,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
     // Handle server-side cache validation (ETag)
     {
-        const char *client_etag = request.GetHeaderValue("If-None-Match");
-        if (client_etag && TestStr(client_etag, etag)) {
+        const char *etag = request.GetHeaderValue("If-None-Match");
+        if (etag && TestStr(etag, thop_etag)) {
             MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
             io->AttachResponse(304, response);
             return;
@@ -425,13 +425,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         case Route::Type::Asset: {
             io->AttachBinary(200, route->u.st.asset.data, route->u.st.mime_type,
                              route->u.st.asset.compression_type);
-            io->flags |= (int)http_IO::Flag::EnableCache;
 
-#ifndef NDEBUG
-            io->flags &= ~(unsigned int)http_IO::Flag::EnableCache;
-#endif
-            io->AddCachingHeaders(thop_config.max_age, etag);
-
+            io->AddCachingHeaders(thop_config.max_age, thop_etag);
             if (route->u.st.asset.source_map) {
                 io->AddHeader("SourceMap", route->u.st.asset.source_map);
             }
@@ -439,11 +434,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
         case Route::Type::Function: {
             route->u.func(request, user, io);
-
-#ifndef NDEBUG
-            io->flags &= ~(unsigned int)http_IO::Flag::EnableCache;
-#endif
-            io->AddCachingHeaders(thop_config.max_age, etag);
         } break;
     }
 }

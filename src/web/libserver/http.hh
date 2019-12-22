@@ -102,15 +102,7 @@ class http_IO {
     HeapArray<std::function<void()>> finalizers;
 
 public:
-    enum class Flag {
-        EnableCacheControl = 1 << 0,
-        EnableETag = 1 << 1,
-        EnableCache = (int)EnableCacheControl | (int)EnableETag
-    };
-
     BlockAllocator allocator;
-
-    unsigned int flags = 0;
 
     http_IO();
     ~http_IO();

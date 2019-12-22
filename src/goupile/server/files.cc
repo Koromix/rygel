@@ -21,7 +21,7 @@ struct FileEntry {
     const char *url;
 
     const char *filename;
-    FileInfo info;
+    Size size;
     char sha256[65];
 
     // Used for garbage collection
@@ -80,8 +80,14 @@ static FileEntry *AddFileEntry(const char *filename, Size offset)
     Allocator *alloc = files.GetBucketAllocator();
 
     file->filename = DuplicateString(filename, file->allocator).ptr;
-    if (!StatFile(filename, &file->info))
-        return nullptr;
+
+    // File size
+    {
+        FileInfo file_info;
+        if (!StatFile(filename, &file_info))
+            return nullptr;
+        file->size = file_info.size;
+    }
 
     Span<char> url = Fmt(file->allocator, "/app/%1", file->filename + offset);
 #ifdef _WIN32
@@ -174,8 +180,7 @@ void HandleFileList(const http_RequestInfo &request, http_IO *io)
     for (const FileEntry &file: files) {
         json.StartObject();
         json.Key("path"); json.String(file.url);
-        json.Key("size"); json.Int64(file.info.size);
-        json.Key("mtime"); json.Int64(file.info.modification_time);
+        json.Key("size"); json.Int64(file.size);
         json.Key("sha256"); json.String(file.sha256);
         json.EndObject();
     }
@@ -187,6 +192,7 @@ void HandleFileList(const http_RequestInfo &request, http_IO *io)
 // Returns false when file does not exist (and another handler needs to be used)
 bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
 {
+    const char *etag = request.GetHeaderValue("If-None-Match");
     const char *sha256 = request.GetQueryValue("sha256");
 
     const FileEntry *file;
@@ -207,6 +213,12 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
     }
     io->AddFinalizer([=]() { file->Unlock(); });
 
+    if (etag && TestStr(etag, file->sha256)) {
+        MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+        io->AttachResponse(304, response);
+        return true;
+    }
+
     if (sha256 && !TestStr(sha256, file->sha256)) {
         LogError("Fetch refused because of sha256 mismatch");
         io->AttachError(409);
@@ -214,6 +226,8 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
     }
 
     io->RunAsync([=]() {
+        io->AddCachingHeaders(goupile_config.max_age, file->sha256);
+
         if (request.compression_type == CompressionType::None) {
 #ifdef _WIN32
             int fd = open(file->filename, O_RDONLY | O_BINARY);
@@ -248,8 +262,6 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
 
             writer.Close();
         }
-
-        io->AddEncodingHeader(request.compression_type);
     });
 
     return true;
@@ -344,8 +356,14 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
                     return;
                 }
 
-                if (!StatFile(filename, &file->info))
-                    return;
+                // File size
+                {
+                    FileInfo file_info;
+                    if (!StatFile(filename, &file_info))
+                        return;
+                    file->size = file_info.size;
+                }
+
                 FormatSha256(hash, file->sha256);
             } else {
                 if (sha256 && sha256[0]) {
@@ -411,7 +429,7 @@ void HandleFileDelete(const http_RequestInfo &request, http_IO *io)
                 files_map.Remove(file0->url);
                 if (file->allocator != file0->allocator) {
                     file->filename = DuplicateString(file0->filename, file->allocator).ptr;
-                    file->info = file0->info;
+                    file->size = file0->size;
                     file->url = DuplicateString(file0->url, file->allocator).ptr;
                     strcpy(file->sha256, file0->sha256);
                 } else {

@@ -19,4 +19,6 @@ extern bool thop_has_casemix;
 extern StructureSet thop_structure_set;
 extern UserSet thop_user_set;
 
+extern char thop_etag[33];
+
 }

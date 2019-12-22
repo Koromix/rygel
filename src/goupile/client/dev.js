@@ -28,7 +28,7 @@ let dev = new function() {
 
     // Can be launched multiple times (e.g. when main.js is edited)
     this.init = async function() {
-        let files = await vfs.list();
+        let files = await vfs.listAll();
         let files_map = util.mapArray(files, file => file.path);
 
         // Detect file changes made outside editor
@@ -425,12 +425,11 @@ Navigation functions should only be called in reaction to user events, such as b
                     reload_app = true;
 
                 if (await runAssetSafe()) {
-                    let file = vfs.create(path, editor.getValue());
-                    let file2 = await vfs.save(file);
+                    let file = await vfs.save(path, editor.getValue());
 
                     let buffer = editor_buffers.get(path);
                     if (buffer)
-                        buffer.sha256 = file2.sha256;
+                        buffer.sha256 = file.sha256;
                 }
                 window.history.replaceState(null, null, app.makeURL());
             }

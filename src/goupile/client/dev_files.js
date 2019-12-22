@@ -7,30 +7,30 @@ let dev_files = new function() {
 
     let remote = false;
 
-    let actions;
+    let files;
     let user_actions = {};
 
     this.runFiles = async function() {
         if (remote) {
-            actions = await vfs.status();
+            files = await vfs.status();
 
             // Overwrite with user actions (if any)
-            for (let action of actions)
-                action.type = user_actions[action.path] || action.type;
+            for (let file of files)
+                file.action = user_actions[file.path] || file.action;
 
             // Show locally deleted files last
-            actions.sort((action1, action2) => (!!action2.sha256 - !!action1.sha256) ||
-                                               util.compareValues(action1.path, action2.path));
+            files.sort((file1, file2) => (!!file2.sha256 - !!file1.sha256) ||
+                                             util.compareValues(file1.path, file2.path));
         } else {
-            actions = await vfs.list();
+            files = await vfs.listLocal();
         }
 
         renderActions();
     };
 
     function renderActions() {
-        let enable_sync = actions.some(action => action.type !== 'noop') &&
-                          !actions.some(action => action.type === 'conflict');
+        let enable_sync = files.some(file => file.action !== 'noop') &&
+                          !files.some(file => file.action === 'conflict');
 
         render(html`
             <table class="sync_table">
@@ -46,25 +46,25 @@ let dev_files = new function() {
                     ` : ''}
                 </tr></thead>
 
-                <tbody>${actions.map(action => {
-                    if (action.sha256 || action.remote_sha256) {
+                <tbody>${files.map(file => {
+                    if (file.sha256 || file.remote_sha256) {
                         return html`<tr>
-                            <td>${action.sha256 ?
-                                html`<a href="#" @click=${e => { showDeleteDialog(e, action.path); e.preventDefault(); }}>x</a>` : ''}</td>
-                            <td class=${action.type == 'pull' ? 'sync_path overwrite' : 'sync_path'}>${action.sha256 ? action.path : ''}</td>
-                            <td class="sync_size">${action.sha256 ? util.formatDiskSize(action.size) : ''}</td>
+                            <td>${file.sha256 ?
+                                html`<a href="#" @click=${e => { showDeleteDialog(e, file.path); e.preventDefault(); }}>x</a>` : ''}</td>
+                            <td class=${file.action == 'pull' ? 'sync_path overwrite' : 'sync_path'}>${file.sha256 ? file.path : ''}</td>
+                            <td class="sync_size">${file.sha256 ? util.formatDiskSize(file.size) : ''}</td>
 
                             ${remote ? html`
                                 <td class="sync_actions">
-                                    <a href="#" class=${action.type !== 'pull' ? 'gray' : ''}
-                                       @click=${e => { toggleAction(action, 'pull'); e.preventDefault(); }}>&lt;</a>
-                                    <a href="#" class=${action.type !== 'noop' ? 'gray' : ''}
-                                       @click=${e => { toggleAction(action, 'noop'); e.preventDefault(); }}>${action.type === 'conflict' ? '?' : '='}</a>
-                                    <a href="#" class=${action.type !== 'push' ? 'gray' : ''}
-                                       @click=${e => { toggleAction(action, 'push'); e.preventDefault(); }}>&gt;</a>
+                                    <a href="#" class=${file.action !== 'pull' ? 'gray' : ''}
+                                       @click=${e => { toggleAction(file, 'pull'); e.preventDefault(); }}>&lt;</a>
+                                    <a href="#" class=${file.action !== 'noop' ? 'gray' : ''}
+                                       @click=${e => { toggleAction(file, 'noop'); e.preventDefault(); }}>${file.action === 'conflict' ? '?' : '='}</a>
+                                    <a href="#" class=${file.action !== 'push' ? 'gray' : ''}
+                                       @click=${e => { toggleAction(file, 'push'); e.preventDefault(); }}>&gt;</a>
                                 </td>
-                                <td class=${action.type == 'push' ? 'sync_path overwrite' : 'sync_path'}>${action.remote_sha256 ? action.path : ''}</td>
-                                <td class="sync_size">${action.remote_sha256 ? util.formatDiskSize(action.remote_size) : ''}</td>
+                                <td class=${file.action == 'push' ? 'sync_path overwrite' : 'sync_path'}>${file.remote_sha256 ? file.path : ''}</td>
+                                <td class="sync_size">${file.remote_sha256 ? util.formatDiskSize(file.remote_size) : ''}</td>
                             ` : ''}
                         `;
                     } else {
@@ -102,7 +102,7 @@ let dev_files = new function() {
                     path.error('Allowed path characters: a-z, _, 0-9 and / (not at the end)');
                 } else if (path.value.includes('/../') || path.value.endsWith('/..')) {
                     path.error('Le chemin ne doit pas contenir de composants \'..\'');
-                } else if (actions.some(action => action.path === path.value && action.sha256)) {
+                } else if (files.some(file => file.path === path.value && file.sha256)) {
                     path.error('Ce chemin est déjà utilisé');
                 }
             }
@@ -114,8 +114,7 @@ let dev_files = new function() {
 
                 entry.progress('Enregistrement du fichier');
                 try {
-                    let file = vfs.create(path.value, blob.value || '');
-                    await vfs.save(file);
+                    await vfs.save(path.value, blob.value || '');
                     await dev.init();
 
                     entry.success('Fichier enregistré !');
@@ -160,9 +159,9 @@ let dev_files = new function() {
         });
     }
 
-    function toggleAction(action, type) {
-        action.type = type;
-        user_actions[action.path] = action.type;
+    function toggleAction(file, type) {
+        file.action = type;
+        user_actions[file.path] = file.action;
 
         renderActions();
     }
@@ -172,7 +171,7 @@ let dev_files = new function() {
         entry.progress('Synchronisation en cours');
 
         try {
-            await vfs.sync(actions);
+            await vfs.sync(files);
             entry.success('Synchronisation terminée !');
         } catch (err) {
             entry.error(err);

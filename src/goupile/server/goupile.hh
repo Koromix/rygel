@@ -13,4 +13,6 @@ namespace RG {
 extern Config goupile_config;
 extern SQLiteDatabase goupile_db;
 
+extern char goupile_etag[33];
+
 }

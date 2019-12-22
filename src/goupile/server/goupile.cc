@@ -17,7 +17,7 @@ namespace RG {
 Config goupile_config;
 SQLiteDatabase goupile_db;
 
-static char etag[64];
+char goupile_etag[33];
 
 #ifndef NDEBUG
 static const char *assets_filename;
@@ -49,7 +49,7 @@ static void HandleManifest(const http_RequestInfo &request, http_IO *io)
     json.Key("theme_color"); json.String("#24579d");
     json.EndObject();
 
-    io->flags |= (int)http_IO::Flag::EnableCache;
+    io->AddCachingHeaders(goupile_config.max_age, nullptr);
     return json.Finish(io);
 }
 
@@ -74,7 +74,7 @@ static AssetInfo PatchGoupilVariables(const AssetInfo &asset, Allocator *alloc)
             writer->Write(goupile_config.use_offline ? "true" : "false");
             return true;
         } else if (TestStr(key, "CACHE_KEY")) {
-            writer->Write(etag);
+            writer->Write(goupile_etag);
             return true;
         } else if (TestStr(key, "SSE_KEEP_ALIVE")) {
             Print(writer, "%1", goupile_config.sse_keep_alive);
@@ -104,7 +104,7 @@ static void InitAssets()
     {
         uint64_t buf[2];
         randombytes_buf(&buf, RG_SIZE(buf));
-        Fmt(etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
+        Fmt(goupile_etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
     }
 
     // Packed static assets
@@ -116,14 +116,6 @@ static void InitAssets()
             assets_map.Append(asset);
         }
     }
-}
-
-static void AddCachingHeaders(http_IO *io)
-{
-#ifndef NDEBUG
-    io->flags &= ~(unsigned int)http_IO::Flag::EnableCache;
-#endif
-    io->AddCachingHeaders(goupile_config.max_age, etag);
 }
 
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
@@ -138,16 +130,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     io->AddHeader("Referrer-Policy", "no-referrer");
 
     if (TestStr(request.method, "GET")) {
-        // Handle server-side cache validation (ETag)
-        {
-            const char *client_etag = request.GetHeaderValue("If-None-Match");
-            if (client_etag && TestStr(client_etag, etag)) {
-                MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-                io->AttachResponse(304, response);
-                return;
-            }
-        }
-
         // Try application files first
         if (HandleFileGet(request, io))
             return;
@@ -168,14 +150,19 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             }
 
             if (asset) {
-                const char *mimetype = http_GetMimeType(GetPathExtension(asset->name));
+                const char *etag = request.GetHeaderValue("If-None-Match");
 
-                io->AttachBinary(200, asset->data, mimetype, asset->compression_type);
-                io->flags |= (int)http_IO::Flag::EnableCache;
+                if (etag && TestStr(etag, goupile_etag)) {
+                    MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+                    io->AttachResponse(304, response);
+                } else {
+                    const char *mimetype = http_GetMimeType(GetPathExtension(asset->name));
+                    io->AttachBinary(200, asset->data, mimetype, asset->compression_type);
 
-                AddCachingHeaders(io);
-                if (asset->source_map) {
-                    io->AddHeader("SourceMap", asset->source_map);
+                    io->AddCachingHeaders(goupile_config.max_age, goupile_etag);
+                    if (asset->source_map) {
+                        io->AddHeader("SourceMap", asset->source_map);
+                    }
                 }
 
                 return;
@@ -200,7 +187,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
             if (func) {
                 (*func)(request, io);
-                AddCachingHeaders(io);
                 return;
             }
         }
