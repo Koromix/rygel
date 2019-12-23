@@ -81,7 +81,8 @@ let dev = new function() {
         let assets = [{
             type: 'main',
             url: `${env.base_url}dev/`,
-            label: 'Script principal',
+            category: 'Paramétrage',
+            label: 'Application',
             overview: 'Application',
 
             path: '/app/main.js',
@@ -97,7 +98,7 @@ let dev = new function() {
                     type: 'page',
                     url: i ? `${env.base_url}dev/${form.key}/${page.key}/` : `${env.base_url}dev/${form.key}/`,
                     category: `Formulaire '${form.key}'`,
-                    label: `Page '${page.key}'`,
+                    label: `${form.key}/${page.key}`,
                     overview: 'Formulaire',
 
                     form: form,
@@ -113,7 +114,7 @@ let dev = new function() {
                 type: 'schedule',
                 url: `${env.base_url}dev/${schedule.key}/`,
                 category: 'Agendas',
-                label: `Agenda '${schedule.key}'`,
+                label: schedule.key,
                 overview: 'Agenda',
 
                 schedule: schedule
@@ -230,12 +231,7 @@ Navigation functions should only be called in reaction to user events, such as b
 
         // Run appropriate module
         if (current_asset) {
-            if (current_asset.category) {
-                document.title = `${current_asset.category} :: ${current_asset.label} — ${env.app_name}`;
-            } else {
-                document.title = `${current_asset.label} — ${env.app_name}`;
-            }
-
+            document.title = `${current_asset.label} — ${env.app_name}`;
             await runAssetSafe();
         } else {
             document.title = env.app_name;
@@ -270,24 +266,11 @@ Navigation functions should only be called in reaction to user events, such as b
             <select id="dev_assets" @change=${e => app.go(e.target.value)}>
                 ${!current_asset ? html`<option>-- Sélectionnez une page --</option>` : ''}
                 ${util.mapRLE(assets, asset => asset.category, (category, offset, len) => {
-                    if (category && len == 1) {
-                        let asset = assets[offset];
+                    return html`<optgroup label=${category}>${util.mapRange(offset, offset + len, idx => {
+                        let asset = assets[idx];
                         return html`<option value=${asset.url}
-                                            .selected=${asset === current_asset}>${asset.category} :: ${asset.label}</option>`;
-                    } else if (category) {
-                        let label = `${category} (${len})`;
-                        return html`<optgroup label=${label}>${util.mapRange(offset, offset + len, idx => {
-                            let asset = assets[idx];
-                            return html`<option value=${asset.url}
-                                                .selected=${asset === current_asset}>${asset.label}</option>`;
-                        })}</optgroup>`;
-                    } else {
-                        return util.mapRange(offset, offset + len, idx => {
-                            let asset = assets[idx];
-                            return html`<option value=${asset.url}
-                                                .selected=${asset === current_asset}>${asset.label}</option>`;
-                        });
-                    }
+                                            .selected=${asset === current_asset}>${asset.label}</option>`;
+                    })}</optgroup>`;
                 })}
             </select>
 
