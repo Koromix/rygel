@@ -389,7 +389,7 @@ let log = new function() {
 
                     if (entry.type === 'progress') {
                         // Wait a bit to show progress entries to prevent quick actions from showing up
-                        setTimeout(renderLog, 100);
+                        setTimeout(renderLog, 200);
                     } else {
                         renderLog();
                     }
