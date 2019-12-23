@@ -97,7 +97,7 @@ let dev = new function() {
                 assets.push({
                     type: 'page',
                     url: i ? `${env.base_url}app/${form.key}/${page.key}/` : `${env.base_url}app/${form.key}/`,
-                    category: `Formulaire '${form.key}'`,
+                    category: `Formulaire ${form.key}`,
                     label: (form.key !== page.key) ? `${form.key}/${page.key}` : form.key,
                     overview: 'Formulaire',
 
@@ -266,11 +266,17 @@ Navigation functions should only be called in reaction to user events, such as b
             <select id="dev_assets" @change=${e => app.go(e.target.value)}>
                 ${!current_asset ? html`<option>-- Sélectionnez une page --</option>` : ''}
                 ${util.mapRLE(assets, asset => asset.category, (category, offset, len) => {
-                    return html`<optgroup label=${category}>${util.mapRange(offset, offset + len, idx => {
-                        let asset = assets[idx];
+                    if (len === 1) {
+                        let asset = assets[offset];
                         return html`<option value=${asset.url}
-                                            .selected=${asset === current_asset}>${asset.label}</option>`;
-                    })}</optgroup>`;
+                                            .selected=${asset === current_asset}>${asset.category} (${asset.label})</option>`;
+                    } else {
+                        return html`<optgroup label=${category}>${util.mapRange(offset, offset + len, idx => {
+                            let asset = assets[idx];
+                            return html`<option value=${asset.url}
+                                                .selected=${asset === current_asset}>${asset.label}</option>`;
+                        })}</optgroup>`;
+                    }
                 })}
             </select>
 
