@@ -87,10 +87,12 @@ function FileManager(db) {
                 let file = {
                     path: path,
                     size: blob.size,
-                    sha256: response.headers.get('ETag'),
-                    data: blob
+                    sha256: response.headers.get('ETag')
                 };
 
+                await db.save('files_cache', file);
+
+                file.data = blob;
                 return file;
             } else {
                 return null;
@@ -198,18 +200,10 @@ function FileManager(db) {
         if (files.some(file => file.action == 'conflict'))
             throw new Error('Conflits non résolus');
 
-        // Perform actions
         for (let i = 0; i < files.length; i += 10) {
             let p = files.slice(i, i + 10).map(executeSyncAction);
             await Promise.all(p);
         }
-
-        // Update information about remote files
-        let remote_files = await fetch(`${env.base_url}api/files.json`).then(response => response.json());
-        await db.transaction(db => {
-            db.clear('files_cache');
-            db.saveAll('files_cache', remote_files);
-        });
     };
 
     async function executeSyncAction(file) {
@@ -226,6 +220,9 @@ function FileManager(db) {
                         let err = (await response.text()).trim();
                         throw new Error(err);
                     }
+
+                    delete file2.data;
+                    await db.save('files_cache', file2);
                 } else {
                     let response = await fetch(url, {method: 'DELETE'});
                     if (!response.ok) {
@@ -233,18 +230,25 @@ function FileManager(db) {
                         throw new Error(err);
                     }
 
-                    await db.delete('files', file.path);
+                    await db.transaction(db => {
+                        db.delete('files', file.path);
+                        db.delete('files_cache', file.path);
+                    });
                 }
             } break;
 
             case 'pull': {
                 if (file.remote_sha256) {
                     let blob = await fetch(url).then(response => response.blob());
-                    await self.save(file.path, blob);
+                    let file2 = await self.save(file.path, blob);
+
+                    delete file2.data;
+                    await db.save('files_cache', file2);
                 } else {
                     await db.transaction(db => {
                         db.delete('files', file.path);
                         db.delete('files_data', file.path);
+                        db.delete('files_cache', file.path);
                     });
                 }
             } break;
