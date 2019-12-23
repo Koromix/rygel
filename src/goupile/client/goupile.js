@@ -29,12 +29,11 @@ let goupile = new function() {
     async function initGoupil() {
         log.pushHandler(log.notifyHandler);
 
-        initOffline();
-
         let db = await openDatabase();
         vfs = new FileManager(db);
         recorder = new FormRecorder(db);
 
+        await initOffline();
         initNavigation();
         initEvents();
 
@@ -42,7 +41,7 @@ let goupile = new function() {
             await dev.init();
     }
 
-    function initOffline() {
+    async function initOffline() {
         if (navigator.serviceWorker) {
             navigator.serviceWorker.register(`${env.base_url}sw.pk.js`);
 
@@ -51,6 +50,25 @@ let goupile = new function() {
                 link.setAttribute('rel', 'manifest');
                 link.setAttribute('href', `${env.base_url}manifest.json`);
                 document.head.appendChild(link);
+
+                let entry = new log.Entry;
+
+                entry.progress('Mise à jour de l\'application');
+                try {
+                    let files = await vfs.status();
+
+                    if (files.some(file => file.action === 'pull' || file.action === 'conflict')) {
+                        if (files.some(file => file.action !== 'pull' && file.action !== 'noop'))
+                            throw new Error('Impossible de mettre à jour (modifications locales)');
+
+                        await vfs.sync(files);
+                        entry.success('Mise à jour terminée !');
+                    } else {
+                        entry.close();
+                    }
+                } catch (err) {
+                    entry.error(err);
+                }
             }
         }
     }
