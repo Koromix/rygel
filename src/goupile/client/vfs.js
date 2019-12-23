@@ -5,10 +5,6 @@
 function FileManager(db) {
     let self = this;
 
-    this.transaction = function(func) {
-        return db.transaction(db => func(self));
-    };
-
     this.save = async function(path, data) {
         if (!(data instanceof Blob))
             data = new Blob([data]);
