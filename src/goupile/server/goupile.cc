@@ -138,7 +138,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         {
             const AssetInfo *asset = nullptr;
 
-            if (TestStr(request.url, "/") || !strncmp(request.url, "/dev/", 5)) {
+            if (TestStr(request.url, "/") ||
+                    !strncmp(request.url, "/app/", 5) || !strncmp(request.url, "/dev/", 5)) {
                 asset = assets_map.Find("goupile.html");
             } else if (TestStr(request.url, "/favicon.png")) {
                 asset = assets_map.Find("favicon.png");
@@ -283,9 +284,9 @@ Options:
         LogError("Project key must not be empty");
         return 1;
     }
-    if (goupile_config.app_directory &&
-            !TestFile(goupile_config.app_directory, FileType::Directory)) {
-        LogError("Application directory '%1' does not exist", goupile_config.app_directory);
+    if (goupile_config.files_directory &&
+            !TestFile(goupile_config.files_directory, FileType::Directory)) {
+        LogError("Application directory '%1' does not exist", goupile_config.files_directory);
         return 1;
     }
 
@@ -313,7 +314,7 @@ Options:
         return 1;
 #endif
     InitAssets();
-    if (goupile_config.app_directory && !InitFiles())
+    if (goupile_config.files_directory && !InitFiles())
         return 1;
 
     // Run!

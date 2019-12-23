@@ -41,7 +41,7 @@ let dev = new function() {
             let new_app = new Application;
             let app_builder = new ApplicationBuilder(new_app);
 
-            let main_script = await loadFileData('/app/main.js');
+            let main_script = await loadFileData('/files/main.js');
             let func = Function('app', 'data', 'route', main_script);
             func(app_builder, new_app.data, new_app.route);
 
@@ -80,12 +80,12 @@ let dev = new function() {
         // the application cannot be loaded.
         let assets = [{
             type: 'main',
-            url: `${env.base_url}dev/`,
+            url: `${env.base_url}dev/main/`,
             category: 'Paramétrage',
             label: 'Application',
             overview: 'Application',
 
-            path: '/app/main.js',
+            path: '/files/main.js',
             edit: true
         }];
 
@@ -96,7 +96,7 @@ let dev = new function() {
 
                 assets.push({
                     type: 'page',
-                    url: i ? `${env.base_url}dev/${form.key}/${page.key}/` : `${env.base_url}dev/${form.key}/`,
+                    url: i ? `${env.base_url}app/${form.key}/${page.key}/` : `${env.base_url}app/${form.key}/`,
                     category: `Formulaire '${form.key}'`,
                     label: (form.key !== page.key) ? `${form.key}/${page.key}` : form.key,
                     overview: 'Formulaire',
@@ -104,7 +104,7 @@ let dev = new function() {
                     form: form,
                     page: page,
 
-                    path: `/app/pages/${page.key}.js`,
+                    path: `/files/pages/${page.key}.js`,
                     edit: true
                 });
             }
@@ -112,7 +112,7 @@ let dev = new function() {
         for (let schedule of app.schedules) {
             assets.push({
                 type: 'schedule',
-                url: `${env.base_url}dev/${schedule.key}/`,
+                url: `${env.base_url}app/${schedule.key}/`,
                 category: 'Agendas',
                 label: schedule.key,
                 overview: 'Agenda',
@@ -129,7 +129,7 @@ let dev = new function() {
                 if (!known_paths.has(file.path)) {
                     assets.push({
                         type: 'blob',
-                        url: `${env.base_url}dev${file.path}`,
+                        url: `${env.base_url}app${file.path}`,
                         category: 'Fichiers',
                         label: file.path,
                         overview: 'Contenu',
@@ -157,7 +157,7 @@ Navigation functions should only be called in reaction to user events, such as b
             if (url.match(/(http|ftp|https):\/\//g) || url.startsWith('/')) {
                 url = new URL(url, window.location.href);
             } else {
-                url = new URL(`${env.base_url}dev/${url}`, window.location.href);
+                url = new URL(`${env.base_url}app/${url}`, window.location.href);
             }
 
             // Update route application global
@@ -412,7 +412,7 @@ Navigation functions should only be called in reaction to user events, such as b
 
             // The user may have changed document (async + timer)
             if (current_asset && current_asset.path === path) {
-                if (path === '/app/main.js')
+                if (path === '/files/main.js')
                     reload_app = true;
 
                 if (await runAssetSafe()) {

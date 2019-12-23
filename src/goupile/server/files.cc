@@ -89,7 +89,7 @@ static FileEntry *AddFileEntry(const char *filename, Size offset)
         file->size = file_info.size;
     }
 
-    Span<char> url = Fmt(file->allocator, "/app/%1", file->filename + offset);
+    Span<char> url = Fmt(file->allocator, "/files/%1", file->filename + offset);
 #ifdef _WIN32
     for (char &c: url) {
         c = (c == '\\') ? '/' : c;
@@ -155,8 +155,8 @@ static bool ComputeFileSha256(const char *filename, char out_sha256[65])
 
 bool InitFiles()
 {
-    Size url_offset = strlen(goupile_config.app_directory) + 1;
-    if (!ListRecurse(goupile_config.app_directory, url_offset))
+    Size url_offset = strlen(goupile_config.files_directory) + 1;
+    if (!ListRecurse(goupile_config.files_directory, url_offset))
         return false;
 
     Async async;
@@ -200,9 +200,9 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
         std::shared_lock<std::shared_mutex> lock_files(files_mutex);
 
         if (TestStr(request.url, "/favicon.png")) {
-            file = files_map.FindValue("/app/favicon.png", nullptr);
+            file = files_map.FindValue("/files/favicon.png", nullptr);
         } else if (TestStr(request.url, "/manifest.json")) {
-            file = files_map.FindValue("/app/manifest.json", nullptr);
+            file = files_map.FindValue("/files/manifest.json", nullptr);
         } else {
             file = files_map.FindValue(request.url, nullptr);
         }
@@ -269,15 +269,15 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
 
 void HandleFilePut(const http_RequestInfo &request, http_IO *io)
 {
-    if (!goupile_config.app_directory) {
+    if (!goupile_config.files_directory) {
         LogError("File upload is disabled");
         io->AttachError(403);
         return;
     }
 
     // Security checks
-    if (strncmp(request.url, "/app/", 5)) {
-        LogError("Cannot write to file outside /app/");
+    if (strncmp(request.url, "/files/", 7)) {
+        LogError("Cannot write to file outside '/files/'");
         io->AttachError(403);
         return;
     }
@@ -288,7 +288,7 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
     }
 
     // Construct filenames
-    const char *filename = Fmt(&io->allocator, "%1%/%2", goupile_config.app_directory, request.url + 5).ptr;
+    const char *filename = Fmt(&io->allocator, "%1%/%2", goupile_config.files_directory, request.url + 7).ptr;
     const char *tmp_filename = Fmt(&io->allocator, "%1~", filename).ptr;
 
     const char *sha256 = request.GetQueryValue("sha256");
@@ -372,7 +372,7 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
                     return;
                 }
 
-                Size url_offset = strlen(goupile_config.app_directory) + 1;
+                Size url_offset = strlen(goupile_config.files_directory) + 1;
                 file = AddFileEntry(filename, url_offset);
                 if (!file)
                     return;
@@ -389,7 +389,7 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
 
 void HandleFileDelete(const http_RequestInfo &request, http_IO *io)
 {
-    if (!goupile_config.app_directory) {
+    if (!goupile_config.files_directory) {
         LogError("File upload is disabled");
         io->AttachError(403);
         return;

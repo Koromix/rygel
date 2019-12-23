@@ -90,15 +90,15 @@ let dev_files = new function() {
         goupile.popup(e, page => {
             let blob = page.file('file', 'Fichier :', {mandatory: true});
 
-            let default_path = blob.value ? `/app/${blob.value.name}` : null;
+            let default_path = blob.value ? `/files/${blob.value.name}` : null;
             let path = page.text('path', 'Chemin :', {placeholder: default_path});
             if (!path.value)
                 path.value = default_path;
 
             if (path.value) {
-                if (!path.value.match(/^\/app\/./)) {
-                    path.error('Le chemin doit commencer par \'/app/\'');
-                } else if (!path.value.match(/^\/app(\/[A-Za-z0-9_\.]+)+$/)) {
+                if (!path.value.match(/^\/files\/./)) {
+                    path.error('Le chemin doit commencer par \'/files/\'');
+                } else if (!path.value.match(/^\/files(\/[A-Za-z0-9_\.]+)+$/)) {
                     path.error('Allowed path characters: a-z, _, 0-9 and / (not at the end)');
                 } else if (path.value.includes('/../') || path.value.endsWith('/..')) {
                     path.error('Le chemin ne doit pas contenir de composants \'..\'');
