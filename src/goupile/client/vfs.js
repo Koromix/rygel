@@ -72,9 +72,13 @@ function FileManager(db) {
             db.load('files_data', path)
         ]);
 
-        if (file && file.sha256) {
-            file.data = data;
-            return file;
+        if (file) {
+            if (file.sha256) {
+                file.data = data;
+                return file;
+            } else {
+                return null;
+            }
         } else {
             let response = await fetch(`${env.base_url}${path.substr(1)}`);
 
@@ -96,7 +100,15 @@ function FileManager(db) {
 
     this.listAll = async function() {
         let files = await self.status();
-        return files.filter(file => file.sha256 || file.remote_sha256);
+
+        files = files.filter(file => file.sha256 || file.remote_sha256);
+        files = files.map(file => ({
+            path: file.path,
+            size: file.sha256 ? file.size : file.remote_size,
+            sha256: file.sha256 || file.remote_sha256
+        }));
+
+        return files;
     };
 
     this.listLocal = async function() {
@@ -181,10 +193,6 @@ function FileManager(db) {
 
         return file;
     }
-
-    this.listLocal = async function() {
-        return await db.loadAll('files').then(files => files.filter(file => file.sha256));
-    };
 
     this.sync = async function(files) {
         if (files.some(file => file.action == 'conflict'))
