@@ -282,7 +282,7 @@ Navigation functions should only be called in reaction to user events, such as b
 
             <button class=${left_panel === 'files' ? 'active' : ''} @click=${e => toggleLeftPanel('files')}>Ressources</button>
             <button @click=${showLoginDialog}>Connexion</button>
-        `, document.querySelector('#gp_menu'));
+        `, document.querySelector('#gp_menu > nav'));
 
         render(html`
             ${left_panel === 'files' ?
