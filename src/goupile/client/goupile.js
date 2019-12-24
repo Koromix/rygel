@@ -16,6 +16,7 @@ let goupile = new function() {
     let sse_online = false;
 
     let tablet_mq = window.matchMedia('(pointer: coarse)');
+    let standalone_mq = window.matchMedia('(display-mode: standalone)');
 
     let popup_el;
     let popup_state;
@@ -29,12 +30,20 @@ let goupile = new function() {
     async function initGoupil() {
         log.pushHandler(log.notifyHandler);
 
+        initNavigation();
+
         let db = await openDatabase();
         vfs = new FileManager(db);
         recorder = new FormRecorder(db);
 
-        await initOffline();
-        initNavigation();
+        if (navigator.serviceWorker) {
+            navigator.serviceWorker.register(`${env.base_url}sw.pk.js`);
+
+            if (env.use_offline && self.isStandalone()) {
+                enablePersistence();
+                await updateApplication();
+            }
+        }
         if (window.EventSource)
             initEvents();
 
@@ -42,49 +51,47 @@ let goupile = new function() {
             await dev.init();
     }
 
-    async function initOffline() {
-        if (navigator.serviceWorker) {
-            navigator.serviceWorker.register(`${env.base_url}sw.pk.js`);
-
-            if (env.use_offline) {
-                let entry = new log.Entry;
-
-                entry.progress('Mise à jour de l\'application');
-                try {
-                    let files = await vfs.status();
-
-                    if (files.some(file => file.action === 'pull' || file.action === 'conflict')) {
-                        if (files.some(file => file.action !== 'pull' && file.action !== 'noop'))
-                            throw new Error('Impossible de mettre à jour (modifications locales)');
-
-                        await vfs.sync(files);
-                        entry.success('Mise à jour terminée !');
-                    } else {
-                        entry.close();
-                    }
-                } catch (err) {
-                    entry.error(err.message);
-                }
-            }
-        }
-    }
-
-    async function openDatabase() {
-        let storage_warning = 'Local data may be cleared by the browser under storage pressure, ' +
-                              'check your privacy settings for this website';
+    function enablePersistence() {
+        let storage_warning = 'Impossible d\'activer le stockage local persistant';
 
         if (navigator.storage && navigator.storage.persist) {
             navigator.storage.persist().then(granted => {
                 // NOTE: For some reason this does not seem to work correctly on my Firefox profile,
                 // where granted is always true. Might come from an extension or some obscure privacy
                 // setting. Investigate.
-                if (!granted)
+                if (granted) {
+                    console.log('Persistent storage has been granted');
+                } else {
                     log.error(storage_warning);
+                }
             });
         } else {
             log.error(storage_warning);
         }
+    }
 
+    async function updateApplication() {
+        let entry = new log.Entry;
+
+        entry.progress('Mise à jour de l\'application');
+        try {
+            let files = await vfs.status();
+
+            if (files.some(file => file.action === 'pull' || file.action === 'conflict')) {
+                if (files.some(file => file.action !== 'pull' && file.action !== 'noop'))
+                    throw new Error('Impossible de mettre à jour (modifications locales)');
+
+                await vfs.sync(files);
+                entry.success('Mise à jour terminée !');
+            } else {
+                entry.close();
+            }
+        } catch (err) {
+            entry.error(err.message);
+        }
+    }
+
+    async function openDatabase() {
         let db_name = `goupile.${env.app_key}`;
         let db = await idb.open(db_name, 1, (db, old_version) => {
             switch (old_version) {
@@ -156,6 +163,7 @@ let goupile = new function() {
     };
 
     this.isTablet = function() { return tablet_mq.matches; };
+    this.isStandalone = function() { return standalone_mq.matches; };
 
     this.popup = function(e, func) {
         closePopup();
