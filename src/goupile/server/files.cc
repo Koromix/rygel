@@ -200,9 +200,9 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
         std::shared_lock<std::shared_mutex> lock_files(files_mutex);
 
         if (TestStr(request.url, "/favicon.png")) {
-            file = files_map.FindValue("/files/favicon.png", nullptr);
+            file = files_map.FindValue("/files/resources/favicon.png", nullptr);
         } else if (TestStr(request.url, "/manifest.json")) {
-            file = files_map.FindValue("/files/manifest.json", nullptr);
+            file = files_map.FindValue("/files/resources/manifest.json", nullptr);
         } else {
             file = files_map.FindValue(request.url, nullptr);
         }
