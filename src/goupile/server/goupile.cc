@@ -74,7 +74,11 @@ static AssetInfo PatchGoupileVariables(const AssetInfo &asset, Allocator *alloc)
             writer->Write(goupile_config.use_offline ? "true" : "false");
             return true;
         } else if (TestStr(key, "CACHE_KEY")) {
+#ifdef NDEBUG
+            writer->Write(BuildVersion);
+#else
             writer->Write(goupile_etag);
+#endif
             return true;
         } else if (TestStr(key, "LINK_MANIFEST")) {
             if (goupile_config.use_offline) {
