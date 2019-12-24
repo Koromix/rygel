@@ -108,3 +108,16 @@ if (window.NodeList && !NodeList.prototype.forEach) {
             callback.call(thisArg, this[i], i, this);
     };
 }
+
+if (Blob && !Blob.prototype.text) {
+    Blob.prototype.text = function() {
+        return new Promise((resolve, reject) => {
+            var reader = new FileReader;
+
+            reader.onload = e => resolve(e.target.result);
+            reader.onerror = e => reject(e.target.error);
+
+            reader.readAsText(this);
+        });
+    };
+}
