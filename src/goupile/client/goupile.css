@@ -72,6 +72,8 @@ button:not(:disabled) { cursor: pointer; }
     color: inherit;
     text-decoration: none;
 }
+#gp_menu button::-moz-focus-inner { border: 0; }
+#gp_menu button:focus { outline: 0; }
 #gp_menu button:not(.active):not(:disabled):hover { background: #376cb5; }
 #gp_menu button.active { background: #3b7ad1; }
 #gp_menu button:disabled { filter: brightness(75%); }

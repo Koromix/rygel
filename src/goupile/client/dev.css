@@ -92,6 +92,8 @@
     color: inherit;
     text-decoration: none;
 }
+#dev_toolbar button::-moz-focus-inner { border: 0; }
+#dev_toolbar button:focus { outline: 0; }
 #dev_toolbar button:not(.active):not(:disabled):hover { background: #3c3d39; }
 #dev_toolbar button.active { background: #464645; }
 #dev_toolbar button:disabled { filter: brightness(75%); }
