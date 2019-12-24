@@ -1,0 +1,33 @@
+h1 {
+    margin: 0;
+    padding: 0;
+    font-variant: small-caps;
+}
+
+.md_button {
+    display: block;
+    width: 60%;
+    max-width: 400px;
+    margin: 10px auto 0 auto;
+    padding: 8px;
+    background: #3b7ad1;
+    border: none;
+    color: white;
+    font-size: 1.1em;
+}
+.md_button:not(:disabled):hover { background: #376cb5; }
+.md_button:disabled {
+    background: #999;
+    color: #555;
+}
+
+.md_footer {
+    display: flex;
+    padding-top: 2px;
+    border-top: 1px solid #ccc;
+}
+.md_footer > * {
+    flex: 1;
+    margin: 0;
+    padding: 0;
+}
