@@ -174,7 +174,7 @@ let dev_files = new function() {
             await vfs.sync(files);
             entry.success('Synchronisation terminée !');
         } catch (err) {
-            entry.error(err);
+            entry.error(err.message);
         }
 
         user_actions = {};
