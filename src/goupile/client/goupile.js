@@ -35,7 +35,8 @@ let goupile = new function() {
 
         await initOffline();
         initNavigation();
-        initEvents();
+        if (window.EventSource)
+            initEvents();
 
         if (typeof dev !== 'undefined')
             await dev.init();
