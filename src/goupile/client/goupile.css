@@ -29,11 +29,14 @@ button:not(:disabled) { cursor: pointer; }
 
 /* -------------------- Main toolbar -------------------- */
 
-#gp_shield {
+#gp_icon {
     display: inline-block;
     width: 16px;
     height: 16px;
-    margin: 0.6em 0.4em 0 0.6em;
+    margin: 6px 5px 0 6px;
+}
+@media (pointer: coarse) {
+    #gp_icon { display: none; }
 }
 
 #gp_menu {
