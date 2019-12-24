@@ -53,7 +53,7 @@ static void HandleManifest(const http_RequestInfo &request, http_IO *io)
     return json.Finish(io);
 }
 
-static AssetInfo PatchGoupilVariables(const AssetInfo &asset, Allocator *alloc)
+static AssetInfo PatchGoupileVariables(const AssetInfo &asset, Allocator *alloc)
 {
     AssetInfo asset2 = asset;
     asset2.data = PatchAssetVariables(asset, alloc,
@@ -115,7 +115,7 @@ static void InitAssets()
     // Packed static assets
     for (const AssetInfo &asset: assets) {
         if (TestStr(asset.name, "goupile.html") || TestStr(asset.name, "sw.pk.js")) {
-            AssetInfo asset2 = PatchGoupilVariables(asset, &assets_alloc);
+            AssetInfo asset2 = PatchGoupileVariables(asset, &assets_alloc);
             assets_map.Append(asset2);
         } else {
             assets_map.Append(asset);
