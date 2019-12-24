@@ -5,7 +5,7 @@
 let dev_files = new function() {
     let self = this;
 
-    let remote = false;
+    let remote = true;
 
     let files;
     let user_actions = {};
