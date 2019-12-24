@@ -47,11 +47,6 @@ let goupile = new function() {
             navigator.serviceWorker.register(`${env.base_url}sw.pk.js`);
 
             if (env.use_offline) {
-                let link = document.createElement('link');
-                link.setAttribute('rel', 'manifest');
-                link.setAttribute('href', `${env.base_url}manifest.json`);
-                document.head.appendChild(link);
-
                 let entry = new log.Entry;
 
                 entry.progress('Mise à jour de l\'application');

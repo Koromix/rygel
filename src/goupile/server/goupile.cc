@@ -76,6 +76,11 @@ static AssetInfo PatchGoupilVariables(const AssetInfo &asset, Allocator *alloc)
         } else if (TestStr(key, "CACHE_KEY")) {
             writer->Write(goupile_etag);
             return true;
+        } else if (TestStr(key, "LINK_MANIFEST")) {
+            if (goupile_config.use_offline) {
+                Print(writer, "<link rel=\"manifest\" href=\"%1manifest.json\"/>", goupile_config.http.base_url);
+            }
+            return true;
         } else if (TestStr(key, "SSE_KEEP_ALIVE")) {
             Print(writer, "%1", goupile_config.sse_keep_alive);
             return true;
@@ -174,7 +179,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         {
             void (*func)(const http_RequestInfo &request, http_IO *io) = nullptr;
 
-            if (TestStr(request.url, "/manifest.json")) {
+            if (TestStr(request.url, "/manifest.json") && goupile_config.use_offline) {
                 func = HandleManifest;
             } else if (TestStr(request.url, "/api/events.json")) {
                 func = HandleEvents;
