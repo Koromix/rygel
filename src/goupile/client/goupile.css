@@ -35,7 +35,7 @@ button:not(:disabled) { cursor: pointer; }
     height: 16px;
     margin: 6px 5px 0 6px;
 }
-@media (pointer: coarse) {
+@media (pointer: coarse), (display-mode: standalone) {
     #gp_icon { display: none; }
 }
 
