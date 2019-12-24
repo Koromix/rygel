@@ -85,66 +85,16 @@ let goupile = new function() {
             log.error(storage_warning);
         }
 
-        let db_name = `goupile_${env.app_key}`;
-        let db = await idb.open(db_name, 13, (db, old_version) => {
+        let db_name = `goupile.${env.app_key}`;
+        let db = await idb.open(db_name, 1, (db, old_version) => {
             switch (old_version) {
                 case null: {
-                    db.createObjectStore('pages', {keyPath: 'key'});
-                    db.createObjectStore('settings');
-                } // fallthrough
-                case 1: {
-                    db.createObjectStore('data', {keyPath: 'id'});
-                } // fallthrough
-                case 2: {
-                    db.createObjectStore('variables', {keyPath: 'key'});
-                } // fallthrough
-                case 3: {
-                    db.deleteObjectStore('data');
-                    db.deleteObjectStore('settings');
+                    db.createObjectStore('files', {keyPath: 'path'});
+                    db.createObjectStore('files_data');
+                    db.createObjectStore('files_cache', {keyPath: 'path'});
 
-                    db.createObjectStore('assets', {keyPath: 'key'});
-                    db.createObjectStore('records', {keyPath: 'id'});
-                } // fallthrough
-                case 4: {
-                    db.deleteObjectStore('records');
-                    db.deleteObjectStore('variables');
-                    db.createObjectStore('records', {keyPath: 'tkey'});
-                    db.createObjectStore('variables', {keyPath: 'tkey'});
-                } // fallthrough
-                case 5: {
-                    db.deleteObjectStore('pages');
-                } // fallthrough
-                case 6: {
-                    db.deleteObjectStore('records');
-                    db.deleteObjectStore('variables');
                     db.createObjectStore('form_records', {keyPath: 'tkey'});
                     db.createObjectStore('form_variables', {keyPath: 'tkey'});
-                } // fallthrough
-                case 7: {
-                    db.deleteObjectStore('assets');
-                    db.createObjectStore('assets');
-                } // fallthrough
-                case 8: {
-                    db.deleteObjectStore('assets');
-                    db.createObjectStore('files');
-                } // fallthrough
-                case 9: {
-                    db.deleteObjectStore('files');
-                    db.createObjectStore('files', {keyPath: 'path'});
-                    db.createObjectStore('files_data');
-                } // fallthrough
-                case 10: {
-                    db.createObjectStore('files_remote', {keyPath: 'path'});
-                } // fallthrough
-                case 11: {
-                    db.deleteObjectStore('files_remote');
-                    db.createObjectStore('files_cache', {keyPath: 'path'});
-                } // fallthrough
-                case 12: {
-                    db.deleteObjectStore('files');
-                    db.deleteObjectStore('files_data');
-                    db.createObjectStore('files', {keyPath: 'path'});
-                    db.createObjectStore('files_data');
                 } // fallthrough
             }
         });
