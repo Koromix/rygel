@@ -14,8 +14,10 @@ struct PushContext {
     PushContext *next;
 
     MHD_Connection *conn;
+
+    std::mutex mutex;
     bool suspended = false;
-    std::atomic_uint events = 0;
+    unsigned int events = 0;
 };
 
 static bool run = true;
@@ -28,22 +30,19 @@ static ssize_t SendClientEvents(void *cls, uint64_t, char *buf, size_t max)
     PushContext *ctx = (PushContext *)cls;
 
     if (run) {
-        if (ctx->events) {
-            int ctz = CountTrailingZeros(ctx->events);
-            ctx->events &= ~(1u << ctz);
+        std::lock_guard<std::mutex> lock(ctx->mutex);
 
-            // FIXME: This may result in truncation when max is very low
-            return Fmt(MakeSpan(buf, max), "event: %1\ndata: {}\n\n", EventTypeNames[ctz]).len;
-        } else {
-            if (!ctx->suspended) {
-                MHD_suspend_connection(ctx->conn);
-                ctx->suspended = true;
-            }
+        RG_ASSERT(ctx->events);
+        int ctz = CountTrailingZeros(ctx->events);
+        ctx->events &= ~(1u << ctz);
 
-            // libmicrohttpd crashes (assert) if you return 0
-            buf[0] = '\n';
-            return 1;
+        if (!ctx->events && !ctx->suspended) {
+            MHD_suspend_connection(ctx->conn);
+            ctx->suspended = true;
         }
+
+        // FIXME: This may result in truncation when max is very low
+        return Fmt(MakeSpan(buf, max), "event: %1\ndata: {}\n\n", EventTypeNames[ctz]).len;
     } else {
         return MHD_CONTENT_READER_END_OF_STREAM;
     }
@@ -66,6 +65,8 @@ void CloseAllEventConnections()
     // Wake up all SSE connections
     PushContext *ctx = root.next;
     while (ctx != &root) {
+        std::lock_guard<std::mutex> lock_ctx(ctx->mutex);
+
         if (ctx->suspended) {
             MHD_resume_connection(ctx->conn);
             ctx->suspended = false;
@@ -122,6 +123,8 @@ static void PushEvents(unsigned int events)
 
     PushContext *ctx = root.next;
     while (ctx != &root) {
+        std::lock_guard<std::mutex> lock_ctx(ctx->mutex);
+
         ctx->events |= events;
         if (ctx->suspended) {
             MHD_resume_connection(ctx->conn);
