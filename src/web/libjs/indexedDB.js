@@ -118,10 +118,27 @@ let idb = new function () {
 
             return executeQuery(store, false, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
-                let req = obj.getAll(query);
 
-                req.onsuccess = e => resolve(e.target.result);
-                req.onerror = e => logAndReject(reject, e.target.error);
+                if (obj.getAll) {
+                    let req = obj.getAll(query);
+
+                    req.onsuccess = e => resolve(e.target.result);
+                    req.onerror = e => logAndReject(reject, e.target.error);
+                } else {
+                    let cur = obj.openCursor(query);
+                    let values = [];
+
+                    cur.onsuccess = e => {
+                        let cursor = e.target.result;
+                        if (cursor) {
+                            values.push(cursor.value);
+                            cursor.continue();
+                        } else {
+                            resolve(values);
+                        }
+                    };
+                    cur.onerror = e => reject(e.target.error);
+                }
             });
         };
 
@@ -130,10 +147,27 @@ let idb = new function () {
 
             return executeQuery(store, false, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
-                let req = obj.getAllKeys(query);
 
-                req.onsuccess = e => resolve(e.target.result);
-                req.onerror = e => logAndReject(reject, e.target.error);
+                if (obj.getAllKeys) {
+                    let req = obj.getAllKeys(query);
+
+                    req.onsuccess = e => resolve(e.target.result);
+                    req.onerror = e => logAndReject(reject, e.target.error);
+                } else {
+                    let cur = obj.openKeyCursor(query);
+                    let keys = [];
+
+                    cur.onsuccess = e => {
+                        let cursor = e.target.result;
+                        if (cursor) {
+                            keys.push(cursor.key);
+                            cursor.continue();
+                        } else {
+                            resolve(keys);
+                        }
+                    };
+                    cur.onerror = e => reject(e.target.error);
+                }
             });
         };
 
