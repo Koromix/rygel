@@ -46,7 +46,7 @@ static void HandleManifest(const http_RequestInfo &request, http_IO *io)
     json.Key("display"); json.String("standalone");
     json.Key("scope"); json.String(goupile_config.http.base_url);
     json.Key("background_color"); json.String("#f8f8f8");
-    json.Key("theme_color"); json.String("#24579d");
+    json.Key("theme_color"); json.String("#dee1e6");
     json.EndObject();
 
     io->AddCachingHeaders(goupile_config.max_age, nullptr);
