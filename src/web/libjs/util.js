@@ -258,17 +258,15 @@ let util = new function() {
     }
 
     this.loadScript = function(url) {
-        let head = document.querySelector('script');
-        let script = document.createElement('script');
-
         return new Promise((resolve, reject) => {
+            let script = document.createElement('script');
             script.type = 'text/javascript';
             script.src = url;
-            script.onreadystatechange = resolve;
-            script.onload = resolve;
+
+            script.onload = e => resolve(script);
             script.onerror = e => reject(`Failed to load '${url}' script`);
 
-            head.appendChild(script);
+            document.head.appendChild(script);
         });
     };
 
