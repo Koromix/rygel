@@ -56,7 +56,7 @@ self.addEventListener('fetch', e => {
         if (e.request.method === 'GET' && url.pathname.startsWith(env.base_url)) {
             let path = url.pathname.substr(env.base_url.length - 1);
 
-            if (path.startsWith('/app/') || path.startsWith('/dev/'))
+            if (path.startsWith('/app/') || path.startsWith('/main/'))
                 return await caches.match(env.base_url) || await fetch(env.base_url);
 
             // Ignore sync GET requests for app files (for which sha256 is specified)

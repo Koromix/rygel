@@ -148,7 +148,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             const AssetInfo *asset = nullptr;
 
             if (TestStr(request.url, "/") ||
-                    !strncmp(request.url, "/app/", 5) || !strncmp(request.url, "/dev/", 5)) {
+                    !strncmp(request.url, "/app/", 5) || !strncmp(request.url, "/main/", 6)) {
                 asset = assets_map.Find("goupile.html");
             } else if (TestStr(request.url, "/favicon.png")) {
                 asset = assets_map.Find("favicon.png");

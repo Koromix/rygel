@@ -24,6 +24,8 @@ let dev = new function() {
     let editor_timer_id;
     let editor_ignore_change = false;
 
+    let style_el;
+
     let reload_app = false;
 
     // Can be launched multiple times (e.g. when main.js is edited)
@@ -66,28 +68,46 @@ let dev = new function() {
         // Select default page
         if (app.home) {
             assets_map[env.base_url] = assets_map[app.home];
-        } else if (assets.length >= 2 && assets[1].type !== 'blob') {
-            assets_map[env.base_url] = assets[1];
         } else {
-            assets_map[env.base_url] = assets[0];
+            assets_map[env.base_url] = assets.find(asset => asset.type !== 'main') || assets[0];
+        }
+
+        // Update custom CSS (if any)
+        {
+            let file = await vfs.load('/files/main.css');
+            if (file) {
+                let css = await file.data.text();
+                updateApplicationCSS(css);
+            }
         }
 
         app.go(current_url || window.location.href, false);
     };
 
     function listAssets(app, files) {
-        // Always add this one, which we need to edit even if is broken and
-        // the application cannot be loaded.
-        let assets = [{
-            type: 'main',
-            url: `${env.base_url}dev/main/`,
-            category: 'Paramétrage',
-            label: 'Application',
-            overview: 'Application',
+        // Always add main application files, which we need to edit even if they are broken
+        // and the application cannot even load completely.
+        let assets = [
+            {
+                type: 'main',
+                url: `${env.base_url}main/js/`,
+                category: 'Paramétrage',
+                label: 'Application',
+                overview: 'Application',
 
-            path: '/files/main.js',
-            edit: true
-        }];
+                path: '/files/main.js',
+                edit: true
+            }, {
+                type: 'main',
+                url: `${env.base_url}main/css/`,
+                category: 'Paramétrage',
+                label: 'Feuille de style',
+                overview: 'Application',
+
+                path: '/files/main.css',
+                edit: true
+            }
+        ];
 
         // Application assets
         for (let form of app.forms) {
@@ -143,6 +163,22 @@ let dev = new function() {
         }
 
         return assets;
+    }
+
+    function updateApplicationCSS(css) {
+        let style;
+        try {
+            if (css) {
+                style = document.createElement('style');
+                style.innerHTML = css;
+            }
+        } finally {
+            if (style_el)
+                document.head.removeChild(style_el);
+            if (style)
+                document.head.appendChild(style);
+            style_el = style;
+        }
     }
 
     // Avoid async here, because it may fail (see allow_go) and the called may need
@@ -374,6 +410,7 @@ Navigation functions should only be called in reaction to user events, such as b
 
         if (!buffer || buffer.reload) {
             let file = await vfs.load(current_asset.path);
+            let extension = current_asset.path.substr(current_asset.path.lastIndexOf('.'));
             let script = file ? await file.data.text() : '';
 
             if (buffer) {
@@ -384,7 +421,13 @@ Navigation functions should only be called in reaction to user events, such as b
                 editor.session.doc.setValue(script);
                 editor_ignore_change = false;
             } else {
-                let session = new ace.EditSession(script, 'ace/mode/javascript');
+                let session;
+                switch (extension) {
+                    case '.js': { session = new ace.EditSession(script, 'ace/mode/javascript'); } break;
+                    case '.css': { session = new ace.EditSession(script, 'ace/mode/css'); } break;
+                    default: { session = new ace.EditSession(script, 'ace/mode/text'); } break;
+                }
+
                 session.setOption('useWorker', false);
                 session.setUseWrapMode(true);
                 session.setUndoManager(buffer ? buffer.session.getUndoManager() : new ace.UndoManager());
@@ -418,19 +461,35 @@ Navigation functions should only be called in reaction to user events, such as b
 
             // The user may have changed document (async + timer)
             if (current_asset && current_asset.path === path) {
-                if (path === '/files/main.js')
-                    reload_app = true;
+                let data = editor.getValue();
+                let extension = path.substr(path.lastIndexOf('.'));
 
-                if (await runAssetSafe()) {
-                    let file = await vfs.save(path, editor.getValue());
+                switch (extension) {
+                    case '.js': {
+                        if (path === '/files/main.js')
+                            reload_app = true;
 
-                    let buffer = editor_buffers.get(path);
-                    if (buffer)
-                        buffer.sha256 = file.sha256;
+                        if (await runAssetSafe())
+                            await saveEditedFile(path, data);
+                        window.history.replaceState(null, null, app.makeURL());
+                    } break;
+
+                    case '.css': {
+                        updateApplicationCSS(data);
+                        await saveEditedFile(path, data);
+                    } break;
                 }
-                window.history.replaceState(null, null, app.makeURL());
+
             }
         }, 180);
+    }
+
+    async function saveEditedFile(path, data) {
+        let file = await vfs.save(path, data);
+
+        let buffer = editor_buffers.get(path);
+        if (buffer)
+            buffer.sha256 = file.sha256;
     }
 
     async function loadFileData(path) {
