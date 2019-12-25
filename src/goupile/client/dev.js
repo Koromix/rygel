@@ -430,7 +430,7 @@ Navigation functions should only be called in reaction to user events, such as b
                 }
                 window.history.replaceState(null, null, app.makeURL());
             }
-        }, 60);
+        }, 180);
     }
 
     async function loadFileData(path) {
