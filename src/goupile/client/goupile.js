@@ -119,11 +119,14 @@ let goupile = new function() {
     }
 
     function initEvents() {
-        if (sse_src)
+        if (sse_src) {
             sse_src.close();
+        } else {
+            // Helps a bit with Firefox issue, see goupile.cc for more information
+            window.addEventListener('beforeunload', () => sse_src.close());
+        }
 
         sse_src = new EventSource(`${env.base_url}api/events.json`);
-        resetEventTimer();
 
         sse_src.onopen = e => {
             resetEventTimer();
@@ -134,7 +137,7 @@ let goupile = new function() {
             sse_online = false;
 
             // Browsers are supposed to retry automatically, but Firefox does weird stuff
-            resetEventTimer(30000);
+            resetEventTimer();
         };
         sse_src.addEventListener('keepalive', e => resetEventTimer());
 
@@ -142,12 +145,9 @@ let goupile = new function() {
             sse_src.addEventListener(listener.event, listener.func);
     }
 
-    function resetEventTimer(delay = null) {
-        if (delay == null)
-            delay = env.sse_keep_alive * 1.5;
-
-        clearTimeout(sse_timer);
-        sse_timer = setTimeout(initEvents, delay);
+    function resetEventTimer() {
+        clearInterval(sse_timer);
+        sse_timer = setInterval(initEvents, 30000);
     }
 
     this.isOnline = function() { return sse_online; };

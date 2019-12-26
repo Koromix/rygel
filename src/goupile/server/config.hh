@@ -19,7 +19,6 @@ struct Config {
 
     http_Config http;
     int max_age = 3600;
-    int sse_keep_alive = 60000;
 
     BlockAllocator str_alloc;
 };

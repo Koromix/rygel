@@ -14,15 +14,13 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                            files_directory = config.files_directory,
                            database_filename = config.database_filename,
                            http = config.http,
-                           max_age = config.max_age,
-                           sse_keep_alive = config.sse_keep_alive) {
+                           max_age = config.max_age) {
         config.app_key = app_key;
         config.app_name = app_name;
         config.files_directory = files_directory;
         config.database_filename = database_filename;
         config.http = http;
         config.max_age = max_age;
-        config.sse_keep_alive = sse_keep_alive;
     };
 
     Span<const char> root_directory;
@@ -84,8 +82,6 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                         config.http.base_url = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else if (prop.key == "MaxAge") {
                         valid &= ParseDec(prop.value, &config.max_age);
-                    } else if (prop.key == "SSEKeepAlive") {
-                        valid &= ParseDec(prop.value, &config.sse_keep_alive);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;

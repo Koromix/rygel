@@ -85,9 +85,6 @@ static AssetInfo PatchGoupileVariables(const AssetInfo &asset, Allocator *alloc)
                 Print(writer, "<link rel=\"manifest\" href=\"%1manifest.json\"/>", goupile_config.http.base_url);
             }
             return true;
-        } else if (TestStr(key, "SSE_KEEP_ALIVE")) {
-            Print(writer, "%1", goupile_config.sse_keep_alive);
-            return true;
         } else {
             return false;
         }
@@ -333,8 +330,13 @@ Options:
     LogInfo("Listening on port %1 (%2 stack)",
             goupile_config.http.port, IPStackNames[(int)goupile_config.http.ip_stack]);
 
-    // We need to send keep-alive notices to SSE clients
-    while (!WaitForInterruption(goupile_config.sse_keep_alive)) {
+    // We need to send keep-alive notices to SSE clients quite often for two reasons:
+    // first, disconnects are detected faster by the client but most importantly, Firefox
+    // does not close a connection (for example after tab close) until it receives an event.
+    // Because Firefox also prevents more than 6 HTTP connections to the same server,
+    // this means that a long keep-alive time can block goupile for a long time in some
+    // situations, such as a few page refreshes.
+    while (!WaitForInterruption(15000)) {
         PushEvent(EventType::KeepAlive);
     }
     CloseAllEventConnections();
