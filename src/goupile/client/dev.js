@@ -166,19 +166,12 @@ let dev = new function() {
     }
 
     function updateApplicationCSS(css) {
-        let style;
-        try {
-            if (css) {
-                style = document.createElement('style');
-                style.innerHTML = css;
-            }
-        } finally {
-            if (style_el)
-                document.head.removeChild(style_el);
-            if (style)
-                document.head.appendChild(style);
-            style_el = style;
+        if (!style_el) {
+            style_el = document.createElement('style');
+            document.head.appendChild(style_el);
         }
+
+        style_el.textContent = css;
     }
 
     // Avoid async here, because it may fail (see allow_go) and the called may need
