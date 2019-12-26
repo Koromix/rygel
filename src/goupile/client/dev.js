@@ -142,7 +142,7 @@ let dev = new function() {
         }
 
         // Unused (by main.js) files
-        try {
+        {
             let known_paths = new Set(assets.map(asset => asset.path));
 
             for (let file of files) {
@@ -158,8 +158,6 @@ let dev = new function() {
                     });
                 }
             }
-        } catch (err) {
-            log.error(`Failed to list files: ${err.message}`);
         }
 
         return assets;
