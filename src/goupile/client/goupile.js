@@ -24,10 +24,10 @@ let goupile = new function() {
 
     document.addEventListener('readystatechange', e => {
         if (document.readyState === 'complete')
-            initGoupil();
+            initGoupile();
     });
 
-    async function initGoupil() {
+    async function initGoupile() {
         log.pushHandler(log.notifyHandler);
 
         initNavigation();
@@ -102,6 +102,9 @@ let goupile = new function() {
 
                     db.createObjectStore('form_records', {keyPath: 'tkey'});
                     db.createObjectStore('form_variables', {keyPath: 'tkey'});
+                } // fallthrough
+                case 1: {
+
                 } // fallthrough
             }
         });

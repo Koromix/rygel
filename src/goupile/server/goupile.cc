@@ -209,7 +209,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     }
 }
 
-int RunGoupil(int argc, char **argv)
+int RunGoupile(int argc, char **argv)
 {
     BlockAllocator temp_alloc;
 
@@ -348,4 +348,4 @@ Options:
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunGoupil(argc, argv); }
+int main(int argc, char **argv) { return RG::RunGoupile(argc, argv); }

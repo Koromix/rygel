@@ -7,7 +7,7 @@
 
 namespace RG {
 
-int RunGoupilAdmin(int argc, char **argv)
+int RunGoupileAdmin(int argc, char **argv)
 {
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: goupile_admin <command> [<args>]
@@ -46,4 +46,4 @@ Commands:
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunGoupilAdmin(argc, argv); }
+int main(int argc, char **argv) { return RG::RunGoupileAdmin(argc, argv); }
