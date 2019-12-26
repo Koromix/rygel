@@ -56,6 +56,9 @@ private:
 struct http_RequestInfo {
     MHD_Connection *conn;
 
+    // Useful in some cases (such as for cookie scopes)
+    const char *base_url;
+
     const char *method;
     const char *url;
     CompressionType compression_type;

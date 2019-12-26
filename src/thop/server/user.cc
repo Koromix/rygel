@@ -2,43 +2,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include <shared_mutex>
-#ifdef _WIN32
-    #include <ws2tcpip.h>
-#else
-    #include <arpa/inet.h>
-#endif
-
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 #include "../../libcc/libcc.hh"
-#include "config.hh"
 #include "structure.hh"
 #include "thop.hh"
 #include "user.hh"
 
 namespace RG {
 
-static const int64_t PruneDelay = 60 * 60000;
-
-static const int64_t MaxSessionDelay = 1440 * 60000;
-static const int64_t MaxKeyDelay = 120 * 60000;
-static const int64_t RegenerateDelay = 15 * 60000;
-
-struct Session {
-    char session_key[129];
-    char client_addr[65];
-    char user_agent[134];
-
-    const User *user;
-
-    int64_t login_time;
-    int64_t register_time;
-
-    RG_HASHTABLE_HANDLER_T(Session, const char *, session_key);
-};
-
-static std::shared_mutex sessions_mutex;
-static HashTable<const char *, Session> sessions;
+static http_SessionManager sessions;
 
 static Span<const char> SplitListValue(Span<const char> str,
                                        Span<const char> *out_remain, bool *out_enable)
@@ -278,178 +250,10 @@ bool LoadUserSet(Span<const char *const> filenames, const StructureSet &structur
     return true;
 }
 
-static bool GetClientAddress(MHD_Connection *conn, Span<char> out_address)
-{
-    RG_ASSERT(out_address.len);
-
-    int family;
-    void *addr;
-    {
-        sockaddr *saddr =
-            MHD_get_connection_info(conn, MHD_CONNECTION_INFO_CLIENT_ADDRESS)->client_addr;
-
-        family = saddr->sa_family;
-        switch (saddr->sa_family) {
-            case AF_INET: { addr = &((sockaddr_in *)saddr)->sin_addr; } break;
-            case AF_INET6: { addr = &((sockaddr_in6 *)saddr)->sin6_addr; } break;
-            default: { RG_ASSERT(false); } break;
-        }
-    }
-
-    if (!inet_ntop(family, addr, out_address.ptr, out_address.len)) {
-        LogError("Cannot convert network address to text");
-        return false;
-    }
-
-    return true;
-}
-
-static Session *RegisterNewSession(const char *address, const char *user_agent, const User *user)
-{
-    std::unique_lock<std::shared_mutex> lock(sessions_mutex, std::defer_lock);
-
-    // Register session with unique key
-    Session *session;
-    for (;;) {
-        char session_key[129];
-        {
-            RG_STATIC_ASSERT(RG_SIZE(session_key) == RG_SIZE(Session::session_key));
-
-            uint64_t buf[8];
-            randombytes_buf(buf, RG_SIZE(buf));
-            Fmt(session_key, "%1%2%3%4%5%6%7%8",
-                FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16),
-                FmtHex(buf[2]).Pad0(-16), FmtHex(buf[3]).Pad0(-16),
-                FmtHex(buf[4]).Pad0(-16), FmtHex(buf[5]).Pad0(-16),
-                FmtHex(buf[6]).Pad0(-16), FmtHex(buf[7]).Pad0(-16));
-        }
-
-        lock.lock();
-
-        std::pair<Session *, bool> ret = sessions.AppendDefault(session_key);
-        if (RG_LIKELY(ret.second)) {
-            session = ret.first;
-            strcpy(session->session_key, session_key);
-            break;
-        }
-    }
-
-    // Fill in remaining information
-    strcpy(session->client_addr, address);
-    strncpy(session->user_agent, user_agent, RG_SIZE(session->user_agent) - 1);
-    session->user = user;
-
-    return session;
-}
-
-static void PruneStaleSessions()
-{
-    int64_t now = GetMonotonicTime();
-
-    static std::mutex last_pruning_mutex;
-    static int64_t last_pruning = 0;
-    {
-        std::lock_guard<std::mutex> lock(last_pruning_mutex);
-        if (now - last_pruning < PruneDelay)
-            return;
-        last_pruning = now;
-    }
-
-    std::unique_lock<std::shared_mutex> lock(sessions_mutex);
-    for (auto it = sessions.begin(); it != sessions.end(); it++) {
-        const Session &session = *it;
-        if (now - session.register_time >= MaxKeyDelay) {
-            it.Remove();
-        }
-    }
-}
-
-// Call with sessions_mutex locked
-static Session *FindSession(const http_RequestInfo &request, bool *out_mismatch = nullptr)
-{
-    int64_t now = GetMonotonicTime();
-
-    char address[65];
-    if (!GetClientAddress(request.conn, address)) {
-        if (out_mismatch) {
-            *out_mismatch = false;
-        }
-        return nullptr;
-    }
-
-    const char *session_key = request.GetCookieValue("session_key");
-    const char *username = request.GetCookieValue("username");
-    const char *user_agent = request.GetHeaderValue("User-Agent");
-    if (!session_key || !username || !user_agent) {
-        if (out_mismatch) {
-            *out_mismatch = session_key || username;
-        }
-        return nullptr;
-    }
-
-    Session *session = sessions.Find(session_key);
-    if (!session ||
-            !TestStr(session->client_addr, address) ||
-            !TestStr(session->user->name, username) ||
-            strncmp(session->user_agent, user_agent, RG_SIZE(session->user_agent) - 1) ||
-            now - session->login_time >= MaxSessionDelay ||
-            now - session->register_time >= MaxKeyDelay) {
-        if (out_mismatch) {
-            *out_mismatch = true;
-        }
-        return nullptr;
-    }
-
-    if (out_mismatch) {
-        *out_mismatch = false;
-    }
-    return session;
-}
-
-static void RegenerateSession(Session *session, http_IO *io)
-{
-    RG_ASSERT(session);
-
-    int64_t now = GetMonotonicTime();
-
-    if (now - session->register_time >= RegenerateDelay) {
-        Session *new_session =
-            RegisterNewSession(session->client_addr, session->user_agent, session->user);
-        new_session->login_time = session->login_time;
-        new_session->register_time = now;
-
-        io->AddCookieHeader(thop_config.http.base_url, "session_key",
-                            new_session->session_key, true);
-    }
-}
-
-static void DeleteSessionCookies(http_IO *io)
-{
-    io->AddCookieHeader(thop_config.http.base_url, "session_key", nullptr);
-    io->AddCookieHeader(thop_config.http.base_url, "url_key", nullptr);
-    io->AddCookieHeader(thop_config.http.base_url, "username", nullptr);
-}
-
 const User *CheckSessionUser(const http_RequestInfo &request, http_IO *io)
 {
-    PruneStaleSessions();
-
-    Session *session;
-    bool mismatch = false;
-    {
-        std::shared_lock<std::shared_mutex> lock(sessions_mutex);
-        session = FindSession(request, &mismatch);
-    }
-
-    if (session) {
-        RegenerateSession(session, io);
-        return session->user;
-    } else if (mismatch) {
-        DeleteSessionCookies(io);
-        return nullptr;
-    } else {
-        return nullptr;
-    }
+    std::shared_ptr<const User> udata = sessions.Find<const User>(request, io);
+    return udata ? udata.get() : nullptr;
 }
 
 void HandleLogin(const http_RequestInfo &request, const User *, http_IO *io)
@@ -488,70 +292,25 @@ void HandleLogin(const http_RequestInfo &request, const User *, http_IO *io)
             return;
         }
 
-        // Get main session security values
-        char address[65];
-        const char *user_agent;
-        {
-            RG_STATIC_ASSERT(RG_SIZE(address) == RG_SIZE(Session::client_addr));
+        // Create session
+        std::shared_ptr<const User> udata(user, [](const User *) {});
+        sessions.Open(request, io, udata);
 
-            if (!GetClientAddress(request.conn, address)) {
-                io->AttachError(422);
-                return;
-            }
-
-            user_agent = request.GetHeaderValue("User-Agent");
-            if (!user_agent) {
-                LogError("Missing User-Agent header");
-                io->AttachError(422);
-                return;
-            }
-        }
-
-        // Destroy current session (if any)
-        if (const char *session_key = request.GetCookieValue("session_key"); session_key) {
-            std::unique_lock<std::shared_mutex> lock(sessions_mutex);
-            sessions.Remove(session_key);
-        }
-
-        // Register session
-        Session *session = RegisterNewSession(address, user_agent, user);
-        session->login_time = now;
-        session->register_time = now;
-
-        // Create URL key
-        char url_key[33];
-        {
-            uint64_t buf[2];
-            randombytes_buf(&buf, RG_SIZE(buf));
-            Fmt(url_key, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
-        }
-
-        // Build empty page
+        // Build empty JSON response
         http_JsonPageBuilder json(request.compression_type);
         json.Null();
         json.Finish(io);
-
-        // Set session cookies
-        io->AddCookieHeader(thop_config.http.base_url, "session_key", session->session_key, true);
-        io->AddCookieHeader(thop_config.http.base_url, "url_key", url_key, false);
-        io->AddCookieHeader(thop_config.http.base_url, "username", user->name, false);
     });
 }
 
 void HandleLogout(const http_RequestInfo &request, const User *, http_IO *io)
 {
-    // Drop session
-    {
-        std::unique_lock<std::shared_mutex> lock(sessions_mutex);
-        sessions.Remove(FindSession(request));
-    }
+    sessions.Close(request, io);
 
+    // Build empty JSON response
     http_JsonPageBuilder json(request.compression_type);
     json.Null();
     json.Finish(io);
-
-    // Delete session cookies
-    DeleteSessionCookies(io);
 }
 
 }

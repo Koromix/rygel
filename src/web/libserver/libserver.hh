@@ -6,3 +6,4 @@
 
 #include "util.hh"
 #include "http.hh"
+#include "session.hh"

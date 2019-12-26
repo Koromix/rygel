@@ -100,6 +100,10 @@ static void ProduceSettings(const http_RequestInfo &request, const User *user, h
 
     json.StartObject();
 
+    if (user) {
+        json.Key("username"); json.String(user->name);
+    }
+
     json.Key("permissions"); json.StartObject();
     {
         unsigned int permissions = user ? user->permissions : 0;

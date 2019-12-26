@@ -165,8 +165,8 @@ let thop = new function() {
                 ${!user.isConnected() ?
                     html`<a href=${user.makeURL({mode: 'login'})}>Se connecter</a>` : ''}
                 ${user.isConnected() ?
-                    html`${user.getUserName()} (<a href=${user.makeURL({mode: 'login'})}>changer</a>,
-                                                <a href="#" @click=${handleLogoutClick}>déconnexion</a>)` : ''}
+                    html`${settings.username} (<a href=${user.makeURL({mode: 'login'})}>changer</a>,
+                                               <a href="#" @click=${handleLogoutClick}>déconnexion</a>)` : ''}
             `, document.querySelector('#th_session'));
         }
     }

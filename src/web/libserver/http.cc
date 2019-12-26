@@ -121,6 +121,7 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
         *con_cls = io;
 
         io->daemon = daemon;
+        io->request.base_url = daemon->base_url;
         io->request.conn = conn;
         io->request.method = method;
 
