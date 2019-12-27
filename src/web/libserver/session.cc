@@ -45,28 +45,36 @@ static bool GetClientAddress(MHD_Connection *conn, Span<char> out_address)
     return true;
 }
 
-void http_SessionManager::Open2(const http_RequestInfo &request, http_IO *io, std::shared_ptr<void> udata)
+void http_SessionManager::Open2(const http_RequestInfo &request, http_IO *io,
+                                std::shared_ptr<void> udata)
+{
+    std::unique_lock<std::shared_mutex> lock(mutex);
+
+    Session *session = CreateSession(request, io);
+    if (!session)
+        return;
+    int64_t now = GetMonotonicTime();
+
+    session->login_time = now;
+    session->register_time = now;
+    session->udata = udata;
+}
+
+http_SessionManager::Session *
+    http_SessionManager::CreateSession(const http_RequestInfo &request, http_IO *io)
 {
     char address[65];
     RG_STATIC_ASSERT(RG_SIZE(address) == RG_SIZE(Session::client_addr));
     if (!GetClientAddress(request.conn, address)) {
         io->AttachError(422);
-        return;
+        return nullptr;
     }
 
     const char *user_agent = request.GetHeaderValue("User-Agent");
     if (!user_agent) {
         LogError("Missing User-Agent header");
         io->AttachError(422);
-        return;
-    }
-
-    std::unique_lock<std::shared_mutex> lock(mutex);
-    int64_t now = GetMonotonicTime();
-
-    // Destroy current session (if any)
-    if (const char *session_key = request.GetCookieValue("session_key"); session_key) {
-        sessions.Remove(session_key);
+        return nullptr;
     }
 
     // Register session with unique key
@@ -102,16 +110,15 @@ void http_SessionManager::Open2(const http_RequestInfo &request, http_IO *io, st
         Fmt(url_key, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
     }
 
-    // Fill session information
+    // Fill extra security values
     strcpy(session->client_addr, address);
     strncpy(session->user_agent, user_agent, RG_SIZE(session->user_agent) - 1);
-    session->login_time = now;
-    session->register_time = now;
-    session->udata = udata;
 
     // Set session cookies
     io->AddCookieHeader(request.base_url, "session_key", session->session_key, true);
     io->AddCookieHeader(request.base_url, "url_key", url_key, false);
+
+    return session;
 }
 
 static void DeleteSessionCookies(const http_RequestInfo &request, http_IO *io)
@@ -143,10 +150,20 @@ std::shared_ptr<void> http_SessionManager::Find2(const http_RequestInfo &request
 
         // Regenerate session if needed
         if (now - session->register_time >= RegenerateDelay) {
+            int64_t login_time = session->login_time;
             std::shared_ptr<void> udata = session->udata;
 
             lock.unlock();
-            Open2(request, io, udata);
+
+            Session *session = CreateSession(request, io);
+
+            if (session) {
+                session->login_time = login_time;
+                session->register_time = now;
+                session->udata = udata;
+            } else {
+                DeleteSessionCookies(request, io);
+            }
         }
 
         return udata;
@@ -158,8 +175,8 @@ std::shared_ptr<void> http_SessionManager::Find2(const http_RequestInfo &request
     }
 }
 
-http_SessionManager::Session *http_SessionManager::FindSession(const http_RequestInfo &request,
-                                                               bool *out_mismatch)
+http_SessionManager::Session *
+    http_SessionManager::FindSession(const http_RequestInfo &request, bool *out_mismatch)
 {
     int64_t now = GetMonotonicTime();
 

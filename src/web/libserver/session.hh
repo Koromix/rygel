@@ -46,6 +46,7 @@ public:
 
 private:
     void Open2(const http_RequestInfo &request, http_IO *io, std::shared_ptr<void> udata);
+    Session *CreateSession(const http_RequestInfo &request, http_IO *io);
 
     std::shared_ptr<void> Find2(const http_RequestInfo &request, http_IO *io);
     Session *FindSession(const http_RequestInfo &request, bool *out_mismatch = nullptr);
