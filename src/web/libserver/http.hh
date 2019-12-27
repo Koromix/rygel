@@ -6,7 +6,6 @@
 
 #include "../../../vendor/libmicrohttpd/src/include/microhttpd.h"
 #include "../../libcc/libcc.hh"
-#include "../../libwrap/json.hh"
 
 namespace RG {
 
@@ -144,19 +143,6 @@ private:
     void Resume();
 
     friend http_Daemon;
-};
-
-uint32_t http_ParseAcceptableEncodings(Span<const char> encodings);
-
-class http_JsonPageBuilder: public json_Writer {
-    HeapArray<uint8_t> buf;
-    StreamWriter st;
-
-public:
-    http_JsonPageBuilder(CompressionType compression_type) :
-        json_Writer(&st), st(&buf, nullptr, compression_type) {}
-
-    void Finish(http_IO *io);
 };
 
 }
