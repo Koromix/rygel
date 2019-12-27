@@ -112,6 +112,7 @@ Options:
         const char *directory = Fmt(&temp_alloc, "%1%/files", profile_directory).ptr;
         if (!MakeDirectory(directory))
             return 1;
+        directories.Append(directory);
     }
 
     // Create database
