@@ -9,12 +9,34 @@
 namespace RG {
 
 static const char *const SchemaSQL = R"(
-CREATE TABLE assets (
-    key TEXT NOT NULL,
-    mimetype TEXT NOT NULL,
+CREATE TABLE users (
+    name TEXT NOT NULL,
+    password_hash TEXT NOT NULL,
+
+    admin INTEGER CHECK(admin IN (0, 1)) NOT NULL
+);
+CREATE UNIQUE INDEX users_n ON users (name);
+
+CREATE TABLE permissions (
+    name TEXT NOT NULL,
+
+    read INTEGER CHECK(read IN (0, 1)) NOT NULL,
+    query INTEGER CHECK(query IN (0, 1)) NOT NULL,
+    new INTEGER CHECK(new IN (0, 1)) NOT NULL,
+    remove INTEGER CHECK(remove IN (0, 1)) NOT NULL,
+    edit INTEGER CHECK(edit IN (0, 1)) NOT NULL,
+    validate INTEGER CHECK(validate IN (0, 1)) NOT NULL
+);
+CREATE INDEX permissions_n ON permissions (name);
+
+CREATE TABLE files (
+    tag TEXT NOT NULL,
+    path TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    sha256 TEXT NOT NULL,
     data BLOB NOT NULL
 );
-CREATE UNIQUE INDEX assets_k ON assets (key);
+CREATE UNIQUE INDEX files_tp ON files (tag, path);
 
 CREATE TABLE form_records (
     id TEXT NOT NULL,
