@@ -7,6 +7,7 @@
 #include "../libcc/libcc.hh"
 
 struct ImFontAtlas;
+struct GLFWwindow;
 
 namespace RG {
 
@@ -70,7 +71,7 @@ class gui_Window {
 #ifdef _WIN32
     struct gui_Win32Window *window = nullptr;
 #else
-    struct GLFWwindow *window = nullptr;
+    GLFWwindow *window = nullptr;
     unsigned int released_buttons = 0;
 #endif
 
