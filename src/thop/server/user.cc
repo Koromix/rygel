@@ -2,11 +2,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 #include "../../libcc/libcc.hh"
 #include "structure.hh"
 #include "thop.hh"
 #include "user.hh"
+#include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
 

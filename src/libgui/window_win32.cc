@@ -4,15 +4,15 @@
 
 #ifdef _WIN32
 
+#include "../libcc/libcc.hh"
+#include "window.hh"
+#include "../libwrap/opengl.hh"
+
 #define WIN32_LEAN_AND_MEAN
 #ifndef NOMINMAX
     #define NOMINMAX
 #endif
 #include <windows.h>
-
-#include "../libcc/libcc.hh"
-#include "window.hh"
-#include "../libwrap/opengl.hh"
 
 namespace RG {
 

@@ -2,15 +2,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#include "../../libcc/libcc.hh"
+#include "session.hh"
+#include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
+
 #ifdef _WIN32
     #include <ws2tcpip.h>
 #else
     #include <arpa/inet.h>
 #endif
-
-#include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
-#include "../../libcc/libcc.hh"
-#include "session.hh"
 
 namespace RG {
 

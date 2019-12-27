@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "../../../vendor/libmicrohttpd/src/include/microhttpd.h"
 #include "../../libcc/libcc.hh"
+#include "../../../vendor/libmicrohttpd/src/include/microhttpd.h"
 
 namespace RG {
 

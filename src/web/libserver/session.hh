@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <shared_mutex>
-
 #include "../../libcc/libcc.hh"
 #include "http.hh"
+
+#include <shared_mutex>
 
 namespace RG {
 

@@ -2,6 +2,18 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#include "libcc.hh"
+#ifndef LIBCC_NO_MINIZ
+    #define MINIZ_NO_STDIO
+    #define MINIZ_NO_TIME
+    #define MINIZ_NO_ARCHIVE_APIS
+    #define MINIZ_NO_ARCHIVE_WRITING_APIS
+    #define MINIZ_NO_ZLIB_APIS
+    #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
+    #define MINIZ_NO_MALLOC
+    #include "../../vendor/miniz/miniz.h"
+#endif
+
 #ifdef _WIN32
     #define WIN32_LEAN_AND_MEAN
     #ifndef NOMINMAX
@@ -40,19 +52,6 @@
 #endif
 #include <chrono>
 #include <thread>
-
-#ifndef LIBCC_NO_MINIZ
-    #define MINIZ_NO_STDIO
-    #define MINIZ_NO_TIME
-    #define MINIZ_NO_ARCHIVE_APIS
-    #define MINIZ_NO_ARCHIVE_WRITING_APIS
-    #define MINIZ_NO_ZLIB_APIS
-    #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
-    #define MINIZ_NO_MALLOC
-    #include "../../vendor/miniz/miniz.h"
-#endif
-
-#include "libcc.hh"
 
 namespace RG {
 

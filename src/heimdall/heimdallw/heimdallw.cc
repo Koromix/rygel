@@ -2,9 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "../../../vendor/imgui/imgui.h"
 #include "../../libcc/libcc.hh"
 #include "../libheimdall/libheimdall.hh"
+#include "../../../vendor/imgui/imgui.h"
 
 namespace RG {
 

@@ -4,10 +4,9 @@
 
 #ifndef _WIN32
 
-#include "../../vendor/glfw/include/GLFW/glfw3.h"
-
 #include "../libcc/libcc.hh"
 #include "window.hh"
+#include "../../vendor/glfw/include/GLFW/glfw3.h"
 
 namespace RG {
 
