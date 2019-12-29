@@ -10,6 +10,7 @@
 #include "files.hh"
 #include "goupile.hh"
 #include "schedule.hh"
+#include "user.hh"
 #include "../../web/libserver/libserver.hh"
 
 namespace RG {
@@ -200,6 +201,14 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
         // Found nothing
         io->AttachError(404);
+    } else if (TestStr(request.method, "POST")) {
+        if (TestStr(request.url, "/api/login.json")) {
+            HandleLogin(request, io);
+        } else if (TestStr(request.url, "/api/logout.json")) {
+            HandleLogout(request, io);
+        } else {
+            io->AttachError(404);
+        }
     } else if (TestStr(request.method, "PUT")) {
         HandleFilePut(request, io);
     } else if (TestStr(request.method, "DELETE")) {

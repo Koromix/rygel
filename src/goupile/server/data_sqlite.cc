@@ -10,15 +10,15 @@ namespace RG {
 
 static const char *const SchemaSQL = R"(
 CREATE TABLE users (
-    name TEXT NOT NULL,
+    username TEXT NOT NULL,
     password_hash TEXT NOT NULL,
 
     admin INTEGER CHECK(admin IN (0, 1)) NOT NULL
 );
-CREATE UNIQUE INDEX users_n ON users (name);
+CREATE UNIQUE INDEX users_u ON users (username);
 
 CREATE TABLE permissions (
-    name TEXT NOT NULL,
+    username TEXT NOT NULL,
 
     read INTEGER CHECK(read IN (0, 1)) NOT NULL,
     query INTEGER CHECK(query IN (0, 1)) NOT NULL,
@@ -27,7 +27,7 @@ CREATE TABLE permissions (
     edit INTEGER CHECK(edit IN (0, 1)) NOT NULL,
     validate INTEGER CHECK(validate IN (0, 1)) NOT NULL
 );
-CREATE INDEX permissions_n ON permissions (name);
+CREATE INDEX permissions_u ON permissions (username);
 
 CREATE TABLE files (
     tag TEXT NOT NULL,
@@ -76,6 +76,9 @@ CREATE INDEX sched_meetings_sd ON sched_meetings (schedule, date, time);
 
 static const char *const DemoSQL = R"(
 BEGIN TRANSACTION;
+
+INSERT INTO users VALUES ('goupile', '$argon2id$v=19$m=65536,t=2,p=1$zsVerrO6LpOnY46D2B532A$dXWo9OKKutuZZzN49HD+oGtjCp6vfIoINfmbsjq5ttI', 1);
+INSERT INTO permissions VALUES ('goupile', 1, 1, 1, 1, 1, 1);
 
 INSERT INTO sched_resources VALUES ('pl', '2019-08-01', 730, 1, 1);
 INSERT INTO sched_resources VALUES ('pl', '2019-08-01', 1130, 2, 0);
