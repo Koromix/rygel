@@ -41,7 +41,7 @@ function FormRecorder(db) {
             return ret;
         });
 
-        return await db.transaction(db => {
+        return await db.transaction('rw', ['form_records', 'form_variables'], () => {
             db.save('form_records', record2);
             db.saveAll('form_variables', variables);
         });
@@ -57,7 +57,7 @@ function FormRecorder(db) {
         let start_key = table + '_';
         let end_key = table + '`';
 
-        await db.transaction(db => {
+        await db.transaction('rw', ['form_records', 'form_variables'], () => {
             db.deleteAll('form_records', start_key, end_key);
             db.deleteAll('form_variables', start_key, end_key);
         });

@@ -16,7 +16,7 @@ function FileManager(db) {
             sha256: await computeSha256(data)
         };
 
-        await db.transaction(db => {
+        await db.transaction('rw', ['files', 'files_data'], () => {
             db.save('files', file);
             db.saveWithKey('files_data', path, data);
         });
@@ -49,14 +49,14 @@ function FileManager(db) {
     }
 
     this.delete = async function(path) {
-        await db.transaction(db => {
+        await db.transaction('rw', ['files', 'files_data'], () => {
             db.save('files', {path: path});
             db.delete('files_data', path);
         });
     };
 
     this.clear = async function() {
-        await db.transaction(db => {
+        await db.transaction('rw', ['files', 'files_data'], () => {
             db.clear('files');
             db.clear('files_data');
         });
@@ -226,7 +226,7 @@ function FileManager(db) {
                         throw new Error(err);
                     }
 
-                    await db.transaction(db => {
+                    await db.transaction('rw', ['files', 'files_cache'], () => {
                         db.delete('files', file.path);
                         db.delete('files_cache', file.path);
                     });
@@ -241,7 +241,7 @@ function FileManager(db) {
                     delete file2.data;
                     await db.save('files_cache', file2);
                 } else {
-                    await db.transaction(db => {
+                    await db.transaction('rw', ['files', 'files_cache', 'files_data'], () => {
                         db.delete('files', file.path);
                         db.delete('files_data', file.path);
                         db.delete('files_cache', file.path);

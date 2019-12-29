@@ -96,15 +96,12 @@ let goupile = new function() {
         let db = await idb.open(db_name, 1, (db, old_version) => {
             switch (old_version) {
                 case null: {
-                    db.createObjectStore('files', {keyPath: 'path'});
-                    db.createObjectStore('files_data');
-                    db.createObjectStore('files_cache', {keyPath: 'path'});
+                    db.createStore('files', {keyPath: 'path'});
+                    db.createStore('files_data');
+                    db.createStore('files_cache', {keyPath: 'path'});
 
-                    db.createObjectStore('form_records', {keyPath: 'tkey'});
-                    db.createObjectStore('form_variables', {keyPath: 'tkey'});
-                } // fallthrough
-                case 1: {
-
+                    db.createStore('form_records', {keyPath: 'tkey'});
+                    db.createStore('form_variables', {keyPath: 'tkey'});
                 } // fallthrough
             }
         });

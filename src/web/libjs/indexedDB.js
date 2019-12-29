@@ -4,76 +4,72 @@
 
 // TODO: Support degraded mode when IDB is not available (e.g. private browsing)
 let idb = new function () {
-    function DatabaseInterface(db) {
-        let self = this;
+    this.open = function(db_name, version = null, version_func = null) {
+        let req;
+        if (version != null) {
+            req = indexedDB.open(db_name, version);
 
-        let t_status = 'none';
-        let t_readwrite = false;
-        let t_stores = new Set;
-        let t_queries = [];
+            req.onupgradeneeded = e => {
+                let db = e.target.result;
+                let intf = new DatabaseInterface(e.target.result, e.target.transaction);
 
-        function resetTransaction() {
-            t_status = 'none';
-            t_readwrite = false;
-            t_stores.clear();
-            t_queries.length = 0;
+                intf.createStore = function(store, params = {}) { db.createObjectStore(store, params); };
+                intf.deleteStore = function(store) { db.deleteObjectStore(store); };
+
+                version_func(intf, e.oldVersion || null);
+            };
+        } else {
+            req = indexedDB.open(db_name);
         }
 
-        this.transaction = async function(func) {
-            if (t_status === 'none') {
-                try {
-                    t_status = 'valid';
-                    await func(self);
+        return new Promise((resolve, reject) => {
+            req.onsuccess = e => {
+                let intf = new DatabaseInterface(e.target.result);
+                resolve(intf);
+            };
+            req.onerror = e => logAndReject(reject, 'Failed to open database');
+        });
+    };
 
-                    if (t_stores.size) {
-                        let t = db.transaction(Array.from(t_stores),
-                                               t_readwrite ? 'readwrite' : 'readonly');
+    function DatabaseInterface(db, transaction = null) {
+        console.log(transaction);
 
-                        for (let query of t_queries)
-                            query.func(t, query.resolve, query.reject);
-                        if (t_status === 'abort')
-                            t.abort();
+        let self = this;
 
-                        return new Promise((resolve, reject) => {
-                            t.addEventListener('complete', e => resolve());
-                            t.addEventListener('abort', e => logAndReject(reject, 'Database transaction failure'));
-                        });
-                    }
-                } finally {
-                    resetTransaction();
-                }
-            } else {
-                await func(self);
+        let aborted = false;
+
+        this.transaction = async function(mode, stores, func) {
+            switch (mode) {
+                case 'r': { mode = 'readonly'; } break;
+                case 'rw': { mode = 'readwrite'; } break;
+            }
+            if (!Array.isArray(stores))
+                stores = [stores];
+
+            if (transaction)
+                throw new Error('Nested transactions are not supported');
+
+            transaction = db.transaction(stores, mode);
+            try {
+                await func();
+            } catch (err) {
+                if (!aborted)
+                    transaction.abort();
+
+                throw err;
+            } finally {
+                transaction = null;
+                aborted = false;
             }
         };
 
         this.abort = function() {
-            t_status = 'abort';
+            transaction.abort();
+            aborted = true;
         };
 
-        function executeQuery(store, readwrite, func) {
-            if (t_status !== 'none') {
-                t_readwrite |= readwrite;
-                t_stores.add(store);
-
-                return new Promise((resolve, reject) => {
-                    let query = {
-                        func: func,
-                        resolve: resolve,
-                        reject: reject
-                    };
-
-                    t_queries.push(query);
-                });
-            } else {
-                let ret;
-                self.transaction(() => { ret = executeQuery(store, readwrite, func); });
-                return ret;
-            }
-        }
-
         this.save = function(store, value) {
-            return executeQuery(store, true, (t, resolve, reject) => {
+            return executeQuery('readwrite', store, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
                 obj.put(value);
 
@@ -83,7 +79,7 @@ let idb = new function () {
         };
 
         this.saveWithKey = function(store, key, value) {
-            return executeQuery(store, true, (t, resolve, reject) => {
+            return executeQuery('readwrite', store, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
                 obj.put(value, key);
 
@@ -93,7 +89,7 @@ let idb = new function () {
         };
 
         this.saveAll = function(store, values) {
-            return executeQuery(store, true, (t, resolve, reject) => {
+            return executeQuery('readwrite', store, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
                 for (let value of values)
                     obj.put(value);
@@ -104,7 +100,7 @@ let idb = new function () {
         };
 
         this.load = function(store, key) {
-            return executeQuery(store, false, (t, resolve, reject) => {
+            return executeQuery('readonly', store, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
                 let req = obj.get(key);
 
@@ -116,7 +112,7 @@ let idb = new function () {
         this.loadAll = function(store, start = null, end = null) {
             let query = makeKeyRange(start, end);
 
-            return executeQuery(store, false, (t, resolve, reject) => {
+            return executeQuery('readonly', store, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
 
                 if (obj.getAll) {
@@ -145,7 +141,7 @@ let idb = new function () {
         this.list = function(store, start = null, end = null) {
             let query = makeKeyRange(start, end);
 
-            return executeQuery(store, false, (t, resolve, reject) => {
+            return executeQuery('readonly', store, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
 
                 if (obj.getAllKeys) {
@@ -172,7 +168,7 @@ let idb = new function () {
         };
 
         this.delete = function(store, key) {
-            return executeQuery(store, true, (t, resolve, reject) => {
+            return executeQuery('readwrite', store, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
                 obj.delete(key);
 
@@ -185,7 +181,7 @@ let idb = new function () {
             let query = makeKeyRange(start, end);
 
             if (query) {
-                return executeQuery(store, true, (t, resolve, reject) => {
+                return executeQuery('readwrite', store, (t, resolve, reject) => {
                     let obj = t.objectStore(store);
                     obj.delete(query);
 
@@ -198,7 +194,7 @@ let idb = new function () {
         };
 
         this.clear = function(store) {
-            return executeQuery(store, true, (t, resolve, reject) => {
+            return executeQuery('readwrite', store, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
                 obj.clear();
 
@@ -218,29 +214,16 @@ let idb = new function () {
                 return null;
             }
         }
-    }
 
-    this.open = function(db_name, version = null, update_func = () => {}) {
-        let req;
-        if (version != null) {
-            req = indexedDB.open(db_name, version);
-
-            req.onupgradeneeded = e => {
-                let db = e.target.result;
-                update_func(db, e.oldVersion || null);
-            };
-        } else {
-            req = indexedDB.open(db_name);
+        function executeQuery(mode, store, func) {
+            if (transaction) {
+                return new Promise((resolve, reject) => func(transaction, resolve, reject));
+            } else {
+                let t = db.transaction([store], mode);
+                return new Promise((resolve, reject) => func(t, resolve, reject));
+            }
         }
-
-        return new Promise((resolve, reject) => {
-            req.onsuccess = e => {
-                let intf = new DatabaseInterface(e.target.result);
-                resolve(intf);
-            };
-            req.onerror = e => logAndReject(reject, 'Failed to open database');
-        });
-    };
+    }
 
     function logAndReject(reject, err) {
         log.error(err);
