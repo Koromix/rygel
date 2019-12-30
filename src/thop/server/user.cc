@@ -296,21 +296,14 @@ void HandleLogin(const http_RequestInfo &request, const User *, http_IO *io)
         std::shared_ptr<const User> udata(user, [](const User *) {});
         sessions.Open(request, io, udata);
 
-        // Build empty JSON response
-        http_JsonPageBuilder json(request.compression_type);
-        json.Null();
-        json.Finish(io);
+        io->AttachText(200, "{}", "application/json");
     });
 }
 
 void HandleLogout(const http_RequestInfo &request, const User *, http_IO *io)
 {
     sessions.Close(request, io);
-
-    // Build empty JSON response
-    http_JsonPageBuilder json(request.compression_type);
-    json.Null();
-    json.Finish(io);
+    io->AttachText(200, "{}", "application/json");
 }
 
 }
