@@ -41,7 +41,7 @@ static ssize_t SendClientEvents(void *cls, uint64_t, char *buf, size_t max)
             ctx->suspended = true;
         }
 
-        // FIXME: This may result in truncation when max is very low
+        // XXX: This may result in truncation when max is very low
         return Fmt(MakeSpan(buf, max), "event: %1\ndata: {}\n\n", EventTypeNames[ctz]).len;
     } else {
         return MHD_CONTENT_READER_END_OF_STREAM;

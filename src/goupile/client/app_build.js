@@ -39,7 +39,7 @@ function ApplicationBuilder(app) {
     this.linkMany = function(key1, key2) {
         let [form1, form2] = findLinkForms(key1, key2);
 
-        // TODO: Handle the reverse link (one-to-many)
+        // XXX: Handle the reverse link (one-to-many)
         form2.links.push(form1);
     };
 

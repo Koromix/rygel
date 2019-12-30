@@ -814,7 +814,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
                     title = elmt.concept;
                     if (elmt.concept[0] == '/') {
                         path = title;
-                        // FIXME: Check name does not end with '/'
+                        // XXX: Check name does not end with '/'
                         while (path.len > 1 && path.ptr[--path.len] != '/');
                         title.ptr += path.len + 1;
                         title.len -= path.len + 1;
@@ -1042,7 +1042,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
     }
 }
 
-// FIXME: Avoid excessive overdraw on the left of the screen when time_offset is big
+// XXX: Avoid excessive overdraw on the left of the screen when time_offset is big
 static void DrawTime(ImRect bb, double time_offset, float time_zoom,
                      float grid_alpha, bool highlight_zero, TimeUnit time_unit)
 {
@@ -1414,7 +1414,7 @@ static void AddConceptsToView(const HashMap<Span<const char>, Span<const char>> 
 static void RemoveConceptsFromView(const HashMap<Span<const char>, Span<const char>> &concepts, ConceptSet *out_concept_set)
 {
     for (const auto &it: concepts.table) {
-        // FIXME: We leak string memory (here and elsewhere...) when we remove stuff
+        // XXX: We leak string memory (here and elsewhere...) when we remove stuff
         out_concept_set->concepts_map.Remove(it.key.ptr);
     }
 }
@@ -1449,7 +1449,7 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
                 ToggleAlign(state);
             }
             ImGui::Separator();
-            // FIXME: Fix limited format specifiers on Windows
+            // XXX: Fix limited format specifiers on Windows
             ImGui::Text("Entities: %d / %d",
                         (int)state.visible_entities, (int)entity_set.entities.len);
         } else {
@@ -1531,7 +1531,7 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
             if (concept_set && ImGui::BeginMenu("Add to view")) {
                 ImGui::Text("New view:");
                 static char new_view_buf[128];
-                // FIXME: Avoid empty and duplicate names
+                // XXX: Avoid empty and duplicate names
                 ImGui::InputText("##new_view", new_view_buf, IM_ARRAYSIZE(new_view_buf));
                 if (ImGui::Button("Create")) {
                     ConceptSet *new_concept_set = CreateView(new_view_buf, &concept_sets);
@@ -1552,7 +1552,7 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
             if (ImGui::BeginMenu("Add to view (flat)")) {
                 ImGui::Text("New view:");
                 static char new_view_buf[128];
-                // FIXME: Avoid empty and duplicate names
+                // XXX: Avoid empty and duplicate names
                 ImGui::InputText("##new_view", new_view_buf, IM_ARRAYSIZE(new_view_buf));
                 if (ImGui::Button("Create")) {
                     ConceptSet *new_concept_set = CreateView(new_view_buf, &concept_sets);

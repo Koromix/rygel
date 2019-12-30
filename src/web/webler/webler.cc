@@ -57,7 +57,7 @@ static const char *FileNameToPageName(const char *filename, Allocator *alloc)
     return name2;
 }
 
-// TODO: Resolve page links in content
+// XXX: Resolve page links in content
 static bool RenderPageContent(PageData *page, Allocator *alloc)
 {
     buf *ib = bufnew(1024);
@@ -114,7 +114,7 @@ static bool RenderPageContent(PageData *page, Allocator *alloc)
             sec.title = DuplicateString(MakeSpan(text->data + i, text->size - i), ctx->alloc).ptr;
             sec.level = level;
 
-            // TODO: Detect duplicate sections
+            // XXX: Detect duplicate sections
             ctx->page->sections.Append(sec);
 
             bufprintf(ob, "<h%d id=\"%s\">%s</h%d>", level, sec.id, sec.title, level);

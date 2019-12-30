@@ -1686,7 +1686,7 @@ public:
         return ret;
     }
 
-    // TODO: Shift operators
+    // XXX: Shift operators
 };
 
 template <typename KeyType, typename ValueType,
@@ -2029,7 +2029,7 @@ private:
         return HashToIndex(hash);
     }
 
-    // FIXME: Testing all slots each time (see Remove()) is slow and stupid
+    // XXX: Testing all slots each time (see Remove()) is slow and stupid
     bool TestNewSlot(Size idx, Size dest_idx) const
     {
         for (;;) {

@@ -12,7 +12,7 @@ function FileManager(db) {
         let file = {
             path: path,
             size: data.size,
-            // TODO: Fix race condition between hash computation and file storage
+            // XXX: Fix race condition between hash computation and file storage
             sha256: await computeSha256(data)
         };
 

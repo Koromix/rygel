@@ -26,7 +26,7 @@ bool StructureSetBuilder::LoadIni(StreamReader &st)
 
             Structure structure = {};
 
-            // TODO: Check validity, or maybe the INI parser checks are enough?
+            // XXX: Check validity, or maybe the INI parser checks are enough?
             structure.name = DuplicateString(prop.section, &set.str_alloc).ptr;
 
             HashSet<drd_UnitCode> units_set;

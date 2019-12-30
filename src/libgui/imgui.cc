@@ -120,7 +120,7 @@ bool gui_Window::InitImGui(ImFontAtlas *font_atlas)
     if (!font_texture) {
         uint8_t *pixels;
         int width, height;
-        // TODO: Switch to GetTexDataAsAlpha8() eventually
+        // XXX: Switch to GetTexDataAsAlpha8() eventually
         io->Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
         glGenTextures(1, &font_texture);

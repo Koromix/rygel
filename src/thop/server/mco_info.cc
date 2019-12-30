@@ -312,7 +312,7 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
                         FmtHex(ghm_node.u.test.params[1]).Pad0(-2)).ptr;
     out_node->type = "test";
 
-    // FIXME: Check children_idx and children_count
+    // XXX: Check children_idx and children_count
     out_node->function = ghm_node.u.test.function;
     out_node->children_idx = ghm_node.u.test.children_idx;
     out_node->children_count = ghm_node.u.test.children_count;
@@ -390,7 +390,7 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
         } break;
 
         case 9: {
-            // TODO: Text for test 9 is inexact
+            // XXX: Text for test 9 is inexact
             out_node->text = Fmt(ctx.str_alloc, "Tous actes A$%1.%2",
                                  ghm_node.u.test.params[0], ghm_node.u.test.params[1]).ptr;
         } break;
@@ -435,7 +435,7 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
         } break;
 
         case 18: {
-            // TODO: Text for test 18 is inexact
+            // XXX: Text for test 18 is inexact
             out_node->text = Fmt(ctx.str_alloc, "2 DAS D$%1.%2",
                                  ghm_node.u.test.params[0], ghm_node.u.test.params[1]).ptr;
         } break;
@@ -596,7 +596,7 @@ static bool ProcessGhmNode(BuildReadableGhmTreeContext &ctx, Size ghm_node_idx)
     return true;
 }
 
-// TODO: Move to libdrd, add classifier_tree export to drdR
+// XXX: Move to libdrd, add classifier_tree export to drdR
 static bool BuildReadableGhmTree(Span<const mco_GhmDecisionNode> ghm_nodes,
                                  HeapArray<ReadableGhmDecisionNode> *out_nodes,
                                  Allocator *str_alloc)
@@ -625,7 +625,7 @@ void ProduceMcoTree(const http_RequestInfo &request, const User *, http_IO *io)
     if (!index)
         return;
 
-    // TODO: Generate ahead of time
+    // XXX: Generate ahead of time
     HeapArray<ReadableGhmDecisionNode> readable_nodes;
     if (!BuildReadableGhmTree(index->ghm_nodes, &readable_nodes, &io->allocator))
         return;

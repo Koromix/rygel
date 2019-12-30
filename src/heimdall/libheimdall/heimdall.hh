@@ -66,7 +66,7 @@ struct InterfaceState {
         Always
     };
 
-    // TODO: Separate deploy_paths set for each concept set
+    // XXX: Separate deploy_paths set for each concept set
     HashSet<Span<const char>> deploy_paths;
 
     AnimatedValue<float, double> time_zoom = NAN;

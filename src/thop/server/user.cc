@@ -57,7 +57,7 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                 return false;
             }
 
-            // TODO: Check validity, or maybe the INI parser checks are enough?
+            // XXX: Check validity, or maybe the INI parser checks are enough?
             const char *name = DuplicateString(prop.section, &set.str_alloc).ptr;
             User user = {};
             UnitRuleSet rule_set = {};

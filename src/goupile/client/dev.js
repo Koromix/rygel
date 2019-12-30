@@ -382,7 +382,7 @@ Navigation functions should only be called in reaction to user events, such as b
 
     async function syncEditor() {
         if (!editor) {
-            // FIXME: Make sure we don't run loadScript more than once
+            // XXX: Make sure we don't run loadScript more than once
             if (typeof ace === 'undefined')
                 await util.loadScript(`${env.base_url}static/ace.js`);
 

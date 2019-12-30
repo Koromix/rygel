@@ -78,7 +78,7 @@ function FormExecutor(form, record) {
         entry.success('Données enregistrées !');
 
         dev.run(null, {id: null});
-        // TODO: Give focus to first widget
+        // XXX: Give focus to first widget
         window.scrollTo(0, 0);
     }
 }

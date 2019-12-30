@@ -149,7 +149,7 @@ struct ProxyArray {
     WrenHandle *var;
     Span<const T> values;
 
-    // TODO: Move out of here, it is used only for the stays array
+    // XXX: Move out of here, it is used only for the stays array
     HeapArray<WrenHandle *> vars;
     HeapArray<T> copies;
 };
@@ -167,7 +167,7 @@ struct ResultObject {
 };
 
 class mco_WrenRunner {
-    // FIXME: Make sure all deallocations are disabled
+    // XXX: Make sure all deallocations are disabled
     BlockAllocator vm_alloc { Kibibytes(256) };
 
 public:
@@ -633,7 +633,7 @@ static WrenForeignMethodFn BindProcedureArrayMethod(const char *signature)
 
     if (false) {}
 
-    // TODO: Check for duplicates before add? What counts as a duplicate?
+    // XXX: Check for duplicates before add? What counts as a duplicate?
     ELSE_IF_METHOD("add(_,_,_,_,_)", [](WrenVM *vm) {
         ProxyArray<mco_ProcedureRealisation> &arr =
             *(ProxyArray<mco_ProcedureRealisation> *)wrenGetSlotForeign(vm, 0);
@@ -1290,7 +1290,7 @@ bool mco_FilterRunner::Init(const char *filter)
     return ResetRunner();
 }
 
-// TODO: Parallelize filtering, see old mco_Filter() API
+// XXX: Parallelize filtering, see old mco_Filter() API
 bool mco_FilterRunner::Process(Span<const mco_Result> results, Span<const mco_Result> mono_results,
                                HeapArray<const mco_Result *> *out_results,
                                HeapArray<const mco_Result *> *out_mono_results,

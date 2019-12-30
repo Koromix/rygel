@@ -531,7 +531,7 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
     }
 
     // Deduplicate procedures
-    // TODO: Warn when we deduplicate procedures with different attributes,
+    // XXX: Warn when we deduplicate procedures with different attributes,
     // such as when the two procedures fall into different date ranges / limits.
     if (pointers_count) {
         Span<const mco_ProcedureInfo *> procedures =
@@ -1985,7 +1985,7 @@ static bool TestSupplementSrc(const mco_TableIndex &index, const mco_PreparedSta
     return false;
 }
 
-// TODO: Count correctly when authorization date is too early (REA)
+// XXX: Count correctly when authorization date is too early (REA)
 void mco_CountSupplements(const mco_TableIndex &index,
                           const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
                           mco_GhmCode ghm, mco_GhsCode ghs, unsigned int /*flags*/,

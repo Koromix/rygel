@@ -99,7 +99,7 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
         case WM_CHAR: {
             uint16_t c = (uint16_t)wparam;
 
-            // TODO: Deal with supplementary planes
+            // XXX: Deal with supplementary planes
             if (c < 0x80 && RG_LIKELY(thread_info->input.text.Available() >= 1)) {
                 thread_info->input.text.Append((char)c);
             } else if (c < 0x800 && RG_LIKELY(thread_info->input.text.Available() >= 2)) {
@@ -493,7 +493,7 @@ bool gui_Window::ProcessEvents(bool wait)
     }
     priv.input.text.Append('\0');
 
-    // FIXME: Should we report an error instead?
+    // XXX: Should we report an error instead?
     RG_ASSERT(SetGLContext(window->hdc, window->hgl));
     if (imgui_local) {
         StartImGuiFrame();

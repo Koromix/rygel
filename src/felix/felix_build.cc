@@ -70,7 +70,7 @@ static int RunTarget(const Target &target, const char *target_filename,
 
     HeapArray<char> cmd_buf;
 
-    // FIXME: Just like the code in compiler.cc, command-line escaping is
+    // XXX: Just like the code in compiler.cc, command-line escaping is
     // either wrong or not done. Make something to deal with that uniformely.
     Fmt(&cmd_buf, "\"%1\"", target_filename);
     for (const char *arg: arguments) {

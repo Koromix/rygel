@@ -106,7 +106,7 @@ static drd_ProcedureCode ConvertProcedureCode(int16_t root_idx, char char4, uint
     return proc;
 }
 
-// TODO: Be careful with overflow in offset and length checks
+// XXX: Be careful with overflow in offset and length checks
 static bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filename,
                               Allocator *str_alloc, HeapArray<mco_TableInfo> *out_tables)
 {
@@ -1789,7 +1789,7 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
     }
 
     // Check index validity
-    // FIXME: Validate all tables (some were not always needed)
+    // XXX: Validate all tables (some were not always needed)
     index.valid &= index.ghm_nodes.len &&
                    index.diagnoses.len &&
                    index.procedures.len &&

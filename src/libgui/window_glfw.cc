@@ -128,7 +128,7 @@ bool gui_Window::Init(const char *application_name)
     glfwSetCharCallback(window, [](GLFWwindow *window, unsigned int c) {
         gui_Window *self = (gui_Window *)glfwGetWindowUserPointer(window);
 
-        // TODO: Deal with supplementary planes
+        // XXX: Deal with supplementary planes
         if (c < 0x80 && RG_LIKELY(self->priv.input.text.Available() >= 1)) {
             self->priv.input.text.Append((char)c);
         } else if (c < 0x800 && RG_LIKELY(self->priv.input.text.Available() >= 2)) {

@@ -309,7 +309,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
             if (!IsFileUpToDate(module_filename, obj_filename)) {
                 BuildCommand cmd = {};
 
-                // TODO: Check if this conflicts with a target destination file?
+                // XXX: Check if this conflicts with a target destination file?
                 cmd.text = Fmt(&str_alloc, "Link %1",
                                SplitStrReverseAny(module_filename, RG_PATH_SEPARATORS)).ptr;
                 cmd.dest_filename = DuplicateString(module_filename, &str_alloc).ptr;

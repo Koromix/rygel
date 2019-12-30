@@ -342,7 +342,7 @@ void BlockAllocator::ReleaseAll()
 // Date
 // ------------------------------------------------------------------------
 
-// TODO: Rewrite the ugly parsing part
+// XXX: Rewrite the ugly parsing part
 Date Date::FromString(Span<const char> date_str, int flags, Span<const char> *out_remaining)
 {
     Date date;
@@ -972,7 +972,7 @@ void PrintFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *st)
 
 void PrintFmt(const char *fmt, Span<const FmtArg> args, FILE *fp)
 {
-    // TODO: Deal properly with partial writes in PrintFmt(FILE) overload
+    // XXX: Deal properly with partial writes in PrintFmt(FILE) overload
 
     LocalArray<char, RG_FMT_STRING_PRINT_BUFFER_SIZE> buf;
     DoFormat(fmt, args, [&](Span<const char> frag) {
@@ -1584,7 +1584,7 @@ bool TestFile(const char *filename, FileType type)
     return true;
 }
 
-// TODO: Replace with OS-independent implementation, with support for full paths
+// XXX: Replace with OS-independent implementation, with support for full paths
 bool MatchPathName(const char *name, const char *pattern)
 {
 #ifdef _WIN32
@@ -3170,7 +3170,7 @@ Size StreamReader::Deflate(Size max_len, void *out_buf)
             if (header_len - header_offset < 2)
                 goto truncated_error;
             uint16_t crc16 = (uint16_t)(header[1] << 8 | header[0]);
-            // TODO: Test this actually works
+            // XXX: Test this actually works
             if ((mz_crc32(MZ_CRC32_INIT, header, (size_t)header_offset) & 0xFFFF) == crc16) {
                 LogError("Failed header CRC16 check in '%s'", filename);
                 error = true;
@@ -3334,7 +3334,7 @@ restart:
     return read_len;
 }
 
-// TODO: Maximum line length
+// XXX: Maximum line length
 bool LineReader::Next(Span<char> *out_line)
 {
     if (RG_UNLIKELY(error || eof))

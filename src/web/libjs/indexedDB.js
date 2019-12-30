@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// TODO: Support degraded mode when IDB is not available (e.g. private browsing)
+// XXX: Support degraded mode when IDB is not available (e.g. private browsing)
 let idb = new function () {
     this.open = function(db_name, version = null, version_func = null) {
         let req;

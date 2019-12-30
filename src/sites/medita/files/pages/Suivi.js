@@ -34,7 +34,7 @@ function addChart(id, echelles) {
                         xAxes: [{
                             type: 'time',
                             ticks: {
-                                // TODO: Fix chart X-axis date format
+                                // XXX: Fix chart X-axis date format
                                 source: 'data'
                             }
                         }],

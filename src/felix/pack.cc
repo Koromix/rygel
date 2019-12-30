@@ -186,7 +186,7 @@ static Size PackAsset(const PackAssetInfo &asset, CompressionType compression_ty
     };
 
     if (asset.transform_cmd) {
-        // FIXME: Implement some kind of stream API for external process input / output
+        // XXX: Implement some kind of stream API for external process input / output
         HeapArray<uint8_t> merge_buf;
         {
             bool success = MergeAssetSourceFiles(asset.sources, [&](Span<const uint8_t> buf) {

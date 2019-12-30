@@ -278,7 +278,7 @@ bool json_Parser::IncreaseDepth()
 
 void json_StreamWriter::Put(char c)
 {
-    // TODO: Move the buffering to StreamWriter (when compression is enabled)
+    // XXX: Move the buffering to StreamWriter (when compression is enabled)
     buf.Append((uint8_t)c);
 
     if (buf.len == RG_SIZE(buf.data)) {

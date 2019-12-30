@@ -50,7 +50,7 @@ static void AppendGccObjectArguments(const char *src_filename, BuildMode build_m
 }
 
 #ifdef _WIN32
-// FIXME: Response files should be handled further down the chain in a
+// XXX: Response files should be handled further down the chain in a
 // clean way, probably in RunBuildCommands().
 
 static std::mutex rsp_files_mutex;

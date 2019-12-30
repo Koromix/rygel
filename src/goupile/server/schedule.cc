@@ -49,7 +49,7 @@ static sqlite3_stmt *PrepareMonthQuery(const http_RequestInfo &request, const ch
         return nullptr;
 
     // Check arguments
-    // FIXME: Check that schedule_name if a valid asset, with the proper mimetype
+    // XXX: Check that schedule_name if a valid asset, with the proper mimetype
     if (month < 1 || month > 12) {
         LogError("Invalid month value %1", month);
         io->AttachError(422);

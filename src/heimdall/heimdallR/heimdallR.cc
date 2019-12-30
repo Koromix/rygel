@@ -52,7 +52,7 @@ template <typename Fun>
 int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame values_df,
                 Rcpp::CharacterVector keys, Fun func)
 {
-    // FIXME: Use guard to restore stuff in case of error
+    // XXX: Use guard to restore stuff in case of error
 
     std::lock_guard<std::mutex> lock(inst->lock);
 
@@ -99,7 +99,7 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
         entity->elements.Append(elmt);
     }
 
-    // TODO: Delay sort (diry flag, sort in run). Might also want to only sort
+    // XXX: Delay sort (diry flag, sort in run). Might also want to only sort
     // elements in changed entities.
     std::sort(inst->entity_set.entities.begin(), inst->entity_set.entities.end(),
               [](const Entity &ent1, const Entity &ent2) { return strcmp(ent1.id, ent2.id) < 0; });
