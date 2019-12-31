@@ -1,0 +1,24 @@
+{
+  "name": "babel",
+  "version": "1.0.0",
+  "description": "",
+  "main": "config.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "^7.7.7",
+    "@babel/preset-env": "^7.7.7",
+    "rollup": "^1.27.14",
+    "@rollup/plugin-commonjs": "^11.0.0",
+    "@rollup/plugin-node-resolve": "^6.0.0",
+    "rollup-plugin-babel": "^4.3.3",
+    "rollup-plugin-hypothetical": "^2.1.0"
+  },
+  "dependencies": {
+    "core-js": "^3.6.1",
+    "regenerator-runtime": "^0.13.3"
+  }
+}
