@@ -92,7 +92,7 @@ let util = new function() {
     this.deepFreeze = function(obj, ignore = []) {
         Object.freeze(obj);
 
-        for (key in obj) {
+        for (let key in obj) {
             let value = obj[key];
             if (!Object.isFrozen(value) && !ignore.includes(key) && (typeof value === 'object' ||
                                                                      typeof value === 'function'))
