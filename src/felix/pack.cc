@@ -188,13 +188,8 @@ static Size PackAsset(const PackAssetInfo &asset, CompressionType compression_ty
     if (asset.transform_cmd) {
         // XXX: Implement some kind of stream API for external process input / output
         HeapArray<uint8_t> merge_buf;
-        {
-            bool success = MergeAssetSourceFiles(asset.sources, [&](Span<const uint8_t> buf) {
-                merge_buf.Append(buf);
-            });
-            if (!success)
-                return -1;
-        }
+        if (!MergeAssetSourceFiles(asset.sources, [&](Span<const uint8_t> buf) { merge_buf.Append(buf); }))
+            return -1;
 
         // Execute transform command
         {
@@ -206,6 +201,7 @@ static Size PackAsset(const PackAssetInfo &asset, CompressionType compression_ty
             }, &code);
             if (!success)
                 return -1;
+
             if (code) {
                 LogError("Transform command '%1' failed with code: %2", asset.transform_cmd, code);
                 return -1;
