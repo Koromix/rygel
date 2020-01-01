@@ -365,7 +365,7 @@ let mco_casemix = new function() {
         tsel.setPrefix('Unités : ');
         for (let structure of structures) {
             tsel.addTab(structure.name);
-            for (ent of structure.entities)
+            for (let ent of structure.entities)
                 tsel.addOption(ent.path, ent.unit, {selected: current_units.has(ent.unit)});
         }
         tsel.setCurrentTab(current_tab);

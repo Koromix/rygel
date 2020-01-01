@@ -56,7 +56,7 @@ let data = new function() {
             defn.children = [];
 
             if (chapter.parents) {
-                for (type of chapter.parents) {
+                for (let type of chapter.parents) {
                     let parent = dict[type].find(defn.parents[type]);
                     parent.children.push(defn);
                 }

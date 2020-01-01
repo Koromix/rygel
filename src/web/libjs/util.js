@@ -67,7 +67,7 @@ let util = new function() {
     };
 
     function assignDeep1(obj, src) {
-        for (key in src) {
+        for (let key in src) {
             let from = src[key];
 
             if (isPodObject(from) && !Object.isFrozen(from)) {

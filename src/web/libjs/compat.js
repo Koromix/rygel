@@ -9,10 +9,10 @@ if (!Array.from) {
     Array.from = function(obj) {
         let arr = [];
         if (obj.values && typeof obj.values === 'function') {
-            for (const value of obj.values())
+            for (let value of obj.values())
                 arr.push(value);
         } else {
-            for (var i = 0; i < obj.length; i++)
+            for (let i = 0; i < obj.length; i++)
                 arr.push(obj[i]);
         }
 
@@ -42,7 +42,7 @@ if (!Array.prototype.includes) {
                    (typeof x === 'number' && typeof y === 'number' && isNaN(x) && isNaN(y));
         }
 
-        for (const value of this) {
+        for (let value of this) {
             if (sameValueZero(value, needle))
                 return true;
         }
@@ -58,7 +58,7 @@ if (!Object.assign) {
             const from = arguments[i];
 
             if (from) {
-                for (const key in from) {
+                for (let key in from) {
                     if (hasOwnProperty.call(from, key))
                         target[key] = from[key];
                 }
