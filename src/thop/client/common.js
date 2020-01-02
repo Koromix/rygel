@@ -9,16 +9,19 @@
 let data = new function() {
     let self = this;
 
-    let cache = new LruMap(32);
+    let json_cache = new LruMap(4);
+    let dict_cache = new LruMap(4);
 
-    this.fetchJSON = async function(url) { return fetchAndCache(url, url, json => json); };
+    this.fetchJSON = async function(url) {
+        return fetchAndCache(json_cache, url, url, json => json); };
+
     this.fetchDictionary = async function(name) {
         let url = `${env.base_url}dictionaries/${name}.json`;
-        return fetchAndCache(name, url, parseDictionary);
+        return fetchAndCache(dict_cache, name, url, parseDictionary);
     };
-    this.fetchCachedDictionary = function(name) { return cache.get(name); }
+    this.fetchCachedDictionary = function(name) { return dict_cache.get(name); }
 
-    async function fetchAndCache(key, url, func) {
+    async function fetchAndCache(cache, key, url, func) {
         let resource = cache.get(key);
 
         if (!resource) {
@@ -91,7 +94,8 @@ let data = new function() {
     }
 
     this.clearCache = function() {
-        cache.clear();
+        json_cache.clear();
+        dict_cache.clear();
     };
 };
 
