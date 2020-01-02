@@ -167,8 +167,8 @@ static void AppendPackCommandLine(Span<const char *const> pack_filenames, BuildM
 #endif
 
     switch (build_mode) {
-        case BuildMode::Debug:
-        case BuildMode::Fast: { Fmt(out_buf, " -m SourceMap"); } break;
+        case BuildMode::Debug: { Fmt(out_buf, " -m SourceMap"); } break;
+        case BuildMode::Fast:
         case BuildMode::Release: { Fmt(out_buf, " -m RunTransform"); } break;
     }
 
