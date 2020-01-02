@@ -17,6 +17,12 @@ try {
     code = '';
 }
 
+// Quick-and-dirty way to add relevant polyfills
+code = `import 'whatwg-fetch';
+import '@webcomponents/template';
+
+${code}`;
+
 module.exports = {
     input: '__stdin__.js',
     plugins: [

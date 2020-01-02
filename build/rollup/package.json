@@ -18,7 +18,9 @@
     "rollup-plugin-hypothetical": "^2.1.0"
   },
   "dependencies": {
+    "@webcomponents/template": "^1.4.1",
     "core-js": "^3.6.1",
-    "regenerator-runtime": "^0.13.3"
+    "regenerator-runtime": "^0.13.3",
+    "whatwg-fetch": "^3.0.0"
   }
 }
