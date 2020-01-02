@@ -18,7 +18,11 @@
                 has_users: {HAS_USERS}
             };
         </script>
-        <script src="{BASE_URL}static/thop.pk.js"></script>
+
+        <!-- Not really a module, but type="module" is an easy way to prevent
+             older browsers from using the modern version -->
+        <script type="module" src="{BASE_URL}static/thop.pk.js"></script>
+        <script nomodule src="{BASE_URL}static/thop_compat.pk.js"></script>
 
         <link rel="stylesheet" href="{BASE_URL}static/thop.pk.css"/>
     </head>

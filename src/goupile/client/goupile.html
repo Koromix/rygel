@@ -22,7 +22,11 @@
             };
         </script>
 
-        <script src="{BASE_URL}static/goupile.pk.js"></script>
+        <!-- Not really a module, but type="module" is an easy way to prevent
+             older browsers from using the modern version -->
+        <script type="module" src="{BASE_URL}static/goupile.pk.js"></script>
+        <script nomodule src="{BASE_URL}static/goupile_compat.pk.js"></script>
+
         <link rel="stylesheet" href="{BASE_URL}static/goupile.pk.css"/>
         {LINK_MANIFEST}
     </head>
