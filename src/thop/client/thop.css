@@ -24,6 +24,7 @@ body {
 }
 
 main {
+    display: block;
     max-width: 1000px;
     margin-left: 180px;
     padding: 6px 12px 6px 12px;
@@ -98,6 +99,9 @@ button { cursor: pointer; }
     text-align: center;
     font-size: 0.8em;
     color: #ff6600;
+}
+@media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
+    #th_version { display: none; }
 }
 
 /* -------------------- Main -------------------- */
