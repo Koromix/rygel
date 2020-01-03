@@ -7,7 +7,7 @@ let dev_files = new function() {
 
     this.runFiles = async function() {
         if (remote) {
-            files = await vfs.status();
+            files = await virt_fs.status();
 
             // Overwrite with user actions (if any)
             for (let file of files)
@@ -17,7 +17,7 @@ let dev_files = new function() {
             files.sort((file1, file2) => (!!file2.sha256 - !!file1.sha256) ||
                                              util.compareValues(file1.path, file2.path));
         } else {
-            files = await vfs.listLocal();
+            files = await virt_fs.listLocal();
         }
 
         renderActions();
@@ -109,7 +109,7 @@ let dev_files = new function() {
 
                 entry.progress('Enregistrement du fichier');
                 try {
-                    await vfs.save(path.value, blob.value || '');
+                    await virt_fs.save(path.value, blob.value || '');
                     await goupile.initApplication();
 
                     entry.success('Fichier enregistré !');
@@ -147,7 +147,7 @@ let dev_files = new function() {
             page.submitHandler = async () => {
                 page.close();
 
-                await vfs.delete(path);
+                await virt_fs.delete(path);
                 await goupile.initApplication();
             };
             page.buttons(page.buttons.std.ok_cancel('Supprimer'));
@@ -166,7 +166,7 @@ let dev_files = new function() {
         entry.progress('Synchronisation en cours');
 
         try {
-            await vfs.sync(files);
+            await virt_fs.sync(files);
             entry.success('Synchronisation terminée !');
         } catch (err) {
             entry.error(err.message);

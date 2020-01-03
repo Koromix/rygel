@@ -4,8 +4,8 @@
 
 // These globals are initialized below
 let app = null;
-let vfs = null;
-let recorder = null;
+let virt_fs = null;
+let virt_data = null;
 
 let goupile = new function() {
     let self = this;
@@ -56,8 +56,8 @@ let goupile = new function() {
         initNavigation();
 
         let db = await openDatabase();
-        vfs = new FileManager(db);
-        recorder = new FormRecorder(db);
+        virt_fs = new VirtualFS(db);
+        virt_data = new VirtualData(db);
 
         if (navigator.serviceWorker) {
             navigator.serviceWorker.register(`${env.base_url}sw.pk.js`);
@@ -97,13 +97,13 @@ let goupile = new function() {
 
         entry.progress('Mise à jour de l\'application');
         try {
-            let files = await vfs.status();
+            let files = await virt_fs.status();
 
             if (files.some(file => file.action === 'pull' || file.action === 'conflict')) {
                 if (files.some(file => file.action !== 'pull' && file.action !== 'noop'))
                     throw new Error('Impossible de mettre à jour (modifications locales)');
 
-                await vfs.sync(files);
+                await virt_fs.sync(files);
                 entry.success('Mise à jour terminée !');
             } else {
                 entry.close();
@@ -188,7 +188,7 @@ let goupile = new function() {
 
     // Can be launched multiple times (e.g. when main.js is edited)
     this.initApplication = async function() {
-        let files = await vfs.listAll();
+        let files = await virt_fs.listAll();
         let files_map = util.mapArray(files, file => file.path);
 
         // Detect file changes made outside editor
@@ -232,7 +232,7 @@ let goupile = new function() {
 
         // Update custom CSS (if any)
         {
-            let file = await vfs.load('/files/main.css');
+            let file = await virt_fs.load('/files/main.css');
             if (file) {
                 let css = await file.data.text();
                 updateApplicationCSS(css);
@@ -248,7 +248,7 @@ let goupile = new function() {
         if (buffer && !buffer.reload) {
             return buffer.session.getValue();
         } else {
-            let file = await vfs.load(path);
+            let file = await virt_fs.load(path);
             return file ? (await file.data.text()) : '';
         }
     }
@@ -397,11 +397,11 @@ Navigation functions should only be called in reaction to user events, such as b
 
             if (args.hasOwnProperty('id') || current_record.id == null) {
                 if (args.id == null) {
-                    current_record = recorder.create(current_asset.form.key);
+                    current_record = virt_data.create(current_asset.form.key);
                 } else if (args.id !== current_record.id) {
-                    current_record = await recorder.load(current_asset.form.key, args.id);
+                    current_record = await virt_data.load(current_asset.form.key, args.id);
                     if (!current_record)
-                        current_record = recorder.create(current_asset.form.key);
+                        current_record = virt_data.create(current_asset.form.key);
 
                     // The user asked for this record, make sure it is visible
                     if (!show_overview) {
@@ -569,7 +569,7 @@ Navigation functions should only be called in reaction to user events, such as b
         let buffer = editor_buffers.get(current_asset.path);
 
         if (!buffer || buffer.reload) {
-            let file = await vfs.load(current_asset.path);
+            let file = await virt_fs.load(current_asset.path);
             let extension = current_asset.path.substr(current_asset.path.lastIndexOf('.'));
             let script = file ? await file.data.text() : '';
 
@@ -645,7 +645,7 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     async function saveEditedFile(path, data) {
-        let file = await vfs.save(path, data);
+        let file = await virt_fs.save(path, data);
 
         let buffer = editor_buffers.get(path);
         if (buffer)

@@ -11,8 +11,8 @@ let dev_data = new function() {
     let user_actions = {};
 
     this.runData = async function(table, current_id) {
-        let records = await recorder.loadAll(table);
-        let variables = await recorder.listVariables(table);
+        let records = await virt_data.loadAll(table);
+        let variables = await virt_data.listVariables(table);
         let columns = orderColumns(variables);
 
         renderRecords(table, records, columns, current_id);
@@ -75,8 +75,8 @@ let dev_data = new function() {
         if (typeof XSLX === 'undefined')
             await util.loadScript(`${env.base_url}static/xlsx.core.min.js`);
 
-        let records = await recorder.loadAll(table);
-        let variables = await recorder.listVariables(table);
+        let records = await virt_data.loadAll(table);
+        let variables = await virt_data.listVariables(table);
         let columns = orderColumns(variables);
 
         // Worksheet
@@ -209,7 +209,7 @@ let dev_data = new function() {
             page.output('Voulez-vous vraiment supprimer cet enregistrement ?');
 
             page.submitHandler = async () => {
-                await recorder.delete(record.table, record.id);
+                await virt_data.delete(record.table, record.id);
 
                 if (record.id === current_id) {
                     goupile.run(null, {id: null});
