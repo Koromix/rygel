@@ -5,7 +5,12 @@
 let dev_data = new function() {
     let self = this;
 
-    this.runTable = async function(table, current_id) {
+    let remote = true;
+
+    let files;
+    let user_actions = {};
+
+    this.runData = async function(table, current_id) {
         let records = await recorder.loadAll(table);
         let variables = await recorder.listVariables(table);
         let columns = orderColumns(variables);
@@ -59,7 +64,7 @@ let dev_data = new function() {
                 </tbody>
             </table>
 
-            <div id="dev_toolbar">
+            <div id="gp_toolbar">
                 <button ?disabled=${!columns.length} @click=${e => exportSheets(table, 'xlsx')}>Export Excel</button>
                 <button ?disabled=${!columns.length} @click=${e => exportSheets(table, 'csv')}>Export CSV</button>
             </div>
@@ -193,9 +198,9 @@ let dev_data = new function() {
 
     function handleEditClick(e, record, current_id) {
         if (record.id !== current_id) {
-            dev.run(null, {id: record.id});
+            goupile.run(null, {id: record.id});
         } else {
-            dev.run(null, {id: null});
+            goupile.run(null, {id: null});
         }
     }
 
@@ -207,9 +212,9 @@ let dev_data = new function() {
                 await recorder.delete(record.table, record.id);
 
                 if (record.id === current_id) {
-                    dev.run(null, {id: null});
+                    goupile.run(null, {id: null});
                 } else {
-                    dev.run();
+                    goupile.run();
                 }
                 page.close();
             };

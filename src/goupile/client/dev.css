@@ -2,130 +2,7 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* -------------------- Header -------------------- */
-
-#dev_assets {
-    flex-grow: 1;
-    background: inherit;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAALCAYAAABhwJ3wAAAAmElEQVQ4jbXSsQpBARgFYC+hDLJISZQUA2UymCzKi8uiDEqhUKKw+CyGf7jEdZ064+lbTg55THHPqGtUc0lBAbMMkA3qiUjAipj/gOzQfIsErIRFCuSA9kdIwMpYfoEc0f0KCVgFqw+QE/qpkIDVng96hZwx+AkJWAPbBOSCYSZIwFrYB+SKUaZIwDrPZ90w/gsSsB4mafcPBrf6ZZY6+FYAAAAASUVORK5CYII=");
-    background-repeat: no-repeat;
-    background-position: right;
-    border: 0;
-    outline: 0;
-    color: inherit;
-    font-size: 1.3em;
-    font-weight: normal;
-    text-align: center;
-    text-align-last: center;
-}
-@-moz-document url-prefix() {
-    #dev_assets > optgroup {
-        background: DodgerBlue;
-        color: white;
-    }
-}
-
-/* -------------------- Panels -------------------- */
-
-.dev_panel_left {
-    position: fixed;
-    left: 0;
-    top: 2.5em;
-    width: 50%;
-    height: calc(100% - 5em);
-    z-index: 999;
-    overflow: auto;
-    border-right: 1px solid #dfdfdf;
-}
-.dev_panel_right {
-    margin: 2.5em 0 0 50%;
-    padding: 12px;
-    background: #efefef;
-}
-
-.dev_panel_fixed {
-    position: fixed;
-    left: 0;
-    top: 2.5em;
-    width: 100%;
-    height: calc(100% - 5em);
-    z-index: 999;
-    overflow: auto;
-}
-.dev_panel_page {
-    max-width: 800px;
-    border: 12px solid #f8f8f8;
-    margin: auto;
-    padding: 12px;
-    background: #efefef;
-}
-
-/* -------------------- Toolbar -------------------- */
-
-#dev_toolbar {
-    position: fixed;
-    display: flex;
-    bottom: 0;
-    box-sizing: border-box;
-    width: inherit;
-    height: 2.5em;
-    margin: 0;
-    padding: 0;
-    z-index: 999;
-    background: #2f3129;
-    color: white;
-    user-select: none;
-    -moz-user-select: none;
-    -webkit-user-select: none;
-    -ms-user-select: none;
-}
-
-#dev_toolbar button {
-    display: inline-block;
-    height: 100%;
-    box-sizing: border-box;
-    background: inherit;
-    border: 0;
-    color: inherit;
-    text-decoration: none;
-}
-#dev_toolbar button::-moz-focus-inner { border: 0; }
-#dev_toolbar button:focus { outline: 0; }
-#dev_toolbar button:not(.active):not(:disabled):hover { background: #3c3d39; }
-#dev_toolbar button.active { background: #464645; }
-#dev_toolbar button:disabled { filter: brightness(75%); }
-
-/* -------------------- Utility -------------------- */
-
-#dev_log {
-    position: fixed;
-    top: 2.5em;
-    right: 0;
-    padding: 6px;
-    background: #db0a0a;
-    color: white;
-    white-space: pre-wrap;
-    z-index: 9999;
-}
-.dev_broken {
-    filter: grayscale(100%);
-    opacity: 0.5;
-}
-
-.dev_wip {
-    padding: 5px;
-    font-size: 2em;
-    text-align: center;
-}
-.dev_wip:before {
-    content: '⚠\FE0E';
-    padding-right: 10px;
-}
-
-/* -------------------- Export -------------------- */
+/* -------------------- Data -------------------- */
 
 .rec_table {
     width: 100%;
@@ -173,7 +50,7 @@
     color: #cbcbcb;
 }
 
-/* -------------------- Synchronization -------------------- */
+/* -------------------- Files -------------------- */
 
 .sync_table {
     width: 100%;

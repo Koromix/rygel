@@ -77,7 +77,7 @@ function FormExecutor(form, record) {
         await recorder.save(record, page.variables);
         entry.success('Données enregistrées !');
 
-        dev.run(null, {id: null});
+        goupile.run(null, {id: null});
         // XXX: Give focus to first widget
         window.scrollTo(0, 0);
     }

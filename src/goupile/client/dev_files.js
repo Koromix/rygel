@@ -5,11 +5,6 @@
 let dev_files = new function() {
     let self = this;
 
-    let remote = true;
-
-    let files;
-    let user_actions = {};
-
     this.runFiles = async function() {
         if (remote) {
             files = await vfs.status();
@@ -76,7 +71,7 @@ let dev_files = new function() {
                 })}</tbody>
             </table>
 
-            <div id="dev_toolbar">
+            <div id="gp_toolbar">
                 <button @click=${showCreateDialog}>Ajouter</button>
                 <div style="flex: 1;"></div>
                 ${remote ?
@@ -115,7 +110,7 @@ let dev_files = new function() {
                 entry.progress('Enregistrement du fichier');
                 try {
                     await vfs.save(path.value, blob.value || '');
-                    await dev.init();
+                    await goupile.initApplication();
 
                     entry.success('Fichier enregistré !');
                 } catch (err) {
@@ -139,7 +134,7 @@ let dev_files = new function() {
                 page.close();
 
                 await syncFiles();
-                await dev.init();
+                await goupile.initApplication();
             };
             page.buttons(page.buttons.std.ok_cancel('Synchroniser'));
         });
@@ -153,7 +148,7 @@ let dev_files = new function() {
                 page.close();
 
                 await vfs.delete(path);
-                await dev.init();
+                await goupile.initApplication();
             };
             page.buttons(page.buttons.std.ok_cancel('Supprimer'));
         });
