@@ -12,7 +12,7 @@ let thop = new function() {
     let route_url = '';
     let scroll_cache = new LruMap(128);
 
-    let settings_key;
+    let settings_rnd;
 
     document.addEventListener('readystatechange', e => {
         if (document.readyState === 'complete')
@@ -137,7 +137,7 @@ let thop = new function() {
     async function updateSettings() {
         if (env.has_users)
             user.readSessionCookies();
-        if (settings_key === user.getUrlKey())
+        if (settings_rnd === user.getSessionRnd())
             return;
 
         // Clear cache, which may contain user-specific and even sensitive data
@@ -147,7 +147,7 @@ let thop = new function() {
         // Fetch new settings
         {
             // We'll parse it manually to revive dates. It's relatively small anyway.
-            let json = await fetch(`${env.base_url}api/settings.json?key=${user.getUrlKey()}`).then(response => response.text());
+            let json = await fetch(`${env.base_url}api/settings.json?rnd=${user.getSessionRnd()}`).then(response => response.text());
 
             settings = JSON.parse(json, (key, value) => {
                 if (typeof value === 'string' && value.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)) {
@@ -156,7 +156,7 @@ let thop = new function() {
                     return value;
                 }
             });
-            settings_key = user.getUrlKey();
+            settings_rnd = user.getSessionRnd();
         }
 
         // Update session information

@@ -122,17 +122,17 @@ let user = new function() {
     // Session
     // ------------------------------------------------------------------------
 
-    let url_key = 0;
+    let session_rnd = 0;
 
     this.readSessionCookies = function(warn = true) {
-        let new_url_key = util.getCookie('url_key') || 0;
+        let new_session_rnd = util.getCookie('session_rnd') || 0;
 
-        if (new_url_key !== url_key && !new_url_key && warn)
+        if (new_session_rnd !== session_rnd && !new_session_rnd && warn)
             log.info('Votre session a expiré');
 
-        url_key = new_url_key;
+        session_rnd = new_session_rnd;
     };
 
-    this.isConnected = function() { return !!url_key; };
-    this.getUrlKey = function() { return url_key; };
+    this.isConnected = function() { return !!session_rnd; };
+    this.getSessionRnd = function() { return session_rnd; };
 };

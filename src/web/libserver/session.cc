@@ -102,12 +102,12 @@ http_SessionManager::Session *
         }
     }
 
-    // Create URL key
-    char url_key[33];
+    // Create public randomized key (for use in session-specific URLs)
+    char session_rnd[33];
     {
         uint64_t buf[2];
         randombytes_buf(&buf, RG_SIZE(buf));
-        Fmt(url_key, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
+        Fmt(session_rnd, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
     }
 
     // Fill extra security values
@@ -116,7 +116,7 @@ http_SessionManager::Session *
 
     // Set session cookies
     io->AddCookieHeader(request.base_url, "session_key", session->session_key, true);
-    io->AddCookieHeader(request.base_url, "url_key", url_key, false);
+    io->AddCookieHeader(request.base_url, "session_rnd", session_rnd, false);
 
     return session;
 }
@@ -124,7 +124,7 @@ http_SessionManager::Session *
 static void DeleteSessionCookies(const http_RequestInfo &request, http_IO *io)
 {
     io->AddCookieHeader(request.base_url, "session_key", nullptr);
-    io->AddCookieHeader(request.base_url, "url_key", nullptr);
+    io->AddCookieHeader(request.base_url, "session_rnd", nullptr);
 }
 
 void http_SessionManager::Close(const http_RequestInfo &request, http_IO *io)
