@@ -32,8 +32,6 @@ let idb = new function () {
     };
 
     function DatabaseInterface(db, transaction = null) {
-        console.log(transaction);
-
         let self = this;
 
         let aborted = false;
