@@ -183,7 +183,11 @@ function PageBuilder(state, page) {
         // Hack to accept incomplete values, mainly in the case of a '-' being typed first,
         // in which case we don't want to clear the field immediately.
         if (!e.target.validity || e.target.validity.valid) {
-            updateValue(key, parseFloat(e.target.value) || undefined);
+            let value = parseFloat(e.target.value);
+            if (Number.isNaN(value))
+                value = undefined;
+
+            updateValue(key, value);
             self.restart();
         }
     }
