@@ -8,9 +8,7 @@ function Page() {
     this.widgets = [];
     this.variables = [];
 
-    this.render = function(el) {
-        render(self.widgets.map(intf => intf.render()), el);
-    };
+    this.render = function() { return self.widgets.map(intf => intf.render()); };
 }
 
 function PageState() {

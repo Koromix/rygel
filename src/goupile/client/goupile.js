@@ -501,12 +501,12 @@ Navigation functions should only be called in reaction to user events, such as b
 
         render(html`
             ${left_panel === 'files' ?
-                html`<div id="dev_files" class=${show_overview ? 'gp_panel_left' : 'gp_panel_fixed'}></div>` : ''}
+                html`<div id="dev_files" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
             ${left_panel === 'editor' ?
-                makeEditorElement(show_overview ? 'gp_panel_left' : 'gp_panel_fixed') : ''}
+                makeEditorElement(show_overview ? 'gp_panel left' : 'gp_panel fixed') : ''}
             ${left_panel === 'data' ?
-                html`<div id="dev_data" class=${show_overview ? 'gp_panel_left' : 'gp_panel_fixed'}></div>` : ''}
-            <div id="gp_overview" class=${left_panel ? 'gp_panel_right' : 'gp_panel_page'}
+                html`<div id="dev_data" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
+            <div id="gp_overview" class=${left_panel ? 'gp_panel right' : 'gp_panel overview'}
                  style=${show_overview ? '' : 'display: none;'}></div>
 
             <div id="gp_overview_log" style="display: none;"></div>
@@ -609,7 +609,7 @@ Navigation functions should only be called in reaction to user events, such as b
             editor_el.id = 'dev_editor';
             render(html`
                 <div style="height: 100%;"></div>
-                <div id="gp_toolbar"></div>
+                <div class="gp_toolbar"></div>
             `, editor_el);
         }
 
@@ -663,8 +663,7 @@ Navigation functions should only be called in reaction to user events, such as b
                     app_form.runPage(asset.page, code, overview_el);
                 } break;
 
-                /// XXX: Pass overview_el along to provide testing without display
-                case 'schedule': { await sched_executor.run(asset.schedule); } break;
+                case 'schedule': { await sched_executor.run(asset.schedule, overview_el); } break;
 
                 default: {
                     render(html`<div class="gp_wip">Aperçu non disponible pour le moment</div>`, overview_el);
@@ -714,7 +713,7 @@ Navigation functions should only be called in reaction to user events, such as b
         });
 
         func(popup_builder);
-        page.render(popup_el);
+        render(page.render(), popup_el);
 
         // We need to know popup width and height
         let give_focus = !popup_el.classList.contains('active');

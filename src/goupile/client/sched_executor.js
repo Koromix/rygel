@@ -8,7 +8,7 @@ let sched_executor = new function() {
     let init = false;
     let view;
 
-    this.run = async function(schedule) {
+    this.run = async function(schedule, view_el) {
         if (!init) {
             goupile.listenToServerEvent('schedule', e => {
                 schedule = null;
@@ -27,7 +27,6 @@ let sched_executor = new function() {
         }
 
         // Find panels
-        let view_el = document.querySelector('main');
         view.render(today.year, today.month, view_el);
     };
 

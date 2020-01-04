@@ -20,41 +20,9 @@
 
 /* -------------------- Year / month selection menu -------------------- */
 
-#sc_footer {
-    position: fixed;
-    display: flex;
-    bottom: 0;
-    box-sizing: border-box;
-    width: 100vw;
-    height: 2.5em;
-    margin: 0;
-    padding: 0;
-    z-index: 999;
-    background: #2f3129;
-    color: white;
-    justify-content: center;
-    user-select: none;
-    -moz-user-select: none;
-    -webkit-user-select: none;
-    -ms-user-select: none;
-}
-
-#sc_footer button {
-    display: inline-block;
-    height: 100%;
-    box-sizing: border-box;
-    background: inherit;
-    border: 0;
-    color: inherit;
-    text-decoration: none;
-}
-#sc_footer button::-moz-focus-inner { border: 0; }
-#sc_footer button:focus { outline: 0; }
-#sc_footer button:not(.active):not(:disabled):hover { background: #3c3d39; }
-#sc_footer button.active { background: #464645; }
-#sc_footer button:disabled { filter: brightness(75%); }
-
+#sc_footer { justify-content: center; }
 #sc_modes {
+    display: flex;
     position: relative;
     left: 0;
 }

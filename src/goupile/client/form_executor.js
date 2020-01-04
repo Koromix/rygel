@@ -9,7 +9,7 @@ function FormExecutor(form, record) {
     let page_scratch;
     let page_key;
 
-    this.runPage = function(info, code, el) {
+    this.runPage = function(info, code, view_el) {
         if (info.key !== page_key) {
             page_state = new PageState;
             page_scratch = {};
@@ -24,7 +24,7 @@ function FormExecutor(form, record) {
         page_builder.setValue = setValue;
         page_builder.getValue = getValue;
         page_builder.changeHandler = () => {
-            self.runPage(info, code, el);
+            self.runPage(info, code, view_el);
             window.history.replaceState(null, null, app.makeURL());
         };
         page_builder.submitHandler = saveRecordAndReset;
@@ -33,7 +33,7 @@ function FormExecutor(form, record) {
         let func = Function('data', 'route', 'go', 'form', 'page', 'scratch', code);
         func(app.data, app.route, app.go, page_builder, page_builder, page_scratch);
 
-        page.render(el);
+        render(html`<div class="af_page">${page.render()}</div>`, view_el);
     };
 
     function decodeKey(key) {
