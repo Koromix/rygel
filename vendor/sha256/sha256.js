@@ -79,7 +79,8 @@ function Sha256(data) {
 
     // Read the next chunk of data and update the SHA256 computation
     this.update = function(data) {
-        // Support several types in data: strings, ArrayBuffer, Uint8Array, JS array
+        let get_byte;
+        let data_len;
         if (typeof data === 'string') {
             get_byte = idx => data.charCodeAt(idx);
             data_len = data.length;
@@ -89,7 +90,7 @@ function Sha256(data) {
             get_byte = idx => arr[idx];
             data_len = arr.length;
         } else if (data instanceof Uint8Array || Array.isArray(data)) {
-            getByte = idx => data[idx];
+            get_byte = idx => data[idx];
             data_len = data.length;
         }
 
