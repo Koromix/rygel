@@ -580,6 +580,8 @@ Navigation functions should only be called in reaction to user events, such as b
 
                     app_form.runPage(asset.page, code, overview_el);
                 } break;
+
+                /// XXX: Pass overview_el along to provide testing without display
                 case 'schedule': { await sched_executor.run(asset.schedule); } break;
 
                 default: {
