@@ -578,7 +578,7 @@ Navigation functions should only be called in reaction to user events, such as b
                         code = file ? await file.data.text() : '';
                     }
 
-                    app_form.runPageScript(asset.page, code, overview_el);
+                    app_form.runPage(asset.page, code, overview_el);
                 } break;
                 case 'schedule': { await sched_executor.run(asset.schedule); } break;
 

@@ -9,14 +9,7 @@ function FormExecutor(form, record) {
     let page_scratch;
     let page_key;
 
-    this.runPage = async function(info, el) {
-        let path = `pages/${info.key}.js`;
-        let file = await virt_fs.load(path);
-
-        self.runPageScript(page, await file.data.text(), el);
-    };
-
-    this.runPageScript = function(info, script, el) {
+    this.runPage = function(info, code, el) {
         if (info.key !== page_key) {
             page_state = new PageState;
             page_scratch = {};
@@ -31,13 +24,13 @@ function FormExecutor(form, record) {
         page_builder.setValue = setValue;
         page_builder.getValue = getValue;
         page_builder.changeHandler = () => {
-            self.runPageScript(info, script, el);
+            self.runPage(info, code, el);
             window.history.replaceState(null, null, app.makeURL());
         };
         page_builder.submitHandler = saveRecordAndReset;
 
         // Execute user script
-        let func = Function('data', 'route', 'go', 'form', 'page', 'scratch', script);
+        let func = Function('data', 'route', 'go', 'form', 'page', 'scratch', code);
         func(app.data, app.route, app.go, page_builder, page_builder, page_scratch);
 
         page.render(el);
