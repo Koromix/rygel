@@ -96,8 +96,8 @@ function VirtualFS(db) {
         }
     };
 
-    this.listAll = async function() {
-        let files = await self.status();
+    this.listAll = async function(remote = true) {
+        let files = await self.status(remote);
 
         files = files.filter(file => file.sha256 || file.remote_sha256);
         files = files.map(file => ({
@@ -114,11 +114,11 @@ function VirtualFS(db) {
         return files.filter(file => file.sha256);
     };
 
-    this.status = async function() {
+    this.status = async function(remote = true) {
         let [local_files, cache_files, remote_files] = await Promise.all([
             db.loadAll('files'),
             db.loadAll('files_cache'),
-            fetch(`${env.base_url}api/files.json`).then(response => response.json())
+            remote ? fetch(`${env.base_url}api/files.json`).then(response => response.json()) : db.loadAll('files_cache')
         ]);
 
         let local_map = util.mapArray(local_files, file => file.path);

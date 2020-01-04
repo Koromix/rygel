@@ -5,11 +5,6 @@
 let dev_data = new function() {
     let self = this;
 
-    let remote = true;
-
-    let files;
-    let user_actions = {};
-
     this.runData = async function(table, current_id) {
         let records = await virt_data.loadAll(table);
         let variables = await virt_data.listVariables(table);

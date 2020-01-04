@@ -197,7 +197,6 @@ button:not(:disabled) { cursor: pointer; }
 #gp_toolbar button.active { background: #464645; }
 #gp_toolbar button:disabled { filter: brightness(75%); }
 
-
 /* -------------------- Popup -------------------- */
 
 #gp_popup {

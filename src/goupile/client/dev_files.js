@@ -5,6 +5,113 @@
 let dev_files = new function() {
     let self = this;
 
+    let remote = true;
+
+    let editor;
+    let editor_buffers = new LruMap(32);
+    let editor_timer_id;
+    let editor_ignore_change = false;
+
+    let files;
+    let user_actions = {};
+
+    this.syncEditor = async function(path) {
+        if (!editor) {
+            // XXX: Make sure we don't run loadScript more than once
+            if (typeof ace === 'undefined')
+                await util.loadScript(`${env.base_url}static/ace.js`);
+
+            editor = ace.edit(document.querySelector('#dev_editor > div'));
+
+            editor.setTheme('ace/theme/monokai');
+            editor.setShowPrintMargin(false);
+            editor.setFontSize(13);
+
+            // Auto-pairing of parentheses is problematic when doing execute-as-you-type,
+            // because it easily leads to infinite for loops.
+            editor.setBehavioursEnabled(false);
+        }
+
+        let buffer = editor_buffers.get(path);
+
+        if (!buffer || buffer.reload) {
+            let file = await virt_fs.load(path);
+            let extension = path.substr(path.lastIndexOf('.'));
+            let script = file ? await file.data.text() : '';
+
+            if (buffer) {
+                buffer.sha256 = file ? file.sha256 : null;
+                buffer.reload = false;
+
+                editor_ignore_change = true;
+                editor.session.doc.setValue(script);
+                editor_ignore_change = false;
+            } else {
+                let session;
+                switch (extension) {
+                    case '.js': { session = new ace.EditSession(script, 'ace/mode/javascript'); } break;
+                    case '.css': { session = new ace.EditSession(script, 'ace/mode/css'); } break;
+                    default: { session = new ace.EditSession(script, 'ace/mode/text'); } break;
+                }
+
+                session.setOption('useWorker', false);
+                session.setUseWrapMode(true);
+                session.setUndoManager(buffer ? buffer.session.getUndoManager() : new ace.UndoManager());
+                session.on('change', e => handleEditorChange(path));
+
+                buffer = {
+                    session: session,
+                    sha256: file ? file.sha256 : null,
+                    reload: false
+                };
+
+                editor_buffers.set(path, buffer);
+            }
+        }
+
+        if (buffer.session !== editor.session) {
+            editor.setSession(buffer.session);
+            editor.setReadOnly(false);
+        }
+
+        editor.resize(false);
+    }
+
+    function handleEditorChange(path) {
+        if (editor_ignore_change)
+            return;
+
+        clearTimeout(editor_timer_id);
+        editor_timer_id = setTimeout(async () => {
+            editor_timer_id = null;
+
+            let code = editor.getValue();
+            let extension = path.substr(path.lastIndexOf('.'));
+
+            switch (extension) {
+                case '.js': {
+                    if (await goupile.validateCode(path, code))
+                        await saveEditedFile(path, code);
+
+                    window.history.replaceState(null, null, app.makeURL());
+                } break;
+
+                case '.css': {
+                    updateApplicationCSS(code);
+                    await saveEditedFile(path, code);
+                } break;
+            }
+        }, 180);
+    }
+
+    async function saveEditedFile(path, data) {
+        let file = await virt_fs.save(path, data);
+
+        let buffer = editor_buffers.get(path);
+        if (buffer)
+            buffer.sha256 = file.sha256;
+    }
+
     this.runFiles = async function() {
         if (remote) {
             files = await virt_fs.status();
@@ -109,7 +216,9 @@ let dev_files = new function() {
 
                 entry.progress('Enregistrement du fichier');
                 try {
-                    await virt_fs.save(path.value, blob.value || '');
+                    let file = await virt_fs.save(path.value, blob.value || '');
+                    syncBuffer(file.path, file.sha256);
+
                     await goupile.initApplication();
 
                     entry.success('Fichier enregistré !');
@@ -148,6 +257,8 @@ let dev_files = new function() {
                 page.close();
 
                 await virt_fs.delete(path);
+                syncBuffer(path, null);
+
                 await goupile.initApplication();
             };
             page.buttons(page.buttons.std.ok_cancel('Supprimer'));
@@ -161,6 +272,12 @@ let dev_files = new function() {
         renderActions();
     }
 
+    function syncBuffer(path, sha256) {
+        let buffer = editor_buffers.get(path);
+        if (buffer && buffer.sha256 !== sha256)
+            buffer.reload = true;
+    }
+
     async function syncFiles() {
         let entry = new log.Entry;
         entry.progress('Synchronisation en cours');
@@ -170,6 +287,14 @@ let dev_files = new function() {
             entry.success('Synchronisation terminée !');
         } catch (err) {
             entry.error(err.message);
+        }
+
+        let files2 = await virt_fs.listAll(false);
+        let files2_map = files2.map(file => file.path);
+
+        for (let [path, buffer] of editor_buffers) {
+            let file = files2_map[path];
+            buffer.reload = (file && file.sha256 !== buffer.sha256) || (!file && buffer.sha256);
         }
 
         user_actions = {};

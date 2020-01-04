@@ -32,14 +32,7 @@ let goupile = new function() {
     let show_overview = true;
 
     let editor_el;
-    let editor;
-    let editor_buffers = new LruMap(32);
-    let editor_timer_id;
-    let editor_ignore_change = false;
-
     let style_el;
-
-    let reload_app = false;
 
     let popup_el;
     let popup_state;
@@ -172,37 +165,21 @@ let goupile = new function() {
         sse_timer = setInterval(initEvents, 30000);
     }
 
-    this.isOnline = function() { return sse_online; };
-    this.isTablet = function() { return tablet_mq.matches; };
-    this.isStandalone = function() { return standalone_mq.matches; };
-
-    this.listenToServerEvent = function(event, func) {
-        let listener = {
-            event: event,
-            func: func
-        };
-        sse_listeners.push(listener);
-
-        sse_src.addEventListener(event, func);
-    };
-
     // Can be launched multiple times (e.g. when main.js is edited)
-    this.initApplication = async function() {
+    this.initApplication = async function(code = null) {
         let files = await virt_fs.listAll();
         let files_map = util.mapArray(files, file => file.path);
-
-        // Detect file changes made outside editor
-        for (let [path, buffer] of editor_buffers) {
-            let file = files_map[path];
-            buffer.reload = (file && file.sha256 !== buffer.sha256) || (!file && buffer.sha256);
-        }
 
         try {
             let new_app = new Application;
             let app_builder = new ApplicationBuilder(new_app);
 
-            let main_script = await loadFileData('/files/main.js');
-            let func = Function('app', 'data', 'route', main_script);
+            if (code == null) {
+                let file = await virt_fs.load('/files/main.js');
+                code = file ? await file.data.text() : '';
+            }
+
+            let func = Function('app', 'data', 'route', code);
             func(app_builder, new_app.data, new_app.route);
 
             app = new_app;
@@ -221,7 +198,13 @@ let goupile = new function() {
         util.deepFreeze(app, 'route');
 
         assets = listAssets(app, files);
-        assets_map = util.mapArray(assets, asset => asset.url);
+
+        assets_map = {};
+        for (let asset of assets) {
+            assets_map[asset.url] = asset;
+            if (asset.path)
+                assets_map[asset.path] = asset;
+        }
 
         // Select default page
         if (app.home) {
@@ -241,17 +224,6 @@ let goupile = new function() {
 
         app.go(current_url || window.location.href, false);
     };
-
-    async function loadFileData(path) {
-        let buffer = editor_buffers.get(path);
-
-        if (buffer && !buffer.reload) {
-            return buffer.session.getValue();
-        } else {
-            let file = await virt_fs.load(path);
-            return file ? (await file.data.text()) : '';
-        }
-    }
 
     function listAssets(app, files) {
         // Always add main application files, which we need to edit even if they are broken
@@ -341,6 +313,20 @@ let goupile = new function() {
         style_el.textContent = css;
     }
 
+    this.isOnline = function() { return sse_online; };
+    this.isTablet = function() { return tablet_mq.matches; };
+    this.isStandalone = function() { return standalone_mq.matches; };
+
+    this.listenToServerEvent = function(event, func) {
+        let listener = {
+            event: event,
+            func: func
+        };
+        sse_listeners.push(listener);
+
+        sse_src.addEventListener(event, func);
+    };
+
     // Avoid async here, because it may fail (see allow_go) and the called may need
     // to catch that synchronously.
     function handleGo(url = null, push_history = true) {
@@ -421,14 +407,14 @@ Navigation functions should only be called in reaction to user events, such as b
         // Run left panel
         switch (left_panel) {
             case 'files': { await dev_files.runFiles(); } break;
-            case 'editor': { syncEditor(); } break;
+            case 'editor': { await dev_files.syncEditor(current_asset.path); } break;
             case 'data': { await dev_data.runData(current_asset.form.key, current_record.id); } break;
         }
 
         // Run appropriate module
         if (current_asset) {
             document.title = `${current_asset.label} — ${env.app_name}`;
-            await runAssetSafe();
+            await runAssetSafe(current_asset);
         } else {
             document.title = env.app_name;
         }
@@ -549,125 +535,36 @@ Navigation functions should only be called in reaction to user events, such as b
         return editor_el;
     }
 
-    async function syncEditor() {
-        if (!editor) {
-            // XXX: Make sure we don't run loadScript more than once
-            if (typeof ace === 'undefined')
-                await util.loadScript(`${env.base_url}static/ace.js`);
+    this.validateCode = function(path, code) {
+        let asset = assets_map[path];
 
-            editor = ace.edit(editor_el.children[0]);
-
-            editor.setTheme('ace/theme/monokai');
-            editor.setShowPrintMargin(false);
-            editor.setFontSize(13);
-
-            // Auto-pairing of parentheses is problematic when doing execute-as-you-type,
-            // because it easily leads to infinite for loops.
-            editor.setBehavioursEnabled(false);
+        if (asset) {
+            return runAssetSafe(asset, code);
+        } else {
+            return true;
         }
+    };
 
-        let buffer = editor_buffers.get(current_asset.path);
-
-        if (!buffer || buffer.reload) {
-            let file = await virt_fs.load(current_asset.path);
-            let extension = current_asset.path.substr(current_asset.path.lastIndexOf('.'));
-            let script = file ? await file.data.text() : '';
-
-            if (buffer) {
-                buffer.sha256 = file ? file.sha256 : null;
-                buffer.reload = false;
-
-                editor_ignore_change = true;
-                editor.session.doc.setValue(script);
-                editor_ignore_change = false;
-            } else {
-                let session;
-                switch (extension) {
-                    case '.js': { session = new ace.EditSession(script, 'ace/mode/javascript'); } break;
-                    case '.css': { session = new ace.EditSession(script, 'ace/mode/css'); } break;
-                    default: { session = new ace.EditSession(script, 'ace/mode/text'); } break;
-                }
-
-                session.setOption('useWorker', false);
-                session.setUseWrapMode(true);
-                session.setUndoManager(buffer ? buffer.session.getUndoManager() : new ace.UndoManager());
-                session.on('change', e => handleEditorChange(current_asset.path));
-
-                buffer = {
-                    session: session,
-                    sha256: file ? file.sha256 : null,
-                    reload: false
-                };
-
-                editor_buffers.set(current_asset.path, buffer);
-            }
+    async function runAssetSafe(asset, code = null) {
+        let overview_el;
+        let log_el;
+        if (asset === current_asset) {
+            overview_el = document.querySelector('#gp_overview');
+            log_el = document.querySelector('#gp_overview_log');
+        } else {
+            overview_el = document.createElement('div');
+            log_el = document.createElement('div');
         }
-
-        if (buffer.session !== editor.session) {
-            editor.setSession(buffer.session);
-            editor.setReadOnly(false);
-        }
-
-        editor.resize(false);
-    }
-
-    function handleEditorChange(path) {
-        if (editor_ignore_change)
-            return;
-
-        clearTimeout(editor_timer_id);
-        editor_timer_id = setTimeout(async () => {
-            editor_timer_id = null;
-
-            // The user may have changed document (async + timer)
-            if (current_asset && current_asset.path === path) {
-                let data = editor.getValue();
-                let extension = path.substr(path.lastIndexOf('.'));
-
-                switch (extension) {
-                    case '.js': {
-                        if (path === '/files/main.js')
-                            reload_app = true;
-
-                        if (await runAssetSafe())
-                            await saveEditedFile(path, data);
-                        window.history.replaceState(null, null, app.makeURL());
-                    } break;
-
-                    case '.css': {
-                        updateApplicationCSS(data);
-                        await saveEditedFile(path, data);
-                    } break;
-                }
-
-            }
-        }, 180);
-    }
-
-    async function saveEditedFile(path, data) {
-        let file = await virt_fs.save(path, data);
-
-        let buffer = editor_buffers.get(path);
-        if (buffer)
-            buffer.sha256 = file.sha256;
-    }
-
-    async function runAssetSafe() {
-        let log_el = document.querySelector('#gp_overview_log');
-        let overview_el = document.querySelector('#gp_overview');
 
         try {
-            switch (current_asset.type) {
+            switch (asset.type) {
                 case 'main': {
-                    if (reload_app) {
-                        reload_app = false;
-
-                        await self.initApplication();
+                    if (code != null) {
+                        await self.initApplication(code);
                         return true;
                     }
 
-                    render(html`<div class="gp_wip">Aperçu non disponible pour le moment</div>`,
-                           document.querySelector('#gp_overview'));
+                    render(html`<div class="gp_wip">Aperçu non disponible pour le moment</div>`, overview_el);
                 } break;
 
                 case 'page': {
@@ -675,16 +572,17 @@ Navigation functions should only be called in reaction to user events, such as b
                     // because then we wouldn't be able to come back to the script to fix the code.
                     allow_go = false;
 
-                    let script = await loadFileData(current_asset.path);
-                    let page_el = document.querySelector('#gp_overview') || document.createElement('div');
+                    if (code == null) {
+                        let file = await virt_fs.load(asset.path);
+                        code = file ? await file.data.text() : '';
+                    }
 
-                    app_form.runPageScript(current_asset.page, script, page_el);
+                    app_form.runPageScript(asset.page, code, overview_el);
                 } break;
-                case 'schedule': { await sched_executor.run(current_asset.schedule); } break;
+                case 'schedule': { await sched_executor.run(asset.schedule); } break;
 
                 default: {
-                    render(html`<div class="gp_wip">Aperçu non disponible pour le moment</div>`,
-                           document.querySelector('#gp_overview'));
+                    render(html`<div class="gp_wip">Aperçu non disponible pour le moment</div>`, overview_el);
                 } break;
             }
 
