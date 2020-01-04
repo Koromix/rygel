@@ -537,12 +537,7 @@ Navigation functions should only be called in reaction to user events, such as b
 
     this.validateCode = function(path, code) {
         let asset = assets_map[path];
-
-        if (asset) {
-            return runAssetSafe(asset, code);
-        } else {
-            return true;
-        }
+        return asset ? runAssetSafe(asset, code) : true;
     };
 
     async function runAssetSafe(asset, code = null) {
@@ -560,8 +555,14 @@ Navigation functions should only be called in reaction to user events, such as b
             switch (asset.type) {
                 case 'main': {
                     if (code != null) {
-                        await self.initApplication(code);
-                        return true;
+                        if (asset.path === '/files/main.js') {
+                            await self.initApplication(code);
+
+                            // If initApplication() succeeds it runs the page, so no need to redo it
+                            return true;
+                        } else if (asset.path === '/files/main.css') {
+                            updateApplicationCSS(code);
+                        }
                     }
 
                     render(html`<div class="gp_wip">Aperçu non disponible pour le moment</div>`, overview_el);

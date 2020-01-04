@@ -86,30 +86,16 @@ let dev_files = new function() {
             editor_timer_id = null;
 
             let code = editor.getValue();
-            let extension = path.substr(path.lastIndexOf('.'));
 
-            switch (extension) {
-                case '.js': {
-                    if (await goupile.validateCode(path, code))
-                        await saveEditedFile(path, code);
+            if (await goupile.validateCode(path, code)) {
+                let file = await virt_fs.save(path, code);
 
-                    window.history.replaceState(null, null, app.makeURL());
-                } break;
-
-                case '.css': {
-                    updateApplicationCSS(code);
-                    await saveEditedFile(path, code);
-                } break;
+                // Avoid unwanted buffer reloads in some cases (such as file syncing)
+                let buffer = editor_buffers.get(path);
+                if (buffer)
+                    buffer.sha256 = file.sha256;
             }
         }, 180);
-    }
-
-    async function saveEditedFile(path, data) {
-        let file = await virt_fs.save(path, data);
-
-        let buffer = editor_buffers.get(path);
-        if (buffer)
-            buffer.sha256 = file.sha256;
     }
 
     this.runFiles = async function() {
