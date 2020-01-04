@@ -13,6 +13,9 @@ let goupile = new function() {
     let tablet_mq = window.matchMedia('(pointer: coarse)');
     let standalone_mq = window.matchMedia('(display-mode: standalone)');
 
+    let settings;
+    let settings_rnd;
+
     let allow_go = true;
 
     let sse_src;
@@ -167,6 +170,8 @@ let goupile = new function() {
 
     // Can be launched multiple times (e.g. when main.js is edited)
     this.initApplication = async function(code = null) {
+        await fetchSettings();
+
         let files = await virt_fs.listAll();
         let files_map = util.mapArray(files, file => file.path);
 
@@ -224,6 +229,29 @@ let goupile = new function() {
 
         app.go(current_url || window.location.href, false);
     };
+
+    async function fetchSettings() {
+        let session_rnd = util.getCookie('session_rnd');
+
+        if (session_rnd !== settings_rnd) {
+            settings = {};
+
+            if (session_rnd != null) {
+                let response = await fetch(`${env.base_url}api/settings.json?rnd=${session_rnd}`);
+                if (response.ok) {
+                    settings = await response.json();
+                } else {
+                    // The request has failed and could have deleted the session_rnd cookie
+                    session_rnd = util.getCookie('session_rnd');
+                }
+            }
+
+            settings_rnd = session_rnd;
+            return true;
+        } else {
+            return false;
+        }
+    }
 
     function listAssets(app, files) {
         // Always add main application files, which we need to edit even if they are broken
@@ -314,6 +342,7 @@ let goupile = new function() {
     }
 
     this.isOnline = function() { return sse_online; };
+    this.isConnected = function() { return !!settings_rnd; };
     this.isTablet = function() { return tablet_mq.matches; };
     this.isStandalone = function() { return standalone_mq.matches; };
 
@@ -365,6 +394,9 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     this.run = async function(url = null, args = {}) {
+        if (await fetchSettings())
+            await self.initApplication();
+
         // Find relevant asset
         if (url) {
             current_asset = assets_map[url];
@@ -463,7 +495,8 @@ Navigation functions should only be called in reaction to user events, such as b
             </select>
 
             <button class=${left_panel === 'files' ? 'active' : ''} @click=${e => toggleLeftPanel('files')}>Ressources</button>
-            <button @click=${showLoginDialog}>Connexion</button>
+            ${!self.isConnected() ? html`<button @click=${showLoginDialog}>Connexion</button>` : ''}
+            ${self.isConnected() ? html`<button @click=${showLogoutDialog}>${settings.username}</button>` : ''}
         `, document.querySelector('#gp_menu > nav'));
 
         render(html`
@@ -482,14 +515,63 @@ Navigation functions should only be called in reaction to user events, such as b
 
     function showLoginDialog(e) {
         goupile.popup(e, page => {
-            page.text('user', 'Nom d\'utilisateur');
-            page.password('password', 'Mot de passe');
+            let username = page.text('username', 'Nom d\'utilisateur');
+            let password = page.password('password', 'Mot de passe');
 
-            page.submitHandler = () => {
+            page.submitHandler = async () => {
                 page.close();
-                log.error('Non disponible pour le moment');
+
+                let entry = new log.Entry;
+
+                entry.progress('Connexion en cours');
+                try {
+                    let body = new URLSearchParams({
+                        username: username.value,
+                        password: password.value}
+                    );
+
+                    let response = await fetch(`${env.base_url}api/login.json`, {method: 'POST', body: body});
+
+                    if (response.ok) {
+                        entry.success('Connexion réussie');
+                        await self.initApplication();
+                    } else {
+                        let msg = await response.text();
+                        entry.error(msg);
+                    }
+                } catch (err) {
+                    entry.error(err.message);
+                }
             };
             page.buttons(page.buttons.std.ok_cancel('Connexion'));
+        });
+    }
+
+    function showLogoutDialog(e) {
+        goupile.popup(e, page => {
+            page.output('Voulez-vous vraiment vous déconnecter ?');
+
+            page.submitHandler = async () => {
+                page.close();
+
+                let entry = new log.Entry;
+
+                entry.progress('Déconnexion en cours');
+                try {
+                    let response = await fetch(`${env.base_url}api/logout.json`, {method: 'POST'});
+
+                    if (response.ok) {
+                        entry.success('Déconnexion réussie');
+                        await self.initApplication();
+                    } else {
+                        let msg = await response.text();
+                        entry.error(msg);
+                    }
+                } catch (err) {
+                    entry.error(err.message);
+                }
+            };
+            page.buttons(page.buttons.std.ok_cancel('Déconnexion'));
         });
     }
 

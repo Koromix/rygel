@@ -50,7 +50,59 @@ static void HandleManifest(const http_RequestInfo &request, http_IO *io)
     json.Key("theme_color"); json.String("#dee1e6");
     json.EndObject();
 
-    io->AddCachingHeaders(goupile_config.max_age, nullptr);
+    io->AddCachingHeaders(goupile_config.max_age, goupile_etag);
+    return json.Finish(io);
+}
+
+static Size ConvertToJsName(const char *name, Span<char> out_buf)
+{
+    // This is used for static strings (e.g. permission names), and the Span<char>
+    // output buffer will abort debug builds on out-of-bounds access.
+
+    if (name[0]) {
+        out_buf[0] = LowerAscii(name[0]);
+
+        Size j = 1;
+        for (Size i = 1; name[i]; i++) {
+            if (name[i] >= 'A' && name[i] <= 'Z') {
+                out_buf[j++] = '_';
+                out_buf[j++] = LowerAscii(name[i]);
+            } else {
+                out_buf[j++] = name[i];
+            }
+        }
+        out_buf[j] = 0;
+
+        return j;
+    } else {
+        out_buf[0] = 0;
+        return 0;
+    }
+}
+
+static void HandleSettings(const http_RequestInfo &request, http_IO *io)
+{
+    std::shared_ptr<const Session> session = GetCheckedSession(request, io);
+    if (!session)
+        return;
+
+    http_JsonPageBuilder json(request.compression_type);
+
+    json.StartObject();
+
+    json.Key("username"); json.String(session->username);
+
+    json.Key("permissions"); json.StartObject();
+    for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
+        char js_name[64];
+        ConvertToJsName(UserPermissionNames[i], js_name);
+
+        json.Key(js_name); json.Bool(session->permissions & (1 << i));
+    }
+    json.EndObject();
+
+    json.EndObject();
+
     return json.Finish(io);
 }
 
@@ -183,6 +235,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
             if (TestStr(request.url, "/manifest.json") && goupile_config.use_offline) {
                 func = HandleManifest;
+            } else if (TestStr(request.url, "/api/settings.json")) {
+                func = HandleSettings;
             } else if (TestStr(request.url, "/api/events.json")) {
                 func = HandleEvents;
             } else if (TestStr(request.url, "/api/files.json")) {

@@ -11,10 +11,16 @@ namespace RG {
 
 static http_SessionManager sessions;
 
-const Session *GetCheckedSession(const http_RequestInfo &request, http_IO *io)
+std::shared_ptr<const Session> GetCheckedSession(const http_RequestInfo &request, http_IO *io)
 {
-    std::shared_ptr<const Session> udata = sessions.Find<const Session>(request, io);
-    return udata ? udata.get() : nullptr;
+    std::shared_ptr<const Session> session = sessions.Find<const Session>(request, io);
+
+    if (!session) {
+        LogError("User is not connected");
+        io->AttachError(403);
+    }
+
+    return session;
 }
 
 void HandleLogin(const http_RequestInfo &request, http_IO *io)
@@ -57,17 +63,20 @@ void HandleLogin(const http_RequestInfo &request, http_IO *io)
             const char *password_hash = (const char *)sqlite3_column_text(stmt, 0);
 
             if (crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
-                std::shared_ptr<Session> session = std::make_shared<Session>();
+                /// XXX: Fishy, we need to make our own shared pointer (and make it intrusive)
+                std::shared_ptr<uint8_t> ptr = std::make_shared<uint8_t>(RG_SIZE(Session) + strlen(username) + 1);
+                Session *session = (Session *)ptr.get();
 
-                session->permissions |= !!sqlite3_column_int(stmt, 1) * (int)Session::Permission::Admin;
-                session->permissions |= !!sqlite3_column_int(stmt, 2) * (int)Session::Permission::Read;
-                session->permissions |= !!sqlite3_column_int(stmt, 3) * (int)Session::Permission::Query;
-                session->permissions |= !!sqlite3_column_int(stmt, 4) * (int)Session::Permission::New;
-                session->permissions |= !!sqlite3_column_int(stmt, 5) * (int)Session::Permission::Remove;
-                session->permissions |= !!sqlite3_column_int(stmt, 6) * (int)Session::Permission::Edit;
-                session->permissions |= !!sqlite3_column_int(stmt, 7) * (int)Session::Permission::Validate;
+                session->permissions |= !!sqlite3_column_int(stmt, 1) * (int)UserPermission::Admin;
+                session->permissions |= !!sqlite3_column_int(stmt, 2) * (int)UserPermission::Read;
+                session->permissions |= !!sqlite3_column_int(stmt, 3) * (int)UserPermission::Query;
+                session->permissions |= !!sqlite3_column_int(stmt, 4) * (int)UserPermission::New;
+                session->permissions |= !!sqlite3_column_int(stmt, 5) * (int)UserPermission::Remove;
+                session->permissions |= !!sqlite3_column_int(stmt, 6) * (int)UserPermission::Edit;
+                session->permissions |= !!sqlite3_column_int(stmt, 7) * (int)UserPermission::Validate;
+                strcpy(session->username, username);
 
-                sessions.Open(request, io, session);
+                sessions.Open(request, io, ptr);
 
                 // Success!
                 io->AttachText(200, "{}", "application/json");
