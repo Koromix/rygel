@@ -254,33 +254,34 @@ let goupile = new function() {
     }
 
     function listAssets(app, files) {
+        let assets = [];
+
         // Always add main application files, which we need to edit even if they are broken
         // and the application cannot even load completely.
-        let assets = [
-            {
-                type: 'main',
-                url: `${env.base_url}main/js/`,
+        assets.push({
+            type: 'main',
+            url: `${env.base_url}main/js/`,
 
-                category: 'Paramétrage',
-                label: 'Application',
-                overview: 'Application',
+            category: 'Paramétrage',
+            label: 'Application',
+            overview: 'Application',
 
-                path: '/files/main.js',
-                edit: true
-            }, {
-                type: 'main',
-                url: `${env.base_url}main/css/`,
+            path: '/files/main.js',
+            edit: true
+        });
+        assets.push({
+            type: 'main',
+            url: `${env.base_url}main/css/`,
 
-                category: 'Paramétrage',
-                label: 'Feuille de style',
-                overview: 'Feuille de style',
+            category: 'Paramétrage',
+            label: 'Feuille de style',
+            overview: 'Feuille de style',
 
-                path: '/files/main.css',
-                edit: true
-            }
-        ];
+            path: '/files/main.css',
+            edit: true
+        });
 
-        // Application assets
+        // Form pages
         for (let form of app.forms) {
             for (let i = 0; i < form.pages.length; i++) {
                 let page = form.pages[i];
@@ -301,6 +302,8 @@ let goupile = new function() {
                 });
             }
         }
+
+        // Schedules
         for (let schedule of app.schedules) {
             assets.push({
                 type: 'schedule',
@@ -312,7 +315,6 @@ let goupile = new function() {
 
                 schedule: schedule
             });
-
             assets.push({
                 type: 'schedule_settings',
                 url: `${env.base_url}app/${schedule.key}/settings/`,
