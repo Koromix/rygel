@@ -34,7 +34,6 @@ button:not(:disabled) { cursor: pointer; }
     height: 2.5em;
     margin: 0;
     padding: 0;
-    z-index: 999;
     background: #2d62ac;
     color: white;
     user-select: none;
@@ -99,6 +98,7 @@ button:not(:disabled) { cursor: pointer; }
     display: flex;
     top: 0;
     width: 100%;
+    z-index: 99999;
     background: #24579d;
 }
 #gp_icon {
@@ -143,7 +143,6 @@ button:not(:disabled) { cursor: pointer; }
     top: 2.5em;
     width: 50%;
     height: calc(100% - 2.5em);
-    z-index: 999;
     overflow: auto;
     border-right: 1px solid #dfdfdf;
 }
@@ -154,7 +153,6 @@ button:not(:disabled) { cursor: pointer; }
     top: 2.5em;
     width: 100%;
     height: calc(100% - 2.5em);
-    z-index: 999;
     overflow: auto;
 }
 .gp_panel.overview { width: 100%; }
