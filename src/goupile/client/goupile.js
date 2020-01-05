@@ -496,7 +496,15 @@ Navigation functions should only be called in reaction to user events, such as b
 
             <button class=${left_panel === 'files' ? 'active' : ''} @click=${e => toggleLeftPanel('files')}>Ressources</button>
             ${!self.isConnected() ? html`<button @click=${showLoginDialog}>Connexion</button>` : ''}
-            ${self.isConnected() ? html`<button @click=${showLogoutDialog}>${settings.username}</button>` : ''}
+            ${self.isConnected() ? html`
+                <div class="dropdown right">
+                    <button>${settings.username}</button>
+                    <div>
+                        <button @click=${showLoginDialog}>Changer d'utilisateur</button>
+                        <button @click=${logout}>Déconnexion</button>
+                    </div>
+                </div>
+            ` : ''}
         `, document.querySelector('#gp_menu > nav'));
 
         render(html`
@@ -547,32 +555,23 @@ Navigation functions should only be called in reaction to user events, such as b
         });
     }
 
-    function showLogoutDialog(e) {
-        goupile.popup(e, page => {
-            page.output('Voulez-vous vraiment vous déconnecter ?');
+    async function logout() {
+        let entry = new log.Entry;
 
-            page.submitHandler = async () => {
-                page.close();
+        entry.progress('Déconnexion en cours');
+        try {
+            let response = await fetch(`${env.base_url}api/logout.json`, {method: 'POST'});
 
-                let entry = new log.Entry;
-
-                entry.progress('Déconnexion en cours');
-                try {
-                    let response = await fetch(`${env.base_url}api/logout.json`, {method: 'POST'});
-
-                    if (response.ok) {
-                        entry.success('Déconnexion réussie');
-                        await self.initApplication();
-                    } else {
-                        let msg = await response.text();
-                        entry.error(msg);
-                    }
-                } catch (err) {
-                    entry.error(err.message);
-                }
-            };
-            page.buttons(page.buttons.std.ok_cancel('Déconnexion'));
-        });
+            if (response.ok) {
+                entry.success('Déconnexion réussie');
+                await self.initApplication();
+            } else {
+                let msg = await response.text();
+                entry.error(msg);
+            }
+        } catch (err) {
+            entry.error(err.message);
+        }
     }
 
     function toggleLeftPanel(mode) {

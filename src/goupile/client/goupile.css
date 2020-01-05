@@ -72,9 +72,40 @@ button:not(:disabled) { cursor: pointer; }
 }
 #gp_menu button::-moz-focus-inner { border: 0; }
 #gp_menu button:focus { outline: 0; }
-#gp_menu button:not(.active):not(:disabled):hover { background: #376cb5; }
-#gp_menu button.active { background: #3b7ad1; }
+#gp_menu button:not(.active):not(:disabled):hover { background-color: #376cb5; }
+#gp_menu button.active { background-color: #3b7ad1; }
 #gp_menu button:disabled { filter: brightness(75%); }
+
+#gp_menu .dropdown {
+    position: relative;
+    display: inline-block;
+    background-color: inherit;
+}
+#gp_menu .dropdown > button {
+    padding-right: 18px;
+    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAICAYAAADJEc7MAAAAWElEQVQYlb3QsQ1AUBAG4EdorGYFMYPWDio76KxgMuHTSCTCeyqXXHdf7r8L4fdCjRV7pKF5wi22COpim/sXOKQiZxhvaEL25d4c8xlvQZH+0oVLDKhicwc+Z5wNZi+VfwAAAABJRU5ErkJggg==');
+    background-repeat: no-repeat;
+    background-position: right center;
+}
+#gp_menu .dropdown > div {
+    display: none;
+    position: absolute;
+    min-width: 160px;
+    background-color: inherit;
+    color: white;
+    box-shadow: 2px 2px rgba(136, 136, 136, 0.12);
+    z-index: 9999;
+}
+#gp_menu .dropdown.right > div { right: 0; }
+#gp_menu .dropdown:hover > div {
+    display: flex;
+    flex-direction: column;
+}
+#gp_menu .dropdown:hover > button { background-color: #376cb5; }
+#gp_menu .dropdown > div button {
+    height: 2.5em;
+    text-align: left;
+}
 
 #gp_assets {
     flex-grow: 1;
