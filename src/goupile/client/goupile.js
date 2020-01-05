@@ -260,6 +260,7 @@ let goupile = new function() {
             {
                 type: 'main',
                 url: `${env.base_url}main/js/`,
+
                 category: 'Paramétrage',
                 label: 'Application',
                 overview: 'Application',
@@ -269,9 +270,10 @@ let goupile = new function() {
             }, {
                 type: 'main',
                 url: `${env.base_url}main/css/`,
+
                 category: 'Paramétrage',
                 label: 'Feuille de style',
-                overview: 'Application',
+                overview: 'Feuille de style',
 
                 path: '/files/main.css',
                 edit: true
@@ -286,6 +288,7 @@ let goupile = new function() {
                 assets.push({
                     type: 'page',
                     url: i ? `${env.base_url}app/${form.key}/${page.key}/` : `${env.base_url}app/${form.key}/`,
+
                     category: `Formulaire ${form.key}`,
                     label: (form.key !== page.key) ? `${form.key}/${page.key}` : form.key,
                     overview: 'Formulaire',
@@ -302,9 +305,22 @@ let goupile = new function() {
             assets.push({
                 type: 'schedule',
                 url: `${env.base_url}app/${schedule.key}/`,
+
                 category: 'Agendas',
                 label: schedule.key,
                 overview: 'Agenda',
+
+                schedule: schedule
+            });
+
+            assets.push({
+                type: 'schedule_settings',
+                url: `${env.base_url}app/${schedule.key}/settings/`,
+
+                category: 'Agendas',
+                label: schedule.key,
+                overview: 'Créneaux',
+                secondary: true,
 
                 schedule: schedule
             });
@@ -328,6 +344,9 @@ let goupile = new function() {
                 }
             }
         }
+
+        for (let i = 0; i < assets.length; i++)
+            assets[i].idx = i;
 
         return assets;
     }
@@ -469,13 +488,39 @@ Navigation functions should only be called in reaction to user events, such as b
             show_overview = true;
         }
 
+        // XXX: The secondary asset thingy is kind of ugly but will do for now
+        let show_assets = [];
+        let select_asset;
+        if (current_asset) {
+            let idx = current_asset.idx;
+            while (assets[idx].secondary)
+                idx--;
+
+            // Main asset
+            show_assets.push(assets[idx]);
+            select_asset = assets[idx];
+
+            // Related secondary assets
+            while (++idx < assets.length && assets[idx].secondary)
+                show_assets.push(assets[idx]);
+        }
+
         render(html`
             ${show_editor ?
-                html`<button class=${left_panel === 'editor' ? 'active' : ''} @click=${e => toggleLeftPanel('editor')}>Éditeur</button>` : ''}
+                html`<button class=${left_panel === 'editor' ? 'active' : ''}
+                             @click=${e => toggleLeftPanel('editor')}>Éditeur</button>` : ''}
             ${show_data ?
-                html`<button class=${left_panel === 'data' ? 'active' : ''} @click=${e => toggleLeftPanel('data')}>Données</button>` : ''}
-            ${current_asset ?
-                html`<button class=${show_overview ? 'active': ''} @click=${e => toggleOverview()}>${current_asset.overview}</button>` : ''}
+                html`<button class=${left_panel === 'data' ? 'active' : ''}
+                             @click=${e => toggleLeftPanel('data')}>Données</button>` : ''}
+
+            ${show_assets.map(asset => {
+                if (asset === current_asset) {
+                    return html`<button class=${show_overview ? 'active': ''}
+                                        @click=${e => toggleAssetView(asset)}>${asset.overview}</button>`;
+                } else {
+                    return html`<button @click=${e => toggleAssetView(asset)}>${asset.overview}</button>`;
+                }
+            })}
 
             <select id="gp_assets" @change=${e => app.go(e.target.value)}>
                 ${!current_asset ? html`<option>-- Sélectionnez une page --</option>` : ''}
@@ -483,12 +528,16 @@ Navigation functions should only be called in reaction to user events, such as b
                     if (len === 1) {
                         let asset = assets[offset];
                         return html`<option value=${asset.url}
-                                            .selected=${asset === current_asset}>${asset.category} (${asset.label})</option>`;
+                                            .selected=${asset === select_asset}>${asset.category} (${asset.label})</option>`;
                     } else {
                         return html`<optgroup label=${category}>${util.mapRange(offset, offset + len, idx => {
                             let asset = assets[idx];
-                            return html`<option value=${asset.url}
-                                                .selected=${asset === current_asset}>${asset.label}</option>`;
+                            if (!asset.secondary) {
+                                return html`<option value=${asset.url}
+                                                   .selected=${asset === select_asset}>${asset.label}</option>`;
+                            } else {
+                                return '';
+                            }
                         })}</optgroup>`;
                     }
                 })}
@@ -594,8 +643,8 @@ Navigation functions should only be called in reaction to user events, such as b
         app.go();
     }
 
-    function toggleOverview() {
-        if (goupile.isTablet()) {
+    function toggleAssetView(asset) {
+        if (goupile.isTablet() || asset !== current_asset) {
             left_panel = null;
             show_overview = true;
         } else if (!show_overview) {
@@ -605,7 +654,7 @@ Navigation functions should only be called in reaction to user events, such as b
             show_overview = false;
         }
 
-        app.go();
+        app.go(asset.url);
     }
 
     function makeEditorElement(cls) {
@@ -668,7 +717,8 @@ Navigation functions should only be called in reaction to user events, such as b
                     app_form.runPage(asset.page, code, overview_el);
                 } break;
 
-                case 'schedule': { await sched_executor.run(asset.schedule, overview_el); } break;
+                case 'schedule': { await sched_executor.runMeetings(asset.schedule, overview_el); } break;
+                case 'schedule_settings': { await sched_executor.runSettings(asset.schedule, overview_el); } break;
 
                 default: {
                     render(html`<div class="gp_wip">Aperçu non disponible pour le moment</div>`, overview_el);

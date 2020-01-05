@@ -8,7 +8,7 @@ let sched_executor = new function() {
     let init = false;
     let view;
 
-    this.run = async function(schedule, view_el) {
+    this.runMeetings = async function(schedule, view_el) {
         if (!init) {
             goupile.listenToServerEvent('schedule', e => {
                 schedule = null;
@@ -27,7 +27,29 @@ let sched_executor = new function() {
         }
 
         // Find panels
-        view.render(today.year, today.month, view_el);
+        view.renderMeetings(today.year, today.month, view_el);
+    };
+
+    this.runSettings = async function(schedule, view_el) {
+        if (!init) {
+            goupile.listenToServerEvent('schedule', e => {
+                schedule = null;
+                self.run();
+            });
+
+            init = true;
+        }
+
+        // This is test code, won't stay that way (obviously)
+        let today = dates.today();
+
+        if (!view) {
+            let [resources, meetings] = await loadSchedule(today.year, today.month);
+            view = new ScheduleView(resources, meetings);
+        }
+
+        // Find panels
+        view.renderSettings(today.year, today.month, view_el);
     };
 
     async function loadSchedule(year, month) {

@@ -14,10 +14,10 @@ function ScheduleView(resources_map, meetings_map) {
 
     let days_el;
     let toolbar_el;
+    let render_func = renderMeetings;
 
     let current_month;
     let current_year;
-    let current_mode = 'meetings';
 
     let drag_slot_ref;
 
@@ -26,7 +26,7 @@ function ScheduleView(resources_map, meetings_map) {
     let copy_resources;
     let copy_ignore = new Set;
 
-    this.render = function(year, month, root_el) {
+    this.renderMeetings = function(year, month, root_el) {
         current_year = year;
         current_month = month;
 
@@ -39,17 +39,31 @@ function ScheduleView(resources_map, meetings_map) {
         days_el = root_el.querySelector('#sc_days');
         toolbar_el = root_el.querySelector('#sc_toolbar');
 
+        render_func = renderMeetings;
+        renderAll();
+    };
+
+    this.renderSettings = function(year, month, root_el) {
+        current_year = year;
+        current_month = month;
+
+        render(html`
+            <div id="sc_toolbar" class="gp_toolbar"></div>
+            <div id="sc_header">${week_day_names.map(name => html`<div>${name}</div>`)}</div>
+            <div id="sc_days"></div>
+        `, root_el);
+
+        days_el = root_el.querySelector('#sc_days');
+        toolbar_el = root_el.querySelector('#sc_toolbar');
+
+        if (render_func !== renderSettings && render_func !== renderCopy)
+            render_func = renderSettings;
         renderAll();
     };
 
     function renderAll() {
         renderToolbar();
-
-        switch (current_mode) {
-            case 'meetings': { renderMeetings(); } break;
-            case 'settings': { renderSettings(); } break;
-            case 'copy': { renderCopy(); } break;
-        }
+        render_func();
     }
 
     function renderToolbar() {
@@ -505,15 +519,18 @@ function ScheduleView(resources_map, meetings_map) {
     }
 
     function closeDay(day) {
-        let resources = resources_map[day.key];
+        let resources = resources_map[day.key] || [];
 
-        resources_map[day.key].length = 0;
+        if (resources.length)
+            resources_map[day.key].length = 0;
         self.changeResourcesHandler(day.key, resources);
 
         renderAll();
     }
 
     function startCopy(day) {
+        if (!resources_map[day.key])
+            resources_map[day.key] = [];
         copy_resources = resources_map[day.key];
 
         // Ignore days with same configuration
@@ -529,7 +546,7 @@ function ScheduleView(resources_map, meetings_map) {
             }
         }
 
-        current_mode = 'copy';
+        render_func = renderCopy;
         renderCopy();
     }
 
@@ -557,9 +574,9 @@ function ScheduleView(resources_map, meetings_map) {
                         <div class="sc_head_count">${(normal_count + overbook_count) ? `${normal_count}+${overbook_count}` : 'Fermé'}</div>
                     </div>
 
-                    <a href="#" style=${copy_ignore.has(day.key) ? 'opacity: 0.1' : ''}
+                    <a href="#" style=${copy_ignore.has(day.key) ? 'opacity: 0.3' : ''}
                        @click=${e => { executeCopy(day); e.preventDefault(); }}>+</a>
-                    <a href="#" style=${copy_ignore.has(day.key) ? 'opacity: 0.1' : ''}
+                    <a href="#" style=${copy_ignore.has(day.key) ? 'opacity: 0.3' : ''}
                        @click=${e => { executeCopyAndEnd(day); e.preventDefault(); }}>⇳</a>
                 </div>`;
             } else {
@@ -583,17 +600,7 @@ function ScheduleView(resources_map, meetings_map) {
         resources_map[dest_day.key] = copy_resources.map(res => Object.assign({}, res));
         self.changeResourcesHandler(dest_day.key, resources_map[dest_day.key]);
 
-        current_mode = 'settings';
-        renderAll();
-    }
-
-    function toggleMode() {
-        switch (current_mode) {
-            case 'meetings': { current_mode = 'settings'; } break;
-            case 'settings': { current_mode = 'meetings'; } break;
-            case 'copy': { current_mode = 'settings'; } break;
-        }
-
+        render_func = renderSettings;
         renderAll();
     }
 
