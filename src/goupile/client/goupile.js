@@ -562,11 +562,16 @@ Navigation functions should only be called in reaction to user events, such as b
             ` : ''}
         `, document.querySelector('#gp_menu'));
 
+        if (left_panel === 'editor' && !editor_el) {
+            editor_el = document.createElement('div');
+            editor_el.style.height = '100%';
+        }
+
         render(html`
             ${left_panel === 'files' ?
                 html`<div id="dev_files" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
             ${left_panel === 'editor' ?
-                makeEditorElement(show_overview ? 'gp_panel left' : 'gp_panel fixed') : ''}
+                html`<div id="dev_editor" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}>${editor_el}</div>` : ''}
             ${left_panel === 'data' ?
                 html`<div id="dev_data" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
             <div id="gp_overview" class=${left_panel ? 'gp_panel right' : 'gp_panel overview'}
@@ -655,20 +660,6 @@ Navigation functions should only be called in reaction to user events, such as b
         }
 
         app.go(asset.url);
-    }
-
-    function makeEditorElement(cls) {
-        if (!editor_el) {
-            editor_el = document.createElement('div');
-            editor_el.id = 'dev_editor';
-            render(html`
-                <div class="gp_toolbar"></div>
-                <div style="height: 100%;"></div>
-            `, editor_el);
-        }
-
-        editor_el.className = cls;
-        return editor_el;
     }
 
     this.validateCode = function(path, code) {

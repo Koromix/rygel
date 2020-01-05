@@ -21,7 +21,7 @@ let dev_files = new function() {
             if (typeof ace === 'undefined')
                 await util.loadScript(`${env.base_url}static/ace.js`);
 
-            editor = ace.edit(document.querySelector('#dev_editor > div:not(.gp_toolbar)'));
+            editor = ace.edit(document.querySelector('#dev_editor > div'));
 
             editor.setTheme('ace/theme/monokai');
             editor.setShowPrintMargin(false);
