@@ -547,7 +547,7 @@ Navigation functions should only be called in reaction to user events, such as b
                 <button>Administration</button>
                 <div>
                     <button class=${left_panel === 'files' ? 'active' : ''} @click=${e => toggleLeftPanel('files')}>Ressources</button>
-                    <button>Utilisateurs</button>
+                    <button @click=${e => log.error('Fonctionnalité non disponible')}>Utilisateurs</button>
                 </div>
             </div>
             ${!self.isConnected() ? html`<button @click=${showLoginDialog}>Connexion</button>` : ''}
