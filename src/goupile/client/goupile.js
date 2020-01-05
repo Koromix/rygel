@@ -28,8 +28,8 @@ let goupile = new function() {
     let current_asset;
     let current_url;
 
+    let executor;
     let current_record = {};
-    let app_form;
 
     let left_panel;
     let show_overview = true;
@@ -448,7 +448,7 @@ Navigation functions should only be called in reaction to user events, such as b
                     }
                 }
 
-                app_form = new FormExecutor(current_asset.form, current_record);
+                executor = new FormExecutor(current_asset.form, current_record);
             }
         }
 
@@ -705,7 +705,7 @@ Navigation functions should only be called in reaction to user events, such as b
                         code = file ? await file.data.text() : '';
                     }
 
-                    app_form.runPage(asset.page, code, overview_el);
+                    executor.runPage(asset.page, code, overview_el);
                 } break;
 
                 case 'schedule': { await sched_executor.runMeetings(asset.schedule, overview_el); } break;
