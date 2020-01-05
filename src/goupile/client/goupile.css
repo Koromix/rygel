@@ -142,7 +142,7 @@ button:not(:disabled) { cursor: pointer; }
     left: 0;
     top: 2.5em;
     width: 50%;
-    height: calc(100% - 5em);
+    height: calc(100% - 2.5em);
     z-index: 999;
     overflow: auto;
     border-right: 1px solid #dfdfdf;
@@ -153,7 +153,7 @@ button:not(:disabled) { cursor: pointer; }
     left: 0;
     top: 2.5em;
     width: 100%;
-    height: calc(100% - 5em);
+    height: calc(100% - 2.5em);
     z-index: 999;
     overflow: auto;
 }
