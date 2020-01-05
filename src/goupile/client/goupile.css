@@ -25,43 +25,25 @@ button {
 }
 button:not(:disabled) { cursor: pointer; }
 
-/* -------------------- Main toolbar -------------------- */
+/* -------------------- Toolbars -------------------- */
 
-#gp_icon {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    margin: 6px 5px 0 6px;
-}
-@media (pointer: coarse), (display-mode: standalone) {
-    #gp_icon { display: none; }
-}
-
-#gp_menu {
-    position: fixed;
+.gp_toolbar {
     display: flex;
-    top: 0;
     box-sizing: border-box;
     width: 100%;
     height: 2.5em;
     margin: 0;
     padding: 0;
     z-index: 999;
-    background: #24579d;
+    background: #2d62ac;
     color: white;
     user-select: none;
     -moz-user-select: none;
     -webkit-user-select: none;
     -ms-user-select: none;
 }
-#gp_menu > nav {
-    display: flex;
-    width: 100%;
-    height: 100%;
-    background: inherit;
-}
 
-#gp_menu button {
+.gp_toolbar button {
     display: inline-block;
     height: 100%;
     box-sizing: border-box;
@@ -70,41 +52,63 @@ button:not(:disabled) { cursor: pointer; }
     color: inherit;
     text-decoration: none;
 }
-#gp_menu button::-moz-focus-inner { border: 0; }
-#gp_menu button:focus { outline: 0; }
-#gp_menu button:not(.active):not(:disabled):hover { background-color: #376cb5; }
-#gp_menu button.active { background-color: #3b7ad1; }
-#gp_menu button:disabled { filter: brightness(75%); }
+.gp_toolbar button::-moz-focus-inner { border: 0; }
+.gp_toolbar button:focus { outline: 0; }
+.gp_toolbar button:not(.active):not(:disabled):hover { background-color: #376cb5; }
+.gp_toolbar button.active { background-color: #3b7ad1; }
+.gp_toolbar button:disabled { filter: brightness(75%); }
 
-#gp_menu .dropdown {
+.gp_dropdown {
     position: relative;
     display: inline-block;
     background-color: inherit;
 }
-#gp_menu .dropdown > button {
-    padding-right: 18px;
-    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAICAYAAADJEc7MAAAAWElEQVQYlb3QsQ1AUBAG4EdorGYFMYPWDio76KxgMuHTSCTCeyqXXHdf7r8L4fdCjRV7pKF5wi22COpim/sXOKQiZxhvaEL25d4c8xlvQZH+0oVLDKhicwc+Z5wNZi+VfwAAAABJRU5ErkJggg==');
+.gp_dropdown > button {
+    padding-right: 24px;
+    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAICAYAAAAftBSpAAAAWUlEQVQokc3PsQ1AUBQFUF9orGYFMYPWDio76KxgMuFofiESfJ2bvPKevJtlvwlqrNgfDpo3qMX2AHSpH/U3yPBlVsB4ASaEZCRCOeY4YUHxCThBJQZUqZ0D9l2cDdCOtbQAAAAASUVORK5CYII=');
     background-repeat: no-repeat;
     background-position: right center;
 }
-#gp_menu .dropdown > div {
+.gp_dropdown > div {
     display: none;
     position: absolute;
     min-width: 160px;
     background-color: inherit;
-    color: white;
-    box-shadow: 2px 2px rgba(136, 136, 136, 0.12);
+    border-left: 0.5px solid #376cb5;
     z-index: 9999;
 }
-#gp_menu .dropdown.right > div { right: 0; }
-#gp_menu .dropdown:hover > div {
+.gp_dropdown.right > div {
+    right: 0;
+    border-left: 0;
+    border-right: 0.5px solid #376cb5;
+}
+.gp_dropdown:hover > div {
     display: flex;
     flex-direction: column;
 }
-#gp_menu .dropdown:hover > button { background-color: #376cb5; }
-#gp_menu .dropdown > div button {
+.gp_dropdown:hover > button { background-color: #376cb5; }
+.gp_dropdown > div button {
     height: 2.5em;
     text-align: left;
+}
+
+/* -------------------- Main header -------------------- */
+
+#gp_header {
+    position: fixed;
+    display: flex;
+    top: 0;
+    width: 100%;
+    background: #24579d;
+}
+#gp_icon {
+    width: 16px;
+    height: 16px;
+    margin: 6px 5px 0 6px;
+}
+#gp_menu { background: inherit; }
+@media (pointer: coarse), (display-mode: standalone) {
+    #gp_icon { display: none; }
 }
 
 #gp_assets {
@@ -181,41 +185,6 @@ button:not(:disabled) { cursor: pointer; }
     content: '⚠\FE0E';
     padding-right: 10px;
 }
-
-/* -------------------- Toolbar -------------------- */
-
-.gp_toolbar {
-    position: fixed;
-    display: flex;
-    bottom: 0;
-    box-sizing: border-box;
-    width: inherit;
-    height: 2.5em;
-    margin: 0;
-    padding: 0;
-    z-index: 999;
-    background: #2f3129;
-    color: white;
-    user-select: none;
-    -moz-user-select: none;
-    -webkit-user-select: none;
-    -ms-user-select: none;
-}
-
-.gp_toolbar button {
-    display: inline-block;
-    height: 100%;
-    box-sizing: border-box;
-    background: inherit;
-    border: 0;
-    color: inherit;
-    text-decoration: none;
-}
-.gp_toolbar button::-moz-focus-inner { border: 0; }
-.gp_toolbar button:focus { outline: 0; }
-.gp_toolbar button:not(.active):not(:disabled):hover { background: #3c3d39; }
-.gp_toolbar button.active { background: #464645; }
-.gp_toolbar button:disabled { filter: brightness(75%); }
 
 /* -------------------- Popup -------------------- */
 

@@ -13,7 +13,7 @@ function ScheduleView(resources_map, meetings_map) {
     let week_day_names = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 
     let days_el;
-    let footer_el;
+    let toolbar_el;
 
     let current_month;
     let current_year;
@@ -31,24 +31,83 @@ function ScheduleView(resources_map, meetings_map) {
         current_month = month;
 
         render(html`
+            <div id="sc_toolbar" class="gp_toolbar"></div>
             <div id="sc_header">${week_day_names.map(name => html`<div>${name}</div>`)}</div>
             <div id="sc_days"></div>
-            <div id="sc_footer" class="gp_toolbar"></div>
         `, root_el);
 
         days_el = root_el.querySelector('#sc_days');
-        footer_el = root_el.querySelector('#sc_footer');
+        toolbar_el = root_el.querySelector('#sc_toolbar');
 
         renderAll();
     };
 
     function renderAll() {
+        renderToolbar();
+
         switch (current_mode) {
             case 'meetings': { renderMeetings(); } break;
             case 'settings': { renderSettings(); } break;
             case 'copy': { renderCopy(); } break;
         }
-        renderFooter();
+    }
+
+    function renderToolbar() {
+        render(html`
+            <div class="sc_selector">
+                <button @click=${switchToPreviousMonth}
+                        @dragover=${slowDownEvents(300, switchToPreviousMonth)}>≪</button>
+                <b>${month_names[current_month - 1]}</b>
+                <button @click=${switchToNextMonth}
+                        @dragover=${slowDownEvents(300, switchToNextMonth)}>≫</button>
+            </div>
+
+            ${month_names.map((name, idx) => {
+                let month = idx + 1;
+
+                let warn = false;
+                {
+                    let days = getMonthDays(current_year, month);
+
+                    for (let i = 0; !warn && i < days.length; i++) {
+                        let day = days[i];
+
+                        let meetings = meetings_map[day.key] || [];
+                        let resources = resources_map[day.key] || [];
+                        let slots = expandSlots(resources);
+
+                        for (let j = 0, k = 0; j < meetings.length; j++) {
+                            while (k < slots.length && slots[k].time < meetings[j].time) {
+                                k++;
+                            }
+
+                            if (k >= slots.length || slots[k++].time !== meetings[j].time) {
+                                warn = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                let cls = '';
+                if (warn)
+                    cls += ' sc_warn';
+                if (month === current_month)
+                    cls += ' active';
+
+                return html`<button class=${cls}
+                                    @click=${e => switchToMonth(month)}
+                                    @dragover=${e => switchToMonth(month)}>${name}</button>`;
+            })}
+
+            <div class="sc_selector">
+                <button @click=${switchToPreviousYear}
+                        @dragover=${slowDownEvents(300, switchToPreviousYear)}>≪</button>
+                <b>${current_year}</b>
+                <button @click=${switchToNextYear}
+                        @dragover=${slowDownEvents(300, switchToNextYear)}>≫</button>
+            </div>
+        `, toolbar_el);
     }
 
     function renderMeetings() {
@@ -526,69 +585,6 @@ function ScheduleView(resources_map, meetings_map) {
 
         current_mode = 'settings';
         renderAll();
-    }
-
-    function renderFooter() {
-        render(html`
-            <div id="sc_modes">
-                <button class=${current_mode === 'meetings' ? 'active' : ''} @click=${toggleMode}>Agenda</button>
-                <button class=${current_mode === 'meetings' ? '' : 'active'} @click=${toggleMode}>Créneaux</button>
-            </div>
-
-            <div class="sc_selector">
-                <button @click=${switchToPreviousMonth}
-                        @dragover=${slowDownEvents(300, switchToPreviousMonth)}>≪</button>
-                <b>${month_names[current_month - 1]}</b>
-                <button @click=${switchToNextMonth}
-                        @dragover=${slowDownEvents(300, switchToNextMonth)}>≫</button>
-            </div>
-
-            ${month_names.map((name, idx) => {
-                let month = idx + 1;
-
-                let warn = false;
-                {
-                    let days = getMonthDays(current_year, month);
-
-                    for (let i = 0; !warn && i < days.length; i++) {
-                        let day = days[i];
-
-                        let meetings = meetings_map[day.key] || [];
-                        let resources = resources_map[day.key] || [];
-                        let slots = expandSlots(resources);
-
-                        for (let j = 0, k = 0; j < meetings.length; j++) {
-                            while (k < slots.length && slots[k].time < meetings[j].time) {
-                                k++;
-                            }
-
-                            if (k >= slots.length || slots[k++].time !== meetings[j].time) {
-                                warn = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                let cls = '';
-                if (warn)
-                    cls += ' sc_month_warn';
-                if (month === current_month)
-                    cls += ' active';
-
-                return html`<button class=${cls}
-                                    @click=${e => switchToMonth(month)}
-                                    @dragover=${e => switchToMonth(month)}>${name}</button>`;
-            })}
-
-            <div class="sc_selector">
-                <button @click=${switchToPreviousYear}
-                        @dragover=${slowDownEvents(300, switchToPreviousYear)}>≪</button>
-                <b>${current_year}</b>
-                <button @click=${switchToNextYear}
-                        @dragover=${slowDownEvents(300, switchToNextYear)}>≫</button>
-            </div>
-        `, footer_el);
     }
 
     function toggleMode() {

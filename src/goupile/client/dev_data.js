@@ -23,6 +23,17 @@ let dev_data = new function() {
         }
 
         render(html`
+            <div class="gp_toolbar">
+                <div style="flex: 1;"></div>
+                <div class="gp_dropdown right">
+                    <button>Export</button>
+                    <div>
+                        <button ?disabled=${!columns.length} @click=${e => exportSheets(table, 'xlsx')}>Excel</button>
+                        <button ?disabled=${!columns.length} @click=${e => exportSheets(table, 'csv')}>CSV</button>
+                    </div>
+                </div>
+            </div>
+
             <table class="rec_table" style=${`min-width: ${30 + 60 * columns.length}px`}>
                 <thead>
                     <tr>
@@ -58,11 +69,6 @@ let dev_data = new function() {
                     </tr>`)}
                 </tbody>
             </table>
-
-            <div class="gp_toolbar">
-                <button ?disabled=${!columns.length} @click=${e => exportSheets(table, 'xlsx')}>Export Excel</button>
-                <button ?disabled=${!columns.length} @click=${e => exportSheets(table, 'csv')}>Export CSV</button>
-            </div>
         `, document.querySelector('#dev_data'));
     }
 

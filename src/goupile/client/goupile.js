@@ -494,10 +494,16 @@ Navigation functions should only be called in reaction to user events, such as b
                 })}
             </select>
 
-            <button class=${left_panel === 'files' ? 'active' : ''} @click=${e => toggleLeftPanel('files')}>Ressources</button>
+            <div class="gp_dropdown right">
+                <button>Administration</button>
+                <div>
+                    <button class=${left_panel === 'files' ? 'active' : ''} @click=${e => toggleLeftPanel('files')}>Ressources</button>
+                    <button>Utilisateurs</button>
+                </div>
+            </div>
             ${!self.isConnected() ? html`<button @click=${showLoginDialog}>Connexion</button>` : ''}
             ${self.isConnected() ? html`
-                <div class="dropdown right">
+                <div class="gp_dropdown right">
                     <button>${settings.username}</button>
                     <div>
                         <button @click=${showLoginDialog}>Changer d'utilisateur</button>
@@ -505,7 +511,7 @@ Navigation functions should only be called in reaction to user events, such as b
                     </div>
                 </div>
             ` : ''}
-        `, document.querySelector('#gp_menu > nav'));
+        `, document.querySelector('#gp_menu'));
 
         render(html`
             ${left_panel === 'files' ?
@@ -607,8 +613,8 @@ Navigation functions should only be called in reaction to user events, such as b
             editor_el = document.createElement('div');
             editor_el.id = 'dev_editor';
             render(html`
-                <div style="height: 100%;"></div>
                 <div class="gp_toolbar"></div>
+                <div style="height: 100%;"></div>
             `, editor_el);
         }
 

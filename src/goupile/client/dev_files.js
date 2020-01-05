@@ -21,7 +21,7 @@ let dev_files = new function() {
             if (typeof ace === 'undefined')
                 await util.loadScript(`${env.base_url}static/ace.js`);
 
-            editor = ace.edit(document.querySelector('#dev_editor > div'));
+            editor = ace.edit(document.querySelector('#dev_editor > div:not(.gp_toolbar)'));
 
             editor.setTheme('ace/theme/monokai');
             editor.setShowPrintMargin(false);
@@ -121,6 +121,14 @@ let dev_files = new function() {
                           !files.some(file => file.action === 'conflict');
 
         render(html`
+            <div class="gp_toolbar">
+                <button @click=${showCreateDialog}>Ajouter</button>
+                <div style="flex: 1;"></div>
+                ${remote ?
+                    html`<button ?disabled=${!enable_sync} @click=${showSyncDialog}>Synchroniser</button>` : ''}
+                <button class=${remote ? 'active' : ''} @click=${toggleRemote}>Distant</button>
+            </div>
+
             <table class="sync_table">
                 <thead><tr>
                     <th style="width: 0.7em;"></th>
@@ -163,14 +171,6 @@ let dev_files = new function() {
                     }
                 })}</tbody>
             </table>
-
-            <div class="gp_toolbar">
-                <button @click=${showCreateDialog}>Ajouter</button>
-                <div style="flex: 1;"></div>
-                ${remote ?
-                    html`<button ?disabled=${!enable_sync} @click=${showSyncDialog}>Synchroniser</button>` : ''}
-                <button class=${remote ? 'active' : ''} @click=${toggleRemote}>Distant</button>
-            </div>
         `, document.querySelector('#dev_files'));
     }
 

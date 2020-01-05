@@ -20,12 +20,7 @@
 
 /* -------------------- Year / month selection menu -------------------- */
 
-#sc_footer { justify-content: center; }
-#sc_modes {
-    display: flex;
-    position: relative;
-    left: 0;
-}
+#sc_toolbar { justify-content: center; }
 
 .sc_selector { margin: 0 1em; }
 .sc_selector > b {
@@ -35,8 +30,8 @@
     font-weight: bold;
 }
 
-#sc_footer .sc_month_warn:before { content: '⚠\FE0E  '; }
-#sc_footer .sc_month_warn:not(.active) {
+#sc_toolbar .sc_warn:before { content: '⚠\FE0E  '; }
+#sc_toolbar .sc_warn:not(.active) {
     background: #db0a0a;
     color: white;
 }
