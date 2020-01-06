@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "../../libcc/libcc.hh"
+#include "../../core/libcc/libcc.hh"
 #include "data.hh"
 #include "animation.hh"
-#include "../../libgui/libgui.hh"
+#include "../../core/libgui/libgui.hh"
 
 namespace RG {
 

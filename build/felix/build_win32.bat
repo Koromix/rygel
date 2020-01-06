@@ -3,7 +3,7 @@
 setlocal enableDelayedExpansion
 cd %~dp0
 
-set SRC=..\..\src\felix\*.cc ..\..\src\libcc\libcc.cc ..\..\src\libwrap\json.cc ..\..\vendor\miniz\miniz.c
+set SRC=..\..\src\felix\*.cc ..\..\src\core\libcc\libcc.cc ..\..\src\core\libwrap\json.cc ..\..\vendor\miniz\miniz.c
 set BIN=..\..\felix.exe
 
 where /q link

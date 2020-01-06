@@ -11,7 +11,7 @@
     #define MINIZ_NO_ZLIB_APIS
     #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
     #define MINIZ_NO_MALLOC
-    #include "../../vendor/miniz/miniz.h"
+    #include "../../../vendor/miniz/miniz.h"
 #endif
 
 #ifdef _WIN32

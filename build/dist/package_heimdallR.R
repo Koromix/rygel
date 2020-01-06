@@ -70,13 +70,13 @@ bundle_heimdallR <- function(project_dir, version, build_dir) {
     copy_files('src/heimdall/heimdallR/heimdallR.cc', 'src/heimdall/heimdallR')
     copy_files('src/heimdall/heimdallR/heimdallR.R', 'R')
     copy_files(list_files('src/heimdall/libheimdall'), 'src/heimdall/libheimdall')
-    copy_files(list_files('src/libcc'), 'src/libcc')
-    copy_files(list_files('src/libgui'), 'src/libgui')
-    copy_files(c('src/libwrap/Rcc.cc',
-                 'src/libwrap/Rcc.hh',
-                 'src/libwrap/opengl.cc',
-                 'src/libwrap/opengl.hh',
-                 'src/libwrap/opengl_func.inc'), 'src/libwrap')
+    copy_files(list_files('src/core/libcc'), 'src/core/libcc')
+    copy_files(list_files('src/core/libgui'), 'src/core/libgui')
+    copy_files(c('src/core/libwrap/Rcc.cc',
+                 'src/core/libwrap/Rcc.hh',
+                 'src/core/libwrap/opengl.cc',
+                 'src/core/libwrap/opengl.hh',
+                 'src/core/libwrap/opengl_func.inc'), 'src/core/libwrap')
     copy_files(list_files('vendor/miniz'), 'vendor/miniz')
     copy_files(list_files('vendor/imgui'), 'vendor/imgui')
     copy_files(list_files('vendor/glfw'), 'vendor/glfw')

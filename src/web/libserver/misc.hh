@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "../../libcc/libcc.hh"
+#include "../../core/libcc/libcc.hh"
 #include "http.hh"
-#include "../../libwrap/json.hh"
+#include "../../core/libwrap/json.hh"
 
 namespace RG {
 

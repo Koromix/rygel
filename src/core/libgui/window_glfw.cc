@@ -6,7 +6,7 @@
 
 #include "../libcc/libcc.hh"
 #include "window.hh"
-#include "../../vendor/glfw/include/GLFW/glfw3.h"
+#include "../../../vendor/glfw/include/GLFW/glfw3.h"
 
 namespace RG {
 

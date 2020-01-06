@@ -14,9 +14,9 @@ override OBJECTS = $(addprefix ./${R_ARCH}_, drdR_mco.cc.o Rcc.cc.o libcc.cc.o l
 
 ./${R_ARCH}_drdR_mco.cc.o: ../drdR_mco.cc
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
-./${R_ARCH}_Rcc.cc.o: ../../../libwrap/Rcc.cc
+./${R_ARCH}_Rcc.cc.o: ../../../core/libwrap/Rcc.cc
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
-./${R_ARCH}_libcc.cc.o: ../../../libcc/libcc.cc
+./${R_ARCH}_libcc.cc.o: ../../../core/libcc/libcc.cc
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
 ./${R_ARCH}_libdrd.cc.o: ../../libdrd/libdrd.cc
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<

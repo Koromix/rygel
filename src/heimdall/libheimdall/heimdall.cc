@@ -2,11 +2,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "../../libcc/libcc.hh"
-#include "../../libwrap/opengl.hh"
-#include "../../libgui/libgui.hh"
+#include "../../core/libcc/libcc.hh"
 #include "heimdall.hh"
 #include "data.hh"
+#include "../../core/libwrap/opengl.hh"
+#include "../../core/libgui/libgui.hh"
 RG_PUSH_NO_WARNINGS()
 #include "../../../vendor/imgui/imgui.h"
 #include "../../../vendor/imgui/imgui_internal.h"

@@ -5,7 +5,7 @@
 #pragma once
 
 #include "../libcc/libcc.hh"
-#include "../../vendor/sqlite/sqlite3.h"
+#include "../../../vendor/sqlite/sqlite3.h"
 
 namespace RG {
 

@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "../../libcc/libcc.hh"
+#include "../../core/libcc/libcc.hh"
 #include "config.hh"
 #include "events.hh"
 #include "files.hh"
@@ -10,7 +10,7 @@
 #include "schedule.hh"
 #include "user.hh"
 #include "../../web/libserver/libserver.hh"
-#include "../../libwrap/sqlite.hh"
+#include "../../core/libwrap/sqlite.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {

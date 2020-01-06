@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "../../libcc/libcc.hh"
+#include "../../core/libcc/libcc.hh"
 #include "structure.hh"
 #include "../../drd/libdrd/libdrd.hh"
 #include "../../web/libserver/libserver.hh"

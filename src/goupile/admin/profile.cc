@@ -2,9 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "../../libcc/libcc.hh"
+#include "../../core/libcc/libcc.hh"
 #include "profile.hh"
-#include "../../libwrap/sqlite.hh"
+#include "../../core/libwrap/sqlite.hh"
 
 #ifdef _WIN32
     #include <direct.h>
