@@ -285,15 +285,12 @@ Options:
         --port <port>            Change web server port
                                  (default: %1)
         --base_url <url>         Change base URL
-                                 (default: %2)
-
-        --dev [<key>]            Run with fake profile and data)",
+                                 (default: %2))",
                 goupile_config.http.port, goupile_config.http.base_url);
     };
 
     // Find config filename
     const char *config_filename = nullptr;
-    const char *dev_key = nullptr;
     {
         OptionParser opt(argc, argv, (int)OptionParser::Flag::SkipNonOptions);
 
@@ -303,29 +300,13 @@ Options:
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::OptionalValue)) {
                 config_filename = opt.current_value;
-            } else if (opt.Test("--dev", OptionType::OptionalValue)) {
-                dev_key = opt.current_value ? opt.current_value : "DEV";
             }
         }
     }
 
     // Load config file
-    if (config_filename) {
-        if (dev_key) {
-            LogError("Option '--dev' cannot be used with '--config_file'");
-            return 1;
-        }
-
-        if (!LoadConfig(config_filename, &goupile_config))
-            return 1;
-
-        if (!goupile_config.app_name) {
-            goupile_config.app_name = goupile_config.app_key;
-        }
-    } else if (dev_key) {
-        goupile_config.app_key = dev_key;
-        goupile_config.app_name = Fmt(&temp_alloc, "goupile (%1)", dev_key).ptr;
-    }
+    if (config_filename && !LoadConfig(config_filename, &goupile_config))
+        return 1;
 
     // Parse arguments
     {
@@ -333,8 +314,6 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("-C", "--config_file", OptionType::Value)) {
-                // Already handled
-            } else if (opt.Test("--dev", OptionType::OptionalValue)) {
                 // Already handled
             } else if (opt.Test("--port", OptionType::Value)) {
                 if (!ParseDec(opt.current_value, &goupile_config.http.port))
@@ -349,31 +328,37 @@ Options:
     }
 
     // Check project configuration
-    if (!goupile_config.app_key || !goupile_config.app_key[0]) {
-        LogError("Project key must not be empty");
-        return 1;
-    }
-    if (goupile_config.files_directory &&
-            !TestFile(goupile_config.files_directory, FileType::Directory)) {
-        LogError("Application directory '%1' does not exist", goupile_config.files_directory);
-        return 1;
+    {
+        if (!config_filename) {
+            LogError("Configuration file must be specified");
+            return 1;
+        }
+
+        bool valid = true;
+
+        if (!goupile_config.app_key || !goupile_config.app_key[0]) {
+            LogError("Project key must not be empty");
+            valid = false;
+        }
+        if (!goupile_config.files_directory) {
+            LogError("Application directory not specified");
+            valid = false;
+        } else if (!TestFile(goupile_config.files_directory, FileType::Directory)) {
+            LogError("Application directory '%1' does not exist", goupile_config.files_directory);
+            valid = false;
+        }
+        if (!goupile_config.database_filename) {
+            LogError("Database file not specified");
+            valid = false;
+        }
+
+        if (!valid)
+            return 1;
     }
 
     // Init database
-    if (goupile_config.database_filename) {
-        if (!goupile_db.Open(goupile_config.database_filename, SQLITE_OPEN_READWRITE))
-            return 1;
-    } else if (dev_key) {
-        if (!goupile_db.Open(":memory:", SQLITE_OPEN_READWRITE))
-            return 1;
-        if (!goupile_db.CreateSchema())
-            return 1;
-        if (!goupile_db.InsertDemo())
-            return 1;
-    } else {
-        LogError("Database file not specified");
+    if (!goupile_db.Open(goupile_config.database_filename, SQLITE_OPEN_READWRITE))
         return 1;
-    }
 
     // Init assets and files
 #ifndef NDEBUG
