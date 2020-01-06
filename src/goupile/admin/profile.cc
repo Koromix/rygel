@@ -4,7 +4,7 @@
 
 #include "../../libcc/libcc.hh"
 #include "profile.hh"
-#include "../server/sqlite.hh"
+#include "../../libwrap/sqlite.hh"
 
 #ifdef _WIN32
     #include <direct.h>

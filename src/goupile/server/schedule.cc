@@ -5,7 +5,7 @@
 #include "../../libcc/libcc.hh"
 #include "goupile.hh"
 #include "schedule.hh"
-#include "sqlite.hh"
+#include "../../libwrap/sqlite.hh"
 
 namespace RG {
 

@@ -8,9 +8,9 @@
 #include "files.hh"
 #include "goupile.hh"
 #include "schedule.hh"
-#include "sqlite.hh"
 #include "user.hh"
 #include "../../web/libserver/libserver.hh"
+#include "../../libwrap/sqlite.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {

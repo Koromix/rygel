@@ -4,8 +4,8 @@
 
 #include "../../libcc/libcc.hh"
 #include "goupile.hh"
-#include "sqlite.hh"
 #include "user.hh"
+#include "../../libwrap/sqlite.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
