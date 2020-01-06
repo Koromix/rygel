@@ -5,10 +5,11 @@
 #pragma once
 
 #include "../../libcc/libcc.hh"
-#include "config.hh"
-#include "data.hh"
 
 namespace RG {
+
+struct Config;
+class SQLiteDatabase;
 
 extern Config goupile_config;
 extern SQLiteDatabase goupile_db;

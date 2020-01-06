@@ -4,10 +4,12 @@
 
 #pragma once
 
-#include "../../../vendor/sqlite/sqlite3.h"
 #include "../../libcc/libcc.hh"
+#include "../../../vendor/sqlite/sqlite3.h"
 
 namespace RG {
+
+class SQLiteStatement;
 
 class SQLiteDatabase {
     sqlite3 *db = nullptr;
@@ -23,11 +25,22 @@ public:
     bool Close();
 
     bool Execute(const char *sql);
-
-    bool CreateSchema();
-    bool InsertDemo();
+    bool Prepare(const char *sql, SQLiteStatement *out_stmt);
 
     operator sqlite3 *() { return db; }
+};
+
+class SQLiteStatement {
+    sqlite3_stmt *stmt = nullptr;
+
+public:
+    ~SQLiteStatement() { Finalize(); }
+
+    void Finalize();
+
+    operator sqlite3_stmt *() { return stmt; }
+
+    friend class SQLiteDatabase;
 };
 
 }

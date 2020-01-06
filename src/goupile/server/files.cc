@@ -2,11 +2,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 #include "../../libcc/libcc.hh"
 #include "config.hh"
 #include "files.hh"
 #include "goupile.hh"
+#include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
+
 #include <shared_mutex>
 #ifdef _WIN32
     #include <io.h>

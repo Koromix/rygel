@@ -3,9 +3,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../libcc/libcc.hh"
-#include "schedule.hh"
-#include "data.hh"
 #include "goupile.hh"
+#include "schedule.hh"
+#include "sqlite.hh"
 
 namespace RG {
 
@@ -30,8 +30,8 @@ static bool GetQueryInteger(const http_RequestInfo &request, const char *key,
 }
 
 // SQL must use 3 bind parameters: schedule, start date, end date (in this order)
-static sqlite3_stmt *PrepareMonthQuery(const http_RequestInfo &request, const char *sql,
-                                       http_IO *io)
+static bool PrepareMonthQuery(const http_RequestInfo &request, http_IO *io,
+                              const char *sql, SQLiteStatement *out_stmt)
 {
     // Get query parameters
     const char *schedule_name;
@@ -41,19 +41,19 @@ static sqlite3_stmt *PrepareMonthQuery(const http_RequestInfo &request, const ch
     if (!schedule_name) {
         LogError("Missing 'schedule' parameter");
         io->AttachError(422);
-        return nullptr;
+        return false;
     }
     if (!GetQueryInteger(request, "year", io, &year))
-        return nullptr;
+        return false;
     if (!GetQueryInteger(request, "month", io, &month))
-        return nullptr;
+        return false;
 
     // Check arguments
     // XXX: Check that schedule_name if a valid asset, with the proper mimetype
     if (month < 1 || month > 12) {
         LogError("Invalid month value %1", month);
         io->AttachError(422);
-        return nullptr;
+        return false;
     }
 
     // Determine query range
@@ -62,40 +62,28 @@ static sqlite3_stmt *PrepareMonthQuery(const http_RequestInfo &request, const ch
     dates[1] = month < 12 ? Date(year, month + 1, 1) : Date(year + 1, 1, 1);
 
     // Prepare statement
-    sqlite3_stmt *stmt;
     {
         char buf[32];
 
-        if (sqlite3_prepare_v2(goupile_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
-            LogError("SQLite Error: %1", sqlite3_errmsg(goupile_db));
-            return nullptr;
-        }
-
-        sqlite3_bind_text(stmt, 1, schedule_name, -1, SQLITE_TRANSIENT);
-        sqlite3_bind_text(stmt, 2, Fmt(buf, "%1", dates[0]).ptr, -1, SQLITE_TRANSIENT);
-        sqlite3_bind_text(stmt, 3, Fmt(buf, "%1", dates[1]).ptr, -1, SQLITE_TRANSIENT);
+        if (!goupile_db.Prepare(sql, out_stmt))
+            return false;
+        sqlite3_bind_text(*out_stmt, 1, schedule_name, -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(*out_stmt, 2, Fmt(buf, "%1", dates[0]).ptr, -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(*out_stmt, 3, Fmt(buf, "%1", dates[1]).ptr, -1, SQLITE_TRANSIENT);
     }
 
-    return stmt;
+    return true;
 }
 
 void HandleScheduleResources(const http_RequestInfo &request, http_IO *io)
 {
-    // Execute query
-    sqlite3_stmt *stmt;
-    {
-        static const char *const sql = R"(
-            SELECT date, time, slots, overbook
-            FROM sched_resources
-            WHERE schedule = ? AND date >= ? AND date < ?
-            ORDER BY date, time
-        )";
-
-        stmt = PrepareMonthQuery(request, sql, io);
-        if (!stmt)
-            return;
-    }
-    RG_DEFER { sqlite3_finalize(stmt); };
+    SQLiteStatement stmt;
+    if (!PrepareMonthQuery(request, io,
+                           R"(SELECT date, time, slots, overbook
+                              FROM sched_resources
+                              WHERE schedule = ? AND date >= ? AND date < ?
+                              ORDER BY date, time)", &stmt))
+        return;
 
     // Export data
     http_JsonPageBuilder json(request.compression_type);
@@ -133,21 +121,13 @@ void HandleScheduleResources(const http_RequestInfo &request, http_IO *io)
 
 void HandleScheduleMeetings(const http_RequestInfo &request, http_IO *io)
 {
-    // Execute query
-    sqlite3_stmt *stmt;
-    {
-        static const char *const sql = R"(
-            SELECT date, time, identity
-            FROM sched_meetings
-            WHERE schedule = ? AND date >= ? AND date < ?
-            ORDER BY date, time
-        )";
-
-        stmt = PrepareMonthQuery(request, sql, io);
-        if (!stmt)
-            return;
-    }
-    RG_DEFER { sqlite3_finalize(stmt); };
+    SQLiteStatement stmt;
+    if (!PrepareMonthQuery(request, io,
+                           R"(SELECT date, time, identity
+                              FROM sched_meetings
+                              WHERE schedule = ? AND date >= ? AND date < ?
+                              ORDER BY date, time)", &stmt))
+        return;
 
     // Export data
     http_JsonPageBuilder json(request.compression_type);

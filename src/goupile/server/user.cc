@@ -4,6 +4,7 @@
 
 #include "../../libcc/libcc.hh"
 #include "goupile.hh"
+#include "sqlite.hh"
 #include "user.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
@@ -41,19 +42,14 @@ void HandleLogin(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
-        const char *sql = R"(SELECT u.password_hash, u.admin,
-                                    p.read, p.query, p.new, p.remove, p.edit, p.validate
-                             FROM users u
-                             INNER JOIN permissions p ON (p.username = u.username)
-                             WHERE u.username = ?)";
-
-        sqlite3_stmt *stmt;
-        if (sqlite3_prepare_v2(goupile_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
-            LogError("SQLite Error: %1", sqlite3_errmsg(goupile_db));
+        SQLiteStatement stmt;
+        if (!goupile_db.Prepare(R"(SELECT u.password_hash, u.admin,
+                                          p.read, p.query, p.new, p.remove, p.edit, p.validate
+                                   FROM users u
+                                   INNER JOIN permissions p ON (p.username = u.username)
+                                   WHERE u.username = ?)", &stmt))
             return;
-        }
         sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
-        RG_DEFER { sqlite3_finalize(stmt); };
 
         // Execute it!
         int rc = sqlite3_step(stmt);
