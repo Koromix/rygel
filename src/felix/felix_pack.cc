@@ -130,10 +130,10 @@ Available merge options:)");
 
     // Resolve merge rules
     PackAssetSet asset_set;
-    ResolveAssets(filenames, strip_count, merge_rule_set.rules, &asset_set);
+    ResolveAssets(filenames, strip_count, merge_rule_set.rules, compression_type, &asset_set);
 
     // Generate output
-    return !PackAssets(asset_set.assets, output_path, mode, compression_type);
+    return !PackAssets(asset_set.assets, output_path, mode);
 }
 
 }

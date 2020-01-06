@@ -18,12 +18,9 @@ static const char *const PackModeNames[] = {
     "Files"
 };
 
-bool PackToC(Span<const PackAssetInfo> assets, const char *output_path,
-             CompressionType compression_type);
-bool PackToFiles(Span<const PackAssetInfo> assets, const char *output_path,
-                 CompressionType compression_type);
+bool PackToC(Span<const PackAssetInfo> assets, const char *output_path);
+bool PackToFiles(Span<const PackAssetInfo> assets, const char *output_path);
 
-bool PackAssets(Span<const PackAssetInfo> assets, const char *output_path,
-                PackMode mode, CompressionType compression_type);
+bool PackAssets(Span<const PackAssetInfo> assets, const char *output_path, PackMode mode);
 
 }

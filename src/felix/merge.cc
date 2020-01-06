@@ -47,7 +47,18 @@ bool LoadMergeRules(const char *filename, unsigned int flags, MergeRuleSet *out_
 
             bool changed_merge_mode = false;
             do {
-                if (prop.key == "MergeMode") {
+                if (prop.key == "CompressionType") {
+                    const char *const *name = FindIf(CompressionTypeNames,
+                                                     [&](const char *name) { return TestStr(name, prop.value); });
+
+                    if (name) {
+                        rule->override_compression = true;
+                        rule->compression_type = (CompressionType)(name - CompressionTypeNames);
+                    } else {
+                        LogError("Unknown compression type '%1'", prop.value);
+                        valid = false;
+                    }
+                } else if (prop.key == "MergeMode") {
                     if (prop.value == "Naive") {
                         rule->merge_mode = MergeMode::Naive;
                     } else if (prop.value == "CSS") {
@@ -165,8 +176,8 @@ static const char *StripDirectoryComponents(Span<const char> filename, int strip
     return name;
 }
 
-void ResolveAssets(Span<const char *const> filenames, int strip_count,
-                   Span<const MergeRule> rules, PackAssetSet *out_set)
+void ResolveAssets(Span<const char *const> filenames, int strip_count, Span<const MergeRule> rules,
+                   CompressionType compression_type, PackAssetSet *out_set)
 {
     HashMap<const void *, Size> merge_map;
 
@@ -199,6 +210,7 @@ void ResolveAssets(Span<const char *const> filenames, int strip_count,
 
                 PackAssetInfo asset = {};
                 asset.name = rule->name;
+                asset.compression_type = rule->override_compression ? rule->compression_type : compression_type;
                 if (rule->source_map_type != SourceMapType::None) {
                     if (!rule->transform_cmd) {
                         asset.source_map_type = rule->source_map_type;
@@ -221,6 +233,7 @@ void ResolveAssets(Span<const char *const> filenames, int strip_count,
 
             PackAssetInfo asset = {};
             asset.name = src.name;
+            asset.compression_type = compression_type;
             out_set->assets.Append(asset)->sources.Append(src);
         }
     }

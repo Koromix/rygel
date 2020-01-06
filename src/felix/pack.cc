@@ -45,6 +45,8 @@ typedef struct AssetInfo {
 struct BlobInfo {
     const char *str_name;
     const char *var_name;
+
+    CompressionType compression_type;
     Size len;
 
     const char *source_map;
@@ -172,11 +174,10 @@ static bool MergeAssetSourceFiles(Span<const PackSourceInfo> sources,
     return true;
 }
 
-static Size PackAsset(const PackAssetInfo &asset, CompressionType compression_type,
-                      FunctionRef<void(Span<const uint8_t> buf)> func)
+static Size PackAsset(const PackAssetInfo &asset, FunctionRef<void(Span<const uint8_t> buf)> func)
 {
     HeapArray<uint8_t> compressed_buf;
-    StreamWriter compressor(&compressed_buf, nullptr, compression_type);
+    StreamWriter compressor(&compressed_buf, nullptr, asset.compression_type);
 
     Size written_len = 0;
     const auto flush_compressor_buffer = [&]() {
@@ -222,13 +223,12 @@ static Size PackAsset(const PackAssetInfo &asset, CompressionType compression_ty
     return written_len;
 }
 
-static Size PackSourceMap(const PackAssetInfo &asset, CompressionType compression_type,
-                          FunctionRef<void(Span<const uint8_t> buf)> func)
+static Size PackSourceMap(const PackAssetInfo &asset, FunctionRef<void(Span<const uint8_t> buf)> func)
 {
     RG_ASSERT(!asset.transform_cmd);
 
     HeapArray<uint8_t> buf;
-    StreamWriter writer(&buf, nullptr, compression_type);
+    StreamWriter writer(&buf, nullptr, asset.compression_type);
 
     switch (asset.source_map_type) {
         case SourceMapType::None: { RG_ASSERT(false); } break;
@@ -270,8 +270,7 @@ static void PrintAsHexArray(Span<const uint8_t> bytes, StreamWriter *out_st)
     }
 }
 
-bool PackToC(Span<const PackAssetInfo> assets, const char *output_path,
-             CompressionType compression_type)
+bool PackToC(Span<const PackAssetInfo> assets, const char *output_path)
 {
     BlockAllocator temp_alloc;
 
@@ -298,12 +297,16 @@ static const uint8_t raw_data[] = {)");
             blob.str_name = asset.name;
             blob.var_name = CreateVariableName(asset.name, &temp_alloc);
 
+            blob.compression_type = asset.compression_type;
+
             PrintLn(&st, "    // %1", blob.str_name);
             Print(&st, "    ");
-            blob.len = PackAsset(asset, compression_type,
-                                 [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
+            blob.len = PackAsset(asset, [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
             if (blob.len < 0)
                 return false;
+
+            // Put NUL byte at the end to make it a valid C string
+            PrintAsHexArray(0, &st);
             PrintLn(&st);
 
             if (asset.source_map_name) {
@@ -313,12 +316,15 @@ static const uint8_t raw_data[] = {)");
                 blob_map.str_name = blob.source_map;
                 blob_map.var_name = CreateVariableName(blob.source_map, &temp_alloc);
 
+                blob_map.compression_type = asset.compression_type;
+
                 PrintLn(&st, "    // %1", blob_map.str_name);
                 Print(&st, "    ");
-                blob_map.len = PackSourceMap(asset, compression_type,
-                                             [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
+                blob_map.len = PackSourceMap(asset, [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
                 if (blob_map.len < 0)
                     return false;
+
+                PrintAsHexArray(0, &st);
                 PrintLn(&st);
 
                 blobs.Append(blob);
@@ -333,18 +339,18 @@ static const uint8_t raw_data[] = {)");
 static AssetInfo assets[%1] = {)", blobs.len);
 
         // Write asset table
-        for (Size i = 0, cumulative_len = 0; i < blobs.len; i++) {
+        for (Size i = 0, raw_offset = 0; i < blobs.len; i++) {
             const BlobInfo &blob = blobs[i];
 
             if (blob.source_map) {
                 PrintLn(&st, "    {\"%1\", %2, {raw_data + %3, %4}, \"%5\"},",
-                        blob.str_name, (int)compression_type, cumulative_len, blob.len,
+                        blob.str_name, (int)blob.compression_type, raw_offset, blob.len,
                         blob.source_map);
             } else {
                 PrintLn(&st, "    {\"%1\", %2, {raw_data + %3, %4}, 0},",
-                        blob.str_name, (int)compression_type, cumulative_len, blob.len);
+                        blob.str_name, (int)blob.compression_type, raw_offset, blob.len);
             }
-            cumulative_len += blob.len;
+            raw_offset += blob.len + 1;
         }
 
         PrintLn(&st, R"(};
@@ -369,8 +375,7 @@ const Span pack_assets = {0, 0};)");
     return st.Close();
 }
 
-bool PackToFiles(Span<const PackAssetInfo> assets, const char *output_path,
-                   CompressionType compression_type)
+bool PackToFiles(Span<const PackAssetInfo> assets, const char *output_path)
 {
     BlockAllocator temp_alloc;
 
@@ -380,17 +385,6 @@ bool PackToFiles(Span<const PackAssetInfo> assets, const char *output_path,
     }
     if (!MakeDirectory(output_path, false))
         return false;
-
-    const char *compression_ext = nullptr;
-    switch (compression_type) {
-        case CompressionType::None: { compression_ext = ""; } break;
-        case CompressionType::Gzip: { compression_ext = ".gz"; } break;
-        case CompressionType::Zlib: {
-            LogError("This generator cannot use Zlib compression");
-            return false;
-        } break;
-    }
-    RG_ASSERT(compression_ext);
 
     for (const PackAssetInfo &asset: assets) {
         StreamWriter st;
@@ -404,6 +398,17 @@ bool PackToFiles(Span<const PackAssetInfo> assets, const char *output_path,
             return false;
         }
 
+        const char *compression_ext = nullptr;
+        switch (asset.compression_type) {
+            case CompressionType::None: { compression_ext = ""; } break;
+            case CompressionType::Gzip: { compression_ext = ".gz"; } break;
+            case CompressionType::Zlib: {
+                LogError("This generator cannot use Zlib compression");
+                return false;
+            } break;
+        }
+        RG_ASSERT(compression_ext);
+
         const char *filename = Fmt(&temp_alloc, "%1%/%2%3", output_path, asset.name, compression_ext).ptr;
 
         if (!EnsureDirectoryExists(filename))
@@ -411,8 +416,7 @@ bool PackToFiles(Span<const PackAssetInfo> assets, const char *output_path,
 
         if (!st.Open(filename))
             return false;
-        if (PackAsset(asset, compression_type,
-                      [&](Span<const uint8_t> buf) { st.Write(buf); }) < 0)
+        if (PackAsset(asset, [&](Span<const uint8_t> buf) { st.Write(buf); }) < 0)
             return false;
         if (!st.Close())
             return false;
@@ -423,8 +427,7 @@ bool PackToFiles(Span<const PackAssetInfo> assets, const char *output_path,
 
             if (!st.Open(map_filename))
                 return false;
-            if (PackSourceMap(asset, compression_type,
-                              [&](Span<const uint8_t> buf) { st.Write(buf); }) < 0)
+            if (PackSourceMap(asset, [&](Span<const uint8_t> buf) { st.Write(buf); }) < 0)
                 return false;
             if (!st.Close())
                 return false;
@@ -434,12 +437,11 @@ bool PackToFiles(Span<const PackAssetInfo> assets, const char *output_path,
     return true;
 }
 
-bool PackAssets(Span<const PackAssetInfo> assets, const char *output_path,
-                PackMode mode, CompressionType compression_type)
+bool PackAssets(Span<const PackAssetInfo> assets, const char *output_path, PackMode mode)
 {
     switch (mode) {
-        case PackMode::C: return PackToC(assets, output_path, compression_type);
-        case PackMode::Files: return PackToFiles(assets, output_path, compression_type);
+        case PackMode::C: return PackToC(assets, output_path);
+        case PackMode::Files: return PackToFiles(assets, output_path);
     }
     RG_ASSERT(false);
 }

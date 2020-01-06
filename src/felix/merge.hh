@@ -34,6 +34,9 @@ struct MergeRule {
     HeapArray<const char *> include;
     HeapArray<const char *> exclude;
 
+    bool override_compression;
+    CompressionType compression_type;
+
     MergeMode merge_mode;
     SourceMapType source_map_type;
     const char *transform_cmd;
@@ -56,6 +59,8 @@ struct PackAssetInfo {
     const char *name;
     HeapArray<PackSourceInfo> sources;
 
+    CompressionType compression_type;
+
     const char *transform_cmd;
     SourceMapType source_map_type;
     const char *source_map_name;
@@ -68,7 +73,7 @@ struct PackAssetSet {
 
 bool LoadMergeRules(const char *filename, unsigned int flags, MergeRuleSet *out_set);
 
-void ResolveAssets(Span<const char *const> filenames, int strip_count,
-                   Span<const MergeRule> rules, PackAssetSet *out_set);
+void ResolveAssets(Span<const char *const> filenames, int strip_count, Span<const MergeRule> rules,
+                   CompressionType compression_type, PackAssetSet *out_set);
 
 }
