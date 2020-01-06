@@ -32,11 +32,18 @@ public:
 
 class SQLiteStatement {
     sqlite3_stmt *stmt = nullptr;
+    int rc;
 
 public:
     ~SQLiteStatement() { Finalize(); }
 
     void Finalize();
+
+    bool IsValid() const { return stmt && (rc == SQLITE_DONE || rc == SQLITE_ROW); };
+    bool IsDone() const { return stmt && rc == SQLITE_DONE; }
+
+    bool Execute();
+    bool Next();
 
     operator sqlite3_stmt *() { return stmt; }
 

@@ -73,4 +73,21 @@ void SQLiteStatement::Finalize()
     stmt = nullptr;
 }
 
+bool SQLiteStatement::Execute()
+{
+    rc = sqlite3_step(stmt);
+
+    if (rc != SQLITE_DONE && rc != SQLITE_ROW) {
+        LogError("SQLite Error: %1", sqlite3_errmsg(sqlite3_db_handle(stmt)));
+        return false;
+    }
+
+    return true;
+}
+
+bool SQLiteStatement::Next()
+{
+    return Execute() && rc == SQLITE_ROW;
+}
+
 }

@@ -92,8 +92,7 @@ void HandleScheduleResources(const http_RequestInfo &request, http_IO *io)
     {
         char current_date[32] = {};
 
-        int rc = sqlite3_step(stmt);
-        while (rc == SQLITE_ROW) {
+        while (stmt.Next()) {
             strncpy(current_date, (const char *)sqlite3_column_text(stmt, 0),
                     RG_SIZE(current_date) - 1);
 
@@ -105,14 +104,11 @@ void HandleScheduleResources(const http_RequestInfo &request, http_IO *io)
                 json.Key("slots"); json.Int(sqlite3_column_int(stmt, 2));
                 json.Key("overbook"); json.Int(sqlite3_column_int(stmt, 3));
                 json.EndObject();
-            } while ((rc = sqlite3_step(stmt)) == SQLITE_ROW &&
-                     TestStr((const char *)sqlite3_column_text(stmt, 0), current_date));
+            } while (stmt.Next() && TestStr((const char *)sqlite3_column_text(stmt, 0), current_date));
             json.EndArray();
         }
-        if (rc != SQLITE_DONE) {
-            LogError("SQLite Error: %1", sqlite3_errmsg(goupile_db));
+        if (!stmt.IsValid())
             return;
-        }
     }
     json.EndObject();
 
@@ -136,8 +132,7 @@ void HandleScheduleMeetings(const http_RequestInfo &request, http_IO *io)
     {
         char current_date[32] = {};
 
-        int rc = sqlite3_step(stmt);
-        while (rc == SQLITE_ROW) {
+        while (stmt.Next()) {
             strncpy(current_date, (const char *)sqlite3_column_text(stmt, 0),
                     RG_SIZE(current_date) - 1);
 
@@ -148,14 +143,11 @@ void HandleScheduleMeetings(const http_RequestInfo &request, http_IO *io)
                 json.Key("time"); json.Int(sqlite3_column_int(stmt, 1));
                 json.Key("identity"); json.String((const char *)sqlite3_column_text(stmt, 2));
                 json.EndObject();
-            } while ((rc = sqlite3_step(stmt)) == SQLITE_ROW &&
-                     TestStr((const char *)sqlite3_column_text(stmt, 0), current_date));
+            } while (stmt.Next() && TestStr((const char *)sqlite3_column_text(stmt, 0), current_date));
             json.EndArray();
         }
-        if (rc != SQLITE_DONE) {
-            LogError("SQLite Error: %1", sqlite3_errmsg(goupile_db));
+        if (!stmt.IsValid())
             return;
-        }
     }
     json.EndObject();
 

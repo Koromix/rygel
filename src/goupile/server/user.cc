@@ -51,11 +51,10 @@ void HandleLogin(const http_RequestInfo &request, http_IO *io)
             return;
         sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
-        // Execute it!
-        int rc = sqlite3_step(stmt);
+        // We use this to extend/fix the response delay in case of error
         int64_t now = GetMonotonicTime();
 
-        if (rc == SQLITE_ROW) {
+        if (stmt.Next()) {
             const char *password_hash = (const char *)sqlite3_column_text(stmt, 0);
 
             if (crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
@@ -78,7 +77,7 @@ void HandleLogin(const http_RequestInfo &request, http_IO *io)
                 io->AttachText(200, "{}", "application/json");
                 return;
             }
-        } else if (rc != SQLITE_DONE) {
+        } else if (!stmt.IsValid()) {
             LogError("SQLite Error: %1", sqlite3_errmsg(goupile_db));
             return;
         }
