@@ -8,13 +8,9 @@
 
 namespace RG {
 
-// External code can use this type as a handle, see LockFile
-struct FileEntry;
-
 bool InitFiles();
 
 void HandleFileList(const http_RequestInfo &request, http_IO *io);
-
 bool HandleFileGet(const http_RequestInfo &request, http_IO *io);
 void HandleFilePut(const http_RequestInfo &request, http_IO *io);
 void HandleFileDelete(const http_RequestInfo &request, http_IO *io);
