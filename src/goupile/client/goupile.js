@@ -457,7 +457,7 @@ Navigation functions should only be called in reaction to user events, such as b
         switch (left_panel) {
             case 'files': { await dev_files.runFiles(); } break;
             case 'editor': { await dev_files.syncEditor(current_asset.path); } break;
-            case 'data': { await dev_data.runData(current_asset.form.key, executor.getRecord().id); } break;
+            case 'data': { await executor.runData(); } break;
         }
 
         // Run appropriate module
