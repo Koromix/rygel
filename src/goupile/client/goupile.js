@@ -25,11 +25,11 @@ let goupile = new function() {
 
     let assets;
     let assets_map;
+
     let current_asset;
     let current_url;
-
-    let executor;
-    let current_record = {};
+    let current_args = {};
+    let executor = new FormExecutor;
 
     let left_panel;
     let show_overview = true;
@@ -424,10 +424,12 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     this.run = async function(url = null, args = {}) {
+        util.assignDeep(current_args, args);
+
         if (await fetchSettings())
             await self.initApplication();
 
-        // Find relevant asset
+        // Find relevant asset and controller
         if (url) {
             current_asset = assets_map[url];
             if (!current_asset && !url.endsWith('/'))
@@ -437,29 +439,14 @@ Navigation functions should only be called in reaction to user events, such as b
             if (!current_asset)
                 log.error(`URL inconnue '${url}'`);
         }
-
-        // Load record (if needed)
         if (current_asset && current_asset.form) {
-            if (!args.hasOwnProperty('id') && current_asset.form.key !== current_record.table)
-                current_record = {};
+            await executor.route(current_asset.form, current_args.id);
 
-            if (args.hasOwnProperty('id') || current_record.id == null) {
-                if (args.id == null) {
-                    current_record = virt_data.create(current_asset.form.key);
-                } else if (args.id !== current_record.id) {
-                    current_record = await virt_data.load(current_asset.form.key, args.id);
-                    if (!current_record)
-                        current_record = virt_data.create(current_asset.form.key);
-
-                    // The user asked for this record, make sure it is visible
-                    if (!show_overview) {
-                        if (goupile.isTablet())
-                            left_panel = null;
-                        show_overview = true;
-                    }
-                }
-
-                executor = new FormExecutor(current_asset.form, current_record);
+            // The user asked for this record, make sure it is visible
+            if (args.id != null && !show_overview) {
+                if (goupile.isTablet())
+                    left_panel = null;
+                show_overview = true;
             }
         }
 
@@ -470,7 +457,7 @@ Navigation functions should only be called in reaction to user events, such as b
         switch (left_panel) {
             case 'files': { await dev_files.runFiles(); } break;
             case 'editor': { await dev_files.syncEditor(current_asset.path); } break;
-            case 'data': { await dev_data.runData(current_asset.form.key, current_record.id); } break;
+            case 'data': { await dev_data.runData(current_asset.form.key, executor.getRecord().id); } break;
         }
 
         // Run appropriate module

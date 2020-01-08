@@ -2,14 +2,33 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function FormExecutor(form, record) {
+function FormExecutor() {
     let self = this;
 
+    let form_key;
+
+    let page_key;
     let page_state;
     let page_scratch;
-    let page_key;
 
-    this.runPage = function(info, code, view_el) {
+    let record = {};
+
+    this.route = async function(form, id) {
+        if (form.key !== form_key || id !== record.id || record.id == null) {
+            if (id != null) {
+                record = await virt_data.load(form.key, id) || virt_data.create(form.key);
+            } else {
+                record = await virt_data.create(form.key);
+            }
+
+            form_key = form.key;
+            page_key = null;
+        }
+    };
+
+    this.getRecord = function() { return record; };
+
+    this.runPage = async function(info, code, view_el) {
         if (info.key !== page_key) {
             page_state = new PageState;
             page_scratch = {};
@@ -74,4 +93,4 @@ function FormExecutor(form, record) {
         // XXX: Give focus to first widget
         window.scrollTo(0, 0);
     }
-}
+};

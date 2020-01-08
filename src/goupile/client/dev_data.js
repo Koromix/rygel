@@ -5,15 +5,15 @@
 let dev_data = new function() {
     let self = this;
 
-    this.runData = async function(table, current_id) {
-        let records = await virt_data.loadAll(table);
-        let variables = await virt_data.listVariables(table);
+    this.runData = async function(form_key, current_id) {
+        let records = await virt_data.loadAll(form_key);
+        let variables = await virt_data.listVariables(form_key);
         let columns = orderColumns(variables);
 
-        renderRecords(table, records, columns, current_id);
+        renderRecords(form_key, records, columns, current_id);
     };
 
-    function renderRecords(table, records, columns, current_id) {
+    function renderRecords(form_key, records, columns, current_id) {
         let empty_msg;
         if (!records.length) {
             empty_msg = 'Aucune donnée à afficher';
@@ -28,8 +28,8 @@ let dev_data = new function() {
                 <div class="gp_dropdown right">
                     <button>Export</button>
                     <div>
-                        <button ?disabled=${!columns.length} @click=${e => exportSheets(table, 'xlsx')}>Excel</button>
-                        <button ?disabled=${!columns.length} @click=${e => exportSheets(table, 'csv')}>CSV</button>
+                        <button ?disabled=${!columns.length} @click=${e => exportSheets(form_key, 'xlsx')}>Excel</button>
+                        <button ?disabled=${!columns.length} @click=${e => exportSheets(form_key, 'csv')}>CSV</button>
                     </div>
                 </div>
             </div>
@@ -72,12 +72,12 @@ let dev_data = new function() {
         `, document.querySelector('#dev_data'));
     }
 
-    async function exportSheets(table, format = 'xlsx') {
+    async function exportSheets(form_key, format = 'xlsx') {
         if (typeof XSLX === 'undefined')
             await util.loadScript(`${env.base_url}static/xlsx.core.min.js`);
 
-        let records = await virt_data.loadAll(table);
-        let variables = await virt_data.listVariables(table);
+        let records = await virt_data.loadAll(form_key);
+        let variables = await virt_data.listVariables(form_key);
         let columns = orderColumns(variables);
 
         // Worksheet
