@@ -24,8 +24,6 @@ function PageBuilder(state, page) {
     let missing_set = new Set;
     let missing_block = false;
 
-    this.errors = [];
-
     // Key and value handling
     this.decodeKey = key => key;
     this.setValue = (key, value) => {};
@@ -791,12 +789,12 @@ Valid choices include:
         options = expandOptions(options);
 
         let render = intf => {
-            if (self.errors.length || options.force) {
+            if (page.errors.length || options.force) {
                 return html`
                     <fieldset class="af_container af_section af_section_error">
                         <legend>${options.label || 'Liste des erreurs'}</legend>
-                        ${!self.errors.length ? 'Aucune erreur' : ''}
-                        ${self.errors.map(intf =>
+                        ${!page.errors.length ? 'Aucune erreur' : ''}
+                        ${page.errors.map(intf =>
                             html`${intf.errors.length} ${intf.errors.length > 1 ? 'erreurs' : 'erreur'} sur :
                                  <a href=${'#' + makeID(intf.key)}>${intf.label}</a><br/>`)}
                     </fieldset>
@@ -897,7 +895,7 @@ Valid choices include:
 
             error: msg => {
                 if (!intf.errors.length)
-                    self.errors.push(intf);
+                    page.errors.push(intf);
                 intf.errors.push(msg || '');
 
                 return intf;
@@ -934,7 +932,7 @@ Valid choices include:
 
         if (missing_block)
             problems.push('Informations obligatoires manquantes');
-        if (self.errors.length)
+        if (page.errors.length)
             problems.push('Présence d\'erreurs sur le formulaire');
 
         return problems;

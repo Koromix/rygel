@@ -7,6 +7,7 @@ function Page() {
 
     this.widgets = [];
     this.variables = [];
+    this.errors = [];
 
     this.render = function() { return self.widgets.map(intf => intf.render()); };
 }
