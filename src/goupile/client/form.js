@@ -52,7 +52,8 @@ function FormExecutor() {
 
                     // Pages need to update themselves without doing a full render
                     let el = document.createElement('div');
-                    el.className = 'af_entry';
+                    if (select_many)
+                        el.className = 'af_entry';
 
                     runPage(page.key, func, record, state, el);
 
@@ -89,8 +90,8 @@ function FormExecutor() {
 
             render(html`
                 <div class="af_actions">
-                    <a href="#" class=${!state.changed ? 'disabled' : ''}
-                       @click=${e => { page_builder.submit(); e.preventDefault(); }}>Enregistrer</a>
+                    <button class="af_button" ?disabled=${!state.changed}
+                            @click=${page_builder.save}>Enregistrer</button>
                 </div>
 
                 ${page.widgets.map(intf => {
@@ -100,15 +101,6 @@ function FormExecutor() {
             `, el);
         } else {
             func(app.data, app.route, app.go, page_builder, page_builder, state.scratch);
-
-            // No variable = no default buttons
-            if (page.widgets.some(intf => intf.key)) {
-                page_builder.errorList();
-                page_builder.buttons([
-                    ['Enregistrer (brouillon)', page_builder.save],
-                    ['Enregistrer et valider', !page.errors.length ? (e => showValidateDialog(e, page_builder.submit)) : null]
-                ]);
-            }
 
             render(html`
                 <div class="af_path">${current_form.pages.map(page => {
@@ -126,6 +118,16 @@ function FormExecutor() {
                     }
                 })}</div>
 
+                ${page.widgets.some(intf => intf.key) ? html`
+                    <div class="af_actions">
+                        <button class="af_button" ?disabled=${!state.changed}
+                                @click=${page_builder.save}>Enregistrer</a>
+                        <button class="af_button" ?disabled=${page.errors.length || !state.changed}
+                                @click=${e => showValidateDialog(e, page_builder.submit)}>Valider</a>
+                    </div>
+                ` : ''}
+
+                <br/>
                 ${page.render()}
             `, el);
         }

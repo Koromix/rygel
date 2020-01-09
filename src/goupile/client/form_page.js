@@ -769,6 +769,7 @@ instead of:
         self.restart();
     }
 
+    // XXX: Get rid of this (used in popups)
     this.buttons = function(buttons, options = {}) {
         options = expandOptions(options);
 
