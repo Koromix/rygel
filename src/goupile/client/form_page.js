@@ -48,7 +48,6 @@ function PageBuilder(state, page) {
     let restart = false;
 
     let missing_set = new Set;
-    let missing_block = false;
 
     // Key and value handling
     this.decodeKey = key => key;
@@ -58,8 +57,6 @@ function PageBuilder(state, page) {
     // Change and submission handling
     this.changeHandler = page => {};
     this.submitHandler = null;
-
-    this.isValid = function() { return !listProblems().length; };
 
     this.pushOptions = function(options = {}) {
         options = expandOptions(options);
@@ -796,19 +793,15 @@ Valid choices include:
         addWidget('buttons', null, render);
     };
     this.buttons.std = {
-        save: (label, options = {}) => {
-            let tooltip = listProblems().join('\n');
-            return [
-                [label || 'Enregistrer', !tooltip ? self.submit : null, tooltip]
-            ];
-        },
-        ok_cancel: (label, options = {}) => {
-            let tooltip = listProblems().join('\n');
-            return [
-                [label || 'OK', !tooltip ? self.submit : null, tooltip],
-                ['Annuler', self.close]
-            ];
-        }
+        save: (label, options = {}) => [
+            [label || 'Enregistrer', !page.errors.length ? self.submit : null,
+                                     page.errors.length ? 'Erreurs ou données obligatoires manquantes' : null]
+        ],
+        ok_cancel: (label, options = {}) => [
+            [label || 'OK', !page.errors.length ? self.submit : null,
+                            page.errors.length ? 'Erreurs ou données obligatoires manquantes' : null],
+            ['Annuler', self.close]
+        ]
     };
 
     this.errorList = function(options = {}) {
@@ -834,7 +827,7 @@ Valid choices include:
     };
 
     this.submit = function() {
-        if (self.submitHandler && self.isValid()) {
+        if (self.submitHandler && !page.errors.length) {
             if (missing_set.size) {
                 log.error('Impossible d\'enregistrer : données manquantes');
 
@@ -934,7 +927,7 @@ Valid choices include:
             if (intf.options.missingMode === 'error' || state.missing_errors.has(key.toString()))
                 intf.error('Donnée obligatoire manquante');
             if (intf.options.missingMode === 'disable')
-                missing_block |= true;
+                page.errors.push('Donnée obligatoire manquante');
         }
 
         page.variables.push(intf);
@@ -951,17 +944,6 @@ Valid choices include:
         } else {
             return '';
         }
-    }
-
-    function listProblems() {
-        let problems = [];
-
-        if (missing_block)
-            problems.push('Informations obligatoires manquantes');
-        if (page.errors.length)
-            problems.push('Présence d\'erreurs sur le formulaire');
-
-        return problems;
     }
 
     function readValue(key, default_value) {

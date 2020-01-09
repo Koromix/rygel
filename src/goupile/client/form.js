@@ -76,17 +76,34 @@ function FormExecutor() {
             goupile.run();
         };
 
-        if (select_many)
-            page_builder.pushOptions({compact: true});
-
-        func(app.data, app.route, app.go, page_builder, page_builder, state.scratch);
-
         if (select_many) {
-            render(page.widgets.map(intf => {
-                let visible = intf.key && select_columns.has(intf.key.toString());
-                return visible ? intf.render() : '';
-            }), el);
+            page_builder.pushOptions({compact: true});
+            func(app.data, app.route, app.go, page_builder, page_builder, state.scratch);
+
+            render(html`
+                <div class="af_actions">
+                    <a href="#" class=${page.errors.length ? 'disabled' : ''}
+                       @click=${e => { page_builder.submit(); e.preventDefault(); }}>Enregistrer</a>
+                </div>
+
+                ${page.widgets.map(intf => {
+                    let visible = intf.key && select_columns.has(intf.key.toString());
+                    return visible ? intf.render() : '';
+                })}
+            `, el);
         } else {
+            func(app.data, app.route, app.go, page_builder, page_builder, state.scratch);
+
+            // No variable = no default buttons
+            if (page.widgets.some(intf => intf.key)) {
+                page_builder.errorList();
+                page_builder.buttons([
+                    ['Enregistrer', !page.errors.length ? page_builder.submit : ''],
+                    // ['Enregistrer', !page.errors.length ? page_builder.submit : ''],
+                    ['Valider']
+                ]);
+            }
+
             render(page.render(), el);
         }
     }

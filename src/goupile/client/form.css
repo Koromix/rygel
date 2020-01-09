@@ -19,8 +19,32 @@
     .af_container + .af_widget { margin-top: 12px; }
 .af_widget + .af_widget { margin-top: 6px; }
 
-.af_entry { padding: 5px 0; }
-.af_entry + .af_entry { border-top: 1px solid #dfdfdf; }
+/* -------------------- Multiple view -------------------- */
+
+.af_entry {
+    position: relative;
+    padding-right: 70px;
+}
+.af_entry + .af_entry {
+    margin-top: 7px;
+    padding-top: 7px;
+    border-top: 1px solid #dfdfdf;
+}
+
+.af_actions {
+    position: absolute;
+    right: 0;
+    width: 60px;
+    background: #efefef;
+    color: #24579d;
+    z-index: 999;
+    font-size: 0.8em;
+    text-align: right;
+}
+.af_actions a.disabled {
+    text-decoration: line-through;
+    cursor: not-allowed;
+}
 
 /* -------------------- Data -------------------- */
 
