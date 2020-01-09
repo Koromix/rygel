@@ -5,7 +5,7 @@
 function FormExecutor() {
     let self = this;
 
-    let form_key;
+    let current_form = {};
     // XXX: Use B-tree instead of two data structures
     let current_records = [];
     let current_ids = new Set;
@@ -15,17 +15,18 @@ function FormExecutor() {
     let select_columns = new Set;
 
     this.route = async function(form, args) {
-        if (args.hasOwnProperty('id') || !current_records.length || form.key !== form_key) {
-            form_key = form.key;
+        if (args.hasOwnProperty('id') || !current_records.length || form.key !== current_form.key) {
+            current_form = form;
             current_records.length = 0;
             current_ids.clear();
             page_states = {};
 
             let record;
             if (args.id != null) {
-                record = await virt_data.load(form_key, args.id) || virt_data.create(form_key);
+                record = await virt_data.load(current_form.key, args.id) ||
+                         virt_data.create(current_form.key);
             } else {
-                record = virt_data.create(form_key);
+                record = virt_data.create(current_form.key);
             }
 
             selectRecord(record);
@@ -148,9 +149,9 @@ function FormExecutor() {
     }
 
     this.runData = async function() {
-        let records = await virt_data.loadAll(form_key);
-        let variables = await virt_data.listVariables(form_key);
-        let columns = orderColumns(variables);
+        let records = await virt_data.loadAll(current_form.key);
+        let variables = await virt_data.listVariables(current_form.key);
+        let columns = orderColumns(current_form.pages, variables);
 
         renderRecords(records, columns);
     };
@@ -178,13 +179,13 @@ function FormExecutor() {
 
         render(html`
             <div class="gp_toolbar">
-                <button class=${select_many ? 'active' : ''} @click=${e => toggleSelectionMode()}>Sélection multiple</button>
                 <div style="flex: 1;"></div>
+                <button class=${select_many ? 'active' : ''} @click=${e => toggleSelectionMode()}>Sélection multiple</button>
                 <div class="gp_dropdown right">
                     <button>Export</button>
                     <div>
-                        <button ?disabled=${!columns.length} @click=${e => exportSheets(form_key, 'xlsx')}>Excel</button>
-                        <button ?disabled=${!columns.length} @click=${e => exportSheets(form_key, 'csv')}>CSV</button>
+                        <button ?disabled=${!columns.length} @click=${e => exportSheets(current_form, 'xlsx')}>Excel</button>
+                        <button ?disabled=${!columns.length} @click=${e => exportSheets(current_form, 'csv')}>CSV</button>
                     </div>
                 </div>
             </div>
@@ -277,13 +278,13 @@ function FormExecutor() {
         goupile.run();
     }
 
-    async function exportSheets(form_key, format = 'xlsx') {
+    async function exportSheets(form, format = 'xlsx') {
         if (typeof XSLX === 'undefined')
             await util.loadScript(`${env.base_url}static/xlsx.core.min.js`);
 
-        let records = await virt_data.loadAll(form_key);
-        let variables = await virt_data.listVariables(form_key);
-        let columns = orderColumns(variables);
+        let records = await virt_data.loadAll(form.key);
+        let variables = await virt_data.listVariables(form.key);
+        let columns = orderColumns(form.pages, variables);
 
         // Worksheet
         let ws = XLSX.utils.aoa_to_sheet([columns.map(col => col.key)]);
@@ -304,34 +305,35 @@ function FormExecutor() {
         }
     }
 
-    function orderColumns(variables) {
+    // XXX: Improve performance and ordering of variables in different pages
+    function orderColumns(pages, variables) {
         variables = variables.slice();
         variables.sort((variable1, variable2) => util.compareValues(variable1.key, variable2.key));
 
-        let first_set = new Set;
-        let sets_map = {};
-        let variables_map = {};
-        for (let variable of variables) {
-            if (variable.before == null) {
-                first_set.add(variable.key);
-            } else {
-                let set_ptr = sets_map[variable.before];
-                if (!set_ptr) {
-                    set_ptr = new Set;
-                    sets_map[variable.before] = set_ptr;
-                }
-
-                set_ptr.add(variable.key);
-            }
-
-            variables_map[variable.key] = variable;
-        }
+        let variables_map = util.mapArray(variables, variable => variable.key);
 
         let columns = [];
-        {
+        for (let page of pages) {
+            let first_set = new Set;
+            let sets_map = {};
+            for (let variable of variables) {
+                if (variable.page === page.key) {
+                    if (variable.before == null) {
+                        first_set.add(variable.key);
+                    } else {
+                        let set_ptr = sets_map[variable.before];
+                        if (!set_ptr) {
+                            set_ptr = new Set;
+                            sets_map[variable.before] = set_ptr;
+                        }
+
+                        set_ptr.add(variable.key);
+                    }
+                }
+            }
+
             let next_sets = [first_set];
             let next_set_idx = 0;
-
             while (next_set_idx < next_sets.length) {
                 let set_ptr = next_sets[next_set_idx++];
                 let set_start_idx = columns.length;
@@ -344,6 +346,7 @@ function FormExecutor() {
 
                         if (!set_ptr.has(variable.after)) {
                             let col = {
+                                page: variable.page,
                                 key: key,
                                 type: variable.type
                             };
@@ -358,6 +361,7 @@ function FormExecutor() {
                         let use_key = set_ptr.values().next().value;
 
                         let col = {
+                            page: variables_map[use_key].page,
                             key: use_key,
                             type: variables_map[use_key].type
                         };
@@ -382,9 +386,10 @@ function FormExecutor() {
             }
         }
 
-        // Remaining variables (probably from old forms)
+        // Remaining variables (probably from old forms, or discarded pages)
         for (let key in variables_map) {
             let col = {
+                page: variables_map[key].page,
                 key: key,
                 type: variables_map[key].type
             }
