@@ -46,6 +46,7 @@
     height: 16px;
     padding: 4px 14px 6px 14px;
     background: #f8f8f8;
+    border: 1px solid #f8f8f8;
     color: black;
     text-decoration: none;
     font-size: 1.3em;
@@ -56,16 +57,20 @@
 
 .af_path > a.complete {
     background: #016a27;
+    background: #016a27;
     color: white;
 }
 .af_path > a.partial {
     background: #ff6600;
+    border-color: #ff6600;
     color: white;
 }
-.af_path > a:hover {
+.af_path > a.active {
     background: #24579d;
+    border-color: #24579d;
     color: white;
 }
+.af_path > a:hover { border-color: #24579d; }
 
 .af_actions {
     position: absolute;

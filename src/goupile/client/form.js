@@ -102,12 +102,18 @@ function FormExecutor() {
         } else {
             func(app.data, app.route, app.go, page_builder, page_builder, state.scratch);
 
+            // XXX: Oops
+            let page2 = page;
+
             render(html`
                 <div class="af_path">${current_form.pages.map(page => {
                     let complete = record.complete[page.key];
 
                     // XXX: Use actual links to form pages when available
-                    if (complete == null) {
+                    if (page.key === page2.key) {
+                        return html`<a class="active" href="#"
+                                       @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>${page.key}</a>`;
+                    } else if (complete == null) {
                         return html`<a href="#" @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>${page.key}</a>`;
                     } else if (complete) {
                         return html`<a class="complete" href="#"
