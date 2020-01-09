@@ -11,6 +11,8 @@ function FormExecutor() {
     let current_ids = new Set;
     let page_states = {};
 
+    let show_complete = true;
+
     let select_many = false;
     let select_columns = new Set;
 
@@ -31,6 +33,8 @@ function FormExecutor() {
 
             selectRecord(record);
         }
+
+        current_form = form;
     };
 
     this.runForm = function(page, code, panel_el) {
@@ -148,6 +152,74 @@ function FormExecutor() {
         }
     }
 
+    this.runStatus = async function() {
+        let records = await virt_data.loadAll(current_form.key);
+        renderStatus(records);
+    };
+
+    function renderStatus(records) {
+        let pages = current_form.pages;
+
+        let complete_set = new Set;
+        for (let record of records) {
+            // XXX: Compute global status at save time
+            if (pages.every(page => record.complete[page.key]))
+                complete_set.add(record.id);
+        }
+
+        render(html`
+            <div class="gp_toolbar">
+                &nbsp;&nbsp;${records.length} ${records.length > 1 ? 'enregistrements' : 'enregistrement'}
+                dont ${complete_set.size} ${complete_set.size > 1 ? 'complets' : 'complet'}
+
+                <div style="flex: 1;"></div>
+                <button class=${show_complete ? 'active' : ''}
+                        @click=${toggleShowComplete}>Afficher les enregistrements complets</button>
+            </div>
+
+            <table class="st_table">
+                <thead>
+                    <tr>${pages.map(page => html`<th>${page.key}</th>`)}</tr>
+                </thead>
+
+                <tbody>
+                    ${records.map(record => {
+                        if (show_complete || !complete_set.has(record.id)) {
+                            return html`
+                                <tr>${pages.map(page => {
+                                    let complete = record.complete[page.key];
+
+                                    // XXX: Use actual links to form pages when available
+                                    if (complete == null) {
+                                        return html`<td><a href="#" @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>Non rempli</a></td>`;
+                                    } else if (complete) {
+                                        return html`<td class="complete"><a href="#" @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>Complet</a></td>`;
+                                    } else {
+                                        return html`<td class="partial"><a href="#" @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>Partiel</a></td>`;
+                                    }
+                                })}</tr>
+                            `;
+                        } else {
+                            return '';
+                        }
+                    })}
+                </tbody>
+            </table>
+        `, document.querySelector('#dev_status'));
+    }
+
+    function toggleShowComplete() {
+        show_complete = !show_complete;
+        goupile.run();
+    }
+
+    // XXX: Function is a complete hack, and there are two things needed to fix it: first,
+    // we need to incorporate URLs in app objects, and also we need record ID in URLs.
+    function handleStatusClick(page, record_id) {
+        let url = `${env.base_url}app/${current_form.key}/${page.key !== current_form.key ? (page.key + '/') : ''}`;
+        goupile.run(url, {id: record_id}).then(() => window.history.pushState(null, null, app.makeURL()));
+    }
+
     this.runData = async function() {
         let records = await virt_data.loadAll(current_form.key);
         let variables = await virt_data.listVariables(current_form.key);
@@ -179,15 +251,9 @@ function FormExecutor() {
 
         render(html`
             <div class="gp_toolbar">
-                <div style="flex: 1;"></div>
                 <button class=${select_many ? 'active' : ''} @click=${e => toggleSelectionMode()}>Sélection multiple</button>
-                <div class="gp_dropdown right">
-                    <button>Export</button>
-                    <div>
-                        <button ?disabled=${!columns.length} @click=${e => exportSheets(current_form, 'xlsx')}>Excel</button>
-                        <button ?disabled=${!columns.length} @click=${e => exportSheets(current_form, 'csv')}>CSV</button>
-                    </div>
-                </div>
+                <div style="flex: 1;"></div>
+                <div class="gp_dropdown right">${renderExportMenu()}</div>
             </div>
 
             <table class="rec_table" style=${`min-width: ${30 + 60 * columns.length}px`}>
@@ -212,10 +278,10 @@ function FormExecutor() {
                     ${empty_msg ?
                         html`<tr><td colspan=${1 + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : ''}
                     ${records.map(record => html`<tr class=${current_ids.has(record.id) ? 'selected' : ''}>
-                        ${!select_many ? html`<th><a href="#" @click=${e => { handleEditClick(e, record); e.preventDefault(); }}>🔍\uFE0E</a>
+                        ${!select_many ? html`<th><a href="#" @click=${e => { handleEditClick(record); e.preventDefault(); }}>🔍\uFE0E</a>
                                                   <a href="#" @click=${e => { showDeleteDialog(e, record); e.preventDefault(); }}>✕</a></th>` : ''}
                         ${select_many ? html`<th><input type="checkbox" .checked=${current_ids.has(record.id)}
-                                                        @click=${e => handleEditClick(e, record)} /></th>` : ''}
+                                                        @click=${e => handleEditClick(record)} /></th>` : ''}
 
                         ${columns.map(col => {
                             let value = record.values[col.key];
@@ -235,6 +301,16 @@ function FormExecutor() {
                 </tbody>
             </table>
         `, document.querySelector('#dev_data'));
+    }
+
+    function renderExportMenu() {
+        return html`
+            <button>Export</button>
+            <div>
+                <button @click=${e => exportSheets(current_form, 'xlsx')}>Excel</button>
+                <button @click=${e => exportSheets(current_form, 'csv')}>CSV</button>
+            </div>
+        `;
     }
 
     function toggleSelectionMode() {
@@ -285,6 +361,11 @@ function FormExecutor() {
         let records = await virt_data.loadAll(form.key);
         let variables = await virt_data.listVariables(form.key);
         let columns = orderColumns(form.pages, variables);
+
+        if (!columns.length) {
+            log.error('Impossible d\'exporter pour le moment (colonnes inconnues)');
+            return;
+        }
 
         // Worksheet
         let ws = XLSX.utils.aoa_to_sheet([columns.map(col => col.key)]);
@@ -407,7 +488,7 @@ function FormExecutor() {
         }
     }
 
-    function handleEditClick(e, record) {
+    function handleEditClick(record) {
         if (!current_ids.has(record.id)) {
             if (!select_many) {
                 current_records.length = 0;

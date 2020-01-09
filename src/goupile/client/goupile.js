@@ -455,6 +455,7 @@ Navigation functions should only be called in reaction to user events, such as b
         switch (left_panel) {
             case 'files': { await dev_files.runFiles(); } break;
             case 'editor': { await dev_files.syncEditor(current_asset.path); } break;
+            case 'status': { await executor.runStatus(); } break;
             case 'data': { await executor.runData(); } break;
         }
 
@@ -474,6 +475,7 @@ Navigation functions should only be called in reaction to user events, such as b
         let correct_mode = (left_panel == null ||
                             left_panel === 'files' ||
                             (left_panel === 'editor' && show_editor) ||
+                            (left_panel === 'status' && show_data) ||
                             (left_panel === 'data' && show_data));
         if (!correct_mode)
             left_panel = show_editor ? 'editor' : null;
@@ -502,6 +504,9 @@ Navigation functions should only be called in reaction to user events, such as b
         }
 
         render(html`
+            ${show_data ?
+                html`<button class=${left_panel === 'status' ? 'active' : ''}
+                             @click=${e => toggleLeftPanel('status')}>Suivi</button>` : ''}
             ${show_editor ?
                 html`<button class=${left_panel === 'editor' ? 'active' : ''}
                              @click=${e => toggleLeftPanel('editor')}>Éditeur</button>` : ''}
@@ -568,6 +573,8 @@ Navigation functions should only be called in reaction to user events, such as b
                 html`<div id="dev_files" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
             ${left_panel === 'editor' ?
                 html`<div id="dev_editor" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}>${editor_el}</div>` : ''}
+            ${left_panel === 'status' ?
+                html`<div id="dev_status" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
             ${left_panel === 'data' ?
                 html`<div id="dev_data" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
             <div id="gp_overview" class=${left_panel ? 'gp_panel right' : 'gp_panel overview'}

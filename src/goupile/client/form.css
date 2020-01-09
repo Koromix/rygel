@@ -46,6 +46,34 @@
     cursor: not-allowed;
 }
 
+/* -------------------- Status -------------------- */
+
+.st_table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 0;
+    table-layout: fixed;
+}
+
+.st_table thead { background: #dfdfdf; }
+.st_table th { font-weight: normal; }
+
+.st_table th, .st_table td {
+    height: 1.7em;
+    padding: 3px;
+    border: 1px solid #dfdfdf;
+    text-align: center;
+}
+
+.st_table td.complete {
+    background: #89c28c;
+    color: white;
+}
+.st_table td.partial {
+    background: #e3af63;
+    color: white;
+}
+
 /* -------------------- Data -------------------- */
 
 .rec_table {

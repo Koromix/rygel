@@ -34,6 +34,7 @@ button:not(:disabled) { cursor: pointer; }
     height: 2.5em;
     margin: 0;
     padding: 0;
+    align-items: center;
     background: #2d62ac;
     color: white;
     user-select: none;
