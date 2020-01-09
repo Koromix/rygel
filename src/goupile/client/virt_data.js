@@ -25,15 +25,6 @@ function VirtualData(db) {
         let record2 = Object.assign({}, record);
         delete record2.values;
 
-        let data = {
-            tkey: record.tkey,
-            values: {}
-        };
-        for (let variable of variables) {
-            if (!variable.missing)
-                data.values[variable.key] = record.values[variable.key];
-        }
-
         variables = variables.map((variable, idx) => {
             let ret = {
                 tkey: makeTableKey(record2.table, variable.key),
@@ -47,7 +38,24 @@ function VirtualData(db) {
             return ret;
         });
 
-        return await db.transaction('rw', ['records', 'records_data', 'records_variables'], () => {
+        await db.transaction('rw', ['records', 'records_data', 'records_variables'], async () => {
+            let data = await db.load('records_data', record.tkey);
+
+            if (data) {
+                Object.assign(data.values, record.values);
+            } else {
+                data = {
+                    tkey: record.tkey,
+                    values: Object.assign({}, record.values)
+                };
+            }
+
+            // Clean up missing variables
+            for (let variable of variables) {
+                if (variable.missing)
+                    delete data.values[variable.key];
+            }
+
             db.save('records', record2);
             db.save('records_data', data);
             db.saveAll('records_variables', variables);
