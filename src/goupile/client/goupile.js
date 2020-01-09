@@ -223,7 +223,8 @@ let goupile = new function() {
         if (app.home) {
             assets_map[env.base_url] = assets_map[app.home];
         } else {
-            assets_map[env.base_url] = assets.find(asset => asset.type !== 'main') || assets[0];
+            assets_map[env.base_url] = assets.find(asset => asset.type !== 'main' &&
+                                                            asset.type !== 'blob') || assets[0];
         }
 
         // Update custom CSS (if any)
