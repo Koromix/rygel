@@ -119,7 +119,7 @@ function FormExecutor() {
                 })}</div>
 
                 ${page.widgets.some(intf => intf.key) ? html`
-                    <div class="af_actions">
+                    <div class="af_actions fixed">
                         <button class="af_button" ?disabled=${!state.changed}
                                 @click=${page_builder.save}>Enregistrer</a>
                         <button class="af_button" ?disabled=${page.errors.length || !state.changed}

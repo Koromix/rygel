@@ -23,11 +23,11 @@
 
 .af_entry {
     position: relative;
-    padding-right: 134px;
+    padding-right: 124px;
 }
 .af_entry + .af_entry {
-    margin-top: 7px;
-    padding-top: 7px;
+    margin-top: 9px;
+    padding-top: 9px;
     border-top: 1px solid #dfdfdf;
 }
 
@@ -69,17 +69,28 @@
 
 .af_actions {
     position: absolute;
-    right: 6px;
-    z-index: 999;
-    background: rgba(239, 239, 239, 0.8);
+    right: 0;
     padding: 0 0 6px 6px;
+    z-index: 999;
 }
-.af_actions > button {
+
+.af_actions.fixed {
+    position: fixed;
+    top: calc(2.5em + 18px);
+    right: 18px;
+    padding: 6px;
+    background: rgba(239, 239, 239, 0.8);
+}
+.gp_panel.overview .af_actions.fixed {
+    right: calc(50% - 408px);
+}
+
+.af_actions button {
     display: block;
     margin-left: auto;
     width: 100px;
 }
-.af_actions > button + button { margin-top: 4px; }
+.af_actions button + button { margin-top: 4px; }
 
 /* -------------------- Status -------------------- */
 
