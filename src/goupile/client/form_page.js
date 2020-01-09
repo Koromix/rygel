@@ -17,6 +17,9 @@ function Page(key) {
 function PageState() {
     this.values = {};
 
+    // Use this to track changes!
+    this.changed = false;
+
     this.sections_state = {};
     this.tabs_state = {};
     this.file_lists = new Map;
@@ -959,6 +962,8 @@ Valid choices include:
 
     function updateValue(key, value, refresh = true) {
         state.values[key] = value;
+        state.changed = true;
+
         state.missing_errors.delete(key.toString());
         state.changed_variables.add(key.toString());
 

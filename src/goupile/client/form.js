@@ -78,6 +78,8 @@ function FormExecutor() {
         };
         page_builder.submitHandler = async (complete) => {
             await saveRecord(record, page, complete);
+            state.changed = false;
+
             goupile.run();
         };
 
@@ -87,7 +89,7 @@ function FormExecutor() {
 
             render(html`
                 <div class="af_actions">
-                    <a href="#" class=${page.errors.length ? 'disabled' : ''}
+                    <a href="#" class=${!state.changed ? 'disabled' : ''}
                        @click=${e => { page_builder.submit(); e.preventDefault(); }}>Enregistrer</a>
                 </div>
 
