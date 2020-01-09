@@ -76,8 +76,8 @@ function FormExecutor() {
             // XXX: Get rid of this, which is not compatible with multiple forms
             window.history.replaceState(null, null, app.makeURL());
         };
-        page_builder.submitHandler = async () => {
-            await saveRecord(record, page);
+        page_builder.submitHandler = async (complete) => {
+            await saveRecord(record, page, complete);
             goupile.run();
         };
 
@@ -103,7 +103,8 @@ function FormExecutor() {
             if (page.widgets.some(intf => intf.key)) {
                 page_builder.errorList();
                 page_builder.buttons([
-                    ['Enregistrer', !page.errors.length ? page_builder.submit : null]
+                    ['Enregistrer (brouillon)', page_builder.save],
+                    ['Enregistrer et valider', !page.errors.length ? (e => showValidateDialog(e, page_builder.submit)) : null]
                 ]);
             }
 
@@ -152,6 +153,18 @@ function FormExecutor() {
         }
     }
 
+    function showValidateDialog(e, submit_func) {
+        goupile.popup(e, page => {
+            page.output('Confirmez-vous la validation de cette page ?');
+
+            page.submitHandler = () => {
+                page.close();
+                submit_func(true);
+            };
+            page.buttons(page.buttons.std.ok_cancel('Valider'));
+        });
+    }
+
     this.runStatus = async function() {
         let records = await virt_data.loadAll(current_form.key);
         renderStatus(records);
@@ -195,7 +208,7 @@ function FormExecutor() {
                                     } else if (complete) {
                                         return html`<td class="complete"><a href="#" @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>Complet</a></td>`;
                                     } else {
-                                        return html`<td class="partial"><a href="#" @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>Partiel</a></td>`;
+                                        return html`<td class="partial"><a href="#" @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>Brouillon</a></td>`;
                                     }
                                 })}</tr>
                             `;

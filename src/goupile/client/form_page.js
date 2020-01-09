@@ -825,21 +825,24 @@ Valid choices include:
         addWidget('errorList', null, render);
     };
 
+    this.save = function() {
+        self.submitHandler(false);
+    };
+
     this.submit = function() {
-        if (self.submitHandler && !page.errors.length) {
-            if (missing_set.size) {
-                log.error('Impossible d\'enregistrer : données manquantes');
+        if (missing_set.size) {
+            log.error('Impossible d\'enregistrer : données manquantes');
 
-                state.missing_errors.clear();
-                for (let key of missing_set)
-                    state.missing_errors.add(key);
+            state.missing_errors.clear();
+            for (let key of missing_set)
+                state.missing_errors.add(key);
 
-                self.restart();
-                return;
-            }
-
-            self.submitHandler(page);
+            self.restart();
+            return;
         }
+
+        if (!page.errors.length)
+            self.submitHandler(true);
     };
 
     this.restart = function() {
