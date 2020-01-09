@@ -5,12 +5,13 @@
 /* -------------------- Form layout -------------------- */
 
 .af_page {
-    padding: 12px;
+    position: relative;
+    padding: 24px 12px 12px 12px;
     background: #efefef;
+    border: 12px solid #f8f8f8;
 }
 .gp_panel.overview > .af_page {
     max-width: 800px;
-    border: 12px solid #f8f8f8;
     margin: auto;
 }
 
@@ -18,6 +19,42 @@
     .af_container + .af_container,
     .af_container + .af_widget { margin-top: 12px; }
 .af_widget + .af_widget { margin-top: 6px; }
+
+/* -------------------- Paths -------------------- */
+
+.af_path {
+    position: absolute;
+    width: 100%;
+    margin-top: -32px;
+}
+
+.af_path > a {
+    position: relative;
+    display: inline-block;
+    position: relative;
+    height: 16px;
+    padding: 4px 14px 6px 14px;
+    background: #f8f8f8;
+    color: black;
+    text-decoration: none;
+    font-size: 1.3em;
+}
+.af_path > a + a {
+    margin-left: 4px;
+}
+
+.af_path > a.complete {
+    background: #016a27;
+    color: white;
+}
+.af_path > a.partial {
+    background: #ff6600;
+    color: white;
+}
+.af_path > a:hover {
+    background: #24579d;
+    color: white;
+}
 
 /* -------------------- Multiple view -------------------- */
 

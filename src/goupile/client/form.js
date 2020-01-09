@@ -110,7 +110,24 @@ function FormExecutor() {
                 ]);
             }
 
-            render(page.render(), el);
+            render(html`
+                <div class="af_path">${current_form.pages.map(page => {
+                    let complete = record.complete[page.key];
+
+                    // XXX: Use actual links to form pages when available
+                    if (complete == null) {
+                        return html`<a href="#" @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>${page.key}</a>`;
+                    } else if (complete) {
+                        return html`<a class="complete" href="#"
+                                       @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>${page.key}</a>`;
+                    } else {
+                        return html`<a class="partial" href="#"
+                                       @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>${page.key}</a>`;
+                    }
+                })}</div>
+
+                ${page.render()}
+            `, el);
         }
     }
 
