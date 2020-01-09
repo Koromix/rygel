@@ -743,7 +743,7 @@ Navigation functions should only be called in reaction to user events, such as b
         if (!popup_el)
             initPopup();
 
-        let page = new Page;
+        let page = new Page('@popup');
 
         popup_builder = new PageBuilder(popup_state, page);
         popup_builder.changeHandler = () => openPopup(e, func);

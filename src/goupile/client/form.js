@@ -49,7 +49,7 @@ function FormExecutor() {
                     let el = document.createElement('div');
                     el.className = 'af_entry';
 
-                    runPage(func, record, state, el);
+                    runPage(page.key, func, record, state, el);
 
                     return el;
                 })}</div>
@@ -59,20 +59,20 @@ function FormExecutor() {
         }
     };
 
-    function runPage(func, record, state, el) {
-        let page = new Page;
+    function runPage(key, func, record, state, el) {
+        let page = new Page(key);
         let page_builder = new PageBuilder(state, page);
 
         page_builder.decodeKey = decodeKey;
         page_builder.setValue = (key, value) => setValue(record, key, value);
         page_builder.getValue = (key, default_value) => getValue(record, key, default_value);
         page_builder.changeHandler = () => {
-            runPage(func, record, state, el);
+            runPage(key, func, record, state, el);
             // XXX: Get rid of this, which is not compatible with multiple forms
             window.history.replaceState(null, null, app.makeURL());
         };
         page_builder.submitHandler = async () => {
-            await saveRecord(record, page.variables);
+            await saveRecord(record, page);
             goupile.run();
         };
 
@@ -98,9 +98,7 @@ function FormExecutor() {
             if (page.widgets.some(intf => intf.key)) {
                 page_builder.errorList();
                 page_builder.buttons([
-                    ['Enregistrer', !page.errors.length ? page_builder.submit : ''],
-                    // ['Enregistrer', !page.errors.length ? page_builder.submit : ''],
-                    ['Valider']
+                    ['Enregistrer', !page.errors.length ? page_builder.submit : null]
                 ]);
             }
 
@@ -135,12 +133,14 @@ function FormExecutor() {
         return record.values[key];
     }
 
-    async function saveRecord(record, variables) {
+    async function saveRecord(record, page, complete = false) {
+        record.complete[page.key] = complete;
+
         let entry = new log.Entry();
 
         entry.progress('Enregistrement en cours');
         try {
-            await virt_data.save(record, variables);
+            await virt_data.save(record, page.variables);
             entry.success('Données enregistrées !');
         } catch (err) {
             entry.error(`Échec de l\'enregistrement : ${err.message}`);

@@ -2,8 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function Page() {
+function Page(key) {
     let self = this;
+
+    this.key = key;
 
     this.widgets = [];
     this.variables = [];
@@ -30,9 +32,6 @@ function PageState() {
 
 function PageBuilder(state, page) {
     let self = this;
-
-    // Prevent DOM ID conflicts
-    let unique_key = ++PageBuilder.current_unique_key;
 
     let variables_map = {};
     let options_stack = [{
@@ -856,7 +855,7 @@ Valid choices include:
     }
 
     function makeID(key) {
-        return `af_var_${unique_key}_${key}`;
+        return `af_var_${page.key}_${key}`;
     }
 
     function renderWrappedWidget(intf, frag) {
@@ -906,6 +905,7 @@ Valid choices include:
             throw new Error(`Variable '${key}' already exists`);
 
         Object.assign(intf, {
+            page: page.key,
             key: key,
             value: value,
 
@@ -965,4 +965,3 @@ Valid choices include:
             self.restart();
     }
 }
-PageBuilder.current_unique_key = 0;

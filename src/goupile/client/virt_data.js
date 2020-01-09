@@ -14,6 +14,8 @@ function VirtualData(db) {
 
             id: id,
             table: table,
+            complete: {},
+
             values: {}
         };
 
@@ -31,6 +33,7 @@ function VirtualData(db) {
 
                 key: variable.key.toString(),
                 table: record2.table,
+                page: variable.page,
                 before: variables[idx - 1] ? variables[idx - 1].key.toString() : null,
                 after: variables[idx + 1] ? variables[idx + 1].key.toString() : null
             };
