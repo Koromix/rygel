@@ -184,9 +184,10 @@ function FormExecutor() {
 
         render(html`
             <div class="gp_toolbar">
-                &nbsp;&nbsp;${records.length} ${records.length > 1 ? 'enregistrements' : 'enregistrement'}
-                dont ${complete_set.size} ${complete_set.size > 1 ? 'complets' : 'complet'}
-
+                <button @click=${e => goupile.run(null, {id: null})}>Ajouter</button>
+                <div style="flex: 1;"></div>
+                <p>${records.length} ${records.length > 1 ? 'enregistrements' : 'enregistrement'}
+                dont ${complete_set.size} ${complete_set.size > 1 ? 'complets' : 'complet'}</p>
                 <div style="flex: 1;"></div>
                 <button class=${show_complete ? 'active' : ''}
                         @click=${toggleShowComplete}>Afficher les enregistrements complets</button>
@@ -266,6 +267,8 @@ function FormExecutor() {
 
         render(html`
             <div class="gp_toolbar">
+                <button @click=${e => goupile.run(null, {id: null})}>Ajouter</button>
+                <div style="flex: 1;"></div>
                 <button class=${select_many ? 'active' : ''} @click=${e => toggleSelectionMode()}>Sélection multiple</button>
                 <div style="flex: 1;"></div>
                 <div class="gp_dropdown right">${renderExportMenu()}</div>
