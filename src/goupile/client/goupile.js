@@ -297,7 +297,7 @@ let goupile = new function() {
 
                 assets.push({
                     type: 'page',
-                    url: i ? `${env.base_url}app/${form.key}/${page.key}/` : `${env.base_url}app/${form.key}/`,
+                    url: `${env.base_url}app/${form.key}/${page.key}/`,
 
                     category: `Formulaire ${form.key}`,
                     label: (form.key !== page.key) ? `${form.key}/${page.key}` : form.key,
