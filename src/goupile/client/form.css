@@ -6,6 +6,7 @@
 
 .af_page {
     position: relative;
+    margin-left: 1px;
     padding: 12px;
     background: #efefef;
     border: 12px solid #f8f8f8;
@@ -98,6 +99,9 @@
     border: 1px solid #dfdfdf;
     text-align: center;
 }
+.st_table td { background: #efefef; }
+.st_table td:first-child { border-left: 0; }
+.st_table td:last-child { border-right: 0; }
 
 .st_table td.complete {
     background: #89c28c;
