@@ -38,7 +38,7 @@
     background: #efefef;
     color: #24579d;
     z-index: 999;
-    font-size: 0.8em;
+    font-size: 0.9em;
     text-align: right;
 }
 .af_actions a.disabled {
@@ -55,10 +55,16 @@
     table-layout: fixed;
 }
 
+.rec_table input[type=checkbox] {
+    vertical-align: middle;
+    margin: 0 5px 0 5px;
+}
+
 .rec_table thead { background: #dfdfdf; }
 .rec_actions { width: 2.5em; }
 
 .rec_table th, .rec_table td {
+    height: 1.7em;
     padding: 3px;
     border: 1px solid #dfdfdf;
     overflow: hidden;
@@ -68,10 +74,7 @@
 .rec_table td:first-child { border-left: 0; }
 .rec_table td:last-child { border-right: 0; }
 
-.rec_table thead th {
-    font-weight: normal;
-    font-style: italic;
-}
+.rec_table thead th { font-weight: normal; }
 
 .rec_table tbody tr:nth-child(2n + 1) { background: #efefef; }
 .rec_table tbody tr:nth-child(2n) { background: #f4f4f4; }
