@@ -71,8 +71,8 @@ function FormExecutor() {
             // XXX: Get rid of this, which is not compatible with multiple forms
             window.history.replaceState(null, null, app.makeURL());
         };
-        page_builder.submitHandler = () => {
-            saveRecord(record, page.variables);
+        page_builder.submitHandler = async () => {
+            await saveRecord(record, page.variables);
             goupile.run();
         };
 
