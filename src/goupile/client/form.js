@@ -137,10 +137,14 @@ function FormExecutor() {
 
     async function saveRecord(record, variables) {
         let entry = new log.Entry();
-        entry.progress('Enregistrement en cours');
 
-        await virt_data.save(record, variables);
-        entry.success('Données enregistrées !');
+        entry.progress('Enregistrement en cours');
+        try {
+            await virt_data.save(record, variables);
+            entry.success('Données enregistrées !');
+        } catch (err) {
+            entry.error(`Échec de l\'enregistrement : ${err.message}`);
+        }
     }
 
     this.runData = async function() {
