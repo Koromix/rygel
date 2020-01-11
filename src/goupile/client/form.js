@@ -218,6 +218,9 @@ function FormExecutor() {
                 </thead>
 
                 <tbody>
+                    ${!records.length ?
+                        html`<tr><td style="text-align: left;"
+                                     colspan=${Math.max(1, pages.length)}>Aucune donnée à afficher</td></tr>` : ''}
                     ${records.map(record => {
                         if (show_complete || !complete_set.has(record.id)) {
                             return html`
