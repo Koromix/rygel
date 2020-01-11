@@ -105,30 +105,36 @@ function FormExecutor() {
             // XXX: Oops
             let page2 = page;
 
+            let show_buttons = page.widgets.some(intf => intf.key);
+            let enable_save = state.changed;
+            let enable_validate = !page.errors.length && !state.changed &&
+                                  record.complete[page.key] === false;
+
             render(html`
                 <div class="af_path">${current_form.pages.map(page => {
                     let complete = record.complete[page.key];
 
-                    // XXX: Use actual links to form pages when available
-                    if (page.key === page2.key) {
-                        return html`<a class="active" href="#"
-                                       @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>${page.key}</a>`;
-                    } else if (complete == null) {
-                        return html`<a href="#" @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>${page.key}</a>`;
+                    let cls = '';
+                    if (page.key === page2.key)
+                        cls += ' active';
+                    if (complete == null) {
+                        // Leave as is
                     } else if (complete) {
-                        return html`<a class="complete" href="#"
-                                       @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>${page.key}</a>`;
+                        cls += ' complete';
                     } else {
-                        return html`<a class="partial" href="#"
-                                       @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>${page.key}</a>`;
+                        cls += ' partial';
                     }
+
+                    // XXX: Use actual links to form pages when available
+                    return html`<a class=${cls} href="#"
+                                   @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>${page.key}</a>`;
                 })}</div>
 
-                ${page.widgets.some(intf => intf.key) ? html`
+                ${show_buttons ? html`
                     <div class="af_actions fixed">
-                        <button class="af_button" ?disabled=${!state.changed}
+                        <button class="af_button" ?disabled=${!enable_save}
                                 @click=${page_builder.save}>Enregistrer</a>
-                        <button class="af_button" ?disabled=${page.errors.length || !state.changed}
+                        <button class="af_button" ?disabled=${!enable_validate}
                                 @click=${e => showValidateDialog(e, page_builder.submit)}>Valider</a>
                     </div>
                 ` : ''}
