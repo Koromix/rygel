@@ -245,7 +245,7 @@ function FormExecutor() {
                                     } else if (complete) {
                                         return html`<td class="complete"><a href="#" @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>Complet</a></td>`;
                                     } else {
-                                        return html`<td class="partial"><a href="#" @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>Brouillon</a></td>`;
+                                        return html`<td class="partial"><a href="#" @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>Partiel</a></td>`;
                                     }
                                 })}</tr>
                             `;
