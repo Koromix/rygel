@@ -28,7 +28,6 @@ let goupile = new function() {
 
     let current_asset;
     let current_url;
-    let current_args = {};
     let executor = new FormExecutor;
 
     let left_panel;
@@ -424,8 +423,6 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     this.run = async function(url = null, args = {}) {
-        util.assignDeep(current_args, args);
-
         if (await fetchSettings())
             await self.initApplication();
 
@@ -439,8 +436,9 @@ Navigation functions should only be called in reaction to user events, such as b
             if (!current_asset)
                 log.error(`URL inconnue '${url}'`);
         }
+
         if (current_asset && current_asset.form) {
-            await executor.route(current_asset.form, current_args.id);
+            await executor.route(current_asset.form, args);
 
             // The user asked for this record, make sure it is visible
             if (args.id != null && !show_overview) {
@@ -703,7 +701,7 @@ Navigation functions should only be called in reaction to user events, such as b
                         code = file ? await file.data.text() : '';
                     }
 
-                    executor.runPage(asset.page, code, overview_el);
+                    executor.runForm(asset.page, code, overview_el);
                 } break;
 
                 case 'schedule': { await sched_executor.runMeetings(asset.schedule, overview_el); } break;
