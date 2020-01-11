@@ -6,6 +6,7 @@
 
 .af_page {
     position: relative;
+    min-height: 60px;
     margin-left: 1px;
     padding: 12px;
     background: #efefef;
