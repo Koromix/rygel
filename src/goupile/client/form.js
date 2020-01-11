@@ -208,7 +208,7 @@ function FormExecutor() {
 
         let complete_set = new Set;
         for (let record of records) {
-            // XXX: Compute global status at save time
+            // We can't compute this at save time because the set of pages may change anytime
             if (pages.every(page => record.complete[page.key]))
                 complete_set.add(record.id);
         }
