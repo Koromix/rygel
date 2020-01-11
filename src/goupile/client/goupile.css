@@ -61,6 +61,7 @@ button:not(:disabled) { cursor: pointer; }
 .gp_dropdown {
     position: relative;
     display: inline-block;
+    height: 100%;
     background-color: inherit;
 }
 .gp_dropdown > button {
