@@ -5,17 +5,44 @@
 function Application() {
     let self = this;
 
-    this.home = null;
-
     this.forms = [];
     this.schedules = [];
+
+    // These assets are always available, even in broken apps
+    this.assets = [
+        {
+            type: 'main',
+            url: `${env.base_url}main/js/`,
+
+            category: 'Paramétrage',
+            label: 'Application',
+            overview: 'Application',
+
+            path: '/files/main.js',
+            edit: true
+        }, {
+            type: 'main',
+            url: `${env.base_url}main/css/`,
+
+            category: 'Paramétrage',
+            label: 'Feuille de style',
+            overview: 'Feuille de style',
+
+            path: '/files/main.css',
+            edit: true
+        }
+    ];
+
+    // Initialized in goupile.js
+    this.home = null;
+    this.urls_map = null;
+    this.paths_map = null;
+    this.go = null;
+    this.makeURL = null;
 
     // Used for user globals
     this.data = {};
     this.route = {};
-
-    this.go = (url = null, push_history = true) => {};
-    this.makeURL = () => {};
 }
 
 function FormInfo(key) {
@@ -24,12 +51,14 @@ function FormInfo(key) {
     this.links = [];
 }
 
-function PageInfo(key) {
+function PageInfo(form, key) {
     this.key = key;
+    this.url = `${env.base_url}app/${form.key}/${key}/`;
 }
 
 function ScheduleInfo(key) {
     this.key = key;
+    this.url = `${env.base_url}app/${key}/`;
 }
 
 function ApplicationBuilder(app) {
@@ -47,8 +76,7 @@ function ApplicationBuilder(app) {
         checkKey(key);
 
         let form = new FormInfo(key);
-
-        let form_builder = new FormBuilder(form);
+        let form_builder = new FormBuilder(app, form);
         if (func) {
             func(form_builder);
         } else {
@@ -99,8 +127,42 @@ function ApplicationBuilder(app) {
         checkKey(key);
 
         let schedule = new ScheduleInfo(key);
-
         app.schedules.push(schedule);
+
+        app.assets.push({
+            type: 'schedule',
+            url: schedule.url,
+
+            category: 'Agendas',
+            label: schedule.key,
+            overview: 'Agenda',
+
+            schedule: schedule
+        });
+        app.assets.push({
+            type: 'schedule_settings',
+            url: `${schedule.url}settings/`,
+
+            category: 'Agendas',
+            label: schedule.key,
+            overview: 'Créneaux',
+            secondary: true,
+
+            schedule: schedule
+        });
+    };
+
+    this.file = function(file) {
+        app.assets.push({
+            type: 'blob',
+            url: `${env.base_url}blob${file.path}`,
+
+            category: 'Fichiers',
+            label: file.path,
+            overview: 'Contenu',
+
+            path: file.path
+        });
     };
 
     function checkKey(key) {
@@ -117,7 +179,7 @@ function ApplicationBuilder(app) {
     this.go = function(url = null, push_history = true) { app.go(url, push_history); };
 }
 
-function FormBuilder(form) {
+function FormBuilder(app, form) {
     let self = this;
 
     let used_keys = new Set;
@@ -130,9 +192,24 @@ function FormBuilder(form) {
         if (used_keys.has(key))
             throw new Error(`Page '${key}' is already used in this form`);
 
-        let page = new PageInfo(key);
+        let page = new PageInfo(form, key);
 
         form.pages.push(page);
         used_keys.add(key);
+
+        app.assets.push({
+            type: 'page',
+            url: page.url,
+
+            category: `Formulaire ${form.key}`,
+            label: (form.key !== page.key) ? `${form.key}/${page.key}` : form.key,
+            overview: 'Formulaire',
+
+            form: form,
+            page: page,
+
+            path: `/files/pages/${page.key}.js`,
+            edit: true
+        });
     };
 }

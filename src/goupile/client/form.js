@@ -271,11 +271,10 @@ function FormExecutor() {
         goupile.run();
     }
 
-    // XXX: Function is a complete hack, and there are two things needed to fix it: first,
-    // we need to incorporate URLs in app objects, and also we need record ID in URLs.
-    function handleStatusClick(page, record_id) {
-        let url = `${env.base_url}app/${current_form.key}/${page.key}/`;
-        goupile.run(url, {id: record_id}).then(() => window.history.pushState(null, null, app.makeURL()));
+    // XXX: Function is a hack, which we can remove when we support record ID in URLs.
+    async function handleStatusClick(page, record_id) {
+        await goupile.run(page.url, {id: record_id});
+        window.history.pushState(null, null, app.makeURL());
     }
 
     this.runData = async function() {

@@ -23,10 +23,6 @@ let goupile = new function() {
     let sse_listeners = [];
     let sse_online = false;
 
-    let assets;
-    let urls_map;
-    let paths_map;
-
     let current_asset;
     let current_url;
     let executor = new FormExecutor;
@@ -196,6 +192,14 @@ let goupile = new function() {
             let func = Function('app', 'data', 'route', code);
             func(app_builder, new_app.data, new_app.route);
 
+            let known_paths = new Set(new_app.assets.map(asset => asset.path));
+
+            // Make unused files available
+            for (let file of files) {
+                if (!known_paths.has(file.path))
+                    app_builder.file(file);
+            }
+
             app = new_app;
         } catch (err) {
             if (app) {
@@ -207,31 +211,34 @@ let goupile = new function() {
             }
         }
 
+        app.urls_map = util.mapArray(app.assets, asset => asset.url);
+        app.paths_map = util.mapArray(app.assets, asset => asset.path);
         app.go = handleGo;
         app.makeURL = makeURL;
-        util.deepFreeze(app, 'route');
 
-        assets = listAssets(app, files);
-        urls_map = util.mapArray(assets, asset => asset.url);
-        paths_map = util.mapArray(assets, asset => asset.path);
+        // XXX: Hack for secondary asset thingy that we'll get rid of eventually
+        for (let i = 0; i < app.assets.length; i++)
+            app.assets[i].idx = i;
 
         // Select default page
         if (app.home) {
-            urls_map[env.base_url] = urls_map[app.home];
+            app.urls_map[env.base_url] = app.urls_map[app.home];
         } else {
-            urls_map[env.base_url] = assets.find(asset => asset.type !== 'main' &&
-                                                          asset.type !== 'blob') || assets[0];
+            app.urls_map[env.base_url] =
+                app.assets.find(asset => asset.type !== 'main' && asset.type !== 'blob') || app.assets[0];
         }
 
         // Update custom CSS (if any)
         {
             let file = await virt_fs.load('/files/main.css');
+
             if (file) {
                 let css = await file.data.text();
                 updateApplicationCSS(css);
             }
         }
 
+        util.deepFreeze(app, 'route');
         app.go(current_url || window.location.href, false);
     };
 
@@ -256,106 +263,6 @@ let goupile = new function() {
         } else {
             return false;
         }
-    }
-
-    function listAssets(app, files) {
-        let assets = [];
-
-        // Always add main application files, which we need to edit even if they are broken
-        // and the application cannot even load completely.
-        assets.push({
-            type: 'main',
-            url: `${env.base_url}main/js/`,
-
-            category: 'Paramétrage',
-            label: 'Application',
-            overview: 'Application',
-
-            path: '/files/main.js',
-            edit: true
-        });
-        assets.push({
-            type: 'main',
-            url: `${env.base_url}main/css/`,
-
-            category: 'Paramétrage',
-            label: 'Feuille de style',
-            overview: 'Feuille de style',
-
-            path: '/files/main.css',
-            edit: true
-        });
-
-        // Form pages
-        for (let form of app.forms) {
-            for (let i = 0; i < form.pages.length; i++) {
-                let page = form.pages[i];
-
-                assets.push({
-                    type: 'page',
-                    url: `${env.base_url}app/${form.key}/${page.key}/`,
-
-                    category: `Formulaire ${form.key}`,
-                    label: (form.key !== page.key) ? `${form.key}/${page.key}` : form.key,
-                    overview: 'Formulaire',
-
-                    form: form,
-                    page: page,
-
-                    path: `/files/pages/${page.key}.js`,
-                    edit: true
-                });
-            }
-        }
-
-        // Schedules
-        for (let schedule of app.schedules) {
-            assets.push({
-                type: 'schedule',
-                url: `${env.base_url}app/${schedule.key}/`,
-
-                category: 'Agendas',
-                label: schedule.key,
-                overview: 'Agenda',
-
-                schedule: schedule
-            });
-            assets.push({
-                type: 'schedule_settings',
-                url: `${env.base_url}app/${schedule.key}/settings/`,
-
-                category: 'Agendas',
-                label: schedule.key,
-                overview: 'Créneaux',
-                secondary: true,
-
-                schedule: schedule
-            });
-        }
-
-        // Unused (by main.js) files
-        {
-            let known_paths = new Set(assets.map(asset => asset.path));
-
-            for (let file of files) {
-                if (!known_paths.has(file.path)) {
-                    assets.push({
-                        type: 'blob',
-                        url: `${env.base_url}app${file.path}`,
-                        category: 'Fichiers',
-                        label: file.path,
-                        overview: 'Contenu',
-
-                        path: file.path
-                    });
-                }
-            }
-        }
-
-        for (let i = 0; i < assets.length; i++)
-            assets[i].idx = i;
-
-        return assets;
     }
 
     function updateApplicationCSS(css) {
@@ -425,9 +332,9 @@ Navigation functions should only be called in reaction to user events, such as b
 
         // Find relevant asset and controller
         if (url) {
-            current_asset = urls_map[url];
+            current_asset = app.urls_map[url];
             if (!current_asset && !url.endsWith('/'))
-                current_asset = urls_map[url + '/'];
+                current_asset = app.urls_map[url + '/'];
             current_url = current_asset ? current_asset.url : url;
 
             if (!current_asset)
@@ -488,16 +395,16 @@ Navigation functions should only be called in reaction to user events, such as b
         let select_asset;
         if (current_asset) {
             let idx = current_asset.idx;
-            while (assets[idx].secondary)
+            while (app.assets[idx].secondary)
                 idx--;
 
             // Main asset
-            show_assets.push(assets[idx]);
-            select_asset = assets[idx];
+            show_assets.push(app.assets[idx]);
+            select_asset = app.assets[idx];
 
             // Related secondary assets
-            while (++idx < assets.length && assets[idx].secondary)
-                show_assets.push(assets[idx]);
+            while (++idx < app.assets.length && app.assets[idx].secondary)
+                show_assets.push(app.assets[idx]);
         }
 
         render(html`
@@ -522,14 +429,14 @@ Navigation functions should only be called in reaction to user events, such as b
 
             <select id="gp_assets" @change=${e => app.go(e.target.value)}>
                 ${!current_asset ? html`<option>-- Sélectionnez une page --</option>` : ''}
-                ${util.mapRLE(assets, asset => asset.category, (category, offset, len) => {
+                ${util.mapRLE(app.assets, asset => asset.category, (category, offset, len) => {
                     if (len === 1) {
-                        let asset = assets[offset];
+                        let asset = app.assets[offset];
                         return html`<option value=${asset.url}
                                             .selected=${asset === select_asset}>${asset.category} (${asset.label})</option>`;
                     } else {
                         return html`<optgroup label=${category}>${util.mapRange(offset, offset + len, idx => {
-                            let asset = assets[idx];
+                            let asset = app.assets[idx];
                             if (!asset.secondary) {
                                 return html`<option value=${asset.url}
                                                    .selected=${asset === select_asset}>${asset.label}</option>`;
@@ -663,7 +570,7 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     this.validateCode = function(path, code) {
-        let asset = paths_map[path];
+        let asset = app.paths_map[path];
         return asset ? runAssetSafe(asset, code) : true;
     };
 
