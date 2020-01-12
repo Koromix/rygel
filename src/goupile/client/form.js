@@ -133,7 +133,6 @@ function FormExecutor() {
                         cls += ' partial';
                     }
 
-                    // XXX: Use actual links to form pages when available
                     return html`<a class=${cls} href="#"
                                    @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>${page.key}</a>`;
                 })}</div>
@@ -247,7 +246,6 @@ function FormExecutor() {
                                 <tr>${pages.map(page => {
                                     let complete = record.complete[page.key];
 
-                                    // XXX: Use actual links to form pages when available
                                     if (complete == null) {
                                         return html`<td><a href="#" @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>Non rempli</a></td>`;
                                     } else if (complete) {

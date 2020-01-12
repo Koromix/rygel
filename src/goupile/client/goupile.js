@@ -390,7 +390,6 @@ Navigation functions should only be called in reaction to user events, such as b
             show_overview = true;
         }
 
-        // XXX: The secondary asset thingy is kind of ugly but will do for now
         let show_assets = [];
         let select_asset;
         if (current_asset) {
