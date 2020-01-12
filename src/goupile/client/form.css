@@ -56,15 +56,13 @@
     margin-left: 4px;
 }
 
-.af_path > a.complete { border-bottom: 2px solid #016a27; }
-.af_path > a.partial { border-bottom: 2px solid #ff6600; }
 .af_path > a.active {
     background: #24579d;
-    border-left: 2px solid #24579d;
-    border-right: 2px solid #24579d;
-    border-top: 2px solid #24579d;
+    border: 2px solid #24579d;
     color: white;
 }
+.af_path > a.complete { border-bottom: 2px solid #016a27; }
+.af_path > a.partial { border-bottom: 2px solid #ff6600; }
 .af_path > a:hover { border-color: #24579d; }
 
 .af_actions {
