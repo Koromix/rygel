@@ -38,7 +38,9 @@ function FormExecutor() {
     };
 
     this.runForm = function(page, code, panel_el) {
-        let func = Function('data', 'route', 'go', 'form', 'page', 'scratch', code);
+        let func = Function('data', 'go', 'form', 'page', 'route', 'scratch', code);
+        let func2 = (state, page_builder) => func(app.data, app.go, page_builder,
+                                                  page_builder, state.route, state.scratch);
 
         if (!select_many || select_columns.size) {
             render(html`
@@ -50,12 +52,18 @@ function FormExecutor() {
                         page_states[record.id] = state;
                     }
 
+                    if (select_many && state.route === app.route) {
+                        state.route = util.assignDeep({}, app.route);
+                    } else if (!select_many && state.route !== app.route) {
+                        state.route = util.assignDeep(app.route, state.route);
+                    }
+
                     // Pages need to update themselves without doing a full render
                     let el = document.createElement('div');
                     if (select_many)
                         el.className = 'af_entry';
 
-                    runPage(page.key, func, record, state, el);
+                    runPage(page.key, func2, record, state, el);
 
                     return el;
                 })}</div>
@@ -74,8 +82,8 @@ function FormExecutor() {
         page_builder.getValue = (key, default_value) => getValue(record, key, default_value);
         page_builder.changeHandler = () => {
             runPage(key, func, record, state, el);
-            // XXX: Get rid of this, which is not compatible with multiple forms
-            window.history.replaceState(null, null, app.makeURL());
+            if (!select_many)
+                window.history.replaceState(null, null, app.makeURL());
         };
         page_builder.submitHandler = async (complete) => {
             await saveRecord(record, page, complete);
@@ -86,7 +94,7 @@ function FormExecutor() {
 
         if (select_many) {
             page_builder.pushOptions({compact: true});
-            func(app.data, app.route, app.go, page_builder, page_builder, state.scratch);
+            func(state, page_builder);
 
             render(html`
                 <div class="af_actions">
@@ -100,7 +108,7 @@ function FormExecutor() {
                 })}
             `, el);
         } else {
-            func(app.data, app.route, app.go, page_builder, page_builder, state.scratch);
+            func(state, page_builder);
 
             // XXX: Oops
             let page2 = page;
