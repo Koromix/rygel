@@ -24,7 +24,8 @@ let goupile = new function() {
     let sse_online = false;
 
     let assets;
-    let assets_map;
+    let urls_map;
+    let paths_map;
 
     let current_asset;
     let current_url;
@@ -211,20 +212,15 @@ let goupile = new function() {
         util.deepFreeze(app, 'route');
 
         assets = listAssets(app, files);
-
-        assets_map = {};
-        for (let asset of assets) {
-            assets_map[asset.url] = asset;
-            if (asset.path)
-                assets_map[asset.path] = asset;
-        }
+        urls_map = util.mapArray(assets, asset => asset.url);
+        paths_map = util.mapArray(assets, asset => asset.path);
 
         // Select default page
         if (app.home) {
-            assets_map[env.base_url] = assets_map[app.home];
+            urls_map[env.base_url] = urls_map[app.home];
         } else {
-            assets_map[env.base_url] = assets.find(asset => asset.type !== 'main' &&
-                                                            asset.type !== 'blob') || assets[0];
+            urls_map[env.base_url] = assets.find(asset => asset.type !== 'main' &&
+                                                          asset.type !== 'blob') || assets[0];
         }
 
         // Update custom CSS (if any)
@@ -429,9 +425,9 @@ Navigation functions should only be called in reaction to user events, such as b
 
         // Find relevant asset and controller
         if (url) {
-            current_asset = assets_map[url];
+            current_asset = urls_map[url];
             if (!current_asset && !url.endsWith('/'))
-                current_asset = assets_map[url + '/'];
+                current_asset = urls_map[url + '/'];
             current_url = current_asset ? current_asset.url : url;
 
             if (!current_asset)
@@ -667,7 +663,7 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     this.validateCode = function(path, code) {
-        let asset = assets_map[path];
+        let asset = paths_map[path];
         return asset ? runAssetSafe(asset, code) : true;
     };
 
