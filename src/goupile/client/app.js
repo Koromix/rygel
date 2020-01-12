@@ -33,12 +33,11 @@ function Application() {
         }
     ];
 
-    // Initialized in goupile.js
     this.home = null;
+
+    // Initialized in goupile.js
     this.urls_map = null;
     this.paths_map = null;
-    this.go = null;
-    this.makeURL = null;
 
     // Used for user globals
     this.data = {};
@@ -175,8 +174,6 @@ function ApplicationBuilder(app) {
 
         used_keys.add(key);
     }
-
-    this.go = function(url = null, push_history = true) { app.go(url, push_history); };
 }
 
 function FormBuilder(app, form) {

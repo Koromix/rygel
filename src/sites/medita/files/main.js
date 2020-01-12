@@ -47,9 +47,9 @@ data.makeFormFooter = function(page) {
     page.output(html`
         <br/><br/>
         <button class="md_button" ?disabled=${!page.isValid()} @click=${page.submit}>Enregistrer</button>
-        <button class="md_button" @click=${e => app.go("Formulaires")}>Formulaires</button>
-        <button class="md_button" @click=${e => app.go("Suivi")}>Suivi Patient / Graphique</button>
-        <button class="md_button" @click=${e => app.go("Accueil")}>Retour à l'accueil</button>
+        <button class="md_button" @click=${e => goupile.go("Formulaires")}>Formulaires</button>
+        <button class="md_button" @click=${e => goupile.go("Suivi")}>Suivi Patient / Graphique</button>
+        <button class="md_button" @click=${e => goupile.go("Accueil")}>Retour à l'accueil</button>
     `)
     data.makeFooter(page)
 }

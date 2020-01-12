@@ -12,7 +12,7 @@ let sched_executor = new function() {
         if (!init) {
             goupile.listenToServerEvent('schedule', e => {
                 schedule = null;
-                self.run();
+                self.runMeetings();
             });
 
             init = true;
@@ -34,7 +34,7 @@ let sched_executor = new function() {
         if (!init) {
             goupile.listenToServerEvent('schedule', e => {
                 schedule = null;
-                self.run();
+                self.runSettings();
             });
 
             init = true;

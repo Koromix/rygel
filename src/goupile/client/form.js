@@ -39,23 +39,14 @@ function FormExecutor() {
 
     this.runForm = function(page, code, panel_el) {
         let func = Function('data', 'go', 'form', 'page', 'route', 'scratch', code);
-        let func2 = (state, page_builder) => func(app.data, app.go, page_builder,
-                                                  page_builder, state.route, state.scratch);
 
         if (!select_many || select_columns.size) {
             render(html`
                 <div class="af_page">${current_records.map(record => {
                     let state = page_states[record.id];
-
                     if (!state) {
                         state = new PageState;
                         page_states[record.id] = state;
-                    }
-
-                    if (select_many && state.route === app.route) {
-                        state.route = util.assignDeep({}, app.route);
-                    } else if (!select_many && state.route !== app.route) {
-                        state.route = util.assignDeep(app.route, state.route);
                     }
 
                     // Pages need to update themselves without doing a full render
@@ -63,7 +54,17 @@ function FormExecutor() {
                     if (select_many)
                         el.className = 'af_entry';
 
-                    runPage(page.key, func2, record, state, el);
+                    if (select_many) {
+                        if (state.route === app.route)
+                            state.route = util.assignDeep({}, app.route);
+
+                        runPageMany(page.key, state, func, record, select_columns, el);
+                    } else {
+                        if (state.route !== app.route)
+                            state.route = util.assignDeep(app.route, state.route);
+
+                        runPage(page.key, state, func, record, el);
+                    }
 
                     return el;
                 })}</div>
@@ -73,83 +74,94 @@ function FormExecutor() {
         }
     };
 
-    function runPage(key, func, record, state, el) {
+    function runPageMany(key, state, func, record, columns, el) {
         let page = new Page(key);
-        let page_builder = new PageBuilder(state, page);
+        let builder = new PageBuilder(state, page);
 
-        page_builder.decodeKey = decodeKey;
-        page_builder.setValue = (key, value) => setValue(record, key, value);
-        page_builder.getValue = (key, default_value) => getValue(record, key, default_value);
-        page_builder.changeHandler = () => {
-            runPage(key, func, record, state, el);
-            if (!select_many)
-                window.history.replaceState(null, null, app.makeURL());
-        };
-        page_builder.submitHandler = async (complete) => {
+        builder.decodeKey = decodeKey;
+        builder.setValue = (key, value) => setValue(record, key, value);
+        builder.getValue = (key, default_value) => getValue(record, key, default_value);
+        builder.submitHandler = async (complete) => {
             await saveRecord(record, page, complete);
             state.changed = false;
 
-            goupile.run();
+            goupile.go();
         };
+        builder.changeHandler = () => runPageMany(...arguments);
 
-        if (select_many) {
-            page_builder.pushOptions({compact: true});
-            func(state, page_builder);
+        // Build it!
+        builder.pushOptions({compact: true});
+        func(app.data, goupile.go, builder, builder, state.route, state.scratch);
 
-            render(html`
-                <div class="af_actions">
-                    <button class="af_button" ?disabled=${!state.changed}
-                            @click=${page_builder.save}>Enregistrer</button>
+        render(html`
+            <div class="af_actions">
+                <button class="af_button" ?disabled=${!state.changed}
+                        @click=${builder.save}>Enregistrer</button>
+            </div>
+
+            ${page.widgets.map(intf => {
+                let visible = intf.key && columns.has(intf.key.toString());
+                return visible ? intf.render() : '';
+            })}
+        `, el);
+    }
+
+    function runPage(key, state, func, record, el) {
+        let page = new Page(key);
+        let builder = new PageBuilder(state, page);
+
+        builder.decodeKey = decodeKey;
+        builder.setValue = (key, value) => setValue(record, key, value);
+        builder.getValue = (key, default_value) => getValue(record, key, default_value);
+        builder.submitHandler = async (complete) => {
+            await saveRecord(record, page, complete);
+            state.changed = false;
+
+            goupile.go();
+        };
+        builder.changeHandler = () => runPage(...arguments);
+
+        // Build it!
+        func(app.data, goupile.go, builder, builder, state.route, state.scratch);
+        window.history.replaceState(null, null, goupile.makeURL());
+
+        // Only show buttons if there is at least one input widget on the page
+        let show_buttons = page.widgets.some(intf => intf.key);
+        let enable_save = state.changed;
+        let enable_validate = !state.changed && !page.errors.length &&
+                              record.complete[page.key] === false;
+
+        render(html`
+            <div class="af_path">${current_form.pages.map(page2 => {
+                let complete = record.complete[page2.key];
+
+                let cls = '';
+                if (page2.key === page.key)
+                    cls += ' active';
+                if (complete == null) {
+                    // Leave as is
+                } else if (complete) {
+                    cls += ' complete';
+                } else {
+                    cls += ' partial';
+                }
+
+                return html`<a class=${cls} href="#"
+                               @click=${e => { handleStatusClick(page2, record.id); e.preventDefault(); }}>${page2.key}</a>`;
+            })}</div>
+
+            ${show_buttons ? html`
+                <div class="af_actions fixed">
+                    <button class="af_button" ?disabled=${!enable_save}
+                            @click=${builder.save}>Enregistrer</a>
+                    <button class="af_button" ?disabled=${!enable_validate}
+                            @click=${e => showValidateDialog(e, builder.submit)}>Valider</a>
                 </div>
+            ` : ''}
 
-                ${page.widgets.map(intf => {
-                    let visible = intf.key && select_columns.has(intf.key.toString());
-                    return visible ? intf.render() : '';
-                })}
-            `, el);
-        } else {
-            func(state, page_builder);
-
-            // XXX: Oops
-            let page2 = page;
-
-            let show_buttons = page.widgets.some(intf => intf.key);
-            let enable_save = state.changed;
-            let enable_validate = !page.errors.length && !state.changed &&
-                                  record.complete[page.key] === false;
-
-            render(html`
-                <div class="af_path">${current_form.pages.map(page => {
-                    let complete = record.complete[page.key];
-
-                    let cls = '';
-                    if (page.key === page2.key)
-                        cls += ' active';
-                    if (complete == null) {
-                        // Leave as is
-                    } else if (complete) {
-                        cls += ' complete';
-                    } else {
-                        cls += ' partial';
-                    }
-
-                    return html`<a class=${cls} href="#"
-                                   @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>${page.key}</a>`;
-                })}</div>
-
-                ${show_buttons ? html`
-                    <div class="af_actions fixed">
-                        <button class="af_button" ?disabled=${!enable_save}
-                                @click=${page_builder.save}>Enregistrer</a>
-                        <button class="af_button" ?disabled=${!enable_validate}
-                                @click=${e => showValidateDialog(e, page_builder.submit)}>Valider</a>
-                    </div>
-                ` : ''}
-
-                <br/>
-                ${page.render()}
-            `, el);
-        }
+            <br/>
+            ${page.render()}
+        `, el);
     }
 
     function decodeKey(key) {
@@ -222,7 +234,7 @@ function FormExecutor() {
 
         render(html`
             <div class="gp_toolbar">
-                <button @click=${e => goupile.run(null, {id: null})}>Ajouter</button>
+                <button @click=${e => goupile.go(null, {id: null})}>Ajouter</button>
                 <div style="flex: 1;"></div>
                 <p>${records.length} ${records.length > 1 ? 'enregistrements' : 'enregistrement'}
                 dont ${complete_set.size} ${complete_set.size > 1 ? 'complets' : 'complet'}</p>
@@ -266,13 +278,13 @@ function FormExecutor() {
 
     function toggleShowComplete() {
         show_complete = !show_complete;
-        goupile.run();
+        goupile.go();
     }
 
     // XXX: Function is a hack, which we can remove when we support record ID in URLs.
     async function handleStatusClick(page, record_id) {
-        await goupile.run(page.url, {id: record_id});
-        window.history.pushState(null, null, app.makeURL());
+        await goupile.go(page.url, {id: record_id});
+        window.history.pushState(null, null, goupile.makeURL());
     }
 
     this.runData = async function() {
@@ -306,7 +318,7 @@ function FormExecutor() {
 
         render(html`
             <div class="gp_toolbar">
-                <button @click=${e => goupile.run(null, {id: null})}>Ajouter</button>
+                <button @click=${e => goupile.go(null, {id: null})}>Ajouter</button>
                 <div style="flex: 1;"></div>
                 <button class=${select_many ? 'active' : ''} @click=${e => toggleSelectionMode()}>Sélection multiple</button>
                 <div style="flex: 1;"></div>
@@ -384,7 +396,7 @@ function FormExecutor() {
             selectRecord(record0);
         }
 
-        goupile.run();
+        goupile.go();
     }
 
     function toggleAllRecords(records, enable) {
@@ -398,7 +410,7 @@ function FormExecutor() {
             }
         }
 
-        goupile.run();
+        goupile.go();
     }
 
     function toggleColumn(key) {
@@ -408,7 +420,7 @@ function FormExecutor() {
             select_columns.add(key);
         }
 
-        goupile.run();
+        goupile.go();
     }
 
     async function exportSheets(form, format = 'xlsx') {
@@ -559,9 +571,9 @@ function FormExecutor() {
 
         if (!select_many && current_ids.size) {
             // XXX: Hack to get goupile to enable overview panel
-            goupile.run(null, {id: record.id});
+            goupile.go(null, {id: record.id});
         } else {
-            goupile.run();
+            goupile.go();
         }
     }
 
@@ -577,7 +589,7 @@ function FormExecutor() {
                 if (current_ids.has(record.id))
                     unselectRecord(record);
 
-                goupile.run();
+                goupile.go();
             };
             page.buttons(page.buttons.std.ok_cancel('Supprimer'));
         });

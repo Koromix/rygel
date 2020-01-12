@@ -133,10 +133,10 @@ let goupile = new function() {
     }
 
     function initNavigation() {
-        window.addEventListener('popstate', e => app.go(window.location.href, false));
+        window.addEventListener('popstate', e => self.go(window.location.href, false));
 
         util.interceptLocalAnchors((e, href) => {
-            app.go(href);
+            self.go(href);
             e.preventDefault();
         });
     }
@@ -213,8 +213,6 @@ let goupile = new function() {
 
         app.urls_map = util.mapArray(app.assets, asset => asset.url);
         app.paths_map = util.mapArray(app.assets, asset => asset.path);
-        app.go = handleGo;
-        app.makeURL = makeURL;
 
         // XXX: Hack for secondary asset thingy that we'll get rid of eventually
         for (let i = 0; i < app.assets.length; i++)
@@ -239,7 +237,7 @@ let goupile = new function() {
         }
 
         util.deepFreeze(app, 'route');
-        app.go(current_url || window.location.href, false);
+        self.go(current_url || window.location.href, false);
     };
 
     async function fetchSettings() {
@@ -289,9 +287,9 @@ let goupile = new function() {
         sse_src.addEventListener(event, func);
     };
 
-    // Avoid async here, because it may fail (see allow_go) and the called may need
+    // Avoid async here, because it may fail (see allow_go) and the caller may need
     // to catch that synchronously.
-    function handleGo(url = null, push_history = true) {
+    this.go = function(url = null, push_history = true) {
         if (!allow_go) {
             throw new Error(`A navigation function (e.g. go()) has been interrupted.
 Navigation functions should only be called in reaction to user events, such as button clicks.`);
@@ -310,23 +308,24 @@ Navigation functions should only be called in reaction to user events, such as b
                 app.route[key] = Number.isNaN(num) ? value : num;
             }
 
-            self.run(url.pathname).then(() => {
+            run(url.pathname).then(() => {
                 if (push_history) {
-                    window.history.pushState(null, null, makeURL());
+                    window.history.pushState(null, null, self.makeURL());
                 } else {
-                    window.history.replaceState(null, null, makeURL());
+                    window.history.replaceState(null, null, self.makeURL());
                 }
             });
         } else {
-            self.run();
+            run();
         }
     }
 
-    function makeURL() {
-        return util.pasteURL(current_url, app.route);
-    }
+    this.makeURL = function() {
+        let url = util.pasteURL(current_url, app.route);
+        return url;
+    };
 
-    this.run = async function(url = null, args = {}) {
+    async function run(url = null, args = {}) {
         if (await fetchSettings())
             await self.initApplication();
 
@@ -426,7 +425,7 @@ Navigation functions should only be called in reaction to user events, such as b
                 }
             })}
 
-            <select id="gp_assets" @change=${e => app.go(e.target.value)}>
+            <select id="gp_assets" @change=${e => self.go(e.target.value)}>
                 ${!current_asset ? html`<option>-- Sélectionnez une page --</option>` : ''}
                 ${util.mapRLE(app.assets, asset => asset.category, (category, offset, len) => {
                     if (len === 1) {
@@ -551,7 +550,7 @@ Navigation functions should only be called in reaction to user events, such as b
             show_overview = true;
         }
 
-        app.go();
+        self.go();
     }
 
     function toggleAssetView(asset) {
@@ -565,7 +564,7 @@ Navigation functions should only be called in reaction to user events, such as b
             show_overview = false;
         }
 
-        app.go(asset.url);
+        self.go(asset.url);
     }
 
     this.validateCode = function(path, code) {
