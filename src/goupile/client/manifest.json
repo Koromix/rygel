@@ -1,0 +1,16 @@
+{
+    "short_name": "{APP_NAME}",
+    "name": "{APP_NAME}",
+    "icons": [
+        {
+            "src": "favicon.png",
+            "type": "image/png",
+            "sizes": "192x192 512x512"
+        }
+    ],
+    "start_url": "{BASE_URL}",
+    "display": "standalone",
+    "scope": "{BASE_URL}",
+    "background_color": "#f8f8f8",
+    "theme_color": "#1a4d94"
+}

@@ -29,31 +29,6 @@ extern "C" const Span<const AssetInfo> pack_assets;
 static HashTable<const char *, AssetInfo> assets_map;
 static BlockAllocator assets_alloc;
 
-static void HandleManifest(const http_RequestInfo &request, http_IO *io)
-{
-    http_JsonPageBuilder json(request.compression_type);
-
-    json.StartObject();
-    json.Key("short_name"); json.String(goupile_config.app_name);
-    json.Key("name"); json.String(goupile_config.app_name);
-    json.Key("icons"); json.StartArray();
-    json.StartObject();
-        json.Key("src"); json.String("favicon.png");
-        json.Key("type"); json.String("image/png");
-        json.Key("sizes"); json.String("192x192 512x512");
-    json.EndObject();
-    json.EndArray();
-    json.Key("start_url"); json.String(goupile_config.http.base_url);
-    json.Key("display"); json.String("standalone");
-    json.Key("scope"); json.String(goupile_config.http.base_url);
-    json.Key("background_color"); json.String("#f8f8f8");
-    json.Key("theme_color"); json.String("#1a4d94");
-    json.EndObject();
-
-    io->AddCachingHeaders(goupile_config.max_age, goupile_etag);
-    return json.Finish(io);
-}
-
 static Size ConvertToJsName(const char *name, Span<char> out_buf)
 {
     // This is used for static strings (e.g. permission names), and the Span<char>
@@ -168,7 +143,8 @@ static void InitAssets()
 
     // Packed static assets
     for (const AssetInfo &asset: assets) {
-        if (TestStr(asset.name, "goupile.html") || TestStr(asset.name, "sw.pk.js")) {
+        if (TestStr(asset.name, "goupile.html") || TestStr(asset.name, "sw.pk.js") ||
+                TestStr(asset.name, "manifest.json")) {
             AssetInfo asset2 = PatchGoupileVariables(asset, &assets_alloc);
             assets_map.Append(asset2);
         } else {
@@ -200,6 +176,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             if (TestStr(request.url, "/") ||
                     !strncmp(request.url, "/app/", 5) || !strncmp(request.url, "/main/", 6)) {
                 asset = assets_map.Find("goupile.html");
+            } else if (TestStr(request.url, "/manifest.json") && goupile_config.use_offline) {
+                asset = assets_map.Find("manifest.json");
             } else if (TestStr(request.url, "/favicon.png")) {
                 asset = assets_map.Find("favicon.png");
             } else if (TestStr(request.url, "/sw.pk.js")) {
@@ -233,9 +211,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         {
             void (*func)(const http_RequestInfo &request, http_IO *io) = nullptr;
 
-            if (TestStr(request.url, "/manifest.json") && goupile_config.use_offline) {
-                func = HandleManifest;
-            } else if (TestStr(request.url, "/api/settings.json")) {
+            if (TestStr(request.url, "/api/settings.json")) {
                 func = HandleSettings;
             } else if (TestStr(request.url, "/api/events.json")) {
                 func = HandleEvents;
