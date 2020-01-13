@@ -357,7 +357,7 @@ Navigation functions should only be called in reaction to user events, such as b
         // Run left panel
         switch (left_panel) {
             case 'files': { await dev_files.runFiles(); } break;
-            case 'editor': { await dev_files.syncEditor(current_asset.path); } break;
+            case 'editor': { await dev_files.runEditor(current_asset); } break;
             case 'status': { await executor.runStatus(); } break;
             case 'data': { await executor.runData(); } break;
         }
@@ -372,16 +372,14 @@ Navigation functions should only be called in reaction to user events, such as b
     };
 
     function renderMainUI() {
-        let show_editor = current_asset && current_asset.edit;
         let show_data = current_asset && current_asset.form;
 
         let correct_mode = (left_panel == null ||
-                            left_panel === 'files' ||
-                            (left_panel === 'editor' && show_editor) ||
+                            left_panel === 'files' || left_panel === 'editor' ||
                             (left_panel === 'status' && show_data) ||
                             (left_panel === 'data' && show_data));
         if (!correct_mode)
-            left_panel = show_editor ? 'editor' : null;
+            left_panel = 'editor';
 
         if (!current_asset || !current_asset.overview) {
             show_overview = false;
@@ -409,9 +407,8 @@ Navigation functions should only be called in reaction to user events, such as b
             ${show_data ?
                 html`<button class=${left_panel === 'status' ? 'active' : ''}
                              @click=${e => toggleLeftPanel('status')}>Suivi</button>` : ''}
-            ${show_editor ?
-                html`<button class=${left_panel === 'editor' ? 'active' : ''}
-                             @click=${e => toggleLeftPanel('editor')}>Éditeur</button>` : ''}
+            <button class=${left_panel === 'editor' ? 'active' : ''}
+                    @click=${e => toggleLeftPanel('editor')}>Éditeur</button>
             ${show_data ?
                 html`<button class=${left_panel === 'data' ? 'active' : ''}
                              @click=${e => toggleLeftPanel('data')}>Données</button>` : ''}
@@ -465,16 +462,11 @@ Navigation functions should only be called in reaction to user events, such as b
             ` : ''}
         `, document.querySelector('#gp_menu'));
 
-        if (left_panel === 'editor' && !editor_el) {
-            editor_el = document.createElement('div');
-            editor_el.style.height = '100%';
-        }
-
         render(html`
             ${left_panel === 'files' ?
                 html`<div id="dev_files" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
             ${left_panel === 'editor' ?
-                html`<div id="dev_editor" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}>${editor_el}</div>` : ''}
+                html`<div id="dev_editor" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
             ${left_panel === 'status' ?
                 html`<div id="dev_status" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
             ${left_panel === 'data' ?
@@ -568,8 +560,15 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     this.validateCode = function(path, code) {
-        let asset = app.paths_map[path];
-        return asset ? runAssetSafe(asset, code) : true;
+        if (path === '/files/main.js') {
+            return runAssetSafe(app.assets[0], code);
+        } else if (path === '/files/main.css') {
+            updateApplicationCSS(code);
+            return true;
+        } else {
+            let asset = app.paths_map[path];
+            return asset ? runAssetSafe(asset, code) : true;
+        }
     };
 
     async function runAssetSafe(asset, code = null) {
@@ -587,17 +586,13 @@ Navigation functions should only be called in reaction to user events, such as b
             switch (asset.type) {
                 case 'main': {
                     if (code != null) {
-                        if (asset.path === '/files/main.js') {
-                            await self.initApplication(code);
+                        await self.initApplication(code);
 
-                            // If initApplication() succeeds it runs the page, so no need to redo it
-                            return true;
-                        } else if (asset.path === '/files/main.css') {
-                            updateApplicationCSS(code);
-                        }
+                        // If initApplication() succeeds it runs the page, so no need to redo it
+                        return true;
                     }
 
-                    render(html`<div class="gp_wip">Aperçu non disponible pour le moment</div>`, overview_el);
+                    render(html`<div class="gp_wip">Tableau de bord non disponible</div>`, overview_el);
                 } break;
 
                 case 'page': {
@@ -617,7 +612,7 @@ Navigation functions should only be called in reaction to user events, such as b
                 case 'schedule_settings': { await sched_executor.runSettings(asset.schedule, overview_el); } break;
 
                 default: {
-                    render(html`<div class="gp_wip">Aperçu non disponible pour le moment</div>`, overview_el);
+                    render(html`<div class="gp_wip">Aperçu non disponible</div>`, overview_el);
                 } break;
             }
 

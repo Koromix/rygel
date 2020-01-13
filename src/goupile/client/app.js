@@ -8,30 +8,15 @@ function Application() {
     this.forms = [];
     this.schedules = [];
 
-    // These assets are always available, even in broken apps
-    this.assets = [
-        {
-            type: 'main',
-            url: `${env.base_url}main/js/`,
+    // This assets is always available, even in broken apps
+    this.assets = [{
+        type: 'main',
+        url: `${env.base_url}main/`,
 
-            category: 'Paramétrage',
-            label: 'Application',
-            overview: 'Application',
-
-            path: '/files/main.js',
-            edit: true
-        }, {
-            type: 'main',
-            url: `${env.base_url}main/css/`,
-
-            category: 'Paramétrage',
-            label: 'Feuille de style',
-            overview: 'Feuille de style',
-
-            path: '/files/main.css',
-            edit: true
-        }
-    ];
+        category: 'Application',
+        label: 'Tableau de bord',
+        overview: 'Tableau de bord',
+    }];
 
     this.home = null;
 
@@ -206,7 +191,7 @@ function FormBuilder(app, form) {
             page: page,
 
             path: `/files/pages/${page.key}.js`,
-            edit: true
+            edit: 'Page de formulaire'
         });
     };
 }

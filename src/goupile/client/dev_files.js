@@ -5,23 +5,77 @@
 let dev_files = new function() {
     let self = this;
 
-    let remote = true;
+    let editor_tabs;
+    let editor_path;
+    let editor_path_forced = false;
 
+    let editor_el;
     let editor;
     let editor_buffers = new LruMap(32);
     let editor_timer_id;
     let editor_ignore_change = false;
 
+    let remote = true;
     let files;
     let user_actions = {};
 
-    this.syncEditor = async function(path) {
-        if (!editor) {
-            // XXX: Make sure we don't run loadScript more than once
-            if (typeof ace === 'undefined')
-                await util.loadScript(`${env.base_url}static/ace.js`);
+    this.runEditor = async function(asset) {
+        // XXX: Make sure we don't run loadScript more than once
+        if (typeof ace === 'undefined')
+            await util.loadScript(`${env.base_url}static/ace.js`);
+        if (!editor_el) {
+            editor_el = document.createElement('div');
+            editor_el.setAttribute('style', 'flex: 1;');
+        }
 
-            editor = ace.edit(document.querySelector('#dev_editor > div'));
+        editor_tabs = [
+            {name: 'Application', path: '/files/main.js'},
+            {name: 'Feuille de style', path: '/files/main.css'},
+        ];
+
+        if (asset.edit) {
+            editor_tabs.push({name: asset.edit, path: asset.path});
+
+            if (editor_path_forced || !editor_tabs.find(tab => tab.path === editor_path)) {
+                editor_path = asset.path;
+                editor_path_forced = false;
+            }
+        } else {
+            if (!editor_tabs.find(tab => tab.path === editor_path)) {
+                editor_path = '/files/main.js';
+                editor_path_forced = true;
+            }
+        }
+
+        await syncEditor(editor_path);
+
+        // Do this after syncEditor() to avoid flashing wrong file when editor panel is
+        // enabled and there was another file rendered in editor_el before.
+        renderEditorPanel();
+    }
+
+    async function renderEditorPanel() {
+        render(html`
+            <div class="gp_toolbar">
+                ${editor_tabs.map(tab =>
+                    html`<button class=${tab.path === editor_path ? 'active' : ''}
+                                 @click=${e => toggleEditorFile(tab.path)}>${tab.name}</button>`)}
+            </div>
+            ${editor_el}
+        `, document.querySelector('#dev_editor'));
+    }
+
+    async function toggleEditorFile(path) {
+        editor_path = path;
+        editor_path_forced = false;
+
+        renderEditorPanel();
+        await syncEditor(path);
+    }
+
+    async function syncEditor(path) {
+        if (!editor) {
+            editor = ace.edit(editor_el);
 
             editor.setTheme('ace/theme/monokai');
             editor.setShowPrintMargin(false);

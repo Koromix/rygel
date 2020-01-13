@@ -145,18 +145,22 @@ button:not(:disabled) { cursor: pointer; }
     top: 2.5em;
     width: 50%;
     height: calc(100% - 2.5em);
+    display: flex;
+    flex-direction: column;
     overflow: auto;
     border-right: 1px solid #dfdfdf;
 }
-.gp_panel.right { margin: 2.5em 0 0 50%; }
 .gp_panel.fixed {
     position: fixed;
     left: 0;
     top: 2.5em;
     width: 100%;
     height: calc(100% - 2.5em);
+    display: flex;
+    flex-direction: column;
     overflow: auto;
 }
+.gp_panel.right { margin: 2.5em 0 0 50%; }
 .gp_panel.overview { width: 100%; }
 
 /* -------------------- Utility -------------------- */
