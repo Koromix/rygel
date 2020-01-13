@@ -126,7 +126,7 @@ function FormExecutor() {
         window.history.replaceState(null, null, goupile.makeURL());
 
         // Only show buttons if there is at least one input widget on the page
-        let show_buttons = page.widgets.some(intf => intf.key);
+        let show_buttons = page.variables.length > 0;
         let enable_save = state.changed;
         let enable_validate = !state.changed && !page.errors.length &&
                               record.complete[page.key] === false;
