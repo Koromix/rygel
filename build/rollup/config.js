@@ -21,6 +21,23 @@ try {
 code = `import 'whatwg-fetch';
 import '@webcomponents/template';
 
+// Chrome 42 sometimes uses valueOf() for string concatenations, which messes up with
+// transpiled template literals. Hack the default concat() implementation to fix this.
+String.prototype.concat = function() {
+    var str = this;
+
+    for (var i = 0; i < arguments.length; i++) {
+        var arg = arguments[i];
+        if (arg != null && arg.toString) {
+            str = str + arg.toString();
+        } else {
+            str = str + arg;
+        }
+    }
+
+    return str;
+};
+
 ${code}`;
 
 module.exports = {
