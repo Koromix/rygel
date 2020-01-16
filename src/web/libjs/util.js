@@ -581,6 +581,312 @@ function LruMap(limit) {
     };
 }
 
+function BTree(order = 64) {
+    if (order < 3)
+        throw new Error('BTree order must be at least 3');
+
+    let self = this;
+
+    let min_node_keys = Math.floor((order - 1) / 2);
+    let max_node_keys = order - 1;
+    let min_leaf_keys = Math.floor(order / 2);
+    let max_leaf_keys = order;
+
+    let root;
+    let leaf0;
+
+    this.size = 0;
+
+    // Also used for initialization
+    this.clear = function() {
+        root = {
+            keys: [],
+            values: [],
+            next: null
+        };
+        leaf0 = root;
+
+        self.size = 0;
+    };
+
+    this.get = function(key) {
+        let leaf = findLeaf(key);
+        let idx = leaf.keys.indexOf(key);
+        return (idx >= 0) ? leaf.values[idx] : undefined;
+    };
+
+    this.has = function(key) {
+        let leaf = findLeaf(key);
+        return leaf.keys.includes(key);
+    };
+
+    function findLeaf(key) {
+        let node = root;
+
+        while (!node.values) {
+            let idx = node.keys.findIndex(key2 => key2 > key);
+
+            if (idx >= 0) {
+                node = node.children[idx];
+            } else {
+                node = node.children[node.children.length - 1];
+            }
+        }
+
+        return node;
+    }
+
+    function findLeafPath(key) {
+        let path = [root];
+        let node = root;
+
+        while (!node.values) {
+            let idx = node.keys.findIndex(key2 => key2 > key);
+
+            if (idx >= 0) {
+                node = node.children[idx];
+            } else {
+                node = node.children[node.children.length - 1];
+            }
+
+            path.push(node);
+        }
+
+        return path;
+    }
+
+    this.entries = function*() {
+        let leaf = leaf0;
+
+        while (leaf) {
+            for (let i = 0; i < leaf.keys.length; i++) {
+                let it = [leaf.keys[i], leaf.values[i]];
+                yield it;
+            }
+            leaf = leaf.next;
+        }
+    };
+    this[Symbol.iterator] = self.entries;
+
+    this.keys = function*() {
+        let leaf = leaf0;
+
+        while (leaf) {
+            for (let i = 0; i < leaf.keys.length; i++)
+                yield leaf.keys[i];
+            leaf = leaf.next;
+        }
+    };
+
+    this.values = function*() {
+        let leaf = leaf0;
+
+        while (leaf) {
+            for (let i = 0; i < leaf.keys.length; i++)
+                yield leaf.values[i];
+            leaf = leaf.next;
+        }
+    };
+
+    this.forEach = function(func, this_arg) {
+        let leaf = leaf0;
+
+        while (leaf) {
+            for (let i = 0; i < leaf.keys.length; i++)
+                func.call(this_arg, leaf.values[i], leaf.keys[i], self);
+            leaf = leaf.next;
+        }
+    };
+
+    this.set = function(key, value) {
+        let path = findLeafPath(key);
+        let leaf = path[path.length - 1];
+
+        let insert_idx = leaf.keys.findIndex(key2 => key2 >= key);
+        if (insert_idx < 0)
+            insert_idx = leaf.keys.length;
+
+        if (leaf.keys[insert_idx] === key) {
+            leaf.values[insert_idx] = value;
+        } else {
+            leaf.keys.splice(insert_idx, 0, key);
+            leaf.values.splice(insert_idx, 0, value);
+
+            if (leaf.keys.length > max_leaf_keys)
+                splitLeaf(path);
+
+            self.size++;
+        }
+    };
+
+    function splitLeaf(path) {
+        let leaf0 = path[path.length - 1];
+        let leaf1 = {
+            keys: leaf0.keys.splice(min_leaf_keys, leaf0.keys.length - min_leaf_keys),
+            values: leaf0.values.splice(min_leaf_keys, leaf0.values.length - min_leaf_keys),
+            next: leaf0.next
+        };
+        leaf0.next = leaf1;
+
+        insertChild(path, path.length - 2, leaf1);
+    }
+
+    function insertChild(path, idx, child) {
+        let key = child.keys[0];
+
+        while (idx >= 0) {
+            let node = path[idx];
+
+            let insert_idx = node.keys.findIndex(key2 => key2 > key);
+            if (insert_idx < 0)
+                insert_idx = node.keys.length;
+
+            node.keys.splice(insert_idx, 0, key);
+            node.children.splice(insert_idx + 1, 0, child);
+
+            if (node.keys.length > max_node_keys) {
+                let split_idx = min_node_keys + 1;
+
+                child = {
+                    keys: node.keys.splice(split_idx, node.keys.length - split_idx),
+                    children: node.children.splice(split_idx, node.children.length - split_idx)
+                };
+                key = node.keys.pop();
+            } else {
+                return;
+            }
+
+            idx--;
+        }
+
+        // Root node is full, split it
+        root = {
+            keys: [key],
+            children: [root, child]
+        };
+    }
+
+    this.delete = function(key) {
+        let path = findLeafPath(key);
+        let leaf = path[path.length - 1];
+
+        let delete_idx = leaf.keys.indexOf(key);
+
+        if (delete_idx >= 0) {
+            leaf.keys.splice(delete_idx, 1);
+            leaf.values.splice(delete_idx, 1);
+
+            if (leaf !== root) {
+                if (!delete_idx)
+                    fixInternalKeys(path, key, leaf.keys[0]);
+                if (leaf.keys.length < min_leaf_keys)
+                    balanceLeaf(path);
+            }
+
+            self.size--;
+        }
+    };
+
+    function balanceLeaf(path) {
+        let leaf = path[path.length - 1];
+        let parent = path[path.length - 2];
+
+        let leaf_idx = parent.children.indexOf(leaf);
+        let sibling0 = parent.children[leaf_idx - 1];
+        let sibling1 = parent.children[leaf_idx + 1];
+
+        if (sibling0 && sibling0.keys.length > min_leaf_keys) {
+            leaf.keys.unshift(sibling0.keys.pop());
+            leaf.values.unshift(sibling0.values.pop());
+
+            fixInternalKeys(path, leaf.keys[1], leaf.keys[0]);
+        } else if (sibling1 && sibling1.keys.length > min_leaf_keys) {
+            fixInternalKeys(path, sibling1.keys[0], sibling1.keys[1]);
+
+            leaf.keys.push(sibling1.keys.shift());
+            leaf.values.push(sibling1.values.shift());
+        } else if (sibling0) {
+            sibling0.keys.push(...leaf.keys);
+            sibling0.values.push(...leaf.values);
+            sibling0.next = leaf.next;
+
+            parent.keys.splice(leaf_idx - 1, 1);
+            parent.children.splice(leaf_idx, 1);
+        } else {
+            leaf.keys.push(...sibling1.keys);
+            leaf.values.push(...sibling1.values);
+            leaf.next = sibling1.next;
+
+            parent.keys.splice(leaf_idx, 1);
+            parent.children.splice(leaf_idx + 1, 1);
+        }
+
+        if (parent.keys.length < min_node_keys)
+            balanceNode(path, path.length - 2);
+    }
+
+    function fixInternalKeys(path, old_key, new_key) {
+        for (let i = path.length - 2; i >= 0; i--) {
+            let parent = path[i];
+
+            let fix_idx = parent.keys.indexOf(old_key);
+
+            if (!fix_idx) {
+                parent.keys[fix_idx] = new_key;
+            } else if (fix_idx > 0) {
+                parent.keys[fix_idx] = new_key;
+                break;
+            }
+        }
+    }
+
+    function balanceNode(path, idx) {
+        while (idx > 0) {
+            let node = path[idx];
+            let parent = path[idx - 1];
+
+            let node_idx = parent.children.indexOf(node);
+            let sibling0 = parent.children[node_idx - 1];
+            let sibling1 = parent.children[node_idx + 1];
+
+            if (sibling0 && sibling0.keys.length > min_node_keys) {
+                node.keys.unshift(parent.keys[node_idx - 1]);
+                parent.keys[node_idx - 1] = sibling0.keys.pop();
+                node.children.unshift(sibling0.children.pop());
+            } else if (sibling1 && sibling1.keys.length > min_node_keys) {
+                node.keys.push(parent.keys[node_idx]);
+                parent.keys[node_idx] = sibling1.keys.shift();
+                node.children.push(sibling1.children.shift());
+            } else if (sibling0) {
+                sibling0.keys.push(parent.keys[node_idx - 1]);
+                parent.keys.splice(node_idx - 1, 1);
+                parent.children.splice(node_idx, 1);
+
+                sibling0.keys.push(...node.keys);
+                sibling0.children.push(...node.children);
+            } else {
+                node.keys.push(parent.keys[node_idx]);
+                parent.keys.splice(node_idx, 1);
+                parent.children.splice(node_idx + 1, 1);
+
+                node.keys.push(...sibling1.keys);
+                node.children.push(...sibling1.children);
+            }
+
+            if (parent.keys.length >= min_node_keys)
+                return;
+
+            idx--;
+        }
+
+        // Empty root, promote only child
+        if (!root.keys.length)
+            root = root.children[0];
+    }
+
+    self.clear();
+}
+
 // ------------------------------------------------------------------------
 // Date
 // ------------------------------------------------------------------------
