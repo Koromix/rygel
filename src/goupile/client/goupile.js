@@ -193,6 +193,8 @@ let goupile = new function() {
             func(app_builder, new_app.data, new_app.route);
 
             let known_paths = new Set(new_app.assets.map(asset => asset.path));
+            known_paths.add('/files/main.js');
+            known_paths.add('/files/main.css');
 
             // Make unused files available
             for (let file of files) {
