@@ -132,6 +132,7 @@ let mco_info = new function() {
         // Table
         renderListTable(ghm_roots, {
             header: false,
+            category: ghm_root => mco.ghm_roots.describeParent(ghm_root, 'cmd'),
             columns: [{key: 'ghm_root', title: 'Racine de GHM', func: ghm_root => mco.ghm_roots.describe(ghm_root)}]
         });
     }

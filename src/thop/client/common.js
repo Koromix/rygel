@@ -86,7 +86,7 @@ let data = new function() {
         };
         this.describeParent = function(code, type) {
             let defn = map[code];
-            return defn ? dict[type].describeParent(type) : '';
+            return defn ? dict[type].describe(defn.parents[type]) : '';
         };
 
         function describeDefinition() { return `${this.code} – ${this.label}`; }
