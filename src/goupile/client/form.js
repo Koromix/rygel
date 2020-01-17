@@ -606,4 +606,14 @@ function FormExecutor() {
         current_records.splice(idx, 1);
         current_ids.delete(record.id);
     }
+
+    this.runDescribe = async function() {
+        if (typeof Chart === 'undefined')
+            await util.loadScript(`${env.base_url}static/chart.bundle.min.js`);
+
+        render(html`
+            <div class="gp_toolbar"></div>
+            <div class="gp_wip">Graphiques non disponibles</div>
+        `, document.querySelector('#dev_describe'));
+    };
 };

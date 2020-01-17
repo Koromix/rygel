@@ -362,6 +362,7 @@ Navigation functions should only be called in reaction to user events, such as b
             case 'editor': { await dev_files.runEditor(current_asset); } break;
             case 'status': { await executor.runStatus(); } break;
             case 'data': { await executor.runData(); } break;
+            case 'describe': { await executor.runDescribe(); } break;
         }
 
         // Run appropriate module
@@ -379,7 +380,8 @@ Navigation functions should only be called in reaction to user events, such as b
         let correct_mode = (left_panel == null ||
                             left_panel === 'files' || left_panel === 'editor' ||
                             (left_panel === 'status' && show_data) ||
-                            (left_panel === 'data' && show_data));
+                            (left_panel === 'data' && show_data) ||
+                            (left_panel === 'describe' && show_data));
         if (!correct_mode)
             left_panel = 'editor';
 
@@ -417,6 +419,8 @@ Navigation functions should only be called in reaction to user events, such as b
                         @click=${e => toggleLeftPanel('status')}>Suivi</button>
                 <button class=${left_panel === 'data' ? 'active' : ''}
                         @click=${e => toggleLeftPanel('data')}>Données</button>
+                <button class=${left_panel === 'describe' ? 'active' : ''}
+                        @click=${e => toggleLeftPanel('describe')}>Descriptif</button>
             ` :  ''}
 
             &nbsp;&nbsp;
@@ -478,6 +482,8 @@ Navigation functions should only be called in reaction to user events, such as b
                 html`<div id="dev_status" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
             ${left_panel === 'data' ?
                 html`<div id="dev_data" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
+            ${left_panel === 'describe' ?
+                html`<div id="dev_describe" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
             <div id="gp_overview" class=${left_panel ? 'gp_panel right' : 'gp_panel overview'}
                  style=${show_overview ? '' : 'display: none;'}></div>
 
