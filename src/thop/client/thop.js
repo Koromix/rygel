@@ -124,14 +124,15 @@ let thop = new function() {
     async function run(push_history) {
         let view_el = document.querySelector('#th_view');
 
-        view_el.classList.add('th_view_busy');
+        if (!window.document.documentMode)
+            view_el.classList.add('busy');
         try {
             await route_mod.run();
         } catch (err) {
             render(err.message, view_el);
             log.error(err.message);
         }
-        view_el.classList.remove('th_view_busy');
+        view_el.classList.remove('busy');
     }
 
     async function updateSettings() {

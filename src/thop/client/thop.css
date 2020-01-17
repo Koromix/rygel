@@ -111,7 +111,7 @@ button { cursor: pointer; }
     text-align: center;
 }
 
-.th_view_busy {
+#th_view.busy {
     animation: th_view_busy 1s 1 linear;
     filter: grayscale(100%);
     opacity: 0.2;
