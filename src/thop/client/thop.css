@@ -11,12 +11,13 @@ body {
     font-size: 12px;
 }
 
-#th_bar {
+#th_side {
     display: flex;
     flex-direction: column;
     position: fixed;
     left: 0;
     top: 0;
+    box-sizing: border-box;
     min-height: 100%;
     width: 180px;
     z-index: 999;
@@ -25,9 +26,27 @@ body {
 
 main {
     display: block;
+    box-sizing: border-box;
     max-width: 1000px;
     margin-left: 180px;
     padding: 6px 12px 6px 12px;
+}
+
+@media (pointer: coarse) {
+    #th_side {
+        display: block;
+        width: 100%;
+        min-height: 0;
+        background: #262626;
+        color: white;
+        overflow: hidden;
+    }
+
+    main {
+        max-width: none;
+        margin: 28px 0 0 0;
+        padding: 0;
+    }
 }
 
 /* -------------------- Common elements -------------------- */
@@ -36,14 +55,15 @@ a {
     color: #ff6600;
     text-decoration: none;
     font-weight: normal;
+    cursor: pointer;
 }
 a:hover { text-decoration: underline; }
 
 button { cursor: pointer; }
 
 .th_form {
-    width: 300px;
-    max-width: 300px;
+    width: 340px;
+    max-width: 340px;
 }
 .th_form label {
     display: block;
@@ -55,17 +75,27 @@ button { cursor: pointer; }
     margin: 0 auto;
 }
 
-/* -------------------- Sidebar -------------------- */
-
-#th_session {
-    padding: 6px 2px 0 2px;
-    text-align: center;
-    font-size: 0.8em;
+@media (pointer: coarse) {
+    .th_form {
+        width: auto;
+        margin: 0 auto;
+        padding: 8px;
+    }
 }
+
+/* -------------------- Sidebar -------------------- */
 
 #th_logo {
     display: block;
-    margin: 1em auto;
+    margin: 2em auto 1.2em auto;
+}
+
+.th_deploy { display: none; }
+
+#th_bar {
+    flex: 1;
+    display: flex;
+    align-items: start;
 }
 
 #th_menu { flex: 1; }
@@ -75,7 +105,6 @@ button { cursor: pointer; }
     box-sizing: border-box;
     font-weight: bold;
     font-variant: small-caps;
-    font-size: 1.1em;
 }
 #th_menu a {
     display: block;
@@ -100,15 +129,44 @@ button { cursor: pointer; }
     font-size: 0.8em;
     color: #ff6600;
 }
-@media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
+@media (pointer: coarse), (-ms-high-contrast: active), (-ms-high-contrast: none) {
     #th_version { display: none; }
+}
+
+@media (pointer: coarse) {
+    #th_logo { display: none; }
+
+    .th_deploy {
+        display: block;
+        cursor: pointer;
+        z-index: 999;
+    }
+
+    #th_menu { min-height: 28px; }
+    #th_menu a { color: white !important; }
+    #th_menu:not(.active) {
+        max-height: 28px;
+        margin-left: -1.5em;
+    }
+    #th_menu:not(.active) a:not(.active) { display: none; }
 }
 
 /* -------------------- Main -------------------- */
 
-#th_options {
+#th_header {
     margin: 0 0 6px 0;
     text-align: center;
+}
+
+#th_session {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 180px;
+    padding: 6px 2px;
+    text-align: center;
+    font-size: 0.8em;
+    z-index: 9999;
 }
 
 #th_view.busy {
@@ -122,4 +180,33 @@ button { cursor: pointer; }
     40% { filter: grayscale(0); opacity: 1; }
     60% { filter: grayscale(100%); opacity: 0.2; }
     to { filter: grayscale(100%); opacity: 0.2; }
+}
+
+@media (pointer: coarse) {
+    #th_header {
+        position: fixed;
+        top: 28px;
+        box-sizing: border-box;
+        width: 100%;
+        padding: 5px;
+        background: #eee;
+        z-index: 999;
+    }
+    #th_header:not(.active) { display: none; }
+
+    #th_session {
+        position: static;
+        width: auto;
+        padding-top: 0;
+        font-size: inherit;
+    }
+
+    #th_options > * { max-width: 100%; }
+    #th_options > label {
+        display: block;
+        clear: both;
+        margin-bottom: 12px;
+        text-align: left;
+    }
+    #th_options > label input, #th_options > label select { float: right; }
 }

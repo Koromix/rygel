@@ -14,9 +14,9 @@ button, input, optgroup, select, textarea {
 
 #ut_log {
     position: fixed;
-    left: calc(50% - 16em);
-    top: 10px;
-    width: 32em;
+    left: calc(50% - 15em);
+    top: 20px;
+    width: 30em;
     z-index: 99999;
     user-select: none;
     -moz-user-select: none;

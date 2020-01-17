@@ -25,6 +25,7 @@
     font-weight: normal;
 }
 .pr_grid th:first-child { width: 90px; }
+.pr_grid .ghm_root { display: none; }
 .pr_grid td {
     position: relative;
     box-shadow: inset 1px 1px 0px 0px rgba(255, 255, 255, 0.08);
@@ -103,6 +104,41 @@
     content: "⚠\FE0E";
 }
 
+@media (pointer: coarse) {
+    .pr_grid { border: 0; }
+    .pr_grid td, .pr_grid th {
+        font-size: 0.9em;
+        box-shadow: none;
+    }
+    .pr_grid th {
+        display: none;
+        border: 0;
+    }
+    .pr_grid .ghm_root {
+        display: table-cell;
+        background: #444;
+        color: white;
+        font-weight: normal;
+        text-align: center;
+    }
+    .pr_grid tbody { counter-reset: duration -1; }
+    .pr_grid .duration td:first-of-type:before {
+        display: block;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 18px;
+        padding-top: 6px;
+        height: 100%;
+        font-size: 0.7em;
+        background: rgba(255, 255, 255, 0.6);
+        text-align: center;
+        color: black;
+        counter-increment: duration;
+        content: counter(duration);
+    }
+}
+
 /* -------------------- Tree -------------------- */
 
 .tr_tree {
@@ -131,6 +167,7 @@
 
 .tr_tree ul {
     margin-left: 4px;
+    padding-left: 30px;
     border-left: 1px solid #dfdfdf;
 }
 .tr_tree li.collapse ul { display: none !important; }
@@ -147,11 +184,7 @@
     font-style: italic;
 }
 
-@media screen and (min-width: 801px) {
-    .tr_tree ul { padding-left: 30px; }
-}
-
-@media screen and (max-width: 800px) {
+@media (pointer: coarse) {
     .tr_tree ul { padding-left: 25px; }
     .tr_tree { font-size: 0.9em; }
 }

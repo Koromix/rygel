@@ -330,8 +330,8 @@ let mco_info = new function() {
 
         if ('filter' in handler) {
             etab.setPanel(html`
-                <label>Filtre : <input type="text" .value=${handler.filter || ''}
-                                       @input=${e => handleFilterInput(e, etab, handler)} /></label>
+                <input type="text" .value=${handler.filter || ''} placeholder="Filtre textuel"
+                       @input=${e => handleFilterInput(e, etab, handler)} />
             `);
         }
 
@@ -466,7 +466,8 @@ let mco_info = new function() {
             throw new Error(`Racine de GHM '${route.ghs.ghm_root}' inexistante`);
 
         // Grid
-        render(renderPriceGrid(route.ghs.ghm_root, columns, route.ghs.duration, route.ghs.coeff),
+        render(renderPriceGrid(mco.ghm_roots.describe(route.ghs.ghm_root), columns,
+                               route.ghs.duration, route.ghs.coeff),
                document.querySelector('#th_view'));
     }
 
@@ -490,6 +491,8 @@ let mco_info = new function() {
         return html`
             <table class="pr_grid">
                 <thead>
+                    <tr><th colspan=${columns.length} class="ghm_root">${ghm_root}</th></tr>
+
                     <tr><th>GHM</th>${util.mapRLE(columns, col => col.ghm,
                         (ghm, _, colspan) => html`<td class="desc" colspan=${colspan}>${ghm}</td>`)}</tr>
                     <tr><th>Niveau</th>${util.mapRLE(columns, col => col.ghm.substr(5, 1),

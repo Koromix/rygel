@@ -8,6 +8,8 @@ let settings = {};
 let thop = new function() {
     let self = this;
 
+    let deployer_targets = [];
+
     let route_mod;
     let route_url = '';
     let scroll_cache = new LruMap(128);
@@ -47,12 +49,38 @@ let thop = new function() {
             self.go(href);
             e.preventDefault();
         });
+
+        // Handle deploy buttons (mobile only)
+        document.querySelectorAll('.th_deploy').forEach(deployer => {
+            deployer.addEventListener('click', handleDeployerClick);
+
+            let target = document.querySelector(deployer.dataset.target);
+            deployer_targets.push(target);
+        });
+        document.querySelector('#th_view').addEventListener('click', closeAllDeployedElements);
+    }
+
+    function handleDeployerClick(e) {
+        let target = document.querySelector(e.target.dataset.target);
+        let open = !target.classList.contains('active');
+
+        closeAllDeployedElements();
+        target.classList.toggle('active', open);
+
+        e.stopPropagation();
+    }
+
+    function closeAllDeployedElements() {
+        deployer_targets.forEach(el => el.classList.remove('active'));
     }
 
     this.go = async function(mod, args = {}, push_history = true) {
         let url = route(mod, args, push_history);
         if (!url)
             return;
+
+        // Close all mobile menus (just in case)
+        closeAllDeployedElements();
 
         // Update URL quickly, even though we'll do it again after module run because some
         // parts may depend on fetched resources. Same thing for session.

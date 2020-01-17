@@ -208,9 +208,6 @@ function EasyTable() {
             } else {
                 stat_text = `0 / ${render_rows.length}`;
             }
-
-            if (render_rows.length < row_sets[row_sets.length - 1].length)
-                stat_text += ` (sans filtre : ${row_sets[row_sets.length - 1].length})`;
         } else {
             stat_text = '';
         }
