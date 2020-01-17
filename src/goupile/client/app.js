@@ -184,7 +184,7 @@ function FormBuilder(app, form) {
             url: page.url,
 
             category: `Formulaire ${form.key}`,
-            label: (form.key !== page.key) ? `${form.key}/${page.key}` : form.key,
+            label: `${form.key}/${page.key}`,
             overview: 'Formulaire',
 
             form: form,
