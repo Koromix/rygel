@@ -406,15 +406,20 @@ Navigation functions should only be called in reaction to user events, such as b
         }
 
         render(html`
-            ${show_data ?
-                html`<button class=${left_panel === 'status' ? 'active' : ''}
-                             @click=${e => toggleLeftPanel('status')}>Suivi</button>` : ''}
             <button class=${left_panel === 'editor' ? 'active' : ''}
                     @click=${e => toggleLeftPanel('editor')}>Éditeur</button>
-            ${show_data ?
-                html`<button class=${left_panel === 'data' ? 'active' : ''}
-                             @click=${e => toggleLeftPanel('data')}>Données</button>` : ''}
+            <button class=${left_panel === 'files' ? 'active' : ''}
+                    @click=${e => toggleLeftPanel('files')}>Ressources</button>
 
+            ${show_data ? html`
+                &nbsp;&nbsp;
+                <button class=${left_panel === 'status' ? 'active' : ''}
+                        @click=${e => toggleLeftPanel('status')}>Suivi</button>
+                <button class=${left_panel === 'data' ? 'active' : ''}
+                        @click=${e => toggleLeftPanel('data')}>Données</button>
+            ` :  ''}
+
+            &nbsp;&nbsp;
             ${show_assets.map(asset => {
                 if (asset === current_asset) {
                     return html`<button class=${show_overview ? 'active': ''}
@@ -448,7 +453,7 @@ Navigation functions should only be called in reaction to user events, such as b
             <div class="gp_dropdown right">
                 <button>Administration</button>
                 <div>
-                    <button class=${left_panel === 'files' ? 'active' : ''} @click=${e => toggleLeftPanel('files')}>Ressources</button>
+                    <button @click=${e => log.error('Fonctionnalité non disponible')}>Configuration</button>
                     <button @click=${e => log.error('Fonctionnalité non disponible')}>Utilisateurs</button>
                 </div>
             </div>
