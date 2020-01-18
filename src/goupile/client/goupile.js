@@ -25,7 +25,6 @@ let goupile = new function() {
 
     let current_asset;
     let current_url;
-    let executor = new FormExecutor;
 
     let left_panel;
     let show_overview = true;
@@ -343,7 +342,7 @@ Navigation functions should only be called in reaction to user events, such as b
         }
 
         if (current_asset && current_asset.form) {
-            await executor.route(current_asset.form, args);
+            await form_executor.route(current_asset.form, args);
 
             // The user asked for this record, make sure it is visible
             if (args.id != null && !show_overview) {
@@ -360,9 +359,9 @@ Navigation functions should only be called in reaction to user events, such as b
         switch (left_panel) {
             case 'files': { await dev_files.runFiles(); } break;
             case 'editor': { await dev_files.runEditor(current_asset); } break;
-            case 'status': { await executor.runStatus(); } break;
-            case 'data': { await executor.runData(); } break;
-            case 'describe': { await executor.runDescribe(); } break;
+            case 'status': { await form_executor.runStatus(); } break;
+            case 'data': { await form_executor.runData(); } break;
+            case 'describe': { await form_executor.runDescribe(); } break;
         }
 
         // Run appropriate module
@@ -618,7 +617,7 @@ Navigation functions should only be called in reaction to user events, such as b
                         code = file ? await file.data.text() : '';
                     }
 
-                    executor.runForm(asset.page, code, overview_el);
+                    form_executor.runForm(asset.page, code, overview_el);
                 } break;
 
                 case 'schedule': { await sched_executor.runMeetings(asset.schedule, overview_el); } break;

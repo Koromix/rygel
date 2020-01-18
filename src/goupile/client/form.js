@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function FormExecutor() {
+let form_executor = new function() {
     let self = this;
 
     let current_form = {};
