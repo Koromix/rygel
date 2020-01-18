@@ -19,13 +19,18 @@ Commands:
     pack                         Pack assets to C source file and other formats)");
     };
 
-    // Handle 'felix --help [command]' and 'felix help [command]' invocations
-    if (argc >= 2 && (TestStr(argv[1], "--help") || TestStr(argv[1], "help"))) {
-        if (argc >= 3 && argv[2][0] != '-') {
-            argv[1] = argv[2];
-            argv[2] = const_cast<char *>("--help");
-        } else {
-            print_usage(stdout);
+    // Handle help and version arguments
+    if (argc >= 2) {
+        if (TestStr(argv[1], "--help") || TestStr(argv[1], "help")) {
+            if (argc >= 3 && argv[2][0] != '-') {
+                argv[1] = argv[2];
+                argv[2] = const_cast<char *>("--help");
+            } else {
+                print_usage(stdout);
+                return 0;
+            }
+        } else if (TestStr(argv[1], "--version")) {
+            PrintLn("felix %1", BuildVersion);
             return 0;
         }
     }

@@ -472,6 +472,12 @@ Options:
         return 1;
     }
 
+    // Handle version
+    if (argc >= 2 && TestStr(argv[1], "--version")) {
+        PrintLn("thop %1", BuildVersion);
+        return 0;
+    }
+
     // Find config filename
     const char *config_filename = nullptr;
     {

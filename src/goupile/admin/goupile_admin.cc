@@ -24,7 +24,7 @@ Commands:
     const char *cmd = argv[1];
     Span<const char *> arguments((const char **)argv + 2, argc - 2);
 
-    // Handle 'goupile_admin help [command]' and 'goupile_admin --help [command]' invocations
+    // Handle help and version arguments
     if (TestStr(cmd, "--help") || TestStr(cmd, "help")) {
         if (arguments.len && arguments[0][0] != '-') {
             cmd = arguments[0];
@@ -33,6 +33,9 @@ Commands:
             print_usage(stdout);
             return 0;
         }
+    } else if (TestStr(cmd, "--version")) {
+        PrintLn("goupile_admin %1", BuildVersion);
+        return 0;
     }
 
     if (TestStr(cmd, "create_profile")) {

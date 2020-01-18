@@ -303,6 +303,12 @@ Options:
         --subdirs                Output HTML pages in subdirectories)");
     };
 
+    // Handle version
+    if (argc >= 2 && TestStr(argv[1], "--version")) {
+        PrintLn("webler %1", BuildVersion);
+        return 0;
+    }
+
     // Parse options
     {
         OptionParser opt(argc, argv);

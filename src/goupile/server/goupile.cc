@@ -265,6 +265,12 @@ Options:
                 goupile_config.http.port, goupile_config.http.base_url);
     };
 
+    // Handle version
+    if (argc >= 2 && TestStr(argv[1], "--version")) {
+        PrintLn("goupile %1", BuildVersion);
+        return 0;
+    }
+
     // Find config filename
     const char *config_filename = nullptr;
     {

@@ -84,15 +84,18 @@ Commands:
     const char *cmd = argv[1];
     Span<const char *> arguments((const char **)argv + 2, argc - 2);
 
-    // Handle 'drdc help [command]' and 'drdc --help [command]' invocations
+    // Handle help and version arguments
     if (TestStr(cmd, "--help") || TestStr(cmd, "help")) {
         if (arguments.len && arguments[0][0] != '-') {
             cmd = arguments[0];
-            arguments[0] = "--help";
+            arguments[0] = (cmd[0] == '-') ? cmd : "--help";
         } else {
             print_usage(stdout);
             return 0;
         }
+    } else if (TestStr(cmd, "--version")) {
+        PrintLn("drdc %1", BuildVersion);
+        return 0;
     }
 
     const char *config_filename = nullptr;
