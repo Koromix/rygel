@@ -58,9 +58,7 @@ void HandleLogin(const http_RequestInfo &request, http_IO *io)
             const char *password_hash = (const char *)sqlite3_column_text(stmt, 0);
 
             if (crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
-                /// XXX: Fishy, we need to make our own shared pointer (and make it intrusive)
-                std::shared_ptr<uint8_t> ptr = std::make_shared<uint8_t>(RG_SIZE(Session) + strlen(username) + 1);
-                Session *session = (Session *)ptr.get();
+                Session *session = (Session *)Allocator::Allocate(nullptr, RG_SIZE(Session) + strlen(username) + 1);
 
                 session->permissions |= !!sqlite3_column_int(stmt, 1) * (int)UserPermission::Admin;
                 session->permissions |= !!sqlite3_column_int(stmt, 2) * (int)UserPermission::Read;
@@ -71,6 +69,9 @@ void HandleLogin(const http_RequestInfo &request, http_IO *io)
                 session->permissions |= !!sqlite3_column_int(stmt, 7) * (int)UserPermission::Validate;
                 strcpy(session->username, username);
 
+                // XXX: Ugly allocation for refcount, we need to make our own intrusive shared pointer
+                std::shared_ptr<Session> ptr =
+                    std::shared_ptr<Session>(session, [](Session *session) { Allocator::Release(nullptr, session, -1); });
                 sessions.Open(request, io, ptr);
 
                 // Success!
