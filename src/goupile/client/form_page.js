@@ -30,7 +30,6 @@ function PageState() {
     this.changed_variables = new Set;
 
     // Used for "real forms" by FormExecutor
-    this.route = {};
     this.scratch = {};
 }
 

@@ -16,15 +16,13 @@ let goupile = new function() {
     let settings;
     let settings_rnd;
 
-    let allow_go = true;
-
     let sse_src;
     let sse_timer;
     let sse_listeners = [];
     let sse_online = false;
 
-    let current_asset;
-    let current_url;
+    let route_asset;
+    let route_url;
 
     let left_panel;
     let show_overview = true;
@@ -242,7 +240,7 @@ let goupile = new function() {
         }
 
         util.deepFreeze(app, 'route');
-        self.go(current_url || window.location.href, false);
+        self.go(route_url ? route_url.pathname : window.location.href, false);
     };
 
     async function fetchSettings() {
@@ -292,14 +290,7 @@ let goupile = new function() {
         sse_src.addEventListener(event, func);
     };
 
-    // Avoid async here, because it may fail (see allow_go) and the caller may need
-    // to catch that synchronously.
-    this.go = function(url = null, push_history = true) {
-        if (!allow_go) {
-            throw new Error(`A navigation function (e.g. go()) has been interrupted.
-Navigation functions should only be called in reaction to user events, such as button clicks.`);
-        }
-
+    this.go = async function(url = null, push_history = true) {
         if (url) {
             if (url.match(/(http|ftp|https):\/\//g) || url.startsWith('/')) {
                 url = new URL(url, window.location.href);
@@ -313,47 +304,51 @@ Navigation functions should only be called in reaction to user events, such as b
                 app.route[key] = Number.isNaN(num) ? value : num;
             }
 
-            run(url.pathname).then(() => {
-                if (push_history) {
-                    window.history.pushState(null, null, self.makeURL());
-                } else {
-                    window.history.replaceState(null, null, self.makeURL());
+            // Find relevant asset
+            route_asset = app.urls_map[url.pathname] || app.urls_map[url.pathname + '/'];
+            if (!route_asset) {
+                let path = url.pathname;
+
+                while (!route_asset && path.length) {
+                    path = path.substr(0, path.length - 1);
+                    path = path.substr(0, path.lastIndexOf('/') + 1);
+                    route_asset = app.urls_map[path];
                 }
-            });
+            }
+            route_url = url.pathname;
+
+            // Route URL through appropriate controller
+            if (route_asset) {
+                switch (route_asset.type) {
+                    case 'page': { await form_executor.route(route_asset, url); } break;
+                }
+            } else {
+                log.error(`URL non supportée '${url.pathname}'`);
+            }
+
+            await run();
         } else {
-            run();
+            await run();
+            push_history = false;
+        }
+
+        if (route_asset) {
+            switch (route_asset.type) {
+                case 'page': { route_url = form_executor.makeURL(); } break;
+            }
+        }
+
+        if (push_history) {
+            window.history.pushState(null, null, route_url);
+        } else {
+            window.history.replaceState(null, null, route_url);
         }
     }
 
-    this.makeURL = function() {
-        let url = util.pasteURL(current_url, app.route);
-        return url;
-    };
-
-    async function run(url = null, args = {}) {
-        if (await fetchSettings())
+    async function run() {
+        if (await fetchSettings()) {
             await self.initApplication();
-
-        // Find relevant asset and controller
-        if (url) {
-            current_asset = app.urls_map[url];
-            if (!current_asset && !url.endsWith('/'))
-                current_asset = app.urls_map[url + '/'];
-            current_url = current_asset ? current_asset.url : url;
-
-            if (!current_asset)
-                log.error(`URL inconnue '${url}'`);
-        }
-
-        if (current_asset && current_asset.form) {
-            await form_executor.route(current_asset.form, args);
-
-            // The user asked for this record, make sure it is visible
-            if (args.id != null && !show_overview) {
-                if (goupile.isTablet())
-                    left_panel = null;
-                show_overview = true;
-            }
+            return;
         }
 
         // Render menu and page layout
@@ -362,23 +357,23 @@ Navigation functions should only be called in reaction to user events, such as b
         // Run left panel
         switch (left_panel) {
             case 'files': { await dev_files.runFiles(); } break;
-            case 'editor': { await dev_files.runEditor(current_asset); } break;
+            case 'editor': { await dev_files.runEditor(route_asset); } break;
             case 'status': { await form_executor.runStatus(); } break;
             case 'data': { await form_executor.runData(); } break;
             case 'describe': { await form_executor.runDescribe(); } break;
         }
 
         // Run appropriate module
-        if (current_asset) {
-            document.title = `${current_asset.label} — ${env.app_name}`;
-            await runAssetSafe(current_asset);
+        if (route_asset) {
+            document.title = `${route_asset.label} — ${env.app_name}`;
+            await runAssetSafe(route_asset);
         } else {
             document.title = env.app_name;
         }
     };
 
     function renderMainUI() {
-        let show_data = current_asset && current_asset.form;
+        let show_data = route_asset && route_asset.form;
 
         let correct_mode = (left_panel == null ||
                             left_panel === 'files' || left_panel === 'editor' ||
@@ -388,7 +383,7 @@ Navigation functions should only be called in reaction to user events, such as b
         if (!correct_mode)
             left_panel = 'editor';
 
-        if (!current_asset || !current_asset.overview) {
+        if (!route_asset || !route_asset.overview) {
             show_overview = false;
         } else if (!left_panel) {
             show_overview = true;
@@ -396,8 +391,8 @@ Navigation functions should only be called in reaction to user events, such as b
 
         let show_assets = [];
         let select_asset;
-        if (current_asset) {
-            let idx = current_asset.idx;
+        if (route_asset) {
+            let idx = route_asset.idx;
             while (app.assets[idx].secondary)
                 idx--;
 
@@ -428,16 +423,16 @@ Navigation functions should only be called in reaction to user events, such as b
 
             &nbsp;&nbsp;
             ${show_assets.map(asset => {
-                if (asset === current_asset) {
+                if (asset === route_asset) {
                     return html`<button class=${show_overview ? 'active': ''}
-                                        @click=${e => toggleAssetView(asset)}>${asset.overview}</button>`;
+                                        @click=${e => self.toggleOverview()}>${asset.overview}</button>`;
                 } else {
-                    return html`<button @click=${e => toggleAssetView(asset)}>${asset.overview}</button>`;
+                    return html`<button @click=${e => self.go(asset.url)}>${asset.overview}</button>`;
                 }
             })}
 
             <select id="gp_assets" @change=${e => self.go(e.target.value)}>
-                ${!current_asset ? html`<option>-- Sélectionnez une page --</option>` : ''}
+                ${!route_asset ? html`<option>-- Sélectionnez une page --</option>` : ''}
                 ${util.mapRLE(app.assets, asset => asset.category, (category, offset, len) => {
                     if (len === 1) {
                         let asset = app.assets[offset];
@@ -561,8 +556,24 @@ Navigation functions should only be called in reaction to user events, such as b
         self.go();
     }
 
+    this.toggleOverview = function(enable = null) {
+        if (enable == null)
+            enable = !show_overview || goupile.isTablet();
+
+        if (enable) {
+            if (goupile.isTablet())
+                left_panel = null;
+            show_overview = true;
+        } else {
+            left_panel = left_panel || 'editor';
+            show_overview = false;
+        }
+
+        self.go();
+    };
+
     function toggleAssetView(asset) {
-        if (goupile.isTablet() || asset !== current_asset) {
+        if (goupile.isTablet() || asset !== route_asset) {
             left_panel = null;
             show_overview = true;
         } else if (!show_overview) {
@@ -590,7 +601,7 @@ Navigation functions should only be called in reaction to user events, such as b
     async function runAssetSafe(asset, code = null) {
         let overview_el;
         let log_el;
-        if (asset === current_asset) {
+        if (asset === route_asset) {
             overview_el = document.querySelector('#gp_overview');
             log_el = document.querySelector('#gp_overview_log');
         } else {
@@ -612,16 +623,12 @@ Navigation functions should only be called in reaction to user events, such as b
                 } break;
 
                 case 'page': {
-                    // We don't want go() to be fired when a script is opened or changed in the editor,
-                    // because then we wouldn't be able to come back to the script to fix the code.
-                    allow_go = false;
-
                     if (code == null) {
                         let file = await virt_fs.load(asset.path);
                         code = file ? await file.data.text() : '';
                     }
 
-                    form_executor.runForm(asset.page, code, overview_el);
+                    form_executor.runPage(code, overview_el);
                 } break;
 
                 case 'schedule': { await sched_executor.runMeetings(asset.schedule, overview_el); } break;
@@ -649,8 +656,6 @@ Navigation functions should only be called in reaction to user events, such as b
             console.log(err);
 
             return false;
-        } finally {
-            allow_go = true;
         }
     }
 

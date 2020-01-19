@@ -5,7 +5,9 @@
 let form_executor = new function() {
     let self = this;
 
-    let current_form = {};
+    let block_go = false;
+
+    let current_asset = {};
     let current_records = new BTree;
     let page_states = {};
 
@@ -14,65 +16,87 @@ let form_executor = new function() {
     let select_many = false;
     let select_columns = new Set;
 
-    this.route = async function(form, args) {
-        if (args.hasOwnProperty('id') || !current_records.size || form.key !== current_form.key) {
-            current_form = form;
+    this.route = async function(asset, url) {
+        let parts = url.pathname.substr(asset.url.length).split('/');
+        let id = parts[0] || null;
+
+        if (asset !== current_asset || !current_records.size || id != null) {
+            current_asset = asset;
             current_records.clear();
             page_states = {};
 
-            let record;
-            if (args.id != null) {
-                record = await virt_data.load(current_form.key, args.id) ||
-                         virt_data.create(current_form.key);
-            } else {
-                record = virt_data.create(current_form.key);
+            if (id === 'many') {
+                select_many = true;
+            } else if (id === 'new') {
+                let record = virt_data.create(current_asset.form.key);
+                current_records.set(record.id, record);
+
+                select_many = false;
+            } else if (id != null) {
+                let record = await virt_data.load(current_asset.form.key, id) || virt_data.create(current_asset.form.key);
+                current_records.set(record.id, record);
+
+                select_many = false;
             }
-
-            current_records.set(record.id, record);
         }
-
-        current_form = form;
     };
 
-    this.runForm = function(page, code, panel_el) {
+    this.makeURL = function() {
+        let url;
+        if (select_many) {
+            url = `${current_asset.url}many`;
+        } else if (!current_records.size) {
+            url = current_asset.url;
+        } else {
+            let record = current_records.values().next().value;
+
+            url = `${current_asset.url}${record.sequence != null ? record.id : 'new'}`;
+        }
+
+        return util.pasteURL(url, app.route);
+    };
+
+    this.runPage = function(code, panel_el) {
         let func = Function('data', 'go', 'form', 'page', 'route', 'scratch', code);
 
         if (!select_many || select_columns.size) {
-            render(html`
-                <div class="af_page">${util.map(current_records.values(), record => {
-                    let state = page_states[record.id];
-                    if (!state) {
-                        state = new PageState;
-                        page_states[record.id] = state;
-                    }
+            try {
+                // We don't want go() to be fired when a script is opened or changed in the editor,
+                // because then we wouldn't be able to come back to the script to fix the code.
+                block_go = true;
 
-                    // Pages need to update themselves without doing a full render
-                    let el = document.createElement('div');
-                    if (select_many)
-                        el.className = 'af_entry';
+                render(html`
+                    <div class="af_page">${util.map(current_records.values(), record => {
+                        let state = page_states[record.id];
+                        if (!state) {
+                            state = new PageState;
+                            page_states[record.id] = state;
+                        }
 
-                    if (select_many) {
-                        if (state.route === app.route)
-                            state.route = util.assignDeep({}, app.route);
+                        // Pages need to update themselves without doing a full render
+                        let el = document.createElement('div');
+                        if (select_many)
+                            el.className = 'af_entry';
 
-                        runPageMany(page.key, state, func, record, select_columns, el);
-                    } else {
-                        if (state.route !== app.route)
-                            state.route = util.assignDeep(app.route, state.route);
+                        if (select_many) {
+                            runPageMany(state, func, record, select_columns, el);
+                        } else {
+                            runPage(state, func, record, el);
+                        }
 
-                        runPage(page.key, state, func, record, el);
-                    }
-
-                    return el;
-                })}</div>
-            `, panel_el);
+                        return el;
+                    })}</div>
+                `, panel_el);
+            } finally {
+                block_go = false;
+            }
         } else {
             render(html`<div class="af_page">Aucune colonne sélectionnée</div>`, panel_el);
         }
     };
 
-    function runPageMany(key, state, func, record, columns, el) {
-        let page = new Page(key);
+    function runPageMany(state, func, record, columns, el) {
+        let page = new Page(current_asset.page.key);
         let builder = new PageBuilder(state, page);
 
         builder.decodeKey = decodeKey;
@@ -88,7 +112,7 @@ let form_executor = new function() {
 
         // Build it!
         builder.pushOptions({compact: true});
-        func(app.data, goupile.go, builder, builder, state.route, state.scratch);
+        func(app.data, handleGo, builder, builder, {}, state.scratch);
 
         render(html`
             <div class="af_actions">
@@ -103,8 +127,8 @@ let form_executor = new function() {
         `, el);
     }
 
-    function runPage(key, state, func, record, el) {
-        let page = new Page(key);
+    function runPage(state, func, record, el) {
+        let page = new Page(current_asset.page.key);
         let builder = new PageBuilder(state, page);
 
         builder.decodeKey = decodeKey;
@@ -119,8 +143,8 @@ let form_executor = new function() {
         builder.changeHandler = () => runPage(...arguments);
 
         // Build it!
-        func(app.data, goupile.go, builder, builder, state.route, state.scratch);
-        window.history.replaceState(null, null, goupile.makeURL());
+        func(app.data, handleGo, builder, builder, app.route, state.scratch);
+        window.history.replaceState(null, null, self.makeURL());
 
         // Only show buttons if there is at least one input widget on the page
         let show_buttons = page.variables.length > 0;
@@ -129,7 +153,7 @@ let form_executor = new function() {
                               record.complete[page.key] === false;
 
         render(html`
-            <div class="af_path">${current_form.pages.map(page2 => {
+            <div class="af_path">${current_asset.form.pages.map(page2 => {
                 let complete = record.complete[page2.key];
 
                 let cls = '';
@@ -143,8 +167,7 @@ let form_executor = new function() {
                     cls += ' partial';
                 }
 
-                return html`<a class=${cls} href="#"
-                               @click=${e => { handleStatusClick(page2, record.id); e.preventDefault(); }}>${page2.key}</a>`;
+                return html`<a class=${cls} href=${makeLink(current_asset.form.key, page2.key, record.id)}>${page2.key}</a>`;
             })}</div>
 
             ${show_buttons ? html`
@@ -159,6 +182,17 @@ let form_executor = new function() {
             <br/>
             ${page.render()}
         `, el);
+    }
+
+    // Avoid async here, because it may fail (see block_go) and the caller may need
+    // to catch that synchronously.
+    function handleGo(url = null, push_history = true) {
+        if (block_go) {
+            throw new Error(`A navigation function (e.g. go()) has been interrupted.
+Navigation functions should only be called in reaction to user events, such as button clicks.`);
+        }
+
+        goupile.go(url, push_history);
     }
 
     function decodeKey(key) {
@@ -218,12 +252,12 @@ let form_executor = new function() {
     }
 
     this.runStatus = async function() {
-        let records = await virt_data.loadAll(current_form.key);
+        let records = await virt_data.loadAll(current_asset.form.key);
         renderStatus(records);
     };
 
     function renderStatus(records) {
-        let pages = current_form.pages;
+        let pages = current_asset.form.pages;
 
         let complete_set = new Set;
         for (let record of records) {
@@ -234,7 +268,8 @@ let form_executor = new function() {
 
         render(html`
             <div class="gp_toolbar">
-                <button @click=${e => goupile.go(null, {id: null})}>Ajouter</button>
+                <button @click=${e => goupile.go(makeLink(current_asset.form.key,
+                                                          current_asset.page.key))}>Ajouter</button>
                 <div style="flex: 1;"></div>
                 <p>${records.length} ${records.length > 1 ? 'enregistrements' : 'enregistrement'}
                 dont ${complete_set.size} ${complete_set.size > 1 ? 'complets' : 'complet'}</p>
@@ -259,11 +294,11 @@ let form_executor = new function() {
                                     let complete = record.complete[page.key];
 
                                     if (complete == null) {
-                                        return html`<td><a href="#" @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>Non rempli</a></td>`;
+                                        return html`<td><a href=${makeLink(current_asset.form.key, page.key, record.id)}>Non rempli</a></td>`;
                                     } else if (complete) {
-                                        return html`<td class="complete"><a href="#" @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>Complet</a></td>`;
+                                        return html`<td class="complete"><a href=${makeLink(current_asset.form.key, page.key, record.id)}>Complet</a></td>`;
                                     } else {
-                                        return html`<td class="partial"><a href="#" @click=${e => { handleStatusClick(page, record.id); e.preventDefault(); }}>Partiel</a></td>`;
+                                        return html`<td class="partial"><a href=${makeLink(current_asset.form.key, page.key, record.id)}>Partiel</a></td>`;
                                     }
                                 })}</tr>
                             `;
@@ -281,16 +316,10 @@ let form_executor = new function() {
         goupile.go();
     }
 
-    // XXX: Function is a hack, which we can remove when we support record ID in URLs.
-    async function handleStatusClick(page, record_id) {
-        await goupile.go(page.url, {id: record_id});
-        window.history.pushState(null, null, goupile.makeURL());
-    }
-
     this.runData = async function() {
-        let records = await virt_data.loadAll(current_form.key);
-        let variables = await virt_data.listVariables(current_form.key);
-        let columns = orderColumns(current_form.pages, variables);
+        let records = await virt_data.loadAll(current_asset.form.key);
+        let variables = await virt_data.listVariables(current_asset.form.key);
+        let columns = orderColumns(current_asset.form.pages, variables);
 
         renderRecords(records, columns);
     };
@@ -318,7 +347,8 @@ let form_executor = new function() {
 
         render(html`
             <div class="gp_toolbar">
-                <button @click=${e => goupile.go(null, {id: null})}>Ajouter</button>
+                <button @click=${e => goupile.go(makeLink(current_asset.form.key,
+                                                          current_asset.page.key))}>Ajouter</button>
                 <div style="flex: 1;"></div>
                 <button class=${select_many ? 'active' : ''} @click=${e => toggleSelectionMode()}>Sélection multiple</button>
                 <div style="flex: 1;"></div>
@@ -376,8 +406,8 @@ let form_executor = new function() {
         return html`
             <button>Export</button>
             <div>
-                <button @click=${e => exportSheets(current_form, 'xlsx')}>Excel</button>
-                <button @click=${e => exportSheets(current_form, 'csv')}>CSV</button>
+                <button @click=${e => exportSheets(current_asset.form, 'xlsx')}>Excel</button>
+                <button @click=${e => exportSheets(current_asset.form, 'csv')}>CSV</button>
             </div>
         `;
     }
@@ -553,6 +583,8 @@ let form_executor = new function() {
     }
 
     function handleEditClick(record) {
+        let show_overview = !current_records.size;
+
         if (!current_records.has(record.id)) {
             if (!select_many)
                 current_records.clear();
@@ -561,9 +593,8 @@ let form_executor = new function() {
             current_records.delete(record.id);
         }
 
-        if (!select_many && current_records.size) {
-            // XXX: Hack to get goupile to enable overview panel
-            goupile.go(null, {id: record.id});
+        if (show_overview) {
+            goupile.toggleOverview(true);
         } else {
             goupile.go();
         }
@@ -594,4 +625,8 @@ let form_executor = new function() {
             <div class="gp_wip">Graphiques non disponibles</div>
         `, document.querySelector('#dev_describe'));
     };
+
+    function makeLink(form_key, page_key, id = null) {
+        return `${env.base_url}app/${form_key}/${page_key}/${id || 'new'}`;
+    }
 };
