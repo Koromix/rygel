@@ -57,7 +57,7 @@ let form_executor = new function() {
     };
 
     this.runPage = function(code, panel_el) {
-        let func = Function('data', 'go', 'form', 'page', 'route', 'scratch', code);
+        let func = Function('util', 'data', 'go', 'form', 'page', 'route', 'scratch', code);
 
         if (!select_many || select_columns.size) {
             try {
@@ -112,7 +112,7 @@ let form_executor = new function() {
 
         // Build it!
         builder.pushOptions({compact: true});
-        func(app.data, handleGo, builder, builder, {}, state.scratch);
+        func(util, app.data, handleGo, builder, builder, {}, state.scratch);
 
         render(html`
             <div class="af_actions">
@@ -143,7 +143,7 @@ let form_executor = new function() {
         builder.changeHandler = () => runPage(...arguments);
 
         // Build it!
-        func(app.data, handleGo, builder, builder, app.route, state.scratch);
+        func(util, app.data, handleGo, builder, builder, app.route, state.scratch);
         window.history.replaceState(null, null, self.makeURL());
 
         // Only show buttons if there is at least one input widget on the page

@@ -190,8 +190,8 @@ let goupile = new function() {
                 code = file ? await file.data.text() : '';
             }
 
-            let func = Function('app', 'data', 'route', code);
-            func(app_builder, new_app.data, new_app.route);
+            let func = Function('util', 'app', 'data', 'route', code);
+            func(util, app_builder, new_app.data, new_app.route);
 
             let known_paths = new Set(new_app.assets.map(asset => asset.path));
             known_paths.add('/files/main.js');
