@@ -417,8 +417,6 @@ let goupile = new function() {
                         @click=${e => toggleLeftPanel('status')}>Suivi</button>
                 <button class=${left_panel === 'data' ? 'active' : ''}
                         @click=${e => toggleLeftPanel('data')}>Données</button>
-                <button class=${left_panel === 'describe' ? 'active' : ''}
-                        @click=${e => toggleLeftPanel('describe')}>Descriptif</button>
             ` :  ''}
 
             &nbsp;&nbsp;
