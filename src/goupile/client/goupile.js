@@ -483,7 +483,7 @@ let goupile = new function() {
             <div id="gp_overview" class=${left_panel ? 'gp_panel right' : 'gp_panel overview'}
                  style=${show_overview ? '' : 'display: none;'}></div>
 
-            <div id="gp_overview_log" style="display: none;"></div>
+            <div id="gp_error" style="display: none;"></div>
         `, document.querySelector('main'));
     }
 
@@ -597,15 +597,9 @@ let goupile = new function() {
     };
 
     async function runAssetSafe(asset, code = null) {
-        let overview_el;
-        let log_el;
-        if (asset === route_asset) {
-            overview_el = document.querySelector('#gp_overview');
-            log_el = document.querySelector('#gp_overview_log');
-        } else {
-            overview_el = document.createElement('div');
-            log_el = document.createElement('div');
-        }
+        let error_el = document.querySelector('#gp_error');
+        let overview_el = document.querySelector('#gp_overview');
+        let test_el = (asset === route_asset) ? overview_el : document.createElement('div');
 
         try {
             switch (asset.type) {
@@ -617,7 +611,7 @@ let goupile = new function() {
                         return true;
                     }
 
-                    render(html`<div class="gp_wip">Tableau de bord non disponible</div>`, overview_el);
+                    render(html`<div class="gp_wip">Tableau de bord non disponible</div>`, test_el);
                 } break;
 
                 case 'page': {
@@ -626,28 +620,30 @@ let goupile = new function() {
                         code = file ? await file.data.text() : '';
                     }
 
-                    form_executor.runPage(code, overview_el);
+                    form_executor.runPage(code, test_el);
                 } break;
 
-                case 'schedule': { await sched_executor.runMeetings(asset.schedule, overview_el); } break;
-                case 'schedule_settings': { await sched_executor.runSettings(asset.schedule, overview_el); } break;
+                case 'schedule': { await sched_executor.runMeetings(asset.schedule, test_el); } break;
+                case 'schedule_settings': { await sched_executor.runSettings(asset.schedule, test_el); } break;
 
                 default: {
-                    render(html`<div class="gp_wip">Aperçu non disponible</div>`, overview_el);
+                    render(html`<div class="gp_wip">Aperçu non disponible</div>`, test_el);
                 } break;
             }
 
             // Things are OK!
-            log_el.innerHTML = '';
-            log_el.style.display = 'none';
+            error_el.innerHTML = '';
+            error_el.style.display = 'none';
             overview_el.classList.remove('broken');
 
             return true;
         } catch (err) {
             let err_line = util.parseEvalErrorLine(err);
 
-            log_el.textContent = `⚠\uFE0E Line ${err_line || '?'}: ${err.message}`;
-            log_el.style.display = 'block';
+            // XXX: If the user changes page quickly before changes are tested, we can
+            // end up showing an error about the previous script on the new page.
+            error_el.textContent = `⚠\uFE0E Line ${err_line || '?'}: ${err.message}`;
+            error_el.style.display = 'block';
             overview_el.classList.add('broken');
 
             // Make it easier for complex screw ups (which are mine, most of the time)
