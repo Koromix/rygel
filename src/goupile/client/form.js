@@ -415,11 +415,13 @@ Navigation functions should only be called in reaction to user events, such as b
     function toggleSelectionMode() {
         select_many = !select_many;
 
+        let record0 = current_records.size ? current_records.values().next().value : null;
+
         if (select_many) {
             select_columns.clear();
-        } else if (current_records.size >= 2) {
-            let record0 = current_records.values().next().value;
-
+            if (record0 && record0.sequence == null)
+                current_records.clear();
+        } else if (record0) {
             current_records.clear();
             current_records.set(record0.id, record0);
         }
