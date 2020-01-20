@@ -59,6 +59,11 @@ let util = new function() {
         return obj;
     };
 
+    this.map = function*(obj, func) {
+        for (let it of obj)
+            yield func(it);
+    };
+
     this.assignDeep = function(obj, ...sources) {
         for (let src of sources)
             assignDeep1(obj, src);

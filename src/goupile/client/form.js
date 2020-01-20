@@ -6,9 +6,7 @@ let form_executor = new function() {
     let self = this;
 
     let current_form = {};
-    // XXX: Use B-tree instead of two data structures
-    let current_records = [];
-    let current_ids = new Set;
+    let current_records = new BTree;
     let page_states = {};
 
     let show_complete = true;
@@ -17,10 +15,9 @@ let form_executor = new function() {
     let select_columns = new Set;
 
     this.route = async function(form, args) {
-        if (args.hasOwnProperty('id') || !current_records.length || form.key !== current_form.key) {
+        if (args.hasOwnProperty('id') || !current_records.size || form.key !== current_form.key) {
             current_form = form;
-            current_records.length = 0;
-            current_ids.clear();
+            current_records.clear();
             page_states = {};
 
             let record;
@@ -31,7 +28,7 @@ let form_executor = new function() {
                 record = virt_data.create(current_form.key);
             }
 
-            selectRecord(record);
+            current_records.set(record.id, record);
         }
 
         current_form = form;
@@ -42,7 +39,7 @@ let form_executor = new function() {
 
         if (!select_many || select_columns.size) {
             render(html`
-                <div class="af_page">${current_records.map(record => {
+                <div class="af_page">${util.map(current_records.values(), record => {
                     let state = page_states[record.id];
                     if (!state) {
                         state = new PageState;
@@ -308,7 +305,7 @@ let form_executor = new function() {
         let count0 = 0;
         if (select_many) {
             for (let record of records) {
-                if (current_ids.has(record.id)) {
+                if (current_records.has(record.id)) {
                     count1++;
                 } else {
                     count0++;
@@ -346,10 +343,10 @@ let form_executor = new function() {
                 <tbody>
                     ${empty_msg ?
                         html`<tr><td colspan=${1 + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : ''}
-                    ${records.map(record => html`<tr class=${current_ids.has(record.id) ? 'selected' : ''}>
+                    ${records.map(record => html`<tr class=${current_records.has(record.id) ? 'selected' : ''}>
                         ${!select_many ? html`<th><a href="#" @click=${e => { handleEditClick(record); e.preventDefault(); }}>🔍\uFE0E</a>
                                                   <a href="#" @click=${e => { showDeleteDialog(e, record); e.preventDefault(); }}>✕</a></th>` : ''}
-                        ${select_many ? html`<th><input type="checkbox" .checked=${current_ids.has(record.id)}
+                        ${select_many ? html`<th><input type="checkbox" .checked=${current_records.has(record.id)}
                                                         @click=${e => handleEditClick(record)} /></th>` : ''}
 
                         ${columns.map(col => {
@@ -387,27 +384,22 @@ let form_executor = new function() {
 
         if (select_many) {
             select_columns.clear();
-        } else if (current_records.length >= 2) {
-            let record0 = current_records[0];
+        } else if (current_records.size >= 2) {
+            let record0 = current_records.values().next().value;
 
-            current_records.length = 0;
-            current_ids.clear();
-
-            selectRecord(record0);
+            current_records.clear();
+            current_records.set(record0.id, record0);
         }
 
         goupile.go();
     }
 
     function toggleAllRecords(records, enable) {
-        current_records.length = 0;
-        current_ids.clear();
+        current_records.clear();
 
         if (enable) {
-            for (let record of records) {
-                current_records.push(record);
-                current_ids.add(record.id);
-            }
+            for (let record of records)
+                current_records.set(record.id, record);
         }
 
         goupile.go();
@@ -558,18 +550,15 @@ let form_executor = new function() {
     }
 
     function handleEditClick(record) {
-        if (!current_ids.has(record.id)) {
-            if (!select_many) {
-                current_records.length = 0;
-                current_ids.clear();
-            }
-
-            selectRecord(record);
+        if (!current_records.has(record.id)) {
+            if (!select_many)
+                current_records.clear();
+            current_records.set(record.id, record);
         } else {
-            unselectRecord(record);
+            current_records.delete(record.id);
         }
 
-        if (!select_many && current_ids.size) {
+        if (!select_many && current_records.size) {
             // XXX: Hack to get goupile to enable overview panel
             goupile.go(null, {id: record.id});
         } else {
@@ -585,26 +574,12 @@ let form_executor = new function() {
                 page.close();
 
                 await virt_data.delete(record.table, record.id);
-
-                if (current_ids.has(record.id))
-                    unselectRecord(record);
+                current_records.delete(record.id, record);
 
                 goupile.go();
             };
             page.buttons(page.buttons.std.ok_cancel('Supprimer'));
         });
-    }
-
-    function selectRecord(record) {
-        current_records.push(record);
-        current_records.sort((record1, record2) => util.compareValues(record1.id, record2.id));
-        current_ids.add(record.id);
-    }
-
-    function unselectRecord(record) {
-        let idx = current_records.findIndex(it => it.id === record.id);
-        current_records.splice(idx, 1);
-        current_ids.delete(record.id);
     }
 
     this.runDescribe = async function() {
