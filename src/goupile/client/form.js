@@ -195,8 +195,11 @@ let form_executor = new function() {
 
         entry.progress('Enregistrement en cours');
         try {
-            await virt_data.save(record, page.variables);
+            let record2 = await virt_data.save(record, page.variables);
             entry.success('Données enregistrées !');
+
+            if (current_records.has(record2.id))
+                current_records.set(record2.id, record2);
         } catch (err) {
             entry.error(`Échec de l\'enregistrement : ${err.message}`);
         }

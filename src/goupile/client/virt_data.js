@@ -41,7 +41,8 @@ function VirtualData(db) {
             return ret;
         });
 
-        await db.transaction('rw', ['records', 'records_data', 'records_variables'], async () => {
+        await db.transaction('rw', ['records', 'records_data',
+                                    'records_sequences', 'records_variables'], async () => {
             let data = await db.load('records_data', record.tkey);
 
             if (data) {
@@ -59,10 +60,21 @@ function VirtualData(db) {
                     delete data.values[variable.key];
             }
 
+            // Attribute sequence ID
+            if (record2.sequence == null) {
+                record2.sequence = await db.load('records_sequences', record2.table) || 0;
+                db.saveWithKey('records_sequences', record2.table, record2.sequence + 1);
+            }
+
             db.save('records', record2);
             db.save('records_data', data);
             db.saveAll('records_variables', variables);
+
+            // Need to return complete record to caller
+            record2.values = data.values;
         });
+
+        return record2;
     };
 
     this.delete = async function(table, id) {
