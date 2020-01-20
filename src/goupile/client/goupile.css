@@ -169,8 +169,8 @@ button:not(:disabled) { cursor: pointer; }
 
 #gp_error {
     position: fixed;
-    top: 2.5em;
-    right: 0;
+    bottom: 0;
+    left: 0;
     padding: 6px;
     background: #db0a0a;
     color: white;
