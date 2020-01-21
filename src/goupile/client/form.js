@@ -148,7 +148,7 @@ let form_executor = new function() {
         builder.errorList();
         window.history.replaceState(null, null, self.makeURL());
 
-        // Only show buttons if there is at least one input widget on the page
+        let show_new = (record.sequence != null);
         let enable_save = state.changed;
         let enable_validate = !state.changed && !page.errors.length &&
                               record.complete[page.key] === false;
@@ -172,10 +172,16 @@ let form_executor = new function() {
             })}</div>
 
             <div class="af_actions sticky">
+                ${record.sequence != null ? html`
+                    <a href="#" @click=${e => { handleNewClick(e, state.changed); e.preventDefault(); }}>x</a>
+                    <p>ID n°${record.sequence}</p>
+                ` : ''}
+                ${record.sequence == null ? html`<p>Nouvel ID</p>` : ''}
+
                 <button class="af_button" ?disabled=${!enable_save}
-                        @click=${builder.save}>Enregistrer</a>
+                        @click=${builder.save}>Enregistrer</button>
                 <button class="af_button" ?disabled=${!enable_validate}
-                        @click=${e => showValidateDialog(e, builder.submit)}>Valider</a>
+                        @click=${e => showValidateDialog(e, builder.submit)}>Valider</button>
             </div>
 
             <br/>
@@ -238,6 +244,22 @@ Navigation functions should only be called in reaction to user events, such as b
         }
     }
 
+    function handleNewClick(e, confirm) {
+        if (confirm) {
+            goupile.popup(e, page => {
+                page.output('Cette action entraînera la perte des modifications en cours, êtes-vous sûr(e) ?');
+
+                page.submitHandler = () => {
+                    page.close();
+                    goupile.go(makeLink(current_asset.form.key, current_asset.page.key));
+                };
+                page.buttons(page.buttons.std.ok_cancel('Fermer l\'enregistrement'));
+            })
+        } else {
+            goupile.go(makeLink(current_asset.form.key, current_asset.page.key));
+        }
+    }
+
     function showValidateDialog(e, submit_func) {
         goupile.popup(e, page => {
             page.output('Confirmez-vous la validation de cette page ?');
@@ -267,11 +289,9 @@ Navigation functions should only be called in reaction to user events, such as b
 
         render(html`
             <div class="gp_toolbar">
-                <button @click=${e => goupile.go(makeLink(current_asset.form.key,
-                                                          current_asset.page.key))}>Ajouter</button>
                 <div style="flex: 1;"></div>
                 <p>${records.length} ${records.length > 1 ? 'enregistrements' : 'enregistrement'}
-                dont ${complete_set.size} ${complete_set.size > 1 ? 'complets' : 'complet'}</p>
+                   dont ${complete_set.size} ${complete_set.size > 1 ? 'complets' : 'complet'}</p>
                 <div style="flex: 1;"></div>
                 <button class=${show_complete ? 'active' : ''}
                         @click=${toggleShowComplete}>Afficher les enregistrements complets</button>
@@ -346,9 +366,6 @@ Navigation functions should only be called in reaction to user events, such as b
 
         render(html`
             <div class="gp_toolbar">
-                <button @click=${e => goupile.go(makeLink(current_asset.form.key,
-                                                          current_asset.page.key))}>Ajouter</button>
-                <div style="flex: 1;"></div>
                 <button class=${select_many ? 'active' : ''} @click=${e => toggleSelectionMode()}>Sélection multiple</button>
                 <div style="flex: 1;"></div>
                 <div class="gp_dropdown right">${renderExportMenu()}</div>

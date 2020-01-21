@@ -75,22 +75,35 @@
     padding: 0 0 6px 6px;
     z-index: 999;
 }
-
 .af_actions.sticky {
     position: sticky;
     float: right;
     display: inline-block;
     top: calc(2.5em + 24px);
-    padding: 6px;
+    padding: 0 6px 6px 6px;
     background: rgba(239, 239, 239, 0.8);
 }
 
-.af_actions button {
-    display: block;
-    margin-left: auto;
-    width: 100px;
+.af_actions > p {
+    margin: 2px 0 6px 0;
+    font-size: 0.9em;
+    color: #444;
 }
-.af_actions button + button { margin-top: 4px; }
+.af_actions > a {
+    float: right;
+    margin-left: 4px;
+    text-decoration: none;
+    font-weight: normal;
+    font-style: normal;
+    vertical-align: top;
+}
+.af_actions > button {
+    display: block;
+    width: 100px;
+    margin: 0 0 0 auto;
+}
+.af_actions > button + button { margin-top: 4px; }
+
 
 /* -------------------- Status -------------------- */
 
