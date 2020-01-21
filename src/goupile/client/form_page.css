@@ -73,7 +73,7 @@
     -ms-user-select: none;
 }
 .af_error {
-    margin-top: 6px;
+    padding: 3px 0 3px 0;
     font-style: italic;
 }
 .af_help {
@@ -84,20 +84,14 @@
 .af_help:before { content: '☞\FE0E  '; }
 .af_prefix, .af_suffix { font-size: 0.85em; }
 
-.af_widget.compact:after {
-    display: table;
-    content: " ";
-    clear: both;
-}
+.af_widget.compact { display: flex; }
 .af_widget.compact > label {
-    display: inline-block;
     width: 250px;
     margin-bottom: 0;
 }
 .af_widget.compact .af_error {
-    float: right;
-    clear: both;
-    margin-top: 3px;
+    flex: 1;
+    text-align: right;
 }
 
 .af_widget > p:first-child { margin-top: 0; }
