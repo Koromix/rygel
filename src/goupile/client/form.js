@@ -380,13 +380,13 @@ Navigation functions should only be called in reaction to user events, such as b
             <table class="rec_table" style=${`min-width: ${30 + 60 * columns.length}px`}>
                 <thead>
                     <tr>
+                        <th class="id">ID</th>
                         <th class="actions">
                             ${select_many ?
                                 html`<input type="checkbox" .checked=${count1 && !count0}
                                             .indeterminate=${count1 && count0}
                                             @change=${e => toggleAllRecords(records, e.target.checked)} />` : ''}
                         </th>
-                        <th class="id">ID</th>
 
                         ${!columns.length ? html`<th>&nbsp;</th>` : ''}
                         ${!select_many ? columns.map(col => html`<th title=${col.key}>${col.key}</th>`) : ''}
@@ -401,12 +401,13 @@ Navigation functions should only be called in reaction to user events, such as b
                         html`<tr><td colspan=${2 + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : ''}
                     ${records.map(record => html`
                         <tr class=${current_records.has(record.id) ? 'selected' : ''}>
+                            <td class="id">${record.sequence}</td>
+
                             ${!select_many ? html`<th><a href="#" @click=${e => { handleEditClick(record); e.preventDefault(); }}>🔍\uFE0E</a>
                                                       <a href="#" @click=${e => { showDeleteDialog(e, record); e.preventDefault(); }}>✕</a></th>` : ''}
                             ${select_many ? html`<th><input type="checkbox" .checked=${current_records.has(record.id)}
                                                             @click=${e => handleEditClick(record)} /></th>` : ''}
 
-                            <td class="id">${record.sequence}</td>
                             ${columns.map(col => {
                                 let value = record.values[col.key];
 
