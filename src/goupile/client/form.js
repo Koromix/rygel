@@ -27,7 +27,7 @@ let form_executor = new function() {
 
             if (id === 'many') {
                 select_many = true;
-            } else if (id === 'new') {
+            } else if (id === 'new' || id == null) {
                 let record = virt_data.create(current_asset.form.key);
                 current_records.set(record.id, record);
 
