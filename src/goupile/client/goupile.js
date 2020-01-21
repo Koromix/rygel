@@ -240,7 +240,7 @@ let goupile = new function() {
         }
 
         util.deepFreeze(app, 'route');
-        self.go(route_url ? route_url.pathname : window.location.href, false);
+        self.go(route_url || window.location.href, false);
     };
 
     async function fetchSettings() {
