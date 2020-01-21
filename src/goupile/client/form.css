@@ -7,7 +7,7 @@
 .af_page {
     position: relative;
     margin-left: 1px;
-    padding: 12px;
+    padding: 16px 12px 12px 12px;
     background: #efefef;
     border: 12px solid #f8f8f8;
 }
@@ -41,7 +41,7 @@
 .af_path {
     position: absolute;
     width: 100%;
-    margin-top: -20px;
+    margin-top: -24px;
 }
 
 .af_path > a {
