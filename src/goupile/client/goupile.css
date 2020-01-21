@@ -145,7 +145,7 @@ button:not(:disabled) { cursor: pointer; }
     position: fixed;
     left: 0;
     top: 2.5em;
-    width: 50%;
+    width: 50vw;
     height: calc(100% - 2.5em);
     display: flex;
     flex-direction: column;
@@ -162,7 +162,7 @@ button:not(:disabled) { cursor: pointer; }
     flex-direction: column;
     overflow: auto;
 }
-.gp_panel.right { margin: 2.5em 0 0 50%; }
+.gp_panel.right { margin: 2.5em 0 0 50vw; }
 .gp_panel.overview { width: 100%; }
 
 #gp_overview.broken {
