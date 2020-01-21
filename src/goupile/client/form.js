@@ -147,7 +147,6 @@ let form_executor = new function() {
         window.history.replaceState(null, null, self.makeURL());
 
         // Only show buttons if there is at least one input widget on the page
-        let show_buttons = page.variables.length > 0;
         let enable_save = state.changed;
         let enable_validate = !state.changed && !page.errors.length &&
                               record.complete[page.key] === false;
@@ -170,14 +169,12 @@ let form_executor = new function() {
                 return html`<a class=${cls} href=${makeLink(current_asset.form.key, page2.key, record.id)}>${page2.key}</a>`;
             })}</div>
 
-            ${show_buttons ? html`
-                <div class="af_actions fixed">
-                    <button class="af_button" ?disabled=${!enable_save}
-                            @click=${builder.save}>Enregistrer</a>
-                    <button class="af_button" ?disabled=${!enable_validate}
-                            @click=${e => showValidateDialog(e, builder.submit)}>Valider</a>
-                </div>
-            ` : ''}
+            <div class="af_actions fixed">
+                <button class="af_button" ?disabled=${!enable_save}
+                        @click=${builder.save}>Enregistrer</a>
+                <button class="af_button" ?disabled=${!enable_validate}
+                        @click=${e => showValidateDialog(e, builder.submit)}>Valider</a>
+            </div>
 
             <br/>
             ${page.render()}
