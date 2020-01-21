@@ -585,7 +585,7 @@ function PageBuilder(state, page) {
         if (!content || typeof content === 'function')
             return;
 
-        let render = intf => renderWrappedWidget(intf, content);
+        let render = intf => html`<div class="af_wrap">${content}</div>`;
 
         return addWidget('output', null, render, options);
     };
@@ -867,20 +867,22 @@ Valid choices include:
 
     function renderWrappedWidget(intf, frag) {
         let cls = 'af_widget';
-        if (intf.options.compact)
-            cls += ' compact';
         if (intf.errors.length)
             cls += ' error';
         if (intf.options.disable)
             cls += ' disable';
         if (intf.options.mandatory)
             cls += ' mandatory';
+        if (intf.options.compact)
+            cls += ' compact';
 
         return html`
-            <div class=${cls}>
-                ${frag}
-                ${intf.errors.length && intf.errors.every(err => err) ?
-                    html`<div class="af_error">${intf.errors.map(err => html`${err}<br/>`)}</div>` : ''}
+            <div class="af_wrap">
+                <div class=${cls}>
+                    ${frag}
+                    ${intf.errors.length ?
+                        html`<div class="af_error">${intf.errors.map(err => html`${err}<br/>`)}</div>` : ''}
+                </div>
                 ${intf.options.help ? html`<p class="af_help">${intf.options.help}</p>` : ''}
             </div>
         `;

@@ -21,10 +21,10 @@
     margin: auto;
 }
 
-.af_widget + .af_container,
+.af_wrap + .af_container,
     .af_container + .af_container,
-    .af_container + .af_widget { margin-top: 12px; }
-.af_widget + .af_widget { margin-top: 6px; }
+    .af_container + .af_wrap { margin-top: 12px; }
+.af_wrap + .af_wrap { margin-top: 6px; }
 
 .af_entry {
     position: relative;

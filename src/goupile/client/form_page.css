@@ -82,9 +82,16 @@
     margin: 2px 0 0 20px;
 }
 .af_help:before { content: '☞\FE0E  '; }
-.af_prefix, .af_suffix { font-size: 0.85em; }
+.af_prefix, .af_suffix {
+    margin-left: 4px;
+    font-size: 0.85em;
+}
 
-.af_widget.compact { display: flex; }
+.af_widget.compact {
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
 .af_widget.compact > label {
     width: 250px;
     margin-bottom: 0;
@@ -94,8 +101,8 @@
     text-align: right;
 }
 
-.af_widget > p:first-child { margin-top: 0; }
-.af_widget > p:last-child { margin-bottom: 0; }
+.af_wrap > p:first-child { margin-top: 0; }
+.af_wrap > p:last-child { margin-bottom: 0; }
 
 /* -------------------- Simple widgets -------------------- */
 
