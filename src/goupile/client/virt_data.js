@@ -62,7 +62,7 @@ function VirtualData(db) {
 
             // Attribute sequence ID
             if (record2.sequence == null) {
-                record2.sequence = await db.load('records_sequences', record2.table) || 0;
+                record2.sequence = await db.load('records_sequences', record2.table) || 1;
                 db.saveWithKey('records_sequences', record2.table, record2.sequence + 1);
             }
 
