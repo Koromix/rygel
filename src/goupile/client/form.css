@@ -124,9 +124,15 @@
     border: 1px solid #dfdfdf;
     text-align: center;
 }
-.st_table td { background: #efefef; }
 .st_table td:first-child { border-left: 0; }
 .st_table td:last-child { border-right: 0; }
+
+.st_table tbody tr:nth-child(2n + 1) { background: #efefef; }
+.st_table tbody tr:nth-child(2n) { background: #f4f4f4; }
+.st_table tbody tr.selected td.id {
+    background: #666;
+    color: white;
+}
 
 .st_table td.id { text-align: center; }
 .st_table td.complete {

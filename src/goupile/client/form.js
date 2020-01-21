@@ -312,7 +312,7 @@ Navigation functions should only be called in reaction to user events, such as b
                     ${records.map(record => {
                         if (show_complete || !complete_set.has(record.id)) {
                             return html`
-                                <tr>
+                                <tr class=${current_records.has(record.id) ? 'selected' : ''}>
                                     <td class="id">${record.sequence}</td>
                                     ${pages.map(page => {
                                         let complete = record.complete[page.key];
