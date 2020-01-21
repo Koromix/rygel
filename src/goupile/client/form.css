@@ -116,6 +116,7 @@
 
 .st_table thead { background: #dfdfdf; }
 .st_table th { font-weight: normal; }
+.st_table th.id { width: 40px; }
 
 .st_table th, .st_table td {
     height: 1.7em;
@@ -127,6 +128,7 @@
 .st_table td:first-child { border-left: 0; }
 .st_table td:last-child { border-right: 0; }
 
+.st_table td.id { text-align: center; }
 .st_table td.complete {
     background: #89c28c;
     color: white;
@@ -151,7 +153,8 @@
 }
 
 .rec_table thead { background: #dfdfdf; }
-.rec_actions { width: 2.5em; }
+.rec_table th.actions { width: 2.5em; }
+.rec_table th.id { width: 40px; }
 
 .rec_table th, .rec_table td {
     height: 1.7em;
@@ -180,6 +183,7 @@
     font-style: normal;
 }
 
+.rec_table td.id { text-align: center; }
 .rec_table td.number { text-align: right; }
 .rec_table td.missing {
     text-align: center;

@@ -299,27 +299,33 @@ Navigation functions should only be called in reaction to user events, such as b
 
             <table class="st_table">
                 <thead>
-                    <tr>${pages.map(page => html`<th>${page.key}</th>`)}</tr>
+                    <tr>
+                        <th class="id">ID</th>
+                        ${pages.map(page => html`<th>${page.key}</th>`)}
+                    </tr>
                 </thead>
 
                 <tbody>
                     ${!records.length ?
                         html`<tr><td style="text-align: left;"
-                                     colspan=${Math.max(1, pages.length)}>Aucune donnée à afficher</td></tr>` : ''}
+                                     colspan=${1 + Math.max(1, pages.length)}>Aucune donnée à afficher</td></tr>` : ''}
                     ${records.map(record => {
                         if (show_complete || !complete_set.has(record.id)) {
                             return html`
-                                <tr>${pages.map(page => {
-                                    let complete = record.complete[page.key];
+                                <tr>
+                                    <td class="id">${record.sequence}</td>
+                                    ${pages.map(page => {
+                                        let complete = record.complete[page.key];
 
-                                    if (complete == null) {
-                                        return html`<td><a href=${makeLink(current_asset.form.key, page.key, record.id)}>Non rempli</a></td>`;
-                                    } else if (complete) {
-                                        return html`<td class="complete"><a href=${makeLink(current_asset.form.key, page.key, record.id)}>Complet</a></td>`;
-                                    } else {
-                                        return html`<td class="partial"><a href=${makeLink(current_asset.form.key, page.key, record.id)}>Partiel</a></td>`;
-                                    }
-                                })}</tr>
+                                        if (complete == null) {
+                                            return html`<td><a href=${makeLink(current_asset.form.key, page.key, record.id)}>Non rempli</a></td>`;
+                                        } else if (complete) {
+                                            return html`<td class="complete"><a href=${makeLink(current_asset.form.key, page.key, record.id)}>Complet</a></td>`;
+                                        } else {
+                                            return html`<td class="partial"><a href=${makeLink(current_asset.form.key, page.key, record.id)}>Partiel</a></td>`;
+                                        }
+                                    })}
+                                </tr>
                             `;
                         } else {
                             return '';
@@ -374,12 +380,13 @@ Navigation functions should only be called in reaction to user events, such as b
             <table class="rec_table" style=${`min-width: ${30 + 60 * columns.length}px`}>
                 <thead>
                     <tr>
-                        <th class="rec_actions">
+                        <th class="actions">
                             ${select_many ?
                                 html`<input type="checkbox" .checked=${count1 && !count0}
                                             .indeterminate=${count1 && count0}
                                             @change=${e => toggleAllRecords(records, e.target.checked)} />` : ''}
                         </th>
+                        <th class="id">ID</th>
 
                         ${!columns.length ? html`<th>&nbsp;</th>` : ''}
                         ${!select_many ? columns.map(col => html`<th title=${col.key}>${col.key}</th>`) : ''}
@@ -391,13 +398,14 @@ Navigation functions should only be called in reaction to user events, such as b
 
                 <tbody>
                     ${empty_msg ?
-                        html`<tr><td colspan=${1 + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : ''}
+                        html`<tr><td colspan=${2 + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : ''}
                     ${records.map(record => html`<tr class=${current_records.has(record.id) ? 'selected' : ''}>
                         ${!select_many ? html`<th><a href="#" @click=${e => { handleEditClick(record); e.preventDefault(); }}>🔍\uFE0E</a>
                                                   <a href="#" @click=${e => { showDeleteDialog(e, record); e.preventDefault(); }}>✕</a></th>` : ''}
                         ${select_many ? html`<th><input type="checkbox" .checked=${current_records.has(record.id)}
                                                         @click=${e => handleEditClick(record)} /></th>` : ''}
 
+                        <td class="id">${record.sequence}</td>
                         ${columns.map(col => {
                             let value = record.values[col.key];
 
