@@ -868,13 +868,13 @@ Valid choices include:
     function renderWrappedWidget(intf, frag) {
         let cls = 'af_widget';
         if (intf.options.compact)
-            cls += ' af_widget_compact';
+            cls += ' compact';
         if (intf.errors.length)
-            cls += ' af_widget_error';
+            cls += ' error';
         if (intf.options.disable)
-            cls += ' af_widget_disable';
+            cls += ' disable';
         if (intf.options.mandatory)
-            cls += ' af_widget_mandatory';
+            cls += ' mandatory';
 
         return html`
             <div class=${cls}>

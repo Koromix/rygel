@@ -55,16 +55,16 @@
     margin-bottom: 6px;
     padding-top: 3px;
 }
-.af_widget_mandatory > label:after {
+.af_widget.mandatory > label:after {
     content: ' *';
     color: #d72a2a;
 }
-.af_widget_error {
+.af_widget.error {
     background: #d72a2a;
     outline: 5px solid #d72a2a;
     color: white;
 }
-.af_widget_disable {
+.af_widget.disable {
     opacity: 0.5;
     pointer-events: none;
     user-select: none;
@@ -84,17 +84,17 @@
 .af_help:before { content: '☞\FE0E  '; }
 .af_prefix, .af_suffix { font-size: 0.85em; }
 
-.af_widget_compact:after {
+.af_widget.compact:after {
     display: table;
     content: " ";
     clear: both;
 }
-.af_widget_compact > label {
+.af_widget.compact > label {
     display: inline-block;
     width: 250px;
     margin-bottom: 0;
 }
-.af_widget_compact .af_error {
+.af_widget.compact .af_error {
     float: right;
     clear: both;
     margin-top: 3px;
