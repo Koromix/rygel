@@ -143,7 +143,9 @@ let form_executor = new function() {
         builder.changeHandler = () => runPage(...arguments);
 
         // Build it!
+        builder.errorList();
         func(util, app.data, handleGo, builder, builder, app.route, state.scratch);
+        builder.errorList();
         window.history.replaceState(null, null, self.makeURL());
 
         // Only show buttons if there is at least one input widget on the page
