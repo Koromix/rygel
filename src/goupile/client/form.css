@@ -6,11 +6,15 @@
 
 .af_page {
     position: relative;
-    min-height: 60px;
     margin-left: 1px;
     padding: 12px;
     background: #efefef;
     border: 12px solid #f8f8f8;
+}
+.af_page:after {
+    display: table;
+    content: ' ';
+    clear: both;
 }
 .gp_panel.overview > .af_page {
     max-width: 800px;
@@ -72,15 +76,13 @@
     z-index: 999;
 }
 
-.af_actions.fixed {
-    position: fixed;
-    top: calc(2.5em + 18px);
-    right: 18px;
+.af_actions.sticky {
+    position: sticky;
+    float: right;
+    display: inline-block;
+    top: calc(2.5em + 24px);
     padding: 6px;
     background: rgba(239, 239, 239, 0.8);
-}
-.gp_panel.overview .af_actions.fixed {
-    right: calc(50% - 408px);
 }
 
 .af_actions button {

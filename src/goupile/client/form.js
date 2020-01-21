@@ -169,7 +169,7 @@ let form_executor = new function() {
                 return html`<a class=${cls} href=${makeLink(current_asset.form.key, page2.key, record.id)}>${page2.key}</a>`;
             })}</div>
 
-            <div class="af_actions fixed">
+            <div class="af_actions sticky">
                 <button class="af_button" ?disabled=${!enable_save}
                         @click=${builder.save}>Enregistrer</a>
                 <button class="af_button" ?disabled=${!enable_validate}
