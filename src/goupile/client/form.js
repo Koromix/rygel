@@ -168,7 +168,7 @@ let form_executor = new function() {
                     cls += ' partial';
                 }
 
-                return html`<a class=${cls} href=${makeLink(current_asset.form.key, page2.key, record.id)}>${page2.key}</a>`;
+                return html`<a class=${cls} href=${makeLink(current_asset.form.key, page2.key, record.id)}>${page2.label}</a>`;
             })}</div>
 
             <div class="af_actions sticky">

@@ -35,8 +35,9 @@ function FormInfo(key) {
     this.links = [];
 }
 
-function PageInfo(form, key) {
+function PageInfo(form, key, label) {
     this.key = key;
+    this.label = label;
     this.url = `${env.base_url}app/${form.key}/${key}/`;
 }
 
@@ -61,10 +62,10 @@ function ApplicationBuilder(app) {
 
         let form = new FormInfo(key);
         let form_builder = new FormBuilder(app, form);
-        if (func) {
+        if (typeof func === 'function') {
             func(form_builder);
         } else {
-            form_builder.page(key);
+            form_builder.page(key, func);
         }
 
         app.forms.push(form);
@@ -166,7 +167,7 @@ function FormBuilder(app, form) {
 
     let used_keys = new Set;
 
-    this.page = function(key) {
+    this.page = function(key, label = null) {
         if (!key)
             throw new Error('Empty keys are not allowed');
         if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
@@ -174,7 +175,7 @@ function FormBuilder(app, form) {
         if (used_keys.has(key))
             throw new Error(`Page '${key}' is already used in this form`);
 
-        let page = new PageInfo(form, key);
+        let page = new PageInfo(form, key, label || key);
 
         form.pages.push(page);
         used_keys.add(key);
@@ -184,7 +185,7 @@ function FormBuilder(app, form) {
             url: page.url,
 
             category: `Formulaire ${form.key}`,
-            label: `${form.key}/${page.key}`,
+            label: `${form.key}/${page.key}` + (page.label !== page.key ? ` (${page.label})` : ''),
             overview: 'Formulaire',
 
             form: form,
