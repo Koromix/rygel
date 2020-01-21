@@ -399,28 +399,30 @@ Navigation functions should only be called in reaction to user events, such as b
                 <tbody>
                     ${empty_msg ?
                         html`<tr><td colspan=${2 + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : ''}
-                    ${records.map(record => html`<tr class=${current_records.has(record.id) ? 'selected' : ''}>
-                        ${!select_many ? html`<th><a href="#" @click=${e => { handleEditClick(record); e.preventDefault(); }}>🔍\uFE0E</a>
-                                                  <a href="#" @click=${e => { showDeleteDialog(e, record); e.preventDefault(); }}>✕</a></th>` : ''}
-                        ${select_many ? html`<th><input type="checkbox" .checked=${current_records.has(record.id)}
-                                                        @click=${e => handleEditClick(record)} /></th>` : ''}
+                    ${records.map(record => html`
+                        <tr class=${current_records.has(record.id) ? 'selected' : ''}>
+                            ${!select_many ? html`<th><a href="#" @click=${e => { handleEditClick(record); e.preventDefault(); }}>🔍\uFE0E</a>
+                                                      <a href="#" @click=${e => { showDeleteDialog(e, record); e.preventDefault(); }}>✕</a></th>` : ''}
+                            ${select_many ? html`<th><input type="checkbox" .checked=${current_records.has(record.id)}
+                                                            @click=${e => handleEditClick(record)} /></th>` : ''}
 
-                        <td class="id">${record.sequence}</td>
-                        ${columns.map(col => {
-                            let value = record.values[col.key];
+                            <td class="id">${record.sequence}</td>
+                            ${columns.map(col => {
+                                let value = record.values[col.key];
 
-                            if (value == null) {
-                                return html`<td class="missing" title="Donnée manquante">NA</td>`;
-                            } else if (Array.isArray(value)) {
-                                let text = value.join('|');
-                                return html`<td title=${text}>${text}</td>`;
-                            } else if (typeof value === 'number') {
-                                return html`<td class="number" title=${value}>${value}</td>`;
-                            } else {
-                                return html`<td title=${value}>${value}</td>`;
-                            }
-                        })}
-                    </tr>`)}
+                                if (value == null) {
+                                    return html`<td class="missing" title="Donnée manquante">NA</td>`;
+                                } else if (Array.isArray(value)) {
+                                    let text = value.join('|');
+                                    return html`<td title=${text}>${text}</td>`;
+                                } else if (typeof value === 'number') {
+                                    return html`<td class="number" title=${value}>${value}</td>`;
+                                } else {
+                                    return html`<td title=${value}>${value}</td>`;
+                                }
+                            })}
+                        </tr>
+                    `)}
                 </tbody>
             </table>
         `, document.querySelector('#dev_data'));
