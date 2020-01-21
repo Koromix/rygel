@@ -491,6 +491,10 @@ function ScheduleView(resources_map, meetings_map) {
 
     function createResource(day, time) {
         let resources = resources_map[day.key];
+        if (!resources) {
+            resources = [];
+            resources_map[day.key] = resources;
+        }
 
         let prev_res = resources.find(res => res.time === time);
         if (prev_res) {
