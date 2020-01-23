@@ -72,9 +72,9 @@ function PageBuilder(state, page) {
     }
 
     this.find = key => variables_map[key];
-    this.value = key => {
+    this.value = (key, default_value = undefined) => {
         let intf = variables_map[key];
-        return intf ? intf.value : undefined;
+        return (intf && !intf.missing) ? intf.value : default_value;
     };
     this.missing = key => variables_map[key].missing;
     this.error = (key, msg) => variables_map[key].error(msg);
