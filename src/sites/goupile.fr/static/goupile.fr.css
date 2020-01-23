@@ -1,0 +1,89 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+   License, v. 2.0. If a copy of the MPL was not distributed with this
+   file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+body {
+    margin: 0;
+    padding: 0;
+    background: #f8f8f8;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 18px;
+}
+
+a {
+    color: #012330;
+    text-decoration: none;
+    cursor: pointer;
+}
+p:first-child { margin-top: 0; }
+p:last-child { margin-bottom: 0; }
+
+#menu {
+    position: sticky;
+    display: flex;
+    top: 0;
+    height: 2.5em;
+    background: #012330;
+    font-size: 0.9em;
+    align-items: center;
+    justify-content: center;
+}
+#menu > * + * { margin-left: 2.2em; }
+#menu > a {
+    font-variant: small-caps;
+    color: white;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+#menu > a:hover { text-decoration: underline; }
+
+#banner {
+    display: flex;
+    justify-content: center;
+    padding: 0.5em;
+    background: #023245;
+    color: #f8f8f8;
+}
+#screenshots {
+    padding-top: 0.5em;
+    text-align: center;
+}
+#screenshots > a {
+    padding: 4px;
+    font-size: 1.5em;
+    color: #f8f8f8;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
+#screenshots > img {
+    display: none;
+    cursor: pointer;
+}
+#screenshots > img.active { display: block; }
+#features {
+    padding: 1em;
+    color: white;
+}
+
+main {
+    display: flex;
+    padding: 1em;
+}
+main > * { flex: 1; }
+
+#veil {
+    display: none;
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.8);
+    cursor: pointer;
+}
+#veil.active { display: flex; }
+#veil > img { max-width: 80%; }

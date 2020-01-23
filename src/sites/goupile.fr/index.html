@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<!--
+    This Source Code Form is subject to the terms of the Mozilla Public
+    License, v. 2.0. If a copy of the MPL was not distributed with this
+    file, You can obtain one at http://mozilla.org/MPL/2.0/.
+-->
+<html lang="en">
+    <head>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+        <link rel="icon" href="static/favicon.png"/>
+        <title>goupile.fr</title>
+
+        <link rel="stylesheet" href="static/goupile.fr.css"/>
+        <link rel="stylesheet" href="static/opensans/OpenSans.css"/>
+
+        <script>
+            var veil;
+            var veil_img;
+
+            var timer_id;
+
+            function toggleScreenshot(idx, delay) {
+                if (delay == null)
+                    delay = 5000;
+
+                var images = document.querySelectorAll('#screenshots > img');
+                var anchors = document.querySelectorAll('#screenshots > a');
+
+                for (var i = 0; i < images.length; i++) {
+                    images[i].classList.toggle('active', i === idx);
+                    anchors[i].classList.toggle('active', i === idx);
+                    anchors[i].textContent = (i === idx) ? '●' : '○';
+                }
+
+                var next_idx = idx + 1;
+                if (next_idx >= images.length)
+                    next_idx = 0;
+
+                clearTimeout(timer_id);
+                timer_id = setTimeout(function() { toggleScreenshot(next_idx) }, delay);
+            }
+
+            function zoomImage(src) {
+                if (!veil) {
+                    veil = document.createElement('div');
+                    veil.id = 'veil';
+                    veil.addEventListener('click', function() { veil.classList.remove('active'); });
+
+                    veil_img = document.createElement('img');
+
+                    veil.appendChild(veil_img);
+                    document.body.appendChild(veil);
+                }
+
+                veil_img.src = src;
+                veil.classList.add('active');
+            }
+
+            toggleScreenshot(0, 0);
+        </script>
+    </head>
+    <body>
+        <nav id="menu">
+            <a href="/">What is it?</a>
+            <a href="/demo/">Test Online</a>
+            <a href="/getit/">Get it</a>
+            <a href="/"><img src="static/favicon.png" height="30"/></a>
+            <a href="/manual/">User Manual</a>
+            <a href="/contribute/">Contribute</a>
+            <a href="/contact/">Contact</a>
+        </nav>
+
+        <div id="banner">
+            <div id="screenshots">
+                <img src="static/screenshot1.png" height="140"  onclick="zoomImage(this.src);" class="active"/>
+                <img src="static/screenshot2.png" height="140"  onclick="zoomImage(this.src);"/>
+                <img src="static/screenshot3.png" height="140" onclick="zoomImage(this.src);"/>
+
+                <a onclick="toggleScreenshot(0, 15000)" class="active">●</a>
+                <a onclick="toggleScreenshot(1, 15000)">○</a>
+                <a onclick="toggleScreenshot(2, 15000)">○</a>
+            </div>
+
+            <div id="features">
+                <p>To facilitate manual collection of medical data, we offer a scripted form creation tool</p>
+                <ul>
+                    <li>Rich features</li>
+                    <li>Quickly implemented and test</li>
+                    <li>Free and open-source</li>
+                </ul>
+            </div>
+        </div>
+
+        <main>
+            <div id="content">
+                <p>This is the official website of Goupile, a free and open-source tool
+                   for creating forms on the fly.</p>
+                <ul>
+                    <li>Quickly implemented</li>
+                    <li>Rich features</li>
+                    <li>No advanced computer skills needed</li>
+                    <li>Integrates with data warehousing solutions</li>
+                </ul>
+                <p>Goupile is composed of five main modules :</p>
+                <ul>
+                    <li>a <b>form editor</b> defines the architecture, configuration, user administration</li>
+                    <li>a <b>page editor</b> codes the widgets (label, type, options), the sections of the forms</li>
+                    <li>a <b>form overview</b> displays the visual control</li>
+                    <li>a <b>data overview and export</b> module displays the data and provide export function (in csv or xlsx formats)</li>
+                    <li>a <b>dashboard</b> displays number of records, number of complete cases</li>
+                </ul>
+            </div>
+
+            <div id="news">
+                <p class="news_title">News</p>
+                <p class="news_text">Goupile is online !</p>
+                <p class="news_date">01/01/2020</p>
+            </div>
+        </main>
+    </body>
+</html>
