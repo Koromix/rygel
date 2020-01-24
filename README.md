@@ -11,7 +11,6 @@
 | *libweb*   | Reusable utility functions and HTML/CSS/JS widgets                         | Good             |
 | *mael*     | Mael robot code for 'Coupe de France de Robotique 2020' competition        | Work in progress |
 | *thop*     | Web-based institutional PMSI (MCO) reporting tool based on libdrd          | Good             |
-| *webler*   | Simple markdown-to-HTML website generator (e.g. koromix.dev)               | Good             |
 | *wrappers* | Small C++ wrappers for library code (http, R)                              | Good             |
 
 # Archived projects
@@ -20,6 +19,7 @@
 | ---------- | -------------------------------------------------------------------------- | -----------------|
 | *inPL*     | Dashboards and various tools for IPL's longevity checkup                   | Good             |
 | *simPL*    | Medico-ecomomic modelling of IPL's longevity checkup                       | Proof-of-concept |
+| *webler*   | Simple markdown-to-HTML website generator (e.g. koromix.dev)               | Good             |
 
 # Help
 
