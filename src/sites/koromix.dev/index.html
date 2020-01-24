@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html class="nojs" lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <title>koromix.dev</title>
+
+        <link rel="stylesheet" href="static/koromix.dev.css">
+        <script type="text/javascript" src="static/koromix.dev" async></script>
+    </head>
+
+    <body class="js">
+        <div id="top">
+            <a id="top_deploy" href="#" onclick="parentNode.query('#top_menu').toggleClass('active'); return false;"></a>
+            <nav id="top_menu">
+                <ul>
+                    <li><a href="/index" class="active">Home</a></li>
+                    <li><a href="/tytools">TyTools</a></li>
+                    <li><a href="/libhs">libhs</a></li>
+
+                    <li style="float: right;"><a href="mailto:niels.martignene@protonmail.com">Contact</a></li>
+                    <li style="float: right;"><a href="https://github.com/Koromix">GitHub Profile</a></li>
+                </ul>
+            </nav>
+        </div>
+
+        <div id="content">
+            <a id="side_deploy" href="#" onclick="parentNode.query('#side_menu').toggleClass('active'); return false;"></a>
+            <nav id="side_menu">
+                <ul>
+                    <li><a href="#tytools" class="lv1">TyTools</a></li>
+                    <li><a href="#libhs" class="lv1">C/C++ libraries</a></li>
+                </ul>
+            </nav>
+
+            <main>
+                <h1 id="tytools">TyTools</h1>
+                <p>TyTools is a collection of <b>independent tools</b> and you only need one executable
+                to use any of them. The Qt-based GUI tools are statically compiled to make that possible.</p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tool</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                <tbody>
+                    <tr>
+                        <td>TyCommander</td>
+                        <td>Qt GUI (static)</td>
+                        <td>Upload, monitor and communicate with multiple boards</td>
+                    </tr>
+                    <tr>
+                        <td>TyUpdater</td>
+                        <td>Qt GUI (static)</td>
+                        <td>Simple firmware / sketch uploader</td>
+                    </tr>
+                    <tr>
+                        <td>tycmd</td>
+                        <td>Command-line<br><em>No Qt !</em></td>
+                        <td>Command-line tool to manage Teensy boards</td>
+                    </tr>
+                </tbody>
+                </table>
+
+                <p>Find out more on the <a href="https://koromix.dev/tytools">page dedicated to TyTools</a>.</p>
+
+                <h1 id="libhs">C/C++ libraries</h1>
+                <p>All my C/C++ libraries are distributed as <b>single-file headers</b>. Drop the file in
+                your project, add one define for the implementation and start to code. You don't have to mess around
+                with arcane build systems to use C and C++.</p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Library</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><a href="https://koromix.dev/libhs">libhs</a></td>
+                            <td>Enumerate and interact with USB serial and HID devices on Windows, OSX and Linux</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </main>
+        </div>
+
+        <footer>Niels Martignène&nbsp;&nbsp;&nbsp;<span style="opacity: 0.6;">Koromix<span></footer>
+    </body>
+</html>
