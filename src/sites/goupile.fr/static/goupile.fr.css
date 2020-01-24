@@ -45,7 +45,7 @@ p:last-child { margin-bottom: 0; }
 #screenshots {
     margin: 0 auto;
     padding: 1em 0 0 0;
-    width: 1280px;
+    width: 1032px;
     max-width: 90%;
     text-align: center;
 }
@@ -88,6 +88,6 @@ p:last-child { margin-bottom: 0; }
 #veil.active { display: flex; }
 #veil > img {
     position: absolute;
-    max-width: 200vw;
+    max-width: 90%;
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
 }
