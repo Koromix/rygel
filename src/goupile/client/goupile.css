@@ -97,22 +97,13 @@ button:not(:disabled) { cursor: pointer; }
 
 /* -------------------- Main header -------------------- */
 
-#gp_header {
+#gp_menu {
     position: fixed;
     display: flex;
     top: 0;
     width: 100%;
     z-index: 99999;
     background: #24579d;
-}
-#gp_icon {
-    width: 16px;
-    height: 16px;
-    margin: 6px 5px 0 6px;
-}
-#gp_menu { background: inherit; }
-@media (pointer: coarse), (display-mode: standalone) {
-    #gp_icon { display: none; }
 }
 
 #gp_assets {
