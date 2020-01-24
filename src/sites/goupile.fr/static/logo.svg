@@ -7,16 +7,16 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="4400"
+   width="5080"
    height="1024"
-   viewBox="0 0 4400 1024"
+   viewBox="0 0 5080 1024"
    version="1.1"
    id="svg7"
    sodipodi:docname="logo.svg"
    inkscape:version="0.92.4 (5da689c313, 2019-01-14)"
-   inkscape:export-filename="V:\code\rygel\src\sites\goupile.fr\static\logo.png"
-   inkscape:export-xdpi="9.1744261"
-   inkscape:export-ydpi="9.1744261"
+   inkscape:export-filename="C:\Code\rygel\src\sites\goupile.fr\static\logo.png"
+   inkscape:export-xdpi="8.9718733"
+   inkscape:export-ydpi="8.9718733"
    style="enable-background:new">
   <metadata
      id="metadata13">
@@ -26,7 +26,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -41,15 +41,15 @@
      guidetolerance="10"
      inkscape:pageopacity="0"
      inkscape:pageshadow="2"
-     inkscape:window-width="1280"
-     inkscape:window-height="753"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
      id="namedview9"
      showgrid="false"
-     inkscape:zoom="0.23046876"
-     inkscape:cx="2885.2632"
-     inkscape:cy="777.45827"
-     inkscape:window-x="-4"
-     inkscape:window-y="-4"
+     inkscape:zoom="0.11523438"
+     inkscape:cx="646.18166"
+     inkscape:cy="1048.1678"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg7"
      showguides="true">
@@ -115,13 +115,13 @@
   </g>
   <text
      id="text827"
-     y="872.59705"
+     y="886.59705"
      x="1041.6505"
-     style="font-style:normal;font-weight:normal;font-size:133.33332825px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#343434;fill-opacity:1;stroke:none"
+     style="font-style:normal;font-weight:normal;font-size:160px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#343434;fill-opacity:1;stroke:none"
      xml:space="preserve"><tspan
-       style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:133.33332825px;font-family:'Open Sans';-inkscape-font-specification:'Open Sans Italic';fill:#343434;fill-opacity:1"
+       style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:160px;font-family:'Open Sans';-inkscape-font-specification:'Open Sans Italic';fill:#343434;fill-opacity:1"
        id="tspan829"
-       y="872.59705"
+       y="886.59705"
        x="1041.6505"
        sodipodi:role="line">Almost makes form creation and data entry fun. Almost.</tspan></text>
 </svg>
