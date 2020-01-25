@@ -43,19 +43,29 @@ p:last-child { margin-bottom: 0; }
 }
 
 #screenshots {
-    margin: 0 auto;
-    padding: 1em 0 0 0;
+    position: relative;
+    margin: 1em auto;
     width: 1032px;
     max-width: 90%;
     text-align: center;
 }
 #screenshots > img {
-    display: none;
-    width: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
     cursor: pointer;
+    transition: opacity 0.2s ease-in-out;
+    opacity: 0;
+    pointer-events: none;
+}
+#screenshots > img:first-of-type {
+    position: relative;
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
 }
-#screenshots > img.active { display: block; }
+#screenshots > img.active {
+    opacity: 1;
+    pointer-events: auto;
+}
 #screenshots > p {
     display: none;
     margin: 1em 0 0 0;

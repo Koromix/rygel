@@ -23,14 +23,14 @@
 
             function toggleScreenshot(idx, delay) {
                 if (delay == null)
-                    delay = 5000;
+                    delay = 10000;
 
                 var images = document.querySelectorAll('#screenshots > img');
                 var texts = document.querySelectorAll('#screenshots > p');
                 var anchors = document.querySelectorAll('#screenshots > a');
 
                 for (var i = 0; i < images.length; i++) {
-                    images[i].classList.toggle('active', i === idx);
+                    images[i].classList.toggle('active', i <= idx);
                     texts[i].classList.toggle('active', i === idx);
                     anchors[i].classList.toggle('active', i === idx);
                     anchors[i].textContent = (i === idx) ? '●' : '○';
@@ -86,9 +86,9 @@
                 <p>Enter your data and export it all on the same screen!</p>
                 <p>Share your forms with your collaborators for routine data collection!</p>
 
-                <a onclick="toggleScreenshot(0, 15000)" class="active">●</a>
-                <a onclick="toggleScreenshot(1, 15000)">○</a>
-                <a onclick="toggleScreenshot(2, 15000)">○</a>
+                <a onclick="toggleScreenshot(0, 20000)" class="active">●</a>
+                <a onclick="toggleScreenshot(1, 20000)">○</a>
+                <a onclick="toggleScreenshot(2, 20000)">○</a>
             </div>
         </main>
     </body>
