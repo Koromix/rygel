@@ -26,8 +26,8 @@
                     delay = 10000;
 
                 var images = document.querySelectorAll('#screenshots > img');
-                var texts = document.querySelectorAll('#screenshots > p');
-                var anchors = document.querySelectorAll('#screenshots > a');
+                var texts = document.querySelectorAll('#legend > p');
+                var anchors = document.querySelectorAll('#legend > a');
 
                 for (var i = 0; i < images.length; i++) {
                     images[i].classList.toggle('active', i <= idx);
@@ -62,33 +62,111 @@
 
             toggleScreenshot(0, 0);
         </script>
+
+        <style>
+            #what {
+                width: 620px;
+                margin: 60px auto 1em auto;
+                padding: 3em 2em 2em 2em;
+                background: #eee;
+                color: #585858;
+                text-align: left;
+            }
+
+            #screenshots {
+                position: relative;
+                margin: 1em auto;
+                width: 1032px;
+                max-width: 90%;
+                text-align: center;
+            }
+            #screenshots > img {
+                position: absolute;
+                left: 0;
+                top: 0;
+                cursor: pointer;
+                transition: opacity 0.2s ease-in-out;
+                opacity: 0;
+                pointer-events: none;
+            }
+            #screenshots > img:first-of-type {
+                position: relative;
+                box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+            }
+            #screenshots > img.active {
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            #legend {
+                position: absolute;
+                bottom: 30px;
+                left: calc(50% - 250px);
+                width: 500px;
+                padding: 10px;
+                background: #0c0c0d;
+                box-shadow: 2px 2px rgba(0, 0, 0, 0.8);
+                opacity: 0.96;
+                color: white;
+                z-index: 1;
+            }
+            #legend > p {
+                display: none;
+                margin: 0;
+                font-size: 0.9em;
+                font-style: italic;
+            }
+            #legend > p.active { display: block; }
+            #legend > a {
+                color: inherit;
+                font-size: 1.5em;
+                user-select: none;
+                -moz-user-select: none;
+                -webkit-user-select: none;
+                -ms-user-select: none;
+            }
+        </style>
     </head>
     <body>
-        <nav id="menu">
-            <a href="/">What is it?</a>
-            <a href="/demo/">Test Online</a>
-            <a href="/getit/">Get it</a>
-            <a href="/"><img src="favicon.png" height="30"/></a>
-            <a href="/manual/">User Manual</a>
-            <a href="/git/Koromix/rygel/src/branch/master/src/goupile">Contribute</a>
-            <a href="mailto:contact@goupile.fr">Contact</a>
+        <nav id="header">
+            <div class="menu" style="text-align: right;">
+                <a href="/">What is it?</a>
+                <a href="/demo/">Test Online</a>
+                <a href="/getit/">Get it</a>
+            </div>
+            <div class="menu" style="width: 140px;"></div>
+            <div class="menu" style="text-align: left;">
+                <a href="/manual/">User Manual</a>
+                <a href="/git/Koromix/rygel/src/branch/master/src/goupile">Contribute</a>
+                <a href="mailto:contact@goupile.fr">Contact</a>
+            </div>
         </nav>
 
         <main>
-            <img id="logo" src="static/logo.png" height="100"/>
+            <a href="/"><img id="logo" src="favicon.png"/></a>
+
+            <div id="what">
+                <p>Goupile is a free and open-source electronic data capture tool that strives to
+                make form creation and data entry both powerful and easy.</p>
+                <p>It is currently in development and there are no public builds yet. But
+                you can <a href="/whatisit/">find out more about it</a> or <a href="/demo/">test
+                the current alpha version</a> online.</p>
+            </div>
 
             <div id="screenshots">
                 <img src="static/screenshot1.png" onclick="zoomImage(this.src);" class="active"/>
                 <img src="static/screenshot2.png" onclick="zoomImage(this.src);"/>
                 <img src="static/screenshot3.png" onclick="zoomImage(this.src);"/>
 
-                <p>Create and test your form on the fly with all kinds of widgets!</p>
-                <p>Enter your data and export it all on the same screen!</p>
-                <p>Share your forms with your collaborators for routine data collection!</p>
+                <div id="legend">
+                    <p class="active">Create and test your form on the fly with all kinds of widgets</p>
+                    <p>Enter your data and export it all on the same screen</p>
+                    <p>Share your forms with your collaborators for routine data collection</p>
 
-                <a onclick="toggleScreenshot(0, 20000)" class="active">●</a>
-                <a onclick="toggleScreenshot(1, 20000)">○</a>
-                <a onclick="toggleScreenshot(2, 20000)">○</a>
+                    <a onclick="toggleScreenshot(0, 20000)" class="active">●</a>
+                    <a onclick="toggleScreenshot(1, 20000)">○</a>
+                    <a onclick="toggleScreenshot(2, 20000)">○</a>
+                </div>
             </div>
         </main>
     </body>

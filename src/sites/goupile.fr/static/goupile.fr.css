@@ -5,7 +5,7 @@
 body {
     margin: 0;
     padding: 0;
-    background: #eaeaea;
+    background: linear-gradient(135deg, #023245 0%, #094b64 100%);
     font-family: 'Open Sans', sans-serif;
     font-size: 18px;
 }
@@ -13,74 +13,42 @@ main { text-align: center; }
 
 a {
     color: #012330;
-    text-decoration: none;
     cursor: pointer;
 }
 p:first-child { margin-top: 0; }
 p:last-child { margin-bottom: 0; }
 
-#menu {
+#header {
     position: sticky;
-    display: flex;
+    display: table;
     top: 0;
+    width: 100%;
     height: 2.5em;
     background: #012330;
-    align-items: center;
-    justify-content: center;
+    table-layout: fixed;
 }
-#menu > * + * { margin-left: 2.2em; }
-#menu > a {
+#header > * {
+    display: table-cell;
+    vertical-align: middle;
+    box-sizing: border-box;
+    padding: 0 1em;
+}
+.menu > * + * { margin-left: 2.2em; }
+.menu > a {
     font-variant: small-caps;
     color: #f8f8f8;
     font-weight: bold;
+    text-decoration: none;
     letter-spacing: 2px;
 }
-#menu > a:hover { text-decoration: underline; }
+.menu > a:hover { text-decoration: underline; }
 
 #logo {
-    display: block;
-    margin: 1.5em auto 0.5em auto;
-}
-
-#screenshots {
-    position: relative;
-    margin: 1em auto;
-    width: 1032px;
-    max-width: 90%;
-    text-align: center;
-}
-#screenshots > img {
     position: absolute;
-    left: 0;
-    top: 0;
-    cursor: pointer;
-    transition: opacity 0.2s ease-in-out;
-    opacity: 0;
-    pointer-events: none;
-}
-#screenshots > img:first-of-type {
-    position: relative;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
-}
-#screenshots > img.active {
-    opacity: 1;
-    pointer-events: auto;
-}
-#screenshots > p {
-    display: none;
-    margin: 1em 0 0 0;
-    font-size: 0.9em;
-    font-style: italic;
-    color: #343434;
-}
-#screenshots > p.active { display: block; }
-#screenshots > a {
-    padding: 4px;
-    font-size: 1.5em;
-    user-select: none;
-    -moz-user-select: none;
-    -webkit-user-select: none;
-    -ms-user-select: none;
+    top: 10px;
+    left: calc(50% - 70px);
+    width: 140px;
+    height: 140px;
 }
 
 #veil {
@@ -92,8 +60,9 @@ p:last-child { margin-bottom: 0; }
     height: 100vh;
     justify-content: center;
     align-items: center;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.96);
     cursor: pointer;
+    z-index: 999;
 }
 #veil.active { display: flex; }
 #veil > img {
