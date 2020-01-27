@@ -10,7 +10,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
         <link rel="icon" href="favicon.png"/>
-        <title>goupile.fr</title>
+        <title>Goupile — Free and open-source EDC application</title>
 
         <link rel="stylesheet" href="static/goupile.fr.css"/>
         <link rel="stylesheet" href="static/opensans/OpenSans.css"/>
@@ -64,25 +64,14 @@
         </script>
 
         <style>
-            body { background: linear-gradient(135deg, #023245 0%, #094b64 100%); }
-
-            #what {
-                width: 860px;
-                max-width: 90%;
-                box-sizing: border-box;
-                margin: 60px auto 1em auto;
-                padding: 3em 2em 2em 2em;
-                background: #eee;
-                color: #585858;
-                text-align: left;
-            }
-
             #screenshots {
                 position: relative;
-                margin: 1em auto;
+                left: 50%;
+                right: 0;
                 width: 1032px;
-                max-width: 90%;
-                text-align: center;
+                max-width: 90vw;
+                transform: translate(-50%, 0);
+                margin-top: 2em;
             }
             #screenshots > img {
                 position: absolute;
@@ -109,15 +98,16 @@
                 left: 0;
                 right: 0;
                 width: 500px;
-                max-width: 90%;
+                max-width: 95%;
+                box-sizing: border-box;
                 margin: 0 auto;
                 padding: 10px;
-                box-sizing: border-box;
                 background: #0c0c0d;
                 box-shadow: 2px 2px rgba(0, 0, 0, 0.8);
                 opacity: 0.96;
                 color: white;
                 z-index: 1;
+                text-align: center;
             }
             #legend > p {
                 display: none;
@@ -135,17 +125,43 @@
                 -webkit-user-select: none;
                 -ms-user-select: none;
             }
+            @media screen and (max-width: 768px) {
+                #legend {
+                    bottom: -6%;
+                    font-size: 0.8em;
+                }
+            }
+
+            #veil {
+                display: none;
+                position: fixed;
+                left: 0;
+                top: 0;
+                width: 100vw;
+                height: 100vh;
+                justify-content: center;
+                align-items: center;
+                background: rgba(0, 0, 0, 0.96);
+                cursor: pointer;
+                z-index: 999;
+            }
+            #veil.active { display: flex; }
+            #veil > img {
+                position: absolute;
+                max-width: 90%;
+                box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+            }
         </style>
     </head>
     <body>
         <nav id="header">
-            <div class="menu" style="text-align: right;">
-                <a href="/">What is it?</a>
+            <div>
+                <a href="/about/">What is it?</a>
                 <a href="/demo/">Test Online</a>
                 <a href="/getit/">Get it</a>
             </div>
-            <div class="menu" style="width: 140px;"></div>
-            <div class="menu" style="text-align: left;">
+            <img id="logo" src="favicon.png"/>
+            <div>
                 <a href="/manual/">User Manual</a>
                 <a href="/git/Koromix/rygel/src/branch/master/src/goupile">Contribute</a>
                 <a href="mailto:contact@goupile.fr">Contact</a>
@@ -153,15 +169,11 @@
         </nav>
 
         <main>
-            <a href="/"><img id="logo" src="favicon.png"/></a>
-
-            <div id="what">
-                <p>Goupile is a free and open-source electronic data capture tool that strives to
-                make form creation and data entry both powerful and easy.</p>
-                <p>It is currently in development and there are no public builds yet. But
-                you can <a href="/whatisit/">find out more about it</a> or <a href="/demo/">test
-                the current alpha version</a> online.</p>
-            </div>
+            <p>Goupile is a free and open-source electronic data capture application that
+            strives to make form creation and data entry both powerful and easy.</p>
+            <p>It is currently in development and there are no public builds yet. But
+            you can <a href="/whatisit/">find out more about it</a> or <a href="/demo/">test
+            the current alpha version</a> online.</p>
 
             <div id="screenshots">
                 <img src="static/screenshot1.png" onclick="zoomImage(this.src);" class="active"/>
@@ -171,7 +183,7 @@
                 <div id="legend">
                     <p class="active">Create and test your form on the fly with all kinds of widgets</p>
                     <p>Enter your data and export it all on the same screen</p>
-                    <p>Share your forms with your collaborators for routine data collection</p>
+                    <p>Share your forms with collaborators for routine data collection</p>
 
                     <a onclick="toggleScreenshot(0, 20000)" class="active">●</a>
                     <a onclick="toggleScreenshot(1, 20000)">○</a>

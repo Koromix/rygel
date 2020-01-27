@@ -3,10 +3,14 @@
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
     margin: 0;
     padding: 0;
-    min-height: 100vh;
-    background: #f8f8f8;
+    background: linear-gradient(135deg, #eee 0%, #ddd 100%);
+    color: #585858;
     font-family: 'Open Sans', sans-serif;
     font-size: 18px;
 }
@@ -20,55 +24,50 @@ p:last-child { margin-bottom: 0; }
 
 #header {
     position: sticky;
-    display: table;
+    display: flex;
+    left: 0;
     top: 0;
     width: 100%;
     height: 2.5em;
     background: #012330;
-    table-layout: fixed;
+    z-index: 99;
+    align-items: center;
+    justify-content: center;
 }
-#header > * {
-    display: table-cell;
-    vertical-align: middle;
-    box-sizing: border-box;
-    padding: 0 1em;
-}
-.menu > * + * { margin-left: 2.2em; }
-.menu > a {
+#header a {
     font-variant: small-caps;
     color: #f8f8f8;
     font-weight: bold;
     text-decoration: none;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
+    text-align: center;
 }
-.menu > a:hover { text-decoration: underline; }
-
+#header a + a { margin-left: 1em; }
+#header a:hover { text-decoration: underline; }
 #logo {
-    position: absolute;
-    top: 10px;
-    left: 0;
-    right: 0;
-    width: 140px;
-    height: 140px;
-    margin: 0 auto;
-}
-
-#veil {
-    display: none;
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 100vw;
-    height: 100vh;
-    justify-content: center;
-    align-items: center;
-    background: rgba(0, 0, 0, 0.96);
-    cursor: pointer;
+    margin: 40px 10px 10px 10px;
+    width: 64px;
+    height: 64px;
     z-index: 999;
 }
-#veil.active { display: flex; }
-#veil > img {
-    position: absolute;
-    max-width: 90%;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+
+@media screen and (max-width: 768px) {
+    #header { height: auto; }
+    #header > div:first-child > a { text-align: right; }
+    #header > div:last-child > a { text-align: left; }
+    #header a {
+        display: block;
+        letter-spacing: 0;
+        font-size: 0.9em;
+        margin-left: 0 !important;
+    }
+    #logo { margin-top: 10px; }
+}
+
+main {
+    flex: 1;
+    width: calc(100% - 3em);
+    max-width: 870px;
+    padding: 2em 1.5em 1.5em 1.5em;
+    background: rgba(255, 255, 255, 0.5);
 }
