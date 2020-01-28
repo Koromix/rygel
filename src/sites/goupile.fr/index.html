@@ -15,141 +15,7 @@
         <link rel="stylesheet" href="static/goupile.fr.css"/>
         <link rel="stylesheet" href="static/opensans/OpenSans.css"/>
 
-        <script>
-            var veil;
-            var veil_img;
-
-            var timer_id;
-
-            function toggleScreenshot(idx, delay) {
-                if (delay == null)
-                    delay = 10000;
-
-                var images = document.querySelectorAll('#screenshots > img');
-                var texts = document.querySelectorAll('#legend > p');
-                var anchors = document.querySelectorAll('#legend > a');
-
-                for (var i = 0; i < images.length; i++) {
-                    images[i].classList.toggle('active', i <= idx);
-                    texts[i].classList.toggle('active', i === idx);
-                    anchors[i].classList.toggle('active', i === idx);
-                    anchors[i].textContent = (i === idx) ? '●' : '○';
-                }
-
-                var next_idx = idx + 1;
-                if (next_idx >= images.length)
-                    next_idx = 0;
-
-                clearTimeout(timer_id);
-                timer_id = setTimeout(function() { toggleScreenshot(next_idx) }, delay);
-            }
-
-            function zoomImage(src) {
-                if (!veil) {
-                    veil = document.createElement('div');
-                    veil.id = 'veil';
-                    veil.addEventListener('click', function() { veil.classList.remove('active'); });
-
-                    veil_img = document.createElement('img');
-
-                    veil.appendChild(veil_img);
-                    document.body.appendChild(veil);
-                }
-
-                veil_img.src = src;
-                veil.classList.add('active');
-            }
-
-            toggleScreenshot(0, 0);
-        </script>
-
-        <style>
-            #screenshots {
-                position: relative;
-                left: 50%;
-                right: 0;
-                width: 1032px;
-                max-width: 90vw;
-                transform: translate(-50%, 0);
-                margin-top: 2em;
-            }
-            #screenshots > img {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                cursor: pointer;
-                transition: opacity 0.2s ease-in-out;
-                opacity: 0;
-                pointer-events: none;
-            }
-            #screenshots > img:first-of-type {
-                position: relative;
-                box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
-            }
-            #screenshots > img.active {
-                opacity: 1;
-                pointer-events: auto;
-            }
-
-            #legend {
-                position: absolute;
-                bottom: -2%;
-                left: 0;
-                right: 0;
-                width: 500px;
-                max-width: 95%;
-                box-sizing: border-box;
-                margin: 0 auto;
-                padding: 10px;
-                background: #0c0c0d;
-                box-shadow: 2px 2px rgba(0, 0, 0, 0.8);
-                opacity: 0.96;
-                color: white;
-                z-index: 1;
-                text-align: center;
-            }
-            #legend > p {
-                display: none;
-                margin: 0;
-                font-size: 0.9em;
-                font-style: italic;
-            }
-            #legend > p.active { display: block; }
-            #legend > a {
-                color: inherit;
-                font-size: 1.5em;
-                padding: 4px;
-                user-select: none;
-                -moz-user-select: none;
-                -webkit-user-select: none;
-                -ms-user-select: none;
-            }
-
-            #veil {
-                display: none;
-                position: fixed;
-                left: 0;
-                top: 0;
-                width: 100vw;
-                height: 100vh;
-                justify-content: center;
-                align-items: center;
-                background: rgba(0, 0, 0, 0.96);
-                cursor: pointer;
-                z-index: 999;
-            }
-            #veil.active { display: flex; }
-            #veil > img {
-                position: absolute;
-                max-width: 90%;
-                box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
-            }
-
-            @media screen and (max-width: 768px) {
-                #legend { bottom: -6%; }
-            }
-        </style>
+        <script src="static/goupile.fr.js"></script>
     </head>
     <body>
         <nav id="header">
@@ -171,19 +37,19 @@
             you can <a href="/whatisit/">find out more about it</a> or <a href="/demo/">test
             the current alpha version</a> online.</p>
 
-            <div id="screenshots">
-                <img src="static/screenshot1.png" onclick="zoomImage(this.src);" class="active"/>
-                <img src="static/screenshot2.png" onclick="zoomImage(this.src);"/>
-                <img src="static/screenshot3.png" onclick="zoomImage(this.src);"/>
+            <div class="screenshots">
+                <img src="static/screenshot1.png"/>
+                <img src="static/screenshot2.png"/>
+                <img src="static/screenshot3.png"/>
 
-                <div id="legend">
+                <div class="legend">
                     <p class="active">Create and test your form on the fly with all kinds of widgets</p>
                     <p>Enter your data and export it all on the same screen</p>
                     <p>Share your forms with collaborators for routine data collection</p>
 
-                    <a onclick="toggleScreenshot(0, 20000)" class="active">●</a>
-                    <a onclick="toggleScreenshot(1, 20000)">○</a>
-                    <a onclick="toggleScreenshot(2, 20000)">○</a>
+                    <a class="active">●</a>
+                    <a>○</a>
+                    <a>○</a>
                 </div>
             </div>
         </main>

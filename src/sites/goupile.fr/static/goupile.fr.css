@@ -29,6 +29,21 @@ h1 {
     text-align: center;
     border-bottom: 0.5px solid #ccc;
 }
+table {
+    width: 80%;
+    margin: 1em auto;
+    border-collapse: collapse;
+}
+th {
+    padding: 0.4em;
+    border: 1px solid #ebebeb;
+    text-align: center;
+}
+td {
+    padding: 0.3em;
+    background: #f8f8f8;
+    border: 1px solid #ebebeb;
+}
 
 #header {
     position: sticky;
@@ -69,6 +84,90 @@ main {
     background: rgba(255, 255, 255, 0.5);
 }
 
+.screenshots {
+    position: relative;
+    left: 50%;
+    right: 0;
+    width: 1032px;
+    max-width: 90vw;
+    transform: translate(-50%, 0);
+    margin-top: 2em;
+}
+.screenshots > img {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    cursor: pointer;
+    transition: opacity 0.2s ease-in-out;
+    opacity: 0;
+    pointer-events: none;
+}
+.screenshots > img:first-of-type {
+    position: relative;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+    opacity: 1;
+    pointer-events: auto;
+}
+.screenshots > img.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.legend {
+    position: absolute;
+    bottom: -2%;
+    left: 0;
+    right: 0;
+    width: 500px;
+    max-width: 95%;
+    box-sizing: border-box;
+    margin: 0 auto;
+    padding: 10px;
+    background: #0c0c0d;
+    box-shadow: 2px 2px rgba(0, 0, 0, 0.8);
+    opacity: 0.96;
+    font-size: 0.9em;
+    font-style: italic;
+    color: white;
+    z-index: 1;
+    text-align: center;
+}
+.legend > p {
+    display: none;
+    margin: 0;
+}
+.legend > p.active { display: block; }
+.legend > a {
+    color: inherit;
+    font-size: 1.5em;
+    padding: 4px;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
+
+#veil {
+    display: none;
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.96);
+    cursor: pointer;
+    z-index: 999;
+}
+#veil.active { display: flex; }
+#veil > img {
+    position: absolute;
+    max-width: 90%;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+}
+
 @media screen and (max-width: 580px) {
     body { font-size: 16px; }
 
@@ -83,4 +182,6 @@ main {
     #logo { margin: 2px 10px; }
 
     main { padding: 1em; }
+
+    .legend { bottom: -6%; }
 }
