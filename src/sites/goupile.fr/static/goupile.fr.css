@@ -43,12 +43,13 @@ h1 {
     justify-content: center;
 }
 #header a {
+    font-size: 18px;
     font-variant: small-caps;
-    color: #f8f8f8;
     font-weight: bold;
     text-decoration: none;
     letter-spacing: 1px;
     text-align: center;
+    color: #f8f8f8;
 }
 #header a + a { margin-left: 1em; }
 #header a:hover { text-decoration: underline; }
@@ -59,7 +60,18 @@ h1 {
     z-index: 999;
 }
 
+main {
+    flex: 1;
+    width: 100%;
+    box-sizing: border-box;
+    max-width: 870px;
+    padding: 2em 1.5em 1.5em 1.5em;
+    background: rgba(255, 255, 255, 0.5);
+}
+
 @media screen and (max-width: 580px) {
+    body { font-size: 16px; }
+
     #header { height: auto; }
     #header > div:first-child > a { text-align: right; }
     #header > div:last-child > a { text-align: left; }
@@ -69,12 +81,6 @@ h1 {
         margin-left: 0 !important;
     }
     #logo { margin: 2px 10px; }
-}
 
-main {
-    flex: 1;
-    width: calc(100% - 3em);
-    max-width: 870px;
-    padding: 2em 1.5em 1.5em 1.5em;
-    background: rgba(255, 255, 255, 0.5);
+    main { padding: 1em; }
 }
