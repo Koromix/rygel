@@ -19,8 +19,16 @@ a {
     color: #012330;
     cursor: pointer;
 }
-p:first-child { margin-top: 0; }
+p:first-child, h1:first-child, h2:first-child, h3:first-child,
+    h4:first-child, h5:first-child, h6:first-child { margin-top: 0; }
 p:last-child { margin-bottom: 0; }
+h1 {
+    margin-top: 1.5em;
+    font-size: 1.4em;
+    font-variant: small-caps;
+    text-align: center;
+    border-bottom: 0.5px solid #ccc;
+}
 
 #header {
     position: sticky;
