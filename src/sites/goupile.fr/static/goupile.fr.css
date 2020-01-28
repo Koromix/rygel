@@ -59,7 +59,7 @@ h1 {
     z-index: 999;
 }
 
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 580px) {
     #header { height: auto; }
     #header > div:first-child > a { text-align: right; }
     #header > div:last-child > a { text-align: left; }
