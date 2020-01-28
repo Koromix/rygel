@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<!--
+    This Source Code Form is subject to the terms of the Mozilla Public
+    License, v. 2.0. If a copy of the MPL was not distributed with this
+    file, You can obtain one at http://mozilla.org/MPL/2.0/.
+-->
+<html lang="en">
+    <head>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+        <link rel="icon" href="favicon.png"/>
+        <title>Goupile — Free and open-source EDC application</title>
+
+        <link rel="stylesheet" href="static/goupile.fr.css"/>
+        <link rel="stylesheet" href="static/opensans/OpenSans.css"/>
+
+        <script src="static/goupile.fr.js"></script>
+    </head>
+
+    <body>
+        <nav id="header">
+            <div>
+                <a href="/demo/">Test Online</a>
+                <a href="/contribute/">Contribute</a>
+            </div>
+            <a href="/"><img id="logo" src="favicon.png"/></a>
+            <div>
+                <a href="/manual/">User Manual</a>
+                <a href="mailto:contact@goupile.fr">Contact</a>
+            </div>
+        </nav>
+
+        <main>
+            <div id="wip">⚠ Work in progress</div>
+
+            <h1>Form creation</h1>
+            <p>During the development step, you can benefit from both <a href="#form_editor">editor</a>
+            and <a href="#form_overview">form overview</a>. With the form editor, you can develop
+            your form by combining the input fields in sequence. This will instantly generate the
+            corresponding form on the form overview. At this step, you can already test your form
+            and enter data.</p>
+            <p>The association of these two modules on the same screen allows you to easily develop
+            your form, test its organization and its entry fields.</p>
+            <div class="screenshots">
+                <img src="static/screenshot1.png"/>
+                <p class="legend">Code with the editor. Immediatly check the result with the form overview.</p>
+            </div>
+
+            <h1>Routine use</h1>
+            <p>After the form has been finalized, the form may be used conjointly with the data
+            overview module and the <a href="#dashboard">dashboard</a> to check records and progress
+            of data entry.</p>
+            <div class="screenshots">
+                <img src="static/screenshot2.png"/>
+                <p class="legend">Test the form. Immediately check the result with the data overview.</p>
+            </div>
+
+            <h1>Modules</h1>
+            <h2>Form editor</h2>
+            <p>The <b>form editor</b> allows defining the architecture, configuration and user
+            administration. Here, you define the number of pages of the form, their order, and
+            their styles.</p>
+
+            <h2>Page editor</h2>
+            <p>The <b>page editor</b> helps you develop the form. It is equivalent to a code editor with
+            the difference that here you don't need advanced computer knowledge to develop your form: you
+            can use predefined functions. These functions will generate a visual control in the form: a
+            text field, a numeric field, a date field, a slider, etc.</p>
+            <p>You can parameter the function with the label of the control, the name of the variable, XXX.</p>
+            <p>XXX The only programing constraints you have to check are the consistence of (), "", [].</p>
+            <p>If you want to benefit from advanced features, be aware that the language associated with
+            the editor is Javascript. As a result, you may use any Javascript functionalities to optimize
+            your form. Among advanced functionalities, we may set up conditions for the appearance of
+            entry fields, loops, etc.</p>
+
+            <h2>Predefined widgets</h2>
+            <table>
+                <tr>
+                    <th>Widget</th>
+                    <th>Screenshot</th>
+                    <th>Code</th>
+                </tr>
+                <tr>
+                    <td>Text</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Password</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Numeric</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Scale</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Date field</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Binary field</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Yes/No question</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Multiple choice question</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Dropdown menu</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Checkbox</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Radiobox</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Computation</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Content</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            </table>
+
+            <h2>Form overview</h2>
+            <p>The form overview displays the visual controls. You can test the form and enter data without any further "action". You will possibly XXX.</p>
+
+            <h2>Data overview and export module</h2>
+            <p> The data overview module displays the data. It also provides an export function of the
+            whole dataset. Currently, supported formats are csv and xlsx.</p>
+            <p>XXX: Video avec clic sur bouton export</p>
+
+            <h2>Dashboard</h2>
+            <p>The dashboard displays the list of records with their status (completed, in progress, empty).
+            From the dashboard, you can access to a specific record in order to complete it or check its values.</p>
+        </main>
+    </body>
+</html>

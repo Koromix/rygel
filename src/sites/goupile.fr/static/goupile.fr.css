@@ -19,9 +19,11 @@ a {
     color: #012330;
     cursor: pointer;
 }
-p:first-child, h1:first-child, h2:first-child, h3:first-child,
-    h4:first-child, h5:first-child, h6:first-child { margin-top: 0; }
+p:first-child { margin-top: 0; }
 p:last-child { margin-bottom: 0; }
+
+h1:first-of-type, h2:first-of-type, h3:first-of-type,
+    h4:first-of-type, h5:first-of-type, h6:first-of-type { margin-top: 0; }
 h1 {
     margin-top: 1.5em;
     font-size: 1.4em;
@@ -29,6 +31,11 @@ h1 {
     text-align: center;
     border-bottom: 0.5px solid #ccc;
 }
+h2 {
+    font-size: 1.3em;
+    font-variant: small-caps;
+}
+
 table {
     width: 80%;
     margin: 1em auto;
@@ -166,6 +173,13 @@ main {
     position: absolute;
     max-width: 90%;
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+}
+
+#wip {
+    float: right;
+    color: red;
+    font-size: 1.1em;
+    font-weight: bold;
 }
 
 @media screen and (max-width: 580px) {
