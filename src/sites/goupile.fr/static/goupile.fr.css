@@ -66,10 +66,9 @@ h1 {
     #header a {
         display: block;
         letter-spacing: 0;
-        font-size: 0.9em;
         margin-left: 0 !important;
     }
-    #logo { margin-top: 10px; }
+    #logo { margin: 2px 10px; }
 }
 
 main {
