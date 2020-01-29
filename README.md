@@ -13,7 +13,7 @@
 | *thop*     | Web-based institutional PMSI (MCO) reporting tool based on libdrd          | Good             |
 | *wrappers* | Small C++ wrappers for library code (http, R)                              | Good             |
 
-# Archived projects
+## Archived projects
 
 | Project    | Description                                                                | Quality          |
 | ---------- | -------------------------------------------------------------------------- | -----------------|
@@ -21,10 +21,28 @@
 | *simPL*    | Medico-ecomomic modelling of IPL's longevity checkup                       | Proof-of-concept |
 | *webler*   | Simple markdown-to-HTML website generator (e.g. koromix.dev)               | Good             |
 
-# Help
+# How to build
 
-* [Build instructions](doc/build.md)
-* [Notes on drd (rationale, drdc and drdR examples)](doc/drd.md)
+This repository uses a dedicated build tool called felix. To get started, you need to
+build this tool. You can use the build scripts in build/felix to bootstrap it:
+
+* Run `build/felix/build_posix.sh` on Linux and macOS
+* Run `build/felix/build_win32.bat` on Windows
+
+This will create a felix binary at the root of the source tree. You can then start
+it to build all projects defined in *FelixBuild.ini*.
+
+Use `felix --help` for other options.
+
+As of now, R packages cannot be built using this method.
+
+## R packages
+
+Some packages provide an Rproject file and can be built by R CMD INSTALL. Open the
+project file (e.g. *src/drd/drdR/drdR.Rproj*) in RStudio and use *Install and restart* in the
+Build tab.
+
+Provided the needed dependencies are available (including Rtools and Rcpp), it should just work!
 
 # Mono repository
 
