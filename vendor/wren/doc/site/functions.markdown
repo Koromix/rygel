@@ -107,7 +107,7 @@ of the body, like so:
       System.print("Hi, " + first + " " + last + "!")
     }
 
-Here we're passing a function to `greet` that takes two parameters, `first` and
+Here we're passing a function to `callMe` that takes two parameters, `first` and
 `last`. They are passed to the function when it's called:
 
     :::wren
@@ -163,5 +163,6 @@ to`i`:
     System.print(counter.call()) //> 2
     System.print(counter.call()) //> 3
 
+<br><hr>
 <a class="right" href="classes.html">Classes &rarr;</a>
 <a href="variables.html">&larr; Variables</a>
