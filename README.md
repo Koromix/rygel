@@ -2,16 +2,14 @@
 
 | Project    | Description                                                                | Quality          |
 | ---------- | -------------------------------------------------------------------------- | -----------------|
+| *core*     | Base C++ libraries (such as libcc) and small wrappers (R, rapidjson...)    | Good             |
 | *drd*      | Alternative PMSI MCO classifier, subprojects: libdrd, drdc and drdR        | Good             |
 | *felix*    | Small build system made specifically for this repository                   | Good             |
 | *goupile*  | Vastly simplified alternative to Voozanoo (from Epiconcept)                | Work in progress |
 | *heimdall* | Medical timeline visualization (proof-of-concept)                          | Proof-of-concept |
-| *libcc*    | C++ container and system library                                           | Good             |
-| *libgui*   | Simple OpenGL window creation                                              | Average          |
-| *libweb*   | Reusable utility functions and HTML/CSS/JS widgets                         | Good             |
 | *mael*     | Mael robot code for 'Coupe de France de Robotique 2020' competition        | Work in progress |
 | *thop*     | Web-based institutional PMSI (MCO) reporting tool based on libdrd          | Good             |
-| *wrappers* | Small C++ wrappers for library code (http, R)                              | Good             |
+| *web*      | Reusable utility functions and HTML/CSS/JS widgets                         | Good             |
 
 ## Archived projects
 
