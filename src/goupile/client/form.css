@@ -72,8 +72,8 @@
 .af_actions {
     position: absolute;
     right: 0;
-    margin-top: -6px;
-    padding: 0 0 6px 6px;
+    margin: -6px -6px 0 0;
+    padding: 6px;
     z-index: 999;
 }
 .af_actions.sticky {
@@ -81,7 +81,7 @@
     float: right;
     display: inline-block;
     top: calc(2.5em + 24px);
-    padding: 0 6px 6px 6px;
+    padding-top: 0;
     background: rgba(239, 239, 239, 0.8);
 }
 
