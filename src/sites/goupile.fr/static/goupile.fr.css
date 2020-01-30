@@ -10,13 +10,12 @@ body {
     margin: 0;
     padding: 0;
     background: linear-gradient(135deg, #f4f4f4 0%, #e4e4e4 100%);
-    color: #585858;
     font-family: 'Open Sans', sans-serif;
     font-size: 18px;
 }
 
 a {
-    color: #012330;
+    color: #24579d;
     cursor: pointer;
 }
 p:first-child { margin-top: 0; }
