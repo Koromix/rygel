@@ -53,6 +53,11 @@ td {
     border: 1px solid #ebebeb;
 }
 
+.code {
+    font-family: monospace;
+    white-space: pre;
+}
+
 #header {
     position: sticky;
     display: flex;
@@ -175,11 +180,15 @@ main {
 }
 
 .screenshot {
-    float: right;
+    float: left;
     width: 250px;
-    margin-left: 1em;
+    margin-right: 1em;
     padding: 10px;
     background: #ebebeb;
+}
+.screenshot.right {
+    float: right;
+    margin-left: 1em;
 }
 .screenshot > img {
     width: 100%;
