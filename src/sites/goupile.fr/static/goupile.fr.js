@@ -9,7 +9,7 @@ let veil_img;
 
 let timer_id;
 
-function toggleScreenshot(parent, idx, delay) {
+function toggleSlideshow(parent, idx, delay) {
     console.log(arguments);
 
     if (delay == null)
@@ -31,10 +31,10 @@ function toggleScreenshot(parent, idx, delay) {
         next_idx = 0;
 
     clearTimeout(timer_id);
-    timer_id = setTimeout(function() { toggleScreenshot(parent, next_idx) }, delay);
+    timer_id = setTimeout(function() { toggleSlideshow(parent, next_idx) }, delay);
 }
 
-function zoomScreenshot(src) {
+function zoomImage(src) {
     if (!veil) {
         veil = document.createElement('div');
         veil.id = 'veil';
@@ -52,19 +52,19 @@ function zoomScreenshot(src) {
 
 document.addEventListener('readystatechange', function(e) {
     if (document.readyState === 'complete') {
-        let containers = document.querySelectorAll('.screenshots');
+        let containers = document.querySelectorAll('.screenshot, .slideshow');
 
         for (let i = 0; i < containers.length; i++) {
             let images = containers[i].querySelectorAll('img');
             let anchors = containers[i].querySelectorAll('.legend > a');
 
             for (let j = 0; j < images.length; j++)
-                images[j].addEventListener('click', function(e) { zoomScreenshot(e.target.src); });
+                images[j].addEventListener('click', function(e) { zoomImage(e.target.src); });
             for (let j = 0; j < anchors.length; j++)
-                anchors[j].addEventListener('click', function(e) { toggleScreenshot(containers[i], j, 20000); });
+                anchors[j].addEventListener('click', function(e) { toggleSlideshow(containers[i], j, 20000); });
 
             if (anchors.length >= 2)
-                toggleScreenshot(containers[i], 0);
+                toggleSlideshow(containers[i], 0);
         }
     }
 });
