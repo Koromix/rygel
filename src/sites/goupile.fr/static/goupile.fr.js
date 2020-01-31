@@ -10,8 +10,6 @@ let veil_img;
 let timer_id;
 
 function toggleSlideshow(parent, idx, delay) {
-    console.log(arguments);
-
     if (delay == null)
         delay = 10000;
 
