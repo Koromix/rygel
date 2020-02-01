@@ -49,11 +49,21 @@ th {
     text-align: center;
 }
 td {
-    padding: 0.3em;
+    padding: 0.5em;
     background: #f8f8f8;
     border: 1px solid #ebebeb;
+    vertical-align: top;
 }
 
+.widget {
+    width: 100px;
+    padding: 0.1em;
+    background: #efefef;
+}
+.widget > img {
+    width: 237px;
+    object-fit: cover;
+}
 .code {
     font-family: monospace;
     white-space: pre;
