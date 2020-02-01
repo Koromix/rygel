@@ -233,10 +233,10 @@ main {
 }
 
 #wip {
-    position: fixed;
-    top: 3em;
-    left: 870px;
-    margin-top: -12px;
+    display: inline-block;
+    position: sticky;
+    float: right;
+    top: 3.5em;
     padding: 4px;
     background: red;
     color: white;
