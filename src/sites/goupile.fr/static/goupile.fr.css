@@ -55,20 +55,6 @@ td {
     vertical-align: top;
 }
 
-.widget {
-    width: 100px;
-    padding: 0.1em;
-    background: #efefef;
-}
-.widget > img {
-    width: 237px;
-    object-fit: cover;
-}
-.code {
-    font-family: monospace;
-    white-space: pre;
-}
-
 #header {
     position: sticky;
     display: flex;
