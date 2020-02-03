@@ -80,8 +80,8 @@ function PageBuilder(state, page) {
     this.error = (key, msg) => variables_map[key].error(msg);
 
     this.text = function(key, label, options = {}) {
-        key = self.decodeKey(key);
         options = expandOptions(options);
+        key = decodeKey(key, options);
 
         let value = readValue(key, options.value);
 
@@ -103,8 +103,8 @@ function PageBuilder(state, page) {
     };
 
     this.password = function(key, label, options = {}) {
-        key = self.decodeKey(key);
         options = expandOptions(options);
+        key = decodeKey(key, options);
 
         let value = readValue(key, options.value);
 
@@ -130,8 +130,8 @@ function PageBuilder(state, page) {
     }
 
     this.number = function(key, label, options = {}) {
-        key = self.decodeKey(key);
         options = expandOptions(options);
+        key = decodeKey(key, options);
 
         let value = parseFloat(readValue(key, options.value));
         let missing = (value == null || Number.isNaN(value));
@@ -156,8 +156,8 @@ function PageBuilder(state, page) {
     };
 
     this.slider = function(key, label, options = {}) {
-        key = self.decodeKey(key);
         options = expandOptions(options);
+        key = decodeKey(key, options);
 
         // Default options
         options.decimals = options.decimals || 0;
@@ -247,8 +247,8 @@ function PageBuilder(state, page) {
     }
 
     this.enum = function(key, label, props = [], options = {}) {
-        key = self.decodeKey(key);
         options = expandOptions(options);
+        key = decodeKey(key, options);
         props = normalizePropositions(props);
 
         let value = readValue(key, options.value);
@@ -297,8 +297,8 @@ function PageBuilder(state, page) {
     };
 
     this.enumDrop = function(key, label, props = [], options = {}) {
-        key = self.decodeKey(key);
         options = expandOptions(options);
+        key = decodeKey(key, options);
         props = normalizePropositions(props);
 
         let value = readValue(key, options.value);
@@ -326,8 +326,8 @@ function PageBuilder(state, page) {
     }
 
     this.enumRadio = function(key, label, props = [], options = {}) {
-        key = self.decodeKey(key);
         options = expandOptions(options);
+        key = decodeKey(key, options);
         props = normalizePropositions(props);
 
         let value = readValue(key, options.value);
@@ -360,8 +360,8 @@ function PageBuilder(state, page) {
     }
 
     this.multi = function(key, label, props = [], options = {}) {
-        key = self.decodeKey(key);
         options = expandOptions(options);
+        key = decodeKey(key, options);
         props = normalizePropositions(props);
 
         let value = readValue(key, options.value);
@@ -404,8 +404,8 @@ function PageBuilder(state, page) {
     }
 
     this.multiCheck = function(key, label, props = [], options = {}) {
-        key = self.decodeKey(key);
         options = expandOptions(options);
+        key = decodeKey(key, options);
         props = normalizePropositions(props);
 
         let value = readValue(key, options.value);
@@ -477,8 +477,8 @@ function PageBuilder(state, page) {
     }
 
     this.date = function(key, label, options = {}) {
-        key = self.decodeKey(key);
         options = expandOptions(options);
+        key = decodeKey(key, options);
 
         let value = readValue(key, options.value);
         if (typeof value === 'string') {
@@ -509,8 +509,8 @@ function PageBuilder(state, page) {
     }
 
     this.file = function(key, label, options = {}) {
-        key = self.decodeKey(key);
         options = expandOptions(options);
+        key = decodeKey(key, options);
 
         let value = readValue(key, options.value);
         if (!(value instanceof File))
@@ -548,8 +548,8 @@ function PageBuilder(state, page) {
     }
 
     this.calc = function(key, label, value, options = {}) {
-        key = self.decodeKey(key);
         options = expandOptions(options);
+        key = decodeKey(key, options);
 
         updateValue(key, value, false);
 
@@ -855,6 +855,15 @@ Valid choices include:
             restart = true;
         }
     };
+
+    function decodeKey(key, options) {
+        if (typeof key === 'string' && key[0] === '*') {
+            key = key.substr(1);
+            options.mandatory = true;
+        }
+
+        return self.decodeKey(key);
+    }
 
     function expandOptions(options) {
         options = Object.assign({}, options_stack[options_stack.length - 1], options);
