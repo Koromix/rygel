@@ -1967,6 +1967,24 @@ FILE *OpenFile(const char *filename, OpenFileMode mode)
     return fp;
 }
 
+bool MakeDirectory(const char *directory, bool error_if_exists)
+{
+    WCHAR directory_w[4096];
+    if (!ConvertUtf8ToWin32Wide(directory, directory_w))
+        return false;
+
+    if (!CreateDirectoryW(directory_w, nullptr)) {
+        DWORD err = GetLastError();
+
+        if (err != ERROR_ALREADY_EXISTS || error_if_exists) {
+            LogError("Cannot create directory '%1': %2", directory, GetWin32ErrorString(err));
+            return false;
+        }
+    }
+
+    return true;
+}
+
 #else
 
 FILE *OpenFile(const char *filename, OpenFileMode mode)
@@ -1985,21 +2003,17 @@ FILE *OpenFile(const char *filename, OpenFileMode mode)
     return fp;
 }
 
-#endif
-
 bool MakeDirectory(const char *directory, bool error_if_exists)
 {
-#ifdef _WIN32
-    if (_mkdir(directory) < 0 && (errno != EEXIST || error_if_exists)) {
-#else
     if (mkdir(directory, 0755) < 0 && (errno != EEXIST || error_if_exists)) {
-#endif
         LogError("Cannot create directory '%1': %2", directory, strerror(errno));
         return false;
     }
 
     return true;
 }
+
+#endif
 
 bool MakeDirectoryRec(Span<const char> directory)
 {
