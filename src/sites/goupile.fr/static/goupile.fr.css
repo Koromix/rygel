@@ -155,6 +155,7 @@ main {
     background: #0c0c0d;
     box-shadow: 2px 2px rgba(0, 0, 0, 0.8);
     opacity: 0.96;
+    font-size: 1.1em;
     color: white;
     z-index: 1;
     text-align: center;
@@ -162,7 +163,6 @@ main {
 .legend > p {
     display: none;
     margin: 0;
-    font-size: 0.9em;
     font-style: italic;
 }
 .legend > p.active { display: block; }
