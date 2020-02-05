@@ -171,6 +171,7 @@ extern "C" void RG_NORETURN AssertFail(const char *filename, int line, const cha
             if (!RG_LIKELY(Cond)) \
                 RG::AssertFail(__FILE__, __LINE__, RG_STRINGIFY(Cond)); \
         } while (false)
+    #define RG_ASSERT_DEBUG(Cond) RG_ASSERT(Cond)
 #else
     #define RG_ASSERT(Cond) \
         do { \
@@ -178,6 +179,7 @@ extern "C" void RG_NORETURN AssertFail(const char *filename, int line, const cha
                 RG_UNREACHABLE(); \
             } \
         } while (false)
+    #define RG_ASSERT_DEBUG(Cond) ((void)0)
 #endif
 #define RG_STATIC_ASSERT(Cond) \
     static_assert((Cond), RG_STRINGIFY(Cond))
