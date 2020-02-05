@@ -165,6 +165,8 @@ void LinkedAllocator::ReleaseAll()
 
 void *LinkedAllocator::Allocate(Size size, unsigned int flags)
 {
+    RG_ASSERT_DEBUG(std::this_thread::get_id() == thread_id);
+
     Bucket *bucket = (Bucket *)Allocator::Allocate(allocator, RG_SIZE(*bucket) + size, flags);
 
     if (list.prev) {
@@ -184,6 +186,8 @@ void *LinkedAllocator::Allocate(Size size, unsigned int flags)
 
 void LinkedAllocator::Resize(void **ptr, Size old_size, Size new_size, unsigned int flags)
 {
+    RG_ASSERT_DEBUG(std::this_thread::get_id() == thread_id);
+
     if (!*ptr) {
         *ptr = Allocate(new_size, flags);
     } else if (!new_size) {
@@ -211,6 +215,8 @@ void LinkedAllocator::Resize(void **ptr, Size old_size, Size new_size, unsigned 
 
 void LinkedAllocator::Release(void *ptr, Size size)
 {
+    RG_ASSERT_DEBUG(std::this_thread::get_id() == thread_id);
+
     if (ptr) {
         Bucket *bucket = PointerToBucket(ptr);
 
