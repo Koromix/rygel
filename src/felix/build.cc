@@ -431,6 +431,7 @@ bool RunBuildNodes(Span<const BuildNode> nodes, int jobs, bool verbose)
 {
     BlockAllocator temp_alloc;
 
+#ifdef _WIN32
     // Prepare response files for excessively long command lines
     HashMap<const void *, const char *> rsp_map;
     for (const BuildNode &node: nodes) {
@@ -455,6 +456,7 @@ bool RunBuildNodes(Span<const BuildNode> nodes, int jobs, bool verbose)
             rsp_map.Append(&node, new_cmd);
         }
     }
+#endif
 
     Async async(jobs - 1);
 
@@ -464,7 +466,11 @@ bool RunBuildNodes(Span<const BuildNode> nodes, int jobs, bool verbose)
 
     for (const BuildNode &node: nodes) {
         async.Run([&]() {
+#ifdef _WIN32
             const char *cmd_line = rsp_map.FindValue(&node, node.cmd.line.ptr);
+#else
+            const char *cmd_line = node.cmd.line.ptr;
+#endif
 
             // The lock is needed to guarantee ordering of progress counter. Atomics
             // do not help much because the LogInfo() calls need to be protected too.
