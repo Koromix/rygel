@@ -478,7 +478,10 @@ bool RunBuildNodes(Span<const BuildNode> nodes, int jobs, bool verbose)
                 std::lock_guard<std::mutex> out_lock(out_mutex);
 
                 Size progress = 100 * progress_counter++ / nodes.len;
-                LogInfo("(%1%%) %2", FmtArg(progress).Pad(-3), verbose ? cmd_line : node.text);
+                LogInfo("(%1%%) %2", FmtArg(progress).Pad(-3), node.text);
+                if (verbose) {
+                    PrintLn(stderr, cmd_line);
+                }
             }
 
             // Run command
@@ -502,9 +505,9 @@ bool RunBuildNodes(Span<const BuildNode> nodes, int jobs, bool verbose)
                 } else if (exit_code == 130) {
                     interrupted = true; // SIGINT
                 } else {
-                    LogError("Command '%1' failed (exit code %2)", cmd_line, exit_code);
-
                     std::lock_guard<std::mutex> out_lock(out_mutex);
+
+                    LogError("Failed: %1 (exit code %2)", node.text, exit_code);
                     stderr_st.Write(output);
                 }
 
