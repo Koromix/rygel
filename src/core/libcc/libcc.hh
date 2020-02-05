@@ -3352,7 +3352,7 @@ enum class OpenFileMode {
     Append = 1 << 2
 };
 
-FILE *OpenFile(const char *path, OpenFileMode mode);
+FILE *OpenFile(const char *filename, OpenFileMode mode);
 
 bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
                         FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code);

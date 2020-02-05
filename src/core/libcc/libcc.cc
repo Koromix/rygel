@@ -20,6 +20,7 @@
         #define NOMINMAX
     #endif
     #include <windows.h>
+    #include <fcntl.h>
     #include <io.h>
     #include <direct.h>
     #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
@@ -1908,28 +1909,83 @@ bool PathContainsDotDot(const char *path)
     return false;
 }
 
-FILE *OpenFile(const char *path, OpenFileMode mode)
+#ifdef _WIN32
+
+FILE *OpenFile(const char *filename, OpenFileMode mode)
+{
+    WCHAR filename_w[4096];
+    if (!ConvertUtf8ToWin32Wide(filename, filename_w))
+        return nullptr;
+
+    DWORD access;
+    DWORD creation;
+    int flags;
+    char mode_str[8] = {};
+    switch (mode) {
+        case OpenFileMode::Read: {
+            access = GENERIC_READ;
+            creation = OPEN_EXISTING;
+            flags = _O_RDONLY | _O_BINARY;
+            strcpy(mode_str, "rbc");
+        } break;
+        case OpenFileMode::Write: {
+            access = GENERIC_WRITE;
+            creation = CREATE_ALWAYS;
+            flags = _O_WRONLY | _O_TRUNC | _O_CREAT | _O_BINARY;
+            strcpy(mode_str, "wbc");
+        } break;
+        case OpenFileMode::Append: {
+            access = GENERIC_WRITE;
+            creation = OPEN_ALWAYS;
+            flags = _O_WRONLY | _O_APPEND | _O_CREAT | _O_BINARY;
+            strcpy(mode_str, "abc");
+        } break;
+    }
+
+    HANDLE h = CreateFileW(filename_w, access, 0, nullptr, creation, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (h == INVALID_HANDLE_VALUE) {
+        LogError("Cannot open '%1': %2", filename, GetWin32ErrorString());
+        return nullptr;
+    }
+
+    int fd = _open_osfhandle((intptr_t)h, flags);
+    if (fd < 0) {
+        CloseHandle(h);
+
+        LogError("Cannot open '%1': %2", filename, strerror(errno));
+        return nullptr;
+    }
+
+    FILE *fp = _fdopen(fd, mode_str);
+    if (!fp) {
+        close(fd);
+
+        LogError("Cannot open '%1': %2", filename, strerror(errno));
+        return nullptr;
+    }
+
+    return fp;
+}
+
+#else
+
+FILE *OpenFile(const char *filename, OpenFileMode mode)
 {
     char mode_str[8] = {};
     switch (mode) {
-        case OpenFileMode::Read: { strcpy(mode_str, "rb"); } break;
-        case OpenFileMode::Write: { strcpy(mode_str, "wb"); } break;
-        case OpenFileMode::Append: { strcpy(mode_str, "ab"); } break;
+        case OpenFileMode::Read: { strcpy(mode_str, "rbe"); } break;
+        case OpenFileMode::Write: { strcpy(mode_str, "wbe"); } break;
+        case OpenFileMode::Append: { strcpy(mode_str, "abe"); } break;
     }
-#ifndef _WIN32
-    // Set the O_CLOEXEC flag
-    strcat(mode_str, "e");
-#else
-    // Set commit flag (_commit when fflush is called)
-    strcat(mode_str, "c");
-#endif
 
-    FILE *fp = fopen(path, mode_str);
+    FILE *fp = fopen(filename, mode_str);
     if (!fp) {
-        LogError("Cannot open '%1': %2", path, strerror(errno));
+        LogError("Cannot open '%1': %2", filename, strerror(errno));
     }
     return fp;
 }
+
+#endif
 
 bool MakeDirectory(const char *directory, bool error_if_exists)
 {
