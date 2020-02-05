@@ -9,7 +9,7 @@ function addChart(id, echelles) {
 
     let p = Promise.all([
         window.Chart || util.loadScript(`${env.base_url}files/resources/chart.bundle.min.js`),
-        ...echelles.map(echelle => recorder.loadAll(echelle.form))
+        ...echelles.map(echelle => virt_data.loadAll(echelle.form))
     ]);
 
     p.then(tables => {
