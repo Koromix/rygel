@@ -429,11 +429,20 @@ int64_t BuildSetBuilder::GetFileModificationTime(const char *filename)
 // the user interrupts felix. For this you can use libcc: call WaitForInterruption(0).
 bool RunBuildNodes(Span<const BuildNode> nodes, int jobs, bool verbose)
 {
+#ifdef _WIN32
     BlockAllocator temp_alloc;
 
-#ifdef _WIN32
-    // Prepare response files for excessively long command lines
+    HeapArray<const char *> rsp_filenames;
     HashMap<const void *, const char *> rsp_map;
+
+    RG_DEFER {
+        for (const char *filename: rsp_filenames) {
+            unlink(filename);
+        }
+    };
+
+    // Windows (especially cmd) does not like excessively long command lines,
+    // so we need to use response files in this case.
     for (const BuildNode &node: nodes) {
         if (node.cmd.line.len > 4096 && node.cmd.rsp_offset > 0) {
             RG_ASSERT(node.cmd.rsp_offset < node.cmd.line.len);
@@ -453,6 +462,8 @@ bool RunBuildNodes(Span<const BuildNode> nodes, int jobs, bool verbose)
 
             const char *new_cmd = Fmt(&temp_alloc, "%1 \"@%2\"",
                                       node.cmd.line.Take(0, node.cmd.rsp_offset), rsp_filename).ptr;
+
+            rsp_filenames.Append(rsp_filename);
             rsp_map.Append(&node, new_cmd);
         }
     }
