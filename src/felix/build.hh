@@ -10,17 +10,17 @@
 
 namespace RG {
 
-struct BuildCommand {
+struct BuildNode {
     const char *text;
 
     const char *dest_filename;
-    const char *cmd;
+    BuildCommand cmd;
 
     bool sync_after;
 };
 
 struct BuildSet {
-    HeapArray<BuildCommand> commands;
+    HeapArray<BuildNode> nodes;
 
     HashMap<const char *, const char *> target_filenames;
 
@@ -37,9 +37,9 @@ class BuildSetBuilder {
     HeapArray<const char *> obj_filenames;
     HeapArray<const char *> definitions;
 
-    HeapArray<BuildCommand> pch_commands;
-    HeapArray<BuildCommand> obj_commands;
-    HeapArray<BuildCommand> link_commands;
+    HeapArray<BuildNode> pch_nodes;
+    HeapArray<BuildNode> obj_nodes;
+    HeapArray<BuildNode> link_nodes;
     BlockAllocator str_alloc;
 
     HashMap<const char *, int64_t> mtime_map;
@@ -50,7 +50,7 @@ class BuildSetBuilder {
 public:
     const char *output_directory;
     const Compiler *compiler;
-    BuildMode build_mode = BuildMode::Debug;
+    CompileMode compile_mode = CompileMode::Debug;
     const char *version_str = nullptr;
 
     BuildSetBuilder(const char *output_directory, const Compiler *compiler)
@@ -67,6 +67,6 @@ private:
     int64_t GetFileModificationTime(const char *filename);
 };
 
-bool RunBuildCommands(Span<const BuildCommand> commands, int jobs, bool verbose);
+bool RunBuildNodes(Span<const BuildNode> nodes, int jobs, bool verbose);
 
 }

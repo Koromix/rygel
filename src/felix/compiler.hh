@@ -15,12 +15,12 @@ enum class SourceType {
     CXX_Header
 };
 
-enum class BuildMode {
+enum class CompileMode {
     Debug,
     Fast,
     Release
 };
-static const char *const BuildModeNames[] = {
+static const char *const CompileModeNames[] = {
     "Debug",
     "Fast",
     "Release"
@@ -31,6 +31,11 @@ enum class LinkType {
     SharedLibrary
 };
 
+struct BuildCommand {
+    Span<const char> line;
+    Size rsp_offset;
+};
+
 class Compiler {
 public:
     const char *name;
@@ -38,15 +43,16 @@ public:
 
     Compiler(const char *name, const char *prefix) : name(name), prefix(prefix) {}
 
-    virtual const char *MakeObjectCommand(const char *src_filename, SourceType src_type, BuildMode build_mode,
-                                          bool warnings, const char *pch_filename, Span<const char *const> definitions,
-                                          Span<const char *const> include_directories, const char *dest_filename,
-                                          const char *deps_filename, Allocator *alloc) const = 0;
-    virtual const char *MakePackCommand(Span<const char *const> pack_filenames, BuildMode build_mode,
-                                        const char *pack_options, const char *dest_filename, Allocator *alloc) const = 0;
-    virtual const char *MakeLinkCommand(Span<const char *const> obj_filenames, BuildMode build_mode,
-                                        Span<const char *const> libraries, LinkType link_type,
-                                        const char *dest_filename, Allocator *alloc) const = 0;
+    virtual void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
+                                   bool warnings, const char *pch_filename, Span<const char *const> definitions,
+                                   Span<const char *const> include_directories, const char *dest_filename,
+                                   const char *deps_filename, Allocator *alloc, BuildCommand *out_cmd) const = 0;
+    virtual void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
+                                 const char *pack_options, const char *dest_filename,
+                                 Allocator *alloc, BuildCommand *out_cmd) const = 0;
+    virtual void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
+                                 Span<const char *const> libraries, LinkType link_type,
+                                 const char *dest_filename, Allocator *alloc, BuildCommand *out_cmd) const = 0;
 };
 
 extern const Span<const Compiler *const> Compilers;

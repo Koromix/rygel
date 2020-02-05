@@ -15,21 +15,21 @@ namespace RG {
 
 struct Toolchain {
     const Compiler *compiler;
-    BuildMode build_mode;
+    CompileMode compile_mode;
 
     operator FmtArg() const
     {
         FmtArg arg = {};
         arg.type = FmtType::Buffer;
-        Fmt(arg.u.buf, "%1_%2", compiler->name, BuildModeNames[(int)build_mode]);
+        Fmt(arg.u.buf, "%1_%2", compiler->name, CompileModeNames[(int)compile_mode]);
         return arg;
     }
 };
 
 static bool ParseToolchainSpec(Span<const char> str, Toolchain *out_toolchain)
 {
-    Span<const char> build_mode_str;
-    Span<const char> compiler_str = SplitStr(str, '_', &build_mode_str);
+    Span<const char> compile_mode_str;
+    Span<const char> compiler_str = SplitStr(str, '_', &compile_mode_str);
 
     Toolchain toolchain = *out_toolchain;
 
@@ -45,14 +45,14 @@ static bool ParseToolchainSpec(Span<const char> str, Toolchain *out_toolchain)
             valid = false;
         }
     }
-    if (build_mode_str.ptr > compiler_str.end()) {
-        const char *const *name = FindIf(BuildModeNames,
-                                         [&](const char *name) { return TestStr(name, build_mode_str); });
+    if (compile_mode_str.ptr > compiler_str.end()) {
+        const char *const *name = FindIf(CompileModeNames,
+                                         [&](const char *name) { return TestStr(name, compile_mode_str); });
 
         if (name) {
-            toolchain.build_mode = (BuildMode)(name - BuildModeNames);
+            toolchain.compile_mode = (CompileMode)(name - CompileModeNames);
         } else {
-            LogError("Unknown build mode '%1'", build_mode_str);
+            LogError("Unknown build mode '%1'", compile_mode_str);
             valid = false;
         }
     }
@@ -120,7 +120,7 @@ int RunBuild(Span<const char *> arguments)
     HeapArray<const char *> target_names;
     const char *config_filename = nullptr;
     const char *output_directory = nullptr;
-    Toolchain toolchain = {Compilers[0], BuildMode::Debug};
+    Toolchain toolchain = {Compilers[0], CompileMode::Debug};
     bool enable_pch = true;
     int jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_WORKERS + 1);
     bool verbose = false;
@@ -154,7 +154,7 @@ Options:
 
 Available toolchains:)", toolchain, jobs);
         for (const Compiler *compiler: Compilers) {
-            for (const char *mode_name: BuildModeNames) {
+            for (const char *mode_name: CompileModeNames) {
                 PrintLn(fp, "    %1_%2", compiler->name, mode_name);
             }
         }
@@ -322,7 +322,7 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
     BuildSet build_set;
     {
         BuildSetBuilder build_set_builder(output_directory, toolchain.compiler);
-        build_set_builder.build_mode = toolchain.build_mode;
+        build_set_builder.compile_mode = toolchain.compile_mode;
         build_set_builder.version_str = BuildGitVersionString(&temp_alloc);
         if (!build_set_builder.version_str) {
             LogError("Git version string will be null");
@@ -337,12 +337,12 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
     }
 
     // The detection of SIGINT (or the Win32 equivalent) by WaitForInterruption()
-    // remains after timing out, which will allow RunBuildCommands() to clean up files
+    // remains after timing out, which will allow RunBuildNodes() to clean up files
     // produced by interrupted commands.
     WaitForInterruption(0);
 
     // Build
-    if (!RunBuildCommands(build_set.commands, jobs, verbose))
+    if (!RunBuildNodes(build_set.nodes, jobs, verbose))
         return 1;
 
     // Run?

@@ -146,13 +146,13 @@ static bool CreatePrecompileHeader(const char *pch_filename, const char *dest_fi
 
 bool BuildSetBuilder::AppendTargetCommands(const Target &target)
 {
-    const Size start_pch_len = pch_commands.len;
-    const Size start_obj_len = obj_commands.len;
-    const Size start_link_len = link_commands.len;
+    const Size start_pch_len = pch_nodes.len;
+    const Size start_obj_len = obj_nodes.len;
+    const Size start_link_len = link_nodes.len;
     RG_DEFER_N(out_guard) {
-        pch_commands.RemoveFrom(start_pch_len);
-        obj_commands.RemoveFrom(start_obj_len);
-        link_commands.RemoveFrom(start_link_len);
+        pch_nodes.RemoveFrom(start_pch_len);
+        obj_nodes.RemoveFrom(start_obj_len);
+        link_nodes.RemoveFrom(start_link_len);
     };
 
     obj_filenames.RemoveFrom(0);
@@ -170,20 +170,17 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
         const char *deps_filename = Fmt(&temp_alloc, "%1.d", pch_filename).ptr;
 
         if (NeedsRebuild(src_filename, pch_filename, deps_filename)) {
-            BuildCommand cmd = {};
+            BuildNode node = {};
 
-            cmd.text = Fmt(&str_alloc, "Precompile %1", src_filename).ptr;
-            cmd.dest_filename = DuplicateString(pch_filename, &str_alloc).ptr;
+            node.text = Fmt(&str_alloc, "Precompile %1", src_filename).ptr;
+            node.dest_filename = DuplicateString(pch_filename, &str_alloc).ptr;
             if (!CreatePrecompileHeader(src_filename, pch_filename))
                 return (const char *)nullptr;
+            compiler->MakeObjectCommand(pch_filename, src_type, compile_mode, warnings,
+                                        nullptr, definitions, target.include_directories,
+                                        nullptr, deps_filename, &str_alloc, &node.cmd);
 
-            cmd.cmd = compiler->MakeObjectCommand(pch_filename, src_type, build_mode, warnings,
-                                                  nullptr, definitions, target.include_directories,
-                                                  nullptr, deps_filename, &str_alloc);
-            if (!cmd.cmd)
-                return (const char *)nullptr;
-
-            pch_commands.Append(cmd);
+            pch_nodes.Append(node);
         }
 
         return pch_filename;
@@ -206,14 +203,15 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
 
         if (UpdateVersionSource(version_str, src_filename)) {
             if (!IsFileUpToDate(version_obj_filename, src_filename)) {
-                BuildCommand cmd = {};
+                BuildNode node = {};
 
-                cmd.text = "Build version file";
-                cmd.dest_filename = version_obj_filename;
-                cmd.cmd = compiler->MakeObjectCommand(src_filename, SourceType::C_Source, build_mode, false,
-                                                      nullptr, {}, {}, version_obj_filename, nullptr, &str_alloc);
+                node.text = "Build version file";
+                node.dest_filename = version_obj_filename;
+                compiler->MakeObjectCommand(src_filename, SourceType::C_Source, compile_mode,
+                                            false, nullptr, {}, {}, version_obj_filename, nullptr,
+                                            &str_alloc, &node.cmd);
 
-                obj_commands.Append(cmd);
+                obj_nodes.Append(node);
 
                 // Pretend object file does not exist to force link step
                 mtime_map.Set(version_obj_filename, -1);
@@ -237,7 +235,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
         const char *deps_filename = Fmt(&temp_alloc, "%1.d", obj_filename).ptr;
 
         if (NeedsRebuild(src.filename, obj_filename, deps_filename)) {
-            BuildCommand cmd = {};
+            BuildNode node = {};
 
             const char *pch_filename = nullptr;
             switch (src.type) {
@@ -248,17 +246,15 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
                 case SourceType::CXX_Header: { RG_ASSERT(false); } break;
             }
 
-            cmd.text = Fmt(&str_alloc, "Build %1", src.filename).ptr;
-            cmd.dest_filename = DuplicateString(obj_filename, &str_alloc).ptr;
+            node.text = Fmt(&str_alloc, "Build %1", src.filename).ptr;
+            node.dest_filename = DuplicateString(obj_filename, &str_alloc).ptr;
             if (!EnsureDirectoryExists(obj_filename))
                 return false;
-            cmd.cmd = compiler->MakeObjectCommand(src.filename, src.type, build_mode, warnings,
-                                                  pch_filename, definitions, target.include_directories,
-                                                  obj_filename, deps_filename, &str_alloc);
-            if (!cmd.cmd)
-                return false;
+            compiler->MakeObjectCommand(src.filename, src.type, compile_mode, warnings,
+                                        pch_filename, definitions, target.include_directories,
+                                        obj_filename, deps_filename, &str_alloc, &node.cmd);
 
-            obj_commands.Append(cmd);
+            obj_nodes.Append(node);
 
             // Pretend object file does not exist to force link step
             mtime_map.Set(obj_filename, -1);
@@ -273,18 +269,16 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
                                        output_directory, target.name).ptr;
 
         if (!IsFileUpToDate(obj_filename, target.pack_filenames)) {
-            BuildCommand cmd = {};
+            BuildNode node = {};
 
-            cmd.text = Fmt(&str_alloc, "Pack %1 assets", target.name).ptr;
-            cmd.dest_filename = DuplicateString(obj_filename, &str_alloc).ptr;
+            node.text = Fmt(&str_alloc, "Pack %1 assets", target.name).ptr;
+            node.dest_filename = DuplicateString(obj_filename, &str_alloc).ptr;
             if (!EnsureDirectoryExists(obj_filename))
                 return false;
-            cmd.cmd = compiler->MakePackCommand(target.pack_filenames, build_mode,
-                                                target.pack_options, obj_filename, &str_alloc);
-            if (!cmd.cmd)
-                return false;
+            compiler->MakePackCommand(target.pack_filenames, compile_mode,
+                                      target.pack_options, obj_filename, &str_alloc, &node.cmd);
 
-            obj_commands.Append(cmd);
+            obj_nodes.Append(node);
 
             // Pretend object file does not exist to force link step
             mtime_map.Set(obj_filename, -1);
@@ -294,7 +288,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
         switch (target.pack_link_type) {
             case PackLinkType::Static: { module = false; } break;
             case PackLinkType::Module: { module = true; } break;
-            case PackLinkType::ModuleIfDebug: { module = (build_mode == BuildMode::Debug); } break;
+            case PackLinkType::ModuleIfDebug: { module = (compile_mode == CompileMode::Debug); } break;
         }
 
         if (module) {
@@ -307,17 +301,17 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
 #endif
 
             if (!IsFileUpToDate(module_filename, obj_filename)) {
-                BuildCommand cmd = {};
+                BuildNode node = {};
 
                 // XXX: Check if this conflicts with a target destination file?
-                cmd.text = Fmt(&str_alloc, "Link %1",
+                node.text = Fmt(&str_alloc, "Link %1",
                                SplitStrReverseAny(module_filename, RG_PATH_SEPARATORS)).ptr;
-                cmd.dest_filename = DuplicateString(module_filename, &str_alloc).ptr;
-                cmd.cmd = compiler->MakeLinkCommand(obj_filename, BuildMode::Debug, {},
-                                                    LinkType::SharedLibrary, module_filename,
-                                                    &str_alloc);
+                node.dest_filename = DuplicateString(module_filename, &str_alloc).ptr;
+                compiler->MakeLinkCommand(obj_filename, CompileMode::Debug, {},
+                                          LinkType::SharedLibrary, module_filename,
+                                          &str_alloc, &node.cmd);
 
-                link_commands.Append(cmd);
+                link_nodes.Append(node);
             }
         } else {
             obj_filenames.Append(obj_filename);
@@ -333,31 +327,29 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
 #endif
 
         if (!IsFileUpToDate(target_filename, obj_filenames)) {
-            BuildCommand cmd = {};
+            BuildNode node = {};
 
-            cmd.text = Fmt(&str_alloc, "Link %1",
+            node.text = Fmt(&str_alloc, "Link %1",
                            SplitStrReverseAny(target_filename, RG_PATH_SEPARATORS)).ptr;
-            cmd.dest_filename = DuplicateString(target_filename, &str_alloc).ptr;
-            cmd.cmd = compiler->MakeLinkCommand(obj_filenames, build_mode, target.libraries,
-                                                LinkType::Executable, target_filename, &str_alloc);
-            if (!cmd.cmd)
-                return false;
+            node.dest_filename = DuplicateString(target_filename, &str_alloc).ptr;
+            compiler->MakeLinkCommand(obj_filenames, compile_mode, target.libraries,
+                                      LinkType::Executable, target_filename, &str_alloc, &node.cmd);
 
-            link_commands.Append(cmd);
+            link_nodes.Append(node);
         }
 
         target_filenames.Set(target.name, target_filename);
     }
 
     // Do this at the end because it's much harder to roll back changes in out_guard
-    for (Size i = start_pch_len; i < pch_commands.len; i++) {
-        output_set.Append(pch_commands[i].dest_filename);
+    for (Size i = start_pch_len; i < pch_nodes.len; i++) {
+        output_set.Append(pch_nodes[i].dest_filename);
     }
-    for (Size i = start_obj_len; i < obj_commands.len; i++) {
-        output_set.Append(obj_commands[i].dest_filename);
+    for (Size i = start_obj_len; i < obj_nodes.len; i++) {
+        output_set.Append(obj_nodes[i].dest_filename);
     }
-    for (Size i = start_link_len; i < link_commands.len; i++) {
-        output_set.Append(link_commands[i].dest_filename);
+    for (Size i = start_link_len; i < link_nodes.len; i++) {
+        output_set.Append(link_nodes[i].dest_filename);
     }
 
     out_guard.Disable();
@@ -366,18 +358,18 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
 
 void BuildSetBuilder::Finish(BuildSet *out_set)
 {
-    RG_ASSERT(!out_set->commands.len);
+    RG_ASSERT(!out_set->nodes.len);
 
-    if (pch_commands.len) {
-        pch_commands[pch_commands.len - 1].sync_after = true;
+    if (pch_nodes.len) {
+        pch_nodes[pch_nodes.len - 1].sync_after = true;
     }
-    if (obj_commands.len) {
-        obj_commands[obj_commands.len - 1].sync_after = true;
+    if (obj_nodes.len) {
+        obj_nodes[obj_nodes.len - 1].sync_after = true;
     }
 
-    out_set->commands.Append(pch_commands);
-    out_set->commands.Append(obj_commands);
-    out_set->commands.Append(link_commands);
+    out_set->nodes.Append(pch_nodes);
+    out_set->nodes.Append(obj_nodes);
+    out_set->nodes.Append(link_nodes);
     std::swap(out_set->target_filenames, target_filenames);
 
     SwapMemory(&out_set->str_alloc, &str_alloc, RG_SIZE(str_alloc));
@@ -435,29 +427,58 @@ int64_t BuildSetBuilder::GetFileModificationTime(const char *filename)
 
 // The caller needs to ignore (or do whetever) SIGINT for the clean up to work if
 // the user interrupts felix. For this you can use libcc: call WaitForInterruption(0).
-bool RunBuildCommands(Span<const BuildCommand> commands, int jobs, bool verbose)
+bool RunBuildNodes(Span<const BuildNode> nodes, int jobs, bool verbose)
 {
+    BlockAllocator temp_alloc;
+
+    // Prepare response files for excessively long command lines
+    HashMap<const void *, const char *> rsp_map;
+    for (const BuildNode &node: nodes) {
+        if (node.cmd.line.len > 4096 && node.cmd.rsp_offset > 0) {
+            RG_ASSERT(node.cmd.rsp_offset < node.cmd.line.len);
+
+            const char *rsp_filename = Fmt(&temp_alloc, "%1.rsp", node.dest_filename).ptr;
+            Span<const char> rsp = node.cmd.line.Take(node.cmd.rsp_offset + 1,
+                                                      node.cmd.line.len - node.cmd.rsp_offset - 1);
+
+            // Apparently backslash characters needs to be escaped in response files,
+            // but it's easier to use '/' instead.
+            StreamWriter st(rsp_filename);
+            for (char c: rsp) {
+                st.Write(c == '\\' ? '/' : c);
+            }
+            if (!st.Close())
+                return false;
+
+            const char *new_cmd = Fmt(&temp_alloc, "%1 \"@%2\"",
+                                      node.cmd.line.Take(0, node.cmd.rsp_offset), rsp_filename).ptr;
+            rsp_map.Append(&node, new_cmd);
+        }
+    }
+
     Async async(jobs - 1);
 
     std::mutex out_mutex;
     Size progress_counter = 0;
     bool interrupted = false;
 
-    for (const BuildCommand &cmd: commands) {
-        async.Run([&, cmd]() {
+    for (const BuildNode &node: nodes) {
+        async.Run([&]() {
+            const char *cmd_line = rsp_map.FindValue(&node, node.cmd.line.ptr);
+
             // The lock is needed to guarantee ordering of progress counter. Atomics
             // do not help much because the LogInfo() calls need to be protected too.
             {
                 std::lock_guard<std::mutex> out_lock(out_mutex);
 
-                Size progress = 100 * progress_counter++ / commands.len;
-                LogInfo("(%1%%) %2", FmtArg(progress).Pad(-3), verbose ? cmd.cmd : cmd.text);
+                Size progress = 100 * progress_counter++ / nodes.len;
+                LogInfo("(%1%%) %2", FmtArg(progress).Pad(-3), verbose ? cmd_line : node.text);
             }
 
             // Run command
             HeapArray<char> output;
             int exit_code;
-            bool started = ExecuteCommandLine(cmd.cmd, {}, Megabytes(1), &output, &exit_code);
+            bool started = ExecuteCommandLine(cmd_line, {}, Megabytes(1), &output, &exit_code);
 
             // Deal with results
             if (started && !exit_code) {
@@ -468,14 +489,14 @@ bool RunBuildCommands(Span<const BuildCommand> commands, int jobs, bool verbose)
 
                 return true;
             } else {
-                unlink(cmd.dest_filename);
+                unlink(node.dest_filename);
 
                 if (!started) {
                     // Error already issued by ExecuteCommandLine()
                 } else if (exit_code == 130) {
                     interrupted = true; // SIGINT
                 } else {
-                    LogError("Command '%1' failed (exit code %2)", cmd.cmd, exit_code);
+                    LogError("Command '%1' failed (exit code %2)", cmd_line, exit_code);
 
                     std::lock_guard<std::mutex> out_lock(out_mutex);
                     stderr_st.Write(output);
@@ -485,7 +506,7 @@ bool RunBuildCommands(Span<const BuildCommand> commands, int jobs, bool verbose)
             }
         });
 
-        if (cmd.sync_after && !async.Sync())
+        if (node.sync_after && !async.Sync())
             break;
     }
 
