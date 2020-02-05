@@ -437,7 +437,7 @@ bool RunBuildNodes(Span<const BuildNode> nodes, int jobs, bool verbose)
 
     RG_DEFER {
         for (const char *filename: rsp_filenames) {
-            unlink(filename);
+            UnlinkFile(filename);
         }
     };
 
@@ -509,7 +509,7 @@ bool RunBuildNodes(Span<const BuildNode> nodes, int jobs, bool verbose)
 
                 return true;
             } else {
-                unlink(node.dest_filename);
+                UnlinkFile(node.dest_filename);
 
                 if (!started) {
                     // Error already issued by ExecuteCommandLine()

@@ -3342,8 +3342,10 @@ const char *GetApplicationDirectory(); // Can be NULL
 const char *GetApplicationExecutable83(); // Can be NULL
 #endif
 
-bool MakeDirectory(const char *dir, bool error_if_exists = true);
-bool MakeDirectoryRec(Span<const char> dir);
+bool MakeDirectory(const char *directory, bool error_if_exists = true);
+bool MakeDirectoryRec(Span<const char> directory);
+bool UnlinkDirectory(const char *directory, bool error_if_missing = false);
+bool UnlinkFile(const char *filename, bool error_if_missing = false);
 bool EnsureDirectoryExists(const char *filename);
 
 enum class OpenFileMode {

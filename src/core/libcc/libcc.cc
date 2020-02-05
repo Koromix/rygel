@@ -2033,6 +2033,36 @@ bool MakeDirectoryRec(Span<const char> directory)
     return true;
 }
 
+bool UnlinkDirectory(const char *directory, bool error_if_missing)
+{
+    WCHAR directory_w[4096];
+    if (ConvertUtf8ToWin32Wide(directory, directory_w) < 0)
+        return false;
+
+    if (!RemoveDirectoryW(directory_w) &&
+            (GetLastError() != ERROR_FILE_NOT_FOUND || error_if_missing)) {
+        LogError("Failed to remove directory '%1': %2", directory, GetWin32ErrorString());
+        return false;
+    }
+
+    return true;
+}
+
+bool UnlinkFile(const char *filename, bool error_if_missing)
+{
+    WCHAR filename_w[4096];
+    if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
+        return false;
+
+    if (!DeleteFileW(filename_w) &&
+            (GetLastError() != ERROR_FILE_NOT_FOUND || error_if_missing)) {
+        LogError("Failed to remove file '%1': %2", filename, GetWin32ErrorString());
+        return false;
+    }
+
+    return true;
+}
+
 #else
 
 FILE *OpenFile(const char *filename, OpenFileMode mode)
@@ -2092,6 +2122,26 @@ bool MakeDirectoryRec(Span<const char> directory)
 
             buf[offset] = *RG_PATH_SEPARATORS;
         }
+    }
+
+    return true;
+}
+
+bool UnlinkDirectory(const char *directory, bool error_if_missing)
+{
+    if (rmdir(directory) < 0 && (errno != ENOENT || error_if_missing)) {
+        LogError("Failed to remove directory '%1': %2", directory, strerror(errno));
+        return false;
+    }
+
+    return true;
+}
+
+bool UnlinkFile(const char *filename, bool error_if_missing)
+{
+    if (unlink(filename) < 0 && (errno != ENOENT || error_if_missing)) {
+        LogError("Failed to remove file '%1': %2", filename, strerror(errno));
+        return false;
     }
 
     return true;

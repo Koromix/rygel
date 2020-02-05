@@ -189,14 +189,12 @@ Options:
     HeapArray<const char *> files;
     RG_DEFER_N(out_guard) {
         for (const char *filename: files) {
-            unlink(filename);
+            UnlinkFile(filename);
         }
         for (Size i = directories.len - 1; i >= 0; i--) {
-            rmdir(directories[i]);
+            UnlinkDirectory(directories[i]);
         }
-        if (rmdir(profile_directory) < 0) {
-            LogError("Failed to remove directory '%1': %2", profile_directory, strerror(errno));
-        }
+        UnlinkDirectory(profile_directory);
     };
 
     // Create files directory

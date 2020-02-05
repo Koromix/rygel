@@ -295,7 +295,7 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
     const char *sha256 = request.GetQueryValue("sha256");
 
     io->RunAsync([=]() {
-        RG_DEFER_N(tmp_guard) { unlink(tmp_filename); };
+        RG_DEFER_N(tmp_guard) { UnlinkFile(tmp_filename); };
 
         if (!EnsureDirectoryExists(filename))
             return;
@@ -413,10 +413,8 @@ void HandleFileDelete(const http_RequestInfo &request, http_IO *io)
         }
 
         // Deal with the OS first
-        if (unlink(file->filename) < 0 && errno != ENOENT) {
-            LogError("Failed to delete '%1': %2", file->filename, strerror(errno));
+        if (!UnlinkFile(file->filename))
             return;
-        }
 
         // Delete file entry
         {
