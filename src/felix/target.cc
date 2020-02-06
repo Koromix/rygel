@@ -347,7 +347,6 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     target->enable_by_default = target_config->enable_by_default;
     std::swap(target->definitions, target_config->definitions);
     std::swap(target->export_definitions, target_config->export_definitions);
-    target->definitions.Append(target->export_definitions);
     std::swap(target->include_directories, target_config->include_directories);
     target->pack_link_type = target_config->pack_link_type;
     target->pack_options = target_config->pack_options;
