@@ -2638,6 +2638,8 @@ private:
     bool InitCompressor(CompressionType type);
     void ReleaseResources();
 
+    bool Deflate(Span<const uint8_t> buf);
+
     bool WriteRaw(Span<const uint8_t> buf);
 };
 

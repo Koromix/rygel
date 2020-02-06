@@ -3557,6 +3557,9 @@ struct MinizDeflateContext {
     // Gzip support
     uint32_t crc32;
     Size uncompressed_size;
+
+    // Used to buffer small writes
+    LocalArray<uint8_t, 1024> buf;
 };
 #endif
 
@@ -3655,7 +3658,12 @@ bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, co
 
 bool StreamWriter::Close()
 {
-    bool success = !error;
+    RG_DEFER {
+        ReleaseResources();
+
+        filename = nullptr;
+        error = false;
+    };
 
     if (IsValid()) {
         switch (compression.type) {
@@ -3666,13 +3674,15 @@ bool StreamWriter::Close()
 #ifdef MZ_VERSION
                 MinizDeflateContext *ctx = compression.u.miniz;
 
-                tdefl_status status = tdefl_compress_buffer(&ctx->deflator, nullptr, 0,
-                                                            TDEFL_FINISH);
+                if (ctx->buf.len && !Deflate(ctx->buf))
+                    return false;
+
+                tdefl_status status = tdefl_compress_buffer(&ctx->deflator, nullptr, 0, TDEFL_FINISH);
                 if (status != TDEFL_STATUS_DONE) {
                     if (status != TDEFL_STATUS_PUT_BUF_FAILED) {
                         LogError("Failed to end Deflate stream for '%1", filename);
                     }
-                    success = false;
+                    return false;
                 }
 
                 if (compression.type == CompressionType::Gzip) {
@@ -3681,7 +3691,8 @@ bool StreamWriter::Close()
                         LittleEndian((uint32_t)ctx->uncompressed_size)
                     };
 
-                    success &= WriteRaw(MakeSpan((uint8_t *)gzip_footer, RG_SIZE(gzip_footer)));
+                    if (!WriteRaw(MakeSpan((uint8_t *)gzip_footer, RG_SIZE(gzip_footer))))
+                        return false;
                 }
 #endif
             } break;
@@ -3700,22 +3711,18 @@ bool StreamWriter::Close()
                 if ((fflush(dest.u.file.fp) != 0 || fsync(fileno(dest.u.file.fp)) < 0) && errno != EINVAL) {
 #endif
                     LogError("Failed to finalize writing to '%1': %2", filename, strerror(errno));
-                    success = false;
+                    return false;
                 }
             } break;
 
             case DestinationType::Function: {
-                success = dest.u.func({});
+                if (!dest.u.func({}))
+                    return false;
             } break;
         }
     }
 
-    ReleaseResources();
-
-    filename = nullptr;
-    error = false;
-
-    return success;
+    return true;
 }
 
 bool StreamWriter::Write(Span<const uint8_t> buf)
@@ -3731,20 +3738,29 @@ bool StreamWriter::Write(Span<const uint8_t> buf)
         case CompressionType::Gzip:
         case CompressionType::Zlib: {
 #ifdef MZ_VERSION
-            if (compression.type == CompressionType::Gzip) {
-                compression.u.miniz->crc32 = (uint32_t)mz_crc32(compression.u.miniz->crc32,
-                                                                buf.ptr, (size_t)buf.len);
-                compression.u.miniz->uncompressed_size += buf.len;
+            MinizDeflateContext *ctx = compression.u.miniz;
+
+            if (ctx->buf.len) {
+                Size copy_len = std::min(buf.len, ctx->buf.Available());
+
+                memcpy(ctx->buf.end(), buf.ptr, copy_len);
+                ctx->buf.len += copy_len;
+                buf.ptr += copy_len;
+                buf.len -= copy_len;
             }
 
-            tdefl_status status = tdefl_compress_buffer(&compression.u.miniz->deflator,
-                                                        buf.ptr, (size_t)buf.len, TDEFL_NO_FLUSH);
-            if (status < TDEFL_STATUS_OKAY) {
-                if (status != TDEFL_STATUS_PUT_BUF_FAILED) {
-                    LogError("Failed to deflate stream to '%1'", filename);
+            if (buf.len) {
+                if (ctx->buf.len && !Deflate(ctx->buf))
+                    return false;
+                ctx->buf.Clear();
+
+                if (buf.len >= RG_SIZE(ctx->buf.data) / 2) {
+                    if (!Deflate(buf))
+                        return false;
+                } else {
+                    memcpy(ctx->buf.data, buf.ptr, buf.len);
+                    ctx->buf.len = buf.len;
                 }
-                error = true;
-                return false;
             }
 
             return true;
@@ -3838,6 +3854,28 @@ void StreamWriter::ReleaseResources()
         } break;
     }
     dest.type = DestinationType::Memory;
+}
+
+bool StreamWriter::Deflate(Span<const uint8_t> buf)
+{
+    MinizDeflateContext *ctx = compression.u.miniz;
+
+    if (compression.type == CompressionType::Gzip) {
+        ctx->crc32 = (uint32_t)mz_crc32(ctx->crc32, buf.ptr, (size_t)buf.len);
+        ctx->uncompressed_size += buf.len;
+    }
+
+    tdefl_status status = tdefl_compress_buffer(&ctx->deflator, buf.ptr, (size_t)buf.len, TDEFL_NO_FLUSH);
+    if (status < TDEFL_STATUS_OKAY) {
+        if (status != TDEFL_STATUS_PUT_BUF_FAILED) {
+            LogError("Failed to deflate stream to '%1'", filename);
+        }
+
+        error = true;
+        return false;
+    }
+
+    return true;
 }
 
 bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
