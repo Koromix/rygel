@@ -5,6 +5,7 @@
 #pragma once
 
 #include "util.hh"
+#include "config.hh"
 
 void InitDrive();
 void ProcessDrive();

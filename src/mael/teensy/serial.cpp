@@ -3,8 +3,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "util.hh"
-#include "serial.hh"
+#include "config.hh"
 #include "drive.hh"
+#include "serial.hh"
 
 void InitSerial()
 {

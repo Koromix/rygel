@@ -3,8 +3,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "util.hh"
+#include "config.hh"
 #include "drive.hh"
-#include "pins.hh"
 
 // Drive speed
 static float drv_x;

@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include "util.hh"
-
 // Encoder pins
 #define PIN_ENC0_INT 12
 #define PIN_ENC0_DIR 16
