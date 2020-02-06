@@ -803,7 +803,7 @@ Pack options:
 
         opt.ConsumeNonOptions(&filenames);
         if (!dest_filename) {
-            LogError("A destination file must be provided (--output)");
+            LogError("A destination file must be provided (--output_file)");
             return 1;
         }
         if (!filenames.len) {
