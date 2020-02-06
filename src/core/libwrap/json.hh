@@ -151,7 +151,7 @@ private:
 
 class json_StreamWriter {
     StreamWriter *st;
-    LocalArray<uint8_t, 4096> buf;
+    LocalArray<uint8_t, 1024> buf;
 
 public:
     typedef char Ch;
