@@ -2507,7 +2507,7 @@ private:
     bool InitDecompressor(CompressionType type);
     void ReleaseResources();
 
-    Size Deflate(Size max_len, void *out_buf);
+    Size Inflate(Size max_len, void *out_buf);
 
     Size ReadRaw(Size max_len, void *out_buf);
 };

@@ -3139,7 +3139,7 @@ Size StreamReader::Read(Span<uint8_t> out_buf)
 
         case CompressionType::Gzip:
         case CompressionType::Zlib: {
-            read_len = Deflate(out_buf.len, out_buf.ptr);
+            read_len = Inflate(out_buf.len, out_buf.ptr);
         } break;
     }
 
@@ -3294,7 +3294,7 @@ void StreamReader::ReleaseResources()
     source.type = SourceType::Memory;
 }
 
-Size StreamReader::Deflate(Size max_len, void *out_buf)
+Size StreamReader::Inflate(Size max_len, void *out_buf)
 {
 #ifdef MZ_VERSION
     MinizInflateContext *ctx = compression.u.miniz;
