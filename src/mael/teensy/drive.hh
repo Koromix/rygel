@@ -10,4 +10,4 @@
 void InitDrive();
 void ProcessDrive();
 
-void SetDriveSpeed(float x, float y, float w);
+void SetDriveSpeed(double x, double y, double w);
