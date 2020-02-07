@@ -9,7 +9,7 @@
 #include "goupile.hh"
 #include "schedule.hh"
 #include "user.hh"
-#include "../../web/libserver/libserver.hh"
+#include "../../web/libhttp/libhttp.hh"
 #include "../../core/libwrap/sqlite.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
