@@ -620,6 +620,11 @@ Navigation functions should only be called in reaction to user events, such as b
             current_records.set(record.id, record);
         } else {
             current_records.delete(record.id);
+
+            if (!select_many && !current_records.size) {
+                let record = virt_data.create(current_asset.form.key);
+                current_records.set(record.id, record);
+            }
         }
 
         if (show_overview) {
