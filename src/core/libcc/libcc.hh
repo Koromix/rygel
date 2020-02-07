@@ -21,9 +21,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifndef NDEBUG
-    #include <thread>
-#endif
 #include <type_traits>
 #include <utility>
 #ifdef _WIN32
@@ -575,10 +572,6 @@ class LinkedAllocator: public Allocator {
     // We want allocators to be memmovable, which means we can't use a circular linked list.
     // Even though it makes the code less nice.
     Node list = {};
-
-#ifndef NDEBUG
-    std::thread::id thread_id = std::this_thread::get_id();
-#endif
 
 public:
     LinkedAllocator(Allocator *alloc = nullptr) : allocator(alloc) {}
