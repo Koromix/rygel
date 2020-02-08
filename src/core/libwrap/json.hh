@@ -79,6 +79,35 @@ static const char *const json_TokenTypeNames[] = {
     "Key"
 };
 
+template <typename Handler>
+bool json_Parse(StreamReader *st, Handler *handler)
+{
+    json_StreamReader json_reader(st);
+    rapidjson::Reader parser;
+
+    PushLogFilter([=](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
+        char msg_buf[4096];
+        Fmt(msg_buf, "%1(%2:%3): %4",
+            st->GetFileName(), json_reader.GetLineNumber(), json_reader.GetLineOffset(), msg);
+
+        func(level, ctx, msg_buf);
+    });
+    RG_DEFER { PopLogFilter(); };
+
+    rapidjson::ParseErrorCode err = parser.Parse(json_reader, *handler).Code();
+    if (err != rapidjson::kParseErrorNone) {
+        // Parse error is likely after I/O error (missing token, etc.) but it's irrelevant,
+        // the I/O error has already been issued. So don't log it.
+        if (st->IsValid() && err != rapidjson::kParseErrorTermination) {
+            LogError("%1", GetParseError_En(err));
+        }
+
+        return false;
+    }
+
+    return true;
+}
+
 class json_Parser {
     struct Handler {
         Allocator *allocator;
