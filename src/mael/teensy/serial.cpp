@@ -50,6 +50,7 @@ static bool ExecuteCommand(char *cmd, char *arg0, char *arg1, char *arg2, char *
         if (!ParseLong(arg1, 0, 1000, &y))
             return false;
         if (!ParseLong(arg2, 0, 1000, &w))
+            return false;
 
         SetDriveSpeed((double)x, (double)y, (double)w);
         return true;
