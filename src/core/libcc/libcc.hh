@@ -649,6 +649,97 @@ public:
 };
 
 // ------------------------------------------------------------------------
+// Reference counting
+// ------------------------------------------------------------------------
+
+template <typename T>
+class RetainPtr {
+    T *p = nullptr;
+
+public:
+    RetainPtr() = default;
+    RetainPtr(T *p, void (*delete_func)(T *))
+        : p(p)
+    {
+        RG_ASSERT(p);
+        RG_ASSERT(delete_func);
+        RG_ASSERT(!p->delete_func || (void *)delete_func == (void *)p->delete_func);
+
+        p->Ref();
+        p->delete_func = (void (*)(void *))delete_func;
+    }
+    RetainPtr(T *p, bool ref = true)
+        : p(p)
+    {
+        if (p) {
+            RG_ASSERT(p->delete_func);
+
+            if (ref) {
+                p->Ref();
+            }
+        }
+    }
+
+    ~RetainPtr()
+    {
+        if (p) {
+            p->Unref();
+        }
+    }
+
+    RetainPtr(const RetainPtr &other)
+    {
+        p = other.p;
+        if (p) {
+            p->Ref();
+        }
+    }
+    RetainPtr &operator=(const RetainPtr &other)
+    {
+        if (p) {
+            p->Unref();
+        }
+
+        p = other.p;
+        if (p) {
+            p->Ref();
+        }
+
+        return *this;
+    }
+
+    bool IsValid() const { return p; }
+    operator bool() const { return p; }
+
+    T &operator*() const
+    {
+        RG_ASSERT(p);
+        return *p;
+    }
+    T *operator->() const { return p; }
+    T *GetRaw() const { return p; }
+};
+
+class RetainObject {
+    mutable void (*delete_func)(void *) = nullptr;
+    mutable std::atomic_int refcount {0};
+
+public:
+    void Ref() const { refcount++; }
+    void Unref() const
+    {
+        int new_count = --refcount;
+        RG_ASSERT(new_count >= 0);
+
+        if (!new_count) {
+            delete_func((void *)this);
+        }
+    }
+
+    template<class T> friend class RetainPtr;
+};
+
+// ------------------------------------------------------------------------
 // Collections
 // ------------------------------------------------------------------------
 
