@@ -26,7 +26,9 @@ static const char *const UserPermissionNames[] = {
     "McoMutate"
 };
 
-struct User {
+// We don't need any extra session information for connected users, so we can
+// use this as the user data pointer stored in session manager.
+struct User: public RetainObject {
     const char *name;
     const char *password_hash;
 

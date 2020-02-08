@@ -45,8 +45,7 @@ static bool GetClientAddress(MHD_Connection *conn, Span<char> out_address)
     return true;
 }
 
-void http_SessionManager::Open2(const http_RequestInfo &request, http_IO *io,
-                                std::shared_ptr<void> udata)
+void http_SessionManager::Open2(const http_RequestInfo &request, http_IO *io, RetainPtr<RetainObject> udata)
 {
     std::unique_lock<std::shared_mutex> lock(mutex);
 
@@ -135,7 +134,7 @@ void http_SessionManager::Close(const http_RequestInfo &request, http_IO *io)
     DeleteSessionCookies(request, io);
 }
 
-std::shared_ptr<void> http_SessionManager::Find2(const http_RequestInfo &request, http_IO *io)
+RetainObject *http_SessionManager::Find2(const http_RequestInfo &request, http_IO *io)
 {
     PruneStaleSessions();
 
@@ -145,13 +144,12 @@ std::shared_ptr<void> http_SessionManager::Find2(const http_RequestInfo &request
     Session *session = FindSession(request, &mismatch);
 
     if (session) {
-        std::shared_ptr<void> udata = session->udata;
+        RetainObject *udata = session->udata.GetRaw();
         int64_t now = GetMonotonicTime();
 
         // Regenerate session if needed
         if (now - session->register_time >= RegenerateDelay) {
             int64_t login_time = session->login_time;
-            std::shared_ptr<void> udata = session->udata;
 
             lock.unlock();
 
@@ -166,6 +164,7 @@ std::shared_ptr<void> http_SessionManager::Find2(const http_RequestInfo &request
             }
         }
 
+        udata->Ref();
         return udata;
     } else if (mismatch) {
         DeleteSessionCookies(request, io);

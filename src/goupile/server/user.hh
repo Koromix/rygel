@@ -28,12 +28,12 @@ static const char *const UserPermissionNames[] = {
     "Validate"
 };
 
-struct Session {
+struct Session: public RetainObject {
     uint32_t permissions;
     char username[];
 };
 
-std::shared_ptr<const Session> GetCheckedSession(const http_RequestInfo &request, http_IO *io);
+RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http_IO *io);
 
 void HandleLogin(const http_RequestInfo &request, http_IO *io);
 void HandleLogout(const http_RequestInfo &request, http_IO *io);

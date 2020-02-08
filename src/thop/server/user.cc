@@ -59,7 +59,7 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
 
             // XXX: Check validity, or maybe the INI parser checks are enough?
             const char *name = DuplicateString(prop.section, &set.str_alloc).ptr;
-            User user = {};
+            User *user = set.users.AppendDefault();
             UnitRuleSet rule_set = {};
 
             bool first_property = true;
@@ -68,7 +68,7 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                     if (first_property) {
                         Size template_idx = map.FindValue(prop.value.ptr, -1);
                         if (template_idx >= 0) {
-                            user = set.users[template_idx];
+                            memcpy(user, &set.users[template_idx], RG_SIZE(*user));
                             rule_set = rule_sets[template_idx];
                             allow.Append(rule_sets[template_idx].allow);
                             deny.Append(rule_sets[template_idx].deny);
@@ -81,7 +81,7 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                         valid = false;
                     }
                 } else if (prop.key == "PasswordHash") {
-                    user.password_hash = DuplicateString(prop.value, &set.str_alloc).ptr;
+                    user->password_hash = DuplicateString(prop.value, &set.str_alloc).ptr;
                 } else if (prop.key == "Password") {
                     if (warn_about_plain_passwords) {
                         LogError("Plain passwords are not recommended, prefer PasswordHash");
@@ -92,7 +92,7 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                             crypto_pwhash_str(hash, prop.value.ptr, prop.value.len,
                                               crypto_pwhash_OPSLIMIT_MIN,
                                               crypto_pwhash_MEMLIMIT_MIN) == 0) {
-                        user.password_hash = DuplicateString(hash, &set.str_alloc).ptr;
+                        user->password_hash = DuplicateString(hash, &set.str_alloc).ptr;
                     } else {
                         LogError("Failed to hash password");
                         valid = false;
@@ -103,13 +103,13 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                         Span<const char> part = SplitListValue(prop.value, &prop.value, &enable);
 
                         if (part == "All") {
-                            user.permissions = enable ? UINT_MAX : 0;
+                            user->permissions = enable ? UINT_MAX : 0;
                         } else if (part.len) {
                             const char *const *name = FindIf(UserPermissionNames,
                                                              [&](const char *str) { return TestStr(str, part); });
                             if (name) {
-                                user.permissions =
-                                    ApplyMask(user.permissions, 1u << (name - UserPermissionNames), enable);
+                                user->permissions =
+                                    ApplyMask(user->permissions, 1u << (name - UserPermissionNames), enable);
                             } else {
                                 LogError("Unknown permission '%1'", part);
                                 valid = false;
@@ -135,13 +135,13 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                         Span<const char> part = SplitListValue(prop.value, &prop.value, &enable);
 
                         if (part == "All") {
-                            user.mco_dispense_modes = enable ? UINT_MAX : 0;
+                            user->mco_dispense_modes = enable ? UINT_MAX : 0;
                         } else if (part.len) {
                             const OptionDesc *desc = FindIf(mco_DispenseModeOptions,
                                                             [&](const OptionDesc &desc) { return TestStr(desc.name, part); });
                             if (desc) {
-                                user.mco_dispense_modes =
-                                    ApplyMask(user.mco_dispense_modes, 1u << (desc - mco_DispenseModeOptions), enable);
+                                user->mco_dispense_modes =
+                                    ApplyMask(user->mco_dispense_modes, 1u << (desc - mco_DispenseModeOptions), enable);
                             } else {
                                 LogError("Unknown dispensation mode '%1'", part);
                                 valid = false;
@@ -156,16 +156,17 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                 first_property = false;
             } while (ini.NextInSection(&prop));
 
-            user.name = name;
+            user->name = name;
             rule_set.allow = allow.TrimAndLeak();
             rule_set.deny = deny.TrimAndLeak();
 
-            if (map.Append(user.name, set.users.len).second) {
-                set.users.Append(user);
+            if (map.Append(user->name, set.users.len - 1).second) {
                 rule_sets.Append(rule_set);
             } else {
-                LogError("Duplicate user '%1'", user.name);
+                LogError("Duplicate user '%1'", user->name);
                 valid = false;
+
+                set.users.RemoveLast(1);
             }
         }
     }
@@ -252,8 +253,8 @@ bool LoadUserSet(Span<const char *const> filenames, const StructureSet &structur
 
 const User *CheckSessionUser(const http_RequestInfo &request, http_IO *io)
 {
-    std::shared_ptr<const User> udata = sessions.Find<const User>(request, io);
-    return udata ? udata.get() : nullptr;
+    RetainPtr<const User> udata = sessions.Find<const User>(request, io);
+    return udata ? udata.GetRaw() : nullptr;
 }
 
 void HandleLogin(const http_RequestInfo &request, const User *, http_IO *io)
@@ -293,7 +294,7 @@ void HandleLogin(const http_RequestInfo &request, const User *, http_IO *io)
         }
 
         // Create session
-        std::shared_ptr<const User> udata(user, [](const User *) {});
+        RetainPtr<const User> udata(user, [](const User *) {});
         sessions.Open(request, io, udata);
 
         io->AttachText(200, "{}", "application/json");

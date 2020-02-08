@@ -57,7 +57,7 @@ static Size ConvertToJsName(const char *name, Span<char> out_buf)
 
 static void HandleSettings(const http_RequestInfo &request, http_IO *io)
 {
-    std::shared_ptr<const Session> session = GetCheckedSession(request, io);
+    RetainPtr<const Session> session = GetCheckedSession(request, io);
     if (!session)
         return;
 

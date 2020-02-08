@@ -20,7 +20,7 @@ class http_SessionManager {
         int64_t login_time;
         int64_t register_time;
 
-        std::shared_ptr<void> udata;
+        RetainPtr<RetainObject> udata;
 
         RG_HASHTABLE_HANDLER_T(Session, const char *, session_key);
     };
@@ -30,25 +30,25 @@ class http_SessionManager {
 
 public:
     template<typename T>
-    void Open(const http_RequestInfo &request, http_IO *io, std::shared_ptr<T> udata)
+    void Open(const http_RequestInfo &request, http_IO *io, RetainPtr<T> udata)
     {
-        std::shared_ptr<void> udata2 = *(std::shared_ptr<void> *)&udata;
-        Open2(request, io, udata2);
+        RetainPtr<RetainObject> *udata2 = (RetainPtr<RetainObject> *)&udata;
+        Open2(request, io, *udata2);
     }
     void Close(const http_RequestInfo &request, http_IO *io);
 
     template<typename T>
-    std::shared_ptr<T> Find(const http_RequestInfo &request, http_IO *io)
+    RetainPtr<T> Find(const http_RequestInfo &request, http_IO *io)
     {
-        std::shared_ptr<void> udata = Find2(request, io);
-        return *(std::shared_ptr<T> *)&udata;
+        RetainObject *udata = Find2(request, io);
+        return RetainPtr<T>((T *)udata, false);
     }
 
 private:
-    void Open2(const http_RequestInfo &request, http_IO *io, std::shared_ptr<void> udata);
+    void Open2(const http_RequestInfo &request, http_IO *io, RetainPtr<RetainObject> udata);
     Session *CreateSession(const http_RequestInfo &request, http_IO *io);
 
-    std::shared_ptr<void> Find2(const http_RequestInfo &request, http_IO *io);
+    RetainObject *Find2(const http_RequestInfo &request, http_IO *io);
     Session *FindSession(const http_RequestInfo &request, bool *out_mismatch = nullptr);
 
     void PruneStaleSessions();
