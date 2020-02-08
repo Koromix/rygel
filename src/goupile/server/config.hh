@@ -16,6 +16,7 @@ struct Config {
     const char *files_directory = nullptr;
     const char *database_filename = nullptr;
     bool use_offline = false;
+    Size max_file_size = Megabytes(4);
 
     http_Config http;
     int max_age = 3600;

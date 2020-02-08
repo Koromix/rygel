@@ -258,7 +258,7 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
             StreamWriter writer;
             if (!io->OpenForWrite(200, &writer))
                 return;
-            if (!SpliceStream(&reader, Megabytes(8), &writer))
+            if (!SpliceStream(&reader, goupile_config.max_file_size, &writer))
                 return;
 
             writer.Close();
@@ -318,8 +318,9 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
                 if (buf.len < 0)
                     return;
 
-                if (RG_UNLIKELY(buf.len > Megabytes(8) - total_len)) {
-                    LogError("File '%1' is too large (limit = %2)", reader.GetFileName(), FmtDiskSize(Megabytes(8)));
+                if (RG_UNLIKELY(buf.len > goupile_config.max_file_size - total_len)) {
+                    LogError("File '%1' is too large (limit = %2)",
+                             reader.GetFileName(), FmtDiskSize(goupile_config.max_file_size));
                     io->AttachError(413);
                     return;
                 }
