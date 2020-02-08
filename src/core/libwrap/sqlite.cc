@@ -11,6 +11,8 @@ bool SQLiteDatabase::Open(const char *filename, unsigned int flags)
 {
     static const char *const sql = R"(
         PRAGMA foreign_keys = ON;
+        PRAGMA journal_mode = WAL;
+        PRAGMA busy_timeout = 5000;
     )";
 
     RG_ASSERT(!db);
