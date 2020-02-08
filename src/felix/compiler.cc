@@ -187,7 +187,7 @@ public:
 
         // Platform flags
 #if defined(_WIN32)
-        Fmt(&buf, " -fuse-ld=lld");
+        Fmt(&buf, " -fuse-ld=lld --rtlib=compiler-rt");
 #elif defined(__APPLE__)
 #else
         Fmt(&buf, " -Wl,-z,relro,-z,now");
