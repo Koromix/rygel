@@ -188,6 +188,7 @@ public:
     json_StreamWriter(StreamWriter *st) : st(st) {}
 
     void Put(char c);
+    void Put(Span<const char> str);
     void Flush();
 };
 
@@ -201,6 +202,11 @@ public:
     // the stream. Call EndString() when done. Make sure you escape properly!
     bool StartString();
     bool EndString();
+
+    // Same thing for raw JSON (e.g. JSON pulled from database)
+    bool StartRaw();
+    bool EndRaw();
+    bool Raw(Span<const char> str);
 
     void Flush() { writer.Flush(); }
 };

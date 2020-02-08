@@ -286,6 +286,12 @@ void json_StreamWriter::Put(char c)
     }
 }
 
+void json_StreamWriter::Put(Span<const char> str)
+{
+    Flush();
+    st->Write(str);
+}
+
 void json_StreamWriter::Flush()
 {
     st->Write(buf);
@@ -304,6 +310,28 @@ bool json_Writer::StartString()
 bool json_Writer::EndString()
 {
     writer.Put('"');
+    return true;
+}
+
+bool json_Writer::StartRaw()
+{
+    Prefix(rapidjson::kStringType);
+    writer.Flush();
+
+    return true;
+}
+
+bool json_Writer::EndRaw()
+{
+    return true;
+}
+
+bool json_Writer::Raw(Span<const char> str)
+{
+    StartRaw();
+    writer.Put(str);
+    EndRaw();
+
     return true;
 }
 
