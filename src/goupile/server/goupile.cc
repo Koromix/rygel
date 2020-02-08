@@ -7,6 +7,8 @@
 #include "events.hh"
 #include "files.hh"
 #include "goupile.hh"
+#include "ports.hh"
+#include "records.hh"
 #include "schedule.hh"
 #include "user.hh"
 #include "../../web/libhttp/libhttp.hh"
@@ -23,6 +25,8 @@ char goupile_etag[33];
 #ifndef NDEBUG
 static const char *assets_filename;
 static AssetSet asset_set;
+extern "C" const RG::AssetInfo *pack_asset_ports_pk_js;
+const RG::AssetInfo *pack_asset_ports_pk_js;
 #else
 extern "C" const Span<const AssetInfo> pack_assets;
 #endif
@@ -147,6 +151,10 @@ static void InitAssets()
                 TestStr(asset.name, "manifest.json")) {
             AssetInfo asset2 = PatchGoupileVariables(asset, &assets_alloc);
             assets_map.Append(asset2);
+        } else if (TestStr(asset.name, "ports.pk.js")) {
+#ifndef NDEBUG
+            pack_asset_ports_pk_js = &asset;
+#endif
         } else {
             assets_map.Append(asset);
         }
@@ -217,6 +225,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                 func = HandleEvents;
             } else if (TestStr(request.url, "/api/files.json")) {
                 func = HandleFileList;
+            } else if (!strncmp(request.url, "/records/", 9)) {
+                func = HandleRecordGet;
             } else if (TestStr(request.url, "/api/schedule/resources.json")) {
                 func = HandleScheduleResources;
             } else if (TestStr(request.url, "/api/schedule/meetings.json")) {
@@ -240,9 +250,21 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             io->AttachError(404);
         }
     } else if (TestStr(request.method, "PUT")) {
-        HandleFilePut(request, io);
+        if (!strncmp(request.url, "/files/", 7)) {
+            HandleFilePut(request, io);
+        } else if (!strncmp(request.url, "/records/", 9)) {
+            HandleRecordPut(request, io);
+        } else {
+            io->AttachError(404);
+        }
     } else if (TestStr(request.method, "DELETE")) {
-        HandleFileDelete(request, io);
+        if (!strncmp(request.url, "/files/", 7)) {
+            HandleFileDelete(request, io);
+        } else if (!strncmp(request.url, "/records/", 9)) {
+            HandleRecordDelete(request, io);
+        } else {
+            io->AttachError(404);
+        }
     } else {
         io->AttachError(405);
     }
@@ -352,6 +374,9 @@ Options:
     InitAssets();
     if (goupile_config.files_directory && !InitFiles())
         return 1;
+
+    // Init QuickJS
+    InitPorts();
 
     // Run!
     http_Daemon daemon;

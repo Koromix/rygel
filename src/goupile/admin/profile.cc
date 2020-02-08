@@ -62,21 +62,21 @@ CREATE TABLE files (
 );
 CREATE UNIQUE INDEX files_tp ON files (tag, path);
 
-CREATE TABLE form_records (
+CREATE TABLE records (
     id TEXT NOT NULL,
     table_name TEXT NOT NULL,
     data TEXT NOT NULL
 );
-CREATE UNIQUE INDEX form_records_i ON form_records (id);
+CREATE UNIQUE INDEX records_i ON records (id);
+CREATE INDEX records_t ON records (table_name);
 
-CREATE TABLE form_variables (
+CREATE TABLE records_variables (
     table_name TEXT NOT NULL,
     key TEXT NOT NULL,
-    type TEXT NOT NULL,
     before TEXT,
     after TEXT
 );
-CREATE UNIQUE INDEX form_variables_tk ON form_variables (table_name, key);
+CREATE UNIQUE INDEX records_variables_tk ON records_variables (table_name, key);
 
 CREATE TABLE sched_resources (
     schedule TEXT NOT NULL,
