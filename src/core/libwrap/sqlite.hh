@@ -7,12 +7,18 @@
 #include "../libcc/libcc.hh"
 #include "../../../vendor/sqlite/sqlite3.h"
 
+#include <shared_mutex>
+#include <thread>
+
 namespace RG {
 
 class SQLiteStatement;
 
 class SQLiteDatabase {
     sqlite3 *db = nullptr;
+
+    std::shared_mutex transact_mutex;
+    std::thread::id transact_thread;
 
 public:
     SQLiteDatabase() {}
@@ -23,6 +29,8 @@ public:
 
     bool Open(const char *filename, unsigned int flags);
     bool Close();
+
+    bool Transaction(FunctionRef<bool()> func);
 
     bool Execute(const char *sql);
     bool Prepare(const char *sql, SQLiteStatement *out_stmt);

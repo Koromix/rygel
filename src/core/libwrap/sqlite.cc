@@ -40,8 +40,34 @@ bool SQLiteDatabase::Close()
     return true;
 }
 
+bool SQLiteDatabase::Transaction(FunctionRef<bool()> func)
+{
+    std::lock_guard<std::shared_mutex> lock(transact_mutex);
+
+    transact_thread = std::this_thread::get_id();
+    RG_DEFER { transact_thread = std::thread::id(); };
+
+    if (!Execute("BEGIN IMMEDIATE TRANSACTION"))
+        return false;
+    RG_DEFER_N(rollback_guard) { Execute("ROLLBACK"); };
+
+    if (!func())
+        return false;
+    if (!Execute("COMMIT"))
+        return false;
+
+    rollback_guard.Disable();
+    return true;
+}
+
 bool SQLiteDatabase::Execute(const char *sql)
 {
+    std::shared_lock<std::shared_mutex> lock(transact_mutex, std::defer_lock);
+
+    if (std::this_thread::get_id() != transact_thread) {
+        lock.lock();
+    }
+
     char *error = nullptr;
     if (sqlite3_exec(db, sql, nullptr, nullptr, &error) != SQLITE_OK) {
         LogError("SQLite request failed: %1", error);
@@ -55,6 +81,12 @@ bool SQLiteDatabase::Execute(const char *sql)
 
 bool SQLiteDatabase::Prepare(const char *sql, SQLiteStatement *out_stmt)
 {
+    std::shared_lock<std::shared_mutex> lock(transact_mutex, std::defer_lock);
+
+    if (std::this_thread::get_id() != transact_thread) {
+        lock.lock();
+    }
+
     sqlite3_stmt *stmt;
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
         LogError("SQLite request failed: %1", sqlite3_errmsg(db));
