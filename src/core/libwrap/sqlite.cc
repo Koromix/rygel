@@ -124,4 +124,9 @@ bool SQLiteStatement::Next()
     return Execute() && rc == SQLITE_ROW;
 }
 
+void SQLiteStatement::Reset()
+{
+    RG_ASSERT(sqlite3_reset(stmt) == SQLITE_OK);
+}
+
 }

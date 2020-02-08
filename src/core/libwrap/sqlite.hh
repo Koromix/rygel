@@ -52,6 +52,7 @@ public:
 
     bool Execute();
     bool Next();
+    void Reset();
 
     operator sqlite3_stmt *() { return stmt; }
 
