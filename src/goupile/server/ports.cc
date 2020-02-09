@@ -136,17 +136,15 @@ private:
 };
 
 // This function does not try to deal with null/undefined values
-static int GetJSPropertyInt(JSContext *ctx, JSValue obj, const char *prop_str)
+static int ConsumeValueInt(JSContext *ctx, JSValue value)
 {
-    JSValue value = JS_GetPropertyStr(ctx, obj, prop_str);
     RG_DEFER { JS_FreeValue(ctx, value); };
     return JS_VALUE_GET_INT(value);
 }
 
 // Returns invalid Span (with ptr set to nullptr) if value is null/undefined
-static Span<const char> GetJSPropertyString(JSContext *ctx, JSValue obj, const char *prop_str)
+static Span<const char> ConsumeValueStr(JSContext *ctx, JSValue value)
 {
-    JSValue value = JS_GetPropertyStr(ctx, obj, prop_str);
     RG_DEFER { JS_FreeValue(ctx, value); };
 
     if (!JS_IsNull(value) && !JS_IsUndefined(value)) {
@@ -214,21 +212,18 @@ bool ScriptPort::RunRecord(Span<const char> script, const ScriptHandle &values, 
     RG_DEFER { JS_FreeValue(ctx, ret); };
 
     // Record values (as JSON string) and errors
-    out_record->json = GetJSPropertyString(ctx, ret, "json");
-    out_record->errors = GetJSPropertyInt(ctx, ret, "errors");
+    out_record->json = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, ret, "json"));
+    out_record->errors = ConsumeValueInt(ctx, JS_GetPropertyStr(ctx, ret, "errors"));
 
     // Variables
     {
         JSValue variables = JS_GetPropertyStr(ctx, ret, "variables");
         RG_DEFER { JS_FreeValue(ctx, variables); };
 
-        int length = GetJSPropertyInt(ctx, variables, "length");
+        int length = ConsumeValueInt(ctx, JS_GetPropertyStr(ctx, variables, "length"));
 
         for (int i = 0; i < length; i++) {
-            JSValue variable = JS_GetPropertyUint32(ctx, variables, i);
-            RG_DEFER { JS_FreeValue(ctx, variable); };
-
-            const char *key = JS_ToCString(ctx, variable);
+            const char *key = ConsumeValueStr(ctx, JS_GetPropertyUint32(ctx, variables, i)).ptr;
             out_record->variables.Append(key);
         }
     }
