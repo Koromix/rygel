@@ -8,7 +8,6 @@
 #include "ports.hh"
 #include "../../core/libwrap/json.hh"
 #include "../../core/libwrap/sqlite.hh"
-#include "../../../vendor/quickjs/quickjs.h"
 
 namespace RG {
 
