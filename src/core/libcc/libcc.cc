@@ -1482,6 +1482,9 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
     }
     RG_DEFER { closedir(dirp); };
 
+    // Avoid random failure in empty directories
+    errno = 0;
+
     Size count = 0;
     dirent *dent;
     while ((dent = readdir(dirp))) {
