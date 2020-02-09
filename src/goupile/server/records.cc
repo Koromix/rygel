@@ -130,7 +130,7 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
         RG_DEFER { UnlockPort(port); };
 
         // Parse request body (JSON)
-        JSValue values;
+        ScriptHandle values;
         {
             StreamReader st;
             if (!io->OpenForRead(&st))
@@ -139,9 +139,8 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
             if (!port->ParseValues(&st, &values))
                 return;
         }
-        RG_DEFER { port->FreeValues(values); };
 
-        CheckedRecord record;
+        ScriptRecord record;
         if (!port->RunRecord(script, values, &record))
             return;
 

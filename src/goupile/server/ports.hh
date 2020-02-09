@@ -9,14 +9,34 @@
 
 namespace RG {
 
-struct CheckedRecord {
+struct ScriptHandle {
+    JSContext *ctx = nullptr;
+    JSValue value = JS_UNDEFINED;
+
+    ScriptHandle() = default;
+
+    ScriptHandle(ScriptHandle &) = delete;
+    ScriptHandle &operator=(ScriptHandle &) = delete;
+
+    ~ScriptHandle()
+    {
+        if (ctx) {
+            JS_FreeValue(ctx, value);
+            ctx = nullptr;
+        }
+    }
+};
+
+struct ScriptRecord {
     JSContext *ctx = nullptr;
 
     Span<const char> json = {};
     HeapArray<const char *> variables;
     int errors;
 
-    ~CheckedRecord()
+    ScriptRecord() = default;
+
+    ~ScriptRecord()
     {
         if (ctx) {
             JS_FreeCString(ctx, json.ptr);
@@ -24,8 +44,13 @@ struct CheckedRecord {
             for (const char *variable: variables) {
                 JS_FreeCString(ctx, variable);
             }
+
+            ctx = nullptr;
         }
     }
+
+    ScriptRecord(ScriptRecord &) = delete;
+    ScriptRecord &operator=(ScriptRecord &) = delete;
 };
 
 class ScriptPort {
@@ -37,10 +62,8 @@ public:
 
     ~ScriptPort();
 
-    bool ParseValues(StreamReader *st, JSValue *out_values);
-    void FreeValues(JSValue values);
-
-    bool RunRecord(Span<const char> script, JSValue values, CheckedRecord *out_record);
+    bool ParseValues(StreamReader *st, ScriptHandle *out_handle);
+    bool RunRecord(Span<const char> script, const ScriptHandle &values, ScriptRecord *out_record);
 
     friend void InitPorts();
 };

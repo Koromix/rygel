@@ -169,8 +169,11 @@ ScriptPort::~ScriptPort()
     }
 }
 
-bool ScriptPort::ParseValues(StreamReader *st, JSValue *out_values)
+bool ScriptPort::ParseValues(StreamReader *st, ScriptHandle *out_handle)
 {
+    // Reinitialize (just in case)
+    out_handle->~ScriptHandle();
+
     JSValue values = JS_NewObject(ctx);
     RG_DEFER_N(out_guard) { JS_FreeValue(ctx, values); };
 
@@ -178,26 +181,22 @@ bool ScriptPort::ParseValues(StreamReader *st, JSValue *out_values)
     if (!json_Parse(st, &converter))
         return false;
 
-    *out_values = values;
+    out_handle->ctx = ctx;
+    out_handle->value = values;
 
     out_guard.Disable();
     return true;
 }
 
-void ScriptPort::FreeValues(JSValue values)
-{
-    JS_FreeValue(ctx, values);
-}
-
 // XXX: Detect errors (such as allocation failures) in calls to QuickJS
-bool ScriptPort::RunRecord(Span<const char> script, JSValue values, CheckedRecord *out_record)
+bool ScriptPort::RunRecord(Span<const char> script, const ScriptHandle &values, ScriptRecord *out_record)
 {
     // Reinitialize (just in case)
-    out_record->~CheckedRecord();
+    out_record->~ScriptRecord();
 
     JSValue args[2] = {
         JS_NewStringLen(ctx, script.ptr, script.len),
-        JS_DupValue(ctx, values)
+        JS_DupValue(ctx, values.value)
     };
     RG_DEFER {
         JS_FreeValue(ctx, args[0]);
