@@ -229,4 +229,38 @@ void HandleRecordDelete(const http_RequestInfo &request, http_IO *io)
     io->AttachText(200, "Done!");
 }
 
+void HandleRecordVariables(const http_RequestInfo &request, http_IO *io)
+{
+    const char *form_name = request.GetQueryValue("form");
+    if (!form_name) {
+        LogError("Missing 'form' parameter'");
+        io->AttachError(422);
+        return;
+    }
+
+    SQLiteStatement stmt;
+    if (!goupile_db.Prepare(R"(SELECT key, before, after
+                               FROM records_variables
+                               WHERE table_name = ?)", &stmt))
+        return;
+    sqlite3_bind_text(stmt, 1, form_name, -1, SQLITE_STATIC);
+
+    // Export data
+    http_JsonPageBuilder json(request.compression_type);
+
+    json.StartArray();
+    while (stmt.Next()) {
+        json.StartObject();
+        json.Key("key"); json.String((const char *)sqlite3_column_text(stmt, 0));
+        json.Key("before"); json.String((const char *)sqlite3_column_text(stmt, 1));
+        json.Key("after"); json.String((const char *)sqlite3_column_text(stmt, 2));
+        json.EndObject();
+    }
+    if (!stmt.IsValid())
+        return;
+    json.EndArray();
+
+    json.Finish(io);
+}
+
 }

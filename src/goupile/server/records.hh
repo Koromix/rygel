@@ -15,4 +15,6 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io);
 void HandleRecordPut(const http_RequestInfo &request, http_IO *io);
 void HandleRecordDelete(const http_RequestInfo &request, http_IO *io);
 
+void HandleRecordVariables(const http_RequestInfo &request, http_IO *io);
+
 }

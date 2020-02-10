@@ -227,6 +227,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                 func = HandleFileList;
             } else if (!strncmp(request.url, "/records/", 9)) {
                 func = HandleRecordGet;
+            } else if (TestStr(request.url, "/api/variables.json")) {
+                func = HandleRecordVariables;
             } else if (TestStr(request.url, "/api/schedule/resources.json")) {
                 func = HandleScheduleResources;
             } else if (TestStr(request.url, "/api/schedule/meetings.json")) {
