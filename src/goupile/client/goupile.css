@@ -95,6 +95,10 @@ button:not(:disabled) { cursor: pointer; }
     text-align: left;
 }
 
+.gp_toolbar.dev { background: #383936; }
+.gp_toolbar.dev button.active { background: #272822; }
+.gp_toolbar.dev button:not(.active):not(:disabled):hover { background: #31322e; }
+
 /* -------------------- Main header -------------------- */
 
 #gp_menu {

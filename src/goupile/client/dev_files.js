@@ -56,7 +56,7 @@ let dev_files = new function() {
 
     async function renderEditorPanel() {
         render(html`
-            <div class="gp_toolbar">
+            <div class="gp_toolbar dev">
                 ${editor_tabs.map(tab =>
                     html`<button class=${tab.path === editor_path ? 'active' : ''}
                                  @click=${e => toggleEditorFile(tab.path)}>${tab.name}</button>`)}
