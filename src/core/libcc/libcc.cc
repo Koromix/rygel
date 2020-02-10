@@ -61,7 +61,7 @@ namespace RG {
 // ------------------------------------------------------------------------
 
 #ifndef FELIX_VERSION
-const char *BuildVersion;
+const char *BuildVersion = "(unknown version)";
 #endif
 
 extern "C" void RG_NORETURN AssertFail(const char *filename, int line, const char *cond)
