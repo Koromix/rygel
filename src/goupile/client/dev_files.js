@@ -135,6 +135,8 @@ let dev_files = new function() {
         if (editor_ignore_change)
             return;
 
+        editor_path_forced = false;
+
         clearTimeout(editor_timer_id);
         editor_timer_id = setTimeout(async () => {
             editor_timer_id = null;

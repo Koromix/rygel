@@ -343,6 +343,7 @@ let goupile = new function() {
         if (route_asset) {
             switch (route_asset.type) {
                 case 'page': { route_url = form_executor.makeURL(); } break;
+                default: { route_url = route_asset.url; } break;
             }
         }
 
