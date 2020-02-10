@@ -13,58 +13,6 @@
 
 namespace RG {
 
-static FmtArg MakeToolchainArg(const Compiler *compiler, CompileMode compile_mode)
-{
-    if (compiler) {
-        FmtArg arg = {};
-        arg.type = FmtType::Buffer;
-        Fmt(arg.u.buf, "%1_%2", compiler->name, CompileModeNames[(int)compile_mode]);
-        return arg;
-    } else {
-        return "?";
-    }
-};
-
-static bool ParseToolchainSpec(Span<const char> str,
-                               const Compiler **out_compiler, CompileMode *out_compile_mode)
-{
-    Span<const char> compile_mode_str;
-    Span<const char> compiler_str = SplitStr(str, '_', &compile_mode_str);
-
-    const Compiler *compiler = *out_compiler;
-    CompileMode compile_mode = *out_compile_mode;
-
-    bool valid = true;
-    if (compiler_str.len) {
-        compiler = FindIf(Compilers,
-                          [&](const Compiler *compiler) { return TestStr(compiler->name, compiler_str); });
-
-        if (!compiler) {
-            LogError("Unknown compiler '%1'", compiler_str);
-            valid = false;
-        }
-    }
-    if (compile_mode_str.ptr > compiler_str.end()) {
-        const char *const *name =
-            FindIfPtr(CompileModeNames,
-                      [&](const char *name) { return TestStr(name, compile_mode_str); });
-
-        if (name) {
-            compile_mode = (CompileMode)(name - CompileModeNames);
-        } else {
-            LogError("Unknown build mode '%1'", compile_mode_str);
-            valid = false;
-        }
-    }
-    if (!valid)
-        return false;
-
-    *out_compiler = compiler;
-    *out_compile_mode = compile_mode;
-
-    return true;
-}
-
 static int RunTarget(const Target &target, const char *target_filename,
                      Span<const char *const> arguments, bool verbose)
 {
@@ -143,12 +91,14 @@ Options:
     -O, --output <directory>     Set output directory
                                  (default: bin/<toolchain>)
 
-    -t, --toolchain <toolchain>  Set toolchain, see below
+    -c, --compiler <compiler>    Set compiler, see below
                                  (default: %1)
+    -m, --mode <mode>            Set build mode, see below
+                                 (default: %2)
         --no_pch                 Disable header precompilation (PCH)
 
     -j, --jobs <count>           Set maximum number of parallel jobs
-                                 (default: %2)
+                                 (default: %3)
 
     -v, --verbose                Show detailed build commands
 
@@ -156,24 +106,18 @@ Options:
                                  (all remaining arguments are passed as-is)
         --run_here <target>      Same thing, but run from current directory
 
-Available toolchains:)", MakeToolchainArg(settings.compiler, settings.compile_mode), settings.jobs);
-        for (const Compiler *compiler: Compilers) {
-            for (const char *mode_name: CompileModeNames) {
-                const char *status;
-                if (compiler == settings.compiler &&
-                        mode_name == CompileModeNames[(int)settings.compile_mode]) {
-                    status = "*";
-                } else if (!compiler->Test()) {
-                    status = " (not available)";
-                } else {
-                    status = "";
-                }
+Supported compilers:)", settings.compiler ? settings.compiler->name : "?",
+                        CompileModeNames[(int)settings.compile_mode], settings.jobs);
 
-                PrintLn(fp, "    %1_%2%3", compiler->name, mode_name, status);
-            }
+        for (const Compiler *compiler: Compilers) {
+            PrintLn(fp, "    %1", compiler->name);
         }
+
         PrintLn(fp, R"(
-You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are both valid).)");
+Supported compilation modes:)");
+        for (const char *mode_name: CompileModeNames) {
+            PrintLn(fp, "    %1", mode_name);
+        }
     };
 
     // Parse arguments
@@ -195,10 +139,25 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
                 config_filename = opt.current_value;
             } else if (opt.Test("-O", "--output", OptionType::Value)) {
                 settings.output_directory = opt.current_value;
-            } else if (opt.Test("-t", "--toolchain", OptionType::Value)) {
-                if (!ParseToolchainSpec(opt.current_value,
-                                        &settings.compiler, &settings.compile_mode))
+            } else if (opt.Test("-c", "--compiler", OptionType::Value)) {
+                settings.compiler =
+                    FindIf(Compilers, [&](const Compiler *compiler) { return TestStr(compiler->name, opt.current_value); });
+
+                if (!settings.compiler) {
+                    LogError("Unknown compiler '%1'", opt.current_value);
                     return 1;
+                }
+            } else if (opt.Test("-m", "--mode", OptionType::Value)) {
+                const char *const *ptr =
+                    FindIfPtr(CompileModeNames,
+                              [&](const char *name) { return TestStr(name, opt.current_value); });
+
+                if (ptr) {
+                    settings.compile_mode = (CompileMode)(ptr - CompileModeNames);
+                } else {
+                    LogError("Unknown build mode '%1'", opt.current_value);
+                    return 1;
+                }
             } else if (opt.Test("--no_pch")) {
                 enable_pch = false;
             } else if (opt.Test("-j", "--jobs", OptionType::Value)) {
@@ -265,8 +224,8 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
     if (settings.output_directory) {
         settings.output_directory = NormalizePath(settings.output_directory, start_directory, &temp_alloc).ptr;
     } else {
-        FmtArg toolchain = MakeToolchainArg(settings.compiler, settings.compile_mode);
-        settings.output_directory = Fmt(&temp_alloc, "%1%/bin%/%2", GetWorkingDirectory(), toolchain).ptr;
+        settings.output_directory = Fmt(&temp_alloc, "%1%/bin%/%2_%3", GetWorkingDirectory(),
+                                        settings.compiler->name, CompileModeNames[(int)settings.compile_mode]).ptr;
     }
 
     // Load configuration file
