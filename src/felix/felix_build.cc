@@ -13,25 +13,22 @@
 
 namespace RG {
 
-struct Toolchain {
-    const Compiler *compiler;
-    CompileMode compile_mode;
-
-    operator FmtArg() const
-    {
-        FmtArg arg = {};
-        arg.type = FmtType::Buffer;
-        Fmt(arg.u.buf, "%1_%2", compiler->name, CompileModeNames[(int)compile_mode]);
-        return arg;
-    }
+static FmtArg MakeToolchainArg(const Compiler *compiler, CompileMode compile_mode)
+{
+    FmtArg arg = {};
+    arg.type = FmtType::Buffer;
+    Fmt(arg.u.buf, "%1_%2", compiler->name, CompileModeNames[(int)compile_mode]);
+    return arg;
 };
 
-static bool ParseToolchainSpec(Span<const char> str, Toolchain *out_toolchain)
+static bool ParseToolchainSpec(Span<const char> str,
+                               const Compiler **out_compiler, CompileMode *out_compile_mode)
 {
     Span<const char> compile_mode_str;
     Span<const char> compiler_str = SplitStr(str, '_', &compile_mode_str);
 
-    Toolchain toolchain = *out_toolchain;
+    const Compiler *compiler = *out_compiler;
+    CompileMode compile_mode = *out_compile_mode;
 
     bool valid = true;
     if (compiler_str.len) {
@@ -39,7 +36,7 @@ static bool ParseToolchainSpec(Span<const char> str, Toolchain *out_toolchain)
                                             [&](const Compiler *compiler) { return TestStr(compiler->name, compiler_str); });
 
         if (ptr) {
-            toolchain.compiler = *ptr;
+            compiler = *ptr;
         } else {
             LogError("Unknown compiler '%1'", compiler_str);
             valid = false;
@@ -50,7 +47,7 @@ static bool ParseToolchainSpec(Span<const char> str, Toolchain *out_toolchain)
                                          [&](const char *name) { return TestStr(name, compile_mode_str); });
 
         if (name) {
-            toolchain.compile_mode = (CompileMode)(name - CompileModeNames);
+            compile_mode = (CompileMode)(name - CompileModeNames);
         } else {
             LogError("Unknown build mode '%1'", compile_mode_str);
             valid = false;
@@ -59,7 +56,9 @@ static bool ParseToolchainSpec(Span<const char> str, Toolchain *out_toolchain)
     if (!valid)
         return false;
 
-    *out_toolchain = toolchain;
+    *out_compiler = compiler;
+    *out_compile_mode = compile_mode;
+
     return true;
 }
 
@@ -119,14 +118,16 @@ int RunBuild(Span<const char *> arguments)
     // Options
     HeapArray<const char *> target_names;
     const char *config_filename = nullptr;
-    const char *output_directory = nullptr;
-    Toolchain toolchain = {Compilers[0], CompileMode::Debug};
+    BuildSettings settings = {};
     bool enable_pch = true;
-    int jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_WORKERS + 1);
     bool verbose = false;
     const char *run_target_name = nullptr;
     Span<const char *> run_arguments = {};
     bool run_here = false;
+
+    // Seems like good defaults
+    settings.compiler = Compilers[0];
+    settings.jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_WORKERS + 1);
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
@@ -152,7 +153,7 @@ Options:
                                  (all remaining arguments are passed as-is)
         --run_here <target>      Same thing, but run from current directory
 
-Available toolchains:)", toolchain, jobs);
+Available toolchains:)", MakeToolchainArg(settings.compiler, settings.compile_mode), settings.jobs);
         for (const Compiler *compiler: Compilers) {
             for (const char *mode_name: CompileModeNames) {
                 PrintLn(fp, "    %1_%2", compiler->name, mode_name);
@@ -180,16 +181,17 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
             } else if (opt.Test("-C", "--config", OptionType::Value)) {
                 config_filename = opt.current_value;
             } else if (opt.Test("-O", "--output", OptionType::Value)) {
-                output_directory = opt.current_value;
+                settings.output_directory = opt.current_value;
             } else if (opt.Test("-t", "--toolchain", OptionType::Value)) {
-                if (!ParseToolchainSpec(opt.current_value, &toolchain))
+                if (!ParseToolchainSpec(opt.current_value,
+                                        &settings.compiler, &settings.compile_mode))
                     return 1;
             } else if (opt.Test("--no_pch")) {
                 enable_pch = false;
             } else if (opt.Test("-j", "--jobs", OptionType::Value)) {
-                if (!ParseDec(opt.current_value, &jobs))
+                if (!ParseDec(opt.current_value, &settings.jobs))
                     return 1;
-                if (jobs < 1) {
+                if (settings.jobs < 1) {
                     LogError("Jobs count cannot be < 1");
                     return 1;
                 }
@@ -242,10 +244,11 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
     }
 
     // Output directory
-    if (output_directory) {
-        output_directory = NormalizePath(output_directory, start_directory, &temp_alloc).ptr;
+    if (settings.output_directory) {
+        settings.output_directory = NormalizePath(settings.output_directory, start_directory, &temp_alloc).ptr;
     } else {
-        output_directory = Fmt(&temp_alloc, "%1%/bin%/%2", GetWorkingDirectory(), toolchain).ptr;
+        FmtArg toolchain = MakeToolchainArg(settings.compiler, settings.compile_mode);
+        settings.output_directory = Fmt(&temp_alloc, "%1%/bin%/%2", GetWorkingDirectory(), toolchain).ptr;
     }
 
     // Load configuration file
@@ -314,26 +317,14 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
 
     // We're ready to output stuff
     LogInfo("Root directory: '%1'", GetWorkingDirectory());
-    LogInfo("Output directory: '%1'", output_directory);
-    if (!MakeDirectoryRec(output_directory))
+    LogInfo("Output directory: '%1'", settings.output_directory);
+    if (!MakeDirectoryRec(settings.output_directory))
         return 1;
 
-    // Create build commands
-    BuildSet build_set;
-    {
-        BuildSetBuilder build_set_builder(output_directory, toolchain.compiler);
-        build_set_builder.compile_mode = toolchain.compile_mode;
-        build_set_builder.version_str = BuildGitVersionString(&temp_alloc);
-        if (!build_set_builder.version_str) {
-            LogError("Git version string will be null");
-        }
-
-        for (const Target *target: enabled_targets) {
-            if (!build_set_builder.AppendTargetCommands(*target))
-                return 1;
-        }
-
-        build_set_builder.Finish(&build_set);
+    // Build version string from git commit (date, hash)
+    settings.version_str = BuildGitVersionString(&temp_alloc);
+    if (!settings.version_str) {
+        LogError("Git version string will be null");
     }
 
     // The detection of SIGINT (or the Win32 equivalent) by WaitForInterruption()
@@ -341,8 +332,13 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
     // produced by interrupted commands.
     WaitForInterruption(0);
 
-    // Build
-    if (!RunBuildNodes(build_set.nodes, jobs, verbose))
+    // Build stuff!
+    Builder builder(settings);
+    for (const Target *target: enabled_targets) {
+        if (!builder.AddTarget(*target))
+            return 1;
+    }
+    if (!builder.Build(verbose))
         return 1;
 
     // Run?
@@ -350,7 +346,7 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
         if (run_here && !SetWorkingDirectory(start_directory))
             return 1;
 
-        const char *target_filename = build_set.target_filenames.FindValue(run_target->name, nullptr);
+        const char *target_filename = builder.target_filenames.FindValue(run_target->name, nullptr);
         return RunTarget(*run_target, target_filename, run_arguments, verbose);
     } else {
         return 0;

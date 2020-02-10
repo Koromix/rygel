@@ -10,25 +10,33 @@
 
 namespace RG {
 
-struct BuildNode {
-    const char *text;
+struct BuildSettings {
+    // Mandatory
+    const char *output_directory = nullptr;
+    const Compiler *compiler = nullptr;
+    int jobs = -1;
 
-    const char *dest_filename;
-    BuildCommand cmd;
-
-    bool sync_after;
+    // Optional
+    CompileMode compile_mode = CompileMode::Debug;
+    const char *version_str = nullptr;
 };
 
-struct BuildSet {
-    HeapArray<BuildNode> nodes;
+class Builder {
+    struct Node {
+        const char *text;
 
-    HashMap<const char *, const char *> target_filenames;
+        const char *dest_filename;
+        BuildCommand cmd;
+    };
 
-    BlockAllocator str_alloc;
-};
-
-class BuildSetBuilder {
     BlockAllocator temp_alloc;
+
+    const char *output_directory;
+    const Compiler *compiler;
+    CompileMode compile_mode = CompileMode::Debug;
+    const char *version_str = nullptr;
+
+    Async async;
 
     bool version_init = false;
     const char *version_obj_filename = nullptr;
@@ -37,36 +45,29 @@ class BuildSetBuilder {
     HeapArray<const char *> obj_filenames;
     HeapArray<const char *> definitions;
 
-    HeapArray<BuildNode> pch_nodes;
-    HeapArray<BuildNode> obj_nodes;
-    HeapArray<BuildNode> link_nodes;
+    HeapArray<Node> pch_nodes;
+    HeapArray<Node> obj_nodes;
+    HeapArray<Node> link_nodes;
     BlockAllocator str_alloc;
 
     HashMap<const char *, int64_t> mtime_map;
     HashSet<const char *> output_set;
 
+public:
     HashMap<const char *, const char *> target_filenames;
 
-public:
-    const char *output_directory;
-    const Compiler *compiler;
-    CompileMode compile_mode = CompileMode::Debug;
-    const char *version_str = nullptr;
+    Builder(const BuildSettings &settings);
 
-    BuildSetBuilder(const char *output_directory, const Compiler *compiler)
-        : output_directory(output_directory), compiler(compiler) {}
-
-    bool AppendTargetCommands(const Target &target);
-
-    void Finish(BuildSet *out_set);
+    bool AddTarget(const Target &target);
+    bool Build(bool verbose);
 
 private:
     bool NeedsRebuild(const char *src_filename, const char *dest_filename,
                       const char *deps_filename);
     bool IsFileUpToDate(const char *dest_filename, Span<const char *const> src_filenames);
     int64_t GetFileModificationTime(const char *filename);
-};
 
-bool RunBuildNodes(Span<const BuildNode> nodes, int jobs, bool verbose);
+    bool RunNodes(Span<const Node> nodes, Size progress, Size total, bool verbose);
+};
 
 }

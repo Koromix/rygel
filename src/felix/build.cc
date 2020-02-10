@@ -144,7 +144,17 @@ static bool CreatePrecompileHeader(const char *pch_filename, const char *dest_fi
     return writer.Close();
 }
 
-bool BuildSetBuilder::AppendTargetCommands(const Target &target)
+Builder::Builder(const BuildSettings &settings)
+    : output_directory(settings.output_directory), compiler(settings.compiler),
+      compile_mode(settings.compile_mode), version_str(settings.version_str),
+      async(settings.jobs - 1)
+{
+    RG_ASSERT(output_directory);
+    RG_ASSERT(compiler);
+    RG_ASSERT(settings.jobs >= 0);
+}
+
+bool Builder::AddTarget(const Target &target)
 {
     const Size start_pch_len = pch_nodes.len;
     const Size start_obj_len = obj_nodes.len;
@@ -170,7 +180,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
         const char *deps_filename = Fmt(&temp_alloc, "%1.d", pch_filename).ptr;
 
         if (NeedsRebuild(src_filename, pch_filename, deps_filename)) {
-            BuildNode node = {};
+            Node node = {};
 
             node.text = Fmt(&str_alloc, "Precompile %1", src_filename).ptr;
             node.dest_filename = DuplicateString(pch_filename, &str_alloc).ptr;
@@ -203,7 +213,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
 
         if (UpdateVersionSource(version_str, src_filename)) {
             if (!IsFileUpToDate(version_obj_filename, src_filename)) {
-                BuildNode node = {};
+                Node node = {};
 
                 node.text = "Build version file";
                 node.dest_filename = version_obj_filename;
@@ -235,7 +245,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
         const char *deps_filename = Fmt(&temp_alloc, "%1.d", obj_filename).ptr;
 
         if (NeedsRebuild(src.filename, obj_filename, deps_filename)) {
-            BuildNode node = {};
+            Node node = {};
 
             const char *pch_filename = nullptr;
             switch (src.type) {
@@ -269,7 +279,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
                                        output_directory, target.name).ptr;
 
         if (!IsFileUpToDate(obj_filename, target.pack_filenames)) {
-            BuildNode node = {};
+            Node node = {};
 
             node.text = Fmt(&str_alloc, "Pack %1 assets", target.name).ptr;
             node.dest_filename = DuplicateString(obj_filename, &str_alloc).ptr;
@@ -301,7 +311,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
 #endif
 
             if (!IsFileUpToDate(module_filename, obj_filename)) {
-                BuildNode node = {};
+                Node node = {};
 
                 // XXX: Check if this conflicts with a target destination file?
                 node.text = Fmt(&str_alloc, "Link %1",
@@ -327,7 +337,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
 #endif
 
         if (!IsFileUpToDate(target_filename, obj_filenames)) {
-            BuildNode node = {};
+            Node node = {};
 
             node.text = Fmt(&str_alloc, "Link %1",
                            SplitStrReverseAny(target_filename, RG_PATH_SEPARATORS)).ptr;
@@ -356,78 +366,24 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
     return true;
 }
 
-void BuildSetBuilder::Finish(BuildSet *out_set)
+// The caller needs to ignore (or do whetever) SIGINT for the clean up to work if
+// the user interrupts felix. For this you can use libcc: call WaitForInterruption(0).
+bool Builder::Build(bool verbose)
 {
-    RG_ASSERT(!out_set->nodes.len);
+    Size total = pch_nodes.len + obj_nodes.len + link_nodes.len;
 
-    if (pch_nodes.len) {
-        pch_nodes[pch_nodes.len - 1].sync_after = true;
-    }
-    if (obj_nodes.len) {
-        obj_nodes[obj_nodes.len - 1].sync_after = true;
-    }
-
-    out_set->nodes.Append(pch_nodes);
-    out_set->nodes.Append(obj_nodes);
-    out_set->nodes.Append(link_nodes);
-    std::swap(out_set->target_filenames, target_filenames);
-
-    SwapMemory(&out_set->str_alloc, &str_alloc, RG_SIZE(str_alloc));
-}
-
-bool BuildSetBuilder::NeedsRebuild(const char *src_filename, const char *dest_filename,
-                                   const char *deps_filename)
-{
-    HeapArray<const char *> dep_filenames;
-    dep_filenames.Append(src_filename);
-
-    if (output_set.Find(dest_filename)) {
+    if (!RunNodes(pch_nodes, 0, total, verbose))
         return false;
-    } else if (TestFile(deps_filename, FileType::File)) {
-        // Parse Make rule dependencies
-        if (!ParseCompilerMakeRule(deps_filename, &temp_alloc, &dep_filenames))
-            return true;
-
-        return !IsFileUpToDate(dest_filename, dep_filenames);
-    } else {
-        return true;
-    }
-}
-
-bool BuildSetBuilder::IsFileUpToDate(const char *dest_filename,
-                                     Span<const char *const> src_filenames)
-{
-    int64_t dest_time = GetFileModificationTime(dest_filename);
-    if (dest_time < 0)
+    if (!RunNodes(obj_nodes, pch_nodes.len, total, verbose))
+        return false;
+    if (!RunNodes(link_nodes, pch_nodes.len + obj_nodes.len, total, verbose))
         return false;
 
-    for (const char *src_filename: src_filenames) {
-        int64_t src_time = GetFileModificationTime(src_filename);
-        if (src_time < 0 || src_time > dest_time)
-            return false;
-    }
-
+    LogInfo("(100%%) Done!");
     return true;
 }
 
-int64_t BuildSetBuilder::GetFileModificationTime(const char *filename)
-{
-    std::pair<int64_t *, bool> ret = mtime_map.Append(filename, -1);
-
-    if (ret.second) {
-        FileInfo file_info;
-        if (!StatFile(filename, false, &file_info))
-            return -1;
-
-        *ret.first = file_info.modification_time;
-    }
-
-    return *ret.first;
-}
-
-// The caller needs to ignore (or do whetever) SIGINT for the clean up to work if
-// the user interrupts felix. For this you can use libcc: call WaitForInterruption(0).
-bool RunBuildNodes(Span<const BuildNode> nodes, int jobs, bool verbose)
+bool Builder::RunNodes(Span<const Node> nodes, Size progress, Size total, bool verbose)
 {
 #ifdef _WIN32
     BlockAllocator temp_alloc;
@@ -443,7 +399,7 @@ bool RunBuildNodes(Span<const BuildNode> nodes, int jobs, bool verbose)
 
     // Windows (especially cmd) does not like excessively long command lines,
     // so we need to use response files in this case.
-    for (const BuildNode &node: nodes) {
+    for (const Node &node: nodes) {
         if (node.cmd.line.len > 4096 && node.cmd.rsp_offset > 0) {
             RG_ASSERT(node.cmd.rsp_offset < node.cmd.line.len);
 
@@ -469,13 +425,10 @@ bool RunBuildNodes(Span<const BuildNode> nodes, int jobs, bool verbose)
     }
 #endif
 
-    Async async(jobs - 1);
-
     std::mutex out_mutex;
-    Size progress_counter = 0;
     bool interrupted = false;
 
-    for (const BuildNode &node: nodes) {
+    for (const Node &node: nodes) {
         async.Run([&]() {
 #ifdef _WIN32
             const char *cmd_line = rsp_map.FindValue(&node, node.cmd.line.ptr);
@@ -488,8 +441,8 @@ bool RunBuildNodes(Span<const BuildNode> nodes, int jobs, bool verbose)
             {
                 std::lock_guard<std::mutex> out_lock(out_mutex);
 
-                Size progress = 100 * progress_counter++ / nodes.len;
-                LogInfo("(%1%%) %2", FmtArg(progress).Pad(-3), node.text);
+                Size progress_pct = 100 * progress++ / total;
+                LogInfo("(%1%%) %2", FmtArg(progress_pct).Pad(-3), node.text);
                 if (verbose) {
                     PrintLn(stderr, cmd_line);
                 }
@@ -525,13 +478,9 @@ bool RunBuildNodes(Span<const BuildNode> nodes, int jobs, bool verbose)
                 return false;
             }
         });
-
-        if (node.sync_after && !async.Sync())
-            break;
     }
 
     if (async.Sync()) {
-        LogInfo("(100%%) Done!");
         return true;
     } else if (interrupted) {
         LogError("Build was interrupted");
@@ -539,6 +488,55 @@ bool RunBuildNodes(Span<const BuildNode> nodes, int jobs, bool verbose)
     } else {
         return false;
     }
+}
+
+bool Builder::NeedsRebuild(const char *src_filename, const char *dest_filename,
+                           const char *deps_filename)
+{
+    HeapArray<const char *> dep_filenames;
+    dep_filenames.Append(src_filename);
+
+    if (output_set.Find(dest_filename)) {
+        return false;
+    } else if (TestFile(deps_filename, FileType::File)) {
+        // Parse Make rule dependencies
+        if (!ParseCompilerMakeRule(deps_filename, &temp_alloc, &dep_filenames))
+            return true;
+
+        return !IsFileUpToDate(dest_filename, dep_filenames);
+    } else {
+        return true;
+    }
+}
+
+bool Builder::IsFileUpToDate(const char *dest_filename, Span<const char *const> src_filenames)
+{
+    int64_t dest_time = GetFileModificationTime(dest_filename);
+    if (dest_time < 0)
+        return false;
+
+    for (const char *src_filename: src_filenames) {
+        int64_t src_time = GetFileModificationTime(src_filename);
+        if (src_time < 0 || src_time > dest_time)
+            return false;
+    }
+
+    return true;
+}
+
+int64_t Builder::GetFileModificationTime(const char *filename)
+{
+    std::pair<int64_t *, bool> ret = mtime_map.Append(filename, -1);
+
+    if (ret.second) {
+        FileInfo file_info;
+        if (!StatFile(filename, false, &file_info))
+            return -1;
+
+        *ret.first = file_info.modification_time;
+    }
+
+    return *ret.first;
 }
 
 }
