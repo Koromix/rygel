@@ -43,8 +43,9 @@ bool HandleCommonOption(OptionParser &opt)
     } else if (opt.Test("--mco_auth_file", OptionType::Value)) {
         drdc_config.mco_authorization_filename = opt.current_value;
     } else if (opt.Test("-s", "--sector", OptionType::Value)) {
-        const char *const *ptr = FindIf(drd_SectorNames,
-                                        [&](const char *name) { return TestStr(name, opt.current_value); });
+        const char *const *ptr =
+            FindIfPtr(drd_SectorNames,
+                      [&](const char *name) { return TestStr(name, opt.current_value); });
         if (!ptr) {
             LogError("Unknown sector '%1'", opt.current_value);
             return false;

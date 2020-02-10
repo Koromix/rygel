@@ -32,19 +32,18 @@ static bool ParseToolchainSpec(Span<const char> str,
 
     bool valid = true;
     if (compiler_str.len) {
-        const Compiler *const *ptr = FindIf(Compilers,
-                                            [&](const Compiler *compiler) { return TestStr(compiler->name, compiler_str); });
+        compiler = FindIf(Compilers,
+                          [&](const Compiler *compiler) { return TestStr(compiler->name, compiler_str); });
 
-        if (ptr) {
-            compiler = *ptr;
-        } else {
+        if (!compiler) {
             LogError("Unknown compiler '%1'", compiler_str);
             valid = false;
         }
     }
     if (compile_mode_str.ptr > compiler_str.end()) {
-        const char *const *name = FindIf(CompileModeNames,
-                                         [&](const char *name) { return TestStr(name, compile_mode_str); });
+        const char *const *name =
+            FindIfPtr(CompileModeNames,
+                      [&](const char *name) { return TestStr(name, compile_mode_str); });
 
         if (name) {
             compile_mode = (CompileMode)(name - CompileModeNames);

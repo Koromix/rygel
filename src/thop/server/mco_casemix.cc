@@ -57,8 +57,9 @@ static bool GetQueryDispenseMode(const http_RequestInfo &request, const char *ke
         return false;
     }
 
-    const OptionDesc *desc = FindIf(mco_DispenseModeOptions,
-                                    [&](const OptionDesc &desc) { return TestStr(desc.name, str); });
+    const OptionDesc *desc =
+        FindIfPtr(mco_DispenseModeOptions,
+                  [&](const OptionDesc &desc) { return TestStr(desc.name, str); });
     if (!desc) {
         LogError("Invalid '%1' parameter value '%2'", key, str);
         io->AttachError(422);

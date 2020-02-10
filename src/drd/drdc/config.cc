@@ -46,8 +46,9 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
             } else if (prop.section == "Institution") {
                 do {
                     if (prop.key == "Sector") {
-                        const char *const *ptr = FindIf(drd_SectorNames,
-                                                        [&](const char *name) { return TestStr(name, prop.value.ptr); });
+                        const char *const *ptr =
+                            FindIfPtr(drd_SectorNames,
+                                      [&](const char *name) { return TestStr(name, prop.value.ptr); });
                         if (ptr) {
                             config.sector = (drd_Sector)(ptr - drd_SectorNames);
                         } else {

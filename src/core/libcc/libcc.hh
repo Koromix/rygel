@@ -514,7 +514,17 @@ T ApplyMask(T value, U mask, bool enable)
 }
 
 template <typename T, typename Fun>
-auto FindIf(const T &arr, Fun func) -> decltype(&(*std::begin(arr)))
+auto FindIf(const T &arr, Fun func,
+            const decltype(*std::begin(arr)) &default_value = {}) -> decltype(*std::begin(arr))
+{
+    for (auto &it: arr) {
+        if (func(it))
+            return it;
+    }
+    return default_value;
+}
+template <typename T, typename Fun>
+auto FindIfPtr(const T &arr, Fun func) -> decltype(&(*std::begin(arr)))
 {
     for (auto &it: arr) {
         if (func(it))

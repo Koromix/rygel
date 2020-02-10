@@ -48,8 +48,9 @@ bool LoadMergeRules(const char *filename, unsigned int flags, MergeRuleSet *out_
             bool changed_merge_mode = false;
             do {
                 if (prop.key == "CompressionType") {
-                    const char *const *name = FindIf(CompressionTypeNames,
-                                                     [&](const char *name) { return TestStr(name, prop.value); });
+                    const char *const *name =
+                        FindIfPtr(CompressionTypeNames,
+                                  [&](const char *name) { return TestStr(name, prop.value); });
 
                     if (name) {
                         rule->override_compression = true;

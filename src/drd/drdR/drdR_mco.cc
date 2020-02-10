@@ -20,8 +20,9 @@ static drd_Sector GetSectorFromString(SEXP sector_xp, drd_Sector default_sector)
     const char *sector_str = !Rf_isNull(sector_xp) ? Rcpp::as<const char *>(sector_xp) : nullptr;
 
     if (sector_str) {
-        const char *const *ptr = FindIf(drd_SectorNames,
-                                        [&](const char *name) { return TestStr(name, sector_str); });
+        const char *const *ptr =
+            FindIfPtr(drd_SectorNames,
+                      [&](const char *name) { return TestStr(name, sector_str); });
         if (!ptr) {
             LogError("Sector '%1' does not exist", sector_str);
             rcc_StopWithLastError();
@@ -483,8 +484,9 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
 
     unsigned int flags = 0;
     for (const char *opt: options_vec) {
-        const OptionDesc *desc = FindIf(mco_ClassifyFlagOptions,
-                                        [&](const OptionDesc &desc) { return TestStr(desc.name, opt); });
+        const OptionDesc *desc =
+            FindIfPtr(mco_ClassifyFlagOptions,
+                      [&](const OptionDesc &desc) { return TestStr(desc.name, opt); });
         if (!desc)
             Rcpp::stop("Unknown classifier option '%1'", opt);
         flags |= 1u << (desc - mco_ClassifyFlagOptions);
@@ -492,8 +494,9 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
 
     int dispense_mode = -1;
     if (dispense_mode_str) {
-        const OptionDesc *desc = FindIf(mco_DispenseModeOptions,
-                                        [&](const OptionDesc &desc) { return TestStr(desc.name, dispense_mode_str); });
+        const OptionDesc *desc =
+            FindIfPtr(mco_DispenseModeOptions,
+                      [&](const OptionDesc &desc) { return TestStr(desc.name, dispense_mode_str); });
         if (!desc) {
             LogError("Unknown dispensation mode '%1'", dispense_mode_str);
             rcc_StopWithLastError();

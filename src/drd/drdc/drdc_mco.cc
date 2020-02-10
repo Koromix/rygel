@@ -363,8 +363,9 @@ Test options:)");
 
                 while (flags_str[0]) {
                     Span<const char> flag = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
-                    const OptionDesc *desc = FindIf(mco_ClassifyFlagOptions,
-                                                    [&](const OptionDesc &desc) { return TestStr(desc.name, flag); });
+                    const OptionDesc *desc =
+                        FindIfPtr(mco_ClassifyFlagOptions,
+                                  [&](const OptionDesc &desc) { return TestStr(desc.name, flag); });
                     if (!desc) {
                         LogError("Unknown classifier flag '%1'", flag);
                         return 1;
@@ -374,8 +375,9 @@ Test options:)");
             } else if (opt.Test("-d", "--dispense", OptionType::Value)) {
                 const char *mode_str = opt.current_value;
 
-                const OptionDesc *desc = FindIf(mco_DispenseModeOptions,
-                                                [&](const OptionDesc &desc) { return TestStr(desc.name, mode_str); });
+                const OptionDesc *desc =
+                    FindIfPtr(mco_DispenseModeOptions,
+                              [&](const OptionDesc &desc) { return TestStr(desc.name, mode_str); });
                 if (!desc) {
                     LogError("Unknown dispensation mode '%1'", mode_str);
                     return 1;
@@ -395,8 +397,9 @@ Test options:)");
                 if (flags_str) {
                     while (flags_str[0]) {
                         Span<const char> flag = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
-                        const OptionDesc *desc = FindIf(TestFlagOptions,
-                                                        [&](const OptionDesc &desc) { return TestStr(desc.name, flag); });
+                        const OptionDesc *desc =
+                            FindIfPtr(TestFlagOptions,
+                                      [&](const OptionDesc &desc) { return TestStr(desc.name, flag); });
                         if (!desc) {
                             LogError("Unknown test flag '%1'", flag);
                             return 1;

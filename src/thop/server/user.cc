@@ -105,8 +105,9 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                         if (part == "All") {
                             user->permissions = enable ? UINT_MAX : 0;
                         } else if (part.len) {
-                            const char *const *name = FindIf(UserPermissionNames,
-                                                             [&](const char *str) { return TestStr(str, part); });
+                            const char *const *name =
+                                FindIfPtr(UserPermissionNames,
+                                          [&](const char *str) { return TestStr(str, part); });
                             if (name) {
                                 user->permissions =
                                     ApplyMask(user->permissions, 1u << (name - UserPermissionNames), enable);
@@ -137,8 +138,9 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                         if (part == "All") {
                             user->mco_dispense_modes = enable ? UINT_MAX : 0;
                         } else if (part.len) {
-                            const OptionDesc *desc = FindIf(mco_DispenseModeOptions,
-                                                            [&](const OptionDesc &desc) { return TestStr(desc.name, part); });
+                            const OptionDesc *desc =
+                                FindIfPtr(mco_DispenseModeOptions,
+                                          [&](const OptionDesc &desc) { return TestStr(desc.name, part); });
                             if (desc) {
                                 user->mco_dispense_modes =
                                     ApplyMask(user->mco_dispense_modes, 1u << (desc - mco_DispenseModeOptions), enable);

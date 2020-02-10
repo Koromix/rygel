@@ -64,8 +64,9 @@ Available merge options:)");
                 print_usage(stdout);
                 return 0;
             } else if (opt.Test("-t", "--type", OptionType::Value)) {
-                const char *const *name = FindIf(PackModeNames,
-                                                 [&](const char *name) { return TestStr(name, opt.current_value); });
+                const char *const *name =
+                    FindIfPtr(PackModeNames,
+                              [&](const char *name) { return TestStr(name, opt.current_value); });
                 if (!name) {
                     LogError("Unknown generator type '%1'", opt.current_value);
                     return 1;
@@ -81,8 +82,9 @@ Available merge options:)");
                     return 1;
                 }
             } else if (opt.Test("-c", "--compress", OptionType::Value)) {
-                const char *const *name = FindIf(CompressionTypeNames,
-                                                 [&](const char *name) { return TestStr(name, opt.current_value); });
+                const char *const *name =
+                    FindIfPtr(CompressionTypeNames,
+                              [&](const char *name) { return TestStr(name, opt.current_value); });
                 if (!name) {
                     LogError("Unknown compression type '%1'", opt.current_value);
                     return 1;
@@ -96,8 +98,9 @@ Available merge options:)");
 
                 while (flags_str[0]) {
                     Span<const char> flag = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
-                    const char *const *name = FindIf(MergeFlagNames,
-                                                     [&](const char *name) { return TestStr(name, flag); });
+                    const char *const *name =
+                        FindIfPtr(MergeFlagNames,
+                                  [&](const char *name) { return TestStr(name, flag); });
                     if (!name) {
                         LogError("Unknown merge flag '%1'", flag);
                         return 1;
