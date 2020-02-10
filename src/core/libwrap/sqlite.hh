@@ -13,6 +13,7 @@
 namespace RG {
 
 class SQLiteStatement;
+class SQLiteBinding;
 
 class SQLiteDatabase {
     sqlite3 *db = nullptr;
@@ -32,10 +33,20 @@ public:
 
     bool Transaction(FunctionRef<bool()> func);
 
-    bool Execute(const char *sql);
+    bool Run(const char *sql);
+    template <typename... Args>
+    bool Run(const char *sql, Args... args)
+    {
+        const SQLiteBinding bindings[] = { SQLiteBinding(args)... };
+        return RunWithBindings(sql, bindings);
+    }
+
     bool Prepare(const char *sql, SQLiteStatement *out_stmt);
 
     operator sqlite3 *() { return db; }
+
+private:
+    bool RunWithBindings(const char *sql, Span<const SQLiteBinding> bindings);
 };
 
 class SQLiteStatement {
@@ -50,13 +61,38 @@ public:
     bool IsValid() const { return stmt && (rc == SQLITE_DONE || rc == SQLITE_ROW); };
     bool IsDone() const { return stmt && rc == SQLITE_DONE; }
 
-    bool Execute();
+    bool Run();
     bool Next();
     void Reset();
 
     operator sqlite3_stmt *() { return stmt; }
 
     friend class SQLiteDatabase;
+};
+
+class SQLiteBinding {
+public:
+    enum class Type {
+        Integer,
+        Double,
+        String
+    };
+
+    Type type;
+    union {
+        int64_t i;
+        double d;
+        Span<const char> str;
+    } u;
+
+    SQLiteBinding(unsigned char i)  : type(Type::Integer) { u.i = i; }
+    SQLiteBinding(short i) : type(Type::Integer) { u.i = i; }
+    SQLiteBinding(unsigned short i) : type(Type::Integer) { u.i = i; }
+    SQLiteBinding(int i) : type(Type::Integer) { u.i = i; }
+    SQLiteBinding(unsigned int i) : type(Type::Integer) { u.i = i; }
+    SQLiteBinding(double d) : type(Type::Double) { u.d = d; };
+    SQLiteBinding(const char *str) : type(Type::String) { u.str = str; };
+    SQLiteBinding(Span<const char> str) : type(Type::String) { u.str = str; };
 };
 
 }

@@ -165,35 +165,19 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
             }
 
             // Update sequence number
-            {
-                SQLiteStatement stmt;
-                if (!goupile_db.Prepare(R"(INSERT INTO records_sequences (form, sequence)
-                                           VALUES (?, ?)
-                                           ON CONFLICT (form) DO UPDATE SET sequence = excluded.sequence)", &stmt))
-                    return false;
-                sqlite3_bind_text(stmt, 1, form_name.ptr, form_name.len, SQLITE_STATIC);
-                sqlite3_bind_int(stmt, 2, sequence + 1);
-
-                if (!stmt.Execute())
-                    return false;
-            }
+            if (!goupile_db.Run(R"(INSERT INTO records_sequences (form, sequence)
+                                   VALUES (?, ?)
+                                   ON CONFLICT (form) DO UPDATE SET sequence = excluded.sequence)",
+                                form_name, sequence + 1))
+                return false;
 
             // Save record
-            {
-                SQLiteStatement stmt;
-                if (!goupile_db.Prepare(R"(INSERT INTO records (id, form, sequence, data)
-                                           VALUES (?, ?, ?, ?)
-                                           ON CONFLICT (id) DO UPDATE SET form = excluded.form,
-                                                                          data = json_patch(data, excluded.data))", &stmt))
-                    return false;
-                sqlite3_bind_text(stmt, 1, id.ptr, id.len, SQLITE_STATIC);
-                sqlite3_bind_text(stmt, 2, form_name.ptr, form_name.len, SQLITE_STATIC);
-                sqlite3_bind_int(stmt, 3, sequence);
-                sqlite3_bind_text(stmt, 4, record.json.ptr, record.json.len, SQLITE_STATIC);
-
-                if (!stmt.Execute())
-                    return false;
-            }
+            if (!goupile_db.Run(R"(INSERT INTO records (id, form, sequence, data)
+                                   VALUES (?, ?, ?, ?)
+                                   ON CONFLICT (id) DO UPDATE SET form = excluded.form,
+                                                                  data = json_patch(data, excluded.data))",
+                                    id, form_name, sequence, record.json))
+                return false;
 
             // Save variables
             {
@@ -216,7 +200,7 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
                     sqlite3_bind_text(stmt, 4, before, -1, SQLITE_STATIC);
                     sqlite3_bind_text(stmt, 5, after, -1, SQLITE_STATIC);
 
-                    if (!stmt.Execute())
+                    if (!stmt.Run())
                         return false;
                 }
             }
@@ -254,13 +238,8 @@ void HandleRecordDelete(const http_RequestInfo &request, http_IO *io)
         }
     }
 
-    SQLiteStatement stmt;
-    if (!goupile_db.Prepare(R"(DELETE FROM records WHERE id = ?)", &stmt))
-        return;
-    sqlite3_bind_text(stmt, 1, id.ptr, id.len, SQLITE_STATIC);
-
-    if (!stmt.Execute())
-        return;
+    // Asking for deletion of non-existent records is teolerated
+    goupile_db.Run("DELETE FROM records WHERE id = ?", id);
 
     io->AttachText(200, "Done!");
 }

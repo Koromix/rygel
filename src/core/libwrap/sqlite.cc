@@ -49,20 +49,20 @@ bool SQLiteDatabase::Transaction(FunctionRef<bool()> func)
     transact_thread = std::this_thread::get_id();
     RG_DEFER { transact_thread = std::thread::id(); };
 
-    if (!Execute("BEGIN IMMEDIATE TRANSACTION"))
+    if (!Run("BEGIN IMMEDIATE TRANSACTION"))
         return false;
-    RG_DEFER_N(rollback_guard) { Execute("ROLLBACK"); };
+    RG_DEFER_N(rollback_guard) { Run("ROLLBACK"); };
 
     if (!func())
         return false;
-    if (!Execute("COMMIT"))
+    if (!Run("COMMIT"))
         return false;
 
     rollback_guard.Disable();
     return true;
 }
 
-bool SQLiteDatabase::Execute(const char *sql)
+bool SQLiteDatabase::Run(const char *sql)
 {
     std::shared_lock<std::shared_mutex> lock(transact_mutex, std::defer_lock);
 
@@ -101,13 +101,33 @@ bool SQLiteDatabase::Prepare(const char *sql, SQLiteStatement *out_stmt)
     return true;
 }
 
+bool SQLiteDatabase::RunWithBindings(const char *sql, Span<const SQLiteBinding> bindings)
+{
+    SQLiteStatement stmt;
+    if (!Prepare(sql, &stmt))
+        return false;
+
+    for (int i = 0; i < (int)bindings.len; i++) {
+        const SQLiteBinding &binding = bindings[i];
+
+        switch (binding.type) {
+            case SQLiteBinding::Type::Integer: { sqlite3_bind_int64(stmt, i + 1, binding.u.i); } break;
+            case SQLiteBinding::Type::Double: { sqlite3_bind_double(stmt, i + 1, binding.u.d); } break;
+            case SQLiteBinding::Type::String: { sqlite3_bind_text(stmt, i + 1, binding.u.str.ptr,
+                                                                  binding.u.str.len, SQLITE_STATIC); } break;
+        }
+    }
+
+    return stmt.Run();
+}
+
 void SQLiteStatement::Finalize()
 {
     sqlite3_finalize(stmt);
     stmt = nullptr;
 }
 
-bool SQLiteStatement::Execute()
+bool SQLiteStatement::Run()
 {
     rc = sqlite3_step(stmt);
 
@@ -121,7 +141,7 @@ bool SQLiteStatement::Execute()
 
 bool SQLiteStatement::Next()
 {
-    return Execute() && rc == SQLITE_ROW;
+    return Run() && rc == SQLITE_ROW;
 }
 
 void SQLiteStatement::Reset()

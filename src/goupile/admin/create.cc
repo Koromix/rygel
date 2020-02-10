@@ -222,9 +222,9 @@ Options:
         if (!database.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
             return 1;
 
-        if (!database.Execute(SchemaSQL))
+        if (!database.Run(SchemaSQL))
             return 1;
-        if (demo && !database.Execute(DemoSQL))
+        if (demo && !database.Run(DemoSQL))
             return 1;
     }
 
