@@ -65,6 +65,7 @@ CREATE UNIQUE INDEX files_tp ON files (tag, path);
 CREATE TABLE records (
     id TEXT NOT NULL,
     form TEXT NOT NULL,
+    sequence INTEGER NOT NULL,
     data TEXT NOT NULL
 );
 CREATE UNIQUE INDEX records_i ON records (id);
@@ -78,6 +79,12 @@ CREATE TABLE records_variables (
     after TEXT
 );
 CREATE UNIQUE INDEX records_variables_fk ON records_variables (form, key);
+
+CREATE TABLE records_sequences (
+    form TEXT NOT NULL,
+    sequence INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX records_sequences_f ON records_sequences (form);
 
 CREATE TABLE sched_resources (
     schedule TEXT NOT NULL,

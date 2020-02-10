@@ -37,7 +37,7 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
 
     if (id.len) {
         SQLiteStatement stmt;
-        if (!goupile_db.Prepare(R"(SELECT id, data
+        if (!goupile_db.Prepare(R"(SELECT id, sequence, data
                                    FROM records
                                    WHERE form = ? AND id = ?)", &stmt))
             return;
@@ -57,13 +57,14 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
 
         json.StartObject();
         json.Key("id"); json.String((const char *)sqlite3_column_text(stmt, 0));
-        json.Key("data"); json.Raw((const char *)sqlite3_column_text(stmt, 1));
+        json.Key("sequence"); json.Int(sqlite3_column_int(stmt, 1));
+        json.Key("data"); json.Raw((const char *)sqlite3_column_text(stmt, 2));
         json.EndObject();
 
         json.Finish(io);
     } else {
         SQLiteStatement stmt;
-        if (!goupile_db.Prepare(R"(SELECT id, data
+        if (!goupile_db.Prepare(R"(SELECT id, sequence, data
                                    FROM records
                                    WHERE form = ?
                                    ORDER BY id)", &stmt))
@@ -77,7 +78,8 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
         while (stmt.Next()) {
             json.StartObject();
             json.Key("id"); json.String((const char *)sqlite3_column_text(stmt, 0));
-            json.Key("data"); json.Raw((const char *)sqlite3_column_text(stmt, 1));
+            json.Key("sequence"); json.Int(sqlite3_column_int(stmt, 1));
+            json.Key("data"); json.Raw((const char *)sqlite3_column_text(stmt, 2));
             json.EndObject();
         }
         if (!stmt.IsValid())
@@ -144,17 +146,50 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
             return;
 
         bool success = goupile_db.Transaction([&]() {
+            int sequence;
+            {
+                SQLiteStatement stmt;
+                if (!goupile_db.Prepare(R"(SELECT sequence
+                                           FROM records_sequences
+                                           WHERE form = ?)", &stmt))
+                    return false;
+                sqlite3_bind_text(stmt, 1, form_name.ptr, form_name.len, SQLITE_STATIC);
+
+                if (stmt.Next()) {
+                    sequence = sqlite3_column_int(stmt, 0);
+                } else if (stmt.IsValid()) {
+                    sequence = 1;
+                } else {
+                    return false;
+                }
+            }
+
+            // Update sequence number
+            {
+                SQLiteStatement stmt;
+                if (!goupile_db.Prepare(R"(INSERT INTO records_sequences (form, sequence)
+                                           VALUES (?, ?)
+                                           ON CONFLICT (form) DO UPDATE SET sequence = excluded.sequence)", &stmt))
+                    return false;
+                sqlite3_bind_text(stmt, 1, form_name.ptr, form_name.len, SQLITE_STATIC);
+                sqlite3_bind_int(stmt, 2, sequence + 1);
+
+                if (!stmt.Execute())
+                    return false;
+            }
+
             // Save record
             {
                 SQLiteStatement stmt;
-                if (!goupile_db.Prepare(R"(INSERT INTO records (id, form, data)
-                                           VALUES (?, ?, ?)
+                if (!goupile_db.Prepare(R"(INSERT INTO records (id, form, sequence, data)
+                                           VALUES (?, ?, ?, ?)
                                            ON CONFLICT (id) DO UPDATE SET form = excluded.form,
                                                                           data = json_patch(data, excluded.data))", &stmt))
                     return false;
                 sqlite3_bind_text(stmt, 1, id.ptr, id.len, SQLITE_STATIC);
                 sqlite3_bind_text(stmt, 2, form_name.ptr, form_name.len, SQLITE_STATIC);
-                sqlite3_bind_text(stmt, 3, record.json.ptr, record.json.len, SQLITE_STATIC);
+                sqlite3_bind_int(stmt, 3, sequence);
+                sqlite3_bind_text(stmt, 4, record.json.ptr, record.json.len, SQLITE_STATIC);
 
                 if (!stmt.Execute())
                     return false;
