@@ -39,7 +39,7 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
         SQLiteStatement stmt;
         if (!goupile_db.Prepare(R"(SELECT id, data
                                    FROM records
-                                   WHERE table_name = ? AND id = ?)", &stmt))
+                                   WHERE form = ? AND id = ?)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, form_name.ptr, form_name.len, SQLITE_STATIC);
         sqlite3_bind_text(stmt, 2, id.ptr, id.len, SQLITE_STATIC);
@@ -65,7 +65,7 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
         SQLiteStatement stmt;
         if (!goupile_db.Prepare(R"(SELECT id, data
                                    FROM records
-                                   WHERE table_name = ?
+                                   WHERE form = ?
                                    ORDER BY id)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, form_name.ptr, form_name.len, SQLITE_STATIC);
@@ -147,9 +147,9 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
             // Save record
             {
                 SQLiteStatement stmt;
-                if (!goupile_db.Prepare(R"(INSERT INTO records (id, table_name, data)
+                if (!goupile_db.Prepare(R"(INSERT INTO records (id, form, data)
                                            VALUES (?, ?, ?)
-                                           ON CONFLICT (id) DO UPDATE SET table_name = excluded.table_name,
+                                           ON CONFLICT (id) DO UPDATE SET form = excluded.form,
                                                                           data = json_patch(data, excluded.data))", &stmt))
                     return false;
                 sqlite3_bind_text(stmt, 1, id.ptr, id.len, SQLITE_STATIC);
@@ -163,12 +163,13 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
             // Save variables
             {
                 SQLiteStatement stmt;
-                if (!goupile_db.Prepare(R"(INSERT INTO records_variables (table_name, key, before, after)
-                                           VALUES (?, ?, ?, ?)
-                                           ON CONFLICT (table_name, key) DO UPDATE SET before = excluded.before,
-                                                                                       after = excluded.after)", &stmt))
+                if (!goupile_db.Prepare(R"(INSERT INTO records_variables (form, key, page, before, after)
+                                           VALUES (?, ?, ?, ?, ?)
+                                           ON CONFLICT (form, key) DO UPDATE SET before = excluded.before,
+                                                                                 after = excluded.after)", &stmt))
                     return false;
                 sqlite3_bind_text(stmt, 1, form_name.ptr, form_name.len, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 3, page_name.ptr, page_name.len, SQLITE_STATIC);
 
                 for (Size i = 0; i < record.variables.len; i++) {
                     const char *key = record.variables[i];
@@ -177,8 +178,8 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
 
                     stmt.Reset();
                     sqlite3_bind_text(stmt, 2, key, -1, SQLITE_STATIC);
-                    sqlite3_bind_text(stmt, 3, before, -1, SQLITE_STATIC);
-                    sqlite3_bind_text(stmt, 4, after, -1, SQLITE_STATIC);
+                    sqlite3_bind_text(stmt, 4, before, -1, SQLITE_STATIC);
+                    sqlite3_bind_text(stmt, 5, after, -1, SQLITE_STATIC);
 
                     if (!stmt.Execute())
                         return false;
@@ -239,9 +240,9 @@ void HandleRecordVariables(const http_RequestInfo &request, http_IO *io)
     }
 
     SQLiteStatement stmt;
-    if (!goupile_db.Prepare(R"(SELECT key, before, after
+    if (!goupile_db.Prepare(R"(SELECT key, page, before, after
                                FROM records_variables
-                               WHERE table_name = ?)", &stmt))
+                               WHERE form = ?)", &stmt))
         return;
     sqlite3_bind_text(stmt, 1, form_name, -1, SQLITE_STATIC);
 
@@ -252,8 +253,9 @@ void HandleRecordVariables(const http_RequestInfo &request, http_IO *io)
     while (stmt.Next()) {
         json.StartObject();
         json.Key("key"); json.String((const char *)sqlite3_column_text(stmt, 0));
-        json.Key("before"); json.String((const char *)sqlite3_column_text(stmt, 1));
-        json.Key("after"); json.String((const char *)sqlite3_column_text(stmt, 2));
+        json.Key("page"); json.String((const char *)sqlite3_column_text(stmt, 1));
+        json.Key("before"); json.String((const char *)sqlite3_column_text(stmt, 2));
+        json.Key("after"); json.String((const char *)sqlite3_column_text(stmt, 3));
         json.EndObject();
     }
     if (!stmt.IsValid())
