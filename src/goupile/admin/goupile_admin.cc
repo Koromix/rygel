@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../core/libcc/libcc.hh"
-#include "profile.hh"
+#include "create.hh"
 
 namespace RG {
 
@@ -13,7 +13,7 @@ int RunGoupileAdmin(int argc, char **argv)
         PrintLn(fp, R"(Usage: goupile_admin <command> [<args>]
 
 Commands:
-    create_profile               Create new profile)");
+    create                       Create new profile)");
     };
 
     if (argc < 2) {
@@ -38,8 +38,8 @@ Commands:
         return 0;
     }
 
-    if (TestStr(cmd, "create_profile")) {
-        return RunCreateProfile(arguments);
+    if (TestStr(cmd, "create")) {
+        return RunCreate(arguments);
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;

@@ -8,6 +8,6 @@
 
 namespace RG {
 
-int RunCreateProfile(Span<const char *> arguments);
+int RunCreate(Span<const char *> arguments);
 
 }

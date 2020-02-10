@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../core/libcc/libcc.hh"
-#include "profile.hh"
+#include "create.hh"
 #include "../../core/libwrap/sqlite.hh"
 
 #ifdef _WIN32
@@ -125,7 +125,7 @@ INSERT INTO sched_meetings VALUES ('pl', '2019-08-02', 1130, 'Lex LUTHOR');
 END TRANSACTION;
 )";
 
-int RunCreateProfile(Span<const char *> arguments)
+int RunCreate(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
