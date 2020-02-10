@@ -15,10 +15,14 @@ namespace RG {
 
 static FmtArg MakeToolchainArg(const Compiler *compiler, CompileMode compile_mode)
 {
-    FmtArg arg = {};
-    arg.type = FmtType::Buffer;
-    Fmt(arg.u.buf, "%1_%2", compiler->name, CompileModeNames[(int)compile_mode]);
-    return arg;
+    if (compiler) {
+        FmtArg arg = {};
+        arg.type = FmtType::Buffer;
+        Fmt(arg.u.buf, "%1_%2", compiler->name, CompileModeNames[(int)compile_mode]);
+        return arg;
+    } else {
+        return "?";
+    }
 };
 
 static bool ParseToolchainSpec(Span<const char> str,
@@ -124,8 +128,8 @@ int RunBuild(Span<const char *> arguments)
     Span<const char *> run_arguments = {};
     bool run_here = false;
 
-    // Seems like good defaults
-    settings.compiler = Compilers[0];
+    // Find default settings
+    settings.compiler = FindIf(Compilers, [](const Compiler *compiler) { return compiler->Test(); });
     settings.jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_WORKERS + 1);
 
     const auto print_usage = [=](FILE *fp) {
@@ -155,7 +159,17 @@ Options:
 Available toolchains:)", MakeToolchainArg(settings.compiler, settings.compile_mode), settings.jobs);
         for (const Compiler *compiler: Compilers) {
             for (const char *mode_name: CompileModeNames) {
-                PrintLn(fp, "    %1_%2", compiler->name, mode_name);
+                const char *status;
+                if (compiler == settings.compiler &&
+                        mode_name == CompileModeNames[(int)settings.compile_mode]) {
+                    status = "*";
+                } else if (!compiler->Test()) {
+                    status = " (not available)";
+                } else {
+                    status = "";
+                }
+
+                PrintLn(fp, "    %1_%2%3", compiler->name, mode_name, status);
             }
         }
         PrintLn(fp, R"(
@@ -213,6 +227,11 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
             target_names.Append(run_target_name);
             run_arguments = opt.GetRemainingArguments();
         }
+    }
+
+    if (!settings.compiler) {
+        LogError("No compiler is available");
+        return 1;
     }
 
     // Root directory

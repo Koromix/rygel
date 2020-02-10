@@ -37,11 +37,18 @@ struct BuildCommand {
 };
 
 class Compiler {
+    mutable bool test_init = false;
+    mutable bool test;
+
 public:
     const char *name;
     const char *prefix;
+    const char *binary;
 
-    Compiler(const char *name, const char *prefix) : name(name), prefix(prefix) {}
+    Compiler(const char *name, const char *prefix, const char *binary)
+        : name(name), prefix(prefix), binary(binary) {}
+
+    bool Test() const;
 
     virtual void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                                    bool warnings, const char *pch_filename, Span<const char *const> definitions,

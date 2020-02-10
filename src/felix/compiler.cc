@@ -15,6 +15,50 @@
 
 namespace RG {
 
+static bool TestBinary(const char *name)
+{
+    Span<const char> env = getenv("PATH");
+
+    while (env.len) {
+#ifdef _WIN32
+        Span<const char> path = SplitStr(env, ';', &env);
+#else
+        Span<const char> path = SplitStr(env, ':', &env);
+#endif
+
+        LocalArray<char, 4096> buf;
+        buf.len = Fmt(buf.data, "%1%/%2", path, name).len;
+
+#ifdef _WIN32
+        static const Span<const char> extensions[] = {".com", ".exe", ".bat", ".cmd"};
+
+        for (Span<const char> ext: extensions) {
+            if (RG_LIKELY(ext.len < buf.Available())) {
+                memcpy(buf.end(), ext.ptr, ext.len + 1);
+
+                if (TestFile(buf.data))
+                    return true;
+            }
+        }
+#else
+        if (RG_LIKELY(buf.len < RG_SIZE(buf.data) - 1) && TestFile(buf.data))
+            return true;
+#endif
+    }
+
+    return false;
+}
+
+bool Compiler::Test() const
+{
+    if (!test_init) {
+        test = TestBinary(binary);
+        test_init = true;
+    }
+
+    return test;
+}
+
 static void AppendGccObjectArguments(const char *src_filename, CompileMode compile_mode,
                                      const char *pch_filename, Span<const char *const> definitions,
                                      Span<const char *const> include_directories,
@@ -96,7 +140,7 @@ static void AppendPackCommandLine(Span<const char *const> pack_filenames, Compil
 
 class ClangCompiler: public Compiler {
 public:
-    ClangCompiler(const char *name, const char *prefix) : Compiler(name, prefix) {}
+    ClangCompiler(const char *name, const char *prefix) : Compiler(name, prefix, "clang") {}
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
@@ -202,7 +246,7 @@ public:
 
 class GnuCompiler: public Compiler {
 public:
-    GnuCompiler(const char *name, const char *prefix) : Compiler(name, prefix) {}
+    GnuCompiler(const char *name, const char *prefix) : Compiler(name, prefix, "gcc") {}
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
