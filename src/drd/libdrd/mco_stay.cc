@@ -28,7 +28,7 @@ RG_STATIC_ASSERT(RG_SIZE(mco_Stay) == 112);
 RG_STATIC_ASSERT(RG_SIZE(drd_DiagnosisCode) == 8);
 RG_STATIC_ASSERT(RG_SIZE(mco_ProcedureRealisation) == 24);
 
-bool mco_StaySet::SavePack(StreamWriter &st) const
+bool mco_StaySet::SavePack(StreamWriter *st) const
 {
     PackHeader bh = {};
 
@@ -42,9 +42,9 @@ bool mco_StaySet::SavePack(StreamWriter &st) const
         bh.procedures_len += stay.procedures.len;
     }
 
-    st.Write(&bh, RG_SIZE(bh));
+    st->Write(&bh, RG_SIZE(bh));
 #ifdef RG_ARCH_64
-    st.Write(stays.ptr, stays.len * RG_SIZE(*stays.ptr));
+    st->Write(stays.ptr, stays.len * RG_SIZE(*stays.ptr));
 #else
     for (const mco_Stay &stay: stays) {
         mco_Stay stay2;
@@ -63,17 +63,17 @@ bool mco_StaySet::SavePack(StreamWriter &st) const
         u.st.procedures_len = (int64_t)stay.procedures.len;
         memcpy(&stay2.other_diagnoses, u.raw, 32);
 
-        st.Write(&stay2, RG_SIZE(stay2));
+        st->Write(&stay2, RG_SIZE(stay2));
     }
 #endif
     for (const mco_Stay &stay: stays) {
-        st.Write(stay.other_diagnoses.ptr, stay.other_diagnoses.len * RG_SIZE(*stay.other_diagnoses.ptr));
+        st->Write(stay.other_diagnoses.ptr, stay.other_diagnoses.len * RG_SIZE(*stay.other_diagnoses.ptr));
     }
     for (const mco_Stay &stay: stays) {
-        st.Write(stay.procedures.ptr, stay.procedures.len * RG_SIZE(*stay.procedures.ptr));
+        st->Write(stay.procedures.ptr, stay.procedures.len * RG_SIZE(*stay.procedures.ptr));
     }
 
-    return st.Close();
+    return st->Close();
 }
 
 bool mco_StaySet::SavePack(const char *filename) const
@@ -86,10 +86,10 @@ bool mco_StaySet::SavePack(const char *filename) const
     }
 
     StreamWriter st(filename, compression_type);
-    return SavePack(st);
+    return SavePack(&st);
 }
 
-bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test> *out_tests)
+bool mco_StaySetBuilder::LoadPack(StreamReader *st, HashTable<int32_t, mco_Test> *out_tests)
 {
     const Size start_stays_len = set.stays.len;
     RG_DEFER_N(set_guard) { set.stays.RemoveFrom(start_stays_len); };
@@ -102,45 +102,45 @@ bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test>
     HeapArray<mco_ProcedureRealisation> procedures(&procedures_alloc);
 
     PackHeader bh;
-    if (st.Read(RG_SIZE(bh), &bh) != RG_SIZE(bh))
+    if (st->Read(RG_SIZE(bh), &bh) != RG_SIZE(bh))
         goto corrupt_error;
 
     if (strncmp(bh.signature, PACK_SIGNATURE, RG_SIZE(bh.signature)) != 0) {
-        LogError("File '%1' does not have dspak signature", st.GetFileName());
+        LogError("File '%1' does not have dspak signature", st->GetFileName());
         return false;
     }
     if (bh.version != PACK_VERSION) {
-        LogError("Cannot load '%1' (dspak version %2), expected version %3", st.GetFileName(),
+        LogError("Cannot load '%1' (dspak version %2), expected version %3", st->GetFileName(),
                  bh.version, PACK_VERSION);
         return false;
     }
     if (bh.endianness != (int8_t)RG_ARCH_ENDIANNESS) {
         LogError("File '%1' is not compatible with this platform (endianness issue)",
-                 st.GetFileName());
+                 st->GetFileName());
         return false;
     }
     if (bh.stays_len < 0 || bh.diagnoses_len < 0 || bh.procedures_len < 0)
         goto corrupt_error;
 
     if (bh.stays_len > (RG_SIZE_MAX - start_stays_len)) {
-        LogError("Too much data to load in '%1'", st.GetFileName());
+        LogError("Too much data to load in '%1'", st->GetFileName());
         return false;
     }
 
     set.stays.Grow((Size)bh.stays_len);
-    if (st.Read(RG_SIZE(*set.stays.ptr) * (Size)bh.stays_len,
-                set.stays.end()) != RG_SIZE(*set.stays.ptr) * (Size)bh.stays_len)
+    if (st->Read(RG_SIZE(*set.stays.ptr) * (Size)bh.stays_len,
+                 set.stays.end()) != RG_SIZE(*set.stays.ptr) * (Size)bh.stays_len)
         goto corrupt_error;
     set.stays.len += (Size)bh.stays_len;
 
     other_diagnoses.Reserve((Size)bh.diagnoses_len);
-    if (st.Read(RG_SIZE(*other_diagnoses.ptr) * (Size)bh.diagnoses_len,
-                other_diagnoses.ptr) != RG_SIZE(*other_diagnoses.ptr) * (Size)bh.diagnoses_len)
+    if (st->Read(RG_SIZE(*other_diagnoses.ptr) * (Size)bh.diagnoses_len,
+                 other_diagnoses.ptr) != RG_SIZE(*other_diagnoses.ptr) * (Size)bh.diagnoses_len)
         goto corrupt_error;
     other_diagnoses.len += (Size)bh.diagnoses_len;
 
     procedures.Grow((Size)bh.procedures_len);
-    if (st.Read(RG_SIZE(*procedures.ptr) * (Size)bh.procedures_len,
+    if (st->Read(RG_SIZE(*procedures.ptr) * (Size)bh.procedures_len,
                 procedures.ptr) != RG_SIZE(*procedures.ptr) * (Size)bh.procedures_len)
         goto corrupt_error;
     procedures.len += (Size)bh.procedures_len;
@@ -197,7 +197,7 @@ bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test>
     return true;
 
 corrupt_error:
-    LogError("Stay pack file '%1' appears to be corrupt or truncated", st.GetFileName());
+    LogError("Stay pack file '%1' appears to be corrupt or truncated", st->GetFileName());
     return false;
 }
 
@@ -800,7 +800,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
     return true;
 }
 
-bool mco_StaySetBuilder::LoadAtih(StreamReader &st,
+bool mco_StaySetBuilder::LoadAtih(StreamReader *st,
                                   bool (mco_StaySetBuilder::*parse_func)(Span<const char> line,
                                                                          HashTable<int32_t, mco_Test> *out_tests),
                                   HashTable<int32_t, mco_Test> *out_tests)
@@ -810,7 +810,7 @@ bool mco_StaySetBuilder::LoadAtih(StreamReader &st,
 
     Size errors = 0;
     {
-        LineReader reader(&st);
+        LineReader reader(st);
 
         reader.PushLogFilter();
         RG_DEFER { PopLogFilter(); };
@@ -835,12 +835,12 @@ bool mco_StaySetBuilder::LoadAtih(StreamReader &st,
     return true;
 }
 
-bool mco_StaySetBuilder::LoadRss(StreamReader &st, HashTable<int32_t, mco_Test> *out_tests)
+bool mco_StaySetBuilder::LoadRss(StreamReader *st, HashTable<int32_t, mco_Test> *out_tests)
 {
     return LoadAtih(st, &mco_StaySetBuilder::ParseRssLine, out_tests);
 }
 
-bool mco_StaySetBuilder::LoadRsa(StreamReader &st, HashTable<int32_t, mco_Test> *out_tests)
+bool mco_StaySetBuilder::LoadRsa(StreamReader *st, HashTable<int32_t, mco_Test> *out_tests)
 {
     static std::atomic_flag gave_rsa_warning = ATOMIC_FLAG_INIT;
     if (!gave_rsa_warning.test_and_set()) {
@@ -851,12 +851,12 @@ bool mco_StaySetBuilder::LoadRsa(StreamReader &st, HashTable<int32_t, mco_Test> 
     return LoadAtih(st, &mco_StaySetBuilder::ParseRsaLine, out_tests);
 }
 
-bool mco_StaySetBuilder::LoadFichComp(StreamReader &st, HashTable<int32_t, mco_Test> *)
+bool mco_StaySetBuilder::LoadFichComp(StreamReader *st, HashTable<int32_t, mco_Test> *)
 {
     Size lines = 0;
     Size errors = 0;
     {
-        LineReader reader(&st);
+        LineReader reader(st);
         reader.PushLogFilter();
         RG_DEFER { PopLogFilter(); };
 
@@ -940,7 +940,7 @@ bool mco_StaySetBuilder::LoadFiles(Span<const char *const> filenames,
         CompressionType compression_type;
         Span<const char> extension = GetPathExtension(filename, &compression_type);
 
-        bool (mco_StaySetBuilder::*load_func)(StreamReader &st,
+        bool (mco_StaySetBuilder::*load_func)(StreamReader *st,
                                               HashTable<int32_t, mco_Test> *out_tests);
         if (extension == ".dmpak") {
             load_func = &mco_StaySetBuilder::LoadPack;
@@ -962,7 +962,7 @@ bool mco_StaySetBuilder::LoadFiles(Span<const char *const> filenames,
             success = false;
             continue;
         }
-        success &= (this->*load_func)(st, out_tests);
+        success &= (this->*load_func)(&st, out_tests);
     }
 
     return success;

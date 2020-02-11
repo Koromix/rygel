@@ -39,8 +39,8 @@ class mco_AuthorizationSetBuilder {
     mco_AuthorizationSet set;
 
 public:
-    bool LoadFicum(StreamReader &stt);
-    bool LoadIni(StreamReader &st);
+    bool LoadFicum(StreamReader *st);
+    bool LoadIni(StreamReader *st);
     bool LoadFiles(Span<const char *const> filenames);
 
     void Finish(mco_AuthorizationSet *out_set);

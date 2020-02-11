@@ -8,7 +8,7 @@
 
 namespace RG {
 
-bool ConfigBuilder::LoadIni(StreamReader &st)
+bool ConfigBuilder::LoadIni(StreamReader *st)
 {
     RG_DEFER_NC(out_guard, table_directories_len = config.table_directories.len,
                            profile_directory = config.profile_directory,
@@ -19,9 +19,9 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
     };
 
     Span<const char> root_directory;
-    SplitStrReverseAny(st.GetFileName(), RG_PATH_SEPARATORS, &root_directory);
+    SplitStrReverseAny(st->GetFileName(), RG_PATH_SEPARATORS, &root_directory);
 
-    IniParser ini(&st);
+    IniParser ini(st);
     ini.PushLogFilter();
     RG_DEFER { PopLogFilter(); };
 
@@ -90,7 +90,7 @@ bool ConfigBuilder::LoadFiles(Span<const char *const> filenames)
         CompressionType compression_type;
         Span<const char> extension = GetPathExtension(filename, &compression_type);
 
-        bool (ConfigBuilder::*load_func)(StreamReader &st);
+        bool (ConfigBuilder::*load_func)(StreamReader *st);
         if (extension == ".ini") {
             load_func = &ConfigBuilder::LoadIni;
         } else {
@@ -105,7 +105,7 @@ bool ConfigBuilder::LoadFiles(Span<const char *const> filenames)
             success = false;
             continue;
         }
-        success &= (this->*load_func)(st);
+        success &= (this->*load_func)(&st);
     }
 
     return success;

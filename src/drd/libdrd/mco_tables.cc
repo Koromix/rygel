@@ -1300,14 +1300,14 @@ const mco_TableIndex *mco_TableSet::FindIndex(Date date) const
     return nullptr;
 }
 
-bool mco_TableSetBuilder::LoadTab(StreamReader &st)
+bool mco_TableSetBuilder::LoadTab(StreamReader *st)
 {
     HeapArray<uint8_t> raw_buf(&file_alloc);
-    if (st.ReadAll(Megabytes(8), &raw_buf) < 0)
+    if (st->ReadAll(Megabytes(8), &raw_buf) < 0)
         return false;
 
     Size start_len = set.tables.len;
-    if (!ParseTableHeaders(raw_buf, st.GetFileName(), &set.str_alloc, &set.tables))
+    if (!ParseTableHeaders(raw_buf, st->GetFileName(), &set.str_alloc, &set.tables))
         return false;
 
     Span<uint8_t> raw_data = raw_buf.Leak();
@@ -1325,16 +1325,16 @@ bool mco_TableSetBuilder::LoadTab(StreamReader &st)
     return true;
 }
 
-bool mco_TableSetBuilder::LoadPrices(StreamReader &st)
+bool mco_TableSetBuilder::LoadPrices(StreamReader *st)
 {
     HeapArray<uint8_t> raw_buf(&file_alloc);
-    if (st.ReadAll(Megabytes(2), &raw_buf) < 0)
+    if (st->ReadAll(Megabytes(2), &raw_buf) < 0)
         return false;
 
     mco_TableInfo table_info = {};
     TableLoadInfo load_info = {};
     {
-        StreamReader mem_st(raw_buf, st.GetFileName());
+        StreamReader mem_st(raw_buf, st->GetFileName());
         IniParser ini(&mem_st);
 
         ini.PushLogFilter();
@@ -1384,7 +1384,7 @@ bool mco_TableSetBuilder::LoadPrices(StreamReader &st)
     load_info.prev_index_idx = -1;
     table_loads.Append(load_info);
 
-    table_info.filename = DuplicateString(st.GetFileName(), &set.str_alloc).ptr;
+    table_info.filename = DuplicateString(st->GetFileName(), &set.str_alloc).ptr;
     set.tables.Append(table_info);
 
     return true;
@@ -1398,7 +1398,7 @@ bool mco_TableSetBuilder::LoadFiles(Span<const char *const> filenames)
         CompressionType compression_type;
         Span<const char> extension = GetPathExtension(filename, &compression_type);
 
-        bool (mco_TableSetBuilder::*load_func)(StreamReader &st);
+        bool (mco_TableSetBuilder::*load_func)(StreamReader *st);
         if (extension == ".tab") {
             load_func = &mco_TableSetBuilder::LoadTab;
         } else if (extension == ".dpri") {
@@ -1415,7 +1415,7 @@ bool mco_TableSetBuilder::LoadFiles(Span<const char *const> filenames)
             success = false;
             continue;
         }
-        success &= (this->*load_func)(st);
+        success &= (this->*load_func)(&st);
     }
 
     return success;

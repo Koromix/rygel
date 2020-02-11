@@ -35,11 +35,11 @@ static Span<const char> SplitListValue(Span<const char> str,
     return part;
 }
 
-bool UserSetBuilder::LoadIni(StreamReader &st)
+bool UserSetBuilder::LoadIni(StreamReader *st)
 {
     RG_DEFER_NC(out_guard, len = set.users.len) { set.users.RemoveFrom(len); };
 
-    IniParser ini(&st);
+    IniParser ini(st);
     ini.PushLogFilter();
     RG_DEFER { PopLogFilter(); };
 
@@ -187,7 +187,7 @@ bool UserSetBuilder::LoadFiles(Span<const char *const> filenames)
         CompressionType compression_type;
         Span<const char> extension = GetPathExtension(filename, &compression_type);
 
-        bool (UserSetBuilder::*load_func)(StreamReader &st);
+        bool (UserSetBuilder::*load_func)(StreamReader *st);
         if (extension == ".ini") {
             load_func = &UserSetBuilder::LoadIni;
         } else {
@@ -202,7 +202,7 @@ bool UserSetBuilder::LoadFiles(Span<const char *const> filenames)
             success = false;
             continue;
         }
-        success &= (this->*load_func)(st);
+        success &= (this->*load_func)(&st);
     }
 
     return success;

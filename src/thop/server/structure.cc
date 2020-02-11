@@ -7,11 +7,11 @@
 
 namespace RG {
 
-bool StructureSetBuilder::LoadIni(StreamReader &st)
+bool StructureSetBuilder::LoadIni(StreamReader *st)
 {
     RG_DEFER_NC(out_guard, len = set.structures.len) { set.structures.RemoveFrom(len); };
 
-    IniParser ini(&st);
+    IniParser ini(st);
     ini.PushLogFilter();
     RG_DEFER { PopLogFilter(); };
 
@@ -81,7 +81,7 @@ bool StructureSetBuilder::LoadFiles(Span<const char *const> filenames)
         CompressionType compression_type;
         Span<const char> extension = GetPathExtension(filename, &compression_type);
 
-        bool (StructureSetBuilder::*load_func)(StreamReader &st);
+        bool (StructureSetBuilder::*load_func)(StreamReader *st);
         if (extension == ".ini") {
             load_func = &StructureSetBuilder::LoadIni;
         } else {
@@ -96,7 +96,7 @@ bool StructureSetBuilder::LoadFiles(Span<const char *const> filenames)
             success = false;
             continue;
         }
-        success &= (this->*load_func)(st);
+        success &= (this->*load_func)(&st);
     }
 
     return success;

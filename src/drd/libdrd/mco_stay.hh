@@ -148,7 +148,7 @@ struct mco_StaySet {
 
     LinkedAllocator array_alloc;
 
-    bool SavePack(StreamWriter &st) const;
+    bool SavePack(StreamWriter *st) const;
     bool SavePack(const char *filename) const;
 };
 
@@ -174,10 +174,10 @@ class mco_StaySetBuilder {
     HeapArray<FichCompData> fichcomps;
 
 public:
-    bool LoadPack(StreamReader &st, HashTable<int32_t, mco_Test> *out_tests = nullptr);
-    bool LoadRss(StreamReader &st, HashTable<int32_t, mco_Test> *out_tests = nullptr);
-    bool LoadRsa(StreamReader &st, HashTable<int32_t, mco_Test> *out_tests = nullptr);
-    bool LoadFichComp(StreamReader &st, HashTable<int32_t, mco_Test> *out_tests = nullptr);
+    bool LoadPack(StreamReader *st, HashTable<int32_t, mco_Test> *out_tests = nullptr);
+    bool LoadRss(StreamReader *st, HashTable<int32_t, mco_Test> *out_tests = nullptr);
+    bool LoadRsa(StreamReader *st, HashTable<int32_t, mco_Test> *out_tests = nullptr);
+    bool LoadFichComp(StreamReader *st, HashTable<int32_t, mco_Test> *out_tests = nullptr);
 
     bool LoadFiles(Span<const char *const> filenames,
                    HashTable<int32_t, mco_Test> *out_tests = nullptr);
@@ -185,7 +185,7 @@ public:
     bool Finish(mco_StaySet *out_set);
 
 private:
-    bool LoadAtih(StreamReader &st,
+    bool LoadAtih(StreamReader *st,
                   bool (mco_StaySetBuilder::*parse_func)(Span<const char> line,
                                                          HashTable<int32_t, mco_Test> *out_tests),
                   HashTable<int32_t, mco_Test> *out_tests);

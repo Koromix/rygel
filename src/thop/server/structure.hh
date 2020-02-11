@@ -32,7 +32,7 @@ class StructureSetBuilder {
     HashMap<drd_UnitCode, Size> unit_reference_counts;
 
 public:
-    bool LoadIni(StreamReader &st);
+    bool LoadIni(StreamReader *st);
     bool LoadFiles(Span<const char *const> filenames);
 
     void Finish(StructureSet *out_set);

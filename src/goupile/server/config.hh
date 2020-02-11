@@ -28,7 +28,7 @@ class ConfigBuilder {
     Config config;
 
 public:
-    bool LoadIni(StreamReader &st);
+    bool LoadIni(StreamReader *st);
     bool LoadFiles(Span<const char *const> filenames);
 
     void Finish(Config *out_config);

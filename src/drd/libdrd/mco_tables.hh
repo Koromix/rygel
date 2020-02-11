@@ -361,8 +361,8 @@ class mco_TableSetBuilder {
     mco_TableSet set;
 
 public:
-    bool LoadTab(StreamReader &st);
-    bool LoadPrices(StreamReader &st);
+    bool LoadTab(StreamReader *st);
+    bool LoadPrices(StreamReader *st);
     bool LoadFiles(Span<const char *const> filenames);
 
     bool Finish(mco_TableSet *out_set);

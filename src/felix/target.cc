@@ -136,11 +136,11 @@ static bool MatchPlatform(Span<const char> name, bool *out_match)
     }
 }
 
-bool TargetSetBuilder::LoadIni(StreamReader &st)
+bool TargetSetBuilder::LoadIni(StreamReader *st)
 {
     RG_DEFER_NC(out_guard, len = set.targets.len) { set.targets.RemoveFrom(len); };
 
-    IniParser ini(&st);
+    IniParser ini(st);
     ini.PushLogFilter();
     RG_DEFER { PopLogFilter(); };
 
@@ -312,7 +312,7 @@ bool TargetSetBuilder::LoadFiles(Span<const char *const> filenames)
         CompressionType compression_type;
         Span<const char> extension = GetPathExtension(filename, &compression_type);
 
-        bool (TargetSetBuilder::*load_func)(StreamReader &st);
+        bool (TargetSetBuilder::*load_func)(StreamReader *st);
         if (extension == ".ini") {
             load_func = &TargetSetBuilder::LoadIni;
         } else {
@@ -327,7 +327,7 @@ bool TargetSetBuilder::LoadFiles(Span<const char *const> filenames)
             success = false;
             continue;
         }
-        success &= (this->*load_func)(st);
+        success &= (this->*load_func)(&st);
     }
 
     return success;

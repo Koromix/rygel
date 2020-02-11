@@ -66,7 +66,7 @@ class TargetSetBuilder {
     HashMap<Span<const char>, Size> targets_map;
 
 public:
-    bool LoadIni(StreamReader &st);
+    bool LoadIni(StreamReader *st);
     bool LoadFiles(Span<const char *const> filenames);
 
     void Finish(TargetSet *out_set);

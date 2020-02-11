@@ -49,7 +49,7 @@ bool mco_AuthorizationSet::TestFacilityAuthorization(int8_t auth_type, Date date
     });
 }
 
-bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader &st)
+bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader *st)
 {
     Size authorizations_len = set.authorizations.len;
     RG_DEFER_NC(out_guard, facility_authorizations_len = set.facility_authorizations.len) {
@@ -57,7 +57,7 @@ bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader &st)
         set.facility_authorizations.RemoveFrom(facility_authorizations_len);
     };
 
-    LineReader reader(&st);
+    LineReader reader(st);
     reader.PushLogFilter();
     RG_DEFER { PopLogFilter(); };
 
@@ -110,7 +110,7 @@ bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader &st)
     return true;
 }
 
-bool mco_AuthorizationSetBuilder::LoadIni(StreamReader &st)
+bool mco_AuthorizationSetBuilder::LoadIni(StreamReader *st)
 {
     Size authorizations_len = set.authorizations.len;
     RG_DEFER_NC(out_guard, facility_authorizations_len = set.facility_authorizations.len) {
@@ -118,7 +118,7 @@ bool mco_AuthorizationSetBuilder::LoadIni(StreamReader &st)
         set.facility_authorizations.RemoveFrom(facility_authorizations_len);
     };
 
-    IniParser ini(&st);
+    IniParser ini(st);
 
     ini.PushLogFilter();
     RG_DEFER { PopLogFilter(); };
@@ -191,7 +191,7 @@ bool mco_AuthorizationSetBuilder::LoadFiles(Span<const char *const> filenames)
         CompressionType compression_type;
         Span<const char> extension = GetPathExtension(filename, &compression_type);
 
-        bool (mco_AuthorizationSetBuilder::*load_func)(StreamReader &st);
+        bool (mco_AuthorizationSetBuilder::*load_func)(StreamReader *st);
         if (extension == ".ini") {
             load_func = &mco_AuthorizationSetBuilder::LoadIni;
         } else if (extension == ".txt" || extension == ".ficum") {
@@ -208,7 +208,7 @@ bool mco_AuthorizationSetBuilder::LoadFiles(Span<const char *const> filenames)
             success = false;
             continue;
         }
-        success &= (this->*load_func)(st);
+        success &= (this->*load_func)(&st);
     }
 
     return success;
