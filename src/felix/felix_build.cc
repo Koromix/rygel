@@ -191,6 +191,10 @@ Supported compilation modes:)");
     if (!settings.compiler) {
         LogError("No compiler is available");
         return 1;
+    } else if (!settings.compiler->Test()) {
+        LogError("Cannot find %1 compiler (binary = %2)",
+                 settings.compiler->name, settings.compiler->binary);
+        return 1;
     }
 
     // Root directory
