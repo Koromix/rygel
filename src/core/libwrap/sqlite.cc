@@ -7,6 +7,34 @@
 
 namespace RG {
 
+void SQLiteStatement::Finalize()
+{
+    sqlite3_finalize(stmt);
+    stmt = nullptr;
+}
+
+bool SQLiteStatement::Run()
+{
+    rc = sqlite3_step(stmt);
+
+    if (rc != SQLITE_DONE && rc != SQLITE_ROW) {
+        LogError("SQLite Error: %1", sqlite3_errmsg(sqlite3_db_handle(stmt)));
+        return false;
+    }
+
+    return true;
+}
+
+bool SQLiteStatement::Next()
+{
+    return Run() && rc == SQLITE_ROW;
+}
+
+void SQLiteStatement::Reset()
+{
+    RG_ASSERT(sqlite3_reset(stmt) == SQLITE_OK);
+}
+
 bool SQLiteDatabase::Open(const char *filename, unsigned int flags)
 {
     static const char *const sql = R"(
@@ -119,34 +147,6 @@ bool SQLiteDatabase::RunWithBindings(const char *sql, Span<const SQLiteBinding> 
     }
 
     return stmt.Run();
-}
-
-void SQLiteStatement::Finalize()
-{
-    sqlite3_finalize(stmt);
-    stmt = nullptr;
-}
-
-bool SQLiteStatement::Run()
-{
-    rc = sqlite3_step(stmt);
-
-    if (rc != SQLITE_DONE && rc != SQLITE_ROW) {
-        LogError("SQLite Error: %1", sqlite3_errmsg(sqlite3_db_handle(stmt)));
-        return false;
-    }
-
-    return true;
-}
-
-bool SQLiteStatement::Next()
-{
-    return Run() && rc == SQLITE_ROW;
-}
-
-void SQLiteStatement::Reset()
-{
-    RG_ASSERT(sqlite3_reset(stmt) == SQLITE_OK);
 }
 
 }

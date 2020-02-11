@@ -12,8 +12,51 @@
 
 namespace RG {
 
-class SQLiteStatement;
-class SQLiteBinding;
+class SQLiteBinding {
+public:
+    enum class Type {
+        Integer,
+        Double,
+        String
+    };
+
+    Type type;
+    union {
+        int64_t i;
+        double d;
+        Span<const char> str;
+    } u;
+
+    SQLiteBinding(unsigned char i)  : type(Type::Integer) { u.i = i; }
+    SQLiteBinding(short i) : type(Type::Integer) { u.i = i; }
+    SQLiteBinding(unsigned short i) : type(Type::Integer) { u.i = i; }
+    SQLiteBinding(int i) : type(Type::Integer) { u.i = i; }
+    SQLiteBinding(unsigned int i) : type(Type::Integer) { u.i = i; }
+    SQLiteBinding(double d) : type(Type::Double) { u.d = d; };
+    SQLiteBinding(const char *str) : type(Type::String) { u.str = str; };
+    SQLiteBinding(Span<const char> str) : type(Type::String) { u.str = str; };
+};
+
+class SQLiteStatement {
+    sqlite3_stmt *stmt = nullptr;
+    int rc;
+
+public:
+    ~SQLiteStatement() { Finalize(); }
+
+    void Finalize();
+
+    bool IsValid() const { return stmt && (rc == SQLITE_DONE || rc == SQLITE_ROW); };
+    bool IsDone() const { return stmt && rc == SQLITE_DONE; }
+
+    bool Run();
+    bool Next();
+    void Reset();
+
+    operator sqlite3_stmt *() { return stmt; }
+
+    friend class SQLiteDatabase;
+};
 
 class SQLiteDatabase {
     sqlite3 *db = nullptr;
@@ -47,52 +90,6 @@ public:
 
 private:
     bool RunWithBindings(const char *sql, Span<const SQLiteBinding> bindings);
-};
-
-class SQLiteStatement {
-    sqlite3_stmt *stmt = nullptr;
-    int rc;
-
-public:
-    ~SQLiteStatement() { Finalize(); }
-
-    void Finalize();
-
-    bool IsValid() const { return stmt && (rc == SQLITE_DONE || rc == SQLITE_ROW); };
-    bool IsDone() const { return stmt && rc == SQLITE_DONE; }
-
-    bool Run();
-    bool Next();
-    void Reset();
-
-    operator sqlite3_stmt *() { return stmt; }
-
-    friend class SQLiteDatabase;
-};
-
-class SQLiteBinding {
-public:
-    enum class Type {
-        Integer,
-        Double,
-        String
-    };
-
-    Type type;
-    union {
-        int64_t i;
-        double d;
-        Span<const char> str;
-    } u;
-
-    SQLiteBinding(unsigned char i)  : type(Type::Integer) { u.i = i; }
-    SQLiteBinding(short i) : type(Type::Integer) { u.i = i; }
-    SQLiteBinding(unsigned short i) : type(Type::Integer) { u.i = i; }
-    SQLiteBinding(int i) : type(Type::Integer) { u.i = i; }
-    SQLiteBinding(unsigned int i) : type(Type::Integer) { u.i = i; }
-    SQLiteBinding(double d) : type(Type::Double) { u.d = d; };
-    SQLiteBinding(const char *str) : type(Type::String) { u.str = str; };
-    SQLiteBinding(Span<const char> str) : type(Type::String) { u.str = str; };
 };
 
 }
