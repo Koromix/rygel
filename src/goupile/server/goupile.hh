@@ -9,10 +9,10 @@
 namespace RG {
 
 struct Config;
-class SQLiteDatabase;
+class sq_Database;
 
 extern Config goupile_config;
-extern SQLiteDatabase goupile_db;
+extern sq_Database goupile_db;
 
 extern char goupile_etag[33];
 

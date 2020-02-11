@@ -18,7 +18,7 @@
 namespace RG {
 
 Config goupile_config;
-SQLiteDatabase goupile_db;
+sq_Database goupile_db;
 
 char goupile_etag[33];
 

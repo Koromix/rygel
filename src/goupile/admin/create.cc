@@ -218,7 +218,7 @@ Options:
         const char *filename = Fmt(&temp_alloc, "%1%/database.db", profile_directory).ptr;
         files.Append(filename);
 
-        SQLiteDatabase database;
+        sq_Database database;
         if (!database.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
             return 1;
 

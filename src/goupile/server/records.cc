@@ -36,7 +36,7 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
     }
 
     if (id.len) {
-        SQLiteStatement stmt;
+        sq_Statement stmt;
         if (!goupile_db.Prepare(R"(SELECT id, sequence, data
                                    FROM records
                                    WHERE form = ? AND id = ?)", &stmt))
@@ -63,7 +63,7 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
 
         json.Finish(io);
     } else {
-        SQLiteStatement stmt;
+        sq_Statement stmt;
         if (!goupile_db.Prepare(R"(SELECT id, sequence, data
                                    FROM records
                                    WHERE form = ?
@@ -148,7 +148,7 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
         bool success = goupile_db.Transaction([&]() {
             int sequence;
             {
-                SQLiteStatement stmt;
+                sq_Statement stmt;
                 if (!goupile_db.Prepare(R"(SELECT sequence
                                            FROM records_sequences
                                            WHERE form = ?)", &stmt))
@@ -181,7 +181,7 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
 
             // Save variables
             {
-                SQLiteStatement stmt;
+                sq_Statement stmt;
                 if (!goupile_db.Prepare(R"(INSERT INTO records_variables (form, key, page, before, after)
                                            VALUES (?, ?, ?, ?, ?)
                                            ON CONFLICT (form, key) DO UPDATE SET before = excluded.before,
@@ -253,7 +253,7 @@ void HandleRecordVariables(const http_RequestInfo &request, http_IO *io)
         return;
     }
 
-    SQLiteStatement stmt;
+    sq_Statement stmt;
     if (!goupile_db.Prepare(R"(SELECT key, page, before, after
                                FROM records_variables
                                WHERE form = ?)", &stmt))

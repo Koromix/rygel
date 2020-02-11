@@ -31,7 +31,7 @@ static bool GetQueryInteger(const http_RequestInfo &request, const char *key,
 
 // SQL must use 3 bind parameters: schedule, start date, end date (in this order)
 static bool PrepareMonthQuery(const http_RequestInfo &request, http_IO *io,
-                              const char *sql, SQLiteStatement *out_stmt)
+                              const char *sql, sq_Statement *out_stmt)
 {
     // Get query parameters
     const char *schedule_name;
@@ -77,7 +77,7 @@ static bool PrepareMonthQuery(const http_RequestInfo &request, http_IO *io,
 
 void HandleScheduleResources(const http_RequestInfo &request, http_IO *io)
 {
-    SQLiteStatement stmt;
+    sq_Statement stmt;
     if (!PrepareMonthQuery(request, io,
                            R"(SELECT date, time, slots, overbook
                               FROM sched_resources
@@ -117,7 +117,7 @@ void HandleScheduleResources(const http_RequestInfo &request, http_IO *io)
 
 void HandleScheduleMeetings(const http_RequestInfo &request, http_IO *io)
 {
-    SQLiteStatement stmt;
+    sq_Statement stmt;
     if (!PrepareMonthQuery(request, io,
                            R"(SELECT date, time, identity
                               FROM sched_meetings

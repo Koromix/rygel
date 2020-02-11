@@ -12,7 +12,7 @@
 
 namespace RG {
 
-class SQLiteBinding {
+class sq_Binding {
 public:
     enum class Type {
         Integer,
@@ -27,22 +27,22 @@ public:
         Span<const char> str;
     } u;
 
-    SQLiteBinding(unsigned char i)  : type(Type::Integer) { u.i = i; }
-    SQLiteBinding(short i) : type(Type::Integer) { u.i = i; }
-    SQLiteBinding(unsigned short i) : type(Type::Integer) { u.i = i; }
-    SQLiteBinding(int i) : type(Type::Integer) { u.i = i; }
-    SQLiteBinding(unsigned int i) : type(Type::Integer) { u.i = i; }
-    SQLiteBinding(double d) : type(Type::Double) { u.d = d; };
-    SQLiteBinding(const char *str) : type(Type::String) { u.str = str; };
-    SQLiteBinding(Span<const char> str) : type(Type::String) { u.str = str; };
+    sq_Binding(unsigned char i)  : type(Type::Integer) { u.i = i; }
+    sq_Binding(short i) : type(Type::Integer) { u.i = i; }
+    sq_Binding(unsigned short i) : type(Type::Integer) { u.i = i; }
+    sq_Binding(int i) : type(Type::Integer) { u.i = i; }
+    sq_Binding(unsigned int i) : type(Type::Integer) { u.i = i; }
+    sq_Binding(double d) : type(Type::Double) { u.d = d; };
+    sq_Binding(const char *str) : type(Type::String) { u.str = str; };
+    sq_Binding(Span<const char> str) : type(Type::String) { u.str = str; };
 };
 
-class SQLiteStatement {
+class sq_Statement {
     sqlite3_stmt *stmt = nullptr;
     int rc;
 
 public:
-    ~SQLiteStatement() { Finalize(); }
+    ~sq_Statement() { Finalize(); }
 
     void Finalize();
 
@@ -55,19 +55,19 @@ public:
 
     operator sqlite3_stmt *() { return stmt; }
 
-    friend class SQLiteDatabase;
+    friend class sq_Database;
 };
 
-class SQLiteDatabase {
+class sq_Database {
     sqlite3 *db = nullptr;
 
     std::shared_mutex transact_mutex;
     std::thread::id transact_thread;
 
 public:
-    SQLiteDatabase() {}
-    SQLiteDatabase(const char *filename, unsigned int flags) { Open(filename, flags); }
-    ~SQLiteDatabase() { Close(); }
+    sq_Database() {}
+    sq_Database(const char *filename, unsigned int flags) { Open(filename, flags); }
+    ~sq_Database() { Close(); }
 
     bool IsValid() const { return db; }
 
@@ -80,16 +80,16 @@ public:
     template <typename... Args>
     bool Run(const char *sql, Args... args)
     {
-        const SQLiteBinding bindings[] = { SQLiteBinding(args)... };
+        const sq_Binding bindings[] = { sq_Binding(args)... };
         return RunWithBindings(sql, bindings);
     }
 
-    bool Prepare(const char *sql, SQLiteStatement *out_stmt);
+    bool Prepare(const char *sql, sq_Statement *out_stmt);
 
     operator sqlite3 *() { return db; }
 
 private:
-    bool RunWithBindings(const char *sql, Span<const SQLiteBinding> bindings);
+    bool RunWithBindings(const char *sql, Span<const sq_Binding> bindings);
 };
 
 }

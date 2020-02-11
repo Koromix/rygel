@@ -7,13 +7,13 @@
 
 namespace RG {
 
-void SQLiteStatement::Finalize()
+void sq_Statement::Finalize()
 {
     sqlite3_finalize(stmt);
     stmt = nullptr;
 }
 
-bool SQLiteStatement::Run()
+bool sq_Statement::Run()
 {
     rc = sqlite3_step(stmt);
 
@@ -25,17 +25,17 @@ bool SQLiteStatement::Run()
     return true;
 }
 
-bool SQLiteStatement::Next()
+bool sq_Statement::Next()
 {
     return Run() && rc == SQLITE_ROW;
 }
 
-void SQLiteStatement::Reset()
+void sq_Statement::Reset()
 {
     RG_ASSERT(sqlite3_reset(stmt) == SQLITE_OK);
 }
 
-bool SQLiteDatabase::Open(const char *filename, unsigned int flags)
+bool sq_Database::Open(const char *filename, unsigned int flags)
 {
     static const char *const sql = R"(
         PRAGMA foreign_keys = ON;
@@ -61,7 +61,7 @@ bool SQLiteDatabase::Open(const char *filename, unsigned int flags)
     return true;
 }
 
-bool SQLiteDatabase::Close()
+bool sq_Database::Close()
 {
     if (sqlite3_close(db) != SQLITE_OK)
         return false;
@@ -70,7 +70,7 @@ bool SQLiteDatabase::Close()
     return true;
 }
 
-bool SQLiteDatabase::Transaction(FunctionRef<bool()> func)
+bool sq_Database::Transaction(FunctionRef<bool()> func)
 {
     std::lock_guard<std::shared_mutex> lock(transact_mutex);
 
@@ -90,7 +90,7 @@ bool SQLiteDatabase::Transaction(FunctionRef<bool()> func)
     return true;
 }
 
-bool SQLiteDatabase::Run(const char *sql)
+bool sq_Database::Run(const char *sql)
 {
     std::shared_lock<std::shared_mutex> lock(transact_mutex, std::defer_lock);
 
@@ -109,7 +109,7 @@ bool SQLiteDatabase::Run(const char *sql)
     return true;
 }
 
-bool SQLiteDatabase::Prepare(const char *sql, SQLiteStatement *out_stmt)
+bool sq_Database::Prepare(const char *sql, sq_Statement *out_stmt)
 {
     std::shared_lock<std::shared_mutex> lock(transact_mutex, std::defer_lock);
 
@@ -129,20 +129,20 @@ bool SQLiteDatabase::Prepare(const char *sql, SQLiteStatement *out_stmt)
     return true;
 }
 
-bool SQLiteDatabase::RunWithBindings(const char *sql, Span<const SQLiteBinding> bindings)
+bool sq_Database::RunWithBindings(const char *sql, Span<const sq_Binding> bindings)
 {
-    SQLiteStatement stmt;
+    sq_Statement stmt;
     if (!Prepare(sql, &stmt))
         return false;
 
     for (int i = 0; i < (int)bindings.len; i++) {
-        const SQLiteBinding &binding = bindings[i];
+        const sq_Binding &binding = bindings[i];
 
         switch (binding.type) {
-            case SQLiteBinding::Type::Integer: { sqlite3_bind_int64(stmt, i + 1, binding.u.i); } break;
-            case SQLiteBinding::Type::Double: { sqlite3_bind_double(stmt, i + 1, binding.u.d); } break;
-            case SQLiteBinding::Type::String: { sqlite3_bind_text(stmt, i + 1, binding.u.str.ptr,
-                                                                  binding.u.str.len, SQLITE_STATIC); } break;
+            case sq_Binding::Type::Integer: { sqlite3_bind_int64(stmt, i + 1, binding.u.i); } break;
+            case sq_Binding::Type::Double: { sqlite3_bind_double(stmt, i + 1, binding.u.d); } break;
+            case sq_Binding::Type::String: { sqlite3_bind_text(stmt, i + 1, binding.u.str.ptr,
+                                                               binding.u.str.len, SQLITE_STATIC); } break;
         }
     }
 

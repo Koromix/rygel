@@ -42,7 +42,7 @@ void HandleLogin(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
-        SQLiteStatement stmt;
+        sq_Statement stmt;
         if (!goupile_db.Prepare(R"(SELECT u.password_hash, u.admin,
                                           p.read, p.query, p.new, p.remove, p.edit, p.validate
                                    FROM users u
