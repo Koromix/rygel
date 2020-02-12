@@ -110,7 +110,8 @@ Supported compilers:)", settings.compiler ? settings.compiler->name : "?",
                         CompileModeNames[(int)settings.compile_mode], settings.jobs);
 
         for (const Compiler *compiler: Compilers) {
-            PrintLn(fp, "    %1", compiler->name);
+            PrintLn(fp, "    %1%2",
+                    FmtArg(compiler->name).Pad(28), compiler->Test() ? "" : " Not available (in PATH)");
         }
 
         PrintLn(fp, R"(
