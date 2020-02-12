@@ -2365,10 +2365,11 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
                     }
                 }
 
-                if (::ReadFile(out_pipe[0], read_buf, RG_SIZE(read_buf), &read_len, &read_ov)) {
+                while (::ReadFile(out_pipe[0], read_buf, RG_SIZE(read_buf), &read_len, &read_ov)) {
                     out_func(MakeSpan(read_buf, read_len));
-                } else if (GetLastError() == ERROR_IO_PENDING) {
-                    ResetEvent(events[1]);
+                }
+
+                if (GetLastError() == ERROR_IO_PENDING) {
                     read_pending = true;
                 } else if (GetLastError() == ERROR_BROKEN_PIPE) {
                     CancelIo(out_pipe[0]);
