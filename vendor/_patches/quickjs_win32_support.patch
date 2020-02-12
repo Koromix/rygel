@@ -1,7 +1,334 @@
-diff -wuN a/vendor/quickjs/quickjs.c b/vendor/quickjs/quickjs.c
---- a/vendor/quickjs/quickjs.c	2019-07-09 19:49:47.000000000 +0200
-+++ b/vendor/quickjs/quickjs.c	2019-07-12 16:44:25.722600000 +0200
-@@ -28,13 +28,16 @@
+diff --git b/vendor/quickjs/cutils.c a/vendor/quickjs/cutils.c
+index 64a32d36..56c4d689 100644
+--- b/vendor/quickjs/cutils.c
++++ a/vendor/quickjs/cutils.c
+@@ -258,19 +258,76 @@ int unicode_from_utf8(const uint8_t *p, int max_len, const uint8_t **pp)
+         return c;
+     }
+     switch(c) {
+-    case 0xc0 ... 0xdf:
++    case 0xc0:
++    case 0xc1:
++    case 0xc2:
++    case 0xc3:
++    case 0xc4:
++    case 0xc5:
++    case 0xc6:
++    case 0xc7:
++    case 0xc8:
++    case 0xc9:
++    case 0xca:
++    case 0xcb:
++    case 0xcc:
++    case 0xcd:
++    case 0xce:
++    case 0xcf:
++    case 0xd0:
++    case 0xd1:
++    case 0xd2:
++    case 0xd3:
++    case 0xd4:
++    case 0xd5:
++    case 0xd6:
++    case 0xd7:
++    case 0xd8:
++    case 0xd9:
++    case 0xda:
++    case 0xdb:
++    case 0xdc:
++    case 0xdd:
++    case 0xde:
++    case 0xdf:
+         l = 1;
+         break;
+-    case 0xe0 ... 0xef:
++    case 0xe0:
++    case 0xe1:
++    case 0xe2:
++    case 0xe3:
++    case 0xe4:
++    case 0xe5:
++    case 0xe6:
++    case 0xe7:
++    case 0xe8:
++    case 0xe9:
++    case 0xea:
++    case 0xeb:
++    case 0xec:
++    case 0xed:
++    case 0xee:
++    case 0xef:
+         l = 2;
+         break;
+-    case 0xf0 ... 0xf7:
++    case 0xf0:
++    case 0xf1:
++    case 0xf2:
++    case 0xf3:
++    case 0xf4:
++    case 0xf5:
++    case 0xf6:
++    case 0xf7:
+         l = 3;
+         break;
+-    case 0xf8 ... 0xfb:
++    case 0xf8:
++    case 0xf9:
++    case 0xfa:
++    case 0xfb:
+         l = 4;
+         break;
+-    case 0xfc ... 0xfd:
++    case 0xfc:
++    case 0xfd:
+         l = 5;
+         break;
+     default:
+diff --git b/vendor/quickjs/cutils.h a/vendor/quickjs/cutils.h
+index 26c68ee6..2af254e0 100644
+--- b/vendor/quickjs/cutils.h
++++ a/vendor/quickjs/cutils.h
+@@ -27,15 +27,31 @@
+
+ #include <stdlib.h>
+ #include <inttypes.h>
++#ifdef _MSC_VER
++#include <intrin.h>
++#endif
+
+ /* set if CPU is big endian */
+ #undef WORDS_BIGENDIAN
+
++#if defined(__GNUC__) || defined(__clang__)
+ #define likely(x)       __builtin_expect(!!(x), 1)
+ #define unlikely(x)     __builtin_expect(!!(x), 0)
+ #define force_inline inline __attribute__((always_inline))
+ #define no_inline __attribute__((noinline))
+ #define __maybe_unused __attribute__((unused))
++#else
++#define likely(x)    (x)
++#define unlikely(x)  (x)
++#define force_inline inline
++#define no_inline
++#define __maybe_unused
++#endif
++
++#ifdef _MSC_VER
++#define __attribute(x)
++#define __attribute__(x)
++#endif
+
+ #define xglue(x, y) x ## y
+ #define glue(x, y) xglue(x, y)
+@@ -114,38 +130,92 @@ static inline int64_t min_int64(int64_t a, int64_t b)
+ /* WARNING: undefined if a = 0 */
+ static inline int clz32(unsigned int a)
+ {
++#ifdef _MSC_VER
++    unsigned long leading_zero;
++    if (_BitScanReverse(&leading_zero, a)) {
++        return (int)(31 - leading_zero);
++    } else {
++        return 32;
++    }
++#else
+     return __builtin_clz(a);
++#endif
+ }
+
+ /* WARNING: undefined if a = 0 */
+ static inline int clz64(uint64_t a)
+ {
+-    return __builtin_clzll(a);
++#if defined(_MSC_VER) && defined(_WIN64)
++    unsigned long leading_zero;
++    if (_BitScanReverse64(&leading_zero, a)) {
++        return (int)(63 - leading_zero);
++    } else {
++        return 64;
++    }
++#elif defined(_MSC_VER)
++    unsigned long leading_zero;
++    if (_BitScanReverse(&leading_zero, a >> 32)) {
++        return (int)(31 - leading_zero);
++    } else if (_BitScanReverse(&leading_zero, (uint32_t)a)) {
++        return (int)(63 - leading_zero);
++    } else {
++        return 64;
++    }
++#else
++    return __builtin_ctzll(a);
++#endif
+ }
+
+ /* WARNING: undefined if a = 0 */
+ static inline int ctz32(unsigned int a)
+ {
++#ifdef _MSC_VER
++    unsigned long trailing_zero;
++    if (_BitScanForward(&trailing_zero, a)) {
++        return (int)trailing_zero;
++    } else {
++        return 32;
++    }
++#else
+     return __builtin_ctz(a);
++#endif
+ }
+
+ /* WARNING: undefined if a = 0 */
+ static inline int ctz64(uint64_t a)
+ {
++#if defined(_MSC_VER) && defined(_WIN64)
++    unsigned long trailing_zero;
++    if (_BitScanForward64(&trailing_zero, a)) {
++        return (int)trailing_zero;
++    } else {
++        return 64;
++    }
++#elif defined(_MSC_VER)
++    unsigned long trailing_zero;
++    if (_BitScanForward(&trailing_zero, (uint32_t)a)) {
++        return trailing_zero;
++    } else if (_BitScanForward(&trailing_zero, a >> 32)) {
++        return 32 + trailing_zero;
++    } else {
++        return 64;
++    }
++#else
+     return __builtin_ctzll(a);
++#endif
+ }
+
+-struct __attribute__((packed)) packed_u64 {
++#pragma pack(push, 1)
++struct packed_u64 {
+     uint64_t v;
+ };
+-
+-struct __attribute__((packed)) packed_u32 {
++struct packed_u32 {
+     uint32_t v;
+ };
+-
+-struct __attribute__((packed)) packed_u16 {
++struct packed_u16 {
+     uint16_t v;
+ };
++#pragma pack(pop)
+
+ static inline uint64_t get_u64(const uint8_t *tab)
+ {
+diff --git b/vendor/quickjs/libregexp.c a/vendor/quickjs/libregexp.c
+index 4425ce55..59de206c 100644
+--- b/vendor/quickjs/libregexp.c
++++ a/vendor/quickjs/libregexp.c
+@@ -25,6 +25,9 @@
+ #include <stdio.h>
+ #include <stdarg.h>
+ #include <inttypes.h>
++#ifdef _WIN32
++#include <malloc.h>
++#endif
+ #include <string.h>
+ #include <assert.h>
+
+@@ -557,7 +560,14 @@ int lre_parse_escape(const uint8_t **pp, int allow_utf16)
+             }
+         }
+         break;
+-    case '0' ... '7':
++    case '0':
++    case '1':
++    case '2':
++    case '3':
++    case '4':
++    case '5':
++    case '6':
++    case '7':
+         c -= '0';
+         if (allow_utf16 == 2) {
+             /* only accept \0 not followed by digit */
+@@ -1383,7 +1393,15 @@ static int re_parse_term(REParseState *s, BOOL is_backward_dir)
+                 }
+             }
+             goto normal_char;
+-        case '1' ... '9':
++        case '1':
++        case '2':
++        case '3':
++        case '4':
++        case '5':
++        case '6':
++        case '7':
++        case '8':
++        case '9':
+             {
+                 const uint8_t *q = ++p;
+
+diff --git b/vendor/quickjs/libunicode.c a/vendor/quickjs/libunicode.c
+index 96ff0020..63c12a07 100644
+--- b/vendor/quickjs/libunicode.c
++++ a/vendor/quickjs/libunicode.c
+@@ -527,7 +527,13 @@ static int unicode_decomp_entry(uint32_t *res, uint32_t c,
+     } else {
+         d = unicode_decomp_data + unicode_decomp_table2[idx];
+         switch(type) {
+-        case DECOMP_TYPE_L1 ... DECOMP_TYPE_L7:
++        case DECOMP_TYPE_L1:
++        case DECOMP_TYPE_L2:
++        case DECOMP_TYPE_L3:
++        case DECOMP_TYPE_L4:
++        case DECOMP_TYPE_L5:
++        case DECOMP_TYPE_L6:
++        case DECOMP_TYPE_L7:
+             l = type - DECOMP_TYPE_L1 + 1;
+             d += (c - code) * l * 2;
+             for(i = 0; i < l; i++) {
+@@ -535,7 +541,8 @@ static int unicode_decomp_entry(uint32_t *res, uint32_t c,
+                     return 0;
+             }
+             return l;
+-        case DECOMP_TYPE_LL1 ... DECOMP_TYPE_LL2:
++        case DECOMP_TYPE_LL1:
++        case DECOMP_TYPE_LL2:
+             {
+                 uint32_t k, p;
+                 l = type - DECOMP_TYPE_LL1 + 1;
+@@ -551,7 +558,11 @@ static int unicode_decomp_entry(uint32_t *res, uint32_t c,
+                 }
+             }
+             return l;
+-        case DECOMP_TYPE_S1 ... DECOMP_TYPE_S5:
++        case DECOMP_TYPE_S1:
++        case DECOMP_TYPE_S2:
++        case DECOMP_TYPE_S3:
++        case DECOMP_TYPE_S4:
++        case DECOMP_TYPE_S5:
+             l = type - DECOMP_TYPE_S1 + 1;
+             d += (c - code) * l;
+             for(i = 0; i < l; i++) {
+@@ -582,7 +593,14 @@ static int unicode_decomp_entry(uint32_t *res, uint32_t c,
+         case DECOMP_TYPE_B18:
+             l = 18;
+             goto decomp_type_b;
+-        case DECOMP_TYPE_B1 ... DECOMP_TYPE_B8:
++        case DECOMP_TYPE_B1:
++        case DECOMP_TYPE_B2:
++        case DECOMP_TYPE_B3:
++        case DECOMP_TYPE_B4:
++        case DECOMP_TYPE_B5:
++        case DECOMP_TYPE_B6:
++        case DECOMP_TYPE_B7:
++        case DECOMP_TYPE_B8:
+             l = type - DECOMP_TYPE_B1 + 1;
+         decomp_type_b:
+             {
+diff --git b/vendor/quickjs/quickjs.c a/vendor/quickjs/quickjs.c
+index b19a4d9f..2665351f 100644
+--- b/vendor/quickjs/quickjs.c
++++ a/vendor/quickjs/quickjs.c
+@@ -28,13 +28,20 @@
  #include <inttypes.h>
  #include <string.h>
  #include <assert.h>
@@ -11,7 +338,11 @@ diff -wuN a/vendor/quickjs/quickjs.c b/vendor/quickjs/quickjs.c
  #include <math.h>
 -#if defined(__APPLE__)
 +#if defined(_WIN32)
-+#include "w32_compat.h"
++#include <inttypes.h>
++#include <malloc.h>
++#include <windows.h>
++#include <winsock.h>
++typedef intptr_t ssize_t;
 +#elif defined(__APPLE__)
 +#include <sys/time.h>
  #include <malloc/malloc.h>
@@ -20,46 +351,434 @@ diff -wuN a/vendor/quickjs/quickjs.c b/vendor/quickjs/quickjs.c
  #include <malloc.h>
  #endif
 
-@@ -103,7 +106,9 @@
- //#define FORCE_GC_AT_MALLOC
+@@ -48,7 +55,7 @@
 
- #ifdef CONFIG_ATOMICS
-+#if !defined(PTHREAD_MUTEX_INITIALIZER)
- #include <pthread.h>
-+#endif
- #include <stdatomic.h>
- #include <errno.h>
+ #define OPTIMIZE         1
+ #define SHORT_OPCODES    1
+-#if defined(EMSCRIPTEN)
++#if defined(EMSCRIPTEN) || defined(_MSC_VER)
+ #define DIRECT_DISPATCH  0
+ #else
+ #define DIRECT_DISPATCH  1
+@@ -65,11 +72,8 @@
+ #define CONFIG_PRINTF_RNDN
  #endif
-diff -wuN a/vendor/quickjs/w32_compat.c b/vendor/quickjs/w32_compat.c
---- a/vendor/quickjs/w32_compat.c	1970-01-01 01:00:00.000000000 +0100
-+++ b/vendor/quickjs/w32_compat.c	2019-07-12 18:52:56.342900000 +0200
-@@ -0,0 +1,155 @@
-+// Hacks for Clang support on Windows (Niels)
+
+-/* define to include Atomics.* operations which depend on the OS
+-   threads */
+-#if !defined(EMSCRIPTEN)
+-#define CONFIG_ATOMICS
+-#endif
++/* Not compatible with MSVC and i Don't really care about Atomics */
++// #define CONFIG_ATOMICS
+
+ /* dump object free */
+ //#define DUMP_FREE
+@@ -801,8 +805,8 @@ typedef struct JSShapeProperty {
+ } JSShapeProperty;
+
+ struct JSShape {
+-    uint32_t prop_hash_end[0]; /* hash table of size hash_mask + 1
+-                                  before the start of the structure. */
++    #define PROP_HASH_END(shape,idx) ((uint32_t *)(shape) + (idx))
 +
-+#if defined(_WIN32)
-+
-+#define NOMINMAX
-+#define WIN32_LEAN_AND_MEAN
-+#include <windows.h>
-+#include <inttypes.h>
-+#include <time.h>
-+#include <sys/types.h>
-+#include <sys/timeb.h>
-+
-+#if !defined(__MINGW32__)
-+struct timeval {
-+    long tv_sec;
-+    long tv_usec;
-+};
+     JSGCObjectHeader header;
+     /* true if the shape is inserted in the shape hash table. If not,
+        JSShape.hash is not valid */
+@@ -817,7 +821,7 @@ struct JSShape {
+     int prop_count;
+     JSShape *shape_hash_next; /* in JSRuntime.shape_hash[h] list */
+     JSObject *proto;
+-    JSShapeProperty prop[0]; /* prop_size elements */
++    JSShapeProperty prop[]; /* prop_size elements */
+ };
+ struct JSObject {
+     union {
+@@ -1973,7 +1977,6 @@ void JS_FreeRuntime(JSRuntime *rt)
+     }
+ }
+
+-#if defined(EMSCRIPTEN)
+ /* currently no stack limitation */
+ static inline uint8_t *js_get_stack_pointer(void)
+ {
+@@ -1984,20 +1987,6 @@ static inline BOOL js_check_stack_overflow(JSContext *ctx, size_t alloca_size)
+ {
+     return FALSE;
+ }
+-#else
+-/* Note: OS and CPU dependent */
+-static inline uint8_t *js_get_stack_pointer(void)
+-{
+-    return __builtin_frame_address(0);
+-}
+-
+-static inline BOOL js_check_stack_overflow(JSContext *ctx, size_t alloca_size)
+-{
+-    size_t size;
+-    size = ctx->stack_top - js_get_stack_pointer();
+-    return unlikely((size + alloca_size) > ctx->stack_size);
+-}
+-#endif
+
+ JSContext *JS_NewContextRaw(JSRuntime *rt)
+ {
+@@ -4077,7 +4066,7 @@ static inline JSShape *get_shape_from_alloc(void *sh_alloc, size_t hash_size)
+
+ static inline void *get_alloc_from_shape(JSShape *sh)
+ {
+-    return sh->prop_hash_end - ((intptr_t)sh->prop_hash_mask + 1);
++    return PROP_HASH_END(sh, -((intptr_t)sh->prop_hash_mask + 1));
+ }
+
+ static inline JSShapeProperty *get_shape_prop(JSShape *sh)
+@@ -4188,7 +4177,7 @@ static no_inline JSShape *js_new_shape2(JSContext *ctx, JSObject *proto,
+     if (proto)
+         JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, proto));
+     sh->proto = proto;
+-    memset(sh->prop_hash_end - hash_size, 0, sizeof(sh->prop_hash_end[0]) *
++    memset(PROP_HASH_END(sh, -hash_size), 0, sizeof(uint32_t) *
+            hash_size);
+     sh->prop_hash_mask = hash_size - 1;
+     sh->prop_count = 0;
+@@ -4316,13 +4305,13 @@ static no_inline int resize_properties(JSContext *ctx, JSShape **psh,
+         list_add_tail(&sh->header.link, &ctx->rt->gc_obj_list);
+         new_hash_mask = new_hash_size - 1;
+         sh->prop_hash_mask = new_hash_mask;
+-        memset(sh->prop_hash_end - new_hash_size, 0,
+-               sizeof(sh->prop_hash_end[0]) * new_hash_size);
++        memset(PROP_HASH_END(sh, -new_hash_size), 0,
++               sizeof(uint32_t) * new_hash_size);
+         for(i = 0, pr = sh->prop; i < sh->prop_count; i++, pr++) {
+             if (pr->atom != JS_ATOM_NULL) {
+                 h = ((uintptr_t)pr->atom & new_hash_mask);
+-                pr->hash_next = sh->prop_hash_end[-h - 1];
+-                sh->prop_hash_end[-h - 1] = i + 1;
++                pr->hash_next = *PROP_HASH_END(sh, -h - 1);
++                *PROP_HASH_END(sh, -h - 1) = i + 1;
+             }
+         }
+         js_free(ctx, get_alloc_from_shape(old_sh));
+@@ -4383,8 +4372,8 @@ static int add_shape_property(JSContext *ctx, JSShape **psh,
+     /* add in hash table */
+     hash_mask = sh->prop_hash_mask;
+     h = atom & hash_mask;
+-    pr->hash_next = sh->prop_hash_end[-h - 1];
+-    sh->prop_hash_end[-h - 1] = sh->prop_count;
++    pr->hash_next = *PROP_HASH_END(sh, -h - 1);
++    *PROP_HASH_END(sh, -h - 1) = sh->prop_count;
+     return 0;
+ }
+
+@@ -4540,7 +4529,19 @@ static JSValue JS_NewObjectFromShape(JSContext *ctx, JSShape *sh, JSClassID clas
+         p->prop[0].u.value = JS_UNDEFINED;
+         break;
+     case JS_CLASS_ARGUMENTS:
+-    case JS_CLASS_UINT8C_ARRAY ... JS_CLASS_FLOAT64_ARRAY:
++    case JS_CLASS_UINT8C_ARRAY:
++    case JS_CLASS_INT8_ARRAY:
++    case JS_CLASS_UINT8_ARRAY:
++    case JS_CLASS_INT16_ARRAY:
++    case JS_CLASS_UINT16_ARRAY:
++    case JS_CLASS_INT32_ARRAY:
++    case JS_CLASS_UINT32_ARRAY:
++#ifdef CONFIG_BIGNUM
++    case JS_CLASS_BIG_INT64_ARRAY:
++    case JS_CLASS_BIG_UINT64_ARRAY:
 +#endif
-+
-+typedef struct { int dummy; } pthread_mutexattr_t;
-+typedef struct { int dummy; } pthread_condattr_t;
-+
-+typedef CRITICAL_SECTION pthread_mutex_t;
-+typedef CONDITION_VARIABLE pthread_cond_t;
-+
-+int clock_gettime(int clock, struct timespec *ts)
++    case JS_CLASS_FLOAT32_ARRAY:
++    case JS_CLASS_FLOAT64_ARRAY:
+         p->is_exotic = 1;
+         p->fast_array = 1;
+         p->u.array.u.ptr = NULL;
+@@ -4920,7 +4921,7 @@ static force_inline JSShapeProperty *find_own_property1(JSObject *p,
+     intptr_t h;
+     sh = p->shape;
+     h = (uintptr_t)atom & sh->prop_hash_mask;
+-    h = sh->prop_hash_end[-h - 1];
++    h = *PROP_HASH_END(sh, -h - 1);
+     prop = get_shape_prop(sh);
+     while (h) {
+         pr = &prop[h - 1];
+@@ -4941,7 +4942,7 @@ static force_inline JSShapeProperty *find_own_property(JSProperty **ppr,
+     intptr_t h;
+     sh = p->shape;
+     h = (uintptr_t)atom & sh->prop_hash_mask;
+-    h = sh->prop_hash_end[-h - 1];
++    h = *PROP_HASH_END(sh, -h - 1);
+     prop = get_shape_prop(sh);
+     while (h) {
+         pr = &prop[h - 1];
+@@ -6850,7 +6851,7 @@ static int JS_DefinePrivateField(JSContext *ctx, JSValueConst obj,
+         JS_ThrowTypeErrorNotASymbol(ctx);
+         goto fail;
+     }
+-    prop = js_symbol_to_atom(ctx, (JSValue)name);
++    prop = js_symbol_to_atom(ctx, JS_VALUE_UNCONST(name));
+     p = JS_VALUE_GET_OBJ(obj);
+     prs = find_own_property(&pr, p, prop);
+     if (prs) {
+@@ -6882,7 +6883,7 @@ static JSValue JS_GetPrivateField(JSContext *ctx, JSValueConst obj,
+     /* safety check */
+     if (unlikely(JS_VALUE_GET_TAG(name) != JS_TAG_SYMBOL))
+         return JS_ThrowTypeErrorNotASymbol(ctx);
+-    prop = js_symbol_to_atom(ctx, (JSValue)name);
++    prop = js_symbol_to_atom(ctx, JS_VALUE_UNCONST(name));
+     p = JS_VALUE_GET_OBJ(obj);
+     prs = find_own_property(&pr, p, prop);
+     if (!prs) {
+@@ -6909,7 +6910,7 @@ static int JS_SetPrivateField(JSContext *ctx, JSValueConst obj,
+         JS_ThrowTypeErrorNotASymbol(ctx);
+         goto fail;
+     }
+-    prop = js_symbol_to_atom(ctx, (JSValue)name);
++    prop = js_symbol_to_atom(ctx, JS_VALUE_UNCONST(name));
+     p = JS_VALUE_GET_OBJ(obj);
+     prs = find_own_property(&pr, p, prop);
+     if (!prs) {
+@@ -6999,7 +7000,7 @@ static int JS_CheckBrand(JSContext *ctx, JSValueConst obj, JSValueConst func)
+     if (unlikely(JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT))
+         goto not_obj;
+     p = JS_VALUE_GET_OBJ(obj);
+-    prs = find_own_property(&pr, p, js_symbol_to_atom(ctx, (JSValue)brand));
++    prs = find_own_property(&pr, p, js_symbol_to_atom(ctx, JS_VALUE_UNCONST(brand)));
+     if (!prs) {
+         JS_ThrowTypeError(ctx, "invalid brand on object");
+         return -1;
+@@ -7670,7 +7671,7 @@ static int delete_property(JSContext *ctx, JSObject *p, JSAtom atom)
+  redo:
+     sh = p->shape;
+     h1 = atom & sh->prop_hash_mask;
+-    h = sh->prop_hash_end[-h1 - 1];
++    h = *PROP_HASH_END(sh, -h1 - 1);
+     prop = get_shape_prop(sh);
+     lpr = NULL;
+     lpr_idx = 0;   /* prevent warning */
+@@ -7691,7 +7692,7 @@ static int delete_property(JSContext *ctx, JSObject *p, JSAtom atom)
+                 lpr = get_shape_prop(sh) + lpr_idx;
+                 lpr->hash_next = pr->hash_next;
+             } else {
+-                sh->prop_hash_end[-h1 - 1] = pr->hash_next;
++                *PROP_HASH_END(sh, -h1 - 1) = pr->hash_next;
+             }
+             /* free the entry */
+             pr1 = &p->prop[h - 1];
+@@ -9772,7 +9773,8 @@ static JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
+             } else
+ #endif
+             {
+-                double d = 1.0 / 0.0;
++                double zero = 0.0;
++                double d = 1.0 / zero;
+                 if (is_neg)
+                     d = -d;
+                 val = JS_NewFloat64(ctx, d);
+@@ -11248,7 +11250,18 @@ static __maybe_unused void JS_DumpObject(JSRuntime *rt, JSObject *p)
+             case JS_CLASS_ARGUMENTS:
+                 JS_DumpValueShort(rt, p->u.array.u.values[i]);
+                 break;
+-            case JS_CLASS_UINT8C_ARRAY ... JS_CLASS_FLOAT64_ARRAY:
++            case JS_CLASS_UINT8C_ARRAY:
++            case JS_CLASS_INT8_ARRAY:
++            case JS_CLASS_UINT8_ARRAY:
++            case JS_CLASS_INT16_ARRAY:
++            case JS_CLASS_UINT16_ARRAY:
++            case JS_CLASS_INT32_ARRAY:
++            case JS_CLASS_UINT32_ARRAY:
++#ifdef CONFIG_BIGNUM
++            case JS_CLASS_BIG_INT64_ARRAY:
++            case JS_CLASS_BIG_UINT64_ARRAY:
++#endif
++            case JS_CLASS_FLOAT32_ARRAY:
+                 {
+                     int size = 1 << typed_array_size_log2(p->class_id);
+                     const uint8_t *b = p->u.array.u.uint8_ptr + i * size;
+@@ -15438,7 +15451,7 @@ static JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
+ #else
+     sf->js_mode = 0;
+ #endif
+-    sf->cur_func = (JSValue)func_obj;
++    sf->cur_func = JS_VALUE_UNCONST(func_obj);
+     sf->arg_count = argc;
+     arg_buf = argv;
+
+@@ -15703,7 +15716,7 @@ static JSValue JS_CallInternal(JSContext *ctx, JSValueConst func_obj,
+     sf->js_mode = b->js_mode;
+     arg_buf = argv;
+     sf->arg_count = argc;
+-    sf->cur_func = (JSValue)func_obj;
++    sf->cur_func = JS_VALUE_UNCONST(func_obj);
+     init_list_head(&sf->var_ref_list);
+     var_refs = p->u.func.var_refs;
+
+@@ -19617,7 +19630,52 @@ static void free_token(JSParseState *s, JSToken *token)
+         JS_FreeValue(s->ctx, token->u.regexp.flags);
+         break;
+     case TOK_IDENT:
+-    case TOK_FIRST_KEYWORD ... TOK_LAST_KEYWORD:
++    case TOK_NULL:
++    case TOK_FALSE:
++    case TOK_TRUE:
++    case TOK_IF:
++    case TOK_ELSE:
++    case TOK_RETURN:
++    case TOK_VAR:
++    case TOK_THIS:
++    case TOK_DELETE:
++    case TOK_VOID:
++    case TOK_TYPEOF:
++    case TOK_NEW:
++    case TOK_IN:
++    case TOK_INSTANCEOF:
++    case TOK_DO:
++    case TOK_WHILE:
++    case TOK_FOR:
++    case TOK_BREAK:
++    case TOK_CONTINUE:
++    case TOK_SWITCH:
++    case TOK_CASE:
++    case TOK_DEFAULT:
++    case TOK_THROW:
++    case TOK_TRY:
++    case TOK_CATCH:
++    case TOK_FINALLY:
++    case TOK_FUNCTION:
++    case TOK_DEBUGGER:
++    case TOK_WITH:
++    case TOK_CLASS:
++    case TOK_CONST:
++    case TOK_ENUM:
++    case TOK_EXPORT:
++    case TOK_EXTENDS:
++    case TOK_IMPORT:
++    case TOK_SUPER:
++    case TOK_IMPLEMENTS:
++    case TOK_INTERFACE:
++    case TOK_LET:
++    case TOK_PACKAGE:
++    case TOK_PRIVATE:
++    case TOK_PROTECTED:
++    case TOK_PUBLIC:
++    case TOK_STATIC:
++    case TOK_YIELD:
++    case TOK_AWAIT:
+     case TOK_PRIVATE_NAME:
+         JS_FreeAtom(s->ctx, token->u.ident.atom);
+         break;
+@@ -20165,8 +20223,58 @@ static __exception int next_token(JSParseState *s)
+             }
+         }
+         goto def_token;
+-    case 'a' ... 'z':
+-    case 'A' ... 'Z':
++    case 'a':
++    case 'b':
++    case 'c':
++    case 'd':
++    case 'e':
++    case 'f':
++    case 'g':
++    case 'h':
++    case 'i':
++    case 'j':
++    case 'k':
++    case 'l':
++    case 'm':
++    case 'n':
++    case 'o':
++    case 'p':
++    case 'q':
++    case 'r':
++    case 's':
++    case 't':
++    case 'u':
++    case 'v':
++    case 'w':
++    case 'x':
++    case 'y':
++    case 'z':
++    case 'A':
++    case 'B':
++    case 'C':
++    case 'D':
++    case 'E':
++    case 'F':
++    case 'G':
++    case 'H':
++    case 'I':
++    case 'J':
++    case 'K':
++    case 'L':
++    case 'M':
++    case 'N':
++    case 'O':
++    case 'P':
++    case 'Q':
++    case 'R':
++    case 'S':
++    case 'T':
++    case 'U':
++    case 'V':
++    case 'W':
++    case 'X':
++    case 'Y':
++    case 'Z':
+     case '_':
+     case '$':
+         /* identifier */
+@@ -20295,7 +20403,15 @@ static __exception int next_token(JSParseState *s)
+             goto fail;
+         }
+         goto parse_number;
+-    case '1' ... '9':
++    case '1':
++    case '2':
++    case '3':
++    case '4':
++    case '5':
++    case '6':
++    case '7':
++    case '8':
++    case '9':
+         /* number */
+     parse_number:
+         {
+@@ -37331,8 +37447,8 @@ static int64_t JS_FlattenIntoArray(JSContext *ctx, JSValueConst target,
+         if (!JS_IsUndefined(mapperFunction)) {
+             JSValueConst args[3] = { element, JS_NewInt64(ctx, sourceIndex), source };
+             element = JS_Call(ctx, mapperFunction, thisArg, 3, args);
+-            JS_FreeValue(ctx, (JSValue)args[0]);
+-            JS_FreeValue(ctx, (JSValue)args[1]);
++            JS_FreeValue(ctx, JS_VALUE_UNCONST(args[0]));
++            JS_FreeValue(ctx, JS_VALUE_UNCONST(args[1]));
+             if (JS_IsException(element))
+                 return -1;
+         }
+@@ -38767,7 +38883,7 @@ static JSValue js_string_match(JSContext *ctx, JSValueConst this_val,
+         str = JS_NewString(ctx, "g");
+         if (JS_IsException(str))
+             goto fail;
+-        args[args_len++] = (JSValueConst)str;
++        args[args_len++] = JS_VALUE_CONST(str);
+     }
+     rx = JS_CallConstructor(ctx, ctx->regexp_ctor, args_len, args);
+     JS_FreeValue(ctx, str);
+@@ -39823,7 +39939,8 @@ static JSValue js_math_min_max(JSContext *ctx, JSValueConst this_val,
+     uint32_t tag;
+
+     if (unlikely(argc == 0)) {
+-        return __JS_NewFloat64(ctx, is_max ? -1.0 / 0.0 : 1.0 / 0.0);
++        double zero = 0.0;
++        return __JS_NewFloat64(ctx, is_max ? -1.0 / zero : 1.0 / zero);
+     }
+
+     tag = JS_VALUE_GET_TAG(argv[0]);
+@@ -39974,6 +40091,26 @@ static uint64_t xorshift64star(uint64_t *pstate)
+     return x * 0x2545F4914F6CDD1D;
+ }
+
++#ifdef _WIN32
++static int gettimeofday(struct timeval *tp, struct timezone *tzp)
 +{
 +    static const uint64_t EPOCH = (uint64_t)116444736000000000ULL;
 +
@@ -71,178 +790,160 @@ diff -wuN a/vendor/quickjs/w32_compat.c b/vendor/quickjs/w32_compat.c
 +    SystemTimeToFileTime(&system_time, &file_time);
 +    time = ((uint64_t)file_time.dwLowDateTime) + (((uint64_t)file_time.dwHighDateTime) << 32);
 +
-+    ts->tv_sec  = (long)((time - EPOCH) / 10000000L);
-+    ts->tv_nsec = (long)(system_time.wMilliseconds * 1000000);
++    tp->tv_sec  = (long)((time - EPOCH) / 10000000L);
++    tp->tv_usec = (long)(system_time.wMilliseconds * 1000);
 +
 +    return 0;
 +}
-+
-+int gettimeofday(struct timeval *tp, struct timezone *tzp)
-+{
-+    struct timespec ts;
-+    clock_gettime(0, &ts);
-+
-+    tp->tv_sec = ts.tv_sec;
-+    tp->tv_usec = ts.tv_nsec / 1000;
-+
-+    return 0;
-+}
-+
-+int pthread_mutex_init(pthread_mutex_t *m, pthread_mutexattr_t *a)
-+{
-+    (void)a;
-+
-+    InitializeCriticalSection(m);
-+    return 0;
-+}
-+
-+int pthread_mutex_destroy(pthread_mutex_t *m)
-+{
-+    DeleteCriticalSection(m);
-+    return 0;
-+}
-+
-+int pthread_mutex_lock(pthread_mutex_t *m)
-+{
-+    EnterCriticalSection(m);
-+    return 0;
-+}
-+
-+int pthread_mutex_unlock(pthread_mutex_t *m)
-+{
-+    LeaveCriticalSection(m);
-+    return 0;
-+}
-+
-+int pthread_mutex_trylock(pthread_mutex_t *m)
-+{
-+    return TryEnterCriticalSection(m) ? 0 : EBUSY;
-+}
-+
-+static unsigned long long _pthread_time_in_ms_from_timespec(const struct timespec *ts)
-+{
-+    unsigned long long t = ts->tv_sec * 1000;
-+    t += ts->tv_nsec / 1000000;
-+
-+    return t;
-+}
-+
-+static unsigned long long _pthread_time_in_ms(void)
-+{
-+    struct __timeb64 tb;
-+    _ftime64(&tb);
-+
-+    return tb.time * 1000 + tb.millitm;
-+}
-+
-+static unsigned long long _pthread_rel_time_in_ms(const struct timespec *ts)
-+{
-+    unsigned long long t1 = _pthread_time_in_ms_from_timespec(ts);
-+    unsigned long long t2 = _pthread_time_in_ms();
-+
-+    if (t1 < t2) return 1;
-+    return t1 - t2;
-+}
-+
-+int pthread_cond_init(pthread_cond_t *c, pthread_condattr_t *a)
-+{
-+    (void) a;
-+
-+    InitializeConditionVariable(c);
-+    return 0;
-+}
-+
-+int pthread_cond_destroy(pthread_cond_t *c)
-+{
-+    (void)c;
-+    return 0;
-+}
-+
-+int pthread_cond_signal(pthread_cond_t *c)
-+{
-+    WakeConditionVariable(c);
-+    return 0;
-+}
-+
-+int pthread_cond_broadcast(pthread_cond_t *c)
-+{
-+    WakeAllConditionVariable(c);
-+    return 0;
-+}
-+
-+int pthread_cond_wait(pthread_cond_t *c, pthread_mutex_t *m)
-+{
-+    SleepConditionVariableCS(c, m, INFINITE);
-+    return 0;
-+}
-+
-+int pthread_cond_timedwait(pthread_cond_t *c, pthread_mutex_t *m, struct timespec *t)
-+{
-+    unsigned long long tm = _pthread_rel_time_in_ms(t);
-+
-+    if (!SleepConditionVariableCS(c, m, tm))
-+        return ETIMEDOUT;
-+    if (!_pthread_rel_time_in_ms(t))
-+        return ETIMEDOUT;
-+
-+    return 0;
-+}
-+
-+#endif
-diff -wuN a/vendor/quickjs/w32_compat.h b/vendor/quickjs/w32_compat.h
---- a/vendor/quickjs/w32_compat.h	1970-01-01 01:00:00.000000000 +0100
-+++ b/vendor/quickjs/w32_compat.h	2019-07-12 18:51:50.608100000 +0200
-@@ -0,0 +1,53 @@
-+// Hacks for Clang support on Windows (Niels)
-+
-+#ifndef W32_COMPAT_H
-+#define W32_COMPAT_H
-+
-+#if defined(_WIN32)
-+
-+#include <inttypes.h>
-+#include <winsock.h>
-+
-+typedef intptr_t ssize_t;
-+
-+typedef struct { int dummy; } pthread_mutexattr_t;
-+typedef struct { int dummy; } pthread_condattr_t;
-+
-+typedef struct {
-+    void *DebugInfo;
-+    long LockCount;
-+    long RecursionCount;
-+    void *OwningThread;
-+    void *LockSemaphore;
-+    uintptr_t SpinCount;
-+} pthread_mutex_t;
-+
-+typedef struct {
-+    void *ptr;
-+} pthread_cond_t;
-+
-+#define CLOCK_REALTIME 0
-+// #define CLOCK_MONOTONIC 1
-+
-+#define PTHREAD_MUTEX_INITIALIZER {(void*)-1, -1, 0, 0, 0, 0}
-+#define PTHREAD_COND_INITIALIZER {0}
-+
-+int clock_gettime(int clock, struct timespec *spec);
-+int gettimeofday(struct timeval *tp, struct timezone *tzp);
-+
-+int pthread_mutex_init(pthread_mutex_t *m, pthread_mutexattr_t *a);
-+int pthread_mutex_destroy(pthread_mutex_t *m);
-+int pthread_mutex_lock(pthread_mutex_t *m);
-+int pthread_mutex_unlock(pthread_mutex_t *m);
-+int pthread_mutex_trylock(pthread_mutex_t *m);
-+
-+int pthread_cond_init(pthread_cond_t *c, pthread_condattr_t *a);
-+int pthread_cond_destroy(pthread_cond_t *c);
-+int pthread_cond_signal(pthread_cond_t *c);
-+int pthread_cond_broadcast(pthread_cond_t *c);
-+int pthread_cond_wait(pthread_cond_t *c, pthread_mutex_t *m);
-+int pthread_cond_timedwait(pthread_cond_t *c, pthread_mutex_t *m, struct timespec *t);
-+
 +#endif
 +
+ static void js_random_init(JSContext *ctx)
+ {
+     struct timeval tv;
+@@ -42542,7 +42679,7 @@ static JSValueConst js_proxy_getPrototypeOf(JSContext *ctx, JSValueConst obj)
+     }
+     /* store the prototype in the proxy so that its refcount is at least 1 */
+     set_value(ctx, &s->proto, ret);
+-    return (JSValueConst)ret;
++    return JS_VALUE_CONST(ret);
+ }
+
+ static int js_proxy_setPrototypeOf(JSContext *ctx, JSValueConst obj,
+@@ -43776,7 +43913,7 @@ static JSMapRecord *map_add_record(JSContext *ctx, JSMapState *s,
+     } else {
+         JS_DupValue(ctx, key);
+     }
+-    mr->key = (JSValue)key;
++    mr->key = JS_VALUE_UNCONST(key);
+     h = map_hash_key(ctx, key) & (s->hash_size - 1);
+     list_add_tail(&mr->hash_link, &s->hash_table[h]);
+     list_add_tail(&mr->link, &s->records);
+@@ -43998,7 +44135,7 @@ static JSValue js_map_forEach(JSContext *ctx, JSValueConst this_val,
+                 args[0] = args[1];
+             else
+                 args[0] = JS_DupValue(ctx, mr->value);
+-            args[2] = (JSValue)this_val;
++            args[2] = JS_VALUE_UNCONST(this_val);
+             ret = JS_Call(ctx, func, this_arg, 3, (JSValueConst *)args);
+             JS_FreeValue(ctx, args[0]);
+             if (!magic)
+@@ -44964,7 +45101,7 @@ static JSValue js_promise_all(JSContext *ctx, JSValueConst this_val,
+                 goto fail_reject;
+             }
+             resolve_element_data[0] = JS_NewBool(ctx, FALSE);
+-            resolve_element_data[1] = (JSValueConst)JS_NewInt32(ctx, index);
++            resolve_element_data[1] = JS_VALUE_CONST(JS_NewInt32(ctx, index));
+             resolve_element_data[2] = values;
+             resolve_element_data[3] = resolving_funcs[0];
+             resolve_element_data[4] = resolve_element_env;
+@@ -45320,7 +45457,7 @@ static JSValue js_async_from_sync_iterator_unwrap_func_create(JSContext *ctx,
+ {
+     JSValueConst func_data[1];
+
+-    func_data[0] = (JSValueConst)JS_NewBool(ctx, done);
++    func_data[0] = JS_VALUE_CONST(JS_NewBool(ctx, done));
+     return JS_NewCFunctionData(ctx, js_async_from_sync_iterator_unwrap,
+                                1, 0, 1, func_data);
+ }
+@@ -50634,8 +50771,8 @@ static int js_TA_cmp_generic(const void *a, const void *b, void *opaque) {
+             psc->exception = 1;
+         }
+     done:
+-        JS_FreeValue(ctx, (JSValue)argv[0]);
+-        JS_FreeValue(ctx, (JSValue)argv[1]);
++        JS_FreeValue(ctx, JS_VALUE_UNCONST(argv[0]));
++        JS_FreeValue(ctx, JS_VALUE_UNCONST(argv[1]));
+     }
+     return cmp;
+ }
+diff --git b/vendor/quickjs/quickjs.h a/vendor/quickjs/quickjs.h
+index 57eded89..238c11e2 100644
+--- b/vendor/quickjs/quickjs.h
++++ a/vendor/quickjs/quickjs.h
+@@ -44,6 +44,11 @@ extern "C" {
+ #define __js_printf_like(a, b)
+ #endif
+
++#ifdef _MSC_VER
++#define __attribute(x)
++#define __attribute__(x)
 +#endif
++
+ #define JS_BOOL int
+
+ typedef struct JSRuntime JSRuntime;
+@@ -102,6 +107,9 @@ typedef struct JSRefCountHeader {
+ typedef struct __JSValue *JSValue;
+ typedef const struct __JSValue *JSValueConst;
+
++#define JS_VALUE_CONST(v) ((JSValueConst)v)
++#define JS_VALUE_UNCONST(v) ((JSValue)v)
++
+ #define JS_VALUE_GET_TAG(v) (int)((uintptr_t)(v) & 0xf)
+ /* same as JS_VALUE_GET_TAG, but return JS_TAG_FLOAT64 with NaN boxing */
+ #define JS_VALUE_GET_NORM_TAG(v) JS_VALUE_GET_TAG(v)
+@@ -133,6 +141,9 @@ typedef uint64_t JSValue;
+
+ #define JSValueConst JSValue
+
++#define JS_VALUE_CONST(v) (v)
++#define JS_VALUE_UNCONST(v) (v)
++
+ #define JS_VALUE_GET_TAG(v) (int)((v) >> 32)
+ #define JS_VALUE_GET_INT(v) (int)(v)
+ #define JS_VALUE_GET_BOOL(v) (int)(v)
+@@ -207,6 +218,9 @@ typedef struct JSValue {
+
+ #define JSValueConst JSValue
+
++#define JS_VALUE_CONST(v) (v)
++#define JS_VALUE_UNCONST(v) (v)
++
+ #define JS_VALUE_GET_TAG(v) ((int32_t)(v).tag)
+ /* same as JS_VALUE_GET_TAG, but return JS_TAG_FLOAT64 with NaN boxing */
+ #define JS_VALUE_GET_NORM_TAG(v) JS_VALUE_GET_TAG(v)
+@@ -215,8 +229,26 @@ typedef struct JSValue {
+ #define JS_VALUE_GET_FLOAT64(v) ((v).u.float64)
+ #define JS_VALUE_GET_PTR(v) ((v).u.ptr)
+
++#ifdef _MSC_VER
++    static inline JSValue JS_MKVAL(int64_t tag, int32_t val)
++    {
++        JSValue value;
++        value.tag = tag;
++        value.u.int32 = val;
++        return value;
++    }
++
++    static inline JSValue JS_MKPTR(int64_t tag, void *ptr)
++    {
++        JSValue value;
++        value.tag = tag;
++        value.u.ptr = ptr;
++        return value;
++    }
++#else
+     #define JS_MKVAL(tag, val) (JSValue){ (JSValueUnion){ .int32 = val }, tag }
+     #define JS_MKPTR(tag, p) (JSValue){ (JSValueUnion){ .ptr = p }, tag }
++#endif
+
+ #define JS_TAG_IS_FLOAT64(tag) ((unsigned)(tag) == JS_TAG_FLOAT64)
+
+@@ -636,7 +668,7 @@ static inline JSValue JS_DupValue(JSContext *ctx, JSValueConst v)
+         JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
+         p->ref_count++;
+     }
+-    return (JSValue)v;
++    return JS_VALUE_UNCONST(v);
+ }
+
+ static inline JSValue JS_DupValueRT(JSRuntime *rt, JSValueConst v)
+@@ -645,7 +677,7 @@ static inline JSValue JS_DupValueRT(JSRuntime *rt, JSValueConst v)
+         JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
+         p->ref_count++;
+     }
+-    return (JSValue)v;
++    return JS_VALUE_UNCONST(v);
+ }
+
+ int JS_ToBool(JSContext *ctx, JSValueConst val); /* return -1 for JS_EXCEPTION */

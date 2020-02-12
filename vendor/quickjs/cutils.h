@@ -27,15 +27,31 @@
 
 #include <stdlib.h>
 #include <inttypes.h>
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
 
 /* set if CPU is big endian */
 #undef WORDS_BIGENDIAN
 
+#if defined(__GNUC__) || defined(__clang__)
 #define likely(x)       __builtin_expect(!!(x), 1)
 #define unlikely(x)     __builtin_expect(!!(x), 0)
 #define force_inline inline __attribute__((always_inline))
 #define no_inline __attribute__((noinline))
 #define __maybe_unused __attribute__((unused))
+#else
+#define likely(x)    (x)
+#define unlikely(x)  (x)
+#define force_inline inline
+#define no_inline
+#define __maybe_unused
+#endif
+
+#ifdef _MSC_VER
+#define __attribute(x)
+#define __attribute__(x)
+#endif
 
 #define xglue(x, y) x ## y
 #define glue(x, y) xglue(x, y)
@@ -114,38 +130,92 @@ static inline int64_t min_int64(int64_t a, int64_t b)
 /* WARNING: undefined if a = 0 */
 static inline int clz32(unsigned int a)
 {
+#ifdef _MSC_VER
+    unsigned long leading_zero;
+    if (_BitScanReverse(&leading_zero, a)) {
+        return (int)(31 - leading_zero);
+    } else {
+        return 32;
+    }
+#else
     return __builtin_clz(a);
+#endif
 }
 
 /* WARNING: undefined if a = 0 */
 static inline int clz64(uint64_t a)
 {
-    return __builtin_clzll(a);
+#if defined(_MSC_VER) && defined(_WIN64)
+    unsigned long leading_zero;
+    if (_BitScanReverse64(&leading_zero, a)) {
+        return (int)(63 - leading_zero);
+    } else {
+        return 64;
+    }
+#elif defined(_MSC_VER)
+    unsigned long leading_zero;
+    if (_BitScanReverse(&leading_zero, a >> 32)) {
+        return (int)(31 - leading_zero);
+    } else if (_BitScanReverse(&leading_zero, (uint32_t)a)) {
+        return (int)(63 - leading_zero);
+    } else {
+        return 64;
+    }
+#else
+    return __builtin_ctzll(a);
+#endif
 }
 
 /* WARNING: undefined if a = 0 */
 static inline int ctz32(unsigned int a)
 {
+#ifdef _MSC_VER
+    unsigned long trailing_zero;
+    if (_BitScanForward(&trailing_zero, a)) {
+        return (int)trailing_zero;
+    } else {
+        return 32;
+    }
+#else
     return __builtin_ctz(a);
+#endif
 }
 
 /* WARNING: undefined if a = 0 */
 static inline int ctz64(uint64_t a)
 {
+#if defined(_MSC_VER) && defined(_WIN64)
+    unsigned long trailing_zero;
+    if (_BitScanForward64(&trailing_zero, a)) {
+        return (int)trailing_zero;
+    } else {
+        return 64;
+    }
+#elif defined(_MSC_VER)
+    unsigned long trailing_zero;
+    if (_BitScanForward(&trailing_zero, (uint32_t)a)) {
+        return trailing_zero;
+    } else if (_BitScanForward(&trailing_zero, a >> 32)) {
+        return 32 + trailing_zero;
+    } else {
+        return 64;
+    }
+#else
     return __builtin_ctzll(a);
+#endif
 }
 
-struct __attribute__((packed)) packed_u64 {
+#pragma pack(push, 1)
+struct packed_u64 {
     uint64_t v;
 };
-
-struct __attribute__((packed)) packed_u32 {
+struct packed_u32 {
     uint32_t v;
 };
-
-struct __attribute__((packed)) packed_u16 {
+struct packed_u16 {
     uint16_t v;
 };
+#pragma pack(pop)
 
 static inline uint64_t get_u64(const uint8_t *tab)
 {

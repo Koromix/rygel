@@ -44,6 +44,11 @@ extern "C" {
 #define __js_printf_like(a, b)
 #endif
 
+#ifdef _MSC_VER
+#define __attribute(x)
+#define __attribute__(x)
+#endif
+
 #define JS_BOOL int
 
 typedef struct JSRuntime JSRuntime;
@@ -102,6 +107,9 @@ typedef struct JSRefCountHeader {
 typedef struct __JSValue *JSValue;
 typedef const struct __JSValue *JSValueConst;
 
+#define JS_VALUE_CONST(v) ((JSValueConst)v)
+#define JS_VALUE_UNCONST(v) ((JSValue)v)
+
 #define JS_VALUE_GET_TAG(v) (int)((uintptr_t)(v) & 0xf)
 /* same as JS_VALUE_GET_TAG, but return JS_TAG_FLOAT64 with NaN boxing */
 #define JS_VALUE_GET_NORM_TAG(v) JS_VALUE_GET_TAG(v)
@@ -132,6 +140,9 @@ static inline JS_BOOL JS_VALUE_IS_NAN(JSValue v)
 typedef uint64_t JSValue;
 
 #define JSValueConst JSValue
+
+#define JS_VALUE_CONST(v) (v)
+#define JS_VALUE_UNCONST(v) (v)
 
 #define JS_VALUE_GET_TAG(v) (int)((v) >> 32)
 #define JS_VALUE_GET_INT(v) (int)(v)
@@ -207,6 +218,9 @@ typedef struct JSValue {
 
 #define JSValueConst JSValue
 
+#define JS_VALUE_CONST(v) (v)
+#define JS_VALUE_UNCONST(v) (v)
+
 #define JS_VALUE_GET_TAG(v) ((int32_t)(v).tag)
 /* same as JS_VALUE_GET_TAG, but return JS_TAG_FLOAT64 with NaN boxing */
 #define JS_VALUE_GET_NORM_TAG(v) JS_VALUE_GET_TAG(v)
@@ -215,8 +229,26 @@ typedef struct JSValue {
 #define JS_VALUE_GET_FLOAT64(v) ((v).u.float64)
 #define JS_VALUE_GET_PTR(v) ((v).u.ptr)
 
-#define JS_MKVAL(tag, val) (JSValue){ (JSValueUnion){ .int32 = val }, tag }
-#define JS_MKPTR(tag, p) (JSValue){ (JSValueUnion){ .ptr = p }, tag }
+#ifdef _MSC_VER
+    static inline JSValue JS_MKVAL(int64_t tag, int32_t val)
+    {
+        JSValue value;
+        value.tag = tag;
+        value.u.int32 = val;
+        return value;
+    }
+
+    static inline JSValue JS_MKPTR(int64_t tag, void *ptr)
+    {
+        JSValue value;
+        value.tag = tag;
+        value.u.ptr = ptr;
+        return value;
+    }
+#else
+    #define JS_MKVAL(tag, val) (JSValue){ (JSValueUnion){ .int32 = val }, tag }
+    #define JS_MKPTR(tag, p) (JSValue){ (JSValueUnion){ .ptr = p }, tag }
+#endif
 
 #define JS_TAG_IS_FLOAT64(tag) ((unsigned)(tag) == JS_TAG_FLOAT64)
 
@@ -636,7 +668,7 @@ static inline JSValue JS_DupValue(JSContext *ctx, JSValueConst v)
         JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
         p->ref_count++;
     }
-    return (JSValue)v;
+    return JS_VALUE_UNCONST(v);
 }
 
 static inline JSValue JS_DupValueRT(JSRuntime *rt, JSValueConst v)
@@ -645,7 +677,7 @@ static inline JSValue JS_DupValueRT(JSRuntime *rt, JSValueConst v)
         JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
         p->ref_count++;
     }
-    return (JSValue)v;
+    return JS_VALUE_UNCONST(v);
 }
 
 int JS_ToBool(JSContext *ctx, JSValueConst val); /* return -1 for JS_EXCEPTION */
