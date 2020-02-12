@@ -244,7 +244,7 @@ static void DrawPartialSpline(ImDrawList *draw, const std::vector<double> &xs,
                 color_idx--;
 
                 if (colors[color_idx] != prev_color) {
-                    draw->AddPolyline(points.ptr, points.len, prev_color, false, 1.0f);
+                    draw->AddPolyline(points.ptr, (int)points.len, prev_color, false, 1.0f);
 
                     points[0] = points[points.len - 1];
                     points.RemoveFrom(1);
@@ -252,7 +252,7 @@ static void DrawPartialSpline(ImDrawList *draw, const std::vector<double> &xs,
                 prev_color = colors[color_idx];
             }
 
-            draw->AddPolyline(points.ptr, points.len, prev_color, false, 1.0f);
+            draw->AddPolyline(points.ptr, (int)points.len, prev_color, false, 1.0f);
         }
     } else if (xs.size() == 2) {
         ImVec2 points[] = {
@@ -1249,7 +1249,7 @@ static void DrawView(InterfaceState &state,
     // Render time
     if (state.settings.natural_time && state.settings.time_unit != TimeUnit::Unknown) {
         TimeUnit time_unit = state.settings.time_unit;
-        double time_zoom = state.time_zoom;
+        float time_zoom = state.time_zoom;
 
         if (time_zoom < 1.5f) {
             if (time_unit == TimeUnit::Milliseconds && time_zoom < 3.0f) {

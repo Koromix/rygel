@@ -192,7 +192,7 @@ static void ProduceStructures(const http_RequestInfo &request, const User *user,
                     Span<const char> part;
                     while (path.len) {
                         part = SplitStr(path, '|', &path);
-                        json.String(part.ptr, part.len);
+                        json.String(part.ptr, (int)part.len);
                     }
                 }
                 json.EndArray();

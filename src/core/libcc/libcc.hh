@@ -138,8 +138,8 @@ enum class Endianness {
         #define SCNu8 "hhu"
     #endif
 #elif defined(_MSC_VER)
-    #define RG_PUSH_NO_WARNINGS()
-    #define RG_POP_NO_WARNINGS()
+    #define RG_PUSH_NO_WARNINGS() __pragma(warning(push, 0))
+    #define RG_POP_NO_WARNINGS() __pragma(warning(pop))
 
     #define RG_THREAD_LOCAL thread_local
     #define RG_NORETURN __declspec(noreturn)

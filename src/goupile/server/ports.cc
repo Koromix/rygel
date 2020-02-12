@@ -106,8 +106,8 @@ public:
     bool Bool(bool b) { return HandleValue(b ? JS_TRUE : JS_FALSE); }
     bool Int(int i) { return HandleValue(JS_NewInt32(ctx, i)); }
     bool Uint(unsigned int u) { return HandleValue(JS_NewInt64(ctx, u)); }
-    bool Int64(int i) { return HandleValue(JS_NewBigInt64(ctx, i)); }
-    bool Uint64(unsigned int u) { return HandleValue(JS_NewBigUint64(ctx, u)); }
+    bool Int64(int64_t i) { return HandleValue(JS_NewBigInt64(ctx, i)); }
+    bool Uint64(uint64_t u) { return HandleValue(JS_NewBigUint64(ctx, u)); }
     bool Double(double d) { return HandleValue(JS_NewFloat64(ctx, d)); }
     bool String(const char *str, Size len, bool)
         { return HandleValue(JS_NewStringLen(ctx, str, (size_t)len)); }

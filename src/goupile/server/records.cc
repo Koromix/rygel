@@ -41,8 +41,8 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
                                    FROM records
                                    WHERE form = ? AND id = ?)", &stmt))
             return;
-        sqlite3_bind_text(stmt, 1, form_name.ptr, form_name.len, SQLITE_STATIC);
-        sqlite3_bind_text(stmt, 2, id.ptr, id.len, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 1, form_name.ptr, (int)form_name.len, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, id.ptr, (int)id.len, SQLITE_STATIC);
 
         if (!stmt.Next()) {
             if (stmt.IsValid()) {
@@ -69,7 +69,7 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
                                    WHERE form = ?
                                    ORDER BY id)", &stmt))
             return;
-        sqlite3_bind_text(stmt, 1, form_name.ptr, form_name.len, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 1, form_name.ptr, (int)form_name.len, SQLITE_STATIC);
 
         // Export data
         http_JsonPageBuilder json(request.compression_type);
@@ -153,7 +153,7 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
                                            FROM records_sequences
                                            WHERE form = ?)", &stmt))
                     return false;
-                sqlite3_bind_text(stmt, 1, form_name.ptr, form_name.len, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 1, form_name.ptr, (int)form_name.len, SQLITE_STATIC);
 
                 if (stmt.Next()) {
                     sequence = sqlite3_column_int(stmt, 0);
@@ -187,8 +187,8 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
                                            ON CONFLICT (form, key) DO UPDATE SET before = excluded.before,
                                                                                  after = excluded.after)", &stmt))
                     return false;
-                sqlite3_bind_text(stmt, 1, form_name.ptr, form_name.len, SQLITE_STATIC);
-                sqlite3_bind_text(stmt, 3, page_name.ptr, page_name.len, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 1, form_name.ptr, (int)form_name.len, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 3, page_name.ptr, (int)page_name.len, SQLITE_STATIC);
 
                 for (Size i = 0; i < record.variables.len; i++) {
                     const char *key = record.variables[i];

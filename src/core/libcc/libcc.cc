@@ -1191,7 +1191,7 @@ static Size ConvertUtf8ToWin32Wide(Span<const char> str, Span<WCHAR> out_str_w)
 {
     RG_ASSERT(out_str_w.len >= 2);
 
-    int len = MultiByteToWideChar(CP_UTF8, 0, str.ptr, str.len, out_str_w.ptr, out_str_w.len - 1);
+    int len = MultiByteToWideChar(CP_UTF8, 0, str.ptr, (int)str.len, out_str_w.ptr, (int)out_str_w.len - 1);
     if (!len) {
         switch (GetLastError()) {
             case ERROR_INSUFFICIENT_BUFFER: { LogError("Path '%1' is too large", str); } break;
@@ -1211,7 +1211,7 @@ static Size ConvertWin32WideToUtf8(LPCWSTR str_w, Span<char> out_str)
 {
     RG_ASSERT(out_str.len >= 1);
 
-    int len = WideCharToMultiByte(CP_UTF8, 0, str_w, -1, out_str.ptr, out_str.len, nullptr, nullptr);
+    int len = WideCharToMultiByte(CP_UTF8, 0, str_w, -1, out_str.ptr, (int)out_str.len, nullptr, nullptr);
     if (!len) {
         // This function is mainly used for strings returned by Win32, errors should
         // be rare so there is no need for fancy messages.
@@ -2322,7 +2322,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
         write_ov.hEvent = events[0];
 
         if (in_buf.len) {
-            if (::WriteFile(in_pipe[1], in_buf.ptr, in_buf.len, &write_len, &write_ov)) {
+            if (::WriteFile(in_pipe[1], in_buf.ptr, (DWORD)in_buf.len, &write_len, &write_ov)) {
                 SetEvent(events[0]);
             } else if (GetLastError() == ERROR_IO_PENDING) {
                 // Go on!
@@ -2874,7 +2874,7 @@ void AsyncPool::AddTask(Async *async, const std::function<bool()> &func)
             TaskQueue *queue = &queues[next_queue_idx];
 
             if (--next_queue_idx < 0) {
-                next_queue_idx = workers_state.len - 1;
+                next_queue_idx = (int)workers_state.len - 1;
             }
 
             std::unique_lock<std::mutex> lock_queue(queue->queue_mutex, std::try_to_lock);
