@@ -30,7 +30,11 @@ build this tool. You can use the build scripts in build/felix to bootstrap it:
 This will create a felix binary at the root of the source tree. You can then start
 it to build all projects defined in *FelixBuild.ini*.
 
-Use `felix --help` for other options.
+The following compilers are supported: GCC, Clang and MSVC (on Windows). If you
+want to build Fast or Release builds you also need to install Node.js in order to
+transpile the JS code used in some projects.
+
+Use `felix build --help` for more information.
 
 As of now, R packages cannot be built using this method.
 
