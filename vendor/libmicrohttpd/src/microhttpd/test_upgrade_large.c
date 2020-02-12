@@ -149,6 +149,8 @@ gnutlscli_connect (int *sock,
   }
   _exit (1);
 }
+
+
 #endif /* HTTPS_SUPPORT && HAVE_FORK && HAVE_WAITPID */
 
 
@@ -306,13 +308,13 @@ wr_connect (struct wr_socket *s,
      * it require processing on MHD side and
      * when testing with "external" polling,
      * test will call MHD processing only
-     * after return from wr_connect(). */
-    s->tls_connected = 0;
+     * after return from wr_connect(). */s->tls_connected = 0;
     return 0;
   }
 #endif /* HTTPS_SUPPORT */
   return -1;
 }
+
 
 #ifdef HTTPS_SUPPORT
 /* Only to be called from wr_send() and wr_recv() ! */
@@ -328,6 +330,8 @@ wr_handshake (struct wr_socket *s)
     MHD_socket_set_error_ (MHD_SCKT_ECONNABORTED_); /* hard error */
   return s->tls_connected;
 }
+
+
 #endif /* HTTPS_SUPPORT */
 
 
@@ -958,6 +962,7 @@ run_mhd_select_loop (struct MHD_Daemon *daemon)
   kicker[1] = -1;
 }
 
+
 #ifdef HAVE_POLL
 
 /**
@@ -971,6 +976,8 @@ run_mhd_poll_loop (struct MHD_Daemon *daemon)
   (void) daemon; /* Unused. Silent compiler warning. */
   abort (); /* currently not implementable with existing MHD API */
 }
+
+
 #endif /* HAVE_POLL */
 
 
@@ -1026,6 +1033,8 @@ run_mhd_epoll_loop (struct MHD_Daemon *daemon)
   kicker[0] = -1;
   kicker[1] = -1;
 }
+
+
 #endif /* EPOLL_SUPPORT */
 
 /**
@@ -1121,7 +1130,7 @@ test_upgrade (int flags,
   if ( (NULL == dinfo) ||
        (0 == dinfo->port) )
     abort ();
-  if (! test_tls ||(TLS_LIB_GNUTLS == use_tls_tool))
+  if (! test_tls || (TLS_LIB_GNUTLS == use_tls_tool))
   {
     sock = test_tls ? wr_create_tls_sckt () : wr_create_plain_sckt ();
     if (NULL == sock)
@@ -1179,7 +1188,7 @@ test_upgrade (int flags,
   pthread_join (pt,
                 NULL);
 #if defined(HTTPS_SUPPORT) && defined(HAVE_FORK) && defined(HAVE_WAITPID)
-  if (test_tls &&(TLS_LIB_GNUTLS != use_tls_tool))
+  if (test_tls && (TLS_LIB_GNUTLS != use_tls_tool))
     waitpid (pid, NULL, 0);
 #endif /* HTTPS_SUPPORT && HAVE_FORK && HAVE_WAITPID */
   MHD_stop_daemon (d);

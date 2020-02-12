@@ -65,6 +65,7 @@ copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
   return size * nmemb;
 }
 
+
 static int
 kv_cb (void *cls, enum MHD_ValueKind kind, const char *key, const char *value)
 {
@@ -77,6 +78,7 @@ kv_cb (void *cls, enum MHD_ValueKind kind, const char *key, const char *value)
   }
   return MHD_YES;
 }
+
 
 static int
 ahc_echo (void *cls,
@@ -179,7 +181,7 @@ testInternalGet ()
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -219,6 +221,7 @@ testInternalGet ()
   return 0;
 }
 
+
 static int
 testMultithreadedGet ()
 {
@@ -250,7 +253,7 @@ testMultithreadedGet ()
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -289,6 +292,7 @@ testMultithreadedGet ()
     return 128;
   return 0;
 }
+
 
 static int
 testMultithreadedPoolGet ()
@@ -321,7 +325,7 @@ testMultithreadedPoolGet ()
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -360,6 +364,7 @@ testMultithreadedPoolGet ()
     return 128;
   return 0;
 }
+
 
 static int
 testExternalGet ()
@@ -406,7 +411,7 @@ testExternalGet ()
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -479,9 +484,10 @@ testExternalGet ()
       if (EINTR != errno)
         abort ();
 #else
-      if ((WSAEINVAL != WSAGetLastError ()) ||(0 != rs.fd_count) ||(0 !=
-                                                                    ws.fd_count)
-          ||(0 != es.fd_count) )
+      if ((WSAEINVAL != WSAGetLastError ()) || (0 != rs.fd_count) || (0 !=
+                                                                      ws.
+                                                                      fd_count)
+          || (0 != es.fd_count) )
         abort ();
       Sleep (1000);
 #endif
@@ -523,14 +529,13 @@ testExternalGet ()
 }
 
 
-
 int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
   (void) argc;   /* Unused. Silent compiler warning. */
 
-  if ((NULL == argv)||(0 == argv[0]))
+  if ((NULL == argv) || (0 == argv[0]))
     return 99;
   oneone = has_in_name (argv[0], "11");
   if (MHD_YES == MHD_is_feature_supported (MHD_FEATURE_THREADS))

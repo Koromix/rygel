@@ -57,9 +57,7 @@ callback (void *cls,
       // Consider suspending connection until data will be ready.
       return 0;
     }
-   * End of pseudo code. */
-
-  if (buf_size < (param->response_size - pos))
+   * End of pseudo code. */if (buf_size < (param->response_size - pos))
     size_to_copy = buf_size;
   else
     size_to_copy = param->response_size - pos;
@@ -72,10 +70,7 @@ callback (void *cls,
       // Close connection with error.
       return MHD_CONTENT_READER_END_WITH_ERROR;
     }
-   * End of pseudo code. */
-
-  /* Return amount of data copied to buffer. */
-  return size_to_copy;
+   * End of pseudo code. *//* Return amount of data copied to buffer. */return size_to_copy;
 }
 
 

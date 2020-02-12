@@ -100,6 +100,7 @@ compress_buf (z_stream *strm, const void *src, size_t src_size, size_t *offset,
   return (Z_OK == ret) ? MHD_YES : MHD_NO;
 }
 
+
 static ssize_t
 read_cb (void *cls, uint64_t pos, char *mem, size_t size)
 {
@@ -139,6 +140,7 @@ done:
   return ret;
 }
 
+
 static void
 free_cb (void *cls)
 {
@@ -148,6 +150,7 @@ free_cb (void *cls)
   free (holder->buf);
   free (holder);
 }
+
 
 static int
 ahc_echo (void *cls, struct MHD_Connection *con, const char *url, const
@@ -206,6 +209,7 @@ file_error:
   free (holder);
   return MHD_NO;
 }
+
 
 int
 main (int argc, char *const *argv)

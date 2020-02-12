@@ -87,8 +87,9 @@ MHD_connection_finish_forward_ (struct MHD_Connection *connection)
    * used with MHD_UPGRADE_ACTION_CLOSE. They will be
    * closed by MHD_cleanup_upgraded_connection_() during
    * connection's final cleanup.
-   */
-}
+   */}
+
+
 #endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT*/
 
 /* end of connection_finish_forward.c */

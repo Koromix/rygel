@@ -37,6 +37,7 @@ data_generator (void *cls, uint64_t pos, char *buf, size_t max)
   return 80;
 }
 
+
 static int
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
@@ -70,6 +71,7 @@ ahc_echo (void *cls,
   MHD_destroy_response (response);
   return ret;
 }
+
 
 int
 main (int argc, char *const *argv)

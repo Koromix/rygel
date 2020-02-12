@@ -87,6 +87,7 @@ MHD_DLOG (const struct MHD_Daemon *daemon,
           enum MHD_StatusCode sc,
           const char *format,
           ...);
+
 #endif
 
 
@@ -145,7 +146,6 @@ extern void *mhd_panic_cls;
  */
 #define MHD_STATICSTR_LEN_(macro) (sizeof(macro) / sizeof(char) - 1)
 #endif /* ! MHD_STATICSTR_LEN_ */
-
 
 
 /**
@@ -1692,7 +1692,6 @@ struct MHD_Response
 };
 
 
-
 /**
  * Callback invoked when iterating over @a key / @a value
  * argument pairs during parsing.
@@ -1731,7 +1730,6 @@ MHD_parse_arguments_ (struct MHD_Request *request,
                       char *args,
                       MHD_ArgumentIterator_ cb,
                       unsigned int *num_headers);
-
 
 
 /**
@@ -1775,7 +1773,6 @@ MHD_parse_arguments_ (struct MHD_Request *request,
       (element)->next->prev = (element)->prev; \
     (element)->next = NULL; \
     (element)->prev = NULL; } while (0)
-
 
 
 /**
@@ -1860,7 +1857,6 @@ MHD_parse_arguments_ (struct MHD_Request *request,
     (element)->prevE = NULL; } while (0)
 
 
-
 /**
  * Error code similar to EGAIN or EINTR
  */
@@ -1891,8 +1887,6 @@ MHD_parse_arguments_ (struct MHD_Request *request,
  * Error code similar to EINVAL
  */
 #define MHD_ERR_INVAL_ (-3078)
-
-
 
 
 #endif

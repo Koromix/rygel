@@ -62,6 +62,7 @@ putBuffer (void *stream, size_t size, size_t nmemb, void *ptr)
   return wrt;
 }
 
+
 static size_t
 copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
 {
@@ -73,6 +74,7 @@ copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
   cbc->pos += size * nmemb;
   return size * nmemb;
 }
+
 
 static int
 ahc_echo (void *cls,
@@ -171,6 +173,7 @@ testInternalPut ()
   MHD_stop_daemon (d);
   return 0;
 }
+
 
 static int
 testMultithreadedPut ()
@@ -353,7 +356,6 @@ testExternalPut ()
   MHD_stop_daemon (d);
   return 0;
 }
-
 
 
 int

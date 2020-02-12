@@ -541,6 +541,7 @@ free_callback (void *cls)
   response->fd = -1;
 }
 
+
 #undef MHD_create_response_from_fd_at_offset
 
 /**
@@ -1195,6 +1196,8 @@ MHD_create_response_for_upgrade (MHD_UpgradeHandler upgrade_handler,
   }
   return response;
 }
+
+
 #endif /* UPGRADE_SUPPORT */
 
 

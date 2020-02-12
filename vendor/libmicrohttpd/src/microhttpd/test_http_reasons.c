@@ -28,7 +28,8 @@
 #include "microhttpd.h"
 #include "mhd_str.h"
 
-static int expect_result (int code, const char*expected)
+static int
+expect_result (int code, const char*expected)
 {
   const char*const reason = MHD_get_reason_phrase_for (code);
   if (MHD_str_equal_caseless_ (reason, expected))
@@ -39,12 +40,16 @@ static int expect_result (int code, const char*expected)
   return 1;
 }
 
-static int expect_absent (int code)
+
+static int
+expect_absent (int code)
 {
   return expect_result (code, "unknown");
 }
 
-static int test_absent_codes (void)
+
+static int
+test_absent_codes (void)
 {
   int errcount = 0;
   errcount += expect_absent (0);
@@ -58,7 +63,9 @@ static int test_absent_codes (void)
   return errcount;
 }
 
-static int test_1xx (void)
+
+static int
+test_1xx (void)
 {
   int errcount = 0;
   errcount += expect_result (MHD_HTTP_CONTINUE, "continue");
@@ -68,7 +75,9 @@ static int test_1xx (void)
   return errcount;
 }
 
-static int test_2xx (void)
+
+static int
+test_2xx (void)
 {
   int errcount = 0;
   errcount += expect_result (MHD_HTTP_OK, "ok");
@@ -80,7 +89,9 @@ static int test_2xx (void)
   return errcount;
 }
 
-static int test_3xx (void)
+
+static int
+test_3xx (void)
 {
   int errcount = 0;
   errcount += expect_result (MHD_HTTP_MULTIPLE_CHOICES, "multiple choices");
@@ -91,7 +102,9 @@ static int test_3xx (void)
   return errcount;
 }
 
-static int test_4xx (void)
+
+static int
+test_4xx (void)
 {
   int errcount = 0;
   errcount += expect_result (MHD_HTTP_BAD_REQUEST, "bad request");
@@ -108,7 +121,9 @@ static int test_4xx (void)
   return errcount;
 }
 
-static int test_5xx (void)
+
+static int
+test_5xx (void)
 {
   int errcount = 0;
   errcount += expect_result (MHD_HTTP_INTERNAL_SERVER_ERROR,
@@ -123,7 +138,9 @@ static int test_5xx (void)
   return errcount;
 }
 
-int main (int argc, char *argv[])
+
+int
+main (int argc, char *argv[])
 {
   int errcount = 0;
   (void) argc; (void) argv; /* Unused. Silent compiler warning. */

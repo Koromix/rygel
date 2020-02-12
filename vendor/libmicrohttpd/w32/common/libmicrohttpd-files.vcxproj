@@ -18,6 +18,7 @@
     <ClCompile Include="$(MhdSrc)microhttpd\sysfdsetsize.c" />
     <ClCompile Include="$(MhdSrc)microhttpd\mhd_str.c" />
     <ClCompile Include="$(MhdSrc)microhttpd\mhd_threads.c" />
+    <ClCompile Include="$(MhdSrc)microhttpd\mhd_send.c" />
     <ClCompile Include="$(MhdSrc)microhttpd\mhd_sockets.c" />
     <ClCompile Include="$(MhdSrc)microhttpd\mhd_itc.c" />
     <ClCompile Include="$(MhdSrc)microhttpd\mhd_compat.c" />
@@ -44,6 +45,7 @@
     <ClInclude Include="$(MhdSrc)microhttpd\mhd_str.h" />
     <ClInclude Include="$(MhdSrc)microhttpd\mhd_threads.h" />
     <ClInclude Include="$(MhdSrc)microhttpd\mhd_locks.h" />
+    <ClInclude Include="$(MhdSrc)microhttpd\mhd_send.h" />
     <ClInclude Include="$(MhdSrc)microhttpd\mhd_sockets.h" />
     <ClInclude Include="$(MhdSrc)microhttpd\mhd_itc.h" />
     <ClInclude Include="$(MhdSrc)microhttpd\mhd_itc_types.h" />

@@ -256,4 +256,5 @@ MHD_response_get_header (struct MHD_Response *response,
   return NULL;
 }
 
+
 /* end of response.c */

@@ -53,6 +53,7 @@ apc_all (void *cls, const struct sockaddr *addr, socklen_t addrlen)
   return MHD_YES;
 }
 
+
 struct CBC
 {
   char *buf;
@@ -66,6 +67,7 @@ copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
   (void) ptr; (void) ctx;  /* Unused. Silent compiler warning. */
   return size * nmemb;
 }
+
 
 static int
 ahc_echo (void *cls,
@@ -130,7 +132,7 @@ testLongUrlGet (size_t buff_size)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -223,7 +225,7 @@ testLongHeaderGet (size_t buff_size)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -283,13 +285,14 @@ testLongHeaderGet (size_t buff_size)
   return 0;
 }
 
+
 int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
   (void) argc;   /* Unused. Silent compiler warning. */
 
-  if ((NULL == argv)||(0 == argv[0]))
+  if ((NULL == argv) || (0 == argv[0]))
     return 99;
   oneone = has_in_name (argv[0], "11");
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))

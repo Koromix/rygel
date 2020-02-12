@@ -149,4 +149,5 @@ main (int argc, char *const *argv)
   return 0;
 }
 
+
 /* end of digest_auth_example.c */

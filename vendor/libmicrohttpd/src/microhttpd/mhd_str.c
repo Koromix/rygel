@@ -63,6 +63,8 @@ isasciilower (char c)
 {
   return (c >= 'a') && (c <= 'z');
 }
+
+
 #endif /* Disable unused functions. */
 
 
@@ -91,6 +93,8 @@ isasciialpha (char c)
 {
   return isasciilower (c) || isasciiupper (c);
 }
+
+
 #endif /* Disable unused functions. */
 
 
@@ -105,6 +109,7 @@ isasciidigit (char c)
 {
   return (c >= '0') && (c <= '9');
 }
+
 
 #if 0 /* Disable unused functions. */
 /**
@@ -133,6 +138,8 @@ isasciialnum (char c)
 {
   return isasciialpha (c) || isasciidigit (c);
 }
+
+
 #endif /* Disable unused functions. */
 
 
@@ -167,6 +174,8 @@ toasciiupper (char c)
 {
   return isasciilower (c) ? (c - 'a' + 'A') : c;
 }
+
+
 #endif /* Disable unused functions. */
 
 
@@ -185,6 +194,8 @@ todigitvalue (char c)
 
   return -1;
 }
+
+
 #endif /* MHD_FAVOR_SMALL_CODE */
 
 
@@ -206,6 +217,8 @@ toxdigitvalue (char c)
 
   return -1;
 }
+
+
 #else  /* !INLINE_FUNC */
 
 
@@ -345,6 +358,8 @@ MHD_str_equal_caseless_ (const char *str1,
   }
   return 0 == (*str2);
 }
+
+
 #endif /* ! MHD_FAVOR_SMALL_CODE */
 
 
@@ -408,7 +423,6 @@ MHD_str_equal_caseless_bin_n_ (const char *const str1,
 }
 
 
-
 /**
  * Check whether @a str has case-insensitive @a token.
  * Token could be surrounded by spaces and tabs and delimited by comma.
@@ -456,7 +470,7 @@ MHD_str_has_token_caseless_ (const char *str,
         while (' ' == *str || '\t' == *str)
           str++;
         /* End of (sub)string? */
-        if ((0 == *str) ||(',' == *str) )
+        if ((0 == *str) || (',' == *str) )
           return true;
         /* Unmatched chars at end of substring. */
         break;
@@ -468,6 +482,7 @@ MHD_str_has_token_caseless_ (const char *str,
   }
   return false;
 }
+
 
 #ifndef MHD_FAVOR_SMALL_CODE
 /* Use individual function for each case */
@@ -583,8 +598,8 @@ MHD_strx_to_uint32_ (const char *str,
   while (digit >= 0)
   {
     if ( (res < (UINT32_MAX / 16)) ||
-         ((res == (UINT32_MAX / 16)) &&( (uint32_t) digit <= (UINT32_MAX
-                                                              % 16)) ) )
+         ((res == (UINT32_MAX / 16)) && ( (uint32_t) digit <= (UINT32_MAX
+                                                               % 16)) ) )
     {
       res *= 16;
       res += digit;
@@ -630,8 +645,8 @@ MHD_strx_to_uint32_n_ (const char *str,
   while (i < maxlen && (digit = toxdigitvalue (str[i])) >= 0)
   {
     if ( (res > (UINT32_MAX / 16)) ||
-         ((res == (UINT32_MAX / 16)) &&( (uint32_t) digit > (UINT32_MAX
-                                                             % 16)) ) )
+         ((res == (UINT32_MAX / 16)) && ( (uint32_t) digit > (UINT32_MAX
+                                                              % 16)) ) )
       return 0;
 
     res *= 16;
@@ -670,8 +685,8 @@ MHD_strx_to_uint64_ (const char *str,
   while (digit >= 0)
   {
     if ( (res < (UINT64_MAX / 16)) ||
-         ((res == (UINT64_MAX / 16)) &&( (uint64_t) digit <= (UINT64_MAX
-                                                              % 16)) ) )
+         ((res == (UINT64_MAX / 16)) && ( (uint64_t) digit <= (UINT64_MAX
+                                                               % 16)) ) )
     {
       res *= 16;
       res += digit;
@@ -717,8 +732,8 @@ MHD_strx_to_uint64_n_ (const char *str,
   while (i < maxlen && (digit = toxdigitvalue (str[i])) >= 0)
   {
     if ( (res > (UINT64_MAX / 16)) ||
-         ((res == (UINT64_MAX / 16)) &&( (uint64_t) digit > (UINT64_MAX
-                                                             % 16)) ) )
+         ((res == (UINT64_MAX / 16)) && ( (uint64_t) digit > (UINT64_MAX
+                                                              % 16)) ) )
       return 0;
 
     res *= 16;
@@ -730,6 +745,7 @@ MHD_strx_to_uint64_n_ (const char *str,
     *out_val = res;
   return i;
 }
+
 
 #else  /* MHD_FAVOR_SMALL_CODE */
 
@@ -767,8 +783,8 @@ MHD_str_to_uvalue_n_ (const char *str,
   int (*const dfunc)(char) = (base == 16) ?
                              toxdigitvalue : todigitvalue;
 
-  if ( ! str || ! out_val ||
-       ((base != 16)&&(base != 10)) )
+  if (! str || ! out_val ||
+      ((base != 16) && (base != 10)) )
     return 0;
 
   res = 0;
@@ -776,7 +792,7 @@ MHD_str_to_uvalue_n_ (const char *str,
   while (maxlen > i && 0 <= (digit = dfunc (str[i])))
   {
     if ( ((max_v_div_b) < res) ||
-         (( (max_v_div_b) == res) &&( (max_v_mod_b) < (uint64_t) digit) ) )
+         (( (max_v_div_b) == res) && ( (max_v_mod_b) < (uint64_t) digit) ) )
       return 0;
 
     res *= base;
@@ -795,4 +811,6 @@ MHD_str_to_uvalue_n_ (const char *str,
   }
   return i;
 }
+
+
 #endif /* MHD_FAVOR_SMALL_CODE */

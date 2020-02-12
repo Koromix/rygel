@@ -38,7 +38,6 @@ extern const char srv_signed_cert_pem[];
 extern const char srv_signed_key_pem[];
 
 
-
 /* perform a HTTP GET request via SSL/TLS */
 static int
 test_secure_get (void *cls, char *cipher_suite, int proto_version)
@@ -70,7 +69,7 @@ test_secure_get (void *cls, char *cipher_suite, int proto_version)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return -1;
     }

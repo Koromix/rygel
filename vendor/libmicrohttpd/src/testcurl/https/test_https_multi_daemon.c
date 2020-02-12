@@ -78,7 +78,7 @@ test_concurent_daemon_pair (void *cls,
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d1, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d1); return -1;
     }
@@ -103,7 +103,7 @@ test_concurent_daemon_pair (void *cls,
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d2, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d1);
       MHD_stop_daemon (d2);

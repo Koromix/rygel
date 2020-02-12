@@ -59,6 +59,7 @@ can_compress (struct MHD_Connection *con)
   return MHD_NO;
 }
 
+
 static int
 body_compress (void **buf,
                size_t *buf_size)
@@ -87,6 +88,7 @@ body_compress (void **buf,
   *buf_size = (size_t) cbuf_size;
   return MHD_YES;
 }
+
 
 static int
 ahc_echo (void *cls,
@@ -155,6 +157,7 @@ ahc_echo (void *cls,
   MHD_destroy_response (response);
   return ret;
 }
+
 
 int
 main (int argc, char *const *argv)

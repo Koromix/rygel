@@ -95,6 +95,7 @@ thread_watchdog (void *param)
   return NULL;
 }
 
+
 pthread_t watchdog_tid;
 
 static void
@@ -110,6 +111,7 @@ start_watchdog (int timeout, const char *obj_name)
   }
 }
 
+
 static void
 stop_watchdog (void)
 {
@@ -120,6 +122,7 @@ stop_watchdog (void)
     _exit (99);
   }
 }
+
 
 static size_t
 copyBuffer (void *ptr,
@@ -163,6 +166,7 @@ ahc_echo (void *cls,
   return ret;
 }
 
+
 static void *
 thread_gets (void *param)
 {
@@ -204,6 +208,7 @@ thread_gets (void *param)
   return NULL;
 }
 
+
 static void *
 do_gets (void *param)
 {
@@ -239,7 +244,8 @@ do_gets (void *param)
 }
 
 
-pthread_t start_gets (int port)
+pthread_t
+start_gets (int port)
 {
   pthread_t tid;
   continue_requesting = 1;
@@ -272,7 +278,7 @@ testMultithreadedGet (int port,
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -309,7 +315,7 @@ testMultithreadedPoolGet (int port,
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -342,7 +348,7 @@ main (int argc, char *const *argv)
   /* Do reuse connection, otherwise all available local ports may exhausted. */
   oneone = 1;
 
-  if ((0 != port)&& oneone)
+  if ((0 != port) && oneone)
     port += 5;
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 2;

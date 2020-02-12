@@ -52,6 +52,7 @@ check_PROGRAMS = \
   test_get \
   test_get_sendfile \
   test_delete \
+  test_patch \
   test_put \
   test_process_headers \
   test_process_arguments \
@@ -59,6 +60,7 @@ check_PROGRAMS = \
   test_large_put \
   test_get11 \
   test_get_sendfile11 \
+  test_patch11 \
   test_put11 \
   test_large_put11 \
   test_large_put_inc11 \
@@ -241,6 +243,18 @@ test_post_loop_LDADD = \
 test_delete_SOURCES = \
   test_delete.c mhd_has_in_name.h
 test_delete_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  @LIBCURL@
+
+test_patch_SOURCES = \
+  test_patch.c mhd_has_in_name.h
+test_patch_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  @LIBCURL@
+
+test_patch11_SOURCES = \
+  test_patch.c mhd_has_in_name.h
+test_patch11_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBCURL@
 

@@ -86,6 +86,7 @@ alloc_init (size_t buf_size)
   return buf;
 }
 
+
 static size_t
 putBuffer (void *stream, size_t size, size_t nmemb, void *ptr)
 {
@@ -103,6 +104,7 @@ putBuffer (void *stream, size_t size, size_t nmemb, void *ptr)
   return wrt;
 }
 
+
 static size_t
 copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
 {
@@ -114,6 +116,7 @@ copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
   cbc->pos += size * nmemb;
   return size * nmemb;
 }
+
 
 static int
 ahc_echo (void *cls,
@@ -213,7 +216,7 @@ testPutInternalThread (unsigned int add_flag)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -257,6 +260,7 @@ testPutInternalThread (unsigned int add_flag)
   return 0;
 }
 
+
 static int
 testPutThreadPerConn (unsigned int add_flag)
 {
@@ -297,7 +301,7 @@ testPutThreadPerConn (unsigned int add_flag)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -343,6 +347,7 @@ testPutThreadPerConn (unsigned int add_flag)
     return 128;
   return 0;
 }
+
 
 static int
 testPutThreadPool (unsigned int add_flag)
@@ -384,7 +389,7 @@ testPutThreadPool (unsigned int add_flag)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -430,6 +435,7 @@ testPutThreadPool (unsigned int add_flag)
     return 128;
   return 0;
 }
+
 
 static int
 testPutExternal (void)
@@ -484,7 +490,7 @@ testPutExternal (void)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -561,9 +567,10 @@ testPutExternal (void)
       if (EINTR != errno)
         abort ();
 #else
-      if ((WSAEINVAL != WSAGetLastError ()) ||(0 != rs.fd_count) ||(0 !=
-                                                                    ws.fd_count)
-          ||(0 != es.fd_count) )
+      if ((WSAEINVAL != WSAGetLastError ()) || (0 != rs.fd_count) || (0 !=
+                                                                      ws.
+                                                                      fd_count)
+          || (0 != es.fd_count) )
         abort ();
       Sleep (1000);
 #endif
@@ -608,7 +615,6 @@ testPutExternal (void)
 }
 
 
-
 int
 main (int argc, char *const *argv)
 {
@@ -624,40 +630,40 @@ main (int argc, char *const *argv)
   if (NULL == put_buffer)
     return 99;
   lastErr = testPutExternal ();
-  if (verbose &&(0 != lastErr))
+  if (verbose && (0 != lastErr))
     fprintf (stderr, "Error during testing with external select().\n");
   errorCount += lastErr;
   if (MHD_YES == MHD_is_feature_supported (MHD_FEATURE_THREADS))
   {
     lastErr = testPutInternalThread (0);
-    if (verbose &&(0 != lastErr) )
+    if (verbose && (0 != lastErr) )
       fprintf (stderr,
                "Error during testing with internal thread with select().\n");
     errorCount += lastErr;
     lastErr = testPutThreadPerConn (0);
-    if (verbose &&(0 != lastErr) )
+    if (verbose && (0 != lastErr) )
       fprintf (stderr,
                "Error during testing with internal thread per connection with select().\n");
     errorCount += lastErr;
     lastErr = testPutThreadPool (0);
-    if (verbose &&(0 != lastErr) )
+    if (verbose && (0 != lastErr) )
       fprintf (stderr,
                "Error during testing with thread pool per connection with select().\n");
     errorCount += lastErr;
     if (MHD_is_feature_supported (MHD_FEATURE_POLL))
     {
       lastErr = testPutInternalThread (MHD_USE_POLL);
-      if (verbose &&(0 != lastErr) )
+      if (verbose && (0 != lastErr) )
         fprintf (stderr,
                  "Error during testing with internal thread with poll().\n");
       errorCount += lastErr;
       lastErr = testPutThreadPerConn (MHD_USE_POLL);
-      if (verbose &&(0 != lastErr) )
+      if (verbose && (0 != lastErr) )
         fprintf (stderr,
                  "Error during testing with internal thread per connection with poll().\n");
       errorCount += lastErr;
       lastErr = testPutThreadPool (MHD_USE_POLL);
-      if (verbose &&(0 != lastErr) )
+      if (verbose && (0 != lastErr) )
         fprintf (stderr,
                  "Error during testing with thread pool per connection with poll().\n");
       errorCount += lastErr;
@@ -665,12 +671,12 @@ main (int argc, char *const *argv)
     if (MHD_is_feature_supported (MHD_FEATURE_EPOLL))
     {
       lastErr = testPutInternalThread (MHD_USE_EPOLL);
-      if (verbose &&(0 != lastErr) )
+      if (verbose && (0 != lastErr) )
         fprintf (stderr,
                  "Error during testing with internal thread with epoll.\n");
       errorCount += lastErr;
       lastErr = testPutThreadPool (MHD_USE_EPOLL);
-      if (verbose &&(0 != lastErr) )
+      if (verbose && (0 != lastErr) )
         fprintf (stderr,
                  "Error during testing with thread pool per connection with epoll.\n");
       errorCount += lastErr;

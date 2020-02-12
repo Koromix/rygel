@@ -1,6 +1,6 @@
 /*
      This file is part of libmicrohttpd
-     Copyright (C) 2007,2013 Christian Grothoff
+     Copyright (C) 2007,2013,2019 Christian Grothoff
 
      libmicrohttpd is free software; you can redistribute it and/or modify
      it under the terms of the GNU General Public License as published
@@ -17,13 +17,11 @@
      Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
      Boston, MA 02110-1301, USA.
 */
-
 /**
  * @file test_postprocessor.c
  * @brief  Testcase for postprocessor
  * @author Christian Grothoff
  */
-
 #include "platform.h"
 #include "microhttpd.h"
 #include "internal.h"
@@ -42,8 +40,18 @@
  * five NULL-entries.
  */
 const char *want[] = {
+#define URL_NOVALUE1_DATA "abc&x=5"
+#define URL_NOVALUE1_START 0
+  "abc", NULL, NULL, NULL, NULL,
+  "x", NULL, NULL, NULL, "5",
+#define URL_NOVALUE1_END (URL_NOVALUE1_START + 10)
+#define URL_NOVALUE2_DATA "abc=&x=5"
+#define URL_NOVALUE2_START URL_NOVALUE1_END
+  "abc", NULL, NULL, NULL, "",
+  "x", NULL, NULL, NULL, "5",
+#define URL_NOVALUE2_END (URL_NOVALUE2_START + 10)
 #define URL_DATA "abc=def&x=5"
-#define URL_START 0
+#define URL_START URL_NOVALUE2_END
   "abc", NULL, NULL, NULL, "def",
   "x", NULL, NULL, NULL, "5",
 #define URL_END (URL_START + 10)
@@ -72,6 +80,7 @@ const char *want[] = {
   NULL, NULL, NULL, NULL, NULL
 };
 
+
 static int
 mismatch (const char *a, const char *b)
 {
@@ -82,6 +91,7 @@ mismatch (const char *a, const char *b)
   return 0 != strcmp (a, b);
 }
 
+
 static int
 value_checker (void *cls,
                enum MHD_ValueKind kind,
@@ -89,47 +99,79 @@ value_checker (void *cls,
                const char *filename,
                const char *content_type,
                const char *transfer_encoding,
-               const char *data, uint64_t off, size_t size)
+               const char *data,
+               uint64_t off,
+               size_t size)
 {
   int *want_off = cls;
   int idx = *want_off;
   (void) kind;  /* Unused. Silent compiler warning. */
 
-
 #if 0
   fprintf (stderr,
-           "VC: `%s' `%s' `%s' `%s' `%.*s'\n",
+           "VC: `%s' `%s' `%s' `%s' `%.*s' (%d)\n",
            key, filename, content_type, transfer_encoding,
            (int) size,
-           data);
+           data,
+           (int) size);
 #endif
   if ( (0 != off) && (0 == size) )
+  {
+    if (NULL == want[idx + 4])
+      *want_off = idx + 5;
     return MHD_YES;
+  }
   if ((idx < 0) ||
       (want[idx] == NULL) ||
       (0 != strcmp (key, want[idx])) ||
       (mismatch (filename, want[idx + 1])) ||
       (mismatch (content_type, want[idx + 2])) ||
       (mismatch (transfer_encoding, want[idx + 3])) ||
-      (0 != memcmp (data, &want[idx + 4][off], size)))
+      (0 != memcmp (data,
+                    &want[idx + 4][off],
+                    size)))
   {
     *want_off = -1;
+    fprintf (stderr,
+             "Failed with: `%s' `%s' `%s' `%s' `%.*s'\n",
+             key, filename, content_type, transfer_encoding,
+             (int) size,
+             data);
+    fprintf (stderr,
+             "Wanted: `%s' `%s' `%s' `%s' `%s'\n",
+             want[idx],
+             want[idx+1],
+             want[idx+2],
+             want[idx+3],
+             want[idx+4]);
+    fprintf (stderr,
+             "Unexpected result: %d/%d/%d/%d/%d/%d/%d\n",
+             (idx < 0),
+             (want[idx] == NULL),
+             (NULL != want[idx]) && (0 != strcmp (key, want[idx])),
+             (mismatch (filename, want[idx + 1])),
+             (mismatch (content_type, want[idx + 2])),
+             (mismatch (transfer_encoding, want[idx + 3])),
+             (0 != memcmp (data, &want[idx + 4][off], size)));
     return MHD_NO;
   }
-  if (off + size == strlen (want[idx + 4]))
+  if ( ( (NULL == want[idx+4]) &&
+         (0 == off + size) ) ||
+       (off + size == strlen (want[idx + 4])) )
     *want_off = idx + 5;
   return MHD_YES;
-
 }
 
 
 static int
-test_urlencoding (void)
+test_urlencoding_case (unsigned int want_start,
+                       unsigned int want_end,
+                       const char *url_data)
 {
   struct MHD_Connection connection;
   struct MHD_HTTP_Header header;
   struct MHD_PostProcessor *pp;
-  unsigned int want_off = URL_START;
+  unsigned int want_off = want_start;
   size_t i;
   size_t delta;
   size_t size;
@@ -144,19 +186,53 @@ test_urlencoding (void)
     MHD_HTTP_POST_ENCODING_FORM_URLENCODED);
   header.kind = MHD_HEADER_KIND;
   pp = MHD_create_post_processor (&connection,
-                                  1024, &value_checker, &want_off);
+                                  1024,
+                                  &value_checker,
+                                  &want_off);
   i = 0;
-  size = strlen (URL_DATA);
+  size = strlen (url_data);
   while (i < size)
   {
     delta = 1 + MHD_random_ () % (size - i);
-    MHD_post_process (pp, &URL_DATA[i], delta);
+    MHD_post_process (pp,
+                      &url_data[i],
+                      delta);
     i += delta;
   }
   MHD_destroy_post_processor (pp);
-  if (want_off != URL_END)
+  if (want_off != want_end)
+  {
+    fprintf (stderr,
+             "Test failed in line %u: %u != %u\n",
+             (unsigned int) __LINE__,
+             want_off,
+             want_end);
     return 1;
+  }
   return 0;
+}
+
+
+static int
+test_urlencoding (void)
+{
+  unsigned int errorCount = 0;
+
+  errorCount += test_urlencoding_case (URL_START,
+                                       URL_END,
+                                       URL_DATA);
+  errorCount += test_urlencoding_case (URL_NOVALUE1_START,
+                                       URL_NOVALUE1_END,
+                                       URL_NOVALUE1_DATA);
+  errorCount += test_urlencoding_case (URL_NOVALUE2_START,
+                                       URL_NOVALUE2_END,
+                                       URL_NOVALUE2_DATA);
+  if (0 != errorCount)
+    fprintf (stderr,
+             "Test failed in line %u with %u errors\n",
+             (unsigned int) __LINE__,
+             errorCount);
+  return errorCount;
 }
 
 
@@ -196,7 +272,13 @@ test_multipart_garbage (void)
     MHD_post_process (pp, &xdata[splitpoint], size - splitpoint);
     MHD_destroy_post_processor (pp);
     if (want_off != FORM_END)
+    {
+      fprintf (stderr,
+               "Test failed in line %u at point %d\n",
+               (unsigned int) __LINE__,
+               (int) splitpoint);
       return (int) splitpoint;
+    }
   }
   return 0;
 }
@@ -231,7 +313,13 @@ test_multipart_splits (void)
     MHD_post_process (pp, &FORM_DATA[splitpoint], size - splitpoint);
     MHD_destroy_post_processor (pp);
     if (want_off != FORM_END)
+    {
+      fprintf (stderr,
+               "Test failed in line %u at point %d\n",
+               (unsigned int) __LINE__,
+               (int) splitpoint);
       return (int) splitpoint;
+    }
   }
   return 0;
 }
@@ -269,7 +357,12 @@ test_multipart (void)
   }
   MHD_destroy_post_processor (pp);
   if (want_off != FORM_END)
+  {
+    fprintf (stderr,
+             "Test failed in line %u\n",
+             (unsigned int) __LINE__);
     return 2;
+  }
   return 0;
 }
 
@@ -306,7 +399,12 @@ test_nested_multipart (void)
   }
   MHD_destroy_post_processor (pp);
   if (want_off != FORM_NESTED_END)
+  {
+    fprintf (stderr,
+             "Test failed in line %u\n",
+             (unsigned int) __LINE__);
     return 4;
+  }
   return 0;
 }
 
@@ -342,11 +440,15 @@ test_empty_value (void)
   }
   MHD_destroy_post_processor (pp);
   if (want_off != URL_EMPTY_VALUE_END)
+  {
+    fprintf (stderr,
+             "Test failed in line %u at offset %d\n",
+             (unsigned int) __LINE__,
+             (int) want_off);
     return 8;
+  }
   return 0;
 }
-
-
 
 
 int

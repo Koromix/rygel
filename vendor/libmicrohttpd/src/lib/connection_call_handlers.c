@@ -146,8 +146,9 @@ MHD_conn_init_static_ (void)
   }
 #endif /* SF_FLAGS */
 }
-#endif /* HAVE_FREEBSD_SENDFILE */
 
+
+#endif /* HAVE_FREEBSD_SENDFILE */
 
 
 /**
@@ -439,8 +440,7 @@ sendfile_adapter (struct MHD_Connection *connection)
        supported for FD or other 'unusual' errors occurred, so we should try
        to fall back to 'SEND'; see also this thread for info on
        odd libc/Linux behavior with sendfile:
-       http://lists.gnu.org/archive/html/libmicrohttpd/2011-02/msg00015.html */
-    request->resp_sender = MHD_resp_sender_std;
+       http://lists.gnu.org/archive/html/libmicrohttpd/2011-02/msg00015.html */request->resp_sender = MHD_resp_sender_std;
     return MHD_ERR_AGAIN_;
 #else  /* HAVE_SOLARIS_SENDFILE */
     if ( (EAFNOSUPPORT == err) ||
@@ -534,6 +534,8 @@ sendfile_adapter (struct MHD_Connection *connection)
 #endif /* HAVE_FREEBSD_SENDFILE */
   return ret;
 }
+
+
 #endif /* _MHD_HAVE_SENDFILE */
 
 
@@ -694,7 +696,7 @@ try_ready_chunked_body (struct MHD_Request *request)
       = (size_t) (request->response_write_position - response->data_start);
     /* buffer already ready, use what is there for the chunk */
     ret = response->data_size - data_write_offset;
-    if ( ((size_t) ret) > request->write_buffer_size - sizeof (cbuf) - 2 )
+    if ( ((size_t) ret) > request->write_buffer_size - sizeof (cbuf) - 2)
       ret = request->write_buffer_size - sizeof (cbuf) - 2;
     memcpy (&request->write_buffer[sizeof (cbuf)],
             &response->data[data_write_offset],
@@ -1434,8 +1436,7 @@ build_header_response (struct MHD_Request *request)
 
         Note that the change from 'SHOULD NOT' to 'MUST NOT' is
         a recent development of the HTTP 1.1 specification.
-      */
-      content_length_len
+      */content_length_len
         = MHD_snprintf_ (content_length_buf,
                          sizeof (content_length_buf),
                          MHD_HTTP_HEADER_CONTENT_LENGTH ": "
@@ -1926,8 +1927,7 @@ process_header_line (struct MHD_Request *request,
      header at the beginning of the while
      loop since we need to be able to inspect
      the *next* header line (in case it starts
-     with a space...) */
-  request->last = line;
+     with a space...) */request->last = line;
   request->colon = colon;
   return true;
 }
@@ -1975,8 +1975,7 @@ process_broken_line (struct MHD_Request *request,
  adjacency); also, in the case where these are not adjacent
  (not sure how it can happen!), we would want to allocate from
  the end of the pool, so as to not destroy the read-buffer's
- ability to grow nicely. */
-    last = MHD_pool_reallocate (connection->pool,
+ ability to grow nicely. */last = MHD_pool_reallocate (connection->pool,
                                 last,
                                 last_len + 1,
                                 last_len + tmp_len + 1);
@@ -2926,6 +2925,8 @@ connection_epoll_update_ (struct MHD_Connection *connection)
   }
   return true;
 }
+
+
 #endif
 
 
@@ -3014,8 +3015,7 @@ connection_update_event_loop_info (struct MHD_Connection *connection)
              or if we do nothing, we would just timeout
              on the connection (if a timeout is even set!).
 
-             Solution: we kill the connection with an error */
-          transmit_error_response (request,
+             Solution: we kill the connection with an error */transmit_error_response (request,
                                    MHD_SC_APPLICATION_HUNG_CONNECTION_CLOSED,
                                    MHD_HTTP_INTERNAL_SERVER_ERROR,
                                    INTERNAL_ERROR);
@@ -3675,10 +3675,8 @@ MHD_connection_call_handlers_ (struct MHD_Connection *con,
      immediately.
      As writeability of socket was not checked and it may have
      some data pending in system buffers, use this optimization
-     only for non-blocking sockets. */
-  /* No need to check 'ret' as connection is always in
-   * MHD_CONNECTION_CLOSED state if 'ret' is equal 'MHD_NO'. */
-  else if (on_fasttrack &&
+     only for non-blocking sockets. *//* No need to check 'ret' as connection is always in
+   * MHD_CONNECTION_CLOSED state if 'ret' is equal 'MHD_NO'. */else if (on_fasttrack &&
            con->sk_nonblck)
   {
     if (MHD_REQUEST_HEADERS_SENDING == con->request.state)
@@ -3721,5 +3719,6 @@ MHD_connection_call_handlers_ (struct MHD_Connection *con,
   }
   return ret;
 }
+
 
 /* end of connection_call_handlers.c */

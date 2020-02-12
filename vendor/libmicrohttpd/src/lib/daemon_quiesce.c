@@ -121,9 +121,8 @@ MHD_daemon_quiesce (struct MHD_Daemon *daemon)
      to be sure that the threads have stopped using the listen
      socket, otherwise there is still the possibility of a race
      between a thread accept()ing and the caller closing and
-     re-binding the socket. */
-
-  return listen_socket;
+     re-binding the socket. */return listen_socket;
 }
+
 
 /* end of daemon_quiesce.c */

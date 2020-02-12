@@ -82,12 +82,14 @@ connection_handler (void *cls,
   return ret;
 }
 
+
 static size_t
 write_data (void *ptr, size_t size, size_t nmemb, void *stream)
 {
   (void) ptr; (void) stream;       /* Unused. Silent compiler warning. */
   return size * nmemb;
 }
+
 
 int
 main (void)
@@ -119,7 +121,7 @@ main (void)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (daemon, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (daemon); return 32;
     }

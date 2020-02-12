@@ -125,6 +125,8 @@ urh_from_pollfd (struct MHD_UpgradeResponseHandle *urh,
   if (0 != (p[1].revents & MHD_POLL_REVENTS_ERRROR))
     urh->mhd.celi |= MHD_EPOLL_STATE_READ_READY | MHD_EPOLL_STATE_WRITE_READY;
 }
+
+
 #endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
 
 
@@ -429,6 +431,8 @@ MHD_daemon_poll_listen_socket_ (struct MHD_Daemon *daemon,
     (void) MHD_accept_connection_ (daemon);
   return MHD_SC_OK;
 }
+
+
 #endif
 
 
@@ -516,6 +520,8 @@ MHD_daemon_upgrade_connection_with_poll_ (struct MHD_Connection *con)
     MHD_upgrade_response_handle_process_ (urh);
   }
 }
+
+
 #endif
 #endif
 

@@ -37,7 +37,8 @@
  * @param err the WinSock error code.
  * @return pointer to string description of specified WinSock error.
  */
-const char*MHD_W32_strerror_winsock_ (int err)
+const char*
+MHD_W32_strerror_winsock_ (int err)
 {
   switch (err)
   {
@@ -358,6 +359,7 @@ MHD_W32_socket_pair_ (SOCKET sockets_pair[2], int non_blk)
   return 0;
 }
 
+
 #endif /* MHD_WINSOCK_SOCKETS */
 
 
@@ -515,7 +517,7 @@ MHD_socket_cork_ (MHD_socket sock,
                        (const void *) (on ? &on_val : &off_val),
                        sizeof (off_val)))
     return 0; /* failed */
-#if defined(__FreeBSD__) &&  __FreeBSD__ + 0 >= 9
+#if defined(__FreeBSD__) && __FreeBSD__ + 0 >= 9
   /* FreeBSD do not need zero-send for flushing starting from version 9 */
   return 1;
 #elif defined(TCP_NOPUSH) && ! defined(TCP_CORK)
@@ -526,6 +528,7 @@ MHD_socket_cork_ (MHD_socket sock,
        TCP_CORK always flushes socket buffer. */
     if (0 > send (sock,
                   &dummy,
+                  0,
                   0))
       return 0; /* even force flush failed!? */
     return 1; /* success */

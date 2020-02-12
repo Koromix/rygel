@@ -199,6 +199,8 @@ run_epoll_for_upgrade (struct MHD_Daemon *daemon)
 
   return MHD_SC_OK;
 }
+
+
 #endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
 
 
@@ -488,8 +490,7 @@ MHD_daemon_epoll_ (struct MHD_Daemon *daemon,
      here.
 
      Connections with custom timeouts must all be looked at, as we
-     do not bother to sort that (presumably very short) list. */
-  prev = daemon->manual_timeout_tail;
+     do not bother to sort that (presumably very short) list. */prev = daemon->manual_timeout_tail;
   while (NULL != (pos = prev))
   {
     prev = pos->prevX;
@@ -509,6 +510,8 @@ MHD_daemon_epoll_ (struct MHD_Daemon *daemon,
   }
   return MHD_SC_OK;
 }
+
+
 #endif
 
 /* end of daemon_epoll.c */

@@ -255,6 +255,7 @@ void
 MHD_DLOG (const struct MHD_Daemon *daemon,
           const char *format,
           ...);
+
 #endif
 
 
@@ -562,6 +563,7 @@ enum MHD_TLS_CONN_STATE
 #if DEBUG_STATES
 const char *
 MHD_state_to_string (enum MHD_CONNECTION_STATE state);
+
 #endif
 #endif
 
@@ -1800,7 +1802,6 @@ struct MHD_Daemon
       (element)->next->prev = (element)->prev; \
     (element)->next = NULL; \
     (element)->prev = NULL; } while (0)
-
 
 
 /**

@@ -50,6 +50,7 @@ parse_version_number (const char **s)
   return atoi (num);
 }
 
+
 const char *
 parse_version_string (const char *s, int *major, int *minor, int *micro)
 {
@@ -67,12 +68,15 @@ parse_version_string (const char *s, int *major, int *minor, int *micro)
   return s;
 }
 
+
 #ifdef HTTPS_SUPPORT
 int
 curl_uses_nss_ssl ()
 {
   return (strstr (curl_version (), " NSS/") != NULL) ? 0 : -1;
 }
+
+
 #endif /* HTTPS_SUPPORT */
 
 /*
@@ -99,8 +103,7 @@ curl_check_version (const char *req_version)
    * this call relies on the cURL string to be of the exact following format :
    * 'libcurl/7.16.4 OpenSSL/0.9.8g zlib/1.2.3.3 libidn/0.6.5' OR
    * 'libcurl/7.18.2 GnuTLS/2.4.0 zlib/1.2.3.3 libidn/0.6.5'
-   */
-  curl_ver = strchr (ver, '/');
+   */curl_ver = strchr (ver, '/');
   if (curl_ver == NULL)
     return -1;
   curl_ver++;
@@ -113,11 +116,11 @@ curl_check_version (const char *req_version)
 
   /* Compare version numbers.  */
   if (((loc_major > rq_major)
-       || ((loc_major == rq_major)&&(loc_minor > rq_minor))
-       || ((loc_major == rq_major)&&(loc_minor == rq_minor)
-           &&(loc_micro > rq_micro)) || ((loc_major == rq_major)
-                                         &&(loc_minor == rq_minor)
-                                         &&(loc_micro == rq_micro) )) == 0)
+       || ((loc_major == rq_major) && (loc_minor > rq_minor))
+       || ((loc_major == rq_major) && (loc_minor == rq_minor)
+           && (loc_micro > rq_micro)) || ((loc_major == rq_major)
+                                          && (loc_minor == rq_minor)
+                                          && (loc_micro == rq_micro) )) == 0)
   {
     fprintf (stderr,
              "Error: running curl test depends on local libcurl version > %s\n",
@@ -164,11 +167,11 @@ curl_check_version (const char *req_version)
     return -1;
 
   if (((loc_major > rq_major)
-       || ((loc_major == rq_major)&&(loc_minor > rq_minor))
-       || ((loc_major == rq_major)&&(loc_minor == rq_minor)
-           &&(loc_micro > rq_micro)) || ((loc_major == rq_major)
-                                         &&(loc_minor == rq_minor)
-                                         &&(loc_micro == rq_micro) )) == 0)
+       || ((loc_major == rq_major) && (loc_minor > rq_minor))
+       || ((loc_major == rq_major) && (loc_minor == rq_minor)
+           && (loc_micro > rq_micro)) || ((loc_major == rq_major)
+                                          && (loc_minor == rq_minor)
+                                          && (loc_micro == rq_micro) )) == 0)
   {
     fprintf (stderr,
              "Error: running curl test depends on local libcurl SSL version > %s\n",

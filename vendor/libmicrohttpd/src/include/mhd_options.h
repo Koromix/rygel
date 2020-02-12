@@ -42,7 +42,6 @@
 #define _(String) (String)
 
 
-
 #ifndef _MHD_EXTERN
 #if defined(BUILDING_MHD_LIB) && defined(_WIN32) && \
   (defined(DLL_EXPORT) || defined(MHD_W32DLL))

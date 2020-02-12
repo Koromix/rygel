@@ -143,7 +143,7 @@ MHD_queue_basic_auth_fail_response (struct MHD_Connection *connection,
                        hlen,
                        "Basic realm=\"%s\"",
                        realm);
-  if ((res > 0)&&((size_t) res < hlen))
+  if ((res > 0) && ((size_t) res < hlen))
     ret = MHD_add_response_header (response,
                                    MHD_HTTP_HEADER_WWW_AUTHENTICATE,
                                    header);
@@ -166,5 +166,6 @@ MHD_queue_basic_auth_fail_response (struct MHD_Connection *connection,
   }
   return ret;
 }
+
 
 /* end of basicauth.c */

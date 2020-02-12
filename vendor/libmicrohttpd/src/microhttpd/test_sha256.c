@@ -285,6 +285,7 @@ bin2hex (const uint8_t *bin,
   *hex = 0;
 }
 
+
 static int
 check_result (const char *test_name,
               unsigned int check_num,
@@ -364,6 +365,7 @@ test1_bin (void)
   }
   return num_failed;
 }
+
 
 /* Calculated SHA-256 as two iterations for whole data */
 static int

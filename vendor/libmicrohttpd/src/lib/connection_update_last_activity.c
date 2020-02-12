@@ -61,4 +61,5 @@ MHD_connection_update_last_activity_ (struct MHD_Connection *connection)
   MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
 }
 
+
 /* end of connection_update_last_activity.c */

@@ -74,7 +74,7 @@ test_secure_get (FILE *test_fd,
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return -1;
     }
@@ -148,8 +148,8 @@ curlExcessFound (CURL *c,
   (void) c;      /* Unused. Silence compiler warning. */
 
   if ((CURLINFO_TEXT == type)
-      &&(size >= str_size)
-      &&(0 == strncmp (excess_found, data, str_size)))
+      && (size >= str_size)
+      && (0 == strncmp (excess_found, data, str_size)))
     *(int *) cls = 1;
   return 0;
 }
@@ -189,7 +189,7 @@ testEmptyGet (int poll_flag)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }

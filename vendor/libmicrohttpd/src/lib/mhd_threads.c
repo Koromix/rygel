@@ -80,8 +80,7 @@ MHD_set_thread_name_ (const MHD_thread_ID_ thread_id,
    *                         third argument is single argument for printf;
    * OSF1 use 3 arguments too, but last one always must be zero (NULL).
    * MHD doesn't use '%' in thread names, so both form are used in same way.
-   */
-  return ! pthread_setname_np (thread_id, thread_name, 0);
+   */return ! pthread_setname_np (thread_id, thread_name, 0);
 #endif /* HAVE_PTHREAD_SETNAME_NP_NETBSD */
 }
 
@@ -235,6 +234,7 @@ MHD_create_thread_ (MHD_thread_handle_ID_ *thread,
 #endif
 }
 
+
 #ifdef MHD_USE_THREAD_NAME_
 
 #ifndef MHD_USE_THREAD_ATTR_SETNAME
@@ -276,6 +276,8 @@ named_thread_starter (void *data)
 
   return thr_func (arg);
 }
+
+
 #endif /* ! MHD_USE_THREAD_ATTR_SETNAME */
 
 
@@ -308,14 +310,13 @@ MHD_create_named_thread_ (MHD_thread_handle_ID_ *thread,
      *                         third argument is single argument for printf;
      * OSF1 use 3 arguments too, but last one always must be zero (NULL).
      * MHD doesn't use '%' in thread names, so both form are used in same way.
-     */
-    res = pthread_attr_setname_np (&attr, thread_name, 0);
+     */res = pthread_attr_setname_np (&attr, thread_name, 0);
 #elif defined(HAVE_PTHREAD_ATTR_SETNAME_NP_IBMI)
     res = pthread_attr_setname_np (&attr, thread_name);
 #else
 #error No pthread_attr_setname_np() function.
 #endif
-    if ((res == 0) &&(0 != stack_size) )
+    if ((res == 0) && (0 != stack_size) )
       res = pthread_attr_setstacksize (&attr,
                                        stack_size);
     if (0 == res)
@@ -361,5 +362,6 @@ MHD_create_named_thread_ (MHD_thread_handle_ID_ *thread,
   return ! 0;
 #endif /* ! MHD_USE_THREAD_ATTR_SETNAME */
 }
+
 
 #endif /* MHD_USE_THREAD_NAME_ */

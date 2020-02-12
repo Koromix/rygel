@@ -102,4 +102,5 @@ MHD_daemon_get_information_sz (struct MHD_Daemon *daemon,
 #undef CHECK_SIZE
 }
 
+
 /* end of daemon_info.c */

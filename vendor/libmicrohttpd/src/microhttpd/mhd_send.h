@@ -94,6 +94,7 @@ MHD_send_on_connection2_ (struct MHD_Connection *connection,
 #if defined(_MHD_HAVE_SENDFILE)
 ssize_t
 MHD_send_sendfile_ (struct MHD_Connection *connection);
+
 #endif
 
 #endif /* MHD_SEND_H */

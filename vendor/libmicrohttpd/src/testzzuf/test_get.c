@@ -59,6 +59,7 @@ copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
   return size * nmemb;
 }
 
+
 static int
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
@@ -137,6 +138,7 @@ testInternalGet ()
   MHD_stop_daemon (d);
   return 0;
 }
+
 
 static int
 testMultithreadedGet ()

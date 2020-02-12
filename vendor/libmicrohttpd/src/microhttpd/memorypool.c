@@ -100,6 +100,7 @@ MHD_init_mem_pools_ (void)
 #endif /* _WIN32 */
 }
 
+
 /**
  * Handle for a memory pool.  Pools are not reentrant and must not be
  * used by multiple threads.

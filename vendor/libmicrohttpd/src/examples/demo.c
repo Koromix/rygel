@@ -871,6 +871,8 @@ ignore_sigpipe ()
     fprintf (stderr,
              "Failed to install SIGPIPE handler: %s\n", strerror (errno));
 }
+
+
 #endif
 
 
@@ -957,5 +959,6 @@ main (int argc, char *const *argv)
 #endif /* MHD_HAVE_LIBMAGIC */
   return 0;
 }
+
 
 /* end of demo.c */

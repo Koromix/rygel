@@ -276,7 +276,7 @@ testInternalGet (int port, int poll_flag)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -327,7 +327,7 @@ testMultithreadedGet (int port, int poll_flag)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -375,7 +375,7 @@ testMultithreadedPoolGet (int port, int poll_flag)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -423,7 +423,7 @@ testExternalGet (int port)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -462,9 +462,10 @@ testExternalGet (int port)
                "select failed: %s\n",
                strerror (errno));
 #else
-      if ((WSAEINVAL == WSAGetLastError ()) &&(0 == rs.fd_count) &&(0 ==
-                                                                    ws.fd_count)
-          &&(0 == es.fd_count) )
+      if ((WSAEINVAL == WSAGetLastError ()) && (0 == rs.fd_count) && (0 ==
+                                                                      ws.
+                                                                      fd_count)
+          && (0 == es.fd_count) )
       {
         Sleep (1000);
         continue;
@@ -478,7 +479,7 @@ testExternalGet (int port)
 
   stop ("external select");
   MHD_stop_daemon (d);
-  if ((0 != pthread_join (pid, (void**) &ret_val))||
+  if ((0 != pthread_join (pid, (void**) &ret_val)) ||
       (NULL != ret_val) )
   {
     fprintf (stderr,
@@ -498,7 +499,7 @@ main (int argc, char *const *argv)
   int port = 1100;
   (void) argc;   /* Unused. Silent compiler warning. */
 
-  if ((NULL == argv)||(0 == argv[0]))
+  if ((NULL == argv) || (0 == argv[0]))
     return 99;
   oneone = has_in_name (argv[0], "11");
   if (oneone)

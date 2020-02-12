@@ -178,6 +178,7 @@ validate (struct CBC cbc, int ebase)
   return 0;
 }
 
+
 static int
 testInternalGet ()
 {
@@ -204,7 +205,7 @@ testInternalGet ()
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -237,6 +238,7 @@ testInternalGet ()
   return validate (cbc, 4);
 }
 
+
 static int
 testMultithreadedGet ()
 {
@@ -264,7 +266,7 @@ testMultithreadedGet ()
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -296,6 +298,7 @@ testMultithreadedGet ()
   MHD_stop_daemon (d);
   return validate (cbc, 64);
 }
+
 
 static int
 testMultithreadedPoolGet ()
@@ -324,7 +327,7 @@ testMultithreadedPoolGet ()
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -356,6 +359,7 @@ testMultithreadedPoolGet ()
   MHD_stop_daemon (d);
   return validate (cbc, 64);
 }
+
 
 static int
 testExternalGet ()
@@ -398,7 +402,7 @@ testExternalGet ()
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -468,9 +472,10 @@ testExternalGet ()
       if (EINTR != errno)
         abort ();
 #else
-      if ((WSAEINVAL != WSAGetLastError ()) ||(0 != rs.fd_count) ||(0 !=
-                                                                    ws.fd_count)
-          ||(0 != es.fd_count) )
+      if ((WSAEINVAL != WSAGetLastError ()) || (0 != rs.fd_count) || (0 !=
+                                                                      ws.
+                                                                      fd_count)
+          || (0 != es.fd_count) )
         abort ();
       Sleep (1000);
 #endif
@@ -506,7 +511,6 @@ testExternalGet ()
   MHD_stop_daemon (d);
   return validate (cbc, 8192);
 }
-
 
 
 int

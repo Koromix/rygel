@@ -74,6 +74,7 @@ ssize_t
 send_tls_adapter (struct MHD_Connection *connection,
                   const void *other,
                   size_t i);
+
 #endif /* HTTPS_SUPPORT */
 
 #endif

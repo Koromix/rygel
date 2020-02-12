@@ -125,7 +125,7 @@
   defined(_M_IX86) || defined(_X86_) || defined (__THW_INTEL__)
 /* x86 family is little endian */
 #define _MHD_BYTE_ORDER _MHD_LITTLE_ENDIAN
-#elif defined(__ARMEB__) || defined(__THUMBEB__) ||  defined(__AARCH64EB__) || \
+#elif defined(__ARMEB__) || defined(__THUMBEB__) || defined(__AARCH64EB__) || \
   defined(_MIPSEB) || defined(__MIPSEB) || defined(__MIPSEB__)
 /* Looks like we are on ARM/MIPS in big endian mode */
 #define _MHD_BYTE_ORDER _MHD_BIG_ENDIAN

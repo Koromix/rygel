@@ -108,7 +108,7 @@ http_ContentReaderCallback (void *cls,
   struct ContentReaderUserdata *userdata = cls;
   (void) pos; (void) max;  /* Unused. Silent compiler warning. */
 
-  if ( userdata->bytes_written >= 1024)
+  if (userdata->bytes_written >= 1024)
   {
     fprintf (stderr,
              "finish: %d\n",
@@ -218,7 +218,7 @@ main (void)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (daemon, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (daemon); return 32;
     }

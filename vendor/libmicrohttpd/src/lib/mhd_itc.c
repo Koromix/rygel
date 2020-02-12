@@ -65,6 +65,8 @@ MHD_itc_nonblocking_ (struct MHD_itc_ itc)
   }
   return ! 0;
 }
+
+
 #endif /* ! HAVE_PIPE2_FUNC */
 #endif /* !_WIN32 || __CYGWIN__ */
 #endif /* _MHD_ITC_EVENTFD ||  _MHD_ITC_PIPE */

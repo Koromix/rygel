@@ -51,6 +51,7 @@
 /* Emulate snprintf function on W32 */
 int W32_snprintf (char *__restrict s, size_t n, const char *__restrict format,
                   ...);
+
 #define MHD_snprintf_ W32_snprintf
 #else  /* ! _WIN32 || __CYGWIN__ */
 #error \
@@ -84,6 +85,7 @@ int W32_snprintf (char *__restrict s, size_t n, const char *__restrict format,
  * MHD_calloc_ is platform-independent calloc()
  */
 void *MHD_calloc_ (size_t nelem, size_t elsize);
+
 #endif /* ! HAVE_CALLOC */
 
 #endif /* MHD_COMPAT_H */

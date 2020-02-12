@@ -39,6 +39,7 @@
  */
 void
 MHD_check_global_init_ (void);
+
 #endif /* ! _AUTOINIT_FUNCS_ARE_SUPPORTED */
 
 

@@ -59,6 +59,8 @@ connection_cleanup_upgraded (struct MHD_Connection *connection)
   connection->request.urh = NULL;
   free (urh);
 }
+
+
 #endif /* UPGRADE_SUPPORT */
 
 
@@ -129,8 +131,7 @@ MHD_connection_cleanup_ (struct MHD_Daemon *daemon)
            this is not true as if we fail to do manually remove it,
            we are still seeing an event for this fd in epoll,
            causing grief (use-after-free...) --- at least on my
-           system. */
-        if (0 != epoll_ctl (daemon->epoll_fd,
+           system. */if (0 != epoll_ctl (daemon->epoll_fd,
                             EPOLL_CTL_DEL,
                             pos->socket_fd,
                             NULL))
@@ -154,5 +155,6 @@ MHD_connection_cleanup_ (struct MHD_Daemon *daemon)
   }
   MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
 }
+
 
 /* end of connection_cleanup.c */

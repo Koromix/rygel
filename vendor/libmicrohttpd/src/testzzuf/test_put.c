@@ -62,6 +62,7 @@ putBuffer (void *stream, size_t size, size_t nmemb, void *ptr)
   return wrt;
 }
 
+
 static size_t
 copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
 {
@@ -73,6 +74,7 @@ copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
   cbc->pos += size * nmemb;
   return size * nmemb;
 }
+
 
 static int
 ahc_echo (void *cls,
@@ -166,6 +168,7 @@ testInternalPut ()
   MHD_stop_daemon (d);
   return 0;
 }
+
 
 static int
 testMultithreadedPut ()
@@ -279,7 +282,6 @@ testExternalPut ()
      *   setting NOSIGNAL results in really weird
      *   crashes on my system! */
     curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
-
 
 
     mret = curl_multi_add_handle (multi, c);

@@ -41,6 +41,7 @@ expect_found_n (const char *str, const char *token, size_t token_len)
   return 0;
 }
 
+
 #define expect_found(s,t) expect_found_n ((s),(t),MHD_STATICSTR_LEN_ (t))
 
 static int
@@ -56,10 +57,12 @@ expect_not_found_n (const char *str, const char *token, size_t token_len)
   return 0;
 }
 
+
 #define expect_not_found(s,t) expect_not_found_n ((s),(t),MHD_STATICSTR_LEN_ ( \
                                                     t))
 
-int check_match (void)
+int
+check_match (void)
 {
   int errcount = 0;
   errcount += expect_found ("string", "string");
@@ -85,7 +88,9 @@ int check_match (void)
   return errcount;
 }
 
-int check_not_match (void)
+
+int
+check_not_match (void)
 {
   int errcount = 0;
   errcount += expect_not_found ("strin", "string");
@@ -111,7 +116,9 @@ int check_not_match (void)
   return errcount;
 }
 
-int main (int argc, char *argv[])
+
+int
+main (int argc, char *argv[])
 {
   int errcount = 0;
   (void) argc; (void) argv; /* Unused. Silent compiler warning. */

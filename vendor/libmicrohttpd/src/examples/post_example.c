@@ -143,8 +143,6 @@ struct Request
 static struct Session *sessions;
 
 
-
-
 /**
  * Return the session handle for this connection, or
  * create one if this is a new user.
@@ -450,7 +448,6 @@ static struct Page pages[] = {
   { "/F", "text/html", &serve_simple_form, LAST_PAGE },
   { NULL, NULL, &not_found_page, NULL }   /* 404 */
 };
-
 
 
 /**

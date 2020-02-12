@@ -48,8 +48,7 @@ MHD_connection_mark_closed_ (struct MHD_Connection *connection)
      * and do not shutdown TCP socket. This give more
      * chances to send TLS closure data to remote side.
      * Closure of TLS layer will be interpreted by
-     * remote side as end of transmission. */
-    if (NULL != (tls = daemon->tls_api))
+     * remote side as end of transmission. */if (NULL != (tls = daemon->tls_api))
     {
       if (MHD_YES !=
           tls->shutdown_connection (tls->cls,
@@ -99,5 +98,6 @@ MHD_connection_close_ (struct MHD_Connection *connection,
                                   connection,
                                   MHD_CONNECTION_NOTIFY_CLOSED);
 }
+
 
 /* end of connection_close.c */

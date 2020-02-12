@@ -46,7 +46,6 @@
 struct MHD_TLS_ConnectionState;
 
 
-
 /**
  * Callback functions to use for TLS operations.
  */

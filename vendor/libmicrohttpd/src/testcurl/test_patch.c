@@ -1,6 +1,6 @@
 /*
      This file is part of libmicrohttpd
-     Copyright (C) 2007 Christian Grothoff
+     Copyright (C) 2020 Christian Grothoff
 
      libmicrohttpd is free software; you can redistribute it and/or modify
      it under the terms of the GNU General Public License as published
@@ -19,9 +19,8 @@
 */
 
 /**
- * @file daemontest_put_chunked.c
- * @brief Testcase for libmicrohttpd PUT operations with chunked encoding
- *        for the upload data
+ * @file test_patch.c
+ * @brief  Testcase for libmicrohttpd PATCH operations
  * @author Christian Grothoff
  */
 
@@ -32,6 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "mhd_has_in_name.h"
 
 #ifndef WINDOWS
 #include <unistd.h>
@@ -43,6 +43,8 @@
 #if ! defined(CPU_COUNT)
 #define CPU_COUNT 2
 #endif
+
+static int oneone;
 
 struct CBC
 {
@@ -60,8 +62,6 @@ putBuffer (void *stream, size_t size, size_t nmemb, void *ptr)
   wrt = size * nmemb;
   if (wrt > 8 - (*pos))
     wrt = 8 - (*pos);
-  if (wrt > 4)
-    wrt = 4;                    /* only send half at first => force multiple chunks! */
   memcpy (stream, &("Hello123"[*pos]), wrt);
   (*pos) += wrt;
   return wrt;
@@ -93,24 +93,16 @@ ahc_echo (void *cls,
   int *done = cls;
   struct MHD_Response *response;
   int ret;
-  int have;
   (void) version; (void) unused;   /* Unused. Silent compiler warning. */
 
-  if (0 != strcmp ("PUT", method))
+  if (0 != strcasecmp ("PATCH", method))
     return MHD_NO;              /* unexpected method */
-  if ((*done) < 8)
+  if ((*done) == 0)
   {
-    have = *upload_data_size;
-    if (have + *done > 8)
+    if (*upload_data_size != 8)
+      return MHD_YES;           /* not yet ready */
+    if (0 == memcmp (upload_data, "Hello123", 8))
     {
-      printf ("Invalid upload data `%8s'!\n", upload_data);
-      return MHD_NO;
-    }
-    if (0 == have)
-      return MHD_YES;
-    if (0 == memcmp (upload_data, &"Hello123"[*done], have))
-    {
-      *done += have;
       *upload_data_size = 0;
     }
     else
@@ -118,17 +110,47 @@ ahc_echo (void *cls,
       printf ("Invalid upload data `%8s'!\n", upload_data);
       return MHD_NO;
     }
-#if 0
-    fprintf (stderr, "Not ready for response: %u/%u\n", *done, 8);
-#endif
+    *done = 1;
     return MHD_YES;
   }
-  response = MHD_create_response_from_buffer (strlen (url),
-                                              (void *) url,
+  response = MHD_create_response_from_buffer (strlen (url), (void*) url,
                                               MHD_RESPMEM_MUST_COPY);
   ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
   MHD_destroy_response (response);
   return ret;
+}
+
+
+static CURL *
+setup_curl (long port,
+            struct CBC *cbc,
+            unsigned int *pos)
+{
+  CURL *c;
+
+  c = curl_easy_init ();
+  curl_easy_setopt (c, CURLOPT_CUSTOMREQUEST, "PATCH");
+  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
+  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
+  curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
+  curl_easy_setopt (c, CURLOPT_WRITEDATA, cbc);
+  curl_easy_setopt (c, CURLOPT_READFUNCTION, &putBuffer);
+  curl_easy_setopt (c, CURLOPT_READDATA, pos);
+  curl_easy_setopt (c, CURLOPT_UPLOAD, 1L);
+  curl_easy_setopt (c, CURLOPT_INFILESIZE_LARGE, (curl_off_t) 8L);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
+  curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
+  if (oneone)
+    curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+  else
+    curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
+  curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
+  /* NOTE: use of CONNECTTIMEOUT without also
+   *   setting NOSIGNAL results in really weird
+   *   crashes on my system! */
+  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
+
+  return c;
 }
 
 
@@ -147,7 +169,11 @@ testInternalPut ()
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
-    port = 1440;
+  {
+    port = 1450;
+    if (oneone)
+      port += 10;
+  }
 
   cbc.buf = buf;
   cbc.size = 2048;
@@ -167,26 +193,7 @@ testInternalPut ()
     }
     port = (int) dinfo->port;
   }
-  c = curl_easy_init ();
-  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
-  curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
-  curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-  curl_easy_setopt (c, CURLOPT_READFUNCTION, &putBuffer);
-  curl_easy_setopt (c, CURLOPT_READDATA, &pos);
-  curl_easy_setopt (c, CURLOPT_UPLOAD, 1L);
-  /* by not giving the file size, we force chunking! */
-  /*
-     curl_easy_setopt (c, CURLOPT_INFILESIZE_LARGE, (curl_off_t) 8L);
-   */
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
-  curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
-  curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-  curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
-  /* NOTE: use of CONNECTTIMEOUT without also
-   *   setting NOSIGNAL results in really weird
-   *   crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
+  c = setup_curl (port, &cbc, &pos);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
   {
     fprintf (stderr,
@@ -221,7 +228,11 @@ testMultithreadedPut ()
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
-    port = 1441;
+  {
+    port = 1451;
+    if (oneone)
+      port += 10;
+  }
 
   cbc.buf = buf;
   cbc.size = 2048;
@@ -242,26 +253,7 @@ testMultithreadedPut ()
     }
     port = (int) dinfo->port;
   }
-  c = curl_easy_init ();
-  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
-  curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
-  curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-  curl_easy_setopt (c, CURLOPT_READFUNCTION, &putBuffer);
-  curl_easy_setopt (c, CURLOPT_READDATA, &pos);
-  curl_easy_setopt (c, CURLOPT_UPLOAD, 1L);
-  /* by not giving the file size, we force chunking! */
-  /*
-     curl_easy_setopt (c, CURLOPT_INFILESIZE_LARGE, (curl_off_t) 8L);
-   */
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
-  curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
-  curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-  curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
-  /* NOTE: use of CONNECTTIMEOUT without also
-   *   setting NOSIGNAL results in really weird
-   *   crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
+  c = setup_curl (port, &cbc, &pos);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
   {
     fprintf (stderr,
@@ -297,7 +289,11 @@ testMultithreadedPoolPut ()
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
-    port = 1442;
+  {
+    port = 1452;
+    if (oneone)
+      port += 10;
+  }
 
   cbc.buf = buf;
   cbc.size = 2048;
@@ -318,26 +314,7 @@ testMultithreadedPoolPut ()
     }
     port = (int) dinfo->port;
   }
-  c = curl_easy_init ();
-  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
-  curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
-  curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-  curl_easy_setopt (c, CURLOPT_READFUNCTION, &putBuffer);
-  curl_easy_setopt (c, CURLOPT_READDATA, &pos);
-  curl_easy_setopt (c, CURLOPT_UPLOAD, 1L);
-  /* by not giving the file size, we force chunking! */
-  /*
-     curl_easy_setopt (c, CURLOPT_INFILESIZE_LARGE, (curl_off_t) 8L);
-   */
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
-  curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
-  curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-  curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
-  /* NOTE: use of CONNECTTIMEOUT without also
-   *   setting NOSIGNAL results in really weird
-   *   crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
+  c = setup_curl (port, &cbc, &pos);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
   {
     fprintf (stderr,
@@ -371,11 +348,7 @@ testExternalPut ()
   fd_set ws;
   fd_set es;
   MHD_socket maxsock;
-#ifdef MHD_WINSOCK_SOCKETS
   int maxposixs; /* Max socket number unused on W32 */
-#else  /* MHD_POSIX_SOCKETS */
-#define maxposixs maxsock
-#endif /* MHD_POSIX_SOCKETS */
   int running;
   struct CURLMsg *msg;
   time_t start;
@@ -387,7 +360,11 @@ testExternalPut ()
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
-    port = 1443;
+  {
+    port = 1453;
+    if (oneone)
+      port += 10;
+  }
 
   multi = NULL;
   cbc.buf = buf;
@@ -408,27 +385,7 @@ testExternalPut ()
     }
     port = (int) dinfo->port;
   }
-  c = curl_easy_init ();
-  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
-  curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
-  curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-  curl_easy_setopt (c, CURLOPT_READFUNCTION, &putBuffer);
-  curl_easy_setopt (c, CURLOPT_READDATA, &pos);
-  curl_easy_setopt (c, CURLOPT_UPLOAD, 1L);
-  /* by not giving the file size, we force chunking! */
-  /*
-     curl_easy_setopt (c, CURLOPT_INFILESIZE_LARGE, (curl_off_t) 8L);
-   */
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
-  curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
-  curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-  curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
-  /* NOTE: use of CONNECTTIMEOUT without also
-   *   setting NOSIGNAL results in really weird
-   *   crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
-
+  c = setup_curl (port, &cbc, &pos);
 
   multi = curl_multi_init ();
   if (multi == NULL)
@@ -471,6 +428,10 @@ testExternalPut ()
       MHD_stop_daemon (d);
       return 4096;
     }
+#ifdef MHD_POSIX_SOCKETS
+    if (maxsock > maxposixs)
+      maxposixs = maxsock;
+#endif /* MHD_POSIX_SOCKETS */
     tv.tv_sec = 0;
     tv.tv_usec = 1000;
     if (-1 == select (maxposixs + 1, &rs, &ws, &es, &tv))
@@ -483,7 +444,7 @@ testExternalPut ()
                                                                       ws.
                                                                       fd_count)
           || (0 != es.fd_count) )
-        abort ();
+        _exit (99);
       Sleep (1000);
 #endif
     }
@@ -499,8 +460,7 @@ testExternalPut ()
           printf ("%s failed at %s:%d: `%s'\n",
                   "curl_multi_perform",
                   __FILE__,
-                  __LINE__,
-                  curl_easy_strerror (msg->data.result));
+                  __LINE__, curl_easy_strerror (msg->data.result));
         curl_multi_remove_handle (multi, c);
         curl_multi_cleanup (multi);
         curl_easy_cleanup (c);
@@ -529,8 +489,11 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
-  (void) argc; (void) argv; /* Unused. Silent compiler warning. */
+  (void) argc;   /* Unused. Silent compiler warning. */
 
+  if ((NULL == argv) || (0 == argv[0]))
+    return 99;
+  oneone = has_in_name (argv[0], "11");
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 2;
   if (MHD_YES == MHD_is_feature_supported (MHD_FEATURE_THREADS))

@@ -67,6 +67,7 @@ putBuffer (void *stream, size_t size, size_t nmemb, void *ptr)
   return wrt;
 }
 
+
 static size_t
 copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
 {
@@ -78,6 +79,7 @@ copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
   cbc->pos += size * nmemb;
   return size * nmemb;
 }
+
 
 static int
 ahc_echo (void *cls,
@@ -148,7 +150,7 @@ testInternalDelete ()
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -224,7 +226,7 @@ testMultithreadedDelete ()
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -270,6 +272,7 @@ testMultithreadedDelete ()
   return 0;
 }
 
+
 static int
 testMultithreadedPoolDelete ()
 {
@@ -300,7 +303,7 @@ testMultithreadedPoolDelete ()
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -391,7 +394,7 @@ testExternalDelete ()
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -469,9 +472,10 @@ testExternalDelete ()
       if (EINTR != errno)
         abort ();
 #else
-      if ((WSAEINVAL != WSAGetLastError ()) ||(0 != rs.fd_count) ||(0 !=
-                                                                    ws.fd_count)
-          ||(0 != es.fd_count) )
+      if ((WSAEINVAL != WSAGetLastError ()) || (0 != rs.fd_count) || (0 !=
+                                                                      ws.
+                                                                      fd_count)
+          || (0 != es.fd_count) )
         abort ();
       Sleep (1000);
 #endif
@@ -513,14 +517,13 @@ testExternalDelete ()
 }
 
 
-
 int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
   (void) argc;   /* Unused. Silent compiler warning. */
 
-  if ((NULL == argv)||(0 == argv[0]))
+  if ((NULL == argv) || (0 == argv[0]))
     return 99;
   oneone = has_in_name (argv[0], "11");
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))

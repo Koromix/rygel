@@ -25,7 +25,6 @@
 #include "internal.h"
 
 
-
 /**
  * Create an action that parses a POST request.
  *
@@ -57,5 +56,6 @@ MHD_action_parse_post (size_t buffer_size,
 {
   return NULL; /* not yet implemented */
 }
+
 
 /* end of action_parse_post.c */

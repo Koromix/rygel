@@ -160,6 +160,8 @@ urh_to_fdset (struct MHD_UpgradeResponseHandle *urh,
 
   return res;
 }
+
+
 #endif
 
 
@@ -392,6 +394,8 @@ urh_from_fdset (struct MHD_UpgradeResponseHandle *urh,
       urh->mhd.celi |= MHD_EPOLL_STATE_ERROR;
   }
 }
+
+
 #endif
 
 
@@ -575,6 +579,8 @@ MHD_daemon_upgrade_connection_with_select_ (struct MHD_Connection *con)
     MHD_upgrade_response_handle_process_ (urh);
   }
 }
+
+
 #endif
 
 
@@ -742,6 +748,8 @@ MHD_daemon_select_ (struct MHD_Daemon *daemon,
 #if defined(MHD_WINSOCK_SOCKETS)
   }
 }
+
+
 #endif /* MHD_WINSOCK_SOCKETS */
   }
   /* Stop listening if we are at the configured connection limit */

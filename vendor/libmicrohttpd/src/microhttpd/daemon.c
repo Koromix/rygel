@@ -216,6 +216,8 @@ MHD_check_global_init_ (void)
 #endif /* MHD_MUTEX_STATIC_DEFN_INIT_ */
 #endif
 }
+
+
 #endif /* ! _AUTOINIT_FUNCS_ARE_SUPPORTED */
 
 
@@ -654,6 +656,7 @@ MHD_init_daemon_certificate (struct MHD_Daemon *daemon)
   return -1;
 }
 
+
 /**
  * Initialize security aspects of the HTTPS daemon
  *
@@ -684,6 +687,8 @@ MHD_TLS_init (struct MHD_Daemon *daemon)
     return -1;
   }
 }
+
+
 #endif /* HTTPS_SUPPORT */
 
 
@@ -858,6 +863,7 @@ urh_from_fdset (struct MHD_UpgradeResponseHandle *urh,
   }
 }
 
+
 #ifdef HAVE_POLL
 
 /**
@@ -950,6 +956,8 @@ urh_from_pollfd (struct MHD_UpgradeResponseHandle *urh,
   if (0 != (p[1].revents & MHD_POLL_REVENTS_ERRROR))
     urh->mhd.celi |= MHD_EPOLL_STATE_READ_READY | MHD_EPOLL_STATE_WRITE_READY;
 }
+
+
 #endif /* HAVE_POLL */
 #endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
 
@@ -1236,10 +1244,8 @@ call_handlers (struct MHD_Connection *con,
      immediately.
      As writeability of socket was not checked and it may have
      some data pending in system buffers, use this optimization
-     only for non-blocking sockets. */
-  /* No need to check 'ret' as connection is always in
-   * MHD_CONNECTION_CLOSED state if 'ret' is equal 'MHD_NO'. */
-  else if (on_fasttrack && con->sk_nonblck)
+     only for non-blocking sockets. *//* No need to check 'ret' as connection is always in
+   * MHD_CONNECTION_CLOSED state if 'ret' is equal 'MHD_NO'. */else if (on_fasttrack && con->sk_nonblck)
   {
     if (MHD_CONNECTION_HEADERS_SENDING == con->state)
     {
@@ -1312,6 +1318,8 @@ cleanup_upgraded_connection (struct MHD_Connection *connection)
   connection->urh = NULL;
   free (urh);
 }
+
+
 #endif /* UPGRADE_SUPPORT */
 
 
@@ -1371,8 +1379,7 @@ process_urh (struct MHD_UpgradeResponseHandle *urh)
      * check for any pending data even if socket is not marked
      * as 'ready' (signal may arrive after poll()/select()).
      * Socketpair for forwarding is always in non-blocking mode
-     * so no risk that recv() will block the thread. */
-    if (0 != urh->out_buffer_size)
+     * so no risk that recv() will block the thread. */if (0 != urh->out_buffer_size)
       urh->mhd.celi |= MHD_EPOLL_STATE_READ_READY;
     /* Discard any data received form remote. */
     urh->in_buffer_used = 0;
@@ -1388,11 +1395,8 @@ process_urh (struct MHD_UpgradeResponseHandle *urh)
    * fail after remote disconnect was detected) may discard data in system
    * buffers received by system but not yet read by recv().
    * So, before trying send() on any socket, recv() must be performed at first
-   * otherwise last part of incoming data may be lost. */
-
-  /* If disconnect or error was detected - try to read from socket
-   * to dry data possibly pending is system buffers. */
-  if (0 != (MHD_EPOLL_STATE_ERROR & urh->app.celi))
+   * otherwise last part of incoming data may be lost. *//* If disconnect or error was detected - try to read from socket
+   * to dry data possibly pending is system buffers. */if (0 != (MHD_EPOLL_STATE_ERROR & urh->app.celi))
     urh->app.celi |= MHD_EPOLL_STATE_READ_READY;
   if (0 != (MHD_EPOLL_STATE_ERROR & urh->mhd.celi))
     urh->mhd.celi |= MHD_EPOLL_STATE_READ_READY;
@@ -1669,6 +1673,8 @@ process_urh (struct MHD_UpgradeResponseHandle *urh)
     urh->mhd.celi &= ~MHD_EPOLL_STATE_READ_READY;
   }
 }
+
+
 #endif /* HTTPS_SUPPORT  && UPGRADE_SUPPORT */
 
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
@@ -1823,6 +1829,8 @@ thread_main_connection_upgrade (struct MHD_Connection *con)
   /* Do not set 'urh->clean_ready' yet as 'urh' will be used
    * in connection thread for a little while. */
 }
+
+
 #endif /* UPGRADE_SUPPORT */
 
 
@@ -2182,7 +2190,7 @@ thread_main_handle_connection (void *data)
                            MHD_REQUEST_TERMINATED_DAEMON_SHUTDOWN :
                            MHD_REQUEST_TERMINATED_WITH_ERROR);
   MHD_connection_handle_idle (con);
-  exit:
+exit:
   if (NULL != con->response)
   {
     MHD_destroy_response (con->response);
@@ -2208,6 +2216,8 @@ thread_main_handle_connection (void *data)
   }
   return (MHD_THRD_RTRN_TYPE_) 0;
 }
+
+
 #endif
 
 
@@ -2248,6 +2258,8 @@ MHD_tls_push_func_ (gnutls_transport_ptr_t trnsp,
 #endif /* (MHD_SCKT_SEND_MAX_SIZE_ < SSIZE_MAX) || (0 == SSIZE_MAX) */
   return MHD_send_ ((MHD_socket) (intptr_t) (trnsp), data, data_size);
 }
+
+
 #endif /* MHD_TLSLIB_DONT_SUPPRESS_SIGPIPE */
 
 
@@ -2327,6 +2339,8 @@ psk_gnutls_adapter (gnutls_session_t session,
   return -1;
 #endif
 }
+
+
 #endif /* HTTPS_SUPPORT */
 
 
@@ -2742,7 +2756,7 @@ internal_add_connection (struct MHD_Daemon *daemon,
 #endif
   }
   return MHD_YES;
-  cleanup:
+cleanup:
   if (NULL != daemon->notify_connection)
     daemon->notify_connection (daemon->notify_connection_cls,
                                connection,
@@ -3117,6 +3131,7 @@ MHD_add_connection (struct MHD_Daemon *daemon,
 {
   bool sk_nonbl;
 
+  MHD_cleanup_connections (daemon);
   if (! MHD_socket_nonblocking_ (client_socket))
   {
 #ifdef HAVE_MESSAGES
@@ -3223,7 +3238,7 @@ MHD_accept_connection (struct MHD_Daemon *daemon)
     {
       MHD_socket_close_chk_ (s);
     }
-    if ( MHD_SCKT_ERR_IS_LOW_RESOURCES_ (err) )
+    if (MHD_SCKT_ERR_IS_LOW_RESOURCES_ (err) )
     {
       /* system/process out of resources */
       if (0 == daemon->connections)
@@ -3267,8 +3282,8 @@ MHD_accept_connection (struct MHD_Daemon *daemon)
     MHD_DLOG (daemon,
               _ ("Failed to disable TCP Nagle on socket: %s\n"),
               MHD_socket_last_strerr_ ());
-  }
 #endif
+  }
 #endif
 #if ! defined(USE_ACCEPT4) || ! defined(HAVE_SOCK_NONBLOCK)
   if (! MHD_socket_nonblocking_ (s))
@@ -3375,8 +3390,7 @@ MHD_cleanup_connections (struct MHD_Daemon *daemon)
            this is not true as if we fail to do manually remove it,
            we are still seeing an event for this fd in epoll,
            causing grief (use-after-free...) --- at least on my
-           system. */
-        if (0 != epoll_ctl (daemon->epoll_fd,
+           system. */if (0 != epoll_ctl (daemon->epoll_fd,
                             EPOLL_CTL_DEL,
                             pos->socket_fd,
                             NULL))
@@ -3632,7 +3646,7 @@ MHD_run_from_select (struct MHD_Daemon *daemon,
   if (0 != (daemon->options
             & (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_POLL)) )
     return MHD_NO;
-  if ((NULL == read_fd_set)||(NULL == write_fd_set))
+  if ((NULL == read_fd_set) || (NULL == write_fd_set))
     return MHD_NO;
   if (NULL == except_fd_set)
   {   /* Workaround to maintain backward compatibility. */
@@ -3770,6 +3784,8 @@ MHD_select (struct MHD_Daemon *daemon,
 #if defined(MHD_WINSOCK_SOCKETS)
   }
 }
+
+
 #endif /* MHD_WINSOCK_SOCKETS */
   }
   /* Stop listening if we are at the configured connection limit */
@@ -4130,6 +4146,8 @@ MHD_poll_listen_socket (struct MHD_Daemon *daemon,
     (void) MHD_accept_connection (daemon);
   return MHD_YES;
 }
+
+
 #endif
 
 
@@ -4319,6 +4337,8 @@ run_epoll_for_upgrade (struct MHD_Daemon *daemon)
 
   return MHD_YES;
 }
+
+
 #endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
 
 
@@ -4607,8 +4627,7 @@ MHD_epoll (struct MHD_Daemon *daemon,
      here.
 
      Connections with custom timeouts must all be looked at, as we
-     do not bother to sort that (presumably very short) list. */
-  prev = daemon->manual_timeout_tail;
+     do not bother to sort that (presumably very short) list. */prev = daemon->manual_timeout_tail;
   while (NULL != (pos = prev))
   {
     prev = pos->prevX;
@@ -4628,6 +4647,8 @@ MHD_epoll (struct MHD_Daemon *daemon,
   }
   return MHD_YES;
 }
+
+
 #endif
 
 
@@ -4759,6 +4780,8 @@ MHD_polling_thread (void *cls)
 
   return (MHD_THRD_RTRN_TYPE_) 0;
 }
+
+
 #endif
 
 
@@ -4792,9 +4815,9 @@ unescape_wrapper (void *cls,
  * @param flags combination of `enum MHD_FLAG` values
  * @param port port to bind to (in host byte order),
  *        use '0' to bind to random free port,
- *        ignored if MHD_OPTION_SOCK_ADDR or
- *        MHD_OPTION_LISTEN_SOCKET is provided
- *        or MHD_USE_NO_LISTEN_SOCKET is specified
+ *        ignored if #MHD_OPTION_SOCK_ADDR or
+ *        #MHD_OPTION_LISTEN_SOCKET is provided
+ *        or #MHD_USE_NO_LISTEN_SOCKET is specified
  * @param apc callback to call to check which clients
  *        will be allowed to connect; you can pass NULL
  *        in which case connections from any IP will be
@@ -5644,6 +5667,8 @@ setup_epoll_to_listen (struct MHD_Daemon *daemon)
   }
   return MHD_YES;
 }
+
+
 #endif
 
 
@@ -5653,9 +5678,9 @@ setup_epoll_to_listen (struct MHD_Daemon *daemon)
  * @param flags combination of `enum MHD_FLAG` values
  * @param port port to bind to (in host byte order),
  *        use '0' to bind to random free port,
- *        ignored if MHD_OPTION_SOCK_ADDR or
- *        MHD_OPTION_LISTEN_SOCKET is provided
- *        or MHD_USE_NO_LISTEN_SOCKET is specified
+ *        ignored if #MHD_OPTION_SOCK_ADDR or
+ *        #MHD_OPTION_LISTEN_SOCKET is provided
+ *        or #MHD_USE_NO_LISTEN_SOCKET is specified
  * @param apc callback to call to check which clients
  *        will be allowed to connect; you can pass NULL
  *        in which case connections from any IP will be
@@ -6553,7 +6578,7 @@ MHD_start_daemon_va (unsigned int flags,
   return daemon;
 
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
-  thread_failed:
+thread_failed:
   /* If no worker threads created, then shut down normally. Calling
      MHD_stop_daemon (as we do below) doesn't work here since it
      assumes a 0-sized thread pool means we had been in the default
@@ -6577,7 +6602,7 @@ MHD_start_daemon_va (unsigned int flags,
   return NULL;
 #endif
 
-  free_and_fail:
+free_and_fail:
   /* clean up basic memory state in 'daemon' and return NULL to
      indicate failure */
 #ifdef EPOLL_SUPPORT
@@ -7053,7 +7078,7 @@ MHD_get_version (void)
                              (((int) MHD_VERSION >> 24) & 0xFF),
                              (((int) MHD_VERSION >> 16) & 0xFF),
                              (((int) MHD_VERSION >> 8) & 0xFF));
-    if ((0 >= res)||(sizeof(ver) <= res))
+    if ((0 >= res) || (sizeof(ver) <= res))
       return "0.0.0"; /* Can't return real version*/
   }
   return ver;
@@ -7301,7 +7326,7 @@ MHD_init (void)
   if (0 != WSAStartup (MAKEWORD (2, 2), &wsd))
     MHD_PANIC (_ ("Failed to initialize winsock\n"));
   mhd_winsock_inited_ = 1;
-  if ((2 != LOBYTE (wsd.wVersion))&&(2 != HIBYTE (wsd.wVersion)))
+  if ((2 != LOBYTE (wsd.wVersion)) && (2 != HIBYTE (wsd.wVersion)))
     MHD_PANIC (_ ("Winsock version 2.2 is not available\n"));
 #endif /* MHD_WINSOCK_SOCKETS */
 #ifdef HTTPS_SUPPORT
@@ -7345,6 +7370,7 @@ MHD_fini (void)
 #endif /* MHD_WINSOCK_SOCKETS */
   MHD_monotonic_sec_counter_finish ();
 }
+
 
 #ifdef _AUTOINIT_FUNCS_ARE_SUPPORTED
 _SET_INIT_AND_DEINIT_FUNCS (MHD_init, MHD_fini);

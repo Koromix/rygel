@@ -157,9 +157,10 @@ ServeOneRequest (void *param)
       if (EINTR != errno)
         abort ();
 #else
-      if ((WSAEINVAL != WSAGetLastError ()) ||(0 != rs.fd_count) ||(0 !=
-                                                                    ws.fd_count)
-          ||(0 != es.fd_count) )
+      if ((WSAEINVAL != WSAGetLastError ()) || (0 != rs.fd_count) || (0 !=
+                                                                      ws.
+                                                                      fd_count)
+          || (0 != es.fd_count) )
         abort ();
       Sleep (1000);
 #endif
@@ -228,7 +229,8 @@ testGet (int type, int pool_count, int poll_flag)
                           MHD_OPTION_END);
 
   }
-  else {
+  else
+  {
     d = MHD_start_daemon (type | MHD_USE_ERROR_LOG | MHD_USE_ITC | poll_flag,
                           port, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
   }
@@ -238,7 +240,7 @@ testGet (int type, int pool_count, int poll_flag)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -395,7 +397,7 @@ testExternalGet ()
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -456,10 +458,10 @@ testExternalGet ()
         if (EINTR != errno)
           abort ();
 #else
-        if ((WSAEINVAL != WSAGetLastError ()) ||(0 != rs.fd_count) ||(0 !=
-                                                                      ws.
-                                                                      fd_count)
-            ||(0 != es.fd_count) )
+        if ((WSAEINVAL != WSAGetLastError ()) || (0 != rs.fd_count) || (0 !=
+                                                                        ws.
+                                                                        fd_count)
+            || (0 != es.fd_count) )
           abort ();
         Sleep (1000);
 #endif
@@ -472,7 +474,7 @@ testExternalGet ()
           break;
         if (msg->msg == CURLMSG_DONE)
         {
-          if ((i == 0) &&(msg->data.result != CURLE_OK) )
+          if ((i == 0) && (msg->data.result != CURLE_OK) )
             printf ("%s failed at %s:%d: `%s'\n",
                     "curl_multi_perform",
                     __FILE__,

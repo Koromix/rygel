@@ -80,6 +80,8 @@ MHD_state_to_string (enum MHD_CONNECTION_STATE state)
     return "unrecognized connection state";
   }
 }
+
+
 #endif
 #endif
 
@@ -107,6 +109,8 @@ MHD_DLOG (const struct MHD_Daemon *daemon,
                   va);
   va_end (va);
 }
+
+
 #endif
 
 
@@ -279,5 +283,6 @@ MHD_parse_arguments_ (struct MHD_Request *request,
   }
   return true;
 }
+
 
 /* end of internal.c */

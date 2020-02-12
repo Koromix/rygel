@@ -64,6 +64,7 @@ has_in_name (const char *prog_name, const char *marker)
   return strstr (prog_name + name_pos, marker) != (char*) 0;
 }
 
+
 /**
  * Check whether one of strings in array is equal to @a param.
  * String @a argv[0] is ignored.
@@ -83,7 +84,7 @@ has_param (int argc, char *const argv[], const char *param)
 
   for (i = 1; i < argc; i++)
   {
-    if (argv[i] &&(strcmp (argv[i], param) == 0) )
+    if (argv[i] && (strcmp (argv[i], param) == 0) )
       return ! 0;
   }
 

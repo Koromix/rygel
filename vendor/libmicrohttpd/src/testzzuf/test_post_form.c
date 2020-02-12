@@ -76,6 +76,7 @@ copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
   return size * nmemb;
 }
 
+
 /**
  * Note that this post_iterator is not perfect
  * in that it fails to support incremental processing.
@@ -152,6 +153,7 @@ ahc_echo (void *cls,
   *upload_data_size = 0;
   return MHD_YES;
 }
+
 
 static struct curl_httppost *
 make_form ()

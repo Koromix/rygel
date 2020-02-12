@@ -60,6 +60,7 @@
 int
 MHD_str_equal_caseless_ (const char *str1,
                          const char *str2);
+
 #else  /* MHD_FAVOR_SMALL_CODE */
 /* Reuse MHD_str_equal_caseless_n_() to reduce size */
 #define MHD_str_equal_caseless_(s1,s2) MHD_str_equal_caseless_n_ ((s1),(s2), \

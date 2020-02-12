@@ -70,6 +70,7 @@ https_transfer_thread_adapter (void *args)
   return &nonnull;
 }
 
+
 /**
  * Test non-parallel requests.
  *

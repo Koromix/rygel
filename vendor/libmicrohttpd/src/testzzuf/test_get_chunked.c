@@ -57,6 +57,7 @@ copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
   return size * nmemb;
 }
 
+
 /**
  * MHD content reader callback that returns
  * data in chunks.
@@ -77,6 +78,7 @@ crc (void *cls, uint64_t pos, char *buf, size_t max)
   return 128;
 }
 
+
 /**
  * Dummy function that does nothing.
  */
@@ -85,6 +87,7 @@ crcf (void *ptr)
 {
   free (ptr);
 }
+
 
 static int
 ahc_echo (void *cls,
@@ -132,6 +135,7 @@ ahc_echo (void *cls,
   return ret;
 }
 
+
 static int
 testInternalGet ()
 {
@@ -173,6 +177,7 @@ testInternalGet ()
   MHD_stop_daemon (d);
   return 0;
 }
+
 
 static int
 testMultithreadedGet ()
@@ -326,7 +331,6 @@ testExternalGet ()
   MHD_stop_daemon (d);
   return 0;
 }
-
 
 
 int

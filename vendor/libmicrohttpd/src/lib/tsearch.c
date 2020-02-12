@@ -102,7 +102,7 @@ tdelete (const void *__restrict vkey,
   node_t *r;
   int cmp;
 
-  if ((rootp == NULL)||((p = *rootp) == NULL))
+  if ((rootp == NULL) || ((p = *rootp) == NULL))
     return NULL;
 
   while ((cmp = (*compar)(vkey, (*rootp)->key)) != 0)
@@ -139,5 +139,6 @@ tdelete (const void *__restrict vkey,
   *rootp = q;       /* link parent to new node */
   return p;
 }
+
 
 /* end of tsearch.c */

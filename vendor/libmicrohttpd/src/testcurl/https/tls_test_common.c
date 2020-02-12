@@ -232,6 +232,7 @@ http_dummy_ahc (void *cls,
   return 0;
 }
 
+
 /**
  * send a test http request to the daemon
  * @param url
@@ -414,6 +415,7 @@ cleanup:
   return ret;
 }
 
+
 /**
  * setup test case
  *
@@ -439,7 +441,7 @@ setup_testcase (struct MHD_Daemon **d, int port, int daemon_flags, va_list
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (*d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (*d);
       return 0;
@@ -450,11 +452,13 @@ setup_testcase (struct MHD_Daemon **d, int port, int daemon_flags, va_list
   return port;
 }
 
+
 void
 teardown_testcase (struct MHD_Daemon *d)
 {
   MHD_stop_daemon (d);
 }
+
 
 int
 setup_session (gnutls_session_t *session,
@@ -501,6 +505,7 @@ setup_session (gnutls_session_t *session,
   return 0;
 }
 
+
 int
 teardown_session (gnutls_session_t session,
                   gnutls_datum_t *key,
@@ -517,6 +522,7 @@ teardown_session (gnutls_session_t session,
   gnutls_certificate_free_credentials (xcred);
   return 0;
 }
+
 
 /* TODO test_wrap: change sig to (setup_func, test, va_list test_arg) */
 int

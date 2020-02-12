@@ -69,6 +69,8 @@ thread_main_connection_upgrade (struct MHD_Connection *con)
   /* Do not set 'urh->clean_ready' yet as 'urh' will be used
    * in connection thread for a little while. */
 }
+
+
 #endif /* UPGRADE_SUPPORT */
 
 
@@ -1054,7 +1056,7 @@ MHD_accept_connection_ (struct MHD_Daemon *daemon)
     {
       MHD_socket_close_chk_ (s);
     }
-    if ( MHD_SCKT_ERR_IS_LOW_RESOURCES_ (err) )
+    if (MHD_SCKT_ERR_IS_LOW_RESOURCES_ (err) )
     {
       /* system/process out of resources */
       if (0 == daemon->connections)
@@ -1133,5 +1135,6 @@ MHD_accept_connection_ (struct MHD_Daemon *daemon)
                                   false,
                                   sk_nonbl);
 }
+
 
 /* end of connection_add.c */

@@ -85,8 +85,7 @@ MHD_upgrade_response_handle_process_ (struct MHD_UpgradeResponseHandle *urh)
      * check for any pending data even if socket is not marked
      * as 'ready' (signal may arrive after poll()/select()).
      * Socketpair for forwarding is always in non-blocking mode
-     * so no risk that recv() will block the thread. */
-    if (0 != urh->out_buffer_size)
+     * so no risk that recv() will block the thread. */if (0 != urh->out_buffer_size)
       urh->mhd.celi |= MHD_EPOLL_STATE_READ_READY;
     /* Discard any data received form remote. */
     urh->in_buffer_used = 0;
@@ -102,11 +101,8 @@ MHD_upgrade_response_handle_process_ (struct MHD_UpgradeResponseHandle *urh)
    * fail after remote disconnect was detected) may discard data in system
    * buffers received by system but not yet read by recv().
    * So, before trying send() on any socket, recv() must be performed at first
-   * otherwise last part of incoming data may be lost. */
-
-  /* If disconnect or error was detected - try to read from socket
-   * to dry data possibly pending is system buffers. */
-  if (0 != (MHD_EPOLL_STATE_ERROR & urh->app.celi))
+   * otherwise last part of incoming data may be lost. *//* If disconnect or error was detected - try to read from socket
+   * to dry data possibly pending is system buffers. */if (0 != (MHD_EPOLL_STATE_ERROR & urh->app.celi))
     urh->app.celi |= MHD_EPOLL_STATE_READ_READY;
   if (0 != (MHD_EPOLL_STATE_ERROR & urh->mhd.celi))
     urh->mhd.celi |= MHD_EPOLL_STATE_READ_READY;
@@ -392,6 +388,8 @@ MHD_upgrade_response_handle_process_ (struct MHD_UpgradeResponseHandle *urh)
     urh->mhd.celi &= ~MHD_EPOLL_STATE_READ_READY;
   }
 }
+
+
 #endif /* HTTPS_SUPPORT  && UPGRADE_SUPPORT */
 
 /* end of upgrade_process.c */

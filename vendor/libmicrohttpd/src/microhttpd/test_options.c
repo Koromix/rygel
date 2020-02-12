@@ -56,6 +56,7 @@ ahc_echo (void *cls,
   return 0;
 }
 
+
 static int
 test_wrap_loc (char *test_name, int (*test)(void))
 {
@@ -121,6 +122,7 @@ test_ip_addr_option ()
 
   return 0;
 }
+
 
 /* setup a temporary transfer test file */
 int

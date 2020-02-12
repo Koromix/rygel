@@ -46,6 +46,7 @@ MHD_MD5Init (void *ctx_)
   ctx->state[3] = 0x10325476;
 }
 
+
 static void
 MD5Transform (uint32_t state[4],
               const uint8_t block[MD5_BLOCK_SIZE]);

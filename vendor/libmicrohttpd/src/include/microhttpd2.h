@@ -124,7 +124,6 @@ typedef intptr_t ssize_t;
 #define MHD_VERSION 0x01000000
 
 
-
 /**
  * Representation of 'bool' in the public API as stdbool.h may not
  * always be available.
@@ -526,7 +525,6 @@ enum MHD_StatusCode
   MHD_SC_CHUNKED_ENCODING_MALFORMED = 40007,
 
 
-
   /* 50000-level errors are because of an error internal
      to the MHD logic, possibly including our interaction
      with the operating system (but not the application) */
@@ -824,7 +822,6 @@ enum MHD_StatusCode
    * MHD failed to build the response header.
    */
   MHD_SC_FAILED_RESPONSE_HEADER_GENERATION = 50056,
-
 
 
   /* 60000-level errors are because the application
@@ -1135,7 +1132,6 @@ enum MHD_Method
 #define MHD_HTTP_POST_ENCODING_MULTIPART_FORMDATA "multipart/form-data"
 
 /** @} */ /* end of group postenc */
-
 
 
 /**
@@ -2656,7 +2652,6 @@ enum MHD_ValueKind
 };
 
 
-
 /**
  * Iterator over key-value pairs.  This iterator can be used to
  * iterate over all of the cookies, headers, or POST-data fields of a
@@ -2745,7 +2740,6 @@ MHD_request_lookup_value (struct MHD_Request *request,
                           enum MHD_ValueKind kind,
                           const char *key)
 MHD_NONNULL (1);
-
 
 
 /**
@@ -3585,7 +3579,6 @@ MHD_action_parse_post (size_t buffer_size,
                        MHD_PostDataIterator iter,
                        void *iter_cls)
 MHD_NONNULL (2);
-
 
 
 /* ********************** generic query functions ********************** */

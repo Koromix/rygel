@@ -120,7 +120,6 @@ load_keys (const char *hostname,
 }
 
 
-
 /**
  * @param session the session we are giving a cert for
  * @param req_ca_dn NULL on server side
@@ -297,7 +296,7 @@ main (int argc, char *const *argv)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return -1;
     }
@@ -318,10 +317,13 @@ main (int argc, char *const *argv)
 
 #else
 
-int main (void)
+int
+main (void)
 {
   fprintf (stderr,
            "SNI not supported by GnuTLS < 3.0\n");
   return 77;
 }
+
+
 #endif

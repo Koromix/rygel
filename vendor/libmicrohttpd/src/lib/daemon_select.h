@@ -50,6 +50,7 @@ MHD_NONNULL (1);
 void
 MHD_daemon_upgrade_connection_with_select_ (struct MHD_Connection *con)
 MHD_NONNULL (1);
+
 #endif
 
 #endif

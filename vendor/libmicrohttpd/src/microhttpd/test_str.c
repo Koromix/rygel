@@ -208,7 +208,8 @@ static const unsigned int locale_name_count = sizeof(locale_names)
  *  Helper functions
  */
 
-int set_test_locale (unsigned int num)
+int
+set_test_locale (unsigned int num)
 {
   if (num >= locale_name_count)
     return -1;
@@ -225,17 +226,21 @@ int set_test_locale (unsigned int num)
   return 0;
 }
 
-const char *get_current_locale_str (void)
+
+const char *
+get_current_locale_str (void)
 {
   char const *loc_str = setlocale (LC_ALL, NULL);
   return loc_str ? loc_str : "unknown";
 }
 
+
 static char tmp_bufs[4][4 * 1024]; /* should be enough for testing */
 static size_t buf_idx = 0;
 
 /* print non-printable chars as char codes */
-char *n_prnt (const char *str)
+char *
+n_prnt (const char *str)
 {
   static char *buf;  /* should be enough for testing */
   static const size_t buf_size = sizeof(tmp_bufs[0]);
@@ -248,14 +253,14 @@ char *n_prnt (const char *str)
   while (*p && w_pos + 1 < buf_size)
   {
     const unsigned char c = *p;
-    if ((c == '\\') ||(c == '"') )
+    if ((c == '\\') || (c == '"') )
     {
       if (w_pos + 2 >= buf_size)
         break;
       buf[w_pos++] = '\\';
       buf[w_pos++] = c;
     }
-    else if ((c >= 0x20) &&(c <= 0x7E) )
+    else if ((c >= 0x20) && (c <= 0x7E) )
       buf[w_pos++] = c;
     else
     {
@@ -497,7 +502,8 @@ static const struct two_neq_strs neq_strings[] = {
 };
 
 
-int check_eq_strings (void)
+int
+check_eq_strings (void)
 {
   size_t t_failed = 0;
   size_t i, j;
@@ -532,7 +538,7 @@ int check_eq_strings (void)
                  " Locale: %s\n", n_prnt (t->s2.str), n_prnt (t->s1.str),
                  get_current_locale_str ());
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[i])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[i])
         printf ("PASSED: MHD_str_equal_caseless_(\"%s\", \"%s\") != 0 && \\\n"
                 "        MHD_str_equal_caseless_(\"%s\", \"%s\") != 0\n",
                 n_prnt (t->s1.str), n_prnt (t->s2.str),
@@ -542,7 +548,9 @@ int check_eq_strings (void)
   return t_failed;
 }
 
-int check_neq_strings (void)
+
+int
+check_neq_strings (void)
 {
   size_t t_failed = 0;
   size_t i, j;
@@ -577,7 +585,7 @@ int check_neq_strings (void)
                  " Locale: %s\n", n_prnt (t->s2.str), n_prnt (t->s1.str),
                  get_current_locale_str ());
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[i])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[i])
         printf ("PASSED: MHD_str_equal_caseless_(\"%s\", \"%s\") == 0 && \\\n"
                 "        MHD_str_equal_caseless_(\"%s\", \"%s\") == 0\n",
                 n_prnt (t->s1.str), n_prnt (t->s2.str),
@@ -587,7 +595,9 @@ int check_neq_strings (void)
   return t_failed;
 }
 
-int check_eq_strings_n (void)
+
+int
+check_eq_strings_n (void)
 {
   size_t t_failed = 0;
   size_t i, j, k;
@@ -627,7 +637,7 @@ int check_eq_strings_n (void)
                    get_current_locale_str ());
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[i])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[i])
         printf (
           "PASSED: MHD_str_equal_caseless_n_(\"%s\", \"%s\", N) != 0 && \\\n"
           "        MHD_str_equal_caseless_n_(\"%s\", \"%s\", N) != 0, where N is 0..%u\n",
@@ -638,7 +648,9 @@ int check_eq_strings_n (void)
   return t_failed;
 }
 
-int check_neq_strings_n (void)
+
+int
+check_neq_strings_n (void)
 {
   size_t t_failed = 0;
   size_t i, j, k;
@@ -732,7 +744,7 @@ int check_neq_strings_n (void)
           }
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[i])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[i])
       {
         printf (
           "PASSED: MHD_str_equal_caseless_n_(\"%s\", \"%s\", N) != 0 && \\\n"
@@ -753,10 +765,12 @@ int check_neq_strings_n (void)
   return t_failed;
 }
 
+
 /*
  * Run eq/neq strings tests
  */
-int run_eq_neq_str_tests (void)
+int
+run_eq_neq_str_tests (void)
 {
   int str_equal_caseless_fails = 0;
   int str_equal_caseless_n_fails = 0;
@@ -850,6 +864,7 @@ int run_eq_neq_str_tests (void)
 
   return 0;
 }
+
 
 /*
  * Digits in string -> value tests
@@ -1118,7 +1133,8 @@ const struct str_with_len strx_ovflw[] = {
 };
 
 
-int check_str_to_uint64_valid (void)
+int
+check_str_to_uint64_valid (void)
 {
   size_t t_failed = 0;
   size_t i, j;
@@ -1175,7 +1191,7 @@ int check_str_to_uint64_valid (void)
                    t->str.str), rv, rv,
                  t->val, get_current_locale_str ());
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[i])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[i])
         printf (
           "PASSED: MHD_str_to_uint64_(\"%s\", ->%" PRIu64 ") == %" PRIuPTR "\n",
           n_prnt (t->str.str), rv, rs);
@@ -1185,7 +1201,8 @@ int check_str_to_uint64_valid (void)
 }
 
 
-int check_str_to_uint64_all_chars (void)
+int
+check_str_to_uint64_all_chars (void)
 {
   static const size_t n_checks = 256; /* from 0 to 255 */
   int c_failed[n_checks];
@@ -1204,9 +1221,9 @@ int check_str_to_uint64_all_chars (void)
     {
       static const uint64_t rnd_val = 24941852;
       size_t rs;
-      if ((c >= '0') &&(c <= '9') )
+      if ((c >= '0') && (c <= '9') )
         continue;     /* skip digits */
-      for (test_val = 0; test_val <= rnd_val&& ! c_failed[c]; test_val +=
+      for (test_val = 0; test_val <= rnd_val && ! c_failed[c]; test_val +=
              rnd_val)
       {
         char test_str[] = "0123";
@@ -1236,7 +1253,7 @@ int check_str_to_uint64_all_chars (void)
                    n_prnt (test_str), test_val, rv, get_current_locale_str ());
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[c])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[c])
       {
         char test_str[] = "0123";
         test_str[0] = (char) (unsigned char) c;      /* replace first char with non-digit char */
@@ -1251,7 +1268,8 @@ int check_str_to_uint64_all_chars (void)
 }
 
 
-int check_str_to_uint64_overflow (void)
+int
+check_str_to_uint64_overflow (void)
 {
   size_t t_failed = 0;
   size_t i, j;
@@ -1298,7 +1316,7 @@ int check_str_to_uint64_overflow (void)
                    n_prnt (t->str), test_val, rv, get_current_locale_str ());
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[i])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[i])
         printf (
           "PASSED: MHD_str_to_uint64_(\"%s\", &ret_val) == 0, value of ret_val is unmodified\n",
           n_prnt (t->str));
@@ -1308,7 +1326,8 @@ int check_str_to_uint64_overflow (void)
 }
 
 
-int check_str_to_uint64_no_val (void)
+int
+check_str_to_uint64_no_val (void)
 {
   size_t t_failed = 0;
   size_t i, j;
@@ -1355,7 +1374,7 @@ int check_str_to_uint64_no_val (void)
                    n_prnt (t->str), test_val, rv, get_current_locale_str ());
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[i])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[i])
         printf (
           "PASSED: MHD_str_to_uint64_(\"%s\", &ret_val) == 0, value of ret_val is unmodified\n",
           n_prnt (t->str));
@@ -1365,7 +1384,8 @@ int check_str_to_uint64_no_val (void)
 }
 
 
-int check_str_to_uint64_n_valid (void)
+int
+check_str_to_uint64_n_valid (void)
 {
   size_t t_failed = 0;
   size_t i, j;
@@ -1423,7 +1443,7 @@ int check_str_to_uint64_n_valid (void)
                    t->val, get_current_locale_str ());
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[i])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[i])
         printf (
           "PASSED: MHD_str_to_uint64_n_(\"%s\", %" PRIuPTR "..%" PRIuPTR ", ->%"
           PRIu64 ")"
@@ -1436,7 +1456,8 @@ int check_str_to_uint64_n_valid (void)
 }
 
 
-int check_str_to_uint64_n_all_chars (void)
+int
+check_str_to_uint64_n_all_chars (void)
 {
   static const size_t n_checks = 256; /* from 0 to 255 */
   int c_failed[n_checks];
@@ -1457,12 +1478,12 @@ int check_str_to_uint64_n_all_chars (void)
       size_t rs;
       size_t len;
 
-      if ((c >= '0') &&(c <= '9') )
+      if ((c >= '0') && (c <= '9') )
         continue;     /* skip digits */
 
       for (len = 0; len <= 5; len++)
       {
-        for (test_val = 0; test_val <= rnd_val&& ! c_failed[c]; test_val +=
+        for (test_val = 0; test_val <= rnd_val && ! c_failed[c]; test_val +=
                rnd_val)
         {
           char test_str[] = "0123";
@@ -1497,7 +1518,7 @@ int check_str_to_uint64_n_all_chars (void)
           }
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[c])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[c])
       {
         char test_str[] = "0123";
         test_str[0] = (char) (unsigned char) c;      /* replace first char with non-digit char */
@@ -1512,7 +1533,8 @@ int check_str_to_uint64_n_all_chars (void)
 }
 
 
-int check_str_to_uint64_n_overflow (void)
+int
+check_str_to_uint64_n_overflow (void)
 {
   size_t t_failed = 0;
   size_t i, j;
@@ -1567,7 +1589,7 @@ int check_str_to_uint64_n_overflow (void)
           }
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[i])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[i])
         printf (
           "PASSED: MHD_str_to_uint64_n_(\"%s\", %" PRIuPTR "..%" PRIuPTR
           ", &ret_val) == 0,"
@@ -1580,7 +1602,8 @@ int check_str_to_uint64_n_overflow (void)
 }
 
 
-int check_str_to_uint64_n_no_val (void)
+int
+check_str_to_uint64_n_no_val (void)
 {
   size_t t_failed = 0;
   size_t i, j;
@@ -1635,7 +1658,7 @@ int check_str_to_uint64_n_no_val (void)
           }
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[i])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[i])
         printf (
           "PASSED: MHD_str_to_uint64_n_(\"%s\", 0..%" PRIuPTR
           ", &ret_val) == 0,"
@@ -1647,7 +1670,8 @@ int check_str_to_uint64_n_no_val (void)
 }
 
 
-int check_strx_to_uint32_valid (void)
+int
+check_strx_to_uint32_valid (void)
 {
   size_t t_failed = 0;
   size_t i, j;
@@ -1708,7 +1732,7 @@ int check_strx_to_uint32_valid (void)
                    t->str.str), (uint64_t) rv, (uint64_t) rv,
                  t->val, get_current_locale_str ());
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[i])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[i])
         printf (
           "PASSED: MHD_strx_to_uint32_(\"%s\", ->0x%" PRIX64 ") == %" PRIuPTR
           "\n",
@@ -1719,7 +1743,8 @@ int check_strx_to_uint32_valid (void)
 }
 
 
-int check_strx_to_uint32_all_chars (void)
+int
+check_strx_to_uint32_all_chars (void)
 {
   static const size_t n_checks = 256; /* from 0 to 255 */
   int c_failed[n_checks];
@@ -1738,12 +1763,13 @@ int check_strx_to_uint32_all_chars (void)
     {
       static const uint32_t rnd_val = 234234;
       size_t rs;
-      if (((c >= '0') &&(c <= '9') ) || ((c >= 'A') &&(c <= 'F') ) ||((c >=
-                                                                       'a') &&
-                                                                      (c <=
-                                                                       'f') ))
+      if (((c >= '0') && (c <= '9') ) || ((c >= 'A') && (c <= 'F') ) || ((c >=
+                                                                          'a')
+                                                                         &&
+                                                                         (c <=
+                                                                          'f') ))
         continue;     /* skip xdigits */
-      for (test_val = 0; test_val <= rnd_val&& ! c_failed[c]; test_val +=
+      for (test_val = 0; test_val <= rnd_val && ! c_failed[c]; test_val +=
              rnd_val)
       {
         char test_str[] = "0123";
@@ -1774,7 +1800,7 @@ int check_strx_to_uint32_all_chars (void)
                    get_current_locale_str ());
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[c])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[c])
       {
         char test_str[] = "0123";
         test_str[0] = (char) (unsigned char) c;      /* replace first char with non-digit char */
@@ -1789,7 +1815,8 @@ int check_strx_to_uint32_all_chars (void)
 }
 
 
-int check_strx_to_uint32_overflow (void)
+int
+check_strx_to_uint32_overflow (void)
 {
   size_t t_failed = 0;
   size_t i, j;
@@ -1854,7 +1881,7 @@ int check_strx_to_uint32_overflow (void)
                    get_current_locale_str ());
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[i])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[i])
         printf (
           "PASSED: MHD_strx_to_uint32_(\"%s\", &ret_val) == 0, value of ret_val is unmodified\n",
           n_prnt (str));
@@ -1864,7 +1891,8 @@ int check_strx_to_uint32_overflow (void)
 }
 
 
-int check_strx_to_uint32_no_val (void)
+int
+check_strx_to_uint32_no_val (void)
 {
   size_t t_failed = 0;
   size_t i, j;
@@ -1912,7 +1940,7 @@ int check_strx_to_uint32_no_val (void)
                    get_current_locale_str ());
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[i])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[i])
         printf (
           "PASSED: MHD_strx_to_uint32_(\"%s\", &ret_val) == 0, value of ret_val is unmodified\n",
           n_prnt (t->str));
@@ -1922,7 +1950,8 @@ int check_strx_to_uint32_no_val (void)
 }
 
 
-int check_strx_to_uint32_n_valid (void)
+int
+check_strx_to_uint32_n_valid (void)
 {
   size_t t_failed = 0;
   size_t i, j;
@@ -1984,7 +2013,7 @@ int check_strx_to_uint32_n_valid (void)
                    t->val, get_current_locale_str ());
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[i])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[i])
         printf (
           "PASSED: MHD_strx_to_uint32_n_(\"%s\", %" PRIuPTR "..%" PRIuPTR
           ", ->0x%"
@@ -1998,7 +2027,8 @@ int check_strx_to_uint32_n_valid (void)
 }
 
 
-int check_strx_to_uint32_n_all_chars (void)
+int
+check_strx_to_uint32_n_all_chars (void)
 {
   static const size_t n_checks = 256; /* from 0 to 255 */
   int c_failed[n_checks];
@@ -2019,15 +2049,16 @@ int check_strx_to_uint32_n_all_chars (void)
       size_t rs;
       size_t len;
 
-      if (((c >= '0') &&(c <= '9') ) || ((c >= 'A') &&(c <= 'F') ) || ((c >=
-                                                                        'a') &&
-                                                                       (c <=
-                                                                        'f') ))
+      if (((c >= '0') && (c <= '9') ) || ((c >= 'A') && (c <= 'F') ) || ((c >=
+                                                                          'a')
+                                                                         &&
+                                                                         (c <=
+                                                                          'f') ))
         continue;     /* skip xdigits */
 
       for (len = 0; len <= 5; len++)
       {
-        for (test_val = 0; test_val <= rnd_val&& ! c_failed[c]; test_val +=
+        for (test_val = 0; test_val <= rnd_val && ! c_failed[c]; test_val +=
                rnd_val)
         {
           char test_str[] = "0123";
@@ -2063,7 +2094,7 @@ int check_strx_to_uint32_n_all_chars (void)
           }
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[c])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[c])
       {
         char test_str[] = "0123";
         test_str[0] = (char) (unsigned char) c;      /* replace first char with non-digit char */
@@ -2078,7 +2109,8 @@ int check_strx_to_uint32_n_all_chars (void)
 }
 
 
-int check_strx_to_uint32_n_overflow (void)
+int
+check_strx_to_uint32_n_overflow (void)
 {
   size_t t_failed = 0;
   size_t i, j;
@@ -2166,7 +2198,7 @@ int check_strx_to_uint32_n_overflow (void)
           }
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[i])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[i])
         printf (
           "PASSED: MHD_strx_to_uint32_n_(\"%s\", %" PRIuPTR "..%" PRIuPTR
           ", &ret_val) == 0,"
@@ -2179,7 +2211,8 @@ int check_strx_to_uint32_n_overflow (void)
 }
 
 
-int check_strx_to_uint32_n_no_val (void)
+int
+check_strx_to_uint32_n_no_val (void)
 {
   size_t t_failed = 0;
   size_t i, j;
@@ -2235,7 +2268,7 @@ int check_strx_to_uint32_n_no_val (void)
           }
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[i])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[i])
         printf (
           "PASSED: MHD_strx_to_uint32_n_(\"%s\", 0..%" PRIuPTR
           ", &ret_val) == 0,"
@@ -2247,7 +2280,8 @@ int check_strx_to_uint32_n_no_val (void)
 }
 
 
-int check_strx_to_uint64_valid (void)
+int
+check_strx_to_uint64_valid (void)
 {
   size_t t_failed = 0;
   size_t i, j;
@@ -2304,7 +2338,7 @@ int check_strx_to_uint64_valid (void)
                    t->str.str), rv, rv,
                  t->val, get_current_locale_str ());
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[i])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[i])
         printf (
           "PASSED: MHD_strx_to_uint64_(\"%s\", ->0x%" PRIX64 ") == %" PRIuPTR
           "\n",
@@ -2315,7 +2349,8 @@ int check_strx_to_uint64_valid (void)
 }
 
 
-int check_strx_to_uint64_all_chars (void)
+int
+check_strx_to_uint64_all_chars (void)
 {
   static const size_t n_checks = 256; /* from 0 to 255 */
   int c_failed[n_checks];
@@ -2334,12 +2369,13 @@ int check_strx_to_uint64_all_chars (void)
     {
       static const uint64_t rnd_val = 234234;
       size_t rs;
-      if (((c >= '0') &&(c <= '9') ) || ((c >= 'A') &&(c <= 'F') ) || ((c >=
-                                                                        'a') &&
-                                                                       (c <=
-                                                                        'f') ))
+      if (((c >= '0') && (c <= '9') ) || ((c >= 'A') && (c <= 'F') ) || ((c >=
+                                                                          'a')
+                                                                         &&
+                                                                         (c <=
+                                                                          'f') ))
         continue;     /* skip xdigits */
-      for (test_val = 0; test_val <= rnd_val&& ! c_failed[c]; test_val +=
+      for (test_val = 0; test_val <= rnd_val && ! c_failed[c]; test_val +=
              rnd_val)
       {
         char test_str[] = "0123";
@@ -2369,7 +2405,7 @@ int check_strx_to_uint64_all_chars (void)
                    n_prnt (test_str), test_val, rv, get_current_locale_str ());
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[c])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[c])
       {
         char test_str[] = "0123";
         test_str[0] = (char) (unsigned char) c;      /* replace first char with non-digit char */
@@ -2384,7 +2420,8 @@ int check_strx_to_uint64_all_chars (void)
 }
 
 
-int check_strx_to_uint64_overflow (void)
+int
+check_strx_to_uint64_overflow (void)
 {
   size_t t_failed = 0;
   size_t i, j;
@@ -2431,7 +2468,7 @@ int check_strx_to_uint64_overflow (void)
                    n_prnt (t->str), test_val, rv, get_current_locale_str ());
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[i])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[i])
         printf (
           "PASSED: MHD_strx_to_uint64_(\"%s\", &ret_val) == 0, value of ret_val is unmodified\n",
           n_prnt (t->str));
@@ -2441,7 +2478,8 @@ int check_strx_to_uint64_overflow (void)
 }
 
 
-int check_strx_to_uint64_no_val (void)
+int
+check_strx_to_uint64_no_val (void)
 {
   size_t t_failed = 0;
   size_t i, j;
@@ -2488,7 +2526,7 @@ int check_strx_to_uint64_no_val (void)
                    n_prnt (t->str), test_val, rv, get_current_locale_str ());
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[i])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[i])
         printf (
           "PASSED: MHD_strx_to_uint64_(\"%s\", &ret_val) == 0, value of ret_val is unmodified\n",
           n_prnt (t->str));
@@ -2498,7 +2536,8 @@ int check_strx_to_uint64_no_val (void)
 }
 
 
-int check_strx_to_uint64_n_valid (void)
+int
+check_strx_to_uint64_n_valid (void)
 {
   size_t t_failed = 0;
   size_t i, j;
@@ -2556,7 +2595,7 @@ int check_strx_to_uint64_n_valid (void)
                    t->val, get_current_locale_str ());
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[i])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[i])
         printf (
           "PASSED: MHD_strx_to_uint64_n_(\"%s\", %" PRIuPTR "..%" PRIuPTR
           ", ->0x%"
@@ -2570,7 +2609,8 @@ int check_strx_to_uint64_n_valid (void)
 }
 
 
-int check_strx_to_uint64_n_all_chars (void)
+int
+check_strx_to_uint64_n_all_chars (void)
 {
   static const size_t n_checks = 256; /* from 0 to 255 */
   int c_failed[n_checks];
@@ -2591,15 +2631,16 @@ int check_strx_to_uint64_n_all_chars (void)
       size_t rs;
       size_t len;
 
-      if (((c >= '0') &&(c <= '9') ) || ((c >= 'A') &&(c <= 'F') ) || ((c >=
-                                                                        'a') &&
-                                                                       (c <=
-                                                                        'f') ))
+      if (((c >= '0') && (c <= '9') ) || ((c >= 'A') && (c <= 'F') ) || ((c >=
+                                                                          'a')
+                                                                         &&
+                                                                         (c <=
+                                                                          'f') ))
         continue;     /* skip xdigits */
 
       for (len = 0; len <= 5; len++)
       {
-        for (test_val = 0; test_val <= rnd_val&& ! c_failed[c]; test_val +=
+        for (test_val = 0; test_val <= rnd_val && ! c_failed[c]; test_val +=
                rnd_val)
         {
           char test_str[] = "0123";
@@ -2635,7 +2676,7 @@ int check_strx_to_uint64_n_all_chars (void)
           }
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[c])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[c])
       {
         char test_str[] = "0123";
         test_str[0] = (char) (unsigned char) c;      /* replace first char with non-digit char */
@@ -2650,7 +2691,8 @@ int check_strx_to_uint64_n_all_chars (void)
 }
 
 
-int check_strx_to_uint64_n_overflow (void)
+int
+check_strx_to_uint64_n_overflow (void)
 {
   size_t t_failed = 0;
   size_t i, j;
@@ -2706,7 +2748,7 @@ int check_strx_to_uint64_n_overflow (void)
           }
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[i])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[i])
         printf (
           "PASSED: MHD_strx_to_uint64_n_(\"%s\", %" PRIuPTR "..%" PRIuPTR
           ", &ret_val) == 0,"
@@ -2719,7 +2761,8 @@ int check_strx_to_uint64_n_overflow (void)
 }
 
 
-int check_strx_to_uint64_n_no_val (void)
+int
+check_strx_to_uint64_n_no_val (void)
 {
   size_t t_failed = 0;
   size_t i, j;
@@ -2775,7 +2818,7 @@ int check_strx_to_uint64_n_no_val (void)
           }
         }
       }
-      if ((verbose > 1) &&(j == locale_name_count - 1) && ! c_failed[i])
+      if ((verbose > 1) && (j == locale_name_count - 1) && ! c_failed[i])
         printf (
           "PASSED: MHD_strx_to_uint64_n_(\"%s\", 0..%" PRIuPTR
           ", &ret_val) == 0,"
@@ -2787,7 +2830,8 @@ int check_strx_to_uint64_n_no_val (void)
 }
 
 
-int run_str_to_X_tests (void)
+int
+run_str_to_X_tests (void)
 {
   int str_to_uint64_fails = 0;
   int str_to_uint64_n_fails = 0;
@@ -3270,7 +3314,8 @@ int run_str_to_X_tests (void)
 }
 
 
-int main (int argc, char *argv[])
+int
+main (int argc, char *argv[])
 {
   if (has_param (argc, argv, "-v") || has_param (argc, argv, "--verbose") ||
       has_param (argc, argv, "--verbose1"))

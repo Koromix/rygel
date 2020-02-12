@@ -105,13 +105,15 @@ host_triplet = @host@
 
 @HAVE_CURL_TRUE@check_PROGRAMS = test_get$(EXEEXT) \
 @HAVE_CURL_TRUE@	test_get_sendfile$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_delete$(EXEEXT) test_put$(EXEEXT) \
+@HAVE_CURL_TRUE@	test_delete$(EXEEXT) test_patch$(EXEEXT) \
+@HAVE_CURL_TRUE@	test_put$(EXEEXT) \
 @HAVE_CURL_TRUE@	test_process_headers$(EXEEXT) \
 @HAVE_CURL_TRUE@	test_process_arguments$(EXEEXT) \
 @HAVE_CURL_TRUE@	test_parse_cookies$(EXEEXT) \
 @HAVE_CURL_TRUE@	test_large_put$(EXEEXT) test_get11$(EXEEXT) \
 @HAVE_CURL_TRUE@	test_get_sendfile11$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_put11$(EXEEXT) test_large_put11$(EXEEXT) \
+@HAVE_CURL_TRUE@	test_patch11$(EXEEXT) test_put11$(EXEEXT) \
+@HAVE_CURL_TRUE@	test_large_put11$(EXEEXT) \
 @HAVE_CURL_TRUE@	test_large_put_inc11$(EXEEXT) \
 @HAVE_CURL_TRUE@	test_get_chunked$(EXEEXT) \
 @HAVE_CURL_TRUE@	test_put_chunked$(EXEEXT) \
@@ -315,6 +317,14 @@ am_test_parse_cookies_OBJECTS = test_parse_cookies.$(OBJEXT)
 test_parse_cookies_OBJECTS = $(am_test_parse_cookies_OBJECTS)
 test_parse_cookies_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_patch_OBJECTS = test_patch.$(OBJEXT)
+test_patch_OBJECTS = $(am_test_patch_OBJECTS)
+test_patch_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_patch11_OBJECTS = test_patch.$(OBJEXT)
+test_patch11_OBJECTS = $(am_test_patch11_OBJECTS)
+test_patch11_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_post_OBJECTS = test_post.$(OBJEXT)
 test_post_OBJECTS = $(am_test_post_OBJECTS)
 test_post_DEPENDENCIES =  \
@@ -417,8 +427,9 @@ am__depfiles_remade = ./$(DEPDIR)/curl_version_check.Po \
 	./$(DEPDIR)/test_get_response_cleanup.Po \
 	./$(DEPDIR)/test_get_sendfile.Po ./$(DEPDIR)/test_iplimit.Po \
 	./$(DEPDIR)/test_large_put.Po ./$(DEPDIR)/test_long_header.Po \
-	./$(DEPDIR)/test_parse_cookies.Po ./$(DEPDIR)/test_post.Po \
-	./$(DEPDIR)/test_post_loop.Po ./$(DEPDIR)/test_postform.Po \
+	./$(DEPDIR)/test_parse_cookies.Po ./$(DEPDIR)/test_patch.Po \
+	./$(DEPDIR)/test_post.Po ./$(DEPDIR)/test_post_loop.Po \
+	./$(DEPDIR)/test_postform.Po \
 	./$(DEPDIR)/test_process_arguments.Po \
 	./$(DEPDIR)/test_process_headers.Po ./$(DEPDIR)/test_put.Po \
 	./$(DEPDIR)/test_put_chunked.Po \
@@ -457,7 +468,8 @@ SOURCES = $(libcurl_version_check_a_SOURCES) $(perf_get_SOURCES) \
 	$(test_iplimit11_SOURCES) $(test_large_put_SOURCES) \
 	$(test_large_put11_SOURCES) $(test_large_put_inc11_SOURCES) \
 	$(test_long_header_SOURCES) $(test_long_header11_SOURCES) \
-	$(test_parse_cookies_SOURCES) $(test_post_SOURCES) \
+	$(test_parse_cookies_SOURCES) $(test_patch_SOURCES) \
+	$(test_patch11_SOURCES) $(test_post_SOURCES) \
 	$(test_post11_SOURCES) $(test_post_loop_SOURCES) \
 	$(test_post_loop11_SOURCES) $(test_postform_SOURCES) \
 	$(test_postform11_SOURCES) $(test_process_arguments_SOURCES) \
@@ -478,7 +490,8 @@ DIST_SOURCES = $(libcurl_version_check_a_SOURCES) $(perf_get_SOURCES) \
 	$(test_iplimit11_SOURCES) $(test_large_put_SOURCES) \
 	$(test_large_put11_SOURCES) $(test_large_put_inc11_SOURCES) \
 	$(test_long_header_SOURCES) $(test_long_header11_SOURCES) \
-	$(test_parse_cookies_SOURCES) $(test_post_SOURCES) \
+	$(test_parse_cookies_SOURCES) $(test_patch_SOURCES) \
+	$(test_patch11_SOURCES) $(test_post_SOURCES) \
 	$(test_post11_SOURCES) $(test_post_loop_SOURCES) \
 	$(test_post_loop11_SOURCES) $(test_postform_SOURCES) \
 	$(test_postform11_SOURCES) $(test_process_arguments_SOURCES) \
@@ -1133,6 +1146,20 @@ test_delete_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBCURL@
 
+test_patch_SOURCES = \
+  test_patch.c mhd_has_in_name.h
+
+test_patch_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  @LIBCURL@
+
+test_patch11_SOURCES = \
+  test_patch.c mhd_has_in_name.h
+
+test_patch11_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  @LIBCURL@
+
 test_put_SOURCES = \
   test_put.c mhd_has_in_name.h
 
@@ -1384,6 +1411,14 @@ test_parse_cookies$(EXEEXT): $(test_parse_cookies_OBJECTS) $(test_parse_cookies_
 	@rm -f test_parse_cookies$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_parse_cookies_OBJECTS) $(test_parse_cookies_LDADD) $(LIBS)
 
+test_patch$(EXEEXT): $(test_patch_OBJECTS) $(test_patch_DEPENDENCIES) $(EXTRA_test_patch_DEPENDENCIES) 
+	@rm -f test_patch$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_patch_OBJECTS) $(test_patch_LDADD) $(LIBS)
+
+test_patch11$(EXEEXT): $(test_patch11_OBJECTS) $(test_patch11_DEPENDENCIES) $(EXTRA_test_patch11_DEPENDENCIES) 
+	@rm -f test_patch11$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_patch11_OBJECTS) $(test_patch11_LDADD) $(LIBS)
+
 test_post$(EXEEXT): $(test_post_OBJECTS) $(test_post_DEPENDENCIES) $(EXTRA_test_post_DEPENDENCIES) 
 	@rm -f test_post$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_post_OBJECTS) $(test_post_LDADD) $(LIBS)
@@ -1472,6 +1507,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_large_put.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_long_header.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_parse_cookies.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_patch.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_post.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_post_loop.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_postform.Po@am__quote@ # am--include-marker
@@ -1852,6 +1888,13 @@ test_delete.log: test_delete$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_patch.log: test_patch$(EXEEXT)
+	@p='test_patch$(EXEEXT)'; \
+	b='test_patch'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test_put.log: test_put$(EXEEXT)
 	@p='test_put$(EXEEXT)'; \
 	b='test_put'; \
@@ -1897,6 +1940,13 @@ test_get11.log: test_get11$(EXEEXT)
 test_get_sendfile11.log: test_get_sendfile11$(EXEEXT)
 	@p='test_get_sendfile11$(EXEEXT)'; \
 	b='test_get_sendfile11'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_patch11.log: test_patch11$(EXEEXT)
+	@p='test_patch11$(EXEEXT)'; \
+	b='test_patch11'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -2234,6 +2284,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/test_large_put.Po
 	-rm -f ./$(DEPDIR)/test_long_header.Po
 	-rm -f ./$(DEPDIR)/test_parse_cookies.Po
+	-rm -f ./$(DEPDIR)/test_patch.Po
 	-rm -f ./$(DEPDIR)/test_post.Po
 	-rm -f ./$(DEPDIR)/test_post_loop.Po
 	-rm -f ./$(DEPDIR)/test_postform.Po
@@ -2309,6 +2360,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/test_large_put.Po
 	-rm -f ./$(DEPDIR)/test_long_header.Po
 	-rm -f ./$(DEPDIR)/test_parse_cookies.Po
+	-rm -f ./$(DEPDIR)/test_patch.Po
 	-rm -f ./$(DEPDIR)/test_post.Po
 	-rm -f ./$(DEPDIR)/test_post_loop.Po
 	-rm -f ./$(DEPDIR)/test_postform.Po

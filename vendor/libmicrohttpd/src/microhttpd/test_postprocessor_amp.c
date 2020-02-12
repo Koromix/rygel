@@ -7,10 +7,11 @@
 
 uint64_t num_errors;
 
-int check_post (void *cls, enum MHD_ValueKind kind, const char*key,
-                const char*filename, const char*content_type,
-                const char*content_encoding, const char*data,
-                uint64_t off, size_t size)
+int
+check_post (void *cls, enum MHD_ValueKind kind, const char*key,
+            const char*filename, const char*content_type,
+            const char*content_encoding, const char*data,
+            uint64_t off, size_t size)
 {
   (void) cls; (void) kind; (void) filename; (void) content_type;  /* Unused. Silent compiler warning. */
   (void) content_encoding; (void) data; (void) off; (void) size;  /* Unused. Silent compiler warning. */

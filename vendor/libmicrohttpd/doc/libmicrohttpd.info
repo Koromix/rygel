@@ -1,7 +1,7 @@
 This is libmicrohttpd.info, produced by makeinfo version 6.7 from
 libmicrohttpd.texi.
 
-This manual is for GNU libmicrohttpd (version 0.9.68, 25 October 2019),
+This manual is for GNU libmicrohttpd (version 0.9.70, 25 October 2019),
 a library for embedding an HTTP(S) server into C applications.
 
    Copyright © 2007–2019 Christian Grothoff
@@ -23,7 +23,7 @@ File: libmicrohttpd.info,  Node: Top,  Next: microhttpd-intro,  Up: (dir)
 The GNU libmicrohttpd Library
 *****************************
 
-This manual is for GNU libmicrohttpd (version 0.9.68, 25 October 2019),
+This manual is for GNU libmicrohttpd (version 0.9.70, 25 October 2019),
 a library for embedding an HTTP(S) server into C applications.
 
    Copyright © 2007–2019 Christian Grothoff

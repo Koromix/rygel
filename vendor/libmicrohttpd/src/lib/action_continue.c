@@ -61,4 +61,5 @@ MHD_action_continue (void)
   return &acont;
 }
 
+
 /* end of action_continue.c */

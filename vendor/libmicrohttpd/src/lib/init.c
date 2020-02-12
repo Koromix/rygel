@@ -121,6 +121,7 @@ MHD_fini (void)
   MHD_monotonic_sec_counter_finish ();
 }
 
+
 #ifdef _AUTOINIT_FUNCS_ARE_SUPPORTED
 
 _SET_INIT_AND_DEINIT_FUNCS (MHD_init, MHD_fini);
@@ -143,4 +144,6 @@ MHD_check_global_init_ (void)
   MHD_mutex_unlock_chk_ (&global_init_mutex_);
 #endif /* MHD_MUTEX_STATIC_DEFN_INIT_ */
 }
+
+
 #endif

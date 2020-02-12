@@ -255,6 +255,8 @@ poll_thread (void*data)
 
   return (MHD_THRD_RTRN_TYPE_) 0;
 }
+
+
 #endif /* HAVE_POLL */
 
 
@@ -306,7 +308,7 @@ main (int argc, char *const *argv)
   ver_req = MAKEWORD (2, 2);
 
   err = WSAStartup (ver_req, &wsa_data);
-  if ((err != 0)||(MAKEWORD (2, 2) != wsa_data.wVersion))
+  if ((err != 0) || (MAKEWORD (2, 2) != wsa_data.wVersion))
   {
     printf ("WSAStartup() failed\n");
     WSACleanup ();
@@ -370,7 +372,7 @@ main (int argc, char *const *argv)
     /* fprintf (stdout, "Thread finished.\n"); */
     MHD_socket_close_chk_ (listen_socket);
 
-    if ((start_t == (time_t) -1) ||(end_t == (time_t) -1) )
+    if ((start_t == (time_t) -1) || (end_t == (time_t) -1) )
     {
       MHD_socket_close_chk_ (listen_socket);
       fprintf (stderr, "Can't get current time\n");

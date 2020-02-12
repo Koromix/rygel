@@ -65,6 +65,7 @@ enum MHD_StatusCode
 MHD_daemon_poll_ (struct MHD_Daemon *daemon,
                   bool may_block)
 MHD_NONNULL (1);
+
 #endif
 
 
@@ -79,6 +80,7 @@ MHD_NONNULL (1);
 void
 MHD_daemon_upgrade_connection_with_poll_ (struct MHD_Connection *con)
 MHD_NONNULL (1);
+
 #endif
 #endif
 

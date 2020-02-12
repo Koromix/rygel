@@ -91,4 +91,5 @@ MHD_response_for_upgrade (MHD_UpgradeHandler upgrade_handler,
 #endif
 }
 
+
 /* end of response_for_upgrade.c */

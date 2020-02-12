@@ -1,3 +1,27 @@
+Sat 08 Feb 2020 09:12:54 PM CET
+    Fixed 100-continue handling for PATCH method (#6068).
+    Fixed FTBFS from wrong #endif position for certain builds (#6025).
+    Fixed connection overflow issue when combining MHD_USE_NO_LISTEN_SOCKET
+    with MHD_USE_THREAD_PER_CONNECTION (#6036).
+    Updated m4 script to fix FTBFS when using -Werror=unused-but-set-parameter (#6078).
+    Releasing libmicrohttpd 0.9.70. -CG
+
+Thu Dec 26 14:43:27 CET 2019
+    Adding fix for urlencoding of keys without values in
+    post-processor logic. -CG
+
+Tue 24 Dec 2019 03:32:18 PM CET
+    Adding patch from Ethan Tuttle with test case for urlencoding
+    in post-processor for keys without values. -CG/ET
+
+Sun 15 Dec 2019 02:12:02 PM CET
+    Fix send() call (affects Mac OS X). #5977 -CG/fbrault
+    Releasing libmicrohttpd 0.9.69. -CG
+
+Fri 29 Nov 2019 11:22:25 PM CET
+    If application suspends a connection before we could send 100 CONTINUE,
+    give application another shot at queuing a reply before the upload begins. -CG
+
 Sat 26 Oct 2019 06:53:05 PM CEST
     Fix regression where MHD would fail to return an empty response
     when used with HTTPS.

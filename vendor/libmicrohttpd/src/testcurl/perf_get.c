@@ -150,6 +150,7 @@ copyBuffer (void *ptr,
   return size * nmemb;
 }
 
+
 static int
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
@@ -205,7 +206,7 @@ testInternalGet (int port, int poll_flag)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -284,7 +285,7 @@ testMultithreadedGet (int port, int poll_flag)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -339,6 +340,7 @@ testMultithreadedGet (int port, int poll_flag)
   return 0;
 }
 
+
 static int
 testMultithreadedPoolGet (int port, int poll_flag)
 {
@@ -365,7 +367,7 @@ testMultithreadedPoolGet (int port, int poll_flag)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -417,6 +419,7 @@ testMultithreadedPoolGet (int port, int poll_flag)
   return 0;
 }
 
+
 static int
 testExternalGet (int port)
 {
@@ -458,7 +461,7 @@ testExternalGet (int port)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-    if ((NULL == dinfo) ||(0 == dinfo->port) )
+    if ((NULL == dinfo) || (0 == dinfo->port) )
     {
       MHD_stop_daemon (d); return 32;
     }
@@ -535,10 +538,10 @@ testExternalGet (int port)
         if (EINTR != errno)
           abort ();
 #else
-        if ((WSAEINVAL != WSAGetLastError ()) ||(0 != rs.fd_count) ||(0 !=
-                                                                      ws.
-                                                                      fd_count)
-            ||(0 != es.fd_count) )
+        if ((WSAEINVAL != WSAGetLastError ()) || (0 != rs.fd_count) || (0 !=
+                                                                        ws.
+                                                                        fd_count)
+            || (0 != es.fd_count) )
           abort ();
         Sleep (1000);
 #endif
@@ -566,8 +569,7 @@ testExternalGet (int port)
          in actual runtime right now, even though the
          number of select calls is virtually cut in half
          (and 'select' is the most expensive of our system
-         calls according to 'strace') */
-      if (0)
+         calls according to 'strace') */if (0)
         MHD_run (d);
       else
         MHD_run_from_select (d, &rs, &ws, &es);
@@ -600,7 +602,7 @@ main (int argc, char *const *argv)
   int port = 1130;
   (void) argc;   /* Unused. Silent compiler warning. */
 
-  if ((NULL == argv)||(0 == argv[0]))
+  if ((NULL == argv) || (0 == argv[0]))
     return 99;
   oneone = has_in_name (argv[0], "11");
   if (oneone)

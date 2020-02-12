@@ -67,6 +67,7 @@ testInternalGet (int poll_flag)
   return 0;
 }
 
+
 static int
 testMultithreadedGet (int poll_flag)
 {
@@ -97,6 +98,8 @@ testMultithreadedPoolGet (int poll_flag)
   MHD_stop_daemon (d);
   return 0;
 }
+
+
 #endif
 
 

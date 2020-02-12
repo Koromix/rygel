@@ -107,4 +107,5 @@ MHD_connection_get_information_sz (struct MHD_Connection *connection,
 #undef CHECK_SIZE
 }
 
+
 /* end of connection_info.c */

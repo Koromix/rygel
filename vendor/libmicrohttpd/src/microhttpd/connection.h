@@ -68,6 +68,7 @@
  */
 void
 MHD_conn_init_static_ (void);
+
 #endif /* HAVE_FREEBSD_SENDFILE */
 
 
@@ -152,6 +153,7 @@ MHD_connection_close_ (struct MHD_Connection *connection,
  */
 void
 MHD_connection_finish_forward_ (struct MHD_Connection *connection);
+
 #else  /* ! HTTPS_SUPPORT */
 #define MHD_connection_finish_forward_(conn) (void) conn
 #endif /* ! HTTPS_SUPPORT */
@@ -168,6 +170,7 @@ MHD_connection_finish_forward_ (struct MHD_Connection *connection);
  */
 int
 MHD_connection_epoll_update_ (struct MHD_Connection *connection);
+
 #endif
 
 /**

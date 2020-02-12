@@ -872,6 +872,8 @@ ignore_sigpipe (void)
     fprintf (stderr,
              "Failed to install SIGPIPE handler: %s\n", strerror (errno));
 }
+
+
 #endif
 
 /* test server key */
@@ -1012,5 +1014,6 @@ main (int argc, char *const *argv)
 #endif /* MHD_HAVE_LIBMAGIC */
   return 0;
 }
+
 
 /* end of demo_https.c */

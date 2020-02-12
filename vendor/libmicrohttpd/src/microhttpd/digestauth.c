@@ -480,9 +480,9 @@ lookup_sub_value (char *dest,
         if (size > len)
           size = len;
         size--;
-        strncpy (dest,
-                 q1,
-                 size);
+        memcpy (dest,
+                q1,
+                size);
         dest[size] = '\0';
         return size;
       }
@@ -555,8 +555,7 @@ check_nonce_nc (struct MHD_Connection *connection,
    * Look for the nonce, if it does exist and its corresponding
    * nonce counter is less than the current nonce counter by 1,
    * then only increase the nonce counter by one.
-   */
-  nn = &daemon->nnc[off];
+   */nn = &daemon->nnc[off];
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   MHD_mutex_lock_chk_ (&daemon->nnc_lock);
 #endif
@@ -938,8 +937,7 @@ digest_auth_check_all (struct MHD_Connection *connection,
        large, but of course in theory the
        #MHD_OPTION_CONNECTION_MEMORY_LIMIT might be very large
        and would thus permit sending a >32k authorization
-       header value. */
-    return MHD_NO;
+       header value. */return MHD_NO;
   }
   if (TIMESTAMP_BIN_SIZE * 2 !=
       MHD_strx_to_uint32_n_ (nonce + len - TIMESTAMP_BIN_SIZE * 2,
@@ -957,8 +955,7 @@ digest_auth_check_all (struct MHD_Connection *connection,
    * First level vetting for the nonce validity: if the timestamp
    * attached to the nonce exceeds `nonce_timeout', then the nonce is
    * invalid.
-   */
-  if ( (t > nonce_time + nonce_timeout) ||
+   */if ( (t > nonce_time + nonce_timeout) ||
        (nonce_time + nonce_timeout < nonce_time) )
   {
     /* too old */
@@ -981,9 +978,7 @@ digest_auth_check_all (struct MHD_Connection *connection,
    * able to generate a "sane" nonce, which if he does
    * not, the nonce fabrication process going to be
    * very hard to achieve.
-   */
-
-  if (0 != strcmp (nonce,
+   */if (0 != strcmp (nonce,
                    noncehashexp))
   {
     return MHD_INVALID_NONCE;
@@ -1003,7 +998,7 @@ digest_auth_check_all (struct MHD_Connection *connection,
        (0 == (len = lookup_sub_value (nc,
                                       sizeof (nc),
                                       header,
-                                      "nc")) )  ||
+                                      "nc")) ) ||
        (0 == lookup_sub_value (response,
                                sizeof (response),
                                header,
@@ -1030,8 +1025,7 @@ digest_auth_check_all (struct MHD_Connection *connection,
    * Checking if that combination of nonce and nc is sound
    * and not a replay attack attempt. Also adds the nonce
    * to the nonce-nc map if it does not exist there.
-   */
-  if (MHD_YES !=
+   */if (MHD_YES !=
       check_nonce_nc (connection,
                       nonce,
                       nci))
@@ -1219,7 +1213,6 @@ MHD_digest_auth_check (struct MHD_Connection *connection,
   } while (0)
 
 
-
 /**
  * Authenticates the authorization header sent by the client.
  *
@@ -1244,6 +1237,7 @@ MHD_digest_auth_check2 (struct MHD_Connection *connection,
 {
   SETUP_DA (algo, da);
 
+  mhd_assert (NULL != password);
   return digest_auth_check_all (connection,
                                 &da,
                                 realm,
@@ -1282,6 +1276,7 @@ MHD_digest_auth_check_digest2 (struct MHD_Connection *connection,
 {
   SETUP_DA (algo, da);
 
+  mhd_assert (NULL != digest);
   if (da.digest_size != digest_size)
     MHD_PANIC (_ ("digest size missmatch")); /* API violation! */
   return digest_auth_check_all (connection,
@@ -1421,6 +1416,12 @@ MHD_queue_auth_fail_response2 (struct MHD_Connection *connection,
                                        header);
       else
         ret = MHD_NO;
+#if 0
+      if ( (MHD_YES == ret) && (AND in state : 100 continue aborting ...))
+        ret = MHD_add_response_header (response,
+                                       MHD_HTTP_HEADER_CONNECTION,
+                                       "close");
+#endif
       free (header);
     }
     else

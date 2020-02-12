@@ -448,6 +448,7 @@ MHD_send_on_connection2_ (struct MHD_Connection *connection,
 #endif
 }
 
+
 /**
  * sendfile() chuck size
  */
@@ -561,8 +562,7 @@ MHD_send_sendfile_ (struct MHD_Connection *connection)
        supported for FD or other 'unusual' errors occurred, so we should try
        to fall back to 'SEND'; see also this thread for info on
        odd libc/Linux behavior with sendfile:
-       http://lists.gnu.org/archive/html/libmicrohttpd/2011-02/msg00015.html */
-    connection->resp_sender = MHD_resp_sender_std;
+       http://lists.gnu.org/archive/html/libmicrohttpd/2011-02/msg00015.html */connection->resp_sender = MHD_resp_sender_std;
     return MHD_ERR_AGAIN_;
 #else  /* HAVE_SOLARIS_SENDFILE */
     if ( (EAFNOSUPPORT == err) ||
@@ -662,4 +662,6 @@ MHD_send_sendfile_ (struct MHD_Connection *connection)
 
   return ret;
 }
+
+
 #endif /* _MHD_HAVE_SENDFILE */

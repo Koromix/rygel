@@ -103,12 +103,14 @@ file_reader (void *cls, uint64_t pos, char *buf, size_t max)
   return fread (buf, 1, max, file);
 }
 
+
 static void
 file_free_callback (void *cls)
 {
   FILE *file = cls;
   fclose (file);
 }
+
 
 /* HTTP access handler call back */
 static int

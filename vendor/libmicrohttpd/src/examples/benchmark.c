@@ -49,7 +49,6 @@ static unsigned int small_deltas[SMALL];
 static struct MHD_Response *response;
 
 
-
 /**
  * Signature of the callback used by MHD to notify the
  * application about completed requests.

@@ -242,6 +242,7 @@ static const uint64_t _MHD_itc_wr_data = 1;
  */
 int
 MHD_itc_nonblocking_ (struct MHD_itc_ itc);
+
 #endif /* ! HAVE_PIPE2_FUNC */
 
 

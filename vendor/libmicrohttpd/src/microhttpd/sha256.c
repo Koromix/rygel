@@ -62,6 +62,7 @@ MHD_SHA256_init (void *ctx_)
   ctx->count = 0;
 }
 
+
 /**
  * Number of bytes in single SHA-256 word
  * used to process data
@@ -245,6 +246,7 @@ sha256_transform (uint32_t H[_SHA256_DIGEST_LENGTH],
   H[6] += g;
   H[7] += h;
 }
+
 
 /**
  * Process portion of bytes.

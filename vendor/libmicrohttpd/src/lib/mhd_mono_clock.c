@@ -94,7 +94,6 @@ static int64_t perf_start;
 #endif /* _WIN32 */
 
 
-
 /**
  * Type of monotonic clock source
  */

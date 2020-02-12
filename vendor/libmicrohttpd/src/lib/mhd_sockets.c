@@ -37,7 +37,8 @@
  * @param err the WinSock error code.
  * @return pointer to string description of specified WinSock error.
  */
-const char*MHD_W32_strerror_winsock_ (int err)
+const char*
+MHD_W32_strerror_winsock_ (int err)
 {
   switch (err)
   {
@@ -357,6 +358,7 @@ MHD_W32_socket_pair_ (SOCKET sockets_pair[2], int non_blk)
 
   return 0;
 }
+
 
 #endif /* MHD_WINSOCK_SOCKETS */
 

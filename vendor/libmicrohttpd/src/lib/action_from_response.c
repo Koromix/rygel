@@ -48,7 +48,7 @@ response_action (void *cls,
 
 #ifdef UPGRADE_SUPPORT
   if ( (NULL != response->upgrade_handler) &&
-       daemon->disallow_upgrade )
+       daemon->disallow_upgrade)
   {
 #ifdef HAVE_MESSAGES
     MHD_DLOG (daemon,
@@ -127,5 +127,6 @@ MHD_action_from_response (struct MHD_Response *response,
   }
   return &response->action;
 }
+
 
 /* end of action_from_response */

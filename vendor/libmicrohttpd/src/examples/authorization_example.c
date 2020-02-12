@@ -39,7 +39,6 @@
   "<html><head><title>Access denied</title></head><body>Access denied</body></html>"
 
 
-
 static int
 ahc_echo (void *cls,
           struct MHD_Connection *connection,

@@ -54,6 +54,7 @@ apc_all (void *cls, const struct sockaddr *addr, socklen_t addrlen)
   return MHD_YES;
 }
 
+
 struct CBC
 {
   char *buf;
@@ -67,6 +68,7 @@ copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
   (void) ptr; (void) ctx;  /* Unused. Silent compiler warning. */
   return size * nmemb;
 }
+
 
 static int
 ahc_echo (void *cls,

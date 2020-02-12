@@ -106,6 +106,7 @@ post_iterator (void *cls,
   return MHD_YES;
 }
 
+
 static int
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
@@ -200,6 +201,7 @@ testInternalPost ()
 
   return 0;
 }
+
 
 static int
 testMultithreadedPost ()
