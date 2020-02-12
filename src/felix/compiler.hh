@@ -34,6 +34,9 @@ enum class LinkType {
 struct BuildCommand {
     Span<const char> line;
     Size rsp_offset;
+
+    int skip_lines;
+    bool parse_cl_includes;
 };
 
 void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
@@ -48,9 +51,10 @@ public:
     const char *name;
     const char *prefix;
     const char *binary;
+    bool pch;
 
-    Compiler(const char *name, const char *prefix, const char *binary)
-        : name(name), prefix(prefix), binary(binary) {}
+    Compiler(const char *name, const char *prefix, const char *binary, bool pch)
+        : name(name), prefix(prefix), binary(binary), pch(pch) {}
 
     bool Test() const;
 

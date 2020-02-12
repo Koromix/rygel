@@ -141,7 +141,7 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames,
 
 class ClangCompiler: public Compiler {
 public:
-    ClangCompiler(const char *name, const char *prefix) : Compiler(name, prefix, "clang") {}
+    ClangCompiler(const char *name, const char *prefix) : Compiler(name, prefix, "clang", true) {}
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
@@ -234,7 +234,7 @@ public:
 
 class GnuCompiler: public Compiler {
 public:
-    GnuCompiler(const char *name, const char *prefix) : Compiler(name, prefix, "gcc") {}
+    GnuCompiler(const char *name, const char *prefix) : Compiler(name, prefix, "gcc", true) {}
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
@@ -329,12 +329,110 @@ public:
     }
 };
 
+#ifdef _WIN32
+class MsCompiler: public Compiler {
+public:
+    MsCompiler(const char *name, const char *prefix) : Compiler(name, prefix, "cl", false) {}
+
+    void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
+                           bool warnings, const char *pch_filename, Span<const char *const> definitions,
+                           Span<const char *const> include_directories, const char *dest_filename,
+                           const char *deps_filename, Allocator *alloc, BuildCommand *out_cmd) const override
+    {
+        HeapArray<char> buf;
+        buf.allocator = alloc;
+
+        // Compiler
+        switch (src_type) {
+            case SourceType::C_Source: { Fmt(&buf, "%1cl /nologo", prefix); } break;
+            case SourceType::C_Header: { RG_ASSERT(false); } break;
+            case SourceType::CXX_Source: { Fmt(&buf, "%1cl /nologo /std:c++17", prefix); } break;
+            case SourceType::CXX_Header: { RG_ASSERT(false); } break;
+        }
+        if (dest_filename) {
+            Fmt(&buf, " \"/Fo%1\"", dest_filename);
+        }
+        out_cmd->rsp_offset = buf.len;
+
+        // Build options
+        Fmt(&buf, " /MT /EHsc %1", warnings ? "/W3 /wd4200" : "/w");
+        switch (compile_mode) {
+            case CompileMode::Debug: { Fmt(&buf, " /Od /Z7"); } break;
+            case CompileMode::Fast: { Fmt(&buf, " /O2 /DNDEBUG"); } break;
+            case CompileMode::Release: { Fmt(&buf, " /O2 /GL /DNDEBUG"); } break;
+        }
+
+        // Platform flags
+        Fmt(&buf, " /D_LARGEFILE_SOURCE /D_LARGEFILE64_SOURCE /D_FILE_OFFSET_BITS=64"
+                  " /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DNOMINMAX"
+                  " /D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_DEPRECATE");
+
+        // Sources and definitions
+        Fmt(&buf, " /c /utf-8 \"%1\"", src_filename);
+        RG_ASSERT(!pch_filename);
+        for (const char *definition: definitions) {
+            Fmt(&buf, " /D%1", definition);
+        }
+        for (const char *include_directory: include_directories) {
+            Fmt(&buf, " /I%1", include_directory);
+        }
+        if (deps_filename) {
+            Fmt(&buf, " /showIncludes");
+        }
+
+        out_cmd->line = buf.Leak();
+
+        out_cmd->skip_lines = 1;
+        out_cmd->parse_cl_includes = true;
+    }
+
+    void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
+                         Span<const char *const> libraries, LinkType link_type,
+                         const char *dest_filename, Allocator *alloc, BuildCommand *out_cmd) const override
+    {
+        HeapArray<char> buf;
+        buf.allocator = alloc;
+
+        // Linker
+        switch (link_type) {
+            case LinkType::Executable: { Fmt(&buf, "%1link /NOLOGO", prefix); } break;
+            case LinkType::SharedLibrary: { Fmt(&buf, "%1link /NOLOGO /DLL", prefix); } break;
+        }
+        Fmt(&buf, " \"/OUT:%1\"", dest_filename);
+        out_cmd->rsp_offset = buf.len;
+
+        // Build mode
+        switch (compile_mode) {
+            case CompileMode::Debug: { Fmt(&buf, " /DEBUG:FULL"); } break;
+            case CompileMode::Fast: { Fmt(&buf, " /DEBUG:NONE"); } break;
+            case CompileMode::Release: { Fmt(&buf, " /LTCG /DEBUG:NONE"); } break;
+        }
+
+        // Objects and libraries
+        for (const char *obj_filename: obj_filenames) {
+            Fmt(&buf, " \"%1\"", obj_filename);
+        }
+        for (const char *lib: libraries) {
+            Fmt(&buf, " %1.lib", lib);
+        }
+
+        out_cmd->line = buf.Leak();
+    }
+};
+#endif
+
 static ClangCompiler ClangCompiler("Clang", "");
 static GnuCompiler GnuCompiler("GCC", "");
+#ifdef _WIN32
+static MsCompiler MsCompiler("MSVC", "");
+#endif
 
 static const Compiler *const CompilerTable[] = {
     &ClangCompiler,
-    &GnuCompiler
+    &GnuCompiler,
+#ifdef _WIN32
+    &MsCompiler
+#endif
 };
 const Span<const Compiler *const> Compilers = CompilerTable;
 

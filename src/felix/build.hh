@@ -26,6 +26,8 @@ class Builder {
         const char *text;
 
         const char *dest_filename;
+        const char *deps_filename;
+
         BuildCommand cmd;
     };
 

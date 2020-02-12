@@ -184,6 +184,7 @@ bool Builder::AddTarget(const Target &target)
 
             node.text = Fmt(&str_alloc, "Precompile %1", src_filename).ptr;
             node.dest_filename = DuplicateString(pch_filename, &str_alloc).ptr;
+            node.deps_filename = DuplicateString(deps_filename, &str_alloc).ptr;
             if (!CreatePrecompileHeader(src_filename, pch_filename))
                 return (const char *)nullptr;
             compiler->MakeObjectCommand(pch_filename, src_type, compile_mode, warnings,
@@ -258,6 +259,7 @@ bool Builder::AddTarget(const Target &target)
 
             node.text = Fmt(&str_alloc, "Build %1", src.filename).ptr;
             node.dest_filename = DuplicateString(obj_filename, &str_alloc).ptr;
+            node.deps_filename = DuplicateString(deps_filename, &str_alloc).ptr;
             if (!EnsureDirectoryExists(obj_filename))
                 return false;
             compiler->MakeObjectCommand(src.filename, src.type, compile_mode, warnings,
@@ -467,9 +469,59 @@ bool Builder::RunNodes(Span<const Node> nodes, Size progress, Size total, bool v
             }
 
             // Run command
-            HeapArray<char> output;
+            HeapArray<char> output_buf;
             int exit_code;
-            bool started = ExecuteCommandLine(cmd_line, {}, Megabytes(1), &output, &exit_code);
+            bool started = ExecuteCommandLine(cmd_line, {}, Megabytes(4), &output_buf, &exit_code);
+
+#ifdef _WIN32
+            // Extract MSVC-like dependency notes
+            if (node.cmd.parse_cl_includes && node.deps_filename) {
+                StreamWriter st(node.deps_filename);
+                Print(&st, "%1:", node.dest_filename);
+
+                // We need to strip include notes from the output
+                Span<const char> remain = output_buf;
+                output_buf.len = 0;
+
+                while (remain.len) {
+                    Span<const char> line = SplitStr(remain, '\n', &remain);
+
+                    Span<const char> dep = {};
+                    for (Size i = line.len - 6; i >= 0; i--) {
+                        if (line[i] == ' ' && line[i + 1] == ' ' && IsAsciiAlpha(line[i + 2]) && line[i + 3] == ':') {
+                            dep = TrimStr(line.Take(i + 2, line.len - i - 2));
+                            break;
+                        }
+                    }
+
+                    if (dep.len) {
+                        Print(&st, " \\\n ");
+
+                        for (char c: dep) {
+                            if (strchr(" $#", c)) {
+                                st.Write('\\');
+                            }
+                            st.Write(c);
+                        }
+                    } else {
+                        Size copy_len = line.len + (remain.ptr > line.end());
+
+                        memmove(output_buf.end(), line.ptr, copy_len);
+                        output_buf.len += copy_len;
+                    }
+                }
+                PrintLn(&st);
+
+                if (!st.Close())
+                    started = false;
+            }
+#endif
+
+            // Skip first output lines (if needed)
+            Span<const char> output = output_buf;
+            for (Size i = 0; i < node.cmd.skip_lines; i++) {
+                SplitStr(output, '\n', &output);
+            }
 
             // Deal with results
             if (started && !exit_code) {
@@ -481,6 +533,9 @@ bool Builder::RunNodes(Span<const Node> nodes, Size progress, Size total, bool v
                 return true;
             } else {
                 UnlinkFile(node.dest_filename);
+                if (node.deps_filename) {
+                    UnlinkFile(node.deps_filename);
+                }
 
                 if (!started) {
                     // Error already issued by ExecuteCommandLine()
