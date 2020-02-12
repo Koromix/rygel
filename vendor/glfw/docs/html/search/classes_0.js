@@ -1,7 +1,7 @@
 var searchData=
 [
-  ['glfwgamepadstate',['GLFWgamepadstate',['../structGLFWgamepadstate.html',1,'']]],
-  ['glfwgammaramp',['GLFWgammaramp',['../structGLFWgammaramp.html',1,'']]],
-  ['glfwimage',['GLFWimage',['../structGLFWimage.html',1,'']]],
-  ['glfwvidmode',['GLFWvidmode',['../structGLFWvidmode.html',1,'']]]
+  ['glfwgamepadstate_527',['GLFWgamepadstate',['../structGLFWgamepadstate.html',1,'']]],
+  ['glfwgammaramp_528',['GLFWgammaramp',['../structGLFWgammaramp.html',1,'']]],
+  ['glfwimage_529',['GLFWimage',['../structGLFWimage.html',1,'']]],
+  ['glfwvidmode_530',['GLFWvidmode',['../structGLFWvidmode.html',1,'']]]
 ];
