@@ -3011,6 +3011,11 @@ static inline bool IsAsciiAlphaOrDigit(char c)
 {
     return IsAsciiAlpha(c) || IsAsciiDigit(c);
 }
+static inline bool IsAsciiWhite(char c)
+{
+    return c == ' ' || c == '\t' || c == '\v' ||
+           c == '\n' || c == '\r' || c == '\f';
+}
 
 static inline char UpperAscii(char c)
 {

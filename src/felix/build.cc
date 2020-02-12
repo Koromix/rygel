@@ -487,13 +487,16 @@ bool Builder::RunNodes(Span<const Node> nodes, Size progress, Size total, bool v
                     Span<const char> line = SplitStr(remain, '\n', &remain);
 
                     // MS had the brilliant idea to localize inclusion notes.. In english it starts
-                    // with 'Note: including file:  ' but it can basically be anything. If we can
-                    // find a colon followed by two spaces we take the line, hopefully it is alright.
+                    // with 'Note: including file:  ' but it can basically be anything. We match
+                    // lines that start with a non-space character, and which contain a colon
+                    // followed by two spaces we take the line. Not pretty, hopefully it is alright.
                     Span<const char> dep = {};
-                    for (Size i = 0; i < line.len - 3; i++) {
-                        if (line[i] == ':' && line[i + 1] == ' ' && line[i + 2] == ' ') {
-                            dep = TrimStr(line.Take(i + 3, line.len - i - 3));
-                            break;
+                    if (!IsAsciiWhite(line[0])) {
+                        for (Size i = 0; i < line.len - 3; i++) {
+                            if (line[i] == ':' && line[i + 1] == ' ' && line[i + 2] == ' ') {
+                                dep = TrimStr(line.Take(i + 3, line.len - i - 3));
+                                break;
+                            }
                         }
                     }
 
