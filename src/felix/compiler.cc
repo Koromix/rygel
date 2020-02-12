@@ -110,7 +110,7 @@ static void AppendGccObjectArguments(const char *src_filename, CompileMode compi
         Fmt(out_buf, " -I%1", include_directory);
     }
     if (deps_filename) {
-        Fmt(out_buf, " -MMD -MF \"%1\"", deps_filename);
+        Fmt(out_buf, " -MD -MF \"%1\"", deps_filename);
     }
 }
 
