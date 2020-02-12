@@ -71,14 +71,11 @@ int RunBuild(Span<const char *> arguments)
     const char *config_filename = nullptr;
     BuildSettings settings = {};
     bool enable_pch = true;
+    int jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_WORKERS + 1);
     bool verbose = false;
     const char *run_target_name = nullptr;
     Span<const char *> run_arguments = {};
     bool run_here = false;
-
-    // Find default settings
-    settings.compiler = FindIf(Compilers, [](const Compiler *compiler) { return compiler->Test(); });
-    settings.jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_WORKERS + 1);
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
@@ -107,7 +104,7 @@ Options:
         --run_here <target>      Same thing, but run from current directory
 
 Supported compilers:)", settings.compiler ? settings.compiler->name : "?",
-                        CompileModeNames[(int)settings.compile_mode], settings.jobs);
+                        CompileModeNames[(int)settings.compile_mode], jobs);
 
         for (const Compiler *compiler: Compilers) {
             PrintLn(fp, "    %1%2",
@@ -120,6 +117,9 @@ Supported compilation modes:)");
             PrintLn(fp, "    %1", mode_name);
         }
     };
+
+    // Find default compiler
+    settings.compiler = FindIf(Compilers, [](const Compiler *compiler) { return compiler->Test(); });
 
     // Parse arguments
     {
@@ -162,9 +162,9 @@ Supported compilation modes:)");
             } else if (opt.Test("--no_pch")) {
                 enable_pch = false;
             } else if (opt.Test("-j", "--jobs", OptionType::Value)) {
-                if (!ParseDec(opt.current_value, &settings.jobs))
+                if (!ParseDec(opt.current_value, &jobs))
                     return 1;
-                if (settings.jobs < 1) {
+                if (jobs < 1) {
                     LogError("Jobs count cannot be < 1");
                     return 1;
                 }
@@ -324,7 +324,7 @@ Supported compilation modes:)");
         if (!builder.AddTarget(*target))
             return 1;
     }
-    if (!builder.Build(verbose))
+    if (!builder.Build(jobs, verbose))
         return 1;
 
     // Run?

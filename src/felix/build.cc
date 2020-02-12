@@ -146,12 +146,10 @@ static bool CreatePrecompileHeader(const char *pch_filename, const char *dest_fi
 
 Builder::Builder(const BuildSettings &settings)
     : output_directory(settings.output_directory), compiler(settings.compiler),
-      compile_mode(settings.compile_mode), version_str(settings.version_str),
-      async(settings.jobs - 1)
+      compile_mode(settings.compile_mode), version_str(settings.version_str)
 {
     RG_ASSERT(output_directory);
     RG_ASSERT(compiler);
-    RG_ASSERT(settings.jobs >= 0);
 }
 
 bool Builder::AddTarget(const Target &target)
@@ -388,23 +386,27 @@ bool Builder::AddTarget(const Target &target)
 
 // The caller needs to ignore (or do whetever) SIGINT for the clean up to work if
 // the user interrupts felix. For this you can use libcc: call WaitForInterruption(0).
-bool Builder::Build(bool verbose)
+bool Builder::Build(int jobs, bool verbose)
 {
+    RG_ASSERT(jobs >= 0);
+
     Size total = prep_nodes.len + obj_nodes.len + link_nodes.len;
 
-    if (!RunNodes(prep_nodes, 0, total, verbose))
+    if (!RunNodes(prep_nodes, jobs, verbose, 0, total))
         return false;
-    if (!RunNodes(obj_nodes, prep_nodes.len, total, verbose))
+    if (!RunNodes(obj_nodes, jobs, verbose, prep_nodes.len, total))
         return false;
-    if (!RunNodes(link_nodes, prep_nodes.len + obj_nodes.len, total, verbose))
+    if (!RunNodes(link_nodes, jobs, verbose, prep_nodes.len + obj_nodes.len, total))
         return false;
 
     LogInfo("(100%%) Done!");
     return true;
 }
 
-bool Builder::RunNodes(Span<const Node> nodes, Size progress, Size total, bool verbose)
+bool Builder::RunNodes(Span<const Node> nodes, int jobs, bool verbose, Size progress, Size total)
 {
+    Async async(jobs - 1);
+
 #ifdef _WIN32
     BlockAllocator temp_alloc;
 

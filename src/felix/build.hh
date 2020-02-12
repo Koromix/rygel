@@ -14,7 +14,6 @@ struct BuildSettings {
     // Mandatory
     const char *output_directory = nullptr;
     const Compiler *compiler = nullptr;
-    int jobs = -1;
 
     // Optional
     CompileMode compile_mode = CompileMode::Debug;
@@ -38,8 +37,6 @@ class Builder {
     CompileMode compile_mode = CompileMode::Debug;
     const char *version_str = nullptr;
 
-    Async async;
-
     bool version_init = false;
     const char *version_obj_filename = nullptr;
 
@@ -61,7 +58,7 @@ public:
     Builder(const BuildSettings &settings);
 
     bool AddTarget(const Target &target);
-    bool Build(bool verbose);
+    bool Build(int jobs, bool verbose);
 
 private:
     bool NeedsRebuild(const char *src_filename, const char *dest_filename,
@@ -69,7 +66,7 @@ private:
     bool IsFileUpToDate(const char *dest_filename, Span<const char *const> src_filenames);
     int64_t GetFileModificationTime(const char *filename);
 
-    bool RunNodes(Span<const Node> nodes, Size progress, Size total, bool verbose);
+    bool RunNodes(Span<const Node> nodes, int jobs, bool verbose, Size progress, Size total);
 };
 
 }
