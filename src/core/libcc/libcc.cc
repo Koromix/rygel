@@ -1942,7 +1942,8 @@ FILE *OpenFile(const char *filename, OpenFileMode mode)
         } break;
     }
 
-    HANDLE h = CreateFileW(filename_w, access, 0, nullptr, creation, FILE_ATTRIBUTE_NORMAL, nullptr);
+    HANDLE h = CreateFileW(filename_w, access, FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE,
+                           nullptr, creation, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (h == INVALID_HANDLE_VALUE) {
         LogError("Cannot open '%1': %2", filename, GetWin32ErrorString());
         return nullptr;
