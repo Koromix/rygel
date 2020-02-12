@@ -395,8 +395,8 @@ public:
 
         // Linker
         switch (link_type) {
-            case LinkType::Executable: { Fmt(&buf, "%1link /NOLOGO", prefix); } break;
-            case LinkType::SharedLibrary: { Fmt(&buf, "%1link /NOLOGO /DLL", prefix); } break;
+            case LinkType::Executable: { Fmt(&buf, "%1link /nologo", prefix); } break;
+            case LinkType::SharedLibrary: { Fmt(&buf, "%1link /nologo /DLL", prefix); } break;
         }
         Fmt(&buf, " \"/OUT:%1\"", dest_filename);
         out_cmd->rsp_offset = buf.len;
