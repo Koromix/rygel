@@ -36,6 +36,10 @@ struct BuildCommand {
     Size rsp_offset;
 };
 
+void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
+                     const char *pack_options, const char *dest_filename,
+                     Allocator *alloc, BuildCommand *out_cmd);
+
 class Compiler {
     mutable bool test_init = false;
     mutable bool test;
@@ -54,9 +58,6 @@ public:
                                    bool warnings, const char *pch_filename, Span<const char *const> definitions,
                                    Span<const char *const> include_directories, const char *dest_filename,
                                    const char *deps_filename, Allocator *alloc, BuildCommand *out_cmd) const = 0;
-    virtual void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
-                                 const char *pack_options, const char *dest_filename,
-                                 Allocator *alloc, BuildCommand *out_cmd) const = 0;
     virtual void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
                                  Span<const char *const> libraries, LinkType link_type,
                                  const char *dest_filename, Allocator *alloc, BuildCommand *out_cmd) const = 0;

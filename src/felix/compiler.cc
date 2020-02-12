@@ -15,6 +15,31 @@
 
 namespace RG {
 
+void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
+                     const char *pack_options, const char *dest_filename,
+                     Allocator *alloc, BuildCommand *out_cmd)
+{
+    HeapArray<char> buf;
+    buf.allocator = alloc;
+
+    Fmt(&buf, "\"%1\" pack -O \"%2\"", GetApplicationExecutable(), dest_filename);
+
+    switch (compile_mode) {
+        case CompileMode::Debug: { Fmt(&buf, " -m SourceMap"); } break;
+        case CompileMode::Fast:
+        case CompileMode::Release: { Fmt(&buf, " -m RunTransform"); } break;
+    }
+
+    if (pack_options) {
+        Fmt(&buf, " %1", pack_options);
+    }
+    for (const char *pack_filename: pack_filenames) {
+        Fmt(&buf, " \"%1\"", pack_filename);
+    }
+
+    out_cmd->line = buf.Leak();
+}
+
 static bool TestBinary(const char *name)
 {
     Span<const char> env = getenv("PATH");
@@ -114,30 +139,6 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames,
     return true;
 }
 
-static void AppendPackCommandLine(Span<const char *const> pack_filenames, CompileMode compile_mode,
-                                  const char *pack_options, HeapArray<char> *out_buf)
-{
-#ifdef _WIN32
-    // For some reason quotes fail here (maybe we need to escape properly), so use short file name
-    Fmt(out_buf, "cmd /c %1 pack", GetApplicationExecutable83());
-#else
-    Fmt(out_buf, "\"%1\" pack", GetApplicationExecutable());
-#endif
-
-    switch (compile_mode) {
-        case CompileMode::Debug: { Fmt(out_buf, " -m SourceMap"); } break;
-        case CompileMode::Fast:
-        case CompileMode::Release: { Fmt(out_buf, " -m RunTransform"); } break;
-    }
-
-    if (pack_options) {
-        Fmt(out_buf, " %1", pack_options);
-    }
-    for (const char *pack_filename: pack_filenames) {
-        Fmt(out_buf, " \"%1\"", pack_filename);
-    }
-}
-
 class ClangCompiler: public Compiler {
 public:
     ClangCompiler(const char *name, const char *prefix) : Compiler(name, prefix, "clang") {}
@@ -187,19 +188,6 @@ public:
         // Common flags (source, definitions, include directories, etc.)
         AppendGccObjectArguments(src_filename, compile_mode, pch_filename, definitions,
                                  include_directories, deps_filename, &buf);
-
-        out_cmd->line = buf.Leak();
-    }
-
-    void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
-                         const char *pack_options, const char *dest_filename,
-                         Allocator *alloc, BuildCommand *out_cmd) const override
-    {
-        HeapArray<char> buf;
-        buf.allocator = alloc;
-
-        AppendPackCommandLine(pack_filenames, compile_mode, pack_options, &buf);
-        Fmt(&buf, " | %1clang -x c -c - -o \"%2\"", prefix, dest_filename);
 
         out_cmd->line = buf.Leak();
     }
@@ -294,19 +282,6 @@ public:
         // Common flags (source, definitions, include directories, etc.)
         AppendGccObjectArguments(src_filename, compile_mode, pch_filename, definitions,
                                  include_directories, deps_filename, &buf);
-
-        out_cmd->line = buf.Leak();
-    }
-
-    void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
-                         const char *pack_options, const char *dest_filename,
-                         Allocator *alloc, BuildCommand *out_cmd) const override
-    {
-        HeapArray<char> buf;
-        buf.allocator = alloc;
-
-        AppendPackCommandLine(pack_filenames, compile_mode, pack_options, &buf);
-        Fmt(&buf, " | %1gcc -x c -c - -o \"%2\"", prefix, dest_filename);
 
         out_cmd->line = buf.Leak();
     }

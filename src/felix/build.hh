@@ -45,7 +45,7 @@ class Builder {
     HeapArray<const char *> obj_filenames;
     HeapArray<const char *> definitions;
 
-    HeapArray<Node> pch_nodes;
+    HeapArray<Node> prep_nodes;
     HeapArray<Node> obj_nodes;
     HeapArray<Node> link_nodes;
     BlockAllocator str_alloc;

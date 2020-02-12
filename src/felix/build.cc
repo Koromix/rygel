@@ -156,11 +156,11 @@ Builder::Builder(const BuildSettings &settings)
 
 bool Builder::AddTarget(const Target &target)
 {
-    const Size start_pch_len = pch_nodes.len;
+    const Size start_prep_len = prep_nodes.len;
     const Size start_obj_len = obj_nodes.len;
     const Size start_link_len = link_nodes.len;
     RG_DEFER_N(out_guard) {
-        pch_nodes.RemoveFrom(start_pch_len);
+        prep_nodes.RemoveFrom(start_prep_len);
         obj_nodes.RemoveFrom(start_obj_len);
         link_nodes.RemoveFrom(start_link_len);
     };
@@ -190,7 +190,7 @@ bool Builder::AddTarget(const Target &target)
                                         nullptr, definitions, target.include_directories,
                                         nullptr, deps_filename, &str_alloc, &node.cmd);
 
-            pch_nodes.Append(node);
+            prep_nodes.Append(node);
         }
 
         return pch_filename;
@@ -275,18 +275,36 @@ bool Builder::AddTarget(const Target &target)
 
     // Assets
     if (target.pack_filenames.len) {
+        const char *src_filename = Fmt(&temp_alloc, "%1%/assets%/%2_assets.c",
+                                       output_directory, target.name).ptr;
         const char *obj_filename = Fmt(&temp_alloc, "%1%/assets%/%2_assets.o",
                                        output_directory, target.name).ptr;
 
-        if (!IsFileUpToDate(obj_filename, target.pack_filenames)) {
+        // Make C file
+        if (!IsFileUpToDate(src_filename, target.pack_filenames)) {
             Node node = {};
 
             node.text = Fmt(&str_alloc, "Pack %1 assets", target.name).ptr;
-            node.dest_filename = DuplicateString(obj_filename, &str_alloc).ptr;
-            if (!EnsureDirectoryExists(obj_filename))
+            node.dest_filename = DuplicateString(src_filename, &str_alloc).ptr;
+            if (!EnsureDirectoryExists(src_filename))
                 return false;
-            compiler->MakePackCommand(target.pack_filenames, compile_mode,
-                                      target.pack_options, obj_filename, &str_alloc, &node.cmd);
+            MakePackCommand(target.pack_filenames, compile_mode,
+                            target.pack_options, src_filename, &str_alloc, &node.cmd);
+
+            prep_nodes.Append(node);
+
+            // Pretend source file does not exist to force next step
+            mtime_map.Set(src_filename, -1);
+        }
+
+        // Build object file
+        if (!IsFileUpToDate(obj_filename, src_filename)) {
+            Node node = {};
+
+            node.text = Fmt(&str_alloc, "Build %1 assets", target.name).ptr;
+            node.dest_filename = DuplicateString(obj_filename, &str_alloc).ptr;
+            compiler->MakeObjectCommand(src_filename, SourceType::C_Source, CompileMode::Debug, false,
+                                        nullptr, {}, {}, obj_filename, nullptr, &str_alloc, &node.cmd);
 
             obj_nodes.Append(node);
 
@@ -315,7 +333,7 @@ bool Builder::AddTarget(const Target &target)
 
                 // XXX: Check if this conflicts with a target destination file?
                 node.text = Fmt(&str_alloc, "Link %1",
-                               SplitStrReverseAny(module_filename, RG_PATH_SEPARATORS)).ptr;
+                                SplitStrReverseAny(module_filename, RG_PATH_SEPARATORS)).ptr;
                 node.dest_filename = DuplicateString(module_filename, &str_alloc).ptr;
                 compiler->MakeLinkCommand(obj_filename, CompileMode::Debug, {},
                                           LinkType::SharedLibrary, module_filename,
@@ -352,8 +370,8 @@ bool Builder::AddTarget(const Target &target)
     }
 
     // Do this at the end because it's much harder to roll back changes in out_guard
-    for (Size i = start_pch_len; i < pch_nodes.len; i++) {
-        output_set.Append(pch_nodes[i].dest_filename);
+    for (Size i = start_prep_len; i < prep_nodes.len; i++) {
+        output_set.Append(prep_nodes[i].dest_filename);
     }
     for (Size i = start_obj_len; i < obj_nodes.len; i++) {
         output_set.Append(obj_nodes[i].dest_filename);
@@ -370,13 +388,13 @@ bool Builder::AddTarget(const Target &target)
 // the user interrupts felix. For this you can use libcc: call WaitForInterruption(0).
 bool Builder::Build(bool verbose)
 {
-    Size total = pch_nodes.len + obj_nodes.len + link_nodes.len;
+    Size total = prep_nodes.len + obj_nodes.len + link_nodes.len;
 
-    if (!RunNodes(pch_nodes, 0, total, verbose))
+    if (!RunNodes(prep_nodes, 0, total, verbose))
         return false;
-    if (!RunNodes(obj_nodes, pch_nodes.len, total, verbose))
+    if (!RunNodes(obj_nodes, prep_nodes.len, total, verbose))
         return false;
-    if (!RunNodes(link_nodes, pch_nodes.len + obj_nodes.len, total, verbose))
+    if (!RunNodes(link_nodes, prep_nodes.len + obj_nodes.len, total, verbose))
         return false;
 
     LogInfo("(100%%) Done!");
