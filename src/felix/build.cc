@@ -405,17 +405,40 @@ bool Builder::RunNodes(Span<const Node> nodes, int jobs, bool verbose, Size prog
 {
     Async async(jobs - 1);
 
-#ifdef _WIN32
-    BlockAllocator temp_alloc;
-
-    HeapArray<const char *> rsp_filenames;
-    HashMap<const void *, const char *> rsp_map;
+    std::mutex out_mutex;
+    HeapArray<const char *> clear_filenames;
 
     RG_DEFER {
-        for (const char *filename: rsp_filenames) {
+#ifdef _WIN32
+        // Windows has a tendency to hold file locks a bit longer than needed... Try to
+        // delete files several times silently unless it's the last try.
+        if (clear_filenames.len) {
+            PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
+            RG_DEFER { PopLogFilter(); };
+
+            for (Size i = 0; i < 3; i++) {
+                bool success = true;
+                for (const char *filename: clear_filenames) {
+                    success &= UnlinkFile(filename);
+                }
+
+                if (success)
+                    break;
+
+                WaitForDelay(150);
+            }
+        }
+#endif
+
+        for (const char *filename: clear_filenames) {
             UnlinkFile(filename);
         }
     };
+
+#ifdef _WIN32
+    BlockAllocator temp_alloc;
+
+    HashMap<const void *, const char *> rsp_map;
 
     // Windows (especially cmd) does not like excessively long command lines,
     // so we need to use response files in this case.
@@ -439,15 +462,13 @@ bool Builder::RunNodes(Span<const Node> nodes, int jobs, bool verbose, Size prog
             const char *new_cmd = Fmt(&temp_alloc, "%1 \"@%2\"",
                                       node.cmd.line.Take(0, node.cmd.rsp_offset), rsp_filename).ptr;
 
-            rsp_filenames.Append(rsp_filename);
             rsp_map.Append(&node, new_cmd);
+            clear_filenames.Append(rsp_filename);
         }
     }
 #endif
 
-    std::mutex out_mutex;
     bool interrupted = false;
-
     for (const Node &node: nodes) {
         async.Run([&]() {
 #ifdef _WIN32
@@ -538,9 +559,11 @@ bool Builder::RunNodes(Span<const Node> nodes, int jobs, bool verbose, Size prog
 
                 return true;
             } else {
-                UnlinkFile(node.dest_filename);
+                std::lock_guard<std::mutex> out_lock(out_mutex);
+
+                clear_filenames.Append(node.dest_filename);
                 if (node.deps_filename) {
-                    UnlinkFile(node.deps_filename);
+                    clear_filenames.Append(node.deps_filename);
                 }
 
                 if (!started) {
@@ -548,8 +571,6 @@ bool Builder::RunNodes(Span<const Node> nodes, int jobs, bool verbose, Size prog
                 } else if (exit_code == 130) {
                     interrupted = true; // SIGINT
                 } else {
-                    std::lock_guard<std::mutex> out_lock(out_mutex);
-
                     LogError("Failed: %1 (exit code %2)", node.text, exit_code);
                     stderr_st.Write(output);
                 }
