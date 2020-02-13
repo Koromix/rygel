@@ -49,12 +49,11 @@ class Compiler {
 
 public:
     const char *name;
-    const char *prefix;
     const char *binary;
     bool pch;
 
-    Compiler(const char *name, const char *prefix, const char *binary, bool pch)
-        : name(name), prefix(prefix), binary(binary), pch(pch) {}
+    Compiler(const char *name, const char *binary, bool pch)
+        : name(name), binary(binary), pch(pch) {}
 
     bool Test() const;
 

@@ -141,7 +141,7 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames,
 
 class ClangCompiler: public Compiler {
 public:
-    ClangCompiler(const char *name, const char *prefix) : Compiler(name, prefix, "clang", true) {}
+    ClangCompiler(const char *name) : Compiler(name, "clang", true) {}
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
@@ -153,10 +153,10 @@ public:
 
         // Compiler
         switch (src_type) {
-            case SourceType::C_Source: { Fmt(&buf, "%1clang -std=gnu11", prefix); } break;
-            case SourceType::C_Header: { Fmt(&buf, "%1clang -std=gnu11 -x c-header", prefix); } break;
-            case SourceType::CXX_Source: { Fmt(&buf, "%1clang++ -std=gnu++17", prefix); } break;
-            case SourceType::CXX_Header: { Fmt(&buf, "%1clang++ -std=gnu++17 -x c++-header", prefix); } break;
+            case SourceType::C_Source: { Fmt(&buf, "clang -std=gnu11"); } break;
+            case SourceType::C_Header: { Fmt(&buf, "clang -std=gnu11 -x c-header"); } break;
+            case SourceType::CXX_Source: { Fmt(&buf, "clang++ -std=gnu++17"); } break;
+            case SourceType::CXX_Header: { Fmt(&buf, "clang++ -std=gnu++17 -x c++-header"); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -201,8 +201,8 @@ public:
 
         // Linker
         switch (link_type) {
-            case LinkType::Executable: { Fmt(&buf, "%1clang++", prefix); } break;
-            case LinkType::SharedLibrary: { Fmt(&buf, "%1clang++ -shared", prefix); } break;
+            case LinkType::Executable: { Fmt(&buf, "clang++"); } break;
+            case LinkType::SharedLibrary: { Fmt(&buf, "clang++ -shared"); } break;
         }
         Fmt(&buf, " -o \"%1\"", dest_filename);
         out_cmd->rsp_offset = buf.len;
@@ -234,7 +234,7 @@ public:
 
 class GnuCompiler: public Compiler {
 public:
-    GnuCompiler(const char *name, const char *prefix) : Compiler(name, prefix, "gcc", true) {}
+    GnuCompiler(const char *name) : Compiler(name, "gcc", true) {}
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
@@ -246,10 +246,10 @@ public:
 
         // Compiler
         switch (src_type) {
-            case SourceType::C_Source: { Fmt(&buf, "%1gcc -std=gnu11", prefix); } break;
-            case SourceType::C_Header: { Fmt(&buf, "%1gcc -std=gnu11 -x c-header", prefix); } break;
-            case SourceType::CXX_Source: { Fmt(&buf, "%1g++ -std=gnu++17 -fno-exceptions", prefix); } break;
-            case SourceType::CXX_Header: { Fmt(&buf, "%1g++ -std=gnu++17 -fno-exceptions -x c++-header", prefix); } break;
+            case SourceType::C_Source: { Fmt(&buf, "gcc -std=gnu11"); } break;
+            case SourceType::C_Header: { Fmt(&buf, "gcc -std=gnu11 -x c-header"); } break;
+            case SourceType::CXX_Source: { Fmt(&buf, "g++ -std=gnu++17 -fno-exceptions"); } break;
+            case SourceType::CXX_Header: { Fmt(&buf, "g++ -std=gnu++17 -fno-exceptions -x c++-header"); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -295,8 +295,8 @@ public:
 
         // Linker
         switch (link_type) {
-            case LinkType::Executable: { Fmt(&buf, "%1g++", prefix); } break;
-            case LinkType::SharedLibrary: { Fmt(&buf, "%1g++ -shared", prefix); } break;
+            case LinkType::Executable: { Fmt(&buf, "g++"); } break;
+            case LinkType::SharedLibrary: { Fmt(&buf, "g++ -shared"); } break;
         }
         Fmt(&buf, " -o \"%1\"", dest_filename);
         out_cmd->rsp_offset = buf.len;
@@ -332,7 +332,7 @@ public:
 #ifdef _WIN32
 class MsCompiler: public Compiler {
 public:
-    MsCompiler(const char *name, const char *prefix) : Compiler(name, prefix, "cl", false) {}
+    MsCompiler(const char *name) : Compiler(name, "cl", false) {}
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
@@ -344,9 +344,9 @@ public:
 
         // Compiler
         switch (src_type) {
-            case SourceType::C_Source: { Fmt(&buf, "%1cl /nologo", prefix); } break;
+            case SourceType::C_Source: { Fmt(&buf, "cl /nologo"); } break;
             case SourceType::C_Header: { RG_ASSERT(false); } break;
-            case SourceType::CXX_Source: { Fmt(&buf, "%1cl /nologo /std:c++17", prefix); } break;
+            case SourceType::CXX_Source: { Fmt(&buf, "cl /nologo /std:c++17"); } break;
             case SourceType::CXX_Header: { RG_ASSERT(false); } break;
         }
         if (dest_filename) {
@@ -395,8 +395,8 @@ public:
 
         // Linker
         switch (link_type) {
-            case LinkType::Executable: { Fmt(&buf, "%1link /nologo", prefix); } break;
-            case LinkType::SharedLibrary: { Fmt(&buf, "%1link /nologo /DLL", prefix); } break;
+            case LinkType::Executable: { Fmt(&buf, "link /nologo"); } break;
+            case LinkType::SharedLibrary: { Fmt(&buf, "link /nologo /DLL"); } break;
         }
         Fmt(&buf, " \"/OUT:%1\"", dest_filename);
         out_cmd->rsp_offset = buf.len;
@@ -421,10 +421,10 @@ public:
 };
 #endif
 
-static ClangCompiler ClangCompiler("Clang", "");
-static GnuCompiler GnuCompiler("GCC", "");
+static ClangCompiler ClangCompiler("Clang");
+static GnuCompiler GnuCompiler("GCC");
 #ifdef _WIN32
-static MsCompiler MsCompiler("MSVC", "");
+static MsCompiler MsCompiler("MSVC");
 #endif
 
 static const Compiler *const CompilerTable[] = {
