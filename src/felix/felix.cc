@@ -16,7 +16,9 @@ int RunFelix(int argc, char **argv)
 
 Commands:
     build                        Build C and C++ projects (default)
-    pack                         Pack assets to C source file and other formats)");
+    pack                         Pack assets to C source file and other formats
+
+You may be more interested by the build command help, type: felix build --help)");
     };
 
     // Handle help and version arguments

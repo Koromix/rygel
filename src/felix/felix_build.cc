@@ -107,8 +107,9 @@ Supported compilers:)", build.compiler ? build.compiler->name : "?",
                         CompileModeNames[(int)build.compile_mode], jobs);
 
         for (const Compiler *compiler: Compilers) {
-            PrintLn(fp, "    %1%2",
-                    FmtArg(compiler->name).Pad(28), compiler->Test() ? "" : " Not available (in PATH)");
+            PrintLn(fp, "    %1 %2%3",
+                    FmtArg(compiler->name).Pad(28), compiler->binary,
+                    compiler->Test() ? "" : " [not available]");
         }
 
         PrintLn(fp, R"(
@@ -194,7 +195,7 @@ Supported compilation modes:)");
         LogError("Could not find any supported compiler in PATH");
         return 1;
     } else if (!build.compiler->Test()) {
-        LogError("Cannot find %1 compiler in PATH (binary = %2)", build.compiler->name, build.compiler->binary);
+        LogError("Cannot find %1 compiler in PATH [%2]", build.compiler->name, build.compiler->binary);
         return 1;
     }
 
