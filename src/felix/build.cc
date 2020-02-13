@@ -401,6 +401,56 @@ bool Builder::Build(int jobs, bool verbose)
     return true;
 }
 
+#ifdef _WIN32
+static bool ExtractShowIncludes(Span<char> buf, const char *dest_filename,
+                                const char *deps_filename, Size *out_new_len)
+{
+    StreamWriter st(deps_filename);
+    Print(&st, "%1:", dest_filename);
+
+    // We need to strip include notes from the output
+    Span<char> new_buf = MakeSpan(buf.ptr, 0);
+
+    while (buf.len) {
+        Span<const char> line = SplitStr(buf, '\n', &buf);
+
+        // MS had the brilliant idea to localize inclusion notes.. In english it starts
+        // with 'Note: including file:  ' but it can basically be anything. We match
+        // lines that start with a non-space character, and which contain a colon
+        // followed by two spaces we take the line. Not pretty, hopefully it is alright.
+        Span<const char> dep = {};
+        if (line.len && !IsAsciiWhite(line[0])) {
+            for (Size i = 0; i < line.len - 3; i++) {
+                if (line[i] == ':' && line[i + 1] == ' ' && line[i + 2] == ' ') {
+                    dep = TrimStr(line.Take(i + 3, line.len - i - 3));
+                    break;
+                }
+            }
+        }
+
+        if (dep.len) {
+            Print(&st, " \\\n ");
+
+            for (char c: dep) {
+                if (strchr(" $#", c)) {
+                    st.Write('\\');
+                }
+                st.Write(c);
+            }
+        } else {
+            Size copy_len = line.len + (buf.ptr > line.end());
+
+            memmove(new_buf.end(), line.ptr, copy_len);
+            new_buf.len += copy_len;
+        }
+    }
+    PrintLn(&st);
+
+    *out_new_len = new_buf.len;
+    return st.Close();
+}
+#endif
+
 bool Builder::RunNodes(Span<const Node> nodes, int jobs, bool verbose, Size progress, Size total)
 {
     BlockAllocator temp_alloc;
@@ -495,52 +545,9 @@ bool Builder::RunNodes(Span<const Node> nodes, int jobs, bool verbose, Size prog
 
 #ifdef _WIN32
             // Extract MSVC-like dependency notes
-            if (node.cmd.parse_cl_includes && node.deps_filename) {
-                StreamWriter st(node.deps_filename);
-                Print(&st, "%1:", node.dest_filename);
-
-                // We need to strip include notes from the output
-                Span<const char> remain = output_buf;
-                output_buf.len = 0;
-
-                while (remain.len) {
-                    Span<const char> line = SplitStr(remain, '\n', &remain);
-
-                    // MS had the brilliant idea to localize inclusion notes.. In english it starts
-                    // with 'Note: including file:  ' but it can basically be anything. We match
-                    // lines that start with a non-space character, and which contain a colon
-                    // followed by two spaces we take the line. Not pretty, hopefully it is alright.
-                    Span<const char> dep = {};
-                    if (line.len && !IsAsciiWhite(line[0])) {
-                        for (Size i = 0; i < line.len - 3; i++) {
-                            if (line[i] == ':' && line[i + 1] == ' ' && line[i + 2] == ' ') {
-                                dep = TrimStr(line.Take(i + 3, line.len - i - 3));
-                                break;
-                            }
-                        }
-                    }
-
-                    if (dep.len) {
-                        Print(&st, " \\\n ");
-
-                        for (char c: dep) {
-                            if (strchr(" $#", c)) {
-                                st.Write('\\');
-                            }
-                            st.Write(c);
-                        }
-                    } else {
-                        Size copy_len = line.len + (remain.ptr > line.end());
-
-                        memmove(output_buf.end(), line.ptr, copy_len);
-                        output_buf.len += copy_len;
-                    }
-                }
-                PrintLn(&st);
-
-                if (!st.Close())
-                    started = false;
-            }
+            if (node.cmd.parse_cl_includes &&
+                    !ExtractShowIncludes(output_buf, node.dest_filename, node.deps_filename, &output_buf.len))
+                started = false;
 #endif
 
             // Skip first output lines (if needed)
@@ -567,6 +574,7 @@ bool Builder::RunNodes(Span<const Node> nodes, int jobs, bool verbose, Size prog
 
                 if (!started) {
                     // Error already issued by ExecuteCommandLine()
+                    stderr_st.Write(output);
                 } else if (exit_code == 130) {
                     interrupted = true; // SIGINT
                 } else {

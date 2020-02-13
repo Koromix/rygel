@@ -378,12 +378,11 @@ public:
         }
         if (deps_filename) {
             Fmt(&buf, " /showIncludes");
+            out_cmd->parse_cl_includes = true;
         }
 
         out_cmd->line = buf.Leak();
-
         out_cmd->skip_lines = 1;
-        out_cmd->parse_cl_includes = true;
     }
 
     void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
