@@ -81,7 +81,7 @@ int RunBuild(Span<const char *> arguments)
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
 R"(Usage: felix build [options] [target...]
-       felix build [options] target --run [arguments...]
+       felix build [options] --run target [arguments...]
 
 Options:
     -C, --config <filename>      Set configuration filename
