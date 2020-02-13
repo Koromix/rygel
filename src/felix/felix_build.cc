@@ -111,7 +111,7 @@ Supported compilers:)", build.compiler ? build.compiler->name : "?",
         for (const Compiler *compiler: Compilers) {
             PrintLn(fp, "    %1 %2%3",
                     FmtArg(compiler->name).Pad(28), compiler->binary,
-                    compiler->Test() ? "" : " [not available]");
+                    compiler->Test() ? "" : " [not available in PATH]");
         }
 
         PrintLn(fp, R"(
