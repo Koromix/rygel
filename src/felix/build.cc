@@ -491,7 +491,7 @@ bool Builder::RunNodes(Span<const Node> nodes, int jobs, bool verbose, Size prog
                     // lines that start with a non-space character, and which contain a colon
                     // followed by two spaces we take the line. Not pretty, hopefully it is alright.
                     Span<const char> dep = {};
-                    if (!IsAsciiWhite(line[0])) {
+                    if (line.len && !IsAsciiWhite(line[0])) {
                         for (Size i = 0; i < line.len - 3; i++) {
                             if (line[i] == ':' && line[i + 1] == ' ' && line[i + 2] == ' ') {
                                 dep = TrimStr(line.Take(i + 3, line.len - i - 3));
