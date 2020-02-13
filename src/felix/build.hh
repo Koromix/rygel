@@ -32,10 +32,7 @@ class Builder {
 
     BlockAllocator temp_alloc;
 
-    const char *output_directory;
-    const Compiler *compiler;
-    CompileMode compile_mode = CompileMode::Debug;
-    const char *version_str = nullptr;
+    BuildSettings build;
 
     bool version_init = false;
     const char *version_obj_filename = nullptr;
@@ -55,7 +52,7 @@ class Builder {
 public:
     HashMap<const char *, const char *> target_filenames;
 
-    Builder(const BuildSettings &settings);
+    Builder(const BuildSettings &build);
 
     bool AddTarget(const Target &target);
     bool Build(int jobs, bool verbose);

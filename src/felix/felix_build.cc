@@ -69,7 +69,7 @@ int RunBuild(Span<const char *> arguments)
     // Options
     HeapArray<const char *> target_names;
     const char *config_filename = nullptr;
-    BuildSettings settings = {};
+    BuildSettings build = {};
     bool enable_pch = true;
     int jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_WORKERS + 1);
     bool verbose = false;
@@ -103,8 +103,8 @@ Options:
                                  (all remaining arguments are passed as-is)
         --run_here <target>      Same thing, but run from current directory
 
-Supported compilers:)", settings.compiler ? settings.compiler->name : "?",
-                        CompileModeNames[(int)settings.compile_mode], jobs);
+Supported compilers:)", build.compiler ? build.compiler->name : "?",
+                        CompileModeNames[(int)build.compile_mode], jobs);
 
         for (const Compiler *compiler: Compilers) {
             PrintLn(fp, "    %1%2",
@@ -119,7 +119,7 @@ Supported compilation modes:)");
     };
 
     // Find default compiler
-    settings.compiler = FindIf(Compilers, [](const Compiler *compiler) { return compiler->Test(); });
+    build.compiler = FindIf(Compilers, [](const Compiler *compiler) { return compiler->Test(); });
 
     // Parse arguments
     {
@@ -139,12 +139,12 @@ Supported compilation modes:)");
             } else if (opt.Test("-C", "--config", OptionType::Value)) {
                 config_filename = opt.current_value;
             } else if (opt.Test("-O", "--output", OptionType::Value)) {
-                settings.output_directory = opt.current_value;
+                build.output_directory = opt.current_value;
             } else if (opt.Test("-c", "--compiler", OptionType::Value)) {
-                settings.compiler =
+                build.compiler =
                     FindIf(Compilers, [&](const Compiler *compiler) { return TestStr(compiler->name, opt.current_value); });
 
-                if (!settings.compiler) {
+                if (!build.compiler) {
                     LogError("Unknown compiler '%1'", opt.current_value);
                     return 1;
                 }
@@ -154,7 +154,7 @@ Supported compilation modes:)");
                               [&](const char *name) { return TestStr(name, opt.current_value); });
 
                 if (ptr) {
-                    settings.compile_mode = (CompileMode)(ptr - CompileModeNames);
+                    build.compile_mode = (CompileMode)(ptr - CompileModeNames);
                 } else {
                     LogError("Unknown build mode '%1'", opt.current_value);
                     return 1;
@@ -189,12 +189,11 @@ Supported compilation modes:)");
         }
     }
 
-    if (!settings.compiler) {
+    if (!build.compiler) {
         LogError("No compiler is available");
         return 1;
-    } else if (!settings.compiler->Test()) {
-        LogError("Cannot find %1 compiler (binary = %2)",
-                 settings.compiler->name, settings.compiler->binary);
+    } else if (!build.compiler->Test()) {
+        LogError("Cannot find %1 compiler (binary = %2)", build.compiler->name, build.compiler->binary);
         return 1;
     }
 
@@ -226,11 +225,11 @@ Supported compilation modes:)");
     }
 
     // Output directory
-    if (settings.output_directory) {
-        settings.output_directory = NormalizePath(settings.output_directory, start_directory, &temp_alloc).ptr;
+    if (build.output_directory) {
+        build.output_directory = NormalizePath(build.output_directory, start_directory, &temp_alloc).ptr;
     } else {
-        settings.output_directory = Fmt(&temp_alloc, "%1%/bin%/%2_%3", GetWorkingDirectory(),
-                                        settings.compiler->name, CompileModeNames[(int)settings.compile_mode]).ptr;
+        build.output_directory = Fmt(&temp_alloc, "%1%/bin%/%2_%3", GetWorkingDirectory(),
+                                     build.compiler->name, CompileModeNames[(int)build.compile_mode]).ptr;
     }
 
     // Load configuration file
@@ -290,8 +289,8 @@ Supported compilation modes:)");
     }
 
     // Disable PCH?
-    if (enable_pch && !settings.compiler->pch) {
-        LogError("Ignoring PCH for %1", settings.compiler->name);
+    if (enable_pch && !build.compiler->pch) {
+        LogError("Ignoring PCH for %1", build.compiler->name);
         enable_pch = false;
     }
     if (!enable_pch) {
@@ -303,13 +302,13 @@ Supported compilation modes:)");
 
     // We're ready to output stuff
     LogInfo("Root directory: '%1'", GetWorkingDirectory());
-    LogInfo("Output directory: '%1'", settings.output_directory);
-    if (!MakeDirectoryRec(settings.output_directory))
+    LogInfo("Output directory: '%1'", build.output_directory);
+    if (!MakeDirectoryRec(build.output_directory))
         return 1;
 
     // Build version string from git commit (date, hash)
-    settings.version_str = BuildGitVersionString(&temp_alloc);
-    if (!settings.version_str) {
+    build.version_str = BuildGitVersionString(&temp_alloc);
+    if (!build.version_str) {
         LogError("Git version string will be null");
     }
 
@@ -319,7 +318,7 @@ Supported compilation modes:)");
     WaitForInterruption(0);
 
     // Build stuff!
-    Builder builder(settings);
+    Builder builder(build);
     for (const Target *target: enabled_targets) {
         if (!builder.AddTarget(*target))
             return 1;
