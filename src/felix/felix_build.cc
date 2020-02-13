@@ -78,6 +78,9 @@ int RunBuild(Span<const char *> arguments)
     Span<const char *> run_arguments = {};
     bool run_here = false;
 
+    // Find default compiler
+    build.compiler = FindIf(Compilers, [](const Compiler *compiler) { return compiler->Test(); });
+
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
 R"(Usage: felix build [options] [target...]
@@ -120,9 +123,6 @@ Supported compilation modes:)");
             PrintLn(fp, "    %1", mode_name);
         }
     };
-
-    // Find default compiler
-    build.compiler = FindIf(Compilers, [](const Compiler *compiler) { return compiler->Test(); });
 
     // Parse arguments
     {
