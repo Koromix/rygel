@@ -316,6 +316,7 @@ Supported compilation modes:)");
 
     // We're ready to output stuff
     LogInfo("Root directory: '%1'", GetWorkingDirectory());
+    LogInfo("Compiler: %1 (%2)", build.compiler->name, CompileModeNames[(int)build.compile_mode]);
     LogInfo("Output directory: '%1'", build.output_directory);
     if (!MakeDirectoryRec(build.output_directory))
         return 1;
