@@ -3972,18 +3972,17 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
             // Ignore this line (empty or comment)
         } else if (line[0] == '[') {
             if (line.len < 2 || line[line.len - 1] != ']') {
-                LogError("%1(%2): Malformed section line", reader.GetFileName(), reader.GetLineNumber());
+                LogError("Malformed section line");
                 return LineType::Exit;
             }
 
             Span<const char> section = TrimStr(line.Take(1, line.len - 2));
             if (!section.len) {
-                LogError("%1(%2): Empty section name", reader.GetFileName(), reader.GetLineNumber());
+                LogError("Empty section name");
                 return LineType::Exit;
             }
             if (!std::all_of(section.begin(), section.end(), IsAsciiIdChar)) {
-                LogError("%1(%2): Section names can only contain alphanumeric characters, '_', '-', '.' or ' '",
-                         reader.GetFileName(), reader.GetLineNumber());
+                LogError("Section names can only contain alphanumeric characters, '_', '-', '.' or ' '");
                 return LineType::Exit;
             }
 
@@ -3996,12 +3995,11 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
             Span<char> value;
             Span<const char> key = TrimStr(SplitStr(line, '=', &value));
             if (!key.len || key.end() == line.end()) {
-                LogError("%1(%2): Malformed key=value", reader.GetFileName(), reader.GetLineNumber());
+                LogError("Malformed key=value pair");
                 return LineType::Exit;
             }
             if (!std::all_of(key.begin(), key.end(), IsAsciiIdChar)) {
-                LogError("%1(%2): Key names can only contain alphanumeric characters, '_', '-' or '.'",
-                         reader.GetFileName(), reader.GetLineNumber());
+                LogError("Key names can only contain alphanumeric characters, '_', '-' or '.'");
                 return LineType::Exit;
             }
             value = TrimStr(value);
