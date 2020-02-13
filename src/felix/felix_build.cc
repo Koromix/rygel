@@ -72,6 +72,7 @@ int RunBuild(Span<const char *> arguments)
     BuildSettings build = {};
     bool enable_pch = true;
     int jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_WORKERS + 1);
+    bool quiet = false;
     bool verbose = false;
     const char *run_target_name = nullptr;
     Span<const char *> run_arguments = {};
@@ -97,6 +98,7 @@ Options:
     -j, --jobs <count>           Set maximum number of parallel jobs
                                  (default: %3)
 
+    -q, --quiet                  Hide felix progress statements
     -v, --verbose                Show detailed build commands
 
         --run <target>           Run target after successful build
@@ -169,6 +171,8 @@ Supported compilation modes:)");
                     LogError("Jobs count cannot be < 1");
                     return 1;
                 }
+            } else if (opt.Test("-q", "--quiet")) {
+                quiet = true;
             } else if (opt.Test("-v", "--verbose")) {
                 verbose = true;
             } else if (opt.Test("--run", OptionType::Value)) {
@@ -188,6 +192,14 @@ Supported compilation modes:)");
             target_names.Append(run_target_name);
             run_arguments = opt.GetRemainingArguments();
         }
+    }
+
+    if (quiet) {
+        SetLogHandler([](LogLevel level, const char *ctx, const char *msg) {
+            if (level != LogLevel::Info) {
+                DefaultLogHandler(level, ctx, msg);
+            }
+        });
     }
 
     // Check compiler
