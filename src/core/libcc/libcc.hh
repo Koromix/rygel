@@ -3390,8 +3390,7 @@ Span<const char> GetPathExtension(Span<const char> filename,
                                   CompressionType *out_compression_type = nullptr);
 CompressionType GetPathCompression(Span<const char> filename);
 
-Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
-                         Allocator *alloc);
+Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory, Allocator *alloc);
 static inline Span<char> NormalizePath(Span<const char> path, Allocator *alloc)
     { return NormalizePath(path, {}, alloc); }
 

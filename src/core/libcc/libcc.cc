@@ -1819,8 +1819,7 @@ CompressionType GetPathCompression(Span<const char> filename)
     return compression_type;
 }
 
-Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
-                               Allocator *alloc)
+Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory, Allocator *alloc)
 {
     if (!path.len && !root_directory.len)
         return Fmt(alloc, "");
@@ -1828,9 +1827,9 @@ Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
     HeapArray<char> buf;
     buf.allocator = alloc;
 
-    const auto append_normalized_path = [&](Span<const char> path) {
-        Size parts_count = 0;
+    Size parts_count = 0;
 
+    const auto append_normalized_path = [&](Span<const char> path) {
         if (!buf.len && PathIsAbsolute(path)) {
             Span<const char> prefix = SplitStrAny(path, RG_PATH_SEPARATORS, &path);
             buf.Append(prefix);
@@ -1858,7 +1857,7 @@ Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
         }
     };
 
-    if (root_directory.len && (!path.len || !PathIsAbsolute(path))) {
+    if (root_directory.len && !PathIsAbsolute(path)) {
         append_normalized_path(root_directory);
     }
     append_normalized_path(path);
