@@ -403,7 +403,7 @@ bool Builder::Build(int jobs, bool verbose)
 
 bool Builder::RunNodes(Span<const Node> nodes, int jobs, bool verbose, Size progress, Size total)
 {
-    Async async(jobs - 1);
+    BlockAllocator temp_alloc;
 
     std::mutex out_mutex;
     HeapArray<const char *> clear_filenames;
@@ -436,12 +436,9 @@ bool Builder::RunNodes(Span<const Node> nodes, int jobs, bool verbose, Size prog
     };
 
 #ifdef _WIN32
-    BlockAllocator temp_alloc;
-
-    HashMap<const void *, const char *> rsp_map;
-
     // Windows (especially cmd) does not like excessively long command lines,
     // so we need to use response files in this case.
+    HashMap<const void *, const char *> rsp_map;
     for (const Node &node: nodes) {
         if (node.cmd.line.len > 4096 && node.cmd.rsp_offset > 0) {
             RG_ASSERT(node.cmd.rsp_offset < node.cmd.line.len);
@@ -467,6 +464,8 @@ bool Builder::RunNodes(Span<const Node> nodes, int jobs, bool verbose, Size prog
         }
     }
 #endif
+
+    Async async(jobs - 1);
 
     bool interrupted = false;
     for (const Node &node: nodes) {
