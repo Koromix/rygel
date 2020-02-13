@@ -189,11 +189,12 @@ Supported compilation modes:)");
         }
     }
 
+    // Check compiler
     if (!build.compiler) {
-        LogError("No compiler is available");
+        LogError("Could not find any supported compiler in PATH");
         return 1;
     } else if (!build.compiler->Test()) {
-        LogError("Cannot find %1 compiler (binary = %2)", build.compiler->name, build.compiler->binary);
+        LogError("Cannot find %1 compiler in PATH (binary = %2)", build.compiler->name, build.compiler->binary);
         return 1;
     }
 
