@@ -10,27 +10,55 @@ where /q link
 if NOT ERRORLEVEL 1 (
     where /q clang-cl
     if NOT ERRORLEVEL 1 (
-        echo Building felix with Clang
-        clang-cl /W0 /EHsc /MP /O2 /DNDEBUG /c %SRC% /Fo.\
-        lld-link /nologo *.obj shlwapi.lib /out:%BIN%
-        del *.obj
+        echo Bootstrapping felix with Clang...
+        mkdir tmp
+        clang-cl /nologo /W0 /EHsc /MP /DNDEBUG /c %SRC% /Fotmp\
+        lld-link /nologo tmp\*.obj shlwapi.lib /out:tmp\felix.exe
+        tmp\felix.exe -m Fast -O tmp\fast felix
+        move tmp\fast\felix.exe %BIN%
+
+        echo Cleaning up...
+        ping -n 4 127.0.0.1 >NUL
+        rmdir /S /Q tmp\fast
+        del /Q tmp\*
+        rmdir /Q tmp
+
         exit /B
     )
 
     where /q cl
     if NOT ERRORLEVEL 1 (
-        echo Building felix with MSVC
-        cl /nologo /W0 /EHsc /MP /O2 /DNDEBUG /c %SRC% /Fo.\
-        link /nologo *.obj shlwapi.lib /out:%BIN%
-        del *.obj
+        echo Bootstrapping felix with MSVC...
+        mkdir tmp
+        cl /nologo /W0 /EHsc /MP /DNDEBUG /c %SRC% /Fotmp\
+        link /nologo tmp\*.obj shlwapi.lib /out:tmp\felix.exe
+        tmp\felix.exe -m Fast -O tmp\fast felix
+        move tmp\fast\felix.exe %BIN%
+
+        echo Cleaning up...
+        ping -n 4 127.0.0.1 >NUL
+        rmdir /S /Q tmp\fast
+        del /Q tmp\*
+        rmdir /Q tmp
+
         exit /B
     )
 )
 
 where /q g++
 if NOT ERRORLEVEL 1 (
-    echo Building felix with GCC
-    g++ -std=gnu++17 -O2 -DNDEBUG %SRC% -lshlwapi -o%BIN%
+    echo Bootstrapping felix with GCC...
+    mkdir tmp
+    g++ -std=gnu++17 -O0 -DNDEBUG %SRC% -w -lshlwapi -otmp\felix.exe
+    tmp\felix.exe -m Fast -O tmp\fast felix
+    move tmp\fast\felix.exe %BIN%
+
+    echo Cleaning up...
+    ping -n 4 127.0.0.1 >NUL
+    rmdir /S /Q tmp\fast
+    del /Q tmp\*
+    rmdir /Q tmp
+
     exit /B
 )
 
