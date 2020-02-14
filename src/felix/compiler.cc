@@ -283,6 +283,11 @@ public:
         AppendGccObjectArguments(src_filename, compile_mode, pch_filename, definitions,
                                  include_directories, deps_filename, &buf);
 
+        // This is needed for GCC to include files from PCH dependencies
+        if (deps_filename) {
+            Fmt(&buf, " -fpch-deps");
+        }
+
         out_cmd->line = buf.Leak();
     }
 
