@@ -113,11 +113,13 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
     http_Daemon *daemon = (http_Daemon *)cls;
     http_IO *io = *(http_IO **)con_cls;
 
+    bool first_call = !io;
+
     // Avoid stale messages and messages from other theads in error pages
     ClearLastLogError();
 
     // Init request data
-    if (!io) {
+    if (first_call) {
         io = new http_IO();
         *con_cls = io;
 
@@ -196,7 +198,7 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
         }
         return MHD_queue_response(conn, (unsigned int)io->code, io->response);
     } else {
-        if (io->read_len == io->read_buf.len) {
+        if (!first_call && io->read_len == io->read_buf.len) {
             io->Suspend();
         }
         return MHD_YES;
