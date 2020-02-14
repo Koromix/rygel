@@ -24,7 +24,7 @@ let goupile = new function() {
     let route_asset;
     let route_url;
 
-    let left_panel = 'editor';
+    let left_panel = null;
     let show_overview = true;
 
     let editor_el;
