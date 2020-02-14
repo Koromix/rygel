@@ -6,13 +6,6 @@
 #include "create.hh"
 #include "../../core/libwrap/sqlite.hh"
 
-#ifdef _WIN32
-    #include <direct.h>
-    #include <io.h>
-#else
-    #include <unistd.h>
-#endif
-
 namespace RG {
 
 static const char *const DefaultConfig =

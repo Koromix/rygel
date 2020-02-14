@@ -5,10 +5,6 @@
 #include "../core/libcc/libcc.hh"
 #include "build.hh"
 
-#ifndef _WIN32
-    #include <unistd.h>
-#endif
-
 namespace RG {
 
 static Span<const char> ParseMakeFragment(Span<const char> remain, HeapArray<char> *out_frag)
