@@ -693,6 +693,8 @@ function BTree(order = 64) {
         }
     };
 
+    this.first = function() { return leaf0 ? leaf0.values[0] : undefined; };
+
     this.forEach = function(func, this_arg) {
         let leaf = leaf0;
 

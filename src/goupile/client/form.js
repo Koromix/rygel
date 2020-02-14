@@ -22,22 +22,33 @@ let form_executor = new function() {
 
         if (asset !== current_asset || !current_records.size || id != null) {
             current_asset = asset;
-            current_records.clear();
-            page_states = {};
 
             if (id === 'many') {
                 select_many = true;
             } else if (id === 'new' || id == null) {
-                let record = virt_data.create(current_asset.form.key);
-                current_records.set(record.id, record);
+                if (current_records.size != 1 || current_records.first().sequence != null) {
+                    let record = virt_data.create(current_asset.form.key);
+
+                    current_records.clear();
+                    current_records.set(record.id, record);
+                }
 
                 select_many = false;
             } else if (id != null) {
-                let record = await virt_data.load(current_asset.form.key, id) || virt_data.create(current_asset.form.key);
+                let record = current_records.get(id) ||
+                             await virt_data.load(current_asset.form.key, id) ||
+                             virt_data.create(current_asset.form.key);
+
+                current_records.clear();
                 current_records.set(record.id, record);
 
                 select_many = false;
             }
+
+            let new_states = {};
+            for (let id of current_records.keys())
+                new_states[id] = page_states[id];
+            page_states = new_states;
         }
     };
 
@@ -48,8 +59,7 @@ let form_executor = new function() {
         } else if (!current_records.size) {
             url = current_asset.url;
         } else {
-            let record = current_records.values().next().value;
-
+            let record = current_records.first();
             url = `${current_asset.url}${record.sequence != null ? record.id : 'new'}`;
         }
 
