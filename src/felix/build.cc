@@ -169,15 +169,15 @@ bool Builder::AddTarget(const Target &target)
     const char *cxx_pch_filename = nullptr;
     const auto add_pch_object = [&](const char *src_filename, SourceType src_type) {
         const char *pch_filename = BuildObjectPath(src_filename, build.output_directory,
-                                                   ".pch.h", &temp_alloc);
-        const char *deps_filename = Fmt(&temp_alloc, "%1.d", pch_filename).ptr;
+                                                   ".pch.h", &str_alloc);
+        const char *deps_filename = Fmt(&str_alloc, "%1.d", pch_filename).ptr;
 
         if (NeedsRebuild(src_filename, pch_filename, deps_filename)) {
             Node node = {};
 
             node.text = Fmt(&str_alloc, "Precompile %1", src_filename).ptr;
-            node.dest_filename = DuplicateString(pch_filename, &str_alloc).ptr;
-            node.deps_filename = DuplicateString(deps_filename, &str_alloc).ptr;
+            node.dest_filename = pch_filename;
+            node.deps_filename = deps_filename;
             if (!CreatePrecompileHeader(src_filename, pch_filename))
                 return (const char *)nullptr;
             build.compiler->MakeObjectCommand(pch_filename, src_type, build.compile_mode, warnings,
@@ -202,7 +202,7 @@ bool Builder::AddTarget(const Target &target)
 
     // Build information
     if (!version_init && build.version_str) {
-        const char *src_filename = Fmt(&temp_alloc, "%1%/resources%/version.c", build.output_directory).ptr;
+        const char *src_filename = Fmt(&str_alloc, "%1%/resources%/version.c", build.output_directory).ptr;
         version_obj_filename = Fmt(&str_alloc, "%1.o", src_filename).ptr;
 
         if (UpdateVersionSource(build.version_str, src_filename)) {
@@ -235,8 +235,8 @@ bool Builder::AddTarget(const Target &target)
     // Object commands
     for (const SourceFileInfo &src: target.sources) {
         const char *obj_filename = BuildObjectPath(src.filename, build.output_directory,
-                                                   ".o", &temp_alloc);
-        const char *deps_filename = Fmt(&temp_alloc, "%1.d", obj_filename).ptr;
+                                                   ".o", &str_alloc);
+        const char *deps_filename = Fmt(&str_alloc, "%1.d", obj_filename).ptr;
 
         if (NeedsRebuild(src.filename, obj_filename, deps_filename)) {
             Node node = {};
@@ -251,8 +251,8 @@ bool Builder::AddTarget(const Target &target)
             }
 
             node.text = Fmt(&str_alloc, "Build %1", src.filename).ptr;
-            node.dest_filename = DuplicateString(obj_filename, &str_alloc).ptr;
-            node.deps_filename = DuplicateString(deps_filename, &str_alloc).ptr;
+            node.dest_filename = obj_filename;
+            node.deps_filename = deps_filename;
             if (!EnsureDirectoryExists(obj_filename))
                 return false;
             build.compiler->MakeObjectCommand(src.filename, src.type, build.compile_mode, warnings,
@@ -270,16 +270,16 @@ bool Builder::AddTarget(const Target &target)
 
     // Assets
     if (target.pack_filenames.len) {
-        const char *src_filename = Fmt(&temp_alloc, "%1%/assets%/%2_assets.c",
+        const char *src_filename = Fmt(&str_alloc, "%1%/assets%/%2_assets.c",
                                        build.output_directory, target.name).ptr;
-        const char *obj_filename = Fmt(&temp_alloc, "%1.o", src_filename).ptr;
+        const char *obj_filename = Fmt(&str_alloc, "%1.o", src_filename).ptr;
 
         // Make C file
         if (!IsFileUpToDate(src_filename, target.pack_filenames)) {
             Node node = {};
 
             node.text = Fmt(&str_alloc, "Pack %1 assets", target.name).ptr;
-            node.dest_filename = DuplicateString(src_filename, &str_alloc).ptr;
+            node.dest_filename = src_filename;
             if (!EnsureDirectoryExists(src_filename))
                 return false;
             MakePackCommand(target.pack_filenames, build.compile_mode,
@@ -296,7 +296,7 @@ bool Builder::AddTarget(const Target &target)
             Node node = {};
 
             node.text = Fmt(&str_alloc, "Build %1 assets", target.name).ptr;
-            node.dest_filename = DuplicateString(obj_filename, &str_alloc).ptr;
+            node.dest_filename = obj_filename;
             build.compiler->MakeObjectCommand(src_filename, SourceType::C_Source, CompileMode::Debug, false,
                                               nullptr, {}, {}, obj_filename, nullptr, &str_alloc, &node.cmd);
 
@@ -315,10 +315,10 @@ bool Builder::AddTarget(const Target &target)
 
         if (module) {
 #ifdef _WIN32
-            const char *module_filename = Fmt(&temp_alloc, "%1%/%2_assets.dll",
+            const char *module_filename = Fmt(&str_alloc, "%1%/%2_assets.dll",
                                               build.output_directory, target.name).ptr;
 #else
-            const char *module_filename = Fmt(&temp_alloc, "%1%/%2_assets.so",
+            const char *module_filename = Fmt(&str_alloc, "%1%/%2_assets.so",
                                               build.output_directory, target.name).ptr;
 #endif
 
@@ -328,7 +328,7 @@ bool Builder::AddTarget(const Target &target)
                 // XXX: Check if this conflicts with a target destination file?
                 node.text = Fmt(&str_alloc, "Link %1",
                                 SplitStrReverseAny(module_filename, RG_PATH_SEPARATORS)).ptr;
-                node.dest_filename = DuplicateString(module_filename, &str_alloc).ptr;
+                node.dest_filename = module_filename;
                 build.compiler->MakeLinkCommand(obj_filename, CompileMode::Debug, {},
                                                 LinkType::SharedLibrary, module_filename,
                                                 &str_alloc, &node.cmd);
@@ -351,9 +351,8 @@ bool Builder::AddTarget(const Target &target)
         if (!IsFileUpToDate(target_filename, obj_filenames)) {
             Node node = {};
 
-            node.text = Fmt(&str_alloc, "Link %1",
-                           SplitStrReverseAny(target_filename, RG_PATH_SEPARATORS)).ptr;
-            node.dest_filename = DuplicateString(target_filename, &str_alloc).ptr;
+            node.text = Fmt(&str_alloc, "Link %1", SplitStrReverseAny(target_filename, RG_PATH_SEPARATORS)).ptr;
+            node.dest_filename = target_filename;
             build.compiler->MakeLinkCommand(obj_filenames, build.compile_mode, target.libraries,
                                             LinkType::Executable, target_filename, &str_alloc, &node.cmd);
 
@@ -596,6 +595,8 @@ bool Builder::RunNodes(Span<const Node> nodes, int jobs, bool verbose, Size prog
 bool Builder::NeedsRebuild(const char *src_filename, const char *dest_filename,
                            const char *deps_filename)
 {
+    BlockAllocator temp_alloc;
+
     HeapArray<const char *> dep_filenames;
     dep_filenames.Append(src_filename);
 
@@ -629,17 +630,21 @@ bool Builder::IsFileUpToDate(const char *dest_filename, Span<const char *const> 
 
 int64_t Builder::GetFileModificationTime(const char *filename)
 {
-    std::pair<int64_t *, bool> ret = mtime_map.Append(filename, -1);
+    int64_t *ptr = mtime_map.Find(filename);
 
-    if (ret.second) {
+    if (ptr) {
+        return *ptr;
+    } else {
         FileInfo file_info;
         if (!StatFile(filename, false, &file_info))
             return -1;
 
-        *ret.first = file_info.modification_time;
-    }
+        // filename might be temporary (e.g. dependency filenames in NeedsRebuild())
+        const char *filename2 = DuplicateString(filename, &str_alloc).ptr;
+        mtime_map.Append(filename2, file_info.modification_time);
 
-    return *ret.first;
+        return file_info.modification_time;
+    }
 }
 
 }

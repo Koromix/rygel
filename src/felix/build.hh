@@ -30,8 +30,6 @@ class Builder {
         BuildCommand cmd;
     };
 
-    BlockAllocator temp_alloc;
-
     BuildSettings build;
 
     bool version_init = false;
