@@ -377,11 +377,11 @@ index b19a4d9f..2665351f 100644
 @@ -801,8 +805,8 @@ typedef struct JSShapeProperty {
  } JSShapeProperty;
 
++#define JSSHAPE_HASH_OFFSET(sh, idx) (((uint32_t *)(sh)) + (offset))
++
  struct JSShape {
 -    uint32_t prop_hash_end[0]; /* hash table of size hash_mask + 1
 -                                  before the start of the structure. */
-+    #define PROP_HASH_END(shape,idx) ((uint32_t *)(shape) + (idx))
-+
      JSGCObjectHeader header;
      /* true if the shape is inserted in the shape hash table. If not,
         JSShape.hash is not valid */
@@ -394,41 +394,12 @@ index b19a4d9f..2665351f 100644
  };
  struct JSObject {
      union {
-@@ -1973,7 +1977,6 @@ void JS_FreeRuntime(JSRuntime *rt)
-     }
- }
-
--#if defined(EMSCRIPTEN)
- /* currently no stack limitation */
- static inline uint8_t *js_get_stack_pointer(void)
- {
-@@ -1984,20 +1987,6 @@ static inline BOOL js_check_stack_overflow(JSContext *ctx, size_t alloca_size)
- {
-     return FALSE;
- }
--#else
--/* Note: OS and CPU dependent */
--static inline uint8_t *js_get_stack_pointer(void)
--{
--    return __builtin_frame_address(0);
--}
--
--static inline BOOL js_check_stack_overflow(JSContext *ctx, size_t alloca_size)
--{
--    size_t size;
--    size = ctx->stack_top - js_get_stack_pointer();
--    return unlikely((size + alloca_size) > ctx->stack_size);
--}
--#endif
-
- JSContext *JS_NewContextRaw(JSRuntime *rt)
- {
 @@ -4077,7 +4066,7 @@ static inline JSShape *get_shape_from_alloc(void *sh_alloc, size_t hash_size)
 
  static inline void *get_alloc_from_shape(JSShape *sh)
  {
 -    return sh->prop_hash_end - ((intptr_t)sh->prop_hash_mask + 1);
-+    return PROP_HASH_END(sh, -((intptr_t)sh->prop_hash_mask + 1));
++    return JSSHAPE_HASH_OFFSET(sh, -((intptr_t)sh->prop_hash_mask + 1));
  }
 
  static inline JSShapeProperty *get_shape_prop(JSShape *sh)
@@ -437,7 +408,7 @@ index b19a4d9f..2665351f 100644
          JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, proto));
      sh->proto = proto;
 -    memset(sh->prop_hash_end - hash_size, 0, sizeof(sh->prop_hash_end[0]) *
-+    memset(PROP_HASH_END(sh, -hash_size), 0, sizeof(uint32_t) *
++    memset(JSSHAPE_HASH_OFFSET(sh, -(intptr_t)hash_size), 0, sizeof(uint32_t) *
             hash_size);
      sh->prop_hash_mask = hash_size - 1;
      sh->prop_count = 0;
@@ -447,15 +418,15 @@ index b19a4d9f..2665351f 100644
          sh->prop_hash_mask = new_hash_mask;
 -        memset(sh->prop_hash_end - new_hash_size, 0,
 -               sizeof(sh->prop_hash_end[0]) * new_hash_size);
-+        memset(PROP_HASH_END(sh, -new_hash_size), 0,
++        memset(JSSHAPE_HASH_OFFSET(sh, -(intptr_t)new_hash_size), 0,
 +               sizeof(uint32_t) * new_hash_size);
          for(i = 0, pr = sh->prop; i < sh->prop_count; i++, pr++) {
              if (pr->atom != JS_ATOM_NULL) {
                  h = ((uintptr_t)pr->atom & new_hash_mask);
 -                pr->hash_next = sh->prop_hash_end[-h - 1];
 -                sh->prop_hash_end[-h - 1] = i + 1;
-+                pr->hash_next = *PROP_HASH_END(sh, -h - 1);
-+                *PROP_HASH_END(sh, -h - 1) = i + 1;
++                pr->hash_next = *JSSHAPE_HASH_OFFSET(sh, -h - 1);
++                *JSSHAPE_HASH_OFFSET(sh, -h - 1) = i + 1;
              }
          }
          js_free(ctx, get_alloc_from_shape(old_sh));
@@ -465,8 +436,8 @@ index b19a4d9f..2665351f 100644
      h = atom & hash_mask;
 -    pr->hash_next = sh->prop_hash_end[-h - 1];
 -    sh->prop_hash_end[-h - 1] = sh->prop_count;
-+    pr->hash_next = *PROP_HASH_END(sh, -h - 1);
-+    *PROP_HASH_END(sh, -h - 1) = sh->prop_count;
++    pr->hash_next = *JSSHAPE_HASH_OFFSET(sh, -h - 1);
++    *JSSHAPE_HASH_OFFSET(sh, -h - 1) = sh->prop_count;
      return 0;
  }
 
@@ -496,7 +467,7 @@ index b19a4d9f..2665351f 100644
      sh = p->shape;
      h = (uintptr_t)atom & sh->prop_hash_mask;
 -    h = sh->prop_hash_end[-h - 1];
-+    h = *PROP_HASH_END(sh, -h - 1);
++    h = *JSSHAPE_HASH_OFFSET(sh, -h - 1);
      prop = get_shape_prop(sh);
      while (h) {
          pr = &prop[h - 1];
@@ -505,7 +476,7 @@ index b19a4d9f..2665351f 100644
      sh = p->shape;
      h = (uintptr_t)atom & sh->prop_hash_mask;
 -    h = sh->prop_hash_end[-h - 1];
-+    h = *PROP_HASH_END(sh, -h - 1);
++    h = *JSSHAPE_HASH_OFFSET(sh, -h - 1);
      prop = get_shape_prop(sh);
      while (h) {
          pr = &prop[h - 1];
@@ -550,7 +521,7 @@ index b19a4d9f..2665351f 100644
      sh = p->shape;
      h1 = atom & sh->prop_hash_mask;
 -    h = sh->prop_hash_end[-h1 - 1];
-+    h = *PROP_HASH_END(sh, -h1 - 1);
++    h = *JSSHAPE_HASH_OFFSET(sh, -h1 - 1);
      prop = get_shape_prop(sh);
      lpr = NULL;
      lpr_idx = 0;   /* prevent warning */
@@ -559,7 +530,7 @@ index b19a4d9f..2665351f 100644
                  lpr->hash_next = pr->hash_next;
              } else {
 -                sh->prop_hash_end[-h1 - 1] = pr->hash_next;
-+                *PROP_HASH_END(sh, -h1 - 1) = pr->hash_next;
++                *JSSHAPE_HASH_OFFSET(sh, -h1 - 1) = pr->hash_next;
              }
              /* free the entry */
              pr1 = &p->prop[h - 1];
