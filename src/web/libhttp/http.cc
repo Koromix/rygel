@@ -170,8 +170,8 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
                 io->read_len += copy_len;
                 *upload_data_size -= copy_len;
             }
-        } else if (io->read_buf.IsValid()) {
-            io->read_eof = true;
+        } else {
+            io->read_eof = !first_call;
         }
 
         // Try in all cases, even if not needed... too much spinning beats deadlock
@@ -198,6 +198,9 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
         }
         return MHD_queue_response(conn, (unsigned int)io->code, io->response);
     } else {
+        // We must not suspend on first call because libmicrohttpd will call us back the same
+        // way if we do so, with *upload_data_size = 0. Which means we'd have no reliable way
+        // to differenciate between this first call and end of upload (request body).
         if (!first_call && io->read_len == io->read_buf.len) {
             io->Suspend();
         }
