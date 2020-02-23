@@ -3431,7 +3431,7 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
 
 bool TestFile(const char *filename, FileType type = FileType::Unknown);
 
-bool MatchPathName(const char *name, const char *pattern);
+bool MatchPathName(const char *path, const char *spec);
 
 bool SetWorkingDirectory(const char *directory);
 const char *GetWorkingDirectory();

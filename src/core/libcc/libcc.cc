@@ -26,8 +26,6 @@
     #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
         #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
     #endif
-
-    extern "C" __declspec(dllimport) int __stdcall PathMatchSpecA(const char *pszFile, const char *pszSpec);
 #else
     #include <dlfcn.h>
     #include <dirent.h>
@@ -1591,14 +1589,85 @@ bool TestFile(const char *filename, FileType type)
     return true;
 }
 
-// XXX: Replace with OS-independent implementation, with support for full paths
-bool MatchPathName(const char *name, const char *pattern)
+static Size MatchPathItem(const char *path, const char *spec)
 {
+    Size i = 0;
+
+    while (spec[i] && spec[i] != '*') {
+        switch (spec[i]) {
+            case '?': {
+                if (!path[i] || IsPathSeparator(path[i]))
+                    return -1;
+            } break;
+
 #ifdef _WIN32
-    return PathMatchSpecA(name, pattern);
-#else
-    return !fnmatch(pattern, name, 0);
+            case '\\':
+            case '/': {
+                if (!IsPathSeparator(path[i]))
+                    return -1;
+            } break;
 #endif
+
+            default: {
+                if (path[i] != spec[i])
+                    return -1;
+            } break;
+        }
+
+        i++;
+    }
+
+    return i;
+}
+
+bool MatchPathName(const char *path, const char *spec)
+{
+    // Match head
+    {
+        Size match_len = MatchPathItem(path, spec);
+
+        if (match_len < 0) {
+            return false;
+        } else {
+            // Fast path (no wildcard)
+            if (!spec[match_len])
+                return !path[match_len];
+
+            path += match_len;
+            spec += match_len;
+        }
+    }
+
+    // Find tail
+    const char *tail = strrchr(spec, '*') + 1;
+
+    // Match remaining items
+    while (spec[0] == '*') {
+        bool superstar = (spec[1] == '*');
+        while (spec[0] == '*') {
+            spec++;
+        }
+
+        for (;;) {
+            Size match_len = MatchPathItem(path, spec);
+
+            // We need to be greedy for the last wildcard, or we may not reach the tail
+            if (match_len < 0 || (spec == tail && path[match_len])) {
+                if (!path[0])
+                    return false;
+                if (!superstar && IsPathSeparator(path[0]))
+                    return false;
+                path++;
+            } else {
+                path += match_len;
+                spec += match_len;
+
+                break;
+            }
+        }
+    }
+
+    return true;
 }
 
 bool SetWorkingDirectory(const char *directory)
