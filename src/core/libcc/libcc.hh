@@ -3235,7 +3235,7 @@ template <typename T>
 Span<T> SplitStrReverse(Span<T> str, char split_char, Span<T> *out_remainder = nullptr)
 {
     Size remainder_len = str.len - 1;
-    while (remainder_len > 0) {
+    while (remainder_len >= 0) {
         if (str[remainder_len] == split_char) {
             if (out_remainder) {
                 *out_remainder = str.Take(0, remainder_len);
@@ -3263,7 +3263,7 @@ Span<T> SplitStrReverseAny(Span<T> str, const char *split_chars, Span<T> *out_re
     }
 
     Size remainder_len = str.len - 1;
-    while (remainder_len > 0) {
+    while (remainder_len >= 0) {
         if (split_mask.Test(str[remainder_len])) {
             if (out_remainder) {
                 *out_remainder = str.Take(0, remainder_len);
