@@ -1,0 +1,66 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+#include "../../src/core/libcc/libcc.hh"
+#include "tests.hh"
+
+namespace RG {
+
+void TestMatchPathName();
+void BenchFmt();
+
+int RunTest(int argc, char **argv)
+{
+    bool test = false;
+    bool bench = false;
+
+    const auto print_usage = [=](FILE *fp) {
+        PrintLn(fp, R"(Usage: tests [options]
+
+Options:
+        --test                   Run tests
+        --bench                  Run benchmarks)",
+                test, bench);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(argc, argv);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(stdout);
+                return 0;
+            } else if (opt.Test("--test")) {
+                test = true;
+            } else if (opt.Test("--bench")) {
+                bench = true;
+            } else {
+                LogError("Cannot handle option '%1'", opt.current_option);
+                return 1;
+            }
+        }
+    }
+
+    if (!test && !bench) {
+        LogError("You must specify --test or --bench");
+        return 1;
+    }
+
+    if (test) {
+        TestMatchPathName();
+        PrintLn();
+    }
+    if (bench) {
+        BenchFmt();
+        PrintLn();
+    }
+
+    return 0;
+}
+
+}
+
+// C++ namespaces are stupid
+int main(int argc, char **argv) { return RG::RunTest(argc, argv); }
