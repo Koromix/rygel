@@ -48,13 +48,13 @@
     position: relative;
     display: inline-block;
     position: relative;
-    height: 16px;
+    height: 1.2em;
     padding: 4px 14px 6px 14px;
     background: #f8f8f8;
     border: 2px solid #f8f8f8;
     color: black;
     text-decoration: none;
-    font-size: 1.3em;
+    font-size: 1.2em;
 }
 .af_path > a + a {
     margin-left: 4px;
@@ -100,7 +100,7 @@
 }
 .af_actions > button {
     display: block;
-    width: 100px;
+    width: 9em;
     margin: 0 0 0 auto;
 }
 .af_actions > button + button { margin-top: 4px; }
