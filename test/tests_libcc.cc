@@ -5,6 +5,12 @@
 #include "../src/core/libcc/libcc.hh"
 #include "tests.hh"
 
+#ifdef _WIN32
+    extern "C" __declspec(dllimport) int __stdcall PathMatchSpecA(const char *pszFile, const char *pszSpec);
+#else
+    #include <fnmatch.h>
+#endif
+
 // Comparative benchmarks
 #include "vendor/stb_sprintf.h"
 #include "vendor/fmt/format.h"
@@ -100,9 +106,9 @@ void TestMatchPathName()
 
 void BenchFmt()
 {
-    PrintLn("Benchmarking string formatting");
+    PrintLn("Benchmarking Fmt");
 
-    static const int iterations = 4000000;
+    static const int iterations = 800000;
 
 #ifdef _WIN32
     FILE *fp = OpenFile("NUL", OpenFileMode::Write);
@@ -169,6 +175,27 @@ void BenchFmt()
         LocalArray<char, 1024> buf;
         buf.len = Fmt(buf.data, "%1:%2:%3:%4:%5:%6:%%\n",
                       1234, 42, -313, "str", (void*)1000, 'X').len;
+    });
+}
+
+void BenchMatchPathName()
+{
+    PrintLn("Benchmarking MatchPathName");
+
+    static const int iterations = 3000000;
+
+#ifdef _WIN32
+    RunBenchmark("PathMatchSpecA", iterations, [&]() {
+        PathMatchSpecA("aaa/bbb", "a*/*b");
+    });
+#else
+    RunBenchmark("fnmatch", iterations, [&]() {
+        fnmatch("a*/*b", "aaa/bbb", FNM_PATHNAME);
+    });
+#endif
+
+    RunBenchmark("MatchPathName", iterations, [&]() {
+        MatchPathName("aaa/bbb", "a*/*b");
     });
 }
 

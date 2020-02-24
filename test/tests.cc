@@ -8,7 +8,9 @@
 namespace RG {
 
 void TestMatchPathName();
+
 void BenchFmt();
+void BenchMatchPathName();
 
 int RunTest(int argc, char **argv)
 {
@@ -54,6 +56,7 @@ Options:
     }
     if (bench) {
         BenchFmt();
+        BenchMatchPathName();
         PrintLn();
     }
 
