@@ -98,10 +98,8 @@ static bool ResolveFileSet(const FileSet &file_set,
 
     out_filenames->RemoveFrom(std::remove_if(out_filenames->begin(), out_filenames->end(),
                                              [&](const char *filename) {
-        const char *name = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
-        bool ignore = std::any_of(file_set.ignore.begin(), file_set.ignore.end(),
-                                  [&](const char *pattern) { return MatchPathName(name, pattern); });
-        return ignore;
+        return std::any_of(file_set.ignore.begin(), file_set.ignore.end(),
+                           [&](const char *pattern) { return MatchPathSpec(filename, pattern); });
     }) - out_filenames->begin());
 
     out_guard.Disable();

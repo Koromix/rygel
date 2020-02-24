@@ -140,7 +140,7 @@ bool LoadMergeRules(const char *filename, unsigned int flags, MergeRuleSet *out_
 static void FindMergeRules(Span<const MergeRule> rules, const char *filename,
                            HeapArray<const MergeRule *> *out_rules)
 {
-    const auto test_pattern = [&](const char *pattern) { return MatchPathName(filename, pattern); };
+    const auto test_pattern = [&](const char *pattern) { return MatchPathSpec(filename, pattern); };
 
     for (const MergeRule &rule: rules) {
         if (std::any_of(rule.include.begin(), rule.include.end(), test_pattern) &&
@@ -186,14 +186,12 @@ void ResolveAssets(Span<const char *const> filenames, int strip_count, Span<cons
     HeapArray<const MergeRule *> file_rules;
 
     for (const char *filename: filenames) {
-        const char *basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
-
         PackSourceInfo src = {};
         src.filename = filename;
         src.name = StripDirectoryComponents(filename, strip_count);
 
         file_rules.RemoveFrom(0);
-        FindMergeRules(rules, basename, &file_rules);
+        FindMergeRules(rules, filename, &file_rules);
 
         bool include_raw_file = !file_rules.len;
 
