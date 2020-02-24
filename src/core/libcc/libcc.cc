@@ -1670,6 +1670,20 @@ bool MatchPathName(const char *path, const char *spec)
     return true;
 }
 
+bool MatchPathSpec(const char *path, const char *spec)
+{
+    Span<const char> path2 = path;
+
+    do {
+        const char *it = SplitStrReverseAny(path2, RG_PATH_SEPARATORS, &path2).ptr;
+
+        if (MatchPathName(it, spec))
+            return true;
+    } while (path2.len);
+
+    return false;
+}
+
 bool SetWorkingDirectory(const char *directory)
 {
 #ifdef _WIN32
