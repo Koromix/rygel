@@ -415,20 +415,30 @@ let goupile = new function() {
         }
 
         render(html`
-            <button class=${left_panel === 'editor' ? 'active' : ''}
-                    @click=${e => toggleLeftPanel('editor')}>Éditeur</button>
-            <button class=${left_panel === 'files' ? 'active' : ''}
-                    @click=${e => toggleLeftPanel('files')}>Ressources</button>
+            <div class="gp_dropdown">
+                <button class=${left_panel === 'editor' || left_panel === 'files' ? 'active' : ''}
+                        @click=${e => toggleLeftPanel('editor')}>Code</button>
+                <div>
+                    <button class=${left_panel === 'editor' ? 'active' : ''}
+                            @click=${e => toggleLeftPanel('editor')}>Éditeur</button>
+                    <button class=${left_panel === 'files' ? 'active' : ''}
+                            @click=${e => toggleLeftPanel('files')}>Déploiement</button>
+                </div>
+            </div>
 
             ${show_data ? html`
-                &nbsp;&nbsp;
-                <button class=${left_panel === 'status' ? 'active' : ''}
-                        @click=${e => toggleLeftPanel('status')}>Suivi</button>
-                <button class=${left_panel === 'data' ? 'active' : ''}
-                        @click=${e => toggleLeftPanel('data')}>Données</button>
+                <div class="gp_dropdown">
+                    <button class=${left_panel === 'status' || left_panel === 'data' ? 'active' : ''}
+                            @click=${e => toggleLeftPanel('status')}>Recueil</button>
+                    <div>
+                        <button class=${left_panel === 'status' ? 'active' : ''}
+                                @click=${e => toggleLeftPanel('status')}>Suivi</button>
+                        <button class=${left_panel === 'data' ? 'active' : ''}
+                                @click=${e => toggleLeftPanel('data')}>Données</button>
+                    </div>
+                </div>
             ` :  ''}
 
-            &nbsp;&nbsp;
             ${show_assets.map(asset => {
                 if (asset === route_asset) {
                     return html`<button class=${show_overview ? 'active': ''}
