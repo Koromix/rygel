@@ -432,11 +432,11 @@ static MsCompiler MsCompiler("MSVC");
 #endif
 
 static const Compiler *const CompilerTable[] = {
-    &ClangCompiler,
-    &GnuCompiler,
 #ifdef _WIN32
-    &MsCompiler
+    &MsCompiler,
 #endif
+    &ClangCompiler,
+    &GnuCompiler
 };
 const Span<const Compiler *const> Compilers = CompilerTable;
 
