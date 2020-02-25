@@ -14,8 +14,8 @@ function Application() {
         url: `${env.base_url}main/`,
 
         category: 'Application',
-        label: 'Tableau de bord',
-        overview: 'Tableau de bord',
+        label: 'Paramétrage',
+        overview: 'Structure',
     }];
 
     this.home = null;
@@ -185,7 +185,7 @@ function FormBuilder(app, form) {
             url: page.url,
 
             category: `Formulaire ${form.key}`,
-            label: `${form.key}/${page.key}` + (page.label !== page.key ? ` (${page.label})` : ''),
+            label: page.label,
             overview: 'Formulaire',
 
             form: form,
