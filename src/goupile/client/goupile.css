@@ -112,6 +112,7 @@ button:not(:disabled) { cursor: pointer; }
 
 #gp_assets {
     flex-grow: 1;
+    min-width: 5em;
     background: inherit;
     -webkit-appearance: none;
     -moz-appearance: none;
@@ -126,6 +127,9 @@ button:not(:disabled) { cursor: pointer; }
     font-weight: normal;
     text-align: center;
     text-align-last: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 @-moz-document url-prefix() {
     #gp_assets > optgroup {
