@@ -416,8 +416,7 @@ let goupile = new function() {
 
         render(html`
             <div class="gp_dropdown">
-                <button class=${left_panel === 'editor' || left_panel === 'files' ? 'active' : ''}
-                        @click=${e => toggleLeftPanel('editor')}>Code</button>
+                <button class=${left_panel === 'editor' || left_panel === 'files' ? 'active' : ''}>Code</button>
                 <div>
                     <button class=${left_panel === 'editor' ? 'active' : ''}
                             @click=${e => toggleLeftPanel('editor')}>Éditeur</button>
@@ -428,8 +427,7 @@ let goupile = new function() {
 
             ${show_data ? html`
                 <div class="gp_dropdown">
-                    <button class=${left_panel === 'status' || left_panel === 'data' ? 'active' : ''}
-                            @click=${e => toggleLeftPanel('status')}>Recueil</button>
+                    <button class=${left_panel === 'status' || left_panel === 'data' ? 'active' : ''}>Recueil</button>
                     <div>
                         <button class=${left_panel === 'status' ? 'active' : ''}
                                 @click=${e => toggleLeftPanel('status')}>Suivi</button>
