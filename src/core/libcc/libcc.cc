@@ -1999,52 +1999,16 @@ FILE *OpenFile(const char *filename, OpenFileMode mode)
     if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
         return nullptr;
 
-    DWORD access;
-    DWORD creation;
-    int flags;
-    char mode_str[8] = {};
+    wchar_t mode_w[8] = {};
     switch (mode) {
-        case OpenFileMode::Read: {
-            access = GENERIC_READ;
-            creation = OPEN_EXISTING;
-            flags = _O_RDONLY | _O_BINARY;
-            strcpy(mode_str, "rbc");
-        } break;
-        case OpenFileMode::Write: {
-            access = GENERIC_WRITE;
-            creation = CREATE_ALWAYS;
-            flags = _O_WRONLY | _O_TRUNC | _O_CREAT | _O_BINARY;
-            strcpy(mode_str, "wbc");
-        } break;
-        case OpenFileMode::Append: {
-            access = GENERIC_WRITE;
-            creation = OPEN_ALWAYS;
-            flags = _O_WRONLY | _O_APPEND | _O_CREAT | _O_BINARY;
-            strcpy(mode_str, "abc");
-        } break;
+        case OpenFileMode::Read: { wcscpy(mode_w, L"rbcN"); } break;
+        case OpenFileMode::Write: { wcscpy(mode_w, L"wbcN"); } break;
+        case OpenFileMode::Append: { wcscpy(mode_w, L"abcN"); } break;
     }
 
-    HANDLE h = CreateFileW(filename_w, access, FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE,
-                           nullptr, creation, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (h == INVALID_HANDLE_VALUE) {
-        LogError("Cannot open '%1': %2", filename, GetWin32ErrorString());
-        return nullptr;
-    }
-
-    int fd = _open_osfhandle((intptr_t)h, flags);
-    if (fd < 0) {
-        CloseHandle(h);
-
-        LogError("Cannot open '%1': %2", filename, strerror(errno));
-        return nullptr;
-    }
-
-    FILE *fp = _fdopen(fd, mode_str);
+    FILE *fp = _wfopen(filename_w, mode_w);
     if (!fp) {
-        close(fd);
-
         LogError("Cannot open '%1': %2", filename, strerror(errno));
-        return nullptr;
     }
 
     return fp;
@@ -2158,6 +2122,7 @@ FILE *OpenFile(const char *filename, OpenFileMode mode)
     if (!fp) {
         LogError("Cannot open '%1': %2", filename, strerror(errno));
     }
+
     return fp;
 }
 
