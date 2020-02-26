@@ -1999,12 +1999,13 @@ FILE *OpenFile(const char *filename, OpenFileMode mode)
     if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
         return nullptr;
 
-    wchar_t mode_w[8] = {};
+    const wchar_t *mode_w = nullptr;
     switch (mode) {
-        case OpenFileMode::Read: { wcscpy(mode_w, L"rbcN"); } break;
-        case OpenFileMode::Write: { wcscpy(mode_w, L"wbcN"); } break;
-        case OpenFileMode::Append: { wcscpy(mode_w, L"abcN"); } break;
+        case OpenFileMode::Read: { mode_w = L"rbcN"; } break;
+        case OpenFileMode::Write: { mode_w = L"wbcN"; } break;
+        case OpenFileMode::Append: { mode_w = L"abcN"; } break;
     }
+    RG_ASSERT(mode_w);
 
     FILE *fp = _wfopen(filename_w, mode_w);
     if (!fp) {
@@ -2111,12 +2112,13 @@ bool UnlinkFile(const char *filename, bool error_if_missing)
 
 FILE *OpenFile(const char *filename, OpenFileMode mode)
 {
-    char mode_str[8] = {};
+    const char *mode_str = nullptr;
     switch (mode) {
-        case OpenFileMode::Read: { strcpy(mode_str, "rbe"); } break;
-        case OpenFileMode::Write: { strcpy(mode_str, "wbe"); } break;
-        case OpenFileMode::Append: { strcpy(mode_str, "abe"); } break;
+        case OpenFileMode::Read: { mode_str = "rbe"; } break;
+        case OpenFileMode::Write: { mode_str = "wbe"; } break;
+        case OpenFileMode::Append: { mode_str = "abe"; } break;
     }
+    RG_ASSERT(mode_str);
 
     FILE *fp = fopen(filename, mode_str);
     if (!fp) {
