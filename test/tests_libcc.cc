@@ -5,13 +5,11 @@
 #include "../src/core/libcc/libcc.hh"
 #include "tests.hh"
 
+// Comparative benchmarks
 #ifdef _WIN32
     extern "C" __declspec(dllimport) int __stdcall PathMatchSpecA(const char *pszFile, const char *pszSpec);
-#else
-    #include <fnmatch.h>
 #endif
-
-// Comparative benchmarks
+#include "vendor/musl_fnmatch.h"
 #include "vendor/stb_sprintf.h"
 #include "vendor/fmt/format.h"
 
@@ -188,11 +186,11 @@ void BenchMatchPathName()
     RunBenchmark("PathMatchSpecA", iterations, [&]() {
         PathMatchSpecA("aaa/bbb", "a*/*b");
     });
-#else
-    RunBenchmark("fnmatch", iterations, [&]() {
+#endif
+
+    RunBenchmark("fnmatch (musl)", iterations, [&]() {
         fnmatch("a*/*b", "aaa/bbb", FNM_PATHNAME);
     });
-#endif
 
     RunBenchmark("MatchPathName", iterations, [&]() {
         MatchPathName("aaa/bbb", "a*/*b");
