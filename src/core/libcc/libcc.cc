@@ -1606,12 +1606,18 @@ static Size MatchPathItem(const char *path, const char *spec)
                 if (!IsPathSeparator(path[i]))
                     return -1;
             } break;
-#endif
 
+            default: {
+                // XXX: Use proper Unicode/locale case-folding? Or is this enough?
+                if (LowerAscii(path[i]) != LowerAscii(spec[i]))
+                    return -1;
+            } break;
+#else
             default: {
                 if (path[i] != spec[i])
                     return -1;
             } break;
+#endif
         }
 
         i++;
