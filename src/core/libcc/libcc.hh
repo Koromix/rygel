@@ -1484,7 +1484,7 @@ public:
     }
     T &operator[](Size idx) { return (T &)(*(const BucketArray *)this)[idx]; }
 
-    T *AppendDefault()
+    T *AppendDefault(Allocator **out_alloc = nullptr)
     {
         Size bucket_idx = (offset + len) / BucketSize;
         Size bucket_offset = (offset + len) % BucketSize;
@@ -1502,6 +1502,9 @@ public:
 
         len++;
 
+        if (out_alloc) {
+            *out_alloc = &buckets[bucket_idx]->allocator;
+        }
         return first;
     }
 
@@ -1574,8 +1577,6 @@ public:
         offset = (offset + count) % BucketSize;
         len -= count;
     }
-
-    Allocator *GetBucketAllocator() const { return &buckets[buckets.len - 1]->allocator; }
 
 private:
     void ClearBucketsAndValues()

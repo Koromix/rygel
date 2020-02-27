@@ -18,8 +18,9 @@ RG_INIT(RedirectLog)
             case LogLevel::Error: {
                 std::lock_guard<std::mutex> lock(rcc_log_mutex);
 
-                const char **ptr = rcc_log_messages.AppendDefault();
-                *ptr = DuplicateString(msg, rcc_log_messages.GetBucketAllocator()).ptr;
+                Allocator *alloc;
+                const char **ptr = rcc_log_messages.AppendDefault(&alloc);
+                *ptr = DuplicateString(msg, alloc).ptr;
 
                 if (rcc_log_messages.len > 100) {
                     rcc_log_messages.RemoveFirst();

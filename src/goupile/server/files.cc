@@ -77,8 +77,8 @@ static HashTable<const char *, FileEntry *> files_map;
 // The caller still needs to compute checksum after this
 static FileEntry *AddFileEntry(const char *filename, Size offset)
 {
-    FileEntry *file = files.AppendDefault();
-    Allocator *alloc = files.GetBucketAllocator();
+    Allocator *alloc;
+    FileEntry *file = files.AppendDefault(&alloc);
 
     file->filename = DuplicateString(filename, file->allocator).ptr;
 
