@@ -303,10 +303,6 @@ Supported compilation modes:)");
     }
 
     // Disable PCH?
-    if (enable_pch && !build.compiler->pch) {
-        LogError("Ignoring PCH for %1", build.compiler->name);
-        enable_pch = false;
-    }
     if (!enable_pch) {
         for (Target &target: target_set.targets) {
             target.c_pch_filename = nullptr;

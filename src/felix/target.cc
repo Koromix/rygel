@@ -360,9 +360,9 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
 
             Span<const char> extension = GetPathExtension(src_filename);
             if (extension == ".c") {
-                src.type = SourceType::C_Source;
+                src.type = SourceType::C;
             } else if (extension == ".cc" || extension == ".cpp") {
-                src.type = SourceType::CXX_Source;
+                src.type = SourceType::CXX;
             } else {
                 continue;
             }

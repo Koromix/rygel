@@ -167,12 +167,13 @@ bool Builder::AddTarget(const Target &target)
     // Precompiled headers
     const char *c_pch_filename = nullptr;
     const char *cxx_pch_filename = nullptr;
-    const auto add_pch_object = [&](const char *src_filename, SourceType src_type) {
+    const auto add_pch_object = [&](const char *src_filename, SourceType src_type,
+                                    const char *pch_ext) {
         const char *pch_filename = BuildObjectPath(src_filename, build.output_directory,
-                                                   ".pch.h", &str_alloc);
+                                                   pch_ext, &str_alloc);
         const char *deps_filename = Fmt(&str_alloc, "%1.d", pch_filename).ptr;
 
-        if (NeedsRebuild(src_filename, pch_filename, deps_filename)) {
+        if (NeedsRebuild(src_filename, nullptr, pch_filename, deps_filename)) {
             Node node = {};
 
             node.text = Fmt(&str_alloc, "Precompile %1", src_filename).ptr;
@@ -180,22 +181,30 @@ bool Builder::AddTarget(const Target &target)
             node.deps_filename = deps_filename;
             if (!CreatePrecompileHeader(src_filename, pch_filename))
                 return (const char *)nullptr;
-            build.compiler->MakeObjectCommand(pch_filename, src_type, build.compile_mode, warnings,
-                                              nullptr, definitions, target.include_directories,
-                                              nullptr, deps_filename, &str_alloc, &node.cmd);
+            build.compiler->MakePchCommand(pch_filename, src_type, build.compile_mode, warnings,
+                                           definitions, target.include_directories, deps_filename,
+                                           &str_alloc, &node.cmd);
 
             prep_nodes.Append(node);
+
+            mtime_map.Set(pch_filename, -1);
+        }
+
+        // Some compilers (such as MSVC) also build a PCH object file that needs to be linked
+        const char *obj_filename = build.compiler->GetPchObject(pch_filename, &str_alloc);
+        if (obj_filename) {
+            obj_filenames.Append(obj_filename);
         }
 
         return pch_filename;
     };
     if (target.c_pch_filename) {
-        c_pch_filename = add_pch_object(target.c_pch_filename, SourceType::C_Header);
+        c_pch_filename = add_pch_object(target.c_pch_filename, SourceType::C, ".c");
         if (!c_pch_filename)
             return false;
     }
     if (target.cxx_pch_filename) {
-        cxx_pch_filename = add_pch_object(target.cxx_pch_filename, SourceType::CXX_Header);
+        cxx_pch_filename = add_pch_object(target.cxx_pch_filename, SourceType::CXX, ".cc");
         if (!cxx_pch_filename)
             return false;
     }
@@ -211,7 +220,7 @@ bool Builder::AddTarget(const Target &target)
 
                 node.text = "Build version file";
                 node.dest_filename = version_obj_filename;
-                build.compiler->MakeObjectCommand(src_filename, SourceType::C_Source, build.compile_mode,
+                build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_mode,
                                                   false, nullptr, {}, {}, version_obj_filename, nullptr,
                                                   &str_alloc, &node.cmd);
 
@@ -238,17 +247,14 @@ bool Builder::AddTarget(const Target &target)
                                                    ".o", &str_alloc);
         const char *deps_filename = Fmt(&str_alloc, "%1.d", obj_filename).ptr;
 
-        if (NeedsRebuild(src.filename, obj_filename, deps_filename)) {
+        const char *pch_filename = nullptr;
+        switch (src.type) {
+            case SourceType::C: { pch_filename = c_pch_filename; } break;
+            case SourceType::CXX: { pch_filename = cxx_pch_filename; } break;
+        }
+
+        if (NeedsRebuild(src.filename, pch_filename, obj_filename, deps_filename)) {
             Node node = {};
-
-            const char *pch_filename = nullptr;
-            switch (src.type) {
-                case SourceType::C_Source: { pch_filename = c_pch_filename; } break;
-                case SourceType::CXX_Source: { pch_filename = cxx_pch_filename; } break;
-
-                case SourceType::C_Header:
-                case SourceType::CXX_Header: { RG_ASSERT(false); } break;
-            }
 
             node.text = Fmt(&str_alloc, "Build %1", src.filename).ptr;
             node.dest_filename = obj_filename;
@@ -297,7 +303,7 @@ bool Builder::AddTarget(const Target &target)
 
             node.text = Fmt(&str_alloc, "Build %1 assets", target.name).ptr;
             node.dest_filename = obj_filename;
-            build.compiler->MakeObjectCommand(src_filename, SourceType::C_Source, CompileMode::Debug, false,
+            build.compiler->MakeObjectCommand(src_filename, SourceType::C, CompileMode::Debug, false,
                                               nullptr, {}, {}, obj_filename, nullptr, &str_alloc, &node.cmd);
 
             obj_nodes.Append(node);
@@ -592,13 +598,16 @@ bool Builder::RunNodes(Span<const Node> nodes, int jobs, bool verbose, Size prog
     }
 }
 
-bool Builder::NeedsRebuild(const char *src_filename, const char *dest_filename,
-                           const char *deps_filename)
+bool Builder::NeedsRebuild(const char *src_filename, const char *pch_filename,
+                           const char *dest_filename, const char *deps_filename)
 {
     BlockAllocator temp_alloc;
 
     HeapArray<const char *> dep_filenames;
     dep_filenames.Append(src_filename);
+    if (pch_filename) {
+        dep_filenames.Append(pch_filename);
+    }
 
     if (output_set.Find(dest_filename)) {
         return false;

@@ -141,7 +141,18 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames,
 
 class ClangCompiler: public Compiler {
 public:
-    ClangCompiler(const char *name) : Compiler(name, "clang", true) {}
+    ClangCompiler(const char *name) : Compiler(name, "clang") {}
+
+    void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
+                        bool warnings, Span<const char *const> definitions,
+                        Span<const char *const> include_directories, const char *deps_filename,
+                        Allocator *alloc, BuildCommand *out_cmd) const override
+    {
+        MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr, definitions,
+                          include_directories, nullptr, deps_filename, alloc, out_cmd);
+    }
+
+    const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
@@ -153,13 +164,16 @@ public:
 
         // Compiler
         switch (src_type) {
-            case SourceType::C_Source: { Fmt(&buf, "clang -std=gnu11"); } break;
-            case SourceType::C_Header: { Fmt(&buf, "clang -std=gnu11 -x c-header"); } break;
-            case SourceType::CXX_Source: { Fmt(&buf, "clang++ -std=gnu++17"); } break;
-            case SourceType::CXX_Header: { Fmt(&buf, "clang++ -std=gnu++17 -x c++-header"); } break;
+            case SourceType::C: { Fmt(&buf, "clang -std=gnu11"); } break;
+            case SourceType::CXX: { Fmt(&buf, "clang++ -std=gnu++17"); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
+        } else {
+            switch (src_type) {
+                case SourceType::C: { Fmt(&buf, " -x c-header"); } break;
+                case SourceType::CXX: { Fmt(&buf, " -x c++-header"); } break;
+            }
         }
         out_cmd->rsp_offset = buf.len;
 
@@ -172,7 +186,7 @@ public:
                   " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DNOMINMAX"
                   " -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE");
 
-        if (src_type == SourceType::CXX_Source || src_type == SourceType::CXX_Header) {
+        if (src_type == SourceType::CXX) {
             Fmt(&buf, " -Xclang -flto-visibility-public-std");
         }
 #elif defined(__APPLE__)
@@ -234,7 +248,18 @@ public:
 
 class GnuCompiler: public Compiler {
 public:
-    GnuCompiler(const char *name) : Compiler(name, "gcc", true) {}
+    GnuCompiler(const char *name) : Compiler(name, "gcc") {}
+
+    void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
+                        bool warnings, Span<const char *const> definitions,
+                        Span<const char *const> include_directories, const char *deps_filename,
+                        Allocator *alloc, BuildCommand *out_cmd) const override
+    {
+        MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr, definitions,
+                          include_directories, nullptr, deps_filename, alloc, out_cmd);
+    }
+
+    const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
@@ -246,19 +271,22 @@ public:
 
         // Compiler
         switch (src_type) {
-            case SourceType::C_Source: { Fmt(&buf, "gcc -std=gnu11"); } break;
-            case SourceType::C_Header: { Fmt(&buf, "gcc -std=gnu11 -x c-header"); } break;
-            case SourceType::CXX_Source: { Fmt(&buf, "g++ -std=gnu++17 -fno-exceptions"); } break;
-            case SourceType::CXX_Header: { Fmt(&buf, "g++ -std=gnu++17 -fno-exceptions -x c++-header"); } break;
+            case SourceType::C: { Fmt(&buf, "gcc -std=gnu11"); } break;
+            case SourceType::CXX: { Fmt(&buf, "g++ -std=gnu++17 -fno-exceptions"); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
+        } else {
+            switch (src_type) {
+                case SourceType::C: { Fmt(&buf, " -x c-header"); } break;
+                case SourceType::CXX: { Fmt(&buf, " -x c++-header"); } break;
+            }
         }
         out_cmd->rsp_offset = buf.len;
 
         if (warnings) {
             Fmt(&buf, " -Wall");
-            if (src_type == SourceType::CXX_Source || src_type == SourceType::CXX_Header) {
+            if (src_type == SourceType::CXX) {
                 Fmt(&buf, " -Wno-class-memaccess");
             }
         } else {
@@ -282,11 +310,6 @@ public:
         // Common flags (source, definitions, include directories, etc.)
         AppendGccObjectArguments(src_filename, compile_mode, pch_filename, definitions,
                                  include_directories, deps_filename, &buf);
-
-        // This is needed for GCC to include files from PCH dependencies
-        if (deps_filename) {
-            Fmt(&buf, " -fpch-deps");
-        }
 
         out_cmd->line = buf.Leak();
     }
@@ -337,7 +360,22 @@ public:
 #ifdef _WIN32
 class MsCompiler: public Compiler {
 public:
-    MsCompiler(const char *name) : Compiler(name, "cl", false) {}
+    MsCompiler(const char *name) : Compiler(name, "cl") {}
+
+    void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
+                        bool warnings, Span<const char *const> definitions,
+                        Span<const char *const> include_directories, const char *deps_filename,
+                        Allocator *alloc, BuildCommand *out_cmd) const override
+    {
+        MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr, definitions,
+                          include_directories, nullptr, deps_filename, alloc, out_cmd);
+    }
+
+    const char *GetPchObject(const char *pch_filename, Allocator *alloc) const override
+    {
+        const char *obj_filename = Fmt(alloc, "%1.obj", pch_filename).ptr;
+        return obj_filename;
+    }
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
@@ -349,13 +387,13 @@ public:
 
         // Compiler
         switch (src_type) {
-            case SourceType::C_Source: { Fmt(&buf, "cl /nologo"); } break;
-            case SourceType::C_Header: { RG_ASSERT(false); } break;
-            case SourceType::CXX_Source: { Fmt(&buf, "cl /nologo /std:c++17"); } break;
-            case SourceType::CXX_Header: { RG_ASSERT(false); } break;
+            case SourceType::C: { Fmt(&buf, "cl /nologo"); } break;
+            case SourceType::CXX: { Fmt(&buf, "cl /nologo /std:c++17 "); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " \"/Fo%1\"", dest_filename);
+        } else {
+            Fmt(&buf, " /Yc \"/Fp%1.pch\" \"/Fo%1.obj\"", src_filename);
         }
         out_cmd->rsp_offset = buf.len;
 
@@ -374,7 +412,9 @@ public:
 
         // Sources and definitions
         Fmt(&buf, " /c /utf-8 \"%1\"", src_filename);
-        RG_ASSERT(!pch_filename);
+        if (pch_filename) {
+            Fmt(&buf, " \"/FI%1\" \"/Yu%1\" \"/Fp%1.pch\"", pch_filename);
+        }
         for (const char *definition: definitions) {
             Fmt(&buf, " /D%1", definition);
         }

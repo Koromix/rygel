@@ -56,8 +56,8 @@ public:
     bool Build(int jobs, bool verbose);
 
 private:
-    bool NeedsRebuild(const char *src_filename, const char *dest_filename,
-                      const char *deps_filename);
+    bool NeedsRebuild(const char *src_filename, const char *pch_filename,
+                      const char *dest_filename, const char *deps_filename);
     bool IsFileUpToDate(const char *dest_filename, Span<const char *const> src_filenames);
     int64_t GetFileModificationTime(const char *filename);
 

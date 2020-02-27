@@ -9,10 +9,8 @@
 namespace RG {
 
 enum class SourceType {
-    C_Source,
-    C_Header,
-    CXX_Source,
-    CXX_Header
+    C,
+    CXX
 };
 
 enum class CompileMode {
@@ -50,17 +48,23 @@ class Compiler {
 public:
     const char *name;
     const char *binary;
-    bool pch;
 
-    Compiler(const char *name, const char *binary, bool pch)
-        : name(name), binary(binary), pch(pch) {}
+    Compiler(const char *name, const char *binary)
+        : name(name), binary(binary) {}
 
     bool Test() const;
+
+    virtual void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
+                                bool warnings, Span<const char *const> definitions,
+                                Span<const char *const> include_directories, const char *deps_filename,
+                                Allocator *alloc, BuildCommand *out_cmd) const = 0;
+    virtual const char *GetPchObject(const char *pch_filename, Allocator *alloc) const = 0;
 
     virtual void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                                    bool warnings, const char *pch_filename, Span<const char *const> definitions,
                                    Span<const char *const> include_directories, const char *dest_filename,
                                    const char *deps_filename, Allocator *alloc, BuildCommand *out_cmd) const = 0;
+
     virtual void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
                                  Span<const char *const> libraries, LinkType link_type,
                                  const char *dest_filename, Allocator *alloc, BuildCommand *out_cmd) const = 0;
