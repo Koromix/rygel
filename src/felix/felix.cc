@@ -32,7 +32,7 @@ You may be more interested by the build command help, type: felix build --help)"
                 return 0;
             }
         } else if (TestStr(argv[1], "--version")) {
-            PrintLn("felix %1", BuildVersion);
+            PrintLn("felix %1", FelixVersion);
             return 0;
         }
     }

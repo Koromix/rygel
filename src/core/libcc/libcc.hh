@@ -67,7 +67,7 @@ namespace RG {
 // Utility
 // ------------------------------------------------------------------------
 
-extern "C" const char *BuildVersion;
+extern "C" const char *FelixVersion;
 
 enum class Endianness {
     LittleEndian,

@@ -89,6 +89,8 @@ static void AppendGccObjectArguments(const char *src_filename, CompileMode compi
                                      Span<const char *const> include_directories,
                                      const char *deps_filename, HeapArray<char> *out_buf)
 {
+    Fmt(out_buf, " -DFELIX");
+
     if (LogUsesTerminalOutput()) {
         Fmt(out_buf, " -fdiagnostics-color=always");
     }
@@ -411,7 +413,7 @@ public:
                   " /D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_DEPRECATE");
 
         // Sources and definitions
-        Fmt(&buf, " /c /utf-8 \"%1\"", src_filename);
+        Fmt(&buf, " /DFELIX /c /utf-8 \"%1\"", src_filename);
         if (pch_filename) {
             Fmt(&buf, " \"/FI%1\" \"/Yu%1\" \"/Fp%1.pch\"", pch_filename);
         }

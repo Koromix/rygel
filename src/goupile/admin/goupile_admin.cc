@@ -34,7 +34,7 @@ Commands:
             return 0;
         }
     } else if (TestStr(cmd, "--version")) {
-        PrintLn("goupile_admin %1", BuildVersion);
+        PrintLn("goupile_admin %1", FelixVersion);
         return 0;
     }
 

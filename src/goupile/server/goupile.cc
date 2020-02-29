@@ -91,7 +91,7 @@ static AssetInfo PatchGoupileVariables(const AssetInfo &asset, Allocator *alloc)
     asset2.data = PatchAssetVariables(asset, alloc,
                                       [](const char *key, StreamWriter *writer) {
         if (TestStr(key, "VERSION")) {
-            writer->Write(BuildVersion);
+            writer->Write(FelixVersion);
             return true;
         } else if (TestStr(key, "APP_KEY")) {
             writer->Write(goupile_config.app_key);
@@ -107,7 +107,7 @@ static AssetInfo PatchGoupileVariables(const AssetInfo &asset, Allocator *alloc)
             return true;
         } else if (TestStr(key, "CACHE_KEY")) {
 #ifdef NDEBUG
-            writer->Write(BuildVersion);
+            writer->Write(FelixVersion);
 #else
             writer->Write(goupile_etag);
 #endif
@@ -291,7 +291,7 @@ Options:
 
     // Handle version
     if (argc >= 2 && TestStr(argv[1], "--version")) {
-        PrintLn("goupile %1", BuildVersion);
+        PrintLn("goupile %1", FelixVersion);
         return 0;
     }
 

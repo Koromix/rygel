@@ -108,7 +108,7 @@ static bool UpdateVersionSource(const char *version_str, const char *dest_filena
         return false;
 
     char code[512];
-    Fmt(code, "const char *BuildVersion = \"%1\";\n", version_str);
+    Fmt(code, "const char *FelixVersion = \"%1\";\n", version_str);
 
     bool new_version;
     if (TestFile(dest_filename, FileType::File)) {
@@ -159,8 +159,6 @@ bool Builder::AddTarget(const Target &target)
     };
 
     obj_filenames.RemoveFrom(0);
-    definitions.RemoveFrom(0);
-    definitions.Append(target.definitions);
 
     bool warnings = (target.type != TargetType::ExternalLibrary);
 
@@ -182,8 +180,8 @@ bool Builder::AddTarget(const Target &target)
             if (!CreatePrecompileHeader(src_filename, pch_filename))
                 return (const char *)nullptr;
             build.compiler->MakePchCommand(pch_filename, src_type, build.compile_mode, warnings,
-                                           definitions, target.include_directories, deps_filename,
-                                           &str_alloc, &node.cmd);
+                                           target.definitions, target.include_directories,
+                                           deps_filename, &str_alloc, &node.cmd);
 
             prep_nodes.Append(node);
 
@@ -210,7 +208,7 @@ bool Builder::AddTarget(const Target &target)
     }
 
     // Build information
-    if (!version_init && build.version_str) {
+    if (!version_init) {
         const char *src_filename = Fmt(&str_alloc, "%1%/resources%/version.c", build.output_directory).ptr;
         version_obj_filename = Fmt(&str_alloc, "%1.o", src_filename).ptr;
 
@@ -236,10 +234,7 @@ bool Builder::AddTarget(const Target &target)
 
         version_init = true;
     }
-    if (version_obj_filename) {
-        obj_filenames.Append(version_obj_filename);
-        definitions.Append("FELIX_VERSION");
-    }
+    obj_filenames.Append(version_obj_filename);
 
     // Object commands
     for (const SourceFileInfo &src: target.sources) {
@@ -262,7 +257,7 @@ bool Builder::AddTarget(const Target &target)
             if (!EnsureDirectoryExists(obj_filename))
                 return false;
             build.compiler->MakeObjectCommand(src.filename, src.type, build.compile_mode, warnings,
-                                              pch_filename, definitions, target.include_directories,
+                                              pch_filename, target.definitions, target.include_directories,
                                               obj_filename, deps_filename, &str_alloc, &node.cmd);
 
             obj_nodes.Append(node);

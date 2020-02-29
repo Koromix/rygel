@@ -329,7 +329,7 @@ static void InitRoutes()
     html.data = PatchAssetVariables(html, &routes_alloc,
                                     [](const char *key, StreamWriter *writer) {
         if (TestStr(key, "VERSION")) {
-            writer->Write(BuildVersion ? BuildVersion : "");
+            writer->Write(FelixVersion);
             return true;
         } else if (TestStr(key, "BASE_URL")) {
             writer->Write(thop_config.http.base_url);
@@ -474,7 +474,7 @@ Options:
 
     // Handle version
     if (argc >= 2 && TestStr(argv[1], "--version")) {
-        PrintLn("thop %1", BuildVersion);
+        PrintLn("thop %1", FelixVersion);
         return 0;
     }
 

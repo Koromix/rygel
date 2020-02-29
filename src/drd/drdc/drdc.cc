@@ -95,7 +95,7 @@ Commands:
             return 0;
         }
     } else if (TestStr(cmd, "--version")) {
-        PrintLn("drdc %1", BuildVersion);
+        PrintLn("drdc %1", FelixVersion);
         return 0;
     }
 

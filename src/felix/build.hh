@@ -17,7 +17,7 @@ struct BuildSettings {
 
     // Optional
     CompileMode compile_mode = CompileMode::Debug;
-    const char *version_str = nullptr;
+    const char *version_str = "(unknown version)";
 };
 
 class Builder {
@@ -37,7 +37,6 @@ class Builder {
 
     // Reuse for performance
     HeapArray<const char *> obj_filenames;
-    HeapArray<const char *> definitions;
 
     HeapArray<Node> prep_nodes;
     HeapArray<Node> obj_nodes;
