@@ -492,8 +492,8 @@ function PageBuilder(state, page) {
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
             <input id=${id} type="date" class="af_input" style=${makeInputStyle(options)}
-                   .value=${value ? value.toString() : null} ?disabled=${options.disable}
-                   @input=${e => handleDateInput(e, key)}/>
+                   .value=${value ? value.toString() : ''} ?disabled=${options.disable}
+                   @input=${e => handleDateTimeInput(e, key)}/>
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
 
@@ -503,7 +503,35 @@ function PageBuilder(state, page) {
         return intf;
     };
 
-    function handleDateInput(e, key) {
+    this.time = function(key, label, options = {}) {
+        options = expandOptions(options);
+        key = decodeKey(key, options);
+
+        let value = readValue(key, options.value);
+        if (typeof value === 'string') {
+            value = times.parse(value);
+        } else if (value == null || value.constructor.name !== 'LocalTime') {
+            value = null;
+        }
+
+        let id = makeID(key);
+        let render = intf => renderWrappedWidget(intf, html`
+            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
+            <input id=${id} type="time" step class="af_input" style=${makeInputStyle(options)}
+                   .value=${value ? value.toString().substr(0, options.seconds ? 8 : 5) : ''}
+                   step=${options.seconds ? 1 : 60} ?disabled=${options.disable}
+                   @input=${e => handleDateTimeInput(e, key)}/>
+            ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
+        `);
+
+        let intf = addWidget('date', label, render, options);
+        fillVariableInfo(intf, key, value, value == null);
+
+        return intf;
+    };
+
+    function handleDateTimeInput(e, key) {
         // Store as string, for serialization purposes
         updateValue(key, e.target.value || undefined);
     }
