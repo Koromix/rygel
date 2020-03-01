@@ -938,11 +938,11 @@ let dates = new function() {
 
         LocalDate.prototype.isZero = function() { return !this.year && !this.month && !this.day; };
         LocalDate.prototype.isValid = function() {
-            if (this.year < -4712)
+            if (this.year == null || this.year < -4712)
                 return false;
-            if (this.month < 1 || this.month > 12)
+            if (this.month == null || this.month < 1 || this.month > 12)
                 return false;
-            if (this.day < 1 || this.day > dates.daysInMonth(this.year, this.month))
+            if (this.day == null || this.day < 1 || this.day > dates.daysInMonth(this.year, this.month))
                 return false;
 
             return true;
@@ -1060,6 +1060,14 @@ let dates = new function() {
     };
 
     this.parseSafe = function(str, validate = true) {
+        try {
+            return self.parse(str, validate);
+        } catch (err) {
+            return null;
+        }
+    };
+
+    this.parseLog = function(str, validate = true) {
         try {
             return self.parse(str, validate);
         } catch (err) {

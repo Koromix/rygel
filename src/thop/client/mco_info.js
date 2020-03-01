@@ -25,7 +25,7 @@ let mco_info = new function() {
 
     this.parseURL = function(path, params = {}) {
         let args = {
-            version: dates.parseSafe(path[0] || null) ||
+            version: dates.parseLog(path[0] || null) ||
                      settings.mco.versions[settings.mco.versions.length - 1].begin_date,
             mode: path[1] || 'ghm_roots',
 
@@ -255,9 +255,9 @@ let mco_info = new function() {
                 {key: 'label', title: 'Libellé', func: proc => ccam.procedures.label(proc.proc),
                     sort: (label1, label2) => label1.localeCompare(label2)},
                 {key: 'begin_date', title: 'Début', tooltip: 'Date de début incluse',
-                    func: proc => dates.parseSafe(proc.begin_date)},
+                    func: proc => dates.parseLog(proc.begin_date)},
                 {key: 'end_date', title: 'Fin', tooltip: 'Date de fin exclue',
-                    func: proc => dates.parseSafe(proc.end_date)},
+                    func: proc => dates.parseLog(proc.end_date)},
                 {key: 'phase', title: 'Phase', func: proc => proc.phase || null},
                 {key: 'activities', title: 'Activités', func: proc => proc.activities},
                 {key: 'extensions', title: 'Extensions', tooltip: 'CCAM descriptive',
