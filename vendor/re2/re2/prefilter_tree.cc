@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-#include "prefilter_tree.h"
+#include "re2/prefilter_tree.h"
 
 #include <stddef.h>
 #include <algorithm>
@@ -13,11 +13,11 @@
 #include <utility>
 #include <vector>
 
-#include "../util/util.h"
-#include "../util/logging.h"
-#include "../util/strutil.h"
-#include "prefilter.h"
-#include "re2.h"
+#include "util/util.h"
+#include "util/logging.h"
+#include "util/strutil.h"
+#include "re2/prefilter.h"
+#include "re2/re2.h"
 
 namespace re2 {
 
@@ -107,7 +107,7 @@ void PrefilterTree::Compile(std::vector<std::string>* atom_vec) {
 
 Prefilter* PrefilterTree::CanonicalNode(NodeMap* nodes, Prefilter* node) {
   std::string node_string = NodeString(node);
-  std::map<std::string, Prefilter*>::iterator iter = nodes->find(node_string);
+  NodeMap::iterator iter = nodes->find(node_string);
   if (iter == nodes->end())
     return NULL;
   return (*iter).second;
@@ -377,7 +377,7 @@ void PrefilterTree::PrintDebugInfo(NodeMap* nodes) {
       LOG(ERROR) << it->first;
   }
   LOG(ERROR) << "Map:";
-  for (std::map<std::string, Prefilter*>::const_iterator iter = nodes->begin();
+  for (NodeMap::const_iterator iter = nodes->begin();
        iter != nodes->end(); ++iter)
     LOG(ERROR) << "NodeId: " << (*iter).second->unique_id()
                << " Str: " << (*iter).first;

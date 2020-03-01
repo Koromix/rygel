@@ -14,8 +14,8 @@
 #include <string>
 #include <vector>
 
-#include "../util/util.h"
-#include "stringpiece.h"
+#include "util/util.h"
+#include "re2/stringpiece.h"
 
 namespace re2 {
 
@@ -57,6 +57,19 @@ class StringGenerator {
   StringGenerator(const StringGenerator&) = delete;
   StringGenerator& operator=(const StringGenerator&) = delete;
 };
+
+// Generates and returns a string over binary alphabet {0,1} that contains
+// all possible binary sequences of length n as subsequences.  The obvious
+// brute force method would generate a string of length n * 2^n, but this
+// generates a string of length n-1 + 2^n called a De Bruijn cycle.
+// See Knuth, The Art of Computer Programming, Vol 2, Exercise 3.2.2 #17.
+//
+// Such a string is useful for testing a DFA.  If you have a DFA
+// where distinct last n bytes implies distinct states, then running on a
+// DeBruijn string causes the DFA to need to create a new state at every
+// position in the input, never reusing any states until it gets to the
+// end of the string.  This is the worst possible case for DFA execution.
+std::string DeBruijnString(int n);
 
 }  // namespace re2
 

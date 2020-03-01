@@ -13,8 +13,8 @@
 #include <string>
 #include <vector>
 
-#include "../util/util.h"
-#include "stringpiece.h"
+#include "util/util.h"
+#include "re2/stringpiece.h"
 
 namespace re2 {
 

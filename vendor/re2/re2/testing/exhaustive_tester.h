@@ -9,9 +9,9 @@
 #include <string>
 #include <vector>
 
-#include "../util/util.h"
-#include "testing/regexp_generator.h"
-#include "testing/string_generator.h"
+#include "util/util.h"
+#include "re2/testing/regexp_generator.h"
+#include "re2/testing/string_generator.h"
 
 namespace re2 {
 

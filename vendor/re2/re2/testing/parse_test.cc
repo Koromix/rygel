@@ -6,9 +6,9 @@
 
 #include <string>
 
-#include "../util/test.h"
-#include "../util/logging.h"
-#include "regexp.h"
+#include "util/test.h"
+#include "util/logging.h"
+#include "re2/regexp.h"
 
 namespace re2 {
 

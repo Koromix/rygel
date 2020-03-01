@@ -5,7 +5,7 @@
 // Regular expression representation.
 // Tested by parse_test.cc
 
-#include "regexp.h"
+#include "re2/regexp.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -16,12 +16,12 @@
 #include <string>
 #include <vector>
 
-#include "../util/util.h"
-#include "../util/logging.h"
-#include "../util/mutex.h"
-#include "../util/utf.h"
-#include "stringpiece.h"
-#include "walker-inl.h"
+#include "util/util.h"
+#include "util/logging.h"
+#include "util/mutex.h"
+#include "util/utf.h"
+#include "re2/stringpiece.h"
+#include "re2/walker-inl.h"
 
 namespace re2 {
 
@@ -544,9 +544,12 @@ class NumCapturesWalker : public Regexp::Walker<Ignored> {
       ncapture_++;
     return ignored;
   }
+
   virtual Ignored ShortVisit(Regexp* re, Ignored ignored) {
-    // Should never be called: we use Walk not WalkExponential.
+    // Should never be called: we use Walk(), not WalkExponential().
+#ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
     LOG(DFATAL) << "NumCapturesWalker::ShortVisit called";
+#endif
     return ignored;
   }
 
@@ -575,7 +578,7 @@ class NamedCapturesWalker : public Regexp::Walker<Ignored> {
     return m;
   }
 
-  Ignored PreVisit(Regexp* re, Ignored ignored, bool* stop) {
+  virtual Ignored PreVisit(Regexp* re, Ignored ignored, bool* stop) {
     if (re->op() == kRegexpCapture && re->name() != NULL) {
       // Allocate map once we find a name.
       if (map_ == NULL)
@@ -591,8 +594,10 @@ class NamedCapturesWalker : public Regexp::Walker<Ignored> {
   }
 
   virtual Ignored ShortVisit(Regexp* re, Ignored ignored) {
-    // Should never be called: we use Walk not WalkExponential.
+    // Should never be called: we use Walk(), not WalkExponential().
+#ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
     LOG(DFATAL) << "NamedCapturesWalker::ShortVisit called";
+#endif
     return ignored;
   }
 
@@ -621,7 +626,7 @@ class CaptureNamesWalker : public Regexp::Walker<Ignored> {
     return m;
   }
 
-  Ignored PreVisit(Regexp* re, Ignored ignored, bool* stop) {
+  virtual Ignored PreVisit(Regexp* re, Ignored ignored, bool* stop) {
     if (re->op() == kRegexpCapture && re->name() != NULL) {
       // Allocate map once we find a name.
       if (map_ == NULL)
@@ -633,8 +638,10 @@ class CaptureNamesWalker : public Regexp::Walker<Ignored> {
   }
 
   virtual Ignored ShortVisit(Regexp* re, Ignored ignored) {
-    // Should never be called: we use Walk not WalkExponential.
+    // Should never be called: we use Walk(), not WalkExponential().
+#ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
     LOG(DFATAL) << "CaptureNamesWalker::ShortVisit called";
+#endif
     return ignored;
   }
 

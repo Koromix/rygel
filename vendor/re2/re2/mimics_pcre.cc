@@ -22,10 +22,10 @@
 //
 // Regexp::MimicsPCRE checks for any of these conditions.
 
-#include "../util/util.h"
-#include "../util/logging.h"
-#include "regexp.h"
-#include "walker-inl.h"
+#include "util/util.h"
+#include "util/logging.h"
+#include "re2/regexp.h"
+#include "re2/walker-inl.h"
 
 namespace re2 {
 
@@ -38,14 +38,21 @@ static bool CanBeEmptyString(Regexp *re);
 class PCREWalker : public Regexp::Walker<bool> {
  public:
   PCREWalker() {}
-  bool PostVisit(Regexp* re, bool parent_arg, bool pre_arg, bool* child_args,
-                 int nchild_args);
 
-  bool ShortVisit(Regexp* re, bool a) {
-    // Should never be called: we use Walk not WalkExponential.
-    LOG(DFATAL) << "EmptyStringWalker::ShortVisit called";
+  virtual bool PostVisit(Regexp* re, bool parent_arg, bool pre_arg,
+                         bool* child_args, int nchild_args);
+
+  virtual bool ShortVisit(Regexp* re, bool a) {
+    // Should never be called: we use Walk(), not WalkExponential().
+#ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+    LOG(DFATAL) << "PCREWalker::ShortVisit called";
+#endif
     return a;
   }
+
+ private:
+  PCREWalker(const PCREWalker&) = delete;
+  PCREWalker& operator=(const PCREWalker&) = delete;
 };
 
 // Called after visiting each of re's children and accumulating
@@ -114,13 +121,16 @@ bool Regexp::MimicsPCRE() {
 
 class EmptyStringWalker : public Regexp::Walker<bool> {
  public:
-  EmptyStringWalker() { }
-  bool PostVisit(Regexp* re, bool parent_arg, bool pre_arg,
-                 bool* child_args, int nchild_args);
+  EmptyStringWalker() {}
 
-  bool ShortVisit(Regexp* re, bool a) {
-    // Should never be called: we use Walk not WalkExponential.
+  virtual bool PostVisit(Regexp* re, bool parent_arg, bool pre_arg,
+                         bool* child_args, int nchild_args);
+
+  virtual bool ShortVisit(Regexp* re, bool a) {
+    // Should never be called: we use Walk(), not WalkExponential().
+#ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
     LOG(DFATAL) << "EmptyStringWalker::ShortVisit called";
+#endif
     return a;
   }
 

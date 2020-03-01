@@ -5,8 +5,8 @@
 #ifndef UTIL_TEST_H_
 #define UTIL_TEST_H_
 
-#include "util.h"
-#include "logging.h"
+#include "util/util.h"
+#include "util/logging.h"
 
 namespace testing {
 std::string TempDir();

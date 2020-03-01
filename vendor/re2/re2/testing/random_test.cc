@@ -8,9 +8,9 @@
 #include <string>
 #include <vector>
 
-#include "../util/test.h"
-#include "../util/flags.h"
-#include "testing/exhaustive_tester.h"
+#include "util/test.h"
+#include "util/flags.h"
+#include "re2/testing/exhaustive_tester.h"
 
 DEFINE_FLAG(int, regexpseed, 404, "Random regexp seed.");
 DEFINE_FLAG(int, regexpcount, 100, "How many random regexps to generate.");

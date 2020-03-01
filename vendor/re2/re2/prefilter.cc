@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-#include "prefilter.h"
+#include "re2/prefilter.h"
 
 #include <stddef.h>
 #include <stdint.h>
 #include <string>
 #include <vector>
 
-#include "../util/util.h"
-#include "../util/logging.h"
-#include "../util/strutil.h"
-#include "../util/utf.h"
-#include "re2.h"
-#include "unicode_casefold.h"
-#include "walker-inl.h"
+#include "util/util.h"
+#include "util/logging.h"
+#include "util/strutil.h"
+#include "util/utf.h"
+#include "re2/re2.h"
+#include "re2/unicode_casefold.h"
+#include "re2/walker-inl.h"
 
 namespace re2 {
 

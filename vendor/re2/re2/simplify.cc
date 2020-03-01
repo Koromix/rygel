@@ -8,12 +8,12 @@
 
 #include <string>
 
-#include "../util/util.h"
-#include "../util/logging.h"
-#include "../util/utf.h"
-#include "pod_array.h"
-#include "regexp.h"
-#include "walker-inl.h"
+#include "util/util.h"
+#include "util/logging.h"
+#include "util/utf.h"
+#include "re2/pod_array.h"
+#include "re2/regexp.h"
+#include "re2/walker-inl.h"
 
 namespace re2 {
 
@@ -212,9 +212,10 @@ Regexp* CoalesceWalker::Copy(Regexp* re) {
 }
 
 Regexp* CoalesceWalker::ShortVisit(Regexp* re, Regexp* parent_arg) {
-  // This should never be called, since we use Walk and not
-  // WalkExponential.
+  // Should never be called: we use Walk(), not WalkExponential().
+#ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
   LOG(DFATAL) << "CoalesceWalker::ShortVisit called";
+#endif
   return re->Incref();
 }
 
@@ -437,9 +438,10 @@ Regexp* SimplifyWalker::Copy(Regexp* re) {
 }
 
 Regexp* SimplifyWalker::ShortVisit(Regexp* re, Regexp* parent_arg) {
-  // This should never be called, since we use Walk and not
-  // WalkExponential.
+  // Should never be called: we use Walk(), not WalkExponential().
+#ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
   LOG(DFATAL) << "SimplifyWalker::ShortVisit called";
+#endif
   return re->Incref();
 }
 

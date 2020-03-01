@@ -161,8 +161,8 @@
 //         Octal(&a), Hex(&b), CRadix(&c), CRadix(&d));
 // will leave 64 in a, b, c, and d.
 
-#include "util.h"
-#include "../re2/stringpiece.h"
+#include "util/util.h"
+#include "re2/stringpiece.h"
 
 #ifdef USEPCRE
 #include <pcre.h>

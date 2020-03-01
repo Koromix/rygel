@@ -7,10 +7,10 @@
 #include <stdint.h>
 #include <string>
 
-#include "../util/test.h"
-#include "../util/utf.h"
-#include "testing/string_generator.h"
-#include "testing/regexp_generator.h"
+#include "util/test.h"
+#include "util/utf.h"
+#include "re2/testing/string_generator.h"
+#include "re2/testing/regexp_generator.h"
 
 namespace re2 {
 

@@ -7,8 +7,8 @@
 
 #include <string>
 
-#include "../re2/stringpiece.h"
-#include "util.h"
+#include "re2/stringpiece.h"
+#include "util/util.h"
 
 namespace re2 {
 

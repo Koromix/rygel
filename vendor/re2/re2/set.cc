@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-#include "set.h"
+#include "re2/set.h"
 
 #include <stddef.h>
 #include <algorithm>
 #include <memory>
 
-#include "../util/util.h"
-#include "../util/logging.h"
-#include "pod_array.h"
-#include "prog.h"
-#include "re2.h"
-#include "regexp.h"
-#include "stringpiece.h"
+#include "util/util.h"
+#include "util/logging.h"
+#include "re2/pod_array.h"
+#include "re2/prog.h"
+#include "re2/re2.h"
+#include "re2/regexp.h"
+#include "re2/stringpiece.h"
 
 namespace re2 {
 

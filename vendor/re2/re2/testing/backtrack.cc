@@ -27,10 +27,10 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "../util/util.h"
-#include "../util/logging.h"
-#include "prog.h"
-#include "regexp.h"
+#include "util/util.h"
+#include "util/logging.h"
+#include "re2/prog.h"
+#include "re2/regexp.h"
 
 namespace re2 {
 

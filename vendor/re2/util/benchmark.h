@@ -8,8 +8,8 @@
 #include <stdint.h>
 #include <functional>
 
-#include "logging.h"
-#include "util.h"
+#include "util/logging.h"
+#include "util/util.h"
 
 // Globals for the old benchmark API.
 void StartBenchmarkTiming();

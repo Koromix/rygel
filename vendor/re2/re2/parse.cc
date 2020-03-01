@@ -25,16 +25,16 @@
 #include <string>
 #include <vector>
 
-#include "../util/util.h"
-#include "../util/logging.h"
-#include "../util/strutil.h"
-#include "../util/utf.h"
-#include "pod_array.h"
-#include "regexp.h"
-#include "stringpiece.h"
-#include "unicode_casefold.h"
-#include "unicode_groups.h"
-#include "walker-inl.h"
+#include "util/util.h"
+#include "util/logging.h"
+#include "util/strutil.h"
+#include "util/utf.h"
+#include "re2/pod_array.h"
+#include "re2/regexp.h"
+#include "re2/stringpiece.h"
+#include "re2/unicode_casefold.h"
+#include "re2/unicode_groups.h"
+#include "re2/walker-inl.h"
 
 #if defined(RE2_USE_ICU)
 #include "unicode/uniset.h"
@@ -556,9 +556,10 @@ int RepetitionWalker::PostVisit(Regexp* re, int parent_arg, int pre_arg,
 }
 
 int RepetitionWalker::ShortVisit(Regexp* re, int parent_arg) {
-  // This should never be called, since we use Walk and not
-  // WalkExponential.
+  // Should never be called: we use Walk(), not WalkExponential().
+#ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
   LOG(DFATAL) << "RepetitionWalker::ShortVisit called";
+#endif
   return 0;
 }
 

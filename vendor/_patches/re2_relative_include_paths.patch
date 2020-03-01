@@ -61,7 +61,7 @@ diff --git a/vendor/re2/re2/dfa.cc b/vendor/re2/re2/dfa.cc
 index 816080a0..2b7ca002 100644
 --- a/vendor/re2/re2/dfa.cc
 +++ b/vendor/re2/re2/dfa.cc
-@@ -36,14 +36,14 @@
+@@ -36,15 +36,15 @@
  #include <utility>
  #include <vector>
  
@@ -71,6 +71,7 @@ index 816080a0..2b7ca002 100644
 -#include "util/strutil.h"
 -#include "re2/pod_array.h"
 -#include "re2/prog.h"
+-#include "re2/re2.h"
 -#include "re2/sparse_set.h"
 -#include "re2/stringpiece.h"
 +#include "../util/logging.h"
@@ -79,6 +80,7 @@ index 816080a0..2b7ca002 100644
 +#include "../util/strutil.h"
 +#include "pod_array.h"
 +#include "prog.h"
++#include "re2.h"
 +#include "sparse_set.h"
 +#include "stringpiece.h"
  
@@ -478,8 +480,8 @@ index c39589d6..86c0fb3c 100644
 --- a/vendor/re2/re2/re2.h
 +++ b/vendor/re2/re2/re2.h
 @@ -196,7 +196,7 @@
- #include <mutex>
- #include <string>
+ #include <TargetConditionals.h>
+ #endif
  
 -#include "re2/stringpiece.h"
 +#include "stringpiece.h"
@@ -1432,7 +1434,7 @@ index b3a32ebf..6362dcc1 100644
 +#include "strutil.h"
  
  // Silence warnings about the wacky formatting in the operator() functions.
- // Note that we test for Clang first because it defines __GNUC__ as well.
+ #if !defined(__clang__) && defined(__GNUC__) && __GNUC__ >= 6
 diff --git a/vendor/re2/util/pcre.h b/vendor/re2/util/pcre.h
 index 644dce68..85b0ee35 100644
 --- a/vendor/re2/util/pcre.h

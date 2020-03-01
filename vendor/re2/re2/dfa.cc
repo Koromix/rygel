@@ -42,6 +42,7 @@
 #include "../util/strutil.h"
 #include "pod_array.h"
 #include "prog.h"
+#include "re2.h"
 #include "sparse_set.h"
 #include "stringpiece.h"
 
@@ -971,8 +972,21 @@ void DFA::RunWorkqOnByte(Workq* oldq, Workq* newq,
         break;
 
       case kInstByteRange:   // can follow if c is in range
-        if (ip->Matches(c))
-          AddToQueue(newq, ip->out(), flag);
+        if (!ip->Matches(c))
+          break;
+        AddToQueue(newq, ip->out(), flag);
+        if (ip->hint() != 0) {
+          // We have a hint, but we must cancel out the
+          // increment that will occur after the break.
+          i += ip->hint() - 1;
+        } else {
+          // We have no hint, so we must find the end
+          // of the current list and then skip to it.
+          Prog::Inst* ip0 = ip;
+          while (!ip->last())
+            ++ip;
+          i += ip - ip0;
+        }
         break;
 
       case kInstMatch:
@@ -1170,6 +1184,11 @@ DFA::RWLocker::~RWLocker() {
 void DFA::ResetCache(RWLocker* cache_lock) {
   // Re-acquire the cache_mutex_ for writing (exclusive use).
   cache_lock->LockForWriting();
+
+  hooks::GetDFAStateCacheResetHook()({
+      state_budget_,
+      state_cache_.size(),
+  });
 
   // Clear the cache, reset the memory budget.
   for (int i = 0; i < kMaxStart; i++) {
@@ -1904,8 +1923,12 @@ bool Prog::SearchDFA(const StringPiece& text, const StringPiece& const_context,
   bool matched = dfa->Search(text, context, anchored,
                              want_earliest_match, !reversed_,
                              failed, &ep, matches);
-  if (*failed)
+  if (*failed) {
+    hooks::GetDFASearchFailureHook()({
+        // Nothing yet...
+    });
     return false;
+  }
   if (!matched)
     return false;
   if (endmatch && ep != (reversed_ ? text.data() : text.data() + text.size()))

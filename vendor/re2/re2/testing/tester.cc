@@ -9,14 +9,14 @@
 #include <string.h>
 #include <string>
 
-#include "../util/util.h"
-#include "../util/flags.h"
-#include "../util/logging.h"
-#include "../util/strutil.h"
-#include "testing/tester.h"
-#include "prog.h"
-#include "re2.h"
-#include "regexp.h"
+#include "util/util.h"
+#include "util/flags.h"
+#include "util/logging.h"
+#include "util/strutil.h"
+#include "re2/testing/tester.h"
+#include "re2/prog.h"
+#include "re2/re2.h"
+#include "re2/regexp.h"
 
 DEFINE_FLAG(bool, dump_prog, false, "dump regexp program");
 DEFINE_FLAG(bool, log_okay, false, "log successful runs");

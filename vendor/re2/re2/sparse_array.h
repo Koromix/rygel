@@ -102,7 +102,7 @@
 #include <memory>
 #include <utility>
 
-#include "pod_array.h"
+#include "re2/pod_array.h"
 
 namespace re2 {
 

@@ -15,7 +15,7 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "utf.h"
+#include "util/utf.h"
 
 namespace re2 {
 
@@ -26,7 +26,7 @@ enum
 	Bit2	= 5,
 	Bit3	= 4,
 	Bit4	= 3,
-	Bit5	= 2,
+	Bit5	= 2, 
 
 	T1	= ((1<<(Bit1+1))-1) ^ 0xFF,	/* 0000 0000 */
 	Tx	= ((1<<(Bitx+1))-1) ^ 0xFF,	/* 1000 0000 */

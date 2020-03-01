@@ -5,7 +5,7 @@
 // Compiled regular expression representation.
 // Tested by compile_test.cc
 
-#include "prog.h"
+#include "re2/prog.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -13,11 +13,11 @@
 #include <memory>
 #include <utility>
 
-#include "../util/util.h"
-#include "../util/logging.h"
-#include "../util/strutil.h"
-#include "bitmap256.h"
-#include "stringpiece.h"
+#include "util/util.h"
+#include "util/logging.h"
+#include "util/strutil.h"
+#include "re2/bitmap256.h"
+#include "re2/stringpiece.h"
 
 namespace re2 {
 

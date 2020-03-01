@@ -16,12 +16,12 @@
 #include <vector>
 #include <type_traits>
 
-#include "../util/util.h"
-#include "../util/logging.h"
-#include "pod_array.h"
-#include "re2.h"
-#include "sparse_array.h"
-#include "sparse_set.h"
+#include "util/util.h"
+#include "util/logging.h"
+#include "re2/pod_array.h"
+#include "re2/re2.h"
+#include "re2/sparse_array.h"
+#include "re2/sparse_set.h"
 
 namespace re2 {
 

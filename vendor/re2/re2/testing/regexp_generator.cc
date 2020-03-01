@@ -29,11 +29,11 @@
 #include <string>
 #include <vector>
 
-#include "../util/test.h"
-#include "../util/logging.h"
-#include "../util/strutil.h"
-#include "../util/utf.h"
-#include "testing/regexp_generator.h"
+#include "util/test.h"
+#include "util/logging.h"
+#include "util/strutil.h"
+#include "util/utf.h"
+#include "re2/testing/regexp_generator.h"
 
 namespace re2 {
 

@@ -31,13 +31,13 @@
 #include <utility>
 #include <vector>
 
-#include "../util/logging.h"
-#include "../util/strutil.h"
-#include "pod_array.h"
-#include "prog.h"
-#include "regexp.h"
-#include "sparse_array.h"
-#include "sparse_set.h"
+#include "util/logging.h"
+#include "util/strutil.h"
+#include "re2/pod_array.h"
+#include "re2/prog.h"
+#include "re2/regexp.h"
+#include "re2/sparse_array.h"
+#include "re2/sparse_set.h"
 
 namespace re2 {
 

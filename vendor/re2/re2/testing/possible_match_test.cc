@@ -6,15 +6,15 @@
 #include <string>
 #include <vector>
 
-#include "../util/test.h"
-#include "../util/logging.h"
-#include "../util/strutil.h"
-#include "prog.h"
-#include "re2.h"
-#include "regexp.h"
-#include "testing/exhaustive_tester.h"
-#include "testing/regexp_generator.h"
-#include "testing/string_generator.h"
+#include "util/test.h"
+#include "util/logging.h"
+#include "util/strutil.h"
+#include "re2/prog.h"
+#include "re2/re2.h"
+#include "re2/regexp.h"
+#include "re2/testing/exhaustive_tester.h"
+#include "re2/testing/regexp_generator.h"
+#include "re2/testing/string_generator.h"
 
 namespace re2 {
 

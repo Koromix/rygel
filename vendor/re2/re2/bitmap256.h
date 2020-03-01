@@ -11,8 +11,8 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "../util/util.h"
-#include "../util/logging.h"
+#include "util/util.h"
+#include "util/logging.h"
 
 namespace re2 {
 
