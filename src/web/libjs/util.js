@@ -912,7 +912,7 @@ function BTree(order = 64) {
 }
 
 // ------------------------------------------------------------------------
-// Date
+// Date and time
 // ------------------------------------------------------------------------
 
 let dates = new function() {
@@ -1100,5 +1100,97 @@ let dates = new function() {
         let day = date.getDate();
 
         return dates.create(year, month, day);
+    };
+};
+
+let times = new function() {
+    let self = this;
+
+    function LocalTime(hour = 0, minute = 0, second = 0) {
+        this.hour = hour;
+        this.minute = minute;
+        this.second = second;
+
+        LocalTime.prototype.clone = function() { return dates.create(this.hour, this.minute, this.second); };
+
+        LocalTime.prototype.isZero = function() { return !this.hour && !this.minute && !this.second; };
+        LocalTime.prototype.isValid = function() {
+            if (this.hour == null || this.hour < 1 || this.hour > 23)
+                return false;
+            if (this.minute == null || this.minute < 0 || this.minute > 59)
+                return false;
+            if (this.second == null || this.second < 0 || this.second > 59)
+                return false;
+
+            return true;
+        };
+
+        LocalTime.prototype.equals = function(other) { return +this === +other; };
+
+        LocalTime.prototype.toDaySeconds = function()
+            { return (this.hour * 3600) + (this.minute * 60) + this.second; };
+
+        LocalTime.prototype.diff = function(other) { return this.toDaySeconds() - other.toDaySeconds(); };
+
+        LocalTime.prototype.valueOf = LocalTime.prototype.toDaySeconds;
+
+        LocalTime.prototype.toString = function() {
+            let hour_str = ('' + this.hour).padStart(2, '0');
+            let minute_str = ('' + this.minute).padStart(2, '0');
+            let second_str = ('' + this.second).padStart(2, '0');
+
+            let str = `${hour_str}:${minute_str}:${second_str}`;
+            return str;
+        };
+        LocalTime.prototype.toLocaleString = LocalTime.prototype.toString;
+    }
+
+    this.create = function(hour = 0, minute = 0, second = 0) {
+        let time = new LocalTime(hour, minute, second);
+        return Object.freeze(time);
+    };
+
+    this.fromDaySeconds = function(seconds) {
+        let hour = Math.floor(seconds / 3600);
+        seconds = Math.floor(seconds % 3600);
+        let minute = Math.floor(seconds / 60);
+        let second = Math.floor(seconds % 60);
+
+        return times.create(hour, minute, second);
+    };
+
+    this.parse = function(str, validate = true) {
+        if (str == null)
+            return null;
+
+        let time;
+        try {
+            let [hour, minute, second] = str.split(':').map(x => parseInt(x, 10));
+            time = times.create(hour, minute, second || 0);
+        } catch (err) {
+            throw new Error(`Time '${str}' is malformed`);
+        }
+
+        if (validate && !time.isValid())
+            throw new Error(`Time '${str}' is invalid`);
+
+        return time;
+    };
+
+    this.parseSafe = function(str, validate = true) {
+        try {
+            return self.parse(str, validate);
+        } catch (err) {
+            return null;
+        }
+    };
+
+    this.parseLog = function(str, validate = true) {
+        try {
+            return self.parse(str, validate);
+        } catch (err) {
+            log.error(err.message);
+            return null;
+        }
     };
 };
