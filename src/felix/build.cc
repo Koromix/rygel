@@ -79,8 +79,7 @@ static const char *BuildObjectPath(const char *src_filename, const char *output_
 {
     RG_ASSERT(!PathIsAbsolute(src_filename));
 
-    HeapArray<char> buf;
-    buf.allocator = alloc;
+    HeapArray<char> buf(alloc);
 
     Size offset = Fmt(&buf, "%1%/objects%/", output_directory).len;
     Fmt(&buf, "%1%2", src_filename, suffix);

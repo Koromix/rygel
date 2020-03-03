@@ -19,8 +19,7 @@ void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile
                      const char *pack_options, const char *dest_filename,
                      Allocator *alloc, BuildCommand *out_cmd)
 {
-    HeapArray<char> buf;
-    buf.allocator = alloc;
+    HeapArray<char> buf(alloc);
 
     Fmt(&buf, "\"%1\" pack -O \"%2\"", GetApplicationExecutable(), dest_filename);
 
@@ -161,8 +160,7 @@ public:
                            Span<const char *const> include_directories, const char *dest_filename,
                            const char *deps_filename, Allocator *alloc, BuildCommand *out_cmd) const override
     {
-        HeapArray<char> buf;
-        buf.allocator = alloc;
+        HeapArray<char> buf(alloc);
 
         // Compiler
         switch (src_type) {
@@ -212,8 +210,7 @@ public:
                          Span<const char *const> libraries, LinkType link_type,
                          const char *dest_filename, Allocator *alloc, BuildCommand *out_cmd) const override
     {
-        HeapArray<char> buf;
-        buf.allocator = alloc;
+        HeapArray<char> buf(alloc);
 
         // Linker
         switch (link_type) {
@@ -268,8 +265,7 @@ public:
                            Span<const char *const> include_directories, const char *dest_filename,
                            const char *deps_filename, Allocator *alloc, BuildCommand *out_cmd) const override
     {
-        HeapArray<char> buf;
-        buf.allocator = alloc;
+        HeapArray<char> buf(alloc);
 
         // Compiler
         switch (src_type) {
@@ -320,8 +316,7 @@ public:
                          Span<const char *const> libraries, LinkType link_type,
                          const char *dest_filename, Allocator *alloc, BuildCommand *out_cmd) const override
     {
-        HeapArray<char> buf;
-        buf.allocator = alloc;
+        HeapArray<char> buf(alloc);
 
         // Linker
         switch (link_type) {
@@ -384,8 +379,7 @@ public:
                            Span<const char *const> include_directories, const char *dest_filename,
                            const char *deps_filename, Allocator *alloc, BuildCommand *out_cmd) const override
     {
-        HeapArray<char> buf;
-        buf.allocator = alloc;
+        HeapArray<char> buf(alloc);
 
         // Compiler
         switch (src_type) {
@@ -436,8 +430,7 @@ public:
                          Span<const char *const> libraries, LinkType link_type,
                          const char *dest_filename, Allocator *alloc, BuildCommand *out_cmd) const override
     {
-        HeapArray<char> buf;
-        buf.allocator = alloc;
+        HeapArray<char> buf(alloc);
 
         // Linker
         switch (link_type) {

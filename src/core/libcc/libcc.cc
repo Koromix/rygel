@@ -1913,9 +1913,7 @@ Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
     if (!path.len && !root_directory.len)
         return Fmt(alloc, "");
 
-    HeapArray<char> buf;
-    buf.allocator = alloc;
-
+    HeapArray<char> buf(alloc);
     Size parts_count = 0;
 
     const auto append_normalized_path = [&](Span<const char> path) {
@@ -4182,8 +4180,7 @@ AssetLoadStatus AssetSet::LoadFromLibrary(const char *filename, const char *var_
 Span<const uint8_t> PatchAssetVariables(const AssetInfo &asset, Allocator *alloc,
                                         FunctionRef<bool(const char *, StreamWriter *)> func)
 {
-    HeapArray<uint8_t> buf;
-    buf.allocator = alloc;
+    HeapArray<uint8_t> buf(alloc);
 
     StreamReader reader(asset.data, nullptr, asset.compression_type);
     StreamWriter writer(&buf, nullptr, asset.compression_type);
