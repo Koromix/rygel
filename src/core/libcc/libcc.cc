@@ -2683,32 +2683,21 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf, Size m
     return true;
 }
 
+#ifdef _WIN32
+
 void WaitForDelay(int64_t delay)
 {
     RG_ASSERT(delay >= 0);
     RG_ASSERT(delay < 1000ll * INT32_MAX);
 
-#ifdef _WIN32
     while (delay) {
         DWORD delay32 = (DWORD)std::min(delay, (int64_t)UINT32_MAX);
         delay -= delay32;
 
         Sleep(delay32);
     }
-#else
-    struct timespec ts;
-    ts.tv_sec = (int)(delay / 1000);
-    ts.tv_nsec = (int)((delay % 1000) * 1000000);
-
-    struct timespec rem;
-    while (nanosleep(&ts, &rem) < 0) {
-        RG_ASSERT(errno == EINTR);
-        ts = rem;
-    }
-#endif
 }
 
-#ifdef _WIN32
 bool WaitForInterruption(int64_t delay)
 {
     RG_ASSERT(InitConsoleCtrlHandler());
@@ -2728,7 +2717,25 @@ bool WaitForInterruption(int64_t delay)
         return WaitForSingleObject(console_ctrl_event, INFINITE) == WAIT_OBJECT_0;
     }
 }
+
 #else
+
+void WaitForDelay(int64_t delay)
+{
+    RG_ASSERT(delay >= 0);
+    RG_ASSERT(delay < 1000ll * INT32_MAX);
+
+    struct timespec ts;
+    ts.tv_sec = (int)(delay / 1000);
+    ts.tv_nsec = (int)((delay % 1000) * 1000000);
+
+    struct timespec rem;
+    while (nanosleep(&ts, &rem) < 0) {
+        RG_ASSERT(errno == EINTR);
+        ts = rem;
+    }
+}
+
 bool WaitForInterruption(int64_t delay)
 {
     static volatile bool run = true;
@@ -2755,6 +2762,7 @@ bool WaitForInterruption(int64_t delay)
 
     return !run;
 }
+
 #endif
 
 int GetCoreCount()
