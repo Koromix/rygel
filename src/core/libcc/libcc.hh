@@ -3504,13 +3504,11 @@ static const char *const IPStackNames[] = {
 // Tasks
 // ------------------------------------------------------------------------
 
-class AsyncPool;
-
 class Async {
     std::atomic_int success {1};
     std::atomic_int remaining_tasks {0};
 
-    AsyncPool *pool;
+    class AsyncPool *pool;
 
 public:
     Async(int workers = -1);
@@ -3526,7 +3524,7 @@ public:
 
     static bool IsTaskRunning();
 
-    friend AsyncPool;
+    friend class AsyncPool;
 };
 
 // ------------------------------------------------------------------------
