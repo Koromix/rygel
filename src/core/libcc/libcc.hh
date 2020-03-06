@@ -2582,7 +2582,7 @@ public:
     bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
     bool Open(const std::function<Size(Span<uint8_t>)> &func, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
-    void Close();
+    bool Close();
 
     const char *GetFileName() const { return filename; }
     CompressionType GetCompressionType() const { return compression.type; }

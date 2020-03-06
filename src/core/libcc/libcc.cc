@@ -3177,9 +3177,11 @@ bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const ch
     return true;
 }
 
-void StreamReader::Close()
+bool StreamReader::Close()
 {
     ReleaseResources();
+
+    bool ret = !error;
 
     filename = nullptr;
     source.eof = false;
@@ -3188,6 +3190,8 @@ void StreamReader::Close()
     raw_read = 0;
     error = false;
     eof = false;
+
+    return ret;
 }
 
 Size StreamReader::Read(Span<uint8_t> out_buf)
