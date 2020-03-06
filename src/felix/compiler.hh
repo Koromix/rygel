@@ -8,6 +8,8 @@
 
 namespace RG {
 
+struct BuildNode;
+
 enum class SourceType {
     C,
     CXX
@@ -29,17 +31,9 @@ enum class LinkType {
     SharedLibrary
 };
 
-struct BuildCommand {
-    Span<const char> line;
-    Size rsp_offset;
-
-    int skip_lines;
-    bool parse_cl_includes;
-};
-
 void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
                      const char *pack_options, const char *dest_filename,
-                     Allocator *alloc, BuildCommand *out_cmd);
+                     Allocator *alloc, BuildNode *out_node);
 
 class Compiler {
     mutable bool test_init = false;
@@ -56,18 +50,18 @@ public:
 
     virtual void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
                                 bool warnings, Span<const char *const> definitions,
-                                Span<const char *const> include_directories, const char *deps_filename,
-                                Allocator *alloc, BuildCommand *out_cmd) const = 0;
+                                Span<const char *const> include_directories,
+                                Allocator *alloc, BuildNode *out_node) const = 0;
     virtual const char *GetPchObject(const char *pch_filename, Allocator *alloc) const = 0;
 
     virtual void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                                    bool warnings, const char *pch_filename, Span<const char *const> definitions,
                                    Span<const char *const> include_directories, const char *dest_filename,
-                                   const char *deps_filename, Allocator *alloc, BuildCommand *out_cmd) const = 0;
+                                   Allocator *alloc, BuildNode *out_node) const = 0;
 
     virtual void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
                                  Span<const char *const> libraries, LinkType link_type,
-                                 const char *dest_filename, Allocator *alloc, BuildCommand *out_cmd) const = 0;
+                                 const char *dest_filename, Allocator *alloc, BuildNode *out_node) const = 0;
 };
 
 extern const Span<const Compiler *const> Compilers;

@@ -20,17 +20,44 @@ struct BuildSettings {
     const char *version_str = "(unknown version)";
 };
 
+struct BuildNode {
+    enum class DependencyMode {
+        None,
+        MakeLike,
+        ShowIncludes
+    };
+
+    const char *text;
+    const char *dest_filename;
+
+    // Set by compiler methods
+    Span<const char> cmd_line;
+    Size rsp_offset;
+    int skip_lines;
+    DependencyMode deps_mode;
+    const char *deps_filename; // Used by MakeLike mode
+};
+
 class Builder {
-    struct Node {
-        const char *text;
+    struct CacheEntry {
+        const char *filename;
+        const char *cmd_line;
 
-        const char *dest_filename;
-        const char *deps_filename;
+        Size deps_offset;
+        Size deps_len;
 
-        BuildCommand cmd;
+        RG_HASHTABLE_HANDLER(CacheEntry, filename);
+    };
+
+    struct WorkerState {
+        HeapArray<CacheEntry> entries;
+        HeapArray<const char *> dependencies;
+
+        BlockAllocator str_alloc;
     };
 
     BuildSettings build;
+    const char *cache_filename;
 
     bool version_init = false;
     const char *version_obj_filename = nullptr;
@@ -38,13 +65,19 @@ class Builder {
     // Reuse for performance
     HeapArray<const char *> obj_filenames;
 
-    HeapArray<Node> prep_nodes;
-    HeapArray<Node> obj_nodes;
-    HeapArray<Node> link_nodes;
-    BlockAllocator str_alloc;
+    HeapArray<BuildNode> prep_nodes;
+    HeapArray<BuildNode> obj_nodes;
+    HeapArray<BuildNode> link_nodes;
+
+    HashTable<const char *, CacheEntry> cache_map;
+    HeapArray<const char *> cache_dependencies;
 
     HashMap<const char *, int64_t> mtime_map;
     HashSet<const char *> output_set;
+
+    HeapArray<WorkerState> workers;
+
+    BlockAllocator str_alloc;
 
 public:
     HashMap<const char *, const char *> target_filenames;
@@ -55,12 +88,15 @@ public:
     bool Build(int jobs, bool verbose);
 
 private:
-    bool NeedsRebuild(const char *src_filename, const char *pch_filename,
-                      const char *dest_filename, const char *deps_filename);
+    void SaveCache();
+    void LoadCache();
+
+    bool NeedsRebuild(const char *dest_filename, const char *cmd_line,
+                      Span<const char *const> src_filenames);
     bool IsFileUpToDate(const char *dest_filename, Span<const char *const> src_filenames);
     int64_t GetFileModificationTime(const char *filename);
 
-    bool RunNodes(Span<const Node> nodes, int jobs, bool verbose, Size progress, Size total);
+    bool RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, Size progress, Size total);
 };
 
 }

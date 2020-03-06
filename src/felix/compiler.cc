@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../core/libcc/libcc.hh"
+#include "build.hh"
 #include "compiler.hh"
 
 #ifdef _WIN32
@@ -17,7 +18,7 @@ namespace RG {
 
 void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
                      const char *pack_options, const char *dest_filename,
-                     Allocator *alloc, BuildCommand *out_cmd)
+                     Allocator *alloc, BuildNode *out_node)
 {
     HeapArray<char> buf(alloc);
 
@@ -36,7 +37,7 @@ void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile
         Fmt(&buf, " \"%1\"", pack_filename);
     }
 
-    out_cmd->line = buf.Leak();
+    out_node->cmd_line = buf.Leak();
 }
 
 static bool TestBinary(const char *name)
@@ -83,74 +84,17 @@ bool Compiler::Test() const
     return test;
 }
 
-static void AppendGccObjectArguments(const char *src_filename, CompileMode compile_mode,
-                                     const char *pch_filename, Span<const char *const> definitions,
-                                     Span<const char *const> include_directories,
-                                     const char *deps_filename, HeapArray<char> *out_buf)
-{
-    Fmt(out_buf, " -DFELIX");
-
-    if (LogUsesTerminalOutput()) {
-        Fmt(out_buf, " -fdiagnostics-color=always");
-    }
-
-    switch (compile_mode) {
-        case CompileMode::Debug: { Fmt(out_buf, " -O0 -g -ftrapv"); } break;
-        case CompileMode::Fast: { Fmt(out_buf, " -O2 -g -DNDEBUG"); } break;
-        case CompileMode::Release: { Fmt(out_buf, " -O2 -flto -DNDEBUG"); } break;
-    }
-
-    Fmt(out_buf, " -c \"%1\"", src_filename);
-    if (pch_filename) {
-        Fmt(out_buf, " -include \"%1\"", pch_filename);
-    }
-    for (const char *definition: definitions) {
-        Fmt(out_buf, " -D%1", definition);
-    }
-    for (const char *include_directory: include_directories) {
-        Fmt(out_buf, " -I%1", include_directory);
-    }
-    if (deps_filename) {
-        Fmt(out_buf, " -MD -MF \"%1\"", deps_filename);
-    }
-}
-
-static bool AppendGccLinkArguments(Span<const char *const> obj_filenames,
-                                   Span<const char *const> libraries, HeapArray<char> *out_buf)
-{
-    if (LogUsesTerminalOutput()) {
-        Fmt(out_buf, " -fdiagnostics-color=always");
-    }
-
-    for (const char *obj_filename: obj_filenames) {
-        Fmt(out_buf, " \"%1\"", obj_filename);
-    }
-    for (const char *lib: libraries) {
-        Fmt(out_buf, " -l%1", lib);
-    }
-
-    // Platform libraries
-#if defined(_WIN32)
-#elif defined(__APPLE__)
-    Fmt(out_buf, " -ldl -pthread");
-#else
-    Fmt(out_buf, " -lrt -ldl -pthread");
-#endif
-
-    return true;
-}
-
 class ClangCompiler: public Compiler {
 public:
     ClangCompiler(const char *name) : Compiler(name, "clang") {}
 
     void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
                         bool warnings, Span<const char *const> definitions,
-                        Span<const char *const> include_directories, const char *deps_filename,
-                        Allocator *alloc, BuildCommand *out_cmd) const override
+                        Span<const char *const> include_directories,
+                        Allocator *alloc, BuildNode *out_node) const override
     {
         MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr, definitions,
-                          include_directories, nullptr, deps_filename, alloc, out_cmd);
+                          include_directories, nullptr, alloc, out_node);
     }
 
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
@@ -158,7 +102,7 @@ public:
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
                            Span<const char *const> include_directories, const char *dest_filename,
-                           const char *deps_filename, Allocator *alloc, BuildCommand *out_cmd) const override
+                           Allocator *alloc, BuildNode *out_node) const override
     {
         HeapArray<char> buf(alloc);
 
@@ -175,9 +119,19 @@ public:
                 case SourceType::CXX: { Fmt(&buf, " -x c++-header"); } break;
             }
         }
-        out_cmd->rsp_offset = buf.len;
+        Fmt(&buf, " -MMD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
+        out_node->rsp_offset = buf.len;
 
+        // Build options
+        switch (compile_mode) {
+            case CompileMode::Debug: { Fmt(&buf, " -O0 -g -ftrapv"); } break;
+            case CompileMode::Fast: { Fmt(&buf, " -O2 -g -DNDEBUG"); } break;
+            case CompileMode::Release: { Fmt(&buf, " -O2 -flto -DNDEBUG"); } break;
+        }
         Fmt(&buf, warnings ? " -Wall" : " -Wno-everything");
+        if (LogUsesTerminalOutput()) {
+            Fmt(&buf, " -fdiagnostics-color=always");
+        }
 
         // Platform flags
 #if defined(_WIN32)
@@ -199,16 +153,28 @@ public:
         }
 #endif
 
-        // Common flags (source, definitions, include directories, etc.)
-        AppendGccObjectArguments(src_filename, compile_mode, pch_filename, definitions,
-                                 include_directories, deps_filename, &buf);
+        // Sources and definitions
+        Fmt(&buf, " -DFELIX -c \"%1\"", src_filename);
+        if (pch_filename) {
+            Fmt(&buf, " -include \"%1\"", pch_filename);
+        }
+        for (const char *definition: definitions) {
+            Fmt(&buf, " -D%1", definition);
+        }
+        for (const char *include_directory: include_directories) {
+            Fmt(&buf, " -I%1", include_directory);
+        }
 
-        out_cmd->line = buf.Leak();
+        out_node->cmd_line = buf.Leak();
+
+        // Dependencies
+        out_node->deps_mode = BuildNode::DependencyMode::MakeLike;
+        out_node->deps_filename = Fmt(alloc, "%1.d", dest_filename ? dest_filename : src_filename).ptr;
     }
 
     void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
                          Span<const char *const> libraries, LinkType link_type,
-                         const char *dest_filename, Allocator *alloc, BuildCommand *out_cmd) const override
+                         const char *dest_filename, Allocator *alloc, BuildNode *out_node) const override
     {
         HeapArray<char> buf(alloc);
 
@@ -218,7 +184,7 @@ public:
             case LinkType::SharedLibrary: { Fmt(&buf, "clang++ -shared"); } break;
         }
         Fmt(&buf, " -o \"%1\"", dest_filename);
-        out_cmd->rsp_offset = buf.len;
+        out_node->rsp_offset = buf.len;
 
         // Build mode
         if (compile_mode == CompileMode::Release) {
@@ -229,19 +195,28 @@ public:
         } else {
             Fmt(&buf, " -g");
         }
+        if (LogUsesTerminalOutput()) {
+            Fmt(&buf, " -fdiagnostics-color=always");
+        }
 
         // Platform flags
 #if defined(_WIN32)
         Fmt(&buf, " -fuse-ld=lld --rtlib=compiler-rt");
 #elif defined(__APPLE__)
+        Fmt(&buf, " -ldl -pthread");
 #else
-        Fmt(&buf, " -Wl,-z,relro,-z,now");
+        Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now");
 #endif
 
         // Objects and libraries
-        AppendGccLinkArguments(obj_filenames, libraries, &buf);
+        for (const char *obj_filename: obj_filenames) {
+            Fmt(&buf, " \"%1\"", obj_filename);
+        }
+        for (const char *lib: libraries) {
+            Fmt(&buf, " -l%1", lib);
+        }
 
-        out_cmd->line = buf.Leak();
+        out_node->cmd_line = buf.Leak();
     }
 };
 
@@ -251,11 +226,11 @@ public:
 
     void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
                         bool warnings, Span<const char *const> definitions,
-                        Span<const char *const> include_directories, const char *deps_filename,
-                        Allocator *alloc, BuildCommand *out_cmd) const override
+                        Span<const char *const> include_directories,
+                        Allocator *alloc, BuildNode *out_node) const override
     {
-        MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr, definitions,
-                          include_directories, nullptr, deps_filename, alloc, out_cmd);
+        MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr,
+                          definitions, include_directories, nullptr, alloc, out_node);
     }
 
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
@@ -263,7 +238,7 @@ public:
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
                            Span<const char *const> include_directories, const char *dest_filename,
-                           const char *deps_filename, Allocator *alloc, BuildCommand *out_cmd) const override
+                           Allocator *alloc, BuildNode *out_node) const override
     {
         HeapArray<char> buf(alloc);
 
@@ -280,8 +255,15 @@ public:
                 case SourceType::CXX: { Fmt(&buf, " -x c++-header"); } break;
             }
         }
-        out_cmd->rsp_offset = buf.len;
+        Fmt(&buf, " -MMD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
+        out_node->rsp_offset = buf.len;
 
+        // Build options
+        switch (compile_mode) {
+            case CompileMode::Debug: { Fmt(&buf, " -O0 -g -ftrapv"); } break;
+            case CompileMode::Fast: { Fmt(&buf, " -O2 -g -DNDEBUG"); } break;
+            case CompileMode::Release: { Fmt(&buf, " -O2 -flto -DNDEBUG"); } break;
+        }
         if (warnings) {
             Fmt(&buf, " -Wall");
             if (src_type == SourceType::CXX) {
@@ -289,6 +271,9 @@ public:
             }
         } else {
             Fmt(&buf, " -w");
+        }
+        if (LogUsesTerminalOutput()) {
+            Fmt(&buf, " -fdiagnostics-color=always");
         }
 
         // Platform flags
@@ -305,16 +290,28 @@ public:
         }
 #endif
 
-        // Common flags (source, definitions, include directories, etc.)
-        AppendGccObjectArguments(src_filename, compile_mode, pch_filename, definitions,
-                                 include_directories, deps_filename, &buf);
+        // Sources and definitions
+        Fmt(&buf, " -DFELIX -c \"%1\"", src_filename);
+        if (pch_filename) {
+            Fmt(&buf, " -include \"%1\"", pch_filename);
+        }
+        for (const char *definition: definitions) {
+            Fmt(&buf, " -D%1", definition);
+        }
+        for (const char *include_directory: include_directories) {
+            Fmt(&buf, " -I%1", include_directory);
+        }
 
-        out_cmd->line = buf.Leak();
+        out_node->cmd_line = buf.Leak();
+
+        // Dependencies
+        out_node->deps_mode = BuildNode::DependencyMode::MakeLike;
+        out_node->deps_filename = Fmt(alloc, "%1.d", dest_filename ? dest_filename : src_filename).ptr;
     }
 
     void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
                          Span<const char *const> libraries, LinkType link_type,
-                         const char *dest_filename, Allocator *alloc, BuildCommand *out_cmd) const override
+                         const char *dest_filename, Allocator *alloc, BuildNode *out_node) const override
     {
         HeapArray<char> buf(alloc);
 
@@ -324,7 +321,7 @@ public:
             case LinkType::SharedLibrary: { Fmt(&buf, "g++ -shared"); } break;
         }
         Fmt(&buf, " -o \"%1\"", dest_filename);
-        out_cmd->rsp_offset = buf.len;
+        out_node->rsp_offset = buf.len;
 
         // Build mode
         if (compile_mode == CompileMode::Release) {
@@ -335,22 +332,31 @@ public:
         } else {
             Fmt(&buf, " -g");
         }
+        if (LogUsesTerminalOutput()) {
+            Fmt(&buf, " -fdiagnostics-color=always");
+        }
 
-        // Platform flags
+        // Platform flags and libraries
 #if defined(_WIN32)
         Fmt(&buf, " -Wl,--dynamicbase -Wl,--nxcompat -Wl,--high-entropy-va");
 #elif defined(__APPLE__)
+        Fmt(&buf, " -ldl -pthread");
 #else
-        Fmt(&buf, " -Wl,-z,relro,-z,now");
+        Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now");
         if (link_type == LinkType::Executable) {
             Fmt(&buf, " -pie");
         }
 #endif
 
         // Objects and libraries
-        AppendGccLinkArguments(obj_filenames, libraries, &buf);
+        for (const char *obj_filename: obj_filenames) {
+            Fmt(&buf, " \"%1\"", obj_filename);
+        }
+        for (const char *lib: libraries) {
+            Fmt(&buf, " -l%1", lib);
+        }
 
-        out_cmd->line = buf.Leak();
+        out_node->cmd_line = buf.Leak();
     }
 };
 
@@ -361,11 +367,11 @@ public:
 
     void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
                         bool warnings, Span<const char *const> definitions,
-                        Span<const char *const> include_directories, const char *deps_filename,
-                        Allocator *alloc, BuildCommand *out_cmd) const override
+                        Span<const char *const> include_directories,
+                        Allocator *alloc, BuildNode *out_node) const override
     {
         MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr, definitions,
-                          include_directories, nullptr, deps_filename, alloc, out_cmd);
+                          include_directories, nullptr, alloc, out_node);
     }
 
     const char *GetPchObject(const char *pch_filename, Allocator *alloc) const override
@@ -377,7 +383,7 @@ public:
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
                            Span<const char *const> include_directories, const char *dest_filename,
-                           const char *deps_filename, Allocator *alloc, BuildCommand *out_cmd) const override
+                           Allocator *alloc, BuildNode *out_node) const override
     {
         HeapArray<char> buf(alloc);
 
@@ -391,7 +397,8 @@ public:
         } else {
             Fmt(&buf, " /Yc \"/Fp%1.pch\" \"/Fo%1.obj\"", src_filename);
         }
-        out_cmd->rsp_offset = buf.len;
+        Fmt(&buf, " /showIncludes");
+        out_node->rsp_offset = buf.len;
 
         // Build options
         Fmt(&buf, " /MT /EHsc %1", warnings ? "/W3 /wd4200" : "/w");
@@ -417,18 +424,17 @@ public:
         for (const char *include_directory: include_directories) {
             Fmt(&buf, " /I%1", include_directory);
         }
-        if (deps_filename) {
-            Fmt(&buf, " /showIncludes");
-            out_cmd->parse_cl_includes = true;
-        }
 
-        out_cmd->line = buf.Leak();
-        out_cmd->skip_lines = 1;
+        out_node->cmd_line = buf.Leak();
+        out_node->skip_lines = 1;
+
+        // Dependencies
+        out_node->deps_mode = BuildNode::DependencyMode::ShowIncludes;
     }
 
     void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
                          Span<const char *const> libraries, LinkType link_type,
-                         const char *dest_filename, Allocator *alloc, BuildCommand *out_cmd) const override
+                         const char *dest_filename, Allocator *alloc, BuildNode *out_node) const override
     {
         HeapArray<char> buf(alloc);
 
@@ -438,7 +444,7 @@ public:
             case LinkType::SharedLibrary: { Fmt(&buf, "link /nologo /DLL"); } break;
         }
         Fmt(&buf, " \"/OUT:%1\"", dest_filename);
-        out_cmd->rsp_offset = buf.len;
+        out_node->rsp_offset = buf.len;
 
         // Build mode
         switch (compile_mode) {
@@ -455,7 +461,7 @@ public:
             Fmt(&buf, " %1.lib", lib);
         }
 
-        out_cmd->line = buf.Leak();
+        out_node->cmd_line = buf.Leak();
     }
 };
 #endif
