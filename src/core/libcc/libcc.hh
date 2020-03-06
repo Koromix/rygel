@@ -3523,6 +3523,7 @@ public:
     void Abort();
 
     static bool IsTaskRunning();
+    static int GetWorkerIdx();
 
     friend class AsyncPool;
 };

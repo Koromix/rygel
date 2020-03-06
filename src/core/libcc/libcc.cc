@@ -2898,6 +2898,11 @@ bool Async::IsTaskRunning()
     return async_running_task;
 }
 
+int Async::GetWorkerIdx()
+{
+    return async_running_worker_idx;
+}
+
 AsyncPool::AsyncPool(int workers, bool leak)
 {
     // The first queue is for the main thread, whereas workers_state[0] is
