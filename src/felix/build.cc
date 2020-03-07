@@ -105,7 +105,7 @@ bool Builder::AddTarget(const Target &target)
                                            target.definitions, target.include_directories,
                                            &str_alloc, &node);
 
-            if (NeedsRebuild(node.dest_filename, node.cmd_line.ptr, src_filename)) {
+            if (NeedsRebuild(node.dest_filename, node, src_filename)) {
                 if (!CreatePrecompileHeader(src_filename, node.dest_filename))
                     return (const char *)nullptr;
 
@@ -181,8 +181,8 @@ bool Builder::AddTarget(const Target &target)
                                               pch_filename, target.definitions, target.include_directories,
                                               node.dest_filename, &str_alloc, &node);
 
-            if (pch_filename ? NeedsRebuild(node.dest_filename, node.cmd_line.ptr, {src.filename, pch_filename})
-                             : NeedsRebuild(node.dest_filename, node.cmd_line.ptr, src.filename)) {
+            if (pch_filename ? NeedsRebuild(node.dest_filename, node, {src.filename, pch_filename})
+                             : NeedsRebuild(node.dest_filename, node, src.filename)) {
                 if (!EnsureDirectoryExists(node.dest_filename))
                     return false;
 
@@ -212,7 +212,7 @@ bool Builder::AddTarget(const Target &target)
             MakePackCommand(target.pack_filenames, build.compile_mode,
                             target.pack_options, src_filename, &str_alloc, &node);
 
-            if (NeedsRebuild(src_filename, node.cmd_line.ptr, target.pack_filenames)) {
+            if (NeedsRebuild(src_filename, node, target.pack_filenames)) {
                 if (!EnsureDirectoryExists(src_filename))
                     return false;
 
@@ -287,7 +287,7 @@ bool Builder::AddTarget(const Target &target)
         build.compiler->MakeLinkCommand(obj_filenames, build.compile_mode, target.libraries,
                                         LinkType::Executable, target_filename, &str_alloc, &node);
 
-        if (NeedsRebuild(target_filename, node.cmd_line.ptr, obj_filenames)) {
+        if (NeedsRebuild(target_filename, node, obj_filenames)) {
             link_nodes.Append(node);
         }
 
@@ -549,7 +549,7 @@ bool Builder::RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, 
                     CacheEntry entry;
 
                     entry.filename = node.dest_filename;
-                    entry.cmd_line = node.cmd_line.ptr;
+                    entry.cmd_line = node.cmd_line.Take(0, node.cache_len);
 
                     entry.deps_offset = worker->dependencies.len;
                     switch (node.deps_mode) {
@@ -689,7 +689,7 @@ void Builder::LoadCache()
                 line.ptr[line.len] = 0;
 
                 if (line[0] == '!') {
-                    entry.cmd_line = line.ptr + 1;
+                    entry.cmd_line = line.Take(1, line.len - 1);
                 } else if (line[0] == '+') {
                     cache_dependencies.Append(line.ptr + 1);
                 } else {
@@ -706,14 +706,14 @@ void Builder::LoadCache()
     clear_guard.Disable();
 }
 
-bool Builder::NeedsRebuild(const char *dest_filename, const char *cmd_line,
+bool Builder::NeedsRebuild(const char *dest_filename, const BuildNode &node,
                            Span<const char *const> src_filenames)
 {
     const CacheEntry *entry = cache_map.Find(dest_filename);
 
     if (!entry)
         return true;
-    if (entry->cmd_line && !TestStr(cmd_line, entry->cmd_line))
+    if (!TestStr(node.cmd_line.Take(0, node.cache_len), entry->cmd_line))
         return true;
 
     if (!IsFileUpToDate(dest_filename, src_filenames))

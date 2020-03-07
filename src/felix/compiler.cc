@@ -37,6 +37,7 @@ void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile
         Fmt(&buf, " \"%1\"", pack_filename);
     }
 
+    out_node->cache_len = buf.len;
     out_node->cmd_line = buf.Leak();
 }
 
@@ -129,9 +130,6 @@ public:
             case CompileMode::Release: { Fmt(&buf, " -O2 -flto -DNDEBUG"); } break;
         }
         Fmt(&buf, warnings ? " -Wall" : " -Wno-everything");
-        if (LogUsesTerminalOutput()) {
-            Fmt(&buf, " -fdiagnostics-color=always");
-        }
 
         // Platform flags
 #if defined(_WIN32)
@@ -165,6 +163,10 @@ public:
             Fmt(&buf, " -I%1", include_directory);
         }
 
+        out_node->cache_len = buf.len;
+        if (LogUsesTerminalOutput()) {
+            Fmt(&buf, " -fdiagnostics-color=always");
+        }
         out_node->cmd_line = buf.Leak();
 
         // Dependencies
@@ -195,9 +197,6 @@ public:
         } else {
             Fmt(&buf, " -g");
         }
-        if (LogUsesTerminalOutput()) {
-            Fmt(&buf, " -fdiagnostics-color=always");
-        }
 
         // Platform flags
 #if defined(_WIN32)
@@ -216,6 +215,10 @@ public:
             Fmt(&buf, " -l%1", lib);
         }
 
+        out_node->cache_len = buf.len;
+        if (LogUsesTerminalOutput()) {
+            Fmt(&buf, " -fdiagnostics-color=always");
+        }
         out_node->cmd_line = buf.Leak();
     }
 };
@@ -272,9 +275,6 @@ public:
         } else {
             Fmt(&buf, " -w");
         }
-        if (LogUsesTerminalOutput()) {
-            Fmt(&buf, " -fdiagnostics-color=always");
-        }
 
         // Platform flags
 #if defined(_WIN32)
@@ -302,6 +302,10 @@ public:
             Fmt(&buf, " -I%1", include_directory);
         }
 
+        out_node->cache_len = buf.len;
+        if (LogUsesTerminalOutput()) {
+            Fmt(&buf, " -fdiagnostics-color=always");
+        }
         out_node->cmd_line = buf.Leak();
 
         // Dependencies
@@ -332,9 +336,6 @@ public:
         } else {
             Fmt(&buf, " -g");
         }
-        if (LogUsesTerminalOutput()) {
-            Fmt(&buf, " -fdiagnostics-color=always");
-        }
 
         // Platform flags and libraries
 #if defined(_WIN32)
@@ -356,6 +357,10 @@ public:
             Fmt(&buf, " -l%1", lib);
         }
 
+        out_node->cache_len = buf.len;
+        if (LogUsesTerminalOutput()) {
+            Fmt(&buf, " -fdiagnostics-color=always");
+        }
         out_node->cmd_line = buf.Leak();
     }
 };
@@ -425,6 +430,7 @@ public:
             Fmt(&buf, " /I%1", include_directory);
         }
 
+        out_node->cache_len = buf.len;
         out_node->cmd_line = buf.Leak();
         out_node->skip_lines = 1;
 
@@ -461,6 +467,7 @@ public:
             Fmt(&buf, " %1.lib", lib);
         }
 
+        out_node->cache_len = buf.len;
         out_node->cmd_line = buf.Leak();
     }
 };

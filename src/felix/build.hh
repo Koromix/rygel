@@ -31,7 +31,8 @@ struct BuildNode {
     const char *dest_filename;
 
     // Set by compiler methods
-    Span<const char> cmd_line;
+    Span<const char> cmd_line; // Must be C safe (NULL termination)
+    Size cache_len;
     Size rsp_offset;
     int skip_lines;
     DependencyMode deps_mode;
@@ -41,7 +42,7 @@ struct BuildNode {
 class Builder {
     struct CacheEntry {
         const char *filename;
-        const char *cmd_line;
+        Span<const char> cmd_line;
 
         Size deps_offset;
         Size deps_len;
@@ -91,7 +92,7 @@ private:
     void SaveCache();
     void LoadCache();
 
-    bool NeedsRebuild(const char *dest_filename, const char *cmd_line,
+    bool NeedsRebuild(const char *dest_filename, const BuildNode &node,
                       Span<const char *const> src_filenames);
     bool IsFileUpToDate(const char *dest_filename, Span<const char *const> src_filenames);
     int64_t GetFileModificationTime(const char *filename);
