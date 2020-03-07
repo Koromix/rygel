@@ -660,8 +660,7 @@ void Builder::LoadCache()
     if (ReadFile(cache_filename, Megabytes(64), CompressionType::Gzip, &cache) < 0)
         return;
     cache.len = TrimStrRight((Span<char>)cache, "\n").len;
-    cache.Append(0);
-    cache.Trim();
+    cache.SetCapacity(cache.len + 1);
 
     // Parse cache file
     {
@@ -719,7 +718,7 @@ bool Builder::NeedsRebuild(const char *dest_filename, const BuildNode &node,
     if (!IsFileUpToDate(dest_filename, src_filenames))
         return true;
 
-    Span<const char *> dep_filenames = MakeSpan(&cache_dependencies[entry->deps_offset], entry->deps_len);
+    Span<const char *> dep_filenames = MakeSpan(cache_dependencies.ptr + entry->deps_offset, entry->deps_len);
     if (!IsFileUpToDate(dest_filename, dep_filenames))
         return true;
 
