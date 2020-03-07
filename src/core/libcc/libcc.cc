@@ -969,24 +969,32 @@ void PrintFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *st)
     st->Write(buf);
 }
 
+static void WriteStdComplete(Span<const char> buf, FILE *fp)
+{
+    while (buf.len) {
+        Size write_len = (Size)fwrite(buf.ptr, 1, (size_t)buf.len, fp);
+        if (RG_UNLIKELY(!write_len))
+            break;
+        buf = buf.Take(write_len, buf.len - write_len);
+    }
+}
+
 void PrintFmt(const char *fmt, Span<const FmtArg> args, FILE *fp)
 {
-    // XXX: Deal properly with partial writes in PrintFmt(FILE) overload
-
     LocalArray<char, RG_FMT_STRING_PRINT_BUFFER_SIZE> buf;
     DoFormat(fmt, args, [&](Span<const char> frag) {
         if (frag.len > RG_LEN(buf.data) - buf.len) {
-            fwrite(buf.data, 1, (size_t)buf.len, fp);
+            WriteStdComplete(buf, fp);
             buf.len = 0;
         }
         if (frag.len >= RG_LEN(buf.data)) {
-            fwrite(frag.ptr, 1, (size_t)frag.len, fp);
+            WriteStdComplete(frag, fp);
         } else {
             memcpy(buf.data + buf.len, frag.ptr, (size_t)frag.len);
             buf.len += frag.len;
         }
     });
-    fwrite(buf.data, 1, (size_t)buf.len, fp);
+    WriteStdComplete(buf, fp);
 }
 
 void PrintLnFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *st)
