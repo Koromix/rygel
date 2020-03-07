@@ -16,31 +16,6 @@
 
 namespace RG {
 
-void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
-                     const char *pack_options, const char *dest_filename,
-                     Allocator *alloc, BuildNode *out_node)
-{
-    HeapArray<char> buf(alloc);
-
-    Fmt(&buf, "\"%1\" pack -O \"%2\"", GetApplicationExecutable(), dest_filename);
-
-    switch (compile_mode) {
-        case CompileMode::Debug: { Fmt(&buf, " -m SourceMap"); } break;
-        case CompileMode::Fast:
-        case CompileMode::Release: { Fmt(&buf, " -m RunTransform"); } break;
-    }
-
-    if (pack_options) {
-        Fmt(&buf, " %1", pack_options);
-    }
-    for (const char *pack_filename: pack_filenames) {
-        Fmt(&buf, " \"%1\"", pack_filename);
-    }
-
-    out_node->cache_len = buf.len;
-    out_node->cmd_line = buf.Leak();
-}
-
 static bool TestBinary(const char *name)
 {
     Span<const char> env = getenv("PATH");
@@ -487,5 +462,30 @@ static const Compiler *const CompilerTable[] = {
     &GnuCompiler
 };
 const Span<const Compiler *const> Compilers = CompilerTable;
+
+void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
+                     const char *pack_options, const char *dest_filename,
+                     Allocator *alloc, BuildNode *out_node)
+{
+    HeapArray<char> buf(alloc);
+
+    Fmt(&buf, "\"%1\" pack -O \"%2\"", GetApplicationExecutable(), dest_filename);
+
+    switch (compile_mode) {
+        case CompileMode::Debug: { Fmt(&buf, " -m SourceMap"); } break;
+        case CompileMode::Fast:
+        case CompileMode::Release: { Fmt(&buf, " -m RunTransform"); } break;
+    }
+
+    if (pack_options) {
+        Fmt(&buf, " %1", pack_options);
+    }
+    for (const char *pack_filename: pack_filenames) {
+        Fmt(&buf, " \"%1\"", pack_filename);
+    }
+
+    out_node->cache_len = buf.len;
+    out_node->cmd_line = buf.Leak();
+}
 
 }

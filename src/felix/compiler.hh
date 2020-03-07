@@ -10,11 +10,6 @@ namespace RG {
 
 struct BuildNode;
 
-enum class SourceType {
-    C,
-    CXX
-};
-
 enum class CompileMode {
     Debug,
     Fast,
@@ -26,14 +21,15 @@ static const char *const CompileModeNames[] = {
     "Release"
 };
 
+enum class SourceType {
+    C,
+    CXX
+};
+
 enum class LinkType {
     Executable,
     SharedLibrary
 };
-
-void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
-                     const char *pack_options, const char *dest_filename,
-                     Allocator *alloc, BuildNode *out_node);
 
 class Compiler {
     mutable bool test_init = false;
@@ -65,5 +61,9 @@ public:
 };
 
 extern const Span<const Compiler *const> Compilers;
+
+void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
+                     const char *pack_options, const char *dest_filename,
+                     Allocator *alloc, BuildNode *out_node);
 
 }
