@@ -100,6 +100,7 @@ Options:
 
     -j, --jobs <count>           Set maximum number of parallel jobs
                                  (default: %3)
+        --rebuild                Force rebuild all files
 
     -q, --quiet                  Hide felix progress statements
     -v, --verbose                Show detailed build commands
@@ -171,6 +172,8 @@ Supported compilation modes:)");
                     LogError("Jobs count cannot be < 1");
                     return 1;
                 }
+            } else if (opt.Test("--rebuild")) {
+                build.rebuild = true;
             } else if (opt.Test("-q", "--quiet")) {
                 quiet = true;
             } else if (opt.Test("-v", "--verbose")) {

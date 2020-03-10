@@ -89,7 +89,11 @@ Builder::Builder(const BuildSettings &build)
     RG_ASSERT(build.compiler);
 
     cache_filename = Fmt(&str_alloc, "%1%/cache%/FelixCache.bin", build.output_directory).ptr;
-    LoadCache();
+
+    // We don't need the cache if the user wants to rebuild everything anyway
+    if (!build.rebuild) {
+        LoadCache();
+    }
 }
 
 // Beware, failures can leave the Builder in a undefined state
@@ -150,7 +154,7 @@ bool Builder::AddTarget(const Target &target)
         const char *src_filename = Fmt(&str_alloc, "%1%/cache%/version.c", build.output_directory).ptr;
         version_obj_filename = Fmt(&str_alloc, "%1%2", src_filename, OBJECT_EXTENSION).ptr;
 
-        if (UpdateVersionSource(build.version_str, src_filename)) {
+        if (UpdateVersionSource(build.version_str, src_filename) || build.rebuild) {
             if (!IsFileUpToDate(version_obj_filename, src_filename)) {
                 BuildNode node = {};
 
@@ -735,6 +739,9 @@ bool Builder::NeedsRebuild(const char *dest_filename, const BuildNode &node,
 
 bool Builder::IsFileUpToDate(const char *dest_filename, Span<const char *const> src_filenames)
 {
+    if (build.rebuild)
+        return false;
+
     int64_t dest_time = GetFileModificationTime(dest_filename);
     if (dest_time < 0)
         return false;

@@ -18,6 +18,7 @@ struct BuildSettings {
     // Optional
     CompileMode compile_mode = CompileMode::Debug;
     const char *version_str = "(unknown version)";
+    bool rebuild = false;
 };
 
 struct BuildNode {
