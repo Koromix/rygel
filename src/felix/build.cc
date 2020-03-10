@@ -7,6 +7,16 @@
 
 namespace RG {
 
+#ifdef _WIN32
+    #define OBJECT_EXTENSION ".obj"
+    #define EXECUTABLE_EXTENSION ".exe"
+    #define SHARED_LIBRARY_EXTENSION ".dll"
+#else
+    #define OBJECT_EXTENSION ".o"
+    #define EXECUTABLE_EXTENSION ""
+    #define SHARED_LIBRARY_EXTENSION ".so"
+#endif
+
 static const char *BuildObjectPath(const char *src_filename, const char *output_directory,
                                    const char *suffix, Allocator *alloc)
 {
@@ -138,7 +148,7 @@ bool Builder::AddTarget(const Target &target)
     // Build information
     if (!version_init) {
         const char *src_filename = Fmt(&str_alloc, "%1%/cache%/version.c", build.output_directory).ptr;
-        version_obj_filename = Fmt(&str_alloc, "%1.o", src_filename).ptr;
+        version_obj_filename = Fmt(&str_alloc, "%1%2", src_filename, OBJECT_EXTENSION).ptr;
 
         if (UpdateVersionSource(build.version_str, src_filename)) {
             if (!IsFileUpToDate(version_obj_filename, src_filename)) {
@@ -168,7 +178,8 @@ bool Builder::AddTarget(const Target &target)
         BuildNode node = {};
 
         node.text = Fmt(&str_alloc, "Build %1", src.filename).ptr;
-        node.dest_filename = BuildObjectPath(src.filename, build.output_directory, ".o", &str_alloc);
+        node.dest_filename = BuildObjectPath(src.filename, build.output_directory,
+                                             OBJECT_EXTENSION, &str_alloc);
 
         if (!output_set.Find(node.dest_filename)) {
             const char *pch_filename = nullptr;
@@ -200,7 +211,7 @@ bool Builder::AddTarget(const Target &target)
     if (target.pack_filenames.len) {
         const char *src_filename = Fmt(&str_alloc, "%1%/cache%/%2_assets.c",
                                        build.output_directory, target.name).ptr;
-        const char *obj_filename = Fmt(&str_alloc, "%1.o", src_filename).ptr;
+        const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, OBJECT_EXTENSION).ptr;
 
         // Make C file
         {
@@ -275,11 +286,8 @@ bool Builder::AddTarget(const Target &target)
     if (target.type == TargetType::Executable) {
         BuildNode node = {};
 
-#ifdef _WIN32
-        const char *target_filename = Fmt(&str_alloc, "%1%/%2.exe", build.output_directory, target.name).ptr;
-#else
-        const char *target_filename = Fmt(&str_alloc, "%1%/%2", build.output_directory, target.name).ptr;
-#endif
+        const char *target_filename = Fmt(&str_alloc, "%1%/%2%3", build.output_directory,
+                                          target.name, EXECUTABLE_EXTENSION).ptr;
 
         node.text = Fmt(&str_alloc, "Link %1", SplitStrReverseAny(target_filename, RG_PATH_SEPARATORS)).ptr;
         node.dest_filename = target_filename;
