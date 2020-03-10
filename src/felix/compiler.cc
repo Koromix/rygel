@@ -21,11 +21,7 @@ static bool TestBinary(const char *name)
     Span<const char> env = getenv("PATH");
 
     while (env.len) {
-#ifdef _WIN32
-        Span<const char> path = SplitStr(env, ';', &env);
-#else
-        Span<const char> path = SplitStr(env, ':', &env);
-#endif
+        Span<const char> path = SplitStr(env, RG_PATH_DELIMITER, &env);
 
         LocalArray<char, 4096> buf;
         buf.len = Fmt(buf.data, "%1%/%2", path, name).len;

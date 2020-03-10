@@ -3367,9 +3367,11 @@ overflow:
 
 #ifdef _WIN32
     #define RG_PATH_SEPARATORS "\\/"
+    #define RG_PATH_DELIMITER ';'
     #define RG_SHARED_LIBRARY_EXTENSION ".dll"
 #else
     #define RG_PATH_SEPARATORS "/"
+    #define RG_PATH_DELIMITER ':'
     #define RG_SHARED_LIBRARY_EXTENSION ".so"
 #endif
 
