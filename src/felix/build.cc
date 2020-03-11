@@ -106,47 +106,50 @@ bool Builder::AddTarget(const Target &target)
     // Precompiled headers
     const char *c_pch_filename = nullptr;
     const char *cxx_pch_filename = nullptr;
-    const auto add_pch_object = [&](const char *src_filename, SourceType src_type,
-                                    const char *pch_ext) {
-        BuildNode node = {};
+    if (build.pch) {
+        const auto add_pch_object = [&](const char *src_filename, SourceType src_type,
+                                        const char *pch_ext) {
+            BuildNode node = {};
 
-        node.text = Fmt(&str_alloc, "Precompile %1", src_filename).ptr;
-        node.dest_filename = BuildObjectPath(src_filename, build.output_directory,
-                                             pch_ext, &str_alloc);
+            node.text = Fmt(&str_alloc, "Precompile %1", src_filename).ptr;
+            node.dest_filename = BuildObjectPath(src_filename, build.output_directory,
+                                                 pch_ext, &str_alloc);
 
-        if (!output_set.Find(node.dest_filename)) {
-            build.compiler->MakePchCommand(node.dest_filename, src_type, build.compile_mode, warnings,
-                                           target.definitions, target.include_directories,
-                                           &str_alloc, &node);
+            if (!output_set.Find(node.dest_filename)) {
+                build.compiler->MakePchCommand(node.dest_filename, src_type, build.compile_mode, warnings,
+                                               target.definitions, target.include_directories,
+                                               &str_alloc, &node);
 
-            if (NeedsRebuild(node.dest_filename, node, src_filename)) {
-                if (!CreatePrecompileHeader(src_filename, node.dest_filename))
-                    return (const char *)nullptr;
+                if (NeedsRebuild(node.dest_filename, node, src_filename)) {
+                    if (!CreatePrecompileHeader(src_filename, node.dest_filename))
+                        return (const char *)nullptr;
 
-                prep_nodes.Append(node);
-                mtime_map.Set(node.dest_filename, -1);
+                    prep_nodes.Append(node);
+                    mtime_map.Set(node.dest_filename, -1);
+                }
+
+                output_set.Append(node.dest_filename);
             }
 
-            output_set.Append(node.dest_filename);
-        }
+            // Some compilers (such as MSVC) also build a PCH object file that needs to be linked
+            const char *obj_filename = build.compiler->GetPchObject(node.dest_filename, &str_alloc);
+            if (obj_filename) {
+                obj_filenames.Append(obj_filename);
+            }
 
-        // Some compilers (such as MSVC) also build a PCH object file that needs to be linked
-        const char *obj_filename = build.compiler->GetPchObject(node.dest_filename, &str_alloc);
-        if (obj_filename) {
-            obj_filenames.Append(obj_filename);
-        }
+            return node.dest_filename;
+        };
 
-        return node.dest_filename;
-    };
-    if (target.c_pch_filename) {
-        c_pch_filename = add_pch_object(target.c_pch_filename, SourceType::C, ".c");
-        if (!c_pch_filename)
-            return false;
-    }
-    if (target.cxx_pch_filename) {
-        cxx_pch_filename = add_pch_object(target.cxx_pch_filename, SourceType::CXX, ".cc");
-        if (!cxx_pch_filename)
-            return false;
+        if (target.c_pch_filename) {
+            c_pch_filename = add_pch_object(target.c_pch_filename, SourceType::C, ".c");
+            if (!c_pch_filename)
+                return false;
+        }
+        if (target.cxx_pch_filename) {
+            cxx_pch_filename = add_pch_object(target.cxx_pch_filename, SourceType::CXX, ".cc");
+            if (!cxx_pch_filename)
+                return false;
+        }
     }
 
     // Build information

@@ -16,6 +16,7 @@ struct BuildSettings {
     const Compiler *compiler = nullptr;
 
     // Optional
+    bool pch = true;
     CompileMode compile_mode = CompileMode::Debug;
     const char *version_str = "(unknown version)";
     bool rebuild = false;

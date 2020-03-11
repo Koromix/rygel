@@ -70,7 +70,6 @@ int RunBuild(Span<const char *> arguments)
     HeapArray<const char *> target_names;
     const char *config_filename = nullptr;
     BuildSettings build = {};
-    bool enable_pch = true;
     int jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_WORKERS + 1);
     bool quiet = false;
     bool verbose = false;
@@ -164,7 +163,7 @@ Supported compilation modes:)");
                     return 1;
                 }
             } else if (opt.Test("--no_pch")) {
-                enable_pch = false;
+                build.pch = false;
             } else if (opt.Test("-j", "--jobs", OptionType::Value)) {
                 if (!ParseDec(opt.current_value, &jobs))
                     return 1;
@@ -303,14 +302,6 @@ Supported compilation modes:)");
     if (run_target && run_target->type != TargetType::Executable) {
         LogError("Cannot run non-executable target '%1'", run_target->name);
         return 1;
-    }
-
-    // Disable PCH?
-    if (!enable_pch) {
-        for (Target &target: target_set.targets) {
-            target.c_pch_filename = nullptr;
-            target.cxx_pch_filename = nullptr;
-        }
     }
 
     // We're ready to output stuff
