@@ -120,6 +120,8 @@ my $CLIENTIP="127.0.0.1"; # address which curl uses for incoming connections
 my $CLIENT6IP="[::1]";    # address which curl uses for incoming connections
 
 my $base = 8990; # base port number
+my $minport;     # minimum used port number
+my $maxport;     # maximum used port number
 
 my $HTTPPORT;            # HTTP server port
 my $HTTP6PORT;           # HTTP IPv6 server port
@@ -151,6 +153,8 @@ my $DICTPORT;            # DICT server port
 my $SMBPORT;             # SMB server port
 my $SMBSPORT;            # SMBS server port
 my $NEGTELNETPORT;       # TELNET server port with negotiation
+
+my $SSHSRVMD5;           # MD5 of ssh server public key
 
 my $srcdir = $ENV{'srcdir'} || '.';
 my $CURL="../src/curl".exe_ext('TOOL'); # what curl executable to run on the tests
@@ -253,7 +257,6 @@ my $has_openssl;    # built with a lib using an OpenSSL-like API
 my $has_gnutls;     # built with GnuTLS
 my $has_nss;        # built with NSS
 my $has_wolfssl;    # built with wolfSSL
-my $has_polarssl;   # built with polarssl
 my $has_winssl;     # built with WinSSL    (Secure Channel aka Schannel)
 my $has_darwinssl;  # built with DarwinSSL (Secure Transport)
 my $has_boringssl;  # built with BoringSSL
@@ -482,7 +485,7 @@ sub startnew {
             logmsg "startnew: failed to write fake $pidfile with pid=$child\n";
         }
         # could/should do a while connect fails sleep a bit and loop
-        sleep $timeout;
+        portable_sleep($timeout);
         if (checkdied($child)) {
             logmsg "startnew: child process has failed to start\n" if($verbose);
             return (-1,-1);
@@ -2140,6 +2143,18 @@ sub runsshserver {
         return (0,0);
     }
 
+    my $hstpubmd5f = "curl_host_rsa_key.pub_md5";
+    if(!open(PUBMD5FILE, "<", $hstpubmd5f) ||
+       (read(PUBMD5FILE, $SSHSRVMD5, 32) != 32) ||
+       !close(PUBMD5FILE) ||
+       ($SSHSRVMD5 !~ /^[a-f0-9]{32}$/i))
+    {
+        my $msg = "Fatal: $srvrname pubkey md5 missing : \"$hstpubmd5f\" : $!";
+        logmsg "$msg\n";
+        stopservers($verbose);
+        die $msg;
+    }
+
     if($verbose) {
         logmsg "RUN: $srvrname server is now running PID $pid2\n";
     }
@@ -2183,7 +2198,7 @@ sub runsocksserver {
     $logfile = server_logfilename($LOGDIR, $proto, $ipvnum, $idnum);
 
     # start our socks server, get commands from the FTP cmd file
-    my $cmd="server/socksd".
+    my $cmd="server/socksd".exe_ext('SRV').
         " --port $port ".
         " --pidfile $pidfile".
         " --backend $HOSTIP".
@@ -2697,7 +2712,7 @@ sub checksystem {
     @version = <VERSOUT>;
     close(VERSOUT);
 
-    open(DISABLED, "server/disabled|");
+    open(DISABLED, "server/disabled".exe_ext('TOOL')."|");
     @disabled = <DISABLED>;
     close(DISABLED);
 
@@ -2743,10 +2758,6 @@ sub checksystem {
            }
            elsif ($libcurl =~ /wolfssl/i) {
                $has_wolfssl=1;
-               $has_sslpinning=1;
-           }
-           elsif ($libcurl =~ /polarssl/i) {
-               $has_polarssl=1;
                $has_sslpinning=1;
            }
            elsif ($libcurl =~ /securetransport/i) {
@@ -3022,6 +3033,7 @@ sub checksystem {
                    $run_event_based?"event-based ":"");
     logmsg sprintf("%s\n", $libtool?"Libtool ":"");
     logmsg ("* Seed: $randseed\n");
+    logmsg ("* Port range: $minport-$maxport\n");
 
     if($verbose) {
         logmsg "* Ports:\n";
@@ -3162,6 +3174,16 @@ sub subVariables {
   $$thing =~ s/%FILE_PWD/$file_pwd/g;
   $$thing =~ s/%SRCDIR/$srcdir/g;
   $$thing =~ s/%USER/$USER/g;
+
+  if($$thing =~ /%SSHSRVMD5/) {
+      if(!$SSHSRVMD5) {
+          my $msg = "Fatal: Missing SSH server pubkey MD5. Is server running?";
+          logmsg "$msg\n";
+          stopservers($verbose);
+          die $msg;
+      }
+      $$thing =~ s/%SSHSRVMD5/$SSHSRVMD5/g;
+  }
 
   # The purpose of FTPTIME2 and FTPTIME3 is to provide times that can be
   # used for time-out tests and that would work on most hosts as these
@@ -3823,7 +3845,7 @@ sub singletest {
     if($serverlogslocktimeout) {
         my $lockretry = $serverlogslocktimeout * 20;
         while((-f $SERVERLOGS_LOCK) && $lockretry--) {
-            select(undef, undef, undef, 0.05);
+            portable_sleep(0.05);
         }
         if(($lockretry < 0) &&
            ($serverlogslocktimeout >= $defserverlogslocktimeout)) {
@@ -3840,7 +3862,7 @@ sub singletest {
     # based tests might need a small delay once that the client command has
     # run to avoid false test failures.
 
-    sleep($postcommanddelay) if($postcommanddelay);
+    portable_sleep($postcommanddelay) if($postcommanddelay);
 
     # timestamp removal of server logs advisor read lock
     $timesrvrlog{$testnum} = Time::HiRes::time();
@@ -5305,6 +5327,8 @@ if ($gdbthis) {
     }
 }
 
+$minport         = $base; # original base port number
+
 $HTTPPORT        = $base++; # HTTP server port
 $HTTPSPORT       = $base++; # HTTPS (stunnel) server port
 $FTPPORT         = $base++; # FTP server port
@@ -5335,6 +5359,8 @@ $SMBPORT         = $base++; # SMB port
 $SMBSPORT        = $base++; # SMBS port
 $NEGTELNETPORT   = $base++; # TELNET port with negotiation
 $HTTPUNIXPATH    = 'http.sock'; # HTTP server Unix domain socket path
+
+$maxport         = $base-1; # updated base port number
 
 #######################################################################
 # clear and create logging directory:
@@ -5588,7 +5614,13 @@ foreach $testnum (@at) {
     $total++; # number of tests we've run
 
     if($error>0) {
-        $failed.= "$testnum ";
+        if($error==2) {
+            # ignored test failures are wrapped in ()
+            $failed.= "($testnum) ";
+        }
+        else {
+            $failed.= "$testnum ";
+        }
         if($postmortem) {
             # display all files in log/ in a nice way
             displaylogs($testnum);

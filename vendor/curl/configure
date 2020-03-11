@@ -2050,9 +2050,9 @@ Optional Packages:
   --with-ca-path=DIRECTORY
                           Path to a directory containing CA certificates
                           stored individually, with their filenames in a hash
-                          format. This option can be used with OpenSSL, GnuTLS
-                          and PolarSSL backends. Refer to OpenSSL c_rehash for
-                          details. (example: /etc/certificates)
+                          format. This option can be used with the OpenSSL,
+                          GnuTLS and mbedTLS backends. Refer to OpenSSL
+                          c_rehash for details. (example: /etc/certificates)
   --without-ca-path       Don't use a default CA path
   --with-ca-fallback      Use the built in CA store of the SSL library
   --without-ca-fallback   Don't use the built in CA store of the SSL library
@@ -25519,8 +25519,8 @@ fi
         ca="$want_ca"
     capath="no"
   elif test "x$want_capath" != "xno" -a "x$want_capath" != "xunset"; then
-        if test "x$OPENSSL_ENABLED" != "x1" -a "x$GNUTLS_ENABLED" != "x1" -a "x$POLARSSL_ENABLED" != "x1"; then
-      as_fn_error $? "--with-ca-path only works with OpenSSL, GnuTLS or PolarSSL" "$LINENO" 5
+        if test "x$OPENSSL_ENABLED" != "x1" -a "x$GNUTLS_ENABLED" != "x1" -a "x$MBEDTLS_ENABLED" != "x1"; then
+      as_fn_error $? "--with-ca-path only works with OpenSSL, GnuTLS or mbedTLS" "$LINENO" 5
     fi
     capath="$want_capath"
     ca="no"
