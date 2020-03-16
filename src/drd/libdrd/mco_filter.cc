@@ -632,7 +632,8 @@ static WrenForeignMethodFn BindProcedureArrayMethod(const char *signature)
 
     if (false) {}
 
-    // XXX: Check for duplicates before add? What counts as a duplicate?
+    // Unlike diagnoses, we don't try to prevent duplicates. You can use a code
+    // twice if the same procedure is done twice, even the same day!
     ELSE_IF_METHOD("add(_,_,_,_,_)", [](WrenVM *vm) {
         ProxyArray<mco_ProcedureRealisation> &arr =
             *(ProxyArray<mco_ProcedureRealisation> *)wrenGetSlotForeign(vm, 0);
