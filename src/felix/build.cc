@@ -476,7 +476,7 @@ bool Builder::RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, 
                 }
 
                 if (success)
-                    break;
+                    return;
 
                 WaitForDelay(150);
             }
