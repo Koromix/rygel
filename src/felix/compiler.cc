@@ -91,7 +91,7 @@ public:
                 case SourceType::CXX: { Fmt(&buf, " -x c++-header"); } break;
             }
         }
-        Fmt(&buf, " -MMD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
+        Fmt(&buf, " -MD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
         out_node->rsp_offset = buf.len;
 
         // Build options
@@ -229,7 +229,7 @@ public:
                 case SourceType::CXX: { Fmt(&buf, " -x c++-header"); } break;
             }
         }
-        Fmt(&buf, " -MMD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
+        Fmt(&buf, " -MD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
         out_node->rsp_offset = buf.len;
 
         // Build options
