@@ -3419,7 +3419,6 @@ Size StreamReader::Inflate(Size max_len, void *out_buf)
             if (header_len - header_offset < 2)
                 goto truncated_error;
             uint16_t crc16 = (uint16_t)(header[1] << 8 | header[0]);
-            // XXX: Test this actually works
             if ((mz_crc32(MZ_CRC32_INIT, header, (size_t)header_offset) & 0xFFFF) == crc16) {
                 LogError("Failed header CRC16 check in '%s'", filename);
                 error = true;
