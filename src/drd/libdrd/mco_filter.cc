@@ -167,7 +167,6 @@ struct ResultObject {
 };
 
 class mco_WrenRunner {
-    // XXX: Make sure all deallocations are disabled
     BlockAllocator vm_alloc { Kibibytes(256) };
 
 public:
@@ -1084,10 +1083,12 @@ bool mco_WrenRunner::Init(const char *expression, Size max_results)
         wrenInitConfiguration(&config);
 
         // Use fast bump allocator and avoid GC as much as possible for
-        // maximum performance.
+        // maximum performance. Release everything at once at the end!
         config.reallocateFn = [](void *mem, size_t old_size, size_t new_size) {
             RG_ASSERT(old_size <= RG_SIZE_MAX && new_size <= RG_SIZE_MAX);
-            Allocator::Resize(thread_alloc, &mem, (Size)old_size, (Size)new_size);
+            if (new_size > old_size) {
+                Allocator::Resize(thread_alloc, &mem, (Size)old_size, (Size)new_size);
+            }
             return mem;
         };
 
