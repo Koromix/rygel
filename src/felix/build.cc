@@ -10,9 +10,11 @@ namespace RG {
 #ifdef _WIN32
     #define OBJECT_EXTENSION ".obj"
     #define EXECUTABLE_EXTENSION ".exe"
+    #define MAX_COMMAND_LEN 4096
 #else
     #define OBJECT_EXTENSION ".o"
     #define EXECUTABLE_EXTENSION ""
+    #define MAX_COMMAND_LEN 32768
 #endif
 
 static const char *BuildObjectPath(const char *src_filename, const char *output_directory,
@@ -461,8 +463,8 @@ bool Builder::RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, 
 
     RG_DEFER {
 #ifdef _WIN32
-        // Windows has a tendency to hold file locks a bit longer than needed... Try to
-        // delete files several times silently unless it's the last try.
+        // Windows has a tendency to hold file locks a bit longer than needed...
+        // Try to delete files several times silently unless it's the last try.
         if (clear_filenames.len) {
             PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
             RG_DEFER { PopLogFilter(); };
@@ -486,9 +488,7 @@ bool Builder::RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, 
         }
     };
 
-#ifdef _WIN32
-    // Windows (especially cmd) does not like excessively long command lines,
-    // so we need to use response files in this case.
+    // Replace long command lines with response files if the command supports it
     HashMap<const void *, const char *> rsp_map;
     for (const BuildNode &node: nodes) {
         if (node.cmd_line.len > 4096 && node.rsp_offset > 0) {
@@ -514,18 +514,12 @@ bool Builder::RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, 
             clear_filenames.Append(rsp_filename);
         }
     }
-#endif
 
     bool interrupted = false;
     for (const BuildNode &node: nodes) {
         async->Run([&]() {
             WorkerState *worker = &workers[Async::GetWorkerIdx()];
-
-#ifdef _WIN32
             const char *cmd_line = rsp_map.FindValue(&node, node.cmd_line.ptr);
-#else
-            const char *cmd_line = node.cmd_line.ptr;
-#endif
 
             // The lock is needed to guarantee ordering of progress counter. Atomics
             // do not help much because the LogInfo() calls need to be protected too.
