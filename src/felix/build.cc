@@ -10,11 +10,9 @@ namespace RG {
 #ifdef _WIN32
     #define OBJECT_EXTENSION ".obj"
     #define EXECUTABLE_EXTENSION ".exe"
-    #define SHARED_LIBRARY_EXTENSION ".dll"
 #else
     #define OBJECT_EXTENSION ".o"
     #define EXECUTABLE_EXTENSION ""
-    #define SHARED_LIBRARY_EXTENSION ".so"
 #endif
 
 static const char *BuildObjectPath(const char *src_filename, const char *output_directory,
@@ -262,13 +260,8 @@ bool Builder::AddTarget(const Target &target)
         }
 
         if (module) {
-#ifdef _WIN32
-            const char *module_filename = Fmt(&str_alloc, "%1%/%2_assets.dll",
-                                              build.output_directory, target.name).ptr;
-#else
-            const char *module_filename = Fmt(&str_alloc, "%1%/%2_assets.so",
-                                              build.output_directory, target.name).ptr;
-#endif
+            const char *module_filename = Fmt(&str_alloc, "%1%/%2_assets%3", build.output_directory,
+                                              target.name, RG_SHARED_LIBRARY_EXTENSION).ptr;
 
             if (!IsFileUpToDate(module_filename, obj_filename)) {
                 BuildNode node = {};
