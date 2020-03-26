@@ -23,10 +23,14 @@ R"(// This Source Code Form is subject to the terms of the Mozilla Public
     typedef int32_t Size;
 #endif
 
-#ifdef _WIN32
-    #define EXPORT __declspec(dllexport)
+#ifdef EXPORT
+    #ifdef _WIN32
+        #define EXPORT_SYMBOL __declspec(dllexport)
+    #else
+        #define EXPORT_SYMBOL __attribute__((visibility("default")))
+    #endif
 #else
-    #define EXPORT __attribute__((visibility("default")))
+    #define EXPORT_SYMBOL
 #endif
 
 typedef struct Span {
@@ -355,7 +359,7 @@ static AssetInfo assets[%1] = {)", blobs.len);
 
         PrintLn(&st, R"(};
 
-EXPORT extern const Span pack_assets;
+EXPORT_SYMBOL extern const Span pack_assets;
 const Span pack_assets = {assets, %1};
 )", blobs.len);
 
@@ -363,12 +367,12 @@ const Span pack_assets = {assets, %1};
             const BlobInfo &blob = blobs[i];
 
             PrintLn(&st,
-R"(EXPORT extern const AssetInfo *const pack_asset_%1;
+R"(EXPORT_SYMBOL extern const AssetInfo *const pack_asset_%1;
 const AssetInfo *const pack_asset_%1 = &assets[%2];)", blob.var_name, i);
         }
     } else {
         PrintLn(&st, R"(
-EXPORT extern const Span pack_assets;
+EXPORT_SYMBOL extern const Span pack_assets;
 const Span pack_assets = {0, 0};)");
     }
 

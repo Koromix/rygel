@@ -10,12 +10,6 @@
     typedef int32_t Size;
 #endif
 
-#ifdef _WIN32
-    #define EXPORT __declspec(dllexport)
-#else
-    #define EXPORT __attribute__((visibility("default")))
-#endif
-
 typedef struct Span {
     const void *ptr;
     Size len;
@@ -38,8 +32,8 @@ static AssetInfo assets[1] = {
     {"Roboto-Medium.ttf", 0, {raw_data + 0, 162588}, 0},
 };
 
-EXPORT extern const Span pack_assets;
+extern const Span pack_assets;
 const Span pack_assets = {assets, 1};
 
-EXPORT extern const AssetInfo *const pack_asset_Roboto_Medium_ttf;
+extern const AssetInfo *const pack_asset_Roboto_Medium_ttf;
 const AssetInfo *const pack_asset_Roboto_Medium_ttf = &assets[0];

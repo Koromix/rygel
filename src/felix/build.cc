@@ -239,21 +239,6 @@ bool Builder::AddTarget(const Target &target)
             }
         }
 
-        // Build object file
-        if (!IsFileUpToDate(obj_filename, src_filename)) {
-            BuildNode node = {};
-
-            node.text = Fmt(&str_alloc, "Build %1 assets", target.name).ptr;
-            node.dest_filename = obj_filename;
-
-            build.compiler->MakeObjectCommand(src_filename, SourceType::C, CompileMode::Debug,
-                                              false, nullptr, {}, {}, obj_filename,
-                                              &str_alloc, &node);
-
-            obj_nodes.Append(node);
-            mtime_map.Set(obj_filename, -1);
-        }
-
         bool module = false;
         switch (target.pack_link_type) {
             case PackLinkType::Static: { module = false; } break;
@@ -261,6 +246,28 @@ bool Builder::AddTarget(const Target &target)
             case PackLinkType::ModuleIfDebug: { module = (build.compile_mode == CompileMode::Debug); } break;
         }
 
+        // Build object file
+        if (!IsFileUpToDate(obj_filename, src_filename)) {
+            BuildNode node = {};
+
+            node.text = Fmt(&str_alloc, "Build %1 assets", target.name).ptr;
+            node.dest_filename = obj_filename;
+
+            if (module) {
+                build.compiler->MakeObjectCommand(src_filename, SourceType::C, CompileMode::Debug,
+                                                  false, nullptr, {"EXPORT"}, {}, obj_filename,
+                                                  &str_alloc, &node);
+            } else {
+                build.compiler->MakeObjectCommand(src_filename, SourceType::C, CompileMode::Debug,
+                                                  false, nullptr, {}, {}, obj_filename,
+                                                  &str_alloc, &node);
+            }
+
+            obj_nodes.Append(node);
+            mtime_map.Set(obj_filename, -1);
+        }
+
+        // Build module if needed
         if (module) {
             const char *module_filename = Fmt(&str_alloc, "%1%/%2_assets%3", build.output_directory,
                                               target.name, RG_SHARED_LIBRARY_EXTENSION).ptr;
