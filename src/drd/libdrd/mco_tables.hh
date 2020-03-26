@@ -343,9 +343,9 @@ public:
 
     BlockAllocator str_alloc;
 
-    const mco_TableIndex *FindIndex(Date date = {}) const;
-    mco_TableIndex *FindIndex(Date date = {})
-        { return (mco_TableIndex *)((const mco_TableSet *)this)->FindIndex(date); }
+    const mco_TableIndex *FindIndex(Date date = {}, bool valid_only = true) const;
+    mco_TableIndex *FindIndex(Date date = {}, bool valid_only = true)
+        { return (mco_TableIndex *)((const mco_TableSet *)this)->FindIndex(date, valid_only); }
 };
 
 class mco_TableSetBuilder {

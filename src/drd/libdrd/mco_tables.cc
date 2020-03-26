@@ -1290,13 +1290,17 @@ static bool ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &
     return true;
 }
 
-const mco_TableIndex *mco_TableSet::FindIndex(Date date) const
+const mco_TableIndex *mco_TableSet::FindIndex(Date date, bool valid_only) const
 {
-    for (Size i = indexes.len; i-- > 0;) {
-        if (indexes[i].valid && (!date.value ||
-                                 (date >= indexes[i].limit_dates[0] && date < indexes[i].limit_dates[1])))
-            return &indexes[i];
+    for (Size i = indexes.len - 1; i >= 0; i--) {
+        if (date.value && (date < indexes[i].limit_dates[0] || date >= indexes[i].limit_dates[1]))
+            continue;
+        if (valid_only && !indexes[i].valid)
+            continue;
+
+        return &indexes[i];
     }
+
     return nullptr;
 }
 
@@ -1434,70 +1438,61 @@ bool mco_TableSetBuilder::Finish(mco_TableSet *out_set)
                         table_info1.build_date - table_info2.build_date) < 0;
     });
 
-    int failures = 0;
-    {
-        TableLoadInfo *active_tables[RG_LEN(mco_TableTypeNames)];
-        Size active_count = 0;
+    TableLoadInfo *active_tables[RG_LEN(mco_TableTypeNames)];
+    Size active_count = 0;
 
-        TableLoadInfo dummy_loads[RG_LEN(mco_TableTypeNames)];
-        for (Size i = 0; i < RG_LEN(active_tables); i++) {
-            dummy_loads[i].table_idx = -1;
-            dummy_loads[i].prev_index_idx = -1;
-            active_tables[i] = &dummy_loads[i];
-        }
-
-        Date start_date = {};
-        Date end_date = {};
-        for (TableLoadInfo &load_info: table_loads) {
-            const mco_TableInfo &table_info = set.tables[load_info.table_idx];
-
-            while (end_date.value && table_info.limit_dates[0] >= end_date) {
-                failures += !CommitIndex(start_date, end_date, active_tables);
-
-                start_date = {};
-                Date next_end_date = {};
-                for (Size i = 0; i < RG_LEN(active_tables); i++) {
-                    if (active_tables[i]->table_idx < 0)
-                        continue;
-
-                    const mco_TableInfo &active_info = set.tables[active_tables[i]->table_idx];
-
-                    if (active_info.limit_dates[1] == end_date) {
-                        active_tables[i] = &dummy_loads[i];
-                        active_count--;
-                    } else if (!next_end_date.value || active_info.limit_dates[1] < next_end_date) {
-                        next_end_date = active_info.limit_dates[1];
-                    }
-                }
-
-                start_date = table_info.limit_dates[0];
-                end_date = next_end_date;
-            }
-
-            if (start_date.value) {
-                if (table_info.limit_dates[0] > start_date) {
-                    failures += !CommitIndex(start_date, table_info.limit_dates[0], active_tables);
-                    start_date = table_info.limit_dates[0];
-                }
-            } else {
-                start_date = table_info.limit_dates[0];
-            }
-            if (!end_date.value || table_info.limit_dates[1] < end_date) {
-                end_date = table_info.limit_dates[1];
-            }
-
-            active_tables[(int)table_info.type] = &load_info;
-            active_count++;
-        }
-
-        if (active_count) {
-            failures += !CommitIndex(start_date, end_date, active_tables);
-        }
+    TableLoadInfo dummy_loads[RG_LEN(mco_TableTypeNames)];
+    for (Size i = 0; i < RG_LEN(active_tables); i++) {
+        dummy_loads[i].table_idx = -1;
+        dummy_loads[i].prev_index_idx = -1;
+        active_tables[i] = &dummy_loads[i];
     }
 
-    if (failures && failures == set.indexes.len) {
-        LogError("All classifier indexes are invalid");
-        return false;
+    Date start_date = {};
+    Date end_date = {};
+    for (TableLoadInfo &load_info: table_loads) {
+        const mco_TableInfo &table_info = set.tables[load_info.table_idx];
+
+        while (end_date.value && table_info.limit_dates[0] >= end_date) {
+            CommitIndex(start_date, end_date, active_tables);
+
+            start_date = {};
+            Date next_end_date = {};
+            for (Size i = 0; i < RG_LEN(active_tables); i++) {
+                if (active_tables[i]->table_idx < 0)
+                    continue;
+
+                const mco_TableInfo &active_info = set.tables[active_tables[i]->table_idx];
+
+                if (active_info.limit_dates[1] == end_date) {
+                    active_tables[i] = &dummy_loads[i];
+                    active_count--;
+                } else if (!next_end_date.value || active_info.limit_dates[1] < next_end_date) {
+                    next_end_date = active_info.limit_dates[1];
+                }
+            }
+
+            start_date = table_info.limit_dates[0];
+            end_date = next_end_date;
+        }
+
+        if (start_date.value) {
+            if (table_info.limit_dates[0] > start_date) {
+                CommitIndex(start_date, table_info.limit_dates[0], active_tables);
+                start_date = table_info.limit_dates[0];
+            }
+        } else {
+            start_date = table_info.limit_dates[0];
+        }
+        if (!end_date.value || table_info.limit_dates[1] < end_date) {
+            end_date = table_info.limit_dates[1];
+        }
+
+        active_tables[(int)table_info.type] = &load_info;
+        active_count++;
+    }
+    if (active_count) {
+        CommitIndex(start_date, end_date, active_tables);
     }
 
     SwapMemory(out_set, &set, RG_SIZE(set));
