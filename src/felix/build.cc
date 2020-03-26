@@ -580,7 +580,7 @@ bool Builder::RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, 
                     worker->entries.Append(entry);
                 }
 
-                if (output.len) {
+                if (output.len && !node.skip_success) {
                     std::lock_guard<std::mutex> out_lock(out_mutex);
                     stdout_st.Write(output);
                 }

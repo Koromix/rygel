@@ -440,6 +440,7 @@ public:
 
         out_node->cache_len = buf.len;
         out_node->cmd_line = buf.Leak();
+        out_node->skip_success = true;
     }
 };
 #endif
