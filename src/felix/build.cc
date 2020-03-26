@@ -468,6 +468,8 @@ bool Builder::RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, 
     std::mutex out_mutex;
     HeapArray<const char *> clear_filenames;
 
+    bool keep_rsp_files = GetDebugFlag("KEEP_RSP_FILES");
+
     RG_DEFER {
 #ifdef _WIN32
         // Windows has a tendency to hold file locks a bit longer than needed...
@@ -518,7 +520,9 @@ bool Builder::RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, 
                                       node.cmd_line.Take(0, node.rsp_offset), rsp_filename).ptr;
 
             rsp_map.Append(&node, new_cmd);
-            clear_filenames.Append(rsp_filename);
+            if (!keep_rsp_files) {
+                clear_filenames.Append(rsp_filename);
+            }
         }
     }
 
