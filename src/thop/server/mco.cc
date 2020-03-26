@@ -12,8 +12,7 @@
 namespace RG {
 
 mco_TableSet mco_table_set;
-HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> mco_constraints_set;
-HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> mco_index_to_constraints;
+McoCacheSet mco_cache_set;
 
 mco_AuthorizationSet mco_authorization_set;
 mco_StaySet mco_stay_set;
@@ -35,24 +34,26 @@ bool InitMcoTables(Span<const char *const> table_directories)
 
     LogInfo("Compute MCO constraints");
 
+    // Do it in parallel for faster startup
     {
         Async async;
 
-        mco_constraints_set.Reserve(mco_table_set.indexes.len);
-        for (Size i = 0; i < mco_table_set.indexes.len; i++) {
-            if (mco_table_set.indexes[i].valid) {
+        // Content must not move (pointers)!
+        mco_cache_set.constraints_set.Reserve(mco_table_set.indexes.len);
+
+        HashTable<mco_GhmCode, mco_GhmConstraint> *constraints = nullptr;
+        for (const mco_TableIndex &index: mco_table_set.indexes) {
+            if (index.valid) {
                 // Extend or remove this check when constraints go beyond the tree info (diagnoses, etc.)
-                if (mco_table_set.indexes[i].changed_tables & MaskEnum(mco_TableType::GhmDecisionTree) ||
-                        !mco_index_to_constraints[mco_index_to_constraints.len - 1]) {
-                    HashTable<mco_GhmCode, mco_GhmConstraint> *constraints = mco_constraints_set.AppendDefault();
-                    async.Run([=]() {
-                        return mco_ComputeGhmConstraints(mco_table_set.indexes[i], constraints);
-                    });
+                if (index.changed_tables & MaskEnum(mco_TableType::GhmDecisionTree) || !constraints) {
+                    constraints = mco_cache_set.constraints_set.AppendDefault();
+                    async.Run([=]() { return mco_ComputeGhmConstraints(index, constraints); });
                 }
-                mco_index_to_constraints.Append(&mco_constraints_set[mco_constraints_set.len - 1]);
             } else {
-                mco_index_to_constraints.Append(nullptr);
+                constraints = nullptr;
             }
+
+            mco_cache_set.index_to_constraints.Append(&index, constraints);
         }
 
         if (!async.Sync())

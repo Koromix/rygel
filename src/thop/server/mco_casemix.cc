@@ -333,8 +333,8 @@ static void GatherGhmGhsInfo(Span<const mco_GhmRootCode> ghm_roots, Date min_dat
     HashMap<GhmGhsInfo::Key, Size> ghm_ghs_map;
 
     for (const mco_TableIndex &index: mco_table_set.indexes) {
-        const HashTable<mco_GhmCode, mco_GhmConstraint> &constraints =
-            *mco_index_to_constraints[&index - mco_table_set.indexes.ptr];
+        const HashTable<mco_GhmCode, mco_GhmConstraint> &constraints = 
+            *mco_cache_set.index_to_constraints.FindValue(&index, nullptr);
 
         if (min_date < index.limit_dates[1] && index.limit_dates[0] < max_date) {
             for (mco_GhmRootCode ghm_root: ghm_roots) {

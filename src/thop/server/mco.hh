@@ -10,9 +10,13 @@
 
 namespace RG {
 
+struct McoCacheSet {
+    HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> constraints_set;
+    HashMap<const void *, HashTable<mco_GhmCode, mco_GhmConstraint> *> index_to_constraints;
+};
+
 extern mco_TableSet mco_table_set;
-extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> mco_constraints_set;
-extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> mco_index_to_constraints;
+extern McoCacheSet mco_cache_set;
 
 extern mco_AuthorizationSet mco_authorization_set;
 

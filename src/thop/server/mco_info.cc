@@ -164,7 +164,7 @@ void ProduceMcoGhmGhs(const http_RequestInfo &request, const User *, http_IO *io
         return;
 
     const HashTable<mco_GhmCode, mco_GhmConstraint> &constraints =
-        *mco_index_to_constraints[index - mco_table_set.indexes.ptr];
+        *mco_cache_set.index_to_constraints.FindValue(index, nullptr);
 
     http_JsonPageBuilder json(request.compression_type);
     char buf[512];
@@ -312,10 +312,10 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
                         FmtHex(ghm_node.u.test.params[1]).Pad0(-2)).ptr;
     out_node->type = "test";
 
-    // XXX: Check children_idx and children_count
     out_node->function = ghm_node.u.test.function;
     out_node->children_idx = ghm_node.u.test.children_idx;
     out_node->children_count = ghm_node.u.test.children_count;
+    RG_ASSERT(out_node->children_idx <= ctx.ghm_nodes.len - out_node->children_count);
 
     switch (ghm_node.u.test.function) {
         case 0:
