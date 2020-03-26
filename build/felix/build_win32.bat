@@ -8,12 +8,12 @@ set BIN=..\..\felix.exe
 
 where /q link
 if NOT ERRORLEVEL 1 (
-    where /q clang-cl
+    where /q cl
     if NOT ERRORLEVEL 1 (
-        echo Bootstrapping felix with Clang...
+        echo Bootstrapping felix with MSVC...
         mkdir tmp
-        clang-cl /nologo /W0 /EHsc /MP /DNDEBUG /c %SRC% /Fotmp\
-        lld-link /nologo tmp\*.obj /out:tmp\felix.exe
+        cl /nologo /W0 /EHsc /MP /DNDEBUG /c %SRC% /Fotmp\
+        link /nologo tmp\*.obj /out:tmp\felix.exe
         tmp\felix.exe -m Fast -O tmp\fast felix
         move tmp\fast\felix.exe %BIN%
 
@@ -26,12 +26,12 @@ if NOT ERRORLEVEL 1 (
         exit /B
     )
 
-    where /q cl
+    where /q clang-cl
     if NOT ERRORLEVEL 1 (
-        echo Bootstrapping felix with MSVC...
+        echo Bootstrapping felix with Clang...
         mkdir tmp
-        cl /nologo /W0 /EHsc /MP /DNDEBUG /c %SRC% /Fotmp\
-        link /nologo tmp\*.obj /out:tmp\felix.exe
+        clang-cl /nologo /W0 /EHsc /MP /DNDEBUG /c %SRC% /Fotmp\
+        lld-link /nologo tmp\*.obj /out:tmp\felix.exe
         tmp\felix.exe -m Fast -O tmp\fast felix
         move tmp\fast\felix.exe %BIN%
 
