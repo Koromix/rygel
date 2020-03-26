@@ -153,7 +153,7 @@ bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *con
                 valid = false;
             }
         }
-        if (!valid && !GetDebugFlag("THOP_IGNORE_MISSING_UNITS"))
+        if (!valid && !GetDebugFlag("SKIP_UNKNOWN_UNITS"))
             return false;
     }
 

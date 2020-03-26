@@ -2779,7 +2779,7 @@ int GetCoreCount()
     static int cores;
 
     if (!cores) {
-        const char *env = getenv("RYGEL_CORES");
+        const char *env = getenv("OVERRIDE_CORES");
 
         if (env) {
             char *end_ptr;
@@ -2787,7 +2787,7 @@ int GetCoreCount()
             if (end_ptr > env && !end_ptr[0] && value > 0) {
                 cores = (int)value;
             } else {
-                LogError("RYGEL_CORES must be positive number (ignored)");
+                LogError("OVERRIDE_CORES must be positive number (ignored)");
             }
         } else {
             cores = (int)std::thread::hardware_concurrency();
