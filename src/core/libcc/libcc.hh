@@ -1973,9 +1973,12 @@ public:
     }
     ValueType *SetDefault(const KeyType &key)
     {
-        ValueType *it = Insert(key);
-        new (it) ValueType();
-        return it;
+        std::pair<ValueType *, bool> ret = Insert(key);
+        if (!ret.second) {
+            ret.first->~ValueType();
+        }
+        new (ret.first) ValueType();
+        return ret.first;
     }
 
     void Remove(ValueType *it)
