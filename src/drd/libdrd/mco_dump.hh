@@ -10,11 +10,23 @@
 
 namespace RG {
 
-void mco_DumpGhmDecisionTree(Span<const mco_GhmDecisionNode> ghm_nodes,
-                             Size node_idx, int depth, StreamWriter *out_st);
-static inline void mco_DumpGhmDecisionTree(Span<const mco_GhmDecisionNode> ghm_nodes,
-                                           StreamWriter *out_st)
-    { mco_DumpGhmDecisionTree(ghm_nodes, 0, 0, out_st); }
+struct mco_ReadableGhmNode {
+    const char *type;
+    const char *key;
+    const char *header;
+    const char *text;
+    const char *reverse;
+
+    uint8_t function;
+    Size children_idx;
+    Size children_count;
+};
+
+bool mco_BuildReadableGhmTree(Span<const mco_GhmDecisionNode> ghm_nodes, Allocator *str_alloc, 
+                              HeapArray<mco_ReadableGhmNode> *out_nodes);
+void mco_DumpGhmDecisionTree(Span<const mco_ReadableGhmNode> readable_nodes, StreamWriter *out_st);
+void mco_DumpGhmDecisionTree(Span<const mco_GhmDecisionNode> ghm_nodes, StreamWriter *out_st);
+
 void mco_DumpDiagnosisTable(Span<const mco_DiagnosisInfo> diagnoses,
                             Span<const mco_ExclusionInfo> exclusions, StreamWriter *out_st);
 void mco_DumpProcedureTable(Span<const mco_ProcedureInfo> procedures, StreamWriter *out_st);

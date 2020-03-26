@@ -280,7 +280,7 @@ void ProduceMcoGhmGhs(const http_RequestInfo &request, const User *, http_IO *io
 
 void ProduceMcoTree(const http_RequestInfo &request, const User *, http_IO *io)
 {
-    const HeapArray<McoReadableGhmNode> *readable_nodes;
+    const HeapArray<mco_ReadableGhmNode> *readable_nodes;
     {
         const mco_TableIndex *index = GetIndexFromRequest(request, io);
         if (!index)
@@ -292,7 +292,7 @@ void ProduceMcoTree(const http_RequestInfo &request, const User *, http_IO *io)
     http_JsonPageBuilder json(request.compression_type);
 
     json.StartArray();
-    for (const McoReadableGhmNode &readable_node: *readable_nodes) {
+    for (const mco_ReadableGhmNode &readable_node: *readable_nodes) {
         json.StartObject();
         if (readable_node.header) {
             json.Key("header"); json.String(readable_node.header);

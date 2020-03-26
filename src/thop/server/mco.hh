@@ -10,23 +10,11 @@
 
 namespace RG {
 
-struct McoReadableGhmNode {
-    const char *type;
-    const char *key;
-    const char *header;
-    const char *text;
-    const char *reverse;
-
-    uint8_t function;
-    Size children_idx;
-    Size children_count;
-};
-
 struct McoCacheSet {
     HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> constraints_set;
     HashMap<const void *, HashTable<mco_GhmCode, mco_GhmConstraint> *> index_to_constraints;
 
-    HashMap<const void *, HeapArray<McoReadableGhmNode>> readable_nodes;
+    HashMap<const void *, HeapArray<mco_ReadableGhmNode>> readable_nodes;
 
     BlockAllocator str_alloc;
 };
