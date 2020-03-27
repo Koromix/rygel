@@ -468,8 +468,6 @@ bool Builder::RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, 
     std::mutex out_mutex;
     HeapArray<const char *> clear_filenames;
 
-    bool keep_rsp_files = GetDebugFlag("KEEP_RSP_FILES");
-
     RG_DEFER {
 #ifdef _WIN32
         // Windows has a tendency to hold file locks a bit longer than needed...
@@ -503,7 +501,12 @@ bool Builder::RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, 
         if (node.cmd_line.len > 4096 && node.rsp_offset > 0) {
             RG_ASSERT(node.rsp_offset < node.cmd_line.len);
 
-            const char *rsp_filename = Fmt(&temp_alloc, "%1.rsp", node.dest_filename).ptr;
+            // In theory, there can be conflicts between RSP files. But it is unlikely
+            // that response files will be generated for anything other than link commands,
+            // so the risk is very low.
+            const char *target_basename = SplitStrReverseAny(node.dest_filename, RG_PATH_SEPARATORS).ptr;
+            const char *rsp_filename = Fmt(&temp_alloc, "%1%/cache%/%2.rsp", build.output_directory, target_basename).ptr;
+
             Span<const char> rsp = node.cmd_line.Take(node.rsp_offset + 1,
                                                       node.cmd_line.len - node.rsp_offset - 1);
 
@@ -520,9 +523,6 @@ bool Builder::RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, 
                                       node.cmd_line.Take(0, node.rsp_offset), rsp_filename).ptr;
 
             rsp_map.Append(&node, new_cmd);
-            if (!keep_rsp_files) {
-                clear_filenames.Append(rsp_filename);
-            }
         }
     }
 
