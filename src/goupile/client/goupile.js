@@ -219,7 +219,7 @@ let goupile = new function() {
             settings = {};
 
             if (session_rnd != null) {
-                let response = await fetch(`${env.base_url}api/settings.json?rnd=${session_rnd}`);
+                let response = await net.fetch(`${env.base_url}api/settings.json?rnd=${session_rnd}`);
                 if (response.ok) {
                     settings = await response.json();
                 } else {
@@ -471,7 +471,7 @@ let goupile = new function() {
                         password: password.value}
                     );
 
-                    let response = await fetch(`${env.base_url}api/login.json`, {method: 'POST', body: body});
+                    let response = await net.fetch(`${env.base_url}api/login.json`, {method: 'POST', body: body});
 
                     if (response.ok) {
                         entry.success('Connexion réussie');
@@ -493,7 +493,7 @@ let goupile = new function() {
 
         entry.progress('Déconnexion en cours');
         try {
-            let response = await fetch(`${env.base_url}api/logout.json`, {method: 'POST'});
+            let response = await net.fetch(`${env.base_url}api/logout.json`, {method: 'POST'});
 
             if (response.ok) {
                 entry.success('Déconnexion réussie');

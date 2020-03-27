@@ -76,7 +76,7 @@ function VirtualFS(db) {
                 return null;
             }
         } else {
-            let response = await fetch(`${env.base_url}${path.substr(1)}`);
+            let response = await net.fetch(`${env.base_url}${path.substr(1)}`);
 
             if (response.ok) {
                 let blob = await response.blob();
@@ -118,7 +118,7 @@ function VirtualFS(db) {
         let [local_files, cache_files, remote_files] = await Promise.all([
             db.loadAll('files'),
             db.loadAll('files_cache'),
-            remote ? fetch(`${env.base_url}api/files.json`).then(response => response.json()) : db.loadAll('files_cache')
+            remote ? net.fetch(`${env.base_url}api/files.json`).then(response => response.json()) : db.loadAll('files_cache')
         ]);
 
         let local_map = util.mapArray(local_files, file => file.path);
@@ -211,7 +211,7 @@ function VirtualFS(db) {
                 if (file.sha256) {
                     let file2 = await self.load(file.path);
 
-                    let response = await fetch(url, {method: 'PUT', body: file2.data});
+                    let response = await net.fetch(url, {method: 'PUT', body: file2.data});
                     if (!response.ok) {
                         let err = (await response.text()).trim();
                         throw new Error(err);
@@ -220,7 +220,7 @@ function VirtualFS(db) {
                     delete file2.data;
                     await db.save('files_cache', file2);
                 } else {
-                    let response = await fetch(url, {method: 'DELETE'});
+                    let response = await net.fetch(url, {method: 'DELETE'});
                     if (!response.ok) {
                         let err = (await response.text()).trim();
                         throw new Error(err);
@@ -235,7 +235,7 @@ function VirtualFS(db) {
 
             case 'pull': {
                 if (file.remote_sha256) {
-                    let blob = await fetch(url).then(response => response.blob());
+                    let blob = await net.fetch(url).then(response => response.blob());
                     let file2 = await self.save(file.path, blob);
 
                     delete file2.data;

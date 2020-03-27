@@ -57,7 +57,7 @@ self.addEventListener('fetch', e => {
             let path = url.pathname.substr(env.base_url.length - 1);
 
             if (path.startsWith('/app/') || path.startsWith('/main/'))
-                return await caches.match(env.base_url) || await fetch(env.base_url);
+                return await caches.match(env.base_url) || await net.fetch(env.base_url);
 
             // Ignore sync GET requests for app files (for which sha256 is specified)
             if (path.startsWith('/files/') && !url.searchParams.has('sha256')) {
@@ -70,10 +70,10 @@ self.addEventListener('fetch', e => {
                     return new Response(file_data);
             }
 
-            return await caches.match(e.request) || await fetch(e.request);
+            return await caches.match(e.request) || await net.fetch(e.request);
         }
 
         // Nothing matched, do the usual
-        return await fetch(e.request);
+        return await net.fetch(e.request);
     }());
 });

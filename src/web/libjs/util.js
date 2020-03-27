@@ -506,6 +506,28 @@ let log = new function() {
 };
 
 // ------------------------------------------------------------------------
+// Network
+// ------------------------------------------------------------------------
+
+let net = new function() {
+    let online = (typeof navigator !== 'undefined') ? navigator.onLine : true;
+
+    this.fetch = async function(request, init) {
+        try {
+            let response = await fetch(request, init);
+
+            online = navigator.onLine;
+            return response;
+        } catch (err) {
+            online = false;
+            throw err;
+        }
+    };
+
+    this.isOnline = function() { return online; };
+};
+
+// ------------------------------------------------------------------------
 // Containers
 // ------------------------------------------------------------------------
 

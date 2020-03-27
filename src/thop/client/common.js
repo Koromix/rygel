@@ -25,7 +25,7 @@ let data = new function() {
         let resource = cache.get(key);
 
         if (!resource) {
-            let response = await fetch(url);
+            let response = await net.fetch(url);
             if (!response.ok) {
                 let err = (await response.text()).trim();
                 throw new Error(err);

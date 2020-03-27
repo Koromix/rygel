@@ -35,8 +35,8 @@ let sched_executor = new function() {
 
     async function loadSchedule(year, month) {
         let [resources, meetings] = await Promise.all([
-            fetch(`${env.base_url}api/schedule/resources.json?schedule=pl&year=${year}&month=${month}`).then(response => response.json()),
-            fetch(`${env.base_url}api/schedule/meetings.json?schedule=pl&year=${year}&month=${month}`).then(response => response.json())
+            net.fetch(`${env.base_url}api/schedule/resources.json?schedule=pl&year=${year}&month=${month}`).then(response => response.json()),
+            net.fetch(`${env.base_url}api/schedule/meetings.json?schedule=pl&year=${year}&month=${month}`).then(response => response.json())
         ]);
 
         return [resources, meetings];

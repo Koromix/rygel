@@ -176,7 +176,7 @@ let thop = new function() {
         // Fetch new settings
         {
             // We'll parse it manually to revive dates. It's relatively small anyway.
-            let json = await fetch(`${env.base_url}api/settings.json?rnd=${user.getSessionRnd()}`).then(response => response.text());
+            let json = await net.fetch(`${env.base_url}api/settings.json?rnd=${user.getSessionRnd()}`).then(response => response.text());
 
             settings = JSON.parse(json, (key, value) => {
                 if (typeof value === 'string' && value.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)) {
