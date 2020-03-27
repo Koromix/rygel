@@ -5,19 +5,9 @@
 let sched_executor = new function() {
     let self = this;
 
-    let init = false;
     let view;
 
     this.runMeetings = async function(schedule, view_el) {
-        if (!init) {
-            goupile.listenToServerEvent('schedule', e => {
-                schedule = null;
-                self.runMeetings();
-            });
-
-            init = true;
-        }
-
         // This is test code, won't stay that way (obviously)
         let today = dates.today();
 
@@ -31,15 +21,6 @@ let sched_executor = new function() {
     };
 
     this.runSettings = async function(schedule, view_el) {
-        if (!init) {
-            goupile.listenToServerEvent('schedule', e => {
-                schedule = null;
-                self.runSettings();
-            });
-
-            init = true;
-        }
-
         // This is test code, won't stay that way (obviously)
         let today = dates.today();
 

@@ -16,11 +16,6 @@ let goupile = new function() {
     let settings;
     let settings_rnd;
 
-    let sse_src;
-    let sse_timer;
-    let sse_listeners = [];
-    let sse_online = false;
-
     let route_asset;
     let route_url;
 
@@ -56,8 +51,6 @@ let goupile = new function() {
                 await updateApplication();
             }
         }
-        if (window.EventSource)
-            initEvents();
 
         await self.initApplication();
     }
@@ -148,38 +141,6 @@ let goupile = new function() {
             self.go(href);
             e.preventDefault();
         });
-    }
-
-    function initEvents() {
-        if (sse_src) {
-            sse_src.close();
-        } else {
-            // Helps a bit with Firefox issue, see goupile.cc for more information
-            window.addEventListener('beforeunload', () => sse_src.close());
-        }
-
-        sse_src = new EventSource(`${env.base_url}api/events.json`);
-
-        sse_src.onopen = e => {
-            resetEventTimer();
-            sse_online = true;
-        };
-        sse_src.onerror = e => {
-            sse_src.close();
-            sse_online = false;
-
-            // Browsers are supposed to retry automatically, but Firefox does weird stuff
-            resetEventTimer();
-        };
-        sse_src.addEventListener('keepalive', e => resetEventTimer());
-
-        for (let listener of sse_listeners)
-            sse_src.addEventListener(listener.event, listener.func);
-    }
-
-    function resetEventTimer() {
-        clearInterval(sse_timer);
-        sse_timer = setInterval(initEvents, 30000);
     }
 
     // Can be launched multiple times (e.g. when main.js is edited)
@@ -283,20 +244,9 @@ let goupile = new function() {
         style_el.textContent = css;
     }
 
-    this.isOnline = function() { return sse_online; };
     this.isConnected = function() { return !!settings_rnd; };
     this.isTablet = function() { return tablet_mq.matches; };
     this.isStandalone = function() { return standalone_mq.matches; };
-
-    this.listenToServerEvent = function(event, func) {
-        let listener = {
-            event: event,
-            func: func
-        };
-        sse_listeners.push(listener);
-
-        sse_src.addEventListener(event, func);
-    };
 
     this.go = async function(url = null, push_history = true) {
         if (url) {

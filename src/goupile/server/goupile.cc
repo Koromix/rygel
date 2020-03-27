@@ -4,7 +4,6 @@
 
 #include "../../core/libcc/libcc.hh"
 #include "config.hh"
-#include "events.hh"
 #include "files.hh"
 #include "goupile.hh"
 #include "ports.hh"
@@ -221,8 +220,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
             if (TestStr(request.url, "/api/settings.json")) {
                 func = HandleSettings;
-            } else if (TestStr(request.url, "/api/events.json")) {
-                func = HandleEvents;
             } else if (TestStr(request.url, "/api/files.json")) {
                 func = HandleFileList;
             } else if (!strncmp(request.url, "/records/", 9)) {
@@ -387,16 +384,7 @@ Options:
     LogInfo("Listening on port %1 (%2 stack)",
             goupile_config.http.port, IPStackNames[(int)goupile_config.http.ip_stack]);
 
-    // We need to send keep-alive notices to SSE clients quite often for two reasons:
-    // first, disconnects are detected faster by the client but most importantly, Firefox
-    // does not close a connection (for example after tab close) until it receives an event.
-    // Because Firefox also prevents more than 6 HTTP connections to the same server,
-    // this means that a long keep-alive time can block goupile for a long time in some
-    // situations, such as a few page refreshes.
-    while (!WaitForInterruption(15000)) {
-        PushEvent(EventType::KeepAlive);
-    }
-    CloseAllEventConnections();
+    WaitForInterruption();
 
     LogInfo("Exit");
     return 0;
