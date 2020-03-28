@@ -26,7 +26,11 @@ void TestMatchPathName()
     CHECK_PATH_SPEC("", "", true);
     CHECK_PATH_SPEC("a", "a", true);
     CHECK_PATH_SPEC("a", "b", false);
+#ifdef _WIN32
+    CHECK_PATH_SPEC("a", "A", true);
+#else
     CHECK_PATH_SPEC("a", "A", false);
+#endif
     CHECK_PATH_SPEC("*", "a", true);
     CHECK_PATH_SPEC("*", "aa", true);
     CHECK_PATH_SPEC("*a", "a", true);
