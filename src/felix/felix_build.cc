@@ -13,7 +13,7 @@
 
 namespace RG {
 
-static int RunTarget(const Target &target, const char *target_filename,
+static int RunTarget(const TargetInfo &target, const char *target_filename,
                      Span<const char *const> arguments, bool verbose)
 {
     RG_ASSERT(target.type == TargetType::Executable);
@@ -255,7 +255,7 @@ Supported compilation modes:)");
 
     // Default targets
     if (!target_names.len) {
-        for (const Target &target: target_set.targets) {
+        for (const TargetInfo &target: target_set.targets) {
             if (target.enable_by_default) {
                 target_names.Append(target.name);
             }
@@ -268,15 +268,15 @@ Supported compilation modes:)");
     }
 
     // Select targets and their dependencies (imports)
-    HeapArray<const Target *> enabled_targets;
-    const Target *run_target = nullptr;
+    HeapArray<const TargetInfo *> enabled_targets;
+    const TargetInfo *run_target = nullptr;
     {
         HashSet<const char *> handled_set;
 
         bool valid = true;
         for (const char *target_name: target_names) {
             if (handled_set.Append(target_name).second) {
-                const Target *target = target_set.targets_map.FindValue(target_name, nullptr);
+                const TargetInfo *target = target_set.targets_map.FindValue(target_name, nullptr);
                 if (!target) {
                     LogError("Target '%1' does not exist", target_name);
                     valid = false;
@@ -285,7 +285,7 @@ Supported compilation modes:)");
 
                 for (const char *import_name: target->imports) {
                     if (handled_set.Append(import_name).second) {
-                        const Target *import = target_set.targets_map.FindValue(import_name, nullptr);
+                        const TargetInfo *import = target_set.targets_map.FindValue(import_name, nullptr);
                         enabled_targets.Append(import);
                     }
                 }
@@ -324,7 +324,7 @@ Supported compilation modes:)");
 
     // Build stuff!
     Builder builder(build);
-    for (const Target *target: enabled_targets) {
+    for (const TargetInfo *target: enabled_targets) {
         if (!builder.AddTarget(*target))
             return 1;
     }

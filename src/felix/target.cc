@@ -33,7 +33,7 @@ struct TargetConfig {
 
     FileSet pack_file_set;
     const char *pack_options;
-    PackLinkType pack_link_type;
+    PackLinkMode pack_link_mode;
 
     RG_HASHTABLE_HANDLER(TargetConfig, name);
 };
@@ -159,7 +159,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                 valid = false;
             }
             target_config.type = TargetType::Executable;
-            target_config.pack_link_type = PackLinkType::Static;
+            target_config.pack_link_mode = PackLinkMode::Static;
 
             // Type property must be specified first
             if (prop.key == "Type") {
@@ -273,11 +273,11 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                         target_config.pack_options = DuplicateString(prop.value, &set.str_alloc).ptr;
                     } else if (prop.key == "AssetLink") {
                         if (prop.value == "Static") {
-                            target_config.pack_link_type = PackLinkType::Static;
+                            target_config.pack_link_mode = PackLinkMode::Static;
                         } else if (prop.value == "Module") {
-                            target_config.pack_link_type = PackLinkType::Module;
+                            target_config.pack_link_mode = PackLinkMode::Module;
                         } else if (prop.value == "ModuleIfDebug") {
-                            target_config.pack_link_type = PackLinkType::ModuleIfDebug;
+                            target_config.pack_link_mode = PackLinkMode::ModuleIfDebug;
                         } else {
                             LogError("Unknown asset link mode '%1'", prop.value);
                             valid = false;
@@ -332,12 +332,12 @@ bool TargetSetBuilder::LoadFiles(Span<const char *const> filenames)
 }
 
 // We steal stuff from TargetConfig so it's not reusable after that
-const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
+const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
 {
     RG_DEFER_NC(out_guard, len = set.targets.len) { set.targets.RemoveFrom(len); };
 
     // Heavy type, so create it directly in HeapArray
-    Target *target = set.targets.AppendDefault();
+    TargetInfo *target = set.targets.AppendDefault();
 
     // Copy simple values
     target->name = target_config->name;
@@ -346,7 +346,7 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     std::swap(target->definitions, target_config->definitions);
     std::swap(target->export_definitions, target_config->export_definitions);
     std::swap(target->include_directories, target_config->include_directories);
-    target->pack_link_type = target_config->pack_link_type;
+    target->pack_link_mode = target_config->pack_link_mode;
     target->pack_options = target_config->pack_options;
 
     // Gather direct target objects
@@ -377,7 +377,7 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
         std::swap(target->libraries, target_config->libraries);
 
         for (const char *import_name: target_config->imports) {
-            const Target *import;
+            const TargetInfo *import;
             {
                 Size import_idx = targets_map.FindValue(import_name, -1);
                 if (import_idx < 0) {
@@ -450,7 +450,7 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
 
 void TargetSetBuilder::Finish(TargetSet *out_set)
 {
-    for (const Target &target: set.targets) {
+    for (const TargetInfo &target: set.targets) {
         set.targets_map.Append(&target);
     }
 

@@ -88,7 +88,7 @@ public:
 
     Builder(const BuildSettings &build);
 
-    bool AddTarget(const Target &target);
+    bool AddTarget(const TargetInfo &target);
     bool Build(int jobs, bool verbose);
 
 private:

@@ -22,13 +22,13 @@ struct SourceFileInfo {
     SourceType type;
 };
 
-enum class PackLinkType {
+enum class PackLinkMode {
     Static,
     Module,
     ModuleIfDebug
 };
 
-struct Target {
+struct TargetInfo {
     const char *name;
     TargetType type;
     bool enable_by_default;
@@ -46,14 +46,14 @@ struct Target {
 
     HeapArray<const char *> pack_filenames;
     const char *pack_options;
-    PackLinkType pack_link_type;
+    PackLinkMode pack_link_mode;
 
-    RG_HASHTABLE_HANDLER(Target, name);
+    RG_HASHTABLE_HANDLER(TargetInfo, name);
 };
 
 struct TargetSet {
-    HeapArray<Target> targets;
-    HashTable<const char *, const Target *> targets_map;
+    HeapArray<TargetInfo> targets;
+    HashTable<const char *, const TargetInfo *> targets_map;
 
     BlockAllocator str_alloc;
 };
@@ -72,7 +72,7 @@ public:
     void Finish(TargetSet *out_set);
 
 private:
-    const Target *CreateTarget(TargetConfig *target_config);
+    const TargetInfo *CreateTarget(TargetConfig *target_config);
 };
 
 bool LoadTargetSet(Span<const char *const> filenames, TargetSet *out_set);

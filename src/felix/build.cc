@@ -97,7 +97,7 @@ Builder::Builder(const BuildSettings &build)
 }
 
 // Beware, failures can leave the Builder in a undefined state
-bool Builder::AddTarget(const Target &target)
+bool Builder::AddTarget(const TargetInfo &target)
 {
     obj_filenames.RemoveFrom(0);
 
@@ -240,10 +240,10 @@ bool Builder::AddTarget(const Target &target)
         }
 
         bool module = false;
-        switch (target.pack_link_type) {
-            case PackLinkType::Static: { module = false; } break;
-            case PackLinkType::Module: { module = true; } break;
-            case PackLinkType::ModuleIfDebug: { module = (build.compile_mode == CompileMode::Debug); } break;
+        switch (target.pack_link_mode) {
+            case PackLinkMode::Static: { module = false; } break;
+            case PackLinkMode::Module: { module = true; } break;
+            case PackLinkMode::ModuleIfDebug: { module = (build.compile_mode == CompileMode::Debug); } break;
         }
 
         // Build object file
