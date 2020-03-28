@@ -169,6 +169,14 @@ public:
             Fmt(&buf, " -g");
         }
 
+        // Objects and libraries
+        for (const char *obj_filename: obj_filenames) {
+            Fmt(&buf, " \"%1\"", obj_filename);
+        }
+        for (const char *lib: libraries) {
+            Fmt(&buf, " -l%1", lib);
+        }
+
         // Platform flags
 #if defined(_WIN32)
         Fmt(&buf, " -fuse-ld=lld --rtlib=compiler-rt");
@@ -177,14 +185,6 @@ public:
 #else
         Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now");
 #endif
-
-        // Objects and libraries
-        for (const char *obj_filename: obj_filenames) {
-            Fmt(&buf, " \"%1\"", obj_filename);
-        }
-        for (const char *lib: libraries) {
-            Fmt(&buf, " -l%1", lib);
-        }
 
         out_node->cache_len = buf.len;
         if (LogUsesTerminalOutput()) {
@@ -308,6 +308,14 @@ public:
             Fmt(&buf, " -g");
         }
 
+        // Objects and libraries
+        for (const char *obj_filename: obj_filenames) {
+            Fmt(&buf, " \"%1\"", obj_filename);
+        }
+        for (const char *lib: libraries) {
+            Fmt(&buf, " -l%1", lib);
+        }
+
         // Platform flags and libraries
 #if defined(_WIN32)
         Fmt(&buf, " -Wl,--dynamicbase -Wl,--nxcompat -Wl,--high-entropy-va");
@@ -319,14 +327,6 @@ public:
             Fmt(&buf, " -pie");
         }
 #endif
-
-        // Objects and libraries
-        for (const char *obj_filename: obj_filenames) {
-            Fmt(&buf, " \"%1\"", obj_filename);
-        }
-        for (const char *lib: libraries) {
-            Fmt(&buf, " -l%1", lib);
-        }
 
         out_node->cache_len = buf.len;
         if (LogUsesTerminalOutput()) {
