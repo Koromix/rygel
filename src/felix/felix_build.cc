@@ -267,7 +267,7 @@ Supported compilation modes:)");
         }
     }
 
-    // Select targets and their dependencies (imports)
+    // Select specified targets
     HeapArray<const TargetInfo *> enabled_targets;
     const TargetInfo *run_target = nullptr;
     {
@@ -281,13 +281,6 @@ Supported compilation modes:)");
                     LogError("Target '%1' does not exist", target_name);
                     valid = false;
                     continue;
-                }
-
-                for (const char *import_name: target->imports) {
-                    if (handled_set.Append(import_name).second) {
-                        const TargetInfo *import = target_set.targets_map.FindValue(import_name, nullptr);
-                        enabled_targets.Append(import);
-                    }
                 }
 
                 enabled_targets.Append(target);

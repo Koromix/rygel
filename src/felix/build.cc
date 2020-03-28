@@ -101,34 +101,31 @@ bool Builder::AddTarget(const TargetInfo &target)
 {
     obj_filenames.RemoveFrom(0);
 
-    bool warnings = (target.type != TargetType::ExternalLibrary);
-
     // Precompiled headers
     const char *c_pch_filename = nullptr;
     const char *cxx_pch_filename = nullptr;
     if (build.pch) {
-        const auto add_pch_object = [&](const char *src_filename, SourceType src_type,
+        const auto add_pch_object = [&](const SourceFileInfo *src, SourceType src_type,
                                         const char *pch_ext) {
             BuildNode node = {};
 
-            node.text = Fmt(&str_alloc, "Precompile %1", src_filename).ptr;
-            node.dest_filename = BuildObjectPath(src_filename, build.output_directory,
+            node.text = Fmt(&str_alloc, "Precompile %1", src->filename).ptr;
+            node.dest_filename = BuildObjectPath(src->filename, build.output_directory,
                                                  pch_ext, &str_alloc);
 
-            if (!output_set.Find(node.dest_filename)) {
+            if (output_set.Append(node.dest_filename).second) {
+                bool warnings = (src->target->type != TargetType::ExternalLibrary);
                 build.compiler->MakePchCommand(node.dest_filename, src_type, build.compile_mode, warnings,
-                                               target.definitions, target.include_directories,
+                                               src->target->definitions, src->target->include_directories,
                                                &str_alloc, &node);
 
-                if (NeedsRebuild(node.dest_filename, node, src_filename)) {
-                    if (!CreatePrecompileHeader(src_filename, node.dest_filename))
+                if (NeedsRebuild(node.dest_filename, node, src->filename)) {
+                    if (!CreatePrecompileHeader(src->filename, node.dest_filename))
                         return (const char *)nullptr;
 
                     prep_nodes.Append(node);
                     mtime_map.Set(node.dest_filename, -1);
                 }
-
-                output_set.Append(node.dest_filename);
             }
 
             // Some compilers (such as MSVC) also build a PCH object file that needs to be linked
@@ -140,13 +137,13 @@ bool Builder::AddTarget(const TargetInfo &target)
             return node.dest_filename;
         };
 
-        if (target.c_pch_filename) {
-            c_pch_filename = add_pch_object(target.c_pch_filename, SourceType::C, ".c");
+        if (target.c_pch_src) {
+            c_pch_filename = add_pch_object(target.c_pch_src, SourceType::C, ".c");
             if (!c_pch_filename)
                 return false;
         }
-        if (target.cxx_pch_filename) {
-            cxx_pch_filename = add_pch_object(target.cxx_pch_filename, SourceType::CXX, ".cc");
+        if (target.cxx_pch_src) {
+            cxx_pch_filename = add_pch_object(target.cxx_pch_src, SourceType::CXX, ".cc");
             if (!cxx_pch_filename)
                 return false;
         }
@@ -181,34 +178,33 @@ bool Builder::AddTarget(const TargetInfo &target)
     obj_filenames.Append(version_obj_filename);
 
     // Object commands
-    for (const SourceFileInfo &src: target.sources) {
+    for (const SourceFileInfo *src: target.sources) {
         BuildNode node = {};
 
-        node.text = Fmt(&str_alloc, "Build %1", src.filename).ptr;
-        node.dest_filename = BuildObjectPath(src.filename, build.output_directory,
+        node.text = Fmt(&str_alloc, "Build %1", src->filename).ptr;
+        node.dest_filename = BuildObjectPath(src->filename, build.output_directory,
                                              OBJECT_EXTENSION, &str_alloc);
 
-        if (!output_set.Find(node.dest_filename)) {
+        if (output_set.Append(node.dest_filename).second) {
             const char *pch_filename = nullptr;
-            switch (src.type) {
+            switch (src->type) {
                 case SourceType::C: { pch_filename = c_pch_filename; } break;
                 case SourceType::CXX: { pch_filename = cxx_pch_filename; } break;
             }
 
-            build.compiler->MakeObjectCommand(src.filename, src.type, build.compile_mode, warnings,
-                                              pch_filename, target.definitions, target.include_directories,
+            bool warnings = (src->target->type != TargetType::ExternalLibrary);
+            build.compiler->MakeObjectCommand(src->filename, src->type, build.compile_mode, warnings,
+                                              pch_filename, src->target->definitions, src->target->include_directories,
                                               node.dest_filename, &str_alloc, &node);
 
-            if (pch_filename ? NeedsRebuild(node.dest_filename, node, {src.filename, pch_filename})
-                             : NeedsRebuild(node.dest_filename, node, src.filename)) {
+            if (pch_filename ? NeedsRebuild(node.dest_filename, node, {src->filename, pch_filename})
+                             : NeedsRebuild(node.dest_filename, node, src->filename)) {
                 if (!EnsureDirectoryExists(node.dest_filename))
                     return false;
 
                 obj_nodes.Append(node);
                 mtime_map.Set(node.dest_filename, -1);
             }
-
-            output_set.Append(node.dest_filename);
         }
 
         obj_filenames.Append(node.dest_filename);

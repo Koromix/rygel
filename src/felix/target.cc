@@ -154,7 +154,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
             TargetConfig target_config = {};
 
             target_config.name = DuplicateString(prop.section, &set.str_alloc).ptr;
-            if (targets_map.Find(target_config.name)) {
+            if (set.targets_map.Find(target_config.name)) {
                 LogError("Duplicate target name '%1'", target_config.name);
                 valid = false;
             }
@@ -349,8 +349,39 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     std::swap(target->libraries, target_config->libraries);
     target->pack_link_mode = target_config->pack_link_mode;
     target->pack_options = target_config->pack_options;
-    target->c_pch_filename = target_config->c_pch_filename;
-    target->cxx_pch_filename = target_config->cxx_pch_filename;
+
+    // Resolve imported targets
+    {
+        HashSet<const char *> handled_imports;
+
+        for (const char *import_name: target_config->imports) {
+            const TargetInfo *import = set.targets_map.FindValue(import_name, nullptr);
+            if (!import) {
+                LogError("Cannot import from unknown target '%1'", import_name);
+                return nullptr;
+            }
+            if (import->type != TargetType::Library && import->type != TargetType::ExternalLibrary) {
+                LogError("Cannot import non-library target '%1'", import->name);
+                return nullptr;
+            }
+
+            for (const TargetInfo *import2: import->imports) {
+                if (handled_imports.Append(import2->name).second) {
+                    target->imports.Append(import2);
+                }
+            }
+
+            if (handled_imports.Append(import->name).second) {
+                target->imports.Append(import);
+            }
+        }
+
+        for (const TargetInfo *import: target->imports) {
+            target->definitions.Append(import->export_definitions);
+            target->libraries.Append(import->libraries);
+            target->sources.Append(import->sources);
+        }
+    }
 
     // Gather direct target objects
     {
@@ -359,50 +390,27 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
             return nullptr;
 
         for (const char *src_filename: src_filenames) {
-            SourceFileInfo src = {};
-
             Span<const char> extension = GetPathExtension(src_filename);
+
+            const SourceFileInfo *src;
             if (extension == ".c") {
-                src.type = SourceType::C;
+                src = CreateSource(target, src_filename, SourceType::C);
             } else if (extension == ".cc" || extension == ".cpp") {
-                src.type = SourceType::CXX;
+                src = CreateSource(target, src_filename, SourceType::CXX);
             } else {
                 continue;
             }
-            src.filename = DuplicateString(src_filename, &set.str_alloc).ptr;
 
             target->sources.Append(src);
         }
     }
 
-    // Resolve imported targets
-    {
-        HeapArray<const TargetInfo *> imports;
-        HashSet<const char *> handled_imports;
-
-        for (const char *import_name: target_config->imports) {
-            const TargetInfo *import = FindImport(import_name);
-            if (!import)
-                return nullptr;
-
-            for (const char *import_name2: import->imports) {
-                const TargetInfo *import2 = FindImport(import_name2);
-                RG_ASSERT(import2);
-
-                imports.Append(import2);
-            }
-
-            imports.Append(import);
-        }
-
-        for (const TargetInfo *import: imports) {
-            if (handled_imports.Append(import->name).second) {
-                target->imports.Append(import->name);
-                target->definitions.Append(import->export_definitions);
-                target->libraries.Append(import->libraries);
-                target->sources.Append(import->sources);
-            }
-        }
+    // PCH
+    if (target_config->c_pch_filename) {
+        target->c_pch_src = CreateSource(target, target_config->c_pch_filename, SourceType::C);
+    }
+    if (target_config->cxx_pch_filename) {
+        target->cxx_pch_src = CreateSource(target, target_config->cxx_pch_filename, SourceType::CXX);
     }
 
     // Sort and deduplicate library and object arrays
@@ -414,49 +422,45 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
                                              [](const char *lib1, const char *lib2) {
         return TestStr(lib1, lib2);
     }) - target->libraries.begin());
-    std::sort(target->sources.begin(), target->sources.end(),
-              [](const SourceFileInfo &src1, const SourceFileInfo &src2) {
-        return CmpStr(src1.filename, src2.filename) < 0;
+    std::stable_sort(target->sources.begin(), target->sources.end(),
+                     [](const SourceFileInfo *src1, const SourceFileInfo *src2) {
+        return CmpStr(src1->filename, src2->filename) < 0;
     });
     target->sources.RemoveFrom(std::unique(target->sources.begin(), target->sources.end(),
-                                           [](const SourceFileInfo &src1, const SourceFileInfo &src2) {
-        return TestStr(src1.filename, src2.filename);
+                                           [](const SourceFileInfo *src1, const SourceFileInfo *src2) {
+        return TestStr(src1->filename, src2->filename);
     }) - target->sources.begin());
 
     // Gather asset filenames
     if (!ResolveFileSet(target_config->pack_file_set, &set.str_alloc, &target->pack_filenames))
         return nullptr;
 
-    bool appended = targets_map.Append(target_config->name, set.targets.len - 1).second;
+    bool appended = set.targets_map.Append(target).second;
     RG_ASSERT(appended);
 
     out_guard.Disable();
     return target;
 }
 
-const TargetInfo *TargetSetBuilder::FindImport(const char *name) const
+const SourceFileInfo *TargetSetBuilder::CreateSource(const TargetInfo *target, const char *filename, SourceType type)
 {
-    Size import_idx = targets_map.FindValue(name, -1);
-    if (import_idx < 0) {
-        LogError("Cannot import from unknown target '%1'", name);
-        return nullptr;
+    std::pair<SourceFileInfo **, bool> ret = set.sources_map.AppendDefault(filename);
+
+    if (ret.second) {
+        SourceFileInfo *src = set.sources.AppendDefault();
+
+        src->target = target;
+        src->filename = DuplicateString(filename, &set.str_alloc).ptr;
+        src->type = type;
+
+        *ret.first = src;
     }
 
-    const TargetInfo *import = &set.targets[import_idx];
-    if (import->type != TargetType::Library && import->type != TargetType::ExternalLibrary) {
-        LogError("Cannot import non-library target '%1'", import->name);
-        return nullptr;
-    }
-
-    return import;
+    return *ret.first;
 }
 
 void TargetSetBuilder::Finish(TargetSet *out_set)
 {
-    for (const TargetInfo &target: set.targets) {
-        set.targets_map.Append(&target);
-    }
-
     SwapMemory(&set, out_set, RG_SIZE(set));
 }
 

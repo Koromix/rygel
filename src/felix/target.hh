@@ -10,6 +10,7 @@
 namespace RG {
 
 struct TargetConfig;
+struct TargetInfo;
 
 enum class TargetType {
     Executable,
@@ -18,8 +19,14 @@ enum class TargetType {
 };
 
 struct SourceFileInfo {
+    // In order to build source files with the correct definitions (and include directories, etc.),
+    // we need to use the options from the target that first found this source file!
+    const TargetInfo *target;
+
     const char *filename;
     SourceType type;
+
+    RG_HASHTABLE_HANDLER(SourceFileInfo, filename);
 };
 
 enum class PackLinkMode {
@@ -33,16 +40,16 @@ struct TargetInfo {
     TargetType type;
     bool enable_by_default;
 
-    HeapArray<const char *> imports;
+    HeapArray<const TargetInfo *> imports;
 
     HeapArray<const char *> definitions;
     HeapArray<const char *> export_definitions;
     HeapArray<const char *> include_directories;
     HeapArray<const char *> libraries;
 
-    const char *c_pch_filename;
-    const char *cxx_pch_filename;
-    HeapArray<SourceFileInfo> sources;
+    const SourceFileInfo *c_pch_src;
+    const SourceFileInfo *cxx_pch_src;
+    HeapArray<const SourceFileInfo *> sources;
 
     HeapArray<const char *> pack_filenames;
     const char *pack_options;
@@ -52,8 +59,11 @@ struct TargetInfo {
 };
 
 struct TargetSet {
-    HeapArray<TargetInfo> targets;
-    HashTable<const char *, const TargetInfo *> targets_map;
+    BucketArray<TargetInfo> targets;
+    HashTable<const char *, TargetInfo *> targets_map;
+
+    BucketArray<SourceFileInfo> sources;
+    HashTable<const char *, SourceFileInfo *> sources_map;
 
     BlockAllocator str_alloc;
 };
@@ -63,8 +73,6 @@ class TargetSetBuilder {
 
     TargetSet set;
 
-    HashMap<Span<const char>, Size> targets_map;
-
 public:
     bool LoadIni(StreamReader *st);
     bool LoadFiles(Span<const char *const> filenames);
@@ -73,7 +81,7 @@ public:
 
 private:
     const TargetInfo *CreateTarget(TargetConfig *target_config);
-    const TargetInfo *FindImport(const char *name) const;
+    const SourceFileInfo *CreateSource(const TargetInfo *target, const char *filename, SourceType type);
 };
 
 bool LoadTargetSet(Span<const char *const> filenames, TargetSet *out_set);
