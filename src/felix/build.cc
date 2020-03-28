@@ -89,11 +89,7 @@ Builder::Builder(const BuildSettings &build)
     RG_ASSERT(build.compiler);
 
     cache_filename = Fmt(&str_alloc, "%1%/cache%/FelixCache.bin", build.output_directory).ptr;
-
-    // We don't need the cache if the user wants to rebuild everything anyway
-    if (!build.rebuild) {
-        LoadCache();
-    }
+    LoadCache();
 }
 
 // Beware, failures can leave the Builder in a undefined state
