@@ -339,15 +339,18 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     // Heavy type, so create it directly in HeapArray
     TargetInfo *target = set.targets.AppendDefault();
 
-    // Copy simple values
+    // Copy/steal simple values
     target->name = target_config->name;
     target->type = target_config->type;
     target->enable_by_default = target_config->enable_by_default;
     std::swap(target->definitions, target_config->definitions);
     std::swap(target->export_definitions, target_config->export_definitions);
     std::swap(target->include_directories, target_config->include_directories);
+    std::swap(target->libraries, target_config->libraries);
     target->pack_link_mode = target_config->pack_link_mode;
     target->pack_options = target_config->pack_options;
+    target->c_pch_filename = target_config->c_pch_filename;
+    target->cxx_pch_filename = target_config->cxx_pch_filename;
 
     // Gather direct target objects
     {
@@ -372,47 +375,34 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
         }
     }
 
-    // Resolve imported objects and libraries
+    // Resolve imported targets
     {
-        std::swap(target->libraries, target_config->libraries);
-
-        for (const char *import_name: target_config->imports) {
-            const TargetInfo *import;
-            {
-                Size import_idx = targets_map.FindValue(import_name, -1);
-                if (import_idx < 0) {
-                    LogError("Cannot import from unknown target '%1'", import_name);
-                    return nullptr;
-                }
-
-                import = &set.targets[import_idx];
-                if (import->type != TargetType::Library && import->type != TargetType::ExternalLibrary) {
-                    LogError("Cannot import non-library target '%1'", import->name);
-                    return nullptr;
-                }
-            }
-
-            target->imports.Append(import->imports);
-            target->definitions.Append(import->export_definitions);
-            target->export_definitions.Append(import->export_definitions);
-            target->libraries.Append(import->libraries);
-            target->sources.Append(import->sources);
-        }
-
-        target->imports.Append(target_config->imports);
-    }
-
-    // Deduplicate import array, without sorting because ordering matters
-    {
+        HeapArray<const TargetInfo *> imports;
         HashSet<const char *> handled_imports;
 
-        Size j = 0;
-        for (Size i = 0; i < target->imports.len; i++) {
-            target->imports[j] = target->imports[i];
-            j += handled_imports.Append(target->imports[i]).second;
+        for (const char *import_name: target_config->imports) {
+            const TargetInfo *import = FindImport(import_name);
+            if (!import)
+                return nullptr;
+
+            for (const char *import_name2: import->imports) {
+                const TargetInfo *import2 = FindImport(import_name2);
+                RG_ASSERT(import2);
+
+                imports.Append(import2);
+            }
+
+            imports.Append(import);
         }
 
-        target->imports.RemoveFrom(j);
+        for (const TargetInfo *import: imports) {
+            if (handled_imports.Append(import->name).second) {
+                target->imports.Append(import->name);
+                target->definitions.Append(import->export_definitions);
+                target->libraries.Append(import->libraries);
+                target->sources.Append(import->sources);
+            }
+        }
     }
 
     // Sort and deduplicate library and object arrays
@@ -433,10 +423,6 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
         return TestStr(src1.filename, src2.filename);
     }) - target->sources.begin());
 
-    // PCH files
-    target->c_pch_filename = target_config->c_pch_filename;
-    target->cxx_pch_filename = target_config->cxx_pch_filename;
-
     // Gather asset filenames
     if (!ResolveFileSet(target_config->pack_file_set, &set.str_alloc, &target->pack_filenames))
         return nullptr;
@@ -446,6 +432,23 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
 
     out_guard.Disable();
     return target;
+}
+
+const TargetInfo *TargetSetBuilder::FindImport(const char *name) const
+{
+    Size import_idx = targets_map.FindValue(name, -1);
+    if (import_idx < 0) {
+        LogError("Cannot import from unknown target '%1'", name);
+        return nullptr;
+    }
+
+    const TargetInfo *import = &set.targets[import_idx];
+    if (import->type != TargetType::Library && import->type != TargetType::ExternalLibrary) {
+        LogError("Cannot import non-library target '%1'", import->name);
+        return nullptr;
+    }
+
+    return import;
 }
 
 void TargetSetBuilder::Finish(TargetSet *out_set)

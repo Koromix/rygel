@@ -73,6 +73,7 @@ public:
 
 private:
     const TargetInfo *CreateTarget(TargetConfig *target_config);
+    const TargetInfo *FindImport(const char *name) const;
 };
 
 bool LoadTargetSet(Span<const char *const> filenames, TargetSet *out_set);
