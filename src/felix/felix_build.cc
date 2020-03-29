@@ -152,13 +152,7 @@ Supported compilation modes:)");
                     return 1;
                 }
             } else if (opt.Test("-m", "--mode", OptionType::Value)) {
-                const char *const *ptr =
-                    FindIfPtr(CompileModeNames,
-                              [&](const char *name) { return TestStr(name, opt.current_value); });
-
-                if (ptr) {
-                    build.compile_mode = (CompileMode)(ptr - CompileModeNames);
-                } else {
+                if (!OptionToEnum(CompileModeNames, opt.current_value, &build.compile_mode)) {
                     LogError("Unknown build mode '%1'", opt.current_value);
                     return 1;
                 }

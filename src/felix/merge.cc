@@ -48,13 +48,8 @@ bool LoadMergeRules(const char *filename, unsigned int flags, MergeRuleSet *out_
             bool changed_merge_mode = false;
             do {
                 if (prop.key == "CompressionType") {
-                    const char *const *name =
-                        FindIfPtr(CompressionTypeNames,
-                                  [&](const char *name) { return TestStr(name, prop.value); });
-
-                    if (name) {
+                    if (OptionToEnum(CompressionTypeNames, prop.value, &rule->compression_type)) {
                         rule->override_compression = true;
-                        rule->compression_type = (CompressionType)(name - CompressionTypeNames);
                     } else {
                         LogError("Unknown compression type '%1'", prop.value);
                         valid = false;

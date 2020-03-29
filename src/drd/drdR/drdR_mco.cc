@@ -20,15 +20,13 @@ static drd_Sector GetSectorFromString(SEXP sector_xp, drd_Sector default_sector)
     const char *sector_str = !Rf_isNull(sector_xp) ? Rcpp::as<const char *>(sector_xp) : nullptr;
 
     if (sector_str) {
-        const char *const *ptr =
-            FindIfPtr(drd_SectorNames,
-                      [&](const char *name) { return TestStr(name, sector_str); });
-        if (!ptr) {
+        drd_Sector sector;
+        if (!OptionToEnum(drd_SectorNames, sector_str, &sector)) {
             LogError("Sector '%1' does not exist", sector_str);
             rcc_StopWithLastError();
         }
 
-        return (drd_Sector)(ptr - drd_SectorNames);
+        return sector;
     } else {
         return default_sector;
     }
@@ -484,24 +482,18 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
 
     unsigned int flags = 0;
     for (const char *opt: options_vec) {
-        const OptionDesc *desc =
-            FindIfPtr(mco_ClassifyFlagOptions,
-                      [&](const OptionDesc &desc) { return TestStr(desc.name, opt); });
-        if (!desc)
+        mco_ClassifyFlag flag;
+        if (!OptionToEnum(mco_ClassifyFlagOptions, opt, &flag))
             Rcpp::stop("Unknown classifier option '%1'", opt);
-        flags |= 1u << (desc - mco_ClassifyFlagOptions);
+
+        flags |= 1u << (int)flag;
     }
 
     int dispense_mode = -1;
-    if (dispense_mode_str) {
-        const OptionDesc *desc =
-            FindIfPtr(mco_DispenseModeOptions,
-                      [&](const OptionDesc &desc) { return TestStr(desc.name, dispense_mode_str); });
-        if (!desc) {
-            LogError("Unknown dispensation mode '%1'", dispense_mode_str);
-            rcc_StopWithLastError();
-        }
-        dispense_mode = (int)(desc - mco_DispenseModeOptions);
+    if (dispense_mode_str &&
+            !OptionToEnum(mco_DispenseModeOptions, dispense_mode_str, &dispense_mode)) {
+        LogError("Unknown dispensation mode '%1'", dispense_mode_str);
+        rcc_StopWithLastError();
     }
 
     bool export_supplement_cents;

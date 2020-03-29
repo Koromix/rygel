@@ -64,15 +64,10 @@ Available merge options:)");
                 print_usage(stdout);
                 return 0;
             } else if (opt.Test("-t", "--type", OptionType::Value)) {
-                const char *const *name =
-                    FindIfPtr(PackModeNames,
-                              [&](const char *name) { return TestStr(name, opt.current_value); });
-                if (!name) {
+                if (!OptionToEnum(PackModeNames, opt.current_value, &mode)) {
                     LogError("Unknown generator type '%1'", opt.current_value);
                     return 1;
                 }
-
-                mode = (PackMode)(name - PackModeNames);
             } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
                 output_path = opt.current_value;
             } else if (opt.Test("-s", "--strip", OptionType::Value)) {
@@ -82,30 +77,25 @@ Available merge options:)");
                     return 1;
                 }
             } else if (opt.Test("-c", "--compress", OptionType::Value)) {
-                const char *const *name =
-                    FindIfPtr(CompressionTypeNames,
-                              [&](const char *name) { return TestStr(name, opt.current_value); });
-                if (!name) {
+                if (!OptionToEnum(CompressionTypeNames, opt.current_value, &compression_type)) {
                     LogError("Unknown compression type '%1'", opt.current_value);
                     return 1;
                 }
-
-                compression_type = (CompressionType)(name - CompressionTypeNames);
             } else if (opt.Test("-M", "--merge_file", OptionType::Value)) {
                 merge_file = opt.current_value;
             } else if (opt.Test("-m", "--merge_option", OptionType::Value)) {
                 const char *flags_str = opt.current_value;
 
                 while (flags_str[0]) {
-                    Span<const char> flag = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
-                    const char *const *name =
-                        FindIfPtr(MergeFlagNames,
-                                  [&](const char *name) { return TestStr(name, flag); });
-                    if (!name) {
-                        LogError("Unknown merge flag '%1'", flag);
+                    Span<const char> part = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
+
+                    MergeFlag flag;
+                    if (!OptionToEnum(MergeFlagNames, part, &flag)) {
+                        LogError("Unknown merge flag '%1'", part);
                         return 1;
                     }
-                    merge_flags |= 1u << (name - MergeFlagNames);
+
+                    merge_flags |= 1u << (int)flag;
                 }
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);

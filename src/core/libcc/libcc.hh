@@ -3660,4 +3660,30 @@ public:
     Span<const char *> GetRemainingArguments() const { return args.Take(pos, args.len - pos); }
 };
 
+template <typename T>
+bool OptionToEnum(Span<const char *const> options, Span<const char> str, T *out_value)
+{
+    const char *const *ptr = FindIfPtr(options, [&](const char *name) { return TestStr(name, str); });
+
+    if (ptr) {
+        *out_value = (T)(ptr - options.ptr);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+template <typename T>
+bool OptionToEnum(Span<const OptionDesc> options, Span<const char> str, T *out_value)
+{
+    const OptionDesc *desc = FindIfPtr(options, [&](const OptionDesc &desc) { return TestStr(desc.name, str); });
+
+    if (desc) {
+        *out_value = (T)(desc - options.ptr);
+        return true;
+    } else {
+        return false;
+    }
+}
+
 }

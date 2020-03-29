@@ -105,12 +105,9 @@ bool UserSetBuilder::LoadIni(StreamReader *st)
                         if (part == "All") {
                             user->permissions = enable ? UINT_MAX : 0;
                         } else if (part.len) {
-                            const char *const *name =
-                                FindIfPtr(UserPermissionNames,
-                                          [&](const char *str) { return TestStr(str, part); });
-                            if (name) {
-                                user->permissions =
-                                    ApplyMask(user->permissions, 1u << (name - UserPermissionNames), enable);
+                            UserPermission perm;
+                            if (OptionToEnum(UserPermissionNames, part, &perm)) {
+                                user->permissions = ApplyMask(user->permissions, 1u << (int)perm, enable);
                             } else {
                                 LogError("Unknown permission '%1'", part);
                                 valid = false;
@@ -138,12 +135,9 @@ bool UserSetBuilder::LoadIni(StreamReader *st)
                         if (part == "All") {
                             user->mco_dispense_modes = enable ? UINT_MAX : 0;
                         } else if (part.len) {
-                            const OptionDesc *desc =
-                                FindIfPtr(mco_DispenseModeOptions,
-                                          [&](const OptionDesc &desc) { return TestStr(desc.name, part); });
-                            if (desc) {
-                                user->mco_dispense_modes =
-                                    ApplyMask(user->mco_dispense_modes, 1u << (desc - mco_DispenseModeOptions), enable);
+                            mco_DispenseMode dispense_mode;
+                            if (OptionToEnum(mco_DispenseModeOptions, part, &dispense_mode)) {
+                                user->mco_dispense_modes = ApplyMask(user->mco_dispense_modes, 1u << (int)dispense_mode, enable);
                             } else {
                                 LogError("Unknown dispensation mode '%1'", part);
                                 valid = false;

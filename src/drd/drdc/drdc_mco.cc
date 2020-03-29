@@ -362,27 +362,21 @@ Test options:)");
                 const char *flags_str = opt.current_value;
 
                 while (flags_str[0]) {
-                    Span<const char> flag = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
-                    const OptionDesc *desc =
-                        FindIfPtr(mco_ClassifyFlagOptions,
-                                  [&](const OptionDesc &desc) { return TestStr(desc.name, flag); });
-                    if (!desc) {
-                        LogError("Unknown classifier flag '%1'", flag);
+                    Span<const char> part = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
+
+                    mco_ClassifyFlag flag;
+                    if (!OptionToEnum(mco_ClassifyFlagOptions, part, &flag)) {
+                        LogError("Unknown classifier flag '%1'", part);
                         return 1;
                     }
-                    classifier_flags |= 1u << (desc - mco_ClassifyFlagOptions);
+
+                    classifier_flags |= 1u << (int)flag;
                 }
             } else if (opt.Test("-d", "--dispense", OptionType::Value)) {
-                const char *mode_str = opt.current_value;
-
-                const OptionDesc *desc =
-                    FindIfPtr(mco_DispenseModeOptions,
-                              [&](const OptionDesc &desc) { return TestStr(desc.name, mode_str); });
-                if (!desc) {
-                    LogError("Unknown dispensation mode '%1'", mode_str);
+                if (!OptionToEnum(mco_DispenseModeOptions, opt.current_value, &dispense_mode)) {
+                    LogError("Unknown dispensation mode '%1'", opt.current_value);
                     return 1;
                 }
-                dispense_mode = (int)(desc - mco_DispenseModeOptions);
             } else if (opt.Test("--coeff")) {
                 apply_coefficient = true;
             } else if (opt.Test("-f", "--filter", OptionType::Value)) {
@@ -396,15 +390,15 @@ Test options:)");
 
                 if (flags_str) {
                     while (flags_str[0]) {
-                        Span<const char> flag = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
-                        const OptionDesc *desc =
-                            FindIfPtr(TestFlagOptions,
-                                      [&](const OptionDesc &desc) { return TestStr(desc.name, flag); });
-                        if (!desc) {
-                            LogError("Unknown test flag '%1'", flag);
+                        Span<const char> part = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
+
+                        TestFlag flag;
+                        if (!OptionToEnum(TestFlagOptions, part, &flag)) {
+                            LogError("Unknown test flag '%1'", part);
                             return 1;
                         }
-                        test_flags |= 1u << (desc - TestFlagOptions);
+
+                        test_flags |= 1u << (int)flag;
                     }
                 } else {
                     test_flags = UINT_MAX;

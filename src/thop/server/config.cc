@@ -57,12 +57,7 @@ bool ConfigBuilder::LoadIni(StreamReader *st)
             } else if (prop.section == "Institution") {
                 do {
                     if (prop.key == "Sector") {
-                        const char *const *ptr =
-                            FindIfPtr(drd_SectorNames,
-                                      [&](const char *name) { return TestStr(name, prop.value.ptr); });
-                        if (ptr) {
-                            config.sector = (drd_Sector)(ptr - drd_SectorNames);
-                        } else {
+                        if (!OptionToEnum(drd_SectorNames, prop.value, &config.sector)) {
                             LogError("Unkown sector '%1'", prop.value);
                             valid = false;
                         }
@@ -77,12 +72,7 @@ bool ConfigBuilder::LoadIni(StreamReader *st)
                         config.mco_authorization_filename = NormalizePath(prop.value, root_directory,
                                                                           &config.str_alloc).ptr;
                     } else if (prop.key == "DispenseMode") {
-                        const OptionDesc *desc =
-                            FindIfPtr(mco_DispenseModeOptions,
-                                      [&](const OptionDesc &desc) { return TestStr(desc.name, prop.value.ptr); });
-                        if (desc) {
-                            config.mco_dispense_mode = (mco_DispenseMode)(desc - mco_DispenseModeOptions);
-                        } else {
+                        if (!OptionToEnum(mco_DispenseModeOptions, prop.value, &config.mco_dispense_mode)) {
                             LogError("Unknown dispensation mode '%1'", prop.value);
                             valid = false;
                         }
