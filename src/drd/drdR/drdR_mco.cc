@@ -41,8 +41,10 @@ RcppExport SEXP drdR_mco_Init(SEXP table_dirs_xp, SEXP table_filenames_xp,
     rcc_Vector<const char *> table_dirs(table_dirs_xp);
     rcc_Vector<const char *> table_filenames(table_filenames_xp);
     rcc_Vector<const char *> authorization_filename(authorization_filename_xp);
-    if (authorization_filename.Len() > 1)
-        Rcpp::stop("Cannot load more than one authorization file");
+    if (authorization_filename.Len() > 1) {
+        LogError("Cannot load more than one authorization file");
+        rcc_StopWithLastError();
+    }
 
     ClassifierInstance *classifier = new ClassifierInstance;
     RG_DEFER_N(classifier_guard) { delete classifier; };
@@ -483,8 +485,10 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     unsigned int flags = 0;
     for (const char *opt: options_vec) {
         mco_ClassifyFlag flag;
-        if (!OptionToEnum(mco_ClassifyFlagOptions, opt, &flag))
-            Rcpp::stop("Unknown classifier option '%1'", opt);
+        if (!OptionToEnum(mco_ClassifyFlagOptions, opt, &flag)) {
+            LogError("Unknown classifier option '%1'", opt);
+            rcc_StopWithLastError();
+        }
 
         flags |= 1u << (int)flag;
     }
@@ -511,7 +515,8 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
         export_supplement_cents = false;
         export_supplement_counts = false;
     } else {
-        Rcpp::stop("Invalid value for supplement_columns parameter");
+        LogError("Invalid value for supplement_columns parameter");
+        rcc_StopWithLastError();
     }
 
 #define LOAD_OPTIONAL_COLUMN(Var, Name) \
@@ -654,8 +659,10 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
             procedures_offset = procedures_end;
         }
 
-        if (!async.Sync())
-            Rcpp::stop("The 'id' column must be ordered in all data.frames");
+        if (!async.Sync()) {
+            LogError("The 'id' column must be ordered in all data.frames");
+            rcc_StopWithLastError();
+        }
     }
 
     mco_Pricing summary = {};
@@ -1211,8 +1218,10 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
             rcc_StopWithLastError();
     }
 
-    if (stay_set.stays.len >= INT_MAX)
-        Rcpp::stop("Cannot load more than %1 stays in data.frame", INT_MAX);
+    if (stay_set.stays.len >= INT_MAX) {
+        LogError("Cannot load more than %1 stays in data.frame", INT_MAX);
+        rcc_StopWithLastError();
+    }
 
     Size diagnoses_count = 0;
     Size procedures_count = 0;

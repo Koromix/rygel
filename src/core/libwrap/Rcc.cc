@@ -115,10 +115,8 @@ const Date rcc_Vector<Date>::operator[](Size idx) const
 
 Date rcc_Vector<Date>::Value() const
 {
-    if (RG_UNLIKELY(Len() != 1)) {
-        LogError("Date or date-like vector must have one value (no more, no less)");
-        rcc_StopWithLastError();
-    }
+    if (RG_UNLIKELY(Len() != 1))
+        Rcpp::stop("Date or date-like vector must have one value (no more, no less)");
 
     return (*this)[0];
 }

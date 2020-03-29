@@ -188,8 +188,10 @@ RcppExport SEXP heimdallR_AddPeriods(SEXP inst_xp, SEXP source_xp, SEXP values_x
     AddElements(inst, source, periods_df, keys, [&](Element &elmt, Size i) {
         elmt.type = Element::Type::Period;
         elmt.u.period.duration = periods.duration[i];
-        if (std::isnan(elmt.u.period.duration) || elmt.u.period.duration < 0.0)
-            Rcpp::stop("Duration must be zero or a positive number");
+        if (std::isnan(elmt.u.period.duration) || elmt.u.period.duration < 0.0) {
+            LogError("Duration must be zero or a positive number");
+            rcc_StopWithLastError();
+        }
     });
 
     return R_NilValue;
@@ -232,8 +234,10 @@ RcppExport SEXP heimdallR_SetConcepts(SEXP inst_xp, SEXP name_xp, SEXP concepts_
     concept_set->name = DuplicateString(name.get_cstring(), &concept_set->str_alloc).ptr;
 
     for (Size i = 0; i < concepts_df.nrow(); i++) {
-        if (((const char *)concepts.path[i])[0] != '/')
-            Rcpp::stop("Paths must start with '/'");
+        if (((const char *)concepts.path[i])[0] != '/') {
+            LogError("Paths must start with '/'");
+            rcc_StopWithLastError();
+        }
 
         const char *path = concept_set->paths_set.FindValue(concepts.path[i], nullptr);
         if (!path) {
@@ -319,8 +323,10 @@ RcppExport SEXP heimdallR_RunSync(SEXP inst_xp)
 
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
 
-    if (inst->run)
-        Rcpp::stop("Async run in progress");
+    if (inst->run) {
+        LogError("Async run in progress");
+        rcc_StopWithLastError();
+    }
 
     InitFontAtlas();
 
