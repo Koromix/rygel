@@ -67,7 +67,7 @@ int RunBuild(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    HeapArray<const char *> target_names;
+    HeapArray<const char *> selectors;
     const char *config_filename = nullptr;
     BuildSettings build = {};
     int jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_WORKERS + 1);
@@ -132,7 +132,7 @@ Supported compilation modes:)");
             // We need to consume values (target names) as we go because
             // the --run option will break the loop and all remaining
             // arguments will be passed as-is to the target.
-            opt.ConsumeNonOptions(&target_names);
+            opt.ConsumeNonOptions(&selectors);
             if (!opt.Next())
                 break;
 
@@ -185,7 +185,7 @@ Supported compilation modes:)");
         }
 
         if (run_target_name) {
-            target_names.Append(run_target_name);
+            selectors.Append(run_target_name);
             run_arguments = opt.GetRemainingArguments();
         }
     }
@@ -246,49 +246,68 @@ Supported compilation modes:)");
     TargetSet target_set;
     if (!LoadTargetSet(config_filename, &target_set))
         return 1;
-
-    // Default targets
-    if (!target_names.len) {
-        for (const TargetInfo &target: target_set.targets) {
-            if (target.enable_by_default) {
-                target_names.Append(target.name);
-            }
-        }
-
-        if (!target_names.len) {
-            LogError("There are no targets");
-            return 1;
-        }
+    if (!target_set.targets.len) {
+        LogError("Configuration file does not contain any target");
+        return 1;
     }
 
-    // Select specified targets
+    // Select targets
     HeapArray<const TargetInfo *> enabled_targets;
-    const TargetInfo *run_target = nullptr;
-    {
+    HeapArray<const SourceFileInfo *> enabled_sources;
+    if (selectors.len) {
         HashSet<const char *> handled_set;
 
-        bool valid = true;
-        for (const char *target_name: target_names) {
-            if (handled_set.Append(target_name).second) {
-                const TargetInfo *target = target_set.targets_map.FindValue(target_name, nullptr);
-                if (!target) {
-                    LogError("Target '%1' does not exist", target_name);
-                    valid = false;
-                    continue;
-                }
+        for (const char *selector: selectors) {
+            bool match = false;
+            for (const TargetInfo &target: target_set.targets) {
+                if (MatchPathSpec(target.name, selector)) {
+                    if (handled_set.Append(target.name).second) {
+                        enabled_targets.Append(&target);
+                    }
 
-                enabled_targets.Append(target);
-                if (run_target_name && TestStr(target_name, run_target_name)) {
-                    run_target = target;
+                    match = true;
                 }
             }
+            for (const SourceFileInfo &src: target_set.sources) {
+                if (MatchPathSpec(src.filename, selector)) {
+                    if (handled_set.Append(src.filename).second) {
+                        enabled_sources.Append(&src);
+                    }
+
+                    match = true;
+                }
+            }
+
+            if (!match) {
+                LogError("Selector '%1' does not match anything", selector);
+                return 1;
+            }
         }
-        if (!valid)
+    } else {
+        for (const TargetInfo &target: target_set.targets) {
+            if (target.enable_by_default) {
+                enabled_targets.Append(&target);
+            }
+        }
+
+        if (!enabled_targets.len) {
+            LogError("No target to build by default");
             return 1;
+        }
     }
-    if (run_target && run_target->type != TargetType::Executable) {
-        LogError("Cannot run non-executable target '%1'", run_target->name);
-        return 1;
+
+    // Find and check target used with --run
+    const TargetInfo *run_target = nullptr;
+    if (run_target_name) {
+        run_target = target_set.targets_map.FindValue(run_target_name, nullptr);
+
+        if (!run_target) {
+            LogError("Run target '%1' does not exist", run_target_name);
+            return 1;
+        } else if (run_target->type != TargetType::Executable) {
+            LogError("Cannot run non-executable target '%1'", run_target->name);
+            return 1;
+        }
     }
 
     // We're ready to output stuff
@@ -313,6 +332,10 @@ Supported compilation modes:)");
     Builder builder(build);
     for (const TargetInfo *target: enabled_targets) {
         if (!builder.AddTarget(*target))
+            return 1;
+    }
+    for (const SourceFileInfo *src: enabled_sources) {
+        if (!builder.AddSource(*src))
             return 1;
     }
     if (!builder.Build(jobs, verbose))

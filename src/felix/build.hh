@@ -77,7 +77,7 @@ class Builder {
     HeapArray<const char *> cache_dependencies;
 
     HashMap<const char *, int64_t> mtime_map;
-    HashSet<const char *> output_set;
+    HashMap<const char *, const char *> build_map;
 
     HeapArray<WorkerState> workers;
 
@@ -89,6 +89,8 @@ public:
     Builder(const BuildSettings &build);
 
     bool AddTarget(const TargetInfo &target);
+    const char *AddSource(const SourceFileInfo &src);
+
     bool Build(int jobs, bool verbose);
 
 private:
