@@ -6,14 +6,6 @@
 #include "build.hh"
 #include "compiler.hh"
 
-#ifdef _WIN32
-    #define WIN32_LEAN_AND_MEAN
-    #ifndef NOMINMAX
-        #define NOMINMAX
-    #endif
-    #include <windows.h>
-#endif
-
 namespace RG {
 
 static bool TestBinary(const char *name)
@@ -103,11 +95,12 @@ public:
         Fmt(&buf, warnings ? " -Wall" : " -Wno-everything");
 
         // Platform flags
+        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64");
 #if defined(_WIN32)
-        Fmt(&buf, " -D_MT -Xclang --dependent-lib=libcmt -Xclang --dependent-lib=oldnames"
-                  " -Wno-unknown-warning-option -Wno-unknown-pragmas -Wno-deprecated-declarations"
-                  " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DNOMINMAX"
-                  " -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE");
+        Fmt(&buf, " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601"
+                  " -DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE"
+                  " -D_MT -Xclang --dependent-lib=libcmt -Xclang --dependent-lib=oldnames"
+                  " -Wno-unknown-warning-option -Wno-unknown-pragmas -Wno-deprecated-declarations");
 
         if (src_type == SourceType::CXX) {
             Fmt(&buf, " -Xclang -flto-visibility-public-std");
@@ -115,8 +108,7 @@ public:
 #elif defined(__APPLE__)
         Fmt(&buf, " -pthread -fPIC");
 #else
-        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
-                  " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4");
+        Fmt(&buf, " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4");
         if (compile_mode == CompileMode::Fast || compile_mode == CompileMode::Release) {
             Fmt(&buf, " -D_FORTIFY_SOURCE=2");
         }
@@ -248,14 +240,13 @@ public:
         }
 
         // Platform flags
+        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64");
 #if defined(_WIN32)
-        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
-                  " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -D__USE_MINGW_ANSI_STDIO=1");
+        Fmt(&buf, " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -D__USE_MINGW_ANSI_STDIO=1 -DNOMINMAX");
 #elif defined(__APPLE__)
         Fmt(&buf, " -pthread -fPIC");
 #else
-        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
-                  " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4");
+        Fmt(&buf, " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4");
         if (compile_mode == CompileMode::Fast || compile_mode == CompileMode::Release) {
             Fmt(&buf, " -D_FORTIFY_SOURCE=2");
         }
@@ -385,9 +376,9 @@ public:
         }
 
         // Platform flags
-        Fmt(&buf, " /D_LARGEFILE_SOURCE /D_LARGEFILE64_SOURCE /D_FILE_OFFSET_BITS=64"
-                  " /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DNOMINMAX"
-                  " /D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_DEPRECATE");
+        Fmt(&buf, " /DWINVER=0x0601 /D_WIN32_WINNT=0x0601"
+                  " /D_LARGEFILE_SOURCE /D_LARGEFILE64_SOURCE /D_FILE_OFFSET_BITS=64"
+                  " /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_DEPRECATE");
 
         // Sources and definitions
         Fmt(&buf, " /DFELIX /c /utf-8 \"%1\"", src_filename);
