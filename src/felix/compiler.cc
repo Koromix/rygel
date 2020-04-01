@@ -22,7 +22,7 @@ static bool TestBinary(const char *name)
         static const Span<const char> extensions[] = {".com", ".exe", ".bat", ".cmd"};
 
         for (Span<const char> ext: extensions) {
-            if (RG_LIKELY(ext.len < buf.Available())) {
+            if (RG_LIKELY(ext.len < buf.Available() - 1)) {
                 memcpy(buf.end(), ext.ptr, ext.len + 1);
 
                 if (TestFile(buf.data))
