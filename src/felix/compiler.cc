@@ -123,7 +123,7 @@ public:
             Fmt(&buf, " -D%1", definition);
         }
         for (const char *include_directory: include_directories) {
-            Fmt(&buf, " -I%1", include_directory);
+            Fmt(&buf, " \"-I%1\"", include_directory);
         }
 
         out_node->cache_len = buf.len;
@@ -261,7 +261,7 @@ public:
             Fmt(&buf, " -D%1", definition);
         }
         for (const char *include_directory: include_directories) {
-            Fmt(&buf, " -I%1", include_directory);
+            Fmt(&buf, " \"-I%1\"", include_directory);
         }
 
         out_node->cache_len = buf.len;
@@ -389,7 +389,7 @@ public:
             Fmt(&buf, " /D%1", definition);
         }
         for (const char *include_directory: include_directories) {
-            Fmt(&buf, " /I%1", include_directory);
+            Fmt(&buf, " \"/I%1\"", include_directory);
         }
 
         out_node->cache_len = buf.len;
