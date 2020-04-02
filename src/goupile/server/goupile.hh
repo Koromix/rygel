@@ -14,6 +14,4 @@ class sq_Database;
 extern Config goupile_config;
 extern sq_Database goupile_db;
 
-extern char goupile_etag[33];
-
 }

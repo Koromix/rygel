@@ -19,8 +19,6 @@ namespace RG {
 Config goupile_config;
 sq_Database goupile_db;
 
-char goupile_etag[33];
-
 #ifndef NDEBUG
 static const char *assets_filename;
 static AssetSet asset_set;
@@ -31,6 +29,8 @@ extern "C" const Span<const AssetInfo> pack_assets;
 #endif
 static HashTable<const char *, AssetInfo> assets_map;
 static BlockAllocator assets_alloc;
+
+static char etag[33];
 
 static Size ConvertToJsName(const char *name, Span<char> out_buf)
 {
@@ -108,7 +108,7 @@ static AssetInfo PatchGoupileVariables(const AssetInfo &asset, Allocator *alloc)
 #ifdef NDEBUG
             writer->Write(FelixVersion);
 #else
-            writer->Write(goupile_etag);
+            writer->Write(etag);
 #endif
             return true;
         } else if (TestStr(key, "LINK_MANIFEST")) {
@@ -141,7 +141,7 @@ static void InitAssets()
     {
         uint64_t buf[2];
         randombytes_buf(&buf, RG_SIZE(buf));
-        Fmt(goupile_etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
+        Fmt(etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
     }
 
     // Packed static assets
@@ -195,16 +195,16 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             }
 
             if (asset) {
-                const char *etag = request.GetHeaderValue("If-None-Match");
+                const char *client_etag = request.GetHeaderValue("If-None-Match");
 
-                if (etag && TestStr(etag, goupile_etag)) {
+                if (client_etag && TestStr(client_etag, etag)) {
                     MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
                     io->AttachResponse(304, response);
                 } else {
                     const char *mimetype = http_GetMimeType(GetPathExtension(asset->name));
                     io->AttachBinary(200, asset->data, mimetype, asset->compression_type);
 
-                    io->AddCachingHeaders(goupile_config.max_age, goupile_etag);
+                    io->AddCachingHeaders(goupile_config.max_age, etag);
                     if (asset->source_map) {
                         io->AddHeader("SourceMap", asset->source_map);
                     }
