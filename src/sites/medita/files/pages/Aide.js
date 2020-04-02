@@ -6,4 +6,3 @@ form.output(html`
     <br/>
     <button class="md_button" @click=${e => go("Accueil")}>Retour à l'accueil</button>
 `)
-data.makeFooter(page)

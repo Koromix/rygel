@@ -117,4 +117,3 @@ form.output(html`
     <button class="md_button" @click=${e => go("Formulaires")}>Formulaires</button>
     <button class="md_button" @click=${e => go("Accueil")}>Retour à l'accueil</button>
 `)
-data.makeFooter(page)

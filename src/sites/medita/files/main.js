@@ -19,8 +19,9 @@ data.echelles = [
     {category: "Autres", name: "Évaluation de la dépression psychotique (PDAS)", form: "F_PDAS", keys: ["score"]},
     {category: "Autres", name: "Diagnostic de la personnalité (PQD4)", form: "F_PDQ4", keys: ["score"]}
 ]
+
 for (let echelle of data.echelles)
-    app.form(echelle.form)
+    app.form(echelle.form, echelle.name)
 
 data.makeHeader = function(title, page) {
     page.output(html`
@@ -28,28 +29,18 @@ data.makeHeader = function(title, page) {
         <h1>${title}</h1><br/>
     `)
 }
+
 data.makeFormHeader = function(title, page) {
     data.makeHeader(title, page)
     route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
 }
-
-data.makeFooter = function(page) {
-    page.output(html`
-        <br/><br/>
-        <div class="md_footer">
-            <p style="text-align: left;">Alpha</p>
-            <a style="text-align: center;" href="Aide">Aide</a>
-            <a style="text-align: right;" href="mailto:xxxx@xxx.fr">Contact</a>
-        </div>
-    `)
-}
 data.makeFormFooter = function(page) {
     page.output(html`
         <br/><br/>
-        <button class="md_button" ?disabled=${!page.isValid()} @click=${page.submit}>Enregistrer</button>
+        <button class="md_button" ?disabled=${!page.isValid() || !page.hasChanged()}
+                @click=${page.save}>Enregistrer</button>
         <button class="md_button" @click=${e => goupile.go("Formulaires")}>Formulaires</button>
         <button class="md_button" @click=${e => goupile.go("Suivi")}>Suivi Patient / Graphique</button>
         <button class="md_button" @click=${e => goupile.go("Accueil")}>Retour à l'accueil</button>
     `)
-    data.makeFooter(page)
 }
