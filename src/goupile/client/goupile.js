@@ -135,10 +135,8 @@ let goupile = new function() {
             let new_app = new Application;
             let app_builder = new ApplicationBuilder(new_app);
 
-            if (code == null) {
-                let file = await virt_fs.load('/files/main.js');
-                code = file ? await file.data.text() : '';
-            }
+            if (code == null)
+                code = await readCode('/files/main.js');
 
             let func = Function('util', 'app', 'data', 'route', code);
             func(util, app_builder, new_app.data, new_app.route);
@@ -181,12 +179,8 @@ let goupile = new function() {
 
         // Update custom CSS (if any)
         {
-            let file = await virt_fs.load('/files/main.css');
-
-            if (file) {
-                let css = await file.data.text();
-                updateApplicationCSS(css);
-            }
+            let css = await readCode('/files/main.css');
+            changeCSS(css);
         }
 
         util.deepFreeze(app, 'route');
@@ -219,7 +213,7 @@ let goupile = new function() {
         }
     }
 
-    function updateApplicationCSS(css) {
+    function changeCSS(css) {
         if (!style_el) {
             style_el = document.createElement('style');
             document.head.appendChild(style_el);
@@ -539,7 +533,7 @@ let goupile = new function() {
         if (path === '/files/main.js') {
             return runAssetSafe(app.assets[0], code);
         } else if (path === '/files/main.css') {
-            updateApplicationCSS(code);
+            changeCSS(code);
             return true;
         } else {
             let asset = app.paths_map[path];
@@ -556,9 +550,7 @@ let goupile = new function() {
             switch (asset.type) {
                 case 'main': {
                     if (code != null) {
-                        await self.initApplication(code);
-
-                        // If initApplication() succeeds it runs the page, so no need to redo it
+                        await self.initApplication();
                         return true;
                     }
 
@@ -566,10 +558,8 @@ let goupile = new function() {
                 } break;
 
                 case 'page': {
-                    if (code == null) {
-                        let file = await virt_fs.load(asset.path);
-                        code = file ? await file.data.text() : '';
-                    }
+                    if (code == null)
+                        code = await readCode(asset.path);
 
                     form_executor.runPage(code, test_el);
                 } break;
@@ -601,6 +591,17 @@ let goupile = new function() {
             console.log(err);
 
             return false;
+        }
+    }
+
+    async function readCode(path) {
+        let code = dev_files.getBuffer(path);
+
+        if (code != null) {
+            return code;
+        } else {
+            let file = await virt_fs.load(path);
+            return file ? await file.data.text() : null;
         }
     }
 

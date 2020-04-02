@@ -90,22 +90,22 @@ let dev_files = new function() {
 
         if (!buffer || buffer.reload) {
             let file = await virt_fs.load(path);
+            let code = file ? await file.data.text() : '';
             let extension = path.substr(path.lastIndexOf('.'));
-            let script = file ? await file.data.text() : '';
 
             if (buffer) {
                 buffer.sha256 = file ? file.sha256 : null;
                 buffer.reload = false;
 
                 editor_ignore_change = true;
-                editor.session.doc.setValue(script);
+                editor.session.doc.setValue(code);
                 editor_ignore_change = false;
             } else {
                 let session;
                 switch (extension) {
-                    case '.js': { session = new ace.EditSession(script, 'ace/mode/javascript'); } break;
-                    case '.css': { session = new ace.EditSession(script, 'ace/mode/css'); } break;
-                    default: { session = new ace.EditSession(script, 'ace/mode/text'); } break;
+                    case '.js': { session = new ace.EditSession(code, 'ace/mode/javascript'); } break;
+                    case '.css': { session = new ace.EditSession(code, 'ace/mode/css'); } break;
+                    default: { session = new ace.EditSession(code, 'ace/mode/text'); } break;
                 }
 
                 session.setOption('useWorker', false);
@@ -153,6 +153,11 @@ let dev_files = new function() {
             }
         }, 180);
     }
+
+    this.getBuffer = function(path) {
+        let buffer = editor_buffers.get(path);
+        return buffer ? buffer.session.doc.getValue() : null;
+    };
 
     this.runFiles = async function() {
         files = await virt_fs.status(remote);
