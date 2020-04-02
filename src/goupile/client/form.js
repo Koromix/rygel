@@ -245,7 +245,7 @@ Navigation functions should only be called in reaction to user events, such as b
         entry.progress('Enregistrement en cours');
         try {
             let record2 = await virt_data.save(record, page.variables);
-            entry.success('Données enregistrées !');
+            entry.success(complete ? 'Données validées !' : 'Données enregistrées');
 
             if (current_records.has(record2.id))
                 current_records.set(record2.id, record2);
