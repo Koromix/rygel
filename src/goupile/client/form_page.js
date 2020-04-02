@@ -62,6 +62,7 @@ function PageBuilder(state, page) {
     this.submitHandler = null;
 
     this.isValid = function() { return !page.errors.length && !missing_block; };
+    this.hasChanged = function() { return state.changed; };
 
     this.pushOptions = function(options = {}) {
         options = expandOptions(options);
