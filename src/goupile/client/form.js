@@ -126,7 +126,7 @@ let form_executor = new function() {
 
         render(html`
             <div class="af_actions">
-                <button class="af_button" ?disabled=${!state.changed}
+                <button class="af_button" ?disabled=${!builder.isValid() || !state.changed}
                         @click=${builder.save}>Enregistrer</button>
             </div>
 
@@ -159,8 +159,8 @@ let form_executor = new function() {
         window.history.replaceState(null, null, self.makeURL());
 
         let show_new = (record.sequence != null);
-        let enable_save = state.changed;
-        let enable_validate = !state.changed && !page.errors.length &&
+        let enable_save = builder.isValid() && state.changed;
+        let enable_validate = builder.isValid() && !state.changed &&
                               record.complete[page.key] === false;
 
         render(html`

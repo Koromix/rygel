@@ -50,6 +50,7 @@ function PageBuilder(state, page) {
     let restart = false;
 
     let missing_set = new Set;
+    let missing_block = false;
 
     // Key and value handling
     this.decodeKey = key => key;
@@ -59,6 +60,8 @@ function PageBuilder(state, page) {
     // Change and submission handling
     this.changeHandler = page => {};
     this.submitHandler = null;
+
+    this.isValid = function() { return !page.errors.length && !missing_block; };
 
     this.pushOptions = function(options = {}) {
         options = expandOptions(options);
@@ -825,12 +828,12 @@ Valid choices include:
     };
     this.buttons.std = {
         save: (label, options = {}) => [
-            [label || 'Enregistrer', !page.errors.length ? self.submit : null,
-                                     page.errors.length ? 'Erreurs ou données obligatoires manquantes' : null]
+            [label || 'Enregistrer', self.isValid() ? self.submit : null,
+                                     !self.isValid() ? 'Erreurs ou données obligatoires manquantes' : null]
         ],
         ok_cancel: (label, options = {}) => [
-            [label || 'OK', !page.errors.length ? self.submit : null,
-                            page.errors.length ? 'Erreurs ou données obligatoires manquantes' : null],
+            [label || 'OK', self.isValid() ? self.submit : null,
+                            !self.isValid() ? 'Erreurs ou données obligatoires manquantes' : null],
             ['Annuler', self.close]
         ]
     };
@@ -873,7 +876,7 @@ Valid choices include:
             return;
         }
 
-        if (!page.errors.length)
+        if (self.isValid())
             self.submitHandler(true);
     };
 
@@ -973,7 +976,7 @@ Valid choices include:
             if (intf.options.missingMode === 'error' || state.missing_errors.has(key.toString()))
                 intf.error('Donnée obligatoire manquante');
             if (intf.options.missingMode === 'disable')
-                page.errors.push('Donnée obligatoire manquante');
+                missing_block |= true;
         }
 
         page.variables.push(intf);
