@@ -24,10 +24,15 @@
             };
         </script>
 
-        <!-- Not really a module, but type="module" is an easy way to prevent
-             older browsers from using the modern version -->
-        <script type="module" src="{BASE_URL}static/goupile.pk.js"></script>
-        <script nomodule src="{BASE_URL}static/goupile_compat.pk.js"></script>
+        <script src="{BASE_URL}static/goupile.pk.js"></script>
+        <script nomodule>
+            if (typeof goupile === 'undefined') {
+                var script = document.createElement('script');
+                script.src = '{BASE_URL}static/goupile_compat.pk.js';
+                script.type = 'text/javascript';
+                document.head.appendChild(script);
+            }
+        </script>
 
         <link rel="stylesheet" href="{BASE_URL}static/goupile.pk.css"/>
         {LINK_MANIFEST}
