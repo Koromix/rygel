@@ -91,7 +91,7 @@ let goupile = new function() {
                 entry.close();
             }
         } catch (err) {
-            entry.error(err.message);
+            entry.info('Mise à jour abandonnée (pas de réseau ?)');
         }
     }
 
