@@ -96,37 +96,18 @@ let goupile = new function() {
     }
 
     async function openDatabase() {
-        let db_name = `goupile.${env.app_key}`;
-        let db = await idb.open(db_name, 5, (db, old_version) => {
+        let db_name = `goupile@${env.app_key}`;
+        let db = await idb.open(db_name, 1, (db, old_version) => {
             switch (old_version) {
                 case null: {
                     db.createStore('files', {keyPath: 'path'});
                     db.createStore('files_data');
                     db.createStore('files_cache', {keyPath: 'path'});
 
-                    db.createStore('form_records', {keyPath: 'tkey'});
-                    db.createStore('form_variables', {keyPath: 'tkey'});
-                } // fallthrough
-
-                case 1: {
-                    db.deleteStore('form_records');
-                    db.deleteStore('form_variables');
-
                     db.createStore('records', {keyPath: 'tkey'});
                     db.createStore('records_data', {keyPath: 'tkey'});
-                    db.createStore('records_variables', {keyPath: 'tkey'});
-                } // fallthrough
-
-                case 2: {
                     db.createStore('records_sequences');
-                } // fallthrough
-
-                case 3: {
-                    db.createStore('events', {keyPath: 'key'});
-                } // fallthrough
-
-                case 4: {
-                    db.deleteStore('events');
+                    db.createStore('records_variables', {keyPath: 'tkey'});
                 } // fallthrough
             }
         });
