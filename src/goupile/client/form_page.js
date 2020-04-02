@@ -582,7 +582,8 @@ function PageBuilder(state, page) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
-        updateValue(key, value, false);
+        if (value !== state.values[key])
+            updateValue(key, value, false);
 
         let text = value;
         if (!options.raw && typeof value !== 'string') {
