@@ -194,6 +194,9 @@ let goupile = new function() {
     };
 
     async function fetchSettings() {
+        if (goupile.isStandalone())
+            return false;
+
         let session_rnd = util.getCookie('session_rnd');
 
         if (session_rnd !== settings_rnd) {

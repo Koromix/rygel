@@ -155,19 +155,15 @@ let dev_files = new function() {
     }
 
     this.runFiles = async function() {
-        if (remote) {
-            files = await virt_fs.status();
+        files = await virt_fs.status(remote);
 
-            // Overwrite with user actions (if any)
-            for (let file of files)
-                file.action = user_actions[file.path] || file.action;
+        // Overwrite with user actions (if any)
+        for (let file of files)
+            file.action = user_actions[file.path] || file.action;
 
-            // Show locally deleted files last
-            files.sort((file1, file2) => (!!file2.sha256 - !!file1.sha256) ||
-                                             util.compareValues(file1.path, file2.path));
-        } else {
-            files = await virt_fs.listLocal();
-        }
+        // Show locally deleted files last
+        files.sort((file1, file2) => (!!file2.sha256 - !!file1.sha256) ||
+                                      util.compareValues(file1.path, file2.path));
 
         renderActions();
     };

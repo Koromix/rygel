@@ -76,6 +76,9 @@ function VirtualFS(db) {
                 return null;
             }
         } else {
+            if (goupile.isStandalone())
+                return null;
+
             let response = await net.fetch(`${env.base_url}${path.substr(1)}`);
 
             if (response.ok) {
@@ -97,6 +100,8 @@ function VirtualFS(db) {
     };
 
     this.listAll = async function(remote = true) {
+        remote &= !goupile.isStandalone();
+
         let files = await self.status(remote);
 
         files = files.filter(file => file.sha256 || file.remote_sha256);
@@ -107,11 +112,6 @@ function VirtualFS(db) {
         }));
 
         return files;
-    };
-
-    this.listLocal = async function() {
-        let files = await db.loadAll('files');
-        return files.filter(file => file.sha256);
     };
 
     this.status = async function(remote = true) {
