@@ -5,8 +5,6 @@
 let form_executor = new function() {
     let self = this;
 
-    let block_go = false;
-
     let current_asset = {};
     let current_records = new BTree;
     let page_states = {};
@@ -56,36 +54,28 @@ let form_executor = new function() {
         let func = Function('util', 'data', 'go', 'form', 'page', 'route', 'scratch', code);
 
         if (!select_many || select_columns.size) {
-            try {
-                // We don't want go() to be fired when a script is opened or changed in the editor,
-                // because then we wouldn't be able to come back to the script to fix the code.
-                block_go = true;
+            render(html`
+                <div class="af_page">${util.map(current_records.values(), record => {
+                    let state = page_states[record.id];
+                    if (!state) {
+                        state = new PageState;
+                        page_states[record.id] = state;
+                    }
 
-                render(html`
-                    <div class="af_page">${util.map(current_records.values(), record => {
-                        let state = page_states[record.id];
-                        if (!state) {
-                            state = new PageState;
-                            page_states[record.id] = state;
-                        }
+                    // Pages need to update themselves without doing a full render
+                    let el = document.createElement('div');
+                    if (select_many)
+                        el.className = 'af_entry';
 
-                        // Pages need to update themselves without doing a full render
-                        let el = document.createElement('div');
-                        if (select_many)
-                            el.className = 'af_entry';
+                    if (select_many) {
+                        runPageMany(state, func, record, select_columns, el);
+                    } else {
+                        runPage(state, func, record, el);
+                    }
 
-                        if (select_many) {
-                            runPageMany(state, func, record, select_columns, el);
-                        } else {
-                            runPage(state, func, record, el);
-                        }
-
-                        return el;
-                    })}</div>
-                `, panel_el);
-            } finally {
-                block_go = false;
-            }
+                    return el;
+                })}</div>
+            `, panel_el);
         } else {
             render(html`<div class="af_page">Aucune colonne sélectionnée</div>`, panel_el);
         }
@@ -108,7 +98,7 @@ let form_executor = new function() {
 
         // Build it!
         builder.pushOptions({compact: true});
-        func(util, app.data, handleGo, builder, builder, {}, state.scratch);
+        func(util, app.data, app.go, builder, builder, {}, state.scratch);
 
         render(html`
             <div class="af_actions">
@@ -142,7 +132,7 @@ let form_executor = new function() {
 
         // Build it!
         builder.errorList();
-        func(util, app.data, handleGo, builder, builder, app.route, state.scratch);
+        func(util, app.data, app.go, builder, builder, app.route, state.scratch);
         builder.errorList();
 
         let show_new = (record.sequence != null);
@@ -200,17 +190,6 @@ let form_executor = new function() {
         }
 
         return util.pasteURL(url, app.route);
-    }
-
-    // Avoid async here, because it may fail (see block_go) and the caller may need
-    // to catch that synchronously.
-    function handleGo(url = null, push_history = true) {
-        if (block_go) {
-            throw new Error(`A navigation function (e.g. go()) has been interrupted.
-Navigation functions should only be called in reaction to user events, such as button clicks.`);
-        }
-
-        goupile.go(url, push_history);
     }
 
     function decodeKey(key) {

@@ -18,6 +18,7 @@ let goupile = new function() {
 
     let route_asset;
     let route_url;
+    let block_go = false;
 
     let left_panel = null;
     let show_overview = true;
@@ -138,8 +139,8 @@ let goupile = new function() {
             if (code == null)
                 code = await readCode('/files/main.js');
 
-            let func = Function('util', 'app', 'data', 'route', code);
-            func(util, app_builder, new_app.data, new_app.route);
+            let func = Function('util', 'app', 'data', 'go', 'route', code);
+            func(util, app_builder, new_app.data, handleGo, new_app.route);
 
             let known_paths = new Set(new_app.assets.map(asset => asset.path));
             known_paths.add('/files/main.js');
@@ -164,6 +165,7 @@ let goupile = new function() {
 
         app.urls_map = util.mapArray(app.assets, asset => asset.url);
         app.paths_map = util.mapArray(app.assets, asset => asset.path);
+        app.go = handleGo;
 
         // XXX: Hack for secondary asset thingy that we'll get rid of eventually
         for (let i = 0; i < app.assets.length; i++)
@@ -186,6 +188,20 @@ let goupile = new function() {
         util.deepFreeze(app, 'route');
         self.go(route_url || window.location.href, false);
     };
+
+    // Avoid async here, because it may fail (see block_go) and the caller
+    // may need to catch that synchronously.
+    function handleGo(url = null, push_history = true) {
+        if (block_go) {
+            throw new Error(`A navigation function (e.g. go()) has been interrupted.
+Navigation functions should only be called in reaction to user events, such as button clicks.`);
+        }
+
+        if (!url.match(/^((http|ftp|https):\/\/|\/)/g))
+            url = `${env.base_url}app/${url}`;
+
+        self.go(url, push_history);
+    }
 
     async function fetchSettings() {
         if (goupile.isStandalone())
@@ -228,11 +244,7 @@ let goupile = new function() {
 
     this.go = async function(url = null, push_history = true) {
         if (url) {
-            if (url.match(/(http|ftp|https):\/\//g) || url.startsWith('/')) {
-                url = new URL(url, window.location.href);
-            } else {
-                url = new URL(`${env.base_url}app/${url}`, window.location.href);
-            }
+            url = new URL(url, window.location.href);
 
             // Update route application global
             for (let [key, value] of url.searchParams) {
@@ -535,6 +547,10 @@ let goupile = new function() {
         let overview_el = document.querySelector('#gp_overview');
         let test_el = (asset === route_asset) ? overview_el : document.createElement('div');
 
+        // We don't want go() to be fired when a script is opened or changed in the editor,
+        // because then we wouldn't be able to come back to the script to fix the code.
+        block_go = true;
+
         try {
             switch (asset.type) {
                 case 'main': {
@@ -580,6 +596,8 @@ let goupile = new function() {
             console.log(err);
 
             return false;
+        } finally {
+            block_go = false;
         }
     }
 

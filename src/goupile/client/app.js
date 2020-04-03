@@ -23,6 +23,7 @@ function Application() {
     // Initialized in goupile.js
     this.urls_map = null;
     this.paths_map = null;
+    this.go = null;
 
     // Used for user globals
     this.data = {};
