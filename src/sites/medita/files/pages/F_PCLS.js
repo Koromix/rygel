@@ -1,7 +1,7 @@
 data.makeFormHeader("PCLS", page)
 form.output(html`
-    <p>Veuillez trouver ci-dessous une liste de problèmes et de symptômes fréquents à la suite d’un épisode de vie traumatique. Veuillez lire chaque problème avec soin puis déplacer le curseur de 1 à 5 pour indiquer à quel point vous avez été perturbé par ce problème dans le mois précédent.</p>
-    <p>1 => pas du tout ; 2=> un peu ; 3 => parfois ; 4 =>souvent ; 5 => très souvent</p>
+    <p>Veuillez trouver ci-dessous une liste de problèmes et de symptômes fréquents à la suite d’un épisode de vie traumatique. Veuillez lire chaque problème avec soin puis choisir un chiffre de 1 à 5 (à droite) pour indiquer à quel point vous avez été perturbé par ce problème dans le mois précédent.</p>
+    
 `)
 
 form.pushOptions({mandatory: true, missingMode: 'disable'})
@@ -16,7 +16,7 @@ let reponses = [
 
 form.enum("a", "1) Etre perturbé(e) par des souvenirs, des pensées ou des images en relation avec cet épisode stressant.", reponses)
 form.enum("b", "2) Etre perturbé(e) par des rêves  répétés en relation avec cet événement.", reponses)
-form.enum("c", "3) Brusquement agir ou sentir comme si l’épisode stressant se reproduisait (comme si vous étiez en train de le revivre).", reponses)
+form.enum("c", "3) Brusquement agir ou se sentir comme si l’épisode stressant se reproduisait (comme si vous étiez en train de le revivre).", reponses)
 form.enum("d", "4) Se sentir très bouleversé(e) lorsque quelque chose vous rappelle l’épisode stressant.", reponses)
 form.enum("e", "5) Avoir des réactions physiques, par exemple, battements de cœur, difficultés à respirer, sueurs lorsque quelque chose vous a rappelé l’épisode stressant.", reponses)
 form.enum("f", "6) Eviter de penser ou de parler de votre épisode stressant ou éviter des sentiments qui sont en relation avec lui.", reponses)

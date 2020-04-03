@@ -1,6 +1,7 @@
-data.makeFormHeader("ECHELLE D'ÉVALUATION GLOBALE DU FONCTIONNEMENT (EGF)", page)
+data.makeFormHeader("ECHELLE D'ÉVALUATION GLOBALE DU FONCTIONNEMENT (EGF (GAF))", page)
 form.output(html`
-    <p>Evaluer le fonctionnement psychologique, social et professionnel sur un continuum hypothétique allant de la santé mentale à la maladie. Ne pas tenir compte d'un handicap du fonctionnement dû à des facteurs limitant d'ordre physique ou environnemental.</p>
+    <p>Evaluer le fonctionnement psychologique, social et professionnel sur un continuum hypothétique allant de la santé mentale à la maladie (curseur à déplacer ci-dessous). 
+    <p>Ne pas tenir compte d'un handicap du fonctionnement dû à des facteurs limitant d'ordre physique ou environnemental.</p>
     <p><b>N.B :</b> Utiliser des codes intermédiaires lorsque cela est justifié : p. ex. 45, 68, 72</p>
 `)
 
