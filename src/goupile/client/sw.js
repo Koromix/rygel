@@ -16,6 +16,7 @@ let cache_urls = [
     `${env.base_url}static/goupile.pk.js`,
     `${env.base_url}static/ace.js`,
     `${env.base_url}static/theme-monokai.js`,
+    `${env.base_url}static/mode-css.js`,
     `${env.base_url}static/mode-javascript.js`,
     `${env.base_url}static/xlsx.core.min.js`,
     `${env.base_url}static/OpenSans-Regular.woff2`,
