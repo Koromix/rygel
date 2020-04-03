@@ -265,6 +265,10 @@ Navigation functions should only be called in reaction to user events, such as b
             }
             route_url = url.pathname;
 
+            // Follow aliases
+            while (route_asset && route_asset.type === 'alias')
+                route_asset = app.urls_map[route_asset.redirect];
+
             if (push_history)
                 window.history.pushState(null, null, route_url);
 
@@ -378,7 +382,9 @@ Navigation functions should only be called in reaction to user events, such as b
             <select id="gp_assets" @change=${e => self.go(e.target.value)}>
                 ${!route_asset ? html`<option>-- Sélectionnez une page --</option>` : ''}
                 ${util.mapRLE(app.assets, asset => asset.category, (category, offset, len) => {
-                    if (len === 1) {
+                    if (category == null) {
+                        return '';
+                    } else if (len === 1) {
                         let asset = app.assets[offset];
                         return html`<option value=${asset.url}
                                             .selected=${asset === select_asset}>${asset.category} (${asset.label})</option>`;

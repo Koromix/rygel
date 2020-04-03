@@ -18,12 +18,11 @@ function Application() {
         overview: 'Structure',
     }];
 
-    this.home = null;
-
     // Initialized in goupile.js
+    this.home = null;
+    this.go = null;
     this.urls_map = null;
     this.paths_map = null;
-    this.go = null;
 
     // Used for user globals
     this.data = {};
@@ -177,6 +176,15 @@ function FormBuilder(app, form) {
             throw new Error(`Page '${key}' is already used in this form`);
 
         let page = new PageInfo(form, key, label || key);
+
+        if (!form.pages.length) {
+            app.assets.push({
+                type: 'alias',
+                url: `${env.base_url}app/${form.key}/`,
+
+                redirect: page.url
+            });
+        }
 
         form.pages.push(page);
         used_keys.add(key);
