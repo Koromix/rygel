@@ -8,6 +8,7 @@
 namespace RG {
 
 void TestMatchPathName();
+void TestOptionParser();
 
 void BenchFmt();
 void BenchMatchPathName();
@@ -52,6 +53,7 @@ Options:
 
     if (test) {
         TestMatchPathName();
+        TestOptionParser();
         PrintLn();
     }
     if (bench) {

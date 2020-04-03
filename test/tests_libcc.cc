@@ -106,6 +106,250 @@ void TestMatchPathName()
 #undef CHECK_PATH_SPEC
 }
 
+void TestOptionParser()
+{
+    TEST_FUNCTION("Testing OptionParser");
+
+    // Empty
+
+    {
+        OptionParser opt({});
+
+        TEST(!opt.Next());
+        TEST(!opt.ConsumeNonOption());
+    }
+
+    // Short options
+
+    {
+        const char *args[] = {"-f"};
+        OptionParser opt(args);
+
+        TEST_STR(opt.Next(), "-f");
+        TEST(!opt.Next());
+        TEST(!opt.ConsumeNonOption());
+    }
+
+    {
+        const char *args[] = {"-foo", "-b"};
+        OptionParser opt(args);
+
+        TEST_STR(opt.Next(), "-f");
+        TEST_STR(opt.Next(), "-o");
+        TEST_STR(opt.Next(), "-o");
+        TEST_STR(opt.Next(), "-b");
+        TEST(!opt.Next());
+        TEST(!opt.ConsumeNonOption());
+    }
+
+    // Long options
+
+    {
+        const char *args[] = {"--foobar"};
+        OptionParser opt(args);
+
+        TEST_STR(opt.Next(), "--foobar");
+        TEST(!opt.Next());
+        TEST(!opt.ConsumeNonOption());
+    }
+
+    {
+        const char *args[] = {"--foo", "--bar"};
+        OptionParser opt(args);
+
+        TEST_STR(opt.Next(), "--foo");
+        TEST_STR(opt.Next(), "--bar");
+        TEST(!opt.Next());
+        TEST(!opt.ConsumeNonOption());
+    }
+
+    // Mixed tests
+
+    {
+        const char *args[] = {"--foo", "-bar"};
+        OptionParser opt(args);
+
+        TEST_STR(opt.Next(), "--foo");
+        TEST_STR(opt.Next(), "-b");
+        TEST_STR(opt.Next(), "-a");
+        TEST_STR(opt.Next(), "-r");
+        TEST(!opt.Next());
+        TEST(!opt.ConsumeNonOption());
+    }
+
+    {
+        const char *args[] = {"-foo", "--bar", "-FOO"};
+        OptionParser opt(args);
+
+        TEST_STR(opt.Next(), "-f");
+        TEST_STR(opt.Next(), "-o");
+        TEST_STR(opt.Next(), "-o");
+        TEST_STR(opt.Next(), "--bar");
+        TEST_STR(opt.Next(), "-F");
+        TEST_STR(opt.Next(), "-O");
+        TEST_STR(opt.Next(), "-O");
+        TEST(!opt.Next());
+        TEST(!opt.ConsumeNonOption());
+    }
+
+    // Values
+
+    {
+        const char *args[] = {"-f", "bar"};
+        OptionParser opt(args);
+
+        TEST_STR(opt.Next(), "-f");
+        TEST_STR(opt.ConsumeValue(), "bar");
+        TEST(!opt.Next());
+        TEST(!opt.ConsumeNonOption());
+    }
+
+    {
+        const char *args[] = {"-fbar"};
+        OptionParser opt(args);
+
+        TEST_STR(opt.Next(), "-f");
+        TEST_STR(opt.ConsumeValue(), "bar");
+        TEST(!opt.Next());
+        TEST(!opt.ConsumeNonOption());
+    }
+
+    {
+        const char *args[] = {"--foo=bar"};
+        OptionParser opt(args);
+
+        TEST_STR(opt.Next(), "--foo");
+        TEST_STR(opt.ConsumeValue(), "bar");
+        TEST(!opt.Next());
+        TEST(!opt.ConsumeNonOption());
+    }
+
+    {
+        const char *args[] = {"--foo", "bar"};
+        OptionParser opt(args);
+
+        TEST_STR(opt.Next(), "--foo");
+        TEST_STR(opt.ConsumeValue(), "bar");
+        TEST(!opt.Next());
+        TEST(!opt.ConsumeNonOption());
+    }
+
+    {
+        const char *args[] = {"bar", "--foo"};
+        OptionParser opt(args);
+
+        TEST_STR(opt.Next(), "--foo");
+        TEST(!opt.ConsumeValue());
+        TEST(!opt.Next());
+        TEST_STR(opt.ConsumeNonOption(), "bar");
+        TEST(!opt.ConsumeNonOption());
+    }
+
+    // Positional tests
+
+    {
+        const char *args[] = {"foo", "bar"};
+        OptionParser opt(args);
+
+        TEST_STR(opt.ConsumeNonOption(), "foo");
+        TEST_STR(opt.ConsumeNonOption(), "bar");
+        TEST(!opt.Next());
+        TEST(!opt.ConsumeNonOption());
+    }
+
+    {
+        const char *args[] = {"foo", "--foobar", "bar"};
+        OptionParser opt(args);
+
+        opt.Next();
+        opt.Next();
+        TEST_STR(opt.ConsumeNonOption(), "foo");
+        TEST_STR(opt.ConsumeNonOption(), "bar");
+        TEST(!opt.Next());
+        TEST(!opt.ConsumeNonOption());
+    }
+
+    {
+        const char *args[] = {"foobar", "--", "foo", "--bar"};
+        OptionParser opt(args);
+
+        opt.Next();
+        TEST_STR(opt.ConsumeNonOption(), "foobar");
+        TEST_STR(opt.ConsumeNonOption(), "foo");
+        TEST_STR(opt.ConsumeNonOption(), "--bar");
+        TEST(!opt.Next());
+        TEST(!opt.ConsumeNonOption());
+    }
+
+    {
+        const char *args[] = {"foo", "FOO", "foobar", "--", "bar", "BAR", "barfoo", "BARFOO"};
+        OptionParser opt(args);
+
+        opt.Next();
+        TEST_STR(opt.ConsumeNonOption(), "foo");
+        TEST_STR(opt.ConsumeNonOption(), "FOO");
+        TEST_STR(opt.ConsumeNonOption(), "foobar");
+        TEST_STR(opt.ConsumeNonOption(), "bar");
+        TEST_STR(opt.ConsumeNonOption(), "BAR");
+        TEST_STR(opt.ConsumeNonOption(), "barfoo");
+        TEST_STR(opt.ConsumeNonOption(), "BARFOO");
+        TEST(!opt.Next());
+        TEST(!opt.ConsumeNonOption());
+    }
+
+    // ConsumeNonOption
+
+    {
+        const char *args[] = {"foo", "-f", "bar"};
+        OptionParser opt(args);
+
+        TEST_STR(opt.ConsumeNonOption(), "foo");
+        TEST_STR(opt.Next(), "-f");
+        TEST_STR(opt.ConsumeNonOption(), "bar");
+        TEST(!opt.Next());
+    }
+
+    {
+        const char *args[] = {"bar1", "-foo", "bar2"};
+        OptionParser opt(args);
+
+        TEST_STR(opt.ConsumeNonOption(), "bar1");
+        TEST_STR(opt.Next(), "-f");
+        TEST_STR(opt.Next(), "-o");
+        TEST_STR(opt.Next(), "-o");
+        TEST_STR(opt.ConsumeNonOption(), "bar2");
+        TEST(!opt.Next());
+    }
+
+    // Complex tests
+
+    {
+        const char *args[] = {"--foo1", "bar", "fooBAR", "-foo2", "--foo3=BAR", "-fbar",
+                              "--", "FOOBAR", "--", "--FOOBAR"};
+        OptionParser opt(args);
+
+        TEST_STR(opt.Next(), "--foo1");
+        TEST_STR(opt.ConsumeValue(), "bar");
+        TEST_STR(opt.Next(), "-f");
+        TEST_STR(opt.Next(), "-o");
+        TEST(!opt.ConsumeValue());
+        TEST_STR(opt.Next(), "-o");
+        TEST_STR(opt.Next(), "-2");
+        TEST_STR(opt.Next(), "--foo3");
+        TEST_STR(opt.ConsumeValue(), "BAR");
+        TEST_STR(opt.Next(), "-f");
+        TEST_STR(opt.ConsumeValue(), "bar");
+        TEST(!opt.Next());
+        TEST_STR(opt.ConsumeNonOption(), "fooBAR");
+        TEST_STR(opt.ConsumeNonOption(), "FOOBAR");
+        TEST_STR(opt.ConsumeNonOption(), "--");
+        TEST(!opt.Next());
+        TEST_STR(opt.ConsumeNonOption(), "--FOOBAR");
+        TEST(!opt.Next());
+        TEST(!opt.ConsumeNonOption());
+    }
+}
+
 void BenchFmt()
 {
     PrintLn("Benchmarking Fmt");

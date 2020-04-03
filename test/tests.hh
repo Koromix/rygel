@@ -14,13 +14,37 @@ namespace RG {
     PrintLn("%1", Label); \
     RG_DEFER { PrintLn("  Failures: %1 / %2", failures, tests); };
 
-#define TEST(Condition) \
+#define TEST_EX(Condition, ...) \
     do { \
         tests++; \
         if (!(Condition)) { \
-            PrintLn(stderr, "  [FAIL] %1", RG_STRINGIFY(Condition)); \
+            PrintLn(stderr, __VA_ARGS__); \
             failures++; \
         } \
+    } while (false)
+
+#define TEST(Condition) \
+    TEST_EX((Condition),  "  [FAIL] %1", RG_STRINGIFY(Condition))
+#define TEST_EQ(Value1, Value2) \
+    do { \
+        auto value1 = (Value1); \
+        auto value2 = (Value2); \
+        \
+        TEST_EX(value1 == value2, "  [FAIL] %1 == %2", value1, value2); \
+    } while (false)
+#define TEST_STR(Str1, Str2) \
+    do { \
+        Span<const char> str1 = (Str1); \
+        Span<const char> str2 = (Str2); \
+        \
+        if (!str1.ptr) { \
+            str1 = "(null)"; \
+        } \
+        if (!str2.ptr) { \
+            str2 = "(null)"; \
+        } \
+        \
+        TEST_EX(str1 == str2, "  [FAIL] '%1' == '%2'", str1, str2); \
     } while (false)
 
 static inline void RunBenchmark(const char *label, Size iterations, FunctionRef<void()> func)
