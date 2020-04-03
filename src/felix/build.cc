@@ -103,16 +103,16 @@ bool Builder::AddTarget(const TargetInfo &target)
         version_obj_filename = Fmt(&str_alloc, "%1%2", src_filename, OBJECT_EXTENSION).ptr;
 
         if (UpdateVersionSource(build.version_str, src_filename) || build.rebuild) {
-            if (!IsFileUpToDate(version_obj_filename, src_filename)) {
-                BuildNode node = {};
+            BuildNode node = {};
 
-                node.text = "Build version file";
-                node.dest_filename = version_obj_filename;
+            node.text = "Build version file";
+            node.dest_filename = version_obj_filename;
 
-                build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_mode,
-                                                  false, nullptr, {}, {}, version_obj_filename,
-                                                  &str_alloc, &node);
+            build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_mode,
+                                              false, nullptr, {}, {}, build.env,
+                                              version_obj_filename, &str_alloc, &node);
 
+            if (NeedsRebuild(version_obj_filename, node, src_filename)) {
                 obj_nodes.Append(node);
                 mtime_map.Set(version_obj_filename, -1);
             }
@@ -185,7 +185,7 @@ bool Builder::AddTarget(const TargetInfo &target)
         }
 
         // Build object file
-        if (!IsFileUpToDate(obj_filename, src_filename)) {
+        {
             BuildNode node = {};
 
             node.text = Fmt(&str_alloc, "Build %1 assets", target.name).ptr;
@@ -193,16 +193,18 @@ bool Builder::AddTarget(const TargetInfo &target)
 
             if (module) {
                 build.compiler->MakeObjectCommand(src_filename, SourceType::C, CompileMode::Debug,
-                                                  false, nullptr, {"EXPORT"}, {}, obj_filename,
-                                                  &str_alloc, &node);
+                                                  false, nullptr, {"EXPORT"}, {}, build.env,
+                                                  obj_filename, &str_alloc, &node);
             } else {
                 build.compiler->MakeObjectCommand(src_filename, SourceType::C, CompileMode::Debug,
-                                                  false, nullptr, {}, {}, obj_filename,
-                                                  &str_alloc, &node);
+                                                  false, nullptr, {}, {}, build.env,
+                                                  obj_filename,  &str_alloc, &node);
             }
 
-            obj_nodes.Append(node);
-            mtime_map.Set(obj_filename, -1);
+            if (NeedsRebuild(obj_filename, node, src_filename)) {
+                obj_nodes.Append(node);
+                mtime_map.Set(obj_filename, -1);
+            }
         }
 
         // Build module if needed
@@ -219,8 +221,8 @@ bool Builder::AddTarget(const TargetInfo &target)
                 node.dest_filename = module_filename;
 
                 build.compiler->MakeLinkCommand(obj_filename, CompileMode::Debug, {},
-                                                LinkType::SharedLibrary, module_filename,
-                                                &str_alloc, &node);
+                                                LinkType::SharedLibrary, build.env,
+                                                module_filename, &str_alloc, &node);
 
                 link_nodes.Append(node);
             }
@@ -240,7 +242,7 @@ bool Builder::AddTarget(const TargetInfo &target)
         node.dest_filename = target_filename;
 
         build.compiler->MakeLinkCommand(obj_filenames, build.compile_mode, target.libraries,
-                                        LinkType::Executable, target_filename, &str_alloc, &node);
+                                        LinkType::Executable, build.env, target_filename, &str_alloc, &node);
 
         if (NeedsRebuild(target_filename, node, obj_filenames)) {
             link_nodes.Append(node);
@@ -283,7 +285,7 @@ const char *Builder::AddSource(const SourceFileInfo &src)
                 bool warnings = (pch->target->type != TargetType::ExternalLibrary);
                 build.compiler->MakePchCommand(node.dest_filename, pch->type, build.compile_mode, warnings,
                                                pch->target->definitions, pch->target->include_directories,
-                                               &str_alloc, &node);
+                                               build.env, &str_alloc, &node);
 
                 if (NeedsRebuild(node.dest_filename, node, pch->filename)) {
                     if (!CreatePrecompileHeader(pch->filename, node.dest_filename))
@@ -312,7 +314,7 @@ const char *Builder::AddSource(const SourceFileInfo &src)
         bool warnings = (src.target->type != TargetType::ExternalLibrary);
         build.compiler->MakeObjectCommand(src.filename, src.type, build.compile_mode, warnings,
                                           pch_filename, src.target->definitions, src.target->include_directories,
-                                          node.dest_filename, &str_alloc, &node);
+                                          build.env, node.dest_filename, &str_alloc, &node);
 
         if (pch_filename ? NeedsRebuild(node.dest_filename, node, {src.filename, pch_filename})
                          : NeedsRebuild(node.dest_filename, node, src.filename)) {

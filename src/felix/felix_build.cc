@@ -95,6 +95,7 @@ Options:
                                  (default: %1)
     -m, --mode <mode>            Set build mode, see below
                                  (default: %2)
+    -e, --environment            Use compiler flags found in environment (CFLAGS, LDFLAGS, etc.)
         --no_pch                 Disable header precompilation (PCH)
 
     -j, --jobs <count>           Set maximum number of parallel jobs
@@ -156,6 +157,8 @@ Supported compilation modes:)");
                     LogError("Unknown build mode '%1'", opt.current_value);
                     return 1;
                 }
+            } else if (opt.Test("-e", "--environment")) {
+                build.env = true;
             } else if (opt.Test("--no_pch")) {
                 build.pch = false;
             } else if (opt.Test("-j", "--jobs", OptionType::Value)) {

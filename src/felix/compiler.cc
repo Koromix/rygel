@@ -38,6 +38,17 @@ static bool TestBinary(const char *name)
     return false;
 }
 
+static void AddEnvironmentFlags(Span<const char *const> names, HeapArray<char> *out_buf)
+{
+    for (const char *name: names) {
+        const char *flags = getenv(name);
+
+        if (flags && flags[0]) {
+            Fmt(out_buf, " %1", flags);
+        }
+    }
+}
+
 bool Compiler::Test() const
 {
     if (!test_init) {
@@ -54,19 +65,19 @@ public:
 
     void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
                         bool warnings, Span<const char *const> definitions,
-                        Span<const char *const> include_directories,
+                        Span<const char *const> include_directories, bool env_flags,
                         Allocator *alloc, BuildNode *out_node) const override
     {
         MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr, definitions,
-                          include_directories, nullptr, alloc, out_node);
+                          include_directories, env_flags, nullptr, alloc, out_node);
     }
 
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
-                           Span<const char *const> include_directories, const char *dest_filename,
-                           Allocator *alloc, BuildNode *out_node) const override
+                           Span<const char *const> include_directories, bool env_flags,
+                           const char *dest_filename, Allocator *alloc, BuildNode *out_node) const override
     {
         HeapArray<char> buf(alloc);
 
@@ -126,6 +137,13 @@ public:
             Fmt(&buf, " \"-I%1\"", include_directory);
         }
 
+        if (env_flags) {
+            switch (src_type) {
+                case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
+                case SourceType::CXX: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
+            }
+        }
+
         out_node->cache_len = buf.len;
         if (LogUsesTerminalOutput()) {
             Fmt(&buf, " -fdiagnostics-color=always");
@@ -139,7 +157,8 @@ public:
 
     void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
                          Span<const char *const> libraries, LinkType link_type,
-                         const char *dest_filename, Allocator *alloc, BuildNode *out_node) const override
+                         bool env_flags, const char *dest_filename,
+                         Allocator *alloc, BuildNode *out_node) const override
     {
         HeapArray<char> buf(alloc);
 
@@ -178,6 +197,10 @@ public:
         Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now");
 #endif
 
+        if (env_flags) {
+            AddEnvironmentFlags("LDFLAGS", &buf);
+        }
+
         out_node->cache_len = buf.len;
         if (LogUsesTerminalOutput()) {
             Fmt(&buf, " -fdiagnostics-color=always");
@@ -192,19 +215,19 @@ public:
 
     void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
                         bool warnings, Span<const char *const> definitions,
-                        Span<const char *const> include_directories,
+                        Span<const char *const> include_directories, bool env_flags,
                         Allocator *alloc, BuildNode *out_node) const override
     {
         MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr,
-                          definitions, include_directories, nullptr, alloc, out_node);
+                          definitions, include_directories, env_flags, nullptr, alloc, out_node);
     }
 
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
-                           Span<const char *const> include_directories, const char *dest_filename,
-                           Allocator *alloc, BuildNode *out_node) const override
+                           Span<const char *const> include_directories, bool env_flags,
+                           const char *dest_filename, Allocator *alloc, BuildNode *out_node) const override
     {
         HeapArray<char> buf(alloc);
 
@@ -264,6 +287,13 @@ public:
             Fmt(&buf, " \"-I%1\"", include_directory);
         }
 
+        if (env_flags) {
+            switch (src_type) {
+                case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
+                case SourceType::CXX: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
+            }
+        }
+
         out_node->cache_len = buf.len;
         if (LogUsesTerminalOutput()) {
             Fmt(&buf, " -fdiagnostics-color=always");
@@ -277,7 +307,8 @@ public:
 
     void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
                          Span<const char *const> libraries, LinkType link_type,
-                         const char *dest_filename, Allocator *alloc, BuildNode *out_node) const override
+                         bool env_flags, const char *dest_filename,
+                         Allocator *alloc, BuildNode *out_node) const override
     {
         HeapArray<char> buf(alloc);
 
@@ -319,6 +350,10 @@ public:
         }
 #endif
 
+        if (env_flags) {
+            AddEnvironmentFlags("LDFLAGS", &buf);
+        }
+
         out_node->cache_len = buf.len;
         if (LogUsesTerminalOutput()) {
             Fmt(&buf, " -fdiagnostics-color=always");
@@ -334,11 +369,11 @@ public:
 
     void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
                         bool warnings, Span<const char *const> definitions,
-                        Span<const char *const> include_directories,
+                        Span<const char *const> include_directories, bool env_flags,
                         Allocator *alloc, BuildNode *out_node) const override
     {
         MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr, definitions,
-                          include_directories, nullptr, alloc, out_node);
+                          include_directories, env_flags, nullptr, alloc, out_node);
     }
 
     const char *GetPchObject(const char *pch_filename, Allocator *alloc) const override
@@ -349,8 +384,8 @@ public:
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
-                           Span<const char *const> include_directories, const char *dest_filename,
-                           Allocator *alloc, BuildNode *out_node) const override
+                           Span<const char *const> include_directories, bool env_flags,
+                           const char *dest_filename, Allocator *alloc, BuildNode *out_node) const override
     {
         HeapArray<char> buf(alloc);
 
@@ -392,6 +427,13 @@ public:
             Fmt(&buf, " \"/I%1\"", include_directory);
         }
 
+        if (env_flags) {
+            switch (src_type) {
+                case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
+                case SourceType::CXX: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
+            }
+        }
+
         out_node->cache_len = buf.len;
         out_node->cmd_line = buf.Leak();
         out_node->skip_lines = 1;
@@ -402,7 +444,8 @@ public:
 
     void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
                          Span<const char *const> libraries, LinkType link_type,
-                         const char *dest_filename, Allocator *alloc, BuildNode *out_node) const override
+                         bool env_flags, const char *dest_filename,
+                         Allocator *alloc, BuildNode *out_node) const override
     {
         HeapArray<char> buf(alloc);
 
@@ -427,6 +470,10 @@ public:
         }
         for (const char *lib: libraries) {
             Fmt(&buf, " %1.lib", lib);
+        }
+
+        if (env_flags) {
+            AddEnvironmentFlags("LDFLAGS", &buf);
         }
 
         out_node->cache_len = buf.len;
