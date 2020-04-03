@@ -4285,15 +4285,16 @@ const char *OptionParser::Next()
     // ConsumeOptionValue() after getting '-f'.
     if (smallopt_offset) {
         const char *opt = args[pos];
-        smallopt_offset++;
-        if (opt[smallopt_offset]) {
-            buf[1] = opt[smallopt_offset];
-            current_option = buf;
-            return current_option;
-        } else {
+
+        buf[1] = opt[smallopt_offset];
+        current_option = buf;
+
+        if (!opt[++smallopt_offset]) {
             smallopt_offset = 0;
             pos++;
         }
+
+        return current_option;
     }
 
     // Skip non-options, do the permutation once we reach an option or the last argument
@@ -4343,7 +4344,7 @@ const char *OptionParser::Next()
         buf[1] = opt[1];
         buf[2] = 0;
         current_option = buf;
-        smallopt_offset = 1;
+        smallopt_offset = opt[2] ? 2 : 0;
 
         // The main point of SkipNonOptions is to be able to parse arguments in
         // multiple passes. This does not work well with ambiguous short options
@@ -4397,12 +4398,12 @@ const char *OptionParser::ConsumeValue()
 
     // Support '-fbar' where bar is the value, but only for the first short option
     // if it's an aggregate.
-    if (smallopt_offset == 1 && args[pos][2]) {
+    if (smallopt_offset == 2 && args[pos][2]) {
         smallopt_offset = 0;
         current_value = args[pos] + 2;
         pos++;
     // Support '-f bar' and '--foo bar', see ConsumeOption() for '--foo=bar'
-    } else if (!smallopt_offset && pos < limit && !IsOption(args[pos])) {
+    } else if (current_option != buf && pos < limit && !IsOption(args[pos])) {
         current_value = args[pos];
         pos++;
     }
