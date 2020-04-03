@@ -21,15 +21,17 @@ let form_executor = new function() {
         if (asset !== current_asset || !current_records.size || id != null) {
             current_asset = asset;
 
-            if (current_records.size > 0) {
+            if (current_records.size) {
                 let record0 = current_records.first();
                 if (record0.table !== current_asset.form.key)
                     current_records.clear();
             }
+            if (!current_records.size && id == null)
+                id = 'new';
 
             if (id === 'many') {
                 select_many = true;
-            } else if (id === 'new' || id == null) {
+            } else if (id === 'new') {
                 if (current_records.size != 1 || current_records.first().sequence != null) {
                     let record = virt_data.create(current_asset.form.key);
 
@@ -161,7 +163,7 @@ let form_executor = new function() {
                     cls += ' partial';
                 }
 
-                return html`<a class=${cls} href=${makeLink(current_asset.form.key, page2.key, record.id)}>${page2.label}</a>`;
+                return html`<a class=${cls} href=${makeLink(current_asset.form.key, page2.key, record)}>${page2.label}</a>`;
             })}</div>
 
             <div class="af_actions sticky">
@@ -316,11 +318,11 @@ let form_executor = new function() {
                                         let complete = record.complete[page.key];
 
                                         if (complete == null) {
-                                            return html`<td><a href=${makeLink(current_asset.form.key, page.key, record.id)}>Non rempli</a></td>`;
+                                            return html`<td><a href=${makeLink(current_asset.form.key, page.key, record)}>Non rempli</a></td>`;
                                         } else if (complete) {
-                                            return html`<td class="complete"><a href=${makeLink(current_asset.form.key, page.key, record.id)}>Complet</a></td>`;
+                                            return html`<td class="complete"><a href=${makeLink(current_asset.form.key, page.key, record)}>Complet</a></td>`;
                                         } else {
-                                            return html`<td class="partial"><a href=${makeLink(current_asset.form.key, page.key, record.id)}>Partiel</a></td>`;
+                                            return html`<td class="partial"><a href=${makeLink(current_asset.form.key, page.key, record)}>Partiel</a></td>`;
                                         }
                                     })}
                                 </tr>
@@ -658,7 +660,15 @@ let form_executor = new function() {
         `, document.querySelector('#dev_describe'));
     };
 
-    function makeLink(form_key, page_key, id = null) {
-        return `${env.base_url}app/${form_key}/${page_key}/${id || 'new'}`;
+    function makeLink(form_key, page_key, record = null) {
+        let url = `${env.base_url}app/${form_key}/${page_key}/`;
+
+        if (record && record.sequence) {
+            url += record.id;
+        } else {
+            url += 'new';
+        }
+
+        return url;
     }
 };
