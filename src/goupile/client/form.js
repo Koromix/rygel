@@ -52,20 +52,6 @@ let form_executor = new function() {
         }
     };
 
-    this.makeURL = function() {
-        let url;
-        if (select_many) {
-            url = `${current_asset.url}many`;
-        } else if (!current_records.size) {
-            url = current_asset.url;
-        } else {
-            let record = current_records.first();
-            url = `${current_asset.url}${record.sequence != null ? record.id : 'new'}`;
-        }
-
-        return util.pasteURL(url, app.route);
-    };
-
     this.runPage = function(code, panel_el) {
         let func = Function('util', 'data', 'go', 'form', 'page', 'route', 'scratch', code);
 
@@ -135,6 +121,8 @@ let form_executor = new function() {
                 return visible ? intf.render() : '';
             })}
         `, el);
+
+        window.history.replaceState(null, null, makeURL());
     }
 
     function runPage(state, func, record, el) {
@@ -156,7 +144,6 @@ let form_executor = new function() {
         builder.errorList();
         func(util, app.data, handleGo, builder, builder, app.route, state.scratch);
         builder.errorList();
-        window.history.replaceState(null, null, self.makeURL());
 
         let show_new = (record.sequence != null);
         let enable_save = builder.isValid() && state.changed;
@@ -197,6 +184,22 @@ let form_executor = new function() {
             <br/>
             ${page.render()}
         `, el);
+
+        window.history.replaceState(null, null, makeURL());
+    }
+
+    function makeURL() {
+        let url;
+        if (select_many) {
+            url = `${current_asset.url}many`;
+        } else if (!current_records.size) {
+            url = current_asset.url;
+        } else {
+            let record = current_records.first();
+            url = `${current_asset.url}${record.sequence != null ? record.id : 'new'}`;
+        }
+
+        return util.pasteURL(url, app.route);
     }
 
     // Avoid async here, because it may fail (see block_go) and the caller may need

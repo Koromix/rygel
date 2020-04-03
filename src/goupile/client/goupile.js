@@ -253,6 +253,9 @@ let goupile = new function() {
             }
             route_url = url.pathname;
 
+            if (push_history)
+                window.history.pushState(null, null, route_url);
+
             // Route URL through appropriate controller
             if (route_asset) {
                 switch (route_asset.type) {
@@ -265,20 +268,6 @@ let goupile = new function() {
             await run();
         } else {
             await run();
-            push_history = false;
-        }
-
-        if (route_asset) {
-            switch (route_asset.type) {
-                case 'page': { route_url = form_executor.makeURL(); } break;
-                default: { route_url = route_asset.url; } break;
-            }
-        }
-
-        if (push_history) {
-            window.history.pushState(null, null, route_url);
-        } else {
-            window.history.replaceState(null, null, route_url);
         }
     }
 
