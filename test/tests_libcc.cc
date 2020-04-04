@@ -17,7 +17,7 @@ namespace RG {
 
 void TestMatchPathName()
 {
-    TEST_FUNCTION("Testing MatchPathName");
+    TEST_FUNCTION("MatchPathName");
 
 #define CHECK_PATH_SPEC(Pattern, Path, Expected) \
         TEST(MatchPathName(Path, Pattern) == Expected)
@@ -108,7 +108,7 @@ void TestMatchPathName()
 
 void TestOptionParser()
 {
-    TEST_FUNCTION("Testing OptionParser");
+    TEST_FUNCTION("OptionParser");
 
     // Empty
 
@@ -352,7 +352,7 @@ void TestOptionParser()
 
 void BenchFmt()
 {
-    PrintLn("Benchmarking Fmt");
+    PrintLn("  Fmt");
 
     static const int iterations = 800000;
 
@@ -426,7 +426,7 @@ void BenchFmt()
 
 void BenchMatchPathName()
 {
-    PrintLn("Benchmarking MatchPathName");
+    PrintLn("  MatchPathName");
 
     static const int iterations = 3000000;
 

@@ -52,13 +52,17 @@ Options:
     }
 
     if (test) {
+        PrintLn(stderr, "Testing libcc");
         TestMatchPathName();
         TestOptionParser();
+
         PrintLn();
     }
     if (bench) {
+        PrintLn(stderr, "Benchmarking libcc");
         BenchFmt();
         BenchMatchPathName();
+
         PrintLn();
     }
 

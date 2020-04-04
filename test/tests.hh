@@ -11,26 +11,44 @@ namespace RG {
 #define TEST_FUNCTION(Label) \
     static Size tests = 0; \
     static Size failures = 0; \
-    PrintLn("%1", Label); \
-    RG_DEFER { PrintLn("  Failures: %1 / %2", failures, tests); };
+    Print("  %1", (Label)); \
+    RG_DEFER { ReportTestResults(tests, failures); };
+
+static inline void ReportTestResults(Size tests, Size failures)
+{
+    if (LogUsesTerminalOutput()) {
+        if (failures) {
+            PrintLn(stderr, "\n    \x1B[31mFailed\x1B[0m (%1/%2)", failures, tests);
+        } else {
+            PrintLn(stderr, " \x1B[32mSuccess\x1B[0m (%1)", tests);
+        }
+    } else {
+        if (failures) {
+            PrintLn(stderr, "\n    Failed (%1/%2)", failures, tests);
+        } else {
+            PrintLn(stderr, " Success (%1)", tests);
+        }
+    }
+}
 
 #define TEST_EX(Condition, ...) \
     do { \
         tests++; \
         if (!(Condition)) { \
-            PrintLn(stderr, __VA_ARGS__); \
+            Print(stderr, "\n    [%1:%2] ", SplitStrReverseAny(__FILE__, RG_PATH_SEPARATORS), __LINE__); \
+            Print(stderr, __VA_ARGS__); \
             failures++; \
         } \
     } while (false)
 
 #define TEST(Condition) \
-    TEST_EX((Condition),  "  [FAIL] %1", RG_STRINGIFY(Condition))
+    TEST_EX((Condition),  "%1", RG_STRINGIFY(Condition))
 #define TEST_EQ(Value1, Value2) \
     do { \
         auto value1 = (Value1); \
         auto value2 = (Value2); \
         \
-        TEST_EX(value1 == value2, "  [FAIL] %1 == %2", value1, value2); \
+        TEST_EX(value1 == value2, "%1: %2 == %3", RG_STRINGIFY(Value1), value1, value2); \
     } while (false)
 #define TEST_STR(Str1, Str2) \
     do { \
@@ -44,12 +62,12 @@ namespace RG {
             str2 = "(null)"; \
         } \
         \
-        TEST_EX(str1 == str2, "  [FAIL] '%1' == '%2'", str1, str2); \
+        TEST_EX(str1 == str2, "%1: '%2' == '%3'", RG_STRINGIFY(Str1), str1, str2); \
     } while (false)
 
 static inline void RunBenchmark(const char *label, Size iterations, FunctionRef<void()> func)
 {
-    Print("  + %1", label);
+    Print("    + %1", label);
 
     int64_t time = GetMonotonicTime();
     int64_t clock = GetClockCounter();
