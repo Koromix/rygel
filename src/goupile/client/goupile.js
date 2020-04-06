@@ -280,21 +280,15 @@ Navigation functions should only be called in reaction to user events, such as b
             } else {
                 log.error(`URL non supportée '${url.pathname}'`);
             }
-
-            await run();
-        } else {
-            await run();
         }
-    }
 
-    async function run() {
         if (await fetchSettings()) {
             await self.initApplication();
             return;
         }
 
         // Render menu and page layout
-        renderMainUI();
+        renderPanels();
 
         // Run left panel
         switch (left_panel) {
@@ -314,7 +308,7 @@ Navigation functions should only be called in reaction to user events, such as b
         }
     };
 
-    function renderMainUI() {
+    function renderPanels() {
         let show_data = route_asset && route_asset.form;
 
         let correct_mode = (left_panel == null ||
