@@ -945,7 +945,7 @@ Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Allocator *alloc)
 {
     HeapArray<char> buf(alloc);
     FmtFmt(fmt, args, &buf);
-    return buf.Leak();
+    return buf.TrimAndLeak(1);
 }
 
 void PrintFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *st)
@@ -1956,14 +1956,16 @@ Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
 
     if (!buf.len) {
         buf.Append('.');
-        buf.Append(0);
     } else if (buf.len == 1 && IsPathSeparator(buf[0])) {
         // Root '/', keep as-is
-        buf.Append(0);
     } else {
         // Strip last separator
-        buf.ptr[--buf.len] = 0;
+        buf.len--;
     }
+
+    // NUL terminator
+    buf.Trim(1);
+    buf.ptr[buf.len] = 0;
 
     return buf.Leak();
 }

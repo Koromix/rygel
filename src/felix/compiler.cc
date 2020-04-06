@@ -148,7 +148,7 @@ public:
         if (LogUsesTerminalOutput()) {
             Fmt(&buf, " -fdiagnostics-color=always");
         }
-        out_node->cmd_line = buf.Leak();
+        out_node->cmd_line = buf.TrimAndLeak(1);
 
         // Dependencies
         out_node->deps_mode = BuildNode::DependencyMode::MakeLike;
@@ -205,7 +205,7 @@ public:
         if (LogUsesTerminalOutput()) {
             Fmt(&buf, " -fdiagnostics-color=always");
         }
-        out_node->cmd_line = buf.Leak();
+        out_node->cmd_line = buf.TrimAndLeak(1);
     }
 };
 
@@ -298,7 +298,7 @@ public:
         if (LogUsesTerminalOutput()) {
             Fmt(&buf, " -fdiagnostics-color=always");
         }
-        out_node->cmd_line = buf.Leak();
+        out_node->cmd_line = buf.TrimAndLeak(1);
 
         // Dependencies
         out_node->deps_mode = BuildNode::DependencyMode::MakeLike;
@@ -358,7 +358,7 @@ public:
         if (LogUsesTerminalOutput()) {
             Fmt(&buf, " -fdiagnostics-color=always");
         }
-        out_node->cmd_line = buf.Leak();
+        out_node->cmd_line = buf.TrimAndLeak(1);
     }
 };
 
@@ -435,7 +435,7 @@ public:
         }
 
         out_node->cache_len = buf.len;
-        out_node->cmd_line = buf.Leak();
+        out_node->cmd_line = buf.TrimAndLeak(1);
         out_node->skip_lines = 1;
 
         // Dependencies
@@ -477,7 +477,7 @@ public:
         }
 
         out_node->cache_len = buf.len;
-        out_node->cmd_line = buf.Leak();
+        out_node->cmd_line = buf.TrimAndLeak(1);
         out_node->skip_success = true;
     }
 };
@@ -520,7 +520,7 @@ void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile
     }
 
     out_node->cache_len = buf.len;
-    out_node->cmd_line = buf.Leak();
+    out_node->cmd_line = buf.TrimAndLeak(1);
 }
 
 }

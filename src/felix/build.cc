@@ -41,7 +41,7 @@ static const char *BuildObjectPath(const char *src_filename, const char *output_
         }
     }
 
-    return buf.Leak().ptr;
+    return buf.TrimAndLeak(1).ptr;
 }
 
 static bool UpdateVersionSource(const char *version_str, const char *dest_filename)

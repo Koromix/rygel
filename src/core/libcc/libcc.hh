@@ -1235,7 +1235,7 @@ public:
         SetCapacity(new_capacity);
     }
 
-    void Trim() { SetCapacity(len); }
+    void Trim(Size extra_capacity = 0) { SetCapacity(len + extra_capacity); }
 
     T *AppendDefault(Size count = 1)
     {
@@ -1325,9 +1325,9 @@ public:
 
         return span;
     }
-    Span<T> TrimAndLeak()
+    Span<T> TrimAndLeak(Size extra_capacity = 0)
     {
-        Trim();
+        Trim(extra_capacity);
         return Leak();
     }
 };
