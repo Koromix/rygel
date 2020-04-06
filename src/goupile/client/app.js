@@ -18,11 +18,12 @@ function Application() {
         overview: 'Structure',
     }];
 
-    // Initialized in goupile.js
+    // Initialized by goupile.js and main script
     this.home = null;
     this.go = null;
-    this.urls_map = null;
-    this.paths_map = null;
+    this.urls_map = {};
+    this.aliases_map = {};
+    this.paths_map = {};
 
     // Used for user globals
     this.data = {};
@@ -61,15 +62,37 @@ function ApplicationBuilder(app) {
         checkKey(key);
 
         let form = new FormInfo(key);
-        let form_builder = new FormBuilder(app, form);
+        let form_builder = new FormBuilder(form);
         if (typeof func === 'function') {
             func(form_builder);
+
+            if (!form.pages.length)
+                throw new Error(`Impossible de créer le formulaire '${key}' sans page`);
         } else {
             form_builder.page(key, func);
         }
 
         app.forms.push(form);
         forms_map[key] = form;
+
+        for (let page of form.pages) {
+            pushAsset({
+                type: 'page',
+                url: page.url,
+
+                category: `Formulaire ${form.key}`,
+                label: page.label,
+                overview: 'Formulaire',
+
+                form: form,
+                page: page,
+
+                path: `/files/pages/${page.key}.js`,
+                edit: 'Page de formulaire'
+            });
+        }
+
+        app.aliases_map[`${env.base_url}app/${key}/`] = app.urls_map[form.pages[0].url];
     };
 
     this.link = function(key1, key2) {
@@ -114,7 +137,7 @@ function ApplicationBuilder(app) {
         let schedule = new ScheduleInfo(key);
         app.schedules.push(schedule);
 
-        app.assets.push({
+        pushAsset({
             type: 'schedule',
             url: schedule.url,
 
@@ -124,7 +147,7 @@ function ApplicationBuilder(app) {
 
             schedule: schedule
         });
-        app.assets.push({
+        pushAsset({
             type: 'schedule_settings',
             url: `${schedule.url}settings/`,
 
@@ -138,7 +161,7 @@ function ApplicationBuilder(app) {
     };
 
     this.file = function(file) {
-        app.assets.push({
+        pushAsset({
             type: 'blob',
             url: `${env.base_url}blob${file.path}`,
 
@@ -149,6 +172,13 @@ function ApplicationBuilder(app) {
             path: file.path
         });
     };
+
+    function pushAsset(asset) {
+        app.assets.push(asset);
+
+        app.urls_map[asset.url] = asset;
+        app.paths_map[asset.path] = asset;
+    }
 
     function checkKey(key) {
         if (!key)
@@ -162,7 +192,7 @@ function ApplicationBuilder(app) {
     }
 }
 
-function FormBuilder(app, form) {
+function FormBuilder(form) {
     let self = this;
 
     let used_keys = new Set;
@@ -177,31 +207,7 @@ function FormBuilder(app, form) {
 
         let page = new PageInfo(form, key, label || key);
 
-        if (!form.pages.length) {
-            app.assets.push({
-                type: 'alias',
-                url: `${env.base_url}app/${form.key}/`,
-
-                redirect: page.url
-            });
-        }
-
         form.pages.push(page);
         used_keys.add(key);
-
-        app.assets.push({
-            type: 'page',
-            url: page.url,
-
-            category: `Formulaire ${form.key}`,
-            label: page.label,
-            overview: 'Formulaire',
-
-            form: form,
-            page: page,
-
-            path: `/files/pages/${page.key}.js`,
-            edit: 'Page de formulaire'
-        });
     };
 }

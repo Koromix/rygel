@@ -135,6 +135,7 @@ let goupile = new function() {
         try {
             let new_app = new Application;
             let app_builder = new ApplicationBuilder(new_app);
+            new_app.go = handleGo;
 
             if (code == null)
                 code = await readCode('/files/main.js');
@@ -159,13 +160,11 @@ let goupile = new function() {
             } else {
                 // Empty application, so that the user can still fix main.js or reset everything
                 app = new Application;
+                app.go = handleGo;
+
                 console.log(err);
             }
         }
-
-        app.urls_map = util.mapArray(app.assets, asset => asset.url);
-        app.paths_map = util.mapArray(app.assets, asset => asset.path);
-        app.go = handleGo;
 
         // XXX: Hack for secondary asset thingy that we'll get rid of eventually
         for (let i = 0; i < app.assets.length; i++)
@@ -253,35 +252,46 @@ Navigation functions should only be called in reaction to user events, such as b
             }
 
             // Find relevant asset
-            route_asset = app.urls_map[url.pathname] || app.urls_map[url.pathname + '/'];
-            if (!route_asset) {
+            {
                 let path = url.pathname;
+                if (!path.endsWith('/'))
+                    path += '/';
 
-                while (!route_asset && path.length) {
-                    path = path.substr(0, path.length - 1);
-                    path = path.substr(0, path.lastIndexOf('/') + 1);
-                    route_asset = app.urls_map[path];
+                route_asset = app.urls_map[path] || app.aliases_map[path];
+
+                if (!route_asset) {
+                    do {
+                        path = path.substr(0, path.length - 1);
+                        path = path.substr(0, path.lastIndexOf('/') + 1);
+
+                        if (path === env.base_url)
+                            break;
+
+                        route_asset = app.urls_map[path];
+                    } while (!route_asset && path.length);
                 }
             }
+
+            // Update URL and history
             route_url = url.pathname;
-
-            // Follow aliases
-            while (route_asset && route_asset.type === 'alias')
-                route_asset = app.urls_map[route_asset.redirect];
-
             if (push_history)
                 window.history.pushState(null, null, route_url);
 
             // Route URL through appropriate controller
             if (route_asset) {
-                switch (route_asset.type) {
-                    case 'page': { await form_executor.route(route_asset, url); } break;
+                try {
+                    switch (route_asset.type) {
+                        case 'page': { await form_executor.route(route_asset, url); } break;
+                    }
+                } catch (err) {
+                    log.error(err.message);
                 }
             } else {
                 log.error(`URL non supportée '${url.pathname}'`);
             }
         }
 
+        // Restart application after session changes
         if (await fetchSettings()) {
             await self.initApplication();
             return;

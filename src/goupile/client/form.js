@@ -18,6 +18,11 @@ let form_executor = new function() {
         let parts = url.pathname.substr(asset.url.length).split('/');
         let id = parts[0] || null;
 
+        if (parts.length !== 1)
+            throw new Error(`Adresse incorrecte '${url.pathname}'`);
+        if (id && id !== 'many' && id !== 'new' && !id.match(/^[A-Z0-9]{26}$/))
+            throw new Error(`Adresse incorrecte '${url.pathname}'`);
+
         if (asset !== current_asset || !current_records.size || id != null) {
             current_asset = asset;
 
