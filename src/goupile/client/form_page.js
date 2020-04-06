@@ -8,8 +8,11 @@ function Page(key) {
     this.key = key;
 
     this.widgets = [];
+    this.widgets0 = [];
     this.variables = [];
-    this.errors = [];
+
+    this.errors = 0;
+    this.valid = true;
 
     this.render = function() { return self.widgets.map(intf => intf.render()); };
 }
@@ -26,7 +29,7 @@ function PageState() {
     this.pressed_buttons = new Set;
     this.clicked_buttons = new Set;
 
-    this.missing_errors = new Set;
+    this.take_delayed = new Set;
     this.changed_variables = new Set;
 
     // Used for "real forms" by FormExecutor
@@ -41,16 +44,13 @@ function PageBuilder(state, page) {
         deploy: true,
         untoggle: true
     }];
-    let widgets_ref = page.widgets;
+    let widgets_ref = page.widgets0;
 
     let tabs_keys = new Set;
     let tabs_ref;
     let selected_tab;
 
     let restart = false;
-
-    let missing_set = new Set;
-    let missing_block = false;
 
     // Key and value handling
     this.decodeKey = key => key;
@@ -61,8 +61,9 @@ function PageBuilder(state, page) {
     this.changeHandler = page => {};
     this.submitHandler = null;
 
-    this.isValid = function() { return !page.errors.length && !missing_block; };
     this.hasChanged = function() { return state.changed; };
+    this.isValid = function() { return page.valid; };
+    this.hasErrors = function() { return !!page.errors; };
 
     this.pushOptions = function(options = {}) {
         options = expandOptions(options);
@@ -81,7 +82,7 @@ function PageBuilder(state, page) {
         return (intf && !intf.missing) ? intf.value : default_value;
     };
     this.missing = key => variables_map[key].missing;
-    this.error = (key, msg) => variables_map[key].error(msg);
+    this.error = (key, msg, delay = false) => variables_map[key].error(msg, delay);
 
     this.text = function(key, label, options = {}) {
         options = expandOptions(options);
@@ -844,14 +845,19 @@ Valid choices include:
         options = expandOptions(options);
 
         let render = intf => {
-            if (page.errors.length || options.force) {
+            if (self.hasErrors() || options.force) {
                 return html`
                     <fieldset class="af_container af_section af_section_error">
                         <legend>${options.label || 'Liste des erreurs'}</legend>
-                        ${!page.errors.length ? 'Aucune erreur' : ''}
-                        ${page.errors.map(intf =>
-                            html`${intf.errors.length} ${intf.errors.length > 1 ? 'erreurs' : 'erreur'} sur :
-                                 <a href=${'#' + makeID(intf.key)}>${intf.label}</a><br/>`)}
+                        ${!self.hasErrors() ? 'Aucune erreur' : ''}
+                        ${page.widgets.map(intf => {
+                            if (intf.errors.length) {
+                                return html`${intf.errors.length} ${intf.errors.length > 1 ? 'erreurs' : 'erreur'} sur :
+                                            <a href=${'#' + makeID(intf.key)}>${intf.label}</a><br/>`;
+                             } else {
+                                return '';
+                             }
+                        })}
                     </fieldset>
                 `;
             } else {
@@ -862,25 +868,21 @@ Valid choices include:
         addWidget('errorList', null, render);
     };
 
-    this.save = function() {
-        self.submitHandler(false);
-    };
+    this.save = function() { doSubmit(false); }
+    this.submit = function() { doSubmit(true); }
 
-    this.submit = function() {
-        if (missing_set.size) {
-            log.error('Impossible d\'enregistrer : données manquantes');
+    function doSubmit(complete) {
+        if (!self.isValid()) {
+            log.error('Corrigez les erreurs avant d\'enregistrer');
 
-            state.missing_errors.clear();
-            for (let key of missing_set)
-                state.missing_errors.add(key);
-
+            state.take_delayed = new Set(page.variables.map(variable => variable.key.toString()));
             self.restart();
+
             return;
         }
 
-        if (self.isValid())
-            self.submitHandler(true);
-    };
+        self.submitHandler(complete);
+    }
 
     this.restart = function() {
         if (!restart) {
@@ -947,6 +949,7 @@ Valid choices include:
         };
 
         widgets_ref.push(intf);
+        page.widgets.push(intf);
 
         return intf;
     }
@@ -963,10 +966,13 @@ Valid choices include:
             missing: missing || intf.options.missing,
             changed: state.changed_variables.has(key.toString()),
 
-            error: msg => {
-                if (!intf.errors.length)
-                    page.errors.push(intf);
-                intf.errors.push(msg || '');
+            error: (msg, delay = false) => {
+                if (!delay || state.take_delayed.has(key.toString())) {
+                    intf.errors.push(msg || '');
+                    page.errors++;
+                }
+
+                page.valid = false;
 
                 return intf;
             }
@@ -974,11 +980,9 @@ Valid choices include:
         state.changed_variables.delete(key.toString());
 
         if (intf.options.mandatory && intf.missing) {
-            missing_set.add(key.toString());
-            if (intf.options.missingMode === 'error' || state.missing_errors.has(key.toString()))
-                intf.error('Donnée obligatoire manquante');
+            intf.error('Donnée obligatoire manquante', intf.options.missingMode !== 'error');
             if (intf.options.missingMode === 'disable')
-                missing_block |= true;
+                valid = false;
         }
 
         page.variables.push(intf);
@@ -1009,7 +1013,7 @@ Valid choices include:
         state.values[key] = value;
         state.changed = true;
 
-        state.missing_errors.delete(key.toString());
+        state.take_delayed.delete(key.toString());
         state.changed_variables.add(key.toString());
 
         self.setValue(key, value);

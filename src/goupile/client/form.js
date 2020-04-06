@@ -115,11 +115,11 @@ let form_executor = new function() {
 
         render(html`
             <div class="af_actions">
-                <button class="af_button" ?disabled=${!builder.isValid() || !state.changed}
+                <button class="af_button" ?disabled=${builder.hasErrors() || !state.changed}
                         @click=${builder.save}>Enregistrer</button>
             </div>
 
-            ${page.widgets.map(intf => {
+            ${page.widgets0.map(intf => {
                 let visible = intf.key && columns.has(intf.key.toString());
                 return visible ? intf.render() : '';
             })}
@@ -149,8 +149,8 @@ let form_executor = new function() {
         builder.errorList();
 
         let show_new = (record.sequence != null);
-        let enable_save = builder.isValid() && state.changed;
-        let enable_validate = builder.isValid() && !state.changed &&
+        let enable_save = !builder.hasErrors() && state.changed;
+        let enable_validate = !builder.hasErrors() && !state.changed &&
                               record.complete[page.key] === false;
 
         render(html`
