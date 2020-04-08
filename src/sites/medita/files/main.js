@@ -62,7 +62,7 @@ app.form("Suivi")
 
 data.makeHeader = function(title, page) {
     page.output(html`
-        <a href="Accueil"><img src="${env.base_url}favicon.png" height="48" style="float: right;"></a>
+        <a href=${env.base_url}><img src="${env.base_url}favicon.png" height="48" style="float: right;"></a>
         <h1>${title}</h1><br/>
     `)
 }
