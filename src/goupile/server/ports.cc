@@ -233,14 +233,23 @@ bool ScriptPort::RunRecord(Span<const char> script, const ScriptHandle &values, 
 
 void InitPorts()
 {
+    // QuickJS requires NUL termination, so we need to make a copy anyway
+    HeapArray<char> code;
+    {
+        StreamReader st(pack_asset_ports_pk_js->data, nullptr, pack_asset_ports_pk_js->compression_type);
+        RG_ASSERT(st.ReadAll(Megabytes(1), &code) >= 0);
+
+        code.Grow(1);
+        code.ptr[code.len] = 0;
+    }
+
     for (Size i = 0; i < RG_LEN(js_ports); i++) {
         ScriptPort *port = &js_ports[i];
 
         port->rt = JS_NewRuntime();
         port->ctx = JS_NewContext(port->rt);
 
-        JSValue ret = JS_Eval(port->ctx, (const char *)pack_asset_ports_pk_js->data.ptr,
-                              pack_asset_ports_pk_js->data.len, "ports.pk.js", JS_EVAL_TYPE_GLOBAL);
+        JSValue ret = JS_Eval(port->ctx, code.ptr, code.len, "ports.pk.js", JS_EVAL_TYPE_GLOBAL);
         RG_ASSERT(!JS_IsException(ret));
 
         JSValue global = JS_GetGlobalObject(port->ctx);
