@@ -2557,7 +2557,7 @@ class StreamReader {
     Size read;
     Size raw_read;
     bool eof;
-    bool error;
+    bool error = false;
 
 public:
     StreamReader() { Close(); }
@@ -2668,7 +2668,7 @@ class StreamWriter {
         Function
     };
 
-    const char *filename;
+    const char *filename = nullptr;
 
     struct {
         DestinationType type = DestinationType::Memory;
