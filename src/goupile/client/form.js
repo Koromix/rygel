@@ -251,7 +251,7 @@ let form_executor = new function() {
 
     function handleNewClick(e, confirm) {
         if (confirm) {
-            goupile.popup(e, page => {
+            ui.popup(e, page => {
                 page.output('Cette action entraînera la perte des modifications en cours, êtes-vous sûr(e) ?');
 
                 page.submitHandler = () => {
@@ -266,7 +266,7 @@ let form_executor = new function() {
     }
 
     function showValidateDialog(e, submit_func) {
-        goupile.popup(e, page => {
+        ui.popup(e, page => {
             page.output('Confirmez-vous la validation de cette page ?');
 
             page.submitHandler = () => {
@@ -640,7 +640,7 @@ let form_executor = new function() {
     }
 
     function showDeleteDialog(e, record) {
-        goupile.popup(e, page => {
+        ui.popup(e, page => {
             page.output('Voulez-vous vraiment supprimer cet enregistrement ?');
 
             page.submitHandler = async () => {

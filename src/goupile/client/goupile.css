@@ -192,17 +192,3 @@ button:not(:disabled) { cursor: pointer; }
     content: '⚠\FE0E';
     padding-right: 10px;
 }
-
-/* -------------------- Popup -------------------- */
-
-#gp_popup {
-    display: none;
-    position: fixed;
-    box-sizing: border-box;
-    padding: 6px;
-    border: 1px solid #dfdfdf;
-    background: #efefef;
-    box-shadow: 2px 2px rgba(136, 136, 136, 0.12);
-    z-index: 999999;
-}
-#gp_popup.active { display: block; }

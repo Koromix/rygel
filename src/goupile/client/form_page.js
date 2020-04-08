@@ -221,7 +221,7 @@ function PageBuilder(state, page) {
     }
 
     function handleSliderClick(e, key, value, min, max) {
-        goupile.popup(e, page => {
+        ui.popup(e, page => {
             let number = page.number('number', 'Valeur :', {min: min, max: max, value: value});
 
             page.submitHandler = () => {
