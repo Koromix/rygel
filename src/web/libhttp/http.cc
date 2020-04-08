@@ -187,10 +187,10 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
                                               &http_Daemon::HandleWrite, io, nullptr);
         MHD_move_response_headers(io->response, new_response);
 
-        io->response = new_response;
+        io->AttachResponse(io->write_code, new_response);
         io->AddEncodingHeader(request->compression_type);
 
-        return MHD_queue_response(conn, (unsigned int)io->write_code, io->response);
+        return MHD_queue_response(conn, (unsigned int)io->code, io->response);
     } else if (io->state == http_IO::State::Idle) {
         if (io->code < 0) {
             // Default to internal error (if nothing else)
