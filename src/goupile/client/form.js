@@ -119,7 +119,7 @@ let form_executor = new function() {
                         @click=${builder.save}>Enregistrer</button>
             </div>
 
-            ${page.widgets0.map(intf => {
+            ${page.widgets.map(intf => {
                 let visible = intf.key && columns.has(intf.key.toString());
                 return visible ? intf.render() : '';
             })}

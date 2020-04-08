@@ -14,7 +14,7 @@ function Page(key) {
     this.errors = 0;
     this.valid = true;
 
-    this.render = function() { return self.widgets.map(intf => intf.render()); };
+    this.render = function() { return self.widgets0.map(intf => intf.render()); };
 }
 
 function PageState() {
