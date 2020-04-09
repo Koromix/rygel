@@ -12,6 +12,7 @@ enum class TokenType {
     Multiply = '*',
     Divide = '/',
     Modulo = '%',
+    Assign = '=',
 
     And = '&',
     Or = '|',
@@ -31,6 +32,8 @@ enum class TokenType {
 
     LogicAnd,
     LogicOr,
+    Equal,
+    NotEqual,
 
     If,
     Else,
@@ -325,7 +328,6 @@ static bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_
             case '/':
             case '%':
             case '^':
-            case '!':
             case '~':
             case '(':
             case ')':
@@ -334,6 +336,22 @@ static bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_
                 out_set->tokens.Append(Token((TokenType)code[i], line));
             } break;
 
+            case '=': {
+                if (j < code.len && code[j] == '=') {
+                    out_set->tokens.Append(Token(TokenType::Equal, line));
+                    j++;
+                } else {
+                    out_set->tokens.Append(Token(TokenType::Assign, line));
+                }
+            } break;
+            case '!': {
+                if (j < code.len && code[j] == '=') {
+                    out_set->tokens.Append(Token(TokenType::NotEqual, line));
+                    j++;
+                } else {
+                    out_set->tokens.Append(Token(TokenType::LogicNot, line));
+                }
+            } break;
             case '&': {
                 if (j < code.len && code[j] == code[i]) {
                     out_set->tokens.Append(Token(TokenType::LogicAnd, line));
@@ -379,6 +397,8 @@ static int GetOperatorPrecedence(TokenType type, bool assoc)
         case TokenType::LogicNot: { return 12 - assoc; } break;
         case TokenType::LogicAnd: { return 3; } break;
         case TokenType::LogicOr: { return 2; } break;
+        case TokenType::Equal: { return 7; } break;
+        case TokenType::NotEqual: { return 7; } break;
 
         default: { return -1; } break;
     }
