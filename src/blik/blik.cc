@@ -364,24 +364,111 @@ static bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_
     return valid;
 }
 
-static int GetOperatorPrecedence(TokenType type)
+static int GetOperatorPrecedence(TokenType type, bool assoc)
 {
     switch (type) {
-        case TokenType::Plus: { return 4; } break;
-        case TokenType::Minus: { return 4; } break;
-        case TokenType::Multiply: { return 3; } break;
-        case TokenType::Divide: { return 3; } break;
-        case TokenType::Modulo: { return 3; } break;
-        case TokenType::And: { return 8; } break;
-        case TokenType::Or: { return 10; } break;
-        case TokenType::Xor: { return 9; } break;
-        case TokenType::Not: { return 2; } break;
-        case TokenType::LogicNot: { return 2; } break;
-        case TokenType::LogicAnd: { return 11; } break;
-        case TokenType::LogicOr: { return 12; } break;
+        case TokenType::Plus: { return 10; } break;
+        case TokenType::Minus: { return 10; } break;
+        case TokenType::Multiply: { return 11; } break;
+        case TokenType::Divide: { return 11; } break;
+        case TokenType::Modulo: { return 11; } break;
+        case TokenType::And: { return 6; } break;
+        case TokenType::Or: { return 4; } break;
+        case TokenType::Xor: { return 5; } break;
+        case TokenType::Not: { return 12 - assoc; } break;
+        case TokenType::LogicNot: { return 12 - assoc; } break;
+        case TokenType::LogicAnd: { return 3; } break;
+        case TokenType::LogicOr: { return 2; } break;
 
-        default: { RG_ASSERT(false); } break;
+        default: { return -1; } break;
     }
+}
+
+static Size PostFixExpression(Span<Token> tokens)
+{
+    HeapArray<Token> stack;
+    Size new_len = 0;
+
+    bool expect_op = false;
+    for (const Token &tok: tokens) {
+        if (tok.type == TokenType::LeftParenthesis) {
+            if (RG_UNLIKELY(expect_op))
+                goto expected_op;
+
+            stack.Append(tok);
+        } else if (tok.type == TokenType::RightParenthesis) {
+            if (RG_UNLIKELY(!expect_op))
+                goto expected_value;
+            expect_op = true;
+
+            for (;;) {
+                if (RG_UNLIKELY(!stack.len)) {
+                    LogError("Too many closing parentheses");
+                    return -1;
+                }
+
+                const Token &op = stack[stack.len - 1];
+
+                if (op.type == TokenType::LeftParenthesis) {
+                    stack.RemoveLast(1);
+                    break;
+                }
+
+                tokens[new_len++] = op;
+                stack.RemoveLast(1);
+            }
+        } else {
+            int prec = GetOperatorPrecedence(tok.type, false);
+
+            if (prec >= 0) {
+                if (RG_UNLIKELY(!expect_op))
+                    goto expected_value;
+                expect_op = false;
+
+                while (stack.len) {
+                    const Token &op = stack[stack.len - 1];
+                    int prec2 = GetOperatorPrecedence(op.type, true);
+
+                    if (prec > prec2)
+                        break;
+
+                    tokens[new_len++] = op;
+                    stack.RemoveLast(1);
+                }
+
+                stack.Append(tok);
+            } else {
+                if (RG_UNLIKELY(expect_op))
+                    goto expected_op;
+                expect_op = true;
+
+                tokens[new_len++] = tok;
+            }
+        }
+    }
+
+    if (RG_UNLIKELY(!expect_op))
+        goto expected_value;
+
+    for (Size i = stack.len - 1; i >= 0; i--) {
+        const Token &op = stack[i];
+
+        if (RG_UNLIKELY(op.type == TokenType::LeftParenthesis)) {
+            LogError("Missing closing parenthesis");
+            return -1;
+        }
+
+        tokens[new_len++] = op;
+    }
+
+    return new_len;
+
+expected_op:
+    LogError("Unexpected token, expected operator or ')'");
+    return -1;
+expected_value:
+    LogError("Unexpected token, expected value or '('");
+    return -1;
 }
 
 int RunBlik(int argc, char **argv)
@@ -395,6 +482,11 @@ int RunBlik(int argc, char **argv)
         TokenSet token_set;
         if (!Tokenize(argv[i], "<argv>", &token_set))
             return 1;
+
+        Size new_len = PostFixExpression(token_set.tokens);
+        if (new_len < 0)
+            return 1;
+        token_set.tokens.RemoveFrom(new_len);
 
         for (const Token &tok: token_set.tokens) {
             if (tok.type == TokenType::Integer) {
