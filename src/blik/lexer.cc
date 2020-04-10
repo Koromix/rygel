@@ -207,9 +207,12 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
                                 case 't': { str.Append('\t'); } break;
                                 case 'f': { str.Append('\f'); } break;
                                 case 'v': { str.Append('\v'); } break;
+                                case 'a': { str.Append('\a'); } break;
+                                case 'b': { str.Append('\b'); } break;
                                 case '\\': { str.Append('\\'); } break;
                                 case '"':  { str.Append('"'); } break;
                                 case '\'':  { str.Append('\''); } break;
+                                case '0':  { str.Append(0); } break;
 
                                 default: {
                                     LogError("Unsupported escape sequence '\\%1'", code[j]);
