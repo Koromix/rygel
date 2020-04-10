@@ -404,10 +404,9 @@ static int GetOperatorPrecedence(TokenType type, bool assoc)
     }
 }
 
-static Size PostFixExpression(Span<Token> tokens)
+static bool ParseExpression(Span<const Token> tokens)
 {
-    HeapArray<Token> stack;
-    Size new_len = 0;
+    LocalArray<TokenType, 128> stack;
 
     bool expect_op = false;
     for (const Token &tok: tokens) {
@@ -415,7 +414,7 @@ static Size PostFixExpression(Span<Token> tokens)
             if (RG_UNLIKELY(expect_op))
                 goto expected_op;
 
-            stack.Append(tok);
+            stack.Append(tok.type);
         } else if (tok.type == TokenType::RightParenthesis) {
             if (RG_UNLIKELY(!expect_op))
                 goto expected_value;
@@ -424,18 +423,19 @@ static Size PostFixExpression(Span<Token> tokens)
             for (;;) {
                 if (RG_UNLIKELY(!stack.len)) {
                     LogError("Too many closing parentheses");
-                    return -1;
+                    return false;
                 }
 
-                const Token &op = stack[stack.len - 1];
+                TokenType op = stack[--stack.len];
 
-                if (op.type == TokenType::LeftParenthesis) {
-                    stack.RemoveLast(1);
+                if (op == TokenType::LeftParenthesis)
                     break;
-                }
 
-                tokens[new_len++] = op;
-                stack.RemoveLast(1);
+                if ((int)op < 256) {
+                    LogInfo("DO %1", (char)op);
+                } else {
+                    LogInfo("DO %1", (int)op);
+                }
             }
         } else if (tok.type == TokenType::Identifier || tok.type == TokenType::Integer ||
                    tok.type == TokenType::Double || tok.type == TokenType::String) {
@@ -443,7 +443,14 @@ static Size PostFixExpression(Span<Token> tokens)
                 goto expected_op;
             expect_op = true;
 
-            tokens[new_len++] = tok;
+            switch (tok.type) {
+                case TokenType::Identifier: { LogInfo("PUSH VARIABLE %1", tok.u.str); } break;
+                case TokenType::Integer: { LogInfo("PUSH INTEGER %1", tok.u.i); } break;
+                case TokenType::Double: { LogInfo("PUSH DOUBLE %1", tok.u.d); } break;
+                case TokenType::String: { LogInfo("PUSH STRING '%1'", tok.u.str); } break;
+
+                default: { RG_ASSERT(false); } break;
+            }
         } else {
             int prec = GetOperatorPrecedence(tok.type, false);
 
@@ -454,17 +461,25 @@ static Size PostFixExpression(Span<Token> tokens)
             expect_op = false;
 
             while (stack.len) {
-                const Token &op = stack[stack.len - 1];
-                int op_prec = GetOperatorPrecedence(op.type, true);
+                TokenType op = stack[stack.len - 1];
+                int op_prec = GetOperatorPrecedence(op, true);
 
                 if (prec > op_prec)
                     break;
 
-                tokens[new_len++] = op;
-                stack.RemoveLast(1);
+                if ((int)op < 256) {
+                    LogInfo("DO %1", (char)op);
+                } else {
+                    LogInfo("DO %1", (int)op);
+                }
+                stack.len--;
             }
 
-            stack.Append(tok);
+            if (RG_UNLIKELY(!stack.Available())) {
+                LogError("Too many operators on the stack");
+                return false;
+            }
+            stack.Append(tok.type);
         }
     }
 
@@ -472,24 +487,28 @@ static Size PostFixExpression(Span<Token> tokens)
         goto expected_value;
 
     for (Size i = stack.len - 1; i >= 0; i--) {
-        const Token &op = stack[i];
+        TokenType op = stack[i];
 
-        if (RG_UNLIKELY(op.type == TokenType::LeftParenthesis)) {
+        if (RG_UNLIKELY(op == TokenType::LeftParenthesis)) {
             LogError("Missing closing parenthesis");
-            return -1;
+            return false;
         }
 
-        tokens[new_len++] = op;
+        if ((int)op < 256) {
+            LogInfo("DO %1", (char)op);
+        } else {
+            LogInfo("DO %1", (int)op);
+        }
     }
 
-    return new_len;
+    return true;
 
 expected_op:
     LogError("Unexpected token, expected operator or ')'");
-    return -1;
+    return false;
 expected_value:
     LogError("Unexpected token, expected value or '('");
-    return -1;
+    return false;
 }
 
 int RunBlik(int argc, char **argv)
@@ -503,27 +522,8 @@ int RunBlik(int argc, char **argv)
         TokenSet token_set;
         if (!Tokenize(argv[i], "<argv>", &token_set))
             return 1;
-
-        Size new_len = PostFixExpression(token_set.tokens);
-        if (new_len < 0)
+        if (!ParseExpression(token_set.tokens))
             return 1;
-        token_set.tokens.RemoveFrom(new_len);
-
-        for (const Token &tok: token_set.tokens) {
-            if (tok.type == TokenType::Integer) {
-                PrintLn("INTEGER %1", tok.u.i);
-            } else if (tok.type == TokenType::Double) {
-                PrintLn("DOUBLE %1", tok.u.d);
-            } else if (tok.type == TokenType::String) {
-                PrintLn("STRING '%1'", tok.u.str);
-            } else if (tok.type == TokenType::Identifier) {
-                PrintLn("IDENT '%1'", tok.u.str);
-            } else if ((int)tok.type < 256) {
-                PrintLn("TOKEN: %1", (char)tok.type);
-            } else {
-                PrintLn("TOKEN: %1", (int)tok.type);
-            }
-        }
     }
 
     return 0;
