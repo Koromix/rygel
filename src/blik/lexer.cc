@@ -35,94 +35,100 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
             } break;
 
             case '0': {
-                if (j < code.len && code[j] == 'b') {
-                    uint64_t u = 0;
-                    bool overflow = false;
+                if (j < code.len && IsAsciiAlpha(code[j])) {
+                    if (code[j] == 'b') {
+                        uint64_t u = 0;
+                        bool overflow = false;
 
-                    while (++j < code.len) {
-                        unsigned int digit = (unsigned int)(code[j] - '0');
-
-                        if (digit < 2) {
-                            overflow |= (u > (UINT64_MAX - digit) / 2);
-                            u = (u * 2) + digit;
-                        } else if (RG_UNLIKELY(digit < 10)) {
-                            LogError("Invalid binary digit '%1'", code[j]);
-                            valid = false;
-                            break;
-                        } else {
-                            break;
-                        }
-                    }
-
-                    if (RG_UNLIKELY(overflow)) {
-                        LogError("Number literal is too large (max = %1)", UINT64_MAX);
-                        valid = false;
-                    }
-
-                    out_set->tokens.Append(Token(TokenType::Integer, line, u));
-                    continue;
-                } else if (j < code.len && code[j] == 'o') {
-                    uint64_t u = 0;
-                    bool overflow = false;
-
-                    while (++j < code.len) {
-                        unsigned int digit = (unsigned int)(code[j] - '0');
-
-                        if (digit < 8) {
-                            overflow |= (u > (UINT64_MAX - digit) / 8);
-                            u = (u * 8) + digit;
-                        } else if (RG_UNLIKELY(digit < 10)) {
-                            LogError("Invalid octal digit '%1'", code[j]);
-                            valid = false;
-                            break;
-                        } else {
-                            break;
-                        }
-                    }
-
-                    if (RG_UNLIKELY(overflow)) {
-                        LogError("Number literal is too large (max = %1)", UINT64_MAX);
-                        valid = false;
-                    }
-
-                    out_set->tokens.Append(Token(TokenType::Integer, line, u));
-                    continue;
-                } else if (j < code.len && code[j] == 'x') {
-                    uint64_t u = 0;
-                    bool overflow = false;
-
-                    while (++j < code.len) {
-                        if (IsAsciiDigit(code[j])) {
+                        while (++j < code.len) {
                             unsigned int digit = (unsigned int)(code[j] - '0');
 
-                            overflow |= (u > (UINT64_MAX - digit) / 16);
-                            u = (u * 16) + (code[j] - '0');
-                        } else if (code[j] >= 'A' && code[j] <= 'F') {
-                            unsigned int digit = (unsigned int)(code[j] - 'A' + 10);
-
-                            overflow |= (u > (UINT64_MAX - digit) / 16);
-                            u = (u * 16) + (code[j] - 'A' + 10);
-                        } else if (code[j] >= 'a' && code[j] <= 'f') {
-                            unsigned int digit = (unsigned int)(code[j] - 'a' + 10);
-
-                            overflow |= (u > (UINT64_MAX - digit) / 16);
-                            u = (u * 16) + (code[j] - 'a' + 10);
-                        } else if (RG_UNLIKELY(IsAsciiAlpha(code[j]))) {
-                            LogError("Invalid hexadecimal digit '%1'", code[j]);
-                            valid = false;
-                            break;
-                        } else {
-                            break;
+                            if (digit < 2) {
+                                overflow |= (u > (UINT64_MAX - digit) / 2);
+                                u = (u * 2) + digit;
+                            } else if (RG_UNLIKELY(digit < 10)) {
+                                LogError("Invalid binary digit '%1'", code[j]);
+                                valid = false;
+                                break;
+                            } else {
+                                break;
+                            }
                         }
-                    }
 
-                    if (RG_UNLIKELY(overflow)) {
-                        LogError("Number literal is too large (max = %1)", UINT64_MAX);
+                        if (RG_UNLIKELY(overflow)) {
+                            LogError("Number literal is too large (max = %1)", UINT64_MAX);
+                            valid = false;
+                        }
+
+                        out_set->tokens.Append(Token(TokenType::Integer, line, u));
+                        continue;
+                    } else if (code[j] == 'o') {
+                        uint64_t u = 0;
+                        bool overflow = false;
+
+                        while (++j < code.len) {
+                            unsigned int digit = (unsigned int)(code[j] - '0');
+
+                            if (digit < 8) {
+                                overflow |= (u > (UINT64_MAX - digit) / 8);
+                                u = (u * 8) + digit;
+                            } else if (RG_UNLIKELY(digit < 10)) {
+                                LogError("Invalid octal digit '%1'", code[j]);
+                                valid = false;
+                                break;
+                            } else {
+                                break;
+                            }
+                        }
+
+                        if (RG_UNLIKELY(overflow)) {
+                            LogError("Number literal is too large (max = %1)", UINT64_MAX);
+                            valid = false;
+                        }
+
+                        out_set->tokens.Append(Token(TokenType::Integer, line, u));
+                        continue;
+                    } else if (code[j] == 'x') {
+                        uint64_t u = 0;
+                        bool overflow = false;
+
+                        while (++j < code.len) {
+                            if (IsAsciiDigit(code[j])) {
+                                unsigned int digit = (unsigned int)(code[j] - '0');
+
+                                overflow |= (u > (UINT64_MAX - digit) / 16);
+                                u = (u * 16) + (code[j] - '0');
+                            } else if (code[j] >= 'A' && code[j] <= 'F') {
+                                unsigned int digit = (unsigned int)(code[j] - 'A' + 10);
+
+                                overflow |= (u > (UINT64_MAX - digit) / 16);
+                                u = (u * 16) + (code[j] - 'A' + 10);
+                            } else if (code[j] >= 'a' && code[j] <= 'f') {
+                                unsigned int digit = (unsigned int)(code[j] - 'a' + 10);
+
+                                overflow |= (u > (UINT64_MAX - digit) / 16);
+                                u = (u * 16) + (code[j] - 'a' + 10);
+                            } else if (RG_UNLIKELY(IsAsciiAlpha(code[j]))) {
+                                LogError("Invalid hexadecimal digit '%1'", code[j]);
+                                valid = false;
+                                break;
+                            } else {
+                                break;
+                            }
+                        }
+
+                        if (RG_UNLIKELY(overflow)) {
+                            LogError("Number literal is too large (max = %1)", UINT64_MAX);
+                            valid = false;
+                        }
+
+                        out_set->tokens.Append(Token(TokenType::Integer, line, u));
+                        continue;
+                    } else {
+                        LogError("Invalid literal base character '%1'", code[j]);
                         valid = false;
+                        break;
                     }
-
-                    out_set->tokens.Append(Token(TokenType::Integer, line, u));
-                    continue;
                 }
             } RG_FALLTHROUGH;
             case '1':
