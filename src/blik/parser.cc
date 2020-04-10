@@ -45,7 +45,9 @@ bool ParseExpression(Span<const Token> tokens)
     LocalArray<TokenType, 128> stack;
 
     bool expect_op = false;
-    for (const Token &tok: tokens) {
+    for (Size i = 0, j = 1; i < tokens.len; i++, j++) {
+        const Token &tok = tokens[i];
+
         if (tok.type == TokenType::LeftParenthesis) {
             if (RG_UNLIKELY(expect_op))
                 goto expected_op;
@@ -92,8 +94,30 @@ bool ParseExpression(Span<const Token> tokens)
 
             if (RG_UNLIKELY(prec < 0))
                 goto expected_value;
-            if (RG_UNLIKELY(!expect_op && !IsUnaryOperator(tok.type)))
-                goto expected_value;
+            if (RG_UNLIKELY(!expect_op)) {
+                if (tok.type == TokenType::Plus) {
+                    if (RG_UNLIKELY(j >= tokens.len))
+                        goto expected_value;
+                    if (RG_UNLIKELY(tokens[j].type != TokenType::Integer &&
+                                    tokens[j].type != TokenType::Double))
+                        goto expected_value;
+
+                    continue;
+                } else if (tok.type == TokenType::Minus) {
+                    if (RG_UNLIKELY(j >= tokens.len))
+                        goto expected_value;
+
+                    switch (tokens[j].type) {
+                        case TokenType::Integer: { LogInfo("PUSH INTEGER 0"); } break;
+                        case TokenType::Double: { LogInfo("PUSH DOUBLE 0"); } break;
+                        default: { goto expected_value; } break;
+                    }
+
+                    prec = 12;
+                } else if (RG_UNLIKELY(!IsUnaryOperator(tok.type))) {
+                    goto expected_value;
+                }
+            }
             expect_op = false;
 
             while (stack.len) {
