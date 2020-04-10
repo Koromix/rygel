@@ -313,6 +313,28 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
                     out_set->tokens.Append(Token(TokenType::Or, line));
                 }
             } break;
+            case '>': {
+                if (j < code.len && code[j] == '>') {
+                    out_set->tokens.Append(Token(TokenType::RightShift, line));
+                    j++;
+                } else if (j < code.len && code[j] == '=') {
+                    out_set->tokens.Append(Token(TokenType::GreaterOrEqual, line));
+                    j++;
+                } else {
+                    out_set->tokens.Append(Token(TokenType::Greater, line));
+                }
+            } break;
+            case '<': {
+                if (j < code.len && code[j] == '<') {
+                    out_set->tokens.Append(Token(TokenType::LeftShift, line));
+                    j++;
+                } else if (j < code.len && code[j] == '=') {
+                    out_set->tokens.Append(Token(TokenType::LessOrEqual, line));
+                    j++;
+                } else {
+                    out_set->tokens.Append(Token(TokenType::Less, line));
+                }
+            } break;
 
             default: {
                 LogError("Unexpected character '%1'", code[i]);

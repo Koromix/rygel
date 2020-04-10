@@ -25,6 +25,12 @@ static int GetOperatorPrecedence(TokenType type)
         case TokenType::LogicOr: { return 2; } break;
         case TokenType::Equal: { return 7; } break;
         case TokenType::NotEqual: { return 7; } break;
+        case TokenType::Greater: { return 8; } break;
+        case TokenType::GreaterOrEqual: { return 8; } break;
+        case TokenType::Less: { return 8; } break;
+        case TokenType::LessOrEqual: { return 8; } break;
+        case TokenType::LeftShift: { return 9; } break;
+        case TokenType::RightShift: { return 9; } break;
 
         default: { return -1; } break;
     }

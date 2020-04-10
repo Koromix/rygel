@@ -22,6 +22,9 @@ enum class TokenType {
     Not = '~',
     LogicNot = '!',
 
+    Greater = '>',
+    Less = '<',
+
     LeftParenthesis = '(',
     RightParenthesis = ')',
     LeftBrace = '{',
@@ -32,10 +35,15 @@ enum class TokenType {
     String,
     Identifier,
 
+    LeftShift,
+    RightShift,
+
     LogicAnd,
     LogicOr,
     Equal,
     NotEqual,
+    GreaterOrEqual,
+    LessOrEqual,
 
     If,
     Else,
