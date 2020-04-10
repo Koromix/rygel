@@ -437,33 +437,34 @@ static Size PostFixExpression(Span<Token> tokens)
                 tokens[new_len++] = op;
                 stack.RemoveLast(1);
             }
+        } else if (tok.type == TokenType::Identifier || tok.type == TokenType::Integer ||
+                   tok.type == TokenType::Double || tok.type == TokenType::String) {
+            if (RG_UNLIKELY(expect_op))
+                goto expected_op;
+            expect_op = true;
+
+            tokens[new_len++] = tok;
         } else {
             int prec = GetOperatorPrecedence(tok.type, false);
 
-            if (prec >= 0) {
-                if (RG_UNLIKELY(!expect_op))
-                    goto expected_value;
-                expect_op = false;
+            if (RG_UNLIKELY(prec < 0))
+                goto expected_value;
+            if (RG_UNLIKELY(!expect_op))
+                goto expected_value;
+            expect_op = false;
 
-                while (stack.len) {
-                    const Token &op = stack[stack.len - 1];
-                    int prec2 = GetOperatorPrecedence(op.type, true);
+            while (stack.len) {
+                const Token &op = stack[stack.len - 1];
+                int op_prec = GetOperatorPrecedence(op.type, true);
 
-                    if (prec > prec2)
-                        break;
+                if (prec > op_prec)
+                    break;
 
-                    tokens[new_len++] = op;
-                    stack.RemoveLast(1);
-                }
-
-                stack.Append(tok);
-            } else {
-                if (RG_UNLIKELY(expect_op))
-                    goto expected_op;
-                expect_op = true;
-
-                tokens[new_len++] = tok;
+                tokens[new_len++] = op;
+                stack.RemoveLast(1);
             }
+
+            stack.Append(tok);
         }
     }
 
