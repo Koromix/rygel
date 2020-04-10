@@ -55,7 +55,7 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
                     }
 
                     if (RG_UNLIKELY(overflow)) {
-                        LogError("Number literal is too large (max = %1)", INT64_MAX);
+                        LogError("Number literal is too large (max = %1)", UINT64_MAX);
                         valid = false;
                     }
 
@@ -91,7 +91,7 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
                     }
 
                     if (RG_UNLIKELY(overflow)) {
-                        LogError("Number literal is too large (max = %1)", INT64_MAX);
+                        LogError("Number literal is too large (max = %1)", UINT64_MAX);
                         valid = false;
                     }
 
@@ -144,7 +144,7 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
                     out_set->tokens.Append(Token(TokenType::Double, line, d));
                 } else {
                     if (RG_UNLIKELY(overflow)) {
-                        LogError("Number literal is too large (max = %1)", INT64_MAX);
+                        LogError("Number literal is too large (max = %1)", UINT64_MAX);
                         valid = false;
                     }
 
