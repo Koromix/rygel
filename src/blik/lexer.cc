@@ -61,6 +61,32 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
 
                     out_set->tokens.Append(Token(TokenType::Integer, line, u));
                     continue;
+                } else if (j < code.len && code[j] == 'o') {
+                    uint64_t u = 0;
+                    bool overflow = false;
+
+                    while (++j < code.len) {
+                        unsigned int digit = (unsigned int)(code[j] - '0');
+
+                        if (digit < 8) {
+                            overflow |= (u > (UINT64_MAX - digit) / 8);
+                            u = (u * 8) + digit;
+                        } else if (RG_UNLIKELY(digit < 10)) {
+                            LogError("Invalid octal digit '%1'", code[j]);
+                            valid = false;
+                            break;
+                        } else {
+                            break;
+                        }
+                    }
+
+                    if (RG_UNLIKELY(overflow)) {
+                        LogError("Number literal is too large (max = %1)", UINT64_MAX);
+                        valid = false;
+                    }
+
+                    out_set->tokens.Append(Token(TokenType::Integer, line, u));
+                    continue;
                 } else if (j < code.len && code[j] == 'x') {
                     uint64_t u = 0;
                     bool overflow = false;
