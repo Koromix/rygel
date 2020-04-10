@@ -8,7 +8,7 @@
 
 namespace RG {
 
-static int GetOperatorPrecedence(TokenType type, bool assoc)
+static int GetOperatorPrecedence(TokenType type)
 {
     switch (type) {
         case TokenType::Plus: { return 10; } break;
@@ -19,14 +19,24 @@ static int GetOperatorPrecedence(TokenType type, bool assoc)
         case TokenType::And: { return 6; } break;
         case TokenType::Or: { return 4; } break;
         case TokenType::Xor: { return 5; } break;
-        case TokenType::Not: { return 12 - assoc; } break;
-        case TokenType::LogicNot: { return 12 - assoc; } break;
+        case TokenType::Not: { return 12; } break;
+        case TokenType::LogicNot: { return 12; } break;
         case TokenType::LogicAnd: { return 3; } break;
         case TokenType::LogicOr: { return 2; } break;
         case TokenType::Equal: { return 7; } break;
         case TokenType::NotEqual: { return 7; } break;
 
         default: { return -1; } break;
+    }
+}
+
+static bool IsUnaryOperator(TokenType type)
+{
+    switch (type) {
+        case TokenType::Not: { return true; } break;
+        case TokenType::LogicNot: { return true; } break;
+
+        default: { return false; } break;
     }
 }
 
@@ -78,17 +88,17 @@ bool ParseExpression(Span<const Token> tokens)
                 default: { RG_ASSERT(false); } break;
             }
         } else {
-            int prec = GetOperatorPrecedence(tok.type, false);
+            int prec = GetOperatorPrecedence(tok.type);
 
             if (RG_UNLIKELY(prec < 0))
                 goto expected_value;
-            if (RG_UNLIKELY(!expect_op))
+            if (RG_UNLIKELY(!expect_op && !IsUnaryOperator(tok.type)))
                 goto expected_value;
             expect_op = false;
 
             while (stack.len) {
                 TokenType op = stack[stack.len - 1];
-                int op_prec = GetOperatorPrecedence(op, true);
+                int op_prec = GetOperatorPrecedence(op) - IsUnaryOperator(op);
 
                 if (prec > op_prec)
                     break;
