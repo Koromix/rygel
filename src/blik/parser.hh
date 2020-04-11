@@ -55,7 +55,11 @@ enum class Opcode {
 
     LogicNot,
     LogicAnd,
-    LogicOr
+    LogicOr,
+
+    Jump,
+    BranchIfTrue,
+    BranchIfFalse
 };
 
 struct Instruction {
@@ -65,6 +69,7 @@ struct Instruction {
         uint64_t i; // PushInteger
         double d; // PushDouble
         const char *str; // PushString
+        Size jump; // Jump, BranchIfTrue, BranchIfFalse
     } u;
 
     Instruction() {}
@@ -73,6 +78,7 @@ struct Instruction {
     Instruction(Opcode code, uint64_t i) : code(code) { u.i = i; }
     Instruction(Opcode code, double d) : code(code) { u.d = d; }
     Instruction(Opcode code, const char *str) : code(code) { u.str = str; }
+    Instruction(Opcode code, Size jump) : code(code) { u.jump = jump; }
 };
 
 bool Parse(Span<const Token> tokens, HeapArray<Instruction> *out_ir);

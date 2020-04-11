@@ -25,7 +25,9 @@ void Run(Span<const Instruction> ir)
 {
     HeapArray<Value> stack;
 
-    for (const Instruction &inst: ir) {
+    for (Size i = 0; i < ir.len; i++) {
+        const Instruction &inst = ir[i];
+
         switch (inst.code) {
             case Opcode::PushBool: { stack.Append(Value(inst.u.b)); } break;
             case Opcode::PushInteger: { stack.Append(Value((int64_t)inst.u.i)); } break;
@@ -153,6 +155,16 @@ void Run(Span<const Instruction> ir)
                 bool b1 = stack[stack.len - 2].b;
                 bool b2 = stack[stack.len - 1].b;
                 stack[--stack.len - 1] = b1 || b2;
+            } break;
+
+            case Opcode::Jump: { i = inst.u.jump - 1; } break;
+            case Opcode::BranchIfTrue: {
+                bool b = stack[stack.len - 1].b;
+                i = b ? (inst.u.jump - 1) : i;
+            } break;
+            case Opcode::BranchIfFalse: {
+                bool b = stack[stack.len - 1].b;
+                i = b ? i : (inst.u.jump - 1);
             } break;
         }
     }
