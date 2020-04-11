@@ -9,13 +9,18 @@
 namespace RG {
 
 class Parser {
+    struct PendingOperator {
+        TokenType type;
+        Size branch_idx;
+    };
+
     HeapArray<Instruction> ir;
     HeapArray<Type> types;
 
 public:
     bool ParseExpression(Span<const Token> tokens);
 
-    bool ProduceOperator(TokenType type);
+    bool ProduceOperator(const PendingOperator &op);
     bool ProduceOperatorArithmetic(const char *name, Opcode int_op, Opcode double_op);
     bool ProduceOperatorCompare(Opcode int_op, Opcode double_op);
 
@@ -68,7 +73,7 @@ static bool IsOperand(TokenType type)
 
 bool Parser::ParseExpression(Span<const Token> tokens)
 {
-    LocalArray<TokenType, 128> stack;
+    LocalArray<PendingOperator, 128> stack;
 
     bool expect_op = false;
     for (Size i = 0, j = 1; i < tokens.len; i++, j++) {
@@ -78,7 +83,7 @@ bool Parser::ParseExpression(Span<const Token> tokens)
             if (RG_UNLIKELY(expect_op))
                 goto expected_op;
 
-            stack.Append(tok.type);
+            stack.Append({tok.type});
         } else if (tok.type == TokenType::RightParenthesis) {
             if (RG_UNLIKELY(!expect_op))
                 goto expected_value;
@@ -90,13 +95,16 @@ bool Parser::ParseExpression(Span<const Token> tokens)
                     return false;
                 }
 
-                TokenType op = stack.data[--stack.len];
+                const PendingOperator &op = stack.data[stack.len - 1];
 
-                if (op == TokenType::LeftParenthesis)
+                if (op.type == TokenType::LeftParenthesis) {
+                    stack.len--;
                     break;
+                }
 
                 if (RG_UNLIKELY(!ProduceOperator(op)))
                     return false;
+                stack.len--;
             }
         } else if (IsOperand(tok.type)) {
             if (RG_UNLIKELY(expect_op))
@@ -158,8 +166,8 @@ bool Parser::ParseExpression(Span<const Token> tokens)
             expect_op = false;
 
             while (stack.len) {
-                TokenType op = stack[stack.len - 1];
-                int op_prec = GetOperatorPrecedence(op) - IsUnaryOperator(op);
+                const PendingOperator &op = stack[stack.len - 1];
+                int op_prec = GetOperatorPrecedence(op.type) - IsUnaryOperator(op.type);
 
                 if (prec > op_prec)
                     break;
@@ -173,7 +181,17 @@ bool Parser::ParseExpression(Span<const Token> tokens)
                 LogError("Too many operators on the stack");
                 return false;
             }
-            stack.Append(tok.type);
+
+            // Short-circuit operators need a short-circuit branch
+            if (tok.type == TokenType::LogicAnd) {
+                stack.Append({tok.type, ir.len});
+                ir.Append(Instruction(Opcode::BranchIfFalse));
+            } else if (tok.type == TokenType::LogicOr) {
+                stack.Append({tok.type, ir.len});
+                ir.Append(Instruction(Opcode::BranchIfTrue));
+            } else {
+                stack.Append({tok.type});
+            }
         }
     }
 
@@ -181,9 +199,9 @@ bool Parser::ParseExpression(Span<const Token> tokens)
         goto expected_value;
 
     for (Size i = stack.len - 1; i >= 0; i--) {
-        TokenType op = stack[i];
+        const PendingOperator &op = stack[i];
 
-        if (RG_UNLIKELY(op == TokenType::LeftParenthesis)) {
+        if (RG_UNLIKELY(op.type == TokenType::LeftParenthesis)) {
             LogError("Missing closing parenthesis");
             return false;
         }
@@ -202,9 +220,9 @@ expected_value:
     return false;
 }
 
-bool Parser::ProduceOperator(TokenType type)
+bool Parser::ProduceOperator(const PendingOperator &op)
 {
-    switch (type) {
+    switch (op.type) {
         case TokenType::Plus: { return ProduceOperatorArithmetic("add", Opcode::Add, Opcode::AddDouble); } break;
         case TokenType::Minus: { return ProduceOperatorArithmetic("substract", Opcode::Substract, Opcode::SubstractDouble); } break;
         case TokenType::Multiply: { return ProduceOperatorArithmetic("multiply", Opcode::Multiply, Opcode::MultiplyDouble); } break;
@@ -257,6 +275,10 @@ bool Parser::ProduceOperator(TokenType type)
             if (type1 == Type::Bool && type2 == Type::Bool) {
                 ir.Append(Instruction(Opcode::LogicAnd));
                 types.Append(Type::Bool);
+
+                RG_ASSERT(op.branch_idx && ir[op.branch_idx].code == Opcode::BranchIfFalse);
+                ir[op.branch_idx].u.jump = ir.len;
+
                 return true;
             } else {
                 LogError("Cannot use AND between %1 value and %2 value", TypeNames[(int)type1], TypeNames[(int)type2]);
@@ -271,6 +293,10 @@ bool Parser::ProduceOperator(TokenType type)
             if (type1 == Type::Bool && type2 == Type::Bool) {
                 ir.Append(Instruction(Opcode::LogicOr));
                 types.Append(Type::Bool);
+
+                RG_ASSERT(op.branch_idx && ir[op.branch_idx].code == Opcode::BranchIfTrue);
+                ir[op.branch_idx].u.jump = ir.len;
+
                 return true;
             } else {
                 LogError("Cannot use OR between %1 value and %2 value", TypeNames[(int)type1], TypeNames[(int)type2]);
