@@ -5,6 +5,7 @@
 #include "../core/libcc/libcc.hh"
 #include "lexer.hh"
 #include "parser.hh"
+#include "run.hh"
 
 namespace RG {
 
@@ -22,6 +23,8 @@ int RunBlik(int argc, char **argv)
             return 1;
         if (!Parse(token_set.tokens, &ir))
             return 1;
+
+        Run(ir);
     }
 
     return 0;
