@@ -8,6 +8,20 @@
 
 namespace RG {
 
+class Parser {
+    HeapArray<Instruction> ir;
+    HeapArray<Type> types;
+
+public:
+    bool ParseExpression(Span<const Token> tokens);
+
+    bool ProduceOperator(TokenType type);
+    bool ProduceOperatorArithmetic(const char *name, Opcode int_op, Opcode double_op);
+    bool ProduceOperatorCompare(Opcode int_op, Opcode double_op);
+
+    void Finish(HeapArray<Instruction> *out_ir);
+};
+
 static int GetOperatorPrecedence(TokenType type)
 {
     switch (type) {
@@ -46,7 +60,13 @@ static bool IsUnaryOperator(TokenType type)
     }
 }
 
-bool ParseExpression(Span<const Token> tokens)
+static bool IsOperand(TokenType type)
+{
+    return type == TokenType::True || type == TokenType::False || type == TokenType::Integer ||
+           type == TokenType::Double || type == TokenType::String || type == TokenType::Identifier;
+}
+
+bool Parser::ParseExpression(Span<const Token> tokens)
 {
     LocalArray<TokenType, 128> stack;
 
@@ -70,28 +90,41 @@ bool ParseExpression(Span<const Token> tokens)
                     return false;
                 }
 
-                TokenType op = stack[--stack.len];
+                TokenType op = stack.data[--stack.len];
 
                 if (op == TokenType::LeftParenthesis)
                     break;
 
-                if ((int)op < 256) {
-                    LogInfo("DO %1", (char)op);
-                } else {
-                    LogInfo("DO %1", (int)op);
-                }
+                if (RG_UNLIKELY(!ProduceOperator(op)))
+                    return false;
             }
-        } else if (tok.type == TokenType::Identifier || tok.type == TokenType::Integer ||
-                   tok.type == TokenType::Double || tok.type == TokenType::String) {
+        } else if (IsOperand(tok.type)) {
             if (RG_UNLIKELY(expect_op))
                 goto expected_op;
             expect_op = true;
 
             switch (tok.type) {
-                case TokenType::Identifier: { LogInfo("PUSH VARIABLE %1", tok.u.str); } break;
-                case TokenType::Integer: { LogInfo("PUSH INTEGER %1", tok.u.i); } break;
-                case TokenType::Double: { LogInfo("PUSH DOUBLE %1", tok.u.d); } break;
-                case TokenType::String: { LogInfo("PUSH STRING '%1'", tok.u.str); } break;
+                case TokenType::True: {
+                    ir.Append(Instruction(Opcode::PushBool, true));
+                    types.Append(Type::Bool);
+                } break;
+                case TokenType::False: {
+                    ir.Append(Instruction(Opcode::PushBool, false));
+                    types.Append(Type::Bool);
+                } break;
+                case TokenType::Integer: {
+                    ir.Append(Instruction(Opcode::PushInteger, tok.u.i));
+                    types.Append(Type::Integer);
+                } break;
+                case TokenType::Double: {
+                    ir.Append(Instruction(Opcode::PushDouble, tok.u.d));
+                    types.Append(Type::Double);
+                } break;
+                case TokenType::String: {
+                    ir.Append(Instruction(Opcode::PushString, tok.u.str));
+                    types.Append(Type::String);
+                } break;
+                case TokenType::Identifier: { RG_ASSERT(false); } break;
 
                 default: { RG_ASSERT(false); } break;
             }
@@ -104,20 +137,18 @@ bool ParseExpression(Span<const Token> tokens)
                 if (tok.type == TokenType::Plus) {
                     if (RG_UNLIKELY(j >= tokens.len))
                         goto expected_value;
-                    if (RG_UNLIKELY(tokens[j].type != TokenType::Integer &&
-                                    tokens[j].type != TokenType::Double))
+                    if (RG_UNLIKELY(!IsOperand(tokens[j].type)))
                         goto expected_value;
 
                     continue;
                 } else if (tok.type == TokenType::Minus) {
                     if (RG_UNLIKELY(j >= tokens.len))
                         goto expected_value;
+                    if (RG_UNLIKELY(!IsOperand(tokens[j].type)))
+                        goto expected_value;
 
-                    switch (tokens[j].type) {
-                        case TokenType::Integer: { LogInfo("PUSH INTEGER 0"); } break;
-                        case TokenType::Double: { LogInfo("PUSH DOUBLE 0"); } break;
-                        default: { goto expected_value; } break;
-                    }
+                    ir.Append(Instruction(Opcode::PushInteger, 0ull));
+                    types.Append(Type::Integer);
 
                     prec = 12;
                 } else if (RG_UNLIKELY(!IsUnaryOperator(tok.type))) {
@@ -133,11 +164,8 @@ bool ParseExpression(Span<const Token> tokens)
                 if (prec > op_prec)
                     break;
 
-                if ((int)op < 256) {
-                    LogInfo("DO %1", (char)op);
-                } else {
-                    LogInfo("DO %1", (int)op);
-                }
+                if (RG_UNLIKELY(!ProduceOperator(op)))
+                    return false;
                 stack.len--;
             }
 
@@ -160,11 +188,8 @@ bool ParseExpression(Span<const Token> tokens)
             return false;
         }
 
-        if ((int)op < 256) {
-            LogInfo("DO %1", (char)op);
-        } else {
-            LogInfo("DO %1", (int)op);
-        }
+        if (RG_UNLIKELY(!ProduceOperator(op)))
+            return false;
     }
 
     return true;
@@ -175,6 +200,143 @@ expected_op:
 expected_value:
     LogError("Unexpected token, expected value or '('");
     return false;
+}
+
+bool Parser::ProduceOperator(TokenType type)
+{
+    switch (type) {
+        case TokenType::Plus: { return ProduceOperatorArithmetic("add", Opcode::Add, Opcode::AddDouble); } break;
+        case TokenType::Minus: { return ProduceOperatorArithmetic("substract", Opcode::Substract, Opcode::SubstractDouble); } break;
+        case TokenType::Multiply: { return ProduceOperatorArithmetic("multiply", Opcode::Multiply, Opcode::MultiplyDouble); } break;
+        case TokenType::Divide: { return ProduceOperatorArithmetic("divide", Opcode::Divide, Opcode::DivideDouble); } break;
+        case TokenType::Modulo: {
+            Type type1 = types[types.len - 2];
+            Type type2 = types[types.len - 1];
+            types.RemoveLast(2);
+
+            if (type1 == Type::Integer && type2 == Type::Integer) {
+                ir.Append(Instruction(Opcode::Modulo));
+                types.Append(Type::Integer);
+                return true;
+            } else {
+                LogError("Cannot use modulo between %1 value and %2 value", TypeNames[(int)type1], TypeNames[(int)type2]);
+                return false;
+            }
+        } break;
+
+        case TokenType::Equal: { return ProduceOperatorCompare(Opcode::Equal, Opcode::EqualDouble); } break;
+        case TokenType::NotEqual: { return ProduceOperatorCompare(Opcode::NotEqual, Opcode::NotEqualDouble); } break;
+        case TokenType::Greater: { return ProduceOperatorCompare(Opcode::Greater, Opcode::GreaterDouble); } break;
+        case TokenType::GreaterOrEqual: { return ProduceOperatorCompare(Opcode::GreaterOrEqual, Opcode::GreaterOrEqualDouble); } break;
+        case TokenType::Less: { return ProduceOperatorCompare(Opcode::Less, Opcode::LessDouble); } break;
+        case TokenType::LessOrEqual: { return ProduceOperatorCompare(Opcode::LessOrEqual, Opcode::LessOrEqualDouble); } break;
+
+        // case TokenType::And: {} break;
+        // case TokenType::Or: {} break;
+        // case TokenType::Xor: {} break;
+        // case TokenType::Not: {} break;
+        // case TokenType::LeftShift: {} break;
+        // case TokenType::RightShift: {} break;
+
+        case TokenType::LogicNot: {
+            Type type = types[types.len - 1];
+
+            if (type == Type::Bool) {
+                ir.Append(Instruction(Opcode::LogicNot));
+                return true;
+            } else {
+                LogError("Cannot use NOT operator with %1 value", TypeNames[(int)type]);
+                return false;
+            }
+        } break;
+        case TokenType::LogicAnd: {
+            Type type1 = types[types.len - 2];
+            Type type2 = types[types.len - 1];
+            types.RemoveLast(2);
+
+            if (type1 == Type::Bool && type2 == Type::Bool) {
+                ir.Append(Instruction(Opcode::LogicAnd));
+                types.Append(Type::Bool);
+                return true;
+            } else {
+                LogError("Cannot use AND between %1 value and %2 value", TypeNames[(int)type1], TypeNames[(int)type2]);
+                return false;
+            }
+        } break;
+        case TokenType::LogicOr: {
+            Type type1 = types[types.len - 2];
+            Type type2 = types[types.len - 1];
+            types.RemoveLast(2);
+
+            if (type1 == Type::Bool && type2 == Type::Bool) {
+                ir.Append(Instruction(Opcode::LogicOr));
+                types.Append(Type::Bool);
+                return true;
+            } else {
+                LogError("Cannot use OR between %1 value and %2 value", TypeNames[(int)type1], TypeNames[(int)type2]);
+                return false;
+            }
+        } break;
+
+        default: { RG_ASSERT(false); } break;
+    }
+}
+
+bool Parser::ProduceOperatorArithmetic(const char *name, Opcode int_op, Opcode double_op)
+{
+    Type type1 = types[types.len - 2];
+    Type type2 = types[types.len - 1];
+    types.RemoveLast(2);
+
+    if (type1 == Type::Integer && type2 == Type::Integer) {
+        ir.Append(Instruction(int_op));
+        types.Append(Type::Integer);
+    } else if (type1 == Type::Double && type2 == Type::Double) {
+        ir.Append(Instruction(double_op));
+        types.Append(Type::Double);
+    } else {
+        LogError("Cannot %1 %2 value and %3 value", name, TypeNames[(int)type1], TypeNames[(int)type2]);
+        return false;
+    }
+
+    return true;
+}
+
+bool Parser::ProduceOperatorCompare(Opcode int_op, Opcode double_op)
+{
+    Type type1 = types[types.len - 2];
+    Type type2 = types[types.len - 1];
+    types.RemoveLast(2);
+
+    if (type1 == Type::Integer && type2 == Type::Integer) {
+        ir.Append(Instruction(int_op));
+        types.Append(Type::Bool);
+    } else if (type1 == Type::Double && type2 == Type::Double) {
+        ir.Append(Instruction(double_op));
+        types.Append(Type::Bool);
+    } else {
+        LogError("Cannot compare %1 value and %2 value", TypeNames[(int)type1], TypeNames[(int)type2]);
+        return false;
+    }
+
+    return true;
+}
+
+void Parser::Finish(HeapArray<Instruction> *out_ir)
+{
+    RG_ASSERT(!out_ir->len);
+    SwapMemory(&ir, out_ir, RG_SIZE(ir));
+}
+
+bool Parse(Span<const Token> tokens, HeapArray<Instruction> *out_ir)
+{
+    Parser parser;
+
+    if (!parser.ParseExpression(tokens))
+        return false;
+
+    parser.Finish(out_ir);
+    return true;
 }
 
 }
