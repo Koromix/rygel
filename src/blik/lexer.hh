@@ -30,7 +30,9 @@ enum class TokenType {
     LeftBrace = '{',
     RightBrace = '}',
 
-    Integer = 256,
+    True = 256,
+    False,
+    Integer,
     Double,
     String,
     Identifier,
@@ -55,6 +57,7 @@ struct Token {
     int32_t line;
 
     union {
+        bool b;
         uint64_t i;
         double d;
         const char *str;
@@ -62,6 +65,7 @@ struct Token {
 
     Token() {}
     Token(TokenType type, int32_t line) : type(type), line(line) {}
+    Token(TokenType type, int32_t line, bool b) : type(type), line(line) { u.b = b; }
     Token(TokenType type, int32_t line, uint64_t i) : type(type), line(line) { u.i = i; }
     Token(TokenType type, int32_t line, double d) : type(type), line(line) { u.d = d; }
     Token(TokenType type, int32_t line, const char *str) : type(type), line(line) { u.str = str; }
