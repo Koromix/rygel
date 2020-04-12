@@ -44,26 +44,26 @@ public:
 static int GetOperatorPrecedence(TokenType type)
 {
     switch (type) {
+        case TokenType::LogicOr: { return 2; } break;
+        case TokenType::LogicAnd: { return 3; } break;
+        case TokenType::Equal: { return 4; } break;
+        case TokenType::NotEqual: { return 4; } break;
+        case TokenType::Greater: { return 5; } break;
+        case TokenType::GreaterOrEqual: { return 5; } break;
+        case TokenType::Less: { return 5; } break;
+        case TokenType::LessOrEqual: { return 5; } break;
+        case TokenType::Or: { return 6; } break;
+        case TokenType::Xor: { return 7; } break;
+        case TokenType::And: { return 8; } break;
+        case TokenType::LeftShift: { return 9; } break;
+        case TokenType::RightShift: { return 9; } break;
         case TokenType::Plus: { return 10; } break;
         case TokenType::Minus: { return 10; } break;
         case TokenType::Multiply: { return 11; } break;
         case TokenType::Divide: { return 11; } break;
         case TokenType::Modulo: { return 11; } break;
-        case TokenType::And: { return 6; } break;
-        case TokenType::Or: { return 4; } break;
-        case TokenType::Xor: { return 5; } break;
         case TokenType::Not: { return 12; } break;
         case TokenType::LogicNot: { return 12; } break;
-        case TokenType::LogicAnd: { return 3; } break;
-        case TokenType::LogicOr: { return 2; } break;
-        case TokenType::Equal: { return 7; } break;
-        case TokenType::NotEqual: { return 7; } break;
-        case TokenType::Greater: { return 8; } break;
-        case TokenType::GreaterOrEqual: { return 8; } break;
-        case TokenType::Less: { return 8; } break;
-        case TokenType::LessOrEqual: { return 8; } break;
-        case TokenType::LeftShift: { return 9; } break;
-        case TokenType::RightShift: { return 9; } break;
 
         default: { return -1; } break;
     }
