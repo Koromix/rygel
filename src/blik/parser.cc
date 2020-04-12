@@ -8,6 +8,19 @@
 
 namespace RG {
 
+enum class Type {
+    Bool,
+    Integer,
+    Double,
+    String
+};
+static const char *const TypeNames[] = {
+    "Bool",
+    "Integer",
+    "Double",
+    "String"
+};
+
 class Parser {
     struct PendingOperator {
         TokenType type;

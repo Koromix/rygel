@@ -9,47 +9,8 @@
 namespace RG {
 
 enum class TokenType {
-    Plus = '+',
-    Minus = '-',
-    Multiply = '*',
-    Divide = '/',
-    Modulo = '%',
-    Assign = '=',
-
-    And = '&',
-    Or = '|',
-    Xor = '^',
-    Not = '~',
-    LogicNot = '!',
-
-    Greater = '>',
-    Less = '<',
-
-    LeftParenthesis = '(',
-    RightParenthesis = ')',
-    LeftBrace = '{',
-    RightBrace = '}',
-
-    True = 256,
-    False,
-    Integer,
-    Double,
-    String,
-    Identifier,
-
-    LeftShift,
-    RightShift,
-
-    LogicAnd,
-    LogicOr,
-    Equal,
-    NotEqual,
-    GreaterOrEqual,
-    LessOrEqual,
-
-    If,
-    Else,
-    While,
+    #define TOKEN(Type, Value) Type = (Value),
+    #include "tokens.inc"
 };
 
 struct Token {

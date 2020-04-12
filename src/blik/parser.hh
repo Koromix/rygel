@@ -10,56 +10,13 @@ namespace RG {
 
 struct Token;
 
-enum class Type {
-    Bool,
-    Integer,
-    Double,
-    String
-};
-static const char *const TypeNames[] = {
-    "Bool",
-    "Integer",
-    "Double",
-    "String"
-};
-
 enum class Opcode {
-    PushBool,
-    PushInteger,
-    PushDouble,
-    PushString,
-    Pop,
-
-    Add,
-    Substract,
-    Multiply,
-    Divide,
-    Modulo,
-    Equal,
-    NotEqual,
-    Greater,
-    GreaterOrEqual,
-    Less,
-    LessOrEqual,
-
-    AddDouble,
-    SubstractDouble,
-    MultiplyDouble,
-    DivideDouble,
-    EqualDouble,
-    NotEqualDouble,
-    GreaterDouble,
-    GreaterOrEqualDouble,
-    LessDouble,
-    LessOrEqualDouble,
-
-    LogicNot,
-    LogicAnd,
-    LogicOr,
-
-    Jump,
-    BranchIfTrue,
-    BranchIfFalse
+    #define OPCODE(Code) Code,
+    #include "opcodes.inc"
+};
+static const char *const OpcodeNames[] = {
+    #define OPCODE(Code) RG_STRINGIFY(Code),
+    #include "opcodes.inc"
 };
 
 struct Instruction {
