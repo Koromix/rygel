@@ -31,7 +31,7 @@ void Run(Span<const Instruction> ir)
 #ifndef NDEBUG
         switch (inst.code) {
             case Opcode::PushBool: { LogDebug("(0x%1) PushBool %2", FmtHex(i).Pad0(-5), inst.u.b); } break;
-            case Opcode::PushInteger: { LogDebug("(0x%1) PushInteger %2", FmtHex(i).Pad0(-5), inst.u.i); } break;
+            case Opcode::PushInt: { LogDebug("(0x%1) PushInt %2", FmtHex(i).Pad0(-5), inst.u.i); } break;
             case Opcode::PushDouble: { LogDebug("(0x%1) PushDouble %2", FmtHex(i).Pad0(-5), inst.u.d); } break;
             case Opcode::PushString: { LogDebug("(0x%1) PushString %2", FmtHex(i).Pad0(-5), inst.u.str); } break;
 
@@ -44,91 +44,91 @@ void Run(Span<const Instruction> ir)
 
         switch (inst.code) {
             case Opcode::PushBool: { stack.Append(Value(inst.u.b)); } break;
-            case Opcode::PushInteger: { stack.Append(Value((int64_t)inst.u.i)); } break;
+            case Opcode::PushInt: { stack.Append(Value((int64_t)inst.u.i)); } break;
             case Opcode::PushDouble: { stack.Append(Value(inst.u.d)); } break;
             case Opcode::PushString: { stack.Append(Value(inst.u.str)); } break;
             case Opcode::Pop: { stack.RemoveLast(1); } break;
 
-            case Opcode::Add: {
+            case Opcode::AddInt: {
                 int64_t i1 = stack[stack.len - 2].i;
                 int64_t i2 = stack[stack.len - 1].i;
                 stack[--stack.len - 1].i = i1 + i2;
             } break;
-            case Opcode::Substract: {
+            case Opcode::SubstractInt: {
                 int64_t i1 = stack[stack.len - 2].i;
                 int64_t i2 = stack[stack.len - 1].i;
                 stack[--stack.len - 1].i = i1 - i2;
             } break;
-            case Opcode::Multiply: {
+            case Opcode::MultiplyInt: {
                 int64_t i1 = stack[stack.len - 2].i;
                 int64_t i2 = stack[stack.len - 1].i;
                 stack.ptr[--stack.len - 1].i = i1 * i2;
             } break;
-            case Opcode::Divide: {
+            case Opcode::DivideInt: {
                 int64_t i1 = stack[stack.len - 2].i;
                 int64_t i2 = stack[stack.len - 1].i;
                 stack[--stack.len - 1].i = i1 / i2;
             } break;
-            case Opcode::Modulo: {
+            case Opcode::ModuloInt: {
                 int64_t i1 = stack[stack.len - 2].i;
                 int64_t i2 = stack[stack.len - 1].i;
                 stack[--stack.len - 1].i = i1 % i2;
             } break;
-            case Opcode::Equal: {
+            case Opcode::EqualInt: {
                 int64_t i1 = stack[stack.len - 2].i;
                 int64_t i2 = stack[stack.len - 1].i;
                 stack[--stack.len - 1].b = (i1 == i2);
             } break;
-            case Opcode::NotEqual: {
+            case Opcode::NotEqualInt: {
                 int64_t i1 = stack[stack.len - 2].i;
                 int64_t i2 = stack[stack.len - 1].i;
                 stack[--stack.len - 1].b = (i1 != i2);
             } break;
-            case Opcode::Greater: {
+            case Opcode::GreaterInt: {
                 int64_t i1 = stack[stack.len - 2].i;
                 int64_t i2 = stack[stack.len - 1].i;
                 stack[--stack.len - 1].b = (i1 > i2);
             } break;
-            case Opcode::GreaterOrEqual: {
+            case Opcode::GreaterOrEqualInt: {
                 int64_t i1 = stack[stack.len - 2].i;
                 int64_t i2 = stack[stack.len - 1].i;
                 stack[--stack.len - 1].b = (i1 >= i2);
             } break;
-            case Opcode::Less: {
+            case Opcode::LessInt: {
                 int64_t i1 = stack[stack.len - 2].i;
                 int64_t i2 = stack[stack.len - 1].i;
                 stack[--stack.len - 1].b = (i1 < i2);
             } break;
-            case Opcode::LessOrEqual: {
+            case Opcode::LessOrEqualInt: {
                 int64_t i1 = stack[stack.len - 2].i;
                 int64_t i2 = stack[stack.len - 1].i;
                 stack[--stack.len - 1].b = (i1 <= i2);
             } break;
-            case Opcode::And: {
+            case Opcode::AndInt: {
                 int64_t i1 = stack[stack.len - 2].i;
                 int64_t i2 = stack[stack.len - 1].i;
                 stack[--stack.len - 1].i = i1 & i2;
             } break;
-            case Opcode::Or: {
+            case Opcode::OrInt: {
                 int64_t i1 = stack[stack.len - 2].i;
                 int64_t i2 = stack[stack.len - 1].i;
                 stack[--stack.len - 1].i = i1 | i2;
             } break;
-            case Opcode::Xor: {
+            case Opcode::XorInt: {
                 int64_t i1 = stack[stack.len - 2].i;
                 int64_t i2 = stack[stack.len - 1].i;
                 stack[--stack.len - 1].i = i1 ^ i2;
             } break;
-            case Opcode::Not: {
+            case Opcode::NotInt: {
                 int64_t i = stack[stack.len - 1].i;
                 stack[stack.len - 1].i = ~i;
             } break;
-            case Opcode::LeftShift: {
+            case Opcode::LeftShiftInt: {
                 int64_t i1 = stack[stack.len - 2].i;
                 int64_t i2 = stack[stack.len - 1].i;
                 stack[--stack.len - 1].i = i1 << i2;
             } break;
-            case Opcode::RightShift: {
+            case Opcode::RightShiftInt: {
                 int64_t i1 = stack[stack.len - 2].i;
                 int64_t i2 = stack[stack.len - 1].i;
                 stack[--stack.len - 1].i = (int64_t)((uint64_t)i1 >> i2);
@@ -195,21 +195,21 @@ void Run(Span<const Instruction> ir)
                 bool b2 = stack[stack.len - 1].b;
                 stack[--stack.len - 1].b = (b1 != b2);
             } break;
-            case Opcode::LogicNot: {
+            case Opcode::NotBool: {
                 bool b = stack[stack.len - 1].b;
                 stack[stack.len - 1].b = !b;
             } break;
-            case Opcode::LogicAnd: {
+            case Opcode::AndBool: {
                 bool b1 = stack[stack.len - 2].b;
                 bool b2 = stack[stack.len - 1].b;
                 stack[--stack.len - 1].b = b1 && b2;
             } break;
-            case Opcode::LogicOr: {
+            case Opcode::OrBool: {
                 bool b1 = stack[stack.len - 2].b;
                 bool b2 = stack[stack.len - 1].b;
                 stack[--stack.len - 1].b = b1 || b2;
             } break;
-            case Opcode::LogicXor: {
+            case Opcode::XorBool: {
                 bool b1 = stack[stack.len - 2].b;
                 bool b2 = stack[stack.len - 1].b;
                 stack[--stack.len - 1].b = b1 ^ b2;

@@ -130,7 +130,7 @@ bool Parser::ParseExpression(Span<const Token> tokens)
                     types.Append(Type::Bool);
                 } break;
                 case TokenType::Integer: {
-                    ir.Append(Instruction(Opcode::PushInteger, tok.u.i));
+                    ir.Append(Instruction(Opcode::PushInt, tok.u.i));
                     types.Append(Type::Integer);
                 } break;
                 case TokenType::Double: {
@@ -164,7 +164,7 @@ bool Parser::ParseExpression(Span<const Token> tokens)
                     if (RG_UNLIKELY(!IsOperand(tokens[j].type)))
                         goto expected_value;
 
-                    ir.Append(Instruction(Opcode::PushInteger, 0ll));
+                    ir.Append(Instruction(Opcode::PushInt, 0ll));
                     types.Append(Type::Integer);
 
                     prec = 12;
@@ -235,86 +235,86 @@ bool Parser::ProduceOperator(const PendingOperator &op)
 
     switch (op.type) {
         case TokenType::Plus: {
-            success = EmitOperator2(Type::Integer, Opcode::Add, Type::Integer) ||
+            success = EmitOperator2(Type::Integer, Opcode::AddInt, Type::Integer) ||
                       EmitOperator2(Type::Double, Opcode::AddDouble, Type::Double);
         } break;
         case TokenType::Minus: {
-            success = EmitOperator2(Type::Integer, Opcode::Substract, Type::Integer) ||
+            success = EmitOperator2(Type::Integer, Opcode::SubstractInt, Type::Integer) ||
                       EmitOperator2(Type::Double, Opcode::SubstractDouble, Type::Double);
         } break;
         case TokenType::Multiply: {
-            success = EmitOperator2(Type::Integer, Opcode::Multiply, Type::Integer) ||
+            success = EmitOperator2(Type::Integer, Opcode::MultiplyInt, Type::Integer) ||
                       EmitOperator2(Type::Double, Opcode::MultiplyDouble, Type::Double);
         } break;
         case TokenType::Divide: {
-            success = EmitOperator2(Type::Integer, Opcode::Divide, Type::Integer) ||
+            success = EmitOperator2(Type::Integer, Opcode::DivideInt, Type::Integer) ||
                       EmitOperator2(Type::Double, Opcode::DivideDouble, Type::Double);
         } break;
         case TokenType::Modulo: {
-            success = EmitOperator2(Type::Integer, Opcode::Modulo, Type::Integer);
+            success = EmitOperator2(Type::Integer, Opcode::ModuloInt, Type::Integer);
         } break;
 
         case TokenType::Equal: {
-            success = EmitOperator2(Type::Integer, Opcode::Equal, Type::Bool) ||
+            success = EmitOperator2(Type::Integer, Opcode::EqualInt, Type::Bool) ||
                       EmitOperator2(Type::Double, Opcode::EqualDouble, Type::Bool) ||
                       EmitOperator2(Type::Bool, Opcode::EqualBool, Type::Bool);
         } break;
         case TokenType::NotEqual: {
-            success = EmitOperator2(Type::Integer, Opcode::NotEqual, Type::Bool) ||
+            success = EmitOperator2(Type::Integer, Opcode::NotEqualInt, Type::Bool) ||
                       EmitOperator2(Type::Double, Opcode::NotEqualDouble, Type::Bool) ||
                       EmitOperator2(Type::Bool, Opcode::NotEqualBool, Type::Bool);
         } break;
         case TokenType::Greater: {
-            success = EmitOperator2(Type::Integer, Opcode::Greater, Type::Bool) ||
+            success = EmitOperator2(Type::Integer, Opcode::GreaterInt, Type::Bool) ||
                       EmitOperator2(Type::Double, Opcode::GreaterDouble, Type::Bool);
         } break;
         case TokenType::GreaterOrEqual: {
-            success = EmitOperator2(Type::Integer, Opcode::GreaterOrEqual, Type::Bool) ||
+            success = EmitOperator2(Type::Integer, Opcode::GreaterOrEqualInt, Type::Bool) ||
                       EmitOperator2(Type::Double, Opcode::GreaterOrEqualDouble, Type::Bool);
         } break;
         case TokenType::Less: {
-            success = EmitOperator2(Type::Integer, Opcode::Less, Type::Bool) ||
+            success = EmitOperator2(Type::Integer, Opcode::LessInt, Type::Bool) ||
                       EmitOperator2(Type::Double, Opcode::LessDouble, Type::Bool);
         } break;
         case TokenType::LessOrEqual: {
-            success = EmitOperator2(Type::Integer, Opcode::LessOrEqual, Type::Bool) ||
+            success = EmitOperator2(Type::Integer, Opcode::LessOrEqualInt, Type::Bool) ||
                       EmitOperator2(Type::Double, Opcode::LessOrEqualDouble, Type::Bool);
         } break;
 
         case TokenType::And: {
-            success = EmitOperator2(Type::Integer, Opcode::And, Type::Integer) ||
-                      EmitOperator2(Type::Bool, Opcode::LogicAnd, Type::Bool);
+            success = EmitOperator2(Type::Integer, Opcode::AndInt, Type::Integer) ||
+                      EmitOperator2(Type::Bool, Opcode::AndBool, Type::Bool);
         } break;
         case TokenType::Or: {
-            success = EmitOperator2(Type::Integer, Opcode::Or, Type::Integer) ||
-                      EmitOperator2(Type::Bool, Opcode::LogicOr, Type::Bool);
+            success = EmitOperator2(Type::Integer, Opcode::OrInt, Type::Integer) ||
+                      EmitOperator2(Type::Bool, Opcode::OrBool, Type::Bool);
         } break;
         case TokenType::Xor: {
-            success = EmitOperator2(Type::Integer, Opcode::Xor, Type::Integer) ||
-                      EmitOperator2(Type::Bool, Opcode::LogicXor, Type::Bool);
+            success = EmitOperator2(Type::Integer, Opcode::XorInt, Type::Integer) ||
+                      EmitOperator2(Type::Bool, Opcode::XorBool, Type::Bool);
         } break;
         case TokenType::Not: {
-            success = EmitOperator1(Type::Integer, Opcode::Not, Type::Integer) ||
-                      EmitOperator1(Type::Bool, Opcode::LogicNot, Type::Bool);
+            success = EmitOperator1(Type::Integer, Opcode::NotInt, Type::Integer) ||
+                      EmitOperator1(Type::Bool, Opcode::NotBool, Type::Bool);
         } break;
         case TokenType::LeftShift: {
-            success = EmitOperator2(Type::Integer, Opcode::LeftShift, Type::Integer);
+            success = EmitOperator2(Type::Integer, Opcode::LeftShiftInt, Type::Integer);
         } break;
         case TokenType::RightShift: {
-            success = EmitOperator2(Type::Integer, Opcode::RightShift, Type::Integer);
+            success = EmitOperator2(Type::Integer, Opcode::RightShiftInt, Type::Integer);
         } break;
 
         case TokenType::LogicNot: {
-            success = EmitOperator1(Type::Bool, Opcode::LogicNot, Type::Bool);
+            success = EmitOperator1(Type::Bool, Opcode::NotBool, Type::Bool);
         } break;
         case TokenType::LogicAnd: {
-            success = EmitOperator2(Type::Bool, Opcode::LogicAnd, Type::Bool);
+            success = EmitOperator2(Type::Bool, Opcode::AndBool, Type::Bool);
 
             RG_ASSERT(op.branch_idx && ir[op.branch_idx].code == Opcode::BranchIfFalse);
             ir[op.branch_idx].u.i = ir.len;
         } break;
         case TokenType::LogicOr: {
-            success = EmitOperator2(Type::Bool, Opcode::LogicOr, Type::Bool);
+            success = EmitOperator2(Type::Bool, Opcode::OrBool, Type::Bool);
 
             RG_ASSERT(op.branch_idx && ir[op.branch_idx].code == Opcode::BranchIfTrue);
             ir[op.branch_idx].u.i = ir.len;
