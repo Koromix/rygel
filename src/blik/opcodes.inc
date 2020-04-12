@@ -41,6 +41,8 @@ OPCODE(GreaterOrEqualDouble)
 OPCODE(LessDouble)
 OPCODE(LessOrEqualDouble)
 
+OPCODE(EqualBool)
+OPCODE(NotEqualBool)
 OPCODE(LogicNot)
 OPCODE(LogicAnd)
 OPCODE(LogicOr)

@@ -185,6 +185,16 @@ void Run(Span<const Instruction> ir)
                 stack[--stack.len - 1].b = (d1 <= d2);
             } break;
 
+            case Opcode::EqualBool: {
+                bool b1 = stack[stack.len - 2].b;
+                bool b2 = stack[stack.len - 1].b;
+                stack[--stack.len - 1].b = (b1 == b2);
+            } break;
+            case Opcode::NotEqualBool: {
+                bool b1 = stack[stack.len - 2].b;
+                bool b2 = stack[stack.len - 1].b;
+                stack[--stack.len - 1].b = (b1 != b2);
+            } break;
             case Opcode::LogicNot: {
                 bool b = stack[stack.len - 1].b;
                 stack[stack.len - 1].b = !b;

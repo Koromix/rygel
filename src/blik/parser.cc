@@ -245,6 +245,7 @@ bool Parser::ProduceOperator(const PendingOperator &op)
             if (type1 == Type::Integer && type2 == Type::Integer) {
                 ir.Append(Instruction(Opcode::Modulo));
                 types.Append(Type::Integer);
+
                 return true;
             } else {
                 LogError("Cannot use modulo between %1 value and %2 value", TypeNames[(int)type1], TypeNames[(int)type2]);
@@ -252,8 +253,58 @@ bool Parser::ProduceOperator(const PendingOperator &op)
             }
         } break;
 
-        case TokenType::Equal: { return ProduceOperatorCompare(Opcode::Equal, Opcode::EqualDouble); } break;
-        case TokenType::NotEqual: { return ProduceOperatorCompare(Opcode::NotEqual, Opcode::NotEqualDouble); } break;
+        case TokenType::Equal: {
+            Type type1 = types[types.len - 2];
+            Type type2 = types[types.len - 1];
+            types.RemoveLast(2);
+
+            if (type1 == Type::Integer && type2 == Type::Integer) {
+                ir.Append(Instruction(Opcode::Equal));
+                types.Append(Type::Bool);
+
+                return true;
+            } else if (type1 == Type::Double && type2 == Type::Double) {
+                ir.Append(Instruction(Opcode::EqualDouble));
+                types.Append(Type::Bool);
+
+                return true;
+            } else if (type1 == Type::Bool && type2 == Type::Bool) {
+                ir.Append(Instruction(Opcode::EqualBool));
+                types.Append(Type::Bool);
+
+                return true;
+            } else {
+                LogError("Cannot compare %1 value and %2 value", TypeNames[(int)type1], TypeNames[(int)type2]);
+                return false;
+            }
+        } break;
+        case TokenType::NotEqual: {
+            Type type1 = types[types.len - 2];
+            Type type2 = types[types.len - 1];
+            types.RemoveLast(2);
+
+            if (type1 == Type::Integer && type2 == Type::Integer) {
+                ir.Append(Instruction(Opcode::NotEqual));
+                types.Append(Type::Bool);
+
+                return true;
+            } else if (type1 == Type::Double && type2 == Type::Double) {
+                ir.Append(Instruction(Opcode::NotEqualDouble));
+                types.Append(Type::Bool);
+
+                return true;
+            } else if (type1 == Type::Bool && type2 == Type::Bool) {
+                ir.Append(Instruction(Opcode::NotEqualBool));
+                types.Append(Type::Bool);
+
+                return true;
+            } else {
+                LogError("Cannot compare %1 value and %2 value", TypeNames[(int)type1], TypeNames[(int)type2]);
+                return false;
+            }
+
+            return true;
+        } break;
         case TokenType::Greater: { return ProduceOperatorCompare(Opcode::Greater, Opcode::GreaterDouble); } break;
         case TokenType::GreaterOrEqual: { return ProduceOperatorCompare(Opcode::GreaterOrEqual, Opcode::GreaterOrEqualDouble); } break;
         case TokenType::Less: { return ProduceOperatorCompare(Opcode::Less, Opcode::LessDouble); } break;
