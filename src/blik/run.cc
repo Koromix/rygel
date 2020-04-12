@@ -28,6 +28,20 @@ void Run(Span<const Instruction> ir)
     for (Size i = 0; i < ir.len; i++) {
         const Instruction &inst = ir[i];
 
+#ifndef NDEBUG
+        switch (inst.code) {
+            case Opcode::PushBool: { LogDebug("(0x%1) PushBool %2", FmtHex(i).Pad0(-5), inst.u.b); } break;
+            case Opcode::PushInteger: { LogDebug("(0x%1) PushInteger %2", FmtHex(i).Pad0(-5), inst.u.i); } break;
+            case Opcode::PushDouble: { LogDebug("(0x%1) PushDouble %2", FmtHex(i).Pad0(-5), inst.u.d); } break;
+            case Opcode::PushString: { LogDebug("(0x%1) PushString %2", FmtHex(i).Pad0(-5), inst.u.str); } break;
+
+            case Opcode::BranchIfTrue: { LogDebug("(0x%1) BranchIfTrue 0x%2", FmtHex(i).Pad0(-5), FmtHex(inst.u.jump).Pad0(-5)); } break;
+            case Opcode::BranchIfFalse: { LogDebug("(0x%1) BranchIfFalse 0x%2", FmtHex(i).Pad0(-5), FmtHex(inst.u.jump).Pad0(-5)); } break;
+
+            default: { LogDebug("(0x%1) %2", FmtHex(i).Pad0(-5), OpcodeNames[(int)inst.code]); } break;
+        }
+#endif
+
         switch (inst.code) {
             case Opcode::PushBool: { stack.Append(Value(inst.u.b)); } break;
             case Opcode::PushInteger: { stack.Append(Value((int64_t)inst.u.i)); } break;
@@ -170,7 +184,6 @@ void Run(Span<const Instruction> ir)
     }
 
     RG_ASSERT(stack.len == 1);
-    LogDebug("VALUE: (bool)%1 -- (int)%2 -- (double)%3", stack[0].b, stack[0].i, stack[0].d);
 }
 
 }
