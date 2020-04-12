@@ -49,6 +49,10 @@ void Run(Span<const Instruction> ir)
             case Opcode::PushString: { stack.Append(Value(inst.u.str)); } break;
             case Opcode::Pop: { stack.RemoveLast(1); } break;
 
+            case Opcode::NegateInt: {
+                int64_t i = stack[stack.len - 1].i;
+                stack[stack.len - 1].i = -i;
+            } break;
             case Opcode::AddInt: {
                 int64_t i1 = stack[stack.len - 2].i;
                 int64_t i2 = stack[stack.len - 1].i;
@@ -134,6 +138,10 @@ void Run(Span<const Instruction> ir)
                 stack[--stack.len - 1].i = (int64_t)((uint64_t)i1 >> i2);
             } break;
 
+            case Opcode::NegateDouble: {
+                double d = stack[stack.len - 1].d;
+                stack[stack.len - 1].d = -d;
+            } break;
             case Opcode::AddDouble: {
                 double d1 = stack[stack.len - 2].d;
                 double d2 = stack[stack.len - 1].d;

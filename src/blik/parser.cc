@@ -24,7 +24,10 @@ static const char *const TypeNames[] = {
 class Parser {
     struct PendingOperator {
         TokenType type;
-        Size branch_idx;
+        int prec;
+        bool unary;
+
+        Size branch_idx; // Used for short-circuit operators
     };
 
     HeapArray<Instruction> ir;
@@ -131,12 +134,28 @@ bool Parser::ParseExpression(Span<const Token> tokens)
                     types.Append(Type::Bool);
                 } break;
                 case TokenType::Integer: {
-                    ir.Append(Instruction(Opcode::PushInt, tok.u.i));
-                    types.Append(Type::Integer);
+                    if (stack.len && stack[stack.len - 1].type == TokenType::Minus &&
+                                     stack[stack.len - 1].unary) {
+                        stack.RemoveLast(1);
+
+                        ir.Append(Instruction(Opcode::PushInt, -tok.u.i));
+                        types.Append(Type::Integer);
+                    } else {
+                        ir.Append(Instruction(Opcode::PushInt, tok.u.i));
+                        types.Append(Type::Integer);
+                    }
                 } break;
                 case TokenType::Double: {
-                    ir.Append(Instruction(Opcode::PushDouble, tok.u.d));
-                    types.Append(Type::Double);
+                    if (stack.len && stack[stack.len - 1].type == TokenType::Minus &&
+                                     stack[stack.len - 1].unary) {
+                        stack.RemoveLast(1);
+
+                        ir.Append(Instruction(Opcode::PushDouble, -tok.u.d));
+                        types.Append(Type::Integer);
+                    } else {
+                        ir.Append(Instruction(Opcode::PushDouble, tok.u.d));
+                        types.Append(Type::Double);
+                    }
                 } break;
                 case TokenType::String: {
                     ir.Append(Instruction(Opcode::PushString, tok.u.str));
@@ -148,28 +167,25 @@ bool Parser::ParseExpression(Span<const Token> tokens)
             }
         } else {
             int prec = GetOperatorPrecedence(tok.type);
+            bool unary = IsUnaryOperator(tok.type);
 
             if (RG_UNLIKELY(prec < 0))
                 goto expected_value;
-            if (RG_UNLIKELY(!expect_op)) {
+            if (RG_UNLIKELY(expect_op == unary)) {
                 if (tok.type == TokenType::Plus) {
                     if (RG_UNLIKELY(j >= tokens.len))
-                        goto expected_value;
-                    if (RG_UNLIKELY(!IsOperand(tokens[j].type)))
                         goto expected_value;
 
                     continue;
                 } else if (tok.type == TokenType::Minus) {
                     if (RG_UNLIKELY(j >= tokens.len))
                         goto expected_value;
-                    if (RG_UNLIKELY(!IsOperand(tokens[j].type)))
-                        goto expected_value;
-
-                    ir.Append(Instruction(Opcode::PushInt, 0ll));
-                    types.Append(Type::Integer);
 
                     prec = 12;
-                } else if (RG_UNLIKELY(!IsUnaryOperator(tok.type))) {
+                    unary = true;
+                } else if (expect_op) {
+                    goto expected_op;
+                } else {
                     goto expected_value;
                 }
             }
@@ -177,9 +193,8 @@ bool Parser::ParseExpression(Span<const Token> tokens)
 
             while (stack.len) {
                 const PendingOperator &op = stack[stack.len - 1];
-                int op_prec = GetOperatorPrecedence(op.type) - IsUnaryOperator(op.type);
 
-                if (prec > op_prec)
+                if (prec > op.prec - op.unary)
                     break;
 
                 if (RG_UNLIKELY(!ProduceOperator(op)))
@@ -194,13 +209,13 @@ bool Parser::ParseExpression(Span<const Token> tokens)
 
             // Short-circuit operators need a short-circuit branch
             if (tok.type == TokenType::LogicAnd) {
-                stack.Append({tok.type, ir.len});
+                stack.Append({tok.type, prec, unary, ir.len});
                 ir.Append(Instruction(Opcode::BranchIfFalse));
             } else if (tok.type == TokenType::LogicOr) {
-                stack.Append({tok.type, ir.len});
+                stack.Append({tok.type, prec, unary, ir.len});
                 ir.Append(Instruction(Opcode::BranchIfTrue));
             } else {
-                stack.Append({tok.type});
+                stack.Append({tok.type, prec, unary});
             }
         }
     }
@@ -242,8 +257,13 @@ bool Parser::ProduceOperator(const PendingOperator &op)
                       EmitOperator2(Type::Double, Opcode::AddDouble, Type::Double);
         } break;
         case TokenType::Minus: {
-            success = EmitOperator2(Type::Integer, Opcode::SubstractInt, Type::Integer) ||
-                      EmitOperator2(Type::Double, Opcode::SubstractDouble, Type::Double);
+            if (op.unary) {
+                success = EmitOperator1(Type::Integer, Opcode::NegateInt, Type::Integer) ||
+                          EmitOperator1(Type::Double, Opcode::NegateDouble, Type::Double);
+            } else {
+                success = EmitOperator2(Type::Integer, Opcode::SubstractInt, Type::Integer) ||
+                          EmitOperator2(Type::Double, Opcode::SubstractDouble, Type::Double);
+            }
         } break;
         case TokenType::Multiply: {
             success = EmitOperator2(Type::Integer, Opcode::MultiplyInt, Type::Integer) ||
