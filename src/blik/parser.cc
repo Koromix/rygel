@@ -88,8 +88,9 @@ bool Parser::ParseExpression(Span<const Token> tokens)
 {
     LocalArray<PendingOperator, 128> stack;
 
+    Size i = 0;
     bool expect_op = false;
-    for (Size i = 0, j = 1; i < tokens.len; i++, j++) {
+    for (Size j = 1; i < tokens.len; i++, j++) {
         const Token &tok = tokens[i];
 
         if (tok.type == TokenType::LeftParenthesis) {
@@ -204,8 +205,10 @@ bool Parser::ParseExpression(Span<const Token> tokens)
         }
     }
 
-    if (RG_UNLIKELY(!expect_op))
-        goto expected_value;
+    if (RG_UNLIKELY(!expect_op)) {
+        LogError("Unexpected end, expected value or '('");
+        return false;
+    }
 
     for (Size i = stack.len - 1; i >= 0; i--) {
         const PendingOperator &op = stack[i];
@@ -222,10 +225,10 @@ bool Parser::ParseExpression(Span<const Token> tokens)
     return true;
 
 expected_op:
-    LogError("Unexpected token, expected operator or ')'");
+    LogError("Unexpected token '%1', expected operator or ')'", TokenTypeNames[(int)tokens[i].type]);
     return false;
 expected_value:
-    LogError("Unexpected token, expected value or '('");
+    LogError("Unexpected token '%1', expected value or '('", TokenTypeNames[(int)tokens[i].type]);
     return false;
 }
 
