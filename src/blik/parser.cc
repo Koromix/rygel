@@ -89,7 +89,7 @@ static bool IsOperand(TokenType type)
 
 bool Parser::ParseExpression(Span<const Token> tokens)
 {
-    LocalArray<PendingOperator, 128> stack;
+    LocalArray<PendingOperator, 128> operators;
 
     Size i = 0;
     bool expect_op = false;
@@ -100,28 +100,28 @@ bool Parser::ParseExpression(Span<const Token> tokens)
             if (RG_UNLIKELY(expect_op))
                 goto expected_op;
 
-            stack.Append({tok.type});
+            operators.Append({tok.type});
         } else if (tok.type == TokenType::RightParenthesis) {
             if (RG_UNLIKELY(!expect_op))
                 goto expected_value;
             expect_op = true;
 
             for (;;) {
-                if (RG_UNLIKELY(!stack.len)) {
+                if (RG_UNLIKELY(!operators.len)) {
                     LogError("Too many closing parentheses");
                     return false;
                 }
 
-                const PendingOperator &op = stack.data[stack.len - 1];
+                const PendingOperator &op = operators.data[operators.len - 1];
 
                 if (op.type == TokenType::LeftParenthesis) {
-                    stack.len--;
+                    operators.len--;
                     break;
                 }
 
                 if (RG_UNLIKELY(!ProduceOperator(op)))
                     return false;
-                stack.len--;
+                operators.len--;
             }
         } else if (IsOperand(tok.type)) {
             if (RG_UNLIKELY(expect_op))
@@ -134,9 +134,9 @@ bool Parser::ParseExpression(Span<const Token> tokens)
                     types.Append(Type::Bool);
                 } break;
                 case TokenType::Integer: {
-                    if (stack.len && stack[stack.len - 1].type == TokenType::Minus &&
-                                     stack[stack.len - 1].unary) {
-                        stack.RemoveLast(1);
+                    if (operators.len && operators[operators.len - 1].type == TokenType::Minus &&
+                                         operators[operators.len - 1].unary) {
+                        operators.RemoveLast(1);
 
                         ir.Append(Instruction(Opcode::PushInt, -tok.u.i));
                         types.Append(Type::Integer);
@@ -146,9 +146,9 @@ bool Parser::ParseExpression(Span<const Token> tokens)
                     }
                 } break;
                 case TokenType::Double: {
-                    if (stack.len && stack[stack.len - 1].type == TokenType::Minus &&
-                                     stack[stack.len - 1].unary) {
-                        stack.RemoveLast(1);
+                    if (operators.len && operators[operators.len - 1].type == TokenType::Minus &&
+                                         operators[operators.len - 1].unary) {
+                        operators.RemoveLast(1);
 
                         ir.Append(Instruction(Opcode::PushDouble, -tok.u.d));
                         types.Append(Type::Integer);
@@ -191,31 +191,31 @@ bool Parser::ParseExpression(Span<const Token> tokens)
             }
             expect_op = false;
 
-            while (stack.len) {
-                const PendingOperator &op = stack[stack.len - 1];
+            while (operators.len) {
+                const PendingOperator &op = operators[operators.len - 1];
 
                 if (prec > op.prec - op.unary)
                     break;
 
                 if (RG_UNLIKELY(!ProduceOperator(op)))
                     return false;
-                stack.len--;
+                operators.len--;
             }
 
-            if (RG_UNLIKELY(!stack.Available())) {
+            if (RG_UNLIKELY(!operators.Available())) {
                 LogError("Too many operators on the stack");
                 return false;
             }
 
             // Short-circuit operators need a short-circuit branch
             if (tok.type == TokenType::LogicAnd) {
-                stack.Append({tok.type, prec, unary, ir.len});
+                operators.Append({tok.type, prec, unary, ir.len});
                 ir.Append(Instruction(Opcode::BranchIfFalse));
             } else if (tok.type == TokenType::LogicOr) {
-                stack.Append({tok.type, prec, unary, ir.len});
+                operators.Append({tok.type, prec, unary, ir.len});
                 ir.Append(Instruction(Opcode::BranchIfTrue));
             } else {
-                stack.Append({tok.type, prec, unary});
+                operators.Append({tok.type, prec, unary});
             }
         }
     }
@@ -225,8 +225,8 @@ bool Parser::ParseExpression(Span<const Token> tokens)
         return false;
     }
 
-    for (Size i = stack.len - 1; i >= 0; i--) {
-        const PendingOperator &op = stack[i];
+    for (Size i = operators.len - 1; i >= 0; i--) {
+        const PendingOperator &op = operators[i];
 
         if (RG_UNLIKELY(op.type == TokenType::LeftParenthesis)) {
             LogError("Missing closing parenthesis");
