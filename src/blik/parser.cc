@@ -34,9 +34,8 @@ public:
     bool ParseExpression(Span<const Token> tokens);
 
     bool ProduceOperator(const PendingOperator &op);
-    bool ProduceOperatorArithmetic(const char *name, Opcode int_op, Opcode double_op);
-    bool ProduceOperatorCompare(Opcode int_op, Opcode double_op);
-    bool ProduceOperatorBitwise(const char *name, Opcode int_op, Opcode bool_op);
+    bool EmitOperator1(Type in_type, Opcode code, Type out_type);
+    bool EmitOperator2(Type in_type, Opcode code, Type out_type);
 
     void Finish(HeapArray<Instruction> *out_ir);
 };
@@ -232,247 +231,143 @@ expected_value:
 
 bool Parser::ProduceOperator(const PendingOperator &op)
 {
+    bool success;
+
     switch (op.type) {
-        case TokenType::Plus: { return ProduceOperatorArithmetic("add", Opcode::Add, Opcode::AddDouble); } break;
-        case TokenType::Minus: { return ProduceOperatorArithmetic("substract", Opcode::Substract, Opcode::SubstractDouble); } break;
-        case TokenType::Multiply: { return ProduceOperatorArithmetic("multiply", Opcode::Multiply, Opcode::MultiplyDouble); } break;
-        case TokenType::Divide: { return ProduceOperatorArithmetic("divide", Opcode::Divide, Opcode::DivideDouble); } break;
+        case TokenType::Plus: {
+            success = EmitOperator2(Type::Integer, Opcode::Add, Type::Integer) ||
+                      EmitOperator2(Type::Double, Opcode::AddDouble, Type::Double);
+        } break;
+        case TokenType::Minus: {
+            success = EmitOperator2(Type::Integer, Opcode::Substract, Type::Integer) ||
+                      EmitOperator2(Type::Double, Opcode::SubstractDouble, Type::Double);
+        } break;
+        case TokenType::Multiply: {
+            success = EmitOperator2(Type::Integer, Opcode::Multiply, Type::Integer) ||
+                      EmitOperator2(Type::Double, Opcode::MultiplyDouble, Type::Double);
+        } break;
+        case TokenType::Divide: {
+            success = EmitOperator2(Type::Integer, Opcode::Divide, Type::Integer) ||
+                      EmitOperator2(Type::Double, Opcode::DivideDouble, Type::Double);
+        } break;
         case TokenType::Modulo: {
-            Type type1 = types[types.len - 2];
-            Type type2 = types[types.len - 1];
-            types.RemoveLast(2);
-
-            if (type1 == Type::Integer && type2 == Type::Integer) {
-                ir.Append(Instruction(Opcode::Modulo));
-                types.Append(Type::Integer);
-
-                return true;
-            } else {
-                LogError("Cannot use modulo between %1 value and %2 value", TypeNames[(int)type1], TypeNames[(int)type2]);
-                return false;
-            }
+            success = EmitOperator2(Type::Integer, Opcode::Modulo, Type::Integer);
         } break;
 
         case TokenType::Equal: {
-            Type type1 = types[types.len - 2];
-            Type type2 = types[types.len - 1];
-            types.RemoveLast(2);
-
-            if (type1 == Type::Integer && type2 == Type::Integer) {
-                ir.Append(Instruction(Opcode::Equal));
-                types.Append(Type::Bool);
-
-                return true;
-            } else if (type1 == Type::Double && type2 == Type::Double) {
-                ir.Append(Instruction(Opcode::EqualDouble));
-                types.Append(Type::Bool);
-
-                return true;
-            } else if (type1 == Type::Bool && type2 == Type::Bool) {
-                ir.Append(Instruction(Opcode::EqualBool));
-                types.Append(Type::Bool);
-
-                return true;
-            } else {
-                LogError("Cannot compare %1 value and %2 value", TypeNames[(int)type1], TypeNames[(int)type2]);
-                return false;
-            }
+            success = EmitOperator2(Type::Integer, Opcode::Equal, Type::Bool) ||
+                      EmitOperator2(Type::Double, Opcode::EqualDouble, Type::Bool) ||
+                      EmitOperator2(Type::Bool, Opcode::EqualBool, Type::Bool);
         } break;
         case TokenType::NotEqual: {
-            Type type1 = types[types.len - 2];
-            Type type2 = types[types.len - 1];
-            types.RemoveLast(2);
-
-            if (type1 == Type::Integer && type2 == Type::Integer) {
-                ir.Append(Instruction(Opcode::NotEqual));
-                types.Append(Type::Bool);
-
-                return true;
-            } else if (type1 == Type::Double && type2 == Type::Double) {
-                ir.Append(Instruction(Opcode::NotEqualDouble));
-                types.Append(Type::Bool);
-
-                return true;
-            } else if (type1 == Type::Bool && type2 == Type::Bool) {
-                ir.Append(Instruction(Opcode::NotEqualBool));
-                types.Append(Type::Bool);
-
-                return true;
-            } else {
-                LogError("Cannot compare %1 value and %2 value", TypeNames[(int)type1], TypeNames[(int)type2]);
-                return false;
-            }
-
-            return true;
+            success = EmitOperator2(Type::Integer, Opcode::NotEqual, Type::Bool) ||
+                      EmitOperator2(Type::Double, Opcode::NotEqualDouble, Type::Bool) ||
+                      EmitOperator2(Type::Bool, Opcode::NotEqualBool, Type::Bool);
         } break;
-        case TokenType::Greater: { return ProduceOperatorCompare(Opcode::Greater, Opcode::GreaterDouble); } break;
-        case TokenType::GreaterOrEqual: { return ProduceOperatorCompare(Opcode::GreaterOrEqual, Opcode::GreaterOrEqualDouble); } break;
-        case TokenType::Less: { return ProduceOperatorCompare(Opcode::Less, Opcode::LessDouble); } break;
-        case TokenType::LessOrEqual: { return ProduceOperatorCompare(Opcode::LessOrEqual, Opcode::LessOrEqualDouble); } break;
+        case TokenType::Greater: {
+            success = EmitOperator2(Type::Integer, Opcode::Greater, Type::Bool) ||
+                      EmitOperator2(Type::Double, Opcode::GreaterDouble, Type::Bool);
+        } break;
+        case TokenType::GreaterOrEqual: {
+            success = EmitOperator2(Type::Integer, Opcode::GreaterOrEqual, Type::Bool) ||
+                      EmitOperator2(Type::Double, Opcode::GreaterOrEqualDouble, Type::Bool);
+        } break;
+        case TokenType::Less: {
+            success = EmitOperator2(Type::Integer, Opcode::Less, Type::Bool) ||
+                      EmitOperator2(Type::Double, Opcode::LessDouble, Type::Bool);
+        } break;
+        case TokenType::LessOrEqual: {
+            success = EmitOperator2(Type::Integer, Opcode::LessOrEqual, Type::Bool) ||
+                      EmitOperator2(Type::Double, Opcode::LessOrEqualDouble, Type::Bool);
+        } break;
 
-        case TokenType::And: { return ProduceOperatorBitwise("AND", Opcode::And, Opcode::LogicAnd); } break;
-        case TokenType::Or: { return ProduceOperatorBitwise("OR", Opcode::Or, Opcode::LogicOr); } break;
-        case TokenType::Xor: { return ProduceOperatorBitwise("XOR", Opcode::Xor, Opcode::LogicXor); } break;
+        case TokenType::And: {
+            success = EmitOperator2(Type::Integer, Opcode::And, Type::Integer) ||
+                      EmitOperator2(Type::Bool, Opcode::LogicAnd, Type::Bool);
+        } break;
+        case TokenType::Or: {
+            success = EmitOperator2(Type::Integer, Opcode::Or, Type::Integer) ||
+                      EmitOperator2(Type::Bool, Opcode::LogicOr, Type::Bool);
+        } break;
+        case TokenType::Xor: {
+            success = EmitOperator2(Type::Integer, Opcode::Xor, Type::Integer) ||
+                      EmitOperator2(Type::Bool, Opcode::LogicXor, Type::Bool);
+        } break;
         case TokenType::Not: {
-            Type type = types[types.len - 1];
-            types.RemoveLast(1);
-
-            if (type == Type::Integer) {
-                ir.Append(Instruction(Opcode::Not));
-                types.Append(Type::Integer);
-
-                return true;
-            } else if (type == Type::Bool) {
-                ir.Append(Instruction(Opcode::LogicNot));
-                types.Append(Type::Bool);
-
-                return false;
-            } else {
-                LogError("Cannot use NOT operator with %1 value", TypeNames[(int)type]);
-                return false;
-            }
+            success = EmitOperator1(Type::Integer, Opcode::Not, Type::Integer) ||
+                      EmitOperator1(Type::Bool, Opcode::LogicNot, Type::Bool);
         } break;
         case TokenType::LeftShift: {
-            Type type1 = types[types.len - 2];
-            Type type2 = types[types.len - 1];
-            types.RemoveLast(2);
-
-            if (type1 == Type::Integer && type2 == Type::Integer) {
-                ir.Append(Instruction(Opcode::LeftShift));
-                types.Append(Type::Integer);
-
-                return true;
-            } else {
-                LogError("Cannot use shift operator with %1 value and %2 value", TypeNames[(int)type1], TypeNames[(int)type2]);
-                return false;
-            }
+            success = EmitOperator2(Type::Integer, Opcode::LeftShift, Type::Integer);
         } break;
         case TokenType::RightShift: {
-            Type type1 = types[types.len - 2];
-            Type type2 = types[types.len - 1];
-            types.RemoveLast(2);
-
-            if (type1 == Type::Integer && type2 == Type::Integer) {
-                ir.Append(Instruction(Opcode::RightShift));
-                types.Append(Type::Integer);
-
-                return true;
-            } else {
-                LogError("Cannot use shift operator with %1 value and %2 value", TypeNames[(int)type1], TypeNames[(int)type2]);
-                return false;
-            }
+            success = EmitOperator2(Type::Integer, Opcode::RightShift, Type::Integer);
         } break;
 
         case TokenType::LogicNot: {
-            Type type = types[types.len - 1];
-
-            if (type == Type::Bool) {
-                ir.Append(Instruction(Opcode::LogicNot));
-                return true;
-            } else {
-                LogError("Cannot use NOT operator with %1 value", TypeNames[(int)type]);
-                return false;
-            }
+            success = EmitOperator1(Type::Bool, Opcode::LogicNot, Type::Bool);
         } break;
         case TokenType::LogicAnd: {
-            Type type1 = types[types.len - 2];
-            Type type2 = types[types.len - 1];
-            types.RemoveLast(2);
+            success = EmitOperator2(Type::Bool, Opcode::LogicAnd, Type::Bool);
 
-            if (type1 == Type::Bool && type2 == Type::Bool) {
-                ir.Append(Instruction(Opcode::LogicAnd));
-                types.Append(Type::Bool);
-
-                RG_ASSERT(op.branch_idx && ir[op.branch_idx].code == Opcode::BranchIfFalse);
-                ir[op.branch_idx].u.i = ir.len;
-
-                return true;
-            } else {
-                LogError("Cannot use AND between %1 value and %2 value", TypeNames[(int)type1], TypeNames[(int)type2]);
-                return false;
-            }
+            RG_ASSERT(op.branch_idx && ir[op.branch_idx].code == Opcode::BranchIfFalse);
+            ir[op.branch_idx].u.i = ir.len;
         } break;
         case TokenType::LogicOr: {
-            Type type1 = types[types.len - 2];
-            Type type2 = types[types.len - 1];
-            types.RemoveLast(2);
+            success = EmitOperator2(Type::Bool, Opcode::LogicOr, Type::Bool);
 
-            if (type1 == Type::Bool && type2 == Type::Bool) {
-                ir.Append(Instruction(Opcode::LogicOr));
-                types.Append(Type::Bool);
-
-                RG_ASSERT(op.branch_idx && ir[op.branch_idx].code == Opcode::BranchIfTrue);
-                ir[op.branch_idx].u.i = ir.len;
-
-                return true;
-            } else {
-                LogError("Cannot use OR between %1 value and %2 value", TypeNames[(int)type1], TypeNames[(int)type2]);
-                return false;
-            }
+            RG_ASSERT(op.branch_idx && ir[op.branch_idx].code == Opcode::BranchIfTrue);
+            ir[op.branch_idx].u.i = ir.len;
         } break;
 
         default: { RG_ASSERT(false); } break;
     }
-}
 
-bool Parser::ProduceOperatorArithmetic(const char *name, Opcode int_op, Opcode double_op)
-{
-    Type type1 = types[types.len - 2];
-    Type type2 = types[types.len - 1];
-    types.RemoveLast(2);
+    if (RG_UNLIKELY(!success)) {
+        if (IsUnaryOperator(op.type)) {
+            LogError("Cannot use '%1' operator on %2 value",
+                     TokenTypeNames[(int)op.type], TypeNames[(int)types[types.len - 1]]);
+        } else if (types[types.len - 2] == types[types.len - 1]) {
+            LogError("Cannot use '%1' operator on %2 values",
+                     TokenTypeNames[(int)op.type], TypeNames[(int)types[types.len - 2]]);
+        } else {
+            LogError("Cannot use '%1' operator on %2 and %3 values",
+                     TokenTypeNames[(int)op.type], TypeNames[(int)types[types.len - 2]], TypeNames[(int)types[types.len - 1]]);
+        }
 
-    if (type1 == Type::Integer && type2 == Type::Integer) {
-        ir.Append(Instruction(int_op));
-        types.Append(Type::Integer);
-    } else if (type1 == Type::Double && type2 == Type::Double) {
-        ir.Append(Instruction(double_op));
-        types.Append(Type::Double);
-    } else {
-        LogError("Cannot %1 %2 value and %3 value", name, TypeNames[(int)type1], TypeNames[(int)type2]);
         return false;
     }
 
     return true;
 }
 
-bool Parser::ProduceOperatorCompare(Opcode int_op, Opcode double_op)
+bool Parser::EmitOperator1(Type in_type, Opcode code, Type out_type)
 {
-    Type type1 = types[types.len - 2];
-    Type type2 = types[types.len - 1];
-    types.RemoveLast(2);
+    Type type = types[types.len - 1];
 
-    if (type1 == Type::Integer && type2 == Type::Integer) {
-        ir.Append(Instruction(int_op));
-        types.Append(Type::Bool);
-    } else if (type1 == Type::Double && type2 == Type::Double) {
-        ir.Append(Instruction(double_op));
-        types.Append(Type::Bool);
+    if (type == in_type) {
+        ir.Append(Instruction(code));
+        types[types.len - 1] = out_type;
+
+        return true;
     } else {
-        LogError("Cannot compare %1 value and %2 value", TypeNames[(int)type1], TypeNames[(int)type2]);
         return false;
     }
-
-    return true;
 }
 
-bool Parser::ProduceOperatorBitwise(const char *name, Opcode int_op, Opcode bool_op)
+bool Parser::EmitOperator2(Type in_type, Opcode code, Type out_type)
 {
     Type type1 = types[types.len - 2];
     Type type2 = types[types.len - 1];
-    types.RemoveLast(2);
 
-    if (type1 == Type::Integer && type2 == Type::Integer) {
-        ir.Append(Instruction(int_op));
-        types.Append(Type::Integer);
-    } else if (type1 == Type::Bool && type2 == Type::Bool) {
-        ir.Append(Instruction(bool_op));
-        types.Append(Type::Bool);
+    if (type1 == in_type && type2 == in_type) {
+        ir.Append(Instruction(code));
+        types[--types.len - 1] = out_type;
+
+        return true;
     } else {
-        LogError("Cannot %1 %2 value and %3 value", name, TypeNames[(int)type1], TypeNames[(int)type2]);
         return false;
     }
-
-    return true;
 }
 
 void Parser::Finish(HeapArray<Instruction> *out_ir)
