@@ -297,9 +297,9 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
                 } else if (ident == "while") {
                     out_set->tokens.Append(Token(TokenType::While, line));
                 } else if (ident == "true") {
-                    out_set->tokens.Append(Token(TokenType::True, line));
+                    out_set->tokens.Append(Token(TokenType::Bool, line, true));
                 } else if (ident == "false") {
-                    out_set->tokens.Append(Token(TokenType::False, line));
+                    out_set->tokens.Append(Token(TokenType::Bool, line, false));
                 } else {
                     const char *str = DuplicateString(ident, &out_set->str_alloc).ptr;
                     out_set->tokens.Append(Token(TokenType::Identifier, line, str));

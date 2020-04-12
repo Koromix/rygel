@@ -80,8 +80,8 @@ static bool IsUnaryOperator(TokenType type)
 
 static bool IsOperand(TokenType type)
 {
-    return type == TokenType::True || type == TokenType::False || type == TokenType::Integer ||
-           type == TokenType::Double || type == TokenType::String || type == TokenType::Identifier;
+    return type == TokenType::Bool || type == TokenType::Integer || type == TokenType::Double ||
+           type == TokenType::String || type == TokenType::Identifier;
 }
 
 bool Parser::ParseExpression(Span<const Token> tokens)
@@ -125,12 +125,8 @@ bool Parser::ParseExpression(Span<const Token> tokens)
             expect_op = true;
 
             switch (tok.type) {
-                case TokenType::True: {
-                    ir.Append(Instruction(Opcode::PushBool, true));
-                    types.Append(Type::Bool);
-                } break;
-                case TokenType::False: {
-                    ir.Append(Instruction(Opcode::PushBool, false));
+                case TokenType::Bool: {
+                    ir.Append(Instruction(Opcode::PushBool, tok.u.b));
                     types.Append(Type::Bool);
                 } break;
                 case TokenType::Integer: {
