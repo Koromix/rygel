@@ -23,19 +23,17 @@ struct Instruction {
     Opcode code;
     union {
         bool b; // PushBool
-        uint64_t i; // PushInteger
+        int64_t i; // PushInteger, Jump, BranchIfTrue, BranchIfFalse
         double d; // PushDouble
         const char *str; // PushString
-        Size jump; // Jump, BranchIfTrue, BranchIfFalse
     } u;
 
     Instruction() {}
     Instruction(Opcode code) : code(code) {}
     Instruction(Opcode code, bool b) : code(code) { u.b = b; }
-    Instruction(Opcode code, uint64_t i) : code(code) { u.i = i; }
+    Instruction(Opcode code, int64_t i) : code(code) { u.i = i; }
     Instruction(Opcode code, double d) : code(code) { u.d = d; }
     Instruction(Opcode code, const char *str) : code(code) { u.str = str; }
-    Instruction(Opcode code, Size jump) : code(code) { u.jump = jump; }
 };
 
 bool Parse(Span<const Token> tokens, HeapArray<Instruction> *out_ir);

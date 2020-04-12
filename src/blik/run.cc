@@ -35,8 +35,8 @@ void Run(Span<const Instruction> ir)
             case Opcode::PushDouble: { LogDebug("(0x%1) PushDouble %2", FmtHex(i).Pad0(-5), inst.u.d); } break;
             case Opcode::PushString: { LogDebug("(0x%1) PushString %2", FmtHex(i).Pad0(-5), inst.u.str); } break;
 
-            case Opcode::BranchIfTrue: { LogDebug("(0x%1) BranchIfTrue 0x%2", FmtHex(i).Pad0(-5), FmtHex(inst.u.jump).Pad0(-5)); } break;
-            case Opcode::BranchIfFalse: { LogDebug("(0x%1) BranchIfFalse 0x%2", FmtHex(i).Pad0(-5), FmtHex(inst.u.jump).Pad0(-5)); } break;
+            case Opcode::BranchIfTrue: { LogDebug("(0x%1) BranchIfTrue 0x%2", FmtHex(i).Pad0(-5), FmtHex(inst.u.i).Pad0(-5)); } break;
+            case Opcode::BranchIfFalse: { LogDebug("(0x%1) BranchIfFalse 0x%2", FmtHex(i).Pad0(-5), FmtHex(inst.u.i).Pad0(-5)); } break;
 
             default: { LogDebug("(0x%1) %2", FmtHex(i).Pad0(-5), OpcodeNames[(int)inst.code]); } break;
         }
@@ -205,14 +205,14 @@ void Run(Span<const Instruction> ir)
                 stack[--stack.len - 1].b = b1 ^ b2;
             } break;
 
-            case Opcode::Jump: { i = inst.u.jump - 1; } break;
+            case Opcode::Jump: { i = (Size)inst.u.i - 1; } break;
             case Opcode::BranchIfTrue: {
                 bool b = stack[stack.len - 1].b;
-                i = b ? (inst.u.jump - 1) : i;
+                i = b ? (Size)(inst.u.i - 1) : i;
             } break;
             case Opcode::BranchIfFalse: {
                 bool b = stack[stack.len - 1].b;
-                i = b ? i : (inst.u.jump - 1);
+                i = b ? i : (Size)(inst.u.i - 1);
             } break;
         }
     }

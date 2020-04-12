@@ -165,7 +165,7 @@ bool Parser::ParseExpression(Span<const Token> tokens)
                     if (RG_UNLIKELY(!IsOperand(tokens[j].type)))
                         goto expected_value;
 
-                    ir.Append(Instruction(Opcode::PushInteger, 0ull));
+                    ir.Append(Instruction(Opcode::PushInteger, 0ll));
                     types.Append(Type::Integer);
 
                     prec = 12;
@@ -333,7 +333,7 @@ bool Parser::ProduceOperator(const PendingOperator &op)
                 types.Append(Type::Bool);
 
                 RG_ASSERT(op.branch_idx && ir[op.branch_idx].code == Opcode::BranchIfFalse);
-                ir[op.branch_idx].u.jump = ir.len;
+                ir[op.branch_idx].u.i = ir.len;
 
                 return true;
             } else {
@@ -351,7 +351,7 @@ bool Parser::ProduceOperator(const PendingOperator &op)
                 types.Append(Type::Bool);
 
                 RG_ASSERT(op.branch_idx && ir[op.branch_idx].code == Opcode::BranchIfTrue);
-                ir[op.branch_idx].u.jump = ir.len;
+                ir[op.branch_idx].u.i = ir.len;
 
                 return true;
             } else {

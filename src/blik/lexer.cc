@@ -37,15 +37,15 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
             case '0': {
                 if (j < code.len && IsAsciiAlpha(code[j])) {
                     if (code[j] == 'b') {
-                        uint64_t u = 0;
+                        int64_t value = 0;
                         bool overflow = false;
 
                         while (++j < code.len) {
                             unsigned int digit = (unsigned int)(code[j] - '0');
 
                             if (digit < 2) {
-                                overflow |= (u > (UINT64_MAX - digit) / 2);
-                                u = (u * 2) + digit;
+                                overflow |= (value > (INT64_MAX - digit) / 2);
+                                value = (value * 2) + digit;
                             } else if (RG_UNLIKELY(digit < 10)) {
                                 LogError("Invalid binary digit '%1'", code[j]);
                                 valid = false;
@@ -56,22 +56,22 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
                         }
 
                         if (RG_UNLIKELY(overflow)) {
-                            LogError("Number literal is too large (max = %1)", UINT64_MAX);
+                            LogError("Number literal is too large (max = %1)", INT64_MAX);
                             valid = false;
                         }
 
-                        out_set->tokens.Append(Token(TokenType::Integer, line, u));
+                        out_set->tokens.Append(Token(TokenType::Integer, line, value));
                         continue;
                     } else if (code[j] == 'o') {
-                        uint64_t u = 0;
+                        int64_t value = 0;
                         bool overflow = false;
 
                         while (++j < code.len) {
                             unsigned int digit = (unsigned int)(code[j] - '0');
 
                             if (digit < 8) {
-                                overflow |= (u > (UINT64_MAX - digit) / 8);
-                                u = (u * 8) + digit;
+                                overflow |= (value > (INT64_MAX - digit) / 8);
+                                value = (value * 8) + digit;
                             } else if (RG_UNLIKELY(digit < 10)) {
                                 LogError("Invalid octal digit '%1'", code[j]);
                                 valid = false;
@@ -82,32 +82,32 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
                         }
 
                         if (RG_UNLIKELY(overflow)) {
-                            LogError("Number literal is too large (max = %1)", UINT64_MAX);
+                            LogError("Number literal is too large (max = %1)", INT64_MAX);
                             valid = false;
                         }
 
-                        out_set->tokens.Append(Token(TokenType::Integer, line, u));
+                        out_set->tokens.Append(Token(TokenType::Integer, line, value));
                         continue;
                     } else if (code[j] == 'x') {
-                        uint64_t u = 0;
+                        int64_t value = 0;
                         bool overflow = false;
 
                         while (++j < code.len) {
                             if (IsAsciiDigit(code[j])) {
                                 unsigned int digit = (unsigned int)(code[j] - '0');
 
-                                overflow |= (u > (UINT64_MAX - digit) / 16);
-                                u = (u * 16) + (code[j] - '0');
+                                overflow |= (value > (INT64_MAX - digit) / 16);
+                                value = (value * 16) + (code[j] - '0');
                             } else if (code[j] >= 'A' && code[j] <= 'F') {
                                 unsigned int digit = (unsigned int)(code[j] - 'A' + 10);
 
-                                overflow |= (u > (UINT64_MAX - digit) / 16);
-                                u = (u * 16) + (code[j] - 'A' + 10);
+                                overflow |= (value > (INT64_MAX - digit) / 16);
+                                value = (value * 16) + (code[j] - 'A' + 10);
                             } else if (code[j] >= 'a' && code[j] <= 'f') {
                                 unsigned int digit = (unsigned int)(code[j] - 'a' + 10);
 
-                                overflow |= (u > (UINT64_MAX - digit) / 16);
-                                u = (u * 16) + (code[j] - 'a' + 10);
+                                overflow |= (value > (INT64_MAX - digit) / 16);
+                                value = (value * 16) + (code[j] - 'a' + 10);
                             } else if (RG_UNLIKELY(IsAsciiAlpha(code[j]))) {
                                 LogError("Invalid hexadecimal digit '%1'", code[j]);
                                 valid = false;
@@ -118,11 +118,11 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
                         }
 
                         if (RG_UNLIKELY(overflow)) {
-                            LogError("Number literal is too large (max = %1)", UINT64_MAX);
+                            LogError("Number literal is too large (max = %1)", INT64_MAX);
                             valid = false;
                         }
 
-                        out_set->tokens.Append(Token(TokenType::Integer, line, u));
+                        out_set->tokens.Append(Token(TokenType::Integer, line, value));
                         continue;
                     } else {
                         LogError("Invalid literal base character '%1'", code[j]);
@@ -140,7 +140,7 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
             case '7':
             case '8':
             case '9': {
-                uint64_t u = code[i] - '0';
+                int64_t value = code[i] - '0';
                 bool overflow = false;
                 bool dot = false;
 
@@ -148,8 +148,8 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
                     unsigned int digit = (unsigned int)(code[j] - '0');
 
                     if (digit < 10) {
-                        overflow |= (u > (UINT64_MAX - digit) / 10);
-                        u = (u * 10) + (code[j] - '0');
+                        overflow |= (value > (INT64_MAX - digit) / 10);
+                        value = (value * 10) + (code[j] - '0');
                     } else if (code[j] == '.') {
                         dot = true;
                         break;
@@ -176,11 +176,11 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
                     out_set->tokens.Append(Token(TokenType::Double, line, d));
                 } else {
                     if (RG_UNLIKELY(overflow)) {
-                        LogError("Number literal is too large (max = %1)", UINT64_MAX);
+                        LogError("Number literal is too large (max = %1)", INT64_MAX);
                         valid = false;
                     }
 
-                    out_set->tokens.Append(Token(TokenType::Integer, line, u));
+                    out_set->tokens.Append(Token(TokenType::Integer, line, value));
                 }
             } break;
 
