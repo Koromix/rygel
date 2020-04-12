@@ -36,6 +36,7 @@ public:
     bool ProduceOperator(const PendingOperator &op);
     bool ProduceOperatorArithmetic(const char *name, Opcode int_op, Opcode double_op);
     bool ProduceOperatorCompare(Opcode int_op, Opcode double_op);
+    bool ProduceOperatorBitwise(const char *name, Opcode int_op, Opcode bool_op);
 
     void Finish(HeapArray<Instruction> *out_ir);
 };
@@ -258,12 +259,58 @@ bool Parser::ProduceOperator(const PendingOperator &op)
         case TokenType::Less: { return ProduceOperatorCompare(Opcode::Less, Opcode::LessDouble); } break;
         case TokenType::LessOrEqual: { return ProduceOperatorCompare(Opcode::LessOrEqual, Opcode::LessOrEqualDouble); } break;
 
-        // case TokenType::And: {} break;
-        // case TokenType::Or: {} break;
-        // case TokenType::Xor: {} break;
-        // case TokenType::Not: {} break;
-        // case TokenType::LeftShift: {} break;
-        // case TokenType::RightShift: {} break;
+        case TokenType::And: { return ProduceOperatorBitwise("AND", Opcode::And, Opcode::LogicAnd); } break;
+        case TokenType::Or: { return ProduceOperatorBitwise("OR", Opcode::Or, Opcode::LogicOr); } break;
+        case TokenType::Xor: { return ProduceOperatorBitwise("XOR", Opcode::Xor, Opcode::LogicXor); } break;
+        case TokenType::Not: {
+            Type type = types[types.len - 1];
+            types.RemoveLast(1);
+
+            if (type == Type::Integer) {
+                ir.Append(Instruction(Opcode::Not));
+                types.Append(Type::Integer);
+
+                return true;
+            } else if (type == Type::Bool) {
+                ir.Append(Instruction(Opcode::LogicNot));
+                types.Append(Type::Bool);
+
+                return false;
+            } else {
+                LogError("Cannot use NOT operator with %1 value", TypeNames[(int)type]);
+                return false;
+            }
+        } break;
+        case TokenType::LeftShift: {
+            Type type1 = types[types.len - 2];
+            Type type2 = types[types.len - 1];
+            types.RemoveLast(2);
+
+            if (type1 == Type::Integer && type2 == Type::Integer) {
+                ir.Append(Instruction(Opcode::LeftShift));
+                types.Append(Type::Integer);
+
+                return true;
+            } else {
+                LogError("Cannot use shift operator with %1 value and %2 value", TypeNames[(int)type1], TypeNames[(int)type2]);
+                return false;
+            }
+        } break;
+        case TokenType::RightShift: {
+            Type type1 = types[types.len - 2];
+            Type type2 = types[types.len - 1];
+            types.RemoveLast(2);
+
+            if (type1 == Type::Integer && type2 == Type::Integer) {
+                ir.Append(Instruction(Opcode::RightShift));
+                types.Append(Type::Integer);
+
+                return true;
+            } else {
+                LogError("Cannot use shift operator with %1 value and %2 value", TypeNames[(int)type1], TypeNames[(int)type2]);
+                return false;
+            }
+        } break;
 
         case TokenType::LogicNot: {
             Type type = types[types.len - 1];
@@ -351,6 +398,26 @@ bool Parser::ProduceOperatorCompare(Opcode int_op, Opcode double_op)
         types.Append(Type::Bool);
     } else {
         LogError("Cannot compare %1 value and %2 value", TypeNames[(int)type1], TypeNames[(int)type2]);
+        return false;
+    }
+
+    return true;
+}
+
+bool Parser::ProduceOperatorBitwise(const char *name, Opcode int_op, Opcode bool_op)
+{
+    Type type1 = types[types.len - 2];
+    Type type2 = types[types.len - 1];
+    types.RemoveLast(2);
+
+    if (type1 == Type::Integer && type2 == Type::Integer) {
+        ir.Append(Instruction(int_op));
+        types.Append(Type::Integer);
+    } else if (type1 == Type::Bool && type2 == Type::Bool) {
+        ir.Append(Instruction(bool_op));
+        types.Append(Type::Bool);
+    } else {
+        LogError("Cannot %1 %2 value and %3 value", name, TypeNames[(int)type1], TypeNames[(int)type2]);
         return false;
     }
 
