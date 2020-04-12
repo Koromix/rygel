@@ -306,19 +306,17 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
                 }
             } break;
 
-            case '+':
-            case '-':
-            case '*':
-            case '/':
-            case '%':
-            case '^':
-            case '~':
-            case '(':
-            case ')':
-            case '{':
-            case '}': {
-                out_set->tokens.Append(Token((TokenType)code[i], line));
-            } break;
+            case '+': { out_set->tokens.Append(Token(TokenType::Plus, line)); } break;
+            case '-': { out_set->tokens.Append(Token(TokenType::Minus, line)); } break;
+            case '*': { out_set->tokens.Append(Token(TokenType::Multiply, line)); } break;
+            case '/': { out_set->tokens.Append(Token(TokenType::Divide, line)); } break;
+            case '%': { out_set->tokens.Append(Token(TokenType::Modulo, line)); } break;
+            case '^': { out_set->tokens.Append(Token(TokenType::Xor, line)); } break;
+            case '~': { out_set->tokens.Append(Token(TokenType::Not, line)); } break;
+            case '(': { out_set->tokens.Append(Token(TokenType::LeftParenthesis, line)); } break;
+            case ')': { out_set->tokens.Append(Token(TokenType::RightParenthesis, line)); } break;
+            case '{': { out_set->tokens.Append(Token(TokenType::LeftBrace, line)); } break;
+            case '}': { out_set->tokens.Append(Token(TokenType::RightBrace, line)); } break;
 
             case '=': {
                 if (j < code.len && code[j] == '=') {
