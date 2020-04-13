@@ -60,7 +60,7 @@ Options:
             filename = "<inline>";
         } else {
             HeapArray<char> code;
-            if (ReadFile(filename, Megabytes(8), &code) < 0)
+            if (ReadFile(filename, Megabytes(32), &code) < 0)
                 return 1;
 
             if (!Tokenize(code, filename, &token_set))
