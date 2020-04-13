@@ -21,12 +21,13 @@ TOKEN(Double, "<double>")
 TOKEN(String, "<string>")
 TOKEN(Identifier, "<identifier>")
 
+TOKEN(Assign, "=")
+
 TOKEN(Plus, "+")
 TOKEN(Minus, "-")
 TOKEN(Multiply, "*")
 TOKEN(Divide, "/")
 TOKEN(Modulo, "%")
-TOKEN(Assign, "=")
 
 TOKEN(And, "&")
 TOKEN(Or, "|")

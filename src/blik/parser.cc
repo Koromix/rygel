@@ -8,19 +8,6 @@
 
 namespace RG {
 
-enum class Type {
-    Bool,
-    Integer,
-    Double,
-    String
-};
-static const char *const TypeNames[] = {
-    "Bool",
-    "Integer",
-    "Double",
-    "String"
-};
-
 class Parser {
     struct PendingOperator {
         TokenKind kind;
@@ -30,10 +17,22 @@ class Parser {
         Size branch_idx; // Used for short-circuit operators
     };
 
+    struct VariableInfo {
+        Type type;
+        Size offset;
+    };
+
+    struct ExpressionType {
+        Type type;
+        const VariableInfo *var;
+    };
+
     Span<const Token> tokens;
     Size offset;
     bool valid;
-    HeapArray<Type> types;
+
+    HashMap<const char *, VariableInfo> variables;
+    HeapArray<ExpressionType> types;
 
     HeapArray<Instruction> ir;
 
@@ -63,6 +62,7 @@ private:
 static int GetOperatorPrecedence(TokenKind kind)
 {
     switch (kind) {
+        case TokenKind::Assign: { return 0; } break;
         case TokenKind::LogicOr: { return 2; } break;
         case TokenKind::LogicAnd: { return 3; } break;
         case TokenKind::Equal: { return 4; } break;
@@ -111,7 +111,9 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
     this->tokens = tokens;
     offset = 0;
     valid = true;
-    types.RemoveFrom(0);
+
+    variables.Clear();
+    types.Clear();
 
     PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
         int32_t line = tokens[std::min(offset, tokens.len - 1)].line;
@@ -184,7 +186,7 @@ void Parser::ParseExpression()
             switch (tok.kind) {
                 case TokenKind::Bool: {
                     ir.Append({Opcode::PushBool, {.b = tok.u.b}});
-                    types.Append(Type::Bool);
+                    types.Append({Type::Bool});
                 } break;
                 case TokenKind::Integer: {
                     if (operators.len && operators[operators.len - 1].kind == TokenKind::Minus &&
@@ -192,10 +194,10 @@ void Parser::ParseExpression()
                         operators.RemoveLast(1);
 
                         ir.Append({Opcode::PushInt, {.i = -tok.u.i}});
-                        types.Append(Type::Integer);
+                        types.Append({Type::Integer});
                     } else {
                         ir.Append({Opcode::PushInt, {.i = tok.u.i}});
-                        types.Append(Type::Integer);
+                        types.Append({Type::Integer});
                     }
                 } break;
                 case TokenKind::Double: {
@@ -204,17 +206,33 @@ void Parser::ParseExpression()
                         operators.RemoveLast(1);
 
                         ir.Append({Opcode::PushDouble, {.d = -tok.u.d}});
-                        types.Append(Type::Integer);
+                        types.Append({Type::Integer});
                     } else {
                         ir.Append({Opcode::PushDouble, {.d = tok.u.d}});
-                        types.Append(Type::Double);
+                        types.Append({Type::Double});
                     }
                 } break;
                 case TokenKind::String: {
                     ir.Append({Opcode::PushString, {.str = tok.u.str}});
-                    types.Append(Type::String);
+                    types.Append({Type::String});
                 } break;
-                case TokenKind::Identifier: { RG_ASSERT(false); } break;
+
+                case TokenKind::Identifier: {
+                    const VariableInfo *var = variables.Find(tok.u.str);
+
+                    if (RG_UNLIKELY(!var)) {
+                        MarkError("Variable '%1' is not defined", tok.u.str);
+                        return;
+                    }
+
+                    switch (var->type) {
+                        case Type::Bool: { ir.Append({Opcode::LoadBool, {.i = var->offset}}); } break;
+                        case Type::Integer: { ir.Append({Opcode::LoadInt, {.i = var->offset}}); } break;
+                        case Type::Double: { ir.Append({Opcode::LoadDouble, {.i = var->offset}});} break;
+                        case Type::String: { ir.Append({Opcode::LoadString, {.i = var->offset}}); } break;
+                    }
+                    types.Append({var->type, var});
+                } break;
 
                 default: { RG_ASSERT(false); } break;
             }
@@ -303,6 +321,31 @@ void Parser::ProduceOperator(const PendingOperator &op)
     bool success;
 
     switch (op.kind) {
+        case TokenKind::Assign: {
+            const ExpressionType &type1 = types[types.len - 2];
+            const ExpressionType &type2 = types[types.len - 1];
+
+            if (!type1.var) {
+                MarkError("Cannot assign expression to rvalue");
+                return;
+            }
+            if (type1.type != type2.type) {
+                MarkError("Cannot assign %1 value to %2 variable",
+                          TypeNames[(int)type2.type], TypeNames[(int)type1.type]);
+                return;
+            }
+
+            switch (type1.type) {
+                case Type::Bool: { ir.Append({Opcode::StoreBool, {.i = type1.var->offset}}); } break;
+                case Type::Integer: { ir.Append({Opcode::StoreInt, {.i = type1.var->offset}}); } break;
+                case Type::Double: { ir.Append({Opcode::StoreDouble, {.i = type1.var->offset}}); } break;
+                case Type::String: { ir.Append({Opcode::StoreString, {.i = type1.var->offset}}); } break;
+            }
+            types.len--;
+
+            return;
+        } break;
+
         case TokenKind::Plus: {
             success = EmitOperator2(Type::Integer, Opcode::AddInt, Type::Integer) ||
                       EmitOperator2(Type::Double, Opcode::AddDouble, Type::Double);
@@ -400,24 +443,25 @@ void Parser::ProduceOperator(const PendingOperator &op)
     if (RG_UNLIKELY(!success)) {
         if (IsUnaryOperator(op.kind)) {
             MarkError("Cannot use '%1' operator on %2 value",
-                      TokenKindNames[(int)op.kind], TypeNames[(int)types[types.len - 1]]);
-        } else if (types[types.len - 2] == types[types.len - 1]) {
+                      TokenKindNames[(int)op.kind], TypeNames[(int)types[types.len - 1].type]);
+        } else if (types[types.len - 2].type == types[types.len - 1].type) {
             MarkError("Cannot use '%1' operator on %2 values",
-                      TokenKindNames[(int)op.kind], TypeNames[(int)types[types.len - 2]]);
+                      TokenKindNames[(int)op.kind], TypeNames[(int)types[types.len - 2].type]);
         } else {
             MarkError("Cannot use '%1' operator on %2 and %3 values",
-                      TokenKindNames[(int)op.kind], TypeNames[(int)types[types.len - 2]], TypeNames[(int)types[types.len - 1]]);
+                      TokenKindNames[(int)op.kind], TypeNames[(int)types[types.len - 2].type],
+                      TypeNames[(int)types[types.len - 1].type]);
         }
     }
 }
 
 bool Parser::EmitOperator1(Type in_type, Opcode code, Type out_type)
 {
-    Type type = types[types.len - 1];
+    Type type = types[types.len - 1].type;
 
     if (type == in_type) {
         ir.Append({code});
-        types[types.len - 1] = out_type;
+        types[types.len - 1] = {out_type};
 
         return true;
     } else {
@@ -427,12 +471,12 @@ bool Parser::EmitOperator1(Type in_type, Opcode code, Type out_type)
 
 bool Parser::EmitOperator2(Type in_type, Opcode code, Type out_type)
 {
-    Type type1 = types[types.len - 2];
-    Type type2 = types[types.len - 1];
+    Type type1 = types[types.len - 2].type;
+    Type type2 = types[types.len - 1].type;
 
     if (type1 == in_type && type2 == in_type) {
         ir.Append({code});
-        types[--types.len - 1] = out_type;
+        types[--types.len - 1] = {out_type};
 
         return true;
     } else {

@@ -19,11 +19,26 @@ static const char *const OpcodeNames[] = {
     #include "opcodes.inc"
 };
 
+enum class Type {
+    Bool,
+    Integer,
+    Double,
+    String
+};
+static const char *const TypeNames[] = {
+    "Bool",
+    "Integer",
+    "Double",
+    "String"
+};
+
 struct Instruction {
     Opcode code;
     union {
         bool b; // PushBool
-        int64_t i; // PushInteger, Jump, BranchIfTrue, BranchIfFalse
+        int64_t i; // PushInteger, StoreBool, StoreInt, StoreDouble, StoreString,
+                   // LoadBool, LoadInt, LoadDouble, LoadString,
+                   // Jump, BranchIfTrue, BranchIfFalse
         double d; // PushDouble
         const char *str; // PushString
     } u;

@@ -29,6 +29,15 @@ void Run(Span<const Instruction> ir)
             case Opcode::PushDouble: { LogDebug("(0x%1) PushDouble %2", FmtHex(pc).Pad0(-5), inst.u.d); } break;
             case Opcode::PushString: { LogDebug("(0x%1) PushString %2", FmtHex(pc).Pad0(-5), inst.u.str); } break;
 
+            case Opcode::StoreBool: { LogDebug("(0x%1) StoreBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+            case Opcode::StoreInt: { LogDebug("(0x%1) StoreInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+            case Opcode::StoreDouble: { LogDebug("(0x%1) StoreDouble @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+            case Opcode::StoreString: { LogDebug("(0x%1) StoreString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+            case Opcode::LoadBool: { LogDebug("(0x%1) LoadBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+            case Opcode::LoadInt: { LogDebug("(0x%1) LoadInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+            case Opcode::LoadDouble: { LogDebug("(0x%1) LoadDouble @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+            case Opcode::LoadString: { LogDebug("(0x%1) LoadString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+
             case Opcode::BranchIfTrue: { LogDebug("(0x%1) BranchIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.i).Pad0(-5)); } break;
             case Opcode::BranchIfFalse: { LogDebug("(0x%1) BranchIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.i).Pad0(-5)); } break;
 
@@ -42,6 +51,15 @@ void Run(Span<const Instruction> ir)
             case Opcode::PushDouble: { stack.Append({.d = inst.u.d}); } break;
             case Opcode::PushString: { stack.Append({.str = inst.u.str}); } break;
             case Opcode::Pop: { stack.RemoveLast(1); } break;
+
+            case Opcode::StoreBool: { stack[inst.u.i].b = stack[stack.len-- - 1].b; } break;
+            case Opcode::StoreInt: { stack[inst.u.i].i = stack[stack.len-- - 1].i; } break;
+            case Opcode::StoreDouble: { stack[inst.u.i].d = stack[stack.len-- - 1].d; } break;
+            case Opcode::StoreString: { stack[inst.u.i].str = stack[stack.len-- - 1].str; } break;
+            case Opcode::LoadBool: { stack.Append({.b = stack[inst.u.i].b}); } break;
+            case Opcode::LoadInt: { stack.Append({.i = stack[inst.u.i].i}); } break;
+            case Opcode::LoadDouble: { stack.Append({.d = stack[inst.u.i].d}); } break;
+            case Opcode::LoadString: { stack.Append({.str = stack[inst.u.i].str}); } break;
 
             case Opcode::NegateInt: {
                 int64_t i = stack[stack.len - 1].i;
@@ -228,8 +246,6 @@ void Run(Span<const Instruction> ir)
             } break;
         }
     }
-
-    RG_ASSERT(!stack.len);
 }
 
 }
