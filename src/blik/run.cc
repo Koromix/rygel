@@ -25,20 +25,20 @@ void Run(Span<const Instruction> ir)
 {
     HeapArray<Value> stack;
 
-    for (Size i = 0; i < ir.len; i++) {
-        const Instruction &inst = ir[i];
+    for (Size pc = 0; pc < ir.len; pc++) {
+        const Instruction &inst = ir[pc];
 
 #ifndef NDEBUG
         switch (inst.code) {
-            case Opcode::PushBool: { LogDebug("(0x%1) PushBool %2", FmtHex(i).Pad0(-5), inst.u.b); } break;
-            case Opcode::PushInt: { LogDebug("(0x%1) PushInt %2", FmtHex(i).Pad0(-5), inst.u.i); } break;
-            case Opcode::PushDouble: { LogDebug("(0x%1) PushDouble %2", FmtHex(i).Pad0(-5), inst.u.d); } break;
-            case Opcode::PushString: { LogDebug("(0x%1) PushString %2", FmtHex(i).Pad0(-5), inst.u.str); } break;
+            case Opcode::PushBool: { LogDebug("(0x%1) PushBool %2", FmtHex(pc).Pad0(-5), inst.u.b); } break;
+            case Opcode::PushInt: { LogDebug("(0x%1) PushInt %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+            case Opcode::PushDouble: { LogDebug("(0x%1) PushDouble %2", FmtHex(pc).Pad0(-5), inst.u.d); } break;
+            case Opcode::PushString: { LogDebug("(0x%1) PushString %2", FmtHex(pc).Pad0(-5), inst.u.str); } break;
 
-            case Opcode::BranchIfTrue: { LogDebug("(0x%1) BranchIfTrue 0x%2", FmtHex(i).Pad0(-5), FmtHex(inst.u.i).Pad0(-5)); } break;
-            case Opcode::BranchIfFalse: { LogDebug("(0x%1) BranchIfFalse 0x%2", FmtHex(i).Pad0(-5), FmtHex(inst.u.i).Pad0(-5)); } break;
+            case Opcode::BranchIfTrue: { LogDebug("(0x%1) BranchIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.i).Pad0(-5)); } break;
+            case Opcode::BranchIfFalse: { LogDebug("(0x%1) BranchIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.i).Pad0(-5)); } break;
 
-            default: { LogDebug("(0x%1) %2", FmtHex(i).Pad0(-5), OpcodeNames[(int)inst.code]); } break;
+            default: { LogDebug("(0x%1) %2", FmtHex(pc).Pad0(-5), OpcodeNames[(int)inst.code]); } break;
         }
 #endif
 
@@ -223,14 +223,14 @@ void Run(Span<const Instruction> ir)
                 stack[--stack.len - 1].b = b1 ^ b2;
             } break;
 
-            case Opcode::Jump: { i = (Size)inst.u.i - 1; } break;
+            case Opcode::Jump: { pc = (Size)inst.u.i - 1; } break;
             case Opcode::BranchIfTrue: {
                 bool b = stack[stack.len - 1].b;
-                i = b ? (Size)(inst.u.i - 1) : i;
+                pc = b ? (Size)(inst.u.i - 1) : pc;
             } break;
             case Opcode::BranchIfFalse: {
                 bool b = stack[stack.len - 1].b;
-                i = b ? i : (Size)(inst.u.i - 1);
+                pc = b ? pc : (Size)(inst.u.i - 1);
             } break;
         }
     }
