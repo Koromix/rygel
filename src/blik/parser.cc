@@ -30,17 +30,33 @@ class Parser {
         Size branch_idx; // Used for short-circuit operators
     };
 
+    Span<const Token> tokens;
+    Size offset = 0;
+    bool valid = true;
+
     HeapArray<Instruction> ir;
     HeapArray<Type> types;
 
 public:
-    bool ParseExpression(Span<const Token> tokens);
+    Parser(Span<const Token> tokens) : tokens(tokens) {}
 
-    bool ProduceOperator(const PendingOperator &op);
+    void ParseExpression();
+
+    void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(Type in_type, Opcode code, Type out_type);
     bool EmitOperator2(Type in_type, Opcode code, Type out_type);
 
-    void Finish(HeapArray<Instruction> *out_ir);
+    bool Finish(HeapArray<Instruction> *out_ir);
+
+private:
+    template <typename... Args>
+    void MarkError(const char *fmt, Args... args)
+    {
+        if (valid) {
+            LogError(fmt, args...);
+            valid = false;
+        }
+    }
 };
 
 static int GetOperatorPrecedence(TokenType type)
@@ -87,14 +103,14 @@ static bool IsOperand(TokenType type)
            type == TokenType::String || type == TokenType::Identifier;
 }
 
-bool Parser::ParseExpression(Span<const Token> tokens)
+void Parser::ParseExpression()
 {
     LocalArray<PendingOperator, 128> operators;
 
-    Size i = 0;
     bool expect_op = false;
-    for (Size j = 1; i < tokens.len; i++, j++) {
-        const Token &tok = tokens[i];
+    for (; offset < tokens.len; offset++) {
+        Size j = offset + 1;
+        const Token &tok = tokens[offset];
 
         if (tok.type == TokenType::LeftParenthesis) {
             if (RG_UNLIKELY(expect_op))
@@ -108,8 +124,8 @@ bool Parser::ParseExpression(Span<const Token> tokens)
 
             for (;;) {
                 if (RG_UNLIKELY(!operators.len)) {
-                    LogError("Too many closing parentheses");
-                    return false;
+                    MarkError("Too many closing parentheses");
+                    return;
                 }
 
                 const PendingOperator &op = operators.data[operators.len - 1];
@@ -119,8 +135,7 @@ bool Parser::ParseExpression(Span<const Token> tokens)
                     break;
                 }
 
-                if (RG_UNLIKELY(!ProduceOperator(op)))
-                    return false;
+                ProduceOperator(op);
                 operators.len--;
             }
         } else if (IsOperand(tok.type)) {
@@ -197,14 +212,13 @@ bool Parser::ParseExpression(Span<const Token> tokens)
                 if (prec > op.prec - op.unary)
                     break;
 
-                if (RG_UNLIKELY(!ProduceOperator(op)))
-                    return false;
+                ProduceOperator(op);
                 operators.len--;
             }
 
             if (RG_UNLIKELY(!operators.Available())) {
-                LogError("Too many operators on the stack");
-                return false;
+                MarkError("Too many operators on the stack");
+                return;
             }
 
             // Short-circuit operators need a short-circuit branch
@@ -221,33 +235,32 @@ bool Parser::ParseExpression(Span<const Token> tokens)
     }
 
     if (RG_UNLIKELY(!expect_op)) {
-        LogError("Unexpected end, expected value or '('");
-        return false;
+        MarkError("Unexpected end, expected value or '('");
+        return;
     }
 
     for (Size i = operators.len - 1; i >= 0; i--) {
         const PendingOperator &op = operators[i];
 
         if (RG_UNLIKELY(op.type == TokenType::LeftParenthesis)) {
-            LogError("Missing closing parenthesis");
-            return false;
+            MarkError("Missing closing parenthesis");
+            return;
         }
 
-        if (RG_UNLIKELY(!ProduceOperator(op)))
-            return false;
+        ProduceOperator(op);
     }
 
-    return true;
+    return;
 
 expected_op:
-    LogError("Unexpected token '%1', expected operator or ')'", TokenTypeNames[(int)tokens[i].type]);
-    return false;
+    MarkError("Unexpected token '%1', expected operator or ')'", TokenTypeNames[(int)tokens[offset].type]);
+    return;
 expected_value:
-    LogError("Unexpected token '%1', expected value or '('", TokenTypeNames[(int)tokens[i].type]);
-    return false;
+    MarkError("Unexpected token '%1', expected value or '('", TokenTypeNames[(int)tokens[offset].type]);
+    return;
 }
 
-bool Parser::ProduceOperator(const PendingOperator &op)
+void Parser::ProduceOperator(const PendingOperator &op)
 {
     bool success;
 
@@ -348,20 +361,16 @@ bool Parser::ProduceOperator(const PendingOperator &op)
 
     if (RG_UNLIKELY(!success)) {
         if (IsUnaryOperator(op.type)) {
-            LogError("Cannot use '%1' operator on %2 value",
-                     TokenTypeNames[(int)op.type], TypeNames[(int)types[types.len - 1]]);
+            MarkError("Cannot use '%1' operator on %2 value",
+                      TokenTypeNames[(int)op.type], TypeNames[(int)types[types.len - 1]]);
         } else if (types[types.len - 2] == types[types.len - 1]) {
-            LogError("Cannot use '%1' operator on %2 values",
-                     TokenTypeNames[(int)op.type], TypeNames[(int)types[types.len - 2]]);
+            MarkError("Cannot use '%1' operator on %2 values",
+                      TokenTypeNames[(int)op.type], TypeNames[(int)types[types.len - 2]]);
         } else {
-            LogError("Cannot use '%1' operator on %2 and %3 values",
-                     TokenTypeNames[(int)op.type], TypeNames[(int)types[types.len - 2]], TypeNames[(int)types[types.len - 1]]);
+            MarkError("Cannot use '%1' operator on %2 and %3 values",
+                      TokenTypeNames[(int)op.type], TypeNames[(int)types[types.len - 2]], TypeNames[(int)types[types.len - 1]]);
         }
-
-        return false;
     }
-
-    return true;
 }
 
 bool Parser::EmitOperator1(Type in_type, Opcode code, Type out_type)
@@ -393,21 +402,22 @@ bool Parser::EmitOperator2(Type in_type, Opcode code, Type out_type)
     }
 }
 
-void Parser::Finish(HeapArray<Instruction> *out_ir)
+bool Parser::Finish(HeapArray<Instruction> *out_ir)
 {
     RG_ASSERT(!out_ir->len);
+
+    if (!valid)
+        return false;
+
     SwapMemory(&ir, out_ir, RG_SIZE(ir));
+    return true;
 }
 
 bool Parse(Span<const Token> tokens, HeapArray<Instruction> *out_ir)
 {
-    Parser parser;
-
-    if (!parser.ParseExpression(tokens))
-        return false;
-
-    parser.Finish(out_ir);
-    return true;
+    Parser parser(tokens);
+    parser.ParseExpression();
+    return parser.Finish(out_ir);
 }
 
 }
