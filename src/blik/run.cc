@@ -235,7 +235,7 @@ void Run(Span<const Instruction> ir)
         }
     }
 
-    RG_ASSERT(stack.len == 1);
+    RG_ASSERT(!stack.len);
 }
 
 }

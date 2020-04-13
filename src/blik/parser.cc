@@ -40,6 +40,10 @@ class Parser {
 public:
     Parser(Span<const Token> tokens) : tokens(tokens) {}
 
+    bool IsValid() const { return valid; }
+    bool IsDone() const { return !valid || offset >= tokens.len; }
+
+    void ParseAll();
     void ParseExpression();
 
     void ProduceOperator(const PendingOperator &op);
@@ -49,6 +53,8 @@ public:
     bool Finish(HeapArray<Instruction> *out_ir);
 
 private:
+    void ConsumeToken(TokenType type);
+
     template <typename... Args>
     void MarkError(const char *fmt, Args... args)
     {
@@ -103,13 +109,28 @@ static bool IsOperand(TokenType type)
            type == TokenType::String || type == TokenType::Identifier;
 }
 
+void Parser::ParseAll()
+{
+    while (!IsDone()) {
+        switch (tokens[offset].type) {
+            case TokenType::NewLine: { offset++; } break;
+
+            default: {
+                ParseExpression();
+                ConsumeToken(TokenType::NewLine);
+
+                ir.Append(Instruction(Opcode::Pop));
+            } break;
+        }
+    }
+}
+
 void Parser::ParseExpression()
 {
     LocalArray<PendingOperator, 128> operators;
-
     bool expect_op = false;
+
     for (; offset < tokens.len; offset++) {
-        Size j = offset + 1;
         const Token &tok = tokens[offset];
 
         if (tok.type == TokenType::LeftParenthesis) {
@@ -184,18 +205,18 @@ void Parser::ParseExpression()
             int prec = GetOperatorPrecedence(tok.type);
             bool unary = IsUnaryOperator(tok.type);
 
-            if (RG_UNLIKELY(prec < 0))
-                goto expected_value;
+            if (RG_UNLIKELY(prec < 0)) {
+                if (!expect_op && tok.type == TokenType::NewLine) {
+                    // Expression is split across multiple lines
+                    continue;
+                } else {
+                    break;
+                }
+            }
             if (RG_UNLIKELY(expect_op == unary)) {
                 if (tok.type == TokenType::Plus) {
-                    if (RG_UNLIKELY(j >= tokens.len))
-                        goto expected_value;
-
                     continue;
                 } else if (tok.type == TokenType::Minus) {
-                    if (RG_UNLIKELY(j >= tokens.len))
-                        goto expected_value;
-
                     prec = 12;
                     unary = true;
                 } else if (expect_op) {
@@ -413,10 +434,25 @@ bool Parser::Finish(HeapArray<Instruction> *out_ir)
     return true;
 }
 
+void Parser::ConsumeToken(TokenType type)
+{
+    if (RG_UNLIKELY(offset >= tokens.len)) {
+        MarkError("Unexpected end, expected '%1'", TokenTypeNames[(int)type]);
+        return;
+    }
+    if (RG_UNLIKELY(tokens[offset].type != type)) {
+        MarkError("Unexpected token '%1', expected '%2'",
+                  TokenTypeNames[(int)tokens[offset].type], TokenTypeNames[(int)type]);
+        return;
+    }
+
+    offset++;
+}
+
 bool Parse(Span<const Token> tokens, HeapArray<Instruction> *out_ir)
 {
     Parser parser(tokens);
-    parser.ParseExpression();
+    parser.ParseAll();
     return parser.Finish(out_ir);
 }
 

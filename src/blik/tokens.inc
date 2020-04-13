@@ -46,4 +46,6 @@ TOKEN(GreaterOrEqual, ">=")
 TOKEN(Less, "<")
 TOKEN(LessOrEqual, "<=")
 
+TOKEN(NewLine, "<newline>")
+
 #undef TOKEN

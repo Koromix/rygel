@@ -22,16 +22,15 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
     });
     RG_DEFER { PopLogFilter(); };
 
-    for (Size i = 0, j; i < code.len; i = j) {
-        line += (code[i] == '\n');
-        j = i + 1;
-
+    for (Size i = 0, j = 1; i < code.len; i = j++) {
         switch (code[i]) {
             case ' ':
             case '\t':
-            case '\r':
+            case '\r': {} break;
+
             case '\n': {
-                line += (code[i] == '\n');
+                out_set->tokens.Append(Token(TokenType::NewLine, line));
+                line++;
             } break;
 
             case '0': {
