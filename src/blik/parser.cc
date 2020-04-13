@@ -113,7 +113,7 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
     valid = true;
     types.RemoveFrom(0);
 
-    PushLogFilter([=](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
+    PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
         int32_t line = tokens[std::min(offset, tokens.len - 1)].line;
 
         char msg_buf[4096];

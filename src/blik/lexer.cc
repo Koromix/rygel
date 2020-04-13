@@ -14,7 +14,7 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
     bool valid = true;
     int32_t line = 1;
 
-    PushLogFilter([=](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
+    PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
         char msg_buf[4096];
         Fmt(msg_buf, "%1(%2): %3", filename, line, msg);
 

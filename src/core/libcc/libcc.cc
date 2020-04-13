@@ -3617,7 +3617,7 @@ bool LineReader::Next(Span<char> *out_line)
 
 void LineReader::PushLogFilter()
 {
-    RG::PushLogFilter([=](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
+    RG::PushLogFilter([this](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
         char msg_buf[4096];
         Fmt(msg_buf, "%1(%2): %3", st->GetFileName(), line_number, msg);
 
