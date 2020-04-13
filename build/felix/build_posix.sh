@@ -8,7 +8,7 @@ BIN=../../felix
 if command -v g++ >/dev/null 2>&1; then
     echo "Bootstrapping felix with GCC..."
     mkdir -p tmp
-    g++ -std=gnu++17 -O0 -DNDEBUG $SRC -w -ldl -pthread -o tmp/felix
+    g++ -std=gnu++2a -O0 -DNDEBUG $SRC -w -ldl -pthread -o tmp/felix
     tmp/felix -m Fast -O tmp/fast felix
     mv tmp/fast/felix $BIN
 
@@ -23,7 +23,7 @@ fi
 if command -v clang++ >/dev/null 2>&1; then
     echo "Bootstrapping felix with Clang..."
     mkdir -p tmp
-    clang++ -std=gnu++17 -O0 -DNDEBUG $SRC -Wno-everything -ldl -pthread -o tmp/felix
+    clang++ -std=gnu++2a -O0 -DNDEBUG $SRC -Wno-everything -ldl -pthread -o tmp/felix
     tmp/felix -m Fast -O tmp/fast felix
     mv tmp/fast/felix $BIN
 

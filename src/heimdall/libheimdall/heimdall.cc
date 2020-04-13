@@ -83,7 +83,7 @@ static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoo
             if (ImGui::IsItemHovered()) {
                 ImGui::BeginTooltip();
                 ImGui::Text("%g | %s [until %g]",
-                            elmt->time - align_offset, elmt->concept,
+                            elmt->time - align_offset, elmt->concept_name,
                             elmt->time - align_offset + elmt->u.period.duration);
                 ImGui::EndTooltip();
             }
@@ -104,19 +104,19 @@ static void TextMeasure(const Element &elmt, double align_offset)
 
     if (!std::isnan(elmt.u.measure.min) && !std::isnan(elmt.u.measure.max)) {
         ImGui::Text("%g | %s = %.2f [%.2f ; %.2f]",
-                    elmt.time - align_offset, elmt.concept, elmt.u.measure.value,
+                    elmt.time - align_offset, elmt.concept_name, elmt.u.measure.value,
                     elmt.u.measure.min, elmt.u.measure.max);
     } else if (!std::isnan(elmt.u.measure.min)) {
         ImGui::Text("%g | %s = %.2f [min = %.2f]",
-                    elmt.time - align_offset, elmt.concept, elmt.u.measure.value,
+                    elmt.time - align_offset, elmt.concept_name, elmt.u.measure.value,
                     elmt.u.measure.min);
     } else if (!std::isnan(elmt.u.measure.max)) {
         ImGui::Text("%g | %s = %.2f [max = %.2f]",
-                    elmt.time - align_offset, elmt.concept, elmt.u.measure.value,
+                    elmt.time - align_offset, elmt.concept_name, elmt.u.measure.value,
                     elmt.u.measure.max);
     } else {
         ImGui::Text("%g | %s = %.2f",
-                    elmt.time - align_offset, elmt.concept, elmt.u.measure.value);
+                    elmt.time - align_offset, elmt.concept_name, elmt.u.measure.value);
     }
 }
 
@@ -179,7 +179,7 @@ static void DrawEventsBlock(ImRect rect, float alpha, Span<const Element *const>
             if (elmt->type == Element::Type::Measure) {
                 TextMeasure(*elmt, align_offset);
             } else {
-                ImGui::Text("%g | %s", elmt->time - align_offset, elmt->concept);
+                ImGui::Text("%g | %s", elmt->time - align_offset, elmt->concept_name);
             }
         }
         ImGui::EndTooltip();
@@ -619,7 +619,7 @@ static bool FindConceptAndAlign(const Entity &ent, const HashSet<Span<const char
 {
     if (align_concepts.table.count) {
         for (const Element &elmt: ent.elements) {
-            if (align_concepts.Find(elmt.concept)) {
+            if (align_concepts.Find(elmt.concept_name)) {
                 *out_offset = elmt.time;
                 return true;
             }
@@ -653,18 +653,18 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
         for (const Element &elmt: ent.elements) {
             Span<const char> path;
             {
-                if (elmt.concept[0] == '/') {
-                    path = elmt.concept;
+                if (elmt.concept_name[0] == '/') {
+                    path = elmt.concept_name;
                     while (path.len > 1 && path.ptr[--path.len] != '/');
                 } else if (concept_set) {
-                    const Concept *concept = concept_set->concepts_map.Find(elmt.concept);
-                    if (!concept) {
+                    const Concept *concept_info = concept_set->concepts_map.Find(elmt.concept_name);
+                    if (!concept_info) {
                         const char *src_name = *entity_set.sources.Find(elmt.source_id);
-                        concept = concept_set->concepts_map.Find(src_name);
-                        if (!concept)
+                        concept_info = concept_set->concepts_map.Find(src_name);
+                        if (!concept_info)
                             continue;
                     }
-                    path = concept->path;
+                    path = concept_info->path;
                 } else {
                     continue;
                 }
@@ -673,7 +673,7 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
 
             if (state.filter_text[0] &&
                     !strstr(path.ptr, state.filter_text) &&
-                    !strstr(elmt.concept, state.filter_text))
+                    !strstr(elmt.concept_name, state.filter_text))
                 continue;
 
             min_x = std::min((float)(elmt.time - align_offset), min_x);
@@ -695,7 +695,7 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
 
             if (fully_deployed) {
                 float new_height = ComputeElementHeight(state.settings, elmt.type) + style.ItemSpacing.y;
-                std::pair<float *, bool> ret = line_heights.Append(elmt.concept, 0.0f);
+                std::pair<float *, bool> ret = line_heights.Append(elmt.concept_name, 0.0f);
                 if (new_height > *ret.first) {
                     height += new_height - *ret.first;
                     *ret.first = new_height;
@@ -811,22 +811,22 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
                 Span<const char> path;
                 Span<const char> title;
                 {
-                    title = elmt.concept;
-                    if (elmt.concept[0] == '/') {
+                    title = elmt.concept_name;
+                    if (elmt.concept_name[0] == '/') {
                         path = title;
                         // XXX: Check name does not end with '/'
                         while (path.len > 1 && path.ptr[--path.len] != '/');
                         title.ptr += path.len + 1;
                         title.len -= path.len + 1;
                     } else if (concept_set) {
-                        const Concept *concept = concept_set->concepts_map.Find(elmt.concept);
-                        if (!concept) {
+                        const Concept *concept_info = concept_set->concepts_map.Find(elmt.concept_name);
+                        if (!concept_info) {
                             const char *src_name = *entity_set.sources.Find(elmt.source_id);
-                            concept = concept_set->concepts_map.Find(src_name);
-                            if (!concept)
+                            concept_info = concept_set->concepts_map.Find(src_name);
+                            if (!concept_info)
                                 continue;
                         }
-                        path = concept->path;
+                        path = concept_info->path;
                     } else {
                         continue;
                     }
@@ -835,7 +835,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
 
                 if (state.filter_text[0] &&
                         !strstr(path.ptr, state.filter_text) &&
-                        !strstr(elmt.concept, state.filter_text))
+                        !strstr(elmt.concept_name, state.filter_text))
                     continue;
 
                 bool fully_deployed = true;
@@ -890,7 +890,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
                 {
                     LineData *line;
                     {
-                        std::pair<Size *, bool> ret = lines_map.Append(elmt.concept, lines.len);
+                        std::pair<Size *, bool> ret = lines_map.Append(elmt.concept_name, lines.len);
                         if (!ret.second) {
                             line = &lines[*ret.first];
                         } else {
@@ -1399,15 +1399,15 @@ static void AddConceptsToView(const HashMap<Span<const char>, Span<const char>> 
                               bool keep_paths, ConceptSet *out_concept_set)
 {
     for (const auto &it: concepts.table) {
-        Concept concept = {};
-        concept.name = DuplicateString(it.key, &out_concept_set->str_alloc).ptr;
-        concept.title = concept.name;
+        Concept concept_info = {};
+        concept_info.name = DuplicateString(it.key, &out_concept_set->str_alloc).ptr;
+        concept_info.title = concept_info.name;
         if (keep_paths) {
-            concept.path = DuplicateString(it.value, &out_concept_set->str_alloc).ptr;
+            concept_info.path = DuplicateString(it.value, &out_concept_set->str_alloc).ptr;
         } else {
-            concept.path = "/";
+            concept_info.path = "/";
         }
-        out_concept_set->concepts_map.Append(concept);
+        out_concept_set->concepts_map.Append(concept_info);
     }
 }
 

@@ -84,7 +84,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "clang -std=gnu11"); } break;
-            case SourceType::CXX: { Fmt(&buf, "clang++ -std=gnu++17"); } break;
+            case SourceType::CXX: { Fmt(&buf, "clang++ -std=gnu++2a"); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -234,7 +234,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "gcc -std=gnu11"); } break;
-            case SourceType::CXX: { Fmt(&buf, "g++ -std=gnu++17 -fno-exceptions"); } break;
+            case SourceType::CXX: { Fmt(&buf, "g++ -std=gnu++2a -fno-exceptions"); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -392,7 +392,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "cl /nologo"); } break;
-            case SourceType::CXX: { Fmt(&buf, "cl /nologo /std:c++17 "); } break;
+            case SourceType::CXX: { Fmt(&buf, "cl /nologo /std:c++latest"); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " \"/Fo%1\"", dest_filename);

@@ -15,7 +15,7 @@ struct Element {
         Period
     };
 
-    const char *concept = nullptr;
+    const char *concept_name = nullptr;
     double time = 0.0;
     int source_id = 0;
 
