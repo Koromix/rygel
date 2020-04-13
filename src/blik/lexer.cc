@@ -308,7 +308,13 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
             case '+': { out_set->tokens.Append(Token(TokenType::Plus, line)); } break;
             case '-': { out_set->tokens.Append(Token(TokenType::Minus, line)); } break;
             case '*': { out_set->tokens.Append(Token(TokenType::Multiply, line)); } break;
-            case '/': { out_set->tokens.Append(Token(TokenType::Divide, line)); } break;
+            case '/': {
+                if (j < code.len && code[j] == '/') {
+                    while (++j < code.len && code[j] != '\n');
+                } else {
+                    out_set->tokens.Append(Token(TokenType::Divide, line));
+                }
+            } break;
             case '%': { out_set->tokens.Append(Token(TokenType::Modulo, line)); } break;
             case '^': { out_set->tokens.Append(Token(TokenType::Xor, line)); } break;
             case '~': { out_set->tokens.Append(Token(TokenType::Not, line)); } break;
