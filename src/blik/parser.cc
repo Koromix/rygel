@@ -31,28 +31,23 @@ class Parser {
     };
 
     Span<const Token> tokens;
-    Size offset = 0;
-    bool valid = true;
-
-    HeapArray<Instruction> ir;
+    Size offset;
+    bool valid;
     HeapArray<Type> types;
 
+    HeapArray<Instruction> ir;
+
 public:
-    Parser(Span<const Token> tokens) : tokens(tokens) {}
+    bool Parse(Span<const Token> tokens, const char *filename);
+    void Finish(HeapArray<Instruction> *out_ir);
 
-    bool IsValid() const { return valid; }
-    bool IsDone() const { return !valid || offset >= tokens.len; }
-
-    void ParseAll();
+private:
     void ParseExpression();
 
     void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(Type in_type, Opcode code, Type out_type);
     bool EmitOperator2(Type in_type, Opcode code, Type out_type);
 
-    bool Finish(HeapArray<Instruction> *out_ir);
-
-private:
     void ConsumeToken(TokenType type);
 
     template <typename... Args>
@@ -109,9 +104,26 @@ static bool IsOperand(TokenType type)
            type == TokenType::String || type == TokenType::Identifier;
 }
 
-void Parser::ParseAll()
+bool Parser::Parse(Span<const Token> tokens, const char *filename)
 {
-    while (!IsDone()) {
+    RG_DEFER_NC(out_guard, len = ir.len) { ir.RemoveFrom(len); };
+
+    this->tokens = tokens;
+    offset = 0;
+    valid = true;
+    types.RemoveFrom(0);
+
+    PushLogFilter([=](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
+        int32_t line = tokens[std::min(offset, tokens.len - 1)].line;
+
+        char msg_buf[4096];
+        Fmt(msg_buf, "%1(%2): %3", filename, line, msg);
+
+        func(level, ctx, msg_buf);
+    });
+    RG_DEFER { PopLogFilter(); };
+
+    while (valid && offset < tokens.len) {
         switch (tokens[offset].type) {
             case TokenType::NewLine: { offset++; } break;
 
@@ -123,6 +135,11 @@ void Parser::ParseAll()
             } break;
         }
     }
+
+    if (valid) {
+        out_guard.Disable();
+    }
+    return valid;
 }
 
 void Parser::ParseExpression()
@@ -423,15 +440,10 @@ bool Parser::EmitOperator2(Type in_type, Opcode code, Type out_type)
     }
 }
 
-bool Parser::Finish(HeapArray<Instruction> *out_ir)
+void Parser::Finish(HeapArray<Instruction> *out_ir)
 {
     RG_ASSERT(!out_ir->len);
-
-    if (!valid)
-        return false;
-
     SwapMemory(&ir, out_ir, RG_SIZE(ir));
-    return true;
 }
 
 void Parser::ConsumeToken(TokenType type)
@@ -449,11 +461,14 @@ void Parser::ConsumeToken(TokenType type)
     offset++;
 }
 
-bool Parse(Span<const Token> tokens, HeapArray<Instruction> *out_ir)
+bool Parse(Span<const Token> tokens, const char *filename, HeapArray<Instruction> *out_ir)
 {
-    Parser parser(tokens);
-    parser.ParseAll();
-    return parser.Finish(out_ir);
+    Parser parser;
+    if (!parser.Parse(tokens, filename))
+        return false;
+
+    parser.Finish(out_ir);
+    return true;
 }
 
 }

@@ -23,9 +23,9 @@ int RunBlik(int argc, char **argv)
 
         TokenSet token_set;
         HeapArray<Instruction> ir;
-        if (!Tokenize(code, "<argv>", &token_set))
+        if (!Tokenize(code, argv[i], &token_set))
             return 1;
-        if (!Parse(token_set.tokens, &ir))
+        if (!Parse(token_set.tokens, argv[i], &ir))
             return 1;
 
         Run(ir);

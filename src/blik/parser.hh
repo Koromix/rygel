@@ -36,6 +36,6 @@ struct Instruction {
     Instruction(Opcode code, const char *str) : code(code) { u.str = str; }
 };
 
-bool Parse(Span<const Token> tokens, HeapArray<Instruction> *out_ir);
+bool Parse(Span<const Token> tokens, const char *filename, HeapArray<Instruction> *out_ir);
 
 }
