@@ -13,12 +13,6 @@ union Value {
     int64_t i;
     double d;
     const char *str;
-
-    Value() {}
-    Value(bool b) : b(b) {}
-    Value(int64_t i) : i(i) {}
-    Value(double d) : d(d) {}
-    Value(const char *str) : str(str) {}
 };
 
 void Run(Span<const Instruction> ir)
@@ -43,10 +37,10 @@ void Run(Span<const Instruction> ir)
 #endif
 
         switch (inst.code) {
-            case Opcode::PushBool: { stack.Append(Value(inst.u.b)); } break;
-            case Opcode::PushInt: { stack.Append(Value((int64_t)inst.u.i)); } break;
-            case Opcode::PushDouble: { stack.Append(Value(inst.u.d)); } break;
-            case Opcode::PushString: { stack.Append(Value(inst.u.str)); } break;
+            case Opcode::PushBool: { stack.Append({.b = inst.u.b}); } break;
+            case Opcode::PushInt: { stack.Append({.i = inst.u.i}); } break;
+            case Opcode::PushDouble: { stack.Append({.d = inst.u.d}); } break;
+            case Opcode::PushString: { stack.Append({.str = inst.u.str}); } break;
             case Opcode::Pop: { stack.RemoveLast(1); } break;
 
             case Opcode::NegateInt: {

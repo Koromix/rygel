@@ -27,13 +27,6 @@ struct Token {
         double d;
         const char *str;
     } u;
-
-    Token() {}
-    Token(TokenType type, int32_t line) : type(type), line(line) {}
-    Token(TokenType type, int32_t line, bool b) : type(type), line(line) { u.b = b; }
-    Token(TokenType type, int32_t line, int64_t i) : type(type), line(line) { u.i = i; }
-    Token(TokenType type, int32_t line, double d) : type(type), line(line) { u.d = d; }
-    Token(TokenType type, int32_t line, const char *str) : type(type), line(line) { u.str = str; }
 };
 
 struct TokenSet {

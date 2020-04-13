@@ -27,13 +27,6 @@ struct Instruction {
         double d; // PushDouble
         const char *str; // PushString
     } u;
-
-    Instruction() {}
-    Instruction(Opcode code) : code(code) {}
-    Instruction(Opcode code, bool b) : code(code) { u.b = b; }
-    Instruction(Opcode code, int64_t i) : code(code) { u.i = i; }
-    Instruction(Opcode code, double d) : code(code) { u.d = d; }
-    Instruction(Opcode code, const char *str) : code(code) { u.str = str; }
 };
 
 bool Parse(Span<const Token> tokens, const char *filename, HeapArray<Instruction> *out_ir);

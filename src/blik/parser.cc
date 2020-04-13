@@ -131,7 +131,7 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
                 ParseExpression();
                 ConsumeToken(TokenType::NewLine);
 
-                ir.Append(Instruction(Opcode::Pop));
+                ir.Append({Opcode::Pop});
             } break;
         }
     }
@@ -183,7 +183,7 @@ void Parser::ParseExpression()
 
             switch (tok.type) {
                 case TokenType::Bool: {
-                    ir.Append(Instruction(Opcode::PushBool, tok.u.b));
+                    ir.Append({Opcode::PushBool, {.b = tok.u.b}});
                     types.Append(Type::Bool);
                 } break;
                 case TokenType::Integer: {
@@ -191,10 +191,10 @@ void Parser::ParseExpression()
                                          operators[operators.len - 1].unary) {
                         operators.RemoveLast(1);
 
-                        ir.Append(Instruction(Opcode::PushInt, -tok.u.i));
+                        ir.Append({Opcode::PushInt, {.i = -tok.u.i}});
                         types.Append(Type::Integer);
                     } else {
-                        ir.Append(Instruction(Opcode::PushInt, tok.u.i));
+                        ir.Append({Opcode::PushInt, {.i = tok.u.i}});
                         types.Append(Type::Integer);
                     }
                 } break;
@@ -203,15 +203,15 @@ void Parser::ParseExpression()
                                          operators[operators.len - 1].unary) {
                         operators.RemoveLast(1);
 
-                        ir.Append(Instruction(Opcode::PushDouble, -tok.u.d));
+                        ir.Append({Opcode::PushDouble, {.d = -tok.u.d}});
                         types.Append(Type::Integer);
                     } else {
-                        ir.Append(Instruction(Opcode::PushDouble, tok.u.d));
+                        ir.Append({Opcode::PushDouble, {.d = tok.u.d}});
                         types.Append(Type::Double);
                     }
                 } break;
                 case TokenType::String: {
-                    ir.Append(Instruction(Opcode::PushString, tok.u.str));
+                    ir.Append({Opcode::PushString, {.str = tok.u.str}});
                     types.Append(Type::String);
                 } break;
                 case TokenType::Identifier: { RG_ASSERT(false); } break;
@@ -262,10 +262,10 @@ void Parser::ParseExpression()
             // Short-circuit operators need a short-circuit branch
             if (tok.type == TokenType::LogicAnd) {
                 operators.Append({tok.type, prec, unary, ir.len});
-                ir.Append(Instruction(Opcode::BranchIfFalse));
+                ir.Append({Opcode::BranchIfFalse});
             } else if (tok.type == TokenType::LogicOr) {
                 operators.Append({tok.type, prec, unary, ir.len});
-                ir.Append(Instruction(Opcode::BranchIfTrue));
+                ir.Append({Opcode::BranchIfTrue});
             } else {
                 operators.Append({tok.type, prec, unary});
             }
@@ -416,7 +416,7 @@ bool Parser::EmitOperator1(Type in_type, Opcode code, Type out_type)
     Type type = types[types.len - 1];
 
     if (type == in_type) {
-        ir.Append(Instruction(code));
+        ir.Append({code});
         types[types.len - 1] = out_type;
 
         return true;
@@ -431,7 +431,7 @@ bool Parser::EmitOperator2(Type in_type, Opcode code, Type out_type)
     Type type2 = types[types.len - 1];
 
     if (type1 == in_type && type2 == in_type) {
-        ir.Append(Instruction(code));
+        ir.Append({code});
         types[--types.len - 1] = out_type;
 
         return true;

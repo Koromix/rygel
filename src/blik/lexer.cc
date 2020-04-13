@@ -29,7 +29,7 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
             case '\r': {} break;
 
             case '\n': {
-                out_set->tokens.Append(Token(TokenType::NewLine, line));
+                out_set->tokens.Append({TokenType::NewLine, line});
                 line++;
             } break;
 
@@ -59,7 +59,7 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
                             valid = false;
                         }
 
-                        out_set->tokens.Append(Token(TokenType::Integer, line, value));
+                        out_set->tokens.Append({TokenType::Integer, line, {.i = value}});
                         continue;
                     } else if (code[j] == 'o') {
                         int64_t value = 0;
@@ -85,7 +85,7 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
                             valid = false;
                         }
 
-                        out_set->tokens.Append(Token(TokenType::Integer, line, value));
+                        out_set->tokens.Append({TokenType::Integer, line, {.i = value}});
                         continue;
                     } else if (code[j] == 'x') {
                         int64_t value = 0;
@@ -121,7 +121,7 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
                             valid = false;
                         }
 
-                        out_set->tokens.Append(Token(TokenType::Integer, line, value));
+                        out_set->tokens.Append({TokenType::Integer, line, {.i = value}});
                         continue;
                     } else {
                         LogError("Invalid literal base character '%1'", code[j]);
@@ -172,14 +172,14 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
                         break;
                     }
 
-                    out_set->tokens.Append(Token(TokenType::Double, line, d));
+                    out_set->tokens.Append({TokenType::Double, line, {.d = d}});
                 } else {
                     if (RG_UNLIKELY(overflow)) {
                         LogError("Number literal is too large (max = %1)", INT64_MAX);
                         valid = false;
                     }
 
-                    out_set->tokens.Append(Token(TokenType::Integer, line, value));
+                    out_set->tokens.Append({TokenType::Integer, line, {.i = value}});
                 }
             } break;
 
@@ -227,7 +227,7 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
                 }
                 str.Append(0);
 
-                out_set->tokens.Append(Token(TokenType::String, line, str.TrimAndLeak().ptr));
+                out_set->tokens.Append({TokenType::String, line, {.str = str.TrimAndLeak().ptr}});
             } break;
 
             case 'a':
@@ -290,91 +290,91 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
                 Span<const char> ident = code.Take(i, j - i);
 
                 if (ident == "if") {
-                    out_set->tokens.Append(Token(TokenType::If, line));
+                    out_set->tokens.Append({TokenType::If, line});
                 } else if (ident == "else") {
-                    out_set->tokens.Append(Token(TokenType::Else, line));
+                    out_set->tokens.Append({TokenType::Else, line});
                 } else if (ident == "while") {
-                    out_set->tokens.Append(Token(TokenType::While, line));
+                    out_set->tokens.Append({TokenType::While, line});
                 } else if (ident == "true") {
-                    out_set->tokens.Append(Token(TokenType::Bool, line, true));
+                    out_set->tokens.Append({TokenType::Bool, line, {.b = true}});
                 } else if (ident == "false") {
-                    out_set->tokens.Append(Token(TokenType::Bool, line, false));
+                    out_set->tokens.Append({TokenType::Bool, line, {.b = false}});
                 } else {
                     const char *str = DuplicateString(ident, &out_set->str_alloc).ptr;
-                    out_set->tokens.Append(Token(TokenType::Identifier, line, str));
+                    out_set->tokens.Append({TokenType::Identifier, line, {.str = str}});
                 }
             } break;
 
-            case '+': { out_set->tokens.Append(Token(TokenType::Plus, line)); } break;
-            case '-': { out_set->tokens.Append(Token(TokenType::Minus, line)); } break;
-            case '*': { out_set->tokens.Append(Token(TokenType::Multiply, line)); } break;
+            case '+': { out_set->tokens.Append({TokenType::Plus, line}); } break;
+            case '-': { out_set->tokens.Append({TokenType::Minus, line}); } break;
+            case '*': { out_set->tokens.Append({TokenType::Multiply, line}); } break;
             case '/': {
                 if (j < code.len && code[j] == '/') {
                     while (++j < code.len && code[j] != '\n');
                 } else {
-                    out_set->tokens.Append(Token(TokenType::Divide, line));
+                    out_set->tokens.Append({TokenType::Divide, line});
                 }
             } break;
-            case '%': { out_set->tokens.Append(Token(TokenType::Modulo, line)); } break;
-            case '^': { out_set->tokens.Append(Token(TokenType::Xor, line)); } break;
-            case '~': { out_set->tokens.Append(Token(TokenType::Not, line)); } break;
-            case '(': { out_set->tokens.Append(Token(TokenType::LeftParenthesis, line)); } break;
-            case ')': { out_set->tokens.Append(Token(TokenType::RightParenthesis, line)); } break;
-            case '{': { out_set->tokens.Append(Token(TokenType::LeftBrace, line)); } break;
-            case '}': { out_set->tokens.Append(Token(TokenType::RightBrace, line)); } break;
+            case '%': { out_set->tokens.Append({TokenType::Modulo, line}); } break;
+            case '^': { out_set->tokens.Append({TokenType::Xor, line}); } break;
+            case '~': { out_set->tokens.Append({TokenType::Not, line}); } break;
+            case '(': { out_set->tokens.Append({TokenType::LeftParenthesis, line}); } break;
+            case ')': { out_set->tokens.Append({TokenType::RightParenthesis, line}); } break;
+            case '{': { out_set->tokens.Append({TokenType::LeftBrace, line}); } break;
+            case '}': { out_set->tokens.Append({TokenType::RightBrace, line}); } break;
 
             case '=': {
                 if (j < code.len && code[j] == '=') {
-                    out_set->tokens.Append(Token(TokenType::Equal, line));
+                    out_set->tokens.Append({TokenType::Equal, line});
                     j++;
                 } else {
-                    out_set->tokens.Append(Token(TokenType::Assign, line));
+                    out_set->tokens.Append({TokenType::Assign, line});
                 }
             } break;
             case '!': {
                 if (j < code.len && code[j] == '=') {
-                    out_set->tokens.Append(Token(TokenType::NotEqual, line));
+                    out_set->tokens.Append({TokenType::NotEqual, line});
                     j++;
                 } else {
-                    out_set->tokens.Append(Token(TokenType::LogicNot, line));
+                    out_set->tokens.Append({TokenType::LogicNot, line});
                 }
             } break;
             case '&': {
                 if (j < code.len && code[j] == code[i]) {
-                    out_set->tokens.Append(Token(TokenType::LogicAnd, line));
+                    out_set->tokens.Append({TokenType::LogicAnd, line});
                     j++;
                 } else {
-                    out_set->tokens.Append(Token(TokenType::And, line));
+                    out_set->tokens.Append({TokenType::And, line});
                 }
             } break;
             case '|': {
                 if (j < code.len && code[j] == code[i]) {
-                    out_set->tokens.Append(Token(TokenType::LogicOr, line));
+                    out_set->tokens.Append({TokenType::LogicOr, line});
                     j++;
                 } else {
-                    out_set->tokens.Append(Token(TokenType::Or, line));
+                    out_set->tokens.Append({TokenType::Or, line});
                 }
             } break;
             case '>': {
                 if (j < code.len && code[j] == '>') {
-                    out_set->tokens.Append(Token(TokenType::RightShift, line));
+                    out_set->tokens.Append({TokenType::RightShift, line});
                     j++;
                 } else if (j < code.len && code[j] == '=') {
-                    out_set->tokens.Append(Token(TokenType::GreaterOrEqual, line));
+                    out_set->tokens.Append({TokenType::GreaterOrEqual, line});
                     j++;
                 } else {
-                    out_set->tokens.Append(Token(TokenType::Greater, line));
+                    out_set->tokens.Append({TokenType::Greater, line});
                 }
             } break;
             case '<': {
                 if (j < code.len && code[j] == '<') {
-                    out_set->tokens.Append(Token(TokenType::LeftShift, line));
+                    out_set->tokens.Append({TokenType::LeftShift, line});
                     j++;
                 } else if (j < code.len && code[j] == '=') {
-                    out_set->tokens.Append(Token(TokenType::LessOrEqual, line));
+                    out_set->tokens.Append({TokenType::LessOrEqual, line});
                     j++;
                 } else {
-                    out_set->tokens.Append(Token(TokenType::Less, line));
+                    out_set->tokens.Append({TokenType::Less, line});
                 }
             } break;
 
@@ -386,7 +386,7 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
     }
 
     // Newlines are used to end statements. Make sure the last statement has one.
-    out_set->tokens.Append(Token(TokenType::NewLine, line));
+    out_set->tokens.Append({TokenType::NewLine, line});
 
     if (valid) {
         out_guard.Disable();
