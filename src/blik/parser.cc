@@ -18,8 +18,11 @@ class Parser {
     };
 
     struct VariableInfo {
+        const char *name;
         Type type;
         Size offset;
+
+        RG_HASHTABLE_HANDLER(VariableInfo, name);
     };
 
     struct ExpressionType {
@@ -31,7 +34,9 @@ class Parser {
     Size offset;
     bool valid;
 
-    HashMap<const char *, VariableInfo> variables;
+    HashTable<const char *, VariableInfo> variables;
+
+    // Reuse for performance
     HeapArray<ExpressionType> types;
 
     HeapArray<Instruction> ir;
@@ -41,13 +46,13 @@ public:
     void Finish(HeapArray<Instruction> *out_ir);
 
 private:
-    void ParseExpression();
+    void ParseExpression(Type *out_type = nullptr);
 
     void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(Type in_type, Opcode code, Type out_type);
     bool EmitOperator2(Type in_type, Opcode code, Type out_type);
 
-    void ConsumeToken(TokenKind kind);
+    bool ConsumeToken(TokenKind kind);
 
     template <typename... Args>
     void MarkError(const char *fmt, Args... args)
@@ -111,9 +116,7 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
     this->tokens = tokens;
     offset = 0;
     valid = true;
-
     variables.Clear();
-    types.Clear();
 
     PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
         int32_t line = tokens[std::min(offset, tokens.len - 1)].line;
@@ -129,11 +132,30 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
         switch (tokens[offset].kind) {
             case TokenKind::NewLine: { offset++; } break;
 
+            case TokenKind::Let: {
+                offset++;
+
+                if (ConsumeToken(TokenKind::Identifier)) {
+                    VariableInfo var = {};
+
+                    var.name = tokens[offset - 1].u.str;
+                    ConsumeToken(TokenKind::Assign);
+                    ParseExpression(&var.type);
+                    var.offset = variables.count;
+
+                    if (!variables.Append(var).second) {
+                        MarkError("Variable '%1' already exists", var.name);
+                    }
+                }
+
+                ConsumeToken(TokenKind::NewLine);
+            } break;
+
             default: {
                 ParseExpression();
-                ConsumeToken(TokenKind::NewLine);
-
                 ir.Append({Opcode::Pop});
+
+                ConsumeToken(TokenKind::NewLine);
             } break;
         }
     }
@@ -144,8 +166,10 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
     return valid;
 }
 
-void Parser::ParseExpression()
+void Parser::ParseExpression(Type *out_type)
 {
+    types.RemoveFrom(0);
+
     LocalArray<PendingOperator, 128> operators;
     bool expect_op = false;
 
@@ -306,6 +330,10 @@ void Parser::ParseExpression()
         ProduceOperator(op);
     }
 
+    RG_ASSERT(types.len == 1);
+    if (out_type) {
+        *out_type = types[0].type;
+    }
     return;
 
 expected_op:
@@ -490,19 +518,20 @@ void Parser::Finish(HeapArray<Instruction> *out_ir)
     SwapMemory(&ir, out_ir, RG_SIZE(ir));
 }
 
-void Parser::ConsumeToken(TokenKind kind)
+bool Parser::ConsumeToken(TokenKind kind)
 {
     if (RG_UNLIKELY(offset >= tokens.len)) {
         MarkError("Unexpected end, expected '%1'", TokenKindNames[(int)kind]);
-        return;
+        return false;
     }
     if (RG_UNLIKELY(tokens[offset].kind != kind)) {
         MarkError("Unexpected token '%1', expected '%2'",
                   TokenKindNames[(int)tokens[offset].kind], TokenKindNames[(int)kind]);
-        return;
+        return false;
     }
 
     offset++;
+    return true;
 }
 
 bool Parse(Span<const Token> tokens, const char *filename, HeapArray<Instruction> *out_ir)

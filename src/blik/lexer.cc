@@ -289,12 +289,8 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
 
                 Span<const char> ident = code.Take(i, j - i);
 
-                if (ident == "if") {
-                    out_set->tokens.Append({TokenKind::If, line});
-                } else if (ident == "else") {
-                    out_set->tokens.Append({TokenKind::Else, line});
-                } else if (ident == "while") {
-                    out_set->tokens.Append({TokenKind::While, line});
+                if (ident == "let") {
+                    out_set->tokens.Append({TokenKind::Let, line});
                 } else if (ident == "true") {
                     out_set->tokens.Append({TokenKind::Bool, line, {.b = true}});
                 } else if (ident == "false") {

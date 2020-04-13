@@ -6,9 +6,7 @@
     #error Please define TOKEN() before including tokens.inc
 #endif
 
-TOKEN(If, "if")
-TOKEN(Else, "else")
-TOKEN(While, "while")
+TOKEN(Let, "let")
 
 TOKEN(LeftParenthesis, "(")
 TOKEN(RightParenthesis, ")")
