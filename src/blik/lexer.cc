@@ -385,6 +385,9 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
         }
     }
 
+    // Newlines are used to end statements. Make sure the last statement has one.
+    out_set->tokens.Append(Token(TokenType::NewLine, line));
+
     if (valid) {
         out_guard.Disable();
     }
