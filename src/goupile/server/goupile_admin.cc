@@ -235,7 +235,7 @@ Options:
     return 0;
 }
 
-int RunGoupileAdmin(int argc, char **argv)
+int Main(int argc, char **argv)
 {
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: goupile_admin <command> [<args>]
@@ -277,4 +277,4 @@ Commands:
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunGoupileAdmin(argc, argv); }
+int main(int argc, char **argv) { return RG::Main(argc, argv); }

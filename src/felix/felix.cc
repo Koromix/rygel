@@ -9,7 +9,7 @@ namespace RG {
 int RunBuild(Span<const char *> arguments);
 int RunPack(Span<const char *> arguments);
 
-int RunFelix(int argc, char **argv)
+int Main(int argc, char **argv)
 {
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: felix <command> [<args>]
@@ -62,4 +62,4 @@ You may be more interested by the build command help, type: felix build --help)"
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunFelix(argc, argv); }
+int main(int argc, char **argv) { return RG::Main(argc, argv); }

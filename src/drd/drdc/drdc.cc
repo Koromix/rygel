@@ -55,7 +55,7 @@ bool HandleCommonOption(OptionParser &opt)
     return true;
 }
 
-int RunDrdc(int argc, char **argv)
+int Main(int argc, char **argv)
 {
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc <command> [<args>]
@@ -145,4 +145,4 @@ Commands:
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunDrdc(argc, argv); }
+int main(int argc, char **argv) { return RG::Main(argc, argv); }

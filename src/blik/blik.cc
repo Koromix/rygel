@@ -9,7 +9,7 @@
 
 namespace RG {
 
-int RunBlik(int argc, char **argv)
+int Main(int argc, char **argv)
 {
     // Options
     bool run_inline = false;
@@ -80,4 +80,4 @@ Options:
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunBlik(argc, argv); }
+int main(int argc, char **argv) { return RG::Main(argc, argv); }

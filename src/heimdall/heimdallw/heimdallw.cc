@@ -10,7 +10,7 @@ namespace RG {
 
 extern "C" const AssetInfo *const pack_asset_Roboto_Medium_ttf;
 
-int RunHeimdallW(int, char **)
+int Main(int, char **)
 {
     InterfaceState render_state = {};
     HeapArray<ConceptSet> concept_sets;
@@ -47,4 +47,4 @@ int RunHeimdallW(int, char **)
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunHeimdallW(argc, argv); }
+int main(int argc, char **argv) { return RG::Main(argc, argv); }
