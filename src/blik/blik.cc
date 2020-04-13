@@ -11,21 +11,64 @@ namespace RG {
 
 int RunBlik(int argc, char **argv)
 {
-    if (argc < 2) {
-        PrintLn(stderr, "Usage: blik <file> ...");
-        return 1;
+    // Options
+    bool run_inline = false;
+    HeapArray<const char *> filenames;
+
+    const auto print_usage = [](FILE *fp) {
+        PrintLn(fp, R"(Usage: blik [options] <file> ...
+
+Options:
+    -i, --inline                 Run code directly from arguments)");
+    };
+
+    // Handle version
+    if (argc >= 2 && TestStr(argv[1], "--version")) {
+        PrintLn("blik %1", FelixVersion);
+        return 0;
     }
 
-    for (Size i = 1; i < argc; i++) {
-        HeapArray<char> code;
-        if (ReadFile(argv[i], Megabytes(8), &code) < 0)
-            return 1;
+    // Parse arguments
+    {
+        OptionParser opt(argc, argv);
 
-        TokenSet token_set;
-        HeapArray<Instruction> ir;
-        if (!Tokenize(code, argv[i], &token_set))
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(stdout);
+                return 0;
+            } else if (opt.Test("-i", "--inline")) {
+                run_inline = true;
+            } else {
+                LogError("Cannot handle option '%1'", opt.current_option);
+                return 1;
+            }
+        }
+
+        opt.ConsumeNonOptions(&filenames);
+        if (!filenames.len) {
+            LogError("No script provided");
             return 1;
-        if (!Parse(token_set.tokens, argv[i], &ir))
+        }
+    }
+
+    for (const char *filename: filenames) {
+        TokenSet token_set;
+        if (run_inline) {
+            if (!Tokenize(filename, "<inline>", &token_set))
+                return 1;
+
+            filename = "<inline>";
+        } else {
+            HeapArray<char> code;
+            if (ReadFile(filename, Megabytes(8), &code) < 0)
+                return 1;
+
+            if (!Tokenize(code, filename, &token_set))
+                return 1;
+        }
+
+        HeapArray<Instruction> ir;
+        if (!Parse(token_set.tokens, filename, &ir))
             return 1;
 
         Run(ir);
