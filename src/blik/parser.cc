@@ -23,7 +23,7 @@ static const char *const TypeNames[] = {
 
 class Parser {
     struct PendingOperator {
-        TokenType type;
+        TokenKind kind;
         int prec;
         bool unary;
 
@@ -48,7 +48,7 @@ private:
     bool EmitOperator1(Type in_type, Opcode code, Type out_type);
     bool EmitOperator2(Type in_type, Opcode code, Type out_type);
 
-    void ConsumeToken(TokenType type);
+    void ConsumeToken(TokenKind kind);
 
     template <typename... Args>
     void MarkError(const char *fmt, Args... args)
@@ -60,48 +60,48 @@ private:
     }
 };
 
-static int GetOperatorPrecedence(TokenType type)
+static int GetOperatorPrecedence(TokenKind kind)
 {
-    switch (type) {
-        case TokenType::LogicOr: { return 2; } break;
-        case TokenType::LogicAnd: { return 3; } break;
-        case TokenType::Equal: { return 4; } break;
-        case TokenType::NotEqual: { return 4; } break;
-        case TokenType::Greater: { return 5; } break;
-        case TokenType::GreaterOrEqual: { return 5; } break;
-        case TokenType::Less: { return 5; } break;
-        case TokenType::LessOrEqual: { return 5; } break;
-        case TokenType::Or: { return 6; } break;
-        case TokenType::Xor: { return 7; } break;
-        case TokenType::And: { return 8; } break;
-        case TokenType::LeftShift: { return 9; } break;
-        case TokenType::RightShift: { return 9; } break;
-        case TokenType::Plus: { return 10; } break;
-        case TokenType::Minus: { return 10; } break;
-        case TokenType::Multiply: { return 11; } break;
-        case TokenType::Divide: { return 11; } break;
-        case TokenType::Modulo: { return 11; } break;
-        case TokenType::Not: { return 12; } break;
-        case TokenType::LogicNot: { return 12; } break;
+    switch (kind) {
+        case TokenKind::LogicOr: { return 2; } break;
+        case TokenKind::LogicAnd: { return 3; } break;
+        case TokenKind::Equal: { return 4; } break;
+        case TokenKind::NotEqual: { return 4; } break;
+        case TokenKind::Greater: { return 5; } break;
+        case TokenKind::GreaterOrEqual: { return 5; } break;
+        case TokenKind::Less: { return 5; } break;
+        case TokenKind::LessOrEqual: { return 5; } break;
+        case TokenKind::Or: { return 6; } break;
+        case TokenKind::Xor: { return 7; } break;
+        case TokenKind::And: { return 8; } break;
+        case TokenKind::LeftShift: { return 9; } break;
+        case TokenKind::RightShift: { return 9; } break;
+        case TokenKind::Plus: { return 10; } break;
+        case TokenKind::Minus: { return 10; } break;
+        case TokenKind::Multiply: { return 11; } break;
+        case TokenKind::Divide: { return 11; } break;
+        case TokenKind::Modulo: { return 11; } break;
+        case TokenKind::Not: { return 12; } break;
+        case TokenKind::LogicNot: { return 12; } break;
 
         default: { return -1; } break;
     }
 }
 
-static bool IsUnaryOperator(TokenType type)
+static bool IsUnaryOperator(TokenKind kind)
 {
-    switch (type) {
-        case TokenType::Not: { return true; } break;
-        case TokenType::LogicNot: { return true; } break;
+    switch (kind) {
+        case TokenKind::Not: { return true; } break;
+        case TokenKind::LogicNot: { return true; } break;
 
         default: { return false; } break;
     }
 }
 
-static bool IsOperand(TokenType type)
+static bool IsOperand(TokenKind kind)
 {
-    return type == TokenType::Bool || type == TokenType::Integer || type == TokenType::Double ||
-           type == TokenType::String || type == TokenType::Identifier;
+    return kind == TokenKind::Bool || kind == TokenKind::Integer || kind == TokenKind::Double ||
+           kind == TokenKind::String || kind == TokenKind::Identifier;
 }
 
 bool Parser::Parse(Span<const Token> tokens, const char *filename)
@@ -124,12 +124,12 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
     RG_DEFER { PopLogFilter(); };
 
     while (valid && offset < tokens.len) {
-        switch (tokens[offset].type) {
-            case TokenType::NewLine: { offset++; } break;
+        switch (tokens[offset].kind) {
+            case TokenKind::NewLine: { offset++; } break;
 
             default: {
                 ParseExpression();
-                ConsumeToken(TokenType::NewLine);
+                ConsumeToken(TokenKind::NewLine);
 
                 ir.Append({Opcode::Pop});
             } break;
@@ -150,12 +150,12 @@ void Parser::ParseExpression()
     for (; offset < tokens.len; offset++) {
         const Token &tok = tokens[offset];
 
-        if (tok.type == TokenType::LeftParenthesis) {
+        if (tok.kind == TokenKind::LeftParenthesis) {
             if (RG_UNLIKELY(expect_op))
                 goto expected_op;
 
-            operators.Append({tok.type});
-        } else if (tok.type == TokenType::RightParenthesis) {
+            operators.Append({tok.kind});
+        } else if (tok.kind == TokenKind::RightParenthesis) {
             if (RG_UNLIKELY(!expect_op))
                 goto expected_value;
             expect_op = true;
@@ -168,7 +168,7 @@ void Parser::ParseExpression()
 
                 const PendingOperator &op = operators.data[operators.len - 1];
 
-                if (op.type == TokenType::LeftParenthesis) {
+                if (op.kind == TokenKind::LeftParenthesis) {
                     operators.len--;
                     break;
                 }
@@ -176,18 +176,18 @@ void Parser::ParseExpression()
                 ProduceOperator(op);
                 operators.len--;
             }
-        } else if (IsOperand(tok.type)) {
+        } else if (IsOperand(tok.kind)) {
             if (RG_UNLIKELY(expect_op))
                 goto expected_op;
             expect_op = true;
 
-            switch (tok.type) {
-                case TokenType::Bool: {
+            switch (tok.kind) {
+                case TokenKind::Bool: {
                     ir.Append({Opcode::PushBool, {.b = tok.u.b}});
                     types.Append(Type::Bool);
                 } break;
-                case TokenType::Integer: {
-                    if (operators.len && operators[operators.len - 1].type == TokenType::Minus &&
+                case TokenKind::Integer: {
+                    if (operators.len && operators[operators.len - 1].kind == TokenKind::Minus &&
                                          operators[operators.len - 1].unary) {
                         operators.RemoveLast(1);
 
@@ -198,8 +198,8 @@ void Parser::ParseExpression()
                         types.Append(Type::Integer);
                     }
                 } break;
-                case TokenType::Double: {
-                    if (operators.len && operators[operators.len - 1].type == TokenType::Minus &&
+                case TokenKind::Double: {
+                    if (operators.len && operators[operators.len - 1].kind == TokenKind::Minus &&
                                          operators[operators.len - 1].unary) {
                         operators.RemoveLast(1);
 
@@ -210,20 +210,20 @@ void Parser::ParseExpression()
                         types.Append(Type::Double);
                     }
                 } break;
-                case TokenType::String: {
+                case TokenKind::String: {
                     ir.Append({Opcode::PushString, {.str = tok.u.str}});
                     types.Append(Type::String);
                 } break;
-                case TokenType::Identifier: { RG_ASSERT(false); } break;
+                case TokenKind::Identifier: { RG_ASSERT(false); } break;
 
                 default: { RG_ASSERT(false); } break;
             }
         } else {
-            int prec = GetOperatorPrecedence(tok.type);
-            bool unary = IsUnaryOperator(tok.type);
+            int prec = GetOperatorPrecedence(tok.kind);
+            bool unary = IsUnaryOperator(tok.kind);
 
             if (RG_UNLIKELY(prec < 0)) {
-                if (!expect_op && tok.type == TokenType::NewLine) {
+                if (!expect_op && tok.kind == TokenKind::NewLine) {
                     // Expression is split across multiple lines
                     continue;
                 } else {
@@ -231,9 +231,9 @@ void Parser::ParseExpression()
                 }
             }
             if (RG_UNLIKELY(expect_op == unary)) {
-                if (tok.type == TokenType::Plus) {
+                if (tok.kind == TokenKind::Plus) {
                     continue;
-                } else if (tok.type == TokenType::Minus) {
+                } else if (tok.kind == TokenKind::Minus) {
                     prec = 12;
                     unary = true;
                 } else if (expect_op) {
@@ -260,14 +260,14 @@ void Parser::ParseExpression()
             }
 
             // Short-circuit operators need a short-circuit branch
-            if (tok.type == TokenType::LogicAnd) {
-                operators.Append({tok.type, prec, unary, ir.len});
+            if (tok.kind == TokenKind::LogicAnd) {
+                operators.Append({tok.kind, prec, unary, ir.len});
                 ir.Append({Opcode::BranchIfFalse});
-            } else if (tok.type == TokenType::LogicOr) {
-                operators.Append({tok.type, prec, unary, ir.len});
+            } else if (tok.kind == TokenKind::LogicOr) {
+                operators.Append({tok.kind, prec, unary, ir.len});
                 ir.Append({Opcode::BranchIfTrue});
             } else {
-                operators.Append({tok.type, prec, unary});
+                operators.Append({tok.kind, prec, unary});
             }
         }
     }
@@ -280,7 +280,7 @@ void Parser::ParseExpression()
     for (Size i = operators.len - 1; i >= 0; i--) {
         const PendingOperator &op = operators[i];
 
-        if (RG_UNLIKELY(op.type == TokenType::LeftParenthesis)) {
+        if (RG_UNLIKELY(op.kind == TokenKind::LeftParenthesis)) {
             MarkError("Missing closing parenthesis");
             return;
         }
@@ -291,10 +291,10 @@ void Parser::ParseExpression()
     return;
 
 expected_op:
-    MarkError("Unexpected token '%1', expected operator or ')'", TokenTypeNames[(int)tokens[offset].type]);
+    MarkError("Unexpected token '%1', expected operator or ')'", TokenKindNames[(int)tokens[offset].kind]);
     return;
 expected_value:
-    MarkError("Unexpected token '%1', expected value or '('", TokenTypeNames[(int)tokens[offset].type]);
+    MarkError("Unexpected token '%1', expected value or '('", TokenKindNames[(int)tokens[offset].kind]);
     return;
 }
 
@@ -302,12 +302,12 @@ void Parser::ProduceOperator(const PendingOperator &op)
 {
     bool success;
 
-    switch (op.type) {
-        case TokenType::Plus: {
+    switch (op.kind) {
+        case TokenKind::Plus: {
             success = EmitOperator2(Type::Integer, Opcode::AddInt, Type::Integer) ||
                       EmitOperator2(Type::Double, Opcode::AddDouble, Type::Double);
         } break;
-        case TokenType::Minus: {
+        case TokenKind::Minus: {
             if (op.unary) {
                 success = EmitOperator1(Type::Integer, Opcode::NegateInt, Type::Integer) ||
                           EmitOperator1(Type::Double, Opcode::NegateDouble, Type::Double);
@@ -316,78 +316,78 @@ void Parser::ProduceOperator(const PendingOperator &op)
                           EmitOperator2(Type::Double, Opcode::SubstractDouble, Type::Double);
             }
         } break;
-        case TokenType::Multiply: {
+        case TokenKind::Multiply: {
             success = EmitOperator2(Type::Integer, Opcode::MultiplyInt, Type::Integer) ||
                       EmitOperator2(Type::Double, Opcode::MultiplyDouble, Type::Double);
         } break;
-        case TokenType::Divide: {
+        case TokenKind::Divide: {
             success = EmitOperator2(Type::Integer, Opcode::DivideInt, Type::Integer) ||
                       EmitOperator2(Type::Double, Opcode::DivideDouble, Type::Double);
         } break;
-        case TokenType::Modulo: {
+        case TokenKind::Modulo: {
             success = EmitOperator2(Type::Integer, Opcode::ModuloInt, Type::Integer);
         } break;
 
-        case TokenType::Equal: {
+        case TokenKind::Equal: {
             success = EmitOperator2(Type::Integer, Opcode::EqualInt, Type::Bool) ||
                       EmitOperator2(Type::Double, Opcode::EqualDouble, Type::Bool) ||
                       EmitOperator2(Type::Bool, Opcode::EqualBool, Type::Bool);
         } break;
-        case TokenType::NotEqual: {
+        case TokenKind::NotEqual: {
             success = EmitOperator2(Type::Integer, Opcode::NotEqualInt, Type::Bool) ||
                       EmitOperator2(Type::Double, Opcode::NotEqualDouble, Type::Bool) ||
                       EmitOperator2(Type::Bool, Opcode::NotEqualBool, Type::Bool);
         } break;
-        case TokenType::Greater: {
+        case TokenKind::Greater: {
             success = EmitOperator2(Type::Integer, Opcode::GreaterInt, Type::Bool) ||
                       EmitOperator2(Type::Double, Opcode::GreaterDouble, Type::Bool);
         } break;
-        case TokenType::GreaterOrEqual: {
+        case TokenKind::GreaterOrEqual: {
             success = EmitOperator2(Type::Integer, Opcode::GreaterOrEqualInt, Type::Bool) ||
                       EmitOperator2(Type::Double, Opcode::GreaterOrEqualDouble, Type::Bool);
         } break;
-        case TokenType::Less: {
+        case TokenKind::Less: {
             success = EmitOperator2(Type::Integer, Opcode::LessInt, Type::Bool) ||
                       EmitOperator2(Type::Double, Opcode::LessDouble, Type::Bool);
         } break;
-        case TokenType::LessOrEqual: {
+        case TokenKind::LessOrEqual: {
             success = EmitOperator2(Type::Integer, Opcode::LessOrEqualInt, Type::Bool) ||
                       EmitOperator2(Type::Double, Opcode::LessOrEqualDouble, Type::Bool);
         } break;
 
-        case TokenType::And: {
+        case TokenKind::And: {
             success = EmitOperator2(Type::Integer, Opcode::AndInt, Type::Integer) ||
                       EmitOperator2(Type::Bool, Opcode::AndBool, Type::Bool);
         } break;
-        case TokenType::Or: {
+        case TokenKind::Or: {
             success = EmitOperator2(Type::Integer, Opcode::OrInt, Type::Integer) ||
                       EmitOperator2(Type::Bool, Opcode::OrBool, Type::Bool);
         } break;
-        case TokenType::Xor: {
+        case TokenKind::Xor: {
             success = EmitOperator2(Type::Integer, Opcode::XorInt, Type::Integer) ||
                       EmitOperator2(Type::Bool, Opcode::XorBool, Type::Bool);
         } break;
-        case TokenType::Not: {
+        case TokenKind::Not: {
             success = EmitOperator1(Type::Integer, Opcode::NotInt, Type::Integer) ||
                       EmitOperator1(Type::Bool, Opcode::NotBool, Type::Bool);
         } break;
-        case TokenType::LeftShift: {
+        case TokenKind::LeftShift: {
             success = EmitOperator2(Type::Integer, Opcode::LeftShiftInt, Type::Integer);
         } break;
-        case TokenType::RightShift: {
+        case TokenKind::RightShift: {
             success = EmitOperator2(Type::Integer, Opcode::RightShiftInt, Type::Integer);
         } break;
 
-        case TokenType::LogicNot: {
+        case TokenKind::LogicNot: {
             success = EmitOperator1(Type::Bool, Opcode::NotBool, Type::Bool);
         } break;
-        case TokenType::LogicAnd: {
+        case TokenKind::LogicAnd: {
             success = EmitOperator2(Type::Bool, Opcode::AndBool, Type::Bool);
 
             RG_ASSERT(op.branch_idx && ir[op.branch_idx].code == Opcode::BranchIfFalse);
             ir[op.branch_idx].u.i = ir.len;
         } break;
-        case TokenType::LogicOr: {
+        case TokenKind::LogicOr: {
             success = EmitOperator2(Type::Bool, Opcode::OrBool, Type::Bool);
 
             RG_ASSERT(op.branch_idx && ir[op.branch_idx].code == Opcode::BranchIfTrue);
@@ -398,15 +398,15 @@ void Parser::ProduceOperator(const PendingOperator &op)
     }
 
     if (RG_UNLIKELY(!success)) {
-        if (IsUnaryOperator(op.type)) {
+        if (IsUnaryOperator(op.kind)) {
             MarkError("Cannot use '%1' operator on %2 value",
-                      TokenTypeNames[(int)op.type], TypeNames[(int)types[types.len - 1]]);
+                      TokenKindNames[(int)op.kind], TypeNames[(int)types[types.len - 1]]);
         } else if (types[types.len - 2] == types[types.len - 1]) {
             MarkError("Cannot use '%1' operator on %2 values",
-                      TokenTypeNames[(int)op.type], TypeNames[(int)types[types.len - 2]]);
+                      TokenKindNames[(int)op.kind], TypeNames[(int)types[types.len - 2]]);
         } else {
             MarkError("Cannot use '%1' operator on %2 and %3 values",
-                      TokenTypeNames[(int)op.type], TypeNames[(int)types[types.len - 2]], TypeNames[(int)types[types.len - 1]]);
+                      TokenKindNames[(int)op.kind], TypeNames[(int)types[types.len - 2]], TypeNames[(int)types[types.len - 1]]);
         }
     }
 }
@@ -446,15 +446,15 @@ void Parser::Finish(HeapArray<Instruction> *out_ir)
     SwapMemory(&ir, out_ir, RG_SIZE(ir));
 }
 
-void Parser::ConsumeToken(TokenType type)
+void Parser::ConsumeToken(TokenKind kind)
 {
     if (RG_UNLIKELY(offset >= tokens.len)) {
-        MarkError("Unexpected end, expected '%1'", TokenTypeNames[(int)type]);
+        MarkError("Unexpected end, expected '%1'", TokenKindNames[(int)kind]);
         return;
     }
-    if (RG_UNLIKELY(tokens[offset].type != type)) {
+    if (RG_UNLIKELY(tokens[offset].kind != kind)) {
         MarkError("Unexpected token '%1', expected '%2'",
-                  TokenTypeNames[(int)tokens[offset].type], TokenTypeNames[(int)type]);
+                  TokenKindNames[(int)tokens[offset].kind], TokenKindNames[(int)kind]);
         return;
     }
 

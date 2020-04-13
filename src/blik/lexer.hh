@@ -8,17 +8,17 @@
 
 namespace RG {
 
-enum class TokenType {
+enum class TokenKind {
     #define TOKEN(Type, Str) Type,
     #include "tokens.inc"
 };
-static const char *const TokenTypeNames[] = {
+static const char *const TokenKindNames[] = {
     #define TOKEN(Type, Str) (Str),
     #include "tokens.inc"
 };
 
 struct Token {
-    TokenType type;
+    TokenKind kind;
     int32_t line;
 
     union {
