@@ -12,14 +12,18 @@ namespace RG {
 int RunBlik(int argc, char **argv)
 {
     if (argc < 2) {
-        PrintLn(stderr, "Usage: blik <expression> ...");
+        PrintLn(stderr, "Usage: blik <file> ...");
         return 1;
     }
 
     for (Size i = 1; i < argc; i++) {
+        HeapArray<char> code;
+        if (ReadFile(argv[i], Megabytes(8), &code) < 0)
+            return 1;
+
         TokenSet token_set;
         HeapArray<Instruction> ir;
-        if (!Tokenize(argv[i], "<argv>", &token_set))
+        if (!Tokenize(code, "<argv>", &token_set))
             return 1;
         if (!Parse(token_set.tokens, &ir))
             return 1;
