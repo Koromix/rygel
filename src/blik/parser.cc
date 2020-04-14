@@ -8,20 +8,20 @@
 
 namespace RG {
 
+struct PendingOperator {
+    TokenKind kind;
+    int prec;
+    bool unary;
+
+    Size branch_idx; // Used for short-circuit operators
+};
+
+struct ExpressionValue {
+    Type type;
+    const VariableInfo *var;
+};
+
 class Parser {
-    struct PendingOperator {
-        TokenKind kind;
-        int prec;
-        bool unary;
-
-        Size branch_idx; // Used for short-circuit operators
-    };
-
-    struct ExpressionValue {
-        Type type;
-        const VariableInfo *var;
-    };
-
     bool valid = true;
 
     Span<const Token> tokens;
@@ -54,35 +54,6 @@ private:
         valid = false;
     }
 };
-
-static int GetOperatorPrecedence(TokenKind kind)
-{
-    switch (kind) {
-        case TokenKind::Reassign: { return 0; } break;
-        case TokenKind::LogicOr: { return 2; } break;
-        case TokenKind::LogicAnd: { return 3; } break;
-        case TokenKind::Equal: { return 4; } break;
-        case TokenKind::NotEqual: { return 4; } break;
-        case TokenKind::Greater: { return 5; } break;
-        case TokenKind::GreaterOrEqual: { return 5; } break;
-        case TokenKind::Less: { return 5; } break;
-        case TokenKind::LessOrEqual: { return 5; } break;
-        case TokenKind::Or: { return 6; } break;
-        case TokenKind::Xor: { return 7; } break;
-        case TokenKind::And: { return 8; } break;
-        case TokenKind::LeftShift: { return 9; } break;
-        case TokenKind::RightShift: { return 9; } break;
-        case TokenKind::Plus: { return 10; } break;
-        case TokenKind::Minus: { return 10; } break;
-        case TokenKind::Multiply: { return 11; } break;
-        case TokenKind::Divide: { return 11; } break;
-        case TokenKind::Modulo: { return 11; } break;
-        case TokenKind::Not: { return 12; } break;
-        case TokenKind::LogicNot: { return 12; } break;
-
-        default: { return -1; } break;
-    }
-}
 
 bool Parser::Parse(Span<const Token> tokens, const char *filename)
 {
@@ -186,6 +157,35 @@ void Parser::ParseDeclaration()
         program.variables.Append(var);
     } else {
         MarkError("Variable '%1' already exists", var.name);
+    }
+}
+
+static int GetOperatorPrecedence(TokenKind kind)
+{
+    switch (kind) {
+        case TokenKind::Reassign: { return 0; } break;
+        case TokenKind::LogicOr: { return 2; } break;
+        case TokenKind::LogicAnd: { return 3; } break;
+        case TokenKind::Equal: { return 4; } break;
+        case TokenKind::NotEqual: { return 4; } break;
+        case TokenKind::Greater: { return 5; } break;
+        case TokenKind::GreaterOrEqual: { return 5; } break;
+        case TokenKind::Less: { return 5; } break;
+        case TokenKind::LessOrEqual: { return 5; } break;
+        case TokenKind::Or: { return 6; } break;
+        case TokenKind::Xor: { return 7; } break;
+        case TokenKind::And: { return 8; } break;
+        case TokenKind::LeftShift: { return 9; } break;
+        case TokenKind::RightShift: { return 9; } break;
+        case TokenKind::Plus: { return 10; } break;
+        case TokenKind::Minus: { return 10; } break;
+        case TokenKind::Multiply: { return 11; } break;
+        case TokenKind::Divide: { return 11; } break;
+        case TokenKind::Modulo: { return 11; } break;
+        case TokenKind::Not: { return 12; } break;
+        case TokenKind::LogicNot: { return 12; } break;
+
+        default: { return -1; } break;
     }
 }
 
