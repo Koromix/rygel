@@ -212,14 +212,14 @@ void Run(const Program &program)
                 stack[--stack.len - 1].b = b1 ^ b2;
             } break;
 
-            case Opcode::Jump: { pc = (Size)inst.u.i - 1; } break;
+            case Opcode::Jump: { pc += (Size)inst.u.i - 1; } break;
             case Opcode::BranchIfTrue: {
                 bool b = stack[stack.len - 1].b;
-                pc = b ? (Size)(inst.u.i - 1) : pc;
+                pc += b ? (Size)(inst.u.i - 1) : 0;
             } break;
             case Opcode::BranchIfFalse: {
                 bool b = stack[stack.len - 1].b;
-                pc = b ? pc : (Size)(inst.u.i - 1);
+                pc += b ? 0 : (Size)(inst.u.i - 1);
             } break;
         }
     }

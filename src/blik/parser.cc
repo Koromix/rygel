@@ -516,13 +516,13 @@ void Parser::ProduceOperator(const PendingOperator &op)
             success = EmitOperator2(Type::Bool, Opcode::AndBool, Type::Bool);
 
             RG_ASSERT(op.branch_idx && program.ir[op.branch_idx].code == Opcode::BranchIfFalse);
-            program.ir[op.branch_idx].u.i = program.ir.len;
+            program.ir[op.branch_idx].u.i = program.ir.len - op.branch_idx;
         } break;
         case TokenKind::LogicOr: {
             success = EmitOperator2(Type::Bool, Opcode::OrBool, Type::Bool);
 
             RG_ASSERT(op.branch_idx && program.ir[op.branch_idx].code == Opcode::BranchIfTrue);
-            program.ir[op.branch_idx].u.i = program.ir.len;
+            program.ir[op.branch_idx].u.i = program.ir.len - op.branch_idx;
         } break;
 
         default: { RG_ASSERT(false); } break;
