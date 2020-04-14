@@ -62,5 +62,7 @@ OPCODE(XorBool)
 OPCODE(Jump)
 OPCODE(BranchIfTrue)
 OPCODE(BranchIfFalse)
+OPCODE(SkipIfTrue)
+OPCODE(SkipIfFalse)
 
 #undef OPCODE

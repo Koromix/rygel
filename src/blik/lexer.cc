@@ -325,6 +325,12 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     Token1(TokenKind::Do);
                 } else if (ident == "end") {
                     Token1(TokenKind::End);
+                } else if (ident == "if") {
+                    Token1(TokenKind::If);
+                } else if (ident == "elif") {
+                    Token1(TokenKind::ElIf);
+                } else if (ident == "else") {
+                    Token1(TokenKind::Else);
                 } else if (ident == "true") {
                     set.tokens.Append({TokenKind::Bool, line, {.b = true}});
                 } else if (ident == "false") {

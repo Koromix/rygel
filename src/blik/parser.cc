@@ -29,6 +29,7 @@ class Parser {
 
     // Reuse for performance
     HeapArray<ExpressionValue> values;
+    HeapArray<Size> jumps;
 
     Program program;
 
@@ -37,6 +38,7 @@ public:
     void Finish(Program *out_program);
 
 private:
+    void ParseIf();
     void ParseBlock();
     void ParseExpression(Type *out_type = nullptr);
     void ParseDeclaration();
@@ -44,6 +46,8 @@ private:
     void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(Type in_type, Opcode code, Type out_type);
     bool EmitOperator2(Type in_type, Opcode code, Type out_type);
+
+    void EmitPop(int64_t count);
 
     bool ConsumeToken(TokenKind kind);
     bool MatchToken(TokenKind kind);
@@ -100,12 +104,14 @@ void Parser::ParseBlock()
 {
     while (valid && offset < tokens.len) {
         switch (tokens[offset++].kind) {
-            case TokenKind::End: {
+            case TokenKind::End:
+            case TokenKind::ElIf:
+            case TokenKind::Else: {
                 offset--;
                 return;
             } break;
 
-            case TokenKind::NewLine: { } break;
+            case TokenKind::NewLine: {} break;
 
             case TokenKind::Let: {
                 ParseDeclaration();
@@ -122,19 +128,104 @@ void Parser::ParseBlock()
                     return;
                 }
 
-                program.ir.Append({Opcode::Pop, {.i = program.variables.len - stack_len}});
+                EmitPop(program.variables.len - stack_len);
                 DestroyVariables(stack_len);
+            } break;
+
+            case TokenKind::If: {
+                ParseIf();
+                ConsumeToken(TokenKind::NewLine);
             } break;
 
             default: {
                 offset--;
 
                 ParseExpression();
-                program.ir.Append({Opcode::Pop, {.i = 1}});
+                EmitPop(1);
 
                 ConsumeToken(TokenKind::NewLine);
             } break;
         }
+    }
+}
+
+void Parser::ParseIf()
+{
+    jumps.RemoveFrom(0);
+
+    Type type;
+    ParseExpression(&type);
+    if (type != Type::Bool) {
+        MarkError("Cannot use non-Bool expression as condition");
+        return;
+    }
+    ConsumeToken(TokenKind::NewLine);
+
+    Size branch_idx = program.ir.len;
+    program.ir.Append({Opcode::BranchIfFalse});
+
+    // Deal with the mandatory block first
+    {
+        Size stack_len = program.variables.len;
+
+        ParseBlock();
+
+        EmitPop(program.variables.len - stack_len);
+        DestroyVariables(stack_len);
+
+        jumps.Append(program.ir.len);
+        program.ir.Append({Opcode::Jump});
+    }
+
+    while (MatchToken(TokenKind::ElIf)) {
+        program.ir[branch_idx].u.i = program.ir.len - branch_idx;
+
+        Type type;
+        ParseExpression(&type);
+        if (type != Type::Bool) {
+            MarkError("Cannot use non-Bool expression as condition");
+            return;
+        }
+        ConsumeToken(TokenKind::NewLine);
+
+        Size stack_len = program.variables.len;
+
+        branch_idx = program.ir.len;
+        program.ir.Append({Opcode::BranchIfFalse});
+
+        ParseBlock();
+
+        EmitPop(program.variables.len - stack_len);
+        DestroyVariables(stack_len);
+
+        jumps.Append(program.ir.len);
+        program.ir.Append({Opcode::Jump});
+    }
+
+    if (MatchToken(TokenKind::Else)) {
+        program.ir[branch_idx].u.i = program.ir.len - branch_idx;
+
+        ConsumeToken(TokenKind::NewLine);
+
+        Size stack_len = program.variables.len;
+
+        ParseBlock();
+        if (RG_UNLIKELY(!MatchToken(TokenKind::End))) {
+            MarkError("Unclosed block");
+            return;
+        }
+
+        EmitPop(program.variables.len - stack_len);
+        DestroyVariables(stack_len);
+    } else if (RG_LIKELY(MatchToken(TokenKind::End))) {
+        program.ir[branch_idx].u.i = program.ir.len;
+    } else {
+        MarkError("Unclosed block");
+        return;
+    }
+
+    for (Size jump_idx: jumps) {
+        program.ir[jump_idx].u.i = program.ir.len - jump_idx;
     }
 }
 
@@ -365,10 +456,10 @@ void Parser::ParseExpression(Type *out_type)
                 program.ir.RemoveLast(1); // Remove load instruction
             } else if (tok.kind == TokenKind::LogicAnd) {
                 op.branch_idx = program.ir.len;
-                program.ir.Append({Opcode::BranchIfFalse});
+                program.ir.Append({Opcode::SkipIfFalse});
             } else if (tok.kind == TokenKind::LogicOr) {
                 op.branch_idx = program.ir.len;
-                program.ir.Append({Opcode::BranchIfTrue});
+                program.ir.Append({Opcode::SkipIfTrue});
             }
 
             if (RG_UNLIKELY(!operators.Available())) {
@@ -515,13 +606,13 @@ void Parser::ProduceOperator(const PendingOperator &op)
         case TokenKind::LogicAnd: {
             success = EmitOperator2(Type::Bool, Opcode::AndBool, Type::Bool);
 
-            RG_ASSERT(op.branch_idx && program.ir[op.branch_idx].code == Opcode::BranchIfFalse);
+            RG_ASSERT(op.branch_idx && program.ir[op.branch_idx].code == Opcode::SkipIfFalse);
             program.ir[op.branch_idx].u.i = program.ir.len - op.branch_idx;
         } break;
         case TokenKind::LogicOr: {
             success = EmitOperator2(Type::Bool, Opcode::OrBool, Type::Bool);
 
-            RG_ASSERT(op.branch_idx && program.ir[op.branch_idx].code == Opcode::BranchIfTrue);
+            RG_ASSERT(op.branch_idx && program.ir[op.branch_idx].code == Opcode::SkipIfTrue);
             program.ir[op.branch_idx].u.i = program.ir.len - op.branch_idx;
         } break;
 
@@ -569,6 +660,17 @@ bool Parser::EmitOperator2(Type in_type, Opcode code, Type out_type)
         return true;
     } else {
         return false;
+    }
+}
+
+void Parser::EmitPop(int64_t count)
+{
+    RG_ASSERT(count >= 0);
+
+    if (program.ir.len && program.ir[program.ir.len - 1].code == Opcode::Pop) {
+        program.ir[program.ir.len - 1].u.i += count;
+    } else if (count) {
+        program.ir.Append({Opcode::Pop, {.i = count}});
     }
 }
 

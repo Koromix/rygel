@@ -10,6 +10,10 @@ TOKEN(Let, "let")
 
 TOKEN(Do, "do")
 TOKEN(End, "end")
+TOKEN(If, "if")
+TOKEN(ElIf, "elif")
+TOKEN(Else, "else")
+TOKEN(While, "while")
 TOKEN(LeftParenthesis, "(")
 TOKEN(RightParenthesis, ")")
 

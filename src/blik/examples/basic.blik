@@ -43,3 +43,16 @@ end
 let foo: String = "Hello," # OK
 # let bar: Integer = "World!" # This is an error and would not work if uncommented
 let empty: Double
+
+if empty < 1.0
+    let blik = 2.0
+    p := 227
+elif true
+    let blik = 3.0
+    p := 89
+else
+    let blik = 4.0
+    p := 226
+end
+
+let end_of_script = "We're done!"
