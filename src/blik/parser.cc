@@ -127,7 +127,7 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
 
             default: {
                 ParseExpression();
-                program.ir.Append({Opcode::Pop});
+                program.ir.Append({Opcode::Pop, {.i = 1}});
 
                 ConsumeToken(TokenKind::NewLine);
             } break;

@@ -28,6 +28,7 @@ void Run(const Program &program)
             case Opcode::PushInt: { LogDebug("(0x%1) PushInt %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
             case Opcode::PushDouble: { LogDebug("(0x%1) PushDouble %2", FmtHex(pc).Pad0(-5), inst.u.d); } break;
             case Opcode::PushString: { LogDebug("(0x%1) PushString %2", FmtHex(pc).Pad0(-5), inst.u.str); } break;
+            case Opcode::Pop: { LogDebug("(0x%1) Pop %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
             case Opcode::StoreBool: { LogDebug("(0x%1) StoreBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
             case Opcode::StoreInt: { LogDebug("(0x%1) StoreInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
@@ -50,7 +51,7 @@ void Run(const Program &program)
             case Opcode::PushInt: { stack.Append({.i = inst.u.i}); } break;
             case Opcode::PushDouble: { stack.Append({.d = inst.u.d}); } break;
             case Opcode::PushString: { stack.Append({.str = inst.u.str}); } break;
-            case Opcode::Pop: { stack.RemoveLast(1); } break;
+            case Opcode::Pop: { stack.RemoveLast(inst.u.i); } break;
 
             case Opcode::StoreBool: { stack[inst.u.i].b = stack[stack.len-- - 1].b; } break;
             case Opcode::StoreInt: { stack[inst.u.i].i = stack[stack.len-- - 1].i; } break;

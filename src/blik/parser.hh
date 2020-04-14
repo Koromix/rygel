@@ -23,7 +23,8 @@ struct Instruction {
     Opcode code;
     union {
         bool b; // PushBool
-        int64_t i; // PushInteger, StoreBool, StoreInt, StoreDouble, StoreString,
+        int64_t i; // PushInteger, Pop,
+                   // StoreBool, StoreInt, StoreDouble, StoreString,
                    // LoadBool, LoadInt, LoadDouble, LoadString,
                    // Jump, BranchIfTrue, BranchIfFalse
         double d; // PushDouble
