@@ -289,7 +289,7 @@ void Parser::ParseExpression(Type *out_type)
             while (operators.len) {
                 const PendingOperator &op = operators[operators.len - 1];
 
-                if (prec > op.prec - op.unary)
+                if (prec > op.prec - (op.unary || op.kind == TokenKind::Assign))
                     break;
 
                 ProduceOperator(op);
