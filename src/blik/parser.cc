@@ -60,7 +60,7 @@ private:
 static int GetOperatorPrecedence(TokenKind kind)
 {
     switch (kind) {
-        case TokenKind::Assign: { return 0; } break;
+        case TokenKind::Reassign: { return 0; } break;
         case TokenKind::LogicOr: { return 2; } break;
         case TokenKind::LogicAnd: { return 3; } break;
         case TokenKind::Equal: { return 4; } break;
@@ -133,7 +133,7 @@ void Parser::ParseDeclaration()
     VariableInfo var = {};
 
     var.name = tokens[offset - 1].u.str;
-    if (MatchToken(TokenKind::Assign)) {
+    if (MatchToken(TokenKind::Equal)) {
         ParseExpression(&var.type);
     } else if (MatchToken(TokenKind::Colon)) {
         if (RG_UNLIKELY(!ConsumeToken(TokenKind::Identifier)))
@@ -145,7 +145,7 @@ void Parser::ParseDeclaration()
             MarkError("Type '%1' is not valid", type_name);
         }
 
-        if (MatchToken(TokenKind::Assign)) {
+        if (MatchToken(TokenKind::Equal)) {
             Type type2;
             ParseExpression(&type2);
 
@@ -307,7 +307,7 @@ void Parser::ParseExpression(Type *out_type)
 
             while (operators.len) {
                 const PendingOperator &op2 = operators[operators.len - 1];
-                bool right_associative = (op2.unary || op2.kind == TokenKind::Assign);
+                bool right_associative = (op2.unary || op2.kind == TokenKind::Reassign);
 
                 if (op2.kind == TokenKind::LeftParenthesis)
                     break;
@@ -318,7 +318,7 @@ void Parser::ParseExpression(Type *out_type)
                 operators.len--;
             }
 
-            if (tok.kind == TokenKind::Assign) {
+            if (tok.kind == TokenKind::Reassign) {
                 program.ir.RemoveLast(1); // Remove load instruction
             } else if (tok.kind == TokenKind::LogicAnd) {
                 op.branch_idx = program.ir.len;
@@ -369,7 +369,7 @@ void Parser::ProduceOperator(const PendingOperator &op)
     bool success;
 
     switch (op.kind) {
-        case TokenKind::Assign: {
+        case TokenKind::Reassign: {
             const ExpressionValue &value1 = values[values.len - 2];
             const ExpressionValue &value2 = values[values.len - 1];
 

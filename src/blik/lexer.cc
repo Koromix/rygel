@@ -314,20 +314,20 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
             case '%': { out_set->tokens.Append({TokenKind::Modulo, line}); } break;
             case '^': { out_set->tokens.Append({TokenKind::Xor, line}); } break;
             case '~': { out_set->tokens.Append({TokenKind::Not, line}); } break;
-            case ':': { out_set->tokens.Append({TokenKind::Colon, line}); } break;
+            case ':': {
+                if (j < code.len && code[j] == '=') {
+                    out_set->tokens.Append({TokenKind::Reassign, line});
+                    j++;
+                } else {
+                    out_set->tokens.Append({TokenKind::Colon, line});
+                }
+            } break;
             case '(': { out_set->tokens.Append({TokenKind::LeftParenthesis, line}); } break;
             case ')': { out_set->tokens.Append({TokenKind::RightParenthesis, line}); } break;
             case '{': { out_set->tokens.Append({TokenKind::LeftBrace, line}); } break;
             case '}': { out_set->tokens.Append({TokenKind::RightBrace, line}); } break;
 
-            case '=': {
-                if (j < code.len && code[j] == '=') {
-                    out_set->tokens.Append({TokenKind::Equal, line});
-                    j++;
-                } else {
-                    out_set->tokens.Append({TokenKind::Assign, line});
-                }
-            } break;
+            case '=': { out_set->tokens.Append({TokenKind::Equal, line}); } break;
             case '!': {
                 if (j < code.len && code[j] == '=') {
                     out_set->tokens.Append({TokenKind::NotEqual, line});

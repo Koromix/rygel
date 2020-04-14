@@ -8,7 +8,6 @@
 
 TOKEN(Let, "let")
 
-TOKEN(Colon, ":")
 TOKEN(LeftParenthesis, "(")
 TOKEN(RightParenthesis, ")")
 TOKEN(LeftBrace, "{")
@@ -19,8 +18,6 @@ TOKEN(Integer, "<integer>")
 TOKEN(Double, "<double>")
 TOKEN(String, "<string>")
 TOKEN(Identifier, "<identifier>")
-
-TOKEN(Assign, "=")
 
 TOKEN(Plus, "+")
 TOKEN(Minus, "-")
@@ -39,7 +36,9 @@ TOKEN(LogicNot, "!")
 TOKEN(LogicAnd, "&&")
 TOKEN(LogicOr, "||")
 
-TOKEN(Equal, "==")
+TOKEN(Colon, ":")
+TOKEN(Reassign, ":=")
+TOKEN(Equal, "=")
 TOKEN(NotEqual, "!=")
 TOKEN(Greater, ">")
 TOKEN(GreaterOrEqual, ">=")
