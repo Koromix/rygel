@@ -83,7 +83,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                                 value = (value * 2) + digit;
                             } else if (RG_UNLIKELY(digit < 10)) {
                                 MarkError("Invalid binary digit '%1'", code[next]);
-                                break;
+                                return false;
                             } else {
                                 break;
                             }
@@ -91,6 +91,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
 
                         if (RG_UNLIKELY(overflow)) {
                             MarkError("Number literal is too large (max = %1)", INT64_MAX);
+                            return false;
                         }
 
                         set.tokens.Append({TokenKind::Integer, line, {.i = value}});
@@ -107,7 +108,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                                 value = (value * 8) + digit;
                             } else if (RG_UNLIKELY(digit < 10)) {
                                 MarkError("Invalid octal digit '%1'", code[next]);
-                                break;
+                                return false;
                             } else {
                                 break;
                             }
@@ -115,6 +116,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
 
                         if (RG_UNLIKELY(overflow)) {
                             MarkError("Number literal is too large (max = %1)", INT64_MAX);
+                            return false;
                         }
 
                         set.tokens.Append({TokenKind::Integer, line, {.i = value}});
@@ -141,7 +143,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                                 value = (value * 16) + (code[next] - 'a' + 10);
                             } else if (RG_UNLIKELY(IsAsciiAlpha(code[next]))) {
                                 MarkError("Invalid hexadecimal digit '%1'", code[next]);
-                                break;
+                                return false;
                             } else {
                                 break;
                             }
@@ -149,13 +151,14 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
 
                         if (RG_UNLIKELY(overflow)) {
                             MarkError("Number literal is too large (max = %1)", INT64_MAX);
+                            return false;
                         }
 
                         set.tokens.Append({TokenKind::Integer, line, {.i = value}});
                         continue;
                     } else {
                         MarkError("Invalid literal base character '%1'", code[next]);
-                        break;
+                        return false;
                     }
                 }
             } RG_FALLTHROUGH;
@@ -197,13 +200,14 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
 
                     if (RG_UNLIKELY(errno == ERANGE)) {
                         MarkError("Double value exceeds supported range");
-                        break;
+                        return false;
                     }
 
                     set.tokens.Append({TokenKind::Double, line, {.d = d}});
                 } else {
                     if (RG_UNLIKELY(overflow)) {
                         MarkError("Number literal is too large (max = %1)", INT64_MAX);
+                        return false;
                     }
 
                     set.tokens.Append({TokenKind::Integer, line, {.i = value}});
@@ -217,7 +221,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                 for (;;) {
                     if (RG_UNLIKELY(next >= code.len || code[next] == '\n')) {
                         MarkError("Unfinished string literal");
-                        break;
+                        return false;
                     }
                     if (code[next] == code[offset]) {
                         next++;
@@ -241,6 +245,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
 
                                 default: {
                                     MarkError("Unsupported escape sequence '\\%1'", code[next]);
+                                    return false;
                                 } break;
                             }
                         }
@@ -350,6 +355,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
 
             default: {
                 MarkError("Unexpected character '%1'", code[offset]);
+                return false;
             } break;
         }
     }

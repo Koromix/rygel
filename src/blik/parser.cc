@@ -129,6 +129,7 @@ void Parser::ParseDeclaration()
 
         if (RG_UNLIKELY(!OptionToEnum(TypeNames, type_name, &var.type))) {
             MarkError("Type '%1' is not valid", type_name);
+            return;
         }
 
         if (MatchToken(TokenKind::Equal)) {
@@ -138,6 +139,7 @@ void Parser::ParseDeclaration()
             if (RG_UNLIKELY(type2 != var.type)) {
                 MarkError("Cannot assign %1 value to %2 variable",
                           TypeNames[(int)type2], TypeNames[(int)var.type]);
+                return;
             }
         } else {
             switch (var.type) {
@@ -150,14 +152,15 @@ void Parser::ParseDeclaration()
         }
     } else {
         MarkError("Unexpected token '%1', expected '=' or ':'");
+        return;
     }
     var.offset = program.variables.len;
 
-    if (program.variables_map.Append(var).second) {
-        program.variables.Append(var);
-    } else {
+    if (!program.variables_map.Append(var).second) {
         MarkError("Variable '%1' already exists", var.name);
+        return;
     }
+    program.variables.Append(var);
 }
 
 static int GetOperatorPrecedence(TokenKind kind)
