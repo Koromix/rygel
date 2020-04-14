@@ -141,7 +141,7 @@ void Parser::ParseDeclaration()
 {
     offset++;
 
-    if (ConsumeToken(TokenKind::Identifier)) {
+    if (RG_LIKELY(ConsumeToken(TokenKind::Identifier))) {
         VariableInfo var = {};
 
         var.name = tokens[offset - 1].u.str;
@@ -344,11 +344,11 @@ void Parser::ProduceOperator(const PendingOperator &op)
             const ExpressionValue &value1 = values[values.len - 2];
             const ExpressionValue &value2 = values[values.len - 1];
 
-            if (!value1.var) {
+            if (RG_UNLIKELY(!value1.var)) {
                 MarkError("Cannot assign expression to rvalue");
                 return;
             }
-            if (value1.type != value2.type) {
+            if (RG_UNLIKELY(value1.type != value2.type)) {
                 MarkError("Cannot assign %1 value to %2 variable",
                           TypeNames[(int)value2.type], TypeNames[(int)value1.type]);
                 return;
