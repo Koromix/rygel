@@ -45,6 +45,7 @@ private:
     bool EmitOperator2(Type in_type, Opcode code, Type out_type);
 
     bool ConsumeToken(TokenKind kind);
+    bool MatchToken(TokenKind kind);
 
     template <typename... Args>
     void MarkError(const char *fmt, Args... args)
@@ -101,8 +102,8 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
     RG_DEFER { PopLogFilter(); };
 
     while (valid && offset < tokens.len) {
-        switch (tokens[offset].kind) {
-            case TokenKind::NewLine: { offset++; } break;
+        switch (tokens[offset++].kind) {
+            case TokenKind::NewLine: {} break;
 
             case TokenKind::Let: {
                 ParseDeclaration();
@@ -110,6 +111,8 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
             } break;
 
             default: {
+                offset--;
+
                 ParseExpression();
                 program.ir.Append({Opcode::Pop, {.i = 1}});
 
@@ -123,21 +126,51 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
 
 void Parser::ParseDeclaration()
 {
-    offset++;
+    // Code below assumes identifier exists for the variable name
+    if (RG_UNLIKELY(!ConsumeToken(TokenKind::Identifier)))
+        return;
 
-    if (RG_LIKELY(ConsumeToken(TokenKind::Identifier))) {
-        VariableInfo var = {};
+    VariableInfo var = {};
 
-        var.name = tokens[offset - 1].u.str;
-        ConsumeToken(TokenKind::Assign);
+    var.name = tokens[offset - 1].u.str;
+    if (MatchToken(TokenKind::Assign)) {
         ParseExpression(&var.type);
-        var.offset = program.variables.len;
+    } else if (MatchToken(TokenKind::Colon)) {
+        if (RG_UNLIKELY(!ConsumeToken(TokenKind::Identifier)))
+            return;
 
-        if (program.variables_map.Append(var).second) {
-            program.variables.Append(var);
-        } else {
-            MarkError("Variable '%1' already exists", var.name);
+        const char *type_name = tokens[offset - 1].u.str;
+
+        if (RG_UNLIKELY(!OptionToEnum(TypeNames, type_name, &var.type))) {
+            MarkError("Type '%1' is not valid", type_name);
         }
+
+        if (MatchToken(TokenKind::Assign)) {
+            Type type2;
+            ParseExpression(&type2);
+
+            if (RG_UNLIKELY(type2 != var.type)) {
+                MarkError("Cannot assign %1 value to %2 variable",
+                          TypeNames[(int)type2], TypeNames[(int)var.type]);
+            }
+        } else {
+            switch (var.type) {
+                case Type::Bool: { program.ir.Append({Opcode::PushBool, {.b = false}}); } break;
+                case Type::Integer: { program.ir.Append({Opcode::PushInt, {.i = 0}}); } break;
+                case Type::Double: { program.ir.Append({Opcode::PushDouble, {.d = 0.0}}); } break;
+                case Type::String: { program.ir.Append({Opcode::PushString, {.str = ""}}); } break;
+            }
+            values.Append({var.type});
+        }
+    } else {
+        MarkError("Unexpected token '%1', expected '=' or ':'");
+    }
+    var.offset = program.variables.len;
+
+    if (program.variables_map.Append(var).second) {
+        program.variables.Append(var);
+    } else {
+        MarkError("Variable '%1' already exists", var.name);
     }
 }
 
@@ -513,6 +546,13 @@ bool Parser::ConsumeToken(TokenKind kind)
 
     offset++;
     return true;
+}
+
+bool Parser::MatchToken(TokenKind kind)
+{
+    bool match = offset < tokens.len && tokens[offset].kind == kind;
+    offset += match;
+    return match;
 }
 
 bool Parse(Span<const Token> tokens, const char *filename, Program *out_program)

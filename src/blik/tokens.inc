@@ -8,6 +8,7 @@
 
 TOKEN(Let, "let")
 
+TOKEN(Colon, ":")
 TOKEN(LeftParenthesis, "(")
 TOKEN(RightParenthesis, ")")
 TOKEN(LeftBrace, "{")
