@@ -180,6 +180,7 @@ void Parser::ParseExpression(Type *out_type)
 
     LocalArray<PendingOperator, 128> operators;
     bool expect_op = false;
+    Size parentheses = 0;
 
     for (; offset < tokens.len; offset++) {
         const Token &tok = tokens[offset];
@@ -189,6 +190,7 @@ void Parser::ParseExpression(Type *out_type)
                 goto expected_op;
 
             operators.Append({tok.kind});
+            parentheses++;
         } else if (tok.kind == TokenKind::RightParenthesis) {
             if (RG_UNLIKELY(!expect_op))
                 goto expected_value;
@@ -204,6 +206,7 @@ void Parser::ParseExpression(Type *out_type)
 
                 if (op.kind == TokenKind::LeftParenthesis) {
                     operators.len--;
+                    parentheses--;
                     break;
                 }
 
@@ -281,6 +284,9 @@ void Parser::ParseExpression(Type *out_type)
                 if (!expect_op && tok.kind == TokenKind::NewLine) {
                     // Expression is split across multiple lines
                     continue;
+                } else if (parentheses) {
+                    MarkError("Unexpected token '%1' in expression", TokenKindNames[(int)tok.kind]);
+                    return;
                 } else {
                     break;
                 }
@@ -334,15 +340,13 @@ void Parser::ParseExpression(Type *out_type)
         MarkError("Unexpected end, expected value or '('");
         return;
     }
+    if (RG_UNLIKELY(parentheses)) {
+        MarkError("Missing closing parenthesis");
+        return;
+    }
 
     for (Size i = operators.len - 1; i >= 0; i--) {
         const PendingOperator &op = operators[i];
-
-        if (RG_UNLIKELY(op.kind == TokenKind::LeftParenthesis)) {
-            MarkError("Missing closing parenthesis");
-            return;
-        }
-
         ProduceOperator(op);
     }
 
