@@ -53,10 +53,10 @@ void Run(const Program &program)
             case Opcode::PushString: { stack.Append({.str = inst.u.str}); } break;
             case Opcode::Pop: { stack.RemoveLast(inst.u.i); } break;
 
-            case Opcode::StoreBool: { stack[inst.u.i].b = stack[stack.len-- - 1].b; } break;
-            case Opcode::StoreInt: { stack[inst.u.i].i = stack[stack.len-- - 1].i; } break;
-            case Opcode::StoreDouble: { stack[inst.u.i].d = stack[stack.len-- - 1].d; } break;
-            case Opcode::StoreString: { stack[inst.u.i].str = stack[stack.len-- - 1].str; } break;
+            case Opcode::StoreBool: { stack[inst.u.i].b = stack[stack.len - 1].b; } break;
+            case Opcode::StoreInt: { stack[inst.u.i].i = stack[stack.len - 1].i; } break;
+            case Opcode::StoreDouble: { stack[inst.u.i].d = stack[stack.len - 1].d; } break;
+            case Opcode::StoreString: { stack[inst.u.i].str = stack[stack.len - 1].str; } break;
             case Opcode::LoadBool: { stack.Append({.b = stack[inst.u.i].b}); } break;
             case Opcode::LoadInt: { stack.Append({.i = stack[inst.u.i].i}); } break;
             case Opcode::LoadDouble: { stack.Append({.d = stack[inst.u.i].d}); } break;

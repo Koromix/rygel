@@ -292,8 +292,10 @@ void Parser::ParseExpression(Type *out_type)
                 return;
             }
 
-            // Short-circuit operators need a short-circuit branch
-            if (tok.kind == TokenKind::LogicAnd) {
+            if (tok.kind == TokenKind::Assign) {
+                program.ir.RemoveLast(1); // Remove load instruction
+                operators.Append({tok.kind, prec, unary});
+            } else if (tok.kind == TokenKind::LogicAnd) {
                 operators.Append({tok.kind, prec, unary, program.ir.len});
                 program.ir.Append({Opcode::BranchIfFalse});
             } else if (tok.kind == TokenKind::LogicOr) {
