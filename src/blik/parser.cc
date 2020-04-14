@@ -30,6 +30,7 @@ class Parser {
     // Reuse for performance
     HeapArray<ExpressionValue> values;
     HeapArray<Size> jumps;
+    HeapArray<Instruction> buf;
 
     Program program;
 
@@ -237,18 +238,26 @@ void Parser::ParseIf()
 
 void Parser::ParseWhile()
 {
-    Size test_idx = program.ir.len;
+    buf.RemoveFrom(0);
+    {
+        Size test_idx = program.ir.len;
 
-    Type type;
-    ParseExpression(&type);
-    if (type != Type::Bool) {
-        MarkError("Cannot use non-Bool expression as condition");
-        return;
+        Type type;
+        ParseExpression(&type);
+        if (type != Type::Bool) {
+            MarkError("Cannot use non-Bool expression as condition");
+            return;
+        }
+        ConsumeToken(TokenKind::NewLine);
+
+        buf.Append(program.ir.Take(test_idx, program.ir.len - test_idx));
+        program.ir.len -= buf.len;
     }
-    ConsumeToken(TokenKind::NewLine);
 
-    Size branch_idx = program.ir.len;
-    program.ir.Append({Opcode::BranchIfFalse});
+    Size jump_idx = program.ir.len;
+    program.ir.Append({Opcode::Jump});
+
+    Size block_idx = program.ir.len;
 
     ParseBlock();
     if (RG_UNLIKELY(!MatchToken(TokenKind::End))) {
@@ -256,8 +265,9 @@ void Parser::ParseWhile()
         return;
     }
 
-    program.ir.Append({Opcode::Jump, {.i = test_idx - program.ir.len}});
-    program.ir[branch_idx].u.i = program.ir.len - branch_idx;
+    program.ir[jump_idx].u.i = program.ir.len - jump_idx;
+    program.ir.Append(buf);
+    program.ir.Append({Opcode::BranchIfTrue, {.i = block_idx - program.ir.len}});
 }
 
 void Parser::ParseDeclaration()
