@@ -303,7 +303,9 @@ void Parser::ParseExpression(Type *out_type)
                 const PendingOperator &op2 = operators[operators.len - 1];
                 bool right_associative = (op2.unary || op2.kind == TokenKind::Assign);
 
-                if (op.prec > op2.prec - right_associative)
+                if (op2.kind == TokenKind::LeftParenthesis)
+                    break;
+                if (op2.prec - right_associative < op.prec)
                     break;
 
                 ProduceOperator(op2);
