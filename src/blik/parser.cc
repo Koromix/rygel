@@ -85,22 +85,6 @@ static int GetOperatorPrecedence(TokenKind kind)
     }
 }
 
-static bool IsUnaryOperator(TokenKind kind)
-{
-    switch (kind) {
-        case TokenKind::Not: { return true; } break;
-        case TokenKind::LogicNot: { return true; } break;
-
-        default: { return false; } break;
-    }
-}
-
-static bool IsOperand(TokenKind kind)
-{
-    return kind == TokenKind::Bool || kind == TokenKind::Integer || kind == TokenKind::Double ||
-           kind == TokenKind::String || kind == TokenKind::Identifier;
-}
-
 bool Parser::Parse(Span<const Token> tokens, const char *filename)
 {
     this->tokens = tokens;
@@ -193,7 +177,9 @@ void Parser::ParseExpression(Type *out_type)
                 ProduceOperator(op);
                 operators.len--;
             }
-        } else if (IsOperand(tok.kind)) {
+        } else if (tok.kind == TokenKind::Bool || tok.kind == TokenKind::Integer ||
+                   tok.kind == TokenKind::Double || tok.kind == TokenKind::String ||
+                   tok.kind == TokenKind::Identifier) {
             if (RG_UNLIKELY(expect_op))
                 goto expected_op;
             expect_op = true;
@@ -252,10 +238,13 @@ void Parser::ParseExpression(Type *out_type)
                 default: { RG_ASSERT(false); } break;
             }
         } else {
-            int prec = GetOperatorPrecedence(tok.kind);
-            bool unary = IsUnaryOperator(tok.kind);
+            PendingOperator op = {};
 
-            if (RG_UNLIKELY(prec < 0)) {
+            op.kind = tok.kind;
+            op.prec = GetOperatorPrecedence(tok.kind);
+            op.unary = (tok.kind == TokenKind::Not || tok.kind == TokenKind::LogicNot);
+
+            if (RG_UNLIKELY(op.prec < 0)) {
                 if (!expect_op && tok.kind == TokenKind::NewLine) {
                     // Expression is split across multiple lines
                     continue;
@@ -263,12 +252,12 @@ void Parser::ParseExpression(Type *out_type)
                     break;
                 }
             }
-            if (RG_UNLIKELY(expect_op == unary)) {
+            if (RG_UNLIKELY(expect_op == op.unary)) {
                 if (tok.kind == TokenKind::Plus) {
                     continue;
                 } else if (tok.kind == TokenKind::Minus) {
-                    prec = 12;
-                    unary = true;
+                    op.prec = 12;
+                    op.unary = true;
                 } else if (expect_op) {
                     goto expected_op;
                 } else {
@@ -278,32 +267,31 @@ void Parser::ParseExpression(Type *out_type)
             expect_op = false;
 
             while (operators.len) {
-                const PendingOperator &op = operators[operators.len - 1];
+                const PendingOperator &op2 = operators[operators.len - 1];
+                bool right_associative = (op2.unary || op2.kind == TokenKind::Assign);
 
-                if (prec > op.prec - (op.unary || op.kind == TokenKind::Assign))
+                if (op.prec > op2.prec - right_associative)
                     break;
 
-                ProduceOperator(op);
+                ProduceOperator(op2);
                 operators.len--;
+            }
+
+            if (tok.kind == TokenKind::Assign) {
+                program.ir.RemoveLast(1); // Remove load instruction
+            } else if (tok.kind == TokenKind::LogicAnd) {
+                op.branch_idx = program.ir.len;
+                program.ir.Append({Opcode::BranchIfFalse});
+            } else if (tok.kind == TokenKind::LogicOr) {
+                op.branch_idx = program.ir.len;
+                program.ir.Append({Opcode::BranchIfTrue});
             }
 
             if (RG_UNLIKELY(!operators.Available())) {
                 MarkError("Too many operators on the stack");
                 return;
             }
-
-            if (tok.kind == TokenKind::Assign) {
-                program.ir.RemoveLast(1); // Remove load instruction
-                operators.Append({tok.kind, prec, unary});
-            } else if (tok.kind == TokenKind::LogicAnd) {
-                operators.Append({tok.kind, prec, unary, program.ir.len});
-                program.ir.Append({Opcode::BranchIfFalse});
-            } else if (tok.kind == TokenKind::LogicOr) {
-                operators.Append({tok.kind, prec, unary, program.ir.len});
-                program.ir.Append({Opcode::BranchIfTrue});
-            } else {
-                operators.Append({tok.kind, prec, unary});
-            }
+            operators.Append(op);
         }
     }
 
@@ -462,7 +450,7 @@ void Parser::ProduceOperator(const PendingOperator &op)
     }
 
     if (RG_UNLIKELY(!success)) {
-        if (IsUnaryOperator(op.kind)) {
+        if (op.unary) {
             MarkError("Cannot use '%1' operator on %2 value",
                       TokenKindNames[(int)op.kind], TypeNames[(int)values[values.len - 1].type]);
         } else if (values[values.len - 2].type == values[values.len - 1].type) {
