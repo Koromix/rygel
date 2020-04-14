@@ -330,8 +330,8 @@ void Parser::ParseExpression(Type *out_type)
         ProduceOperator(op);
     }
 
-    RG_ASSERT(types.len == 1);
-    if (out_type) {
+    RG_ASSERT(!valid || types.len == 1);
+    if (valid && out_type) {
         *out_type = types[0].type;
     }
     return;
