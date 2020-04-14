@@ -17,6 +17,11 @@ let p = 8
 # bug, car au lieu de tester si a == 1 (ce qu'on voulait probablement faire), on assigne la
 # valeur 1 à la variable a.
 
+let i = 0
+while i < 100000000
+    i := i + 1
+end
+
 p := 5
 test := true
 

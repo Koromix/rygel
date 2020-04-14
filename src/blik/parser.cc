@@ -39,6 +39,7 @@ public:
 
 private:
     void ParseIf();
+    void ParseWhile();
     void ParseBlock();
     void ParseExpression(Type *out_type = nullptr);
     void ParseDeclaration();
@@ -137,6 +138,11 @@ void Parser::ParseBlock()
                 ConsumeToken(TokenKind::NewLine);
             } break;
 
+            case TokenKind::While: {
+                ParseWhile();
+                ConsumeToken(TokenKind::NewLine);
+            } break;
+
             default: {
                 offset--;
 
@@ -227,6 +233,31 @@ void Parser::ParseIf()
     for (Size jump_idx: jumps) {
         program.ir[jump_idx].u.i = program.ir.len - jump_idx;
     }
+}
+
+void Parser::ParseWhile()
+{
+    Size test_idx = program.ir.len;
+
+    Type type;
+    ParseExpression(&type);
+    if (type != Type::Bool) {
+        MarkError("Cannot use non-Bool expression as condition");
+        return;
+    }
+    ConsumeToken(TokenKind::NewLine);
+
+    Size branch_idx = program.ir.len;
+    program.ir.Append({Opcode::BranchIfFalse});
+
+    ParseBlock();
+    if (RG_UNLIKELY(!MatchToken(TokenKind::End))) {
+        MarkError("Unclosed block");
+        return;
+    }
+
+    program.ir.Append({Opcode::Jump, {.i = test_idx - program.ir.len}});
+    program.ir[branch_idx].u.i = program.ir.len - branch_idx;
 }
 
 void Parser::ParseDeclaration()
