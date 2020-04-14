@@ -1,9 +1,12 @@
-# Exemples de syntax
+# Ne cherchez pas la logique dans ce script, ce sont des bouts de code
+# tapés presque au hasard pour mettrer au point le parseur.
 
-let z = 5 + # Les nouvelles mettent fin à une commande, sauf si une expression est encore ouverte
-        3   # comme c'est le cas ici avec le + non suivi d'une valeur.
+let z = 5 + # Les nouvelles mettent fin à une commande, sauf si une expression est
+        3   # encore ouverte comme c'est le cas ici avec le + non suivi d'une valeur.
 
 let x = 2 + 8 * 5 - (0x1444 << 5) > 2 && true
+
+# Les variables doivent être déclarées à l'aide du mot-clé let.
 
 let test = (5 = 8)
 let p = 8
@@ -15,9 +18,11 @@ let p = 8
 # valeur 1 à la variable a.
 
 p := 5
+test := true
 
 # Les variables de ce langage ont une portée lexicale. En dehors de if, while & compagnie,
-# il est possible de définir des blocs à l'aide de do/end.
+# il est possible de définir des blocs à l'aide de do/end. Les deux variables zzz et bleh
+# dans le bloc ci-dessous n'existent plus à la sortie du bloc.
 
 do
     let zzz = 2
@@ -33,7 +38,8 @@ end
 
 # C'est un langage avec typage statique avec inférence de type. Si on ne précise par le
 # type de variable il est déduit de l'expression à droite, mais on peut aussi le préciser.
+# Si le type est précisé il est possible d'omettre la valeur d'initialisation.
 
 let foo: String = "Hello," # OK
-# let bar: Integer = "World!" # This is an error and would not work
+# let bar: Integer = "World!" # This is an error and would not work if uncommented
 let empty: Double
