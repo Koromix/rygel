@@ -187,13 +187,13 @@ void Parser::ParseExpression(Type *out_type)
 
         if (tok.kind == TokenKind::LeftParenthesis) {
             if (RG_UNLIKELY(expect_op))
-                goto expected_op;
+                goto unexpected_token;
 
             operators.Append({tok.kind});
             parentheses++;
         } else if (tok.kind == TokenKind::RightParenthesis) {
             if (RG_UNLIKELY(!expect_op))
-                goto expected_value;
+                goto unexpected_token;
             expect_op = true;
 
             for (;;) {
@@ -217,7 +217,7 @@ void Parser::ParseExpression(Type *out_type)
                    tok.kind == TokenKind::Double || tok.kind == TokenKind::String ||
                    tok.kind == TokenKind::Identifier) {
             if (RG_UNLIKELY(expect_op))
-                goto expected_op;
+                goto unexpected_token;
             expect_op = true;
 
             switch (tok.kind) {
@@ -284,9 +284,8 @@ void Parser::ParseExpression(Type *out_type)
                 if (!expect_op && tok.kind == TokenKind::NewLine) {
                     // Expression is split across multiple lines
                     continue;
-                } else if (parentheses) {
-                    MarkError("Unexpected token '%1' in expression", TokenKindNames[(int)tok.kind]);
-                    return;
+                } else if (parentheses || !expect_op) {
+                    goto unexpected_token;
                 } else {
                     break;
                 }
@@ -297,10 +296,8 @@ void Parser::ParseExpression(Type *out_type)
                 } else if (tok.kind == TokenKind::Minus) {
                     op.prec = 12;
                     op.unary = true;
-                } else if (expect_op) {
-                    goto expected_op;
                 } else {
-                    goto expected_value;
+                    goto unexpected_token;
                 }
             }
             expect_op = false;
@@ -356,12 +353,9 @@ void Parser::ParseExpression(Type *out_type)
     }
     return;
 
-expected_op:
-    MarkError("Unexpected token '%1', expected operator or ')'", TokenKindNames[(int)tokens[offset].kind]);
-    return;
-expected_value:
-    MarkError("Unexpected token '%1', expected value or '('", TokenKindNames[(int)tokens[offset].kind]);
-    return;
+unexpected_token:
+    MarkError("Unexpected token '%1', expected %2", TokenKindNames[(int)tokens[offset].kind],
+              expect_op ? "operator or ')'" : "value or '('");
 }
 
 void Parser::ProduceOperator(const PendingOperator &op)
