@@ -5,7 +5,7 @@
 #include "../core/libcc/libcc.hh"
 #include "lexer.hh"
 #include "parser.hh"
-#include "run.hh"
+#include "vm.hh"
 
 namespace RG {
 

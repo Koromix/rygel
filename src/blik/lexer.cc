@@ -291,6 +291,10 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
 
                 if (ident == "let") {
                     out_set->tokens.Append({TokenKind::Let, line});
+                } else if (ident == "do") {
+                    out_set->tokens.Append({TokenKind::Do, line});
+                } else if (ident == "end") {
+                    out_set->tokens.Append({TokenKind::End, line});
                 } else if (ident == "true") {
                     out_set->tokens.Append({TokenKind::Bool, line, {.b = true}});
                 } else if (ident == "false") {
@@ -324,8 +328,6 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
             } break;
             case '(': { out_set->tokens.Append({TokenKind::LeftParenthesis, line}); } break;
             case ')': { out_set->tokens.Append({TokenKind::RightParenthesis, line}); } break;
-            case '{': { out_set->tokens.Append({TokenKind::LeftBrace, line}); } break;
-            case '}': { out_set->tokens.Append({TokenKind::RightBrace, line}); } break;
 
             case '=': { out_set->tokens.Append({TokenKind::Equal, line}); } break;
             case '!': {

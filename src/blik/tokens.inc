@@ -8,10 +8,10 @@
 
 TOKEN(Let, "let")
 
+TOKEN(Do, "do")
+TOKEN(End, "end")
 TOKEN(LeftParenthesis, "(")
 TOKEN(RightParenthesis, ")")
-TOKEN(LeftBrace, "{")
-TOKEN(RightBrace, "}")
 
 TOKEN(Bool, "<bool>")
 TOKEN(Integer, "<integer>")

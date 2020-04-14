@@ -4,7 +4,7 @@
 
 #include "../core/libcc/libcc.hh"
 #include "parser.hh"
-#include "run.hh"
+#include "vm.hh"
 
 namespace RG {
 
