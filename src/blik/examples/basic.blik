@@ -16,6 +16,21 @@ let p = 8
 
 p := 5
 
+# Les variables de ce langage ont une portée lexicale. En dehors de if, while & compagnie,
+# il est possible de définir des blocs à l'aide de do/end.
+
+do
+    let zzz = 2
+    let bleh = 8
+
+    do
+    end
+
+    do
+        let foobar = "STRING"
+    end
+end
+
 # C'est un langage avec typage statique avec inférence de type. Si on ne précise par le
 # type de variable il est déduit de l'expression à droite, mais on peut aussi le préciser.
 

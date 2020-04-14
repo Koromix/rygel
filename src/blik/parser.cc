@@ -37,6 +37,7 @@ public:
     void Finish(Program *out_program);
 
 private:
+    void ParseBlock();
     void ParseExpression(Type *out_type = nullptr);
     void ParseDeclaration();
 
@@ -46,6 +47,8 @@ private:
 
     bool ConsumeToken(TokenKind kind);
     bool MatchToken(TokenKind kind);
+
+    void DestroyVariables(Size start_idx);
 
     template <typename... Args>
     void MarkError(const char *fmt, Args... args)
@@ -60,11 +63,7 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
     RG_DEFER_NC(out_guard, ir_len = program.ir.len,
                            variables_len = program.variables.len) {
         program.ir.RemoveFrom(ir_len);
-
-        for (Size i = variables_len; i < program.variables.len; i++) {
-            program.variables_map.Remove(program.variables[i].name);
-        }
-        program.variables.RemoveFrom(variables_len);
+        DestroyVariables(variables_len);
     };
 
     valid = true;
@@ -84,13 +83,47 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
     });
     RG_DEFER { PopLogFilter(); };
 
+    // Do the actual parsing!
+    ParseBlock();
+    if (RG_UNLIKELY(MatchToken(TokenKind::End))) {
+        MarkError("End statement outside of block");
+        return false;
+    }
+
+    if (valid) {
+        out_guard.Disable();
+    }
+    return valid;
+}
+
+void Parser::ParseBlock()
+{
     while (valid && offset < tokens.len) {
         switch (tokens[offset++].kind) {
-            case TokenKind::NewLine: {} break;
+            case TokenKind::End: {
+                offset--;
+                return;
+            } break;
+
+            case TokenKind::NewLine: { } break;
 
             case TokenKind::Let: {
                 ParseDeclaration();
                 ConsumeToken(TokenKind::NewLine);
+            } break;
+
+            case TokenKind::Do: {
+                Size stack_len = program.variables.len;
+
+                ConsumeToken(TokenKind::NewLine);
+                ParseBlock();
+                if (RG_UNLIKELY(!MatchToken(TokenKind::End))) {
+                    MarkError("Unclosed block");
+                    return;
+                }
+
+                program.ir.Append({Opcode::Pop, {.i = program.variables.len - stack_len}});
+                DestroyVariables(stack_len);
             } break;
 
             default: {
@@ -103,11 +136,6 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
             } break;
         }
     }
-
-    if (valid) {
-        out_guard.Disable();
-    }
-    return valid;
 }
 
 void Parser::ParseDeclaration()
@@ -571,6 +599,15 @@ bool Parser::MatchToken(TokenKind kind)
     bool match = offset < tokens.len && tokens[offset].kind == kind;
     offset += match;
     return match;
+}
+
+void Parser::DestroyVariables(Size start_idx)
+{
+    for (Size i = start_idx; i < program.variables.len; i++) {
+        program.variables_map.Remove(program.variables[i].name);
+    }
+
+    program.variables.RemoveFrom(start_idx);
 }
 
 bool Parse(Span<const Token> tokens, const char *filename, Program *out_program)
