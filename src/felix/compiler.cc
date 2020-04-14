@@ -114,7 +114,7 @@ public:
                   " -Wno-unknown-warning-option -Wno-unknown-pragmas -Wno-deprecated-declarations");
 
         if (src_type == SourceType::CXX) {
-            Fmt(&buf, " -Xclang -flto-visibility-public-std");
+            Fmt(&buf, " -Xclang -flto-visibility-public-std -D_SILENCE_CLANG_CONCEPTS_MESSAGE");
         }
 #elif defined(__APPLE__)
         Fmt(&buf, " -pthread -fPIC");
