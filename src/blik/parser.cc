@@ -718,6 +718,8 @@ void Parser::EmitPop(int64_t count)
 void Parser::Finish(Program *out_program)
 {
     RG_ASSERT(!out_program->ir.len);
+
+    program.ir.Append({Opcode::Exit});
     SwapMemory(&program, out_program, RG_SIZE(program));
 }
 

@@ -65,4 +65,6 @@ OPCODE(BranchIfFalse)
 OPCODE(SkipIfTrue)
 OPCODE(SkipIfFalse)
 
+OPCODE(Exit)
+
 #undef OPCODE

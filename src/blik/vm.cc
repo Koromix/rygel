@@ -18,9 +18,10 @@ union Value {
 void Run(const Program &program)
 {
     HeapArray<Value> stack;
+    Size pc = -1;
 
-    for (Size pc = 0; pc < program.ir.len; pc++) {
-        const Instruction &inst = program.ir[pc];
+    for (;;) {
+        const Instruction &inst = program.ir[++pc];
 
         switch (inst.code) {
             case Opcode::PushBool: { stack.Append({.b = inst.u.b}); } break;
@@ -229,17 +230,21 @@ void Run(const Program &program)
                 bool b = stack[stack.len - 1].b;
                 pc += b ? 0 : (Size)(inst.u.i - 1);
             } break;
-        }
-    }
 
-    RG_ASSERT(stack.len == program.variables.len);
+            case Opcode::Exit: {
+                RG_ASSERT(stack.len == program.variables.len);
 
-    for (const VariableInfo &var: program.variables) {
-        switch (var.type) {
-            case Type::Bool: { PrintLn("%1 (Bool) = %2", var.name, stack[var.offset].b); } break;
-            case Type::Integer: { PrintLn("%1 (Integer) = %2", var.name, stack[var.offset].i); } break;
-            case Type::Double: { PrintLn("%1 (Double) = %2", var.name, stack[var.offset].d); } break;
-            case Type::String: { PrintLn("%1 (String) = '%2'", var.name, stack[var.offset].str); } break;
+                for (const VariableInfo &var: program.variables) {
+                    switch (var.type) {
+                        case Type::Bool: { PrintLn("%1 (Bool) = %2", var.name, stack[var.offset].b); } break;
+                        case Type::Integer: { PrintLn("%1 (Integer) = %2", var.name, stack[var.offset].i); } break;
+                        case Type::Double: { PrintLn("%1 (Double) = %2", var.name, stack[var.offset].d); } break;
+                        case Type::String: { PrintLn("%1 (String) = '%2'", var.name, stack[var.offset].str); } break;
+                    }
+                }
+
+                return;
+            } break;
         }
     }
 }
