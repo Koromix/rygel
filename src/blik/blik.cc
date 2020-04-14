@@ -67,11 +67,11 @@ Options:
                 return 1;
         }
 
-        HeapArray<Instruction> ir;
-        if (!Parse(token_set.tokens, filename, &ir))
+        Program program;
+        if (!Parse(token_set.tokens, filename, &program))
             return 1;
 
-        Run(ir);
+        Run(program);
     }
 
     return 0;

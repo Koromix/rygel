@@ -8,8 +8,8 @@
 
 namespace RG {
 
-struct Instruction;
+struct Program;
 
-void Run(Span<const Instruction> ir);
+void Run(const Program &program);
 
 }

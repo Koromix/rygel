@@ -17,33 +17,24 @@ class Parser {
         Size branch_idx; // Used for short-circuit operators
     };
 
-    struct VariableInfo {
-        const char *name;
-        Type type;
-        Size offset;
-
-        RG_HASHTABLE_HANDLER(VariableInfo, name);
-    };
-
     struct ExpressionValue {
         Type type;
         const VariableInfo *var;
     };
 
+    bool valid = true;
+
     Span<const Token> tokens;
     Size offset;
-    bool valid;
-
-    HashTable<const char *, VariableInfo> variables;
 
     // Reuse for performance
     HeapArray<ExpressionValue> values;
 
-    HeapArray<Instruction> ir;
+    Program program;
 
 public:
     bool Parse(Span<const Token> tokens, const char *filename);
-    void Finish(HeapArray<Instruction> *out_ir);
+    void Finish(Program *out_program);
 
 private:
     void ParseExpression(Type *out_type = nullptr);
@@ -111,12 +102,8 @@ static bool IsOperand(TokenKind kind)
 
 bool Parser::Parse(Span<const Token> tokens, const char *filename)
 {
-    RG_DEFER_NC(out_guard, len = ir.len) { ir.RemoveFrom(len); };
-
     this->tokens = tokens;
     offset = 0;
-    valid = true;
-    variables.Clear();
 
     PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
         int32_t line = tokens[std::min(offset, tokens.len - 1)].line;
@@ -141,9 +128,11 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
                     var.name = tokens[offset - 1].u.str;
                     ConsumeToken(TokenKind::Assign);
                     ParseExpression(&var.type);
-                    var.offset = variables.count;
+                    var.offset = program.variables.len;
 
-                    if (!variables.Append(var).second) {
+                    if (program.variables_map.Append(var).second) {
+                        program.variables.Append(var);
+                    } else {
                         MarkError("Variable '%1' already exists", var.name);
                     }
                 }
@@ -153,16 +142,13 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
 
             default: {
                 ParseExpression();
-                ir.Append({Opcode::Pop});
+                program.ir.Append({Opcode::Pop});
 
                 ConsumeToken(TokenKind::NewLine);
             } break;
         }
     }
 
-    if (valid) {
-        out_guard.Disable();
-    }
     return valid;
 }
 
@@ -209,7 +195,7 @@ void Parser::ParseExpression(Type *out_type)
 
             switch (tok.kind) {
                 case TokenKind::Bool: {
-                    ir.Append({Opcode::PushBool, {.b = tok.u.b}});
+                    program.ir.Append({Opcode::PushBool, {.b = tok.u.b}});
                     values.Append({Type::Bool});
                 } break;
                 case TokenKind::Integer: {
@@ -217,10 +203,10 @@ void Parser::ParseExpression(Type *out_type)
                                          operators[operators.len - 1].unary) {
                         operators.RemoveLast(1);
 
-                        ir.Append({Opcode::PushInt, {.i = -tok.u.i}});
+                        program.ir.Append({Opcode::PushInt, {.i = -tok.u.i}});
                         values.Append({Type::Integer});
                     } else {
-                        ir.Append({Opcode::PushInt, {.i = tok.u.i}});
+                        program.ir.Append({Opcode::PushInt, {.i = tok.u.i}});
                         values.Append({Type::Integer});
                     }
                 } break;
@@ -229,20 +215,20 @@ void Parser::ParseExpression(Type *out_type)
                                          operators[operators.len - 1].unary) {
                         operators.RemoveLast(1);
 
-                        ir.Append({Opcode::PushDouble, {.d = -tok.u.d}});
+                        program.ir.Append({Opcode::PushDouble, {.d = -tok.u.d}});
                         values.Append({Type::Integer});
                     } else {
-                        ir.Append({Opcode::PushDouble, {.d = tok.u.d}});
+                        program.ir.Append({Opcode::PushDouble, {.d = tok.u.d}});
                         values.Append({Type::Double});
                     }
                 } break;
                 case TokenKind::String: {
-                    ir.Append({Opcode::PushString, {.str = tok.u.str}});
+                    program.ir.Append({Opcode::PushString, {.str = tok.u.str}});
                     values.Append({Type::String});
                 } break;
 
                 case TokenKind::Identifier: {
-                    const VariableInfo *var = variables.Find(tok.u.str);
+                    const VariableInfo *var = program.variables_map.Find(tok.u.str);
 
                     if (RG_UNLIKELY(!var)) {
                         MarkError("Variable '%1' is not defined", tok.u.str);
@@ -250,10 +236,10 @@ void Parser::ParseExpression(Type *out_type)
                     }
 
                     switch (var->type) {
-                        case Type::Bool: { ir.Append({Opcode::LoadBool, {.i = var->offset}}); } break;
-                        case Type::Integer: { ir.Append({Opcode::LoadInt, {.i = var->offset}}); } break;
-                        case Type::Double: { ir.Append({Opcode::LoadDouble, {.i = var->offset}});} break;
-                        case Type::String: { ir.Append({Opcode::LoadString, {.i = var->offset}}); } break;
+                        case Type::Bool: { program.ir.Append({Opcode::LoadBool, {.i = var->offset}}); } break;
+                        case Type::Integer: { program.ir.Append({Opcode::LoadInt, {.i = var->offset}}); } break;
+                        case Type::Double: { program.ir.Append({Opcode::LoadDouble, {.i = var->offset}});} break;
+                        case Type::String: { program.ir.Append({Opcode::LoadString, {.i = var->offset}}); } break;
                     }
                     values.Append({var->type, var});
                 } break;
@@ -303,11 +289,11 @@ void Parser::ParseExpression(Type *out_type)
 
             // Short-circuit operators need a short-circuit branch
             if (tok.kind == TokenKind::LogicAnd) {
-                operators.Append({tok.kind, prec, unary, ir.len});
-                ir.Append({Opcode::BranchIfFalse});
+                operators.Append({tok.kind, prec, unary, program.ir.len});
+                program.ir.Append({Opcode::BranchIfFalse});
             } else if (tok.kind == TokenKind::LogicOr) {
-                operators.Append({tok.kind, prec, unary, ir.len});
-                ir.Append({Opcode::BranchIfTrue});
+                operators.Append({tok.kind, prec, unary, program.ir.len});
+                program.ir.Append({Opcode::BranchIfTrue});
             } else {
                 operators.Append({tok.kind, prec, unary});
             }
@@ -364,10 +350,10 @@ void Parser::ProduceOperator(const PendingOperator &op)
             }
 
             switch (value1.type) {
-                case Type::Bool: { ir.Append({Opcode::StoreBool, {.i = value1.var->offset}}); } break;
-                case Type::Integer: { ir.Append({Opcode::StoreInt, {.i = value1.var->offset}}); } break;
-                case Type::Double: { ir.Append({Opcode::StoreDouble, {.i = value1.var->offset}}); } break;
-                case Type::String: { ir.Append({Opcode::StoreString, {.i = value1.var->offset}}); } break;
+                case Type::Bool: { program.ir.Append({Opcode::StoreBool, {.i = value1.var->offset}}); } break;
+                case Type::Integer: { program.ir.Append({Opcode::StoreInt, {.i = value1.var->offset}}); } break;
+                case Type::Double: { program.ir.Append({Opcode::StoreDouble, {.i = value1.var->offset}}); } break;
+                case Type::String: { program.ir.Append({Opcode::StoreString, {.i = value1.var->offset}}); } break;
             }
             values.len--;
 
@@ -455,14 +441,14 @@ void Parser::ProduceOperator(const PendingOperator &op)
         case TokenKind::LogicAnd: {
             success = EmitOperator2(Type::Bool, Opcode::AndBool, Type::Bool);
 
-            RG_ASSERT(op.branch_idx && ir[op.branch_idx].code == Opcode::BranchIfFalse);
-            ir[op.branch_idx].u.i = ir.len;
+            RG_ASSERT(op.branch_idx && program.ir[op.branch_idx].code == Opcode::BranchIfFalse);
+            program.ir[op.branch_idx].u.i = program.ir.len;
         } break;
         case TokenKind::LogicOr: {
             success = EmitOperator2(Type::Bool, Opcode::OrBool, Type::Bool);
 
-            RG_ASSERT(op.branch_idx && ir[op.branch_idx].code == Opcode::BranchIfTrue);
-            ir[op.branch_idx].u.i = ir.len;
+            RG_ASSERT(op.branch_idx && program.ir[op.branch_idx].code == Opcode::BranchIfTrue);
+            program.ir[op.branch_idx].u.i = program.ir.len;
         } break;
 
         default: { RG_ASSERT(false); } break;
@@ -488,7 +474,7 @@ bool Parser::EmitOperator1(Type in_type, Opcode code, Type out_type)
     Type type = values[values.len - 1].type;
 
     if (type == in_type) {
-        ir.Append({code});
+        program.ir.Append({code});
         values[values.len - 1] = {out_type};
 
         return true;
@@ -503,7 +489,7 @@ bool Parser::EmitOperator2(Type in_type, Opcode code, Type out_type)
     Type type2 = values[values.len - 1].type;
 
     if (type1 == in_type && type2 == in_type) {
-        ir.Append({code});
+        program.ir.Append({code});
         values[--values.len - 1] = {out_type};
 
         return true;
@@ -512,10 +498,10 @@ bool Parser::EmitOperator2(Type in_type, Opcode code, Type out_type)
     }
 }
 
-void Parser::Finish(HeapArray<Instruction> *out_ir)
+void Parser::Finish(Program *out_program)
 {
-    RG_ASSERT(!out_ir->len);
-    SwapMemory(&ir, out_ir, RG_SIZE(ir));
+    RG_ASSERT(!out_program->ir.len);
+    SwapMemory(&program, out_program, RG_SIZE(program));
 }
 
 bool Parser::ConsumeToken(TokenKind kind)
@@ -534,13 +520,13 @@ bool Parser::ConsumeToken(TokenKind kind)
     return true;
 }
 
-bool Parse(Span<const Token> tokens, const char *filename, HeapArray<Instruction> *out_ir)
+bool Parse(Span<const Token> tokens, const char *filename, Program *out_program)
 {
     Parser parser;
     if (!parser.Parse(tokens, filename))
         return false;
 
-    parser.Finish(out_ir);
+    parser.Finish(out_program);
     return true;
 }
 

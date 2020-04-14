@@ -15,12 +15,12 @@ union Value {
     const char *str;
 };
 
-void Run(Span<const Instruction> ir)
+void Run(const Program &program)
 {
     HeapArray<Value> stack;
 
-    for (Size pc = 0; pc < ir.len; pc++) {
-        const Instruction &inst = ir[pc];
+    for (Size pc = 0; pc < program.ir.len; pc++) {
+        const Instruction &inst = program.ir[pc];
 
 #ifndef NDEBUG
         switch (inst.code) {
@@ -244,6 +244,17 @@ void Run(Span<const Instruction> ir)
                 bool b = stack[stack.len - 1].b;
                 pc = b ? pc : (Size)(inst.u.i - 1);
             } break;
+        }
+    }
+
+    RG_ASSERT(stack.len == program.variables.len);
+
+    for (const VariableInfo &var: program.variables) {
+        switch (var.type) {
+            case Type::Bool: { PrintLn("%1 (Bool) = %2", var.name, stack[var.offset].b); } break;
+            case Type::Integer: { PrintLn("%1 (Integer) = %2", var.name, stack[var.offset].i); } break;
+            case Type::Double: { PrintLn("%1 (Double) = %2", var.name, stack[var.offset].d); } break;
+            case Type::String: { PrintLn("%1 (String) = '%2'", var.name, stack[var.offset].str); } break;
         }
     }
 }
