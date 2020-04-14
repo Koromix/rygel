@@ -1,24 +1,24 @@
-// Exemples de syntax
+# Exemples de syntax
 
-let z = 5 + // Les nouvelles mettent fin à une commande, sauf si une expression est encore ouverte
-        3   // comme c'est le cas ici avec le + non suivi d'une valeur.
+let z = 5 + # Les nouvelles mettent fin à une commande, sauf si une expression est encore ouverte
+        3   # comme c'est le cas ici avec le + non suivi d'une valeur.
 
 let x = 2 + 8 * 5 - (0x1444 << 5) > 2 && true
 
 let test = (5 = 8)
 let p = 8
 
-// Pour modifier la valeur d'une variable déjà créée il faut utiliser l'opérateur := (et non =)
-// Je ne suis pas sûr pour ça, mais le but est d'éviter les erreurs dans les expressions,
-// comme par exemple en JS ou en C quand on fait : if (a = 1) {}. C'est une source fréquente de
-// bug, car au lieu de tester si a == 1 (ce qu'on voulait probablement faire), on assigne la
-// valeur 1 à la variable a.
+# Pour modifier la valeur d'une variable déjà créée il faut utiliser l'opérateur := (et non =)
+# Je ne suis pas sûr pour ça, mais le but est d'éviter les erreurs dans les expressions,
+# comme par exemple en JS ou en C quand on fait : if (a = 1) {}. C'est une source fréquente de
+# bug, car au lieu de tester si a == 1 (ce qu'on voulait probablement faire), on assigne la
+# valeur 1 à la variable a.
 
 p := 5
 
-// C'est un langage avec typage statique avec inférence de type. Si on ne précise par le
-// type de variable il est déduit de l'expression à droite, mais on peut aussi le préciser.
+# C'est un langage avec typage statique avec inférence de type. Si on ne précise par le
+# type de variable il est déduit de l'expression à droite, mais on peut aussi le préciser.
 
-let foo: String = "Hello," // OK
-// let bar: Integer = "World!" // This is an error and would not work
+let foo: String = "Hello," # OK
+# let bar: Integer = "World!" # This is an error and would not work
 let empty: Double

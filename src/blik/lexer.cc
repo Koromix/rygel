@@ -63,6 +63,12 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                 line++;
             } break;
 
+            case '#': {
+                while (next < code.len && code[next] != '\n') {
+                    next++;
+                }
+            } break;
+
             case '0': {
                 if (next < code.len && IsAsciiAlpha(code[next])) {
                     if (code[next] == 'b') {
@@ -327,13 +333,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
             case '+': { Token1(TokenKind::Plus); } break;
             case '-': { Token1(TokenKind::Minus); } break;
             case '*': { Token1(TokenKind::Multiply); } break;
-            case '/': {
-                if (next < code.len && code[next] == '/') {
-                    while (++next < code.len && code[next] != '\n');
-                } else {
-                    Token1(TokenKind::Divide);
-                }
-            } break;
+            case '/': { Token1(TokenKind::Divide); } break;
             case '%': { Token1(TokenKind::Modulo); } break;
             case '^': { Token1(TokenKind::Xor); } break;
             case '~': { Token1(TokenKind::Not); } break;
