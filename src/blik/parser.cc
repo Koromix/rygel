@@ -50,10 +50,8 @@ private:
     template <typename... Args>
     void MarkError(const char *fmt, Args... args)
     {
-        if (valid) {
-            LogError(fmt, args...);
-            valid = false;
-        }
+        LogError(fmt, args...);
+        valid = false;
     }
 };
 
@@ -88,16 +86,30 @@ static int GetOperatorPrecedence(TokenKind kind)
 
 bool Parser::Parse(Span<const Token> tokens, const char *filename)
 {
+    RG_DEFER_NC(out_guard, ir_len = program.ir.len,
+                           variables_len = program.variables.len) {
+        program.ir.RemoveFrom(ir_len);
+
+        for (Size i = variables_len; i < program.variables.len; i++) {
+            program.variables_map.Remove(program.variables[i].name);
+        }
+        program.variables.RemoveFrom(variables_len);
+    };
+
+    valid = true;
+
     this->tokens = tokens;
     offset = 0;
 
     PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
-        int32_t line = tokens[std::min(offset, tokens.len - 1)].line;
+        if (valid) {
+            int32_t line = tokens[std::min(offset, tokens.len - 1)].line;
 
-        char msg_buf[4096];
-        Fmt(msg_buf, "%1(%2): %3", filename, line, msg);
+            char msg_buf[4096];
+            Fmt(msg_buf, "%1(%2): %3", filename, line, msg);
 
-        func(level, ctx, msg_buf);
+            func(level, ctx, msg_buf);
+        }
     });
     RG_DEFER { PopLogFilter(); };
 
@@ -121,6 +133,9 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
         }
     }
 
+    if (valid) {
+        out_guard.Disable();
+    }
     return valid;
 }
 
