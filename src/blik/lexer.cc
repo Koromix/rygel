@@ -7,47 +7,76 @@
 
 namespace RG {
 
-bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
-{
-    RG_DEFER_NC(out_guard, len = out_set->tokens.len) { out_set->tokens.RemoveFrom(len); };
-
+class Lexer {
     bool valid = true;
-    int32_t line = 1;
+
+    Span<const char> code;
+    Size offset;
+    Size next;
+    int32_t line;
+
+    TokenSet set;
+
+public:
+    bool Tokenize(Span<const char> code, const char *filename);
+    void Finish(TokenSet *out_set);
+
+private:
+    bool Token1(TokenKind tok);
+    bool Token2(char c, TokenKind tok);
+
+    template <typename... Args>
+    void MarkError(const char *fmt, Args... args)
+    {
+        LogError(fmt, args...);
+        valid = false;
+    }
+};
+
+bool Lexer::Tokenize(Span<const char> code, const char *filename)
+{
+    RG_DEFER_NC(out_guard, len = set.tokens.len) { set.tokens.RemoveFrom(len); };
+
+    valid = true;
+
+    this->code = code;
+    line = 1;
 
     PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
-        char msg_buf[4096];
-        Fmt(msg_buf, "%1(%2): %3", filename, line, msg);
+        if (valid) {
+            char msg_buf[4096];
+            Fmt(msg_buf, "%1(%2): %3", filename, line, msg);
 
-        func(level, ctx, msg_buf);
+            func(level, ctx, msg_buf);
+        }
     });
     RG_DEFER { PopLogFilter(); };
 
-    for (Size i = 0, j = 1; i < code.len; i = j++) {
-        switch (code[i]) {
+    for (offset = 0, next = 1; offset < code.len; offset = next++) {
+        switch (code[offset]) {
             case ' ':
             case '\t':
             case '\r': {} break;
 
             case '\n': {
-                out_set->tokens.Append({TokenKind::NewLine, line});
+                Token1(TokenKind::NewLine);
                 line++;
             } break;
 
             case '0': {
-                if (j < code.len && IsAsciiAlpha(code[j])) {
-                    if (code[j] == 'b') {
+                if (next < code.len && IsAsciiAlpha(code[next])) {
+                    if (code[next] == 'b') {
                         int64_t value = 0;
                         bool overflow = false;
 
-                        while (++j < code.len) {
-                            unsigned int digit = (unsigned int)(code[j] - '0');
+                        while (++next < code.len) {
+                            unsigned int digit = (unsigned int)(code[next] - '0');
 
                             if (digit < 2) {
                                 overflow |= (value > (INT64_MAX - digit) / 2);
                                 value = (value * 2) + digit;
                             } else if (RG_UNLIKELY(digit < 10)) {
-                                LogError("Invalid binary digit '%1'", code[j]);
-                                valid = false;
+                                MarkError("Invalid binary digit '%1'", code[next]);
                                 break;
                             } else {
                                 break;
@@ -55,25 +84,23 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
                         }
 
                         if (RG_UNLIKELY(overflow)) {
-                            LogError("Number literal is too large (max = %1)", INT64_MAX);
-                            valid = false;
+                            MarkError("Number literal is too large (max = %1)", INT64_MAX);
                         }
 
-                        out_set->tokens.Append({TokenKind::Integer, line, {.i = value}});
+                        set.tokens.Append({TokenKind::Integer, line, {.i = value}});
                         continue;
-                    } else if (code[j] == 'o') {
+                    } else if (code[next] == 'o') {
                         int64_t value = 0;
                         bool overflow = false;
 
-                        while (++j < code.len) {
-                            unsigned int digit = (unsigned int)(code[j] - '0');
+                        while (++next < code.len) {
+                            unsigned int digit = (unsigned int)(code[next] - '0');
 
                             if (digit < 8) {
                                 overflow |= (value > (INT64_MAX - digit) / 8);
                                 value = (value * 8) + digit;
                             } else if (RG_UNLIKELY(digit < 10)) {
-                                LogError("Invalid octal digit '%1'", code[j]);
-                                valid = false;
+                                MarkError("Invalid octal digit '%1'", code[next]);
                                 break;
                             } else {
                                 break;
@@ -81,35 +108,33 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
                         }
 
                         if (RG_UNLIKELY(overflow)) {
-                            LogError("Number literal is too large (max = %1)", INT64_MAX);
-                            valid = false;
+                            MarkError("Number literal is too large (max = %1)", INT64_MAX);
                         }
 
-                        out_set->tokens.Append({TokenKind::Integer, line, {.i = value}});
+                        set.tokens.Append({TokenKind::Integer, line, {.i = value}});
                         continue;
-                    } else if (code[j] == 'x') {
+                    } else if (code[next] == 'x') {
                         int64_t value = 0;
                         bool overflow = false;
 
-                        while (++j < code.len) {
-                            if (IsAsciiDigit(code[j])) {
-                                unsigned int digit = (unsigned int)(code[j] - '0');
+                        while (++next < code.len) {
+                            if (IsAsciiDigit(code[next])) {
+                                unsigned int digit = (unsigned int)(code[next] - '0');
 
                                 overflow |= (value > (INT64_MAX - digit) / 16);
-                                value = (value * 16) + (code[j] - '0');
-                            } else if (code[j] >= 'A' && code[j] <= 'F') {
-                                unsigned int digit = (unsigned int)(code[j] - 'A' + 10);
+                                value = (value * 16) + (code[next] - '0');
+                            } else if (code[next] >= 'A' && code[next] <= 'F') {
+                                unsigned int digit = (unsigned int)(code[next] - 'A' + 10);
 
                                 overflow |= (value > (INT64_MAX - digit) / 16);
-                                value = (value * 16) + (code[j] - 'A' + 10);
-                            } else if (code[j] >= 'a' && code[j] <= 'f') {
-                                unsigned int digit = (unsigned int)(code[j] - 'a' + 10);
+                                value = (value * 16) + (code[next] - 'A' + 10);
+                            } else if (code[next] >= 'a' && code[next] <= 'f') {
+                                unsigned int digit = (unsigned int)(code[next] - 'a' + 10);
 
                                 overflow |= (value > (INT64_MAX - digit) / 16);
-                                value = (value * 16) + (code[j] - 'a' + 10);
-                            } else if (RG_UNLIKELY(IsAsciiAlpha(code[j]))) {
-                                LogError("Invalid hexadecimal digit '%1'", code[j]);
-                                valid = false;
+                                value = (value * 16) + (code[next] - 'a' + 10);
+                            } else if (RG_UNLIKELY(IsAsciiAlpha(code[next]))) {
+                                MarkError("Invalid hexadecimal digit '%1'", code[next]);
                                 break;
                             } else {
                                 break;
@@ -117,15 +142,13 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
                         }
 
                         if (RG_UNLIKELY(overflow)) {
-                            LogError("Number literal is too large (max = %1)", INT64_MAX);
-                            valid = false;
+                            MarkError("Number literal is too large (max = %1)", INT64_MAX);
                         }
 
-                        out_set->tokens.Append({TokenKind::Integer, line, {.i = value}});
+                        set.tokens.Append({TokenKind::Integer, line, {.i = value}});
                         continue;
                     } else {
-                        LogError("Invalid literal base character '%1'", code[j]);
-                        valid = false;
+                        MarkError("Invalid literal base character '%1'", code[next]);
                         break;
                     }
                 }
@@ -139,68 +162,65 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
             case '7':
             case '8':
             case '9': {
-                int64_t value = code[i] - '0';
+                int64_t value = code[offset] - '0';
                 bool overflow = false;
                 bool dot = false;
 
-                while (j < code.len) {
-                    unsigned int digit = (unsigned int)(code[j] - '0');
+                while (next < code.len) {
+                    unsigned int digit = (unsigned int)(code[next] - '0');
 
                     if (digit < 10) {
                         overflow |= (value > (INT64_MAX - digit) / 10);
-                        value = (value * 10) + (code[j] - '0');
-                    } else if (code[j] == '.') {
+                        value = (value * 10) + (code[next] - '0');
+                    } else if (code[next] == '.') {
                         dot = true;
                         break;
                     } else {
                         break;
                     }
 
-                    j++;
+                    next++;
                 }
 
                 if (dot) {
                     errno = 0;
 
                     char *end;
-                    double d = strtod(code.ptr + i, &end);
-                    j = end - code.ptr;
+                    double d = strtod(code.ptr + offset, &end);
+                    next = end - code.ptr;
 
                     if (RG_UNLIKELY(errno == ERANGE)) {
-                        LogError("Double value exceeds supported range");
-                        valid = false;
+                        MarkError("Double value exceeds supported range");
                         break;
                     }
 
-                    out_set->tokens.Append({TokenKind::Double, line, {.d = d}});
+                    set.tokens.Append({TokenKind::Double, line, {.d = d}});
                 } else {
                     if (RG_UNLIKELY(overflow)) {
-                        LogError("Number literal is too large (max = %1)", INT64_MAX);
-                        valid = false;
+                        MarkError("Number literal is too large (max = %1)", INT64_MAX);
                     }
 
-                    out_set->tokens.Append({TokenKind::Integer, line, {.i = value}});
+                    set.tokens.Append({TokenKind::Integer, line, {.i = value}});
                 }
             } break;
 
             case '"':
             case '\'': {
-                HeapArray<char> str(&out_set->str_alloc);
+                HeapArray<char> str(&set.str_alloc);
 
                 for (;;) {
-                    if (RG_UNLIKELY(j >= code.len || code[j] == '\n')) {
-                        LogError("Unfinished string literal");
-                        valid = false;
+                    if (RG_UNLIKELY(next >= code.len || code[next] == '\n')) {
+                        MarkError("Unfinished string literal");
                         break;
                     }
-                    if (code[j] == code[i]) {
-                        j++;
+                    if (code[next] == code[offset]) {
+                        next++;
                         break;
                     }
 
-                    if (code[j] == '\\') {
-                        if (++j < code.len) {
-                            switch (code[j]) {
+                    if (code[next] == '\\') {
+                        if (++next < code.len) {
+                            switch (code[next]) {
                                 case 'r': { str.Append('\r'); } break;
                                 case 'n': { str.Append('\n'); } break;
                                 case 't': { str.Append('\t'); } break;
@@ -214,20 +234,19 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
                                 case '0':  { str.Append(0); } break;
 
                                 default: {
-                                    LogError("Unsupported escape sequence '\\%1'", code[j]);
-                                    valid = false;
+                                    MarkError("Unsupported escape sequence '\\%1'", code[next]);
                                 } break;
                             }
                         }
                     } else {
-                        str.Append(code[j]);
+                        str.Append(code[next]);
                     }
 
-                    j++;
+                    next++;
                 }
                 str.Append(0);
 
-                out_set->tokens.Append({TokenKind::String, line, {.str = str.TrimAndLeak().ptr}});
+                set.tokens.Append({TokenKind::String, line, {.str = str.TrimAndLeak().ptr}});
             } break;
 
             case 'a':
@@ -283,114 +302,99 @@ bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
             case 'Y':
             case 'Z':
             case '_': {
-                while (j < code.len && (IsAsciiAlphaOrDigit(code[j]) || code[j] == '_')) {
-                    j++;
+                while (next < code.len && (IsAsciiAlphaOrDigit(code[next]) || code[next] == '_')) {
+                    next++;
                 }
 
-                Span<const char> ident = code.Take(i, j - i);
+                Span<const char> ident = code.Take(offset, next - offset);
 
                 if (ident == "let") {
-                    out_set->tokens.Append({TokenKind::Let, line});
+                    Token1(TokenKind::Let);
                 } else if (ident == "do") {
-                    out_set->tokens.Append({TokenKind::Do, line});
+                    Token1(TokenKind::Do);
                 } else if (ident == "end") {
-                    out_set->tokens.Append({TokenKind::End, line});
+                    Token1(TokenKind::End);
                 } else if (ident == "true") {
-                    out_set->tokens.Append({TokenKind::Bool, line, {.b = true}});
+                    set.tokens.Append({TokenKind::Bool, line, {.b = true}});
                 } else if (ident == "false") {
-                    out_set->tokens.Append({TokenKind::Bool, line, {.b = false}});
+                    set.tokens.Append({TokenKind::Bool, line, {.b = false}});
                 } else {
-                    const char *str = DuplicateString(ident, &out_set->str_alloc).ptr;
-                    out_set->tokens.Append({TokenKind::Identifier, line, {.str = str}});
+                    const char *str = DuplicateString(ident, &set.str_alloc).ptr;
+                    set.tokens.Append({TokenKind::Identifier, line, {.str = str}});
                 }
             } break;
 
-            case '+': { out_set->tokens.Append({TokenKind::Plus, line}); } break;
-            case '-': { out_set->tokens.Append({TokenKind::Minus, line}); } break;
-            case '*': { out_set->tokens.Append({TokenKind::Multiply, line}); } break;
+            case '+': { Token1(TokenKind::Plus); } break;
+            case '-': { Token1(TokenKind::Minus); } break;
+            case '*': { Token1(TokenKind::Multiply); } break;
             case '/': {
-                if (j < code.len && code[j] == '/') {
-                    while (++j < code.len && code[j] != '\n');
+                if (next < code.len && code[next] == '/') {
+                    while (++next < code.len && code[next] != '\n');
                 } else {
-                    out_set->tokens.Append({TokenKind::Divide, line});
+                    Token1(TokenKind::Divide);
                 }
             } break;
-            case '%': { out_set->tokens.Append({TokenKind::Modulo, line}); } break;
-            case '^': { out_set->tokens.Append({TokenKind::Xor, line}); } break;
-            case '~': { out_set->tokens.Append({TokenKind::Not, line}); } break;
-            case ':': {
-                if (j < code.len && code[j] == '=') {
-                    out_set->tokens.Append({TokenKind::Reassign, line});
-                    j++;
-                } else {
-                    out_set->tokens.Append({TokenKind::Colon, line});
-                }
-            } break;
-            case '(': { out_set->tokens.Append({TokenKind::LeftParenthesis, line}); } break;
-            case ')': { out_set->tokens.Append({TokenKind::RightParenthesis, line}); } break;
+            case '%': { Token1(TokenKind::Modulo); } break;
+            case '^': { Token1(TokenKind::Xor); } break;
+            case '~': { Token1(TokenKind::Not); } break;
+            case ':': { Token2('=', TokenKind::Reassign) || Token1(TokenKind::Colon); } break;
+            case '(': { Token1(TokenKind::LeftParenthesis); } break;
+            case ')': { Token1(TokenKind::RightParenthesis); } break;
 
-            case '=': { out_set->tokens.Append({TokenKind::Equal, line}); } break;
-            case '!': {
-                if (j < code.len && code[j] == '=') {
-                    out_set->tokens.Append({TokenKind::NotEqual, line});
-                    j++;
-                } else {
-                    out_set->tokens.Append({TokenKind::LogicNot, line});
-                }
-            } break;
-            case '&': {
-                if (j < code.len && code[j] == code[i]) {
-                    out_set->tokens.Append({TokenKind::LogicAnd, line});
-                    j++;
-                } else {
-                    out_set->tokens.Append({TokenKind::And, line});
-                }
-            } break;
-            case '|': {
-                if (j < code.len && code[j] == code[i]) {
-                    out_set->tokens.Append({TokenKind::LogicOr, line});
-                    j++;
-                } else {
-                    out_set->tokens.Append({TokenKind::Or, line});
-                }
-            } break;
-            case '>': {
-                if (j < code.len && code[j] == '>') {
-                    out_set->tokens.Append({TokenKind::RightShift, line});
-                    j++;
-                } else if (j < code.len && code[j] == '=') {
-                    out_set->tokens.Append({TokenKind::GreaterOrEqual, line});
-                    j++;
-                } else {
-                    out_set->tokens.Append({TokenKind::Greater, line});
-                }
-            } break;
-            case '<': {
-                if (j < code.len && code[j] == '<') {
-                    out_set->tokens.Append({TokenKind::LeftShift, line});
-                    j++;
-                } else if (j < code.len && code[j] == '=') {
-                    out_set->tokens.Append({TokenKind::LessOrEqual, line});
-                    j++;
-                } else {
-                    out_set->tokens.Append({TokenKind::Less, line});
-                }
-            } break;
+            case '=': { Token1(TokenKind::Equal); } break;
+            case '!': { Token2('=', TokenKind::NotEqual) || Token1(TokenKind::LogicNot); } break;
+            case '&': { Token2('&', TokenKind::LogicAnd) || Token1(TokenKind::And); } break;
+            case '|': { Token2('|', TokenKind::LogicOr) || Token1(TokenKind::Or); } break;
+            case '>': { Token2('>', TokenKind::RightShift) || Token2('=', TokenKind::GreaterOrEqual) || Token1(TokenKind::Greater); } break;
+            case '<': { Token2('<', TokenKind::LeftShift) || Token2('=', TokenKind::LessOrEqual) || Token1(TokenKind::Less); } break;
 
             default: {
-                LogError("Unexpected character '%1'", code[i]);
-                valid = false;
+                MarkError("Unexpected character '%1'", code[offset]);
             } break;
         }
     }
 
     // Newlines are used to end statements. Make sure the last statement has one.
-    out_set->tokens.Append({TokenKind::NewLine, line});
+    Token1(TokenKind::NewLine);
 
     if (valid) {
         out_guard.Disable();
     }
     return valid;
+}
+
+void Lexer::Finish(TokenSet *out_set)
+{
+    RG_ASSERT(!out_set->tokens.len);
+    SwapMemory(&set, out_set, RG_SIZE(set));
+}
+
+bool Lexer::Token1(TokenKind tok)
+{
+    set.tokens.Append({tok, line});
+    return true;
+}
+
+bool Lexer::Token2(char c, TokenKind tok)
+{
+    if (next < code.len && code[next] == c) {
+        set.tokens.Append({tok, line});
+        next++;
+
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set)
+{
+    Lexer lexer;
+    if (!lexer.Tokenize(code, filename))
+        return false;
+
+    lexer.Finish(out_set);
+    return true;
 }
 
 }
