@@ -1,5 +1,5 @@
 -----------------------------------------------------------------------
- dear imgui, v1.75
+ dear imgui, v1.76
 -----------------------------------------------------------------------
  examples/README.txt
  (This is the README file for the examples/ folder. See docs/ for more documentation)
@@ -153,7 +153,7 @@ Those will allow you to create portable applications and will solve and abstract
 ---------------------------------------
 
 Building:
-  Unfortunately in 2018 it is still tedious to create and maintain portable build files using external
+  Unfortunately in 2020 it is still tedious to create and maintain portable build files using external
   libraries (the kind we're using here to create a window and render 3D triangles) without relying on
   third party software. For most examples here I choose to provide:
    - Makefiles for Linux/OSX
@@ -163,6 +163,9 @@ Building:
   Please let me know if they don't work with your setup!
   You can probably just import the imgui_impl_xxx.cpp/.h files into your own codebase or compile those
   directly with a command-line compiler.
+
+  If you are interested in using Cmake to build and links examples, see:
+    https://github.com/ocornut/imgui/pull/1713 and https://github.com/ocornut/imgui/pull/3027
 
 
 example_allegro5/
@@ -190,13 +193,13 @@ example_empscripten:
 
 example_glfw_metal/
     GLFW (Mac) + Metal example.
-    = main.mm + imgui_impl_glfw.cpp + imgui_impl_metal.mm.
+    = main.mm + imgui_impl_glfw.cpp + imgui_impl_metal.mm
 
 example_glfw_opengl2/
     GLFW + OpenGL2 example (legacy, fixed pipeline).
     = main.cpp + imgui_impl_glfw.cpp + imgui_impl_opengl2.cpp
     **DO NOT USE OPENGL2 CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
-    **Prefer using OPENGL3 code (with gl3w/glew/glad/glbindings, you can replace the OpenGL function loader)**
+    **Prefer using OPENGL3 code (with gl3w/glew/glad/glbinding, you can replace the OpenGL function loader)**
     This code is mostly provided as a reference to learn about Dear ImGui integration, because it is shorter.
     If your code is using GL3+ context or any semi modern OpenGL calls, using this renderer is likely to
     make things more complicated, will require your code to reset many OpenGL attributes to their initial
@@ -237,11 +240,15 @@ example_sdl_directx11/
     = main.cpp + imgui_impl_sdl.cpp + imgui_impl_dx11.cpp
     This to demonstrate usage of DirectX with SDL.
 
+example_sdl_metal/
+    SDL2 (Mac) + Metal example.
+    = main.mm + imgui_impl_sdl.cpp + imgui_impl_metal.mm
+
 example_sdl_opengl2/
     SDL2 (Win32, Mac, Linux etc.) + OpenGL example (legacy, fixed pipeline).
     = main.cpp + imgui_impl_sdl.cpp + imgui_impl_opengl2.cpp
     **DO NOT USE OPENGL2 CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
-    **Prefer using OPENGL3 code (with gl3w/glew/glad/glbindings, you can replace the OpenGL function loader)**
+    **Prefer using OPENGL3 code (with gl3w/glew/glad/glbinding, you can replace the OpenGL function loader)**
     This code is mostly provided as a reference to learn about Dear ImGui integration, because it is shorter.
     If your code is using GL3+ context or any semi modern OpenGL calls, using this renderer is likely to
     make things more complicated, will require your code to reset many OpenGL attributes to their initial

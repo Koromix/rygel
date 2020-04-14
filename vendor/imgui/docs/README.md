@@ -7,7 +7,7 @@ dear imgui
 Businesses: support continued development via invoiced technical support, maintenance, sponsoring contracts:
 <br>&nbsp;&nbsp;_E-mail: contact @ dearimgui dot org_
 
-Individuals: support continued maintenance and development via [PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=WGHNC6MBFLZ2S) donations.
+Individuals: support continued maintenance and development with [PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=WGHNC6MBFLZ2S).
 
 ----
 
@@ -80,7 +80,7 @@ ImGui::End();
 Result:
 <br>![sample code output](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/code_sample_03_color.gif)
 
-Dear ImGui allows you **create elaborate tools** as well as very short-lived ones. On the extreme side of short-livedness: using the Edit&Continue (hot code reload) feature of modern compilers you can add a few widgets to tweaks variables while your application is running, and remove the code a minute later! Dear ImGui is not just for tweaking values. You can use it to trace a running algorithm by just emitting text commands. You can use it along with your own reflection data to browse your dataset live. You can use it to expose the internals of a subsystem in your engine, to create a logger, an inspection tool, a profiler, a debugger, an entire game making editor/framework, etc.
+Dear ImGui allows you to **create elaborate tools** as well as very short-lived ones. On the extreme side of short-livedness: using the Edit&Continue (hot code reload) feature of modern compilers you can add a few widgets to tweaks variables while your application is running, and remove the code a minute later! Dear ImGui is not just for tweaking values. You can use it to trace a running algorithm by just emitting text commands. You can use it along with your own reflection data to browse your dataset live. You can use it to expose the internals of a subsystem in your engine, to create a logger, an inspection tool, a profiler, a debugger, an entire game making editor/framework, etc.
 
 ### How it works
 
@@ -97,7 +97,7 @@ Calling the `ImGui::ShowDemoWindow()` function will create a demo window showcas
 ![screenshot demo](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v167/v167-misc.png)
 
 You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at some Dear ImGui features, you can download Windows binaries of the demo app here:
-- [imgui-demo-binaries-20190715.zip](http://www.dearimgui.org/binaries/imgui-demo-binaries-20190715.zip) (Windows binaries, 1.72 WIP, built 2019/07/15, master branch, 5 executables)
+- [imgui-demo-binaries-20190715.zip](http://www.dearimgui.org/binaries/imgui-demo-binaries-20200412.zip) (Windows binaries, 1.76 WIP, built 2020/04/12, master branch, 5 executables) or [older demo binaries](http://www.dearimgui.org/binaries).
 
 The demo applications are not DPI aware so expect some blurriness on a 4K screen. For DPI awareness in your application, you can load/reload your font at different scale, and scale your style with `style.ScaleAllSizes()`.
 
@@ -131,7 +131,7 @@ Some of the goals for 2020 are:
 
 ### Gallery
 
-For more user-submitted screenshots of projects using Dear ImGui, check out the [Gallery Threads](https://github.com/ocornut/imgui/issues/2847)!
+For more user-submitted screenshots of projects using Dear ImGui, check out the [Gallery Threads](https://github.com/ocornut/imgui/issues/3075)!
 
 Custom engine
 [![screenshot game](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v149/gallery_TheDragonsTrap-01-thumb.jpg)](https://cloud.githubusercontent.com/assets/8225057/20628927/33e14cac-b329-11e6-80f6-9524e93b048a.png)
@@ -140,7 +140,7 @@ Custom engine
 [![screenshot tool](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/editor_white_preview.jpg)](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/editor_white.png)
 
 [Tracy Profiler](https://bitbucket.org/wolfpld/tracy)
-![tracy profiler](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v173/tracy_profiler.jpg)
+![tracy profiler](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v176/tracy_profiler.png)
 
 ### Support, Frequently Asked Questions (FAQ)
 
@@ -164,7 +164,7 @@ You may also peak at the [Multi-Viewport](https://github.com/ocornut/imgui/issue
 
 **Who uses Dear ImGui?**
 
-See the [Quotes](https://github.com/ocornut/imgui/wiki/Quotes) and [Software using dear imgui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui) Wiki pages for a list of games/software which are publicly known to use dear imgui. Please add yours if you can! Also see the [Gallery Threads](https://github.com/ocornut/imgui/issues/2847)!
+See the [Quotes](https://github.com/ocornut/imgui/wiki/Quotes), [Sponsors](https://github.com/ocornut/imgui/wiki/Sponsors), [Software using dear imgui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui) Wiki pages for an idea of who is using Dear ImGui. Please add your game/software if you can! Also see the [Gallery Threads](https://github.com/ocornut/imgui/issues/3075)!
 
 How to help
 -----------
@@ -183,38 +183,32 @@ Your contributions are keeping this project alive. The library is available unde
 Businesses: support continued development via invoiced technical support, maintenance, sponsoring contracts:
 <br>&nbsp;&nbsp;_E-mail: contact @ dearimgui dot org_
 
-Individuals: support continued maintenance and development via [PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=WGHNC6MBFLZ2S) donations.
+Individuals: support continued maintenance and development with [PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=WGHNC6MBFLZ2S).
 
-### Sponsors
+Sponsors
+--------
 
 Ongoing Dear ImGui development is financially supported by users and private sponsors, recently:
 
 *Platinum-chocolate sponsors*
-- Blizzard Entertainment
-- Google
-- Ubisoft
-- Nvidia
+- [Blizzard](https://careers.blizzard.com/en-us/openings/engineering/all/all/all/1), [Google](https://github.com/google/filament), [Nvidia](https://developer.nvidia.com/nvidia-omniverse), [Ubisoft](https://montreal.ubisoft.com/en/ubisoft-sponsors-user-interface-library-for-c-dear-imgui/)
 
-*Double-chocolate sponsors*
-- Media Molecule, Mobigame, Aras Pranckevičius, Greggman, DotEmu, Nadeo, Supercell, Aiden Koss, Kylotonn.
+*Double-chocolate and Salty caramel sponsors*
+- [Activision](https://careers.activision.com/c/programmingsoftware-engineering-jobs), [DotEmu](http://www.dotemu.com), [Framefield](http://framefield.com), [Hexagon](https://hexagonxalt.com/the-technology/xalt-visualization), [Kylotonn](https://www.kylotonn.com), [Media Molecule](http://www.mediamolecule.com), [Mesh Consultants](https://www.meshconsultants.ca), [Mobigame](http://www.mobigame.net), [Nadeo](https://www.nadeo.com), [Supercell](http://www.supercell.com), [Remedy Entertainment](https://www.remedygames.com/), [Unit 2 Games](https://unit2games.com/)
 
-*Salty caramel supporters*
-- Remedy Entertainment, Next Level Games, Recognition Robotics, ikrima, Geoffrey Evans, Mercury Labs, Singularity Demo Group, Lionel Landwerlin, Ron Gilbert, Brandon Townsend, G3DVu, Cort Stratton, drudru, Harfang 3D, Jeff Roberts, Rainway inc, Ondra Voves, Mesh Consultants, Unit 2 Games, Neil Bickford, Bill Six, Graham Manders.
+From November 2014 to December 2019, ongoing development has also been financially supported by its users on Patreon and through individual donations. Please see [detailed list of Dear ImGui supporters](https://github.com/ocornut/imgui/wiki/Sponsors).
 
-*Caramel supporters*
-- Jerome Lanquetot, Daniel Collin, Ctrl Alt Ninja, Neil Henning, Neil Blakey-Milner, Aleksei, NeiloGD, Eric, Game Atelier, Vincent Hamm, Morten Skaaning, Colin Riley, Sergio Gonzales, Andrew Berridge, Roy Eltham, Game Preservation Society, Josh Faust, Martin Donlon, Codecat, Doug McNabb, Emmanuel Julien, Guillaume Chereau, Jeffrey Slutter, Jeremiah Deckard, r-lyeh, Nekith, Joshua Fisher, Malte Hoffmann, Mustafa Karaalioglu, Merlyn Morgan-Graham, Per Vognsen, Fabian Giesen, Jan Staubach, Matt Hargett, John Shearer, Jesse Chounard, kingcoopa, Jonas Bernemann, Johan Andersson, Michael Labbe, Tomasz Golebiowski, Louis Schnellbach, Jimmy Andrews, Bojan Endrovski, Robin Berg Pettersen, Rachel Crawford, Andrew Johnson, Sean Hunter, Jordan Mellow, Nefarius Software Solutions, Laura Wieme, Robert Nix, Mick Honey, Steven Kah Hien Wong, Bartosz Bielecki, Oscar Penas, A M, Liam Moynihan, Artometa, Mark Lee, Dimitri Diakopoulos, Pete Goodwin, Johnathan Roatch, nyu lea, Oswald Hurlem, Semyon Smelyanskiy, Le Bach, Jeong MyeongSoo, Chris Matthews, Astrofra, Frederik De Bleser, Anticrisis, Matt Reyer.
+**THANK YOU to all past and present supporters for helping to keep this project alive and thriving!**
 
-And all other past and present supporters; THANK YOU!
-(Please contact me if you would like to be added or removed from this list)
-
-Dear ImGui is using software and services kindly provided free of charge for open source projects:
+Dear ImGui is using software and services provided free of charge for open source projects:
 - [PVS-Studio](https://www.viva64.com/en/b/0570/) for static analysis.
 - [GitHub actions](https://github.com/features/actions) for continuous integration systems.
+- [OpenCppCoverage](https://github.com/OpenCppCoverage/OpenCppCoverage) for code coverage analysis.
 
 Credits
 -------
 
-Developed by [Omar Cornut](http://www.miracleworld.net) and every direct or indirect contributors to the GitHub. The early version of this library was developed with the support of [Media Molecule](http://www.mediamolecule.com) and first used internally on the game [Tearaway](http://tearaway.mediamolecule.com) (Vita).
+Developed by [Omar Cornut](http://www.miracleworld.net) and every direct or indirect contributors to the GitHub. The early version of this library was developed with the support of [Media Molecule](http://www.mediamolecule.com) and first used internally on the game [Tearaway](http://tearaway.mediamolecule.com) (PS Vita).
 
 I first discovered the IMGUI paradigm at [Q-Games](http://www.q-games.com) where Atman Binstock had dropped his own simple implementation in the codebase, which I spent quite some time improving and thinking about. It turned out that Atman was exposed to the concept directly by working with Casey. When I moved to Media Molecule I rewrote a new library trying to overcome the flaws and limitations of the first one I've worked with. It became this library and since then I have spent an unreasonable amount of time iterating and improving it.
 

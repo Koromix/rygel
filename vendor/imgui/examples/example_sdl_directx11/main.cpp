@@ -1,6 +1,6 @@
 // dear imgui: standalone example application for SDL2 + DirectX 11
 // If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
-// (SDL is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
+// (SDL is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan/Metal graphics context creation, etc.)
 
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
@@ -101,6 +101,13 @@ int main(int, char**)
                 done = true;
             if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
                 done = true;
+            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED && event.window.windowID == SDL_GetWindowID(window))
+            {                
+                // Release all outstanding references to the swap chain's buffers before resizing.
+                CleanupRenderTarget();
+                g_pSwapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
+                CreateRenderTarget();
+            }
         }
 
         // Start the Dear ImGui frame
