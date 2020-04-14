@@ -38,6 +38,7 @@ public:
 
 private:
     void ParseExpression(Type *out_type = nullptr);
+    void ParseDeclaration();
 
     void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(Type in_type, Opcode code, Type out_type);
@@ -120,23 +121,7 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
             case TokenKind::NewLine: { offset++; } break;
 
             case TokenKind::Let: {
-                offset++;
-
-                if (ConsumeToken(TokenKind::Identifier)) {
-                    VariableInfo var = {};
-
-                    var.name = tokens[offset - 1].u.str;
-                    ConsumeToken(TokenKind::Assign);
-                    ParseExpression(&var.type);
-                    var.offset = program.variables.len;
-
-                    if (program.variables_map.Append(var).second) {
-                        program.variables.Append(var);
-                    } else {
-                        MarkError("Variable '%1' already exists", var.name);
-                    }
-                }
-
+                ParseDeclaration();
                 ConsumeToken(TokenKind::NewLine);
             } break;
 
@@ -150,6 +135,26 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
     }
 
     return valid;
+}
+
+void Parser::ParseDeclaration()
+{
+    offset++;
+
+    if (ConsumeToken(TokenKind::Identifier)) {
+        VariableInfo var = {};
+
+        var.name = tokens[offset - 1].u.str;
+        ConsumeToken(TokenKind::Assign);
+        ParseExpression(&var.type);
+        var.offset = program.variables.len;
+
+        if (program.variables_map.Append(var).second) {
+            program.variables.Append(var);
+        } else {
+            MarkError("Variable '%1' already exists", var.name);
+        }
+    }
 }
 
 void Parser::ParseExpression(Type *out_type)
