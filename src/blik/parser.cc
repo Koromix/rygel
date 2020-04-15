@@ -39,13 +39,13 @@ public:
     void Finish(Program *out_program);
 
 private:
+    void ParseBlock();
+    void ParseDeclaration();
     void ParseIf();
     void ParseWhile();
-    void ParseBlock();
     void ParsePrint();
-    Type ParseExpression();
-    void ParseDeclaration();
 
+    Type ParseExpression();
     void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(Type in_type, Opcode code, Type out_type);
     bool EmitOperator2(Type in_type, Opcode code, Type out_type);
@@ -160,6 +160,58 @@ void Parser::ParseBlock()
     }
 }
 
+void Parser::ParseDeclaration()
+{
+    // Code below assumes identifier exists for the variable name
+    if (RG_UNLIKELY(!ConsumeToken(TokenKind::Identifier)))
+        return;
+
+    VariableInfo var = {};
+
+    var.name = tokens[offset - 1].u.str;
+    if (MatchToken(TokenKind::Equal)) {
+        var.type = ParseExpression();
+    } else if (MatchToken(TokenKind::Colon)) {
+        if (RG_UNLIKELY(!ConsumeToken(TokenKind::Identifier)))
+            return;
+
+        const char *type_name = tokens[offset - 1].u.str;
+
+        if (RG_UNLIKELY(!OptionToEnum(TypeNames, type_name, &var.type))) {
+            MarkError("Type '%1' is not valid", type_name);
+            return;
+        }
+
+        if (MatchToken(TokenKind::Equal)) {
+            Type type2 = ParseExpression();
+
+            if (RG_UNLIKELY(type2 != var.type)) {
+                MarkError("Cannot assign %1 value to %2 variable",
+                          TypeNames[(int)type2], TypeNames[(int)var.type]);
+                return;
+            }
+        } else {
+            switch (var.type) {
+                case Type::Bool: { program.ir.Append({Opcode::PushBool, {.b = false}}); } break;
+                case Type::Integer: { program.ir.Append({Opcode::PushInt, {.i = 0}}); } break;
+                case Type::Double: { program.ir.Append({Opcode::PushDouble, {.d = 0.0}}); } break;
+                case Type::String: { program.ir.Append({Opcode::PushString, {.str = ""}}); } break;
+            }
+            values.Append({var.type});
+        }
+    } else {
+        MarkError("Unexpected token '%1', expected '=' or ':'");
+        return;
+    }
+    var.offset = program.variables.len;
+
+    if (!program.variables_map.Append(var).second) {
+        MarkError("Variable '%1' already exists", var.name);
+        return;
+    }
+    program.variables.Append(var);
+}
+
 void Parser::ParseIf()
 {
     jumps.RemoveFrom(0);
@@ -257,58 +309,6 @@ void Parser::ParseWhile()
     program.ir[jump_idx].u.i = program.ir.len - jump_idx;
     program.ir.Append(buf);
     program.ir.Append({Opcode::BranchIfTrue, {.i = block_idx - program.ir.len}});
-}
-
-void Parser::ParseDeclaration()
-{
-    // Code below assumes identifier exists for the variable name
-    if (RG_UNLIKELY(!ConsumeToken(TokenKind::Identifier)))
-        return;
-
-    VariableInfo var = {};
-
-    var.name = tokens[offset - 1].u.str;
-    if (MatchToken(TokenKind::Equal)) {
-        var.type = ParseExpression();
-    } else if (MatchToken(TokenKind::Colon)) {
-        if (RG_UNLIKELY(!ConsumeToken(TokenKind::Identifier)))
-            return;
-
-        const char *type_name = tokens[offset - 1].u.str;
-
-        if (RG_UNLIKELY(!OptionToEnum(TypeNames, type_name, &var.type))) {
-            MarkError("Type '%1' is not valid", type_name);
-            return;
-        }
-
-        if (MatchToken(TokenKind::Equal)) {
-            Type type2 = ParseExpression();
-
-            if (RG_UNLIKELY(type2 != var.type)) {
-                MarkError("Cannot assign %1 value to %2 variable",
-                          TypeNames[(int)type2], TypeNames[(int)var.type]);
-                return;
-            }
-        } else {
-            switch (var.type) {
-                case Type::Bool: { program.ir.Append({Opcode::PushBool, {.b = false}}); } break;
-                case Type::Integer: { program.ir.Append({Opcode::PushInt, {.i = 0}}); } break;
-                case Type::Double: { program.ir.Append({Opcode::PushDouble, {.d = 0.0}}); } break;
-                case Type::String: { program.ir.Append({Opcode::PushString, {.str = ""}}); } break;
-            }
-            values.Append({var.type});
-        }
-    } else {
-        MarkError("Unexpected token '%1', expected '=' or ':'");
-        return;
-    }
-    var.offset = program.variables.len;
-
-    if (!program.variables_map.Append(var).second) {
-        MarkError("Variable '%1' already exists", var.name);
-        return;
-    }
-    program.variables.Append(var);
 }
 
 void Parser::ParsePrint()
