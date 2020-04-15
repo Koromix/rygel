@@ -60,5 +60,4 @@ else
     p := 226
 end
 
-print "The value of p is: "
-print p
+print "The value of p is: ", p, "\n"

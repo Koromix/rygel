@@ -353,6 +353,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
             case ':': { Token2('=', TokenKind::Reassign) || Token1(TokenKind::Colon); } break;
             case '(': { Token1(TokenKind::LeftParenthesis); } break;
             case ')': { Token1(TokenKind::RightParenthesis); } break;
+            case ',': { Token1(TokenKind::Comma); } break;
 
             case '=': { Token1(TokenKind::Equal); } break;
             case '!': { Token2('=', TokenKind::NotEqual) || Token1(TokenKind::LogicNot); } break;

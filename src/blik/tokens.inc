@@ -15,6 +15,7 @@ TOKEN(While, "while")
 TOKEN(Print, "print")
 TOKEN(LeftParenthesis, "(")
 TOKEN(RightParenthesis, ")")
+TOKEN(Comma, ",")
 
 TOKEN(Bool, "<bool>")
 TOKEN(Integer, "<integer>")

@@ -42,6 +42,7 @@ private:
     void ParseIf();
     void ParseWhile();
     void ParseBlock();
+    void ParsePrint();
     Type ParseExpression();
     void ParseDeclaration();
 
@@ -143,10 +144,8 @@ void Parser::ParseBlock()
             // This will be removed once we get functions, but in the mean time
             // I need to output things somehow!
             case TokenKind::Print: {
-                Type type = ParseExpression();
+                ParsePrint();
                 ConsumeToken(TokenKind::NewLine);
-
-                program.ir.Append({Opcode::Print, {.type = type}});
             } break;
 
             default: {
@@ -310,6 +309,17 @@ void Parser::ParseDeclaration()
         return;
     }
     program.variables.Append(var);
+}
+
+void Parser::ParsePrint()
+{
+    Type type = ParseExpression();
+    program.ir.Append({Opcode::Print, {.type = type}});
+
+    while (MatchToken(TokenKind::Comma)) {
+        Type type = ParseExpression();
+        program.ir.Append({Opcode::Print, {.type = type}});
+    }
 }
 
 static int GetOperatorPrecedence(TokenKind kind)
