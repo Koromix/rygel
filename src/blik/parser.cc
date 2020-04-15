@@ -358,6 +358,9 @@ Type Parser::ParseExpression()
     bool expect_op = false;
     Size parentheses = 0;
 
+    // Used to detect "empty" expressions
+    Size prev_offset = offset;
+
     for (; offset < tokens.len; offset++) {
         const Token &tok = tokens[offset];
 
@@ -457,7 +460,15 @@ Type Parser::ParseExpression()
             op.unary = (tok.kind == TokenKind::Not || tok.kind == TokenKind::LogicNot);
 
             if (RG_UNLIKELY(op.prec < 0)) {
-                if (!expect_op && tok.kind == TokenKind::NewLine) {
+                if (offset == prev_offset) {
+                    if (offset >= tokens.len) {
+                        MarkError("Unexpected end, expected expression");
+                    } else {
+                        MarkError("Unexpected token '%1', expected expression", TokenKindNames[(int)tokens[offset].kind]);
+                    }
+
+                    return {};
+                } else if (!expect_op && tok.kind == TokenKind::NewLine) {
                     // Expression is split across multiple lines
                     continue;
                 } else if (parentheses || !expect_op) {
