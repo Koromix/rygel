@@ -152,9 +152,22 @@ void Parser::ParseBlock()
                 offset--;
 
                 ParseExpression();
-                EmitPop(1);
-
                 ConsumeToken(TokenKind::NewLine);
+
+                // We need to pop the result of the expression. If it was an assignement,
+                // we can replace the copy with a store (implicit pop) instead.
+                if (RG_LIKELY(program.ir.len)) {
+                    Instruction *inst = &program.ir[program.ir.len - 1];
+
+                    switch (inst->code) {
+                        case Opcode::CopyBool: { inst->code = Opcode::StoreBool; } break;
+                        case Opcode::CopyInt: { inst->code = Opcode::StoreInt; } break;
+                        case Opcode::CopyDouble: { inst->code = Opcode::StoreDouble; } break;
+                        case Opcode::CopyString: { inst->code = Opcode::StoreString; } break;
+
+                        default: { EmitPop(1); } break;
+                    }
+                }
             } break;
         }
     }
@@ -567,10 +580,10 @@ void Parser::ProduceOperator(const PendingOperator &op)
             }
 
             switch (value1.type) {
-                case Type::Bool: { program.ir.Append({Opcode::StoreBool, {.i = value1.var->offset}}); } break;
-                case Type::Integer: { program.ir.Append({Opcode::StoreInt, {.i = value1.var->offset}}); } break;
-                case Type::Double: { program.ir.Append({Opcode::StoreDouble, {.i = value1.var->offset}}); } break;
-                case Type::String: { program.ir.Append({Opcode::StoreString, {.i = value1.var->offset}}); } break;
+                case Type::Bool: { program.ir.Append({Opcode::CopyBool, {.i = value1.var->offset}}); } break;
+                case Type::Integer: { program.ir.Append({Opcode::CopyInt, {.i = value1.var->offset}}); } break;
+                case Type::Double: { program.ir.Append({Opcode::CopyDouble, {.i = value1.var->offset}}); } break;
+                case Type::String: { program.ir.Append({Opcode::CopyString, {.i = value1.var->offset}}); } break;
             }
             values.len--;
 
