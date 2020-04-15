@@ -719,9 +719,7 @@ void Parser::EmitPop(int64_t count)
 {
     RG_ASSERT(count >= 0);
 
-    if (program.ir.len && program.ir[program.ir.len - 1].code == Opcode::Pop) {
-        program.ir[program.ir.len - 1].u.i += count;
-    } else if (count) {
+    if (count) {
         program.ir.Append({Opcode::Pop, {.i = count}});
     }
 }
