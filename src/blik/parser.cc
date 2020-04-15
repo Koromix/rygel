@@ -438,7 +438,7 @@ Type Parser::ParseExpression()
                     const VariableInfo *var = program.variables_map.Find(tok.u.str);
 
                     if (RG_UNLIKELY(!var)) {
-                        MarkError("Variable '%1' is not defined", tok.u.str);
+                        MarkError("Identifier '%1' does not exist", tok.u.str);
                         return {};
                     }
 
