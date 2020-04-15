@@ -45,7 +45,7 @@ private:
     void ParseWhile();
     void ParsePrint();
 
-    Type ParseExpression();
+    Type ParseExpression(bool keep_result);
     void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(Type in_type, Opcode code, Type out_type);
     bool EmitOperator2(Type in_type, Opcode code, Type out_type);
@@ -148,23 +148,8 @@ void Parser::ParseBlock()
             default: {
                 offset--;
 
-                ParseExpression();
+                ParseExpression(false);
                 ConsumeToken(TokenKind::NewLine);
-
-                // We need to pop the result of the expression. If it was an assignement,
-                // we can replace the copy with a store (implicit pop) instead.
-                if (RG_LIKELY(program.ir.len)) {
-                    Instruction *inst = &program.ir[program.ir.len - 1];
-
-                    switch (inst->code) {
-                        case Opcode::CopyBool: { inst->code = Opcode::StoreBool; } break;
-                        case Opcode::CopyInt: { inst->code = Opcode::StoreInt; } break;
-                        case Opcode::CopyDouble: { inst->code = Opcode::StoreDouble; } break;
-                        case Opcode::CopyString: { inst->code = Opcode::StoreString; } break;
-
-                        default: { EmitPop(1); } break;
-                    }
-                }
             } break;
         }
     }
@@ -184,7 +169,7 @@ void Parser::ParseDeclaration()
 
     var.name = tokens[offset - 1].u.str;
     if (MatchToken(TokenKind::Equal)) {
-        var.type = ParseExpression();
+        var.type = ParseExpression(true);
     } else if (MatchToken(TokenKind::Colon)) {
         if (RG_UNLIKELY(!ConsumeToken(TokenKind::Identifier)))
             return;
@@ -197,7 +182,7 @@ void Parser::ParseDeclaration()
         }
 
         if (MatchToken(TokenKind::Equal)) {
-            Type type2 = ParseExpression();
+            Type type2 = ParseExpression(true);
 
             if (RG_UNLIKELY(type2 != var.type)) {
                 MarkError("Cannot assign %1 value to %2 variable",
@@ -230,49 +215,52 @@ void Parser::ParseIf()
 {
     jumps.RemoveFrom(0);
 
-    if (RG_UNLIKELY(ParseExpression() != Type::Bool)) {
+    if (RG_UNLIKELY(ParseExpression(true) != Type::Bool)) {
         MarkError("Cannot use non-Bool expression as condition");
         return;
     }
-    ConsumeToken(TokenKind::NewLine);
 
     Size branch_idx = program.ir.len;
     program.ir.Append({Opcode::BranchIfFalse});
 
-    // Deal with the mandatory block first
-    ParseBlock();
+    if (MatchToken(TokenKind::Do)) {
+        ParseExpression(false);
+    } else {
+        ConsumeToken(TokenKind::NewLine);
+        ParseBlock();
 
-    jumps.Append(program.ir.len);
-    program.ir.Append({Opcode::Jump});
+        jumps.Append(program.ir.len);
+        program.ir.Append({Opcode::Jump});
 
-    while (MatchToken(TokenKind::Else)) {
-        program.ir[branch_idx].u.i = program.ir.len - branch_idx;
+        while (MatchToken(TokenKind::Else)) {
+            program.ir[branch_idx].u.i = program.ir.len - branch_idx;
 
-        if (MatchToken(TokenKind::If)) {
-            if (RG_UNLIKELY(ParseExpression() != Type::Bool)) {
-                MarkError("Cannot use non-Bool expression as condition");
-                return;
+            if (MatchToken(TokenKind::If)) {
+                if (RG_UNLIKELY(ParseExpression(true) != Type::Bool)) {
+                    MarkError("Cannot use non-Bool expression as condition");
+                    return;
+                }
+                ConsumeToken(TokenKind::NewLine);
+
+                branch_idx = program.ir.len;
+                program.ir.Append({Opcode::BranchIfFalse});
+
+                ParseBlock();
+
+                jumps.Append(program.ir.len);
+                program.ir.Append({Opcode::Jump});
+            } else {
+                ConsumeToken(TokenKind::NewLine);
+
+                ParseBlock();
+                break;
             }
-            ConsumeToken(TokenKind::NewLine);
-
-            branch_idx = program.ir.len;
-            program.ir.Append({Opcode::BranchIfFalse});
-
-            ParseBlock();
-
-            jumps.Append(program.ir.len);
-            program.ir.Append({Opcode::Jump});
-        } else {
-            ConsumeToken(TokenKind::NewLine);
-
-            ParseBlock();
-            break;
         }
+
+        ConsumeToken(TokenKind::End);
     }
 
-    ConsumeToken(TokenKind::End);
-
-    program.ir[branch_idx].u.i = program.ir.len;
+    program.ir[branch_idx].u.i = program.ir.len - branch_idx;
     for (Size jump_idx: jumps) {
         program.ir[jump_idx].u.i = program.ir.len - jump_idx;
     }
@@ -284,11 +272,10 @@ void Parser::ParseWhile()
     {
         Size test_idx = program.ir.len;
 
-        if (RG_UNLIKELY(ParseExpression() != Type::Bool)) {
+        if (RG_UNLIKELY(ParseExpression(true) != Type::Bool)) {
             MarkError("Cannot use non-Bool expression as condition");
             return;
         }
-        ConsumeToken(TokenKind::NewLine);
 
         buf.Append(program.ir.Take(test_idx, program.ir.len - test_idx));
         program.ir.len -= buf.len;
@@ -299,8 +286,13 @@ void Parser::ParseWhile()
 
     Size block_idx = program.ir.len;
 
-    ParseBlock();
-    ConsumeToken(TokenKind::End);
+    if (MatchToken(TokenKind::Do)) {
+        ParseExpression(false);
+    } else {
+        ConsumeToken(TokenKind::NewLine);
+        ParseBlock();
+        ConsumeToken(TokenKind::End);
+    }
 
     program.ir[jump_idx].u.i = program.ir.len - jump_idx;
     program.ir.Append(buf);
@@ -309,11 +301,11 @@ void Parser::ParseWhile()
 
 void Parser::ParsePrint()
 {
-    Type type = ParseExpression();
+    Type type = ParseExpression(true);
     program.ir.Append({Opcode::Print, {.type = type}});
 
     while (MatchToken(TokenKind::Comma)) {
-        Type type = ParseExpression();
+        Type type = ParseExpression(true);
         program.ir.Append({Opcode::Print, {.type = type}});
     }
 }
@@ -347,7 +339,7 @@ static int GetOperatorPrecedence(TokenKind kind)
     }
 }
 
-Type Parser::ParseExpression()
+Type Parser::ParseExpression(bool keep_result)
 {
     values.RemoveFrom(0);
 
@@ -533,6 +525,21 @@ Type Parser::ParseExpression()
 
     if (RG_UNLIKELY(!valid))
         return {};
+
+    if (!keep_result) {
+        Instruction *inst = &program.ir[program.ir.len - 1];
+
+        // We need to pop the result of the expression. If it was an assignement,
+        // we can replace the copy with a store (implicit pop) instead.
+        switch (inst->code) {
+            case Opcode::CopyBool: { inst->code = Opcode::StoreBool; } break;
+            case Opcode::CopyInt: { inst->code = Opcode::StoreInt; } break;
+            case Opcode::CopyDouble: { inst->code = Opcode::StoreDouble; } break;
+            case Opcode::CopyString: { inst->code = Opcode::StoreString; } break;
+
+            default: { EmitPop(1); } break;
+        }
+    }
 
     RG_ASSERT(values.len == 1);
     return values[0].type;

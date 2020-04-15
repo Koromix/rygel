@@ -21,9 +21,11 @@ let i = 0
 while i < 1000000
     i := i + 1
 end
+while i > 100 do i := i - 1
+print "i = ", i, "\n"
 
 p := 5
-test := true
+# test := true
 
 # Les variables de ce langage ont une portée lexicale. En dehors de if, while & compagnie,
 # il est possible de définir des blocs à l'aide de do/end. Les deux variables zzz et bleh
@@ -48,6 +50,10 @@ end
 let foo: String = "Hello" # OK
 # let bar: Integer = "World!" # This is an error and would not work if uncommented
 let empty: Double
+
+let txt = "FOO"
+if test do txt := "BAR"
+print txt, "\n"
 
 if empty < 1.0
     let blik = 2.0
