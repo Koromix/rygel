@@ -91,8 +91,8 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
 
     // Do the actual parsing!
     ParseBlock();
-    if (RG_UNLIKELY(MatchToken(TokenKind::End))) {
-        MarkError("End statement outside of block");
+    if (RG_UNLIKELY(offset < tokens.len)) {
+        MarkError("Unexpected token '%1' without matching block", TokenKindNames[(int)tokens[offset].kind]);
         return false;
     }
 
