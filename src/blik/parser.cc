@@ -42,7 +42,7 @@ private:
     void ParseIf();
     void ParseWhile();
     void ParseBlock();
-    void ParseExpression(Type *out_type = nullptr);
+    Type ParseExpression();
     void ParseDeclaration();
 
     void ProduceOperator(const PendingOperator &op);
@@ -160,9 +160,7 @@ void Parser::ParseIf()
 {
     jumps.RemoveFrom(0);
 
-    Type type;
-    ParseExpression(&type);
-    if (type != Type::Bool) {
+    if (RG_UNLIKELY(ParseExpression() != Type::Bool)) {
         MarkError("Cannot use non-Bool expression as condition");
         return;
     }
@@ -187,9 +185,7 @@ void Parser::ParseIf()
     while (MatchToken(TokenKind::ElIf)) {
         program.ir[branch_idx].u.i = program.ir.len - branch_idx;
 
-        Type type;
-        ParseExpression(&type);
-        if (type != Type::Bool) {
+        if (RG_UNLIKELY(ParseExpression() != Type::Bool)) {
             MarkError("Cannot use non-Bool expression as condition");
             return;
         }
@@ -242,9 +238,7 @@ void Parser::ParseWhile()
     {
         Size test_idx = program.ir.len;
 
-        Type type;
-        ParseExpression(&type);
-        if (type != Type::Bool) {
+        if (RG_UNLIKELY(ParseExpression() != Type::Bool)) {
             MarkError("Cannot use non-Bool expression as condition");
             return;
         }
@@ -280,7 +274,7 @@ void Parser::ParseDeclaration()
 
     var.name = tokens[offset - 1].u.str;
     if (MatchToken(TokenKind::Equal)) {
-        ParseExpression(&var.type);
+        var.type = ParseExpression();
     } else if (MatchToken(TokenKind::Colon)) {
         if (RG_UNLIKELY(!ConsumeToken(TokenKind::Identifier)))
             return;
@@ -293,8 +287,7 @@ void Parser::ParseDeclaration()
         }
 
         if (MatchToken(TokenKind::Equal)) {
-            Type type2;
-            ParseExpression(&type2);
+            Type type2 = ParseExpression();
 
             if (RG_UNLIKELY(type2 != var.type)) {
                 MarkError("Cannot assign %1 value to %2 variable",
@@ -352,7 +345,7 @@ static int GetOperatorPrecedence(TokenKind kind)
     }
 }
 
-void Parser::ParseExpression(Type *out_type)
+Type Parser::ParseExpression()
 {
     values.RemoveFrom(0);
 
@@ -377,7 +370,7 @@ void Parser::ParseExpression(Type *out_type)
             for (;;) {
                 if (RG_UNLIKELY(!operators.len)) {
                     MarkError("Too many closing parentheses");
-                    return;
+                    return {};
                 }
 
                 const PendingOperator &op = operators.data[operators.len - 1];
@@ -437,7 +430,7 @@ void Parser::ParseExpression(Type *out_type)
 
                     if (RG_UNLIKELY(!var)) {
                         MarkError("Variable '%1' is not defined", tok.u.str);
-                        return;
+                        return {};
                     }
 
                     switch (var->type) {
@@ -505,7 +498,7 @@ void Parser::ParseExpression(Type *out_type)
 
             if (RG_UNLIKELY(!operators.Available())) {
                 MarkError("Too many operators on the stack");
-                return;
+                return {};
             }
             operators.Append(op);
         }
@@ -513,11 +506,11 @@ void Parser::ParseExpression(Type *out_type)
 
     if (RG_UNLIKELY(!expect_op)) {
         MarkError("Unexpected end, expected value or '('");
-        return;
+        return {};
     }
     if (RG_UNLIKELY(parentheses)) {
         MarkError("Missing closing parenthesis");
-        return;
+        return {};
     }
 
     for (Size i = operators.len - 1; i >= 0; i--) {
@@ -525,15 +518,16 @@ void Parser::ParseExpression(Type *out_type)
         ProduceOperator(op);
     }
 
-    RG_ASSERT(!valid || values.len == 1);
-    if (valid && out_type) {
-        *out_type = values[0].type;
-    }
-    return;
+    if (RG_UNLIKELY(!valid))
+        return {};
+
+    RG_ASSERT(values.len == 1);
+    return values[0].type;
 
 unexpected_token:
     MarkError("Unexpected token '%1', expected %2", TokenKindNames[(int)tokens[offset].kind],
               expect_op ? "operator or ')'" : "value or '('");
+    return {};
 }
 
 void Parser::ProduceOperator(const PendingOperator &op)
