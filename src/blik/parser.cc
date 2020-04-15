@@ -229,32 +229,34 @@ void Parser::ParseIf()
         ConsumeToken(TokenKind::NewLine);
         ParseBlock();
 
-        jumps.Append(program.ir.len);
-        program.ir.Append({Opcode::Jump});
+        if (MatchToken(TokenKind::Else)) {
+            jumps.Append(program.ir.len);
+            program.ir.Append({Opcode::Jump});
 
-        while (MatchToken(TokenKind::Else)) {
-            program.ir[branch_idx].u.i = program.ir.len - branch_idx;
+            do {
+                program.ir[branch_idx].u.i = program.ir.len - branch_idx;
 
-            if (MatchToken(TokenKind::If)) {
-                if (RG_UNLIKELY(ParseExpression(true) != Type::Bool)) {
-                    MarkError("Cannot use non-Bool expression as condition");
-                    return;
+                if (MatchToken(TokenKind::If)) {
+                    if (RG_UNLIKELY(ParseExpression(true) != Type::Bool)) {
+                        MarkError("Cannot use non-Bool expression as condition");
+                        return;
+                    }
+                    ConsumeToken(TokenKind::NewLine);
+
+                    branch_idx = program.ir.len;
+                    program.ir.Append({Opcode::BranchIfFalse});
+
+                    ParseBlock();
+
+                    jumps.Append(program.ir.len);
+                    program.ir.Append({Opcode::Jump});
+                } else {
+                    ConsumeToken(TokenKind::NewLine);
+
+                    ParseBlock();
+                    break;
                 }
-                ConsumeToken(TokenKind::NewLine);
-
-                branch_idx = program.ir.len;
-                program.ir.Append({Opcode::BranchIfFalse});
-
-                ParseBlock();
-
-                jumps.Append(program.ir.len);
-                program.ir.Append({Opcode::Jump});
-            } else {
-                ConsumeToken(TokenKind::NewLine);
-
-                ParseBlock();
-                break;
-            }
+            } while (MatchToken(TokenKind::Else));
         }
 
         ConsumeToken(TokenKind::End);
