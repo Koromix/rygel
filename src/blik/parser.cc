@@ -124,10 +124,7 @@ void Parser::ParseBlock()
 
                 ConsumeToken(TokenKind::NewLine);
                 ParseBlock();
-                if (RG_UNLIKELY(!MatchToken(TokenKind::End))) {
-                    MarkError("Unclosed block");
-                    return;
-                }
+                ConsumeToken(TokenKind::End);
 
                 EmitPop(program.variables.len - stack_len);
                 DestroyVariables(stack_len);
@@ -226,10 +223,7 @@ void Parser::ParseIf()
         }
     }
 
-    if (RG_UNLIKELY(!MatchToken(TokenKind::End))) {
-        MarkError("Unclosed block");
-        return;
-    }
+    ConsumeToken(TokenKind::End);
 
     program.ir[branch_idx].u.i = program.ir.len;
     for (Size jump_idx: jumps) {
@@ -259,10 +253,7 @@ void Parser::ParseWhile()
     Size block_idx = program.ir.len;
 
     ParseBlock();
-    if (RG_UNLIKELY(!MatchToken(TokenKind::End))) {
-        MarkError("Unclosed block");
-        return;
-    }
+    ConsumeToken(TokenKind::End);
 
     program.ir[jump_idx].u.i = program.ir.len - jump_idx;
     program.ir.Append(buf);
@@ -462,7 +453,7 @@ Type Parser::ParseExpression()
             if (RG_UNLIKELY(op.prec < 0)) {
                 if (offset == prev_offset) {
                     if (offset >= tokens.len) {
-                        MarkError("Unexpected end, expected expression");
+                        MarkError("Unexpected end of file, expected expression");
                     } else {
                         MarkError("Unexpected token '%1', expected expression", TokenKindNames[(int)tokens[offset].kind]);
                     }
@@ -521,7 +512,7 @@ Type Parser::ParseExpression()
     }
 
     if (RG_UNLIKELY(!expect_op)) {
-        MarkError("Unexpected end, expected value or '('");
+        MarkError("Unexpected end of expression, expected value or '('");
         return {};
     }
     if (RG_UNLIKELY(parentheses)) {
@@ -736,7 +727,7 @@ void Parser::Finish(Program *out_program)
 bool Parser::ConsumeToken(TokenKind kind)
 {
     if (RG_UNLIKELY(offset >= tokens.len)) {
-        MarkError("Unexpected end, expected '%1'", TokenKindNames[(int)kind]);
+        MarkError("Unexpected end of file, expected '%1'", TokenKindNames[(int)kind]);
         return false;
     }
     if (RG_UNLIKELY(tokens[offset].kind != kind)) {
