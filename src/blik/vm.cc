@@ -51,19 +51,7 @@ void Run(const Program &program)
     Size pc = 0;
     const Instruction *inst;
 
-#ifdef _MSC_VER
-    #define DISPATCH(PC) \
-        inst = &program.ir[(PC)]; \
-        DumpInstruction(pc, *inst); \
-        break
-    #define LOOP \
-        inst = &program.ir[pc]; \
-        DumpInstruction(pc, *inst); \
-        for (;;) \
-            switch(inst->code)
-    #define CASE(Code) \
-        case Opcode::Code
-#else
+#if defined(__GNUC__) || defined(__clang__)
     static const void *dispatch[] = {
         #define OPCODE(Code) && Code,
         #include "opcodes.inc"
@@ -77,6 +65,18 @@ void Run(const Program &program)
         DISPATCH(0)
     #define CASE(Code) \
         Code
+#else
+    #define DISPATCH(PC) \
+        inst = &program.ir[(PC)]; \
+        DumpInstruction(pc, *inst); \
+        break
+    #define LOOP \
+        inst = &program.ir[pc]; \
+        DumpInstruction(pc, *inst); \
+        for (;;) \
+            switch(inst->code)
+    #define CASE(Code) \
+        case Opcode::Code
 #endif
 
     LOOP {
