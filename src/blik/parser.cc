@@ -315,9 +315,13 @@ void Parser::ParseWhile()
     program.ir.Append({Opcode::Jump});
 
     Size block_idx = program.ir.len;
+    Size stack_len = program.variables.len;
 
     ParseBlock();
     ConsumeToken(TokenKind::End);
+
+    EmitPop(program.variables.len - stack_len);
+    DestroyVariables(stack_len);
 
     program.ir[jump_idx].u.i = program.ir.len - jump_idx;
     program.ir.Append(buf);
