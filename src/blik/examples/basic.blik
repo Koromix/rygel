@@ -52,7 +52,7 @@ let empty: Double
 if empty < 1.0
     let blik = 2.0
     p := 227
-elif true
+else if true
     let blik = 3.0
     p := 89
 else

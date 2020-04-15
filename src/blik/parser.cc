@@ -107,7 +107,6 @@ void Parser::ParseBlock()
     while (valid && offset < tokens.len) {
         switch (tokens[offset++].kind) {
             case TokenKind::End:
-            case TokenKind::ElIf:
             case TokenKind::Else: {
                 offset--;
                 return;
@@ -191,51 +190,48 @@ void Parser::ParseIf()
         program.ir.Append({Opcode::Jump});
     }
 
-    while (MatchToken(TokenKind::ElIf)) {
+    while (MatchToken(TokenKind::Else)) {
         program.ir[branch_idx].u.i = program.ir.len - branch_idx;
 
-        if (RG_UNLIKELY(ParseExpression() != Type::Bool)) {
-            MarkError("Cannot use non-Bool expression as condition");
-            return;
+        if (MatchToken(TokenKind::If)) {
+            if (RG_UNLIKELY(ParseExpression() != Type::Bool)) {
+                MarkError("Cannot use non-Bool expression as condition");
+                return;
+            }
+            ConsumeToken(TokenKind::NewLine);
+
+            Size stack_len = program.variables.len;
+
+            branch_idx = program.ir.len;
+            program.ir.Append({Opcode::BranchIfFalse});
+
+            ParseBlock();
+
+            EmitPop(program.variables.len - stack_len);
+            DestroyVariables(stack_len);
+
+            jumps.Append(program.ir.len);
+            program.ir.Append({Opcode::Jump});
+        } else {
+            ConsumeToken(TokenKind::NewLine);
+
+            Size stack_len = program.variables.len;
+
+            ParseBlock();
+
+            EmitPop(program.variables.len - stack_len);
+            DestroyVariables(stack_len);
+
+            break;
         }
-        ConsumeToken(TokenKind::NewLine);
-
-        Size stack_len = program.variables.len;
-
-        branch_idx = program.ir.len;
-        program.ir.Append({Opcode::BranchIfFalse});
-
-        ParseBlock();
-
-        EmitPop(program.variables.len - stack_len);
-        DestroyVariables(stack_len);
-
-        jumps.Append(program.ir.len);
-        program.ir.Append({Opcode::Jump});
     }
 
-    if (MatchToken(TokenKind::Else)) {
-        program.ir[branch_idx].u.i = program.ir.len - branch_idx;
-
-        ConsumeToken(TokenKind::NewLine);
-
-        Size stack_len = program.variables.len;
-
-        ParseBlock();
-        if (RG_UNLIKELY(!MatchToken(TokenKind::End))) {
-            MarkError("Unclosed block");
-            return;
-        }
-
-        EmitPop(program.variables.len - stack_len);
-        DestroyVariables(stack_len);
-    } else if (RG_LIKELY(MatchToken(TokenKind::End))) {
-        program.ir[branch_idx].u.i = program.ir.len;
-    } else {
+    if (RG_UNLIKELY(!MatchToken(TokenKind::End))) {
         MarkError("Unclosed block");
         return;
     }
 
+    program.ir[branch_idx].u.i = program.ir.len;
     for (Size jump_idx: jumps) {
         program.ir[jump_idx].u.i = program.ir.len - jump_idx;
     }
