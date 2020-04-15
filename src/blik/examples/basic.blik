@@ -45,7 +45,7 @@ end
 # type de variable il est déduit de l'expression à droite, mais on peut aussi le préciser.
 # Si le type est précisé il est possible d'omettre la valeur d'initialisation.
 
-let foo: String = "Hello," # OK
+let foo: String = "Hello" # OK
 # let bar: Integer = "World!" # This is an error and would not work if uncommented
 let empty: Double
 
@@ -60,4 +60,5 @@ else
     p := 226
 end
 
-let end_of_script = "We're done!"
+print "The value of p is: "
+print p

@@ -364,18 +364,21 @@ void Run(const Program &program)
             DISPATCH(pc += (b ? 1 : (Size)inst->u.i));
         }
 
-        CASE(Exit): {
-            RG_ASSERT(stack.len == program.variables.len);
-
-            for (const VariableInfo &var: program.variables) {
-                switch (var.type) {
-                    case Type::Bool: { PrintLn("%1 (Bool) = %2", var.name, stack[var.offset].b); } break;
-                    case Type::Integer: { PrintLn("%1 (Integer) = %2", var.name, stack[var.offset].i); } break;
-                    case Type::Double: { PrintLn("%1 (Double) = %2", var.name, stack[var.offset].d); } break;
-                    case Type::String: { PrintLn("%1 (String) = '%2'", var.name, stack[var.offset].str); } break;
-                }
+        // This will be removed once we get functions, but in the mean time
+        // I need to output things somehow!
+        CASE(Print): {
+            switch (inst->u.type) {
+                case Type::Bool: { Print("%1", stack.ptr[--stack.len].b); } break;
+                case Type::Integer: { Print("%1", stack.ptr[--stack.len].i); } break;
+                case Type::Double: { Print("%1", stack.ptr[--stack.len].d); } break;
+                case Type::String: { Print("%1", stack.ptr[--stack.len].str); } break;
             }
 
+            DISPATCH(++pc);
+        }
+
+        CASE(Exit): {
+            RG_ASSERT(stack.len == program.variables.len);
             return;
         }
     }

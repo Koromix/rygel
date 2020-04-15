@@ -10,28 +10,6 @@ namespace RG {
 
 struct Token;
 
-enum class Opcode {
-    #define OPCODE(Code) Code,
-    #include "opcodes.inc"
-};
-static const char *const OpcodeNames[] = {
-    #define OPCODE(Code) RG_STRINGIFY(Code),
-    #include "opcodes.inc"
-};
-
-struct Instruction {
-    Opcode code;
-    union {
-        bool b; // PushBool
-        int64_t i; // PushInteger, Pop,
-                   // StoreBool, StoreInt, StoreDouble, StoreString,
-                   // LoadBool, LoadInt, LoadDouble, LoadString,
-                   // Jump, BranchIfTrue, BranchIfFalse
-        double d; // PushDouble
-        const char *str; // PushString
-    } u;
-};
-
 enum class Type {
     Bool,
     Integer,
@@ -51,6 +29,29 @@ struct VariableInfo {
     Size offset;
 
     RG_HASHTABLE_HANDLER(VariableInfo, name);
+};
+
+enum class Opcode {
+    #define OPCODE(Code) Code,
+    #include "opcodes.inc"
+};
+static const char *const OpcodeNames[] = {
+    #define OPCODE(Code) RG_STRINGIFY(Code),
+    #include "opcodes.inc"
+};
+
+struct Instruction {
+    Opcode code;
+    union {
+        bool b; // PushBool
+        int64_t i; // PushInteger, Pop,
+                   // StoreBool, StoreInt, StoreDouble, StoreString,
+                   // LoadBool, LoadInt, LoadDouble, LoadString,
+                   // Jump, BranchIfTrue, BranchIfFalse
+        double d; // PushDouble
+        const char *str; // PushString
+        Type type; // Print
+    } u;
 };
 
 struct Program {

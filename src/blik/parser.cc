@@ -144,6 +144,15 @@ void Parser::ParseBlock()
                 ConsumeToken(TokenKind::NewLine);
             } break;
 
+            // This will be removed once we get functions, but in the mean time
+            // I need to output things somehow!
+            case TokenKind::Print: {
+                Type type = ParseExpression();
+                ConsumeToken(TokenKind::NewLine);
+
+                program.ir.Append({Opcode::Print, {.type = type}});
+            } break;
+
             default: {
                 offset--;
 
