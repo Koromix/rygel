@@ -15,6 +15,36 @@ union Value {
     const char *str;
 };
 
+static void DumpInstruction(Size pc, const Instruction &inst)
+{
+#if 0
+    switch (inst.code) {
+        case Opcode::PushBool: { LogDebug("(0x%1) PushBool %2", FmtHex(pc).Pad0(-5), inst.u.b); } break;
+        case Opcode::PushInt: { LogDebug("(0x%1) PushInt %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::PushDouble: { LogDebug("(0x%1) PushDouble %2", FmtHex(pc).Pad0(-5), inst.u.d); } break;
+        case Opcode::PushString: { LogDebug("(0x%1) PushString %2", FmtHex(pc).Pad0(-5), inst.u.str); } break;
+        case Opcode::Pop: { LogDebug("(0x%1) Pop %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+
+        case Opcode::StoreBool: { LogDebug("(0x%1) StoreBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreInt: { LogDebug("(0x%1) StoreInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreDouble: { LogDebug("(0x%1) StoreDouble @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreString: { LogDebug("(0x%1) StoreString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadBool: { LogDebug("(0x%1) LoadBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadInt: { LogDebug("(0x%1) LoadInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadDouble: { LogDebug("(0x%1) LoadDouble @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadString: { LogDebug("(0x%1) LoadString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+
+        case Opcode::Jump: { LogDebug("(0x%1) Jump 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
+        case Opcode::BranchIfTrue: { LogDebug("(0x%1) BranchIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
+        case Opcode::BranchIfFalse: { LogDebug("(0x%1) BranchIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
+        case Opcode::SkipIfTrue: { LogDebug("(0x%1) SkipIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
+        case Opcode::SkipIfFalse: { LogDebug("(0x%1) SkipIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
+
+        default: { LogDebug("(0x%1) %2", FmtHex(pc).Pad0(-5), OpcodeNames[(int)inst.code]); } break;
+    }
+#endif
+}
+
 void Run(const Program &program)
 {
     HeapArray<Value> stack;
@@ -24,9 +54,11 @@ void Run(const Program &program)
 #ifdef _MSC_VER
     #define DISPATCH(PC) \
         inst = &program.ir[(PC)]; \
+        DumpInstruction(pc, *inst); \
         break
     #define LOOP \
         inst = &program.ir[pc]; \
+        DumpInstruction(pc, *inst); \
         for (;;) \
             switch(inst->code)
     #define CASE(Code) \
@@ -39,6 +71,7 @@ void Run(const Program &program)
 
     #define DISPATCH(PC) \
         inst = &program.ir[(PC)]; \
+        DumpInstruction(pc, *inst); \
         goto *dispatch[(int)inst->code];
     #define LOOP \
         DISPATCH(0)
