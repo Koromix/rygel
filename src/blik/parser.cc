@@ -105,12 +105,14 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
 
 void Parser::ParseBlock()
 {
+    Size stack_len = program.variables.len;
+
     while (valid && offset < tokens.len) {
         switch (tokens[offset++].kind) {
             case TokenKind::End:
             case TokenKind::Else: {
                 offset--;
-                return;
+                goto done;
             } break;
 
             case TokenKind::NewLine: {} break;
@@ -121,14 +123,9 @@ void Parser::ParseBlock()
             } break;
 
             case TokenKind::Do: {
-                Size stack_len = program.variables.len;
-
                 ConsumeToken(TokenKind::NewLine);
                 ParseBlock();
                 ConsumeToken(TokenKind::End);
-
-                EmitPop(program.variables.len - stack_len);
-                DestroyVariables(stack_len);
             } break;
 
             case TokenKind::If: {
@@ -171,6 +168,10 @@ void Parser::ParseBlock()
             } break;
         }
     }
+
+done:
+    EmitPop(program.variables.len - stack_len);
+    DestroyVariables(stack_len);
 }
 
 void Parser::ParseDeclaration()
@@ -239,17 +240,10 @@ void Parser::ParseIf()
     program.ir.Append({Opcode::BranchIfFalse});
 
     // Deal with the mandatory block first
-    {
-        Size stack_len = program.variables.len;
+    ParseBlock();
 
-        ParseBlock();
-
-        EmitPop(program.variables.len - stack_len);
-        DestroyVariables(stack_len);
-
-        jumps.Append(program.ir.len);
-        program.ir.Append({Opcode::Jump});
-    }
+    jumps.Append(program.ir.len);
+    program.ir.Append({Opcode::Jump});
 
     while (MatchToken(TokenKind::Else)) {
         program.ir[branch_idx].u.i = program.ir.len - branch_idx;
@@ -261,28 +255,17 @@ void Parser::ParseIf()
             }
             ConsumeToken(TokenKind::NewLine);
 
-            Size stack_len = program.variables.len;
-
             branch_idx = program.ir.len;
             program.ir.Append({Opcode::BranchIfFalse});
 
             ParseBlock();
-
-            EmitPop(program.variables.len - stack_len);
-            DestroyVariables(stack_len);
 
             jumps.Append(program.ir.len);
             program.ir.Append({Opcode::Jump});
         } else {
             ConsumeToken(TokenKind::NewLine);
 
-            Size stack_len = program.variables.len;
-
             ParseBlock();
-
-            EmitPop(program.variables.len - stack_len);
-            DestroyVariables(stack_len);
-
             break;
         }
     }
@@ -315,13 +298,9 @@ void Parser::ParseWhile()
     program.ir.Append({Opcode::Jump});
 
     Size block_idx = program.ir.len;
-    Size stack_len = program.variables.len;
 
     ParseBlock();
     ConsumeToken(TokenKind::End);
-
-    EmitPop(program.variables.len - stack_len);
-    DestroyVariables(stack_len);
 
     program.ir[jump_idx].u.i = program.ir.len - jump_idx;
     program.ir.Append(buf);
