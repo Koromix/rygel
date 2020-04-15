@@ -47,7 +47,7 @@ struct Instruction {
         int64_t i; // PushInteger, Pop,
                    // StoreBool, StoreInt, StoreDouble, StoreString,
                    // LoadBool, LoadInt, LoadDouble, LoadString,
-                   // Jump, BranchIfTrue, BranchIfFalse
+                   // Jump, BranchIfTrue, BranchIfFalse, Exit
         double d; // PushDouble
         const char *str; // PushString
         Type type; // Print

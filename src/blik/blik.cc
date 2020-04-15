@@ -13,13 +13,13 @@ int Main(int argc, char **argv)
 {
     // Options
     bool run_inline = false;
-    HeapArray<const char *> filenames;
+    const char *filename = nullptr;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: blik [options] <file> ...
+        PrintLn(fp, R"(Usage: blik [options] <file>
 
 Options:
-    -i, --inline                 Run code directly from arguments)");
+    -i, --inline                 Run code directly from argument)");
     };
 
     // Handle version
@@ -44,37 +44,33 @@ Options:
             }
         }
 
-        opt.ConsumeNonOptions(&filenames);
-        if (!filenames.len) {
+        filename = opt.ConsumeNonOption();
+        if (!filename) {
             LogError("No script provided");
             return 1;
         }
     }
 
-    for (const char *filename: filenames) {
-        TokenSet token_set;
-        if (run_inline) {
-            if (!Tokenize(filename, "<inline>", &token_set))
-                return 1;
-
-            filename = "<inline>";
-        } else {
-            HeapArray<char> code;
-            if (ReadFile(filename, Megabytes(32), &code) < 0)
-                return 1;
-
-            if (!Tokenize(code, filename, &token_set))
-                return 1;
-        }
-
-        Program program;
-        if (!Parse(token_set.tokens, filename, &program))
+    TokenSet token_set;
+    if (run_inline) {
+        if (!Tokenize(filename, "<inline>", &token_set))
             return 1;
 
-        Run(program);
+        filename = "<inline>";
+    } else {
+        HeapArray<char> code;
+        if (ReadFile(filename, Megabytes(32), &code) < 0)
+            return 1;
+
+        if (!Tokenize(code, filename, &token_set))
+            return 1;
     }
 
-    return 0;
+    Program program;
+    if (!Parse(token_set.tokens, filename, &program))
+        return 1;
+
+    return Run(program);
 }
 
 }

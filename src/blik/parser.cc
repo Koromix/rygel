@@ -730,7 +730,9 @@ void Parser::Finish(Program *out_program)
 {
     RG_ASSERT(!out_program->ir.len);
 
+    program.ir.Append({Opcode::PushInt, {.i = 0}});
     program.ir.Append({Opcode::Exit});
+
     SwapMemory(&program, out_program, RG_SIZE(program));
 }
 

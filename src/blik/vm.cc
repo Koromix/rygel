@@ -45,7 +45,7 @@ static void DumpInstruction(Size pc, const Instruction &inst)
 #endif
 }
 
-void Run(const Program &program)
+int Run(const Program &program)
 {
     HeapArray<Value> stack;
     Size pc = 0;
@@ -378,8 +378,8 @@ void Run(const Program &program)
         }
 
         CASE(Exit): {
-            RG_ASSERT(stack.len == program.variables.len);
-            return;
+            RG_ASSERT(stack.len == program.variables.len + 1);
+            return (int)stack.ptr[--stack.len].i;
         }
     }
 
