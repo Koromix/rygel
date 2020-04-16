@@ -498,7 +498,11 @@ Type Parser::ParseExpression(bool keep_result)
             }
 
             if (tok.kind == TokenKind::Reassign) {
-                ir->RemoveLast(1); // Remove load instruction
+                // Remove useless load instruction. We don't remove the variable from the
+                // stack of values, because it will be needed when we output the copy opcode,
+                // and will be removed then. And because the copy opcode does not pop, we
+                // should not have any imbalance.
+                ir->RemoveLast(1);
             } else if (tok.kind == TokenKind::LogicAnd) {
                 op.branch_idx = ir->len;
                 ir->Append({Opcode::SkipIfFalse});
@@ -581,6 +585,8 @@ void Parser::ProduceOperator(const PendingOperator &op)
                 case Type::Double: { ir->Append({Opcode::CopyDouble, {.i = value1.var->offset}}); } break;
                 case Type::String: { ir->Append({Opcode::CopyString, {.i = value1.var->offset}}); } break;
             }
+
+            std::swap(values[values.len - 1], values[values.len - 2]);
             values.len--;
 
             return;
