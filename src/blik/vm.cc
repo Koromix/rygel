@@ -25,10 +25,6 @@ static void DumpInstruction(Size pc, const Instruction &inst)
         case Opcode::PushString: { LogDebug("(0x%1) PushString %2", FmtHex(pc).Pad0(-5), inst.u.str); } break;
         case Opcode::Pop: { LogDebug("(0x%1) Pop %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
-        case Opcode::CopyBool: { LogDebug("(0x%1) CopyBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::CopyInt: { LogDebug("(0x%1) CopyInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::CopyDouble: { LogDebug("(0x%1) CopyDouble @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::CopyString: { LogDebug("(0x%1) CopyString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case Opcode::StoreBool: { LogDebug("(0x%1) StoreBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case Opcode::StoreInt: { LogDebug("(0x%1) StoreInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case Opcode::StoreDouble: { LogDebug("(0x%1) StoreDouble @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
@@ -104,23 +100,11 @@ int Run(const Program &program)
             stack.RemoveLast(inst->u.i);
             DISPATCH(++pc);
         }
+        CASE(Duplicate): {
+            stack.Append(stack[stack.len - 1]);
+            DISPATCH(++pc);
+        }
 
-        CASE(CopyBool): {
-            stack[inst->u.i].b = stack[stack.len - 1].b;
-            DISPATCH(++pc);
-        }
-        CASE(CopyInt): {
-            stack[inst->u.i].i = stack[stack.len - 1].i;
-            DISPATCH(++pc);
-        }
-        CASE(CopyDouble): {
-            stack[inst->u.i].d = stack[stack.len - 1].d;
-            DISPATCH(++pc);
-        }
-        CASE(CopyString): {
-            stack[inst->u.i].str = stack[stack.len - 1].str;
-            DISPATCH(++pc);
-        }
         CASE(StoreBool): {
             stack[inst->u.i].b = stack.ptr[--stack.len].b;
             DISPATCH(++pc);

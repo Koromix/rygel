@@ -499,9 +499,8 @@ Type Parser::ParseExpression(bool keep_result)
 
             if (tok.kind == TokenKind::Reassign) {
                 // Remove useless load instruction. We don't remove the variable from the
-                // stack of values, because it will be needed when we output the copy opcode,
-                // and will be removed then. And because the copy opcode does not pop, we
-                // should not have any imbalance.
+                // stack of values, because it will be needed when we emit the store instruction
+                // and will be removed then.
                 ir->RemoveLast(1);
             } else if (tok.kind == TokenKind::LogicAnd) {
                 op.branch_idx = ir->len;
@@ -540,17 +539,11 @@ Type Parser::ParseExpression(bool keep_result)
     if (keep_result) {
         return values[0].type;
     } else {
-        Instruction *inst = &(*ir)[ir->len - 1];
-
-        // We need to pop the result of the expression. If it was an assignement,
-        // we can replace the copy with a store (implicit pop) instead.
-        switch (inst->code) {
-            case Opcode::CopyBool: { inst->code = Opcode::StoreBool; } break;
-            case Opcode::CopyInt: { inst->code = Opcode::StoreInt; } break;
-            case Opcode::CopyDouble: { inst->code = Opcode::StoreDouble; } break;
-            case Opcode::CopyString: { inst->code = Opcode::StoreString; } break;
-
-            default: { EmitPop(1); } break;
+        if (ir->len >= 2 && (*ir)[ir->len - 2].code == Opcode::Duplicate) {
+            std::swap((*ir)[ir->len - 2], (*ir)[ir->len - 1]);
+            ir->len--;
+        } else {
+            EmitPop(1);
         }
 
         return {};
@@ -581,11 +574,12 @@ void Parser::ProduceOperator(const PendingOperator &op)
                 return;
             }
 
+            ir->Append({Opcode::Duplicate});
             switch (value1.type) {
-                case Type::Bool: { ir->Append({Opcode::CopyBool, {.i = value1.var->offset}}); } break;
-                case Type::Integer: { ir->Append({Opcode::CopyInt, {.i = value1.var->offset}}); } break;
-                case Type::Double: { ir->Append({Opcode::CopyDouble, {.i = value1.var->offset}}); } break;
-                case Type::String: { ir->Append({Opcode::CopyString, {.i = value1.var->offset}}); } break;
+                case Type::Bool: { ir->Append({Opcode::StoreBool, {.i = value1.var->offset}}); } break;
+                case Type::Integer: { ir->Append({Opcode::StoreInt, {.i = value1.var->offset}}); } break;
+                case Type::Double: { ir->Append({Opcode::StoreDouble, {.i = value1.var->offset}}); } break;
+                case Type::String: { ir->Append({Opcode::StoreString, {.i = value1.var->offset}}); } break;
             }
 
             std::swap(values[values.len - 1], values[values.len - 2]);
