@@ -519,6 +519,14 @@ Type Parser::ParseExpression(bool keep_result)
         }
     }
 
+    // Discharge remaining operators
+    for (Size i = operators.len - 1; i >= 0; i--) {
+        const PendingOperator &op = operators[i];
+        ProduceOperator(op);
+    }
+
+    if (RG_UNLIKELY(!valid))
+        return {};
     if (RG_UNLIKELY(!expect_op)) {
         MarkError("Unexpected end of expression, expected value or '('");
         return {};
@@ -528,15 +536,10 @@ Type Parser::ParseExpression(bool keep_result)
         return {};
     }
 
-    for (Size i = operators.len - 1; i >= 0; i--) {
-        const PendingOperator &op = operators[i];
-        ProduceOperator(op);
-    }
-
-    if (RG_UNLIKELY(!valid))
-        return {};
-
-    if (!keep_result) {
+    RG_ASSERT(values.len == 1);
+    if (keep_result) {
+        return values[0].type;
+    } else {
         Instruction *inst = &(*ir)[ir->len - 1];
 
         // We need to pop the result of the expression. If it was an assignement,
@@ -549,10 +552,9 @@ Type Parser::ParseExpression(bool keep_result)
 
             default: { EmitPop(1); } break;
         }
-    }
 
-    RG_ASSERT(values.len == 1);
-    return values[0].type;
+        return {};
+    }
 
 unexpected_token:
     MarkError("Unexpected token '%1', expected %2", TokenKindNames[(int)tokens[offset].kind],
