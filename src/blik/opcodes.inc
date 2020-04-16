@@ -61,7 +61,6 @@ OPCODE(NotEqualBool)
 OPCODE(NotBool)
 OPCODE(AndBool)
 OPCODE(OrBool)
-OPCODE(XorBool)
 
 OPCODE(Jump)
 OPCODE(BranchIfTrue)

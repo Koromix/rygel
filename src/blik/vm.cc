@@ -356,12 +356,6 @@ int Run(const Program &program)
             stack[--stack.len - 1].b = b1 || b2;
             DISPATCH(++pc);
         }
-        CASE(XorBool): {
-            bool b1 = stack[stack.len - 2].b;
-            bool b2 = stack[stack.len - 1].b;
-            stack[--stack.len - 1].b = b1 ^ b2;
-            DISPATCH(++pc);
-        }
 
         CASE(Jump): {
             pc += (Size)inst->u.i - 1;

@@ -648,7 +648,7 @@ void Parser::ProduceOperator(const PendingOperator &op)
         } break;
         case TokenKind::Xor: {
             success = EmitOperator2(Type::Integer, Opcode::XorInt, Type::Integer) ||
-                      EmitOperator2(Type::Bool, Opcode::XorBool, Type::Bool);
+                      EmitOperator2(Type::Bool, Opcode::NotEqualBool, Type::Bool);
         } break;
         case TokenKind::Not: {
             success = EmitOperator1(Type::Integer, Opcode::NotInt, Type::Integer) ||
