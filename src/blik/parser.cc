@@ -32,6 +32,7 @@ class Parser {
     HeapArray<Size> jumps;
     HeapArray<Instruction> buf;
 
+    HeapArray<Instruction> *ir;
     Program program;
 
 public:
@@ -77,6 +78,7 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
 
     this->tokens = tokens;
     offset = 0;
+    ir = &program.ir;
 
     PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
         if (valid) {
@@ -96,6 +98,8 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
         MarkError("Unexpected token '%1' without matching block", TokenKindNames[(int)tokens[offset].kind]);
         return false;
     }
+
+    RG_ASSERT(ir == &program.ir);
 
     if (valid) {
         out_guard.Disable();
@@ -191,10 +195,10 @@ void Parser::ParseDeclaration()
             }
         } else {
             switch (var.type) {
-                case Type::Bool: { program.ir.Append({Opcode::PushBool, {.b = false}}); } break;
-                case Type::Integer: { program.ir.Append({Opcode::PushInt, {.i = 0}}); } break;
-                case Type::Double: { program.ir.Append({Opcode::PushDouble, {.d = 0.0}}); } break;
-                case Type::String: { program.ir.Append({Opcode::PushString, {.str = ""}}); } break;
+                case Type::Bool: { ir->Append({Opcode::PushBool, {.b = false}}); } break;
+                case Type::Integer: { ir->Append({Opcode::PushInt, {.i = 0}}); } break;
+                case Type::Double: { ir->Append({Opcode::PushDouble, {.d = 0.0}}); } break;
+                case Type::String: { ir->Append({Opcode::PushString, {.str = ""}}); } break;
             }
             values.Append({var.type});
         }
@@ -220,22 +224,22 @@ void Parser::ParseIf()
         return;
     }
 
-    Size branch_idx = program.ir.len;
-    program.ir.Append({Opcode::BranchIfFalse});
+    Size branch_idx = ir->len;
+    ir->Append({Opcode::BranchIfFalse});
 
     if (MatchToken(TokenKind::Do)) {
         ParseExpression(false);
-        program.ir[branch_idx].u.i = program.ir.len - branch_idx;
+        (*ir)[branch_idx].u.i = ir->len - branch_idx;
     } else {
         ConsumeToken(TokenKind::NewLine);
         ParseBlock();
 
         if (MatchToken(TokenKind::Else)) {
-            jumps.Append(program.ir.len);
-            program.ir.Append({Opcode::Jump});
+            jumps.Append(ir->len);
+            ir->Append({Opcode::Jump});
 
             do {
-                program.ir[branch_idx].u.i = program.ir.len - branch_idx;
+                (*ir)[branch_idx].u.i = ir->len - branch_idx;
 
                 if (MatchToken(TokenKind::If)) {
                     if (RG_UNLIKELY(ParseExpression(true) != Type::Bool)) {
@@ -244,13 +248,13 @@ void Parser::ParseIf()
                     }
                     ConsumeToken(TokenKind::NewLine);
 
-                    branch_idx = program.ir.len;
-                    program.ir.Append({Opcode::BranchIfFalse});
+                    branch_idx = ir->len;
+                    ir->Append({Opcode::BranchIfFalse});
 
                     ParseBlock();
 
-                    jumps.Append(program.ir.len);
-                    program.ir.Append({Opcode::Jump});
+                    jumps.Append(ir->len);
+                    ir->Append({Opcode::Jump});
                 } else {
                     ConsumeToken(TokenKind::NewLine);
 
@@ -260,10 +264,10 @@ void Parser::ParseIf()
             } while (MatchToken(TokenKind::Else));
 
             for (Size jump_idx: jumps) {
-                program.ir[jump_idx].u.i = program.ir.len - jump_idx;
+                (*ir)[jump_idx].u.i = ir->len - jump_idx;
             }
         } else {
-            program.ir[branch_idx].u.i = program.ir.len - branch_idx;
+            (*ir)[branch_idx].u.i = ir->len - branch_idx;
         }
 
         ConsumeToken(TokenKind::End);
@@ -274,21 +278,19 @@ void Parser::ParseWhile()
 {
     buf.RemoveFrom(0);
     {
-        Size test_idx = program.ir.len;
+        RG_DEFER_C(prev_ir = ir) { ir = prev_ir; };
+        ir = &buf;
 
         if (RG_UNLIKELY(ParseExpression(true) != Type::Bool)) {
             MarkError("Cannot use non-Bool expression as condition");
             return;
         }
-
-        buf.Append(program.ir.Take(test_idx, program.ir.len - test_idx));
-        program.ir.len -= buf.len;
     }
 
-    Size jump_idx = program.ir.len;
-    program.ir.Append({Opcode::Jump});
+    Size jump_idx = ir->len;
+    ir->Append({Opcode::Jump});
 
-    Size block_idx = program.ir.len;
+    Size block_idx = ir->len;
 
     if (MatchToken(TokenKind::Do)) {
         ParseExpression(false);
@@ -298,19 +300,19 @@ void Parser::ParseWhile()
         ConsumeToken(TokenKind::End);
     }
 
-    program.ir[jump_idx].u.i = program.ir.len - jump_idx;
-    program.ir.Append(buf);
-    program.ir.Append({Opcode::BranchIfTrue, {.i = block_idx - program.ir.len}});
+    (*ir)[jump_idx].u.i = ir->len - jump_idx;
+    ir->Append(buf);
+    ir->Append({Opcode::BranchIfTrue, {.i = block_idx - ir->len}});
 }
 
 void Parser::ParsePrint()
 {
     Type type = ParseExpression(true);
-    program.ir.Append({Opcode::Print, {.type = type}});
+    ir->Append({Opcode::Print, {.type = type}});
 
     while (MatchToken(TokenKind::Comma)) {
         Type type = ParseExpression(true);
-        program.ir.Append({Opcode::Print, {.type = type}});
+        ir->Append({Opcode::Print, {.type = type}});
     }
 }
 
@@ -394,7 +396,7 @@ Type Parser::ParseExpression(bool keep_result)
 
             switch (tok.kind) {
                 case TokenKind::Bool: {
-                    program.ir.Append({Opcode::PushBool, {.b = tok.u.b}});
+                    ir->Append({Opcode::PushBool, {.b = tok.u.b}});
                     values.Append({Type::Bool});
                 } break;
                 case TokenKind::Integer: {
@@ -402,10 +404,10 @@ Type Parser::ParseExpression(bool keep_result)
                                          operators[operators.len - 1].unary) {
                         operators.RemoveLast(1);
 
-                        program.ir.Append({Opcode::PushInt, {.i = -tok.u.i}});
+                        ir->Append({Opcode::PushInt, {.i = -tok.u.i}});
                         values.Append({Type::Integer});
                     } else {
-                        program.ir.Append({Opcode::PushInt, {.i = tok.u.i}});
+                        ir->Append({Opcode::PushInt, {.i = tok.u.i}});
                         values.Append({Type::Integer});
                     }
                 } break;
@@ -414,15 +416,15 @@ Type Parser::ParseExpression(bool keep_result)
                                          operators[operators.len - 1].unary) {
                         operators.RemoveLast(1);
 
-                        program.ir.Append({Opcode::PushDouble, {.d = -tok.u.d}});
+                        ir->Append({Opcode::PushDouble, {.d = -tok.u.d}});
                         values.Append({Type::Integer});
                     } else {
-                        program.ir.Append({Opcode::PushDouble, {.d = tok.u.d}});
+                        ir->Append({Opcode::PushDouble, {.d = tok.u.d}});
                         values.Append({Type::Double});
                     }
                 } break;
                 case TokenKind::String: {
-                    program.ir.Append({Opcode::PushString, {.str = tok.u.str}});
+                    ir->Append({Opcode::PushString, {.str = tok.u.str}});
                     values.Append({Type::String});
                 } break;
 
@@ -435,10 +437,10 @@ Type Parser::ParseExpression(bool keep_result)
                     }
 
                     switch (var->type) {
-                        case Type::Bool: { program.ir.Append({Opcode::LoadBool, {.i = var->offset}}); } break;
-                        case Type::Integer: { program.ir.Append({Opcode::LoadInt, {.i = var->offset}}); } break;
-                        case Type::Double: { program.ir.Append({Opcode::LoadDouble, {.i = var->offset}});} break;
-                        case Type::String: { program.ir.Append({Opcode::LoadString, {.i = var->offset}}); } break;
+                        case Type::Bool: { ir->Append({Opcode::LoadBool, {.i = var->offset}}); } break;
+                        case Type::Integer: { ir->Append({Opcode::LoadInt, {.i = var->offset}}); } break;
+                        case Type::Double: { ir->Append({Opcode::LoadDouble, {.i = var->offset}});} break;
+                        case Type::String: { ir->Append({Opcode::LoadString, {.i = var->offset}}); } break;
                     }
                     values.Append({var->type, var});
                 } break;
@@ -496,13 +498,13 @@ Type Parser::ParseExpression(bool keep_result)
             }
 
             if (tok.kind == TokenKind::Reassign) {
-                program.ir.RemoveLast(1); // Remove load instruction
+                ir->RemoveLast(1); // Remove load instruction
             } else if (tok.kind == TokenKind::LogicAnd) {
-                op.branch_idx = program.ir.len;
-                program.ir.Append({Opcode::SkipIfFalse});
+                op.branch_idx = ir->len;
+                ir->Append({Opcode::SkipIfFalse});
             } else if (tok.kind == TokenKind::LogicOr) {
-                op.branch_idx = program.ir.len;
-                program.ir.Append({Opcode::SkipIfTrue});
+                op.branch_idx = ir->len;
+                ir->Append({Opcode::SkipIfTrue});
             }
 
             if (RG_UNLIKELY(!operators.Available())) {
@@ -531,7 +533,7 @@ Type Parser::ParseExpression(bool keep_result)
         return {};
 
     if (!keep_result) {
-        Instruction *inst = &program.ir[program.ir.len - 1];
+        Instruction *inst = &(*ir)[ir->len - 1];
 
         // We need to pop the result of the expression. If it was an assignement,
         // we can replace the copy with a store (implicit pop) instead.
@@ -574,10 +576,10 @@ void Parser::ProduceOperator(const PendingOperator &op)
             }
 
             switch (value1.type) {
-                case Type::Bool: { program.ir.Append({Opcode::CopyBool, {.i = value1.var->offset}}); } break;
-                case Type::Integer: { program.ir.Append({Opcode::CopyInt, {.i = value1.var->offset}}); } break;
-                case Type::Double: { program.ir.Append({Opcode::CopyDouble, {.i = value1.var->offset}}); } break;
-                case Type::String: { program.ir.Append({Opcode::CopyString, {.i = value1.var->offset}}); } break;
+                case Type::Bool: { ir->Append({Opcode::CopyBool, {.i = value1.var->offset}}); } break;
+                case Type::Integer: { ir->Append({Opcode::CopyInt, {.i = value1.var->offset}}); } break;
+                case Type::Double: { ir->Append({Opcode::CopyDouble, {.i = value1.var->offset}}); } break;
+                case Type::String: { ir->Append({Opcode::CopyString, {.i = value1.var->offset}}); } break;
             }
             values.len--;
 
@@ -665,14 +667,14 @@ void Parser::ProduceOperator(const PendingOperator &op)
         case TokenKind::LogicAnd: {
             success = EmitOperator2(Type::Bool, Opcode::AndBool, Type::Bool);
 
-            RG_ASSERT(op.branch_idx && program.ir[op.branch_idx].code == Opcode::SkipIfFalse);
-            program.ir[op.branch_idx].u.i = program.ir.len - op.branch_idx;
+            RG_ASSERT(op.branch_idx && (*ir)[op.branch_idx].code == Opcode::SkipIfFalse);
+            (*ir)[op.branch_idx].u.i = ir->len - op.branch_idx;
         } break;
         case TokenKind::LogicOr: {
             success = EmitOperator2(Type::Bool, Opcode::OrBool, Type::Bool);
 
-            RG_ASSERT(op.branch_idx && program.ir[op.branch_idx].code == Opcode::SkipIfTrue);
-            program.ir[op.branch_idx].u.i = program.ir.len - op.branch_idx;
+            RG_ASSERT(op.branch_idx && (*ir)[op.branch_idx].code == Opcode::SkipIfTrue);
+            (*ir)[op.branch_idx].u.i = ir->len - op.branch_idx;
         } break;
 
         default: { RG_ASSERT(false); } break;
@@ -698,7 +700,7 @@ bool Parser::EmitOperator1(Type in_type, Opcode code, Type out_type)
     Type type = values[values.len - 1].type;
 
     if (type == in_type) {
-        program.ir.Append({code});
+        ir->Append({code});
         values[values.len - 1] = {out_type};
 
         return true;
@@ -713,7 +715,7 @@ bool Parser::EmitOperator2(Type in_type, Opcode code, Type out_type)
     Type type2 = values[values.len - 1].type;
 
     if (type1 == in_type && type2 == in_type) {
-        program.ir.Append({code});
+        ir->Append({code});
         values[--values.len - 1] = {out_type};
 
         return true;
@@ -727,7 +729,7 @@ void Parser::EmitPop(int64_t count)
     RG_ASSERT(count >= 0);
 
     if (count) {
-        program.ir.Append({Opcode::Pop, {.i = count}});
+        ir->Append({Opcode::Pop, {.i = count}});
     }
 }
 
@@ -735,8 +737,8 @@ void Parser::Finish(Program *out_program)
 {
     RG_ASSERT(!out_program->ir.len);
 
-    program.ir.Append({Opcode::PushInt, {.i = 0}});
-    program.ir.Append({Opcode::Exit});
+    ir->Append({Opcode::PushInt, {.i = 0}});
+    ir->Append({Opcode::Exit});
 
     SwapMemory(&program, out_program, RG_SIZE(program));
 }
