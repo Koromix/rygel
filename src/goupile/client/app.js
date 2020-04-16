@@ -21,7 +21,7 @@ function Application() {
     // Initialized by goupile.js and main script
     this.home = null;
     this.go = null;
-    this.urls_map = {};
+    this.urls_map = util.mapArray(this.assets, asset => asset.url);
     this.aliases_map = {};
     this.paths_map = {};
 
