@@ -392,8 +392,10 @@ int Run(const Program &program)
         }
 
         CASE(Exit): {
-            RG_ASSERT(stack.len == program.variables.len + 1);
-            return (int)stack.ptr[--stack.len].i;
+            int code = (int)stack.ptr[--stack.len].i;
+
+            RG_ASSERT(stack.len == program.variables.len);
+            return (int)code;
         }
     }
 
