@@ -225,6 +225,7 @@ void Parser::ParseIf()
 
     if (MatchToken(TokenKind::Do)) {
         ParseExpression(false);
+        program.ir[branch_idx].u.i = program.ir.len - branch_idx;
     } else {
         ConsumeToken(TokenKind::NewLine);
         ParseBlock();
@@ -257,14 +258,15 @@ void Parser::ParseIf()
                     break;
                 }
             } while (MatchToken(TokenKind::Else));
+
+            for (Size jump_idx: jumps) {
+                program.ir[jump_idx].u.i = program.ir.len - jump_idx;
+            }
+        } else {
+            program.ir[branch_idx].u.i = program.ir.len - branch_idx;
         }
 
         ConsumeToken(TokenKind::End);
-    }
-
-    program.ir[branch_idx].u.i = program.ir.len - branch_idx;
-    for (Size jump_idx: jumps) {
-        program.ir[jump_idx].u.i = program.ir.len - jump_idx;
     }
 }
 
