@@ -66,6 +66,7 @@ private:
     void ParsePrint();
 
     Type ParseExpression(bool keep_result);
+    bool ParseCall(const char *name);
     void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(Type in_type, Opcode code, Type out_type);
     bool EmitOperator2(Type in_type, Opcode code, Type out_type);
@@ -614,46 +615,8 @@ Type Parser::ParseExpression(bool keep_result)
 
                 case TokenKind::Identifier: {
                     if (MatchToken(TokenKind::LeftParenthesis)) {
-                        types.RemoveFrom(0);
-
-                        const FunctionInfo *func = functions_map.FindValue(tok.u.str, nullptr);
-                        if (RG_UNLIKELY(!func)) {
-                            MarkError("Function '%1' does not exist", tok.u.str);
+                        if (RG_UNLIKELY(!ParseCall(tok.u.str)))
                             return {};
-                        }
-
-                        if (!MatchToken(TokenKind::RightParenthesis)) {
-                            types.Append(ParseExpression(true));
-                            while (MatchToken(TokenKind::Comma)) {
-                                types.Append(ParseExpression(true));
-                            }
-
-                            ConsumeToken(TokenKind::RightParenthesis);
-                        }
-
-                        bool mismatch = false;
-                        if (RG_UNLIKELY(types.len != func->params.len)) {
-                            MarkError("Function '%1' expects %2 arguments, not %3", func->name,
-                                      func->params.len, types.len);
-                            return {};
-                        }
-                        for (Size i = 0; i < types.len; i++) {
-                            if (RG_UNLIKELY(types[i] != func->params[i].type)) {
-                                MarkError("Function '%1' expects %2 as %3 argument, not %4",
-                                          func->name, TypeNames[(int)func->params[i].type], i + 1,
-                                          TypeNames[(int)types[i]]);
-                                mismatch = true;
-                            }
-                        }
-                        if (RG_UNLIKELY(mismatch))
-                            return {};
-
-                        if (func->addr < 0) {
-                            forward_calls.Append({ir->len, func});
-                        }
-                        ir->Append({Opcode::Call, {.i = func->addr - ir->len}});
-
-                        values.Append({func->ret});
                     } else {
                         const VariableInfo *var = variables_map.FindValue(tok.u.str, nullptr);
 
@@ -790,6 +753,53 @@ unexpected_token:
     MarkError("Unexpected token '%1', expected %2", TokenKindNames[(int)tokens[offset - 1].kind],
               expect_op ? "operator or ')'" : "value or '('");
     return {};
+}
+
+// Don't try to call from outside ParseExpression()!
+bool Parser::ParseCall(const char *name)
+{
+    types.RemoveFrom(0);
+
+    const FunctionInfo *func = functions_map.FindValue(name, nullptr);
+    if (RG_UNLIKELY(!func)) {
+        MarkError("Function '%1' does not exist", name);
+        return false;
+    }
+
+    if (!MatchToken(TokenKind::RightParenthesis)) {
+        types.Append(ParseExpression(true));
+        while (MatchToken(TokenKind::Comma)) {
+            types.Append(ParseExpression(true));
+        }
+
+        ConsumeToken(TokenKind::RightParenthesis);
+    }
+
+    bool mismatch = false;
+    if (RG_UNLIKELY(types.len != func->params.len)) {
+        MarkError("Function '%1' expects %2 arguments, not %3", func->name,
+                  func->params.len, types.len);
+        return {};
+    }
+    for (Size i = 0; i < types.len; i++) {
+        if (RG_UNLIKELY(types[i] != func->params[i].type)) {
+            MarkError("Function '%1' expects %2 as %3 argument, not %4",
+                      func->name, TypeNames[(int)func->params[i].type], i + 1,
+                      TypeNames[(int)types[i]]);
+            mismatch = true;
+        }
+    }
+    if (RG_UNLIKELY(mismatch))
+        return false;
+
+    if (func->addr < 0) {
+        forward_calls.Append({ir->len, func});
+    }
+    ir->Append({Opcode::Call, {.i = func->addr - ir->len}});
+
+    values.Append({func->ret});
+
+    return true;
 }
 
 void Parser::ProduceOperator(const PendingOperator &op)
