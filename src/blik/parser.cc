@@ -50,7 +50,7 @@ private:
     bool ParseBlock(bool keep_variables);
     void ParseFunction();
     void ParseReturn();
-    void ParseDeclaration();
+    void ParseLet();
     void ParseIf();
     void ParseWhile();
     void ParsePrint();
@@ -141,7 +141,7 @@ bool Parser::ParseBlock(bool keep_variables)
             case TokenKind::NewLine: {} break;
 
             case TokenKind::Let: {
-                ParseDeclaration();
+                ParseLet();
                 ConsumeToken(TokenKind::NewLine);
             } break;
 
@@ -302,7 +302,7 @@ void Parser::ParseReturn()
     ir->Append({Opcode::Return, {.i = func->params.len}});
 }
 
-void Parser::ParseDeclaration()
+void Parser::ParseLet()
 {
     VariableInfo *var = variables.AppendDefault();
     var->name = ConsumeIdentifier();
