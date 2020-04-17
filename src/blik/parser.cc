@@ -496,12 +496,17 @@ void Parser::ParsePrint()
 {
     offset++;
 
-    Type type = ParseExpression(true);
-    ir->Append({Opcode::Print, {.type = type}});
-
-    while (MatchToken(TokenKind::Comma)) {
+    ConsumeToken(TokenKind::LeftParenthesis);
+    if (!MatchToken(TokenKind::RightParenthesis)) {
         Type type = ParseExpression(true);
         ir->Append({Opcode::Print, {.type = type}});
+
+        while (MatchToken(TokenKind::Comma)) {
+            Type type = ParseExpression(true);
+            ir->Append({Opcode::Print, {.type = type}});
+        }
+
+        ConsumeToken(TokenKind::RightParenthesis);
     }
 
     ConsumeToken(TokenKind::NewLine);

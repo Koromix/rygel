@@ -22,7 +22,7 @@ while i < 1000000
     i := i + 1
 end
 while i > 100 do i := i - 1
-print "i = ", i, "\n"
+print("i = ", i, "\n")
 
 p := 5
 # test := true
@@ -53,7 +53,7 @@ let empty: Double
 
 let txt = "FOO"
 if test do txt := "BAR"
-print txt, "\n"
+print(txt, "\n")
 
 if empty < 1.0
     let blik = 2.0
@@ -66,7 +66,7 @@ else
     p := 226
 end
 
-print "The value of p is: ", p, "\n"
+print("The value of p is: ", p, "\n")
 
 # Les fonctions sont également typées, bien évidemment ! On commence par fibonacci,
 # un classique...
@@ -78,7 +78,7 @@ func fib(n: Integer): Integer
     return fib(n - 1) + fib(n - 2)
 end
 
-print "fib(8) = ", fib(8), "\n"
+print("fib(8) = ", fib(8), "\n")
 
 # Et maintenant une séquence assez random qui m'a servi à implémenter le support des fonctions :)
 
@@ -89,13 +89,13 @@ func tt(e: String, ii: Integer): Bool
         tte := tte + xx * eee(xx + ii)
         eee(xx)
     end
-    print "hello ", e, " (", ii, ") ", tte, "\n"
+    print("hello ", e, " (", ii, ") ", tte, "\n")
     return true
 end
 
 func eee(pp: Integer): Integer
     let xxxxx = 1
-    print "CALLED eee with ", pp, "\n"
+    print("CALLED eee with ", pp, "\n")
     return pp
 end
 
@@ -110,5 +110,5 @@ func func0(): String
 end
 func inline0(): String do "inline0()"
 
-print "TESTING ", func0(), "\n"
-print "TESTING ", inline0(), "\n"
+print("TESTING ", func0(), "\n")
+print("TESTING ", inline0(), "\n")
