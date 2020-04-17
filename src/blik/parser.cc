@@ -42,11 +42,12 @@ class Parser {
     HashTable<const char *, FunctionInfo *> functions_map;
     BucketArray<VariableInfo> variables;
     HashTable<const char *, VariableInfo *> variables_map;
-    HeapArray<ForwardCall> forward_calls;
 
-    Size depth;
+    Size depth = -1;
     FunctionInfo *func = nullptr;
     Size func_var_offset;
+
+    HeapArray<ForwardCall> forward_calls;
 
     HeapArray<Instruction> *ir;
     Program program;
@@ -91,17 +92,11 @@ private:
 
 bool Parser::Parse(const TokenSet &set, const char *filename)
 {
-    RG_DEFER_NC(out_guard, ir_len = program.ir.len,
-                           variables_len = variables.len) {
-        program.ir.RemoveFrom(ir_len);
-        DestroyVariables(variables_len);
-    };
-
-    valid = true;
+    RG_ASSERT(valid);
 
     tokens = set.tokens;
+    offset = 0;
     ir = &program.ir;
-    depth = -1;
 
     PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
         if (valid) {
@@ -119,7 +114,6 @@ bool Parser::Parse(const TokenSet &set, const char *filename)
     ParsePrototypes(set.funcs);
     if (!valid)
         return false;
-    offset = 0;
 
     // Do the actual parsing!
     ParseBlock(true);
@@ -128,19 +122,20 @@ bool Parser::Parse(const TokenSet &set, const char *filename)
         return false;
     }
     RG_ASSERT(ir == &program.ir);
+    RG_ASSERT(depth == -1);
 
     for (const ForwardCall &call: forward_calls) {
         program.ir[call.offset].u.i = call.func->addr - call.offset;
     }
+    forward_calls.Clear();
 
-    if (valid) {
-        out_guard.Disable();
-    }
     return valid;
 }
 
 void Parser::ParsePrototypes(Span<const Size> offsets)
 {
+    RG_DEFER_C(prev_offset = offset) { offset = prev_offset; };
+
     for (Size i = 0; i < offsets.len; i++) {
         offset = offsets[i] + 1;
 

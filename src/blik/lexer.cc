@@ -35,9 +35,7 @@ private:
 
 bool Lexer::Tokenize(Span<const char> code, const char *filename)
 {
-    RG_DEFER_NC(out_guard, len = set.tokens.len) { set.tokens.RemoveFrom(len); };
-
-    valid = true;
+    RG_ASSERT(valid);
 
     this->code = code;
     line = 1;
@@ -379,9 +377,6 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
     // Newlines are used to end statements. Make sure the last statement has one.
     Token1(TokenKind::NewLine);
 
-    if (valid) {
-        out_guard.Disable();
-    }
     return valid;
 }
 
