@@ -250,18 +250,29 @@ void Parser::ParseFunction()
         ConsumeToken(TokenKind::RightParenthesis);
     }
 
-    // Return type
-    ConsumeToken(TokenKind::Colon);
-    func->ret = ConsumeType();
-    ConsumeToken(TokenKind::NewLine);
-
-    // Function body
     func->addr = ir->len;
     func_var_offset = variables.len;
-    if (RG_UNLIKELY(!ParseBlock(false))) {
-        MarkError("Function '%1' does not have a return statement", func->name);
+
+    if (MatchToken(TokenKind::Colon)) {
+        func->ret = ConsumeType();
+
+        // Function body
+        if (MatchToken(TokenKind::Do)) {
+            ParseExpression(true);
+            ir->Append({Opcode::Return, {.i = func->params.len}});
+        } else {
+            ConsumeToken(TokenKind::NewLine);
+
+            // Function body
+            if (RG_UNLIKELY(!ParseBlock(false))) {
+                MarkError("Function '%1' does not have a return statement", func->name);
+            }
+            ConsumeToken(TokenKind::End);
+        }
+    } else {
+        func->ret = ParseExpression(true);
+        ir->Append({Opcode::Return, {.i = func->params.len}});
     }
-    ConsumeToken(TokenKind::End);
 }
 
 void Parser::ParseReturn()

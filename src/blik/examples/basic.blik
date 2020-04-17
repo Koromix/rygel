@@ -108,5 +108,9 @@ end
 func func0(): String
     return "func0()"
 end
+func inline0(): String do "inline0()"
+func implicit0() "implicit0()"
 
 print "TESTING ", func0(), "\n"
+print "TESTING ", inline0(), "\n"
+print "TESTING ", implicit0(), "\n"
