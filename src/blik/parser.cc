@@ -33,6 +33,9 @@ class Parser {
     HeapArray<Instruction> buf;
     HeapArray<Type> types;
 
+    BucketArray<VariableInfo> variables;
+    HashTable<const char *, VariableInfo *> variables_map;
+
     FunctionInfo *func = nullptr;
     Size func_var_offset;
 
@@ -44,7 +47,7 @@ public:
     void Finish(Program *out_program);
 
 private:
-    bool ParseBlock();
+    bool ParseBlock(bool keep_variables);
     void ParseFunction();
     void ParseReturn();
     void ParseDeclaration();
@@ -77,7 +80,7 @@ private:
 bool Parser::Parse(const TokenSet &set, const char *filename)
 {
     RG_DEFER_NC(out_guard, ir_len = program.ir.len,
-                           variables_len = program.variables.len) {
+                           variables_len = variables.len) {
         program.ir.RemoveFrom(ir_len);
         DestroyVariables(variables_len);
     };
@@ -101,7 +104,7 @@ bool Parser::Parse(const TokenSet &set, const char *filename)
     RG_DEFER { PopLogFilter(); };
 
     // Do the actual parsing!
-    ParseBlock();
+    ParseBlock(true);
     if (RG_UNLIKELY(offset < tokens.len)) {
         MarkError("Unexpected token '%1' without matching block", TokenKindNames[(int)tokens[offset].kind]);
         return false;
@@ -115,17 +118,24 @@ bool Parser::Parse(const TokenSet &set, const char *filename)
     return valid;
 }
 
-bool Parser::ParseBlock()
+bool Parser::ParseBlock(bool keep_variables)
 {
-    Size stack_len = program.variables.len;
+    Size stack_len = variables.len;
     bool has_return = false;
+
+    RG_DEFER {
+        if (!keep_variables) {
+            EmitPop(variables.len - stack_len);
+            DestroyVariables(stack_len);
+        }
+    };
 
     while (valid && offset < tokens.len) {
         switch (tokens[offset++].kind) {
             case TokenKind::End:
             case TokenKind::Else: {
                 offset--;
-                goto done;
+                return has_return;
             } break;
 
             case TokenKind::NewLine: {} break;
@@ -154,7 +164,7 @@ bool Parser::ParseBlock()
 
             case TokenKind::Do: {
                 ConsumeToken(TokenKind::NewLine);
-                has_return |= ParseBlock();
+                has_return |= ParseBlock(false);
                 ConsumeToken(TokenKind::End);
             } break;
 
@@ -184,16 +194,12 @@ bool Parser::ParseBlock()
         }
     }
 
-done:
-    EmitPop(program.variables.len - stack_len);
-    DestroyVariables(stack_len);
-
     return has_return;
 }
 
 void Parser::ParseFunction()
 {
-    RG_DEFER_C(variables_len = program.variables.len) {
+    RG_DEFER_C(variables_len = variables.len) {
         func = nullptr;
         DestroyVariables(variables_len);
     };
@@ -214,10 +220,10 @@ void Parser::ParseFunction()
     ConsumeToken(TokenKind::LeftParenthesis);
     if (!MatchToken(TokenKind::RightParenthesis)) {
         do {
-            VariableInfo *var = program.variables.AppendDefault();
+            VariableInfo *var = variables.AppendDefault();
             var->name = ConsumeIdentifier();
 
-            std::pair<VariableInfo **, bool> ret = program.variables_map.Append(var);
+            std::pair<VariableInfo **, bool> ret = variables_map.Append(var);
             if (RG_UNLIKELY(!ret.second)) {
                const VariableInfo *prev_var = *ret.first;
 
@@ -237,7 +243,7 @@ void Parser::ParseFunction()
 
         // We need to know the number of parameters to compute stack offsets
         for (Size i = 1; i <= func->params.len; i++) {
-            VariableInfo *var = &program.variables[program.variables.len - i];
+            VariableInfo *var = &variables[variables.len - i];
             var->offset = -2 - i;
         }
 
@@ -251,8 +257,8 @@ void Parser::ParseFunction()
 
     // Function body
     func->addr = ir->len;
-    func_var_offset = program.variables.len;
-    if (RG_UNLIKELY(!ParseBlock())) {
+    func_var_offset = variables.len;
+    if (RG_UNLIKELY(!ParseBlock(false))) {
         MarkError("Function '%1' does not have a return statement", func->name);
     }
     ConsumeToken(TokenKind::End);
@@ -272,7 +278,7 @@ void Parser::ParseReturn()
         return;
     }
 
-    if (program.variables.len - func_var_offset > 0) {
+    if (variables.len - func_var_offset > 0) {
         switch (type) {
             case Type::Bool: { ir->Append({Opcode::StoreLocalBool, {.i = 0}}); } break;
             case Type::Integer: { ir->Append({Opcode::StoreLocalInt, {.i = 0}}); } break;
@@ -280,17 +286,17 @@ void Parser::ParseReturn()
             case Type::String: { ir->Append({Opcode::StoreLocalString, {.i = 0}}); } break;
         }
 
-        EmitPop(program.variables.len - func_var_offset - 1);
+        EmitPop(variables.len - func_var_offset - 1);
     }
     ir->Append({Opcode::Return, {.i = func->params.len}});
 }
 
 void Parser::ParseDeclaration()
 {
-    VariableInfo *var = program.variables.AppendDefault();
+    VariableInfo *var = variables.AppendDefault();
     var->name = ConsumeIdentifier();
 
-    std::pair<VariableInfo **, bool> ret = program.variables_map.Append(var);
+    std::pair<VariableInfo **, bool> ret = variables_map.Append(var);
     if (RG_UNLIKELY(!ret.second)) {
         const VariableInfo *prev_var = *ret.first;
 
@@ -330,10 +336,10 @@ void Parser::ParseDeclaration()
     }
 
     if (func) {
-        var->offset = program.variables.len - func_var_offset - 1;
+        var->offset = variables.len - func_var_offset - 1;
     } else {
         var->global = true;
-        var->offset = program.variables.len - 1;
+        var->offset = variables.len - 1;
     }
 }
 
@@ -354,7 +360,7 @@ void Parser::ParseIf()
         (*ir)[branch_idx].u.i = ir->len - branch_idx;
     } else {
         ConsumeToken(TokenKind::NewLine);
-        ParseBlock();
+        ParseBlock(false);
 
         if (MatchToken(TokenKind::Else)) {
             jumps.Append(ir->len);
@@ -373,14 +379,14 @@ void Parser::ParseIf()
                     branch_idx = ir->len;
                     ir->Append({Opcode::BranchIfFalse});
 
-                    ParseBlock();
+                    ParseBlock(false);
 
                     jumps.Append(ir->len);
                     ir->Append({Opcode::Jump});
                 } else {
                     ConsumeToken(TokenKind::NewLine);
 
-                    ParseBlock();
+                    ParseBlock(false);
                     break;
                 }
             } while (MatchToken(TokenKind::Else));
@@ -418,7 +424,7 @@ void Parser::ParseWhile()
         ParseExpression(false);
     } else {
         ConsumeToken(TokenKind::NewLine);
-        ParseBlock();
+        ParseBlock(false);
         ConsumeToken(TokenKind::End);
     }
 
@@ -586,7 +592,7 @@ Type Parser::ParseExpression(bool keep_result)
                         ir->Append({Opcode::Call, {.i = func->addr - ir->len}});
                         values.Append({func->ret});
                     } else {
-                        const VariableInfo *var = program.variables_map.FindValue(tok.u.str, nullptr);
+                        const VariableInfo *var = variables_map.FindValue(tok.u.str, nullptr);
 
                         if (RG_UNLIKELY(!var)) {
                             MarkError("Variable '%1' does not exist", tok.u.str);
@@ -919,6 +925,11 @@ void Parser::Finish(Program *out_program)
     ir->Append({Opcode::PushInt, {.i = 0}});
     ir->Append({Opcode::Exit});
 
+    for (const VariableInfo &var: variables) {
+        VariableInfo *global = program.globals.Append(var);
+        program.globals_map.Append(global);
+    }
+
     SwapMemory(&program, out_program, RG_SIZE(program));
 }
 
@@ -969,10 +980,10 @@ bool Parser::MatchToken(TokenKind kind)
 
 void Parser::DestroyVariables(Size start_idx)
 {
-    for (Size i = start_idx; i < program.variables.len; i++) {
-        program.variables_map.Remove(program.variables[i].name);
+    for (Size i = start_idx; i < variables.len; i++) {
+        variables_map.Remove(variables[i].name);
     }
-    program.variables.RemoveFrom(start_idx);
+    variables.RemoveFrom(start_idx);
 }
 
 bool Parse(const TokenSet &set, const char *filename, Program *out_program)

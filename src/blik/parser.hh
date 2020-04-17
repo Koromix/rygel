@@ -70,8 +70,8 @@ struct Program {
     BucketArray<FunctionInfo> functions;
     HashTable<const char *, FunctionInfo *> functions_map;
 
-    BucketArray<VariableInfo> variables;
-    HashTable<const char *, VariableInfo *> variables_map;
+    BucketArray<VariableInfo> globals;
+    HashTable<const char *, VariableInfo *> globals_map;
 };
 
 bool Parse(const TokenSet &set, const char *filename, Program *out_program);
