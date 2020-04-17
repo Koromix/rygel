@@ -44,6 +44,7 @@ class Parser {
     HashTable<const char *, VariableInfo *> variables_map;
     HeapArray<ForwardCall> forward_calls;
 
+    Size depth;
     FunctionInfo *func = nullptr;
     Size func_var_offset;
 
@@ -100,6 +101,7 @@ bool Parser::Parse(const TokenSet &set, const char *filename)
 
     tokens = set.tokens;
     ir = &program.ir;
+    depth = -1;
 
     PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
         if (valid) {
@@ -160,6 +162,10 @@ void Parser::ParsePrototypes(Span<const Size> offsets)
                 ConsumeToken(TokenKind::Colon);
                 param.type = ConsumeType();
 
+                if (RG_UNLIKELY(!proto->params.Available())) {
+                    MarkError("Functions cannot have more than %1 parameters", RG_LEN(proto->params.data));
+                    return;
+                }
                 proto->params.Append(param);
             } while (MatchToken(TokenKind::Comma));
 
@@ -178,7 +184,11 @@ bool Parser::ParseBlock(bool keep_variables)
     Size stack_len = variables.len;
     bool has_return = false;
 
+    depth++;
+
     RG_DEFER {
+        depth--;
+
         if (!keep_variables) {
             EmitPop(variables.len - stack_len);
             DestroyVariables(stack_len);
@@ -240,7 +250,11 @@ void Parser::ParseFunction()
     };
 
     if (RG_UNLIKELY(func)) {
-        LogError("Nested functions are not supported");
+        MarkError("Nested functions are not supported");
+        return;
+    }
+    if (RG_UNLIKELY(depth)) {
+        MarkError("Functions must be defined in top-level scope");
         return;
     }
 
