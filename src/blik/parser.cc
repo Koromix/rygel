@@ -8,6 +8,11 @@
 
 namespace RG {
 
+struct ForwardCall {
+    Size offset;
+    const FunctionInfo *func;
+};
+
 struct PendingOperator {
     TokenKind kind;
     int prec;
@@ -33,8 +38,11 @@ class Parser {
     HeapArray<Instruction> buf;
     HeapArray<Type> types;
 
+    BucketArray<FunctionInfo> functions;
+    HashTable<const char *, FunctionInfo *> functions_map;
     BucketArray<VariableInfo> variables;
     HashTable<const char *, VariableInfo *> variables_map;
+    HeapArray<ForwardCall> forward_calls;
 
     FunctionInfo *func = nullptr;
     Size func_var_offset;
@@ -47,6 +55,8 @@ public:
     void Finish(Program *out_program);
 
 private:
+    void ParsePrototypes(Span<const Size> offsets);
+
     bool ParseBlock(bool keep_variables);
     void ParseFunction();
     void ParseReturn();
@@ -88,7 +98,6 @@ bool Parser::Parse(const TokenSet &set, const char *filename)
     valid = true;
 
     tokens = set.tokens;
-    offset = 0;
     ir = &program.ir;
 
     PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
@@ -103,19 +112,64 @@ bool Parser::Parse(const TokenSet &set, const char *filename)
     });
     RG_DEFER { PopLogFilter(); };
 
+    // We want top-level order-independent functions
+    ParsePrototypes(set.funcs);
+    if (!valid)
+        return false;
+    offset = 0;
+
     // Do the actual parsing!
     ParseBlock(true);
     if (RG_UNLIKELY(offset < tokens.len)) {
         MarkError("Unexpected token '%1' without matching block", TokenKindNames[(int)tokens[offset].kind]);
         return false;
     }
-
     RG_ASSERT(ir == &program.ir);
+
+    for (const ForwardCall &call: forward_calls) {
+        program.ir[call.offset].u.i = call.func->addr - call.offset;
+    }
 
     if (valid) {
         out_guard.Disable();
     }
     return valid;
+}
+
+void Parser::ParsePrototypes(Span<const Size> offsets)
+{
+    for (Size i = 0; i < offsets.len; i++) {
+        offset = offsets[i] + 1;
+
+        FunctionInfo *proto = functions.AppendDefault();
+        proto->name = ConsumeIdentifier();
+
+        if (RG_UNLIKELY(!functions_map.Append(proto).second)) {
+            MarkError("Function '%1' already exists", proto->name);
+            return;
+        }
+
+         // Parameters
+        ConsumeToken(TokenKind::LeftParenthesis);
+        if (!MatchToken(TokenKind::RightParenthesis)) {
+            do {
+                FunctionInfo::Parameter param = {};
+
+                param.name = ConsumeIdentifier();
+                ConsumeToken(TokenKind::Colon);
+                param.type = ConsumeType();
+
+                proto->params.Append(param);
+            } while (MatchToken(TokenKind::Comma));
+
+            ConsumeToken(TokenKind::RightParenthesis);
+        }
+
+        ConsumeToken(TokenKind::Colon);
+        proto->ret = ConsumeType();
+
+        proto->addr = -1;
+    }
 }
 
 bool Parser::ParseBlock(bool keep_variables)
@@ -209,11 +263,10 @@ void Parser::ParseFunction()
         return;
     }
 
-    func = program.functions.AppendDefault();
-    func->name = ConsumeIdentifier();
-
-    if (RG_UNLIKELY(!program.functions_map.Append(func).second)) {
-        MarkError("Function '%1' already exists", func->name);
+    func = functions_map.FindValue(ConsumeIdentifier(), nullptr);
+    if (RG_UNLIKELY(!func)) {
+        RG_ASSERT(!valid);
+        return;
     }
 
     // Parameters
@@ -238,7 +291,6 @@ void Parser::ParseFunction()
 
             ConsumeToken(TokenKind::Colon);
             var->type = ConsumeType();
-            func->params.Append(var->type);
         } while (MatchToken(TokenKind::Comma));
 
         // We need to know the number of parameters to compute stack offsets
@@ -250,28 +302,25 @@ void Parser::ParseFunction()
         ConsumeToken(TokenKind::RightParenthesis);
     }
 
+    // Return type
+    ConsumeToken(TokenKind::Colon);
+    func->ret = ConsumeType();
+
     func->addr = ir->len;
     func_var_offset = variables.len;
 
-    if (MatchToken(TokenKind::Colon)) {
-        func->ret = ConsumeType();
+    // Function body
+    if (MatchToken(TokenKind::Do)) {
+        ParseExpression(true);
+        ir->Append({Opcode::Return, {.i = func->params.len}});
+    } else {
+        ConsumeToken(TokenKind::NewLine);
 
         // Function body
-        if (MatchToken(TokenKind::Do)) {
-            ParseExpression(true);
-            ir->Append({Opcode::Return, {.i = func->params.len}});
-        } else {
-            ConsumeToken(TokenKind::NewLine);
-
-            // Function body
-            if (RG_UNLIKELY(!ParseBlock(false))) {
-                MarkError("Function '%1' does not have a return statement", func->name);
-            }
-            ConsumeToken(TokenKind::End);
+        if (RG_UNLIKELY(!ParseBlock(false))) {
+            MarkError("Function '%1' does not have a return statement", func->name);
         }
-    } else {
-        func->ret = ParseExpression(true);
-        ir->Append({Opcode::Return, {.i = func->params.len}});
+        ConsumeToken(TokenKind::End);
     }
 }
 
@@ -567,8 +616,7 @@ Type Parser::ParseExpression(bool keep_result)
                     if (MatchToken(TokenKind::LeftParenthesis)) {
                         types.RemoveFrom(0);
 
-                        const FunctionInfo *func = program.functions_map.FindValue(tok.u.str, nullptr);
-
+                        const FunctionInfo *func = functions_map.FindValue(tok.u.str, nullptr);
                         if (RG_UNLIKELY(!func)) {
                             MarkError("Function '%1' does not exist", tok.u.str);
                             return {};
@@ -590,9 +638,9 @@ Type Parser::ParseExpression(bool keep_result)
                             return {};
                         }
                         for (Size i = 0; i < types.len; i++) {
-                            if (RG_UNLIKELY(types[i] != func->params[i])) {
+                            if (RG_UNLIKELY(types[i] != func->params[i].type)) {
                                 MarkError("Function '%1' expects %2 as %3 argument, not %4",
-                                          func->name, TypeNames[(int)func->params[i]], i + 1,
+                                          func->name, TypeNames[(int)func->params[i].type], i + 1,
                                           TypeNames[(int)types[i]]);
                                 mismatch = true;
                             }
@@ -600,7 +648,11 @@ Type Parser::ParseExpression(bool keep_result)
                         if (RG_UNLIKELY(mismatch))
                             return {};
 
+                        if (func->addr < 0) {
+                            forward_calls.Append({ir->len, func});
+                        }
                         ir->Append({Opcode::Call, {.i = func->addr - ir->len}});
+
                         values.Append({func->ret});
                     } else {
                         const VariableInfo *var = variables_map.FindValue(tok.u.str, nullptr);

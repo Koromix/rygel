@@ -33,8 +33,13 @@ struct VariableInfo {
 };
 
 struct FunctionInfo {
+    struct Parameter {
+        const char *name;
+        Type type;
+    };
+
     const char *name;
-    LocalArray<Type, 16> params;
+    LocalArray<Parameter, 16> params;
     Type ret;
     Size addr;
 
