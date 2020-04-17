@@ -31,6 +31,10 @@ struct Token {
 
 struct TokenSet {
     HeapArray<Token> tokens;
+
+    // Used to parse function declarations in first pass
+    HeapArray<Size> funcs;
+
     BlockAllocator str_alloc;
 };
 

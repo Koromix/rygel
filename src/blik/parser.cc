@@ -31,16 +31,22 @@ class Parser {
     HeapArray<ExpressionValue> values;
     HeapArray<Size> jumps;
     HeapArray<Instruction> buf;
+    HeapArray<Type> types;
+
+    FunctionInfo *func = nullptr;
+    Size func_var_offset;
 
     HeapArray<Instruction> *ir;
     Program program;
 
 public:
-    bool Parse(Span<const Token> tokens, const char *filename);
+    bool Parse(const TokenSet &set, const char *filename);
     void Finish(Program *out_program);
 
 private:
-    void ParseBlock();
+    bool ParseBlock();
+    void ParseFunction();
+    void ParseReturn();
     void ParseDeclaration();
     void ParseIf();
     void ParseWhile();
@@ -54,6 +60,8 @@ private:
     void EmitPop(int64_t count);
 
     bool ConsumeToken(TokenKind kind);
+    const char *ConsumeIdentifier();
+    Type ConsumeType();
     bool MatchToken(TokenKind kind);
 
     void DestroyVariables(Size start_idx);
@@ -66,7 +74,7 @@ private:
     }
 };
 
-bool Parser::Parse(Span<const Token> tokens, const char *filename)
+bool Parser::Parse(const TokenSet &set, const char *filename)
 {
     RG_DEFER_NC(out_guard, ir_len = program.ir.len,
                            variables_len = program.variables.len) {
@@ -76,7 +84,7 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
 
     valid = true;
 
-    this->tokens = tokens;
+    tokens = set.tokens;
     offset = 0;
     ir = &program.ir;
 
@@ -107,9 +115,10 @@ bool Parser::Parse(Span<const Token> tokens, const char *filename)
     return valid;
 }
 
-void Parser::ParseBlock()
+bool Parser::ParseBlock()
 {
     Size stack_len = program.variables.len;
+    bool has_return = false;
 
     while (valid && offset < tokens.len) {
         switch (tokens[offset++].kind) {
@@ -126,9 +135,26 @@ void Parser::ParseBlock()
                 ConsumeToken(TokenKind::NewLine);
             } break;
 
+            case TokenKind::Func: {
+                Size jump_idx = ir->len;
+                ir->Append({Opcode::Jump});
+
+                ParseFunction();
+                ConsumeToken(TokenKind::NewLine);
+
+                (*ir)[jump_idx].u.i = ir->len - jump_idx;
+            } break;
+
+            case TokenKind::Return: {
+                ParseReturn();
+                ConsumeToken(TokenKind::NewLine);
+
+                has_return = true;
+            } break;
+
             case TokenKind::Do: {
                 ConsumeToken(TokenKind::NewLine);
-                ParseBlock();
+                has_return |= ParseBlock();
                 ConsumeToken(TokenKind::End);
             } break;
 
@@ -161,58 +187,154 @@ void Parser::ParseBlock()
 done:
     EmitPop(program.variables.len - stack_len);
     DestroyVariables(stack_len);
+
+    return has_return;
+}
+
+void Parser::ParseFunction()
+{
+    RG_DEFER_C(variables_len = program.variables.len) {
+        func = nullptr;
+        DestroyVariables(variables_len);
+    };
+
+    if (RG_UNLIKELY(func)) {
+        LogError("Nested functions are not supported");
+        return;
+    }
+
+    func = program.functions.AppendDefault();
+    func->name = ConsumeIdentifier();
+
+    if (RG_UNLIKELY(!program.functions_map.Append(func).second)) {
+        MarkError("Function '%1' already exists", func->name);
+    }
+
+    // Parameters
+    ConsumeToken(TokenKind::LeftParenthesis);
+    if (!MatchToken(TokenKind::RightParenthesis)) {
+        do {
+            VariableInfo *var = program.variables.AppendDefault();
+            var->name = ConsumeIdentifier();
+
+            std::pair<VariableInfo **, bool> ret = program.variables_map.Append(var);
+            if (RG_UNLIKELY(!ret.second)) {
+               const VariableInfo *prev_var = *ret.first;
+
+                if (prev_var->global) {
+                    MarkError("Parameter '%1' is not allowed to hide global variable", var->name);
+                } else {
+                    MarkError("Parameter '%1' already exists", var->name);
+                }
+
+                return;
+            }
+
+            ConsumeToken(TokenKind::Colon);
+            var->type = ConsumeType();
+            func->params.Append(var->type);
+        } while (MatchToken(TokenKind::Comma));
+
+        // We need to know the number of parameters to compute stack offsets
+        for (Size i = 1; i <= func->params.len; i++) {
+            VariableInfo *var = &program.variables[program.variables.len - i];
+            var->offset = -2 - i;
+        }
+
+        ConsumeToken(TokenKind::RightParenthesis);
+    }
+
+    // Return type
+    ConsumeToken(TokenKind::Colon);
+    func->ret = ConsumeType();
+    ConsumeToken(TokenKind::NewLine);
+
+    // Function body
+    func->addr = ir->len;
+    func_var_offset = program.variables.len;
+    if (RG_UNLIKELY(!ParseBlock())) {
+        MarkError("Function '%1' does not have a return statement", func->name);
+    }
+    ConsumeToken(TokenKind::End);
+}
+
+void Parser::ParseReturn()
+{
+    if (RG_UNLIKELY(!func)) {
+        MarkError("Return statement cannot be used outside function");
+        return;
+    }
+
+    Type type = ParseExpression(true);
+    if (RG_UNLIKELY(type != func->ret)) {
+        MarkError("Cannot return %1 value (expected %2)",
+                  TypeNames[(int)type], TypeNames[(int)func->ret]);
+        return;
+    }
+
+    if (program.variables.len - func_var_offset > 0) {
+        switch (type) {
+            case Type::Bool: { ir->Append({Opcode::StoreLocalBool, {.i = 0}}); } break;
+            case Type::Integer: { ir->Append({Opcode::StoreLocalInt, {.i = 0}}); } break;
+            case Type::Double: { ir->Append({Opcode::StoreLocalDouble, {.i = 0}}); } break;
+            case Type::String: { ir->Append({Opcode::StoreLocalString, {.i = 0}}); } break;
+        }
+
+        EmitPop(program.variables.len - func_var_offset - 1);
+    }
+    ir->Append({Opcode::Return, {.i = func->params.len}});
 }
 
 void Parser::ParseDeclaration()
 {
-    // Code below assumes identifier exists for the variable name
-    if (RG_UNLIKELY(!ConsumeToken(TokenKind::Identifier)))
-        return;
+    VariableInfo *var = program.variables.AppendDefault();
+    var->name = ConsumeIdentifier();
 
-    VariableInfo var = {};
+    std::pair<VariableInfo **, bool> ret = program.variables_map.Append(var);
+    if (RG_UNLIKELY(!ret.second)) {
+        const VariableInfo *prev_var = *ret.first;
 
-    var.name = tokens[offset - 1].u.str;
-    if (MatchToken(TokenKind::Equal)) {
-        var.type = ParseExpression(true);
-    } else if (MatchToken(TokenKind::Colon)) {
-        if (RG_UNLIKELY(!ConsumeToken(TokenKind::Identifier)))
-            return;
-
-        const char *type_name = tokens[offset - 1].u.str;
-
-        if (RG_UNLIKELY(!OptionToEnum(TypeNames, type_name, &var.type))) {
-            MarkError("Type '%1' is not valid", type_name);
-            return;
+        if (func && prev_var->global) {
+            MarkError("Declaration '%1' is not allowed to hide global variable", var->name);
+        } else if (func && prev_var->offset < 0) {
+            MarkError("Declaration '%1' is not allowed to hide parameter", var->name);
+        } else {
+            MarkError("Variable '%1' already exists", var->name);
         }
+    }
+
+    if (MatchToken(TokenKind::Equal)) {
+        var->type = ParseExpression(true);
+    } else if (MatchToken(TokenKind::Colon)) {
+        var->type = ConsumeType();
 
         if (MatchToken(TokenKind::Equal)) {
             Type type2 = ParseExpression(true);
 
-            if (RG_UNLIKELY(type2 != var.type)) {
+            if (RG_UNLIKELY(type2 != var->type)) {
                 MarkError("Cannot assign %1 value to %2 variable",
-                          TypeNames[(int)type2], TypeNames[(int)var.type]);
+                          TypeNames[(int)type2], TypeNames[(int)var->type]);
                 return;
             }
         } else {
-            switch (var.type) {
+            switch (var->type) {
                 case Type::Bool: { ir->Append({Opcode::PushBool, {.b = false}}); } break;
                 case Type::Integer: { ir->Append({Opcode::PushInt, {.i = 0}}); } break;
                 case Type::Double: { ir->Append({Opcode::PushDouble, {.d = 0.0}}); } break;
                 case Type::String: { ir->Append({Opcode::PushString, {.str = ""}}); } break;
             }
-            values.Append({var.type});
         }
     } else {
         MarkError("Unexpected token '%1', expected '=' or ':'");
         return;
     }
-    var.offset = program.variables.len;
 
-    if (!program.variables_map.Append(var).second) {
-        MarkError("Variable '%1' already exists", var.name);
-        return;
+    if (func) {
+        var->offset = program.variables.len - func_var_offset - 1;
+    } else {
+        var->global = true;
+        var->offset = program.variables.len - 1;
     }
-    program.variables.Append(var);
 }
 
 void Parser::ParseIf()
@@ -347,7 +469,8 @@ static int GetOperatorPrecedence(TokenKind kind)
 
 Type Parser::ParseExpression(bool keep_result)
 {
-    values.RemoveFrom(0);
+    Size start_values_len = values.len;
+    RG_DEFER { values.RemoveFrom(start_values_len); };
 
     LocalArray<PendingOperator, 128> operators;
     bool expect_op = false;
@@ -356,8 +479,8 @@ Type Parser::ParseExpression(bool keep_result)
     // Used to detect "empty" expressions
     Size prev_offset = offset;
 
-    for (; offset < tokens.len; offset++) {
-        const Token &tok = tokens[offset];
+    while (offset < tokens.len) {
+        const Token &tok = tokens[offset++];
 
         if (tok.kind == TokenKind::LeftParenthesis) {
             if (RG_UNLIKELY(expect_op))
@@ -365,17 +488,12 @@ Type Parser::ParseExpression(bool keep_result)
 
             operators.Append({tok.kind});
             parentheses++;
-        } else if (tok.kind == TokenKind::RightParenthesis) {
+        } else if (parentheses && tok.kind == TokenKind::RightParenthesis) {
             if (RG_UNLIKELY(!expect_op))
                 goto unexpected_token;
             expect_op = true;
 
             for (;;) {
-                if (RG_UNLIKELY(!operators.len)) {
-                    MarkError("Too many closing parentheses");
-                    return {};
-                }
-
                 const PendingOperator &op = operators.data[operators.len - 1];
 
                 if (op.kind == TokenKind::LeftParenthesis) {
@@ -429,20 +547,69 @@ Type Parser::ParseExpression(bool keep_result)
                 } break;
 
                 case TokenKind::Identifier: {
-                    const VariableInfo *var = program.variables_map.Find(tok.u.str);
+                    if (MatchToken(TokenKind::LeftParenthesis)) {
+                        types.RemoveFrom(0);
 
-                    if (RG_UNLIKELY(!var)) {
-                        MarkError("Identifier '%1' does not exist", tok.u.str);
-                        return {};
-                    }
+                        const FunctionInfo *func = program.functions_map.FindValue(tok.u.str, nullptr);
 
-                    switch (var->type) {
-                        case Type::Bool: { ir->Append({Opcode::LoadBool, {.i = var->offset}}); } break;
-                        case Type::Integer: { ir->Append({Opcode::LoadInt, {.i = var->offset}}); } break;
-                        case Type::Double: { ir->Append({Opcode::LoadDouble, {.i = var->offset}});} break;
-                        case Type::String: { ir->Append({Opcode::LoadString, {.i = var->offset}}); } break;
+                        if (RG_UNLIKELY(!func)) {
+                            MarkError("Function '%1' does not exist", tok.u.str);
+                            return {};
+                        }
+
+                        if (!MatchToken(TokenKind::RightParenthesis)) {
+                            types.Append(ParseExpression(true));
+                            while (MatchToken(TokenKind::Comma)) {
+                                types.Append(ParseExpression(true));
+                            }
+
+                            ConsumeToken(TokenKind::RightParenthesis);
+                        }
+
+                        bool mismatch = false;
+                        if (RG_UNLIKELY(types.len != func->params.len)) {
+                            MarkError("Function '%1' expects %2 arguments, not %3", func->name,
+                                      func->params.len, types.len);
+                            return {};
+                        }
+                        for (Size i = 0; i < types.len; i++) {
+                            if (RG_UNLIKELY(types[i] != func->params[i])) {
+                                MarkError("Function '%1' expects %2 as %3 argument, not %4",
+                                          func->name, TypeNames[(int)func->params[i]], i + 1,
+                                          TypeNames[(int)types[i]]);
+                                mismatch = true;
+                            }
+                        }
+                        if (RG_UNLIKELY(mismatch))
+                            return {};
+
+                        ir->Append({Opcode::Call, {.i = func->addr - ir->len}});
+                        values.Append({func->ret});
+                    } else {
+                        const VariableInfo *var = program.variables_map.FindValue(tok.u.str, nullptr);
+
+                        if (RG_UNLIKELY(!var)) {
+                            MarkError("Variable '%1' does not exist", tok.u.str);
+                            return {};
+                        }
+
+                        if (var->global) {
+                            switch (var->type) {
+                                case Type::Bool: { ir->Append({Opcode::LoadGlobalBool, {.i = var->offset}}); } break;
+                                case Type::Integer: { ir->Append({Opcode::LoadGlobalInt, {.i = var->offset}}); } break;
+                                case Type::Double: { ir->Append({Opcode::LoadGlobalDouble, {.i = var->offset}});} break;
+                                case Type::String: { ir->Append({Opcode::LoadGlobalString, {.i = var->offset}}); } break;
+                            }
+                        } else {
+                            switch (var->type) {
+                                case Type::Bool: { ir->Append({Opcode::LoadLocalBool, {.i = var->offset}}); } break;
+                                case Type::Integer: { ir->Append({Opcode::LoadLocalInt, {.i = var->offset}}); } break;
+                                case Type::Double: { ir->Append({Opcode::LoadLocalDouble, {.i = var->offset}});} break;
+                                case Type::String: { ir->Append({Opcode::LoadLocalString, {.i = var->offset}}); } break;
+                            }
+                        }
+                        values.Append({var->type, var});
                     }
-                    values.Append({var->type, var});
                 } break;
 
                 default: { RG_ASSERT(false); } break;
@@ -455,7 +622,7 @@ Type Parser::ParseExpression(bool keep_result)
             op.unary = (tok.kind == TokenKind::Not || tok.kind == TokenKind::LogicNot);
 
             if (RG_UNLIKELY(op.prec < 0)) {
-                if (offset == prev_offset) {
+                if (offset == prev_offset + 1) {
                     if (offset >= tokens.len) {
                         MarkError("Unexpected end of file, expected expression");
                     } else {
@@ -469,6 +636,7 @@ Type Parser::ParseExpression(bool keep_result)
                 } else if (parentheses || !expect_op) {
                     goto unexpected_token;
                 } else {
+                    offset--;
                     break;
                 }
             }
@@ -535,7 +703,7 @@ Type Parser::ParseExpression(bool keep_result)
         return {};
     }
 
-    RG_ASSERT(values.len == 1);
+    RG_ASSERT(values.len == start_values_len + 1);
     if (keep_result) {
         return values[0].type;
     } else {
@@ -550,7 +718,7 @@ Type Parser::ParseExpression(bool keep_result)
     }
 
 unexpected_token:
-    MarkError("Unexpected token '%1', expected %2", TokenKindNames[(int)tokens[offset].kind],
+    MarkError("Unexpected token '%1', expected %2", TokenKindNames[(int)tokens[offset - 1].kind],
               expect_op ? "operator or ')'" : "value or '('");
     return {};
 }
@@ -575,11 +743,20 @@ void Parser::ProduceOperator(const PendingOperator &op)
             }
 
             ir->Append({Opcode::Duplicate});
-            switch (value1.type) {
-                case Type::Bool: { ir->Append({Opcode::StoreBool, {.i = value1.var->offset}}); } break;
-                case Type::Integer: { ir->Append({Opcode::StoreInt, {.i = value1.var->offset}}); } break;
-                case Type::Double: { ir->Append({Opcode::StoreDouble, {.i = value1.var->offset}}); } break;
-                case Type::String: { ir->Append({Opcode::StoreString, {.i = value1.var->offset}}); } break;
+            if (value1.var->global) {
+                switch (value1.type) {
+                    case Type::Bool: { ir->Append({Opcode::StoreGlobalBool, {.i = value1.var->offset}}); } break;
+                    case Type::Integer: { ir->Append({Opcode::StoreGlobalInt, {.i = value1.var->offset}}); } break;
+                    case Type::Double: { ir->Append({Opcode::StoreGlobalDouble, {.i = value1.var->offset}}); } break;
+                    case Type::String: { ir->Append({Opcode::StoreGlobalString, {.i = value1.var->offset}}); } break;
+                }
+            } else {
+                switch (value1.type) {
+                    case Type::Bool: { ir->Append({Opcode::StoreLocalBool, {.i = value1.var->offset}}); } break;
+                    case Type::Integer: { ir->Append({Opcode::StoreLocalInt, {.i = value1.var->offset}}); } break;
+                    case Type::Double: { ir->Append({Opcode::StoreLocalDouble, {.i = value1.var->offset}}); } break;
+                    case Type::String: { ir->Append({Opcode::StoreLocalString, {.i = value1.var->offset}}); } break;
+                }
             }
 
             std::swap(values[values.len - 1], values[values.len - 2]);
@@ -761,6 +938,28 @@ bool Parser::ConsumeToken(TokenKind kind)
     return true;
 }
 
+const char *Parser::ConsumeIdentifier()
+{
+    if (RG_LIKELY(ConsumeToken(TokenKind::Identifier))) {
+        return tokens[offset - 1].u.str;
+    } else {
+        return "";
+    }
+}
+
+Type Parser::ConsumeType()
+{
+    const char *type_name = ConsumeIdentifier();
+
+    Type type;
+    if (RG_LIKELY(OptionToEnum(TypeNames, type_name, &type))) {
+        return type;
+    } else {
+        MarkError("Type '%1' is not valid", type_name);
+        return {};
+    }
+}
+
 bool Parser::MatchToken(TokenKind kind)
 {
     bool match = offset < tokens.len && tokens[offset].kind == kind;
@@ -773,14 +972,13 @@ void Parser::DestroyVariables(Size start_idx)
     for (Size i = start_idx; i < program.variables.len; i++) {
         program.variables_map.Remove(program.variables[i].name);
     }
-
     program.variables.RemoveFrom(start_idx);
 }
 
-bool Parse(Span<const Token> tokens, const char *filename, Program *out_program)
+bool Parse(const TokenSet &set, const char *filename, Program *out_program)
 {
     Parser parser;
-    if (!parser.Parse(tokens, filename))
+    if (!parser.Parse(set, filename))
         return false;
 
     parser.Finish(out_program);

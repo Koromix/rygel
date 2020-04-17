@@ -67,3 +67,46 @@ else
 end
 
 print "The value of p is: ", p, "\n"
+
+# Les fonctions sont également typées, bien évidemment ! On commence par fibonacci,
+# un classique...
+
+func fib(n: Integer): Integer
+    if n <= 1
+        return n
+    end
+    return fib(n - 1) + fib(n - 2)
+end
+
+print "fib(8) = ", fib(8), "\n"
+
+# Et maintenant une séquence assez random qui m'a servi à implémenter le support des fonctions :)
+
+func eee(pp: Integer): Integer
+    let xxxxx = 1
+    print "CALLED eee with ", pp, "\n"
+    return pp
+end
+
+func tt(e: String, ii: Integer): Bool
+    let tte = 267
+    do
+        let xx = 3
+        tte := tte + xx * eee(xx + ii)
+        eee(xx)
+    end
+    print "hello ", e, " (", ii, ") ", tte, "\n"
+    return true
+end
+
+let zz = 0
+while zz < 3
+    tt("Niels", zz)
+    zz := zz + 1
+end
+
+func func0(): String
+    return "func0()"
+end
+
+print "TESTING ", func0(), "\n"

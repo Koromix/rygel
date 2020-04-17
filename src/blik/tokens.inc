@@ -6,6 +6,8 @@
     #error Please define TOKEN() before including tokens.inc
 #endif
 
+TOKEN(Func, "func")
+TOKEN(Return, "return")
 TOKEN(Let, "let")
 TOKEN(Do, "do")
 TOKEN(End, "end")

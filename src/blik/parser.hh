@@ -8,7 +8,7 @@
 
 namespace RG {
 
-struct Token;
+struct TokenSet;
 
 enum class Type {
     Bool,
@@ -26,9 +26,19 @@ static const char *const TypeNames[] = {
 struct VariableInfo {
     const char *name;
     Type type;
+    bool global;
     Size offset;
 
     RG_HASHTABLE_HANDLER(VariableInfo, name);
+};
+
+struct FunctionInfo {
+    const char *name;
+    LocalArray<Type, 16> params;
+    Type ret;
+    Size addr;
+
+    RG_HASHTABLE_HANDLER(FunctionInfo, name);
 };
 
 enum class Opcode {
@@ -57,10 +67,13 @@ struct Instruction {
 struct Program {
     HeapArray<Instruction> ir;
 
-    HeapArray<VariableInfo> variables;
-    HashTable<const char *, VariableInfo> variables_map;
+    BucketArray<FunctionInfo> functions;
+    HashTable<const char *, FunctionInfo *> functions_map;
+
+    BucketArray<VariableInfo> variables;
+    HashTable<const char *, VariableInfo *> variables_map;
 };
 
-bool Parse(Span<const Token> tokens, const char *filename, Program *out_program);
+bool Parse(const TokenSet &set, const char *filename, Program *out_program);
 
 }

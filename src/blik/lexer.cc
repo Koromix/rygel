@@ -319,7 +319,14 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
 
                 Span<const char> ident = code.Take(offset, next - offset);
 
-                if (ident == "let") {
+                if (ident == "func") {
+                    // In order to have order-independent top-level functions, we need to parse
+                    // their declarations first! Tell the parser where to look to help it.
+                    set.funcs.Append(set.tokens.len);
+                    Token1(TokenKind::Func);
+                } else if (ident == "return") {
+                    Token1(TokenKind::Return);
+                } else if (ident == "let") {
                     Token1(TokenKind::Let);
                 } else if (ident == "do") {
                     Token1(TokenKind::Do);

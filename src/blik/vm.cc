@@ -25,20 +25,32 @@ static void DumpInstruction(Size pc, const Instruction &inst)
         case Opcode::PushString: { LogDebug("(0x%1) PushString %2", FmtHex(pc).Pad0(-5), inst.u.str); } break;
         case Opcode::Pop: { LogDebug("(0x%1) Pop %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
-        case Opcode::StoreBool: { LogDebug("(0x%1) StoreBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreInt: { LogDebug("(0x%1) StoreInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreDouble: { LogDebug("(0x%1) StoreDouble @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreString: { LogDebug("(0x%1) StoreString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadBool: { LogDebug("(0x%1) LoadBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadInt: { LogDebug("(0x%1) LoadInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadDouble: { LogDebug("(0x%1) LoadDouble @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadString: { LogDebug("(0x%1) LoadString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreGlobalBool: { LogDebug("(0x%1) StoreGlobalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreGlobalInt: { LogDebug("(0x%1) StoreGlobalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreGlobalDouble: { LogDebug("(0x%1) StoreGlobalDouble @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreGlobalString: { LogDebug("(0x%1) StoreGlobalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadGlobalBool: { LogDebug("(0x%1) LoadGlobalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadGlobalInt: { LogDebug("(0x%1) LoadGlobalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadGlobalDouble: { LogDebug("(0x%1) LoadGlobalDouble @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadGlobalString: { LogDebug("(0x%1) LoadGlobalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+
+        case Opcode::StoreLocalBool: { LogDebug("(0x%1) StoreLocalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreLocalInt: { LogDebug("(0x%1) StoreLocalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreLocalDouble: { LogDebug("(0x%1) StoreLocalDouble @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreLocalString: { LogDebug("(0x%1) StoreLocalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadLocalBool: { LogDebug("(0x%1) LoadLocalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadLocalInt: { LogDebug("(0x%1) LoadLocalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadLocalDouble: { LogDebug("(0x%1) LoadLocalDouble @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadLocalString: { LogDebug("(0x%1) LoadLocalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
         case Opcode::Jump: { LogDebug("(0x%1) Jump 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
         case Opcode::BranchIfTrue: { LogDebug("(0x%1) BranchIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
         case Opcode::BranchIfFalse: { LogDebug("(0x%1) BranchIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
         case Opcode::SkipIfTrue: { LogDebug("(0x%1) SkipIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
         case Opcode::SkipIfFalse: { LogDebug("(0x%1) SkipIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
+
+        case Opcode::Call: { LogDebug("(0x%1) Call 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
+        case Opcode::Return: { LogDebug("(0x%1) Return %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
         default: { LogDebug("(0x%1) %2", FmtHex(pc).Pad0(-5), OpcodeNames[(int)inst.code]); } break;
     }
@@ -48,7 +60,7 @@ static void DumpInstruction(Size pc, const Instruction &inst)
 int Run(const Program &program)
 {
     HeapArray<Value> stack;
-    Size pc = 0;
+    Size pc = 0, bp = 0;
     const Instruction *inst;
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -105,36 +117,69 @@ int Run(const Program &program)
             DISPATCH(++pc);
         }
 
-        CASE(StoreBool): {
-            stack[inst->u.i].b = stack.ptr[--stack.len].b;
-            DISPATCH(++pc);
-        }
-        CASE(StoreInt): {
-            stack[inst->u.i].i = stack.ptr[--stack.len].i;
-            DISPATCH(++pc);
-        }
-        CASE(StoreDouble): {
-            stack[inst->u.i].d = stack.ptr[--stack.len].d;
-            DISPATCH(++pc);
-        }
-        CASE(StoreString): {
-            stack[inst->u.i].str = stack.ptr[--stack.len].str;
-            DISPATCH(++pc);
-        }
-        CASE(LoadBool): {
+        CASE(LoadGlobalBool): {
             stack.Append({.b = stack[inst->u.i].b});
             DISPATCH(++pc);
         }
-        CASE(LoadInt): {
+        CASE(LoadGlobalInt): {
             stack.Append({.i = stack[inst->u.i].i});
             DISPATCH(++pc);
         }
-        CASE(LoadDouble): {
+        CASE(LoadGlobalDouble): {
             stack.Append({.d = stack[inst->u.i].d});
             DISPATCH(++pc);
         }
-        CASE(LoadString): {
+        CASE(LoadGlobalString): {
             stack.Append({.str = stack[inst->u.i].str});
+            DISPATCH(++pc);
+        }
+        CASE(StoreGlobalBool): {
+            stack[inst->u.i].b = stack.ptr[--stack.len].b;
+            DISPATCH(++pc);
+        }
+        CASE(StoreGlobalInt): {
+            stack[inst->u.i].i = stack.ptr[--stack.len].i;
+            DISPATCH(++pc);
+        }
+        CASE(StoreGlobalDouble): {
+            stack[inst->u.i].d = stack.ptr[--stack.len].d;
+            DISPATCH(++pc);
+        }
+        CASE(StoreGlobalString): {
+            stack[inst->u.i].str = stack.ptr[--stack.len].str;
+            DISPATCH(++pc);
+        }
+
+        CASE(LoadLocalBool): {
+            stack.Append({.b = stack[bp + inst->u.i].b});
+            DISPATCH(++pc);
+        }
+        CASE(LoadLocalInt): {
+            stack.Append({.i = stack[bp + inst->u.i].i});
+            DISPATCH(++pc);
+        }
+        CASE(LoadLocalDouble): {
+            stack.Append({.d = stack[bp + inst->u.i].d});
+            DISPATCH(++pc);
+        }
+        CASE(LoadLocalString): {
+            stack.Append({.str = stack[bp + inst->u.i].str});
+            DISPATCH(++pc);
+        }
+        CASE(StoreLocalBool): {
+            stack[bp + inst->u.i].b = stack.ptr[--stack.len].b;
+            DISPATCH(++pc);
+        }
+        CASE(StoreLocalInt): {
+            stack[bp + inst->u.i].i = stack.ptr[--stack.len].i;
+            DISPATCH(++pc);
+        }
+        CASE(StoreLocalDouble): {
+            stack[bp + inst->u.i].d = stack.ptr[--stack.len].d;
+            DISPATCH(++pc);
+        }
+        CASE(StoreLocalString): {
+            stack[bp + inst->u.i].str = stack.ptr[--stack.len].str;
             DISPATCH(++pc);
         }
 
@@ -342,8 +387,7 @@ int Run(const Program &program)
         }
 
         CASE(Jump): {
-            pc += (Size)inst->u.i - 1;
-            DISPATCH(++pc);
+            DISPATCH(pc += (Size)inst->u.i);
         }
         CASE(BranchIfTrue): {
             bool b = stack.ptr[--stack.len].b;
@@ -360,6 +404,22 @@ int Run(const Program &program)
         CASE(SkipIfFalse): {
             bool b = stack[stack.len - 1].b;
             DISPATCH(pc += (b ? 1 : (Size)inst->u.i));
+        }
+
+        CASE(Call): {
+            stack.Grow(2);
+            stack.ptr[stack.len++].i = pc + 1;
+            stack.ptr[stack.len++].i = bp;
+            bp = stack.len;
+            DISPATCH(pc += (Size)inst->u.i);
+        }
+        CASE(Return): {
+            Value ret = stack.ptr[stack.len - 1];
+            pc = stack.ptr[stack.len - 3].i;
+            bp = stack.ptr[stack.len - 2].i;
+            stack.len -= 2 + inst->u.i;
+            stack[stack.len - 1] = ret;
+            DISPATCH(pc);
         }
 
         // This will be removed once we get functions, but in the mean time

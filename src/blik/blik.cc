@@ -67,7 +67,7 @@ Options:
     }
 
     Program program;
-    if (!Parse(token_set.tokens, filename, &program))
+    if (!Parse(token_set, filename, &program))
         return 1;
 
     return Run(program);
