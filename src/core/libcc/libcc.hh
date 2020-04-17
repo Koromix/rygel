@@ -1008,7 +1008,7 @@ public:
     T *end() { return data + len; }
     const T *end() const { return data + len; }
 
-    Size Available() const { return RG_SIZE(data) - len; }
+    Size Available() const { return RG_LEN(data) - len; }
 
     T &operator[](Size idx)
     {
