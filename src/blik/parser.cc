@@ -186,17 +186,18 @@ bool Parser::ParseBlock(bool keep_variables)
     };
 
     while (valid && offset < tokens.len) {
-        switch (tokens[offset++].kind) {
+        switch (tokens[offset].kind) {
+            case TokenKind::NewLine: { offset++; } break;
+
             case TokenKind::End:
-            case TokenKind::Else: {
-                offset--;
-                return has_return;
-            } break;
+            case TokenKind::Else: { return has_return; } break;
 
-            case TokenKind::NewLine: {} break;
+            case TokenKind::Do: {
+                offset++;
 
-            case TokenKind::Let: {
-                ParseLet();
+                ConsumeToken(TokenKind::NewLine);
+                has_return |= ParseBlock(false);
+                ConsumeToken(TokenKind::End);
                 ConsumeToken(TokenKind::NewLine);
             } break;
 
@@ -205,44 +206,21 @@ bool Parser::ParseBlock(bool keep_variables)
                 ir->Append({Opcode::Jump});
 
                 ParseFunction();
-                ConsumeToken(TokenKind::NewLine);
 
                 (*ir)[jump_idx].u.i = ir->len - jump_idx;
             } break;
 
             case TokenKind::Return: {
                 ParseReturn();
-                ConsumeToken(TokenKind::NewLine);
-
                 has_return = true;
             } break;
 
-            case TokenKind::Do: {
-                ConsumeToken(TokenKind::NewLine);
-                has_return |= ParseBlock(false);
-                ConsumeToken(TokenKind::End);
-            } break;
-
-            case TokenKind::If: {
-                ParseIf();
-                ConsumeToken(TokenKind::NewLine);
-            } break;
-
-            case TokenKind::While: {
-                ParseWhile();
-                ConsumeToken(TokenKind::NewLine);
-            } break;
-
-            // This will be removed once we get functions, but in the mean time
-            // I need to output things somehow!
-            case TokenKind::Print: {
-                ParsePrint();
-                ConsumeToken(TokenKind::NewLine);
-            } break;
+            case TokenKind::Let: { ParseLet(); } break;
+            case TokenKind::If: { ParseIf(); } break;
+            case TokenKind::While: { ParseWhile(); } break;
+            case TokenKind::Print: { ParsePrint(); } break;
 
             default: {
-                offset--;
-
                 ParseExpression(false);
                 ConsumeToken(TokenKind::NewLine);
             } break;
@@ -254,6 +232,8 @@ bool Parser::ParseBlock(bool keep_variables)
 
 void Parser::ParseFunction()
 {
+    offset++;
+
     RG_DEFER_C(variables_len = variables.len) {
         func = nullptr;
         DestroyVariables(variables_len);
@@ -323,10 +303,14 @@ void Parser::ParseFunction()
         }
         ConsumeToken(TokenKind::End);
     }
+
+    ConsumeToken(TokenKind::NewLine);
 }
 
 void Parser::ParseReturn()
 {
+    offset++;
+
     if (RG_UNLIKELY(!func)) {
         MarkError("Return statement cannot be used outside function");
         return;
@@ -350,10 +334,14 @@ void Parser::ParseReturn()
         EmitPop(variables.len - func_var_offset - 1);
     }
     ir->Append({Opcode::Return, {.i = func->params.len}});
+
+    ConsumeToken(TokenKind::NewLine);
 }
 
 void Parser::ParseLet()
 {
+    offset++;
+
     VariableInfo *var = variables.AppendDefault();
     var->name = ConsumeIdentifier();
 
@@ -402,10 +390,14 @@ void Parser::ParseLet()
         var->global = true;
         var->offset = variables.len - 1;
     }
+
+    ConsumeToken(TokenKind::NewLine);
 }
 
 void Parser::ParseIf()
 {
+    offset++;
+
     jumps.RemoveFrom(0);
 
     if (RG_UNLIKELY(ParseExpression(true) != Type::Bool)) {
@@ -461,10 +453,14 @@ void Parser::ParseIf()
 
         ConsumeToken(TokenKind::End);
     }
+
+    ConsumeToken(TokenKind::NewLine);
 }
 
 void Parser::ParseWhile()
 {
+    offset++;
+
     buf.RemoveFrom(0);
     {
         RG_DEFER_C(prev_ir = ir) { ir = prev_ir; };
@@ -492,10 +488,14 @@ void Parser::ParseWhile()
     (*ir)[jump_idx].u.i = ir->len - jump_idx;
     ir->Append(buf);
     ir->Append({Opcode::BranchIfTrue, {.i = block_idx - ir->len}});
+
+    ConsumeToken(TokenKind::NewLine);
 }
 
 void Parser::ParsePrint()
 {
+    offset++;
+
     Type type = ParseExpression(true);
     ir->Append({Opcode::Print, {.type = type}});
 
@@ -503,6 +503,8 @@ void Parser::ParsePrint()
         Type type = ParseExpression(true);
         ir->Append({Opcode::Print, {.type = type}});
     }
+
+    ConsumeToken(TokenKind::NewLine);
 }
 
 static int GetOperatorPrecedence(TokenKind kind)
