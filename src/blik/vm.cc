@@ -411,7 +411,7 @@ int Run(const Program &program)
             stack.ptr[stack.len++].i = pc + 1;
             stack.ptr[stack.len++].i = bp;
             bp = stack.len;
-            DISPATCH(pc += (Size)inst->u.i);
+            DISPATCH(pc = (Size)inst->u.i);
         }
         CASE(Return): {
             Value ret = stack.ptr[stack.len - 1];

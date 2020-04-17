@@ -122,7 +122,7 @@ bool Parser::Parse(const TokenSet &set, const char *filename)
     RG_ASSERT(depth == -1);
 
     for (const ForwardCall &call: forward_calls) {
-        program.ir[call.offset].u.i = call.func->addr - call.offset;
+        program.ir[call.offset].u.i = call.func->addr;
     }
     forward_calls.Clear();
 
@@ -467,17 +467,20 @@ void Parser::ParseWhile()
 {
     offset++;
 
-    // Parse expression
+    Size start_fix_forward;
+    Size end_fix_forward;
     {
         buf.RemoveFrom(0);
 
         std::swap(program.ir, buf);
         RG_DEFER { std::swap(program.ir, buf); };
 
+        start_fix_forward = forward_calls.len;
         if (RG_UNLIKELY(ParseExpression(true) != Type::Bool)) {
             MarkError("Cannot use non-Bool expression as condition");
             return;
         }
+        end_fix_forward = forward_calls.len;
     }
 
     Size jump_idx = program.ir.len;
@@ -491,6 +494,11 @@ void Parser::ParseWhile()
         ConsumeToken(TokenKind::NewLine);
         ParseBlock(false);
         ConsumeToken(TokenKind::End);
+    }
+
+    // We need to fix forward calls inside test expression because we move the instructions
+    for (Size i = start_fix_forward; i < end_fix_forward; i++) {
+        forward_calls[i].offset += program.ir.len;
     }
 
     program.ir[jump_idx].u.i = program.ir.len - jump_idx;
@@ -810,7 +818,7 @@ bool Parser::ParseCall(const char *name)
     if (func->addr < 0) {
         forward_calls.Append({program.ir.len, func});
     }
-    program.ir.Append({Opcode::Call, {.i = func->addr - program.ir.len}});
+    program.ir.Append({Opcode::Call, {.i = func->addr}});
 
     values.Append({func->ret});
 
