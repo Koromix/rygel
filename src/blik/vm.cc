@@ -185,7 +185,7 @@ int Run(const Program &program)
             stack[--stack.len - 1].b = (i1 != i2);
             DISPATCH(++pc);
         }
-        CASE(GreaterInt): {
+        CASE(GreaterThanInt): {
             int64_t i1 = stack[stack.len - 2].i;
             int64_t i2 = stack[stack.len - 1].i;
             stack[--stack.len - 1].b = (i1 > i2);
@@ -197,7 +197,7 @@ int Run(const Program &program)
             stack[--stack.len - 1].b = (i1 >= i2);
             DISPATCH(++pc);
         }
-        CASE(LessInt): {
+        CASE(LessThanInt): {
             int64_t i1 = stack[stack.len - 2].i;
             int64_t i2 = stack[stack.len - 1].i;
             stack[--stack.len - 1].b = (i1 < i2);
@@ -286,7 +286,7 @@ int Run(const Program &program)
             stack[--stack.len - 1].b = (d1 != d2);
             DISPATCH(++pc);
         }
-        CASE(GreaterDouble): {
+        CASE(GreaterThanDouble): {
             double d1 = stack[stack.len - 2].d;
             double d2 = stack[stack.len - 1].d;
             stack[--stack.len - 1].b = (d1 > d2);
@@ -298,7 +298,7 @@ int Run(const Program &program)
             stack[--stack.len - 1].b = (d1 >= d2);
             DISPATCH(++pc);
         }
-        CASE(LessDouble): {
+        CASE(LessThanDouble): {
             double d1 = stack[stack.len - 2].d;
             double d2 = stack[stack.len - 1].d;
             stack[--stack.len - 1].b = (d1 < d2);

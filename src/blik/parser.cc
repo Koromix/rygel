@@ -624,16 +624,16 @@ void Parser::ProduceOperator(const PendingOperator &op)
                       EmitOperator2(Type::Bool, Opcode::NotEqualBool, Type::Bool);
         } break;
         case TokenKind::Greater: {
-            success = EmitOperator2(Type::Integer, Opcode::GreaterInt, Type::Bool) ||
-                      EmitOperator2(Type::Double, Opcode::GreaterDouble, Type::Bool);
+            success = EmitOperator2(Type::Integer, Opcode::GreaterThanInt, Type::Bool) ||
+                      EmitOperator2(Type::Double, Opcode::GreaterThanDouble, Type::Bool);
         } break;
         case TokenKind::GreaterOrEqual: {
             success = EmitOperator2(Type::Integer, Opcode::GreaterOrEqualInt, Type::Bool) ||
                       EmitOperator2(Type::Double, Opcode::GreaterOrEqualDouble, Type::Bool);
         } break;
         case TokenKind::Less: {
-            success = EmitOperator2(Type::Integer, Opcode::LessInt, Type::Bool) ||
-                      EmitOperator2(Type::Double, Opcode::LessDouble, Type::Bool);
+            success = EmitOperator2(Type::Integer, Opcode::LessThanInt, Type::Bool) ||
+                      EmitOperator2(Type::Double, Opcode::LessThanDouble, Type::Bool);
         } break;
         case TokenKind::LessOrEqual: {
             success = EmitOperator2(Type::Integer, Opcode::LessOrEqualInt, Type::Bool) ||
