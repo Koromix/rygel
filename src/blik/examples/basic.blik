@@ -78,7 +78,8 @@ func fib(n: Integer): Integer
     return fib(n - 1) + fib(n - 2)
 end
 
-print("fib(8) = ", fib(8), "\n")
+let fib_n = 13
+print("fib(", fib_n, ") = ", fib(fib_n), "\n")
 
 # Et maintenant une séquence assez random qui m'a servi à implémenter le support des fonctions :)
 
@@ -104,6 +105,9 @@ while zz < 3
     tt("Niels", zz)
     zz := zz + 1
 end
+while (zz := inc(zz)) < 9 do tt("Nelson", (zz := zz + 1) - 1)
+
+func inc(pp: Integer): Integer do pp + 1
 
 func func0(): String
     return "func0()"
