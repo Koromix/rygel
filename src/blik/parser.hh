@@ -29,6 +29,9 @@ struct VariableInfo {
     bool global;
     Size offset;
 
+    // Used to prevent dangerous forward calls, only for globals
+    Size defined_at;
+
     RG_HASHTABLE_HANDLER(VariableInfo, name);
 };
 
@@ -42,6 +45,9 @@ struct FunctionInfo {
     LocalArray<Parameter, 16> params;
     Type ret;
     Size addr;
+
+    // Used to prevent dangerous forward calls (if relevant globals are not defined yet)
+    Size earliest_forward_call;
 
     RG_HASHTABLE_HANDLER(FunctionInfo, name);
 };

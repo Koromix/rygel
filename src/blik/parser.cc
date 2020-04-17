@@ -168,6 +168,7 @@ void Parser::ParsePrototypes(Span<const Size> offsets)
         proto->ret = ConsumeType();
 
         proto->addr = -1;
+        proto->earliest_forward_call = RG_SIZE_MAX;
     }
 }
 
@@ -395,6 +396,8 @@ void Parser::ParseLet()
     } else {
         var->global = true;
         var->offset = variables.len - 1;
+
+        var->defined_at = program.ir.len;
     }
 
     ConsumeToken(TokenKind::NewLine);
@@ -467,26 +470,25 @@ void Parser::ParseWhile()
 {
     offset++;
 
-    Size start_fix_forward;
+    Size start_idx = program.ir.len;
+
+    // Parse expression
+    Size start_fix_forward = forward_calls.len;
     Size end_fix_forward;
-    {
-        buf.RemoveFrom(0);
-
-        std::swap(program.ir, buf);
-        RG_DEFER { std::swap(program.ir, buf); };
-
-        start_fix_forward = forward_calls.len;
-        if (RG_UNLIKELY(ParseExpression(true) != Type::Bool)) {
-            MarkError("Cannot use non-Bool expression as condition");
-            return;
-        }
-        end_fix_forward = forward_calls.len;
+    if (RG_UNLIKELY(ParseExpression(true) != Type::Bool)) {
+        MarkError("Cannot use non-Bool expression as condition");
+        return;
     }
+    end_fix_forward = forward_calls.len;
+
+    // Put expression IR aside, because we want to put it after loop body
+    // to avoid an extra jump after each iteration.
+    buf.RemoveFrom(0);
+    buf.Append(program.ir.Take(start_idx, program.ir.len - start_idx));
+    program.ir.len -= buf.len;
 
     Size jump_idx = program.ir.len;
     program.ir.Append({Opcode::Jump});
-
-    Size block_idx = program.ir.len;
 
     if (MatchToken(TokenKind::Do)) {
         ParseExpression(false);
@@ -498,12 +500,13 @@ void Parser::ParseWhile()
 
     // We need to fix forward calls inside test expression because we move the instructions
     for (Size i = start_fix_forward; i < end_fix_forward; i++) {
-        forward_calls[i].offset += program.ir.len;
+        forward_calls[i].offset += program.ir.len - start_idx;
     }
 
+    // Finally write down expression IR
     program.ir[jump_idx].u.i = program.ir.len - jump_idx;
     program.ir.Append(buf);
-    program.ir.Append({Opcode::BranchIfTrue, {.i = block_idx - program.ir.len}});
+    program.ir.Append({Opcode::BranchIfTrue, {.i = jump_idx - program.ir.len + 1}});
 
     ConsumeToken(TokenKind::NewLine);
 }
@@ -649,6 +652,12 @@ Type Parser::ParseExpression(bool keep_result)
                         }
 
                         if (var->global) {
+                            if (RG_UNLIKELY(func && func->earliest_forward_call < var->defined_at)) {
+                                MarkError("Function '%1' was called before variable '%2' was defined",
+                                          func->name, var->name);
+                                return {};
+                            }
+
                             switch (var->type) {
                                 case Type::Bool: { program.ir.Append({Opcode::LoadGlobalBool, {.i = var->offset}}); } break;
                                 case Type::Integer: { program.ir.Append({Opcode::LoadGlobalInt, {.i = var->offset}}); } break;
@@ -783,7 +792,7 @@ bool Parser::ParseCall(const char *name)
 {
     types.RemoveFrom(0);
 
-    const FunctionInfo *func = functions_map.FindValue(name, nullptr);
+    FunctionInfo *func = functions_map.FindValue(name, nullptr);
     if (RG_UNLIKELY(!func)) {
         MarkError("Function '%1' does not exist", name);
         return false;
@@ -817,6 +826,7 @@ bool Parser::ParseCall(const char *name)
 
     if (func->addr < 0) {
         forward_calls.Append({program.ir.len, func});
+        func->earliest_forward_call = std::min(func->earliest_forward_call, program.ir.len);
     }
     program.ir.Append({Opcode::Call, {.i = func->addr}});
 
