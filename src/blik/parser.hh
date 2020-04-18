@@ -11,12 +11,14 @@ namespace RG {
 struct TokenSet;
 
 enum class Type {
+    Null,
     Bool,
     Integer,
     Double,
     String
 };
 static const char *const TypeNames[] = {
+    "Null",
     "Bool",
     "Integer",
     "Double",

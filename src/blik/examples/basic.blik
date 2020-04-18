@@ -81,6 +81,17 @@ end
 let fib_n = 13
 print("fib(", fib_n, ") = ", fib(fib_n), "\n")
 
+# On peut aussi faire des fonctions qui ne retournent pas de valeur ! En réalité elles retournent
+# alors la valeur null (seule valeur possible du type Null).
+
+let nn: Null = test()
+print(nn, "\n")
+
+func test()
+    for j in 0..8
+    end
+end
+
 # Et maintenant une séquence assez random qui m'a servi à implémenter le support des fonctions :)
 
 func tt(e: String, ii: Integer): Bool

@@ -160,8 +160,11 @@ void Parser::ParsePrototypes(Span<const Size> offsets)
             ConsumeToken(TokenKind::RightParenthesis);
         }
 
-        ConsumeToken(TokenKind::Colon);
-        proto->ret = ConsumeType();
+        if (MatchToken(TokenKind::Colon)) {
+            proto->ret = ConsumeType();
+        } else {
+            proto->ret = Type::Null;
+        }
 
         proto->addr = -1;
         proto->earliest_forward_call = RG_SIZE_MAX;
@@ -287,8 +290,9 @@ void Parser::ParseFunction()
     }
 
     // Return type
-    ConsumeToken(TokenKind::Colon);
-    func->ret = ConsumeType();
+    if (MatchToken(TokenKind::Colon)) {
+        ConsumeType();
+    }
 
     func->addr = program.ir.len;
     func_var_offset = variables.len;
@@ -301,9 +305,17 @@ void Parser::ParseFunction()
         ConsumeToken(TokenKind::NewLine);
 
         // Function body
-        if (RG_UNLIKELY(!ParseBlock(false))) {
-            MarkError("Function '%1' does not have a return statement", func->name);
+        bool has_return = ParseBlock(false);
+        if (!has_return) {
+            if (func->ret == Type::Null) {
+                program.ir.Append({Opcode::PushNull});
+                program.ir.Append({Opcode::Return, {.i = func->params.len}});
+            } else {
+                MarkError("Function '%1' does not have a return statement", func->name);
+                return;
+            }
         }
+
         ConsumeToken(TokenKind::End);
     }
 
@@ -319,7 +331,16 @@ void Parser::ParseReturn()
         return;
     }
 
-    Type type = ParseExpression(true);
+    Type type;
+    if (MatchToken(TokenKind::NewLine)) {
+        offset--;
+
+        type = Type::Null;
+        program.ir.Append({Opcode::PushNull});
+    } else {
+        type = ParseExpression(true);
+    }
+
     if (RG_UNLIKELY(type != func->ret)) {
         MarkError("Cannot return %1 value (expected %2)",
                   TypeNames[(int)type], TypeNames[(int)func->ret]);
@@ -327,14 +348,17 @@ void Parser::ParseReturn()
     }
 
     if (variables.len - func_var_offset > 0) {
+        Size pop_len = variables.len - func_var_offset - 1;
+
         switch (type) {
+            case Type::Null: { pop_len++; } break;
             case Type::Bool: { program.ir.Append({Opcode::StoreLocalBool, {.i = 0}}); } break;
             case Type::Integer: { program.ir.Append({Opcode::StoreLocalInt, {.i = 0}}); } break;
             case Type::Double: { program.ir.Append({Opcode::StoreLocalDouble, {.i = 0}}); } break;
             case Type::String: { program.ir.Append({Opcode::StoreLocalString, {.i = 0}}); } break;
         }
 
-        EmitPop(variables.len - func_var_offset - 1);
+        EmitPop(pop_len);
     }
     program.ir.Append({Opcode::Return, {.i = func->params.len}});
 
@@ -377,6 +401,7 @@ void Parser::ParseLet()
             }
         } else {
             switch (var->type) {
+                case Type::Null: { program.ir.Append({Opcode::PushNull}); } break;
                 case Type::Bool: { program.ir.Append({Opcode::PushBool, {.b = false}}); } break;
                 case Type::Integer: { program.ir.Append({Opcode::PushInt, {.i = 0}}); } break;
                 case Type::Double: { program.ir.Append({Opcode::PushDouble, {.d = 0.0}}); } break;
@@ -593,14 +618,18 @@ Type Parser::ParseExpression(bool keep_result)
                 ProduceOperator(op);
                 operators.len--;
             }
-        } else if (tok.kind == TokenKind::Bool || tok.kind == TokenKind::Integer ||
-                   tok.kind == TokenKind::Double || tok.kind == TokenKind::String ||
-                   tok.kind == TokenKind::Identifier) {
+        } else if (tok.kind == TokenKind::Null || tok.kind == TokenKind::Bool ||
+                   tok.kind == TokenKind::Integer || tok.kind == TokenKind::Double ||
+                   tok.kind == TokenKind::String || tok.kind == TokenKind::Identifier) {
             if (RG_UNLIKELY(expect_op))
                 goto unexpected_token;
             expect_op = true;
 
             switch (tok.kind) {
+                case TokenKind::Null: {
+                    program.ir.Append({Opcode::PushNull});
+                    values.Append({Type::Null});
+                } break;
                 case TokenKind::Bool: {
                     program.ir.Append({Opcode::PushBool, {.b = tok.u.b}});
                     values.Append({Type::Bool});
@@ -654,6 +683,7 @@ Type Parser::ParseExpression(bool keep_result)
                             }
 
                             switch (var->type) {
+                                case Type::Null: { program.ir.Append({Opcode::PushNull}); } break;
                                 case Type::Bool: { program.ir.Append({Opcode::LoadGlobalBool, {.i = var->offset}}); } break;
                                 case Type::Integer: { program.ir.Append({Opcode::LoadGlobalInt, {.i = var->offset}}); } break;
                                 case Type::Double: { program.ir.Append({Opcode::LoadGlobalDouble, {.i = var->offset}});} break;
@@ -661,6 +691,7 @@ Type Parser::ParseExpression(bool keep_result)
                             }
                         } else {
                             switch (var->type) {
+                                case Type::Null: { program.ir.Append({Opcode::PushNull}); } break;
                                 case Type::Bool: { program.ir.Append({Opcode::LoadLocalBool, {.i = var->offset}}); } break;
                                 case Type::Integer: { program.ir.Append({Opcode::LoadLocalInt, {.i = var->offset}}); } break;
                                 case Type::Double: { program.ir.Append({Opcode::LoadLocalDouble, {.i = var->offset}});} break;
@@ -856,6 +887,7 @@ void Parser::ProduceOperator(const PendingOperator &op)
             program.ir.Append({Opcode::Duplicate});
             if (value1.var->global) {
                 switch (value1.type) {
+                    case Type::Null: { EmitPop(1); } break;
                     case Type::Bool: { program.ir.Append({Opcode::StoreGlobalBool, {.i = value1.var->offset}}); } break;
                     case Type::Integer: { program.ir.Append({Opcode::StoreGlobalInt, {.i = value1.var->offset}}); } break;
                     case Type::Double: { program.ir.Append({Opcode::StoreGlobalDouble, {.i = value1.var->offset}}); } break;
@@ -863,6 +895,7 @@ void Parser::ProduceOperator(const PendingOperator &op)
                 }
             } else {
                 switch (value1.type) {
+                    case Type::Null: { EmitPop(1); } break;
                     case Type::Bool: { program.ir.Append({Opcode::StoreLocalBool, {.i = value1.var->offset}}); } break;
                     case Type::Integer: { program.ir.Append({Opcode::StoreLocalInt, {.i = value1.var->offset}}); } break;
                     case Type::Double: { program.ir.Append({Opcode::StoreLocalDouble, {.i = value1.var->offset}}); } break;

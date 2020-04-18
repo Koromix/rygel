@@ -92,6 +92,10 @@ int Run(const Program &program)
 #endif
 
     LOOP {
+        CASE(PushNull): {
+            stack.Append(Value());
+            DISPATCH(++pc);
+        }
         CASE(PushBool): {
             stack.Append({.b = inst->u.b});
             DISPATCH(++pc);
@@ -426,6 +430,10 @@ int Run(const Program &program)
         // I need to output things somehow!
         CASE(Print): {
             switch (inst->u.type) {
+                case Type::Null: {
+                    Print("null");
+                    stack.len--;
+                } break;
                 case Type::Bool: { Print("%1", stack.ptr[--stack.len].b); } break;
                 case Type::Integer: { Print("%1", stack.ptr[--stack.len].i); } break;
                 case Type::Double: { Print("%1", stack.ptr[--stack.len].d); } break;

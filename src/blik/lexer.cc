@@ -338,6 +338,8 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     Token1(TokenKind::While);
                 } else if (ident == "print") {
                     Token1(TokenKind::Print);
+                } else if (ident == "null") {
+                    Token1(TokenKind::Null);
                 } else if (ident == "true") {
                     set.tokens.Append({TokenKind::Bool, line, {.b = true}});
                 } else if (ident == "false") {

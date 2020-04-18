@@ -19,6 +19,7 @@ TOKEN(LeftParenthesis, "(")
 TOKEN(RightParenthesis, ")")
 TOKEN(Comma, ",")
 
+TOKEN(Null, "null")
 TOKEN(Bool, "<bool>")
 TOKEN(Integer, "<integer>")
 TOKEN(Double, "<double>")

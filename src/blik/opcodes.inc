@@ -6,6 +6,7 @@
     #error Please define OPCODE() before including opcodes.inc
 #endif
 
+OPCODE(PushNull)
 OPCODE(PushBool)
 OPCODE(PushInt)
 OPCODE(PushDouble)
