@@ -363,7 +363,8 @@ void Parser::ParseLet()
 
     if (MatchToken(TokenKind::Equal)) {
         var->type = ParseExpression(true);
-    } else if (MatchToken(TokenKind::Colon)) {
+    } else {
+        ConsumeToken(TokenKind::Colon);
         var->type = ConsumeType();
 
         if (MatchToken(TokenKind::Equal)) {
@@ -382,9 +383,6 @@ void Parser::ParseLet()
                 case Type::String: { program.ir.Append({Opcode::PushString, {.str = ""}}); } break;
             }
         }
-    } else {
-        MarkError("Unexpected token '%1', expected '=' or ':'");
-        return;
     }
 
     if (func) {
