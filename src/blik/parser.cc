@@ -32,11 +32,7 @@ class Parser {
     Span<const Token> tokens;
     Size offset;
 
-    // Reuse for performance
     HeapArray<ExpressionValue> values;
-    HeapArray<Size> jumps;
-    HeapArray<Instruction> buf;
-    HeapArray<Type> types;
 
     BucketArray<FunctionInfo> functions;
     HashTable<const char *, FunctionInfo *> functions_map;
@@ -407,8 +403,6 @@ void Parser::ParseIf()
 {
     offset++;
 
-    jumps.RemoveFrom(0);
-
     if (RG_UNLIKELY(ParseExpression(true) != Type::Bool)) {
         MarkError("Cannot use non-Bool expression as condition");
         return;
@@ -425,6 +419,8 @@ void Parser::ParseIf()
         ParseBlock(false);
 
         if (MatchToken(TokenKind::Else)) {
+            HeapArray<Size> jumps;
+
             jumps.Append(program.ir.len);
             program.ir.Append({Opcode::Jump});
 
@@ -483,9 +479,10 @@ void Parser::ParseWhile()
 
     // Put expression IR aside, because we want to put it after loop body
     // to avoid an extra jump after each iteration.
-    buf.RemoveFrom(0);
-    buf.Append(program.ir.Take(start_idx, program.ir.len - start_idx));
-    program.ir.len -= buf.len;
+
+    HeapArray<Instruction> expr;
+    expr.Append(program.ir.Take(start_idx, program.ir.len - start_idx));
+    program.ir.len -= expr.len;
 
     Size jump_idx = program.ir.len;
     program.ir.Append({Opcode::Jump});
@@ -505,7 +502,7 @@ void Parser::ParseWhile()
 
     // Finally write down expression IR
     program.ir[jump_idx].u.i = program.ir.len - jump_idx;
-    program.ir.Append(buf);
+    program.ir.Append(expr);
     program.ir.Append({Opcode::BranchIfTrue, {.i = jump_idx - program.ir.len + 1}});
 
     ConsumeToken(TokenKind::NewLine);
@@ -790,7 +787,7 @@ unexpected_token:
 // Don't try to call from outside ParseExpression()!
 bool Parser::ParseCall(const char *name)
 {
-    types.RemoveFrom(0);
+    LocalArray<Type, RG_LEN(FunctionInfo::params.data)> types;
 
     FunctionInfo *func = functions_map.FindValue(name, nullptr);
     if (RG_UNLIKELY(!func)) {
@@ -801,6 +798,10 @@ bool Parser::ParseCall(const char *name)
     if (!MatchToken(TokenKind::RightParenthesis)) {
         types.Append(ParseExpression(true));
         while (MatchToken(TokenKind::Comma)) {
+            if (RG_UNLIKELY(!types.Available())) {
+                MarkError("Functions cannot take more than %1 arguments", RG_LEN(types.data));
+                return false;
+            }
             types.Append(ParseExpression(true));
         }
 
@@ -811,7 +812,7 @@ bool Parser::ParseCall(const char *name)
     if (RG_UNLIKELY(types.len != func->params.len)) {
         MarkError("Function '%1' expects %2 arguments, not %3", func->name,
                   func->params.len, types.len);
-        return {};
+        return false;
     }
     for (Size i = 0; i < types.len; i++) {
         if (RG_UNLIKELY(types[i] != func->params[i].type)) {

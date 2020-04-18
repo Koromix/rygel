@@ -1,0 +1,125 @@
+func fib(n: Integer): Integer
+    if n <= 1
+        return n
+    end
+    return fib(n - 1) + fib(n - 2)
+end
+
+let iter = 0
+while (iter := iter + 1) <= 10
+    print("---------------------------\n")
+    print("ITERATION ", iter, "\n")
+    print("---------------------------\n")
+
+    # Ne cherchez pas la logique dans ce script, ce sont des bouts de code
+    # tapés presque au hasard pour mettrer au point le parseur.
+
+    let z = 5 + # Les nouvelles mettent fin à une commande, sauf si une expression est
+            3   # encore ouverte comme c'est le cas ici avec le + non suivi d'une valeur.
+
+    let x = 2 + 8 * 5 - (0x1444 << 5) > 2 && true
+
+    # Les variables doivent être déclarées à l'aide du mot-clé let.
+
+    let test = (5 = 8)
+    let p = 8
+
+    # Pour modifier la valeur d'une variable déjà créée il faut utiliser l'opérateur := (et non =)
+    # Je ne suis pas sûr pour ça, mais le but est d'éviter les erreurs dans les expressions,
+    # comme par exemple en JS ou en C quand on fait : if (a = 1) {}. C'est une source fréquente de
+    # bug, car au lieu de tester si a == 1 (ce qu'on voulait probablement faire), on assigne la
+    # valeur 1 à la variable a.
+
+    let i = 0
+    while i < 1000
+        i := i + 1
+    end
+    while i > 100 do i := i - 1
+    print("i = ", i, "\n")
+
+    p := 5
+    # test := true
+
+    # Les variables de ce langage ont une portée lexicale. En dehors de if, while & compagnie,
+    # il est possible de définir des blocs à l'aide de do/end. Les deux variables zzz et bleh
+    # dans le bloc ci-dessous n'existent plus à la sortie du bloc.
+
+    do
+        let zzz = 2
+        let bleh = 8
+
+        do
+        end
+
+        do
+            let foobar = "STRING"
+        end
+    end
+
+    # C'est un langage avec typage statique avec inférence de type. Si on ne précise par le
+    # type de variable il est déduit de l'expression à droite, mais on peut aussi le préciser.
+    # Si le type est précisé il est possible d'omettre la valeur d'initialisation.
+
+    let foo: String = "Hello" # OK
+    # let bar: Integer = "World!" # This is an error and would not work if uncommented
+    let empty: Double
+
+    let txt = "FOO"
+    if test do txt := "BAR"
+    print(txt, "\n")
+
+    if empty < 1.0
+        let blik = 2.0
+        p := 227
+    else if true
+        let blik = 3.0
+        p := 89
+    else
+        let blik = 4.0
+        p := 226
+    end
+
+    print("The value of p is: ", p, "\n")
+
+    # Les fonctions sont également typées, bien évidemment ! On commence par fibonacci,
+    # un classique...
+
+    let fib_n = 6
+    print("fib(", fib_n, ") = ", fib(fib_n), "\n")
+
+    # Et maintenant une séquence assez random qui m'a servi à implémenter le support des fonctions :)
+
+    let zz = 0
+    while zz < 3
+        tt("Niels", zz)
+        zz := zz + 1
+    end
+    while (zz := inc(zz)) < 9 do tt("Nelson", (zz := zz + 1) - 1)
+
+    print("TESTING ", func0(), "\n")
+    print("TESTING ", inline0(), "\n")
+end
+
+func tt(e: String, ii: Integer): Bool
+    let tte = 267
+    do
+        let xx = 3
+        tte := tte + xx * eee(xx + ii)
+        eee(xx)
+    end
+    print("hello ", e, " (", ii, ") ", tte, "\n")
+    return true
+end
+
+func eee(pp: Integer): Integer
+    let xxxxx = 1
+    print("CALLED eee with ", pp, "\n")
+    return pp
+end
+
+func inc(pp: Integer): Integer do pp + 1
+
+func func0(): String
+    return "func0()"
+end
+func inline0(): String do "inline0()"
