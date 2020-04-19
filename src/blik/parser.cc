@@ -780,10 +780,11 @@ Type Parser::ParseExpression(bool keep_result)
 
             if (RG_UNLIKELY(op.prec < 0)) {
                 if (offset == prev_offset + 1) {
-                    if (offset >= tokens.len) {
+                    if (offset > tokens.len) {
                         MarkError("Unexpected end of file, expected expression");
                     } else {
-                        MarkError("Unexpected token '%1', expected expression", TokenKindNames[(int)tokens[offset].kind]);
+                        MarkError("Unexpected token '%1', expected expression",
+                                  TokenKindNames[(int)tokens[offset - 1].kind]);
                     }
 
                     return {};
