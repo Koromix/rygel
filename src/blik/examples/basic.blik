@@ -11,6 +11,15 @@ let x = 2 + 8 * 5 - (0x1444 << 5) > 2 && true
 let test = (5 = 8)
 let p = 8
 
+# Les boucles for permettront à terme d'itérer sur différents objets, en attendant d'avoir
+# des objets on peut déjà itérer sur des un intervalle d'entiers.
+
+for i in 2..5
+    for j in 3..6
+        print("for loop ", i, " ", j, "\n")
+    end
+end
+
 # Pour modifier la valeur d'une variable déjà créée il faut utiliser l'opérateur := (et non =)
 # Je ne suis pas sûr pour ça, mais le but est d'éviter les erreurs dans les expressions,
 # comme par exemple en JS ou en C quand on fait : if (a = 1) {}. C'est une source fréquente de

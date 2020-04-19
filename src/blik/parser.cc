@@ -41,7 +41,7 @@ class Parser {
 
     Size depth = -1;
     FunctionInfo *func = nullptr;
-    Size func_var_offset;
+    Size func_var_offset = 0;
 
     HeapArray<ForwardCall> forward_calls;
 
@@ -60,6 +60,7 @@ private:
     void ParseLet();
     void ParseIf();
     void ParseWhile();
+    void ParseFor();
     void ParsePrint();
 
     Type ParseExpression(bool keep_result);
@@ -220,6 +221,7 @@ bool Parser::ParseBlock(bool keep_variables)
             case TokenKind::Let: { ParseLet(); } break;
             case TokenKind::If: { ParseIf(); } break;
             case TokenKind::While: { ParseWhile(); } break;
+            case TokenKind::For: { ParseFor(); } break;
             case TokenKind::Print: { ParsePrint(); } break;
 
             default: {
@@ -238,6 +240,7 @@ void Parser::ParseFunction()
 
     RG_DEFER_C(variables_len = variables.len) {
         func = nullptr;
+        func_var_offset = 0;
         DestroyVariables(variables_len);
     };
 
@@ -527,6 +530,79 @@ void Parser::ParseWhile()
     program.ir[jump_idx].u.i = program.ir.len - jump_idx;
     program.ir.Append(expr);
     program.ir.Append({Opcode::BranchIfTrue, {.i = jump_idx - program.ir.len + 1}});
+
+    ConsumeToken(TokenKind::NewLine);
+}
+
+void Parser::ParseFor()
+{
+    offset++;
+
+    VariableInfo *it = variables.AppendDefault();
+
+    it->name = ConsumeIdentifier();
+    it->type = Type::Integer;
+    it->offset = variables.len - func_var_offset + 1;
+
+    std::pair<VariableInfo **, bool> ret = variables_map.Append(it);
+    if (RG_UNLIKELY(!ret.second)) {
+        const VariableInfo *prev_var = *ret.first;
+
+        if (func && prev_var->global) {
+            MarkError("Iterator '%1' is not allowed to hide global variable", it->name);
+        } else {
+            MarkError("Variable '%1' already exists", it->name);
+        }
+
+        return;
+    }
+
+    Type type1;
+    Type type2;
+    ConsumeToken(TokenKind::In);
+    type1 = ParseExpression(true);
+    ConsumeToken(TokenKind::DotDot);
+    type2 = ParseExpression(true);
+
+    // XXX: Hack to prevent body code from messing with start and end values
+    variables.AppendDefault()->name = "";
+    variables.AppendDefault()->name = "";
+
+    if (RG_UNLIKELY(type1 != Type::Integer)) {
+        MarkError("Start value must be Integer, not %1", TypeNames[(int)type1]);
+        return;
+    }
+    if (RG_UNLIKELY(type2 != Type::Integer)) {
+        MarkError("End value must be Integer, not %1", TypeNames[(int)type2]);
+        return;
+    }
+
+    // Put iterator value on the stack
+    program.ir.Append({Opcode::LoadLocalInt, {.i = it->offset - 2}});
+
+    Size body_idx = program.ir.len;
+
+    program.ir.Append({Opcode::LoadLocalInt, {.i = it->offset}});
+    program.ir.Append({Opcode::LoadLocalInt, {.i = it->offset - 1}});
+    program.ir.Append({Opcode::LessThanInt});
+    program.ir.Append({Opcode::BranchIfFalse, {.i = body_idx - program.ir.len}});
+
+    if (MatchToken(TokenKind::Do)) {
+        ParseExpression(false);
+    } else {
+        ConsumeToken(TokenKind::NewLine);
+        ParseBlock(false);
+        ConsumeToken(TokenKind::End);
+    }
+
+    program.ir.Append({Opcode::PushInt, {.i = 1}});
+    program.ir.Append({Opcode::AddInt});
+    program.ir.Append({Opcode::Jump, {.i = body_idx - program.ir.len}});
+    program.ir[body_idx + 3].u.i = program.ir.len - (body_idx + 3);
+
+    // Destroy iterator and range values
+    EmitPop(3);
+    DestroyVariables(variables.len - 3);
 
     ConsumeToken(TokenKind::NewLine);
 }

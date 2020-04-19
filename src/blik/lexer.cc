@@ -180,7 +180,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                         overflow |= (value > (INT64_MAX - digit) / 10);
                         value = (value * 10) + (code[next] - '0');
                     } else if (code[next] == '.') {
-                        dot = true;
+                        dot = (next + 1 < code.len && IsAsciiDigit(code[next + 1]));
                         break;
                     } else {
                         break;
@@ -336,6 +336,10 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     Token1(TokenKind::Else);
                 } else if (ident == "while") {
                     Token1(TokenKind::While);
+                } else if (ident == "for") {
+                    Token1(TokenKind::For);
+                } else if (ident == "in") {
+                    Token1(TokenKind::In);
                 } else if (ident == "print") {
                     Token1(TokenKind::Print);
                 } else if (ident == "null") {
@@ -357,6 +361,12 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
             case '%': { Token1(TokenKind::Modulo); } break;
             case '^': { Token1(TokenKind::Xor); } break;
             case '~': { Token1(TokenKind::Not); } break;
+            case '.': {
+                if (RG_UNLIKELY(!Token2('.', TokenKind::DotDot))) {
+                    MarkError("Unexpected character '.'");
+                    return false;
+                }
+            } break;
             case ':': { Token2('=', TokenKind::Reassign) || Token1(TokenKind::Colon); } break;
             case '(': { Token1(TokenKind::LeftParenthesis); } break;
             case ')': { Token1(TokenKind::RightParenthesis); } break;
