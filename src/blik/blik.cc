@@ -3,8 +3,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../core/libcc/libcc.hh"
+#include "compiler.hh"
 #include "lexer.hh"
-#include "parser.hh"
 #include "vm.hh"
 
 namespace RG {
@@ -67,7 +67,7 @@ Options:
     }
 
     Program program;
-    if (!Parse(token_set, filename, &program))
+    if (!Compile(token_set, filename, &program))
         return 1;
 
     return Run(program);

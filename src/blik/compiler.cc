@@ -3,8 +3,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../core/libcc/libcc.hh"
+#include "compiler.hh"
 #include "lexer.hh"
-#include "parser.hh"
+#include "types.hh"
 
 namespace RG {
 
@@ -26,7 +27,7 @@ struct StackSlot {
     const VariableInfo *var;
 };
 
-class Parser {
+class Compiler {
     bool valid = true;
 
     Span<const Token> tokens;
@@ -88,7 +89,7 @@ private:
     }
 };
 
-bool Parser::Parse(const TokenSet &set, const char *filename)
+bool Compiler::Parse(const TokenSet &set, const char *filename)
 {
     RG_ASSERT(valid);
 
@@ -128,7 +129,7 @@ bool Parser::Parse(const TokenSet &set, const char *filename)
     return valid;
 }
 
-void Parser::ParsePrototypes(Span<const Size> offsets)
+void Compiler::ParsePrototypes(Span<const Size> offsets)
 {
     RG_DEFER_C(prev_offset = offset) { offset = prev_offset; };
 
@@ -175,7 +176,7 @@ void Parser::ParsePrototypes(Span<const Size> offsets)
     }
 }
 
-bool Parser::ParseBlock(bool keep_variables)
+bool Compiler::ParseBlock(bool keep_variables)
 {
     depth++;
 
@@ -235,7 +236,7 @@ bool Parser::ParseBlock(bool keep_variables)
     return has_return;
 }
 
-void Parser::ParseFunction()
+void Compiler::ParseFunction()
 {
     offset++;
 
@@ -327,7 +328,7 @@ void Parser::ParseFunction()
     ConsumeToken(TokenKind::NewLine);
 }
 
-void Parser::ParseReturn()
+void Compiler::ParseReturn()
 {
     offset++;
 
@@ -370,7 +371,7 @@ void Parser::ParseReturn()
     ConsumeToken(TokenKind::NewLine);
 }
 
-void Parser::ParseLet()
+void Compiler::ParseLet()
 {
     offset++;
 
@@ -424,7 +425,7 @@ void Parser::ParseLet()
     ConsumeToken(TokenKind::NewLine);
 }
 
-void Parser::ParseIf()
+void Compiler::ParseIf()
 {
     offset++;
 
@@ -487,7 +488,7 @@ void Parser::ParseIf()
     ConsumeToken(TokenKind::NewLine);
 }
 
-void Parser::ParseWhile()
+void Compiler::ParseWhile()
 {
     offset++;
 
@@ -533,7 +534,7 @@ void Parser::ParseWhile()
     ConsumeToken(TokenKind::NewLine);
 }
 
-void Parser::ParseFor()
+void Compiler::ParseFor()
 {
     offset++;
 
@@ -612,7 +613,7 @@ void Parser::ParseFor()
     ConsumeToken(TokenKind::NewLine);
 }
 
-bool Parser::ParseExpressionOrReturn()
+bool Compiler::ParseExpressionOrReturn()
 {
     if (MatchToken(TokenKind::Return)) {
         offset--;
@@ -655,7 +656,7 @@ static int GetOperatorPrecedence(TokenKind kind)
     }
 }
 
-Type Parser::ParseExpression(bool keep_result)
+Type Compiler::ParseExpression(bool keep_result)
 {
     Size start_values_len = stack.len;
     RG_DEFER { stack.RemoveFrom(start_values_len); };
@@ -891,7 +892,7 @@ unexpected_token:
 }
 
 // Don't try to call from outside ParseExpression()!
-bool Parser::ParseCall(const char *name)
+bool Compiler::ParseCall(const char *name)
 {
     if (TestStr(name, "print") || TestStr(name, "println")) {
         Size pop = -1;
@@ -974,7 +975,7 @@ bool Parser::ParseCall(const char *name)
     return true;
 }
 
-void Parser::ProduceOperator(const PendingOperator &op)
+void Compiler::ProduceOperator(const PendingOperator &op)
 {
     bool success;
 
@@ -1131,7 +1132,7 @@ void Parser::ProduceOperator(const PendingOperator &op)
     }
 }
 
-bool Parser::EmitOperator1(Type in_type, Opcode code, Type out_type)
+bool Compiler::EmitOperator1(Type in_type, Opcode code, Type out_type)
 {
     Type type = stack[stack.len - 1].type;
 
@@ -1145,7 +1146,7 @@ bool Parser::EmitOperator1(Type in_type, Opcode code, Type out_type)
     }
 }
 
-bool Parser::EmitOperator2(Type in_type, Opcode code, Type out_type)
+bool Compiler::EmitOperator2(Type in_type, Opcode code, Type out_type)
 {
     Type type1 = stack[stack.len - 2].type;
     Type type2 = stack[stack.len - 1].type;
@@ -1160,7 +1161,7 @@ bool Parser::EmitOperator2(Type in_type, Opcode code, Type out_type)
     }
 }
 
-void Parser::EmitPop(int64_t count)
+void Compiler::EmitPop(int64_t count)
 {
     RG_ASSERT(count >= 0);
 
@@ -1169,7 +1170,7 @@ void Parser::EmitPop(int64_t count)
     }
 }
 
-void Parser::Finish(Program *out_program)
+void Compiler::Finish(Program *out_program)
 {
     RG_ASSERT(!out_program->ir.len);
 
@@ -1184,7 +1185,7 @@ void Parser::Finish(Program *out_program)
     SwapMemory(&program, out_program, RG_SIZE(program));
 }
 
-bool Parser::ConsumeToken(TokenKind kind)
+bool Compiler::ConsumeToken(TokenKind kind)
 {
     if (RG_UNLIKELY(offset >= tokens.len)) {
         MarkError("Unexpected end of file, expected '%1'", TokenKindNames[(int)kind]);
@@ -1200,7 +1201,7 @@ bool Parser::ConsumeToken(TokenKind kind)
     return true;
 }
 
-const char *Parser::ConsumeIdentifier()
+const char *Compiler::ConsumeIdentifier()
 {
     if (RG_LIKELY(ConsumeToken(TokenKind::Identifier))) {
         return tokens[offset - 1].u.str;
@@ -1209,7 +1210,7 @@ const char *Parser::ConsumeIdentifier()
     }
 }
 
-Type Parser::ConsumeType()
+Type Compiler::ConsumeType()
 {
     const char *type_name = ConsumeIdentifier();
 
@@ -1222,14 +1223,14 @@ Type Parser::ConsumeType()
     }
 }
 
-bool Parser::MatchToken(TokenKind kind)
+bool Compiler::MatchToken(TokenKind kind)
 {
     bool match = offset < tokens.len && tokens[offset].kind == kind;
     offset += match;
     return match;
 }
 
-void Parser::DestroyVariables(Size count)
+void Compiler::DestroyVariables(Size count)
 {
     for (Size i = variables.len - count; i < variables.len; i++) {
         variables_map.Remove(variables[i].name);
@@ -1239,13 +1240,13 @@ void Parser::DestroyVariables(Size count)
     var_offset -= count;
 }
 
-bool Parse(const TokenSet &set, const char *filename, Program *out_program)
+bool Compile(const TokenSet &set, const char *filename, Program *out_program)
 {
-    Parser parser;
-    if (!parser.Parse(set, filename))
+    Compiler compiler;
+    if (!compiler.Parse(set, filename))
         return false;
 
-    parser.Finish(out_program);
+    compiler.Finish(out_program);
     return true;
 }
 

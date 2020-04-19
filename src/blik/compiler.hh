@@ -5,55 +5,11 @@
 #pragma once
 
 #include "../core/libcc/libcc.hh"
+#include "types.hh"
 
 namespace RG {
 
 struct TokenSet;
-
-enum class Type {
-    Null,
-    Bool,
-    Int,
-    Double,
-    String
-};
-static const char *const TypeNames[] = {
-    "Null",
-    "Bool",
-    "Int",
-    "Double",
-    "String"
-};
-
-struct VariableInfo {
-    const char *name;
-    Type type;
-    bool global;
-    bool readonly;
-
-    Size offset;
-    // Used to prevent dangerous forward calls, only for globals
-    Size defined_at;
-
-    RG_HASHTABLE_HANDLER(VariableInfo, name);
-};
-
-struct FunctionInfo {
-    struct Parameter {
-        const char *name;
-        Type type;
-    };
-
-    const char *name;
-    LocalArray<Parameter, 16> params;
-    Type ret;
-
-    Size inst_idx;
-    // Used to prevent dangerous forward calls (if relevant globals are not defined yet)
-    Size earliest_forward_call;
-
-    RG_HASHTABLE_HANDLER(FunctionInfo, name);
-};
 
 enum class Opcode {
     #define OPCODE(Code) Code,
@@ -88,6 +44,6 @@ struct Program {
     HashTable<const char *, VariableInfo *> globals_map;
 };
 
-bool Parse(const TokenSet &set, const char *filename, Program *out_program);
+bool Compile(const TokenSet &set, const char *filename, Program *out_program);
 
 }
