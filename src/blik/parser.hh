@@ -13,14 +13,14 @@ struct TokenSet;
 enum class Type {
     Null,
     Bool,
-    Integer,
+    Int,
     Double,
     String
 };
 static const char *const TypeNames[] = {
     "Null",
     "Bool",
-    "Integer",
+    "Int",
     "Double",
     "String"
 };

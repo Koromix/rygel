@@ -1,4 +1,4 @@
-func fib(n: Integer): Integer
+func fib(n: Int): Int
     if n <= 1 do return n
     return fib(n - 1) + fib(n - 2)
 end
@@ -60,7 +60,7 @@ for iter in 1..11
     # Si le type est précisé il est possible d'omettre la valeur d'initialisation.
 
     let foo: String = "Hello" # OK
-    # let bar: Integer = "World!" # This is an error and would not work if uncommented
+    # let bar: Int = "World!" # This is an error and would not work if uncommented
     let empty: Double
 
     let txt = "FOO"
@@ -99,7 +99,7 @@ for iter in 1..11
     println("TESTING ", inline0())
 end
 
-func tt(e: String, ii: Integer): Bool
+func tt(e: String, ii: Int): Bool
     let tte = 267
     begin
         let xx = 3
@@ -110,13 +110,13 @@ func tt(e: String, ii: Integer): Bool
     return true
 end
 
-func eee(pp: Integer): Integer
+func eee(pp: Int): Int
     let xxxxx = 1
     println("CALLED eee with ", pp)
     return pp
 end
 
-func inc(pp: Integer): Integer do pp + 1
+func inc(pp: Int): Int do pp + 1
 
 func func0(): String
     return "func0()"

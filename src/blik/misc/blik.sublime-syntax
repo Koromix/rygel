@@ -16,7 +16,7 @@ contexts:
     - match: \b(let|for)\b
       scope: keyword.control.blik
       push: variable
-    - match: \b(Null|Bool|Integer|Double|String)\b
+    - match: \b(Null|Bool|Int|Double|String)\b
       scope: storage.type.blik
     - match: (!|&&|\|\||=|!=|<=|>=|<|>|:=|\-|\+|\*|\/|%|~|<<|>>|^|\.\.)
       scope: keyword.operator.blik

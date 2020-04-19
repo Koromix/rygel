@@ -356,7 +356,7 @@ void Parser::ParseReturn()
         switch (type) {
             case Type::Null: { pop_len++; } break;
             case Type::Bool: { program.ir.Append({Opcode::StoreLocalBool, {.i = 0}}); } break;
-            case Type::Integer: { program.ir.Append({Opcode::StoreLocalInt, {.i = 0}}); } break;
+            case Type::Int: { program.ir.Append({Opcode::StoreLocalInt, {.i = 0}}); } break;
             case Type::Double: { program.ir.Append({Opcode::StoreLocalDouble, {.i = 0}}); } break;
             case Type::String: { program.ir.Append({Opcode::StoreLocalString, {.i = 0}}); } break;
         }
@@ -406,7 +406,7 @@ void Parser::ParseLet()
             switch (var->type) {
                 case Type::Null: { program.ir.Append({Opcode::PushNull}); } break;
                 case Type::Bool: { program.ir.Append({Opcode::PushBool, {.b = false}}); } break;
-                case Type::Integer: { program.ir.Append({Opcode::PushInt, {.i = 0}}); } break;
+                case Type::Int: { program.ir.Append({Opcode::PushInt, {.i = 0}}); } break;
                 case Type::Double: { program.ir.Append({Opcode::PushDouble, {.d = 0.0}}); } break;
                 case Type::String: { program.ir.Append({Opcode::PushString, {.str = ""}}); } break;
             }
@@ -541,7 +541,7 @@ void Parser::ParseFor()
     VariableInfo *it = variables.AppendDefault();
 
     it->name = ConsumeIdentifier();
-    it->type = Type::Integer;
+    it->type = Type::Int;
     it->offset = variables.len - local_offset + 1;
 
     std::pair<VariableInfo **, bool> ret = variables_map.Append(it);
@@ -568,12 +568,12 @@ void Parser::ParseFor()
     variables.AppendDefault()->name = "";
     variables.AppendDefault()->name = "";
 
-    if (RG_UNLIKELY(type1 != Type::Integer)) {
-        MarkError("Start value must be Integer, not %1", TypeNames[(int)type1]);
+    if (RG_UNLIKELY(type1 != Type::Int)) {
+        MarkError("Start value must be Int, not %1", TypeNames[(int)type1]);
         return;
     }
-    if (RG_UNLIKELY(type2 != Type::Integer)) {
-        MarkError("End value must be Integer, not %1", TypeNames[(int)type2]);
+    if (RG_UNLIKELY(type2 != Type::Int)) {
+        MarkError("End value must be Int, not %1", TypeNames[(int)type2]);
         return;
     }
 
@@ -707,10 +707,10 @@ Type Parser::ParseExpression(bool keep_result)
                         operators.RemoveLast(1);
 
                         program.ir.Append({Opcode::PushInt, {.i = -tok.u.i}});
-                        values.Append({Type::Integer});
+                        values.Append({Type::Int});
                     } else {
                         program.ir.Append({Opcode::PushInt, {.i = tok.u.i}});
-                        values.Append({Type::Integer});
+                        values.Append({Type::Int});
                     }
                 } break;
                 case TokenKind::Double: {
@@ -719,7 +719,7 @@ Type Parser::ParseExpression(bool keep_result)
                         operators.RemoveLast(1);
 
                         program.ir.Append({Opcode::PushDouble, {.d = -tok.u.d}});
-                        values.Append({Type::Integer});
+                        values.Append({Type::Int});
                     } else {
                         program.ir.Append({Opcode::PushDouble, {.d = tok.u.d}});
                         values.Append({Type::Double});
@@ -753,7 +753,7 @@ Type Parser::ParseExpression(bool keep_result)
                             switch (var->type) {
                                 case Type::Null: { program.ir.Append({Opcode::PushNull}); } break;
                                 case Type::Bool: { program.ir.Append({Opcode::LoadGlobalBool, {.i = var->offset}}); } break;
-                                case Type::Integer: { program.ir.Append({Opcode::LoadGlobalInt, {.i = var->offset}}); } break;
+                                case Type::Int: { program.ir.Append({Opcode::LoadGlobalInt, {.i = var->offset}}); } break;
                                 case Type::Double: { program.ir.Append({Opcode::LoadGlobalDouble, {.i = var->offset}});} break;
                                 case Type::String: { program.ir.Append({Opcode::LoadGlobalString, {.i = var->offset}}); } break;
                             }
@@ -761,7 +761,7 @@ Type Parser::ParseExpression(bool keep_result)
                             switch (var->type) {
                                 case Type::Null: { program.ir.Append({Opcode::PushNull}); } break;
                                 case Type::Bool: { program.ir.Append({Opcode::LoadLocalBool, {.i = var->offset}}); } break;
-                                case Type::Integer: { program.ir.Append({Opcode::LoadLocalInt, {.i = var->offset}}); } break;
+                                case Type::Int: { program.ir.Append({Opcode::LoadLocalInt, {.i = var->offset}}); } break;
                                 case Type::Double: { program.ir.Append({Opcode::LoadLocalDouble, {.i = var->offset}});} break;
                                 case Type::String: { program.ir.Append({Opcode::LoadLocalString, {.i = var->offset}}); } break;
                             }
@@ -990,7 +990,7 @@ void Parser::ProduceOperator(const PendingOperator &op)
                 switch (value1.type) {
                     case Type::Null: { EmitPop(1); } break;
                     case Type::Bool: { program.ir.Append({Opcode::StoreGlobalBool, {.i = value1.var->offset}}); } break;
-                    case Type::Integer: { program.ir.Append({Opcode::StoreGlobalInt, {.i = value1.var->offset}}); } break;
+                    case Type::Int: { program.ir.Append({Opcode::StoreGlobalInt, {.i = value1.var->offset}}); } break;
                     case Type::Double: { program.ir.Append({Opcode::StoreGlobalDouble, {.i = value1.var->offset}}); } break;
                     case Type::String: { program.ir.Append({Opcode::StoreGlobalString, {.i = value1.var->offset}}); } break;
                 }
@@ -998,7 +998,7 @@ void Parser::ProduceOperator(const PendingOperator &op)
                 switch (value1.type) {
                     case Type::Null: { EmitPop(1); } break;
                     case Type::Bool: { program.ir.Append({Opcode::StoreLocalBool, {.i = value1.var->offset}}); } break;
-                    case Type::Integer: { program.ir.Append({Opcode::StoreLocalInt, {.i = value1.var->offset}}); } break;
+                    case Type::Int: { program.ir.Append({Opcode::StoreLocalInt, {.i = value1.var->offset}}); } break;
                     case Type::Double: { program.ir.Append({Opcode::StoreLocalDouble, {.i = value1.var->offset}}); } break;
                     case Type::String: { program.ir.Append({Opcode::StoreLocalString, {.i = value1.var->offset}}); } break;
                 }
@@ -1011,78 +1011,78 @@ void Parser::ProduceOperator(const PendingOperator &op)
         } break;
 
         case TokenKind::Plus: {
-            success = EmitOperator2(Type::Integer, Opcode::AddInt, Type::Integer) ||
+            success = EmitOperator2(Type::Int, Opcode::AddInt, Type::Int) ||
                       EmitOperator2(Type::Double, Opcode::AddDouble, Type::Double);
         } break;
         case TokenKind::Minus: {
             if (op.unary) {
-                success = EmitOperator1(Type::Integer, Opcode::NegateInt, Type::Integer) ||
+                success = EmitOperator1(Type::Int, Opcode::NegateInt, Type::Int) ||
                           EmitOperator1(Type::Double, Opcode::NegateDouble, Type::Double);
             } else {
-                success = EmitOperator2(Type::Integer, Opcode::SubstractInt, Type::Integer) ||
+                success = EmitOperator2(Type::Int, Opcode::SubstractInt, Type::Int) ||
                           EmitOperator2(Type::Double, Opcode::SubstractDouble, Type::Double);
             }
         } break;
         case TokenKind::Multiply: {
-            success = EmitOperator2(Type::Integer, Opcode::MultiplyInt, Type::Integer) ||
+            success = EmitOperator2(Type::Int, Opcode::MultiplyInt, Type::Int) ||
                       EmitOperator2(Type::Double, Opcode::MultiplyDouble, Type::Double);
         } break;
         case TokenKind::Divide: {
-            success = EmitOperator2(Type::Integer, Opcode::DivideInt, Type::Integer) ||
+            success = EmitOperator2(Type::Int, Opcode::DivideInt, Type::Int) ||
                       EmitOperator2(Type::Double, Opcode::DivideDouble, Type::Double);
         } break;
         case TokenKind::Modulo: {
-            success = EmitOperator2(Type::Integer, Opcode::ModuloInt, Type::Integer);
+            success = EmitOperator2(Type::Int, Opcode::ModuloInt, Type::Int);
         } break;
 
         case TokenKind::Equal: {
-            success = EmitOperator2(Type::Integer, Opcode::EqualInt, Type::Bool) ||
+            success = EmitOperator2(Type::Int, Opcode::EqualInt, Type::Bool) ||
                       EmitOperator2(Type::Double, Opcode::EqualDouble, Type::Bool) ||
                       EmitOperator2(Type::Bool, Opcode::EqualBool, Type::Bool);
         } break;
         case TokenKind::NotEqual: {
-            success = EmitOperator2(Type::Integer, Opcode::NotEqualInt, Type::Bool) ||
+            success = EmitOperator2(Type::Int, Opcode::NotEqualInt, Type::Bool) ||
                       EmitOperator2(Type::Double, Opcode::NotEqualDouble, Type::Bool) ||
                       EmitOperator2(Type::Bool, Opcode::NotEqualBool, Type::Bool);
         } break;
         case TokenKind::Greater: {
-            success = EmitOperator2(Type::Integer, Opcode::GreaterThanInt, Type::Bool) ||
+            success = EmitOperator2(Type::Int, Opcode::GreaterThanInt, Type::Bool) ||
                       EmitOperator2(Type::Double, Opcode::GreaterThanDouble, Type::Bool);
         } break;
         case TokenKind::GreaterOrEqual: {
-            success = EmitOperator2(Type::Integer, Opcode::GreaterOrEqualInt, Type::Bool) ||
+            success = EmitOperator2(Type::Int, Opcode::GreaterOrEqualInt, Type::Bool) ||
                       EmitOperator2(Type::Double, Opcode::GreaterOrEqualDouble, Type::Bool);
         } break;
         case TokenKind::Less: {
-            success = EmitOperator2(Type::Integer, Opcode::LessThanInt, Type::Bool) ||
+            success = EmitOperator2(Type::Int, Opcode::LessThanInt, Type::Bool) ||
                       EmitOperator2(Type::Double, Opcode::LessThanDouble, Type::Bool);
         } break;
         case TokenKind::LessOrEqual: {
-            success = EmitOperator2(Type::Integer, Opcode::LessOrEqualInt, Type::Bool) ||
+            success = EmitOperator2(Type::Int, Opcode::LessOrEqualInt, Type::Bool) ||
                       EmitOperator2(Type::Double, Opcode::LessOrEqualDouble, Type::Bool);
         } break;
 
         case TokenKind::And: {
-            success = EmitOperator2(Type::Integer, Opcode::AndInt, Type::Integer) ||
+            success = EmitOperator2(Type::Int, Opcode::AndInt, Type::Int) ||
                       EmitOperator2(Type::Bool, Opcode::AndBool, Type::Bool);
         } break;
         case TokenKind::Or: {
-            success = EmitOperator2(Type::Integer, Opcode::OrInt, Type::Integer) ||
+            success = EmitOperator2(Type::Int, Opcode::OrInt, Type::Int) ||
                       EmitOperator2(Type::Bool, Opcode::OrBool, Type::Bool);
         } break;
         case TokenKind::Xor: {
-            success = EmitOperator2(Type::Integer, Opcode::XorInt, Type::Integer) ||
+            success = EmitOperator2(Type::Int, Opcode::XorInt, Type::Int) ||
                       EmitOperator2(Type::Bool, Opcode::NotEqualBool, Type::Bool);
         } break;
         case TokenKind::Not: {
-            success = EmitOperator1(Type::Integer, Opcode::NotInt, Type::Integer) ||
+            success = EmitOperator1(Type::Int, Opcode::NotInt, Type::Int) ||
                       EmitOperator1(Type::Bool, Opcode::NotBool, Type::Bool);
         } break;
         case TokenKind::LeftShift: {
-            success = EmitOperator2(Type::Integer, Opcode::LeftShiftInt, Type::Integer);
+            success = EmitOperator2(Type::Int, Opcode::LeftShiftInt, Type::Int);
         } break;
         case TokenKind::RightShift: {
-            success = EmitOperator2(Type::Integer, Opcode::RightShiftInt, Type::Integer);
+            success = EmitOperator2(Type::Int, Opcode::RightShiftInt, Type::Int);
         } break;
 
         case TokenKind::LogicNot: {
