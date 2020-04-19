@@ -1,0 +1,57 @@
+%YAML 1.2
+---
+name: blik
+file_extensions: [blik]
+scope: source.blik
+
+contexts:
+  main:
+    - match: \#.*
+      scope: comment.line.blik
+    - match: \b(if|else|while|do|end|return|in)\b
+      scope: keyword.control.blik
+    - match: \bfunc\b
+      scope: keyword.control.blik
+      push: function
+    - match: \b(let|for)\b
+      scope: keyword.control.blik
+      push: variable
+    - match: \b(Null|Bool|Integer|Double|String)\b
+      scope: storage.type.blik
+    - match: (!|&&|\|\||=|!=|<=|>=|<|>|:=|\-|\+|\*|\/|%|~|<<|>>|^|\.\.)
+      scope: keyword.operator.blik
+    - match: '"'
+      push: string
+    - match: \(
+      push: brackets
+    - match: \)
+      scope: invalid.illegal.blik
+    - match: \b(true|false)\b
+      scope: constant.language.blik
+    - match: \b(0x[0-9a-fA-F]*|[0-9]+(\.?[0-9]*)?|0o[0-8]*|0b[01]*)\b
+      scope: constant.numeric.blik
+    - match: \b([A-Za-z_][A-Za-z_0-9]*) *\(\b*
+      captures:
+      1: variable.function.blik
+      push: brackets
+
+  function:
+    - match: \b[A-Za-z_][A-Za-z_0-9]*\b*
+      scope: entity.name.function.blik
+      pop: true
+  variable:
+    - match: \b[A-Za-z_][A-Za-z_0-9]*\b*
+      scope: variable.other.blik
+      pop: true
+
+  brackets:
+    - match: \)
+      pop: true
+    - include: main
+
+  string:
+    - meta_scope: string.quoted.double.blik
+    - match: \\.
+      scope: constant.character.escape.blik
+    - match: '"'
+      pop: true

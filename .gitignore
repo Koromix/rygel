@@ -11,5 +11,5 @@ CMakeLists.txt.user*
 RcppExports.*
 .Rhistory
 .Rbuildignore
-*.sublime-*
+/*.sublime-*
 /rygel.*

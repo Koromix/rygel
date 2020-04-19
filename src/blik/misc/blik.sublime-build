@@ -1,0 +1,4 @@
+{
+  "cmd": ["blik", "$file"],
+  "selector": "source.blik"
+}
