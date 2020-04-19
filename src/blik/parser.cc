@@ -62,6 +62,8 @@ private:
     void ParseWhile();
     void ParseFor();
 
+    void ParseExpressionOrReturn();
+
     Type ParseExpression(bool keep_result);
     bool ParseCall(const char *name);
     void ProduceOperator(const PendingOperator &op);
@@ -436,7 +438,7 @@ void Parser::ParseIf()
     program.ir.Append({Opcode::BranchIfFalse});
 
     if (MatchToken(TokenKind::Do)) {
-        ParseExpression(false);
+        ParseExpressionOrReturn();
         program.ir[branch_idx].u.i = program.ir.len - branch_idx;
     } else {
         ConsumeToken(TokenKind::NewLine);
@@ -512,7 +514,7 @@ void Parser::ParseWhile()
     program.ir.Append({Opcode::Jump});
 
     if (MatchToken(TokenKind::Do)) {
-        ParseExpression(false);
+        ParseExpressionOrReturn();
     } else {
         ConsumeToken(TokenKind::NewLine);
         ParseBlock(false);
@@ -586,7 +588,7 @@ void Parser::ParseFor()
     program.ir.Append({Opcode::BranchIfFalse, {.i = body_idx - program.ir.len}});
 
     if (MatchToken(TokenKind::Do)) {
-        ParseExpression(false);
+        ParseExpressionOrReturn();
     } else {
         ConsumeToken(TokenKind::NewLine);
         ParseBlock(false);
@@ -603,6 +605,17 @@ void Parser::ParseFor()
     DestroyVariables(3);
 
     ConsumeToken(TokenKind::NewLine);
+}
+
+void Parser::ParseExpressionOrReturn()
+{
+    if (MatchToken(TokenKind::Return)) {
+        offset--;
+        ParseReturn();
+        offset--;
+    } else {
+        ParseExpression(false);
+    }
 }
 
 static int GetOperatorPrecedence(TokenKind kind)

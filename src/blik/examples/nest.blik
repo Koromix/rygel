@@ -1,7 +1,5 @@
 func fib(n: Integer): Integer
-    if n <= 1
-        return n
-    end
+    if n <= 1 do return n
     return fib(n - 1) + fib(n - 2)
 end
 
