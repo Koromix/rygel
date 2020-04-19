@@ -127,12 +127,12 @@ while zz < 3
 end
 while (zz := inc(zz)) < 9 do tt("Nelson", (zz := zz + 1) - 1)
 
-func inc(pp: Int): Int do pp + 1
+func inc(pp: Int): Int do return pp + 1
 
 func func0(): String
     return "func0()"
 end
-func inline0(): String do "inline0()"
+func inline0(): String do return "inline0()"
 
 println("TESTING ", func0())
 println("TESTING ", inline0())

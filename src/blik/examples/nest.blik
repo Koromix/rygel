@@ -116,11 +116,11 @@ func eee(pp: Int): Int
     return pp
 end
 
-func inc(pp: Int): Int do pp + 1
+func inc(pp: Int): Int do return pp + 1
 
 func func0(): String
     return "func0()"
 end
-func inline0(): String do "inline0()"
+func inline0(): String do return "inline0()"
 
 for i in 1..14 do println(i)

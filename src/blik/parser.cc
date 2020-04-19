@@ -63,7 +63,7 @@ private:
     void ParseWhile();
     void ParseFor();
 
-    void ParseExpressionOrReturn();
+    bool ParseExpressionOrReturn();
 
     Type ParseExpression(bool keep_result);
     bool ParseCall(const char *name);
@@ -304,25 +304,23 @@ void Parser::ParseFunction()
     var_offset = 0;
 
     // Function body
+    bool has_return;
     if (MatchToken(TokenKind::Do)) {
-        ParseExpression(true);
-        program.ir.Append({Opcode::Return, {.i = current_func->params.len}});
+        has_return = ParseExpressionOrReturn();
     } else {
         ConsumeToken(TokenKind::NewLine);
-
-        // Function body
-        bool has_return = ParseBlock(false);
-        if (!has_return) {
-            if (current_func->ret == Type::Null) {
-                program.ir.Append({Opcode::PushNull});
-                program.ir.Append({Opcode::Return, {.i = current_func->params.len}});
-            } else {
-                MarkError("Function '%1' does not have a return statement", current_func->name);
-                return;
-            }
-        }
-
+        has_return = ParseBlock(false);
         ConsumeToken(TokenKind::End);
+    }
+
+    if (!has_return) {
+        if (current_func->ret == Type::Null) {
+            program.ir.Append({Opcode::PushNull});
+            program.ir.Append({Opcode::Return, {.i = current_func->params.len}});
+        } else {
+            MarkError("Function '%1' does not have a return statement", current_func->name);
+            return;
+        }
     }
 
     ConsumeToken(TokenKind::NewLine);
@@ -613,14 +611,17 @@ void Parser::ParseFor()
     ConsumeToken(TokenKind::NewLine);
 }
 
-void Parser::ParseExpressionOrReturn()
+bool Parser::ParseExpressionOrReturn()
 {
     if (MatchToken(TokenKind::Return)) {
         offset--;
         ParseReturn();
         offset--;
+
+        return true;
     } else {
         ParseExpression(false);
+        return false;
     }
 }
 
