@@ -21,7 +21,7 @@ struct PendingOperator {
     Size branch_idx; // Used for short-circuit operators
 };
 
-struct ExpressionValue {
+struct StackSlot {
     Type type;
     const VariableInfo *var;
 };
@@ -32,7 +32,7 @@ class Parser {
     Span<const Token> tokens;
     Size offset;
 
-    HeapArray<ExpressionValue> values;
+    HeapArray<StackSlot> stack;
 
     BucketArray<FunctionInfo> functions;
     HashTable<const char *, FunctionInfo *> functions_map;
@@ -649,8 +649,8 @@ static int GetOperatorPrecedence(TokenKind kind)
 
 Type Parser::ParseExpression(bool keep_result)
 {
-    Size start_values_len = values.len;
-    RG_DEFER { values.RemoveFrom(start_values_len); };
+    Size start_values_len = stack.len;
+    RG_DEFER { stack.RemoveFrom(start_values_len); };
 
     LocalArray<PendingOperator, 128> operators;
     bool expect_op = false;
@@ -695,11 +695,11 @@ Type Parser::ParseExpression(bool keep_result)
             switch (tok.kind) {
                 case TokenKind::Null: {
                     program.ir.Append({Opcode::PushNull});
-                    values.Append({Type::Null});
+                    stack.Append({Type::Null});
                 } break;
                 case TokenKind::Bool: {
                     program.ir.Append({Opcode::PushBool, {.b = tok.u.b}});
-                    values.Append({Type::Bool});
+                    stack.Append({Type::Bool});
                 } break;
                 case TokenKind::Integer: {
                     if (operators.len && operators[operators.len - 1].kind == TokenKind::Minus &&
@@ -707,10 +707,10 @@ Type Parser::ParseExpression(bool keep_result)
                         operators.RemoveLast(1);
 
                         program.ir.Append({Opcode::PushInt, {.i = -tok.u.i}});
-                        values.Append({Type::Int});
+                        stack.Append({Type::Int});
                     } else {
                         program.ir.Append({Opcode::PushInt, {.i = tok.u.i}});
-                        values.Append({Type::Int});
+                        stack.Append({Type::Int});
                     }
                 } break;
                 case TokenKind::Double: {
@@ -719,15 +719,15 @@ Type Parser::ParseExpression(bool keep_result)
                         operators.RemoveLast(1);
 
                         program.ir.Append({Opcode::PushDouble, {.d = -tok.u.d}});
-                        values.Append({Type::Int});
+                        stack.Append({Type::Int});
                     } else {
                         program.ir.Append({Opcode::PushDouble, {.d = tok.u.d}});
-                        values.Append({Type::Double});
+                        stack.Append({Type::Double});
                     }
                 } break;
                 case TokenKind::String: {
                     program.ir.Append({Opcode::PushString, {.str = tok.u.str}});
-                    values.Append({Type::String});
+                    stack.Append({Type::String});
                 } break;
 
                 case TokenKind::Identifier: {
@@ -766,7 +766,7 @@ Type Parser::ParseExpression(bool keep_result)
                                 case Type::String: { program.ir.Append({Opcode::LoadLocalString, {.i = var->offset}}); } break;
                             }
                         }
-                        values.Append({var->type, var});
+                        stack.Append({var->type, var});
                     }
                 } break;
 
@@ -825,8 +825,8 @@ Type Parser::ParseExpression(bool keep_result)
             }
 
             if (tok.kind == TokenKind::Reassign) {
-                // Remove useless load instruction. We don't remove the variable from the
-                // stack of values, because it will be needed when we emit the store instruction
+                // Remove useless load instruction. We don't remove the variable from
+                // stack slots,  because it will be needed when we emit the store instruction
                 // and will be removed then.
                 program.ir.RemoveLast(1);
             } else if (tok.kind == TokenKind::LogicAnd) {
@@ -862,9 +862,9 @@ Type Parser::ParseExpression(bool keep_result)
         return {};
     }
 
-    RG_ASSERT(values.len == start_values_len + 1);
+    RG_ASSERT(stack.len == start_values_len + 1);
     if (keep_result) {
-        return values[0].type;
+        return stack[0].type;
     } else {
         if (program.ir.len >= 2 && program.ir[program.ir.len - 2].code == Opcode::Duplicate) {
             std::swap(program.ir[program.ir.len - 2], program.ir[program.ir.len - 1]);
@@ -914,7 +914,7 @@ bool Parser::ParseCall(const char *name)
             EmitPop(pop);
         }
 
-        values.Append({Type::Null});
+        stack.Append({Type::Null});
     } else {
         LocalArray<Type, RG_LEN(FunctionInfo::params.data)> types;
 
@@ -960,7 +960,7 @@ bool Parser::ParseCall(const char *name)
         }
         program.ir.Append({Opcode::Call, {.i = func->addr}});
 
-        values.Append({func->ret});
+        stack.Append({func->ret});
     }
 
     return true;
@@ -972,40 +972,40 @@ void Parser::ProduceOperator(const PendingOperator &op)
 
     switch (op.kind) {
         case TokenKind::Reassign: {
-            const ExpressionValue &value1 = values[values.len - 2];
-            const ExpressionValue &value2 = values[values.len - 1];
+            const StackSlot &slot1 = stack[stack.len - 2];
+            const StackSlot &slot2 = stack[stack.len - 1];
 
-            if (RG_UNLIKELY(!value1.var)) {
+            if (RG_UNLIKELY(!slot1.var)) {
                 MarkError("Cannot assign expression to rvalue");
                 return;
             }
-            if (RG_UNLIKELY(value1.type != value2.type)) {
+            if (RG_UNLIKELY(slot1.type != slot2.type)) {
                 MarkError("Cannot assign %1 value to %2 variable",
-                          TypeNames[(int)value2.type], TypeNames[(int)value1.type]);
+                          TypeNames[(int)slot2.type], TypeNames[(int)slot1.type]);
                 return;
             }
 
             program.ir.Append({Opcode::Duplicate});
-            if (value1.var->global) {
-                switch (value1.type) {
+            if (slot1.var->global) {
+                switch (slot1.type) {
                     case Type::Null: { EmitPop(1); } break;
-                    case Type::Bool: { program.ir.Append({Opcode::StoreGlobalBool, {.i = value1.var->offset}}); } break;
-                    case Type::Int: { program.ir.Append({Opcode::StoreGlobalInt, {.i = value1.var->offset}}); } break;
-                    case Type::Double: { program.ir.Append({Opcode::StoreGlobalDouble, {.i = value1.var->offset}}); } break;
-                    case Type::String: { program.ir.Append({Opcode::StoreGlobalString, {.i = value1.var->offset}}); } break;
+                    case Type::Bool: { program.ir.Append({Opcode::StoreGlobalBool, {.i = slot1.var->offset}}); } break;
+                    case Type::Int: { program.ir.Append({Opcode::StoreGlobalInt, {.i = slot1.var->offset}}); } break;
+                    case Type::Double: { program.ir.Append({Opcode::StoreGlobalDouble, {.i = slot1.var->offset}}); } break;
+                    case Type::String: { program.ir.Append({Opcode::StoreGlobalString, {.i = slot1.var->offset}}); } break;
                 }
             } else {
-                switch (value1.type) {
+                switch (slot1.type) {
                     case Type::Null: { EmitPop(1); } break;
-                    case Type::Bool: { program.ir.Append({Opcode::StoreLocalBool, {.i = value1.var->offset}}); } break;
-                    case Type::Int: { program.ir.Append({Opcode::StoreLocalInt, {.i = value1.var->offset}}); } break;
-                    case Type::Double: { program.ir.Append({Opcode::StoreLocalDouble, {.i = value1.var->offset}}); } break;
-                    case Type::String: { program.ir.Append({Opcode::StoreLocalString, {.i = value1.var->offset}}); } break;
+                    case Type::Bool: { program.ir.Append({Opcode::StoreLocalBool, {.i = slot1.var->offset}}); } break;
+                    case Type::Int: { program.ir.Append({Opcode::StoreLocalInt, {.i = slot1.var->offset}}); } break;
+                    case Type::Double: { program.ir.Append({Opcode::StoreLocalDouble, {.i = slot1.var->offset}}); } break;
+                    case Type::String: { program.ir.Append({Opcode::StoreLocalString, {.i = slot1.var->offset}}); } break;
                 }
             }
 
-            std::swap(values[values.len - 1], values[values.len - 2]);
-            values.len--;
+            std::swap(stack[stack.len - 1], stack[stack.len - 2]);
+            stack.len--;
 
             return;
         } break;
@@ -1107,25 +1107,25 @@ void Parser::ProduceOperator(const PendingOperator &op)
     if (RG_UNLIKELY(!success)) {
         if (op.unary) {
             MarkError("Cannot use '%1' operator on %2 value",
-                      TokenKindNames[(int)op.kind], TypeNames[(int)values[values.len - 1].type]);
-        } else if (values[values.len - 2].type == values[values.len - 1].type) {
-            MarkError("Cannot use '%1' operator on %2 values",
-                      TokenKindNames[(int)op.kind], TypeNames[(int)values[values.len - 2].type]);
+                      TokenKindNames[(int)op.kind], TypeNames[(int)stack[stack.len - 1].type]);
+        } else if (stack[stack.len - 2].type == stack[stack.len - 1].type) {
+            MarkError("Cannot use '%1' operator on %2 stack",
+                      TokenKindNames[(int)op.kind], TypeNames[(int)stack[stack.len - 2].type]);
         } else {
-            MarkError("Cannot use '%1' operator on %2 and %3 values",
-                      TokenKindNames[(int)op.kind], TypeNames[(int)values[values.len - 2].type],
-                      TypeNames[(int)values[values.len - 1].type]);
+            MarkError("Cannot use '%1' operator on %2 and %3 stack",
+                      TokenKindNames[(int)op.kind], TypeNames[(int)stack[stack.len - 2].type],
+                      TypeNames[(int)stack[stack.len - 1].type]);
         }
     }
 }
 
 bool Parser::EmitOperator1(Type in_type, Opcode code, Type out_type)
 {
-    Type type = values[values.len - 1].type;
+    Type type = stack[stack.len - 1].type;
 
     if (type == in_type) {
         program.ir.Append({code});
-        values[values.len - 1] = {out_type};
+        stack[stack.len - 1] = {out_type};
 
         return true;
     } else {
@@ -1135,12 +1135,12 @@ bool Parser::EmitOperator1(Type in_type, Opcode code, Type out_type)
 
 bool Parser::EmitOperator2(Type in_type, Opcode code, Type out_type)
 {
-    Type type1 = values[values.len - 2].type;
-    Type type2 = values[values.len - 1].type;
+    Type type1 = stack[stack.len - 2].type;
+    Type type2 = stack[stack.len - 1].type;
 
     if (type1 == in_type && type2 == in_type) {
         program.ir.Append({code});
-        values[--values.len - 1] = {out_type};
+        stack[--stack.len - 1] = {out_type};
 
         return true;
     } else {
