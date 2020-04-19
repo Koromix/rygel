@@ -5,11 +5,10 @@ func fib(n: Integer): Integer
     return fib(n - 1) + fib(n - 2)
 end
 
-let iter = 0
-while (iter := iter + 1) <= 10
-    print("---------------------------\n")
-    print("ITERATION ", iter, "\n")
-    print("---------------------------\n")
+for iter in 1..11
+    println("---------------------------")
+    println("ITERATION ", iter)
+    println("---------------------------")
 
     # Ne cherchez pas la logique dans ce script, ce sont des bouts de code
     # tapés presque au hasard pour mettrer au point le parseur.
@@ -33,9 +32,11 @@ while (iter := iter + 1) <= 10
     let i = 0
     while i < 1000
         i := i + 1
+
+        let j = 0
+        while j > 100 do j := j - 1
     end
-    while i > 100 do i := i - 1
-    print("i = ", i, "\n")
+    println("i = ", i)
 
     p := 5
     # test := true
@@ -66,7 +67,7 @@ while (iter := iter + 1) <= 10
 
     let txt = "FOO"
     if test do txt := "BAR"
-    print(txt, "\n")
+    println(txt)
 
     if empty < 1.0
         let blik = 2.0
@@ -79,13 +80,13 @@ while (iter := iter + 1) <= 10
         p := 226
     end
 
-    print("The value of p is: ", p, "\n")
+    println("The value of p is: ", p)
 
     # Les fonctions sont également typées, bien évidemment ! On commence par fibonacci,
     # un classique...
 
     let fib_n = 6
-    print("fib(", fib_n, ") = ", fib(fib_n), "\n")
+    println("fib(", fib_n, ") = ", fib(fib_n))
 
     # Et maintenant une séquence assez random qui m'a servi à implémenter le support des fonctions :)
 
@@ -96,8 +97,8 @@ while (iter := iter + 1) <= 10
     end
     while (zz := inc(zz)) < 9 do tt("Nelson", (zz := zz + 1) - 1)
 
-    print("TESTING ", func0(), "\n")
-    print("TESTING ", inline0(), "\n")
+    println("TESTING ", func0())
+    println("TESTING ", inline0())
 end
 
 func tt(e: String, ii: Integer): Bool
@@ -107,13 +108,13 @@ func tt(e: String, ii: Integer): Bool
         tte := tte + xx * eee(xx + ii)
         eee(xx)
     end
-    print("hello ", e, " (", ii, ") ", tte, "\n")
+    println("hello ", e, " (", ii, ") ", tte)
     return true
 end
 
 func eee(pp: Integer): Integer
     let xxxxx = 1
-    print("CALLED eee with ", pp, "\n")
+    println("CALLED eee with ", pp)
     return pp
 end
 
@@ -123,3 +124,5 @@ func func0(): String
     return "func0()"
 end
 func inline0(): String do "inline0()"
+
+for i in 1..14 do println(i)

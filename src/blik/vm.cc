@@ -430,14 +430,11 @@ int Run(const Program &program)
         // I need to output things somehow!
         CASE(Print): {
             switch (inst->u.type) {
-                case Type::Null: {
-                    Print("null");
-                    stack.len--;
-                } break;
-                case Type::Bool: { Print("%1", stack.ptr[--stack.len].b); } break;
-                case Type::Integer: { Print("%1", stack.ptr[--stack.len].i); } break;
-                case Type::Double: { Print("%1", stack.ptr[--stack.len].d); } break;
-                case Type::String: { Print("%1", stack.ptr[--stack.len].str); } break;
+                case Type::Null: { Print("null"); } break;
+                case Type::Bool: { Print("%1", stack.ptr[stack.len - 1].b); } break;
+                case Type::Integer: { Print("%1", stack.ptr[stack.len - 1].i); } break;
+                case Type::Double: { Print("%1", stack.ptr[stack.len - 1].d); } break;
+                case Type::String: { Print("%1", stack.ptr[stack.len - 1].str); } break;
             }
 
             DISPATCH(++pc);

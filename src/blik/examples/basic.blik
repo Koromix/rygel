@@ -16,7 +16,7 @@ let p = 8
 
 for i in 2..5
     for j in 3..6
-        print("for loop ", i, " ", j, "\n")
+        println("for loop ", i, " ", j)
     end
 end
 
@@ -31,7 +31,7 @@ while i < 1000000
     i := i + 1
 end
 while i > 100 do i := i - 1
-print("i = ", i, "\n")
+println("i = ", i)
 
 p := 5
 # test := true
@@ -62,7 +62,7 @@ let empty: Double
 
 let txt = "FOO"
 if test do txt := "BAR"
-print(txt, "\n")
+println(txt)
 
 if empty < 1.0
     let blik = 2.0
@@ -75,7 +75,7 @@ else
     p := 226
 end
 
-print("The value of p is: ", p, "\n")
+println("The value of p is: ", p)
 
 # Les fonctions sont également typées, bien évidemment ! On commence par fibonacci,
 # un classique...
@@ -88,13 +88,13 @@ func fib(n: Integer): Integer
 end
 
 let fib_n = 13
-print("fib(", fib_n, ") = ", fib(fib_n), "\n")
+println("fib(", fib_n, ") = ", fib(fib_n))
 
 # On peut aussi faire des fonctions qui ne retournent pas de valeur ! En réalité elles retournent
 # alors la valeur null (seule valeur possible du type Null).
 
 let nn: Null = test()
-print(nn, "\n")
+println(nn)
 
 func test()
     for j in 0..8
@@ -110,13 +110,13 @@ func tt(e: String, ii: Integer): Bool
         tte := tte + xx * eee(xx + ii)
         eee(xx)
     end
-    print("hello ", e, " (", ii, ") ", tte, "\n")
+    println("hello ", e, " (", ii, ") ", tte)
     return true
 end
 
 func eee(pp: Integer): Integer
     let xxxxx = 1
-    print("CALLED eee with ", pp, "\n")
+    println("CALLED eee with ", pp)
     return pp
 end
 
@@ -134,5 +134,5 @@ func func0(): String
 end
 func inline0(): String do "inline0()"
 
-print("TESTING ", func0(), "\n")
-print("TESTING ", inline0(), "\n")
+println("TESTING ", func0())
+println("TESTING ", inline0())

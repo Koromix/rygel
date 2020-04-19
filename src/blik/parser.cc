@@ -870,20 +870,35 @@ unexpected_token:
 // Don't try to call from outside ParseExpression()!
 bool Parser::ParseCall(const char *name)
 {
-    if (TestStr(name, "print")) {
+    if (TestStr(name, "print") || TestStr(name, "println")) {
+        Size pop = -1;
+
         if (!MatchToken(TokenKind::RightParenthesis)) {
             Type type = ParseExpression(true);
             program.ir.Append({Opcode::Print, {.type = type}});
+            pop++;
 
             while (MatchToken(TokenKind::Comma)) {
                 Type type = ParseExpression(true);
                 program.ir.Append({Opcode::Print, {.type = type}});
+                pop++;
             }
 
             ConsumeToken(TokenKind::RightParenthesis);
         }
 
-        program.ir.Append({Opcode::PushNull});
+        if (TestStr(name, "println")) {
+            program.ir.Append({Opcode::PushString, {.str = "\n"}});
+            program.ir.Append({Opcode::Print, {.type = Type::String}});
+            pop++;
+        }
+
+        if (pop < 0) {
+            program.ir.Append({Opcode::PushNull});
+        } else {
+            EmitPop(pop);
+        }
+
         values.Append({Type::Null});
     } else {
         LocalArray<Type, RG_LEN(FunctionInfo::params.data)> types;
