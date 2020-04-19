@@ -32,8 +32,6 @@ class Parser {
     Span<const Token> tokens;
     Size offset;
 
-    HeapArray<StackSlot> stack;
-
     BucketArray<FunctionInfo> functions;
     HashTable<const char *, FunctionInfo *> functions_map;
     BucketArray<VariableInfo> variables;
@@ -41,7 +39,10 @@ class Parser {
 
     Size depth = -1;
     FunctionInfo *current_func = nullptr;
-    Size local_offset = 0;
+    Size var_offset = 0;
+
+    // Only used (and valid) while parsing expression
+    HeapArray<StackSlot> stack;
 
     HeapArray<ForwardCall> forward_calls;
 
@@ -175,19 +176,18 @@ void Parser::ParsePrototypes(Span<const Size> offsets)
 
 bool Parser::ParseBlock(bool keep_variables)
 {
-    Size stack_len = variables.len;
-    bool has_return = false;
-
     depth++;
 
-    RG_DEFER {
+    RG_DEFER_C(variables_len = variables.len) {
         depth--;
 
         if (!keep_variables) {
-            EmitPop(variables.len - stack_len);
-            DestroyVariables(variables.len - stack_len);
+            EmitPop(variables.len - variables_len);
+            DestroyVariables(variables.len - variables_len);
         }
     };
+
+    bool has_return = false;
 
     while (valid && offset < tokens.len) {
         switch (tokens[offset].kind) {
@@ -238,10 +238,13 @@ void Parser::ParseFunction()
 {
     offset++;
 
-    RG_DEFER_C(variables_len = variables.len) {
+    RG_DEFER_C(prev_offset = var_offset) {
+        // Variables inside the function are destroyed at the end of the block.
+        // This destroys the parameters.
+        DestroyVariables(current_func->params.len);
+
         current_func = nullptr;
-        local_offset = 0;
-        DestroyVariables(variables.len - variables_len);
+        var_offset = prev_offset;
     };
 
     if (RG_UNLIKELY(current_func)) {
@@ -298,7 +301,7 @@ void Parser::ParseFunction()
     }
 
     current_func->addr = program.ir.len;
-    local_offset = variables.len;
+    var_offset = 0;
 
     // Function body
     if (MatchToken(TokenKind::Do)) {
@@ -350,8 +353,8 @@ void Parser::ParseReturn()
         return;
     }
 
-    if (variables.len - local_offset > 0) {
-        Size pop_len = variables.len - local_offset - 1;
+    if (var_offset > 0) {
+        Size pop_len = var_offset - 1;
 
         switch (type) {
             case Type::Null: { pop_len++; } break;
@@ -413,14 +416,9 @@ void Parser::ParseLet()
         }
     }
 
-    if (current_func) {
-        var->offset = variables.len - local_offset - 1;
-    } else {
-        var->global = true;
-        var->offset = variables.len - 1;
-
-        var->defined_at = program.ir.len;
-    }
+    var->global = !current_func;
+    var->offset = var_offset++;
+    var->defined_at = program.ir.len;
 
     ConsumeToken(TokenKind::NewLine);
 }
@@ -542,7 +540,7 @@ void Parser::ParseFor()
 
     it->name = ConsumeIdentifier();
     it->type = Type::Int;
-    it->offset = variables.len - local_offset + 1;
+    it->offset = var_offset + 2;
 
     std::pair<VariableInfo **, bool> ret = variables_map.Append(it);
     if (RG_UNLIKELY(!ret.second)) {
@@ -564,10 +562,6 @@ void Parser::ParseFor()
     ConsumeToken(TokenKind::DotDot);
     type2 = ParseExpression(true);
 
-    // XXX: Hack to prevent body code from messing with start and end values
-    variables.AppendDefault()->name = "";
-    variables.AppendDefault()->name = "";
-
     if (RG_UNLIKELY(type1 != Type::Int)) {
         MarkError("Start value must be Int, not %1", TypeNames[(int)type1]);
         return;
@@ -576,6 +570,9 @@ void Parser::ParseFor()
         MarkError("End value must be Int, not %1", TypeNames[(int)type2]);
         return;
     }
+
+    // Make sure start and end value remain on the stack
+    var_offset += 3;
 
     // Put iterator value on the stack
     program.ir.Append({Opcode::LoadLocalInt, {.i = it->offset - 2}});
@@ -602,7 +599,8 @@ void Parser::ParseFor()
 
     // Destroy iterator and range values
     EmitPop(3);
-    DestroyVariables(3);
+    DestroyVariables(1);
+    var_offset -= 2;
 
     ConsumeToken(TokenKind::NewLine);
 }
@@ -1223,6 +1221,8 @@ void Parser::DestroyVariables(Size count)
         variables_map.Remove(variables[i].name);
     }
     variables.RemoveLast(count);
+
+    var_offset -= count;
 }
 
 bool Parse(const TokenSet &set, const char *filename, Program *out_program)
