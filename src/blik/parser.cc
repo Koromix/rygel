@@ -266,11 +266,14 @@ void Parser::ParseFunction()
     // Parameters
     ConsumeToken(TokenKind::LeftParenthesis);
     if (!MatchToken(TokenKind::RightParenthesis)) {
+        Size stack_offset = -2 - current_func->params.len;
+
         do {
             VariableInfo *var = variables.AppendDefault();
 
             var->readonly = !MatchToken(TokenKind::Mut);
             var->name = ConsumeIdentifier();
+            var->offset = stack_offset++;
 
             std::pair<VariableInfo **, bool> ret = variables_map.Append(var);
             if (RG_UNLIKELY(!ret.second)) {
@@ -288,12 +291,6 @@ void Parser::ParseFunction()
             ConsumeToken(TokenKind::Colon);
             var->type = ConsumeType();
         } while (MatchToken(TokenKind::Comma));
-
-        // We need to know the number of parameters to compute stack offsets
-        for (Size i = 1; i <= current_func->params.len; i++) {
-            VariableInfo *var = &variables[variables.len - i];
-            var->offset = -2 - i;
-        }
 
         ConsumeToken(TokenKind::RightParenthesis);
     }
