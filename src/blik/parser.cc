@@ -257,16 +257,17 @@ void Parser::ParseFunction()
         return;
     }
 
-    current_func = functions_map.FindValue(ConsumeIdentifier(), nullptr);
-    if (RG_UNLIKELY(!current_func)) {
+    FunctionInfo *func = functions_map.FindValue(ConsumeIdentifier(), nullptr);
+    if (RG_UNLIKELY(!func)) {
         RG_ASSERT(!valid);
         return;
     }
+    current_func = func;
 
     // Parameters
     ConsumeToken(TokenKind::LeftParenthesis);
     if (!MatchToken(TokenKind::RightParenthesis)) {
-        Size stack_offset = -2 - current_func->params.len;
+        Size stack_offset = -2 - func->params.len;
 
         do {
             VariableInfo *var = variables.AppendDefault();
@@ -300,7 +301,7 @@ void Parser::ParseFunction()
         ConsumeType();
     }
 
-    current_func->inst_idx = program.ir.len;
+    func->inst_idx = program.ir.len;
     var_offset = 0;
 
     // Function body
@@ -314,11 +315,11 @@ void Parser::ParseFunction()
     }
 
     if (!has_return) {
-        if (current_func->ret == Type::Null) {
+        if (func->ret == Type::Null) {
             program.ir.Append({Opcode::PushNull});
-            program.ir.Append({Opcode::Return, {.i = current_func->params.len}});
+            program.ir.Append({Opcode::Return, {.i = func->params.len}});
         } else {
-            MarkError("Function '%1' does not have a return statement", current_func->name);
+            MarkError("Function '%1' does not have a return statement", func->name);
             return;
         }
     }
