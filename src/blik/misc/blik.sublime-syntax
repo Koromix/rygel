@@ -8,14 +8,17 @@ contexts:
   main:
     - match: \#.*
       scope: comment.line.blik
-    - match: \b(if|else|while|begin|end|return|in|do)\b
+    - match: \b(if|else|while|begin|end|return|in|do|mut)\b
       scope: keyword.control.blik
     - match: \bfunc\b
       scope: keyword.control.blik
       push: function
-    - match: \b(let|for)\b
+    - match: \blet\b
       scope: keyword.control.blik
-      push: variable
+      push: let
+    - match: \bfor\b
+      scope: keyword.control.blik
+      push: for
     - match: \b(Null|Bool|Int|Double|String)\b
       scope: storage.type.blik
     - match: (!|&&|\|\||=|!=|<=|>=|<|>|:=|\-|\+|\*|\/|%|~|<<|>>|^|\.\.\.?)
@@ -39,7 +42,13 @@ contexts:
     - match: \b[A-Za-z_][A-Za-z_0-9]*\b*
       scope: entity.name.function.blik
       pop: true
-  variable:
+
+  let:
+    - match: \bmut\b
+      scope: keyword.control.blik
+    - match: \b[A-Za-z_][A-Za-z_0-9]*\b*
+      pop: true
+  for:
     - match: \b[A-Za-z_][A-Za-z_0-9]*\b*
       scope: variable.other.blik
       pop: true

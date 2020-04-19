@@ -29,8 +29,9 @@ struct VariableInfo {
     const char *name;
     Type type;
     bool global;
-    Size offset;
+    bool readonly;
 
+    Size offset;
     // Used to prevent dangerous forward calls, only for globals
     Size defined_at;
 

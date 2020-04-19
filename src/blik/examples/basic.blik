@@ -9,7 +9,7 @@ let x = 2 + 8 * 5 - (0x1444 << 5) > 2 && true
 # Les variables doivent être déclarées à l'aide du mot-clé let.
 
 let test = (5 = 8)
-let p = 8
+let mut p = 8
 
 # Les boucles for permettront à terme d'itérer sur différents objets, en attendant d'avoir
 # des objets on peut déjà itérer sur des un intervalle d'entiers.
@@ -26,7 +26,7 @@ end
 # bug, car au lieu de tester si a == 1 (ce qu'on voulait probablement faire), on assigne la
 # valeur 1 à la variable a.
 
-let i = 0
+let mut i = 0
 while i < 1000000
     i := i + 1
 end
@@ -60,7 +60,7 @@ let foo: String = "Hello" # OK
 # let bar: Int = "World!" # This is an error and would not work if uncommented
 let empty: Double
 
-let txt = "FOO"
+let mut txt = "FOO"
 if test do txt := "BAR"
 println(txt)
 
@@ -103,7 +103,7 @@ end
 # Et maintenant une séquence assez random qui m'a servi à implémenter le support des fonctions :)
 
 func tt(e: String, ii: Int): Bool
-    let tte = 267
+    let mut tte = 267
     begin
         let xx = 3
         tte := tte + xx * eee(xx + ii)
@@ -113,13 +113,14 @@ func tt(e: String, ii: Int): Bool
     return true
 end
 
-func eee(pp: Int): Int
+func eee(mut pp: Int): Int
     let xxxxx = 1
     println("CALLED eee with ", pp)
+    pp := pp + 1
     return pp
 end
 
-let zz = 0
+let mut zz = 0
 while zz < 3
     tt("Niels", zz)
     zz := zz + 1

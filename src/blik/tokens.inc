@@ -9,6 +9,7 @@
 TOKEN(Func, "func")
 TOKEN(Return, "return")
 TOKEN(Let, "let")
+TOKEN(Mut, "mut")
 TOKEN(Begin, "begin")
 TOKEN(End, "end")
 TOKEN(If, "if")

@@ -149,6 +149,7 @@ void Parser::ParsePrototypes(Span<const Size> offsets)
             do {
                 FunctionInfo::Parameter param = {};
 
+                MatchToken(TokenKind::Mut);
                 param.name = ConsumeIdentifier();
                 ConsumeToken(TokenKind::Colon);
                 param.type = ConsumeType();
@@ -267,6 +268,8 @@ void Parser::ParseFunction()
     if (!MatchToken(TokenKind::RightParenthesis)) {
         do {
             VariableInfo *var = variables.AppendDefault();
+
+            var->readonly = !MatchToken(TokenKind::Mut);
             var->name = ConsumeIdentifier();
 
             std::pair<VariableInfo **, bool> ret = variables_map.Append(var);
@@ -376,6 +379,8 @@ void Parser::ParseLet()
     offset++;
 
     VariableInfo *var = variables.AppendDefault();
+
+    var->readonly = !MatchToken(TokenKind::Mut);
     var->name = ConsumeIdentifier();
 
     std::pair<VariableInfo **, bool> ret = variables_map.Append(var);
@@ -981,6 +986,10 @@ void Parser::ProduceOperator(const PendingOperator &op)
 
             if (RG_UNLIKELY(!slot1.var)) {
                 MarkError("Cannot assign expression to rvalue");
+                return;
+            }
+            if (RG_UNLIKELY(slot1.var->readonly)) {
+                MarkError("Cannot assign expression to const variable '%1'", slot1.var->name);
                 return;
             }
             if (RG_UNLIKELY(slot1.type != slot2.type)) {

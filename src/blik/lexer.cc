@@ -327,6 +327,8 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     Token1(TokenKind::Return);
                 } else if (ident == "let") {
                     Token1(TokenKind::Let);
+                } else if (ident == "mut") {
+                    Token1(TokenKind::Mut);
                 } else if (ident == "begin") {
                     Token1(TokenKind::Begin);
                 } else if (ident == "end") {
