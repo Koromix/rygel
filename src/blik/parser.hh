@@ -47,8 +47,8 @@ struct FunctionInfo {
     const char *name;
     LocalArray<Parameter, 16> params;
     Type ret;
-    Size addr;
 
+    Size inst_idx;
     // Used to prevent dangerous forward calls (if relevant globals are not defined yet)
     Size earliest_forward_call;
 

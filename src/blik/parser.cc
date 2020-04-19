@@ -121,7 +121,7 @@ bool Parser::Parse(const TokenSet &set, const char *filename)
     RG_ASSERT(depth == -1);
 
     for (const ForwardCall &call: forward_calls) {
-        program.ir[call.offset].u.i = call.func->addr;
+        program.ir[call.offset].u.i = call.func->inst_idx;
     }
     forward_calls.Clear();
 
@@ -170,7 +170,7 @@ void Parser::ParsePrototypes(Span<const Size> offsets)
             proto->ret = Type::Null;
         }
 
-        proto->addr = -1;
+        proto->inst_idx = -1;
         proto->earliest_forward_call = RG_SIZE_MAX;
     }
 }
@@ -300,7 +300,7 @@ void Parser::ParseFunction()
         ConsumeType();
     }
 
-    current_func->addr = program.ir.len;
+    current_func->inst_idx = program.ir.len;
     var_offset = 0;
 
     // Function body
@@ -961,11 +961,11 @@ bool Parser::ParseCall(const char *name)
         if (RG_UNLIKELY(mismatch))
             return false;
 
-        if (func->addr < 0) {
+        if (func->inst_idx < 0) {
             forward_calls.Append({program.ir.len, func});
             func->earliest_forward_call = std::min(func->earliest_forward_call, program.ir.len);
         }
-        program.ir.Append({Opcode::Call, {.i = func->addr}});
+        program.ir.Append({Opcode::Call, {.i = func->inst_idx}});
 
         stack.Append({func->ret});
     }
