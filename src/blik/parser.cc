@@ -61,7 +61,6 @@ private:
     void ParseIf();
     void ParseWhile();
     void ParseFor();
-    void ParsePrint();
 
     Type ParseExpression(bool keep_result);
     bool ParseCall(const char *name);
@@ -222,7 +221,6 @@ bool Parser::ParseBlock(bool keep_variables)
             case TokenKind::If: { ParseIf(); } break;
             case TokenKind::While: { ParseWhile(); } break;
             case TokenKind::For: { ParseFor(); } break;
-            case TokenKind::Print: { ParsePrint(); } break;
 
             default: {
                 ParseExpression(false);
@@ -607,26 +605,6 @@ void Parser::ParseFor()
     ConsumeToken(TokenKind::NewLine);
 }
 
-void Parser::ParsePrint()
-{
-    offset++;
-
-    ConsumeToken(TokenKind::LeftParenthesis);
-    if (!MatchToken(TokenKind::RightParenthesis)) {
-        Type type = ParseExpression(true);
-        program.ir.Append({Opcode::Print, {.type = type}});
-
-        while (MatchToken(TokenKind::Comma)) {
-            Type type = ParseExpression(true);
-            program.ir.Append({Opcode::Print, {.type = type}});
-        }
-
-        ConsumeToken(TokenKind::RightParenthesis);
-    }
-
-    ConsumeToken(TokenKind::NewLine);
-}
-
 static int GetOperatorPrecedence(TokenKind kind)
 {
     switch (kind) {
@@ -892,51 +870,68 @@ unexpected_token:
 // Don't try to call from outside ParseExpression()!
 bool Parser::ParseCall(const char *name)
 {
-    LocalArray<Type, RG_LEN(FunctionInfo::params.data)> types;
+    if (TestStr(name, "print")) {
+        if (!MatchToken(TokenKind::RightParenthesis)) {
+            Type type = ParseExpression(true);
+            program.ir.Append({Opcode::Print, {.type = type}});
 
-    FunctionInfo *func = functions_map.FindValue(name, nullptr);
-    if (RG_UNLIKELY(!func)) {
-        MarkError("Function '%1' does not exist", name);
-        return false;
-    }
-
-    if (!MatchToken(TokenKind::RightParenthesis)) {
-        types.Append(ParseExpression(true));
-        while (MatchToken(TokenKind::Comma)) {
-            if (RG_UNLIKELY(!types.Available())) {
-                MarkError("Functions cannot take more than %1 arguments", RG_LEN(types.data));
-                return false;
+            while (MatchToken(TokenKind::Comma)) {
+                Type type = ParseExpression(true);
+                program.ir.Append({Opcode::Print, {.type = type}});
             }
+
+            ConsumeToken(TokenKind::RightParenthesis);
+        }
+
+        program.ir.Append({Opcode::PushNull});
+        values.Append({Type::Null});
+    } else {
+        LocalArray<Type, RG_LEN(FunctionInfo::params.data)> types;
+
+        FunctionInfo *func = functions_map.FindValue(name, nullptr);
+        if (RG_UNLIKELY(!func)) {
+            MarkError("Function '%1' does not exist", name);
+            return false;
+        }
+
+        if (!MatchToken(TokenKind::RightParenthesis)) {
             types.Append(ParseExpression(true));
+            while (MatchToken(TokenKind::Comma)) {
+                if (RG_UNLIKELY(!types.Available())) {
+                    MarkError("Functions cannot take more than %1 arguments", RG_LEN(types.data));
+                    return false;
+                }
+                types.Append(ParseExpression(true));
+            }
+
+            ConsumeToken(TokenKind::RightParenthesis);
         }
 
-        ConsumeToken(TokenKind::RightParenthesis);
-    }
-
-    bool mismatch = false;
-    if (RG_UNLIKELY(types.len != func->params.len)) {
-        MarkError("Function '%1' expects %2 arguments, not %3", func->name,
-                  func->params.len, types.len);
-        return false;
-    }
-    for (Size i = 0; i < types.len; i++) {
-        if (RG_UNLIKELY(types[i] != func->params[i].type)) {
-            MarkError("Function '%1' expects %2 as %3 argument, not %4",
-                      func->name, TypeNames[(int)func->params[i].type], i + 1,
-                      TypeNames[(int)types[i]]);
-            mismatch = true;
+        bool mismatch = false;
+        if (RG_UNLIKELY(types.len != func->params.len)) {
+            MarkError("Function '%1' expects %2 arguments, not %3", func->name,
+                      func->params.len, types.len);
+            return false;
         }
-    }
-    if (RG_UNLIKELY(mismatch))
-        return false;
+        for (Size i = 0; i < types.len; i++) {
+            if (RG_UNLIKELY(types[i] != func->params[i].type)) {
+                MarkError("Function '%1' expects %2 as %3 argument, not %4",
+                          func->name, TypeNames[(int)func->params[i].type], i + 1,
+                          TypeNames[(int)types[i]]);
+                mismatch = true;
+            }
+        }
+        if (RG_UNLIKELY(mismatch))
+            return false;
 
-    if (func->addr < 0) {
-        forward_calls.Append({program.ir.len, func});
-        func->earliest_forward_call = std::min(func->earliest_forward_call, program.ir.len);
-    }
-    program.ir.Append({Opcode::Call, {.i = func->addr}});
+        if (func->addr < 0) {
+            forward_calls.Append({program.ir.len, func});
+            func->earliest_forward_call = std::min(func->earliest_forward_call, program.ir.len);
+        }
+        program.ir.Append({Opcode::Call, {.i = func->addr}});
 
-    values.Append({func->ret});
+        values.Append({func->ret});
+    }
 
     return true;
 }
