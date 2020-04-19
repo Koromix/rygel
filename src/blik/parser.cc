@@ -76,7 +76,7 @@ private:
     Type ConsumeType();
     bool MatchToken(TokenKind kind);
 
-    void DestroyVariables(Size start_idx);
+    void DestroyVariables(Size count);
 
     template <typename... Args>
     void MarkError(const char *fmt, Args... args)
@@ -184,7 +184,7 @@ bool Parser::ParseBlock(bool keep_variables)
 
         if (!keep_variables) {
             EmitPop(variables.len - stack_len);
-            DestroyVariables(stack_len);
+            DestroyVariables(variables.len - stack_len);
         }
     };
 
@@ -241,7 +241,7 @@ void Parser::ParseFunction()
     RG_DEFER_C(variables_len = variables.len) {
         func = nullptr;
         func_var_offset = 0;
-        DestroyVariables(variables_len);
+        DestroyVariables(variables.len - variables_len);
     };
 
     if (RG_UNLIKELY(func)) {
@@ -602,7 +602,7 @@ void Parser::ParseFor()
 
     // Destroy iterator and range values
     EmitPop(3);
-    DestroyVariables(variables.len - 3);
+    DestroyVariables(3);
 
     ConsumeToken(TokenKind::NewLine);
 }
@@ -1192,12 +1192,12 @@ bool Parser::MatchToken(TokenKind kind)
     return match;
 }
 
-void Parser::DestroyVariables(Size start_idx)
+void Parser::DestroyVariables(Size count)
 {
-    for (Size i = start_idx; i < variables.len; i++) {
+    for (Size i = variables.len - count; i < variables.len; i++) {
         variables_map.Remove(variables[i].name);
     }
-    variables.RemoveFrom(start_idx);
+    variables.RemoveLast(count);
 }
 
 bool Parse(const TokenSet &set, const char *filename, Program *out_program)
