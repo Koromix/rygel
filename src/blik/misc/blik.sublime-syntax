@@ -18,7 +18,7 @@ contexts:
       push: variable
     - match: \b(Null|Bool|Int|Double|String)\b
       scope: storage.type.blik
-    - match: (!|&&|\|\||=|!=|<=|>=|<|>|:=|\-|\+|\*|\/|%|~|<<|>>|^|\.\.)
+    - match: (!|&&|\|\||=|!=|<=|>=|<|>|:=|\-|\+|\*|\/|%|~|<<|>>|^|\.\.\.?)
       scope: keyword.operator.blik
     - match: '"'
       push: string

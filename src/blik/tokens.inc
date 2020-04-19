@@ -46,6 +46,7 @@ TOKEN(LogicAnd, "&&")
 TOKEN(LogicOr, "||")
 
 TOKEN(DotDot, "..")
+TOKEN(DotDotDot, "...")
 TOKEN(Colon, ":")
 TOKEN(Reassign, ":=")
 TOKEN(Equal, "=")

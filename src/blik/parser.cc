@@ -557,9 +557,15 @@ void Parser::ParseFor()
 
     Type type1;
     Type type2;
+    bool inclusive;
     ConsumeToken(TokenKind::In);
     type1 = ParseExpression(true);
-    ConsumeToken(TokenKind::DotDot);
+    if (MatchToken(TokenKind::DotDotDot)) {
+        inclusive = false;
+    } else {
+        ConsumeToken(TokenKind::DotDot);
+        inclusive = true;
+    }
     type2 = ParseExpression(true);
 
     if (RG_UNLIKELY(type1 != Type::Int)) {
@@ -581,7 +587,7 @@ void Parser::ParseFor()
 
     program.ir.Append({Opcode::LoadLocalInt, {.i = it->offset}});
     program.ir.Append({Opcode::LoadLocalInt, {.i = it->offset - 1}});
-    program.ir.Append({Opcode::LessThanInt});
+    program.ir.Append({inclusive ? Opcode::LessOrEqualInt : Opcode::LessThanInt});
     program.ir.Append({Opcode::BranchIfFalse, {.i = body_idx - program.ir.len}});
 
     if (MatchToken(TokenKind::Do)) {

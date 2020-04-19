@@ -24,6 +24,7 @@ public:
 private:
     bool Token1(TokenKind tok);
     bool Token2(char c, TokenKind tok);
+    bool Token3(char c1, char c2, TokenKind tok);
 
     template <typename... Args>
     void MarkError(const char *fmt, Args... args)
@@ -362,7 +363,9 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
             case '^': { Token1(TokenKind::Xor); } break;
             case '~': { Token1(TokenKind::Not); } break;
             case '.': {
-                if (RG_UNLIKELY(!Token2('.', TokenKind::DotDot))) {
+                bool success = Token3('.', '.', TokenKind::DotDotDot) || Token2('.', TokenKind::DotDot);
+
+                if (RG_UNLIKELY(!success)) {
                     MarkError("Unexpected character '.'");
                     return false;
                 }
@@ -409,6 +412,18 @@ bool Lexer::Token2(char c, TokenKind tok)
     if (next < code.len && code[next] == c) {
         set.tokens.Append({tok, line});
         next++;
+
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool Lexer::Token3(char c1, char c2, TokenKind tok)
+{
+    if (next + 1 < code.len && code[next] == c1 && code[next + 1] == c2) {
+        set.tokens.Append({tok, line});
+        next += 2;
 
         return true;
     } else {

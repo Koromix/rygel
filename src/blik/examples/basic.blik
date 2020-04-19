@@ -14,7 +14,7 @@ let p = 8
 # Les boucles for permettront à terme d'itérer sur différents objets, en attendant d'avoir
 # des objets on peut déjà itérer sur des un intervalle d'entiers.
 
-for i in 2..5
+for i in 2...5
     for j in 3..6
         println("for loop ", i, " ", j)
     end
