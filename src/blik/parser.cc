@@ -862,7 +862,7 @@ Type Parser::ParseExpression(bool keep_result)
 
     RG_ASSERT(stack.len == start_values_len + 1);
     if (keep_result) {
-        return stack[0].type;
+        return stack[stack.len - 1].type;
     } else {
         if (program.ir.len >= 2 && program.ir[program.ir.len - 2].code == Opcode::Duplicate) {
             std::swap(program.ir[program.ir.len - 2], program.ir[program.ir.len - 1]);
