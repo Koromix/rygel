@@ -40,8 +40,8 @@ class Parser {
     HashTable<const char *, VariableInfo *> variables_map;
 
     Size depth = -1;
-    FunctionInfo *func = nullptr;
-    Size func_var_offset = 0;
+    FunctionInfo *current_func = nullptr;
+    Size local_offset = 0;
 
     HeapArray<ForwardCall> forward_calls;
 
@@ -239,12 +239,12 @@ void Parser::ParseFunction()
     offset++;
 
     RG_DEFER_C(variables_len = variables.len) {
-        func = nullptr;
-        func_var_offset = 0;
+        current_func = nullptr;
+        local_offset = 0;
         DestroyVariables(variables.len - variables_len);
     };
 
-    if (RG_UNLIKELY(func)) {
+    if (RG_UNLIKELY(current_func)) {
         MarkError("Nested functions are not supported");
         return;
     }
@@ -253,8 +253,8 @@ void Parser::ParseFunction()
         return;
     }
 
-    func = functions_map.FindValue(ConsumeIdentifier(), nullptr);
-    if (RG_UNLIKELY(!func)) {
+    current_func = functions_map.FindValue(ConsumeIdentifier(), nullptr);
+    if (RG_UNLIKELY(!current_func)) {
         RG_ASSERT(!valid);
         return;
     }
@@ -284,7 +284,7 @@ void Parser::ParseFunction()
         } while (MatchToken(TokenKind::Comma));
 
         // We need to know the number of parameters to compute stack offsets
-        for (Size i = 1; i <= func->params.len; i++) {
+        for (Size i = 1; i <= current_func->params.len; i++) {
             VariableInfo *var = &variables[variables.len - i];
             var->offset = -2 - i;
         }
@@ -297,24 +297,24 @@ void Parser::ParseFunction()
         ConsumeType();
     }
 
-    func->addr = program.ir.len;
-    func_var_offset = variables.len;
+    current_func->addr = program.ir.len;
+    local_offset = variables.len;
 
     // Function body
     if (MatchToken(TokenKind::Do)) {
         ParseExpression(true);
-        program.ir.Append({Opcode::Return, {.i = func->params.len}});
+        program.ir.Append({Opcode::Return, {.i = current_func->params.len}});
     } else {
         ConsumeToken(TokenKind::NewLine);
 
         // Function body
         bool has_return = ParseBlock(false);
         if (!has_return) {
-            if (func->ret == Type::Null) {
+            if (current_func->ret == Type::Null) {
                 program.ir.Append({Opcode::PushNull});
-                program.ir.Append({Opcode::Return, {.i = func->params.len}});
+                program.ir.Append({Opcode::Return, {.i = current_func->params.len}});
             } else {
-                MarkError("Function '%1' does not have a return statement", func->name);
+                MarkError("Function '%1' does not have a return statement", current_func->name);
                 return;
             }
         }
@@ -329,7 +329,7 @@ void Parser::ParseReturn()
 {
     offset++;
 
-    if (RG_UNLIKELY(!func)) {
+    if (RG_UNLIKELY(!current_func)) {
         MarkError("Return statement cannot be used outside function");
         return;
     }
@@ -344,14 +344,14 @@ void Parser::ParseReturn()
         type = ParseExpression(true);
     }
 
-    if (RG_UNLIKELY(type != func->ret)) {
+    if (RG_UNLIKELY(type != current_func->ret)) {
         MarkError("Cannot return %1 value (expected %2)",
-                  TypeNames[(int)type], TypeNames[(int)func->ret]);
+                  TypeNames[(int)type], TypeNames[(int)current_func->ret]);
         return;
     }
 
-    if (variables.len - func_var_offset > 0) {
-        Size pop_len = variables.len - func_var_offset - 1;
+    if (variables.len - local_offset > 0) {
+        Size pop_len = variables.len - local_offset - 1;
 
         switch (type) {
             case Type::Null: { pop_len++; } break;
@@ -363,7 +363,7 @@ void Parser::ParseReturn()
 
         EmitPop(pop_len);
     }
-    program.ir.Append({Opcode::Return, {.i = func->params.len}});
+    program.ir.Append({Opcode::Return, {.i = current_func->params.len}});
 
     ConsumeToken(TokenKind::NewLine);
 }
@@ -379,9 +379,9 @@ void Parser::ParseLet()
     if (RG_UNLIKELY(!ret.second)) {
         const VariableInfo *prev_var = *ret.first;
 
-        if (func && prev_var->global) {
+        if (current_func && prev_var->global) {
             MarkError("Declaration '%1' is not allowed to hide global variable", var->name);
-        } else if (func && prev_var->offset < 0) {
+        } else if (current_func && prev_var->offset < 0) {
             MarkError("Declaration '%1' is not allowed to hide parameter", var->name);
         } else {
             MarkError("Variable '%1' already exists", var->name);
@@ -413,8 +413,8 @@ void Parser::ParseLet()
         }
     }
 
-    if (func) {
-        var->offset = variables.len - func_var_offset - 1;
+    if (current_func) {
+        var->offset = variables.len - local_offset - 1;
     } else {
         var->global = true;
         var->offset = variables.len - 1;
@@ -542,13 +542,13 @@ void Parser::ParseFor()
 
     it->name = ConsumeIdentifier();
     it->type = Type::Integer;
-    it->offset = variables.len - func_var_offset + 1;
+    it->offset = variables.len - local_offset + 1;
 
     std::pair<VariableInfo **, bool> ret = variables_map.Append(it);
     if (RG_UNLIKELY(!ret.second)) {
         const VariableInfo *prev_var = *ret.first;
 
-        if (func && prev_var->global) {
+        if (current_func && prev_var->global) {
             MarkError("Iterator '%1' is not allowed to hide global variable", it->name);
         } else {
             MarkError("Variable '%1' already exists", it->name);
@@ -743,9 +743,10 @@ Type Parser::ParseExpression(bool keep_result)
                         }
 
                         if (var->global) {
-                            if (RG_UNLIKELY(func && func->earliest_forward_call < var->defined_at)) {
+                            if (RG_UNLIKELY(current_func &&
+                                            current_func->earliest_forward_call < var->defined_at)) {
                                 MarkError("Function '%1' was called before variable '%2' was defined",
-                                          func->name, var->name);
+                                          current_func->name, var->name);
                                 return {};
                             }
 
