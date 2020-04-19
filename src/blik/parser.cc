@@ -196,7 +196,7 @@ bool Parser::ParseBlock(bool keep_variables)
             case TokenKind::End:
             case TokenKind::Else: { return has_return; } break;
 
-            case TokenKind::Do: {
+            case TokenKind::Begin: {
                 offset++;
 
                 ConsumeToken(TokenKind::NewLine);

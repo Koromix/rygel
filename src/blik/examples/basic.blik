@@ -40,14 +40,14 @@ p := 5
 # il est possible de définir des blocs à l'aide de do/end. Les deux variables zzz et bleh
 # dans le bloc ci-dessous n'existent plus à la sortie du bloc.
 
-do
+begin
     let zzz = 2
     let bleh = 8
 
-    do
+    begin
     end
 
-    do
+    begin
         let foobar = "STRING"
     end
 end
@@ -104,7 +104,7 @@ end
 
 func tt(e: String, ii: Integer): Bool
     let tte = 267
-    do
+    begin
         let xx = 3
         tte := tte + xx * eee(xx + ii)
         eee(xx)
