@@ -88,8 +88,9 @@ end
 let fib_n = 13
 println("fib(", fib_n, ") = ", fib(fib_n))
 
-# On peut aussi faire des fonctions qui ne retournent pas de valeur ! En réalité elles retournent
-# alors la valeur null (seule valeur possible du type Null).
+# On peut aussi faire des fonctions qui ne retournent pas de valeur ! En réalité
+# elles retournent alors la valeur null (seule valeur possible du type Null).
+# On remarque par ailleurs que les fonctions peuvent être appelés avant leur déclaration.
 
 let nn: Null = test()
 println(nn)
