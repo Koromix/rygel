@@ -7,39 +7,71 @@
 #include "compiler.hh"
 #include "target.hh"
 
-#ifndef _WIN32
+#ifdef _WIN32
+    #define WIN32_LEAN_AND_MEAN
+    #include <windows.h>
+#else
     #include <unistd.h>
 #endif
 
 namespace RG {
 
 static int RunTarget(const TargetInfo &target, const char *target_filename,
-                     Span<const char *const> arguments, bool verbose)
+                     Span<const char *const> arguments)
 {
     RG_ASSERT(target.type == TargetType::Executable);
 
-    HeapArray<char> cmd_buf;
-
-    // XXX: Just like the code in compiler.cc, command-line escaping is
-    // either wrong or not done. Make something to deal with that uniformely.
-    Fmt(&cmd_buf, "\"%1\"", target_filename);
-    for (const char *arg: arguments) {
-        bool escape = strchr(arg, ' ');
-        Fmt(&cmd_buf, escape ? " \"%1\"" : " %1", arg);
-    }
-
-    if (verbose) {
-        LogInfo("Run '%1'", cmd_buf);
-    } else {
-        LogInfo("Run target '%1'", target.name);
-    }
+    LogInfo("Run target '%1'", target.name);
     PrintLn(stderr);
 
 #ifdef _WIN32
-    return system(cmd_buf.ptr);
+    HeapArray<char> cmd;
+
+    Fmt(&cmd, "\"%1\"", target_filename);
+
+    // Windows command line quoting rules are batshit crazy
+    for (const char *arg: arguments) {
+        bool quote = strchr(arg, ' ');
+
+        cmd.Append(quote ? " \"" : " ");
+        for (Size i = 0; arg[i]; i++) {
+            if (strchr("\"", arg[i])) {
+                cmd.Append('\\');
+            }
+            cmd.Append(arg[i]);
+        }
+        cmd.Append(quote ? "\"" : "");
+    }
+    cmd.Append(0);
+
+    // XXX: Use ExecuteCommandLine() but it needs to be improved first, because right
+    // now it always wants to capture output. And we don't want to do that here.
+    STARTUPINFOA startup_info = {};
+    PROCESS_INFORMATION process_info;
+    if (!CreateProcessA(target_filename, cmd.ptr, nullptr, nullptr, FALSE, 0,
+                        nullptr, nullptr, &startup_info, &process_info)) {
+        LogError("Failed to start process: %1", GetWin32ErrorString());
+        return 127;
+    }
+    RG_DEFER {
+        CloseHandle(process_info.hProcess);
+        CloseHandle(process_info.hThread);
+    };
+
+    DWORD exit_code;
+    RG_ASSERT(WaitForSingleObject(process_info.hProcess, INFINITE) == WAIT_OBJECT_0);
+    RG_ASSERT(GetExitCodeProcess(process_info.hProcess, &exit_code));
+
+    return (int)exit_code;
 #else
-    execl("/bin/sh", "sh", "-c", cmd_buf.ptr, nullptr);
-    LogError("Failed to execute /bin/sh: %1", strerror(errno));
+    HeapArray<const char *> argv;
+
+    argv.Append(target_filename);
+    argv.Append(arguments);
+    argv.Append(nullptr);
+
+    execv(target_filename, (char **)argv.ptr);
+    LogError("Failed to execute '%1': %2", target_filename, strerror(errno));
     return 127;
 #endif
 }
@@ -350,7 +382,7 @@ Supported compilation modes:)");
             return 1;
 
         const char *target_filename = builder.target_filenames.FindValue(run_target->name, nullptr);
-        return RunTarget(*run_target, target_filename, run_arguments, verbose);
+        return RunTarget(*run_target, target_filename, run_arguments);
     } else {
         return 0;
     }
