@@ -75,7 +75,7 @@ private:
     bool EmitOperator2(Type in_type, Opcode code, Type out_type);
 
     bool ParseCall(const char *name);
-    bool EmitIntrinsic(const char *name, Span<const Type> types);
+    void EmitIntrinsic(const char *name, Span<const Type> types);
 
     void EmitPop(int64_t count);
 
@@ -1184,7 +1184,7 @@ bool Compiler::ParseCall(const char *name)
     }
 
     if (func->intrinsic) {
-        return EmitIntrinsic(name, types);
+        EmitIntrinsic(name, types);
     } else {
         if (func->inst_idx < 0) {
             forward_calls.Append({program.ir.len, func});
@@ -1192,12 +1192,12 @@ bool Compiler::ParseCall(const char *name)
         }
         program.ir.Append({Opcode::Call, {.i = func->inst_idx}});
         stack.Append({func->ret});
-
-        return true;
     }
+
+    return true;
 }
 
-bool Compiler::EmitIntrinsic(const char *name, Span<const Type> types)
+void Compiler::EmitIntrinsic(const char *name, Span<const Type> types)
 {
     if (TestStr(name, "print") || TestStr(name, "printLn")) {
         RG_STATIC_ASSERT(RG_LEN(FunctionInfo::params.data) <= 30);
@@ -1216,21 +1216,13 @@ bool Compiler::EmitIntrinsic(const char *name, Span<const Type> types)
 
         program.ir.Append({Opcode::Print, {.i = payload}});
         stack.Append({Type::Null});
-
-        return true;
     } else if (TestStr(name, "intToFloat")) {
         program.ir.Append({Opcode::IntToFloat});
         stack.Append({Type::Float});
-
-        return true;
     } else if (TestStr(name, "floatToInt")) {
         program.ir.Append({Opcode::FloatToInt});
         stack.Append({Type::Int});
-
-        return true;
     }
-
-    RG_ASSERT(false);
 }
 
 void Compiler::EmitPop(int64_t count)
