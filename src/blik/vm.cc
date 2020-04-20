@@ -429,13 +429,25 @@ int Run(const Program &program)
         // This will be removed once we get functions, but in the mean time
         // I need to output things somehow!
         CASE(Print): {
-            switch (inst->u.type) {
-                case Type::Null: { Print("null"); } break;
-                case Type::Bool: { Print("%1", stack.ptr[stack.len - 1].b); } break;
-                case Type::Int: { Print("%1", stack.ptr[stack.len - 1].i); } break;
-                case Type::Float: { Print("%1", stack.ptr[stack.len - 1].d); } break;
-                case Type::String: { Print("%1", stack.ptr[stack.len - 1].str); } break;
+            int64_t remain = inst->u.i;
+
+            Size count = (Size)(remain & 0x1F);
+            remain >>= 5;
+
+            for (Size i = count; i > 0; i--) {
+                Type type = (Type)(remain & 0x7);
+                remain >>= 3;
+
+                switch (type) {
+                    case Type::Null: { Print("null"); } break;
+                    case Type::Bool: { Print("%1", stack.ptr[stack.len - i].b); } break;
+                    case Type::Int: { Print("%1", stack.ptr[stack.len - i].i); } break;
+                    case Type::Float: { Print("%1", stack.ptr[stack.len - i].d); } break;
+                    case Type::String: { Print("%1", stack.ptr[stack.len - i].str); } break;
+                }
             }
+
+            stack.len -= count - 1;
 
             DISPATCH(++pc);
         }

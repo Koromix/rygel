@@ -27,10 +27,10 @@ struct Instruction {
         int64_t i; // PushInteger, Pop,
                    // StoreBool, StoreInt, StoreFloat, StoreString,
                    // LoadBool, LoadInt, LoadFloat, LoadString,
-                   // Jump, BranchIfTrue, BranchIfFalse, Call, Return, Exit
+                   // Jump, BranchIfTrue, BranchIfFalse,
+                   // Call, Return, Print, Exit
         double d; // PushFloat
         const char *str; // PushString
-        Type type; // Print
     } u;
 };
 

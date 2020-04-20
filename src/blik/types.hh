@@ -45,12 +45,15 @@ struct FunctionInfo {
 
     const char *name;
     const char *full_name;
+
     LocalArray<Parameter, 16> params;
+    bool variadic;
     Type ret;
 
     // Singly-linked list
     FunctionInfo *next_overload;
 
+    bool intrinsic;
     Size inst_idx;
     // Used to prevent dangerous forward calls (if relevant globals are not defined yet)
     Size earliest_forward_call;

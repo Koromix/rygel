@@ -38,7 +38,7 @@ class Compiler {
     BucketArray<VariableInfo> variables;
     HashTable<const char *, VariableInfo *> variables_map;
 
-    Size func_idx = -1;
+    Size func_idx;
     FunctionInfo *current_func = nullptr;
     Size depth = -1;
     Size var_offset = 0;
@@ -51,6 +51,8 @@ class Compiler {
     Program program;
 
 public:
+    Compiler();
+
     bool Parse(const TokenSet &set, const char *filename);
     void Finish(Program *out_program);
 
@@ -68,10 +70,12 @@ private:
     bool ParseExpressionOrReturn();
 
     Type ParseExpression(bool keep_result);
-    bool ParseCall(const char *name);
     void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(Type in_type, Opcode code, Type out_type);
     bool EmitOperator2(Type in_type, Opcode code, Type out_type);
+
+    bool ParseCall(const char *name);
+    bool EmitIntrinsic(const char *name, Span<const Type> types);
 
     void EmitPop(int64_t count);
 
@@ -92,6 +96,18 @@ private:
         valid = false;
     }
 };
+
+Compiler::Compiler()
+{
+    functions.Append({.name = "print", .full_name = "print(...)", .variadic = true, .ret = Type::Null, .intrinsic = true});
+    functions.Append({.name = "println", .full_name = "println(...)", .variadic = true, .ret = Type::Null, .intrinsic = true});
+
+    for (FunctionInfo &intr: functions) {
+        functions_map.Append(&intr);
+    }
+
+    func_idx = functions.len;
+}
 
 bool Compiler::Parse(const TokenSet &set, const char *filename)
 {
@@ -303,7 +319,7 @@ void Compiler::ParseFunction()
         return;
     }
 
-    FunctionInfo *func = &functions[++func_idx];
+    FunctionInfo *func = &functions[func_idx++];
     {
         const char *name = ConsumeIdentifier();
         RG_ASSERT(TestStr(name, func->name));
@@ -939,92 +955,6 @@ unexpected_token:
     return {};
 }
 
-// Don't try to call from outside ParseExpression()!
-bool Compiler::ParseCall(const char *name)
-{
-    if (TestStr(name, "print") || TestStr(name, "println")) {
-        Size pop = -1;
-
-        if (!MatchToken(TokenKind::RightParenthesis)) {
-            MatchToken(TokenKind::NewLine);
-
-            Type type = ParseExpression(true);
-            program.ir.Append({Opcode::Print, {.type = type}});
-            pop++;
-
-            while (MatchToken(TokenKind::Comma)) {
-                MatchToken(TokenKind::NewLine);
-
-                Type type = ParseExpression(true);
-                program.ir.Append({Opcode::Print, {.type = type}});
-                pop++;
-            }
-
-            MatchToken(TokenKind::NewLine);
-            ConsumeToken(TokenKind::RightParenthesis);
-        }
-
-        if (TestStr(name, "println")) {
-            program.ir.Append({Opcode::PushString, {.str = "\n"}});
-            program.ir.Append({Opcode::Print, {.type = Type::String}});
-            pop++;
-        }
-
-        if (pop < 0) {
-            program.ir.Append({Opcode::PushNull});
-        } else {
-            EmitPop(pop);
-        }
-
-        stack.Append({Type::Null});
-    } else {
-        LocalArray<Type, RG_LEN(FunctionInfo::params.data)> types;
-
-        FunctionInfo *func0 = functions_map.FindValue(name, nullptr);
-        if (RG_UNLIKELY(!func0)) {
-            MarkError("Function '%1' does not exist", name);
-            return false;
-        }
-
-        if (!MatchToken(TokenKind::RightParenthesis)) {
-            types.Append(ParseExpression(true));
-            while (MatchToken(TokenKind::Comma)) {
-                if (RG_UNLIKELY(!types.Available())) {
-                    MarkError("Functions cannot take more than %1 arguments", RG_LEN(types.data));
-                    return false;
-                }
-                types.Append(ParseExpression(true));
-            }
-
-            ConsumeToken(TokenKind::RightParenthesis);
-        }
-
-        FunctionInfo *func = func0;
-        while (func && !TestOverload(*func, types)) {
-            func = func->next_overload;
-        }
-        if (RG_UNLIKELY(!func)) {
-            LocalArray<char, 1024> buf = {};
-            for (Size i = 0; i < types.len; i++) {
-                buf.len += Fmt(buf.TakeAvailable(), "%1%2", i ? ", " : "", TypeNames[(int)types[i]]).len;
-            }
-
-            MarkError("Cannot call '%1' with (%2) arguments", func0->name, buf);
-            return false;
-        }
-
-        if (func->inst_idx < 0) {
-            forward_calls.Append({program.ir.len, func});
-            func->earliest_forward_call = std::min(func->earliest_forward_call, program.ir.len);
-        }
-        program.ir.Append({Opcode::Call, {.i = func->inst_idx}});
-
-        stack.Append({func->ret});
-    }
-
-    return true;
-}
-
 void Compiler::ProduceOperator(const PendingOperator &op)
 {
     bool success;
@@ -1211,6 +1141,85 @@ bool Compiler::EmitOperator2(Type in_type, Opcode code, Type out_type)
     }
 }
 
+// Don't try to call from outside ParseExpression()!
+bool Compiler::ParseCall(const char *name)
+{
+    LocalArray<Type, RG_LEN(FunctionInfo::params.data)> types;
+
+    FunctionInfo *func0 = functions_map.FindValue(name, nullptr);
+    if (RG_UNLIKELY(!func0)) {
+        MarkError("Function '%1' does not exist", name);
+        return false;
+    }
+
+    if (!MatchToken(TokenKind::RightParenthesis)) {
+        types.Append(ParseExpression(true));
+        while (MatchToken(TokenKind::Comma)) {
+            if (RG_UNLIKELY(!types.Available())) {
+                MarkError("Functions cannot take more than %1 arguments", RG_LEN(types.data));
+                return false;
+            }
+            types.Append(ParseExpression(true));
+        }
+
+        ConsumeToken(TokenKind::RightParenthesis);
+    }
+
+    FunctionInfo *func = func0;
+    while (!TestOverload(*func, types)) {
+        func = func->next_overload;
+
+        if (RG_UNLIKELY(!func)) {
+            LocalArray<char, 1024> buf = {};
+            for (Size i = 0; i < types.len; i++) {
+                buf.len += Fmt(buf.TakeAvailable(), "%1%2", i ? ", " : "", TypeNames[(int)types[i]]).len;
+            }
+
+            MarkError("Cannot call '%1' with (%2) arguments", func0->name, buf);
+            return false;
+        }
+    }
+
+    if (func->intrinsic) {
+        return EmitIntrinsic(name, types);
+    } else {
+        if (func->inst_idx < 0) {
+            forward_calls.Append({program.ir.len, func});
+            func->earliest_forward_call = std::min(func->earliest_forward_call, program.ir.len);
+        }
+        program.ir.Append({Opcode::Call, {.i = func->inst_idx}});
+        stack.Append({func->ret});
+
+        return true;
+    }
+}
+
+bool Compiler::EmitIntrinsic(const char *name, Span<const Type> types)
+{
+    if (TestStr(name, "print") || TestStr(name, "println")) {
+        RG_STATIC_ASSERT(RG_LEN(FunctionInfo::params.data) <= 30);
+
+        bool println = TestStr(name, "println");
+
+        int64_t payload = 0;
+        if (println) {
+            program.ir.Append({Opcode::PushString, {.str = "\n"}});
+            payload = (int)Type::String;
+        }
+        for (Size i = types.len - 1; i >= 0; i--) {
+            payload = (payload << 3) | (int)types[i];
+        }
+        payload = (payload << 5) | (types.len + println);
+
+        program.ir.Append({Opcode::Print, {.i = payload}});
+        stack.Append({Type::Null});
+
+        return true;
+    }
+
+    RG_ASSERT(false);
+}
+
 void Compiler::EmitPop(int64_t count)
 {
     RG_ASSERT(count >= 0);
@@ -1235,8 +1244,13 @@ bool Compiler::TestOverload(const FunctionInfo &proto1, const FunctionInfo &prot
 
 bool Compiler::TestOverload(const FunctionInfo &proto, Span<const Type> types)
 {
-    if (proto.params.len != types.len)
-        return false;
+    if (proto.variadic) {
+        if (proto.params.len > types.len)
+            return false;
+    } else {
+        if (proto.params.len != types.len)
+            return false;
+    }
 
     for (Size i = 0; i < proto.params.len; i++) {
         if (proto.params[i].type != types[i])
