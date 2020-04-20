@@ -213,6 +213,11 @@ void Compiler::ParsePrototypes(Span<const Size> offsets)
             FunctionInfo *overload = *ret.first;
             FunctionInfo *next = overload->next_overload;
 
+            if (RG_UNLIKELY(overload->intrinsic)) {
+                MarkError("Cannot replace or overload intrinsic function '%1'", proto->name);
+                return;
+            }
+
             for (;;) {
                 if (TestOverload(*overload, *proto)) {
                     if (overload->ret == proto->ret) {
