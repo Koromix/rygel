@@ -1,7 +1,7 @@
 # Ne cherchez pas la logique dans ce script, ce sont des bouts de code
 # tapés presque au hasard pour mettrer au point le parseur.
 
-let z = 5 + # Les nouvelles mettent fin à une commande, sauf si une expression est
+let z = 5 + # Les nouvelles lignes mettent fin à une commande, sauf si une expression est
         3   # encore ouverte comme c'est le cas ici avec le + non suivi d'une valeur.
 
 let x = 2 + 8 * 5 - (0x1444 << 5) > 2 && true
@@ -13,7 +13,7 @@ let test = (5 = 8)
 let mut p = 8
 
 # Les boucles for permettront à terme d'itérer sur différents objets, en attendant d'avoir
-# des objets on peut déjà itérer sur des un intervalle d'entiers.
+# des objets on peut déjà itérer sur un intervalle d'entiers.
 
 for i in 2...5
     for j in 3..6
@@ -38,7 +38,7 @@ p := 5
 # test := true
 
 # Les variables de ce langage ont une portée lexicale. En dehors de if, while & compagnie,
-# il est possible de définir des blocs à l'aide de do/end. Les deux variables zzz et bleh
+# il est possible de définir des blocs à l'aide de begin/end. Les deux variables zzz et bleh
 # dans le bloc ci-dessous n'existent plus à la sortie du bloc.
 
 begin
@@ -53,12 +53,12 @@ begin
     end
 end
 
-# C'est un langage avec typage statique avec inférence de type. Si on ne précise par le
+# C'est un langage avec typage statique et inférence de type. Si on ne précise pas le
 # type de variable il est déduit de l'expression à droite, mais on peut aussi le préciser.
 # Si le type est précisé il est possible d'omettre la valeur d'initialisation.
 
 let foo: String = "Hello" # OK
-# let bar: Int = "World!" # This is an error and would not work if uncommented
+# let bar: Int = "World!" # Cette ligne décomentée génère une erreur de compilation
 let empty: Double
 
 let mut txt = "FOO"
@@ -101,7 +101,23 @@ func test()
     end
 end
 
+# Les fonctions peuvent être surchargées, c'est à dire qu'on peut avoir plusieurs fonctions
+# avec le même nom tant qu'elles prennent des paramètres différents. Il n'est pas autorisé
+# d'avoir les mêmes types de paramètres mais un type de retour différent.
+
+func overload() do println("test")
+func overload(p1: Int) do println("test! (", p1, ")")
+func overload(p1: Int,
+              p2: Double) do println("test... (", p1, " -- ", p2, ")")
+
+println("Test overloads!")
+overload(2, 3.0)
+overload(2)
+overload()
+# overload(2, 3, "hello") # Erreur car il n'y a pas de définition de overload() qui correspond
+
 # Et maintenant une séquence assez random qui m'a servi à implémenter le support des fonctions :)
+# On la garde pour tester que tout ne commence pas à déconner pour une raison X ou Y.
 
 func tt(e: String, ii: Int): Bool
     let mut tte = 267
@@ -137,16 +153,3 @@ func inline0(): String do return "inline0()"
 
 println("TESTING ", func0())
 println("TESTING ", inline0())
-
-# Les fonctions peuvent être surchargées
-
-func overload() do println("test")
-func overload(p1: Int) do println("test! (", p1, ")")
-func overload(p1: Int,
-              p2: Double) do println("test... (", p1, " -- ", p2, ")")
-
-println("Test overloads!")
-overload(2, 3.0)
-overload(2)
-overload()
-# overload(2, 3, "hello") # Erreur car il n'y a pas de définition de overload() qui correspond
