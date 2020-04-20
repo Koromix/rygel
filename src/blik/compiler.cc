@@ -1105,10 +1105,10 @@ void Compiler::ProduceOperator(const PendingOperator &op)
             MarkError("Cannot use '%1' operator on %2 value",
                       TokenKindNames[(int)op.kind], TypeNames[(int)stack[stack.len - 1].type]);
         } else if (stack[stack.len - 2].type == stack[stack.len - 1].type) {
-            MarkError("Cannot use '%1' operator on %2 stack",
+            MarkError("Cannot use '%1' operator on %2 values",
                       TokenKindNames[(int)op.kind], TypeNames[(int)stack[stack.len - 2].type]);
         } else {
-            MarkError("Cannot use '%1' operator on %2 and %3 stack",
+            MarkError("Cannot use '%1' operator on %2 and %3 values",
                       TokenKindNames[(int)op.kind], TypeNames[(int)stack[stack.len - 2].type],
                       TypeNames[(int)stack[stack.len - 1].type]);
         }
