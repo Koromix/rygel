@@ -99,10 +99,10 @@ private:
 
 Compiler::Compiler()
 {
-    functions.Append({.name = "print", .full_name = "print(...)", .variadic = true, .ret = Type::Null});
-    functions.Append({.name = "printLn", .full_name = "printLn(...)", .variadic = true, .ret = Type::Null});
-    functions.Append({.name = "intToFloat", .full_name = "intToFloat(Int)", .params = {{"i", Type::Int}}, .ret = Type::Float});
-    functions.Append({.name = "floatToInt", .full_name = "floatToInt(Float)", .params = {{"f", Type::Float}}, .ret = Type::Int});
+    functions.Append({.name = "print", .signature = "print(...)", .variadic = true, .ret = Type::Null});
+    functions.Append({.name = "printLn", .signature = "printLn(...)", .variadic = true, .ret = Type::Null});
+    functions.Append({.name = "intToFloat", .signature = "intToFloat(Int)", .params = {{"i", Type::Int}}, .ret = Type::Float});
+    functions.Append({.name = "floatToInt", .signature = "floatToInt(Float)", .params = {{"f", Type::Float}}, .ret = Type::Int});
 
     for (FunctionInfo &intr: functions) {
         intr.intrinsic = true;
@@ -204,7 +204,7 @@ void Compiler::ParsePrototypes(Span<const Size> offsets)
             }
             Fmt(&buf, "): %1", TypeNames[(int)proto->ret]);
 
-            proto->full_name = buf.TrimAndLeak(1).ptr;
+            proto->signature = buf.TrimAndLeak(1).ptr;
         }
 
         // Insert in functions map and check for duplication
@@ -216,10 +216,10 @@ void Compiler::ParsePrototypes(Span<const Size> offsets)
             for (;;) {
                 if (TestOverload(*overload, *proto)) {
                     if (overload->ret == proto->ret) {
-                        MarkError("Function '%1' is already defined", proto->full_name);
+                        MarkError("Function '%1' is already defined", proto->signature);
                     } else {
                         MarkError("Function '%1' only differs from previously defined '%2' by return type",
-                                  proto->full_name, overload->full_name);
+                                  proto->signature, overload->signature);
                     }
 
                     return;

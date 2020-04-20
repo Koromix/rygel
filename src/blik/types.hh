@@ -44,7 +44,7 @@ struct FunctionInfo {
     };
 
     const char *name;
-    const char *full_name;
+    const char *signature;
 
     LocalArray<Parameter, 16> params;
     bool variadic;
