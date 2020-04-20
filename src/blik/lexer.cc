@@ -364,14 +364,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
             case '%': { Token1(TokenKind::Modulo); } break;
             case '^': { Token1(TokenKind::Xor); } break;
             case '~': { Token1(TokenKind::Not); } break;
-            case '.': {
-                bool success = Token3('.', '.', TokenKind::DotDotDot) || Token2('.', TokenKind::DotDot);
-
-                if (RG_UNLIKELY(!success)) {
-                    MarkError("Unexpected character '.'");
-                    return false;
-                }
-            } break;
+            case '.': { Token3('.', '.', TokenKind::DotDotDot) || Token2('.', TokenKind::DotDot) || Token1(TokenKind::Dot); } break;
             case ':': { Token2('=', TokenKind::Reassign) || Token1(TokenKind::Colon); } break;
             case '(': { Token1(TokenKind::LeftParenthesis); } break;
             case ')': { Token1(TokenKind::RightParenthesis); } break;
