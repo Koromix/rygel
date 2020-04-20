@@ -6,7 +6,8 @@ let z = 5 + # Les nouvelles mettent fin à une commande, sauf si une expression 
 
 let x = 2 + 8 * 5 - (0x1444 << 5) > 2 && true
 
-# Les variables doivent être déclarées à l'aide du mot-clé let.
+# Les variables doivent être déclarées à l'aide du mot-clé let. Par défaut, leur valeur
+# ne pas être modifiée par la suite à moins d'utiliser "let mut".
 
 let test = (5 = 8)
 let mut p = 8
