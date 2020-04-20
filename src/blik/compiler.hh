@@ -42,6 +42,8 @@ struct Program {
 
     BucketArray<VariableInfo> globals;
     HashTable<const char *, VariableInfo *> globals_map;
+
+    BlockAllocator str_alloc;
 };
 
 bool Compile(const TokenSet &set, const char *filename, Program *out_program);

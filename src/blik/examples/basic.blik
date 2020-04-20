@@ -136,3 +136,16 @@ func inline0(): String do return "inline0()"
 
 println("TESTING ", func0())
 println("TESTING ", inline0())
+
+# Les fonctions peuvent être surchargées
+
+func overload() do println("test")
+func overload(p1: Int) do println("test! (", p1, ")")
+func overload(p1: Int,
+              p2: Double) do println("test... (", p1, " -- ", p2, ")")
+
+println("Test overloads!")
+overload(2, 3.0)
+overload(2)
+overload()
+# overload(2, 3, "hello") # Erreur car il n'y a pas de définition de overload() qui correspond

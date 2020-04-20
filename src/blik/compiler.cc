@@ -38,8 +38,9 @@ class Compiler {
     BucketArray<VariableInfo> variables;
     HashTable<const char *, VariableInfo *> variables_map;
 
-    Size depth = -1;
+    Size func_idx = -1;
     FunctionInfo *current_func = nullptr;
+    Size depth = -1;
     Size var_offset = 0;
 
     // Only used (and valid) while parsing expression
@@ -73,6 +74,9 @@ private:
     bool EmitOperator2(Type in_type, Opcode code, Type out_type);
 
     void EmitPop(int64_t count);
+
+    bool TestOverload(const FunctionInfo &proto1, const FunctionInfo &proto2);
+    bool TestOverload(const FunctionInfo &proto, Span<const Type> types);
 
     bool ConsumeToken(TokenKind kind);
     const char *ConsumeIdentifier();
@@ -139,11 +143,6 @@ void Compiler::ParsePrototypes(Span<const Size> offsets)
         FunctionInfo *proto = functions.AppendDefault();
         proto->name = ConsumeIdentifier();
 
-        if (RG_UNLIKELY(!functions_map.Append(proto).second)) {
-            MarkError("Function '%1' already exists", proto->name);
-            return;
-        }
-
          // Parameters
         ConsumeToken(TokenKind::LeftParenthesis);
         if (!MatchToken(TokenKind::RightParenthesis)) {
@@ -165,10 +164,53 @@ void Compiler::ParsePrototypes(Span<const Size> offsets)
             ConsumeToken(TokenKind::RightParenthesis);
         }
 
+        // Return type
         if (MatchToken(TokenKind::Colon)) {
             proto->ret = ConsumeType();
         } else {
             proto->ret = Type::Null;
+        }
+
+        // Build full name (with parameter and return types)
+        {
+            HeapArray<char> buf(&program.str_alloc);
+
+            Fmt(&buf, "%1(", proto->name);
+            for (Size i = 0; i < proto->params.len; i++) {
+                const FunctionInfo::Parameter &param = proto->params[i];
+                Fmt(&buf, "%1%2", i ? ", " : "", TypeNames[(int)param.type]);
+            }
+            Fmt(&buf, "): %1", TypeNames[(int)proto->ret]);
+
+            proto->full_name = buf.TrimAndLeak(1).ptr;
+        }
+
+        // Insert in functions map and check for duplication
+        std::pair<FunctionInfo **, bool> ret = functions_map.Append(proto);
+        if (!ret.second) {
+            FunctionInfo *overload = *ret.first;
+            FunctionInfo *next = overload->next_overload;
+
+            for (;;) {
+                if (TestOverload(*overload, *proto)) {
+                    if (overload->ret == proto->ret) {
+                        MarkError("Function '%1' is already defined", proto->full_name);
+                    } else {
+                        MarkError("Function '%1' only differs from previously defined '%2' by return type",
+                                  proto->full_name, overload->full_name);
+                    }
+
+                    return;
+                }
+
+                if (!next)
+                    break;
+
+                overload = next;
+                next = overload->next_overload;
+            }
+
+            overload->next_overload = proto;
         }
 
         proto->inst_idx = -1;
@@ -258,10 +300,10 @@ void Compiler::ParseFunction()
         return;
     }
 
-    FunctionInfo *func = functions_map.FindValue(ConsumeIdentifier(), nullptr);
-    if (RG_UNLIKELY(!func)) {
-        RG_ASSERT(!valid);
-        return;
+    FunctionInfo *func = &functions[++func_idx];
+    {
+        const char *name = ConsumeIdentifier();
+        RG_ASSERT(TestStr(name, func->name));
     }
     current_func = func;
 
@@ -927,8 +969,8 @@ bool Compiler::ParseCall(const char *name)
     } else {
         LocalArray<Type, RG_LEN(FunctionInfo::params.data)> types;
 
-        FunctionInfo *func = functions_map.FindValue(name, nullptr);
-        if (RG_UNLIKELY(!func)) {
+        FunctionInfo *func0 = functions_map.FindValue(name, nullptr);
+        if (RG_UNLIKELY(!func0)) {
             MarkError("Function '%1' does not exist", name);
             return false;
         }
@@ -946,22 +988,19 @@ bool Compiler::ParseCall(const char *name)
             ConsumeToken(TokenKind::RightParenthesis);
         }
 
-        bool mismatch = false;
-        if (RG_UNLIKELY(types.len != func->params.len)) {
-            MarkError("Function '%1' expects %2 arguments, not %3", func->name,
-                      func->params.len, types.len);
-            return false;
+        FunctionInfo *func = func0;
+        while (func && !TestOverload(*func, types)) {
+            func = func->next_overload;
         }
-        for (Size i = 0; i < types.len; i++) {
-            if (RG_UNLIKELY(types[i] != func->params[i].type)) {
-                MarkError("Function '%1' expects %2 as %3 argument, not %4",
-                          func->name, TypeNames[(int)func->params[i].type], i + 1,
-                          TypeNames[(int)types[i]]);
-                mismatch = true;
+        if (RG_UNLIKELY(!func)) {
+            LocalArray<char, 1024> buf = {};
+            for (Size i = 0; i < types.len; i++) {
+                buf.len += Fmt(buf.TakeAvailable(), "%1%2", i ? ", " : "", TypeNames[(int)types[i]]).len;
             }
-        }
-        if (RG_UNLIKELY(mismatch))
+
+            MarkError("Cannot call '%1' with (%2) arguments", func0->name, buf);
             return false;
+        }
 
         if (func->inst_idx < 0) {
             forward_calls.Append({program.ir.len, func});
@@ -1168,6 +1207,32 @@ void Compiler::EmitPop(int64_t count)
     if (count) {
         program.ir.Append({Opcode::Pop, {.i = count}});
     }
+}
+
+bool Compiler::TestOverload(const FunctionInfo &proto1, const FunctionInfo &proto2)
+{
+    if (proto1.params.len != proto2.params.len)
+        return false;
+
+    for (Size i = 0; i < proto1.params.len; i++) {
+        if (proto1.params[i].type != proto2.params[i].type)
+            return false;
+    }
+
+    return true;
+}
+
+bool Compiler::TestOverload(const FunctionInfo &proto, Span<const Type> types)
+{
+    if (proto.params.len != types.len)
+        return false;
+
+    for (Size i = 0; i < proto.params.len; i++) {
+        if (proto.params[i].type != types[i])
+            return false;
+    }
+
+    return true;
 }
 
 void Compiler::Finish(Program *out_program)
