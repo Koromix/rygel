@@ -408,7 +408,7 @@ void Compiler::ParseReturn()
             case Type::Null: { pop_len++; } break;
             case Type::Bool: { program.ir.Append({Opcode::StoreLocalBool, {.i = 0}}); } break;
             case Type::Int: { program.ir.Append({Opcode::StoreLocalInt, {.i = 0}}); } break;
-            case Type::Double: { program.ir.Append({Opcode::StoreLocalDouble, {.i = 0}}); } break;
+            case Type::Float: { program.ir.Append({Opcode::StoreLocalFloat, {.i = 0}}); } break;
             case Type::String: { program.ir.Append({Opcode::StoreLocalString, {.i = 0}}); } break;
         }
 
@@ -460,7 +460,7 @@ void Compiler::ParseLet()
                 case Type::Null: { program.ir.Append({Opcode::PushNull}); } break;
                 case Type::Bool: { program.ir.Append({Opcode::PushBool, {.b = false}}); } break;
                 case Type::Int: { program.ir.Append({Opcode::PushInt, {.i = 0}}); } break;
-                case Type::Double: { program.ir.Append({Opcode::PushDouble, {.d = 0.0}}); } break;
+                case Type::Float: { program.ir.Append({Opcode::PushFloat, {.d = 0.0}}); } break;
                 case Type::String: { program.ir.Append({Opcode::PushString, {.str = ""}}); } break;
             }
         }
@@ -743,7 +743,7 @@ Type Compiler::ParseExpression(bool keep_result)
                 operators.len--;
             }
         } else if (tok.kind == TokenKind::Null || tok.kind == TokenKind::Bool ||
-                   tok.kind == TokenKind::Integer || tok.kind == TokenKind::Double ||
+                   tok.kind == TokenKind::Integer || tok.kind == TokenKind::Float ||
                    tok.kind == TokenKind::String || tok.kind == TokenKind::Identifier) {
             if (RG_UNLIKELY(expect_op))
                 goto unexpected_token;
@@ -770,16 +770,16 @@ Type Compiler::ParseExpression(bool keep_result)
                         stack.Append({Type::Int});
                     }
                 } break;
-                case TokenKind::Double: {
+                case TokenKind::Float: {
                     if (operators.len && operators[operators.len - 1].kind == TokenKind::Minus &&
                                          operators[operators.len - 1].unary) {
                         operators.RemoveLast(1);
 
-                        program.ir.Append({Opcode::PushDouble, {.d = -tok.u.d}});
+                        program.ir.Append({Opcode::PushFloat, {.d = -tok.u.d}});
                         stack.Append({Type::Int});
                     } else {
-                        program.ir.Append({Opcode::PushDouble, {.d = tok.u.d}});
-                        stack.Append({Type::Double});
+                        program.ir.Append({Opcode::PushFloat, {.d = tok.u.d}});
+                        stack.Append({Type::Float});
                     }
                 } break;
                 case TokenKind::String: {
@@ -811,7 +811,7 @@ Type Compiler::ParseExpression(bool keep_result)
                                 case Type::Null: { program.ir.Append({Opcode::PushNull}); } break;
                                 case Type::Bool: { program.ir.Append({Opcode::LoadGlobalBool, {.i = var->offset}}); } break;
                                 case Type::Int: { program.ir.Append({Opcode::LoadGlobalInt, {.i = var->offset}}); } break;
-                                case Type::Double: { program.ir.Append({Opcode::LoadGlobalDouble, {.i = var->offset}});} break;
+                                case Type::Float: { program.ir.Append({Opcode::LoadGlobalFloat, {.i = var->offset}});} break;
                                 case Type::String: { program.ir.Append({Opcode::LoadGlobalString, {.i = var->offset}}); } break;
                             }
                         } else {
@@ -819,7 +819,7 @@ Type Compiler::ParseExpression(bool keep_result)
                                 case Type::Null: { program.ir.Append({Opcode::PushNull}); } break;
                                 case Type::Bool: { program.ir.Append({Opcode::LoadLocalBool, {.i = var->offset}}); } break;
                                 case Type::Int: { program.ir.Append({Opcode::LoadLocalInt, {.i = var->offset}}); } break;
-                                case Type::Double: { program.ir.Append({Opcode::LoadLocalDouble, {.i = var->offset}});} break;
+                                case Type::Float: { program.ir.Append({Opcode::LoadLocalFloat, {.i = var->offset}});} break;
                                 case Type::String: { program.ir.Append({Opcode::LoadLocalString, {.i = var->offset}}); } break;
                             }
                         }
@@ -1054,7 +1054,7 @@ void Compiler::ProduceOperator(const PendingOperator &op)
                     case Type::Null: { EmitPop(1); } break;
                     case Type::Bool: { program.ir.Append({Opcode::StoreGlobalBool, {.i = slot1.var->offset}}); } break;
                     case Type::Int: { program.ir.Append({Opcode::StoreGlobalInt, {.i = slot1.var->offset}}); } break;
-                    case Type::Double: { program.ir.Append({Opcode::StoreGlobalDouble, {.i = slot1.var->offset}}); } break;
+                    case Type::Float: { program.ir.Append({Opcode::StoreGlobalFloat, {.i = slot1.var->offset}}); } break;
                     case Type::String: { program.ir.Append({Opcode::StoreGlobalString, {.i = slot1.var->offset}}); } break;
                 }
             } else {
@@ -1062,7 +1062,7 @@ void Compiler::ProduceOperator(const PendingOperator &op)
                     case Type::Null: { EmitPop(1); } break;
                     case Type::Bool: { program.ir.Append({Opcode::StoreLocalBool, {.i = slot1.var->offset}}); } break;
                     case Type::Int: { program.ir.Append({Opcode::StoreLocalInt, {.i = slot1.var->offset}}); } break;
-                    case Type::Double: { program.ir.Append({Opcode::StoreLocalDouble, {.i = slot1.var->offset}}); } break;
+                    case Type::Float: { program.ir.Append({Opcode::StoreLocalFloat, {.i = slot1.var->offset}}); } break;
                     case Type::String: { program.ir.Append({Opcode::StoreLocalString, {.i = slot1.var->offset}}); } break;
                 }
             }
@@ -1075,24 +1075,24 @@ void Compiler::ProduceOperator(const PendingOperator &op)
 
         case TokenKind::Plus: {
             success = EmitOperator2(Type::Int, Opcode::AddInt, Type::Int) ||
-                      EmitOperator2(Type::Double, Opcode::AddDouble, Type::Double);
+                      EmitOperator2(Type::Float, Opcode::AddFloat, Type::Float);
         } break;
         case TokenKind::Minus: {
             if (op.unary) {
                 success = EmitOperator1(Type::Int, Opcode::NegateInt, Type::Int) ||
-                          EmitOperator1(Type::Double, Opcode::NegateDouble, Type::Double);
+                          EmitOperator1(Type::Float, Opcode::NegateFloat, Type::Float);
             } else {
                 success = EmitOperator2(Type::Int, Opcode::SubstractInt, Type::Int) ||
-                          EmitOperator2(Type::Double, Opcode::SubstractDouble, Type::Double);
+                          EmitOperator2(Type::Float, Opcode::SubstractFloat, Type::Float);
             }
         } break;
         case TokenKind::Multiply: {
             success = EmitOperator2(Type::Int, Opcode::MultiplyInt, Type::Int) ||
-                      EmitOperator2(Type::Double, Opcode::MultiplyDouble, Type::Double);
+                      EmitOperator2(Type::Float, Opcode::MultiplyFloat, Type::Float);
         } break;
         case TokenKind::Divide: {
             success = EmitOperator2(Type::Int, Opcode::DivideInt, Type::Int) ||
-                      EmitOperator2(Type::Double, Opcode::DivideDouble, Type::Double);
+                      EmitOperator2(Type::Float, Opcode::DivideFloat, Type::Float);
         } break;
         case TokenKind::Modulo: {
             success = EmitOperator2(Type::Int, Opcode::ModuloInt, Type::Int);
@@ -1100,29 +1100,29 @@ void Compiler::ProduceOperator(const PendingOperator &op)
 
         case TokenKind::Equal: {
             success = EmitOperator2(Type::Int, Opcode::EqualInt, Type::Bool) ||
-                      EmitOperator2(Type::Double, Opcode::EqualDouble, Type::Bool) ||
+                      EmitOperator2(Type::Float, Opcode::EqualFloat, Type::Bool) ||
                       EmitOperator2(Type::Bool, Opcode::EqualBool, Type::Bool);
         } break;
         case TokenKind::NotEqual: {
             success = EmitOperator2(Type::Int, Opcode::NotEqualInt, Type::Bool) ||
-                      EmitOperator2(Type::Double, Opcode::NotEqualDouble, Type::Bool) ||
+                      EmitOperator2(Type::Float, Opcode::NotEqualFloat, Type::Bool) ||
                       EmitOperator2(Type::Bool, Opcode::NotEqualBool, Type::Bool);
         } break;
         case TokenKind::Greater: {
             success = EmitOperator2(Type::Int, Opcode::GreaterThanInt, Type::Bool) ||
-                      EmitOperator2(Type::Double, Opcode::GreaterThanDouble, Type::Bool);
+                      EmitOperator2(Type::Float, Opcode::GreaterThanFloat, Type::Bool);
         } break;
         case TokenKind::GreaterOrEqual: {
             success = EmitOperator2(Type::Int, Opcode::GreaterOrEqualInt, Type::Bool) ||
-                      EmitOperator2(Type::Double, Opcode::GreaterOrEqualDouble, Type::Bool);
+                      EmitOperator2(Type::Float, Opcode::GreaterOrEqualFloat, Type::Bool);
         } break;
         case TokenKind::Less: {
             success = EmitOperator2(Type::Int, Opcode::LessThanInt, Type::Bool) ||
-                      EmitOperator2(Type::Double, Opcode::LessThanDouble, Type::Bool);
+                      EmitOperator2(Type::Float, Opcode::LessThanFloat, Type::Bool);
         } break;
         case TokenKind::LessOrEqual: {
             success = EmitOperator2(Type::Int, Opcode::LessOrEqualInt, Type::Bool) ||
-                      EmitOperator2(Type::Double, Opcode::LessOrEqualDouble, Type::Bool);
+                      EmitOperator2(Type::Float, Opcode::LessOrEqualFloat, Type::Bool);
         } break;
 
         case TokenKind::And: {

@@ -13,14 +13,14 @@ enum class Type {
     Null,
     Bool,
     Int,
-    Double,
+    Float,
     String
 };
 static const char *const TypeNames[] = {
     "Null",
     "Bool",
     "Int",
-    "Double",
+    "Float",
     "String"
 };
 

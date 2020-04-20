@@ -25,7 +25,7 @@ TOKEN(Comma, ",")
 TOKEN(Null, "null")
 TOKEN(Bool, "<bool>")
 TOKEN(Integer, "<integer>")
-TOKEN(Double, "<double>")
+TOKEN(Float, "<float>")
 TOKEN(String, "<string>")
 TOKEN(Identifier, "<identifier>")
 

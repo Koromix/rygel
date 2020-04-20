@@ -19,7 +19,7 @@ contexts:
     - match: \bfor\b
       scope: keyword.control.blik
       push: for
-    - match: \b(Null|Bool|Int|Double|String)\b
+    - match: \b(Null|Bool|Int|Float|String)\b
       scope: storage.type.blik
     - match: (!|&&|\|\||=|!=|<=|>=|<|>|:=|\-|\+|\*|\/|%|~|<<|>>|^|\.\.\.?)
       scope: keyword.operator.blik

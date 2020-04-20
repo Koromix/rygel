@@ -59,7 +59,7 @@ end
 
 let foo: String = "Hello" # OK
 # let bar: Int = "World!" # Cette ligne décomentée génère une erreur de compilation
-let empty: Double
+let empty: Float
 
 let mut txt = "FOO"
 if test do txt := "BAR"
@@ -108,7 +108,7 @@ end
 func overload() do println("test")
 func overload(p1: Int) do println("test! (", p1, ")")
 func overload(p1: Int,
-              p2: Double) do println("test... (", p1, " -- ", p2, ")")
+              p2: Float) do println("test... (", p1, " -- ", p2, ")")
 
 println("Test overloads!")
 overload(2, 3.0)

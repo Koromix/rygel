@@ -25,10 +25,10 @@ struct Instruction {
     union {
         bool b; // PushBool
         int64_t i; // PushInteger, Pop,
-                   // StoreBool, StoreInt, StoreDouble, StoreString,
-                   // LoadBool, LoadInt, LoadDouble, LoadString,
+                   // StoreBool, StoreInt, StoreFloat, StoreString,
+                   // LoadBool, LoadInt, LoadFloat, LoadString,
                    // Jump, BranchIfTrue, BranchIfFalse, Call, Return, Exit
-        double d; // PushDouble
+        double d; // PushFloat
         const char *str; // PushString
         Type type; // Print
     } u;

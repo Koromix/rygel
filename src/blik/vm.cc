@@ -21,26 +21,26 @@ static void DumpInstruction(Size pc, const Instruction &inst)
     switch (inst.code) {
         case Opcode::PushBool: { LogDebug("(0x%1) PushBool %2", FmtHex(pc).Pad0(-5), inst.u.b); } break;
         case Opcode::PushInt: { LogDebug("(0x%1) PushInt %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::PushDouble: { LogDebug("(0x%1) PushDouble %2", FmtHex(pc).Pad0(-5), inst.u.d); } break;
+        case Opcode::PushFloat: { LogDebug("(0x%1) PushFloat %2", FmtHex(pc).Pad0(-5), inst.u.d); } break;
         case Opcode::PushString: { LogDebug("(0x%1) PushString %2", FmtHex(pc).Pad0(-5), inst.u.str); } break;
         case Opcode::Pop: { LogDebug("(0x%1) Pop %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
         case Opcode::StoreGlobalBool: { LogDebug("(0x%1) StoreGlobalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case Opcode::StoreGlobalInt: { LogDebug("(0x%1) StoreGlobalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreGlobalDouble: { LogDebug("(0x%1) StoreGlobalDouble @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreGlobalFloat: { LogDebug("(0x%1) StoreGlobalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case Opcode::StoreGlobalString: { LogDebug("(0x%1) StoreGlobalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case Opcode::LoadGlobalBool: { LogDebug("(0x%1) LoadGlobalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case Opcode::LoadGlobalInt: { LogDebug("(0x%1) LoadGlobalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadGlobalDouble: { LogDebug("(0x%1) LoadGlobalDouble @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadGlobalFloat: { LogDebug("(0x%1) LoadGlobalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case Opcode::LoadGlobalString: { LogDebug("(0x%1) LoadGlobalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
         case Opcode::StoreLocalBool: { LogDebug("(0x%1) StoreLocalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case Opcode::StoreLocalInt: { LogDebug("(0x%1) StoreLocalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreLocalDouble: { LogDebug("(0x%1) StoreLocalDouble @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreLocalFloat: { LogDebug("(0x%1) StoreLocalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case Opcode::StoreLocalString: { LogDebug("(0x%1) StoreLocalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case Opcode::LoadLocalBool: { LogDebug("(0x%1) LoadLocalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case Opcode::LoadLocalInt: { LogDebug("(0x%1) LoadLocalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadLocalDouble: { LogDebug("(0x%1) LoadLocalDouble @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadLocalFloat: { LogDebug("(0x%1) LoadLocalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case Opcode::LoadLocalString: { LogDebug("(0x%1) LoadLocalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
         case Opcode::Jump: { LogDebug("(0x%1) Jump 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
@@ -104,7 +104,7 @@ int Run(const Program &program)
             stack.Append({.i = inst->u.i});
             DISPATCH(++pc);
         }
-        CASE(PushDouble): {
+        CASE(PushFloat): {
             stack.Append({.d = inst->u.d});
             DISPATCH(++pc);
         }
@@ -129,7 +129,7 @@ int Run(const Program &program)
             stack.Append({.i = stack[inst->u.i].i});
             DISPATCH(++pc);
         }
-        CASE(LoadGlobalDouble): {
+        CASE(LoadGlobalFloat): {
             stack.Append({.d = stack[inst->u.i].d});
             DISPATCH(++pc);
         }
@@ -145,7 +145,7 @@ int Run(const Program &program)
             stack[inst->u.i].i = stack.ptr[--stack.len].i;
             DISPATCH(++pc);
         }
-        CASE(StoreGlobalDouble): {
+        CASE(StoreGlobalFloat): {
             stack[inst->u.i].d = stack.ptr[--stack.len].d;
             DISPATCH(++pc);
         }
@@ -162,7 +162,7 @@ int Run(const Program &program)
             stack.Append({.i = stack[bp + inst->u.i].i});
             DISPATCH(++pc);
         }
-        CASE(LoadLocalDouble): {
+        CASE(LoadLocalFloat): {
             stack.Append({.d = stack[bp + inst->u.i].d});
             DISPATCH(++pc);
         }
@@ -178,7 +178,7 @@ int Run(const Program &program)
             stack[bp + inst->u.i].i = stack.ptr[--stack.len].i;
             DISPATCH(++pc);
         }
-        CASE(StoreLocalDouble): {
+        CASE(StoreLocalFloat): {
             stack[bp + inst->u.i].d = stack.ptr[--stack.len].d;
             DISPATCH(++pc);
         }
@@ -294,66 +294,66 @@ int Run(const Program &program)
             DISPATCH(++pc);
         }
 
-        CASE(NegateDouble): {
+        CASE(NegateFloat): {
             double d = stack[stack.len - 1].d;
             stack[stack.len - 1].d = -d;
             DISPATCH(++pc);
         }
-        CASE(AddDouble): {
+        CASE(AddFloat): {
             double d1 = stack[stack.len - 2].d;
             double d2 = stack[stack.len - 1].d;
             stack[--stack.len - 1].d = d1 + d2;
             DISPATCH(++pc);
         }
-        CASE(SubstractDouble): {
+        CASE(SubstractFloat): {
             double d1 = stack[stack.len - 2].d;
             double d2 = stack[stack.len - 1].d;
             stack[--stack.len - 1].d = d1 - d2;
             DISPATCH(++pc);
         }
-        CASE(MultiplyDouble): {
+        CASE(MultiplyFloat): {
             double d1 = stack[stack.len - 2].d;
             double d2 = stack[stack.len - 1].d;
             stack[--stack.len - 1].d = d1 * d2;
             DISPATCH(++pc);
         }
-        CASE(DivideDouble): {
+        CASE(DivideFloat): {
             double d1 = stack[stack.len - 2].d;
             double d2 = stack[stack.len - 1].d;
             stack[--stack.len - 1].d = d1 / d2;
             DISPATCH(++pc);
         }
-        CASE(EqualDouble): {
+        CASE(EqualFloat): {
             double d1 = stack[stack.len - 2].d;
             double d2 = stack[stack.len - 1].d;
             stack[--stack.len - 1].b = (d1 == d2);
             DISPATCH(++pc);
         }
-        CASE(NotEqualDouble): {
+        CASE(NotEqualFloat): {
             double d1 = stack[stack.len - 2].d;
             double d2 = stack[stack.len - 1].d;
             stack[--stack.len - 1].b = (d1 != d2);
             DISPATCH(++pc);
         }
-        CASE(GreaterThanDouble): {
+        CASE(GreaterThanFloat): {
             double d1 = stack[stack.len - 2].d;
             double d2 = stack[stack.len - 1].d;
             stack[--stack.len - 1].b = (d1 > d2);
             DISPATCH(++pc);
         }
-        CASE(GreaterOrEqualDouble): {
+        CASE(GreaterOrEqualFloat): {
             double d1 = stack[stack.len - 2].d;
             double d2 = stack[stack.len - 1].d;
             stack[--stack.len - 1].b = (d1 >= d2);
             DISPATCH(++pc);
         }
-        CASE(LessThanDouble): {
+        CASE(LessThanFloat): {
             double d1 = stack[stack.len - 2].d;
             double d2 = stack[stack.len - 1].d;
             stack[--stack.len - 1].b = (d1 < d2);
             DISPATCH(++pc);
         }
-        CASE(LessOrEqualDouble): {
+        CASE(LessOrEqualFloat): {
             double d1 = stack[stack.len - 2].d;
             double d2 = stack[stack.len - 1].d;
             stack[--stack.len - 1].b = (d1 <= d2);
@@ -433,7 +433,7 @@ int Run(const Program &program)
                 case Type::Null: { Print("null"); } break;
                 case Type::Bool: { Print("%1", stack.ptr[stack.len - 1].b); } break;
                 case Type::Int: { Print("%1", stack.ptr[stack.len - 1].i); } break;
-                case Type::Double: { Print("%1", stack.ptr[stack.len - 1].d); } break;
+                case Type::Float: { Print("%1", stack.ptr[stack.len - 1].d); } break;
                 case Type::String: { Print("%1", stack.ptr[stack.len - 1].str); } break;
             }
 

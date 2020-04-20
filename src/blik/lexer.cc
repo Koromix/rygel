@@ -198,11 +198,11 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     next = end - code.ptr;
 
                     if (RG_UNLIKELY(errno == ERANGE)) {
-                        MarkError("Double value exceeds supported range");
+                        MarkError("Float value exceeds supported range");
                         return false;
                     }
 
-                    set.tokens.Append({TokenKind::Double, line, {.d = d}});
+                    set.tokens.Append({TokenKind::Float, line, {.d = d}});
                 } else {
                     if (RG_UNLIKELY(overflow)) {
                         MarkError("Number literal is too large (max = %1)", INT64_MAX);

@@ -61,7 +61,7 @@ for iter in 1..11
 
     let foo: String = "Hello" # OK
     # let bar: Int = "World!" # This is an error and would not work if uncommented
-    let empty: Double
+    let empty: Float
 
     let mut txt = "FOO"
     if test do txt := "BAR"
