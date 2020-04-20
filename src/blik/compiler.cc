@@ -100,7 +100,7 @@ private:
 Compiler::Compiler()
 {
     functions.Append({.name = "print", .full_name = "print(...)", .variadic = true, .ret = Type::Null});
-    functions.Append({.name = "println", .full_name = "println(...)", .variadic = true, .ret = Type::Null});
+    functions.Append({.name = "printLn", .full_name = "printLn(...)", .variadic = true, .ret = Type::Null});
     functions.Append({.name = "intToFloat", .full_name = "intToFloat(Int)", .params = {{"i", Type::Int}}, .ret = Type::Float});
     functions.Append({.name = "floatToInt", .full_name = "floatToInt(Float)", .params = {{"f", Type::Float}}, .ret = Type::Int});
 
@@ -1199,10 +1199,10 @@ bool Compiler::ParseCall(const char *name)
 
 bool Compiler::EmitIntrinsic(const char *name, Span<const Type> types)
 {
-    if (TestStr(name, "print") || TestStr(name, "println")) {
+    if (TestStr(name, "print") || TestStr(name, "printLn")) {
         RG_STATIC_ASSERT(RG_LEN(FunctionInfo::params.data) <= 30);
 
-        bool println = TestStr(name, "println");
+        bool println = TestStr(name, "printLn");
 
         int64_t payload = 0;
         if (println) {

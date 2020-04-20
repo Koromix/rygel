@@ -17,7 +17,7 @@ let mut p = 8
 
 for i in 2...5
     for j in 3..6
-        println("for loop ", i, " ", j)
+        printLn("for loop ", i, " ", j)
     end
 end
 
@@ -32,7 +32,7 @@ while i < 1000000
     i := i + 1
 end
 while i > 100 do i := i - 1
-println("i = ", i)
+printLn("i = ", i)
 
 p := 5
 # test := true
@@ -63,7 +63,7 @@ let empty: Float
 
 let mut txt = "FOO"
 if test do txt := "BAR"
-println(txt)
+printLn(txt)
 
 if empty < 1.0
     let blik = 2.0
@@ -76,7 +76,7 @@ else
     p := 226
 end
 
-println("The value of p is: ", p)
+printLn("The value of p is: ", p)
 
 # Les fonctions sont également typées, bien évidemment ! On commence par fibonacci,
 # un classique...
@@ -87,14 +87,14 @@ func fib(n: Int): Int
 end
 
 let fib_n = 13
-println("fib(", fib_n, ") = ", fib(fib_n))
+printLn("fib(", fib_n, ") = ", fib(fib_n))
 
 # On peut aussi faire des fonctions qui ne retournent pas de valeur ! En réalité
 # elles retournent alors la valeur null (seule valeur possible du type Null).
 # On remarque par ailleurs que les fonctions peuvent être appelés avant leur déclaration.
 
 let nn: Null = test()
-println(nn)
+printLn(nn)
 
 func test()
     for j in 0..8
@@ -105,12 +105,12 @@ end
 # avec le même nom tant qu'elles prennent des paramètres différents. Il n'est pas autorisé
 # d'avoir les mêmes types de paramètres mais un type de retour différent.
 
-func overload() do println("test")
-func overload(p1: Int) do println("test! (", p1, ")")
+func overload() do printLn("test")
+func overload(p1: Int) do printLn("test! (", p1, ")")
 func overload(p1: Int,
-              p2: Float) do println("test... (", p1, " -- ", p2, ")")
+              p2: Float) do printLn("test... (", p1, " -- ", p2, ")")
 
-println("Test overloads!")
+printLn("Test overloads!")
 overload(2, 3.0)
 overload(2)
 overload()
@@ -126,13 +126,13 @@ func tt(e: String, ii: Int): Bool
         tte := tte + xx * eee(xx + ii)
         eee(xx)
     end
-    println("hello ", e, " (", ii, ") ", tte)
+    printLn("hello ", e, " (", ii, ") ", tte)
     return true
 end
 
 func eee(mut pp: Int): Int
     let xxxxx = 1
-    println("CALLED eee with ", pp)
+    printLn("CALLED eee with ", pp)
     pp := pp + 1
     return pp
 end
@@ -151,5 +151,5 @@ func func0(): String
 end
 func inline0(): String do return "inline0()"
 
-println("TESTING ", func0())
-println("TESTING ", inline0())
+printLn("TESTING ", func0())
+printLn("TESTING ", inline0())

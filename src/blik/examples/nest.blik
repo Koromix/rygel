@@ -4,9 +4,9 @@ func fib(n: Int): Int
 end
 
 for iter in 1..11
-    println("---------------------------")
-    println("ITERATION ", iter)
-    println("---------------------------")
+    printLn("---------------------------")
+    printLn("ITERATION ", iter)
+    printLn("---------------------------")
 
     # Ne cherchez pas la logique dans ce script, ce sont des bouts de code
     # tapés presque au hasard pour mettrer au point le parseur.
@@ -34,7 +34,7 @@ for iter in 1..11
         let mut j = 0
         while j > 100 do j := j - 1
     end
-    println("i = ", i)
+    printLn("i = ", i)
 
     p := 5
     # test := true
@@ -65,7 +65,7 @@ for iter in 1..11
 
     let mut txt = "FOO"
     if test do txt := "BAR"
-    println(txt)
+    printLn(txt)
 
     if empty < 1.0
         let blik = 2.0
@@ -78,13 +78,13 @@ for iter in 1..11
         p := 226
     end
 
-    println("The value of p is: ", p)
+    printLn("The value of p is: ", p)
 
     # Les fonctions sont également typées, bien évidemment ! On commence par fibonacci,
     # un classique...
 
     let fib_n = 6
-    println("fib(", fib_n, ") = ", fib(fib_n))
+    printLn("fib(", fib_n, ") = ", fib(fib_n))
 
     # Et maintenant une séquence assez random qui m'a servi à implémenter le support des fonctions :)
 
@@ -95,8 +95,8 @@ for iter in 1..11
     end
     while (zz := inc(zz)) < 9 do tt("Nelson", (zz := zz + 1) - 1)
 
-    println("TESTING ", func0())
-    println("TESTING ", inline0())
+    printLn("TESTING ", func0())
+    printLn("TESTING ", inline0())
 end
 
 func tt(e: String, ii: Int): Bool
@@ -106,13 +106,13 @@ func tt(e: String, ii: Int): Bool
         tte := tte + xx * eee(xx + ii)
         eee(xx)
     end
-    println("hello ", e, " (", ii, ") ", tte)
+    printLn("hello ", e, " (", ii, ") ", tte)
     return true
 end
 
 func eee(pp: Int): Int
     let xxxxx = 1
-    println("CALLED eee with ", pp)
+    printLn("CALLED eee with ", pp)
     return pp
 end
 
@@ -123,4 +123,4 @@ func func0(): String
 end
 func inline0(): String do return "inline0()"
 
-for i in 1..14 do println(i)
+for i in 1..14 do printLn(i)
