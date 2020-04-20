@@ -147,6 +147,8 @@ void Compiler::ParsePrototypes(Span<const Size> offsets)
         ConsumeToken(TokenKind::LeftParenthesis);
         if (!MatchToken(TokenKind::RightParenthesis)) {
             do {
+                MatchToken(TokenKind::NewLine);
+
                 FunctionInfo::Parameter param = {};
 
                 MatchToken(TokenKind::Mut);
@@ -161,6 +163,7 @@ void Compiler::ParsePrototypes(Span<const Size> offsets)
                 proto->params.Append(param);
             } while (MatchToken(TokenKind::Comma));
 
+            MatchToken(TokenKind::NewLine);
             ConsumeToken(TokenKind::RightParenthesis);
         }
 
@@ -313,6 +316,8 @@ void Compiler::ParseFunction()
         Size stack_offset = -2 - func->params.len;
 
         do {
+            MatchToken(TokenKind::NewLine);
+
             VariableInfo *var = variables.AppendDefault();
 
             var->readonly = !MatchToken(TokenKind::Mut);
@@ -336,6 +341,7 @@ void Compiler::ParseFunction()
             var->type = ConsumeType();
         } while (MatchToken(TokenKind::Comma));
 
+        MatchToken(TokenKind::NewLine);
         ConsumeToken(TokenKind::RightParenthesis);
     }
 
@@ -940,16 +946,21 @@ bool Compiler::ParseCall(const char *name)
         Size pop = -1;
 
         if (!MatchToken(TokenKind::RightParenthesis)) {
+            MatchToken(TokenKind::NewLine);
+
             Type type = ParseExpression(true);
             program.ir.Append({Opcode::Print, {.type = type}});
             pop++;
 
             while (MatchToken(TokenKind::Comma)) {
+                MatchToken(TokenKind::NewLine);
+
                 Type type = ParseExpression(true);
                 program.ir.Append({Opcode::Print, {.type = type}});
                 pop++;
             }
 
+            MatchToken(TokenKind::NewLine);
             ConsumeToken(TokenKind::RightParenthesis);
         }
 
