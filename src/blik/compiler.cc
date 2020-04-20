@@ -101,8 +101,8 @@ Compiler::Compiler()
 {
     functions.Append({.name = "print", .signature = "print(...)", .variadic = true, .ret = Type::Null});
     functions.Append({.name = "printLn", .signature = "printLn(...)", .variadic = true, .ret = Type::Null});
-    functions.Append({.name = "intToFloat", .signature = "intToFloat(Int)", .params = {{"i", Type::Int}}, .ret = Type::Float});
-    functions.Append({.name = "floatToInt", .signature = "floatToInt(Float)", .params = {{"f", Type::Float}}, .ret = Type::Int});
+    functions.Append({.name = "intToFloat", .signature = "intToFloat(Int): Float", .params = {{"i", Type::Int}}, .ret = Type::Float});
+    functions.Append({.name = "floatToInt", .signature = "floatToInt(Float): Int", .params = {{"f", Type::Float}}, .ret = Type::Int});
 
     for (FunctionInfo &intr: functions) {
         intr.intrinsic = true;
