@@ -222,12 +222,15 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                         MarkError("Unfinished string literal");
                         return false;
                     }
+                    if (RG_UNLIKELY(code[next] == '\r')) {
+                        MarkError("Carriage return is not allowed in string literals, use \\r");
+                        return false;
+                    }
+
                     if (code[next] == code[offset]) {
                         next++;
                         break;
-                    }
-
-                    if (code[next] == '\\') {
+                    } else if (code[next] == '\\') {
                         if (++next < code.len) {
                             switch (code[next]) {
                                 case 'r': { str.Append('\r'); } break;
