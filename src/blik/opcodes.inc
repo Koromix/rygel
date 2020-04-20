@@ -79,6 +79,8 @@ OPCODE(Call)
 OPCODE(Return)
 
 OPCODE(Print)
+OPCODE(IntToFloat)
+OPCODE(FloatToInt)
 
 OPCODE(Exit)
 

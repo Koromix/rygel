@@ -452,6 +452,17 @@ int Run(const Program &program)
             DISPATCH(++pc);
         }
 
+        CASE(IntToFloat): {
+            int64_t i = stack[stack.len - 1].i;
+            stack[stack.len - 1].d = (double)i;
+            DISPATCH(++pc);
+        }
+        CASE(FloatToInt): {
+            double d = stack[stack.len - 1].d;
+            stack[stack.len - 1].i = (int64_t)d;
+            DISPATCH(++pc);
+        }
+
         CASE(Exit): {
             int code = (int)stack.ptr[--stack.len].i;
 

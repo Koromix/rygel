@@ -99,10 +99,13 @@ private:
 
 Compiler::Compiler()
 {
-    functions.Append({.name = "print", .full_name = "print(...)", .variadic = true, .ret = Type::Null, .intrinsic = true});
-    functions.Append({.name = "println", .full_name = "println(...)", .variadic = true, .ret = Type::Null, .intrinsic = true});
+    functions.Append({.name = "print", .full_name = "print(...)", .variadic = true, .ret = Type::Null});
+    functions.Append({.name = "println", .full_name = "println(...)", .variadic = true, .ret = Type::Null});
+    functions.Append({.name = "intToFloat", .full_name = "intToFloat(Int)", .params = {{"i", Type::Int}}, .ret = Type::Float});
+    functions.Append({.name = "floatToInt", .full_name = "floatToInt(Float)", .params = {{"f", Type::Float}}, .ret = Type::Int});
 
     for (FunctionInfo &intr: functions) {
+        intr.intrinsic = true;
         functions_map.Append(&intr);
     }
 
@@ -1213,6 +1216,16 @@ bool Compiler::EmitIntrinsic(const char *name, Span<const Type> types)
 
         program.ir.Append({Opcode::Print, {.i = payload}});
         stack.Append({Type::Null});
+
+        return true;
+    } else if (TestStr(name, "intToFloat")) {
+        program.ir.Append({Opcode::IntToFloat});
+        stack.Append({Type::Float});
+
+        return true;
+    } else if (TestStr(name, "floatToInt")) {
+        program.ir.Append({Opcode::FloatToInt});
+        stack.Append({Type::Int});
 
         return true;
     }
