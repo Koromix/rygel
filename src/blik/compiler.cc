@@ -815,13 +815,13 @@ Type Compiler::ParseExpression(bool keep_result)
                 case TokenKind::Identifier: {
                     if (MatchToken(TokenKind::LeftParenthesis)) {
                         if (RG_UNLIKELY(!ParseCall(tok.u.str)))
-                            return {};
+                            return Type::Null;
                     } else {
                         const VariableInfo *var = variables_map.FindValue(tok.u.str, nullptr);
 
                         if (RG_UNLIKELY(!var)) {
                             MarkError("Variable '%1' does not exist", tok.u.str);
-                            return {};
+                            return Type::Null;
                         }
 
                         if (var->global) {
@@ -829,7 +829,7 @@ Type Compiler::ParseExpression(bool keep_result)
                                             current_func->earliest_forward_call < var->defined_at)) {
                                 MarkError("Function '%1' was called before variable '%2' was defined",
                                           current_func->name, var->name);
-                                return {};
+                                return Type::Null;
                             }
 
                             switch (var->type) {
@@ -870,7 +870,7 @@ Type Compiler::ParseExpression(bool keep_result)
                                   TokenKindNames[(int)tokens[--pos].kind]);
                     }
 
-                    return {};
+                    return Type::Null;
                 } else if (!expect_op && tok.kind == TokenKind::NewLine) {
                     // Expression is split across multiple lines
                     continue;
@@ -921,7 +921,7 @@ Type Compiler::ParseExpression(bool keep_result)
 
             if (RG_UNLIKELY(!operators.Available())) {
                 MarkError("Too many operators on the stack");
-                return {};
+                return Type::Null;
             }
             operators.Append(op);
         }
@@ -934,14 +934,14 @@ Type Compiler::ParseExpression(bool keep_result)
     }
 
     if (RG_UNLIKELY(!valid))
-        return {};
+        return Type::Null;
     if (RG_UNLIKELY(!expect_op)) {
         MarkError("Unexpected end of expression, expected value or '('");
-        return {};
+        return Type::Null;
     }
     if (RG_UNLIKELY(parentheses)) {
         MarkError("Missing closing parenthesis");
-        return {};
+        return Type::Null;
     }
 
     RG_ASSERT(stack.len == start_values_len + 1);
@@ -955,15 +955,15 @@ Type Compiler::ParseExpression(bool keep_result)
             EmitPop(1);
         }
 
-        return {};
+        return Type::Null;
     } else {
-        return {};
+        return Type::Null;
     }
 
 unexpected_token:
     MarkError("Unexpected token '%1', expected %2", TokenKindNames[(int)tokens[--pos].kind],
               expect_op ? "operator or ')'" : "value or '('");
-    return {};
+    return Type::Null;
 }
 
 void Compiler::ProduceOperator(const PendingOperator &op)
@@ -1353,7 +1353,7 @@ Type Compiler::ConsumeType()
         return type;
     } else {
         MarkError("Type '%1' is not valid", type_name);
-        return {};
+        return Type::Null;
     }
 }
 
