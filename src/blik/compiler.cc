@@ -930,14 +930,6 @@ Type Compiler::ParseExpression(bool keep_result)
         }
     }
 
-    // Discharge remaining operators
-    for (Size i = operators.len - 1; i >= 0; i--) {
-        const PendingOperator &op = operators[i];
-        ProduceOperator(op);
-    }
-
-    if (RG_UNLIKELY(!valid))
-        return Type::Null;
     if (RG_UNLIKELY(!expect_op)) {
         MarkError(pos - 1, "Unexpected end of expression, expected value or '('");
         return Type::Null;
@@ -946,6 +938,15 @@ Type Compiler::ParseExpression(bool keep_result)
         MarkError(pos - 1, "Missing closing parenthesis");
         return Type::Null;
     }
+
+    // Discharge remaining operators
+    for (Size i = operators.len - 1; i >= 0; i--) {
+        const PendingOperator &op = operators[i];
+        ProduceOperator(op);
+    }
+
+    if (RG_UNLIKELY(!valid))
+        return Type::Null;
 
     RG_ASSERT(stack.len == start_values_len + 1);
     if (keep_result) {
