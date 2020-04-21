@@ -31,7 +31,7 @@ class Compiler {
     bool valid = true;
 
     Span<const Token> tokens;
-    Size offset;
+    Size pos;
 
     BucketArray<FunctionInfo> functions;
     HashTable<const char *, FunctionInfo *> functions_map;
@@ -57,7 +57,7 @@ public:
     void Finish(Program *out_program);
 
 private:
-    void ParsePrototypes(Span<const Size> offsets);
+    void ParsePrototypes(Span<const Size> funcs);
 
     bool ParseBlock(bool keep_variables);
     void ParseFunction();
@@ -118,11 +118,11 @@ bool Compiler::Parse(const TokenSet &set, const char *filename)
     RG_ASSERT(valid);
 
     tokens = set.tokens;
-    offset = 0;
+    pos = 0;
 
     PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
         if (valid) {
-            int32_t line = tokens[std::min(offset, tokens.len - 1)].line;
+            int32_t line = tokens[std::min(pos, tokens.len - 1)].line;
 
             char msg_buf[4096];
             Fmt(msg_buf, "%1(%2): %3", filename, line, msg);
@@ -139,8 +139,8 @@ bool Compiler::Parse(const TokenSet &set, const char *filename)
 
     // Do the actual parsing!
     ParseBlock(true);
-    if (RG_UNLIKELY(offset < tokens.len)) {
-        MarkError("Unexpected token '%1' without matching block", TokenKindNames[(int)tokens[offset].kind]);
+    if (RG_UNLIKELY(pos < tokens.len)) {
+        MarkError("Unexpected token '%1' without matching block", TokenKindNames[(int)tokens[pos].kind]);
         return false;
     }
     RG_ASSERT(depth == -1);
@@ -153,12 +153,12 @@ bool Compiler::Parse(const TokenSet &set, const char *filename)
     return valid;
 }
 
-void Compiler::ParsePrototypes(Span<const Size> offsets)
+void Compiler::ParsePrototypes(Span<const Size> funcs)
 {
-    RG_DEFER_C(prev_offset = offset) { offset = prev_offset; };
+    RG_DEFER_C(prev_offset = pos) { pos = prev_offset; };
 
-    for (Size i = 0; i < offsets.len; i++) {
-        offset = offsets[i] + 1;
+    for (Size i = 0; i < funcs.len; i++) {
+        pos = funcs[i] + 1;
 
         FunctionInfo *proto = functions.AppendDefault();
         proto->name = ConsumeIdentifier();
@@ -266,15 +266,15 @@ bool Compiler::ParseBlock(bool keep_variables)
 
     bool has_return = false;
 
-    while (valid && offset < tokens.len) {
-        switch (tokens[offset].kind) {
-            case TokenKind::NewLine: { offset++; } break;
+    while (valid && pos < tokens.len) {
+        switch (tokens[pos].kind) {
+            case TokenKind::NewLine: { pos++; } break;
 
             case TokenKind::End:
             case TokenKind::Else: { return has_return; } break;
 
             case TokenKind::Begin: {
-                offset++;
+                pos++;
 
                 ConsumeToken(TokenKind::NewLine);
                 has_return |= ParseBlock(false);
@@ -313,7 +313,7 @@ bool Compiler::ParseBlock(bool keep_variables)
 
 void Compiler::ParseFunction()
 {
-    offset++;
+    pos++;
 
     RG_DEFER_C(prev_offset = var_offset) {
         // Variables inside the function are destroyed at the end of the block.
@@ -407,7 +407,7 @@ void Compiler::ParseFunction()
 
 void Compiler::ParseReturn()
 {
-    offset++;
+    pos++;
 
     if (RG_UNLIKELY(!current_func)) {
         MarkError("Return statement cannot be used outside function");
@@ -416,7 +416,7 @@ void Compiler::ParseReturn()
 
     Type type;
     if (MatchToken(TokenKind::NewLine)) {
-        offset--;
+        pos--;
         type = Type::Null;
     } else {
         type = ParseExpression(true);
@@ -448,7 +448,7 @@ void Compiler::ParseReturn()
 
 void Compiler::ParseLet()
 {
-    offset++;
+    pos++;
 
     VariableInfo *var = variables.AppendDefault();
 
@@ -505,7 +505,7 @@ void Compiler::ParseLet()
 
 void Compiler::ParseIf()
 {
-    offset++;
+    pos++;
 
     if (RG_UNLIKELY(ParseExpression(true) != Type::Bool)) {
         MarkError("Cannot use non-Bool expression as condition");
@@ -568,7 +568,7 @@ void Compiler::ParseIf()
 
 void Compiler::ParseWhile()
 {
-    offset++;
+    pos++;
 
     Size start_idx = program.ir.len;
 
@@ -614,7 +614,7 @@ void Compiler::ParseWhile()
 
 void Compiler::ParseFor()
 {
-    offset++;
+    pos++;
 
     VariableInfo *it = variables.AppendDefault();
 
@@ -694,9 +694,9 @@ void Compiler::ParseFor()
 bool Compiler::ParseExpressionOrReturn()
 {
     if (MatchToken(TokenKind::Return)) {
-        offset--;
+        pos--;
         ParseReturn();
-        offset--;
+        pos--;
 
         return true;
     } else {
@@ -744,10 +744,10 @@ Type Compiler::ParseExpression(bool keep_result)
     Size parentheses = 0;
 
     // Used to detect "empty" expressions
-    Size prev_offset = offset;
+    Size prev_offset = pos;
 
-    while (offset < tokens.len) {
-        const Token &tok = tokens[offset++];
+    while (pos < tokens.len) {
+        const Token &tok = tokens[pos++];
 
         if (tok.kind == TokenKind::LeftParenthesis) {
             if (RG_UNLIKELY(expect_op))
@@ -864,12 +864,12 @@ Type Compiler::ParseExpression(bool keep_result)
             op.unary = (tok.kind == TokenKind::Not || tok.kind == TokenKind::LogicNot);
 
             if (RG_UNLIKELY(op.prec < 0)) {
-                if (offset == prev_offset + 1) {
-                    if (offset > tokens.len) {
+                if (pos == prev_offset + 1) {
+                    if (pos > tokens.len) {
                         MarkError("Unexpected end of file, expected expression");
                     } else {
                         MarkError("Unexpected token '%1', expected expression",
-                                  TokenKindNames[(int)tokens[offset - 1].kind]);
+                                  TokenKindNames[(int)tokens[pos - 1].kind]);
                     }
 
                     return {};
@@ -879,7 +879,7 @@ Type Compiler::ParseExpression(bool keep_result)
                 } else if (parentheses || !expect_op) {
                     goto unexpected_token;
                 } else {
-                    offset--;
+                    pos--;
                     break;
                 }
             }
@@ -963,7 +963,7 @@ Type Compiler::ParseExpression(bool keep_result)
     }
 
 unexpected_token:
-    MarkError("Unexpected token '%1', expected %2", TokenKindNames[(int)tokens[offset - 1].kind],
+    MarkError("Unexpected token '%1', expected %2", TokenKindNames[(int)tokens[pos - 1].kind],
               expect_op ? "operator or ')'" : "value or '('");
     return {};
 }
@@ -1323,24 +1323,24 @@ void Compiler::Finish(Program *out_program)
 
 bool Compiler::ConsumeToken(TokenKind kind)
 {
-    if (RG_UNLIKELY(offset >= tokens.len)) {
+    if (RG_UNLIKELY(pos >= tokens.len)) {
         MarkError("Unexpected end of file, expected '%1'", TokenKindNames[(int)kind]);
         return false;
     }
-    if (RG_UNLIKELY(tokens[offset].kind != kind)) {
+    if (RG_UNLIKELY(tokens[pos].kind != kind)) {
         MarkError("Unexpected token '%1', expected '%2'",
-                  TokenKindNames[(int)tokens[offset].kind], TokenKindNames[(int)kind]);
+                  TokenKindNames[(int)tokens[pos].kind], TokenKindNames[(int)kind]);
         return false;
     }
 
-    offset++;
+    pos++;
     return true;
 }
 
 const char *Compiler::ConsumeIdentifier()
 {
     if (RG_LIKELY(ConsumeToken(TokenKind::Identifier))) {
-        return tokens[offset - 1].u.str;
+        return tokens[pos - 1].u.str;
     } else {
         return "";
     }
@@ -1361,8 +1361,8 @@ Type Compiler::ConsumeType()
 
 bool Compiler::MatchToken(TokenKind kind)
 {
-    bool match = offset < tokens.len && tokens[offset].kind == kind;
-    offset += match;
+    bool match = pos < tokens.len && tokens[pos].kind == kind;
+    pos += match;
     return match;
 }
 
