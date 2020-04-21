@@ -42,6 +42,10 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
 {
     RG_ASSERT(valid);
 
+    // Make sure we only have one EndOfLine token at the end. Without it some parser errors
+    // caused by premature end of file may be not be located correctly.
+    code = TrimStrRight(code);
+
     this->filename = filename;
     this->code = code;
     line = 1;
