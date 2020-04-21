@@ -19,7 +19,8 @@ static const char *const TokenKindNames[] = {
 
 struct Token {
     TokenKind kind;
-    int32_t line;
+    int line;
+    Size offset;
 
     union {
         bool b;
@@ -30,6 +31,7 @@ struct Token {
 };
 
 struct TokenSet {
+    Span<const char> code;
     HeapArray<Token> tokens;
 
     // Used to parse function declarations in first pass

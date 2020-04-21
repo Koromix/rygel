@@ -4,12 +4,14 @@
 
 #include "../core/libcc/libcc.hh"
 #include "lexer.hh"
+#include "util.hh"
 
 namespace RG {
 
 class Lexer {
     bool valid = true;
 
+    const char *filename;
     Span<const char> code;
     Size offset;
     Size next;
@@ -27,10 +29,12 @@ private:
     bool Token3(char c1, char c2, TokenKind tok);
 
     template <typename... Args>
-    void MarkError(const char *fmt, Args... args)
+    void MarkError(Size offset, const char *fmt, Args... args)
     {
-        LogError(fmt, args...);
-        valid = false;
+        if (valid) {
+            ReportError(code, filename, line, offset, fmt, args...);
+            valid = false;
+        }
     }
 };
 
@@ -38,18 +42,9 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
 {
     RG_ASSERT(valid);
 
+    this->filename = filename;
     this->code = code;
     line = 1;
-
-    PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
-        if (valid) {
-            char msg_buf[4096];
-            Fmt(msg_buf, "%1(%2): %3", filename, line, msg);
-
-            func(level, ctx, msg_buf);
-        }
-    });
-    RG_DEFER { PopLogFilter(); };
 
     for (offset = 0, next = 1; offset < code.len; offset = next++) {
         switch (code[offset]) {
@@ -81,7 +76,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                                 overflow |= (value > (INT64_MAX - digit) / 2);
                                 value = (value * 2) + digit;
                             } else if (RG_UNLIKELY(digit < 10)) {
-                                MarkError("Invalid binary digit '%1'", code[next]);
+                                MarkError(next, "Invalid binary digit '%1'", code[next]);
                                 return false;
                             } else {
                                 break;
@@ -89,11 +84,11 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                         }
 
                         if (RG_UNLIKELY(overflow)) {
-                            MarkError("Number literal is too large (max = %1)", INT64_MAX);
+                            MarkError(offset, "Number literal is too large (max = %1)", INT64_MAX);
                             return false;
                         }
 
-                        set.tokens.Append({TokenKind::Integer, line, {.i = value}});
+                        set.tokens.Append({TokenKind::Integer, line, offset, {.i = value}});
                         continue;
                     } else if (code[next] == 'o') {
                         int64_t value = 0;
@@ -106,7 +101,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                                 overflow |= (value > (INT64_MAX - digit) / 8);
                                 value = (value * 8) + digit;
                             } else if (RG_UNLIKELY(digit < 10)) {
-                                MarkError("Invalid octal digit '%1'", code[next]);
+                                MarkError(next, "Invalid octal digit '%1'", code[next]);
                                 return false;
                             } else {
                                 break;
@@ -114,11 +109,11 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                         }
 
                         if (RG_UNLIKELY(overflow)) {
-                            MarkError("Number literal is too large (max = %1)", INT64_MAX);
+                            MarkError(offset, "Number literal is too large (max = %1)", INT64_MAX);
                             return false;
                         }
 
-                        set.tokens.Append({TokenKind::Integer, line, {.i = value}});
+                        set.tokens.Append({TokenKind::Integer, line, offset, {.i = value}});
                         continue;
                     } else if (code[next] == 'x') {
                         int64_t value = 0;
@@ -141,7 +136,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                                 overflow |= (value > (INT64_MAX - digit) / 16);
                                 value = (value * 16) + (code[next] - 'a' + 10);
                             } else if (RG_UNLIKELY(IsAsciiAlpha(code[next]))) {
-                                MarkError("Invalid hexadecimal digit '%1'", code[next]);
+                                MarkError(next, "Invalid hexadecimal digit '%1'", code[next]);
                                 return false;
                             } else {
                                 break;
@@ -149,14 +144,14 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                         }
 
                         if (RG_UNLIKELY(overflow)) {
-                            MarkError("Number literal is too large (max = %1)", INT64_MAX);
+                            MarkError(offset, "Number literal is too large (max = %1)", INT64_MAX);
                             return false;
                         }
 
-                        set.tokens.Append({TokenKind::Integer, line, {.i = value}});
+                        set.tokens.Append({TokenKind::Integer, line, offset, {.i = value}});
                         continue;
                     } else {
-                        MarkError("Invalid literal base character '%1'", code[next]);
+                        MarkError(next, "Invalid literal base character '%1'", code[next]);
                         return false;
                     }
                 }
@@ -198,18 +193,18 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     next = end - code.ptr;
 
                     if (RG_UNLIKELY(errno == ERANGE)) {
-                        MarkError("Float value exceeds supported range");
+                        MarkError(offset, "Float value exceeds supported range");
                         return false;
                     }
 
-                    set.tokens.Append({TokenKind::Float, line, {.d = d}});
+                    set.tokens.Append({TokenKind::Float, line, offset, {.d = d}});
                 } else {
                     if (RG_UNLIKELY(overflow)) {
-                        MarkError("Number literal is too large (max = %1)", INT64_MAX);
+                        MarkError(offset, "Number literal is too large (max = %1)", INT64_MAX);
                         return false;
                     }
 
-                    set.tokens.Append({TokenKind::Integer, line, {.i = value}});
+                    set.tokens.Append({TokenKind::Integer, line, offset, {.i = value}});
                 }
             } break;
 
@@ -219,11 +214,11 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
 
                 for (;;) {
                     if (RG_UNLIKELY(next >= code.len || code[next] == '\n')) {
-                        MarkError("Unfinished string literal");
+                        MarkError(next, "Unfinished string literal");
                         return false;
                     }
                     if (RG_UNLIKELY(code[next] == '\r')) {
-                        MarkError("Carriage return is not allowed in string literals, use \\r");
+                        MarkError(next, "Carriage return is not allowed in string literals, use \\r");
                         return false;
                     }
 
@@ -246,7 +241,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                                 case '0':  { str.Append(0); } break;
 
                                 default: {
-                                    MarkError("Unsupported escape sequence '\\%1'", code[next]);
+                                    MarkError(next, "Unsupported escape sequence '\\%1'", code[next]);
                                     return false;
                                 } break;
                             }
@@ -259,7 +254,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                 }
                 str.Append(0);
 
-                set.tokens.Append({TokenKind::String, line, {.str = str.TrimAndLeak().ptr}});
+                set.tokens.Append({TokenKind::String, line, offset, {.str = str.TrimAndLeak().ptr}});
             } break;
 
             case 'a':
@@ -351,12 +346,12 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                 } else if (ident == "null") {
                     Token1(TokenKind::Null);
                 } else if (ident == "true") {
-                    set.tokens.Append({TokenKind::Bool, line, {.b = true}});
+                    set.tokens.Append({TokenKind::Bool, line, offset, {.b = true}});
                 } else if (ident == "false") {
-                    set.tokens.Append({TokenKind::Bool, line, {.b = false}});
+                    set.tokens.Append({TokenKind::Bool, line, offset, {.b = false}});
                 } else {
                     const char *str = DuplicateString(ident, &set.str_alloc).ptr;
-                    set.tokens.Append({TokenKind::Identifier, line, {.str = str}});
+                    set.tokens.Append({TokenKind::Identifier, line, offset, {.str = str}});
                 }
             } break;
 
@@ -381,7 +376,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
             case '<': { Token2('<', TokenKind::LeftShift) || Token2('=', TokenKind::LessOrEqual) || Token1(TokenKind::Less); } break;
 
             default: {
-                MarkError("Unexpected character '%1'", code[offset]);
+                MarkError(offset, "Unexpected character '%1'", code[offset]);
                 return false;
             } break;
         }
@@ -396,19 +391,21 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
 void Lexer::Finish(TokenSet *out_set)
 {
     RG_ASSERT(!out_set->tokens.len);
+
+    set.code = code;
     SwapMemory(&set, out_set, RG_SIZE(set));
 }
 
 bool Lexer::Token1(TokenKind tok)
 {
-    set.tokens.Append({tok, line});
+    set.tokens.Append({tok, line, offset});
     return true;
 }
 
 bool Lexer::Token2(char c, TokenKind tok)
 {
     if (next < code.len && code[next] == c) {
-        set.tokens.Append({tok, line});
+        set.tokens.Append({tok, line, offset});
         next++;
 
         return true;
@@ -420,7 +417,7 @@ bool Lexer::Token2(char c, TokenKind tok)
 bool Lexer::Token3(char c1, char c2, TokenKind tok)
 {
     if (next + 1 < code.len && code[next] == c1 && code[next + 1] == c2) {
-        set.tokens.Append({tok, line});
+        set.tokens.Append({tok, line, offset});
         next += 2;
 
         return true;

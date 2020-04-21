@@ -6,6 +6,7 @@
 #include "compiler.hh"
 #include "lexer.hh"
 #include "types.hh"
+#include "util.hh"
 
 namespace RG {
 
@@ -30,6 +31,8 @@ struct StackSlot {
 class Compiler {
     bool valid = true;
 
+    const char *filename;
+    Span<const char> code;
     Span<const Token> tokens;
     Size pos;
 
@@ -92,8 +95,13 @@ private:
     template <typename... Args>
     void MarkError(const char *fmt, Args... args)
     {
-        LogError(fmt, args...);
-        valid = false;
+        if (valid) {
+            Size offset = (pos < tokens.len) ? tokens[pos].offset : code.len;
+            int line = tokens[std::min(pos, tokens.len - 1)].line;
+
+            ReportError(code, filename, line, offset, fmt, args...);
+            valid = false;
+        }
     }
 };
 
@@ -117,20 +125,10 @@ bool Compiler::Parse(const TokenSet &set, const char *filename)
 {
     RG_ASSERT(valid);
 
+    this->filename = filename;
+    this->code = set.code;
     tokens = set.tokens;
     pos = 0;
-
-    PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
-        if (valid) {
-            int32_t line = tokens[std::min(pos, tokens.len - 1)].line;
-
-            char msg_buf[4096];
-            Fmt(msg_buf, "%1(%2): %3", filename, line, msg);
-
-            func(level, ctx, msg_buf);
-        }
-    });
-    RG_DEFER { PopLogFilter(); };
 
     // We want top-level order-independent functions
     ParsePrototypes(set.funcs);
@@ -866,10 +864,10 @@ Type Compiler::ParseExpression(bool keep_result)
             if (RG_UNLIKELY(op.prec < 0)) {
                 if (pos == prev_offset + 1) {
                     if (pos > tokens.len) {
-                        MarkError("Unexpected end of file, expected expression");
+                        MarkError("Unexpected end of file, expected value or expression");
                     } else {
-                        MarkError("Unexpected token '%1', expected expression",
-                                  TokenKindNames[(int)tokens[pos - 1].kind]);
+                        MarkError("Unexpected token '%1', expected value or expression",
+                                  TokenKindNames[(int)tokens[--pos].kind]);
                     }
 
                     return {};
@@ -963,7 +961,7 @@ Type Compiler::ParseExpression(bool keep_result)
     }
 
 unexpected_token:
-    MarkError("Unexpected token '%1', expected %2", TokenKindNames[(int)tokens[pos - 1].kind],
+    MarkError("Unexpected token '%1', expected %2", TokenKindNames[(int)tokens[--pos].kind],
               expect_op ? "operator or ')'" : "value or '('");
     return {};
 }

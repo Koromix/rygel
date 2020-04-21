@@ -51,20 +51,18 @@ Options:
         }
     }
 
-    TokenSet token_set;
+    HeapArray<char> code;
     if (run_inline) {
-        if (!Tokenize(filename, "<inline>", &token_set))
-            return 1;
-
+        code.Append(filename);
         filename = "<inline>";
     } else {
-        HeapArray<char> code;
         if (ReadFile(filename, Megabytes(64), &code) < 0)
             return 1;
-
-        if (!Tokenize(code, filename, &token_set))
-            return 1;
     }
+
+    TokenSet token_set;
+    if (!Tokenize(code, filename, &token_set))
+        return 1;
 
     Program program;
     if (!Compile(token_set, filename, &program))
