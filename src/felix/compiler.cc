@@ -406,7 +406,7 @@ public:
         Fmt(&buf, " /MT /EHsc %1", warnings ? "/W3 /wd4200" : "/w");
         switch (compile_mode) {
             case CompileMode::Debug: { Fmt(&buf, " /Od /Z7"); } break;
-            case CompileMode::Fast: { Fmt(&buf, " /O2 /DNDEBUG"); } break;
+            case CompileMode::Fast: { Fmt(&buf, " /O2 /Z7 /DNDEBUG"); } break;
             case CompileMode::Release: { Fmt(&buf, " /O2 /GL /DNDEBUG"); } break;
         }
 
@@ -460,7 +460,7 @@ public:
         // Build mode
         switch (compile_mode) {
             case CompileMode::Debug: { Fmt(&buf, " /DEBUG:FULL"); } break;
-            case CompileMode::Fast: { Fmt(&buf, " /DEBUG:NONE"); } break;
+            case CompileMode::Fast: { Fmt(&buf, " /DEBUG:FULL"); } break;
             case CompileMode::Release: { Fmt(&buf, " /LTCG /DEBUG:NONE"); } break;
         }
 
