@@ -1454,7 +1454,7 @@ public:
     }
 
     iterator_type begin() { return iterator_type(this, 0, offset); }
-    Iterator<const BucketArray<T, BucketSize>> begin() const { return iterator_type(this, 0, offset); }
+    Iterator<const BucketArray<T, BucketSize>> begin() const { return Iterator<const BucketArray>(this, 0, offset); }
     iterator_type end()
     {
         Size end_idx = offset + len;
@@ -1469,7 +1469,7 @@ public:
         Size bucket_idx = end_idx / BucketSize;
         Size bucket_offset = end_idx % BucketSize;
 
-        return iterator_type(this, bucket_idx, bucket_offset);
+        return Iterator<const BucketArray>(this, bucket_idx, bucket_offset);
     }
 
     const T &operator[](Size idx) const
