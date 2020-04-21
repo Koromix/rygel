@@ -53,7 +53,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
             case '\r': {} break;
 
             case '\n': {
-                Token1(TokenKind::NewLine);
+                Token1(TokenKind::EndOfLine);
                 line++;
             } break;
 
@@ -383,7 +383,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
     }
 
     // Newlines are used to end statements. Make sure the last statement has one.
-    Token1(TokenKind::NewLine);
+    Token1(TokenKind::EndOfLine);
 
     return valid;
 }

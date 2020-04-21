@@ -166,7 +166,7 @@ void Compiler::ParsePrototypes(Span<const Size> funcs)
         ConsumeToken(TokenKind::LeftParenthesis);
         if (!MatchToken(TokenKind::RightParenthesis)) {
             do {
-                MatchToken(TokenKind::NewLine);
+                MatchToken(TokenKind::EndOfLine);
 
                 FunctionInfo::Parameter param = {};
 
@@ -184,7 +184,7 @@ void Compiler::ParsePrototypes(Span<const Size> funcs)
                 proto->ret_pop += (param.type != Type::Null);
             } while (MatchToken(TokenKind::Comma));
 
-            MatchToken(TokenKind::NewLine);
+            MatchToken(TokenKind::EndOfLine);
             ConsumeToken(TokenKind::RightParenthesis);
         }
 
@@ -267,7 +267,7 @@ bool Compiler::ParseBlock(bool keep_variables)
 
     while (valid && pos < tokens.len) {
         switch (tokens[pos].kind) {
-            case TokenKind::NewLine: { pos++; } break;
+            case TokenKind::EndOfLine: { pos++; } break;
 
             case TokenKind::End:
             case TokenKind::Else: { return has_return; } break;
@@ -275,10 +275,10 @@ bool Compiler::ParseBlock(bool keep_variables)
             case TokenKind::Begin: {
                 pos++;
 
-                ConsumeToken(TokenKind::NewLine);
+                ConsumeToken(TokenKind::EndOfLine);
                 has_return |= ParseBlock(false);
                 ConsumeToken(TokenKind::End);
-                ConsumeToken(TokenKind::NewLine);
+                ConsumeToken(TokenKind::EndOfLine);
             } break;
 
             case TokenKind::Func: {
@@ -302,7 +302,7 @@ bool Compiler::ParseBlock(bool keep_variables)
 
             default: {
                 ParseExpression(false);
-                ConsumeToken(TokenKind::NewLine);
+                ConsumeToken(TokenKind::EndOfLine);
             } break;
         }
     }
@@ -345,7 +345,7 @@ void Compiler::ParseFunction()
         Size stack_offset = -2 - func->params.len;
 
         do {
-            MatchToken(TokenKind::NewLine);
+            MatchToken(TokenKind::EndOfLine);
 
             VariableInfo *var = variables.AppendDefault();
 
@@ -370,7 +370,7 @@ void Compiler::ParseFunction()
             var->type = ConsumeType();
         } while (MatchToken(TokenKind::Comma));
 
-        MatchToken(TokenKind::NewLine);
+        MatchToken(TokenKind::EndOfLine);
         ConsumeToken(TokenKind::RightParenthesis);
     }
 
@@ -387,7 +387,7 @@ void Compiler::ParseFunction()
     if (MatchToken(TokenKind::Do)) {
         has_return = ParseExpressionOrReturn();
     } else {
-        ConsumeToken(TokenKind::NewLine);
+        ConsumeToken(TokenKind::EndOfLine);
         has_return = ParseBlock(false);
         ConsumeToken(TokenKind::End);
     }
@@ -401,7 +401,7 @@ void Compiler::ParseFunction()
         }
     }
 
-    ConsumeToken(TokenKind::NewLine);
+    ConsumeToken(TokenKind::EndOfLine);
 }
 
 void Compiler::ParseReturn()
@@ -414,7 +414,7 @@ void Compiler::ParseReturn()
     }
 
     Type type;
-    if (MatchToken(TokenKind::NewLine)) {
+    if (MatchToken(TokenKind::EndOfLine)) {
         pos--;
         type = Type::Null;
     } else {
@@ -442,7 +442,7 @@ void Compiler::ParseReturn()
     }
     program.ir.Append({type == Type::Null ? Opcode::ReturnNull : Opcode::Return, {.i = current_func->ret_pop}});
 
-    ConsumeToken(TokenKind::NewLine);
+    ConsumeToken(TokenKind::EndOfLine);
 }
 
 void Compiler::ParseLet()
@@ -499,7 +499,7 @@ void Compiler::ParseLet()
     // Null values don't actually exist
     var_offset += (var->type != Type::Null);
 
-    ConsumeToken(TokenKind::NewLine);
+    ConsumeToken(TokenKind::EndOfLine);
 }
 
 void Compiler::ParseIf()
@@ -518,7 +518,7 @@ void Compiler::ParseIf()
         ParseExpressionOrReturn();
         program.ir[branch_idx].u.i = program.ir.len - branch_idx;
     } else {
-        ConsumeToken(TokenKind::NewLine);
+        ConsumeToken(TokenKind::EndOfLine);
         ParseBlock(false);
 
         if (MatchToken(TokenKind::Else)) {
@@ -537,7 +537,7 @@ void Compiler::ParseIf()
                         MarkError(elseif_pos, "Cannot use non-Bool expression as condition");
                         return;
                     }
-                    ConsumeToken(TokenKind::NewLine);
+                    ConsumeToken(TokenKind::EndOfLine);
 
                     branch_idx = program.ir.len;
                     program.ir.Append({Opcode::BranchIfFalse});
@@ -547,7 +547,7 @@ void Compiler::ParseIf()
                     jumps.Append(program.ir.len);
                     program.ir.Append({Opcode::Jump});
                 } else {
-                    ConsumeToken(TokenKind::NewLine);
+                    ConsumeToken(TokenKind::EndOfLine);
 
                     ParseBlock(false);
                     break;
@@ -564,7 +564,7 @@ void Compiler::ParseIf()
         ConsumeToken(TokenKind::End);
     }
 
-    ConsumeToken(TokenKind::NewLine);
+    ConsumeToken(TokenKind::EndOfLine);
 }
 
 void Compiler::ParseWhile()
@@ -594,7 +594,7 @@ void Compiler::ParseWhile()
     if (MatchToken(TokenKind::Do)) {
         ParseExpressionOrReturn();
     } else {
-        ConsumeToken(TokenKind::NewLine);
+        ConsumeToken(TokenKind::EndOfLine);
         ParseBlock(false);
         ConsumeToken(TokenKind::End);
     }
@@ -609,7 +609,7 @@ void Compiler::ParseWhile()
     program.ir.Append(expr);
     program.ir.Append({Opcode::BranchIfTrue, {.i = jump_idx - program.ir.len + 1}});
 
-    ConsumeToken(TokenKind::NewLine);
+    ConsumeToken(TokenKind::EndOfLine);
 }
 
 void Compiler::ParseFor()
@@ -673,7 +673,7 @@ void Compiler::ParseFor()
     if (MatchToken(TokenKind::Do)) {
         ParseExpressionOrReturn();
     } else {
-        ConsumeToken(TokenKind::NewLine);
+        ConsumeToken(TokenKind::EndOfLine);
         ParseBlock(false);
         ConsumeToken(TokenKind::End);
     }
@@ -688,7 +688,7 @@ void Compiler::ParseFor()
     DestroyVariables(1);
     var_offset -= 3;
 
-    ConsumeToken(TokenKind::NewLine);
+    ConsumeToken(TokenKind::EndOfLine);
 }
 
 bool Compiler::ParseExpressionOrReturn()
@@ -874,7 +874,7 @@ Type Compiler::ParseExpression(bool keep_result)
                     }
 
                     return Type::Null;
-                } else if (!expect_op && tok.kind == TokenKind::NewLine) {
+                } else if (!expect_op && tok.kind == TokenKind::EndOfLine) {
                     // Expression is split across multiple lines
                     continue;
                 } else if (parentheses || !expect_op) {

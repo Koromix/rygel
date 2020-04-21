@@ -58,6 +58,6 @@ TOKEN(GreaterOrEqual, ">=")
 TOKEN(Less, "<")
 TOKEN(LessOrEqual, "<=")
 
-TOKEN(NewLine, "<newline>")
+TOKEN(EndOfLine, "<end of line>")
 
 #undef TOKEN
