@@ -934,10 +934,7 @@ Type Compiler::ParseExpression(bool keep_result)
         MarkError(pos - 1, "Unexpected end of expression, expected value or '('");
         return Type::Null;
     }
-    if (RG_UNLIKELY(parentheses)) {
-        MarkError(pos - 1, "Missing closing parenthesis");
-        return Type::Null;
-    }
+    RG_ASSERT(!parentheses);
 
     // Discharge remaining operators
     for (Size i = operators.len - 1; i >= 0; i--) {
