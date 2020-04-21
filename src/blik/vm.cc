@@ -212,12 +212,20 @@ int Run(const Program &program)
         CASE(DivideInt): {
             int64_t i1 = stack[stack.len - 2].i;
             int64_t i2 = stack[stack.len - 1].i;
+            if (RG_UNLIKELY(i2 == 0)) {
+                LogError("Attempted to divide by 0");
+                return 1;
+            }
             stack[--stack.len - 1].i = i1 / i2;
             DISPATCH(++pc);
         }
         CASE(ModuloInt): {
             int64_t i1 = stack[stack.len - 2].i;
             int64_t i2 = stack[stack.len - 1].i;
+            if (RG_UNLIKELY(i2 == 0)) {
+                LogError("Attempted to divide by 0");
+                return 1;
+            }
             stack[--stack.len - 1].i = i1 % i2;
             DISPATCH(++pc);
         }
