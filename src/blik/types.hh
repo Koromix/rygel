@@ -49,6 +49,7 @@ struct FunctionInfo {
     LocalArray<Parameter, 16> params;
     bool variadic;
     Type ret;
+    Size ret_pop;
 
     // Singly-linked list
     FunctionInfo *next_overload;

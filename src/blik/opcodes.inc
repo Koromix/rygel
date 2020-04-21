@@ -6,7 +6,6 @@
     #error Please define OPCODE() before including opcodes.inc
 #endif
 
-OPCODE(PushNull)
 OPCODE(PushBool)
 OPCODE(PushInt)
 OPCODE(PushFloat)
@@ -77,6 +76,7 @@ OPCODE(SkipIfFalse)
 
 OPCODE(Call)
 OPCODE(Return)
+OPCODE(ReturnNull)
 
 OPCODE(Print)
 OPCODE(IntToFloat)

@@ -51,6 +51,7 @@ static void DumpInstruction(Size pc, const Instruction &inst)
 
         case Opcode::Call: { LogDebug("(0x%1) Call 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.i).Pad0(-5)); } break;
         case Opcode::Return: { LogDebug("(0x%1) Return %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::ReturnNull: { LogDebug("(0x%1) ReturnNull %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
         default: { LogDebug("(0x%1) %2", FmtHex(pc).Pad0(-5), OpcodeNames[(int)inst.code]); } break;
     }
@@ -92,10 +93,6 @@ int Run(const Program &program)
 #endif
 
     LOOP {
-        CASE(PushNull): {
-            stack.Append(Value());
-            DISPATCH(++pc);
-        }
         CASE(PushBool): {
             stack.Append({.b = inst->u.b});
             DISPATCH(++pc);
@@ -425,6 +422,12 @@ int Run(const Program &program)
             stack[stack.len - 1] = ret;
             DISPATCH(pc);
         }
+        CASE(ReturnNull): {
+            pc = stack.ptr[stack.len - 2].i;
+            bp = stack.ptr[stack.len - 1].i;
+            stack.len -= 2 + inst->u.i;
+            DISPATCH(pc);
+        }
 
         // This will be removed once we get functions, but in the mean time
         // I need to output things somehow!
@@ -432,7 +435,8 @@ int Run(const Program &program)
             int64_t remain = inst->u.i;
 
             Size count = (Size)(remain & 0x1F);
-            remain >>= 5;
+            Size pop = (Size)((remain >> 5) & 0x1F);
+            remain >>= 10;
 
             for (Size i = count; i > 0; i--) {
                 Type type = (Type)(remain & 0x7);
@@ -447,7 +451,7 @@ int Run(const Program &program)
                 }
             }
 
-            stack.len -= count - 1;
+            stack.len -= pop;
 
             DISPATCH(++pc);
         }
@@ -466,7 +470,14 @@ int Run(const Program &program)
         CASE(Exit): {
             int code = (int)stack.ptr[--stack.len].i;
 
-            RG_ASSERT(stack.len == program.globals.len);
+#ifndef NDEBUG
+            Size good_stack_len = 0;
+            for (VariableInfo &var: program.globals) {
+                good_stack_len += (var.type != Type::Null);
+            }
+            RG_ASSERT(stack.len == good_stack_len);
+#endif
+
             return (int)code;
         }
     }

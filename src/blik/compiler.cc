@@ -180,6 +180,8 @@ void Compiler::ParsePrototypes(Span<const Size> offsets)
                     return;
                 }
                 proto->params.Append(param);
+
+                proto->ret_pop += (param.type != Type::Null);
             } while (MatchToken(TokenKind::Comma));
 
             MatchToken(TokenKind::NewLine);
@@ -192,6 +194,7 @@ void Compiler::ParsePrototypes(Span<const Size> offsets)
         } else {
             proto->ret = Type::Null;
         }
+        proto->ret_pop -= (proto->ret == Type::Null);
 
         // Build full name (with parameter and return types)
         {
@@ -249,12 +252,14 @@ bool Compiler::ParseBlock(bool keep_variables)
 {
     depth++;
 
-    RG_DEFER_C(variables_len = variables.len) {
+    RG_DEFER_C(prev_offset = var_offset,
+               variables_len = variables.len) {
         depth--;
 
         if (!keep_variables) {
-            EmitPop(variables.len - variables_len);
+            EmitPop(var_offset - prev_offset);
             DestroyVariables(variables.len - variables_len);
+            var_offset = prev_offset;
         }
     };
 
@@ -313,9 +318,9 @@ void Compiler::ParseFunction()
         // Variables inside the function are destroyed at the end of the block.
         // This destroys the parameters.
         DestroyVariables(current_func->params.len);
+        var_offset = prev_offset;
 
         current_func = nullptr;
-        var_offset = prev_offset;
     };
 
     if (RG_UNLIKELY(current_func)) {
@@ -389,8 +394,7 @@ void Compiler::ParseFunction()
 
     if (!has_return) {
         if (func->ret == Type::Null) {
-            program.ir.Append({Opcode::PushNull});
-            program.ir.Append({Opcode::Return, {.i = func->params.len}});
+            program.ir.Append({Opcode::ReturnNull, {.i = func->params.len}});
         } else {
             MarkError("Function '%1' does not have a return statement", func->name);
             return;
@@ -412,9 +416,7 @@ void Compiler::ParseReturn()
     Type type;
     if (MatchToken(TokenKind::NewLine)) {
         offset--;
-
         type = Type::Null;
-        program.ir.Append({Opcode::PushNull});
     } else {
         type = ParseExpression(true);
     }
@@ -426,19 +428,19 @@ void Compiler::ParseReturn()
     }
 
     if (var_offset > 0) {
-        Size pop_len = var_offset - 1;
+        Size pop = var_offset - 1;
 
         switch (type) {
-            case Type::Null: { pop_len++; } break;
+            case Type::Null: { pop++; } break;
             case Type::Bool: { program.ir.Append({Opcode::StoreLocalBool, {.i = 0}}); } break;
             case Type::Int: { program.ir.Append({Opcode::StoreLocalInt, {.i = 0}}); } break;
             case Type::Float: { program.ir.Append({Opcode::StoreLocalFloat, {.i = 0}}); } break;
             case Type::String: { program.ir.Append({Opcode::StoreLocalString, {.i = 0}}); } break;
         }
 
-        EmitPop(pop_len);
+        EmitPop(pop);
     }
-    program.ir.Append({Opcode::Return, {.i = current_func->params.len}});
+    program.ir.Append({type == Type::Null ? Opcode::ReturnNull : Opcode::Return, {.i = current_func->ret_pop}});
 
     ConsumeToken(TokenKind::NewLine);
 }
@@ -481,7 +483,7 @@ void Compiler::ParseLet()
             }
         } else {
             switch (var->type) {
-                case Type::Null: { program.ir.Append({Opcode::PushNull}); } break;
+                case Type::Null: {} break;
                 case Type::Bool: { program.ir.Append({Opcode::PushBool, {.b = false}}); } break;
                 case Type::Int: { program.ir.Append({Opcode::PushInt, {.i = 0}}); } break;
                 case Type::Float: { program.ir.Append({Opcode::PushFloat, {.d = 0.0}}); } break;
@@ -491,8 +493,11 @@ void Compiler::ParseLet()
     }
 
     var->global = !current_func;
-    var->offset = var_offset++;
+    var->offset = var_offset;
     var->defined_at = program.ir.len;
+
+    // Null values don't actually exist
+    var_offset += (var->type != Type::Null);
 
     ConsumeToken(TokenKind::NewLine);
 }
@@ -680,7 +685,7 @@ void Compiler::ParseFor()
     // Destroy iterator and range values
     EmitPop(3);
     DestroyVariables(1);
-    var_offset -= 2;
+    var_offset -= 3;
 
     ConsumeToken(TokenKind::NewLine);
 }
@@ -774,10 +779,7 @@ Type Compiler::ParseExpression(bool keep_result)
             expect_op = true;
 
             switch (tok.kind) {
-                case TokenKind::Null: {
-                    program.ir.Append({Opcode::PushNull});
-                    stack.Append({Type::Null});
-                } break;
+                case TokenKind::Null: { stack.Append({Type::Null}); } break;
                 case TokenKind::Bool: {
                     program.ir.Append({Opcode::PushBool, {.b = tok.u.b}});
                     stack.Append({Type::Bool});
@@ -832,7 +834,7 @@ Type Compiler::ParseExpression(bool keep_result)
                             }
 
                             switch (var->type) {
-                                case Type::Null: { program.ir.Append({Opcode::PushNull}); } break;
+                                case Type::Null: {} break;
                                 case Type::Bool: { program.ir.Append({Opcode::LoadGlobalBool, {.i = var->offset}}); } break;
                                 case Type::Int: { program.ir.Append({Opcode::LoadGlobalInt, {.i = var->offset}}); } break;
                                 case Type::Float: { program.ir.Append({Opcode::LoadGlobalFloat, {.i = var->offset}});} break;
@@ -840,7 +842,7 @@ Type Compiler::ParseExpression(bool keep_result)
                             }
                         } else {
                             switch (var->type) {
-                                case Type::Null: { program.ir.Append({Opcode::PushNull}); } break;
+                                case Type::Null: {} break;
                                 case Type::Bool: { program.ir.Append({Opcode::LoadLocalBool, {.i = var->offset}}); } break;
                                 case Type::Int: { program.ir.Append({Opcode::LoadLocalInt, {.i = var->offset}}); } break;
                                 case Type::Float: { program.ir.Append({Opcode::LoadLocalFloat, {.i = var->offset}});} break;
@@ -946,7 +948,7 @@ Type Compiler::ParseExpression(bool keep_result)
     RG_ASSERT(stack.len == start_values_len + 1);
     if (keep_result) {
         return stack[stack.len - 1].type;
-    } else {
+    } else if (stack[stack.len - 1].type != Type::Null) {
         if (program.ir.len >= 2 && program.ir[program.ir.len - 2].code == Opcode::Duplicate) {
             std::swap(program.ir[program.ir.len - 2], program.ir[program.ir.len - 1]);
             program.ir.len--;
@@ -954,6 +956,8 @@ Type Compiler::ParseExpression(bool keep_result)
             EmitPop(1);
         }
 
+        return {};
+    } else {
         return {};
     }
 
@@ -986,22 +990,45 @@ void Compiler::ProduceOperator(const PendingOperator &op)
                 return;
             }
 
-            program.ir.Append({Opcode::Duplicate});
             if (slot1.var->global) {
                 switch (slot1.type) {
-                    case Type::Null: { EmitPop(1); } break;
-                    case Type::Bool: { program.ir.Append({Opcode::StoreGlobalBool, {.i = slot1.var->offset}}); } break;
-                    case Type::Int: { program.ir.Append({Opcode::StoreGlobalInt, {.i = slot1.var->offset}}); } break;
-                    case Type::Float: { program.ir.Append({Opcode::StoreGlobalFloat, {.i = slot1.var->offset}}); } break;
-                    case Type::String: { program.ir.Append({Opcode::StoreGlobalString, {.i = slot1.var->offset}}); } break;
+                    case Type::Null: {} break;
+                    case Type::Bool: {
+                        program.ir.Append({Opcode::Duplicate});
+                        program.ir.Append({Opcode::StoreGlobalBool, {.i = slot1.var->offset}});
+                    } break;
+                    case Type::Int: {
+                        program.ir.Append({Opcode::Duplicate});
+                        program.ir.Append({Opcode::StoreGlobalInt, {.i = slot1.var->offset}});
+                    } break;
+                    case Type::Float: {
+                        program.ir.Append({Opcode::Duplicate});
+                        program.ir.Append({Opcode::StoreGlobalFloat, {.i = slot1.var->offset}});
+                    } break;
+                    case Type::String: {
+                        program.ir.Append({Opcode::Duplicate});
+                        program.ir.Append({Opcode::StoreGlobalString, {.i = slot1.var->offset}});
+                    } break;
                 }
             } else {
                 switch (slot1.type) {
-                    case Type::Null: { EmitPop(1); } break;
-                    case Type::Bool: { program.ir.Append({Opcode::StoreLocalBool, {.i = slot1.var->offset}}); } break;
-                    case Type::Int: { program.ir.Append({Opcode::StoreLocalInt, {.i = slot1.var->offset}}); } break;
-                    case Type::Float: { program.ir.Append({Opcode::StoreLocalFloat, {.i = slot1.var->offset}}); } break;
-                    case Type::String: { program.ir.Append({Opcode::StoreLocalString, {.i = slot1.var->offset}}); } break;
+                    case Type::Null: {} break;
+                    case Type::Bool: {
+                        program.ir.Append({Opcode::Duplicate});
+                        program.ir.Append({Opcode::StoreLocalBool, {.i = slot1.var->offset}});
+                    } break;
+                    case Type::Int: {
+                        program.ir.Append({Opcode::Duplicate});
+                        program.ir.Append({Opcode::StoreLocalInt, {.i = slot1.var->offset}});
+                    } break;
+                    case Type::Float: {
+                        program.ir.Append({Opcode::Duplicate});
+                        program.ir.Append({Opcode::StoreLocalFloat, {.i = slot1.var->offset}});
+                    } break;
+                    case Type::String: {
+                        program.ir.Append({Opcode::Duplicate});
+                        program.ir.Append({Opcode::StoreLocalString, {.i = slot1.var->offset}});
+                    } break;
                 }
             }
 
@@ -1205,21 +1232,26 @@ bool Compiler::ParseCall(const char *name)
 void Compiler::EmitIntrinsic(const char *name, Span<const Type> types)
 {
     if (TestStr(name, "print") || TestStr(name, "printLn")) {
-        RG_STATIC_ASSERT(RG_LEN(FunctionInfo::params.data) <= 30);
+        RG_STATIC_ASSERT(RG_LEN(FunctionInfo::params.data) <= 18);
 
         bool println = TestStr(name, "printLn");
 
-        int64_t payload = 0;
+        uint64_t payload = 0;
+        Size pop = 0;
+
         if (println) {
             program.ir.Append({Opcode::PushString, {.str = "\n"}});
             payload = (int)Type::String;
         }
         for (Size i = types.len - 1; i >= 0; i--) {
             payload = (payload << 3) | (int)types[i];
+            pop += (types[i] != Type::Null);
         }
+
+        payload = (payload << 5) | (pop + println);
         payload = (payload << 5) | (types.len + println);
 
-        program.ir.Append({Opcode::Print, {.i = payload}});
+        program.ir.Append({Opcode::Print, {.i = (int64_t)payload}});
         stack.Append({Type::Null});
     } else if (TestStr(name, "intToFloat")) {
         program.ir.Append({Opcode::IntToFloat});
@@ -1336,8 +1368,6 @@ void Compiler::DestroyVariables(Size count)
         variables_map.Remove(variables[i].name);
     }
     variables.RemoveLast(count);
-
-    var_offset -= count;
 }
 
 bool Compile(const TokenSet &set, const char *filename, Program *out_program)
