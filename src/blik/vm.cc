@@ -473,11 +473,13 @@ int Run(const Program &program)
             int code = (int)stack.ptr[--stack.len].i;
 
 #ifndef NDEBUG
-            Size good_stack_len = 0;
-            for (VariableInfo &var: program.globals) {
-                good_stack_len += (var.type != Type::Null);
+            if (inst->u.b) {
+                Size good_stack_len = 0;
+                for (VariableInfo &var: program.globals) {
+                    good_stack_len += (var.type != Type::Null);
+                }
+                RG_ASSERT(stack.len == good_stack_len);
             }
-            RG_ASSERT(stack.len == good_stack_len);
 #endif
 
             return (int)code;

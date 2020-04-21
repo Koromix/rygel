@@ -103,6 +103,7 @@ Compiler::Compiler()
     functions.Append({.name = "printLn", .signature = "printLn(...)", .variadic = true, .ret = Type::Null});
     functions.Append({.name = "intToFloat", .signature = "intToFloat(Int): Float", .params = {{"i", Type::Int}}, .ret = Type::Float});
     functions.Append({.name = "floatToInt", .signature = "floatToInt(Float): Int", .params = {{"f", Type::Float}}, .ret = Type::Int});
+    functions.Append({.name = "exit", .signature = "exit(Int)", .params = {{"code", Type::Int}}, .ret = Type::Null});
 
     for (FunctionInfo &intr: functions) {
         intr.intrinsic = true;
@@ -1259,6 +1260,9 @@ void Compiler::EmitIntrinsic(const char *name, Span<const Type> types)
     } else if (TestStr(name, "floatToInt")) {
         program.ir.Append({Opcode::FloatToInt});
         stack.Append({Type::Int});
+    } else if (TestStr(name, "exit")) {
+        program.ir.Append({Opcode::Exit});
+        stack.Append({Type::Null});
     }
 }
 
@@ -1307,7 +1311,7 @@ void Compiler::Finish(Program *out_program)
     RG_ASSERT(!out_program->ir.len);
 
     program.ir.Append({Opcode::PushInt, {.i = 0}});
-    program.ir.Append({Opcode::Exit});
+    program.ir.Append({Opcode::Exit, {.b = true}});
 
     for (const VariableInfo &var: variables) {
         VariableInfo *global = program.globals.Append(var);

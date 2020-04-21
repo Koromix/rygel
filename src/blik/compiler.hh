@@ -23,7 +23,7 @@ static const char *const OpcodeNames[] = {
 struct Instruction {
     Opcode code;
     union {
-        bool b; // PushBool
+        bool b; // PushBool, Exit
         int64_t i; // PushInteger, Pop,
                    // StoreBool, StoreInt, StoreFloat, StoreString,
                    // LoadBool, LoadInt, LoadFloat, LoadString,
