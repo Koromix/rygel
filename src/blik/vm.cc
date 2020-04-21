@@ -53,6 +53,8 @@ static void DumpInstruction(Size pc, const Instruction &inst)
         case Opcode::Return: { LogDebug("(0x%1) Return %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case Opcode::ReturnNull: { LogDebug("(0x%1) ReturnNull %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
+        case Opcode::Print: { LogDebug("(0x%1) Print %2", FmtHex(pc).Pad0(-5), inst.u.i & 0x1F); } break;
+
         default: { LogDebug("(0x%1) %2", FmtHex(pc).Pad0(-5), OpcodeNames[(int)inst.code]); } break;
     }
 #endif
