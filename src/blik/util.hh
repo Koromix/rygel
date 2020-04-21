@@ -12,6 +12,10 @@ template <typename... Args>
 void ReportError(Span<const char> code, const char *filename, int line, Size offset,
                  const char *fmt, Args... args)
 {
+    // We point the user to error location with '^^^', if the token is a single
+    // character (e.g. operator) we want the second caret to be centered on it.
+    offset -= (offset > 0 && offset + 1 < code.len && IsAsciiWhite(code[offset + 1]));
+
     // Extract code line
     Span<const char> extract = MakeSpan(code.ptr + offset, 0);
     while (extract.ptr > code.ptr && extract.ptr[-1] != '\n') {
@@ -30,13 +34,13 @@ void ReportError(Span<const char> code, const char *filename, int line, Size off
         Print(stderr, "\x1B[0m");
 
         PrintLn(stderr, "    %1", extract);
-        PrintLn(stderr, "  %1\x1B[38;5;202m^^^\x1B[0m", FmtArg(' ').Repeat(column));
+        PrintLn(stderr, "   %1\x1B[38;5;202m^^^\x1B[0m", FmtArg(' ').Repeat(column));
     } else {
         Print(stderr, "%1(%2:%3): ", filename, line, column);
         PrintLn(stderr, fmt, args...);
 
         PrintLn(stderr, "    %1", extract);
-        PrintLn(stderr, "  %1^^^", FmtArg(' ').Repeat(column));
+        PrintLn(stderr, "   %1^^^", FmtArg(' ').Repeat(column));
     }
 }
 

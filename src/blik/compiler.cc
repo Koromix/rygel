@@ -20,6 +20,7 @@ struct PendingOperator {
     int prec;
     bool unary;
 
+    Size pos; // For error messages
     Size branch_idx; // Used for short-circuit operators
 };
 
@@ -93,7 +94,7 @@ private:
     void DestroyVariables(Size count);
 
     template <typename... Args>
-    void MarkError(const char *fmt, Args... args)
+    void MarkError(Size pos, const char *fmt, Args... args)
     {
         if (valid) {
             Size offset = (pos < tokens.len) ? tokens[pos].offset : code.len;
@@ -138,7 +139,7 @@ bool Compiler::Parse(const TokenSet &set, const char *filename)
     // Do the actual parsing!
     ParseBlock(true);
     if (RG_UNLIKELY(pos < tokens.len)) {
-        MarkError("Unexpected token '%1' without matching block", TokenKindNames[(int)tokens[pos].kind]);
+        MarkError(pos, "Unexpected token '%1' without matching block", TokenKindNames[(int)tokens[pos].kind]);
         return false;
     }
     RG_ASSERT(depth == -1);
@@ -175,7 +176,7 @@ void Compiler::ParsePrototypes(Span<const Size> funcs)
                 param.type = ConsumeType();
 
                 if (RG_UNLIKELY(!proto->params.Available())) {
-                    MarkError("Functions cannot have more than %1 parameters", RG_LEN(proto->params.data));
+                    MarkError(pos, "Functions cannot have more than %1 parameters", RG_LEN(proto->params.data));
                     return;
                 }
                 proto->params.Append(param);
@@ -216,16 +217,16 @@ void Compiler::ParsePrototypes(Span<const Size> funcs)
             FunctionInfo *next = overload->next_overload;
 
             if (RG_UNLIKELY(overload->intrinsic)) {
-                MarkError("Cannot replace or overload intrinsic function '%1'", proto->name);
+                MarkError(funcs[i] + 1, "Cannot replace or overload intrinsic function '%1'", proto->name);
                 return;
             }
 
             for (;;) {
                 if (TestOverload(*overload, *proto)) {
                     if (overload->ret == proto->ret) {
-                        MarkError("Function '%1' is already defined", proto->signature);
+                        MarkError(funcs[i] + 1, "Function '%1' is already defined", proto->signature);
                     } else {
-                        MarkError("Function '%1' only differs from previously defined '%2' by return type",
+                        MarkError(funcs[i] + 1, "Function '%1' only differs from previously defined '%2' by return type",
                                   proto->signature, overload->signature);
                     }
 
@@ -311,7 +312,7 @@ bool Compiler::ParseBlock(bool keep_variables)
 
 void Compiler::ParseFunction()
 {
-    pos++;
+    Size func_pos = ++pos;
 
     RG_DEFER_C(prev_offset = var_offset) {
         // Variables inside the function are destroyed at the end of the block.
@@ -323,11 +324,11 @@ void Compiler::ParseFunction()
     };
 
     if (RG_UNLIKELY(current_func)) {
-        MarkError("Nested functions are not supported");
+        MarkError(func_pos, "Nested functions are not supported");
         return;
     }
     if (RG_UNLIKELY(depth)) {
-        MarkError("Functions must be defined in top-level scope");
+        MarkError(func_pos, "Functions must be defined in top-level scope");
         return;
     }
 
@@ -357,9 +358,9 @@ void Compiler::ParseFunction()
                const VariableInfo *prev_var = *ret.first;
 
                 if (prev_var->global) {
-                    MarkError("Parameter '%1' is not allowed to hide global variable", var->name);
+                    MarkError(pos - 1, "Parameter '%1' is not allowed to hide global variable", var->name);
                 } else {
-                    MarkError("Parameter '%1' already exists", var->name);
+                    MarkError(pos - 1, "Parameter '%1' already exists", var->name);
                 }
 
                 return;
@@ -395,7 +396,7 @@ void Compiler::ParseFunction()
         if (func->ret == Type::Null) {
             program.ir.Append({Opcode::ReturnNull, {.i = func->params.len}});
         } else {
-            MarkError("Function '%1' does not have a return statement", func->name);
+            MarkError(func_pos, "Function '%1' does not have a return statement", func->name);
             return;
         }
     }
@@ -405,10 +406,10 @@ void Compiler::ParseFunction()
 
 void Compiler::ParseReturn()
 {
-    pos++;
+    Size return_pos = ++pos;
 
     if (RG_UNLIKELY(!current_func)) {
-        MarkError("Return statement cannot be used outside function");
+        MarkError(pos - 1, "Return statement cannot be used outside function");
         return;
     }
 
@@ -421,7 +422,7 @@ void Compiler::ParseReturn()
     }
 
     if (RG_UNLIKELY(type != current_func->ret)) {
-        MarkError("Cannot return %1 value (expected %2)",
+        MarkError(return_pos, "Cannot return %1 value (expected %2)",
                   TypeNames[(int)type], TypeNames[(int)current_func->ret]);
         return;
     }
@@ -446,7 +447,7 @@ void Compiler::ParseReturn()
 
 void Compiler::ParseLet()
 {
-    pos++;
+    Size var_pos = ++pos;
 
     VariableInfo *var = variables.AppendDefault();
 
@@ -458,11 +459,11 @@ void Compiler::ParseLet()
         const VariableInfo *prev_var = *ret.first;
 
         if (current_func && prev_var->global) {
-            MarkError("Declaration '%1' is not allowed to hide global variable", var->name);
+            MarkError(var_pos, "Declaration '%1' is not allowed to hide global variable", var->name);
         } else if (current_func && prev_var->offset < 0) {
-            MarkError("Declaration '%1' is not allowed to hide parameter", var->name);
+            MarkError(var_pos, "Declaration '%1' is not allowed to hide parameter", var->name);
         } else {
-            MarkError("Variable '%1' already exists", var->name);
+            MarkError(var_pos, "Variable '%1' already exists", var->name);
         }
     }
 
@@ -476,7 +477,7 @@ void Compiler::ParseLet()
             Type type2 = ParseExpression(true);
 
             if (RG_UNLIKELY(type2 != var->type)) {
-                MarkError("Cannot assign %1 value to %2 variable",
+                MarkError(var_pos + 3, "Cannot assign %1 value to %2 variable",
                           TypeNames[(int)type2], TypeNames[(int)var->type]);
                 return;
             }
@@ -503,10 +504,10 @@ void Compiler::ParseLet()
 
 void Compiler::ParseIf()
 {
-    pos++;
+    Size if_pos = ++pos;
 
     if (RG_UNLIKELY(ParseExpression(true) != Type::Bool)) {
-        MarkError("Cannot use non-Bool expression as condition");
+        MarkError(if_pos, "Cannot use non-Bool expression as condition");
         return;
     }
 
@@ -530,8 +531,10 @@ void Compiler::ParseIf()
                 program.ir[branch_idx].u.i = program.ir.len - branch_idx;
 
                 if (MatchToken(TokenKind::If)) {
+                    Size elseif_pos = pos;
+
                     if (RG_UNLIKELY(ParseExpression(true) != Type::Bool)) {
-                        MarkError("Cannot use non-Bool expression as condition");
+                        MarkError(elseif_pos, "Cannot use non-Bool expression as condition");
                         return;
                     }
                     ConsumeToken(TokenKind::NewLine);
@@ -566,15 +569,14 @@ void Compiler::ParseIf()
 
 void Compiler::ParseWhile()
 {
-    pos++;
-
+    Size while_pos = ++pos;
     Size start_idx = program.ir.len;
 
     // Parse expression
     Size start_fix_forward = forward_calls.len;
     Size end_fix_forward;
     if (RG_UNLIKELY(ParseExpression(true) != Type::Bool)) {
-        MarkError("Cannot use non-Bool expression as condition");
+        MarkError(while_pos, "Cannot use non-Bool expression as condition");
         return;
     }
     end_fix_forward = forward_calls.len;
@@ -612,7 +614,7 @@ void Compiler::ParseWhile()
 
 void Compiler::ParseFor()
 {
-    pos++;
+    Size for_pos = ++pos;
 
     VariableInfo *it = variables.AppendDefault();
 
@@ -625,9 +627,9 @@ void Compiler::ParseFor()
         const VariableInfo *prev_var = *ret.first;
 
         if (current_func && prev_var->global) {
-            MarkError("Iterator '%1' is not allowed to hide global variable", it->name);
+            MarkError(for_pos, "Iterator '%1' is not allowed to hide global variable", it->name);
         } else {
-            MarkError("Variable '%1' already exists", it->name);
+            MarkError(for_pos, "Variable '%1' already exists", it->name);
         }
 
         return;
@@ -647,11 +649,11 @@ void Compiler::ParseFor()
     type2 = ParseExpression(true);
 
     if (RG_UNLIKELY(type1 != Type::Int)) {
-        MarkError("Start value must be Int, not %1", TypeNames[(int)type1]);
+        MarkError(for_pos + 3, "Start value must be Int, not %1", TypeNames[(int)type1]);
         return;
     }
     if (RG_UNLIKELY(type2 != Type::Int)) {
-        MarkError("End value must be Int, not %1", TypeNames[(int)type2]);
+        MarkError(for_pos + 3, "End value must be Int, not %1", TypeNames[(int)type2]);
         return;
     }
 
@@ -820,14 +822,14 @@ Type Compiler::ParseExpression(bool keep_result)
                         const VariableInfo *var = variables_map.FindValue(tok.u.str, nullptr);
 
                         if (RG_UNLIKELY(!var)) {
-                            MarkError("Variable '%1' does not exist", tok.u.str);
+                            MarkError(pos - 1, "Variable '%1' does not exist", tok.u.str);
                             return Type::Null;
                         }
 
                         if (var->global) {
                             if (RG_UNLIKELY(current_func &&
                                             current_func->earliest_forward_call < var->defined_at)) {
-                                MarkError("Function '%1' was called before variable '%2' was defined",
+                                MarkError(pos, "Function '%1' was called before variable '%2' was defined",
                                           current_func->name, var->name);
                                 return Type::Null;
                             }
@@ -860,14 +862,15 @@ Type Compiler::ParseExpression(bool keep_result)
             op.kind = tok.kind;
             op.prec = GetOperatorPrecedence(tok.kind);
             op.unary = (tok.kind == TokenKind::Not || tok.kind == TokenKind::LogicNot);
+            op.pos = pos - 1;
 
             if (RG_UNLIKELY(op.prec < 0)) {
                 if (pos == prev_offset + 1) {
                     if (pos > tokens.len) {
-                        MarkError("Unexpected end of file, expected value or expression");
+                        MarkError(pos, "Unexpected end of file, expected value or expression");
                     } else {
-                        MarkError("Unexpected token '%1', expected value or expression",
-                                  TokenKindNames[(int)tokens[--pos].kind]);
+                        MarkError(pos - 1, "Unexpected token '%1', expected value or expression",
+                                  TokenKindNames[(int)tokens[pos - 1].kind]);
                     }
 
                     return Type::Null;
@@ -920,7 +923,7 @@ Type Compiler::ParseExpression(bool keep_result)
             }
 
             if (RG_UNLIKELY(!operators.Available())) {
-                MarkError("Too many operators on the stack");
+                MarkError(pos - 1, "Too many operators on the stack");
                 return Type::Null;
             }
             operators.Append(op);
@@ -936,11 +939,11 @@ Type Compiler::ParseExpression(bool keep_result)
     if (RG_UNLIKELY(!valid))
         return Type::Null;
     if (RG_UNLIKELY(!expect_op)) {
-        MarkError("Unexpected end of expression, expected value or '('");
+        MarkError(pos - 1, "Unexpected end of expression, expected value or '('");
         return Type::Null;
     }
     if (RG_UNLIKELY(parentheses)) {
-        MarkError("Missing closing parenthesis");
+        MarkError(pos - 1, "Missing closing parenthesis");
         return Type::Null;
     }
 
@@ -961,7 +964,7 @@ Type Compiler::ParseExpression(bool keep_result)
     }
 
 unexpected_token:
-    MarkError("Unexpected token '%1', expected %2", TokenKindNames[(int)tokens[--pos].kind],
+    MarkError(pos - 1, "Unexpected token '%1', expected %2", TokenKindNames[(int)tokens[pos - 1].kind],
               expect_op ? "operator or ')'" : "value or '('");
     return Type::Null;
 }
@@ -976,15 +979,15 @@ void Compiler::ProduceOperator(const PendingOperator &op)
             const StackSlot &slot2 = stack[stack.len - 1];
 
             if (RG_UNLIKELY(!slot1.var)) {
-                MarkError("Cannot assign expression to rvalue");
+                MarkError(op.pos, "Cannot assign expression to rvalue");
                 return;
             }
             if (RG_UNLIKELY(slot1.var->readonly)) {
-                MarkError("Cannot assign expression to const variable '%1'", slot1.var->name);
+                MarkError(op.pos, "Cannot assign expression to const variable '%1'", slot1.var->name);
                 return;
             }
             if (RG_UNLIKELY(slot1.type != slot2.type)) {
-                MarkError("Cannot assign %1 value to %2 variable",
+                MarkError(op.pos, "Cannot assign %1 value to %2 variable",
                           TypeNames[(int)slot2.type], TypeNames[(int)slot1.type]);
                 return;
             }
@@ -1133,13 +1136,13 @@ void Compiler::ProduceOperator(const PendingOperator &op)
 
     if (RG_UNLIKELY(!success)) {
         if (op.unary) {
-            MarkError("Cannot use '%1' operator on %2 value",
+            MarkError(op.pos, "Cannot use '%1' operator on %2 value",
                       TokenKindNames[(int)op.kind], TypeNames[(int)stack[stack.len - 1].type]);
         } else if (stack[stack.len - 2].type == stack[stack.len - 1].type) {
-            MarkError("Cannot use '%1' operator on %2 values",
+            MarkError(op.pos, "Cannot use '%1' operator on %2 values",
                       TokenKindNames[(int)op.kind], TypeNames[(int)stack[stack.len - 2].type]);
         } else {
-            MarkError("Cannot use '%1' operator on %2 and %3 values",
+            MarkError(op.pos, "Cannot use '%1' operator on %2 and %3 values",
                       TokenKindNames[(int)op.kind], TypeNames[(int)stack[stack.len - 2].type],
                       TypeNames[(int)stack[stack.len - 1].type]);
         }
@@ -1180,9 +1183,11 @@ bool Compiler::ParseCall(const char *name)
 {
     LocalArray<Type, RG_LEN(FunctionInfo::params.data)> types;
 
+    Size call_pos = pos - 2;
+
     FunctionInfo *func0 = functions_map.FindValue(name, nullptr);
     if (RG_UNLIKELY(!func0)) {
-        MarkError("Function '%1' does not exist", name);
+        MarkError(call_pos, "Function '%1' does not exist", name);
         return false;
     }
 
@@ -1190,7 +1195,7 @@ bool Compiler::ParseCall(const char *name)
         types.Append(ParseExpression(true));
         while (MatchToken(TokenKind::Comma)) {
             if (RG_UNLIKELY(!types.Available())) {
-                MarkError("Functions cannot take more than %1 arguments", RG_LEN(types.data));
+                MarkError(pos, "Functions cannot take more than %1 arguments", RG_LEN(types.data));
                 return false;
             }
             types.Append(ParseExpression(true));
@@ -1209,7 +1214,7 @@ bool Compiler::ParseCall(const char *name)
                 buf.len += Fmt(buf.TakeAvailable(), "%1%2", i ? ", " : "", TypeNames[(int)types[i]]).len;
             }
 
-            MarkError("Cannot call '%1' with (%2) arguments", func0->name, buf);
+            MarkError(call_pos, "Cannot call '%1' with (%2) arguments", func0->name, buf);
             return false;
         }
     }
@@ -1322,11 +1327,11 @@ void Compiler::Finish(Program *out_program)
 bool Compiler::ConsumeToken(TokenKind kind)
 {
     if (RG_UNLIKELY(pos >= tokens.len)) {
-        MarkError("Unexpected end of file, expected '%1'", TokenKindNames[(int)kind]);
+        MarkError(pos, "Unexpected end of file, expected '%1'", TokenKindNames[(int)kind]);
         return false;
     }
     if (RG_UNLIKELY(tokens[pos].kind != kind)) {
-        MarkError("Unexpected token '%1', expected '%2'",
+        MarkError(pos, "Unexpected token '%1', expected '%2'",
                   TokenKindNames[(int)tokens[pos].kind], TokenKindNames[(int)kind]);
         return false;
     }
@@ -1352,7 +1357,7 @@ Type Compiler::ConsumeType()
     if (RG_LIKELY(OptionToEnum(TypeNames, type_name, &type))) {
         return type;
     } else {
-        MarkError("Type '%1' is not valid", type_name);
+        MarkError(pos - 1, "Type '%1' is not valid", type_name);
         return Type::Null;
     }
 }
