@@ -146,7 +146,7 @@ public:
 
         out_node->cache_len = buf.len;
         if (LogUsesTerminalOutput()) {
-            Fmt(&buf, " -fdiagnostics-color=always");
+            Fmt(&buf, " -fcolor-diagnostics -fansi-escape-codes");
         }
         out_node->cmd_line = buf.TrimAndLeak(1);
 
@@ -203,7 +203,7 @@ public:
 
         out_node->cache_len = buf.len;
         if (LogUsesTerminalOutput()) {
-            Fmt(&buf, " -fdiagnostics-color=always");
+            Fmt(&buf, " -fcolor-diagnostics -fansi-escape-codes");
         }
         out_node->cmd_line = buf.TrimAndLeak(1);
     }
