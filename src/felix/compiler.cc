@@ -145,7 +145,7 @@ public:
         }
 
         out_node->cache_len = buf.len;
-        if (LogUsesTerminalOutput()) {
+        if (EnableAnsiOutput()) {
             Fmt(&buf, " -fcolor-diagnostics -fansi-escape-codes");
         }
         out_node->cmd_line = buf.TrimAndLeak(1);
@@ -202,7 +202,7 @@ public:
         }
 
         out_node->cache_len = buf.len;
-        if (LogUsesTerminalOutput()) {
+        if (EnableAnsiOutput()) {
             Fmt(&buf, " -fcolor-diagnostics -fansi-escape-codes");
         }
         out_node->cmd_line = buf.TrimAndLeak(1);
@@ -295,7 +295,7 @@ public:
         }
 
         out_node->cache_len = buf.len;
-        if (LogUsesTerminalOutput()) {
+        if (EnableAnsiOutput()) {
             Fmt(&buf, " -fdiagnostics-color=always");
         }
         out_node->cmd_line = buf.TrimAndLeak(1);
@@ -355,7 +355,7 @@ public:
         }
 
         out_node->cache_len = buf.len;
-        if (LogUsesTerminalOutput()) {
+        if (EnableAnsiOutput()) {
             Fmt(&buf, " -fdiagnostics-color=always");
         }
         out_node->cmd_line = buf.TrimAndLeak(1);

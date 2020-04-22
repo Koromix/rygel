@@ -1047,7 +1047,7 @@ bool GetDebugFlag(const char *name)
 #endif
 }
 
-bool LogUsesTerminalOutput()
+bool EnableAnsiOutput()
 {
     static bool init, output_is_terminal;
 
@@ -1151,7 +1151,7 @@ void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg)
     static std::mutex mutex;
     std::lock_guard<std::mutex> lock(mutex);
 
-    if (LogUsesTerminalOutput()) {
+    if (EnableAnsiOutput()) {
         switch (level)  {
             case LogLevel::Error: { PrintLn(stderr, "\x1B[31m%1%2\x1B[0m", ctx, msg); } break;
             case LogLevel::Info: { PrintLn(stderr, "\x1B[96m%1%2\x1B[0m", ctx, msg); } break;

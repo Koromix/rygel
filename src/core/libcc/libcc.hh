@@ -2960,7 +2960,7 @@ typedef void LogFilterFunc(LogLevel level, const char *ctx, const char *msg,
                            FunctionRef<LogFunc> func);
 
 bool GetDebugFlag(const char *name);
-bool LogUsesTerminalOutput();
+bool EnableAnsiOutput();
 
 void LogFmt(LogLevel level, const char *fmt, Span<const FmtArg> args);
 
