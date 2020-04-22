@@ -4,6 +4,7 @@
 
 #include "../core/libcc/libcc.hh"
 #include "lexer.hh"
+#include "lexer_xid.hh"
 #include "util.hh"
 
 namespace RG {
@@ -37,6 +38,31 @@ private:
         }
     }
 };
+
+static bool TestUnicodeTable(Span<const int32_t> table, int32_t c)
+{
+    RG_ASSERT(table.len > 0);
+    RG_ASSERT(table.len % 2 == 0);
+
+    if (c >= table[0] && c <= table[table.len - 1]) {
+        Size start = 0;
+        Size end = table.len;
+
+        while (end > start + 1) {
+            Size idx = start + (end - start) / 2;
+
+            if (c >= table[idx]) {
+                start = idx;
+            } else {
+                end = idx;
+            }
+        }
+
+        return (start % 2) == 0;
+    } else {
+        return false;
+    }
+}
 
 bool Lexer::Tokenize(Span<const char> code, const char *filename)
 {
@@ -240,17 +266,29 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                                 case 'a': { str.Append('\a'); } break;
                                 case 'b': { str.Append('\b'); } break;
                                 case '\\': { str.Append('\\'); } break;
-                                case '"':  { str.Append('"'); } break;
-                                case '\'':  { str.Append('\''); } break;
-                                case '0':  { str.Append(0); } break;
+                                case '"': { str.Append('"'); } break;
+                                case '\'': { str.Append('\''); } break;
+                                case '0': { str.Append(0); } break;
 
                                 default: {
-                                    MarkError(next, "Unsupported escape sequence '\\%1'", code[next]);
+                                    if (code[next] >= 32 && (uint8_t)code[next] < 128) {
+                                        MarkError(next, "Unsupported escape sequence '\\%1'", code[next]);
+                                    } else {
+                                        MarkError(next, "Unsupported escape sequence byte '\\0x%1",
+                                                  FmtHex(code[next]).Pad0(-2));
+                                    }
+
                                     return false;
                                 } break;
                             }
                         }
                     } else {
+                        int32_t c;
+                        if (RG_UNLIKELY(DecodeUtf8(code, next, &c) < 0)) {
+                            MarkError(next, "Invalid UTF-8 sequence");
+                            return false;
+                        }
+
                         str.Append(code[next]);
                     }
 
@@ -261,61 +299,73 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                 set.tokens.Append({TokenKind::String, line, offset, {.str = str.TrimAndLeak().ptr}});
             } break;
 
-            case 'a':
-            case 'b':
-            case 'c':
-            case 'd':
-            case 'e':
-            case 'f':
-            case 'g':
-            case 'h':
-            case 'i':
-            case 'j':
-            case 'k':
-            case 'l':
-            case 'm':
-            case 'n':
-            case 'o':
-            case 'p':
-            case 'q':
-            case 'r':
-            case 's':
-            case 't':
-            case 'u':
-            case 'v':
-            case 'w':
-            case 'x':
-            case 'y':
-            case 'z':
-            case 'A':
-            case 'B':
-            case 'C':
-            case 'D':
-            case 'E':
-            case 'F':
-            case 'G':
-            case 'H':
-            case 'I':
-            case 'J':
-            case 'K':
-            case 'L':
-            case 'M':
-            case 'N':
-            case 'O':
-            case 'P':
-            case 'Q':
-            case 'R':
-            case 'S':
-            case 'T':
-            case 'U':
-            case 'V':
-            case 'W':
-            case 'X':
-            case 'Y':
-            case 'Z':
-            case '_': {
-                while (next < code.len && (IsAsciiAlphaOrDigit(code[next]) || code[next] == '_')) {
-                    next++;
+            case '+': { Token1(TokenKind::Plus); } break;
+            case '-': { Token1(TokenKind::Minus); } break;
+            case '*': { Token1(TokenKind::Multiply); } break;
+            case '/': { Token1(TokenKind::Divide); } break;
+            case '%': { Token1(TokenKind::Modulo); } break;
+            case '^': { Token1(TokenKind::Xor); } break;
+            case '~': { Token1(TokenKind::Not); } break;
+            case '.': { Token3('.', '.', TokenKind::DotDotDot) || Token2('.', TokenKind::DotDot) || Token1(TokenKind::Dot); } break;
+            case ':': { Token2('=', TokenKind::Reassign) || Token1(TokenKind::Colon); } break;
+            case '(': { Token1(TokenKind::LeftParenthesis); } break;
+            case ')': { Token1(TokenKind::RightParenthesis); } break;
+            case ',': { Token1(TokenKind::Comma); } break;
+
+            case '=': { Token1(TokenKind::Equal); } break;
+            case '!': { Token2('=', TokenKind::NotEqual) || Token1(TokenKind::LogicNot); } break;
+            case '&': { Token2('&', TokenKind::LogicAnd) || Token1(TokenKind::And); } break;
+            case '|': { Token2('|', TokenKind::LogicOr) || Token1(TokenKind::Or); } break;
+            case '>': { Token2('>', TokenKind::RightShift) || Token2('=', TokenKind::GreaterOrEqual) || Token1(TokenKind::Greater); } break;
+            case '<': { Token2('<', TokenKind::LeftShift) || Token2('=', TokenKind::LessOrEqual) || Token1(TokenKind::Less); } break;
+
+            default: {
+                if (RG_LIKELY(IsAsciiAlpha(code[offset]) || code[offset] == '_')) {
+                    // Go on!
+                } else if ((uint8_t)code[offset] >= 128) {
+                    int32_t c = -1;
+                    Size bytes = DecodeUtf8(code.ptr, offset, &c);
+
+                    if (RG_UNLIKELY(!TestUnicodeTable(UnicodeIdStartTable, c))) {
+                        if (bytes >= 0) {
+                            MarkError(offset, "Character '%1' is not allowed at the beginning of identifiers", code.Take(offset, bytes));
+                        } else {
+                            MarkError(offset, "Invalid UTF-8 sequence");
+                        }
+
+                        return false;
+                    }
+
+                    next += bytes - 1;
+                } else if (code[offset] >= 32) {
+                    MarkError(offset, "Unexpected character '%1'", code[offset]);
+                    return false;
+                } else {
+                    MarkError(offset, "Unexpected byte 0x%1", FmtHex(code[offset]).Pad0(-2));
+                    return false;
+                }
+
+                while (next < code.len) {
+                    if (IsAsciiAlphaOrDigit(code[next]) || code[next] == '_') {
+                        next++;
+                    } else if (RG_UNLIKELY((uint8_t)code[next] >= 128)) {
+                        int32_t c = -1;
+                        Size bytes = DecodeUtf8(code.ptr, next, &c);
+
+                        if (!TestUnicodeTable(UnicodeIdContinueTable, c)) {
+                            if (bytes >= 0) {
+                                MarkError(next, "Character '%1' is not allowed in identifiers", code.Take(next, bytes));
+                            } else {
+                                MarkError(offset, "Invalid UTF-8 sequence");
+                            }
+
+                            return false;
+                        }
+
+                        next += bytes;
+                    } else {
+                        break;
+                    }
                 }
 
                 Span<const char> ident = code.Take(offset, next - offset);
@@ -357,31 +407,6 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     const char *str = DuplicateString(ident, &set.str_alloc).ptr;
                     set.tokens.Append({TokenKind::Identifier, line, offset, {.str = str}});
                 }
-            } break;
-
-            case '+': { Token1(TokenKind::Plus); } break;
-            case '-': { Token1(TokenKind::Minus); } break;
-            case '*': { Token1(TokenKind::Multiply); } break;
-            case '/': { Token1(TokenKind::Divide); } break;
-            case '%': { Token1(TokenKind::Modulo); } break;
-            case '^': { Token1(TokenKind::Xor); } break;
-            case '~': { Token1(TokenKind::Not); } break;
-            case '.': { Token3('.', '.', TokenKind::DotDotDot) || Token2('.', TokenKind::DotDot) || Token1(TokenKind::Dot); } break;
-            case ':': { Token2('=', TokenKind::Reassign) || Token1(TokenKind::Colon); } break;
-            case '(': { Token1(TokenKind::LeftParenthesis); } break;
-            case ')': { Token1(TokenKind::RightParenthesis); } break;
-            case ',': { Token1(TokenKind::Comma); } break;
-
-            case '=': { Token1(TokenKind::Equal); } break;
-            case '!': { Token2('=', TokenKind::NotEqual) || Token1(TokenKind::LogicNot); } break;
-            case '&': { Token2('&', TokenKind::LogicAnd) || Token1(TokenKind::And); } break;
-            case '|': { Token2('|', TokenKind::LogicOr) || Token1(TokenKind::Or); } break;
-            case '>': { Token2('>', TokenKind::RightShift) || Token2('=', TokenKind::GreaterOrEqual) || Token1(TokenKind::Greater); } break;
-            case '<': { Token2('<', TokenKind::LeftShift) || Token2('=', TokenKind::LessOrEqual) || Token1(TokenKind::Less); } break;
-
-            default: {
-                MarkError(offset, "Unexpected character '%1'", code[offset]);
-                return false;
             } break;
         }
     }

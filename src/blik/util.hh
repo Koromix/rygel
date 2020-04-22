@@ -8,6 +8,37 @@
 
 namespace RG {
 
+static inline Size DecodeUtf8(Span<const char> str, Size offset, int32_t *out_c)
+{
+    RG_ASSERT(offset < str.len);
+
+    const uint8_t *ptr = (const uint8_t *)(str.ptr + offset);
+    Size available = str.len - offset;
+
+    if (ptr[0] < 0x80) {
+        *out_c = ptr[0];
+        return 1;
+    } else if (RG_UNLIKELY(ptr[0] - 0xC2 > 0xF4 - 0xC2)) {
+        return -1;
+    } else if (ptr[0] < 0xE0 &&
+               RG_LIKELY(available >= 2 && (ptr[1] & 0xC0) == 0x80)) {
+        *out_c = ((ptr[0] & 0x1F) << 6) | (ptr[1] & 0x3F);
+        return 2;
+    } else if (ptr[0] < 0xF0 &&
+               RG_LIKELY(available >= 3 && (ptr[1] & 0xC0) == 0x80 &&
+                                           (ptr[2] & 0xC0) == 0x80)) {
+        *out_c = ((ptr[0] & 0xF) << 12) | ((ptr[1] & 0x3F) << 6) | (ptr[2] & 0x3F);
+        return 3;
+    } else if (RG_LIKELY(available >= 4 && (ptr[1] & 0xC0) == 0x80 &&
+                                           (ptr[2] & 0xC0) == 0x80 &&
+                                           (ptr[3] & 0xC0) == 0x80)) {
+        *out_c = ((ptr[0] & 0x7) << 18) | ((ptr[1] & 0x3F) << 12) | ((ptr[2] & 0x3F) << 6) | (ptr[3] & 0x3F);
+        return 4;
+    } else {
+        return -1;
+    }
+}
+
 template <typename... Args>
 void ReportError(Span<const char> code, const char *filename, int line, Size offset,
                  const char *fmt, Args... args)
@@ -20,16 +51,18 @@ void ReportError(Span<const char> code, const char *filename, int line, Size off
                offset + 1 < code.len && IsAsciiWhite(code[offset + 1]));
 
     // Extract code line
+    int column = 1;
     Span<const char> extract = MakeSpan(code.ptr + offset, 0);
     while (extract.ptr > code.ptr && extract.ptr[-1] != '\n') {
         extract.ptr--;
         extract.len++;
+
+        // Ignore UTF-8 trailing bytes
+        column += ((extract.ptr[0] & 0xC0) != 0x80);
     }
     while (extract.end() < code.end() && !strchr("\r\n", extract.ptr[extract.len])) {
         extract.len++;
     }
-
-    int column = (int)(offset - (extract.ptr - code.ptr)) + 1;
 
     // Because we accept tabulation users, including the crazy ones who may put tabulations
     // after other characters, we can't just repeat ' ' (column - 1) times to align the

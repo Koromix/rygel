@@ -12,6 +12,16 @@ let x = 2 + 8 * 5 - (0x1444 << 5) > 2 && true
 let test = (5 = 8)
 let mut p = 8
 
+# Les noms de variables et de fonctions peuvent utiliser des caractères Unicode reconnus
+# par la norme "Unicode Identifier and Pattern Syntax" (http://www.unicode.org/reports/tr31/).
+# Les fichiers doivent être encodés en UTF-8. Attention cependant, blik ne normalise
+# pas les séquences de caractères !
+
+let изменяемый = 12
+let α = 2
+
+printLn("Test Unicode = ", изменяемый + α)
+
 # Les boucles for permettront à terme d'itérer sur différents objets, en attendant d'avoir
 # des objets on peut déjà itérer sur un intervalle d'entiers.
 
