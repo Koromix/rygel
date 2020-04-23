@@ -176,8 +176,8 @@ void Compiler::ParsePrototypes(Span<const Size> funcs)
         pos = funcs[i] + 1;
 
         FunctionInfo *proto = functions.AppendDefault();
-        proto->defined_pos = pos;
 
+        proto->defined_pos = pos;
         proto->name = ConsumeIdentifier();
 
          // Parameters
@@ -246,6 +246,11 @@ void Compiler::ParsePrototypes(Span<const Size> funcs)
                     } else {
                         MarkError(funcs[i] + 1, "Function '%1' only differs from previously defined '%2' by return type",
                                   proto->signature, overload->signature);
+                    }
+
+                    // Walk the chain again to help user...
+                    for (const FunctionInfo *it = *ret.first; it; it = it->next_overload) {
+                        HintError(it->defined_pos, "Previous definition here");
                     }
 
                     return;
@@ -369,10 +374,11 @@ void Compiler::ParseFunction()
             MatchToken(TokenKind::EndOfLine);
 
             VariableInfo *var = variables.AppendDefault();
-            var->defined_pos = pos;
 
             var->readonly = !MatchToken(TokenKind::Mut);
+            var->defined_pos = pos;
             var->name = ConsumeIdentifier();
+
             var->offset = stack_offset++;
 
             std::pair<VariableInfo **, bool> ret = variables_map.Append(var);
@@ -381,6 +387,7 @@ void Compiler::ParseFunction()
 
                 if (prev_var->global) {
                     MarkError(pos - 1, "Parameter '%1' is not allowed to hide global variable", var->name);
+                    HintError(prev_var->defined_pos, "Global variable '%1' is defined here", prev_var->name);
                 } else {
                     MarkError(pos - 1, "Parameter '%1' already exists", var->name);
                 }
@@ -444,7 +451,7 @@ void Compiler::ParseReturn()
     }
 
     if (RG_UNLIKELY(type != current_func->ret)) {
-        MarkError(return_pos, "Cannot return %1 value (expected %2)",
+        MarkError(return_pos, "Cannot return %1 value in function defined to return %2",
                   TypeNames[(int)type], TypeNames[(int)current_func->ret]);
         return;
     }
@@ -472,9 +479,9 @@ void Compiler::ParseLet()
     Size var_pos = ++pos;
 
     VariableInfo *var = variables.AppendDefault();
-    var->defined_pos = pos;
 
     var->readonly = !MatchToken(TokenKind::Mut);
+    var->defined_pos = pos;
     var->name = ConsumeIdentifier();
 
     std::pair<VariableInfo **, bool> ret = variables_map.Append(var);
@@ -483,10 +490,13 @@ void Compiler::ParseLet()
 
         if (current_func && prev_var->global) {
             MarkError(var_pos, "Declaration '%1' is not allowed to hide global variable", var->name);
+            HintError(prev_var->defined_pos, "Global variable '%1' is defined here", prev_var->name);
         } else if (current_func && prev_var->offset < 0) {
             MarkError(var_pos, "Declaration '%1' is not allowed to hide parameter", var->name);
+            HintError(prev_var->defined_pos, "Parameter '%1' is defined here", prev_var->name);
         } else {
             MarkError(var_pos, "Variable '%1' already exists", var->name);
+            HintError(prev_var->defined_pos, "Previous variable '%1' is defined here", prev_var->name);
         }
     }
 
@@ -640,10 +650,11 @@ void Compiler::ParseFor()
     Size for_pos = ++pos;
 
     VariableInfo *it = variables.AppendDefault();
-    it->defined_pos = pos;
 
+    it->defined_pos = pos;
     it->name = ConsumeIdentifier();
     it->type = Type::Int;
+
     it->offset = var_offset + 2;
 
     std::pair<VariableInfo **, bool> ret = variables_map.Append(it);
@@ -652,8 +663,10 @@ void Compiler::ParseFor()
 
         if (current_func && prev_var->global) {
             MarkError(for_pos, "Iterator '%1' is not allowed to hide global variable", it->name);
+            HintError(prev_var->defined_pos, "Global variable '%1' is defined here", prev_var->name);
         } else {
             MarkError(for_pos, "Variable '%1' already exists", it->name);
+            HintError(prev_var->defined_pos, "Previous variable '%1' is defined here", prev_var->name);
         }
 
         return;
@@ -950,7 +963,7 @@ Type Compiler::ParseExpression(bool keep_result)
             }
 
             if (RG_UNLIKELY(!operators.Available())) {
-                MarkError(pos - 1, "Too many operators on the stack");
+                MarkError(pos - 1, "Too many operators on the stack (compiler limitation)");
                 return Type::Null;
             }
             operators.Append(op);
@@ -1009,11 +1022,14 @@ void Compiler::ProduceOperator(const PendingOperator &op)
             }
             if (RG_UNLIKELY(slot1.var->readonly)) {
                 MarkError(op.pos, "Cannot assign expression to const variable '%1'", slot1.var->name);
+                HintError(slot1.var->defined_pos, "Variable '%1' is defined here without mut qualifier", slot1.var->name);
+
                 return;
             }
             if (RG_UNLIKELY(slot1.type != slot2.type)) {
                 MarkError(op.pos, "Cannot assign %1 value to %2 variable",
                           TypeNames[(int)slot2.type], TypeNames[(int)slot1.type]);
+                HintError(slot1.var->defined_pos, "Variable '%1' is defined here", slot1.var->name);
                 return;
             }
 
@@ -1240,6 +1256,10 @@ bool Compiler::ParseCall(const char *name)
             }
 
             MarkError(call_pos, "Cannot call '%1' with (%2) arguments", func0->name, buf);
+            for (const FunctionInfo *it = func0; it; it = it->next_overload) {
+                HintError(it->defined_pos, "Candidate '%1'", it->signature);
+            }
+
             return false;
         }
     }
