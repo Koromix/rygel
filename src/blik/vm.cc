@@ -24,7 +24,15 @@ public:
 
 private:
     void DumpInstruction();
-    void DumpTrace();
+
+    template <typename... Args>
+    void FatalError(const char *fmt, Args... args)
+    {
+        HeapArray<FrameInfo> frames;
+        DecodeFrames(*program, debug, stack, pc, bp, &frames);
+
+        ReportRuntimeError(frames, fmt, args...);
+    }
 };
 
 int Interpreter::Run(const Program &program, const DebugInfo *debug)
@@ -184,8 +192,7 @@ int Interpreter::Run(const Program &program, const DebugInfo *debug)
             int64_t i1 = stack[stack.len - 2].i;
             int64_t i2 = stack[stack.len - 1].i;
             if (RG_UNLIKELY(i2 == 0)) {
-                LogError("Division by 0 is illegal");
-                DumpTrace();
+                FatalError("Division by 0 is illegal");
                 return 1;
             }
             stack[--stack.len - 1].i = i1 / i2;
@@ -195,8 +202,7 @@ int Interpreter::Run(const Program &program, const DebugInfo *debug)
             int64_t i1 = stack[stack.len - 2].i;
             int64_t i2 = stack[stack.len - 1].i;
             if (RG_UNLIKELY(i2 == 0)) {
-                LogError("Division by 0 is illegal");
-                DumpTrace();
+                FatalError("Division by 0 is illegal");
                 return 1;
             }
             stack[--stack.len - 1].i = i1 % i2;
@@ -515,23 +521,6 @@ void Interpreter::DumpInstruction()
         default: { LogDebug("(0x%1) %2", FmtHex(pc).Pad0(-5), OpcodeNames[(int)inst->code]); } break;
     }
 #endif
-}
-
-void Interpreter::DumpTrace()
-{
-    HeapArray<FrameInfo> frames;
-    DecodeFrames(*program, debug, stack, pc, bp, &frames);
-
-    PrintLn(stderr, "Dumping stack trace");
-    for (const FrameInfo &frame: frames) {
-        const char *name = frame.func ? frame.func->signature : "<outside function>";
-
-        if (debug) {
-            PrintLn(stderr, "    * %1  [%2 (%3)]", FmtArg(name).Pad(30), frame.filename, frame.line);
-        } else {
-            PrintLn(stderr, "    * %1", name);
-        }
-    }
 }
 
 int Run(const Program &program, const DebugInfo *debug)

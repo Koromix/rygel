@@ -40,6 +40,9 @@ struct FrameInfo {
     int32_t line;
 };
 
+void DecodeFrames(const Program &program, const DebugInfo *debug,
+                  Span<const Value> stack, Size pc, Size b, HeapArray<FrameInfo> *out_frames);
+
 template <typename... Args>
 void ReportDiagnostic(DiagnosticType type, Span<const char> code, const char *filename,
                       int line, Size offset, const char *fmt, Args... args)
@@ -101,7 +104,36 @@ void ReportDiagnostic(DiagnosticType type, Span<const char> code, const char *fi
     }
 }
 
-void DecodeFrames(const Program &program, const DebugInfo *debug,
-                  Span<const Value> stack, Size pc, Size b, HeapArray<FrameInfo> *out_frames);
+template <typename... Args>
+void ReportRuntimeError(Span<const FrameInfo> frames, const char *fmt, Args... args)
+{
+    if (frames.len) {
+        PrintLn(stderr, "Something wrong has happened, execution has stopped");
+        PrintLn(stderr);
+
+        PrintLn(stderr, "Dumping stack trace:");
+        for (Size i = frames.len - 1; i >= 0; i--) {
+            const FrameInfo &frame = frames[i];
+            const char *name = frame.func ? frame.func->signature : "<outside function>";
+
+            if (!i) {
+                Print(stderr, "  %!..+>>> %1%!0", FmtArg(name).Pad(36));
+            } else {
+                Print(stderr, "    %!..+* %1%!0", FmtArg(name).Pad(36));
+            }
+
+            if (frame.filename) {
+                PrintLn(stderr, "  %!D..[%1 (%2)]%!0", frame.filename, frame.line);
+            } else {
+                PrintLn(stderr);
+            }
+        }
+        PrintLn(stderr);
+    }
+
+    Print(stderr, "Error: %!R..");
+    Print(stderr, fmt, args...);
+    PrintLn(stderr, "%!0");
+}
 
 }
