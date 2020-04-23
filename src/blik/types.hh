@@ -31,8 +31,9 @@ struct VariableInfo {
     bool readonly;
 
     Size offset;
-    // Used to prevent dangerous forward calls, only for globals
-    Size defined_at;
+
+    Size defined_pos; // Token
+    Size defined_idx; // IR
 
     RG_HASHTABLE_HANDLER(VariableInfo, name);
 };
@@ -50,14 +51,17 @@ struct FunctionInfo {
     bool variadic;
     Type ret;
     Size ret_pop;
+    bool intrinsic;
 
     // Singly-linked list
     FunctionInfo *next_overload;
 
-    bool intrinsic;
-    Size inst_idx;
+    Size defined_pos; // Token
+    Size inst_idx; // IR
+
     // Used to prevent dangerous forward calls (if relevant globals are not defined yet)
-    Size earliest_forward_call;
+    Size earliest_call_pos;
+    Size earliest_call_idx;
 
     RG_HASHTABLE_HANDLER(FunctionInfo, name);
 };

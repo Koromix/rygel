@@ -176,6 +176,8 @@ void Compiler::ParsePrototypes(Span<const Size> funcs)
         pos = funcs[i] + 1;
 
         FunctionInfo *proto = functions.AppendDefault();
+        proto->defined_pos = pos;
+
         proto->name = ConsumeIdentifier();
 
          // Parameters
@@ -259,8 +261,11 @@ void Compiler::ParsePrototypes(Span<const Size> funcs)
             overload->next_overload = proto;
         }
 
+        // We don't know where it will live yet!
         proto->inst_idx = -1;
-        proto->earliest_forward_call = RG_SIZE_MAX;
+
+        proto->earliest_call_pos = RG_SIZE_MAX;
+        proto->earliest_call_idx = RG_SIZE_MAX;
     }
 }
 
@@ -364,6 +369,7 @@ void Compiler::ParseFunction()
             MatchToken(TokenKind::EndOfLine);
 
             VariableInfo *var = variables.AppendDefault();
+            var->defined_pos = pos;
 
             var->readonly = !MatchToken(TokenKind::Mut);
             var->name = ConsumeIdentifier();
@@ -466,6 +472,7 @@ void Compiler::ParseLet()
     Size var_pos = ++pos;
 
     VariableInfo *var = variables.AppendDefault();
+    var->defined_pos = pos;
 
     var->readonly = !MatchToken(TokenKind::Mut);
     var->name = ConsumeIdentifier();
@@ -510,7 +517,7 @@ void Compiler::ParseLet()
 
     var->global = !current_func;
     var->offset = var_offset;
-    var->defined_at = program.ir.len;
+    var->defined_idx = program.ir.len;
 
     // Null values don't actually exist
     var_offset += (var->type != Type::Null);
@@ -633,6 +640,7 @@ void Compiler::ParseFor()
     Size for_pos = ++pos;
 
     VariableInfo *it = variables.AppendDefault();
+    it->defined_pos = pos;
 
     it->name = ConsumeIdentifier();
     it->type = Type::Int;
@@ -844,9 +852,12 @@ Type Compiler::ParseExpression(bool keep_result)
 
                         if (var->global) {
                             if (RG_UNLIKELY(current_func &&
-                                            current_func->earliest_forward_call < var->defined_at)) {
-                                MarkError(pos, "Function '%1' was called before variable '%2' was defined",
+                                            current_func->earliest_call_idx < var->defined_idx)) {
+                                MarkError(current_func->defined_pos, "Function '%1' may be called before variable '%2' exists",
                                           current_func->name, var->name);
+                                HintError(current_func->earliest_call_pos, "Function call happens here");
+                                HintError(var->defined_pos, "Variable '%1' is defined here", var->name);
+
                                 return Type::Null;
                             }
 
@@ -1238,7 +1249,9 @@ bool Compiler::ParseCall(const char *name)
     } else {
         if (func->inst_idx < 0) {
             forward_calls.Append({program.ir.len, func});
-            func->earliest_forward_call = std::min(func->earliest_forward_call, program.ir.len);
+
+            func->earliest_call_pos = std::min(func->earliest_call_pos, call_pos);
+            func->earliest_call_idx = std::min(func->earliest_call_idx, program.ir.len);
         }
         program.ir.Append({Opcode::Call, {.i = func->inst_idx}});
         stack.Append({func->ret});
