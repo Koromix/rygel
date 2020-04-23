@@ -33,7 +33,7 @@ private:
     void MarkError(Size offset, const char *fmt, Args... args)
     {
         if (valid) {
-            ReportError(code, filename, line, offset, fmt, args...);
+            ReportDiagnostic(DiagnosticType::Error, code, filename, line, offset, fmt, args...);
             valid = false;
         }
     }

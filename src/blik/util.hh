@@ -8,6 +8,11 @@
 
 namespace RG {
 
+enum class DiagnosticType {
+    Error,
+    ErrorHint
+};
+
 static inline Size DecodeUtf8(Span<const char> str, Size offset, int32_t *out_c)
 {
     RG_ASSERT(offset < str.len);
@@ -40,8 +45,8 @@ static inline Size DecodeUtf8(Span<const char> str, Size offset, int32_t *out_c)
 }
 
 template <typename... Args>
-void ReportError(Span<const char> code, const char *filename, int line, Size offset,
-                 const char *fmt, Args... args)
+void ReportDiagnostic(DiagnosticType type, Span<const char> code, const char *filename,
+                      int line, Size offset, const char *fmt, Args... args)
 {
     // Find entire code line and compute column from offset
     int column = 0;
@@ -63,7 +68,7 @@ void ReportError(Span<const char> code, const char *filename, int line, Size off
     // There is a small trap: we can't do that if the character before is a tabulation,
     // see below for tab handling.
     bool center = (offset > 0 && code[offset - 1] == ' ' &&
-                   offset + 1 < code.len && IsAsciiWhite(code[offset + 1]));
+                   (offset + 1 >= code.len || IsAsciiWhite(code[offset + 1])));
 
     // Because we accept tabulation users, including the crazy ones who may put tabulations
     // after other characters, we can't just repeat ' ' (column - 1) times to align the
@@ -82,16 +87,38 @@ void ReportError(Span<const char> code, const char *filename, int line, Size off
         align_more = column - center - align_len;
     }
 
+    const char *prefix = nullptr;
+    switch (type) {
+        case DiagnosticType::Error: { prefix = ""; } break;
+        case DiagnosticType::ErrorHint: { prefix = "    "; } break;
+    }
+    RG_ASSERT(prefix);
+
     if (EnableAnsiOutput()) {
-        Print(stderr, "\x1B[91m%1(%2:%3):\x1B[0m \x1B[1m", filename, line, column + 1);
+        // Make it gorgeous!
+        const char *color1 = nullptr;
+        const char *color2 = nullptr;
+        switch (type) {
+            case DiagnosticType::Error: {
+                color1 = "\x1B[91m";
+                color2 = "\x1B[95m";
+            } break;
+            case DiagnosticType::ErrorHint: {
+                color1 = "\x1B[93m";
+                color2 = "\x1B[90m";
+            } break;
+        }
+        RG_ASSERT(color1);
+
+        Print(stderr, "%1%2%3(%4:%5):\x1B[0m \x1B[1m", prefix, color1, filename, line, column + 1);
         PrintLn(stderr, fmt, args...);
-        PrintLn(stderr, "%1 |\x1B[0m  %2", FmtArg(line).Pad(-7), extract);
-        PrintLn(stderr, "        |  %1%2\x1B[95m^^^\x1B[0m", align, FmtArg(' ').Repeat(align_more));
+        PrintLn(stderr, "%1%2 |\x1B[0m  %3", prefix, FmtArg(line).Pad(-7), extract);
+        PrintLn(stderr, "%1        |  %2%3%4^^^\x1B[0m", prefix, align, FmtArg(' ').Repeat(align_more), color2);
     } else {
-        Print(stderr, "%1(%2:%3): ", filename, line, column + 1);
+        Print(stderr, "%1%2(%3:%4): ", prefix, filename, line, column + 1);
         PrintLn(stderr, fmt, args...);
-        PrintLn(stderr, "%1 |  %2", FmtArg(line).Pad(-7), extract);
-        PrintLn(stderr, "        |  %1%2^^^", align, FmtArg(' ').Repeat(align_more));
+        PrintLn(stderr, "%1%2 |  %3", prefix, FmtArg(line).Pad(-7), extract);
+        PrintLn(stderr, "%1        |  %2%3^^^", prefix, align, FmtArg(' ').Repeat(align_more));
     }
 }
 

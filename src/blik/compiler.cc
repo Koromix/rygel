@@ -32,6 +32,8 @@ struct StackSlot {
 class Compiler {
     bool valid = true;
 
+    bool show_hints = false;
+
     const char *filename;
     Span<const char> code;
     Span<const Token> tokens;
@@ -100,8 +102,22 @@ private:
             Size offset = (pos < tokens.len) ? tokens[pos].offset : code.len;
             int line = tokens[std::min(pos, tokens.len - 1)].line;
 
-            ReportError(code, filename, line, offset, fmt, args...);
+            ReportDiagnostic(DiagnosticType::Error, code, filename, line, offset, fmt, args...);
+
             valid = false;
+            show_hints = true;
+        } else {
+            show_hints = false;
+        }
+    }
+    template <typename... Args>
+    void HintError(Size pos, const char *fmt, Args... args)
+    {
+        if (show_hints) {
+            Size offset = (pos < tokens.len) ? tokens[pos].offset : code.len;
+            int line = tokens[std::min(pos, tokens.len - 1)].line;
+
+            ReportDiagnostic(DiagnosticType::ErrorHint, code, filename, line, offset, fmt, args...);
         }
     }
 };
