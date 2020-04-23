@@ -1369,8 +1369,12 @@ void Compiler::Finish(Program *out_program)
     program.ir.Append({Opcode::PushInt, {.i = 0}});
     program.ir.Append({Opcode::Exit, {.b = true}});
 
+    for (const FunctionInfo &func: functions) {
+        const FunctionInfo *func2 = program.functions.Append(func);
+        program.functions_map.Append(func2);
+    }
     for (const VariableInfo &var: variables) {
-        VariableInfo *global = program.globals.Append(var);
+        const VariableInfo *global = program.globals.Append(var);
         program.globals_map.Append(global);
     }
 

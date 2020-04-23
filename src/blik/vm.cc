@@ -483,7 +483,7 @@ int Run(const Program &program)
 #ifndef NDEBUG
             if (inst->u.b) {
                 Size good_stack_len = 0;
-                for (VariableInfo &var: program.globals) {
+                for (const VariableInfo &var: program->globals) {
                     good_stack_len += (var.type != Type::Null);
                 }
                 RG_ASSERT(stack.len == good_stack_len);
