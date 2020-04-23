@@ -855,7 +855,7 @@ Type Compiler::ParseExpression(bool keep_result)
                                             current_func->earliest_call_idx < var->defined_idx)) {
                                 MarkError(current_func->defined_pos, "Function '%1' may be called before variable '%2' exists",
                                           current_func->name, var->name);
-                                HintError(current_func->earliest_call_pos, "Function call happens here");
+                                HintError(current_func->earliest_call_pos, "Function call happens here (it could be indirect)");
                                 HintError(var->defined_pos, "Variable '%1' is defined here", var->name);
 
                                 return Type::Null;
@@ -1250,8 +1250,13 @@ bool Compiler::ParseCall(const char *name)
         if (func->inst_idx < 0) {
             forward_calls.Append({program.ir.len, func});
 
-            func->earliest_call_pos = std::min(func->earliest_call_pos, call_pos);
-            func->earliest_call_idx = std::min(func->earliest_call_idx, program.ir.len);
+            if (current_func && current_func != func) {
+                func->earliest_call_pos = std::min(func->earliest_call_pos, current_func->earliest_call_pos);
+                func->earliest_call_idx = std::min(func->earliest_call_idx, current_func->earliest_call_idx);
+            } else {
+                func->earliest_call_pos = std::min(func->earliest_call_pos, call_pos);
+                func->earliest_call_idx = std::min(func->earliest_call_idx, program.ir.len);
+            }
         }
         program.ir.Append({Opcode::Call, {.i = func->inst_idx}});
         stack.Append({func->ret});
