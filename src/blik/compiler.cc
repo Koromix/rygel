@@ -1378,6 +1378,7 @@ void Compiler::Finish(Program *out_program)
         program.globals_map.Append(global);
     }
 
+    program.ir.Trim();
     SwapMemory(&program, out_program, RG_SIZE(program));
 }
 

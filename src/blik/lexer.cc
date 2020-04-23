@@ -12,6 +12,8 @@ namespace RG {
 class Lexer {
     bool valid = true;
 
+    HashSet<Span<const char>> strings;
+
     const char *filename;
     Span<const char> code;
     Size offset;
@@ -294,9 +296,15 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
 
                     next++;
                 }
-                str.Append(0);
 
-                set.tokens.Append({TokenKind::String, line, offset, {.str = str.TrimAndLeak().ptr}});
+                // Intern string
+                std::pair<Span<const char> *, bool> ret = strings.Append(str);
+                if (ret.second) {
+                    str.Append(0);
+                    ret.first->ptr = str.TrimAndLeak().ptr;
+                }
+
+                set.tokens.Append({TokenKind::String, line, offset, {.str = ret.first->ptr}});
             } break;
 
             case '+': { Token1(TokenKind::Plus); } break;
@@ -404,8 +412,12 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                 } else if (ident == "false") {
                     set.tokens.Append({TokenKind::Bool, line, offset, {.b = false}});
                 } else {
-                    const char *str = DuplicateString(ident, &set.str_alloc).ptr;
-                    set.tokens.Append({TokenKind::Identifier, line, offset, {.str = str}});
+                    // Intern string
+                    std::pair<Span<const char> *, bool> ret = strings.Append(ident);
+                    if (ret.second) {
+                        ret.first->ptr = DuplicateString(ident, &set.str_alloc).ptr;
+                    }
+                    set.tokens.Append({TokenKind::Identifier, line, offset, {.str = ret.first->ptr}});
                 }
             } break;
         }
@@ -421,6 +433,7 @@ void Lexer::Finish(TokenSet *out_set)
 {
     RG_ASSERT(!out_set->tokens.len);
 
+    set.tokens.Trim();
     set.code = code;
     SwapMemory(&set, out_set, RG_SIZE(set));
 }
