@@ -651,6 +651,7 @@ void Compiler::ParseFor()
 
     VariableInfo *it = variables.AppendDefault();
 
+    it->readonly = !MatchToken(TokenKind::Mut);
     it->defined_pos = pos;
     it->name = ConsumeIdentifier();
     it->type = Type::Int;

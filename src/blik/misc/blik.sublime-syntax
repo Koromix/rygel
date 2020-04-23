@@ -49,6 +49,8 @@ contexts:
     - match: \b[[:alpha:]_][[:alnum:]_]*\b*
       pop: true
   for:
+    - match: \bmut\b
+      scope: keyword.control.blik
     - match: \b[[:alpha:]_][[:alnum:]_]*\b*
       scope: variable.other.blik
       pop: true
