@@ -14,13 +14,16 @@ int Main(int argc, char **argv)
 {
     // Options
     bool run_inline = false;
+    bool generate_debug = true;
     const char *filename = nullptr;
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: blik [options] <file>
 
 Options:
-    -i, --inline                 Run code directly from argument)");
+    -i, --inline                 Run code directly from argument
+
+        --no_debug               Disable generation of debug formation)");
     };
 
     // Handle version
@@ -39,6 +42,8 @@ Options:
                 return 0;
             } else if (opt.Test("-i", "--inline")) {
                 run_inline = true;
+            } else if (opt.Test("--no_debug")) {
+                generate_debug = false;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -67,10 +72,10 @@ Options:
 
     Program program;
     DebugInfo debug;
-    if (!Compile(token_set, filename, &program, &debug))
+    if (!Compile(token_set, filename, &program, generate_debug ? &debug : nullptr))
         return 1;
 
-    return Run(program, &debug);
+    return Run(program, generate_debug ? &debug : nullptr);
 }
 
 }
