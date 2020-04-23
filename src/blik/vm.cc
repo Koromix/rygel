@@ -15,56 +15,33 @@ union Value {
     const char *str;
 };
 
-static void DumpInstruction(Size pc, const Instruction &inst)
-{
-#if 0
-    switch (inst.code) {
-        case Opcode::PushBool: { LogDebug("(0x%1) PushBool %2", FmtHex(pc).Pad0(-5), inst.u.b); } break;
-        case Opcode::PushInt: { LogDebug("(0x%1) PushInt %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::PushFloat: { LogDebug("(0x%1) PushFloat %2", FmtHex(pc).Pad0(-5), inst.u.d); } break;
-        case Opcode::PushString: { LogDebug("(0x%1) PushString %2", FmtHex(pc).Pad0(-5), inst.u.str); } break;
-        case Opcode::Pop: { LogDebug("(0x%1) Pop %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+class Interpreter {
+    const Program *program;
+    Span<const Instruction> ir;
 
-        case Opcode::StoreGlobalBool: { LogDebug("(0x%1) StoreGlobalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreGlobalInt: { LogDebug("(0x%1) StoreGlobalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreGlobalFloat: { LogDebug("(0x%1) StoreGlobalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreGlobalString: { LogDebug("(0x%1) StoreGlobalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadGlobalBool: { LogDebug("(0x%1) LoadGlobalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadGlobalInt: { LogDebug("(0x%1) LoadGlobalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadGlobalFloat: { LogDebug("(0x%1) LoadGlobalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadGlobalString: { LogDebug("(0x%1) LoadGlobalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-
-        case Opcode::StoreLocalBool: { LogDebug("(0x%1) StoreLocalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreLocalInt: { LogDebug("(0x%1) StoreLocalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreLocalFloat: { LogDebug("(0x%1) StoreLocalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreLocalString: { LogDebug("(0x%1) StoreLocalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadLocalBool: { LogDebug("(0x%1) LoadLocalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadLocalInt: { LogDebug("(0x%1) LoadLocalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadLocalFloat: { LogDebug("(0x%1) LoadLocalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadLocalString: { LogDebug("(0x%1) LoadLocalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-
-        case Opcode::Jump: { LogDebug("(0x%1) Jump 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
-        case Opcode::BranchIfTrue: { LogDebug("(0x%1) BranchIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
-        case Opcode::BranchIfFalse: { LogDebug("(0x%1) BranchIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
-        case Opcode::SkipIfTrue: { LogDebug("(0x%1) SkipIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
-        case Opcode::SkipIfFalse: { LogDebug("(0x%1) SkipIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
-
-        case Opcode::Call: { LogDebug("(0x%1) Call 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.i).Pad0(-5)); } break;
-        case Opcode::Return: { LogDebug("(0x%1) Return %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::ReturnNull: { LogDebug("(0x%1) ReturnNull %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-
-        case Opcode::Print: { LogDebug("(0x%1) Print %2", FmtHex(pc).Pad0(-5), inst.u.i & 0x1F); } break;
-
-        default: { LogDebug("(0x%1) %2", FmtHex(pc).Pad0(-5), OpcodeNames[(int)inst.code]); } break;
-    }
-#endif
-}
-
-int Run(const Program &program)
-{
     HeapArray<Value> stack;
-    Size pc = 0, bp = 0;
+    Size pc = 0;
+    Size bp = 0;
     const Instruction *inst;
+
+public:
+    int Run(const Program &program);
+
+private:
+    void DumpInstruction();
+
+    void DumpTrace();
+    const FunctionInfo *FindFunction(Size idx);
+};
+
+int Interpreter::Run(const Program &program)
+{
+    this->program = &program;
+    ir = program.ir;
+
+    stack.Clear();
+    pc = 0;
+    bp = 0;
 
 #if defined(__GNUC__) || defined(__clang__)
     static const void *dispatch[] = {
@@ -73,8 +50,8 @@ int Run(const Program &program)
     };
 
     #define DISPATCH(PC) \
-        inst = &program.ir[(PC)]; \
-        DumpInstruction(pc, *inst); \
+        inst = &ir[(PC)]; \
+        DumpInstruction(); \
         goto *dispatch[(int)inst->code];
     #define LOOP \
         DISPATCH(0)
@@ -82,12 +59,12 @@ int Run(const Program &program)
         Code
 #else
     #define DISPATCH(PC) \
-        inst = &program.ir[(PC)]; \
-        DumpInstruction(pc, *inst); \
+        inst = &ir[(PC)]; \
+        DumpInstruction(); \
         break
     #define LOOP \
-        inst = &program.ir[pc]; \
-        DumpInstruction(pc, *inst); \
+        inst = &ir[pc]; \
+        DumpInstruction(); \
         for (;;) \
             switch(inst->code)
     #define CASE(Code) \
@@ -213,7 +190,8 @@ int Run(const Program &program)
             int64_t i1 = stack[stack.len - 2].i;
             int64_t i2 = stack[stack.len - 1].i;
             if (RG_UNLIKELY(i2 == 0)) {
-                LogError("Attempted to divide by 0");
+                LogError("Division by 0 is illegal");
+                DumpTrace();
                 return 1;
             }
             stack[--stack.len - 1].i = i1 / i2;
@@ -223,7 +201,8 @@ int Run(const Program &program)
             int64_t i1 = stack[stack.len - 2].i;
             int64_t i2 = stack[stack.len - 1].i;
             if (RG_UNLIKELY(i2 == 0)) {
-                LogError("Attempted to divide by 0");
+                LogError("Division by 0 is illegal");
+                DumpTrace();
                 return 1;
             }
             stack[--stack.len - 1].i = i1 % i2;
@@ -483,7 +462,7 @@ int Run(const Program &program)
 #ifndef NDEBUG
             if (inst->u.b) {
                 Size good_stack_len = 0;
-                for (const VariableInfo &var: program->globals) {
+                for (const VariableInfo &var: program.globals) {
                     good_stack_len += (var.type != Type::Null);
                 }
                 RG_ASSERT(stack.len == good_stack_len);
@@ -497,6 +476,92 @@ int Run(const Program &program)
 #undef CASE
 #undef LOOP
 #undef DISPATCH
+}
+
+void Interpreter::DumpInstruction()
+{
+#if 0
+    switch (inst->code) {
+        case Opcode::PushBool: { LogDebug("(0x%1) PushBool %2", FmtHex(pc).Pad0(-5), inst->u.b); } break;
+        case Opcode::PushInt: { LogDebug("(0x%1) PushInt %2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::PushFloat: { LogDebug("(0x%1) PushFloat %2", FmtHex(pc).Pad0(-5), inst->u.d); } break;
+        case Opcode::PushString: { LogDebug("(0x%1) PushString %2", FmtHex(pc).Pad0(-5), inst->u.str); } break;
+        case Opcode::Pop: { LogDebug("(0x%1) Pop %2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+
+        case Opcode::StoreGlobalBool: { LogDebug("(0x%1) StoreGlobalBool @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::StoreGlobalInt: { LogDebug("(0x%1) StoreGlobalInt @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::StoreGlobalFloat: { LogDebug("(0x%1) StoreGlobalFloat @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::StoreGlobalString: { LogDebug("(0x%1) StoreGlobalString @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::LoadGlobalBool: { LogDebug("(0x%1) LoadGlobalBool @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::LoadGlobalInt: { LogDebug("(0x%1) LoadGlobalInt @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::LoadGlobalFloat: { LogDebug("(0x%1) LoadGlobalFloat @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::LoadGlobalString: { LogDebug("(0x%1) LoadGlobalString @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+
+        case Opcode::StoreLocalBool: { LogDebug("(0x%1) StoreLocalBool @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::StoreLocalInt: { LogDebug("(0x%1) StoreLocalInt @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::StoreLocalFloat: { LogDebug("(0x%1) StoreLocalFloat @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::StoreLocalString: { LogDebug("(0x%1) StoreLocalString @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::LoadLocalBool: { LogDebug("(0x%1) LoadLocalBool @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::LoadLocalInt: { LogDebug("(0x%1) LoadLocalInt @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::LoadLocalFloat: { LogDebug("(0x%1) LoadLocalFloat @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::LoadLocalString: { LogDebug("(0x%1) LoadLocalString @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+
+        case Opcode::Jump: { LogDebug("(0x%1) Jump 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst->u.i).Pad0(-5)); } break;
+        case Opcode::BranchIfTrue: { LogDebug("(0x%1) BranchIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst->u.i).Pad0(-5)); } break;
+        case Opcode::BranchIfFalse: { LogDebug("(0x%1) BranchIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst->u.i).Pad0(-5)); } break;
+        case Opcode::SkipIfTrue: { LogDebug("(0x%1) SkipIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst->u.i).Pad0(-5)); } break;
+        case Opcode::SkipIfFalse: { LogDebug("(0x%1) SkipIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst->u.i).Pad0(-5)); } break;
+
+        case Opcode::Call: { LogDebug("(0x%1) Call 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst->u.i).Pad0(-5)); } break;
+        case Opcode::Return: { LogDebug("(0x%1) Return %2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::ReturnNull: { LogDebug("(0x%1) ReturnNull %2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+
+        case Opcode::Print: { LogDebug("(0x%1) Print %2", FmtHex(pc).Pad0(-5), inst->u.i & 0x1F); } break;
+
+        default: { LogDebug("(0x%1) %2", FmtHex(pc).Pad0(-5), OpcodeNames[(int)inst->code]); } break;
+    }
+#endif
+}
+
+void Interpreter::DumpTrace()
+{
+    HeapArray<const char *> trace;
+
+    if (bp) {
+        trace.Append(FindFunction(pc)->signature);
+
+        Size pc2 = pc;
+        Size bp2 = bp;
+
+        for (;;) {
+            pc2 = stack[bp2 - 2].i;
+            bp2 = stack[bp2 - 1].i;
+
+            if (!bp2)
+                break;
+
+            trace.Append(FindFunction(pc2)->signature);
+        }
+    }
+
+    PrintLn(stderr, "Dumping stack trace");
+    PrintLn(stderr, "      1) Main code");
+    for (Size i = trace.len - 1; i >= 0; i--) {
+        PrintLn(stderr, "    %1) Function %2", FmtArg(trace.len - i + 1).Pad(-3), trace[i]);
+    }
+}
+
+const FunctionInfo *Interpreter::FindFunction(Size idx)
+{
+    auto it = std::lower_bound(program->functions.begin(), program->functions.end(), idx,
+                               [](const FunctionInfo &func, Size idx) { return func.inst_idx < idx; });
+    return &*(--it);
+}
+
+int Run(const Program &program)
+{
+    Interpreter interp;
+    return interp.Run(program);
 }
 
 }
