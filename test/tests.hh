@@ -16,7 +16,7 @@ namespace RG {
 
 static inline void ReportTestResults(Size tests, Size failures)
 {
-    if (LogUsesTerminalOutput()) {
+    if (EnableAnsiOutput()) {
         if (failures) {
             PrintLn(stderr, "\n    \x1B[31mFailed\x1B[0m (%1/%2)", failures, tests);
         } else {
