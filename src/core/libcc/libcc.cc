@@ -825,6 +825,100 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
 }
 
 template <typename AppendFunc>
+static inline Size ProcessAnsiSpecifier(const char *spec, AppendFunc append)
+{
+    Size idx = 0;
+
+    char buf[32] = "\x1B[";
+    bool valid = true;
+
+    // Foreground color
+    switch (spec[++idx]) {
+        case 'd': { strcat(buf, "30"); } break;
+        case 'r': { strcat(buf, "31"); } break;
+        case 'g': { strcat(buf, "32"); } break;
+        case 'y': { strcat(buf, "33"); } break;
+        case 'b': { strcat(buf, "34"); } break;
+        case 'm': { strcat(buf, "35"); } break;
+        case 'c': { strcat(buf, "36"); } break;
+        case 'w': { strcat(buf, "37"); } break;
+        case 'D': { strcat(buf, "90"); } break;
+        case 'R': { strcat(buf, "91"); } break;
+        case 'G': { strcat(buf, "92"); } break;
+        case 'Y': { strcat(buf, "93"); } break;
+        case 'B': { strcat(buf, "94"); } break;
+        case 'M': { strcat(buf, "95"); } break;
+        case 'C': { strcat(buf, "96"); } break;
+        case 'W': { strcat(buf, "97"); } break;
+        case '.': { strcat(buf, "39"); } break;
+        case '0': {
+            strcat(buf, "0");
+            goto end;
+        } break;
+        case 0: {
+            valid = false;
+            goto end;
+        } break;
+        default: { valid = false; } break;
+    }
+
+    // Background color
+    switch (spec[++idx]) {
+        case 'd': { strcat(buf, ";40"); } break;
+        case 'r': { strcat(buf, ";41"); } break;
+        case 'g': { strcat(buf, ";42"); } break;
+        case 'y': { strcat(buf, ";43"); } break;
+        case 'b': { strcat(buf, ";44"); } break;
+        case 'm': { strcat(buf, ";45"); } break;
+        case 'c': { strcat(buf, ";46"); } break;
+        case 'w': { strcat(buf, ";47"); } break;
+        case 'D': { strcat(buf, ";100"); } break;
+        case 'R': { strcat(buf, ";101"); } break;
+        case 'G': { strcat(buf, ";102"); } break;
+        case 'Y': { strcat(buf, ";103"); } break;
+        case 'B': { strcat(buf, ";104"); } break;
+        case 'M': { strcat(buf, ";105"); } break;
+        case 'C': { strcat(buf, ";106"); } break;
+        case 'W': { strcat(buf, ";107"); } break;
+        case '.': { strcat(buf, ";49"); } break;
+        case 0: {
+            valid = false;
+            goto end;
+        } break;
+        default: { valid = false; } break;
+    }
+
+    // Bold/dim/underline/invert
+    switch (spec[++idx]) {
+        case '+': { strcat(buf, ";1"); } break;
+        case '-': { strcat(buf, ";2"); } break;
+        case '_': { strcat(buf, ";4"); } break;
+        case '^': { strcat(buf, ";7"); } break;
+        case '.': {} break;
+        case 0: {
+            valid = false;
+            goto end;
+        } break;
+        default: { valid = false; } break;
+    }
+
+end:
+    if (!valid) {
+#ifndef NDEBUG
+        LogDebug("Format string contains invalid ANSI specifier");
+#endif
+        return idx;
+    }
+
+    if (EnableAnsiOutput()) {
+        strcat(buf, "m");
+        append(buf);
+    }
+
+    return idx;
+}
+
+template <typename AppendFunc>
 static inline void DoFormat(const char *fmt, Span<const FmtArg> args, AppendFunc append)
 {
 #ifndef NDEBUG
@@ -873,6 +967,8 @@ static inline void DoFormat(const char *fmt, Span<const FmtArg> args, AppendFunc
         } else if (marker_ptr[1] == '/') {
             append(*RG_PATH_SEPARATORS);
             fmt_ptr = marker_ptr + 2;
+        } else if (marker_ptr[1] == '!') {
+            fmt_ptr = marker_ptr + 2 + ProcessAnsiSpecifier(marker_ptr + 1, append);
         } else if (marker_ptr[1]) {
             append(marker_ptr[0]);
             fmt_ptr = marker_ptr + 1;
@@ -1151,14 +1247,10 @@ void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg)
     static std::mutex mutex;
     std::lock_guard<std::mutex> lock(mutex);
 
-    if (EnableAnsiOutput()) {
-        switch (level)  {
-            case LogLevel::Error: { PrintLn(stderr, "\x1B[31m%1%2\x1B[0m", ctx, msg); } break;
-            case LogLevel::Info: { PrintLn(stderr, "\x1B[96m%1%2\x1B[0m", ctx, msg); } break;
-            case LogLevel::Debug: { PrintLn(stderr, "\x1B[90m%1%2\x1B[0m", ctx, msg); } break;
-        }
-    } else {
-        PrintLn(stderr, "%1%2", ctx, msg);
+    switch (level)  {
+        case LogLevel::Error: { PrintLn(stderr, "%!r..%1%2%!0", ctx, msg); } break;
+        case LogLevel::Info: { PrintLn(stderr, "%!C..%1%2%!0", ctx, msg); } break;
+        case LogLevel::Debug: { PrintLn(stderr, "%!D..%1%2%!0", ctx, msg); } break;
     }
 }
 
