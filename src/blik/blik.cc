@@ -4,6 +4,7 @@
 
 #include "../core/libcc/libcc.hh"
 #include "compiler.hh"
+#include "debug.hh"
 #include "lexer.hh"
 #include "vm.hh"
 
@@ -65,10 +66,11 @@ Options:
         return 1;
 
     Program program;
-    if (!Compile(token_set, filename, &program))
+    DebugInfo debug;
+    if (!Compile(token_set, filename, &program, &debug))
         return 1;
 
-    return Run(program);
+    return Run(program, &debug);
 }
 
 }

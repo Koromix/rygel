@@ -4,20 +4,15 @@
 
 #include "../core/libcc/libcc.hh"
 #include "compiler.hh"
+#include "debug.hh"
 #include "vm.hh"
 
 namespace RG {
 
-union Value {
-    bool b;
-    int64_t i;
-    double d;
-    const char *str;
-};
-
 class Interpreter {
     const Program *program;
     Span<const Instruction> ir;
+    const DebugInfo *debug; // Can be NULL
 
     HeapArray<Value> stack;
     Size pc = 0;
@@ -25,19 +20,18 @@ class Interpreter {
     const Instruction *inst;
 
 public:
-    int Run(const Program &program);
+    int Run(const Program &program, const DebugInfo *debug);
 
 private:
     void DumpInstruction();
-
     void DumpTrace();
-    const FunctionInfo *FindFunction(Size idx);
 };
 
-int Interpreter::Run(const Program &program)
+int Interpreter::Run(const Program &program, const DebugInfo *debug)
 {
     this->program = &program;
     ir = program.ir;
+    this->debug = debug;
 
     stack.Clear();
     pc = 0;
@@ -525,43 +519,25 @@ void Interpreter::DumpInstruction()
 
 void Interpreter::DumpTrace()
 {
-    HeapArray<const char *> trace;
-
-    if (bp) {
-        trace.Append(FindFunction(pc)->signature);
-
-        Size pc2 = pc;
-        Size bp2 = bp;
-
-        for (;;) {
-            pc2 = stack[bp2 - 2].i;
-            bp2 = stack[bp2 - 1].i;
-
-            if (!bp2)
-                break;
-
-            trace.Append(FindFunction(pc2)->signature);
-        }
-    }
+    HeapArray<FrameInfo> frames;
+    DecodeFrames(*program, debug, stack, pc, bp, &frames);
 
     PrintLn(stderr, "Dumping stack trace");
-    PrintLn(stderr, "      1) Main code");
-    for (Size i = trace.len - 1; i >= 0; i--) {
-        PrintLn(stderr, "    %1) Function %2", FmtArg(trace.len - i + 1).Pad(-3), trace[i]);
+    for (const FrameInfo &frame: frames) {
+        const char *name = frame.func ? frame.func->signature : "<outside function>";
+
+        if (debug) {
+            PrintLn(stderr, "    * %1  [%2 (%3)]", FmtArg(name).Pad(30), frame.filename, frame.line);
+        } else {
+            PrintLn(stderr, "    * %1", name);
+        }
     }
 }
 
-const FunctionInfo *Interpreter::FindFunction(Size idx)
-{
-    auto it = std::lower_bound(program->functions.begin(), program->functions.end(), idx,
-                               [](const FunctionInfo &func, Size idx) { return func.inst_idx < idx; });
-    return &*(--it);
-}
-
-int Run(const Program &program)
+int Run(const Program &program, const DebugInfo *debug)
 {
     Interpreter interp;
-    return interp.Run(program);
+    return interp.Run(program, debug);
 }
 
 }

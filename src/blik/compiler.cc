@@ -4,9 +4,9 @@
 
 #include "../core/libcc/libcc.hh"
 #include "compiler.hh"
+#include "debug.hh"
 #include "lexer.hh"
 #include "types.hh"
-#include "util.hh"
 
 namespace RG {
 
@@ -54,13 +54,16 @@ class Compiler {
 
     HeapArray<ForwardCall> forward_calls;
 
+    DebugInfo debug;
+    bool generate_debug;
+
     Program program;
 
 public:
-    Compiler();
+    Compiler(bool generate_debug);
 
     bool Parse(const TokenSet &set, const char *filename);
-    void Finish(Program *out_program);
+    void Finish(Program *out_program, DebugInfo *out_debug = nullptr);
 
 private:
     void ParsePrototypes(Span<const Size> funcs);
@@ -84,6 +87,7 @@ private:
     void EmitIntrinsic(const char *name, Span<const Type> types);
 
     void EmitPop(int64_t count);
+    void EmitInstruction(Instruction inst);
 
     bool TestOverload(const FunctionInfo &proto1, const FunctionInfo &proto2);
     bool TestOverload(const FunctionInfo &proto, Span<const Type> types);
@@ -92,6 +96,7 @@ private:
     const char *ConsumeIdentifier();
     Type ConsumeType();
     bool MatchToken(TokenKind kind);
+    bool PeekToken(TokenKind kind);
 
     void DestroyVariables(Size count);
 
@@ -122,7 +127,8 @@ private:
     }
 };
 
-Compiler::Compiler()
+Compiler::Compiler(bool generate_debug)
+    : generate_debug(generate_debug)
 {
     functions.Append({.name = "print", .signature = "print(...)", .variadic = true, .ret = Type::Null});
     functions.Append({.name = "printLn", .signature = "printLn(...)", .variadic = true, .ret = Type::Null});
@@ -147,6 +153,17 @@ bool Compiler::Parse(const TokenSet &set, const char *filename)
     tokens = set.tokens;
     pos = 0;
 
+    if (generate_debug) {
+        SourceInfo src = {};
+
+        src.filename = DuplicateString(filename, &debug.str_alloc).ptr;
+        src.first_idx = program.ir.len;
+        src.line_idx = debug.lines.len;
+
+        debug.sources.Append(src);
+        debug.lines.Append(program.ir.len);
+    }
+
     // We want top-level order-independent functions
     ParsePrototypes(set.funcs);
     if (!valid)
@@ -170,7 +187,14 @@ bool Compiler::Parse(const TokenSet &set, const char *filename)
 
 void Compiler::ParsePrototypes(Span<const Size> funcs)
 {
-    RG_DEFER_C(prev_offset = pos) { pos = prev_offset; };
+    RG_DEFER_C(prev_debug = generate_debug,
+               prev_offset = pos) {
+        generate_debug = prev_debug;
+        pos = prev_offset;
+    };
+
+    // This is a preliminary parse step, don't count newlines
+    generate_debug = false;
 
     for (Size i = 0; i < funcs.len; i++) {
         pos = funcs[i] + 1;
@@ -293,7 +317,12 @@ bool Compiler::ParseBlock(bool keep_variables)
 
     while (valid && pos < tokens.len) {
         switch (tokens[pos].kind) {
-            case TokenKind::EndOfLine: { pos++; } break;
+            case TokenKind::EndOfLine: {
+                if (generate_debug) {
+                    debug.lines.Append(program.ir.len);
+                }
+                pos++;
+            } break;
 
             case TokenKind::End:
             case TokenKind::Else: { return has_return; } break;
@@ -312,19 +341,34 @@ bool Compiler::ParseBlock(bool keep_variables)
                 program.ir.Append({Opcode::Jump});
 
                 ParseFunction();
+                ConsumeToken(TokenKind::EndOfLine);
 
                 program.ir[jump_idx].u.i = program.ir.len - jump_idx;
             } break;
 
             case TokenKind::Return: {
                 ParseReturn();
+                ConsumeToken(TokenKind::EndOfLine);
+
                 has_return = true;
             } break;
 
-            case TokenKind::Let: { ParseLet(); } break;
-            case TokenKind::If: { ParseIf(); } break;
-            case TokenKind::While: { ParseWhile(); } break;
-            case TokenKind::For: { ParseFor(); } break;
+            case TokenKind::Let: {
+                ParseLet();
+                ConsumeToken(TokenKind::EndOfLine);
+            } break;
+            case TokenKind::If: {
+                ParseIf();
+                ConsumeToken(TokenKind::EndOfLine);
+            } break;
+            case TokenKind::While: {
+                ParseWhile();
+                ConsumeToken(TokenKind::EndOfLine);
+            } break;
+            case TokenKind::For: {
+                ParseFor();
+                ConsumeToken(TokenKind::EndOfLine);
+            } break;
 
             default: {
                 ParseExpression(false);
@@ -429,8 +473,6 @@ void Compiler::ParseFunction()
             return;
         }
     }
-
-    ConsumeToken(TokenKind::EndOfLine);
 }
 
 void Compiler::ParseReturn()
@@ -443,8 +485,7 @@ void Compiler::ParseReturn()
     }
 
     Type type;
-    if (MatchToken(TokenKind::EndOfLine)) {
-        pos--;
+    if (PeekToken(TokenKind::EndOfLine)) {
         type = Type::Null;
     } else {
         type = ParseExpression(true);
@@ -470,8 +511,6 @@ void Compiler::ParseReturn()
         EmitPop(pop);
     }
     program.ir.Append({type == Type::Null ? Opcode::ReturnNull : Opcode::Return, {.i = current_func->ret_pop}});
-
-    ConsumeToken(TokenKind::EndOfLine);
 }
 
 void Compiler::ParseLet()
@@ -531,8 +570,6 @@ void Compiler::ParseLet()
 
     // Null values don't actually exist
     var_offset += (var->type != Type::Null);
-
-    ConsumeToken(TokenKind::EndOfLine);
 }
 
 void Compiler::ParseIf()
@@ -596,8 +633,6 @@ void Compiler::ParseIf()
 
         ConsumeToken(TokenKind::End);
     }
-
-    ConsumeToken(TokenKind::EndOfLine);
 }
 
 void Compiler::ParseWhile()
@@ -641,8 +676,6 @@ void Compiler::ParseWhile()
     program.ir[jump_idx].u.i = program.ir.len - jump_idx;
     program.ir.Append(expr);
     program.ir.Append({Opcode::BranchIfTrue, {.i = jump_idx - program.ir.len + 1}});
-
-    ConsumeToken(TokenKind::EndOfLine);
 }
 
 void Compiler::ParseFor()
@@ -725,17 +758,12 @@ void Compiler::ParseFor()
     EmitPop(3);
     DestroyVariables(1);
     var_offset -= 3;
-
-    ConsumeToken(TokenKind::EndOfLine);
 }
 
 bool Compiler::ParseExpressionOrReturn()
 {
-    if (MatchToken(TokenKind::Return)) {
-        pos--;
+    if (PeekToken(TokenKind::Return)) {
         ParseReturn();
-        pos--;
-
         return true;
     } else {
         ParseExpression(false);
@@ -916,7 +944,9 @@ Type Compiler::ParseExpression(bool keep_result)
 
                     return Type::Null;
                 } else if (!expect_op && tok.kind == TokenKind::EndOfLine) {
-                    // Expression is split across multiple lines
+                    if (generate_debug) {
+                        debug.lines.Append(program.ir.len);
+                    }
                     continue;
                 } else if (parentheses || !expect_op) {
                     goto unexpected_token;
@@ -1362,9 +1392,10 @@ bool Compiler::TestOverload(const FunctionInfo &proto, Span<const Type> types)
     return true;
 }
 
-void Compiler::Finish(Program *out_program)
+void Compiler::Finish(Program *out_program, DebugInfo *out_debug)
 {
     RG_ASSERT(!out_program->ir.len);
+    RG_ASSERT(!!generate_debug == !!out_debug);
 
     program.ir.Append({Opcode::PushInt, {.i = 0}});
     program.ir.Append({Opcode::Exit, {.b = true}});
@@ -1380,6 +1411,9 @@ void Compiler::Finish(Program *out_program)
 
     program.ir.Trim();
     SwapMemory(&program, out_program, RG_SIZE(program));
+    if (out_debug) {
+        SwapMemory(&debug, out_debug, RG_SIZE(debug));
+    }
 }
 
 bool Compiler::ConsumeToken(TokenKind kind)
@@ -1392,6 +1426,10 @@ bool Compiler::ConsumeToken(TokenKind kind)
         MarkError(pos, "Unexpected token '%1', expected '%2'",
                   TokenKindNames[(int)tokens[pos].kind], TokenKindNames[(int)kind]);
         return false;
+    }
+
+    if (generate_debug && kind == TokenKind::EndOfLine) {
+        debug.lines.Append(program.ir.len);
     }
 
     pos++;
@@ -1424,6 +1462,17 @@ bool Compiler::MatchToken(TokenKind kind)
 {
     bool match = pos < tokens.len && tokens[pos].kind == kind;
     pos += match;
+
+    if (generate_debug && match && kind == TokenKind::EndOfLine) {
+        debug.lines.Append(program.ir.len);
+    }
+
+    return match;
+}
+
+bool Compiler::PeekToken(TokenKind kind)
+{
+    bool match = pos < tokens.len && tokens[pos].kind == kind;
     return match;
 }
 
@@ -1435,13 +1484,14 @@ void Compiler::DestroyVariables(Size count)
     variables.RemoveLast(count);
 }
 
-bool Compile(const TokenSet &set, const char *filename, Program *out_program)
+bool Compile(const TokenSet &set, const char *filename,
+             Program *out_program, DebugInfo *out_debug)
 {
-    Compiler compiler;
+    Compiler compiler(out_debug);
     if (!compiler.Parse(set, filename))
         return false;
 
-    compiler.Finish(out_program);
+    compiler.Finish(out_program, out_debug);
     return true;
 }
 

@@ -10,6 +10,6 @@ namespace RG {
 
 struct Program;
 
-int Run(const Program &program);
+int Run(const Program &program, const DebugInfo *debug = nullptr);
 
 }

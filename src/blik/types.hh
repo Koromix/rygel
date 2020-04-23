@@ -66,4 +66,11 @@ struct FunctionInfo {
     RG_HASHTABLE_HANDLER(FunctionInfo, name);
 };
 
+union Value {
+    bool b;
+    int64_t i;
+    double d;
+    const char *str;
+};
+
 }

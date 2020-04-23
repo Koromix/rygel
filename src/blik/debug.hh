@@ -5,44 +5,40 @@
 #pragma once
 
 #include "../core/libcc/libcc.hh"
+#include "types.hh"
 
 namespace RG {
+
+struct Program;
+struct DebugInfo;
 
 enum class DiagnosticType {
     Error,
     ErrorHint
 };
 
-static inline Size DecodeUtf8(Span<const char> str, Size offset, int32_t *out_c)
-{
-    RG_ASSERT(offset < str.len);
+struct SourceInfo {
+    const char *filename;
+    Size first_idx;
+    Size line_idx;
+};
 
-    const uint8_t *ptr = (const uint8_t *)(str.ptr + offset);
-    Size available = str.len - offset;
+struct DebugInfo {
+    HeapArray<SourceInfo> sources;
+    HeapArray<Size> lines;
 
-    if (ptr[0] < 0x80) {
-        *out_c = ptr[0];
-        return 1;
-    } else if (RG_UNLIKELY(ptr[0] - 0xC2 > 0xF4 - 0xC2)) {
-        return -1;
-    } else if (ptr[0] < 0xE0 &&
-               RG_LIKELY(available >= 2 && (ptr[1] & 0xC0) == 0x80)) {
-        *out_c = ((ptr[0] & 0x1F) << 6) | (ptr[1] & 0x3F);
-        return 2;
-    } else if (ptr[0] < 0xF0 &&
-               RG_LIKELY(available >= 3 && (ptr[1] & 0xC0) == 0x80 &&
-                                           (ptr[2] & 0xC0) == 0x80)) {
-        *out_c = ((ptr[0] & 0xF) << 12) | ((ptr[1] & 0x3F) << 6) | (ptr[2] & 0x3F);
-        return 3;
-    } else if (RG_LIKELY(available >= 4 && (ptr[1] & 0xC0) == 0x80 &&
-                                           (ptr[2] & 0xC0) == 0x80 &&
-                                           (ptr[3] & 0xC0) == 0x80)) {
-        *out_c = ((ptr[0] & 0x7) << 18) | ((ptr[1] & 0x3F) << 12) | ((ptr[2] & 0x3F) << 6) | (ptr[3] & 0x3F);
-        return 4;
-    } else {
-        return -1;
-    }
-}
+    BlockAllocator str_alloc;
+};
+
+struct FrameInfo {
+    Size pc;
+    Size bp;
+    const FunctionInfo *func; // Can be NULL
+
+    // Only if DebugInfo is available
+    const char *filename;
+    int32_t line;
+};
 
 template <typename... Args>
 void ReportDiagnostic(DiagnosticType type, Span<const char> code, const char *filename,
@@ -121,5 +117,8 @@ void ReportDiagnostic(DiagnosticType type, Span<const char> code, const char *fi
         PrintLn(stderr, "%1        |  %2%3^^^", prefix, align, FmtArg(' ').Repeat(align_more));
     }
 }
+
+void DecodeFrames(const Program &program, const DebugInfo *debug,
+                  Span<const Value> stack, Size pc, Size b, HeapArray<FrameInfo> *out_frames);
 
 }

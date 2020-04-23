@@ -3,9 +3,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../core/libcc/libcc.hh"
+#include "debug.hh"
 #include "lexer.hh"
 #include "lexer_xid.hh"
-#include "util.hh"
 
 namespace RG {
 
@@ -40,6 +40,37 @@ private:
         }
     }
 };
+
+static inline Size DecodeUtf8(Span<const char> str, Size offset, int32_t *out_c)
+{
+    RG_ASSERT(offset < str.len);
+
+    const uint8_t *ptr = (const uint8_t *)(str.ptr + offset);
+    Size available = str.len - offset;
+
+    if (ptr[0] < 0x80) {
+        *out_c = ptr[0];
+        return 1;
+    } else if (RG_UNLIKELY(ptr[0] - 0xC2 > 0xF4 - 0xC2)) {
+        return -1;
+    } else if (ptr[0] < 0xE0 &&
+               RG_LIKELY(available >= 2 && (ptr[1] & 0xC0) == 0x80)) {
+        *out_c = ((ptr[0] & 0x1F) << 6) | (ptr[1] & 0x3F);
+        return 2;
+    } else if (ptr[0] < 0xF0 &&
+               RG_LIKELY(available >= 3 && (ptr[1] & 0xC0) == 0x80 &&
+                                           (ptr[2] & 0xC0) == 0x80)) {
+        *out_c = ((ptr[0] & 0xF) << 12) | ((ptr[1] & 0x3F) << 6) | (ptr[2] & 0x3F);
+        return 3;
+    } else if (RG_LIKELY(available >= 4 && (ptr[1] & 0xC0) == 0x80 &&
+                                           (ptr[2] & 0xC0) == 0x80 &&
+                                           (ptr[3] & 0xC0) == 0x80)) {
+        *out_c = ((ptr[0] & 0x7) << 18) | ((ptr[1] & 0x3F) << 12) | ((ptr[2] & 0x3F) << 6) | (ptr[3] & 0x3F);
+        return 4;
+    } else {
+        return -1;
+    }
+}
 
 static bool TestUnicodeTable(Span<const int32_t> table, int32_t c)
 {
