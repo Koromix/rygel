@@ -271,11 +271,7 @@ void Compiler::ParsePrototypes(Span<const Size> funcs)
                         MarkError(funcs[i] + 1, "Function '%1' only differs from previously defined '%2' by return type",
                                   proto->signature, overload->signature);
                     }
-
-                    // Walk the chain again to help user...
-                    for (const FunctionInfo *it = *ret.first; it; it = it->next_overload) {
-                        HintError(it->defined_pos, "Previous definition here");
-                    }
+                    HintError(overload->defined_pos, "Previous definition here");
 
                     return;
                 }
