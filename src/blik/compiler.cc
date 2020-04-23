@@ -865,7 +865,7 @@ Type Compiler::ParseExpression(bool keep_result)
                         operators.RemoveLast(1);
 
                         program.ir.Append({Opcode::PushFloat, {.d = -tok.u.d}});
-                        stack.Append({Type::Int});
+                        stack.Append({Type::Float});
                     } else {
                         program.ir.Append({Opcode::PushFloat, {.d = tok.u.d}});
                         stack.Append({Type::Float});
