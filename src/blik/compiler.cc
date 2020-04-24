@@ -33,7 +33,6 @@ class Compiler {
     bool valid = true;
     bool valid_stmt;
     bool show_hints;
-    HashSet<const void *> poisoned_variables;
 
     const char *filename;
     Span<const char> code;
@@ -160,7 +159,6 @@ bool Compiler::Parse(const TokenSet &set, const char *filename)
 
     valid_stmt = true;
     show_hints = false;
-    poisoned_variables.Clear();
 
     if (generate_debug) {
         SourceInfo src = {};
@@ -453,9 +451,7 @@ void Compiler::ParseFunction()
             var->type = ConsumeType();
             types.Append(var->type);
 
-            if (RG_UNLIKELY(!valid_stmt)) {
-                poisoned_variables.Append(var);
-            }
+            var->poisoned = !valid_stmt;
         } while (MatchToken(TokenKind::Comma));
 
         MatchToken(TokenKind::EndOfLine);
@@ -592,7 +588,6 @@ void Compiler::ParseLet()
             if (RG_UNLIKELY(type2 != var->type)) {
                 MarkError(var_pos + 3, "Cannot assign %1 value to %2 variable",
                           TypeNames[(int)type2], TypeNames[(int)var->type]);
-                return;
             }
         } else {
             switch (var->type) {
@@ -612,10 +607,9 @@ void Compiler::ParseLet()
     // Null values don't actually exist
     var_offset += (var->type != Type::Null);
 
-    if (RG_UNLIKELY(!valid_stmt)) {
-        // Please don't issue "Variable 'X' does not exist" errors
-        poisoned_variables.Append(var);
-    }
+    // Expressions involving this variable won't issue (visible) errors
+    // and will be marked as invalid too.
+    var->poisoned = !valid_stmt;
 }
 
 void Compiler::ParseIf()
@@ -1021,7 +1015,7 @@ Type Compiler::ParseExpression(bool keep_result)
                             MarkError(pos - 1, "Variable '%1' does not exist", tok.u.str);
                             return Type::Null;
                         }
-                        valid_stmt &= !!poisoned_variables.Find(var);
+                        valid_stmt &= !var->poisoned;
 
                         if (var->global) {
                             if (RG_UNLIKELY(current_func &&
@@ -1602,9 +1596,7 @@ void Compiler::DestroyVariables(Size count)
 {
     for (Size i = variables.len - count; i < variables.len; i++) {
         const VariableInfo &var = variables[i];
-
         variables_map.Remove(var.name);
-        poisoned_variables.Remove(&var);
     }
 
     variables.RemoveLast(count);

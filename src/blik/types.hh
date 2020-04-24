@@ -29,6 +29,7 @@ struct VariableInfo {
     Type type;
     bool global;
     bool readonly;
+    bool poisoned;
 
     Size offset;
 
