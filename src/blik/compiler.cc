@@ -933,11 +933,7 @@ static int GetOperatorPrecedence(TokenKind kind)
 Type Compiler::ParseExpression(bool keep_result)
 {
     Size start_values_len = stack.len;
-    RG_DEFER_C(prev_valid = valid) {
-        stack.RemoveFrom(start_values_len);
-        valid = prev_valid;
-    };
-    valid = true;
+    RG_DEFER { stack.RemoveFrom(start_values_len); };
 
     LocalArray<PendingOperator, 128> operators;
     bool expect_op = false;
@@ -1148,7 +1144,7 @@ Type Compiler::ParseExpression(bool keep_result)
         ProduceOperator(op);
     }
 
-    if (RG_UNLIKELY(!valid))
+    if (RG_UNLIKELY(!valid_stmt))
         return Type::Null;
 
     RG_ASSERT(stack.len == start_values_len + 1);
