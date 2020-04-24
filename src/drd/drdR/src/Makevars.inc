@@ -4,7 +4,7 @@
 
 PKG_CPPFLAGS += -D_FILE_OFFSET_BITS=64 -D__STDC_FORMAT_MACROS -DLIBDRD_NO_WREN -Wstrict-overflow=0
 PKG_CFLAGS += -std=gnu99
-PKG_CXXFLAGS += -std=gnu++14
+PKG_CXXFLAGS += -std=gnu++17 -Wno-class-memaccess
 
 all:
 	@mkdir -p ../R
