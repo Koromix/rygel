@@ -53,8 +53,9 @@ struct FunctionInfo {
     Size ret_pop;
     bool intrinsic;
 
-    // Singly-linked list
-    FunctionInfo *next_overload;
+    // Linked list
+    FunctionInfo *overload_prev;
+    FunctionInfo *overload_next;
 
     Size defined_pos; // Token
     Size inst_idx; // IR
