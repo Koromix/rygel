@@ -31,8 +31,8 @@ struct StackSlot {
 
 class Compiler {
     bool valid = true;
-    bool valid_stmt = true;
-    bool show_hints = false;
+    bool valid_stmt;
+    bool show_hints;
     HashSet<const void *> poisoned_variables;
 
     const char *filename;
@@ -42,7 +42,7 @@ class Compiler {
 
     BucketArray<FunctionInfo> functions;
     HashTable<const char *, FunctionInfo *> functions_map;
-    HashMap<Size, FunctionInfo *> functions_by_pos;
+    HashMap<Size, FunctionInfo *> functions_by_pos; // Clear for each Parse call
     BucketArray<VariableInfo> variables;
     HashTable<const char *, VariableInfo *> variables_map;
 
@@ -157,6 +157,9 @@ bool Compiler::Parse(const TokenSet &set, const char *filename)
     this->code = set.code;
     tokens = set.tokens;
     pos = 0;
+
+    valid_stmt = true;
+    show_hints = false;
     poisoned_variables.Clear();
 
     if (generate_debug) {
@@ -180,9 +183,13 @@ bool Compiler::Parse(const TokenSet &set, const char *filename)
         MarkError(pos, "Unexpected token '%1' without matching block", TokenKindNames[(int)tokens[pos].kind]);
         return false;
     }
+
+    // Maybe it'll help catch bugs
     RG_ASSERT(depth == -1);
     RG_ASSERT(loop_var_offset == -1);
+    RG_ASSERT(!current_func);
 
+    // Fix up foward calls
     for (const ForwardCall &call: forward_calls) {
         program.ir[call.offset].u.i = call.func->inst_idx;
     }
