@@ -245,7 +245,7 @@ void Compiler::ParsePrototypes(Span<const Size> funcs)
         }
         proto->ret_pop -= (proto->ret == Type::Null);
 
-        // Build full name (with parameter and return types)
+        // Build signature (with parameter and return types)
         {
             HeapArray<char> buf(&program.str_alloc);
 
@@ -254,7 +254,10 @@ void Compiler::ParsePrototypes(Span<const Size> funcs)
                 const FunctionInfo::Parameter &param = proto->params[i];
                 Fmt(&buf, "%1%2", i ? ", " : "", TypeNames[(int)param.type]);
             }
-            Fmt(&buf, "): %1", TypeNames[(int)proto->ret]);
+            Fmt(&buf, ")");
+            if (proto->ret != Type::Null) {
+                Fmt(&buf, ": %1", TypeNames[(int)proto->ret]);
+            }
 
             proto->signature = buf.TrimAndLeak(1).ptr;
         }
