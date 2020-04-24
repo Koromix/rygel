@@ -93,7 +93,6 @@ private:
     void EmitIntrinsic(const char *name, Span<const Type> types);
 
     void EmitPop(int64_t count);
-    void EmitInstruction(Instruction inst);
 
     bool TestOverload(const FunctionInfo &proto, Span<const Type> types);
 
