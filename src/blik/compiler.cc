@@ -93,6 +93,7 @@ private:
     void EmitIntrinsic(const char *name, Span<const Type> types);
 
     void EmitPop(int64_t count);
+    void EmitReturn();
 
     bool TestOverload(const FunctionInfo &proto, Span<const Type> types);
 
@@ -266,7 +267,6 @@ void Compiler::ParsePrototypes(Span<const Size> funcs)
         } else {
             proto->ret = Type::Null;
         }
-        proto->ret_pop -= (proto->ret == Type::Null);
 
         // Build signature (with parameter and return types)
         {
@@ -498,7 +498,7 @@ void Compiler::ParseFunction()
 
     if (!has_return) {
         if (func->ret == Type::Null) {
-            program.ir.Append({Opcode::ReturnNull, {.i = func->params.len}});
+            EmitReturn();
         } else {
             MarkError(func_pos, "Some code paths do not return a value in function '%1'", func->name);
         }
@@ -527,20 +527,7 @@ void Compiler::ParseReturn()
         return;
     }
 
-    if (var_offset > 0) {
-        Size pop = var_offset - 1;
-
-        switch (type) {
-            case Type::Null: { pop++; } break;
-            case Type::Bool: { program.ir.Append({Opcode::StoreLocalBool, {.i = 0}}); } break;
-            case Type::Int: { program.ir.Append({Opcode::StoreLocalInt, {.i = 0}}); } break;
-            case Type::Float: { program.ir.Append({Opcode::StoreLocalFloat, {.i = 0}}); } break;
-            case Type::String: { program.ir.Append({Opcode::StoreLocalString, {.i = 0}}); } break;
-        }
-
-        EmitPop(pop);
-    }
-    program.ir.Append({type == Type::Null ? Opcode::ReturnNull : Opcode::Return, {.i = current_func->ret_pop}});
+    EmitReturn();
 }
 
 void Compiler::ParseLet()
@@ -1450,7 +1437,7 @@ void Compiler::EmitIntrinsic(const char *name, Span<const Type> types)
         bool println = TestStr(name, "printLn");
 
         uint64_t payload = 0;
-        Size pop = 0;
+        int offset = 0;
 
         if (println) {
             program.ir.Append({Opcode::PushString, {.str = "\n"}});
@@ -1458,10 +1445,10 @@ void Compiler::EmitIntrinsic(const char *name, Span<const Type> types)
         }
         for (Size i = types.len - 1; i >= 0; i--) {
             payload = (payload << 3) | (int)types[i];
-            pop += (types[i] != Type::Null);
+            offset += (types[i] != Type::Null);
         }
 
-        payload = (payload << 5) | (pop + println);
+        payload = (payload << 5) | (offset + println);
         payload = (payload << 5) | (types.len + println);
 
         program.ir.Append({Opcode::Print, {.i = (int64_t)payload}});
@@ -1484,6 +1471,50 @@ void Compiler::EmitPop(int64_t count)
 
     if (count) {
         program.ir.Append({Opcode::Pop, {.i = count}});
+    }
+}
+
+void Compiler::EmitReturn()
+{
+    RG_ASSERT(current_func);
+
+    // We support tail recursion elimination (TRE)
+    if (program.ir.len > 0 && program.ir[program.ir.len - 1].code == Opcode::Call &&
+                              program.ir[program.ir.len - 1].u.i == current_func->inst_idx) {
+        program.ir.len--;
+
+        Size stack_offset = -2;
+        for (Size i = current_func->params.len - 1; i >= 0; i--) {
+            const FunctionInfo::Parameter &param = current_func->params[i];
+
+            switch (param.type) {
+                case Type::Null: {} break;
+                case Type::Bool: { program.ir.Append({Opcode::StoreLocalBool, {.i = --stack_offset}}); } break;
+                case Type::Int: { program.ir.Append({Opcode::StoreLocalInt, {.i = --stack_offset}}); } break;
+                case Type::Float: { program.ir.Append({Opcode::StoreLocalFloat, {.i = --stack_offset}}); } break;
+                case Type::String: { program.ir.Append({Opcode::StoreLocalString, {.i = --stack_offset}}); } break;
+            }
+        }
+
+        program.ir.Append({Opcode::CallTail, {.i = current_func->inst_idx}});
+
+        current_func->tre = true;
+    } else {
+        if (var_offset > 0) {
+            Size pop = var_offset - 1;
+
+            switch (current_func->ret) {
+                case Type::Null: { pop++; } break;
+                case Type::Bool: { program.ir.Append({Opcode::StoreLocalBool, {.i = 0}}); } break;
+                case Type::Int: { program.ir.Append({Opcode::StoreLocalInt, {.i = 0}}); } break;
+                case Type::Float: { program.ir.Append({Opcode::StoreLocalFloat, {.i = 0}}); } break;
+                case Type::String: { program.ir.Append({Opcode::StoreLocalString, {.i = 0}}); } break;
+            }
+
+            EmitPop(pop);
+        }
+
+        program.ir.Append({current_func->ret == Type::Null ? Opcode::ReturnNull : Opcode::Return, {.i = current_func->ret_pop}});
     }
 }
 

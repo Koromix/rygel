@@ -133,12 +133,14 @@ void ReportRuntimeError(Span<const FrameInfo> frames, const char *fmt, Args... a
         PrintLn(stderr, "Dumping stack trace:");
         for (Size i = frames.len - 1; i >= 0; i--) {
             const FrameInfo &frame = frames[i];
+
             const char *name = frame.func ? frame.func->signature : "<outside function>";
+            bool tre = frame.func && frame.func->tre;
 
             if (!i) {
-                Print(stderr, "  %!..+>>> %1%!0", FmtArg(name).Pad(36));
+                Print(stderr, "  %!..+>>> %1%2%!0", FmtArg(name).Pad(36), tre ? "+++" : "   ");
             } else {
-                Print(stderr, "    %!..+* %1%!0", FmtArg(name).Pad(36));
+                Print(stderr, "    %!..+* %1%2%!0", FmtArg(name).Pad(36), tre ? "+++" : "   ");
             }
 
             if (frame.filename) {

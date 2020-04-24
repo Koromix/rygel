@@ -61,6 +61,7 @@ struct FunctionInfo {
 
     Size defined_pos; // Token
     Size inst_idx; // IR
+    bool tre;
 
     // Used to prevent dangerous forward calls (if relevant globals are not defined yet)
     Size earliest_call_pos;

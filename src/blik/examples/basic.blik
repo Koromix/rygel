@@ -191,3 +191,14 @@ func inline0(): String do return "inline0()"
 
 printLn("TESTING ", func0())
 printLn("TESTING ", inline0())
+
+# blik optimise la récursivité terminale (TRE = tail recursion elimination).
+
+func factorial(n: Int, accum: Int): Int
+    let soFar = n * accum
+    if n <= 1 do return soFar
+    return factorial(n - 1, soFar)
+end
+func factorial(n: Int): Int do return factorial(n, 1)
+
+printLn(factorial(18))

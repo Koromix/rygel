@@ -398,23 +398,27 @@ int Interpreter::Run(const Program &program, const DebugInfo *debug)
 
         CASE(Call): {
             stack.Grow(2);
-            stack.ptr[stack.len++].i = pc + 1;
+            stack.ptr[stack.len++].i = pc;
             stack.ptr[stack.len++].i = bp;
             bp = stack.len;
             DISPATCH(pc = (Size)inst->u.i);
         }
+        CASE(CallTail): {
+            stack.len = bp;
+            DISPATCH(pc = (Size)inst->u.i);
+        }
         CASE(Return): {
             Value ret = stack.ptr[stack.len - 1];
-            pc = stack.ptr[stack.len - 3].i;
-            bp = stack.ptr[stack.len - 2].i;
-            stack.len -= 2 + inst->u.i;
+            stack.len = bp - inst->u.i - 1;
+            pc = stack.ptr[bp - 2].i + 1;
+            bp = stack.ptr[bp - 1].i;
             stack[stack.len - 1] = ret;
             DISPATCH(pc);
         }
         CASE(ReturnNull): {
-            pc = stack.ptr[stack.len - 2].i;
-            bp = stack.ptr[stack.len - 1].i;
-            stack.len -= 2 + inst->u.i;
+            stack.len = bp - inst->u.i - 2;
+            pc = stack.ptr[bp - 2].i + 1;
+            bp = stack.ptr[bp - 1].i;
             DISPATCH(pc);
         }
 
@@ -427,16 +431,17 @@ int Interpreter::Run(const Program &program, const DebugInfo *debug)
             Size pop = (Size)((remain >> 5) & 0x1F);
             remain >>= 10;
 
-            for (Size i = count; i > 0; i--) {
+            Size stack_offset = stack.len - pop;
+            for (Size i = 0; i < count; i++) {
                 Type type = (Type)(remain & 0x7);
                 remain >>= 3;
 
                 switch (type) {
                     case Type::Null: { Print("null"); } break;
-                    case Type::Bool: { Print("%1", stack.ptr[stack.len - i].b); } break;
-                    case Type::Int: { Print("%1", stack.ptr[stack.len - i].i); } break;
-                    case Type::Float: { Print("%1", stack.ptr[stack.len - i].d); } break;
-                    case Type::String: { Print("%1", stack.ptr[stack.len - i].str); } break;
+                    case Type::Bool: { Print("%1", stack[stack_offset++].b); } break;
+                    case Type::Int: { Print("%1", stack[stack_offset++].i); } break;
+                    case Type::Float: { Print("%1", stack[stack_offset++].d); } break;
+                    case Type::String: { Print("%1", stack[stack_offset++].str); } break;
                 }
             }
 
@@ -513,6 +518,7 @@ void Interpreter::DumpInstruction()
         case Opcode::SkipIfFalse: { LogDebug("(0x%1) SkipIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst->u.i).Pad0(-5)); } break;
 
         case Opcode::Call: { LogDebug("(0x%1) Call 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst->u.i).Pad0(-5)); } break;
+        case Opcode::CallTail: { LogDebug("(0x%1) CallTail 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst->u.i).Pad0(-5)); } break;
         case Opcode::Return: { LogDebug("(0x%1) Return %2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
         case Opcode::ReturnNull: { LogDebug("(0x%1) ReturnNull %2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
 

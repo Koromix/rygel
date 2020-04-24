@@ -75,6 +75,7 @@ OPCODE(SkipIfTrue)
 OPCODE(SkipIfFalse)
 
 OPCODE(Call)
+OPCODE(CallTail)
 OPCODE(Return)
 OPCODE(ReturnNull)
 
