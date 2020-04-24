@@ -49,6 +49,10 @@ class Compiler {
     Size depth = -1;
     Size var_offset = 0;
 
+    Size loop_var_offset = -1;
+    HeapArray<Size> loop_breaks;
+    HeapArray<Size> loop_continues;
+
     // Only used (and valid) while parsing expression
     HeapArray<StackSlot> stack;
 
@@ -75,8 +79,10 @@ private:
     void ParseIf();
     void ParseWhile();
     void ParseFor();
+    void ParseBreak();
+    void ParseContinue();
 
-    bool ParseExpressionOrReturn();
+    bool ParseDo();
 
     Type ParseExpression(bool keep_result);
     void ProduceOperator(const PendingOperator &op);
@@ -176,6 +182,7 @@ bool Compiler::Parse(const TokenSet &set, const char *filename)
         return false;
     }
     RG_ASSERT(depth == -1);
+    RG_ASSERT(loop_var_offset == -1);
 
     for (const ForwardCall &call: forward_calls) {
         program.ir[call.offset].u.i = call.func->inst_idx;
@@ -366,6 +373,15 @@ bool Compiler::ParseBlock(bool keep_variables)
                 ConsumeToken(TokenKind::EndOfLine);
             } break;
 
+            case TokenKind::Break: {
+                ParseBreak();
+                ConsumeToken(TokenKind::EndOfLine);
+            } break;
+            case TokenKind::Continue: {
+                ParseContinue();
+                ConsumeToken(TokenKind::EndOfLine);
+            } break;
+
             default: {
                 ParseExpression(false);
                 ConsumeToken(TokenKind::EndOfLine);
@@ -453,8 +469,8 @@ void Compiler::ParseFunction()
 
     // Function body
     bool has_return;
-    if (MatchToken(TokenKind::Do)) {
-        has_return = ParseExpressionOrReturn();
+    if (PeekToken(TokenKind::Do)) {
+        has_return = ParseDo();
     } else {
         ConsumeToken(TokenKind::EndOfLine);
         has_return = ParseBlock(false);
@@ -580,8 +596,8 @@ void Compiler::ParseIf()
     Size branch_idx = program.ir.len;
     program.ir.Append({Opcode::BranchIfFalse});
 
-    if (MatchToken(TokenKind::Do)) {
-        ParseExpressionOrReturn();
+    if (PeekToken(TokenKind::Do)) {
+        ParseDo();
         program.ir[branch_idx].u.i = program.ir.len - branch_idx;
     } else {
         ConsumeToken(TokenKind::EndOfLine);
@@ -655,8 +671,19 @@ void Compiler::ParseWhile()
     Size jump_idx = program.ir.len;
     program.ir.Append({Opcode::Jump});
 
-    if (MatchToken(TokenKind::Do)) {
-        ParseExpressionOrReturn();
+    // Break and continue need to apply to while loop blocks
+    Size first_break_idx = loop_breaks.len;
+    Size first_continue_idx = loop_continues.len;
+    RG_DEFER_C(prev_offset = loop_var_offset) {
+        loop_breaks.RemoveFrom(first_break_idx);
+        loop_continues.RemoveFrom(first_continue_idx);
+        loop_var_offset = prev_offset;
+    };
+    loop_var_offset = var_offset;
+
+    // Parse body
+    if (PeekToken(TokenKind::Do)) {
+        ParseDo();
     } else {
         ConsumeToken(TokenKind::EndOfLine);
         ParseBlock(false);
@@ -668,10 +695,22 @@ void Compiler::ParseWhile()
         forward_calls[i].offset += program.ir.len - start_idx;
     }
 
+    // Fix up continue jumps
+    for (Size i = first_continue_idx; i < loop_continues.len; i++) {
+        Size jump_idx = loop_continues[i];
+        program.ir[jump_idx].u.i = program.ir.len - jump_idx;
+    }
+
     // Finally write down expression IR
     program.ir[jump_idx].u.i = program.ir.len - jump_idx;
     program.ir.Append(expr);
     program.ir.Append({Opcode::BranchIfTrue, {.i = jump_idx - program.ir.len + 1}});
+
+    // Fix up break jumps
+    for (Size i = first_break_idx; i < loop_breaks.len; i++) {
+        Size jump_idx = loop_breaks[i];
+        program.ir[jump_idx].u.i = program.ir.len - jump_idx;
+    }
 }
 
 void Compiler::ParseFor()
@@ -737,12 +776,29 @@ void Compiler::ParseFor()
     program.ir.Append({inclusive ? Opcode::LessOrEqualInt : Opcode::LessThanInt});
     program.ir.Append({Opcode::BranchIfFalse, {.i = body_idx - program.ir.len}});
 
-    if (MatchToken(TokenKind::Do)) {
-        ParseExpressionOrReturn();
+    // Break and continue need to apply to for loop blocks
+    Size first_break_idx = loop_breaks.len;
+    Size first_continue_idx = loop_continues.len;
+    RG_DEFER_C(prev_offset = loop_var_offset) {
+        loop_breaks.RemoveFrom(first_break_idx);
+        loop_continues.RemoveFrom(first_continue_idx);
+        loop_var_offset = prev_offset;
+    };
+    loop_var_offset = var_offset;
+
+    // Parse body
+    if (PeekToken(TokenKind::Do)) {
+        ParseDo();
     } else {
         ConsumeToken(TokenKind::EndOfLine);
         ParseBlock(false);
         ConsumeToken(TokenKind::End);
+    }
+
+    // Fix up continue jumps
+    for (Size i = first_continue_idx; i < loop_continues.len; i++) {
+        Size jump_idx = loop_continues[i];
+        program.ir[jump_idx].u.i = program.ir.len - jump_idx;
     }
 
     program.ir.Append({Opcode::PushInt, {.i = 1}});
@@ -750,16 +806,60 @@ void Compiler::ParseFor()
     program.ir.Append({Opcode::Jump, {.i = body_idx - program.ir.len}});
     program.ir[body_idx + 3].u.i = program.ir.len - (body_idx + 3);
 
+    // Fix up break jumps
+    for (Size i = first_break_idx; i < loop_breaks.len; i++) {
+        Size jump_idx = loop_breaks[i];
+        program.ir[jump_idx].u.i = program.ir.len - jump_idx;
+    }
+
     // Destroy iterator and range values
     EmitPop(3);
     DestroyVariables(1);
     var_offset -= 3;
 }
 
-bool Compiler::ParseExpressionOrReturn()
+void Compiler::ParseBreak()
 {
+    Size break_pos = pos++;
+
+    if (loop_var_offset < 0) {
+        MarkError(break_pos, "Break statement outside of loop");
+        return;
+    }
+
+    EmitPop(var_offset - loop_var_offset);
+
+    loop_breaks.Append(program.ir.len);
+    program.ir.Append({Opcode::Jump});
+}
+
+void Compiler::ParseContinue()
+{
+    Size continue_pos = pos++;
+
+    if (loop_var_offset < 0) {
+        MarkError(continue_pos, "Continue statement outside of loop");
+        return;
+    }
+
+    EmitPop(var_offset - loop_var_offset);
+
+    loop_continues.Append(program.ir.len);
+    program.ir.Append({Opcode::Jump});
+}
+
+bool Compiler::ParseDo()
+{
+    pos++;
+
     if (PeekToken(TokenKind::Return)) {
         ParseReturn();
+        return true;
+    } else if (PeekToken(TokenKind::Break)) {
+        ParseBreak();
+        return true;
+    } else if (PeekToken(TokenKind::Continue)) {
+        ParseContinue();
         return true;
     } else {
         ParseExpression(false);

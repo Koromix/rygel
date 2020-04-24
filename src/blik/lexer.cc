@@ -434,6 +434,10 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     Token1(TokenKind::For);
                 } else if (ident == "in") {
                     Token1(TokenKind::In);
+                } else if (ident == "break") {
+                    Token1(TokenKind::Break);
+                } else if (ident == "continue") {
+                    Token1(TokenKind::Continue);
                 } else if (ident == "do") {
                     Token1(TokenKind::Do);
                 } else if (ident == "null") {

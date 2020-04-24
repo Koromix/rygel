@@ -37,15 +37,43 @@ end
 # bug, car au lieu de tester si a == 1 (ce qu'on voulait probablement faire), on assigne la
 # valeur 1 à la variable a.
 
-let mut i = 0
-while i < 1000000
-    i := i + 1
+let mut blop = 0
+while blop < 1000000
+    blop := blop + 1
 end
-while i > 100 do i := i - 1
-printLn("i = ", i)
+while blop > 100 do blop := blop - 1
+printLn("blop = ", blop)
 
 p := 5
 # test := true
+
+# Les instructions continue et break sont utilisables dans les boucles: break interrompt la
+# boucle et continue court-circuite le reste du contenue et va directement à l'itération suivante.
+
+printLn("Testing break and continue")
+for i in 1..8
+    print("Outler loop ", i)
+    if i = 3
+        printLn("    [SKIPPING!!]")
+        continue
+    end
+    if i = 5
+        printLn("    [ABORT!!]")
+        break
+    end
+    printLn()
+
+    let mut j = 0
+    while (j := j + 1) < 10
+        printLn("  Hello: ", j)
+        if j = 3 do continue
+        if j = 7 do break
+        printLn("  Going strong!")
+    end
+
+    printLn("--------------")
+end
+printLn("Seems to work!")
 
 # Les variables de ce langage ont une portée lexicale. En dehors de if, while & compagnie,
 # il est possible de définir des blocs à l'aide de begin/end. Les deux variables zzz et bleh
