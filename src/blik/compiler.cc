@@ -31,9 +31,9 @@ struct StackSlot {
 
 class Compiler {
     bool valid = true;
-
-    bool show_errors = true;
+    bool valid_stmt = true;
     bool show_hints = false;
+    HashSet<const void *> poisoned_variables;
 
     const char *filename;
     Span<const char> code;
@@ -109,19 +109,18 @@ private:
     template <typename... Args>
     void MarkError(Size pos, const char *fmt, Args... args)
     {
-        if (show_errors) {
+        if (valid_stmt) {
             Size offset = (pos < tokens.len) ? tokens[pos].offset : code.len;
             int line = tokens[std::min(pos, tokens.len - 1)].line;
 
             ReportDiagnostic(DiagnosticType::Error, code, filename, line, offset, fmt, args...);
 
-            show_errors = false;
+            valid = false;
+            valid_stmt = false;
             show_hints = true;
         } else {
             show_hints = false;
         }
-
-        valid = false;
     }
     template <typename... Args>
     void HintError(Size pos, const char *fmt, Args... args)
@@ -158,6 +157,7 @@ bool Compiler::Parse(const TokenSet &set, const char *filename)
     this->code = set.code;
     tokens = set.tokens;
     pos = 0;
+    poisoned_variables.Clear();
 
     if (generate_debug) {
         SourceInfo src = {};
@@ -197,14 +197,14 @@ void Compiler::ParsePrototypes(Span<const Size> funcs)
 
     RG_DEFER_C(prev_debug = generate_debug,
                prev_offset = pos) {
-        show_errors = true;
         generate_debug = prev_debug;
         pos = prev_offset;
+        valid_stmt = true;
     };
 
     // This is preliminary, it doesn't really count :)
     generate_debug = false;
-    show_errors = false;
+    valid_stmt = false;
 
     for (Size i = 0; i < funcs.len; i++) {
         pos = funcs[i] + 1;
@@ -321,10 +321,10 @@ bool Compiler::ParseBlock(bool keep_variables)
             case TokenKind::Begin: {
                 pos++;
 
-                ConsumeToken(TokenKind::EndOfLine);
+                valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
                 has_return |= ParseBlock(false);
                 ConsumeToken(TokenKind::End);
-                show_errors |= ConsumeToken(TokenKind::EndOfLine);
+                valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
             } break;
 
             case TokenKind::Func: {
@@ -332,46 +332,46 @@ bool Compiler::ParseBlock(bool keep_variables)
                 program.ir.Append({Opcode::Jump});
 
                 ParseFunction();
-                show_errors |= ConsumeToken(TokenKind::EndOfLine);
+                valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
 
                 program.ir[jump_idx].u.i = program.ir.len - jump_idx;
             } break;
 
             case TokenKind::Return: {
                 ParseReturn();
-                show_errors |= ConsumeToken(TokenKind::EndOfLine);
+                valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
                 has_return = true;
             } break;
 
             case TokenKind::Let: {
                 ParseLet();
-                show_errors |= ConsumeToken(TokenKind::EndOfLine);
+                valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
             } break;
             case TokenKind::If: {
                 ParseIf();
-                show_errors |= ConsumeToken(TokenKind::EndOfLine);
+                valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
             } break;
             case TokenKind::While: {
                 ParseWhile();
-                show_errors |= ConsumeToken(TokenKind::EndOfLine);
+                valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
             } break;
             case TokenKind::For: {
                 ParseFor();
-                show_errors |= ConsumeToken(TokenKind::EndOfLine);
+                valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
             } break;
 
             case TokenKind::Break: {
                 ParseBreak();
-                show_errors |= ConsumeToken(TokenKind::EndOfLine);
+                valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
             } break;
             case TokenKind::Continue: {
                 ParseContinue();
-                show_errors |= ConsumeToken(TokenKind::EndOfLine);
+                valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
             } break;
 
             default: {
                 ParseExpression(false);
-                show_errors |= ConsumeToken(TokenKind::EndOfLine);
+                valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
             } break;
         }
     }
@@ -445,6 +445,10 @@ void Compiler::ParseFunction()
             ConsumeToken(TokenKind::Colon);
             var->type = ConsumeType();
             types.Append(var->type);
+
+            if (RG_UNLIKELY(!valid_stmt)) {
+                poisoned_variables.Append(var);
+            }
         } while (MatchToken(TokenKind::Comma));
 
         MatchToken(TokenKind::EndOfLine);
@@ -600,6 +604,11 @@ void Compiler::ParseLet()
 
     // Null values don't actually exist
     var_offset += (var->type != Type::Null);
+
+    if (RG_UNLIKELY(!valid_stmt)) {
+        // Please don't issue "Variable 'X' does not exist" errors
+        poisoned_variables.Append(var);
+    }
 }
 
 void Compiler::ParseIf()
@@ -1009,6 +1018,7 @@ Type Compiler::ParseExpression(bool keep_result)
                             MarkError(pos - 1, "Variable '%1' does not exist", tok.u.str);
                             return Type::Null;
                         }
+                        valid_stmt &= !!poisoned_variables.Find(var);
 
                         if (var->global) {
                             if (RG_UNLIKELY(current_func &&
@@ -1588,8 +1598,12 @@ bool Compiler::PeekToken(TokenKind kind)
 void Compiler::DestroyVariables(Size count)
 {
     for (Size i = variables.len - count; i < variables.len; i++) {
-        variables_map.Remove(variables[i].name);
+        const VariableInfo &var = variables[i];
+
+        variables_map.Remove(var.name);
+        poisoned_variables.Remove(&var);
     }
+
     variables.RemoveLast(count);
 }
 
