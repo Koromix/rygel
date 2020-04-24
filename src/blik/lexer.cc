@@ -298,6 +298,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                                 case 'v': { str.Append('\v'); } break;
                                 case 'a': { str.Append('\a'); } break;
                                 case 'b': { str.Append('\b'); } break;
+                                case 'e': { str.Append('\x1B'); } break;
                                 case '\\': { str.Append('\\'); } break;
                                 case '"': { str.Append('"'); } break;
                                 case '\'': { str.Append('\''); } break;
