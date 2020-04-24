@@ -404,6 +404,8 @@ int Interpreter::Run(const Program &program, const DebugInfo *debug)
             DISPATCH(pc = (Size)inst->u.i);
         }
         CASE(Return): {
+            RG_ASSERT(stack.len == bp + 1);
+
             Value ret = stack.ptr[stack.len - 1];
             stack.len = bp - inst->u.i - 1;
             pc = stack.ptr[bp - 2].i + 1;
@@ -412,6 +414,8 @@ int Interpreter::Run(const Program &program, const DebugInfo *debug)
             DISPATCH(pc);
         }
         CASE(ReturnNull): {
+            RG_ASSERT(stack.len == bp);
+
             stack.len = bp - inst->u.i - 2;
             pc = stack.ptr[bp - 2].i + 1;
             bp = stack.ptr[bp - 1].i;
