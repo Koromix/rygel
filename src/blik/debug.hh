@@ -62,25 +62,6 @@ void ReportDiagnostic(DiagnosticType type, Span<const char> code, const char *fi
         extract.len++;
     }
 
-    // Yeah I may have gone overboard a bit... but it looks nice :)
-    Span<const char> comment = {};
-    for (Size i = 0; i < extract.len; i++) {
-        if (extract[i] == '"' || extract[i] == '\'') {
-            char quote = extract[i];
-
-            for (i++; i < extract.len; i++) {
-                if (extract[i] == '\\') {
-                    i++;
-                } else if (extract[i] == quote) {
-                    break;
-                }
-            }
-        } else if (extract[i] == '#') {
-            comment = extract.Take(i, extract.len - i);
-            extract.len = i;
-        }
-    }
-
     // We point the user to error location with '^^^', but if the token is a single
     // character (e.g. operator) we want the second caret to be centered on it.
     // There is a small trap: we can't do that if the character before is a tabulation,
@@ -103,6 +84,25 @@ void ReportDiagnostic(DiagnosticType type, Span<const char> code, const char *fi
 
         // Tabulations and very long lines... if you can read this comment: just stop.
         align_more = column - center - align_len;
+    }
+
+    // Yeah I may have gone overboard a bit... but it looks nice :)
+    Span<const char> comment = {};
+    for (Size i = 0; i < extract.len; i++) {
+        if (extract[i] == '"' || extract[i] == '\'') {
+            char quote = extract[i];
+
+            for (i++; i < extract.len; i++) {
+                if (extract[i] == '\\') {
+                    i++;
+                } else if (extract[i] == quote) {
+                    break;
+                }
+            }
+        } else if (extract[i] == '#') {
+            comment = extract.Take(i, extract.len - i);
+            extract.len = i;
+        }
     }
 
     // Make it gorgeous!
