@@ -76,7 +76,7 @@ private:
     void ParseFunction();
     void ParseReturn();
     void ParseLet();
-    void ParseIf();
+    bool ParseIf();
     void ParseWhile();
     void ParseFor();
     void ParseBreak();
@@ -352,7 +352,7 @@ bool Compiler::ParseBlock(bool keep_variables)
                 valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
             } break;
             case TokenKind::If: {
-                ParseIf();
+                has_return |= ParseIf();
                 valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
             } break;
             case TokenKind::While: {
@@ -500,7 +500,7 @@ void Compiler::ParseFunction()
         if (func->ret == Type::Null) {
             program.ir.Append({Opcode::ReturnNull, {.i = func->params.len}});
         } else {
-            MarkError(func_pos, "Function '%1' does not have a return statement", func->name);
+            MarkError(func_pos, "Some code paths do not return a value in function '%1'", func->name);
         }
     }
 }
@@ -606,24 +606,25 @@ void Compiler::ParseLet()
     var->poisoned = !valid_stmt;
 }
 
-void Compiler::ParseIf()
+bool Compiler::ParseIf()
 {
     Size if_pos = ++pos;
 
     if (RG_UNLIKELY(ParseExpression(true) != Type::Bool)) {
         MarkError(if_pos, "Cannot use non-Bool expression as condition");
-        return;
     }
 
     Size branch_idx = program.ir.len;
     program.ir.Append({Opcode::BranchIfFalse});
 
+    bool has_return = true;
+
     if (PeekToken(TokenKind::Do)) {
-        ParseDo();
+        has_return &= ParseDo();
         program.ir[branch_idx].u.i = program.ir.len - branch_idx;
     } else {
         ConsumeToken(TokenKind::EndOfLine);
-        ParseBlock(false);
+        has_return &= ParseBlock(false);
 
         if (MatchToken(TokenKind::Else)) {
             HeapArray<Size> jumps;
@@ -639,21 +640,20 @@ void Compiler::ParseIf()
 
                     if (RG_UNLIKELY(ParseExpression(true) != Type::Bool)) {
                         MarkError(elseif_pos, "Cannot use non-Bool expression as condition");
-                        return;
                     }
                     ConsumeToken(TokenKind::EndOfLine);
 
                     branch_idx = program.ir.len;
                     program.ir.Append({Opcode::BranchIfFalse});
 
-                    ParseBlock(false);
+                    has_return &= ParseBlock(false);
 
                     jumps.Append(program.ir.len);
                     program.ir.Append({Opcode::Jump});
                 } else {
                     ConsumeToken(TokenKind::EndOfLine);
 
-                    ParseBlock(false);
+                    has_return &= ParseBlock(false);
                     break;
                 }
             } while (MatchToken(TokenKind::Else));
@@ -667,6 +667,8 @@ void Compiler::ParseIf()
 
         ConsumeToken(TokenKind::End);
     }
+
+    return has_return;
 }
 
 void Compiler::ParseWhile()
@@ -880,10 +882,10 @@ bool Compiler::ParseDo()
         return true;
     } else if (PeekToken(TokenKind::Break)) {
         ParseBreak();
-        return true;
+        return false;
     } else if (PeekToken(TokenKind::Continue)) {
         ParseContinue();
-        return true;
+        return false;
     } else {
         ParseExpression(false);
         return false;
