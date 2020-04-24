@@ -30,6 +30,7 @@ struct VariableInfo {
     bool global;
     bool readonly;
     bool poisoned;
+    const VariableInfo *shadow;
 
     Size offset;
 

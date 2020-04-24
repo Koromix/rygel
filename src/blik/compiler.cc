@@ -388,29 +388,29 @@ void Compiler::ParseFunction()
 {
     Size func_pos = ++pos;
 
-    RG_DEFER_C(prev_offset = var_offset) {
+    FunctionInfo *func = functions_by_pos.FindValue(func_pos, nullptr);
+    RG_ASSERT(func);
+
+    RG_DEFER_C(prev_func = current_func,
+               prev_offset = var_offset) {
         // Variables inside the function are destroyed at the end of the block.
         // This destroys the parameters.
-        DestroyVariables(current_func->params.len);
+        DestroyVariables(func->params.len);
         var_offset = prev_offset;
 
-        current_func = nullptr;
+        current_func = prev_func;
     };
+
+    ConsumeIdentifier();
 
     if (RG_UNLIKELY(current_func)) {
         MarkError(func_pos, "Nested functions are not supported");
-        return;
-    }
-    if (RG_UNLIKELY(depth)) {
+        HintError(current_func->defined_pos, "Current function was started here and is still open");
+    } else if (RG_UNLIKELY(depth)) {
         MarkError(func_pos, "Functions must be defined in top-level scope");
-        return;
+    } else {
+        current_func = func;
     }
-
-    FunctionInfo *func = functions_by_pos.FindValue(func_pos, nullptr);
-    RG_ASSERT(func);
-    current_func = func;
-
-    ConsumeIdentifier();
 
     // Parameters
     HeapArray<Type> types;
@@ -429,13 +429,13 @@ void Compiler::ParseFunction()
 
             if (stack_offset >= -2) {
                 MarkError(pos - 1, "Functions cannot have more than %1 parameters", RG_LEN(func->params.data));
-                return;
             }
             var->offset = stack_offset++;
 
             std::pair<VariableInfo **, bool> ret = variables_map.Append(var);
             if (RG_UNLIKELY(!ret.second)) {
                const VariableInfo *prev_var = *ret.first;
+               var->shadow = prev_var;
 
                 if (prev_var->global) {
                     MarkError(pos - 1, "Parameter '%1' is not allowed to hide global variable", var->name);
@@ -443,8 +443,6 @@ void Compiler::ParseFunction()
                 } else {
                     MarkError(pos - 1, "Parameter '%1' already exists", var->name);
                 }
-
-                return;
             }
 
             ConsumeToken(TokenKind::Colon);
@@ -470,7 +468,6 @@ void Compiler::ParseFunction()
         while (overload != func) {
             if (RG_UNLIKELY(overload->intrinsic)) {
                 MarkError(func_pos, "Cannot replace or overload intrinsic function '%1'", func->name);
-                return;
             }
 
             if (TestOverload(*overload, types)) {
@@ -481,8 +478,6 @@ void Compiler::ParseFunction()
                               func->signature, overload->signature);
                 }
                 HintError(overload->defined_pos, "Previous definition here");
-
-                return;
             }
 
             overload = overload->overload_next;
@@ -507,7 +502,6 @@ void Compiler::ParseFunction()
             program.ir.Append({Opcode::ReturnNull, {.i = func->params.len}});
         } else {
             MarkError(func_pos, "Function '%1' does not have a return statement", func->name);
-            return;
         }
     }
 }
@@ -563,6 +557,7 @@ void Compiler::ParseLet()
     std::pair<VariableInfo **, bool> ret = variables_map.Append(var);
     if (RG_UNLIKELY(!ret.second)) {
         const VariableInfo *prev_var = *ret.first;
+        var->shadow = prev_var;
 
         if (current_func && prev_var->global) {
             MarkError(var_pos, "Declaration '%1' is not allowed to hide global variable", var->name);
@@ -757,6 +752,7 @@ void Compiler::ParseFor()
     std::pair<VariableInfo **, bool> ret = variables_map.Append(it);
     if (RG_UNLIKELY(!ret.second)) {
         const VariableInfo *prev_var = *ret.first;
+        it->shadow = prev_var;
 
         if (current_func && prev_var->global) {
             MarkError(for_pos, "Iterator '%1' is not allowed to hide global variable", it->name);
@@ -1596,7 +1592,13 @@ void Compiler::DestroyVariables(Size count)
 {
     for (Size i = variables.len - count; i < variables.len; i++) {
         const VariableInfo &var = variables[i];
-        variables_map.Remove(var.name);
+        VariableInfo **ptr = variables_map.Find(var.name);
+
+        if (var.shadow) {
+            *ptr = (VariableInfo *)var.shadow;
+        } else {
+            variables_map.Remove(ptr);
+        }
     }
 
     variables.RemoveLast(count);
