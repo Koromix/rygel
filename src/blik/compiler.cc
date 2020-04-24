@@ -1496,7 +1496,8 @@ void Compiler::EmitReturn()
             }
         }
 
-        program.ir.Append({Opcode::CallTail, {.i = current_func->inst_idx}});
+        EmitPop(var_offset);
+        program.ir.Append({Opcode::Jump, {.i = current_func->inst_idx - program.ir.len}});
 
         current_func->tre = true;
     } else {

@@ -403,10 +403,6 @@ int Interpreter::Run(const Program &program, const DebugInfo *debug)
             bp = stack.len;
             DISPATCH(pc = (Size)inst->u.i);
         }
-        CASE(CallTail): {
-            stack.len = bp;
-            DISPATCH(pc = (Size)inst->u.i);
-        }
         CASE(Return): {
             Value ret = stack.ptr[stack.len - 1];
             stack.len = bp - inst->u.i - 1;
@@ -518,7 +514,6 @@ void Interpreter::DumpInstruction()
         case Opcode::SkipIfFalse: { LogDebug("(0x%1) SkipIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst->u.i).Pad0(-5)); } break;
 
         case Opcode::Call: { LogDebug("(0x%1) Call 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst->u.i).Pad0(-5)); } break;
-        case Opcode::CallTail: { LogDebug("(0x%1) CallTail 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst->u.i).Pad0(-5)); } break;
         case Opcode::Return: { LogDebug("(0x%1) Return %2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
         case Opcode::ReturnNull: { LogDebug("(0x%1) ReturnNull %2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
 
