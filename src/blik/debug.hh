@@ -115,7 +115,7 @@ void ReportDiagnostic(DiagnosticType type, Span<const char> code, const char *fi
         } break;
 
         case DiagnosticType::ErrorHint: {
-            Print(stderr, "    %!Y..%1(%2:%3):%!0 %!..+", filename, line, column + 1);
+            Print(stderr, "    %!D..%1(%2:%3):%!0 %!..+", filename, line, column + 1);
             PrintLn(stderr, fmt, args...);
             PrintLn(stderr, "    %1 |%!0  %2%!D..%3%!0", FmtArg(line).Pad(-7), extract, comment);
             PrintLn(stderr, "            |  %1%2%!D..^^^%!0", align, FmtArg(' ').Repeat(align_more));
