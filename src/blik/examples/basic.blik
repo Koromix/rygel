@@ -38,10 +38,10 @@ end
 # valeur 1 à la variable a.
 
 let mut blop = 0
-while blop < 1000000
+while blop < 100
     blop := blop + 1
 end
-while blop > 100 do blop := blop - 1
+while blop > 10 do blop := blop - 1
 printLn("blop = ", blop)
 
 p := 5
