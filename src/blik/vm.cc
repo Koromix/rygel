@@ -12,7 +12,6 @@ namespace RG {
 class Interpreter {
     const Program *program;
     Span<const Instruction> ir;
-    const DebugInfo *debug; // Can be NULL
 
     HeapArray<Value> stack;
     Size pc = 0;
@@ -20,7 +19,7 @@ class Interpreter {
     const Instruction *inst;
 
 public:
-    int Run(const Program &program, const DebugInfo *debug);
+    int Run(const Program &program);
 
 private:
     void DumpInstruction();
@@ -29,17 +28,16 @@ private:
     void FatalError(const char *fmt, Args... args)
     {
         HeapArray<FrameInfo> frames;
-        DecodeFrames(*program, debug, stack, pc, bp, &frames);
+        DecodeFrames(*program, stack, pc, bp, &frames);
 
         ReportRuntimeError(frames, fmt, args...);
     }
 };
 
-int Interpreter::Run(const Program &program, const DebugInfo *debug)
+int Interpreter::Run(const Program &program)
 {
     this->program = &program;
     ir = program.ir;
-    this->debug = debug;
 
     stack.Clear();
     pc = 0;
@@ -544,10 +542,10 @@ void Interpreter::DumpInstruction()
 #endif
 }
 
-int Run(const Program &program, const DebugInfo *debug)
+int Run(const Program &program)
 {
     Interpreter interp;
-    return interp.Run(program, debug);
+    return interp.Run(program);
 }
 
 }

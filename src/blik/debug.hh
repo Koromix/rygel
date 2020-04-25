@@ -10,24 +10,10 @@
 namespace RG {
 
 struct Program;
-struct DebugInfo;
 
 enum class DiagnosticType {
     Error,
     ErrorHint
-};
-
-struct SourceInfo {
-    const char *filename;
-    Size first_idx;
-    Size line_idx;
-};
-
-struct DebugInfo {
-    HeapArray<SourceInfo> sources;
-    HeapArray<Size> lines;
-
-    BlockAllocator str_alloc;
 };
 
 struct FrameInfo {
@@ -35,13 +21,12 @@ struct FrameInfo {
     Size bp;
     const FunctionInfo *func; // Can be NULL
 
-    // Only if DebugInfo is available
     const char *filename;
     int32_t line;
 };
 
-void DecodeFrames(const Program &program, const DebugInfo *debug,
-                  Span<const Value> stack, Size pc, Size b, HeapArray<FrameInfo> *out_frames);
+void DecodeFrames(const Program &program, Span<const Value> stack, Size pc, Size bp,
+                  HeapArray<FrameInfo> *out_frames);
 
 template <typename... Args>
 void ReportDiagnostic(DiagnosticType type, Span<const char> code, const char *filename,

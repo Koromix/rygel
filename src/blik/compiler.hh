@@ -9,7 +9,6 @@
 
 namespace RG {
 
-struct DebugInfo;
 struct TokenSet;
 
 enum class Opcode {
@@ -35,8 +34,17 @@ struct Instruction {
     } u;
 };
 
+struct SourceInfo {
+    const char *filename;
+    Size first_idx;
+    Size line_idx;
+};
+
 struct Program {
     HeapArray<Instruction> ir;
+
+    HeapArray<SourceInfo> sources;
+    HeapArray<Size> lines;
 
     BucketArray<FunctionInfo> functions;
     HashTable<const char *, const FunctionInfo *> functions_map;
@@ -46,7 +54,6 @@ struct Program {
     BlockAllocator str_alloc;
 };
 
-bool Compile(const TokenSet &set, const char *filename,
-             Program *out_program, DebugInfo *out_debug = nullptr);
+bool Compile(const TokenSet &set, const char *filename, Program *out_program);
 
 }

@@ -58,16 +58,13 @@ class Compiler {
 
     HeapArray<ForwardCall> forward_calls;
 
-    DebugInfo debug;
-    bool generate_debug;
-
     Program program;
 
 public:
-    Compiler(bool generate_debug);
+    Compiler();
 
     bool Parse(const TokenSet &set, const char *filename);
-    void Finish(Program *out_program, DebugInfo *out_debug = nullptr);
+    void Finish(Program *out_program);
 
 private:
     void ParsePrototypes(Span<const Size> funcs);
@@ -140,8 +137,7 @@ private:
     }
 };
 
-Compiler::Compiler(bool generate_debug)
-    : generate_debug(generate_debug)
+Compiler::Compiler()
 {
     functions.Append({.name = "print", .signature = "print(...)", .variadic = true, .ret = Type::Null});
     functions.Append({.name = "printLn", .signature = "printLn(...)", .variadic = true, .ret = Type::Null});
@@ -179,15 +175,16 @@ bool Compiler::Parse(const TokenSet &set, const char *filename)
     valid_stmt = true;
     show_hints = false;
 
-    if (generate_debug) {
+    // Add to output files
+    {
         SourceInfo src = {};
 
-        src.filename = DuplicateString(filename, &debug.str_alloc).ptr;
+        src.filename = DuplicateString(filename, &program.str_alloc).ptr;
         src.first_idx = program.ir.len;
-        src.line_idx = debug.lines.len;
+        src.line_idx = program.lines.len;
 
-        debug.sources.Append(src);
-        debug.lines.Append(program.ir.len);
+        program.sources.Append(src);
+        program.lines.Append(program.ir.len);
     }
 
     // We want top-level order-independent functions
@@ -221,15 +218,14 @@ void Compiler::ParsePrototypes(Span<const Size> funcs)
 {
     RG_ASSERT(!functions_by_pos.table.count);
 
-    RG_DEFER_C(prev_debug = generate_debug,
+    RG_DEFER_C(lines_len = program.lines.len,
                prev_offset = pos) {
-        generate_debug = prev_debug;
+        program.lines.RemoveFrom(lines_len);
         pos = prev_offset;
         valid_stmt = true;
     };
 
     // This is preliminary, it doesn't really count :)
-    generate_debug = false;
     valid_stmt = false;
 
     for (Size i = 0; i < funcs.len; i++) {
@@ -334,9 +330,7 @@ bool Compiler::ParseBlock(bool keep_variables)
     while (pos < tokens.len) {
         switch (tokens[pos].kind) {
             case TokenKind::EndOfLine: {
-                if (generate_debug) {
-                    debug.lines.Append(program.ir.len);
-                }
+                program.lines.Append(program.ir.len);
                 pos++;
             } break;
 
@@ -1060,9 +1054,7 @@ Type Compiler::ParseExpression(bool keep_result)
                     pos--;
                     goto error;
                 } else if (!expect_op && tok.kind == TokenKind::EndOfLine) {
-                    if (generate_debug) {
-                        debug.lines.Append(program.ir.len);
-                    }
+                    program.lines.Append(program.ir.len);
                     continue;
                 } else if (parentheses || !expect_op) {
                     goto unexpected;
@@ -1587,10 +1579,9 @@ bool Compiler::TestOverload(const FunctionInfo &proto, Span<const Type> types)
     return true;
 }
 
-void Compiler::Finish(Program *out_program, DebugInfo *out_debug)
+void Compiler::Finish(Program *out_program)
 {
     RG_ASSERT(!out_program->ir.len);
-    RG_ASSERT(!!generate_debug == !!out_debug);
 
     program.ir.Append({Opcode::PushInt, {.i = 0}});
     program.ir.Append({Opcode::Exit, {.b = true}});
@@ -1606,9 +1597,6 @@ void Compiler::Finish(Program *out_program, DebugInfo *out_debug)
 
     program.ir.Trim();
     SwapMemory(&program, out_program, RG_SIZE(program));
-    if (out_debug) {
-        SwapMemory(&debug, out_debug, RG_SIZE(debug));
-    }
 }
 
 bool Compiler::ConsumeToken(TokenKind kind)
@@ -1623,8 +1611,8 @@ bool Compiler::ConsumeToken(TokenKind kind)
         return false;
     }
 
-    if (generate_debug && kind == TokenKind::EndOfLine) {
-        debug.lines.Append(program.ir.len);
+    if (kind == TokenKind::EndOfLine) {
+        program.lines.Append(program.ir.len);
     }
 
     pos++;
@@ -1658,8 +1646,8 @@ bool Compiler::MatchToken(TokenKind kind)
     bool match = pos < tokens.len && tokens[pos].kind == kind;
     pos += match;
 
-    if (generate_debug && match && kind == TokenKind::EndOfLine) {
-        debug.lines.Append(program.ir.len);
+    if (match && kind == TokenKind::EndOfLine) {
+        program.lines.Append(program.ir.len);
     }
 
     return match;
@@ -1687,14 +1675,13 @@ void Compiler::DestroyVariables(Size count)
     variables.RemoveLast(count);
 }
 
-bool Compile(const TokenSet &set, const char *filename,
-             Program *out_program, DebugInfo *out_debug)
+bool Compile(const TokenSet &set, const char *filename, Program *out_program)
 {
-    Compiler compiler(out_debug);
+    Compiler compiler;
     if (!compiler.Parse(set, filename))
         return false;
 
-    compiler.Finish(out_program, out_debug);
+    compiler.Finish(out_program);
     return true;
 }
 
