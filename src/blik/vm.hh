@@ -10,6 +10,33 @@ namespace RG {
 
 struct Program;
 
+class VirtualMachine {
+    Span<const Instruction> ir;
+
+public:
+    const Program *const program;
+
+    HeapArray<Value> stack;
+    Size pc = 0;
+    Size bp = 0;
+
+    VirtualMachine(const Program &program) : ir(program.ir), program(&program) {}
+
+    int Run();
+
+private:
+    void DumpInstruction();
+
+    template <typename... Args>
+    void FatalError(const char *fmt, Args... args)
+    {
+        HeapArray<FrameInfo> frames;
+        DecodeFrames(*this, &frames);
+
+        ReportRuntimeError(frames, fmt, args...);
+    }
+};
+
 int Run(const Program &program);
 
 }

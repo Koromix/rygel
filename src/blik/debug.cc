@@ -6,6 +6,7 @@
 #include "compiler.hh"
 #include "debug.hh"
 #include "types.hh"
+#include "vm.hh"
 
 namespace RG {
 
@@ -36,26 +37,28 @@ static void Decode1(const Program &program, Size pc, Size bp, HeapArray<FrameInf
     out_frames->Append(frame);
 }
 
-void DecodeFrames(const Program &program, Span<const Value> stack, Size pc, Size bp,
-                  HeapArray<FrameInfo> *out_frames)
+void DecodeFrames(const VirtualMachine &vm, HeapArray<FrameInfo> *out_frames)
 {
+    Size pc = vm.pc;
+    Size bp = vm.bp;
+
     // Walk up call frames
-    if (bp) {
-        Decode1(program, pc, bp, out_frames);
+    if (vm.bp) {
+        Decode1(*vm.program, pc, bp, out_frames);
 
         for (;;) {
-            pc = stack[bp - 2].i;
-            bp = stack[bp - 1].i;
+            pc = vm.stack[bp - 2].i;
+            bp = vm.stack[bp - 1].i;
 
             if (!bp)
                 break;
 
-            Decode1(program, pc, bp, out_frames);
+            Decode1(*vm.program, pc, bp, out_frames);
         }
     }
 
     // Outside funtion
-    Decode1(program, pc, 0, out_frames);
+    Decode1(*vm.program, pc, 0, out_frames);
 }
 
 }
