@@ -23,7 +23,7 @@ public:
 
     VirtualMachine(const Program &program) : ir(program.ir), program(&program) {}
 
-    int Run();
+    bool Run(int *out_exit_code);
 
     void DecodeFrames(const VirtualMachine &vm, HeapArray<FrameInfo> *out_frames);
 
@@ -40,6 +40,6 @@ private:
     }
 };
 
-int Run(const Program &program);
+bool Run(const Program &program, int *out_exit_code);
 
 }

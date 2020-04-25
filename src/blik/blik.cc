@@ -69,7 +69,8 @@ Options:
     if (!Compile(token_set, filename, &program))
         return 1;
 
-    return Run(program);
+    int exit_code;
+    return Run(program, &exit_code) ? exit_code : 1;
 }
 
 }

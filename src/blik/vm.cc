@@ -8,7 +8,7 @@
 
 namespace RG {
 
-int VirtualMachine::Run()
+bool VirtualMachine::Run(int *out_exit_code)
 {
     const Instruction *inst;
 
@@ -172,7 +172,7 @@ int VirtualMachine::Run()
             int64_t i2 = stack[stack.len - 1].i;
             if (RG_UNLIKELY(i2 == 0)) {
                 FatalError("Division by 0 is illegal");
-                return 1;
+                return false;
             }
             stack[--stack.len - 1].i = i1 / i2;
             DISPATCH(++pc);
@@ -182,7 +182,7 @@ int VirtualMachine::Run()
             int64_t i2 = stack[stack.len - 1].i;
             if (RG_UNLIKELY(i2 == 0)) {
                 FatalError("Division by 0 is illegal");
-                return 1;
+                return false;
             }
             stack[--stack.len - 1].i = i1 % i2;
             DISPATCH(++pc);
@@ -453,7 +453,8 @@ int VirtualMachine::Run()
             }
 #endif
 
-            return (int)code;
+            *out_exit_code = code;
+            return true;
         }
     }
 
@@ -564,10 +565,10 @@ void VirtualMachine::DumpInstruction()
 #endif
 }
 
-int Run(const Program &program)
+bool Run(const Program &program, int *out_exit_code)
 {
     VirtualMachine vm(program);
-    return vm.Run();
+    return vm.Run(out_exit_code);
 }
 
 }
