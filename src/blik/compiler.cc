@@ -144,7 +144,19 @@ Compiler::Compiler(bool generate_debug)
 
     for (FunctionInfo &intr: functions) {
         intr.intrinsic = true;
-        functions_map.Append(&intr);
+
+        std::pair<FunctionInfo **, bool> ret = functions_map.Append(&intr);
+        FunctionInfo *intr0 = *ret.first;
+
+        if (ret.second) {
+            intr.overload_prev = &intr;
+            intr.overload_next = &intr;
+        } else {
+            intr0->overload_prev->overload_next = &intr;
+            intr.overload_next = intr0;
+            intr.overload_prev = intr0->overload_prev;
+            intr0->overload_prev = &intr;
+        }
     }
 }
 
