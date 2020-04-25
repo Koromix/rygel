@@ -983,28 +983,12 @@ Type Compiler::ParseExpression(bool keep_result)
                     stack.Append({Type::Bool});
                 } break;
                 case TokenKind::Integer: {
-                    if (operators.len && operators[operators.len - 1].kind == TokenKind::Minus &&
-                                         operators[operators.len - 1].unary) {
-                        operators.RemoveLast(1);
-
-                        program.ir.Append({Opcode::PushInt, {.i = -tok.u.i}});
-                        stack.Append({Type::Int});
-                    } else {
-                        program.ir.Append({Opcode::PushInt, {.i = tok.u.i}});
-                        stack.Append({Type::Int});
-                    }
+                    program.ir.Append({Opcode::PushInt, {.i = tok.u.i}});
+                    stack.Append({Type::Int});
                 } break;
                 case TokenKind::Float: {
-                    if (operators.len && operators[operators.len - 1].kind == TokenKind::Minus &&
-                                         operators[operators.len - 1].unary) {
-                        operators.RemoveLast(1);
-
-                        program.ir.Append({Opcode::PushFloat, {.d = -tok.u.d}});
-                        stack.Append({Type::Float});
-                    } else {
-                        program.ir.Append({Opcode::PushFloat, {.d = tok.u.d}});
-                        stack.Append({Type::Float});
-                    }
+                    program.ir.Append({Opcode::PushFloat, {.d = tok.u.d}});
+                    stack.Append({Type::Float});
                 } break;
                 case TokenKind::String: {
                     program.ir.Append({Opcode::PushString, {.str = tok.u.str}});
@@ -1094,9 +1078,7 @@ Type Compiler::ParseExpression(bool keep_result)
                 }
             }
             if (RG_UNLIKELY(expect_op == op.unary)) {
-                if (tok.kind == TokenKind::Plus) {
-                    continue;
-                } else if (tok.kind == TokenKind::Minus) {
+                if (tok.kind == TokenKind::Plus || tok.kind == TokenKind::Minus) {
                     op.prec = 12;
                     op.unary = true;
                 } else {
@@ -1202,7 +1184,7 @@ error:
 
 void Compiler::ProduceOperator(const PendingOperator &op)
 {
-    bool success;
+    bool success = false;
 
     switch (op.kind) {
         case TokenKind::Reassign: {
@@ -1263,13 +1245,40 @@ void Compiler::ProduceOperator(const PendingOperator &op)
         } break;
 
         case TokenKind::Plus: {
-            success = EmitOperator2(Type::Int, Opcode::AddInt, Type::Int) ||
-                      EmitOperator2(Type::Float, Opcode::AddFloat, Type::Float);
+            if (op.unary) {
+                success = stack[stack.len - 1].type == Type::Int ||
+                          stack[stack.len - 1].type == Type::Float;
+            } else {
+                success = EmitOperator2(Type::Int, Opcode::AddInt, Type::Int) ||
+                          EmitOperator2(Type::Float, Opcode::AddFloat, Type::Float);
+            }
         } break;
         case TokenKind::Minus: {
             if (op.unary) {
-                success = EmitOperator1(Type::Int, Opcode::NegateInt, Type::Int) ||
-                          EmitOperator1(Type::Float, Opcode::NegateFloat, Type::Float);
+                Instruction *inst = &program.ir[program.ir.len - 1];
+
+                switch (inst->code) {
+                    case Opcode::PushInt: {
+                        // XXX: Don't forget to handle overflow (negation of INT64_MIN) here when
+                        // we implement overflow detection later!
+                        inst->u.i = -inst->u.i;
+                        success = true;
+                    } break;
+                    case Opcode::PushFloat: {
+                        inst->u.d = -inst->u.d;
+                        success = true;
+                    } break;
+                    case Opcode::NegateInt:
+                    case Opcode::NegateFloat: {
+                        program.ir.len--;
+                        success = true;
+                    } break;
+
+                    default: {
+                        success = EmitOperator1(Type::Int, Opcode::NegateInt, Type::Int) ||
+                                  EmitOperator1(Type::Float, Opcode::NegateFloat, Type::Float);
+                    }
+                }
             } else {
                 success = EmitOperator2(Type::Int, Opcode::SubstractInt, Type::Int) ||
                           EmitOperator2(Type::Float, Opcode::SubstractFloat, Type::Float);
