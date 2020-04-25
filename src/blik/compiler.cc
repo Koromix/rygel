@@ -407,9 +407,8 @@ void Compiler::ParseFunction()
         HintError(current_func->defined_pos, "Current function was started here and is still open");
     } else if (RG_UNLIKELY(depth)) {
         MarkError(func_pos, "Functions must be defined in top-level scope");
-    } else {
-        current_func = func;
     }
+    current_func = func;
 
     // Parameters
     HeapArray<Type> types;
