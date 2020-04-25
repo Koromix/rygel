@@ -350,7 +350,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
             case '%': { Token1(TokenKind::Modulo); } break;
             case '^': { Token1(TokenKind::Xor); } break;
             case '~': { Token1(TokenKind::Not); } break;
-            case '=': { Token1(TokenKind::Equal); } break;
+            case '=': { Token2('=', TokenKind::Equal) || Token1(TokenKind::Assign); } break;
             case '!': { Token2('=', TokenKind::NotEqual) || Token1(TokenKind::LogicNot); } break;
             case '&': { Token2('&', TokenKind::LogicAnd) || Token1(TokenKind::And); } break;
             case '|': { Token2('|', TokenKind::LogicOr) || Token1(TokenKind::Or); } break;

@@ -557,13 +557,13 @@ void Compiler::ParseLet()
         }
     }
 
-    if (MatchToken(TokenKind::Equal)) {
+    if (MatchToken(TokenKind::Assign)) {
         var->type = ParseExpression(true);
     } else {
         ConsumeToken(TokenKind::Colon);
         var->type = ConsumeType();
 
-        if (MatchToken(TokenKind::Equal)) {
+        if (MatchToken(TokenKind::Assign)) {
             Type type2 = ParseExpression(true);
 
             if (RG_UNLIKELY(type2 != var->type)) {
@@ -1061,6 +1061,12 @@ Type Compiler::ParseExpression(bool keep_result)
                     continue;
                 } else if (parentheses || !expect_op) {
                     goto unexpected_token;
+                } else if (tok.kind == TokenKind::Assign) {
+                    MarkError(pos - 1, "Unexpected token '=', did you mean '=='?");
+
+                    // Pretend the user has typed '==' to avoid cascading errors
+                    op.kind = TokenKind::Equal;
+                    op.prec = GetOperatorPrecedence(TokenKind::Equal);
                 } else {
                     pos--;
                     break;
