@@ -490,7 +490,7 @@ void Compiler::ParseFunction()
     if (PeekToken(TokenKind::Do)) {
         has_return = ParseDo();
     } else {
-        ConsumeToken(TokenKind::EndOfLine);
+        valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
         has_return = ParseBlock(false);
         ConsumeToken(TokenKind::End);
     }
@@ -610,7 +610,7 @@ bool Compiler::ParseIf()
         has_return &= ParseDo();
         program.ir[branch_idx].u.i = program.ir.len - branch_idx;
     } else {
-        ConsumeToken(TokenKind::EndOfLine);
+        valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
         has_return &= ParseBlock(false);
 
         if (MatchToken(TokenKind::Else)) {
@@ -628,7 +628,7 @@ bool Compiler::ParseIf()
                     if (RG_UNLIKELY(ParseExpression(true) != Type::Bool)) {
                         MarkError(elseif_pos, "Cannot use non-Bool expression as condition");
                     }
-                    ConsumeToken(TokenKind::EndOfLine);
+                    valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
 
                     branch_idx = program.ir.len;
                     program.ir.Append({Opcode::BranchIfFalse});
@@ -638,7 +638,7 @@ bool Compiler::ParseIf()
                     jumps.Append(program.ir.len);
                     program.ir.Append({Opcode::Jump});
                 } else {
-                    ConsumeToken(TokenKind::EndOfLine);
+                    valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
 
                     has_return &= ParseBlock(false);
                     has_else = true;
@@ -698,7 +698,7 @@ void Compiler::ParseWhile()
     if (PeekToken(TokenKind::Do)) {
         ParseDo();
     } else {
-        ConsumeToken(TokenKind::EndOfLine);
+        valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
         ParseBlock(false);
         ConsumeToken(TokenKind::End);
     }
@@ -804,7 +804,7 @@ void Compiler::ParseFor()
     if (PeekToken(TokenKind::Do)) {
         ParseDo();
     } else {
-        ConsumeToken(TokenKind::EndOfLine);
+        valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
         ParseBlock(false);
         ConsumeToken(TokenKind::End);
     }
