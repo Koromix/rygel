@@ -9,7 +9,18 @@
 
 namespace RG {
 
+class Parser;
 struct TokenSet;
+
+class Compiler {
+    std::unique_ptr<Parser> parser;
+
+public:
+    Compiler();
+
+    bool Compile(const TokenSet &set, const char *filename);
+    void Finish(Program *out_program);
+};
 
 bool Compile(const TokenSet &set, const char *filename, Program *out_program);
 

@@ -29,7 +29,7 @@ struct StackSlot {
     const VariableInfo *var;
 };
 
-class Compiler {
+class Parser {
     bool valid = true;
     bool valid_stmt;
     bool show_hints;
@@ -61,7 +61,7 @@ class Compiler {
     Program program;
 
 public:
-    Compiler();
+    Parser();
 
     bool Parse(const TokenSet &set, const char *filename);
     void Finish(Program *out_program);
@@ -137,7 +137,15 @@ private:
     }
 };
 
+// PImpl crap
 Compiler::Compiler()
+    : parser(new Parser) {}
+bool Compiler::Compile(const TokenSet &set, const char *filename)
+    { return parser->Parse(set, filename); }
+void Compiler::Finish(Program *out_program)
+    { return parser->Finish(out_program); }
+
+Parser::Parser()
 {
     functions.Append({.name = "print", .signature = "print(...)", .variadic = true, .ret = Type::Null});
     functions.Append({.name = "printLn", .signature = "printLn(...)", .variadic = true, .ret = Type::Null});
@@ -163,7 +171,7 @@ Compiler::Compiler()
     }
 }
 
-bool Compiler::Parse(const TokenSet &set, const char *filename)
+bool Parser::Parse(const TokenSet &set, const char *filename)
 {
     RG_ASSERT(valid);
 
@@ -214,7 +222,7 @@ bool Compiler::Parse(const TokenSet &set, const char *filename)
     return valid;
 }
 
-void Compiler::ParsePrototypes(Span<const Size> funcs)
+void Parser::ParsePrototypes(Span<const Size> funcs)
 {
     RG_ASSERT(!functions_by_pos.table.count);
 
@@ -310,7 +318,7 @@ void Compiler::ParsePrototypes(Span<const Size> funcs)
     }
 }
 
-bool Compiler::ParseBlock(bool keep_variables)
+bool Parser::ParseBlock(bool keep_variables)
 {
     depth++;
 
@@ -398,7 +406,7 @@ bool Compiler::ParseBlock(bool keep_variables)
     return has_return;
 }
 
-void Compiler::ParseFunction()
+void Parser::ParseFunction()
 {
     Size func_pos = ++pos;
 
@@ -519,7 +527,7 @@ void Compiler::ParseFunction()
     }
 }
 
-void Compiler::ParseReturn()
+void Parser::ParseReturn()
 {
     Size return_pos = ++pos;
 
@@ -544,7 +552,7 @@ void Compiler::ParseReturn()
     EmitReturn();
 }
 
-void Compiler::ParseLet()
+void Parser::ParseLet()
 {
     Size var_pos = ++pos;
 
@@ -607,7 +615,7 @@ void Compiler::ParseLet()
     var->poisoned = !valid_stmt;
 }
 
-bool Compiler::ParseIf()
+bool Parser::ParseIf()
 {
     Size if_pos = ++pos;
 
@@ -675,7 +683,7 @@ bool Compiler::ParseIf()
     return has_return && has_else;
 }
 
-void Compiler::ParseWhile()
+void Parser::ParseWhile()
 {
     Size while_pos = ++pos;
     Size start_idx = program.ir.len;
@@ -741,7 +749,7 @@ void Compiler::ParseWhile()
     }
 }
 
-void Compiler::ParseFor()
+void Parser::ParseFor()
 {
     Size for_pos = ++pos;
 
@@ -847,7 +855,7 @@ void Compiler::ParseFor()
     var_offset -= 3;
 }
 
-void Compiler::ParseBreak()
+void Parser::ParseBreak()
 {
     Size break_pos = pos++;
 
@@ -862,7 +870,7 @@ void Compiler::ParseBreak()
     program.ir.Append({Opcode::Jump});
 }
 
-void Compiler::ParseContinue()
+void Parser::ParseContinue()
 {
     Size continue_pos = pos++;
 
@@ -877,7 +885,7 @@ void Compiler::ParseContinue()
     program.ir.Append({Opcode::Jump});
 }
 
-bool Compiler::ParseDo()
+bool Parser::ParseDo()
 {
     pos++;
 
@@ -925,7 +933,7 @@ static int GetOperatorPrecedence(TokenKind kind)
     }
 }
 
-Type Compiler::ParseExpression(bool keep_result)
+Type Parser::ParseExpression(bool keep_result)
 {
     Size start_values_len = stack.len;
     RG_DEFER { stack.RemoveFrom(start_values_len); };
@@ -1174,7 +1182,7 @@ error:
     return Type::Null;
 }
 
-void Compiler::ProduceOperator(const PendingOperator &op)
+void Parser::ProduceOperator(const PendingOperator &op)
 {
     bool success = false;
 
@@ -1372,7 +1380,7 @@ void Compiler::ProduceOperator(const PendingOperator &op)
     }
 }
 
-bool Compiler::EmitOperator1(Type in_type, Opcode code, Type out_type)
+bool Parser::EmitOperator1(Type in_type, Opcode code, Type out_type)
 {
     Type type = stack[stack.len - 1].type;
 
@@ -1386,7 +1394,7 @@ bool Compiler::EmitOperator1(Type in_type, Opcode code, Type out_type)
     }
 }
 
-bool Compiler::EmitOperator2(Type in_type, Opcode code, Type out_type)
+bool Parser::EmitOperator2(Type in_type, Opcode code, Type out_type)
 {
     Type type1 = stack[stack.len - 2].type;
     Type type2 = stack[stack.len - 1].type;
@@ -1402,7 +1410,7 @@ bool Compiler::EmitOperator2(Type in_type, Opcode code, Type out_type)
 }
 
 // Don't try to call from outside ParseExpression()!
-bool Compiler::ParseCall(const char *name)
+bool Parser::ParseCall(const char *name)
 {
     LocalArray<Type, RG_LEN(FunctionInfo::params.data)> types;
 
@@ -1471,7 +1479,7 @@ bool Compiler::ParseCall(const char *name)
     return true;
 }
 
-void Compiler::EmitIntrinsic(const char *name, Span<const Type> types)
+void Parser::EmitIntrinsic(const char *name, Span<const Type> types)
 {
     if (TestStr(name, "print") || TestStr(name, "printLn")) {
         RG_STATIC_ASSERT(RG_LEN(FunctionInfo::params.data) <= 18);
@@ -1507,7 +1515,7 @@ void Compiler::EmitIntrinsic(const char *name, Span<const Type> types)
     }
 }
 
-void Compiler::EmitPop(int64_t count)
+void Parser::EmitPop(int64_t count)
 {
     RG_ASSERT(count >= 0);
 
@@ -1516,7 +1524,7 @@ void Compiler::EmitPop(int64_t count)
     }
 }
 
-void Compiler::EmitReturn()
+void Parser::EmitReturn()
 {
     RG_ASSERT(current_func);
 
@@ -1561,7 +1569,7 @@ void Compiler::EmitReturn()
     }
 }
 
-bool Compiler::TestOverload(const FunctionInfo &proto, Span<const Type> types)
+bool Parser::TestOverload(const FunctionInfo &proto, Span<const Type> types)
 {
     if (proto.variadic) {
         if (proto.params.len > types.len)
@@ -1579,7 +1587,7 @@ bool Compiler::TestOverload(const FunctionInfo &proto, Span<const Type> types)
     return true;
 }
 
-void Compiler::Finish(Program *out_program)
+void Parser::Finish(Program *out_program)
 {
     RG_ASSERT(!out_program->ir.len);
 
@@ -1599,7 +1607,7 @@ void Compiler::Finish(Program *out_program)
     SwapMemory(&program, out_program, RG_SIZE(program));
 }
 
-bool Compiler::ConsumeToken(TokenKind kind)
+bool Parser::ConsumeToken(TokenKind kind)
 {
     if (RG_UNLIKELY(pos >= tokens.len)) {
         MarkError(pos, "Unexpected end of file, expected '%1'", TokenKindNames[(int)kind]);
@@ -1619,7 +1627,7 @@ bool Compiler::ConsumeToken(TokenKind kind)
     return true;
 }
 
-const char *Compiler::ConsumeIdentifier()
+const char *Parser::ConsumeIdentifier()
 {
     if (RG_LIKELY(ConsumeToken(TokenKind::Identifier))) {
         return tokens[pos - 1].u.str;
@@ -1628,7 +1636,7 @@ const char *Compiler::ConsumeIdentifier()
     }
 }
 
-Type Compiler::ConsumeType()
+Type Parser::ConsumeType()
 {
     const char *type_name = ConsumeIdentifier();
 
@@ -1641,7 +1649,7 @@ Type Compiler::ConsumeType()
     }
 }
 
-bool Compiler::MatchToken(TokenKind kind)
+bool Parser::MatchToken(TokenKind kind)
 {
     bool match = pos < tokens.len && tokens[pos].kind == kind;
     pos += match;
@@ -1653,13 +1661,13 @@ bool Compiler::MatchToken(TokenKind kind)
     return match;
 }
 
-bool Compiler::PeekToken(TokenKind kind)
+bool Parser::PeekToken(TokenKind kind)
 {
     bool match = pos < tokens.len && tokens[pos].kind == kind;
     return match;
 }
 
-void Compiler::DestroyVariables(Size count)
+void Parser::DestroyVariables(Size count)
 {
     for (Size i = variables.len - count; i < variables.len; i++) {
         const VariableInfo &var = variables[i];
@@ -1678,7 +1686,7 @@ void Compiler::DestroyVariables(Size count)
 bool Compile(const TokenSet &set, const char *filename, Program *out_program)
 {
     Compiler compiler;
-    if (!compiler.Parse(set, filename))
+    if (!compiler.Compile(set, filename))
         return false;
 
     compiler.Finish(out_program);
