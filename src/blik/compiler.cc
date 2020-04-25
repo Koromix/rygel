@@ -922,18 +922,18 @@ Type Compiler::ParseExpression(bool keep_result)
     // Used to detect "empty" expressions
     Size prev_offset = pos;
 
-    while (pos < tokens.len) {
+    while (RG_LIKELY(pos < tokens.len)) {
         const Token &tok = tokens[pos++];
 
         if (tok.kind == TokenKind::LeftParenthesis) {
             if (RG_UNLIKELY(expect_op))
-                goto unexpected_token;
+                goto unexpected;
 
             operators.Append({tok.kind});
             parentheses++;
         } else if (parentheses && tok.kind == TokenKind::RightParenthesis) {
             if (RG_UNLIKELY(!expect_op))
-                goto unexpected_token;
+                goto unexpected;
             expect_op = true;
 
             for (;;) {
@@ -952,7 +952,7 @@ Type Compiler::ParseExpression(bool keep_result)
                    tok.kind == TokenKind::Integer || tok.kind == TokenKind::Float ||
                    tok.kind == TokenKind::String || tok.kind == TokenKind::Identifier) {
             if (RG_UNLIKELY(expect_op))
-                goto unexpected_token;
+                goto unexpected;
             expect_op = true;
 
             switch (tok.kind) {
@@ -993,13 +993,13 @@ Type Compiler::ParseExpression(bool keep_result)
                 case TokenKind::Identifier: {
                     if (MatchToken(TokenKind::LeftParenthesis)) {
                         if (RG_UNLIKELY(!ParseCall(tok.u.str)))
-                            return Type::Null;
+                            goto error;
                     } else {
                         const VariableInfo *var = variables_map.FindValue(tok.u.str, nullptr);
 
                         if (RG_UNLIKELY(!var)) {
                             MarkError(pos - 1, "Variable '%1' does not exist", tok.u.str);
-                            return Type::Null;
+                            goto error;
                         }
                         valid_stmt &= !var->poisoned;
 
@@ -1010,7 +1010,7 @@ Type Compiler::ParseExpression(bool keep_result)
                                 HintError(current_func->earliest_call_pos, "Function call happens here (it could be indirect)");
                                 HintError(var->defined_pos, "Variable '%1' is defined here", var->name);
 
-                                return Type::Null;
+                                goto error;
                             }
 
                             switch (var->type) {
@@ -1052,14 +1052,15 @@ Type Compiler::ParseExpression(bool keep_result)
                                   TokenKindNames[(int)tokens[pos - 1].kind]);
                     }
 
-                    return Type::Null;
+                    pos--;
+                    goto error;
                 } else if (!expect_op && tok.kind == TokenKind::EndOfLine) {
                     if (generate_debug) {
                         debug.lines.Append(program.ir.len);
                     }
                     continue;
                 } else if (parentheses || !expect_op) {
-                    goto unexpected_token;
+                    goto unexpected;
                 } else if (tok.kind == TokenKind::Assign) {
                     MarkError(pos - 1, "Unexpected token '=', did you mean '=='?");
 
@@ -1078,7 +1079,7 @@ Type Compiler::ParseExpression(bool keep_result)
                     op.prec = 12;
                     op.unary = true;
                 } else {
-                    goto unexpected_token;
+                    goto unexpected;
                 }
             }
             expect_op = false;
@@ -1119,7 +1120,7 @@ Type Compiler::ParseExpression(bool keep_result)
 
     if (RG_UNLIKELY(!expect_op)) {
         MarkError(pos - 1, "Unexpected end of expression, expected value or '('");
-        return Type::Null;
+        goto error;
     }
     RG_ASSERT(!parentheses);
 
@@ -1161,9 +1162,20 @@ Type Compiler::ParseExpression(bool keep_result)
         return Type::Null;
     }
 
-unexpected_token:
-    MarkError(pos - 1, "Unexpected token '%1', expected %2", TokenKindNames[(int)tokens[pos - 1].kind],
+unexpected:
+    pos--;
+    MarkError(pos, "Unexpected token '%1', expected %2", TokenKindNames[(int)tokens[pos].kind],
               expect_op ? "operator or ')'" : "value or '('");
+error:
+    // The goal of this loop is to skip expression until we get to "do" (which is used
+    // for single-line constructs) or end of line (which starts a block in some cases,
+    // e.g. if expressions). This way, the parent can differenciate single-line constructs
+    // and block constructs, and prevent generation of garbage errors (such as "functions
+    // must be defined in top-level scope") caused by undetected block and/or do statement.
+    while (pos < tokens.len && tokens[pos].kind != TokenKind::Do &&
+                               tokens[pos].kind != TokenKind::EndOfLine) {
+        pos++;
+    };
     return Type::Null;
 }
 
