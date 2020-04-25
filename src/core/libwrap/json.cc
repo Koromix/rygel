@@ -226,7 +226,7 @@ bool json_Parser::ParseKey(Span<const char> *out_key)
 
 void json_Parser::PushLogFilter()
 {
-    RG::PushLogFilter([=](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
+    RG::PushLogFilter([this](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
         char msg_buf[4096];
         Fmt(msg_buf, "%1(%2:%3): %4", st.GetFileName(), st.GetLineNumber(), st.GetLineOffset(), msg);
 
