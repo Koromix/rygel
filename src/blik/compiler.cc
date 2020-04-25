@@ -177,9 +177,11 @@ bool Compiler::Parse(const TokenSet &set, const char *filename)
 
     // Do the actual parsing!
     ParseBlock(true);
-    if (RG_UNLIKELY(valid && pos < tokens.len)) {
+    while (RG_UNLIKELY(pos < tokens.len)) {
         MarkError(pos, "Unexpected token '%1' without matching block", TokenKindNames[(int)tokens[pos].kind]);
-        return false;
+
+        pos++;
+        ParseBlock(true);
     }
 
     // Maybe it'll help catch bugs
