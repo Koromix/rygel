@@ -339,6 +339,10 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                 set.tokens.Append({TokenKind::String, line, offset, {.str = ret.first->ptr}});
             } break;
 
+            case '.': { Token3('.', '.', TokenKind::DotDotDot) || Token2('.', TokenKind::DotDot) || Token1(TokenKind::Dot); } break;
+            case ':': { Token2('=', TokenKind::Reassign) || Token1(TokenKind::Colon); } break;
+            case '(': { Token1(TokenKind::LeftParenthesis); } break;
+            case ')': { Token1(TokenKind::RightParenthesis); } break;
             case '+': { Token1(TokenKind::Plus); } break;
             case '-': { Token1(TokenKind::Minus); } break;
             case '*': { Token1(TokenKind::Multiply); } break;
@@ -346,18 +350,13 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
             case '%': { Token1(TokenKind::Modulo); } break;
             case '^': { Token1(TokenKind::Xor); } break;
             case '~': { Token1(TokenKind::Not); } break;
-            case '.': { Token3('.', '.', TokenKind::DotDotDot) || Token2('.', TokenKind::DotDot) || Token1(TokenKind::Dot); } break;
-            case ':': { Token2('=', TokenKind::Reassign) || Token1(TokenKind::Colon); } break;
-            case '(': { Token1(TokenKind::LeftParenthesis); } break;
-            case ')': { Token1(TokenKind::RightParenthesis); } break;
-            case ',': { Token1(TokenKind::Comma); } break;
-
             case '=': { Token1(TokenKind::Equal); } break;
             case '!': { Token2('=', TokenKind::NotEqual) || Token1(TokenKind::LogicNot); } break;
             case '&': { Token2('&', TokenKind::LogicAnd) || Token1(TokenKind::And); } break;
             case '|': { Token2('|', TokenKind::LogicOr) || Token1(TokenKind::Or); } break;
             case '>': { Token2('>', TokenKind::RightShift) || Token2('=', TokenKind::GreaterOrEqual) || Token1(TokenKind::Greater); } break;
             case '<': { Token2('<', TokenKind::LeftShift) || Token2('=', TokenKind::LessOrEqual) || Token1(TokenKind::Less); } break;
+            case ',': { Token1(TokenKind::Comma); } break;
 
             default: {
                 if (RG_LIKELY(IsAsciiAlpha(code[offset]) || code[offset] == '_')) {
