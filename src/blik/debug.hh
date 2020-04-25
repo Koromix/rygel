@@ -123,6 +123,25 @@ void ReportDiagnostic(DiagnosticType type, Span<const char> code, const char *fi
     }
 }
 
+
+template <typename... Args>
+void ReportDiagnostic(DiagnosticType type, const char *fmt, Args... args)
+{
+    switch (type) {
+        case DiagnosticType::Error: {
+            Print(stderr, "%!R..Error:%!0 %!..+");
+            Print(stderr, fmt, args...);
+            PrintLn(stderr, "%!0");
+        } break;
+
+        case DiagnosticType::ErrorHint: {
+            Print(stderr, "    %!D..Hint:%!0 %!..+");
+            Print(stderr, fmt, args...);
+            PrintLn(stderr, "%!0");
+        } break;
+    }
+}
+
 template <typename... Args>
 void ReportRuntimeError(Span<const FrameInfo> frames, const char *fmt, Args... args)
 {

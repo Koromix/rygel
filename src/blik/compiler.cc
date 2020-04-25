@@ -108,6 +108,8 @@ private:
     template <typename... Args>
     void MarkError(Size pos, const char *fmt, Args... args)
     {
+        RG_ASSERT(pos >= 0);
+
         if (valid_stmt) {
             Size offset = (pos < tokens.len) ? tokens[pos].offset : code.len;
             int line = tokens[std::min(pos, tokens.len - 1)].line;
@@ -121,14 +123,19 @@ private:
             show_hints = false;
         }
     }
+
     template <typename... Args>
     void HintError(Size pos, const char *fmt, Args... args)
     {
         if (show_hints) {
-            Size offset = (pos < tokens.len) ? tokens[pos].offset : code.len;
-            int line = tokens[std::min(pos, tokens.len - 1)].line;
+            if (pos >= 0) {
+                Size offset = (pos < tokens.len) ? tokens[pos].offset : code.len;
+                int line = tokens[std::min(pos, tokens.len - 1)].line;
 
-            ReportDiagnostic(DiagnosticType::ErrorHint, code, filename, line, offset, fmt, args...);
+                ReportDiagnostic(DiagnosticType::ErrorHint, code, filename, line, offset, fmt, args...);
+            } else {
+                ReportDiagnostic(DiagnosticType::ErrorHint, fmt, args...);
+            }
         }
     }
 };
@@ -1434,7 +1441,7 @@ bool Compiler::ParseCall(const char *name)
             // Show all candidate functions with same name
             const FunctionInfo *it = func0;
             do {
-                HintError(it->defined_pos, "Candidate '%1'", it->signature);
+                HintError(it->intrinsic ? -1 : it->defined_pos, "Candidate '%1'", it->signature);
                 it = it->overload_next;
             } while (it != func0);
 
