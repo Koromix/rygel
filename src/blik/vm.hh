@@ -5,7 +5,7 @@
 #pragma once
 
 #include "../core/libcc/libcc.hh"
-#include "debug.hh"
+#include "error.hh"
 
 namespace RG {
 

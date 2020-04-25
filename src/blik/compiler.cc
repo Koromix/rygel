@@ -4,7 +4,7 @@
 
 #include "../core/libcc/libcc.hh"
 #include "compiler.hh"
-#include "debug.hh"
+#include "error.hh"
 #include "lexer.hh"
 #include "types.hh"
 
