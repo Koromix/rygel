@@ -605,6 +605,7 @@ bool Compiler::ParseIf()
     program.ir.Append({Opcode::BranchIfFalse});
 
     bool has_return = true;
+    bool has_else = false;
 
     if (PeekToken(TokenKind::Do)) {
         has_return &= ParseDo();
@@ -641,6 +642,8 @@ bool Compiler::ParseIf()
                     ConsumeToken(TokenKind::EndOfLine);
 
                     has_return &= ParseBlock(false);
+                    has_else = true;
+
                     break;
                 }
             } while (MatchToken(TokenKind::Else));
@@ -655,7 +658,7 @@ bool Compiler::ParseIf()
         ConsumeToken(TokenKind::End);
     }
 
-    return has_return;
+    return has_return && has_else;
 }
 
 void Compiler::ParseWhile()
