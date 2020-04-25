@@ -94,8 +94,53 @@ int Interpreter::Run(const Program &program, const DebugInfo *debug)
             stack.RemoveLast(inst->u.i);
             DISPATCH(++pc);
         }
-        CASE(Duplicate): {
-            stack.Append(stack[stack.len - 1]);
+
+        CASE(LoadBool): {
+            stack.Append({.b = stack[bp + inst->u.i].b});
+            DISPATCH(++pc);
+        }
+        CASE(LoadInt): {
+            stack.Append({.i = stack[bp + inst->u.i].i});
+            DISPATCH(++pc);
+        }
+        CASE(LoadFloat): {
+            stack.Append({.d = stack[bp + inst->u.i].d});
+            DISPATCH(++pc);
+        }
+        CASE(LoadString): {
+            stack.Append({.str = stack[bp + inst->u.i].str});
+            DISPATCH(++pc);
+        }
+        CASE(StoreBool): {
+            stack[bp + inst->u.i].b = stack.ptr[--stack.len].b;
+            DISPATCH(++pc);
+        }
+        CASE(StoreInt): {
+            stack[bp + inst->u.i].i = stack.ptr[--stack.len].i;
+            DISPATCH(++pc);
+        }
+        CASE(StoreFloat): {
+            stack[bp + inst->u.i].d = stack.ptr[--stack.len].d;
+            DISPATCH(++pc);
+        }
+        CASE(StoreString): {
+            stack[bp + inst->u.i].str = stack.ptr[--stack.len].str;
+            DISPATCH(++pc);
+        }
+        CASE(CopyBool): {
+            stack[bp + inst->u.i].b = stack.ptr[stack.len - 1].b;
+            DISPATCH(++pc);
+        }
+        CASE(CopyInt): {
+            stack[bp + inst->u.i].i = stack.ptr[stack.len - 1].i;
+            DISPATCH(++pc);
+        }
+        CASE(CopyFloat): {
+            stack[bp + inst->u.i].d = stack.ptr[stack.len - 1].d;
+            DISPATCH(++pc);
+        }
+        CASE(CopyString): {
+            stack[bp + inst->u.i].str = stack.ptr[stack.len - 1].str;
             DISPATCH(++pc);
         }
 
@@ -129,39 +174,6 @@ int Interpreter::Run(const Program &program, const DebugInfo *debug)
         }
         CASE(StoreGlobalString): {
             stack[inst->u.i].str = stack.ptr[--stack.len].str;
-            DISPATCH(++pc);
-        }
-
-        CASE(LoadLocalBool): {
-            stack.Append({.b = stack[bp + inst->u.i].b});
-            DISPATCH(++pc);
-        }
-        CASE(LoadLocalInt): {
-            stack.Append({.i = stack[bp + inst->u.i].i});
-            DISPATCH(++pc);
-        }
-        CASE(LoadLocalFloat): {
-            stack.Append({.d = stack[bp + inst->u.i].d});
-            DISPATCH(++pc);
-        }
-        CASE(LoadLocalString): {
-            stack.Append({.str = stack[bp + inst->u.i].str});
-            DISPATCH(++pc);
-        }
-        CASE(StoreLocalBool): {
-            stack[bp + inst->u.i].b = stack.ptr[--stack.len].b;
-            DISPATCH(++pc);
-        }
-        CASE(StoreLocalInt): {
-            stack[bp + inst->u.i].i = stack.ptr[--stack.len].i;
-            DISPATCH(++pc);
-        }
-        CASE(StoreLocalFloat): {
-            stack[bp + inst->u.i].d = stack.ptr[--stack.len].d;
-            DISPATCH(++pc);
-        }
-        CASE(StoreLocalString): {
-            stack[bp + inst->u.i].str = stack.ptr[--stack.len].str;
             DISPATCH(++pc);
         }
 
@@ -493,23 +505,27 @@ void Interpreter::DumpInstruction()
         case Opcode::PushString: { LogDebug("(0x%1) PushString %2", FmtHex(pc).Pad0(-5), inst->u.str); } break;
         case Opcode::Pop: { LogDebug("(0x%1) Pop %2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
 
-        case Opcode::StoreGlobalBool: { LogDebug("(0x%1) StoreGlobalBool @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
-        case Opcode::StoreGlobalInt: { LogDebug("(0x%1) StoreGlobalInt @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
-        case Opcode::StoreGlobalFloat: { LogDebug("(0x%1) StoreGlobalFloat @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
-        case Opcode::StoreGlobalString: { LogDebug("(0x%1) StoreGlobalString @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::LoadBool: { LogDebug("(0x%1) LoadBool @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::LoadInt: { LogDebug("(0x%1) LoadInt @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::LoadFloat: { LogDebug("(0x%1) LoadFloat @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::LoadString: { LogDebug("(0x%1) LoadString @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::StoreBool: { LogDebug("(0x%1) StoreBool @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::StoreInt: { LogDebug("(0x%1) StoreInt @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::StoreFloat: { LogDebug("(0x%1) StoreFloat @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::StoreString: { LogDebug("(0x%1) StoreString @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::CopyBool: { LogDebug("(0x%1) CopyBool @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::CopyInt: { LogDebug("(0x%1) CopyInt @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::CopyFloat: { LogDebug("(0x%1) CopyFloat @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::CopyString: { LogDebug("(0x%1) CopyString @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+
         case Opcode::LoadGlobalBool: { LogDebug("(0x%1) LoadGlobalBool @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
         case Opcode::LoadGlobalInt: { LogDebug("(0x%1) LoadGlobalInt @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
         case Opcode::LoadGlobalFloat: { LogDebug("(0x%1) LoadGlobalFloat @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
         case Opcode::LoadGlobalString: { LogDebug("(0x%1) LoadGlobalString @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
-
-        case Opcode::StoreLocalBool: { LogDebug("(0x%1) StoreLocalBool @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
-        case Opcode::StoreLocalInt: { LogDebug("(0x%1) StoreLocalInt @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
-        case Opcode::StoreLocalFloat: { LogDebug("(0x%1) StoreLocalFloat @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
-        case Opcode::StoreLocalString: { LogDebug("(0x%1) StoreLocalString @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
-        case Opcode::LoadLocalBool: { LogDebug("(0x%1) LoadLocalBool @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
-        case Opcode::LoadLocalInt: { LogDebug("(0x%1) LoadLocalInt @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
-        case Opcode::LoadLocalFloat: { LogDebug("(0x%1) LoadLocalFloat @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
-        case Opcode::LoadLocalString: { LogDebug("(0x%1) LoadLocalString @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::StoreGlobalBool: { LogDebug("(0x%1) StoreGlobalBool @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::StoreGlobalInt: { LogDebug("(0x%1) StoreGlobalInt @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::StoreGlobalFloat: { LogDebug("(0x%1) StoreGlobalFloat @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
+        case Opcode::StoreGlobalString: { LogDebug("(0x%1) StoreGlobalString @%2", FmtHex(pc).Pad0(-5), inst->u.i); } break;
 
         case Opcode::Jump: { LogDebug("(0x%1) Jump 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst->u.i).Pad0(-5)); } break;
         case Opcode::BranchIfTrue: { LogDebug("(0x%1) BranchIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst->u.i).Pad0(-5)); } break;
