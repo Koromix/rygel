@@ -18,6 +18,7 @@ int Main(int argc, char **argv)
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: blik [options] <file>
+       blik [options] -i <code>
 
 Options:
     -i, --inline                 Run code directly from argument)");
