@@ -5,12 +5,9 @@
 #pragma once
 
 #include "../core/libcc/libcc.hh"
-#include "types.hh"
+#include "program.hh"
 
 namespace RG {
-
-struct Program;
-struct FrameInfo;
 
 enum class DiagnosticType {
     Error,

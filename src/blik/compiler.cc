@@ -6,7 +6,7 @@
 #include "compiler.hh"
 #include "error.hh"
 #include "lexer.hh"
-#include "types.hh"
+#include "program.hh"
 
 namespace RG {
 

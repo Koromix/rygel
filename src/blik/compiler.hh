@@ -5,54 +5,11 @@
 #pragma once
 
 #include "../core/libcc/libcc.hh"
-#include "types.hh"
+#include "program.hh"
 
 namespace RG {
 
 struct TokenSet;
-
-enum class Opcode {
-    #define OPCODE(Code) Code,
-    #include "opcodes.inc"
-};
-static const char *const OpcodeNames[] = {
-    #define OPCODE(Code) RG_STRINGIFY(Code),
-    #include "opcodes.inc"
-};
-
-struct Instruction {
-    Opcode code;
-    union {
-        bool b; // PushBool, Exit
-        int64_t i; // PushInteger, Pop,
-                   // StoreBool, StoreInt, StoreFloat, StoreString,
-                   // LoadBool, LoadInt, LoadFloat, LoadString,
-                   // Jump, BranchIfTrue, BranchIfFalse,
-                   // Call, Return, Print, Exit
-        double d; // PushFloat
-        const char *str; // PushString
-    } u;
-};
-
-struct SourceInfo {
-    const char *filename;
-    Size first_idx;
-    Size line_idx;
-};
-
-struct Program {
-    HeapArray<Instruction> ir;
-
-    HeapArray<SourceInfo> sources;
-    HeapArray<Size> lines;
-
-    BucketArray<FunctionInfo> functions;
-    HashTable<const char *, const FunctionInfo *> functions_map;
-    BucketArray<VariableInfo> globals;
-    HashTable<const char *, const VariableInfo *> globals_map;
-
-    BlockAllocator str_alloc;
-};
 
 bool Compile(const TokenSet &set, const char *filename, Program *out_program);
 

@@ -6,10 +6,9 @@
 
 #include "../core/libcc/libcc.hh"
 #include "error.hh"
+#include "program.hh"
 
 namespace RG {
-
-struct Program;
 
 class VirtualMachine {
     Span<const Instruction> ir;
