@@ -39,7 +39,7 @@ end
 
 let mut blop = 0
 while blop < 100
-    blop := blop + 1
+    blop += 1
 end
 while blop > 10 do blop := blop - 1
 printLn("blop = ", blop)
@@ -180,7 +180,7 @@ while zz < 3
     tt("Niels", zz)
     zz := zz + 1
 end
-while (zz := inc(zz)) < 9 do tt("Nelson", (zz := zz + 1) - 1)
+while (zz := inc(zz)) < 9 do tt("Nelson", (zz += 1) - 1)
 
 func inc(pp: Int) Int do return pp + 1
 

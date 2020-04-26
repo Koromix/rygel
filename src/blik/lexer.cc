@@ -343,19 +343,21 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
             case ':': { Token2('=', TokenKind::Reassign) || Token1(TokenKind::Colon); } break;
             case '(': { Token1(TokenKind::LeftParenthesis); } break;
             case ')': { Token1(TokenKind::RightParenthesis); } break;
-            case '+': { Token1(TokenKind::Plus); } break;
-            case '-': { Token1(TokenKind::Minus); } break;
-            case '*': { Token1(TokenKind::Multiply); } break;
-            case '/': { Token1(TokenKind::Divide); } break;
-            case '%': { Token1(TokenKind::Modulo); } break;
-            case '^': { Token1(TokenKind::Xor); } break;
+            case '+': { Token2('=', TokenKind::PlusAssign) || Token1(TokenKind::Plus); } break;
+            case '-': { Token2('=', TokenKind::MinusAssign) || Token1(TokenKind::Minus); } break;
+            case '*': { Token2('=', TokenKind::MultiplyAssign) || Token1(TokenKind::Multiply); } break;
+            case '/': { Token2('=', TokenKind::DivideAssign) || Token1(TokenKind::Divide); } break;
+            case '%': { Token2('=', TokenKind::ModuloAssign) || Token1(TokenKind::Modulo); } break;
+            case '^': { Token2('=', TokenKind::XorAssign) || Token1(TokenKind::Xor); } break;
             case '~': { Token1(TokenKind::Not); } break;
             case '=': { Token2('=', TokenKind::Equal) || Token1(TokenKind::Assign); } break;
             case '!': { Token2('=', TokenKind::NotEqual) || Token1(TokenKind::LogicNot); } break;
-            case '&': { Token2('&', TokenKind::LogicAnd) || Token1(TokenKind::And); } break;
-            case '|': { Token2('|', TokenKind::LogicOr) || Token1(TokenKind::Or); } break;
-            case '>': { Token2('>', TokenKind::RightShift) || Token2('=', TokenKind::GreaterOrEqual) || Token1(TokenKind::Greater); } break;
-            case '<': { Token2('<', TokenKind::LeftShift) || Token2('=', TokenKind::LessOrEqual) || Token1(TokenKind::Less); } break;
+            case '&': { Token2('=', TokenKind::AndAssign) || Token2('&', TokenKind::LogicAnd) || Token1(TokenKind::And); } break;
+            case '|': { Token2('=', TokenKind::OrAssign) || Token2('|', TokenKind::LogicOr) || Token1(TokenKind::Or); } break;
+            case '>': { Token3('>', '=', TokenKind::RightShiftAssign) || Token2('>', TokenKind::RightShift) ||
+                        Token2('=', TokenKind::GreaterOrEqual) || Token1(TokenKind::Greater); } break;
+            case '<': { Token3('<', '=', TokenKind::LeftShiftAssign) || Token2('<', TokenKind::LeftShift) ||
+                        Token2('=', TokenKind::LessOrEqual) || Token1(TokenKind::Less); } break;
             case ',': { Token1(TokenKind::Comma); } break;
 
             default: {

@@ -990,26 +990,37 @@ bool Parser::ParseDo()
 static int GetOperatorPrecedence(TokenKind kind)
 {
     switch (kind) {
-        case TokenKind::Reassign: { return 0; } break;
+        case TokenKind::Reassign:
+        case TokenKind::PlusAssign:
+        case TokenKind::MinusAssign:
+        case TokenKind::MultiplyAssign:
+        case TokenKind::DivideAssign:
+        case TokenKind::ModuloAssign:
+        case TokenKind::LeftShiftAssign:
+        case TokenKind::RightShiftAssign:
+        case TokenKind::AndAssign:
+        case TokenKind::OrAssign:
+        case TokenKind::XorAssign: { return 0; } break;
+
         case TokenKind::LogicOr: { return 2; } break;
         case TokenKind::LogicAnd: { return 3; } break;
-        case TokenKind::Equal: { return 4; } break;
+        case TokenKind::Equal:
         case TokenKind::NotEqual: { return 4; } break;
-        case TokenKind::Greater: { return 5; } break;
-        case TokenKind::GreaterOrEqual: { return 5; } break;
-        case TokenKind::Less: { return 5; } break;
+        case TokenKind::Greater:
+        case TokenKind::GreaterOrEqual:
+        case TokenKind::Less:
         case TokenKind::LessOrEqual: { return 5; } break;
         case TokenKind::Or: { return 6; } break;
         case TokenKind::Xor: { return 7; } break;
         case TokenKind::And: { return 8; } break;
-        case TokenKind::LeftShift: { return 9; } break;
+        case TokenKind::LeftShift:
         case TokenKind::RightShift: { return 9; } break;
-        case TokenKind::Plus: { return 10; } break;
+        case TokenKind::Plus:
         case TokenKind::Minus: { return 10; } break;
-        case TokenKind::Multiply: { return 11; } break;
-        case TokenKind::Divide: { return 11; } break;
+        case TokenKind::Multiply:
+        case TokenKind::Divide:
         case TokenKind::Modulo: { return 11; } break;
-        case TokenKind::Not: { return 12; } break;
+        case TokenKind::Not:
         case TokenKind::LogicNot: { return 12; } break;
 
         default: { return -1; } break;
@@ -1268,183 +1279,229 @@ void Parser::ProduceOperator(const PendingOperator &op)
 {
     bool success = false;
 
-    switch (op.kind) {
-        case TokenKind::Reassign: {
-            const StackSlot &slot1 = stack[stack.len - 2];
-            const StackSlot &slot2 = stack[stack.len - 1];
+    if (op.prec == 0) { // Assignement operators
+        RG_ASSERT(!op.unary);
 
-            if (RG_UNLIKELY(!slot1.var)) {
-                MarkError(op.pos, "Cannot assign expression to rvalue");
-                return;
-            }
-            if (RG_UNLIKELY(slot1.var->readonly)) {
-                MarkError(op.pos, "Cannot assign expression to const variable '%1'", slot1.var->name);
-                HintError(slot1.var->defined_pos, "Variable '%1' is defined here without mut qualifier", slot1.var->name);
+        const StackSlot &slot1 = stack[stack.len - 2];
+        const StackSlot &slot2 = stack[stack.len - 1];
 
-                return;
-            }
-            if (RG_UNLIKELY(slot1.type != slot2.type)) {
-                MarkError(op.pos, "Cannot assign %1 value to %2 variable",
-                          TypeNames[(int)slot2.type], TypeNames[(int)slot1.type]);
-                HintError(slot1.var->defined_pos, "Variable '%1' is defined here", slot1.var->name);
-                return;
-            }
-
-            if (slot1.var->global && current_func) {
-                switch (slot1.type) {
-                    case Type::Null: {} break;
-                    case Type::Bool: {
-                        program.ir.Append({Opcode::StoreGlobalBool, {.i = slot1.var->offset}});
-                        program.ir.Append({Opcode::LoadGlobalBool, {.i = slot1.var->offset}});
-                    } break;
-                    case Type::Int: {
-                        program.ir.Append({Opcode::StoreGlobalInt, {.i = slot1.var->offset}});
-                        program.ir.Append({Opcode::LoadGlobalInt, {.i = slot1.var->offset}});
-                    } break;
-                    case Type::Float: {
-                        program.ir.Append({Opcode::StoreGlobalFloat, {.i = slot1.var->offset}});
-                        program.ir.Append({Opcode::LoadGlobalFloat, {.i = slot1.var->offset}});
-                    } break;
-                    case Type::String: {
-                        program.ir.Append({Opcode::StoreGlobalString, {.i = slot1.var->offset}});
-                        program.ir.Append({Opcode::LoadGlobalString, {.i = slot1.var->offset}});
-                    } break;
-                }
-            } else {
-                switch (slot1.type) {
-                    case Type::Null: {} break;
-                    case Type::Bool: { program.ir.Append({Opcode::CopyBool, {.i = slot1.var->offset}}); } break;
-                    case Type::Int: { program.ir.Append({Opcode::CopyInt, {.i = slot1.var->offset}}); } break;
-                    case Type::Float: { program.ir.Append({Opcode::CopyFloat, {.i = slot1.var->offset}}); } break;
-                    case Type::String: { program.ir.Append({Opcode::CopyString, {.i = slot1.var->offset}}); } break;
-                }
-            }
-
-            std::swap(stack[stack.len - 1], stack[stack.len - 2]);
-            stack.len--;
+        if (RG_UNLIKELY(!slot1.var)) {
+            MarkError(op.pos, "Cannot assign expression to rvalue");
+            return;
+        }
+        if (RG_UNLIKELY(slot1.var->readonly)) {
+            MarkError(op.pos, "Cannot assign expression to const variable '%1'", slot1.var->name);
+            HintError(slot1.var->defined_pos, "Variable '%1' is defined here without mut qualifier", slot1.var->name);
 
             return;
-        } break;
+        }
+        if (RG_UNLIKELY(slot1.type != slot2.type)) {
+            MarkError(op.pos, "Cannot assign %1 value to %2 variable",
+                      TypeNames[(int)slot2.type], TypeNames[(int)slot1.type]);
+            HintError(slot1.var->defined_pos, "Variable '%1' is defined here", slot1.var->name);
+            return;
+        }
 
-        case TokenKind::Plus: {
-            if (op.unary) {
-                success = stack[stack.len - 1].type == Type::Int ||
-                          stack[stack.len - 1].type == Type::Float;
-            } else {
-                success = EmitOperator2(Type::Int, Opcode::AddInt, Type::Int) ||
-                          EmitOperator2(Type::Float, Opcode::AddFloat, Type::Float);
+        switch (op.kind) {
+            case TokenKind::Reassign: { success = true; } break;
+
+            case TokenKind::PlusAssign: {
+                success = EmitOperator1(Type::Int, Opcode::AddInt, Type::Int) ||
+                          EmitOperator1(Type::Float, Opcode::AddFloat, Type::Float);
+            } break;
+            case TokenKind::MinusAssign: {
+                success = EmitOperator1(Type::Int, Opcode::SubstractInt, Type::Int) ||
+                          EmitOperator1(Type::Float, Opcode::SubstractFloat, Type::Float);
+            } break;
+            case TokenKind::MultiplyAssign: {
+                success = EmitOperator1(Type::Int, Opcode::MultiplyInt, Type::Int) ||
+                          EmitOperator1(Type::Float, Opcode::MultiplyFloat, Type::Float);
+            } break;
+            case TokenKind::DivideAssign: {
+                success = EmitOperator1(Type::Int, Opcode::DivideInt, Type::Int) ||
+                          EmitOperator1(Type::Float, Opcode::DivideFloat, Type::Float);
+            } break;
+            case TokenKind::ModuloAssign: {
+                success = EmitOperator1(Type::Int, Opcode::ModuloInt, Type::Int);
+            } break;
+            case TokenKind::AndAssign: {
+                success = EmitOperator1(Type::Int, Opcode::AndInt, Type::Int) ||
+                          EmitOperator1(Type::Bool, Opcode::AndBool, Type::Bool);
+            } break;
+            case TokenKind::OrAssign: {
+                success = EmitOperator1(Type::Int, Opcode::OrInt, Type::Int) ||
+                          EmitOperator1(Type::Bool, Opcode::OrBool, Type::Bool);
+            } break;
+            case TokenKind::XorAssign: {
+                success = EmitOperator1(Type::Int, Opcode::XorInt, Type::Int) ||
+                          EmitOperator1(Type::Bool, Opcode::NotEqualBool, Type::Bool);
+            } break;
+            case TokenKind::LeftShiftAssign: {
+                success = EmitOperator1(Type::Int, Opcode::LeftShiftInt, Type::Int);
+            } break;
+            case TokenKind::RightShiftAssign: {
+                success = EmitOperator1(Type::Int, Opcode::RightShiftInt, Type::Int);
+            } break;
+
+            default: { RG_ASSERT(false); } break;
+        }
+
+        if (slot1.var->global && current_func) {
+            switch (slot1.type) {
+                case Type::Null: {} break;
+                case Type::Bool: {
+                    program.ir.Append({Opcode::StoreGlobalBool, {.i = slot1.var->offset}});
+                    program.ir.Append({Opcode::LoadGlobalBool, {.i = slot1.var->offset}});
+                } break;
+                case Type::Int: {
+                    program.ir.Append({Opcode::StoreGlobalInt, {.i = slot1.var->offset}});
+                    program.ir.Append({Opcode::LoadGlobalInt, {.i = slot1.var->offset}});
+                } break;
+                case Type::Float: {
+                    program.ir.Append({Opcode::StoreGlobalFloat, {.i = slot1.var->offset}});
+                    program.ir.Append({Opcode::LoadGlobalFloat, {.i = slot1.var->offset}});
+                } break;
+                case Type::String: {
+                    program.ir.Append({Opcode::StoreGlobalString, {.i = slot1.var->offset}});
+                    program.ir.Append({Opcode::LoadGlobalString, {.i = slot1.var->offset}});
+                } break;
             }
-        } break;
-        case TokenKind::Minus: {
-            if (op.unary) {
-                Instruction *inst = &program.ir[program.ir.len - 1];
+        } else {
+            switch (slot1.type) {
+                case Type::Null: {} break;
+                case Type::Bool: { program.ir.Append({Opcode::CopyBool, {.i = slot1.var->offset}}); } break;
+                case Type::Int: { program.ir.Append({Opcode::CopyInt, {.i = slot1.var->offset}}); } break;
+                case Type::Float: { program.ir.Append({Opcode::CopyFloat, {.i = slot1.var->offset}}); } break;
+                case Type::String: { program.ir.Append({Opcode::CopyString, {.i = slot1.var->offset}}); } break;
+            }
+        }
 
-                switch (inst->code) {
-                    case Opcode::PushInt: {
-                        // XXX: Don't forget to handle overflow (negation of INT64_MIN) here when
-                        // we implement overflow detection later!
-                        inst->u.i = -inst->u.i;
-                        success = true;
-                    } break;
-                    case Opcode::PushFloat: {
-                        inst->u.d = -inst->u.d;
-                        success = true;
-                    } break;
-                    case Opcode::NegateInt:
-                    case Opcode::NegateFloat: {
-                        program.ir.len--;
-                        success = true;
-                    } break;
-
-                    default: {
-                        success = EmitOperator1(Type::Int, Opcode::NegateInt, Type::Int) ||
-                                  EmitOperator1(Type::Float, Opcode::NegateFloat, Type::Float);
-                    }
+        if (RG_LIKELY(success)) {
+            std::swap(stack[stack.len - 1], stack[stack.len - 2]);
+            stack.len--;
+        }
+    } else { // Other operators
+        switch (op.kind) {
+            case TokenKind::Plus: {
+                if (op.unary) {
+                    success = stack[stack.len - 1].type == Type::Int ||
+                              stack[stack.len - 1].type == Type::Float;
+                } else {
+                    success = EmitOperator2(Type::Int, Opcode::AddInt, Type::Int) ||
+                              EmitOperator2(Type::Float, Opcode::AddFloat, Type::Float);
                 }
-            } else {
-                success = EmitOperator2(Type::Int, Opcode::SubstractInt, Type::Int) ||
-                          EmitOperator2(Type::Float, Opcode::SubstractFloat, Type::Float);
-            }
-        } break;
-        case TokenKind::Multiply: {
-            success = EmitOperator2(Type::Int, Opcode::MultiplyInt, Type::Int) ||
-                      EmitOperator2(Type::Float, Opcode::MultiplyFloat, Type::Float);
-        } break;
-        case TokenKind::Divide: {
-            success = EmitOperator2(Type::Int, Opcode::DivideInt, Type::Int) ||
-                      EmitOperator2(Type::Float, Opcode::DivideFloat, Type::Float);
-        } break;
-        case TokenKind::Modulo: {
-            success = EmitOperator2(Type::Int, Opcode::ModuloInt, Type::Int);
-        } break;
+            } break;
+            case TokenKind::Minus: {
+                if (op.unary) {
+                    Instruction *inst = &program.ir[program.ir.len - 1];
 
-        case TokenKind::Equal: {
-            success = EmitOperator2(Type::Int, Opcode::EqualInt, Type::Bool) ||
-                      EmitOperator2(Type::Float, Opcode::EqualFloat, Type::Bool) ||
-                      EmitOperator2(Type::Bool, Opcode::EqualBool, Type::Bool);
-        } break;
-        case TokenKind::NotEqual: {
-            success = EmitOperator2(Type::Int, Opcode::NotEqualInt, Type::Bool) ||
-                      EmitOperator2(Type::Float, Opcode::NotEqualFloat, Type::Bool) ||
-                      EmitOperator2(Type::Bool, Opcode::NotEqualBool, Type::Bool);
-        } break;
-        case TokenKind::Greater: {
-            success = EmitOperator2(Type::Int, Opcode::GreaterThanInt, Type::Bool) ||
-                      EmitOperator2(Type::Float, Opcode::GreaterThanFloat, Type::Bool);
-        } break;
-        case TokenKind::GreaterOrEqual: {
-            success = EmitOperator2(Type::Int, Opcode::GreaterOrEqualInt, Type::Bool) ||
-                      EmitOperator2(Type::Float, Opcode::GreaterOrEqualFloat, Type::Bool);
-        } break;
-        case TokenKind::Less: {
-            success = EmitOperator2(Type::Int, Opcode::LessThanInt, Type::Bool) ||
-                      EmitOperator2(Type::Float, Opcode::LessThanFloat, Type::Bool);
-        } break;
-        case TokenKind::LessOrEqual: {
-            success = EmitOperator2(Type::Int, Opcode::LessOrEqualInt, Type::Bool) ||
-                      EmitOperator2(Type::Float, Opcode::LessOrEqualFloat, Type::Bool);
-        } break;
+                    switch (inst->code) {
+                        case Opcode::PushInt: {
+                            // XXX: Don't forget to handle overflow (negation of INT64_MIN) here when
+                            // we implement overflow detection later!
+                            inst->u.i = -inst->u.i;
+                            success = true;
+                        } break;
+                        case Opcode::PushFloat: {
+                            inst->u.d = -inst->u.d;
+                            success = true;
+                        } break;
+                        case Opcode::NegateInt:
+                        case Opcode::NegateFloat: {
+                            program.ir.len--;
+                            success = true;
+                        } break;
 
-        case TokenKind::And: {
-            success = EmitOperator2(Type::Int, Opcode::AndInt, Type::Int) ||
-                      EmitOperator2(Type::Bool, Opcode::AndBool, Type::Bool);
-        } break;
-        case TokenKind::Or: {
-            success = EmitOperator2(Type::Int, Opcode::OrInt, Type::Int) ||
-                      EmitOperator2(Type::Bool, Opcode::OrBool, Type::Bool);
-        } break;
-        case TokenKind::Xor: {
-            success = EmitOperator2(Type::Int, Opcode::XorInt, Type::Int) ||
-                      EmitOperator2(Type::Bool, Opcode::NotEqualBool, Type::Bool);
-        } break;
-        case TokenKind::Not: {
-            success = EmitOperator1(Type::Int, Opcode::NotInt, Type::Int) ||
-                      EmitOperator1(Type::Bool, Opcode::NotBool, Type::Bool);
-        } break;
-        case TokenKind::LeftShift: {
-            success = EmitOperator2(Type::Int, Opcode::LeftShiftInt, Type::Int);
-        } break;
-        case TokenKind::RightShift: {
-            success = EmitOperator2(Type::Int, Opcode::RightShiftInt, Type::Int);
-        } break;
+                        default: {
+                            success = EmitOperator1(Type::Int, Opcode::NegateInt, Type::Int) ||
+                                      EmitOperator1(Type::Float, Opcode::NegateFloat, Type::Float);
+                        }
+                    }
+                } else {
+                    success = EmitOperator2(Type::Int, Opcode::SubstractInt, Type::Int) ||
+                              EmitOperator2(Type::Float, Opcode::SubstractFloat, Type::Float);
+                }
+            } break;
+            case TokenKind::Multiply: {
+                success = EmitOperator2(Type::Int, Opcode::MultiplyInt, Type::Int) ||
+                          EmitOperator2(Type::Float, Opcode::MultiplyFloat, Type::Float);
+            } break;
+            case TokenKind::Divide: {
+                success = EmitOperator2(Type::Int, Opcode::DivideInt, Type::Int) ||
+                          EmitOperator2(Type::Float, Opcode::DivideFloat, Type::Float);
+            } break;
+            case TokenKind::Modulo: {
+                success = EmitOperator2(Type::Int, Opcode::ModuloInt, Type::Int);
+            } break;
 
-        case TokenKind::LogicNot: {
-            success = EmitOperator1(Type::Bool, Opcode::NotBool, Type::Bool);
-        } break;
-        case TokenKind::LogicAnd: {
-            success = EmitOperator2(Type::Bool, Opcode::AndBool, Type::Bool);
+            case TokenKind::Equal: {
+                success = EmitOperator2(Type::Int, Opcode::EqualInt, Type::Bool) ||
+                          EmitOperator2(Type::Float, Opcode::EqualFloat, Type::Bool) ||
+                          EmitOperator2(Type::Bool, Opcode::EqualBool, Type::Bool);
+            } break;
+            case TokenKind::NotEqual: {
+                success = EmitOperator2(Type::Int, Opcode::NotEqualInt, Type::Bool) ||
+                          EmitOperator2(Type::Float, Opcode::NotEqualFloat, Type::Bool) ||
+                          EmitOperator2(Type::Bool, Opcode::NotEqualBool, Type::Bool);
+            } break;
+            case TokenKind::Greater: {
+                success = EmitOperator2(Type::Int, Opcode::GreaterThanInt, Type::Bool) ||
+                          EmitOperator2(Type::Float, Opcode::GreaterThanFloat, Type::Bool);
+            } break;
+            case TokenKind::GreaterOrEqual: {
+                success = EmitOperator2(Type::Int, Opcode::GreaterOrEqualInt, Type::Bool) ||
+                          EmitOperator2(Type::Float, Opcode::GreaterOrEqualFloat, Type::Bool);
+            } break;
+            case TokenKind::Less: {
+                success = EmitOperator2(Type::Int, Opcode::LessThanInt, Type::Bool) ||
+                          EmitOperator2(Type::Float, Opcode::LessThanFloat, Type::Bool);
+            } break;
+            case TokenKind::LessOrEqual: {
+                success = EmitOperator2(Type::Int, Opcode::LessOrEqualInt, Type::Bool) ||
+                          EmitOperator2(Type::Float, Opcode::LessOrEqualFloat, Type::Bool);
+            } break;
 
-            RG_ASSERT(op.branch_idx && program.ir[op.branch_idx].code == Opcode::SkipIfFalse);
-            program.ir[op.branch_idx].u.i = program.ir.len - op.branch_idx;
-        } break;
-        case TokenKind::LogicOr: {
-            success = EmitOperator2(Type::Bool, Opcode::OrBool, Type::Bool);
+            case TokenKind::And: {
+                success = EmitOperator2(Type::Int, Opcode::AndInt, Type::Int) ||
+                          EmitOperator2(Type::Bool, Opcode::AndBool, Type::Bool);
+            } break;
+            case TokenKind::Or: {
+                success = EmitOperator2(Type::Int, Opcode::OrInt, Type::Int) ||
+                          EmitOperator2(Type::Bool, Opcode::OrBool, Type::Bool);
+            } break;
+            case TokenKind::Xor: {
+                success = EmitOperator2(Type::Int, Opcode::XorInt, Type::Int) ||
+                          EmitOperator2(Type::Bool, Opcode::NotEqualBool, Type::Bool);
+            } break;
+            case TokenKind::Not: {
+                success = EmitOperator1(Type::Int, Opcode::NotInt, Type::Int) ||
+                          EmitOperator1(Type::Bool, Opcode::NotBool, Type::Bool);
+            } break;
+            case TokenKind::LeftShift: {
+                success = EmitOperator2(Type::Int, Opcode::LeftShiftInt, Type::Int);
+            } break;
+            case TokenKind::RightShift: {
+                success = EmitOperator2(Type::Int, Opcode::RightShiftInt, Type::Int);
+            } break;
 
-            RG_ASSERT(op.branch_idx && program.ir[op.branch_idx].code == Opcode::SkipIfTrue);
-            program.ir[op.branch_idx].u.i = program.ir.len - op.branch_idx;
-        } break;
+            case TokenKind::LogicNot: {
+                success = EmitOperator1(Type::Bool, Opcode::NotBool, Type::Bool);
+            } break;
+            case TokenKind::LogicAnd: {
+                success = EmitOperator2(Type::Bool, Opcode::AndBool, Type::Bool);
 
-        default: { RG_ASSERT(false); } break;
+                RG_ASSERT(op.branch_idx && program.ir[op.branch_idx].code == Opcode::SkipIfFalse);
+                program.ir[op.branch_idx].u.i = program.ir.len - op.branch_idx;
+            } break;
+            case TokenKind::LogicOr: {
+                success = EmitOperator2(Type::Bool, Opcode::OrBool, Type::Bool);
+
+                RG_ASSERT(op.branch_idx && program.ir[op.branch_idx].code == Opcode::SkipIfTrue);
+                program.ir[op.branch_idx].u.i = program.ir.len - op.branch_idx;
+            } break;
+
+            default: { RG_ASSERT(false); } break;
+        }
     }
 
     if (RG_UNLIKELY(!success)) {
