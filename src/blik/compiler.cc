@@ -139,18 +139,24 @@ private:
     }
 };
 
-// PImpl crap
 Compiler::Compiler()
     : parser(new Parser) {}
+
 bool Compiler::Compile(const TokenSet &set, const char *filename)
-    { return parser->Parse(set, filename); }
+{
+    return parser->Parse(set, filename);
+}
+
 void Compiler::AddFunction(const char *signature, NativeFunction *native)
 {
     RG_ASSERT(native);
     parser->AddFunction(signature, native);
 }
+
 void Compiler::Finish(Program *out_program)
-    { return parser->Finish(out_program); }
+{
+    return parser->Finish(out_program);
+}
 
 Parser::Parser()
 {
