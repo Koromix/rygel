@@ -64,6 +64,8 @@ public:
     Parser();
 
     bool Parse(const TokenSet &set, const char *filename);
+    void AddFunction(const char *signature, NativeFunction *native);
+
     void Finish(Program *out_program);
 
 private:
@@ -87,12 +89,12 @@ private:
     bool EmitOperator2(Type in_type, Opcode code, Type out_type);
 
     bool ParseCall(const char *name);
-    void EmitIntrinsic(const char *name, Span<const Type> types);
+    void EmitIntrinsic(const char *name, Span<const FunctionInfo::Parameter> args);
 
     void EmitPop(int64_t count);
     void EmitReturn();
 
-    bool TestOverload(const FunctionInfo &proto, Span<const Type> types);
+    bool TestOverload(const FunctionInfo &proto, Span<const FunctionInfo::Parameter> params2);
 
     bool ConsumeToken(TokenKind kind);
     const char *ConsumeIdentifier();
@@ -142,33 +144,22 @@ Compiler::Compiler()
     : parser(new Parser) {}
 bool Compiler::Compile(const TokenSet &set, const char *filename)
     { return parser->Parse(set, filename); }
+void Compiler::AddFunction(const char *signature, NativeFunction *native)
+{
+    RG_ASSERT(native);
+    parser->AddFunction(signature, native);
+}
 void Compiler::Finish(Program *out_program)
     { return parser->Finish(out_program); }
 
 Parser::Parser()
 {
-    functions.Append({.name = "print", .signature = "print(...)", .variadic = true, .ret = Type::Null});
-    functions.Append({.name = "printLn", .signature = "printLn(...)", .variadic = true, .ret = Type::Null});
-    functions.Append({.name = "intToFloat", .signature = "intToFloat(Int): Float", .params = {{"i", Type::Int}}, .ret = Type::Float});
-    functions.Append({.name = "floatToInt", .signature = "floatToInt(Float): Int", .params = {{"f", Type::Float}}, .ret = Type::Int});
-    functions.Append({.name = "exit", .signature = "exit(Int)", .params = {{"code", Type::Int}}, .ret = Type::Null});
-
-    for (FunctionInfo &intr: functions) {
-        intr.intrinsic = true;
-
-        std::pair<FunctionInfo **, bool> ret = functions_map.Append(&intr);
-        FunctionInfo *intr0 = *ret.first;
-
-        if (ret.second) {
-            intr.overload_prev = &intr;
-            intr.overload_next = &intr;
-        } else {
-            intr0->overload_prev->overload_next = &intr;
-            intr.overload_next = intr0;
-            intr.overload_prev = intr0->overload_prev;
-            intr0->overload_prev = &intr;
-        }
-    }
+    // Intrinsics
+    AddFunction("print(...)", nullptr);
+    AddFunction("printLn(...)", nullptr);
+    AddFunction("intToFloat(Int): Float", nullptr);
+    AddFunction("floatToInt(Float): Int", nullptr);
+    AddFunction("exit(Int)", nullptr);
 }
 
 bool Parser::Parse(const TokenSet &set, const char *filename)
@@ -220,6 +211,95 @@ bool Parser::Parse(const TokenSet &set, const char *filename)
     forward_calls.Clear();
 
     return valid;
+}
+
+// This is not exposed to user scripts, and the validation of signature
+// is very light (debug-only asserts). Don't pass in garbage!
+void Parser::AddFunction(const char *signature, NativeFunction *native)
+{
+    FunctionInfo *func = functions.AppendDefault();
+
+    const char *ptr = signature;
+
+    // Name and signature
+    {
+        Size len = strcspn(ptr, "()");
+        Span<const char> func_name = TrimStr(MakeSpan(ptr, len));
+
+        func->name = DuplicateString(func_name, &program.str_alloc).ptr;
+        ptr += len;
+    }
+    func->signature = DuplicateString(signature, &program.str_alloc).ptr;
+
+    if (native) {
+        func->mode = FunctionInfo::Mode::Native;
+        func->native = native;
+    } else {
+        func->mode = FunctionInfo::Mode::Intrinsic;
+    }
+
+    // Parameters
+    RG_ASSERT(ptr[0] == '(');
+    if (ptr[1] != ')') {
+        do {
+            Size len = strcspn(++ptr, ",)");
+            Span<const char> type_name = TrimStr(MakeSpan(ptr, len));
+
+            if (type_name == "...") {
+                RG_ASSERT(ptr[len] == ')');
+                RG_ASSERT(func->mode == FunctionInfo::Mode::Intrinsic);
+
+                func->variadic = true;
+            } else {
+                Type type;
+                RG_ASSERT(OptionToEnum(TypeNames, type_name, &type));
+
+                func->params.Append({"", type});
+                func->ret_pop += (type != Type::Null);
+            }
+
+            ptr += len;
+            RG_ASSERT(ptr[0]);
+        } while (ptr[0] != ')');
+
+        ptr++;
+    } else {
+        ptr += 2;
+    }
+
+    // Return type
+    RG_ASSERT(ptr[0] == ':' || !ptr[0]);
+    if (ptr[0] == ':') {
+        Span<const char> type_name = TrimStr(Span<const char>(ptr + 1));
+        RG_ASSERT(OptionToEnum(TypeNames, type_name, &func->ret_type));
+    }
+
+    func->defined_pos = -1;
+    func->inst_idx = -1;
+
+    // Publish it!
+    {
+        FunctionInfo *head = *functions_map.Append(func).first;
+
+        if (head != func) {
+            head->overload_prev->overload_next = func;
+            func->overload_next = head;
+            func->overload_prev = head->overload_prev;
+            head->overload_prev = func;
+
+#ifndef NDEBUG
+            do {
+                RG_ASSERT(head->mode == func->mode);
+                RG_ASSERT(!TestOverload(*head, func->params));
+
+                head = head->overload_next;
+            } while (head != func);
+#endif
+        } else {
+            func->overload_prev = func;
+            func->overload_next = func;
+        }
+    }
 }
 
 void Parser::ParsePrototypes(Span<const Size> funcs)
@@ -288,9 +368,9 @@ void Parser::ParsePrototypes(Span<const Size> funcs)
 
         // Return type
         if (MatchToken(TokenKind::Colon)) {
-            proto->ret = ConsumeType();
+            proto->ret_type = ConsumeType();
         } else {
-            proto->ret = Type::Null;
+            proto->ret_type = Type::Null;
         }
 
         // Build signature (with parameter and return types)
@@ -303,8 +383,8 @@ void Parser::ParsePrototypes(Span<const Size> funcs)
                 Fmt(&buf, "%1%2", i ? ", " : "", TypeNames[(int)param.type]);
             }
             Fmt(&buf, ")");
-            if (proto->ret != Type::Null) {
-                Fmt(&buf, ": %1", TypeNames[(int)proto->ret]);
+            if (proto->ret_type != Type::Null) {
+                Fmt(&buf, ": %1", TypeNames[(int)proto->ret_type]);
             }
 
             proto->signature = buf.TrimAndLeak(1).ptr;
@@ -434,7 +514,6 @@ void Parser::ParseFunction()
     current_func = func;
 
     // Parameters
-    HeapArray<Type> types;
     ConsumeToken(TokenKind::LeftParenthesis);
     if (!MatchToken(TokenKind::RightParenthesis)) {
         Size stack_offset = -2 - func->params.len;
@@ -468,7 +547,6 @@ void Parser::ParseFunction()
 
             ConsumeToken(TokenKind::Colon);
             var->type = ConsumeType();
-            types.Append(var->type);
 
             var->poisoned = !valid_stmt;
         } while (MatchToken(TokenKind::Comma));
@@ -487,12 +565,12 @@ void Parser::ParseFunction()
         FunctionInfo *overload = functions_map.FindValue(func->name, nullptr);
 
         while (overload != func) {
-            if (RG_UNLIKELY(overload->intrinsic)) {
-                MarkError(func_pos, "Cannot replace or overload intrinsic function '%1'", func->name);
+            if (RG_UNLIKELY(overload->mode != FunctionInfo::Mode::Blik)) {
+                MarkError(func_pos, "Cannot replace or overload native or intrinsic function '%1'", func->name);
             }
 
-            if (TestOverload(*overload, types)) {
-                if (overload->ret == func->ret) {
+            if (TestOverload(*overload, func->params)) {
+                if (overload->ret_type == func->ret_type) {
                     MarkError(func_pos, "Function '%1' is already defined", func->signature);
                 } else {
                     MarkError(func_pos, "Function '%1' only differs from previously defined '%2' by return type",
@@ -519,7 +597,7 @@ void Parser::ParseFunction()
     }
 
     if (!has_return) {
-        if (func->ret == Type::Null) {
+        if (func->ret_type == Type::Null) {
             EmitReturn();
         } else {
             MarkError(func_pos, "Some code paths do not return a value in function '%1'", func->name);
@@ -543,9 +621,9 @@ void Parser::ParseReturn()
         type = ParseExpression(true);
     }
 
-    if (RG_UNLIKELY(type != current_func->ret)) {
+    if (RG_UNLIKELY(type != current_func->ret_type)) {
         MarkError(return_pos, "Cannot return %1 value in function defined to return %2",
-                  TypeNames[(int)type], TypeNames[(int)current_func->ret]);
+                  TypeNames[(int)type], TypeNames[(int)current_func->ret_type]);
         return;
     }
 
@@ -1412,7 +1490,8 @@ bool Parser::EmitOperator2(Type in_type, Opcode code, Type out_type)
 // Don't try to call from outside ParseExpression()!
 bool Parser::ParseCall(const char *name)
 {
-    LocalArray<Type, RG_LEN(FunctionInfo::params.data)> types;
+    // We only need to store types, but TestOverload() wants FunctionInfo::Parameter.
+    LocalArray<FunctionInfo::Parameter, RG_LEN(FunctionInfo::params.data)> args;
 
     Size call_pos = pos - 2;
 
@@ -1423,26 +1502,26 @@ bool Parser::ParseCall(const char *name)
     }
 
     if (!MatchToken(TokenKind::RightParenthesis)) {
-        types.Append(ParseExpression(true));
+        args.Append({nullptr, ParseExpression(true)});
         while (MatchToken(TokenKind::Comma)) {
-            if (RG_UNLIKELY(!types.Available())) {
-                MarkError(pos, "Functions cannot take more than %1 arguments", RG_LEN(types.data));
+            if (RG_UNLIKELY(!args.Available())) {
+                MarkError(pos, "Functions cannot take more than %1 arguments", RG_LEN(args.data));
                 return false;
             }
-            types.Append(ParseExpression(true));
+            args.Append({nullptr, ParseExpression(true)});
         }
 
         ConsumeToken(TokenKind::RightParenthesis);
     }
 
     FunctionInfo *func = func0;
-    while (!TestOverload(*func, types)) {
+    while (!TestOverload(*func, args)) {
         func = func->overload_next;
 
         if (RG_UNLIKELY(func == func0)) {
             LocalArray<char, 1024> buf = {};
-            for (Size i = 0; i < types.len; i++) {
-                buf.len += Fmt(buf.TakeAvailable(), "%1%2", i ? ", " : "", TypeNames[(int)types[i]]).len;
+            for (Size i = 0; i < args.len; i++) {
+                buf.len += Fmt(buf.TakeAvailable(), "%1%2", i ? ", " : "", TypeNames[(int)args[i].type]).len;
             }
 
             MarkError(call_pos, "Cannot call '%1' with (%2) arguments", func0->name, buf);
@@ -1450,7 +1529,7 @@ bool Parser::ParseCall(const char *name)
             // Show all candidate functions with same name
             const FunctionInfo *it = func0;
             do {
-                HintError(it->intrinsic ? -1 : it->defined_pos, "Candidate '%1'", it->signature);
+                HintError(it->defined_pos, "Candidate '%1'", it->signature);
                 it = it->overload_next;
             } while (it != func0);
 
@@ -1458,31 +1537,49 @@ bool Parser::ParseCall(const char *name)
         }
     }
 
-    if (func->intrinsic) {
-        EmitIntrinsic(name, types);
-    } else {
-        if (func->inst_idx < 0) {
-            forward_calls.Append({program.ir.len, func});
+    switch (func->mode) {
+        case FunctionInfo::Mode::Blik: {
+          if (func->inst_idx < 0) {
+                forward_calls.Append({program.ir.len, func});
 
-            if (current_func && current_func != func) {
-                func->earliest_call_pos = std::min(func->earliest_call_pos, current_func->earliest_call_pos);
-                func->earliest_call_idx = std::min(func->earliest_call_idx, current_func->earliest_call_idx);
-            } else {
-                func->earliest_call_pos = std::min(func->earliest_call_pos, call_pos);
-                func->earliest_call_idx = std::min(func->earliest_call_idx, program.ir.len);
+                if (current_func && current_func != func) {
+                    func->earliest_call_pos = std::min(func->earliest_call_pos, current_func->earliest_call_pos);
+                    func->earliest_call_idx = std::min(func->earliest_call_idx, current_func->earliest_call_idx);
+                } else {
+                    func->earliest_call_pos = std::min(func->earliest_call_pos, call_pos);
+                    func->earliest_call_idx = std::min(func->earliest_call_idx, program.ir.len);
+                }
             }
-        }
-        program.ir.Append({Opcode::Call, {.i = func->inst_idx}});
-        stack.Append({func->ret});
+
+            program.ir.Append({Opcode::Call, {.i = func->inst_idx}});
+            stack.Append({func->ret_type});
+        } break;
+
+        case FunctionInfo::Mode::Intrinsic: {
+            EmitIntrinsic(name, args);
+        } break;
+
+        case FunctionInfo::Mode::Native: {
+            RG_STATIC_ASSERT(RG_LEN(FunctionInfo::params.data) < 32);
+
+            uint64_t payload = 0;
+
+            payload |= (func->ret_type == Type::Null) ? (1ull << 62) : 0;
+            payload |= (uint64_t)func->ret_pop << 57;
+            payload |= (uint64_t)func->native & 0x1FFFFFFFFFFFFFFull;
+
+            program.ir.Append({Opcode::CallNative, {.payload = payload}});
+            stack.Append({func->ret_type});
+        } break;
     }
 
     return true;
 }
 
-void Parser::EmitIntrinsic(const char *name, Span<const Type> types)
+void Parser::EmitIntrinsic(const char *name, Span<const FunctionInfo::Parameter> args)
 {
     if (TestStr(name, "print") || TestStr(name, "printLn")) {
-        RG_STATIC_ASSERT(RG_LEN(FunctionInfo::params.data) <= 18);
+        RG_STATIC_ASSERT(RG_LEN(FunctionInfo::params.data) < 19);
 
         bool println = TestStr(name, "printLn");
 
@@ -1493,15 +1590,15 @@ void Parser::EmitIntrinsic(const char *name, Span<const Type> types)
             program.ir.Append({Opcode::PushString, {.str = "\n"}});
             payload = (int)Type::String;
         }
-        for (Size i = types.len - 1; i >= 0; i--) {
-            payload = (payload << 3) | (int)types[i];
-            offset += (types[i] != Type::Null);
+        for (Size i = args.len - 1; i >= 0; i--) {
+            payload = (payload << 3) | (int)args[i].type;
+            offset += (args[i].type != Type::Null);
         }
 
         payload = (payload << 5) | (offset + println);
-        payload = (payload << 5) | (types.len + println);
+        payload = (payload << 5) | (args.len + println);
 
-        program.ir.Append({Opcode::Print, {.i = (int64_t)payload}});
+        program.ir.Append({Opcode::Print, {.payload = payload}});
         stack.Append({Type::Null});
     } else if (TestStr(name, "intToFloat")) {
         program.ir.Append({Opcode::IntToFloat});
@@ -1554,7 +1651,7 @@ void Parser::EmitReturn()
         if (var_offset > 0) {
             Size pop = var_offset - 1;
 
-            switch (current_func->ret) {
+            switch (current_func->ret_type) {
                 case Type::Null: { pop++; } break;
                 case Type::Bool: { program.ir.Append({Opcode::StoreBool, {.i = 0}}); } break;
                 case Type::Int: { program.ir.Append({Opcode::StoreInt, {.i = 0}}); } break;
@@ -1565,22 +1662,22 @@ void Parser::EmitReturn()
             EmitPop(pop);
         }
 
-        program.ir.Append({current_func->ret == Type::Null ? Opcode::ReturnNull : Opcode::Return, {.i = current_func->ret_pop}});
+        program.ir.Append({current_func->ret_type == Type::Null ? Opcode::ReturnNull : Opcode::Return, {.i = current_func->ret_pop}});
     }
 }
 
-bool Parser::TestOverload(const FunctionInfo &proto, Span<const Type> types)
+bool Parser::TestOverload(const FunctionInfo &proto, Span<const FunctionInfo::Parameter> params2)
 {
     if (proto.variadic) {
-        if (proto.params.len > types.len)
+        if (proto.params.len > params2.len)
             return false;
     } else {
-        if (proto.params.len != types.len)
+        if (proto.params.len != params2.len)
             return false;
     }
 
     for (Size i = 0; i < proto.params.len; i++) {
-        if (proto.params[i].type != types[i])
+        if (proto.params[i].type != params2[i].type)
             return false;
     }
 

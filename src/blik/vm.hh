@@ -24,10 +24,10 @@ public:
 
     bool Run(int *out_exit_code);
 
-    void DecodeFrames(const VirtualMachine &vm, HeapArray<FrameInfo> *out_frames);
+    void DecodeFrames(const VirtualMachine &vm, HeapArray<FrameInfo> *out_frames) const;
 
 private:
-    void DumpInstruction();
+    void DumpInstruction() const;
 
     template <typename... Args>
     void FatalError(const char *fmt, Args... args)

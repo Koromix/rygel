@@ -19,6 +19,8 @@ public:
     Compiler();
 
     bool Compile(const TokenSet &set, const char *filename);
+    void AddFunction(const char *signature, NativeFunction *native);
+
     void Finish(Program *out_program);
 };
 

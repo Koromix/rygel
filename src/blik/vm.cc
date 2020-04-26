@@ -382,6 +382,30 @@ bool VirtualMachine::Run(int *out_exit_code)
             bp = stack.len;
             DISPATCH(pc = (Size)inst->u.i);
         }
+        CASE(CallNative): {
+            NativeFunction *native = (NativeFunction *)(inst->u.payload & 0x1FFFFFFFFFFFFFFull);
+            Size ret_pop = (Size)(inst->u.payload >> 57) & 0x1F;
+            bool ret_null = inst->u.payload & (1ull << 62);
+
+            Span<const Value> args = stack.Take(stack.len - ret_pop, ret_pop);
+
+            stack.Grow(2);
+            stack.ptr[stack.len++].i = pc;
+            stack.ptr[stack.len++].i = bp;
+            bp = stack.len;
+
+            if (ret_null) {
+                stack.len -= ret_pop + 2;
+                (*native)(this, args);
+            } else if (ret_pop) {
+                stack.len -= ret_pop + 1;
+                stack[stack.len - 1] = (*native)(this, args);
+            }
+
+            pc = stack.ptr[bp - 2].i + 1;
+            bp = stack.ptr[bp - 1].i;
+            DISPATCH(pc);
+        }
         CASE(Return): {
             RG_ASSERT(stack.len == bp + 1);
 
@@ -404,16 +428,16 @@ bool VirtualMachine::Run(int *out_exit_code)
         // This will be removed once we get functions, but in the mean time
         // I need to output things somehow!
         CASE(Print): {
-            int64_t remain = inst->u.i;
+            uint64_t payload = inst->u.payload;
 
-            Size count = (Size)(remain & 0x1F);
-            Size pop = (Size)((remain >> 5) & 0x1F);
-            remain >>= 10;
+            Size count = (Size)(payload & 0x1F);
+            Size pop = (Size)((payload >> 5) & 0x1F);
+            payload >>= 10;
 
             Size stack_offset = stack.len - pop;
             for (Size i = 0; i < count; i++) {
-                Type type = (Type)(remain & 0x7);
-                remain >>= 3;
+                Type type = (Type)(payload & 0x7);
+                payload >>= 3;
 
                 switch (type) {
                     case Type::Null: { Print("null"); } break;
@@ -490,7 +514,7 @@ static void Decode1(const Program &program, Size pc, Size bp, HeapArray<FrameInf
     out_frames->Append(frame);
 }
 
-void VirtualMachine::DecodeFrames(const VirtualMachine &vm, HeapArray<FrameInfo> *out_frames)
+void VirtualMachine::DecodeFrames(const VirtualMachine &vm, HeapArray<FrameInfo> *out_frames) const
 {
     Size pc = vm.pc;
     Size bp = vm.bp;
@@ -514,7 +538,7 @@ void VirtualMachine::DecodeFrames(const VirtualMachine &vm, HeapArray<FrameInfo>
     Decode1(*vm.program, pc, 0, out_frames);
 }
 
-void VirtualMachine::DumpInstruction()
+void VirtualMachine::DumpInstruction() const
 {
 #if 0
     const Instruction &inst = ir[pc];
@@ -555,10 +579,11 @@ void VirtualMachine::DumpInstruction()
         case Opcode::SkipIfFalse: { LogDebug("(0x%1) SkipIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
 
         case Opcode::Call: { LogDebug("(0x%1) Call 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.i).Pad0(-5)); } break;
+        case Opcode::CallNative: { LogDebug("(0x%1) CallNative 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.payload & 0x1FFFFFFFFFFFFFFull).Pad0(-5)); } break;
         case Opcode::Return: { LogDebug("(0x%1) Return %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case Opcode::ReturnNull: { LogDebug("(0x%1) ReturnNull %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
-        case Opcode::Print: { LogDebug("(0x%1) Print %2", FmtHex(pc).Pad0(-5), inst.u.i & 0x1F); } break;
+        case Opcode::Print: { LogDebug("(0x%1) Print %2", FmtHex(pc).Pad0(-5), inst.u.payload & 0x1F); } break;
 
         default: { LogDebug("(0x%1) %2", FmtHex(pc).Pad0(-5), OpcodeNames[(int)inst.code]); } break;
     }

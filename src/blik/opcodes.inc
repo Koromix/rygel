@@ -86,6 +86,7 @@ OPCODE(SkipIfFalse)
 
 // Functions
 OPCODE(Call)
+OPCODE(CallNative)
 OPCODE(Return)
 OPCODE(ReturnNull)
 

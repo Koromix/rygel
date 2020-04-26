@@ -8,6 +8,8 @@
 
 namespace RG {
 
+class VirtualMachine;
+
 enum class Opcode {
     #define OPCODE(Code) Code,
     #include "opcodes.inc"
@@ -25,9 +27,11 @@ struct Instruction {
                    // StoreBool, StoreInt, StoreFloat, StoreString,
                    // LoadBool, LoadInt, LoadFloat, LoadString,
                    // Jump, BranchIfTrue, BranchIfFalse,
-                   // Call, Return, Print, Exit
+                   // Call, Return, Exit
         double d; // PushFloat
         const char *str; // PushString
+
+        uint64_t payload; // CallNative, Print
     } u;
 };
 
@@ -75,7 +79,16 @@ union Value {
     const char *str;
 };
 
+// XXX: Support native calling conventions to provide seamless integration
+typedef Value NativeFunction(VirtualMachine *vm, Span<const Value> args);
+
 struct FunctionInfo {
+    enum class Mode {
+        Blik,
+        Intrinsic,
+        Native
+    };
+
     struct Parameter {
         const char *name;
         Type type;
@@ -84,19 +97,21 @@ struct FunctionInfo {
     const char *name;
     const char *signature;
 
+    Mode mode;
+    NativeFunction *native;
+
     LocalArray<Parameter, 16> params;
     bool variadic;
-    Type ret;
     Size ret_pop;
-    bool intrinsic;
-
-    // Linked list
-    FunctionInfo *overload_prev;
-    FunctionInfo *overload_next;
+    Type ret_type;
 
     Size defined_pos; // Token
     Size inst_idx; // IR
     bool tre;
+
+    // Linked list
+    FunctionInfo *overload_prev;
+    FunctionInfo *overload_next;
 
     // Used to prevent dangerous forward calls (if relevant globals are not defined yet)
     Size earliest_call_pos;
