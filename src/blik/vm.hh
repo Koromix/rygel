@@ -5,6 +5,7 @@
 #pragma once
 
 #include "../core/libcc/libcc.hh"
+#include "debug.hh"
 
 namespace RG {
 
@@ -23,6 +24,8 @@ public:
     VirtualMachine(const Program &program) : ir(program.ir), program(&program) {}
 
     int Run();
+
+    void DecodeFrames(const VirtualMachine &vm, HeapArray<FrameInfo> *out_frames);
 
 private:
     void DumpInstruction();

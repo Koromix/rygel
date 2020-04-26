@@ -10,7 +10,7 @@
 namespace RG {
 
 struct Program;
-class VirtualMachine;
+struct FrameInfo;
 
 enum class DiagnosticType {
     Error,
@@ -25,8 +25,6 @@ struct FrameInfo {
     const char *filename;
     int32_t line;
 };
-
-void DecodeFrames(const VirtualMachine &vm, HeapArray<FrameInfo> *out_frames);
 
 template <typename... Args>
 void ReportDiagnostic(DiagnosticType type, Span<const char> code, const char *filename,
