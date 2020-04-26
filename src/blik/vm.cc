@@ -12,6 +12,8 @@ bool VirtualMachine::Run(int *out_exit_code)
 {
     const Instruction *inst;
 
+    fatal = false;
+
 #if defined(__GNUC__) || defined(__clang__)
     static const void *dispatch[] = {
         #define OPCODE(Code) && Code,
@@ -395,34 +397,47 @@ bool VirtualMachine::Run(int *out_exit_code)
             bp = stack.len;
 
             if (ret_null) {
-                stack.len -= ret_pop + 2;
                 (*native)(this, args);
+                stack.len -= ret_pop + 2;
+
+                pc = stack.ptr[bp - 2].i;
+                bp = stack.ptr[bp - 1].i;
+
+                if (RG_UNLIKELY(fatal))
+                    return false;
             } else if (ret_pop) {
+                Value ret = (*native)(this, args);
                 stack.len -= ret_pop + 1;
-                stack[stack.len - 1] = (*native)(this, args);
+
+                pc = stack.ptr[bp - 2].i;
+                bp = stack.ptr[bp - 1].i;
+
+                if (RG_UNLIKELY(fatal)) {
+                    stack.len--;
+                    return false;
+                }
+                stack[stack.len - 1] = ret;
             }
 
-            pc = stack.ptr[bp - 2].i + 1;
-            bp = stack.ptr[bp - 1].i;
-            DISPATCH(pc);
+            DISPATCH(++pc);
         }
         CASE(Return): {
             RG_ASSERT(stack.len == bp + 1);
 
             Value ret = stack.ptr[stack.len - 1];
             stack.len = bp - inst->u.i - 1;
-            pc = stack.ptr[bp - 2].i + 1;
+            pc = stack.ptr[bp - 2].i;
             bp = stack.ptr[bp - 1].i;
             stack[stack.len - 1] = ret;
-            DISPATCH(pc);
+            DISPATCH(++pc);
         }
         CASE(ReturnNull): {
             RG_ASSERT(stack.len == bp);
 
             stack.len = bp - inst->u.i - 2;
-            pc = stack.ptr[bp - 2].i + 1;
+            pc = stack.ptr[bp - 2].i;
             bp = stack.ptr[bp - 1].i;
-            DISPATCH(pc);
+            DISPATCH(++pc);
         }
 
         // This will be removed once we get functions, but in the mean time

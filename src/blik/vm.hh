@@ -13,6 +13,9 @@ namespace RG {
 class VirtualMachine {
     Span<const Instruction> ir;
 
+    // Used to detect fatal errors issued by native functions
+    bool fatal = false;
+
 public:
     const Program *const program;
 
@@ -26,9 +29,6 @@ public:
 
     void DecodeFrames(const VirtualMachine &vm, HeapArray<FrameInfo> *out_frames) const;
 
-private:
-    void DumpInstruction() const;
-
     template <typename... Args>
     void FatalError(const char *fmt, Args... args)
     {
@@ -36,7 +36,11 @@ private:
         DecodeFrames(*this, &frames);
 
         ReportRuntimeError(frames, fmt, args...);
+        fatal = true;
     }
+
+private:
+    void DumpInstruction() const;
 };
 
 bool Run(const Program &program, int *out_exit_code);
