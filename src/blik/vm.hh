@@ -25,6 +25,9 @@ public:
 
     VirtualMachine(const Program &program) : ir(program.ir), program(&program) {}
 
+    VirtualMachine(const VirtualMachine &) = delete;
+    VirtualMachine &operator=(const VirtualMachine &) = delete;
+
     bool Run(int *out_exit_code);
 
     void DecodeFrames(const VirtualMachine &vm, HeapArray<FrameInfo> *out_frames) const;

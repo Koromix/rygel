@@ -13,10 +13,14 @@ class Parser;
 struct TokenSet;
 
 class Compiler {
-    std::unique_ptr<Parser> parser;
+    Parser *parser;
 
 public:
     Compiler();
+    ~Compiler();
+
+    Compiler(const Compiler &) = delete;
+    Compiler &operator=(const Compiler &) = delete;
 
     bool Compile(const TokenSet &set, const char *filename);
     void AddFunction(const char *signature, NativeFunction *native);

@@ -23,6 +23,11 @@ class Lexer {
     TokenSet set;
 
 public:
+    Lexer() {}
+
+    Lexer(const Lexer &) = delete;
+    Lexer &operator=(const Lexer &) = delete;
+
     bool Tokenize(Span<const char> code, const char *filename);
     void Finish(TokenSet *out_set);
 

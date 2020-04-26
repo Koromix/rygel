@@ -63,6 +63,9 @@ class Parser {
 public:
     Parser();
 
+    Parser(const Parser &) = delete;
+    Parser &operator=(const Parser &) = delete;
+
     bool Parse(const TokenSet &set, const char *filename);
     void AddFunction(const char *signature, NativeFunction *native);
 
@@ -140,7 +143,14 @@ private:
 };
 
 Compiler::Compiler()
-    : parser(new Parser) {}
+    : parser(new Parser)
+{
+}
+
+Compiler::~Compiler()
+{
+    delete parser;
+}
 
 bool Compiler::Compile(const TokenSet &set, const char *filename)
 {
