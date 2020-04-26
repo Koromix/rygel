@@ -267,7 +267,7 @@ void Parser::AddFunction(const char *signature, NativeFunction *native)
 
                 func->variadic = true;
             } else {
-                Type type;
+                Type type = Type::Null;
                 RG_ASSERT(OptionToEnum(TypeNames, type_name, &type));
 
                 func->params.Append({"", type});
