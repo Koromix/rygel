@@ -163,8 +163,8 @@ Parser::Parser()
     // Intrinsics
     AddFunction("print(...)", nullptr);
     AddFunction("printLn(...)", nullptr);
-    AddFunction("intToFloat(Int): Float", nullptr);
-    AddFunction("floatToInt(Float): Int", nullptr);
+    AddFunction("intToFloat(Int) Float", nullptr);
+    AddFunction("floatToInt(Float) Int", nullptr);
     AddFunction("exit(Int)", nullptr);
 }
 
@@ -274,10 +274,11 @@ void Parser::AddFunction(const char *signature, NativeFunction *native)
     }
 
     // Return type
-    RG_ASSERT(ptr[0] == ':' || !ptr[0]);
-    if (ptr[0] == ':') {
-        Span<const char> type_name = TrimStr(Span<const char>(ptr + 1));
-        RG_ASSERT(OptionToEnum(TypeNames, type_name, &func->ret_type));
+    {
+        Span<const char> type_name = TrimStr(Span<const char>(ptr));
+        if (type_name.len) {
+            RG_ASSERT(OptionToEnum(TypeNames, type_name, &func->ret_type));
+        }
     }
 
     func->defined_pos = -1;
@@ -373,10 +374,8 @@ void Parser::ParsePrototypes(Span<const Size> funcs)
         }
 
         // Return type
-        if (MatchToken(TokenKind::Colon)) {
+        if (!PeekToken(TokenKind::EndOfLine)) {
             proto->ret_type = ConsumeType();
-        } else {
-            proto->ret_type = Type::Null;
         }
 
         // Build signature (with parameter and return types)
@@ -562,7 +561,7 @@ void Parser::ParseFunction()
     }
 
     // Return type
-    if (MatchToken(TokenKind::Colon)) {
+    if (!PeekToken(TokenKind::EndOfLine) && !PeekToken(TokenKind::Do)) {
         ConsumeType();
     }
 
@@ -1143,7 +1142,6 @@ Type Parser::ParseExpression(bool keep_result)
                                   TokenKindNames[(int)tokens[pos - 1].kind]);
                     }
 
-                    pos--;
                     goto error;
                 } else if (!expect_op && tok.kind == TokenKind::EndOfLine) {
                     program.lines.Append(program.ir.len);

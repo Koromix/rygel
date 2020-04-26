@@ -1,4 +1,4 @@
-func fib(n: Int): Int
+func fib(n: Int) Int
     if n <= 1 do return n
     return fib(n - 1) + fib(n - 2)
 end
@@ -99,7 +99,7 @@ for iter in 1..11
     printLn("TESTING ", inline0())
 end
 
-func tt(e: String, ii: Int): Bool
+func tt(e: String, ii: Int) Bool
     let mut tte = 267
     begin
         let xx = 3
@@ -110,17 +110,17 @@ func tt(e: String, ii: Int): Bool
     return true
 end
 
-func eee(pp: Int): Int
+func eee(pp: Int) Int
     let xxxxx = 1
     printLn("CALLED eee with ", pp)
     return pp
 end
 
-func inc(pp: Int): Int do return pp + 1
+func inc(pp: Int) Int do return pp + 1
 
-func func0(): String
+func func0() String
     return "func0()"
 end
-func inline0(): String do return "inline0()"
+func inline0() String do return "inline0()"
 
 for i in 1..14 do printLn(i)
