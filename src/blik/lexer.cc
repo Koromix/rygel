@@ -46,38 +46,7 @@ private:
     }
 };
 
-static inline Size DecodeUtf8(Span<const char> str, Size offset, int32_t *out_c)
-{
-    RG_ASSERT(offset < str.len);
-
-    const uint8_t *ptr = (const uint8_t *)(str.ptr + offset);
-    Size available = str.len - offset;
-
-    if (ptr[0] < 0x80) {
-        *out_c = ptr[0];
-        return 1;
-    } else if (RG_UNLIKELY(ptr[0] - 0xC2 > 0xF4 - 0xC2)) {
-        return -1;
-    } else if (ptr[0] < 0xE0 &&
-               RG_LIKELY(available >= 2 && (ptr[1] & 0xC0) == 0x80)) {
-        *out_c = ((ptr[0] & 0x1F) << 6) | (ptr[1] & 0x3F);
-        return 2;
-    } else if (ptr[0] < 0xF0 &&
-               RG_LIKELY(available >= 3 && (ptr[1] & 0xC0) == 0x80 &&
-                                           (ptr[2] & 0xC0) == 0x80)) {
-        *out_c = ((ptr[0] & 0xF) << 12) | ((ptr[1] & 0x3F) << 6) | (ptr[2] & 0x3F);
-        return 3;
-    } else if (RG_LIKELY(available >= 4 && (ptr[1] & 0xC0) == 0x80 &&
-                                           (ptr[2] & 0xC0) == 0x80 &&
-                                           (ptr[3] & 0xC0) == 0x80)) {
-        *out_c = ((ptr[0] & 0x7) << 18) | ((ptr[1] & 0x3F) << 12) | ((ptr[2] & 0x3F) << 6) | (ptr[3] & 0x3F);
-        return 4;
-    } else {
-        return -1;
-    }
-}
-
-static bool TestUnicodeTable(Span<const int32_t> table, int32_t c)
+static bool TestUnicodeTable(Span<const uint32_t> table, uint32_t c)
 {
     RG_ASSERT(table.len > 0);
     RG_ASSERT(table.len % 2 == 0);
@@ -320,18 +289,24 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                                     return false;
                                 } break;
                             }
+
+                            next++;
                         }
+                    } else if ((uint8_t)code[next] < 128) {
+                        str.Append(code[next]);
+                        next++;
                     } else {
-                        int32_t c;
-                        if (RG_UNLIKELY(DecodeUtf8(code, next, &c) < 0)) {
+                        uint32_t c;
+                        Size bytes = DecodeUtf8(code.ptr, next, &c);
+
+                        if (RG_UNLIKELY(!bytes)) {
                             MarkError(next, "Invalid UTF-8 sequence");
                             return false;
                         }
 
-                        str.Append(code[next]);
+                        str.Append(code.Take(next, bytes));
+                        next += bytes;
                     }
-
-                    next++;
                 }
 
                 // Intern string
@@ -369,11 +344,11 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                 if (RG_LIKELY(IsAsciiAlpha(code[offset]) || code[offset] == '_')) {
                     // Go on!
                 } else if ((uint8_t)code[offset] >= 128) {
-                    int32_t c = -1;
+                    uint32_t c = 0;
                     Size bytes = DecodeUtf8(code.ptr, offset, &c);
 
                     if (RG_UNLIKELY(!TestUnicodeTable(UnicodeIdStartTable, c))) {
-                        if (bytes >= 0) {
+                        if (bytes > 0) {
                             MarkError(offset, "Character '%1' is not allowed at the beginning of identifiers", code.Take(offset, bytes));
                         } else {
                             MarkError(offset, "Invalid UTF-8 sequence");
@@ -395,11 +370,11 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     if (IsAsciiAlphaOrDigit(code[next]) || code[next] == '_') {
                         next++;
                     } else if (RG_UNLIKELY((uint8_t)code[next] >= 128)) {
-                        int32_t c = -1;
+                        uint32_t c = 0;
                         Size bytes = DecodeUtf8(code.ptr, next, &c);
 
                         if (!TestUnicodeTable(UnicodeIdContinueTable, c)) {
-                            if (bytes >= 0) {
+                            if (bytes > 0) {
                                 MarkError(next, "Character '%1' is not allowed in identifiers", code.Take(next, bytes));
                             } else {
                                 MarkError(offset, "Invalid UTF-8 sequence");

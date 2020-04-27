@@ -128,20 +128,12 @@ bool gui_Window::Init(const char *application_name)
     glfwSetCharCallback(window, [](GLFWwindow *window, unsigned int c) {
         gui_Window *self = (gui_Window *)glfwGetWindowUserPointer(window);
 
-        // XXX: Deal with supplementary planes
-        if (c < 0x80 && RG_LIKELY(self->priv.input.text.Available() >= 1)) {
-            self->priv.input.text.Append((char)c);
-        } else if (c < 0x800 && RG_LIKELY(self->priv.input.text.Available() >= 2)) {
-            self->priv.input.text.Append((char)(0xC0 | (c >> 6)));
-            self->priv.input.text.Append((char)(0x80 | (c & 0x3F)));
-        } else if (RG_LIKELY(self->priv.input.text.Available() >= 3)) {
-            self->priv.input.text.Append((char)(0xE0 | (c >> 12)));
-            self->priv.input.text.Append((char)(0x80 | ((c >> 6) & 0x3F)));
-            self->priv.input.text.Append((char)(0x80 | (c & 0x3F)));
+        if (RG_LIKELY(self->priv.input.text.Available() >= 5)) {
+            self->priv.input.text.len += EncodeUtf8(c, self->priv.input.text.end());
+            self->priv.input.text.data[self->priv.input.text.len] = 0;
         } else {
             LogError("Dropping text events (buffer full)");
         }
-
         self->priv.input.interaction_time = self->priv.time.monotonic;
     });
 
@@ -181,6 +173,7 @@ bool gui_Window::ProcessEvents(bool wait)
 
     // Reset relative inputs
     priv.input.text.Clear();
+    priv.input.text.data[priv.input.text.len] = 0;
     priv.input.buttons &= ~released_buttons;
     released_buttons = 0;
     priv.input.wheel_x = 0;
@@ -198,12 +191,6 @@ bool gui_Window::ProcessEvents(bool wait)
     // Update window size and focus
     glfwGetFramebufferSize(window, &priv.display.width, &priv.display.height);
     priv.input.mouseover = glfwGetWindowAttrib(window, GLFW_HOVERED);
-
-    // Append NUL byte to keyboard text
-    if (!priv.input.text.Available()) {
-        priv.input.text.len--;
-    }
-    priv.input.text.Append('\0');
 
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);

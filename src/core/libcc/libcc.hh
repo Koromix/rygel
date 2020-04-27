@@ -3356,6 +3356,64 @@ overflow:
     return false;
 }
 
+static inline Size EncodeUtf8(uint32_t c, char out_buf[4])
+{
+    if (c < 0x80) {
+        out_buf[0] = (char)c;
+        return 1;
+    } else if (c < 0x800) {
+        out_buf[0] = (char)(0xC0 | (c >> 6));
+        out_buf[1] = (char)(0x80 | (c & 0x3F));
+        return 2;
+    } else if (c >= 0xD800 && c < 0xE000) {
+        return 0;
+    } else if (c < 0x10000) {
+        out_buf[0] = (char)(0xE0 | (c >> 12));
+        out_buf[1] = (char)(0x80 | ((c >> 6) & 0x3F));
+        out_buf[2] = (char)(0x80 | (c & 0x3F));
+        return 3;
+    } else if (c < 0x110000) {
+        out_buf[0] = (char)(0xE0 | (c >> 18));
+        out_buf[1] = (char)(0x80 | ((c >> 12) & 0x3F));
+        out_buf[2] = (char)(0x80 | ((c >> 6) & 0x3F));
+        out_buf[3] = (char)(0x80 | (c & 0x3F));
+        return 4;
+    } else {
+        return 0;
+    }
+}
+
+static inline Size DecodeUtf8(Span<const char> str, Size offset, uint32_t *out_c)
+{
+    RG_ASSERT(offset < str.len);
+
+    const uint8_t *ptr = (const uint8_t *)(str.ptr + offset);
+    Size available = str.len - offset;
+
+    if (ptr[0] < 0x80) {
+        *out_c = ptr[0];
+        return 1;
+    } else if (RG_UNLIKELY(ptr[0] - 0xC2 > 0xF4 - 0xC2)) {
+        return 0;
+    } else if (ptr[0] < 0xE0 &&
+               RG_LIKELY(available >= 2 && (ptr[1] & 0xC0) == 0x80)) {
+        *out_c = ((ptr[0] & 0x1F) << 6) | (ptr[1] & 0x3F);
+        return 2;
+    } else if (ptr[0] < 0xF0 &&
+               RG_LIKELY(available >= 3 && (ptr[1] & 0xC0) == 0x80 &&
+                                           (ptr[2] & 0xC0) == 0x80)) {
+        *out_c = ((ptr[0] & 0xF) << 12) | ((ptr[1] & 0x3F) << 6) | (ptr[2] & 0x3F);
+        return 3;
+    } else if (RG_LIKELY(available >= 4 && (ptr[1] & 0xC0) == 0x80 &&
+                                           (ptr[2] & 0xC0) == 0x80 &&
+                                           (ptr[3] & 0xC0) == 0x80)) {
+        *out_c = ((ptr[0] & 0x7) << 18) | ((ptr[1] & 0x3F) << 12) | ((ptr[2] & 0x3F) << 6) | (ptr[3] & 0x3F);
+        return 4;
+    } else {
+        return 0;
+    }
+}
+
 // ------------------------------------------------------------------------
 // System
 // ------------------------------------------------------------------------

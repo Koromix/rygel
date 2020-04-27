@@ -39,6 +39,8 @@ struct gui_Win32Window {
     // Apply mouse up events next frame, or some clicks will fail (such as touchpads)
     // because the DOWN and UP events will be detected in the same frame.
     unsigned int released_buttons;
+
+    uint32_t surrogate_buf;
 };
 
 static RG_THREAD_LOCAL gui_Info *thread_info;
@@ -94,18 +96,27 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
 #undef HANDLE_KEY
         } break;
         case WM_CHAR: {
-            uint16_t c = (uint16_t)wparam;
+            uint32_t c = (uint32_t)wparam;
 
-            // XXX: Deal with supplementary planes
-            if (c < 0x80 && RG_LIKELY(thread_info->input.text.Available() >= 1)) {
-                thread_info->input.text.Append((char)c);
-            } else if (c < 0x800 && RG_LIKELY(thread_info->input.text.Available() >= 2)) {
-                thread_info->input.text.Append((char)(0xC0 | (c >> 6)));
-                thread_info->input.text.Append((char)(0x80 | (c & 0x3F)));
-            } else if (RG_LIKELY(thread_info->input.text.Available() >= 3)) {
-                thread_info->input.text.Append((char)(0xE0 | (c >> 12)));
-                thread_info->input.text.Append((char)(0x80 | ((c >> 6) & 0x3F)));
-                thread_info->input.text.Append((char)(0x80 | (c & 0x3F)));
+            // XXX: Test this, Unicode support is probably broken. It may not even work unless
+            // we use the Unicode 'W' Win32 functions in this file (instead of the ANSI ones).
+            if ((c - 0xD800u) < 0x800u) {
+                if ((c & 0xFC00) == 0xD800) {
+                    thread_window->surrogate_buf = c;
+                    break;
+                } else if (thread_window->surrogate_buf && (c & 0xFC00) == 0xDC00) {
+                    c = (thread_window->surrogate_buf << 10) + c - 0x35FDC00;
+                    thread_window->surrogate_buf = 0;
+                } else {
+                    // Yeah something is up. Give up on this character.
+                    thread_window->surrogate_buf = 0;
+                    break;
+                }
+            }
+
+            if (RG_LIKELY(thread_info->input.text.Available() >= 5)) {
+                thread_info->input.text.len += EncodeUtf8(c, thread_info->input.text.end());
+                thread_info->input.text.data[thread_info->input.text.len] = 0;
             } else {
                 LogError("Dropping text events (buffer full)");
             }
@@ -463,6 +474,7 @@ bool gui_Window::ProcessEvents(bool wait)
 
     // Reset relative inputs
     priv.input.text.Clear();
+    priv.input.text.data[priv.input.text.len] = 0;
     priv.input.buttons &= ~window->released_buttons;
     window->released_buttons = 0;
     priv.input.wheel_x = 0;
@@ -483,12 +495,6 @@ bool gui_Window::ProcessEvents(bool wait)
             wait = false;
         }
     }
-
-    // Append NUL byte to keyboard text
-    if (!priv.input.text.Available()) {
-        priv.input.text.len--;
-    }
-    priv.input.text.Append('\0');
 
     // XXX: Should we report an error instead?
     RG_ASSERT(SetGLContext(window->hdc, window->hgl));
