@@ -1838,7 +1838,7 @@ void wrenAbortFiber(WrenVM* vm, int slot)
 
 bool wrenWillAbort(WrenVM* vm)
 {
-  return wrenHasError(vm);
+  return wrenHasError(vm->fiber);
 }
 
 void* wrenGetUserData(WrenVM* vm)

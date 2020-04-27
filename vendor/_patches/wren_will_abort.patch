@@ -22,7 +22,7 @@ index 9f01fe00..78e28ff6 100644
  
 +bool wrenWillAbort(WrenVM* vm)
 +{
-+  return !IS_NULL(vm->fiber->error);
++  return wrenHasError(vm->fiber);
 +}
 +
  void* wrenGetUserData(WrenVM* vm)
