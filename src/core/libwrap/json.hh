@@ -137,7 +137,7 @@ class json_Parser {
 
         bool Key(const char *key, Size len, bool);
 
-        bool RawNumber(const char *, Size, bool) { RG_ASSERT(false); }
+        bool RawNumber(const char *, Size, bool) { RG_UNREACHABLE(); }
     };
 
     json_StreamReader st;

@@ -765,7 +765,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                     switch (arg.u.span.type) {
                         case FmtType::Str1: { arg2.u.str1 = *(const char **)ptr; } break;
                         case FmtType::Str2: { arg2.u.str2 = *(const Span<const char> *)ptr; } break;
-                        case FmtType::Buffer: { RG_ASSERT(false); } break;
+                        case FmtType::Buffer: { RG_UNREACHABLE(); } break;
                         case FmtType::Char: { arg2.u.ch = *(const char *)ptr; } break;
                         case FmtType::Bool: { arg2.u.b = *(const bool *)ptr; } break;
                         case FmtType::Integer:
@@ -777,21 +777,21 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                                 case 4: { arg2.u.u = *(const uint32_t *)ptr; } break;
                                 case 2: { arg2.u.u = *(const uint16_t *)ptr; } break;
                                 case 1: { arg2.u.u = *(const uint8_t *)ptr; } break;
-                                default: { RG_ASSERT(false); } break;
+                                default: { RG_UNREACHABLE(); } break;
                             }
                         } break;
                         case FmtType::Double: {
                             switch (arg.u.span.type_len) {
                                 case RG_SIZE(double): { arg2.u.d.value = *(const double *)ptr; } break;
                                 case RG_SIZE(float): { arg2.u.d.value = *(const float *)ptr; } break;
-                                default: { RG_ASSERT(false); } break;
+                                default: { RG_UNREACHABLE(); } break;
                             }
                             arg2.u.d.precision = -1;
                         } break;
                         case FmtType::MemorySize: { arg2.u.size = *(const Size *)ptr; } break;
                         case FmtType::DiskSize: { arg2.u.size = *(const Size *)ptr; } break;
                         case FmtType::Date: { arg2.u.date = *(const Date *)ptr; } break;
-                        case FmtType::Span: { RG_ASSERT(false); } break;
+                        case FmtType::Span: { RG_UNREACHABLE(); } break;
                     }
                     ptr += arg.u.span.type_len;
 
@@ -1677,7 +1677,7 @@ bool TestFile(const char *filename, FileType type)
         switch (type) {
             case FileType::Directory: { LogError("Path '%1' is not a directory", filename); } break;
             case FileType::File: { LogError("Path '%1' is not a file", filename); } break;
-            case FileType::Unknown: { RG_ASSERT(false); } break;
+            case FileType::Unknown: { RG_UNREACHABLE(); } break;
         }
 
         return false;
@@ -3625,7 +3625,7 @@ truncated_error:
     error = true;
     return -1;
 #else
-    RG_ASSERT(false);
+    RG_UNREACHABLE();
 #endif
 }
 
@@ -3934,7 +3934,8 @@ bool StreamWriter::Write(Span<const uint8_t> buf)
 #endif
         } break;
     }
-    RG_ASSERT(false);
+
+    RG_UNREACHABLE();
 }
 
 bool StreamWriter::InitCompressor(CompressionType type)
@@ -4088,7 +4089,8 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
             }
         } break;
     }
-    RG_ASSERT(false);
+
+    RG_UNREACHABLE();
 }
 
 bool SpliceStream(StreamReader *reader, Size max_len, StreamWriter *writer)

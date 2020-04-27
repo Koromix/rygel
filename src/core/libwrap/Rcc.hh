@@ -355,7 +355,8 @@ public:
             case Type::Int: { return (T)u.i[idx]; } break;
             case Type::Double: { return (T)u.d[idx]; } break;
         }
-        RG_ASSERT(false);
+
+        RG_UNREACHABLE();
     }
 };
 

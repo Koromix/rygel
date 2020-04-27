@@ -42,7 +42,8 @@ static ImU32 GetVisColor(VisColor color, float alpha = 1.0f)
         case VisColor::Plot: { return ImGui::GetColorU32(ImGuiCol_PlotLines, alpha); } break;
         case VisColor::Limit: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.9f, 0.7f, 0.03f, 0.4f * alpha)); } break;
     }
-    RG_ASSERT(false);
+
+    RG_UNREACHABLE();
 }
 
 static bool DetectAnomaly(const Element &elmt)
@@ -55,7 +56,8 @@ static bool DetectAnomaly(const Element &elmt)
         } break;
         case Element::Type::Period: { return false; } break;
     }
-    RG_ASSERT(false);
+
+    RG_UNREACHABLE();
 }
 
 static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoom, float alpha,

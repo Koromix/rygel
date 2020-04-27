@@ -440,7 +440,8 @@ public:
                        values[1] == u.cmd_jump.jump;
             } break;
         }
-        RG_ASSERT(false);
+
+        RG_UNREACHABLE();
     }
 };
 

@@ -112,7 +112,7 @@ public:
     bool String(const char *str, Size len, bool)
         { return HandleValue(JS_NewStringLen(ctx, str, (size_t)len)); }
 
-    bool RawNumber(const char *, Size, bool) { RG_ASSERT(false); }
+    bool RawNumber(const char *, Size, bool) { RG_UNREACHABLE(); }
 
 private:
     bool HandleValue(JSValue value)

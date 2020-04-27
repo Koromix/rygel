@@ -1144,7 +1144,7 @@ Type Parser::ParseExpression(bool keep_result)
                     }
                 } break;
 
-                default: { RG_ASSERT(false); } break;
+                default: { RG_UNREACHABLE(); } break;
             }
         } else {
             PendingOperator op = {};
@@ -1353,7 +1353,7 @@ void Parser::ProduceOperator(const PendingOperator &op)
                 success = EmitOperator1(Type::Int, Opcode::RightShiftInt, Type::Int);
             } break;
 
-            default: { RG_ASSERT(false); } break;
+            default: { RG_UNREACHABLE(); } break;
         }
 
         if (slot1.var->global && current_func) {
@@ -1510,7 +1510,7 @@ void Parser::ProduceOperator(const PendingOperator &op)
                 program.ir[op.branch_idx].u.i = program.ir.len - op.branch_idx;
             } break;
 
-            default: { RG_ASSERT(false); } break;
+            default: { RG_UNREACHABLE(); } break;
         }
     }
 

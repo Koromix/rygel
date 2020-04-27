@@ -235,7 +235,7 @@ static Size PackSourceMap(const PackAssetInfo &asset, FunctionRef<void(Span<cons
     StreamWriter writer(&buf, nullptr, asset.compression_type);
 
     switch (asset.source_map_type) {
-        case SourceMapType::None: { RG_ASSERT(false); } break;
+        case SourceMapType::None: { RG_UNREACHABLE(); } break;
         case SourceMapType::JSv3: {
             if (!BuildJavaScriptMap3(asset.sources, &writer))
                 return false;
@@ -447,7 +447,8 @@ bool PackAssets(Span<const PackAssetInfo> assets, const char *output_path, PackM
         case PackMode::C: return PackToC(assets, output_path);
         case PackMode::Files: return PackToFiles(assets, output_path);
     }
-    RG_ASSERT(false);
+
+    RG_UNREACHABLE();
 }
 
 }

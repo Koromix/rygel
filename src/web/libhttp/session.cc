@@ -33,7 +33,7 @@ static bool GetClientAddress(MHD_Connection *conn, Span<char> out_address)
         switch (saddr->sa_family) {
             case AF_INET: { addr = &((sockaddr_in *)saddr)->sin_addr; } break;
             case AF_INET6: { addr = &((sockaddr_in6 *)saddr)->sin6_addr; } break;
-            default: { RG_ASSERT(false); } break;
+            default: { RG_UNREACHABLE(); } break;
         }
     }
 

@@ -81,7 +81,7 @@ enum class Endianness {
 
     typedef int64_t Size;
     #define RG_SIZE_MAX INT64_MAX
-#elif defined(__i386__) || defined(_M_IX86) || defined(__arm__) || defined(__EMSCRIPTEN__)
+#elif defined(__i386__) || defined(_M_IX86) || defined(__thumb__) || defined(__arm__) || defined(__EMSCRIPTEN__)
     #define RG_ARCH_32
     #define RG_ARCH_LITTLE_ENDIAN
     #define RG_ARCH_ENDIANNESS (Endianness::LittleEndian)
@@ -126,7 +126,6 @@ enum class Endianness {
     #define RG_LIKELY(Cond) __builtin_expect(!!(Cond), 1)
     #define RG_UNLIKELY(Cond) __builtin_expect(!!(Cond), 0)
     #define RG_RESTRICT __restrict__
-    #define RG_UNREACHABLE() __builtin_unreachable()
 
     #ifndef SCNd8
         #define SCNd8 "hhd"
@@ -148,9 +147,61 @@ enum class Endianness {
     #define RG_LIKELY(Cond) (Cond)
     #define RG_UNLIKELY(Cond) (Cond)
     #define RG_RESTRICT __restrict
-    #define RG_UNREACHABLE() __assume(0)
 #else
     #error Compiler not supported
+#endif
+
+extern "C" void RG_NORETURN AssertFail(const char *filename, int line, const char *cond);
+
+#if defined(_MSC_VER)
+    #define RG_DEBUG_BREAK() __debugbreak()
+#elif defined(__clang__)
+    #define RG_DEBUG_BREAK() __builtin_debugtrap()
+#elif defined(__i386__) || defined(__x86_64__)
+    #define RG_DEBUG_BREAK() __asm__ __volatile__("int $0x03")
+#elif defined(__thumb__)
+    #define RG_DEBUG_BREAK() __asm__ __volatile__(".inst 0xde01")
+#elif defined(__aarch64__)
+    #define RG_DEBUG_BREAK() __asm__ __volatile__(".inst 0xd4200000")
+#elif defined(__arm__)
+    #define RG_DEBUG_BREAK() __asm__ __volatile__(".inst 0xe7f001f0")
+#endif
+
+#ifndef NDEBUG
+    #define RG_ASSERT(Cond) \
+        do { \
+            if (!RG_LIKELY(Cond)) { \
+                RG_DEBUG_BREAK(); \
+                RG::AssertFail(__FILE__, __LINE__, RG_STRINGIFY(Cond)); \
+            } \
+        } while (false)
+    #define RG_ASSERT_DEBUG(Cond) RG_ASSERT(Cond)
+#else
+    #define RG_ASSERT(Cond) \
+        do { \
+            (void)sizeof(Cond); \
+        } while (false)
+    #define RG_ASSERT_DEBUG(Cond) ((void)0)
+#endif
+#define RG_STATIC_ASSERT(Cond) \
+    static_assert((Cond), RG_STRINGIFY(Cond))
+
+#if !defined(NDEBUG)
+    #define RG_UNREACHABLE() \
+        do { \
+            RG_DEBUG_BREAK(); \
+            RG::AssertFail(__FILE__, __LINE__, "Reached code marked as UNREACHABLE"); \
+        } while (false)
+#elif defined(__GNUC__)
+    #define RG_UNREACHABLE() __builtin_unreachable()
+#elif defined(_MSC_VER)
+    #define RG_UNREACHABLE() __assume(0)
+#endif
+
+#ifdef _WIN32
+    #define RG_EXPORT __declspec(dllexport)
+#else
+    #define RG_EXPORT __attribute__((visibility("default")))
 #endif
 
 #if __cplusplus >= 201703L
@@ -161,33 +212,6 @@ enum class Endianness {
     #define RG_FALLTHROUGH [[gnu::fallthrough]]
 #else
     #define RG_FALLTHROUGH
-#endif
-
-extern "C" void RG_NORETURN AssertFail(const char *filename, int line, const char *cond);
-
-#ifndef NDEBUG
-    #define RG_ASSERT(Cond) \
-        do { \
-            if (!RG_LIKELY(Cond)) \
-                RG::AssertFail(__FILE__, __LINE__, RG_STRINGIFY(Cond)); \
-        } while (false)
-    #define RG_ASSERT_DEBUG(Cond) RG_ASSERT(Cond)
-#else
-    #define RG_ASSERT(Cond) \
-        do { \
-            if (!RG_LIKELY(Cond)) { \
-                RG_UNREACHABLE(); \
-            } \
-        } while (false)
-    #define RG_ASSERT_DEBUG(Cond) ((void)0)
-#endif
-#define RG_STATIC_ASSERT(Cond) \
-    static_assert((Cond), RG_STRINGIFY(Cond))
-
-#ifdef _WIN32
-    #define RG_EXPORT __declspec(dllexport)
-#else
-    #define RG_EXPORT __attribute__((visibility("default")))
 #endif
 
 constexpr uint16_t MakeUInt16(uint8_t high, uint8_t low)

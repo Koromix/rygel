@@ -680,7 +680,7 @@ List options:
                         case 0x1: { sex_str = " (male)"; } break;
                         case 0x2: { sex_str = " (female)"; } break;
                         case 0x3: { sex_str = ""; } break;
-                        default: { RG_ASSERT(false); } break;
+                        default: { RG_UNREACHABLE(); } break;
                     }
 
                     PrintLn("  %1%2", diag_info.diag, sex_str);

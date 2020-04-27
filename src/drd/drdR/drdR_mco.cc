@@ -951,7 +951,7 @@ static int GetDiagnosisSexSpec(const mco_DiagnosisInfo &diag_info)
         case 0x3: return NA_INTEGER;
     }
 
-    RG_ASSERT(false);
+    RG_UNREACHABLE();
 }
 
 RcppExport SEXP drdR_mco_Diagnoses(SEXP classifier_xp, SEXP date_xp)
