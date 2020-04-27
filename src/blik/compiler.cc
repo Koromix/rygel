@@ -1407,8 +1407,10 @@ void Parser::ProduceOperator(const PendingOperator &op)
 
                     switch (inst->code) {
                         case Opcode::PushInt: {
-                            // XXX: Don't forget to handle overflow (negation of INT64_MIN) here when
-                            // we implement overflow detection later!
+                            // In theory, this could overflow trying to negate INT64_MIN.. but we
+                            // we can't have INT64_MIN, because numeric literal tokens are always
+                            // positive. inst->u.i will flip between positive and negative values
+                            // if we encounter successive '-' unary operators (e.g. -----64).
                             inst->u.i = -inst->u.i;
                             success = true;
                         } break;
