@@ -1387,8 +1387,8 @@ void Parser::ProduceOperator(const PendingOperator &op)
         }
 
         if (RG_LIKELY(success)) {
-            std::swap(stack[stack.len - 1], stack[stack.len - 2]);
             stack.len--;
+            stack[stack.len - 1].var = nullptr;
         }
     } else { // Other operators
         switch (op.kind) {
