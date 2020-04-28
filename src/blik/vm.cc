@@ -243,7 +243,7 @@ bool VirtualMachine::Run(int *out_exit_code)
             stack[--stack.len - 1].i = i1 ^ i2;
             DISPATCH(++pc);
         }
-        CASE(NotInt): {
+        CASE(ComplementInt): {
             int64_t i = stack[stack.len - 1].i;
             stack[stack.len - 1].i = ~i;
             DISPATCH(++pc);

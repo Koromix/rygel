@@ -53,7 +53,7 @@ OPCODE(LessOrEqualInt)
 OPCODE(AndInt)
 OPCODE(OrInt)
 OPCODE(XorInt)
-OPCODE(NotInt)
+OPCODE(ComplementInt)
 OPCODE(LeftShiftInt)
 OPCODE(RightShiftInt)
 

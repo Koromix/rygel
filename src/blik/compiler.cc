@@ -1012,8 +1012,8 @@ static int GetOperatorPrecedence(TokenKind kind)
         case TokenKind::OrAssign:
         case TokenKind::XorAssign: { return 0; } break;
 
-        case TokenKind::LogicOr: { return 2; } break;
-        case TokenKind::LogicAnd: { return 3; } break;
+        case TokenKind::OrOr: { return 2; } break;
+        case TokenKind::AndAnd: { return 3; } break;
         case TokenKind::Equal:
         case TokenKind::NotEqual: { return 4; } break;
         case TokenKind::Greater:
@@ -1030,8 +1030,8 @@ static int GetOperatorPrecedence(TokenKind kind)
         case TokenKind::Multiply:
         case TokenKind::Divide:
         case TokenKind::Modulo: { return 11; } break;
-        case TokenKind::Not:
-        case TokenKind::LogicNot: { return 12; } break;
+        case TokenKind::Complement:
+        case TokenKind::Not: { return 12; } break;
 
         default: { return -1; } break;
     }
@@ -1151,7 +1151,7 @@ Type Parser::ParseExpression(bool keep_result)
 
             op.kind = tok.kind;
             op.prec = GetOperatorPrecedence(tok.kind);
-            op.unary = (tok.kind == TokenKind::Not || tok.kind == TokenKind::LogicNot);
+            op.unary = (tok.kind == TokenKind::Complement || tok.kind == TokenKind::Not);
             op.pos = pos - 1;
 
             if (RG_UNLIKELY(op.prec < 0)) {
@@ -1208,10 +1208,10 @@ Type Parser::ParseExpression(bool keep_result)
                 // stack slots,  because it will be needed when we emit the store instruction
                 // and will be removed then.
                 program.ir.RemoveLast(1);
-            } else if (tok.kind == TokenKind::LogicAnd) {
+            } else if (tok.kind == TokenKind::AndAnd) {
                 op.branch_idx = program.ir.len;
                 program.ir.Append({Opcode::SkipIfFalse});
-            } else if (tok.kind == TokenKind::LogicOr) {
+            } else if (tok.kind == TokenKind::OrOr) {
                 op.branch_idx = program.ir.len;
                 program.ir.Append({Opcode::SkipIfTrue});
             }
@@ -1485,8 +1485,8 @@ void Parser::ProduceOperator(const PendingOperator &op)
                 success = EmitOperator2(Type::Int, Opcode::XorInt, Type::Int) ||
                           EmitOperator2(Type::Bool, Opcode::NotEqualBool, Type::Bool);
             } break;
-            case TokenKind::Not: {
-                success = EmitOperator1(Type::Int, Opcode::NotInt, Type::Int) ||
+            case TokenKind::Complement: {
+                success = EmitOperator1(Type::Int, Opcode::ComplementInt, Type::Int) ||
                           EmitOperator1(Type::Bool, Opcode::NotBool, Type::Bool);
             } break;
             case TokenKind::LeftShift: {
@@ -1496,16 +1496,16 @@ void Parser::ProduceOperator(const PendingOperator &op)
                 success = EmitOperator2(Type::Int, Opcode::RightShiftInt, Type::Int);
             } break;
 
-            case TokenKind::LogicNot: {
+            case TokenKind::Not: {
                 success = EmitOperator1(Type::Bool, Opcode::NotBool, Type::Bool);
             } break;
-            case TokenKind::LogicAnd: {
+            case TokenKind::AndAnd: {
                 success = EmitOperator2(Type::Bool, Opcode::AndBool, Type::Bool);
 
                 RG_ASSERT(op.branch_idx && program.ir[op.branch_idx].code == Opcode::SkipIfFalse);
                 program.ir[op.branch_idx].u.i = program.ir.len - op.branch_idx;
             } break;
-            case TokenKind::LogicOr: {
+            case TokenKind::OrOr: {
                 success = EmitOperator2(Type::Bool, Opcode::OrBool, Type::Bool);
 
                 RG_ASSERT(op.branch_idx && program.ir[op.branch_idx].code == Opcode::SkipIfTrue);
