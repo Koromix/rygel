@@ -84,6 +84,7 @@ private:
     void ParseBreak();
     void ParseContinue();
 
+    bool ParseCondition();
     bool ParseDo();
 
     Type ParseExpression(bool keep_result);
@@ -229,8 +230,9 @@ bool Parser::Parse(const TokenSet &set, const char *filename)
     return valid;
 }
 
-// This is not exposed to user scripts, and the validation of signature
-// is very light (debug-only asserts). Don't pass in garbage!
+// This is not exposed to user scripts, and the validation of signature is very light,
+// with a few debug-only asserts. Bad function names (even invalid UTF-8 sequences)
+// will go right through. Don't pass in garbage!
 void Parser::AddFunction(const char *signature, NativeFunction *native)
 {
     FunctionInfo *func = functions.AppendDefault();
@@ -522,7 +524,7 @@ void Parser::ParseFunction()
 
     if (RG_UNLIKELY(current_func)) {
         MarkError(func_pos, "Nested functions are not supported");
-        HintError(current_func->defined_pos, "Current function was started here and is still open");
+        HintError(current_func->defined_pos, "Previous function was started here and is still open");
     } else if (RG_UNLIKELY(depth)) {
         MarkError(func_pos, "Functions must be defined in top-level scope");
     }
@@ -674,6 +676,7 @@ void Parser::ParseLet()
 
     if (MatchToken(TokenKind::Assign)) {
         var->type = ParseExpression(true);
+        var->implicit = true;
     } else {
         ConsumeToken(TokenKind::Colon);
         var->type = ConsumeType();
@@ -682,8 +685,8 @@ void Parser::ParseLet()
             Type type2 = ParseExpression(true);
 
             if (RG_UNLIKELY(type2 != var->type)) {
-                MarkError(var_pos + 3, "Cannot assign %1 value to %2 variable",
-                          TypeNames[(int)type2], TypeNames[(int)var->type]);
+                MarkError(var_pos + 3, "Cannot assign %1 value to variable '%2' (defined as %3)",
+                          TypeNames[(int)type2], var->name, TypeNames[(int)var->type]);
             }
         } else {
             switch (var->type) {
@@ -710,11 +713,9 @@ void Parser::ParseLet()
 
 bool Parser::ParseIf()
 {
-    Size if_pos = ++pos;
+    pos++;
 
-    if (RG_UNLIKELY(ParseExpression(true) != Type::Bool)) {
-        MarkError(if_pos, "Cannot use non-Bool expression as condition");
-    }
+    ParseCondition();
 
     Size branch_idx = program.ir.len;
     program.ir.Append({Opcode::BranchIfFalse});
@@ -739,11 +740,7 @@ bool Parser::ParseIf()
                 program.ir[branch_idx].u.i = program.ir.len - branch_idx;
 
                 if (MatchToken(TokenKind::If)) {
-                    Size elseif_pos = pos;
-
-                    if (RG_UNLIKELY(ParseExpression(true) != Type::Bool)) {
-                        MarkError(elseif_pos, "Cannot use non-Bool expression as condition");
-                    }
+                    ParseCondition();
                     valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
 
                     branch_idx = program.ir.len;
@@ -778,16 +775,14 @@ bool Parser::ParseIf()
 
 void Parser::ParseWhile()
 {
-    Size while_pos = ++pos;
+    pos++;
+
     Size start_idx = program.ir.len;
 
     // Parse expression
     Size start_fix_forward = forward_calls.len;
     Size end_fix_forward;
-    if (RG_UNLIKELY(ParseExpression(true) != Type::Bool)) {
-        MarkError(while_pos, "Cannot use non-Bool expression as condition");
-        return;
-    }
+    ParseCondition();
     end_fix_forward = forward_calls.len;
 
     // Put expression IR aside, because we want to put it after loop body
@@ -852,6 +847,7 @@ void Parser::ParseFor()
     it->defined_pos = pos;
     it->name = ConsumeIdentifier();
     it->type = Type::Int;
+    it->implicit = true;
 
     it->offset = var_offset + 2;
 
@@ -976,6 +972,19 @@ void Parser::ParseContinue()
 
     loop_continues.Append(program.ir.len);
     program.ir.Append({Opcode::Jump});
+}
+
+bool Parser::ParseCondition()
+{
+    Size cond_pos = pos;
+
+    Type type = ParseExpression(true);
+    if (RG_UNLIKELY(type != Type::Bool)) {
+        MarkError(cond_pos, "Cannot implicitly convert %1 result to Bool condition", TypeNames[(int)type]);
+        return false;
+    }
+
+    return true;
 }
 
 bool Parser::ParseDo()
@@ -1270,19 +1279,20 @@ void Parser::ProduceOperator(const PendingOperator &op)
         const StackSlot &expr = stack[stack.len - 1];
 
         if (RG_UNLIKELY(!var)) {
-            MarkError(op.pos, "Cannot assign expression result to temporary value; left operand should be a variable");
+            MarkError(op.pos, "Cannot assign result to temporary value; left operand should be a variable");
             return;
         }
         if (RG_UNLIKELY(var->readonly)) {
-            MarkError(op.pos, "Cannot assign expression to const variable '%1'", var->name);
-            HintError(var->defined_pos, "Variable '%1' is defined here without mut qualifier", var->name);
+            MarkError(op.pos, "Cannot assign result to non-mutable variable '%1'", var->name);
+            HintError(var->defined_pos, "Variable '%1' is defined here without 'mut' qualifier", var->name);
 
             return;
         }
         if (RG_UNLIKELY(var->type != expr.type)) {
-            MarkError(op.pos, "Cannot assign %1 value to %2 variable",
-                      TypeNames[(int)expr.type], TypeNames[(int)var->type]);
-            HintError(var->defined_pos, "Variable '%1' is defined here", var->name);
+            MarkError(op.pos, "Cannot assign %1 value to variable '%2'",
+                      TypeNames[(int)expr.type], var->name);
+            HintError(var->defined_pos, "Variable '%1' is %2defined here as %3",
+                      var->name, var->implicit ? "implicitly " : "", TypeNames[(int)var->type]);
             return;
         }
 
@@ -1816,7 +1826,7 @@ Type Parser::ConsumeType()
     if (RG_LIKELY(OptionToEnum(TypeNames, type_name, &type))) {
         return type;
     } else {
-        MarkError(pos - 1, "Type '%1' is not valid", type_name);
+        MarkError(pos - 1, "Type '%1' does not exist", type_name);
         return Type::Null;
     }
 }
