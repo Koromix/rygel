@@ -26,16 +26,14 @@ def parse_properties_xid(f):
 
         if '..' in parts[0]:
             start, end = parts[0].split('..')
-
-            if parts[1] == 'ID_Start':
-                id_start.append((start, end))
-            elif parts[1] == 'ID_Continue':
-                id_continue.append((start, end))
         else:
-            if parts[1] == 'ID_Start':
-                id_start.append((parts[0], parts[0]))
-            elif parts[1] == 'ID_Continue':
-                id_continue.append((parts[0], parts[0]))
+            start, end = parts[0], parts[0]
+        start, end = int(start, 16), int(end, 16)
+
+        if parts[1] == 'ID_Start':
+            id_start.append((start, end + 1))
+        elif parts[1] == 'ID_Continue':
+            id_continue.append((start, end + 1))
 
     return (version, id_start, id_continue)
 
@@ -52,14 +50,14 @@ namespace RG {{
 static const uint32_t UnicodeIdStartTable[] = {{""")
     for i, v in enumerate(id_start):
         if i % 5 == 0: f.write('\n   ')
-        f.write(f' 0x{v[0]:0>5}, 0x{v[1]:0>5}{"," if i + 1 < len(id_start) else ""}')
+        f.write(f' 0x{v[0]:05X}, 0x{v[1]:05X}{"," if i + 1 < len(id_start) else ""}')
     f.write("""
 };
 
 static const uint32_t UnicodeIdContinueTable[] = {""")
     for i, v in enumerate(id_continue):
         if i % 5 == 0: f.write('\n   ')
-        f.write(f' 0x{v[0]:0>5}, 0x{v[1]:0>5}{"," if i + 1 < len(id_continue) else ""}')
+        f.write(f' 0x{v[0]:05X}, 0x{v[1]:05X}{"," if i + 1 < len(id_continue) else ""}')
     f.write("""
 };
 

@@ -51,24 +51,12 @@ static bool TestUnicodeTable(Span<const uint32_t> table, uint32_t c)
     RG_ASSERT(table.len > 0);
     RG_ASSERT(table.len % 2 == 0);
 
-    if (c >= table[0] && c <= table[table.len - 1]) {
-        Size start = 0;
-        Size end = table.len;
+    auto it = std::upper_bound(table.begin(), table.end(), c,
+                               [](uint32_t c, uint32_t x) { return c < x; });
+    Size idx = it - table.ptr;
 
-        while (end > start + 1) {
-            Size idx = start + (end - start) / 2;
-
-            if (c >= table[idx]) {
-                start = idx;
-            } else {
-                end = idx;
-            }
-        }
-
-        return (start % 2) == 0;
-    } else {
-        return false;
-    }
+    // Each pair of value in table represents a valid interval
+    return idx & 0x1;
 }
 
 bool Lexer::Tokenize(Span<const char> code, const char *filename)
