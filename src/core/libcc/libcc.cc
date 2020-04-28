@@ -59,10 +59,9 @@ namespace RG {
 const char *FelixVersion = "(unknown version)";
 #endif
 
-extern "C" void RG_NORETURN AssertFail(const char *filename, int line, const char *cond)
+extern "C" void AssertMessage(const char *filename, int line, const char *cond)
 {
     fprintf(stderr, "%s:%d: Assertion '%s' failed\n", filename, line, cond);
-    abort();
 }
 
 // ------------------------------------------------------------------------

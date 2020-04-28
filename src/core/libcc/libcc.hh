@@ -151,7 +151,7 @@ enum class Endianness {
     #error Compiler not supported
 #endif
 
-extern "C" void RG_NORETURN AssertFail(const char *filename, int line, const char *cond);
+extern "C" void AssertMessage(const char *filename, int line, const char *cond);
 
 #if defined(_MSC_VER)
     #define RG_DEBUG_BREAK() __debugbreak()
@@ -171,8 +171,9 @@ extern "C" void RG_NORETURN AssertFail(const char *filename, int line, const cha
     #define RG_ASSERT(Cond) \
         do { \
             if (!RG_LIKELY(Cond)) { \
+                RG::AssertMessage(__FILE__, __LINE__, RG_STRINGIFY(Cond)); \
                 RG_DEBUG_BREAK(); \
-                RG::AssertFail(__FILE__, __LINE__, RG_STRINGIFY(Cond)); \
+                abort(); \
             } \
         } while (false)
     #define RG_ASSERT_DEBUG(Cond) RG_ASSERT(Cond)
@@ -189,8 +190,9 @@ extern "C" void RG_NORETURN AssertFail(const char *filename, int line, const cha
 #if !defined(NDEBUG)
     #define RG_UNREACHABLE() \
         do { \
+            RG::AssertMessage(__FILE__, __LINE__, "Reached code marked as UNREACHABLE"); \
             RG_DEBUG_BREAK(); \
-            RG::AssertFail(__FILE__, __LINE__, "Reached code marked as UNREACHABLE"); \
+            abort(); \
         } while (false)
 #elif defined(__GNUC__)
     #define RG_UNREACHABLE() __builtin_unreachable()
