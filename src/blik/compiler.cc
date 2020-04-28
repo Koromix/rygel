@@ -1270,7 +1270,7 @@ void Parser::ProduceOperator(const PendingOperator &op)
         const StackSlot &expr = stack[stack.len - 1];
 
         if (RG_UNLIKELY(!var)) {
-            MarkError(op.pos, "Cannot assign expression to rvalue");
+            MarkError(op.pos, "Cannot assign expression result to temporary value; left operand should be a variable");
             return;
         }
         if (RG_UNLIKELY(var->readonly)) {
