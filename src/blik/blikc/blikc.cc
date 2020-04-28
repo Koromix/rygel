@@ -2,10 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "../core/libcc/libcc.hh"
-#include "compiler.hh"
-#include "lexer.hh"
-#include "vm.hh"
+#include "../../core/libcc/libcc.hh"
+#include "../libblik/libblik.hh"
 
 namespace RG {
 
@@ -16,8 +14,8 @@ int Main(int argc, char **argv)
     const char *filename = nullptr;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: blik [options] <file>
-       blik [options] -i <code>
+        PrintLn(fp, R"(Usage: blikc [options] <file>
+       blikc [options] -i <code>
 
 Options:
     -i, --inline                 Run code directly from argument)");
@@ -25,7 +23,7 @@ Options:
 
     // Handle version
     if (argc >= 2 && TestStr(argv[1], "--version")) {
-        PrintLn("blik %1", FelixVersion);
+        PrintLn("blikc %1", FelixVersion);
         return 0;
     }
 

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "../core/libcc/libcc.hh"
+#include "../../core/libcc/libcc.hh"
 #include "error.hh"
 #include "program.hh"
 
