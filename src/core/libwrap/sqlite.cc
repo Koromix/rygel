@@ -32,7 +32,8 @@ bool sq_Statement::Next()
 
 void sq_Statement::Reset()
 {
-    RG_ASSERT(sqlite3_reset(stmt) == SQLITE_OK);
+    int ret = sqlite3_reset(stmt);
+    RG_ASSERT(ret == SQLITE_OK);
 }
 
 bool sq_Database::Open(const char *filename, unsigned int flags)

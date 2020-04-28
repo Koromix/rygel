@@ -89,7 +89,9 @@ void http_JsonPageBuilder::Finish(http_IO *io)
     CompressionType compression_type = st.GetCompressionType();
 
     Flush();
-    RG_ASSERT(st.Close());
+
+    bool success = st.Close();
+    RG_ASSERT(success);
 
     MHD_Response *response =
         MHD_create_response_from_buffer_with_free_callback((size_t)buf.len, buf.ptr,

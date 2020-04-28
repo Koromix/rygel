@@ -237,7 +237,9 @@ void InitPorts()
     HeapArray<char> code;
     {
         StreamReader st(pack_asset_ports_pk_js->data, nullptr, pack_asset_ports_pk_js->compression_type);
-        RG_ASSERT(st.ReadAll(Megabytes(1), &code) >= 0);
+
+        Size read_len = st.ReadAll(Megabytes(1), &code);
+        RG_ASSERT(read_len >= 0);
 
         code.Grow(1);
         code.ptr[code.len] = 0;

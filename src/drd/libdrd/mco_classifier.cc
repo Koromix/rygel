@@ -1686,7 +1686,7 @@ static mco_GhmCode RunGhmSeverity(const mco_TableIndex &index, const mco_Prepare
 
         if (ghm_root_info.childbirth_severity_list) {
             RG_ASSERT(ghm_root_info.childbirth_severity_list > 0 &&
-                   ghm_root_info.childbirth_severity_list <= RG_SIZE(index.cma_cells));
+                      ghm_root_info.childbirth_severity_list <= RG_SIZE(index.cma_cells));
             Span<const mco_ValueRangeCell<2>> cma_cells =
                 index.cma_cells[ghm_root_info.childbirth_severity_list - 1];
             for (const mco_ValueRangeCell<2> &cell: cma_cells) {

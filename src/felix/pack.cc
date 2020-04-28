@@ -221,7 +221,8 @@ static Size PackAsset(const PackAssetInfo &asset, FunctionRef<void(Span<const ui
             return -1;
     }
 
-    RG_ASSERT(compressor.Close());
+    bool success = compressor.Close();
+    RG_ASSERT(success);
     flush_compressor_buffer();
 
     return written_len;
@@ -242,7 +243,8 @@ static Size PackSourceMap(const PackAssetInfo &asset, FunctionRef<void(Span<cons
         } break;
     }
 
-    RG_ASSERT(writer.Close());
+    bool success = writer.Close();
+    RG_ASSERT(success);
     func(buf);
 
     return buf.len;

@@ -1119,7 +1119,10 @@ bool mco_WrenRunner::Init(const char *expression, Size max_results)
     wrenSetUserData(vm, this);
 
     // Run init code
-    RG_ASSERT(wrenInterpret(vm, "mco", InitCode) == WREN_RESULT_SUCCESS);
+    {
+        WrenInterpretResult ret = wrenInterpret(vm, "mco", InitCode);
+        RG_ASSERT(ret == WREN_RESULT_SUCCESS);
+    }
     wrenEnsureSlots(vm, 1);
     wrenGetVariable(vm, "mco", "Date", 0);
     date_class = wrenGetSlotHandle(vm, 0);
@@ -1141,7 +1144,10 @@ bool mco_WrenRunner::Init(const char *expression, Size max_results)
     mco_class = wrenGetSlotHandle(vm, 0);
     mco_build = wrenMakeCallHandle(vm, "build(_)");
     expression_call = wrenMakeCallHandle(vm, "call()");
-    RG_ASSERT(wrenInterpret(vm, "mco", VarCode) == WREN_RESULT_SUCCESS);
+    {
+        WrenInterpretResult ret = wrenInterpret(vm, "mco", VarCode);
+        RG_ASSERT(ret == WREN_RESULT_SUCCESS);
+    }
 
     // Compile expression
     wrenEnsureSlots(vm, 2);

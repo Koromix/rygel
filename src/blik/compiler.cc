@@ -270,7 +270,9 @@ void Parser::AddFunction(const char *signature, NativeFunction *native)
                 func->variadic = true;
             } else {
                 Type type = Type::Null;
-                RG_ASSERT(OptionToEnum(TypeNames, type_name, &type));
+
+                bool success = OptionToEnum(TypeNames, type_name, &type);
+                RG_ASSERT(success);
 
                 func->params.Append({"", type});
                 func->ret_pop += (type != Type::Null);
@@ -289,7 +291,8 @@ void Parser::AddFunction(const char *signature, NativeFunction *native)
     {
         Span<const char> type_name = TrimStr(Span<const char>(ptr));
         if (type_name.len) {
-            RG_ASSERT(OptionToEnum(TypeNames, type_name, &func->ret_type));
+            bool success = OptionToEnum(TypeNames, type_name, &func->ret_type);
+            RG_ASSERT(success);
         }
     }
 

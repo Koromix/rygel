@@ -1816,9 +1816,11 @@ const char *GetWorkingDirectory()
     DWORD ret = GetCurrentDirectoryW(RG_SIZE(buf_w), buf_w);
     RG_ASSERT(ret && ret <= RG_SIZE(buf_w));
 
-    RG_ASSERT(ConvertWin32WideToUtf8(buf_w, buf) >= 0);
+    Size str_len = ConvertWin32WideToUtf8(buf_w, buf);
+    RG_ASSERT(str_len >= 0);
 #else
-    RG_ASSERT(getcwd(buf, RG_SIZE(buf)));
+    const char *ptr = getcwd(buf, RG_SIZE(buf));
+    RG_ASSERT(ptr);
 #endif
 
     return buf;
@@ -1882,7 +1884,8 @@ const char *GetApplicationExecutable()
         Size path_len = (Size)GetModuleFileNameW(nullptr, path_w, RG_SIZE(path_w));
         RG_ASSERT(path_len && path_len < RG_SIZE(path_w));
 
-        RG_ASSERT(ConvertWin32WideToUtf8(path_w, executable_path) >= 0);
+        Size str_len = ConvertWin32WideToUtf8(path_w, executable_path);
+        RG_ASSERT(str_len >= 0);
     }
 
     return executable_path;
@@ -1891,10 +1894,13 @@ const char *GetApplicationExecutable()
 
     if (!executable_path[0]) {
         uint32_t buffer_size = RG_SIZE(executable_path);
-        RG_ASSERT(!_NSGetExecutablePath(executable_path, &buffer_size));
+        int ret = _NSGetExecutablePath(executable_path, &buffer_size);
+        RG_ASSERT(!ret);
+
         char *path_buf = realpath(executable_path, nullptr);
         RG_ASSERT(path_buf);
         RG_ASSERT(strlen(path_buf) < RG_SIZE(executable_path));
+
         strcpy(executable_path, path_buf);
         free(path_buf);
     }
@@ -1907,6 +1913,7 @@ const char *GetApplicationExecutable()
         char *path_buf = realpath("/proc/self/exe", nullptr);
         RG_ASSERT(path_buf);
         RG_ASSERT(strlen(path_buf) < RG_SIZE(executable_path));
+
         strcpy(executable_path, path_buf);
         free(path_buf);
     }
@@ -2776,8 +2783,8 @@ void WaitForDelay(int64_t delay)
 
 bool WaitForInterruption(int64_t delay)
 {
-    RG_ASSERT(InitConsoleCtrlHandler());
-    ignore_ctrl_event = true;
+    ignore_ctrl_event = InitConsoleCtrlHandler();
+    RG_ASSERT(ignore_ctrl_event);
 
     if (delay >= 0) {
         do {
@@ -4283,7 +4290,8 @@ Span<const uint8_t> PatchAssetVariables(const AssetInfo &asset, Allocator *alloc
             bool valid = false;
             if (IsAsciiAlpha(name[0]) || name[0] == '_') {
                 do {
-                    RG_ASSERT(reader.Read(1, &name[name_len]) >= 0);
+                    Size read_len = reader.Read(1, &name[name_len]);
+                    RG_ASSERT(read_len >= 0);
 
                     if (name[name_len] == '}') {
                         name[name_len] = 0;
@@ -4308,7 +4316,9 @@ Span<const uint8_t> PatchAssetVariables(const AssetInfo &asset, Allocator *alloc
     }
     RG_ASSERT(reader.IsValid());
 
-    RG_ASSERT(writer.Close());
+    bool success = writer.Close();
+    RG_ASSERT(success);
+
     return buf.Leak();
 }
 

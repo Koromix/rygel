@@ -497,7 +497,9 @@ bool gui_Window::ProcessEvents(bool wait)
     }
 
     // XXX: Should we report an error instead?
-    RG_ASSERT(SetGLContext(window->hdc, window->hgl));
+    bool success = SetGLContext(window->hdc, window->hgl);
+    RG_ASSERT(success);
+
     if (imgui_local) {
         StartImGuiFrame();
     }
