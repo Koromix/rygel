@@ -90,9 +90,9 @@ private:
     void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(Type in_type, Opcode code, Type out_type);
     bool EmitOperator2(Type in_type, Opcode code, Type out_type);
-
     bool ParseCall(const char *name);
     void EmitIntrinsic(const char *name, Span<const FunctionInfo::Parameter> args);
+    void EmitLoad(const VariableInfo &var);
 
     void EmitPop(int64_t count);
     void EmitReturn();
@@ -1114,33 +1114,7 @@ Type Parser::ParseExpression(bool keep_result)
                         }
                         valid_stmt &= !var->poisoned;
 
-                        if (var->global && current_func) {
-                            if (RG_UNLIKELY(current_func->earliest_call_idx < var->defined_idx)) {
-                                MarkError(current_func->defined_pos, "Function '%1' may be called before variable '%2' exists",
-                                          current_func->name, var->name);
-                                HintError(current_func->earliest_call_pos, "Function call happens here (it could be indirect)");
-                                HintError(var->defined_pos, "Variable '%1' is defined here", var->name);
-
-                                goto error;
-                            }
-
-                            switch (var->type) {
-                                case Type::Null: {} break;
-                                case Type::Bool: { program.ir.Append({Opcode::LoadGlobalBool, {.i = var->offset}}); } break;
-                                case Type::Int: { program.ir.Append({Opcode::LoadGlobalInt, {.i = var->offset}}); } break;
-                                case Type::Float: { program.ir.Append({Opcode::LoadGlobalFloat, {.i = var->offset}});} break;
-                                case Type::String: { program.ir.Append({Opcode::LoadGlobalString, {.i = var->offset}}); } break;
-                            }
-                        } else {
-                            switch (var->type) {
-                                case Type::Null: {} break;
-                                case Type::Bool: { program.ir.Append({Opcode::LoadBool, {.i = var->offset}}); } break;
-                                case Type::Int: { program.ir.Append({Opcode::LoadInt, {.i = var->offset}}); } break;
-                                case Type::Float: { program.ir.Append({Opcode::LoadFloat, {.i = var->offset}});} break;
-                                case Type::String: { program.ir.Append({Opcode::LoadString, {.i = var->offset}}); } break;
-                            }
-                        }
-                        stack.Append({var->type, var});
+                        EmitLoad(*var);
                     }
                 } break;
 
@@ -1558,6 +1532,36 @@ bool Parser::EmitOperator2(Type in_type, Opcode code, Type out_type)
     } else {
         return false;
     }
+}
+
+void Parser::EmitLoad(const VariableInfo &var)
+{
+    if (var.global && current_func) {
+        if (RG_UNLIKELY(current_func->earliest_call_idx < var.defined_idx)) {
+            MarkError(current_func->defined_pos, "Function '%1' may be called before variable '%2' exists",
+                      current_func->name, var.name);
+            HintError(current_func->earliest_call_pos, "Function call happens here (it could be indirect)");
+            HintError(var.defined_pos, "Variable '%1' is defined here", var.name);
+        }
+
+        switch (var.type) {
+            case Type::Null: {} break;
+            case Type::Bool: { program.ir.Append({Opcode::LoadGlobalBool, {.i = var.offset}}); } break;
+            case Type::Int: { program.ir.Append({Opcode::LoadGlobalInt, {.i = var.offset}}); } break;
+            case Type::Float: { program.ir.Append({Opcode::LoadGlobalFloat, {.i = var.offset}});} break;
+            case Type::String: { program.ir.Append({Opcode::LoadGlobalString, {.i = var.offset}}); } break;
+        }
+    } else {
+        switch (var.type) {
+            case Type::Null: {} break;
+            case Type::Bool: { program.ir.Append({Opcode::LoadBool, {.i = var.offset}}); } break;
+            case Type::Int: { program.ir.Append({Opcode::LoadInt, {.i = var.offset}}); } break;
+            case Type::Float: { program.ir.Append({Opcode::LoadFloat, {.i = var.offset}});} break;
+            case Type::String: { program.ir.Append({Opcode::LoadString, {.i = var.offset}}); } break;
+        }
+    }
+
+    stack.Append({var.type, &var});
 }
 
 // Don't try to call from outside ParseExpression()!
