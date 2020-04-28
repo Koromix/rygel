@@ -1266,103 +1266,101 @@ void Parser::ProduceOperator(const PendingOperator &op)
     if (op.prec == 0) { // Assignement operators
         RG_ASSERT(!op.unary);
 
-        const StackSlot &slot1 = stack[stack.len - 2];
-        const StackSlot &slot2 = stack[stack.len - 1];
+        const VariableInfo *var = stack[stack.len - 2].var;
+        const StackSlot &expr = stack[stack.len - 1];
 
-        if (RG_UNLIKELY(!slot1.var)) {
+        if (RG_UNLIKELY(!var)) {
             MarkError(op.pos, "Cannot assign expression to rvalue");
             return;
         }
-        if (RG_UNLIKELY(slot1.var->readonly)) {
-            MarkError(op.pos, "Cannot assign expression to const variable '%1'", slot1.var->name);
-            HintError(slot1.var->defined_pos, "Variable '%1' is defined here without mut qualifier", slot1.var->name);
+        if (RG_UNLIKELY(var->readonly)) {
+            MarkError(op.pos, "Cannot assign expression to const variable '%1'", var->name);
+            HintError(var->defined_pos, "Variable '%1' is defined here without mut qualifier", var->name);
 
             return;
         }
-        if (RG_UNLIKELY(slot1.type != slot2.type)) {
+        if (RG_UNLIKELY(var->type != expr.type)) {
             MarkError(op.pos, "Cannot assign %1 value to %2 variable",
-                      TypeNames[(int)slot2.type], TypeNames[(int)slot1.type]);
-            HintError(slot1.var->defined_pos, "Variable '%1' is defined here", slot1.var->name);
+                      TypeNames[(int)expr.type], TypeNames[(int)var->type]);
+            HintError(var->defined_pos, "Variable '%1' is defined here", var->name);
             return;
         }
 
         switch (op.kind) {
-            case TokenKind::Reassign: { success = true; } break;
+            case TokenKind::Reassign: {
+                stack[--stack.len - 1].var = nullptr;
+                success = true;
+            } break;
 
             case TokenKind::PlusAssign: {
-                success = EmitOperator1(Type::Int, Opcode::AddInt, Type::Int) ||
-                          EmitOperator1(Type::Float, Opcode::AddFloat, Type::Float);
+                success = EmitOperator2(Type::Int, Opcode::AddInt, Type::Int) ||
+                          EmitOperator2(Type::Float, Opcode::AddFloat, Type::Float);
             } break;
             case TokenKind::MinusAssign: {
-                success = EmitOperator1(Type::Int, Opcode::SubstractInt, Type::Int) ||
-                          EmitOperator1(Type::Float, Opcode::SubstractFloat, Type::Float);
+                success = EmitOperator2(Type::Int, Opcode::SubstractInt, Type::Int) ||
+                          EmitOperator2(Type::Float, Opcode::SubstractFloat, Type::Float);
             } break;
             case TokenKind::MultiplyAssign: {
-                success = EmitOperator1(Type::Int, Opcode::MultiplyInt, Type::Int) ||
-                          EmitOperator1(Type::Float, Opcode::MultiplyFloat, Type::Float);
+                success = EmitOperator2(Type::Int, Opcode::MultiplyInt, Type::Int) ||
+                          EmitOperator2(Type::Float, Opcode::MultiplyFloat, Type::Float);
             } break;
             case TokenKind::DivideAssign: {
-                success = EmitOperator1(Type::Int, Opcode::DivideInt, Type::Int) ||
-                          EmitOperator1(Type::Float, Opcode::DivideFloat, Type::Float);
+                success = EmitOperator2(Type::Int, Opcode::DivideInt, Type::Int) ||
+                          EmitOperator2(Type::Float, Opcode::DivideFloat, Type::Float);
             } break;
             case TokenKind::ModuloAssign: {
-                success = EmitOperator1(Type::Int, Opcode::ModuloInt, Type::Int);
+                success = EmitOperator2(Type::Int, Opcode::ModuloInt, Type::Int);
             } break;
             case TokenKind::AndAssign: {
-                success = EmitOperator1(Type::Int, Opcode::AndInt, Type::Int) ||
-                          EmitOperator1(Type::Bool, Opcode::AndBool, Type::Bool);
+                success = EmitOperator2(Type::Int, Opcode::AndInt, Type::Int) ||
+                          EmitOperator2(Type::Bool, Opcode::AndBool, Type::Bool);
             } break;
             case TokenKind::OrAssign: {
-                success = EmitOperator1(Type::Int, Opcode::OrInt, Type::Int) ||
-                          EmitOperator1(Type::Bool, Opcode::OrBool, Type::Bool);
+                success = EmitOperator2(Type::Int, Opcode::OrInt, Type::Int) ||
+                          EmitOperator2(Type::Bool, Opcode::OrBool, Type::Bool);
             } break;
             case TokenKind::XorAssign: {
-                success = EmitOperator1(Type::Int, Opcode::XorInt, Type::Int) ||
-                          EmitOperator1(Type::Bool, Opcode::NotEqualBool, Type::Bool);
+                success = EmitOperator2(Type::Int, Opcode::XorInt, Type::Int) ||
+                          EmitOperator2(Type::Bool, Opcode::NotEqualBool, Type::Bool);
             } break;
             case TokenKind::LeftShiftAssign: {
-                success = EmitOperator1(Type::Int, Opcode::LeftShiftInt, Type::Int);
+                success = EmitOperator2(Type::Int, Opcode::LeftShiftInt, Type::Int);
             } break;
             case TokenKind::RightShiftAssign: {
-                success = EmitOperator1(Type::Int, Opcode::RightShiftInt, Type::Int);
+                success = EmitOperator2(Type::Int, Opcode::RightShiftInt, Type::Int);
             } break;
 
             default: { RG_UNREACHABLE(); } break;
         }
 
-        if (slot1.var->global && current_func) {
-            switch (slot1.type) {
+        if (var->global && current_func) {
+            switch (var->type) {
                 case Type::Null: {} break;
                 case Type::Bool: {
-                    program.ir.Append({Opcode::StoreGlobalBool, {.i = slot1.var->offset}});
-                    program.ir.Append({Opcode::LoadGlobalBool, {.i = slot1.var->offset}});
+                    program.ir.Append({Opcode::StoreGlobalBool, {.i = var->offset}});
+                    program.ir.Append({Opcode::LoadGlobalBool, {.i = var->offset}});
                 } break;
                 case Type::Int: {
-                    program.ir.Append({Opcode::StoreGlobalInt, {.i = slot1.var->offset}});
-                    program.ir.Append({Opcode::LoadGlobalInt, {.i = slot1.var->offset}});
+                    program.ir.Append({Opcode::StoreGlobalInt, {.i = var->offset}});
+                    program.ir.Append({Opcode::LoadGlobalInt, {.i = var->offset}});
                 } break;
                 case Type::Float: {
-                    program.ir.Append({Opcode::StoreGlobalFloat, {.i = slot1.var->offset}});
-                    program.ir.Append({Opcode::LoadGlobalFloat, {.i = slot1.var->offset}});
+                    program.ir.Append({Opcode::StoreGlobalFloat, {.i = var->offset}});
+                    program.ir.Append({Opcode::LoadGlobalFloat, {.i = var->offset}});
                 } break;
                 case Type::String: {
-                    program.ir.Append({Opcode::StoreGlobalString, {.i = slot1.var->offset}});
-                    program.ir.Append({Opcode::LoadGlobalString, {.i = slot1.var->offset}});
+                    program.ir.Append({Opcode::StoreGlobalString, {.i = var->offset}});
+                    program.ir.Append({Opcode::LoadGlobalString, {.i = var->offset}});
                 } break;
             }
         } else {
-            switch (slot1.type) {
+            switch (var->type) {
                 case Type::Null: {} break;
-                case Type::Bool: { program.ir.Append({Opcode::CopyBool, {.i = slot1.var->offset}}); } break;
-                case Type::Int: { program.ir.Append({Opcode::CopyInt, {.i = slot1.var->offset}}); } break;
-                case Type::Float: { program.ir.Append({Opcode::CopyFloat, {.i = slot1.var->offset}}); } break;
-                case Type::String: { program.ir.Append({Opcode::CopyString, {.i = slot1.var->offset}}); } break;
+                case Type::Bool: { program.ir.Append({Opcode::CopyBool, {.i = var->offset}}); } break;
+                case Type::Int: { program.ir.Append({Opcode::CopyInt, {.i = var->offset}}); } break;
+                case Type::Float: { program.ir.Append({Opcode::CopyFloat, {.i = var->offset}}); } break;
+                case Type::String: { program.ir.Append({Opcode::CopyString, {.i = var->offset}}); } break;
             }
-        }
-
-        if (RG_LIKELY(success)) {
-            stack.len--;
-            stack[stack.len - 1].var = nullptr;
         }
     } else { // Other operators
         switch (op.kind) {
