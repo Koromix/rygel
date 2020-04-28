@@ -251,13 +251,27 @@ bool VirtualMachine::Run(int *out_exit_code)
         CASE(LeftShiftInt): {
             int64_t i1 = stack[stack.len - 2].i;
             int64_t i2 = stack[stack.len - 1].i;
-            stack[--stack.len - 1].i = i1 << i2;
+            if (RG_UNLIKELY(i2 >= 64)) {
+                stack[--stack.len - 1].i = 0;
+            } else if (RG_LIKELY(i2 >= 0)) {
+                stack[--stack.len - 1].i = (int64_t)((uint64_t)i1 << i2);
+            } else {
+                FatalError("Left-shift by negative value is illegal");
+                return false;
+            }
             DISPATCH(++pc);
         }
         CASE(RightShiftInt): {
             int64_t i1 = stack[stack.len - 2].i;
             int64_t i2 = stack[stack.len - 1].i;
-            stack[--stack.len - 1].i = (int64_t)((uint64_t)i1 >> i2);
+            if (RG_UNLIKELY(i2 >= 64)) {
+                stack[--stack.len - 1].i = 0;
+            } else if (RG_LIKELY(i2 >= 0)) {
+                stack[--stack.len - 1].i = (int64_t)((uint64_t)i1 >> i2);
+            } else {
+                FatalError("Right-shift by negative value is illegal");
+                return false;
+            }
             DISPATCH(++pc);
         }
 
