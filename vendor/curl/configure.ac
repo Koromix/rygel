@@ -59,19 +59,6 @@ XC_CHECK_PATH_SEPARATOR
 CONFIGURE_OPTIONS="\"$ac_configure_args\""
 AC_SUBST(CONFIGURE_OPTIONS)
 
-CURL_CFLAG_EXTRAS=""
-if test X"$want_werror" = Xyes; then
-  CURL_CFLAG_EXTRAS="-Werror"
-  if test "$compiler_id" = "GNU_C"; then
-    dnl enable -pedantic-errors for GCC 5 and later,
-    dnl as before that it was the same as -Werror=pedantic
-    if test "$compiler_num" -ge "500"; then
-      CURL_CFLAG_EXTRAS="$CURL_CFLAG_EXTRAS -pedantic-errors"
-    fi
-  fi
-fi
-AC_SUBST(CURL_CFLAG_EXTRAS)
-
 dnl SED is mandatory for configure process and libtool.
 dnl Set it now, allowing it to be changed later.
 if test -z "$SED"; then
@@ -285,6 +272,19 @@ if test "$compiler_id" = "INTEL_UNIX_C"; then
   fi
   #
 fi
+
+CURL_CFLAG_EXTRAS=""
+if test X"$want_werror" = Xyes; then
+  CURL_CFLAG_EXTRAS="-Werror"
+  if test "$compiler_id" = "GNU_C"; then
+    dnl enable -pedantic-errors for GCC 5 and later,
+    dnl as before that it was the same as -Werror=pedantic
+    if test "$compiler_num" -ge "500"; then
+      CURL_CFLAG_EXTRAS="$CURL_CFLAG_EXTRAS -pedantic-errors"
+    fi
+  fi
+fi
+AC_SUBST(CURL_CFLAG_EXTRAS)
 
 CURL_CHECK_COMPILER_HALT_ON_ERROR
 CURL_CHECK_COMPILER_ARRAY_SIZE_NEGATIVE
@@ -637,6 +637,22 @@ AC_HELP_STRING([--disable-gopher],[Disable Gopher support]),
        AC_MSG_RESULT(yes)
 )
 
+AC_MSG_CHECKING([whether to support mqtt])
+AC_ARG_ENABLE(mqtt,
+AC_HELP_STRING([--enable-mqtt],[Enable MQTT support])
+AC_HELP_STRING([--disable-mqtt],[Disable MQTT support]),
+[ case "$enableval" in
+  no)
+       AC_MSG_RESULT(no)
+       ;;
+  *)   AC_MSG_RESULT(yes)
+       experimental="$experimental MQTT"
+       AC_DEFINE(CURL_ENABLE_MQTT, 1, [to enable MQTT])
+       AC_SUBST(CURL_ENABLE_MQTT, [1])
+       ;;
+  esac ],
+       AC_MSG_RESULT(no)
+)
 
 dnl **********************************************************************
 dnl Check for built-in manual
@@ -1554,7 +1570,7 @@ AC_HELP_STRING([--without-secure-transport], [disable Apple OS native SSL/TLS]),
 AC_MSG_CHECKING([whether to enable Secure Transport])
 if test -z "$ssl_backends" -o "x$OPT_SECURETRANSPORT" != xno; then
   if test "x$OPT_SECURETRANSPORT" != "xno" &&
-     test -d "/System/Library/Frameworks/Security.framework"; then
+     (test "x$cross_compiling" != "xno" || test -d "/System/Library/Frameworks/Security.framework"); then
     AC_MSG_RESULT(yes)
     AC_DEFINE(USE_SECTRANSP, 1, [enable Secure Transport])
     AC_SUBST(USE_SECTRANSP, [1])
@@ -1873,6 +1889,31 @@ if test -z "$ssl_backends" -o "x$OPT_SSL" != xno &&
     ],[
       AC_MSG_RESULT([no])
     ])
+
+    AC_MSG_CHECKING([for OpenSSL >= v3])
+    AC_COMPILE_IFELSE([
+      AC_LANG_PROGRAM([[
+#include <openssl/opensslv.h>
+      ]],[[
+        #if defined(OPENSSL_VERSION_MAJOR) && (OPENSSL_VERSION_MAJOR >= 3)
+        return 0;
+        #else
+        #error older than 3
+        #endif
+      ]])
+    ],[
+      AC_MSG_RESULT([yes])
+      AC_DEFINE_UNQUOTED(HAVE_OPENSSL3, 1,
+        [Define to 1 if using OpenSSL 3 or later.])
+      dnl OpenSSLv3 marks the DES functions deprecated but we have no
+      dnl replacements (yet) so tell the compiler to not warn for them
+      dnl
+      dnl Ask OpenSSL to suppress the warnings.
+      CPPFLAGS="$CPPFLAGS -DOPENSSL_SUPPRESS_DEPRECATED"
+      ssl_msg="OpenSSL v3+"
+    ],[
+      AC_MSG_RESULT([no])
+    ])
   fi
 
   if test "$OPENSSL_ENABLED" = "1"; then
@@ -2043,7 +2084,8 @@ if test -z "$ssl_backends" -o "x$OPT_GNUTLS" != xno; then
          CPPFLAGS="$CPPFLAGS $addcflags"
       fi
 
-      AC_CHECK_LIB(gnutls, gnutls_check_version,
+      dnl this function is selected since it was introduced in 3.1.10
+      AC_CHECK_LIB(gnutls, gnutls_x509_crt_get_dn2,
        [
        AC_DEFINE(USE_GNUTLS, 1, [if GnuTLS is enabled])
        AC_SUBST(USE_GNUTLS, [1])
@@ -2071,7 +2113,6 @@ if test -z "$ssl_backends" -o "x$OPT_GNUTLS" != xno; then
             AC_MSG_NOTICE([Added $gtlslib to CURL_LIBRARY_PATH])
           fi
         fi
-        AC_CHECK_FUNCS([gnutls_certificate_set_x509_key_file2 gnutls_alpn_set_protocols gnutls_ocsp_req_init])
       fi
 
     fi
@@ -3503,7 +3544,7 @@ if test X"$want_tcp2" != Xno; then
 
 fi
 
-if test "x$NGTCP2_ENABLED" = "x1"; then
+if test "x$NGTCP2_ENABLED" = "x1" -a "x$OPENSSL_ENABLED" = "x1"; then
   dnl backup the pre-ngtcp2_crypto_openssl variables
   CLEANLDFLAGS="$LDFLAGS"
   CLEANCPPFLAGS="$CPPFLAGS"
@@ -3554,6 +3595,61 @@ if test "x$NGTCP2_ENABLED" = "x1"; then
       dnl To avoid link errors, we do not allow --with-ngtcp2 without
       dnl a pkgconfig file
       AC_MSG_ERROR([--with-ngtcp2 was specified but could not find ngtcp2_crypto_openssl pkg-config file.])
+    fi
+  fi
+fi
+
+if test "x$NGTCP2_ENABLED" = "x1" -a "x$GNUTLS_ENABLED" = "x1"; then
+  dnl backup the pre-ngtcp2_crypto_gnutls variables
+  CLEANLDFLAGS="$LDFLAGS"
+  CLEANCPPFLAGS="$CPPFLAGS"
+  CLEANLIBS="$LIBS"
+
+  CURL_CHECK_PKGCONFIG(libngtcp2_crypto_gnutls, $want_tcp2_path)
+
+  if test "$PKGCONFIG" != "no" ; then
+    LIB_NGTCP2_CRYPTO_GNUTLS=`CURL_EXPORT_PCDIR([$want_tcp2_path])
+      $PKGCONFIG --libs-only-l libngtcp2_crypto_gnutls`
+    AC_MSG_NOTICE([-l is $LIB_NGTCP2_CRYPTO_GNUTLS])
+
+    CPP_NGTCP2_CRYPTO_GNUTLS=`CURL_EXPORT_PCDIR([$want_tcp2_path]) dnl
+      $PKGCONFIG --cflags-only-I libngtcp2_crypto_gnutls`
+    AC_MSG_NOTICE([-I is $CPP_NGTCP2_CRYPTO_GNUTLS])
+
+    LD_NGTCP2_CRYPTO_GNUTLS=`CURL_EXPORT_PCDIR([$want_tcp2_path])
+      $PKGCONFIG --libs-only-L libngtcp2_crypto_gnutls`
+    AC_MSG_NOTICE([-L is $LD_NGTCP2_CRYPTO_GNUTLS])
+
+    LDFLAGS="$LDFLAGS $LD_NGTCP2_CRYPTO_GNUTLS"
+    CPPFLAGS="$CPPFLAGS $CPP_NGTCP2_CRYPTO_GNUTLS"
+    LIBS="$LIB_NGTCP2_CRYPTO_GNUTLS $LIBS"
+
+    if test "x$cross_compiling" != "xyes"; then
+      DIR_NGTCP2_CRYPTO_GNUTLS=`echo $LD_NGTCP2_CRYPTO_GNUTLS | $SED -e 's/-L//'`
+    fi
+    AC_CHECK_LIB(ngtcp2_crypto_gnutls, ngtcp2_crypto_ctx_initial,
+      [
+       AC_CHECK_HEADERS(ngtcp2/ngtcp2_crypto.h,
+          NGTCP2_ENABLED=1
+          AC_DEFINE(USE_NGTCP2_CRYPTO_GNUTLS, 1, [if ngtcp2_crypto_gnutls is in use])
+          AC_SUBST(USE_NGTCP2_CRYPTO_GNUTLS, [1])
+          CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$DIR_NGTCP2_CRYPTO_GNUTLS"
+          export CURL_LIBRARY_PATH
+          AC_MSG_NOTICE([Added $DIR_NGTCP2_CRYPTO_GNUTLS to CURL_LIBRARY_PATH])
+       )
+      ],
+        dnl not found, revert back to clean variables
+        LDFLAGS=$CLEANLDFLAGS
+        CPPFLAGS=$CLEANCPPFLAGS
+        LIBS=$CLEANLIBS
+    )
+
+  else
+    dnl no ngtcp2_crypto_gnutls pkg-config found, deal with it
+    if test X"$want_tcp2" != Xdefault; then
+      dnl To avoid link errors, we do not allow --with-ngtcp2 without
+      dnl a pkgconfig file
+      AC_MSG_ERROR([--with-ngtcp2 was specified but could not find ngtcp2_crypto_gnutls pkg-config file.])
     fi
   fi
 fi
@@ -3862,6 +3958,8 @@ dnl default includes
 #endif
 #ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
+#elif defined(HAVE_UNISTD_H)
+#include <unistd.h>
 #endif
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
@@ -4258,6 +4356,8 @@ if test "$want_thres" = "yes" && test "x$USE_THREADS_POSIX" != "x1"; then
     AC_MSG_ERROR([Threaded resolver enabled but no thread library found])
   fi
 fi
+
+CURL_CONVERT_INCLUDE_TO_ISYSTEM
 
 dnl ************************************************************
 dnl disable verbose text strings
@@ -4758,6 +4858,9 @@ if test "x$CURL_DISABLE_TFTP" != "x1"; then
 fi
 if test "x$CURL_DISABLE_GOPHER" != "x1"; then
   SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS GOPHER"
+fi
+if test "x$CURL_ENABLE_MQTT" = "x1"; then
+  SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS MQTT"
 fi
 if test "x$CURL_DISABLE_POP3" != "x1"; then
   SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS POP3"

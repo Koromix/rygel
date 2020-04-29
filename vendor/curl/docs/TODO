@@ -66,6 +66,7 @@
 
  5. HTTP
  5.1 Better persistency for HTTP 1.0
+ 5.2 Set custom client ip when using haproxy protocol
  5.3 Rearrange request header order
  5.4 Allow SAN names in HTTP/2 server push
  5.5 auth= in URLs
@@ -99,6 +100,7 @@
  12. New protocols
 
  13. SSL
+ 13.1 TLS-PSK with OpenSSL
  13.2 Provide mutex locking API
  13.3 Support in-memory certs/ca certs/keys
  13.4 Cache/share OpenSSL contexts
@@ -136,7 +138,9 @@
  18.3 prevent file overwriting
  18.4 --proxycommand
  18.5 UTF-8 filenames in Content-Disposition
+ 18.6 Option to make -Z merge lined based outputs on stdout
  18.7 at least N milliseconds between requests
+ 18.8 Consider convenience options for JSON and XML?
  18.9 Choose the name of file in braces for complex URLs
  18.10 improve how curl works in a windows console window
  18.11 Windows: set attribute 'archive' for completed downloads
@@ -162,6 +166,7 @@
  20.6 Use the RFC6265 test suite
  20.7 Support LD_PRELOAD on macOS
  20.8 Run web-platform-tests url tests
+ 20.9 Use "random" ports for the test servers
 
  21. Next SONAME bump
  21.1 http-style HEAD output for FTP
@@ -405,11 +410,21 @@
  Make sure we don't ever loop because of non-blocking sockets returning
  EWOULDBLOCK or similar. Blocking cases include:
 
- - Name resolves on non-windows unless c-ares or the threaded resolver is used
+ - Name resolves on non-windows unless c-ares or the threaded resolver is used.
+
+ - The threaded resolver may block on cleanup:
+ https://github.com/curl/curl/issues/4852
+
  - file:// transfers
+
  - TELNET transfers
+
+ - GSSAPI authentication for FTP transfers
+
  - The "DONE" operation (post transfer protocol-specific actions) for the
-   protocols SFTP, SMTP, FTP. Fixing Curl_done() for this is a worthy task.
+ protocols SFTP, SMTP, FTP. Fixing Curl_done() for this is a worthy task.
+
+ - curl_multi_remove_handle for any of the above. See section 2.3.
 
 2.2 Better support for same name resolves
 
@@ -509,6 +524,13 @@
 
  "Better" support for persistent connections over HTTP 1.0
  https://curl.haxx.se/bug/feature.cgi?id=1089001
+
+5.2 Set custom client ip when using haproxy protocol
+
+ This would allow testing servers with different client ip addresses (without
+ using x-forward-for header).
+
+ https://github.com/curl/curl/issues/5125
 
 5.3 Rearrange request header order
 
@@ -639,6 +661,15 @@ that doesn't exist on the server, just like --ftp-create-dirs.
 12. New protocols
 
 13. SSL
+
+13.1 TLS-PSK with OpenSSL
+
+ Transport Layer Security pre-shared key ciphersuites (TLS-PSK) is a set of
+ cryptographic protocols that provide secure communication based on pre-shared
+ keys (PSKs). These pre-shared keys are symmetric keys shared in advance among
+ the communicating parties.
+
+ https://github.com/curl/curl/issues/5081
 
 13.2 Provide mutex locking API
 
@@ -887,6 +918,14 @@ that doesn't exist on the server, just like --ftp-create-dirs.
 
  https://github.com/curl/curl/issues/1888
 
+18.6 Option to make -Z merge lined based outputs on stdout
+
+ When a user requests multiple lined based files using -Z and sends them to
+ stdout, curl will not "merge" and send complete lines fine but may very well
+ send partial lines from several sources.
+
+ https://github.com/curl/curl/issues/5175
+
 18.7 at least N milliseconds between requests
 
  Allow curl command lines issue a lot of request against services that limit
@@ -897,6 +936,20 @@ that doesn't exist on the server, just like --ftp-create-dirs.
     $ curl "https://example.com/api?input=[1-1000]" -d yadayada --after 500
 
  See https://github.com/curl/curl/issues/3920
+
+18.8 Consider convenience options for JSON and XML?
+
+ Could we add `--xml` or `--json` to add headers needed to call rest API:
+
+ `--xml` adds -H 'Content-Type: application/xml' -H "Accept: application/xml" and
+ `--json` adds -H 'Content-Type: application/json' -H "Accept: application/json"
+
+ Setting Content-Type when doing a GET or any other method without a body
+ would be a bit strange I think - so maybe only add CT for requests with body?
+ Maybe plain `--xml` and ` --json` are a bit too brief and generic. Maybe
+ `--http-json` etc?
+
+ See https://github.com/curl/curl/issues/5203
 
 18.9 Choose the name of file in braces for complex URLs
 
@@ -1085,6 +1138,17 @@ that doesn't exist on the server, just like --ftp-create-dirs.
  differs from the WHATWG URL spec parsers.
 
  See https://github.com/curl/curl/issues/4477
+
+20.9 Use "random" ports for the test servers
+
+ Instead of insisting and using fixed port numbers for the tests (even though
+ they can be changed with a switch), consider letting each server pick a
+ random available one at start-up, store that info in a file and let the test
+ suite use that.
+
+ We could then remove the "check that it is our server that's running"-check
+ and we would immediately detect when we write tests wrongly to use hard-coded
+ port numbers.
 
 21. Next SONAME bump
 

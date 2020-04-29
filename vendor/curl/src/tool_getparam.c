@@ -249,6 +249,7 @@ static const struct LongShort aliases[]= {
   {"Eq", "cert-status",              ARG_BOOL},
   {"Er", "false-start",              ARG_BOOL},
   {"Es", "ssl-no-revoke",            ARG_BOOL},
+  {"ES", "ssl-revoke-best-effort",   ARG_BOOL},
   {"Et", "tcp-fastopen",             ARG_BOOL},
   {"Eu", "proxy-tlsuser",            ARG_STRING},
   {"Ev", "proxy-tlspassword",        ARG_STRING},
@@ -1606,6 +1607,11 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
           config->ssl_no_revoke = TRUE;
         break;
 
+      case 'S': /* --ssl-revoke-best-effort */
+        if(curlinfo->features & CURL_VERSION_SSL)
+          config->ssl_revoke_best_effort = TRUE;
+        break;
+
       case 't': /* --tcp-fastopen */
         config->tcp_fastopen = TRUE;
         break;
@@ -2252,6 +2258,7 @@ ParameterError parse_args(struct GlobalConfig *global, int argc,
         char *nextarg = (i < (argc - 1)) ? argv[i + 1] : NULL;
 
         result = getparameter(flag, nextarg, &passarg, global, config);
+        config = global->last;
         if(result == PARAM_NEXT_OPERATION) {
           /* Reset result as PARAM_NEXT_OPERATION is only used here and not
              returned from this function */

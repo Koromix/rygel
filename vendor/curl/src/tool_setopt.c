@@ -5,7 +5,7 @@
  *                            | (__| |_| |  _ <| |___
  *                             \___|\___/|_| \_\_____|
  *
- * Copyright (C) 1998 - 2019, Daniel Stenberg, <daniel@haxx.se>, et al.
+ * Copyright (C) 1998 - 2020, Daniel Stenberg, <daniel@haxx.se>, et al.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
@@ -125,6 +125,7 @@ const NameValueUnsigned setopt_nv_CURLSSLOPT[] = {
   NV(CURLSSLOPT_ALLOW_BEAST),
   NV(CURLSSLOPT_NO_REVOKE),
   NV(CURLSSLOPT_NO_PARTIALCHAIN),
+  NV(CURLSSLOPT_REVOKE_BEST_EFFORT),
   NVEND,
 };
 
@@ -284,7 +285,8 @@ CURLcode tool_setopt_enum(CURL *curl, struct GlobalConfig *config,
     /* we only use this for real if --libcurl was used */
     const NameValue *nv = NULL;
     for(nv = nvlist; nv->name; nv++) {
-      if(nv->value == lval) break; /* found it */
+      if(nv->value == lval)
+        break; /* found it */
     }
     if(! nv->name) {
       /* If no definition was found, output an explicit value.

@@ -851,6 +851,10 @@ SOURCE=..\..\..\..\src\tool_writeout.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\..\..\src\tool_writeout_json.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\..\..\src\tool_xattr.c
 # End Source File
 # End Group
@@ -1048,6 +1052,10 @@ SOURCE=..\..\..\..\src\tool_vms.h
 # Begin Source File
 
 SOURCE=..\..\..\..\src\tool_writeout.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\..\src\tool_writeout_json.h
 # End Source File
 # Begin Source File
 

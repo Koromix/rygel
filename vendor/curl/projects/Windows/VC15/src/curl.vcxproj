@@ -2698,6 +2698,7 @@
     <ClCompile Include="..\..\..\..\src\tool_util.c" />
     <ClCompile Include="..\..\..\..\src\tool_vms.c" />
     <ClCompile Include="..\..\..\..\src\tool_writeout.c" />
+    <ClCompile Include="..\..\..\..\src\tool_writeout_json.c" />
     <ClCompile Include="..\..\..\..\src\tool_xattr.c" />
   </ItemGroup>
   <ItemGroup>
@@ -2749,6 +2750,7 @@
     <ClInclude Include="..\..\..\..\src\tool_version.h" />
     <ClInclude Include="..\..\..\..\src\tool_vms.h" />
     <ClInclude Include="..\..\..\..\src\tool_writeout.h" />
+    <ClInclude Include="..\..\..\..\src\tool_writeout_json.h" />
     <ClInclude Include="..\..\..\..\src\tool_xattr.h" />
   </ItemGroup>
   <ItemGroup>

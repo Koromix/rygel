@@ -40,7 +40,7 @@
  ---------------------------------------------------------
 
   cd $srcroot/docs/cmdline-opts
-  ./gen.pl listhelp
+  ./gen.pl listhelp *.d
  */
 
 struct helptxt {
@@ -437,6 +437,8 @@ static const struct helptxt helptext[] = {
    "Allow security flaw to improve interop"},
   {"    --ssl-no-revoke",
    "Disable cert revocation checks (Schannel)"},
+  {"    --ssl-revoke-best-effort",
+   "Ignore revocation offline or missing revocation list errors (Schannel)"},
   {"    --ssl-reqd",
    "Require SSL/TLS"},
   {"-2, --sslv2",
@@ -550,7 +552,6 @@ static const struct feat feats[] = {
   {"MultiSSL",       CURL_VERSION_MULTI_SSL},
   {"PSL",            CURL_VERSION_PSL},
   {"alt-svc",        CURL_VERSION_ALTSVC},
-  {"ESNI",           CURL_VERSION_ESNI},
 };
 
 void tool_help(void)

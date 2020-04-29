@@ -172,6 +172,8 @@ option(CURL_DISABLE_SMTP "to disable SMTP" OFF)
 mark_as_advanced(CURL_DISABLE_SMTP)
 option(CURL_DISABLE_GOPHER "to disable Gopher" OFF)
 mark_as_advanced(CURL_DISABLE_GOPHER)
+option(CURL_ENABLE_MQTT "to enable MQTT" OFF)
+mark_as_advanced(CURL_ENABLE_MQTT)
 
 if(HTTP_ONLY)
   set(CURL_DISABLE_FTP ON)
@@ -232,6 +234,7 @@ set(CMAKE_C_FLAGS "${CMAKE_ANSI_CFLAGS} ${CMAKE_C_FLAGS}")
 set(CMAKE_REQUIRED_FLAGS ${CMAKE_ANSI_CFLAGS})
 
 if(CURL_STATIC_CRT)
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
   set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
   set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
 endif()
@@ -298,7 +301,7 @@ if(WIN32)
 endif()
 
 # check SSL libraries
-# TODO support GnuTLS and WolfSSL
+# TODO support GnuTLS
 
 if(APPLE)
   option(CMAKE_USE_SECTRANSP "enable Apple OS native SSL/TLS" OFF)
@@ -311,9 +314,10 @@ endif()
 option(CMAKE_USE_MBEDTLS "Enable mbedTLS for SSL/TLS" OFF)
 option(CMAKE_USE_BEARSSL "Enable BearSSL for SSL/TLS" OFF)
 option(CMAKE_USE_NSS "Enable NSS for SSL/TLS" OFF)
+option(CMAKE_USE_WOLFSSL "enable wolfSSL for SSL/TLS" OFF)
 
 set(openssl_default ON)
-if(WIN32 OR CMAKE_USE_SECTRANSP OR CMAKE_USE_WINSSL OR CMAKE_USE_MBEDTLS OR CMAKE_USE_NSS)
+if(WIN32 OR CMAKE_USE_SECTRANSP OR CMAKE_USE_WINSSL OR CMAKE_USE_MBEDTLS OR CMAKE_USE_NSS OR CMAKE_USE_WOLFSSL)
   set(openssl_default OFF)
 endif()
 option(CMAKE_USE_OPENSSL "Use OpenSSL code. Experimental" ${openssl_default})
@@ -325,6 +329,7 @@ count_true(enabled_ssl_options_count
   CMAKE_USE_MBEDTLS
   CMAKE_USE_BEARSSL
   CMAKE_USE_NSS
+  CMAKE_USE_WOLFSSL
 )
 if(enabled_ssl_options_count GREATER "1")
   set(CURL_WITH_MULTI_SSL ON)
@@ -403,6 +408,14 @@ if(CMAKE_USE_BEARSSL)
   set(USE_BEARSSL ON)
   list(APPEND CURL_LIBS ${BEARSSL_LIBRARY})
   include_directories(${BEARSSL_INCLUDE_DIRS})
+endif()
+
+if(CMAKE_USE_WOLFSSL)
+  find_package(WolfSSL REQUIRED)
+  set(SSL_ENABLED ON)
+  set(USE_WOLFSSL ON)
+  list(APPEND CURL_LIBS ${WolfSSL_LIBRARIES})
+  include_directories(${WolfSSL_INCLUDE_DIRS})
 endif()
 
 if(CMAKE_USE_NSS)
@@ -750,7 +763,7 @@ elseif(CURL_CA_PATH_AUTODETECT OR CURL_CA_BUNDLE_AUTODETECT)
 endif()
 
 if(CURL_CA_PATH_SET AND NOT USE_OPENSSL AND NOT USE_MBEDTLS)
-  message(FATAL_ERROR
+  message(STATUS
           "CA path only supported by OpenSSL, GnuTLS or mbed TLS. "
           "Set CURL_CA_PATH=none or enable one of those TLS backends.")
 endif()
@@ -788,7 +801,6 @@ check_include_file_concat("arpa/inet.h"      HAVE_ARPA_INET_H)
 check_include_file_concat("arpa/tftp.h"      HAVE_ARPA_TFTP_H)
 check_include_file_concat("assert.h"         HAVE_ASSERT_H)
 check_include_file_concat("crypto.h"         HAVE_CRYPTO_H)
-check_include_file_concat("des.h"            HAVE_DES_H)
 check_include_file_concat("err.h"            HAVE_ERR_H)
 check_include_file_concat("errno.h"          HAVE_ERRNO_H)
 check_include_file_concat("fcntl.h"          HAVE_FCNTL_H)
@@ -1297,6 +1309,7 @@ _add_if("SCP"           USE_LIBSSH2)
 _add_if("SFTP"          USE_LIBSSH2)
 _add_if("RTSP"          NOT CURL_DISABLE_RTSP)
 _add_if("RTMP"          USE_LIBRTMP)
+_add_if("MQTT"          CURL_ENABLE_MQTT)
 if(_items)
   list(SORT _items)
 endif()
@@ -1311,6 +1324,7 @@ _add_if("Secure Transport" SSL_ENABLED AND USE_SECTRANSP)
 _add_if("mbedTLS"          SSL_ENABLED AND USE_MBEDTLS)
 _add_if("BearSSL"          SSL_ENABLED AND USE_BEARSSL)
 _add_if("NSS"              SSL_ENABLED AND USE_NSS)
+_add_if("wolfSSL"          SSL_ENABLED AND USE_WOLFSSL)
 if(_items)
   list(SORT _items)
 endif()

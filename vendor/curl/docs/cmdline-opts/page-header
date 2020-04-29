@@ -5,7 +5,7 @@
 .\" *                            | (__| |_| |  _ <| |___
 .\" *                             \___|\___/|_| \_\_____|
 .\" *
-.\" * Copyright (C) 1998 - 2018, Daniel Stenberg, <daniel@haxx.se>, et al.
+.\" * Copyright (C) 1998 - 2020, Daniel Stenberg, <daniel@haxx.se>, et al.
 .\" *
 .\" * This software is licensed as described in the file COPYING, which
 .\" * you should have received as part of this distribution. The terms
@@ -31,8 +31,8 @@ curl \- transfer a URL
 .B curl
 is a tool to transfer data from or to a server, using one of the supported
 protocols (DICT, FILE, FTP, FTPS, GOPHER, HTTP, HTTPS, IMAP, IMAPS, LDAP,
-LDAPS, POP3, POP3S, RTMP, RTSP, SCP, SFTP, SMB, SMBS, SMTP, SMTPS, TELNET
-and TFTP). The command is designed to work without user interaction.
+LDAPS, MQTT, POP3, POP3S, RTMP, RTSP, SCP, SFTP, SMB, SMBS, SMTP, SMTPS,
+TELNET and TFTP). The command is designed to work without user interaction.
 
 curl offers a busload of useful tricks like proxy support, user
 authentication, FTP upload, HTTP post, SSL connections, cookies, file transfer
@@ -46,9 +46,9 @@ The URL syntax is protocol-dependent. You'll find a detailed description in
 RFC 3986.
 
 You can specify multiple URLs or parts of URLs by writing part sets within
-braces as in:
+braces and quoting the URL as in:
 
-  http://site.{one,two,three}.com
+  "http://site.{one,two,three}.com"
 
 or you can get sequences of alphanumeric series by using [] as in:
 

@@ -1314,6 +1314,9 @@
 				RelativePath="..\..\..\..\lib\mprintf.c">
 			</File>
 			<File
+				RelativePath="..\..\..\..\lib\mqtt.c">
+			</File>
+			<File
 				RelativePath="..\..\..\..\lib\multi.c">
 			</File>
 			<File
@@ -1652,6 +1655,9 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\lib\mime.h">
+			</File>
+			<File
+				RelativePath="..\..\..\..\lib\mqtt.h">
 			</File>
 			<File
 				RelativePath="..\..\..\..\lib\multihandle.h">

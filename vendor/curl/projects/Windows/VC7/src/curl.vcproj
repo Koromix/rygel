@@ -1345,6 +1345,9 @@
 				RelativePath="..\..\..\..\src\tool_writeout.c">
 			</File>
 			<File
+				RelativePath="..\..\..\..\src\tool_writeout_json.c">
+			</File>
+			<File
 				RelativePath="..\..\..\..\src\tool_xattr.c">
 			</File>
 		</Filter>
@@ -1494,6 +1497,9 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\src\tool_writeout.h">
+			</File>
+			<File
+				RelativePath="..\..\..\..\src\tool_writeout_json.h">
 			</File>
 			<File
 				RelativePath="..\..\..\..\src\tool_xattr.h">

@@ -31,6 +31,8 @@
 
 #ifdef HAVE_SYS_SELECT_H
 #  include <sys/select.h>
+#elif defined(HAVE_UNISTD_H)
+#  include <unistd.h>
 #endif
 
 #ifdef __VMS
@@ -903,35 +905,6 @@ static CURLcode single_transfer(struct GlobalConfig *global,
         /* default output stream is stdout */
         outs->stream = stdout;
 
-        /* --etag-save */
-        etag_save = &per->etag_save;
-        etag_save->stream = stdout;
-
-        if(config->etag_save_file) {
-          /* open file for output: */
-          if(strcmp(config->etag_save_file, "-")) {
-            FILE *newfile = fopen(config->etag_save_file, "wb");
-            if(!newfile) {
-              warnf(
-                config->global,
-                "Failed to open %s\n", config->etag_save_file);
-
-              result = CURLE_WRITE_ERROR;
-              break;
-            }
-            else {
-              etag_save->filename = config->etag_save_file;
-              etag_save->s_isreg = TRUE;
-              etag_save->fopened = TRUE;
-              etag_save->stream = newfile;
-            }
-          }
-          else {
-            /* always use binary mode for protocol header output */
-            set_binmode(etag_save->stream);
-          }
-        }
-
         /* --etag-compare */
         if(config->etag_compare_file) {
           char *etag_from_file = NULL;
@@ -939,7 +912,7 @@ static CURLcode single_transfer(struct GlobalConfig *global,
 
           /* open file for reading: */
           FILE *file = fopen(config->etag_compare_file, FOPEN_READTEXT);
-          if(!file) {
+          if(!file && !config->etag_save_file) {
             errorf(config->global,
                    "Failed to open %s\n", config->etag_compare_file);
             result = CURLE_READ_ERROR;
@@ -970,6 +943,35 @@ static CURLcode single_transfer(struct GlobalConfig *global,
 
           if(file) {
             fclose(file);
+          }
+        }
+
+        /* --etag-save */
+        etag_save = &per->etag_save;
+        etag_save->stream = stdout;
+
+        if(config->etag_save_file) {
+          /* open file for output: */
+          if(strcmp(config->etag_save_file, "-")) {
+            FILE *newfile = fopen(config->etag_save_file, "wb");
+            if(!newfile) {
+              warnf(
+                config->global,
+                "Failed to open %s\n", config->etag_save_file);
+
+              result = CURLE_WRITE_ERROR;
+              break;
+            }
+            else {
+              etag_save->filename = config->etag_save_file;
+              etag_save->s_isreg = TRUE;
+              etag_save->fopened = TRUE;
+              etag_save->stream = newfile;
+            }
+          }
+          else {
+            /* always use binary mode for protocol header output */
+            set_binmode(etag_save->stream);
           }
         }
 
@@ -1898,9 +1900,11 @@ static CURLcode single_transfer(struct GlobalConfig *global,
           my_setopt_str(curl, CURLOPT_GSSAPI_DELEGATION,
                         config->gssapi_delegation);
 
-        /* new in 7.25.0 and 7.44.0 */
+        /* new in 7.25.0, 7.44.0 and 7.70.0 */
         {
           long mask = (config->ssl_allow_beast ? CURLSSLOPT_ALLOW_BEAST : 0) |
+                      (config->ssl_revoke_best_effort ?
+                       CURLSSLOPT_REVOKE_BEST_EFFORT : 0) |
                       (config->ssl_no_revoke ? CURLSSLOPT_NO_REVOKE : 0);
           if(mask)
             my_setopt_bitmask(curl, CURLOPT_SSL_OPTIONS, mask);
@@ -2055,7 +2059,7 @@ static CURLcode add_parallel_transfers(struct GlobalConfig *global,
   *addedp = FALSE;
   *morep = FALSE;
   result = create_transfer(global, share, addedp);
-  if(result || !*addedp)
+  if(result)
     return result;
   for(per = transfers; per && (all_added < global->parallel_max);
       per = per->next) {

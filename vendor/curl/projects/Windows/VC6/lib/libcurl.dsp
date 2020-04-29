@@ -1002,6 +1002,10 @@ SOURCE=..\..\..\..\lib\mprintf.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\..\..\lib\mqtt.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\..\..\lib\multi.c
 # End Source File
 # Begin Source File
@@ -1571,6 +1575,10 @@ SOURCE=..\..\..\..\lib\memdebug.h
 # Begin Source File
 
 SOURCE=..\..\..\..\lib\mime.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\..\lib\mqtt.h
 # End Source File
 # Begin Source File
 
