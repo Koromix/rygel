@@ -3375,7 +3375,7 @@ static inline Size EncodeUtf8(uint32_t c, char out_buf[4])
         out_buf[2] = (char)(0x80 | (c & 0x3F));
         return 3;
     } else if (c < 0x110000) {
-        out_buf[0] = (char)(0xE0 | (c >> 18));
+        out_buf[0] = (char)(0xF0 | (c >> 18));
         out_buf[1] = (char)(0x80 | ((c >> 12) & 0x3F));
         out_buf[2] = (char)(0x80 | ((c >> 6) & 0x3F));
         out_buf[3] = (char)(0x80 | (c & 0x3F));
@@ -3440,6 +3440,7 @@ static inline bool IsPathSeparator(char c)
 }
 
 #ifdef _WIN32
+Size ConvertUtf8ToWin32Wide(Span<const char> str, Span<wchar_t> out_str_w);
 char *GetWin32ErrorString(uint32_t error_code = UINT32_MAX);
 #endif
 

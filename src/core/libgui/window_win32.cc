@@ -98,8 +98,6 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
         case WM_CHAR: {
             uint32_t c = (uint32_t)wparam;
 
-            // XXX: Test this, Unicode support is probably broken. It may not even work unless
-            // we use the Unicode 'W' Win32 functions in this file (instead of the ANSI ones).
             if ((c - 0xD800u) < 0x800u) {
                 if ((c & 0xFC00) == 0xD800) {
                     thread_window->surrogate_buf = c;
@@ -168,33 +166,35 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
         } break;
     }
 
-    return DefWindowProc(hwnd, msg, wparam, lparam);
+    return DefWindowProcW(hwnd, msg, wparam, lparam);
 }
 
 static HWND CreateMainWindow(const char *application_name)
 {
-    // Create Win32 main window class
-    static char main_cls_name[256];
+    static wchar_t application_name_w[256];
     static ATOM main_cls_atom;
-    if (!main_cls_atom) {
-        Fmt(main_cls_name, "%1_main", application_name);
 
-        WNDCLASSEXA gl_cls = { RG_SIZE(gl_cls) };
+    // Create Win32 main window class
+    if (!main_cls_atom) {
+        if (ConvertUtf8ToWin32Wide(application_name, application_name_w) < -1)
+            return nullptr;
+
+        WNDCLASSEXW gl_cls = { RG_SIZE(gl_cls) };
         gl_cls.hInstance = GetModuleHandle(nullptr);
-        gl_cls.lpszClassName = main_cls_name;
+        gl_cls.lpszClassName = application_name_w;
         gl_cls.lpfnWndProc = MainWindowProc;
         gl_cls.hCursor = LoadCursor(nullptr, IDC_ARROW);
         gl_cls.style = CS_OWNDC;
 
-        main_cls_atom = RegisterClassExA(&gl_cls);
+        main_cls_atom = RegisterClassExW(&gl_cls);
         if (!main_cls_atom) {
-            LogError("Failed to register window class '%1': %2", main_cls_name,
+            LogError("Failed to register window class '%1': %2", application_name,
                      GetWin32ErrorString());
             return nullptr;
         }
 
         atexit([]() {
-            UnregisterClassA(main_cls_name, GetModuleHandle(nullptr));
+            UnregisterClassW(application_name_w, GetModuleHandle(nullptr));
         });
     }
 
@@ -206,7 +206,7 @@ static HWND CreateMainWindow(const char *application_name)
         rect.bottom = 648;
         AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, 0);
 
-        main_wnd = CreateWindowExA(0, main_cls_name, application_name, WS_OVERLAPPEDWINDOW,
+        main_wnd = CreateWindowExW(0, application_name_w, application_name_w, WS_OVERLAPPEDWINDOW,
                                    CW_USEDEFAULT, CW_USEDEFAULT,
                                    rect.right - rect.left, rect.bottom - rect.top,
                                    nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
@@ -232,30 +232,36 @@ static bool InitWGL(const char *application_name)
     if (wglCreateContextAttribsARB)
         return true;
 
-    // First, we need a dummy window handle to create OpenGL context (...). I know
-    // it is ugly, but not my fault.
+    // First, we need a dummy window handle to create OpenGL context (...).
+    // I know it is ugly, but not my fault.
+    static wchar_t dummy_cls_name_w[256];
+    static ATOM dummy_cls_atom;
+    static char dummy_cls_name[256];
 
-    char dummy_cls_name[256];
-    Fmt(dummy_cls_name, "%1_init_gl", application_name);
+    // Register it
+    if (!dummy_cls_atom) {
+        Fmt(dummy_cls_name, "%1_init_gl", application_name);
+        if (ConvertUtf8ToWin32Wide(dummy_cls_name, dummy_cls_name_w) < 0)
+            return false;
 
-    {
-        WNDCLASSEXA dummy_cls = { RG_SIZE(dummy_cls) };
+        WNDCLASSEXW dummy_cls = { RG_SIZE(dummy_cls) };
         dummy_cls.hInstance = GetModuleHandle(nullptr);
-        dummy_cls.lpszClassName = dummy_cls_name;
-        dummy_cls.lpfnWndProc = DefWindowProc;
+        dummy_cls.lpszClassName = dummy_cls_name_w;
+        dummy_cls.lpfnWndProc = DefWindowProcW;
 
-        if (!RegisterClassExA(&dummy_cls)) {
+        dummy_cls_atom = RegisterClassExW(&dummy_cls);
+        if (!dummy_cls_atom) {
             LogError("Failed to register window class '%1': %2", dummy_cls_name,
                      GetWin32ErrorString());
             return false;
         }
     }
-    RG_DEFER { UnregisterClassA(dummy_cls_name, GetModuleHandle(nullptr)); };
+    RG_DEFER { UnregisterClassW(dummy_cls_name_w, GetModuleHandle(nullptr)); };
 
     HWND dummy_wnd;
     HDC dummy_dc;
     {
-        dummy_wnd = CreateWindowExA(0, dummy_cls_name, dummy_cls_name, 0, 0, 0, 0, 0,
+        dummy_wnd = CreateWindowExW(0, dummy_cls_name_w, dummy_cls_name_w, 0, 0, 0, 0, 0,
                                     nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
         dummy_dc = GetDC(dummy_wnd);
         if (!dummy_wnd || !dummy_dc) {

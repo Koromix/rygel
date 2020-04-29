@@ -1281,15 +1281,15 @@ void ClearLastLogError()
 
 #ifdef _WIN32
 
-static Size ConvertUtf8ToWin32Wide(Span<const char> str, Span<WCHAR> out_str_w)
+Size ConvertUtf8ToWin32Wide(Span<const char> str, Span<wchar_t> out_str_w)
 {
     RG_ASSERT(out_str_w.len >= 2);
 
     int len = MultiByteToWideChar(CP_UTF8, 0, str.ptr, (int)str.len, out_str_w.ptr, (int)out_str_w.len - 1);
     if (!len) {
         switch (GetLastError()) {
-            case ERROR_INSUFFICIENT_BUFFER: { LogError("Path '%1' is too large", str); } break;
-            case ERROR_NO_UNICODE_TRANSLATION: { LogError("Path '%1' is not valid UTF-8", str); } break;
+            case ERROR_INSUFFICIENT_BUFFER: { LogError("String '%1' is too large", str); } break;
+            case ERROR_NO_UNICODE_TRANSLATION: { LogError("String '%1' is not valid UTF-8", str); } break;
             default: { LogError("MultiByteToWideChar() failed: %1", GetWin32ErrorString()); } break;
         }
         return -1;
@@ -1324,7 +1324,7 @@ char *GetWin32ErrorString(uint32_t error_code)
         error_code = GetLastError();
     }
 
-    WCHAR buf_w[256];
+    wchar_t buf_w[256];
     if (!FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                         nullptr, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                         buf_w, RG_SIZE(buf_w), nullptr))
@@ -1367,7 +1367,7 @@ static int64_t FileTimeToUnixTime(FILETIME ft)
 
 bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
 {
-    WCHAR filename_w[4096];
+    wchar_t filename_w[4096];
     if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
         return false;
 
@@ -1398,8 +1398,8 @@ bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
 
 bool RenameFile(const char *src_filename, const char *dest_filename, bool)
 {
-    WCHAR src_filename_w[4096];
-    WCHAR dest_filename_w[4096];
+    wchar_t src_filename_w[4096];
+    wchar_t dest_filename_w[4096];
     if (ConvertUtf8ToWin32Wide(src_filename, src_filename_w) < 0)
         return false;
     if (ConvertUtf8ToWin32Wide(dest_filename, dest_filename_w) < 0)
@@ -1422,7 +1422,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
         filter = "*";
     }
 
-    WCHAR find_filter_w[4096];
+    wchar_t find_filter_w[4096];
     {
         char find_filter[4096];
         if (snprintf(find_filter, RG_SIZE(find_filter), "%s\\%s", dirname, filter) >= RG_SIZE(find_filter)) {
@@ -1789,7 +1789,7 @@ bool MatchPathSpec(const char *path, const char *spec)
 bool SetWorkingDirectory(const char *directory)
 {
 #ifdef _WIN32
-    WCHAR directory_w[4096];
+    wchar_t directory_w[4096];
     if (ConvertUtf8ToWin32Wide(directory, directory_w) < 0)
         return false;
 
@@ -1812,7 +1812,7 @@ const char *GetWorkingDirectory()
     static RG_THREAD_LOCAL char buf[4096];
 
 #ifdef _WIN32
-    WCHAR buf_w[RG_SIZE(buf)];
+    wchar_t buf_w[RG_SIZE(buf)];
     DWORD ret = GetCurrentDirectoryW(RG_SIZE(buf_w), buf_w);
     RG_ASSERT(ret && ret <= RG_SIZE(buf_w));
 
@@ -1880,7 +1880,7 @@ const char *GetApplicationExecutable()
     static char executable_path[4096];
 
     if (!executable_path[0]) {
-        WCHAR path_w[RG_SIZE(executable_path)];
+        wchar_t path_w[RG_SIZE(executable_path)];
         Size path_len = (Size)GetModuleFileNameW(nullptr, path_w, RG_SIZE(path_w));
         RG_ASSERT(path_len && path_len < RG_SIZE(path_w));
 
@@ -2084,7 +2084,7 @@ bool PathContainsDotDot(const char *path)
 
 FILE *OpenFile(const char *filename, OpenFileMode mode)
 {
-    WCHAR filename_w[4096];
+    wchar_t filename_w[4096];
     if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
         return nullptr;
 
@@ -2106,7 +2106,7 @@ FILE *OpenFile(const char *filename, OpenFileMode mode)
 
 bool MakeDirectory(const char *directory, bool error_if_exists)
 {
-    WCHAR directory_w[4096];
+    wchar_t directory_w[4096];
     if (ConvertUtf8ToWin32Wide(directory, directory_w) < 0)
         return false;
 
@@ -2124,7 +2124,7 @@ bool MakeDirectory(const char *directory, bool error_if_exists)
 
 bool MakeDirectoryRec(Span<const char> directory)
 {
-    LocalArray<WCHAR, 4096> buf_w;
+    LocalArray<wchar_t, 4096> buf_w;
     buf_w.len = ConvertUtf8ToWin32Wide(directory, buf_w.data);
     if (buf_w.len < 0)
         return false;
@@ -2169,7 +2169,7 @@ bool MakeDirectoryRec(Span<const char> directory)
 
 bool UnlinkDirectory(const char *directory, bool error_if_missing)
 {
-    WCHAR directory_w[4096];
+    wchar_t directory_w[4096];
     if (ConvertUtf8ToWin32Wide(directory, directory_w) < 0)
         return false;
 
@@ -2184,7 +2184,7 @@ bool UnlinkDirectory(const char *directory, bool error_if_missing)
 
 bool UnlinkFile(const char *filename, bool error_if_missing)
 {
-    WCHAR filename_w[4096];
+    wchar_t filename_w[4096];
     if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
         return false;
 
@@ -2369,9 +2369,9 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
     STARTUPINFOW startup_info = {};
 
     // Convert command line
-    Span<WCHAR> cmd_line_w;
+    Span<wchar_t> cmd_line_w;
     cmd_line_w.len = 4 * strlen(cmd_line) + 2;
-    cmd_line_w.ptr = (WCHAR *)Allocator::Allocate(nullptr, cmd_line_w.len);
+    cmd_line_w.ptr = (wchar_t *)Allocator::Allocate(nullptr, cmd_line_w.len);
     RG_DEFER { Allocator::Release(nullptr, cmd_line_w.ptr, cmd_line_w.len); };
     if (ConvertUtf8ToWin32Wide(cmd_line, cmd_line_w) < 0)
         return false;
@@ -4225,7 +4225,7 @@ AssetLoadStatus AssetSet::LoadFromLibrary(const char *filename, const char *var_
     }
 
 #ifdef _WIN32
-    WCHAR filename_w[4096];
+    wchar_t filename_w[4096];
     if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
         return AssetLoadStatus::Error;
 
