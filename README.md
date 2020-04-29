@@ -2,6 +2,7 @@
 
 | Project    | Description                                                                | Quality          |
 | ---------- | -------------------------------------------------------------------------- | -----------------|
+| *blik*     | Embeddable beginner-friendly language with static types, fast compilation  | Work in progress |
 | *core*     | Base C++ libraries (such as libcc) and small wrappers (R, rapidjson...)    | Good             |
 | *drd*      | Alternative PMSI MCO classifier, subprojects: libdrd, drdc and drdR        | Good             |
 | *felix*    | Small build system made specifically for this repository                   | Good             |
