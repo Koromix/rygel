@@ -59,12 +59,12 @@ Options:
             return 1;
     }
 
-    TokenSet token_set;
-    if (!Tokenize(code, filename, &token_set))
+    TokenizedFile file;
+    if (!Tokenize(code, filename, &file))
         return 1;
 
     Program program;
-    if (!Compile(token_set, filename, &program))
+    if (!Compile(file, &program))
         return 1;
 
     int exit_code;

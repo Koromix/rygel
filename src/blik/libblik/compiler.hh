@@ -10,7 +10,7 @@
 namespace RG {
 
 class Parser;
-struct TokenSet;
+struct TokenizedFile;
 
 class Compiler {
     Parser *parser;
@@ -22,12 +22,12 @@ public:
     Compiler(const Compiler &) = delete;
     Compiler &operator=(const Compiler &) = delete;
 
-    bool Compile(const TokenSet &set, const char *filename);
+    bool Compile(const TokenizedFile &file);
     void AddFunction(const char *signature, NativeFunction *native);
 
     void Finish(Program *out_program);
 };
 
-bool Compile(const TokenSet &set, const char *filename, Program *out_program);
+bool Compile(const TokenizedFile &file, Program *out_program);
 
 }

@@ -30,8 +30,10 @@ struct Token {
     } u;
 };
 
-struct TokenSet {
+struct TokenizedFile {
+    const char *filename;
     Span<const char> code;
+
     HeapArray<Token> tokens;
 
     // Used to parse function declarations in first pass
@@ -40,6 +42,6 @@ struct TokenSet {
     BlockAllocator str_alloc;
 };
 
-bool Tokenize(Span<const char> code, const char *filename, TokenSet *out_set);
+bool Tokenize(Span<const char> code, const char *filename, TokenizedFile *out_set);
 
 }

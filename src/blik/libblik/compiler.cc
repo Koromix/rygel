@@ -31,8 +31,7 @@ struct StackSlot {
 
 class Parser {
     // All these members are relevant to the current parse only, and get resetted each time
-    const char *filename;
-    Span<const char> code;
+    const TokenizedFile *file;
     Span<const Token> tokens;
     Size pos;
     bool valid;
@@ -66,7 +65,7 @@ public:
     Parser(const Parser &) = delete;
     Parser &operator=(const Parser &) = delete;
 
-    bool Parse(const TokenSet &set, const char *filename);
+    bool Parse(const TokenizedFile &file);
     void AddFunction(const char *signature, NativeFunction *native);
 
     void Finish(Program *out_program);
@@ -114,10 +113,10 @@ private:
         RG_ASSERT(pos >= 0);
 
         if (valid_stmt) {
-            Size offset = (pos < tokens.len) ? tokens[pos].offset : code.len;
+            Size offset = (pos < tokens.len) ? tokens[pos].offset : file->code.len;
             int line = tokens[std::min(pos, tokens.len - 1)].line;
 
-            ReportDiagnostic(DiagnosticType::Error, code, filename, line, offset, fmt, args...);
+            ReportDiagnostic(DiagnosticType::Error, file->code, file->filename, line, offset, fmt, args...);
 
             valid = false;
             valid_stmt = false;
@@ -132,10 +131,10 @@ private:
     {
         if (show_hints) {
             if (pos >= 0) {
-                Size offset = (pos < tokens.len) ? tokens[pos].offset : code.len;
+                Size offset = (pos < tokens.len) ? tokens[pos].offset : file->code.len;
                 int line = tokens[std::min(pos, tokens.len - 1)].line;
 
-                ReportDiagnostic(DiagnosticType::ErrorHint, code, filename, line, offset, fmt, args...);
+                ReportDiagnostic(DiagnosticType::ErrorHint, file->code, file->filename, line, offset, fmt, args...);
             } else {
                 ReportDiagnostic(DiagnosticType::ErrorHint, fmt, args...);
             }
@@ -153,9 +152,9 @@ Compiler::~Compiler()
     delete parser;
 }
 
-bool Compiler::Compile(const TokenSet &set, const char *filename)
+bool Compiler::Compile(const TokenizedFile &file)
 {
-    return parser->Parse(set, filename);
+    return parser->Parse(file);
 }
 
 void Compiler::AddFunction(const char *signature, NativeFunction *native)
@@ -179,7 +178,7 @@ Parser::Parser()
     AddFunction("exit(Int)", nullptr);
 }
 
-bool Parser::Parse(const TokenSet &set, const char *filename)
+bool Parser::Parse(const TokenizedFile &file)
 {
     RG_DEFER_NC(err_guard, variables_len = variables.len,
                            functions_len = functions.len) {
@@ -191,9 +190,8 @@ bool Parser::Parse(const TokenSet &set, const char *filename)
         functions.RemoveFrom(functions_len);
     };
 
-    this->filename = filename;
-    this->code = set.code;
-    tokens = set.tokens;
+    this->file = &file;
+    tokens = file.tokens;
     pos = 0;
 
     valid = true;
@@ -206,7 +204,7 @@ bool Parser::Parse(const TokenSet &set, const char *filename)
     {
         SourceInfo src = {};
 
-        src.filename = DuplicateString(filename, &program.str_alloc).ptr;
+        src.filename = DuplicateString(file.filename, &program.str_alloc).ptr;
         src.first_idx = program.ir.len;
         src.line_idx = program.lines.len;
 
@@ -216,7 +214,7 @@ bool Parser::Parse(const TokenSet &set, const char *filename)
 
     // We want top-level order-independent functions
     functions_by_pos.Clear();
-    ParsePrototypes(set.funcs);
+    ParsePrototypes(file.funcs);
 
     // Do the actual parsing!
     ParseBlock(true);
@@ -1882,10 +1880,10 @@ void Parser::DestroyVariables(Size count)
     variables.RemoveLast(count);
 }
 
-bool Compile(const TokenSet &set, const char *filename, Program *out_program)
+bool Compile(const TokenizedFile &file, Program *out_program)
 {
     Compiler compiler;
-    if (!compiler.Compile(set, filename))
+    if (!compiler.Compile(file))
         return false;
 
     compiler.Finish(out_program);
