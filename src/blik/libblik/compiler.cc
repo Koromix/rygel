@@ -30,18 +30,18 @@ struct StackSlot {
 };
 
 class Parser {
-    bool valid = true;
-    bool valid_stmt;
-    bool show_hints;
-
+    // All these members are relevant to the current parse only, and get resetted each time
     const char *filename;
     Span<const char> code;
     Span<const Token> tokens;
     Size pos;
+    bool valid;
+    bool valid_stmt;
+    bool show_hints;
+    HashMap<Size, FunctionInfo *> functions_by_pos;
 
     BucketArray<FunctionInfo> functions;
     HashTable<const char *, FunctionInfo *> functions_map;
-    HashMap<Size, FunctionInfo *> functions_by_pos; // Clear for each Parse call
     BucketArray<VariableInfo> variables;
     HashTable<const char *, VariableInfo *> variables_map;
 
@@ -181,15 +181,26 @@ Parser::Parser()
 
 bool Parser::Parse(const TokenSet &set, const char *filename)
 {
-    RG_ASSERT(valid);
+    RG_DEFER_NC(err_guard, variables_len = variables.len,
+                           functions_len = functions.len) {
+        DestroyVariables(variables.len - variables_len);
+
+        for (Size i = functions_len; i < functions.len; i++) {
+            functions_map.Remove(functions[i].name);
+        }
+        functions.RemoveFrom(functions_len);
+    };
 
     this->filename = filename;
     this->code = set.code;
     tokens = set.tokens;
     pos = 0;
 
+    valid = true;
     valid_stmt = true;
     show_hints = false;
+
+    forward_calls.Clear();
 
     // Add to output files
     {
@@ -227,6 +238,9 @@ bool Parser::Parse(const TokenSet &set, const char *filename)
     }
     forward_calls.Clear();
 
+    if (valid) {
+        err_guard.Disable();
+    }
     return valid;
 }
 
