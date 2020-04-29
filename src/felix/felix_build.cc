@@ -58,7 +58,7 @@ static int RunTarget(const TargetInfo &target, const char *target_filename,
         CloseHandle(process_info.hThread);
     };
 
-    DWORD exit_code;
+    DWORD exit_code = 0;
     RG_ASSERT(WaitForSingleObject(process_info.hProcess, INFINITE) == WAIT_OBJECT_0);
     RG_ASSERT(GetExitCodeProcess(process_info.hProcess, &exit_code));
 
