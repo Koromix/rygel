@@ -530,15 +530,13 @@ static void Decode1(const Program &program, Size pc, Size bp, HeapArray<FrameInf
         frame.func = &*func;
     }
 
-    auto src = std::lower_bound(program.sources.begin(), program.sources.end(), pc,
-                                [](const SourceInfo &src, Size pc) { return src.first_idx < pc; });
-    src--;
-
-    auto line = std::lower_bound(program.lines.begin() + src->line_idx, program.lines.end(), pc);
-    line--;
+    const SourceInfo *src = std::lower_bound(program.sources.begin(), program.sources.end(), pc,
+                                             [](const SourceInfo &src, Size pc) { return src.lines[0].first_idx < pc; }) - 1;
+    const SourceInfo::LineInfo *line = std::lower_bound(src->lines.begin(), src->lines.end(), pc,
+                                                        [](const SourceInfo::LineInfo &line, Size pc) { return line.first_idx < pc; }) - 1;
 
     frame.filename = src->filename;
-    frame.line = (int32_t)(line - (program.lines.ptr + src->line_idx) + 1);
+    frame.line = line->line;
 
     out_frames->Append(frame);
 }

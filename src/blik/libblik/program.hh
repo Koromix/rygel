@@ -36,9 +36,13 @@ struct Instruction {
 };
 
 struct SourceInfo {
+    struct LineInfo {
+        int32_t line;
+        Size first_idx;
+    };
+
     const char *filename;
-    Size first_idx;
-    Size line_idx;
+    HeapArray<LineInfo> lines;
 };
 
 enum class Type {
@@ -123,9 +127,7 @@ struct FunctionInfo {
 
 struct Program {
     HeapArray<Instruction> ir;
-
     HeapArray<SourceInfo> sources;
-    HeapArray<Size> lines;
 
     BucketArray<FunctionInfo> functions;
     HashTable<const char *, const FunctionInfo *> functions_map;
