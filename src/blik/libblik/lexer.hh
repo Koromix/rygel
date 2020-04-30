@@ -31,7 +31,7 @@ struct Token {
 };
 
 struct TokenizedFile {
-    const char *filename;
+    const char *filename = nullptr;
     Span<const char> code;
 
     HeapArray<Token> tokens;
@@ -42,6 +42,7 @@ struct TokenizedFile {
     BlockAllocator str_alloc;
 };
 
-bool Tokenize(Span<const char> code, const char *filename, TokenizedFile *out_set);
+// TokenizedFile keeps a reference to code, you must keep it around!
+bool Tokenize(Span<const char> code, const char *filename, TokenizedFile *out_file);
 
 }
