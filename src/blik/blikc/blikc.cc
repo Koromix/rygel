@@ -64,7 +64,7 @@ Options:
         return 1;
 
     Program program;
-    if (!Compile(file, &program))
+    if (!Parse(file, &program))
         return 1;
 
     int exit_code;

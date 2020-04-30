@@ -7,5 +7,5 @@
 #include "program.hh"
 #include "error.hh"
 #include "lexer.hh"
-#include "compiler.hh"
+#include "parser.hh"
 #include "vm.hh"

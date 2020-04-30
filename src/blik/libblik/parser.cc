@@ -3,9 +3,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../core/libcc/libcc.hh"
-#include "compiler.hh"
 #include "error.hh"
 #include "lexer.hh"
+#include "parser.hh"
 #include "program.hh"
 
 namespace RG {
@@ -29,7 +29,7 @@ struct StackSlot {
     const VariableInfo *var;
 };
 
-class Parser {
+class ParserImpl {
     // All these members are relevant to the current parse only, and get resetted each time
     const TokenizedFile *file;
     Span<const Token> tokens;
@@ -57,18 +57,17 @@ class Parser {
 
     HeapArray<ForwardCall> forward_calls;
 
-    Program program;
+    Program *out_program;
 
 public:
-    Parser();
+    ParserImpl(Program *out_program);
 
-    Parser(const Parser &) = delete;
-    Parser &operator=(const Parser &) = delete;
+    ParserImpl(const ParserImpl &) = delete;
+    ParserImpl &operator=(const ParserImpl &) = delete;
 
     bool Parse(const TokenizedFile &file);
-    void AddFunction(const char *signature, NativeFunction *native);
 
-    void Finish(Program *out_program);
+    void AddFunction(const char *signature, NativeFunction *native);
 
 private:
     void ParsePrototypes(Span<const Size> funcs);
@@ -141,34 +140,32 @@ private:
     }
 };
 
-Compiler::Compiler()
-    : parser(new Parser)
+Parser::Parser(Program *out_program)
 {
+    impl = new ParserImpl(out_program);
 }
 
-Compiler::~Compiler()
+Parser::~Parser()
 {
-    delete parser;
+    delete impl;
 }
 
-bool Compiler::Compile(const TokenizedFile &file)
+bool Parser::Parse(const TokenizedFile &file)
 {
-    return parser->Parse(file);
+    return impl->Parse(file);
 }
 
-void Compiler::AddFunction(const char *signature, NativeFunction *native)
+void Parser::AddFunction(const char *signature, NativeFunction *native)
 {
     RG_ASSERT(native);
-    parser->AddFunction(signature, native);
+    impl->AddFunction(signature, native);
 }
 
-void Compiler::Finish(Program *out_program)
+ParserImpl::ParserImpl(Program *out_program)
+    : out_program(out_program)
 {
-    return parser->Finish(out_program);
-}
+    RG_ASSERT(out_program);
 
-Parser::Parser()
-{
     // Intrinsics
     AddFunction("print(...)", nullptr);
     AddFunction("printLn(...)", nullptr);
@@ -177,10 +174,17 @@ Parser::Parser()
     AddFunction("exit(Int)", nullptr);
 }
 
-bool Parser::Parse(const TokenizedFile &file)
+bool ParserImpl::Parse(const TokenizedFile &file)
 {
-    RG_DEFER_NC(err_guard, variables_len = variables.len,
+    RG_DEFER_NC(err_guard, ir_len = out_program->ir.len,
+                           sources_len = out_program->sources.len,
+                           lines_len = out_program->lines.len,
+                           variables_len = variables.len,
                            functions_len = functions.len) {
+        out_program->ir.RemoveFrom(ir_len);
+        out_program->sources.RemoveFrom(sources_len);
+        out_program->lines.RemoveFrom(lines_len);
+
         DestroyVariables(variables.len - variables_len);
 
         for (Size i = functions_len; i < functions.len; i++) {
@@ -203,12 +207,12 @@ bool Parser::Parse(const TokenizedFile &file)
     {
         SourceInfo src = {};
 
-        src.filename = DuplicateString(file.filename, &program.str_alloc).ptr;
-        src.first_idx = program.ir.len;
-        src.line_idx = program.lines.len;
+        src.filename = DuplicateString(file.filename, &out_program->str_alloc).ptr;
+        src.first_idx = out_program->ir.len;
+        src.line_idx = out_program->lines.len;
 
-        program.sources.Append(src);
-        program.lines.Append(program.ir.len);
+        out_program->sources.Append(src);
+        out_program->lines.Append(out_program->ir.len);
     }
 
     // We want top-level order-independent functions
@@ -231,20 +235,34 @@ bool Parser::Parse(const TokenizedFile &file)
 
     // Fix up foward calls
     for (const ForwardCall &call: forward_calls) {
-        program.ir[call.offset].u.i = call.func->inst_idx;
+        out_program->ir[call.offset].u.i = call.func->inst_idx;
     }
     forward_calls.Clear();
 
+    out_program->ir.Append({Opcode::PushInt, {.i = 0}});
+    out_program->ir.Append({Opcode::Exit, {.b = true}});
+
+    // We're done, add global functions and variables to the program
     if (valid) {
+        for (const FunctionInfo &func: functions) {
+            const FunctionInfo *func2 = out_program->functions.Append(func);
+            out_program->functions_map.Append(func2);
+        }
+        for (const VariableInfo &var: variables) {
+            const VariableInfo *global = out_program->globals.Append(var);
+            out_program->globals_map.Append(global);
+        }
+
         err_guard.Disable();
     }
+
     return valid;
 }
 
 // This is not exposed to user scripts, and the validation of signature is very light,
 // with a few debug-only asserts. Bad function names (even invalid UTF-8 sequences)
 // will go right through. Don't pass in garbage!
-void Parser::AddFunction(const char *signature, NativeFunction *native)
+void ParserImpl::AddFunction(const char *signature, NativeFunction *native)
 {
     FunctionInfo *func = functions.AppendDefault();
 
@@ -255,10 +273,10 @@ void Parser::AddFunction(const char *signature, NativeFunction *native)
         Size len = strcspn(ptr, "()");
         Span<const char> func_name = TrimStr(MakeSpan(ptr, len));
 
-        func->name = DuplicateString(func_name, &program.str_alloc).ptr;
+        func->name = DuplicateString(func_name, &out_program->str_alloc).ptr;
         ptr += len;
     }
-    func->signature = DuplicateString(signature, &program.str_alloc).ptr;
+    func->signature = DuplicateString(signature, &out_program->str_alloc).ptr;
 
     if (native) {
         func->mode = FunctionInfo::Mode::Native;
@@ -335,13 +353,13 @@ void Parser::AddFunction(const char *signature, NativeFunction *native)
     }
 }
 
-void Parser::ParsePrototypes(Span<const Size> funcs)
+void ParserImpl::ParsePrototypes(Span<const Size> funcs)
 {
     RG_ASSERT(!functions_by_pos.table.count);
 
-    RG_DEFER_C(lines_len = program.lines.len,
+    RG_DEFER_C(lines_len = out_program->lines.len,
                prev_offset = pos) {
-        program.lines.RemoveFrom(lines_len);
+        out_program->lines.RemoveFrom(lines_len);
         pos = prev_offset;
         valid_stmt = true;
     };
@@ -406,7 +424,7 @@ void Parser::ParsePrototypes(Span<const Size> funcs)
 
         // Build signature (with parameter and return types)
         {
-            HeapArray<char> buf(&program.str_alloc);
+            HeapArray<char> buf(&out_program->str_alloc);
 
             Fmt(&buf, "%1(", proto->name);
             for (Size i = 0; i < proto->params.len; i++) {
@@ -429,7 +447,7 @@ void Parser::ParsePrototypes(Span<const Size> funcs)
     }
 }
 
-bool Parser::ParseBlock(bool keep_variables)
+bool ParserImpl::ParseBlock(bool keep_variables)
 {
     depth++;
 
@@ -449,7 +467,7 @@ bool Parser::ParseBlock(bool keep_variables)
     while (pos < tokens.len) {
         switch (tokens[pos].kind) {
             case TokenKind::EndOfLine: {
-                program.lines.Append(program.ir.len);
+                out_program->lines.Append(out_program->ir.len);
                 pos++;
             } break;
 
@@ -466,13 +484,13 @@ bool Parser::ParseBlock(bool keep_variables)
             } break;
 
             case TokenKind::Func: {
-                Size jump_idx = program.ir.len;
-                program.ir.Append({Opcode::Jump});
+                Size jump_idx = out_program->ir.len;
+                out_program->ir.Append({Opcode::Jump});
 
                 ParseFunction();
                 valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
 
-                program.ir[jump_idx].u.i = program.ir.len - jump_idx;
+                out_program->ir[jump_idx].u.i = out_program->ir.len - jump_idx;
             } break;
 
             case TokenKind::Return: {
@@ -517,7 +535,7 @@ bool Parser::ParseBlock(bool keep_variables)
     return has_return;
 }
 
-void Parser::ParseFunction()
+void ParserImpl::ParseFunction()
 {
     Size func_pos = ++pos;
 
@@ -614,7 +632,7 @@ void Parser::ParseFunction()
         }
     }
 
-    func->inst_idx = program.ir.len;
+    func->inst_idx = out_program->ir.len;
     var_offset = 0;
 
     // Function body
@@ -636,7 +654,7 @@ void Parser::ParseFunction()
     }
 }
 
-void Parser::ParseReturn()
+void ParserImpl::ParseReturn()
 {
     Size return_pos = ++pos;
 
@@ -661,7 +679,7 @@ void Parser::ParseReturn()
     EmitReturn();
 }
 
-void Parser::ParseLet()
+void ParserImpl::ParseLet()
 {
     Size var_pos = ++pos;
 
@@ -705,17 +723,17 @@ void Parser::ParseLet()
         } else {
             switch (var->type) {
                 case Type::Null: {} break;
-                case Type::Bool: { program.ir.Append({Opcode::PushBool, {.b = false}}); } break;
-                case Type::Int: { program.ir.Append({Opcode::PushInt, {.i = 0}}); } break;
-                case Type::Float: { program.ir.Append({Opcode::PushFloat, {.d = 0.0}}); } break;
-                case Type::String: { program.ir.Append({Opcode::PushString, {.str = ""}}); } break;
+                case Type::Bool: { out_program->ir.Append({Opcode::PushBool, {.b = false}}); } break;
+                case Type::Int: { out_program->ir.Append({Opcode::PushInt, {.i = 0}}); } break;
+                case Type::Float: { out_program->ir.Append({Opcode::PushFloat, {.d = 0.0}}); } break;
+                case Type::String: { out_program->ir.Append({Opcode::PushString, {.str = ""}}); } break;
             }
         }
     }
 
     var->global = !current_func;
     var->offset = var_offset;
-    var->defined_idx = program.ir.len;
+    var->defined_idx = out_program->ir.len;
 
     // Null values don't actually exist
     var_offset += (var->type != Type::Null);
@@ -725,21 +743,21 @@ void Parser::ParseLet()
     var->poisoned = !valid_stmt;
 }
 
-bool Parser::ParseIf()
+bool ParserImpl::ParseIf()
 {
     pos++;
 
     ParseCondition();
 
-    Size branch_idx = program.ir.len;
-    program.ir.Append({Opcode::BranchIfFalse});
+    Size branch_idx = out_program->ir.len;
+    out_program->ir.Append({Opcode::BranchIfFalse});
 
     bool has_return = true;
     bool has_else = false;
 
     if (PeekToken(TokenKind::Do)) {
         has_return &= ParseDo();
-        program.ir[branch_idx].u.i = program.ir.len - branch_idx;
+        out_program->ir[branch_idx].u.i = out_program->ir.len - branch_idx;
     } else {
         valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
         has_return &= ParseBlock(false);
@@ -747,23 +765,23 @@ bool Parser::ParseIf()
         if (MatchToken(TokenKind::Else)) {
             HeapArray<Size> jumps;
 
-            jumps.Append(program.ir.len);
-            program.ir.Append({Opcode::Jump});
+            jumps.Append(out_program->ir.len);
+            out_program->ir.Append({Opcode::Jump});
 
             do {
-                program.ir[branch_idx].u.i = program.ir.len - branch_idx;
+                out_program->ir[branch_idx].u.i = out_program->ir.len - branch_idx;
 
                 if (MatchToken(TokenKind::If)) {
                     ParseCondition();
                     valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
 
-                    branch_idx = program.ir.len;
-                    program.ir.Append({Opcode::BranchIfFalse});
+                    branch_idx = out_program->ir.len;
+                    out_program->ir.Append({Opcode::BranchIfFalse});
 
                     has_return &= ParseBlock(false);
 
-                    jumps.Append(program.ir.len);
-                    program.ir.Append({Opcode::Jump});
+                    jumps.Append(out_program->ir.len);
+                    out_program->ir.Append({Opcode::Jump});
                 } else {
                     valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
 
@@ -775,10 +793,10 @@ bool Parser::ParseIf()
             } while (MatchToken(TokenKind::Else));
 
             for (Size jump_idx: jumps) {
-                program.ir[jump_idx].u.i = program.ir.len - jump_idx;
+                out_program->ir[jump_idx].u.i = out_program->ir.len - jump_idx;
             }
         } else {
-            program.ir[branch_idx].u.i = program.ir.len - branch_idx;
+            out_program->ir[branch_idx].u.i = out_program->ir.len - branch_idx;
         }
 
         ConsumeToken(TokenKind::End);
@@ -787,11 +805,11 @@ bool Parser::ParseIf()
     return has_return && has_else;
 }
 
-void Parser::ParseWhile()
+void ParserImpl::ParseWhile()
 {
     pos++;
 
-    Size start_idx = program.ir.len;
+    Size start_idx = out_program->ir.len;
 
     // Parse expression
     Size start_fix_forward = forward_calls.len;
@@ -803,11 +821,11 @@ void Parser::ParseWhile()
     // to avoid an extra jump after each iteration.
 
     HeapArray<Instruction> expr;
-    expr.Append(program.ir.Take(start_idx, program.ir.len - start_idx));
-    program.ir.len -= expr.len;
+    expr.Append(out_program->ir.Take(start_idx, out_program->ir.len - start_idx));
+    out_program->ir.len -= expr.len;
 
-    Size jump_idx = program.ir.len;
-    program.ir.Append({Opcode::Jump});
+    Size jump_idx = out_program->ir.len;
+    out_program->ir.Append({Opcode::Jump});
 
     // Break and continue need to apply to while loop blocks
     Size first_break_idx = loop_breaks.len;
@@ -830,28 +848,28 @@ void Parser::ParseWhile()
 
     // We need to fix forward calls inside test expression because we move the instructions
     for (Size i = start_fix_forward; i < end_fix_forward; i++) {
-        forward_calls[i].offset += program.ir.len - start_idx;
+        forward_calls[i].offset += out_program->ir.len - start_idx;
     }
 
     // Fix up continue jumps
     for (Size i = first_continue_idx; i < loop_continues.len; i++) {
         Size jump_idx = loop_continues[i];
-        program.ir[jump_idx].u.i = program.ir.len - jump_idx;
+        out_program->ir[jump_idx].u.i = out_program->ir.len - jump_idx;
     }
 
     // Finally write down expression IR
-    program.ir[jump_idx].u.i = program.ir.len - jump_idx;
-    program.ir.Append(expr);
-    program.ir.Append({Opcode::BranchIfTrue, {.i = jump_idx - program.ir.len + 1}});
+    out_program->ir[jump_idx].u.i = out_program->ir.len - jump_idx;
+    out_program->ir.Append(expr);
+    out_program->ir.Append({Opcode::BranchIfTrue, {.i = jump_idx - out_program->ir.len + 1}});
 
     // Fix up break jumps
     for (Size i = first_break_idx; i < loop_breaks.len; i++) {
         Size jump_idx = loop_breaks[i];
-        program.ir[jump_idx].u.i = program.ir.len - jump_idx;
+        out_program->ir[jump_idx].u.i = out_program->ir.len - jump_idx;
     }
 }
 
-void Parser::ParseFor()
+void ParserImpl::ParseFor()
 {
     Size for_pos = ++pos;
 
@@ -907,14 +925,14 @@ void Parser::ParseFor()
     var_offset += 3;
 
     // Put iterator value on the stack
-    program.ir.Append({Opcode::LoadInt, {.i = it->offset - 2}});
+    out_program->ir.Append({Opcode::LoadInt, {.i = it->offset - 2}});
 
-    Size body_idx = program.ir.len;
+    Size body_idx = out_program->ir.len;
 
-    program.ir.Append({Opcode::LoadInt, {.i = it->offset}});
-    program.ir.Append({Opcode::LoadInt, {.i = it->offset - 1}});
-    program.ir.Append({inclusive ? Opcode::LessOrEqualInt : Opcode::LessThanInt});
-    program.ir.Append({Opcode::BranchIfFalse, {.i = body_idx - program.ir.len}});
+    out_program->ir.Append({Opcode::LoadInt, {.i = it->offset}});
+    out_program->ir.Append({Opcode::LoadInt, {.i = it->offset - 1}});
+    out_program->ir.Append({inclusive ? Opcode::LessOrEqualInt : Opcode::LessThanInt});
+    out_program->ir.Append({Opcode::BranchIfFalse});
 
     // Break and continue need to apply to for loop blocks
     Size first_break_idx = loop_breaks.len;
@@ -938,18 +956,18 @@ void Parser::ParseFor()
     // Fix up continue jumps
     for (Size i = first_continue_idx; i < loop_continues.len; i++) {
         Size jump_idx = loop_continues[i];
-        program.ir[jump_idx].u.i = program.ir.len - jump_idx;
+        out_program->ir[jump_idx].u.i = out_program->ir.len - jump_idx;
     }
 
-    program.ir.Append({Opcode::PushInt, {.i = 1}});
-    program.ir.Append({Opcode::AddInt});
-    program.ir.Append({Opcode::Jump, {.i = body_idx - program.ir.len}});
-    program.ir[body_idx + 3].u.i = program.ir.len - (body_idx + 3);
+    out_program->ir.Append({Opcode::PushInt, {.i = 1}});
+    out_program->ir.Append({Opcode::AddInt});
+    out_program->ir.Append({Opcode::Jump, {.i = body_idx - out_program->ir.len}});
+    out_program->ir[body_idx + 3].u.i = out_program->ir.len - (body_idx + 3);
 
     // Fix up break jumps
     for (Size i = first_break_idx; i < loop_breaks.len; i++) {
         Size jump_idx = loop_breaks[i];
-        program.ir[jump_idx].u.i = program.ir.len - jump_idx;
+        out_program->ir[jump_idx].u.i = out_program->ir.len - jump_idx;
     }
 
     // Destroy iterator and range values
@@ -958,7 +976,7 @@ void Parser::ParseFor()
     var_offset -= 3;
 }
 
-void Parser::ParseBreak()
+void ParserImpl::ParseBreak()
 {
     Size break_pos = pos++;
 
@@ -969,11 +987,11 @@ void Parser::ParseBreak()
 
     EmitPop(var_offset - loop_var_offset);
 
-    loop_breaks.Append(program.ir.len);
-    program.ir.Append({Opcode::Jump});
+    loop_breaks.Append(out_program->ir.len);
+    out_program->ir.Append({Opcode::Jump});
 }
 
-void Parser::ParseContinue()
+void ParserImpl::ParseContinue()
 {
     Size continue_pos = pos++;
 
@@ -984,11 +1002,11 @@ void Parser::ParseContinue()
 
     EmitPop(var_offset - loop_var_offset);
 
-    loop_continues.Append(program.ir.len);
-    program.ir.Append({Opcode::Jump});
+    loop_continues.Append(out_program->ir.len);
+    out_program->ir.Append({Opcode::Jump});
 }
 
-bool Parser::ParseCondition()
+bool ParserImpl::ParseCondition()
 {
     Size cond_pos = pos;
 
@@ -1001,7 +1019,7 @@ bool Parser::ParseCondition()
     return true;
 }
 
-bool Parser::ParseDo()
+bool ParserImpl::ParseDo()
 {
     pos++;
 
@@ -1060,7 +1078,7 @@ static int GetOperatorPrecedence(TokenKind kind)
     }
 }
 
-Type Parser::ParseExpression(bool keep_result)
+Type ParserImpl::ParseExpression(bool keep_result)
 {
     Size start_values_len = stack.len;
     RG_DEFER { stack.RemoveFrom(start_values_len); };
@@ -1108,19 +1126,19 @@ Type Parser::ParseExpression(bool keep_result)
             switch (tok.kind) {
                 case TokenKind::Null: { stack.Append({Type::Null}); } break;
                 case TokenKind::Bool: {
-                    program.ir.Append({Opcode::PushBool, {.b = tok.u.b}});
+                    out_program->ir.Append({Opcode::PushBool, {.b = tok.u.b}});
                     stack.Append({Type::Bool});
                 } break;
                 case TokenKind::Integer: {
-                    program.ir.Append({Opcode::PushInt, {.i = tok.u.i}});
+                    out_program->ir.Append({Opcode::PushInt, {.i = tok.u.i}});
                     stack.Append({Type::Int});
                 } break;
                 case TokenKind::Float: {
-                    program.ir.Append({Opcode::PushFloat, {.d = tok.u.d}});
+                    out_program->ir.Append({Opcode::PushFloat, {.d = tok.u.d}});
                     stack.Append({Type::Float});
                 } break;
                 case TokenKind::String: {
-                    program.ir.Append({Opcode::PushString, {.str = tok.u.str}});
+                    out_program->ir.Append({Opcode::PushString, {.str = tok.u.str}});
                     stack.Append({Type::String});
                 } break;
 
@@ -1162,7 +1180,7 @@ Type Parser::ParseExpression(bool keep_result)
 
                     goto error;
                 } else if (!expect_op && tok.kind == TokenKind::EndOfLine) {
-                    program.lines.Append(program.ir.len);
+                    out_program->lines.Append(out_program->ir.len);
                     continue;
                 } else if (parentheses || !expect_op) {
                     goto unexpected;
@@ -1204,13 +1222,13 @@ Type Parser::ParseExpression(bool keep_result)
                 // Remove useless load instruction. We don't remove the variable from
                 // stack slots,  because it will be needed when we emit the store instruction
                 // and will be removed then.
-                program.ir.RemoveLast(1);
+                out_program->ir.RemoveLast(1);
             } else if (tok.kind == TokenKind::AndAnd) {
-                op.branch_idx = program.ir.len;
-                program.ir.Append({Opcode::SkipIfFalse});
+                op.branch_idx = out_program->ir.len;
+                out_program->ir.Append({Opcode::SkipIfFalse});
             } else if (tok.kind == TokenKind::OrOr) {
-                op.branch_idx = program.ir.len;
-                program.ir.Append({Opcode::SkipIfTrue});
+                op.branch_idx = out_program->ir.len;
+                out_program->ir.Append({Opcode::SkipIfTrue});
             }
 
             if (RG_UNLIKELY(!operators.Available())) {
@@ -1235,13 +1253,13 @@ Type Parser::ParseExpression(bool keep_result)
 
     if (RG_UNLIKELY(!valid_stmt))
         return Type::Null;
-
     RG_ASSERT(stack.len == start_values_len + 1);
+
     if (keep_result) {
         return stack[stack.len - 1].type;
     } else if (stack[stack.len - 1].type != Type::Null) {
-        if (RG_LIKELY(program.ir.len >= 1)) {
-            switch (program.ir[program.ir.len - 1].code) {
+        if (RG_LIKELY(out_program->ir.len >= 1)) {
+            switch (out_program->ir[out_program->ir.len - 1].code) {
                 case Opcode::LoadBool:
                 case Opcode::LoadInt:
                 case Opcode::LoadFloat:
@@ -1249,12 +1267,12 @@ Type Parser::ParseExpression(bool keep_result)
                 case Opcode::LoadGlobalBool:
                 case Opcode::LoadGlobalInt:
                 case Opcode::LoadGlobalFloat:
-                case Opcode::LoadGlobalString: { program.ir.len--; } break;
+                case Opcode::LoadGlobalString: { out_program->ir.len--; } break;
 
-                case Opcode::CopyBool: { program.ir[program.ir.len - 1].code = Opcode::StoreBool; } break;
-                case Opcode::CopyInt: { program.ir[program.ir.len - 1].code = Opcode::StoreInt; } break;
-                case Opcode::CopyFloat: { program.ir[program.ir.len - 1].code = Opcode::StoreFloat; } break;
-                case Opcode::CopyString: { program.ir[program.ir.len - 1].code = Opcode::StoreString; } break;
+                case Opcode::CopyBool: { out_program->ir[out_program->ir.len - 1].code = Opcode::StoreBool; } break;
+                case Opcode::CopyInt: { out_program->ir[out_program->ir.len - 1].code = Opcode::StoreInt; } break;
+                case Opcode::CopyFloat: { out_program->ir[out_program->ir.len - 1].code = Opcode::StoreFloat; } break;
+                case Opcode::CopyString: { out_program->ir[out_program->ir.len - 1].code = Opcode::StoreString; } break;
 
                 default: { EmitPop(1); } break;
             }
@@ -1282,7 +1300,7 @@ error:
     return Type::Null;
 }
 
-void Parser::ProduceOperator(const PendingOperator &op)
+void ParserImpl::ProduceOperator(const PendingOperator &op)
 {
     bool success = false;
 
@@ -1361,29 +1379,29 @@ void Parser::ProduceOperator(const PendingOperator &op)
             switch (var->type) {
                 case Type::Null: {} break;
                 case Type::Bool: {
-                    program.ir.Append({Opcode::StoreGlobalBool, {.i = var->offset}});
-                    program.ir.Append({Opcode::LoadGlobalBool, {.i = var->offset}});
+                    out_program->ir.Append({Opcode::StoreGlobalBool, {.i = var->offset}});
+                    out_program->ir.Append({Opcode::LoadGlobalBool, {.i = var->offset}});
                 } break;
                 case Type::Int: {
-                    program.ir.Append({Opcode::StoreGlobalInt, {.i = var->offset}});
-                    program.ir.Append({Opcode::LoadGlobalInt, {.i = var->offset}});
+                    out_program->ir.Append({Opcode::StoreGlobalInt, {.i = var->offset}});
+                    out_program->ir.Append({Opcode::LoadGlobalInt, {.i = var->offset}});
                 } break;
                 case Type::Float: {
-                    program.ir.Append({Opcode::StoreGlobalFloat, {.i = var->offset}});
-                    program.ir.Append({Opcode::LoadGlobalFloat, {.i = var->offset}});
+                    out_program->ir.Append({Opcode::StoreGlobalFloat, {.i = var->offset}});
+                    out_program->ir.Append({Opcode::LoadGlobalFloat, {.i = var->offset}});
                 } break;
                 case Type::String: {
-                    program.ir.Append({Opcode::StoreGlobalString, {.i = var->offset}});
-                    program.ir.Append({Opcode::LoadGlobalString, {.i = var->offset}});
+                    out_program->ir.Append({Opcode::StoreGlobalString, {.i = var->offset}});
+                    out_program->ir.Append({Opcode::LoadGlobalString, {.i = var->offset}});
                 } break;
             }
         } else {
             switch (var->type) {
                 case Type::Null: {} break;
-                case Type::Bool: { program.ir.Append({Opcode::CopyBool, {.i = var->offset}}); } break;
-                case Type::Int: { program.ir.Append({Opcode::CopyInt, {.i = var->offset}}); } break;
-                case Type::Float: { program.ir.Append({Opcode::CopyFloat, {.i = var->offset}}); } break;
-                case Type::String: { program.ir.Append({Opcode::CopyString, {.i = var->offset}}); } break;
+                case Type::Bool: { out_program->ir.Append({Opcode::CopyBool, {.i = var->offset}}); } break;
+                case Type::Int: { out_program->ir.Append({Opcode::CopyInt, {.i = var->offset}}); } break;
+                case Type::Float: { out_program->ir.Append({Opcode::CopyFloat, {.i = var->offset}}); } break;
+                case Type::String: { out_program->ir.Append({Opcode::CopyString, {.i = var->offset}}); } break;
             }
         }
     } else { // Other operators
@@ -1399,7 +1417,7 @@ void Parser::ProduceOperator(const PendingOperator &op)
             } break;
             case TokenKind::Minus: {
                 if (op.unary) {
-                    Instruction *inst = &program.ir[program.ir.len - 1];
+                    Instruction *inst = &out_program->ir[out_program->ir.len - 1];
 
                     switch (inst->code) {
                         case Opcode::PushInt: {
@@ -1416,7 +1434,7 @@ void Parser::ProduceOperator(const PendingOperator &op)
                         } break;
                         case Opcode::NegateInt:
                         case Opcode::NegateFloat: {
-                            program.ir.len--;
+                            out_program->ir.len--;
                             success = true;
                         } break;
 
@@ -1498,14 +1516,14 @@ void Parser::ProduceOperator(const PendingOperator &op)
             case TokenKind::AndAnd: {
                 success = EmitOperator2(Type::Bool, Opcode::AndBool, Type::Bool);
 
-                RG_ASSERT(op.branch_idx && program.ir[op.branch_idx].code == Opcode::SkipIfFalse);
-                program.ir[op.branch_idx].u.i = program.ir.len - op.branch_idx;
+                RG_ASSERT(op.branch_idx && out_program->ir[op.branch_idx].code == Opcode::SkipIfFalse);
+                out_program->ir[op.branch_idx].u.i = out_program->ir.len - op.branch_idx;
             } break;
             case TokenKind::OrOr: {
                 success = EmitOperator2(Type::Bool, Opcode::OrBool, Type::Bool);
 
-                RG_ASSERT(op.branch_idx && program.ir[op.branch_idx].code == Opcode::SkipIfTrue);
-                program.ir[op.branch_idx].u.i = program.ir.len - op.branch_idx;
+                RG_ASSERT(op.branch_idx && out_program->ir[op.branch_idx].code == Opcode::SkipIfTrue);
+                out_program->ir[op.branch_idx].u.i = out_program->ir.len - op.branch_idx;
             } break;
 
             default: { RG_UNREACHABLE(); } break;
@@ -1527,12 +1545,12 @@ void Parser::ProduceOperator(const PendingOperator &op)
     }
 }
 
-bool Parser::EmitOperator1(Type in_type, Opcode code, Type out_type)
+bool ParserImpl::EmitOperator1(Type in_type, Opcode code, Type out_type)
 {
     Type type = stack[stack.len - 1].type;
 
     if (type == in_type) {
-        program.ir.Append({code});
+        out_program->ir.Append({code});
         stack[stack.len - 1] = {out_type};
 
         return true;
@@ -1541,13 +1559,13 @@ bool Parser::EmitOperator1(Type in_type, Opcode code, Type out_type)
     }
 }
 
-bool Parser::EmitOperator2(Type in_type, Opcode code, Type out_type)
+bool ParserImpl::EmitOperator2(Type in_type, Opcode code, Type out_type)
 {
     Type type1 = stack[stack.len - 2].type;
     Type type2 = stack[stack.len - 1].type;
 
     if (type1 == in_type && type2 == in_type) {
-        program.ir.Append({code});
+        out_program->ir.Append({code});
         stack[--stack.len - 1] = {out_type};
 
         return true;
@@ -1556,7 +1574,7 @@ bool Parser::EmitOperator2(Type in_type, Opcode code, Type out_type)
     }
 }
 
-void Parser::EmitLoad(const VariableInfo &var)
+void ParserImpl::EmitLoad(const VariableInfo &var)
 {
     if (var.global && current_func) {
         if (RG_UNLIKELY(current_func->earliest_call_idx < var.defined_idx)) {
@@ -1568,18 +1586,18 @@ void Parser::EmitLoad(const VariableInfo &var)
 
         switch (var.type) {
             case Type::Null: {} break;
-            case Type::Bool: { program.ir.Append({Opcode::LoadGlobalBool, {.i = var.offset}}); } break;
-            case Type::Int: { program.ir.Append({Opcode::LoadGlobalInt, {.i = var.offset}}); } break;
-            case Type::Float: { program.ir.Append({Opcode::LoadGlobalFloat, {.i = var.offset}});} break;
-            case Type::String: { program.ir.Append({Opcode::LoadGlobalString, {.i = var.offset}}); } break;
+            case Type::Bool: { out_program->ir.Append({Opcode::LoadGlobalBool, {.i = var.offset}}); } break;
+            case Type::Int: { out_program->ir.Append({Opcode::LoadGlobalInt, {.i = var.offset}}); } break;
+            case Type::Float: { out_program->ir.Append({Opcode::LoadGlobalFloat, {.i = var.offset}});} break;
+            case Type::String: { out_program->ir.Append({Opcode::LoadGlobalString, {.i = var.offset}}); } break;
         }
     } else {
         switch (var.type) {
             case Type::Null: {} break;
-            case Type::Bool: { program.ir.Append({Opcode::LoadBool, {.i = var.offset}}); } break;
-            case Type::Int: { program.ir.Append({Opcode::LoadInt, {.i = var.offset}}); } break;
-            case Type::Float: { program.ir.Append({Opcode::LoadFloat, {.i = var.offset}});} break;
-            case Type::String: { program.ir.Append({Opcode::LoadString, {.i = var.offset}}); } break;
+            case Type::Bool: { out_program->ir.Append({Opcode::LoadBool, {.i = var.offset}}); } break;
+            case Type::Int: { out_program->ir.Append({Opcode::LoadInt, {.i = var.offset}}); } break;
+            case Type::Float: { out_program->ir.Append({Opcode::LoadFloat, {.i = var.offset}});} break;
+            case Type::String: { out_program->ir.Append({Opcode::LoadString, {.i = var.offset}}); } break;
         }
     }
 
@@ -1587,7 +1605,7 @@ void Parser::EmitLoad(const VariableInfo &var)
 }
 
 // Don't try to call from outside ParseExpression()!
-bool Parser::ParseCall(const char *name)
+bool ParserImpl::ParseCall(const char *name)
 {
     // We only need to store types, but TestOverload() wants FunctionInfo::Parameter.
     LocalArray<FunctionInfo::Parameter, RG_LEN(FunctionInfo::params.data)> args;
@@ -1639,19 +1657,18 @@ bool Parser::ParseCall(const char *name)
     switch (func->mode) {
         case FunctionInfo::Mode::Blik: {
           if (func->inst_idx < 0) {
-                forward_calls.Append({program.ir.len, func});
+                forward_calls.Append({out_program->ir.len, func});
 
                 if (current_func && current_func != func) {
                     func->earliest_call_pos = std::min(func->earliest_call_pos, current_func->earliest_call_pos);
                     func->earliest_call_idx = std::min(func->earliest_call_idx, current_func->earliest_call_idx);
                 } else {
                     func->earliest_call_pos = std::min(func->earliest_call_pos, call_pos);
-                    func->earliest_call_idx = std::min(func->earliest_call_idx, program.ir.len);
+                    func->earliest_call_idx = std::min(func->earliest_call_idx, out_program->ir.len);
                 }
             }
 
-            program.ir.Append({Opcode::Call, {.i = func->inst_idx}});
-            stack.Append({func->ret_type});
+            out_program->ir.Append({Opcode::Call, {.i = func->inst_idx}});
         } break;
 
         case FunctionInfo::Mode::Intrinsic: {
@@ -1667,15 +1684,15 @@ bool Parser::ParseCall(const char *name)
             payload |= (uint64_t)func->ret_pop << 57;
             payload |= (uint64_t)func->native & 0x1FFFFFFFFFFFFFFull;
 
-            program.ir.Append({Opcode::CallNative, {.payload = payload}});
-            stack.Append({func->ret_type});
+            out_program->ir.Append({Opcode::CallNative, {.payload = payload}});
         } break;
     }
+    stack.Append({func->ret_type});
 
     return true;
 }
 
-void Parser::EmitIntrinsic(const char *name, Span<const FunctionInfo::Parameter> args)
+void ParserImpl::EmitIntrinsic(const char *name, Span<const FunctionInfo::Parameter> args)
 {
     if (TestStr(name, "print") || TestStr(name, "printLn")) {
         RG_STATIC_ASSERT(RG_LEN(FunctionInfo::params.data) < 19);
@@ -1686,7 +1703,7 @@ void Parser::EmitIntrinsic(const char *name, Span<const FunctionInfo::Parameter>
         int offset = 0;
 
         if (println) {
-            program.ir.Append({Opcode::PushString, {.str = "\n"}});
+            out_program->ir.Append({Opcode::PushString, {.str = "\n"}});
             payload = (int)Type::String;
         }
         for (Size i = args.len - 1; i >= 0; i--) {
@@ -1697,37 +1714,33 @@ void Parser::EmitIntrinsic(const char *name, Span<const FunctionInfo::Parameter>
         payload = (payload << 5) | (offset + println);
         payload = (payload << 5) | (args.len + println);
 
-        program.ir.Append({Opcode::Print, {.payload = payload}});
-        stack.Append({Type::Null});
+        out_program->ir.Append({Opcode::Print, {.payload = payload}});
     } else if (TestStr(name, "intToFloat")) {
-        program.ir.Append({Opcode::IntToFloat});
-        stack.Append({Type::Float});
+        out_program->ir.Append({Opcode::IntToFloat});
     } else if (TestStr(name, "floatToInt")) {
-        program.ir.Append({Opcode::FloatToInt});
-        stack.Append({Type::Int});
+        out_program->ir.Append({Opcode::FloatToInt});
     } else if (TestStr(name, "exit")) {
-        program.ir.Append({Opcode::Exit});
-        stack.Append({Type::Null});
+        out_program->ir.Append({Opcode::Exit});
     }
 }
 
-void Parser::EmitPop(int64_t count)
+void ParserImpl::EmitPop(int64_t count)
 {
     RG_ASSERT(count >= 0);
 
     if (count) {
-        program.ir.Append({Opcode::Pop, {.i = count}});
+        out_program->ir.Append({Opcode::Pop, {.i = count}});
     }
 }
 
-void Parser::EmitReturn()
+void ParserImpl::EmitReturn()
 {
     RG_ASSERT(current_func);
 
     // We support tail recursion elimination (TRE)
-    if (program.ir.len > 0 && program.ir[program.ir.len - 1].code == Opcode::Call &&
-                              program.ir[program.ir.len - 1].u.i == current_func->inst_idx) {
-        program.ir.len--;
+    if (out_program->ir.len > 0 && out_program->ir[out_program->ir.len - 1].code == Opcode::Call &&
+                              out_program->ir[out_program->ir.len - 1].u.i == current_func->inst_idx) {
+        out_program->ir.len--;
 
         Size stack_offset = -2;
         for (Size i = current_func->params.len - 1; i >= 0; i--) {
@@ -1735,15 +1748,15 @@ void Parser::EmitReturn()
 
             switch (param.type) {
                 case Type::Null: {} break;
-                case Type::Bool: { program.ir.Append({Opcode::StoreBool, {.i = --stack_offset}}); } break;
-                case Type::Int: { program.ir.Append({Opcode::StoreInt, {.i = --stack_offset}}); } break;
-                case Type::Float: { program.ir.Append({Opcode::StoreFloat, {.i = --stack_offset}}); } break;
-                case Type::String: { program.ir.Append({Opcode::StoreString, {.i = --stack_offset}}); } break;
+                case Type::Bool: { out_program->ir.Append({Opcode::StoreBool, {.i = --stack_offset}}); } break;
+                case Type::Int: { out_program->ir.Append({Opcode::StoreInt, {.i = --stack_offset}}); } break;
+                case Type::Float: { out_program->ir.Append({Opcode::StoreFloat, {.i = --stack_offset}}); } break;
+                case Type::String: { out_program->ir.Append({Opcode::StoreString, {.i = --stack_offset}}); } break;
             }
         }
 
         EmitPop(var_offset);
-        program.ir.Append({Opcode::Jump, {.i = current_func->inst_idx - program.ir.len}});
+        out_program->ir.Append({Opcode::Jump, {.i = current_func->inst_idx - out_program->ir.len}});
 
         current_func->tre = true;
     } else {
@@ -1752,20 +1765,20 @@ void Parser::EmitReturn()
 
             switch (current_func->ret_type) {
                 case Type::Null: { pop++; } break;
-                case Type::Bool: { program.ir.Append({Opcode::StoreBool, {.i = 0}}); } break;
-                case Type::Int: { program.ir.Append({Opcode::StoreInt, {.i = 0}}); } break;
-                case Type::Float: { program.ir.Append({Opcode::StoreFloat, {.i = 0}}); } break;
-                case Type::String: { program.ir.Append({Opcode::StoreString, {.i = 0}}); } break;
+                case Type::Bool: { out_program->ir.Append({Opcode::StoreBool, {.i = 0}}); } break;
+                case Type::Int: { out_program->ir.Append({Opcode::StoreInt, {.i = 0}}); } break;
+                case Type::Float: { out_program->ir.Append({Opcode::StoreFloat, {.i = 0}}); } break;
+                case Type::String: { out_program->ir.Append({Opcode::StoreString, {.i = 0}}); } break;
             }
 
             EmitPop(pop);
         }
 
-        program.ir.Append({current_func->ret_type == Type::Null ? Opcode::ReturnNull : Opcode::Return, {.i = current_func->ret_pop}});
+        out_program->ir.Append({current_func->ret_type == Type::Null ? Opcode::ReturnNull : Opcode::Return, {.i = current_func->ret_pop}});
     }
 }
 
-void Parser::DestroyVariables(Size count)
+void ParserImpl::DestroyVariables(Size count)
 {
     for (Size i = variables.len - count; i < variables.len; i++) {
         const VariableInfo &var = variables[i];
@@ -1781,7 +1794,7 @@ void Parser::DestroyVariables(Size count)
     variables.RemoveLast(count);
 }
 
-bool Parser::TestOverload(const FunctionInfo &proto, Span<const FunctionInfo::Parameter> params2)
+bool ParserImpl::TestOverload(const FunctionInfo &proto, Span<const FunctionInfo::Parameter> params2)
 {
     if (proto.variadic) {
         if (proto.params.len > params2.len)
@@ -1799,27 +1812,7 @@ bool Parser::TestOverload(const FunctionInfo &proto, Span<const FunctionInfo::Pa
     return true;
 }
 
-void Parser::Finish(Program *out_program)
-{
-    RG_ASSERT(!out_program->ir.len);
-
-    program.ir.Append({Opcode::PushInt, {.i = 0}});
-    program.ir.Append({Opcode::Exit, {.b = true}});
-
-    for (const FunctionInfo &func: functions) {
-        const FunctionInfo *func2 = program.functions.Append(func);
-        program.functions_map.Append(func2);
-    }
-    for (const VariableInfo &var: variables) {
-        const VariableInfo *global = program.globals.Append(var);
-        program.globals_map.Append(global);
-    }
-
-    program.ir.Trim();
-    SwapMemory(&program, out_program, RG_SIZE(program));
-}
-
-bool Parser::ConsumeToken(TokenKind kind)
+bool ParserImpl::ConsumeToken(TokenKind kind)
 {
     if (RG_UNLIKELY(pos >= tokens.len)) {
         MarkError(pos, "Unexpected end of file, expected '%1'", TokenKindNames[(int)kind]);
@@ -1832,14 +1825,14 @@ bool Parser::ConsumeToken(TokenKind kind)
     }
 
     if (kind == TokenKind::EndOfLine) {
-        program.lines.Append(program.ir.len);
+        out_program->lines.Append(out_program->ir.len);
     }
 
     pos++;
     return true;
 }
 
-const char *Parser::ConsumeIdentifier()
+const char *ParserImpl::ConsumeIdentifier()
 {
     if (RG_LIKELY(ConsumeToken(TokenKind::Identifier))) {
         return tokens[pos - 1].u.str;
@@ -1848,7 +1841,7 @@ const char *Parser::ConsumeIdentifier()
     }
 }
 
-Type Parser::ConsumeType()
+Type ParserImpl::ConsumeType()
 {
     const char *type_name = ConsumeIdentifier();
 
@@ -1861,32 +1854,28 @@ Type Parser::ConsumeType()
     }
 }
 
-bool Parser::MatchToken(TokenKind kind)
+bool ParserImpl::MatchToken(TokenKind kind)
 {
     bool match = pos < tokens.len && tokens[pos].kind == kind;
     pos += match;
 
     if (match && kind == TokenKind::EndOfLine) {
-        program.lines.Append(program.ir.len);
+        out_program->lines.Append(out_program->ir.len);
     }
 
     return match;
 }
 
-bool Parser::PeekToken(TokenKind kind)
+bool ParserImpl::PeekToken(TokenKind kind)
 {
     bool match = pos < tokens.len && tokens[pos].kind == kind;
     return match;
 }
 
-bool Compile(const TokenizedFile &file, Program *out_program)
+bool Parse(const TokenizedFile &file, Program *out_program)
 {
-    Compiler compiler;
-    if (!compiler.Compile(file))
-        return false;
-
-    compiler.Finish(out_program);
-    return true;
+    Parser parser(out_program);
+    return parser.Parse(file);
 }
 
 }
