@@ -39,6 +39,8 @@ class ParserImpl {
     bool show_hints;
     HashMap<Size, FunctionInfo *> functions_by_pos;
 
+    HashSet<const char *> strings;
+
     BucketArray<FunctionInfo> functions;
     HashTable<const char *, FunctionInfo *> functions_map;
     BucketArray<VariableInfo> variables;
@@ -104,6 +106,8 @@ private:
     Type ConsumeType();
     bool MatchToken(TokenKind kind);
     bool PeekToken(TokenKind kind);
+
+    const char *InternString(const char *str);
 
     template <typename... Args>
     void MarkError(Size pos, const char *fmt, Args... args)
@@ -1138,7 +1142,7 @@ Type ParserImpl::ParseExpression(bool keep_result)
                     stack.Append({Type::Float});
                 } break;
                 case TokenKind::String: {
-                    out_program->ir.Append({Opcode::PushString, {.str = tok.u.str}});
+                    out_program->ir.Append({Opcode::PushString, {.str = InternString(tok.u.str)}});
                     stack.Append({Type::String});
                 } break;
 
@@ -1835,7 +1839,7 @@ bool ParserImpl::ConsumeToken(TokenKind kind)
 const char *ParserImpl::ConsumeIdentifier()
 {
     if (RG_LIKELY(ConsumeToken(TokenKind::Identifier))) {
-        return tokens[pos - 1].u.str;
+        return InternString(tokens[pos - 1].u.str);
     } else {
         return "";
     }
@@ -1870,6 +1874,15 @@ bool ParserImpl::PeekToken(TokenKind kind)
 {
     bool match = pos < tokens.len && tokens[pos].kind == kind;
     return match;
+}
+
+const char *ParserImpl::InternString(const char *str)
+{
+    std::pair<const char **, bool> ret = strings.Append(str);
+    if (ret.second) {
+        *ret.first = DuplicateString(str, &out_program->str_alloc).ptr;
+    }
+    return str;
 }
 
 bool Parse(const TokenizedFile &file, Program *out_program)
