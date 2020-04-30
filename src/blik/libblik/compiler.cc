@@ -96,6 +96,7 @@ private:
 
     void EmitPop(int64_t count);
     void EmitReturn();
+    void DestroyVariables(Size count);
 
     bool TestOverload(const FunctionInfo &proto, Span<const FunctionInfo::Parameter> params2);
 
@@ -104,8 +105,6 @@ private:
     Type ConsumeType();
     bool MatchToken(TokenKind kind);
     bool PeekToken(TokenKind kind);
-
-    void DestroyVariables(Size count);
 
     template <typename... Args>
     void MarkError(Size pos, const char *fmt, Args... args)
@@ -1766,6 +1765,22 @@ void Parser::EmitReturn()
     }
 }
 
+void Parser::DestroyVariables(Size count)
+{
+    for (Size i = variables.len - count; i < variables.len; i++) {
+        const VariableInfo &var = variables[i];
+        VariableInfo **ptr = variables_map.Find(var.name);
+
+        if (var.shadow) {
+            *ptr = (VariableInfo *)var.shadow;
+        } else {
+            variables_map.Remove(ptr);
+        }
+    }
+
+    variables.RemoveLast(count);
+}
+
 bool Parser::TestOverload(const FunctionInfo &proto, Span<const FunctionInfo::Parameter> params2)
 {
     if (proto.variadic) {
@@ -1862,22 +1877,6 @@ bool Parser::PeekToken(TokenKind kind)
 {
     bool match = pos < tokens.len && tokens[pos].kind == kind;
     return match;
-}
-
-void Parser::DestroyVariables(Size count)
-{
-    for (Size i = variables.len - count; i < variables.len; i++) {
-        const VariableInfo &var = variables[i];
-        VariableInfo **ptr = variables_map.Find(var.name);
-
-        if (var.shadow) {
-            *ptr = (VariableInfo *)var.shadow;
-        } else {
-            variables_map.Remove(ptr);
-        }
-    }
-
-    variables.RemoveLast(count);
 }
 
 bool Compile(const TokenizedFile &file, Program *out_program)
