@@ -35,7 +35,7 @@ class ParserImpl {
     Span<const Token> tokens;
     Size pos;
     bool valid;
-    bool valid_stmt;
+    bool show_errors;
     bool show_hints;
     SourceInfo *src;
     HashMap<Size, FunctionInfo *> functions_by_pos;
@@ -116,18 +116,19 @@ private:
     {
         RG_ASSERT(pos >= 0);
 
-        if (valid_stmt) {
+        if (show_errors) {
             Size offset = (pos < tokens.len) ? tokens[pos].offset : file->code.len;
             int line = tokens[std::min(pos, tokens.len - 1)].line;
 
             ReportDiagnostic(DiagnosticType::Error, file->code, file->filename, line, offset, fmt, args...);
 
-            valid = false;
-            valid_stmt = false;
+            show_errors = false;
             show_hints = true;
         } else {
             show_hints = false;
         }
+
+        valid = false;
     }
 
     template <typename... Args>
@@ -202,7 +203,7 @@ bool ParserImpl::Parse(const TokenizedFile &file)
     pos = 0;
 
     valid = true;
-    valid_stmt = true;
+    show_errors = true;
     show_hints = false;
 
     forward_calls.Clear();
@@ -358,10 +359,11 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
     // call ParsePrototypes() ever again!
     RG_DEFER {
         pos = 0;
-        valid_stmt = true;
+        valid = true;
+        show_errors = true;
         src->lines.RemoveFrom(0);
     };
-    valid_stmt = false;
+    show_errors = false;
 
     for (Size i = 0; i < funcs.len; i++) {
         pos = funcs[i] + 1;
@@ -475,10 +477,10 @@ bool ParserImpl::ParseBlock(bool keep_variables)
             case TokenKind::Begin: {
                 pos++;
 
-                valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
+                show_errors |= ConsumeToken(TokenKind::EndOfLine);
                 has_return |= ParseBlock(false);
                 ConsumeToken(TokenKind::End);
-                valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
+                show_errors |= ConsumeToken(TokenKind::EndOfLine);
             } break;
 
             case TokenKind::Func: {
@@ -486,46 +488,46 @@ bool ParserImpl::ParseBlock(bool keep_variables)
                 out_program->ir.Append({Opcode::Jump});
 
                 ParseFunction();
-                valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
+                show_errors |= ConsumeToken(TokenKind::EndOfLine);
 
                 out_program->ir[jump_idx].u.i = out_program->ir.len - jump_idx;
             } break;
 
             case TokenKind::Return: {
                 ParseReturn();
-                valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
+                show_errors |= ConsumeToken(TokenKind::EndOfLine);
                 has_return = true;
             } break;
 
             case TokenKind::Let: {
                 ParseLet();
-                valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
+                show_errors |= ConsumeToken(TokenKind::EndOfLine);
             } break;
             case TokenKind::If: {
                 has_return |= ParseIf();
-                valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
+                show_errors |= ConsumeToken(TokenKind::EndOfLine);
             } break;
             case TokenKind::While: {
                 ParseWhile();
-                valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
+                show_errors |= ConsumeToken(TokenKind::EndOfLine);
             } break;
             case TokenKind::For: {
                 ParseFor();
-                valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
+                show_errors |= ConsumeToken(TokenKind::EndOfLine);
             } break;
 
             case TokenKind::Break: {
                 ParseBreak();
-                valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
+                show_errors |= ConsumeToken(TokenKind::EndOfLine);
             } break;
             case TokenKind::Continue: {
                 ParseContinue();
-                valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
+                show_errors |= ConsumeToken(TokenKind::EndOfLine);
             } break;
 
             default: {
                 ParseExpression(false);
-                valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
+                show_errors |= ConsumeToken(TokenKind::EndOfLine);
             } break;
         }
     }
@@ -595,7 +597,7 @@ void ParserImpl::ParseFunction()
             ConsumeToken(TokenKind::Colon);
             var->type = ConsumeType();
 
-            var->poisoned = !valid_stmt;
+            var->poisoned = !show_errors;
         } while (MatchToken(TokenKind::Comma));
 
         MatchToken(TokenKind::EndOfLine);
@@ -638,7 +640,7 @@ void ParserImpl::ParseFunction()
     if (PeekToken(TokenKind::Do)) {
         has_return = ParseDo();
     } else {
-        valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
+        show_errors |= ConsumeToken(TokenKind::EndOfLine);
         has_return = ParseBlock(false);
         ConsumeToken(TokenKind::End);
     }
@@ -738,7 +740,7 @@ void ParserImpl::ParseLet()
 
     // Expressions involving this variable won't issue (visible) errors
     // and will be marked as invalid too.
-    var->poisoned = !valid_stmt;
+    var->poisoned = !show_errors;
 }
 
 bool ParserImpl::ParseIf()
@@ -757,7 +759,7 @@ bool ParserImpl::ParseIf()
         has_return &= ParseDo();
         out_program->ir[branch_idx].u.i = out_program->ir.len - branch_idx;
     } else {
-        valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
+        show_errors |= ConsumeToken(TokenKind::EndOfLine);
         has_return &= ParseBlock(false);
 
         if (MatchToken(TokenKind::Else)) {
@@ -771,7 +773,7 @@ bool ParserImpl::ParseIf()
 
                 if (MatchToken(TokenKind::If)) {
                     ParseCondition();
-                    valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
+                    show_errors |= ConsumeToken(TokenKind::EndOfLine);
 
                     branch_idx = out_program->ir.len;
                     out_program->ir.Append({Opcode::BranchIfFalse});
@@ -781,7 +783,7 @@ bool ParserImpl::ParseIf()
                     jumps.Append(out_program->ir.len);
                     out_program->ir.Append({Opcode::Jump});
                 } else {
-                    valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
+                    show_errors |= ConsumeToken(TokenKind::EndOfLine);
 
                     has_return &= ParseBlock(false);
                     has_else = true;
@@ -805,25 +807,15 @@ bool ParserImpl::ParseIf()
 
 void ParserImpl::ParseWhile()
 {
-    pos++;
+    int32_t while_line = tokens[pos].line;
+    Size while_pos = ++pos;
 
-    Size start_idx = out_program->ir.len;
-
-    // Parse expression
-    Size start_fix_forward = forward_calls.len;
-    Size end_fix_forward;
+    // Parse expression. We'll do it again at the end because we want to put a copy after
+    // the loop body. The IR code will look roughly like if (cond) { do { ... } while (cond) }.
     ParseCondition();
-    end_fix_forward = forward_calls.len;
 
-    // Put expression IR aside, because we want to put it after loop body
-    // to avoid an extra jump after each iteration.
-
-    HeapArray<Instruction> expr;
-    expr.Append(out_program->ir.Take(start_idx, out_program->ir.len - start_idx));
-    out_program->ir.len -= expr.len;
-
-    Size jump_idx = out_program->ir.len;
-    out_program->ir.Append({Opcode::Jump});
+    Size branch_idx = out_program->ir.len;
+    out_program->ir.Append({Opcode::BranchIfFalse});
 
     // Break and continue need to apply to while loop blocks
     Size first_break_idx = loop_breaks.len;
@@ -839,14 +831,9 @@ void ParserImpl::ParseWhile()
     if (PeekToken(TokenKind::Do)) {
         ParseDo();
     } else {
-        valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
+        show_errors |= ConsumeToken(TokenKind::EndOfLine);
         ParseBlock(false);
         ConsumeToken(TokenKind::End);
-    }
-
-    // We need to fix forward calls inside test expression because we move the instructions
-    for (Size i = start_fix_forward; i < end_fix_forward; i++) {
-        forward_calls[i].offset += out_program->ir.len - start_idx;
     }
 
     // Fix up continue jumps
@@ -855,10 +842,27 @@ void ParserImpl::ParseWhile()
         out_program->ir[jump_idx].u.i = out_program->ir.len - jump_idx;
     }
 
-    // Finally write down expression IR
-    out_program->ir[jump_idx].u.i = out_program->ir.len - jump_idx;
-    out_program->ir.Append(expr);
-    out_program->ir.Append({Opcode::BranchIfTrue, {.i = jump_idx - out_program->ir.len + 1}});
+    // Parse the condition again. We could copy the IR instead but this implies a bunch of
+    // annoying fixups (forward calls, IR/line map, etc.). It is easier and less fragile
+    // this way, even if a bit slower. Don't show errors again though!
+    {
+        RG_DEFER_C(prev_pos = pos,
+                   prev_errors = show_errors) {
+            pos = prev_pos;
+            show_errors = prev_errors;
+        };
+
+        pos = while_pos;
+        show_errors = false;
+
+        if (src->lines[src->lines.len - 1].line != while_line) {
+            src->lines.Append({while_line, out_program->ir.len});
+        }
+        ParseCondition();
+    }
+
+    out_program->ir.Append({Opcode::BranchIfTrue, {.i = branch_idx - out_program->ir.len + 1}});
+    out_program->ir[branch_idx].u.i = out_program->ir.len - branch_idx;
 
     // Fix up break jumps
     for (Size i = first_break_idx; i < loop_breaks.len; i++) {
@@ -946,7 +950,7 @@ void ParserImpl::ParseFor()
     if (PeekToken(TokenKind::Do)) {
         ParseDo();
     } else {
-        valid_stmt |= ConsumeToken(TokenKind::EndOfLine);
+        show_errors |= ConsumeToken(TokenKind::EndOfLine);
         ParseBlock(false);
         ConsumeToken(TokenKind::End);
     }
@@ -1151,7 +1155,7 @@ Type ParserImpl::ParseExpression(bool keep_result)
                             MarkError(pos - 1, "Variable '%1' does not exist", tok.u.str);
                             goto error;
                         }
-                        valid_stmt &= !var->poisoned;
+                        show_errors &= !var->poisoned;
 
                         EmitLoad(*var);
                     }
@@ -1249,9 +1253,9 @@ Type ParserImpl::ParseExpression(bool keep_result)
         ProduceOperator(op);
     }
 
-    if (RG_UNLIKELY(!valid_stmt))
+    RG_ASSERT(stack.len == start_values_len + 1 || !show_errors);
+    if (RG_UNLIKELY(!stack.len))
         return Type::Null;
-    RG_ASSERT(stack.len == start_values_len + 1);
 
     if (keep_result) {
         return stack[stack.len - 1].type;
