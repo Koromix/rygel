@@ -14,8 +14,8 @@ int Main(int argc, char **argv)
     const char *filename = nullptr;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: blikc [options] <file>
-       blikc [options] -i <code>
+        PrintLn(fp, R"(Usage: blik [options] <file>
+       blik [options] -i <code>
 
 Options:
     -i, --inline                 Run code directly from argument)");
@@ -23,7 +23,7 @@ Options:
 
     // Handle version
     if (argc >= 2 && TestStr(argv[1], "--version")) {
-        PrintLn("blikc %1", FelixVersion);
+        PrintLn("blik %1", FelixVersion);
         return 0;
     }
 
