@@ -42,7 +42,11 @@ class sq_Statement {
     int rc;
 
 public:
+    sq_Statement() {}
     ~sq_Statement() { Finalize(); }
+
+    sq_Statement(const sq_Statement &) = delete;
+    sq_Statement &operator=(const sq_Statement &) = delete;
 
     void Finalize();
 
@@ -68,6 +72,9 @@ public:
     sq_Database() {}
     sq_Database(const char *filename, unsigned int flags) { Open(filename, flags); }
     ~sq_Database() { Close(); }
+
+    sq_Database(const sq_Database &) = delete;
+    sq_Database &operator=(const sq_Database &) = delete;
 
     bool IsValid() const { return db; }
 
