@@ -75,7 +75,7 @@ static BucketArray<FileEntry> files;
 static HashTable<const char *, FileEntry *> files_map;
 
 // The caller still needs to compute checksum after this
-static FileEntry *AddFileEntry(const char *filename, Size offset)
+static FileEntry *AddFileEntry(const char *filename, Size offset, Size size)
 {
     FileEntry *file;
     {
@@ -85,14 +85,7 @@ static FileEntry *AddFileEntry(const char *filename, Size offset)
     }
 
     file->filename = DuplicateString(filename, file->allocator).ptr;
-
-    // File size
-    {
-        FileInfo file_info;
-        if (!StatFile(filename, &file_info))
-            return nullptr;
-        file->size = file_info.size;
-    }
+    file->size = size;
 
     Span<char> url = Fmt(file->allocator, "/files/%1", file->filename + offset);
 #ifdef _WIN32
@@ -115,7 +108,14 @@ static bool ListRecurse(const char *directory, Size offset)
 
         switch (file_type) {
             case FileType::Directory: { return ListRecurse(filename, offset); } break;
-            case FileType::File: { return !!AddFileEntry(filename, offset); } break;
+            case FileType::File: {
+                FileInfo file_info;
+                if (!StatFile(filename, &file_info))
+                    return false;
+
+                AddFileEntry(filename, offset, file_info.size);
+                return true;
+            } break;
             case FileType::Unknown: {} break;
         }
 
@@ -278,6 +278,8 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
         return;
     }
 
+    const char *sha256 = request.GetQueryValue("sha256");
+
     // Security checks
     if (strncmp(request.url, "/files/", 7)) {
         LogError("Cannot write to file outside '/files/'");
@@ -294,8 +296,6 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
     const char *filename = Fmt(&io->allocator, "%1%/%2", goupile_config.files_directory, request.url + 7).ptr;
     const char *tmp_filename = Fmt(&io->allocator, "%1~", filename).ptr;
 
-    const char *sha256 = request.GetQueryValue("sha256");
-
     io->RunAsync([=]() {
         RG_DEFER_N(tmp_guard) { UnlinkFile(tmp_filename); };
 
@@ -304,6 +304,7 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
 
         // Write new file
         uint8_t hash[crypto_hash_sha256_BYTES];
+        Size total_len = 0;
         {
             StreamWriter writer(tmp_filename);
             StreamReader reader;
@@ -313,7 +314,6 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
             crypto_hash_sha256_state state;
             crypto_hash_sha256_init(&state);
 
-            Size total_len = 0;
             while (!reader.IsEOF()) {
                 LocalArray<uint8_t, 16384> buf;
                 buf.len = reader.Read(buf.data);
@@ -339,54 +339,46 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
             crypto_hash_sha256_final(&state, hash);
         }
 
-        // Perform atomic file rename
-        if (!RenameFile(tmp_filename, filename))
-            return;
+        // Nothing has failed so far, the upload is complete. Check and update metadata
+        // and if things go well, we'll be able to overwrite and delete the old file.
+        std::unique_lock<std::shared_mutex> lock_files(files_mutex);
 
-        // Create or update file entry. From now on, failures can only come from a failed
-        // StatFile(), which should not happen unless some other process is screwing us up.
-        {
-            std::unique_lock<std::shared_mutex> lock_files(files_mutex);
+        FileEntry *file = files_map.FindValue(request.url, nullptr);
 
-            FileEntry *file = files_map.FindValue(request.url, nullptr);
+        if (file) {
+            file->LockExclusive();
+            RG_DEFER { file->UnlockExclusive(); };
 
-            if (file) {
-                file->LockExclusive();
-                RG_DEFER { file->UnlockExclusive(); };
-
-                if (sha256 && !TestStr(sha256, file->sha256)) {
-                    LogError("Update refused because of sha256 mismatch");
-                    io->AttachError(409);
-                    return;
-                }
-
-                // File size
-                {
-                    FileInfo file_info;
-                    if (!StatFile(filename, &file_info))
-                        return;
-                    file->size = file_info.size;
-                }
-
-                FormatSha256(hash, file->sha256);
-            } else {
-                if (sha256 && sha256[0]) {
-                    LogError("Update refused because file does not exist");
-                    io->AttachError(409);
-                    return;
-                }
-
-                Size url_offset = strlen(goupile_config.files_directory) + 1;
-                file = AddFileEntry(filename, url_offset);
-                if (!file)
-                    return;
-                FormatSha256(hash, file->sha256);
-
-                files_map.Set(file);
+            if (!sha256 || !TestStr(sha256, file->sha256)) {
+                LogError("Update refused because of sha256 mismatch");
+                io->AttachError(409);
+                return;
             }
+
+            if (!RenameFile(tmp_filename, filename))
+                return;
+            tmp_guard.Disable();
+
+            file->size = total_len;
+            FormatSha256(hash, file->sha256);
+        } else {
+            if (sha256 && sha256[0]) {
+                LogError("Update refused because file does not exist");
+                io->AttachError(409);
+                return;
+            }
+
+            if (!RenameFile(tmp_filename, filename))
+                return;
+            tmp_guard.Disable();
+
+            Size url_offset = strlen(goupile_config.files_directory) + 1;
+            file = AddFileEntry(filename, url_offset, total_len);
+            FormatSha256(hash, file->sha256);
+
+            files_map.Set(file);
         }
 
-        tmp_guard.Disable();
         io->AttachText(200, "Done!");
     });
 }
@@ -409,13 +401,13 @@ void HandleFileDelete(const http_RequestInfo &request, http_IO *io)
         file->LockExclusive();
         RG_DEFER { file->UnlockExclusive(); };
 
-        if (sha256 && !TestStr(sha256, file->sha256)) {
+        if (!sha256 || !TestStr(sha256, file->sha256)) {
             LogError("Deletion refused because of sha256 mismatch");
             io->AttachError(409);
             return;
         }
 
-        // Deal with the OS first
+        // Deal with the OS first. The rest can't fail anyway.
         if (!UnlinkFile(file->filename))
             return;
 
