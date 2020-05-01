@@ -216,6 +216,10 @@ extern "C" void AssertMessage(const char *filename, int line, const char *cond);
     #define RG_FALLTHROUGH
 #endif
 
+#define RG_DELETE_COPY(Cls) \
+    Cls(const Cls&) = delete; \
+    Cls &operator=(const Cls&) = delete;
+
 constexpr uint16_t MakeUInt16(uint8_t high, uint8_t low)
     { return (uint16_t)(((uint16_t)high << 8) | low); }
 constexpr uint32_t MakeUInt32(uint16_t high, uint16_t low) { return ((uint32_t)high << 16) | low; }
@@ -424,6 +428,8 @@ typename std::underlying_type<T>::type MaskEnum(T value)
 
 template <typename Fun>
 class DeferGuard {
+    RG_DELETE_COPY(DeferGuard)
+
     Fun f;
     bool enabled;
 
@@ -442,9 +448,6 @@ public:
     {
         other.enabled = false;
     }
-
-    DeferGuard(const DeferGuard &) = delete;
-    DeferGuard &operator=(DeferGuard &) = delete;
 
     void Disable() { enabled = false; }
 };
@@ -571,6 +574,8 @@ enum class ParseFlag {
 // ------------------------------------------------------------------------
 
 class Allocator {
+    RG_DELETE_COPY(Allocator)
+
 public:
     enum class Flag {
         Zero = 1,
@@ -579,8 +584,6 @@ public:
 
     Allocator() = default;
     virtual ~Allocator() = default;
-    Allocator(Allocator &) = delete;
-    Allocator &operator=(const Allocator &) = delete;
 
     static void *Allocate(Allocator *alloc, Size size, unsigned int flags = 0);
     static void Resize(Allocator *alloc, void **ptr, Size old_size, Size new_size,
@@ -1340,6 +1343,8 @@ public:
 
 template <typename T, Size BucketSize = 64, typename AllocatorType = BlockAllocator>
 class BucketArray {
+    RG_DELETE_COPY(BucketArray)
+
 public:
     struct Bucket {
         T *values;
@@ -1448,8 +1453,6 @@ public:
         memset(&other, 0, RG_SIZE(other));
         return *this;
     }
-    BucketArray(BucketArray &) = delete;
-    BucketArray &operator=(const BucketArray &) = delete;
 
     void Clear()
     {
@@ -2510,6 +2513,8 @@ static const char *const CompressionTypeNames[] = {
 };
 
 class StreamReader {
+    RG_DELETE_COPY(StreamReader)
+
     enum class SourceType {
         Memory,
         File,
@@ -2569,9 +2574,6 @@ public:
         : StreamReader() { Open(func, filename, compression_type); }
     ~StreamReader() { ReleaseResources(); }
 
-    StreamReader(const StreamReader &other) = delete;
-    StreamReader &operator=(const StreamReader &other) = delete;
-
     bool Open(Span<const uint8_t> buf, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
     bool Open(FILE *fp, const char *filename,
@@ -2628,6 +2630,8 @@ static inline Size ReadFile(const char *filename, Size max_len, HeapArray<char> 
 }
 
 class LineReader {
+    RG_DELETE_COPY(LineReader)
+
     HeapArray<char> buf;
     Span<char> view = {};
 
@@ -2641,9 +2645,6 @@ class LineReader {
 public:
     LineReader(StreamReader *st) : st(st) {}
 
-    LineReader(const LineReader &other) = delete;
-    LineReader &operator=(const LineReader &other) = delete;
-
     const char *GetFileName() const { return st->GetFileName(); }
     Size GetLineNumber() const { return line_number; }
     bool IsValid() const { return !error; }
@@ -2656,6 +2657,8 @@ public:
 };
 
 class StreamWriter {
+    RG_DELETE_COPY(StreamWriter)
+
     enum class DestinationType {
         Memory,
         File,
@@ -2704,9 +2707,6 @@ public:
                  CompressionType compression_type = CompressionType::None)
         : StreamWriter() { Open(func, filename, compression_type); }
     ~StreamWriter() { ReleaseResources(); }
-
-    StreamWriter(const StreamWriter &other) = delete;
-    StreamWriter &operator=(const StreamWriter &other) = delete;
 
     bool Open(HeapArray<uint8_t> *mem, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
@@ -3560,6 +3560,8 @@ static const char *const IPStackNames[] = {
 // ------------------------------------------------------------------------
 
 class Async {
+    RG_DELETE_COPY(Async)
+
     std::atomic_int success {1};
     std::atomic_int remaining_tasks {0};
 
@@ -3568,9 +3570,6 @@ class Async {
 public:
     Async(int workers = -1);
     ~Async();
-
-    Async(Async &) = delete;
-    Async &operator=(const Async &) = delete;
 
     void Run(const std::function<bool()> &f);
 
@@ -3594,6 +3593,8 @@ struct IniProperty {
 };
 
 class IniParser {
+    RG_DELETE_COPY(IniParser)
+
     HeapArray<char> current_section;
 
     enum class LineType {
@@ -3608,9 +3609,6 @@ class IniParser {
 
 public:
     IniParser(StreamReader *st) : reader(st) {}
-
-    IniParser(const IniParser &other) = delete;
-    IniParser &operator=(const IniParser &other) = delete;
 
     const char *GetFileName() const { return reader.GetFileName(); }
     bool IsValid() const { return !error; }
@@ -3676,6 +3674,8 @@ enum class OptionType {
 };
 
 class OptionParser {
+    RG_DELETE_COPY(OptionParser)
+
     Span<const char *> args;
     unsigned int flags;
 

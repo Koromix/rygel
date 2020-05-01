@@ -10,6 +10,8 @@
 namespace RG {
 
 class Lexer {
+    RG_DELETE_COPY(Lexer)
+
     const char *filename;
     Span<const char> code;
     Size offset;
@@ -23,9 +25,6 @@ class Lexer {
 
 public:
     Lexer(TokenizedFile *out_file);
-
-    Lexer(const Lexer &) = delete;
-    Lexer &operator=(const Lexer &) = delete;
 
     bool Tokenize(Span<const char> code, const char *filename);
 

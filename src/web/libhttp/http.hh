@@ -23,6 +23,8 @@ struct http_RequestInfo;
 class http_IO;
 
 class http_Daemon {
+    RG_DELETE_COPY(http_Daemon)
+
     MHD_Daemon *daemon = nullptr;
 
     const char *base_url;
@@ -33,9 +35,6 @@ class http_Daemon {
 public:
     http_Daemon() {}
     ~http_Daemon() { Stop(); }
-
-    http_Daemon(const http_Daemon &other) = delete;
-    http_Daemon &operator=(const http_Daemon &other) = delete;
 
     bool Start(const http_Config &config,
                std::function<void(const http_RequestInfo &request, http_IO *io)> func);
@@ -71,6 +70,8 @@ struct http_RequestInfo {
 };
 
 class http_IO {
+    RG_DELETE_COPY(http_IO)
+
     enum class State {
         Sync,
         Idle,
@@ -108,9 +109,6 @@ public:
 
     http_IO();
     ~http_IO();
-
-    http_IO(const http_IO &other) = delete;
-    http_IO &operator=(const http_IO &other) = delete;
 
     void RunAsync(std::function<void()> func);
 

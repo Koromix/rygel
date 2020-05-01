@@ -10,13 +10,12 @@
 namespace RG {
 
 struct ScriptHandle {
+    RG_DELETE_COPY(ScriptHandle)
+
     JSContext *ctx = nullptr;
     JSValue value = JS_UNDEFINED;
 
     ScriptHandle() = default;
-
-    ScriptHandle(ScriptHandle &) = delete;
-    ScriptHandle &operator=(ScriptHandle &) = delete;
 
     ~ScriptHandle()
     {
@@ -28,6 +27,8 @@ struct ScriptHandle {
 };
 
 struct ScriptRecord {
+    RG_DELETE_COPY(ScriptRecord)
+
     JSContext *ctx = nullptr;
 
     Span<const char> json = {};
@@ -48,18 +49,18 @@ struct ScriptRecord {
             ctx = nullptr;
         }
     }
-
-    ScriptRecord(ScriptRecord &) = delete;
-    ScriptRecord &operator=(ScriptRecord &) = delete;
 };
 
 class ScriptPort {
+    RG_DELETE_COPY(ScriptPort)
+
     JSValue validate_func = JS_UNDEFINED;
 
 public:
     JSRuntime *rt = nullptr;
     JSContext *ctx = nullptr;
 
+    ScriptPort() = default;
     ~ScriptPort();
 
     bool ParseValues(StreamReader *st, ScriptHandle *out_handle);

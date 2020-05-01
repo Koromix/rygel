@@ -2892,6 +2892,8 @@ struct TaskQueue {
 };
 
 class AsyncPool {
+    RG_DELETE_COPY(AsyncPool)
+
     std::mutex pool_mutex;
     std::condition_variable pending_cv;
     std::condition_variable sync_cv;

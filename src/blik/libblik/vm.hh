@@ -11,6 +11,8 @@
 namespace RG {
 
 class VirtualMachine {
+    RG_DELETE_COPY(VirtualMachine)
+
     Span<const Instruction> ir;
 
     // Used to detect fatal errors issued by native functions
@@ -24,9 +26,6 @@ public:
     Size bp = 0;
 
     VirtualMachine(const Program &program) : ir(program.ir), program(&program) {}
-
-    VirtualMachine(const VirtualMachine &) = delete;
-    VirtualMachine &operator=(const VirtualMachine &) = delete;
 
     bool Run(int *out_exit_code);
 

@@ -36,9 +36,13 @@ struct mco_AuthorizationSet {
 };
 
 class mco_AuthorizationSetBuilder {
+    RG_DELETE_COPY(mco_AuthorizationSetBuilder)
+
     mco_AuthorizationSet set;
 
 public:
+    mco_AuthorizationSetBuilder() = default;
+
     bool LoadFicum(StreamReader *st);
     bool LoadIni(StreamReader *st);
     bool LoadFiles(Span<const char *const> filenames);

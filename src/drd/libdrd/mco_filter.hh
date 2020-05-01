@@ -10,12 +10,15 @@
 namespace RG {
 
 class mco_FilterRunner {
+    RG_DELETE_COPY(mco_FilterRunner)
+
     HeapArray<char> filter_buf;
 
     class mco_WrenRunner *wren = nullptr;
     Size wren_count;
 
 public:
+  mco_FilterRunner() = default;
     ~mco_FilterRunner();
 
     bool Init(const char *filter);

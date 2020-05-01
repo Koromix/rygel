@@ -37,6 +37,8 @@ bool InitMcoProfile(const char *profile_directory, const char *authorization_fil
 bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *const> stay_filenames);
 
 class McoResultProvider {
+    RG_DELETE_COPY(McoResultProvider)
+
     // Parameters
     Date min_date = {};
     Date max_date = {};
@@ -45,6 +47,8 @@ class McoResultProvider {
     mco_GhmRootCode ghm_root = {};
 
 public:
+    McoResultProvider() = default;
+
     void SetDateRange(Date min_date, Date max_date)
     {
         this->min_date = min_date;

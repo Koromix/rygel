@@ -167,6 +167,8 @@ struct ResultObject {
 };
 
 class mco_WrenRunner {
+    RG_DELETE_COPY(mco_WrenRunner)
+
     BlockAllocator vm_alloc { Kibibytes(256) };
 
 public:
@@ -187,6 +189,8 @@ public:
 
     WrenHandle *expression_var = nullptr;
     WrenHandle *expression_call;
+
+    mco_WrenRunner() = default;
 
     bool Init(const char *filter, Size max_results);
 

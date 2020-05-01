@@ -167,6 +167,8 @@ struct AggregateSet {
 };
 
 class AggregateSetBuilder {
+    RG_DELETE_COPY(AggregateSetBuilder)
+
     const User *user;
     unsigned int flags;
 

@@ -53,6 +53,8 @@ struct UserSet {
 };
 
 class UserSetBuilder {
+    RG_DELETE_COPY(UserSetBuilder)
+
     struct UnitRuleSet {
         bool allow_default;
         Span<const char *> allow;
@@ -67,6 +69,8 @@ class UserSetBuilder {
     BlockAllocator deny_alloc;
 
 public:
+    UserSetBuilder() = default;
+
     bool LoadIni(StreamReader *st);
     bool LoadFiles(Span<const char *const> filenames);
 

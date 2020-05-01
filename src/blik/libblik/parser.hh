@@ -13,14 +13,13 @@ class ParserImpl;
 struct TokenizedFile;
 
 class Parser {
+    RG_DELETE_COPY(Parser)
+
     ParserImpl *impl;
 
 public:
     Parser(Program *out_program);
     ~Parser();
-
-    Parser(const Parser &) = delete;
-    Parser &operator=(const Parser &) = delete;
 
     bool Parse(const TokenizedFile &file);
 

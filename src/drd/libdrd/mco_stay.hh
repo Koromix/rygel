@@ -153,6 +153,8 @@ struct mco_StaySet {
 };
 
 class mco_StaySetBuilder {
+    RG_DELETE_COPY(mco_StaySetBuilder)
+
     mco_StaySet set;
 
     IndirectBlockAllocator other_diagnoses_alloc {&set.array_alloc, 2048 * RG_SIZE(drd_DiagnosisCode)};
@@ -174,6 +176,8 @@ class mco_StaySetBuilder {
     HeapArray<FichCompData> fichcomps;
 
 public:
+    mco_StaySetBuilder() = default;
+
     bool LoadPack(StreamReader *st, HashTable<int32_t, mco_Test> *out_tests = nullptr);
     bool LoadRss(StreamReader *st, HashTable<int32_t, mco_Test> *out_tests = nullptr);
     bool LoadRsa(StreamReader *st, HashTable<int32_t, mco_Test> *out_tests = nullptr);

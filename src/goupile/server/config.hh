@@ -25,9 +25,13 @@ struct Config {
 };
 
 class ConfigBuilder {
+    RG_DELETE_COPY(ConfigBuilder)
+
     Config config;
 
 public:
+    ConfigBuilder() = default;
+
     bool LoadIni(StreamReader *st);
     bool LoadFiles(Span<const char *const> filenames);
 

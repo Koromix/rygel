@@ -32,6 +32,8 @@ enum class LinkType {
 };
 
 class Compiler {
+    RG_DELETE_COPY(Compiler)
+
     mutable bool test_init = false;
     mutable bool test;
 

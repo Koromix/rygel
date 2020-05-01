@@ -44,6 +44,8 @@ struct BuildNode {
 };
 
 class Builder {
+    RG_DELETE_COPY(Builder)
+
     struct CacheEntry {
         const char *filename;
         Span<const char> cmd_line;

@@ -30,6 +30,8 @@ struct StackSlot {
 };
 
 class ParserImpl {
+    RG_DELETE_COPY(ParserImpl)
+
     // All these members are relevant to the current parse only, and get resetted each time
     const TokenizedFile *file;
     Span<const Token> tokens;
@@ -64,9 +66,6 @@ class ParserImpl {
 
 public:
     ParserImpl(Program *out_program);
-
-    ParserImpl(const ParserImpl &) = delete;
-    ParserImpl &operator=(const ParserImpl &) = delete;
 
     bool Parse(const TokenizedFile &file);
 

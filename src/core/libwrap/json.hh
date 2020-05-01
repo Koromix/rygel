@@ -14,6 +14,8 @@ RG_POP_NO_WARNINGS()
 namespace RG {
 
 class json_StreamReader {
+    RG_DELETE_COPY(json_StreamReader)
+
     StreamReader *st;
 
     LocalArray<uint8_t, 4096> buf;
@@ -85,7 +87,7 @@ bool json_Parse(StreamReader *st, Handler *handler)
     json_StreamReader json_reader(st);
     rapidjson::Reader parser;
 
-    PushLogFilter([=](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
+    PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
         char msg_buf[4096];
         Fmt(msg_buf, "%1(%2:%3): %4",
             st->GetFileName(), json_reader.GetLineNumber(), json_reader.GetLineOffset(), msg);
@@ -109,6 +111,8 @@ bool json_Parse(StreamReader *st, Handler *handler)
 }
 
 class json_Parser {
+    RG_DELETE_COPY(json_Parser)
+
     struct Handler {
         Allocator *allocator;
 
@@ -179,6 +183,8 @@ private:
 };
 
 class json_StreamWriter {
+    RG_DELETE_COPY(json_StreamWriter)
+
     StreamWriter *st;
     LocalArray<uint8_t, 1024> buf;
 
@@ -193,6 +199,8 @@ public:
 };
 
 class json_Writer: public rapidjson::Writer<json_StreamWriter> {
+    RG_DELETE_COPY(json_Writer)
+
     json_StreamWriter writer;
 
 public:

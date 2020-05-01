@@ -26,12 +26,16 @@ struct StructureSet {
 };
 
 class StructureSetBuilder {
+    RG_DELETE_COPY(StructureSetBuilder)
+
     StructureSet set;
 
     HashSet<const char *> structures_set;
     HashMap<drd_UnitCode, Size> unit_reference_counts;
 
 public:
+    StructureSetBuilder() = default;
+
     bool LoadIni(StreamReader *st);
     bool LoadFiles(Span<const char *const> filenames);
 

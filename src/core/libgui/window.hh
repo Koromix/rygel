@@ -66,6 +66,8 @@ struct gui_Info {
 };
 
 class gui_Window {
+    RG_DELETE_COPY(gui_Window)
+
     gui_Info priv = {};
 
 #ifdef _WIN32
@@ -81,6 +83,7 @@ class gui_Window {
 public:
     const gui_Info &info = priv;
 
+    gui_Window() = default;
     ~gui_Window() { Release(); }
 
     bool Init(const char *application_name);

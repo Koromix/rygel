@@ -69,11 +69,15 @@ struct TargetSet {
 };
 
 class TargetSetBuilder {
+    RG_DELETE_COPY(TargetSetBuilder)
+
     BlockAllocator temp_alloc;
 
     TargetSet set;
 
 public:
+    TargetSetBuilder() = default;
+
     bool LoadIni(StreamReader *st);
     bool LoadFiles(Span<const char *const> filenames);
 

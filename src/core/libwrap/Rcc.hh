@@ -361,6 +361,8 @@ public:
 };
 
 class rcc_ListBuilder {
+    RG_DELETE_COPY(rcc_ListBuilder)
+
     struct Variable {
         const char *name;
         SEXP vec;
@@ -371,9 +373,6 @@ class rcc_ListBuilder {
 
 public:
     rcc_ListBuilder() = default;
-
-    rcc_ListBuilder(const rcc_ListBuilder &) = delete;
-    rcc_ListBuilder &operator=(const rcc_ListBuilder &) = delete;
 
     SEXP Add(const char *name, SEXP vec)
     {
@@ -441,14 +440,13 @@ public:
 };
 
 class rcc_DataFrameBuilder {
+    RG_DELETE_COPY(rcc_DataFrameBuilder)
+
     rcc_ListBuilder list_builder;
     Size len;
 
 public:
     rcc_DataFrameBuilder(Size len) : len(len) {}
-
-    rcc_DataFrameBuilder(const rcc_DataFrameBuilder &) = delete;
-    rcc_DataFrameBuilder &operator=(const rcc_DataFrameBuilder &) = delete;
 
     template <typename T>
     rcc_Vector<T> Add(const char *name) { return list_builder.Add(name, rcc_Vector<T>(len)); }

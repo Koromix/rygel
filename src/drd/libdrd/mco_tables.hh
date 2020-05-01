@@ -307,8 +307,7 @@ struct mco_TableIndex {
     const mco_SupplementCounters<int32_t> &SupplementPrices(drd_Sector sector) const;
 };
 
-class mco_TableSet {
-public:
+struct mco_TableSet {
     HeapArray<mco_TableInfo> tables;
     HeapArray<mco_TableIndex> indexes;
 
@@ -343,12 +342,16 @@ public:
 
     BlockAllocator str_alloc;
 
+    mco_TableSet() = default;
+
     const mco_TableIndex *FindIndex(Date date = {}, bool valid_only = true) const;
     mco_TableIndex *FindIndex(Date date = {}, bool valid_only = true)
         { return (mco_TableIndex *)((const mco_TableSet *)this)->FindIndex(date, valid_only); }
 };
 
 class mco_TableSetBuilder {
+    RG_DELETE_COPY(mco_TableSetBuilder)
+
     struct TableLoadInfo {
         Size table_idx;
         Span<uint8_t> raw_data;
@@ -361,6 +364,8 @@ class mco_TableSetBuilder {
     mco_TableSet set;
 
 public:
+    mco_TableSetBuilder() = default;
+
     bool LoadTab(StreamReader *st);
     bool LoadPrices(StreamReader *st);
     bool LoadFiles(Span<const char *const> filenames);

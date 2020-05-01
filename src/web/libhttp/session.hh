@@ -12,6 +12,8 @@
 namespace RG {
 
 class http_SessionManager {
+    RG_DELETE_COPY(http_SessionManager)
+
     struct Session {
         char session_key[129];
         char client_addr[65];
@@ -29,6 +31,8 @@ class http_SessionManager {
     HashTable<const char *, Session> sessions;
 
 public:
+    http_SessionManager() = default;
+
     template<typename T>
     void Open(const http_RequestInfo &request, http_IO *io, RetainPtr<T> udata)
     {

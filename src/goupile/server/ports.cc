@@ -16,6 +16,8 @@ static ScriptPort js_ports[16];
 static LocalArray<ScriptPort *, 16> js_idle_ports;
 
 class JsonToQuickJS {
+    RG_DELETE_COPY(JsonToQuickJS)
+
     enum class State {
         Start,
         Object,
