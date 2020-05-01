@@ -49,6 +49,7 @@ class ParserImpl {
     BucketArray<VariableInfo> variables;
     HashTable<const char *, VariableInfo *> variables_map;
 
+    Size func_jump_idx = -1;
     FunctionInfo *current_func = nullptr;
     Size depth = -1;
     Size var_offset = 0;
@@ -324,8 +325,15 @@ void ParserImpl::AddFunction(const char *signature, NativeFunction *native)
         payload |= (uint64_t)func->ret_pop << 57;
         payload |= (uint64_t)native & 0x1FFFFFFFFFFFFFFull;
 
-        func->inst_idx = out_program->ir.len + 1;
-        out_program->ir.Append({Opcode::Jump, {.i = 2}});
+        // Jump over consecutively defined functions in one go
+        if (func_jump_idx >= 0 && out_program->ir[func_jump_idx].u.i == out_program->ir.len - func_jump_idx) {
+            out_program->ir[func_jump_idx].u.i++;
+        } else {
+            func_jump_idx = out_program->ir.len;
+            out_program->ir.Append({Opcode::Jump, {.i = 2}});
+        }
+
+        func->inst_idx = out_program->ir.len;
         out_program->ir.Append({func->ret_type != Type::Null ? Opcode::Invoke : Opcode::InvokeNull, {.payload = payload}});
     }
 
@@ -489,13 +497,8 @@ bool ParserImpl::ParseBlock(bool keep_variables)
             } break;
 
             case TokenKind::Func: {
-                Size jump_idx = out_program->ir.len;
-                out_program->ir.Append({Opcode::Jump});
-
                 ParseFunction();
                 show_errors |= ConsumeToken(TokenKind::EndOfLine);
-
-                out_program->ir[jump_idx].u.i = out_program->ir.len - jump_idx;
             } break;
 
             case TokenKind::Return: {
@@ -637,6 +640,12 @@ void ParserImpl::ParseFunction()
         }
     }
 
+    // Jump over consecutively defined functions in one go
+    if (func_jump_idx < 0 || out_program->ir[func_jump_idx].u.i < out_program->ir.len - func_jump_idx) {
+        func_jump_idx = out_program->ir.len;
+        out_program->ir.Append({Opcode::Jump});
+    }
+
     func->inst_idx = out_program->ir.len;
     var_offset = 0;
 
@@ -657,6 +666,8 @@ void ParserImpl::ParseFunction()
             MarkError(func_pos, "Some code paths do not return a value in function '%1'", func->name);
         }
     }
+
+    out_program->ir[func_jump_idx].u.i = out_program->ir.len - func_jump_idx;
 }
 
 void ParserImpl::ParseReturn()
