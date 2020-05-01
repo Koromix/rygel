@@ -22,6 +22,7 @@ class Lexer {
     HashSet<Span<const char>> strings;
 
     TokenizedFile *out_file;
+    HeapArray<Token> &tokens;
 
 public:
     Lexer(TokenizedFile *out_file);
@@ -58,7 +59,7 @@ static bool TestUnicodeTable(Span<const uint32_t> table, uint32_t c)
 }
 
 Lexer::Lexer(TokenizedFile *out_file)
-    : out_file(out_file)
+    : out_file(out_file), tokens(out_file->tokens)
 {
     RG_ASSERT(out_file);
     RG_ASSERT(!out_file->filename);
@@ -66,10 +67,10 @@ Lexer::Lexer(TokenizedFile *out_file)
 
 bool Lexer::Tokenize(Span<const char> code, const char *filename)
 {
-    RG_ASSERT(!out_file->tokens.len);
+    RG_ASSERT(!tokens.len);
 
     RG_DEFER_N(err_guard) {
-        out_file->tokens.Clear();
+        tokens.Clear();
         out_file->funcs.Clear();
         out_file->str_alloc.ReleaseAll();
     };
@@ -126,7 +127,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                             return false;
                         }
 
-                        out_file->tokens.Append({TokenKind::Integer, line, offset, {.i = value}});
+                        tokens.Append({TokenKind::Integer, line, offset, {.i = value}});
                         continue;
                     } else if (code[next] == 'o') {
                         int64_t value = 0;
@@ -151,7 +152,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                             return false;
                         }
 
-                        out_file->tokens.Append({TokenKind::Integer, line, offset, {.i = value}});
+                        tokens.Append({TokenKind::Integer, line, offset, {.i = value}});
                         continue;
                     } else if (code[next] == 'x') {
                         int64_t value = 0;
@@ -186,7 +187,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                             return false;
                         }
 
-                        out_file->tokens.Append({TokenKind::Integer, line, offset, {.i = value}});
+                        tokens.Append({TokenKind::Integer, line, offset, {.i = value}});
                         continue;
                     } else {
                         MarkError(next, "Invalid literal base character '%1'", code[next]);
@@ -235,14 +236,14 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                         return false;
                     }
 
-                    out_file->tokens.Append({TokenKind::Float, line, offset, {.d = d}});
+                    tokens.Append({TokenKind::Float, line, offset, {.d = d}});
                 } else {
                     if (RG_UNLIKELY(overflow)) {
                         MarkError(offset, "Number literal is too large (max = %1)", INT64_MAX);
                         return false;
                     }
 
-                    out_file->tokens.Append({TokenKind::Integer, line, offset, {.i = value}});
+                    tokens.Append({TokenKind::Integer, line, offset, {.i = value}});
                 }
             } break;
 
@@ -317,7 +318,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     ret.first->ptr = str.TrimAndLeak().ptr;
                 }
 
-                out_file->tokens.Append({TokenKind::String, line, offset, {.str = ret.first->ptr}});
+                tokens.Append({TokenKind::String, line, offset, {.str = ret.first->ptr}});
             } break;
 
             case '.': { Token3('.', '.', TokenKind::DotDotDot) || Token2('.', TokenKind::DotDot) || Token1(TokenKind::Dot); } break;
@@ -395,7 +396,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                 if (ident == "func") {
                     // In order to have order-independent top-level functions, we need to parse
                     // their declarations first! Tell the parser where to look to help it.
-                    out_file->funcs.Append(out_file->tokens.len);
+                    out_file->funcs.Append(tokens.len);
                     Token1(TokenKind::Func);
                 } else if (ident == "return") {
                     Token1(TokenKind::Return);
@@ -426,16 +427,16 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                 } else if (ident == "null") {
                     Token1(TokenKind::Null);
                 } else if (ident == "true") {
-                    out_file->tokens.Append({TokenKind::Bool, line, offset, {.b = true}});
+                    tokens.Append({TokenKind::Bool, line, offset, {.b = true}});
                 } else if (ident == "false") {
-                    out_file->tokens.Append({TokenKind::Bool, line, offset, {.b = false}});
+                    tokens.Append({TokenKind::Bool, line, offset, {.b = false}});
                 } else {
                     // Intern string
                     std::pair<Span<const char> *, bool> ret = strings.Append(ident);
                     if (ret.second) {
                         ret.first->ptr = DuplicateString(ident, &out_file->str_alloc).ptr;
                     }
-                    out_file->tokens.Append({TokenKind::Identifier, line, offset, {.str = ret.first->ptr}});
+                    tokens.Append({TokenKind::Identifier, line, offset, {.str = ret.first->ptr}});
                 }
             } break;
         }
@@ -447,7 +448,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
     if (valid) {
         out_file->filename = DuplicateString(filename, &out_file->str_alloc).ptr;
         out_file->code = code;
-        out_file->tokens.Trim();
+        tokens.Trim();
         out_file->funcs.Trim();
 
         err_guard.Disable();
@@ -458,14 +459,14 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
 
 inline bool Lexer::Token1(TokenKind tok)
 {
-    out_file->tokens.Append({tok, line, offset});
+    tokens.Append({tok, line, offset});
     return true;
 }
 
 inline bool Lexer::Token2(char c, TokenKind tok)
 {
     if (next < code.len && code[next] == c) {
-        out_file->tokens.Append({tok, line, offset});
+        tokens.Append({tok, line, offset});
         next++;
 
         return true;
@@ -477,7 +478,7 @@ inline bool Lexer::Token2(char c, TokenKind tok)
 inline bool Lexer::Token3(char c1, char c2, TokenKind tok)
 {
     if (next + 1 < code.len && code[next] == c1 && code[next + 1] == c2) {
-        out_file->tokens.Append({tok, line, offset});
+        tokens.Append({tok, line, offset});
         next += 2;
 
         return true;
