@@ -143,9 +143,9 @@ void ReportRuntimeError(Span<const FrameInfo> frames, const char *fmt, Args... a
             }
 
             if (frame.filename) {
-                PrintLn(stderr, "  %!D..[%1 (%2)]%!0", frame.filename, frame.line);
+                PrintLn(stderr, "  %!D..%1 (%2)%!0", frame.filename, frame.line);
             } else {
-                PrintLn(stderr);
+                PrintLn(stderr, "  %!D..<native function>%!0");
             }
         }
         PrintLn(stderr);

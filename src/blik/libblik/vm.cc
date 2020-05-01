@@ -398,43 +398,6 @@ bool VirtualMachine::Run(int *out_exit_code)
             bp = stack.len;
             DISPATCH(pc = (Size)inst->u.i);
         }
-        CASE(CallNative): {
-            NativeFunction *native = (NativeFunction *)(inst->u.payload & 0x1FFFFFFFFFFFFFFull);
-            Size ret_pop = (Size)(inst->u.payload >> 57) & 0x1F;
-            bool ret_null = inst->u.payload & (1ull << 62);
-
-            Span<const Value> args = stack.Take(stack.len - ret_pop, ret_pop);
-
-            stack.Grow(2);
-            stack.ptr[stack.len++].i = pc;
-            stack.ptr[stack.len++].i = bp;
-            bp = stack.len;
-
-            if (ret_null) {
-                (*native)(this, args);
-                stack.len -= ret_pop + 2;
-
-                pc = stack.ptr[bp - 2].i;
-                bp = stack.ptr[bp - 1].i;
-
-                if (RG_UNLIKELY(fatal))
-                    return false;
-            } else if (ret_pop) {
-                Value ret = (*native)(this, args);
-                stack.len -= ret_pop + 1;
-
-                pc = stack.ptr[bp - 2].i;
-                bp = stack.ptr[bp - 1].i;
-
-                if (RG_UNLIKELY(fatal)) {
-                    stack.len--;
-                    return false;
-                }
-                stack[stack.len - 1] = ret;
-            }
-
-            DISPATCH(++pc);
-        }
         CASE(Return): {
             RG_ASSERT(stack.len == bp + 1);
 
@@ -451,6 +414,47 @@ bool VirtualMachine::Run(int *out_exit_code)
             stack.len = bp - inst->u.i - 2;
             pc = stack.ptr[bp - 2].i;
             bp = stack.ptr[bp - 1].i;
+            DISPATCH(++pc);
+        }
+        CASE(Invoke): {
+            RG_ASSERT(stack.len == bp);
+
+            NativeFunction *native = (NativeFunction *)(inst->u.payload & 0x1FFFFFFFFFFFFFFull);
+            Size ret_pop = (Size)(inst->u.payload >> 57) & 0x3F;
+
+            Span<const Value> args = stack.Take(stack.len - ret_pop - 2, ret_pop);
+
+            Value ret = (*native)(this, args);
+            stack.len -= ret_pop + 1;
+
+            pc = stack.ptr[bp - 2].i;
+            bp = stack.ptr[bp - 1].i;
+
+            if (RG_UNLIKELY(fatal)) {
+                stack.len--;
+                return false;
+            }
+            stack[stack.len - 1] = ret;
+
+            DISPATCH(++pc);
+        }
+        CASE(InvokeNull): {
+            RG_ASSERT(stack.len == bp);
+
+            NativeFunction *native = (NativeFunction *)(inst->u.payload & 0x1FFFFFFFFFFFFFFull);
+            Size ret_pop = (Size)(inst->u.payload >> 57) & 0x3F;
+
+            Span<const Value> args = stack.Take(stack.len - ret_pop - 2, ret_pop);
+
+            (*native)(this, args);
+            stack.len -= ret_pop + 2;
+
+            pc = stack.ptr[bp - 2].i;
+            bp = stack.ptr[bp - 1].i;
+
+            if (RG_UNLIKELY(fatal))
+                return false;
+
             DISPATCH(++pc);
         }
 
@@ -523,20 +527,22 @@ static void Decode1(const Program &program, Size pc, Size bp, HeapArray<FrameInf
     frame.pc = pc;
     frame.bp = bp;
     if (bp) {
-        auto func = std::lower_bound(program.functions.begin(), program.functions.end(), pc,
-                                     [](const FunctionInfo &func, Size pc) { return func.inst_idx < pc; });
+        auto func = std::upper_bound(program.functions.begin(), program.functions.end(), pc,
+                                     [](Size pc, const FunctionInfo &func) { return pc < func.inst_idx; });
         --func;
 
         frame.func = &*func;
     }
 
-    const SourceInfo *src = std::lower_bound(program.sources.begin(), program.sources.end(), pc,
-                                             [](const SourceInfo &src, Size pc) { return src.lines[0].first_idx < pc; }) - 1;
-    const SourceInfo::LineInfo *line = std::lower_bound(src->lines.begin(), src->lines.end(), pc,
-                                                        [](const SourceInfo::LineInfo &line, Size pc) { return line.first_idx < pc; }) - 1;
+    const SourceInfo *src = std::upper_bound(program.sources.begin(), program.sources.end(), pc,
+                                             [](Size pc, const SourceInfo &src) { return pc < src.lines[0].first_idx; }) - 1;
+    if (src >= program.sources.ptr) {
+        const SourceInfo::LineInfo *line = std::upper_bound(src->lines.begin(), src->lines.end(), pc,
+                                                            [](Size pc, const SourceInfo::LineInfo &line) { return pc < line.first_idx; }) - 1;
 
-    frame.filename = src->filename;
-    frame.line = line->line;
+        frame.filename = src->filename;
+        frame.line = line->line;
+    }
 
     out_frames->Append(frame);
 }
@@ -606,9 +612,10 @@ void VirtualMachine::DumpInstruction() const
         case Opcode::SkipIfFalse: { LogDebug("(0x%1) SkipIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
 
         case Opcode::Call: { LogDebug("(0x%1) Call 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.i).Pad0(-5)); } break;
-        case Opcode::CallNative: { LogDebug("(0x%1) CallNative 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.payload & 0x1FFFFFFFFFFFFFFull).Pad0(-5)); } break;
         case Opcode::Return: { LogDebug("(0x%1) Return %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case Opcode::ReturnNull: { LogDebug("(0x%1) ReturnNull %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::Invoke: { LogDebug("(0x%1) Invoke 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.payload & 0x1FFFFFFFFFFFFFFull).Pad0(-5)); } break;
+        case Opcode::InvokeNull: { LogDebug("(0x%1) InvokeNull 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.payload & 0x1FFFFFFFFFFFFFFull).Pad0(-5)); } break;
 
         case Opcode::Print: { LogDebug("(0x%1) Print %2", FmtHex(pc).Pad0(-5), inst.u.payload & 0x1F); } break;
 

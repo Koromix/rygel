@@ -86,9 +86,10 @@ OPCODE(SkipIfFalse)
 
 // Functions
 OPCODE(Call)
-OPCODE(CallNative)
 OPCODE(Return)
 OPCODE(ReturnNull)
+OPCODE(Invoke)
+OPCODE(InvokeNull)
 
 // Intrinsics
 OPCODE(Print)

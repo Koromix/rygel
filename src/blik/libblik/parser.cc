@@ -260,6 +260,7 @@ bool ParserImpl::Parse(const TokenizedFile &file)
 void ParserImpl::AddFunction(const char *signature, NativeFunction *native)
 {
     FunctionInfo *func = functions.AppendDefault();
+    func->defined_pos = -1;
 
     const char *ptr = signature;
 
@@ -273,12 +274,7 @@ void ParserImpl::AddFunction(const char *signature, NativeFunction *native)
     }
     func->signature = DuplicateString(signature, &out_program->str_alloc).ptr;
 
-    if (native) {
-        func->mode = FunctionInfo::Mode::Native;
-        func->native = native;
-    } else {
-        func->mode = FunctionInfo::Mode::Intrinsic;
-    }
+    func->intrinsic = !native;
 
     // Parameters
     RG_ASSERT(ptr[0] == '(');
@@ -289,7 +285,7 @@ void ParserImpl::AddFunction(const char *signature, NativeFunction *native)
 
             if (type_name == "...") {
                 RG_ASSERT(ptr[len] == ')');
-                RG_ASSERT(func->mode == FunctionInfo::Mode::Intrinsic);
+                RG_ASSERT(func->intrinsic);
 
                 func->variadic = true;
             } else {
@@ -320,8 +316,18 @@ void ParserImpl::AddFunction(const char *signature, NativeFunction *native)
         }
     }
 
-    func->defined_pos = -1;
-    func->inst_idx = -1;
+    if (native) {
+        RG_STATIC_ASSERT(RG_LEN(FunctionInfo::params.data) < 64);
+
+        uint64_t payload = 0;
+
+        payload |= (uint64_t)func->ret_pop << 57;
+        payload |= (uint64_t)native & 0x1FFFFFFFFFFFFFFull;
+
+        func->inst_idx = out_program->ir.len + 1;
+        out_program->ir.Append({Opcode::Jump, {.i = 2}});
+        out_program->ir.Append({func->ret_type != Type::Null ? Opcode::Invoke : Opcode::InvokeNull, {.payload = payload}});
+    }
 
     // Publish it!
     {
@@ -335,7 +341,7 @@ void ParserImpl::AddFunction(const char *signature, NativeFunction *native)
 
 #ifndef NDEBUG
             do {
-                RG_ASSERT(head->mode == func->mode);
+                RG_ASSERT(head->intrinsic == func->intrinsic);
                 RG_ASSERT(!TestOverload(*head, func->params));
 
                 head = head->overload_next;
@@ -613,8 +619,8 @@ void ParserImpl::ParseFunction()
         FunctionInfo *overload = functions_map.FindValue(func->name, nullptr);
 
         while (overload != func) {
-            if (RG_UNLIKELY(overload->mode != FunctionInfo::Mode::Blik)) {
-                MarkError(func_pos, "Cannot replace or overload native or intrinsic function '%1'", func->name);
+            if (RG_UNLIKELY(overload->intrinsic)) {
+                MarkError(func_pos, "Cannot replace or overload intrinsic function '%1'", func->name);
             }
 
             if (TestOverload(*overload, func->params)) {
@@ -1655,38 +1661,22 @@ bool ParserImpl::ParseCall(const char *name)
         }
     }
 
-    switch (func->mode) {
-        case FunctionInfo::Mode::Blik: {
-          if (func->inst_idx < 0) {
-                forward_calls.Append({out_program->ir.len, func});
+    if (func->intrinsic) {
+        EmitIntrinsic(name, args);
+    } else {
+        if (func->inst_idx < 0) {
+            forward_calls.Append({out_program->ir.len, func});
 
-                if (current_func && current_func != func) {
-                    func->earliest_call_pos = std::min(func->earliest_call_pos, current_func->earliest_call_pos);
-                    func->earliest_call_idx = std::min(func->earliest_call_idx, current_func->earliest_call_idx);
-                } else {
-                    func->earliest_call_pos = std::min(func->earliest_call_pos, call_pos);
-                    func->earliest_call_idx = std::min(func->earliest_call_idx, out_program->ir.len);
-                }
+            if (current_func && current_func != func) {
+                func->earliest_call_pos = std::min(func->earliest_call_pos, current_func->earliest_call_pos);
+                func->earliest_call_idx = std::min(func->earliest_call_idx, current_func->earliest_call_idx);
+            } else {
+                func->earliest_call_pos = std::min(func->earliest_call_pos, call_pos);
+                func->earliest_call_idx = std::min(func->earliest_call_idx, out_program->ir.len);
             }
+        }
 
-            out_program->ir.Append({Opcode::Call, {.i = func->inst_idx}});
-        } break;
-
-        case FunctionInfo::Mode::Intrinsic: {
-            EmitIntrinsic(name, args);
-        } break;
-
-        case FunctionInfo::Mode::Native: {
-            RG_STATIC_ASSERT(RG_LEN(FunctionInfo::params.data) < 32);
-
-            uint64_t payload = 0;
-
-            payload |= (func->ret_type == Type::Null) ? (1ull << 62) : 0;
-            payload |= (uint64_t)func->ret_pop << 57;
-            payload |= (uint64_t)func->native & 0x1FFFFFFFFFFFFFFull;
-
-            out_program->ir.Append({Opcode::CallNative, {.payload = payload}});
-        } break;
+        out_program->ir.Append({Opcode::Call, {.i = func->inst_idx}});
     }
     stack.Append({func->ret_type});
 

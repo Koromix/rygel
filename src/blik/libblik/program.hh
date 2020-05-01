@@ -88,12 +88,6 @@ union Value {
 typedef Value NativeFunction(VirtualMachine *vm, Span<const Value> args);
 
 struct FunctionInfo {
-    enum class Mode {
-        Blik,
-        Intrinsic,
-        Native
-    };
-
     struct Parameter {
         const char *name;
         Type type;
@@ -102,8 +96,7 @@ struct FunctionInfo {
     const char *name;
     const char *signature;
 
-    Mode mode;
-    NativeFunction *native;
+    bool intrinsic;
 
     LocalArray<Parameter, 16> params;
     bool variadic;
