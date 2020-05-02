@@ -25,7 +25,7 @@ public:
     Size pc = 0;
     Size bp = 0;
 
-    VirtualMachine(const Program &program) : ir(program.ir), program(&program) {}
+    VirtualMachine(const Program *const program) : ir(program->ir), program(program) {}
 
     bool Run(int *out_exit_code);
 

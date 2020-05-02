@@ -626,7 +626,7 @@ void VirtualMachine::DumpInstruction() const
 
 bool Run(const Program &program, int *out_exit_code)
 {
-    VirtualMachine vm(program);
+    VirtualMachine vm(&program);
     return vm.Run(out_exit_code);
 }
 
