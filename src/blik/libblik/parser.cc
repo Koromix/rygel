@@ -546,7 +546,7 @@ void ParserImpl::ParseFunction()
         current_func = prev_func;
     };
 
-    ConsumeIdentifier();
+    ConsumeToken(TokenKind::Identifier);
 
     if (RG_UNLIKELY(current_func)) {
         MarkError(func_pos, "Nested functions are not supported");
@@ -1858,7 +1858,7 @@ const char *ParserImpl::InternString(const char *str)
     if (ret.second) {
         *ret.first = DuplicateString(str, &program->str_alloc).ptr;
     }
-    return str;
+    return *ret.first;
 }
 
 bool Parse(const TokenizedFile &file, Program *out_program)
