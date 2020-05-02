@@ -75,6 +75,13 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
         file->str_alloc.ReleaseAll();
     };
 
+    // Skip UTF-8 BOM... Who invented this crap?
+    if (code.len >= 3 && (uint8_t)code[0] == 0xEF &&
+                         (uint8_t)code[1] == 0xBB &&
+                         (uint8_t)code[2] == 0xBF) {
+        code = code.Take(3, code.len - 3);
+    }
+
     // Make sure we only have one EndOfLine token at the end. Without it some parser errors
     // caused by premature end of file may be not be located correctly.
     code = TrimStrRight(code);
