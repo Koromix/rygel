@@ -14,8 +14,6 @@ class VirtualMachine {
     RG_DELETE_COPY(VirtualMachine)
 
     Span<const Instruction> ir;
-
-    // Used to detect fatal errors issued by native functions
     bool fatal = false;
 
 public:
@@ -25,7 +23,7 @@ public:
     Size pc = 0;
     Size bp = 0;
 
-    VirtualMachine(const Program *const program) : ir(program->ir), program(program) {}
+    VirtualMachine(const Program *const program) : program(program) {}
 
     bool Run(int *out_exit_code);
 

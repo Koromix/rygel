@@ -12,6 +12,7 @@ bool VirtualMachine::Run(int *out_exit_code)
 {
     const Instruction *inst;
 
+    ir = program->ir;
     fatal = false;
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -25,7 +26,7 @@ bool VirtualMachine::Run(int *out_exit_code)
         DumpInstruction(); \
         goto *dispatch[(int)inst->code];
     #define LOOP \
-        DISPATCH(0)
+        DISPATCH(pc)
     #define CASE(Code) \
         Code
 #else
