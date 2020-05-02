@@ -58,11 +58,11 @@ class ParserImpl {
 
     HeapArray<ForwardCall> forward_calls;
 
-    Program *out_program;
+    Program *program;
     HeapArray<Instruction> &ir;
 
 public:
-    ParserImpl(Program *out_program);
+    ParserImpl(Program *program);
 
     bool Parse(const TokenizedFile &file);
 
@@ -143,9 +143,9 @@ private:
     }
 };
 
-Parser::Parser(Program *out_program)
+Parser::Parser(Program *program)
 {
-    impl = new ParserImpl(out_program);
+    impl = new ParserImpl(program);
 }
 
 Parser::~Parser()
@@ -164,11 +164,11 @@ void Parser::AddFunction(const char *signature, NativeFunction *native)
     impl->AddFunction(signature, native);
 }
 
-ParserImpl::ParserImpl(Program *out_program)
-    : out_program(out_program), ir(out_program->ir)
+ParserImpl::ParserImpl(Program *program)
+    : program(program), ir(program->ir)
 {
-    RG_ASSERT(out_program);
-    RG_ASSERT(!out_program->ir.len);
+    RG_ASSERT(program);
+    RG_ASSERT(!program->ir.len);
 
     // Intrinsics
     AddFunction("print(...)", nullptr);
@@ -181,18 +181,18 @@ ParserImpl::ParserImpl(Program *out_program)
 bool ParserImpl::Parse(const TokenizedFile &file)
 {
     RG_DEFER_NC(err_guard, ir_len = ir.len,
-                           sources_len = out_program->sources.len,
-                           variables_len = out_program->variables.len,
-                           functions_len = out_program->functions.len) {
+                           sources_len = program->sources.len,
+                           variables_len = program->variables.len,
+                           functions_len = program->functions.len) {
         ir.RemoveFrom(ir_len);
-        out_program->sources.RemoveFrom(sources_len);
+        program->sources.RemoveFrom(sources_len);
 
-        DestroyVariables(out_program->variables.len - variables_len);
+        DestroyVariables(program->variables.len - variables_len);
 
-        for (Size i = functions_len; i < out_program->functions.len; i++) {
-            out_program->functions_map.Remove(out_program->functions[i].name);
+        for (Size i = functions_len; i < program->functions.len; i++) {
+            program->functions_map.Remove(program->functions[i].name);
         }
-        out_program->functions.RemoveFrom(functions_len);
+        program->functions.RemoveFrom(functions_len);
     };
 
     this->file = &file;
@@ -206,8 +206,8 @@ bool ParserImpl::Parse(const TokenizedFile &file)
     forward_calls.Clear();
     functions_by_pos.Clear();
 
-    src = out_program->sources.AppendDefault();
-    src->filename = DuplicateString(file.filename, &out_program->str_alloc).ptr;
+    src = program->sources.AppendDefault();
+    src->filename = DuplicateString(file.filename, &program->str_alloc).ptr;
 
     // We want top-level order-independent functions
     ParsePrototypes(file.funcs);
@@ -246,7 +246,7 @@ bool ParserImpl::Parse(const TokenizedFile &file)
 // will go right through. Don't pass in garbage!
 void ParserImpl::AddFunction(const char *signature, NativeFunction *native)
 {
-    FunctionInfo *func = out_program->functions.AppendDefault();
+    FunctionInfo *func = program->functions.AppendDefault();
     func->defined_pos = -1;
 
     const char *ptr = signature;
@@ -256,10 +256,10 @@ void ParserImpl::AddFunction(const char *signature, NativeFunction *native)
         Size len = strcspn(ptr, "()");
         Span<const char> func_name = TrimStr(MakeSpan(ptr, len));
 
-        func->name = DuplicateString(func_name, &out_program->str_alloc).ptr;
+        func->name = DuplicateString(func_name, &program->str_alloc).ptr;
         ptr += len;
     }
-    func->signature = DuplicateString(signature, &out_program->str_alloc).ptr;
+    func->signature = DuplicateString(signature, &program->str_alloc).ptr;
 
     func->intrinsic = !native;
 
@@ -325,7 +325,7 @@ void ParserImpl::AddFunction(const char *signature, NativeFunction *native)
 
     // Publish it!
     {
-        FunctionInfo *head = *out_program->functions_map.Append(func).first;
+        FunctionInfo *head = *program->functions_map.Append(func).first;
 
         if (head != func) {
             head->overload_prev->overload_next = func;
@@ -367,7 +367,7 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
     for (Size i = 0; i < funcs.len; i++) {
         pos = funcs[i] + 1;
 
-        FunctionInfo *proto = out_program->functions.AppendDefault();
+        FunctionInfo *proto = program->functions.AppendDefault();
         functions_by_pos.Append(pos, proto);
 
         proto->defined_pos = pos;
@@ -375,7 +375,7 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
 
         // Insert in functions map
         {
-            std::pair<FunctionInfo **, bool> ret = out_program->functions_map.Append(proto);
+            std::pair<FunctionInfo **, bool> ret = program->functions_map.Append(proto);
             FunctionInfo *proto0 = *ret.first;
 
             if (ret.second) {
@@ -421,7 +421,7 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
 
         // Build signature (with parameter and return types)
         {
-            HeapArray<char> buf(&out_program->str_alloc);
+            HeapArray<char> buf(&program->str_alloc);
 
             Fmt(&buf, "%1(", proto->name);
             for (Size i = 0; i < proto->params.len; i++) {
@@ -449,12 +449,12 @@ bool ParserImpl::ParseBlock(bool keep_variables)
     depth++;
 
     RG_DEFER_C(prev_offset = var_offset,
-               variables_len = out_program->variables.len) {
+               variables_len = program->variables.len) {
         depth--;
 
         if (!keep_variables) {
             EmitPop(var_offset - prev_offset);
-            DestroyVariables(out_program->variables.len - variables_len);
+            DestroyVariables(program->variables.len - variables_len);
             var_offset = prev_offset;
         }
     };
@@ -564,7 +564,7 @@ void ParserImpl::ParseFunction()
         do {
             MatchToken(TokenKind::EndOfLine);
 
-            VariableInfo *var = out_program->variables.AppendDefault();
+            VariableInfo *var = program->variables.AppendDefault();
 
             var->readonly = !MatchToken(TokenKind::Mut);
             var->defined_pos = pos;
@@ -575,7 +575,7 @@ void ParserImpl::ParseFunction()
             }
             var->offset = stack_offset++;
 
-            std::pair<VariableInfo **, bool> ret = out_program->variables_map.Append(var);
+            std::pair<VariableInfo **, bool> ret = program->variables_map.Append(var);
             if (RG_UNLIKELY(!ret.second)) {
                const VariableInfo *prev_var = *ret.first;
                var->shadow = prev_var;
@@ -605,7 +605,7 @@ void ParserImpl::ParseFunction()
 
     // Check for incompatible function overloadings
     {
-        FunctionInfo *overload = out_program->functions_map.FindValue(func->name, nullptr);
+        FunctionInfo *overload = program->functions_map.FindValue(func->name, nullptr);
 
         while (overload != func) {
             if (RG_UNLIKELY(overload->intrinsic)) {
@@ -685,13 +685,13 @@ void ParserImpl::ParseLet()
 {
     Size var_pos = ++pos;
 
-    VariableInfo *var = out_program->variables.AppendDefault();
+    VariableInfo *var = program->variables.AppendDefault();
 
     var->readonly = !MatchToken(TokenKind::Mut);
     var->defined_pos = pos;
     var->name = ConsumeIdentifier();
 
-    std::pair<VariableInfo **, bool> ret = out_program->variables_map.Append(var);
+    std::pair<VariableInfo **, bool> ret = program->variables_map.Append(var);
     if (RG_UNLIKELY(!ret.second)) {
         const VariableInfo *prev_var = *ret.first;
         var->shadow = prev_var;
@@ -877,7 +877,7 @@ void ParserImpl::ParseFor()
 {
     Size for_pos = ++pos;
 
-    VariableInfo *it = out_program->variables.AppendDefault();
+    VariableInfo *it = program->variables.AppendDefault();
 
     it->readonly = !MatchToken(TokenKind::Mut);
     it->defined_pos = pos;
@@ -887,7 +887,7 @@ void ParserImpl::ParseFor()
 
     it->offset = var_offset + 2;
 
-    std::pair<VariableInfo **, bool> ret = out_program->variables_map.Append(it);
+    std::pair<VariableInfo **, bool> ret = program->variables_map.Append(it);
     if (RG_UNLIKELY(!ret.second)) {
         const VariableInfo *prev_var = *ret.first;
         it->shadow = prev_var;
@@ -1151,7 +1151,7 @@ Type ParserImpl::ParseExpression(bool keep_result)
                         if (RG_UNLIKELY(!ParseCall(tok.u.str)))
                             goto error;
                     } else {
-                        const VariableInfo *var = out_program->variables_map.FindValue(tok.u.str, nullptr);
+                        const VariableInfo *var = program->variables_map.FindValue(tok.u.str, nullptr);
 
                         if (RG_UNLIKELY(!var)) {
                             MarkError(pos - 1, "Variable '%1' does not exist", tok.u.str);
@@ -1616,7 +1616,7 @@ bool ParserImpl::ParseCall(const char *name)
 
     Size call_pos = pos - 2;
 
-    FunctionInfo *func0 = out_program->functions_map.FindValue(name, nullptr);
+    FunctionInfo *func0 = program->functions_map.FindValue(name, nullptr);
     if (RG_UNLIKELY(!func0)) {
         MarkError(call_pos, "Function '%1' does not exist", name);
         return false;
@@ -1768,18 +1768,18 @@ void ParserImpl::EmitReturn()
 
 void ParserImpl::DestroyVariables(Size count)
 {
-    for (Size i = out_program->variables.len - count; i < out_program->variables.len; i++) {
-        const VariableInfo &var = out_program->variables[i];
-        VariableInfo **ptr = out_program->variables_map.Find(var.name);
+    for (Size i = program->variables.len - count; i < program->variables.len; i++) {
+        const VariableInfo &var = program->variables[i];
+        VariableInfo **ptr = program->variables_map.Find(var.name);
 
         if (var.shadow) {
             *ptr = (VariableInfo *)var.shadow;
         } else {
-            out_program->variables_map.Remove(ptr);
+            program->variables_map.Remove(ptr);
         }
     }
 
-    out_program->variables.RemoveLast(count);
+    program->variables.RemoveLast(count);
 }
 
 bool ParserImpl::TestOverload(const FunctionInfo &proto, Span<const FunctionInfo::Parameter> params2)
@@ -1856,7 +1856,7 @@ const char *ParserImpl::InternString(const char *str)
 {
     std::pair<const char **, bool> ret = strings.Append(str);
     if (ret.second) {
-        *ret.first = DuplicateString(str, &out_program->str_alloc).ptr;
+        *ret.first = DuplicateString(str, &program->str_alloc).ptr;
     }
     return str;
 }
