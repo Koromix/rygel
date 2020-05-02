@@ -15,11 +15,11 @@
 #include <string>
 #include <utility>
 
-#include "util.h"
-#include "flags.h"
-#include "logging.h"
-#include "pcre.h"
-#include "strutil.h"
+#include "util/util.h"
+#include "util/flags.h"
+#include "util/logging.h"
+#include "util/pcre.h"
+#include "util/strutil.h"
 
 // Silence warnings about the wacky formatting in the operator() functions.
 #if !defined(__clang__) && defined(__GNUC__) && __GNUC__ >= 6

@@ -20,9 +20,9 @@
 #include <string>
 #include <vector>
 
-#include "util/util.h"
-#include "re2/prefilter.h"
-#include "re2/sparse_array.h"
+#include "../util/util.h"
+#include "prefilter.h"
+#include "sparse_array.h"
 
 namespace re2 {
 

@@ -13,7 +13,7 @@
 #include <ostream>
 #include <sstream>
 
-#include "util/util.h"
+#include "util.h"
 
 // Debug-only checking.
 #define DCHECK(condition) assert(condition)
