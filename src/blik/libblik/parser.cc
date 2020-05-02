@@ -182,11 +182,13 @@ bool ParserImpl::Parse(const TokenizedFile &file)
 {
     RG_DEFER_NC(err_guard, ir_len = ir.len,
                            sources_len = program->sources.len,
+                           prev_var_offset = var_offset,
                            variables_len = program->variables.len,
                            functions_len = program->functions.len) {
         ir.RemoveFrom(ir_len);
         program->sources.RemoveFrom(sources_len);
 
+        var_offset = prev_var_offset;
         DestroyVariables(program->variables.len - variables_len);
 
         for (Size i = functions_len; i < program->functions.len; i++) {
