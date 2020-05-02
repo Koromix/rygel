@@ -29,5 +29,5 @@ index e3bcd2d2..8b581b8c 100644
 -}
 -#endif
  
- JSContext *JS_NewContextRaw(JSRuntime *rt)
+ JSRuntime *JS_NewRuntime2(const JSMallocFunctions *mf, void *opaque)
  {
