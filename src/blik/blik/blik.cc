@@ -7,18 +7,71 @@
 
 namespace RG {
 
+static int RunCode(Span<const char> code, const char *filename)
+{
+    TokenizedFile file;
+    Program program;
+
+    if (!Tokenize(code, filename, &file))
+        return 1;
+    if (!Parse(file, &program))
+        return 1;
+
+    int exit_code;
+    if (!Run(program, &exit_code))
+        return 1;
+
+    return exit_code;
+}
+
+static int RunInteractive()
+{
+    Program program;
+    Parser parser(&program);
+    VirtualMachine vm(&program);
+
+    // XXX: We need to go back to the StreamReader/LineReader split design, because it
+    // does not work correctly with stdin. The problem is that StreamReader uses fread()
+    // which does block until the buffer is full or EOF. Until then, use fgets() here.
+    char chunk[1024];
+    while(fgets(chunk, sizeof(chunk), stdin) != nullptr) {
+        TokenizedFile file;
+        if (!Tokenize(chunk, "<inline>", &file))
+            continue;
+        if (!parser.Parse(file))
+            continue;
+
+        int code;
+        if (!vm.Run(&code))
+            return 1;
+
+        // Delete the exit for the next iteration :)
+        program.ir.RemoveLast(1);
+    }
+
+    return 0;
+}
+
 int Main(int argc, char **argv)
 {
+    enum class RunMode {
+        File,
+        Command,
+        Interactive
+    };
+
     // Options
-    bool run_inline = false;
-    const char *filename = nullptr;
+    RunMode mode = RunMode::File;
+    const char *filename_or_code = nullptr;
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: blik [options] <file>
-       blik [options] -i <code>
+       blik [options] -c <code>
+       blik [options] -i
 
 Options:
-    -i, --inline                 Run code directly from argument)");
+    -c, --command                Run code directly from argument
+    -i, --interactive            Run code interactively (REPL))");
     };
 
     // Handle version
@@ -35,40 +88,56 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-i", "--inline")) {
-                run_inline = true;
+            } else if (opt.Test("-c", "--command")) {
+                if (mode != RunMode::File) {
+                    LogError("You cannot use --command and --interactive at the same time");
+                    return 1;
+                }
+
+                mode = RunMode::Command;
+            } else if (opt.Test("-i", "--interactive")) {
+                if (mode != RunMode::File) {
+                    LogError("You cannot use --command and --interactive at the same time");
+                    return 1;
+                }
+
+                mode = RunMode::Interactive;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
             }
         }
 
-        filename = opt.ConsumeNonOption();
-        if (!filename) {
-            LogError("No script provided");
-            return 1;
-        }
+        filename_or_code = opt.ConsumeNonOption();
     }
 
-    HeapArray<char> code;
-    if (run_inline) {
-        code.Append(filename);
-        filename = "<inline>";
-    } else {
-        if (ReadFile(filename, Megabytes(64), &code) < 0)
-            return 1;
+    switch (mode) {
+        case RunMode::File: {
+            if (!filename_or_code) {
+                LogError("No filename provided");
+                return 1;
+            }
+
+            HeapArray<char> code;
+            if (ReadFile(filename_or_code, Megabytes(64), &code) < 0)
+                return 1;
+
+            return RunCode(code, filename_or_code);
+        } break;
+
+        case RunMode::Command: {
+            if (!filename_or_code) {
+                LogError("No command provided");
+                return 1;
+            }
+
+            return RunCode(filename_or_code, "<inline>");
+        } break;
+
+        case RunMode::Interactive: { return RunInteractive(); } break;
     }
 
-    TokenizedFile file;
-    if (!Tokenize(code, filename, &file))
-        return 1;
-
-    Program program;
-    if (!Parse(file, &program))
-        return 1;
-
-    int exit_code;
-    return Run(program, &exit_code) ? exit_code : 1;
+    RG_UNREACHABLE();
 }
 
 }
