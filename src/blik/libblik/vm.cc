@@ -503,7 +503,7 @@ bool VirtualMachine::Run(int *out_exit_code)
 #ifndef NDEBUG
             if (inst->u.b) {
                 Size good_stack_len = 0;
-                for (const VariableInfo &var: program->globals) {
+                for (const VariableInfo &var: program->variables) {
                     good_stack_len += (var.type != Type::Null);
                 }
                 RG_ASSERT(stack.len == good_stack_len);

@@ -123,9 +123,9 @@ struct Program {
     HeapArray<SourceInfo> sources;
 
     BucketArray<FunctionInfo> functions;
-    HashTable<const char *, const FunctionInfo *> functions_map;
-    BucketArray<VariableInfo> globals;
-    HashTable<const char *, const VariableInfo *> globals_map;
+    HashTable<const char *, FunctionInfo *> functions_map;
+    BucketArray<VariableInfo> variables;
+    HashTable<const char *, VariableInfo *> variables_map;
 
     BlockAllocator str_alloc;
 };
