@@ -58,11 +58,11 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
 
     struct {
         Rcpp::CharacterVector entity;
-        Rcpp::CharacterVector concept;
+        Rcpp::CharacterVector concept_name;
         Rcpp::NumericVector time;
     } values;
     values.entity = values_df[(const char *)keys["entity"]];
-    values.concept = values_df[(const char *)keys["concept"]];
+    values.concept_name = values_df[(const char *)keys["concept"]];
     values.time = values_df[(const char *)keys["time"]];
 
     inst->last_source_id++;
@@ -93,7 +93,7 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
 
         Element elmt;
         elmt.source_id = inst->last_source_id;
-        elmt.concept = DuplicateString((const char *)values.concept[i], &inst->entity_set.str_alloc).ptr;
+        elmt.concept_name = DuplicateString((const char *)values.concept_name[i], &inst->entity_set.str_alloc).ptr;
         elmt.time = values.time[i];
         func(elmt, i);
         entity->elements.Append(elmt);
@@ -246,11 +246,11 @@ RcppExport SEXP heimdallR_SetConcepts(SEXP inst_xp, SEXP name_xp, SEXP concepts_
             concept_set->paths_set.Append(path);
         }
 
-        Concept concept;
-        concept.name = DuplicateString((const char *)concepts.name[i], &inst->entity_set.str_alloc).ptr;
-        concept.path = path;
-        if (!concept_set->concepts_map.Append(concept).second) {
-            LogError("Concept '%1' already exists", concept.name);
+        Concept concept_info;
+        concept_info.name = DuplicateString((const char *)concepts.name[i], &inst->entity_set.str_alloc).ptr;
+        concept_info.path = path;
+        if (!concept_set->concepts_map.Append(concept_info).second) {
+            LogError("Concept '%1' already exists", concept_info.name);
         }
     }
 
