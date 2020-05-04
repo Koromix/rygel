@@ -119,7 +119,7 @@ printLn("The value of p is: ", p)
 # Les fonctions sont également typées, bien évidemment ! On commence par fibonacci,
 # un classique...
 
-func fib(n: Int) Int
+func fib(n: Int): Int
     if n <= 1 do return n
     return fib(n - 1) + fib(n - 2)
 end
@@ -157,7 +157,7 @@ overload()
 # Et maintenant une séquence assez random qui m'a servi à implémenter le support des fonctions :)
 # On la garde pour tester que tout ne commence pas à déconner pour une raison X ou Y.
 
-func tt(e: String, ii: Int) Bool
+func tt(e: String, ii: Int): Bool
     let mut tte = 267
     begin
         let xx = 3
@@ -168,7 +168,7 @@ func tt(e: String, ii: Int) Bool
     return true
 end
 
-func eee(mut pp: Int) Int
+func eee(mut pp: Int): Int
     let xxxxx = 1
     printLn("CALLED eee with ", pp)
     pp := pp + 1
@@ -182,23 +182,23 @@ while zz < 3
 end
 while (zz := inc(zz)) < 9 do tt("Nelson", (zz += 1) - 1)
 
-func inc(pp: Int) Int do return pp + 1
+func inc(pp: Int): Int do return pp + 1
 
-func func0() String
+func func0(): String
     return "func0()"
 end
-func inline0() String do return "inline0()"
+func inline0(): String do return "inline0()"
 
 printLn("TESTING ", func0())
 printLn("TESTING ", inline0())
 
 # blik optimise la récursivité terminale (TRE = tail recursion elimination).
 
-func factorial(n: Int, accum: Int) Int
+func factorial(n: Int, accum: Int): Int
     let soFar = n * accum
     if n <= 1 do return soFar
     return factorial(n - 1, soFar)
 end
-func factorial(n: Int) Int do return factorial(n, 1)
+func factorial(n: Int): Int do return factorial(n, 1)
 
 printLn(factorial(18))
