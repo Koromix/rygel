@@ -1191,7 +1191,7 @@ Type ParserImpl::ParseExpression(bool keep_result)
                 } else if (parentheses || !expect_op) {
                     goto unexpected;
                 } else if (tok.kind == TokenKind::Assign) {
-                    MarkError(pos - 1, "Unexpected token '=', did you mean '=='?");
+                    MarkError(pos - 1, "Unexpected token '=', did you mean ':=' or '=='?");
 
                     // Pretend the user has typed '==' to avoid cascading errors
                     op.kind = TokenKind::Equal;
