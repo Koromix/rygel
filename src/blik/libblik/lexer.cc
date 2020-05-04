@@ -124,6 +124,8 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                             } else if (RG_UNLIKELY(digit < 10)) {
                                 MarkError(next, "Invalid binary digit '%1'", code[next]);
                                 return false;
+                            } else if (code[next] == '_') {
+                                // Ignore underscores in number literals (e.g. 0b1000_0000_0001)
                             } else {
                                 break;
                             }
@@ -149,6 +151,8 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                             } else if (RG_UNLIKELY(digit < 10)) {
                                 MarkError(next, "Invalid octal digit '%1'", code[next]);
                                 return false;
+                            } else if (code[next] == '_') {
+                                // Ignore underscores in number literals (e.g. 0o700_777)
                             } else {
                                 break;
                             }
@@ -184,6 +188,8 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                             } else if (RG_UNLIKELY(IsAsciiAlpha(code[next]))) {
                                 MarkError(next, "Invalid hexadecimal digit '%1'", code[next]);
                                 return false;
+                            } else if (code[next] == '_') {
+                                // Ignore underscores in number literals (e.g. 0xFFFF_FFFF)
                             } else {
                                 break;
                             }
@@ -222,8 +228,13 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                         overflow |= (value > (INT64_MAX - digit) / 10);
                         value = (value * 10) + (code[next] - '0');
                     } else if (code[next] == '.') {
-                        dot = (next + 1 < code.len && IsAsciiDigit(code[next + 1]));
-                        break;
+                        // Could be a range operator (.., ...), don't mess it up!
+                        if (next + 1 < code.len && code[next + 1] == '.')
+                            break;
+
+                        dot = true;
+                    } else if (code[next] == '_') {
+                        // Ignore underscores in number literals (e.g. 10_000_000)
                     } else {
                         break;
                     }
@@ -232,18 +243,34 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                 }
 
                 if (dot) {
+                    char buf[256];
+                    Size buf_len = 0;
+                    for (Size i = offset; i < next; i++) {
+                        if (code[i] != '_') {
+                            if (RG_UNLIKELY(buf_len >= RG_SIZE(buf) - 2)) {
+                                MarkError(offset, "Number literal is too large");
+                                return false;
+                            }
+
+                            buf[buf_len++] = code[i];
+                        }
+                    }
+                    buf[buf_len] = 0;
+
                     errno = 0;
 
-                    char *end;
-                    double d = strtod(code.ptr + offset, &end);
-                    next = end - code.ptr;
-
+                    double d = strtod(buf, nullptr);
                     if (RG_UNLIKELY(errno == ERANGE)) {
                         MarkError(offset, "Float value exceeds supported range");
                         return false;
                     }
 
                     tokens.Append({TokenKind::Float, line, offset, {.d = d}});
+
+                    if (RG_UNLIKELY(errno == ERANGE)) {
+                        MarkError(offset, "Float value exceeds supported range");
+                        return false;
+                    }
                 } else {
                     if (RG_UNLIKELY(overflow)) {
                         MarkError(offset, "Number literal is too large (max = %1)", INT64_MAX);

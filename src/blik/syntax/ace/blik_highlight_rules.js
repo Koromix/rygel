@@ -21,7 +21,7 @@ var BlikHighlightRules = function() {
             regex: "'(?:[^\\\\]|\\\\.)*?'"
         }, {
             token: "constant.numeric",
-            regex: "(0x[0-9a-fA-F]*|[0-9]+(\\.?[0-9]*)?|0o[0-8]*|0b[01]*)\\b"
+            regex: "(0x[0-9a-fA-F_]*|[0-9_]+(\\.?[0-9_]*)?|0o[0-8_]*|0b[01_]*)\\b"
         }, {
             token: "keyword.control",
             regex: "(?:let|for|func|if|else|while|begin|end|return|in|do|mut|break|continue)\\b"
