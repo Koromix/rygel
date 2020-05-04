@@ -112,14 +112,16 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
             case '0': {
                 if (next < code.len && IsAsciiAlpha(code[next])) {
                     if (code[next] == 'b') {
-                        int64_t value = 0;
+                        // We limit to IN64_MAX, but we build with -ftrapv in debug builds.
+                        // Don't replace with int64_t or debug builds will crash on overflow!
+                        uint64_t value = 0;
                         bool overflow = false;
 
                         while (++next < code.len) {
                             unsigned int digit = (unsigned int)(code[next] - '0');
 
                             if (digit < 2) {
-                                overflow |= (value > (INT64_MAX - digit) / 2);
+                                overflow |= (value > ((uint64_t)INT64_MAX - digit) / 2);
                                 value = (value * 2) + digit;
                             } else if (RG_UNLIKELY(digit < 10)) {
                                 MarkError(next, "Invalid binary digit '%1'", code[next]);
@@ -132,21 +134,23 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                         }
 
                         if (RG_UNLIKELY(overflow)) {
-                            MarkError(offset, "Number literal is too large (max = %1)", INT64_MAX);
+                            MarkError(offset, "Number literal is too big (max = %1)", INT64_MAX);
                             return false;
                         }
 
-                        tokens.Append({TokenKind::Integer, line, offset, {.i = value}});
+                        tokens.Append({TokenKind::Integer, line, offset, {.i = (int64_t)value}});
                         continue;
                     } else if (code[next] == 'o') {
-                        int64_t value = 0;
+                        // We limit to IN64_MAX, but we build with -ftrapv in debug builds.
+                        // Don't replace with int64_t or debug builds will crash on overflow!
+                        uint64_t value = 0;
                         bool overflow = false;
 
                         while (++next < code.len) {
                             unsigned int digit = (unsigned int)(code[next] - '0');
 
                             if (digit < 8) {
-                                overflow |= (value > (INT64_MAX - digit) / 8);
+                                overflow |= (value > ((uint64_t)INT64_MAX - digit) / 8);
                                 value = (value * 8) + digit;
                             } else if (RG_UNLIKELY(digit < 10)) {
                                 MarkError(next, "Invalid octal digit '%1'", code[next]);
@@ -159,32 +163,34 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                         }
 
                         if (RG_UNLIKELY(overflow)) {
-                            MarkError(offset, "Number literal is too large (max = %1)", INT64_MAX);
+                            MarkError(offset, "Number literal is too big (max = %1)", INT64_MAX);
                             return false;
                         }
 
-                        tokens.Append({TokenKind::Integer, line, offset, {.i = value}});
+                        tokens.Append({TokenKind::Integer, line, offset, {.i = (int64_t)value}});
                         continue;
                     } else if (code[next] == 'x') {
-                        int64_t value = 0;
+                        // We limit to IN64_MAX, but we build with -ftrapv in debug builds.
+                        // Don't replace with int64_t or debug builds will crash on overflow!
+                        uint64_t value = 0;
                         bool overflow = false;
 
                         while (++next < code.len) {
                             if (IsAsciiDigit(code[next])) {
                                 unsigned int digit = (unsigned int)(code[next] - '0');
 
-                                overflow |= (value > (INT64_MAX - digit) / 16);
-                                value = (value * 16) + (code[next] - '0');
+                                overflow |= (value > ((uint64_t)INT64_MAX - digit) / 16);
+                                value = (value * 16) + digit;
                             } else if (code[next] >= 'A' && code[next] <= 'F') {
                                 unsigned int digit = (unsigned int)(code[next] - 'A' + 10);
 
-                                overflow |= (value > (INT64_MAX - digit) / 16);
-                                value = (value * 16) + (code[next] - 'A' + 10);
+                                overflow |= (value > ((uint64_t)INT64_MAX - digit) / 16);
+                                value = (value * 16) + digit;
                             } else if (code[next] >= 'a' && code[next] <= 'f') {
                                 unsigned int digit = (unsigned int)(code[next] - 'a' + 10);
 
-                                overflow |= (value > (INT64_MAX - digit) / 16);
-                                value = (value * 16) + (code[next] - 'a' + 10);
+                                overflow |= (value > ((uint64_t)INT64_MAX - digit) / 16);
+                                value = (value * 16) + digit;
                             } else if (RG_UNLIKELY(IsAsciiAlpha(code[next]))) {
                                 MarkError(next, "Invalid hexadecimal digit '%1'", code[next]);
                                 return false;
@@ -196,11 +202,11 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                         }
 
                         if (RG_UNLIKELY(overflow)) {
-                            MarkError(offset, "Number literal is too large (max = %1)", INT64_MAX);
+                            MarkError(offset, "Number literal is too big (max = %1)", INT64_MAX);
                             return false;
                         }
 
-                        tokens.Append({TokenKind::Integer, line, offset, {.i = value}});
+                        tokens.Append({TokenKind::Integer, line, offset, {.i = (int64_t)value}});
                         continue;
                     } else {
                         MarkError(next, "Invalid literal base character '%1'", code[next]);
@@ -217,7 +223,9 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
             case '7':
             case '8':
             case '9': {
-                int64_t value = code[offset] - '0';
+                // We limit to IN64_MAX, but we build with -ftrapv in debug builds.
+                // Don't replace with int64_t or debug builds will crash on overflow!
+                uint64_t value = code[offset] - '0';
                 bool overflow = false;
                 bool dot = false;
 
@@ -225,7 +233,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     unsigned int digit = (unsigned int)(code[next] - '0');
 
                     if (digit < 10) {
-                        overflow |= (value > (INT64_MAX - digit) / 10);
+                        overflow |= (value > ((uint64_t)INT64_MAX - digit) / 10);
                         value = (value * 10) + (code[next] - '0');
                     } else if (code[next] == '.') {
                         // Could be a range operator (.., ...), don't mess it up!
@@ -248,7 +256,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     for (Size i = offset; i < next; i++) {
                         if (code[i] != '_') {
                             if (RG_UNLIKELY(buf_len >= RG_SIZE(buf) - 2)) {
-                                MarkError(offset, "Number literal is too large");
+                                MarkError(offset, "Number literal is too long (max = %1 characters)", RG_SIZE(buf) - 1);
                                 return false;
                             }
 
@@ -273,11 +281,11 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     }
                 } else {
                     if (RG_UNLIKELY(overflow)) {
-                        MarkError(offset, "Number literal is too large (max = %1)", INT64_MAX);
+                        MarkError(offset, "Number literal is too big (max = %1)", INT64_MAX);
                         return false;
                     }
 
-                    tokens.Append({TokenKind::Integer, line, offset, {.i = value}});
+                    tokens.Append({TokenKind::Integer, line, offset, {.i = (int64_t)value}});
                 }
             } break;
 
