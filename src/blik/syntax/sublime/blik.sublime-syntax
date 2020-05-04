@@ -33,25 +33,25 @@ contexts:
       scope: constant.language.blik
     - match: \b(0x[0-9a-fA-F]*|[0-9]+(\.?[0-9]*)?|0o[0-8]*|0b[01]*)\b
       scope: constant.numeric.blik
-    - match: \b([[:alpha:]_][[:alnum:]_]*) *\(\b*
+    - match: \b([[:alpha:]_][[:alnum:]_]*) *\(\b
       captures:
       1: variable.function.blik
       push: brackets
 
   function:
-    - match: \b[[:alpha:]_][[:alnum:]_]*\b*
+    - match: \b[[:alpha:]_][[:alnum:]_]*\b
       scope: entity.name.function.blik
       pop: true
 
   let:
     - match: \bmut\b
       scope: keyword.control.blik
-    - match: \b[[:alpha:]_][[:alnum:]_]*\b*
+    - match: \b[[:alpha:]_][[:alnum:]_]*\b
       pop: true
   for:
     - match: \bmut\b
       scope: keyword.control.blik
-    - match: \b[[:alpha:]_][[:alnum:]_]*\b*
+    - match: \b[[:alpha:]_][[:alnum:]_]*\b
       scope: variable.other.blik
       pop: true
 
