@@ -364,13 +364,15 @@ void DrawLine(InterpolationMode interpolation, Fun f)
 
 static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zoom, float alpha,
                          Span<const Element *const> measures, double align_offset,
-                         double min, double max, InterpolationMode interpolation)
+                         double min, double max, InterpolationMode interpolation, bool labels)
 {
     if (!measures.len)
         return;
     RG_ASSERT(measures[0]->type == Element::Type::Measure);
 
     ImDrawList *draw = ImGui::GetWindowDrawList();
+    ImFont *font = ImGui::GetFont();
+    float font_size = ImGui::GetFontSize() * 0.75f;
 
     float y_scaler;
     if (max > min) {
@@ -430,18 +432,45 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
     for (const Element *elmt: measures) {
         ImU32 color = get_color(elmt);
         ImVec2 point = compute_coordinates(elmt->time, elmt->u.measure.value);
-        ImRect point_bb = {
-            point.x - 3.0f, point.y - 3.0f,
-            point.x + 3.0f, point.y + 3.0f
-        };
 
-        if (ImGui::ItemAdd(point_bb, 0)) {
-            draw->AddCircleFilled(point, 3.0f, color);
+        if (labels) {
+            char value_str[32];
+            Fmt(value_str, "%1", FmtDouble(elmt->u.measure.value, 2));
 
-            if (ImGui::IsItemHovered()) {
-                ImGui::BeginTooltip();
-                TextMeasure(*elmt, align_offset);
-                ImGui::EndTooltip();
+            ImRect text_bb;
+            {
+                ImVec2 text_size = font->CalcTextSizeA(font_size, FLT_MAX, -1.0f, value_str);
+
+                text_bb.Min.x = point.x - text_size.x / 2.0f;
+                text_bb.Min.y = point.y - text_size.y / 2.0f - 2.0f;
+                text_bb.Max.x = point.x + text_size.x / 2.0f;
+                text_bb.Max.y = point.y + text_size.y / 2.0f - 2.0f;
+            }
+
+            if (ImGui::ItemAdd(text_bb, 0)) {
+                draw->AddRectFilled(text_bb.Min, text_bb.Max, ImGui::GetColorU32(ImGuiCol_PopupBg, alpha));
+                draw->AddText(font, font_size, text_bb.Min, color, value_str, nullptr);
+
+                if (ImGui::IsItemHovered()) {
+                    ImGui::BeginTooltip();
+                    TextMeasure(*elmt, align_offset);
+                    ImGui::EndTooltip();
+                }
+            }
+        } else {
+            ImRect point_bb = {
+                point.x - 3.0f, point.y - 3.0f,
+                point.x + 3.0f, point.y + 3.0f
+            };
+
+            if (ImGui::ItemAdd(point_bb, 0)) {
+                draw->AddCircleFilled(point, 3.0f, color);
+
+                if (ImGui::IsItemHovered()) {
+                    ImGui::BeginTooltip();
+                    TextMeasure(*elmt, align_offset);
+                    ImGui::EndTooltip();
+                }
             }
         }
     }
@@ -613,7 +642,8 @@ static void DrawLineElements(ImRect bb, float tree_width,
     DrawEvents(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.elements_alpha, events,
                line.align_offset);
     DrawMeasures(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.elements_alpha,
-                 measures, line.align_offset, measures_min, measures_max, state.settings.interpolation);
+                 measures, line.align_offset, measures_min, measures_max,
+                 state.settings.interpolation, state.settings.plot_labels);
 }
 
 static bool FindConceptAndAlign(const Entity &ent, const HashSet<Span<const char>> &align_concepts,
@@ -951,24 +981,6 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
                         CmpStr(line1.title, line2.title)) < 0;
     });
 
-    // Draw elements
-    {
-        draw->PushClipRect(ImVec2(win->ClipRect.Min.x + tree_width, win->ClipRect.Min.y),
-                           win->ClipRect.Max, true);
-        RG_DEFER { draw->PopClipRect(); };
-
-        float y = state.render_offset + bb.Min.y;
-        for (const LineData &line: lines) {
-            if (!line.draw)
-                continue;
-
-            ImRect bb(win->ClipRect.Min.x, y + style.ItemSpacing.y + 0.5f,
-                      win->ClipRect.Max.x, y + style.ItemSpacing.y + line.height + 0.5f);
-            DrawLineElements(bb, tree_width, state, time_offset + line.align_offset, line);
-            y = bb.Max.y - 0.5f;
-        }
-    }
-
     // Draw frames (header, support line)
     Span<const char> deploy_path = {};
     HeapArray<const LineData *> select_lines;
@@ -1022,6 +1034,24 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
             }
 
             y = line_bb.Max.y;
+        }
+    }
+
+    // Draw elements
+    {
+        draw->PushClipRect(ImVec2(win->ClipRect.Min.x + tree_width, win->ClipRect.Min.y),
+                           win->ClipRect.Max, true);
+        RG_DEFER { draw->PopClipRect(); };
+
+        float y = state.render_offset + bb.Min.y;
+        for (const LineData &line: lines) {
+            if (!line.draw)
+                continue;
+
+            ImRect bb(win->ClipRect.Min.x, y + style.ItemSpacing.y + 0.5f,
+                      win->ClipRect.Max.x, y + style.ItemSpacing.y + line.height + 0.5f);
+            DrawLineElements(bb, tree_width, state, time_offset + line.align_offset, line);
+            y = bb.Max.y - 0.5f;
         }
     }
 
@@ -1604,6 +1634,7 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
             ImGui::Checkbox("Draw plots", &state.new_settings.plot_measures);
             ImGui::Combo("Interpolation", (int *)&state.new_settings.interpolation,
                          InterpolationModeNames, RG_LEN(InterpolationModeNames));
+            ImGui::Checkbox("Show labels", &state.new_settings.plot_labels);
         }
         if (ImGui::CollapsingHeader("Time", ImGuiTreeNodeFlags_DefaultOpen)) {
             int time_unit = (int)state.new_settings.time_unit;

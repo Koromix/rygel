@@ -54,6 +54,7 @@ struct InterfaceSettings {
     float deployed_alpha = 0.05f;
     float plot_height = 50.0f;
     InterpolationMode interpolation = InterpolationMode::Linear;
+    bool plot_labels = true;
     float grid_alpha = 0.04f;
     TimeUnit time_unit = TimeUnit::Unknown;
     bool natural_time = false;
