@@ -43,6 +43,22 @@ private:
             valid = false;
         }
     }
+
+    void MarkUnexpected(Size offset, const char *prefix)
+    {
+        // It's possible the caller has done this already, but we can afford a bit
+        // of redundance here: it is an error path.
+        uint32_t c;
+        Size bytes = DecodeUtf8(code, offset, &c);
+
+        if (!bytes) {
+            MarkError(offset, "Illegal UTF-8 sequence");
+        } else if ((uint8_t)code[offset] < 32) {
+            MarkError(offset, "%1 byte 0x%2", prefix, FmtHex(code[offset]).Pad0(-2));
+        } else {
+            MarkError(offset, "%1 character '%2'", prefix, code.Take(offset, bytes));
+        }
+    }
 };
 
 static bool TestUnicodeTable(Span<const uint32_t> table, uint32_t c)
@@ -124,7 +140,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                                 overflow |= (value > ((uint64_t)INT64_MAX - digit) / 2);
                                 value = (value * 2) + digit;
                             } else if (RG_UNLIKELY(digit < 10)) {
-                                MarkError(next, "Invalid binary digit '%1'", code[next]);
+                                MarkUnexpected(next, "Invalid binary digit");
                                 return false;
                             } else if (code[next] == '_') {
                                 // Ignore underscores in number literals (e.g. 0b1000_0000_0001)
@@ -153,7 +169,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                                 overflow |= (value > ((uint64_t)INT64_MAX - digit) / 8);
                                 value = (value * 8) + digit;
                             } else if (RG_UNLIKELY(digit < 10)) {
-                                MarkError(next, "Invalid octal digit '%1'", code[next]);
+                                MarkUnexpected(next, "Invalid octal digit");
                                 return false;
                             } else if (code[next] == '_') {
                                 // Ignore underscores in number literals (e.g. 0o700_777)
@@ -192,7 +208,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                                 overflow |= (value > ((uint64_t)INT64_MAX - digit) / 16);
                                 value = (value * 16) + digit;
                             } else if (RG_UNLIKELY(IsAsciiAlpha(code[next]))) {
-                                MarkError(next, "Invalid hexadecimal digit '%1'", code[next]);
+                                MarkUnexpected(next, "Invalid hexadecimal digit");
                                 return false;
                             } else if (code[next] == '_') {
                                 // Ignore underscores in number literals (e.g. 0xFFFF_FFFF)
@@ -209,7 +225,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                         tokens.Append({TokenKind::Integer, line, offset, {.i = (int64_t)value}});
                         continue;
                     } else {
-                        MarkError(next, "Invalid literal base character '%1'", code[next]);
+                        MarkUnexpected(next, "Invalid literal base");
                         return false;
                     }
                 }
@@ -323,13 +339,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                                 case '0': { str.Append(0); } break;
 
                                 default: {
-                                    if (code[next] >= 32 && (uint8_t)code[next] < 128) {
-                                        MarkError(next, "Unsupported escape sequence '\\%1'", code[next]);
-                                    } else {
-                                        MarkError(next, "Unsupported escape sequence byte '\\0x%1",
-                                                  FmtHex(code[next]).Pad0(-2));
-                                    }
-
+                                    MarkUnexpected(next, "Unsupported escape sequence");
                                     return false;
                                 } break;
                             }
@@ -392,21 +402,13 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     Size bytes = DecodeUtf8(code.ptr, offset, &c);
 
                     if (RG_UNLIKELY(!TestUnicodeTable(UnicodeIdStartTable, c))) {
-                        if (bytes > 0) {
-                            MarkError(offset, "Character '%1' is not allowed at the beginning of identifiers", code.Take(offset, bytes));
-                        } else {
-                            MarkError(offset, "Invalid UTF-8 sequence");
-                        }
-
+                        MarkUnexpected(offset, "Identifiers cannot start with");
                         return false;
                     }
 
                     next += bytes - 1;
-                } else if (code[offset] >= 32) {
-                    MarkError(offset, "Unexpected character '%1'", code[offset]);
-                    return false;
                 } else {
-                    MarkError(offset, "Unexpected byte 0x%1", FmtHex(code[offset]).Pad0(-2));
+                    MarkUnexpected(offset, "Unexpected");
                     return false;
                 }
 
@@ -418,12 +420,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                         Size bytes = DecodeUtf8(code.ptr, next, &c);
 
                         if (!TestUnicodeTable(UnicodeIdContinueTable, c)) {
-                            if (bytes > 0) {
-                                MarkError(next, "Character '%1' is not allowed in identifiers", code.Take(next, bytes));
-                            } else {
-                                MarkError(offset, "Invalid UTF-8 sequence");
-                            }
-
+                            MarkUnexpected(next, "Identifiers cannot contain");
                             return false;
                         }
 
