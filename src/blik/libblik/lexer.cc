@@ -290,11 +290,6 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     }
 
                     tokens.Append({TokenKind::Float, line, offset, {.d = d}});
-
-                    if (RG_UNLIKELY(errno == ERANGE)) {
-                        MarkError(offset, "Float value exceeds supported range");
-                        return false;
-                    }
                 } else {
                     if (RG_UNLIKELY(overflow)) {
                         MarkError(offset, "Number literal is too big (max = %1)", INT64_MAX);
