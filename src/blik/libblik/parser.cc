@@ -1819,7 +1819,9 @@ void ParserImpl::EmitReturn()
 
 void ParserImpl::DestroyVariables(Size count)
 {
-    for (Size i = variables.len - count; i < variables.len; i++) {
+    Size first_idx = variables.len - count;
+
+    for (Size i = variables.len - 1; i >= first_idx; i--) {
         const VariableInfo &var = variables[i];
         VariableInfo **ptr = variables_map.Find(var.name);
 
