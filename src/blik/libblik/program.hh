@@ -60,21 +60,6 @@ static const char *const TypeNames[] = {
     "String"
 };
 
-struct VariableInfo {
-    const char *name;
-    Type type;
-    bool global;
-    bool readonly;
-    bool poisoned;
-    bool implicit;
-    const VariableInfo *shadow;
-
-    Size offset;
-    Size defined_idx; // IR
-
-    RG_HASHTABLE_HANDLER(VariableInfo, name);
-};
-
 union Value {
     bool b;
     int64_t i;
@@ -121,8 +106,8 @@ struct Program {
 
     BucketArray<FunctionInfo> functions;
     HashTable<const char *, FunctionInfo *> functions_map;
-    BucketArray<VariableInfo> variables;
-    HashTable<const char *, VariableInfo *> variables_map;
+
+    Size end_stack_len;
 
     BlockAllocator str_alloc;
 };

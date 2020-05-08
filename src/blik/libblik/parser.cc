@@ -24,6 +24,21 @@ struct PendingOperator {
     Size branch_idx; // Used for short-circuit operators
 };
 
+struct VariableInfo {
+    const char *name;
+    Type type;
+    bool global;
+    bool readonly;
+    bool poisoned;
+    bool implicit;
+    const VariableInfo *shadow;
+
+    Size offset;
+    Size defined_idx; // IR
+
+    RG_HASHTABLE_HANDLER(VariableInfo, name);
+};
+
 struct StackSlot {
     Type type;
     const VariableInfo *var;
@@ -45,21 +60,24 @@ class ParserImpl {
     HashMap<Size, FunctionInfo *> functions_by_pos;
     HashMap<const void *, Size> definitions_map;
 
-    HashSet<const char *> strings;
+    HeapArray<ForwardCall> forward_calls;
 
     Size func_jump_idx = -1;
     FunctionInfo *current_func = nullptr;
     Size depth = -1;
+
+    BucketArray<VariableInfo> variables;
+    HashTable<const char *, VariableInfo *> variables_map;
     Size var_offset = 0;
 
     Size loop_var_offset = -1;
     HeapArray<Size> loop_breaks;
     HeapArray<Size> loop_continues;
 
+    HashSet<const char *> strings;
+
     // Only used (and valid) while parsing expression
     HeapArray<StackSlot> stack;
-
-    HeapArray<ForwardCall> forward_calls;
 
     Program *program;
     HeapArray<Instruction> &ir;
@@ -196,7 +214,7 @@ bool ParserImpl::Parse(const TokenizedFile &file)
                            sources_len = program->sources.len,
                            prev_jump_idx = func_jump_idx,
                            prev_var_offset = var_offset,
-                           variables_len = program->variables.len,
+                           variables_len = variables.len,
                            functions_len = program->functions.len) {
         func_jump_idx = prev_jump_idx;
 
@@ -204,7 +222,7 @@ bool ParserImpl::Parse(const TokenizedFile &file)
         program->sources.RemoveFrom(sources_len);
 
         var_offset = prev_var_offset;
-        DestroyVariables(program->variables.len - variables_len);
+        DestroyVariables(variables.len - variables_len);
 
         if (functions_len) {
             for (Size i = functions_len; i < program->functions.len; i++) {
@@ -268,6 +286,7 @@ bool ParserImpl::Parse(const TokenizedFile &file)
 
     ir.Append({Opcode::PushInt, {.i = 0}});
     ir.Append({Opcode::Exit, {.b = true}});
+    program->end_stack_len = var_offset;
 
     if (valid) {
         err_guard.Disable();
@@ -481,12 +500,12 @@ bool ParserImpl::ParseBlock(bool keep_variables)
     depth++;
 
     RG_DEFER_C(prev_offset = var_offset,
-               variables_len = program->variables.len) {
+               variables_len = variables.len) {
         depth--;
 
         if (!keep_variables) {
             EmitPop(var_offset - prev_offset);
-            DestroyVariables(program->variables.len - variables_len);
+            DestroyVariables(variables.len - variables_len);
             var_offset = prev_offset;
         }
     };
@@ -596,7 +615,7 @@ void ParserImpl::ParseFunction()
         do {
             MatchToken(TokenKind::EndOfLine);
 
-            VariableInfo *var = program->variables.AppendDefault();
+            VariableInfo *var = variables.AppendDefault();
 
             var->readonly = !MatchToken(TokenKind::Mut);
             definitions_map.Append(var, pos);
@@ -607,7 +626,7 @@ void ParserImpl::ParseFunction()
             }
             var->offset = stack_offset++;
 
-            std::pair<VariableInfo **, bool> ret = program->variables_map.Append(var);
+            std::pair<VariableInfo **, bool> ret = variables_map.Append(var);
             if (RG_UNLIKELY(!ret.second)) {
                const VariableInfo *prev_var = *ret.first;
                var->shadow = prev_var;
@@ -717,13 +736,13 @@ void ParserImpl::ParseLet()
 {
     Size var_pos = ++pos;
 
-    VariableInfo *var = program->variables.AppendDefault();
+    VariableInfo *var = variables.AppendDefault();
 
     var->readonly = !MatchToken(TokenKind::Mut);
     definitions_map.Append(var, pos);
     var->name = ConsumeIdentifier();
 
-    std::pair<VariableInfo **, bool> ret = program->variables_map.Append(var);
+    std::pair<VariableInfo **, bool> ret = variables_map.Append(var);
     if (RG_UNLIKELY(!ret.second)) {
         const VariableInfo *prev_var = *ret.first;
         var->shadow = prev_var;
@@ -909,7 +928,7 @@ void ParserImpl::ParseFor()
 {
     Size for_pos = ++pos;
 
-    VariableInfo *it = program->variables.AppendDefault();
+    VariableInfo *it = variables.AppendDefault();
 
     it->readonly = !MatchToken(TokenKind::Mut);
     definitions_map.Append(it, pos);
@@ -919,7 +938,7 @@ void ParserImpl::ParseFor()
 
     it->offset = var_offset + 2;
 
-    std::pair<VariableInfo **, bool> ret = program->variables_map.Append(it);
+    std::pair<VariableInfo **, bool> ret = variables_map.Append(it);
     if (RG_UNLIKELY(!ret.second)) {
         const VariableInfo *prev_var = *ret.first;
         it->shadow = prev_var;
@@ -1183,7 +1202,7 @@ Type ParserImpl::ParseExpression(bool keep_result)
                         if (RG_UNLIKELY(!ParseCall(tok.u.str)))
                             goto error;
                     } else {
-                        const VariableInfo *var = program->variables_map.FindValue(tok.u.str, nullptr);
+                        const VariableInfo *var = variables_map.FindValue(tok.u.str, nullptr);
 
                         if (RG_UNLIKELY(!var)) {
                             MarkError(pos - 1, "Variable '%1' does not exist", tok.u.str);
@@ -1800,18 +1819,18 @@ void ParserImpl::EmitReturn()
 
 void ParserImpl::DestroyVariables(Size count)
 {
-    for (Size i = program->variables.len - count; i < program->variables.len; i++) {
-        const VariableInfo &var = program->variables[i];
-        VariableInfo **ptr = program->variables_map.Find(var.name);
+    for (Size i = variables.len - count; i < variables.len; i++) {
+        const VariableInfo &var = variables[i];
+        VariableInfo **ptr = variables_map.Find(var.name);
 
         if (var.shadow) {
             *ptr = (VariableInfo *)var.shadow;
         } else {
-            program->variables_map.Remove(ptr);
+            variables_map.Remove(ptr);
         }
     }
 
-    program->variables.RemoveLast(count);
+    variables.RemoveLast(count);
 }
 
 bool ParserImpl::TestOverload(const FunctionInfo &proto, Span<const FunctionInfo::Parameter> params2)

@@ -501,15 +501,7 @@ bool VirtualMachine::Run(int *out_exit_code)
         CASE(Exit): {
             int code = (int)stack.ptr[--stack.len].i;
 
-#ifndef NDEBUG
-            if (inst->u.b) {
-                Size good_stack_len = 0;
-                for (const VariableInfo &var: program->variables) {
-                    good_stack_len += (var.type != Type::Null);
-                }
-                RG_ASSERT(stack.len == good_stack_len);
-            }
-#endif
+            RG_ASSERT(stack.len == program->end_stack_len || !inst->u.b);
 
             *out_exit_code = code;
             return true;
