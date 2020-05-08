@@ -206,8 +206,24 @@ bool ParserImpl::Parse(const TokenizedFile &file)
         var_offset = prev_var_offset;
         DestroyVariables(program->variables.len - variables_len);
 
-        for (Size i = functions_len; i < program->functions.len; i++) {
-            program->functions_map.Remove(program->functions[i].name);
+        if (functions_len) {
+            for (Size i = functions_len; i < program->functions.len; i++) {
+                FunctionInfo *func = &program->functions[i];
+                FunctionInfo **it = program->functions_map.Find(func->name);
+
+                if (*it == func && func->overload_next == func) {
+                    program->functions_map.Remove(it);
+                } else {
+                    if (*it == func) {
+                        *it = func->overload_next;
+                    }
+
+                    func->overload_next->overload_prev = func->overload_prev;
+                    func->overload_prev->overload_next = func->overload_next;
+                }
+            }
+        } else {
+            program->functions_map.Clear();
         }
         program->functions.RemoveFrom(functions_len);
     };
