@@ -70,8 +70,6 @@ struct VariableInfo {
     const VariableInfo *shadow;
 
     Size offset;
-
-    Size defined_pos; // Token
     Size defined_idx; // IR
 
     RG_HASHTABLE_HANDLER(VariableInfo, name);
@@ -103,7 +101,6 @@ struct FunctionInfo {
     Size ret_pop;
     Type ret_type;
 
-    Size defined_pos; // Token
     Size inst_idx; // IR
     bool tre;
 

@@ -40,7 +40,10 @@ class ParserImpl {
     bool show_errors;
     bool show_hints;
     SourceInfo *src;
+
+    // Transient mappings
     HashMap<Size, FunctionInfo *> functions_by_pos;
+    HashMap<const void *, Size> definitions_map;
 
     HashSet<const char *> strings;
 
@@ -141,6 +144,15 @@ private:
             }
         }
     }
+
+    template <typename... Args>
+    void HintDefinition(const void *defn, const char *fmt, Args... args)
+    {
+        Size defn_pos = definitions_map.FindValue(defn, -1);
+        if (defn_pos >= 0) {
+            HintError(defn_pos, fmt, args...);
+        }
+    }
 };
 
 Parser::Parser(Program *program)
@@ -207,6 +219,7 @@ bool ParserImpl::Parse(const TokenizedFile &file)
 
     forward_calls.Clear();
     functions_by_pos.Clear();
+    definitions_map.Clear();
 
     src = program->sources.AppendDefault();
     src->filename = DuplicateString(file.filename, &program->str_alloc).ptr;
@@ -249,7 +262,6 @@ bool ParserImpl::Parse(const TokenizedFile &file)
 void ParserImpl::AddFunction(const char *signature, NativeFunction *native)
 {
     FunctionInfo *func = program->functions.AppendDefault();
-    func->defined_pos = -1;
 
     const char *ptr = signature;
 
@@ -371,7 +383,7 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
         FunctionInfo *proto = program->functions.AppendDefault();
         functions_by_pos.Append(pos, proto);
 
-        proto->defined_pos = pos;
+        definitions_map.Append(proto, pos);
         proto->name = ConsumeIdentifier();
 
         // Insert in functions map
@@ -551,7 +563,7 @@ void ParserImpl::ParseFunction()
 
     if (RG_UNLIKELY(current_func)) {
         MarkError(func_pos, "Nested functions are not supported");
-        HintError(current_func->defined_pos, "Previous function was started here and is still open");
+        HintError(definitions_map.FindValue(current_func, -1), "Previous function was started here and is still open");
     } else if (RG_UNLIKELY(depth)) {
         MarkError(func_pos, "Functions must be defined in top-level scope");
     }
@@ -568,7 +580,7 @@ void ParserImpl::ParseFunction()
             VariableInfo *var = program->variables.AppendDefault();
 
             var->readonly = !MatchToken(TokenKind::Mut);
-            var->defined_pos = pos;
+            definitions_map.Append(var, pos);
             var->name = ConsumeIdentifier();
 
             if (stack_offset >= -2) {
@@ -583,7 +595,7 @@ void ParserImpl::ParseFunction()
 
                 if (prev_var->global) {
                     MarkError(pos - 1, "Parameter '%1' is not allowed to hide global variable", var->name);
-                    HintError(prev_var->defined_pos, "Global variable '%1' is defined here", prev_var->name);
+                    HintDefinition(prev_var, "Global variable '%1' is defined here", prev_var->name);
                 } else {
                     MarkError(pos - 1, "Parameter '%1' already exists", var->name);
                 }
@@ -620,7 +632,7 @@ void ParserImpl::ParseFunction()
                     MarkError(func_pos, "Function '%1' only differs from previously defined '%2' by return type",
                               func->signature, overload->signature);
                 }
-                HintError(overload->defined_pos, "Previous definition here");
+                HintError(definitions_map.FindValue(overload, -1), "Previous definition");
             }
 
             overload = overload->overload_next;
@@ -689,7 +701,7 @@ void ParserImpl::ParseLet()
     VariableInfo *var = program->variables.AppendDefault();
 
     var->readonly = !MatchToken(TokenKind::Mut);
-    var->defined_pos = pos;
+    definitions_map.Append(var, pos);
     var->name = ConsumeIdentifier();
 
     std::pair<VariableInfo **, bool> ret = program->variables_map.Append(var);
@@ -699,13 +711,13 @@ void ParserImpl::ParseLet()
 
         if (current_func && prev_var->global) {
             MarkError(var_pos, "Declaration '%1' is not allowed to hide global variable", var->name);
-            HintError(prev_var->defined_pos, "Global variable '%1' is defined here", prev_var->name);
+            HintDefinition(prev_var, "Global variable '%1' is defined here", prev_var->name);
         } else if (current_func && prev_var->offset < 0) {
             MarkError(var_pos, "Declaration '%1' is not allowed to hide parameter", var->name);
-            HintError(prev_var->defined_pos, "Parameter '%1' is defined here", prev_var->name);
+            HintDefinition(prev_var, "Parameter '%1' is defined here", prev_var->name);
         } else {
             MarkError(var_pos, "Variable '%1' already exists", var->name);
-            HintError(prev_var->defined_pos, "Previous variable '%1' is defined here", prev_var->name);
+            HintDefinition(prev_var, "Previous variable '%1' is defined here", prev_var->name);
         }
     }
 
@@ -881,7 +893,7 @@ void ParserImpl::ParseFor()
     VariableInfo *it = program->variables.AppendDefault();
 
     it->readonly = !MatchToken(TokenKind::Mut);
-    it->defined_pos = pos;
+    definitions_map.Append(it, pos);
     it->name = ConsumeIdentifier();
     it->type = Type::Int;
     it->implicit = true;
@@ -895,10 +907,10 @@ void ParserImpl::ParseFor()
 
         if (current_func && prev_var->global) {
             MarkError(for_pos, "Iterator '%1' is not allowed to hide global variable", it->name);
-            HintError(prev_var->defined_pos, "Global variable '%1' is defined here", prev_var->name);
+            HintDefinition(prev_var, "Global variable '%1' is defined here", prev_var->name);
         } else {
             MarkError(for_pos, "Variable '%1' already exists", it->name);
-            HintError(prev_var->defined_pos, "Previous variable '%1' is defined here", prev_var->name);
+            HintDefinition(prev_var, "Previous variable '%1' is defined here", prev_var->name);
         }
 
         return;
@@ -1321,14 +1333,14 @@ void ParserImpl::ProduceOperator(const PendingOperator &op)
         }
         if (RG_UNLIKELY(var->readonly)) {
             MarkError(op.pos, "Cannot assign result to non-mutable variable '%1'", var->name);
-            HintError(var->defined_pos, "Variable '%1' is defined here without 'mut' qualifier", var->name);
+            HintError(definitions_map.FindValue(var, -1), "Variable '%1' is defined without 'mut' qualifier", var->name);
 
             return;
         }
         if (RG_UNLIKELY(var->type != expr.type)) {
             MarkError(op.pos, "Cannot assign %1 value to variable '%2'",
                       TypeNames[(int)expr.type], var->name);
-            HintError(var->defined_pos, "Variable '%1' is %2defined here as %3",
+            HintError(definitions_map.FindValue(var, -1), "Variable '%1' is %2defined as %3",
                       var->name, var->implicit ? "implicitly " : "", TypeNames[(int)var->type]);
             return;
         }
@@ -1583,10 +1595,10 @@ void ParserImpl::EmitLoad(const VariableInfo &var)
 {
     if (var.global && current_func) {
         if (RG_UNLIKELY(current_func->earliest_call_idx < var.defined_idx)) {
-            MarkError(current_func->defined_pos, "Function '%1' may be called before variable '%2' exists",
+            MarkError(definitions_map.FindValue(current_func, -1), "Function '%1' may be called before variable '%2' exists",
                       current_func->name, var.name);
             HintError(current_func->earliest_call_pos, "Function call happens here (it could be indirect)");
-            HintError(var.defined_pos, "Variable '%1' is defined here", var.name);
+            HintDefinition(&var, "Variable '%1' is defined here", var.name);
         }
 
         switch (var.type) {
@@ -1651,7 +1663,7 @@ bool ParserImpl::ParseCall(const char *name)
             // Show all candidate functions with same name
             const FunctionInfo *it = func0;
             do {
-                HintError(it->defined_pos, "Candidate '%1'", it->signature);
+                HintError(definitions_map.FindValue(it, -1), "Candidate '%1'", it->signature);
                 it = it->overload_next;
             } while (it != func0);
 
