@@ -143,34 +143,25 @@ template <typename... Args>
 void ReportRuntimeError(Span<const FrameInfo> frames, const char *fmt, Args... args)
 {
     if (frames.len) {
-        PrintLn(stderr, "Something wrong has happened, execution has stopped");
-        PrintLn(stderr);
+        LogInfo("Dumping stack trace:");
 
-        PrintLn(stderr, "Dumping stack trace:");
         for (Size i = frames.len - 1; i >= 0; i--) {
             const FrameInfo &frame = frames[i];
 
             const char *name = frame.func ? frame.func->signature : "<outside function>";
             bool tre = frame.func && frame.func->tre;
 
-            if (!i) {
-                Print(stderr, "  %!..+>>> %1%2%!0", FmtArg(name).Pad(36), tre ? "+++" : "   ");
-            } else {
-                Print(stderr, "    %!..+* %1%2%!0", FmtArg(name).Pad(36), tre ? "+++" : "   ");
-            }
-
             if (frame.filename) {
-                PrintLn(stderr, "  %!D..%1 (%2)%!0", frame.filename, frame.line);
+                LogInfo("  %!..+%1 %2%3%!0 %!D..%4 (%5)%!0",
+                        i ? "  *" : ">>>", FmtArg(name).Pad(36), tre ? "+++" : "   ", frame.filename, frame.line);
             } else {
-                PrintLn(stderr, "  %!D..<native function>%!0");
+                LogInfo("  %!..+%1 %2%3%!0 %!D..<native function>%!0",
+                        i ? "  *" : ">>>", FmtArg(name).Pad(36), tre ? "+++" : "   ");
             }
         }
-        PrintLn(stderr);
     }
 
-    Print(stderr, "Error: %!R..");
-    Print(stderr, fmt, args...);
-    PrintLn(stderr, "%!0");
+    LogError(fmt, args...);
 }
 
 }
