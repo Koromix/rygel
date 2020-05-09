@@ -1121,6 +1121,7 @@ static int GetOperatorPrecedence(TokenKind kind)
         case TokenKind::And: { return 8; } break;
         case TokenKind::LeftShift:
         case TokenKind::RightShift: { return 9; } break;
+        // Unary '+' and '-' operators are dealt with directly in ParseExpression()
         case TokenKind::Plus:
         case TokenKind::Minus: { return 10; } break;
         case TokenKind::Multiply:
@@ -1139,7 +1140,7 @@ Type ParserImpl::ParseExpression(bool keep_result)
     RG_DEFER { stack.RemoveFrom(start_values_len); };
 
     LocalArray<PendingOperator, 128> operators;
-    bool expect_op = false;
+    bool expect_value = true;
     Size parentheses = 0;
 
     // Used to detect "empty" expressions
@@ -1149,15 +1150,15 @@ Type ParserImpl::ParseExpression(bool keep_result)
         const Token &tok = tokens[pos++];
 
         if (tok.kind == TokenKind::LeftParenthesis) {
-            if (RG_UNLIKELY(expect_op))
+            if (RG_UNLIKELY(!expect_value))
                 goto unexpected;
 
             operators.Append({tok.kind});
             parentheses++;
         } else if (parentheses && tok.kind == TokenKind::RightParenthesis) {
-            if (RG_UNLIKELY(!expect_op))
+            if (RG_UNLIKELY(expect_value))
                 goto unexpected;
-            expect_op = true;
+            expect_value = false;
 
             for (;;) {
                 const PendingOperator &op = operators.data[operators.len - 1];
@@ -1174,9 +1175,9 @@ Type ParserImpl::ParseExpression(bool keep_result)
         } else if (tok.kind == TokenKind::Null || tok.kind == TokenKind::Bool ||
                    tok.kind == TokenKind::Integer || tok.kind == TokenKind::Float ||
                    tok.kind == TokenKind::String || tok.kind == TokenKind::Identifier) {
-            if (RG_UNLIKELY(expect_op))
+            if (RG_UNLIKELY(!expect_value))
                 goto unexpected;
-            expect_op = true;
+            expect_value = false;
 
             switch (tok.kind) {
                 case TokenKind::Null: { stack.Append({Type::Null}); } break;
@@ -1224,33 +1225,31 @@ Type ParserImpl::ParseExpression(bool keep_result)
             op.unary = (tok.kind == TokenKind::Complement || tok.kind == TokenKind::Not);
             op.pos = pos - 1;
 
+            // Not an operator? There's a few cases to deal with, including a perfectly
+            // valid one: end of expression!
             if (RG_UNLIKELY(op.prec < 0)) {
                 if (pos == prev_offset + 1) {
-                    if (pos > tokens.len) {
-                        MarkError(pos, "Unexpected end of file, expected value or expression");
-                    } else {
-                        MarkError(pos - 1, "Unexpected token '%1', expected value or expression",
-                                  TokenKindNames[(int)tokens[pos - 1].kind]);
-                    }
-
+                    MarkError(pos - 1, "Unexpected token '%1', expected value or expression",
+                              TokenKindNames[(int)tokens[pos - 1].kind]);
                     goto error;
-                } else if (!expect_op && tok.kind == TokenKind::EndOfLine) {
+                } else if (tok.kind == TokenKind::EndOfLine && expect_value) {
                     src->lines.Append({tok.line + 1, ir.len});
                     continue;
-                } else if (parentheses || !expect_op) {
-                    goto unexpected;
-                } else if (tok.kind == TokenKind::Assign) {
+                } else if (tok.kind == TokenKind::Assign && !expect_value) {
                     MarkError(pos - 1, "Unexpected token '=', did you mean ':=' or '=='?");
 
                     // Pretend the user has typed '==' to avoid cascading errors
                     op.kind = TokenKind::Equal;
                     op.prec = GetOperatorPrecedence(TokenKind::Equal);
+                } else if (parentheses || expect_value) {
+                    goto unexpected;
                 } else {
                     pos--;
                     break;
                 }
             }
-            if (RG_UNLIKELY(expect_op == op.unary)) {
+
+            if (RG_UNLIKELY(expect_value != op.unary)) {
                 if (tok.kind == TokenKind::Plus || tok.kind == TokenKind::Minus) {
                     op.prec = 12;
                     op.unary = true;
@@ -1258,7 +1257,7 @@ Type ParserImpl::ParseExpression(bool keep_result)
                     goto unexpected;
                 }
             }
-            expect_op = false;
+            expect_value = true;
 
             while (operators.len) {
                 const PendingOperator &op2 = operators[operators.len - 1];
@@ -1294,7 +1293,7 @@ Type ParserImpl::ParseExpression(bool keep_result)
         }
     }
 
-    if (RG_UNLIKELY(!expect_op)) {
+    if (RG_UNLIKELY(expect_value)) {
         MarkError(pos - 1, "Unexpected end of expression, expected value or '('");
         goto error;
     }
@@ -1341,7 +1340,7 @@ Type ParserImpl::ParseExpression(bool keep_result)
 unexpected:
     pos--;
     MarkError(pos, "Unexpected token '%1', expected %2", TokenKindNames[(int)tokens[pos].kind],
-              expect_op ? "operator or ')'" : "value or '('");
+              expect_value ? "value or '('" : "operator or ')'");
 error:
     // The goal of this loop is to skip expression until we get to "do" (which is used
     // for single-line constructs) or end of line (which starts a block in some cases,
