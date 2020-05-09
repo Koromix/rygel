@@ -1858,13 +1858,15 @@ bool ParserImpl::ConsumeToken(TokenKind kind)
         MarkError(pos, "Unexpected end of file, expected '%1'", TokenKindNames[(int)kind]);
         return false;
     }
-    if (RG_UNLIKELY(tokens[pos].kind != kind)) {
-        MarkError(pos, "Unexpected token '%1', expected '%2'",
-                  TokenKindNames[(int)tokens[pos].kind], TokenKindNames[(int)kind]);
+
+    Size prev_pos = pos++;
+
+    if (RG_UNLIKELY(tokens[prev_pos].kind != kind)) {
+        MarkError(prev_pos, "Unexpected token '%1', expected '%2'",
+                  TokenKindNames[(int)tokens[prev_pos].kind], TokenKindNames[(int)kind]);
         return false;
     }
 
-    pos++;
     return true;
 }
 
