@@ -87,12 +87,11 @@ bool json_Parse(StreamReader *st, Handler *handler)
     json_StreamReader json_reader(st);
     rapidjson::Reader parser;
 
-    PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
-        char msg_buf[4096];
-        Fmt(msg_buf, "%1(%2:%3): %4",
-            st->GetFileName(), json_reader.GetLineNumber(), json_reader.GetLineOffset(), msg);
+    PushLogFilter([&](LogLevel level, const char *, const char *msg, FunctionRef<LogFunc> func) {
+        char ctx_buf[1024];
+        Fmt(ctx_buf, "%1(%2:%3): ", st->GetFileName(), json_reader.GetLineNumber(), json_reader.GetLineOffset());
 
-        func(level, ctx, msg_buf);
+        func(level, ctx_buf, msg);
     });
     RG_DEFER { PopLogFilter(); };
 

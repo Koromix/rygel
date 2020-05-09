@@ -85,20 +85,31 @@ void ReportDiagnostic(DiagnosticType type, Span<const char> code, const char *fi
         }
     }
 
-    // Make it gorgeous!
     switch (type) {
         case DiagnosticType::Error: {
-            Print(stderr, "%!R..%1(%2:%3):%!0 %!..+", filename, line, column + 1);
-            PrintLn(stderr, fmt, args...);
-            PrintLn(stderr, "%1 |%!0  %2%!D..%3%!0", FmtArg(line).Pad(-7), extract, comment);
-            PrintLn(stderr, "        |  %1%2%!M..^^^%!0", align, FmtArg(' ').Repeat(align_more));
+            char ctx_buf[512];
+            Fmt(ctx_buf, "%1(%2:%3): ", filename, line, column + 1);
+
+            LocalArray<char, 2048> msg_buf;
+            msg_buf.len += Fmt(msg_buf.TakeAvailable(), "%!..+").len;
+            msg_buf.len += Fmt(msg_buf.TakeAvailable(), fmt, args...).len;
+            msg_buf.len += Fmt(msg_buf.TakeAvailable(), "\n%1 |%!0  %2%!D..%3%!0", FmtArg(line).Pad(-7), extract, comment).len;
+            msg_buf.len += Fmt(msg_buf.TakeAvailable(), "\n        |  %1%2%!M..^^^%!0", align, FmtArg(' ').Repeat(align_more)).len;
+
+            Log(LogLevel::Error, ctx_buf, "%1", msg_buf.data);
         } break;
 
         case DiagnosticType::ErrorHint: {
-            Print(stderr, "    %!D..%1(%2:%3):%!0 %!..+", filename, line, column + 1);
-            PrintLn(stderr, fmt, args...);
-            PrintLn(stderr, "    %1 |%!0  %2%!D..%3%!0", FmtArg(line).Pad(-7), extract, comment);
-            PrintLn(stderr, "            |  %1%2%!D..^^^%!0", align, FmtArg(' ').Repeat(align_more));
+            char ctx_buf[512];
+            Fmt(ctx_buf, "    %1(%2:%3): ", filename, line, column + 1);
+
+            LocalArray<char, 2048> msg_buf;
+            msg_buf.len += Fmt(msg_buf.TakeAvailable(), "%!..+").len;
+            msg_buf.len += Fmt(msg_buf.TakeAvailable(), fmt, args...).len;
+            msg_buf.len += Fmt(msg_buf.TakeAvailable(), "\n    %1 |%!0  %2%!D..%3%!0", FmtArg(line).Pad(-7), extract, comment).len;
+            msg_buf.len += Fmt(msg_buf.TakeAvailable(), "\n            |  %1%2%!D..^^^%!0", align, FmtArg(' ').Repeat(align_more)).len;
+
+            Log(LogLevel::Info, ctx_buf, "%1", msg_buf.data);
         } break;
     }
 }
@@ -109,15 +120,21 @@ void ReportDiagnostic(DiagnosticType type, const char *fmt, Args... args)
 {
     switch (type) {
         case DiagnosticType::Error: {
-            Print(stderr, "%!R..Error:%!0 %!..+");
-            Print(stderr, fmt, args...);
-            PrintLn(stderr, "%!0");
+            LocalArray<char, 2048> msg_buf;
+            msg_buf.len += Fmt(msg_buf.TakeAvailable(), "%!..+").len;
+            msg_buf.len += Fmt(msg_buf.TakeAvailable(), fmt, args...).len;
+            msg_buf.len += Fmt(msg_buf.TakeAvailable(), "%!0").len;
+
+            Log(LogLevel::Error, "Error: ", "%1", msg_buf.data);
         } break;
 
         case DiagnosticType::ErrorHint: {
-            Print(stderr, "    %!D..Hint:%!0 %!..+");
-            Print(stderr, fmt, args...);
-            PrintLn(stderr, "%!0");
+            LocalArray<char, 2048> msg_buf;
+            msg_buf.len += Fmt(msg_buf.TakeAvailable(), "%!..+").len;
+            msg_buf.len += Fmt(msg_buf.TakeAvailable(), fmt, args...).len;
+            msg_buf.len += Fmt(msg_buf.TakeAvailable(), "%!0").len;
+
+            Log(LogLevel::Info, "    Hint: ", "%1", msg_buf.data);
         } break;
     }
 }

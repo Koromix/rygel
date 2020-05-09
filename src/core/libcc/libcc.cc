@@ -1117,8 +1117,6 @@ static RG_THREAD_LOCAL char log_last_error[1024];
 
 bool GetDebugFlag(const char *name)
 {
-    LogDebug("Checked debug flag '%1'", name);
-
 #ifdef __EMSCRIPTEN__
     return EM_ASM_INT({
         try {
@@ -1215,14 +1213,29 @@ static void RunLogFilter(Size idx, LogLevel level, const char *ctx, const char *
     });
 }
 
-void LogFmt(LogLevel level, const char *fmt, Span<const FmtArg> args)
+void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg> args)
 {
-    char ctx_buf[128];
-    char msg_buf[4096];
-    {
-        double time = (double)(GetMonotonicTime() - start_time) / 1000;
-        Fmt(ctx_buf, " [%1] ", FmtDouble(time, 3).Pad(-8));
+    static bool init = false;
+    static bool log_times;
 
+    if (!init) {
+        // Do this first... GetDebugFlag() might log an error or something, in which
+        // case we don't want to recurse forever and crash!
+        init = true;
+
+        log_times = GetDebugFlag("LOG_TIMES");
+    }
+
+    char ctx_buf[512];
+    if (log_times) {
+        double time = (double)(GetMonotonicTime() - start_time) / 1000;
+        Fmt(ctx_buf, "[%1] %2", FmtDouble(time, 3).Pad(-8), ctx);
+
+        ctx = ctx_buf;
+    }
+
+    char msg_buf[2048];
+    {
         Size len = FmtFmt(fmt, args, msg_buf).len;
         if (len == RG_SIZE(msg_buf) - 1) {
             strcpy(msg_buf + RG_SIZE(msg_buf) - 32, "... [truncated]");
@@ -1230,9 +1243,9 @@ void LogFmt(LogLevel level, const char *fmt, Span<const FmtArg> args)
     }
 
     if (log_filters_len) {
-        RunLogFilter(log_filters_len - 1, level, ctx_buf, msg_buf);
+        RunLogFilter(log_filters_len - 1, level, ctx, msg_buf);
     } else {
-        CallLogHandler(level, ctx_buf, msg_buf);
+        CallLogHandler(level, ctx, msg_buf);
     }
 }
 
@@ -1247,9 +1260,9 @@ void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg)
     std::lock_guard<std::mutex> lock(mutex);
 
     switch (level)  {
-        case LogLevel::Error: { PrintLn(stderr, "%!r..%1%2%!0", ctx, msg); } break;
-        case LogLevel::Info: { PrintLn(stderr, "%!C..%1%2%!0", ctx, msg); } break;
-        case LogLevel::Debug: { PrintLn(stderr, "%!D..%1%2%!0", ctx, msg); } break;
+        case LogLevel::Debug:
+        case LogLevel::Info: { PrintLn(stderr, "%!D..%1%!0%2", ctx, msg); } break;
+        case LogLevel::Error: { PrintLn(stderr, "%!r..%1%!0%2", ctx, msg); } break;
     }
 }
 
@@ -3697,11 +3710,11 @@ bool LineReader::Next(Span<char> *out_line)
 
 void LineReader::PushLogFilter()
 {
-    RG::PushLogFilter([this](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
-        char msg_buf[4096];
-        Fmt(msg_buf, "%1(%2): %3", st->GetFileName(), line_number, msg);
+    RG::PushLogFilter([this](LogLevel level, const char *, const char *msg, FunctionRef<LogFunc> func) {
+        char ctx_buf[1024];
+        Fmt(ctx_buf, "%1(%2): ", st->GetFileName(), line_number);
 
-        func(level, ctx, msg_buf);
+        func(level, ctx_buf, msg);
     });
 }
 

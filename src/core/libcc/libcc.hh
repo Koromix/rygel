@@ -2956,31 +2956,31 @@ typedef void LogFilterFunc(LogLevel level, const char *ctx, const char *msg,
 bool GetDebugFlag(const char *name);
 bool EnableAnsiOutput();
 
-void LogFmt(LogLevel level, const char *fmt, Span<const FmtArg> args);
+void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg> args);
 
-static inline void Log(LogLevel level, const char *fmt)
+static inline void Log(LogLevel level, const char *ctx, const char *fmt)
 {
-    LogFmt(level, fmt, {});
+    LogFmt(level, ctx, fmt, {});
 }
 template <typename... Args>
-static inline void Log(LogLevel level, const char *fmt, Args... args)
+static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args... args)
 {
     const FmtArg fmt_args[] = { FmtArg(args)... };
-    LogFmt(level, fmt, fmt_args);
+    LogFmt(level, ctx, fmt, fmt_args);
 }
 
 // Shortcut log functions
 #ifndef NDEBUG
 template <typename... Args>
-static inline void LogDebug(Args... args) { Log(LogLevel::Debug, args...); }
+static inline void LogDebug(Args... args) { Log(LogLevel::Debug, "(debug) ", args...); }
 #else
 template <typename... Args>
 static inline void LogDebug(Args...) {}
 #endif
 template <typename... Args>
-static inline void LogInfo(Args... args) { Log(LogLevel::Info, args...); }
+static inline void LogInfo(Args... args) { Log(LogLevel::Info, "", args...); }
 template <typename... Args>
-static inline void LogError(Args... args) { Log(LogLevel::Error, args...); }
+static inline void LogError(Args... args) { Log(LogLevel::Error, "Error: ", args...); }
 
 void SetLogHandler(const std::function<LogFunc> &func);
 void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg);

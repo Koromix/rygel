@@ -226,11 +226,11 @@ bool json_Parser::ParseKey(Span<const char> *out_key)
 
 void json_Parser::PushLogFilter()
 {
-    RG::PushLogFilter([this](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
-        char msg_buf[4096];
-        Fmt(msg_buf, "%1(%2:%3): %4", st.GetFileName(), st.GetLineNumber(), st.GetLineOffset(), msg);
+    RG::PushLogFilter([this](LogLevel level, const char *, const char *msg, FunctionRef<LogFunc> func) {
+        char ctx_buf[1024];
+        Fmt(ctx_buf, "%1(%2:%3): ", st.GetFileName(), st.GetLineNumber(), st.GetLineOffset());
 
-        func(level, ctx, msg_buf);
+        func(level, ctx_buf, msg);
     });
 }
 

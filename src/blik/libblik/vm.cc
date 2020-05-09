@@ -570,49 +570,49 @@ void VirtualMachine::DumpInstruction() const
     const Instruction &inst = ir[pc];
 
     switch (inst.code) {
-        case Opcode::PushBool: { LogDebug("(0x%1) PushBool %2", FmtHex(pc).Pad0(-5), inst.u.b); } break;
-        case Opcode::PushInt: { LogDebug("(0x%1) PushInt %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::PushFloat: { LogDebug("(0x%1) PushFloat %2", FmtHex(pc).Pad0(-5), inst.u.d); } break;
-        case Opcode::PushString: { LogDebug("(0x%1) PushString %2", FmtHex(pc).Pad0(-5), inst.u.str); } break;
-        case Opcode::Pop: { LogDebug("(0x%1) Pop %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::PushBool: { LogDebug("[0x%1] PushBool %2", FmtHex(pc).Pad0(-5), inst.u.b); } break;
+        case Opcode::PushInt: { LogDebug("[0x%1] PushInt %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::PushFloat: { LogDebug("[0x%1] PushFloat %2", FmtHex(pc).Pad0(-5), inst.u.d); } break;
+        case Opcode::PushString: { LogDebug("[0x%1] PushString %2", FmtHex(pc).Pad0(-5), inst.u.str); } break;
+        case Opcode::Pop: { LogDebug("[0x%1] Pop %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
-        case Opcode::LoadBool: { LogDebug("(0x%1) LoadBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadInt: { LogDebug("(0x%1) LoadInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadFloat: { LogDebug("(0x%1) LoadFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadString: { LogDebug("(0x%1) LoadString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreBool: { LogDebug("(0x%1) StoreBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreInt: { LogDebug("(0x%1) StoreInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreFloat: { LogDebug("(0x%1) StoreFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreString: { LogDebug("(0x%1) StoreString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::CopyBool: { LogDebug("(0x%1) CopyBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::CopyInt: { LogDebug("(0x%1) CopyInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::CopyFloat: { LogDebug("(0x%1) CopyFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::CopyString: { LogDebug("(0x%1) CopyString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadBool: { LogDebug("[0x%1] LoadBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadInt: { LogDebug("[0x%1] LoadInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadFloat: { LogDebug("[0x%1] LoadFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadString: { LogDebug("[0x%1] LoadString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreBool: { LogDebug("[0x%1] StoreBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreInt: { LogDebug("[0x%1] StoreInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreFloat: { LogDebug("[0x%1] StoreFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreString: { LogDebug("[0x%1] StoreString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::CopyBool: { LogDebug("[0x%1] CopyBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::CopyInt: { LogDebug("[0x%1] CopyInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::CopyFloat: { LogDebug("[0x%1] CopyFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::CopyString: { LogDebug("[0x%1] CopyString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
-        case Opcode::LoadGlobalBool: { LogDebug("(0x%1) LoadGlobalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadGlobalInt: { LogDebug("(0x%1) LoadGlobalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadGlobalFloat: { LogDebug("(0x%1) LoadGlobalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadGlobalString: { LogDebug("(0x%1) LoadGlobalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreGlobalBool: { LogDebug("(0x%1) StoreGlobalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreGlobalInt: { LogDebug("(0x%1) StoreGlobalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreGlobalFloat: { LogDebug("(0x%1) StoreGlobalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreGlobalString: { LogDebug("(0x%1) StoreGlobalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadGlobalBool: { LogDebug("[0x%1] LoadGlobalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadGlobalInt: { LogDebug("[0x%1] LoadGlobalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadGlobalFloat: { LogDebug("[0x%1] LoadGlobalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadGlobalString: { LogDebug("[0x%1] LoadGlobalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreGlobalBool: { LogDebug("[0x%1] StoreGlobalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreGlobalInt: { LogDebug("[0x%1] StoreGlobalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreGlobalFloat: { LogDebug("[0x%1] StoreGlobalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreGlobalString: { LogDebug("[0x%1] StoreGlobalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
-        case Opcode::Jump: { LogDebug("(0x%1) Jump 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
-        case Opcode::BranchIfTrue: { LogDebug("(0x%1) BranchIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
-        case Opcode::BranchIfFalse: { LogDebug("(0x%1) BranchIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
-        case Opcode::SkipIfTrue: { LogDebug("(0x%1) SkipIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
-        case Opcode::SkipIfFalse: { LogDebug("(0x%1) SkipIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
+        case Opcode::Jump: { LogDebug("[0x%1] Jump 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
+        case Opcode::BranchIfTrue: { LogDebug("[0x%1] BranchIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
+        case Opcode::BranchIfFalse: { LogDebug("[0x%1] BranchIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
+        case Opcode::SkipIfTrue: { LogDebug("[0x%1] SkipIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
+        case Opcode::SkipIfFalse: { LogDebug("[0x%1] SkipIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
 
-        case Opcode::Call: { LogDebug("(0x%1) Call 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.i).Pad0(-5)); } break;
-        case Opcode::Return: { LogDebug("(0x%1) Return %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::ReturnNull: { LogDebug("(0x%1) ReturnNull %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::Invoke: { LogDebug("(0x%1) Invoke 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.payload & 0x1FFFFFFFFFFFFFFull).Pad0(-5)); } break;
-        case Opcode::InvokeNull: { LogDebug("(0x%1) InvokeNull 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.payload & 0x1FFFFFFFFFFFFFFull).Pad0(-5)); } break;
+        case Opcode::Call: { LogDebug("[0x%1] Call 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.i).Pad0(-5)); } break;
+        case Opcode::Return: { LogDebug("[0x%1] Return %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::ReturnNull: { LogDebug("[0x%1] ReturnNull %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::Invoke: { LogDebug("[0x%1] Invoke 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.payload & 0x1FFFFFFFFFFFFFFull).Pad0(-5)); } break;
+        case Opcode::InvokeNull: { LogDebug("[0x%1] InvokeNull 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.payload & 0x1FFFFFFFFFFFFFFull).Pad0(-5)); } break;
 
-        case Opcode::Print: { LogDebug("(0x%1) Print %2", FmtHex(pc).Pad0(-5), inst.u.payload & 0x1F); } break;
+        case Opcode::Print: { LogDebug("[0x%1] Print %2", FmtHex(pc).Pad0(-5), inst.u.payload & 0x1F); } break;
 
-        default: { LogDebug("(0x%1) %2", FmtHex(pc).Pad0(-5), OpcodeNames[(int)inst.code]); } break;
+        default: { LogDebug("[0x%1] %2", FmtHex(pc).Pad0(-5), OpcodeNames[(int)inst.code]); } break;
     }
 #endif
 }

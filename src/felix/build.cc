@@ -362,14 +362,15 @@ bool Builder::Build(int jobs, bool verbose)
         }
     };
 
+    LogInfo("Building...");
     if (!RunNodes(&async, prep_nodes, verbose, 0, total))
         return false;
     if (!RunNodes(&async, obj_nodes, verbose, prep_nodes.len, total))
         return false;
     if (!RunNodes(&async, link_nodes, verbose, prep_nodes.len + obj_nodes.len, total))
         return false;
+    LogInfo("%!C..100%%%!0 Done!");
 
-    LogInfo("(100%%) Done!");
     return true;
 }
 
@@ -556,7 +557,7 @@ bool Builder::RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, 
                 std::lock_guard<std::mutex> out_lock(out_mutex);
 
                 Size progress_pct = 100 * progress++ / total;
-                LogInfo("(%1%%) %2", FmtArg(progress_pct).Pad(-3), node.text);
+                LogInfo("%!C..%1%%%!0 %2", FmtArg(progress_pct).Pad(-3), node.text);
                 if (verbose) {
                     PrintLn(stderr, cmd_line);
                 }
@@ -626,7 +627,7 @@ bool Builder::RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, 
                 } else if (exit_code == 130) {
                     interrupted = true; // SIGINT
                 } else {
-                    LogError("Failed: %1 (exit code %2)", node.text, exit_code);
+                    LogError("%1 (exit code %2)", node.text, exit_code);
                     stderr_st.Write(output);
                 }
 

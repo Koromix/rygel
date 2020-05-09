@@ -21,8 +21,7 @@ static int RunTarget(const TargetInfo &target, const char *target_filename,
 {
     RG_ASSERT(target.type == TargetType::Executable);
 
-    LogInfo("Run target '%1'", target.name);
-    PrintLn(stderr);
+    LogInfo("Run target '%1'\n%!D..--------------------------------------------------%!0", target.name);
 
 #ifdef _WIN32
     HeapArray<char> cmd;
@@ -347,8 +346,8 @@ Supported compilation modes:)");
 
     // We're ready to output stuff
     LogInfo("Root directory: '%1'", GetWorkingDirectory());
-    LogInfo("Compiler: %1 (%2)", build.compiler->name, CompileModeNames[(int)build.compile_mode]);
-    LogInfo("Output directory: '%1'", build.output_directory);
+    LogInfo("  Compiler: %1 (%2)", build.compiler->name, CompileModeNames[(int)build.compile_mode]);
+    LogInfo("  Output directory: '%1'", build.output_directory);
     if (!MakeDirectoryRec(build.output_directory))
         return 1;
 
