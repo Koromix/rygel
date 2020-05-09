@@ -1,5 +1,5 @@
 func fib(n: Int): Int
-    if n <= 1 do return n
+    if n <= 1 then return n
     return fib(n - 1) + fib(n - 2)
 end
 
@@ -64,7 +64,7 @@ for iter in 1..11
     let empty: Float
 
     let mut txt = "FOO"
-    if test do txt := "BAR"
+    if test then txt := "BAR"
     printLn(txt)
 
     if empty < 1.0

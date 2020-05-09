@@ -808,7 +808,7 @@ bool ParserImpl::ParseIf()
     bool has_return = true;
     bool has_else = false;
 
-    if (PeekToken(TokenKind::Do)) {
+    if (PeekToken(TokenKind::Then)) {
         has_return &= ParseDo();
         ir[branch_idx].u.i = ir.len - branch_idx;
     } else {
