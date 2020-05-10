@@ -52,6 +52,7 @@ class ParserImpl {
     Span<const Token> tokens;
     Size pos;
     bool valid;
+    bool unexpected_eof;
     bool show_errors;
     bool show_hints;
     SourceInfo *src;
@@ -85,7 +86,7 @@ class ParserImpl {
 public:
     ParserImpl(Program *program);
 
-    bool Parse(const TokenizedFile &file);
+    bool Parse(const TokenizedFile &file, ParseReport *out_report);
 
     void AddFunction(const char *signature, NativeFunction *native);
 
@@ -183,9 +184,9 @@ Parser::~Parser()
     delete impl;
 }
 
-bool Parser::Parse(const TokenizedFile &file)
+bool Parser::Parse(const TokenizedFile &file, ParseReport *out_report)
 {
-    return impl->Parse(file);
+    return impl->Parse(file, out_report);
 }
 
 void Parser::AddFunction(const char *signature, NativeFunction *native)
@@ -208,8 +209,9 @@ ParserImpl::ParserImpl(Program *program)
     AddFunction("exit(Int)", nullptr);
 }
 
-bool ParserImpl::Parse(const TokenizedFile &file)
+bool ParserImpl::Parse(const TokenizedFile &file, ParseReport *out_report)
 {
+    // Restore previous state if something goes wrong
     RG_DEFER_NC(err_guard, ir_len = ir.len,
                            sources_len = program->sources.len,
                            prev_jump_idx = func_jump_idx,
@@ -251,6 +253,7 @@ bool ParserImpl::Parse(const TokenizedFile &file)
     pos = 0;
 
     valid = true;
+    unexpected_eof = false;
     show_errors = true;
     show_hints = false;
 
@@ -290,6 +293,10 @@ bool ParserImpl::Parse(const TokenizedFile &file)
 
     if (valid) {
         err_guard.Disable();
+    }
+    if (out_report) {
+        out_report->valid = valid;
+        out_report->unexpected_eof = unexpected_eof;
     }
     return valid;
 }
@@ -670,7 +677,7 @@ void ParserImpl::ParseFunction()
                     MarkError(func_pos, "Function '%1' only differs from previously defined '%2' by return type",
                               func->signature, overload->signature);
                 }
-                HintError(definitions_map.FindValue(overload, -1), "Previous definition");
+                HintDefinition(overload, "Previous definition is here");
             }
 
             overload = overload->overload_next;
@@ -1294,7 +1301,9 @@ Type ParserImpl::ParseExpression(bool keep_result)
     }
 
     if (RG_UNLIKELY(expect_value)) {
-        MarkError(pos - 1, "Unexpected end of expression, expected value or '('");
+        unexpected_eof |= valid;
+        MarkError(pos - 1, "Unexpected end of file, expected value or '('");
+
         goto error;
     }
     RG_ASSERT(!parentheses);
@@ -1855,7 +1864,9 @@ bool ParserImpl::TestOverload(const FunctionInfo &proto, Span<const FunctionInfo
 bool ParserImpl::ConsumeToken(TokenKind kind)
 {
     if (RG_UNLIKELY(pos >= tokens.len)) {
+        unexpected_eof |= valid;
         MarkError(pos, "Unexpected end of file, expected '%1'", TokenKindNames[(int)kind]);
+
         return false;
     }
 

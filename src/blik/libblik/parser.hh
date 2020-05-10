@@ -12,6 +12,11 @@ namespace RG {
 class ParserImpl;
 struct TokenizedFile;
 
+struct ParseReport {
+    bool valid;
+    bool unexpected_eof;
+};
+
 class Parser {
     RG_DELETE_COPY(Parser)
 
@@ -21,7 +26,7 @@ public:
     Parser(Program *out_program);
     ~Parser();
 
-    bool Parse(const TokenizedFile &file);
+    bool Parse(const TokenizedFile &file, ParseReport *out_report = nullptr);
 
     void AddFunction(const char *signature, NativeFunction *native);
 };

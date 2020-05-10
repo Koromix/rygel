@@ -7,6 +7,86 @@
 
 namespace RG {
 
+struct LogEntry {
+    LogLevel level;
+    const char *ctx;
+    const char *msg;
+};
+
+class LogTrace {
+    HeapArray<LogEntry> entries;
+    BlockAllocator str_alloc;
+
+public:
+    void HandleLog(LogLevel level, const char *ctx, const char *msg)
+    {
+        LogEntry entry = {};
+
+        entry.level = level;
+        entry.ctx = DuplicateString(ctx, &str_alloc).ptr;
+        entry.msg = DuplicateString(msg, &str_alloc).ptr;
+
+        entries.Append(entry);
+    }
+
+    void Dump()
+    {
+        for (const LogEntry &entry: entries) {
+            DefaultLogHandler(entry.level, entry.ctx, entry.msg);
+        }
+
+        entries.Clear();
+        str_alloc.ReleaseAll();
+    }
+};
+
+static int RunInteractive()
+{
+    Program program;
+    Parser parser(&program);
+    VirtualMachine vm(&program);
+
+    HeapArray<char> code;
+    char line[1024];
+
+    while (fgets(line, sizeof(line), stdin) != nullptr) {
+        code.Append(line);
+
+        // We need to intercept errors in order to hide them in some cases, such as
+        // for unexpected EOF because we want to allow the user to add more lines!
+        LogTrace trace;
+        SetLogHandler([&](LogLevel level, const char *ctx, const char *msg) { trace.HandleLog(level, ctx, msg); });
+        RG_DEFER_N(err_guard) {
+            code.Clear();
+            trace.Dump();
+        };
+
+        TokenizedFile file;
+        if (!Tokenize(code, "<interactive>", &file))
+            continue;
+
+        ParseReport report;
+        if (!parser.Parse(file, &report)) {
+            if (report.unexpected_eof) {
+                err_guard.Disable();
+            }
+
+            continue;
+        }
+
+        int exit_code;
+        if (!vm.Run(&exit_code))
+            return 1;
+
+        // Delete the exit for the next iteration :)
+        program.ir.RemoveLast(1);
+
+        code.Clear();
+    }
+
+    return 0;
+}
+
 static int RunCode(Span<const char> code, const char *filename)
 {
     TokenizedFile file;
@@ -24,40 +104,12 @@ static int RunCode(Span<const char> code, const char *filename)
     return exit_code;
 }
 
-static int RunInteractive()
-{
-    Program program;
-    Parser parser(&program);
-    VirtualMachine vm(&program);
-
-    // XXX: We need to go back to the StreamReader/LineReader split design, because it
-    // does not work correctly with stdin. The problem is that StreamReader uses fread()
-    // which does block until the buffer is full or EOF. Until then, use fgets() here.
-    char chunk[1024];
-    while(fgets(chunk, sizeof(chunk), stdin) != nullptr) {
-        TokenizedFile file;
-        if (!Tokenize(chunk, "<inline>", &file))
-            continue;
-        if (!parser.Parse(file))
-            continue;
-
-        int code;
-        if (!vm.Run(&code))
-            return 1;
-
-        // Delete the exit for the next iteration :)
-        program.ir.RemoveLast(1);
-    }
-
-    return 0;
-}
-
 int Main(int argc, char **argv)
 {
     enum class RunMode {
+        Interactive,
         File,
-        Command,
-        Interactive
+        Command
     };
 
     // Options
@@ -112,6 +164,8 @@ Options:
     }
 
     switch (mode) {
+        case RunMode::Interactive: { return RunInteractive(); } break;
+
         case RunMode::File: {
             if (!filename_or_code) {
                 LogError("No filename provided");
@@ -124,7 +178,6 @@ Options:
 
             return RunCode(code, filename_or_code);
         } break;
-
         case RunMode::Command: {
             if (!filename_or_code) {
                 LogError("No command provided");
@@ -133,8 +186,6 @@ Options:
 
             return RunCode(filename_or_code, "<inline>");
         } break;
-
-        case RunMode::Interactive: { return RunInteractive(); } break;
     }
 
     RG_UNREACHABLE();
