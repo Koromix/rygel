@@ -49,10 +49,10 @@ class ParserImpl {
 
     // All these members are relevant to the current parse only, and get resetted each time
     const TokenizedFile *file;
+    ParseReport *out_report; // Can be NULL
     Span<const Token> tokens;
     Size pos;
     bool valid;
-    bool unexpected_eof;
     bool show_errors;
     bool show_hints;
     SourceInfo *src;
@@ -65,7 +65,7 @@ class ParserImpl {
 
     Size func_jump_idx = -1;
     FunctionInfo *current_func = nullptr;
-    Size depth = -1;
+    int depth = -1;
 
     BucketArray<VariableInfo> variables;
     HashTable<const char *, VariableInfo *> variables_map;
@@ -146,6 +146,9 @@ private:
             show_hints = false;
         }
 
+        if (out_report && valid) {
+            out_report->depth = depth;
+        }
         valid = false;
     }
 
@@ -249,11 +252,14 @@ bool ParserImpl::Parse(const TokenizedFile &file, ParseReport *out_report)
     };
 
     this->file = &file;
+    this->out_report = out_report;
+    if (out_report) {
+        *out_report = {};
+    }
     tokens = file.tokens;
     pos = 0;
 
     valid = true;
-    unexpected_eof = false;
     show_errors = true;
     show_hints = false;
 
@@ -293,10 +299,6 @@ bool ParserImpl::Parse(const TokenizedFile &file, ParseReport *out_report)
 
     if (valid) {
         err_guard.Disable();
-    }
-    if (out_report) {
-        out_report->valid = valid;
-        out_report->unexpected_eof = unexpected_eof;
     }
     return valid;
 }
@@ -451,7 +453,7 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
         ConsumeToken(TokenKind::LeftParenthesis);
         if (!MatchToken(TokenKind::RightParenthesis)) {
             do {
-                MatchToken(TokenKind::EndOfLine);
+                while (MatchToken(TokenKind::EndOfLine));
 
                 FunctionInfo::Parameter param = {};
 
@@ -468,7 +470,7 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
                 proto->ret_pop += (param.type != Type::Null);
             } while (MatchToken(TokenKind::Comma));
 
-            MatchToken(TokenKind::EndOfLine);
+            while (MatchToken(TokenKind::EndOfLine));
             ConsumeToken(TokenKind::RightParenthesis);
         }
 
@@ -620,7 +622,7 @@ void ParserImpl::ParseFunction()
         Size stack_offset = -2 - func->params.len;
 
         do {
-            MatchToken(TokenKind::EndOfLine);
+            while (MatchToken(TokenKind::EndOfLine));
 
             VariableInfo *var = variables.AppendDefault();
 
@@ -652,7 +654,7 @@ void ParserImpl::ParseFunction()
             var->poisoned = !show_errors;
         } while (MatchToken(TokenKind::Comma));
 
-        MatchToken(TokenKind::EndOfLine);
+        while (MatchToken(TokenKind::EndOfLine));
         ConsumeToken(TokenKind::RightParenthesis);
     }
 
@@ -1239,7 +1241,7 @@ Type ParserImpl::ParseExpression(bool keep_result)
                     MarkError(pos - 1, "Unexpected token '%1', expected value or expression",
                               TokenKindNames[(int)tokens[pos - 1].kind]);
                     goto error;
-                } else if (tok.kind == TokenKind::EndOfLine && expect_value) {
+                } else if (tok.kind == TokenKind::EndOfLine && (expect_value || parentheses)) {
                     src->lines.Append({tok.line + 1, ir.len});
                     continue;
                 } else if (tok.kind == TokenKind::Assign && !expect_value) {
@@ -1300,13 +1302,14 @@ Type ParserImpl::ParseExpression(bool keep_result)
         }
     }
 
-    if (RG_UNLIKELY(expect_value)) {
-        unexpected_eof |= valid;
+    if (RG_UNLIKELY(expect_value || parentheses)) {
+        if (out_report && valid) {
+            out_report->unexpected_eof = true;
+        }
         MarkError(pos - 1, "Unexpected end of file, expected value or '('");
 
         goto error;
     }
-    RG_ASSERT(!parentheses);
 
     // Discharge remaining operators
     for (Size i = operators.len - 1; i >= 0; i--) {
@@ -1682,15 +1685,17 @@ bool ParserImpl::ParseCall(const char *name)
     }
 
     if (!MatchToken(TokenKind::RightParenthesis)) {
-        args.Append({nullptr, ParseExpression(true)});
-        while (MatchToken(TokenKind::Comma)) {
+        do {
+            while (MatchToken(TokenKind::EndOfLine));
+
             if (RG_UNLIKELY(!args.Available())) {
                 MarkError(pos, "Functions cannot take more than %1 arguments", RG_LEN(args.data));
                 return false;
             }
             args.Append({nullptr, ParseExpression(true)});
-        }
+        } while (MatchToken(TokenKind::Comma));
 
+        while (MatchToken(TokenKind::EndOfLine));
         ConsumeToken(TokenKind::RightParenthesis);
     }
 
@@ -1864,7 +1869,9 @@ bool ParserImpl::TestOverload(const FunctionInfo &proto, Span<const FunctionInfo
 bool ParserImpl::ConsumeToken(TokenKind kind)
 {
     if (RG_UNLIKELY(pos >= tokens.len)) {
-        unexpected_eof |= valid;
+        if (out_report && valid) {
+            out_report->unexpected_eof = true;
+        }
         MarkError(pos, "Unexpected end of file, expected '%1'", TokenKindNames[(int)kind]);
 
         return false;

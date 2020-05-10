@@ -13,8 +13,8 @@ class ParserImpl;
 struct TokenizedFile;
 
 struct ParseReport {
-    bool valid;
     bool unexpected_eof;
+    int depth;
 };
 
 class Parser {
