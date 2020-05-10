@@ -152,11 +152,11 @@ void ReportRuntimeError(Span<const FrameInfo> frames, const char *fmt, Args... a
             bool tre = frame.func && frame.func->tre;
 
             if (frame.filename) {
-                LogInfo("  %!..+%1 %2%3%!0 %!D..%4 (%5)%!0",
-                        i ? "  *" : ">>>", FmtArg(name).Pad(36), tre ? "+++" : "   ", frame.filename, frame.line);
+                LogInfo(" %!M.+%1%!0 %!..+%2%3%!0 %!D..%4 (%5)%!0",
+                        i ? "   " : ">>>", FmtArg(name).Pad(36), tre ? "+++" : "   ", frame.filename, frame.line);
             } else {
-                LogInfo("  %!..+%1 %2%3%!0 %!D..<native function>%!0",
-                        i ? "  *" : ">>>", FmtArg(name).Pad(36), tre ? "+++" : "   ");
+                LogInfo(" %!M.+%1%!0 %!..+%2%3%!0 %!D..<native function>%!0",
+                        i ? "   " : ">>>", FmtArg(name).Pad(36), tre ? "+++" : "   ");
             }
         }
     }
