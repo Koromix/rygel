@@ -95,6 +95,7 @@ OPCODE(InvokeNull)
 OPCODE(Print)
 OPCODE(IntToFloat)
 OPCODE(FloatToInt)
-OPCODE(Exit)
+
+OPCODE(End)
 
 #undef OPCODE

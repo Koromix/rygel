@@ -209,7 +209,6 @@ ParserImpl::ParserImpl(Program *program)
     AddFunction("printLn(...)", nullptr);
     AddFunction("intToFloat(Int): Float", nullptr);
     AddFunction("floatToInt(Float): Int", nullptr);
-    AddFunction("exit(Int)", nullptr);
 }
 
 bool ParserImpl::Parse(const TokenizedFile &file, ParseReport *out_report)
@@ -293,8 +292,7 @@ bool ParserImpl::Parse(const TokenizedFile &file, ParseReport *out_report)
     }
     forward_calls.Clear();
 
-    ir.Append({Opcode::PushInt, {.i = 0}});
-    ir.Append({Opcode::Exit, {.b = true}});
+    ir.Append({Opcode::End});
     program->end_stack_len = var_offset;
 
     if (valid) {
@@ -1771,8 +1769,6 @@ void ParserImpl::EmitIntrinsic(const char *name, Span<const FunctionInfo::Parame
         ir.Append({Opcode::IntToFloat});
     } else if (TestStr(name, "floatToInt")) {
         ir.Append({Opcode::FloatToInt});
-    } else if (TestStr(name, "exit")) {
-        ir.Append({Opcode::Exit});
     }
 }
 

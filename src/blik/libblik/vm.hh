@@ -14,7 +14,9 @@ class VirtualMachine {
     RG_DELETE_COPY(VirtualMachine)
 
     Span<const Instruction> ir;
-    bool fatal = false;
+
+    bool run;
+    bool error;
 
 public:
     const Program *const program;
@@ -25,10 +27,11 @@ public:
 
     VirtualMachine(const Program *const program) : program(program) {}
 
-    bool Run(int *out_exit_code);
+    bool Run();
 
     void DecodeFrames(const VirtualMachine &vm, HeapArray<FrameInfo> *out_frames) const;
 
+    void SetInterrupt() { run = false; }
     template <typename... Args>
     void FatalError(const char *fmt, Args... args)
     {
@@ -36,13 +39,15 @@ public:
         DecodeFrames(*this, &frames);
 
         ReportRuntimeError(frames, fmt, args...);
-        fatal = true;
+
+        run = false;
+        error = true;
     }
 
 private:
     void DumpInstruction() const;
 };
 
-bool Run(const Program &program, int *out_exit_code);
+bool Run(const Program &program);
 
 }

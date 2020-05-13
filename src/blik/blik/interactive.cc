@@ -602,10 +602,22 @@ int RunInteractive()
     Parser parser(&program);
     VirtualMachine vm(&program);
 
+    static bool run = true;
+    parser.AddFunction("exit()", [](VirtualMachine *vm, Span<const Value> args) {
+        run = false;
+        vm->SetInterrupt();
+        return Value();
+    });
+    parser.AddFunction("quit()", [](VirtualMachine *vm, Span<const Value> args) {
+        run = false;
+        vm->SetInterrupt();
+        return Value();
+    });
+
     ConsolePrompter prompter;
     ParseReport report;
 
-    while (prompter.Read()) {
+    while (run && prompter.Read()) {
         // We need to intercept errors in order to hide them in some cases, such as
         // for unexpected EOF because we want to allow the user to add more lines!
         LogTrace trace;
@@ -636,8 +648,7 @@ int RunInteractive()
             continue;
         }
 
-        int exit_code;
-        if (!vm.Run(&exit_code))
+        if (!vm.Run())
             return 1;
 
         // Delete the exit for the next iteration :)

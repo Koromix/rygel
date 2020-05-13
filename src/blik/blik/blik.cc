@@ -18,12 +18,10 @@ static int RunCode(Span<const char> code, const char *filename)
         return 1;
     if (!Parse(file, &program))
         return 1;
-
-    int exit_code;
-    if (!Run(program, &exit_code))
+    if (!Run(program))
         return 1;
 
-    return exit_code;
+    return 0;
 }
 
 int Main(int argc, char **argv)

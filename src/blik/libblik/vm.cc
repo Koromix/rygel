@@ -8,12 +8,13 @@
 
 namespace RG {
 
-bool VirtualMachine::Run(int *out_exit_code)
+bool VirtualMachine::Run()
 {
     const Instruction *inst;
 
     ir = program->ir;
-    fatal = false;
+    run = true;
+    error = false;
 
 #if defined(__GNUC__) || defined(__clang__)
     static const void *dispatch[] = {
@@ -430,12 +431,10 @@ bool VirtualMachine::Run(int *out_exit_code)
 
             pc = stack.ptr[bp - 2].i;
             bp = stack.ptr[bp - 1].i;
-
-            if (RG_UNLIKELY(fatal)) {
-                stack.len--;
-                return false;
-            }
             stack[stack.len - 1] = ret;
+
+            if (RG_UNLIKELY(!run))
+                return !error;
 
             DISPATCH(++pc);
         }
@@ -453,8 +452,8 @@ bool VirtualMachine::Run(int *out_exit_code)
             pc = stack.ptr[bp - 2].i;
             bp = stack.ptr[bp - 1].i;
 
-            if (RG_UNLIKELY(fatal))
-                return false;
+            if (RG_UNLIKELY(!run))
+                return !error;
 
             DISPATCH(++pc);
         }
@@ -498,12 +497,8 @@ bool VirtualMachine::Run(int *out_exit_code)
             DISPATCH(++pc);
         }
 
-        CASE(Exit): {
-            int code = (int)stack.ptr[--stack.len].i;
-
+        CASE(End): {
             RG_ASSERT(stack.len == program->end_stack_len || !inst->u.b);
-
-            *out_exit_code = code;
             return true;
         }
     }
@@ -617,10 +612,10 @@ void VirtualMachine::DumpInstruction() const
 #endif
 }
 
-bool Run(const Program &program, int *out_exit_code)
+bool Run(const Program &program)
 {
     VirtualMachine vm(&program);
-    return vm.Run(out_exit_code);
+    return vm.Run();
 }
 
 }
