@@ -190,27 +190,64 @@ bool ConsolePrompter::Read()
 
         switch (c) {
             case 0x1B: {
-                int d = ReadChar();
-                int e = ReadChar();
+                LocalArray<char, 16> buf;
 
-                if (d == '[') {
-                    switch (e) {
-                        case '3': { // Delete?
-                            if (ReadChar() == '~' && str_offset < str.len) {
-                                memmove(str.ptr + str_offset, str.ptr + str_offset + 1, str.len - str_offset - 1);
-                                str.len--;
+                const auto match_escape = [&](const char *seq) {
+                    RG_ASSERT(strlen(seq) < RG_SIZE(buf.data));
 
-                                Prompt();
-                            }
-                        } break;
-
-                        case 'A': { fake_input = "\x10"; } break;
-                        case 'B': { fake_input = "\x0E"; } break;
-                        case 'C': { fake_input = "\x06"; } break;
-                        case 'D': { fake_input = "\x02"; } break;
-                        case 'H': { fake_input = "\x01"; } break;
-                        case 'F': { fake_input = "\x05"; } break;
+                    for (Size i = 0; seq[i]; i++) {
+                        if (i >= buf.len) {
+                            buf.Append(ReadChar());
+                        }
+                        if (buf[i] != seq[i])
+                            return false;
                     }
+
+                    return true;
+                };
+
+                if (match_escape("[1;5D")) { // Ctrl-Left
+                    if (str_offset > 0) {
+                        str_offset--;
+                        while (str_offset > 0 && strchr(" \t\r\n", str[str_offset])) {
+                            str_offset--;
+                        }
+                        while (str_offset > 0 && !strchr(" \t\r\n", str[str_offset - 1])) {
+                            str_offset--;
+                        }
+                    }
+
+                    Prompt();
+                } else if (match_escape("[1;5C")) { // Ctrl-Right
+                    if (str_offset < str.len) {
+                        while (str_offset < str.len && strchr(" \t\r\n", str[str_offset])) {
+                            str_offset++;
+                        }
+                        while (str_offset < str.len && !strchr(" \t\r\n", str[str_offset])) {
+                            str_offset++;
+                        }
+                    }
+
+                    Prompt();
+                } else if (match_escape("[3~")) { // Delete
+                    if (str_offset < str.len) {
+                        memmove(str.ptr + str_offset, str.ptr + str_offset + 1, str.len - str_offset - 1);
+                        str.len--;
+
+                        Prompt();
+                    }
+                } else if (match_escape("[A")) { // Up
+                    fake_input = "\x10";
+                } else if (match_escape("[B")) { // Down
+                    fake_input = "\x0E";
+                } else if (match_escape("[D")) { // Left
+                    fake_input = "\x02";
+                } else if (match_escape("[C")) { // Right
+                    fake_input = "\x06";
+                } else if (match_escape("[H")) { // Home
+                    fake_input = "\x01";
+                } else if (match_escape("[F")) { // End
+                    fake_input = "\x05";
                 }
             } break;
 
@@ -551,6 +588,14 @@ int ConsolePrompter::ReadChar()
                     case 'P': { return 0x10; } break;
                     case 'T': { return 0x14; } break;
                     case 'U': { return 0x15; } break;
+                    case VK_LEFT: {
+                        fake_input = "[1;5D";
+                        return 0x1B;
+                    } break;
+                    case VK_RIGHT: {
+                        fake_input = "[1;5C";
+                        return 0x1B;
+                    } break;
                 }
             } else {
                 switch (ev.Event.KeyEvent.wVirtualKeyCode) {
