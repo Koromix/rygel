@@ -141,6 +141,9 @@ public:
 private:
     void ChangeEntry(Size new_idx);
 
+    Size SkipWordForward();
+    Size SkipWordBackward();
+
     void Prompt();
 
     int GetColumns();
@@ -208,31 +211,37 @@ bool ConsolePrompter::Read()
 
                 if (match_escape("[1;5D")) { // Ctrl-Left
                     if (str_offset > 0) {
-                        str_offset--;
-                        while (str_offset > 0 && strchr(" \t\r\n", str[str_offset])) {
-                            str_offset--;
-                        }
-                        while (str_offset > 0 && !strchr(" \t\r\n", str[str_offset - 1])) {
-                            str_offset--;
-                        }
+                        str_offset = SkipWordBackward();
+                        Prompt();
                     }
-
-                    Prompt();
                 } else if (match_escape("[1;5C")) { // Ctrl-Right
                     if (str_offset < str.len) {
-                        while (str_offset < str.len && strchr(" \t\r\n", str[str_offset])) {
-                            str_offset++;
-                        }
-                        while (str_offset < str.len && !strchr(" \t\r\n", str[str_offset])) {
-                            str_offset++;
-                        }
+                        str_offset = SkipWordForward();
+                        Prompt();
                     }
-
-                    Prompt();
                 } else if (match_escape("[3~")) { // Delete
                     if (str_offset < str.len) {
                         memmove(str.ptr + str_offset, str.ptr + str_offset + 1, str.len - str_offset - 1);
                         str.len--;
+
+                        Prompt();
+                    }
+                } else if (match_escape("\x7F")) { // Alt-Backspace
+                    if (str_offset > 0) {
+                        Size new_offset = SkipWordBackward();
+
+                        memmove(str.ptr + new_offset, str.ptr + str_offset, str.len - str_offset);
+                        str.len -= str_offset - new_offset;
+                        str_offset = new_offset;
+
+                        Prompt();
+                    }
+                } else if (match_escape("d")) { // Alt-D
+                    if (str_offset < str.len) {
+                        Size new_offset = SkipWordForward();
+
+                        memmove(str.ptr + str_offset, str.ptr + new_offset, str.len - new_offset);
+                        str.len -= new_offset - str_offset;
 
                         Prompt();
                     }
@@ -446,6 +455,34 @@ void ConsolePrompter::ChangeEntry(Size new_idx)
     entry_idx = new_idx;
 }
 
+Size ConsolePrompter::SkipWordForward()
+{
+    Size offset = str_offset;
+
+    while (offset < str.len && strchr(" \t\r\n", str[offset])) {
+        offset++;
+    }
+    while (offset < str.len && !strchr(" \t\r\n", str[offset])) {
+        offset++;
+    }
+
+    return offset;
+}
+
+Size ConsolePrompter::SkipWordBackward()
+{
+    Size offset = str_offset - 1;
+
+    while (offset > 0 && strchr(" \t\r\n", str[offset])) {
+        offset--;
+    }
+    while (offset > 0 && !strchr(" \t\r\n", str[offset - 1])) {
+        offset--;
+    }
+
+    return offset;
+}
+
 void ConsolePrompter::Prompt()
 {
     columns = GetColumns();
@@ -598,6 +635,19 @@ int ConsolePrompter::ReadChar()
                     } break;
                 }
             } else {
+                if (alt) {
+                    switch (ev.Event.KeyEvent.wVirtualKeyCode) {
+                        case VK_BACK: {
+                            fake_input = "\x7F";
+                            return 0x1B;
+                        } break;
+                        case 'D': {
+                            fake_input = "d";
+                            return 0x1B;
+                        } break;
+                    }
+                }
+
                 switch (ev.Event.KeyEvent.wVirtualKeyCode) {
                     case VK_UP: { return 0x10; } break;
                     case VK_DOWN: { return 0xE; } break;
