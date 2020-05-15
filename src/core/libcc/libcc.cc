@@ -4979,31 +4979,29 @@ Vec2<int> ConsolePrompter::GetConsoleSize()
 
 Vec2<int> ConsolePrompter::GetCursorPosition()
 {
+#ifdef _WIN32
+    HANDLE h = (HANDLE)_get_osfhandle(_fileno(stdout));
+
+    CONSOLE_SCREEN_BUFFER_INFO screen;
+    if (!GetConsoleScreenBufferInfo(h, &screen))
+        return {};
+
+    return {screen.dwCursorPosition.X - 1, screen.dwCursorPosition.Y - 1};
+#else
     fputs("\x1B[6n", stdout);
     fflush(stdout);
 
-#ifdef _WIN32
-    int fd = _fileno(stdin);
-#else
-    int fd = STDIN_FILENO;
-#endif
-
-    char c;
-    if (read(fd, &c, 1) != 1 || c != 0x1B)
-        return {};
-    if (read(fd, &c, 1) != 1 || c != '[')
-        return {};
-
     LocalArray<char, 64> buf;
-    while (buf.Available() > 1 && read(fd, buf.end(), 1) == 1 && buf.data[buf.len] != 'R') {
+    while (buf.Available() > 1 && read(STDIN_FILENO, buf.end(), 1) == 1 && buf.data[buf.len] != 'R') {
         buf.len++;
     }
     buf.Append(0);
 
     int v = 1, h = 1;
-    sscanf(buf.data, "%d;%d", &v, &h);
+    sscanf(buf.data, "\x1B[%d;%d", &v, &h);
 
     return {h - 1, v - 1};
+#endif
 }
 
 int ConsolePrompter::ReadChar()
