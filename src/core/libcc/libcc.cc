@@ -4358,25 +4358,6 @@ static inline bool IsDashDash(const char *arg)
     return arg[0] == '-' && arg[1] == '-' && !arg[2];
 }
 
-static void ReverseArgs(const char **args, Size start, Size end)
-{
-    for (Size i = 0; i < (end - start) / 2; i++) {
-        const char *tmp = args[start + i];
-        args[start + i] = args[end - i - 1];
-        args[end - i - 1] = tmp;
-    }
-}
-
-static void RotateArgs(const char **args, Size start, Size mid, Size end)
-{
-    if (start == mid || mid == end)
-        return;
-
-    ReverseArgs(args, start, mid);
-    ReverseArgs(args, mid, end);
-    ReverseArgs(args, start, end);
-}
-
 const char *OptionParser::Next()
 {
     current_option = nullptr;
@@ -4407,7 +4388,7 @@ const char *OptionParser::Next()
     if (flags & (int)Flag::SkipNonOptions) {
         pos = next_index;
     } else {
-        RotateArgs(args.ptr, pos, next_index, args.len);
+        std::rotate(args.ptr + pos, args.ptr + next_index, args.end());
         limit -= (next_index - pos);
     }
     if (pos >= limit)
@@ -4436,7 +4417,7 @@ const char *OptionParser::Next()
     } else if (IsDashDash(opt)) {
         // We may have previously moved non-options to the end of args. For example,
         // at this point 'a b c -- d e' is reordered to '-- d e a b c'. Fix it.
-        RotateArgs(args.ptr, pos + 1, limit, args.len);
+        std::rotate(args.ptr + pos + 1, args.ptr + limit, args.end());
         limit = pos;
         pos++;
     } else if (opt[2]) {
@@ -4773,10 +4754,7 @@ bool ConsolePrompter::Read()
                 Size start = SkipBackward(middle, 1);
 
                 if (start < middle) {
-                    std::reverse(str.ptr + start, str.ptr + middle);
-                    std::reverse(str.ptr + middle, str.ptr + str_offset);
-                    std::reverse(str.ptr + start, str.ptr + str_offset);
-
+                    std::rotate(str.ptr + start, str.ptr + middle, str.ptr + str_offset);
                     Prompt();
                 }
             } break;
