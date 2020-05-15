@@ -106,11 +106,9 @@ struct VariableInfo {
     Type type;
     bool global;
     bool readonly;
-    bool poisoned;
-    bool implicit;
     const VariableInfo *shadow;
 
-    Size offset;
+    Size offset; // Stack
     Size defined_idx; // IR
 
     RG_HASHTABLE_HANDLER(VariableInfo, name);

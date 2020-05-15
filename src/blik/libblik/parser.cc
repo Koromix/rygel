@@ -45,6 +45,7 @@ class ParserImpl {
     // Transient mappings
     HashMap<Size, FunctionInfo *> functions_by_pos;
     HashMap<const void *, Size> definitions_map;
+    HashSet<const void *> poisons;
 
     HeapArray<ForwardCall> forward_calls;
 
@@ -634,7 +635,9 @@ void ParserImpl::ParseFunction()
             ConsumeToken(TokenKind::Colon);
             var->type = ConsumeType();
 
-            var->poisoned = !show_errors;
+            if (RG_UNLIKELY(!show_errors)) {
+                poisons.Append(var);
+            }
         } while (MatchToken(TokenKind::Comma));
 
         while (MatchToken(TokenKind::EndOfLine));
@@ -753,7 +756,6 @@ void ParserImpl::ParseLet()
 
     if (MatchToken(TokenKind::Assign)) {
         var->type = ParseExpression(true);
-        var->implicit = true;
     } else {
         ConsumeToken(TokenKind::Colon);
         var->type = ConsumeType();
@@ -785,7 +787,9 @@ void ParserImpl::ParseLet()
 
     // Expressions involving this variable won't issue (visible) errors
     // and will be marked as invalid too.
-    var->poisoned = !show_errors;
+    if (RG_UNLIKELY(!show_errors)) {
+        poisons.Append(var);
+    }
 }
 
 bool ParserImpl::ParseIf()
@@ -926,7 +930,6 @@ void ParserImpl::ParseFor()
     definitions_map.Append(it, pos);
     it->name = ConsumeIdentifier();
     it->type = Type::Int;
-    it->implicit = true;
 
     it->offset = var_offset + 2;
 
@@ -1201,7 +1204,7 @@ Type ParserImpl::ParseExpression(bool keep_result)
                             MarkError(pos - 1, "Variable '%1' does not exist", tok.u.str);
                             goto error;
                         }
-                        show_errors &= !var->poisoned;
+                        show_errors &= !poisons.Find(var);
 
                         EmitLoad(*var);
                     }
@@ -1372,8 +1375,8 @@ void ParserImpl::ProduceOperator(const PendingOperator &op)
         if (RG_UNLIKELY(var->type != expr.type)) {
             MarkError(op.pos, "Cannot assign %1 value to variable '%2'",
                       TypeNames[(int)expr.type], var->name);
-            HintError(definitions_map.FindValue(var, -1), "Variable '%1' is %2defined as %3",
-                      var->name, var->implicit ? "implicitly " : "", TypeNames[(int)var->type]);
+            HintError(definitions_map.FindValue(var, -1), "Variable '%1' is defined as %2",
+                      var->name, TypeNames[(int)var->type]);
             return;
         }
 
@@ -1824,6 +1827,8 @@ void ParserImpl::DestroyVariables(Size count)
         } else {
             program->variables_map.Remove(ptr);
         }
+
+        poisons.Remove(&var);
     }
 
     program->variables.RemoveLast(count);
