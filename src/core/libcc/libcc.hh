@@ -3749,4 +3749,46 @@ bool OptionToEnum(Span<const OptionDesc> options, Span<const char> str, T *out_v
     }
 }
 
+// ------------------------------------------------------------------------
+// Console prompter (simplified readline)
+// ------------------------------------------------------------------------
+
+class ConsolePrompter {
+    const char *prompt = ">>> ";
+    int prompt_columns = 4;
+
+    HeapArray<HeapArray<char>> entries;
+    Size entry_idx = 0;
+    Size str_offset = 0;
+
+    int columns = 0;
+    int rows = 0;
+    int rows_with_extra = 0;
+    int x = 0;
+    int y = 0;
+
+    const char *fake_input = "";
+
+public:
+    HeapArray<char> str;
+
+    ConsolePrompter();
+
+    bool Read();
+    void Commit();
+
+private:
+    void ChangeEntry(Size new_idx);
+
+    Size SkipForward(Size offset, const char *chars);
+    Size SkipBackward(Size offset, const char *chars);
+    void Delete(Size start, Size end);
+
+    void Prompt();
+
+    Vec2<int> GetConsoleSize();
+    Vec2<int> GetCursorPosition();
+    int ReadChar();
+};
+
 }
