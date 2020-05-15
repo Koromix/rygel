@@ -88,7 +88,7 @@ public:
 
     bool Parse(const TokenizedFile &file, ParseReport *out_report);
 
-    void AddFunction(const char *signature, NativeFunction *native);
+    void AddFunction(const char *signature, std::function<NativeFunction> native);
 
 private:
     void ParsePrototypes(Span<const Size> funcs);
@@ -192,7 +192,7 @@ bool Parser::Parse(const TokenizedFile &file, ParseReport *out_report)
     return impl->Parse(file, out_report);
 }
 
-void Parser::AddFunction(const char *signature, NativeFunction *native)
+void Parser::AddFunction(const char *signature, std::function<NativeFunction> native)
 {
     RG_ASSERT(native);
     impl->AddFunction(signature, native);
@@ -205,10 +205,10 @@ ParserImpl::ParserImpl(Program *program)
     RG_ASSERT(!program->ir.len);
 
     // Intrinsics
-    AddFunction("print(...)", nullptr);
-    AddFunction("printLn(...)", nullptr);
-    AddFunction("intToFloat(Int): Float", nullptr);
-    AddFunction("floatToInt(Float): Int", nullptr);
+    AddFunction("print(...)", {});
+    AddFunction("printLn(...)", {});
+    AddFunction("intToFloat(Int): Float", {});
+    AddFunction("floatToInt(Float): Int", {});
 }
 
 bool ParserImpl::Parse(const TokenizedFile &file, ParseReport *out_report)
@@ -304,7 +304,7 @@ bool ParserImpl::Parse(const TokenizedFile &file, ParseReport *out_report)
 // This is not exposed to user scripts, and the validation of signature is very light,
 // with a few debug-only asserts. Bad function names (even invalid UTF-8 sequences)
 // will go right through. Don't pass in garbage!
-void ParserImpl::AddFunction(const char *signature, NativeFunction *native)
+void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction> native)
 {
     FunctionInfo *func = program->functions.AppendDefault();
 
@@ -321,6 +321,7 @@ void ParserImpl::AddFunction(const char *signature, NativeFunction *native)
     func->signature = DuplicateString(signature, &program->str_alloc).ptr;
 
     func->intrinsic = !native;
+    func->native = native;
 
     // Parameters
     RG_ASSERT(ptr[0] == '(');
@@ -367,7 +368,7 @@ void ParserImpl::AddFunction(const char *signature, NativeFunction *native)
         uint64_t payload = 0;
 
         payload |= (uint64_t)func->ret_pop << 57;
-        payload |= (uint64_t)native & 0x1FFFFFFFFFFFFFFull;
+        payload |= (uint64_t)&func->native & 0x1FFFFFFFFFFFFFFull;
 
         // Jump over consecutively defined functions in one go
         if (func_jump_idx >= 0 && ir[func_jump_idx].u.i == ir.len - func_jump_idx) {

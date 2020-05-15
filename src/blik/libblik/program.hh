@@ -80,6 +80,7 @@ struct FunctionInfo {
     const char *signature;
 
     bool intrinsic;
+    std::function<NativeFunction> native;
 
     LocalArray<Parameter, 16> params;
     bool variadic;

@@ -28,7 +28,7 @@ public:
 
     bool Parse(const TokenizedFile &file, ParseReport *out_report = nullptr);
 
-    void AddFunction(const char *signature, NativeFunction *native);
+    void AddFunction(const char *signature, std::function<NativeFunction> native);
 };
 
 bool Parse(const TokenizedFile &file, Program *out_program);

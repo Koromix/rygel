@@ -667,14 +667,14 @@ int RunInteractive()
     Program program;
     Parser parser(&program);
     VirtualMachine vm(&program);
+    bool run = true;
 
-    static bool run = true;
-    parser.AddFunction("exit()", [](VirtualMachine *vm, Span<const Value> args) {
+    parser.AddFunction("exit()", [&](VirtualMachine *vm, Span<const Value> args) {
         run = false;
         vm->SetInterrupt();
         return Value();
     });
-    parser.AddFunction("quit()", [](VirtualMachine *vm, Span<const Value> args) {
+    parser.AddFunction("quit()", [&](VirtualMachine *vm, Span<const Value> args) {
         run = false;
         vm->SetInterrupt();
         return Value();

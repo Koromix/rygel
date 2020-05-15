@@ -421,7 +421,7 @@ bool VirtualMachine::Run()
         CASE(Invoke): {
             RG_ASSERT(stack.len == bp);
 
-            NativeFunction *native = (NativeFunction *)(inst->u.payload & 0x1FFFFFFFFFFFFFFull);
+            std::function<NativeFunction> *native = (std::function<NativeFunction> *)(inst->u.payload & 0x1FFFFFFFFFFFFFFull);
             Size ret_pop = (Size)(inst->u.payload >> 57) & 0x3F;
 
             Span<const Value> args = stack.Take(stack.len - ret_pop - 2, ret_pop);
@@ -441,7 +441,7 @@ bool VirtualMachine::Run()
         CASE(InvokeNull): {
             RG_ASSERT(stack.len == bp);
 
-            NativeFunction *native = (NativeFunction *)(inst->u.payload & 0x1FFFFFFFFFFFFFFull);
+            std::function<NativeFunction> *native = (std::function<NativeFunction> *)(inst->u.payload & 0x1FFFFFFFFFFFFFFull);
             Size ret_pop = (Size)(inst->u.payload >> 57) & 0x3F;
 
             Span<const Value> args = stack.Take(stack.len - ret_pop - 2, ret_pop);
