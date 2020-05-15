@@ -3398,6 +3398,12 @@ static inline Size EncodeUtf8(uint32_t c, char out_buf[4])
     }
 }
 
+static inline int CountUtf8Bytes(char c)
+{
+    int ones = CountLeadingZeros((uint32_t)~c << 24);
+    return std::clamp(ones, 1, 4);
+}
+
 static inline Size DecodeUtf8(Span<const char> str, Size offset, uint32_t *out_c)
 {
     RG_ASSERT(offset < str.len);
@@ -3768,6 +3774,9 @@ class ConsolePrompter {
     int y = 0;
 
     const char *fake_input = "";
+#ifdef _WIN32
+    uint32_t surrogate_buf = 0;
+#endif
 
 public:
     HeapArray<char> str;
@@ -3780,15 +3789,18 @@ public:
 private:
     void ChangeEntry(Size new_idx);
 
-    Size SkipForward(Size offset, const char *chars);
-    Size SkipBackward(Size offset, const char *chars);
+    Size SkipForward(Size offset, Size count);
+    Size SkipBackward(Size offset, Size count);
+    Size FindForward(Size offset, const char *chars);
+    Size FindBackward(Size offset, const char *chars);
+
     void Delete(Size start, Size end);
 
     void Prompt();
 
     Vec2<int> GetConsoleSize();
     Vec2<int> GetCursorPosition();
-    int ReadChar();
+    int32_t ReadChar();
 };
 
 }

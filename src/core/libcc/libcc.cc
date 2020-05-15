@@ -4632,7 +4632,7 @@ bool ConsolePrompter::Read()
     str_offset = str.len;
     Prompt();
 
-    int c;
+    int32_t c;
     while ((c = ReadChar()) >= 0) {
         // Fix display if terminal is resized
         if (GetConsoleSize().x != columns) {
@@ -4648,7 +4648,15 @@ bool ConsolePrompter::Read()
 
                     for (Size i = 0; seq[i]; i++) {
                         if (i >= buf.len) {
-                            buf.Append(ReadChar());
+                            c = ReadChar();
+
+                            if (c >= 128) {
+                                // Got some kind of non-ASCII character, make sure nothing else matches
+                                buf.Append(0);
+                                return false;
+                            }
+
+                            buf.Append((char)c);
                         }
                         if (buf[i] != seq[i])
                             return false;
@@ -4658,21 +4666,21 @@ bool ConsolePrompter::Read()
                 };
 
                 if (match_escape("[1;5D")) { // Ctrl-Left
-                    str_offset = SkipBackward(str_offset, " \t\r\n");
+                    str_offset = FindBackward(str_offset, " \t\r\n");
                     Prompt();
                 } else if (match_escape("[1;5C")) { // Ctrl-Right
-                    str_offset = SkipForward(str_offset, " \t\r\n");
+                    str_offset = FindForward(str_offset, " \t\r\n");
                     Prompt();
                 } else if (match_escape("[3~")) { // Delete
                     if (str_offset < str.len) {
-                        Delete(str_offset, str_offset + 1);
+                        Delete(str_offset, SkipForward(str_offset, 1));
                         Prompt();
                     }
                 } else if (match_escape("\x7F")) { // Alt-Backspace
-                    Delete(SkipBackward(str_offset, " \t\r\n"), str_offset);
+                    Delete(FindBackward(str_offset, " \t\r\n"), str_offset);
                     Prompt();
                 } else if (match_escape("d")) { // Alt-D
-                    Delete(str_offset, SkipForward(str_offset, " \t\r\n"));
+                    Delete(str_offset, FindForward(str_offset, " \t\r\n"));
                     Prompt();
                 } else if (match_escape("[A")) { // Up
                     fake_input = "\x10";
@@ -4691,13 +4699,13 @@ bool ConsolePrompter::Read()
 
             case 0x2: { // Left
                 if (str_offset > 0) {
-                    str_offset--;
+                    str_offset = SkipBackward(str_offset, 1);
                     Prompt();
                 }
             } break;
             case 0x6: { // Right
                 if (str_offset < str.len) {
-                    str_offset++;
+                    str_offset = SkipForward(str_offset, 1);
                     Prompt();
                 }
             } break;
@@ -4735,26 +4743,18 @@ bool ConsolePrompter::Read()
             } break;
 
             case 0x1: { // Home
-                str_offset = SkipBackward(str_offset, "\n");
+                str_offset = FindBackward(str_offset, "\n");
                 Prompt();
             } break;
             case 0x5: { // End
-                str_offset = SkipForward(str_offset, "\n");
+                str_offset = FindForward(str_offset, "\n");
                 Prompt();
             } break;
 
             case 0x8:
             case 0x7F: { // Backspace
-                if (str_offset) {
-                    Delete(str_offset - 1, str_offset);
-
-                    if (str_offset == str.len && x > prompt_columns) {
-                        fputs("\x1B[1D\x1B[0K", stdout);
-                        x--;
-                    } else {
-                        Prompt();
-                    }
-                }
+                Delete(SkipBackward(str_offset, 1), str_offset);
+                Prompt();
             } break;
             case 0x3: { // Ctrl-C
                 fputs("\r\n", stdout);
@@ -4764,22 +4764,28 @@ bool ConsolePrompter::Read()
                 if (!str.len) {
                     return false;
                 } else if (str_offset < str.len) {
-                    Delete(str_offset, str_offset + 1);
+                    Delete(str_offset, SkipForward(str_offset, 1));
                     Prompt();
                 }
             } break;
             case 0x14: { // Ctrl-T
-                if (str_offset >= 2) {
-                    std::swap(str[str_offset - 1], str[str_offset - 2]);
+                Size middle = SkipBackward(str_offset, 1);
+                Size start = SkipBackward(middle, 1);
+
+                if (start < middle) {
+                    std::reverse(str.ptr + start, str.ptr + middle);
+                    std::reverse(str.ptr + middle, str.ptr + str_offset);
+                    std::reverse(str.ptr + start, str.ptr + str_offset);
+
                     Prompt();
                 }
             } break;
             case 0xB: { // Ctrl-K
-                Delete(str_offset, SkipForward(str_offset, "\n"));
+                Delete(str_offset, FindForward(str_offset, "\n"));
                 Prompt();
             } break;
             case 0x15: { // Ctrl-U
-                Delete(SkipBackward(str_offset, "\n"), str_offset);
+                Delete(FindBackward(str_offset, "\n"), str_offset);
                 Prompt();
             } break;
             case 0xC: { // Ctrl-L
@@ -4804,8 +4810,8 @@ bool ConsolePrompter::Read()
                 LocalArray<char, 16> frag;
                 if (c == '\t') {
                     frag.Append("    ");
-                } else if (c >= 32 && (uint8_t)c < 128) {
-                    frag.Append((char)c);
+                } else if (c >= 32) {
+                    frag.len = EncodeUtf8(c, frag.data);
                 } else {
                     continue;
                 }
@@ -4816,9 +4822,9 @@ bool ConsolePrompter::Read()
                 str.len += frag.len;
                 str_offset += frag.len;
 
-                if (str_offset == str.len && x < columns) {
+                if (str_offset == str.len && c < 128 && x + frag.len < columns) {
                     fwrite(frag.data, 1, (size_t)frag.len, stdout);
-                    x++;
+                    x += (int)frag.len;
                 } else {
                     Prompt();
                 }
@@ -4859,7 +4865,33 @@ void ConsolePrompter::ChangeEntry(Size new_idx)
     entry_idx = new_idx;
 }
 
-Size ConsolePrompter::SkipForward(Size offset, const char *chars)
+Size ConsolePrompter::SkipForward(Size offset, Size count)
+{
+    if (offset < str.len) {
+        offset++;
+
+        while (offset < str.len && (((str[offset] & 0xC0) == 0x80) || --count)) {
+            offset++;
+        }
+    }
+
+    return offset;
+}
+
+Size ConsolePrompter::SkipBackward(Size offset, Size count)
+{
+    if (offset > 0) {
+        offset--;
+
+        while (offset > 0 && (((str[offset] & 0xC0) == 0x80) || --count)) {
+            offset--;
+        }
+    }
+
+    return offset;
+}
+
+Size ConsolePrompter::FindForward(Size offset, const char *chars)
 {
     while (offset < str.len && strchr(chars, str[offset])) {
         offset++;
@@ -4871,7 +4903,7 @@ Size ConsolePrompter::SkipForward(Size offset, const char *chars)
     return offset;
 }
 
-Size ConsolePrompter::SkipBackward(Size offset, const char *chars)
+Size ConsolePrompter::FindBackward(Size offset, const char *chars)
 {
     if (offset > 0) {
         offset--;
@@ -4905,6 +4937,7 @@ void ConsolePrompter::Delete(Size start, Size end)
 void ConsolePrompter::Prompt()
 {
     columns = GetConsoleSize().x;
+    rows = 0;
 
     // Hide cursor during refresh
     fprintf(stdout, "\x1B[?25l");
@@ -4912,37 +4945,41 @@ void ConsolePrompter::Prompt()
         fprintf(stdout, "\x1B[%dA", y);
     }
 
-    // Output prompt(s) and string
+    // Output prompt(s) and string lines
     {
-        Span<const char> remain = str;
-        Span<const char> line;
+        Size i = 0;
+        int x2 = prompt_columns;
 
-        rows = -1;
-        do {
-            line = TrimStrRight(SplitStr(remain, '\n', &remain), "\r\n");
+        Print("\r%!D.+%1%!0", prompt);
 
-            for (Size i = 0; i <= line.len; i += columns - prompt_columns) {
-                Span<const char> part = line.Take(i, std::min((Size)(columns - prompt_columns), line.len - i));
-
-                if (i) {
-                    FmtArg prefix = FmtArg(' ').Repeat(prompt_columns - 1);
-                    Print("\r\n%!D.+%1%!0 %2\x1B[0K", prefix, part);
-                } else if (rows >= 0) {
-                    FmtArg prefix = FmtArg('.').Repeat(prompt_columns - 1);
-                    Print("\r\n%!D.+%1%!0 %2\x1B[0K", prefix, part);
-                } else {
-                    Print("\r%!D.+%1%!0%2\x1B[0K", prompt, part);
-                }
-                rows++;
-
-                Size part_offset = (str.ptr + str_offset) - part.ptr;
-
-                if (part_offset >= 0) {
-                    x = (int)(prompt_columns + part_offset);
-                    y = rows;
-                }
+        for (;;) {
+            if (i == str_offset) {
+                x = x2;
+                y = rows;
             }
-        } while (remain.ptr > line.end());
+            if (i >= str.len)
+                break;
+
+            // XXX: For now we assume all codepoints take a single column, we need to use
+            // something like wcwidth() instead.
+            Size bytes = std::min((Size)CountUtf8Bytes(str[i]), str.len - i);
+            int width = ((uint8_t)str[i] >= 32) ? 1 : 0;
+
+            if (x2 + width >= columns || str[i] == '\n') {
+                FmtArg prefix = FmtArg(str[i] == '\n' ? '.' : ' ').Repeat(prompt_columns - 1);
+                Print(stdout, "\x1B[0K\r\n%!D.+%1%!0 ", prefix);
+
+                x2 = prompt_columns;
+                rows++;
+            }
+            if (width > 0) {
+                fwrite(str.ptr + i, 1, (size_t)bytes, stdout);
+            }
+
+            i += bytes;
+            x2 += width;
+        }
+        fputs("\x1B[0K", stdout);
     }
 
     // Clear remaining rows
@@ -5004,7 +5041,7 @@ Vec2<int> ConsolePrompter::GetCursorPosition()
 #endif
 }
 
-int ConsolePrompter::ReadChar()
+int32_t ConsolePrompter::ReadChar()
 {
     if (fake_input[0]) {
         int c = fake_input[0];
@@ -5018,7 +5055,7 @@ int ConsolePrompter::ReadChar()
     for (;;) {
         INPUT_RECORD ev;
         DWORD ev_len;
-        if (!ReadConsoleInputA(h, &ev, 1, &ev_len))
+        if (!ReadConsoleInputW(h, &ev, 1, &ev_len))
             return -1;
         if (!ev_len)
             return -1;
@@ -5080,8 +5117,22 @@ int ConsolePrompter::ReadChar()
                     } break;
 
                     default: {
-                        if (ev.Event.KeyEvent.uChar.AsciiChar > 0)
-                            return ev.Event.KeyEvent.uChar.AsciiChar;
+                        uint32_t uc = ev.Event.KeyEvent.uChar.UnicodeChar;
+
+                        if ((uc - 0xD800u) < 0x800u) {
+                            if ((uc & 0xFC00u) == 0xD800u) {
+                                surrogate_buf = uc;
+                                return 0;
+                            } else if (surrogate_buf && (uc & 0xFC00) == 0xDC00) {
+                                uc = (surrogate_buf << 10) + uc - 0x35FDC00;
+                            } else {
+                                // Yeah something is up. Give up on this character.
+                                surrogate_buf = 0;
+                                return 0;
+                            }
+                        }
+
+                        return (int32_t)uc;
                     } break;
                 }
             }
@@ -5090,16 +5141,26 @@ int ConsolePrompter::ReadChar()
         }
     }
 #else
-    int c = getc(stdin);
-    if (c < 0) {
-        if (errno == EINTR) {
-            // Could be SIGWINCH, react immediately
+    int32_t uc = getc(stdin);
+    if (uc < 0)
+        return (errno == EINTR) ? 0 : -1;
+
+    if (uc > 0 && (uc & 0xC0) == 0xC0) {
+        Size bytes = CountUtf8Bytes((char)uc);
+
+        LocalArray<char, 4> buf;
+        buf.Append((char)uc);
+        buf.len += fread(buf.end(), 1, bytes - 1, stdin);
+        if (buf.len < 1)
+            return (errno == EINTR) ? 0 : -1;
+
+        if (buf.len != bytes)
             return 0;
-        } else {
-            return -1;
-        }
+        if (DecodeUtf8(buf, 0, (uint32_t *)&uc) != bytes)
+            return 0;
     }
-    return c;
+
+    return uc;
 #endif
 }
 
