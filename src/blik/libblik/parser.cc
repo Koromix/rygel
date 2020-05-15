@@ -199,12 +199,9 @@ bool ParserImpl::Parse(const TokenizedFile &file, ParseReport *out_report)
     // Restore previous state if something goes wrong
     RG_DEFER_NC(err_guard, ir_len = ir.len,
                            sources_len = program->sources.len,
-                           prev_jump_idx = func_jump_idx,
                            prev_var_offset = var_offset,
                            variables_len = program->variables.len,
                            functions_len = program->functions.len) {
-        func_jump_idx = prev_jump_idx;
-
         ir.RemoveFrom(ir_len);
         program->sources.RemoveFrom(sources_len);
 
@@ -277,6 +274,10 @@ bool ParserImpl::Parse(const TokenizedFile &file, ParseReport *out_report)
 
     ir.Append({Opcode::End});
     program->end_stack_len = var_offset;
+
+    // The caller may want to execute the code and then compile new code (e.g. REPL),
+    // we can't ever try to reuse a jump that will not be executed!
+    func_jump_idx = -1;
 
     if (valid) {
         err_guard.Disable();
