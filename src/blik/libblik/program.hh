@@ -101,12 +101,30 @@ struct FunctionInfo {
     RG_HASHTABLE_HANDLER(FunctionInfo, name);
 };
 
+struct VariableInfo {
+    const char *name;
+    Type type;
+    bool global;
+    bool readonly;
+    bool poisoned;
+    bool implicit;
+    const VariableInfo *shadow;
+
+    Size offset;
+    Size defined_idx; // IR
+
+    RG_HASHTABLE_HANDLER(VariableInfo, name);
+};
+
 struct Program {
     HeapArray<Instruction> ir;
     HeapArray<SourceInfo> sources;
 
     BucketArray<FunctionInfo> functions;
     HashTable<const char *, FunctionInfo *> functions_map;
+
+    BucketArray<VariableInfo> variables;
+    HashTable<const char *, VariableInfo *> variables_map;
 
     Size end_stack_len;
 
