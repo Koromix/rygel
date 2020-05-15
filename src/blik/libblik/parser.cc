@@ -610,7 +610,7 @@ void ParserImpl::ParseFunction()
 
             VariableInfo *var = program->variables.AppendDefault();
 
-            var->readonly = !MatchToken(TokenKind::Mut);
+            var->mut = MatchToken(TokenKind::Mut);
             definitions_map.Append(var, pos);
             var->name = ConsumeIdentifier();
 
@@ -733,7 +733,7 @@ void ParserImpl::ParseLet()
 
     VariableInfo *var = program->variables.AppendDefault();
 
-    var->readonly = !MatchToken(TokenKind::Mut);
+    var->mut = MatchToken(TokenKind::Mut);
     definitions_map.Append(var, pos);
     var->name = ConsumeIdentifier();
 
@@ -926,7 +926,7 @@ void ParserImpl::ParseFor()
 
     VariableInfo *it = program->variables.AppendDefault();
 
-    it->readonly = !MatchToken(TokenKind::Mut);
+    it->mut = MatchToken(TokenKind::Mut);
     definitions_map.Append(it, pos);
     it->name = ConsumeIdentifier();
     it->type = Type::Int;
@@ -1366,7 +1366,7 @@ void ParserImpl::ProduceOperator(const PendingOperator &op)
             MarkError(op.pos, "Cannot assign result to temporary value; left operand should be a variable");
             return;
         }
-        if (RG_UNLIKELY(var->readonly)) {
+        if (RG_UNLIKELY(!var->mut)) {
             MarkError(op.pos, "Cannot assign result to non-mutable variable '%1'", var->name);
             HintError(definitions_map.FindValue(var, -1), "Variable '%1' is defined without 'mut' qualifier", var->name);
 

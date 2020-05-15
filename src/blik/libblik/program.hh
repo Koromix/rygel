@@ -104,12 +104,13 @@ struct FunctionInfo {
 struct VariableInfo {
     const char *name;
     Type type;
-    bool global;
-    bool readonly;
-    const VariableInfo *shadow;
+    bool mut;
 
+    bool global;
     Size offset; // Stack
     Size defined_idx; // IR
+
+    const VariableInfo *shadow;
 
     RG_HASHTABLE_HANDLER(VariableInfo, name);
 };
