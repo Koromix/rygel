@@ -42,13 +42,6 @@ void ReportDiagnostic(DiagnosticType type, Span<const char> code, const char *fi
         extract.len++;
     }
 
-    // We point the user to error location with '^^^', but if the token is a single
-    // character (e.g. operator) we want the second caret to be centered on it.
-    // There is a small trap: we can't do that if the character before is a tabulation,
-    // see below for tab handling.
-    bool center = (offset > 0 && code[offset - 1] == ' ' &&
-                   (offset + 1 >= code.len || IsAsciiWhite(code[offset + 1])));
-
     // Because we accept tabulation users, including the crazy ones who may put tabulations
     // after other characters, we can't just repeat ' ' (column - 1) times to align the
     // visual indicator. Instead, we create an alignment string containing spaces (for all
@@ -56,14 +49,14 @@ void ReportDiagnostic(DiagnosticType type, Span<const char> code, const char *fi
     char align[1024];
     int align_more;
     {
-        int align_len = std::min((int)RG_SIZE(align) - 1, column - center);
+        int align_len = std::min((int)RG_SIZE(align) - 1, column);
         for (Size i = 0; i < align_len; i++) {
             align[i] = (extract[i] == '\t') ? '\t' : ' ';
         }
         align[align_len] = 0;
 
         // Tabulations and very long lines... if you can read this comment: just stop.
-        align_more = column - center - align_len;
+        align_more = column - align_len;
     }
 
     // Yeah I may have gone overboard a bit... but it looks nice :)
@@ -94,7 +87,7 @@ void ReportDiagnostic(DiagnosticType type, Span<const char> code, const char *fi
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), "%!..+").len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), fmt, args...).len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), "\n%1 |%!0  %2%!D..%3%!0", FmtArg(line).Pad(-7), extract, comment).len;
-            msg_buf.len += Fmt(msg_buf.TakeAvailable(), "\n        |  %1%2%!M..^^^%!0", align, FmtArg(' ').Repeat(align_more)).len;
+            msg_buf.len += Fmt(msg_buf.TakeAvailable(), "\n        |  %1%2%!M..^%!0", align, FmtArg(' ').Repeat(align_more)).len;
 
             Log(LogLevel::Error, ctx_buf, "%1", msg_buf.data);
         } break;
@@ -107,7 +100,7 @@ void ReportDiagnostic(DiagnosticType type, Span<const char> code, const char *fi
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), "%!..+").len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), fmt, args...).len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), "\n    %1 |%!0  %2%!D..%3%!0", FmtArg(line).Pad(-7), extract, comment).len;
-            msg_buf.len += Fmt(msg_buf.TakeAvailable(), "\n            |  %1%2%!D..^^^%!0", align, FmtArg(' ').Repeat(align_more)).len;
+            msg_buf.len += Fmt(msg_buf.TakeAvailable(), "\n            |  %1%2%!D..^%!0", align, FmtArg(' ').Repeat(align_more)).len;
 
             Log(LogLevel::Info, ctx_buf, "%1", msg_buf.data);
         } break;
