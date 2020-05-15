@@ -42,7 +42,7 @@ public:
 
 int RunInteractive()
 {
-    LogInfo("%!R.+blik%!0 %1", FelixVersion);
+    LogInfo("%!R..blik%!0 %1", FelixVersion);
 
     WaitForInterruption(0);
     EnableAnsiOutput();
