@@ -4801,23 +4801,23 @@ bool ConsolePrompter::Read()
             } break;
 
             default: {
-                Span<const char> frag;
+                LocalArray<char, 16> frag;
                 if (c == '\t') {
-                    frag = "    ";
+                    frag.Append("    ");
                 } else if (c >= 32 && (uint8_t)c < 128) {
-                    frag = c;
+                    frag.Append((char)c);
                 } else {
                     continue;
                 }
 
                 str.Grow(frag.len);
                 memmove(str.ptr + str_offset + frag.len, str.ptr + str_offset, (size_t)(str.len - str_offset));
-                memcpy(str.ptr + str_offset, frag.ptr, (size_t)frag.len);
+                memcpy(str.ptr + str_offset, frag.data, (size_t)frag.len);
                 str.len += frag.len;
                 str_offset += frag.len;
 
                 if (str_offset == str.len && x < columns) {
-                    fwrite(frag.ptr, 1, (size_t)frag.len, stdout);
+                    fwrite(frag.data, 1, (size_t)frag.len, stdout);
                     x++;
                 } else {
                     Prompt();
