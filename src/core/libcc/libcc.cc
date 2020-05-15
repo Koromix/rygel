@@ -4632,14 +4632,14 @@ bool ConsolePrompter::Read()
     str_offset = str.len;
     Prompt();
 
-    int32_t c;
-    while ((c = ReadChar()) >= 0) {
+    int32_t uc;
+    while ((uc = ReadChar()) >= 0) {
         // Fix display if terminal is resized
         if (GetConsoleSize().x != columns) {
             Prompt();
         }
 
-        switch (c) {
+        switch (uc) {
             case 0x1B: {
                 LocalArray<char, 16> buf;
 
@@ -4648,15 +4648,15 @@ bool ConsolePrompter::Read()
 
                     for (Size i = 0; seq[i]; i++) {
                         if (i >= buf.len) {
-                            c = ReadChar();
+                            uc = ReadChar();
 
-                            if (c >= 128) {
+                            if (uc >= 128) {
                                 // Got some kind of non-ASCII character, make sure nothing else matches
                                 buf.Append(0);
                                 return false;
                             }
 
-                            buf.Append((char)c);
+                            buf.Append((char)uc);
                         }
                         if (buf[i] != seq[i])
                             return false;
@@ -4808,10 +4808,10 @@ bool ConsolePrompter::Read()
 
             default: {
                 LocalArray<char, 16> frag;
-                if (c == '\t') {
+                if (uc == '\t') {
                     frag.Append("    ");
-                } else if (c >= 32) {
-                    frag.len = EncodeUtf8(c, frag.data);
+                } else if (uc >= 32) {
+                    frag.len = EncodeUtf8(uc, frag.data);
                 } else {
                     continue;
                 }
@@ -4822,7 +4822,7 @@ bool ConsolePrompter::Read()
                 str.len += frag.len;
                 str_offset += frag.len;
 
-                if (str_offset == str.len && c < 128 && x + frag.len < columns) {
+                if (str_offset == str.len && uc < 128 && x + frag.len < columns) {
                     fwrite(frag.data, 1, (size_t)frag.len, stdout);
                     x += (int)frag.len;
                 } else {
@@ -5145,7 +5145,7 @@ int32_t ConsolePrompter::ReadChar()
     if (uc < 0)
         return (errno == EINTR) ? 0 : -1;
 
-    if (uc > 0 && (uc & 0xC0) == 0xC0) {
+    if (uc >= 128) {
         Size bytes = CountUtf8Bytes((char)uc);
 
         LocalArray<char, 4> buf;
@@ -5156,7 +5156,7 @@ int32_t ConsolePrompter::ReadChar()
 
         if (buf.len != bytes)
             return 0;
-        if (DecodeUtf8(buf, 0, (uint32_t *)&uc) != bytes)
+        if (DecodeUtf8(buf, 0, &uc) != bytes)
             return 0;
     }
 

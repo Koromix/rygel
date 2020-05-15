@@ -48,8 +48,8 @@ private:
     {
         // It's possible the caller has done this already, but we can afford a bit
         // of redundance here: it is an error path.
-        uint32_t c;
-        Size bytes = DecodeUtf8(code, offset, &c);
+        int32_t uc;
+        Size bytes = DecodeUtf8(code, offset, &uc);
 
         if (!bytes) {
             MarkError(offset, "Illegal UTF-8 sequence");
@@ -61,13 +61,13 @@ private:
     }
 };
 
-static bool TestUnicodeTable(Span<const uint32_t> table, uint32_t c)
+static bool TestUnicodeTable(Span<const int32_t> table, int32_t uc)
 {
     RG_ASSERT(table.len > 0);
     RG_ASSERT(table.len % 2 == 0);
 
-    auto it = std::upper_bound(table.begin(), table.end(), c,
-                               [](uint32_t c, uint32_t x) { return c < x; });
+    auto it = std::upper_bound(table.begin(), table.end(), uc,
+                               [](int32_t uc, int32_t x) { return uc < x; });
     Size idx = it - table.ptr;
 
     // Each pair of value in table represents a valid interval
@@ -345,8 +345,8 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                         str.Append(code[next]);
                         next++;
                     } else {
-                        uint32_t c;
-                        Size bytes = DecodeUtf8(code.ptr, next, &c);
+                        int32_t uc;
+                        Size bytes = DecodeUtf8(code.ptr, next, &uc);
 
                         if (RG_UNLIKELY(!bytes)) {
                             MarkError(next, "Invalid UTF-8 sequence");
@@ -393,10 +393,10 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                 if (RG_LIKELY(IsAsciiAlpha(code[offset]) || code[offset] == '_')) {
                     // Go on!
                 } else if ((uint8_t)code[offset] >= 128) {
-                    uint32_t c = 0;
-                    Size bytes = DecodeUtf8(code.ptr, offset, &c);
+                    int32_t uc = 0;
+                    Size bytes = DecodeUtf8(code.ptr, offset, &uc);
 
-                    if (RG_UNLIKELY(!TestUnicodeTable(UnicodeIdStartTable, c))) {
+                    if (RG_UNLIKELY(!TestUnicodeTable(UnicodeIdStartTable, uc))) {
                         MarkUnexpected(offset, "Identifiers cannot start with");
                         return false;
                     }
@@ -411,10 +411,10 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     if (IsAsciiAlphaOrDigit(code[next]) || code[next] == '_') {
                         next++;
                     } else if (RG_UNLIKELY((uint8_t)code[next] >= 128)) {
-                        uint32_t c = 0;
-                        Size bytes = DecodeUtf8(code.ptr, next, &c);
+                        int32_t uc = 0;
+                        Size bytes = DecodeUtf8(code.ptr, next, &uc);
 
-                        if (!TestUnicodeTable(UnicodeIdContinueTable, c)) {
+                        if (!TestUnicodeTable(UnicodeIdContinueTable, uc)) {
                             MarkUnexpected(next, "Identifiers cannot contain");
                             return false;
                         }

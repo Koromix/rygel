@@ -96,14 +96,14 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
 #undef HANDLE_KEY
         } break;
         case WM_CHAR: {
-            uint32_t c = (uint32_t)wparam;
+            uint32_t uc = (uint32_t)wparam;
 
-            if ((c - 0xD800u) < 0x800u) {
-                if ((c & 0xFC00) == 0xD800) {
-                    thread_window->surrogate_buf = c;
+            if ((uc - 0xD800u) < 0x800u) {
+                if ((uc & 0xFC00) == 0xD800) {
+                    thread_window->surrogate_buf = uc;
                     break;
-                } else if (thread_window->surrogate_buf && (c & 0xFC00) == 0xDC00) {
-                    c = (thread_window->surrogate_buf << 10) + c - 0x35FDC00;
+                } else if (thread_window->surrogate_buf && (uc & 0xFC00) == 0xDC00) {
+                    uc = (thread_window->surrogate_buf << 10) + uc - 0x35FDC00;
                     thread_window->surrogate_buf = 0;
                 } else {
                     // Yeah something is up. Give up on this character.
@@ -113,7 +113,7 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
             }
 
             if (RG_LIKELY(thread_info->input.text.Available() >= 5)) {
-                thread_info->input.text.len += EncodeUtf8(c, thread_info->input.text.end());
+                thread_info->input.text.len += EncodeUtf8(uc, thread_info->input.text.end());
                 thread_info->input.text.data[thread_info->input.text.len] = 0;
             } else {
                 LogError("Dropping text events (buffer full)");

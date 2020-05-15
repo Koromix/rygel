@@ -3371,7 +3371,7 @@ overflow:
     return false;
 }
 
-static inline Size EncodeUtf8(uint32_t c, char out_buf[4])
+static inline Size EncodeUtf8(int32_t c, char out_buf[4])
 {
     if (c < 0x80) {
         out_buf[0] = (char)c;
@@ -3404,7 +3404,7 @@ static inline int CountUtf8Bytes(char c)
     return std::clamp(ones, 1, 4);
 }
 
-static inline Size DecodeUtf8(Span<const char> str, Size offset, uint32_t *out_c)
+static inline Size DecodeUtf8(Span<const char> str, Size offset, int32_t *out_c)
 {
     RG_ASSERT(offset < str.len);
 
