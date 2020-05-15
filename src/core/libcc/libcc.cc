@@ -4756,7 +4756,7 @@ bool ConsolePrompter::Read()
                     }
                 }
             } break;
-            case 0x3: {
+            case 0x3: { // Ctrl-C
                 fputs("\r\n", stdout);
                 return false;
             } break;
