@@ -306,7 +306,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
 
                 for (;;) {
                     if (RG_UNLIKELY(next >= code.len || code[next] == '\n')) {
-                        MarkError(next, "Unfinished string literal");
+                        MarkError(offset, "Unfinished string literal");
                         return false;
                     }
                     if (RG_UNLIKELY(code[next] == '\r')) {
