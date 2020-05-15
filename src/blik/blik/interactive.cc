@@ -147,8 +147,8 @@ private:
 
     void Prompt();
 
-    int GetColumns();
-    int GetCursorX();
+    Vec2<int> GetConsoleSize();
+    Vec2<int> GetCursorPosition();
     int ReadChar();
 };
 
@@ -177,7 +177,7 @@ bool ConsolePrompter::Read()
     RG_DEFER { DisableRawMode(); };
 
     // Don't overwrite current line
-    if (GetCursorX() > 0) {
+    if (GetCursorPosition().x > 0) {
         fputs("\r\n", stdout);
     }
 
@@ -187,7 +187,7 @@ bool ConsolePrompter::Read()
     int c;
     while ((c = ReadChar()) >= 0) {
         // Fix display if terminal is resized
-        if (GetColumns() != columns) {
+        if (GetConsoleSize().x != columns) {
             Prompt();
         }
 
@@ -456,7 +456,7 @@ void ConsolePrompter::Delete(Size start, Size end)
 
 void ConsolePrompter::Prompt()
 {
-    columns = GetColumns();
+    columns = GetConsoleSize().x;
 
     // Hide cursor during refresh
     fprintf(stdout, "\x1B[?25l");
@@ -511,25 +511,25 @@ void ConsolePrompter::Prompt()
     fprintf(stdout, "\x1B[?25h");
 }
 
-int ConsolePrompter::GetColumns()
+Vec2<int> ConsolePrompter::GetConsoleSize()
 {
 #ifdef _WIN32
     HANDLE h = (HANDLE)_get_osfhandle(_fileno(stdout));
 
     CONSOLE_SCREEN_BUFFER_INFO screen;
     if (GetConsoleScreenBufferInfo(h, &screen))
-        return screen.srWindow.Right - screen.srWindow.Left;
+        return {screen.dwSize.X, screen.dwSize.Y};
 #else
     struct winsize ws;
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) >= 0 && ws.ws_col)
-        return ws.ws_col;
+        return {ws.ws_col, ws.ws_row};
 #endif
 
     // Give up!
-    return 80;
+    return {80, 24};
 }
 
-int ConsolePrompter::GetCursorX()
+Vec2<int> ConsolePrompter::GetCursorPosition()
 {
     fputs("\x1B[6n", stdout);
     fflush(stdout);
@@ -542,9 +542,9 @@ int ConsolePrompter::GetCursorX()
 
     char c;
     if (read(fd, &c, 1) != 1 || c != 0x1B)
-        return 0;
+        return {};
     if (read(fd, &c, 1) != 1 || c != '[')
-        return 0;
+        return {};
 
     LocalArray<char, 64> buf;
     while (buf.Available() > 1 && read(fd, buf.end(), 1) == 1 && buf.data[buf.len] != 'R') {
@@ -552,10 +552,10 @@ int ConsolePrompter::GetCursorX()
     }
     buf.Append(0);
 
-    int v, h = 1;
+    int v = 1, h = 1;
     sscanf(buf.data, "%d;%d", &v, &h);
 
-    return h - 1;
+    return {h - 1, v - 1};
 }
 
 int ConsolePrompter::ReadChar()

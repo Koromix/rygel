@@ -569,6 +569,19 @@ enum class ParseFlag {
 };
 #define RG_DEFAULT_PARSE_FLAGS ((int)ParseFlag::Log | (int)ParseFlag::Validate | (int)ParseFlag::End)
 
+template <typename T>
+struct Vec2 {
+    T x;
+    T y;
+};
+
+template <typename T>
+struct Vec3 {
+    T x;
+    T y;
+    T z;
+};
+
 // ------------------------------------------------------------------------
 // Memory / Allocator
 // ------------------------------------------------------------------------
