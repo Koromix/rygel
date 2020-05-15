@@ -141,14 +141,14 @@ public:
 private:
     void ChangeEntry(Size new_idx);
 
-    Size SkipWordForward();
-    Size SkipWordBackward();
+    Size SkipForward(Size offset, const char *chars);
+    Size SkipBackward(Size offset, const char *chars);
+    void Delete(Size start, Size end);
 
     void Prompt();
 
     int GetColumns();
     int GetCursorX();
-
     int ReadChar();
 };
 
@@ -210,41 +210,22 @@ bool ConsolePrompter::Read()
                 };
 
                 if (match_escape("[1;5D")) { // Ctrl-Left
-                    if (str_offset > 0) {
-                        str_offset = SkipWordBackward();
-                        Prompt();
-                    }
+                    str_offset = SkipBackward(str_offset, " \t\r\n");
+                    Prompt();
                 } else if (match_escape("[1;5C")) { // Ctrl-Right
-                    if (str_offset < str.len) {
-                        str_offset = SkipWordForward();
-                        Prompt();
-                    }
+                    str_offset = SkipForward(str_offset, " \t\r\n");
+                    Prompt();
                 } else if (match_escape("[3~")) { // Delete
                     if (str_offset < str.len) {
-                        memmove(str.ptr + str_offset, str.ptr + str_offset + 1, str.len - str_offset - 1);
-                        str.len--;
-
+                        Delete(str_offset, str_offset + 1);
                         Prompt();
                     }
                 } else if (match_escape("\x7F")) { // Alt-Backspace
-                    if (str_offset > 0) {
-                        Size new_offset = SkipWordBackward();
-
-                        memmove(str.ptr + new_offset, str.ptr + str_offset, str.len - str_offset);
-                        str.len -= str_offset - new_offset;
-                        str_offset = new_offset;
-
-                        Prompt();
-                    }
+                    Delete(SkipBackward(str_offset, " \t\r\n"), str_offset);
+                    Prompt();
                 } else if (match_escape("d")) { // Alt-D
-                    if (str_offset < str.len) {
-                        Size new_offset = SkipWordForward();
-
-                        memmove(str.ptr + str_offset, str.ptr + new_offset, str.len - new_offset);
-                        str.len -= new_offset - str_offset;
-
-                        Prompt();
-                    }
+                    Delete(str_offset, SkipForward(str_offset, " \t\r\n"));
+                    Prompt();
                 } else if (match_escape("[A")) { // Up
                     fake_input = "\x10";
                 } else if (match_escape("[B")) { // Down
@@ -306,26 +287,18 @@ bool ConsolePrompter::Read()
             } break;
 
             case 0x1: { // Home
-                while (str_offset > 0 && str[str_offset - 1] != '\n') {
-                    str_offset--;
-                }
-
+                str_offset = SkipBackward(str_offset, "\n");
                 Prompt();
             } break;
             case 0x5: { // End
-                while (str_offset < str.len && str[str_offset] != '\n') {
-                    str_offset++;
-                }
-
+                str_offset = SkipForward(str_offset, "\n");
                 Prompt();
             } break;
 
             case 0x8:
             case 0x7F: { // Backspace
                 if (str_offset) {
-                    memmove(str.ptr + str_offset - 1, str.ptr + str_offset, str.len - str_offset);
-                    str_offset--;
-                    str.len--;
+                    Delete(str_offset - 1, str_offset);
 
                     if (str_offset == str.len && x > prompt_columns) {
                         fputs("\x1B[1D\x1B[0K", stdout);
@@ -343,9 +316,7 @@ bool ConsolePrompter::Read()
                 if (!str.len) {
                     return false;
                 } else if (str_offset < str.len) {
-                    memmove(str.ptr + str_offset, str.ptr + str_offset + 1, str.len - str_offset - 1);
-                    str.len--;
-
+                    Delete(str_offset, str_offset + 1);
                     Prompt();
                 }
             } break;
@@ -356,27 +327,12 @@ bool ConsolePrompter::Read()
                 }
             } break;
             case 0xB: { // Ctrl-K
-                Span<const char> remain = str.Take(str_offset, str.len - str_offset);
-                Size end_idx = str_offset + SplitStr(remain, '\n').len;
-
-                if (end_idx > str_offset) {
-                    memmove(str.ptr + str_offset, str.ptr + end_idx, str.len - end_idx);
-                    str.len -= end_idx - str_offset;
-
-                    Prompt();
-                }
+                Delete(str_offset, SkipForward(str_offset, "\n"));
+                Prompt();
             } break;
             case 0x15: { // Ctrl-U
-                Span<const char> remain = str.Take(0, str_offset);
-                Size start_idx = SplitStrReverse(remain, '\n').ptr - str.ptr;
-
-                if (start_idx < str_offset) {
-                    memmove(str.ptr + start_idx, str.ptr + str_offset, str.len - str_offset);
-                    str.len -= str_offset - start_idx;
-                    str_offset = start_idx;
-
-                    Prompt();
-                }
+                Delete(SkipBackward(str_offset, "\n"), str_offset);
+                Prompt();
             } break;
             case 0xC: { // Ctrl-L
                 fputs("\x1B[2J\x1B[999A", stdout);
@@ -455,32 +411,47 @@ void ConsolePrompter::ChangeEntry(Size new_idx)
     entry_idx = new_idx;
 }
 
-Size ConsolePrompter::SkipWordForward()
+Size ConsolePrompter::SkipForward(Size offset, const char *chars)
 {
-    Size offset = str_offset;
-
-    while (offset < str.len && strchr(" \t\r\n", str[offset])) {
+    while (offset < str.len && strchr(chars, str[offset])) {
         offset++;
     }
-    while (offset < str.len && !strchr(" \t\r\n", str[offset])) {
+    while (offset < str.len && !strchr(chars, str[offset])) {
         offset++;
     }
 
     return offset;
 }
 
-Size ConsolePrompter::SkipWordBackward()
+Size ConsolePrompter::SkipBackward(Size offset, const char *chars)
 {
-    Size offset = str_offset - 1;
+    if (offset > 0) {
+        offset--;
 
-    while (offset > 0 && strchr(" \t\r\n", str[offset])) {
-        offset--;
-    }
-    while (offset > 0 && !strchr(" \t\r\n", str[offset - 1])) {
-        offset--;
+        while (offset > 0 && strchr(chars, str[offset])) {
+            offset--;
+        }
+        while (offset > 0 && !strchr(chars, str[offset - 1])) {
+            offset--;
+        }
     }
 
     return offset;
+}
+
+void ConsolePrompter::Delete(Size start, Size end)
+{
+    RG_ASSERT(start >= 0);
+    RG_ASSERT(end >= start && end <= str.len);
+
+    memmove(str.ptr + start, str.ptr + end, str.len - end);
+    str.len -= end - start;
+
+    if (str_offset > end) {
+        str_offset -= end - start;
+    } else if (str_offset > start) {
+        str_offset = start;
+    }
 }
 
 void ConsolePrompter::Prompt()
