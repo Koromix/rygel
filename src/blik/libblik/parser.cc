@@ -247,6 +247,10 @@ bool ParserImpl::Parse(const TokenizedFile &file, ParseReport *out_report)
     functions_by_pos.Clear();
     definitions_map.Clear();
 
+    // The caller may want to execute the code and then compile new code (e.g. REPL),
+    // we can't ever try to reuse a jump that will not be executed!
+    func_jump_idx = -1;
+
     src = program->sources.AppendDefault();
     src->filename = DuplicateString(file.filename, &program->str_alloc).ptr;
 
@@ -275,10 +279,6 @@ bool ParserImpl::Parse(const TokenizedFile &file, ParseReport *out_report)
 
     ir.Append({Opcode::End});
     program->end_stack_len = var_offset;
-
-    // The caller may want to execute the code and then compile new code (e.g. REPL),
-    // we can't ever try to reuse a jump that will not be executed!
-    func_jump_idx = -1;
 
     if (valid) {
         err_guard.Disable();
