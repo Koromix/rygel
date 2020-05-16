@@ -44,9 +44,6 @@ int RunInteractive()
 {
     LogInfo("%!R..blik%!0 %1", FelixVersion);
 
-    WaitForInterruption(0);
-    EnableAnsiOutput();
-
     Program program;
     Parser parser(&program);
     VirtualMachine vm(&program);

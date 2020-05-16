@@ -4540,11 +4540,7 @@ static bool EnableRawMode()
         stdin_handle = (HANDLE)_get_osfhandle(_fileno(stdin));
 
         if (GetConsoleMode(stdin_handle, &input_orig_mode)) {
-            DWORD new_mode = input_orig_mode;
-            new_mode &= ~(ENABLE_PROCESSED_INPUT | ENABLE_LINE_INPUT);
-            new_mode |= ENABLE_WINDOW_INPUT;
-
-            input_is_raw = SetConsoleMode(stdin_handle, new_mode);
+            input_is_raw = SetConsoleMode(stdin_handle, ENABLE_WINDOW_INPUT);
 
             if (input_is_raw && !init_atexit) {
                 atexit([]() { SetConsoleMode(stdin_handle, input_orig_mode); });
@@ -4602,7 +4598,25 @@ bool ConsolePrompter::Read()
     RG_DEFER { sigaction(SIGWINCH, &old_sa, nullptr); };
 #endif
 
-    EnableRawMode();
+    if (!EnableAnsiOutput() || !EnableRawMode()) {
+        int c;
+        while ((c = fgetc(stdin)) != EOF) {
+            if (c == '\n') {
+                str.Append('\n');
+                return true;
+            } else if (c >= 32 || c == '\t') {
+                str.Append(c);
+            }
+        }
+
+        if (ferror(stdin)) {
+            LogError("Failed to read from standard input: %1", strerror(errno));
+            return false;
+        }
+
+        // EOF
+        return false;
+    }
     RG_DEFER { DisableRawMode(); };
 
     // Don't overwrite current line
