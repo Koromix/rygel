@@ -4738,15 +4738,24 @@ bool ConsolePrompter::Read()
                 Prompt();
             } break;
             case 0x3: { // Ctrl-C
-                fputs("\r\n", stdout);
-                return false;
+                if (str.len) {
+                    str.RemoveFrom(0);
+                    str_offset = 0;
+                    entry_idx = entries.len - 1;
+                    entries[entry_idx].RemoveFrom(0);
+
+                    Prompt();
+                } else {
+                    fputs("\r\n", stdout);
+                    return false;
+                }
             } break;
             case 0x4: { // Ctrl-D
-                if (!str.len) {
-                    return false;
-                } else if (str_offset < str.len) {
+                if (str.len) {
                     Delete(str_offset, SkipForward(str_offset, 1));
                     Prompt();
+                } else {
+                    return false;
                 }
             } break;
             case 0x14: { // Ctrl-T
