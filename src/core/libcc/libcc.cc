@@ -5142,9 +5142,9 @@ int32_t ConsolePrompter::ReadChar()
         }
     }
 #else
-    int32_t uc = getc(stdin);
+    int32_t uc = fgetc(stdin);
     if (uc < 0)
-        return (errno == EINTR) ? 0 : -1;
+        goto eof;
 
     if (uc >= 128) {
         Size bytes = CountUtf8Bytes((char)uc);
@@ -5153,7 +5153,7 @@ int32_t ConsolePrompter::ReadChar()
         buf.Append((char)uc);
         buf.len += fread(buf.end(), 1, bytes - 1, stdin);
         if (buf.len < 1)
-            return (errno == EINTR) ? 0 : -1;
+            goto eof;
 
         if (buf.len != bytes)
             return 0;
@@ -5162,6 +5162,20 @@ int32_t ConsolePrompter::ReadChar()
     }
 
     return uc;
+
+eof:
+    if (ferror(stdin)) {
+        if (errno == EINTR) {
+            // Could be SIGWINCH, give the user a chance to deal with it
+            return 0;
+        } else {
+            LogError("Failed to read from standard input: %1", strerror(errno));
+            return -1;
+        }
+    } else {
+        // EOF
+        return -1;
+    }
 #endif
 }
 
