@@ -88,8 +88,11 @@ int RunInteractive()
 
         if (!parser.Parse(file, &report)) {
             if (report.unexpected_eof) {
-                prompter.str.len = TrimStrRight((Span<const char>)prompter.str).len;
-                Fmt(&prompter.str, "\n%1", FmtArg("    ").Repeat(report.depth + 1));
+                prompter.str.len = TrimStrRight((Span<const char>)prompter.str, "\t ").len;
+                if (!prompter.str.len || prompter.str[prompter.str.len - 1] != '\n') {
+                    prompter.str.Append('\n');
+                }
+                Fmt(&prompter.str, "%1", FmtArg("    ").Repeat(report.depth + 1));
 
                 try_guard.Disable();
             }
