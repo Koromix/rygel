@@ -35,10 +35,28 @@ public:
             DefaultLogHandler(entry.level, entry.ctx, entry.msg);
         }
 
+        Clear();
+    }
+
+    void Clear()
+    {
         entries.Clear();
         str_alloc.ReleaseAll();
     }
 };
+
+static bool TokenizeWithFakePrint(Span<const char> code, const char *filename, TokenizedFile *out_file)
+{
+    out_file->tokens.Append({TokenKind::Identifier, 0, 0, {.str = "printLn"}});
+    out_file->tokens.Append({TokenKind::LeftParenthesis, 0, 0});
+    if (!Tokenize(code, filename, out_file))
+        return false;
+    out_file->tokens.len--;
+    out_file->tokens.Append({TokenKind::RightParenthesis, 0, 0});
+    out_file->tokens.Append({TokenKind::EndOfLine});
+
+    return true;
+}
 
 int RunInteractive()
 {
@@ -79,22 +97,32 @@ int RunInteractive()
             trace.Dump();
         };
 
+        // Try with fake printLn() call first, and parse as normal code if it fails!
+        // Seems like a simple and clean way to print expression results.
         TokenizedFile file;
-        if (!Tokenize(prompter.str, "<interactive>", &file))
+        if (!TokenizeWithFakePrint(prompter.str, "<interactive>", &file))
             continue;
+        if (!parser.Parse(file)) {
+            trace.Clear();
+            file.tokens.RemoveFrom(0);
+            file.funcs.RemoveFrom(0);
 
-        if (!parser.Parse(file, &report)) {
-            if (report.unexpected_eof) {
-                prompter.str.len = TrimStrRight((Span<const char>)prompter.str, "\t ").len;
-                if (!prompter.str.len || prompter.str[prompter.str.len - 1] != '\n') {
-                    prompter.str.Append('\n');
+            bool success = Tokenize(prompter.str, "<interactive>", &file);
+            RG_ASSERT(success);
+
+            if (!parser.Parse(file, &report)) {
+                if (report.unexpected_eof) {
+                    prompter.str.len = TrimStrRight((Span<const char>)prompter.str, "\t ").len;
+                    if (!prompter.str.len || prompter.str[prompter.str.len - 1] != '\n') {
+                        prompter.str.Append('\n');
+                    }
+                    Fmt(&prompter.str, "%1", FmtArg("    ").Repeat(report.depth + 1));
+
+                    try_guard.Disable();
                 }
-                Fmt(&prompter.str, "%1", FmtArg("    ").Repeat(report.depth + 1));
 
-                try_guard.Disable();
+                continue;
             }
-
-            continue;
         }
 
         if (!vm.Run())

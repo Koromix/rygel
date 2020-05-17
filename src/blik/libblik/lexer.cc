@@ -61,6 +61,12 @@ private:
     }
 };
 
+Lexer::Lexer(TokenizedFile *file)
+    : file(file), tokens(file->tokens)
+{
+    RG_ASSERT(file);
+}
+
 static bool TestUnicodeTable(Span<const int32_t> table, int32_t uc)
 {
     RG_ASSERT(table.len > 0);
@@ -74,21 +80,12 @@ static bool TestUnicodeTable(Span<const int32_t> table, int32_t uc)
     return idx & 0x1;
 }
 
-Lexer::Lexer(TokenizedFile *file)
-    : file(file), tokens(file->tokens)
-{
-    RG_ASSERT(file);
-    RG_ASSERT(!file->tokens.len);
-}
-
 bool Lexer::Tokenize(Span<const char> code, const char *filename)
 {
-    RG_ASSERT(!tokens.len);
-
-    RG_DEFER_N(err_guard) {
-        tokens.Clear();
-        file->funcs.Clear();
-        file->str_alloc.ReleaseAll();
+    RG_DEFER_NC(err_guard, tokens_len = tokens.len,
+                           funcs_len = file->funcs.len) {
+        tokens.RemoveFrom(tokens_len);
+        file->funcs.RemoveFrom(funcs_len);
     };
 
     // Skip UTF-8 BOM... Who invented this crap?
