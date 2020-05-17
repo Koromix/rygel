@@ -787,12 +787,18 @@ void ParserImpl::ParseLet()
     }
 
     if (MatchToken(TokenKind::Assign)) {
+        while (MatchToken(TokenKind::EndOfLine));
+
         var->type = ParseExpression();
     } else {
         ConsumeToken(TokenKind::Colon);
+        while (MatchToken(TokenKind::EndOfLine));
+
         var->type = ParseType();
 
         if (MatchToken(TokenKind::Assign)) {
+            while (MatchToken(TokenKind::EndOfLine));
+
             Type type2 = ParseExpression();
 
             if (RG_UNLIKELY(type2 != var->type)) {
