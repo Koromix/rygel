@@ -51,7 +51,7 @@ class ParserImpl {
 
     Size func_jump_idx = -1;
     FunctionInfo *current_func = nullptr;
-    int depth = -1;
+    int depth = 0;
 
     Size var_offset = 0;
 
@@ -77,18 +77,22 @@ public:
 private:
     void ParsePrototypes(Span<const Size> funcs);
 
-    bool ParseBlock(bool keep_variables);
+    // These 3 functions return true if (and only if) all code paths have a return statement.
+    // For simplicity, return statements inside loops are not considered.
+    bool ParseBlock();
+    bool ParseStatement();
+    bool ParseDo();
+
     void ParseFunction();
     void ParseReturn();
     void ParseLet();
     bool ParseIf();
     void ParseWhile();
     void ParseFor();
-    void ParseBreak();
-    void ParseContinue();
 
     bool ParseCondition();
-    bool ParseDo();
+    void ParseBreak();
+    void ParseContinue();
 
     Type ParseExpression();
     void ProduceOperator(const PendingOperator &op);
@@ -260,16 +264,12 @@ bool ParserImpl::Parse(const TokenizedFile &file, ParseReport *out_report)
     ParsePrototypes(file.funcs);
 
     // Do the actual parsing!
-    ParseBlock(true);
-    while (RG_UNLIKELY(pos < tokens.len)) {
-        MarkError(pos, "Unexpected token '%1' without matching block", TokenKindNames[(int)tokens[pos].kind]);
-
-        pos++;
-        ParseBlock(true);
+    while (RG_LIKELY(pos < tokens.len)) {
+        ParseStatement();
     }
 
     // Maybe it'll help catch bugs
-    RG_ASSERT(depth == -1);
+    RG_ASSERT(!depth);
     RG_ASSERT(loop_var_offset == -1);
     RG_ASSERT(!current_func);
 
@@ -490,7 +490,7 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
     }
 }
 
-bool ParserImpl::ParseBlock(bool keep_variables)
+bool ParserImpl::ParseBlock()
 {
     depth++;
 
@@ -498,83 +498,109 @@ bool ParserImpl::ParseBlock(bool keep_variables)
                variables_len = program->variables.len) {
         depth--;
 
-        if (!keep_variables) {
-            EmitPop(var_offset - prev_offset);
-            DestroyVariables(program->variables.len - variables_len);
-            var_offset = prev_offset;
-        }
+        EmitPop(var_offset - prev_offset);
+        DestroyVariables(program->variables.len - variables_len);
+        var_offset = prev_offset;
     };
 
     bool has_return = false;
 
-    while (RG_LIKELY(pos < tokens.len)) {
-        src->lines.Append({tokens[pos].line, ir.len});
-
-        switch (tokens[pos].kind) {
-            case TokenKind::EndOfLine: {
-                src->lines.len--;
-                pos++;
-            } break;
-
-            case TokenKind::End:
-            case TokenKind::Else: { return has_return; } break;
-
-            case TokenKind::Begin: {
-                pos++;
-
-                show_errors |= ConsumeToken(TokenKind::EndOfLine);
-                has_return |= ParseBlock(false);
-                ConsumeToken(TokenKind::End);
-                show_errors |= ConsumeToken(TokenKind::EndOfLine);
-            } break;
-
-            case TokenKind::Func: {
-                ParseFunction();
-                show_errors |= ConsumeToken(TokenKind::EndOfLine);
-            } break;
-
-            case TokenKind::Return: {
-                ParseReturn();
-                show_errors |= ConsumeToken(TokenKind::EndOfLine);
-                has_return = true;
-            } break;
-
-            case TokenKind::Let: {
-                ParseLet();
-                show_errors |= ConsumeToken(TokenKind::EndOfLine);
-            } break;
-            case TokenKind::If: {
-                has_return |= ParseIf();
-                show_errors |= ConsumeToken(TokenKind::EndOfLine);
-            } break;
-            case TokenKind::While: {
-                ParseWhile();
-                show_errors |= ConsumeToken(TokenKind::EndOfLine);
-            } break;
-            case TokenKind::For: {
-                ParseFor();
-                show_errors |= ConsumeToken(TokenKind::EndOfLine);
-            } break;
-
-            case TokenKind::Break: {
-                ParseBreak();
-                show_errors |= ConsumeToken(TokenKind::EndOfLine);
-            } break;
-            case TokenKind::Continue: {
-                ParseContinue();
-                show_errors |= ConsumeToken(TokenKind::EndOfLine);
-            } break;
-
-            default: {
-                Type type = ParseExpression();
-                DiscardResult(type);
-
-                show_errors |= ConsumeToken(TokenKind::EndOfLine);
-            } break;
-        }
+    while (RG_LIKELY(pos < tokens.len) && tokens[pos].kind != TokenKind::Else &&
+                                          tokens[pos].kind != TokenKind::End) {
+        has_return |= ParseStatement();
     }
 
     return has_return;
+}
+
+bool ParserImpl::ParseStatement()
+{
+    bool has_return = false;
+
+    src->lines.Append({tokens[pos].line, ir.len});
+
+    switch (tokens[pos].kind) {
+        case TokenKind::EndOfLine: {
+            src->lines.len--;
+            pos++;
+        } break;
+
+        case TokenKind::Begin: {
+            pos++;
+
+            show_errors |= ConsumeToken(TokenKind::EndOfLine);
+            has_return = ParseBlock();
+            ConsumeToken(TokenKind::End);
+            show_errors |= ConsumeToken(TokenKind::EndOfLine);
+        } break;
+
+        case TokenKind::Func: {
+            ParseFunction();
+            show_errors |= ConsumeToken(TokenKind::EndOfLine);
+        } break;
+
+        case TokenKind::Return: {
+            ParseReturn();
+            show_errors |= ConsumeToken(TokenKind::EndOfLine);
+            has_return = true;
+        } break;
+
+        case TokenKind::Let: {
+            ParseLet();
+            show_errors |= ConsumeToken(TokenKind::EndOfLine);
+        } break;
+        case TokenKind::If: {
+            has_return = ParseIf();
+            show_errors |= ConsumeToken(TokenKind::EndOfLine);
+        } break;
+        case TokenKind::While: {
+            ParseWhile();
+            show_errors |= ConsumeToken(TokenKind::EndOfLine);
+        } break;
+        case TokenKind::For: {
+            ParseFor();
+            show_errors |= ConsumeToken(TokenKind::EndOfLine);
+        } break;
+
+        case TokenKind::Break: {
+            ParseBreak();
+            show_errors |= ConsumeToken(TokenKind::EndOfLine);
+        } break;
+        case TokenKind::Continue: {
+            ParseContinue();
+            show_errors |= ConsumeToken(TokenKind::EndOfLine);
+        } break;
+
+        default: {
+            Type type = ParseExpression();
+            DiscardResult(type);
+
+            show_errors |= ConsumeToken(TokenKind::EndOfLine);
+        } break;
+    }
+
+    return has_return;
+}
+
+bool ParserImpl::ParseDo()
+{
+    pos++;
+
+    if (PeekToken(TokenKind::Return)) {
+        ParseReturn();
+        return true;
+    } else if (PeekToken(TokenKind::Break)) {
+        ParseBreak();
+        return false;
+    } else if (PeekToken(TokenKind::Continue)) {
+        ParseContinue();
+        return false;
+    } else {
+        Type type = ParseExpression();
+        DiscardResult(type);
+
+        return false;
+    }
 }
 
 void ParserImpl::ParseFunction()
@@ -691,7 +717,7 @@ void ParserImpl::ParseFunction()
         has_return = ParseDo();
     } else {
         show_errors |= ConsumeToken(TokenKind::EndOfLine);
-        has_return = ParseBlock(false);
+        has_return = ParseBlock();
         ConsumeToken(TokenKind::End);
     }
 
@@ -813,7 +839,7 @@ bool ParserImpl::ParseIf()
         ir[branch_idx].u.i = ir.len - branch_idx;
     } else {
         show_errors |= ConsumeToken(TokenKind::EndOfLine);
-        has_return &= ParseBlock(false);
+        has_return &= ParseBlock();
 
         if (MatchToken(TokenKind::Else)) {
             HeapArray<Size> jumps;
@@ -831,14 +857,14 @@ bool ParserImpl::ParseIf()
                     branch_idx = ir.len;
                     ir.Append({Opcode::BranchIfFalse});
 
-                    has_return &= ParseBlock(false);
+                    has_return &= ParseBlock();
 
                     jumps.Append(ir.len);
                     ir.Append({Opcode::Jump});
                 } else {
                     show_errors |= ConsumeToken(TokenKind::EndOfLine);
 
-                    has_return &= ParseBlock(false);
+                    has_return &= ParseBlock();
                     has_else = true;
 
                     break;
@@ -885,7 +911,7 @@ void ParserImpl::ParseWhile()
         ParseDo();
     } else {
         show_errors |= ConsumeToken(TokenKind::EndOfLine);
-        ParseBlock(false);
+        ParseBlock();
         ConsumeToken(TokenKind::End);
     }
 
@@ -1003,7 +1029,7 @@ void ParserImpl::ParseFor()
         ParseDo();
     } else {
         show_errors |= ConsumeToken(TokenKind::EndOfLine);
-        ParseBlock(false);
+        ParseBlock();
         ConsumeToken(TokenKind::End);
     }
 
@@ -1028,6 +1054,19 @@ void ParserImpl::ParseFor()
     EmitPop(3);
     DestroyVariables(1);
     var_offset -= 3;
+}
+
+bool ParserImpl::ParseCondition()
+{
+    Size cond_pos = pos;
+
+    Type type = ParseExpression();
+    if (RG_UNLIKELY(type != Type::Bool)) {
+        MarkError(cond_pos, "Cannot implicitly convert %1 result to Bool condition", TypeNames[(int)type]);
+        return false;
+    }
+
+    return true;
 }
 
 void ParserImpl::ParseBreak()
@@ -1058,40 +1097,6 @@ void ParserImpl::ParseContinue()
 
     loop_continues.Append(ir.len);
     ir.Append({Opcode::Jump});
-}
-
-bool ParserImpl::ParseCondition()
-{
-    Size cond_pos = pos;
-
-    Type type = ParseExpression();
-    if (RG_UNLIKELY(type != Type::Bool)) {
-        MarkError(cond_pos, "Cannot implicitly convert %1 result to Bool condition", TypeNames[(int)type]);
-        return false;
-    }
-
-    return true;
-}
-
-bool ParserImpl::ParseDo()
-{
-    pos++;
-
-    if (PeekToken(TokenKind::Return)) {
-        ParseReturn();
-        return true;
-    } else if (PeekToken(TokenKind::Break)) {
-        ParseBreak();
-        return false;
-    } else if (PeekToken(TokenKind::Continue)) {
-        ParseContinue();
-        return false;
-    } else {
-        Type type = ParseExpression();
-        DiscardResult(type);
-
-        return false;
-    }
 }
 
 static int GetOperatorPrecedence(TokenKind kind)
