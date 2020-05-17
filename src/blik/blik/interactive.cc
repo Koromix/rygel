@@ -47,13 +47,19 @@ public:
 
 static bool TokenizeWithFakePrint(Span<const char> code, const char *filename, TokenizedFile *out_file)
 {
-    out_file->tokens.Append({TokenKind::Identifier, 0, 0, {.str = "printLn"}});
-    out_file->tokens.Append({TokenKind::LeftParenthesis, 0, 0});
+    bool success = Tokenize(R"(
+begin
+    let __result =
+)", filename, out_file);
+    RG_ASSERT(success);
+
     if (!Tokenize(code, filename, out_file))
         return false;
-    out_file->tokens.len--;
-    out_file->tokens.Append({TokenKind::RightParenthesis, 0, 0});
-    out_file->tokens.Append({TokenKind::EndOfLine});
+
+    success = Tokenize(R"(
+    if typeOf(__result) != Null then printLn(__result)
+end)", filename, out_file);
+    RG_ASSERT(success);
 
     return true;
 }
