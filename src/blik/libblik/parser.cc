@@ -90,13 +90,15 @@ private:
     bool ParseCondition();
     bool ParseDo();
 
-    Type ParseExpression(bool keep_result);
+    Type ParseExpression();
     void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(Type in_type, Opcode code, Type out_type);
     bool EmitOperator2(Type in_type, Opcode code, Type out_type);
     bool ParseCall(const char *name);
     void EmitIntrinsic(const char *name, Span<const FunctionInfo::Parameter> args);
     void EmitLoad(const VariableInfo &var);
+
+    void DiscardResult(Type type);
 
     void EmitPop(int64_t count);
     void EmitReturn();
@@ -564,7 +566,9 @@ bool ParserImpl::ParseBlock(bool keep_variables)
             } break;
 
             default: {
-                ParseExpression(false);
+                Type type = ParseExpression();
+                DiscardResult(type);
+
                 show_errors |= ConsumeToken(TokenKind::EndOfLine);
             } break;
         }
@@ -715,7 +719,7 @@ void ParserImpl::ParseReturn()
     if (PeekToken(TokenKind::EndOfLine)) {
         type = Type::Null;
     } else {
-        type = ParseExpression(true);
+        type = ParseExpression();
     }
 
     if (RG_UNLIKELY(type != current_func->ret_type)) {
@@ -755,13 +759,13 @@ void ParserImpl::ParseLet()
     }
 
     if (MatchToken(TokenKind::Assign)) {
-        var->type = ParseExpression(true);
+        var->type = ParseExpression();
     } else {
         ConsumeToken(TokenKind::Colon);
         var->type = ConsumeType();
 
         if (MatchToken(TokenKind::Assign)) {
-            Type type2 = ParseExpression(true);
+            Type type2 = ParseExpression();
 
             if (RG_UNLIKELY(type2 != var->type)) {
                 MarkError(var_pos + 3, "Cannot assign %1 value to variable '%2' (defined as %3)",
@@ -953,14 +957,14 @@ void ParserImpl::ParseFor()
     Type type2;
     bool inclusive;
     ConsumeToken(TokenKind::In);
-    type1 = ParseExpression(true);
+    type1 = ParseExpression();
     if (MatchToken(TokenKind::DotDotDot)) {
         inclusive = false;
     } else {
         ConsumeToken(TokenKind::DotDot);
         inclusive = true;
     }
-    type2 = ParseExpression(true);
+    type2 = ParseExpression();
 
     if (RG_UNLIKELY(type1 != Type::Int)) {
         MarkError(for_pos + 3, "Start value must be Int, not %1", TypeNames[(int)type1]);
@@ -1060,7 +1064,7 @@ bool ParserImpl::ParseCondition()
 {
     Size cond_pos = pos;
 
-    Type type = ParseExpression(true);
+    Type type = ParseExpression();
     if (RG_UNLIKELY(type != Type::Bool)) {
         MarkError(cond_pos, "Cannot implicitly convert %1 result to Bool condition", TypeNames[(int)type]);
         return false;
@@ -1083,7 +1087,9 @@ bool ParserImpl::ParseDo()
         ParseContinue();
         return false;
     } else {
-        ParseExpression(false);
+        Type type = ParseExpression();
+        DiscardResult(type);
+
         return false;
     }
 }
@@ -1129,7 +1135,7 @@ static int GetOperatorPrecedence(TokenKind kind)
     }
 }
 
-Type ParserImpl::ParseExpression(bool keep_result)
+Type ParserImpl::ParseExpression()
 {
     Size start_values_len = stack.len;
     RG_DEFER { stack.RemoveFrom(start_values_len); };
@@ -1304,36 +1310,7 @@ Type ParserImpl::ParseExpression(bool keep_result)
     }
 
     RG_ASSERT(stack.len == start_values_len + 1 || !show_errors);
-    if (RG_UNLIKELY(!stack.len))
-        return Type::Null;
-
-    if (keep_result) {
-        return stack[stack.len - 1].type;
-    } else if (stack[stack.len - 1].type != Type::Null) {
-        if (RG_LIKELY(ir.len >= 1)) {
-            switch (ir[ir.len - 1].code) {
-                case Opcode::LoadBool:
-                case Opcode::LoadInt:
-                case Opcode::LoadFloat:
-                case Opcode::LoadString:
-                case Opcode::LoadGlobalBool:
-                case Opcode::LoadGlobalInt:
-                case Opcode::LoadGlobalFloat:
-                case Opcode::LoadGlobalString: { ir.len--; } break;
-
-                case Opcode::CopyBool: { ir[ir.len - 1].code = Opcode::StoreBool; } break;
-                case Opcode::CopyInt: { ir[ir.len - 1].code = Opcode::StoreInt; } break;
-                case Opcode::CopyFloat: { ir[ir.len - 1].code = Opcode::StoreFloat; } break;
-                case Opcode::CopyString: { ir[ir.len - 1].code = Opcode::StoreString; } break;
-
-                default: { EmitPop(1); } break;
-            }
-        }
-
-        return Type::Null;
-    } else {
-        return Type::Null;
-    }
+    return RG_LIKELY(stack.len) ? stack[stack.len - 1].type : Type::Null;
 
 unexpected:
     pos--;
@@ -1678,7 +1655,7 @@ bool ParserImpl::ParseCall(const char *name)
                 MarkError(pos, "Functions cannot take more than %1 arguments", RG_LEN(args.data));
                 return false;
             }
-            args.Append({nullptr, ParseExpression(true)});
+            args.Append({nullptr, ParseExpression()});
         } while (MatchToken(TokenKind::Comma));
 
         while (MatchToken(TokenKind::EndOfLine));
@@ -1757,6 +1734,29 @@ void ParserImpl::EmitIntrinsic(const char *name, Span<const FunctionInfo::Parame
         ir.Append({Opcode::IntToFloat});
     } else if (TestStr(name, "floatToInt")) {
         ir.Append({Opcode::FloatToInt});
+    }
+}
+
+void ParserImpl::DiscardResult(Type type)
+{
+    if (type != Type::Null && ir.len >= 1) {
+        switch (ir[ir.len - 1].code) {
+            case Opcode::LoadBool:
+            case Opcode::LoadInt:
+            case Opcode::LoadFloat:
+            case Opcode::LoadString:
+            case Opcode::LoadGlobalBool:
+            case Opcode::LoadGlobalInt:
+            case Opcode::LoadGlobalFloat:
+            case Opcode::LoadGlobalString: { ir.len--; } break;
+
+            case Opcode::CopyBool: { ir[ir.len - 1].code = Opcode::StoreBool; } break;
+            case Opcode::CopyInt: { ir[ir.len - 1].code = Opcode::StoreInt; } break;
+            case Opcode::CopyFloat: { ir[ir.len - 1].code = Opcode::StoreFloat; } break;
+            case Opcode::CopyString: { ir[ir.len - 1].code = Opcode::StoreString; } break;
+
+            default: { EmitPop(1); } break;
+        }
     }
 }
 
