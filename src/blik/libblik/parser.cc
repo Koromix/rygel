@@ -766,6 +766,7 @@ void ParserImpl::ParseLet()
     VariableInfo *var = program->variables.AppendDefault();
 
     var->mut = MatchToken(TokenKind::Mut);
+    var_pos += var->mut;
     definitions_map.Append(var, pos);
     var->name = ConsumeIdentifier();
 
@@ -966,6 +967,7 @@ void ParserImpl::ParseFor()
     VariableInfo *it = program->variables.AppendDefault();
 
     it->mut = MatchToken(TokenKind::Mut);
+    for_pos += it->mut;
     definitions_map.Append(it, pos);
     it->name = ConsumeIdentifier();
     it->type = Type::Int;
