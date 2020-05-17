@@ -94,12 +94,14 @@ private:
     void ParseBreak();
     void ParseContinue();
 
+    Type ParseType();
+
     Type ParseExpression();
     void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(Type in_type, Opcode code, Type out_type);
     bool EmitOperator2(Type in_type, Opcode code, Type out_type);
     bool ParseCall(const char *name);
-    void EmitIntrinsic(const char *name, Span<const FunctionInfo::Parameter> args);
+    void EmitIntrinsic(const char *name, Size call_idx, Span<const FunctionInfo::Parameter> args);
     void EmitLoad(const VariableInfo &var);
 
     void DiscardResult(Type type);
@@ -112,7 +114,6 @@ private:
 
     bool ConsumeToken(TokenKind kind);
     const char *ConsumeIdentifier();
-    Type ConsumeType();
 
     bool MatchToken(TokenKind kind);
     bool PeekToken(TokenKind kind);
@@ -199,6 +200,7 @@ ParserImpl::ParserImpl(Program *program)
     AddFunction("printLn(...)", {});
     AddFunction("intToFloat(Int): Float", {});
     AddFunction("floatToInt(Float): Int", {});
+    AddFunction("typeOf(...): Type", {});
 }
 
 bool ParserImpl::Parse(const TokenizedFile &file, ParseReport *out_report)
@@ -446,7 +448,7 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
                 MatchToken(TokenKind::Mut);
                 param.name = ConsumeIdentifier();
                 ConsumeToken(TokenKind::Colon);
-                param.type = ConsumeType();
+                param.type = ParseType();
 
                 // We'll show an error in ParseFunction()
                 if (RG_LIKELY(proto->params.Available())) {
@@ -462,7 +464,7 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
 
         // Return type
         if (MatchToken(TokenKind::Colon)) {
-            proto->ret_type = ConsumeType();
+            proto->ret_type = ParseType();
         }
 
         // Build signature (with parameter and return types)
@@ -663,7 +665,7 @@ void ParserImpl::ParseFunction()
             }
 
             ConsumeToken(TokenKind::Colon);
-            var->type = ConsumeType();
+            var->type = ParseType();
 
             if (RG_UNLIKELY(!show_errors)) {
                 poisons.Append(var);
@@ -676,7 +678,7 @@ void ParserImpl::ParseFunction()
 
     // Return type
     if (MatchToken(TokenKind::Colon)) {
-        ConsumeType();
+        ParseType();
     }
 
     // Check for incompatible function overloadings
@@ -788,7 +790,7 @@ void ParserImpl::ParseLet()
         var->type = ParseExpression();
     } else {
         ConsumeToken(TokenKind::Colon);
-        var->type = ConsumeType();
+        var->type = ParseType();
 
         if (MatchToken(TokenKind::Assign)) {
             Type type2 = ParseExpression();
@@ -804,6 +806,7 @@ void ParserImpl::ParseLet()
                 case Type::Int: { ir.Append({Opcode::PushInt, {.i = 0}}); } break;
                 case Type::Float: { ir.Append({Opcode::PushFloat, {.d = 0.0}}); } break;
                 case Type::String: { ir.Append({Opcode::PushString, {.str = ""}}); } break;
+                case Type::Type: { MarkError(var_pos, "Type variable '%1' must be initialized explicitly", var->name); } break;
             }
         }
     }
@@ -1211,13 +1214,19 @@ Type ParserImpl::ParseExpression()
                     } else {
                         const VariableInfo *var = program->variables_map.FindValue(tok.u.str, nullptr);
 
-                        if (RG_UNLIKELY(!var)) {
-                            MarkError(pos - 1, "Variable '%1' does not exist", tok.u.str);
-                            goto error;
-                        }
-                        show_errors &= !poisons.Find(var);
+                        if (RG_LIKELY(var)) {
+                            show_errors &= !poisons.Find(var);
+                            EmitLoad(*var);
+                        } else {
+                            Type type;
+                            if (RG_UNLIKELY(!OptionToEnum(TypeNames, tok.u.str, &type))) {
+                                MarkError(pos - 1, "Reference to unknown symbol '%1'", tok.u.str);
+                                goto error;
+                            }
 
-                        EmitLoad(*var);
+                            ir.Append({Opcode::PushType, {.type = type}});
+                            stack.Append({Type::Type});
+                        }
                     }
                 } break;
 
@@ -1241,12 +1250,6 @@ Type ParserImpl::ParseExpression()
                 } else if (tok.kind == TokenKind::EndOfLine && (expect_value || parentheses)) {
                     src->lines.Append({tok.line + 1, ir.len});
                     continue;
-                } else if (tok.kind == TokenKind::Assign && !expect_value) {
-                    MarkError(pos - 1, "Unexpected token '=', did you mean ':=' or '=='?");
-
-                    // Pretend the user has typed '==' to avoid cascading errors
-                    op.kind = TokenKind::Equal;
-                    op.prec = GetOperatorPrecedence(TokenKind::Equal);
                 } else if (parentheses || expect_value) {
                     goto unexpected;
                 } else {
@@ -1428,6 +1431,10 @@ void ParserImpl::ProduceOperator(const PendingOperator &op)
                     ir.Append({Opcode::StoreGlobalString, {.i = var->offset}});
                     ir.Append({Opcode::LoadGlobalString, {.i = var->offset}});
                 } break;
+                case Type::Type: {
+                    ir.Append({Opcode::StoreGlobalType, {.i = var->offset}});
+                    ir.Append({Opcode::LoadGlobalType, {.i = var->offset}});
+                } break;
             }
         } else {
             switch (var->type) {
@@ -1436,6 +1443,7 @@ void ParserImpl::ProduceOperator(const PendingOperator &op)
                 case Type::Int: { ir.Append({Opcode::CopyInt, {.i = var->offset}}); } break;
                 case Type::Float: { ir.Append({Opcode::CopyFloat, {.i = var->offset}}); } break;
                 case Type::String: { ir.Append({Opcode::CopyString, {.i = var->offset}}); } break;
+                case Type::Type: { ir.Append({Opcode::CopyType, {.i = var->offset}}); } break;
             }
         }
     } else { // Other operators
@@ -1497,12 +1505,14 @@ void ParserImpl::ProduceOperator(const PendingOperator &op)
             case TokenKind::Equal: {
                 success = EmitOperator2(Type::Int, Opcode::EqualInt, Type::Bool) ||
                           EmitOperator2(Type::Float, Opcode::EqualFloat, Type::Bool) ||
-                          EmitOperator2(Type::Bool, Opcode::EqualBool, Type::Bool);
+                          EmitOperator2(Type::Bool, Opcode::EqualBool, Type::Bool) ||
+                          EmitOperator2(Type::Type, Opcode::EqualType, Type::Bool);
             } break;
             case TokenKind::NotEqual: {
                 success = EmitOperator2(Type::Int, Opcode::NotEqualInt, Type::Bool) ||
                           EmitOperator2(Type::Float, Opcode::NotEqualFloat, Type::Bool) ||
-                          EmitOperator2(Type::Bool, Opcode::NotEqualBool, Type::Bool);
+                          EmitOperator2(Type::Bool, Opcode::NotEqualBool, Type::Bool) ||
+                          EmitOperator2(Type::Type, Opcode::NotEqualType, Type::Bool);
             } break;
             case TokenKind::Greater: {
                 success = EmitOperator2(Type::Int, Opcode::GreaterThanInt, Type::Bool) ||
@@ -1624,6 +1634,7 @@ void ParserImpl::EmitLoad(const VariableInfo &var)
             case Type::Int: { ir.Append({Opcode::LoadGlobalInt, {.i = var.offset}}); } break;
             case Type::Float: { ir.Append({Opcode::LoadGlobalFloat, {.i = var.offset}});} break;
             case Type::String: { ir.Append({Opcode::LoadGlobalString, {.i = var.offset}}); } break;
+            case Type::Type: { ir.Append({Opcode::LoadGlobalType, {.i = var.offset}}); } break;
         }
     } else {
         switch (var.type) {
@@ -1632,6 +1643,7 @@ void ParserImpl::EmitLoad(const VariableInfo &var)
             case Type::Int: { ir.Append({Opcode::LoadInt, {.i = var.offset}}); } break;
             case Type::Float: { ir.Append({Opcode::LoadFloat, {.i = var.offset}});} break;
             case Type::String: { ir.Append({Opcode::LoadString, {.i = var.offset}}); } break;
+            case Type::Type: { ir.Append({Opcode::LoadType, {.i = var.offset}}); } break;
         }
     }
 
@@ -1645,6 +1657,7 @@ bool ParserImpl::ParseCall(const char *name)
     LocalArray<FunctionInfo::Parameter, RG_LEN(FunctionInfo::params.data)> args;
 
     Size call_pos = pos - 2;
+    Size call_idx = ir.len;
 
     FunctionInfo *func0 = program->functions_map.FindValue(name, nullptr);
     if (RG_UNLIKELY(!func0)) {
@@ -1691,7 +1704,7 @@ bool ParserImpl::ParseCall(const char *name)
     }
 
     if (func->intrinsic) {
-        EmitIntrinsic(name, args);
+        EmitIntrinsic(name, call_idx, args);
     } else {
         if (func->inst_idx < 0) {
             forward_calls.Append({ir.len, func});
@@ -1712,7 +1725,7 @@ bool ParserImpl::ParseCall(const char *name)
     return true;
 }
 
-void ParserImpl::EmitIntrinsic(const char *name, Span<const FunctionInfo::Parameter> args)
+void ParserImpl::EmitIntrinsic(const char *name, Size call_idx, Span<const FunctionInfo::Parameter> args)
 {
     if (TestStr(name, "print") || TestStr(name, "printLn")) {
         RG_STATIC_ASSERT(RG_LEN(FunctionInfo::params.data) < 19);
@@ -1739,6 +1752,18 @@ void ParserImpl::EmitIntrinsic(const char *name, Span<const FunctionInfo::Parame
         ir.Append({Opcode::IntToFloat});
     } else if (TestStr(name, "floatToInt")) {
         ir.Append({Opcode::FloatToInt});
+    } else if (TestStr(name, "typeOf")) {
+        // XXX: We can change the signature from typeOf(...) to typeOf(Any) after Any
+        // is implemented, and remove this check.
+        if (RG_UNLIKELY(args.len != 1)) {
+            LogError("Intrinsic function typeOf() takes one argument");
+            return;
+        }
+
+        // typeOf() does not execute anything!
+        ir.RemoveFrom(call_idx);
+
+        ir.Append({Opcode::PushType, {.type = args[0].type}});
     }
 }
 
@@ -1750,15 +1775,18 @@ void ParserImpl::DiscardResult(Type type)
             case Opcode::LoadInt:
             case Opcode::LoadFloat:
             case Opcode::LoadString:
+            case Opcode::LoadType:
             case Opcode::LoadGlobalBool:
             case Opcode::LoadGlobalInt:
             case Opcode::LoadGlobalFloat:
-            case Opcode::LoadGlobalString: { ir.len--; } break;
+            case Opcode::LoadGlobalString:
+            case Opcode::LoadGlobalType: { ir.len--; } break;
 
             case Opcode::CopyBool: { ir[ir.len - 1].code = Opcode::StoreBool; } break;
             case Opcode::CopyInt: { ir[ir.len - 1].code = Opcode::StoreInt; } break;
             case Opcode::CopyFloat: { ir[ir.len - 1].code = Opcode::StoreFloat; } break;
             case Opcode::CopyString: { ir[ir.len - 1].code = Opcode::StoreString; } break;
+            case Opcode::CopyType: { ir[ir.len - 1].code = Opcode::StoreType; } break;
 
             default: { EmitPop(1); } break;
         }
@@ -1793,6 +1821,7 @@ void ParserImpl::EmitReturn()
                 case Type::Int: { ir.Append({Opcode::StoreInt, {.i = --stack_offset}}); } break;
                 case Type::Float: { ir.Append({Opcode::StoreFloat, {.i = --stack_offset}}); } break;
                 case Type::String: { ir.Append({Opcode::StoreString, {.i = --stack_offset}}); } break;
+                case Type::Type: { ir.Append({Opcode::StoreType, {.i = --stack_offset}}); } break;
             }
         }
 
@@ -1810,6 +1839,7 @@ void ParserImpl::EmitReturn()
                 case Type::Int: { ir.Append({Opcode::StoreInt, {.i = 0}}); } break;
                 case Type::Float: { ir.Append({Opcode::StoreFloat, {.i = 0}}); } break;
                 case Type::String: { ir.Append({Opcode::StoreString, {.i = 0}}); } break;
+                case Type::Type: { ir.Append({Opcode::StoreType, {.i = 0}}); } break;
             }
 
             EmitPop(pop);
@@ -1888,17 +1918,40 @@ const char *ParserImpl::ConsumeIdentifier()
     }
 }
 
-Type ParserImpl::ConsumeType()
+Type ParserImpl::ParseType()
 {
-    const char *type_name = ConsumeIdentifier();
+    Size type_pos = pos;
 
-    Type type;
-    if (RG_LIKELY(OptionToEnum(TypeNames, type_name, &type))) {
-        return type;
-    } else {
-        MarkError(pos - 1, "Type '%1' does not exist", type_name);
+    // Try simple type names first (fast path)
+    if (MatchToken(TokenKind::Identifier)) {
+        const char *type_name = tokens[pos - 1].u.str;
+
+        Type type;
+        if (OptionToEnum(TypeNames, type_name, &type))
+            return type;
+
+        pos--;
+    }
+
+    // Parse type expression
+    {
+        Type type = ParseExpression();
+
+        if (RG_UNLIKELY(type != Type::Type)) {
+            MarkError(type_pos, "Expected a Type expression, not %1", TypeNames[(int)type]);
+            return Type::Null;
+        }
+    }
+
+    // Once we start to implement constant folding and CTFE, more complex expressions
+    // should work without any change here.
+    if (RG_UNLIKELY(ir[ir.len - 1].code != Opcode::PushType)) {
+        MarkError(type_pos, "Complex type expression cannot be resolved statically");
         return Type::Null;
     }
+
+    ir.len--;
+    return ir.ptr[ir.len].u.type;
 }
 
 bool ParserImpl::MatchToken(TokenKind kind)

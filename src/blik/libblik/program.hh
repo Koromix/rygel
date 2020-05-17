@@ -10,6 +10,31 @@ namespace RG {
 
 class VirtualMachine;
 
+enum class Type {
+    Null,
+    Bool,
+    Int,
+    Float,
+    String,
+    Type
+};
+static const char *const TypeNames[] = {
+    "Null",
+    "Bool",
+    "Int",
+    "Float",
+    "String",
+    "Type"
+};
+
+union Value {
+    bool b;
+    int64_t i;
+    double d;
+    const char *str;
+    Type type;
+};
+
 enum class Opcode {
     #define OPCODE(Code) Code,
     #include "opcodes.inc"
@@ -30,6 +55,7 @@ struct Instruction {
                    // Call, Return, Exit
         double d; // PushFloat
         const char *str; // PushString
+        Type type; // PushType
 
         uint64_t payload; // CallNative, Print
     } u;
@@ -43,28 +69,6 @@ struct SourceInfo {
 
     const char *filename;
     HeapArray<LineInfo> lines;
-};
-
-enum class Type {
-    Null,
-    Bool,
-    Int,
-    Float,
-    String
-};
-static const char *const TypeNames[] = {
-    "Null",
-    "Bool",
-    "Int",
-    "Float",
-    "String"
-};
-
-union Value {
-    bool b;
-    int64_t i;
-    double d;
-    const char *str;
 };
 
 // XXX: Support native calling conventions to provide seamless integration

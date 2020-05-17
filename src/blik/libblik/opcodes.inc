@@ -11,6 +11,7 @@ OPCODE(PushBool)
 OPCODE(PushInt)
 OPCODE(PushFloat)
 OPCODE(PushString)
+OPCODE(PushType)
 OPCODE(Pop)
 
 // Local variables
@@ -18,24 +19,29 @@ OPCODE(LoadBool)
 OPCODE(LoadInt)
 OPCODE(LoadFloat)
 OPCODE(LoadString)
+OPCODE(LoadType)
 OPCODE(StoreBool)
 OPCODE(StoreInt)
 OPCODE(StoreFloat)
 OPCODE(StoreString)
+OPCODE(StoreType)
 OPCODE(CopyBool)
 OPCODE(CopyInt)
 OPCODE(CopyFloat)
 OPCODE(CopyString)
+OPCODE(CopyType)
 
 // Global variables
 OPCODE(LoadGlobalBool)
 OPCODE(LoadGlobalInt)
 OPCODE(LoadGlobalFloat)
 OPCODE(LoadGlobalString)
+OPCODE(LoadGlobalType)
 OPCODE(StoreGlobalBool)
 OPCODE(StoreGlobalInt)
 OPCODE(StoreGlobalFloat)
 OPCODE(StoreGlobalString)
+OPCODE(StoreGlobalType)
 
 // Integer operators
 OPCODE(NegateInt)
@@ -76,6 +82,10 @@ OPCODE(NotEqualBool)
 OPCODE(NotBool)
 OPCODE(AndBool)
 OPCODE(OrBool)
+
+// Type operators
+OPCODE(EqualType)
+OPCODE(NotEqualType)
 
 // Jumps and branch
 OPCODE(Jump)
