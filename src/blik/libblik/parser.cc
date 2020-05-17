@@ -813,7 +813,7 @@ void ParserImpl::ParseLet()
                 case Type::Int: { ir.Append({Opcode::PushInt, {.i = 0}}); } break;
                 case Type::Float: { ir.Append({Opcode::PushFloat, {.d = 0.0}}); } break;
                 case Type::String: { ir.Append({Opcode::PushString, {.str = ""}}); } break;
-                case Type::Type: { MarkError(var_pos, "Type variable '%1' must be initialized explicitly", var->name); } break;
+                case Type::Type: { ir.Append({Opcode::PushType, {.type = Type::Null}}); } break;
             }
         }
     }
