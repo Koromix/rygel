@@ -1108,6 +1108,42 @@ void ParserImpl::ParseContinue()
     ir.Append({Opcode::Jump});
 }
 
+Type ParserImpl::ParseType()
+{
+    Size type_pos = pos;
+
+    // Try simple type names first (fast path)
+    if (MatchToken(TokenKind::Identifier)) {
+        const char *type_name = tokens[pos - 1].u.str;
+
+        Type type;
+        if (OptionToEnum(TypeNames, type_name, &type))
+            return type;
+
+        pos--;
+    }
+
+    // Parse type expression
+    {
+        Type type = ParseExpression();
+
+        if (RG_UNLIKELY(type != Type::Type)) {
+            MarkError(type_pos, "Expected a Type expression, not %1", TypeNames[(int)type]);
+            return Type::Null;
+        }
+    }
+
+    // Once we start to implement constant folding and CTFE, more complex expressions
+    // should work without any change here.
+    if (RG_UNLIKELY(ir[ir.len - 1].code != Opcode::PushType)) {
+        MarkError(type_pos, "Complex type expression cannot be resolved statically");
+        return Type::Null;
+    }
+
+    ir.len--;
+    return ir.ptr[ir.len].u.type;
+}
+
 static int GetOperatorPrecedence(TokenKind kind)
 {
     switch (kind) {
@@ -1816,7 +1852,7 @@ void ParserImpl::EmitReturn()
 
     // We support tail recursion elimination (TRE)
     if (ir.len > 0 && ir[ir.len - 1].code == Opcode::Call &&
-                              ir[ir.len - 1].u.i == current_func->inst_idx) {
+                      ir[ir.len - 1].u.i == current_func->inst_idx) {
         ir.len--;
 
         Size stack_offset = -2;
@@ -1924,42 +1960,6 @@ const char *ParserImpl::ConsumeIdentifier()
     } else {
         return "";
     }
-}
-
-Type ParserImpl::ParseType()
-{
-    Size type_pos = pos;
-
-    // Try simple type names first (fast path)
-    if (MatchToken(TokenKind::Identifier)) {
-        const char *type_name = tokens[pos - 1].u.str;
-
-        Type type;
-        if (OptionToEnum(TypeNames, type_name, &type))
-            return type;
-
-        pos--;
-    }
-
-    // Parse type expression
-    {
-        Type type = ParseExpression();
-
-        if (RG_UNLIKELY(type != Type::Type)) {
-            MarkError(type_pos, "Expected a Type expression, not %1", TypeNames[(int)type]);
-            return Type::Null;
-        }
-    }
-
-    // Once we start to implement constant folding and CTFE, more complex expressions
-    // should work without any change here.
-    if (RG_UNLIKELY(ir[ir.len - 1].code != Opcode::PushType)) {
-        MarkError(type_pos, "Complex type expression cannot be resolved statically");
-        return Type::Null;
-    }
-
-    ir.len--;
-    return ir.ptr[ir.len].u.type;
 }
 
 bool ParserImpl::MatchToken(TokenKind kind)
