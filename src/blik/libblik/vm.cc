@@ -16,6 +16,8 @@ bool VirtualMachine::Run()
     run = true;
     error = false;
 
+    RG_ASSERT(pc < ir.len);
+
 #if defined(__GNUC__) || defined(__clang__)
     static const void *dispatch[] = {
         #define OPCODE(Code) && Code,
@@ -536,10 +538,14 @@ bool VirtualMachine::Run()
         }
 
         CASE(End): {
+            pc++;
+
             RG_ASSERT(stack.len == program->end_stack_len || !inst->u.b);
             return true;
         }
     }
+
+    RG_UNREACHABLE();
 
 #undef CASE
 #undef LOOP

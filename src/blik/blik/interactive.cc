@@ -103,6 +103,9 @@ int RunInteractive()
             trace.Dump();
         };
 
+        Size prev_variables_len = program.variables.len;
+        Size prev_stack_len = vm.stack.len;
+
         // Try with fake printLn() call first, and parse as normal code if it fails!
         // Seems like a simple and clean way to print expression results.
         TokenizedFile file;
@@ -131,11 +134,23 @@ int RunInteractive()
             }
         }
 
-        if (!vm.Run())
-            return 1;
+        if (!vm.Run()) {
+            // Destroying global variables should be enough, because we execute single statements.
+            // Thus, if the user defines a function, pretty much no execution can occur, and
+            // execution should not even be able to fail in this case.
+            // Besides, since thore are global variables, no shadowing has occured and we don't
+            // need to deal with this.
+            for (Size i = prev_variables_len; i < program.variables.len; i++) {
+                program.variables_map.Remove(program.variables[i].name);
+            }
+            program.variables.RemoveFrom(prev_variables_len);
 
-        // Delete the exit for the next iteration :)
-        program.ir.RemoveLast(1);
+            // XXX: We don't yet manage memory so this works for now
+            vm.stack.RemoveFrom(prev_stack_len);
+
+            vm.pc = program.ir.len;
+            vm.bp = 0;
+        }
     }
 
     return 0;
