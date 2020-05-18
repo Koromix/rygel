@@ -494,6 +494,7 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
 
 bool ParserImpl::ParseBlock()
 {
+    show_errors = true;
     depth++;
 
     RG_DEFER_C(prev_offset = var_offset,
@@ -530,10 +531,12 @@ bool ParserImpl::ParseStatement()
         case TokenKind::Begin: {
             pos++;
 
-            show_errors |= ConsumeToken(TokenKind::EndOfLine);
-            has_return = ParseBlock();
-            ConsumeToken(TokenKind::End);
-            show_errors |= ConsumeToken(TokenKind::EndOfLine);
+            if (RG_LIKELY(ConsumeToken(TokenKind::EndOfLine))) {
+                has_return = ParseBlock();
+                ConsumeToken(TokenKind::End);
+
+                show_errors |= ConsumeToken(TokenKind::EndOfLine);
+            }
         } break;
 
         case TokenKind::Func: {
@@ -717,8 +720,7 @@ void ParserImpl::ParseFunction()
     bool has_return;
     if (PeekToken(TokenKind::Do)) {
         has_return = ParseDo();
-    } else {
-        show_errors |= ConsumeToken(TokenKind::EndOfLine);
+    } else if (RG_LIKELY(ConsumeToken(TokenKind::EndOfLine))) {
         has_return = ParseBlock();
         ConsumeToken(TokenKind::End);
     }
@@ -847,8 +849,7 @@ bool ParserImpl::ParseIf()
     if (PeekToken(TokenKind::Then)) {
         has_return &= ParseDo();
         ir[branch_idx].u.i = ir.len - branch_idx;
-    } else {
-        show_errors |= ConsumeToken(TokenKind::EndOfLine);
+    } else if (RG_LIKELY(ConsumeToken(TokenKind::EndOfLine))) {
         has_return &= ParseBlock();
 
         if (MatchToken(TokenKind::Else)) {
@@ -862,18 +863,17 @@ bool ParserImpl::ParseIf()
 
                 if (MatchToken(TokenKind::If)) {
                     ParseCondition();
-                    show_errors |= ConsumeToken(TokenKind::EndOfLine);
 
-                    branch_idx = ir.len;
-                    ir.Append({Opcode::BranchIfFalse});
+                    if (RG_LIKELY(ConsumeToken(TokenKind::EndOfLine))) {
+                        branch_idx = ir.len;
+                        ir.Append({Opcode::BranchIfFalse});
 
-                    has_return &= ParseBlock();
+                        has_return &= ParseBlock();
 
-                    jumps.Append(ir.len);
-                    ir.Append({Opcode::Jump});
-                } else {
-                    show_errors |= ConsumeToken(TokenKind::EndOfLine);
-
+                        jumps.Append(ir.len);
+                        ir.Append({Opcode::Jump});
+                    }
+                } else if (RG_LIKELY(ConsumeToken(TokenKind::EndOfLine))) {
                     has_return &= ParseBlock();
                     has_else = true;
 
@@ -919,8 +919,7 @@ void ParserImpl::ParseWhile()
     // Parse body
     if (PeekToken(TokenKind::Do)) {
         ParseDo();
-    } else {
-        show_errors |= ConsumeToken(TokenKind::EndOfLine);
+    } else if (RG_LIKELY(ConsumeToken(TokenKind::EndOfLine))) {
         ParseBlock();
         ConsumeToken(TokenKind::End);
     }
@@ -1038,8 +1037,7 @@ void ParserImpl::ParseFor()
     // Parse body
     if (PeekToken(TokenKind::Do)) {
         ParseDo();
-    } else {
-        show_errors |= ConsumeToken(TokenKind::EndOfLine);
+    } else if (RG_LIKELY(ConsumeToken(TokenKind::EndOfLine))) {
         ParseBlock();
         ConsumeToken(TokenKind::End);
     }
