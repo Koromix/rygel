@@ -1248,24 +1248,26 @@ Type ParserImpl::ParseExpression()
 
             // Not an operator? There's a few cases to deal with, including a perfectly
             // valid one: end of expression!
-            if (RG_UNLIKELY(op.prec < 0)) {
-                if (pos == prev_offset + 1) {
+            if (op.prec < 0) {
+                if (RG_UNLIKELY(pos == prev_offset + 1)) {
                     MarkError(pos - 1, "Unexpected token '%1', expected value or expression",
                               TokenKindNames[(int)tokens[pos - 1].kind]);
                     goto error;
-                } else if (tok.kind == TokenKind::EndOfLine && (expect_value || parentheses)) {
-                    src->lines.Append({tok.line + 1, ir.len});
-                    continue;
-                } else if (parentheses || expect_value) {
-                    goto unexpected;
+                } else if (RG_UNLIKELY(expect_value || parentheses)) {
+                    if (RG_LIKELY(tok.kind == TokenKind::EndOfLine)) {
+                        src->lines.Append({tok.line + 1, ir.len});
+                        continue;
+                    } else {
+                        goto unexpected;
+                    }
                 } else {
                     pos--;
                     break;
                 }
             }
 
-            if (RG_UNLIKELY(expect_value != op.unary)) {
-                if (tok.kind == TokenKind::Plus || tok.kind == TokenKind::Minus) {
+            if (expect_value != op.unary) {
+                if (RG_LIKELY(tok.kind == TokenKind::Plus || tok.kind == TokenKind::Minus)) {
                     op.prec = 12;
                     op.unary = true;
                 } else {
