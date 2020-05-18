@@ -34,6 +34,8 @@ private:
     inline bool Token2(char c, TokenKind tok);
     inline bool Token3(char c1, char c2, TokenKind tok);
 
+    void TokenizeFloat();
+
     template <typename... Args>
     void MarkError(Size offset, const char *fmt, Args... args)
     {
@@ -250,10 +252,8 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                         value = (value * 10) + (code[next] - '0');
                     } else if (code[next] == '.') {
                         // Could be a range operator (.., ...), don't mess it up!
-                        if (next + 1 < code.len && code[next + 1] == '.')
-                            break;
-
-                        dot = true;
+                        dot = (next + 1 >= code.len || code[next + 1] != '.');
+                        break;
                     } else if (code[next] == '_') {
                         // Ignore underscores in number literals (e.g. 10_000_000)
                     } else {
@@ -264,29 +264,8 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                 }
 
                 if (dot) {
-                    char buf[256];
-                    Size buf_len = 0;
-                    for (Size i = offset; i < next; i++) {
-                        if (code[i] != '_') {
-                            if (RG_UNLIKELY(buf_len >= RG_SIZE(buf) - 2)) {
-                                MarkError(offset, "Number literal is too long (max = %1 characters)", RG_SIZE(buf) - 1);
-                                return false;
-                            }
-
-                            buf[buf_len++] = code[i];
-                        }
-                    }
-                    buf[buf_len] = 0;
-
-                    errno = 0;
-
-                    double d = strtod(buf, nullptr);
-                    if (RG_UNLIKELY(errno == ERANGE)) {
-                        MarkError(offset, "Float value exceeds supported range");
-                        return false;
-                    }
-
-                    tokens.Append({TokenKind::Float, line, offset, {.d = d}});
+                    next++;
+                    TokenizeFloat();
                 } else {
                     if (RG_UNLIKELY(overflow)) {
                         MarkError(offset, "Number literal is too big (max = %1)", INT64_MAX);
@@ -365,7 +344,14 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                 tokens.Append({TokenKind::String, line, offset, {.str = ret.first->ptr}});
             } break;
 
-            case '.': { Token3('.', '.', TokenKind::DotDotDot) || Token2('.', TokenKind::DotDot) || Token1(TokenKind::Dot); } break;
+            case '.': {
+                if (RG_UNLIKELY(next < code.len && IsAsciiDigit(code[next]))) {
+                    // Support '.dddd' float literals
+                    TokenizeFloat();
+                } else {
+                    Token3('.', '.', TokenKind::DotDotDot) || Token2('.', TokenKind::DotDot) || Token1(TokenKind::Dot);
+                }
+            } break;
             case ':': { Token2('=', TokenKind::Reassign) || Token1(TokenKind::Colon); } break;
             case '(': { Token1(TokenKind::LeftParenthesis); } break;
             case ')': { Token1(TokenKind::RightParenthesis); } break;
@@ -518,6 +504,62 @@ inline bool Lexer::Token3(char c1, char c2, TokenKind tok)
     } else {
         return false;
     }
+}
+
+// Expects offset to point to the start of the literal, and next to point just behind the dot
+void Lexer::TokenizeFloat()
+{
+    LocalArray<char, 256> buf;
+    for (Size i = offset; i < next; i++) {
+        if (code[i] != '_') {
+            if (RG_UNLIKELY(buf.len >= RG_SIZE(buf.data) - 2)) {
+                MarkError(offset, "Number literal is too long (max = %1 characters)", RG_SIZE(buf.data) - 1);
+                return;
+            }
+
+            buf.Append(code[i]);
+        }
+    }
+    while (next < code.len) {
+        if (IsAsciiDigit(code[next])) {
+            if (RG_UNLIKELY(buf.len >= RG_SIZE(buf.data) - 2)) {
+                MarkError(offset, "Number literal is too long (max = %1 characters)", RG_SIZE(buf.data) - 1);
+                return;
+            }
+
+            buf.Append(code[next]);
+        } else if (code[next] == '_') {
+            // Skip
+        } else if (code[next] == '.') {
+            // Could be a range operator!
+            if (next + 1 >= code.len || code[next + 1] != '.') {
+                MarkError(next, "Number literals cannot contain multiple '.' characters");
+                return;
+            }
+
+            break;
+        } else {
+            break;
+        }
+
+        next++;
+    }
+    buf.Append(0);
+
+    errno = 0;
+
+    // XXX: We need to ditch libc here eventually, and use something fast and well defined across
+    // platforms. Or maybe std::from_chars()? Not sure it solves the cross-platform issue...
+    // And my first try went wrong with MinGW-w64 (gcc 10.1.0), with a vomit of template errors :/
+    char *end = nullptr;
+    double d = strtod(buf.data, &end);
+
+    if (RG_UNLIKELY(errno == ERANGE)) {
+        MarkError(offset, "Float literal exceeds supported range");
+        return;
+    }
+
+    tokens.Append({TokenKind::Float, line, offset, {.d = d}});
 }
 
 bool Tokenize(Span<const char> code, const char *filename, TokenizedFile *out_file)
