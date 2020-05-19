@@ -717,7 +717,7 @@ void ParserImpl::ParseFunction()
     var_offset = 0;
 
     // Function body
-    bool has_return;
+    bool has_return = false;
     if (PeekToken(TokenKind::Do)) {
         has_return = ParseDo();
     } else if (RG_LIKELY(ConsumeToken(TokenKind::EndOfLine))) {
