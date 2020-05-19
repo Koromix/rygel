@@ -2971,6 +2971,10 @@ bool EnableAnsiOutput();
 
 void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg> args);
 
+static inline void Log(LogLevel level, const char *ctx)
+{
+    LogFmt(level, ctx, "", {});
+}
 static inline void Log(LogLevel level, const char *ctx, const char *fmt)
 {
     LogFmt(level, ctx, fmt, {});

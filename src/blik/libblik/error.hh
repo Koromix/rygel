@@ -152,6 +152,8 @@ void ReportRuntimeError(Span<const FrameInfo> frames, const char *fmt, Args... a
                         i ? "   " : ">>>", FmtArg(name).Pad(36), tre ? "+++" : "   ");
             }
         }
+
+        LogInfo();
     }
 
     LogError(fmt, args...);
