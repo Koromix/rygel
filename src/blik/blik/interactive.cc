@@ -109,20 +109,24 @@ int RunInteractive()
             trace.Dump();
         };
 
+        Span<const char> code = TrimStrRight((Span<const char>)prompter.str);
+        if (!code.len)
+            continue;
+
         Size prev_variables_len = program.variables.len;
         Size prev_stack_len = vm.stack.len;
 
         // Try with fake printLn() call first, and parse as normal code if it fails!
         // Seems like a simple and clean way to print expression results.
         TokenizedFile file;
-        if (!TokenizeWithFakePrint(prompter.str, "<interactive>", &file))
+        if (!TokenizeWithFakePrint(code, "<interactive>", &file))
             continue;
         if (!parser.Parse(file)) {
             trace.Clear();
             file.tokens.RemoveFrom(0);
             file.funcs.RemoveFrom(0);
 
-            bool success = Tokenize(prompter.str, "<interactive>", &file);
+            bool success = Tokenize(code, "<interactive>", &file);
             RG_ASSERT(success);
 
             if (!parser.Parse(file, &report)) {
