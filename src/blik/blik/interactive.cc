@@ -53,6 +53,11 @@ begin
 )", filename, out_file);
     RG_ASSERT(success);
 
+    // Pretend we are still on first line for runtime errors
+    for (auto &token: out_file->tokens) {
+        token.line = 1;
+    }
+
     if (!Tokenize(code, filename, out_file))
         return false;
 
