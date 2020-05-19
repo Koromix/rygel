@@ -9,11 +9,11 @@
 namespace RG {
 
 enum class TokenKind {
-    #define TOKEN(Type, Str) Type,
+    #define TOKEN(Kind, Str) Kind,
     #include "tokens.inc"
 };
 static const char *const TokenKindNames[] = {
-    #define TOKEN(Type, Str) (Str),
+    #define TOKEN(Kind, Str) (Str),
     #include "tokens.inc"
 };
 

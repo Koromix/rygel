@@ -10,7 +10,7 @@ namespace RG {
 
 class VirtualMachine;
 
-enum class Type {
+enum class PrimitiveType {
     Null,
     Bool,
     Int,
@@ -18,7 +18,7 @@ enum class Type {
     String,
     Type
 };
-static const char *const TypeNames[] = {
+static const char *const PrimitiveTypeNames[] = {
     "Null",
     "Bool",
     "Int",
@@ -32,7 +32,7 @@ union Value {
     int64_t i;
     double d;
     const char *str;
-    Type type;
+    PrimitiveType type;
 };
 
 enum class Opcode {
@@ -55,7 +55,7 @@ struct Instruction {
                    // Call, Return, Exit
         double d; // PushFloat
         const char *str; // PushString
-        Type type; // PushType
+        PrimitiveType type; // PushType
 
         uint64_t payload; // CallNative, Print
     } u;
@@ -77,7 +77,7 @@ typedef Value NativeFunction(VirtualMachine *vm, Span<const Value> args);
 struct FunctionInfo {
     struct Parameter {
         const char *name;
-        Type type;
+        PrimitiveType type;
     };
 
     const char *name;
@@ -89,7 +89,7 @@ struct FunctionInfo {
     LocalArray<Parameter, 16> params;
     bool variadic;
     Size ret_pop;
-    Type ret_type;
+    PrimitiveType ret_type;
 
     Size inst_idx; // IR
     bool tre;
@@ -107,7 +107,7 @@ struct FunctionInfo {
 
 struct VariableInfo {
     const char *name;
-    Type type;
+    PrimitiveType type;
     bool mut;
 
     bool global;

@@ -25,7 +25,7 @@ struct PendingOperator {
 };
 
 struct StackSlot {
-    Type type;
+    PrimitiveType type;
     const VariableInfo *var;
 };
 
@@ -94,17 +94,17 @@ private:
     void ParseBreak();
     void ParseContinue();
 
-    Type ParseType();
+    PrimitiveType ParseType();
 
-    Type ParseExpression();
+    PrimitiveType ParseExpression();
     void ProduceOperator(const PendingOperator &op);
-    bool EmitOperator1(Type in_type, Opcode code, Type out_type);
-    bool EmitOperator2(Type in_type, Opcode code, Type out_type);
+    bool EmitOperator1(PrimitiveType in_type, Opcode code, PrimitiveType out_type);
+    bool EmitOperator2(PrimitiveType in_type, Opcode code, PrimitiveType out_type);
     bool ParseCall(const char *name);
     void EmitIntrinsic(const char *name, Size call_idx, Span<const FunctionInfo::Parameter> args);
     void EmitLoad(const VariableInfo &var);
 
-    void DiscardResult(Type type);
+    void DiscardResult(PrimitiveType type);
 
     void EmitPop(int64_t count);
     void EmitReturn();
@@ -326,13 +326,13 @@ void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction
 
                 func->variadic = true;
             } else {
-                Type type = Type::Null;
+                PrimitiveType type = PrimitiveType::Null;
 
-                bool success = OptionToEnum(TypeNames, type_name, &type);
+                bool success = OptionToEnum(PrimitiveTypeNames, type_name, &type);
                 RG_ASSERT(success);
 
                 func->params.Append({"", type});
-                func->ret_pop += (type != Type::Null);
+                func->ret_pop += (type != PrimitiveType::Null);
             }
 
             ptr += len;
@@ -348,7 +348,7 @@ void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction
     if (ptr[0] == ':') {
         Span<const char> type_name = TrimStr(Span<const char>(ptr + 1));
 
-        bool success = OptionToEnum(TypeNames, type_name, &func->ret_type);
+        bool success = OptionToEnum(PrimitiveTypeNames, type_name, &func->ret_type);
         RG_ASSERT(success);
     }
 
@@ -369,7 +369,7 @@ void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction
         }
 
         func->inst_idx = ir.len;
-        ir.Append({func->ret_type != Type::Null ? Opcode::Invoke : Opcode::InvokeNull, {.payload = payload}});
+        ir.Append({func->ret_type != PrimitiveType::Null ? Opcode::Invoke : Opcode::InvokeNull, {.payload = payload}});
     }
 
     // Publish it!
@@ -456,7 +456,7 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
                     proto->params.Append(param);
                 }
 
-                proto->ret_pop += (param.type != Type::Null);
+                proto->ret_pop += (param.type != PrimitiveType::Null);
             } while (MatchToken(TokenKind::Comma));
 
             SkipNewLines();
@@ -475,11 +475,11 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
             Fmt(&buf, "%1(", proto->name);
             for (Size i = 0; i < proto->params.len; i++) {
                 const FunctionInfo::Parameter &param = proto->params[i];
-                Fmt(&buf, "%1%2", i ? ", " : "", TypeNames[(int)param.type]);
+                Fmt(&buf, "%1%2", i ? ", " : "", PrimitiveTypeNames[(int)param.type]);
             }
             Fmt(&buf, ")");
-            if (proto->ret_type != Type::Null) {
-                Fmt(&buf, ": %1", TypeNames[(int)proto->ret_type]);
+            if (proto->ret_type != PrimitiveType::Null) {
+                Fmt(&buf, ": %1", PrimitiveTypeNames[(int)proto->ret_type]);
             }
 
             proto->signature = buf.TrimAndLeak(1).ptr;
@@ -575,7 +575,7 @@ bool ParserImpl::ParseStatement()
         } break;
 
         default: {
-            Type type = ParseExpression();
+            PrimitiveType type = ParseExpression();
             DiscardResult(type);
 
             show_errors |= ConsumeToken(TokenKind::EndOfLine);
@@ -599,7 +599,7 @@ bool ParserImpl::ParseDo()
         ParseContinue();
         return false;
     } else {
-        Type type = ParseExpression();
+        PrimitiveType type = ParseExpression();
         DiscardResult(type);
 
         return false;
@@ -724,7 +724,7 @@ void ParserImpl::ParseFunction()
     }
 
     if (!has_return) {
-        if (func->ret_type == Type::Null) {
+        if (func->ret_type == PrimitiveType::Null) {
             EmitReturn();
         } else {
             MarkError(func_pos, "Some code paths do not return a value in function '%1'", func->name);
@@ -743,16 +743,16 @@ void ParserImpl::ParseReturn()
         return;
     }
 
-    Type type;
+    PrimitiveType type;
     if (PeekToken(TokenKind::EndOfLine)) {
-        type = Type::Null;
+        type = PrimitiveType::Null;
     } else {
         type = ParseExpression();
     }
 
     if (RG_UNLIKELY(type != current_func->ret_type)) {
         MarkError(return_pos, "Cannot return %1 value in function defined to return %2",
-                  TypeNames[(int)type], TypeNames[(int)current_func->ret_type]);
+                  PrimitiveTypeNames[(int)type], PrimitiveTypeNames[(int)current_func->ret_type]);
         return;
     }
 
@@ -800,20 +800,20 @@ void ParserImpl::ParseLet()
         if (MatchToken(TokenKind::Assign)) {
             SkipNewLines();
 
-            Type type2 = ParseExpression();
+            PrimitiveType type2 = ParseExpression();
 
             if (RG_UNLIKELY(type2 != var->type)) {
                 MarkError(var_pos + 3, "Cannot assign %1 value to variable '%2' (defined as %3)",
-                          TypeNames[(int)type2], var->name, TypeNames[(int)var->type]);
+                          PrimitiveTypeNames[(int)type2], var->name, PrimitiveTypeNames[(int)var->type]);
             }
         } else {
             switch (var->type) {
-                case Type::Null: {} break;
-                case Type::Bool: { ir.Append({Opcode::PushBool, {.b = false}}); } break;
-                case Type::Int: { ir.Append({Opcode::PushInt, {.i = 0}}); } break;
-                case Type::Float: { ir.Append({Opcode::PushFloat, {.d = 0.0}}); } break;
-                case Type::String: { ir.Append({Opcode::PushString, {.str = ""}}); } break;
-                case Type::Type: { ir.Append({Opcode::PushType, {.type = Type::Null}}); } break;
+                case PrimitiveType::Null: {} break;
+                case PrimitiveType::Bool: { ir.Append({Opcode::PushBool, {.b = false}}); } break;
+                case PrimitiveType::Int: { ir.Append({Opcode::PushInt, {.i = 0}}); } break;
+                case PrimitiveType::Float: { ir.Append({Opcode::PushFloat, {.d = 0.0}}); } break;
+                case PrimitiveType::String: { ir.Append({Opcode::PushString, {.str = ""}}); } break;
+                case PrimitiveType::Type: { ir.Append({Opcode::PushType, {.type = PrimitiveType::Null}}); } break;
             }
         }
     }
@@ -823,7 +823,7 @@ void ParserImpl::ParseLet()
     var->defined_idx = ir.len;
 
     // Null values don't actually exist
-    var_offset += (var->type != Type::Null);
+    var_offset += (var->type != PrimitiveType::Null);
 
     // Expressions involving this variable won't issue (visible) errors
     // and will be marked as invalid too.
@@ -964,7 +964,7 @@ void ParserImpl::ParseFor()
     for_pos += it->mut;
     definitions_map.Append(it, pos);
     it->name = ConsumeIdentifier();
-    it->type = Type::Int;
+    it->type = PrimitiveType::Int;
 
     it->offset = var_offset + 2;
 
@@ -984,8 +984,8 @@ void ParserImpl::ParseFor()
         return;
     }
 
-    Type type1;
-    Type type2;
+    PrimitiveType type1;
+    PrimitiveType type2;
     bool inclusive;
     ConsumeToken(TokenKind::In);
     type1 = ParseExpression();
@@ -997,12 +997,12 @@ void ParserImpl::ParseFor()
     }
     type2 = ParseExpression();
 
-    if (RG_UNLIKELY(type1 != Type::Int)) {
-        MarkError(for_pos + 3, "Start value must be Int, not %1", TypeNames[(int)type1]);
+    if (RG_UNLIKELY(type1 != PrimitiveType::Int)) {
+        MarkError(for_pos + 3, "Start value must be Int, not %1", PrimitiveTypeNames[(int)type1]);
         return;
     }
-    if (RG_UNLIKELY(type2 != Type::Int)) {
-        MarkError(for_pos + 3, "End value must be Int, not %1", TypeNames[(int)type2]);
+    if (RG_UNLIKELY(type2 != PrimitiveType::Int)) {
+        MarkError(for_pos + 3, "End value must be Int, not %1", PrimitiveTypeNames[(int)type2]);
         return;
     }
 
@@ -1064,9 +1064,9 @@ bool ParserImpl::ParseCondition()
 {
     Size cond_pos = pos;
 
-    Type type = ParseExpression();
-    if (RG_UNLIKELY(type != Type::Bool)) {
-        MarkError(cond_pos, "Cannot implicitly convert %1 result to Bool condition", TypeNames[(int)type]);
+    PrimitiveType type = ParseExpression();
+    if (RG_UNLIKELY(type != PrimitiveType::Bool)) {
+        MarkError(cond_pos, "Cannot implicitly convert %1 result to Bool condition", PrimitiveTypeNames[(int)type]);
         return false;
     }
 
@@ -1103,7 +1103,7 @@ void ParserImpl::ParseContinue()
     ir.Append({Opcode::Jump});
 }
 
-Type ParserImpl::ParseType()
+PrimitiveType ParserImpl::ParseType()
 {
     Size type_pos = pos;
 
@@ -1111,8 +1111,8 @@ Type ParserImpl::ParseType()
     if (MatchToken(TokenKind::Identifier)) {
         const char *type_name = tokens[pos - 1].u.str;
 
-        Type type;
-        if (OptionToEnum(TypeNames, type_name, &type))
+        PrimitiveType type;
+        if (OptionToEnum(PrimitiveTypeNames, type_name, &type))
             return type;
 
         pos--;
@@ -1120,11 +1120,11 @@ Type ParserImpl::ParseType()
 
     // Parse type expression
     {
-        Type type = ParseExpression();
+        PrimitiveType type = ParseExpression();
 
-        if (RG_UNLIKELY(type != Type::Type)) {
-            MarkError(type_pos, "Expected a Type expression, not %1", TypeNames[(int)type]);
-            return Type::Null;
+        if (RG_UNLIKELY(type != PrimitiveType::Type)) {
+            MarkError(type_pos, "Expected a Type expression, not %1", PrimitiveTypeNames[(int)type]);
+            return PrimitiveType::Null;
         }
     }
 
@@ -1132,7 +1132,7 @@ Type ParserImpl::ParseType()
     // should work without any change here.
     if (RG_UNLIKELY(ir[ir.len - 1].code != Opcode::PushType)) {
         MarkError(type_pos, "Complex type expression cannot be resolved statically");
-        return Type::Null;
+        return PrimitiveType::Null;
     }
 
     ir.len--;
@@ -1184,7 +1184,7 @@ static int GetOperatorPrecedence(TokenKind kind)
     }
 }
 
-Type ParserImpl::ParseExpression()
+PrimitiveType ParserImpl::ParseExpression()
 {
     Size start_values_len = stack.len;
     RG_DEFER { stack.RemoveFrom(start_values_len); };
@@ -1230,22 +1230,22 @@ Type ParserImpl::ParseExpression()
             expect_value = false;
 
             switch (tok.kind) {
-                case TokenKind::Null: { stack.Append({Type::Null}); } break;
+                case TokenKind::Null: { stack.Append({PrimitiveType::Null}); } break;
                 case TokenKind::Bool: {
                     ir.Append({Opcode::PushBool, {.b = tok.u.b}});
-                    stack.Append({Type::Bool});
+                    stack.Append({PrimitiveType::Bool});
                 } break;
                 case TokenKind::Integer: {
                     ir.Append({Opcode::PushInt, {.i = tok.u.i}});
-                    stack.Append({Type::Int});
+                    stack.Append({PrimitiveType::Int});
                 } break;
                 case TokenKind::Float: {
                     ir.Append({Opcode::PushFloat, {.d = tok.u.d}});
-                    stack.Append({Type::Float});
+                    stack.Append({PrimitiveType::Float});
                 } break;
                 case TokenKind::String: {
                     ir.Append({Opcode::PushString, {.str = InternString(tok.u.str)}});
-                    stack.Append({Type::String});
+                    stack.Append({PrimitiveType::String});
                 } break;
 
                 case TokenKind::Identifier: {
@@ -1259,14 +1259,14 @@ Type ParserImpl::ParseExpression()
                             show_errors &= !poisons.Find(var);
                             EmitLoad(*var);
                         } else {
-                            Type type;
-                            if (RG_UNLIKELY(!OptionToEnum(TypeNames, tok.u.str, &type))) {
+                            PrimitiveType type;
+                            if (RG_UNLIKELY(!OptionToEnum(PrimitiveTypeNames, tok.u.str, &type))) {
                                 MarkError(pos - 1, "Reference to unknown symbol '%1'", tok.u.str);
                                 goto error;
                             }
 
                             ir.Append({Opcode::PushType, {.type = type}});
-                            stack.Append({Type::Type});
+                            stack.Append({PrimitiveType::Type});
                         }
                     }
                 } break;
@@ -1340,7 +1340,7 @@ Type ParserImpl::ParseExpression()
 
             if (RG_UNLIKELY(!operators.Available())) {
                 MarkError(pos - 1, "Too many operators on the stack (compiler limitation)");
-                return Type::Null;
+                return PrimitiveType::Null;
             }
             operators.Append(op);
         }
@@ -1362,7 +1362,7 @@ Type ParserImpl::ParseExpression()
     }
 
     RG_ASSERT(stack.len == start_values_len + 1 || !show_errors);
-    return RG_LIKELY(stack.len) ? stack[stack.len - 1].type : Type::Null;
+    return RG_LIKELY(stack.len) ? stack[stack.len - 1].type : PrimitiveType::Null;
 
 unexpected:
     pos--;
@@ -1378,7 +1378,7 @@ error:
                                tokens[pos].kind != TokenKind::EndOfLine) {
         pos++;
     };
-    return Type::Null;
+    return PrimitiveType::Null;
 }
 
 void ParserImpl::ProduceOperator(const PendingOperator &op)
@@ -1403,9 +1403,9 @@ void ParserImpl::ProduceOperator(const PendingOperator &op)
         }
         if (RG_UNLIKELY(var->type != expr.type)) {
             MarkError(op.pos, "Cannot assign %1 value to variable '%2'",
-                      TypeNames[(int)expr.type], var->name);
+                      PrimitiveTypeNames[(int)expr.type], var->name);
             HintError(definitions_map.FindValue(var, -1), "Variable '%1' is defined as %2",
-                      var->name, TypeNames[(int)var->type]);
+                      var->name, PrimitiveTypeNames[(int)var->type]);
             return;
         }
 
@@ -1416,47 +1416,47 @@ void ParserImpl::ProduceOperator(const PendingOperator &op)
             } break;
 
             case TokenKind::PlusAssign: {
-                success = EmitOperator2(Type::Int, Opcode::AddInt, Type::Int) ||
-                          EmitOperator2(Type::Float, Opcode::AddFloat, Type::Float);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::AddInt, PrimitiveType::Int) ||
+                          EmitOperator2(PrimitiveType::Float, Opcode::AddFloat, PrimitiveType::Float);
             } break;
             case TokenKind::MinusAssign: {
-                success = EmitOperator2(Type::Int, Opcode::SubstractInt, Type::Int) ||
-                          EmitOperator2(Type::Float, Opcode::SubstractFloat, Type::Float);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::SubstractInt, PrimitiveType::Int) ||
+                          EmitOperator2(PrimitiveType::Float, Opcode::SubstractFloat, PrimitiveType::Float);
             } break;
             case TokenKind::MultiplyAssign: {
-                success = EmitOperator2(Type::Int, Opcode::MultiplyInt, Type::Int) ||
-                          EmitOperator2(Type::Float, Opcode::MultiplyFloat, Type::Float);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::MultiplyInt, PrimitiveType::Int) ||
+                          EmitOperator2(PrimitiveType::Float, Opcode::MultiplyFloat, PrimitiveType::Float);
             } break;
             case TokenKind::DivideAssign: {
-                success = EmitOperator2(Type::Int, Opcode::DivideInt, Type::Int) ||
-                          EmitOperator2(Type::Float, Opcode::DivideFloat, Type::Float);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::DivideInt, PrimitiveType::Int) ||
+                          EmitOperator2(PrimitiveType::Float, Opcode::DivideFloat, PrimitiveType::Float);
             } break;
             case TokenKind::ModuloAssign: {
-                success = EmitOperator2(Type::Int, Opcode::ModuloInt, Type::Int);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::ModuloInt, PrimitiveType::Int);
             } break;
             case TokenKind::AndAssign: {
-                success = EmitOperator2(Type::Int, Opcode::AndInt, Type::Int) ||
-                          EmitOperator2(Type::Bool, Opcode::AndBool, Type::Bool);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::AndInt, PrimitiveType::Int) ||
+                          EmitOperator2(PrimitiveType::Bool, Opcode::AndBool, PrimitiveType::Bool);
             } break;
             case TokenKind::OrAssign: {
-                success = EmitOperator2(Type::Int, Opcode::OrInt, Type::Int) ||
-                          EmitOperator2(Type::Bool, Opcode::OrBool, Type::Bool);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::OrInt, PrimitiveType::Int) ||
+                          EmitOperator2(PrimitiveType::Bool, Opcode::OrBool, PrimitiveType::Bool);
             } break;
             case TokenKind::XorAssign: {
-                success = EmitOperator2(Type::Int, Opcode::XorInt, Type::Int) ||
-                          EmitOperator2(Type::Bool, Opcode::NotEqualBool, Type::Bool);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::XorInt, PrimitiveType::Int) ||
+                          EmitOperator2(PrimitiveType::Bool, Opcode::NotEqualBool, PrimitiveType::Bool);
             } break;
             case TokenKind::LeftShiftAssign: {
-                success = EmitOperator2(Type::Int, Opcode::LeftShiftInt, Type::Int);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::LeftShiftInt, PrimitiveType::Int);
             } break;
             case TokenKind::RightShiftAssign: {
-                success = EmitOperator2(Type::Int, Opcode::RightShiftInt, Type::Int);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::RightShiftInt, PrimitiveType::Int);
             } break;
             case TokenKind::LeftRotateAssign: {
-                success = EmitOperator2(Type::Int, Opcode::LeftRotateInt, Type::Int);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::LeftRotateInt, PrimitiveType::Int);
             } break;
             case TokenKind::RightRotateAssign: {
-                success = EmitOperator2(Type::Int, Opcode::RightRotateInt, Type::Int);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::RightRotateInt, PrimitiveType::Int);
             } break;
 
             default: { RG_UNREACHABLE(); } break;
@@ -1464,47 +1464,47 @@ void ParserImpl::ProduceOperator(const PendingOperator &op)
 
         if (var->global && current_func) {
             switch (var->type) {
-                case Type::Null: {} break;
-                case Type::Bool: {
+                case PrimitiveType::Null: {} break;
+                case PrimitiveType::Bool: {
                     ir.Append({Opcode::StoreGlobalBool, {.i = var->offset}});
                     ir.Append({Opcode::LoadGlobalBool, {.i = var->offset}});
                 } break;
-                case Type::Int: {
+                case PrimitiveType::Int: {
                     ir.Append({Opcode::StoreGlobalInt, {.i = var->offset}});
                     ir.Append({Opcode::LoadGlobalInt, {.i = var->offset}});
                 } break;
-                case Type::Float: {
+                case PrimitiveType::Float: {
                     ir.Append({Opcode::StoreGlobalFloat, {.i = var->offset}});
                     ir.Append({Opcode::LoadGlobalFloat, {.i = var->offset}});
                 } break;
-                case Type::String: {
+                case PrimitiveType::String: {
                     ir.Append({Opcode::StoreGlobalString, {.i = var->offset}});
                     ir.Append({Opcode::LoadGlobalString, {.i = var->offset}});
                 } break;
-                case Type::Type: {
+                case PrimitiveType::Type: {
                     ir.Append({Opcode::StoreGlobalType, {.i = var->offset}});
                     ir.Append({Opcode::LoadGlobalType, {.i = var->offset}});
                 } break;
             }
         } else {
             switch (var->type) {
-                case Type::Null: {} break;
-                case Type::Bool: { ir.Append({Opcode::CopyBool, {.i = var->offset}}); } break;
-                case Type::Int: { ir.Append({Opcode::CopyInt, {.i = var->offset}}); } break;
-                case Type::Float: { ir.Append({Opcode::CopyFloat, {.i = var->offset}}); } break;
-                case Type::String: { ir.Append({Opcode::CopyString, {.i = var->offset}}); } break;
-                case Type::Type: { ir.Append({Opcode::CopyType, {.i = var->offset}}); } break;
+                case PrimitiveType::Null: {} break;
+                case PrimitiveType::Bool: { ir.Append({Opcode::CopyBool, {.i = var->offset}}); } break;
+                case PrimitiveType::Int: { ir.Append({Opcode::CopyInt, {.i = var->offset}}); } break;
+                case PrimitiveType::Float: { ir.Append({Opcode::CopyFloat, {.i = var->offset}}); } break;
+                case PrimitiveType::String: { ir.Append({Opcode::CopyString, {.i = var->offset}}); } break;
+                case PrimitiveType::Type: { ir.Append({Opcode::CopyType, {.i = var->offset}}); } break;
             }
         }
     } else { // Other operators
         switch (op.kind) {
             case TokenKind::Plus: {
                 if (op.unary) {
-                    success = stack[stack.len - 1].type == Type::Int ||
-                              stack[stack.len - 1].type == Type::Float;
+                    success = stack[stack.len - 1].type == PrimitiveType::Int ||
+                              stack[stack.len - 1].type == PrimitiveType::Float;
                 } else {
-                    success = EmitOperator2(Type::Int, Opcode::AddInt, Type::Int) ||
-                              EmitOperator2(Type::Float, Opcode::AddFloat, Type::Float);
+                    success = EmitOperator2(PrimitiveType::Int, Opcode::AddInt, PrimitiveType::Int) ||
+                              EmitOperator2(PrimitiveType::Float, Opcode::AddFloat, PrimitiveType::Float);
                 }
             } break;
             case TokenKind::Minus: {
@@ -1531,96 +1531,96 @@ void ParserImpl::ProduceOperator(const PendingOperator &op)
                         } break;
 
                         default: {
-                            success = EmitOperator1(Type::Int, Opcode::NegateInt, Type::Int) ||
-                                      EmitOperator1(Type::Float, Opcode::NegateFloat, Type::Float);
+                            success = EmitOperator1(PrimitiveType::Int, Opcode::NegateInt, PrimitiveType::Int) ||
+                                      EmitOperator1(PrimitiveType::Float, Opcode::NegateFloat, PrimitiveType::Float);
                         }
                     }
                 } else {
-                    success = EmitOperator2(Type::Int, Opcode::SubstractInt, Type::Int) ||
-                              EmitOperator2(Type::Float, Opcode::SubstractFloat, Type::Float);
+                    success = EmitOperator2(PrimitiveType::Int, Opcode::SubstractInt, PrimitiveType::Int) ||
+                              EmitOperator2(PrimitiveType::Float, Opcode::SubstractFloat, PrimitiveType::Float);
                 }
             } break;
             case TokenKind::Multiply: {
-                success = EmitOperator2(Type::Int, Opcode::MultiplyInt, Type::Int) ||
-                          EmitOperator2(Type::Float, Opcode::MultiplyFloat, Type::Float);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::MultiplyInt, PrimitiveType::Int) ||
+                          EmitOperator2(PrimitiveType::Float, Opcode::MultiplyFloat, PrimitiveType::Float);
             } break;
             case TokenKind::Divide: {
-                success = EmitOperator2(Type::Int, Opcode::DivideInt, Type::Int) ||
-                          EmitOperator2(Type::Float, Opcode::DivideFloat, Type::Float);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::DivideInt, PrimitiveType::Int) ||
+                          EmitOperator2(PrimitiveType::Float, Opcode::DivideFloat, PrimitiveType::Float);
             } break;
             case TokenKind::Modulo: {
-                success = EmitOperator2(Type::Int, Opcode::ModuloInt, Type::Int);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::ModuloInt, PrimitiveType::Int);
             } break;
 
             case TokenKind::Equal: {
-                success = EmitOperator2(Type::Int, Opcode::EqualInt, Type::Bool) ||
-                          EmitOperator2(Type::Float, Opcode::EqualFloat, Type::Bool) ||
-                          EmitOperator2(Type::Bool, Opcode::EqualBool, Type::Bool) ||
-                          EmitOperator2(Type::Type, Opcode::EqualType, Type::Bool);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::EqualInt, PrimitiveType::Bool) ||
+                          EmitOperator2(PrimitiveType::Float, Opcode::EqualFloat, PrimitiveType::Bool) ||
+                          EmitOperator2(PrimitiveType::Bool, Opcode::EqualBool, PrimitiveType::Bool) ||
+                          EmitOperator2(PrimitiveType::Type, Opcode::EqualType, PrimitiveType::Bool);
             } break;
             case TokenKind::NotEqual: {
-                success = EmitOperator2(Type::Int, Opcode::NotEqualInt, Type::Bool) ||
-                          EmitOperator2(Type::Float, Opcode::NotEqualFloat, Type::Bool) ||
-                          EmitOperator2(Type::Bool, Opcode::NotEqualBool, Type::Bool) ||
-                          EmitOperator2(Type::Type, Opcode::NotEqualType, Type::Bool);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::NotEqualInt, PrimitiveType::Bool) ||
+                          EmitOperator2(PrimitiveType::Float, Opcode::NotEqualFloat, PrimitiveType::Bool) ||
+                          EmitOperator2(PrimitiveType::Bool, Opcode::NotEqualBool, PrimitiveType::Bool) ||
+                          EmitOperator2(PrimitiveType::Type, Opcode::NotEqualType, PrimitiveType::Bool);
             } break;
             case TokenKind::Greater: {
-                success = EmitOperator2(Type::Int, Opcode::GreaterThanInt, Type::Bool) ||
-                          EmitOperator2(Type::Float, Opcode::GreaterThanFloat, Type::Bool);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::GreaterThanInt, PrimitiveType::Bool) ||
+                          EmitOperator2(PrimitiveType::Float, Opcode::GreaterThanFloat, PrimitiveType::Bool);
             } break;
             case TokenKind::GreaterOrEqual: {
-                success = EmitOperator2(Type::Int, Opcode::GreaterOrEqualInt, Type::Bool) ||
-                          EmitOperator2(Type::Float, Opcode::GreaterOrEqualFloat, Type::Bool);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::GreaterOrEqualInt, PrimitiveType::Bool) ||
+                          EmitOperator2(PrimitiveType::Float, Opcode::GreaterOrEqualFloat, PrimitiveType::Bool);
             } break;
             case TokenKind::Less: {
-                success = EmitOperator2(Type::Int, Opcode::LessThanInt, Type::Bool) ||
-                          EmitOperator2(Type::Float, Opcode::LessThanFloat, Type::Bool);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::LessThanInt, PrimitiveType::Bool) ||
+                          EmitOperator2(PrimitiveType::Float, Opcode::LessThanFloat, PrimitiveType::Bool);
             } break;
             case TokenKind::LessOrEqual: {
-                success = EmitOperator2(Type::Int, Opcode::LessOrEqualInt, Type::Bool) ||
-                          EmitOperator2(Type::Float, Opcode::LessOrEqualFloat, Type::Bool);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::LessOrEqualInt, PrimitiveType::Bool) ||
+                          EmitOperator2(PrimitiveType::Float, Opcode::LessOrEqualFloat, PrimitiveType::Bool);
             } break;
 
             case TokenKind::And: {
-                success = EmitOperator2(Type::Int, Opcode::AndInt, Type::Int) ||
-                          EmitOperator2(Type::Bool, Opcode::AndBool, Type::Bool);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::AndInt, PrimitiveType::Int) ||
+                          EmitOperator2(PrimitiveType::Bool, Opcode::AndBool, PrimitiveType::Bool);
             } break;
             case TokenKind::Or: {
-                success = EmitOperator2(Type::Int, Opcode::OrInt, Type::Int) ||
-                          EmitOperator2(Type::Bool, Opcode::OrBool, Type::Bool);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::OrInt, PrimitiveType::Int) ||
+                          EmitOperator2(PrimitiveType::Bool, Opcode::OrBool, PrimitiveType::Bool);
             } break;
             case TokenKind::Xor: {
-                success = EmitOperator2(Type::Int, Opcode::XorInt, Type::Int) ||
-                          EmitOperator2(Type::Bool, Opcode::NotEqualBool, Type::Bool);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::XorInt, PrimitiveType::Int) ||
+                          EmitOperator2(PrimitiveType::Bool, Opcode::NotEqualBool, PrimitiveType::Bool);
             } break;
             case TokenKind::Complement: {
-                success = EmitOperator1(Type::Int, Opcode::ComplementInt, Type::Int) ||
-                          EmitOperator1(Type::Bool, Opcode::NotBool, Type::Bool);
+                success = EmitOperator1(PrimitiveType::Int, Opcode::ComplementInt, PrimitiveType::Int) ||
+                          EmitOperator1(PrimitiveType::Bool, Opcode::NotBool, PrimitiveType::Bool);
             } break;
             case TokenKind::LeftShift: {
-                success = EmitOperator2(Type::Int, Opcode::LeftShiftInt, Type::Int);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::LeftShiftInt, PrimitiveType::Int);
             } break;
             case TokenKind::RightShift: {
-                success = EmitOperator2(Type::Int, Opcode::RightShiftInt, Type::Int);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::RightShiftInt, PrimitiveType::Int);
             } break;
             case TokenKind::LeftRotate: {
-                success = EmitOperator2(Type::Int, Opcode::LeftRotateInt, Type::Int);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::LeftRotateInt, PrimitiveType::Int);
             } break;
             case TokenKind::RightRotate: {
-                success = EmitOperator2(Type::Int, Opcode::RightRotateInt, Type::Int);
+                success = EmitOperator2(PrimitiveType::Int, Opcode::RightRotateInt, PrimitiveType::Int);
             } break;
 
             case TokenKind::Not: {
-                success = EmitOperator1(Type::Bool, Opcode::NotBool, Type::Bool);
+                success = EmitOperator1(PrimitiveType::Bool, Opcode::NotBool, PrimitiveType::Bool);
             } break;
             case TokenKind::AndAnd: {
-                success = EmitOperator2(Type::Bool, Opcode::AndBool, Type::Bool);
+                success = EmitOperator2(PrimitiveType::Bool, Opcode::AndBool, PrimitiveType::Bool);
 
                 RG_ASSERT(op.branch_idx && ir[op.branch_idx].code == Opcode::SkipIfFalse);
                 ir[op.branch_idx].u.i = ir.len - op.branch_idx;
             } break;
             case TokenKind::OrOr: {
-                success = EmitOperator2(Type::Bool, Opcode::OrBool, Type::Bool);
+                success = EmitOperator2(PrimitiveType::Bool, Opcode::OrBool, PrimitiveType::Bool);
 
                 RG_ASSERT(op.branch_idx && ir[op.branch_idx].code == Opcode::SkipIfTrue);
                 ir[op.branch_idx].u.i = ir.len - op.branch_idx;
@@ -1633,21 +1633,21 @@ void ParserImpl::ProduceOperator(const PendingOperator &op)
     if (RG_UNLIKELY(!success)) {
         if (op.unary) {
             MarkError(op.pos, "Cannot use '%1' operator on %2 value",
-                      TokenKindNames[(int)op.kind], TypeNames[(int)stack[stack.len - 1].type]);
+                      TokenKindNames[(int)op.kind], PrimitiveTypeNames[(int)stack[stack.len - 1].type]);
         } else if (stack[stack.len - 2].type == stack[stack.len - 1].type) {
             MarkError(op.pos, "Cannot use '%1' operator on %2 values",
-                      TokenKindNames[(int)op.kind], TypeNames[(int)stack[stack.len - 2].type]);
+                      TokenKindNames[(int)op.kind], PrimitiveTypeNames[(int)stack[stack.len - 2].type]);
         } else {
             MarkError(op.pos, "Cannot use '%1' operator on %2 and %3 values",
-                      TokenKindNames[(int)op.kind], TypeNames[(int)stack[stack.len - 2].type],
-                      TypeNames[(int)stack[stack.len - 1].type]);
+                      TokenKindNames[(int)op.kind], PrimitiveTypeNames[(int)stack[stack.len - 2].type],
+                      PrimitiveTypeNames[(int)stack[stack.len - 1].type]);
         }
     }
 }
 
-bool ParserImpl::EmitOperator1(Type in_type, Opcode code, Type out_type)
+bool ParserImpl::EmitOperator1(PrimitiveType in_type, Opcode code, PrimitiveType out_type)
 {
-    Type type = stack[stack.len - 1].type;
+    PrimitiveType type = stack[stack.len - 1].type;
 
     if (type == in_type) {
         ir.Append({code});
@@ -1659,10 +1659,10 @@ bool ParserImpl::EmitOperator1(Type in_type, Opcode code, Type out_type)
     }
 }
 
-bool ParserImpl::EmitOperator2(Type in_type, Opcode code, Type out_type)
+bool ParserImpl::EmitOperator2(PrimitiveType in_type, Opcode code, PrimitiveType out_type)
 {
-    Type type1 = stack[stack.len - 2].type;
-    Type type2 = stack[stack.len - 1].type;
+    PrimitiveType type1 = stack[stack.len - 2].type;
+    PrimitiveType type2 = stack[stack.len - 1].type;
 
     if (type1 == in_type && type2 == in_type) {
         ir.Append({code});
@@ -1685,21 +1685,21 @@ void ParserImpl::EmitLoad(const VariableInfo &var)
         }
 
         switch (var.type) {
-            case Type::Null: {} break;
-            case Type::Bool: { ir.Append({Opcode::LoadGlobalBool, {.i = var.offset}}); } break;
-            case Type::Int: { ir.Append({Opcode::LoadGlobalInt, {.i = var.offset}}); } break;
-            case Type::Float: { ir.Append({Opcode::LoadGlobalFloat, {.i = var.offset}});} break;
-            case Type::String: { ir.Append({Opcode::LoadGlobalString, {.i = var.offset}}); } break;
-            case Type::Type: { ir.Append({Opcode::LoadGlobalType, {.i = var.offset}}); } break;
+            case PrimitiveType::Null: {} break;
+            case PrimitiveType::Bool: { ir.Append({Opcode::LoadGlobalBool, {.i = var.offset}}); } break;
+            case PrimitiveType::Int: { ir.Append({Opcode::LoadGlobalInt, {.i = var.offset}}); } break;
+            case PrimitiveType::Float: { ir.Append({Opcode::LoadGlobalFloat, {.i = var.offset}});} break;
+            case PrimitiveType::String: { ir.Append({Opcode::LoadGlobalString, {.i = var.offset}}); } break;
+            case PrimitiveType::Type: { ir.Append({Opcode::LoadGlobalType, {.i = var.offset}}); } break;
         }
     } else {
         switch (var.type) {
-            case Type::Null: {} break;
-            case Type::Bool: { ir.Append({Opcode::LoadBool, {.i = var.offset}}); } break;
-            case Type::Int: { ir.Append({Opcode::LoadInt, {.i = var.offset}}); } break;
-            case Type::Float: { ir.Append({Opcode::LoadFloat, {.i = var.offset}});} break;
-            case Type::String: { ir.Append({Opcode::LoadString, {.i = var.offset}}); } break;
-            case Type::Type: { ir.Append({Opcode::LoadType, {.i = var.offset}}); } break;
+            case PrimitiveType::Null: {} break;
+            case PrimitiveType::Bool: { ir.Append({Opcode::LoadBool, {.i = var.offset}}); } break;
+            case PrimitiveType::Int: { ir.Append({Opcode::LoadInt, {.i = var.offset}}); } break;
+            case PrimitiveType::Float: { ir.Append({Opcode::LoadFloat, {.i = var.offset}});} break;
+            case PrimitiveType::String: { ir.Append({Opcode::LoadString, {.i = var.offset}}); } break;
+            case PrimitiveType::Type: { ir.Append({Opcode::LoadType, {.i = var.offset}}); } break;
         }
     }
 
@@ -1743,7 +1743,7 @@ bool ParserImpl::ParseCall(const char *name)
         if (RG_UNLIKELY(func == func0)) {
             LocalArray<char, 1024> buf = {};
             for (Size i = 0; i < args.len; i++) {
-                buf.len += Fmt(buf.TakeAvailable(), "%1%2", i ? ", " : "", TypeNames[(int)args[i].type]).len;
+                buf.len += Fmt(buf.TakeAvailable(), "%1%2", i ? ", " : "", PrimitiveTypeNames[(int)args[i].type]).len;
             }
 
             MarkError(call_pos, "Cannot call '%1' with (%2) arguments", func0->name, buf);
@@ -1793,11 +1793,11 @@ void ParserImpl::EmitIntrinsic(const char *name, Size call_idx, Span<const Funct
 
         if (println) {
             ir.Append({Opcode::PushString, {.str = "\n"}});
-            payload = (int)Type::String;
+            payload = (int)PrimitiveType::String;
         }
         for (Size i = args.len - 1; i >= 0; i--) {
             payload = (payload << 3) | (int)args[i].type;
-            offset += (args[i].type != Type::Null);
+            offset += (args[i].type != PrimitiveType::Null);
         }
 
         payload = (payload << 5) | (offset + println);
@@ -1823,9 +1823,9 @@ void ParserImpl::EmitIntrinsic(const char *name, Size call_idx, Span<const Funct
     }
 }
 
-void ParserImpl::DiscardResult(Type type)
+void ParserImpl::DiscardResult(PrimitiveType type)
 {
-    if (type != Type::Null && ir.len >= 1) {
+    if (type != PrimitiveType::Null && ir.len >= 1) {
         switch (ir[ir.len - 1].code) {
             case Opcode::LoadBool:
             case Opcode::LoadInt:
@@ -1872,12 +1872,12 @@ void ParserImpl::EmitReturn()
             const FunctionInfo::Parameter &param = current_func->params[i];
 
             switch (param.type) {
-                case Type::Null: {} break;
-                case Type::Bool: { ir.Append({Opcode::StoreBool, {.i = --stack_offset}}); } break;
-                case Type::Int: { ir.Append({Opcode::StoreInt, {.i = --stack_offset}}); } break;
-                case Type::Float: { ir.Append({Opcode::StoreFloat, {.i = --stack_offset}}); } break;
-                case Type::String: { ir.Append({Opcode::StoreString, {.i = --stack_offset}}); } break;
-                case Type::Type: { ir.Append({Opcode::StoreType, {.i = --stack_offset}}); } break;
+                case PrimitiveType::Null: {} break;
+                case PrimitiveType::Bool: { ir.Append({Opcode::StoreBool, {.i = --stack_offset}}); } break;
+                case PrimitiveType::Int: { ir.Append({Opcode::StoreInt, {.i = --stack_offset}}); } break;
+                case PrimitiveType::Float: { ir.Append({Opcode::StoreFloat, {.i = --stack_offset}}); } break;
+                case PrimitiveType::String: { ir.Append({Opcode::StoreString, {.i = --stack_offset}}); } break;
+                case PrimitiveType::Type: { ir.Append({Opcode::StoreType, {.i = --stack_offset}}); } break;
             }
         }
 
@@ -1890,18 +1890,18 @@ void ParserImpl::EmitReturn()
             Size pop = var_offset - 1;
 
             switch (current_func->ret_type) {
-                case Type::Null: { pop++; } break;
-                case Type::Bool: { ir.Append({Opcode::StoreBool, {.i = 0}}); } break;
-                case Type::Int: { ir.Append({Opcode::StoreInt, {.i = 0}}); } break;
-                case Type::Float: { ir.Append({Opcode::StoreFloat, {.i = 0}}); } break;
-                case Type::String: { ir.Append({Opcode::StoreString, {.i = 0}}); } break;
-                case Type::Type: { ir.Append({Opcode::StoreType, {.i = 0}}); } break;
+                case PrimitiveType::Null: { pop++; } break;
+                case PrimitiveType::Bool: { ir.Append({Opcode::StoreBool, {.i = 0}}); } break;
+                case PrimitiveType::Int: { ir.Append({Opcode::StoreInt, {.i = 0}}); } break;
+                case PrimitiveType::Float: { ir.Append({Opcode::StoreFloat, {.i = 0}}); } break;
+                case PrimitiveType::String: { ir.Append({Opcode::StoreString, {.i = 0}}); } break;
+                case PrimitiveType::Type: { ir.Append({Opcode::StoreType, {.i = 0}}); } break;
             }
 
             EmitPop(pop);
         }
 
-        ir.Append({current_func->ret_type == Type::Null ? Opcode::ReturnNull : Opcode::Return, {.i = current_func->ret_pop}});
+        ir.Append({current_func->ret_type == PrimitiveType::Null ? Opcode::ReturnNull : Opcode::Return, {.i = current_func->ret_pop}});
     }
 }
 

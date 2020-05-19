@@ -420,14 +420,14 @@ bool VirtualMachine::Run()
         }
 
         CASE(EqualType): {
-            Type type1 = stack[stack.len - 2].type;
-            Type type2 = stack[stack.len - 1].type;
+            PrimitiveType type1 = stack[stack.len - 2].type;
+            PrimitiveType type2 = stack[stack.len - 1].type;
             stack[--stack.len - 1].b = (type1 == type2);
             DISPATCH(++pc);
         }
         CASE(NotEqualType): {
-            Type type1 = stack[stack.len - 2].type;
-            Type type2 = stack[stack.len - 1].type;
+            PrimitiveType type1 = stack[stack.len - 2].type;
+            PrimitiveType type2 = stack[stack.len - 1].type;
             stack[--stack.len - 1].b = (type1 != type2);
             DISPATCH(++pc);
         }
@@ -528,16 +528,16 @@ bool VirtualMachine::Run()
 
             Size stack_offset = stack.len - pop;
             for (Size i = 0; i < count; i++) {
-                Type type = (Type)(payload & 0x7);
+                PrimitiveType type = (PrimitiveType)(payload & 0x7);
                 payload >>= 3;
 
                 switch (type) {
-                    case Type::Null: { Print("null"); } break;
-                    case Type::Bool: { Print("%1", stack[stack_offset++].b); } break;
-                    case Type::Int: { Print("%1", stack[stack_offset++].i); } break;
-                    case Type::Float: { Print("%1", stack[stack_offset++].d); } break;
-                    case Type::String: { Print("%1", stack[stack_offset++].str); } break;
-                    case Type::Type: { Print("%1", TypeNames[(int)stack[stack_offset++].type]); } break;
+                    case PrimitiveType::Null: { Print("null"); } break;
+                    case PrimitiveType::Bool: { Print("%1", stack[stack_offset++].b); } break;
+                    case PrimitiveType::Int: { Print("%1", stack[stack_offset++].i); } break;
+                    case PrimitiveType::Float: { Print("%1", stack[stack_offset++].d); } break;
+                    case PrimitiveType::String: { Print("%1", stack[stack_offset++].str); } break;
+                    case PrimitiveType::Type: { Print("%1", PrimitiveTypeNames[(int)stack[stack_offset++].type]); } break;
                 }
             }
 
