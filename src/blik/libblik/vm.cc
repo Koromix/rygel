@@ -201,7 +201,7 @@ bool VirtualMachine::Run()
             int64_t i1 = stack[stack.len - 2].i;
             int64_t i2 = stack[stack.len - 1].i;
             if (RG_UNLIKELY(i2 == 0)) {
-                FatalError("Division by 0 is illegal");
+                FatalError("Integer division by 0 is illegal");
                 return false;
             }
             stack[--stack.len - 1].i = i1 / i2;
@@ -211,7 +211,7 @@ bool VirtualMachine::Run()
             int64_t i1 = stack[stack.len - 2].i;
             int64_t i2 = stack[stack.len - 1].i;
             if (RG_UNLIKELY(i2 == 0)) {
-                FatalError("Division by 0 is illegal");
+                FatalError("Integer division by 0 is illegal");
                 return false;
             }
             stack[--stack.len - 1].i = i1 % i2;
