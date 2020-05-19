@@ -894,8 +894,7 @@ bool ParserImpl::ParseIf()
 
 void ParserImpl::ParseWhile()
 {
-    Size while_pos = ++pos;
-    int32_t while_line = tokens[pos].line;
+    pos++;
 
     // Parse expression. We'll make a copy after the loop body so that the IR code looks
     // roughly like if (cond) { do { ... } while (cond) }.
