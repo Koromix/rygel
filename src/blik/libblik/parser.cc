@@ -523,10 +523,7 @@ bool ParserImpl::ParseStatement()
     src->lines.Append({tokens[pos].line, ir.len});
 
     switch (tokens[pos].kind) {
-        case TokenKind::EndOfLine: {
-            src->lines.len--;
-            pos++;
-        } break;
+        case TokenKind::EndOfLine: { pos++; } break;
 
         case TokenKind::Begin: {
             pos++;
