@@ -62,6 +62,8 @@ OPCODE(XorInt)
 OPCODE(ComplementInt)
 OPCODE(LeftShiftInt)
 OPCODE(RightShiftInt)
+OPCODE(LeftRotateInt)
+OPCODE(RightRotateInt)
 
 // Float operators
 OPCODE(NegateFloat)

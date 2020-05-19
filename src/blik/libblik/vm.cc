@@ -302,6 +302,26 @@ bool VirtualMachine::Run()
             }
             DISPATCH(++pc);
         }
+        CASE(LeftRotateInt): {
+            int64_t i1 = stack[stack.len - 2].i;
+            int64_t i2 = stack[stack.len - 1].i % 64;
+            if (RG_UNLIKELY(i2 < 0)) {
+                FatalError("Left-rotate by negative value is illegal");
+                return false;
+            }
+            stack[--stack.len - 1].i = (int64_t)(((uint64_t)i1 << i2) | ((uint64_t)i1 >> (64 - i2)));
+            DISPATCH(++pc);
+        }
+        CASE(RightRotateInt): {
+            int64_t i1 = stack[stack.len - 2].i;
+            int64_t i2 = stack[stack.len - 1].i % 64;
+            if (RG_UNLIKELY(i2 < 0)) {
+                FatalError("Right-rotate by negative value is illegal");
+                return false;
+            }
+            stack[--stack.len - 1].i = (int64_t)(((uint64_t)i1 >> i2) | ((uint64_t)i1 << (64 - i2)));
+            DISPATCH(++pc);
+        }
 
         CASE(NegateFloat): {
             double d = stack[stack.len - 1].d;

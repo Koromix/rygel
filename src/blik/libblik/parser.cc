@@ -1150,6 +1150,8 @@ static int GetOperatorPrecedence(TokenKind kind)
         case TokenKind::ModuloAssign:
         case TokenKind::LeftShiftAssign:
         case TokenKind::RightShiftAssign:
+        case TokenKind::LeftRotateAssign:
+        case TokenKind::RightRotateAssign:
         case TokenKind::AndAssign:
         case TokenKind::OrAssign:
         case TokenKind::XorAssign: { return 0; } break;
@@ -1166,7 +1168,9 @@ static int GetOperatorPrecedence(TokenKind kind)
         case TokenKind::Xor: { return 7; } break;
         case TokenKind::And: { return 8; } break;
         case TokenKind::LeftShift:
-        case TokenKind::RightShift: { return 9; } break;
+        case TokenKind::RightShift:
+        case TokenKind::LeftRotate:
+        case TokenKind::RightRotate: { return 9; } break;
         // Unary '+' and '-' operators are dealt with directly in ParseExpression()
         case TokenKind::Plus:
         case TokenKind::Minus: { return 10; } break;
@@ -1448,6 +1452,12 @@ void ParserImpl::ProduceOperator(const PendingOperator &op)
             case TokenKind::RightShiftAssign: {
                 success = EmitOperator2(Type::Int, Opcode::RightShiftInt, Type::Int);
             } break;
+            case TokenKind::LeftRotateAssign: {
+                success = EmitOperator2(Type::Int, Opcode::LeftRotateInt, Type::Int);
+            } break;
+            case TokenKind::RightRotateAssign: {
+                success = EmitOperator2(Type::Int, Opcode::RightRotateInt, Type::Int);
+            } break;
 
             default: { RG_UNREACHABLE(); } break;
         }
@@ -1592,6 +1602,12 @@ void ParserImpl::ProduceOperator(const PendingOperator &op)
             } break;
             case TokenKind::RightShift: {
                 success = EmitOperator2(Type::Int, Opcode::RightShiftInt, Type::Int);
+            } break;
+            case TokenKind::LeftRotate: {
+                success = EmitOperator2(Type::Int, Opcode::LeftRotateInt, Type::Int);
+            } break;
+            case TokenKind::RightRotate: {
+                success = EmitOperator2(Type::Int, Opcode::RightRotateInt, Type::Int);
             } break;
 
             case TokenKind::Not: {

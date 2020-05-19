@@ -33,6 +33,7 @@ private:
     inline bool Token1(TokenKind tok);
     inline bool Token2(char c, TokenKind tok);
     inline bool Token3(char c1, char c2, TokenKind tok);
+    inline bool Token4(char c1, char c2, char c3, TokenKind tok);
 
     void TokenizeFloat();
 
@@ -366,9 +367,11 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
             case '|': { Token2('=', TokenKind::OrAssign) || Token2('|', TokenKind::OrOr) || Token1(TokenKind::Or); } break;
             case '!': { Token2('=', TokenKind::NotEqual) || Token1(TokenKind::Not); } break;
             case '=': { Token2('=', TokenKind::Equal) || Token1(TokenKind::Assign); } break;
-            case '>': { Token3('>', '=', TokenKind::RightShiftAssign) || Token2('>', TokenKind::RightShift) ||
+            case '>': { Token4('>', '>', '=', TokenKind::RightRotateAssign) || Token3('>', '>', TokenKind::RightRotate) ||
+                        Token3('>', '=', TokenKind::RightShiftAssign) || Token2('>', TokenKind::RightShift) ||
                         Token2('=', TokenKind::GreaterOrEqual) || Token1(TokenKind::Greater); } break;
-            case '<': { Token3('<', '=', TokenKind::LeftShiftAssign) || Token2('<', TokenKind::LeftShift) ||
+            case '<': { Token4('<', '<', '=', TokenKind::LeftRotateAssign) || Token3('<', '<', TokenKind::LeftRotate) ||
+                        Token3('<', '=', TokenKind::LeftShiftAssign) || Token2('<', TokenKind::LeftShift) ||
                         Token2('=', TokenKind::LessOrEqual) || Token1(TokenKind::Less); } break;
             case ',': { Token1(TokenKind::Comma); } break;
 
@@ -496,9 +499,21 @@ inline bool Lexer::Token2(char c, TokenKind tok)
 
 inline bool Lexer::Token3(char c1, char c2, TokenKind tok)
 {
-    if (next + 1 < code.len && code[next] == c1 && code[next + 1] == c2) {
+    if (next < code.len - 1 && code[next] == c1 && code[next + 1] == c2) {
         tokens.Append({tok, line, offset});
         next += 2;
+
+        return true;
+    } else {
+        return false;
+    }
+}
+
+inline bool Lexer::Token4(char c1, char c2, char c3, TokenKind tok)
+{
+    if (next < code.len - 2 && code[next] == c1 && code[next + 1] == c2 && code[next + 2] == c3) {
+        tokens.Append({tok, line, offset});
+        next += 3;
 
         return true;
     } else {
