@@ -47,24 +47,25 @@ public:
 
 static bool TokenizeWithFakePrint(Span<const char> code, const char *filename, TokenizedFile *out_file)
 {
-    bool success = Tokenize(R"(
+    static TokenizedFile intro;
+    static TokenizedFile outro;
+
+    // Tokenize must only be called once for each TokenizedFile, so we need to cheat a little
+    if (!intro.tokens.len) {
+        Tokenize(R"(
 begin
     let __result =
-)", filename, out_file);
-    RG_ASSERT(success);
-
-    // Pretend we are still on first line for runtime errors
-    for (auto &token: out_file->tokens) {
-        token.line = 1;
+)", "<intro>", &intro);
+        Tokenize(R"(
+    if typeOf(__result) != Null then printLn(__result)
+end
+)", "<outro>", &outro);
     }
 
+    out_file->tokens.Append(intro.tokens);
     if (!Tokenize(code, filename, out_file))
         return false;
-
-    success = Tokenize(R"(
-    if typeOf(__result) != Null then printLn(__result)
-end)", filename, out_file);
-    RG_ASSERT(success);
+    out_file->tokens.Append(outro.tokens);
 
     return true;
 }

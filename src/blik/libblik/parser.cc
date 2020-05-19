@@ -117,7 +117,7 @@ private:
     bool MatchToken(TokenKind kind);
     bool PeekToken(TokenKind kind);
 
-    void SkipNewLines();
+    bool SkipNewLines();
 
     const char *InternString(const char *str);
 
@@ -277,8 +277,8 @@ bool ParserImpl::Parse(const TokenizedFile &file, ParseReport *out_report)
     RG_ASSERT(!current_func);
 
     // Fix up foward calls
-    for (const ForwardCall &call: forward_calls) {
-        ir[call.offset].u.i = call.func->inst_idx;
+    for (const ForwardCall &fcall: forward_calls) {
+        ir[fcall.offset].u.i = fcall.func->inst_idx;
     }
     forward_calls.Clear();
 
@@ -521,7 +521,7 @@ bool ParserImpl::ParseStatement()
 {
     bool has_return = false;
 
-    src->lines.Append({tokens[pos].line, ir.len});
+    src->lines.Append({ir.len, tokens[pos].line});
 
     switch (tokens[pos].kind) {
         case TokenKind::EndOfLine: { pos++; } break;
@@ -897,8 +897,11 @@ void ParserImpl::ParseWhile()
     Size while_pos = ++pos;
     int32_t while_line = tokens[pos].line;
 
-    // Parse expression. We'll do it again at the end because we want to put a copy after
-    // the loop body. The IR code will look roughly like if (cond) { do { ... } while (cond) }.
+    // Parse expression. We'll make a copy after the loop body so that the IR code looks
+    // roughly like if (cond) { do { ... } while (cond) }.
+    Size condition_idx = ir.len;
+    Size condition_fcall_idx = forward_calls.len;
+    Size condition_line_idx = src->lines.len;
     ParseCondition();
 
     Size branch_idx = ir.len;
@@ -928,24 +931,18 @@ void ParserImpl::ParseWhile()
         ir[jump_idx].u.i = ir.len - jump_idx;
     }
 
-    // Parse the condition again. We could copy the IR instead but this implies a bunch of
-    // annoying fixups (forward calls, IR/line map, etc.). It is easier and less fragile
-    // this way, even if a bit slower. Don't show errors again though!
-    {
-        RG_DEFER_C(prev_pos = pos,
-                   prev_errors = show_errors) {
-            pos = prev_pos;
-            show_errors = prev_errors;
-        };
-
-        pos = while_pos;
-        show_errors = false;
-
-        if (src->lines[src->lines.len - 1].line != while_line) {
-            src->lines.Append({while_line, ir.len});
-        }
-        ParseCondition();
+    // Copy the condition expression, and all the related data: forward calls, IR/line map
+    for (Size i = condition_fcall_idx; i < forward_calls.len &&
+                                       forward_calls[i].offset < branch_idx; i++) {
+        const ForwardCall &fcall = forward_calls[i];
+        forward_calls.Append({ir.len + (fcall.offset - condition_idx), fcall.func});
     }
+    for (Size i = condition_line_idx; i < src->lines.len &&
+                                      src->lines[i].first_idx < branch_idx; i++) {
+        const SourceInfo::LineInfo &line = src->lines[i];
+        src->lines.Append({ir.len + (line.first_idx - condition_idx), line.line});
+    }
+    ir.Append(ir.Take(condition_idx, branch_idx - condition_idx));
 
     ir.Append({Opcode::BranchIfTrue, {.i = branch_idx - ir.len + 1}});
     ir[branch_idx].u.i = ir.len - branch_idx;
@@ -1288,10 +1285,11 @@ Type ParserImpl::ParseExpression()
                               TokenKindNames[(int)tokens[pos - 1].kind]);
                     goto error;
                 } else if (RG_UNLIKELY(expect_value || parentheses)) {
-                    if (RG_LIKELY(tok.kind == TokenKind::EndOfLine)) {
-                        src->lines.Append({tok.line + 1, ir.len});
+                    pos--;
+                    if (RG_LIKELY(SkipNewLines())) {
                         continue;
                     } else {
+                        pos++;
                         goto unexpected;
                     }
                 } else {
@@ -1974,14 +1972,18 @@ bool ParserImpl::PeekToken(TokenKind kind)
     return match;
 }
 
-void ParserImpl::SkipNewLines()
+bool ParserImpl::SkipNewLines()
 {
     if (MatchToken(TokenKind::EndOfLine)) {
         while (MatchToken(TokenKind::EndOfLine));
 
         if (RG_LIKELY(pos < tokens.len)) {
-            src->lines.Append({tokens[pos].line, ir.len});
+            src->lines.Append({ir.len, tokens[pos].line});
         }
+
+        return true;
+    } else {
+        return false;
     }
 }
 

@@ -63,8 +63,8 @@ struct Instruction {
 
 struct SourceInfo {
     struct LineInfo {
-        int32_t line;
         Size first_idx;
+        int32_t line;
     };
 
     const char *filename;
