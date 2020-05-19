@@ -114,9 +114,10 @@ private:
 
     bool ConsumeToken(TokenKind kind);
     const char *ConsumeIdentifier();
-
     bool MatchToken(TokenKind kind);
     bool PeekToken(TokenKind kind);
+
+    void SkipNewLines();
 
     const char *InternString(const char *str);
 
@@ -441,7 +442,7 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
         ConsumeToken(TokenKind::LeftParenthesis);
         if (!MatchToken(TokenKind::RightParenthesis)) {
             do {
-                while (MatchToken(TokenKind::EndOfLine));
+                SkipNewLines();
 
                 FunctionInfo::Parameter param = {};
 
@@ -458,7 +459,7 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
                 proto->ret_pop += (param.type != Type::Null);
             } while (MatchToken(TokenKind::Comma));
 
-            while (MatchToken(TokenKind::EndOfLine));
+            SkipNewLines();
             ConsumeToken(TokenKind::RightParenthesis);
         }
 
@@ -638,7 +639,7 @@ void ParserImpl::ParseFunction()
         Size stack_offset = -2 - func->params.len;
 
         do {
-            while (MatchToken(TokenKind::EndOfLine));
+            SkipNewLines();
 
             VariableInfo *var = program->variables.AppendDefault();
 
@@ -672,7 +673,7 @@ void ParserImpl::ParseFunction()
             }
         } while (MatchToken(TokenKind::Comma));
 
-        while (MatchToken(TokenKind::EndOfLine));
+        SkipNewLines();
         ConsumeToken(TokenKind::RightParenthesis);
     }
 
@@ -787,17 +788,17 @@ void ParserImpl::ParseLet()
     }
 
     if (MatchToken(TokenKind::Assign)) {
-        while (MatchToken(TokenKind::EndOfLine));
+        SkipNewLines();
 
         var->type = ParseExpression();
     } else {
         ConsumeToken(TokenKind::Colon);
-        while (MatchToken(TokenKind::EndOfLine));
+        SkipNewLines();
 
         var->type = ParseType();
 
         if (MatchToken(TokenKind::Assign)) {
-            while (MatchToken(TokenKind::EndOfLine));
+            SkipNewLines();
 
             Type type2 = ParseExpression();
 
@@ -893,8 +894,8 @@ bool ParserImpl::ParseIf()
 
 void ParserImpl::ParseWhile()
 {
-    int32_t while_line = tokens[pos].line;
     Size while_pos = ++pos;
+    int32_t while_line = tokens[pos].line;
 
     // Parse expression. We'll do it again at the end because we want to put a copy after
     // the loop body. The IR code will look roughly like if (cond) { do { ... } while (cond) }.
@@ -1708,7 +1709,7 @@ bool ParserImpl::ParseCall(const char *name)
 
     if (!MatchToken(TokenKind::RightParenthesis)) {
         do {
-            while (MatchToken(TokenKind::EndOfLine));
+            SkipNewLines();
 
             if (RG_UNLIKELY(!args.Available())) {
                 MarkError(pos, "Functions cannot take more than %1 arguments", RG_LEN(args.data));
@@ -1717,7 +1718,7 @@ bool ParserImpl::ParseCall(const char *name)
             args.Append({nullptr, ParseExpression()});
         } while (MatchToken(TokenKind::Comma));
 
-        while (MatchToken(TokenKind::EndOfLine));
+        SkipNewLines();
         ConsumeToken(TokenKind::RightParenthesis);
     }
 
@@ -1971,6 +1972,17 @@ bool ParserImpl::PeekToken(TokenKind kind)
 {
     bool match = pos < tokens.len && tokens[pos].kind == kind;
     return match;
+}
+
+void ParserImpl::SkipNewLines()
+{
+    if (MatchToken(TokenKind::EndOfLine)) {
+        while (MatchToken(TokenKind::EndOfLine));
+
+        if (RG_LIKELY(pos < tokens.len)) {
+            src->lines.Append({tokens[pos].line, ir.len});
+        }
+    }
 }
 
 const char *ParserImpl::InternString(const char *str)
