@@ -10,6 +10,7 @@ namespace RG {
 
 class VirtualMachine;
 
+// Keep ordering in sync with Push* opcodes!
 enum class PrimitiveType {
     Null,
     Bool,
@@ -27,12 +28,19 @@ static const char *const PrimitiveTypeNames[] = {
     "Type"
 };
 
+struct TypeInfo {
+    const char *signature;
+    PrimitiveType primitive;
+
+    RG_HASHTABLE_HANDLER(TypeInfo, signature);
+};
+
 union Value {
     bool b;
     int64_t i;
     double d;
     const char *str;
-    PrimitiveType type;
+    const TypeInfo *type;
 };
 
 enum class Opcode {
@@ -55,7 +63,7 @@ struct Instruction {
                    // Call, Return, Exit
         double d; // PushFloat
         const char *str; // PushString
-        PrimitiveType type; // PushType
+        const TypeInfo *type; // PushType
 
         uint64_t payload; // CallNative, Print
     } u;
@@ -77,7 +85,7 @@ typedef Value NativeFunction(VirtualMachine *vm, Span<const Value> args);
 struct FunctionInfo {
     struct Parameter {
         const char *name;
-        PrimitiveType type;
+        const TypeInfo *type;
     };
 
     const char *name;
@@ -89,7 +97,7 @@ struct FunctionInfo {
     LocalArray<Parameter, 16> params;
     bool variadic;
     Size ret_pop;
-    PrimitiveType ret_type;
+    const TypeInfo *ret_type;
 
     Size inst_idx; // IR
     bool tre;
@@ -107,7 +115,7 @@ struct FunctionInfo {
 
 struct VariableInfo {
     const char *name;
-    PrimitiveType type;
+    const TypeInfo *type;
     bool mut;
 
     bool global;
@@ -122,6 +130,9 @@ struct VariableInfo {
 struct Program {
     HeapArray<Instruction> ir;
     HeapArray<SourceInfo> sources;
+
+    BucketArray<TypeInfo> types;
+    HashTable<const char *, TypeInfo *> types_map;
 
     BucketArray<FunctionInfo> functions;
     HashTable<const char *, FunctionInfo *> functions_map;

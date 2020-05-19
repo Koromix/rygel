@@ -420,14 +420,14 @@ bool VirtualMachine::Run()
         }
 
         CASE(EqualType): {
-            PrimitiveType type1 = stack[stack.len - 2].type;
-            PrimitiveType type2 = stack[stack.len - 1].type;
+            const TypeInfo *type1 = stack[stack.len - 2].type;
+            const TypeInfo *type2 = stack[stack.len - 1].type;
             stack[--stack.len - 1].b = (type1 == type2);
             DISPATCH(++pc);
         }
         CASE(NotEqualType): {
-            PrimitiveType type1 = stack[stack.len - 2].type;
-            PrimitiveType type2 = stack[stack.len - 1].type;
+            const TypeInfo *type1 = stack[stack.len - 2].type;
+            const TypeInfo *type2 = stack[stack.len - 1].type;
             stack[--stack.len - 1].b = (type1 != type2);
             DISPATCH(++pc);
         }
