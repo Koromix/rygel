@@ -90,7 +90,6 @@ private:
     void ParseWhile();
     void ParseFor();
 
-    bool ParseCondition();
     void ParseBreak();
     void ParseContinue();
 
@@ -103,6 +102,7 @@ private:
     bool ParseCall(const char *name);
     void EmitIntrinsic(const char *name, Size call_idx, Span<const FunctionInfo::Parameter> args);
     void EmitLoad(const VariableInfo &var);
+    bool ParseExpressionOfType(PrimitiveType type);
 
     void DiscardResult(PrimitiveType type);
 
@@ -800,10 +800,11 @@ void ParserImpl::ParseLet()
         if (MatchToken(TokenKind::Assign)) {
             SkipNewLines();
 
+            Size expr_pos = pos;
             PrimitiveType type2 = ParseExpression();
 
             if (RG_UNLIKELY(type2 != var->type)) {
-                MarkError(var_pos + 3, "Cannot assign %1 value to variable '%2' (defined as %3)",
+                MarkError(expr_pos, "Cannot assign %1 value to variable '%2' (defined as %3)",
                           PrimitiveTypeNames[(int)type2], var->name, PrimitiveTypeNames[(int)var->type]);
             }
         } else {
@@ -836,7 +837,7 @@ bool ParserImpl::ParseIf()
 {
     pos++;
 
-    ParseCondition();
+    ParseExpressionOfType(PrimitiveType::Bool);
 
     Size branch_idx = ir.len;
     ir.Append({Opcode::BranchIfFalse});
@@ -860,7 +861,7 @@ bool ParserImpl::ParseIf()
                 ir[branch_idx].u.i = ir.len - branch_idx;
 
                 if (MatchToken(TokenKind::If)) {
-                    ParseCondition();
+                    ParseExpressionOfType(PrimitiveType::Bool);
 
                     if (RG_LIKELY(ConsumeToken(TokenKind::EndOfLine))) {
                         branch_idx = ir.len;
@@ -901,7 +902,7 @@ void ParserImpl::ParseWhile()
     Size condition_idx = ir.len;
     Size condition_fcall_idx = forward_calls.len;
     Size condition_line_idx = src->lines.len;
-    ParseCondition();
+    ParseExpressionOfType(PrimitiveType::Bool);
 
     Size branch_idx = ir.len;
     ir.Append({Opcode::BranchIfFalse});
@@ -983,27 +984,16 @@ void ParserImpl::ParseFor()
         return;
     }
 
-    PrimitiveType type1;
-    PrimitiveType type2;
     bool inclusive;
     ConsumeToken(TokenKind::In);
-    type1 = ParseExpression();
+    ParseExpressionOfType(PrimitiveType::Int);
     if (MatchToken(TokenKind::DotDotDot)) {
         inclusive = false;
     } else {
         ConsumeToken(TokenKind::DotDot);
         inclusive = true;
     }
-    type2 = ParseExpression();
-
-    if (RG_UNLIKELY(type1 != PrimitiveType::Int)) {
-        MarkError(for_pos + 3, "Start value must be Int, not %1", PrimitiveTypeNames[(int)type1]);
-        return;
-    }
-    if (RG_UNLIKELY(type2 != PrimitiveType::Int)) {
-        MarkError(for_pos + 3, "End value must be Int, not %1", PrimitiveTypeNames[(int)type2]);
-        return;
-    }
+    ParseExpressionOfType(PrimitiveType::Int);
 
     // Make sure start and end value remain on the stack
     var_offset += 3;
@@ -1057,19 +1047,6 @@ void ParserImpl::ParseFor()
     EmitPop(3);
     DestroyVariables(1);
     var_offset -= 3;
-}
-
-bool ParserImpl::ParseCondition()
-{
-    Size cond_pos = pos;
-
-    PrimitiveType type = ParseExpression();
-    if (RG_UNLIKELY(type != PrimitiveType::Bool)) {
-        MarkError(cond_pos, "Cannot implicitly convert %1 result to Bool condition", PrimitiveTypeNames[(int)type]);
-        return false;
-    }
-
-    return true;
 }
 
 void ParserImpl::ParseBreak()
@@ -1820,6 +1797,20 @@ void ParserImpl::EmitIntrinsic(const char *name, Size call_idx, Span<const Funct
 
         ir.Append({Opcode::PushType, {.type = args[0].type}});
     }
+}
+
+bool ParserImpl::ParseExpressionOfType(PrimitiveType type)
+{
+    Size expr_pos = pos;
+
+    PrimitiveType type2 = ParseExpression();
+    if (RG_UNLIKELY(type2 != type)) {
+        MarkError(expr_pos, "Expected expression result type to be %1, not %2",
+                  PrimitiveTypeNames[(int)type], PrimitiveTypeNames[(int)type2]);
+        return false;
+    }
+
+    return true;
 }
 
 void ParserImpl::DiscardResult(PrimitiveType type)
