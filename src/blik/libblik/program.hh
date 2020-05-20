@@ -96,7 +96,6 @@ struct FunctionInfo {
 
     LocalArray<Parameter, 16> params;
     bool variadic;
-    Size ret_pop;
     const TypeInfo *ret_type;
 
     Size inst_idx; // IR

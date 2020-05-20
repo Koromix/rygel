@@ -47,6 +47,10 @@ bool VirtualMachine::Run()
 #endif
 
     LOOP {
+        CASE(PushNull): {
+            stack.AppendDefault();
+            DISPATCH(++pc);
+        }
         CASE(PushBool): {
             stack.Append({.b = inst->u.b});
             DISPATCH(++pc);
@@ -469,14 +473,6 @@ bool VirtualMachine::Run()
             stack[stack.len - 1] = ret;
             DISPATCH(++pc);
         }
-        CASE(ReturnNull): {
-            RG_ASSERT(stack.len == bp);
-
-            stack.len = bp - inst->u.i - 2;
-            pc = stack.ptr[bp - 2].i;
-            bp = stack.ptr[bp - 1].i;
-            DISPATCH(++pc);
-        }
         CASE(Invoke): {
             RG_ASSERT(stack.len == bp);
 
@@ -497,25 +493,6 @@ bool VirtualMachine::Run()
 
             DISPATCH(++pc);
         }
-        CASE(InvokeNull): {
-            RG_ASSERT(stack.len == bp);
-
-            std::function<NativeFunction> *native = (std::function<NativeFunction> *)(inst->u.payload & 0x1FFFFFFFFFFFFFFull);
-            Size ret_pop = (Size)(inst->u.payload >> 57) & 0x3F;
-
-            Span<const Value> args = stack.Take(stack.len - ret_pop - 2, ret_pop);
-
-            (*native)(this, args);
-            stack.len -= ret_pop + 2;
-
-            pc = stack.ptr[bp - 2].i;
-            bp = stack.ptr[bp - 1].i;
-
-            if (RG_UNLIKELY(!run))
-                return !error;
-
-            DISPATCH(++pc);
-        }
 
         // This will be removed once we get functions, but in the mean time
         // I need to output things somehow!
@@ -524,10 +501,9 @@ bool VirtualMachine::Run()
             uint64_t payload = inst->u.payload;
 
             Size count = (Size)(payload & 0x1F);
-            Size pop = (Size)((payload >> 5) & 0x1F);
-            payload >>= 10;
+            payload >>= 5;
 
-            Size stack_offset = stack.len - pop;
+            Size stack_offset = stack.len - count;
             for (Size i = 0; i < count; i++) {
                 PrimitiveType type = (PrimitiveType)(payload & 0x7);
                 payload >>= 3;
@@ -538,14 +514,19 @@ bool VirtualMachine::Run()
                     case PrimitiveType::Int: { Print("%1", stack[stack_offset++].i); } break;
                     case PrimitiveType::Float: { Print("%1", stack[stack_offset++].d); } break;
                     case PrimitiveType::String: { Print("%1", stack[stack_offset++].str); } break;
-                    case PrimitiveType::Type: { Print("%1", PrimitiveTypeNames[(int)stack[stack_offset++].type]); } break;
+                    case PrimitiveType::Type: { Print("%1", stack[stack_offset++].type->signature); } break;
                 }
             }
             if (inst->code == Opcode::PrintLn) {
                 PrintLn();
             }
 
-            stack.len -= pop;
+            // Return null
+            if (count) {
+                stack.len -= count - 1;
+            } else {
+                stack.AppendDefault();
+            }
 
             DISPATCH(++pc);
         }
@@ -564,7 +545,7 @@ bool VirtualMachine::Run()
         CASE(End): {
             pc++;
 
-            RG_ASSERT(stack.len == program->end_stack_len || !inst->u.b);
+            RG_ASSERT(stack.len == program->end_stack_len);
             return true;
         }
     }
@@ -637,7 +618,7 @@ void VirtualMachine::DumpInstruction() const
         case Opcode::PushInt: { LogDebug("[0x%1] PushInt %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case Opcode::PushFloat: { LogDebug("[0x%1] PushFloat %2", FmtHex(pc).Pad0(-5), inst.u.d); } break;
         case Opcode::PushString: { LogDebug("[0x%1] PushString %2", FmtHex(pc).Pad0(-5), inst.u.str); } break;
-        case Opcode::PushType: { LogDebug("[0x%1] PushType %2", FmtHex(pc).Pad0(-5), TypeNames[(int)inst.u.type]); } break;
+        case Opcode::PushType: { LogDebug("[0x%1] PushType %2", FmtHex(pc).Pad0(-5), inst.u.type->signature); } break;
         case Opcode::Pop: { LogDebug("[0x%1] Pop %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
         case Opcode::LoadBool: { LogDebug("[0x%1] LoadBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
@@ -675,9 +656,7 @@ void VirtualMachine::DumpInstruction() const
 
         case Opcode::Call: { LogDebug("[0x%1] Call 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.i).Pad0(-5)); } break;
         case Opcode::Return: { LogDebug("[0x%1] Return %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::ReturnNull: { LogDebug("[0x%1] ReturnNull %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case Opcode::Invoke: { LogDebug("[0x%1] Invoke 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.payload & 0x1FFFFFFFFFFFFFFull).Pad0(-5)); } break;
-        case Opcode::InvokeNull: { LogDebug("[0x%1] InvokeNull 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.payload & 0x1FFFFFFFFFFFFFFull).Pad0(-5)); } break;
 
         case Opcode::Print: { LogDebug("[0x%1] Print %2", FmtHex(pc).Pad0(-5), inst.u.payload & 0x1F); } break;
 

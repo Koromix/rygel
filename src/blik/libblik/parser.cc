@@ -104,7 +104,7 @@ private:
     void EmitLoad(const VariableInfo &var);
     bool ParseExpressionOfType(const TypeInfo *type);
 
-    void DiscardResult(const TypeInfo *type);
+    void DiscardResult();
 
     void EmitPop(int64_t count);
     void EmitReturn();
@@ -343,7 +343,6 @@ void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction
                 RG_ASSERT(success);
 
                 func->params.Append({"", GetBasicType(primitive)});
-                func->ret_pop += (primitive != PrimitiveType::Null);
             }
 
             ptr += len;
@@ -373,7 +372,7 @@ void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction
 
         uint64_t payload = 0;
 
-        payload |= (uint64_t)func->ret_pop << 57;
+        payload |= (uint64_t)func->params.len << 57;
         payload |= (uint64_t)&func->native & 0x1FFFFFFFFFFFFFFull;
 
         // Jump over consecutively defined functions in one go
@@ -385,7 +384,7 @@ void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction
         }
 
         func->inst_idx = ir.len;
-        ir.Append({func->ret_type->primitive != PrimitiveType::Null ? Opcode::Invoke : Opcode::InvokeNull, {.payload = payload}});
+        ir.Append({Opcode::Invoke, {.payload = payload}});
     }
 
     // Publish it!
@@ -471,8 +470,6 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
                 if (RG_LIKELY(proto->params.Available())) {
                     proto->params.Append(param);
                 }
-
-                proto->ret_pop += (param.type->primitive != PrimitiveType::Null);
             } while (MatchToken(TokenKind::Comma));
 
             SkipNewLines();
@@ -496,7 +493,7 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
                 Fmt(&buf, "%1%2", i ? ", " : "", param.type->signature);
             }
             Fmt(&buf, ")");
-            if (proto->ret_type->primitive != PrimitiveType::Null) {
+            if (proto->ret_type != GetBasicType(PrimitiveType::Null)) {
                 Fmt(&buf, ": %1", proto->ret_type->signature);
             }
 
@@ -593,8 +590,8 @@ bool ParserImpl::ParseStatement()
         } break;
 
         default: {
-            const TypeInfo *type = ParseExpression();
-            DiscardResult(type);
+            ParseExpression();
+            DiscardResult();
 
             show_errors |= ConsumeToken(TokenKind::EndOfLine);
         } break;
@@ -617,8 +614,8 @@ bool ParserImpl::ParseDo()
         ParseContinue();
         return false;
     } else {
-        const TypeInfo *type = ParseExpression();
-        DiscardResult(type);
+        ParseExpression();
+        DiscardResult();
 
         return false;
     }
@@ -742,7 +739,8 @@ void ParserImpl::ParseFunction()
     }
 
     if (!has_return) {
-        if (func->ret_type->primitive == PrimitiveType::Null) {
+        if (func->ret_type == GetBasicType(PrimitiveType::Null)) {
+            ir.Append({Opcode::PushNull});
             EmitReturn();
         } else {
             MarkError(func_pos, "Some code paths do not return a value in function '%1'", func->name);
@@ -827,7 +825,7 @@ void ParserImpl::ParseLet()
             }
         } else {
             switch (var->type->primitive) {
-                case PrimitiveType::Null: {} break;
+                case PrimitiveType::Null: { ir.Append({Opcode::PushNull}); } break;
                 case PrimitiveType::Bool: { ir.Append({Opcode::PushBool, {.b = false}}); } break;
                 case PrimitiveType::Int: { ir.Append({Opcode::PushInt, {.i = 0}}); } break;
                 case PrimitiveType::Float: { ir.Append({Opcode::PushFloat, {.d = 0.0}}); } break;
@@ -838,11 +836,8 @@ void ParserImpl::ParseLet()
     }
 
     var->global = !current_func;
-    var->offset = var_offset;
+    var->offset = var_offset++;
     var->defined_idx = ir.len;
-
-    // Null values don't actually exist
-    var_offset += (var->type->primitive != PrimitiveType::Null);
 
     // Expressions involving this variable won't issue (visible) errors
     // and will be marked as invalid too.
@@ -1224,7 +1219,10 @@ const TypeInfo *ParserImpl::ParseExpression()
             expect_value = false;
 
             switch (tok.kind) {
-                case TokenKind::Null: { stack.Append({GetBasicType(PrimitiveType::Null)}); } break;
+                case TokenKind::Null: {
+                    ir.Append({Opcode::PushNull});
+                    stack.Append({GetBasicType(PrimitiveType::Null)});
+                } break;
                 case TokenKind::Bool: {
                     ir.Append({Opcode::PushBool, {.b = tok.u.b}});
                     stack.Append({GetBasicType(PrimitiveType::Bool)});
@@ -1679,7 +1677,7 @@ void ParserImpl::EmitLoad(const VariableInfo &var)
         }
 
         switch (var.type->primitive) {
-            case PrimitiveType::Null: {} break;
+            case PrimitiveType::Null: { ir.Append({Opcode::PushNull}); } break;
             case PrimitiveType::Bool: { ir.Append({Opcode::LoadGlobalBool, {.i = var.offset}}); } break;
             case PrimitiveType::Int: { ir.Append({Opcode::LoadGlobalInt, {.i = var.offset}}); } break;
             case PrimitiveType::Float: { ir.Append({Opcode::LoadGlobalFloat, {.i = var.offset}});} break;
@@ -1688,7 +1686,7 @@ void ParserImpl::EmitLoad(const VariableInfo &var)
         }
     } else {
         switch (var.type->primitive) {
-            case PrimitiveType::Null: {} break;
+            case PrimitiveType::Null: { ir.Append({Opcode::PushNull}); } break;
             case PrimitiveType::Bool: { ir.Append({Opcode::LoadBool, {.i = var.offset}}); } break;
             case PrimitiveType::Int: { ir.Append({Opcode::LoadInt, {.i = var.offset}}); } break;
             case PrimitiveType::Float: { ir.Append({Opcode::LoadFloat, {.i = var.offset}});} break;
@@ -1783,13 +1781,10 @@ void ParserImpl::EmitIntrinsic(const char *name, Size call_idx, Span<const Funct
         bool println = TestStr(name, "printLn");
 
         uint64_t payload = 0;
-        int offset = 0;
         for (Size i = args.len - 1; i >= 0; i--) {
             payload = (payload << 3) | (int)args[i].type->primitive;
-            offset += (args[i].type->primitive != PrimitiveType::Null);
         }
-        payload = (payload << 5) | (offset);
-        payload = (payload << 5) | (args.len);
+        payload = (payload << 5) | args.len;
 
         ir.Append({println ? Opcode::PrintLn : Opcode::Print, {.payload = payload}});
     } else if (TestStr(name, "intToFloat")) {
@@ -1825,9 +1820,9 @@ bool ParserImpl::ParseExpressionOfType(const TypeInfo *type)
     return true;
 }
 
-void ParserImpl::DiscardResult(const TypeInfo *type)
+void ParserImpl::DiscardResult()
 {
-    if (type != GetBasicType(PrimitiveType::Null) && ir.len >= 1) {
+    if (ir.len >= 1) {
         switch (ir[ir.len - 1].code) {
             case Opcode::LoadBool:
             case Opcode::LoadInt:
@@ -1874,7 +1869,7 @@ void ParserImpl::EmitReturn()
             const FunctionInfo::Parameter &param = current_func->params[i];
 
             switch (param.type->primitive) {
-                case PrimitiveType::Null: {} break;
+                case PrimitiveType::Null: { stack_offset--; } break;
                 case PrimitiveType::Bool: { ir.Append({Opcode::StoreBool, {.i = --stack_offset}}); } break;
                 case PrimitiveType::Int: { ir.Append({Opcode::StoreInt, {.i = --stack_offset}}); } break;
                 case PrimitiveType::Float: { ir.Append({Opcode::StoreFloat, {.i = --stack_offset}}); } break;
@@ -1903,7 +1898,7 @@ void ParserImpl::EmitReturn()
             EmitPop(pop);
         }
 
-        ir.Append({current_func->ret_type->primitive == PrimitiveType::Null ? Opcode::ReturnNull : Opcode::Return, {.i = current_func->ret_pop}});
+        ir.Append({Opcode::Return, {.i = current_func->params.len}});
     }
 }
 

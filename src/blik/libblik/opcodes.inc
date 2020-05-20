@@ -7,6 +7,7 @@
 #endif
 
 // Immediate values
+OPCODE(PushNull)
 OPCODE(PushBool)
 OPCODE(PushInt)
 OPCODE(PushFloat)
@@ -99,9 +100,7 @@ OPCODE(SkipIfFalse)
 // Functions
 OPCODE(Call)
 OPCODE(Return)
-OPCODE(ReturnNull)
 OPCODE(Invoke)
-OPCODE(InvokeNull)
 
 // Intrinsics
 OPCODE(Print)
