@@ -309,9 +309,10 @@ void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction
 {
     FunctionInfo *func = program->functions.AppendDefault();
 
-    const char *ptr = signature;
+    char *ptr = DuplicateString(signature, &program->str_alloc).ptr;
+    func->signature = ptr;
 
-    // Name and signature
+    // Name
     {
         Size len = strcspn(ptr, "()");
         Span<const char> func_name = TrimStr(MakeSpan(ptr, len));
@@ -319,7 +320,6 @@ void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction
         func->name = DuplicateString(func_name, &program->str_alloc).ptr;
         ptr += len;
     }
-    func->signature = DuplicateString(signature, &program->str_alloc).ptr;
 
     func->intrinsic = !native;
     func->native = native;
@@ -329,40 +329,36 @@ void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction
     if (ptr[1] != ')') {
         do {
             Size len = strcspn(++ptr, ",)");
-            Span<const char> type_name = TrimStr(MakeSpan(ptr, len));
+            RG_ASSERT(ptr[len]);
 
-            if (type_name == "...") {
-                RG_ASSERT(ptr[len] == ')');
+            char c = ptr[len];
+            ptr[len] = 0;
+
+            if (TestStr(ptr, "...")) {
+                RG_ASSERT(c == ')');
                 RG_ASSERT(func->intrinsic);
 
                 func->variadic = true;
             } else {
-                PrimitiveType primitive = PrimitiveType::Null;
+                const TypeInfo *type = program->types_map.FindValue(ptr, nullptr);
+                RG_ASSERT(type);
 
-                bool success = OptionToEnum(PrimitiveTypeNames, type_name, &primitive);
-                RG_ASSERT(success);
-
-                func->params.Append({"", GetBasicType(primitive)});
+                func->params.Append({"", type});
             }
 
+            ptr[len] = c;
             ptr += len;
-            RG_ASSERT(ptr[0]);
-        } while (ptr[0] != ')');
-
-        ptr++;
+        } while ((ptr++)[0] != ')');
     } else {
         ptr += 2;
     }
 
     // Return type
     if (ptr[0] == ':') {
-        Span<const char> type_name = TrimStr(Span<const char>(ptr + 1));
+        RG_ASSERT(ptr[1] == ' ');
 
-        PrimitiveType primitive;
-        bool success = OptionToEnum(PrimitiveTypeNames, type_name, &primitive);
-        RG_ASSERT(success);
-
-        func->ret_type = GetBasicType(primitive);
+        func->ret_type = program->types_map.FindValue(ptr + 2, nullptr);
+        RG_ASSERT(func->ret_type);
     } else {
         func->ret_type = GetBasicType(PrimitiveType::Null);
     }
@@ -392,6 +388,8 @@ void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction
         FunctionInfo *head = *program->functions_map.Append(func).first;
 
         if (head != func) {
+            RG_ASSERT(!head->variadic && !func->variadic);
+
             head->overload_prev->overload_next = func;
             func->overload_next = head;
             func->overload_prev = head->overload_prev;
@@ -400,7 +398,6 @@ void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction
 #ifndef NDEBUG
             do {
                 RG_ASSERT(head->intrinsic == func->intrinsic);
-                RG_ASSERT(head->variadic == func->variadic);
                 RG_ASSERT(!TestOverload(*head, func->params));
 
                 head = head->overload_next;
@@ -1097,17 +1094,6 @@ const TypeInfo *ParserImpl::ParseType()
 {
     Size type_pos = pos;
 
-    // Try basic type names first (fast path)
-    if (MatchToken(TokenKind::Identifier)) {
-        const char *type_name = tokens[pos - 1].u.str;
-
-        PrimitiveType primitive;
-        if (OptionToEnum(PrimitiveTypeNames, type_name, &primitive))
-            return GetBasicType(primitive);
-
-        pos--;
-    }
-
     // Parse type expression
     {
         const TypeInfo *type = ParseExpression();
@@ -1252,13 +1238,14 @@ const TypeInfo *ParserImpl::ParseExpression()
                             show_errors &= !poisons.Find(var);
                             EmitLoad(*var);
                         } else {
-                            PrimitiveType primitive;
-                            if (RG_UNLIKELY(!OptionToEnum(PrimitiveTypeNames, tok.u.str, &primitive))) {
+                            const TypeInfo *type = program->types_map.FindValue(tok.u.str, nullptr);
+
+                            if (RG_UNLIKELY(!type)) {
                                 MarkError(pos - 1, "Reference to unknown symbol '%1'", tok.u.str);
                                 goto error;
                             }
 
-                            ir.Append({Opcode::PushType, {.type = GetBasicType(primitive)}});
+                            ir.Append({Opcode::PushType, {.type = type}});
                             stack.Append({GetBasicType(PrimitiveType::Type)});
                         }
                     }
@@ -1714,6 +1701,7 @@ bool ParserImpl::ParseCall(const char *name)
         return false;
     }
 
+    // Parse arguments
     if (!MatchToken(TokenKind::RightParenthesis)) {
         do {
             SkipNewLines();
@@ -1735,7 +1723,7 @@ bool ParserImpl::ParseCall(const char *name)
         ConsumeToken(TokenKind::RightParenthesis);
     }
     if (func0->variadic) {
-        ir.Append({Opcode::PushInt, {.i = args.len}});
+        ir.Append({Opcode::PushInt, {.i = args.len - func0->params.len}});
     }
 
     // Find appropriate overload. Variadic functions cannot be overloaded but it
@@ -1763,6 +1751,7 @@ bool ParserImpl::ParseCall(const char *name)
         }
     }
 
+    // Emit intrinsic or call
     if (func->intrinsic) {
         EmitIntrinsic(name, call_idx, args);
     } else {
@@ -1928,18 +1917,18 @@ void ParserImpl::DestroyVariables(Size count)
     program->variables.RemoveLast(count);
 }
 
-bool ParserImpl::TestOverload(const FunctionInfo &proto, Span<const FunctionInfo::Parameter> params2)
+bool ParserImpl::TestOverload(const FunctionInfo &proto, Span<const FunctionInfo::Parameter> params)
 {
     if (proto.variadic) {
-        if (proto.params.len > params2.len)
+        if (proto.params.len > params.len)
             return false;
     } else {
-        if (proto.params.len != params2.len)
+        if (proto.params.len != params.len)
             return false;
     }
 
     for (Size i = 0; i < proto.params.len; i++) {
-        if (proto.params[i].type != params2[i].type)
+        if (proto.params[i].type != params[i].type)
             return false;
     }
 
