@@ -476,13 +476,16 @@ bool VirtualMachine::Run()
         CASE(Invoke): {
             RG_ASSERT(stack.len == bp);
 
-            std::function<NativeFunction> *native = (std::function<NativeFunction> *)(inst->u.payload & 0x1FFFFFFFFFFFFFFull);
-            Size ret_pop = (Size)(inst->u.payload >> 57) & 0x3F;
+            std::function<NativeFunction> *native =
+                (std::function<NativeFunction> *)(inst->u.payload & 0x1FFFFFFFFFFFFFFull);
 
-            Span<const Value> args = stack.Take(stack.len - ret_pop - 2, ret_pop);
+            Span<const Value> args;
+            args.len = (Size)(inst->u.payload >> 57) & 0x3F;
+            args.ptr = stack.end() - args.len - 2;
+
+            stack.len -= 1 + args.len;
 
             Value ret = (*native)(this, args);
-            stack.len -= ret_pop + 1;
 
             pc = stack.ptr[bp - 2].i;
             bp = stack.ptr[bp - 1].i;
@@ -498,23 +501,20 @@ bool VirtualMachine::Run()
         // I need to output things somehow!
         CASE(Print):
         CASE(PrintLn): {
-            uint64_t payload = inst->u.payload;
+            Span<const Value> args;
+            args.len = (Size)stack.ptr[stack.len - 1].i * 2;
+            args.ptr = stack.end() - 1 - args.len;
 
-            Size count = (Size)(payload & 0x1F);
-            payload >>= 5;
+            stack.len -= 1 + args.len;
 
-            Size stack_offset = stack.len - count;
-            for (Size i = 0; i < count; i++) {
-                PrimitiveType type = (PrimitiveType)(payload & 0x7);
-                payload >>= 3;
-
-                switch (type) {
+            for (Size i = 0; i < args.len; i += 2) {
+                switch (args[i + 1].type->primitive) {
                     case PrimitiveType::Null: { Print("null"); } break;
-                    case PrimitiveType::Bool: { Print("%1", stack[stack_offset++].b); } break;
-                    case PrimitiveType::Int: { Print("%1", stack[stack_offset++].i); } break;
-                    case PrimitiveType::Float: { Print("%1", stack[stack_offset++].d); } break;
-                    case PrimitiveType::String: { Print("%1", stack[stack_offset++].str); } break;
-                    case PrimitiveType::Type: { Print("%1", stack[stack_offset++].type->signature); } break;
+                    case PrimitiveType::Bool: { Print("%1", args[i].b); } break;
+                    case PrimitiveType::Int: { Print("%1", args[i].i); } break;
+                    case PrimitiveType::Float: { Print("%1", args[i].d); } break;
+                    case PrimitiveType::String: { Print("%1", args[i].str); } break;
+                    case PrimitiveType::Type: { Print("%1", args[i].type->signature); } break;
                 }
             }
             if (inst->code == Opcode::PrintLn) {
@@ -522,11 +522,7 @@ bool VirtualMachine::Run()
             }
 
             // Return null
-            if (count) {
-                stack.len -= count - 1;
-            } else {
-                stack.AppendDefault();
-            }
+            stack.AppendDefault();
 
             DISPATCH(++pc);
         }
@@ -657,8 +653,6 @@ void VirtualMachine::DumpInstruction() const
         case Opcode::Call: { LogDebug("[0x%1] Call 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.i).Pad0(-5)); } break;
         case Opcode::Return: { LogDebug("[0x%1] Return %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case Opcode::Invoke: { LogDebug("[0x%1] Invoke 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.payload & 0x1FFFFFFFFFFFFFFull).Pad0(-5)); } break;
-
-        case Opcode::Print: { LogDebug("[0x%1] Print %2", FmtHex(pc).Pad0(-5), inst.u.payload & 0x1F); } break;
 
         default: { LogDebug("[0x%1] %2", FmtHex(pc).Pad0(-5), OpcodeNames[(int)inst.code]); } break;
     }

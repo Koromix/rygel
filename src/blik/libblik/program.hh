@@ -65,7 +65,7 @@ struct Instruction {
         const char *str; // PushString
         const TypeInfo *type; // PushType
 
-        uint64_t payload; // CallNative, Print
+        uint64_t payload; // Invoke
     } u;
 };
 

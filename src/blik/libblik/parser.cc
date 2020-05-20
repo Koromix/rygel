@@ -400,6 +400,7 @@ void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction
 #ifndef NDEBUG
             do {
                 RG_ASSERT(head->intrinsic == func->intrinsic);
+                RG_ASSERT(head->variadic == func->variadic);
                 RG_ASSERT(!TestOverload(*head, func->params));
 
                 head = head->overload_next;
@@ -1721,13 +1722,24 @@ bool ParserImpl::ParseCall(const char *name)
                 MarkError(pos, "Functions cannot take more than %1 arguments", RG_LEN(args.data));
                 return false;
             }
-            args.Append({nullptr, ParseExpression()});
+
+            const TypeInfo *type = ParseExpression();
+
+            args.Append({nullptr, type});
+            if (func0->variadic && args.len > func0->params.len) {
+                ir.Append({Opcode::PushType, {.type = type}});
+            }
         } while (MatchToken(TokenKind::Comma));
 
         SkipNewLines();
         ConsumeToken(TokenKind::RightParenthesis);
     }
+    if (func0->variadic) {
+        ir.Append({Opcode::PushInt, {.i = args.len}});
+    }
 
+    // Find appropriate overload. Variadic functions cannot be overloaded but it
+    // does not hurt to use the same logic to check argument types.
     FunctionInfo *func = func0;
     while (!TestOverload(*func, args)) {
         func = func->overload_next;
@@ -1775,18 +1787,10 @@ bool ParserImpl::ParseCall(const char *name)
 
 void ParserImpl::EmitIntrinsic(const char *name, Size call_idx, Span<const FunctionInfo::Parameter> args)
 {
-    if (TestStr(name, "print") || TestStr(name, "printLn")) {
-        RG_STATIC_ASSERT(RG_LEN(FunctionInfo::params.data) < 19);
-
-        bool println = TestStr(name, "printLn");
-
-        uint64_t payload = 0;
-        for (Size i = args.len - 1; i >= 0; i--) {
-            payload = (payload << 3) | (int)args[i].type->primitive;
-        }
-        payload = (payload << 5) | args.len;
-
-        ir.Append({println ? Opcode::PrintLn : Opcode::Print, {.payload = payload}});
+    if (TestStr(name, "print")) {
+        ir.Append({Opcode::Print});
+    } else if (TestStr(name, "printLn")) {
+        ir.Append({Opcode::PrintLn});
     } else if (TestStr(name, "intToFloat")) {
         ir.Append({Opcode::IntToFloat});
     } else if (TestStr(name, "floatToInt")) {
@@ -1803,6 +1807,8 @@ void ParserImpl::EmitIntrinsic(const char *name, Size call_idx, Span<const Funct
         ir.RemoveFrom(call_idx);
 
         ir.Append({Opcode::PushType, {.type = args[0].type}});
+    } else {
+        RG_UNREACHABLE();
     }
 }
 
