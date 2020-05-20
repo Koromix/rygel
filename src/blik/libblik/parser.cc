@@ -1784,20 +1784,14 @@ void ParserImpl::EmitIntrinsic(const char *name, Size call_idx, Span<const Funct
 
         uint64_t payload = 0;
         int offset = 0;
-
-        if (println) {
-            ir.Append({Opcode::PushString, {.str = "\n"}});
-            payload = (int)PrimitiveType::String;
-        }
         for (Size i = args.len - 1; i >= 0; i--) {
             payload = (payload << 3) | (int)args[i].type->primitive;
             offset += (args[i].type->primitive != PrimitiveType::Null);
         }
+        payload = (payload << 5) | (offset);
+        payload = (payload << 5) | (args.len);
 
-        payload = (payload << 5) | (offset + println);
-        payload = (payload << 5) | (args.len + println);
-
-        ir.Append({Opcode::Print, {.payload = payload}});
+        ir.Append({println ? Opcode::PrintLn : Opcode::Print, {.payload = payload}});
     } else if (TestStr(name, "intToFloat")) {
         ir.Append({Opcode::IntToFloat});
     } else if (TestStr(name, "floatToInt")) {

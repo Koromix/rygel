@@ -105,6 +105,7 @@ OPCODE(InvokeNull)
 
 // Intrinsics
 OPCODE(Print)
+OPCODE(PrintLn)
 OPCODE(IntToFloat)
 OPCODE(FloatToInt)
 

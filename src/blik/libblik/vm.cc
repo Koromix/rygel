@@ -519,7 +519,8 @@ bool VirtualMachine::Run()
 
         // This will be removed once we get functions, but in the mean time
         // I need to output things somehow!
-        CASE(Print): {
+        CASE(Print):
+        CASE(PrintLn): {
             uint64_t payload = inst->u.payload;
 
             Size count = (Size)(payload & 0x1F);
@@ -539,6 +540,9 @@ bool VirtualMachine::Run()
                     case PrimitiveType::String: { Print("%1", stack[stack_offset++].str); } break;
                     case PrimitiveType::Type: { Print("%1", PrimitiveTypeNames[(int)stack[stack_offset++].type]); } break;
                 }
+            }
+            if (inst->code == Opcode::PrintLn) {
+                PrintLn();
             }
 
             stack.len -= pop;
