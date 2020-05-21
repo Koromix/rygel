@@ -10,6 +10,15 @@
 
 namespace RG {
 
+struct PrototypeInfo {
+    Size pos;
+
+    FunctionInfo *func;
+    Size body_pos;
+
+    RG_HASHTABLE_HANDLER(PrototypeInfo, pos);
+};
+
 struct ForwardCall {
     Size offset;
     const FunctionInfo *func;
@@ -43,11 +52,10 @@ class ParserImpl {
     SourceInfo *src;
 
     // Transient mappings
-    HashMap<Size, FunctionInfo *> functions_by_pos;
-    HashMap<const void *, Size> definitions_map;
-    HashSet<const void *> poisons;
-
     HeapArray<ForwardCall> forward_calls;
+    HashTable<Size, PrototypeInfo> prototypes_map;
+    HashMap<const void *, Size> definitions_map;
+    HashSet<const void *> poisoned_set;
 
     Size func_jump_idx = -1;
     FunctionInfo *current_func = nullptr;
@@ -264,8 +272,9 @@ bool ParserImpl::Parse(const TokenizedFile &file, ParseReport *out_report)
     show_hints = false;
 
     forward_calls.Clear();
-    functions_by_pos.Clear();
+    prototypes_map.Clear();
     definitions_map.Clear();
+    poisoned_set.Clear();
 
     // The caller may want to execute the code and then compile new code (e.g. REPL),
     // we can't ever try to reuse a jump that will not be executed!
@@ -412,44 +421,52 @@ void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction
 
 void ParserImpl::ParsePrototypes(Span<const Size> funcs)
 {
-    RG_ASSERT(!functions_by_pos.table.count);
+    RG_ASSERT(!prototypes_map.count);
     RG_ASSERT(pos == 0);
     RG_ASSERT(!src->lines.len);
 
-    // This is a preparse step, don't make any noise. And make sure nobody tries to
-    // call ParsePrototypes() ever again!
-    RG_DEFER {
+    // This is a preparse step, clean up main side effets
+    RG_DEFER_C(ir_len = ir.len,
+               lines_len = src->lines.len) {
         pos = 0;
-        valid = true;
-        show_errors = true;
-        src->lines.RemoveFrom(0);
+
+        ir.RemoveFrom(ir_len);
+        src->lines.RemoveFrom(lines_len);
     };
-    show_errors = false;
 
     for (Size i = 0; i < funcs.len; i++) {
         pos = funcs[i] + 1;
+        show_errors = true;
 
-        FunctionInfo *proto = program->functions.AppendDefault();
-        functions_by_pos.Append(pos, proto);
+        PrototypeInfo *proto = prototypes_map.SetDefault(pos);
+        FunctionInfo *func = program->functions.AppendDefault();
+        definitions_map.Append(func, pos);
 
-        definitions_map.Append(proto, pos);
-        proto->name = ConsumeIdentifier();
+        proto->pos = pos;
+        proto->func = func;
+
+        func->name = ConsumeIdentifier();
 
         // Insert in functions map
         {
-            std::pair<FunctionInfo **, bool> ret = program->functions_map.Append(proto);
+            std::pair<FunctionInfo **, bool> ret = program->functions_map.Append(func);
             FunctionInfo *proto0 = *ret.first;
 
             if (ret.second) {
                 proto0->overload_prev = proto0;
                 proto0->overload_next = proto0;
             } else {
-                proto0->overload_prev->overload_next = proto;
-                proto->overload_next = proto0;
-                proto->overload_prev = proto0->overload_prev;
-                proto0->overload_prev = proto;
+                proto0->overload_prev->overload_next = func;
+                func->overload_next = proto0;
+                func->overload_prev = proto0->overload_prev;
+                proto0->overload_prev = func;
             }
         }
+
+        // Clean up parameter variables once we're done
+        RG_DEFER_C(variables_len = program->variables.len) {
+            DestroyVariables(program->variables.len - variables_len);
+        };
 
         // Parameters
         ConsumeToken(TokenKind::LeftParenthesis);
@@ -457,16 +474,36 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
             do {
                 SkipNewLines();
 
-                FunctionInfo::Parameter param = {};
+                VariableInfo *var = program->variables.AppendDefault();
+                Size param_pos = pos;
 
-                MatchToken(TokenKind::Mut);
-                param.name = ConsumeIdentifier();
+                var->mut = MatchToken(TokenKind::Mut);
+                var->name = ConsumeIdentifier();
                 ConsumeToken(TokenKind::Colon);
-                param.type = ParseType();
+                var->type = ParseType();
 
-                // We'll show an error in ParseFunction()
-                if (RG_LIKELY(proto->params.Available())) {
-                    proto->params.Append(param);
+                std::pair<VariableInfo **, bool> ret = program->variables_map.Append(var);
+                if (RG_UNLIKELY(!ret.second)) {
+                    const VariableInfo *prev_var = *ret.first;
+                    var->shadow = prev_var;
+
+                    // Error messages for globals are issued in ParseFunction(), because at
+                    // this stage some globals (those issues from the same Parse call) may not
+                    // yet exist. Better issue all errors about that later.
+                    if (!prev_var->global) {
+                        MarkError(param_pos, "Parameter named '%1' already exists", var->name);
+                    }
+                }
+
+                if (RG_LIKELY(func->params.Available())) {
+                    FunctionInfo::Parameter *param = func->params.AppendDefault();
+                    definitions_map.Append(param, param_pos);
+
+                    param->name = var->name;
+                    param->type = var->type;
+                    param->mut = var->mut;
+                } else {
+                    MarkError(pos - 1, "Functions cannot have more than %1 parameters", RG_LEN(func->params.data));
                 }
             } while (MatchToken(TokenKind::Comma));
 
@@ -476,33 +513,34 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
 
         // Return type
         if (MatchToken(TokenKind::Colon)) {
-            proto->ret_type = ParseType();
+            func->ret_type = ParseType();
         } else {
-            proto->ret_type = GetBasicType(PrimitiveType::Null);
+            func->ret_type = GetBasicType(PrimitiveType::Null);
         }
 
         // Build signature (with parameter and return types)
         {
             HeapArray<char> buf(&program->str_alloc);
 
-            Fmt(&buf, "%1(", proto->name);
-            for (Size i = 0; i < proto->params.len; i++) {
-                const FunctionInfo::Parameter &param = proto->params[i];
+            Fmt(&buf, "%1(", func->name);
+            for (Size i = 0; i < func->params.len; i++) {
+                const FunctionInfo::Parameter &param = func->params[i];
                 Fmt(&buf, "%1%2", i ? ", " : "", param.type->signature);
             }
             Fmt(&buf, ")");
-            if (proto->ret_type != GetBasicType(PrimitiveType::Null)) {
-                Fmt(&buf, ": %1", proto->ret_type->signature);
+            if (func->ret_type != GetBasicType(PrimitiveType::Null)) {
+                Fmt(&buf, ": %1", func->ret_type->signature);
             }
 
-            proto->signature = buf.TrimAndLeak(1).ptr;
+            func->signature = buf.TrimAndLeak(1).ptr;
         }
 
-        // We don't know where it will live yet!
-        proto->inst_idx = -1;
+        proto->body_pos = pos;
 
-        proto->earliest_call_pos = RG_SIZE_MAX;
-        proto->earliest_call_idx = RG_SIZE_MAX;
+        // We don't know where it will live yet!
+        func->inst_idx = -1;
+        func->earliest_call_pos = RG_SIZE_MAX;
+        func->earliest_call_idx = RG_SIZE_MAX;
     }
 }
 
@@ -623,8 +661,10 @@ void ParserImpl::ParseFunction()
 {
     Size func_pos = ++pos;
 
-    FunctionInfo *func = functions_by_pos.FindValue(func_pos, nullptr);
-    RG_ASSERT(func);
+    const PrototypeInfo *proto = prototypes_map.Find(func_pos);
+    RG_ASSERT(proto);
+
+    FunctionInfo *func = proto->func;
 
     RG_DEFER_C(prev_func = current_func,
                prev_offset = var_offset) {
@@ -636,8 +676,7 @@ void ParserImpl::ParseFunction()
         current_func = prev_func;
     };
 
-    ConsumeToken(TokenKind::Identifier);
-
+    // Do safety checks we could not do in ParsePrototypes()
     if (RG_UNLIKELY(current_func)) {
         MarkError(func_pos, "Nested functions are not supported");
         HintError(definitions_map.FindValue(current_func, -1), "Previous function was started here and is still open");
@@ -646,53 +685,40 @@ void ParserImpl::ParseFunction()
     }
     current_func = func;
 
-    // Parameters
-    ConsumeToken(TokenKind::LeftParenthesis);
-    if (!MatchToken(TokenKind::RightParenthesis)) {
+    // Create parameter variables
+    {
         Size stack_offset = -2 - func->params.len;
 
-        do {
-            SkipNewLines();
-
+        for (const FunctionInfo::Parameter &param: func->params) {
             VariableInfo *var = program->variables.AppendDefault();
+            Size param_pos = definitions_map.FindValue(&param, -1);
+            definitions_map.Append(var, param_pos);
 
-            var->mut = MatchToken(TokenKind::Mut);
-            definitions_map.Append(var, pos);
-            var->name = ConsumeIdentifier();
+            var->name = param.name;
+            var->type = param.type;
+            var->mut = param.mut;
 
-            if (stack_offset >= -2) {
-                MarkError(pos - 1, "Functions cannot have more than %1 parameters", RG_LEN(func->params.data));
-            }
             var->offset = stack_offset++;
 
             std::pair<VariableInfo **, bool> ret = program->variables_map.Append(var);
             if (RG_UNLIKELY(!ret.second)) {
-               const VariableInfo *prev_var = *ret.first;
-               var->shadow = prev_var;
+                const VariableInfo *prev_var = *ret.first;
+                var->shadow = prev_var;
 
+                // We should already have issued an error message for the other case (duplicate
+                // parameter name) in ParsePrototypes().
                 if (prev_var->global) {
-                    MarkError(pos - 1, "Parameter '%1' is not allowed to hide global variable", var->name);
+                    MarkError(param_pos, "Parameter '%1' is not allowed to hide global variable", var->name);
                     HintDefinition(prev_var, "Global variable '%1' is defined here", prev_var->name);
                 } else {
-                    MarkError(pos - 1, "Parameter '%1' already exists", var->name);
+                    valid = false;
                 }
             }
 
-            ConsumeToken(TokenKind::Colon);
-            var->type = ParseType();
-
-            if (RG_UNLIKELY(!show_errors)) {
-                poisons.Append(var);
+            if (RG_UNLIKELY(poisoned_set.Find(&param))) {
+                poisoned_set.Append(var);
             }
-        } while (MatchToken(TokenKind::Comma));
-
-        SkipNewLines();
-        ConsumeToken(TokenKind::RightParenthesis);
-    }
-
-    // Return type
-    if (MatchToken(TokenKind::Colon)) {
-        ParseType();
+        }
     }
 
     // Check for incompatible function overloadings
@@ -717,6 +743,9 @@ void ParserImpl::ParseFunction()
             overload = overload->overload_next;
         }
     }
+
+    // Skip prototype
+    pos = proto->body_pos;
 
     // Jump over consecutively defined functions in one go
     if (func_jump_idx < 0 || ir[func_jump_idx].u.i < ir.len - func_jump_idx) {
@@ -840,7 +869,7 @@ void ParserImpl::ParseLet()
     // Expressions involving this variable won't issue (visible) errors
     // and will be marked as invalid too.
     if (RG_UNLIKELY(!show_errors)) {
-        poisons.Append(var);
+        poisoned_set.Append(var);
     }
 }
 
@@ -1235,7 +1264,7 @@ const TypeInfo *ParserImpl::ParseExpression()
                         const VariableInfo *var = program->variables_map.FindValue(tok.u.str, nullptr);
 
                         if (RG_LIKELY(var)) {
-                            show_errors &= !poisons.Find(var);
+                            show_errors &= !poisoned_set.Find(var);
                             EmitLoad(*var);
                         } else {
                             const TypeInfo *type = program->types_map.FindValue(tok.u.str, nullptr);
@@ -1911,7 +1940,7 @@ void ParserImpl::DestroyVariables(Size count)
             program->variables_map.Remove(ptr);
         }
 
-        poisons.Remove(&var);
+        poisoned_set.Remove(&var);
     }
 
     program->variables.RemoveLast(count);

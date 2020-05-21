@@ -86,6 +86,7 @@ struct FunctionInfo {
     struct Parameter {
         const char *name;
         const TypeInfo *type;
+        bool mut;
     };
 
     const char *name;
@@ -119,7 +120,7 @@ struct VariableInfo {
 
     bool global;
     Size offset; // Stack
-    Size defined_idx; // IR
+    Size defined_idx; // IR (for globals)
 
     const VariableInfo *shadow;
 
