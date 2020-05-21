@@ -847,7 +847,7 @@ void ParserImpl::ParseLet()
             const TypeInfo *type2 = ParseExpression();
 
             if (RG_UNLIKELY(type2 != var->type)) {
-                MarkError(expr_pos, "Cannot assign %1 value to variable '%2' (defined as %3)",
+                MarkError(expr_pos - 1, "Cannot assign %1 value to variable '%2' (defined as %3)",
                           type2->signature, var->name, var->type->signature);
             }
         } else {
