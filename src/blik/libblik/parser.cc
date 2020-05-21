@@ -1281,7 +1281,7 @@ const TypeInfo *ParserImpl::ParseExpression()
                             const TypeInfo *type = program->types_map.FindValue(tok.u.str, nullptr);
 
                             if (RG_UNLIKELY(!type)) {
-                                MarkError(pos - 1, "Reference to unknown symbol '%1'", tok.u.str);
+                                MarkError(pos - 1, "Reference to unknown identifier '%1'", tok.u.str);
                                 goto error;
                             }
 
