@@ -479,8 +479,6 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
 
                 var->mut = MatchToken(TokenKind::Mut);
                 var->name = ConsumeIdentifier();
-                ConsumeToken(TokenKind::Colon);
-                var->type = ParseType();
 
                 std::pair<VariableInfo **, bool> ret = program->variables_map.Append(var);
                 if (RG_UNLIKELY(!ret.second)) {
@@ -494,6 +492,9 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
                         MarkError(param_pos, "Parameter named '%1' already exists", var->name);
                     }
                 }
+
+                ConsumeToken(TokenKind::Colon);
+                var->type = ParseType();
 
                 if (RG_LIKELY(func->params.Available())) {
                     FunctionInfo::Parameter *param = func->params.AppendDefault();
@@ -838,7 +839,9 @@ void ParserImpl::ParseLet()
         ConsumeToken(TokenKind::Colon);
         SkipNewLines();
 
-        var->type = ParseType();
+        // Don't assign to var->type yet, so that ParseExpression() knows it
+        // cannot use this variable.
+        const TypeInfo *type = ParseType();
 
         if (MatchToken(TokenKind::Assign)) {
             SkipNewLines();
@@ -846,12 +849,12 @@ void ParserImpl::ParseLet()
             Size expr_pos = pos;
             const TypeInfo *type2 = ParseExpression();
 
-            if (RG_UNLIKELY(type2 != var->type)) {
+            if (RG_UNLIKELY(type2 != type)) {
                 MarkError(expr_pos - 1, "Cannot assign %1 value to variable '%2' (defined as %3)",
-                          type2->signature, var->name, var->type->signature);
+                          type2->signature, var->name, type->signature);
             }
         } else {
-            switch (var->type->primitive) {
+            switch (type->primitive) {
                 case PrimitiveType::Null: { ir.Append({Opcode::PushNull}); } break;
                 case PrimitiveType::Bool: { ir.Append({Opcode::PushBool, {.b = false}}); } break;
                 case PrimitiveType::Int: { ir.Append({Opcode::PushInt, {.i = 0}}); } break;
@@ -860,6 +863,8 @@ void ParserImpl::ParseLet()
                 case PrimitiveType::Type: { ir.Append({Opcode::PushType, {.type = GetBasicType(PrimitiveType::Null)}}); } break;
             }
         }
+
+        var->type = type;
     }
 
     var->global = !current_func;
@@ -1004,7 +1009,6 @@ void ParserImpl::ParseFor()
     for_pos += it->mut;
     definitions_map.Append(it, pos);
     it->name = ConsumeIdentifier();
-    it->type = GetBasicType(PrimitiveType::Int);
 
     it->offset = var_offset + 2;
 
@@ -1040,6 +1044,7 @@ void ParserImpl::ParseFor()
 
     // Put iterator value on the stack
     ir.Append({Opcode::LoadInt, {.i = it->offset - 2}});
+    it->type = GetBasicType(PrimitiveType::Int);
 
     Size body_idx = ir.len;
 
@@ -1265,7 +1270,13 @@ const TypeInfo *ParserImpl::ParseExpression()
 
                         if (RG_LIKELY(var)) {
                             show_errors &= !poisoned_set.Find(var);
-                            EmitLoad(*var);
+
+                            if (RG_LIKELY(var->type)) {
+                                EmitLoad(*var);
+                            } else {
+                                MarkError(pos - 1, "Cannot use variable '%1' before it is defined", var->name);
+                                goto error;
+                            }
                         } else {
                             const TypeInfo *type = program->types_map.FindValue(tok.u.str, nullptr);
 
