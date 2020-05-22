@@ -4,7 +4,13 @@
 
 #pragma once
 
-#include "lexer.cc"
-#include "parser.cc"
-#include "std.cc"
-#include "vm.cc"
+#include "../../core/libcc/libcc.hh"
+
+namespace RG {
+
+class Parser;
+
+void ImportAll(Parser *out_parser);
+void ImportPrint(Parser *out_parser);
+
+}

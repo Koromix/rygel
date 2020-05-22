@@ -7,6 +7,7 @@
 #include "lexer.hh"
 #include "parser.hh"
 #include "program.hh"
+#include "std.hh"
 
 namespace RG {
 
@@ -203,24 +204,6 @@ void Parser::AddFunction(const char *signature, std::function<NativeFunction> na
     impl->AddFunction(signature, native);
 }
 
-static Value DoPrint(VirtualMachine *vm, Span<const Value> args)
-{
-    RG_ASSERT(args.len % 2 == 0);
-
-    for (Size i = 0; i < args.len; i += 2) {
-        switch (args[i + 1].type->primitive) {
-            case PrimitiveType::Null: { Print("null"); } break;
-            case PrimitiveType::Bool: { Print("%1", args[i].b); } break;
-            case PrimitiveType::Int: { Print("%1", args[i].i); } break;
-            case PrimitiveType::Float: { Print("%1", args[i].d); } break;
-            case PrimitiveType::String: { Print("%1", args[i].str); } break;
-            case PrimitiveType::Type: { Print("%1", args[i].type->signature); } break;
-        }
-    }
-
-    return Value();
-}
-
 ParserImpl::ParserImpl(Program *program)
     : program(program), ir(program->ir)
 {
@@ -237,15 +220,6 @@ ParserImpl::ParserImpl(Program *program)
     AddFunction("intToFloat(Int): Float", {});
     AddFunction("floatToInt(Float): Int", {});
     AddFunction("typeOf(...): Type", {});
-
-    // Standard functions
-    AddFunction("print(...)", DoPrint);
-    AddFunction("printLn(...)", [](VirtualMachine *vm, Span<const Value> args) {
-        DoPrint(vm, args);
-        PrintLn();
-
-        return Value();
-    });
 }
 
 bool ParserImpl::Parse(const TokenizedFile &file, ParseReport *out_report)
@@ -2058,6 +2032,7 @@ const char *ParserImpl::InternString(const char *str)
 bool Parse(const TokenizedFile &file, Program *out_program)
 {
     Parser parser(out_program);
+    ImportAll(&parser);
     return parser.Parse(file);
 }
 

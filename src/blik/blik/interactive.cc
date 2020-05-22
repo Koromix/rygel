@@ -79,6 +79,9 @@ int RunInteractive()
     VirtualMachine vm(&program);
     bool run = true;
 
+    ImportAll(&parser);
+
+    // Functions specific to interactive mode
     parser.AddFunction("exit()", [&](VirtualMachine *vm, Span<const Value> args) {
         run = false;
         vm->SetInterrupt();
