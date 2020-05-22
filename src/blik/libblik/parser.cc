@@ -837,7 +837,6 @@ void ParserImpl::ParseLet()
         var->type = ParseExpression();
     } else {
         ConsumeToken(TokenKind::Colon);
-        SkipNewLines();
 
         // Don't assign to var->type yet, so that ParseExpression() knows it
         // cannot use this variable.
