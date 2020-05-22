@@ -43,42 +43,6 @@ union Value {
     const TypeInfo *type;
 };
 
-enum class Opcode {
-    #define OPCODE(Code) Code,
-    #include "opcodes.inc"
-};
-static const char *const OpcodeNames[] = {
-    #define OPCODE(Code) RG_STRINGIFY(Code),
-    #include "opcodes.inc"
-};
-
-struct Instruction {
-    Opcode code;
-    union {
-        bool b; // PushBool, Exit
-        int64_t i; // PushInteger, Pop,
-                   // StoreBool, StoreInt, StoreFloat, StoreString,
-                   // LoadBool, LoadInt, LoadFloat, LoadString,
-                   // Jump, BranchIfTrue, BranchIfFalse,
-                   // Call, Return, Exit
-        double d; // PushFloat
-        const char *str; // PushString
-        const TypeInfo *type; // PushType
-
-        uint64_t payload; // Invoke
-    } u;
-};
-
-struct SourceInfo {
-    struct LineInfo {
-        Size first_idx;
-        int32_t line;
-    };
-
-    const char *filename;
-    HeapArray<LineInfo> lines;
-};
-
 // XXX: Support native calling conventions to provide seamless integration
 typedef Value NativeFunction(VirtualMachine *vm, Span<const Value> args);
 
@@ -125,6 +89,41 @@ struct VariableInfo {
     const VariableInfo *shadow;
 
     RG_HASHTABLE_HANDLER(VariableInfo, name);
+};
+
+enum class Opcode {
+    #define OPCODE(Code) Code,
+    #include "opcodes.inc"
+};
+static const char *const OpcodeNames[] = {
+    #define OPCODE(Code) RG_STRINGIFY(Code),
+    #include "opcodes.inc"
+};
+
+struct Instruction {
+    Opcode code;
+    union {
+        bool b; // PushBool, Exit
+        int64_t i; // PushInteger, Pop,
+                   // StoreBool, StoreInt, StoreFloat, StoreString,
+                   // LoadBool, LoadInt, LoadFloat, LoadString,
+                   // Jump, BranchIfTrue, BranchIfFalse,
+                   // Call, Return, Exit
+        double d; // PushFloat
+        const char *str; // PushString
+        const TypeInfo *type; // PushType
+        const FunctionInfo *func; // Invoke
+    } u;
+};
+
+struct SourceInfo {
+    struct LineInfo {
+        Size first_idx;
+        int32_t line;
+    };
+
+    const char *filename;
+    HeapArray<LineInfo> lines;
 };
 
 struct Program {

@@ -466,7 +466,7 @@ bool VirtualMachine::Run()
         CASE(Return): {
             RG_ASSERT(stack.len == bp + 1);
 
-            Value ret = stack.ptr[stack.len - 1];
+            Value ret = stack[stack.len - 1];
             stack.len = bp - inst->u.i - 1;
             pc = stack.ptr[bp - 2].i;
             bp = stack.ptr[bp - 1].i;
@@ -476,16 +476,22 @@ bool VirtualMachine::Run()
         CASE(Invoke): {
             RG_ASSERT(stack.len == bp);
 
-            std::function<NativeFunction> *native =
-                (std::function<NativeFunction> *)(inst->u.payload & 0x1FFFFFFFFFFFFFFull);
+            const FunctionInfo *func = inst->u.func;
 
             Span<const Value> args;
-            args.len = (Size)(inst->u.payload >> 57) & 0x3F;
-            args.ptr = stack.end() - args.len - 2;
+            if (func->variadic) {
+                args.len = func->params.len + (stack[bp - 3].i * 2);
+                args.ptr = stack.end() - args.len - 3;
 
-            stack.len -= 1 + args.len;
+                stack.len -= 2 + args.len;
+            } else {
+                args.len = func->params.len;
+                args.ptr = stack.end() - args.len - 2;
 
-            Value ret = (*native)(this, args);
+                stack.len -= 1 + args.len;
+            }
+
+            Value ret = func->native(this, args);
 
             pc = stack.ptr[bp - 2].i;
             bp = stack.ptr[bp - 1].i;
@@ -493,36 +499,6 @@ bool VirtualMachine::Run()
 
             if (RG_UNLIKELY(!run))
                 return !error;
-
-            DISPATCH(++pc);
-        }
-
-        // This will be removed once we get functions, but in the mean time
-        // I need to output things somehow!
-        CASE(Print):
-        CASE(PrintLn): {
-            Span<const Value> args;
-            args.len = (Size)stack.ptr[stack.len - 1].i * 2;
-            args.ptr = stack.end() - 1 - args.len;
-
-            stack.len -= 1 + args.len;
-
-            for (Size i = 0; i < args.len; i += 2) {
-                switch (args[i + 1].type->primitive) {
-                    case PrimitiveType::Null: { Print("null"); } break;
-                    case PrimitiveType::Bool: { Print("%1", args[i].b); } break;
-                    case PrimitiveType::Int: { Print("%1", args[i].i); } break;
-                    case PrimitiveType::Float: { Print("%1", args[i].d); } break;
-                    case PrimitiveType::String: { Print("%1", args[i].str); } break;
-                    case PrimitiveType::Type: { Print("%1", args[i].type->signature); } break;
-                }
-            }
-            if (inst->code == Opcode::PrintLn) {
-                PrintLn();
-            }
-
-            // Return null
-            stack.AppendDefault();
 
             DISPATCH(++pc);
         }
@@ -651,8 +627,11 @@ void VirtualMachine::DumpInstruction() const
         case Opcode::SkipIfFalse: { LogDebug("[0x%1] SkipIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
 
         case Opcode::Call: { LogDebug("[0x%1] Call 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.i).Pad0(-5)); } break;
-        case Opcode::Return: { LogDebug("[0x%1] Return %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::Invoke: { LogDebug("[0x%1] Invoke 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.payload & 0x1FFFFFFFFFFFFFFull).Pad0(-5)); } break;
+        case Opcode::Return: { LogDebug("[0x%1] Return (%2)", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::Invoke: {
+            const FunctionInfo *func = inst.u.func;
+            LogDebug("[0x%1] Invoke %2 (%3%4)", FmtHex(pc).Pad0(-5), func->name, func->params.len, func->variadic ? "+" : "");
+        } break;
 
         default: { LogDebug("[0x%1] %2", FmtHex(pc).Pad0(-5), OpcodeNames[(int)inst.code]); } break;
     }

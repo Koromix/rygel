@@ -203,6 +203,24 @@ void Parser::AddFunction(const char *signature, std::function<NativeFunction> na
     impl->AddFunction(signature, native);
 }
 
+static Value DoPrint(VirtualMachine *vm, Span<const Value> args)
+{
+    RG_ASSERT(args.len % 2 == 0);
+
+    for (Size i = 0; i < args.len; i += 2) {
+        switch (args[i + 1].type->primitive) {
+            case PrimitiveType::Null: { Print("null"); } break;
+            case PrimitiveType::Bool: { Print("%1", args[i].b); } break;
+            case PrimitiveType::Int: { Print("%1", args[i].i); } break;
+            case PrimitiveType::Float: { Print("%1", args[i].d); } break;
+            case PrimitiveType::String: { Print("%1", args[i].str); } break;
+            case PrimitiveType::Type: { Print("%1", args[i].type->signature); } break;
+        }
+    }
+
+    return Value();
+}
+
 ParserImpl::ParserImpl(Program *program)
     : program(program), ir(program->ir)
 {
@@ -216,11 +234,18 @@ ParserImpl::ParserImpl(Program *program)
     }
 
     // Intrinsics
-    AddFunction("print(...)", {});
-    AddFunction("printLn(...)", {});
     AddFunction("intToFloat(Int): Float", {});
     AddFunction("floatToInt(Float): Int", {});
     AddFunction("typeOf(...): Type", {});
+
+    // Standard functions
+    AddFunction("print(...)", DoPrint);
+    AddFunction("printLn(...)", [](VirtualMachine *vm, Span<const Value> args) {
+        DoPrint(vm, args);
+        PrintLn();
+
+        return Value();
+    });
 }
 
 bool ParserImpl::Parse(const TokenizedFile &file, ParseReport *out_report)
@@ -345,8 +370,6 @@ void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction
 
             if (TestStr(ptr, "...")) {
                 RG_ASSERT(c == ')');
-                RG_ASSERT(func->intrinsic);
-
                 func->variadic = true;
             } else {
                 const TypeInfo *type = program->types_map.FindValue(ptr, nullptr);
@@ -373,13 +396,6 @@ void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction
     }
 
     if (native) {
-        RG_STATIC_ASSERT(RG_LEN(FunctionInfo::params.data) < 64);
-
-        uint64_t payload = 0;
-
-        payload |= (uint64_t)func->params.len << 57;
-        payload |= (uint64_t)&func->native & 0x1FFFFFFFFFFFFFFull;
-
         // Jump over consecutively defined functions in one go
         if (func_jump_idx >= 0 && ir[func_jump_idx].u.i == ir.len - func_jump_idx) {
             ir[func_jump_idx].u.i++;
@@ -389,7 +405,7 @@ void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction
         }
 
         func->inst_idx = ir.len;
-        ir.Append({Opcode::Invoke, {.payload = payload}});
+        ir.Append({Opcode::Invoke, {.func = func}});
     }
 
     // Publish it!
@@ -1815,11 +1831,7 @@ bool ParserImpl::ParseCall(const char *name)
 
 void ParserImpl::EmitIntrinsic(const char *name, Size call_idx, Span<const FunctionInfo::Parameter> args)
 {
-    if (TestStr(name, "print")) {
-        ir.Append({Opcode::Print});
-    } else if (TestStr(name, "printLn")) {
-        ir.Append({Opcode::PrintLn});
-    } else if (TestStr(name, "intToFloat")) {
+    if (TestStr(name, "intToFloat")) {
         ir.Append({Opcode::IntToFloat});
     } else if (TestStr(name, "floatToInt")) {
         ir.Append({Opcode::FloatToInt});
