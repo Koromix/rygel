@@ -546,8 +546,8 @@ static void Decode1(const Program &program, Size pc, Size bp, HeapArray<FrameInf
     const SourceInfo *src = std::upper_bound(program.sources.begin(), program.sources.end(), pc,
                                              [](Size pc, const SourceInfo &src) { return pc < src.lines[0].first_idx; }) - 1;
     if (src >= program.sources.ptr) {
-        const SourceInfo::LineInfo *line = std::upper_bound(src->lines.begin(), src->lines.end(), pc,
-                                                            [](Size pc, const SourceInfo::LineInfo &line) { return pc < line.first_idx; }) - 1;
+        const SourceInfo::Line *line = std::upper_bound(src->lines.begin(), src->lines.end(), pc,
+                                                        [](Size pc, const SourceInfo::Line &line) { return pc < line.first_idx; }) - 1;
 
         frame.filename = src->filename;
         frame.line = line->line;

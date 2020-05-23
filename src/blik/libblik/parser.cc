@@ -973,7 +973,7 @@ void ParserImpl::ParseWhile()
     }
     for (Size i = condition_line_idx; i < src->lines.len &&
                                       src->lines[i].first_idx < branch_idx; i++) {
-        const SourceInfo::LineInfo &line = src->lines[i];
+        const SourceInfo::Line &line = src->lines[i];
         src->lines.Append({ir.len + (line.first_idx - condition_idx), line.line});
     }
     ir.Append(ir.Take(condition_idx, branch_idx - condition_idx));

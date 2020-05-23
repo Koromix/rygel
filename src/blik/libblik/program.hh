@@ -117,13 +117,13 @@ struct Instruction {
 };
 
 struct SourceInfo {
-    struct LineInfo {
+    struct Line {
         Size first_idx;
         int32_t line;
     };
 
     const char *filename;
-    HeapArray<LineInfo> lines;
+    HeapArray<Line> lines;
 };
 
 struct Program {
