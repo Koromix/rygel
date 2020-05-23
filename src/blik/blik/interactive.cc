@@ -70,6 +70,40 @@ end
     return true;
 }
 
+int RunCommand(Span<const char> code)
+{
+    Program program;
+    Parser parser(&program);
+
+    ImportAll(&parser);
+
+    // Try to parse with fake print first...
+    bool valid_with_fake_print;
+    {
+        TokenizedFile file;
+        if (!TokenizeWithFakePrint(code, "<inline>", &file))
+            return 1;
+
+        // ... but don't tell the user if it fails!
+        SetLogHandler([](LogLevel level, const char *ctx, const char *msg) {});
+        RG_DEFER { SetLogHandler(DefaultLogHandler); };
+
+        valid_with_fake_print = parser.Parse(file);
+    }
+
+    // If the fake print has failed, reparse the code without the fake print
+    if (!valid_with_fake_print) {
+        TokenizedFile file;
+        bool success = Tokenize(code, "<inline>", &file);
+        RG_ASSERT(success);
+
+        if (!parser.Parse(file))
+            return 1;
+    }
+
+    return !Run(program);
+}
+
 int RunInteractive()
 {
     LogInfo("%!R..blik%!0 %1", FelixVersion);
@@ -94,7 +128,6 @@ int RunInteractive()
     });
 
     ConsolePrompter prompter;
-    ParseReport report;
 
     while (run && prompter.Read()) {
         // We need to intercept errors in order to hide them in some cases, such as
@@ -119,19 +152,23 @@ int RunInteractive()
         Size prev_variables_len = program.variables.len;
         Size prev_stack_len = vm.stack.len;
 
-        // Try with fake printLn() call first, and parse as normal code if it fails!
-        // Seems like a simple and clean way to print expression results.
-        TokenizedFile file;
-        if (!TokenizeWithFakePrint(code, "<interactive>", &file))
-            continue;
-        if (!parser.Parse(file)) {
-            trace.Clear();
-            file.tokens.RemoveFrom(0);
-            file.funcs.RemoveFrom(0);
+        bool valid_with_fake_print;
+        {
+            TokenizedFile file;
+            if (!TokenizeWithFakePrint(code, "<inline>", &file))
+                return 1;
 
+            valid_with_fake_print = parser.Parse(file);
+        }
+
+        if (!valid_with_fake_print) {
+            trace.Clear();
+
+            TokenizedFile file;
             bool success = Tokenize(code, "<interactive>", &file);
             RG_ASSERT(success);
 
+            ParseReport report;
             if (!parser.Parse(file, &report)) {
                 if (report.unexpected_eof) {
                     prompter.str.len = TrimStrRight((Span<const char>)prompter.str, "\t ").len;

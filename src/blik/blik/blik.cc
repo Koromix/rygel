@@ -7,13 +7,17 @@
 
 namespace RG {
 
+int RunCommand(Span<const char> code);
 int RunInteractive();
 
-static int RunCode(Span<const char> code, const char *filename)
+static int RunFile(const char *filename)
 {
+    HeapArray<char> code;
+    if (ReadFile(filename, Megabytes(64), &code) < 0)
+        return 1;
+
     TokenizedFile file;
     Program program;
-
     if (!Tokenize(code, filename, &file))
         return 1;
     if (!Parse(file, &program))
@@ -92,11 +96,7 @@ Options:
                 return 1;
             }
 
-            HeapArray<char> code;
-            if (ReadFile(filename_or_code, Megabytes(64), &code) < 0)
-                return 1;
-
-            return RunCode(code, filename_or_code);
+            return RunFile(filename_or_code);
         } break;
         case RunMode::Command: {
             if (!filename_or_code) {
@@ -104,7 +104,7 @@ Options:
                 return 1;
             }
 
-            return RunCode(filename_or_code, "<inline>");
+            return RunCommand(filename_or_code);
         } break;
     }
 
