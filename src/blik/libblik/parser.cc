@@ -1375,8 +1375,18 @@ const TypeInfo *ParserImpl::ParseExpression()
 
 unexpected:
     pos--;
-    MarkError(pos, "Unexpected token '%1', expected %2", TokenKindNames[(int)tokens[pos].kind],
-              expect_value ? "value or '('" : "operator or ')'");
+    {
+        const char *expected;
+        if (expect_value) {
+            expected = "value or '('";
+        } else if (parentheses) {
+            expected = "operator or ')'";
+        } else {
+            expected = "operator or end of expression";
+        }
+
+        MarkError(pos, "Unexpected token '%1', expected %2", TokenKindNames[(int)tokens[pos].kind], expected);
+    }
 error:
     // The goal of this loop is to skip expression until we get to "do" (which is used
     // for single-line constructs) or end of line (which starts a block in some cases,
