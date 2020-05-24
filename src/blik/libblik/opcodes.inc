@@ -6,6 +6,8 @@
     #error Please define OPCODE() before including opcodes.inc
 #endif
 
+OPCODE(Nop)
+
 // Immediate values
 OPCODE(PushNull)
 OPCODE(PushBool)
@@ -99,8 +101,8 @@ OPCODE(SkipIfFalse)
 
 // Functions
 OPCODE(Call)
+OPCODE(CallNative)
 OPCODE(Return)
-OPCODE(Invoke)
 
 // Intrinsics
 OPCODE(IntToFloat)

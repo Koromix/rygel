@@ -20,11 +20,6 @@ struct PrototypeInfo {
     RG_HASHTABLE_HANDLER(PrototypeInfo, pos);
 };
 
-struct ForwardCall {
-    Size offset;
-    const FunctionInfo *func;
-};
-
 struct PendingOperator {
     TokenKind kind;
     int prec;
@@ -53,7 +48,6 @@ class ParserImpl {
     SourceInfo *src;
 
     // Transient mappings
-    HeapArray<ForwardCall> forward_calls;
     HashTable<Size, PrototypeInfo> prototypes_map;
     HashMap<const void *, Size> definitions_map;
     HashSet<const void *> poisoned_set;
@@ -270,7 +264,6 @@ bool ParserImpl::Parse(const TokenizedFile &file, ParseReport *out_report)
     show_errors = true;
     show_hints = false;
 
-    forward_calls.Clear();
     prototypes_map.Clear();
     definitions_map.Clear();
     poisoned_set.Clear();
@@ -294,12 +287,6 @@ bool ParserImpl::Parse(const TokenizedFile &file, ParseReport *out_report)
     RG_ASSERT(!depth);
     RG_ASSERT(loop_var_offset == -1);
     RG_ASSERT(!current_func);
-
-    // Fix up foward calls
-    for (const ForwardCall &fcall: forward_calls) {
-        ir[fcall.offset].u.i = fcall.func->inst_idx;
-    }
-    forward_calls.Clear();
 
     ir.Append({Opcode::End});
     program->end_stack_len = var_offset;
@@ -329,7 +316,7 @@ void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction
         ptr += len;
     }
 
-    func->intrinsic = !native;
+    func->mode = native ? FunctionInfo::Mode::Native : FunctionInfo::Mode::Intrinsic;
     func->native = native;
 
     // Parameters
@@ -379,7 +366,7 @@ void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction
         }
 
         func->inst_idx = ir.len;
-        ir.Append({Opcode::Invoke, {.func = func}});
+        ir.Append({Opcode::Nop});
     }
 
     // Publish it!
@@ -396,9 +383,7 @@ void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction
 
 #ifndef NDEBUG
             do {
-                RG_ASSERT(head->intrinsic == func->intrinsic);
                 RG_ASSERT(!TestOverload(*head, func->params));
-
                 head = head->overload_next;
             } while (head != func);
 #endif
@@ -436,6 +421,7 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
         proto->func = func;
 
         func->name = ConsumeIdentifier();
+        func->mode = FunctionInfo::Mode::Blik;
 
         // Insert in functions map
         {
@@ -717,10 +703,6 @@ void ParserImpl::ParseFunction()
         FunctionInfo *overload = program->functions_map.FindValue(func->name, nullptr);
 
         while (overload != func) {
-            if (RG_UNLIKELY(overload->intrinsic)) {
-                MarkError(func_pos, "Cannot replace or overload intrinsic function '%1'", func->name);
-            }
-
             if (TestOverload(*overload, func->params)) {
                 if (overload->ret_type == func->ret_type) {
                     MarkError(func_pos, "Function '%1' is already defined", func->signature);
@@ -934,7 +916,6 @@ void ParserImpl::ParseWhile()
     // Parse expression. We'll make a copy after the loop body so that the IR code looks
     // roughly like if (cond) { do { ... } while (cond) }.
     Size condition_idx = ir.len;
-    Size condition_fcall_idx = forward_calls.len;
     Size condition_line_idx = src->lines.len;
     ParseExpressionOfType(GetBasicType(PrimitiveType::Bool));
 
@@ -965,12 +946,7 @@ void ParserImpl::ParseWhile()
         ir[jump_idx].u.i = ir.len - jump_idx;
     }
 
-    // Copy the condition expression, and all the related data: forward calls, IR/line map
-    for (Size i = condition_fcall_idx; i < forward_calls.len &&
-                                       forward_calls[i].offset < branch_idx; i++) {
-        const ForwardCall &fcall = forward_calls[i];
-        forward_calls.Append({ir.len + (fcall.offset - condition_idx), fcall.func});
-    }
+    // Copy the condition expression, and the IR/line map information
     for (Size i = condition_line_idx; i < src->lines.len &&
                                       src->lines[i].first_idx < branch_idx; i++) {
         const SourceInfo::Line &line = src->lines[i];
@@ -1791,22 +1767,26 @@ bool ParserImpl::ParseCall(const char *name)
     }
 
     // Emit intrinsic or call
-    if (func->intrinsic) {
-        EmitIntrinsic(name, call_idx, args);
-    } else {
-        if (func->inst_idx < 0) {
-            forward_calls.Append({ir.len, func});
-
-            if (current_func && current_func != func) {
-                func->earliest_call_pos = std::min(func->earliest_call_pos, current_func->earliest_call_pos);
-                func->earliest_call_idx = std::min(func->earliest_call_idx, current_func->earliest_call_idx);
-            } else {
-                func->earliest_call_pos = std::min(func->earliest_call_pos, call_pos);
-                func->earliest_call_idx = std::min(func->earliest_call_idx, ir.len);
+    switch (func->mode) {
+        case FunctionInfo::Mode::Intrinsic: {
+            EmitIntrinsic(name, call_idx, args);
+        } break;
+        case FunctionInfo::Mode::Native: {
+            ir.Append({Opcode::CallNative, {.func = func}});
+        } break;
+        case FunctionInfo::Mode::Blik: {
+            if (func->inst_idx < 0) {
+                if (current_func && current_func != func) {
+                    func->earliest_call_pos = std::min(func->earliest_call_pos, current_func->earliest_call_pos);
+                    func->earliest_call_idx = std::min(func->earliest_call_idx, current_func->earliest_call_idx);
+                } else {
+                    func->earliest_call_pos = std::min(func->earliest_call_pos, call_pos);
+                    func->earliest_call_idx = std::min(func->earliest_call_idx, ir.len);
+                }
             }
-        }
 
-        ir.Append({Opcode::Call, {.i = func->inst_idx}});
+            ir.Append({Opcode::Call, {.func = func}});
+        } break;
     }
     stack.Append({func->ret_type});
 
@@ -1829,7 +1809,6 @@ void ParserImpl::EmitIntrinsic(const char *name, Size call_idx, Span<const Funct
 
         // typeOf() does not execute anything!
         ir.RemoveFrom(call_idx);
-
         ir.Append({Opcode::PushType, {.type = args[0].type}});
     } else {
         RG_UNREACHABLE();
@@ -1891,7 +1870,7 @@ void ParserImpl::EmitReturn()
 
     // We support tail recursion elimination (TRE)
     if (ir.len > 0 && ir[ir.len - 1].code == Opcode::Call &&
-                      ir[ir.len - 1].u.i == current_func->inst_idx) {
+                      ir[ir.len - 1].u.func == current_func) {
         ir.len--;
 
         Size stack_offset = -2;

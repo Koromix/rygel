@@ -47,6 +47,12 @@ union Value {
 typedef Value NativeFunction(VirtualMachine *vm, Span<const Value> args);
 
 struct FunctionInfo {
+    enum class Mode {
+        Intrinsic,
+        Native,
+        Blik
+    };
+
     struct Parameter {
         const char *name;
         const TypeInfo *type;
@@ -56,7 +62,7 @@ struct FunctionInfo {
     const char *name;
     const char *signature;
 
-    bool intrinsic;
+    Mode mode;
     std::function<NativeFunction> native;
 
     LocalArray<Parameter, 16> params;
@@ -107,12 +113,11 @@ struct Instruction {
         int64_t i; // PushInteger, Pop,
                    // StoreBool, StoreInt, StoreFloat, StoreString,
                    // LoadBool, LoadInt, LoadFloat, LoadString,
-                   // Jump, BranchIfTrue, BranchIfFalse,
-                   // Call, Return, Exit
+                   // Jump, BranchIfTrue, BranchIfFalse, Return
         double d; // PushFloat
         const char *str; // PushString
         const TypeInfo *type; // PushType
-        const FunctionInfo *func; // Invoke
+        const FunctionInfo *func; // Call
     } u;
 };
 

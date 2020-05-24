@@ -47,6 +47,10 @@ bool VirtualMachine::Run()
 #endif
 
     LOOP {
+        CASE(Nop): {
+            DISPATCH(++pc);
+        }
+
         CASE(PushNull): {
             stack.AppendDefault();
             DISPATCH(++pc);
@@ -457,26 +461,26 @@ bool VirtualMachine::Run()
         }
 
         CASE(Call): {
-            stack.Grow(2);
-            stack.ptr[stack.len++].i = pc;
-            stack.ptr[stack.len++].i = bp;
-            bp = stack.len;
-            DISPATCH(pc = (Size)inst->u.i);
-        }
-        CASE(Return): {
-            RG_ASSERT(stack.len == bp + 1);
-
-            Value ret = stack[stack.len - 1];
-            stack.len = bp - inst->u.i - 1;
-            pc = stack.ptr[bp - 2].i;
-            bp = stack.ptr[bp - 1].i;
-            stack[stack.len - 1] = ret;
-            DISPATCH(++pc);
-        }
-        CASE(Invoke): {
-            RG_ASSERT(stack.len == bp);
-
             const FunctionInfo *func = inst->u.func;
+            RG_ASSERT(func->mode == FunctionInfo::Mode::Blik);
+
+            stack.Grow(2);
+            stack[stack.len++].i = pc;
+            stack[stack.len++].i = bp;
+            bp = stack.len;
+
+            DISPATCH(pc = func->inst_idx);
+        }
+        CASE(CallNative): {
+            const FunctionInfo *func = inst->u.func;
+            RG_ASSERT(func->mode == FunctionInfo::Mode::Native);
+
+            stack.Grow(2);
+            stack[stack.len++].i = pc;
+            stack[stack.len++].i = bp;
+            bp = stack.len;
+
+            pc = func->inst_idx;
 
             Span<const Value> args;
             if (func->variadic) {
@@ -499,6 +503,17 @@ bool VirtualMachine::Run()
 
             if (RG_UNLIKELY(!run))
                 return !error;
+
+            DISPATCH(++pc);
+        }
+        CASE(Return): {
+            RG_ASSERT(stack.len == bp + 1);
+
+            Value ret = stack[stack.len - 1];
+            stack.len = bp - inst->u.i - 1;
+            pc = stack.ptr[bp - 2].i;
+            bp = stack.ptr[bp - 1].i;
+            stack[stack.len - 1] = ret;
 
             DISPATCH(++pc);
         }
@@ -626,12 +641,13 @@ void VirtualMachine::DumpInstruction() const
         case Opcode::SkipIfTrue: { LogDebug("[0x%1] SkipIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
         case Opcode::SkipIfFalse: { LogDebug("[0x%1] SkipIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
 
-        case Opcode::Call: { LogDebug("[0x%1] Call 0x%2", FmtHex(pc).Pad0(-5), FmtHex(inst.u.i).Pad0(-5)); } break;
-        case Opcode::Return: { LogDebug("[0x%1] Return (%2)", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::Invoke: {
+        case Opcode::Call:
+        case Opcode::CallNative: {
             const FunctionInfo *func = inst.u.func;
-            LogDebug("[0x%1] Invoke %2 (%3%4)", FmtHex(pc).Pad0(-5), func->name, func->params.len, func->variadic ? "+" : "");
+            LogDebug("[0x%1] %2 %3 (%4%5)", FmtHex(pc).Pad0(-5), OpcodeNames[(int)inst.code],
+                                            func->name, func->params.len, func->variadic ? "+" : "");
         } break;
+        case Opcode::Return: { LogDebug("[0x%1] Return (%2)", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
         default: { LogDebug("[0x%1] %2", FmtHex(pc).Pad0(-5), OpcodeNames[(int)inst.code]); } break;
     }
