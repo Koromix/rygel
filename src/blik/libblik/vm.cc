@@ -8,6 +8,12 @@
 
 namespace RG {
 
+VirtualMachine::VirtualMachine(const Program *const program)
+    : program(program)
+{
+    frames.AppendDefault();
+}
+
 bool VirtualMachine::Run()
 {
     const Instruction *inst;
@@ -15,6 +21,13 @@ bool VirtualMachine::Run()
     ir = program->ir;
     run = true;
     error = false;
+
+    CallFrame *frame = &frames[frames.len - 1];
+    Size pc = frame->pc;
+    Size bp = frame->bp;
+
+    // Save PC on exit
+    RG_DEFER { frame->pc = pc; };
 
     RG_ASSERT(pc < ir.len);
 
@@ -26,7 +39,7 @@ bool VirtualMachine::Run()
 
     #define DISPATCH(PC) \
         inst = &ir[(PC)]; \
-        DumpInstruction(); \
+        DumpInstruction(pc); \
         goto *dispatch[(int)inst->code];
     #define LOOP \
         DISPATCH(pc)
@@ -35,11 +48,11 @@ bool VirtualMachine::Run()
 #else
     #define DISPATCH(PC) \
         inst = &ir[(PC)]; \
-        DumpInstruction(); \
+        DumpInstruction(pc); \
         break
     #define LOOP \
         inst = &ir[pc]; \
-        DumpInstruction(); \
+        DumpInstruction(pc); \
         for (;;) \
             switch(inst->code)
     #define CASE(Code) \
@@ -47,10 +60,6 @@ bool VirtualMachine::Run()
 #endif
 
     LOOP {
-        CASE(Nop): {
-            DISPATCH(++pc);
-        }
-
         CASE(PushNull): {
             stack.AppendDefault();
             DISPATCH(++pc);
@@ -464,42 +473,51 @@ bool VirtualMachine::Run()
             const FunctionInfo *func = inst->u.func;
             RG_ASSERT(func->mode == FunctionInfo::Mode::Blik);
 
-            stack.Grow(2);
-            stack[stack.len++].i = pc;
-            stack[stack.len++].i = bp;
-            bp = stack.len;
+            // Save current PC
+            frame->pc = pc;
 
-            DISPATCH(pc = func->inst_idx);
+            frame = frames.AppendDefault();
+            frame->func = func;
+            frame->pc = func->inst_idx;
+            frame->bp = stack.len - func->params.len;
+
+            bp = frame->bp;
+            DISPATCH(pc = frame->pc);
         }
         CASE(CallNative): {
             const FunctionInfo *func = inst->u.func;
             RG_ASSERT(func->mode == FunctionInfo::Mode::Native);
 
-            stack.Grow(2);
-            stack[stack.len++].i = pc;
-            stack[stack.len++].i = bp;
-            bp = stack.len;
+            // Save current PC
+            frame->pc = pc;
 
-            pc = func->inst_idx;
+            frame = frames.AppendDefault();
+            frame->func = func;
+            frame->pc = func->inst_idx;
 
-            Span<const Value> args;
             if (func->variadic) {
-                args.len = func->params.len + (stack[bp - 3].i * 2);
-                args.ptr = stack.end() - args.len - 3;
+                Span<const Value> args;
+                args.len = func->params.len + (stack[stack.len - 1].i * 2);
+                args.ptr = stack.end() - args.len - 1;
 
-                stack.len -= 2 + args.len;
+                stack.len -= args.len;
+                stack[stack.len - 1] = func->native(this, args);
             } else {
+                Span<const Value> args;
                 args.len = func->params.len;
-                args.ptr = stack.end() - args.len - 2;
+                args.ptr = stack.end() - args.len;
 
-                stack.len -= 1 + args.len;
+                if (args.len) {
+                    stack.len -= args.len - 1;
+                } else {
+                    stack.len -= args.len;
+                    stack.AppendDefault();
+                }
+                stack[stack.len - 1] = func->native(this, args);
             }
 
-            Value ret = func->native(this, args);
-
-            pc = stack.ptr[bp - 2].i;
-            bp = stack.ptr[bp - 1].i;
-            stack[stack.len - 1] = ret;
+            frames.RemoveLast(1);
+            frame = &frames[frames.len - 1];
 
             if (RG_UNLIKELY(!run))
                 return !error;
@@ -507,13 +525,13 @@ bool VirtualMachine::Run()
             DISPATCH(++pc);
         }
         CASE(Return): {
-            RG_ASSERT(stack.len == bp + 1);
+            stack[bp] = stack[stack.len - 1];
+            stack.len = bp + 1;
 
-            Value ret = stack[stack.len - 1];
-            stack.len = bp - inst->u.i - 1;
-            pc = stack.ptr[bp - 2].i;
-            bp = stack.ptr[bp - 1].i;
-            stack[stack.len - 1] = ret;
+            frames.RemoveLast(1);
+            frame = &frames[frames.len - 1];
+            pc = frame->pc;
+            bp = frame->bp;
 
             DISPATCH(++pc);
         }
@@ -544,58 +562,7 @@ bool VirtualMachine::Run()
 #undef DISPATCH
 }
 
-static void Decode1(const Program &program, Size pc, Size bp, HeapArray<FrameInfo> *out_frames)
-{
-    FrameInfo frame = {};
-
-    frame.pc = pc;
-    frame.bp = bp;
-    if (bp) {
-        auto func = std::upper_bound(program.functions.begin(), program.functions.end(), pc,
-                                     [](Size pc, const FunctionInfo &func) { return pc < func.inst_idx; });
-        --func;
-
-        frame.func = &*func;
-    }
-
-    const SourceInfo *src = std::upper_bound(program.sources.begin(), program.sources.end(), pc,
-                                             [](Size pc, const SourceInfo &src) { return pc < src.lines[0].first_idx; }) - 1;
-    if (src >= program.sources.ptr) {
-        const SourceInfo::Line *line = std::upper_bound(src->lines.begin(), src->lines.end(), pc,
-                                                        [](Size pc, const SourceInfo::Line &line) { return pc < line.first_idx; }) - 1;
-
-        frame.filename = src->filename;
-        frame.line = line->line;
-    }
-
-    out_frames->Append(frame);
-}
-
-void VirtualMachine::DecodeFrames(const VirtualMachine &vm, HeapArray<FrameInfo> *out_frames) const
-{
-    Size pc = vm.pc;
-    Size bp = vm.bp;
-
-    // Walk up call frames
-    if (vm.bp) {
-        Decode1(*vm.program, pc, bp, out_frames);
-
-        for (;;) {
-            pc = vm.stack[bp - 2].i;
-            bp = vm.stack[bp - 1].i;
-
-            if (!bp)
-                break;
-
-            Decode1(*vm.program, pc, bp, out_frames);
-        }
-    }
-
-    // Outside funtion
-    Decode1(*vm.program, pc, 0, out_frames);
-}
-
-void VirtualMachine::DumpInstruction() const
+void VirtualMachine::DumpInstruction(Size pc) const
 {
 #if 0
     const Instruction &inst = ir[pc];
@@ -647,7 +614,6 @@ void VirtualMachine::DumpInstruction() const
             LogDebug("[0x%1] %2 %3 (%4%5)", FmtHex(pc).Pad0(-5), OpcodeNames[(int)inst.code],
                                             func->name, func->params.len, func->variadic ? "+" : "");
         } break;
-        case Opcode::Return: { LogDebug("[0x%1] Return (%2)", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
         default: { LogDebug("[0x%1] %2", FmtHex(pc).Pad0(-5), OpcodeNames[(int)inst.code]); } break;
     }

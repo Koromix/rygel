@@ -198,8 +198,8 @@ int RunInteractive()
             // XXX: We don't yet manage memory so this works for now
             vm.stack.RemoveFrom(prev_stack_len);
 
-            vm.pc = program.ir.len;
-            vm.bp = 0;
+            vm.frames.RemoveFrom(1);
+            vm.frames[0].pc = program.ir.len;
         }
     }
 

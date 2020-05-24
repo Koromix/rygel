@@ -131,22 +131,28 @@ struct SourceInfo {
     HeapArray<Line> lines;
 };
 
+struct CallFrame {
+    const FunctionInfo *func; // Can be NULL
+    Size pc;
+    Size bp;
+};
+
 struct Program {
     HeapArray<Instruction> ir;
     HeapArray<SourceInfo> sources;
 
     BucketArray<TypeInfo> types;
-    HashTable<const char *, TypeInfo *> types_map;
-
     BucketArray<FunctionInfo> functions;
-    HashTable<const char *, FunctionInfo *> functions_map;
-
     BucketArray<VariableInfo> variables;
+    HashTable<const char *, TypeInfo *> types_map;
+    HashTable<const char *, FunctionInfo *> functions_map;
     HashTable<const char *, VariableInfo *> variables_map;
 
     Size end_stack_len;
 
     BlockAllocator str_alloc;
+
+    const char *LocateInstruction(Size pc, int32_t *out_line = nullptr) const;
 };
 
 }

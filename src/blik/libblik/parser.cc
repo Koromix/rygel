@@ -318,6 +318,7 @@ void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction
 
     func->mode = native ? FunctionInfo::Mode::Native : FunctionInfo::Mode::Intrinsic;
     func->native = native;
+    func->inst_idx = -1;
 
     // Parameters
     RG_ASSERT(ptr[0] == '(');
@@ -354,19 +355,6 @@ void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction
         RG_ASSERT(func->ret_type);
     } else {
         func->ret_type = GetBasicType(PrimitiveType::Null);
-    }
-
-    if (native) {
-        // Jump over consecutively defined functions in one go
-        if (func_jump_idx >= 0 && ir[func_jump_idx].u.i == ir.len - func_jump_idx) {
-            ir[func_jump_idx].u.i++;
-        } else {
-            func_jump_idx = ir.len;
-            ir.Append({Opcode::Jump, {.i = 2}});
-        }
-
-        func->inst_idx = ir.len;
-        ir.Append({Opcode::Nop});
     }
 
     // Publish it!
@@ -662,39 +650,39 @@ void ParserImpl::ParseFunction()
     }
     current_func = func;
 
+    // Skip prototype
+    var_offset = 0;
+    pos = proto->body_pos;
+
     // Create parameter variables
-    {
-        Size stack_offset = -2 - func->params.len;
+    for (const FunctionInfo::Parameter &param: func->params) {
+        VariableInfo *var = program->variables.AppendDefault();
+        Size param_pos = definitions_map.FindValue(&param, -1);
+        definitions_map.Append(var, param_pos);
 
-        for (const FunctionInfo::Parameter &param: func->params) {
-            VariableInfo *var = program->variables.AppendDefault();
-            Size param_pos = definitions_map.FindValue(&param, -1);
-            definitions_map.Append(var, param_pos);
+        var->name = param.name;
+        var->type = param.type;
+        var->mut = param.mut;
 
-            var->name = param.name;
-            var->type = param.type;
-            var->mut = param.mut;
+        var->offset = var_offset++;
 
-            var->offset = stack_offset++;
+        std::pair<VariableInfo **, bool> ret = program->variables_map.Append(var);
+        if (RG_UNLIKELY(!ret.second)) {
+            const VariableInfo *prev_var = *ret.first;
+            var->shadow = prev_var;
 
-            std::pair<VariableInfo **, bool> ret = program->variables_map.Append(var);
-            if (RG_UNLIKELY(!ret.second)) {
-                const VariableInfo *prev_var = *ret.first;
-                var->shadow = prev_var;
-
-                // We should already have issued an error message for the other case (duplicate
-                // parameter name) in ParsePrototypes().
-                if (prev_var->global) {
-                    MarkError(param_pos, "Parameter '%1' is not allowed to hide global variable", var->name);
-                    HintDefinition(prev_var, "Global variable '%1' is defined here", prev_var->name);
-                } else {
-                    valid = false;
-                }
+            // We should already have issued an error message for the other case (duplicate
+            // parameter name) in ParsePrototypes().
+            if (prev_var->global) {
+                MarkError(param_pos, "Parameter '%1' is not allowed to hide global variable", var->name);
+                HintDefinition(prev_var, "Global variable '%1' is defined here", prev_var->name);
+            } else {
+                valid = false;
             }
+        }
 
-            if (RG_UNLIKELY(poisoned_set.Find(&param))) {
-                poisoned_set.Append(var);
-            }
+        if (RG_UNLIKELY(poisoned_set.Find(&param))) {
+            poisoned_set.Append(var);
         }
     }
 
@@ -717,9 +705,6 @@ void ParserImpl::ParseFunction()
         }
     }
 
-    // Skip prototype
-    pos = proto->body_pos;
-
     // Jump over consecutively defined functions in one go
     if (func_jump_idx < 0 || ir[func_jump_idx].u.i < ir.len - func_jump_idx) {
         func_jump_idx = ir.len;
@@ -727,7 +712,6 @@ void ParserImpl::ParseFunction()
     }
 
     func->inst_idx = ir.len;
-    var_offset = 0;
 
     // Function body
     bool has_return = false;
@@ -1873,41 +1857,25 @@ void ParserImpl::EmitReturn()
                       ir[ir.len - 1].u.func == current_func) {
         ir.len--;
 
-        Size stack_offset = -2;
         for (Size i = current_func->params.len - 1; i >= 0; i--) {
             const FunctionInfo::Parameter &param = current_func->params[i];
 
             switch (param.type->primitive) {
-                case PrimitiveType::Null: { stack_offset--; } break;
-                case PrimitiveType::Bool: { ir.Append({Opcode::StoreBool, {.i = --stack_offset}}); } break;
-                case PrimitiveType::Int: { ir.Append({Opcode::StoreInt, {.i = --stack_offset}}); } break;
-                case PrimitiveType::Float: { ir.Append({Opcode::StoreFloat, {.i = --stack_offset}}); } break;
-                case PrimitiveType::String: { ir.Append({Opcode::StoreString, {.i = --stack_offset}}); } break;
-                case PrimitiveType::Type: { ir.Append({Opcode::StoreType, {.i = --stack_offset}}); } break;
+                case PrimitiveType::Null: {} break;
+                case PrimitiveType::Bool: { ir.Append({Opcode::StoreBool, {.i = i}}); } break;
+                case PrimitiveType::Int: { ir.Append({Opcode::StoreInt, {.i = i}}); } break;
+                case PrimitiveType::Float: { ir.Append({Opcode::StoreFloat, {.i = i}}); } break;
+                case PrimitiveType::String: { ir.Append({Opcode::StoreString, {.i = i}}); } break;
+                case PrimitiveType::Type: { ir.Append({Opcode::StoreType, {.i = i}}); } break;
             }
         }
 
-        EmitPop(var_offset);
+        EmitPop(var_offset - current_func->params.len);
         ir.Append({Opcode::Jump, {.i = current_func->inst_idx - ir.len}});
 
         current_func->tre = true;
     } else {
-        if (var_offset > 0) {
-            Size pop = var_offset - 1;
-
-            switch (current_func->ret_type->primitive) {
-                case PrimitiveType::Null: { pop++; } break;
-                case PrimitiveType::Bool: { ir.Append({Opcode::StoreBool, {.i = 0}}); } break;
-                case PrimitiveType::Int: { ir.Append({Opcode::StoreInt, {.i = 0}}); } break;
-                case PrimitiveType::Float: { ir.Append({Opcode::StoreFloat, {.i = 0}}); } break;
-                case PrimitiveType::String: { ir.Append({Opcode::StoreString, {.i = 0}}); } break;
-                case PrimitiveType::Type: { ir.Append({Opcode::StoreType, {.i = 0}}); } break;
-            }
-
-            EmitPop(pop);
-        }
-
-        ir.Append({Opcode::Return, {.i = current_func->params.len}});
+        ir.Append({Opcode::Return});
     }
 }
 

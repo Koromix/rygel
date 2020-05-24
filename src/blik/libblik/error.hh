@@ -14,15 +14,6 @@ enum class DiagnosticType {
     ErrorHint
 };
 
-struct FrameInfo {
-    Size pc;
-    Size bp;
-    const FunctionInfo *func; // Can be NULL
-
-    const char *filename;
-    int32_t line;
-};
-
 template <typename... Args>
 void ReportDiagnostic(DiagnosticType type, Span<const char> code, const char *filename,
                       int line, Size offset, const char *fmt, Args... args)
@@ -133,23 +124,26 @@ void ReportDiagnostic(DiagnosticType type, const char *fmt, Args... args)
 }
 
 template <typename... Args>
-void ReportRuntimeError(Span<const FrameInfo> frames, const char *fmt, Args... args)
+void ReportRuntimeError(const Program &program, Span<const CallFrame> frames, const char *fmt, Args... args)
 {
     if (frames.len) {
         LogInfo("Dumping stack trace:");
 
         for (Size i = frames.len - 1; i >= 0; i--) {
-            const FrameInfo &frame = frames[i];
+            const CallFrame &frame = frames[i];
 
             const char *name = frame.func ? frame.func->signature : "<outside function>";
             bool tre = frame.func && frame.func->tre;
 
-            if (frame.filename) {
+            int32_t line;
+            const char *filename = program.LocateInstruction(frame.pc, &line);
+
+            if (filename) {
                 LogInfo(" %!M.+%1%!0 %!..+%2%3%!0 %!D..%4 (%5)%!0",
-                        i ? "   " : ">>>", FmtArg(name).Pad(36), tre ? "+++" : "   ", frame.filename, frame.line);
+                        i ? "   " : ">>>", FmtArg(name).Pad(36), tre ? "(+)" : "   ", filename, line);
             } else {
                 LogInfo(" %!M.+%1%!0 %!..+%2%3%!0 %!D..<native function>%!0",
-                        i ? "   " : ">>>", FmtArg(name).Pad(36), tre ? "+++" : "   ");
+                        i ? "   " : ">>>", FmtArg(name).Pad(36), tre ? "(+)" : "   ");
             }
         }
 

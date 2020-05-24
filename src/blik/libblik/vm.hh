@@ -21,31 +21,25 @@ class VirtualMachine {
 public:
     const Program *const program;
 
+    HeapArray<CallFrame> frames;
     HeapArray<Value> stack;
-    Size pc = 0;
-    Size bp = 0;
 
-    VirtualMachine(const Program *const program) : program(program) {}
+    VirtualMachine(const Program *const program);
 
     bool Run();
-
-    void DecodeFrames(const VirtualMachine &vm, HeapArray<FrameInfo> *out_frames) const;
 
     void SetInterrupt() { run = false; }
     template <typename... Args>
     void FatalError(const char *fmt, Args... args)
     {
-        HeapArray<FrameInfo> frames;
-        DecodeFrames(*this, &frames);
-
-        ReportRuntimeError(frames, fmt, args...);
+        ReportRuntimeError(*program, frames, fmt, args...);
 
         run = false;
         error = true;
     }
 
 private:
-    void DumpInstruction() const;
+    void DumpInstruction(Size pc) const;
 };
 
 bool Run(const Program &program);
