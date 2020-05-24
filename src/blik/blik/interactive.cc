@@ -73,9 +73,9 @@ end
 int RunCommand(Span<const char> code)
 {
     Program program;
-    Parser parser(&program);
+    Compiler compiler(&program);
 
-    ImportAll(&parser);
+    ImportAll(&compiler);
 
     // Try to parse with fake print first...
     bool valid_with_fake_print;
@@ -88,7 +88,7 @@ int RunCommand(Span<const char> code)
         SetLogHandler([](LogLevel level, const char *ctx, const char *msg) {});
         RG_DEFER { SetLogHandler(DefaultLogHandler); };
 
-        valid_with_fake_print = parser.Parse(file);
+        valid_with_fake_print = compiler.Compile(file);
     }
 
     // If the fake print has failed, reparse the code without the fake print
@@ -97,7 +97,7 @@ int RunCommand(Span<const char> code)
         bool success = Tokenize(code, "<inline>", &file);
         RG_ASSERT(success);
 
-        if (!parser.Parse(file))
+        if (!compiler.Compile(file))
             return 1;
     }
 
@@ -109,19 +109,19 @@ int RunInteractive()
     LogInfo("%!R..blik%!0 %1", FelixVersion);
 
     Program program;
-    Parser parser(&program);
+    Compiler compiler(&program);
     VirtualMachine vm(&program);
     bool run = true;
 
-    ImportAll(&parser);
+    ImportAll(&compiler);
 
     // Functions specific to interactive mode
-    parser.AddFunction("exit()", [&](VirtualMachine *vm, Span<const Value> args) {
+    compiler.AddFunction("exit()", [&](VirtualMachine *vm, Span<const Value> args) {
         run = false;
         vm->SetInterrupt();
         return Value();
     });
-    parser.AddFunction("quit()", [&](VirtualMachine *vm, Span<const Value> args) {
+    compiler.AddFunction("quit()", [&](VirtualMachine *vm, Span<const Value> args) {
         run = false;
         vm->SetInterrupt();
         return Value();
@@ -158,7 +158,7 @@ int RunInteractive()
             if (!TokenizeWithFakePrint(code, "<inline>", &file))
                 return 1;
 
-            valid_with_fake_print = parser.Parse(file);
+            valid_with_fake_print = compiler.Compile(file);
         }
 
         if (!valid_with_fake_print) {
@@ -168,8 +168,8 @@ int RunInteractive()
             bool success = Tokenize(code, "<interactive>", &file);
             RG_ASSERT(success);
 
-            ParseReport report;
-            if (!parser.Parse(file, &report)) {
+            CompileReport report;
+            if (!compiler.Compile(file, &report)) {
                 if (report.unexpected_eof) {
                     prompter.str.len = TrimStrRight((Span<const char>)prompter.str, "\t ").len;
                     if (!prompter.str.len || prompter.str[prompter.str.len - 1] != '\n') {

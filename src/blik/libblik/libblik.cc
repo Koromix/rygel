@@ -4,7 +4,7 @@
 
 #pragma once
 
+#include "compiler.cc"
 #include "lexer.cc"
-#include "parser.cc"
 #include "std.cc"
 #include "vm.cc"

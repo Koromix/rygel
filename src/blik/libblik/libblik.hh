@@ -6,7 +6,7 @@
 
 #include "program.hh"
 #include "error.hh"
+#include "compiler.hh"
 #include "lexer.hh"
-#include "parser.hh"
 #include "std.hh"
 #include "vm.hh"

@@ -3,11 +3,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../core/libcc/libcc.hh"
+#include "compiler.hh"
 #include "error.hh"
 #include "lexer.hh"
-#include "parser.hh"
 #include "program.hh"
-#include "std.hh"
 
 namespace RG {
 
@@ -34,12 +33,12 @@ struct StackSlot {
     const VariableInfo *var;
 };
 
-class ParserImpl {
-    RG_DELETE_COPY(ParserImpl)
+class Parser {
+    RG_DELETE_COPY(Parser)
 
     // All these members are relevant to the current parse only, and get resetted each time
     const TokenizedFile *file;
-    ParseReport *out_report; // Can be NULL
+    CompileReport *out_report; // Can be NULL
     Span<const Token> tokens;
     Size pos;
     bool valid;
@@ -71,9 +70,9 @@ class ParserImpl {
     HeapArray<Instruction> &ir;
 
 public:
-    ParserImpl(Program *program);
+    Parser(Program *program);
 
-    bool Parse(const TokenizedFile &file, ParseReport *out_report);
+    bool Parse(const TokenizedFile &file, CompileReport *out_report);
 
     void AddFunction(const char *signature, std::function<NativeFunction> native);
 
@@ -177,28 +176,37 @@ private:
     }
 };
 
-Parser::Parser(Program *program)
+Compiler::Compiler(Program *program)
 {
-    impl = new ParserImpl(program);
+    parser = new Parser(program);
 }
 
-Parser::~Parser()
+Compiler::~Compiler()
 {
-    delete impl;
+    delete parser;
 }
 
-bool Parser::Parse(const TokenizedFile &file, ParseReport *out_report)
+bool Compiler::Compile(const TokenizedFile &file, CompileReport *out_report)
 {
-    return impl->Parse(file, out_report);
+    return parser->Parse(file, out_report);
 }
 
-void Parser::AddFunction(const char *signature, std::function<NativeFunction> native)
+bool Compiler::Compile(Span<const char> code, const char *filename, CompileReport *out_report)
+{
+    TokenizedFile file;
+    if (!Tokenize(code, filename, &file))
+        return false;
+
+    return parser->Parse(file, out_report);
+}
+
+void Compiler::AddFunction(const char *signature, std::function<NativeFunction> native)
 {
     RG_ASSERT(native);
-    impl->AddFunction(signature, native);
+    parser->AddFunction(signature, native);
 }
 
-ParserImpl::ParserImpl(Program *program)
+Parser::Parser(Program *program)
     : program(program), ir(program->ir)
 {
     RG_ASSERT(program);
@@ -216,7 +224,7 @@ ParserImpl::ParserImpl(Program *program)
     AddFunction("typeOf(...): Type", {});
 }
 
-bool ParserImpl::Parse(const TokenizedFile &file, ParseReport *out_report)
+bool Parser::Parse(const TokenizedFile &file, CompileReport *out_report)
 {
     // Restore previous state if something goes wrong
     RG_DEFER_NC(err_guard, ir_len = ir.len,
@@ -300,7 +308,7 @@ bool ParserImpl::Parse(const TokenizedFile &file, ParseReport *out_report)
 // This is not exposed to user scripts, and the validation of signature is very light,
 // with a few debug-only asserts. Bad function names (even invalid UTF-8 sequences)
 // will go right through. Don't pass in garbage!
-void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction> native)
+void Parser::AddFunction(const char *signature, std::function<NativeFunction> native)
 {
     FunctionInfo *func = program->functions.AppendDefault();
 
@@ -382,7 +390,7 @@ void ParserImpl::AddFunction(const char *signature, std::function<NativeFunction
     }
 }
 
-void ParserImpl::ParsePrototypes(Span<const Size> funcs)
+void Parser::ParsePrototypes(Span<const Size> funcs)
 {
     RG_ASSERT(!prototypes_map.count);
     RG_ASSERT(pos == 0);
@@ -509,7 +517,7 @@ void ParserImpl::ParsePrototypes(Span<const Size> funcs)
     }
 }
 
-bool ParserImpl::ParseBlock()
+bool Parser::ParseBlock()
 {
     show_errors = true;
     depth++;
@@ -533,7 +541,7 @@ bool ParserImpl::ParseBlock()
     return has_return;
 }
 
-bool ParserImpl::ParseStatement()
+bool Parser::ParseStatement()
 {
     bool has_return = false;
 
@@ -601,7 +609,7 @@ bool ParserImpl::ParseStatement()
     return has_return;
 }
 
-bool ParserImpl::ParseDo()
+bool Parser::ParseDo()
 {
     pos++;
 
@@ -622,7 +630,7 @@ bool ParserImpl::ParseDo()
     }
 }
 
-void ParserImpl::ParseFunction()
+void Parser::ParseFunction()
 {
     Size func_pos = ++pos;
 
@@ -734,7 +742,7 @@ void ParserImpl::ParseFunction()
     ir[func_jump_idx].u.i = ir.len - func_jump_idx;
 }
 
-void ParserImpl::ParseReturn()
+void Parser::ParseReturn()
 {
     Size return_pos = ++pos;
 
@@ -759,7 +767,7 @@ void ParserImpl::ParseReturn()
     EmitReturn();
 }
 
-void ParserImpl::ParseLet()
+void Parser::ParseLet()
 {
     Size var_pos = ++pos;
 
@@ -833,7 +841,7 @@ void ParserImpl::ParseLet()
     }
 }
 
-bool ParserImpl::ParseIf()
+bool Parser::ParseIf()
 {
     pos++;
 
@@ -893,7 +901,7 @@ bool ParserImpl::ParseIf()
     return has_return && has_else;
 }
 
-void ParserImpl::ParseWhile()
+void Parser::ParseWhile()
 {
     pos++;
 
@@ -948,7 +956,7 @@ void ParserImpl::ParseWhile()
     }
 }
 
-void ParserImpl::ParseFor()
+void Parser::ParseFor()
 {
     Size for_pos = ++pos;
 
@@ -1043,7 +1051,7 @@ void ParserImpl::ParseFor()
     var_offset -= 3;
 }
 
-void ParserImpl::ParseBreak()
+void Parser::ParseBreak()
 {
     Size break_pos = pos++;
 
@@ -1058,7 +1066,7 @@ void ParserImpl::ParseBreak()
     ir.Append({Opcode::Jump});
 }
 
-void ParserImpl::ParseContinue()
+void Parser::ParseContinue()
 {
     Size continue_pos = pos++;
 
@@ -1073,7 +1081,7 @@ void ParserImpl::ParseContinue()
     ir.Append({Opcode::Jump});
 }
 
-const TypeInfo *ParserImpl::ParseType()
+const TypeInfo *Parser::ParseType()
 {
     Size type_pos = pos;
 
@@ -1143,7 +1151,7 @@ static int GetOperatorPrecedence(TokenKind kind)
     }
 }
 
-const TypeInfo *ParserImpl::ParseExpression()
+const TypeInfo *Parser::ParseExpression()
 {
     Size start_values_len = stack.len;
     RG_DEFER { stack.RemoveFrom(start_values_len); };
@@ -1360,7 +1368,7 @@ error:
     return GetBasicType(PrimitiveType::Null);
 }
 
-void ParserImpl::ProduceOperator(const PendingOperator &op)
+void Parser::ProduceOperator(const PendingOperator &op)
 {
     bool success = false;
 
@@ -1624,7 +1632,7 @@ void ParserImpl::ProduceOperator(const PendingOperator &op)
     }
 }
 
-bool ParserImpl::EmitOperator1(PrimitiveType in_primitive, Opcode code, const TypeInfo *out_type)
+bool Parser::EmitOperator1(PrimitiveType in_primitive, Opcode code, const TypeInfo *out_type)
 {
     const TypeInfo *type = stack[stack.len - 1].type;
 
@@ -1638,7 +1646,7 @@ bool ParserImpl::EmitOperator1(PrimitiveType in_primitive, Opcode code, const Ty
     }
 }
 
-bool ParserImpl::EmitOperator2(PrimitiveType in_primitive, Opcode code, const TypeInfo *out_type)
+bool Parser::EmitOperator2(PrimitiveType in_primitive, Opcode code, const TypeInfo *out_type)
 {
     const TypeInfo *type1 = stack[stack.len - 2].type;
     const TypeInfo *type2 = stack[stack.len - 1].type;
@@ -1653,7 +1661,7 @@ bool ParserImpl::EmitOperator2(PrimitiveType in_primitive, Opcode code, const Ty
     }
 }
 
-void ParserImpl::EmitLoad(const VariableInfo &var)
+void Parser::EmitLoad(const VariableInfo &var)
 {
     if (var.global && current_func) {
         if (RG_UNLIKELY(current_func->earliest_call_idx < var.defined_idx)) {
@@ -1686,7 +1694,7 @@ void ParserImpl::EmitLoad(const VariableInfo &var)
 }
 
 // Don't try to call from outside ParseExpression()!
-bool ParserImpl::ParseCall(const char *name)
+bool Parser::ParseCall(const char *name)
 {
     // We only need to store types, but TestOverload() wants FunctionInfo::Parameter.
     LocalArray<FunctionInfo::Parameter, RG_LEN(FunctionInfo::params.data)> args;
@@ -1777,7 +1785,7 @@ bool ParserImpl::ParseCall(const char *name)
     return true;
 }
 
-void ParserImpl::EmitIntrinsic(const char *name, Size call_idx, Span<const FunctionInfo::Parameter> args)
+void Parser::EmitIntrinsic(const char *name, Size call_idx, Span<const FunctionInfo::Parameter> args)
 {
     if (TestStr(name, "intToFloat")) {
         ir.Append({Opcode::IntToFloat});
@@ -1799,7 +1807,7 @@ void ParserImpl::EmitIntrinsic(const char *name, Size call_idx, Span<const Funct
     }
 }
 
-bool ParserImpl::ParseExpressionOfType(const TypeInfo *type)
+bool Parser::ParseExpressionOfType(const TypeInfo *type)
 {
     Size expr_pos = pos;
 
@@ -1813,7 +1821,7 @@ bool ParserImpl::ParseExpressionOfType(const TypeInfo *type)
     return true;
 }
 
-void ParserImpl::DiscardResult()
+void Parser::DiscardResult()
 {
     if (ir.len >= 1) {
         switch (ir[ir.len - 1].code) {
@@ -1839,7 +1847,7 @@ void ParserImpl::DiscardResult()
     }
 }
 
-void ParserImpl::EmitPop(int64_t count)
+void Parser::EmitPop(int64_t count)
 {
     RG_ASSERT(count >= 0);
 
@@ -1848,7 +1856,7 @@ void ParserImpl::EmitPop(int64_t count)
     }
 }
 
-void ParserImpl::EmitReturn()
+void Parser::EmitReturn()
 {
     RG_ASSERT(current_func);
 
@@ -1879,7 +1887,7 @@ void ParserImpl::EmitReturn()
     }
 }
 
-void ParserImpl::DestroyVariables(Size count)
+void Parser::DestroyVariables(Size count)
 {
     Size first_idx = program->variables.len - count;
 
@@ -1899,7 +1907,7 @@ void ParserImpl::DestroyVariables(Size count)
     program->variables.RemoveLast(count);
 }
 
-bool ParserImpl::TestOverload(const FunctionInfo &proto, Span<const FunctionInfo::Parameter> params)
+bool Parser::TestOverload(const FunctionInfo &proto, Span<const FunctionInfo::Parameter> params)
 {
     if (proto.variadic) {
         if (proto.params.len > params.len)
@@ -1917,7 +1925,7 @@ bool ParserImpl::TestOverload(const FunctionInfo &proto, Span<const FunctionInfo
     return true;
 }
 
-bool ParserImpl::ConsumeToken(TokenKind kind)
+bool Parser::ConsumeToken(TokenKind kind)
 {
     if (RG_UNLIKELY(pos >= tokens.len)) {
         if (out_report && valid) {
@@ -1939,7 +1947,7 @@ bool ParserImpl::ConsumeToken(TokenKind kind)
     return true;
 }
 
-const char *ParserImpl::ConsumeIdentifier()
+const char *Parser::ConsumeIdentifier()
 {
     if (RG_LIKELY(ConsumeToken(TokenKind::Identifier))) {
         return InternString(tokens[pos - 1].u.str);
@@ -1948,7 +1956,7 @@ const char *ParserImpl::ConsumeIdentifier()
     }
 }
 
-bool ParserImpl::MatchToken(TokenKind kind)
+bool Parser::MatchToken(TokenKind kind)
 {
     bool match = pos < tokens.len && tokens[pos].kind == kind;
     pos += match;
@@ -1956,13 +1964,13 @@ bool ParserImpl::MatchToken(TokenKind kind)
     return match;
 }
 
-bool ParserImpl::PeekToken(TokenKind kind)
+bool Parser::PeekToken(TokenKind kind)
 {
     bool match = pos < tokens.len && tokens[pos].kind == kind;
     return match;
 }
 
-bool ParserImpl::SkipNewLines()
+bool Parser::SkipNewLines()
 {
     if (MatchToken(TokenKind::EndOfLine)) {
         while (MatchToken(TokenKind::EndOfLine));
@@ -1977,20 +1985,13 @@ bool ParserImpl::SkipNewLines()
     }
 }
 
-const char *ParserImpl::InternString(const char *str)
+const char *Parser::InternString(const char *str)
 {
     std::pair<const char **, bool> ret = strings.Append(str);
     if (ret.second) {
         *ret.first = DuplicateString(str, &program->str_alloc).ptr;
     }
     return *ret.first;
-}
-
-bool Parse(const TokenizedFile &file, Program *out_program)
-{
-    Parser parser(out_program);
-    ImportAll(&parser);
-    return parser.Parse(file);
 }
 
 }

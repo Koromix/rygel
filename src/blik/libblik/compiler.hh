@@ -9,28 +9,27 @@
 
 namespace RG {
 
-class ParserImpl;
+class Parser;
 struct TokenizedFile;
 
-struct ParseReport {
+struct CompileReport {
     bool unexpected_eof;
     int depth;
 };
 
-class Parser {
-    RG_DELETE_COPY(Parser)
+class Compiler {
+    RG_DELETE_COPY(Compiler)
 
-    ParserImpl *impl;
+    Parser *parser;
 
 public:
-    Parser(Program *out_program);
-    ~Parser();
+    Compiler(Program *out_program);
+    ~Compiler();
 
-    bool Parse(const TokenizedFile &file, ParseReport *out_report = nullptr);
+    bool Compile(const TokenizedFile &file, CompileReport *out_report = nullptr);
+    bool Compile(Span<const char> code, const char *filename, CompileReport *out_report = nullptr);
 
     void AddFunction(const char *signature, std::function<NativeFunction> native);
 };
-
-bool Parse(const TokenizedFile &file, Program *out_program);
 
 }

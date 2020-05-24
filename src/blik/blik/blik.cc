@@ -16,16 +16,14 @@ static int RunFile(const char *filename)
     if (ReadFile(filename, Megabytes(64), &code) < 0)
         return 1;
 
-    TokenizedFile file;
     Program program;
-    if (!Tokenize(code, filename, &file))
-        return 1;
-    if (!Parse(file, &program))
-        return 1;
-    if (!Run(program))
+    Compiler compiler(&program);
+
+    ImportAll(&compiler);
+    if (!compiler.Compile(code, filename))
         return 1;
 
-    return 0;
+    return !Run(program);
 }
 
 int Main(int argc, char **argv)

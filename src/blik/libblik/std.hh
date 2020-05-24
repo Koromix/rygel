@@ -8,9 +8,9 @@
 
 namespace RG {
 
-class Parser;
+class Compiler;
 
-void ImportAll(Parser *out_parser);
-void ImportPrint(Parser *out_parser);
+void ImportAll(Compiler *out_compiler);
+void ImportPrint(Compiler *out_compiler);
 
 }

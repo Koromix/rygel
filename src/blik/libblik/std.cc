@@ -3,14 +3,14 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../core/libcc/libcc.hh"
-#include "parser.hh"
+#include "compiler.hh"
 #include "std.hh"
 
 namespace RG {
 
-void ImportAll(Parser *out_parser)
+void ImportAll(Compiler *out_compiler)
 {
-    ImportPrint(out_parser);
+    ImportPrint(out_compiler);
 }
 
 static Value DoPrint(VirtualMachine *vm, Span<const Value> args)
@@ -31,10 +31,10 @@ static Value DoPrint(VirtualMachine *vm, Span<const Value> args)
     return Value();
 }
 
-void ImportPrint(Parser *out_parser)
+void ImportPrint(Compiler *out_compiler)
 {
-    out_parser->AddFunction("print(...)", DoPrint);
-    out_parser->AddFunction("printLn(...)", [](VirtualMachine *vm, Span<const Value> args) {
+    out_compiler->AddFunction("print(...)", DoPrint);
+    out_compiler->AddFunction("printLn(...)", [](VirtualMachine *vm, Span<const Value> args) {
         DoPrint(vm, args);
         PrintLn();
 
