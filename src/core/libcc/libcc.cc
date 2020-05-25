@@ -4620,6 +4620,7 @@ bool ConsolePrompter::Read()
     RG_DEFER { DisableRawMode(); };
 
     // Don't overwrite current line
+    fflush(stdout);
     if (GetCursorPosition().x > 0) {
         fputs("\r\n", stdout);
     }
@@ -5024,7 +5025,7 @@ Vec2<int> ConsolePrompter::GetCursorPosition()
     if (!GetConsoleScreenBufferInfo(h, &screen))
         return {};
 
-    return {screen.dwCursorPosition.X - 1, screen.dwCursorPosition.Y - 1};
+    return {screen.dwCursorPosition.X, screen.dwCursorPosition.Y};
 #else
     fputs("\x1B[6n", stdout);
     fflush(stdout);
