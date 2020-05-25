@@ -1005,13 +1005,13 @@ void Parser::ParseFor()
     var_offset += 3;
 
     // Put iterator value on the stack
-    ir.Append({Opcode::LoadInt, {.i = it->offset - 2}});
+    ir.Append({Opcode::LoadLocalInt, {.i = it->offset - 2}});
     it->type = GetBasicType(PrimitiveType::Int);
 
     Size body_idx = ir.len;
 
-    ir.Append({Opcode::LoadInt, {.i = it->offset}});
-    ir.Append({Opcode::LoadInt, {.i = it->offset - 1}});
+    ir.Append({Opcode::LoadLocalInt, {.i = it->offset}});
+    ir.Append({Opcode::LoadLocalInt, {.i = it->offset - 1}});
     ir.Append({inclusive ? Opcode::LessOrEqualInt : Opcode::LessThanInt});
     ir.Append({Opcode::BranchIfFalse});
 
@@ -1454,31 +1454,7 @@ void Parser::ProduceOperator(const PendingOperator &op)
             default: { RG_UNREACHABLE(); } break;
         }
 
-        if (var->global && current_func) {
-            switch (var->type->primitive) {
-                case PrimitiveType::Null: {} break;
-                case PrimitiveType::Bool: {
-                    ir.Append({Opcode::StoreGlobalBool, {.i = var->offset}});
-                    ir.Append({Opcode::LoadGlobalBool, {.i = var->offset}});
-                } break;
-                case PrimitiveType::Int: {
-                    ir.Append({Opcode::StoreGlobalInt, {.i = var->offset}});
-                    ir.Append({Opcode::LoadGlobalInt, {.i = var->offset}});
-                } break;
-                case PrimitiveType::Float: {
-                    ir.Append({Opcode::StoreGlobalFloat, {.i = var->offset}});
-                    ir.Append({Opcode::LoadGlobalFloat, {.i = var->offset}});
-                } break;
-                case PrimitiveType::String: {
-                    ir.Append({Opcode::StoreGlobalString, {.i = var->offset}});
-                    ir.Append({Opcode::LoadGlobalString, {.i = var->offset}});
-                } break;
-                case PrimitiveType::Type: {
-                    ir.Append({Opcode::StoreGlobalType, {.i = var->offset}});
-                    ir.Append({Opcode::LoadGlobalType, {.i = var->offset}});
-                } break;
-            }
-        } else {
+        if (var->global) {
             switch (var->type->primitive) {
                 case PrimitiveType::Null: {} break;
                 case PrimitiveType::Bool: { ir.Append({Opcode::CopyBool, {.i = var->offset}}); } break;
@@ -1486,6 +1462,15 @@ void Parser::ProduceOperator(const PendingOperator &op)
                 case PrimitiveType::Float: { ir.Append({Opcode::CopyFloat, {.i = var->offset}}); } break;
                 case PrimitiveType::String: { ir.Append({Opcode::CopyString, {.i = var->offset}}); } break;
                 case PrimitiveType::Type: { ir.Append({Opcode::CopyType, {.i = var->offset}}); } break;
+            }
+        } else {
+            switch (var->type->primitive) {
+                case PrimitiveType::Null: {} break;
+                case PrimitiveType::Bool: { ir.Append({Opcode::CopyLocalBool, {.i = var->offset}}); } break;
+                case PrimitiveType::Int: { ir.Append({Opcode::CopyLocalInt, {.i = var->offset}}); } break;
+                case PrimitiveType::Float: { ir.Append({Opcode::CopyLocalFloat, {.i = var->offset}}); } break;
+                case PrimitiveType::String: { ir.Append({Opcode::CopyLocalString, {.i = var->offset}}); } break;
+                case PrimitiveType::Type: { ir.Append({Opcode::CopyLocalType, {.i = var->offset}}); } break;
             }
         }
     } else { // Other operators
@@ -1668,8 +1653,8 @@ bool Parser::EmitOperator2(PrimitiveType in_primitive, Opcode code, const TypeIn
 
 void Parser::EmitLoad(const VariableInfo &var)
 {
-    if (var.global && current_func) {
-        if (RG_UNLIKELY(current_func->earliest_call_idx < var.defined_idx)) {
+    if (var.global) {
+        if (RG_UNLIKELY(current_func && current_func->earliest_call_idx < var.defined_idx)) {
             MarkError(definitions_map.FindValue(current_func, -1), "Function '%1' may be called before variable '%2' exists",
                       current_func->name, var.name);
             HintError(current_func->earliest_call_pos, "Function call happens here (it could be indirect)");
@@ -1678,20 +1663,20 @@ void Parser::EmitLoad(const VariableInfo &var)
 
         switch (var.type->primitive) {
             case PrimitiveType::Null: { ir.Append({Opcode::PushNull}); } break;
-            case PrimitiveType::Bool: { ir.Append({Opcode::LoadGlobalBool, {.i = var.offset}}); } break;
-            case PrimitiveType::Int: { ir.Append({Opcode::LoadGlobalInt, {.i = var.offset}}); } break;
-            case PrimitiveType::Float: { ir.Append({Opcode::LoadGlobalFloat, {.i = var.offset}});} break;
-            case PrimitiveType::String: { ir.Append({Opcode::LoadGlobalString, {.i = var.offset}}); } break;
-            case PrimitiveType::Type: { ir.Append({Opcode::LoadGlobalType, {.i = var.offset}}); } break;
-        }
-    } else {
-        switch (var.type->primitive) {
-            case PrimitiveType::Null: { ir.Append({Opcode::PushNull}); } break;
             case PrimitiveType::Bool: { ir.Append({Opcode::LoadBool, {.i = var.offset}}); } break;
             case PrimitiveType::Int: { ir.Append({Opcode::LoadInt, {.i = var.offset}}); } break;
             case PrimitiveType::Float: { ir.Append({Opcode::LoadFloat, {.i = var.offset}});} break;
             case PrimitiveType::String: { ir.Append({Opcode::LoadString, {.i = var.offset}}); } break;
             case PrimitiveType::Type: { ir.Append({Opcode::LoadType, {.i = var.offset}}); } break;
+        }
+    } else {
+        switch (var.type->primitive) {
+            case PrimitiveType::Null: { ir.Append({Opcode::PushNull}); } break;
+            case PrimitiveType::Bool: { ir.Append({Opcode::LoadLocalBool, {.i = var.offset}}); } break;
+            case PrimitiveType::Int: { ir.Append({Opcode::LoadLocalInt, {.i = var.offset}}); } break;
+            case PrimitiveType::Float: { ir.Append({Opcode::LoadLocalFloat, {.i = var.offset}});} break;
+            case PrimitiveType::String: { ir.Append({Opcode::LoadLocalString, {.i = var.offset}}); } break;
+            case PrimitiveType::Type: { ir.Append({Opcode::LoadLocalType, {.i = var.offset}}); } break;
         }
     }
 
@@ -1835,22 +1820,33 @@ void Parser::DiscardResult()
 {
     if (ir.len >= 1) {
         switch (ir[ir.len - 1].code) {
+            case Opcode::PushNull:
+            case Opcode::PushBool:
+            case Opcode::PushInt:
+            case Opcode::PushFloat:
+            case Opcode::PushString:
+            case Opcode::PushType:
             case Opcode::LoadBool:
             case Opcode::LoadInt:
             case Opcode::LoadFloat:
             case Opcode::LoadString:
             case Opcode::LoadType:
-            case Opcode::LoadGlobalBool:
-            case Opcode::LoadGlobalInt:
-            case Opcode::LoadGlobalFloat:
-            case Opcode::LoadGlobalString:
-            case Opcode::LoadGlobalType: { TrimInstructions(1); } break;
+            case Opcode::LoadLocalBool:
+            case Opcode::LoadLocalInt:
+            case Opcode::LoadLocalFloat:
+            case Opcode::LoadLocalString:
+            case Opcode::LoadLocalType: { TrimInstructions(1); } break;
 
             case Opcode::CopyBool: { ir[ir.len - 1].code = Opcode::StoreBool; } break;
             case Opcode::CopyInt: { ir[ir.len - 1].code = Opcode::StoreInt; } break;
             case Opcode::CopyFloat: { ir[ir.len - 1].code = Opcode::StoreFloat; } break;
             case Opcode::CopyString: { ir[ir.len - 1].code = Opcode::StoreString; } break;
             case Opcode::CopyType: { ir[ir.len - 1].code = Opcode::StoreType; } break;
+            case Opcode::CopyLocalBool: { ir[ir.len - 1].code = Opcode::StoreLocalBool; } break;
+            case Opcode::CopyLocalInt: { ir[ir.len - 1].code = Opcode::StoreLocalInt; } break;
+            case Opcode::CopyLocalFloat: { ir[ir.len - 1].code = Opcode::StoreLocalFloat; } break;
+            case Opcode::CopyLocalString: { ir[ir.len - 1].code = Opcode::StoreLocalString; } break;
+            case Opcode::CopyLocalType: { ir[ir.len - 1].code = Opcode::StoreLocalType; } break;
 
             default: { EmitPop(1); } break;
         }
@@ -1880,11 +1876,11 @@ void Parser::EmitReturn()
 
             switch (param.type->primitive) {
                 case PrimitiveType::Null: {} break;
-                case PrimitiveType::Bool: { ir.Append({Opcode::StoreBool, {.i = i}}); } break;
-                case PrimitiveType::Int: { ir.Append({Opcode::StoreInt, {.i = i}}); } break;
-                case PrimitiveType::Float: { ir.Append({Opcode::StoreFloat, {.i = i}}); } break;
-                case PrimitiveType::String: { ir.Append({Opcode::StoreString, {.i = i}}); } break;
-                case PrimitiveType::Type: { ir.Append({Opcode::StoreType, {.i = i}}); } break;
+                case PrimitiveType::Bool: { ir.Append({Opcode::StoreLocalBool, {.i = i}}); } break;
+                case PrimitiveType::Int: { ir.Append({Opcode::StoreLocalInt, {.i = i}}); } break;
+                case PrimitiveType::Float: { ir.Append({Opcode::StoreLocalFloat, {.i = i}}); } break;
+                case PrimitiveType::String: { ir.Append({Opcode::StoreLocalString, {.i = i}}); } break;
+                case PrimitiveType::Type: { ir.Append({Opcode::StoreLocalType, {.i = i}}); } break;
             }
         }
 

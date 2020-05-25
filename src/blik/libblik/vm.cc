@@ -90,104 +90,124 @@ bool VirtualMachine::Run()
         }
 
         CASE(LoadBool): {
-            stack.Append({.b = stack[bp + inst->u.i].b});
-            DISPATCH(++pc);
-        }
-        CASE(LoadInt): {
-            stack.Append({.i = stack[bp + inst->u.i].i});
-            DISPATCH(++pc);
-        }
-        CASE(LoadFloat): {
-            stack.Append({.d = stack[bp + inst->u.i].d});
-            DISPATCH(++pc);
-        }
-        CASE(LoadString): {
-            stack.Append({.str = stack[bp + inst->u.i].str});
-            DISPATCH(++pc);
-        }
-        CASE(LoadType): {
-            stack.Append({.type = stack[bp + inst->u.i].type});
-            DISPATCH(++pc);
-        }
-        CASE(StoreBool): {
-            stack[bp + inst->u.i].b = stack.ptr[--stack.len].b;
-            DISPATCH(++pc);
-        }
-        CASE(StoreInt): {
-            stack[bp + inst->u.i].i = stack.ptr[--stack.len].i;
-            DISPATCH(++pc);
-        }
-        CASE(StoreFloat): {
-            stack[bp + inst->u.i].d = stack.ptr[--stack.len].d;
-            DISPATCH(++pc);
-        }
-        CASE(StoreString): {
-            stack[bp + inst->u.i].str = stack.ptr[--stack.len].str;
-            DISPATCH(++pc);
-        }
-        CASE(StoreType): {
-            stack[bp + inst->u.i].type = stack.ptr[--stack.len].type;
-            DISPATCH(++pc);
-        }
-        CASE(CopyBool): {
-            stack[bp + inst->u.i].b = stack.ptr[stack.len - 1].b;
-            DISPATCH(++pc);
-        }
-        CASE(CopyInt): {
-            stack[bp + inst->u.i].i = stack.ptr[stack.len - 1].i;
-            DISPATCH(++pc);
-        }
-        CASE(CopyFloat): {
-            stack[bp + inst->u.i].d = stack.ptr[stack.len - 1].d;
-            DISPATCH(++pc);
-        }
-        CASE(CopyString): {
-            stack[bp + inst->u.i].str = stack.ptr[stack.len - 1].str;
-            DISPATCH(++pc);
-        }
-        CASE(CopyType): {
-            stack[bp + inst->u.i].type = stack.ptr[stack.len - 1].type;
-            DISPATCH(++pc);
-        }
-
-        CASE(LoadGlobalBool): {
             stack.Append({.b = stack[inst->u.i].b});
             DISPATCH(++pc);
         }
-        CASE(LoadGlobalInt): {
+        CASE(LoadInt): {
             stack.Append({.i = stack[inst->u.i].i});
             DISPATCH(++pc);
         }
-        CASE(LoadGlobalFloat): {
+        CASE(LoadFloat): {
             stack.Append({.d = stack[inst->u.i].d});
             DISPATCH(++pc);
         }
-        CASE(LoadGlobalString): {
+        CASE(LoadString): {
             stack.Append({.str = stack[inst->u.i].str});
             DISPATCH(++pc);
         }
-        CASE(LoadGlobalType): {
+        CASE(LoadType): {
             stack.Append({.type = stack[inst->u.i].type});
             DISPATCH(++pc);
         }
-        CASE(StoreGlobalBool): {
+        CASE(StoreBool): {
             stack[inst->u.i].b = stack.ptr[--stack.len].b;
             DISPATCH(++pc);
         }
-        CASE(StoreGlobalInt): {
+        CASE(StoreInt): {
             stack[inst->u.i].i = stack.ptr[--stack.len].i;
             DISPATCH(++pc);
         }
-        CASE(StoreGlobalFloat): {
+        CASE(StoreFloat): {
             stack[inst->u.i].d = stack.ptr[--stack.len].d;
             DISPATCH(++pc);
         }
-        CASE(StoreGlobalString): {
+        CASE(StoreString): {
             stack[inst->u.i].str = stack.ptr[--stack.len].str;
             DISPATCH(++pc);
         }
-        CASE(StoreGlobalType): {
+        CASE(StoreType): {
             stack[inst->u.i].type = stack.ptr[--stack.len].type;
+            DISPATCH(++pc);
+        }
+        CASE(CopyBool): {
+            stack[inst->u.i].b = stack[stack.len - 1].b;
+            DISPATCH(++pc);
+        }
+        CASE(CopyInt): {
+            stack[inst->u.i].i = stack[stack.len - 1].i;
+            DISPATCH(++pc);
+        }
+        CASE(CopyFloat): {
+            stack[inst->u.i].d = stack[stack.len - 1].d;
+            DISPATCH(++pc);
+        }
+        CASE(CopyString): {
+            stack[inst->u.i].str = stack[stack.len - 1].str;
+            DISPATCH(++pc);
+        }
+        CASE(CopyType): {
+            stack[inst->u.i].type = stack[stack.len - 1].type;
+            DISPATCH(++pc);
+        }
+
+        CASE(LoadLocalBool): {
+            stack.Append({.b = stack[bp + inst->u.i].b});
+            DISPATCH(++pc);
+        }
+        CASE(LoadLocalInt): {
+            stack.Append({.i = stack[bp + inst->u.i].i});
+            DISPATCH(++pc);
+        }
+        CASE(LoadLocalFloat): {
+            stack.Append({.d = stack[bp + inst->u.i].d});
+            DISPATCH(++pc);
+        }
+        CASE(LoadLocalString): {
+            stack.Append({.str = stack[bp + inst->u.i].str});
+            DISPATCH(++pc);
+        }
+        CASE(LoadLocalType): {
+            stack.Append({.type = stack[bp + inst->u.i].type});
+            DISPATCH(++pc);
+        }
+        CASE(StoreLocalBool): {
+            stack[bp + inst->u.i].b = stack.ptr[--stack.len].b;
+            DISPATCH(++pc);
+        }
+        CASE(StoreLocalInt): {
+            stack[bp + inst->u.i].i = stack.ptr[--stack.len].i;
+            DISPATCH(++pc);
+        }
+        CASE(StoreLocalFloat): {
+            stack[bp + inst->u.i].d = stack.ptr[--stack.len].d;
+            DISPATCH(++pc);
+        }
+        CASE(StoreLocalString): {
+            stack[bp + inst->u.i].str = stack.ptr[--stack.len].str;
+            DISPATCH(++pc);
+        }
+        CASE(StoreLocalType): {
+            stack[bp + inst->u.i].type = stack.ptr[--stack.len].type;
+            DISPATCH(++pc);
+        }
+        CASE(CopyLocalBool): {
+            stack[bp + inst->u.i].b = stack.ptr[stack.len - 1].b;
+            DISPATCH(++pc);
+        }
+        CASE(CopyLocalInt): {
+            stack[bp + inst->u.i].i = stack.ptr[stack.len - 1].i;
+            DISPATCH(++pc);
+        }
+        CASE(CopyLocalFloat): {
+            stack[bp + inst->u.i].d = stack.ptr[stack.len - 1].d;
+            DISPATCH(++pc);
+        }
+        CASE(CopyLocalString): {
+            stack[bp + inst->u.i].str = stack.ptr[stack.len - 1].str;
+            DISPATCH(++pc);
+        }
+        CASE(CopyLocalType): {
+            stack[bp + inst->u.i].type = stack.ptr[stack.len - 1].type;
             DISPATCH(++pc);
         }
 
@@ -591,16 +611,21 @@ void VirtualMachine::DumpInstruction(Size pc) const
         case Opcode::CopyString: { LogDebug("[0x%1] CopyString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case Opcode::CopyType: { LogDebug("[0x%1] CopyType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
-        case Opcode::LoadGlobalBool: { LogDebug("[0x%1] LoadGlobalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadGlobalInt: { LogDebug("[0x%1] LoadGlobalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadGlobalFloat: { LogDebug("[0x%1] LoadGlobalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadGlobalString: { LogDebug("[0x%1] LoadGlobalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadGlobalType: { LogDebug("[0x%1] LoadGlobalType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreGlobalBool: { LogDebug("[0x%1] StoreGlobalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreGlobalInt: { LogDebug("[0x%1] StoreGlobalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreGlobalFloat: { LogDebug("[0x%1] StoreGlobalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreGlobalString: { LogDebug("[0x%1] StoreGlobalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreGlobalType: { LogDebug("[0x%1] StoreGlobalType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadLocalBool: { LogDebug("[0x%1] LoadLocalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadLocalInt: { LogDebug("[0x%1] LoadLocalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadLocalFloat: { LogDebug("[0x%1] LoadLocalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadLocalString: { LogDebug("[0x%1] LoadLocalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::LoadLocalType: { LogDebug("[0x%1] LoadLocalType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreLocalBool: { LogDebug("[0x%1] StoreLocalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreLocalInt: { LogDebug("[0x%1] StoreLocalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreLocalFloat: { LogDebug("[0x%1] StoreLocalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreLocalString: { LogDebug("[0x%1] StoreLocalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::StoreLocalType: { LogDebug("[0x%1] StoreLocalType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::CopyLocalBool: { LogDebug("[0x%1] CopyLocalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::CopyLocalInt: { LogDebug("[0x%1] CopyLocalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::CopyLocalFloat: { LogDebug("[0x%1] CopyLocalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::CopyLocalString: { LogDebug("[0x%1] CopyLocalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case Opcode::CopyLocalType: { LogDebug("[0x%1] CopyLocalType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
         case Opcode::Jump: { LogDebug("[0x%1] Jump 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
         case Opcode::BranchIfTrue: { LogDebug("[0x%1] BranchIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
