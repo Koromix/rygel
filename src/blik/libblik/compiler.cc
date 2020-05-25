@@ -97,7 +97,7 @@ private:
 
     const TypeInfo *ParseType();
 
-    const TypeInfo *ParseExpression();
+    StackSlot ParseExpression();
     void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(PrimitiveType in_primitive, Opcode code, const TypeInfo *out_type);
     bool EmitOperator2(PrimitiveType in_primitive, Opcode code, const TypeInfo *out_type);
@@ -760,7 +760,7 @@ void Parser::ParseReturn()
     if (PeekToken(TokenKind::EndOfLine)) {
         type = GetBasicType(PrimitiveType::Null);
     } else {
-        type = ParseExpression();
+        type = ParseExpression().type;
     }
 
     if (RG_UNLIKELY(type != current_func->ret_type)) {
@@ -800,10 +800,10 @@ void Parser::ParseLet()
         }
     }
 
+    StackSlot slot;
     if (MatchToken(TokenKind::Assign)) {
         SkipNewLines();
-
-        var->type = ParseExpression();
+        slot = ParseExpression();
     } else {
         ConsumeToken(TokenKind::Colon);
 
@@ -815,13 +815,15 @@ void Parser::ParseLet()
             SkipNewLines();
 
             Size expr_pos = pos;
-            const TypeInfo *type2 = ParseExpression();
+            slot = ParseExpression();
 
-            if (RG_UNLIKELY(type2 != type)) {
+            if (RG_UNLIKELY(slot.type != type)) {
                 MarkError(expr_pos - 1, "Cannot assign %1 value to variable '%2' (defined as %3)",
-                          type2->signature, var->name, type->signature);
+                          slot.type->signature, var->name, type->signature);
             }
         } else {
+            slot = {type};
+
             switch (type->primitive) {
                 case PrimitiveType::Null: { ir.Append({Opcode::PushNull}); } break;
                 case PrimitiveType::Bool: { ir.Append({Opcode::PushBool, {.b = false}}); } break;
@@ -831,12 +833,20 @@ void Parser::ParseLet()
                 case PrimitiveType::Type: { ir.Append({Opcode::PushType, {.type = GetBasicType(PrimitiveType::Null)}}); } break;
             }
         }
-
-        var->type = type;
     }
 
-    var->global = !current_func;
-    var->offset = var_offset++;
+    var->type = slot.type;
+    if (slot.var && !slot.var->mut && !var->mut) {
+        // We're about to alias var to slot.var... we need to drop the load instruction.
+        // Is it enough, and is it safe?
+        TrimInstructions(1);
+
+        var->global = slot.var->global;
+        var->offset = slot.var->offset;
+    } else {
+        var->global = !current_func;
+        var->offset = var_offset++;
+    }
     var->defined_idx = ir.len;
 
     // Expressions involving this variable won't issue (visible) errors
@@ -1076,7 +1086,7 @@ const TypeInfo *Parser::ParseType()
 
     // Parse type expression
     {
-        const TypeInfo *type = ParseExpression();
+        const TypeInfo *type = ParseExpression().type;
 
         if (RG_UNLIKELY(type != GetBasicType(PrimitiveType::Type))) {
             MarkError(type_pos, "Expected a Type expression, not %1", type->signature);
@@ -1142,7 +1152,7 @@ static int GetOperatorPrecedence(TokenKind kind)
     }
 }
 
-const TypeInfo *Parser::ParseExpression()
+StackSlot Parser::ParseExpression()
 {
     Size start_values_len = stack.len;
     RG_DEFER { stack.RemoveFrom(start_values_len); };
@@ -1308,7 +1318,7 @@ const TypeInfo *Parser::ParseExpression()
 
             if (RG_UNLIKELY(!operators.Available())) {
                 MarkError(pos - 1, "Too many operators on the stack (compiler limitation)");
-                return GetBasicType(PrimitiveType::Null);
+                goto error;
             }
             operators.Append(op);
         }
@@ -1330,7 +1340,11 @@ const TypeInfo *Parser::ParseExpression()
     }
 
     RG_ASSERT(stack.len == start_values_len + 1 || !show_errors);
-    return RG_LIKELY(stack.len) ? stack[stack.len - 1].type : GetBasicType(PrimitiveType::Null);
+    if (RG_LIKELY(stack.len)) {
+        return stack[stack.len - 1];
+    } else {
+        return {GetBasicType(PrimitiveType::Null)};
+    }
 
 unexpected:
     pos--;
@@ -1356,7 +1370,7 @@ error:
                                tokens[pos].kind != TokenKind::EndOfLine) {
         pos++;
     };
-    return GetBasicType(PrimitiveType::Null);
+    return {GetBasicType(PrimitiveType::Null)};
 }
 
 void Parser::ProduceOperator(const PendingOperator &op)
@@ -1709,7 +1723,7 @@ bool Parser::ParseCall(const char *name)
                 return false;
             }
 
-            const TypeInfo *type = ParseExpression();
+            const TypeInfo *type = ParseExpression().type;
 
             args.Append({nullptr, type});
             if (func0->variadic && args.len > func0->params.len) {
@@ -1807,7 +1821,7 @@ bool Parser::ParseExpressionOfType(const TypeInfo *type)
 {
     Size expr_pos = pos;
 
-    const TypeInfo *type2 = ParseExpression();
+    const TypeInfo *type2 = ParseExpression().type;
     if (RG_UNLIKELY(type2 != type)) {
         MarkError(expr_pos, "Expected expression result type to be %1, not %2",
                   type->signature, type2->signature);
