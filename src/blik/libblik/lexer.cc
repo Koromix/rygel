@@ -35,6 +35,8 @@ private:
     inline bool Token3(char c1, char c2, TokenKind tok);
     inline bool Token4(char c1, char c2, char c3, TokenKind tok);
 
+    unsigned int ConvertHexaDigit(Size pos);
+
     void TokenizeFloat();
 
     template <typename... Args>
@@ -192,29 +194,22 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                         bool overflow = false;
 
                         while (++next < code.len) {
-                            if (IsAsciiDigit(code[next])) {
-                                unsigned int digit = (unsigned int)(code[next] - '0');
+                            unsigned int digit = ConvertHexaDigit(next);
 
-                                overflow |= (value > ((uint64_t)INT64_MAX - digit) / 16);
-                                value = (value * 16) + digit;
-                            } else if (code[next] >= 'A' && code[next] <= 'F') {
-                                unsigned int digit = (unsigned int)(code[next] - 'A' + 10);
-
-                                overflow |= (value > ((uint64_t)INT64_MAX - digit) / 16);
-                                value = (value * 16) + digit;
-                            } else if (code[next] >= 'a' && code[next] <= 'f') {
-                                unsigned int digit = (unsigned int)(code[next] - 'a' + 10);
-
-                                overflow |= (value > ((uint64_t)INT64_MAX - digit) / 16);
-                                value = (value * 16) + digit;
-                            } else if (RG_UNLIKELY(IsAsciiAlpha(code[next]))) {
-                                MarkUnexpected(next, "Invalid hexadecimal digit");
-                                return false;
-                            } else if (code[next] == '_') {
-                                // Ignore underscores in number literals (e.g. 0xFFFF_FFFF)
-                            } else {
-                                break;
+                            if (digit >= 16) {
+                                if (IsAsciiAlpha(code[next])) {
+                                    MarkError(next, "Invalid hexadecimal digit");
+                                    return false;
+                                } else if (code[next] == '_') {
+                                    // Ignore underscores in number literals (e.g. 0b1000_0000_0001)
+                                    continue;
+                                } else {
+                                    break;
+                                }
                             }
+
+                            overflow |= (value > ((uint64_t)INT64_MAX - digit) / 16);
+                            value = (value * 16) + digit;
                         }
 
                         if (RG_UNLIKELY(overflow)) {
@@ -305,6 +300,51 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                                 case 'a': { str.Append('\a'); } break;
                                 case 'b': { str.Append('\b'); } break;
                                 case 'e': { str.Append('\x1B'); } break;
+                                case 'x': {
+                                    if (RG_UNLIKELY(next > code.len - 3)) {
+                                        MarkError(next + 1, "Truncated escape sequence");
+                                        return false;
+                                    }
+
+                                    int c = 0;
+                                    for (Size i = 0; i < 2; i++) {
+                                        unsigned int digit = ConvertHexaDigit(++next);
+                                        if (RG_UNLIKELY(digit >= 16)) {
+                                            MarkError(next, "Invalid hexadecimal digit");
+                                            return false;
+                                        }
+                                        c = (c << 4) | (int)digit;
+                                    }
+
+                                    str.Append((char)c);
+                                } break;
+                                case 'u':
+                                case 'U': {
+                                    Size consume = (code[next] == 'U') ? 6 : 4;
+
+                                    if (RG_UNLIKELY(next > code.len - consume - 1)) {
+                                        MarkError(next + 1, "Truncated escape sequence (expected %1 hexadecimal digits)", consume);
+                                        return false;
+                                    }
+
+                                    int32_t uc = 0;
+                                    for (Size i = 0; i < consume; i++) {
+                                        unsigned int digit = ConvertHexaDigit(++next);
+                                        if (RG_UNLIKELY(digit >= 16)) {
+                                            MarkError(next, "Invalid hexadecimal digit");
+                                            return false;
+                                        }
+                                        uc = (uc << 4) | (int32_t)digit;
+                                    }
+
+                                    str.Grow(4);
+                                    Size bytes = EncodeUtf8(uc, str.end());
+                                    if (RG_UNLIKELY(!bytes)) {
+                                        MarkError(next - consume, "Invalid UTF-8 codepoint");
+                                        return false;
+                                    }
+                                    str.len += bytes;
+                                } break;
                                 case '\\': { str.Append('\\'); } break;
                                 case '"': { str.Append('"'); } break;
                                 case '\'': { str.Append('\''); } break;
@@ -518,6 +558,17 @@ inline bool Lexer::Token4(char c1, char c2, char c3, TokenKind tok)
         return true;
     } else {
         return false;
+    }
+}
+
+unsigned int Lexer::ConvertHexaDigit(Size pos)
+{
+    if (IsAsciiDigit(code[pos])) {
+        return (unsigned int)(code[pos] - '0');
+    } else if (code[pos] >= 'A' && code[pos] <= 'F') {
+        return (unsigned int)(code[pos] - 'A' + 10);
+    } else {
+        return (unsigned int)(code[pos] - 'a' + 10);
     }
 }
 
