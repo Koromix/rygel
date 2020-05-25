@@ -113,6 +113,7 @@ private:
     void DestroyVariables(Size count);
 
     void FixJumps(Size jump_idx, Size target_idx);
+    void TrimInstructions(Size count);
 
     bool TestOverload(const FunctionInfo &proto, Span<const FunctionInfo::Parameter> params2);
 
@@ -1090,8 +1091,10 @@ const TypeInfo *Parser::ParseType()
         return GetBasicType(PrimitiveType::Null);
     }
 
-    ir.len--;
-    return ir.ptr[ir.len].u.type;
+    const TypeInfo *type = ir[ir.len - 1].u.type;
+    TrimInstructions(1);
+
+    return type;
 }
 
 static int GetOperatorPrecedence(TokenKind kind)
@@ -1294,7 +1297,7 @@ const TypeInfo *Parser::ParseExpression()
                 // Remove useless load instruction. We don't remove the variable from
                 // stack slots,  because it will be needed when we emit the store instruction
                 // and will be removed then.
-                ir.RemoveLast(1);
+                TrimInstructions(1);
             } else if (tok.kind == TokenKind::AndAnd) {
                 op.branch_idx = ir.len;
                 ir.Append({Opcode::SkipIfFalse});
@@ -1501,7 +1504,7 @@ void Parser::ProduceOperator(const PendingOperator &op)
                         } break;
                         case Opcode::NegateInt:
                         case Opcode::NegateFloat: {
-                            ir.len--;
+                            TrimInstructions(1);
                             success = true;
                         } break;
 
@@ -1792,7 +1795,8 @@ void Parser::EmitIntrinsic(const char *name, Size call_idx, Span<const FunctionI
         }
 
         // typeOf() does not execute anything!
-        ir.RemoveFrom(call_idx);
+        TrimInstructions(ir.len - call_idx);
+
         ir.Append({Opcode::PushType, {.type = args[0].type}});
     } else {
         RG_UNREACHABLE();
@@ -1826,7 +1830,7 @@ void Parser::DiscardResult()
             case Opcode::LoadGlobalInt:
             case Opcode::LoadGlobalFloat:
             case Opcode::LoadGlobalString:
-            case Opcode::LoadGlobalType: { ir.len--; } break;
+            case Opcode::LoadGlobalType: { TrimInstructions(1); } break;
 
             case Opcode::CopyBool: { ir[ir.len - 1].code = Opcode::StoreBool; } break;
             case Opcode::CopyInt: { ir[ir.len - 1].code = Opcode::StoreInt; } break;
@@ -1905,6 +1909,22 @@ void Parser::FixJumps(Size jump_idx, Size target_idx)
         Size next_idx = ir[jump_idx].u.i;
         ir[jump_idx].u.i = target_idx - jump_idx;
         jump_idx = next_idx;
+    }
+}
+
+void Parser::TrimInstructions(Size count)
+{
+    ir.RemoveLast(count);
+
+    if (src->lines.len > 0 && src->lines[src->lines.len - 1].first_idx > ir.len) {
+        SourceInfo::Line line = src->lines[src->lines.len - 1];
+        line.first_idx = ir.len;
+
+        do {
+            src->lines.len--;
+        } while (src->lines.len > 0 && src->lines[src->lines.len - 1].first_idx >= ir.len);
+
+        src->lines.Append(line);
     }
 }
 
