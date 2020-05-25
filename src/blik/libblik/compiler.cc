@@ -58,8 +58,8 @@ class Parser {
     Size var_offset = 0;
 
     Size loop_var_offset = -1;
-    HeapArray<Size> loop_breaks;
-    HeapArray<Size> loop_continues;
+    Size loop_break_idx = -1;
+    Size loop_continue_idx = -1;
 
     HashSet<const char *> strings;
 
@@ -111,6 +111,8 @@ private:
     void EmitPop(int64_t count);
     void EmitReturn();
     void DestroyVariables(Size count);
+
+    void FixJumps(Size jump_idx, Size target_idx);
 
     bool TestOverload(const FunctionInfo &proto, Span<const FunctionInfo::Parameter> params2);
 
@@ -862,10 +864,8 @@ bool Parser::ParseIf()
         has_return &= ParseBlock();
 
         if (MatchToken(TokenKind::Else)) {
-            HeapArray<Size> jumps;
-
-            jumps.Append(ir.len);
-            ir.Append({Opcode::Jump});
+            Size jump_idx = ir.len;
+            ir.Append({Opcode::Jump, {.i = -1}});
 
             do {
                 ir[branch_idx].u.i = ir.len - branch_idx;
@@ -879,8 +879,8 @@ bool Parser::ParseIf()
 
                         has_return &= ParseBlock();
 
-                        jumps.Append(ir.len);
-                        ir.Append({Opcode::Jump});
+                        ir.Append({Opcode::Jump, {.i = jump_idx}});
+                        jump_idx = ir.len - 1;
                     }
                 } else if (RG_LIKELY(ConsumeToken(TokenKind::EndOfLine))) {
                     has_return &= ParseBlock();
@@ -890,9 +890,7 @@ bool Parser::ParseIf()
                 }
             } while (MatchToken(TokenKind::Else));
 
-            for (Size jump_idx: jumps) {
-                ir[jump_idx].u.i = ir.len - jump_idx;
-            }
+            FixJumps(jump_idx, ir.len);
         } else {
             ir[branch_idx].u.i = ir.len - branch_idx;
         }
@@ -917,14 +915,16 @@ void Parser::ParseWhile()
     ir.Append({Opcode::BranchIfFalse});
 
     // Break and continue need to apply to while loop blocks
-    Size first_break_idx = loop_breaks.len;
-    Size first_continue_idx = loop_continues.len;
-    RG_DEFER_C(prev_offset = loop_var_offset) {
-        loop_breaks.RemoveFrom(first_break_idx);
-        loop_continues.RemoveFrom(first_continue_idx);
+    RG_DEFER_C(prev_offset = loop_var_offset,
+               prev_break_idx = loop_break_idx,
+               prev_continue_idx = loop_continue_idx) {
         loop_var_offset = prev_offset;
+        loop_break_idx = prev_break_idx;
+        loop_continue_idx = prev_continue_idx;
     };
     loop_var_offset = var_offset;
+    loop_break_idx = -1;
+    loop_continue_idx = -1;
 
     // Parse body
     if (PeekToken(TokenKind::Do)) {
@@ -934,11 +934,7 @@ void Parser::ParseWhile()
         ConsumeToken(TokenKind::End);
     }
 
-    // Fix up continue jumps
-    for (Size i = first_continue_idx; i < loop_continues.len; i++) {
-        Size jump_idx = loop_continues[i];
-        ir[jump_idx].u.i = ir.len - jump_idx;
-    }
+    FixJumps(loop_continue_idx, ir.len);
 
     // Copy the condition expression, and the IR/line map information
     for (Size i = condition_line_idx; i < src->lines.len &&
@@ -951,11 +947,7 @@ void Parser::ParseWhile()
     ir.Append({Opcode::BranchIfTrue, {.i = branch_idx - ir.len + 1}});
     ir[branch_idx].u.i = ir.len - branch_idx;
 
-    // Fix up break jumps
-    for (Size i = first_break_idx; i < loop_breaks.len; i++) {
-        Size jump_idx = loop_breaks[i];
-        ir[jump_idx].u.i = ir.len - jump_idx;
-    }
+    FixJumps(loop_break_idx, ir.len);
 }
 
 void Parser::ParseFor()
@@ -1013,14 +1005,16 @@ void Parser::ParseFor()
     ir.Append({Opcode::BranchIfFalse});
 
     // Break and continue need to apply to for loop blocks
-    Size first_break_idx = loop_breaks.len;
-    Size first_continue_idx = loop_continues.len;
-    RG_DEFER_C(prev_offset = loop_var_offset) {
-        loop_breaks.RemoveFrom(first_break_idx);
-        loop_continues.RemoveFrom(first_continue_idx);
+    RG_DEFER_C(prev_offset = loop_var_offset,
+               prev_break_idx = loop_break_idx,
+               prev_continue_idx = loop_continue_idx) {
         loop_var_offset = prev_offset;
+        loop_break_idx = prev_break_idx;
+        loop_continue_idx = prev_continue_idx;
     };
     loop_var_offset = var_offset;
+    loop_break_idx = -1;
+    loop_continue_idx = -1;
 
     // Parse body
     if (PeekToken(TokenKind::Do)) {
@@ -1030,22 +1024,14 @@ void Parser::ParseFor()
         ConsumeToken(TokenKind::End);
     }
 
-    // Fix up continue jumps
-    for (Size i = first_continue_idx; i < loop_continues.len; i++) {
-        Size jump_idx = loop_continues[i];
-        ir[jump_idx].u.i = ir.len - jump_idx;
-    }
+    FixJumps(loop_continue_idx, ir.len);
 
     ir.Append({Opcode::PushInt, {.i = 1}});
     ir.Append({Opcode::AddInt});
     ir.Append({Opcode::Jump, {.i = body_idx - ir.len}});
     ir[body_idx + 3].u.i = ir.len - (body_idx + 3);
 
-    // Fix up break jumps
-    for (Size i = first_break_idx; i < loop_breaks.len; i++) {
-        Size jump_idx = loop_breaks[i];
-        ir[jump_idx].u.i = ir.len - jump_idx;
-    }
+    FixJumps(loop_break_idx, ir.len);
 
     // Destroy iterator and range values
     EmitPop(3);
@@ -1064,8 +1050,8 @@ void Parser::ParseBreak()
 
     EmitPop(var_offset - loop_var_offset);
 
-    loop_breaks.Append(ir.len);
-    ir.Append({Opcode::Jump});
+    ir.Append({Opcode::Jump, {.i = loop_break_idx}});
+    loop_break_idx = ir.len - 1;
 }
 
 void Parser::ParseContinue()
@@ -1079,8 +1065,8 @@ void Parser::ParseContinue()
 
     EmitPop(var_offset - loop_var_offset);
 
-    loop_continues.Append(ir.len);
-    ir.Append({Opcode::Jump});
+    ir.Append({Opcode::Jump, {.i = loop_continue_idx}});
+    loop_continue_idx = ir.len - 1;
 }
 
 const TypeInfo *Parser::ParseType()
@@ -1911,6 +1897,15 @@ void Parser::DestroyVariables(Size count)
     }
 
     program->variables.RemoveLast(count);
+}
+
+void Parser::FixJumps(Size jump_idx, Size target_idx)
+{
+    while (jump_idx >= 0) {
+        Size next_idx = ir[jump_idx].u.i;
+        ir[jump_idx].u.i = target_idx - jump_idx;
+        jump_idx = next_idx;
+    }
 }
 
 bool Parser::TestOverload(const FunctionInfo &proto, Span<const FunctionInfo::Parameter> params)
