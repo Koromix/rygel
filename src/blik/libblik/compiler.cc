@@ -219,8 +219,10 @@ Parser::Parser(Program *program)
     }
 
     // Intrinsics
-    AddFunction("intToFloat(Int): Float", {});
-    AddFunction("floatToInt(Float): Int", {});
+    AddFunction("Float(Int): Float", {});
+    AddFunction("Float(Float): Float", {});
+    AddFunction("Int(Int): Int", {});
+    AddFunction("Int(Float): Int", {});
     AddFunction("typeOf(...): Type", {});
 }
 
@@ -1787,10 +1789,14 @@ bool Parser::ParseCall(const char *name)
 
 void Parser::EmitIntrinsic(const char *name, Size call_idx, Span<const FunctionInfo::Parameter> args)
 {
-    if (TestStr(name, "intToFloat")) {
-        ir.Append({Opcode::IntToFloat});
-    } else if (TestStr(name, "floatToInt")) {
-        ir.Append({Opcode::FloatToInt});
+    if (TestStr(name, "Float")) {
+        if (args[0].type->primitive == PrimitiveType::Int) {
+            ir.Append({Opcode::IntToFloat});
+        }
+    } else if (TestStr(name, "Int")) {
+        if (args[0].type->primitive == PrimitiveType::Float) {
+            ir.Append({Opcode::FloatToInt});
+        }
     } else if (TestStr(name, "typeOf")) {
         // XXX: We can change the signature from typeOf(...) to typeOf(Any) after Any
         // is implemented, and remove this check.
