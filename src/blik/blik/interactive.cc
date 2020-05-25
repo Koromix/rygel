@@ -156,7 +156,7 @@ int RunInteractive()
         {
             TokenizedFile file;
             if (!TokenizeWithFakePrint(code, "<inline>", &file))
-                return 1;
+                continue;
 
             valid_with_fake_print = compiler.Compile(file);
         }
