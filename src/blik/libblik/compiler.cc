@@ -807,6 +807,7 @@ void Parser::ParseReturn()
 
     const TypeInfo *type;
     if (PeekToken(TokenKind::EndOfLine) || PeekToken(TokenKind::Semicolon)) {
+        ir.Append({Opcode::PushNull});
         type = GetBasicType(PrimitiveType::Null);
     } else {
         type = ParseExpression().type;
