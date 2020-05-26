@@ -30,6 +30,10 @@ public:
     bool Compile(Span<const char> code, const char *filename, CompileReport *out_report = nullptr);
 
     void AddFunction(const char *signature, std::function<NativeFunction> native);
+    void AddGlobal(const char *name, const TypeInfo *type, Value value, bool mut = false);
+    void AddGlobal(const char *name, PrimitiveType primitive, Value value, bool mut = false);
+
+    const TypeInfo *GetBasicType(PrimitiveType primitive);
 };
 
 }

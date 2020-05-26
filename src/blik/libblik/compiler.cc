@@ -75,6 +75,12 @@ public:
     bool Parse(const TokenizedFile &file, CompileReport *out_report);
 
     void AddFunction(const char *signature, std::function<NativeFunction> native);
+    void AddGlobal(const char *name, const TypeInfo *type, Value value, bool mut);
+
+    inline const TypeInfo *GetBasicType(PrimitiveType primitive)
+    {
+        return &program->types[(int)primitive];
+    }
 
 private:
     void ParsePrototypes(Span<const Size> funcs);
@@ -125,11 +131,6 @@ private:
     bool SkipNewLines();
 
     const char *InternString(const char *str);
-
-    inline const TypeInfo *GetBasicType(PrimitiveType primitive)
-    {
-        return &program->types[(int)primitive];
-    }
 
     template <typename... Args>
     void MarkError(Size pos, const char *fmt, Args... args)
@@ -207,6 +208,22 @@ void Compiler::AddFunction(const char *signature, std::function<NativeFunction> 
 {
     RG_ASSERT(native);
     parser->AddFunction(signature, native);
+}
+
+void Compiler::AddGlobal(const char *name, const TypeInfo *type, Value value, bool mut)
+{
+    parser->AddGlobal(name, type, value, mut);
+}
+
+void Compiler::AddGlobal(const char *name, PrimitiveType primitive, Value value, bool mut)
+{
+    const TypeInfo *type = parser->GetBasicType(primitive);
+    parser->AddGlobal(name, type, value, mut);
+}
+
+const TypeInfo *Compiler::GetBasicType(PrimitiveType primitive)
+{
+    return parser->GetBasicType(primitive);
 }
 
 Parser::Parser(Program *program)
@@ -394,6 +411,31 @@ void Parser::AddFunction(const char *signature, std::function<NativeFunction> na
             func->overload_next = func;
         }
     }
+}
+
+void Parser::AddGlobal(const char *name, const TypeInfo *type, Value value, bool mut)
+{
+    VariableInfo *var = program->variables.AppendDefault();
+
+    var->name = InternString(name);
+    var->type = type;
+    var->mut = mut;
+
+    switch (type->primitive) {
+        case PrimitiveType::Null: { ir.Append({Opcode::PushNull}); } break;
+        case PrimitiveType::Bool: { ir.Append({Opcode::PushBool, {.b = value.b}}); } break;
+        case PrimitiveType::Int: { ir.Append({Opcode::PushInt, {.i = value.i}}); } break;
+        case PrimitiveType::Float: { ir.Append({Opcode::PushFloat, {.d = value.d}}); } break;
+        case PrimitiveType::String: { ir.Append({Opcode::PushString, {.str = InternString(value.str)}}); } break;
+        case PrimitiveType::Type: { ir.Append({Opcode::PushType, {.type = value.type}}); } break;
+    }
+
+    var->global = true;
+    var->offset = var_offset++;
+    var->ready_addr = ir.len;
+
+    bool success = program->variables_map.Append(var).second;
+    RG_ASSERT(success);
 }
 
 void Parser::ParsePrototypes(Span<const Size> funcs)
