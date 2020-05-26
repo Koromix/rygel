@@ -49,7 +49,7 @@ namespace RG {
 #define RG_BLOCK_ALLOCATOR_DEFAULT_SIZE Kibibytes(4)
 
 #define RG_HEAPARRAY_BASE_CAPACITY 8
-#define RG_HEAPARRAY_GROWTH_FACTOR 1.5
+#define RG_HEAPARRAY_GROWTH_FACTOR 2.0
 
 // Must be a power-of-two
 #define RG_HASHTABLE_BASE_CAPACITY 32
@@ -1227,26 +1227,25 @@ public:
     {
         RG_ASSERT(new_capacity >= 0);
 
-        if (new_capacity == capacity)
-            return;
-
-        if (len > new_capacity) {
-            for (Size i = new_capacity; i < len; i++) {
-                ptr[i].~T();
+        if (new_capacity != capacity) {
+            if (len > new_capacity) {
+                for (Size i = new_capacity; i < len; i++) {
+                    ptr[i].~T();
+                }
+                len = new_capacity;
             }
-            len = new_capacity;
+
+            Allocator::Resize(allocator, (void **)&ptr,
+                              capacity * RG_SIZE(T), new_capacity * RG_SIZE(T));
+            capacity = new_capacity;
         }
-        Allocator::Resize(allocator, (void **)&ptr,
-                          capacity * RG_SIZE(T), new_capacity * RG_SIZE(T));
-        capacity = new_capacity;
     }
 
     void Reserve(Size min_capacity)
     {
-        if (min_capacity <= capacity)
-            return;
-
-        SetCapacity(min_capacity);
+        if (min_capacity > capacity) {
+            SetCapacity(min_capacity);
+        }
     }
 
     void Grow(Size reserve_capacity = 1)
@@ -1255,22 +1254,18 @@ public:
         RG_ASSERT(reserve_capacity >= 0);
         RG_ASSERT((size_t)capacity + (size_t)reserve_capacity <= RG_SIZE_MAX);
 
-        if (reserve_capacity <= capacity - len)
-            return;
+        if (reserve_capacity > capacity - len) {
+            Size needed = capacity + reserve_capacity;
 
-        Size needed_capacity = capacity + reserve_capacity;
+            Size new_capacity;
+            if (needed <= RG_HEAPARRAY_BASE_CAPACITY) {
+                new_capacity = RG_HEAPARRAY_BASE_CAPACITY;
+            } else {
+                new_capacity = (Size)((double)(needed - 1) * RG_HEAPARRAY_GROWTH_FACTOR);
+            }
 
-        Size new_capacity;
-        if (!capacity) {
-            new_capacity = RG_HEAPARRAY_BASE_CAPACITY;
-        } else {
-            new_capacity = capacity;
+            SetCapacity(new_capacity);
         }
-        do {
-            new_capacity = (Size)((double)new_capacity * RG_HEAPARRAY_GROWTH_FACTOR);
-        } while (new_capacity < needed_capacity);
-
-        SetCapacity(new_capacity);
     }
 
     void Trim(Size extra_capacity = 0) { SetCapacity(len + extra_capacity); }

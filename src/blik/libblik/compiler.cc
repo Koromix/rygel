@@ -328,11 +328,13 @@ bool Parser::Parse(const TokenizedFile &file, CompileReport *out_report)
     RG_ASSERT(loop_offset == -1);
     RG_ASSERT(!current_func);
 
-    ir.Append({Opcode::End, {.i = var_offset}});
-
     if (valid) {
+        ir.Append({Opcode::End, {.i = var_offset}});
+        ir.Trim();
+
         err_guard.Disable();
     }
+
     return valid;
 }
 

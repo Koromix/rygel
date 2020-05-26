@@ -1016,7 +1016,9 @@ bool mco_StaySetBuilder::Finish(mco_StaySet *out_set)
                  fichcomps.len - matched_fichcomps.table.count);
     }
 
+    set.stays.Trim();
     SwapMemory(out_set, &set, RG_SIZE(set));
+
     return true;
 }
 
