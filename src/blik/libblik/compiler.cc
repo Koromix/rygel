@@ -292,6 +292,7 @@ bool Parser::Parse(const TokenizedFile &file, CompileReport *out_report)
     ParsePrototypes(file.funcs);
 
     // Do the actual parsing!
+    src->lines.Append({ir.len, 0});
     while (RG_LIKELY(pos < tokens.len)) {
         ParseStatement();
     }
@@ -399,7 +400,6 @@ void Parser::ParsePrototypes(Span<const Size> funcs)
 {
     RG_ASSERT(!prototypes_map.count);
     RG_ASSERT(pos == 0);
-    RG_ASSERT(!src->lines.len);
 
     // This is a preparse step, clean up main side effets
     RG_DEFER_C(ir_len = ir.len,
@@ -553,7 +553,10 @@ bool Parser::ParseStatement()
     src->lines.Append({ir.len, tokens[pos].line});
 
     switch (tokens[pos].kind) {
-        case TokenKind::EndOfLine: { pos++; } break;
+        case TokenKind::EndOfLine: {
+            pos++;
+            src->lines.len--;
+        } break;
 
         case TokenKind::Begin: {
             pos++;
