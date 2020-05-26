@@ -41,6 +41,7 @@ class Parser {
     CompileReport *out_report; // Can be NULL
     Span<const Token> tokens;
     Size pos;
+    Size prev_ir_len;
     bool valid;
     bool show_errors;
     bool show_hints;
@@ -231,7 +232,7 @@ Parser::Parser(Program *program)
     : program(program), ir(program->ir)
 {
     RG_ASSERT(program);
-    RG_ASSERT(!program->ir.len);
+    RG_ASSERT(!ir.len);
 
     // Basic types
     for (Size i = 0; i < RG_LEN(PrimitiveTypeNames); i++) {
@@ -255,13 +256,14 @@ Parser::Parser(Program *program)
 
 bool Parser::Parse(const TokenizedFile &file, CompileReport *out_report)
 {
+    prev_ir_len = ir.len;
+
     // Restore previous state if something goes wrong
-    RG_DEFER_NC(err_guard, ir_len = ir.len,
-                           sources_len = program->sources.len,
+    RG_DEFER_NC(err_guard, sources_len = program->sources.len,
                            prev_var_offset = var_offset,
                            variables_len = program->variables.len,
                            functions_len = program->functions.len) {
-        ir.RemoveFrom(ir_len);
+        ir.RemoveFrom(prev_ir_len);
         program->sources.RemoveFrom(sources_len);
 
         var_offset = prev_var_offset;
@@ -1869,38 +1871,36 @@ bool Parser::ParseExpressionOfType(const TypeInfo *type)
 
 void Parser::DiscardResult()
 {
-    if (ir.len >= 1) {
-        switch (ir[ir.len - 1].code) {
-            case Opcode::PushNull:
-            case Opcode::PushBool:
-            case Opcode::PushInt:
-            case Opcode::PushFloat:
-            case Opcode::PushString:
-            case Opcode::PushType:
-            case Opcode::LoadBool:
-            case Opcode::LoadInt:
-            case Opcode::LoadFloat:
-            case Opcode::LoadString:
-            case Opcode::LoadType:
-            case Opcode::LoadLocalBool:
-            case Opcode::LoadLocalInt:
-            case Opcode::LoadLocalFloat:
-            case Opcode::LoadLocalString:
-            case Opcode::LoadLocalType: { TrimInstructions(1); } break;
+    switch (ir[ir.len - 1].code) {
+        case Opcode::PushNull:
+        case Opcode::PushBool:
+        case Opcode::PushInt:
+        case Opcode::PushFloat:
+        case Opcode::PushString:
+        case Opcode::PushType:
+        case Opcode::LoadBool:
+        case Opcode::LoadInt:
+        case Opcode::LoadFloat:
+        case Opcode::LoadString:
+        case Opcode::LoadType:
+        case Opcode::LoadLocalBool:
+        case Opcode::LoadLocalInt:
+        case Opcode::LoadLocalFloat:
+        case Opcode::LoadLocalString:
+        case Opcode::LoadLocalType: { TrimInstructions(1); } break;
 
-            case Opcode::CopyBool: { ir[ir.len - 1].code = Opcode::StoreBool; } break;
-            case Opcode::CopyInt: { ir[ir.len - 1].code = Opcode::StoreInt; } break;
-            case Opcode::CopyFloat: { ir[ir.len - 1].code = Opcode::StoreFloat; } break;
-            case Opcode::CopyString: { ir[ir.len - 1].code = Opcode::StoreString; } break;
-            case Opcode::CopyType: { ir[ir.len - 1].code = Opcode::StoreType; } break;
-            case Opcode::CopyLocalBool: { ir[ir.len - 1].code = Opcode::StoreLocalBool; } break;
-            case Opcode::CopyLocalInt: { ir[ir.len - 1].code = Opcode::StoreLocalInt; } break;
-            case Opcode::CopyLocalFloat: { ir[ir.len - 1].code = Opcode::StoreLocalFloat; } break;
-            case Opcode::CopyLocalString: { ir[ir.len - 1].code = Opcode::StoreLocalString; } break;
-            case Opcode::CopyLocalType: { ir[ir.len - 1].code = Opcode::StoreLocalType; } break;
+        case Opcode::CopyBool: { ir[ir.len - 1].code = Opcode::StoreBool; } break;
+        case Opcode::CopyInt: { ir[ir.len - 1].code = Opcode::StoreInt; } break;
+        case Opcode::CopyFloat: { ir[ir.len - 1].code = Opcode::StoreFloat; } break;
+        case Opcode::CopyString: { ir[ir.len - 1].code = Opcode::StoreString; } break;
+        case Opcode::CopyType: { ir[ir.len - 1].code = Opcode::StoreType; } break;
+        case Opcode::CopyLocalBool: { ir[ir.len - 1].code = Opcode::StoreLocalBool; } break;
+        case Opcode::CopyLocalInt: { ir[ir.len - 1].code = Opcode::StoreLocalInt; } break;
+        case Opcode::CopyLocalFloat: { ir[ir.len - 1].code = Opcode::StoreLocalFloat; } break;
+        case Opcode::CopyLocalString: { ir[ir.len - 1].code = Opcode::StoreLocalString; } break;
+        case Opcode::CopyLocalType: { ir[ir.len - 1].code = Opcode::StoreLocalType; } break;
 
-            default: { EmitPop(1); } break;
-        }
+        default: { EmitPop(1); } break;
     }
 }
 
@@ -1918,8 +1918,7 @@ void Parser::EmitReturn()
     RG_ASSERT(current_func);
 
     // We support tail recursion elimination (TRE)
-    if (ir.len > 0 && ir[ir.len - 1].code == Opcode::Call &&
-                      ir[ir.len - 1].u.func == current_func) {
+    if (ir[ir.len - 1].code == Opcode::Call && ir[ir.len - 1].u.func == current_func) {
         ir.len--;
 
         for (Size i = current_func->params.len - 1; i >= 0; i--) {
@@ -1975,17 +1974,19 @@ void Parser::FixJumps(Size jump_addr, Size target_addr)
 
 void Parser::TrimInstructions(Size count)
 {
-    ir.RemoveLast(count);
+    if (RG_LIKELY(ir.len - prev_ir_len >= count)) {
+        ir.RemoveLast(count);
 
-    if (src->lines.len > 0 && src->lines[src->lines.len - 1].addr > ir.len) {
-        SourceInfo::Line line = src->lines[src->lines.len - 1];
-        line.addr = ir.len;
+        if (src->lines.len > 0 && src->lines[src->lines.len - 1].addr > ir.len) {
+            SourceInfo::Line line = src->lines[src->lines.len - 1];
+            line.addr = ir.len;
 
-        do {
-            src->lines.len--;
-        } while (src->lines.len > 0 && src->lines[src->lines.len - 1].addr >= ir.len);
+            do {
+                src->lines.len--;
+            } while (src->lines.len > 0 && src->lines[src->lines.len - 1].addr >= ir.len);
 
-        src->lines.Append(line);
+            src->lines.Append(line);
+        }
     }
 }
 
