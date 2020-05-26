@@ -25,7 +25,7 @@ struct PendingOperator {
     bool unary;
 
     Size pos; // For error messages
-    Size branch_idx; // Used for short-circuit operators
+    Size branch_addr; // Used for short-circuit operators
 };
 
 struct StackSlot {
@@ -51,15 +51,15 @@ class Parser {
     HashMap<const void *, Size> definitions_map;
     HashSet<const void *> poisoned_set;
 
-    Size func_jump_idx = -1;
+    Size func_jump_addr = -1;
     FunctionInfo *current_func = nullptr;
     int depth = 0;
 
     Size var_offset = 0;
 
-    Size loop_var_offset = -1;
-    Size loop_break_idx = -1;
-    Size loop_continue_idx = -1;
+    Size loop_offset = -1;
+    Size loop_break_addr = -1;
+    Size loop_continue_addr = -1;
 
     HashSet<const char *> strings;
 
@@ -102,7 +102,7 @@ private:
     bool EmitOperator1(PrimitiveType in_primitive, Opcode code, const TypeInfo *out_type);
     bool EmitOperator2(PrimitiveType in_primitive, Opcode code, const TypeInfo *out_type);
     bool ParseCall(const char *name);
-    void EmitIntrinsic(const char *name, Size call_idx, Span<const FunctionInfo::Parameter> args);
+    void EmitIntrinsic(const char *name, Size call_addr, Span<const FunctionInfo::Parameter> args);
     void EmitLoad(const VariableInfo &var);
     bool ParseExpressionOfType(const TypeInfo *type);
 
@@ -112,7 +112,7 @@ private:
     void EmitReturn();
     void DestroyVariables(Size count);
 
-    void FixJumps(Size jump_idx, Size target_idx);
+    void FixJumps(Size jump_addr, Size target_addr);
     void TrimInstructions(Size count);
 
     bool TestOverload(const FunctionInfo &proto, Span<const FunctionInfo::Parameter> params2);
@@ -283,7 +283,7 @@ bool Parser::Parse(const TokenizedFile &file, CompileReport *out_report)
 
     // The caller may want to execute the code and then compile new code (e.g. REPL),
     // we can't ever try to reuse a jump that will not be executed!
-    func_jump_idx = -1;
+    func_jump_addr = -1;
 
     src = program->sources.AppendDefault();
     src->filename = DuplicateString(file.filename, &program->str_alloc).ptr;
@@ -298,7 +298,7 @@ bool Parser::Parse(const TokenizedFile &file, CompileReport *out_report)
 
     // Maybe it'll help catch bugs
     RG_ASSERT(!depth);
-    RG_ASSERT(loop_var_offset == -1);
+    RG_ASSERT(loop_offset == -1);
     RG_ASSERT(!current_func);
 
     ir.Append({Opcode::End});
@@ -331,7 +331,7 @@ void Parser::AddFunction(const char *signature, std::function<NativeFunction> na
 
     func->mode = native ? FunctionInfo::Mode::Native : FunctionInfo::Mode::Intrinsic;
     func->native = native;
-    func->inst_idx = -1;
+    func->addr = -1;
 
     // Parameters
     RG_ASSERT(ptr[0] == '(');
@@ -516,9 +516,9 @@ void Parser::ParsePrototypes(Span<const Size> funcs)
         proto->body_pos = pos;
 
         // We don't know where it will live yet!
-        func->inst_idx = -1;
+        func->addr = -1;
         func->earliest_call_pos = RG_SIZE_MAX;
-        func->earliest_call_idx = RG_SIZE_MAX;
+        func->earliest_call_addr = RG_SIZE_MAX;
     }
 }
 
@@ -719,12 +719,12 @@ void Parser::ParseFunction()
     }
 
     // Jump over consecutively defined functions in one go
-    if (func_jump_idx < 0 || ir[func_jump_idx].u.i < ir.len - func_jump_idx) {
-        func_jump_idx = ir.len;
+    if (func_jump_addr < 0 || ir[func_jump_addr].u.i < ir.len - func_jump_addr) {
+        func_jump_addr = ir.len;
         ir.Append({Opcode::Jump});
     }
 
-    func->inst_idx = ir.len;
+    func->addr = ir.len;
 
     // Function body
     bool has_return = false;
@@ -744,7 +744,7 @@ void Parser::ParseFunction()
         }
     }
 
-    ir[func_jump_idx].u.i = ir.len - func_jump_idx;
+    ir[func_jump_addr].u.i = ir.len - func_jump_addr;
 }
 
 void Parser::ParseReturn()
@@ -847,7 +847,7 @@ void Parser::ParseLet()
         var->global = !current_func;
         var->offset = var_offset++;
     }
-    var->defined_idx = ir.len;
+    var->ready_addr = ir.len;
 
     // Expressions involving this variable won't issue (visible) errors
     // and will be marked as invalid too.
@@ -862,7 +862,7 @@ bool Parser::ParseIf()
 
     ParseExpressionOfType(GetBasicType(PrimitiveType::Bool));
 
-    Size branch_idx = ir.len;
+    Size branch_addr = ir.len;
     ir.Append({Opcode::BranchIfFalse});
 
     bool has_return = true;
@@ -870,28 +870,28 @@ bool Parser::ParseIf()
 
     if (PeekToken(TokenKind::Then)) {
         has_return &= ParseDo();
-        ir[branch_idx].u.i = ir.len - branch_idx;
+        ir[branch_addr].u.i = ir.len - branch_addr;
     } else if (RG_LIKELY(ConsumeToken(TokenKind::EndOfLine))) {
         has_return &= ParseBlock();
 
         if (MatchToken(TokenKind::Else)) {
-            Size jump_idx = ir.len;
+            Size jump_addr = ir.len;
             ir.Append({Opcode::Jump, {.i = -1}});
 
             do {
-                ir[branch_idx].u.i = ir.len - branch_idx;
+                ir[branch_addr].u.i = ir.len - branch_addr;
 
                 if (MatchToken(TokenKind::If)) {
                     ParseExpressionOfType(GetBasicType(PrimitiveType::Bool));
 
                     if (RG_LIKELY(ConsumeToken(TokenKind::EndOfLine))) {
-                        branch_idx = ir.len;
+                        branch_addr = ir.len;
                         ir.Append({Opcode::BranchIfFalse});
 
                         has_return &= ParseBlock();
 
-                        ir.Append({Opcode::Jump, {.i = jump_idx}});
-                        jump_idx = ir.len - 1;
+                        ir.Append({Opcode::Jump, {.i = jump_addr}});
+                        jump_addr = ir.len - 1;
                     }
                 } else if (RG_LIKELY(ConsumeToken(TokenKind::EndOfLine))) {
                     has_return &= ParseBlock();
@@ -901,9 +901,9 @@ bool Parser::ParseIf()
                 }
             } while (MatchToken(TokenKind::Else));
 
-            FixJumps(jump_idx, ir.len);
+            FixJumps(jump_addr, ir.len);
         } else {
-            ir[branch_idx].u.i = ir.len - branch_idx;
+            ir[branch_addr].u.i = ir.len - branch_addr;
         }
 
         ConsumeToken(TokenKind::End);
@@ -918,24 +918,24 @@ void Parser::ParseWhile()
 
     // Parse expression. We'll make a copy after the loop body so that the IR code looks
     // roughly like if (cond) { do { ... } while (cond) }.
-    Size condition_idx = ir.len;
+    Size condition_addr = ir.len;
     Size condition_line_idx = src->lines.len;
     ParseExpressionOfType(GetBasicType(PrimitiveType::Bool));
 
-    Size branch_idx = ir.len;
+    Size branch_addr = ir.len;
     ir.Append({Opcode::BranchIfFalse});
 
     // Break and continue need to apply to while loop blocks
-    RG_DEFER_C(prev_offset = loop_var_offset,
-               prev_break_idx = loop_break_idx,
-               prev_continue_idx = loop_continue_idx) {
-        loop_var_offset = prev_offset;
-        loop_break_idx = prev_break_idx;
-        loop_continue_idx = prev_continue_idx;
+    RG_DEFER_C(prev_offset = loop_offset,
+               prev_break_addr = loop_break_addr,
+               prev_continue_addr = loop_continue_addr) {
+        loop_offset = prev_offset;
+        loop_break_addr = prev_break_addr;
+        loop_continue_addr = prev_continue_addr;
     };
-    loop_var_offset = var_offset;
-    loop_break_idx = -1;
-    loop_continue_idx = -1;
+    loop_offset = var_offset;
+    loop_break_addr = -1;
+    loop_continue_addr = -1;
 
     // Parse body
     if (PeekToken(TokenKind::Do)) {
@@ -945,20 +945,20 @@ void Parser::ParseWhile()
         ConsumeToken(TokenKind::End);
     }
 
-    FixJumps(loop_continue_idx, ir.len);
+    FixJumps(loop_continue_addr, ir.len);
 
     // Copy the condition expression, and the IR/line map information
     for (Size i = condition_line_idx; i < src->lines.len &&
-                                      src->lines[i].first_idx < branch_idx; i++) {
+                                      src->lines[i].addr < branch_addr; i++) {
         const SourceInfo::Line &line = src->lines[i];
-        src->lines.Append({ir.len + (line.first_idx - condition_idx), line.line});
+        src->lines.Append({ir.len + (line.addr - condition_addr), line.line});
     }
-    ir.Append(ir.Take(condition_idx, branch_idx - condition_idx));
+    ir.Append(ir.Take(condition_addr, branch_addr - condition_addr));
 
-    ir.Append({Opcode::BranchIfTrue, {.i = branch_idx - ir.len + 1}});
-    ir[branch_idx].u.i = ir.len - branch_idx;
+    ir.Append({Opcode::BranchIfTrue, {.i = branch_addr - ir.len + 1}});
+    ir[branch_addr].u.i = ir.len - branch_addr;
 
-    FixJumps(loop_break_idx, ir.len);
+    FixJumps(loop_break_addr, ir.len);
 }
 
 void Parser::ParseFor()
@@ -1008,7 +1008,7 @@ void Parser::ParseFor()
     ir.Append({Opcode::LoadLocalInt, {.i = it->offset - 2}});
     it->type = GetBasicType(PrimitiveType::Int);
 
-    Size body_idx = ir.len;
+    Size body_addr = ir.len;
 
     ir.Append({Opcode::LoadLocalInt, {.i = it->offset}});
     ir.Append({Opcode::LoadLocalInt, {.i = it->offset - 1}});
@@ -1016,16 +1016,16 @@ void Parser::ParseFor()
     ir.Append({Opcode::BranchIfFalse});
 
     // Break and continue need to apply to for loop blocks
-    RG_DEFER_C(prev_offset = loop_var_offset,
-               prev_break_idx = loop_break_idx,
-               prev_continue_idx = loop_continue_idx) {
-        loop_var_offset = prev_offset;
-        loop_break_idx = prev_break_idx;
-        loop_continue_idx = prev_continue_idx;
+    RG_DEFER_C(prev_offset = loop_offset,
+               prev_break_addr = loop_break_addr,
+               prev_continue_addr = loop_continue_addr) {
+        loop_offset = prev_offset;
+        loop_break_addr = prev_break_addr;
+        loop_continue_addr = prev_continue_addr;
     };
-    loop_var_offset = var_offset;
-    loop_break_idx = -1;
-    loop_continue_idx = -1;
+    loop_offset = var_offset;
+    loop_break_addr = -1;
+    loop_continue_addr = -1;
 
     // Parse body
     if (PeekToken(TokenKind::Do)) {
@@ -1035,14 +1035,14 @@ void Parser::ParseFor()
         ConsumeToken(TokenKind::End);
     }
 
-    FixJumps(loop_continue_idx, ir.len);
+    FixJumps(loop_continue_addr, ir.len);
 
     ir.Append({Opcode::PushInt, {.i = 1}});
     ir.Append({Opcode::AddInt});
-    ir.Append({Opcode::Jump, {.i = body_idx - ir.len}});
-    ir[body_idx + 3].u.i = ir.len - (body_idx + 3);
+    ir.Append({Opcode::Jump, {.i = body_addr - ir.len}});
+    ir[body_addr + 3].u.i = ir.len - (body_addr + 3);
 
-    FixJumps(loop_break_idx, ir.len);
+    FixJumps(loop_break_addr, ir.len);
 
     // Destroy iterator and range values
     EmitPop(3);
@@ -1054,30 +1054,30 @@ void Parser::ParseBreak()
 {
     Size break_pos = pos++;
 
-    if (loop_var_offset < 0) {
+    if (loop_offset < 0) {
         MarkError(break_pos, "Break statement outside of loop");
         return;
     }
 
-    EmitPop(var_offset - loop_var_offset);
+    EmitPop(var_offset - loop_offset);
 
-    ir.Append({Opcode::Jump, {.i = loop_break_idx}});
-    loop_break_idx = ir.len - 1;
+    ir.Append({Opcode::Jump, {.i = loop_break_addr}});
+    loop_break_addr = ir.len - 1;
 }
 
 void Parser::ParseContinue()
 {
     Size continue_pos = pos++;
 
-    if (loop_var_offset < 0) {
+    if (loop_offset < 0) {
         MarkError(continue_pos, "Continue statement outside of loop");
         return;
     }
 
-    EmitPop(var_offset - loop_var_offset);
+    EmitPop(var_offset - loop_offset);
 
-    ir.Append({Opcode::Jump, {.i = loop_continue_idx}});
-    loop_continue_idx = ir.len - 1;
+    ir.Append({Opcode::Jump, {.i = loop_continue_addr}});
+    loop_continue_addr = ir.len - 1;
 }
 
 const TypeInfo *Parser::ParseType()
@@ -1309,10 +1309,10 @@ StackSlot Parser::ParseExpression()
                 // and will be removed then.
                 TrimInstructions(1);
             } else if (tok.kind == TokenKind::AndAnd) {
-                op.branch_idx = ir.len;
+                op.branch_addr = ir.len;
                 ir.Append({Opcode::SkipIfFalse});
             } else if (tok.kind == TokenKind::OrOr) {
-                op.branch_idx = ir.len;
+                op.branch_addr = ir.len;
                 ir.Append({Opcode::SkipIfTrue});
             }
 
@@ -1593,14 +1593,14 @@ void Parser::ProduceOperator(const PendingOperator &op)
             case TokenKind::AndAnd: {
                 success = EmitOperator2(PrimitiveType::Bool, Opcode::AndBool, stack[stack.len - 2].type);
 
-                RG_ASSERT(op.branch_idx && ir[op.branch_idx].code == Opcode::SkipIfFalse);
-                ir[op.branch_idx].u.i = ir.len - op.branch_idx;
+                RG_ASSERT(op.branch_addr && ir[op.branch_addr].code == Opcode::SkipIfFalse);
+                ir[op.branch_addr].u.i = ir.len - op.branch_addr;
             } break;
             case TokenKind::OrOr: {
                 success = EmitOperator2(PrimitiveType::Bool, Opcode::OrBool, stack[stack.len - 2].type);
 
-                RG_ASSERT(op.branch_idx && ir[op.branch_idx].code == Opcode::SkipIfTrue);
-                ir[op.branch_idx].u.i = ir.len - op.branch_idx;
+                RG_ASSERT(op.branch_addr && ir[op.branch_addr].code == Opcode::SkipIfTrue);
+                ir[op.branch_addr].u.i = ir.len - op.branch_addr;
             } break;
 
             default: { RG_UNREACHABLE(); } break;
@@ -1654,7 +1654,7 @@ bool Parser::EmitOperator2(PrimitiveType in_primitive, Opcode code, const TypeIn
 void Parser::EmitLoad(const VariableInfo &var)
 {
     if (var.global) {
-        if (RG_UNLIKELY(current_func && current_func->earliest_call_idx < var.defined_idx)) {
+        if (RG_UNLIKELY(current_func && current_func->earliest_call_addr < var.ready_addr)) {
             MarkError(definitions_map.FindValue(current_func, -1), "Function '%1' may be called before variable '%2' exists",
                       current_func->name, var.name);
             HintError(current_func->earliest_call_pos, "Function call happens here (it could be indirect)");
@@ -1690,7 +1690,7 @@ bool Parser::ParseCall(const char *name)
     LocalArray<FunctionInfo::Parameter, RG_LEN(FunctionInfo::params.data)> args;
 
     Size call_pos = pos - 2;
-    Size call_idx = ir.len;
+    Size call_addr = ir.len;
 
     FunctionInfo *func0 = program->functions_map.FindValue(name, nullptr);
     if (RG_UNLIKELY(!func0)) {
@@ -1751,19 +1751,19 @@ bool Parser::ParseCall(const char *name)
     // Emit intrinsic or call
     switch (func->mode) {
         case FunctionInfo::Mode::Intrinsic: {
-            EmitIntrinsic(name, call_idx, args);
+            EmitIntrinsic(name, call_addr, args);
         } break;
         case FunctionInfo::Mode::Native: {
             ir.Append({Opcode::CallNative, {.func = func}});
         } break;
         case FunctionInfo::Mode::Blik: {
-            if (func->inst_idx < 0) {
+            if (func->addr < 0) {
                 if (current_func && current_func != func) {
                     func->earliest_call_pos = std::min(func->earliest_call_pos, current_func->earliest_call_pos);
-                    func->earliest_call_idx = std::min(func->earliest_call_idx, current_func->earliest_call_idx);
+                    func->earliest_call_addr = std::min(func->earliest_call_addr, current_func->earliest_call_addr);
                 } else {
                     func->earliest_call_pos = std::min(func->earliest_call_pos, call_pos);
-                    func->earliest_call_idx = std::min(func->earliest_call_idx, ir.len);
+                    func->earliest_call_addr = std::min(func->earliest_call_addr, ir.len);
                 }
             }
 
@@ -1775,7 +1775,7 @@ bool Parser::ParseCall(const char *name)
     return true;
 }
 
-void Parser::EmitIntrinsic(const char *name, Size call_idx, Span<const FunctionInfo::Parameter> args)
+void Parser::EmitIntrinsic(const char *name, Size call_addr, Span<const FunctionInfo::Parameter> args)
 {
     if (TestStr(name, "Float")) {
         if (args[0].type->primitive == PrimitiveType::Int) {
@@ -1794,7 +1794,7 @@ void Parser::EmitIntrinsic(const char *name, Size call_idx, Span<const FunctionI
         }
 
         // typeOf() does not execute anything!
-        TrimInstructions(ir.len - call_idx);
+        TrimInstructions(ir.len - call_addr);
 
         ir.Append({Opcode::PushType, {.type = args[0].type}});
     } else {
@@ -1885,7 +1885,7 @@ void Parser::EmitReturn()
         }
 
         EmitPop(var_offset - current_func->params.len);
-        ir.Append({Opcode::Jump, {.i = current_func->inst_idx - ir.len}});
+        ir.Append({Opcode::Jump, {.i = current_func->addr - ir.len}});
 
         current_func->tre = true;
     } else {
@@ -1913,12 +1913,12 @@ void Parser::DestroyVariables(Size count)
     program->variables.RemoveLast(count);
 }
 
-void Parser::FixJumps(Size jump_idx, Size target_idx)
+void Parser::FixJumps(Size jump_addr, Size target_addr)
 {
-    while (jump_idx >= 0) {
-        Size next_idx = ir[jump_idx].u.i;
-        ir[jump_idx].u.i = target_idx - jump_idx;
-        jump_idx = next_idx;
+    while (jump_addr >= 0) {
+        Size next_addr = ir[jump_addr].u.i;
+        ir[jump_addr].u.i = target_addr - jump_addr;
+        jump_addr = next_addr;
     }
 }
 
@@ -1926,13 +1926,13 @@ void Parser::TrimInstructions(Size count)
 {
     ir.RemoveLast(count);
 
-    if (src->lines.len > 0 && src->lines[src->lines.len - 1].first_idx > ir.len) {
+    if (src->lines.len > 0 && src->lines[src->lines.len - 1].addr > ir.len) {
         SourceInfo::Line line = src->lines[src->lines.len - 1];
-        line.first_idx = ir.len;
+        line.addr = ir.len;
 
         do {
             src->lines.len--;
-        } while (src->lines.len > 0 && src->lines[src->lines.len - 1].first_idx >= ir.len);
+        } while (src->lines.len > 0 && src->lines[src->lines.len - 1].addr >= ir.len);
 
         src->lines.Append(line);
     }

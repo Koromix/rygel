@@ -69,7 +69,7 @@ struct FunctionInfo {
     bool variadic;
     const TypeInfo *ret_type;
 
-    Size inst_idx; // IR
+    Size addr; // IR
     bool tre;
 
     // Linked list
@@ -78,7 +78,7 @@ struct FunctionInfo {
 
     // Used to prevent dangerous forward calls (if relevant globals are not defined yet)
     Size earliest_call_pos;
-    Size earliest_call_idx;
+    Size earliest_call_addr;
 
     RG_HASHTABLE_HANDLER(FunctionInfo, name);
 };
@@ -90,7 +90,7 @@ struct VariableInfo {
 
     bool global;
     Size offset; // Stack
-    Size defined_idx; // IR (for globals)
+    Size ready_addr; // IR (for globals)
 
     const VariableInfo *shadow;
 
@@ -123,7 +123,7 @@ struct Instruction {
 
 struct SourceInfo {
     struct Line {
-        Size first_idx;
+        Size addr;
         int32_t line;
     };
 

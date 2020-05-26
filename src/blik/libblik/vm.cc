@@ -498,7 +498,7 @@ bool VirtualMachine::Run()
 
             frame = frames.AppendDefault();
             frame->func = func;
-            frame->pc = func->inst_idx;
+            frame->pc = func->addr;
             frame->bp = stack.len - func->params.len;
 
             bp = frame->bp;
@@ -513,7 +513,7 @@ bool VirtualMachine::Run()
 
             frame = frames.AppendDefault();
             frame->func = func;
-            frame->pc = func->inst_idx;
+            frame->pc = func->addr;
 
             if (func->variadic) {
                 Span<const Value> args;
