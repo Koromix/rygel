@@ -238,6 +238,10 @@ Parser::Parser(Program *program)
         program->types_map.Append(type);
     }
 
+    // Special float values
+    AddGlobal("NaN", GetBasicType(PrimitiveType::Float), Value {.d = (double)NAN}, false);
+    AddGlobal("Inf", GetBasicType(PrimitiveType::Float), Value {.d = (double)INFINITY}, false);
+
     // Intrinsics
     AddFunction("Float(Int): Float", {});
     AddFunction("Float(Float): Float", {});

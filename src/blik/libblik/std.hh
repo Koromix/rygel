@@ -11,6 +11,8 @@ namespace RG {
 class Compiler;
 
 void ImportAll(Compiler *out_compiler);
+
 void ImportPrint(Compiler *out_compiler);
+void ImportMath(Compiler *out_compiler);
 
 }
