@@ -66,8 +66,8 @@ for i in 1..8
     let mut j = 0
     while (j := j + 1) < 10
         printLn("  Hello: ", j)
-        if j == 3 then continue
-        if j == 7 then break
+        if j == 3 do continue
+        if j == 7 do break
         printLn("  Going strong!")
     end
 
@@ -100,7 +100,7 @@ let foo: String = "Hello" # OK
 let empty: Float
 
 let mut txt = "FOO"
-if test then txt := "BAR"
+if test do txt := "BAR"
 printLn(txt)
 
 if empty < 1.0
@@ -120,7 +120,7 @@ printLn("The value of p is: ", p)
 # un classique...
 
 func fib(n: Int): Int
-    if n <= 1 then return n
+    if n <= 1 do return n
     return fib(n - 1) + fib(n - 2)
 end
 
@@ -196,7 +196,7 @@ printLn("TESTING ", inline0())
 
 func factorial(n: Int, accum: Int): Int
     let soFar = n * accum
-    if n <= 1 then return soFar
+    if n <= 1 do return soFar
     return factorial(n - 1, soFar)
 end
 func factorial(n: Int): Int do return factorial(n, 1)

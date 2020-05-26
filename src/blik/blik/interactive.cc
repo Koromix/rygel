@@ -52,14 +52,16 @@ static bool TokenizeWithFakePrint(Span<const char> code, const char *filename, T
 
     // Tokenize must only be called once for each TokenizedFile, so we need to cheat a little
     if (!intro.tokens.len) {
-        Tokenize(R"(
+        bool success = Tokenize(R"(
 begin
     let __result =
 )", "<intro>", &intro);
-        Tokenize(R"(
-    if typeOf(__result) != Null then printLn(__result)
+        success &= Tokenize(R"(
+    if typeOf(__result) != Null do printLn(__result)
 end
 )", "<outro>", &outro);
+
+        RG_ASSERT(success);
     }
 
     out_file->tokens.Append(intro.tokens);

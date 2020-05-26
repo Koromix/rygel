@@ -918,7 +918,7 @@ bool Parser::ParseIf()
     bool has_return = true;
     bool has_else = false;
 
-    if (PeekToken(TokenKind::Then)) {
+    if (PeekToken(TokenKind::Do)) {
         has_return &= ParseDo();
         ir[branch_addr].u.i = ir.len - branch_addr;
     } else if (RG_LIKELY(EndStatement())) {
