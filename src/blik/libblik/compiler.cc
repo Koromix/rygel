@@ -325,8 +325,7 @@ bool Parser::Parse(const TokenizedFile &file, CompileReport *out_report)
     RG_ASSERT(loop_offset == -1);
     RG_ASSERT(!current_func);
 
-    ir.Append({Opcode::End});
-    program->end_stack_len = var_offset;
+    ir.Append({Opcode::End, {.i = var_offset}});
 
     if (valid) {
         err_guard.Disable();

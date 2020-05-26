@@ -148,8 +148,6 @@ struct Program {
     HashTable<const char *, FunctionInfo *> functions_map;
     HashTable<const char *, VariableInfo *> variables_map;
 
-    Size end_stack_len;
-
     BlockAllocator str_alloc;
 
     const char *LocateInstruction(Size pc, int32_t *out_line = nullptr) const;

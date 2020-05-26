@@ -568,9 +568,9 @@ bool VirtualMachine::Run()
         }
 
         CASE(End): {
-            pc++;
+            RG_ASSERT(stack.len == inst->u.i);
 
-            RG_ASSERT(stack.len == program->end_stack_len);
+            pc++;
             return true;
         }
     }
