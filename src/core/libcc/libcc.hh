@@ -1544,16 +1544,14 @@ public:
         }
 
         Size start_idx = offset + from;
-        Size end_idx = offset + len;
         Size start_bucket_idx = start_idx / BucketSize;
         Size start_bucket_offset = start_idx % BucketSize;
-        Size end_bucket_idx = end_idx / BucketSize;
 
         iterator_type from_it(this, start_bucket_idx, start_bucket_offset);
         DeleteValues(from_it, end());
 
         Size delete_idx = start_bucket_idx + !!start_bucket_offset;
-        for (Size i = delete_idx; i <= end_bucket_idx; i++) {
+        for (Size i = delete_idx; i < buckets.len; i++) {
             DeleteBucket(buckets[i]);
         }
         buckets.RemoveFrom(delete_idx);
