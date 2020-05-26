@@ -128,6 +128,7 @@ private:
     bool MatchToken(TokenKind kind);
     bool PeekToken(TokenKind kind);
 
+    bool EndStatement();
     bool SkipNewLines();
 
     const char *InternString(const char *str);
@@ -598,66 +599,64 @@ bool Parser::ParseStatement()
     bool has_return = false;
 
     src->lines.Append({ir.len, tokens[pos].line});
+    show_errors = true;
 
     switch (tokens[pos].kind) {
         case TokenKind::EndOfLine: {
             pos++;
             src->lines.len--;
         } break;
+        case TokenKind::Semicolon: { pos++; } break;
 
         case TokenKind::Begin: {
             pos++;
 
-            if (RG_LIKELY(ConsumeToken(TokenKind::EndOfLine))) {
+            if (RG_LIKELY(EndStatement())) {
                 has_return = ParseBlock();
                 ConsumeToken(TokenKind::End);
 
-                show_errors |= ConsumeToken(TokenKind::EndOfLine);
+                EndStatement();
             }
         } break;
-
         case TokenKind::Func: {
             ParseFunction();
-            show_errors |= ConsumeToken(TokenKind::EndOfLine);
+            EndStatement();
         } break;
-
         case TokenKind::Return: {
             ParseReturn();
-            show_errors |= ConsumeToken(TokenKind::EndOfLine);
             has_return = true;
+            EndStatement();
         } break;
-
         case TokenKind::Let: {
             ParseLet();
-            show_errors |= ConsumeToken(TokenKind::EndOfLine);
+            EndStatement();
         } break;
         case TokenKind::If: {
             has_return = ParseIf();
-            show_errors |= ConsumeToken(TokenKind::EndOfLine);
+            EndStatement();
         } break;
         case TokenKind::While: {
             ParseWhile();
-            show_errors |= ConsumeToken(TokenKind::EndOfLine);
+            EndStatement();
         } break;
         case TokenKind::For: {
             ParseFor();
-            show_errors |= ConsumeToken(TokenKind::EndOfLine);
+            EndStatement();
         } break;
-
         case TokenKind::Break: {
             ParseBreak();
-            show_errors |= ConsumeToken(TokenKind::EndOfLine);
+            EndStatement();
         } break;
         case TokenKind::Continue: {
             ParseContinue();
-            show_errors |= ConsumeToken(TokenKind::EndOfLine);
+            EndStatement();
         } break;
 
         default: {
             ParseExpression();
             DiscardResult();
 
-            show_errors |= ConsumeToken(TokenKind::EndOfLine);
+            EndStatement();
         } break;
     }
 
@@ -780,7 +779,7 @@ void Parser::ParseFunction()
     bool has_return = false;
     if (PeekToken(TokenKind::Do)) {
         has_return = ParseDo();
-    } else if (RG_LIKELY(ConsumeToken(TokenKind::EndOfLine))) {
+    } else if (RG_LIKELY(EndStatement())) {
         has_return = ParseBlock();
         ConsumeToken(TokenKind::End);
     }
@@ -807,7 +806,7 @@ void Parser::ParseReturn()
     }
 
     const TypeInfo *type;
-    if (PeekToken(TokenKind::EndOfLine)) {
+    if (PeekToken(TokenKind::EndOfLine) || PeekToken(TokenKind::Semicolon)) {
         type = GetBasicType(PrimitiveType::Null);
     } else {
         type = ParseExpression().type;
@@ -921,7 +920,7 @@ bool Parser::ParseIf()
     if (PeekToken(TokenKind::Then)) {
         has_return &= ParseDo();
         ir[branch_addr].u.i = ir.len - branch_addr;
-    } else if (RG_LIKELY(ConsumeToken(TokenKind::EndOfLine))) {
+    } else if (RG_LIKELY(EndStatement())) {
         has_return &= ParseBlock();
 
         if (MatchToken(TokenKind::Else)) {
@@ -934,7 +933,7 @@ bool Parser::ParseIf()
                 if (MatchToken(TokenKind::If)) {
                     ParseExpressionOfType(GetBasicType(PrimitiveType::Bool));
 
-                    if (RG_LIKELY(ConsumeToken(TokenKind::EndOfLine))) {
+                    if (RG_LIKELY(EndStatement())) {
                         branch_addr = ir.len;
                         ir.Append({Opcode::BranchIfFalse});
 
@@ -943,7 +942,7 @@ bool Parser::ParseIf()
                         ir.Append({Opcode::Jump, {.i = jump_addr}});
                         jump_addr = ir.len - 1;
                     }
-                } else if (RG_LIKELY(ConsumeToken(TokenKind::EndOfLine))) {
+                } else if (RG_LIKELY(EndStatement())) {
                     has_return &= ParseBlock();
                     has_else = true;
 
@@ -990,7 +989,7 @@ void Parser::ParseWhile()
     // Parse body
     if (PeekToken(TokenKind::Do)) {
         ParseDo();
-    } else if (RG_LIKELY(ConsumeToken(TokenKind::EndOfLine))) {
+    } else if (RG_LIKELY(EndStatement())) {
         ParseBlock();
         ConsumeToken(TokenKind::End);
     }
@@ -1080,7 +1079,7 @@ void Parser::ParseFor()
     // Parse body
     if (PeekToken(TokenKind::Do)) {
         ParseDo();
-    } else if (RG_LIKELY(ConsumeToken(TokenKind::EndOfLine))) {
+    } else if (RG_LIKELY(EndStatement())) {
         ParseBlock();
         ConsumeToken(TokenKind::End);
     }
@@ -1417,7 +1416,8 @@ error:
     // and block constructs, and prevent generation of garbage errors (such as "functions
     // must be defined in top-level scope") caused by undetected block and/or do statement.
     while (pos < tokens.len && tokens[pos].kind != TokenKind::Do &&
-                               tokens[pos].kind != TokenKind::EndOfLine) {
+                               tokens[pos].kind != TokenKind::EndOfLine &&
+                               tokens[pos].kind != TokenKind::Semicolon) {
         pos++;
     };
     return {GetBasicType(PrimitiveType::Null)};
@@ -2049,6 +2049,30 @@ bool Parser::PeekToken(TokenKind kind)
 {
     bool match = pos < tokens.len && tokens[pos].kind == kind;
     return match;
+}
+
+bool Parser::EndStatement()
+{
+    if (RG_UNLIKELY(pos >= tokens.len)) {
+        MarkError(pos, "Unexpected end of file, expected end of statement");
+        return false;
+    }
+
+    if (RG_UNLIKELY(tokens[pos].kind != TokenKind::EndOfLine &&
+                    tokens[pos].kind != TokenKind::Semicolon)) {
+        MarkError(pos, "Unexpected token '%1', expected end of statement",
+                  TokenKindNames[(int)tokens[pos].kind]);
+
+        // Find next statement to recover (for error report)
+        do {
+            pos++;
+        } while (pos < tokens.len && tokens[pos].kind != TokenKind::EndOfLine &&
+                                     tokens[pos].kind != TokenKind::Semicolon);
+
+        return false;
+    }
+
+    return true;
 }
 
 bool Parser::SkipNewLines()

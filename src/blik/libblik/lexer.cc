@@ -414,6 +414,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                         Token3('<', '=', TokenKind::LeftShiftAssign) || Token2('<', TokenKind::LeftShift) ||
                         Token2('=', TokenKind::LessOrEqual) || Token1(TokenKind::Less); } break;
             case ',': { Token1(TokenKind::Comma); } break;
+            case ';': { Token1(TokenKind::Semicolon); } break;
 
             default: {
                 if (RG_LIKELY(IsAsciiAlpha(code[offset]) || code[offset] == '_')) {

@@ -78,5 +78,6 @@ TOKEN(Comma, ",")
 
 // End statements
 TOKEN(EndOfLine, "<end of line>")
+TOKEN(Semicolon, ";")
 
 #undef TOKEN
