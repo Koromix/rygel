@@ -110,6 +110,9 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
 
     valid = true;
 
+    // Reuse for performance
+    HeapArray<char> str_buf(&file->str_alloc);
+
     for (offset = 0, next = 1; offset < code.len; offset = next++) {
         switch (code[offset]) {
             case ' ':
@@ -274,7 +277,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
 
             case '"':
             case '\'': {
-                HeapArray<char> str(&file->str_alloc);
+                str_buf.RemoveFrom(0);
 
                 for (;;) {
                     if (RG_UNLIKELY(next >= code.len || code[next] == '\n')) {
@@ -292,14 +295,14 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     } else if (code[next] == '\\') {
                         if (++next < code.len) {
                             switch (code[next]) {
-                                case 'r': { str.Append('\r'); } break;
-                                case 'n': { str.Append('\n'); } break;
-                                case 't': { str.Append('\t'); } break;
-                                case 'f': { str.Append('\f'); } break;
-                                case 'v': { str.Append('\v'); } break;
-                                case 'a': { str.Append('\a'); } break;
-                                case 'b': { str.Append('\b'); } break;
-                                case 'e': { str.Append('\x1B'); } break;
+                                case 'r': { str_buf.Append('\r'); } break;
+                                case 'n': { str_buf.Append('\n'); } break;
+                                case 't': { str_buf.Append('\t'); } break;
+                                case 'f': { str_buf.Append('\f'); } break;
+                                case 'v': { str_buf.Append('\v'); } break;
+                                case 'a': { str_buf.Append('\a'); } break;
+                                case 'b': { str_buf.Append('\b'); } break;
+                                case 'e': { str_buf.Append('\x1B'); } break;
                                 case 'x': {
                                     if (RG_UNLIKELY(next > code.len - 3)) {
                                         MarkError(next + 1, "Truncated escape sequence");
@@ -316,7 +319,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                                         c = (c << 4) | (int)digit;
                                     }
 
-                                    str.Append((char)c);
+                                    str_buf.Append((char)c);
                                 } break;
                                 case 'u':
                                 case 'U': {
@@ -337,18 +340,18 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                                         uc = (uc << 4) | (int32_t)digit;
                                     }
 
-                                    str.Grow(4);
-                                    Size bytes = EncodeUtf8(uc, str.end());
+                                    str_buf.Grow(4);
+                                    Size bytes = EncodeUtf8(uc, str_buf.end());
                                     if (RG_UNLIKELY(!bytes)) {
                                         MarkError(next - consume, "Invalid UTF-8 codepoint");
                                         return false;
                                     }
-                                    str.len += bytes;
+                                    str_buf.len += bytes;
                                 } break;
-                                case '\\': { str.Append('\\'); } break;
-                                case '"': { str.Append('"'); } break;
-                                case '\'': { str.Append('\''); } break;
-                                case '0': { str.Append(0); } break;
+                                case '\\': { str_buf.Append('\\'); } break;
+                                case '"': { str_buf.Append('"'); } break;
+                                case '\'': { str_buf.Append('\''); } break;
+                                case '0': { str_buf.Append(0); } break;
 
                                 default: {
                                     MarkUnexpected(next, "Unsupported escape sequence");
@@ -359,7 +362,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                             next++;
                         }
                     } else if ((uint8_t)code[next] < 128) {
-                        str.Append(code[next]);
+                        str_buf.Append(code[next]);
                         next++;
                     } else {
                         int32_t uc;
@@ -370,16 +373,16 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                             return false;
                         }
 
-                        str.Append(code.Take(next, bytes));
+                        str_buf.Append(code.Take(next, bytes));
                         next += bytes;
                     }
                 }
 
                 // Intern string
-                std::pair<Span<const char> *, bool> ret = strings.Append(str);
+                std::pair<Span<const char> *, bool> ret = strings.Append(str_buf);
                 if (ret.second) {
-                    str.Append(0);
-                    ret.first->ptr = str.TrimAndLeak().ptr;
+                    str_buf.Append(0);
+                    ret.first->ptr = str_buf.TrimAndLeak().ptr;
                 }
 
                 tokens.Append({TokenKind::String, line, offset, {.str = ret.first->ptr}});
