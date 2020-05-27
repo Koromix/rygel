@@ -5,7 +5,7 @@ Il y a deux possibilités :
 * Simple : Installer une version précompilée
 * Compliquée : Compiler manuellement drdc et drdR
 
-## Tables et versions précompilées (Windows + Linux)
+## Tables et versions précompilées
 
 Pour obtenir les *tables de groupage* et le client en ligne de commande, il suffit
 de télécharger la dernière archive de drdc disponible sur mon serveur :
