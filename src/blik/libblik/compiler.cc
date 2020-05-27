@@ -468,7 +468,7 @@ void Parser::ParsePrototypes(Span<const Size> funcs)
 
         PrototypeInfo *proto = prototypes_map.SetDefault(pos);
         FunctionInfo *func = program->functions.AppendDefault();
-        definitions_map.Append(func, pos);
+        definitions_map.Set(func, pos);
 
         proto->pos = pos;
         proto->func = func;
@@ -527,7 +527,7 @@ void Parser::ParsePrototypes(Span<const Size> funcs)
 
                 if (RG_LIKELY(func->params.Available())) {
                     FunctionInfo::Parameter *param = func->params.AppendDefault();
-                    definitions_map.Append(param, param_pos);
+                    definitions_map.Set(param, param_pos);
 
                     param->name = var->name;
                     param->type = var->type;
@@ -724,7 +724,7 @@ void Parser::ParseFunction()
     for (const FunctionInfo::Parameter &param: func->params) {
         VariableInfo *var = program->variables.AppendDefault();
         Size param_pos = definitions_map.FindValue(&param, -1);
-        definitions_map.Append(var, param_pos);
+        definitions_map.Set(var, param_pos);
 
         var->name = param.name;
         var->type = param.type;
@@ -834,7 +834,7 @@ void Parser::ParseLet()
 
     var->mut = MatchToken(TokenKind::Mut);
     var_pos += var->mut;
-    definitions_map.Append(var, pos);
+    definitions_map.Set(var, pos);
     var->name = ConsumeIdentifier();
 
     std::pair<VariableInfo **, bool> ret = program->variables_map.Append(var);
@@ -1024,7 +1024,7 @@ void Parser::ParseFor()
 
     it->mut = MatchToken(TokenKind::Mut);
     for_pos += it->mut;
-    definitions_map.Append(it, pos);
+    definitions_map.Set(it, pos);
     it->name = ConsumeIdentifier();
 
     it->offset = var_offset + 2;
