@@ -156,7 +156,7 @@ bool UserSetBuilder::LoadIni(StreamReader *st)
             rule_set.allow = allow.TrimAndLeak();
             rule_set.deny = deny.TrimAndLeak();
 
-            if (map.Append(user->name, set.users.len - 1).second) {
+            if (map.TrySet(user->name, set.users.len - 1).second) {
                 rule_sets.Append(rule_set);
             } else {
                 LogError("Duplicate user '%1'", user->name);
@@ -213,11 +213,11 @@ void UserSetBuilder::Finish(const StructureSet &structure_set, UserSet *out_set)
         for (const Structure &structure: structure_set.structures) {
             for (const StructureEntity &ent: structure.entities) {
                 if (CheckUnitPermission(rule_set, ent))
-                    user.mco_allowed_units.Append(ent.unit);
+                    user.mco_allowed_units.Set(ent.unit);
             }
         }
 
-        set.map.Append(&user);
+        set.map.Set(&user);
     }
 
     SwapMemory(out_set, &set, RG_SIZE(set));

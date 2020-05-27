@@ -1295,7 +1295,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
             Size special_matches = 0;
             for (const mco_DiagnosisInfo *diag_info: ctx.prep->diagnoses) {
                 if (TestDiagnosis(*diag_info, ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
-                        handled_codes.Append(diag_info->diag).second) {
+                        handled_codes.TrySet(diag_info->diag).second) {
                     special_matches += (diag_info == ctx.main_diag_info ||
                                         diag_info == ctx.linked_diag_info);
                     if (handled_codes.table.count >= 2 && handled_codes.table.count > special_matches)

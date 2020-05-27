@@ -399,7 +399,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                 }
 
                 // Intern string
-                std::pair<Span<const char> *, bool> ret = strings.Append(str_buf);
+                std::pair<Span<const char> *, bool> ret = strings.TrySet(str_buf);
                 if (ret.second) {
                     str_buf.Append(0);
                     ret.first->ptr = str_buf.TrimAndLeak().ptr;
@@ -488,7 +488,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     tokens.Append({keyword->kind, line, offset, keyword->u});
                 } else {
                     // Intern string
-                    std::pair<Span<const char> *, bool> ret = strings.Append(ident);
+                    std::pair<Span<const char> *, bool> ret = strings.TrySet(ident);
                     if (ret.second) {
                         ret.first->ptr = DuplicateString(ident, &file->str_alloc).ptr;
                     }

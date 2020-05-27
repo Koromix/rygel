@@ -92,7 +92,7 @@ http_SessionManager::Session *
                 FmtHex(buf[6]).Pad0(-16), FmtHex(buf[7]).Pad0(-16));
         }
 
-        std::pair<Session *, bool> ret = sessions.AppendDefault(session_key);
+        std::pair<Session *, bool> ret = sessions.TrySetDefault(session_key);
 
         if (RG_LIKELY(ret.second)) {
             session = ret.first;

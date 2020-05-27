@@ -140,7 +140,7 @@ bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *con
         HashSet<drd_UnitCode> known_units;
         for (const Structure &structure: thop_structure_set.structures) {
             for (const StructureEntity &ent: structure.entities) {
-                known_units.Append(ent.unit);
+                known_units.Set(ent.unit);
             }
         }
 
@@ -148,7 +148,7 @@ bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *con
         for (const mco_Stay &stay: mco_stay_set.stays) {
             if (stay.unit.number && !known_units.Find(stay.unit)) {
                 LogError("Structure set is missing unit %1", stay.unit);
-                known_units.Append(stay.unit);
+                known_units.Set(stay.unit);
 
                 valid = false;
             }
@@ -217,12 +217,12 @@ bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *con
         const mco_Result &result = mco_results[i];
 
         results_by_ghm_root_ptrs.Append(&result);
-        mco_results_to_mono.Append(&result, &mco_mono_results[j]);
+        mco_results_to_mono.TrySet(&result, &mco_mono_results[j]);
 
         i++;
         j += result.stays.len;
     }
-    mco_results_to_mono.Append(mco_results.end(), mco_mono_results.end());
+    mco_results_to_mono.TrySet(mco_results.end(), mco_mono_results.end());
 
     // Finalize index by GHM
     std::stable_sort(results_by_ghm_root_ptrs.begin(), results_by_ghm_root_ptrs.end(),
@@ -238,7 +238,7 @@ bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *con
             ptrs.len++;
         }
 
-        mco_results_by_ghm_root.Append(ghm_root, ptrs);
+        mco_results_by_ghm_root.Set(ghm_root, ptrs);
     }
 
     return true;

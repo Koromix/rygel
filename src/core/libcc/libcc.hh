@@ -1908,7 +1908,7 @@ public:
     {
         Clear();
         for (const ValueType &value: other) {
-            Append(value);
+            Set(value);
         }
         return *this;
     }
@@ -1965,24 +1965,6 @@ public:
         return it ? *it : default_value;
     }
 
-    std::pair<ValueType *, bool> Append(const ValueType &value)
-    {
-        const KeyType &key = Handler::GetKey(value);
-        std::pair<ValueType *, bool> ret = Insert(key);
-        if (ret.second) {
-            *ret.first = value;
-        }
-        return ret;
-    }
-    std::pair<ValueType *, bool> AppendDefault(const KeyType &key)
-    {
-        std::pair<ValueType *, bool> ret = Insert(key);
-        if (ret.second) {
-            new (ret.first) ValueType();
-        }
-        return ret;
-    }
-
     ValueType *Set(const ValueType &value)
     {
         const KeyType &key = Handler::GetKey(value);
@@ -1998,6 +1980,24 @@ public:
         }
         new (ret.first) ValueType();
         return ret.first;
+    }
+
+    std::pair<ValueType *, bool> TrySet(const ValueType &value)
+    {
+        const KeyType &key = Handler::GetKey(value);
+        std::pair<ValueType *, bool> ret = Insert(key);
+        if (ret.second) {
+            *ret.first = value;
+        }
+        return ret;
+    }
+    std::pair<ValueType *, bool> TrySetDefault(const KeyType &key)
+    {
+        std::pair<ValueType *, bool> ret = Insert(key);
+        if (ret.second) {
+            new (ret.first) ValueType();
+        }
+        return ret;
     }
 
     void Remove(ValueType *it)
@@ -2325,18 +2325,6 @@ public:
     void Clear() { table.Clear(); }
     void RemoveAll() { table.RemoveAll(); }
 
-    std::pair<ValueType *, bool> Append(const KeyType &key, const ValueType &value)
-    {
-        std::pair<Bucket *, bool> ret = table.Append({key, value});
-        return { &ret.first->value, ret.second };
-    }
-    std::pair<ValueType *, bool> AppendDefault(const KeyType &key)
-    {
-        std::pair<Bucket *, bool> ret = table.AppendDefault(key);
-        ret.first->key = key;
-        return { &ret.first->value, ret.second };
-    }
-
     ValueType *Set(const KeyType &key, const ValueType &value)
         { return &table.Set({key, value})->value; }
     ValueType *SetDefault(const KeyType &key)
@@ -2344,6 +2332,18 @@ public:
         Bucket *table_it = table.SetDefault(key);
         table_it->key = key;
         return &table_it->value;
+    }
+
+    std::pair<ValueType *, bool> TrySet(const KeyType &key, const ValueType &value)
+    {
+        std::pair<Bucket *, bool> ret = table.TrySet({key, value});
+        return { &ret.first->value, ret.second };
+    }
+    std::pair<ValueType *, bool> TrySetDefault(const KeyType &key)
+    {
+        std::pair<Bucket *, bool> ret = table.TrySetDefault(key);
+        ret.first->key = key;
+        return { &ret.first->value, ret.second };
     }
 
     void Remove(ValueType *it)
@@ -2396,8 +2396,8 @@ public:
     void Clear() { table.Clear(); }
     void RemoveAll() { table.RemoveAll(); }
 
-    std::pair<ValueType *, bool> Append(const ValueType &value) { return table.Append(value); }
     ValueType *Set(const ValueType &value) { return table.Set(value); }
+    std::pair<ValueType *, bool> TrySet(const ValueType &value) { return table.TrySet(value); }
 
     void Remove(ValueType *it) { table.Remove(it); }
     void Remove(const ValueType &value) { Remove(Find(value)); }

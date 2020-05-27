@@ -245,7 +245,7 @@ void AggregateSetBuilder::Process(Span<const mco_Result> results, Span<const mco
 
             if (user->mco_allowed_units.Find(unit)) {
                 std::pair<Aggregate::Part *, bool> ret =
-                    agg_parts_map.AppendDefault(mono_result.stays[0].unit);
+                    agg_parts_map.TrySetDefault(mono_result.stays[0].unit);
 
                 ret.first->mono_count += multiplier;
                 ret.first->price_cents += multiplier * mono_pricing.price_cents;
@@ -281,7 +281,7 @@ void AggregateSetBuilder::Process(Span<const mco_Result> results, Span<const mco
 
             Aggregate *agg;
             {
-                std::pair<Size *, bool> ret = aggregates_map.Append(key, set.aggregates.len);
+                std::pair<Size *, bool> ret = aggregates_map.TrySet(key, set.aggregates.len);
                 if (ret.second) {
                     agg = set.aggregates.AppendDefault();
                     agg->key = key;
@@ -304,7 +304,7 @@ void AggregateSetBuilder::Process(Span<const mco_Result> results, Span<const mco
                 agg->parts = agg_parts.TrimAndLeak();
             }
 
-            if (ghm_roots_set.Append(result.ghm.Root()).second) {
+            if (ghm_roots_set.TrySet(result.ghm.Root()).second) {
                 ghm_roots.Append(result.ghm.Root());
             }
         }
@@ -348,7 +348,7 @@ static void GatherGhmGhsInfo(Span<const mco_GhmRootCode> ghm_roots, Date min_dat
                         key.ghm = ghm_to_ghs_info.ghm;
                         key.ghs = ghm_to_ghs_info.Ghs(sector);
 
-                        std::pair<Size *, bool> ret = ghm_ghs_map.Append(key, out_ghm_ghs->len);
+                        std::pair<Size *, bool> ret = ghm_ghs_map.TrySet(key, out_ghm_ghs->len);
                         if (ret.second) {
                             agg_ghm_ghs = out_ghm_ghs->AppendDefault();
                             agg_ghm_ghs->key = key;

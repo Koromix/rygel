@@ -237,7 +237,7 @@ Parser::Parser(Program *program)
     // Basic types
     for (Size i = 0; i < RG_LEN(PrimitiveTypeNames); i++) {
         TypeInfo *type = program->types.Append({PrimitiveTypeNames[i], (PrimitiveType)i});
-        program->types_map.Append(type);
+        program->types_map.Set(type);
     }
 
     AddGlobal("Version", GetBasicType(PrimitiveType::String), Value {.str = FelixVersion}, false);
@@ -400,7 +400,7 @@ void Parser::AddFunction(const char *signature, std::function<NativeFunction> na
 
     // Publish it!
     {
-        FunctionInfo *head = *program->functions_map.Append(func).first;
+        FunctionInfo *head = *program->functions_map.TrySet(func).first;
 
         if (head != func) {
             RG_ASSERT(!head->variadic && !func->variadic);
@@ -444,7 +444,7 @@ void Parser::AddGlobal(const char *name, const TypeInfo *type, Value value, bool
     var->offset = var_offset++;
     var->ready_addr = ir.len;
 
-    bool success = program->variables_map.Append(var).second;
+    bool success = program->variables_map.TrySet(var).second;
     RG_ASSERT(success);
 }
 
@@ -478,7 +478,7 @@ void Parser::ParsePrototypes(Span<const Size> funcs)
 
         // Insert in functions map
         {
-            std::pair<FunctionInfo **, bool> ret = program->functions_map.Append(func);
+            std::pair<FunctionInfo **, bool> ret = program->functions_map.TrySet(func);
             FunctionInfo *proto0 = *ret.first;
 
             if (ret.second) {
@@ -509,7 +509,7 @@ void Parser::ParsePrototypes(Span<const Size> funcs)
                 var->mut = MatchToken(TokenKind::Mut);
                 var->name = ConsumeIdentifier();
 
-                std::pair<VariableInfo **, bool> ret = program->variables_map.Append(var);
+                std::pair<VariableInfo **, bool> ret = program->variables_map.TrySet(var);
                 if (RG_UNLIKELY(!ret.second)) {
                     const VariableInfo *prev_var = *ret.first;
                     var->shadow = prev_var;
@@ -732,7 +732,7 @@ void Parser::ParseFunction()
 
         var->offset = var_offset++;
 
-        std::pair<VariableInfo **, bool> ret = program->variables_map.Append(var);
+        std::pair<VariableInfo **, bool> ret = program->variables_map.TrySet(var);
         if (RG_UNLIKELY(!ret.second)) {
             const VariableInfo *prev_var = *ret.first;
             var->shadow = prev_var;
@@ -748,7 +748,7 @@ void Parser::ParseFunction()
         }
 
         if (RG_UNLIKELY(poisoned_set.Find(&param))) {
-            poisoned_set.Append(var);
+            poisoned_set.Set(var);
         }
     }
 
@@ -837,7 +837,7 @@ void Parser::ParseLet()
     definitions_map.Set(var, pos);
     var->name = ConsumeIdentifier();
 
-    std::pair<VariableInfo **, bool> ret = program->variables_map.Append(var);
+    std::pair<VariableInfo **, bool> ret = program->variables_map.TrySet(var);
     if (RG_UNLIKELY(!ret.second)) {
         const VariableInfo *prev_var = *ret.first;
         var->shadow = prev_var;
@@ -906,7 +906,7 @@ void Parser::ParseLet()
     // Expressions involving this variable won't issue (visible) errors
     // and will be marked as invalid too.
     if (RG_UNLIKELY(!show_errors)) {
-        poisoned_set.Append(var);
+        poisoned_set.Set(var);
     }
 }
 
@@ -1029,7 +1029,7 @@ void Parser::ParseFor()
 
     it->offset = var_offset + 2;
 
-    std::pair<VariableInfo **, bool> ret = program->variables_map.Append(it);
+    std::pair<VariableInfo **, bool> ret = program->variables_map.TrySet(it);
     if (RG_UNLIKELY(!ret.second)) {
         const VariableInfo *prev_var = *ret.first;
         it->shadow = prev_var;
@@ -2097,7 +2097,7 @@ bool Parser::SkipNewLines()
 
 const char *Parser::InternString(const char *str)
 {
-    std::pair<const char **, bool> ret = strings.Append(str);
+    std::pair<const char **, bool> ret = strings.TrySet(str);
     if (ret.second) {
         *ret.first = DuplicateString(str, &program->str_alloc).ptr;
     }

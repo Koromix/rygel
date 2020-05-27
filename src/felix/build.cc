@@ -296,7 +296,7 @@ const char *Builder::AddSource(const SourceFileInfo &src)
                 }
 
                 pch_filename = node.dest_filename;
-                build_map.Append(pch->filename, pch_filename);
+                build_map.Set(pch->filename, pch_filename);
             }
         }
     }
@@ -326,7 +326,7 @@ const char *Builder::AddSource(const SourceFileInfo &src)
         }
 
         obj_filename = node.dest_filename;
-        build_map.Append(src.filename, obj_filename);
+        build_map.Set(src.filename, obj_filename);
     }
 
     return obj_filename;
@@ -541,7 +541,7 @@ bool Builder::RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, 
             const char *new_cmd = Fmt(&temp_alloc, "%1 \"@%2\"",
                                       node.cmd_line.Take(0, node.rsp_offset), rsp_filename).ptr;
 
-            rsp_map.Append(&node, new_cmd);
+            rsp_map.Set(&node, new_cmd);
         }
     }
 
@@ -788,7 +788,7 @@ int64_t Builder::GetFileModificationTime(const char *filename)
 
         // filename might be temporary (e.g. dependency filenames in NeedsRebuild())
         const char *filename2 = DuplicateString(filename, &str_alloc).ptr;
-        mtime_map.Append(filename2, file_info.modification_time);
+        mtime_map.Set(filename2, file_info.modification_time);
 
         return file_info.modification_time;
     }

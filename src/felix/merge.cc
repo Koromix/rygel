@@ -200,7 +200,7 @@ void ResolveAssets(Span<const char *const> filenames, int strip_count, Span<cons
 
                 include_raw_file |= (asset->source_map_type != SourceMapType::None);
             } else {
-                merge_map.Append(rule, out_set->assets.len);
+                merge_map.Set(rule, out_set->assets.len);
 
                 PackAssetInfo asset = {};
                 asset.name = rule->name;

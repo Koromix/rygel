@@ -297,7 +297,7 @@ Supported compilation modes:)");
             bool match = false;
             for (const TargetInfo &target: target_set.targets) {
                 if (MatchPathSpec(target.name, selector)) {
-                    if (handled_set.Append(target.name).second) {
+                    if (handled_set.TrySet(target.name).second) {
                         enabled_targets.Append(&target);
                     }
 
@@ -306,7 +306,7 @@ Supported compilation modes:)");
             }
             for (const SourceFileInfo &src: target_set.sources) {
                 if (MatchPathSpec(src.filename, selector)) {
-                    if (handled_set.Append(src.filename).second) {
+                    if (handled_set.TrySet(src.filename).second) {
                         enabled_sources.Append(&src);
                     }
 

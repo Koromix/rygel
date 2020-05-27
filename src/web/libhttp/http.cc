@@ -469,7 +469,7 @@ bool http_IO::ReadPostValues(Allocator *alloc,
 
         key = DuplicateString(key, ctx->alloc).ptr;
         data = DuplicateString(data, ctx->alloc).ptr;
-        ctx->values->Append(key, data);
+        ctx->values->Set(key, data);
 
         return MHD_YES;
     }, &ctx);

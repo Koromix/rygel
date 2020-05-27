@@ -25,7 +25,7 @@ static bool MergeConstraint(const mco_TableIndex &index,
             new_constraint.durations &= (DurationMask); \
             new_constraint.raac_durations = constraint.durations & (RaacMask); \
             if (new_constraint.durations) { \
-                std::pair<mco_GhmConstraint *, bool> ret = out_constraints->Append(new_constraint); \
+                std::pair<mco_GhmConstraint *, bool> ret = out_constraints->TrySet(new_constraint); \
                 if (!ret.second) { \
                     ret.first->cmds |= new_constraint.cmds; \
                     ret.first->durations |= new_constraint.durations; \
@@ -121,7 +121,7 @@ static bool RecurseGhmTree(MapperContext &ctx, Size depth, Size ghm_node_idx,
                         uint64_t warn_cmd28_jumps;
                         {
                             std::pair<uint64_t *, bool> ret =
-                                ctx.warn_cmd28_jumps_cache.Append(ghm_node_idx, 0);
+                                ctx.warn_cmd28_jumps_cache.TrySet(ghm_node_idx, 0);
                             if (ret.second) {
                                 warn_cmd28_jumps = UINT64_MAX;
                                 RG_ASSERT(ghm_node.u.test.children_count <= 64);

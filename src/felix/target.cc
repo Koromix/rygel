@@ -366,12 +366,12 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
             }
 
             for (const TargetInfo *import2: import->imports) {
-                if (handled_imports.Append(import2->name).second) {
+                if (handled_imports.TrySet(import2->name).second) {
                     target->imports.Append(import2);
                 }
             }
 
-            if (handled_imports.Append(import->name).second) {
+            if (handled_imports.TrySet(import->name).second) {
                 target->imports.Append(import);
             }
         }
@@ -435,7 +435,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     if (!ResolveFileSet(target_config->pack_file_set, &set.str_alloc, &target->pack_filenames))
         return nullptr;
 
-    bool appended = set.targets_map.Append(target).second;
+    bool appended = set.targets_map.TrySet(target).second;
     RG_ASSERT(appended);
 
     out_guard.Disable();
@@ -444,7 +444,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
 
 const SourceFileInfo *TargetSetBuilder::CreateSource(const TargetInfo *target, const char *filename, SourceType type)
 {
-    std::pair<SourceFileInfo **, bool> ret = set.sources_map.AppendDefault(filename);
+    std::pair<SourceFileInfo **, bool> ret = set.sources_map.TrySetDefault(filename);
 
     if (ret.second) {
         SourceFileInfo *src = set.sources.AppendDefault();

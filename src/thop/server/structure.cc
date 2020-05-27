@@ -42,10 +42,10 @@ bool StructureSetBuilder::LoadIni(StreamReader *st)
                     valid = false;
                 }
 
-                if (units_set.Append(ent.unit).second) {
+                if (units_set.TrySet(ent.unit).second) {
                     structure.entities.Append(ent);
 
-                    Size *ref_count = unit_reference_counts.Append(ent.unit, 0).first;
+                    Size *ref_count = unit_reference_counts.TrySet(ent.unit, 0).first;
                     (*ref_count)++;
                 } else {
                     LogError("Ignoring duplicate unit %1 in structure '%2'",
@@ -58,7 +58,7 @@ bool StructureSetBuilder::LoadIni(StreamReader *st)
                 return CmpStr(ent1.path, ent2.path) < 0;
             });
 
-            if (structures_set.Append(structure.name).second) {
+            if (structures_set.TrySet(structure.name).second) {
                 set.structures.Append(structure);
             } else {
                 LogError("Duplicate structure '%1'", structure.name);

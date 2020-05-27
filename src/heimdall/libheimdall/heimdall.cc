@@ -715,7 +715,7 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
             {
                 Span<const char> partial_path = {path.ptr, 1};
                 for (;;) {
-                    height += line_heights.Append(partial_path, 20.0f).second *
+                    height += line_heights.TrySet(partial_path, 20.0f).second *
                               (20.0f + style.ItemSpacing.y);
                     fully_deployed = state.deploy_paths.Find(partial_path);
 
@@ -727,7 +727,7 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
 
             if (fully_deployed) {
                 float new_height = ComputeElementHeight(state.settings, elmt.type) + style.ItemSpacing.y;
-                std::pair<float *, bool> ret = line_heights.Append(elmt.concept_name, 0.0f);
+                std::pair<float *, bool> ret = line_heights.TrySet(elmt.concept_name, 0.0f);
                 if (new_height > *ret.first) {
                     height += new_height - *ret.first;
                     *ret.first = new_height;
@@ -878,7 +878,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
                     for (;;) {
                         LineData *line;
                         {
-                            std::pair<Size *, bool> ret = lines_map.Append(partial_path, lines.len);
+                            std::pair<Size *, bool> ret = lines_map.TrySet(partial_path, lines.len);
                             if (!ret.second) {
                                 line = &lines[*ret.first];
                                 tree_depth = line->depth + 1;
@@ -922,7 +922,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
                 {
                     LineData *line;
                     {
-                        std::pair<Size *, bool> ret = lines_map.Append(elmt.concept_name, lines.len);
+                        std::pair<Size *, bool> ret = lines_map.TrySet(elmt.concept_name, lines.len);
                         if (!ret.second) {
                             line = &lines[*ret.first];
                         } else {
@@ -1057,7 +1057,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
 
     // Handle user interactions
     if (deploy_path.len) {
-        std::pair<Span<const char> *, bool> ret = state.deploy_paths.Append(deploy_path);
+        std::pair<Span<const char> *, bool> ret = state.deploy_paths.TrySet(deploy_path);
         if (!ret.second) {
             state.deploy_paths.Remove(ret.first);
         }
@@ -1065,7 +1065,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
         state.size_cache_valid = false;
     } else if (select_enable) {
         for (const LineData *line: select_lines) {
-             state.select_concepts.Append(line->title, line->path);
+             state.select_concepts.Set(line->title, line->path);
         }
     } else {
         for (const LineData *line: select_lines) {
@@ -1409,7 +1409,7 @@ static void ToggleAlign(InterfaceState &state)
     } else {
         state.align_concepts.Clear();
         for (const auto &it: state.select_concepts.table) {
-            state.align_concepts.Append(it.key);
+            state.align_concepts.Set(it.key);
         }
         state.select_concepts.Clear();
     }
@@ -1423,7 +1423,7 @@ static ConceptSet *CreateView(const char *name, HeapArray<ConceptSet> *out_conce
     ConceptSet *concept_set = out_concept_sets->AppendDefault();
     concept_set->name = DuplicateString(name, &concept_set->str_alloc).ptr;
     concept_set->paths.Append("/");
-    concept_set->paths_set.Append("/");
+    concept_set->paths_set.Set("/");
     return concept_set;
 }
 
@@ -1439,7 +1439,7 @@ static void AddConceptsToView(const HashMap<Span<const char>, Span<const char>> 
         } else {
             concept_info.path = "/";
         }
-        out_concept_set->concepts_map.Append(concept_info);
+        out_concept_set->concepts_map.Set(concept_info);
     }
 }
 

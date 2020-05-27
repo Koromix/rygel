@@ -149,13 +149,13 @@ static void InitAssets()
         if (TestStr(asset.name, "goupile.html") || TestStr(asset.name, "sw.pk.js") ||
                 TestStr(asset.name, "manifest.json")) {
             AssetInfo asset2 = PatchGoupileVariables(asset, &assets_alloc);
-            assets_map.Append(asset2);
+            assets_map.Set(asset2);
         } else if (TestStr(asset.name, "ports.pk.js")) {
 #ifndef NDEBUG
             pack_asset_ports_pk_js = &asset;
 #endif
         } else {
-            assets_map.Append(asset);
+            assets_map.Set(asset);
         }
     }
 }

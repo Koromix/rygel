@@ -290,7 +290,7 @@ static void InitRoutes()
         route.u.st.asset = asset;
         route.u.st.mime_type = http_GetMimeType(GetPathExtension(asset.name));
 
-        routes.Append(route);
+        routes.Set(route);
     };
     const auto add_function_route = [&](const char *method, const char *url,
                                         void (*func)(const http_RequestInfo &request, const User *user,
@@ -303,7 +303,7 @@ static void InitRoutes()
         route.type = Route::Type::Function;
         route.u.func = func;
 
-        routes.Append(route);
+        routes.Set(route);
     };
 
     // Static assets and dictionaries
