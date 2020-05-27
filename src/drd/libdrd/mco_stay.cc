@@ -284,7 +284,7 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
         version = (int16_t)(version - 100);
         offset += 15;
     }
-    if (RG_UNLIKELY(version < 16 || version > 19)) {
+    if (RG_UNLIKELY(version < 16 || version > 20)) {
         stay.errors |= (int)mco_Stay::Error::UnknownRumVersion;
         set.stays.Append(stay);
         return true;
