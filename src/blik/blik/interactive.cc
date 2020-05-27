@@ -75,8 +75,8 @@ end
 int RunCommand(Span<const char> code, bool execute)
 {
     Program program;
-    Compiler compiler(&program);
 
+    Compiler compiler(&program);
     ImportAll(&compiler);
 
     // Try to parse with fake print first...
@@ -111,11 +111,12 @@ int RunInteractive(bool execute)
     LogInfo("%!R..blik%!0 %1", FelixVersion);
 
     Program program;
+
     Compiler compiler(&program);
+    ImportAll(&compiler);
+
     VirtualMachine vm(&program);
     bool run = true;
-
-    ImportAll(&compiler);
 
     // Functions specific to interactive mode
     compiler.AddFunction("exit()", [&](VirtualMachine *vm, Span<const Value> args) {

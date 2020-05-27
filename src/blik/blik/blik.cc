@@ -12,16 +12,18 @@ int RunInteractive(bool execute);
 
 static int RunFile(const char *filename, bool execute)
 {
-    HeapArray<char> code;
-    if (ReadFile(filename, Megabytes(256), &code) < 0)
-        return 1;
-
     Program program;
-    Compiler compiler(&program);
+    {
+        HeapArray<char> code;
+        if (ReadFile(filename, Megabytes(256), &code) < 0)
+            return 1;
 
-    ImportAll(&compiler);
-    if (!compiler.Compile(code, filename))
-        return 1;
+        Compiler compiler(&program);
+        ImportAll(&compiler);
+
+        if (!compiler.Compile(code, filename))
+            return 1;
+    }
 
     return execute ? !Run(program) : 0;
 }
