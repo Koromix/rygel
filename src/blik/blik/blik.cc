@@ -13,7 +13,7 @@ int RunInteractive();
 static int RunFile(const char *filename)
 {
     HeapArray<char> code;
-    if (ReadFile(filename, Megabytes(64), &code) < 0)
+    if (ReadFile(filename, Megabytes(256), &code) < 0)
         return 1;
 
     Program program;
