@@ -1007,6 +1007,7 @@ void Parser::ParseWhile()
         const SourceInfo::Line &line = src->lines[i];
         src->lines.Append({ir.len + (line.addr - condition_addr), line.line});
     }
+    ir.Grow(branch_addr - condition_addr);
     ir.Append(ir.Take(condition_addr, branch_addr - condition_addr));
 
     ir.Append({Opcode::BranchIfTrue, {.i = branch_addr - ir.len + 1}});
