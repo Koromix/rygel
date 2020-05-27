@@ -19,6 +19,7 @@ static const char *const TokenKindNames[] = {
 
 struct Token {
     TokenKind kind;
+
     int line;
     Size offset;
 

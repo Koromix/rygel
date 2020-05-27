@@ -9,6 +9,26 @@
 
 namespace RG {
 
+static const HashMap<Span<const char>, Token> KeywordsMap {
+    {"func", {TokenKind::Func}},
+    {"return", {TokenKind::Return}},
+    {"let", {TokenKind::Let}},
+    {"mut", {TokenKind::Mut}},
+    {"begin", {TokenKind::Begin}},
+    {"end", {TokenKind::End}},
+    {"if", {TokenKind::If}},
+    {"else", {TokenKind::Else}},
+    {"while", {TokenKind::While}},
+    {"for", {TokenKind::For}},
+    {"in", {TokenKind::In}},
+    {"break", {TokenKind::Break}},
+    {"continue", {TokenKind::Continue}},
+    {"do", {TokenKind::Do}},
+    {"null", {TokenKind::Null}},
+    {"true", {TokenKind::Bool, 0, 0, {.b = true}}},
+    {"false", {TokenKind::Bool, 0, 0, {.b = false}}}
+};
+
 class Lexer {
     RG_DELETE_COPY(Lexer)
 
@@ -456,44 +476,16 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                 }
 
                 Span<const char> ident = code.Take(offset, next - offset);
+                const Token *keyword = KeywordsMap.Find(ident);
 
-                if (ident == "func") {
+                if (keyword) {
                     // In order to have order-independent top-level functions, we need to parse
                     // their declarations first! Tell the parser where to look to help it.
-                    file->funcs.Append(tokens.len);
-                    Token1(TokenKind::Func);
-                } else if (ident == "return") {
-                    Token1(TokenKind::Return);
-                } else if (ident == "let") {
-                    Token1(TokenKind::Let);
-                } else if (ident == "mut") {
-                    Token1(TokenKind::Mut);
-                } else if (ident == "begin") {
-                    Token1(TokenKind::Begin);
-                } else if (ident == "end") {
-                    Token1(TokenKind::End);
-                } else if (ident == "if") {
-                    Token1(TokenKind::If);
-                } else if (ident == "else") {
-                    Token1(TokenKind::Else);
-                } else if (ident == "while") {
-                    Token1(TokenKind::While);
-                } else if (ident == "for") {
-                    Token1(TokenKind::For);
-                } else if (ident == "in") {
-                    Token1(TokenKind::In);
-                } else if (ident == "break") {
-                    Token1(TokenKind::Break);
-                } else if (ident == "continue") {
-                    Token1(TokenKind::Continue);
-                } else if (ident == "do") {
-                    Token1(TokenKind::Do);
-                } else if (ident == "null") {
-                    Token1(TokenKind::Null);
-                } else if (ident == "true") {
-                    tokens.Append({TokenKind::Bool, line, offset, {.b = true}});
-                } else if (ident == "false") {
-                    tokens.Append({TokenKind::Bool, line, offset, {.b = false}});
+                    if (keyword->kind == TokenKind::Func) {
+                        file->funcs.Append(tokens.len);
+                    }
+
+                    tokens.Append({keyword->kind, line, offset, keyword->u});
                 } else {
                     // Intern string
                     std::pair<Span<const char> *, bool> ret = strings.Append(ident);
@@ -521,16 +513,16 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
     return valid;
 }
 
-inline bool Lexer::Token1(TokenKind tok)
+inline bool Lexer::Token1(TokenKind kind)
 {
-    tokens.Append({tok, line, offset});
+    tokens.Append({kind, line, offset});
     return true;
 }
 
-inline bool Lexer::Token2(char c, TokenKind tok)
+inline bool Lexer::Token2(char c, TokenKind kind)
 {
     if (next < code.len && code[next] == c) {
-        tokens.Append({tok, line, offset});
+        tokens.Append({kind, line, offset});
         next++;
 
         return true;
@@ -539,10 +531,10 @@ inline bool Lexer::Token2(char c, TokenKind tok)
     }
 }
 
-inline bool Lexer::Token3(char c1, char c2, TokenKind tok)
+inline bool Lexer::Token3(char c1, char c2, TokenKind kind)
 {
     if (next < code.len - 1 && code[next] == c1 && code[next + 1] == c2) {
-        tokens.Append({tok, line, offset});
+        tokens.Append({kind, line, offset});
         next += 2;
 
         return true;
@@ -551,10 +543,10 @@ inline bool Lexer::Token3(char c1, char c2, TokenKind tok)
     }
 }
 
-inline bool Lexer::Token4(char c1, char c2, char c3, TokenKind tok)
+inline bool Lexer::Token4(char c1, char c2, char c3, TokenKind kind)
 {
     if (next < code.len - 2 && code[next] == c1 && code[next + 1] == c2 && code[next + 2] == c3) {
-        tokens.Append({tok, line, offset});
+        tokens.Append({kind, line, offset});
         next += 3;
 
         return true;
