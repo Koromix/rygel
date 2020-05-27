@@ -7,10 +7,10 @@
 
 namespace RG {
 
-int RunCommand(Span<const char> code);
-int RunInteractive();
+int RunCommand(Span<const char> code, bool execute);
+int RunInteractive(bool execute);
 
-static int RunFile(const char *filename)
+static int RunFile(const char *filename, bool execute)
 {
     HeapArray<char> code;
     if (ReadFile(filename, Megabytes(256), &code) < 0)
@@ -23,7 +23,7 @@ static int RunFile(const char *filename)
     if (!compiler.Compile(code, filename))
         return 1;
 
-    return !Run(program);
+    return execute ? !Run(program) : 0;
 }
 
 int Main(int argc, char **argv)
@@ -37,6 +37,7 @@ int Main(int argc, char **argv)
     // Options
     RunMode mode = RunMode::File;
     const char *filename_or_code = nullptr;
+    bool execute = true;
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: blik [options] <file>
@@ -45,7 +46,9 @@ int Main(int argc, char **argv)
 
 Options:
     -c, --command                Run code directly from argument
-    -i, --interactive            Run code interactively (REPL))");
+    -i, --interactive            Run code interactively (REPL)
+
+        --no_execute             Parse code but don't run it)");
     };
 
     // Handle version
@@ -76,6 +79,8 @@ Options:
                 }
 
                 mode = RunMode::Interactive;
+            } else if (opt.Test("--no_execute")) {
+                execute = false;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -86,7 +91,7 @@ Options:
     }
 
     switch (mode) {
-        case RunMode::Interactive: { return RunInteractive(); } break;
+        case RunMode::Interactive: { return RunInteractive(execute); } break;
 
         case RunMode::File: {
             if (!filename_or_code) {
@@ -94,7 +99,7 @@ Options:
                 return 1;
             }
 
-            return RunFile(filename_or_code);
+            return RunFile(filename_or_code, execute);
         } break;
         case RunMode::Command: {
             if (!filename_or_code) {
@@ -102,7 +107,7 @@ Options:
                 return 1;
             }
 
-            return RunCommand(filename_or_code);
+            return RunCommand(filename_or_code, execute);
         } break;
     }
 

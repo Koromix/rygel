@@ -72,7 +72,7 @@ end
     return true;
 }
 
-int RunCommand(Span<const char> code)
+int RunCommand(Span<const char> code, bool execute)
 {
     Program program;
     Compiler compiler(&program);
@@ -103,10 +103,10 @@ int RunCommand(Span<const char> code)
             return 1;
     }
 
-    return !Run(program);
+    return execute ? !Run(program) : 0;
 }
 
-int RunInteractive()
+int RunInteractive(bool execute)
 {
     LogInfo("%!R..blik%!0 %1", FelixVersion);
 
@@ -186,7 +186,7 @@ int RunInteractive()
             }
         }
 
-        if (!vm.Run()) {
+        if (execute && !vm.Run()) {
             // Destroying global variables should be enough, because we execute single statements.
             // Thus, if the user defines a function, pretty much no execution can occur, and
             // execution should not even be able to fail in this case.
