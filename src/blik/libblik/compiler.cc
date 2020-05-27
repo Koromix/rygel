@@ -2077,6 +2077,7 @@ bool Parser::EndStatement()
         return false;
     }
 
+    pos++;
     return true;
 }
 
