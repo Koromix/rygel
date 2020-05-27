@@ -977,7 +977,7 @@ public:
     FixedArray(std::initializer_list<T> l)
     {
         RG_ASSERT(l.size() <= N);
-        for (Size i = 0; i < l.size(); i++) {
+        for (Size i = 0; i < (Size)l.size(); i++) {
             data[i] = l[i];
         }
     }
@@ -1029,9 +1029,10 @@ public:
     LocalArray(std::initializer_list<T> l)
     {
         RG_ASSERT(l.size() <= N);
-        for (const T &val: l) {
-            Append(val);
+        for (Size i = 0; i < (Size)l.size(); i++) {
+            data[i] = l[i];
         }
+        len = (Size)l.size();
     }
 
     void Clear()
@@ -1152,9 +1153,10 @@ public:
     HeapArray(std::initializer_list<T> l)
     {
         Reserve(l.size());
-        for (const T &val: l) {
-            Append(val);
+        for (Size i = 0; i < (Size)l.size(); i++) {
+            ptr[i] = l[i];
         }
+        len = (Size)l.size();
     }
     ~HeapArray() { Clear(); }
 
@@ -1451,6 +1453,12 @@ public:
     typedef Iterator<BucketArray> iterator_type;
 
     BucketArray() {}
+    BucketArray(std::initializer_list<T> l)
+    {
+        for (const T &value: l) {
+            Append(value);
+        }
+    }
     ~BucketArray() { ClearBucketsAndValues(); }
 
     BucketArray(BucketArray &&other) { *this = std::move(other); }
@@ -1871,6 +1879,12 @@ public:
     Allocator *allocator = nullptr;
 
     HashTable() = default;
+    HashTable(std::initializer_list<ValueType> l)
+    {
+        for (const ValueType &value: l) {
+            Set(value);
+        }
+    }
     ~HashTable()
     {
         if constexpr(std::is_trivial<ValueType>::value) {
@@ -2300,6 +2314,14 @@ public:
 
     HashTable<KeyType, Bucket> table;
 
+    HashMap() {}
+    HashMap(std::initializer_list<Bucket> l)
+    {
+        for (const Bucket &bucket: l) {
+            Set(bucket.key, bucket.value);
+        }
+    }
+
     void Clear() { table.Clear(); }
     void RemoveAll() { table.RemoveAll(); }
 
@@ -2362,6 +2384,14 @@ class HashSet {
 
 public:
     HashTable<ValueType, ValueType, Handler> table;
+
+    HashSet() {}
+    HashSet(std::initializer_list<ValueType> l)
+    {
+        for (const ValueType &value: l) {
+            Set(value);
+        }
+    }
 
     void Clear() { table.Clear(); }
     void RemoveAll() { table.RemoveAll(); }
