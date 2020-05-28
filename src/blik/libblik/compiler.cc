@@ -104,7 +104,7 @@ private:
 
     const TypeInfo *ParseType();
 
-    StackSlot ParseExpression();
+    StackSlot ParseExpression(bool tolerate_assign);
     void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(PrimitiveType in_primitive, Opcode code, const TypeInfo *out_type);
     bool EmitOperator2(PrimitiveType in_primitive, Opcode code, const TypeInfo *out_type);
@@ -657,7 +657,7 @@ bool Parser::ParseStatement()
         } break;
 
         default: {
-            ParseExpression();
+            ParseExpression(true);
             DiscardResult();
 
             EndStatement();
@@ -681,7 +681,7 @@ bool Parser::ParseDo()
         ParseContinue();
         return false;
     } else {
-        ParseExpression();
+        ParseExpression(true);
         DiscardResult();
 
         return false;
@@ -814,7 +814,7 @@ void Parser::ParseReturn()
         ir.Append({Opcode::PushNull});
         type = GetBasicType(PrimitiveType::Null);
     } else {
-        type = ParseExpression().type;
+        type = ParseExpression(true).type;
     }
 
     if (RG_UNLIKELY(type != current_func->ret_type)) {
@@ -857,7 +857,7 @@ void Parser::ParseLet()
     StackSlot slot;
     if (MatchToken(TokenKind::Assign)) {
         SkipNewLines();
-        slot = ParseExpression();
+        slot = ParseExpression(true);
     } else {
         ConsumeToken(TokenKind::Colon);
 
@@ -869,7 +869,7 @@ void Parser::ParseLet()
             SkipNewLines();
 
             Size expr_pos = pos;
-            slot = ParseExpression();
+            slot = ParseExpression(true);
 
             if (RG_UNLIKELY(slot.type != type)) {
                 MarkError(expr_pos - 1, "Cannot assign %1 value to variable '%2' (defined as %3)",
@@ -1141,7 +1141,7 @@ const TypeInfo *Parser::ParseType()
 
     // Parse type expression
     {
-        const TypeInfo *type = ParseExpression().type;
+        const TypeInfo *type = ParseExpression(false).type;
 
         if (RG_UNLIKELY(type != GetBasicType(PrimitiveType::Type))) {
             MarkError(type_pos, "Expected a Type expression, not %1", type->signature);
@@ -1207,7 +1207,7 @@ static int GetOperatorPrecedence(TokenKind kind)
     }
 }
 
-StackSlot Parser::ParseExpression()
+StackSlot Parser::ParseExpression(bool tolerate_assign)
 {
     Size start_values_len = stack.len;
     RG_DEFER { stack.RemoveFrom(start_values_len); };
@@ -1329,6 +1329,12 @@ StackSlot Parser::ParseExpression()
                         pos++;
                         goto unexpected;
                     }
+                } else if (RG_UNLIKELY(tolerate_assign && tok.kind == TokenKind::Assign)) {
+                    MarkError(pos - 1, "Unexpected token '=', did you mean '==' or ':='?");
+
+                    // Pretend the user meant '==' to recover
+                    op.kind = TokenKind::Equal;
+                    op.prec = GetOperatorPrecedence(TokenKind::Equal);
                 } else {
                     pos--;
                     break;
@@ -1764,7 +1770,7 @@ bool Parser::ParseCall(const char *name)
                 return false;
             }
 
-            const TypeInfo *type = ParseExpression().type;
+            const TypeInfo *type = ParseExpression(true).type;
 
             args.Append({nullptr, type});
             if (func0->variadic && args.len > func0->params.len) {
@@ -1862,7 +1868,7 @@ bool Parser::ParseExpressionOfType(const TypeInfo *type)
 {
     Size expr_pos = pos;
 
-    const TypeInfo *type2 = ParseExpression().type;
+    const TypeInfo *type2 = ParseExpression(true).type;
     if (RG_UNLIKELY(type2 != type)) {
         MarkError(expr_pos, "Expected expression result type to be %1, not %2",
                   type->signature, type2->signature);
