@@ -126,6 +126,9 @@ void ReportDiagnostic(DiagnosticType type, const char *fmt, Args... args)
 template <typename... Args>
 void ReportRuntimeError(const Program &program, Span<const CallFrame> frames, const char *fmt, Args... args)
 {
+    LogInfo("Something wrong has happened, execution has stopped");
+    LogInfo();
+
     if (frames.len) {
         LogInfo("Dumping stack trace:");
 
