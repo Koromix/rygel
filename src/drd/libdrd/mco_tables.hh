@@ -162,6 +162,7 @@ struct mco_GhmRootInfo {
     bool allow_ambulatory;
     int8_t short_duration_treshold;
     bool allow_raac;
+    bool allow_intermediary;
 
     int8_t young_severity_limit;
     int8_t young_age_treshold;
@@ -178,7 +179,8 @@ struct mco_GhmRootInfo {
 struct mco_GhmToGhsInfo {
     enum class SpecialMode: int8_t {
         None,
-        Diabetes
+        Diabetes,
+        Intermediary
     };
 
     mco_GhmCode ghm;

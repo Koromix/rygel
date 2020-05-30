@@ -11,6 +11,8 @@ struct ProcedureExtensionInfo {
     drd_ProcedureCode proc;
     int8_t phase;
     int8_t extension;
+
+    Date limit_dates[2];
 };
 
 struct ProcedureAdditionInfo {
@@ -678,15 +680,21 @@ static bool ParseProcedureExtensionTable(const uint8_t *file_data, const mco_Tab
     struct PackedProcedureExtension {
         char char4;
         uint16_t seq_phase;
-
         uint8_t extension;
+
+        uint16_t date_min;
+        uint16_t date_max;
     };
 #pragma pack(pop)
 
     FAIL_PARSE_IF(table.filename, table.sections.len != 2);
     FAIL_PARSE_IF(table.filename, table.sections[0].values_count != 26 * 26 * 26 ||
                                   table.sections[0].value_len != 2);
-    FAIL_PARSE_IF(table.filename, table.sections[1].value_len != RG_SIZE(PackedProcedureExtension));
+    if (table.version[0] >= 12 || (table.version[0] == 11 && table.version[1] >= 29)) {
+        FAIL_PARSE_IF(table.filename, table.sections[1].value_len != RG_SIZE(PackedProcedureExtension));
+    } else {
+        FAIL_PARSE_IF(table.filename, table.sections[1].value_len != RG_SIZE(PackedProcedureExtension) - 4);
+    }
 
     Size block_end = table.sections[1].raw_offset;
     for (int16_t root_idx = 0; root_idx < table.sections[0].values_count; root_idx++) {
@@ -698,20 +706,20 @@ static bool ParseProcedureExtensionTable(const uint8_t *file_data, const mco_Tab
                                          root_idx * 2;
             uint16_t end_idx = (uint16_t)((end_idx_ptr[0] << 8) | end_idx_ptr[1]);
             FAIL_PARSE_IF(table.filename, end_idx > table.sections[1].values_count);
-            block_end = table.sections[1].raw_offset + end_idx * RG_SIZE(PackedProcedureExtension);
+            block_end = table.sections[1].raw_offset + end_idx * table.sections[1].value_len;
         }
         if (block_end == block_start)
             continue;
 
         for (Size block_offset = block_start; block_offset < block_end;
-             block_offset += RG_SIZE(PackedProcedureExtension)) {
+             block_offset += table.sections[1].value_len) {
             ProcedureExtensionInfo ext_info = {};
 
             PackedProcedureExtension raw_proc_ext;
-            {
-                memcpy(&raw_proc_ext, file_data + block_offset, RG_SIZE(PackedProcedureExtension));
-                raw_proc_ext.seq_phase = BigEndian(raw_proc_ext.seq_phase);
-            }
+            memcpy(&raw_proc_ext, file_data + block_offset, table.sections[1].value_len);
+            raw_proc_ext.seq_phase = BigEndian(raw_proc_ext.seq_phase);
+            raw_proc_ext.date_min = BigEndian(raw_proc_ext.date_min);
+            raw_proc_ext.date_max = BigEndian(raw_proc_ext.date_max);
 
             ext_info.proc = ConvertProcedureCode(root_idx, raw_proc_ext.char4,
                                                  raw_proc_ext.seq_phase / 10);
@@ -719,6 +727,14 @@ static bool ParseProcedureExtensionTable(const uint8_t *file_data, const mco_Tab
 
             FAIL_PARSE_IF(table.filename, raw_proc_ext.extension > INT8_MAX);
             ext_info.extension = (int8_t)raw_proc_ext.extension;
+
+            if (table.sections[1].value_len >= 8) {
+                ext_info.limit_dates[0] = mco_ConvertDate1980(raw_proc_ext.date_min);
+                ext_info.limit_dates[1] = mco_ConvertDate1980(raw_proc_ext.date_min);
+            } else {
+                ext_info.limit_dates[0] = Date(2000, 1, 1);
+                ext_info.limit_dates[1] = mco_MaxDate1980;
+            }
 
             out_extensions->Append(ext_info);
         }
@@ -746,16 +762,19 @@ static bool ParseGhmRootTable(const uint8_t *file_data, const mco_TableInfo &tab
         uint8_t confirm_duration_treshold;
         uint8_t childbirth_severity_mode; // Appeared in FG 11d
         uint8_t ignore_raac; // Appeared in FG 2019
+        uint8_t force_ghs; // Appeared in FG 2020
 	};
 #pragma pack(pop)
 
     FAIL_PARSE_IF(table.filename, table.sections.len != 1);
-    if (table.version[0] > 11 || (table.version[0] == 11 && table.version[1] > 27)) {
+    if (table.version[0] >= 12 || (table.version[0] == 11 && table.version[1] >= 29)) {
         FAIL_PARSE_IF(table.filename, table.sections[0].value_len != RG_SIZE(PackedGhmRoot));
-    } else if (table.version[0] == 11 && table.version[1] > 14) {
+    } else if (table.version[0] == 11 && table.version[1] >= 28) {
         FAIL_PARSE_IF(table.filename, table.sections[0].value_len != RG_SIZE(PackedGhmRoot) - 1);
-    } else {
+    } else if (table.version[0] == 11 && table.version[1] >= 15) {
         FAIL_PARSE_IF(table.filename, table.sections[0].value_len != RG_SIZE(PackedGhmRoot) - 2);
+    } else {
+        FAIL_PARSE_IF(table.filename, table.sections[0].value_len != RG_SIZE(PackedGhmRoot) - 3);
     }
 
     for (Size i = 0; i < table.sections[0].values_count; i++) {
@@ -832,6 +851,11 @@ static bool ParseGhmRootTable(const uint8_t *file_data, const mco_TableInfo &tab
             FAIL_PARSE_IF(table.filename, raw_ghm_root.ignore_raac != 0 &&
                                           raw_ghm_root.ignore_raac != 1);
             ghm_root.allow_raac = !raw_ghm_root.ignore_raac;
+        }
+        if (table.sections[0].value_len >= 14) {
+            FAIL_PARSE_IF(table.filename, raw_ghm_root.force_ghs != 0 &&
+                                          raw_ghm_root.force_ghs != 1);
+            ghm_root.allow_intermediary = !raw_ghm_root.force_ghs;
         }
 
         ghm_root.cma_exclusion_mask.offset = raw_ghm_root.cma_exclusion_offset;
@@ -1003,6 +1027,16 @@ static bool ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &ta
                 FAIL_PARSE_IF(table.filename, current_ghs.special_mode != mco_GhmToGhsInfo::SpecialMode::None);
                 current_ghs.special_mode = mco_GhmToGhsInfo::SpecialMode::Diabetes;
                 current_ghs.special_duration = raw_ghs_node.params[1];
+            } break;
+
+            case 10: {
+                FAIL_PARSE_IF(table.filename, raw_ghs_node.params[0]);
+                FAIL_PARSE_IF(table.filename, current_ghs.special_mode != mco_GhmToGhsInfo::SpecialMode::None);
+                switch (raw_ghs_node.params[1]) {
+                    case 1: { current_ghs.special_mode = mco_GhmToGhsInfo::SpecialMode::Intermediary; } break;
+                    case 2: { /* Default */ } break;
+                    default: { FAIL_PARSE_IF(table.filename, true); } break;
+                }
             } break;
 
             default: {
@@ -1678,6 +1712,7 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                             continue;
                         }
 
+                        // XXX: Starting with FG 2020, extension codes have validity dates...
                         mco_ProcedureInfo *proc_info =
                             (mco_ProcedureInfo *)index.procedures_map->FindValue(ext_info.proc, nullptr);
                         if (RG_LIKELY(proc_info)) {
