@@ -3787,8 +3787,7 @@ bool OptionToEnum(Span<const OptionDesc> options, Span<const char> str, T *out_v
 // ------------------------------------------------------------------------
 
 class ConsolePrompter {
-    const char *prompt = ">>> ";
-    int prompt_columns = 4;
+    int prompt_columns;
 
     HeapArray<HeapArray<char>> entries;
     Size entry_idx = 0;
@@ -3806,6 +3805,9 @@ class ConsolePrompter {
 #endif
 
 public:
+    const char *prompt = ">>> ";
+    const char *mask = nullptr;
+
     HeapArray<char> str;
 
     ConsolePrompter();
@@ -3828,6 +3830,8 @@ private:
     Vec2<int> GetConsoleSize();
     Vec2<int> GetCursorPosition();
     int32_t ReadChar();
+
+    int ComputeWidth(Span<const char> str);
 };
 
 }

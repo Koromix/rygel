@@ -4824,7 +4824,7 @@ bool ConsolePrompter::Read()
                 str.len += frag.len;
                 str_offset += frag.len;
 
-                if (str_offset == str.len && uc < 128 && x + frag.len < columns) {
+                if (!mask && str_offset == str.len && uc < 128 && x + frag.len < columns) {
                     fwrite(frag.data, 1, (size_t)frag.len, stdout);
                     x += (int)frag.len;
                 } else {
@@ -4941,6 +4941,9 @@ void ConsolePrompter::Prompt()
     columns = GetConsoleSize().x;
     rows = 0;
 
+    int mask_columns = mask ? ComputeWidth(mask) : 0;
+    prompt_columns = ComputeWidth(prompt);
+
     // Hide cursor during refresh
     fprintf(stdout, "\x1B[?25l");
     if (y) {
@@ -4962,10 +4965,8 @@ void ConsolePrompter::Prompt()
             if (i >= str.len)
                 break;
 
-            // XXX: For now we assume all codepoints take a single column, we need to use
-            // something like wcwidth() instead.
             Size bytes = std::min((Size)CountUtf8Bytes(str[i]), str.len - i);
-            int width = ((uint8_t)str[i] >= 32) ? 1 : 0;
+            int width = mask ? mask_columns : ComputeWidth(str.Take(i, bytes));
 
             if (x2 + width >= columns || str[i] == '\n') {
                 FmtArg prefix = FmtArg(str[i] == '\n' ? '.' : ' ').Repeat(prompt_columns - 1);
@@ -4975,11 +4976,15 @@ void ConsolePrompter::Prompt()
                 rows++;
             }
             if (width > 0) {
-                fwrite(str.ptr + i, 1, (size_t)bytes, stdout);
+                if (mask) {
+                    fputs(mask, stdout);
+                } else {
+                    fwrite(str.ptr + i, 1, (size_t)bytes, stdout);
+                }
             }
 
-            i += bytes;
             x2 += width;
+            i += bytes;
         }
         fputs("\x1B[0K", stdout);
     }
@@ -5178,6 +5183,19 @@ eof:
         return -1;
     }
 #endif
+}
+
+int ConsolePrompter::ComputeWidth(Span<const char> str)
+{
+    int width = 0;
+
+    for (char c: str) {
+        // XXX: For now we assume all codepoints take a single column,
+        // we need to use something like wcwidth() instead.
+        width += ((uint8_t)c >= 32 && !((c & 0xC0) == 0x80));
+    }
+
+    return width;
 }
 
 }
