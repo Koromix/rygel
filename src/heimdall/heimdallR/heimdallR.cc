@@ -68,13 +68,13 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
     inst->last_source_id++;
     {
         const char *src_name = DuplicateString(source.get_cstring(), &inst->entity_set.str_alloc).ptr;
-        inst->entity_set.sources.Append(inst->last_source_id, src_name);
+        inst->entity_set.sources.Set(inst->last_source_id, src_name);
     }
 
     HashMap<const char *, Size> entities_map;
     for (Size i = 0; i < inst->entity_set.entities.len; i++) {
         const Entity &ent = inst->entity_set.entities[i];
-        entities_map.Append(ent.id, i);
+        entities_map.Set(ent.id, i);
     }
 
     for (Size i = 0; i < values_df.nrow(); i++) {
@@ -85,7 +85,7 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
                 entity = inst->entity_set.entities.AppendDefault();
                 entity->id = DuplicateString((const char *)values.entity[i], &inst->entity_set.str_alloc).ptr;
 
-                entities_map.Append(entity->id, inst->entity_set.entities.len - 1);
+                entities_map.Set(entity->id, inst->entity_set.entities.len - 1);
             } else {
                 entity = &inst->entity_set.entities[idx];
             }
@@ -243,13 +243,13 @@ RcppExport SEXP heimdallR_SetConcepts(SEXP inst_xp, SEXP name_xp, SEXP concepts_
         if (!path) {
             path = DuplicateString((const char *)concepts.path[i], &inst->entity_set.str_alloc).ptr;
             concept_set->paths.Append(path);
-            concept_set->paths_set.Append(path);
+            concept_set->paths_set.Set(path);
         }
 
         Concept concept_info;
         concept_info.name = DuplicateString((const char *)concepts.name[i], &inst->entity_set.str_alloc).ptr;
         concept_info.path = path;
-        if (!concept_set->concepts_map.Append(concept_info).second) {
+        if (!concept_set->concepts_map.TrySet(concept_info).second) {
             LogError("Concept '%1' already exists", concept_info.name);
         }
     }
