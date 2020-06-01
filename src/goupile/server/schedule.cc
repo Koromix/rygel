@@ -92,20 +92,22 @@ void HandleScheduleResources(const http_RequestInfo &request, http_IO *io)
     {
         char current_date[32] = {};
 
-        while (stmt.Next()) {
-            strncpy(current_date, (const char *)sqlite3_column_text(stmt, 0),
-                    RG_SIZE(current_date) - 1);
-
-            json.Key(current_date);
-            json.StartArray();
+        if (stmt.Next()) {
             do {
-                json.StartObject();
-                json.Key("time"); json.Int(sqlite3_column_int(stmt, 1));
-                json.Key("slots"); json.Int(sqlite3_column_int(stmt, 2));
-                json.Key("overbook"); json.Int(sqlite3_column_int(stmt, 3));
-                json.EndObject();
-            } while (stmt.Next() && TestStr((const char *)sqlite3_column_text(stmt, 0), current_date));
-            json.EndArray();
+                strncpy(current_date, (const char *)sqlite3_column_text(stmt, 0),
+                        RG_SIZE(current_date) - 1);
+
+                json.Key(current_date);
+                json.StartArray();
+                do {
+                    json.StartObject();
+                    json.Key("time"); json.Int(sqlite3_column_int(stmt, 1));
+                    json.Key("slots"); json.Int(sqlite3_column_int(stmt, 2));
+                    json.Key("overbook"); json.Int(sqlite3_column_int(stmt, 3));
+                    json.EndObject();
+                } while (stmt.Next() && TestStr((const char *)sqlite3_column_text(stmt, 0), current_date));
+                json.EndArray();
+            } while (stmt.IsRow());
         }
         if (!stmt.IsValid())
             return;
@@ -132,19 +134,21 @@ void HandleScheduleMeetings(const http_RequestInfo &request, http_IO *io)
     {
         char current_date[32] = {};
 
-        while (stmt.Next()) {
-            strncpy(current_date, (const char *)sqlite3_column_text(stmt, 0),
-                    RG_SIZE(current_date) - 1);
-
-            json.Key(current_date);
-            json.StartArray();
+        if (stmt.Next()) {
             do {
-                json.StartObject();
-                json.Key("time"); json.Int(sqlite3_column_int(stmt, 1));
-                json.Key("identity"); json.String((const char *)sqlite3_column_text(stmt, 2));
-                json.EndObject();
-            } while (stmt.Next() && TestStr((const char *)sqlite3_column_text(stmt, 0), current_date));
-            json.EndArray();
+                strncpy(current_date, (const char *)sqlite3_column_text(stmt, 0),
+                        RG_SIZE(current_date) - 1);
+
+                json.Key(current_date);
+                json.StartArray();
+                do {
+                    json.StartObject();
+                    json.Key("time"); json.Int(sqlite3_column_int(stmt, 1));
+                    json.Key("identity"); json.String((const char *)sqlite3_column_text(stmt, 2));
+                    json.EndObject();
+                } while (stmt.Next() && TestStr((const char *)sqlite3_column_text(stmt, 0), current_date));
+                json.EndArray();
+            } while (stmt.IsRow());
         }
         if (!stmt.IsValid())
             return;
