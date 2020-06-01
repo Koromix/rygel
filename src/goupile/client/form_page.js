@@ -870,7 +870,7 @@ Valid choices include:
         addWidget('errorList', null, render);
     };
 
-    this.submit = function() {
+    this.submit = async function() {
         if (!self.isValid()) {
             log.error('Corrigez les erreurs avant d\'enregistrer');
 
@@ -880,7 +880,7 @@ Valid choices include:
             return;
         }
 
-        self.submitHandler();
+        await self.submitHandler();
     };
 
     this.restart = function() {

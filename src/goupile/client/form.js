@@ -64,7 +64,11 @@ let form_executor = new function() {
     };
 
     this.runPage = function(code, panel_el) {
-        let func = Function('util', 'data', 'go', 'form', 'page', 'route', 'scratch', code);
+        let func = Function('util', 'data', 'nav', 'go', 'form', 'page', 'route', 'scratch', code);
+        let nav = {
+            go: app.go,
+            new: () => app.go(makeLink(current_asset.form.key, current_asset.page.key))
+        };
 
         if (!select_many || select_columns.size) {
             render(html`
@@ -81,9 +85,9 @@ let form_executor = new function() {
                         el.className = 'af_entry';
 
                     if (select_many) {
-                        runPageMany(state, func, record, select_columns, el);
+                        runPageMany(state, func, nav, record, select_columns, el);
                     } else {
-                        runPage(state, func, record, el);
+                        runPage(state, func, nav, record, el);
                     }
 
                     return el;
@@ -94,7 +98,7 @@ let form_executor = new function() {
         }
     };
 
-    function runPageMany(state, func, record, columns, el) {
+    function runPageMany(state, func, nav, record, columns, el) {
         let page = new Page(current_asset.page.key);
         let builder = new PageBuilder(state, page);
 
@@ -105,13 +109,13 @@ let form_executor = new function() {
             await saveRecord(record, page);
             state.changed = false;
 
-            goupile.go();
+            await goupile.go();
         };
         builder.changeHandler = () => runPageMany(...arguments);
 
         // Build it!
         builder.pushOptions({compact: true});
-        func(util, app.data, app.go, builder, builder, {}, state.scratch);
+        func(util, app.data, nav, nav.go, builder, builder, {}, state.scratch);
 
         render(html`
             ${current_asset.form.options.actions ? html`
@@ -131,7 +135,7 @@ let form_executor = new function() {
         window.history.replaceState(null, null, makeURL());
     }
 
-    function runPage(state, func, record, el) {
+    function runPage(state, func, nav, record, el) {
         let page = new Page(current_asset.page.key);
         let builder = new PageBuilder(state, page);
 
@@ -142,13 +146,13 @@ let form_executor = new function() {
             await saveRecord(record, page);
             state.changed = false;
 
-            goupile.go();
+            await goupile.go();
         };
         builder.changeHandler = () => runPage(...arguments);
 
         // Build it!
         builder.errorList();
-        func(util, app.data, app.go, builder, builder, app.route, state.scratch);
+        func(util, app.data, nav, nav.go, builder, builder, app.route, state.scratch);
         builder.errorList();
 
         let show_new = (record.sequence != null);
