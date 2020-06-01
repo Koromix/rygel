@@ -52,4 +52,4 @@ let score = form.value("physicalAbuse") +
             form.value("emotionalAbuse")
 form.calc("score", "Score total", score);
 
-data.makeFormFooter(page)
+data.makeFormFooter(nav, page)

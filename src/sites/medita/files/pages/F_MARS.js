@@ -1,6 +1,6 @@
 data.makeFormHeader("Echelle de mesure de l'observance médicamenteuse (MARS)", page)
 form.output(html`
-    <p>Ce questionnaire consiste à mieux comprendre les difficultés liées à la prise de médicaments. 
+    <p>Ce questionnaire consiste à mieux comprendre les difficultés liées à la prise de médicaments.
     <p>Veuillez répondre aux questions suivantes en cochant la réponse qui correspond le mieux à votre comportement ou attitude vis-à-vis du traitement que vous preniez durant la semaine avant votre hospitalisation.
 `)
 
@@ -16,7 +16,7 @@ form.binary("Q7", "7. Mes idées sont plus claires avec les médicaments.")
 form.binary("Q8", "8. En continuant à prendre les médicaments, je peux éviter de tomber à nouveau malade.")
 form.binary("Q9", "9. Avec les médicaments je me sens bizarre comme un « zombie ».")
 form.binary("Q10", "10. Les médicaments me rendent lourd(e) et fatigué(e).")
-  
+
 let score = form.value("Q1") +
             form.value("Q2") +
             form.value("Q3") +
@@ -26,8 +26,8 @@ let score = form.value("Q1") +
             form.value("Q7") +
             form.value("Q8") +
             form.value("Q9") +
-            form.value("Q10") 
+            form.value("Q10")
 
 form.calc("score", "Score total", score);
 
-data.makeFormFooter(page)   
+data.makeFormFooter(nav, page)

@@ -106,7 +106,7 @@ let score = form.value("Q1") +
 			form.value("Q16") +
             form.value("Q17") +
             form.value("Q18")
-            
+
 form.calc("score", "Score total", score);
 
-data.makeFormFooter(page)
+data.makeFormFooter(nav, page)

@@ -57,4 +57,4 @@ form.output(html`
     <p>En cas de syndrome catatonique : prendre les constantes du patient (tableau ci-dessous) et passer à l'évaluation complète du syndrome catatonique avec l'échelle de Bush Francis.</p>
 `)
 
-data.makeFormFooter(page)
+data.makeFormFooter(nav, page)

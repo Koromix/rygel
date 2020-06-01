@@ -1,7 +1,7 @@
 data.makeFormHeader("AUTO-QUESTIONNAIRE DE ANGST", page)
 form.output(html`
     <p>Cocher les cases vrai/faux en pensant aux derniers épisodes durant lesquels vous vous êtes senti "bien dans votre peau", heureux, agité ou irritable.
- 
+
 `)
 
 form.pushOptions({mandatory: true, missingMode: 'disable'})
@@ -26,7 +26,7 @@ form.binary("Q17", "17. Augmentation de la consommation d'alcool.")
 form.binary("Q18", "18. Exagérément optimiste, voire euphorique.")
 form.binary("Q19", "19. Augmentation du rire (farces, plaisanteries, jeux de mots, calembours).")
 form.binary("Q20", "20. Rapidité de la pensée, idées soudaines, calembours.")
-  
+
 let score = form.value("Q1") +
             form.value("Q2") +
             form.value("Q3") +
@@ -46,8 +46,8 @@ let score = form.value("Q1") +
             form.value("Q17") +
             form.value("Q18") +
             form.value("Q19") +
-            form.value("Q20") 
+            form.value("Q20")
 
 form.calc("score", "Score total", score);
 
-data.makeFormFooter(page)   
+data.makeFormFooter(nav, page)

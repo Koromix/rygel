@@ -22,7 +22,7 @@ let score = form.value("a") +
             form.value("e") +
             form.value("f") +
             form.value("g") +
-            form.value("h") 
+            form.value("h")
 form.calc("score", "Score total", score)
 
-data.makeFormFooter(page)
+data.makeFormFooter(nav, page)

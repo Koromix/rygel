@@ -1,7 +1,7 @@
 data.makeFormHeader("Echelle d’évaluation de la dépression psychotique (PDAS)", page)
 form.output(html`
     <p><b>Pour les instructions concernant l’entretien, veuillez vous reporter au guide associé.</p>
-    
+
 `)
 
 form.pushOptions({mandatory: true, missingMode: 'disable'})
@@ -129,4 +129,4 @@ let score = form.value("symptomesSomatiques") +
             form.value("emoussementDesAffects")
 form.calc("score", "Score total", score)
 
-data.makeFormFooter(page)
+data.makeFormFooter(nav, page)

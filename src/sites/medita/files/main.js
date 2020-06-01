@@ -8,7 +8,7 @@ data.echelles = [
     {category: "AUTO-QUESTIONNAIRES", name: "Échelle de dépression QIDS", form: "F_QIDS", keys: ["score"]},
     {category: "AUTO-QUESTIONNAIRES", name: "Questionnaire de trouble de l'humeur (MDQ)", form: "F_MDQ", keys: ["score"]},
     {category: "AUTO-QUESTIONNAIRES", name: "Auto-questionnaire de Angst", form: "F_ANGST", keys: ["score"]},
-    {category: "AUTO-QUESTIONNAIRES", name: "Inventaire de Beck pour l'anxiété", form: "F_IBA", keys: ["score"]},    
+    {category: "AUTO-QUESTIONNAIRES", name: "Inventaire de Beck pour l'anxiété", form: "F_IBA", keys: ["score"]},
     {category: "AUTO-QUESTIONNAIRES", name: "Chilhood Trauma Questionnaire (CTQ)", form: "F_CTQ",
         keys: ["physicalAbuse", "emotionalNeglect", "physicalNeglect",
                "sexualAbuse", "emotionalAbuse", "score"]},
@@ -16,10 +16,10 @@ data.echelles = [
     {category: "AUTO-QUESTIONNAIRES", name: "Questionnaire de fonctionnement social", form: "F_QFS", keys: ["score"]},
     {category: "AUTO-QUESTIONNAIRES", name: "PQD4", form: "F_PDQ4", keys: ["score"]},
     {category: "AUTO-QUESTIONNAIRES", name: "Symptômes psychotiques", form: "F_symptomespsychotiquesMINI", keys: ["score"]},
-    
-    
-     
-     
+
+
+
+
     {category: "Catatonie", name: "Catatonie : Critères diagnostiques", form: "F_CATATONIE", keys: ["score"]},
     {category: "Catatonie", name: "Échelle de Bush-Francis (BFCRS)", form: "F_BFCRS", keys: ["score"]},
 
@@ -33,10 +33,10 @@ data.echelles = [
     {category: "ESPPER", name: "Echelle abrégée d'évaluation psychiatrique (BPRS)", form: "BPRS", keys: ["score"]},
     {category: "ESPPER", name: "Questionnaire de Altman (ASRM)", form: "F_ALTMAN", keys: ["score"]},
 
-    
-   
 
-    
+
+
+
     {category: "Personnalité", name: "Echelle SAPAS (Standardised Assessment of Personality – Abbreviated Scale) REVOIR SCORE", form: "SAPAS", keys: ["score"]},
 
     {category: "Fonctionnement", name: "Échelle brève d'évaluation du fonctionnement du patient (FAST)", form: "FAST", keys: ["score"]},
@@ -88,10 +88,11 @@ data.makeFormHeader = function(title, page) {
     route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
 }
 
-data.makeFormFooter = function(page) {
+data.makeFormFooter = function(nav, page) {
     page.output(html`
         <br/><br/>
-        <button class="md_button" ?disabled=${!page.isValid()} @click=${page.submit}>Enregistrer</button>
+        <button class="md_button" ?disabled=${!page.isValid()}
+                @click=${async e => {await page.submit(); nav.new();}}>Enregistrer</button>
         <button class="md_button" @click=${e => go("Formulaires")}>Formulaires</button>
         <button class="md_button" @click=${e => go("Suivi")}>Suivi Patient / Graphique</button>
         <button class="md_button" @click=${e => go("Accueil")}>Retour à l'accueil</button>

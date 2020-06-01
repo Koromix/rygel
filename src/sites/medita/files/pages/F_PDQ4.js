@@ -1,16 +1,16 @@
 data.makeFormHeader("Questionnaire de personnalité", page)
 form.output(html`
     <p>Le but de ce questionnaire est de vous aider à décrire le genre de personne que vous êtes. Pour répondre aux questions, pensez à la manière dont vous avez eu tendance à ressentir les choses, à penser et à agir durant ces dernières années. Afin de vous rappeler cette consigne, chaque page du questionnaire commence par la phrase : « Depuis plusieurs années.. ».</p>
-    
-    
-    <p>V (vrai) signifie que cet énoncé est généralement vrai pour vous. 
+
+
+    <p>V (vrai) signifie que cet énoncé est généralement vrai pour vous.
      <p>F (faux) signifie que cet énoncé est généralement faux pour vous.
  <p>Même si vous n'êtes pas tout à fait certain(e) de votre réponse, veuillez indiquer V ou F à chaque question
 <p> Par exemple, à l'énoncé suivant : "J'ai tendance à être têtu(e)	V	F"
 
 
 <p>Si, depuis plusieurs années, vous êtes effectivement têtu(e), vous répondrez «vrai» en entourant le
-V. Si cet énoncé ne s'applique pas du tout à vous, vous répondrez «faux» en entourant le F. 
+V. Si cet énoncé ne s'applique pas du tout à vous, vous répondrez «faux» en entourant le F.
 <p>Il n'y a pas de réponses justes ou fausses.
 Vous pouvez prendre tout le temps qu'il vous faut.
 <p>Depuis plusieurs années..
@@ -143,8 +143,8 @@ form.multiCheck("p99", "99. Lorsquej'étais enfant (avantl'âgede 15ans), j'éta
         [13, "13. Je me suis plus d'une fois enfui(e) de la maison en pleine nuit."],
         [14, "14. J'ai commencé à beaucoup manquer l'école avant l'âge de 13 ans."],
         [15, "15. Je me suis introduit(e) par effraction dans la maison, le bâtiment ou la voiture de quelqu'un."],
-                ])                
-                
+                ])
+
 form.calc("persoparano", "Personnalité paranoïaque ", form.value("p11") + form.value("p24") + form.value("p37") + form.value("p50") + form.value("p62") + form.value("p85") + form.value("p96"));
 
 form.calc("persohistrio", "Personnalité histrionique", form.value("p4") + form.value("p17") + form.value("p30") + form.value("p43") + form.value("p55") + form.value("p67") + form.value("p80") + form.value("p90"));
@@ -153,7 +153,7 @@ form.calc("persoantisociale", "Personnalité anti-sociale", form.value("p8") + f
 
 form.calc("poc", "Personnalité obsessionnelle compulsive", form.value("p3") + form.value("p16") + form.value("p29") + form.value("p41") + form.value("p54") + form.value("p66") + form.value("p81") + form.value("p89"));
 
-form.calc("persoschizoide", "Personnalité schizoïde", form.value("p9") + form.value("p22") + form.value("p34") + form.value("p47") + form.value("p60") + form.value("p71") + form.value("p95")); 
+form.calc("persoschizoide", "Personnalité schizoïde", form.value("p9") + form.value("p22") + form.value("p34") + form.value("p47") + form.value("p60") + form.value("p71") + form.value("p95"));
 
 form.calc("personarcissique", "Personnalité narcissique", form.value("p5") + form.value("p18") + form.value("p31") + form.value("p44") + form.value("p57") + form.value("p68") + form.value("p73") + form.value("p79") + form.value("p92"));
 
@@ -164,4 +164,4 @@ form.calc("persoborderline", "Personnalité borderline", form.value("p6") + form
 form.calc("persodependante", "Personnalité dépendante", form.value("p2") + form.value("p15") + form.value("p27") + form.value("p40") + form.value("p53") + form.value("p65") + form.value("p82") + form.value("p88"));
 
 
-data.makeFormFooter(page)
+data.makeFormFooter(nav, page)

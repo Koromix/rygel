@@ -197,7 +197,7 @@ form.section("23 - ANOMALIES NEUROVÉGÉTATIVES", () => {
         [3 ,"3 : Anomalie de 3 paramètres ou plus"],
     ])
 })
-  
+
 let score = form.value("agitation") +
             form.value("immobiliteStupeur") +
             form.value("mutisme") +
@@ -220,8 +220,8 @@ let score = form.value("agitation") +
             form.value("grasping") +
             form.value("perseveration") +
 			form.value("combativite") +
-			form.value("anomalies_neuroveget") 
-			
+			form.value("anomalies_neuroveget")
+
 form.calc("score", "Score total", score)
 
-data.makeFormFooter(page)
+data.makeFormFooter(nav, page)

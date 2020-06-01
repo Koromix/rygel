@@ -97,7 +97,7 @@ let score = form.value("frequence") +
             form.value("nombredevoix") +
             form.value("longueurcontenu") +
             form.value("saillanceattentionnelle") +
-            form.value("stress") 
+            form.value("stress")
 form.calc("score", "Score total", score)
 
-data.makeFormFooter(page)
+data.makeFormFooter(nav, page)

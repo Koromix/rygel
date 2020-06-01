@@ -1,8 +1,8 @@
 data.makeFormHeader("Inventaire de Beck pour l'anxiété", page)
 form.output(html`
     <p>Voici une liste de symptômes courants dus à l’anxiété. Veuillez lire chaque symptôme attentivement. Indiquez, en encerclant le chiffre approprié, à quel degré vous avez été affecté par chacun de ces symptômes au cours de la dernière semaine, aujourd’hui inclus.</p>
-    
-    
+
+
     <p>Au cours des 7 derniers jours, j’ai été affecté(e)
 par…
 
@@ -64,4 +64,4 @@ let score = form.value("a") +
 form.calc("score", "Score total", score)
 
 
-data.makeFormFooter(page)
+data.makeFormFooter(nav, page)

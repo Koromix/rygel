@@ -135,4 +135,4 @@ let score = form.value("ideeDeSuicide") +
             form.value("tristesseApparente")
 form.calc("score", "Score total", score)
 
-data.makeFormFooter(page)
+data.makeFormFooter(nav, page)

@@ -23,13 +23,13 @@ form.section("Subjective", () => {
         [1, "1 : Non-specific sense of inner restlessness"],
         [2, "2 : The patient is aware of an inability to keep the legs still, or a desire to move the legs, and/or complains of inner restlessness aggravated specifically by being required to stand still"],
         [3, "3 : Awareness of intense compulsion to move most of the time and/or reports strong desire to walk or pace most of the time"],
-        
+
     ])
     form.enumRadio("Distressrelatedtorestlessness", "Distress related to restlessness", [
         [0, "0 : No distress"],
         [1, "1 : Mild"],
         [2, "2 : Moderate"],
-        [3, "3 : Severe"],   
+        [3, "3 : Severe"],
     ])
 })
 
@@ -50,7 +50,7 @@ form.section("Global Clinical Assessment of Akathisia", () => {
 let score = form.value("objective") +
             form.value("Awarenessofrestlessness") +
             form.value("Distressrelatedtorestlessness") +
-            form.value("GlobalClinicalAssessmentofAkathisia") 
+            form.value("GlobalClinicalAssessmentofAkathisia")
 form.calc("score", "Score total", score)
 
-data.makeFormFooter(page)
+data.makeFormFooter(nav, page)

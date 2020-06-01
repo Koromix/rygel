@@ -3,7 +3,7 @@ form.output(html`
     <p>Voici une liste de problèmes que les gens éprouvent parfois suite à une expérience vraiment stressante.
 Veuillez lire chaque énoncé attentivement et cocher la case pour indiquer dans quelle mesure ce problème vous a
 affecté dans le dernier mois.</p>
-    
+
 `)
 
 form.pushOptions({mandatory: true, missingMode: 'disable'})
@@ -59,4 +59,4 @@ let score = form.value("a") +
             form.value("t")
 form.calc("score", "Score total", score)
 
-data.makeFormFooter(page)
+data.makeFormFooter(nav, page)
