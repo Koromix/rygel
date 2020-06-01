@@ -115,7 +115,8 @@ let form_executor = new function() {
 
         render(html`
             <div class="af_actions">
-                <button class="af_button" ?disabled=${builder.hasErrors() || !state.changed}
+                <button type="button" class="af_button"
+                        ?disabled=${builder.hasErrors() || !state.changed}
                         @click=${builder.save}>Enregistrer</button>
             </div>
 
@@ -178,9 +179,9 @@ let form_executor = new function() {
                 ` : ''}
                 ${record.sequence == null ? html`<p>Nouvel ID</p>` : ''}
 
-                <button class="af_button" ?disabled=${!enable_save}
+                <button type="button" class="af_button" ?disabled=${!enable_save}
                         @click=${builder.save}>Enregistrer</button>
-                <button class="af_button" ?disabled=${!enable_validate}
+                <button type="button" class="af_button" ?disabled=${!enable_validate}
                         @click=${e => showValidateDialog(e, builder.submit)}>Valider</button>
             </div>
 
@@ -298,7 +299,7 @@ let form_executor = new function() {
                 <p>${records.length} ${records.length > 1 ? 'enregistrements' : 'enregistrement'}
                    dont ${complete_set.size} ${complete_set.size > 1 ? 'complets' : 'complet'}</p>
                 <div style="flex: 1;"></div>
-                <button class=${show_complete ? 'active' : ''}
+                <button type="button" class=${show_complete ? 'active' : ''}
                         @click=${toggleShowComplete}>Afficher les enregistrements complets</button>
             </div>
 
@@ -377,7 +378,8 @@ let form_executor = new function() {
 
         render(html`
             <div class="gp_toolbar">
-                <button class=${select_many ? 'active' : ''} @click=${e => toggleSelectionMode()}>Sélection multiple</button>
+                <button type="button" class=${select_many ? 'active' : ''}
+                        @click=${e => toggleSelectionMode()}>Sélection multiple</button>
                 <div style="flex: 1;"></div>
                 <div class="gp_dropdown right">${renderExportMenu()}</div>
             </div>
@@ -436,10 +438,10 @@ let form_executor = new function() {
 
     function renderExportMenu() {
         return html`
-            <button>Export</button>
+            <button type="button">Export</button>
             <div>
-                <button @click=${e => exportSheets(current_asset.form, 'xlsx')}>Excel</button>
-                <button @click=${e => exportSheets(current_asset.form, 'csv')}>CSV</button>
+                <button type="button" @click=${e => exportSheets(current_asset.form, 'xlsx')}>Excel</button>
+                <button type="button" @click=${e => exportSheets(current_asset.form, 'csv')}>CSV</button>
             </div>
         `;
     }

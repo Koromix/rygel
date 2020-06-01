@@ -62,6 +62,15 @@ bool ConfigBuilder::LoadIni(StreamReader *st)
                         valid = false;
                     }
                 } while (ini.NextInSection(&prop));
+            } else if (prop.section == "Security") {
+                do {
+                    if (prop.key == "AllowGuests") {
+                        valid &= IniParser::ParseBoolValue(prop.value, &config.allow_guests);
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
             } else if (prop.section == "HTTP") {
                 do {
                     if (prop.key == "IPStack") {

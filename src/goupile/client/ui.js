@@ -28,7 +28,11 @@ let ui = new function() {
         });
 
         func(popup_builder);
-        render(page.render(), popup_el);
+        render(html`
+            <form @submit=${e => e.preventDefault()}>
+                ${page.render()}
+            </form>
+        `, popup_el);
 
         // We need to know popup width and height
         let give_focus = !popup_el.classList.contains('active');
@@ -98,14 +102,8 @@ let ui = new function() {
         document.body.appendChild(popup_el);
 
         popup_el.addEventListener('keydown', e => {
-            switch (e.keyCode) {
-                case 13: {
-                    if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A' &&
-                            popup_builder.submit)
-                        popup_builder.submit();
-                } break;
-                case 27: { closePopup(); } break;
-            }
+            if (e.keyCode == 27)
+                closePopup();
         });
 
         popup_el.addEventListener('click', e => e.stopPropagation());
@@ -119,6 +117,7 @@ let ui = new function() {
         if (popup_el) {
             popup_el.classList.remove('active');
             popup_el.style.minWidth = '';
+
             render('', popup_el);
         }
     }

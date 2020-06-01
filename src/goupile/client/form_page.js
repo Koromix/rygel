@@ -263,7 +263,7 @@ function PageBuilder(state, page) {
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div class="af_select" id=${id}>
                 ${props.map(p =>
-                    html`<button data-value=${util.valueToStr(p.value)}
+                    html`<button type="button" data-value=${util.valueToStr(p.value)}
                                  ?disabled=${options.disable} .className=${value === p.value ? 'af_button active' : 'af_button'}
                                  @click=${e => handleEnumChange(e, key, options.untoggle)}>${p.label}</button>`)}
             </div>
@@ -378,7 +378,7 @@ function PageBuilder(state, page) {
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div class="af_select" id=${id}>
                 ${props.map(p =>
-                    html`<button data-value=${util.valueToStr(p.value)}
+                    html`<button type="button" data-value=${util.valueToStr(p.value)}
                                  ?disabled=${options.disable} .className=${value.includes(p.value) ? 'af_button active' : 'af_button'}
                                  @click=${e => handleMultiChange(e, key)}>${p.label}</button>`)}
             </div>
@@ -701,7 +701,7 @@ function PageBuilder(state, page) {
                     //if (tab.disable)
                       //  cls += ' disabled';
 
-                    return html`<button class=${cls} ?disabled=${tab.disable}
+                    return html`<button type="button" class=${cls} ?disabled=${tab.disable}
                                         @click=${e => handleTabClick(e, key, idx)}>${tab.label}</button>`;
                 })}
 
@@ -786,7 +786,8 @@ instead of:
         state.clicked_buttons.delete(label);
 
         let render = intf => renderWrappedWidget(intf, html`
-            <button class="af_button" @click=${e => handleButtonClick(e, label)}>${label}</button>
+            <button type="button" class="af_button"
+                    @click=${e => handleButtonClick(e, label)}>${label}</button>
         `);
 
         let intf = addWidget('button', label, render, options);
@@ -821,8 +822,9 @@ Valid choices include:
 
         let render = intf => renderWrappedWidget(intf, html`
             <div class="af_buttons">
-                ${buttons.map(button =>
-                    html`<button class="af_button" ?disabled=${!button[1]} title=${button[2] || ''}
+                ${buttons.map((button, idx) =>
+                    html`<button type=${idx ? 'button' : 'submit'} class="af_button"
+                                 ?disabled=${!button[1]} title=${button[2] || ''}
                                  @click=${button[1]}>${button[0]}</button>`)}
             </div>
         `);

@@ -18,6 +18,8 @@ struct Config {
     bool use_offline = false;
     Size max_file_size = Megabytes(4);
 
+    bool allow_guests = false;
+
     http_Config http;
     int max_age = 3600;
 

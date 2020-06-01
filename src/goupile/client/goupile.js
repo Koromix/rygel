@@ -125,62 +125,67 @@ let goupile = new function() {
     this.initApplication = async function(code = null) {
         await fetchSettings();
 
-        let files = await virt_fs.listAll();
-        let files_map = util.mapArray(files, file => file.path);
+        if (self.isConnected() || env.allow_guests) {
+            let files = await virt_fs.listAll();
+            let files_map = util.mapArray(files, file => file.path);
 
-        try {
-            let new_app = new Application;
-            let app_builder = new ApplicationBuilder(new_app);
-            new_app.go = handleGo;
+            try {
+                let new_app = new Application;
+                let app_builder = new ApplicationBuilder(new_app);
+                new_app.go = handleGo;
 
-            if (code == null)
-                code = await readCode('/files/main.js');
+                if (code == null)
+                    code = await readCode('/files/main.js');
 
-            let func = Function('util', 'app', 'data', 'go', 'route', code);
-            func(util, app_builder, new_app.data, handleGo, new_app.route);
+                let func = Function('util', 'app', 'data', 'go', 'route', code);
+                func(util, app_builder, new_app.data, handleGo, new_app.route);
 
-            let known_paths = new Set(new_app.assets.map(asset => asset.path));
-            known_paths.add('/files/main.js');
-            known_paths.add('/files/main.css');
+                let known_paths = new Set(new_app.assets.map(asset => asset.path));
+                known_paths.add('/files/main.js');
+                known_paths.add('/files/main.css');
 
-            // Make unused files available
-            for (let file of files) {
-                if (!known_paths.has(file.path))
-                    app_builder.file(file);
+                // Make unused files available
+                for (let file of files) {
+                    if (!known_paths.has(file.path))
+                        app_builder.file(file);
+                }
+
+                app = new_app;
+            } catch (err) {
+                if (app) {
+                    throw err;
+                } else {
+                    // Empty application, so that the user can still fix main.js or reset everything
+                    app = new Application;
+                    app.go = handleGo;
+
+                    console.log(err);
+                }
             }
 
-            app = new_app;
-        } catch (err) {
-            if (app) {
-                throw err;
+            // XXX: Hack for secondary asset thingy that we'll get rid of eventually
+            for (let i = 0; i < app.assets.length; i++)
+                app.assets[i].idx = i;
+
+            // Select default page
+            if (app.home) {
+                app.urls_map[env.base_url] = app.urls_map[app.home];
             } else {
-                // Empty application, so that the user can still fix main.js or reset everything
-                app = new Application;
-                app.go = handleGo;
-
-                console.log(err);
+                app.urls_map[env.base_url] =
+                    app.assets.find(asset => asset.type !== 'main' && asset.type !== 'blob') || app.assets[0];
             }
-        }
 
-        // XXX: Hack for secondary asset thingy that we'll get rid of eventually
-        for (let i = 0; i < app.assets.length; i++)
-            app.assets[i].idx = i;
+            // Update custom CSS (if any)
+            {
+                let css = await readCode('/files/main.css');
+                changeCSS(css);
+            }
 
-        // Select default page
-        if (app.home) {
-            app.urls_map[env.base_url] = app.urls_map[app.home];
+            util.deepFreeze(app, 'route');
         } else {
-            app.urls_map[env.base_url] =
-                app.assets.find(asset => asset.type !== 'main' && asset.type !== 'blob') || app.assets[0];
+            app = null;
         }
 
-        // Update custom CSS (if any)
-        {
-            let css = await readCode('/files/main.css');
-            changeCSS(css);
-        }
-
-        util.deepFreeze(app, 'route');
         self.go(route_url || window.location.href, false);
     };
 
@@ -238,79 +243,83 @@ Navigation functions should only be called in reaction to user events, such as b
     this.isStandalone = function() { return standalone_mq.matches; };
 
     this.go = async function(url = null, push_history = true) {
-        if (url) {
-            url = new URL(url, window.location.href);
+        if (self.isConnected() || env.allow_guests) {
+            if (url) {
+                url = new URL(url, window.location.href);
 
-            // Update route application global
-            for (let [key, value] of url.searchParams) {
-                let num = Number(value);
-                app.route[key] = Number.isNaN(num) ? value : num;
-            }
-
-            // Find relevant asset
-            {
-                let path = url.pathname;
-                if (!path.endsWith('/'))
-                    path += '/';
-
-                route_asset = app.urls_map[path] || app.aliases_map[path];
-
-                if (!route_asset) {
-                    do {
-                        path = path.substr(0, path.length - 1);
-                        path = path.substr(0, path.lastIndexOf('/') + 1);
-
-                        if (path === env.base_url)
-                            break;
-
-                        route_asset = app.urls_map[path];
-                    } while (!route_asset && path.length);
+                // Update route application global
+                for (let [key, value] of url.searchParams) {
+                    let num = Number(value);
+                    app.route[key] = Number.isNaN(num) ? value : num;
                 }
-            }
 
-            // Update URL and history
-            route_url = url.pathname;
-            if (push_history)
-                window.history.pushState(null, null, route_url);
+                // Find relevant asset
+                {
+                    let path = url.pathname;
+                    if (!path.endsWith('/'))
+                        path += '/';
 
-            // Route URL through appropriate controller
-            if (route_asset) {
-                try {
-                    switch (route_asset.type) {
-                        case 'page': { await form_executor.route(route_asset, url); } break;
+                    route_asset = app.urls_map[path] || app.aliases_map[path];
+
+                    if (!route_asset) {
+                        do {
+                            path = path.substr(0, path.length - 1);
+                            path = path.substr(0, path.lastIndexOf('/') + 1);
+
+                            if (path === env.base_url)
+                                break;
+
+                            route_asset = app.urls_map[path];
+                        } while (!route_asset && path.length);
                     }
-                } catch (err) {
-                    log.error(err.message);
                 }
-            } else {
-                log.error(`URL non supportée '${url.pathname}'`);
+
+                // Update URL and history
+                route_url = url.pathname;
+                if (push_history)
+                    window.history.pushState(null, null, route_url);
+
+                // Route URL through appropriate controller
+                if (route_asset) {
+                    try {
+                        switch (route_asset.type) {
+                            case 'page': { await form_executor.route(route_asset, url); } break;
+                        }
+                    } catch (err) {
+                        log.error(err.message);
+                    }
+                } else {
+                    log.error(`URL non supportée '${url.pathname}'`);
+                }
             }
-        }
 
-        // Restart application after session changes
-        if (await fetchSettings()) {
-            await self.initApplication();
-            return;
-        }
+            // Restart application after session changes
+            if (await fetchSettings()) {
+                await self.initApplication();
+                return;
+            }
 
-        // Render menu and page layout
-        renderPanels();
+            // Render menu and page layout
+            renderPanels();
 
-        // Run left panel
-        switch (left_panel) {
-            case 'files': { await dev_files.runFiles(); } break;
-            case 'editor': { await dev_files.runEditor(route_asset); } break;
-            case 'status': { await form_executor.runStatus(); } break;
-            case 'data': { await form_executor.runData(); } break;
-            case 'describe': { await form_executor.runDescribe(); } break;
-        }
+            // Run left panel
+            switch (left_panel) {
+                case 'files': { await dev_files.runFiles(); } break;
+                case 'editor': { await dev_files.runEditor(route_asset); } break;
+                case 'status': { await form_executor.runStatus(); } break;
+                case 'data': { await form_executor.runData(); } break;
+                case 'describe': { await form_executor.runDescribe(); } break;
+            }
 
-        // Run appropriate module
-        if (route_asset) {
-            document.title = `${route_asset.label} — ${env.app_name}`;
-            await runAssetSafe(route_asset);
+            // Run appropriate module
+            if (route_asset) {
+                document.title = `${route_asset.label} — ${env.app_name}`;
+                await runAssetSafe(route_asset);
+            } else {
+                document.title = env.app_name;
+            }
         } else {
-            document.title = env.app_name;
+            renderGuest();
         }
     };
 
@@ -440,37 +449,40 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     function showLoginDialog(e) {
-        ui.popup(e, page => {
-            let username = page.text('username', 'Nom d\'utilisateur');
-            let password = page.password('password', 'Mot de passe');
+        ui.popup(e, makeLoginForm);
+    }
 
-            page.submitHandler = async () => {
-                page.close();
+    function makeLoginForm(page) {
+        let username = page.text('username', 'Nom d\'utilisateur');
+        let password = page.password('password', 'Mot de passe');
 
-                let entry = new log.Entry;
+        page.submitHandler = async () => {
+            let entry = new log.Entry;
 
-                entry.progress('Connexion en cours');
-                try {
-                    let body = new URLSearchParams({
-                        username: username.value,
-                        password: password.value}
-                    );
+            entry.progress('Connexion en cours');
+            try {
+                let body = new URLSearchParams({
+                    username: username.value,
+                    password: password.value}
+                );
 
-                    let response = await net.fetch(`${env.base_url}api/login.json`, {method: 'POST', body: body});
+                let response = await net.fetch(`${env.base_url}api/login.json`, {method: 'POST', body: body});
 
-                    if (response.ok) {
-                        entry.success('Connexion réussie');
-                        await self.initApplication();
-                    } else {
-                        let msg = await response.text();
-                        entry.error(msg);
-                    }
-                } catch (err) {
-                    entry.error(err.message);
+                if (response.ok) {
+                    if (page.close)
+                        page.close();
+
+                    entry.success('Connexion réussie');
+                    await self.initApplication();
+                } else {
+                    let msg = await response.text();
+                    entry.error(msg);
                 }
-            };
-            page.buttons(page.buttons.std.ok_cancel('Connexion'));
-        });
+            } catch (err) {
+                entry.error(err.message);
+            }
+        };
+        page.buttons(page.buttons.std.ok_cancel('Connexion'));
     }
 
     async function logout() {
@@ -616,5 +628,31 @@ Navigation functions should only be called in reaction to user events, such as b
             let file = await virt_fs.load(path);
             return file ? await file.data.text() : null;
         }
+    }
+
+    function renderGuest() {
+        render('', document.querySelector('#gp_menu'));
+
+        let state = new PageState;
+        let update = () => {
+            let page = new Page('@login');
+
+            let builder = new PageBuilder(state, page);
+            builder.changeHandler = update;
+            builder.pushOptions({
+                missingMode: 'disable',
+                wide: true
+            });
+
+            makeLoginForm(builder);
+
+            render(html`
+                <form id="gp_login" @submit=${e => e.preventDefault()}>
+                    ${page.render()}
+                </form>
+            `, document.querySelector('main'));
+        };
+
+        update();
     }
 };
