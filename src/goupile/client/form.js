@@ -101,8 +101,8 @@ let form_executor = new function() {
         builder.decodeKey = decodeKey;
         builder.setValue = (key, value) => setValue(record, key, value);
         builder.getValue = (key, default_value) => getValue(record, key, default_value);
-        builder.submitHandler = async (complete) => {
-            await saveRecord(record, page, complete);
+        builder.submitHandler = async () => {
+            await saveRecord(record, page);
             state.changed = false;
 
             goupile.go();
@@ -117,7 +117,7 @@ let form_executor = new function() {
             <div class="af_actions">
                 <button type="button" class="af_button"
                         ?disabled=${builder.hasErrors() || !state.changed}
-                        @click=${builder.save}>Enregistrer</button>
+                        @click=${builder.submit}>Enregistrer</button>
             </div>
 
             ${page.widgets.map(intf => {
@@ -136,8 +136,8 @@ let form_executor = new function() {
         builder.decodeKey = decodeKey;
         builder.setValue = (key, value) => setValue(record, key, value);
         builder.getValue = (key, default_value) => getValue(record, key, default_value);
-        builder.submitHandler = async (complete) => {
-            await saveRecord(record, page, complete);
+        builder.submitHandler = async () => {
+            await saveRecord(record, page);
             state.changed = false;
 
             goupile.go();
@@ -180,7 +180,7 @@ let form_executor = new function() {
                 ${record.sequence == null ? html`<p>Nouvel ID</p>` : ''}
 
                 <button type="button" class="af_button" ?disabled=${!enable_save}
-                        @click=${builder.save}>Enregistrer</button>
+                        @click=${builder.submit}>Enregistrer</button>
                 <button type="button" class="af_button" ?disabled=${!enable_validate}
                         @click=${e => showValidateDialog(e, builder.submit)}>Valider</button>
             </div>
@@ -233,15 +233,13 @@ let form_executor = new function() {
         return record.values[key];
     }
 
-    async function saveRecord(record, page, complete = false) {
-        record.complete[page.key] = complete;
-
+    async function saveRecord(record, page) {
         let entry = new log.Entry();
 
         entry.progress('Enregistrement en cours');
         try {
-            let record2 = await virt_data.save(record, page.variables);
-            entry.success(complete ? 'Données validées !' : 'Données enregistrées');
+            let record2 = await virt_data.save(record, page.key, page.variables);
+            entry.success('Données enregistrées');
 
             if (current_records.has(record2.id))
                 current_records.set(record2.id, record2);
@@ -326,9 +324,9 @@ let form_executor = new function() {
                                         if (complete == null) {
                                             return html`<td><a href=${makeLink(current_asset.form.key, page.key, record)}>Non rempli</a></td>`;
                                         } else if (complete) {
-                                            return html`<td class="complete"><a href=${makeLink(current_asset.form.key, page.key, record)}>Complet</a></td>`;
+                                            return html`<td class="complete"><a href=${makeLink(current_asset.form.key, page.key, record)}>Validé</a></td>`;
                                         } else {
-                                            return html`<td class="partial"><a href=${makeLink(current_asset.form.key, page.key, record)}>Partiel</a></td>`;
+                                            return html`<td class="partial"><a href=${makeLink(current_asset.form.key, page.key, record)}>Enregistré</a></td>`;
                                         }
                                     })}
                                 </tr>

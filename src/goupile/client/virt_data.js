@@ -22,7 +22,7 @@ function VirtualData(db) {
         return record;
     };
 
-    this.save = async function(record, variables) {
+    this.save = async function(record, page_key, variables) {
         // We need to keep only valid values listed in variables
         let record2 = Object.assign({}, record);
         delete record2.values;
@@ -33,13 +33,15 @@ function VirtualData(db) {
 
                 key: variable.key.toString(),
                 table: record2.table,
-                page: variable.page,
+                page: page_key,
                 before: variables[idx - 1] ? variables[idx - 1].key.toString() : null,
                 after: variables[idx + 1] ? variables[idx + 1].key.toString() : null
             };
 
             return ret;
         });
+
+        record2.complete[page_key] = false;
 
         await db.transaction('rw', ['records', 'records_data',
                                     'records_sequences', 'records_variables'], async () => {

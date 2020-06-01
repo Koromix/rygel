@@ -870,10 +870,7 @@ Valid choices include:
         addWidget('errorList', null, render);
     };
 
-    this.save = function() { doSubmit(false); }
-    this.submit = function() { doSubmit(true); }
-
-    function doSubmit(complete) {
+    this.submit = function() {
         if (!self.isValid()) {
             log.error('Corrigez les erreurs avant d\'enregistrer');
 
@@ -883,8 +880,8 @@ Valid choices include:
             return;
         }
 
-        self.submitHandler(complete);
-    }
+        self.submitHandler();
+    };
 
     this.restart = function() {
         if (!restart) {
