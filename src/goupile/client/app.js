@@ -30,8 +30,13 @@ function Application() {
     this.route = {};
 }
 
-function FormInfo(key) {
+function FormInfo(key, options = {}) {
     this.key = key;
+    this.options = util.assignDeep({
+        actions: true,
+        validate: true
+    }, options);
+
     this.pages = [];
     this.links = [];
 }
@@ -39,11 +44,13 @@ function FormInfo(key) {
 function PageInfo(form, key, label) {
     this.key = key;
     this.label = label;
+
     this.url = `${env.base_url}app/${form.key}/${key}/`;
 }
 
 function ScheduleInfo(key) {
     this.key = key;
+
     this.url = `${env.base_url}app/${key}/`;
 }
 
@@ -58,10 +65,10 @@ function ApplicationBuilder(app) {
         app.home = url;
     };
 
-    this.form = function(key, func = null) {
+    this.form = function(key, func = null, options = {}) {
         checkKey(key);
 
-        let form = new FormInfo(key);
+        let form = new FormInfo(key, options);
         let form_builder = new FormBuilder(form);
         if (typeof func === 'function') {
             func(form_builder);

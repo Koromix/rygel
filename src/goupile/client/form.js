@@ -114,11 +114,13 @@ let form_executor = new function() {
         func(util, app.data, app.go, builder, builder, {}, state.scratch);
 
         render(html`
-            <div class="af_actions">
-                <button type="button" class="af_button"
-                        ?disabled=${builder.hasErrors() || !state.changed}
-                        @click=${builder.submit}>Enregistrer</button>
-            </div>
+            ${current_asset.form.options.actions ? html`
+                <div class="af_actions">
+                    <button type="button" class="af_button"
+                            ?disabled=${builder.hasErrors() || !state.changed}
+                            @click=${builder.submit}>Enregistrer</button>
+                </div>
+            ` : ''}
 
             ${page.widgets.map(intf => {
                 let visible = intf.key && columns.has(intf.key.toString());
@@ -172,18 +174,21 @@ let form_executor = new function() {
                 return html`<a class=${cls} href=${makeLink(current_asset.form.key, page2.key, record)}>${page2.label}</a>`;
             })}</div>
 
-            <div class="af_actions sticky">
-                ${record.sequence != null ? html`
-                    <a href="#" @click=${e => { handleNewClick(e, state.changed); e.preventDefault(); }}>x</a>
-                    <p>ID n°${record.sequence}</p>
-                ` : ''}
-                ${record.sequence == null ? html`<p>Nouvel ID</p>` : ''}
+            ${current_asset.form.options.actions ? html`
+                <div class="af_actions sticky">
+                    ${record.sequence != null ? html`
+                        <a href="#" @click=${e => { handleNewClick(e, state.changed); e.preventDefault(); }}>x</a>
+                        <p>ID n°${record.sequence}</p>
+                    ` : ''}
+                    ${record.sequence == null ? html`<p>Nouvel ID</p>` : ''}
 
-                <button type="button" class="af_button" ?disabled=${!enable_save}
-                        @click=${builder.submit}>Enregistrer</button>
-                <button type="button" class="af_button" ?disabled=${!enable_validate}
-                        @click=${e => showValidateDialog(e, builder.submit)}>Valider</button>
-            </div>
+                    <button type="button" class="af_button" ?disabled=${!enable_save}
+                            @click=${builder.submit}>Enregistrer</button>
+                    ${current_asset.form.options.validate ?
+                        html`<button type="button" class="af_button" ?disabled=${!enable_validate}
+                                     @click=${e => showValidateDialog(e, builder.submit)}>Valider</button>`: ''}
+                </div>
+            `: ''}
 
             <br/>
             ${page.render()}
