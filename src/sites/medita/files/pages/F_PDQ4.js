@@ -1,4 +1,4 @@
-data.makeFormHeader("PDQ4 (À finir)", page)
+data.makeFormHeader("Questionnaire de personnalité", page)
 form.output(html`
     <p>Le but de ce questionnaire est de vous aider à décrire le genre de personne que vous êtes. Pour répondre aux questions, pensez à la manière dont vous avez eu tendance à ressentir les choses, à penser et à agir durant ces dernières années. Afin de vous rappeler cette consigne, chaque page du questionnaire commence par la phrase : « Depuis plusieurs années.. ».</p>
     
@@ -39,12 +39,12 @@ form.enum("p15", "15. Je préfère que ce soit les autres qui soient responsab
 form.enum("p16", "16. Je perds du temps à m'efforcer de tout faire parfaitement.", dataQ)
 form.enum("p17", "17. Je suis plus «sexy» que la plupart des gens.", dataQ)
 form.enum("p18", "18. Je me surprends souvent à penser à la personne importante que je suis ou que je vais devenir un jour.", dataQ)
-form.enum("p19", "19. Je me bagarre beaucoup physiquement.", dataQ)
-form.enum("p20", "20. Je sens très bien que les autres ne comprennent pas ou ne m'apprécient pas.", dataQ)
-form.enum("p21", "21. J'aime mieux faire les choses tout(e) seul(e) qu'avec les autres.", dataQ)
-form.enum("p22", "22. Je suis capable de savoir que certaines choses vont se produire avant qu'elles n'arrivent")
-form.enum("p23", "23. Je me demande souvent si les gens que je connais sont dignes de confiance.", dataQ)
-form.enum("p24", "24. Je suis capable de savoir que certaines choses vont .", dataQ)
+form.enum("p19", "19. J'aime ou je déteste quelqu'un, il n'y a pas de milieu pour moi.", dataQ)
+form.enum("p20", "20. Je me bagarre beaucoup physiquement.", dataQ)
+form.enum("p21", "21. Je sens très bien que les autre ne me comprennent pas ou ne m'apprécient pas", dataQ)
+form.enum("p22", "22. J'aime mieux faire les choses tout(e) seul(e) qu'avec les autres", dataQ)
+form.enum("p23", "23. Je suis capable de savoir que certaines choses vont se produire avant qu'elles n'arrivent", dataQ)
+form.enum("p24", "24. Je me demande souvent si les gens que je connais sont dignes de confiance.", dataQ)
 form.enum("p25", "25. Parfois, je parle des gens dans leur dos.", dataQ)
 form.enum("p26", "26. Je suis inhibé(e) dans mes relations intimes parce que j'ai peur d'être ridiculisé.", dataQ)
 form.enum("p27", "27. Je crais de perdre le soutien des autres si je ne suis pas d'accord avec eux.", dataQ)
@@ -146,22 +146,22 @@ form.multiCheck("p99", "99. Lorsquej'étais enfant (avantl'âgede 15ans), j'éta
                 ])                
                 
 form.calc("persoparano", "Personnalité paranoïaque ", form.value("p11") + form.value("p24") + form.value("p37") + form.value("p50") + form.value("p62") + form.value("p85") + form.value("p96"));
-form.calc("emotionalNeglect", "Emotional Neglect", form.value("Q5") + form.value("Q7") + form.value("Q13") +
-                                                   form.value("Q19") + form.value("Q28"));
-form.calc("physicalNeglect", "Physical Neglect", form.value("Q1") + form.value("Q2") + form.value("Q4") +
-                                                 form.value("Q6") + form.value("Q26"));
-form.calc("sexualAbuse", "Sexual abuse", form.value("Q20") + form.value("Q21") + form.value("Q23") +
-                                         form.value("Q24") + form.value("Q27"));
-form.calc("emotionalAbuse", "Emotional Abuse", form.value("Q3") + form.value("Q8") + form.value("Q14") +
-                                              form.value("Q18") + form.value("Q25"));
-                                              
 
+form.calc("persohistrio", "Personnalité histrionique", form.value("p4") + form.value("p17") + form.value("p30") + form.value("p43") + form.value("p55") + form.value("p67") + form.value("p80") + form.value("p90"));
 
-let score = form.value("physicalAbuse") +
-            form.value("emotionalNeglect") +
-            form.value("physicalNeglect") +
-            form.value("sexualAbuse") +
-            form.value("emotionalAbuse")
-form.calc("score", "Score total", score);
+form.calc("persoantisociale", "Personnalité anti-sociale", form.value("p8") + form.value("p20") + form.value("p33") + form.value("p46") + form.value("p59") + form.value("p75") + form.value("p94") + form.value((form.value("p99") || []).length >= 2));
+
+form.calc("poc", "Personnalité obsessionnelle compulsive", form.value("p3") + form.value("p16") + form.value("p29") + form.value("p41") + form.value("p54") + form.value("p66") + form.value("p81") + form.value("p89"));
+
+form.calc("persoschizoide", "Personnalité schizoïde", form.value("p9") + form.value("p22") + form.value("p34") + form.value("p47") + form.value("p60") + form.value("p71") + form.value("p95")); 
+
+form.calc("personarcissique", "Personnalité narcissique", form.value("p5") + form.value("p18") + form.value("p31") + form.value("p44") + form.value("p57") + form.value("p68") + form.value("p73") + form.value("p79") + form.value("p92"));
+
+form.calc("persoschizotypique", "Personnalité schizoptypique", form.value("p10") + form.value("p23") + form.value("p36") + form.value("p48") + form.value("p61") + form.value("p72") + form.value("p74") + form.value("p60") + form.value("p86"));
+
+form.calc("persoborderline", "Personnalité borderline", form.value("p6") + form.value("p19") + form.value("p32") + ((form.value("p98") || []).length >= 2) + form.value("p45") + form.value("p58") + form.value("p69") + form.value("p78") + form.value("p93"));
+
+form.calc("persodependante", "Personnalité dépendante", form.value("p2") + form.value("p15") + form.value("p27") + form.value("p40") + form.value("p53") + form.value("p65") + form.value("p82") + form.value("p88"));
+
 
 data.makeFormFooter(page)

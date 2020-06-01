@@ -22,7 +22,7 @@ let score = form.value("Q1") +
             form.value("Q3") +
             form.value("Q4") +
             form.value("Q5") +
-	    form.value("Q6") +
+	        form.value("Q6") +
             form.value("Q7") +
             form.value("Q8") +
             form.value("Q9") +

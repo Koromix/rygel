@@ -1,6 +1,6 @@
 data.makeFormHeader("Catatonie", page)
 
-form.pushOptions({mandatory: true, missingMode: 'disable'})
+form.pushOptions({mandatory: false, missingMode: 'disable'})
 
 form.section("STUPEUR", () => {
     form.binary("stupeur","Absence d'activité psychomotrice, pas de relation active avec l'environnement.",[""])
@@ -39,6 +39,14 @@ form.section("ÉCHOPRAXIE", () => {
     form.binary("echopraxie", "Reproduction des mouvements de l'examinateur.")
 })
 
+form.section("CONSTANTES", () => {
+    form.text("TA", "Pression artérielle")
+    form.text("FC", "Fréquence cardiaque")
+    form.text("FR", "Fréquence respiratoire")
+    form.text("Temperature", "Température")
+    form.text("SaO2", "Saturation en O2")
+    form.text("Hypersudation", "Hypersudation")
+})
 form.calc("score", "Score total", form.value("stupeur") +
                                   form.value("catalepsie") +
                                   form.value("flexibiliteCireuse") +
