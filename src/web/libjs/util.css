@@ -15,7 +15,7 @@ button, input, optgroup, select, textarea {
 #ut_log {
     position: fixed;
     left: calc(50% - 15em);
-    top: 60px;
+    top: 40px;
     width: 30em;
     z-index: 99999;
     user-select: none;
