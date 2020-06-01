@@ -57,10 +57,10 @@ data.echelles = [
 
 // Déclaration des pages
 
-app.form("Accueil")
-app.form("Aide")
-app.form("Formulaires")
-app.form("Suivi")
+app.form("Accueil", null, {actions: false})
+app.form("Aide", null, {actions: false})
+app.form("Formulaires", null, {actions: false})
+app.form("Suivi", null, {actions: false})
 
 {
     let handled_set = new Set;
@@ -69,7 +69,7 @@ app.form("Suivi")
         if (handled_set.has(echelle.form))
             continue;
 
-        app.form(echelle.form, echelle.name)
+        app.form(echelle.form, echelle.name, {actions: false})
         handled_set.add(echelle.form)
     }
 }
