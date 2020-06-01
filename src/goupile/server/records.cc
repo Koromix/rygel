@@ -11,6 +11,26 @@
 
 namespace RG {
 
+static void ExportRecord(sq_Statement *stmt, Span<const char> form_name, json_Writer *json)
+{
+    const char *id = (const char *)sqlite3_column_text(*stmt, 0);
+
+    json->StartObject();
+
+    json->Key("table"); json->String(form_name.ptr, (int)form_name.len);
+    json->Key("id"); json->String(id);
+    json->Key("sequence"); json->Int(sqlite3_column_int(*stmt, 1));
+    json->Key("values"); json->Raw((const char *)sqlite3_column_text(*stmt, 2));
+
+    json->Key("complete"); json->StartObject();
+    do {
+        json->Key((const char *)sqlite3_column_text(*stmt, 3)); json->Bool(sqlite3_column_int(*stmt, 4));
+    } while (stmt->Next() && TestStr((const char *)sqlite3_column_text(*stmt, 0), id));
+    json->EndObject();
+
+    json->EndObject();
+}
+
 void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
 {
     Span<const char> form_name;
@@ -37,9 +57,10 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
 
     if (id.len) {
         sq_Statement stmt;
-        if (!goupile_db.Prepare(R"(SELECT id, sequence, values
-                                   FROM records
-                                   WHERE form = ? AND id = ?)", &stmt))
+        if (!goupile_db.Prepare(R"(SELECT r.id, r.sequence, r.values, c.page, c.complete
+                                   FROM records r
+                                   LEFT JOIN records_complete c ON (c.form = r.form)
+                                   WHERE r.form = ? AND r.id = ?)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, form_name.ptr, (int)form_name.len, SQLITE_STATIC);
         sqlite3_bind_text(stmt, 2, id.ptr, (int)id.len, SQLITE_STATIC);
@@ -55,20 +76,16 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
         // Export data
         http_JsonPageBuilder json(request.compression_type);
 
-        json.StartObject();
-        json.Key("table"); json.String(form_name.ptr, (int)form_name.len);
-        json.Key("id"); json.String((const char *)sqlite3_column_text(stmt, 0));
-        json.Key("sequence"); json.Int(sqlite3_column_int(stmt, 1));
-        json.Key("values"); json.Raw((const char *)sqlite3_column_text(stmt, 2));
-        json.EndObject();
+        ExportRecord(&stmt, form_name, &json);
 
         json.Finish(io);
     } else {
         sq_Statement stmt;
-        if (!goupile_db.Prepare(R"(SELECT id, sequence, values
-                                   FROM records
-                                   WHERE form = ?
-                                   ORDER BY id)", &stmt))
+        if (!goupile_db.Prepare(R"(SELECT r.id, r.sequence, r.values, c.page, c.complete
+                                   FROM records r
+                                   LEFT JOIN records_complete c ON (c.form = r.form)
+                                   WHERE r.form = ?
+                                   ORDER BY r.id)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, form_name.ptr, (int)form_name.len, SQLITE_STATIC);
 
@@ -76,13 +93,10 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
         http_JsonPageBuilder json(request.compression_type);
 
         json.StartArray();
-        while (stmt.Next()) {
-            json.StartObject();
-            json.Key("table"); json.String(form_name.ptr, (int)form_name.len);
-            json.Key("id"); json.String((const char *)sqlite3_column_text(stmt, 0));
-            json.Key("sequence"); json.Int(sqlite3_column_int(stmt, 1));
-            json.Key("values"); json.Raw((const char *)sqlite3_column_text(stmt, 2));
-            json.EndObject();
+        if (stmt.Next()) {
+            do {
+                ExportRecord(&stmt, form_name, &json);
+            } while (stmt.IsRow());
         }
         if (!stmt.IsValid())
             return;
