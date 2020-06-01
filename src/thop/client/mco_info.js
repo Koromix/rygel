@@ -580,6 +580,8 @@ let mco_info = new function() {
             conditions.push('Âge ≥ ' + ghs.minimum_age);
         switch (ghs.special_mode) {
             case 'diabetes': { conditions.push('FI diabète < ' + ghs.special_duration + ' nuits'); } break;
+            case 'outpatient': { conditions.push('Ambulatoire'); } break;
+            case 'intermediary': { conditions.push('Intermédiaire'); } break;
         }
         if (ghs.main_diagnosis)
             conditions.push('DP ' + ghs.main_diagnosis);

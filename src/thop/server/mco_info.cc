@@ -229,6 +229,12 @@ void ProduceMcoGhmGhs(const http_RequestInfo &request, const User *, http_IO *io
                     json.Key("special_mode"); json.String("diabetes");
                     json.Key("special_duration"); json.Int(ghm_to_ghs_info.special_duration);
                 } break;
+                case mco_GhmToGhsInfo::SpecialMode::Outpatient: {
+                    json.Key("special_mode"); json.String("outpatient");
+                } break;
+                case mco_GhmToGhsInfo::SpecialMode::Intermediary: {
+                    json.Key("special_mode"); json.String("intermediary");
+                } break;
             }
             if (ghm_to_ghs_info.main_diagnosis_mask.value) {
                 json.Key("main_diagnosis");
