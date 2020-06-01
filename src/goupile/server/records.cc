@@ -37,7 +37,7 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
 
     if (id.len) {
         sq_Statement stmt;
-        if (!goupile_db.Prepare(R"(SELECT id, sequence, data
+        if (!goupile_db.Prepare(R"(SELECT id, sequence, values
                                    FROM records
                                    WHERE form = ? AND id = ?)", &stmt))
             return;
@@ -56,15 +56,16 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
         http_JsonPageBuilder json(request.compression_type);
 
         json.StartObject();
+        json.Key("table"); json.String(form_name.ptr, (int)form_name.len);
         json.Key("id"); json.String((const char *)sqlite3_column_text(stmt, 0));
         json.Key("sequence"); json.Int(sqlite3_column_int(stmt, 1));
-        json.Key("data"); json.Raw((const char *)sqlite3_column_text(stmt, 2));
+        json.Key("values"); json.Raw((const char *)sqlite3_column_text(stmt, 2));
         json.EndObject();
 
         json.Finish(io);
     } else {
         sq_Statement stmt;
-        if (!goupile_db.Prepare(R"(SELECT id, sequence, data
+        if (!goupile_db.Prepare(R"(SELECT id, sequence, values
                                    FROM records
                                    WHERE form = ?
                                    ORDER BY id)", &stmt))
@@ -77,9 +78,10 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
         json.StartArray();
         while (stmt.Next()) {
             json.StartObject();
+            json.Key("table"); json.String(form_name.ptr, (int)form_name.len);
             json.Key("id"); json.String((const char *)sqlite3_column_text(stmt, 0));
             json.Key("sequence"); json.Int(sqlite3_column_int(stmt, 1));
-            json.Key("data"); json.Raw((const char *)sqlite3_column_text(stmt, 2));
+            json.Key("values"); json.Raw((const char *)sqlite3_column_text(stmt, 2));
             json.EndObject();
         }
         if (!stmt.IsValid())
@@ -172,10 +174,10 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
                 return false;
 
             // Save record
-            if (!goupile_db.Run(R"(INSERT INTO records (id, form, sequence, data)
+            if (!goupile_db.Run(R"(INSERT INTO records (id, form, sequence, values)
                                    VALUES (?, ?, ?, ?)
                                    ON CONFLICT (id) DO UPDATE SET form = excluded.form,
-                                                                  data = json_patch(data, excluded.data))",
+                                                                  values = json_patch(values, excluded.values))",
                                     id, form_name, sequence, record.json))
                 return false;
 
