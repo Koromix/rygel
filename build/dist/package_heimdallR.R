@@ -122,6 +122,20 @@ local({
     repo_dir <<- args$args[1]
 })
 
+# Put Rtools40 in PATH (Windows)
+local({
+    if (.Platform$OS.type == 'windows') {
+        path <- Sys.getenv('PATH')
+        rtools_home <- Sys.getenv('RTOOLS40_HOME', unset = NA)
+
+        if (is.na(rtools_home)) {
+            stop('Environment variable RTOOLS40_HOME is not set')
+        }
+
+        Sys.setenv(PATH = str_interp('${rtools_home}\\usr\\bin;${path}'))
+    }
+})
+
 # Use all cores to build package
 local({
     cores <- detectCores()
