@@ -57,7 +57,7 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
 
     if (id.len) {
         sq_Statement stmt;
-        if (!goupile_db.Prepare(R"(SELECT r.id, r.sequence, r.values, c.page, c.complete
+        if (!goupile_db.Prepare(R"(SELECT r.id, r.sequence, r.data, c.page, c.complete
                                    FROM records r
                                    LEFT JOIN records_complete c ON (c.form = r.form)
                                    WHERE r.form = ? AND r.id = ?)", &stmt))
@@ -81,7 +81,7 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
         json.Finish(io);
     } else {
         sq_Statement stmt;
-        if (!goupile_db.Prepare(R"(SELECT r.id, r.sequence, r.values, c.page, c.complete
+        if (!goupile_db.Prepare(R"(SELECT r.id, r.sequence, r.data, c.page, c.complete
                                    FROM records r
                                    LEFT JOIN records_complete c ON (c.form = r.form)
                                    WHERE r.form = ?
@@ -188,10 +188,10 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
                 return false;
 
             // Save record
-            if (!goupile_db.Run(R"(INSERT INTO records (id, form, sequence, values)
+            if (!goupile_db.Run(R"(INSERT INTO records (id, form, sequence, data)
                                    VALUES (?, ?, ?, ?)
                                    ON CONFLICT (id) DO UPDATE SET form = excluded.form,
-                                                                  values = json_patch(values, excluded.values))",
+                                                                  data = json_patch(data, excluded.data))",
                                     id, form_name, sequence, record.json))
                 return false;
 

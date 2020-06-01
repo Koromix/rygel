@@ -58,7 +58,7 @@ CREATE TABLE records (
     id TEXT NOT NULL,
     form TEXT NOT NULL,
     sequence INTEGER NOT NULL,
-    values TEXT NOT NULL,
+    data TEXT NOT NULL,
     complete TEXT NOT NULL
 );
 CREATE UNIQUE INDEX records_i ON records (id);
@@ -67,7 +67,7 @@ CREATE INDEX records_f ON records (form);
 CREATE TABLE records_complete (
     form TEXT NOT NULL,
     page TEXT NOT NULL,
-    complete INTEGER CHECK(read IN (0, 1)) NOT NULL
+    complete INTEGER CHECK(complete IN (0, 1)) NOT NULL
 );
 CREATE UNIQUE INDEX records_complete_fp ON records_complete(form, page);
 
