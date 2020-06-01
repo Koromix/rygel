@@ -966,57 +966,6 @@ static inline constexpr Strider<T> MakeStrider(T (&arr)[N])
 }
 
 template <typename T, Size N>
-class FixedArray {
-public:
-    T data[N];
-
-    typedef T value_type;
-    typedef T *iterator_type;
-
-    FixedArray() = default;
-    FixedArray(std::initializer_list<T> l)
-    {
-        RG_ASSERT(l.size() <= N);
-        for (Size i = 0; i < (Size)l.size(); i++) {
-            data[i] = l[i];
-        }
-    }
-
-    operator Span<T>() { return Span<T>(data, N); }
-    operator Span<const T>() const { return Span<const T>(data, N); }
-
-    T *begin() { return data; }
-    const T *begin() const { return data; }
-    T *end() { return data + N; }
-    const T *end() const { return data + N; }
-
-    T &operator[](Size idx)
-    {
-        RG_ASSERT(idx >= 0 && idx < N);
-        return data[idx];
-    }
-    const T &operator[](Size idx) const
-    {
-        RG_ASSERT(idx >= 0 && idx < N);
-        return data[idx];
-    }
-
-    bool operator==(const FixedArray &other) const
-    {
-        for (Size i = 0; i < N; i++) {
-            if (data[i] != other.data[i])
-                return false;
-        }
-
-        return true;
-    }
-    bool operator!=(const FixedArray &other) const { return !(*this == other); }
-
-    Span<T> Take(Size offset, Size len) const
-        { return Span<T>((T *)data, this->len).Take(offset, len); }
-};
-
-template <typename T, Size N>
 class LocalArray {
 public:
     T data[N];
