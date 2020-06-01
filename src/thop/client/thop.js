@@ -157,6 +157,8 @@ let thop = new function() {
         try {
             await route_mod.run();
         } catch (err) {
+            document.title = 'THOP (erreur)';
+
             render(err.message, view_el);
             log.error(err.message);
         }

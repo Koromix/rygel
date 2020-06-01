@@ -121,6 +121,8 @@ let mco_info = new function() {
             data.fetchJSON(`${env.base_url}api/mco_ghmghs.json?sector=${route.sector || 'public'}&date=${version.begin_date}`)
         ]);
 
+        document.title = `THOP – Racines de GHM (${version.begin_date})`;
+
         let ghm_roots = ghmghs.filter((ghs, idx) => !idx || ghmghs[idx - 1].ghm_root !== ghs.ghm_root)
                               .map(ghs => ghs.ghm_root);
 
@@ -143,6 +145,8 @@ let mco_info = new function() {
             data.fetchDictionary('mco'),
             data.fetchJSON(`${env.base_url}api/mco_ghmghs.json?sector=${route.sector}&date=${version.begin_date}`)
         ]);
+
+        document.title = `THOP – GHM/GHS (${version.begin_date})`;
 
         // Options
         render(html`
@@ -199,6 +203,8 @@ let mco_info = new function() {
             data.fetchJSON(`${env.base_url}api/mco_diagnoses.json?date=${version.begin_date}&spec=${route.diagnoses.list || ''}`)
         ]);
 
+        document.title = `THOP – Diagnostics (${version.begin_date})`;
+
         // Options
         render(html`
             ${renderVersionLine(settings.mco.versions, version)}
@@ -233,6 +239,8 @@ let mco_info = new function() {
             data.fetchDictionary('ccam'),
             data.fetchJSON(`${env.base_url}api/mco_procedures.json?date=${version.begin_date}&spec=${route.procedures.list || ''}`)
         ]);
+
+        document.title = `THOP – Actes (${version.begin_date})`;
 
         // Options
         render(html`
@@ -451,6 +459,8 @@ let mco_info = new function() {
         if (!route.ghs.ghm_root)
             route.ghs.ghm_root = mco.ghm_roots.definitions[0].code;
 
+        document.title = `THOP – Tarifs ${route.ghs.ghm_root} (${version.begin_date})`;
+
         // Options
         render(html`
             ${renderVersionLine(settings.mco.versions, version)}
@@ -642,6 +652,8 @@ let mco_info = new function() {
             data.fetchDictionary('mco'),
             data.fetchJSON(`${env.base_url}api/mco_tree.json?date=${version.begin_date}`)
         ]);
+
+        document.title = `THOP – Arbre de groupage (${version.begin_date})`;
 
         // Options
         render(renderVersionLine(settings.mco.versions, version),

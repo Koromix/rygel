@@ -243,6 +243,8 @@ let mco_casemix = new function() {
             data.fetchJSON(`${env.base_url}api/structures.json`)
         ]);
 
+        document.title = `THOP – Casemix`;
+
         // Options
         render(html`
             ${renderPeriodPicker(settings.mco.casemix.min_date, settings.mco.casemix.max_date,
@@ -266,6 +268,8 @@ let mco_casemix = new function() {
             data.fetchDictionary('mco'),
             data.fetchJSON(`${env.base_url}api/structures.json`)
         ]);
+
+        document.title = `THOP – Valorisation`;
 
         if (!route.valorisation.ghm_root)
             route.valorisation.ghm_root = mco.ghm_roots.definitions[0].code;
@@ -307,6 +311,8 @@ let mco_casemix = new function() {
             data.fetchDictionary('mco'),
             data.fetchJSON(`${env.base_url}api/structures.json`)
         ]);
+
+        document.title = `THOP – RSS`;
 
         // Options
         render(html`
