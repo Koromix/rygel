@@ -108,7 +108,9 @@ let id = form.find("id");
 }
 
 if (id.value) {
-    let echelles = scratch.echelles ? data.echelles.filter(echelle => scratch.echelles.has(echelle.form)) : data.echelles;
+    let forms = new Set(scratch.echelles || data.echelles.map(echelle => echelle.form));
+    let echelles = data.echelles.filter(echelle => forms.delete(echelle.form));
+
     addChart(id.value, echelles);
 }
 
