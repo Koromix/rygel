@@ -589,7 +589,8 @@ let mco_info = new function() {
         if (ghs.minimum_age)
             conditions.push('Âge ≥ ' + ghs.minimum_age);
         switch (ghs.special_mode) {
-            case 'diabetes': { conditions.push('FI diabète < ' + ghs.special_duration + ' nuits'); } break;
+            case 'diabetes2': { conditions.push('Diabète < 2 nuits'); } break;
+            case 'diabetes3': { conditions.push('Diabète < 3 nuits'); } break;
             case 'outpatient': { conditions.push('Ambulatoire'); } break;
             case 'intermediary': { conditions.push('Intermédiaire'); } break;
         }

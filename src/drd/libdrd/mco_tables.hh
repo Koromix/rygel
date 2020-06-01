@@ -179,7 +179,8 @@ struct mco_GhmRootInfo {
 struct mco_GhmToGhsInfo {
     enum class SpecialMode: int8_t {
         None,
-        Diabetes,
+        Diabetes2,
+        Diabetes3,
         Outpatient,
         Intermediary
     };
@@ -192,7 +193,6 @@ struct mco_GhmToGhsInfo {
     int8_t minimum_duration;
     int8_t minimum_age;
     SpecialMode special_mode;
-    int8_t special_duration;
     drd_ListMask main_diagnosis_mask;
     drd_ListMask diagnosis_mask;
     LocalArray<drd_ListMask, 4> procedure_masks;

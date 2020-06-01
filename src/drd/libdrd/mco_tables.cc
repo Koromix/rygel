@@ -1025,8 +1025,11 @@ static bool ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &ta
             case 9: {
                 FAIL_PARSE_IF(table.filename, raw_ghs_node.params[0]);
                 FAIL_PARSE_IF(table.filename, current_ghs.special_mode != mco_GhmToGhsInfo::SpecialMode::None);
-                current_ghs.special_mode = mco_GhmToGhsInfo::SpecialMode::Diabetes;
-                current_ghs.special_duration = raw_ghs_node.params[1];
+                switch (raw_ghs_node.params[1]) {
+                    case 2: { current_ghs.special_mode = mco_GhmToGhsInfo::SpecialMode::Diabetes2; } break;
+                    case 3: { current_ghs.special_mode = mco_GhmToGhsInfo::SpecialMode::Diabetes3; } break;
+                    default: { FAIL_PARSE_IF(table.filename, true); } break;
+                }
             } break;
 
             case 10: {
