@@ -855,7 +855,7 @@ static bool ParseGhmRootTable(const uint8_t *file_data, const mco_TableInfo &tab
         if (table.sections[0].value_len >= 14) {
             FAIL_PARSE_IF(table.filename, raw_ghm_root.force_ghs != 0 &&
                                           raw_ghm_root.force_ghs != 1);
-            ghm_root.allow_intermediary = !raw_ghm_root.force_ghs;
+            ghm_root.gradated = !raw_ghm_root.force_ghs;
         }
 
         ghm_root.cma_exclusion_mask.offset = raw_ghm_root.cma_exclusion_offset;
@@ -1033,8 +1033,8 @@ static bool ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &ta
                 FAIL_PARSE_IF(table.filename, raw_ghs_node.params[0]);
                 FAIL_PARSE_IF(table.filename, current_ghs.special_mode != mco_GhmToGhsInfo::SpecialMode::None);
                 switch (raw_ghs_node.params[1]) {
-                    case 1: { current_ghs.special_mode = mco_GhmToGhsInfo::SpecialMode::Intermediary; } break;
-                    case 2: { /* Default */ } break;
+                    case 1: { current_ghs.special_mode = mco_GhmToGhsInfo::SpecialMode::Outpatient; } break;
+                    case 2: { current_ghs.special_mode = mco_GhmToGhsInfo::SpecialMode::Intermediary; } break;
                     default: { FAIL_PARSE_IF(table.filename, true); } break;
                 }
             } break;
