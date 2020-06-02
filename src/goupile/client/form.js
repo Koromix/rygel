@@ -67,7 +67,8 @@ let form_executor = new function() {
         let func = Function('util', 'data', 'nav', 'go', 'form', 'page', 'route', 'scratch', code);
         let nav = {
             go: app.go,
-            new: () => app.go(makeLink(current_asset.form.key, current_asset.page.key))
+            new: () => app.go(makeLink(current_asset.form.key, current_asset.page.key)),
+            link: makeLink
         };
 
         if (!select_many || select_columns.size) {
@@ -674,8 +675,8 @@ let form_executor = new function() {
         `, document.querySelector('#dev_describe'));
     };
 
-    function makeLink(form_key, page_key, record = null) {
-        let url = `${env.base_url}app/${form_key}/${page_key}/`;
+    function makeLink(form_key, page_key = null, record = null) {
+        let url = `${env.base_url}app/${form_key}/${page_key || form_key}/`;
 
         if (record && record.sequence) {
             url += record.id;
