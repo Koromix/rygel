@@ -17,6 +17,9 @@ Name = %2
 FilesDirectory = files
 DatabaseFile = database.db
 
+[Security]
+AllowGuests = On
+
 # [HTTP]
 # IPStack = Dual
 # Port = 8888
