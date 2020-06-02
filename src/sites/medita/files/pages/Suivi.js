@@ -33,9 +33,19 @@ function addChart(id, echelles) {
                     scales: {
                         xAxes: [{
                             type: 'time',
+
+                            time: {
+                                unit: 'day',
+                                unitStepSize: 1,
+                                displayFormats: {
+                                   day: 'DD/MM HH:mm'
+                                }
+                            },
+
                             ticks: {
-                                // XXX: Fix chart X-axis date format
-                                source: 'data'
+                                source: 'data',
+                                minRotation: 90,
+                                maxRotation: 90
                             }
                         }],
                         yAxes: [{type: 'linear'}]
