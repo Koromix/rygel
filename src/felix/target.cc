@@ -461,7 +461,7 @@ const SourceFileInfo *TargetSetBuilder::CreateSource(const TargetInfo *target, c
 
 void TargetSetBuilder::Finish(TargetSet *out_set)
 {
-    SwapMemory(&set, out_set, RG_SIZE(set));
+    std::swap(*out_set, set);
 }
 
 bool LoadTargetSet(Span<const char *const> filenames, TargetSet *out_set)

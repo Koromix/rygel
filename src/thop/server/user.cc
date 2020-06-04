@@ -220,7 +220,7 @@ void UserSetBuilder::Finish(const StructureSet &structure_set, UserSet *out_set)
         set.map.Set(&user);
     }
 
-    SwapMemory(out_set, &set, RG_SIZE(set));
+    std::swap(*out_set, set);
 }
 
 bool UserSetBuilder::CheckUnitPermission(const UnitRuleSet &rule_set, const StructureEntity &ent)

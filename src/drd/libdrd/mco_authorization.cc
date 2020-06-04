@@ -236,7 +236,7 @@ void mco_AuthorizationSetBuilder::Finish(mco_AuthorizationSet *out_set)
         LogError("Authorization set is empty");
     }
 
-    SwapMemory(out_set, &set, RG_SIZE(set));
+    std::swap(*out_set, set);
 }
 
 bool mco_LoadAuthorizationSet(const char *profile_directory,

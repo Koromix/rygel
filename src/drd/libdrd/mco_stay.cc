@@ -1017,7 +1017,7 @@ bool mco_StaySetBuilder::Finish(mco_StaySet *out_set)
     }
 
     set.stays.Trim();
-    SwapMemory(out_set, &set, RG_SIZE(set));
+    std::swap(*out_set, set);
 
     return true;
 }

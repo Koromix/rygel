@@ -1532,7 +1532,7 @@ bool mco_TableSetBuilder::Finish(mco_TableSet *out_set)
         CommitIndex(start_date, end_date, active_tables);
     }
 
-    SwapMemory(out_set, &set, RG_SIZE(set));
+    std::swap(*out_set, set);
     return true;
 }
 

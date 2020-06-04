@@ -319,7 +319,7 @@ void AggregateSetBuilder::Finish(AggregateSet *out_set, HeapArray<mco_GhmRootCod
                         agg1.key.ghs.number - agg2.key.ghs.number) < 0;
     });
 
-    SwapMemory(out_set, &set, RG_SIZE(set));
+    std::swap(*out_set, set);
     if (out_ghm_roots) {
         std::swap(ghm_roots, *out_ghm_roots);
     }

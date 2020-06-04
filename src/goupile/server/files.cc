@@ -427,7 +427,10 @@ void HandleFileDelete(const http_RequestInfo &request, http_IO *io)
                     file->url = DuplicateString(file0->url, file->allocator).ptr;
                     strcpy(file->sha256, file0->sha256);
                 } else {
-                    SwapMemory(file, file0, RG_SIZE(*file));
+                    file->filename = file0->filename;
+                    file->size = file0->size;
+                    file->url = file0->url;
+                    strcpy(file->sha256, file0->sha256);
                 }
                 files_map.Set(file);
             }

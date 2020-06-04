@@ -110,7 +110,7 @@ void StructureSetBuilder::Finish(StructureSet *out_set)
         }
     }
 
-    SwapMemory(out_set, &set, RG_SIZE(set));
+    std::swap(*out_set, set);
 }
 
 bool LoadStructureSet(Span<const char *const> filenames, StructureSet *out_set)

@@ -265,16 +265,6 @@ static inline constexpr int64_t ReverseBytes(int64_t i)
     constexpr T BigEndian(T v) { return v; }
 #endif
 
-static inline void SwapMemory(void *ptr1, void *ptr2, Size len)
-{
-    uint8_t *raw1 = (uint8_t *)ptr1, *raw2 = (uint8_t *)ptr2;
-    for (Size i = 0; i < len; i++) {
-        uint8_t tmp = raw1[i];
-        raw1[i] = raw2[i];
-        raw2[i] = tmp;
-    }
-}
-
 #if defined(__GNUC__)
     static inline int CountLeadingZeros(uint32_t u)
     {

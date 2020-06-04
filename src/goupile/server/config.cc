@@ -144,7 +144,7 @@ bool ConfigBuilder::LoadFiles(Span<const char *const> filenames)
 void ConfigBuilder::Finish(Config *out_config)
 {
     config.app_name = config.app_name ? config.app_name : config.app_key;
-    SwapMemory(out_config, &config, RG_SIZE(config));
+    std::swap(*out_config, config);
 }
 
 bool LoadConfig(Span<const char *const> filenames, Config *out_config)
