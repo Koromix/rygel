@@ -149,6 +149,15 @@ void Allocator::Release(Allocator *alloc, void *ptr, Size size)
     alloc->Release(ptr, size);
 }
 
+LinkedAllocator& LinkedAllocator::operator=(LinkedAllocator &&other)
+{
+    ReleaseAll();
+    list = other.list;
+    other.list = {};
+
+    return *this;
+}
+
 void LinkedAllocator::ReleaseAll()
 {
     Node *head = list.next;
@@ -224,12 +233,6 @@ void LinkedAllocator::Release(void *ptr, Size size)
 
         Allocator::Release(allocator, bucket, size);
     }
-}
-
-void BlockAllocatorBase::ForgetCurrentBlock()
-{
-    current_bucket = nullptr;
-    last_alloc = nullptr;
 }
 
 void *BlockAllocatorBase::Allocate(Size size, unsigned int flags)
@@ -329,10 +332,44 @@ void BlockAllocatorBase::Release(void *ptr, Size size)
     }
 }
 
+void BlockAllocatorBase::CopyFrom(BlockAllocatorBase *other)
+{
+    block_size = other->block_size;
+    current_bucket = other->current_bucket;
+    last_alloc = other->last_alloc;
+}
+
+void BlockAllocatorBase::ForgetCurrentBlock()
+{
+    current_bucket = nullptr;
+    last_alloc = nullptr;
+}
+
+BlockAllocator& BlockAllocator::operator=(BlockAllocator &&other)
+{
+    allocator.operator=(std::move(other.allocator));
+    CopyFrom(&other);
+
+    return *this;
+}
+
 void BlockAllocator::ReleaseAll()
 {
     ForgetCurrentBlock();
     allocator.ReleaseAll();
+}
+
+IndirectBlockAllocator& IndirectBlockAllocator::operator=(IndirectBlockAllocator &&other)
+{
+    allocator->operator=(std::move(*other.allocator));
+    CopyFrom(&other);
+
+    return *this;
+}
+
+void IndirectBlockAllocator::ReleaseAll()
+{
+    allocator->ReleaseAll();
 }
 
 // ------------------------------------------------------------------------

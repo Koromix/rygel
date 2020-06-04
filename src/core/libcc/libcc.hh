@@ -610,6 +610,10 @@ class LinkedAllocator: public Allocator {
 public:
     LinkedAllocator(Allocator *alloc = nullptr) : allocator(alloc) {}
     ~LinkedAllocator() override { ReleaseAll(); }
+
+    LinkedAllocator(LinkedAllocator &&other) { *this = std::move(other); }
+    LinkedAllocator& operator=(LinkedAllocator &&other);
+
     void ReleaseAll();
 
 protected:
@@ -645,6 +649,7 @@ protected:
     void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
     void Release(void *ptr, Size size) override;
 
+    void CopyFrom(BlockAllocatorBase *other);
     void ForgetCurrentBlock();
 
     virtual LinkedAllocator *GetAllocator() = 0;
@@ -666,6 +671,9 @@ public:
     BlockAllocator(Size block_size = RG_BLOCK_ALLOCATOR_DEFAULT_SIZE)
         : BlockAllocatorBase(block_size) {}
 
+    BlockAllocator(BlockAllocator &&other) { *this = std::move(other); }
+    BlockAllocator& operator=(BlockAllocator &&other);
+
     void ReleaseAll();
 };
 
@@ -678,6 +686,9 @@ protected:
 public:
     IndirectBlockAllocator(LinkedAllocator *alloc, Size block_size = RG_BLOCK_ALLOCATOR_DEFAULT_SIZE)
         : BlockAllocatorBase(block_size), allocator(alloc) {}
+
+    IndirectBlockAllocator(IndirectBlockAllocator &&other) { *this = std::move(other); }
+    IndirectBlockAllocator& operator=(IndirectBlockAllocator &&other);
 
     void ReleaseAll();
 };
