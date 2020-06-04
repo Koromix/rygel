@@ -247,7 +247,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                         return false;
                     }
                 }
-            } RG_FALLTHROUGH;
+            } [[fallthrough]];
             case '1':
             case '2':
             case '3':

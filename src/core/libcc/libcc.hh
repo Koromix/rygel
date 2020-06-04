@@ -120,12 +120,8 @@ enum class Endianness {
     #else
         #define RG_THREAD_LOCAL __thread
     #endif
-    #define RG_NORETURN __attribute__((noreturn))
-    #define RG_MAYBE_UNUSED __attribute__((unused))
-    #define RG_FORCE_INLINE __attribute__((always_inline)) inline
     #define RG_LIKELY(Cond) __builtin_expect(!!(Cond), 1)
     #define RG_UNLIKELY(Cond) __builtin_expect(!!(Cond), 0)
-    #define RG_RESTRICT __restrict__
 
     #ifndef SCNd8
         #define SCNd8 "hhd"
@@ -141,12 +137,8 @@ enum class Endianness {
     #define RG_POP_NO_WARNINGS() __pragma(warning(pop))
 
     #define RG_THREAD_LOCAL thread_local
-    #define RG_NORETURN __declspec(noreturn)
-    #define RG_MAYBE_UNUSED
-    #define RG_FORCE_INLINE __forceinline
     #define RG_LIKELY(Cond) (Cond)
     #define RG_UNLIKELY(Cond) (Cond)
-    #define RG_RESTRICT __restrict
 #else
     #error Compiler not supported
 #endif
@@ -204,16 +196,6 @@ extern "C" void AssertMessage(const char *filename, int line, const char *cond);
     #define RG_EXPORT __declspec(dllexport)
 #else
     #define RG_EXPORT __attribute__((visibility("default")))
-#endif
-
-#if __cplusplus >= 201703L
-    #define RG_FALLTHROUGH [[fallthrough]]
-#elif defined(__clang__)
-    #define RG_FALLTHROUGH [[clang::fallthrough]]
-#elif __GNUC__ >= 7
-    #define RG_FALLTHROUGH [[gnu::fallthrough]]
-#else
-    #define RG_FALLTHROUGH
 #endif
 
 #define RG_DELETE_COPY(Cls) \
@@ -283,7 +265,7 @@ static inline constexpr int64_t ReverseBytes(int64_t i)
     constexpr T BigEndian(T v) { return v; }
 #endif
 
-static inline void SwapMemory(void *RG_RESTRICT ptr1, void *RG_RESTRICT ptr2, Size len)
+static inline void SwapMemory(void *ptr1, void *ptr2, Size len)
 {
     uint8_t *raw1 = (uint8_t *)ptr1, *raw2 = (uint8_t *)ptr2;
     for (Size i = 0; i < len; i++) {
@@ -1561,7 +1543,7 @@ private:
         buckets.Clear();
     }
 
-    void DeleteValues(iterator_type begin RG_MAYBE_UNUSED, iterator_type end RG_MAYBE_UNUSED)
+    void DeleteValues(iterator_type begin, iterator_type end)
     {
         if constexpr(!std::is_trivial<T>::value) {
             for (iterator_type it = begin; it != end; ++it) {

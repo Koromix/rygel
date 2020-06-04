@@ -54,7 +54,7 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
             thread_info->display.height = (int)(lparam >> 16);
         } break;
 
-        case WM_MOUSELEAVE: { thread_info->input.mouseover = false; } RG_FALLTHROUGH;
+        case WM_MOUSELEAVE: { thread_info->input.mouseover = false; } [[fallthrough]];
         case WM_KILLFOCUS: {
             thread_info->input.keys.Clear();
             thread_info->input.buttons = 0;
