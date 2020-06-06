@@ -654,6 +654,18 @@ static bool CheckDataErrors(Span<const mco_Stay> mono_stays, mco_ErrorSet *out_e
         if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedRAAC)) {
             valid &= SetError(out_errors, 188);
         }
+        if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedContext)) {
+            valid &= SetError(out_errors, 195);
+        }
+        if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedHospitalUse)) {
+            valid &= SetError(out_errors, 196);
+        }
+        if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedRescript)) {
+            valid &= SetError(out_errors, 197);
+        }
+        if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedIntervCategory)) {
+            valid &= SetError(out_errors, 198);
+        }
 
         // Diagnoses
         if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedMainDiagnosis)) {
@@ -1130,7 +1142,13 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set,
         if (mono_stay.igs2 > out_prepared_set->stay.igs2) {
             out_prepared_set->stay.igs2 = mono_stay.igs2;
         }
-        out_prepared_set->stay.flags |= (mono_stay.flags & (int)mco_Stay::Flag::RAAC);
+        out_prepared_set->stay.flags |= mono_stay.flags & ((int)mco_Stay::Flag::RAAC |
+                                                           (int)mco_Stay::Flag::Context |
+                                                           (int)mco_Stay::Flag::HospitalUse |
+                                                           (int)mco_Stay::Flag::Rescript);
+        if (!out_prepared_set->stay.interv_category) {
+            out_prepared_set->stay.interv_category = mono_stay.interv_category;
+        }
     }
     out_prepared_set->stay.exit = mono_stays[mono_stays.len - 1].exit;
     out_prepared_set->stay.flags |= (mono_stays[mono_stays.len - 1].flags & (int)mco_Stay::Flag::Confirmed);
@@ -1779,9 +1797,54 @@ mco_GhmCode mco_PickGhm(const mco_TableIndex &index,
     return ghm;
 }
 
+static bool TestGradation(const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
+                          const mco_GhmToGhsInfo &ghm_to_ghs_info, int8_t max_category, mco_ErrorSet *out_errors)
+{
+    // GHM and stay modes
+    if (ghm_to_ghs_info.ghm.parts.cmd == 28 || ghm_to_ghs_info.ghm.parts.cmd == 15)
+        return true;
+    if (prep.duration || prep.stay->exit.mode == '9' || prep.stay->exit.mode == '7')
+        return true;
+
+    // Exemption flags
+    if (prep.stay->flags & ((int)mco_Stay::Flag::Context |
+                            (int)mco_Stay::Flag::HospitalUse |
+                            (int)mco_Stay::Flag::Rescript))
+        return true;
+
+    // UHCD
+    if (std::any_of(mono_preps.begin(), mono_preps.end(),
+                    [](const mco_PreparedStay &mono_prep) { return mono_prep.auth_type == 7; }))
+        return true;
+
+    // Procedures and diagnoses
+    for (const mco_DiagnosisInfo *diag_info: prep.diagnoses) {
+        if (TestDiagnosis(*diag_info, 32, 0x8))
+            return true;
+    }
+    for (const mco_ProcedureInfo *proc_info: prep.procedures) {
+        if (TestProcedure(*proc_info, 51, 0xE0))
+            return true;
+        if (TestProcedure(*proc_info, 22, 0x20))
+            return true;
+        if (TestProcedure(*proc_info, 31, 0x20))
+            return true;
+        if (TestProcedure(*proc_info, 38, 0x8))
+            return true;
+        if (TestProcedure(*proc_info, 44, 0x40))
+            return true;
+    }
+
+    if (!prep.stay->interv_category) {
+        SetError(out_errors, 241, 0);
+    }
+
+    return prep.stay->interv_category > max_category;
+}
+
 static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
-                    const mco_AuthorizationSet &authorization_set,
-                    const mco_GhmToGhsInfo &ghm_to_ghs_info)
+                    const mco_AuthorizationSet &authorization_set, const mco_GhmToGhsInfo &ghm_to_ghs_info,
+                    mco_ErrorSet *out_errors)
 {
     const mco_Stay &stay = *prep.stay;
 
@@ -1822,6 +1885,7 @@ static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> m
 
     switch (ghm_to_ghs_info.special_mode) {
         case mco_GhmToGhsInfo::SpecialMode::None: {} break;
+
         case mco_GhmToGhsInfo::SpecialMode::Diabetes2:
         case mco_GhmToGhsInfo::SpecialMode::Diabetes3: {
             int duration = 2 + (int)ghm_to_ghs_info.special_mode - (int)mco_GhmToGhsInfo::SpecialMode::Diabetes2;
@@ -1835,6 +1899,16 @@ static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> m
 
             if (!TestDiagnosis(*prep.main_diag_info, 32, 0x20) &&
                     (!prep.linked_diag_info || !TestDiagnosis(*prep.linked_diag_info, 32, 0x20)))
+                return false;
+        } break;
+
+        case mco_GhmToGhsInfo::SpecialMode::Outpatient: {
+            if (TestGradation(prep, mono_preps, ghm_to_ghs_info, 1, out_errors))
+                return false;
+            SetError(out_errors, 242, 0);
+        } break;
+        case mco_GhmToGhsInfo::SpecialMode::Intermediary: {
+            if (TestGradation(prep, mono_preps, ghm_to_ghs_info, 2, out_errors))
                 return false;
         } break;
     }
@@ -1866,7 +1940,7 @@ static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> m
 mco_GhsCode mco_PickGhs(const mco_TableIndex &index, const mco_AuthorizationSet &authorization_set,
                         drd_Sector sector, const mco_PreparedStay &prep,
                         Span<const mco_PreparedStay> mono_preps, mco_GhmCode ghm,
-                        unsigned int /*flags*/, int16_t *out_ghs_duration)
+                        unsigned int /*flags*/, mco_ErrorSet *out_errors, int16_t *out_ghs_duration)
 {
     const mco_Stay &stay = *prep.stay;
 
@@ -1900,7 +1974,7 @@ mco_GhsCode mco_PickGhs(const mco_TableIndex &index, const mco_AuthorizationSet 
         Span<const mco_GhmToGhsInfo> compatible_ghs = index.FindCompatibleGhs(ghm);
 
         for (const mco_GhmToGhsInfo &ghm_to_ghs_info: compatible_ghs) {
-            if (TestGhs(prep, mono_preps, authorization_set, ghm_to_ghs_info)) {
+            if (TestGhs(prep, mono_preps, authorization_set, ghm_to_ghs_info, out_errors)) {
                 ghs = ghm_to_ghs_info.Ghs(sector);
                 break;
             }
@@ -2232,13 +2306,13 @@ static Size RunClassifier(const mco_TableSet &table_set,
             result.ghm = mco_PickGhm(*prepared_set.index, prepared_set.prep, prepared_set.mono_preps,
                                      flags, &errors, &result.ghm_for_ghs);
         }
-        result.main_error = errors.main_error;
         RG_ASSERT(result.ghm.IsValid());
 
         // Classify GHS
         result.ghs = mco_PickGhs(*prepared_set.index, authorization_set, sector,
                                  prepared_set.prep, prepared_set.mono_preps, result.ghm_for_ghs,
-                                 flags, &result.ghs_duration);
+                                 flags, &errors, &result.ghs_duration);
+        result.main_error = errors.main_error;
 
         if (out_mono_results.IsValid()) {
             Strider<mco_SupplementCounters<int16_t>> mono_supplement_days =
@@ -2281,7 +2355,7 @@ static Size RunClassifier(const mco_TableSet &table_set,
                             }
                             mono_result->ghs = mco_PickGhs(*prepared_set.index, authorization_set,
                                                            sector, mono_prep, mono_prep, mono_result->ghm,
-                                                           mono_flags, &mono_result->ghs_duration);
+                                                           mono_flags, &mono_errors, &mono_result->ghs_duration);
                         } else {
                             RG_DEFER_C(prev_stay = mono_prep.stay) { mono_prep.stay = prev_stay; };
                             mco_Stay fixed_mono_stay = FixMonoStayForClassifier(*mono_prep.stay);
@@ -2291,7 +2365,7 @@ static Size RunClassifier(const mco_TableSet &table_set,
                                                            &mono_errors, &mono_result->ghm_for_ghs);
                             mono_result->ghs = mco_PickGhs(*prepared_set.index, authorization_set,
                                                            sector, mono_prep, mono_prep, mono_result->ghm_for_ghs,
-                                                           mono_flags, &mono_result->ghs_duration);
+                                                           mono_flags, &mono_errors, &mono_result->ghs_duration);
                         }
                         mono_result->main_error = mono_errors.main_error;
                     } else {

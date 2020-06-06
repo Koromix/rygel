@@ -26,7 +26,10 @@ struct mco_Stay {
         UCD = 1 << 1,
         NoConversion = 1 << 2,
         Conversion = 1 << 3,
-        RAAC = 1 << 4
+        RAAC = 1 << 4,
+        Context = 1 << 5,
+        HospitalUse = 1 << 6,
+        Rescript = 1 << 7
     };
 
     enum class Error {
@@ -48,15 +51,19 @@ struct mco_Stay {
         MalformedConfirmation = 1 << 15,
         MalformedConversion = 1 << 16,
         MalformedRAAC = 1 << 17,
-        MalformedMainDiagnosis = 1 << 18,
-        MalformedLinkedDiagnosis = 1 << 19,
-        MissingOtherDiagnosesCount = 1 << 20,
-        MalformedOtherDiagnosesCount = 1 << 21,
-        MalformedOtherDiagnosis = 1 << 22,
-        MissingProceduresCount = 1 << 23,
-        MalformedProceduresCount = 1 << 24,
-        MalformedProcedureCode = 1 << 25,
-        MalformedProcedureExtension = 1 << 26
+        MalformedContext = 1 << 18,
+        MalformedHospitalUse = 1 << 19,
+        MalformedRescript = 1 << 20,
+        MalformedIntervCategory = 1 << 21,
+        MalformedMainDiagnosis = 1 << 22,
+        MalformedLinkedDiagnosis = 1 << 23,
+        MissingOtherDiagnosesCount = 1 << 24,
+        MalformedOtherDiagnosesCount = 1 << 25,
+        MalformedOtherDiagnosis = 1 << 26,
+        MissingProceduresCount = 1 << 27,
+        MalformedProceduresCount = 1 << 28,
+        MalformedProcedureCode = 1 << 29,
+        MalformedProcedureExtension = 1 << 30
     };
 
     uint32_t flags;
@@ -85,6 +92,7 @@ struct mco_Stay {
     int16_t gestational_age;
     int16_t newborn_weight;
     int16_t dip_count;
+    int8_t interv_category;
 
     drd_DiagnosisCode main_diagnosis;
     drd_DiagnosisCode linked_diagnosis;

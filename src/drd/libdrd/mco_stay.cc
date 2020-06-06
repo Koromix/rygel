@@ -19,7 +19,7 @@ struct PackHeader {
     int64_t procedures_len;
 };
 #pragma pack(pop)
-#define PACK_VERSION 16
+#define PACK_VERSION 17
 #define PACK_SIGNATURE "DRD_MCO_PACK"
 
 // This should warn us in most cases when we break dspak files (it's basically a memcpy format)
@@ -252,6 +252,19 @@ static bool ParsePmsiDate(Span<const char> str, Date *out_date)
     return true;
 }
 
+static bool ParsePmsiFlag(char c, int flag1, int flag2, uint32_t *out_flags)
+{
+    switch (c) {
+        case '1': { *out_flags |= (int)flag1; } break;
+        case '2': { *out_flags |= (int)flag2; } break;
+        case ' ': {} break;
+
+        default: { return false; } break;
+    }
+
+    return true;
+}
+
 bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, mco_Test> *out_tests)
 {
     if (RG_UNLIKELY(line.len < 12)) {
@@ -350,28 +363,31 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
     }
     offset += 8;
     ParsePmsiInt(read_fragment(3), &stay.igs2) || set_error_flag(mco_Stay::Error::MalformedIgs2);
-    if (line[offset] == '1') {
-        stay.flags |= (int)mco_Stay::Flag::Confirmed;
-    } else if (RG_UNLIKELY(line[offset] != ' ')) {
-        // According to the GenRSA manual and what the official FG does, confirmation
-        // code '2' is supposed to be okay... but why? I don't accept it here.
-        stay.errors |= (int)mco_Stay::Error::MalformedConfirmation;
-    }
-    offset += 18; // Skip a bunch of fields
+    ParsePmsiFlag(line[offset++], (int)mco_Stay::Flag::Confirmed, 0, &stay.flags) || set_error_flag(mco_Stay::Error::MalformedConfirmation);
+    offset += 17; // Skip a bunch of fields
     if (version >= 19) {
-        switch (line[offset++]) {
-            case '1': { stay.flags |= (int)mco_Stay::Flag::Conversion; } break;
-            case '2': { stay.flags |= (int)mco_Stay::Flag::NoConversion; } break;
-            case ' ': {} break;
-            default: { set_error_flag(mco_Stay::Error::MalformedConversion); } break;
+        ParsePmsiFlag(line[offset++], (int)mco_Stay::Flag::Conversion, (int)mco_Stay::Flag::NoConversion, &stay.flags) ||
+            set_error_flag(mco_Stay::Error::MalformedConversion);
+        ParsePmsiFlag(line[offset++], (int)mco_Stay::Flag::RAAC, 0, &stay.flags) || set_error_flag(mco_Stay::Error::MalformedRAAC);
+
+        if (version >= 20) {
+            ParsePmsiFlag(line[offset++], (int)mco_Stay::Flag::Context, 0, &stay.flags) || set_error_flag(mco_Stay::Error::MalformedContext);
+            ParsePmsiFlag(line[offset++], (int)mco_Stay::Flag::HospitalUse, 0, &stay.flags) || set_error_flag(mco_Stay::Error::MalformedHospitalUse);
+            ParsePmsiFlag(line[offset++], (int)mco_Stay::Flag::Rescript, 0, &stay.flags) || set_error_flag(mco_Stay::Error::MalformedRescript);
+
+            switch (line[offset++]) {
+                case 'A': { stay.interv_category = 1; } break;
+                case 'B': { stay.interv_category = 2; } break;
+                case 'C': { stay.interv_category = 3; } break;
+                case ' ': {} break;
+
+                default: { set_error_flag(mco_Stay::Error::MalformedIntervCategory); } break;
+            }
+
+            offset += 9; // Skip a bunch of fields
+        } else {
+            offset += 13; // Skip a bunch of fields
         }
-        switch (line[offset++]) {
-            case '1': { stay.flags |= (int)mco_Stay::Flag::RAAC; } break;
-            case '2':
-            case ' ': {}  break;
-            default: { set_error_flag(mco_Stay::Error::MalformedRAAC); } break;
-        }
-        offset += 13; // Skip a bunch of fields
     } else {
         offset += 15; // Skip a bunch of fields
     }
