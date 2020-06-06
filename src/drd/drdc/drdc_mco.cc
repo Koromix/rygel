@@ -278,7 +278,7 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
             failed_ghm, tested_ghm, results.len - tested_ghm);
     }
     if (flags & (int)TestFlag::MainError) {
-    PrintLn("    Failed main errors tests: %1 / %2 (missing %3)",
+    PrintLn("    Failed main error tests: %1 / %2 (missing %3)",
             failed_main_errors, tested_main_errors, results.len - tested_main_errors);
     }
     if (flags & (int)TestFlag::Ghs) {
