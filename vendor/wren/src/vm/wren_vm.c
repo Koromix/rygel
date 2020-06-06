@@ -226,7 +226,6 @@ void* wrenReallocate(WrenVM* vm, void* memory, size_t oldSize, size_t newSize)
   // track the original size). Instead, that will be handled while marking
   // during the next GC.
   vm->bytesAllocated += newSize - oldSize;
-
   if (newSize > 0)
   {
     if (vm->config.maxHeapSize && vm->bytesAllocated > vm->config.maxHeapSize)
@@ -236,13 +235,12 @@ void* wrenReallocate(WrenVM* vm, void* memory, size_t oldSize, size_t newSize)
       vm->fiber->error = wrenStringFormat(vm, "Script has exhausted its memory budget");
       vm->config.maxHeapSize = maxHeapSize;
     }
-
 #if WREN_DEBUG_GC_STRESS
     // Since collecting calls this function to free things, make sure we don't
     // recurse.
     wrenCollectGarbage(vm);
 #else
-    if (vm->nextGC && vm->bytesAllocated > vm->nextGC) wrenCollectGarbage(vm);
+    if (vm->bytesAllocated > vm->nextGC) wrenCollectGarbage(vm);
 #endif
   }
 
@@ -1541,13 +1539,6 @@ int wrenDeclareVariable(WrenVM* vm, ObjModule* module, const char* name,
   return wrenSymbolTableAdd(vm, &module->variableNames, name, length);
 }
 
-// Returns `true` if [name] is a local variable name (starts with a lowercase
-// letter).
-static bool isLocalName(const char* name)
-{
-	return name[0] >= 'a' && name[0] <= 'z';
-}
-
 int wrenDefineVariable(WrenVM* vm, ObjModule* module, const char* name,
                        size_t length, Value value, int* line)
 {
@@ -1568,12 +1559,12 @@ int wrenDefineVariable(WrenVM* vm, ObjModule* module, const char* name,
   {
     // An implicitly declared variable's value will always be a number.
     // Now we have a real definition.
-    if(line) *line = AS_NUM(module->variables.data[symbol]);
+    if(line) *line = (int)AS_NUM(module->variables.data[symbol]);
     module->variables.data[symbol] = value;
 
 	// If this was a localname we want to error if it was
 	// referenced before this definition.
-	if (isLocalName(name)) symbol = -3;
+	if (wrenIsLocalName(name)) symbol = -3;
   }
   else
   {
