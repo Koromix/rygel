@@ -1826,11 +1826,15 @@ static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> m
         case mco_GhmToGhsInfo::SpecialMode::Diabetes3: {
             int duration = 2 + (int)ghm_to_ghs_info.special_mode - (int)mco_GhmToGhsInfo::SpecialMode::Diabetes2;
 
-            if (authorization_set.TestFacilityAuthorization(62, stay.exit.date) &&
-                    prep.duration < duration &&
-                    stay.entry.mode == '8' && stay.entry.origin != '5' && stay.exit.mode == '8' &&
-                    (TestDiagnosis(*prep.main_diag_info, 32, 0x20) ||
-                     (prep.linked_diag_info && TestDiagnosis(*prep.linked_diag_info, 32, 0x20))))
+            if (!authorization_set.TestFacilityAuthorization(62, stay.exit.date))
+                return false;
+            if (prep.duration >= duration)
+                return false;
+            if (stay.entry.mode != '8' || stay.entry.origin == '5' || stay.exit.mode != '8')
+                return false;
+
+            if (!TestDiagnosis(*prep.main_diag_info, 32, 0x20) &&
+                    (!prep.linked_diag_info || !TestDiagnosis(*prep.linked_diag_info, 32, 0x20)))
                 return false;
         } break;
     }
