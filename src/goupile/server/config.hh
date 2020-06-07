@@ -17,6 +17,7 @@ struct Config {
     const char *database_filename = nullptr;
 
     bool use_offline = false;
+    bool offline_records = false;
     Size max_file_size = Megabytes(4);
     bool allow_guests = false;
 

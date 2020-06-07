@@ -104,6 +104,9 @@ static AssetInfo PatchGoupileVariables(const AssetInfo &asset, Allocator *alloc)
         } else if (TestStr(key, "USE_OFFLINE")) {
             writer->Write(goupile_config.use_offline ? "true" : "false");
             return true;
+        } else if (TestStr(key, "OFFLINE_RECORDS")) {
+            writer->Write(goupile_config.offline_records ? "true" : "false");
+            return true;
         } else if (TestStr(key, "ALLOW_GUESTS")) {
             writer->Write(goupile_config.allow_guests ? "true" : "false");
             return true;
