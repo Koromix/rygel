@@ -114,6 +114,11 @@ struct StaysProxy {
     rcc_NumericVector<int> confirm;
     rcc_NumericVector<int> ucd;
     rcc_NumericVector<int> raac;
+    rcc_NumericVector<int> context;
+    rcc_NumericVector<int> hospital_use;
+    rcc_NumericVector<int> rescript;
+    rcc_Vector<const char *> interv_category;
+
     rcc_NumericVector<int> dip_count;
 };
 
@@ -212,6 +217,24 @@ static bool RunClassifier(const ClassifierInstance &classifier,
         if (stays.raac.Len() && stays.raac[i] && stays.raac[i] != NA_INTEGER) {
             stay.flags |= (int)mco_Stay::Flag::RAAC;
         }
+        if (stays.context.Len() && stays.context[i] && stays.context[i] != NA_INTEGER) {
+            stay.flags |= (int)mco_Stay::Flag::Context;
+        }
+        if (stays.hospital_use.Len() && stays.hospital_use[i] && stays.hospital_use[i] != NA_INTEGER) {
+            stay.flags |= (int)mco_Stay::Flag::HospitalUse;
+        }
+        if (stays.rescript.Len() && stays.rescript[i] && stays.rescript[i] != NA_INTEGER) {
+            stay.flags |= (int)mco_Stay::Flag::Rescript;
+        }
+        if (stays.interv_category.Len()) {
+            const char *str = stays.interv_category[i].ptr;
+            if (str[0] && !str[1]) {
+                stay.interv_category = UpperAscii(str[0]) - 'A' + 1;
+            } else if (str != CHAR(NA_STRING)) {
+                stay.errors |= (uint32_t)mco_Stay::Error::MalformedIntervCategory;
+            }
+        }
+
         stay.dip_count = stays.dip_count[i];
 
         stay.other_diagnoses.ptr = other_diagnoses2.end();
@@ -551,6 +574,10 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     }
     LOAD_OPTIONAL_COLUMN(stays, ucd);
     LOAD_OPTIONAL_COLUMN(stays, raac);
+    LOAD_OPTIONAL_COLUMN(stays, context);
+    LOAD_OPTIONAL_COLUMN(stays, hospital_use);
+    LOAD_OPTIONAL_COLUMN(stays, rescript);
+    LOAD_OPTIONAL_COLUMN(stays, interv_category);
     LOAD_OPTIONAL_COLUMN(stays, dip_count);
 
     DiagnosesProxy diagnoses;
@@ -1258,6 +1285,10 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
         rcc_Vector<int> stays_confirm = stays_builder.Add<int>("confirm");
         rcc_Vector<int> stays_ucd = stays_builder.Add<int>("ucd");
         rcc_Vector<int> stays_raac = stays_builder.Add<int>("raac");
+        rcc_Vector<int> stays_context = stays_builder.Add<int>("context");
+        rcc_Vector<int> stays_hospital_use = stays_builder.Add<int>("hospital_use");
+        rcc_Vector<int> stays_rescript = stays_builder.Add<int>("rescript");
+        rcc_Vector<const char *> stays_interv_category = stays_builder.Add<const char *>("interv_category");
         rcc_Vector<int> stays_dip_count = stays_builder.Add<int>("dip_count");
 
         rcc_DataFrameBuilder diagnoses_builder(diagnoses_count);
@@ -1313,6 +1344,14 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
             stays_confirm[i] = !!(stay.flags & (int)mco_Stay::Flag::Confirmed);
             stays_ucd[i] = !!(stay.flags & (int)mco_Stay::Flag::UCD);
             stays_raac[i] = !!(stay.flags & (int)mco_Stay::Flag::RAAC);
+            stays_context[i] = !!(stay.flags & (int)mco_Stay::Flag::Context);
+            stays_hospital_use[i] = !!(stay.flags & (int)mco_Stay::Flag::HospitalUse);
+            stays_rescript[i] = !!(stay.flags & (int)mco_Stay::Flag::Rescript);
+            if (stay.interv_category) {
+                stays_interv_category.Set(i, 'A' + stay.interv_category - 1);
+            } else {
+                stays_interv_category.Set(i, nullptr);
+            }
             stays_dip_count[i] = stay.dip_count;
 
             for (drd_DiagnosisCode diag: stay.other_diagnoses) {
