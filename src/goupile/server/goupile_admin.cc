@@ -13,11 +13,11 @@ Key = %1
 Name = %2
 
 [Data]
-# UseOffline = On
 FilesDirectory = files
 DatabaseFile = database.db
 
-[Security]
+[Sync]
+# UseOffline = Off
 AllowGuests = On
 
 # [HTTP]

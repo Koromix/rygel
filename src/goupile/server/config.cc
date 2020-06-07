@@ -53,18 +53,18 @@ bool ConfigBuilder::LoadIni(StreamReader *st)
                     } else if (prop.key == "DatabaseFile") {
                         config.database_filename = NormalizePath(prop.value, root_directory,
                                                                  &config.str_alloc).ptr;
-                    } else if (prop.key == "UseOffline") {
-                        valid &= IniParser::ParseBoolValue(prop.value, &config.use_offline);
-                    } else if (prop.key == "MaxFileSize") {
-                        valid &= ParseDec(prop.value, &config.max_file_size);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
                     }
                 } while (ini.NextInSection(&prop));
-            } else if (prop.section == "Security") {
+            } else if (prop.section == "Sync") {
                 do {
-                    if (prop.key == "AllowGuests") {
+                    if (prop.key == "UseOffline") {
+                        valid &= IniParser::ParseBoolValue(prop.value, &config.use_offline);
+                    } else if (prop.key == "MaxFileSize") {
+                        valid &= ParseDec(prop.value, &config.max_file_size);
+                    } else if (prop.key == "AllowGuests") {
                         valid &= IniParser::ParseBoolValue(prop.value, &config.allow_guests);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
