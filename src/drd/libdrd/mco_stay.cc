@@ -255,8 +255,8 @@ static bool ParsePmsiDate(Span<const char> str, Date *out_date)
 static bool ParsePmsiFlag(char c, int flag1, int flag2, uint32_t *out_flags)
 {
     switch (c) {
-        case '1': { *out_flags |= (int)flag1; } break;
-        case '2': { *out_flags |= (int)flag2; } break;
+        case '1': { *out_flags |= flag1; } break;
+        case '2': { *out_flags |= flag2; } break;
         case ' ': {} break;
 
         default: { return false; } break;
