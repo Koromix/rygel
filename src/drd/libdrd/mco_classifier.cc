@@ -668,7 +668,8 @@ static bool CheckDataErrors(Span<const mco_Stay> mono_stays, mco_ErrorSet *out_e
         if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedRescript)) {
             valid &= SetError(out_errors, 197);
         }
-        if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedIntervCategory)) {
+        if (RG_UNLIKELY(mono_stay.interv_category && (mono_stay.interv_category < 'A' ||
+                                                      mono_stay.interv_category > 'C'))) {
             valid &= SetError(out_errors, 198);
         }
 
@@ -1803,7 +1804,7 @@ mco_GhmCode mco_PickGhm(const mco_TableIndex &index,
 }
 
 static bool TestGradation(const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
-                          const mco_GhmToGhsInfo &ghm_to_ghs_info, int8_t max_category, mco_ErrorSet *out_errors)
+                          const mco_GhmToGhsInfo &ghm_to_ghs_info, char max_category, mco_ErrorSet *out_errors)
 {
     // GHM and stay modes
     if (ghm_to_ghs_info.ghm.parts.cmd == 28 || ghm_to_ghs_info.ghm.parts.cmd == 15)
@@ -1908,12 +1909,12 @@ static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> m
         } break;
 
         case mco_GhmToGhsInfo::SpecialMode::Outpatient: {
-            if (TestGradation(prep, mono_preps, ghm_to_ghs_info, 1, out_errors))
+            if (TestGradation(prep, mono_preps, ghm_to_ghs_info, 'A', out_errors))
                 return false;
             SetError(out_errors, 242, 0);
         } break;
         case mco_GhmToGhsInfo::SpecialMode::Intermediary: {
-            if (TestGradation(prep, mono_preps, ghm_to_ghs_info, 2, out_errors))
+            if (TestGradation(prep, mono_preps, ghm_to_ghs_info, 'B', out_errors))
                 return false;
         } break;
     }

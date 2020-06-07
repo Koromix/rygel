@@ -19,7 +19,7 @@ struct PackHeader {
     int64_t procedures_len;
 };
 #pragma pack(pop)
-#define PACK_VERSION 17
+#define PACK_VERSION 18
 #define PACK_SIGNATURE "DRD_MCO_PACK"
 
 // This should warn us in most cases when we break dspak files (it's basically a memcpy format)
@@ -374,15 +374,7 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
             ParsePmsiFlag(line[offset++], (int)mco_Stay::Flag::Context, 0, &stay.flags) || set_error_flag(mco_Stay::Error::MalformedContext);
             ParsePmsiFlag(line[offset++], (int)mco_Stay::Flag::HospitalUse, 0, &stay.flags) || set_error_flag(mco_Stay::Error::MalformedHospitalUse);
             ParsePmsiFlag(line[offset++], (int)mco_Stay::Flag::Rescript, 0, &stay.flags) || set_error_flag(mco_Stay::Error::MalformedRescript);
-
-            switch (line[offset++]) {
-                case 'A': { stay.interv_category = 1; } break;
-                case 'B': { stay.interv_category = 2; } break;
-                case 'C': { stay.interv_category = 3; } break;
-                case ' ': {} break;
-
-                default: { set_error_flag(mco_Stay::Error::MalformedIntervCategory); } break;
-            }
+            ParsePmsiChar(line[offset++], &stay.interv_category);
 
             offset += 9; // Skip a bunch of fields
         } else {

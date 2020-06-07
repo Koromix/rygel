@@ -229,9 +229,9 @@ static bool RunClassifier(const ClassifierInstance &classifier,
         if (stays.interv_category.Len()) {
             const char *str = stays.interv_category[i].ptr;
             if (str[0] && !str[1]) {
-                stay.interv_category = UpperAscii(str[0]) - 'A' + 1;
+                stay.interv_category = UpperAscii(str[0]);
             } else if (str != CHAR(NA_STRING)) {
-                stay.errors |= (uint32_t)mco_Stay::Error::MalformedIntervCategory;
+                stay.interv_category = '?'; // Trigger malformed error code
             }
         }
 
@@ -1348,7 +1348,7 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
             stays_hospital_use[i] = !!(stay.flags & (int)mco_Stay::Flag::HospitalUse);
             stays_rescript[i] = !!(stay.flags & (int)mco_Stay::Flag::Rescript);
             if (stay.interv_category) {
-                stays_interv_category.Set(i, 'A' + stay.interv_category - 1);
+                stays_interv_category.Set(i, stay.interv_category);
             } else {
                 stays_interv_category.Set(i, nullptr);
             }

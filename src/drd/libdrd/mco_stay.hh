@@ -54,16 +54,15 @@ struct mco_Stay {
         MalformedContext = 1 << 18,
         MalformedHospitalUse = 1 << 19,
         MalformedRescript = 1 << 20,
-        MalformedIntervCategory = 1 << 21,
-        MalformedMainDiagnosis = 1 << 22,
-        MalformedLinkedDiagnosis = 1 << 23,
-        MissingOtherDiagnosesCount = 1 << 24,
-        MalformedOtherDiagnosesCount = 1 << 25,
-        MalformedOtherDiagnosis = 1 << 26,
-        MissingProceduresCount = 1 << 27,
-        MalformedProceduresCount = 1 << 28,
-        MalformedProcedureCode = 1 << 29,
-        MalformedProcedureExtension = 1 << 30
+        MalformedMainDiagnosis = 1 << 21,
+        MalformedLinkedDiagnosis = 1 << 22,
+        MissingOtherDiagnosesCount = 1 << 23,
+        MalformedOtherDiagnosesCount = 1 << 24,
+        MalformedOtherDiagnosis = 1 << 25,
+        MissingProceduresCount = 1 << 26,
+        MalformedProceduresCount = 1 << 27,
+        MalformedProcedureCode = 1 << 28,
+        MalformedProcedureExtension = 1 << 29
     };
 
     uint32_t flags;
@@ -92,7 +91,7 @@ struct mco_Stay {
     int16_t gestational_age;
     int16_t newborn_weight;
     int16_t dip_count;
-    int8_t interv_category;
+    char interv_category;
 
     drd_DiagnosisCode main_diagnosis;
     drd_DiagnosisCode linked_diagnosis;
