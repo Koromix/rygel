@@ -730,7 +730,7 @@ static bool ParseProcedureExtensionTable(const uint8_t *file_data, const mco_Tab
 
             if (table.sections[1].value_len >= 8) {
                 ext_info.limit_dates[0] = mco_ConvertDate1980(raw_proc_ext.date_min);
-                ext_info.limit_dates[1] = mco_ConvertDate1980(raw_proc_ext.date_min);
+                ext_info.limit_dates[1] = mco_ConvertDate1980(raw_proc_ext.date_max);
             } else {
                 ext_info.limit_dates[0] = Date(2000, 1, 1);
                 ext_info.limit_dates[1] = mco_MaxDate1980;
@@ -1715,13 +1715,19 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                             continue;
                         }
 
-                        // XXX: Starting with FG 2020, extension codes have validity dates...
                         mco_ProcedureInfo *proc_info =
                             (mco_ProcedureInfo *)index.procedures_map->FindValue(ext_info.proc, nullptr);
                         if (RG_LIKELY(proc_info)) {
                             do {
                                 if (proc_info->phase == ext_info.phase) {
                                     proc_info->extensions |= 1ull << ext_info.extension;
+
+                                    // XXX: Starting with FG 2020, extension codes have
+                                    // validity dates... and we need to properly support them!
+                                    // This does the job for almost all codes for now (except for ZZQX173).
+                                    if (ext_info.limit_dates[1] < Date(2020, 3, 1)) {
+                                        proc_info->disabled_extensions |= 1ull << ext_info.extension;
+                                    }
                                 }
                             } while (++proc_info < index.procedures.end() &&
                                      proc_info->proc == ext_info.proc);

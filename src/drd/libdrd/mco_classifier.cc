@@ -417,15 +417,20 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
                     }
                 }
 
-                if (RG_UNLIKELY(!(flags & (int)mco_ClassifyFlag::IgnoreProcedureExtension) &&
-                                stay.exit.date >= Date(2016, 3, 1) &&
-                                !(proc_info->extensions & (1ull << proc.extension)))) {
-                    if (stay.exit.date >= Date(2019, 3, 1) && !proc.extension) {
-                        SetError(out_errors, 192, 0);
-                    } else if (stay.exit.date >= Date(2017, 3, 1)) {
-                        valid &= SetError(out_errors, 186);
-                    } else {
-                        SetError(out_errors, 186, 0);
+                // Check extension
+                if (!(flags & (int)mco_ClassifyFlag::IgnoreProcedureExtension) &&
+                        stay.exit.date >= Date(2016, 3, 1)) {
+                    if (mono_stay.entry.date >= Date(2020, 3, 1) &&
+                            (proc_info->disabled_extensions & (1ull << proc.extension))) {
+                        valid &= SetError(out_errors, 193);
+                    } else if (!(proc_info->extensions & (1ull << proc.extension))) {
+                        if (stay.exit.date >= Date(2019, 3, 1) && !proc.extension) {
+                            SetError(out_errors, 192, 0);
+                        } else if (stay.exit.date >= Date(2017, 3, 1)) {
+                            valid &= SetError(out_errors, 186);
+                        } else {
+                            SetError(out_errors, 186, 0);
+                        }
                     }
                 }
 

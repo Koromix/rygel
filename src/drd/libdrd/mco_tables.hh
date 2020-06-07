@@ -121,9 +121,11 @@ struct mco_ProcedureInfo {
         int16_t offset;
         int16_t len;
     } addition_list;
-    uint64_t extensions;
 
-    uint8_t bytes[56];
+    uint64_t extensions;
+    uint64_t disabled_extensions;
+
+    uint8_t bytes[52];
 
     Span<const char> ActivitiesToStr(Span<char> out_buf) const;
     Span<const char> ExtensionsToStr(Span<char> out_buf) const;
