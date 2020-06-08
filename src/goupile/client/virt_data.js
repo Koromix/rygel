@@ -41,6 +41,7 @@ function VirtualData(db) {
             return ret;
         });
 
+        record2.mtime = Date.now();
         record2.complete[page_key] = false;
 
         let page = {
@@ -56,7 +57,7 @@ function VirtualData(db) {
             page.values[key] = record.values[key];
         }
 
-        await db.transaction('rw', ['records', 'records_data', 'records_sequences',
+        await db.transaction('rw', ['records', 'records_data',
                                     'records_variables', 'records_queue'], async () => {
             let data = await db.load('records_data', record.tkey);
 
@@ -73,12 +74,6 @@ function VirtualData(db) {
             for (let variable of variables) {
                 if (variable.missing)
                     delete data.values[variable.key];
-            }
-
-            // Attribute sequence ID
-            if (record2.sequence == null) {
-                record2.sequence = await db.load('records_sequences', record2.table) || 1;
-                db.saveWithKey('records_sequences', record2.table, record2.sequence + 1);
             }
 
             db.save('records', record2);

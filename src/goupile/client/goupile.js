@@ -94,7 +94,7 @@ let goupile = new function() {
 
     async function openDatabase() {
         let db_name = `goupile@${env.app_key}`;
-        let db = await idb.open(db_name, 2, (db, old_version) => {
+        let db = await idb.open(db_name, 3, (db, old_version) => {
             switch (old_version) {
                 case null: {
                     db.createStore('files', {keyPath: 'path'});
@@ -109,6 +109,10 @@ let goupile = new function() {
 
                 case 1: {
                     db.createStore('records_queue', {keyPath: 'tpkey'});
+                } // fallthrough
+
+                case 2: {
+                    db.deleteStore('records_sequences');
                 } // fallthrough
             }
         });

@@ -37,7 +37,7 @@ let form_executor = new function() {
             if (id === 'many') {
                 select_many = true;
             } else if (id === 'new') {
-                if (current_records.size != 1 || current_records.first().sequence != null) {
+                if (current_records.size != 1 || current_records.first().mtime != null) {
                     let record = virt_data.create(current_asset.form.key);
 
                     current_records.clear();
@@ -156,7 +156,6 @@ let form_executor = new function() {
         func(util, app.data, nav, nav.go, builder, builder, app.route, state.scratch);
         builder.errorList();
 
-        let show_new = (record.sequence != null);
         let enable_save = !builder.hasErrors() && state.changed;
         let enable_validate = !builder.hasErrors() && !state.changed &&
                               record.complete[page.key] === false;
@@ -181,11 +180,11 @@ let form_executor = new function() {
 
             ${current_asset.form.options.actions ? html`
                 <div class="af_actions sticky">
-                    ${record.sequence != null ? html`
+                    ${record.mtime != null ? html`
                         <a href="#" @click=${e => { handleNewClick(e, state.changed); e.preventDefault(); }}>x</a>
-                        <p>ID n°${record.sequence}</p>
+                        <p>${record.sequence != null ? `ID n°${record.sequence}` : 'Enregistré (local)'}</p>
                     ` : ''}
-                    ${record.sequence == null ? html`<p>Nouvel ID</p>` : ''}
+                    ${record.mtime == null ? html`<p>Nouvelle fiche</p>` : ''}
 
                     <button type="button" class="af_button" ?disabled=${!enable_save}
                             @click=${builder.submit}>Enregistrer</button>
@@ -210,7 +209,7 @@ let form_executor = new function() {
             url = current_asset.url;
         } else {
             let record = current_records.first();
-            url = `${current_asset.url}${record.sequence != null ? record.id : 'new'}`;
+            url = `${current_asset.url}${record.mtime != null ? record.id : 'new'}`;
         }
 
         return util.pasteURL(url, app.route);
@@ -461,7 +460,7 @@ let form_executor = new function() {
 
         if (select_many) {
             select_columns.clear();
-            if (record0 && record0.sequence == null)
+            if (record0 && record0.mtime == null)
                 current_records.clear();
         } else if (record0) {
             current_records.clear();
@@ -678,7 +677,7 @@ let form_executor = new function() {
     function makeLink(form_key, page_key = null, record = null) {
         let url = `${env.base_url}app/${form_key}/${page_key || form_key}/`;
 
-        if (record && record.sequence) {
+        if (record && record.mtime != null) {
             url += record.id;
         } else {
             url += 'new';
