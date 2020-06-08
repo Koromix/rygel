@@ -75,10 +75,7 @@ function VirtualFS(db) {
             } else {
                 return null;
             }
-        } else {
-            if (goupile.isStandalone())
-                return null;
-
+        } else if (net.isOnline()) {
             let response = await net.fetch(`${env.base_url}${path.substr(1)}`);
 
             if (response.ok) {
@@ -96,11 +93,13 @@ function VirtualFS(db) {
             } else {
                 return null;
             }
+        } else {
+            return null;
         }
     };
 
     this.listAll = async function(remote = true) {
-        remote &= !goupile.isStandalone();
+        remote &= net.isOnline();
 
         let files = await self.status(remote);
 

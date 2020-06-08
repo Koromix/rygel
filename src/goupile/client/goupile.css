@@ -139,6 +139,15 @@ button:not(:disabled) { cursor: pointer; }
     }
 }
 
+#gp_status {
+    background-repeat: no-repeat;
+    background-position: center;
+    width: 2.5em;
+}
+#gp_status.online { background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAABiElEQVRIic3VP2obURAGcMOCS4N9AasKpAhCoCak8zVcmRzAF3CnxvYJ1AQVKgySexcqBKmDm4AOkCJFwIULleaXYj9Fm402lpxNyIOBmTfzvm/ev5m9vf9hoMBrnOF99KIN4D7GWCrHU0WWGKH3EuAD3OARX/ApWV9giDe4j+8xSRxsC97BIgQT3GE/vgsMo+/HN4ks0Nkm8wUucYJvOKr4fxDEPkrMCa6ytnknyfom+hznNf9PBJk7xzz6BOMm8H4ur43R30QwytEcJqtZ9KoMElefn2XNIa7xoQ5e4AHd2EMMNiTxyxFlfmB9+b3cS1EN6GBZsWc43YHgFHcVe4njasDbsF5GvmJasVfyUfn+6/PTrFnZD3j3Twn++hEV2UEvdruXHMdI+Rvbf6Yh6Grnoz1pqrDKqjiJPrd7qbjFaCN4AlbF7sruxe4anz1Xtq3L9dT25fo24Me/Ba/tZGzdcO6VTaap4YyezbyBqJfF9ZbJumV2dwbeQFTglbLpn0X/86bfxvgOIj43Mp9kmakAAAAASUVORK5CYII='); }
+#gp_status.offline { background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAB4klEQVRIic2VsWoCQRCGg2AbLFJbWQWEkMLiRBArm7yBlW9wYJHCysrCLo0EQg4Lm7QBkTQ+RR4hjXCNylXhS3H/xWGz7llYZOBgb3f2/2f+nZ29uvoPBlSBOtAGOkADqFwCuAW8Alty2wGZximwAFrGPwIS4KYMuAYsDdgGuAXGwFzjjdYyIFZ2O80lIfAG8CmCFfAOVLU2BuZGthXwBPSAg8kyOgV+LfCJ0t0CNbP+S2Ay7ZnIM6Abin4JLDVeAyNn3SWIgL3A90AfiE+B33O+bRxZMoEX59LyESTATGnHyqDmfBNp3jGyFJF35TMDFi54RXo39f8MjD1B9BzN9wJ+5Hj4TSB1N9aVbsXoP/AQRC645ofA2gSbAQ13YwpM9X0Bb+b/QT4HA96XZFP5fhn/FGhbgnaAYIKnFEU6DRBElqDhkWgYksWRbuCRqO4ecuoc8qMHvH/ibOwNb6pgKq7TgmOZdj3V0pNcr/wt3w/y0i7K9MUNouicUH6JyuwbuPtDIJKYQG/BaRWaGxn9l5R0Ul8pljW7rfZNyRvldQi8iPygTJ7IW3KoXa8U+Se2cjwEicB35Pci5vwHJzkZuSG4kWNk5lrk1ZUa2QrSLXk53weBzzXyy9hRdnUu8ehfwn4AniG7J5JDDN8AAAAASUVORK5CYII='); }
+#gp_status.unplugged { background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAA10lEQVRIibWWyw2EMAxEOaWMSNSQMwcKRGwfdEEbbAdLBVzeHkikAIZ8dj1STlHmSR5j0zSZAgxg/TG571KmDhiBhasWf+dqjFtgEkzvNAFtrnkHfArMg1agT5n3wFZhHrQB3VNZ1h/Mgz6AlQAlNU9pOpu7P5oHuRjwUgAMMeCtAFiCuREuZ/bQS84s+JjQPWcdQ8oQcpPYhn22qAJ0S6QesgeMCoBDm+p+aA8h1eraJOxB1Yzps+Rh5yF64zqC6C2cCGIpX5lyWRKg1NIfqFn6N7Cq35YvSBQYyo6nATQAAAAASUVORK5CYII='); }
+
 /* -------------------- Panels -------------------- */
 
 .gp_panel.left {

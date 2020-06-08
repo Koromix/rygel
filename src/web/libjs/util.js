@@ -510,21 +510,42 @@ let log = new function() {
 // ------------------------------------------------------------------------
 
 let net = new function() {
-    let online = (typeof navigator !== 'undefined') ? navigator.onLine : true;
+    let self = this;
+
+    let plugged = true;
+    let online = true;
+
+    this.changeHandler = online => {};
 
     this.fetch = async function(request, init) {
+        if (!plugged)
+            throw new Error('Cannot perform request in offline mode');
+
         try {
             let response = await fetch(request, init);
 
-            online = navigator.onLine;
+            setOnline(true);
             return response;
         } catch (err) {
-            online = false;
+            setOnline(false);
             throw err;
         }
     };
 
-    this.isOnline = function() { return online; };
+    function setOnline(online2) {
+        if (online2 !== online) {
+            online = online2;
+            self.changeHandler(online);
+        }
+    }
+
+    this.isPlugged = function() { return plugged; };
+    this.isOnline = function() { return plugged && online; };
+
+    this.setPlugged = function(plug) {
+        plugged = plug;
+        self.changeHandler(online && plug);
+    };
 };
 
 // ------------------------------------------------------------------------

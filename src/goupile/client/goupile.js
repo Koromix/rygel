@@ -34,6 +34,13 @@ let goupile = new function() {
     async function initGoupile() {
         log.pushHandler(log.notifyHandler);
 
+        net.changeHandler = online => {
+            if (net.isPlugged() && !online)
+                log.error('Connexion au serveur non disponible');
+
+            self.go();
+        }
+
         initNavigation();
 
         let db = await openDatabase();
@@ -213,26 +220,28 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     async function fetchSettings() {
-        if (goupile.isStandalone())
-            return false;
-
         let session_rnd = util.getCookie('session_rnd');
 
-        if (session_rnd !== settings_rnd) {
+        if (net.isPlugged() && session_rnd !== settings_rnd) {
             settings = {};
 
             if (session_rnd != null) {
-                let response = await net.fetch(`${env.base_url}api/settings.json?rnd=${session_rnd}`);
-                if (response.ok) {
-                    settings = await response.json();
-                } else {
-                    // The request has failed and could have deleted the session_rnd cookie
-                    session_rnd = util.getCookie('session_rnd');
+                try {
+                    let response = await net.fetch(`${env.base_url}api/settings.json?rnd=${session_rnd}`);
+
+                    if (response.ok) {
+                        settings = await response.json();
+                    } else {
+                        // The request has failed and could have deleted the session_rnd cookie
+                        session_rnd = util.getCookie('session_rnd');
+                    }
+
+                    settings_rnd = session_rnd;
+                    return true;
+                } catch (err) {
+                    return false;
                 }
             }
-
-            settings_rnd = session_rnd;
-            return true;
         } else {
             return false;
         }
@@ -420,13 +429,10 @@ Navigation functions should only be called in reaction to user events, such as b
                 })}
             </select>
 
-            <div class="gp_dropdown right">
-                <button>Administration</button>
-                <div>
-                    <button @click=${e => log.error('Fonctionnalité non disponible')}>Configuration</button>
-                    <button @click=${e => log.error('Fonctionnalité non disponible')}>Utilisateurs</button>
-                </div>
-            </div>
+            ${net.isPlugged() && net.isOnline() ? html`<button type="button" id="gp_status" class="online" @click=${e => net.setPlugged(false)} />` : ''}
+            ${net.isPlugged() && !net.isOnline() ? html`<button type="button" id="gp_status" class="offline" @click=${e => net.setPlugged(false)} />` : ''}
+            ${!net.isPlugged() ? html`<button type="button" id="gp_status" class="unplugged" @click=${e => net.setPlugged(true)} />` : ''}
+
             ${!self.isConnected() ? html`<button @click=${showLoginDialog}>Connexion</button>` : ''}
             ${self.isConnected() ? html`
                 <div class="gp_dropdown right">
