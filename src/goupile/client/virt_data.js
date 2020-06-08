@@ -43,8 +43,21 @@ function VirtualData(db) {
 
         record2.complete[page_key] = false;
 
-        await db.transaction('rw', ['records', 'records_data',
-                                    'records_sequences', 'records_variables'], async () => {
+        let page = {
+            tpkey: `${record2.table}_${page_key}:${record.id}`,
+            table: record2.table,
+            id: record2.id,
+            page: page_key,
+
+            values: {}
+        };
+        for (let variable of variables) {
+            let key = variable.key.toString();
+            page.values[key] = record.values[key];
+        }
+
+        await db.transaction('rw', ['records', 'records_data', 'records_sequences',
+                                    'records_variables', 'records_queue'], async () => {
             let data = await db.load('records_data', record.tkey);
 
             if (data) {
@@ -71,6 +84,7 @@ function VirtualData(db) {
             db.save('records', record2);
             db.save('records_data', data);
             db.saveAll('records_variables', variables);
+            db.save('records_queue', page);
 
             // Need to return complete record to caller
             record2.values = data.values;
@@ -85,6 +99,7 @@ function VirtualData(db) {
         await db.transaction('rw', ['records', 'records_data'], () => {
             db.delete('records', tkey);
             db.delete('records_data', tkey);
+            db.delete('records_queue', tkey, tkey + '`');
         });
     };
 
@@ -93,10 +108,11 @@ function VirtualData(db) {
         let start_key = table + '_';
         let end_key = table + '`';
 
-        await db.transaction('rw', ['records', 'records_data', 'records_variables'], () => {
+        await db.transaction('rw', ['records', 'records_data', 'records_variables', 'records_queue'], () => {
             db.deleteAll('records', start_key, end_key);
             db.deleteAll('records_data', start_key, end_key);
             db.deleteAll('records_variables', start_key, end_key);
+            db.deleteAll('records_queue', start_key, end_key);
         });
     };
 
@@ -160,7 +176,59 @@ function VirtualData(db) {
         return db.loadAll('records_variables', start_key, end_key);
     };
 
+    this.sync = async function() {
+        let pages = await db.loadAll('records_queue');
+
+        for (let i = 0; i < pages.length; i += 10) {
+            let p = pages.slice(i, i + 10).map(uploadPage);
+            await Promise.all(p);
+        }
+
+        if (env.offline_records) {
+            for (let i = 0; i < app.forms.length; i += 10) {
+                let p = app.forms.slice(i, i + 10).map(downloadRecords);
+                await Promise.all(p);
+            }
+        }
+    };
+
+    async function uploadPage(page) {
+        let url = `${env.base_url}records/${page.table}/${page.id}/${page.page}`;
+        let response = await net.fetch(url, {method: 'PUT', body: JSON.stringify(page.values)});
+
+        if (response.ok)
+            await db.delete('records_queue', page.tpkey);
+    }
+
+    async function downloadRecords(form) {
+        let url = `${env.base_url}records/${form.key}`;
+        let response = await net.fetch(url);
+
+        if (response.ok) {
+            let records = await response.json();
+            records.sort((record1, record2) => record1.sequence - record2.sequence);
+
+            let data = records.map(record => ({
+                tkey: makeTableKey(record.table, record.id),
+                values: record.values
+            }));
+            for (let record of records) {
+                record.tkey = makeTableKey(record.table, record.id);
+                delete record.values;
+            }
+
+            await db.transaction('rw', ['records', 'records_data'], () => {
+                db.saveAll('records', records);
+                db.saveAll('records_data', data);
+            });
+        }
+    }
+
     function makeTableKey(table, id) {
         return `${table}_${id}`;
+    }
+
+    function makeTablePageKey(table, page, id) {
+        return `${table}_${id}:${page}`;
     }
 }
