@@ -83,11 +83,6 @@ data.makeHeader = function(title, page) {
     `)
 }
 
-data.makeFormHeader = function(title, page) {
-    data.makeHeader(title, page)
-    route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
-}
-
 data.makeFormFooter = function(nav, page) {
     page.output(html`
         <br/><br/>

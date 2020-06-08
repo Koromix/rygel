@@ -1,4 +1,6 @@
-data.makeFormHeader("Questionnaire de fonctionnement social (QFS)", page)
+if (typeof data !== 'undefined')
+    data.makeHeader("Questionnaire de fonctionnement social (QFS)", page)
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
 
 let cotation1 = [[5, "Tous les jours"], [4, "Au moins deux fois par semaine"],[3, "au moins une fois par semaine"],[2, "Une fois tous les 15 jours"], [1, "Jamais"]]
 
@@ -69,4 +71,5 @@ let score = form.value("Q1") +
             form.value("Q16")
 form.calc("score", "Score total", score)
 
-data.makeFormFooter(nav, page)
+if (typeof data !== 'undefined')
+    data.makeFormFooter(nav, page)

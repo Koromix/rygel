@@ -1,4 +1,7 @@
-data.makeFormHeader("Questionnaire de personnalité", page)
+if (typeof data !== 'undefined')
+    data.makeHeader("Questionnaire de personnalité", page)
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+
 form.output(html`
     <p>Le but de ce questionnaire est de vous aider à décrire le genre de personne que vous êtes. Pour répondre aux questions, pensez à la manière dont vous avez eu tendance à ressentir les choses, à penser et à agir durant ces dernières années. Afin de vous rappeler cette consigne, chaque page du questionnaire commence par la phrase : « Depuis plusieurs années.. ».</p>
 
@@ -164,4 +167,5 @@ form.calc("persoborderline", "Personnalité borderline", form.value("p6") + form
 form.calc("persodependante", "Personnalité dépendante", form.value("p2") + form.value("p15") + form.value("p27") + form.value("p40") + form.value("p53") + form.value("p65") + form.value("p82") + form.value("p88"));
 
 
-data.makeFormFooter(nav, page)
+if (typeof data !== 'undefined')
+    data.makeFormFooter(nav, page)

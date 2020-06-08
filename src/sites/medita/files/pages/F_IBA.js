@@ -1,4 +1,7 @@
-data.makeFormHeader("Inventaire de Beck pour l'anxiété", page)
+if (typeof data !== 'undefined')
+    data.makeHeader("Inventaire de Beck pour l'anxiété", page)
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+
 form.output(html`
     <p>Voici une liste de symptômes courants dus à l’anxiété. Veuillez lire chaque symptôme attentivement. Indiquez, en encerclant le chiffre approprié, à quel degré vous avez été affecté par chacun de ces symptômes au cours de la dernière semaine, aujourd’hui inclus.</p>
 
@@ -64,4 +67,5 @@ let score = form.value("a") +
 form.calc("score", "Score total", score)
 
 
-data.makeFormFooter(nav, page)
+if (typeof data !== 'undefined')
+    data.makeFormFooter(nav, page)

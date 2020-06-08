@@ -1,4 +1,5 @@
 data.makeHeader("Formulaires", page)
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
 
 util.mapRLE(data.echelles, echelle => echelle.category, (category, offset, len) => {
     page.section(category, () => {

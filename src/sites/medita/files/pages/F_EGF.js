@@ -1,4 +1,7 @@
-data.makeFormHeader("ECHELLE D'ÉVALUATION GLOBALE DU FONCTIONNEMENT (EGF (GAF))", page)
+if (typeof data !== 'undefined')
+    data.makeHeader("ECHELLE D'ÉVALUATION GLOBALE DU FONCTIONNEMENT (EGF (GAF))", page)
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+
 form.output(html`
     <p>Evaluer le fonctionnement psychologique, social et professionnel sur un continuum hypothétique allant de la santé mentale à la maladie (curseur à déplacer ci-dessous).
     <p>Ne pas tenir compte d'un handicap du fonctionnement dû à des facteurs limitant d'ordre physique ou environnemental.</p>
@@ -53,4 +56,5 @@ form.section("0", () => {
 
 form.slider("score", "Entrez votre score ici :", {min: 0, max: 100, wide: true});
 
-data.makeFormFooter(nav, page)
+if (typeof data !== 'undefined')
+    data.makeFormFooter(nav, page)

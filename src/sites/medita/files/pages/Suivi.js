@@ -1,4 +1,6 @@
-data.makeFormHeader("Suivi d'échelles", page)
+data.makeHeader("Suivi d'échelles", page)
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+
 page.pushOptions({compact: true})
 
 let id = form.find("id");
@@ -168,7 +170,7 @@ function updateTables(echelles, tables) {
 function showDeleteDialog(e, form, id) {
     ui.popup(e, popup => {
         popup.output('Voulez-vous vraiment supprimer cet enregistrement ?');
-        
+
         popup.submitHandler = async () => {
             popup.close();
 

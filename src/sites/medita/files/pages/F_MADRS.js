@@ -1,4 +1,6 @@
-data.makeFormHeader("Evalue la gravité des symptômes de dépression", page)
+if (typeof data !== 'undefined')
+    data.makeHeader("Evalue la gravité des symptômes de dépression", page)
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
 
 form.pushOptions({mandatory: true, missingMode: 'disable'})
 
@@ -135,4 +137,5 @@ let score = form.value("ideeDeSuicide") +
             form.value("tristesseApparente")
 form.calc("score", "Score total", score)
 
-data.makeFormFooter(nav, page)
+if (typeof data !== 'undefined')
+    data.makeFormFooter(nav, page)

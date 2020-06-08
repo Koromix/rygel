@@ -1,4 +1,7 @@
-data.makeFormHeader("Échelle de cotation de catatonie de Bush-Francis", page)
+if (typeof data !== 'undefined')
+    data.makeHeader("Échelle de cotation de catatonie de Bush-Francis", page)
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+
 form.output(html`<p>Ne côter que les items bien définis. En cas de doute sur la présence d'un item, côter 0.</p>`)
 
 form.pushOptions({mandatory: true, missingMode: 'disable'})
@@ -224,4 +227,5 @@ let score = form.value("agitation") +
 
 form.calc("score", "Score total", score)
 
-data.makeFormFooter(nav, page)
+if (typeof data !== 'undefined')
+    data.makeFormFooter(nav, page)

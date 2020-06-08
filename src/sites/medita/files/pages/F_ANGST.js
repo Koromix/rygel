@@ -1,4 +1,7 @@
-data.makeFormHeader("AUTO-QUESTIONNAIRE DE ANGST", page)
+if (typeof data !== 'undefined')
+    data.makeHeader("AUTO-QUESTIONNAIRE DE ANGST", page)
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+
 form.output(html`
     <p>Cocher les cases vrai/faux en pensant aux derniers épisodes durant lesquels vous vous êtes senti "bien dans votre peau", heureux, agité ou irritable.
 
@@ -50,4 +53,5 @@ let score = form.value("Q1") +
 
 form.calc("score", "Score total", score);
 
-data.makeFormFooter(nav, page)
+if (typeof data !== 'undefined')
+    data.makeFormFooter(nav, page)

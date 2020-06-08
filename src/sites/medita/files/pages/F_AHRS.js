@@ -1,4 +1,6 @@
-data.makeFormHeader("Echelle d’évaluation des hallucinations auditives (AHRS)", page)
+if (typeof data !== 'undefined')
+    data.makeHeader("Echelle d’évaluation des hallucinations auditives (AHRS)", page)
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
 
 form.output(html`
 	<p>Evaluation des hallucinations des 24 dernières heures. (D’après Hoffman et al., 2003)
@@ -100,4 +102,5 @@ let score = form.value("frequence") +
             form.value("stress")
 form.calc("score", "Score total", score)
 
-data.makeFormFooter(nav, page)
+if (typeof data !== 'undefined')
+    data.makeFormFooter(nav, page)

@@ -1,6 +1,9 @@
-data.makeFormHeader("Echelle de Calgary CDSS", page)
+if (typeof data !== 'undefined')
+    data.makeHeader("Echelle de Calgary CDSS", page)
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+
 form.output(html`
-	<p>Poser la première question telle qu'elle est écrite. Par la suite, vous pouvez utiliser d'autres questions d'exploration ou d'autres questions pertinentes à votre discrétion. 
+	<p>Poser la première question telle qu'elle est écrite. Par la suite, vous pouvez utiliser d'autres questions d'exploration ou d'autres questions pertinentes à votre discrétion.
 	<p>Le cadre temporel concerne les 2 dernières semaines à moins qu'il ne soit stipulé autrement.
 </p>
     `)
@@ -101,3 +104,5 @@ let score = form.value("depression") +
             form.value("depressionobservee")
 form.calc("score", "Score total =", score)
 
+if (typeof data !== 'undefined')
+    data.makeFormFooter(nav, page)

@@ -1,4 +1,7 @@
-data.makeFormHeader("Echelle de mesure de l'observance médicamenteuse (MARS)", page)
+if (typeof data !== 'undefined')
+    data.makeHeader("Echelle de mesure de l'observance médicamenteuse (MARS)", page)
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+
 form.output(html`
     <p>Ce questionnaire consiste à mieux comprendre les difficultés liées à la prise de médicaments.
     <p>Veuillez répondre aux questions suivantes en cochant la réponse qui correspond le mieux à votre comportement ou attitude vis-à-vis du traitement que vous preniez durant la semaine avant votre hospitalisation.
@@ -30,4 +33,5 @@ let score = form.value("Q1") +
 
 form.calc("score", "Score total", score);
 
-data.makeFormFooter(nav, page)
+if (typeof data !== 'undefined')
+    data.makeFormFooter(nav, page)

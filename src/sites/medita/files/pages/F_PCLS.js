@@ -1,4 +1,7 @@
-data.makeFormHeader("PCLS", page)
+if (typeof data !== 'undefined')
+    data.makeHeader("PCLS", page)
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+
 form.output(html`
     <p>Voici une liste de problèmes que les gens éprouvent parfois suite à une expérience vraiment stressante.
 Veuillez lire chaque énoncé attentivement et cocher la case pour indiquer dans quelle mesure ce problème vous a
@@ -59,4 +62,5 @@ let score = form.value("a") +
             form.value("t")
 form.calc("score", "Score total", score)
 
-data.makeFormFooter(nav, page)
+if (typeof data !== 'undefined')
+    data.makeFormFooter(nav, page)

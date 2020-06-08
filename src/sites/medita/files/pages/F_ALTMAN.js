@@ -1,7 +1,10 @@
-data.makeFormHeader("Questionnaire de Altman (ASRM)", page)
+if (typeof data !== 'undefined')
+    data.makeHeader("Questionnaire de Altman (ASRM)", page)
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+
 form.output(html`
 	<p>Choisir la proposition dans chaque groupe qui correspond le mieux à la manière dont vous vous êtes
-senti(e) la semaine dernière. 
+senti(e) la semaine dernière.
 	<p>Veuillez noter : <p>« parfois » utilisé ici signifie une ou deux fois,
 <p>« Souvent » signifie plusieurs,
 <p>« Fréquemment » signifie la plupart du temps
@@ -68,6 +71,8 @@ let score = form.value("Q1") +
             form.value("Q2") +
             form.value("Q3") +
             form.value("Q4") +
-            form.value("Q5") 
+            form.value("Q5")
 form.calc("score", "Score total =", score)
 
+if (typeof data !== 'undefined')
+    data.makeFormFooter(nav, page)

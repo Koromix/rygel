@@ -1,4 +1,6 @@
-data.makeFormHeader("Inventaire de dépression de Beck (BDI)", page)
+if (typeof data !== 'undefined')
+    data.makeHeader("Inventaire de dépression de Beck (BDI)", page)
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
 
 form.output(html`
 	<p>Ce questionnaire comporte plusieurs séries de quatre propositions. Pour chaque série, lisez les quatre propositions, puis choisissez celle qui décrit le mieux votre état actuel.
@@ -142,4 +144,5 @@ let score = form.value("A") +
 			form.value("M")
 form.calc("score", "Score total", score)
 
-data.makeFormFooter(nav, page)
+if (typeof data !== 'undefined')
+    data.makeFormFooter(nav, page)

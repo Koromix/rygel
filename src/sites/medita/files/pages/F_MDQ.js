@@ -1,4 +1,6 @@
-data.makeFormHeader("Questionnaire sur les troubles de l'humeur (Mood Disorder QUESTIONNAIRE", page)
+if (typeof data !== 'undefined')
+    data.makeHeader("Questionnaire sur les troubles de l'humeur (Mood Disorder QUESTIONNAIRE", page)
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
 
 form.pushOptions({mandatory: true, missingMode: 'disable'})
 
@@ -43,4 +45,5 @@ let score = form.value("a") +
             form.value("o")
 form.calc("score", "Score total", score)
 
-data.makeFormFooter(nav, page)
+if (typeof data !== 'undefined')
+    data.makeFormFooter(nav, page)

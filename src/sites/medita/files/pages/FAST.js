@@ -1,4 +1,6 @@
-data.makeFormHeader("échelle brève d'évaluation du fonctionnement du patient (FAST)", page)
+if (typeof data !== 'undefined')
+    data.makeHeader("échelle brève d'évaluation du fonctionnement du patient (FAST)", page)
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
 
 let cotation = [[0, "Aucune difficulté"], [1, "Difficulté légère"],[2, "Difficulté modérée"],[3, "Difficulté sévère"]]
 
@@ -77,4 +79,5 @@ let score = form.value("Q1") +
             form.value("Q24")
 form.calc("score", "Score total", score)
 
-data.makeFormFooter(nav, page)
+if (typeof data !== 'undefined')
+    data.makeFormFooter(nav, page)
