@@ -49,8 +49,10 @@ var server = new function() {
 
         let set = new Set;
         for (let variable of variables) {
-            set.add(variable.key);
-            values2[variable.key] = values[variable.key];
+            let key = variable.key.toString();
+
+            set.add(key);
+            values2[key] = values[key];
         }
 
         for (let key in values) {

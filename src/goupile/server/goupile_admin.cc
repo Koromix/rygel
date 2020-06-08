@@ -62,8 +62,7 @@ CREATE TABLE records (
     id TEXT NOT NULL,
     form TEXT NOT NULL,
     sequence INTEGER NOT NULL,
-    data TEXT NOT NULL,
-    complete TEXT NOT NULL
+    data TEXT NOT NULL
 );
 CREATE UNIQUE INDEX records_i ON records (id);
 CREATE INDEX records_f ON records (form);

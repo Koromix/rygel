@@ -23,9 +23,13 @@ static void ExportRecord(sq_Statement *stmt, Span<const char> form_name, json_Wr
     json->Key("values"); json->Raw((const char *)sqlite3_column_text(*stmt, 2));
 
     json->Key("complete"); json->StartObject();
-    do {
-        json->Key((const char *)sqlite3_column_text(*stmt, 3)); json->Bool(sqlite3_column_int(*stmt, 4));
-    } while (stmt->Next() && TestStr((const char *)sqlite3_column_text(*stmt, 0), id));
+    if (sqlite3_column_text(*stmt, 3)) {
+        do {
+            json->Key((const char *)sqlite3_column_text(*stmt, 3)); json->Bool(sqlite3_column_int(*stmt, 4));
+        } while (stmt->Next() && TestStr((const char *)sqlite3_column_text(*stmt, 0), id));
+    } else {
+        stmt->Next();
+    }
     json->EndObject();
 
     json->EndObject();
