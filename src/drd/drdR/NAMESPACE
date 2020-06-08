@@ -1,4 +1,6 @@
 useDynLib(drdR, .registration = TRUE)
-exportPattern('^[[:alpha:]\\\\._]+')
+exportPattern('^(mco_|summary\\.)')
+S3method(summary, mco.result)
+S3method(summary, mco.result.df)
 import(Rcpp)
 import(data.table)

@@ -146,14 +146,14 @@ mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
     result_set <- .Call(`drdR_mco_Classify`, classifier, stays, diagnoses, procedures, sector,
                         options, results, dispense_mode, apply_coefficient, supplement_columns)
 
-    class(result_set$summary) <- c('mco_summary', class(result_set$summary))
+    class(result_set$summary) <- c('mco.result.summary', class(result_set$summary))
     if ('results' %in% names(result_set)) {
-        class(result_set$results) <- c('mco_results', class(result_set$results))
+        class(result_set$results) <- c('mco.result.df', class(result_set$results))
     }
     if ('mono_results' %in% names(result_set)) {
-        class(result_set$mono_results) <- c('mco_results', class(result_set$results))
+        class(result_set$mono_results) <- c('mco.result.df', class(result_set$results))
     }
-    class(result_set) <- c('mco_result_set', class(result_set))
+    class(result_set) <- c('mco.result', class(result_set))
 
     return(result_set)
 }
@@ -225,10 +225,10 @@ mco_procedures <- function(classifier, date) {
 #'
 #' @md
 mco_compare <- function(summary1, summary2, ...) {
-    if (!('mco_summary' %in% class(summary1))) {
+    if (!('mco.result.summary' %in% class(summary1))) {
         summary1 <- summary(summary1, ...)
     }
-    if (!('mco_summary' %in% class(summary2))) {
+    if (!('mco.result.summary' %in% class(summary2))) {
         summary2 <- summary(summary2, ...)
     }
 
@@ -273,15 +273,15 @@ mco_compare <- function(summary1, summary2, ...) {
 #' }
 #'
 #' @md
-summary.mco_result_set <- function(result_set, by = NULL) {
+summary.mco.result <- function(result_set, by = NULL) {
     if (is.null(by)) {
         return(result_set$summary)
     } else {
-        return(summary.mco_results(result_set$results, by = by))
+        return(summary.mco.result.df(result_set$results, by = by))
     }
 }
 
-summary.mco_results <- function(results, by = NULL) {
+summary.mco.result.df <- function(results, by = NULL) {
     sum_columns <- colnames(results)
     sum_columns <- sum_columns[grepl('(_cents|_count)$', sum_columns)]
 
@@ -301,7 +301,7 @@ summary.mco_results <- function(results, by = NULL) {
             ), keyby = by])
             setDF(results)
 
-            class(agg) <- c(\'mco_summary\', class(agg))
+            class(agg) <- c(\'mco.result.summary\', class(agg))
             return(agg)
         }
     ')
@@ -313,11 +313,11 @@ summary.mco_results <- function(results, by = NULL) {
 #' Dispense MCO pricings to medical units
 mco_dispense <- function(results, group = NULL, group_var = 'group',
                          reassign_list = NULL, reassign_counts = FALSE) {
-    if ('mco_result_set' %in% class(results)) {
+    if ('mco.result' %in% class(results)) {
         results <- results$mono_results
     }
 
-    agg <- setDT(summary.mco_results(results, by = 'unit'))
+    agg <- setDT(summary.mco.result.df(results, by = 'unit'))
 
     if (!is.null(reassign_list)) {
         if (is.data.frame(reassign_list)) {
@@ -343,7 +343,7 @@ mco_dispense <- function(results, group = NULL, group_var = 'group',
 
         group <- merge(agg[, list(unit)], group, by = 'unit', all.x = TRUE)
 
-        # Read comment in summary.mco_results for information about use of eval
+        # Read comment in summary.mco.result.df for information about use of eval
         sum_columns <- intersect(mco_summary_columns(), colnames(agg))
         code <- paste0('
             function(agg, group, group_var) {
