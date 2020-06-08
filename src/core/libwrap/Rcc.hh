@@ -351,9 +351,16 @@ public:
 
     T operator[](Size idx) const
     {
-        switch (type) {
-            case Type::Int: { return (T)u.i[idx]; } break;
-            case Type::Double: { return (T)u.d[idx]; } break;
+        if constexpr(std::is_floating_point<T>::value) {
+            switch (type) {
+                case Type::Int: { return (u.i[idx] != NA_INTEGER) ? (T)u.i[idx] : (T)NA_REAL; } break;
+                case Type::Double: { return !ISNA(u.d[idx]) ? (T)u.d[idx] : (T)NA_REAL; } break;
+            }
+        } else {
+            switch (type) {
+                case Type::Int: { return (u.i[idx] != NA_INTEGER) ? (T)u.i[idx] : (T)NA_INTEGER; } break;
+                case Type::Double: { return !ISNA(u.d[idx]) ? (T)u.d[idx] : (T)NA_INTEGER; } break;
+            }
         }
 
         RG_UNREACHABLE();
