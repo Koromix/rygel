@@ -75,8 +75,17 @@ function VirtualFS(db) {
             } else {
                 return null;
             }
-        } else if (net.isOnline()) {
-            let response = await net.fetch(`${env.base_url}${path.substr(1)}`);
+        } else if (net.isOnline() || !env.use_offline) {
+            let response;
+            try {
+                response = await net.fetch(`${env.base_url}${path.substr(1)}`);
+            } catch (err) {
+                if (env.use_offline) {
+                    return null;
+                } else {
+                    throw err;
+                }
+            }
 
             if (response.ok) {
                 let blob = await response.blob();
@@ -99,7 +108,7 @@ function VirtualFS(db) {
     };
 
     this.listAll = async function(remote = true) {
-        remote &= net.isOnline();
+        remote &= net.isOnline() || !env.use_offline;
 
         let files = await self.status(remote);
 

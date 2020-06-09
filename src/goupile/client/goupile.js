@@ -34,13 +34,6 @@ let goupile = new function() {
     async function initGoupile() {
         log.pushHandler(log.notifyHandler);
 
-        net.changeHandler = online => {
-            if (net.isPlugged() && !online)
-                log.error('Connexion au serveur non disponible');
-
-            self.go();
-        }
-
         initNavigation();
 
         let db = await openDatabase();
@@ -50,13 +43,20 @@ let goupile = new function() {
         if (navigator.serviceWorker) {
             navigator.serviceWorker.register(`${env.base_url}sw.pk.js`);
 
-            if (env.use_offline && self.isStandalone()) {
+            if (env.use_offline) {
                 enablePersistence();
                 await updateApplication();
             }
         }
 
         await self.initApplication();
+
+        net.changeHandler = online => {
+            if (net.isPlugged() && !online)
+                log.error('Connexion au serveur non disponible');
+
+            self.go();
+        }
     }
 
     function enablePersistence() {
@@ -141,7 +141,7 @@ let goupile = new function() {
         await fetchSettings();
 
         if (self.isConnected() || env.allow_guests) {
-            let files = await virt_fs.listAll();
+            let files = await virt_fs.listAll(net.isOnline() || !env.use_offline);
             let files_map = util.mapArray(files, file => file.path);
 
             try {
@@ -320,21 +320,25 @@ Navigation functions should only be called in reaction to user events, such as b
             // Render menu and page layout
             renderPanels();
 
-            // Run left panel
-            switch (left_panel) {
-                case 'files': { await dev_files.runFiles(); } break;
-                case 'editor': { await dev_files.runEditor(route_asset); } break;
-                case 'status': { await form_executor.runStatus(); } break;
-                case 'data': { await form_executor.runData(); } break;
-                case 'describe': { await form_executor.runDescribe(); } break;
-            }
+            try {
+                // Run left panel
+                switch (left_panel) {
+                    case 'files': { await dev_files.runFiles(); } break;
+                    case 'editor': { await dev_files.runEditor(route_asset); } break;
+                    case 'status': { await form_executor.runStatus(); } break;
+                    case 'data': { await form_executor.runData(); } break;
+                    case 'describe': { await form_executor.runDescribe(); } break;
+                }
 
-            // Run appropriate module
-            if (route_asset) {
-                document.title = `${route_asset.label} — ${env.app_name}`;
-                await runAssetSafe(route_asset);
-            } else {
-                document.title = env.app_name;
+                // Run appropriate module
+                if (route_asset) {
+                    document.title = `${route_asset.label} — ${env.app_name}`;
+                    await runAssetSafe(route_asset);
+                } else {
+                    document.title = env.app_name;
+                }
+            } finally {
+                updateStatus();
             }
         } else {
             renderGuest();
@@ -429,9 +433,8 @@ Navigation functions should only be called in reaction to user events, such as b
                 })}
             </select>
 
-            ${net.isPlugged() && net.isOnline() ? html`<button type="button" id="gp_status" class="online" @click=${e => net.setPlugged(false)} />` : ''}
-            ${net.isPlugged() && !net.isOnline() ? html`<button type="button" id="gp_status" class="offline" @click=${e => net.setPlugged(false)} />` : ''}
-            ${!net.isPlugged() ? html`<button type="button" id="gp_status" class="unplugged" @click=${e => net.setPlugged(true)} />` : ''}
+            ${env.use_offline ? html`<button type="button" id="gp_status" @click=${e => net.setPlugged(!net.isPlugged())} />` : ''}
+            ${!env.use_offline ? html`<div id="gp_status"/>` : ''}
 
             ${!self.isConnected() ? html`<button @click=${showLoginDialog}>Connexion</button>` : ''}
             ${self.isConnected() ? html`
@@ -642,6 +645,18 @@ Navigation functions should only be called in reaction to user events, such as b
         } else {
             let file = await virt_fs.load(path);
             return file ? await file.data.text() : null;
+        }
+    }
+
+    function updateStatus() {
+        let el = document.querySelector('#gp_status');
+
+        if (!net.isPlugged()) {
+            el.className = 'unplugged';
+        } else if (net.isOnline()) {
+            el.className = 'online';
+        } else {
+            el.className = 'offline';
         }
     }
 
