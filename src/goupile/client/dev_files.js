@@ -15,7 +15,6 @@ let dev_files = new function() {
     let editor_timer_id;
     let editor_ignore_change = false;
 
-    let remote = true;
     let files;
     let user_actions = {};
 
@@ -160,6 +159,8 @@ let dev_files = new function() {
     };
 
     this.runFiles = async function() {
+        let remote = net.isOnline() || !env.use_offline;
+
         files = await virt_fs.status(remote);
 
         // Overwrite with user actions (if any)
@@ -170,10 +171,10 @@ let dev_files = new function() {
         files.sort((file1, file2) => (!!file2.sha256 - !!file1.sha256) ||
                                       util.compareValues(file1.path, file2.path));
 
-        renderActions();
+        renderActions(remote);
     };
 
-    function renderActions() {
+    function renderActions(remote) {
         let enable_sync = files.some(file => file.action !== 'noop') &&
                           !files.some(file => file.action === 'conflict');
 
@@ -181,9 +182,7 @@ let dev_files = new function() {
             <div class="gp_toolbar">
                 <button @click=${showCreateDialog}>Ajouter</button>
                 <div style="flex: 1;"></div>
-                ${remote ?
-                    html`<button ?disabled=${!enable_sync} @click=${showSyncDialog}>Synchroniser</button>` : ''}
-                <button class=${remote ? 'active' : ''} @click=${toggleRemote}>Distant</button>
+                ${remote ? html`<button ?disabled=${!enable_sync} @click=${showSyncDialog}>Synchroniser</button>` : ''}
             </div>
 
             <table class="sync_table">
@@ -271,11 +270,6 @@ let dev_files = new function() {
             };
             page.buttons(page.buttons.std.ok_cancel('Créer'));
         });
-    }
-
-    function toggleRemote() {
-        remote = !remote;
-        self.runFiles();
     }
 
     function showSyncDialog(e) {
