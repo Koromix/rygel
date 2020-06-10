@@ -216,15 +216,15 @@ Navigation functions should only be called in reaction to user events, such as b
         self.go(url, push_history);
     }
 
-    async function fetchSettings() {
+    async function fetchSettings(force = false) {
         let session_rnd = util.getCookie('session_rnd');
 
-        if (net.isPlugged() && session_rnd !== settings_rnd) {
+        if ((net.isPlugged() && session_rnd !== settings_rnd) || force) {
             settings = {};
 
-            if (session_rnd != null) {
+            if (session_rnd != null || force) {
                 try {
-                    let response = await net.fetch(`${env.base_url}api/settings.json?rnd=${session_rnd}`);
+                    let response = await net.fetch(`${env.base_url}api/settings.json?rnd=${session_rnd || 0}`);
 
                     if (response.ok) {
                         settings = await response.json();
@@ -446,7 +446,7 @@ Navigation functions should only be called in reaction to user events, such as b
                 })}
             </select>
 
-            ${env.use_offline ? html`<button type="button" id="gp_status" @click=${e => net.setPlugged(!net.isPlugged())} />` : ''}
+            ${env.use_offline ? html`<button type="button" id="gp_status" @click=${toggleStatus} />` : ''}
             ${!env.use_offline ? html`<div id="gp_status"/>` : ''}
 
             ${!self.isConnected() ? html`<button @click=${showLoginDialog}>Connexion</button>` : ''}
@@ -477,6 +477,17 @@ Navigation functions should only be called in reaction to user events, such as b
 
             <div id="gp_error" style="display: none;"></div>
         `, document.querySelector('main'));
+    }
+
+    async function toggleStatus() {
+        if (net.isOnline()) {
+            net.setPlugged(false);
+        } else {
+            net.setPlugged(true);
+            await fetchSettings(true);
+        }
+
+        await self.go();
     }
 
     function showLoginDialog(e) {

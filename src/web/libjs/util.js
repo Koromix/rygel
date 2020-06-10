@@ -545,10 +545,7 @@ let net = new function() {
     this.isPlugged = function() { return plugged; };
     this.isOnline = function() { return plugged && online; };
 
-    this.setPlugged = function(plug) {
-        plugged = plug;
-        self.changeHandler(online && plug);
-    };
+    this.setPlugged = function(plug) { plugged = plug; };
 };
 
 // ------------------------------------------------------------------------

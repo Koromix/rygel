@@ -15,12 +15,6 @@ static http_SessionManager sessions;
 RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = sessions.Find<const Session>(request, io);
-
-    if (!session) {
-        LogError("User is not connected");
-        io->AttachError(403);
-    }
-
     return session;
 }
 
