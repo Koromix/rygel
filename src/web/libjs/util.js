@@ -520,9 +520,6 @@ let net = new function() {
     };
 
     this.loadScript = function(url) {
-        if (!plugged)
-            throw new Error('Cannot perform request in offline mode');
-
         return new Promise((resolve, reject) => {
             let script = document.createElement('script');
             script.type = 'text/javascript';

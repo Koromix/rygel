@@ -20,6 +20,9 @@ let goupile = new function() {
     let route_url;
     let block_go = false;
 
+    let running = false;
+    let restart = false;
+
     let left_panel = null;
     let show_overview = true;
 
@@ -51,12 +54,11 @@ let goupile = new function() {
 
         await self.initApplication();
 
+        // If a run fails and we can run in offline mode, restart it transparently
         net.changeHandler = online => {
-            if (net.isPlugged() && !online)
-                log.error('Connexion au serveur non disponible');
-
-            self.go();
-        }
+            if (env.use_offline)
+                self.go();
+        };
     }
 
     function enablePersistence() {
@@ -256,87 +258,103 @@ Navigation functions should only be called in reaction to user events, such as b
     this.isStandalone = function() { return standalone_mq.matches; };
 
     this.go = async function(url = null, push_history = true) {
-        if (self.isConnected() || env.allow_guests) {
-            if (url) {
-                url = new URL(url, window.location.href);
+        if (running) {
+            restart = true;
+            return;
+        }
 
-                // Update route application global
-                for (let [key, value] of url.searchParams) {
-                    let num = Number(value);
-                    app.route[key] = Number.isNaN(num) ? value : num;
-                }
+        try {
+            running = true;
 
-                // Find relevant asset
-                {
-                    let path = url.pathname;
-                    if (!path.endsWith('/'))
-                        path += '/';
+            if (self.isConnected() || env.allow_guests) {
+                if (url) {
+                    url = new URL(url, window.location.href);
 
-                    route_asset = app.urls_map[path] || app.aliases_map[path];
-
-                    if (!route_asset) {
-                        do {
-                            path = path.substr(0, path.length - 1);
-                            path = path.substr(0, path.lastIndexOf('/') + 1);
-
-                            if (path === env.base_url)
-                                break;
-
-                            route_asset = app.urls_map[path];
-                        } while (!route_asset && path.length);
+                    // Update route application global
+                    for (let [key, value] of url.searchParams) {
+                        let num = Number(value);
+                        app.route[key] = Number.isNaN(num) ? value : num;
                     }
-                }
 
-                // Update URL and history
-                route_url = url.pathname;
-                if (push_history)
-                    window.history.pushState(null, null, route_url);
+                    // Find relevant asset
+                    {
+                        let path = url.pathname;
+                        if (!path.endsWith('/'))
+                            path += '/';
 
-                // Route URL through appropriate controller
-                if (route_asset) {
-                    try {
-                        switch (route_asset.type) {
-                            case 'page': { await form_executor.route(route_asset, url); } break;
+                        route_asset = app.urls_map[path] || app.aliases_map[path];
+
+                        if (!route_asset) {
+                            do {
+                                path = path.substr(0, path.length - 1);
+                                path = path.substr(0, path.lastIndexOf('/') + 1);
+
+                                if (path === env.base_url)
+                                    break;
+
+                                route_asset = app.urls_map[path];
+                            } while (!route_asset && path.length);
                         }
-                    } catch (err) {
-                        log.error(err.message);
                     }
-                } else {
-                    log.error(`URL non supportée '${url.pathname}'`);
-                }
-            }
 
-            // Restart application after session changes
-            if (await fetchSettings()) {
-                await self.initApplication();
-                return;
-            }
+                    // Update URL and history
+                    route_url = url.pathname;
+                    if (push_history)
+                        window.history.pushState(null, null, route_url);
 
-            // Render menu and page layout
-            renderPanels();
-
-            try {
-                // Run left panel
-                switch (left_panel) {
-                    case 'files': { await dev_files.runFiles(); } break;
-                    case 'editor': { await dev_files.runEditor(route_asset); } break;
-                    case 'status': { await form_executor.runStatus(); } break;
-                    case 'data': { await form_executor.runData(); } break;
-                    case 'describe': { await form_executor.runDescribe(); } break;
+                    // Route URL through appropriate controller
+                    if (route_asset) {
+                        try {
+                            switch (route_asset.type) {
+                                case 'page': { await form_executor.route(route_asset, url); } break;
+                            }
+                        } catch (err) {
+                            log.error(err.message);
+                        }
+                    } else {
+                        log.error(`URL non supportée '${url.pathname}'`);
+                    }
                 }
 
-                // Run appropriate module
-                if (route_asset) {
-                    document.title = `${route_asset.label} — ${env.app_name}`;
-                    await runAssetSafe(route_asset);
-                } else {
-                    document.title = env.app_name;
+                // Restart application after session changes
+                if (await fetchSettings()) {
+                    await self.initApplication();
+                    return;
                 }
-            } finally {
-                updateStatus();
+
+                // Render menu and page layout
+                renderPanels();
+
+                try {
+                    // Run left panel
+                    switch (left_panel) {
+                        case 'files': { await dev_files.runFiles(); } break;
+                        case 'editor': { await dev_files.runEditor(route_asset); } break;
+                        case 'status': { await form_executor.runStatus(); } break;
+                        case 'data': { await form_executor.runData(); } break;
+                        case 'describe': { await form_executor.runDescribe(); } break;
+                    }
+
+                    // Run appropriate module
+                    if (route_asset) {
+                        document.title = `${route_asset.label} — ${env.app_name}`;
+                        await runAssetSafe(route_asset);
+                    } else {
+                        document.title = env.app_name;
+                    }
+                } finally {
+                    updateStatus();
+                }
+            } else {
+                renderGuest();
             }
-        } else {
-            renderGuest();
+        } finally {
+            running = false;
+
+            if (restart) {
+                restart = false;
+                setTimeout(self.go, 0);
+            }
         }
     };
 

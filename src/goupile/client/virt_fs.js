@@ -76,16 +76,7 @@ function VirtualFS(db) {
                 return null;
             }
         } else if (net.isOnline() || !env.use_offline) {
-            let response;
-            try {
-                response = await net.fetch(`${env.base_url}${path.substr(1)}`);
-            } catch (err) {
-                if (env.use_offline) {
-                    return null;
-                } else {
-                    throw err;
-                }
-            }
+            let response = await net.fetch(`${env.base_url}${path.substr(1)}`);
 
             if (response.ok) {
                 let blob = await response.blob();
