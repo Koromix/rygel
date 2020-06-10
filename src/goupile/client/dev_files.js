@@ -77,7 +77,7 @@ let dev_files = new function() {
         if (!editor) {
             editor = ace.edit(editor_el);
 
-            editor.setTheme('ace/theme/monokai');
+            editor.setTheme('ace/theme/merbivore_soft');
             editor.setShowPrintMargin(false);
             editor.setFontSize(13);
 
