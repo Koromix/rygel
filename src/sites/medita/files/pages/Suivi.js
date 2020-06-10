@@ -30,7 +30,7 @@ if (id.value) {
     let echelles = data.echelles.filter(echelle => forms.delete(echelle.form));
 
     let p = Promise.all([
-        window.Chart || util.loadScript(`${env.base_url}files/resources/chart.bundle.min.js`),
+        window.Chart || net.loadScript(`${env.base_url}files/resources/chart.bundle.min.js`),
         ...echelles.map(echelle => virt_data.loadAll(echelle.form))
     ]);
 

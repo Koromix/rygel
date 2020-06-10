@@ -493,7 +493,7 @@ let form_executor = new function() {
 
     async function exportSheets(form, format = 'xlsx') {
         if (typeof XSLX === 'undefined')
-            await util.loadScript(`${env.base_url}static/xlsx.core.min.js`);
+            await net.loadScript(`${env.base_url}static/xlsx.core.min.js`);
 
         let records = await virt_data.loadAll(form.key);
         let variables = await virt_data.listVariables(form.key);
@@ -666,7 +666,7 @@ let form_executor = new function() {
 
     this.runDescribe = async function() {
         if (typeof Chart === 'undefined')
-            await util.loadScript(`${env.base_url}static/chart.bundle.min.js`);
+            await net.loadScript(`${env.base_url}static/chart.bundle.min.js`);
 
         render(html`
             <div class="gp_toolbar"></div>

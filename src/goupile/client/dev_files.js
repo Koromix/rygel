@@ -22,7 +22,7 @@ let dev_files = new function() {
     this.runEditor = async function(asset) {
         // XXX: Make sure we don't run loadScript more than once
         if (typeof ace === 'undefined')
-            await util.loadScript(`${env.base_url}static/ace.js`);
+            await net.loadScript(`${env.base_url}static/ace.js`);
         if (!editor_el) {
             editor_el = document.createElement('div');
             editor_el.setAttribute('style', 'flex: 1;');

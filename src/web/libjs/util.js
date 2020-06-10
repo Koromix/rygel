@@ -279,19 +279,6 @@ let util = new function() {
         throw new Error('Invalid ULID string (incorrect character)');
     }
 
-    this.loadScript = function(url) {
-        return new Promise((resolve, reject) => {
-            let script = document.createElement('script');
-            script.type = 'text/javascript';
-            script.src = url;
-
-            script.onload = e => resolve(script);
-            script.onerror = e => reject(`Failed to load '${url}' script`);
-
-            document.head.appendChild(script);
-        });
-    };
-
     this.saveBlob = function(blob, filename) {
         let url = URL.createObjectURL(blob);
 
@@ -530,6 +517,25 @@ let net = new function() {
             setOnline(false);
             throw err;
         }
+    };
+
+    this.loadScript = function(url) {
+        if (!plugged)
+            throw new Error('Cannot perform request in offline mode');
+
+        return new Promise((resolve, reject) => {
+            let script = document.createElement('script');
+            script.type = 'text/javascript';
+            script.src = url;
+
+            script.onload = e => resolve(script);
+            script.onerror = e => {
+                setOnline(false);
+                reject(`Failed to load '${url}' script`);
+            }
+
+            document.head.appendChild(script);
+        });
     };
 
     function setOnline(online2) {
