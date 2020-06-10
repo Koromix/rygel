@@ -79,23 +79,18 @@ let goupile = new function() {
     }
 
     async function updateApplication() {
-        let entry = new log.Entry;
-
-        entry.progress('Mise à jour de l\'application');
         try {
             let files = await virt_fs.status();
 
             if (files.some(file => file.action === 'pull' || file.action === 'conflict')) {
-                if (files.some(file => file.action !== 'pull' && file.action !== 'noop'))
-                    throw new Error('Impossible de mettre à jour (modifications locales)');
-
-                await virt_fs.sync(files);
-                entry.success('Mise à jour terminée !');
-            } else {
-                entry.close();
+                if (files.every(file => file.action === 'pull' || file.action === 'noop')) {
+                    await virt_fs.sync(files);
+                } else {
+                    log.info('Mise à jour non appliquée : il existe des modifications locales')
+                }
             }
         } catch (err) {
-            entry.info('Mise à jour abandonnée (pas de réseau ?)');
+            console.log('Mise à jour abandonnée (pas de réseau ?)');
         }
     }
 
