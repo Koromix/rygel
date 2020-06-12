@@ -45,7 +45,7 @@ function VirtualData(db) {
         record2.complete[page_key] = false;
 
         let page = {
-            tpkey: `${record2.table}_${page_key}:${record.id}`,
+            tpkey: makeTablePageKey(record2.table, record.id, page_key),
             table: record2.table,
             id: record2.id,
             page: page_key,
@@ -223,7 +223,7 @@ function VirtualData(db) {
         return `${table}_${id}`;
     }
 
-    function makeTablePageKey(table, page, id) {
+    function makeTablePageKey(table, id, page) {
         return `${table}_${id}:${page}`;
     }
 }

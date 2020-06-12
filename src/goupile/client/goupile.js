@@ -123,9 +123,11 @@ let goupile = new function() {
                         let table = parts.join('_');
 
                         let frag = {
-                            tpkey: `${table}_${table}:${id}`,
+                            tpkey: `${table}_${id}:${table}`,
                             table: table,
+                            id: id,
                             page: table,
+
                             values: data.values
                         };
 
