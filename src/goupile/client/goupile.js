@@ -457,7 +457,6 @@ Navigation functions should only be called in reaction to user events, such as b
                                     @click=${e => toggleLeftPanel('status')}>Suivi</button>
                             <button class=${left_panel === 'data' ? 'active' : ''}
                                     @click=${e => toggleLeftPanel('data')}>Données</button>
-                            <button @click=${syncRecords}>Synchroniser</button>
                         </div>
                     </div>
                 ` :  ''}
@@ -505,6 +504,7 @@ Navigation functions should only be called in reaction to user events, such as b
                     </div>
                 ` : ''}
 
+                <button type="button" class="gp_icon" @click=${showSyncDialog}>⮁\uFE0E</button>
                 ${env.use_offline ? html`<button type="button" id="gp_status" class="gp_icon" @click=${toggleStatus} />` : ''}
                 ${!env.use_offline ? html`<div id="gp_status" class="gp_icon"/>` : ''}
                 <button type="button" class="gp_icon" @click=${toggleLock}>🔒\uFE0E</button>
@@ -641,6 +641,33 @@ Navigation functions should only be called in reaction to user events, such as b
         }
 
         self.go(asset.url);
+    }
+
+    function showSyncDialog(e) {
+        ui.popup(e, page => {
+            page.output('Désirez-vous synchroniser les données ?');
+
+            page.submitHandler = () => {
+                page.close();
+                syncRecords();
+            };
+            page.buttons(page.buttons.std.ok_cancel('Synchroniser'));
+        });
+    }
+
+    async function syncRecords() {
+        let entry = new log.Entry;
+
+        entry.progress('Synchronisation des données en cours');
+        try {
+            await virt_data.sync();
+
+            entry.success('Données synchronisées !');
+        } catch (err) {
+            entry.error(`La synchronisation a échoué : ${err.message}`);
+        }
+
+        self.go();
     }
 
     this.validateCode = function(path, code) {
@@ -806,18 +833,5 @@ Navigation functions should only be called in reaction to user events, such as b
     function deleteLock() {
         document.cookie = `lock_url=; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
         document.cookie = `lock_pin=; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-    }
-
-    async function syncRecords() {
-        let entry = new log.Entry;
-
-        entry.progress('Synchronisation des données en cours');
-        try {
-            await virt_data.sync();
-
-            entry.success('Données synchronisées !');
-        } catch (err) {
-            entry.error(`La synchronisation a échoué : ${err.message}`);
-        }
     }
 };
