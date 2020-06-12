@@ -234,7 +234,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "gcc -std=gnu11"); } break;
-            case SourceType::CXX: { Fmt(&buf, "g++ -std=gnu++2a -fno-exceptions"); } break;
+            case SourceType::CXX: { Fmt(&buf, "g++ -std=gnu++2a"); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
