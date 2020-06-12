@@ -457,6 +457,7 @@ Navigation functions should only be called in reaction to user events, such as b
                                     @click=${e => toggleLeftPanel('status')}>Suivi</button>
                             <button class=${left_panel === 'data' ? 'active' : ''}
                                     @click=${e => toggleLeftPanel('data')}>Données</button>
+                            <button @click=${syncRecords}>Synchroniser</button>
                         </div>
                     </div>
                 ` :  ''}
@@ -802,5 +803,18 @@ Navigation functions should only be called in reaction to user events, such as b
     function deleteLock() {
         document.cookie = `lock_url=; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
         document.cookie = `lock_pin=; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    }
+
+    async function syncRecords() {
+        let entry = new log.Entry;
+
+        entry.progress('Synchronisation des données en cours');
+        try {
+            await virt_data.sync();
+
+            entry.success('Données synchronisées !');
+        } catch (err) {
+            entry.error(`La synchronisation a échoué : ${err.message}`);
+        }
     }
 };
