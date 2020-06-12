@@ -796,7 +796,7 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     function getLockURL() {
-        let url = util.getCookie('lock_url');
+        let url = localStorage.getItem('lock_url');
         return url;
     }
 
@@ -807,7 +807,7 @@ Navigation functions should only be called in reaction to user events, such as b
                 let pin = page.text('code');
 
                 if (pin.value && pin.value.length >= 4) {
-                    if (pin.value === util.getCookie('lock_pin')) {
+                    if (pin.value === localStorage.getItem('lock_pin')) {
                         setTimeout(page.close, 0);
 
                         deleteLock();
@@ -822,8 +822,8 @@ Navigation functions should only be called in reaction to user events, such as b
         } else {
             let pin = ('' + util.getRandomInt(0, 9999)).padStart(4, '0');
 
-            document.cookie = `lock_url=${route_url}; expires=Fri, 31 Dec 9999 23:59:59 GMT`;
-            document.cookie = `lock_pin=${pin}; expires=Fri, 31 Dec 9999 23:59:59 GMT`;
+            localStorage.setItem('lock_url', route_url);
+            localStorage.setItem('lock_pin', pin);
 
             log.info(`Code de déverouillage = ${pin}`, 10000);
             self.go();
@@ -831,7 +831,7 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     function deleteLock() {
-        document.cookie = `lock_url=; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-        document.cookie = `lock_pin=; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+        localStorage.removeItem('lock_url');
+        localStorage.removeItem('lock_pin');
     }
 };
