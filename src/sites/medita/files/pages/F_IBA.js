@@ -18,7 +18,7 @@ let reponses = [
     [1, "Pas du tout"],
     [2, "Un peu. Cela ne m'a pas beaucoup dérangé(e)"],
     [3, "Modérément. C'était très déplaisant mais supportable"],
-    [4, "Beaucoup. Je pouvaus à peine le supporter."],
+    [4, "Beaucoup. Je pouvais à peine le supporter."],
 ]
 
 form.enum("a", "1. Sensations d’engourdissement ou de picotement", reponses)
