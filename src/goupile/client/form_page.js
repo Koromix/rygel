@@ -909,26 +909,30 @@ Valid choices include:
     }
 
     function renderWrappedWidget(intf, frag) {
-        let cls = 'af_widget';
-        if (intf.errors.length)
-            cls += ' error';
-        if (intf.options.disable)
-            cls += ' disable';
-        if (intf.options.mandatory)
-            cls += ' mandatory';
-        if (intf.options.compact)
-            cls += ' compact';
+        if (!intf.options.hidden) {
+            let cls = 'af_widget';
+            if (intf.errors.length)
+                cls += ' error';
+            if (intf.options.disable)
+                cls += ' disable';
+            if (intf.options.mandatory)
+                cls += ' mandatory';
+            if (intf.options.compact)
+                cls += ' compact';
 
-        return html`
-            <div class="af_wrap">
-                <div class=${cls}>
-                    ${frag}
-                    ${intf.errors.length ?
-                        html`<div class="af_error">${intf.errors.map(err => html`${err}<br/>`)}</div>` : ''}
+            return html`
+                <div class="af_wrap">
+                    <div class=${cls}>
+                        ${frag}
+                        ${intf.errors.length ?
+                            html`<div class="af_error">${intf.errors.map(err => html`${err}<br/>`)}</div>` : ''}
+                    </div>
+                    ${intf.options.help ? html`<p class="af_help">${intf.options.help}</p>` : ''}
                 </div>
-                ${intf.options.help ? html`<p class="af_help">${intf.options.help}</p>` : ''}
-            </div>
-        `;
+            `;
+        } else {
+            return '';
+        }
     }
 
     function makeInputStyle(options) {

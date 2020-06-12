@@ -361,6 +361,14 @@ let util = new function() {
             return `${size} B`;
         }
     };
+
+    this.getRandomInt = function(min, max) {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+
+        let rnd = Math.floor(Math.random() * (max - min)) + min;
+        return rnd;
+    };
 };
 
 // ------------------------------------------------------------------------

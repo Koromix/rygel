@@ -256,6 +256,7 @@ Navigation functions should only be called in reaction to user events, such as b
     this.isConnected = function() { return !!settings_rnd; };
     this.isTablet = function() { return tablet_mq.matches; };
     this.isStandalone = function() { return standalone_mq.matches; };
+    this.isLocked = function() { return !!getLockURL(); };
 
     this.go = async function(url = null, push_history = true) {
         if (running) {
@@ -265,6 +266,14 @@ Navigation functions should only be called in reaction to user events, such as b
 
         try {
             running = true;
+
+            let lock_url = getLockURL();
+            if (lock_url) {
+                url = lock_url;
+
+                left_panel = null;
+                show_overview = true;
+            }
 
             if (self.isConnected() || env.allow_guests) {
                 if (url) {
@@ -359,107 +368,117 @@ Navigation functions should only be called in reaction to user events, such as b
     };
 
     function renderPanels() {
-        let show_data = route_asset && route_asset.form;
+        if (getLockURL()) {
+            render(html`
+                &nbsp;Application verrouillée
+                <div style="flex: 1;"></div>
+                <button @click=${showLoginDialog}>Connexion</button>
+                <button type="button" id="gp_lock" class="active" @click=${toggleLock}></button>
+            `, document.querySelector('#gp_menu'));
+        } else {
+            let show_data = route_asset && route_asset.form;
 
-        let correct_mode = (left_panel == null ||
-                            left_panel === 'files' || left_panel === 'editor' ||
-                            (left_panel === 'status' && show_data) ||
-                            (left_panel === 'data' && show_data) ||
-                            (left_panel === 'describe' && show_data));
-        if (!correct_mode)
-            left_panel = 'editor';
+            let correct_mode = (left_panel == null ||
+                                left_panel === 'files' || left_panel === 'editor' ||
+                                (left_panel === 'status' && show_data) ||
+                                (left_panel === 'data' && show_data) ||
+                                (left_panel === 'describe' && show_data));
+            if (!correct_mode)
+                left_panel = 'editor';
 
-        if (!route_asset || !route_asset.overview) {
-            show_overview = false;
-        } else if (!left_panel) {
-            show_overview = true;
-        }
+            if (!route_asset || !route_asset.overview) {
+                show_overview = false;
+            } else if (!left_panel) {
+                show_overview = true;
+            }
 
-        let show_assets = [];
-        let select_asset;
-        if (route_asset) {
-            let idx = route_asset.idx;
-            while (app.assets[idx].secondary)
-                idx--;
+            let show_assets = [];
+            let select_asset;
+            if (route_asset) {
+                let idx = route_asset.idx;
+                while (app.assets[idx].secondary)
+                    idx--;
 
-            // Main asset
-            show_assets.push(app.assets[idx]);
-            select_asset = app.assets[idx];
-
-            // Related secondary assets
-            while (++idx < app.assets.length && app.assets[idx].secondary)
+                // Main asset
                 show_assets.push(app.assets[idx]);
-        }
+                select_asset = app.assets[idx];
 
-        render(html`
-            <div class="gp_dropdown">
-                <button class=${left_panel === 'editor' || left_panel === 'files' ? 'active' : ''}>Code</button>
-                <div>
-                    <button class=${left_panel === 'editor' ? 'active' : ''}
-                            @click=${e => toggleLeftPanel('editor')}>Éditeur</button>
-                    <button class=${left_panel === 'files' ? 'active' : ''}
-                            @click=${e => toggleLeftPanel('files')}>Déploiement</button>
-                </div>
-            </div>
+                // Related secondary assets
+                while (++idx < app.assets.length && app.assets[idx].secondary)
+                    show_assets.push(app.assets[idx]);
+            }
 
-            ${show_data ? html`
+            render(html`
                 <div class="gp_dropdown">
-                    <button class=${left_panel === 'status' || left_panel === 'data' ? 'active' : ''}>Recueil</button>
+                    <button class=${left_panel === 'editor' || left_panel === 'files' ? 'active' : ''}>Code</button>
                     <div>
-                        <button class=${left_panel === 'status' ? 'active' : ''}
-                                @click=${e => toggleLeftPanel('status')}>Suivi</button>
-                        <button class=${left_panel === 'data' ? 'active' : ''}
-                                @click=${e => toggleLeftPanel('data')}>Données</button>
+                        <button class=${left_panel === 'editor' ? 'active' : ''}
+                                @click=${e => toggleLeftPanel('editor')}>Éditeur</button>
+                        <button class=${left_panel === 'files' ? 'active' : ''}
+                                @click=${e => toggleLeftPanel('files')}>Déploiement</button>
                     </div>
                 </div>
-            ` :  ''}
 
-            ${show_assets.map(asset => {
-                if (asset === route_asset) {
-                    return html`<button class=${show_overview ? 'active': ''}
-                                        @click=${e => self.toggleOverview()}>${asset.overview}</button>`;
-                } else {
-                    return html`<button @click=${e => self.go(asset.url)}>${asset.overview}</button>`;
-                }
-            })}
+                ${show_data ? html`
+                    <div class="gp_dropdown">
+                        <button class=${left_panel === 'status' || left_panel === 'data' ? 'active' : ''}>Recueil</button>
+                        <div>
+                            <button class=${left_panel === 'status' ? 'active' : ''}
+                                    @click=${e => toggleLeftPanel('status')}>Suivi</button>
+                            <button class=${left_panel === 'data' ? 'active' : ''}
+                                    @click=${e => toggleLeftPanel('data')}>Données</button>
+                        </div>
+                    </div>
+                ` :  ''}
 
-            <select id="gp_assets" @change=${e => self.go(e.target.value)}>
-                ${!route_asset ? html`<option>-- Sélectionnez une page --</option>` : ''}
-                ${util.mapRLE(app.assets, asset => asset.category, (category, offset, len) => {
-                    if (category == null) {
-                        return '';
-                    } else if (len === 1) {
-                        let asset = app.assets[offset];
-                        return html`<option value=${asset.url}
-                                            .selected=${asset === select_asset}>${asset.category} (${asset.label})</option>`;
+                ${show_assets.map(asset => {
+                    if (asset === route_asset) {
+                        return html`<button class=${show_overview ? 'active': ''}
+                                            @click=${e => self.toggleOverview()}>${asset.overview}</button>`;
                     } else {
-                        return html`<optgroup label=${category}>${util.mapRange(offset, offset + len, idx => {
-                            let asset = app.assets[idx];
-                            if (!asset.secondary) {
-                                return html`<option value=${asset.url}
-                                                   .selected=${asset === select_asset}>${asset.label}</option>`;
-                            } else {
-                                return '';
-                            }
-                        })}</optgroup>`;
+                        return html`<button @click=${e => self.go(asset.url)}>${asset.overview}</button>`;
                     }
                 })}
-            </select>
 
-            ${env.use_offline ? html`<button type="button" id="gp_status" @click=${toggleStatus} />` : ''}
-            ${!env.use_offline ? html`<div id="gp_status"/>` : ''}
+                <select id="gp_assets" @change=${e => self.go(e.target.value)}>
+                    ${!route_asset ? html`<option>-- Sélectionnez une page --</option>` : ''}
+                    ${util.mapRLE(app.assets, asset => asset.category, (category, offset, len) => {
+                        if (category == null) {
+                            return '';
+                        } else if (len === 1) {
+                            let asset = app.assets[offset];
+                            return html`<option value=${asset.url}
+                                                .selected=${asset === select_asset}>${asset.category} (${asset.label})</option>`;
+                        } else {
+                            return html`<optgroup label=${category}>${util.mapRange(offset, offset + len, idx => {
+                                let asset = app.assets[idx];
+                                if (!asset.secondary) {
+                                    return html`<option value=${asset.url}
+                                                       .selected=${asset === select_asset}>${asset.label}</option>`;
+                                } else {
+                                    return '';
+                                }
+                            })}</optgroup>`;
+                        }
+                    })}
+                </select>
 
-            ${!self.isConnected() ? html`<button @click=${showLoginDialog}>Connexion</button>` : ''}
-            ${self.isConnected() ? html`
-                <div class="gp_dropdown right">
-                    <button>${settings.username}</button>
-                    <div>
-                        <button @click=${showLoginDialog}>Changer d'utilisateur</button>
-                        <button @click=${logout}>Déconnexion</button>
+                ${!self.isConnected() ? html`<button @click=${showLoginDialog}>Connexion</button>` : ''}
+                ${self.isConnected() ? html`
+                    <div class="gp_dropdown right">
+                        <button>${settings.username}</button>
+                        <div>
+                            <button @click=${showLoginDialog}>Changer d'utilisateur</button>
+                            <button @click=${logout}>Déconnexion</button>
+                        </div>
                     </div>
-                </div>
-            ` : ''}
-        `, document.querySelector('#gp_menu'));
+                ` : ''}
+
+                ${env.use_offline ? html`<button type="button" id="gp_status" @click=${toggleStatus} />` : ''}
+                ${!env.use_offline ? html`<div id="gp_status"/>` : ''}
+                <button type="button" id="gp_lock" @click=${toggleLock}></button>
+            `, document.querySelector('#gp_menu'));
+        }
 
         render(html`
             ${left_panel === 'files' ?
@@ -505,14 +524,17 @@ Navigation functions should only be called in reaction to user events, such as b
             try {
                 let body = new URLSearchParams({
                     username: username.value,
-                    password: password.value}
-                );
+                    password: password.value
+                });
 
                 let response = await net.fetch(`${env.base_url}api/login.json`, {method: 'POST', body: body});
 
                 if (response.ok) {
                     if (page.close)
                         page.close();
+
+                    // Emergency unlocking
+                    deleteLock();
 
                     entry.success('Connexion réussie');
                     await self.initApplication();
@@ -675,12 +697,14 @@ Navigation functions should only be called in reaction to user events, such as b
     function updateStatus() {
         let el = document.querySelector('#gp_status');
 
-        if (!net.isPlugged()) {
-            el.className = 'unplugged';
-        } else if (net.isOnline()) {
-            el.className = 'online';
-        } else {
-            el.className = 'offline';
+        if (el) {
+            if (!net.isPlugged()) {
+                el.className = 'unplugged';
+            } else if (net.isOnline()) {
+                el.className = 'online';
+            } else {
+                el.className = 'offline';
+            }
         }
     }
 
@@ -708,5 +732,45 @@ Navigation functions should only be called in reaction to user events, such as b
         };
 
         update();
+    }
+
+    function getLockURL() {
+        let url = util.getCookie('lock_url');
+        return url;
+    }
+
+    function toggleLock(e) {
+        if (getLockURL()) {
+            ui.popup(e, page => {
+                page.output('Entrez le code de déverrouillage');
+                let pin = page.text('code');
+
+                if (pin.value && pin.value.length >= 4) {
+                    if (pin.value === util.getCookie('lock_pin')) {
+                        setTimeout(page.close, 0);
+
+                        deleteLock();
+
+                        log.info('Application déverrouillée !');
+                        self.go();
+                    } else {
+                        pin.error('Code erroné');
+                    }
+                }
+            });
+        } else {
+            let pin = ('' + util.getRandomInt(0, 9999)).padStart(4, '0');
+
+            document.cookie = `lock_url=${route_url}; expires=Fri, 31 Dec 9999 23:59:59 GMT`;
+            document.cookie = `lock_pin=${pin}; expires=Fri, 31 Dec 9999 23:59:59 GMT`;
+
+            log.info(`Code de déverouillage = ${pin}`);
+            self.go();
+        }
+    }
+
+    function deleteLock() {
+        document.cookie = `lock_url=; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+        document.cookie = `lock_pin=; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
     }
 };
