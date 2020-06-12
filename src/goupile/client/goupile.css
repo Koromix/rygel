@@ -140,7 +140,7 @@ button:not(:disabled) { cursor: pointer; }
 }
 
 .gp_icon {
-    width: 2.5em;
+    width: 2em;
     font-size: 1.5em;
     text-align: center;
 }
