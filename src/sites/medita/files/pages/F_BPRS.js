@@ -1,4 +1,4 @@
-if (typeof data !== 'undefined')
+if (data.makeHeader)
     data.makeHeader("Echelle abrégée d'évaluation psychiatrique (BPRS)", page)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
 
@@ -111,5 +111,5 @@ let score = form.value("Q1") +
 
 form.calc("score", "Score total", score);
 
-if (typeof data !== 'undefined')
+if (data.makeHeader)
     data.makeFormFooter(nav, page)

@@ -1,4 +1,4 @@
-if (typeof data !== 'undefined')
+if (data.makeHeader)
     data.makeHeader("Echelle d’évaluation des hallucinations auditives (AHRS)", page)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
 
@@ -102,5 +102,5 @@ let score = form.value("frequence") +
             form.value("stress")
 form.calc("score", "Score total", score)
 
-if (typeof data !== 'undefined')
+if (data.makeHeader)
     data.makeFormFooter(nav, page)

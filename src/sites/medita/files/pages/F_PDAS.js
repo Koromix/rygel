@@ -1,4 +1,4 @@
-if (typeof data !== 'undefined')
+if (data.makeHeader)
     data.makeHeader("Echelle d’évaluation de la dépression psychotique (PDAS)", page)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
                                        hidden: goupile.isLocked()}).value
@@ -133,5 +133,5 @@ let score = form.value("symptomesSomatiques") +
             form.value("emoussementDesAffects")
 form.calc("score", "Score total", score, {hidden: goupile.isLocked()})
 
-if (typeof data !== 'undefined')
+if (data.makeHeader)
     data.makeFormFooter(nav, page)

@@ -1,4 +1,4 @@
-if (typeof data !== 'undefined')
+if (data.makeHeader)
     data.makeHeader("Questionnaire de personnalité", page)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
                                        hidden: goupile.isLocked()}).value
@@ -168,5 +168,5 @@ form.calc("persoborderline", "Personnalité borderline", form.value("p6") + form
 form.calc("persodependante", "Personnalité dépendante", form.value("p2") + form.value("p15") + form.value("p27") + form.value("p40") + form.value("p53") + form.value("p65") + form.value("p82") + form.value("p88"), {hidden: goupile.isLocked()});
 
 
-if (typeof data !== 'undefined')
+if (data.makeHeader)
     data.makeFormFooter(nav, page)

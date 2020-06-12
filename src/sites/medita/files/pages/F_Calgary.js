@@ -1,4 +1,4 @@
-if (typeof data !== 'undefined')
+if (data.makeHeader)
     data.makeHeader("Echelle de Calgary CDSS", page)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
 
@@ -104,5 +104,5 @@ let score = form.value("depression") +
             form.value("depressionobservee")
 form.calc("score", "Score total =", score)
 
-if (typeof data !== 'undefined')
+if (data.makeHeader)
     data.makeFormFooter(nav, page)

@@ -1,4 +1,4 @@
-if (typeof data !== 'undefined')
+if (data.makeHeader)
     data.makeHeader("Echelle de mesure de l'observance médicamenteuse (MARS)", page)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
                                        hidden: goupile.isLocked()}).value
@@ -34,5 +34,5 @@ let score = form.value("Q1") +
 
 form.calc("score", "Score total", score, {hidden: goupile.isLocked()});
 
-if (typeof data !== 'undefined')
+if (data.makeHeader)
     data.makeFormFooter(nav, page)

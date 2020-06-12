@@ -1,4 +1,4 @@
-if (typeof data !== 'undefined')
+if (data.makeHeader)
     data.makeHeader("Inventaire rapide de symptomatologie dépressive (QIDS)", page)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
                                        hidden: goupile.isLocked()}).value
@@ -143,5 +143,5 @@ let score = form.value("impressionDAgitation") +
             form.value("endormissement")
 form.calc("score", "Score total", score, {hidden: goupile.isLocked()})
 
-if (typeof data !== 'undefined')
+if (data.makeHeader)
     data.makeFormFooter(nav, page)
