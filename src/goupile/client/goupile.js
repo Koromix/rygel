@@ -403,7 +403,7 @@ Navigation functions should only be called in reaction to user events, such as b
                 &nbsp;Application verrouillée
                 <div style="flex: 1;"></div>
                 <button @click=${showLoginDialog}>Connexion</button>
-                <button type="button" id="gp_lock" class="active" @click=${toggleLock}></button>
+                <button type="button" class="gp_icon active" @click=${toggleLock}>🔒\uFE0E</button>
             `, document.querySelector('#gp_menu'));
         } else {
             let show_data = route_asset && route_asset.form;
@@ -505,9 +505,9 @@ Navigation functions should only be called in reaction to user events, such as b
                     </div>
                 ` : ''}
 
-                ${env.use_offline ? html`<button type="button" id="gp_status" @click=${toggleStatus} />` : ''}
-                ${!env.use_offline ? html`<div id="gp_status"/>` : ''}
-                <button type="button" id="gp_lock" @click=${toggleLock}></button>
+                ${env.use_offline ? html`<button type="button" id="gp_status" class="gp_icon" @click=${toggleStatus} />` : ''}
+                ${!env.use_offline ? html`<div id="gp_status" class="gp_icon"/>` : ''}
+                <button type="button" class="gp_icon" @click=${toggleLock}>🔒\uFE0E</button>
             `, document.querySelector('#gp_menu'));
         }
 
@@ -730,11 +730,14 @@ Navigation functions should only be called in reaction to user events, such as b
 
         if (el) {
             if (!net.isPlugged()) {
-                el.className = 'unplugged';
+                el.textContent = '⛔\uFE0E';
+                el.title = 'Mode hors-ligne forcé';
             } else if (net.isOnline()) {
-                el.className = 'online';
+                el.textContent = '🌐\uFE0E';
+                el.title = 'Connecté au serveur';
             } else {
-                el.className = 'offline';
+                el.textContent = '⚠\uFE0E';
+                el.title = 'Serveur non disponible';
             }
         }
     }
