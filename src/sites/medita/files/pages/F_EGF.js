@@ -1,6 +1,7 @@
 if (typeof data !== 'undefined')
     data.makeHeader("ECHELLE D'ÉVALUATION GLOBALE DU FONCTIONNEMENT (EGF (GAF))", page)
-route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
+                                       hidden: goupile.isLocked()}).value
 
 form.output(html`
     <p>Evaluer le fonctionnement psychologique, social et professionnel sur un continuum hypothétique allant de la santé mentale à la maladie (curseur à déplacer ci-dessous).

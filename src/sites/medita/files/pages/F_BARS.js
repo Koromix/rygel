@@ -1,6 +1,7 @@
 if (typeof data !== 'undefined')
     data.makeHeader("Barnes Akathisia Rating Scale (BARS)", page)
-route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
+                                       hidden: goupile.isLocked()}).value
 
 form.output(html`
     <p>Patient should be observed while they are seated, and then standing while engaged in neutral
@@ -53,7 +54,7 @@ let score = form.value("objective") +
             form.value("Awarenessofrestlessness") +
             form.value("Distressrelatedtorestlessness") +
             form.value("GlobalClinicalAssessmentofAkathisia")
-form.calc("score", "Score total", score)
+form.calc("score", "Score total", score, {hidden: goupile.isLocked()})
 
 if (typeof data !== 'undefined')
     data.makeFormFooter(nav, page)

@@ -1,6 +1,7 @@
 if (typeof data !== 'undefined')
     data.makeHeader("Echelle de Calgary CDSS", page)
-route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
+                                       hidden: goupile.isLocked()}).value
 
 form.output(html`
 	<p>Poser la première question telle qu'elle est écrite. Par la suite, vous pouvez utiliser d'autres questions d'exploration ou d'autres questions pertinentes à votre discrétion.
@@ -102,7 +103,7 @@ let score = form.value("depression") +
             form.value("eveilprecoce") +
             form.value("suicide") +
             form.value("depressionobservee")
-form.calc("score", "Score total =", score)
+form.calc("score", "Score total =", score, {hidden: goupile.isLocked()})
 
 if (typeof data !== 'undefined')
     data.makeFormFooter(nav, page)

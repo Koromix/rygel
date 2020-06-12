@@ -1,6 +1,7 @@
 if (typeof data !== 'undefined')
     data.makeHeader("Questionnaire de personnalité", page)
-route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
+                                       hidden: goupile.isLocked()}).value
 
 form.output(html`
     <p>Le but de ce questionnaire est de vous aider à décrire le genre de personne que vous êtes. Pour répondre aux questions, pensez à la manière dont vous avez eu tendance à ressentir les choses, à penser et à agir durant ces dernières années. Afin de vous rappeler cette consigne, chaque page du questionnaire commence par la phrase : « Depuis plusieurs années.. ».</p>
@@ -148,23 +149,23 @@ form.multiCheck("p99", "99. Lorsquej'étais enfant (avantl'âgede 15ans), j'éta
         [15, "15. Je me suis introduit(e) par effraction dans la maison, le bâtiment ou la voiture de quelqu'un."],
                 ])
 
-form.calc("persoparano", "Personnalité paranoïaque ", form.value("p11") + form.value("p24") + form.value("p37") + form.value("p50") + form.value("p62") + form.value("p85") + form.value("p96"));
+form.calc("persoparano", "Personnalité paranoïaque ", form.value("p11") + form.value("p24") + form.value("p37") + form.value("p50") + form.value("p62") + form.value("p85") + form.value("p96"), {hidden: goupile.isLocked()});
 
-form.calc("persohistrio", "Personnalité histrionique", form.value("p4") + form.value("p17") + form.value("p30") + form.value("p43") + form.value("p55") + form.value("p67") + form.value("p80") + form.value("p90"));
+form.calc("persohistrio", "Personnalité histrionique", form.value("p4") + form.value("p17") + form.value("p30") + form.value("p43") + form.value("p55") + form.value("p67") + form.value("p80") + form.value("p90"), {hidden: goupile.isLocked()});
 
-form.calc("persoantisociale", "Personnalité anti-sociale", form.value("p8") + form.value("p20") + form.value("p33") + form.value("p46") + form.value("p59") + form.value("p75") + form.value("p94") + form.value((form.value("p99") || []).length >= 2));
+form.calc("persoantisociale", "Personnalité anti-sociale", form.value("p8") + form.value("p20") + form.value("p33") + form.value("p46") + form.value("p59") + form.value("p75") + form.value("p94") + form.value((form.value("p99") || []).length >= 2), {hidden: goupile.isLocked()});
 
-form.calc("poc", "Personnalité obsessionnelle compulsive", form.value("p3") + form.value("p16") + form.value("p29") + form.value("p41") + form.value("p54") + form.value("p66") + form.value("p81") + form.value("p89"));
+form.calc("poc", "Personnalité obsessionnelle compulsive", form.value("p3") + form.value("p16") + form.value("p29") + form.value("p41") + form.value("p54") + form.value("p66") + form.value("p81") + form.value("p89"), {hidden: goupile.isLocked()});
 
-form.calc("persoschizoide", "Personnalité schizoïde", form.value("p9") + form.value("p22") + form.value("p34") + form.value("p47") + form.value("p60") + form.value("p71") + form.value("p95"));
+form.calc("persoschizoide", "Personnalité schizoïde", form.value("p9") + form.value("p22") + form.value("p34") + form.value("p47") + form.value("p60") + form.value("p71") + form.value("p95"), {hidden: goupile.isLocked()});
 
-form.calc("personarcissique", "Personnalité narcissique", form.value("p5") + form.value("p18") + form.value("p31") + form.value("p44") + form.value("p57") + form.value("p68") + form.value("p73") + form.value("p79") + form.value("p92"));
+form.calc("personarcissique", "Personnalité narcissique", form.value("p5") + form.value("p18") + form.value("p31") + form.value("p44") + form.value("p57") + form.value("p68") + form.value("p73") + form.value("p79") + form.value("p92"), {hidden: goupile.isLocked()});
 
-form.calc("persoschizotypique", "Personnalité schizoptypique", form.value("p10") + form.value("p23") + form.value("p36") + form.value("p48") + form.value("p61") + form.value("p72") + form.value("p74") + form.value("p60") + form.value("p86"));
+form.calc("persoschizotypique", "Personnalité schizoptypique", form.value("p10") + form.value("p23") + form.value("p36") + form.value("p48") + form.value("p61") + form.value("p72") + form.value("p74") + form.value("p60") + form.value("p86"), {hidden: goupile.isLocked()});
 
-form.calc("persoborderline", "Personnalité borderline", form.value("p6") + form.value("p19") + form.value("p32") + ((form.value("p98") || []).length >= 2) + form.value("p45") + form.value("p58") + form.value("p69") + form.value("p78") + form.value("p93"));
+form.calc("persoborderline", "Personnalité borderline", form.value("p6") + form.value("p19") + form.value("p32") + ((form.value("p98") || []).length >= 2) + form.value("p45") + form.value("p58") + form.value("p69") + form.value("p78") + form.value("p93"), {hidden: goupile.isLocked()});
 
-form.calc("persodependante", "Personnalité dépendante", form.value("p2") + form.value("p15") + form.value("p27") + form.value("p40") + form.value("p53") + form.value("p65") + form.value("p82") + form.value("p88"));
+form.calc("persodependante", "Personnalité dépendante", form.value("p2") + form.value("p15") + form.value("p27") + form.value("p40") + form.value("p53") + form.value("p65") + form.value("p82") + form.value("p88"), {hidden: goupile.isLocked()});
 
 
 if (typeof data !== 'undefined')

@@ -1,6 +1,7 @@
 if (typeof data !== 'undefined')
     data.makeHeader("Echelle de mesure de l'observance médicamenteuse (MARS)", page)
-route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
+                                       hidden: goupile.isLocked()}).value
 
 form.output(html`
     <p>Ce questionnaire consiste à mieux comprendre les difficultés liées à la prise de médicaments.
@@ -31,7 +32,7 @@ let score = form.value("Q1") +
             form.value("Q9") +
             form.value("Q10")
 
-form.calc("score", "Score total", score);
+form.calc("score", "Score total", score, {hidden: goupile.isLocked()});
 
 if (typeof data !== 'undefined')
     data.makeFormFooter(nav, page)

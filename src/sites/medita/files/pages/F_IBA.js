@@ -1,6 +1,7 @@
 if (typeof data !== 'undefined')
     data.makeHeader("Inventaire de Beck pour l'anxiété", page)
-route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
+                                       hidden: goupile.isLocked()}).value
 
 form.output(html`
     <p>Voici une liste de symptômes courants dus à l’anxiété. Veuillez lire chaque symptôme attentivement. Indiquez, en encerclant le chiffre approprié, à quel degré vous avez été affecté par chacun de ces symptômes au cours de la dernière semaine, aujourd’hui inclus.</p>
@@ -64,7 +65,7 @@ let score = form.value("a") +
             form.value("s") +
             form.value("t") +
             form.value("u")
-form.calc("score", "Score total", score)
+form.calc("score", "Score total", score, {hidden: goupile.isLocked()})
 
 
 if (typeof data !== 'undefined')

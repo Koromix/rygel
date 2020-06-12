@@ -84,12 +84,14 @@ data.makeHeader = function(title, page) {
 }
 
 data.makeFormFooter = function(nav, page) {
-    page.output(html`
-        <br/><br/>
-        <button class="md_button" ?disabled=${!page.isValid()}
-                @click=${async e => {await page.submit(); nav.new();}}>Enregistrer</button>
-        <button class="md_button" @click=${e => go("Formulaires")}>Formulaires</button>
-        <button class="md_button" @click=${e => go("Suivi")}>Suivi Patient / Graphique</button>
-        <button class="md_button" @click=${e => go("Accueil")}>Retour à l'accueil</button>
-    `)
+    if (!goupile.isLocked()) {
+        page.output(html`
+            <br/><br/>
+            <button class="md_button" ?disabled=${!page.isValid()}
+                    @click=${async e => {await page.submit(); nav.new();}}>Enregistrer</button>
+            <button class="md_button" @click=${e => go("Formulaires")}>Formulaires</button>
+            <button class="md_button" @click=${e => go("Suivi")}>Suivi Patient / Graphique</button>
+            <button class="md_button" @click=${e => go("Accueil")}>Retour à l'accueil</button>
+        `)
+    }
 }

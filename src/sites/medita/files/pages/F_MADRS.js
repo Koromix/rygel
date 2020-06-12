@@ -1,6 +1,7 @@
 if (typeof data !== 'undefined')
     data.makeHeader("Evalue la gravité des symptômes de dépression", page)
-route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
+                                       hidden: goupile.isLocked()}).value
 
 form.pushOptions({mandatory: true, missingMode: 'disable'})
 
@@ -135,7 +136,7 @@ let score = form.value("ideeDeSuicide") +
             form.value("tensionInterieure") +
             form.value("tristesseExprimee") +
             form.value("tristesseApparente")
-form.calc("score", "Score total", score)
+form.calc("score", "Score total", score, {hidden: goupile.isLocked()})
 
 if (typeof data !== 'undefined')
     data.makeFormFooter(nav, page)

@@ -1,6 +1,7 @@
 if (typeof data !== 'undefined')
     data.makeHeader("Catatonie", page)
-route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
+                                       hidden: goupile.isLocked()}).value
 
 form.pushOptions({mandatory: false, missingMode: 'disable'})
 
@@ -60,7 +61,7 @@ form.calc("score", "Score total", form.value("stupeur") +
                                   form.value("agitation") +
                                   form.value("grimaces") +
                                   form.value("echolalie") +
-                                  form.value("echopraxie"))
+                                  form.value("echopraxie"), {hidden: goupile.isLocked()})
 
 form.output(html`
     <p>Si présence de plus de 3 signes => syndrome catatonique.</p>

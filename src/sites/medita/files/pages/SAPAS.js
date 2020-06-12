@@ -1,6 +1,7 @@
 if (typeof data !== 'undefined')
     data.makeHeader("Echelle SAPAS (Standardised Assessment of Personality – Abbreviated Scale)", page)
-route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
+                                       hidden: goupile.isLocked()}).value
 
 form.output(html`
     <p>Cochez Oui (ou Non pour la question 3) si le patient pense que la description s’applique la plupart du temps et dans la plupart des situation.</p>
@@ -26,7 +27,7 @@ let score = form.value("a") +
             form.value("f") +
             form.value("g") +
             form.value("h")
-form.calc("score", "Score total", score)
+form.calc("score", "Score total", score, {hidden: goupile.isLocked()})
 
 if (typeof data !== 'undefined')
     data.makeFormFooter(nav, page)

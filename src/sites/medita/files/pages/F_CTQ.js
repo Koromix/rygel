@@ -1,6 +1,7 @@
 if (typeof data !== 'undefined')
     data.makeHeader("CTQ", page)
-route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
+                                       hidden: goupile.isLocked()}).value
 
 form.pushOptions({mandatory: true, missingMode: 'disable'})
 
@@ -37,22 +38,22 @@ form.enum("Q27", "27. Je pense qu’on a abusé de moi sexuellement", dataQ)
 form.enum("Q28", "28. Ma famille était une source de force et de soutien.", dataQSpecial)
 
 form.calc("physicalAbuse", "Physical abuse", form.value("Q9") + form.value("Q11") + form.value("Q12") +
-                                             form.value("Q15") + form.value("Q17"));
+                                             form.value("Q15") + form.value("Q17"), {hidden: goupile.isLocked()});
 form.calc("emotionalNeglect", "Emotional Neglect", form.value("Q5") + form.value("Q7") + form.value("Q13") +
-                                                   form.value("Q19") + form.value("Q28"));
+                                                   form.value("Q19") + form.value("Q28"), {hidden: goupile.isLocked()});
 form.calc("physicalNeglect", "Physical Neglect", form.value("Q1") + form.value("Q2") + form.value("Q4") +
-                                                 form.value("Q6") + form.value("Q26"));
+                                                 form.value("Q6") + form.value("Q26"), {hidden: goupile.isLocked()});
 form.calc("sexualAbuse", "Sexual abuse", form.value("Q20") + form.value("Q21") + form.value("Q23") +
-                                         form.value("Q24") + form.value("Q27"));
+                                         form.value("Q24") + form.value("Q27"), {hidden: goupile.isLocked()});
 form.calc("emotionalAbuse", "Emotional Abuse", form.value("Q3") + form.value("Q8") + form.value("Q14") +
-                                              form.value("Q18") + form.value("Q25"));
+                                              form.value("Q18") + form.value("Q25"), {hidden: goupile.isLocked()});
 
 let score = form.value("physicalAbuse") +
             form.value("emotionalNeglect") +
             form.value("physicalNeglect") +
             form.value("sexualAbuse") +
             form.value("emotionalAbuse")
-form.calc("score", "Score total", score);
+form.calc("score", "Score total", score, {hidden: goupile.isLocked()});
 
 if (typeof data !== 'undefined')
     data.makeFormFooter(nav, page)

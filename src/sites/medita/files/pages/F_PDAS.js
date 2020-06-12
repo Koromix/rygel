@@ -1,6 +1,7 @@
 if (typeof data !== 'undefined')
     data.makeHeader("Echelle d’évaluation de la dépression psychotique (PDAS)", page)
-route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
+                                       hidden: goupile.isLocked()}).value
 
 form.output(html`
     <p><b>Pour les instructions concernant l’entretien, veuillez vous reporter au guide associé.</p>
@@ -130,7 +131,7 @@ let score = form.value("symptomesSomatiques") +
             form.value("hallucinations") +
             form.value("penseesInhabituelles") +
             form.value("emoussementDesAffects")
-form.calc("score", "Score total", score)
+form.calc("score", "Score total", score, {hidden: goupile.isLocked()})
 
 if (typeof data !== 'undefined')
     data.makeFormFooter(nav, page)

@@ -1,6 +1,7 @@
 if (typeof data !== 'undefined')
     data.makeHeader("Questionnaire de Altman (ASRM)", page)
-route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
+                                       hidden: goupile.isLocked()}).value
 
 form.output(html`
 	<p>Choisir la proposition dans chaque groupe qui correspond le mieux à la manière dont vous vous êtes
@@ -72,7 +73,7 @@ let score = form.value("Q1") +
             form.value("Q3") +
             form.value("Q4") +
             form.value("Q5")
-form.calc("score", "Score total =", score)
+form.calc("score", "Score total =", score, {hidden: goupile.isLocked()})
 
 if (typeof data !== 'undefined')
     data.makeFormFooter(nav, page)

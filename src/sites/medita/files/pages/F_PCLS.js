@@ -1,6 +1,7 @@
 if (typeof data !== 'undefined')
     data.makeHeader("PCLS", page)
-route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
+route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
+                                       hidden: goupile.isLocked()}).value
 
 form.output(html`
     <p>Voici une liste de problèmes que les gens éprouvent parfois suite à une expérience vraiment stressante.
@@ -60,7 +61,7 @@ let score = form.value("a") +
             form.value("r") +
             form.value("s") +
             form.value("t")
-form.calc("score", "Score total", score)
+form.calc("score", "Score total", score, {hidden: goupile.isLocked()})
 
 if (typeof data !== 'undefined')
     data.makeFormFooter(nav, page)
