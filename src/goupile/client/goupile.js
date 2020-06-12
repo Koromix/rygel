@@ -785,7 +785,7 @@ Navigation functions should only be called in reaction to user events, such as b
 
                         deleteLock();
 
-                        log.info('Application déverrouillée !');
+                        log.success('Application déverrouillée !');
                         self.go();
                     } else {
                         pin.error('Code erroné');
@@ -798,7 +798,7 @@ Navigation functions should only be called in reaction to user events, such as b
             document.cookie = `lock_url=${route_url}; expires=Fri, 31 Dec 9999 23:59:59 GMT`;
             document.cookie = `lock_pin=${pin}; expires=Fri, 31 Dec 9999 23:59:59 GMT`;
 
-            log.info(`Code de déverouillage = ${pin}`);
+            log.info(`Code de déverouillage = ${pin}`, 10000);
             self.go();
         }
     }
