@@ -545,7 +545,7 @@ Navigation functions should only be called in reaction to user events, such as b
     }
 
     function makeLoginForm(page) {
-        let username = page.text('username', 'Nom d\'utilisateur');
+        let username = page.text('username', 'Nom d\'utilisateur', {mandatory: true});
         let password = page.password('password', 'Mot de passe');
 
         page.submitHandler = async () => {
@@ -554,7 +554,7 @@ Navigation functions should only be called in reaction to user events, such as b
             entry.progress('Connexion en cours');
             try {
                 let body = new URLSearchParams({
-                    username: username.value,
+                    username: username.value.toLowerCase(),
                     password: password.value
                 });
 

@@ -89,7 +89,7 @@ let user = new function() {
         let response = await net.fetch(`${env.base_url}api/login.json`, {
             method: 'POST',
             body: new URLSearchParams({
-                username: username,
+                username: username.toLowerCase(),
                 password: password
             })
         });
