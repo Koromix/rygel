@@ -7,6 +7,16 @@ var render = () => {};
 var html = () => {};
 var svg = () => {};
 
+// Stub exposed goupile methods
+var goupile = new function() {
+    let self = this;
+
+    this.isConnected = function() { return false; };
+    this.isTablet = function() { return false; };
+    this.isStandalone = function() { return false; };
+    this.isLocked = function() { return false; };
+};
+
 var server = new function() {
     let self = this;
 
