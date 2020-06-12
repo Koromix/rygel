@@ -98,7 +98,7 @@ let goupile = new function() {
 
     async function openDatabase() {
         let db_name = `goupile@${env.app_key}`;
-        let db = await idb.open(db_name, 3, (db, old_version) => {
+        let db = await idb.open(db_name, 3, async (db, old_version) => {
             switch (old_version) {
                 case null: {
                     db.createStore('files', {keyPath: 'path'});
@@ -113,6 +113,25 @@ let goupile = new function() {
 
                 case 1: {
                     db.createStore('records_queue', {keyPath: 'tpkey'});
+
+                    // XXX: Temporary code to migrate Medita data
+                    let records = await db.loadAll('records_data');
+                    let frags = records.map(data => {
+                        let parts = data.tkey.split('_');
+
+                        let id = parts.pop();
+                        let table = parts.join('_');
+
+                        let frag = {
+                            tpkey: `${table}_${table}:${id}`,
+                            table: table,
+                            page: table,
+                            values: data.values
+                        };
+
+                        return frag;
+                    });
+                    await db.saveAll('records_queue', frags);
                 } // fallthrough
 
                 case 2: {
