@@ -219,28 +219,37 @@ Navigation functions should only be called in reaction to user events, such as b
     async function fetchSettings(force = false) {
         let session_rnd = util.getCookie('session_rnd');
 
-        if ((net.isPlugged() && session_rnd !== settings_rnd) || force) {
+        if (!force) {
+            if (session_rnd == settings_rnd) {
+                return false;
+            } else if (session_rnd == null) {
+                settings = {};
+                settings_rnd = null;
+
+                return true;
+            }
+        }
+
+        if (net.isPlugged() || force) {
             settings = {};
 
-            if (session_rnd != null || force) {
-                try {
-                    let response = await net.fetch(`${env.base_url}api/settings.json?rnd=${session_rnd || 0}`);
+            try {
+                let response = await net.fetch(`${env.base_url}api/settings.json?rnd=${session_rnd || 0}`);
 
-                    if (response.ok) {
-                        settings = await response.json();
-                    } else {
-                        // The request has failed and could have deleted the session_rnd cookie
-                        session_rnd = util.getCookie('session_rnd');
-                    }
-
-                    settings_rnd = session_rnd;
-                    return true;
-                } catch (err) {
-                    return false;
+                if (response.ok) {
+                    settings = await response.json();
+                } else {
+                    // The request has failed and could have deleted the session_rnd cookie
+                    session_rnd = util.getCookie('session_rnd');
                 }
+
+                settings_rnd = session_rnd;
+                return true;
+            } catch (err) {
+                // Too bad :)
             }
-        } else {
-            return false;
+
+            return true;
         }
     }
 
