@@ -189,8 +189,12 @@ function VirtualData(db) {
         let url = `${env.base_url}records/${page.table}/${page.id}/${page.page}`;
         let response = await net.fetch(url, {method: 'PUT', body: JSON.stringify(page.values)});
 
-        if (response.ok)
+        if (response.ok) {
             await db.delete('records_queue', page.tpkey);
+        } else {
+            let err = (await response.text()).trim();
+            throw new Error(err);
+        }
     }
 
     async function downloadRecords(form) {
@@ -214,6 +218,9 @@ function VirtualData(db) {
                 db.saveAll('records', records);
                 db.saveAll('records_data', data);
             });
+        } else {
+            let err = (await response.text()).trim();
+            throw new Error(err);
         }
     }
 
