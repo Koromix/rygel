@@ -174,10 +174,8 @@ function VirtualData(db) {
     this.sync = async function() {
         let pages = await db.loadAll('records_queue');
 
-        for (let i = 0; i < pages.length; i += 10) {
-            let p = pages.slice(i, i + 10).map(uploadPage);
-            await Promise.all(p);
-        }
+        for (let page of pages)
+            await uploadPage(page);
 
         if (env.offline_records) {
             for (let i = 0; i < app.forms.length; i += 10) {
