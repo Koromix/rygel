@@ -70,13 +70,13 @@ let goupile = new function() {
                 // where granted is always true. Might come from an extension or some obscure privacy
                 // setting. Investigate.
                 if (granted) {
-                    console.log('Persistent storage has been granted');
+                    console.log('Stockage persistant activé');
                 } else {
-                    log.error(storage_warning);
+                    console.log(storage_warning);
                 }
             });
         } else {
-            log.error(storage_warning);
+            console.log(storage_warning);
         }
     }
 
