@@ -29,7 +29,7 @@ let dev_files = new function() {
 
         editor_tabs = [
             {name: 'Application', path: '/files/main.js'},
-            {name: 'Feuille de style', path: '/files/main.css'},
+            {name: 'Style', path: '/files/main.css'},
         ];
 
         if (asset.edit) {

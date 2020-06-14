@@ -95,7 +95,7 @@ function ApplicationBuilder(app) {
                 page: page,
 
                 path: `/files/pages/${page.key}.js`,
-                edit: 'Page de formulaire'
+                edit: 'Formulaire'
             });
         }
 
