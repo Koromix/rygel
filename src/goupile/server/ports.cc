@@ -204,14 +204,14 @@ bool ScriptPort::RunRecord(Span<const char> script, const ScriptHandle &values, 
     };
 
     JSValue ret = JS_Call(ctx, validate_func, JS_UNDEFINED, RG_LEN(args), args);
+    RG_DEFER { JS_FreeValue(ctx, ret); };
     if (JS_IsException(ret)) {
-        const char *msg = JS_ToCString(ctx, JS_GetException(ctx));
+        const char *msg = ConsumeValueStr(ctx, JS_GetException(ctx)).ptr;
         RG_DEFER { JS_FreeCString(ctx, msg); };
 
         LogError("JS: %1", msg);
         return false;
     }
-    RG_DEFER { JS_FreeValue(ctx, ret); };
 
     // Record values (as JSON string) and errors
     out_record->json = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, ret, "json"));
