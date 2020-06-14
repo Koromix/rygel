@@ -103,9 +103,10 @@ function updateChart(echelles, tables) {
             for (let j = 0; j < keys.length; j++) {
                 let dataset = {
                     label: keys[j] === 'score' ? echelle.name : `${echelle.name} [${keys[j]}]`,
-                    borderColor: colors[j % colors.length],
+                    borderColor: colors[i % colors.length],
                     fill: false,
                     lineTension: 0.1,
+                    borderDash: j ? [5, 15] : [],
                     pointBorderColor: [],
                     pointBackgroundColor:[],
                     data: []
@@ -113,8 +114,8 @@ function updateChart(echelles, tables) {
                 chart.data.datasets.push(dataset);
 
                 for (let record of records) {
-                    dataset.pointBorderColor.push(colors[j % colors.length]);
-                    dataset.pointBackgroundColor.push(colors[j % colors.length]);
+                    dataset.pointBorderColor.push(colors[i % colors.length]);
+                    dataset.pointBackgroundColor.push(colors[i % colors.length]);
 
                     dataset.data.push({
                         x: new Date(util.decodeULIDTime(record.id)),
