@@ -400,7 +400,7 @@ Navigation functions should only be called in reaction to user events, such as b
     function renderPanels() {
         if (getLockURL()) {
             render(html`
-                &nbsp;Application verrouillée
+                &nbsp;&nbsp;Application verrouillée
                 <div style="flex: 1;"></div>
                 <button @click=${showLoginDialog}>Connexion</button>
                 <button type="button" class="gp_icon active" @click=${toggleLock}>🔒\uFE0E</button>
