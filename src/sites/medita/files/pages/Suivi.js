@@ -105,6 +105,7 @@ function updateChart(echelles, tables) {
                     label: keys[j] === 'score' ? echelle.name : `${echelle.name} [${keys[j]}]`,
                     borderColor: colors[j % colors.length],
                     fill: false,
+                    lineTension: 0.1,
                     pointBorderColor: [],
                     pointBackgroundColor:[],
                     data: []
