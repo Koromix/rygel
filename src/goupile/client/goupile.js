@@ -403,7 +403,8 @@ Navigation functions should only be called in reaction to user events, such as b
                 &nbsp;&nbsp;Application verrouillée
                 <div style="flex: 1;"></div>
                 <button @click=${showLoginDialog}>Connexion</button>
-                <button type="button" class="gp_icon active" @click=${toggleLock}>🔒\uFE0E</button>
+                <button type="button" class="icon active" @click=${toggleLock}
+                        style="background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAYAAADEtGw7AAAA9ElEQVQ4jd2UoQ7CMBCGhyFBzM5hUTgECQqBwe0xMLhZ3F4CP8cbYBC8wMQEmpAgl0zMkOxDcAmXsW60WULCn5zpf/fl2l7reX8lIABi4AxcJE5ABIxcoRPgjlkp4LuAjwqSAYnEVa3HtlAfqKQ4AQbKG0m3AJkteKK6Chv8nXi5LXiqwMsGfyte+VuwnG0KFApcALmKR206ciDpAs9wU4W64Cbw3FBYAnvgwHta6hq6gNcqJ3YBLwxFvspZ9wmOxB/wejC9gQHGQNjimz+lDvAc2FiDZZtt4JLPGe6l4y61gscdXZl0M0Jr8JVlBN+AzU/TQk9O3o861bNs7AAAAABJRU5ErkJggg==');"></button>
             `, document.querySelector('#gp_menu'));
         } else {
             let show_data = route_asset && route_asset.form;
@@ -504,10 +505,12 @@ Navigation functions should only be called in reaction to user events, such as b
                     </div>
                 ` : ''}
 
-                <button type="button" class="gp_icon" @click=${showSyncDialog}>⮁\uFE0E</button>
-                ${env.use_offline ? html`<button type="button" id="gp_status" class="gp_icon" @click=${toggleStatus} />` : ''}
-                ${!env.use_offline ? html`<div id="gp_status" class="gp_icon"/>` : ''}
-                <button type="button" class="gp_icon" @click=${toggleLock}>🔒\uFE0E</button>
+                <button type="button" class="icon" @click=${showSyncDialog}
+                        style="background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAYAAADEtGw7AAAA2UlEQVQ4je2UoQ7CMBCGl5BUIuawk+hZPGaK55hE4ZA8AYIn2DMgeQgE4R3ml3wIbqSUttyaBsUlNd13n+ju/qL4RQFroLPOQtGz0ohb3qv6wpdADzS5xUfhboDJIgaWwGCx21zis8P2wX+iFQMb/HVKFgMGuAfEA1Cniht5hovDXuV+n/wUwlYO24bYv/g17DVwcOBG7j/mUyveES7vCGnFhue++8o79CqxgL5tCq6pWiywu//BYJkqthMrGoWTxNIwZmw0vFPEJdBFoRSxNM0UjBH5eOb29wfW1iIWbyrrqwAAAABJRU5ErkJggg==');"></button>
+                ${env.use_offline ? html`<button type="button" id="gp_status" class="icon" @click=${toggleStatus} />` : ''}
+                ${!env.use_offline ? html`<div id="gp_status"/>` : ''}
+                <button type="button" class="icon" @click=${toggleLock}
+                        style="background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAYAAADEtGw7AAAA9ElEQVQ4jd2UoQ7CMBCGhyFBzM5hUTgECQqBwe0xMLhZ3F4CP8cbYBC8wMQEmpAgl0zMkOxDcAmXsW60WULCn5zpf/fl2l7reX8lIABi4AxcJE5ABIxcoRPgjlkp4LuAjwqSAYnEVa3HtlAfqKQ4AQbKG0m3AJkteKK6Chv8nXi5LXiqwMsGfyte+VuwnG0KFApcALmKR206ciDpAs9wU4W64Cbw3FBYAnvgwHta6hq6gNcqJ3YBLwxFvspZ9wmOxB/wejC9gQHGQNjimz+lDvAc2FiDZZtt4JLPGe6l4y61gscdXZl0M0Jr8JVlBN+AzU/TQk9O3o861bNs7AAAAABJRU5ErkJggg==');"></button>
             `, document.querySelector('#gp_menu'));
         }
 
@@ -757,13 +760,13 @@ Navigation functions should only be called in reaction to user events, such as b
 
         if (el) {
             if (!net.isPlugged()) {
-                el.textContent = '⛔\uFE0E';
+                el.style.backgroundImage = 'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAYAAADEtGw7AAABuklEQVQ4jZWVP2sCQRDFT2wP1MpCuFZE/AjprG3sRLD3E1hYia2NkEKwCtiHlCnShtRWNoZAQBBsUgmCvxT3Npmse3pZWHBm3jzn385FUY4DxEBdN87jc42sAcyALZdnK1vjP4QxsABOIjkDG+BFdyMdwixuZgEkwFpOB2AE1AK4mmwHYddAkkVaUTQAz0AlR3YVYZFvOQR6EuARKN4iNX5F6+sb26YpsdFXgUKArABUjRybJrct0KXTNbo68KnmFDzSObCzUwH0XBmdogwc1YiiR7wTeCFCRwqwB5peSfaalLItwyqQclNggHvdC1KDX/2UAxhImGQ0x0buSFsZ2KkwgwgYShhlgAsmEvT7oqHCjoQZRkBXwjyD1KZvyxKaFlf/bgS0JLwGSG2jWgQa6vm8ydZyBB+k7z8xoI5AO/52v2nIO0afiOM9VPSlF8GYwAYj3XxjT/cgjolVlkjn+GyjyHuU3VklK/nGroxf2Gd5m7QtnzPm5fogNy4nYMKVPUu6H6b87u3guFqHAekTR+VZku6BO92edG4XH4F+3vQSNcNFEzonYcIL/sYfVIA+6fdtpTtT1Fc/BN9Rvo/nLx5nCAAAAABJRU5ErkJggg==")';
                 el.title = 'Mode hors-ligne forcé';
             } else if (net.isOnline()) {
-                el.textContent = '🌐\uFE0E';
+                el.style.backgroundImage = 'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAYAAADEtGw7AAABx0lEQVQ4jcWUIUtDYRSGLzfoBGFhbZiUhcHi4orZYBBhYFwxGQRBVm4S/AGWwZpBmILRrmBYGUzMS4JYBjJYGOwx3PeTl+sdUxE8cGD3Oee83z3nnm9R9B8GFIAdIAE68kSs8BvBInAOTFhs78AZUPyuaB14UfEbcKvfEzvoVjGUW18m2gCmwFxvvG7CR3KAG8XOlTsBGotEN/QWM2BfrCahgZ5jYChWE2uq5g0o5wlfquDEWEesaawpdmHsVOwyK1pRS0MgNv6qj7RqrCD2YiwGnqVRceFwYstYGMN1Tndh7lVjh9mOI+BOsGxsX6ydI5wotmdsQ+zOE5/URs98oMR+hvfEUI7zOTB04RF/ZyMXftRpVWBT3lZiYix4oljbWE0ajy7cVWLD2LbY51pZ7EKxbWMNsa4n7gp2jBVJF3+Y0Y1I13KG/U/Yy+164irpnGfYHgIPSnZWEbs3VlXtCNv5EDxQwQBYF2tlx2FjaFlnYYOaUZ5ZO33SvVwjvX1TYEs+FVtTTli9bq6ojeRKiWPSGxlu5b0c42M9XwErC4XtgGMrmvPVAhsDR0sFM+Il0j3t68MEm4m1gdKPRHMOiYGyPF5eEUUfsO8MIRsFC68AAAAASUVORK5CYII=")';
                 el.title = 'Connecté au serveur';
             } else {
-                el.textContent = '⚠\uFE0E';
+                el.style.backgroundImage = 'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAYAAADEtGw7AAAB6UlEQVQ4jcWVIUgDURjHd8GxMFgxDYMIpgPTwLAirCjCYGEwsBnWDAZBGIw1g01YWLEsiBgWBDEJCxbDhAurppUFwxgyEPwZ7n+7z+ep0+KDD+5+3/f+997/vneXSv3HADLALtACOoqWWOYvgjngBJjy9ZioJreoaAEYafIY6Ol6ah7UUw7VFn4SLQIvwJtWkzXCBwqAK+VOVTsFil+JrmgVr0BVbENCj4CnCMR81dQ0Zwzkk4S7mnBkWEesZlhNrG3YsVjXFV3XlgLAE/Pk3wRIm9qM2MipHUpjPZXwxLphfuRnwu4i333D6u6OU8CtYN6wqlgjQbipXMV5RwA3tjDQNq5MDFT44PAuYXdsAmlgSVbuyaLACj+x2OgDJSBPeAKvFS2xEnBhhe+1Yh9YU0S+N3W/SvjiysQH5U2BWBl7WIBzJYuGlcTODNsAZmYHdeJDg3K+Fa4o0TEsR9j4gWGXjjVlMzcaH6xIE/o8w/ShLCJixN+H74THbgvtKTEAsmL7Ym3dzxyRCvFJnNvhtqf1+oGwLzNa5UzXgSMyVNjxmCScJvbxmbAz5qcSOHREthR2HHwSlrgngYkKbTttA3dGpAfcmPs7YClR2DxgGWjIlldN7AM7hN9h+3eZiv3ud6Vd5BXeInPeAUnSepfmIVvfAAAAAElFTkSuQmCC")';
                 el.title = 'Serveur non disponible';
             }
         }

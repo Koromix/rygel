@@ -56,6 +56,12 @@ button:not(:disabled) { cursor: pointer; }
     color: inherit;
     text-decoration: none;
 }
+.gp_toolbar button.icon {
+    width: 36px;
+    min-width: 36px;
+    background-repeat: no-repeat;
+    background-position: center;
+}
 .gp_toolbar button::-moz-focus-inner { border: 0; }
 .gp_toolbar button:focus { outline: 0; }
 .gp_toolbar button:not(.active):not(:disabled):hover { background-color: #376cb5; }
@@ -138,12 +144,6 @@ button:not(:disabled) { cursor: pointer; }
         background: DodgerBlue;
         color: white;
     }
-}
-
-.gp_icon {
-    width: 2em;
-    font-size: 1.5em;
-    text-align: center;
 }
 
 /* -------------------- Panels -------------------- */
