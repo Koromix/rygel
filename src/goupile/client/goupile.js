@@ -804,29 +804,42 @@ Navigation functions should only be called in reaction to user events, such as b
         if (getLockURL()) {
             ui.popup(e, page => {
                 page.output('Entrez le code de déverrouillage');
-                let pin = page.text('code');
+                let pin = page.pin('code');
 
                 if (pin.value && pin.value.length >= 4) {
-                    if (pin.value === localStorage.getItem('lock_pin')) {
+                    let code = localStorage.getItem('lock_pin');
+
+                    if (pin.value === code) {
                         setTimeout(page.close, 0);
 
                         deleteLock();
 
                         log.success('Application déverrouillée !');
                         self.go();
-                    } else {
+                    } else if (pin.value.length >= code.length) {
                         pin.error('Code erroné');
                     }
                 }
             });
         } else {
-            let pin = ('' + util.getRandomInt(0, 9999)).padStart(4, '0');
+            ui.popup(e, page => {
+                page.output('Entrez le code de verrouillage');
+                let pin = page.pin('*code');
 
-            localStorage.setItem('lock_url', route_url);
-            localStorage.setItem('lock_pin', pin);
+                if (pin.value && pin.value.length < 4)
+                    pin.error('Le code doit comporter au moins 4 chiffres', true);
 
-            log.info(`Code de déverouillage = ${pin}`, 10000);
-            self.go();
+                page.submitHandler = () => {
+                    page.close();
+
+                    localStorage.setItem('lock_url', route_url);
+                    localStorage.setItem('lock_pin', pin.value);
+
+                    log.success('Application verrouillée !');
+                    self.go();
+                };
+                page.buttons(page.buttons.std.ok_cancel('Verrouiller'));
+            });
         }
     }
 

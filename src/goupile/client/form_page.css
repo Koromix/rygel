@@ -112,6 +112,16 @@
     border-width: 0.5px;
 }
 
+.af_pin {
+    width: 8em;
+    margin: 8px auto;
+    text-align: center;
+}
+.af_pin > button {
+    width: 2.5em;
+    height: 2.2em;
+}
+
 .af_select, .af_radio, .af_multi { display: inline-block; }
 
 .af_button {

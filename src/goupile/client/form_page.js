@@ -129,6 +129,43 @@ function PageBuilder(state, page) {
         return intf;
     };
 
+    this.pin = function(key, label, options = {}) {
+        options = expandOptions(options);
+        key = decodeKey(key, options);
+
+        let value = readValue(key, options.value);
+        if (value != null)
+            value = '' + value;
+
+        let id = makeID(key);
+        let render = intf => renderWrappedWidget(intf, html`
+            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
+            <input id=${id} type="text" class="af_input" style=${makeInputStyle(options)}
+                   inputmode="none" .value=${value || ''}
+                   placeholder=${options.placeholder || ''} ?disabled=${options.disable}
+                   @input=${e => handleTextInput(e, key)}/>
+            ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
+            <div class="af_pin">
+                ${[7, 8, 9, 4, 5, 6, 1, 2, 3, 0].map(i =>
+                    html`<button type="button" @click=${e => handlePinButton(e, key, value)}>${i}</button>`)}
+            </div>
+        `);
+
+        let intf = addWidget('pin', label, render, options);
+        fillVariableInfo(intf, key, value, value == null);
+
+        if (value && !value.match(/^[0-9]*$/))
+            intf.error('Le code doit comporter uniquement des chiffres');
+
+        return intf;
+    };
+
+    function handlePinButton(e, key, value) {
+        updateValue(key, (value || '') + e.target.textContent);
+        self.restart();
+    }
+
     function handleTextInput(e, key) {
         updateValue(key, e.target.value || undefined);
         self.restart();
