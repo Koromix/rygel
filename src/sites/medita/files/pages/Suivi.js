@@ -140,12 +140,12 @@ function updateTables(echelles, tables) {
             return html`
                 <fieldset class="af_container af_section">
                     <legend>${echelle.name}</legend>
-                    <table style="width: 100%;">
+                    <table style="width: 100%; table-layout: fixed;">
                         <thead>
                             <tr>
-                                <th>Date</th>
-                                ${keys.map(key => html`<th>${key}</th>`)}
-                                <th colspan="2"></th>
+                                <th style="text-align: left;">Date</th>
+                                ${keys.map(key => html`<th style="text-align: left;">${key}</th>`)}
+                                <th style="width: 200px;"></th>
                             </tr>
                         </thead>
                         <tbody>${records.map(record => {
@@ -155,8 +155,10 @@ function updateTables(echelles, tables) {
                             return html`<tr>
                                 <td>${date.toLocaleString()}</td>
                                 ${values.map(value => html`<td>${value}</td>`)}
-                                <td><a href=${nav.link(echelle.form, null, record)}>Modifier</a></td>
-                                <td><a href="#" @click=${e => {showDeleteDialog(e, echelle.form, record.id); e.preventDefault();}}>Supprimer</a></td>
+                                <td style="text-align: right;">
+                                    <a href=${nav.link(echelle.form, null, record)}>Modifier</a> |
+                                    <a href="#" @click=${e => {showDeleteDialog(e, echelle.form, record.id); e.preventDefault();}}>Supprimer</a>
+                                </td>
                             </tr>`;
                         })}</tbody>
                     </table>
