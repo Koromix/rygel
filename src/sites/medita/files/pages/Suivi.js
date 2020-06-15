@@ -42,7 +42,7 @@ if (id.value) {
     p.then(tables => {
         // Remove parasite script thingy
         tables.shift();
-        tables = tables.map(table => table.filter(record => record.values.id === id.value));
+        tables = tables.map(table => table.filter(record => record.values.id == id.value));
 
         updateChart(echelles, tables);
         updateTables(echelles, tables);
