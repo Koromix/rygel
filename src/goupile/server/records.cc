@@ -20,6 +20,7 @@ static void ExportRecord(sq_Statement *stmt, Span<const char> form_name, json_Wr
     json->Key("table"); json->String(form_name.ptr, (int)form_name.len);
     json->Key("id"); json->String(id);
     json->Key("sequence"); json->Int(sqlite3_column_int(*stmt, 1));
+    json->Key("mtime"); json->Int(1592179521); // XXX: Temporary code to fix Medita
     json->Key("values"); json->Raw((const char *)sqlite3_column_text(*stmt, 2));
 
     json->Key("complete"); json->StartObject();
