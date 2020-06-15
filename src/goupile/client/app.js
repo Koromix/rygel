@@ -30,30 +30,6 @@ function Application() {
     this.route = {};
 }
 
-function FormInfo(key, options = {}) {
-    this.key = key;
-    this.options = util.assignDeep({
-        actions: true,
-        validate: true
-    }, options);
-
-    this.pages = [];
-    this.links = [];
-}
-
-function PageInfo(form, key, label) {
-    this.key = key;
-    this.label = label;
-
-    this.url = `${env.base_url}app/${form.key}/${key}/`;
-}
-
-function ScheduleInfo(key) {
-    this.key = key;
-
-    this.url = `${env.base_url}app/${key}/`;
-}
-
 function ApplicationBuilder(app) {
     let self = this;
 
@@ -68,7 +44,17 @@ function ApplicationBuilder(app) {
     this.form = function(key, func = null, options = {}) {
         checkKey(key);
 
-        let form = new FormInfo(key, options);
+        let form = {
+            key: key,
+            options: util.assignDeep({
+                actions: true,
+                validate: true
+            }, options),
+
+            pages: [],
+            links: []
+        };
+
         let form_builder = new FormBuilder(form);
         if (typeof func === 'function') {
             func(form_builder);
@@ -141,7 +127,10 @@ function ApplicationBuilder(app) {
     this.schedule = function(key) {
         checkKey(key);
 
-        let schedule = new ScheduleInfo(key);
+        let schedule = {
+            key: key,
+            url: `${env.base_url}app/${key}/`
+        };
         app.schedules.push(schedule);
 
         pushAsset({
@@ -212,9 +201,14 @@ function FormBuilder(form) {
         if (used_keys.has(key))
             throw new Error(`Page '${key}' is already used in this form`);
 
-        let page = new PageInfo(form, key, label || key);
+        let page = {
+            key: key,
+            label: label || key,
 
+            url: `${env.base_url}app/${form.key}/${key}/`
+        };
         form.pages.push(page);
+
         used_keys.add(key);
     };
 }
