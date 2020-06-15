@@ -4,6 +4,7 @@
 
 // These globals are initialized below
 let app = null;
+let nav = null;
 let virt_fs = null;
 let virt_data = null;
 
@@ -18,7 +19,6 @@ let goupile = new function() {
 
     let route_asset;
     let route_url;
-    let block_go = false;
 
     let running = false;
     let restart = false;
@@ -52,6 +52,7 @@ let goupile = new function() {
             }
         }
 
+        nav = new ApplicationNavigator();
         await self.initApplication();
 
         // If a run fails and we can run in offline mode, restart it transparently
@@ -135,14 +136,12 @@ let goupile = new function() {
             try {
                 let new_app = new Application;
                 let app_builder = new ApplicationBuilder(new_app);
-                new_app.go = handleGo;
 
                 if (code == null)
                     code = await readCode('/files/main.js');
 
-                let func = Function('util', 'app', 'data', 'nav', 'go', 'route', code);
-                let nav = {go: handleGo};
-                func(util, app_builder, new_app.data, nav, nav.go, new_app.route);
+                let func = Function('util', 'app', 'data', 'go', 'route', code);
+                func(util, app_builder, new_app.data, nav.go, new_app.route);
 
                 let known_paths = new Set(new_app.assets.map(asset => asset.path));
                 known_paths.add('/files/main.js');
@@ -161,8 +160,6 @@ let goupile = new function() {
                 } else {
                     // Empty application, so that the user can still fix main.js or reset everything
                     app = new Application;
-                    app.go = handleGo;
-
                     console.log(err);
                 }
             }
@@ -192,20 +189,6 @@ let goupile = new function() {
 
         self.go(route_url || window.location.href, false);
     };
-
-    // Avoid async here, because it may fail (see block_go) and the caller
-    // may need to catch that synchronously.
-    function handleGo(url = null, push_history = true) {
-        if (block_go) {
-            throw new Error(`A navigation function (e.g. go()) has been interrupted.
-Navigation functions should only be called in reaction to user events, such as button clicks.`);
-        }
-
-        if (!url.match(/^((http|ftp|https):\/\/|\/)/g))
-            url = `${env.base_url}app/${url}`;
-
-        self.go(url, push_history);
-    }
 
     async function fetchSettings(force = false) {
         let session_rnd = util.getCookie('session_rnd');
@@ -668,7 +651,7 @@ Navigation functions should only be called in reaction to user events, such as b
 
         // We don't want go() to be fired when a script is opened or changed in the editor,
         // because then we wouldn't be able to come back to the script to fix the code.
-        block_go = true;
+        nav.block();
 
         try {
             switch (asset.type) {
@@ -716,7 +699,7 @@ Navigation functions should only be called in reaction to user events, such as b
 
             return false;
         } finally {
-            block_go = false;
+            nav.unblock();
         }
     }
 
