@@ -24,6 +24,9 @@ let id = form.find("id");
     page.output(tsel.render());
 }
 
+// Sous-échelles ?
+let sub = page.boolean('sub', 'Afficher les sous-scores ?', {untoggle: false, value: false});
+
 // Graphique et tableaux
 if (id.value) {
     let forms = new Set(scratch.echelles || data.echelles.map(echelle => echelle.form));
@@ -100,7 +103,7 @@ function updateChart(echelles, tables) {
         let records = tables[i];
 
         if (records.length) {
-            for (let j = 0; j < keys.length; j++) {
+            for (let j = 0; j < (sub.value ? keys.length : 1); j++) {
                 let dataset = {
                     label: keys[j] === 'score' ? echelle.name : `${echelle.name} [${keys[j]}]`,
                     borderColor: colors[i % colors.length],
