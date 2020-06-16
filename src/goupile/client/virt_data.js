@@ -7,13 +7,14 @@ function VirtualData(db) {
 
     this.create = function(table) {
         let id = util.makeULID();
-        let tkey = makeTableKey(table, id);
-
         let record = {
-            tkey: tkey,
+            _ikey: makeEntryKey(table, id),
 
-            id: id,
             table: table,
+            id: id,
+
+            mtime: null,
+            fragments: [],
             complete: {},
 
             values: {}
@@ -22,18 +23,15 @@ function VirtualData(db) {
         return record;
     };
 
-    this.save = async function(record, page_key, variables) {
-        // We need to keep only valid values listed in variables
-        let record2 = Object.assign({}, record);
-        delete record2.values;
-
+    this.save = async function(record, page, variables) {
         variables = variables.map((variable, idx) => {
             let ret = {
-                tkey: makeTableKey(record2.table, variable.key),
+                _ikey: makeVariableKey(record.table, page, variable.key),
 
+                table: record.table,
+                frag: page,
                 key: variable.key.toString(),
-                table: record2.table,
-                page: page_key,
+
                 before: variables[idx - 1] ? variables[idx - 1].key.toString() : null,
                 after: variables[idx + 1] ? variables[idx + 1].key.toString() : null
             };
@@ -41,86 +39,67 @@ function VirtualData(db) {
             return ret;
         });
 
-        record2.mtime = Date.now();
-        record2.complete[page_key] = false;
+        // We need to keep only valid values listed in variables
+        let entry = Object.assign({}, record);
+        entry.mtime = Date.now();
+        entry.fragments = entry.fragments.filter(frag => frag != page);
+        entry.fragments.push(page);
+        delete entry.complete;
+        delete entry.values;
 
-        let page = {
-            tpkey: makeTablePageKey(record2.table, record.id, page_key),
-            table: record2.table,
-            id: record2.id,
-            page: page_key,
+        let frag = {
+            _ikey: makeFragmentKey(record.table, record.id, page),
 
+            table: entry.table,
+            id: entry.id,
+            frag: page,
+
+            complete: false,
             values: {}
         };
         for (let variable of variables) {
-            let key = variable.key.toString();
-            page.values[key] = record.values[key];
+            if (!variable.missing) {
+                let key = variable.key.toString();
+                frag.values[key] = record.values[key];
+            }
         }
 
-        await db.transaction('rw', ['records', 'records_data',
-                                    'records_variables', 'records_queue'], async () => {
-            let data = await db.load('records_data', record.tkey);
-
-            if (data) {
-                Object.assign(data.values, record.values);
-            } else {
-                data = {
-                    tkey: record.tkey,
-                    values: Object.assign({}, record.values)
-                };
-            }
-
-            // Clean up missing variables
-            for (let variable of variables) {
-                if (variable.missing)
-                    delete data.values[variable.key];
-            }
-
-            db.save('records', record2);
-            db.save('records_data', data);
-            db.saveAll('records_variables', variables);
-            db.save('records_queue', page);
-
-            // Need to return complete record to caller
-            record2.values = data.values;
+        await db.transaction('rw', ['rec_entries', 'rec_fragments', 'rec_variables'], () => {
+            db.save('rec_entries', entry);
+            db.save('rec_fragments', frag);
+            db.saveAll('rec_variables', variables);
         });
 
-        return record2;
+        entry.complete = record.complete;
+        entry.values = record.values;
+        return entry;
     };
 
     this.delete = async function(table, id) {
-        let tkey = makeTableKey(table, id);
-
-        await db.transaction('rw', ['records', 'records_data'], () => {
-            db.delete('records', tkey);
-            db.delete('records_data', tkey);
-            db.delete('records_queue', tkey, tkey + '`');
-        });
+        let ikey = makeEntryKey(table, id);
+        await db.deleteAll('rec_fragments', ikey + ':', ikey + '`');
     };
 
     this.clear = async function(table) {
-        // Works for ASCII names, which we enforce
-        let start_key = table + '_';
-        let end_key = table + '`';
-
-        await db.transaction('rw', ['records', 'records_data', 'records_variables', 'records_queue'], () => {
-            db.deleteAll('records', start_key, end_key);
-            db.deleteAll('records_data', start_key, end_key);
-            db.deleteAll('records_variables', start_key, end_key);
-            db.deleteAll('records_queue', start_key, end_key);
+        await db.transaction('rw', ['rec_entries', 'rec_fragments', 'rec_variables'], () => {
+            db.deleteAll('rec_entries', table + ':', table + '`');
+            db.deleteAll('rec_fragments', table + ':', table + '`');
+            db.deleteAll('rec_variables', table + '@', table + '`');
         });
     };
 
     this.load = async function(table, id) {
-        let tkey = makeTableKey(table, id);
+        let ikey = makeEntryKey(table, id);
 
-        let [record, data] = await Promise.all([
-            db.load('records', tkey),
-            db.load('records_data', tkey)
+        let [record, fragments] = await Promise.all([
+            db.load('rec_entries', ikey),
+            db.loadAll('rec_fragments', ikey)
         ]);
 
-        if (record && data) {
-            record.values = data.values || {};
+        if (record && fragments.length) {
+            let fragments_map = util.mapArray(fragments, frag => frag.frag);
+            expandFragments(record, fragments_map);
+
             return record;
         } else {
             return null;
@@ -128,25 +107,31 @@ function VirtualData(db) {
     };
 
     this.loadAll = async function(table) {
-        // Works for ASCII names, which we enforce
-        let start_key = table + '_';
-        let end_key = table + '`';
-
-        let [records, data] = await Promise.all([
-            db.loadAll('records', start_key, end_key),
-            db.loadAll('records_data', start_key, end_key)
+        let [records, fragments] = await Promise.all([
+            db.loadAll('rec_entries', table + ':', table + '`'),
+            db.loadAll('rec_fragments', table + ':', table + '`')
         ]);
 
         let i = 0, j = 0, k = 0;
-        while (j < records.length && k < data.length) {
+        while (j < records.length && k < fragments.length) {
             records[i] = records[j++];
 
             // Find matching data row
-            while (k < data.length && data[k].tkey < records[i].tkey)
+            while (k < fragments.length && fragments[k]._ikey < records[i]._ikey)
                 k++;
 
-            if (data[k].tkey === records[i].tkey) {
-                records[i].values = data[k].values || {};
+            let valid = false;
+            let fragments_map = {};
+            while (k < fragments.length && fragments[k].table === table &&
+                                           fragments[k].id === records[i].id) {
+                let frag = fragments[k++];
+
+                fragments_map[frag.frag] = frag;
+                valid = true;
+            }
+
+            if (valid) {
+                expandFragments(records[i], fragments_map);
                 i++;
             }
         }
@@ -155,80 +140,39 @@ function VirtualData(db) {
         return records;
     };
 
-    this.listAll = async function(table) {
-        // Works for ASCII names, which we enforce
-        let start_key = table + '_';
-        let end_key = table + '`';
+    function expandFragments(record, fragments_map) {
+        record.complete = {};
+        record.values = {};
 
-        return db.loadAll('records', tkey);
+        for (let frag of record.fragments) {
+            frag = fragments_map[frag];
+
+            record.complete[frag.frag] = frag.complete;
+            Object.assign(record.values, frag.values);
+        }
     }
+
+    this.listAll = async function(table) {
+        return db.loadAll('rec_entries', table + ':', table + '`');
+    };
 
     this.listVariables = async function(table) {
-        // Works for ASCII names, which we enforce
-        let start_key = table + '_';
-        let end_key = table + '`';
-
-        return db.loadAll('records_variables', start_key, end_key);
+        return db.loadAll('rec_variables', table + '@', table + '`');
     };
 
-    this.sync = async function() {
-        let pages = await db.loadAll('records_queue');
-
-        for (let page of pages)
-            await uploadPage(page);
-
-        if (env.offline_records) {
-            for (let i = 0; i < app.forms.length; i += 10) {
-                let p = app.forms.slice(i, i + 10).map(downloadRecords);
-                await Promise.all(p);
-            }
-        }
+    this.sync = function() {
+        throw new Error('Not implemented yet!');
     };
 
-    async function uploadPage(page) {
-        let url = `${env.base_url}records/${page.table}/${page.id}/${page.page}`;
-        let response = await net.fetch(url, {method: 'PUT', body: JSON.stringify(page.values)});
-
-        if (response.ok) {
-            await db.delete('records_queue', page.tpkey);
-        } else {
-            let err = (await response.text()).trim();
-            throw new Error(err);
-        }
+    function makeEntryKey(table, id) {
+        return `${table}:${id}`;
     }
 
-    async function downloadRecords(form) {
-        let url = `${env.base_url}records/${form.key}`;
-        let response = await net.fetch(url);
-
-        if (response.ok) {
-            let records = await response.json();
-            records.sort((record1, record2) => record1.sequence - record2.sequence);
-
-            let data = records.map(record => ({
-                tkey: makeTableKey(record.table, record.id),
-                values: record.values
-            }));
-            for (let record of records) {
-                record.tkey = makeTableKey(record.table, record.id);
-                delete record.values;
-            }
-
-            await db.transaction('rw', ['records', 'records_data'], () => {
-                db.saveAll('records', records);
-                db.saveAll('records_data', data);
-            });
-        } else {
-            let err = (await response.text()).trim();
-            throw new Error(err);
-        }
+    function makeFragmentKey(table, id, frag) {
+        return `${table}:${id}@${frag}`;
     }
 
-    function makeTableKey(table, id) {
-        return `${table}_${id}`;
-    }
-
-    function makeTablePageKey(table, id, page) {
-        return `${table}_${id}:${page}`;
+    function makeVariableKey(table, page, key) {
+        return `${table}@${page}.${key}`;
     }
 }

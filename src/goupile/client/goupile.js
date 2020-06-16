@@ -97,47 +97,17 @@ let goupile = new function() {
     }
 
     async function openDatabase() {
-        let db_name = `goupile@${env.app_key}`;
-        let db = await idb.open(db_name, 10, async (db, old_version) => {
+        let db_name = `goupile:${env.app_key}`;
+        let db = await idb.open(db_name, 1, async (db, old_version) => {
             switch (old_version) {
                 case null: {
-                    db.createStore('files', {keyPath: 'path'});
-                    db.createStore('files_data');
-                    db.createStore('files_cache', {keyPath: 'path'});
+                    db.createStore('fs_entries', {keyPath: 'path'});
+                    db.createStore('fs_data');
+                    db.createStore('fs_mirror', {keyPath: 'path'});
 
-                    db.createStore('records', {keyPath: 'tkey'});
-                    db.createStore('records_data', {keyPath: 'tkey'});
-                    db.createStore('records_sequences');
-                    db.createStore('records_variables', {keyPath: 'tkey'});
-                } // fallthrough
-
-                case 1: {
-                    db.createStore('records_queue', {keyPath: 'tpkey'});
-
-                    // XXX: Temporary code to migrate Medita data
-                    let records = await db.loadAll('records_data');
-                    let frags = records.map(data => {
-                        let parts = data.tkey.split('_');
-
-                        let id = parts.pop();
-                        let table = parts.join('_');
-
-                        let frag = {
-                            tpkey: `${table}_${id}:${table}`,
-                            table: table,
-                            id: id,
-                            page: table,
-
-                            values: data.values
-                        };
-
-                        return frag;
-                    });
-                    await db.saveAll('records_queue', frags);
-                } // fallthrough
-
-                case 2: {
-                    db.deleteStore('records_sequences');
+                    db.createStore('rec_entries', {keyPath: '_ikey'});
+                    db.createStore('rec_fragments', {keyPath: '_ikey'});
+                    db.createStore('rec_variables', {keyPath: '_ikey'});
                 } // fallthrough
             }
         });
