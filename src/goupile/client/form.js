@@ -119,13 +119,11 @@ let form_executor = new function() {
         func(util, app.data, nav, nav.go, builder, builder, {}, state.scratch);
 
         render(html`
-            ${current_asset.form.options.actions ? html`
-                <div class="af_actions">
-                    <button type="button" class="af_button"
-                            ?disabled=${builder.hasErrors() || !state.changed}
-                            @click=${builder.submit}>Enregistrer</button>
-                </div>
-            ` : ''}
+            <div class="af_actions">
+                <button type="button" class="af_button"
+                        ?disabled=${builder.hasErrors() || !state.changed}
+                        @click=${builder.submit}>Enregistrer</button>
+            </div>
 
             ${page.widgets.map(intf => {
                 let visible = intf.key && columns.has(intf.key.toString());
