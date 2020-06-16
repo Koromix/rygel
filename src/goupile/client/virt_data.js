@@ -144,11 +144,15 @@ function VirtualData(db) {
         record.complete = {};
         record.values = {};
 
-        for (let frag of record.fragments) {
-            frag = fragments_map[frag];
+        for (let frag_key of record.fragments) {
+            frag = fragments_map[frag_key];
 
-            record.complete[frag.frag] = frag.complete;
-            Object.assign(record.values, frag.values);
+            if (frag) {
+                record.complete[frag_key] = frag.complete;
+                Object.assign(record.values, frag.values);
+            } else {
+                console.log(`Damaged record %1 (missing fragment '%2')`, record.id, frag_key);
+            }
         }
     }
 
