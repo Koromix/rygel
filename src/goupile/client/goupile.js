@@ -398,6 +398,8 @@ Navigation functions should only be called in reaction to user events, such as b
     };
 
     function renderPanels() {
+        let menu_el = document.querySelector('#gp_menu');
+
         if (getLockURL()) {
             render(html`
                 &nbsp;&nbsp;Application verrouillée
@@ -405,7 +407,9 @@ Navigation functions should only be called in reaction to user events, such as b
                 <button @click=${showLoginDialog}>Connexion</button>
                 <button type="button" class="icon active" @click=${toggleLock}
                         style="background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAYAAADEtGw7AAAA9ElEQVQ4jd2UoQ7CMBCGhyFBzM5hUTgECQqBwe0xMLhZ3F4CP8cbYBC8wMQEmpAgl0zMkOxDcAmXsW60WULCn5zpf/fl2l7reX8lIABi4AxcJE5ABIxcoRPgjlkp4LuAjwqSAYnEVa3HtlAfqKQ4AQbKG0m3AJkteKK6Chv8nXi5LXiqwMsGfyte+VuwnG0KFApcALmKR206ciDpAs9wU4W64Cbw3FBYAnvgwHta6hq6gNcqJ3YBLwxFvspZ9wmOxB/wejC9gQHGQNjimz+lDvAc2FiDZZtt4JLPGe6l4y61gscdXZl0M0Jr8JVlBN+AzU/TQk9O3o861bNs7AAAAABJRU5ErkJggg==');"></button>
-            `, document.querySelector('#gp_menu'));
+            `, menu_el);
+
+            menu_el.classList.add('locked');
         } else {
             let show_data = route_asset && route_asset.form;
 
@@ -511,7 +515,9 @@ Navigation functions should only be called in reaction to user events, such as b
                 ${!env.use_offline ? html`<div id="gp_status"/>` : ''}
                 <button type="button" class="icon" @click=${toggleLock}
                         style="background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAYAAADEtGw7AAAA9ElEQVQ4jd2UoQ7CMBCGhyFBzM5hUTgECQqBwe0xMLhZ3F4CP8cbYBC8wMQEmpAgl0zMkOxDcAmXsW60WULCn5zpf/fl2l7reX8lIABi4AxcJE5ABIxcoRPgjlkp4LuAjwqSAYnEVa3HtlAfqKQ4AQbKG0m3AJkteKK6Chv8nXi5LXiqwMsGfyte+VuwnG0KFApcALmKR206ciDpAs9wU4W64Cbw3FBYAnvgwHta6hq6gNcqJ3YBLwxFvspZ9wmOxB/wejC9gQHGQNjimz+lDvAc2FiDZZtt4JLPGe6l4y61gscdXZl0M0Jr8JVlBN+AzU/TQk9O3o861bNs7AAAAABJRU5ErkJggg==');"></button>
-            `, document.querySelector('#gp_menu'));
+            `, menu_el);
+
+            menu_el.classList.remove('locked');
         }
 
         render(html`

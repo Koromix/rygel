@@ -117,6 +117,7 @@ button:not(:disabled) { cursor: pointer; }
     z-index: 99999;
     background: #24579d;
 }
+#gp_menu.locked { filter: saturate(0%); }
 
 #gp_assets {
     flex-grow: 1;
