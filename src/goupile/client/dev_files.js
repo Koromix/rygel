@@ -159,9 +159,7 @@ let dev_files = new function() {
     };
 
     this.runFiles = async function() {
-        let remote = net.isOnline() || !env.use_offline;
-
-        files = await virt_fs.status(remote);
+        files = await virt_fs.status(net.isOnline() || !env.use_offline);
 
         // Overwrite with user actions (if any)
         for (let file of files)
@@ -171,10 +169,11 @@ let dev_files = new function() {
         files.sort((file1, file2) => (!!file2.sha256 - !!file1.sha256) ||
                                       util.compareValues(file1.path, file2.path));
 
-        renderActions(remote);
+        renderActions();
     };
 
-    function renderActions(remote) {
+    function renderActions() {
+        let remote = net.isOnline() || !env.use_offline;
         let enable_sync = files.some(file => file.action !== 'noop') &&
                           !files.some(file => file.action === 'conflict');
 
