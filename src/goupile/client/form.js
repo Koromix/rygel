@@ -38,7 +38,7 @@ let form_executor = new function() {
                 select_many = true;
             } else if (id === 'new') {
                 if (current_records.size != 1 || current_records.first().mtime != null) {
-                    let record = virt_data.create(current_asset.form.key);
+                    let record = virt_rec.create(current_asset.form.key);
 
                     current_records.clear();
                     current_records.set(record.id, record);
@@ -47,8 +47,8 @@ let form_executor = new function() {
                 select_many = false;
             } else if (id != null) {
                 let record = current_records.get(id) ||
-                             await virt_data.load(current_asset.form.key, id) ||
-                             virt_data.create(current_asset.form.key);
+                             await virt_rec.load(current_asset.form.key, id) ||
+                             virt_rec.create(current_asset.form.key);
 
                 current_records.clear();
                 current_records.set(record.id, record);
@@ -240,7 +240,7 @@ let form_executor = new function() {
 
         entry.progress('Enregistrement en cours');
         try {
-            let record2 = await virt_data.save(record, page.key, page.variables);
+            let record2 = await virt_rec.save(record, page.key, page.variables);
             entry.success('Données enregistrées');
 
             if (current_records.has(record2.id))
@@ -279,7 +279,7 @@ let form_executor = new function() {
     }
 
     this.runStatus = async function() {
-        let records = await virt_data.loadAll(current_asset.form.key);
+        let records = await virt_rec.loadAll(current_asset.form.key);
         renderStatus(records);
     };
 
@@ -348,8 +348,8 @@ let form_executor = new function() {
     }
 
     this.runData = async function() {
-        let records = await virt_data.loadAll(current_asset.form.key);
-        let variables = await virt_data.listVariables(current_asset.form.key);
+        let records = await virt_rec.loadAll(current_asset.form.key);
+        let variables = await virt_rec.listVariables(current_asset.form.key);
         let columns = orderColumns(current_asset.form.pages, variables);
 
         renderRecords(records, columns);
@@ -488,8 +488,8 @@ let form_executor = new function() {
         if (typeof XSLX === 'undefined')
             await net.loadScript(`${env.base_url}static/xlsx.core.min.js`);
 
-        let records = await virt_data.loadAll(form.key);
-        let variables = await virt_data.listVariables(form.key);
+        let records = await virt_rec.loadAll(form.key);
+        let variables = await virt_rec.listVariables(form.key);
         let columns = orderColumns(form.pages, variables);
 
         if (!columns.length) {
@@ -629,7 +629,7 @@ let form_executor = new function() {
             current_records.delete(record.id);
 
             if (!select_many && !current_records.size) {
-                let record = virt_data.create(current_asset.form.key);
+                let record = virt_rec.create(current_asset.form.key);
                 current_records.set(record.id, record);
             }
         }
@@ -648,7 +648,7 @@ let form_executor = new function() {
             page.submitHandler = async () => {
                 page.close();
 
-                await virt_data.delete(record.table, record.id);
+                await virt_rec.delete(record.table, record.id);
                 current_records.delete(record.id, record);
 
                 goupile.go();
