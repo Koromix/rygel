@@ -79,18 +79,14 @@ let dev_files = new function() {
             editor.setTheme('ace/theme/merbivore_soft');
             editor.setShowPrintMargin(false);
             editor.setFontSize(13);
-
-            // Auto-pairing of parentheses is problematic when doing execute-as-you-type,
-            // because it easily leads to infinite for loops.
-            editor.setBehavioursEnabled(false);
         }
 
         let buffer = editor_buffers.get(path);
+        let extension = path.substr(path.lastIndexOf('.'));
 
         if (!buffer || buffer.reload) {
             let file = await virt_fs.load(path);
             let code = file ? await file.data.text() : '';
-            let extension = path.substr(path.lastIndexOf('.'));
 
             if (buffer) {
                 buffer.sha256 = file ? file.sha256 : null;
@@ -126,6 +122,10 @@ let dev_files = new function() {
             editor.setSession(buffer.session);
             editor.setReadOnly(false);
         }
+
+        // Auto-pairing of parentheses is problematic when doing
+        // execute-as-you-type, because it easily leads to infinite for loops.
+        editor.setBehavioursEnabled(extension !== '.js');
 
         editor.resize(false);
     }
