@@ -99,9 +99,9 @@ let mco_info = new function() {
                 path.push(args.sector);
                 if (args.ghs.ghm_root)
                     path.push(args.ghs.ghm_root);
-                params.duration = args.ghs.duration;
-                params.coeff = (args.ghs.coeff != null) ? (0 + args.ghs.coeff) : null;
-                params.plot = (args.ghs.plot != null) ? (0 + args.ghs.plot) : null;
+                params.duration = (args.ghs.duration !== 200) ? args.ghs.duration : null;
+                params.coeff = args.ghs.coeff ? 1 : null;
+                params.plot = args.ghs.plot ? 1 : null;
             } break;
 
             case 'tree': { /* Nothing to do */ } break;
@@ -474,9 +474,9 @@ let mco_info = new function() {
             ${renderVersionLine(settings.mco.versions, version)}
             ${renderSectorSelector(route.sector)}
             <label>Durée <input type="number" step="5" min="0" max="500" .value=${route.ghs.duration}
-                                 @change=${e => thop.go(self, {ghs: {duration: e.target.value}})}/></label>
+                                @change=${e => thop.go(self, {ghs: {duration: parseInt(e.target.value, 10)}})}/></label>
             <label>Coefficient <input type="checkbox" .checked=${route.ghs.coeff}
-                                       @change=${e => thop.go(self, {ghs: {coeff: e.target.checked}})}/></label>
+                                      @change=${e => thop.go(self, {ghs: {coeff: e.target.checked}})}/></label>
             <label>Graphique <input type="checkbox" .checked=${route.ghs.plot}
                                     @change=${e => thop.go(self, {ghs: {plot: e.target.checked}})}/></label>
             ${renderGhmRootSelector(mco, route.ghs.ghm_root)}
