@@ -34,7 +34,7 @@ let dev_files = new function() {
         ];
 
         if (asset.edit) {
-            editor_tabs.push({name: asset.edit, path: asset.path});
+            editor_tabs.unshift({name: asset.edit, path: asset.path});
 
             if (editor_path_forced || !editor_tabs.find(tab => tab.path === editor_path)) {
                 editor_path = asset.path;
@@ -57,9 +57,11 @@ let dev_files = new function() {
     async function renderEditorPanel() {
         render(html`
             <div class="gp_toolbar dev">
-                ${editor_tabs.map(tab =>
-                    html`<button class=${tab.path === editor_path ? 'active' : ''}
-                                 @click=${e => toggleEditorFile(tab.path)}>${tab.name}</button>`)}
+                ${editor_tabs.map((tab, idx) => html`
+                    ${idx === editor_tabs.length - 3 ? html`<div style="flex: 1;"></div>` : ''}
+                    <button class=${tab.path === editor_path ? 'active' : ''}
+                            @click=${e => toggleEditorFile(tab.path)}>${tab.name}</button>
+                `)}
             </div>
             ${editor_el}
         `, document.querySelector('#dev_editor'));
