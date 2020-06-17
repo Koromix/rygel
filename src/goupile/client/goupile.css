@@ -59,8 +59,9 @@ button:not(:disabled) { cursor: pointer; }
 .gp_toolbar button.icon {
     width: 36px;
     min-width: 36px;
+    background-image: url('icons.png');
     background-repeat: no-repeat;
-    background-position: center;
+    background-size: 220px 44px;
 }
 .gp_toolbar button::-moz-focus-inner { border: 0; }
 .gp_toolbar button:focus { outline: 0; }

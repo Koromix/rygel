@@ -23,6 +23,7 @@ let cache_urls = [
     `${env.base_url}static/OpenSans-Bold.woff2`,
     `${env.base_url}static/OpenSans-Italic.woff2`,
     `${env.base_url}static/OpenSans-BoldItalic.woff2`,
+    `${env.base_url}static/icons.png`,
 
     `${env.base_url}manifest.json`,
     `${env.base_url}favicon.png`
