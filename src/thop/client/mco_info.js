@@ -366,12 +366,13 @@ let mco_info = new function() {
                     case 'ï': { re += '[iï]'; } break;
                     case 'u':
                     case 'ù': { re += '[uù]'; } break;
+                    case 'ô': { re += '[ôo]'; } break;
                     case 'o': {
                         if (filter[i + 1] === 'e') {
                             re += '(oe|œ)';
                             i++;
                         } else {
-                            re += 'o';
+                            re += '[ôo]';
                         }
                     } break;
                     case 'œ': { re += '(oe|œ)'; } break;
