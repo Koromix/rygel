@@ -28,6 +28,7 @@ let goupile = new function() {
 
     let editor_el;
     let style_el;
+    let template_el;
 
     document.addEventListener('readystatechange', e => {
         if (document.readyState === 'complete')
@@ -176,9 +177,15 @@ let goupile = new function() {
                     app.assets.find(asset => asset.type !== 'main' && asset.type !== 'blob') || app.assets[0];
             }
 
+            // Load custom template (if any)
+            {
+                let html = await readCode('/files/main.html') || '';
+                changeTemplate(html);
+            }
+
             // Update custom CSS (if any)
             {
-                let css = await readCode('/files/main.css');
+                let css = await readCode('/files/main.css') || '';
                 changeCSS(css);
             }
 
@@ -234,6 +241,17 @@ let goupile = new function() {
         }
 
         style_el.textContent = css;
+    }
+
+    function changeTemplate(html) {
+        html = html.trim();
+
+        if (html) {
+            template_el = document.createElement('template');
+            template_el.innerHTML = html;
+        } else {
+            template_el = null;
+        }
     }
 
     this.isConnected = function() { return !!settings_rnd; };
@@ -638,6 +656,11 @@ let goupile = new function() {
         } else if (path === '/files/main.css') {
             changeCSS(code);
             return true;
+        } else if (path === '/files/main.html') {
+            changeTemplate(code);
+            if (route_asset)
+                runAssetSafe(route_asset);
+            return true;
         } else {
             let asset = app.paths_map[path];
             return asset ? runAssetSafe(asset, code) : true;
@@ -647,7 +670,24 @@ let goupile = new function() {
     async function runAssetSafe(asset, code = null) {
         let error_el = document.querySelector('#gp_error');
         let overview_el = document.querySelector('#gp_overview');
-        let test_el = (asset === route_asset) ? overview_el : document.createElement('div');
+
+        let test_el;
+        let broken_template = false;
+        if (asset === route_asset) {
+            if (template_el) {
+                render(template_el.content, overview_el);
+                test_el = document.getElementById('@page');
+
+                if (!test_el) {
+                    test_el = overview_el;
+                    broken_template = true;
+                }
+            } else {
+                test_el = overview_el;
+            }
+        } else {
+            test_el = document.createElement('div');
+        }
 
         // We don't want go() to be fired when a script is opened or changed in the editor,
         // because then we wouldn't be able to come back to the script to fix the code.
@@ -679,6 +719,9 @@ let goupile = new function() {
                 } break;
             }
 
+            if (broken_template)
+                throw new Error(`Le modèle ne contient pas d'élément avec l'ID '@page'`);
+
             // Things are OK!
             error_el.innerHTML = '';
             error_el.style.display = 'none';
@@ -690,7 +733,11 @@ let goupile = new function() {
 
             // XXX: If the user changes page quickly before changes are tested, we can
             // end up showing an error about the previous script on the new page.
-            error_el.textContent = `⚠\uFE0E Line ${err_line || '?'}: ${err.message}`;
+            if (err_line) {
+                error_el.textContent = `⚠\uFE0E Line ${err_line}: ${err.message}`;
+            } else {
+                error_el.textContent = `⚠\uFE0E ${err.message}`;
+            }
             error_el.style.display = 'block';
             overview_el.classList.add('broken');
 

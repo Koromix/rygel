@@ -29,7 +29,8 @@ let dev_files = new function() {
 
         editor_tabs = [
             {name: 'Application', path: '/files/main.js'},
-            {name: 'Style', path: '/files/main.css'},
+            {name: 'Modèle', path: '/files/main.html'},
+            {name: 'Style', path: '/files/main.css'}
         ];
 
         if (asset.edit) {
@@ -100,6 +101,7 @@ let dev_files = new function() {
                 switch (extension) {
                     case '.js': { session = new ace.EditSession(code, 'ace/mode/javascript'); } break;
                     case '.css': { session = new ace.EditSession(code, 'ace/mode/css'); } break;
+                    case '.html': { session = new ace.EditSession(code, 'ace/mode/html'); } break;
                     default: { session = new ace.EditSession(code, 'ace/mode/text'); } break;
                 }
 
