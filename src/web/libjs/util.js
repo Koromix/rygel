@@ -590,9 +590,15 @@ function LruMap(limit) {
 
         if (bucket) {
             bucket.value = value;
-            unlink(bucket);
-            link(bucket);
-        } else if (count < limit) {
+
+            if (root_bucket.prev !== bucket) {
+                unlink(bucket);
+                link(bucket);
+            }
+        } else {
+            if (count >= limit)
+                deleteBucket(root_bucket.next);
+
             bucket = {
                 key: key,
                 value: value,
@@ -603,24 +609,20 @@ function LruMap(limit) {
             map[key] = bucket;
             link(bucket);
             count++;
-        } else {
-            bucket = root_bucket.next;
-
-            bucket.value = value;
-            unlink(bucket);
-            link(bucket);
         }
     };
 
     this.delete = function(key) {
         let bucket = map[key];
-
-        if (bucket) {
-            unlink(bucket);
-            delete map[key];
-            count--;
-        }
+        if (bucket)
+            deleteBucket(bucket);
     };
+
+    function deleteBucket(bucket) {
+        unlink(bucket);
+        delete map[bucket.key];
+        count--;
+    }
 
     this.get = function(key) {
         let bucket = map[key];
