@@ -18,7 +18,7 @@ if (typeof Blob !== 'undefined' && !Blob.prototype.text) {
             var reader = new FileReader;
 
             reader.onload = e => resolve(e.target.result);
-            reader.onerror = e => reject(e.target.error);
+            reader.onerror = e => reject(new Error(e.target.error));
 
             reader.readAsText(this);
         });
@@ -523,7 +523,7 @@ let net = new function() {
             return response;
         } catch (err) {
             setOnline(false);
-            throw err;
+            throw new Error('Request failure: network error');
         }
     };
 
@@ -536,7 +536,7 @@ let net = new function() {
             script.onload = e => resolve(script);
             script.onerror = e => {
                 setOnline(false);
-                reject(`Failed to load '${url}' script`);
+                reject(new Error(`Failed to load '${url}' script`));
             }
 
             document.head.appendChild(script);

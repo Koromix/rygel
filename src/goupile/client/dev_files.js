@@ -264,7 +264,7 @@ let dev_files = new function() {
 
                     entry.success('Fichier enregistré !');
                 } catch (err) {
-                    entry.error(`Echec de l'enregistrement : ${err}`);
+                    entry.error(`Echec de l'enregistrement : ${err.message}`);
                 }
             };
             page.buttons(page.buttons.std.ok_cancel('Créer'));

@@ -131,7 +131,7 @@ let idb = new function () {
                             resolve(values);
                         }
                     };
-                    cur.onerror = e => reject(e.target.error);
+                    cur.onerror = e => reject(new Error(e.target.error));
                 }
             });
         };
@@ -160,7 +160,7 @@ let idb = new function () {
                             resolve(keys);
                         }
                     };
-                    cur.onerror = e => reject(e.target.error);
+                    cur.onerror = e => reject(new Error(e.target.error));
                 }
             });
         };
@@ -223,8 +223,8 @@ let idb = new function () {
         }
     }
 
-    function logAndReject(reject, err) {
-        log.error(err);
-        reject(err);
+    function logAndReject(reject, msg) {
+        log.error(msg);
+        reject(new Error(msg));
     }
 };

@@ -36,7 +36,7 @@ function VirtualFS(db) {
                 reader.onload = e => resolve(e.target.result);
                 reader.onerror = e => {
                     reader.abort();
-                    reject(e.target.error);
+                    reject(new Error(e.target.error));
                 };
 
                 reader.readAsArrayBuffer(piece);

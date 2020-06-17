@@ -79,7 +79,7 @@ let user = new function() {
         });
         p.catch(err => {
             fieldset_el.disabled = false;
-            log.error(err);
+            log.error(err.message);
         });
 
         e.preventDefault();
