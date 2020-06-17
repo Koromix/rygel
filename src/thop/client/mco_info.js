@@ -58,6 +58,7 @@ let mco_info = new function() {
                 args.ghs.ghm_root = path[3] || null;
                 args.ghs.duration = parseInt(params.duration, 10) || 200;
                 args.ghs.coeff = !!parseInt(params.coeff, 10) || false;
+                args.ghs.plot = !!parseInt(params.plot, 10) || false;
             } break;
 
             case 'tree': { /* Nothing to do */ } break;
@@ -100,6 +101,7 @@ let mco_info = new function() {
                     path.push(args.ghs.ghm_root);
                 params.duration = args.ghs.duration;
                 params.coeff = (args.ghs.coeff != null) ? (0 + args.ghs.coeff) : null;
+                params.plot = (args.ghs.plot != null) ? (0 + args.ghs.plot) : null;
             } break;
 
             case 'tree': { /* Nothing to do */ } break;
@@ -450,6 +452,11 @@ let mco_info = new function() {
     // GHS
     // ------------------------------------------------------------------------
 
+    let chart_obj;
+    let chart_canvas = document.createElement('canvas');
+
+    let max_map = new LruMap(256);
+
     async function runGhs() {
         let version = findVersion(route.version);
         let [mco, ghmghs] = await Promise.all([
@@ -470,6 +477,8 @@ let mco_info = new function() {
                                  @change=${e => thop.go(self, {ghs: {duration: e.target.value}})}/></label>
             <label>Coefficient <input type="checkbox" .checked=${route.ghs.coeff}
                                        @change=${e => thop.go(self, {ghs: {coeff: e.target.checked}})}/></label>
+            <label>Graphique <input type="checkbox" .checked=${route.ghs.plot}
+                                    @change=${e => thop.go(self, {ghs: {plot: e.target.checked}})}/></label>
             ${renderGhmRootSelector(mco, route.ghs.ghm_root)}
         `, document.querySelector('#th_options'));
 
@@ -477,10 +486,30 @@ let mco_info = new function() {
         if (!columns.length)
             throw new Error(`Racine de GHM '${route.ghs.ghm_root}' inexistante`);
 
-        // Grid
-        render(renderPriceGrid(mco.ghm_roots.describe(route.ghs.ghm_root), columns,
-                               route.ghs.duration, route.ghs.coeff),
-               document.querySelector('#th_view'));
+        // Stabilize Y maximum in charts
+        {
+            let max_price = max_map.get(`${route.ghs.ghm_root}@${route.ghs.duration}`) || 0.0;
+
+            for (let col of columns) {
+                let info = computeGhsPrice(col, route.ghs.duration, route.ghs.coeff);
+                max_price = Math.max(max_price, info ? info.price : 0.0);
+            }
+
+            max_map.set(`${route.ghs.ghm_root}@${route.ghs.duration}`, max_price);
+        }
+
+        if (route.ghs.plot) {
+            if (typeof Chart === 'undefined')
+                await net.loadScript(`${env.base_url}static/chart.bundle.min.js`);
+
+            render(chart_canvas, document.querySelector('#th_view'));
+            updatePriceChart(mco.ghm_roots.describe(route.ghs.ghm_root), columns,
+                             route.ghs.duration, route.ghs.coeff);
+        } else {
+            render(renderPriceGrid(mco.ghm_roots.describe(route.ghs.ghm_root), columns,
+                                   route.ghs.duration, route.ghs.coeff),
+                   document.querySelector('#th_view'));
+        }
     }
 
     function renderGhmRootSelector(mco, current_ghm_root) {
@@ -576,6 +605,116 @@ let mco_info = new function() {
                 )}</tbody>
             </table>
         `;
+    }
+
+    function updatePriceChart(ghm_root, columns, max_duration, apply_coeff) {
+        let conditions = columns.map(col => buildConditionsArray(col));
+        let max_price = max_map.get(`${route.ghs.ghm_root}@${route.ghs.duration}`);
+
+        let datasets = [];
+        for (let i = columns.length - 1; i >= 0; i--) {
+            let col = columns[i];
+
+            let dataset = {
+                label: `${col.ghs}${conditions[i].length ? '*' : ''} (${col.ghm})`,
+                data: [],
+                borderColor: modeToColor(col.ghm.substr(5, 1)),
+                backgroundColor: modeToColor(col.ghm.substr(5, 1)),
+                borderDash: (conditions[i].length ? [5, 5] : undefined),
+                fill: false
+            };
+
+            for (let duration = 0; duration < max_duration; duration++) {
+                let info = computeGhsPrice(col, duration, apply_coeff);
+
+                if (info !== null) {
+                    dataset.data.push({
+                        x: duration,
+                        y: info.price
+                    });
+                } else {
+                    dataset.data.push(null);
+                }
+            }
+            datasets.push(dataset);
+        }
+
+        if (chart_obj) {
+            chart_obj.data.datasets = datasets;
+            chart_obj.options.scales.yAxes[0].ticks.suggestedMax = max_price;
+            chart_obj.update({duration: 0});
+        } else {
+            chart_obj = new Chart(chart_canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    legend: {
+                        reverse: true,
+                        onClick: null
+                    },
+                    tooltips: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            title: (items, data) => format.duration(items[0].xLabel),
+                            label: (item, data) => `GHS ${data.datasets[item.datasetIndex].label} : ` +
+                                                   format.price(item.yLabel, true)
+                        }
+                    },
+                    hover: {
+                        mode: 'x',
+                        intersect: true
+                    },
+                    elements: {
+                        line: {
+                            tension: 0
+                        },
+                        point: {
+                            radius: 0,
+                            hitRadius: 0
+                        }
+                    },
+                    scales: {
+                        xAxes: [{
+                            type: 'linear',
+                            ticks: {
+                                stepSize: 10,
+                                callback: value => format.duration(value)
+                            }
+                        }],
+                        yAxes: [{
+                            type: 'linear',
+                            ticks: {
+                                suggestedMin: 0.0,
+                                suggestedMax: max_price,
+                                callback: value => format.price(value)
+                            }
+                        }]
+                    }
+                }
+            });
+        }
+    }
+
+    function modeToColor(mode) {
+        switch (mode) {
+            case 'J': return '#1b9e77';
+            case 'T': return '#1b9e77';
+            case '1': return '#9a9a9a';
+            case '2': return '#0070c0';
+            case '3': return '#ff6600';
+            case '4': return '#ff0000';
+            case 'A': return '#9a9a9a';
+            case 'B': return '#0070c0';
+            case 'C': return '#ff6600';
+            case 'D': return '#ff0000';
+            case 'E': return '#7f2704';
+            case 'Z': return '#9a9a9a';
+            default: return 'black';
+        };
     }
 
     function buildConditionsArray(ghs) {
