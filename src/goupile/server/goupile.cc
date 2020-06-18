@@ -314,7 +314,15 @@ Options:
     }
 
     // Load config file
-    if (config_filename && !LoadConfig(config_filename, &goupile_config))
+    if (!config_filename) {
+        config_filename = Fmt(&temp_alloc, "%1%/default/goupile.ini", GetApplicationDirectory()).ptr;
+
+        if (!TestFile(config_filename, FileType::File)) {
+            LogError("Configuration file must be specified");
+            return 1;
+        }
+    }
+    if (!LoadConfig(config_filename, &goupile_config))
         return 1;
 
     // Parse arguments
@@ -338,11 +346,6 @@ Options:
 
     // Check project configuration
     {
-        if (!config_filename) {
-            LogError("Configuration file must be specified");
-            return 1;
-        }
-
         bool valid = true;
 
         if (!goupile_config.app_key || !goupile_config.app_key[0]) {
