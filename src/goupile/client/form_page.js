@@ -147,8 +147,12 @@ function PageBuilder(state, page) {
                    @input=${e => handleTextInput(e, key)}/>
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
             <div class="af_pin">
-                ${[7, 8, 9, 4, 5, 6, 1, 2, 3, 0].map(i =>
-                    html`<button type="button" @click=${e => handlePinButton(e, key, value)}>${i}</button>`)}
+                ${[7, 8, 9, 4, 5, 6, 1, 2, 3].map(i =>
+                    html`<button type="button" class="af_button"
+                                 @click=${e => handlePinButton(e, key, value)}>${i}</button>`)}
+                <button type="button" class="af_button" style="visibility: hidden;">?</button>
+                <button type="button" class="af_button" @click=${e => handlePinButton(e, key, value)}>0</button>
+                <button type="button" class="af_button clear" @click=${e => handlePinClear(e, key)}>C</button>
             </div>
         `);
 
@@ -163,6 +167,11 @@ function PageBuilder(state, page) {
 
     function handlePinButton(e, key, value) {
         updateValue(key, (value || '') + e.target.textContent);
+        self.restart();
+    }
+
+    function handlePinClear(e, key) {
+        updateValue(key, undefined);
         self.restart();
     }
 

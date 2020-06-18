@@ -113,14 +113,18 @@
 }
 
 .af_pin {
-    width: 8em;
+    width: 9em;
     margin: 8px auto;
     text-align: center;
+    display: table;
 }
 .af_pin > button {
-    width: 2.5em;
-    height: 2.2em;
+    display: table-cell;
+    width: 2.7em;
+    height: 2.7em;
+    margin: 1px;
 }
+.af_pin > button.clear { color: #d72a2a; }
 
 .af_select, .af_radio, .af_multi { display: inline-block; }
 
