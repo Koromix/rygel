@@ -525,8 +525,8 @@ let goupile = new function() {
     }
 
     function makeLoginForm(page) {
-        let username = page.text('username', 'Nom d\'utilisateur', {mandatory: true});
-        let password = page.password('password', 'Mot de passe');
+        let username = page.text('*username', 'Nom d\'utilisateur');
+        let password = page.password('*password', 'Mot de passe');
 
         page.submitHandler = async () => {
             let entry = new log.Entry;
