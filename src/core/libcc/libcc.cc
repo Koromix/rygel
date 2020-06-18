@@ -3929,7 +3929,7 @@ bool StreamWriter::Close()
         }
     }
 
-    return true;
+    return IsValid();
 }
 
 bool StreamWriter::Write(Span<const uint8_t> buf)
