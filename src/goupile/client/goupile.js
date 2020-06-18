@@ -794,11 +794,18 @@ let goupile = new function() {
 
             makeLoginForm(builder);
 
+            let focus = !document.querySelector('#gp_login');
+
             render(html`
                 <form id="gp_login" @submit=${e => e.preventDefault()}>
                     ${page.render()}
                 </form>
             `, document.querySelector('main'));
+
+            if (focus) {
+                let el = document.querySelector('#gp_login input');
+                el.focus();
+            }
         };
 
         update();
