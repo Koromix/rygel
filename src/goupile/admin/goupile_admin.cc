@@ -5,7 +5,11 @@
 #include "../../core/libcc/libcc.hh"
 #include "../../core/libwrap/sqlite.hh"
 
+#include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
+
 namespace RG {
+
+extern "C" const Span<const AssetInfo> pack_assets;
 
 static const char *const DefaultConfig =
 R"([Application]
@@ -109,32 +113,6 @@ CREATE TABLE sched_meetings (
 CREATE INDEX sched_meetings_sd ON sched_meetings (schedule, date, time);
 )";
 
-static const char *const DemoSQL = R"(
-BEGIN TRANSACTION;
-
-INSERT INTO users VALUES ('goupile', '$argon2id$v=19$m=65536,t=2,p=1$zsVerrO6LpOnY46D2B532A$dXWo9OKKutuZZzN49HD+oGtjCp6vfIoINfmbsjq5ttI', 1);
-INSERT INTO permissions VALUES ('goupile', 1, 1, 1, 1, 1, 1);
-
-INSERT INTO sched_resources VALUES ('pl', '2019-08-01', 730, 1, 1);
-INSERT INTO sched_resources VALUES ('pl', '2019-08-01', 1130, 2, 0);
-INSERT INTO sched_resources VALUES ('pl', '2019-08-02', 730, 1, 1);
-INSERT INTO sched_resources VALUES ('pl', '2019-08-02', 1130, 2, 0);
-INSERT INTO sched_resources VALUES ('pl', '2019-08-05', 730, 1, 1);
-INSERT INTO sched_resources VALUES ('pl', '2019-08-05', 1130, 2, 0);
-INSERT INTO sched_resources VALUES ('pl', '2019-08-06', 730, 1, 1);
-INSERT INTO sched_resources VALUES ('pl', '2019-08-06', 1130, 2, 0);
-INSERT INTO sched_resources VALUES ('pl', '2019-08-07', 730, 1, 1);
-INSERT INTO sched_resources VALUES ('pl', '2019-08-07', 1130, 2, 0);
-
-INSERT INTO sched_meetings VALUES ('pl', '2019-08-01', 730, 'Gwen STACY');
-INSERT INTO sched_meetings VALUES ('pl', '2019-08-01', 730, 'Peter PARKER');
-INSERT INTO sched_meetings VALUES ('pl', '2019-08-01', 730, 'Mary JANE PARKER');
-INSERT INTO sched_meetings VALUES ('pl', '2019-08-02', 730, 'Clark KENT');
-INSERT INTO sched_meetings VALUES ('pl', '2019-08-02', 1130, 'Lex LUTHOR');
-
-END TRANSACTION;
-)";
-
 static int RunCreate(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -142,11 +120,13 @@ static int RunCreate(Span<const char *> arguments)
     // Options
     Span<const char> app_key = {};
     Span<const char> app_name = {};
-    bool demo = false;
+    bool empty = false;
+    Span<const char> default_username = nullptr;
+    Span<const char> default_password = nullptr;
     const char *profile_directory = nullptr;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: goupile_admin create_profile [options] profile_directory
+        PrintLn(fp, R"(Usage: goupile_admin create [options] profile_directory
 
 Options:
     -k, --key <key>              Change application key
@@ -154,7 +134,10 @@ Options:
         --name <name>            Change application name
                                  (default: project key)
 
-        --demo                   Insert fake data in profile)");
+    -u, --user <name>            Name of default user
+    -p, --password <pwd>         Password of default user
+
+        --empty                  Don't create default files)");
     };
 
     // Parse arguments
@@ -169,8 +152,12 @@ Options:
                 app_key = opt.current_value;
             } else if (opt.Test("--name", OptionType::Value)) {
                 app_name = opt.current_value;
-            } else if (opt.Test("--demo")) {
-                demo = true;
+            } else if (opt.Test("-u", "--user", OptionType::Value)) {
+                default_username = opt.current_value;
+            } else if (opt.Test("-p", "--password", OptionType::Value)) {
+                default_password = opt.current_value;
+            } else if (opt.Test("--empty")) {
+                empty = true;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -180,6 +167,12 @@ Options:
         profile_directory = opt.ConsumeNonOption();
     }
 
+    if (sodium_init() < 0) {
+        LogError("Failed to initialize libsodium");
+        return 1;
+    }
+
+    // Errors and defaults
     if (!profile_directory) {
         LogError("Profile directory is missing");
         return 1;
@@ -191,7 +184,12 @@ Options:
     if (!app_name.len) {
         app_name = app_key;
     }
+    if (default_password.len && !default_username.len) {
+        LogError("Option --password cannot be used without --user");
+        return 1;
+    }
 
+    // If we can make it, it's a good start!
     if (!MakeDirectory(profile_directory))
         return 1;
 
@@ -208,30 +206,77 @@ Options:
         UnlinkDirectory(profile_directory);
     };
 
-    // Create files directory
-    {
-        const char *directory = Fmt(&temp_alloc, "%1%/files", profile_directory).ptr;
-        if (!MakeDirectory(directory))
+    // Gather missing information
+    if (!default_username.len) {
+        default_username = Prompt("User: ", &temp_alloc);
+        if (!default_username.len)
             return 1;
-        directories.Append(directory);
+    }
+    if (!default_password.len) {
+        default_password = Prompt("Password: ", "*", &temp_alloc);
+        if (!default_password.len)
+            return 1;
+    }
+
+    // Create base directories
+    {
+        const auto make_profile_directory = [&](const char *name) {
+            const char *directory = Fmt(&temp_alloc, "%1%/%2", profile_directory, name).ptr;
+            if (!MakeDirectory(directory))
+                return false;
+
+            directories.Append(directory);
+            return true;
+        };
+
+        if (!make_profile_directory("files"))
+            return 1;
+        if (!make_profile_directory("files/pages"))
+            return 1;
+    }
+
+    // Create default pages
+    if (!empty) {
+        for (const AssetInfo &asset: pack_assets) {
+            RG_ASSERT(asset.compression_type == CompressionType::None);
+
+            const char *filename = Fmt(&temp_alloc, "%1%/files/%2", profile_directory, asset.name).ptr;
+            if (!WriteFile(asset.data, filename))
+                return 1;
+            files.Append(filename);
+        }
     }
 
     // Create database
+    sq_Database database;
     {
         const char *filename = Fmt(&temp_alloc, "%1%/database.db", profile_directory).ptr;
         files.Append(filename);
 
-        sq_Database database;
         if (!database.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
             return 1;
-
         if (!database.Run(SchemaSQL))
-            return 1;
-        if (demo && !database.Run(DemoSQL))
             return 1;
     }
 
-    // Create configuration file
+    // Create default user
+    {
+        char hash[crypto_pwhash_STRBYTES];
+        if (crypto_pwhash_str(hash, default_password.ptr, default_password.len,
+                              crypto_pwhash_OPSLIMIT_INTERACTIVE, crypto_pwhash_MEMLIMIT_INTERACTIVE) != 0) {
+            LogError("Failed to hash password");
+            return 1;
+        }
+
+        if (!database.Run("INSERT INTO users (username, password_hash, admin) VALUES (?, ?, 1)",
+                          default_username, hash))
+            return 1;
+        if (!database.Run("INSERT INTO permissions (username, read, query, new, remove, edit, validate) VALUES (?, 1, 1, 1, 1, 1, 1)",
+                          default_username))
+            return 1;
+    }
+
+    // Write configuration file
     {
         const char *filename = Fmt(&temp_alloc, "%1%/goupile.ini", profile_directory).ptr;
         files.Append(filename);
@@ -241,6 +286,10 @@ Options:
         if (!st.Close())
             return 1;
     }
+
+    // Make sure database is OK!
+    if (!database.Close())
+        return 1;
 
     out_guard.Disable();
     return 0;
