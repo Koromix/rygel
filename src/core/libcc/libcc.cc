@@ -4834,8 +4834,6 @@ bool ConsolePrompter::Read()
 
             case '\r':
             case '\n': {
-                str.Append('\n');
-
                 if (rows > y) {
                     fprintf(stdout, "\x1B[%dB", rows - y);
                 }
