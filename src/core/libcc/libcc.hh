@@ -3766,4 +3766,8 @@ private:
     int ComputeWidth(Span<const char> str);
 };
 
+const char *Prompt(const char *prompt, const char *mask, Allocator *alloc);
+static inline const char *Prompt(const char *prompt, Allocator *alloc)
+    { return Prompt(prompt, nullptr, alloc); }
+
 }

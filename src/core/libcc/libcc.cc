@@ -5233,4 +5233,17 @@ int ConsolePrompter::ComputeWidth(Span<const char> str)
     return width;
 }
 
+const char *Prompt(const char *prompt, const char *mask, Allocator *alloc)
+{
+    ConsolePrompter prompter;
+    prompter.prompt = prompt;
+    prompter.mask = mask;
+
+    if (!prompter.Read())
+        return nullptr;
+
+    const char *str = DuplicateString(prompter.str, alloc).ptr;
+    return str;
+}
+
 }
