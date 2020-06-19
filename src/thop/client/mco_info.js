@@ -56,6 +56,7 @@ let mco_info = new function() {
             case 'ghs': {
                 args.sector = path[2] || 'public';
                 args.ghs.ghm_root = path[3] || null;
+                args.ghs.diff = dates.parseLog(params.diff || null);
                 args.ghs.duration = parseInt(params.duration, 10) || 200;
                 args.ghs.coeff = !!parseInt(params.coeff, 10) || false;
                 args.ghs.plot = !!parseInt(params.plot, 10) || false;
@@ -99,6 +100,7 @@ let mco_info = new function() {
                 path.push(args.sector);
                 if (args.ghs.ghm_root)
                     path.push(args.ghs.ghm_root);
+                params.diff = args.ghs.diff;
                 params.duration = (args.ghs.duration !== 200) ? args.ghs.duration : null;
                 params.coeff = args.ghs.coeff ? 1 : null;
                 params.plot = args.ghs.plot ? 1 : null;
@@ -459,9 +461,11 @@ let mco_info = new function() {
 
     async function runGhs() {
         let version = findVersion(route.version);
-        let [mco, ghmghs] = await Promise.all([
+        let version_diff = route.ghs.diff ? findVersion(route.ghs.diff) : null;
+        let [mco, ghmghs, ghmghs_diff] = await Promise.all([
             data.fetchDictionary('mco'),
-            data.fetchJSON(`${env.base_url}api/mco_ghmghs.json?sector=${route.sector}&date=${version.begin_date}`)
+            data.fetchJSON(`${env.base_url}api/mco_ghmghs.json?sector=${route.sector}&date=${version.begin_date}`),
+            version_diff ? data.fetchJSON(`${env.base_url}api/mco_ghmghs.json?sector=${route.sector}&date=${version_diff.begin_date}`) : null
         ]);
 
         if (!route.ghs.ghm_root)
@@ -473,6 +477,10 @@ let mco_info = new function() {
         render(html`
             ${renderVersionLine(settings.mco.versions, version)}
             ${renderSectorSelector(route.sector)}
+            <label>
+                <span style=${route.ghs.plot ? 'text-decoration: line-through;' : ''}>Comparer</span>
+                ${renderDiffSelector(settings.mco.versions, version_diff, !route.ghs.plot)}
+            </label>
             <label>Durée <input type="number" step="5" min="0" max="500" .value=${route.ghs.duration}
                                 @change=${e => thop.go(self, {ghs: {duration: parseInt(e.target.value, 10)}})}/></label>
             <label>Coefficient <input type="checkbox" .checked=${route.ghs.coeff}
@@ -486,18 +494,7 @@ let mco_info = new function() {
         if (!columns.length)
             throw new Error(`Racine de GHM '${route.ghs.ghm_root}' inexistante`);
 
-        // Stabilize Y maximum in charts
-        {
-            let max_price = max_map.get(`${route.ghs.ghm_root}@${route.ghs.duration}`) || 0.0;
-
-            for (let col of columns) {
-                let info = computeGhsPrice(col, route.ghs.duration, route.ghs.coeff);
-                max_price = Math.max(max_price, info ? info.price : 0.0);
-            }
-
-            max_map.set(`${route.ghs.ghm_root}@${route.ghs.duration}`, max_price);
-        }
-
+        // Render grid or plot
         if (route.ghs.plot) {
             if (typeof Chart === 'undefined')
                 await net.loadScript(`${env.base_url}static/chart.bundle.min.js`);
@@ -506,10 +503,31 @@ let mco_info = new function() {
             updatePriceChart(mco.ghm_roots.describe(route.ghs.ghm_root), columns,
                              route.ghs.duration, route.ghs.coeff);
         } else {
+            let diff_map;
+            if (version_diff) {
+                diff_map = util.mapArray(ghmghs_diff, it => it.ghs);
+                if (!columns.some(col => !!diff_map[col.ghs]))
+                    throw new Error(`La racine de GHM '${route.ghs.ghm_root}' n'existait pas dans la version ${version_diff.begin_date.toLocaleString()}`);
+            }
+
             render(renderPriceGrid(mco.ghm_roots.describe(route.ghs.ghm_root), columns,
-                                   route.ghs.duration, route.ghs.coeff),
+                                   diff_map, route.ghs.duration, route.ghs.coeff),
                    document.querySelector('#th_view'));
         }
+    }
+
+    function renderDiffSelector(versions, current_version, enable) {
+        return html`
+            <select ?disabled=${!enable}
+                    @change=${e => thop.go(self, {ghs: {diff: dates.parse(e.target.value || null)}})}>
+                <option value="" .selected=${current_version == null}>Non</option>
+                ${versions.map(version => {
+                    let label = version.begin_date.toLocaleString();
+                    return html`<option value=${version.begin_date}
+                                        .selected=${version == current_version}>${label}</option>`;
+                })}
+            </select>
+        `;
     }
 
     function renderGhmRootSelector(mco, current_ghm_root) {
@@ -526,7 +544,7 @@ let mco_info = new function() {
         `
     }
 
-    function renderPriceGrid(ghm_root, columns, max_duration, apply_coeff) {
+    function renderPriceGrid(ghm_root, columns, diff_map, max_duration, apply_coeff) {
         let conditions = columns.map(col => buildConditionsArray(col));
 
         return html`
@@ -577,7 +595,13 @@ let mco_info = new function() {
                     html`<tr class="duration">
                         <th>${format.duration(duration)}</th>
                         ${columns.map(col => {
-                            let info = computeGhsPrice(col, duration, apply_coeff);
+                            let info;
+                            if (diff_map) {
+                                let col_diff = diff_map[col.ghs];
+                                info = computeGhsDelta(col, col_diff, duration, apply_coeff);
+                            } else {
+                                info = computeGhsPrice(col, duration, apply_coeff);
+                            }
 
                             if (info) {
                                 let cls = info.mode;
@@ -609,7 +633,7 @@ let mco_info = new function() {
 
     function updatePriceChart(ghm_root, columns, max_duration, apply_coeff) {
         let conditions = columns.map(col => buildConditionsArray(col));
-        let max_price = max_map.get(`${route.ghs.ghm_root}@${route.ghs.duration}`);
+        let max_price = max_map.get(`${ghm_root}@${max_duration}`) || 0.0;
 
         let datasets = [];
         for (let i = columns.length - 1; i >= 0; i--) {
@@ -627,17 +651,22 @@ let mco_info = new function() {
             for (let duration = 0; duration < max_duration; duration++) {
                 let info = computeGhsPrice(col, duration, apply_coeff);
 
-                if (info !== null) {
+                if (info != null) {
                     dataset.data.push({
                         x: duration,
                         y: info.price
                     });
+
+                    max_price = Math.max(max_price, info.price);
                 } else {
                     dataset.data.push(null);
                 }
             }
             datasets.push(dataset);
         }
+
+        // Stabilize Y maximum value across versions
+        max_map.set(`${ghm_root}@${max_duration}`, max_price);
 
         if (chart_obj) {
             chart_obj.data.datasets = datasets;
@@ -779,7 +808,33 @@ let mco_info = new function() {
     function testGhsDuration(mask, duration) {
         let duration_mask = (duration < 32) ? (1 << duration) : (1 << 31);
         return !!(mask & duration_mask);
-    };
+    }
+
+    function computeGhsDelta(ghs, ghs_diff, duration, apply_coeff) {
+        let info = ghs ? computeGhsPrice(ghs, duration, apply_coeff) : null;
+        let info_diff = ghs_diff ? computeGhsPrice(ghs_diff, duration, apply_coeff) : null;
+
+        let delta;
+        let mode;
+        if (info != null && info_diff != null) {
+            info.price -= info_diff.price;
+            if (info.price < 0) {
+                info.mode += ' diff lower';
+            } else if (info.price > 0) {
+                info.mode += ' diff higher';
+            } else {
+                info.mode += ' diff neutral';
+            }
+        } else if (info != null) {
+            info.mode += ' added';
+        } else if (info_diff != null) {
+            info = {price: -info_diff.price, mode: info_diff.mode + ' removed'};
+        } else {
+            return null;
+        }
+
+        return info;
+    }
 
     // ------------------------------------------------------------------------
     // Tree
@@ -990,8 +1045,8 @@ let mco_info = new function() {
             <label>
                 Secteur <abbr title="${help}">?</abbr>
                 <select @change=${e => thop.go(self, {sector: e.target.value})}>
-                    <option value="public" .selected=${current_sector === 'public'}>Public (prestation complète)</option>
-                    <option value="private" .selected=${current_sector === 'private'}>Privé (clinique et personnel non médical)</option>
+                    <option value="public" .selected=${current_sector === 'public'}>Public</option>
+                    <option value="private" .selected=${current_sector === 'private'}>Privé</option>
                 </select>
             </label>
         `;
