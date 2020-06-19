@@ -106,11 +106,17 @@ build_package <- function(pkg_dir, repo_dir) {
 
 # Parse arguments
 local({
-    opt_parser <- OptionParser(option_list = list())
-    args <- parse_args(opt_parser, positional_arguments = 1)
+    opt_parser <- OptionParser(option_list = list(
+        make_option(c('-D', '--destination'), type = 'character', help = 'destination directory')
+    ))
+    args <- parse_args(opt_parser, positional_arguments = 0)
 
     src_dir <<- rprojroot::find_root('FelixBuild.ini')
-    repo_dir <<- args$args[1]
+    if (!is.null(args$options$destination)) {
+        repo_dir <<- args$options$destination
+    } else {
+        repo_dir <<- str_interp('${src_dir}/bin/R')
+    }
 })
 
 # Put Rtools40 in PATH (Windows)
