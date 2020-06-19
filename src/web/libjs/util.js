@@ -1085,7 +1085,7 @@ let dates = new function() {
 
         LocalDate.prototype.toLocaleString = function() {
             let js_date = new Date(this.year, this.month - 1, this.day);
-            return js_date.toLocaleDateString();
+            return js_date.toLocaleDateString(undefined, {month: '2-digit', day: '2-digit', year: 'numeric'});
         };
     }
 
