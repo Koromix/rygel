@@ -44,7 +44,7 @@ main {
 
     main {
         max-width: none;
-        margin: 28px 0 0 0;
+        margin: 38px 0 0 0;
         padding: 0;
     }
 }
@@ -138,14 +138,19 @@ button { cursor: pointer; }
 
     .th_deploy {
         display: block;
+        width: 38px;
+        height: 38px;
         cursor: pointer;
         z-index: 999;
     }
 
-    #th_menu { min-height: 28px; }
+    #th_menu {
+        min-height: 38px;
+        font-size: 1.4em;
+    }
     #th_menu a { color: white !important; }
     #th_menu:not(.active) {
-        max-height: 28px;
+        max-height: 38px;
         margin-left: -1.5em;
     }
     #th_menu:not(.active) a:not(.active) { display: none; }
@@ -185,7 +190,7 @@ button { cursor: pointer; }
 @media (pointer: coarse) {
     #th_header {
         position: fixed;
-        top: 28px;
+        top: 38px;
         box-sizing: border-box;
         width: 100%;
         padding: 5px;
