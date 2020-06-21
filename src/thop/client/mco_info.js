@@ -168,6 +168,8 @@ let mco_info = new function() {
             sort: route.ghmghs.sort,
             route: (offset, filter, sort_key) => ({ghmghs: {offset: offset, filter: filter, sort: sort_key}}),
 
+            export: `GHM_GHS_${version.begin_date}`,
+
             category: ghs => mco.ghm_roots.describe(ghs.ghm_root),
             columns: [
                 {key: 'code', title: 'Code', func: ghs => ghs.ghm},
@@ -225,6 +227,8 @@ let mco_info = new function() {
             sort: route.diagnoses.sort,
             route: (offset, filter, sort_key) => ({diagnoses: {offset: offset, filter: filter, sort: sort_key}}),
 
+            export: `Diagnostics_${version.begin_date}`,
+
             columns: [
                 {key: 'code', title: 'Code', func: diag => diag.diag},
                 {key: 'label', title: 'Libellé', func: diag => cim10.diagnoses.label(diag.diag),
@@ -261,6 +265,8 @@ let mco_info = new function() {
             filter: route.procedures.filter,
             sort: route.procedures.sort,
             route: (offset, filter, sort_key) => ({procedures: {offset: offset, filter: filter, sort: sort_key}}),
+
+            export: `Actes_${version.begin_date}`,
 
             columns: [
                 {key: 'code', title: 'Code', func: proc => proc.proc},
@@ -301,6 +307,14 @@ let mco_info = new function() {
             filter: true
         });
 
+        etab.setPanel(html`
+            ${'filter' in handler ?
+                html`<input type="text" .value=${handler.filter || ''} placeholder="Filtre textuel"
+                            @input=${e => handleFilterInput(e, etab, handler)} />` : ''}
+            ${handler.export ?
+                html`<a class="ls_excel" @click=${e => exportListToXLSX(records, handler)}></a>` : ''}
+        `);
+
         for (let col of handler.columns) {
             etab.addColumn(col.key, col.title, {
                 render: value => {
@@ -339,13 +353,6 @@ let mco_info = new function() {
                 etab.addCell(value);
             }
             etab.endRow();
-        }
-
-        if ('filter' in handler) {
-            etab.setPanel(html`
-                <input type="text" .value=${handler.filter || ''} placeholder="Filtre textuel"
-                       @input=${e => handleFilterInput(e, etab, handler)} />
-            `);
         }
 
         render(etab.render(), document.querySelector('#th_view'));
@@ -448,6 +455,20 @@ let mco_info = new function() {
         } else {
             return html`<div class="opt_list"><b>Liste :</b> tous les ${label}</div>`;
         }
+    }
+
+    async function exportListToXLSX(records, handler) {
+        if (typeof XLSX === 'undefined')
+            await net.loadScript(`${env.base_url}static/xlsx.core.min.js`);
+
+        let ws = XLSX.utils.aoa_to_sheet([
+            handler.columns.map(col => col.key),
+            ...records.map(record => handler.columns.map(col => col.func(record)))
+        ]);
+
+        let wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, handler.export);
+        XLSX.writeFile(wb, `${handler.export}.xlsx`);
     }
 
     // ------------------------------------------------------------------------
