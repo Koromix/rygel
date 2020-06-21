@@ -229,7 +229,7 @@ let mco_info = new function() {
                 {key: 'code', title: 'Code', func: diag => diag.diag},
                 {key: 'label', title: 'Libellé', func: diag => cim10.diagnoses.label(diag.diag),
                     sort: (label1, label2) => label1.localeCompare(label2)},
-                {key: 'severity', title: 'Niveau', func: diag => diag.severity},
+                {key: 'severity', title: 'Niveau', func: diag => (diag.severity || 0) + 1},
                 {key: 'cmd', title: 'CMD', tooltip: 'Catégorie majeure de diagnostics',
                     func: diag => diag.cmd},
                 {key: 'main_list', title: 'Liste principale', func: diag => diag.main_list}
