@@ -48,7 +48,11 @@ function EasyTable() {
     };
     this.getSortKey = function() { return sort_key; };
 
-    this.setOptions = function(new_options) { Object.assign(options, new_options); };
+    this.setOptions = function(new_options) {
+        if (('parents' in new_options) && new_options.parents !== options.parents)
+            ready = false;
+        Object.assign(options, new_options);
+    };
     this.getOptions = function() { return options; };
 
     this.setPanel = function(new_panel) { panel = new_panel || ''; };
@@ -149,8 +153,23 @@ function EasyTable() {
         }
 
         render_rows.length = 0;
-        sortRowsRecursive(row_sets[0], col_idx, order, false);
+
+        let set_idx = options.parents ? 0 : (row_sets.length - 1);
+        sortRowsRecursive(row_sets[set_idx], col_idx, order, false);
     };
+
+    function sortRowsRecursive(rows, col_idx, order, parent_match) {
+        sortRows(rows, col_idx, order);
+
+        for (let row of rows) {
+            let match = parent_match || row.cells.some(cell => filter(cell.value));
+
+            if (match && row.depth + 1 === row_sets.length)
+                render_rows.push(row);
+
+            sortRowsRecursive(row.children, col_idx, order, match);
+        }
+    }
 
     function sortRows(rows, col_idx, order) {
         rows.sort((row1, row2) => {
@@ -164,19 +183,6 @@ function EasyTable() {
                 return (row1.insert_idx - row2.insert_idx) * order;
             }
         });
-    }
-
-    function sortRowsRecursive(rows, col_idx, order, parent_match) {
-        sortRows(rows, col_idx, order);
-
-        for (let row of rows) {
-            let match = parent_match || row.cells.some(cell => filter(cell.value));
-
-            if (match && row.depth + 1 === row_sets.length)
-                render_rows.push(row);
-
-            sortRowsRecursive(row.children, col_idx, order, match);
-        }
     }
 
     this.render = function() {
