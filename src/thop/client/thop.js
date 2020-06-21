@@ -46,6 +46,9 @@ let thop = new function() {
         window.addEventListener('popstate', e => self.go(window.location.href, {}, false));
 
         util.interceptLocalAnchors((e, href) => {
+            // Close all mobile menus (just in case)
+            closeAllDeployedElements();
+
             self.go(href);
             e.preventDefault();
         });
@@ -78,9 +81,6 @@ let thop = new function() {
         let url = route(mod, args, push_history);
         if (!url)
             return;
-
-        // Close all mobile menus (just in case)
-        closeAllDeployedElements();
 
         // Update URL quickly, even though we'll do it again after module run because some
         // parts may depend on fetched resources. Same thing for session.
