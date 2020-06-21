@@ -162,6 +162,9 @@ let util = new function() {
     };
 
     this.compareValues = function(value1, value2) {
+        value1 = value1 || '';
+        value2 = value2 || '';
+
         if (value1 < value2) {
             return -1;
         } else if (value1 > value2) {
