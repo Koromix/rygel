@@ -64,21 +64,16 @@ struct mco_TableInfo {
 };
 
 struct mco_GhmDecisionNode {
-    enum class Type {
-        Test,
-        Ghm
-    };
+    uint8_t function; // XXX: Switch to dedicated enum?
 
-    Type type;
     union {
         struct {
-            uint8_t function; // Switch to dedicated enum
             uint8_t params[2];
             Size children_count;
             Size children_idx;
         } test;
 
-        struct {
+        struct { // Function 12
             mco_GhmCode ghm;
             int16_t error;
         } ghm;

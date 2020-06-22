@@ -1193,9 +1193,9 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set,
 static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm_node,
                           mco_ErrorSet *out_errors)
 {
-    RG_ASSERT(ghm_node.type == mco_GhmDecisionNode::Type::Test);
+    RG_ASSERT(ghm_node.function != 12);
 
-    switch (ghm_node.u.test.function) {
+    switch (ghm_node.function) {
         case 0:
         case 1: {
             return ctx.main_diag_info->GetByte(ghm_node.u.test.params[0]);
@@ -1433,7 +1433,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
         } break;
     }
 
-    LogError("Unknown test %1 or invalid arguments", ghm_node.u.test.function);
+    LogError("Unknown test %1 or invalid arguments", ghm_node.function);
     return -1;
 }
 
@@ -1573,26 +1573,22 @@ static mco_GhmCode RunGhmTree(const mco_TableIndex &index, const mco_PreparedSta
         RG_ASSERT(ghm_node_idx < index.ghm_nodes.len);
         const mco_GhmDecisionNode &ghm_node = index.ghm_nodes[ghm_node_idx];
 
-        switch (ghm_node.type) {
-            case mco_GhmDecisionNode::Type::Test: {
-                int function_ret = ExecuteGhmTest(ctx, ghm_node, out_errors);
-                if (RG_UNLIKELY(function_ret < 0 || function_ret >= ghm_node.u.test.children_count)) {
-                    LogError("Result for GHM tree test %1 out of range (%2 - %3)",
-                             ghm_node.u.test.function, 0, ghm_node.u.test.children_count);
-                    SetError(out_errors, 4, 2);
-                    return mco_GhmCode::FromString("90Z03Z");
-                }
+        if (ghm_node.function != 12) {
+            int function_ret = ExecuteGhmTest(ctx, ghm_node, out_errors);
+            if (RG_UNLIKELY(function_ret < 0 || function_ret >= ghm_node.u.test.children_count)) {
+                LogError("Result for GHM tree test %1 out of range (%2 - %3)",
+                         ghm_node.function, 0, ghm_node.u.test.children_count);
+                SetError(out_errors, 4, 2);
+                return mco_GhmCode::FromString("90Z03Z");
+            }
 
-                ghm_node_idx = ghm_node.u.test.children_idx + function_ret;
-            } break;
-
-            case mco_GhmDecisionNode::Type::Ghm: {
-                ghm = ghm_node.u.ghm.ghm;
-                if (ghm_node.u.ghm.error && out_errors) {
-                    SetError(out_errors, ghm_node.u.ghm.error);
-                }
-                return ghm;
-            } break;
+            ghm_node_idx = ghm_node.u.test.children_idx + function_ret;
+        } else {
+            ghm = ghm_node.u.ghm.ghm;
+            if (ghm_node.u.ghm.error && out_errors) {
+                SetError(out_errors, ghm_node.u.ghm.error);
+            }
+            return ghm;
         }
     }
 }

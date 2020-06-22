@@ -105,106 +105,104 @@ static bool RecurseGhmTree(MapperContext &ctx, Size depth, Size ghm_node_idx,
     const mco_GhmDecisionNode &ghm_node = ctx.index->ghm_nodes[ghm_node_idx];
 
     bool success = true;
-    switch (ghm_node.type) {
-        case mco_GhmDecisionNode::Type::Test: {
-            switch (ghm_node.u.test.function) {
-                case 0:
-                case 1: {
-                    if (ghm_node.u.test.params[0] == 0) {
-                        for (Size i = 0; i < ghm_node.u.test.children_count; i++) {
-                            uint32_t cmd_mask = 1u << i;
-                            RUN_TREE_SUB(i, cmds &= cmd_mask);
-                        }
 
-                        return true;
-                    } else if (ghm_node.u.test.params[0] == 1) {
-                        uint64_t warn_cmd28_jumps;
-                        {
-                            std::pair<uint64_t *, bool> ret =
-                                ctx.warn_cmd28_jumps_cache.TrySet(ghm_node_idx, 0);
-                            if (ret.second) {
-                                warn_cmd28_jumps = UINT64_MAX;
-                                RG_ASSERT(ghm_node.u.test.children_count <= 64);
-                                for (const mco_DiagnosisInfo &diag_info: ctx.index->diagnoses) {
-                                    if (constraint.cmds & (1u << diag_info.cmd) &&
-                                            !(diag_info.raw[8] & 0x2)) {
-                                        warn_cmd28_jumps &= ~(1ull << diag_info.raw[1]);
-                                    }
-                                }
+    switch (ghm_node.function) {
+        case 0:
+        case 1: {
+            if (ghm_node.u.test.params[0] == 0) {
+                for (Size i = 0; i < ghm_node.u.test.children_count; i++) {
+                    uint32_t cmd_mask = 1u << i;
+                    RUN_TREE_SUB(i, cmds &= cmd_mask);
+                }
 
-                                *ret.first = warn_cmd28_jumps;
-                            } else {
-                                warn_cmd28_jumps = *ret.first;
+                return true;
+            } else if (ghm_node.u.test.params[0] == 1) {
+                uint64_t warn_cmd28_jumps;
+                {
+                    std::pair<uint64_t *, bool> ret =
+                        ctx.warn_cmd28_jumps_cache.TrySet(ghm_node_idx, 0);
+                    if (ret.second) {
+                        warn_cmd28_jumps = UINT64_MAX;
+                        RG_ASSERT(ghm_node.u.test.children_count <= 64);
+                        for (const mco_DiagnosisInfo &diag_info: ctx.index->diagnoses) {
+                            if (constraint.cmds & (1u << diag_info.cmd) &&
+                                    !(diag_info.raw[8] & 0x2)) {
+                                warn_cmd28_jumps &= ~(1ull << diag_info.raw[1]);
                             }
                         }
 
-                        for (Size i = 0; i < ghm_node.u.test.children_count; i++) {
-                            uint32_t warning_mask = 0;
-                            if (warn_cmd28_jumps & (1ull << i)) {
-                                warning_mask |= (int)mco_GhmConstraint::Warning::PreferCmd28;
-                            }
-                            RUN_TREE_SUB(i, warnings |= warning_mask);
-                        }
-
-                        return true;
+                        *ret.first = warn_cmd28_jumps;
+                    } else {
+                        warn_cmd28_jumps = *ret.first;
                     }
-                } break;
+                }
 
-                case 22: {
-                    uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
-                    if (param >= 31) {
-                        LogError("Incomplete GHM constraint due to duration >= 31 nights");
-                        success = false;
-                        break;
+                for (Size i = 0; i < ghm_node.u.test.children_count; i++) {
+                    uint32_t warning_mask = 0;
+                    if (warn_cmd28_jumps & (1ull << i)) {
+                        warning_mask |= (int)mco_GhmConstraint::Warning::PreferCmd28;
                     }
+                    RUN_TREE_SUB(i, warnings |= warning_mask);
+                }
 
-                    uint32_t test_mask = ((uint32_t)1 << param) - 1;
-                    RUN_TREE_SUB(0, durations &= ~test_mask);
-                    RUN_TREE_SUB(1, durations &= test_mask);
-
-                    return success;
-                } break;
-
-                case 29: {
-                    uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
-                    if (param >= 31) {
-                        LogError("Incomplete GHM constraint due to duration >= 31 nights");
-                        success = false;
-                        break;
-                    }
-
-                    uint32_t test_mask = (uint32_t)1 << param;
-                    RUN_TREE_SUB(0, durations &= ~test_mask);
-                    RUN_TREE_SUB(1, durations &= test_mask);
-
-                    return success;
-                } break;
-
-                case 30: {
-                    uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
-                    if (param != 0) {
-                        LogError("Incomplete GHM constraint due to session count != 0");
-                        success = false;
-                        break;
-                    }
-
-                    RUN_TREE_SUB(0, durations &= 0x1);
-                    RUN_TREE_SUB(1, durations &= UINT32_MAX);
-
-                    return success;
-                } break;
-            }
-
-            // Default case, for most functions and in case of error
-            for (Size i = 0; i < ghm_node.u.test.children_count; i++) {
-                success &= RecurseGhmTree(ctx, depth + 1, ghm_node.u.test.children_idx + i,
-                                          constraint, out_constraints);
+                return true;
             }
         } break;
 
-        case mco_GhmDecisionNode::Type::Ghm: {
+        case 12: {
             success &= MergeConstraint(*ctx.index, ghm_node.u.ghm.ghm, constraint, out_constraints);
+            return success;
         } break;
+
+        case 22: {
+            uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
+            if (param >= 31) {
+                LogError("Incomplete GHM constraint due to duration >= 31 nights");
+                success = false;
+                break;
+            }
+
+            uint32_t test_mask = ((uint32_t)1 << param) - 1;
+            RUN_TREE_SUB(0, durations &= ~test_mask);
+            RUN_TREE_SUB(1, durations &= test_mask);
+
+            return success;
+        } break;
+
+        case 29: {
+            uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
+            if (param >= 31) {
+                LogError("Incomplete GHM constraint due to duration >= 31 nights");
+                success = false;
+                break;
+            }
+
+            uint32_t test_mask = (uint32_t)1 << param;
+            RUN_TREE_SUB(0, durations &= ~test_mask);
+            RUN_TREE_SUB(1, durations &= test_mask);
+
+            return success;
+        } break;
+
+        case 30: {
+            uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
+            if (param != 0) {
+                LogError("Incomplete GHM constraint due to session count != 0");
+                success = false;
+                break;
+            }
+
+            RUN_TREE_SUB(0, durations &= 0x1);
+            RUN_TREE_SUB(1, durations &= UINT32_MAX);
+
+            return success;
+        } break;
+    }
+
+    // Default case, for most functions and in case of error
+    for (Size i = 0; i < ghm_node.u.test.children_count; i++) {
+        success &= RecurseGhmTree(ctx, depth + 1, ghm_node.u.test.children_idx + i,
+                                  constraint, out_constraints);
     }
 
 #undef RUN_TREE_SUB

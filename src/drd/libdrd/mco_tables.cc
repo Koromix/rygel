@@ -315,9 +315,8 @@ static bool ParseGhmDecisionTree(const uint8_t *file_data, const mco_TableInfo &
                           (size_t)(i * RG_SIZE(PackedTreeNode)), RG_SIZE(PackedTreeNode));
         raw_node.children_idx = BigEndian(raw_node.children_idx);
 
+        ghm_node.function = raw_node.function;
         if (raw_node.function != 12) {
-            ghm_node.type = mco_GhmDecisionNode::Type::Test;
-            ghm_node.u.test.function = raw_node.function;
             ghm_node.u.test.params[0] = raw_node.params[0];
             ghm_node.u.test.params[1] = raw_node.params[1];
             if (raw_node.function == 20) {
@@ -337,7 +336,6 @@ static bool ParseGhmDecisionTree(const uint8_t *file_data, const mco_TableInfo &
             static char chars1[] = {0, 'C', 'H', 'K', 'M', 'Z', ' ', ' ', ' ', ' '};
             static char chars4[] = {0, 'A', 'B', 'C', 'D', 'E', 'J', 'Z', ' ', ' '};
 
-            ghm_node.type = mco_GhmDecisionNode::Type::Ghm;
             ghm_node.u.ghm.ghm.parts.cmd = (int8_t)raw_node.params[1];
             ghm_node.u.ghm.ghm.parts.type = chars1[(raw_node.children_idx / 1000) % 10];
             ghm_node.u.ghm.ghm.parts.seq = (int8_t)((raw_node.children_idx / 10) % 100);

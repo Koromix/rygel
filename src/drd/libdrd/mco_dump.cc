@@ -20,20 +20,20 @@ static bool ProcessGhmNode(BuildReadableTreeContext &ctx, Size ghm_node_idx);
 static Size ProcessGhmTest(BuildReadableTreeContext &ctx, const mco_GhmDecisionNode &ghm_node,
                            mco_ReadableGhmNode *out_node)
 {
-    RG_ASSERT(ghm_node.type == mco_GhmDecisionNode::Type::Test);
+    RG_ASSERT(ghm_node.function != 12);
 
     out_node->key = Fmt(ctx.str_alloc, "%1%2%3",
-                        FmtHex(ghm_node.u.test.function).Pad0(-2),
+                        FmtHex(ghm_node.function).Pad0(-2),
                         FmtHex(ghm_node.u.test.params[0]).Pad0(-2),
                         FmtHex(ghm_node.u.test.params[1]).Pad0(-2)).ptr;
     out_node->type = "test";
 
-    out_node->function = ghm_node.u.test.function;
+    out_node->function = ghm_node.function;
     out_node->children_idx = ghm_node.u.test.children_idx;
     out_node->children_count = ghm_node.u.test.children_count;
     RG_ASSERT(out_node->children_idx <= ctx.ghm_nodes.len - out_node->children_count);
 
-    switch (ghm_node.u.test.function) {
+    switch (ghm_node.function) {
         case 0:
         case 1: {
             if (ghm_node.u.test.params[0] == 0) {
@@ -257,7 +257,7 @@ static Size ProcessGhmTest(BuildReadableTreeContext &ctx, const mco_GhmDecisionN
 
         default: {
             out_node->text = Fmt(ctx.str_alloc, "Test inconnu %1 (%2, %3)",
-                                 ghm_node.u.test.function,
+                                 ghm_node.function,
                                  ghm_node.u.test.params[0], ghm_node.u.test.params[1]).ptr;
         } break;
     }
@@ -283,29 +283,25 @@ static bool ProcessGhmNode(BuildReadableTreeContext &ctx, Size node_idx)
         const mco_GhmDecisionNode &ghm_node = ctx.ghm_nodes[node_idx];
         mco_ReadableGhmNode *out_node = &ctx.out_nodes[node_idx];
 
-        switch (ghm_node.type) {
-            case mco_GhmDecisionNode::Type::Test: {
-                node_idx = ProcessGhmTest(ctx, ghm_node, out_node);
-                if (RG_UNLIKELY(node_idx < 0))
-                    return false;
+        if (ghm_node.function != 12) {
+            node_idx = ProcessGhmTest(ctx, ghm_node, out_node);
+            if (RG_UNLIKELY(node_idx < 0))
+                return false;
 
-                // GOTO is special
-                if (ghm_node.u.test.function == 20)
-                    return true;
-            } break;
-
-            case mco_GhmDecisionNode::Type::Ghm: {
-                out_node->key = Fmt(ctx.str_alloc, "%1", ghm_node.u.ghm.ghm).ptr;
-                out_node->type = "ghm";
-
-                if (ghm_node.u.ghm.error) {
-                    out_node->text = Fmt(ctx.str_alloc, "GHM %1 [%2]",
-                                         ghm_node.u.ghm.ghm, ghm_node.u.ghm.error).ptr;
-                } else {
-                    out_node->text = Fmt(ctx.str_alloc, "GHM %1", ghm_node.u.ghm.ghm).ptr;
-                }
+            // GOTO is special
+            if (ghm_node.function == 20)
                 return true;
-            } break;
+        } else {
+            out_node->key = Fmt(ctx.str_alloc, "%1", ghm_node.u.ghm.ghm).ptr;
+            out_node->type = "ghm";
+
+            if (ghm_node.u.ghm.error) {
+                out_node->text = Fmt(ctx.str_alloc, "GHM %1 [%2]",
+                                     ghm_node.u.ghm.ghm, ghm_node.u.ghm.error).ptr;
+            } else {
+                out_node->text = Fmt(ctx.str_alloc, "GHM %1", ghm_node.u.ghm.ghm).ptr;
+            }
+            return true;
         }
     }
 
@@ -313,7 +309,7 @@ static bool ProcessGhmNode(BuildReadableTreeContext &ctx, Size node_idx)
 }
 
 // XXX: Add classifier_tree export to drdR
-bool mco_BuildReadableGhmTree(Span<const mco_GhmDecisionNode> ghm_nodes, Allocator *str_alloc, 
+bool mco_BuildReadableGhmTree(Span<const mco_GhmDecisionNode> ghm_nodes, Allocator *str_alloc,
                               HeapArray<mco_ReadableGhmNode> *out_nodes)
 {
     if (!ghm_nodes.len)
