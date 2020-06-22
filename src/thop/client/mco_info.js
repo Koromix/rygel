@@ -463,12 +463,23 @@ let mco_info = new function() {
 
         let ws = XLSX.utils.aoa_to_sheet([
             handler.columns.map(col => col.key),
-            ...records.map(record => handler.columns.map(col => col.func(record)))
+            ...records.map(record => handler.columns.map(col => {
+                let value = col.func(record);
+
+                if (value == null || typeof value === 'number') {
+                    return value;
+                } else if (value.toJSDate) {
+                    return value.toJSDate(true);
+                } else {
+                    return value.toString();
+                }
+            }))
         ]);
 
         let wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, handler.export);
-        XLSX.writeFile(wb, `${handler.export}.xlsx`);
+
+        XLSX.writeFile(wb, `${handler.export}.xlsx`, {cellDates: true});
     }
 
     // ------------------------------------------------------------------------

@@ -1020,6 +1020,15 @@ let dates = new function() {
             return julian_days;
         };
 
+        LocalDate.prototype.toJSDate = function(utc = false) {
+            if (utc) {
+                let unix = Date.UTC(this.year, this.month - 1, this.day);
+                return new Date(unix);
+            } else {
+                return new Date(this.year, this.month - 1, this.day);
+            }
+        };
+
         LocalDate.prototype.getWeekDay = function() {
             // Zeller's congruence:
             // https://en.wikipedia.org/wiki/Zeller%27s_congruence
