@@ -1112,9 +1112,12 @@ let mco_info = new function() {
             } else if (m = str.match(/[A-Z]{4}[0-9+]{3}/)) {
                 let tooltip = findCachedLabel('ccam', 'procedures', m[0]);
                 frag = tooltip ? html`<abbr title=${tooltip}>${m[0]}</abbr>` : m[0];
-            } else if (m = str.match(/[A-Z][0-9+]{2,5}/)) {
-                let tooltip = findCachedLabel('cim10', 'diagnoses', m[0]);
-                frag = tooltip ? html`<abbr title=${tooltip}>${m[0]}</abbr>` : m[0];
+            } else if (m = str.match(/[A-Z][0-9+]{2}(\.?[0-9+]{1,3})?/)) {
+                let code = m[0].replace('.', '');
+                let code_with_dot = code.length >= 4 ? `${code.substr(0, 3)}.${code.substr(3)}` : code;
+
+                let tooltip = findCachedLabel('cim10', 'diagnoses', code);
+                frag = tooltip ? html`<abbr title=${tooltip}>${code_with_dot}</abbr>` : code_with_dot;
             } else if (m = str.match(/[Nn]oeud ([0-9]+)/)) {
                 frag = html`<a href=${self.makeURL({mode: 'tree'}) + `#n${m[1]}`}>${m[0]}</a>`;
             } else {
