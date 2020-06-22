@@ -152,15 +152,20 @@ let thop = new function() {
     async function run(push_history) {
         let view_el = document.querySelector('#th_view');
 
-        if (!window.document.documentMode)
-            view_el.classList.add('busy');
         try {
+            if (!window.document.documentMode)
+                view_el.classList.add('busy');
+
             await route_mod.run();
+
+            view_el.classList.remove('error');
         } catch (err) {
             document.title = 'THOP (erreur)';
 
-            render(err.message, view_el);
+            render(`⚠\uFE0E ${err.message}`, view_el);
             log.error(err.message);
+
+            view_el.classList.add('error');
         }
         view_el.classList.remove('busy');
     }

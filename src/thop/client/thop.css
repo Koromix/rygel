@@ -186,6 +186,12 @@ button { cursor: pointer; }
     60% { filter: grayscale(100%); opacity: 0.2; }
     to { filter: grayscale(100%); opacity: 0.2; }
 }
+#th_view.error {
+    font-size: 1.3em;
+    color: red;
+    padding: 10px;
+    text-align: center;
+}
 
 @media (pointer: coarse) {
     #th_header {
