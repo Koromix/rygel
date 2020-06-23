@@ -894,7 +894,7 @@ let mco_info = new function() {
             data.fetchDictionary('mco'),
             data.fetchJSON(`${env.base_url}api/mco_tree.json?date=${version.begin_date}`),
             (route.tree.diag || route.tree.proc) ? data.fetchJSON(`${env.base_url}api/mco_highlight.json?date=${version.begin_date}`+
-                                                                  `&diag=${route.tree.diag || ''}&proc=${route.tree.proc || ''}`) : null
+                                                                  `&diag=${(route.tree.diag || '').replace('.', '')}&proc=${route.tree.proc || ''}`) : null
         ]);
 
         document.title = `THOP – Arbre de groupage (${version.begin_date})`;
