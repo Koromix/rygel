@@ -280,14 +280,12 @@ void ProduceMcoGhmGhs(const http_RequestInfo &request, const User *, http_IO *io
 
 void ProduceMcoTree(const http_RequestInfo &request, const User *, http_IO *io)
 {
-    const HeapArray<mco_ReadableGhmNode> *readable_nodes;
-    {
-        const mco_TableIndex *index = GetIndexFromRequest(request, io);
-        if (!index)
-            return;
+    const mco_TableIndex *index = GetIndexFromRequest(request, io);
+    if (!index)
+        return;
 
-        readable_nodes = mco_cache_set.readable_nodes.Find(index);
-    }
+    const HeapArray<mco_ReadableGhmNode> *readable_nodes;
+    readable_nodes = mco_cache_set.readable_nodes.Find(index);
 
     http_JsonPageBuilder json(request.compression_type);
 
@@ -313,7 +311,7 @@ void ProduceMcoTree(const http_RequestInfo &request, const User *, http_IO *io)
     json.EndArray();
 
     io->AddCachingHeaders(thop_config.max_age, thop_etag);
-    return json.Finish(io);
+    json.Finish(io);
 }
 
 }
