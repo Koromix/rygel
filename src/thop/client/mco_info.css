@@ -165,7 +165,7 @@
 .tr_tree .direct .n { padding-left: 0; }
 .tr_tree .direct:before { content: ' → '; }
 .tr_tree li.irrelevant {
-    padding-top: 0;
+    padding-top: 1px;
     background-size: 5px 6px;
     font-size: 0.5em;
     opacity: 0.16;
