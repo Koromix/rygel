@@ -142,14 +142,14 @@
 /* -------------------- Tree -------------------- */
 
 .tr_tree {
-    margin: 8px 8px 8px 22px;
+    margin: 8px 8px 8px 18px;
     padding: 0;
     white-space: nowrap;
 }
 
 .tr_tree li {
     margin-left: -8px;
-    padding-top: 1px;
+    padding-top: 2px;
     list-style-type: none;
 }
 .tr_tree .n {
@@ -186,7 +186,10 @@
 
 @media (pointer: coarse) {
     .tr_tree ul { padding-left: 25px; }
-    .tr_tree { font-size: 0.9em; }
+    .tr_tree {
+        padding-top: 6px;
+        font-size: 0.9em;
+    }
 }
 
 /* -------------------- Tables -------------------- */
