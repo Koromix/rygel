@@ -16,7 +16,7 @@ struct BuildReadableTreeContext {
     Allocator *str_alloc;
 };
 
-static bool ProcessGhmNode(BuildReadableTreeContext &ctx, Size ghm_node_idx);
+static bool ProcessGhmNode(BuildReadableTreeContext &ctx, Size node_idx);
 static Size ProcessGhmTest(BuildReadableTreeContext &ctx, const mco_GhmDecisionNode &ghm_node,
                            mco_ReadableGhmNode *out_node)
 {
@@ -274,12 +274,9 @@ static Size ProcessGhmTest(BuildReadableTreeContext &ctx, const mco_GhmDecisionN
 static bool ProcessGhmNode(BuildReadableTreeContext &ctx, Size node_idx)
 {
     for (Size i = 0;; i++) {
-        if (RG_UNLIKELY(i >= ctx.ghm_nodes.len)) {
-            LogError("Empty GHM tree or infinite loop (%2)", ctx.ghm_nodes.len);
-            return false;
-        }
-
+        RG_ASSERT(i < ctx.ghm_nodes.len); // Infinite loops
         RG_ASSERT(node_idx < ctx.ghm_nodes.len);
+
         const mco_GhmDecisionNode &ghm_node = ctx.ghm_nodes[node_idx];
         mco_ReadableGhmNode *out_node = &ctx.out_nodes[node_idx];
 
@@ -334,12 +331,9 @@ static void DumpReadableNodes(Span<const mco_ReadableGhmNode> readable_nodes,
                               Size node_idx, int depth, StreamWriter *out_st)
 {
     for (Size i = 0;; i++) {
-        if (RG_UNLIKELY(i >= readable_nodes.len)) {
-            LogError("Empty GHM tree or infinite loop (%2)", readable_nodes.len);
-            return;
-        }
-
+        RG_ASSERT(i < readable_nodes.len); // Infinite loops
         RG_ASSERT(node_idx < readable_nodes.len);
+
         const mco_ReadableGhmNode &readable_node = readable_nodes[node_idx];
 
         PrintLn(out_st, "    %1[%2] %3", FmtArg("  ").Repeat(depth), node_idx, readable_node.text);

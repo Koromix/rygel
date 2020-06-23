@@ -84,7 +84,7 @@ static bool MergeConstraint(const mco_TableIndex &index,
     return true;
 }
 
-static bool RecurseGhmTree(MapperContext &ctx, Size depth, Size ghm_node_idx,
+static bool RecurseGhmTree(MapperContext &ctx, Size depth, Size node_idx,
                            mco_GhmConstraint constraint,
                            HashTable<mco_GhmCode, mco_GhmConstraint> *out_constraints)
 {
@@ -101,8 +101,8 @@ static bool RecurseGhmTree(MapperContext &ctx, Size depth, Size ghm_node_idx,
                                       constraint_copy, out_constraints); \
         } while (false)
 
-    RG_ASSERT(ghm_node_idx < ctx.index->ghm_nodes.len);
-    const mco_GhmDecisionNode &ghm_node = ctx.index->ghm_nodes[ghm_node_idx];
+    RG_ASSERT(node_idx < ctx.index->ghm_nodes.len);
+    const mco_GhmDecisionNode &ghm_node = ctx.index->ghm_nodes[node_idx];
 
     bool success = true;
 
@@ -120,7 +120,7 @@ static bool RecurseGhmTree(MapperContext &ctx, Size depth, Size ghm_node_idx,
                 uint64_t warn_cmd28_jumps;
                 {
                     std::pair<uint64_t *, bool> ret =
-                        ctx.warn_cmd28_jumps_cache.TrySet(ghm_node_idx, 0);
+                        ctx.warn_cmd28_jumps_cache.TrySet(node_idx, 0);
                     if (ret.second) {
                         warn_cmd28_jumps = UINT64_MAX;
                         RG_ASSERT(ghm_node.u.test.children_count <= 64);

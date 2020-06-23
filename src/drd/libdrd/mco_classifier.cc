@@ -1562,27 +1562,23 @@ static mco_GhmCode RunGhmTree(const mco_TableIndex &index, const mco_PreparedSta
     ctx.main_diag_info = prep.main_diag_info;
     ctx.linked_diag_info = prep.linked_diag_info;
 
-    Size ghm_node_idx = 0;
+    Size node_idx = 0;
     for (Size i = 0;; i++) {
-        if (RG_UNLIKELY(i >= index.ghm_nodes.len)) {
-            LogError("Empty GHM tree or infinite loop (%2)", index.ghm_nodes.len);
-            SetError(out_errors, 4, 2);
-            return mco_GhmCode::FromString("90Z03Z");
-        }
+        RG_ASSERT(i < index.ghm_nodes.len); // Infinite loops
+        RG_ASSERT(node_idx < index.ghm_nodes.len);
 
-        RG_ASSERT(ghm_node_idx < index.ghm_nodes.len);
-        const mco_GhmDecisionNode &ghm_node = index.ghm_nodes[ghm_node_idx];
+        const mco_GhmDecisionNode &ghm_node = index.ghm_nodes[node_idx];
 
         if (ghm_node.function != 12) {
-            int function_ret = ExecuteGhmTest(ctx, ghm_node, out_errors);
-            if (RG_UNLIKELY(function_ret < 0 || function_ret >= ghm_node.u.test.children_count)) {
+            int test_ret = ExecuteGhmTest(ctx, ghm_node, out_errors);
+            if (RG_UNLIKELY(test_ret < 0 || test_ret >= ghm_node.u.test.children_count)) {
                 LogError("Result for GHM tree test %1 out of range (%2 - %3)",
                          ghm_node.function, 0, ghm_node.u.test.children_count);
                 SetError(out_errors, 4, 2);
                 return mco_GhmCode::FromString("90Z03Z");
             }
 
-            ghm_node_idx = ghm_node.u.test.children_idx + function_ret;
+            node_idx = ghm_node.u.test.children_idx + test_ret;
         } else {
             ghm = ghm_node.u.ghm.ghm;
             if (ghm_node.u.ghm.error && out_errors) {
