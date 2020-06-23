@@ -443,8 +443,8 @@ let log = new function() {
                 ${entry.type === 'progress' ?
                     html`<div class="ut_log_spin"></div>` :
                     html`<button class="ut_log_close">X</button>`}
-                ${entry.msg}
-             </div>`;
+                ${entry.msg.split('\n').map(line => [line, html`<br/>`])}
+            </div>`;
         }), log_el);
     }
 
