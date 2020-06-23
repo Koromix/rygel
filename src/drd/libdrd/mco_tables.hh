@@ -102,6 +102,14 @@ struct mco_DiagnosisInfo {
     uint16_t exclusion_set_idx;
     drd_ListMask cma_exclusion_mask;
 
+    inline uint8_t GetByte(uint8_t byte_idx) const
+    {
+        RG_ASSERT(byte_idx < RG_SIZE(raw));
+        return raw[byte_idx];
+    }
+    inline bool Test(drd_ListMask mask) const { return GetByte((uint8_t)mask.offset) & mask.value; }
+    inline bool Test(uint8_t offset, uint8_t value) const { return GetByte(offset) & value; }
+
     RG_HASHTABLE_HANDLER(mco_DiagnosisInfo, diag);
 };
 
@@ -126,6 +134,14 @@ struct mco_ProcedureInfo {
     uint64_t disabled_extensions;
 
     uint8_t bytes[52];
+
+    inline uint8_t GetByte(int16_t byte_idx) const
+    {
+        RG_ASSERT(byte_idx >= 0 && byte_idx < RG_SIZE(bytes));
+        return bytes[byte_idx];
+    }
+    inline bool Test(drd_ListMask mask) const { return GetByte(mask.offset) & mask.value; }
+    inline bool Test(int16_t offset, uint8_t value) const { return GetByte(offset) & value; }
 
     Span<const char> ActivitiesToStr(Span<char> out_buf) const;
     Span<const char> ExtensionsToStr(Span<char> out_buf) const;

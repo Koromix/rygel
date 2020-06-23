@@ -28,37 +28,6 @@ static int16_t ComputeAge(Date date, Date birthdate)
     return age;
 }
 
-static inline uint8_t GetDiagnosisByte(const mco_DiagnosisInfo &diag_info, uint8_t byte_idx)
-{
-    RG_ASSERT(byte_idx < RG_SIZE(mco_DiagnosisInfo::raw));
-    return diag_info.raw[byte_idx];
-}
-
-static inline bool TestDiagnosis(const mco_DiagnosisInfo &diag_info, drd_ListMask mask)
-{
-    RG_ASSERT(mask.offset >= 0 && mask.offset <= UINT8_MAX);
-    return GetDiagnosisByte(diag_info, (uint8_t)mask.offset) & mask.value;
-}
-static inline bool TestDiagnosis(const mco_DiagnosisInfo &diag_info, uint8_t offset, uint8_t value)
-{
-    return GetDiagnosisByte(diag_info, offset) & value;
-}
-
-static inline uint8_t GetProcedureByte(const mco_ProcedureInfo &proc_info, int16_t byte_idx)
-{
-    RG_ASSERT(byte_idx >= 0 && byte_idx < RG_SIZE(mco_ProcedureInfo::bytes));
-    return proc_info.bytes[byte_idx];
-}
-
-static inline bool TestProcedure(const mco_ProcedureInfo &proc_info, drd_ListMask mask)
-{
-    return GetProcedureByte(proc_info, mask.offset) & mask.value;
-}
-static inline bool TestProcedure(const mco_ProcedureInfo &proc_info, int16_t offset, uint8_t value)
-{
-    return GetProcedureByte(proc_info, offset) & value;
-}
-
 static const mco_PreparedStay *FindMainStay(Span<const mco_PreparedStay> mono_preps, int duration)
 {
     RG_ASSERT(duration >= 0);
@@ -1229,12 +1198,12 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
     switch (ghm_node.u.test.function) {
         case 0:
         case 1: {
-            return GetDiagnosisByte(*ctx.main_diag_info, ghm_node.u.test.params[0]);
+            return ctx.main_diag_info->GetByte(ghm_node.u.test.params[0]);
         } break;
 
         case 2: {
             for (const mco_ProcedureInfo *proc_info: ctx.prep->procedures) {
-                if (TestProcedure(*proc_info, ghm_node.u.test.params[0], ghm_node.u.test.params[1]))
+                if (proc_info->Test(ghm_node.u.test.params[0], ghm_node.u.test.params[1]))
                     return 1;
             }
             return 0;
@@ -1249,14 +1218,14 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
         } break;
 
         case 5: {
-            return TestDiagnosis(*ctx.main_diag_info, ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
+            return ctx.main_diag_info->Test(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
         } break;
 
         case 6: {
             // NOTE: Incomplete, should behave differently when params[0] >= 128,
             // but it's probably relevant only for FG 9 and 10 (CMAs)
             for (const mco_DiagnosisInfo *diag_info: ctx.prep->diagnoses) {
-                if (TestDiagnosis(*diag_info, ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
+                if (diag_info->Test(ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
                         diag_info != ctx.main_diag_info && diag_info != ctx.linked_diag_info)
                     return 1;
             }
@@ -1265,7 +1234,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 7: {
             for (const mco_DiagnosisInfo *diag_info: ctx.prep->diagnoses) {
-                if (TestDiagnosis(*diag_info, ghm_node.u.test.params[0], ghm_node.u.test.params[1]))
+                if (diag_info->Test(ghm_node.u.test.params[0], ghm_node.u.test.params[1]))
                     return 1;
             }
             return 0;
@@ -1275,7 +1244,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
             int result = 0;
             for (const mco_ProcedureInfo *proc_info: ctx.prep->procedures) {
                 if (proc_info->bytes[0] & 0x80) {
-                    if (TestProcedure(*proc_info, ghm_node.u.test.params[0], ghm_node.u.test.params[1])) {
+                    if (proc_info->Test(ghm_node.u.test.params[0], ghm_node.u.test.params[1])) {
                         result = 1;
                     } else {
                         return 0;
@@ -1292,8 +1261,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
             // against prev_proc_info.
             const mco_ProcedureInfo *prev_proc_info = nullptr;
             for (const mco_ProcedureInfo *proc_info: ctx.prep->procedures) {
-                if (TestProcedure(*proc_info,
-                                  ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
+                if (proc_info->Test(ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
                         proc_info != prev_proc_info) {
                     matches++;
                     if (matches >= 2)
@@ -1305,7 +1273,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
         } break;
 
         case 13: {
-            uint8_t diag_byte = GetDiagnosisByte(*ctx.main_diag_info, ghm_node.u.test.params[0]);
+            uint8_t diag_byte = ctx.main_diag_info->GetByte(ghm_node.u.test.params[0]);
             return (diag_byte == ghm_node.u.test.params[1]);
         } break;
 
@@ -1318,7 +1286,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
             HashSet<drd_DiagnosisCode> handled_codes;
             Size special_matches = 0;
             for (const mco_DiagnosisInfo *diag_info: ctx.prep->diagnoses) {
-                if (TestDiagnosis(*diag_info, ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
+                if (diag_info->Test(ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
                         handled_codes.TrySet(diag_info->diag).second) {
                     special_matches += (diag_info == ctx.main_diag_info ||
                                         diag_info == ctx.linked_diag_info);
@@ -1356,11 +1324,8 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
         } break;
 
         case 26: {
-            if (ctx.linked_diag_info) {
-                return TestDiagnosis(*ctx.linked_diag_info, ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
-            } else {
-                return 0;
-            }
+            return ctx.linked_diag_info &&
+                   ctx.linked_diag_info->Test(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
         } break;
 
         case 28: {
@@ -1397,7 +1362,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 36: {
             for (const mco_DiagnosisInfo *diag_info: ctx.prep->diagnoses) {
-                if (TestDiagnosis(*diag_info, ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
+                if (diag_info->Test(ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
                         diag_info != ctx.linked_diag_info)
                     return 1;
             }
@@ -1825,19 +1790,19 @@ static bool TestGradation(const mco_PreparedStay &prep, Span<const mco_PreparedS
 
     // Procedures and diagnoses
     for (const mco_DiagnosisInfo *diag_info: prep.diagnoses) {
-        if (TestDiagnosis(*diag_info, 32, 0x8))
+        if (diag_info->Test(32, 0x8))
             return true;
     }
     for (const mco_ProcedureInfo *proc_info: prep.procedures) {
-        if (TestProcedure(*proc_info, 51, 0xE0))
+        if (proc_info->Test(51, 0xE0))
             return true;
-        if (TestProcedure(*proc_info, 22, 0x20))
+        if (proc_info->Test(22, 0x20))
             return true;
-        if (TestProcedure(*proc_info, 31, 0x20))
+        if (proc_info->Test(31, 0x20))
             return true;
-        if (TestProcedure(*proc_info, 38, 0x8))
+        if (proc_info->Test(38, 0x8))
             return true;
-        if (TestProcedure(*proc_info, 44, 0x40))
+        if (proc_info->Test(44, 0x40))
             return true;
     }
 
@@ -1903,8 +1868,8 @@ static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> m
             if (stay.entry.mode != '8' || stay.entry.origin == '5' || stay.exit.mode != '8')
                 return false;
 
-            if (!TestDiagnosis(*prep.main_diag_info, 32, 0x20) &&
-                    (!prep.linked_diag_info || !TestDiagnosis(*prep.linked_diag_info, 32, 0x20)))
+            if (!prep.main_diag_info->Test(32, 0x20) &&
+                    (!prep.linked_diag_info || !prep.linked_diag_info->Test(32, 0x20)))
                 return false;
         } break;
 
@@ -1920,13 +1885,13 @@ static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> m
     }
 
     if (ghm_to_ghs_info.main_diagnosis_mask.value) {
-        if (!TestDiagnosis(*prep.main_diag_info, ghm_to_ghs_info.main_diagnosis_mask))
+        if (!prep.main_diag_info->Test(ghm_to_ghs_info.main_diagnosis_mask))
             return false;
     }
     if (ghm_to_ghs_info.diagnosis_mask.value) {
         bool test = std::any_of(prep.diagnoses.begin(), prep.diagnoses.end(),
                                 [&](const mco_DiagnosisInfo *diag_info) {
-            return TestDiagnosis(*diag_info, ghm_to_ghs_info.diagnosis_mask);
+            return diag_info->Test(ghm_to_ghs_info.diagnosis_mask);
         });
         if (!test)
             return false;
@@ -1934,7 +1899,7 @@ static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> m
     for (const drd_ListMask &mask: ghm_to_ghs_info.procedure_masks) {
         bool test = std::any_of(prep.procedures.begin(), prep.procedures.end(),
                                 [&](const mco_ProcedureInfo *proc_info) {
-            return TestProcedure(*proc_info, mask);
+            return proc_info->Test(mask);
         });
         if (!test)
             return false;
