@@ -33,7 +33,9 @@ let mco_info = new function() {
             diagnoses: {},
             procedures: {},
 
-            ghs: {}
+            ghs: {},
+
+            tree: {}
         };
 
         // Mode-specific part
@@ -62,7 +64,12 @@ let mco_info = new function() {
                 args.ghs.plot = !!parseInt(params.plot, 10) || false;
             } break;
 
-            case 'tree': { /* Nothing to do */ } break;
+            case 'tree': {
+                args.tree.diag = params.diag || null;
+                args.tree.proc = params.proc || null;
+                args.tree.session = !!parseInt(params.session, 10) || false;
+                args.tree.a7d = !!parseInt(params.a7d, 10) || false;
+            } break;
         }
 
         return args;
@@ -106,7 +113,12 @@ let mco_info = new function() {
                 params.plot = args.ghs.plot ? 1 : null;
             } break;
 
-            case 'tree': { /* Nothing to do */ } break;
+            case 'tree': {
+                params.diag = args.tree.diag || null;
+                params.proc = args.tree.proc || null;
+                params.session = args.tree.session ? 1 : null;
+                params.a7d = args.tree.a7d ? 1 : null;
+            } break;
         }
 
         return util.pasteURL(`${env.base_url}${path.join('/')}`, params);
@@ -878,25 +890,41 @@ let mco_info = new function() {
 
     async function runTree() {
         let version = findVersion(route.version);
-        let [mco, tree_nodes] = await Promise.all([
+        let [mco, tree_nodes, highlight_map] = await Promise.all([
             data.fetchDictionary('mco'),
-            data.fetchJSON(`${env.base_url}api/mco_tree.json?date=${version.begin_date}`)
+            data.fetchJSON(`${env.base_url}api/mco_tree.json?date=${version.begin_date}`),
+            (route.tree.diag || route.tree.proc) ? data.fetchJSON(`${env.base_url}api/mco_highlight.json?date=${version.begin_date}`+
+                                                                  `&diag=${route.tree.diag || ''}&proc=${route.tree.proc || ''}`) : null
         ]);
 
         document.title = `THOP – Arbre de groupage (${version.begin_date})`;
 
         // Options
-        render(renderVersionLine(settings.mco.versions, version),
-               document.querySelector('#th_options'));
+        render(html`
+            ${renderVersionLine(settings.mco.versions, version)}
+            <label>Diagnostic <input type="text" .value=${route.tree.diag}
+                                     placeholder="* pour tout accepter"
+                                     @change=${e => thop.go(self, {tree: {diag: e.target.value || null}})} /></label>
+            <label>Acte <input type="text" .value=${route.tree.proc}
+                               placeholder="* pour tout accepter"
+                               @change=${e => thop.go(self, {tree: {proc: e.target.value || null}})} /></label><br/>
+            <label>Séance <input type="checkbox" .checked=${route.tree.session}
+                                 @change=${e => thop.go(self, {tree: {session: e.target.checked}})} /></label>
+            <label>Âge ≤ 7 jours <input type="checkbox" .checked=${route.tree.a7d}
+                                        @change=${e => thop.go(self, {tree: {a7d: e.target.checked}})} /></label>
+        `, document.querySelector('#th_options'));
 
         // Tree
-        render(renderTree(tree_nodes, mco),
+        render(renderTree(tree_nodes, highlight_map, route.tree.session, route.tree.a7d, mco),
                document.querySelector('#th_view'));
     }
 
-    function renderTree(nodes, mco) {
+    function renderTree(nodes, highlight_map, session, a7d, mco) {
         if (nodes.length) {
-            let children = buildTreeRec(nodes, mco, 0, '', []);
+            let mask = (session ? (1 << 1) : (1 << 0)) |
+                       (a7d ? (1 << 3) : (1 << 2));
+            let children = buildTreeRec(nodes, highlight_map, mask, mco, 0, '', []);
+
             return html`
                 <ul class="tr_tree">
                     ${renderTreeChildren(children)}
@@ -907,7 +935,7 @@ let mco_info = new function() {
         }
     }
 
-    function buildTreeRec(nodes, mco, start_idx, chain_str, parent_next_indices) {
+    function buildTreeRec(nodes, highlight_map, mask, mco, start_idx, chain_str, parent_next_indices) {
         let elements = [];
 
         let indices = [];
@@ -933,7 +961,9 @@ let mco_info = new function() {
                 let ghm_root = node.key.substr(0, 5);
                 let label = mco.ghm_roots.label(ghm_root);
 
-                let li = renderTreeGhm(node_idx, node.text, label);
+                let irrelevant = highlight_map && !((highlight_map[node_idx] & mask) === mask);
+                let li = renderTreeGhm(node_idx, node.text, label, irrelevant);
+
                 elements.push(li);
             } else if (node.test === 20 && node.children_idx === parent_next_indices[0]) {
                 // Hide GOTO nodes at the end of a chain, the classifier uses those to
@@ -946,23 +976,29 @@ let mco_info = new function() {
                     let pseudo_idx = (j > 1) ? `${node_idx}-${j}` : node_idx;
                     let pseudo_text = `${node.text} ${nodes[node.children_idx + j].header}`;
 
-                    let children = buildTreeRec(nodes, mco, node.children_idx + j, recurse_str, indices);
-                    let li = renderTreeTest(pseudo_idx, pseudo_text, children, recurse_str);
+                    let children = buildTreeRec(nodes, highlight_map, mask, mco, node.children_idx + j, recurse_str, indices);
+                    let irrelevant = highlight_map && !((highlight_map[node.children_idx + j] & mask) === mask);
+                    let li = renderTreeTest(pseudo_idx, pseudo_text, irrelevant, children, recurse_str);
+
                     elements.push(li);
                 }
             } else if (node.children_count === 2) {
                 let recurse_str = chain_str + node.key;
 
-                let children = buildTreeRec(nodes, mco, node.children_idx + !node.reverse, recurse_str, indices);
-                let li = renderTreeTest(node_idx, node.reverse || node.text, children, recurse_str);
+                let children = buildTreeRec(nodes, highlight_map, mask, mco, node.children_idx + !node.reverse, recurse_str, indices);
+                let irrelevant = highlight_map && !((highlight_map[node_idx] & mask) === mask);
+                let li = renderTreeTest(node_idx, node.reverse || node.text, irrelevant, children, recurse_str);
+
                 elements.push(li);
             } else {
                 let recurse_str = chain_str + node.key;
                 let leaf = !node.children_count || node.children_count == 1;
 
                 let children = util.mapRange(1, node.children_count,
-                                             j => buildTreeRec(nodes, mco, node.children_idx + j, recurse_str, indices));
-                let li = renderTreeTest(node_idx, node.text, children, recurse_str);
+                                             j => buildTreeRec(nodes, highlight_map, mask, mco, node.children_idx + j, recurse_str, indices));
+                let irrelevant = highlight_map && !((highlight_map[node_idx] & mask) === mask);
+                let li = renderTreeTest(node_idx, node.text, irrelevant, children, recurse_str);
+
                 elements.push(li);
 
                 // Hide repeated subtrees, this happens with error-generating nodes 80 and 222
@@ -971,7 +1007,7 @@ let mco_info = new function() {
                         let pseudo_idx = `${node_idx}-2`;
                         let pseudo_text = 'Saut noeud ' + node.children_idx;
 
-                        let li = renderTreeTest(pseudo_idx, pseudo_text);
+                        let li = renderTreeTest(pseudo_idx, pseudo_text, true);
                         elements.push(li);
                     }
 
@@ -983,21 +1019,27 @@ let mco_info = new function() {
         return elements;
     }
 
-    function renderTreeTest(idx, text, children = [], chain_str = null) {
+    function renderTreeTest(idx, text, irrelevant, children = [], chain_str = null) {
         if (children.length === 1 && children[0].type === 'leaf') {
+            irrelevant &= children[0].irrelevant;
+
             // Simplify when there is only one leaf children
             let ret = {
                 idx: idx,
                 type: 'leaf',
+                irrelevant: irrelevant,
                 vdom: html`<span><span class="n">${idx} </span>${self.addSpecLinks(text)}</span>
                            <span class="direct">${children[0].vdom}</span>`
             };
 
             return ret;
         } else if (children.length) {
+            irrelevant &= children.every(child => child.irrelevant);
+
             let ret = {
                 idx: idx,
                 type: 'parent',
+                irrelevant: irrelevant,
                 chain_str: chain_str,
                 vdom: html`<span><span class="n" @click=${handleTreeTestClick}>${idx} </span>${self.addSpecLinks(text)}</span>
                            <ul>${renderTreeChildren(children)}</ul>`
@@ -1008,6 +1050,7 @@ let mco_info = new function() {
             let ret = {
                 idx: idx,
                 type: 'leaf',
+                irrelevant: irrelevant,
                 vdom: html`<span><span class="n">${idx} </span>${self.addSpecLinks(text)}</span>`
             };
 
@@ -1017,7 +1060,13 @@ let mco_info = new function() {
 
     function renderTreeChildren(children) {
         return children.map(child => {
-            let cls = child.type + (child.chain_str && collapse_nodes.has(child.chain_str) ? ' collapse' : '');
+            let cls = child.type;
+            if (child.irrelevant) {
+                cls += ' collapse irrelevant';
+            } else if (child.chain_str && collapse_nodes.has(child.chain_str)) {
+                cls += ' collapse';
+            }
+
             return html`<li id=${'n' + child.idx} class=${cls}>${child.vdom}</li>`;
         });
     }
@@ -1033,10 +1082,11 @@ let mco_info = new function() {
         e.preventDefault();
     }
 
-    function renderTreeGhm(idx, text, label) {
+    function renderTreeGhm(idx, text, label, irrelevant) {
         let ret = {
             idx: idx,
             type: 'leaf',
+            irrelevant: irrelevant,
             vdom: html`<span><span class="n">${idx} </span>${self.addSpecLinks(text)}
                              <span class="label">${label}</span></span>`
         };

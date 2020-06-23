@@ -314,4 +314,239 @@ void ProduceMcoTree(const http_RequestInfo &request, const User *, http_IO *io)
     json.Finish(io);
 }
 
+struct HighlightContext {
+    Span<const mco_GhmDecisionNode> ghm_nodes;
+
+    bool ignore_diagnoses;
+    bool ignore_procedures;
+    HeapArray<const mco_DiagnosisInfo *> diagnoses;
+    HeapArray<const mco_ProcedureInfo *> procedures;
+};
+
+// Keep in sync with code in mco_info.js (renderTree function)
+enum class HighlightFlag {
+    Session = 1 << 0,
+    NoSession = 1 << 1,
+    A7D = 1 << 2,
+    NoA7D = 1 << 3
+};
+
+static bool HighlightNodes(const HighlightContext &ctx, Size node_idx, uint16_t flags,
+                           HashMap<int16_t, uint16_t> *out_nodes);
+static void HighlightChildren(const HighlightContext &ctx, const mco_GhmDecisionNode &ghm_node,
+                              uint16_t flags, HashMap<int16_t, uint16_t> *out_nodes)
+{
+    for (Size i = 1; i < ghm_node.u.test.children_count; i++) {
+        HighlightNodes(ctx, ghm_node.u.test.children_idx + i, flags, out_nodes);
+    }
+}
+
+static bool HighlightNodes(const HighlightContext &ctx, Size node_idx, uint16_t flags,
+                           HashMap<int16_t, uint16_t> *out_nodes)
+{
+    for (Size i = 0;; i++) {
+        RG_ASSERT(i < ctx.ghm_nodes.len); // Infinite loops
+        RG_ASSERT(node_idx < ctx.ghm_nodes.len);
+
+        const mco_GhmDecisionNode &ghm_node = ctx.ghm_nodes[node_idx];
+        bool highlight = false;
+
+        switch (ghm_node.function) {
+            case 0:
+            case 1: {
+                if (!ctx.ignore_diagnoses) {
+                    for (const mco_DiagnosisInfo *diag_info: ctx.diagnoses) {
+                        uint8_t diag_byte = diag_info->GetByte(ghm_node.u.test.params[0]);
+                        highlight |= diag_byte &&
+                                     HighlightNodes(ctx, ghm_node.u.test.children_idx + diag_byte, flags, out_nodes);
+                    }
+                } else {
+                    HighlightChildren(ctx, ghm_node, flags, out_nodes);
+                }
+            } break;
+
+            case 2:
+            case 9:
+            case 10: {
+                if (!ctx.ignore_procedures) {
+                    for (const mco_ProcedureInfo *proc_info: ctx.procedures) {
+                        highlight |= proc_info->Test(ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
+                                     HighlightNodes(ctx, ghm_node.u.test.children_idx + 1, flags, out_nodes);
+                    }
+                } else {
+                    HighlightChildren(ctx, ghm_node, flags, out_nodes);
+                }
+            } break;
+
+            case 3: {
+                if (ghm_node.u.test.params[1] == 1 && ghm_node.u.test.params[0] == 7) {
+                    HighlightChildren(ctx, ghm_node, flags & ~(int)HighlightFlag::NoA7D, out_nodes);
+                    flags &= ~(int)HighlightFlag::A7D;
+                } else {
+                    HighlightChildren(ctx, ghm_node, flags, out_nodes);
+                }
+            } break;
+            case 19: {
+                // This is ugly, but needed for A7D to work correctly. Otherwise there
+                // are entry mode nodes that lead back to A7D nodes but with NoA7D :/
+                if (ghm_node.u.test.params[1] != 2) {
+                    HighlightChildren(ctx, ghm_node, flags, out_nodes);
+                }
+            } break;
+
+            case 5:
+            case 6:
+            case 7:
+            case 18:
+            case 26:
+            case 36: {
+                if (!ctx.ignore_diagnoses) {
+                    for (const mco_DiagnosisInfo *diag_info: ctx.diagnoses) {
+                        highlight |= diag_info->Test(ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
+                                     HighlightNodes(ctx, ghm_node.u.test.children_idx + 1, flags, out_nodes);
+                    }
+                } else {
+                    HighlightChildren(ctx, ghm_node, flags, out_nodes);
+                }
+            } break;
+
+            case 12: { // GHM, at least!
+                uint16_t *ptr = out_nodes->TrySet((int16_t)node_idx, 0).first;
+                *ptr |= flags;
+
+                return true;
+            } break;
+
+            case 13: {
+                if (!ctx.ignore_diagnoses) {
+                    for (const mco_DiagnosisInfo *diag_info: ctx.diagnoses) {
+                        uint8_t diag_byte = diag_info->GetByte(ghm_node.u.test.params[0]);
+                        highlight |= (diag_byte == ghm_node.u.test.params[1]) &&
+                                     HighlightNodes(ctx, ghm_node.u.test.children_idx + 1, flags, out_nodes);
+                    }
+                } else {
+                    HighlightChildren(ctx, ghm_node, flags, out_nodes);
+                }
+            } break;
+
+            case 20: { // GOTO
+                HighlightNodes(ctx, ghm_node.u.test.children_idx, flags, out_nodes);
+                return false;
+            } break;
+
+            case 30: {
+                uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
+
+                if (param == 0) {
+                    HighlightChildren(ctx, ghm_node, flags & ~(int)HighlightFlag::NoSession, out_nodes);
+                    flags &= ~(int)HighlightFlag::Session;
+                } else {
+                    HighlightChildren(ctx, ghm_node, flags, out_nodes);
+                }
+            } break;
+
+            case 41:
+            case 43: {
+                if (!ctx.ignore_diagnoses) {
+                    for (const mco_DiagnosisInfo *diag_info: ctx.diagnoses) {
+                        highlight |= (diag_info->cmd == ghm_node.u.test.params[0]) &&
+                                     (diag_info->jump == ghm_node.u.test.params[1]) &&
+                                     HighlightNodes(ctx, ghm_node.u.test.children_idx + 1, flags, out_nodes);
+                    }
+                } else {
+                    HighlightChildren(ctx, ghm_node, flags, out_nodes);
+                }
+            } break;
+
+            default: {
+                HighlightChildren(ctx, ghm_node, flags, out_nodes);
+            } break;
+        }
+
+        if (highlight) {
+            uint16_t *ptr = out_nodes->TrySet((int16_t)node_idx, 0).first;
+            *ptr |= flags;
+
+            return true;
+        }
+
+        node_idx = ghm_node.u.test.children_idx;
+    }
+}
+
+void ProduceMcoHighlight(const http_RequestInfo &request, const User *user, http_IO *io)
+{
+    const mco_TableIndex *index = GetIndexFromRequest(request, io);
+    if (!index)
+        return;
+
+    HighlightContext ctx = {};
+    ctx.ghm_nodes = index->ghm_nodes;
+
+    // Diagnosis?
+    if (const char *code = request.GetQueryValue("diag"); code && code[0]) {
+        if (TestStr(code, "*")) {
+            ctx.ignore_diagnoses = true;
+        } else {
+            drd_DiagnosisCode diag =
+                drd_DiagnosisCode::FromString(code, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+            if (!diag.IsValid()) {
+                LogError("Invalid CIM-10 code '%1'", code);
+                io->AttachError(422);
+                return;
+            }
+
+            for (const mco_DiagnosisInfo &diag_info: index->FindDiagnosis(diag)) {
+                ctx.diagnoses.Append(&diag_info);
+            }
+            if (!ctx.diagnoses.len) {
+                LogError("Unknown diagnosis '%1'", code);
+                io->AttachError(404);
+                return;
+            }
+        }
+    }
+
+    // Procedure?
+    if (const char *code = request.GetQueryValue("proc"); code && code[0]) {
+        if (TestStr(code, "*")) {
+            ctx.ignore_procedures = true;
+        } else {
+            drd_ProcedureCode proc =
+                drd_ProcedureCode::FromString(code, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+            if (!proc.IsValid()) {
+                LogError("Invalid CCAM code '%1'", code);
+                io->AttachError(422);
+                return;
+            }
+
+            for (const mco_ProcedureInfo &proc_info: index->FindProcedure(proc)) {
+                ctx.procedures.Append(&proc_info);
+            }
+            if (!ctx.procedures.len) {
+                LogError("Unknown procedure '%1'", code);
+                io->AttachError(404);
+                return;
+            }
+        }
+    }
+
+    // Run highlighter
+    HashMap<int16_t, uint16_t> matches;
+    HighlightNodes(ctx, 0, 0xF, &matches);
+
+    // Output matches!
+    http_JsonPageBuilder json(request.compression_type);
+
+    json.StartObject();
+    for (const auto &it: matches.table) {
+        char buf[16];
+        json.Key(Fmt(buf, "%1", it.key).ptr); json.Int64(it.value);
+    }
+    json.EndObject();
+
+    io->AddCachingHeaders(thop_config.max_age, thop_etag);
+    json.Finish(io);
+}
+
 }

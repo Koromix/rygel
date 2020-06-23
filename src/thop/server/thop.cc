@@ -356,11 +356,14 @@ static void InitRoutes()
     add_function_route("POST", "/api/logout.json", HandleLogout);
     add_function_route("GET", "/api/structures.json", ProduceStructures);
 
-    // MCO API
+    // MCO information API
     add_function_route("GET", "/api/mco_diagnoses.json", ProduceMcoDiagnoses);
     add_function_route("GET", "/api/mco_procedures.json", ProduceMcoProcedures);
     add_function_route("GET", "/api/mco_ghmghs.json", ProduceMcoGhmGhs);
     add_function_route("GET", "/api/mco_tree.json", ProduceMcoTree);
+    add_function_route("GET", "/api/mco_highlight.json", ProduceMcoHighlight);
+
+    // MCO casemix API
     add_function_route("GET", "/api/mco_aggregate.json", ProduceMcoAggregate);
     add_function_route("GET", "/api/mco_results.json", ProduceMcoResults);
 

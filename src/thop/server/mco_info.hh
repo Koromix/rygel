@@ -15,5 +15,6 @@ void ProduceMcoProcedures(const http_RequestInfo &request, const User *user, htt
 void ProduceMcoGhmGhs(const http_RequestInfo &request, const User *user, http_IO *io);
 
 void ProduceMcoTree(const http_RequestInfo &request, const User *user, http_IO *io);
+void ProduceMcoHighlight(const http_RequestInfo &request, const User *user, http_IO *io);
 
 }
