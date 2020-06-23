@@ -1097,7 +1097,7 @@ let mco_info = new function() {
         return version;
     }
 
-    this.addSpecLinks = function(str, append_desc = false) {
+    this.addSpecLinks = function(str) {
         let elements = [];
         for (;;) {
             let m;
