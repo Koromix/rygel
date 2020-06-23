@@ -405,13 +405,15 @@ let mco_info = new function() {
                     case '\\':
                     case '^':
                     case '$':
-                    case '.':
                     case '(':
                     case ')':
                     case '{':
                     case '}':
                     case '[':
                     case ']': { re += `\\${c}`; } break;
+
+                    // Special case '.' for CIM-10 codes
+                    case '.': { re += `\\.?`; } break;
 
                     default: { re += c; } break;
                 }
