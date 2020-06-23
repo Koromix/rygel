@@ -321,6 +321,8 @@ struct HighlightContext {
     bool ignore_procedures;
     HeapArray<const mco_DiagnosisInfo *> diagnoses;
     HeapArray<const mco_ProcedureInfo *> procedures;
+
+    bool ignore_medical;
 };
 
 // Keep in sync with code in mco_info.js (renderTree function)
@@ -411,10 +413,17 @@ static bool HighlightNodes(const HighlightContext &ctx, Size node_idx, uint16_t 
             } break;
 
             case 12: { // GHM, at least!
-                uint16_t *ptr = out_nodes->TrySet((int16_t)node_idx, 0).first;
-                *ptr |= flags;
+                if (!ctx.ignore_medical || ghm_node.u.ghm.ghm.parts.type == 'C' ||
+                                           ghm_node.u.ghm.ghm.parts.type == 'K' ||
+                                           (ghm_node.u.ghm.ghm.Root() == mco_GhmRootCode(90, 'Z', 1) &&
+                                            ghm_node.u.ghm.error == 6)) {
+                    uint16_t *ptr = out_nodes->TrySet((int16_t)node_idx, 0).first;
+                    *ptr |= flags;
 
-                return true;
+                    return true;
+                } else {
+                    return false;
+                }
             } break;
 
             case 13: {
@@ -528,6 +537,20 @@ void ProduceMcoHighlight(const http_RequestInfo &request, const User *user, http
                 io->AttachError(404);
                 return;
             }
+        }
+    }
+
+    // If the user only specifies a major procedure, but no diagnosis, the algorithm
+    // fails. But typically, the user wants to see potential GHMs. We can find them with
+    // by using a wildcard for diagnosis and by refusing non-C/non-K GHMs.
+    if (ctx.procedures.len && !ctx.diagnoses.len && !ctx.ignore_diagnoses) {
+        bool invasive = std::any_of(ctx.procedures.begin(), ctx.procedures.end(),
+                                    [](const mco_ProcedureInfo *proc_info) { return proc_info->Test(0, 0x80) ||
+                                                                                    proc_info->Test(23, 0x80); });
+
+        if (invasive) {
+            ctx.ignore_diagnoses = true;
+            ctx.ignore_medical = true;
         }
     }
 
