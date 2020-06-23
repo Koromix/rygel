@@ -256,7 +256,7 @@ public:
         if (warnings) {
             Fmt(&buf, " -Wall");
             if (src_type == SourceType::CXX) {
-                Fmt(&buf, " -Wno-class-memaccess");
+                Fmt(&buf, " -Wno-class-memaccess -Wno-init-list-lifetime");
             }
         } else {
             Fmt(&buf, " -w");
