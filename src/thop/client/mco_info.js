@@ -1229,9 +1229,15 @@ let mco_info = new function() {
                 frag = html`<a href=${self.makeURL({mode: 'procedures', procedures: {list: m[0], offset: 0}})}>${m[0]}</a>`;
             } else if (m = str.match(/D(\-[0-9]+|\$[0-9]+\.[0-9]+)/)) {
                 frag = html`<a href=${self.makeURL({mode: 'diagnoses', diagnoses: {list: m[0], offset: 0}})}>${m[0]}</a>`;
-            } else if (m = str.match(/[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?( \[[0-9]{1,3}\])?/)) {
+            } else if (m = str.match(/[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?( \[([0-9]{1,3})\])?/)) {
                 let ghm_root = m[0].substr(0, 5);
                 let tooltip = findCachedLabel('mco', 'ghm_roots', ghm_root) || '';
+
+                if (m[2]) {
+                    let error = findCachedLabel('mco', 'errors', m[2]);
+                    if (error)
+                        tooltip += `\nErreur ${m[2]} : ${error}`;
+                }
 
                 frag = html`<a class="ghm" href=${self.makeURL({mode: 'ghs', ghs: {ghm_root: ghm_root}})} title=${tooltip}>${m[0]}</a>`;
             } else if (m = str.match(/[A-Z]{4}[0-9+]{3}/)) {
