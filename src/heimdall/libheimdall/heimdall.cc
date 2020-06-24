@@ -1451,18 +1451,36 @@ static ConceptSet *CreateView(const char *name, HeapArray<ConceptSet> *out_conce
     return concept_set;
 }
 
+enum class PathCopyMode {
+    Flat,
+    SingleLevel,
+    Full
+};
+static const char *PathCopyModeNames[] = {
+    "Flat",
+    "Single level",
+    "Full"
+};
+
 static void AddConceptsToView(const HashMap<Span<const char>, Span<const char>> &concepts,
-                              bool keep_paths, ConceptSet *out_concept_set)
+                              PathCopyMode copy_mode, ConceptSet *out_concept_set)
 {
     for (const auto &it: concepts.table) {
-        Concept concept_info = {};
-        concept_info.name = DuplicateString(it.key, &out_concept_set->str_alloc).ptr;
-        if (keep_paths) {
-            concept_info.path = DuplicateString(it.value, &out_concept_set->str_alloc).ptr;
-        } else {
-            concept_info.path = "/";
+        Concept *concept_info = out_concept_set->concepts_map.TrySetDefault(it.key.ptr).first;
+        if (!concept_info->name) {
+            concept_info->name = DuplicateString(it.key.ptr, &out_concept_set->str_alloc).ptr;
         }
-        out_concept_set->concepts_map.Set(concept_info);
+
+        switch (copy_mode) {
+            case PathCopyMode::Flat: { concept_info->path = "/"; } break;
+            case PathCopyMode::SingleLevel: {
+                RG_ASSERT(it.value.len);
+
+                Size len = strcspn(it.value.ptr + 1, "/") + 1;
+                concept_info->path = DuplicateString(MakeSpan(it.value.ptr, len), &out_concept_set->str_alloc).ptr;
+            } break;
+            case PathCopyMode::Full: { concept_info->path = DuplicateString(it.value, &out_concept_set->str_alloc).ptr; } break;
+        }
     }
 }
 
@@ -1473,6 +1491,7 @@ static void RemoveConceptsFromView(const HashMap<Span<const char>, Span<const ch
         if (!concept_info->name) {
             concept_info->name = DuplicateString(it.key.ptr, &out_concept_set->str_alloc).ptr;
         }
+
         concept_info->path = nullptr;
     }
 }
@@ -1601,45 +1620,31 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
                 ImGui::Separator();
 
                 if (ImGui::BeginMenu("Add to view")) {
+                    static char view_buf[128];
+                    static int copy_mode = (int)PathCopyMode::Flat;
+
                     ImGui::Text("New view:");
-                    static char new_view_buf[128];
                     // XXX: Avoid empty and duplicate names
-                    ImGui::InputText("##new_view", new_view_buf, IM_ARRAYSIZE(new_view_buf));
+                    ImGui::InputText("##new_view", view_buf, IM_ARRAYSIZE(view_buf));
                     if (ImGui::Button("Create")) {
-                        ConceptSet *new_concept_set = CreateView(new_view_buf, &concept_sets);
-                        new_view_buf[0] = 0;
-                        AddConceptsToView(state.select_concepts, true, new_concept_set);
+                        ConceptSet *new_concept_set = CreateView(view_buf, &concept_sets);
+                        view_buf[0] = 0;
+                        AddConceptsToView(state.select_concepts, (PathCopyMode)copy_mode, new_concept_set);
                         state.select_concepts.Clear();
                         ImGui::CloseCurrentPopup();
                     }
                     ImGui::Separator();
+
                     for (ConceptSet &it: concept_sets) {
                         if (ImGui::MenuItem(it.name)) {
-                            AddConceptsToView(state.select_concepts, true, &it);
+                            AddConceptsToView(state.select_concepts, (PathCopyMode)copy_mode, &it);
                             state.select_concepts.Clear();
                         }
-                    }
-                    ImGui::EndMenu();
-                }
-                if (ImGui::BeginMenu("Add to view (flat)")) {
-                    ImGui::Text("New view:");
-                    static char new_view_buf[128];
-                    // XXX: Avoid empty and duplicate names
-                    ImGui::InputText("##new_view", new_view_buf, IM_ARRAYSIZE(new_view_buf));
-                    if (ImGui::Button("Create")) {
-                        ConceptSet *new_concept_set = CreateView(new_view_buf, &concept_sets);
-                        new_view_buf[0] = 0;
-                        AddConceptsToView(state.select_concepts, false, new_concept_set);
-                        state.select_concepts.Clear();
-                        ImGui::CloseCurrentPopup();
                     }
                     ImGui::Separator();
-                    for (ConceptSet &it: concept_sets) {
-                        if (ImGui::MenuItem(it.name)) {
-                            AddConceptsToView(state.select_concepts, false, &it);
-                            state.select_concepts.Clear();
-                        }
-                    }
+
+                    ImGui::Combo("Copy mode", &copy_mode, PathCopyModeNames, RG_LEN(PathCopyModeNames));
+
                     ImGui::EndMenu();
                 }
                 if (ImGui::MenuItem("Remove from view", nullptr, false,
