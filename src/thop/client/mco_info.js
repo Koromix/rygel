@@ -65,10 +65,21 @@ let mco_info = new function() {
             } break;
 
             case 'tree': {
-                args.tree.diag = params.diag || null;
-                args.tree.proc = params.proc || null;
-                args.tree.session = !!parseInt(params.session, 10) || false;
-                args.tree.a7d = !!parseInt(params.a7d, 10) || false;
+                if (!path[2] && (params.diag || params.proc))
+                    path[2] = 'filter';
+
+                if (path[2] && path[2] === 'filter') {
+                    args.tree.filter = true;
+                    args.tree.diag = params.diag || null;
+                    args.tree.proc = params.proc || null;
+                    args.tree.session = !!parseInt(params.session, 10) || false;
+                    args.tree.a7d = !!parseInt(params.a7d, 10) || false;
+                } else {
+                    if (path[2])
+                        log.error('Mode incorrect et ignoré');
+
+                    args.tree.filter = false;
+                }
             } break;
         }
 
@@ -114,10 +125,13 @@ let mco_info = new function() {
             } break;
 
             case 'tree': {
-                params.diag = args.tree.diag || null;
-                params.proc = args.tree.proc || null;
-                params.session = args.tree.session ? 1 : null;
-                params.a7d = args.tree.a7d ? 1 : null;
+                if (args.tree.filter) {
+                    path.push('filter');
+                    params.diag = args.tree.diag || null;
+                    params.proc = args.tree.proc || null;
+                    params.session = args.tree.session ? 1 : null;
+                    params.a7d = args.tree.a7d ? 1 : null;
+                }
             } break;
         }
 
@@ -546,8 +560,8 @@ let mco_info = new function() {
         render(html`
             ${renderVersionLine(settings.mco.versions, version)}
             ${renderSectorSelector(route.sector)}
-            <label>
-                <span style=${route.ghs.plot ? 'text-decoration: line-through;' : ''}>Comparer</span>
+            <label class=${route.ghs.plot ? 'disabled' : ''}>
+                <span>Comparer</span>
                 ${renderDiffSelector(settings.mco.versions, version_diff, !route.ghs.plot)}
             </label>
             <label>Durée <input type="number" step="5" min="0" max="500" .value=${route.ghs.duration}
@@ -608,10 +622,9 @@ let mco_info = new function() {
         }
     }
 
-    function renderDiffSelector(versions, current_version, enable) {
+    function renderDiffSelector(versions, current_version) {
         return html`
-            <select ?disabled=${!enable}
-                    @change=${e => thop.go(self, {ghs: {diff: dates.parse(e.target.value || null)}})}>
+            <select @change=${e => thop.go(self, {ghs: {diff: dates.parse(e.target.value || null)}})}>
                 <option value="" .selected=${current_version == null}>Non</option>
                 ${versions.map(version => {
                     let label = version.begin_date.toLocaleString();
@@ -943,7 +956,7 @@ let mco_info = new function() {
             data.fetchJSON(util.pasteURL(`${env.base_url}api/mco_tree.json`, {
                 date: version.begin_date
             })),
-            (route.tree.diag || route.tree.proc) ? data.fetchJSON(util.pasteURL(`${env.base_url}api/mco_highlight.json`, {
+            route.tree.filter ? data.fetchJSON(util.pasteURL(`${env.base_url}api/mco_highlight.json`, {
                 date: version.begin_date,
                 diag: route.tree.diag ? route.tree.diag.replace('.', '').trim() : null,
                 proc: route.tree.proc ? route.tree.proc.trim() : null
@@ -955,16 +968,23 @@ let mco_info = new function() {
         // Options
         render(html`
             ${renderVersionLine(settings.mco.versions, version)}
-            <label>Diagnostic <input type="text" .value=${route.tree.diag}
-                                     placeholder="* pour tout accepter"
-                                     @change=${e => thop.go(self, {tree: {diag: e.target.value || null}})} /></label>
-            <label>Acte <input type="text" .value=${route.tree.proc}
-                               placeholder="* pour tout accepter"
-                               @change=${e => thop.go(self, {tree: {proc: e.target.value || null}})} /></label><br/>
-            <label>Séance <input type="checkbox" .checked=${route.tree.session}
-                                 @change=${e => thop.go(self, {tree: {session: e.target.checked}})} /></label>
-            <label>Âge ≤ 7 jours <input type="checkbox" .checked=${route.tree.a7d}
-                                        @change=${e => thop.go(self, {tree: {a7d: e.target.checked}})} /></label>
+            <label>
+                Filtre sur diagnostic ou acte
+                <input type="checkbox" .checked=${route.tree.filter}
+                       @change=${e => thop.go(self, {tree: {filter: e.target.checked}})} />
+            </label>
+            <div class=${!route.tree.filter ? 'disabled' : ''}>
+                <label>Diagnostic <input type="text" .value=${route.tree.diag || ''}
+                                         placeholder="* pour tout accepter"
+                                         @change=${e => thop.go(self, {tree: {diag: e.target.value || null}})} /></label>
+                <label>Acte <input type="text" .value=${route.tree.proc || ''}
+                                   placeholder="* pour tout accepter"
+                                   @change=${e => thop.go(self, {tree: {proc: e.target.value || null}})} /></label>
+                <label>Séance <input type="checkbox" .checked=${route.tree.session}
+                                     @change=${e => thop.go(self, {tree: {session: e.target.checked}})} /></label>
+                <label>Âge ≤ 7 jours <input type="checkbox" .checked=${route.tree.a7d}
+                                            @change=${e => thop.go(self, {tree: {a7d: e.target.checked}})} /></label>
+            </div>
         `, document.querySelector('#th_options'));
 
         // Tree

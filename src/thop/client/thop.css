@@ -214,11 +214,11 @@ button { cursor: pointer; }
     }
 
     #th_options > * { max-width: 100%; }
-    #th_options > label {
+    #th_options label {
         display: block;
         clear: both;
         margin-bottom: 12px;
         text-align: left;
     }
-    #th_options > label input, #th_options > label select { float: right; }
+    #th_options label > input, #th_options label > select { float: right; }
 }

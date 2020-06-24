@@ -71,3 +71,11 @@ button, input, optgroup, select, textarea {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* -------------------- Miscellaneous -------------------- */
+
+.disabled {
+    pointer-events: none !important;
+    user-select: none !important;
+    opacity: 0.25 !important;
+}
