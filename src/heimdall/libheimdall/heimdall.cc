@@ -60,7 +60,7 @@ static bool DetectAnomaly(const Element &elmt)
     RG_UNREACHABLE();
 }
 
-static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoom, float alpha,
+static void DrawPeriods(double x_offset, double y_min, double y_max, double time_zoom, float alpha,
                         Span<const Element *const> periods, double align_offset)
 {
     const ImGuiStyle &style = ImGui::GetStyle();
@@ -70,8 +70,8 @@ static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoo
         RG_ASSERT(elmt->type == Element::Type::Period);
 
         ImRect rect {
-            x_offset + (float)elmt->time * time_zoom, y_min,
-            x_offset + (float)(elmt->time + elmt->u.period.duration) * time_zoom, y_max
+            (float)(x_offset + elmt->time * time_zoom), (float)y_min,
+            (float)(x_offset + elmt->time + elmt->u.period.duration * time_zoom), (float)y_max
         };
         // Make sure it's at least one pixel wide
         rect.Max.x = std::max(rect.Min.x + 1.0f, rect.Max.x);
@@ -188,21 +188,21 @@ static void DrawEventsBlock(ImRect rect, float alpha, Span<const Element *const>
     }
 }
 
-static void DrawEvents(float x_offset, float y_min, float y_max, float time_zoom, float alpha,
+static void DrawEvents(double x_offset, double y_min, double y_max, double time_zoom, float alpha,
                        Span<const Element *const> events, double align_offset)
 {
     if (!events.len)
         return;
 
     ImRect rect {
-        x_offset + ((float)events[0]->time * time_zoom), y_min,
-        x_offset + ((float)events[0]->time * time_zoom), y_max
+        (float)(x_offset + events[0]->time * time_zoom), (float)y_min,
+        (float)(x_offset + events[0]->time * time_zoom), (float)y_max
     };
     Size first_block_event = 0;
     for (Size i = 0; i < events.len; i++) {
         const Element *elmt = events[i];
 
-        float event_pos = x_offset + ((float)elmt->time * time_zoom);
+        double event_pos = x_offset + elmt->time * time_zoom;
         if (event_pos - rect.Max.x >= 16.0f) {
             DrawEventsBlock(rect, alpha, events.Take(first_block_event, i - first_block_event),
                             align_offset);
@@ -227,8 +227,8 @@ static void DrawPartialSpline(ImDrawList *draw, const std::vector<double> &xs,
         spline.set_points(xs, ys);
 
         // Don't overdraw (slow and unnecessary)
-        float min_x = std::max((float)xs[0], draw->GetClipRectMin().x);
-        float max_x = std::min((float)xs[xs.size() - 1], draw->GetClipRectMax().x);
+        double min_x = std::max(xs[0], (double)draw->GetClipRectMin().x);
+        double max_x = std::min(xs[xs.size() - 1], (double)draw->GetClipRectMax().x);
 
         // Draw the curve
         {
@@ -236,7 +236,7 @@ static void DrawPartialSpline(ImDrawList *draw, const std::vector<double> &xs,
             Size color_idx = 0;
 
             HeapArray<ImVec2> points;
-            for (float x = min_x; x <= max_x; x += 1.0f) {
+            for (double x = min_x; x <= max_x; x += 1.0f) {
                 ImVec2 point = {(float)x, (float)spline(x)};
                 points.Append(point);
 
@@ -362,7 +362,7 @@ void DrawLine(InterpolationMode interpolation, Fun f)
     }
 }
 
-static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zoom, float alpha,
+static void DrawMeasures(double x_offset, double y_min, double y_max, double time_zoom, float alpha,
                          Span<const Element *const> measures, double align_offset,
                          double min, double max, InterpolationMode interpolation, bool labels)
 {
@@ -374,9 +374,9 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
     ImFont *font = ImGui::GetFont();
     float font_size = ImGui::GetFontSize() * 0.75f;
 
-    float y_scaler;
+    double y_scaler;
     if (max > min) {
-        y_scaler  = (y_max - y_min - 4.0f) / (float)(max - min);;
+        y_scaler  = (y_max - y_min - 4.0f) / (max - min);;
     } else {
         RG_ASSERT(!(min > max));
         y_max = (y_max + y_min) / 2.0f;
@@ -385,8 +385,8 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
 
     const auto compute_coordinates = [&](double time, double value) {
         return ImVec2 {
-            x_offset + ((float)time * time_zoom),
-            y_max - 4.0f - y_scaler * (float)(value - min)
+            (float)(x_offset + time * time_zoom),
+            (float)(y_max - 4.0 - y_scaler * (value - min))
         };
     };
     const auto get_color = [&](const Element *elmt) {
@@ -488,7 +488,7 @@ struct LineData {
     int depth;
     float text_alpha;
     float elements_alpha;
-    float height;
+    double height;
     bool align_marker;
     double align_offset;
     HeapArray<const Element *> elements;
@@ -501,16 +501,16 @@ enum class LineInteraction {
     Menu
 };
 
-static LineInteraction DrawLineFrame(ImRect bb, float tree_width, const LineData &line)
+static LineInteraction DrawLineFrame(ImRect bb, double tree_width, const LineData &line)
 {
     ImDrawList *draw = ImGui::GetWindowDrawList();
 
     // Layout
-    float y = (bb.Min.y + bb.Max.y) / 2.0f - 9.0f;
+    double y = (bb.Min.y + bb.Max.y) / 2.0f - 9.0f;
     ImVec2 text_size = ImGui::CalcTextSize(line.title.ptr, line.title.end());
     ImRect select_bb(bb.Min.x + 2.0f, y + 2.0f, bb.Min.x + 14.0f, y + 16.0f);
-    ImRect deploy_bb(bb.Min.x + (float)line.depth * 16.0f - 3.0f, y,
-                     bb.Min.x + (float)line.depth * 16.0f + 23.0f + text_size.x, y + 16.0f);
+    ImRect deploy_bb(bb.Min.x + (double)line.depth * 16.0f - 3.0f, y,
+                     bb.Min.x + (double)line.depth * 16.0f + 23.0f + text_size.x, y + 16.0f);
     ImRect full_bb(select_bb.Min.x, deploy_bb.Min.y, deploy_bb.Max.x, deploy_bb.Max.y);
 
     LineInteraction interaction = LineInteraction::None;
@@ -550,13 +550,13 @@ static LineInteraction DrawLineFrame(ImRect bb, float tree_width, const LineData
         RG_DEFER { ImGui::PopStyleColor(1); };
 
         if (!line.leaf) {
-            ImGui::RenderArrow(ImVec2(bb.Min.x + (float)line.depth * 16.0f, y),
+            ImGui::RenderArrow(ImVec2(bb.Min.x + (double)line.depth * 16.0f, y),
                                line.deployed ? ImGuiDir_Down : ImGuiDir_Right);
         }
 
         ImVec4 text_rect {
-            bb.Min.x + (float)line.depth * 16.0f + 20.0f, bb.Min.y,
-            bb.Min.x + tree_width, bb.Max.y
+            (float)(bb.Min.x + (double)line.depth * 16.0f + 20.0f), bb.Min.y,
+            (float)(bb.Min.x + tree_width), bb.Max.y
         };
         draw->AddText(nullptr, 0.0f, ImVec2(text_rect.x, y),
                       ImGui::GetColorU32(ImGuiCol_Text),
@@ -590,7 +590,7 @@ static LineInteraction DrawLineFrame(ImRect bb, float tree_width, const LineData
     return interaction;
 }
 
-static void DrawLineElements(ImRect bb, float tree_width,
+static void DrawLineElements(ImRect bb, double tree_width,
                              const InterfaceState &state, double time_offset, const LineData &line)
 {
     if (line.elements_alpha == 0.0f)
@@ -636,7 +636,7 @@ static void DrawLineElements(ImRect bb, float tree_width,
     }
 
     // Draw elements
-    float x_offset = bb.Min.x + tree_width + 15.0f - (float)(time_offset * state.time_zoom);
+    double x_offset = bb.Min.x + tree_width + 15.0 - (time_offset * state.time_zoom);
     DrawPeriods(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.elements_alpha, periods,
                 line.align_offset);
     DrawEvents(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.elements_alpha, events,
@@ -663,7 +663,7 @@ static bool FindConceptAndAlign(const Entity &ent, const HashSet<Span<const char
     }
 }
 
-static float ComputeElementHeight(const InterfaceSettings &settings, Element::Type type)
+static double ComputeElementHeight(const InterfaceSettings &settings, Element::Type type)
 {
     if (settings.plot_measures && type == Element::Type::Measure) {
         return settings.plot_height;
@@ -677,8 +677,8 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
 {
     ImGuiStyle &style = ImGui::GetStyle();
 
-    HashMap<Span<const char>, float> line_heights;
-    float min_x = 0.0f, max_x = 0.0f, height = 0.0f;
+    HashMap<Span<const char>, double> line_heights;
+    double min_x = 0.0f, max_x = 0.0f, height = 0.0f;
 
     double align_offset;
     if (FindConceptAndAlign(ent, state.align_concepts, &align_offset)) {
@@ -708,8 +708,8 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
                     !strstr(elmt.concept_name, state.filter_text))
                 continue;
 
-            min_x = std::min((float)(elmt.time - align_offset), min_x);
-            max_x = std::max((float)(elmt.time + (elmt.type == Element::Type::Period ? elmt.u.period.duration : 0) - align_offset), max_x);
+            min_x = std::min(elmt.time - align_offset, min_x);
+            max_x = std::max(elmt.time + (elmt.type == Element::Type::Period ? elmt.u.period.duration : 0) - align_offset, max_x);
 
             bool fully_deployed = false;
             {
@@ -726,8 +726,8 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
             }
 
             if (fully_deployed) {
-                float new_height = ComputeElementHeight(state.settings, elmt.type) + style.ItemSpacing.y;
-                std::pair<float *, bool> ret = line_heights.TrySet(elmt.concept_name, 0.0f);
+                double new_height = ComputeElementHeight(state.settings, elmt.type) + style.ItemSpacing.y;
+                std::pair<double *, bool> ret = line_heights.TrySet(elmt.concept_name, 0.0f);
                 if (new_height > *ret.first) {
                     height += new_height - *ret.first;
                     *ret.first = new_height;
@@ -739,7 +739,7 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
     return ImRect(min_x, 0.0f, max_x, height);
 }
 
-static void DrawEntities(ImRect bb, float tree_width, double time_offset,
+static void DrawEntities(ImRect bb, double tree_width, double time_offset,
                          InterfaceState &state, const EntitySet &entity_set,
                          const ConceptSet *concept_set)
 {
@@ -771,8 +771,8 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
 
             ImRect ent_size = ComputeEntitySize(state, entity_set, concept_set,
                                                 entity_set.entities[i]);
-            state.minimum_x_unscaled = std::min(state.minimum_x_unscaled, ent_size.Min.x);
-            state.total_width_unscaled = std::max(state.total_width_unscaled, ent_size.Max.x);
+            state.minimum_x_unscaled = std::min(state.minimum_x_unscaled, (double)ent_size.Min.x);
+            state.total_width_unscaled = std::max(state.total_width_unscaled, (double)ent_size.Max.x);
             state.total_height += ent_size.Max.y;
             state.visible_entities += (ent_size.Max.y > 0.0f);
         }
@@ -782,8 +782,8 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
 
             ImRect ent_size = ComputeEntitySize(state, entity_set, concept_set,
                                                 entity_set.entities[i]);
-            state.minimum_x_unscaled = std::min(state.minimum_x_unscaled, ent_size.Min.x);
-            state.total_width_unscaled = std::max(state.total_width_unscaled, ent_size.Max.x);
+            state.minimum_x_unscaled = std::min(state.minimum_x_unscaled, (double)ent_size.Min.x);
+            state.total_width_unscaled = std::max(state.total_width_unscaled, (double)ent_size.Max.x);
             state.total_height += ent_size.Max.y;
             state.visible_entities += (ent_size.Max.y > 0.0f);
         }
@@ -826,8 +826,8 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
     // Distribute entity elements to separate lines
     HeapArray<LineData> lines;
     {
-        float base_y = state.render_offset;
-        float y = base_y;
+        double base_y = state.render_offset;
+        double y = base_y;
         for (Size i = state.render_idx; i < entity_set.entities.len &&
                                         y < win->ClipRect.Max.y; i++) {
             const Entity &ent = entity_set.entities[i];
@@ -943,7 +943,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
                             y += fully_deployed ? style.ItemSpacing.y : 0.0f;
                         }
 
-                        float new_height = ComputeElementHeight(state.settings, elmt.type);
+                        double new_height = ComputeElementHeight(state.settings, elmt.type);
                         if (fully_deployed && new_height > line->height) {
                             y += new_height - line->height;
                             line->height = new_height;
@@ -987,9 +987,9 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
     bool select_enable = false;
     {
         const Entity *ent = nullptr;
-        float ent_offset_y = 0.0f;
+        double ent_offset_y = 0.0f;
 
-        float y = state.render_offset + bb.Min.y;
+        double y = state.render_offset + bb.Min.y;
         for (Size i = 0; i < lines.len && y < win->ClipRect.Max.y; i++) {
             const LineData &line = lines[i];
             if (!line.draw)
@@ -1043,7 +1043,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
                            win->ClipRect.Max, true);
         RG_DEFER { draw->PopClipRect(); };
 
-        float y = state.render_offset + bb.Min.y;
+        double y = state.render_offset + bb.Min.y;
         for (const LineData &line: lines) {
             if (!line.draw)
                 continue;
@@ -1075,7 +1075,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
 }
 
 // XXX: Avoid excessive overdraw on the left of the screen when time_offset is big
-static void DrawTime(ImRect bb, double time_offset, float time_zoom,
+static void DrawTime(ImRect bb, double time_offset, double time_zoom,
                      float grid_alpha, bool highlight_zero, TimeUnit time_unit)
 {
     ImDrawList *draw = ImGui::GetWindowDrawList();
@@ -1095,14 +1095,14 @@ static void DrawTime(ImRect bb, double time_offset, float time_zoom,
     RG_ASSERT(suffix);
 
     // Find appropriate time step
-    float time_step = 10.0f / powf(10.0f, floorf(log10f(time_zoom)));
-    int precision = (int)log10f(1.0f / time_step);
-    float min_text_delta = 25.0f + 10.0f * fabsf(log10f(1.0f / time_step))
-                                 + 10.0f * strlen(suffix);
+    double time_step = 10.0 / pow(10.0, floor(log10(time_zoom)));
+    int precision = (int)log10(1.0 / time_step);
+    double min_text_delta = 25.0 + 10.0 * fabs(log10(1.0 / time_step))
+                                 + 10.0 * strlen(suffix);
 
     // Find start time and corresponding X coordinate
-    float x = bb.Min.x - (float)time_offset * time_zoom;
-    float time = 0.0f;
+    double x = bb.Min.x - (double)time_offset * time_zoom;
+    double time = 0.0f;
     {
         int test = (int)std::ceil(min_text_delta / (time_step * time_zoom));
         while (x > bb.Min.x) {
@@ -1112,7 +1112,7 @@ static void DrawTime(ImRect bb, double time_offset, float time_zoom,
     }
 
     // Draw!
-    float prev_text_x = x - min_text_delta - 1.0f;
+    double prev_text_x = x - min_text_delta - 1.0f;
     while (x < bb.Max.x + 30.0f) {
         bool show_text = false;
         if (x - prev_text_x >= min_text_delta) {
@@ -1121,7 +1121,7 @@ static void DrawTime(ImRect bb, double time_offset, float time_zoom,
         }
 
         if (x >= bb.Min.x) {
-            float x_exact = round(x);
+            double x_exact = round(x);
 
             if (show_text) {
                 draw->AddLine(ImVec2(x_exact, bb.Min.y + 2.0f), ImVec2(x_exact, bb.Max.y - ImGui::GetFontSize() - 4.0f),
@@ -1162,10 +1162,10 @@ static void DrawTime(ImRect bb, double time_offset, float time_zoom,
     }
 }
 
-static float AdjustScrollAfterZoom(float stable_x, double prev_zoom, double new_zoom)
+static double AdjustScrollAfterZoom(double stable_x, double prev_zoom, double new_zoom)
 {
     double stable_time = stable_x / prev_zoom;
-    return (float)(stable_time * (new_zoom - prev_zoom));
+    return (double)(stable_time * (new_zoom - prev_zoom));
 }
 
 static void DrawView(InterfaceState &state,
@@ -1174,19 +1174,19 @@ static void DrawView(InterfaceState &state,
     ImGuiWindow *win = ImGui::GetCurrentWindow();
 
     // Global layout
-    float scale_height = 16.0f + ImGui::GetFontSize();
+    double scale_height = 16.0 + ImGui::GetFontSize();
     ImRect scale_rect = win->ClipRect;
     ImRect entity_rect = win->ClipRect;
     ImRect view_rect = win->ClipRect;
-    scale_rect.Min.x = ImMin(scale_rect.Min.x + state.settings.tree_width + 15.0f, scale_rect.Max.x);
-    scale_rect.Min.y = ImMin(scale_rect.Max.y - scale_height, scale_rect.Max.y);
+    scale_rect.Min.x = ImMin((float)(scale_rect.Min.x + state.settings.tree_width + 15.0), scale_rect.Max.x);
+    scale_rect.Min.y = ImMin((float)(scale_rect.Max.y - scale_height), scale_rect.Max.y);
     entity_rect.Max.y -= scale_height;
-    view_rect.Min.x += state.settings.tree_width + 15.0f;
+    view_rect.Min.x += state.settings.tree_width + 15.0;
     view_rect.Max.y -= scale_height;
 
     // Sync scroll from ImGui
-    float prev_scroll_x = state.scroll_x;
-    float prev_scroll_y = state.scroll_y;
+    double prev_scroll_x = state.scroll_x;
+    double prev_scroll_y = state.scroll_y;
     state.scroll_x = ImGui::GetScrollX() + state.imgui_scroll_delta_x;
     if (prev_scroll_x < state.imgui_scroll_delta_x) {
         state.scroll_x += prev_scroll_x - state.imgui_scroll_delta_x;
@@ -1199,7 +1199,7 @@ static void DrawView(InterfaceState &state,
         double min_time = DBL_MAX;
         double max_time = DBL_MIN;
 
-        float y = state.render_offset;
+        double y = state.render_offset;
         for (Size i = state.render_idx; i < entity_set.entities.len &&
                                         y < win->ClipRect.Max.y; i++) {
             const Entity &ent = entity_set.entities[i];
@@ -1222,25 +1222,25 @@ static void DrawView(InterfaceState &state,
             max_time += delta / 50.0f;
         }
 
-        state.time_zoom = (float)(view_rect.GetWidth() / (max_time - min_time));
-        state.scroll_x = (float)(min_time * state.time_zoom);
+        state.time_zoom = view_rect.GetWidth() / (max_time - min_time);
+        state.scroll_x = min_time * state.time_zoom;
 
         state.autozoom = false;
     }
 
     // Handle controls
-    float entities_mouse_x = (state.scroll_x + (float)gui_info->input.x - win->ClipRect.Min.x - (state.settings.tree_width + 15.0f));
+    double entities_mouse_x = (state.scroll_x + (double)gui_info->input.x - win->ClipRect.Min.x - (state.settings.tree_width + 15.0f));
     if (ImGui::IsWindowHovered()) {
         if (gui_info->input.buttons & MaskEnum(gui_InputButton::Left)) {
             if (state.grab_canvas) {
-                state.scroll_x += state.grab_canvas_x - (float)gui_info->input.x;
-                state.scroll_y += state.grab_canvas_y - (float)gui_info->input.y;
-            } else if (entity_rect.Contains(ImVec2((float)gui_info->input.x, (float)gui_info->input.y))) {
+                state.scroll_x += state.grab_canvas_x - (double)gui_info->input.x;
+                state.scroll_y += state.grab_canvas_y - (double)gui_info->input.y;
+            } else if (entity_rect.Contains(ImVec2((double)gui_info->input.x, (double)gui_info->input.y))) {
                 state.grab_canvas = true;
             }
 
-            state.grab_canvas_x = (float)gui_info->input.x;
-            state.grab_canvas_y = (float)gui_info->input.y;
+            state.grab_canvas_x = (double)gui_info->input.x;
+            state.grab_canvas_y = (double)gui_info->input.y;
         } else {
             state.grab_canvas = false;
         }
@@ -1255,15 +1255,15 @@ static void DrawView(InterfaceState &state,
                 animator = TweenInOutQuad;
             }
 
-            float new_zoom;
+            double new_zoom;
             {
-                float multiplier = ((gui_info->input.keys.Test((int)gui_InputKey::Shift)) ? 2.0736f : 1.2f);
+                double multiplier = ((gui_info->input.keys.Test((int)gui_InputKey::Shift)) ? 2.0736 : 1.2);
                 if (gui_info->input.wheel_y > 0) {
-                    new_zoom = state.time_zoom * (float)gui_info->input.wheel_y * multiplier;
+                    new_zoom = state.time_zoom * (double)gui_info->input.wheel_y * multiplier;
                 } else {
-                    new_zoom = state.time_zoom / -(float)gui_info->input.wheel_y / multiplier;
+                    new_zoom = state.time_zoom / -(double)gui_info->input.wheel_y / multiplier;
                 }
-                new_zoom = ImClamp(new_zoom, 0.00001f, 1000000.0f);
+                new_zoom = ImClamp(new_zoom, 0.00001, 100000.0);
             }
 
             state.time_zoom = MakeAnimatedValue(state.time_zoom, new_zoom, gui_info->time.monotonic,
@@ -1281,64 +1281,64 @@ static void DrawView(InterfaceState &state,
     // Render time
     if (state.settings.natural_time && state.settings.time_unit != TimeUnit::Unknown) {
         TimeUnit time_unit = state.settings.time_unit;
-        float time_zoom = state.time_zoom;
+        double time_zoom = state.time_zoom;
 
-        if (time_zoom < 1.5f) {
-            if (time_unit == TimeUnit::Milliseconds && time_zoom < 3.0f) {
-                time_zoom *= 1000.0f;
+        if (time_zoom < 1.5) {
+            if (time_unit == TimeUnit::Milliseconds && time_zoom < 3.0) {
+                time_zoom *= 1000.0;
                 time_unit = TimeUnit::Seconds;
             }
-            if (time_unit == TimeUnit::Seconds && time_zoom < 3.0f) {
-                time_zoom *= 60.0f;
+            if (time_unit == TimeUnit::Seconds && time_zoom < 3.0) {
+                time_zoom *= 60.0;
                 time_unit = TimeUnit::Minutes;
             }
-            if (time_unit == TimeUnit::Minutes && time_zoom < 3.0f) {
-                time_zoom *= 60.0f;
+            if (time_unit == TimeUnit::Minutes && time_zoom < 3.0) {
+                time_zoom *= 60.0;
                 time_unit = TimeUnit::Hours;
             }
-            if (time_unit == TimeUnit::Hours && time_zoom < 3.0f) {
+            if (time_unit == TimeUnit::Hours && time_zoom < 3.0) {
                 time_zoom *= 24.0f;
                 time_unit = TimeUnit::Days;
             }
             if (time_unit == TimeUnit::Days) {
-                if (time_zoom < 3.0f / 12.0f) {
-                    time_zoom *= 365.0f;
+                if (time_zoom < 3.0 / 12.0) {
+                    time_zoom *= 365.0;
                     time_unit = TimeUnit::Years;
-                } else if (time_zoom < 3.0f) {
-                    time_zoom *= 28.0f;
+                } else if (time_zoom < 3.0) {
+                    time_zoom *= 28.0;
                     time_unit = TimeUnit::Months;
                 }
-            } else if (time_unit == TimeUnit::Months && time_zoom < 3.0f) {
-                time_zoom *= 12.0f;
+            } else if (time_unit == TimeUnit::Months && time_zoom < 3.0) {
+                time_zoom *= 12.0;
                 time_unit = TimeUnit::Years;
             }
-        } else if (time_zoom > 150.0f) {
+        } else if (time_zoom > 150.0) {
             if (time_unit == TimeUnit::Years) {
-                if (time_zoom > 75.0f * 12.0f) {
-                    time_zoom /= 365.0f;
+                if (time_zoom > 75.0 * 12.0) {
+                    time_zoom /= 365.0;
                     time_unit = TimeUnit::Days;
-                } else if (time_zoom > 75.0f) {
-                    time_zoom /= 12.0f;
+                } else if (time_zoom > 75.0) {
+                    time_zoom /= 12.0;
                     time_unit = TimeUnit::Months;
                 }
-            } else if (time_unit == TimeUnit::Months && time_zoom > 75.0f) {
-                time_zoom /= 28.0f;
+            } else if (time_unit == TimeUnit::Months && time_zoom > 75.0) {
+                time_zoom /= 28.0;
                 time_unit = TimeUnit::Days;
             }
-            if (time_unit == TimeUnit::Days && time_zoom > 75.0f) {
-                time_zoom /= 24.0f;
+            if (time_unit == TimeUnit::Days && time_zoom > 75.0) {
+                time_zoom /= 24.0;
                 time_unit = TimeUnit::Hours;
             }
-            if (time_unit == TimeUnit::Hours && time_zoom > 75.0f) {
-                time_zoom /= 60.0f;
+            if (time_unit == TimeUnit::Hours && time_zoom > 75.0) {
+                time_zoom /= 60.0;
                 time_unit = TimeUnit::Minutes;
             }
-            if (time_unit == TimeUnit::Minutes && time_zoom > 75.0f) {
-                time_zoom /= 60.0f;
+            if (time_unit == TimeUnit::Minutes && time_zoom > 75.0) {
+                time_zoom /= 60.0;
                 time_unit = TimeUnit::Seconds;
             }
-            if (time_unit == TimeUnit::Seconds && time_zoom > 75.0f) {
-                time_zoom /= 1000.0f;
+            if (time_unit == TimeUnit::Seconds && time_zoom > 75.0) {
+                time_zoom /= 1000.0;
                 time_unit = TimeUnit::Milliseconds;
             }
         }
@@ -1361,13 +1361,13 @@ static void DrawView(InterfaceState &state,
 
     // Inform ImGui about content size and fake scroll offsets (hacky)
     {
-        float width = state.settings.tree_width + 20.0f +
-                      state.total_width_unscaled * (float)state.time_zoom;
-        float max_scroll_x = width - win->ClipRect.GetWidth();
-        width -= (state.minimum_x_unscaled * (float)state.time_zoom);
-        state.imgui_scroll_delta_x = state.minimum_x_unscaled * (float)state.time_zoom;
+        double width = state.settings.tree_width + 20.0 +
+                       state.total_width_unscaled * (double)state.time_zoom;
+        double max_scroll_x = width - win->ClipRect.GetWidth();
+        width -= (state.minimum_x_unscaled * state.time_zoom);
+        state.imgui_scroll_delta_x = state.minimum_x_unscaled * state.time_zoom;
 
-        float set_scroll_x;
+        double set_scroll_x;
         if (state.scroll_x < state.imgui_scroll_delta_x) {
             width += (state.imgui_scroll_delta_x - state.scroll_x);
             set_scroll_x = 0.0f;
@@ -1378,9 +1378,9 @@ static void DrawView(InterfaceState &state,
             set_scroll_x = state.scroll_x - state.imgui_scroll_delta_x;
         }
 
-        float height = scale_height + state.total_height;
-        float max_scroll_y = height - win->ClipRect.GetHeight();
-        float set_scroll_y;
+        double height = scale_height + state.total_height;
+        double max_scroll_y = height - win->ClipRect.GetHeight();
+        double set_scroll_y;
         if (state.scroll_y < -1.0f) {
             height -= state.scroll_y;
             set_scroll_y = 0.0f;
@@ -1464,7 +1464,7 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
     }
 
     // Menu
-    float menu_height = 0.0f;
+    double menu_height = 0.0;
     if (ImGui::BeginMainMenuBar()) {
         ImGui::Text("Views");
         ImGui::PushItemWidth(100.0f);

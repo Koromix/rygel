@@ -70,10 +70,10 @@ struct InterfaceState {
     // XXX: Separate deploy_paths set for each concept set
     HashSet<Span<const char>> deploy_paths;
 
-    AnimatedValue<float, double> time_zoom = NAN;
-    float scroll_x = 0.0f;
-    float scroll_y = 0.0f;
-    float imgui_scroll_delta_x = 0.0f;
+    AnimatedValue<double, double> time_zoom = NAN;
+    double scroll_x = 0.0;
+    double scroll_y = 0.0;
+    double imgui_scroll_delta_x = 0.0;
 
     bool show_settings = false;
     InterfaceSettings settings;
@@ -83,24 +83,24 @@ struct InterfaceState {
     const ConceptSet *prev_concept_set = nullptr;
 
     bool size_cache_valid = false;
-    HeapArray<float> lines_top;
-    float minimum_x_unscaled;
-    float total_width_unscaled;
-    float total_height;
+    HeapArray<double> lines_top;
+    double minimum_x_unscaled;
+    double total_width_unscaled;
+    double total_height;
     Size visible_entities = 0;
 
     Size render_idx = 0;
-    float render_offset = 0.0f;
+    double render_offset = 0.0;
     bool autozoom = false;
 
     HighlightMode highlight_mode = HighlightMode::Deployed;
     Size scroll_to_idx = 0;
-    float scroll_offset_y;
+    double scroll_offset_y;
     Size highlight_idx = -1;
 
     bool grab_canvas = false;
-    float grab_canvas_x;
-    float grab_canvas_y;
+    double grab_canvas_x;
+    double grab_canvas_y;
 
     HashMap<Span<const char>, Span<const char>> select_concepts;
     HashSet<Span<const char>> align_concepts;
