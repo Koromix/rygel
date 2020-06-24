@@ -197,6 +197,7 @@ static const struct LongShort aliases[]= {
   {"$Y", "suppress-connect-headers", ARG_BOOL},
   {"$Z", "compressed-ssh",           ARG_BOOL},
   {"$~", "happy-eyeballs-timeout-ms", ARG_STRING},
+  {"$!", "retry-all-errors",         ARG_BOOL},
   {"0",   "http1.0",                 ARG_NONE},
   {"01",  "http1.1",                 ARG_NONE},
   {"02",  "http2",                   ARG_NONE},
@@ -926,6 +927,9 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
         err = str2unummax(&config->retry_maxtime, nextarg, LONG_MAX/1000);
         if(err)
           return err;
+        break;
+      case '!': /* --retry-all-errors */
+        config->retry_all_errors = toggle;
         break;
 
       case 'k': /* --proxy-negotiate */
@@ -1813,6 +1817,11 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
       }
       break;
     case 'i':
+      if(config->content_disposition) {
+        warnf(global,
+              "--include and --remote-header-name cannot be combined.\n");
+        return PARAM_BAD_USE;
+      }
       config->show_headers = toggle; /* show the headers as well in the
                                         general output stream */
       break;
@@ -2244,20 +2253,22 @@ ParameterError parse_args(struct GlobalConfig *global, int argc,
   struct OperationConfig *config = global->first;
 
   for(i = 1, stillflags = TRUE; i < argc && !result; i++) {
-    orig_opt = argv[i];
+    orig_opt = curlx_convert_tchar_to_UTF8(argv[i]);
 
-    if(stillflags && ('-' == argv[i][0])) {
+    if(stillflags && ('-' == orig_opt[0])) {
       bool passarg;
-      char *flag = argv[i];
 
-      if(!strcmp("--", argv[i]))
+      if(!strcmp("--", orig_opt))
         /* This indicates the end of the flags and thus enables the
            following (URL) argument to start with -. */
         stillflags = FALSE;
       else {
-        char *nextarg = (i < (argc - 1)) ? argv[i + 1] : NULL;
+        char *nextarg = (i < (argc - 1))
+          ? curlx_convert_tchar_to_UTF8(argv[i + 1])
+          : NULL;
 
-        result = getparameter(flag, nextarg, &passarg, global, config);
+        result = getparameter(orig_opt, nextarg, &passarg, global, config);
+        curlx_unicodefree(nextarg);
         config = global->last;
         if(result == PARAM_NEXT_OPERATION) {
           /* Reset result as PARAM_NEXT_OPERATION is only used here and not
@@ -2293,9 +2304,12 @@ ParameterError parse_args(struct GlobalConfig *global, int argc,
       bool used;
 
       /* Just add the URL please */
-      result = getparameter((char *)"--url", argv[i], &used, global,
+      result = getparameter("--url", orig_opt, &used, global,
                             config);
     }
+
+    if(!result)
+      curlx_unicodefree(orig_opt);
   }
 
   if(result && result != PARAM_HELP_REQUESTED &&
@@ -2310,5 +2324,6 @@ ParameterError parse_args(struct GlobalConfig *global, int argc,
       helpf(global->errors, "%s\n", reason);
   }
 
+  curlx_unicodefree(orig_opt);
   return result;
 }

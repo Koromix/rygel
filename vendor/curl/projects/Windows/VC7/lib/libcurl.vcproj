@@ -35,7 +35,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386 /FIXED:NO"
-				AdditionalDependencies="wldap32.lib ws2_32.lib libeay32.lib ssleay32.lib libssh2.lib"
+				AdditionalDependencies="crypt32.lib wldap32.lib ws2_32.lib libeay32.lib ssleay32.lib libssh2.lib"
 				OutputFile="$(OutDir)\$(ProjectName).dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
@@ -87,7 +87,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386 /FIXED:NO"
-				AdditionalDependencies="wldap32.lib ws2_32.lib libeay32.lib ssleay32.lib"
+				AdditionalDependencies="crypt32.lib wldap32.lib ws2_32.lib libeay32.lib ssleay32.lib"
 				OutputFile="$(OutDir)\$(ProjectName)d.dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
@@ -592,7 +592,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386 /FIXED:NO"
-				AdditionalDependencies="wldap32.lib ws2_32.lib libeay32.lib ssleay32.lib"
+				AdditionalDependencies="crypt32.lib wldap32.lib ws2_32.lib libeay32.lib ssleay32.lib"
 				OutputFile="$(OutDir)\$(ProjectName).dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
@@ -849,7 +849,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386 /FIXED:NO"
-				AdditionalDependencies="wldap32.lib ws2_32.lib libeay32.lib ssleay32.lib libssh2d.lib"
+				AdditionalDependencies="crypt32.lib wldap32.lib ws2_32.lib libeay32.lib ssleay32.lib libssh2d.lib"
 				OutputFile="$(OutDir)\$(ProjectName)d.dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
@@ -1198,6 +1198,9 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\lib\dotdot.c">
+			</File>
+			<File
+				RelativePath="..\..\..\..\lib\dynbuf.c">
 			</File>
 			<File
 				RelativePath="..\..\..\..\lib\easy.c">
@@ -1579,6 +1582,9 @@
 				RelativePath="..\..\..\..\lib\dotdot.h">
 			</File>
 			<File
+				RelativePath="..\..\..\..\lib\dynbuf.h">
+			</File>
+			<File
 				RelativePath="..\..\..\..\lib\easyif.h">
 			</File>
 			<File
@@ -1868,6 +1874,9 @@
 				<File
 					RelativePath="..\..\..\..\lib\vquic\quiche.c">
 				</File>
+				<File
+					RelativePath="..\..\..\..\lib\vquic\vquic.c">
+				</File>
 			</Filter>
 			<Filter
 				Name="Header Files"
@@ -1877,6 +1886,9 @@
 				</File>
 				<File
 					RelativePath="..\..\..\..\lib\vquic\quiche.h">
+				</File>
+				<File
+					RelativePath="..\..\..\..\lib\vquic\vquic.h">
 				</File>
 			</Filter>
 		</Filter>
@@ -1920,6 +1932,9 @@
 					RelativePath="..\..\..\..\lib\vtls\gtls.c">
 				</File>
 				<File
+					RelativePath="..\..\..\..\lib\vtls\keylog.c">
+				</File>
+				<File
 					RelativePath="..\..\..\..\lib\vtls\mbedtls.c">
 				</File>
 				<File
@@ -1961,6 +1976,9 @@
 				</File>
 				<File
 					RelativePath="..\..\..\..\lib\vtls\gtls.h">
+				</File>
+				<File
+					RelativePath="..\..\..\..\lib\vtls\keylog.h">
 				</File>
 				<File
 					RelativePath="..\..\..\..\lib\vtls\mbedtls.h">

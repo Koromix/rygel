@@ -154,6 +154,10 @@ const char *serverlogfile = DEFAULT_LOGFILE;
 #define REQUEST_PROXY_DUMP  "log/proxy.input"
 #define RESPONSE_PROXY_DUMP "log/proxy.response"
 
+/* file in which additional instructions may be found */
+#define DEFAULT_CMDFILE "log/ftpserver.cmd"
+const char *cmdfile = DEFAULT_CMDFILE;
+
 /* very-big-path support */
 #define MAXDOCNAMELEN 140000
 #define MAXDOCNAMELEN_TXT "139999"
@@ -229,6 +233,24 @@ static bool socket_domain_is_ip(void)
   /* case AF_UNIX: */
     return false;
   }
+}
+
+/* parse the file on disk that might have a test number for us */
+static int parse_cmdfile(struct httprequest *req)
+{
+  int testnum = DOCNUMBER_NOTHING;
+  char buf[256];
+  FILE *f = fopen(cmdfile, FOPEN_READTEXT);
+  if(f) {
+    while(fgets(buf, sizeof(buf), f)) {
+      if(1 == sscanf(buf, "Testnum %d", &testnum)) {
+        logmsg("[%s] cmdfile says testnum %d", cmdfile, testnum);
+        req->testno = testnum;
+      }
+    }
+    fclose(f);
+  }
+  return 0;
 }
 
 /* based on the testno, parse the correct server commands */
@@ -488,34 +510,41 @@ static int ProcessRequest(struct httprequest *req)
 
       /* get the number after it */
       if(ptr) {
+        long num;
         ptr++; /* skip the dot */
 
-        req->testno = strtol(ptr, &ptr, 10);
+        num = strtol(ptr, &ptr, 10);
 
-        if(req->testno > 10000) {
-          req->partno = req->testno % 10000;
-          req->testno /= 10000;
+        if(num) {
+          req->testno = num;
+          if(req->testno > 10000) {
+            req->partno = req->testno % 10000;
+            req->testno /= 10000;
 
-          logmsg("found test %d in requested host name", req->testno);
+            logmsg("found test %d in requested host name", req->testno);
 
+          }
+          else
+            req->partno = 0;
         }
-        else
-          req->partno = 0;
 
-        msnprintf(logbuf, sizeof(logbuf),
-                  "Requested test number %ld part %ld (from host name)",
-                  req->testno, req->partno);
-        logmsg("%s", logbuf);
-
+        if(req->testno != DOCNUMBER_NOTHING) {
+          logmsg("Requested test number %ld part %ld (from host name)",
+                 req->testno, req->partno);
+        }
       }
-
-      if(!req->testno) {
-        logmsg("Did not find test number in PATH");
-        req->testno = DOCNUMBER_404;
-      }
-      else
-        parse_servercmd(req);
     }
+
+    if(req->testno == DOCNUMBER_NOTHING)
+      /* might get the test number */
+      parse_cmdfile(req);
+
+    if(req->testno == DOCNUMBER_NOTHING) {
+      logmsg("Did not find test number in PATH");
+      req->testno = DOCNUMBER_404;
+    }
+    else
+      parse_servercmd(req);
   }
   else if((req->offset >= 3) && (req->testno == DOCNUMBER_NOTHING)) {
     logmsg("** Unusual request. Starts with %02x %02x %02x (%c%c%c)",
@@ -1886,6 +1915,11 @@ int main(int argc, char *argv[])
       if(argc>arg)
         serverlogfile = argv[arg++];
     }
+    else if(!strcmp("--cmdfile", argv[arg])) {
+      arg++;
+      if(argc>arg)
+        cmdfile = argv[arg++];
+    }
     else if(!strcmp("--gopher", argv[arg])) {
       arg++;
       use_gopher = TRUE;
@@ -2172,6 +2206,7 @@ int main(int argc, char *argv[])
     fd_set output;
     struct timeval timeout = {0, 250000L}; /* 250 ms */
     curl_socket_t maxfd = (curl_socket_t)-1;
+    int active;
 
     /* Clear out closed sockets */
     for(socket_idx = num_sockets - 1; socket_idx >= 1; --socket_idx) {
@@ -2219,6 +2254,7 @@ int main(int argc, char *argv[])
       /* Timed out - try again */
       continue;
     }
+    active = rc; /* a positive number */
 
     /* Check if the listening socket is ready to accept */
     if(FD_ISSET(all_sockets[0], &input)) {
@@ -2230,11 +2266,13 @@ int main(int argc, char *argv[])
         if(CURL_SOCKET_BAD == msgsock)
           goto sws_cleanup;
       } while(msgsock > 0);
+      active--;
     }
 
     /* Service all connections that are ready */
-    for(socket_idx = 1; socket_idx < num_sockets; ++socket_idx) {
+    for(socket_idx = 1; (socket_idx < num_sockets) && active; ++socket_idx) {
       if(FD_ISSET(all_sockets[socket_idx], &input)) {
+        active--;
         if(got_exit_signal)
           goto sws_cleanup;
 

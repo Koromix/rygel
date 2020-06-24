@@ -260,6 +260,7 @@ LCOV = @LCOV@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBCURL_LIBS = @LIBCURL_LIBS@
+LIBCURL_NO_SHARED = @LIBCURL_NO_SHARED@
 LIBMETALINK_CPPFLAGS = @LIBMETALINK_CPPFLAGS@
 LIBMETALINK_LDFLAGS = @LIBMETALINK_LDFLAGS@
 LIBMETALINK_LIBS = @LIBMETALINK_LIBS@
@@ -551,6 +552,7 @@ DPAGES = \
   request-target.d				\
   request.d					\
   resolve.d					\
+  retry-all-errors.d				\
   retry-connrefused.d				\
   retry-delay.d					\
   retry-max-time.d				\

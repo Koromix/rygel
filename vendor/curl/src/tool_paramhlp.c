@@ -180,7 +180,7 @@ void cleanarg(char *str)
 ParameterError str2num(long *val, const char *str)
 {
   if(str) {
-    char *endptr;
+    char *endptr = NULL;
     long num;
     errno = 0;
     num = strtol(str, &endptr, 10);

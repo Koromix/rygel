@@ -199,7 +199,7 @@ FILE *test2fopen(long testno)
   FILE *stream;
   char filename[256];
   /* first try the alternative, preprocessed, file */
-  msnprintf(filename, sizeof(filename), ALTTEST_DATA_PATH, path, testno);
+  msnprintf(filename, sizeof(filename), ALTTEST_DATA_PATH, ".", testno);
   stream = fopen(filename, "rb");
   if(stream)
     return stream;
@@ -290,7 +290,7 @@ int write_pidfile(const char *filename)
 #endif
   fprintf(pidfile, "%" CURL_FORMAT_CURL_OFF_T "\n", pid);
   fclose(pidfile);
-  logmsg("Wrote pid %ld to %s", pid, filename);
+  logmsg("Wrote pid %" CURL_FORMAT_CURL_OFF_T " to %s", pid, filename);
   return 1; /* success */
 }
 
@@ -580,6 +580,11 @@ volatile int got_exit_signal = 0;
 /* if next is set indicates the first signal handled in exit_signal_handler */
 volatile int exit_signal = 0;
 
+#ifdef WIN32
+/* event which if set indicates that the program should finish */
+HANDLE exit_event = NULL;
+#endif
+
 /* signal handler that will be triggered to indicate that the program
  * should finish its execution in a controlled manner as soon as possible.
  * The first time this is called it will set got_exit_signal to one and
@@ -592,6 +597,10 @@ static RETSIGTYPE exit_signal_handler(int signum)
   if(got_exit_signal == 0) {
     got_exit_signal = 1;
     exit_signal = signum;
+#ifdef WIN32
+    if(exit_event)
+      (void)SetEvent(exit_event);
+#endif
   }
   (void)signal(signum, exit_signal_handler);
   errno = old_errno;
@@ -632,7 +641,7 @@ static BOOL WINAPI ctrl_event_handler(DWORD dwCtrlType)
   }
   if(signum) {
     logmsg("ctrl_event_handler: %d -> %d", dwCtrlType, signum);
-    exit_signal_handler(signum);
+    raise(signum);
   }
   return TRUE;
 }
@@ -656,7 +665,7 @@ static LRESULT CALLBACK main_window_proc(HWND hwnd, UINT uMsg,
     }
     if(signum) {
       logmsg("main_window_proc: %d -> %d", uMsg, signum);
-      exit_signal_handler(signum);
+      raise(signum);
     }
   }
   return DefWindowProc(hwnd, uMsg, wParam, lParam);
@@ -712,6 +721,12 @@ static DWORD WINAPI main_window_loop(LPVOID lpParameter)
 
 void install_signal_handlers(bool keep_sigalrm)
 {
+#ifdef WIN32
+  /* setup windows exit event before any signal can trigger */
+  exit_event = CreateEvent(NULL, TRUE, FALSE, NULL);
+  if(!exit_event)
+    logmsg("cannot create exit event");
+#endif
 #ifdef SIGHUP
   /* ignore SIGHUP signal */
   old_sighup_handler = signal(SIGHUP, SIG_IGN);
@@ -803,8 +818,19 @@ void restore_signal_handlers(bool keep_sigalrm)
 #ifdef WIN32
   (void)SetConsoleCtrlHandler(ctrl_event_handler, FALSE);
   if(thread_main_window && thread_main_id) {
-    if(PostThreadMessage(thread_main_id, WM_APP, 0, 0))
-      (void)WaitForSingleObjectEx(thread_main_window, INFINITE, TRUE);
+    if(PostThreadMessage(thread_main_id, WM_APP, 0, 0)) {
+      if(WaitForSingleObjectEx(thread_main_window, INFINITE, TRUE)) {
+        if(CloseHandle(thread_main_window)) {
+          thread_main_window = NULL;
+          thread_main_id = 0;
+        }
+      }
+    }
+  }
+  if(exit_event) {
+    if(CloseHandle(exit_event)) {
+      exit_event = NULL;
+    }
   }
 #endif
 }

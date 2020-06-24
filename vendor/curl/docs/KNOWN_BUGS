@@ -43,19 +43,18 @@ problems may have been fixed or changed somewhat since this was written!
  4.1 -J and -O with %-encoded file names
  4.2 -J with -C - fails
  4.3 --retry and transfer timeouts
- 4.4 --upload-file . hang if delay in STDIN
- 4.5 Improve --data-urlencode space encoding
+ 4.4 Improve --data-urlencode space encoding
 
  5. Build and portability issues
+ 5.1 OS400 port requires deprecated IBM library
  5.2 curl-config --libs contains private details
  5.3 curl compiled on OSX 10.13 failed to run on OSX 10.10
- 5.4 Cannot compile against a static build of OpenLDAP
- 5.5 can't handle Unicode arguments in Windows
+ 5.4 Build with statically built dependency
+ 5.5 can't handle Unicode arguments in non-Unicode builds on Windows
  5.6 cmake support gaps
  5.7 Visual Studio project gaps
  5.8 configure finding libs in wrong directory
  5.9 Utilize Requires.private directives in libcurl.pc
- 5.10 IDN tests failing on Windows / MSYS2
  5.11 configure --with-gssapi with Heimdal is ignored on macOS
 
  6. Authentication
@@ -66,6 +65,7 @@ problems may have been fixed or changed somewhat since this was written!
  6.5 NTLM doesn't support password with § character
  6.6 libcurl can fail to try alternatives with --proxy-any
  6.7 Don't clear digest for single realm
+ 6.8 RTSP authentication breaks without redirect support
 
  7. FTP
  7.1 FTP without or slow 220 response
@@ -85,6 +85,7 @@ problems may have been fixed or changed somewhat since this was written!
 
  9. SFTP and SCP
  9.1 SFTP doesn't do CURLOPT_POSTQUOTE correct
+ 9.2 wolfssh: publickey auth doesn't work
 
  10. SOCKS
  10.3 FTPS over SOCKS
@@ -200,8 +201,8 @@ problems may have been fixed or changed somewhat since this was written!
 
 2.1 CURLINFO_SSL_VERIFYRESULT has limited support
 
- CURLINFO_SSL_VERIFYRESULT is only implemented for the OpenSSL and NSS
- backends, so relying on this information in a generic app is flaky.
+ CURLINFO_SSL_VERIFYRESULT is only implemented for the OpenSSL, NSS and
+ GnuTLS backends, so relying on this information in a generic app is flaky.
 
 2.2 DER in keychain
 
@@ -337,15 +338,7 @@ problems may have been fixed or changed somewhat since this was written!
  https://curl.haxx.se/mail/lib-2008-01/0080.html and Mandriva bug report
  https://qa.mandriva.com/show_bug.cgi?id=22565
 
-4.4 --upload-file . hangs if delay in STDIN
-
- "(echo start; sleep 1; echo end) | curl --upload-file . http://mywebsite -vv"
-
- ... causes a hang when it shouldn't.
-
- See https://github.com/curl/curl/issues/2051
-
-4.5 Improve --data-urlencode space encoding
+4.4 Improve --data-urlencode space encoding
 
  ASCII space characters in --data-urlencode are currently encoded as %20
  rather than +, which RFC 1866 says should be used.
@@ -353,6 +346,14 @@ problems may have been fixed or changed somewhat since this was written!
  See https://github.com/curl/curl/issues/3229
 
 5. Build and portability issues
+
+5.1 OS400 port requires deprecated IBM library
+
+ curl for OS400 requires QADRT to build, which provides ASCII wrappers for
+ libc/POSIX functions in the ILE, but IBM no longer supports or even offers
+ this library to download.
+
+ See https://github.com/curl/curl/issues/5176
 
 5.2 curl-config --libs contains private details
 
@@ -364,20 +365,40 @@ problems may have been fixed or changed somewhat since this was written!
 
  See https://github.com/curl/curl/issues/2905
 
-5.4 Cannot compile against a static build of OpenLDAP
+5.4 Build with statically built dependency
 
- See https://github.com/curl/curl/issues/2367
+ The build scripts in curl (autotools, cmake and others) are primarily done to
+ work with shared/dynamic third party dependencies. When linking with shared
+ libraries, the dependency "chain" is handled automatically by the library
+ loader - on all modern systems.
 
-5.5 can't handle Unicode arguments in Windows
+ If you instead link with a static library, we need to provide all the
+ dependency libraries already at the link command line.
+
+ Figuring out all the dependency libraries for a given library is hard, as it
+ might also involve figuring out the dependencies of the dependencies and they
+ may vary between platforms and even change between versions.
+
+ When using static dependencies, the build scripts will mostly assume that
+ you, the user, will provide all the necessary additional dependency libraries
+ as additional arguments in the build. With configure, by setting LIBS/LDFLAGS
+ on the command line.
+
+ We welcome help to improve curl's ability to link with static libraries, but
+ it is likely a task that we can never fully support.
+
+5.5 can't handle Unicode arguments in non-Unicode builds on Windows
 
  If a URL or filename can't be encoded using the user's current codepage then
  it can only be encoded properly in the Unicode character set. Windows uses
  UTF-16 encoding for Unicode and stores it in wide characters, however curl
- and libcurl are not equipped for that at the moment. And, except for Cygwin,
- Windows can't use UTF-8 as a locale.
+ and libcurl are not equipped for that at the moment except when built with
+ _UNICODE and UNICODE defined. And, except for Cygwin, Windows can't use UTF-8
+ as a locale.
 
   https://curl.haxx.se/bug/?i=345
   https://curl.haxx.se/bug/?i=731
+  https://curl.haxx.se/bug/?i=3747
 
 5.6 cmake support gaps
 
@@ -429,13 +450,6 @@ problems may have been fixed or changed somewhat since this was written!
 5.9 Utilize Requires.private directives in libcurl.pc
 
  https://github.com/curl/curl/issues/864
-
-5.10 IDN tests failing on Windows / MSYS2
-
- It seems like MSYS2 does some UTF-8-to-something-else conversion for Windows
- compatibility.
-
- https://github.com/curl/curl/issues/3747
 
 5.11 configure --with-gssapi with Heimdal is ignored on macOS
 
@@ -498,6 +512,15 @@ problems may have been fixed or changed somewhat since this was written!
 6.7 Don't clear digest for single realm
 
  https://github.com/curl/curl/issues/3267
+
+6.8 RTSP authentication breaks without redirect support
+
+ RTSP authentication broke in 7.66.0. A work-around is to enable RTSP in
+ CURLOPT_REDIR_PROTOCOLS. Authentication should however not be considered an
+ actual redirect so a "proper" fix needs to be different and not require users
+ to allow redirects to RTSP to work.
+
+ See https://github.com/curl/curl/pull/4750
 
 7. FTP
 
@@ -620,6 +643,13 @@ problems may have been fixed or changed somewhat since this was written!
  report but it cannot be accepted as-is. See
  https://curl.haxx.se/bug/view.cgi?id=748
 
+9.2 wolfssh: publickey auth doesn't work
+
+ When building curl to use the wolfSSH backend for SFTP, the publickey
+ authentication doesn't work. This is simply functionality not written for curl
+ yet, the necessary API for make this work is provided by wolfSSH.
+
+ See https://github.com/curl/curl/issues/4820
 
 10. SOCKS
 

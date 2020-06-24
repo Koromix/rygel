@@ -38,6 +38,8 @@ extern const char *path;
 /* global variable, log file name */
 extern const char *serverlogfile;
 
+extern const char *cmdfile;
+
 #if defined(WIN32) || defined(_WIN32)
 #include <process.h>
 #include <fcntl.h>
@@ -69,6 +71,11 @@ extern volatile int got_exit_signal;
 
 /* global variable which if set indicates the first signal handled */
 extern volatile int exit_signal;
+
+#ifdef WIN32
+/* global event which if set indicates that the program should finish */
+extern HANDLE exit_event;
+#endif
 
 void install_signal_handlers(bool keep_sigalrm);
 void restore_signal_handlers(bool keep_sigalrm);

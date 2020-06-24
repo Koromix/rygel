@@ -22,6 +22,7 @@
  1.3 struct lifreq
  1.4 alt-svc sharing
  1.5 get rid of PATH_MAX
+ 1.6 native IDN support on macOS
  1.7 Support HTTP/2 for HTTP(S) proxies
  1.8 CURLOPT_RESOLVE for any port number
  1.9 Cache negative name resolves
@@ -108,18 +109,20 @@
  13.6 Provide callback for cert verification
  13.7 improve configure --with-ssl
  13.8 Support DANE
+ 13.9 TLS record padding
  13.10 Support Authority Information Access certificate extension (AIA)
  13.11 Support intermediate & root pinning for PINNEDPUBLICKEY
  13.12 Support HSTS
+ 13.13 Make sure we forbid TLS 1.3 post-handshake authentication
  13.14 Support the clienthello extension
 
  14. GnuTLS
  14.2 check connection
 
- 15. WinSSL/SChannel
- 15.1 Add support for client certificate authentication
- 15.3 Add support for the --ciphers option
- 15.4 Add option to disable client certificate auto-send
+ 15. Schannel
+ 15.1 Extend support for client certificate authentication
+ 15.2 Extend support for the --ciphers option
+ 15.3 Add option to disable client certificate auto-send
 
  16. SASL
  16.1 Other authentication mechanisms
@@ -145,17 +148,19 @@
  18.10 improve how curl works in a windows console window
  18.11 Windows: set attribute 'archive' for completed downloads
  18.12 keep running, read instructions from pipe/socket
+ 18.13 Ratelimit or wait between serial requests
+ 18.14 --dry-run
  18.15 --retry should resume
  18.16 send only part of --data
  18.17 consider file name from the redirected URL with -O ?
  18.18 retry on network is unreachable
  18.19 expand ~/ in config files
  18.20 host name sections in config files
+ 18.21 retry on the redirected-to URL
 
  19. Build
  19.1 roffit
  19.2 Enable PIE and RELRO by default
- 19.3 cmake test suite improvements
 
  20. Test suite
  20.1 SSL tunnel
@@ -220,6 +225,14 @@
  Currently the libssh2 SSH based code uses it, but to remove PATH_MAX from
  there we need libssh2 to properly tell us when we pass in a too small buffer
  and its current API (as of libssh2 1.2.7) doesn't.
+
+1.6 native IDN support on macOS
+
+ On recent macOS versions, the getaddrinfo() function itself has built-in IDN
+ support. By setting the AI_CANONNAME flag, the function will return the
+ encoded name in the ai_canonname struct field in the returned information.
+ This could be used by curl on macOS when built without a separate IDN library
+ and an IDN host name is used in a URL.
 
 1.7 Support HTTP/2 for HTTP(S) proxies
 
@@ -422,7 +435,7 @@
  - GSSAPI authentication for FTP transfers
 
  - The "DONE" operation (post transfer protocol-specific actions) for the
- protocols SFTP, SMTP, FTP. Fixing Curl_done() for this is a worthy task.
+ protocols SFTP, SMTP, FTP. Fixing multi_done() for this is a worthy task.
 
  - curl_multi_remove_handle for any of the above. See section 2.3.
 
@@ -735,6 +748,14 @@ that doesn't exist on the server, just like --ftp-create-dirs.
  Björn Stenberg wrote a separate initial take on DANE that was never
  completed.
 
+13.9 TLS record padding
+
+ TLS (1.3) offers optional record padding and OpenSSL provides an API for it.
+ I could make sense for libcurl to offer this ability to applications to make
+ traffic patterns harder to figure out by network traffic observers.
+
+ See https://github.com/curl/curl/issues/5398
+
 13.10 Support Authority Information Access certificate extension (AIA)
 
  AIA can provide various things like CRLs but more importantly information
@@ -750,22 +771,29 @@ that doesn't exist on the server, just like --ftp-create-dirs.
 
  CURLOPT_PINNEDPUBLICKEY does not consider the hashes of intermediate & root
  certificates when comparing the pinned keys. Therefore it is not compatible
- with "HTTP Public Key Pinning" as there also intermediate and root certificates
- can be pinned. This is very useful as it prevents webadmins from "locking
- themself out of their servers".
+ with "HTTP Public Key Pinning" as there also intermediate and root
+ certificates can be pinned. This is very useful as it prevents webadmins from
+ "locking themself out of their servers".
 
- Adding this feature would make curls pinning 100% compatible to HPKP and allow
- more flexible pinning.
+ Adding this feature would make curls pinning 100% compatible to HPKP and
+ allow more flexible pinning.
 
 13.12 Support HSTS
 
  "HTTP Strict Transport Security" is TOFU (trust on first use), time-based
  features indicated by a HTTP header send by the webserver. It is widely used
- in browsers and it's purpose is to prevent insecure HTTP connections after
- a previous HTTPS connection. It protects against SSLStripping attacks.
+ in browsers and it's purpose is to prevent insecure HTTP connections after a
+ previous HTTPS connection. It protects against SSLStripping attacks.
 
  Doc: https://developer.mozilla.org/en-US/docs/Web/Security/HTTP_strict_transport_security
  RFC 6797: https://tools.ietf.org/html/rfc6797
+
+13.13 Make sure we forbid TLS 1.3 post-handshake authentication
+
+ RFC 8740 explains how using HTTP/2 must forbid the use of TLS 1.3
+ post-handshake authentication. We should make sure to live up to that.
+
+ See https://github.com/curl/curl/issues/5396
 
 13.14 Support the clienthello extension
 
@@ -784,31 +812,23 @@ that doesn't exist on the server, just like --ftp-create-dirs.
  Add a way to check if the connection seems to be alive, to correspond to the
  SSL_peak() way we use with OpenSSL.
 
-15. WinSSL/SChannel
+15. Schannel
 
-15.1 Add support for client certificate authentication
+15.1 Extend support for client certificate authentication
 
- WinSSL/SChannel currently makes use of the OS-level system and user
- certificate and private key stores. This does not allow the application
- or the user to supply a custom client certificate using curl or libcurl.
-
- Therefore support for the existing -E/--cert and --key options should be
- implemented by supplying a custom certificate to the SChannel APIs, see:
+ The existing support for the -E/--cert and --key options could be
+ extended by supplying a custom certificate and key in PEM format, see:
  - Getting a Certificate for Schannel
    https://msdn.microsoft.com/en-us/library/windows/desktop/aa375447.aspx
 
-15.3 Add support for the --ciphers option
+15.2 Extend support for the --ciphers option
 
- The cipher suites used by WinSSL/SChannel are configured on an OS-level
- instead of an application-level. This does not allow the application or
- the user to customize the configured cipher suites using curl or libcurl.
-
- Therefore support for the existing --ciphers option should be implemented
- by mapping the OpenSSL/GnuTLS cipher suites to the SChannel APIs, see
+ The existing support for the --ciphers option could be extended
+ by mapping the OpenSSL/GnuTLS cipher suites to the Schannel APIs, see
  - Specifying Schannel Ciphers and Cipher Strengths
    https://msdn.microsoft.com/en-us/library/windows/desktop/aa380161.aspx
 
-15.4 Add option to disable client certificate auto-send
+15.3 Add option to disable client certificate auto-send
 
  Microsoft says "By default, Schannel will, with no notification to the client,
  attempt to locate a client certificate and send it to the server." That could
@@ -988,6 +1008,23 @@ that doesn't exist on the server, just like --ftp-create-dirs.
  invoke can talk to the still running instance and ask for transfers to get
  done, and thus maintain its connection pool, DNS cache and more.
 
+18.13 Ratelimit or wait between serial requests
+
+ Consider a command line option that can make curl do multiple serial requests
+ slow, potentially with a (random) wait between transfers. There's also a
+ propsed set of standard HTTP headers to let servers let the client adapt to
+ its rate limits:
+ https://www.ietf.org/id/draft-polli-ratelimit-headers-02.html
+
+ See https://github.com/curl/curl/issues/5406
+
+18.14 --dry-run
+
+ A command line option that makes curl show exactly what it would do and send
+ if it would run for real.
+
+ See https://github.com/curl/curl/issues/5426
+
 18.15 --retry should resume
 
  When --retry is used and curl actually retries transfer, it should use the
@@ -1050,6 +1087,17 @@ that doesn't exist on the server, just like --ftp-create-dirs.
  default .curlrc could a specific user-agent only when doing requests against
  a certain site.
 
+18.21 retry on the redirected-to URL
+
+ When curl is told to --retry a failed transfer and follows redirects, it
+ might get a HTTP 429 response from the redirected-to URL and not the original
+ one, which then could make curl decide to rather retry the transfer on that
+ URL only instead of the original operation to the original URL.
+
+ Perhaps extra emphasized if the original transfer is a large POST that
+ redirects to a separate GET, and that GET is what gets the 529
+
+ See https://github.com/curl/curl/issues/5462
 
 19. Build
 
@@ -1070,13 +1118,6 @@ that doesn't exist on the server, just like --ftp-create-dirs.
  to no impact, neither on the performance nor on the general functionality of
  curl.
 
-19.3 cmake test suite improvements
-
- The cmake build doesn't support 'make show' so it doesn't know which tests
- are in the makefile or not (making appveyor builds do many false warnings
- about it) nor does it support running the test suite if building out-of-tree.
-
- See https://github.com/curl/curl/issues/3109
 
 20. Test suite
 

@@ -879,6 +879,7 @@ LIBOBJS
 SSL_BACKENDS
 SUPPORT_PROTOCOLS
 SUPPORT_FEATURES
+LIBCURL_NO_SHARED
 ENABLE_STATIC
 ENABLE_SHARED
 CROSSCOMPILING_FALSE
@@ -21047,7 +21048,7 @@ $as_echo "found" >&6; }
       LD_BROTLI=`$PKGCONFIG --libs-only-L libbrotlidec`
       CPP_BROTLI=`$PKGCONFIG --cflags-only-I libbrotlidec`
       version=`$PKGCONFIG --modversion libbrotlidec`
-      DIR_BROTLI=`echo $LD_BROTLI | $SED -e 's/-L//'`
+      DIR_BROTLI=`echo $LD_BROTLI | $SED -e 's/^-L//'`
     fi
 
     ;;
@@ -21907,9 +21908,11 @@ else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
-int main(int argc, char ** argv) {
-    argv00 = ' ';
-    return (argv00 == ' ')?0:1;
+int main(int argc, char **argv)
+{
+  (void)argc;
+  argv[0][0] = ' ';
+  return (argv[0][0] == ' ')?0:1;
 }
 
 _ACEOF
@@ -22587,7 +22590,7 @@ $as_echo "$as_me: pkg-config: SSL_LDFLAGS: \"$SSL_LDFLAGS\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: pkg-config: SSL_CPPFLAGS: \"$SSL_CPPFLAGS\"" >&5
 $as_echo "$as_me: pkg-config: SSL_CPPFLAGS: \"$SSL_CPPFLAGS\"" >&6;}
 
-      LIB_OPENSSL=`echo $SSL_LDFLAGS | sed -e 's/-L//g'`
+      LIB_OPENSSL=`echo $SSL_LDFLAGS | sed -e 's/^-L//'`
 
                                           LIBS="$SSL_LIBS $LIBS"
     fi
@@ -22641,6 +22644,8 @@ else
        # only set this if pkg-config wasn't used
        CPPFLAGS="$CLEANCPPFLAGS -I$PREFIX_OPENSSL/include/openssl -I$PREFIX_OPENSSL/include"
      fi
+     # Linking previously failed, try extra paths from --with-ssl or pkg-config.
+     # Use a different function name to avoid reusing the earlier cached result.
      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for HMAC_Init_ex in -lcrypto" >&5
 $as_echo_n "checking for HMAC_Init_ex in -lcrypto... " >&6; }
 if ${ac_cv_lib_crypto_HMAC_Init_ex+:} false; then :
@@ -24012,7 +24017,7 @@ $as_echo "found" >&6; }
         addld=`$PKGCONFIG --libs-only-L gnutls`
         addcflags=`$PKGCONFIG --cflags-only-I gnutls`
         version=`$PKGCONFIG --modversion gnutls`
-        gtlslib=`echo $addld | $SED -e 's/-L//'`
+        gtlslib=`echo $addld | $SED -e 's/^-L//'`
       else
                         check=`libgnutls-config --version 2>/dev/null`
         if test -n "$check"; then
@@ -24523,6 +24528,15 @@ if test "${with_wolfssl+set}" = set; then :
 fi
 
 
+case "$OPT_WOLFSSL" in
+  yes|no)
+    wolfpkg=""
+    ;;
+  *)
+    wolfpkg="$withval/lib/pkgconfig"
+    ;;
+esac
+
 if test -z "$ssl_backends" -o "x$OPT_WOLFSSL" != xno; then
   ssl_msg=
 
@@ -24532,22 +24546,190 @@ if test -z "$ssl_backends" -o "x$OPT_WOLFSSL" != xno; then
       OPT_WOLFSSL=""
     fi
 
+
+    if test -n "$PKG_CONFIG"; then
+      PKGCONFIG="$PKG_CONFIG"
+    else
+      if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}pkg-config", so it can be a program name with args.
+set dummy ${ac_tool_prefix}pkg-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_PKGCONFIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $PKGCONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_PKGCONFIG="$PKGCONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+as_dummy="$PATH:/usr/bin:/usr/local/bin"
+for as_dir in $as_dummy
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_PKGCONFIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+PKGCONFIG=$ac_cv_path_PKGCONFIG
+if test -n "$PKGCONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PKGCONFIG" >&5
+$as_echo "$PKGCONFIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+fi
+if test -z "$ac_cv_path_PKGCONFIG"; then
+  ac_pt_PKGCONFIG=$PKGCONFIG
+  # Extract the first word of "pkg-config", so it can be a program name with args.
+set dummy pkg-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_ac_pt_PKGCONFIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $ac_pt_PKGCONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_PKGCONFIG="$ac_pt_PKGCONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+as_dummy="$PATH:/usr/bin:/usr/local/bin"
+for as_dir in $as_dummy
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_ac_pt_PKGCONFIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ac_pt_PKGCONFIG=$ac_cv_path_ac_pt_PKGCONFIG
+if test -n "$ac_pt_PKGCONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_pt_PKGCONFIG" >&5
+$as_echo "$ac_pt_PKGCONFIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_pt_PKGCONFIG" = x; then
+    PKGCONFIG="no"
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    PKGCONFIG=$ac_pt_PKGCONFIG
+  fi
+else
+  PKGCONFIG="$ac_cv_path_PKGCONFIG"
+fi
+
+    fi
+
+    if test "x$PKGCONFIG" != "xno"; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for wolfssl options with pkg-config" >&5
+$as_echo_n "checking for wolfssl options with pkg-config... " >&6; }
+            itexists=`
+    if test -n "$wolfpkg"; then
+      PKG_CONFIG_LIBDIR="$wolfpkg"
+      export PKG_CONFIG_LIBDIR
+    fi
+         $PKGCONFIG --exists wolfssl >/dev/null 2>&1 && echo 1`
+
+      if test -z "$itexists"; then
+                        PKGCONFIG="no"
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+      else
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+      fi
+    fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: Check dir $wolfpkg" >&5
+$as_echo "$as_me: Check dir $wolfpkg" >&6;}
+
     addld=""
     addlib=""
     addcflags=""
+    if test "$PKGCONFIG" != "no" ; then
+      addlib=`
+    if test -n "$wolfpkg"; then
+      PKG_CONFIG_LIBDIR="$wolfpkg"
+      export PKG_CONFIG_LIBDIR
+    fi
 
-    if test "x$USE_WOLFSSL" != "xyes"; then
+        $PKGCONFIG --libs-only-l wolfssl`
+      addld=`
+    if test -n "$wolfpkg"; then
+      PKG_CONFIG_LIBDIR="$wolfpkg"
+      export PKG_CONFIG_LIBDIR
+    fi
+
+        $PKGCONFIG --libs-only-L wolfssl`
+      addcflags=`
+    if test -n "$wolfpkg"; then
+      PKG_CONFIG_LIBDIR="$wolfpkg"
+      export PKG_CONFIG_LIBDIR
+    fi
+
+        $PKGCONFIG --cflags-only-I wolfssl`
+      version=`
+    if test -n "$wolfpkg"; then
+      PKG_CONFIG_LIBDIR="$wolfpkg"
+      export PKG_CONFIG_LIBDIR
+    fi
+
+        $PKGCONFIG --modversion wolfssl`
+      wolfssllibpath=`echo $addld | $SED -e 's/^-L//'`
+    else
+      addlib=-lwolfssl
       addld=-L$OPT_WOLFSSL/lib$libsuff
       addcflags=-I$OPT_WOLFSSL/include
       wolfssllibpath=$OPT_WOLFSSL/lib$libsuff
+    fi
+
+    if test "x$USE_WOLFSSL" != "xyes"; then
 
       LDFLAGS="$LDFLAGS $addld"
+      { $as_echo "$as_me:${as_lineno-$LINENO}: Add $addld to LDFLAGS" >&5
+$as_echo "$as_me: Add $addld to LDFLAGS" >&6;}
       if test "$addcflags" != "-I/usr/include"; then
          CPPFLAGS="$CPPFLAGS $addcflags"
+         { $as_echo "$as_me:${as_lineno-$LINENO}: Add $addcflags to CPPFLAGS" >&5
+$as_echo "$as_me: Add $addcflags to CPPFLAGS" >&6;}
       fi
 
       my_ac_save_LIBS="$LIBS"
-      LIBS="-lwolfssl -lm $LIBS"
+      LIBS="$addlib $LIBS"
+      { $as_echo "$as_me:${as_lineno-$LINENO}: Add $addlib to LIBS" >&5
+$as_echo "$as_me: Add $addlib to LIBS" >&6;}
 
       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for wolfSSL_Init in -lwolfssl" >&5
 $as_echo_n "checking for wolfSSL_Init in -lwolfssl... " >&6; }
@@ -24646,7 +24828,7 @@ _ACEOF
 
       LIBS="-lwolfssl -lm $LIBS"
 
-                  for ac_func in wolfSSLv3_client_method \
+                              for ac_func in wolfSSLv3_client_method \
                      wolfSSL_get_peer_certificate \
                      wolfSSL_UseALPN
 do :
@@ -24659,6 +24841,21 @@ _ACEOF
 
 fi
 done
+
+
+                  ac_fn_c_check_func "$LINENO" "wolfSSL_DES_set_odd_parity" "ac_cv_func_wolfSSL_DES_set_odd_parity"
+if test "x$ac_cv_func_wolfSSL_DES_set_odd_parity" = xyes; then :
+
+
+$as_echo "#define HAVE_WOLFSSL_DES_SET_ODD_PARITY 1" >>confdefs.h
+
+            CPPFLAGS="$addcflags/wolfssl $CPPFLAGS"
+            { $as_echo "$as_me:${as_lineno-$LINENO}: Add $addcflags/wolfssl to CPPFLAGS" >&5
+$as_echo "$as_me: Add $addcflags/wolfssl to CPPFLAGS" >&6;}
+            WOLFSSL_NTLM=1
+
+
+fi
 
 
       if test -n "$wolfssllibpath"; then
@@ -26039,7 +26236,7 @@ $as_echo "found" >&6; }
       export PKG_CONFIG_LIBDIR
     fi
        $PKGCONFIG --modversion libmetalink`
-    libmetalinklib=`echo $addld | $SED -e 's/-L//'`
+    libmetalinklib=`echo $addld | $SED -e 's/^-L//'`
   fi
   if test -n "$addlib"; then
 
@@ -26282,7 +26479,7 @@ $as_echo "found" >&6; }
       LD_SSH2=`$PKGCONFIG --libs-only-L libssh2`
       CPP_SSH2=`$PKGCONFIG --cflags-only-I libssh2`
       version=`$PKGCONFIG --modversion libssh2`
-      DIR_SSH2=`echo $LD_SSH2 | $SED -e 's/-L//'`
+      DIR_SSH2=`echo $LD_SSH2 | $SED -e 's/^-L//'`
     fi
 
     ;;
@@ -26526,7 +26723,7 @@ $as_echo "found" >&6; }
       LD_SSH=`$PKGCONFIG --libs-only-L libssh`
       CPP_SSH=`$PKGCONFIG --cflags-only-I libssh`
       version=`$PKGCONFIG --modversion libssh`
-      DIR_SSH=`echo $LD_SSH | $SED -e 's/-L//'`
+      DIR_SSH=`echo $LD_SSH | $SED -e 's/^-L//'`
     fi
 
     ;;
@@ -26856,7 +27053,7 @@ $as_echo "found" >&6; }
       LD_RTMP=`$PKGCONFIG --libs-only-L librtmp`
       CPP_RTMP=`$PKGCONFIG --cflags-only-I librtmp`
       version=`$PKGCONFIG --modversion librtmp`
-      DIR_RTMP=`echo $LD_RTMP | $SED -e 's/-L//'`
+      DIR_RTMP=`echo $LD_RTMP | $SED -e 's/^-L//'`
     else
                   as_fn_error $? "--librtmp was specified but could not find librtmp pkgconfig file." "$LINENO" 5
     fi
@@ -27306,7 +27503,7 @@ $as_echo "found" >&6; }
       export PKG_CONFIG_LIBDIR
     fi
          $PKGCONFIG --cflags-only-I libidn2 2>/dev/null`
-      IDN_DIR=`echo $IDN_LDFLAGS | $SED -e 's/-L//'`
+      IDN_DIR=`echo $IDN_LDFLAGS | $SED -e 's/^-L//'`
     else
             IDN_LIBS="-lidn2"
       IDN_LDFLAGS="-L$want_idn_path/lib$libsuff"
@@ -27444,7 +27641,7 @@ $as_echo "found" >&6; }
       IDN_LIBS=`$PKGCONFIG --libs-only-l libidn2 2>/dev/null`
       IDN_LDFLAGS=`$PKGCONFIG --libs-only-L libidn2 2>/dev/null`
       IDN_CPPFLAGS=`$PKGCONFIG --cflags-only-I libidn2 2>/dev/null`
-      IDN_DIR=`echo $IDN_LDFLAGS | $SED -e 's/-L//'`
+      IDN_DIR=`echo $IDN_LDFLAGS | $SED -e 's/^-L//'`
     else
             IDN_LIBS="-lidn2"
     fi
@@ -28024,7 +28221,7 @@ $as_echo "$as_me: -L is $LD_TCP2" >&6;}
     LIBS="$LIB_TCP2 $LIBS"
 
     if test "x$cross_compiling" != "xyes"; then
-      DIR_TCP2=`echo $LD_TCP2 | $SED -e 's/-L//'`
+      DIR_TCP2=`echo $LD_TCP2 | $SED -e 's/^-L//'`
     fi
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ngtcp2_conn_client_new in -lngtcp2" >&5
 $as_echo_n "checking for ngtcp2_conn_client_new in -lngtcp2... " >&6; }
@@ -28267,7 +28464,7 @@ $as_echo "$as_me: -L is $LD_NGTCP2_CRYPTO_OPENSSL" >&6;}
     LIBS="$LIB_NGTCP2_CRYPTO_OPENSSL $LIBS"
 
     if test "x$cross_compiling" != "xyes"; then
-      DIR_NGTCP2_CRYPTO_OPENSSL=`echo $LD_NGTCP2_CRYPTO_OPENSSL | $SED -e 's/-L//'`
+      DIR_NGTCP2_CRYPTO_OPENSSL=`echo $LD_NGTCP2_CRYPTO_OPENSSL | $SED -e 's/^-L//'`
     fi
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ngtcp2_crypto_ctx_initial in -lngtcp2_crypto_openssl" >&5
 $as_echo_n "checking for ngtcp2_crypto_ctx_initial in -lngtcp2_crypto_openssl... " >&6; }
@@ -28509,7 +28706,7 @@ $as_echo "$as_me: -L is $LD_NGTCP2_CRYPTO_GNUTLS" >&6;}
     LIBS="$LIB_NGTCP2_CRYPTO_GNUTLS $LIBS"
 
     if test "x$cross_compiling" != "xyes"; then
-      DIR_NGTCP2_CRYPTO_GNUTLS=`echo $LD_NGTCP2_CRYPTO_GNUTLS | $SED -e 's/-L//'`
+      DIR_NGTCP2_CRYPTO_GNUTLS=`echo $LD_NGTCP2_CRYPTO_GNUTLS | $SED -e 's/^-L//'`
     fi
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ngtcp2_crypto_ctx_initial in -lngtcp2_crypto_gnutls" >&5
 $as_echo_n "checking for ngtcp2_crypto_ctx_initial in -lngtcp2_crypto_gnutls... " >&6; }
@@ -28780,7 +28977,7 @@ $as_echo "$as_me: -L is $LD_NGHTTP3" >&6;}
     LIBS="$LIB_NGHTTP3 $LIBS"
 
     if test "x$cross_compiling" != "xyes"; then
-      DIR_NGHTTP3=`echo $LD_NGHTTP3 | $SED -e 's/-L//'`
+      DIR_NGHTTP3=`echo $LD_NGHTTP3 | $SED -e 's/^-L//'`
     fi
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for nghttp3_conn_client_new in -lnghttp3" >&5
 $as_echo_n "checking for nghttp3_conn_client_new in -lnghttp3... " >&6; }
@@ -29053,7 +29250,7 @@ $as_echo "$as_me: -L is $LD_QUICHE" >&6;}
     LIBS="$LIB_QUICHE $LIBS"
 
     if test "x$cross_compiling" != "xyes"; then
-      DIR_QUICHE=`echo $LD_QUICHE | $SED -e 's/-L//'`
+      DIR_QUICHE=`echo $LD_QUICHE | $SED -e 's/^-L//'`
     fi
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for quiche_connect in -lquiche" >&5
 $as_echo_n "checking for quiche_connect in -lquiche... " >&6; }
@@ -29106,6 +29303,17 @@ $as_echo "$as_me: HTTP3 support is experimental" >&6;}
 $as_echo "#define USE_QUICHE 1" >>confdefs.h
 
           USE_QUICHE=1
+
+          for ac_func in quiche_conn_set_qlog_fd
+do :
+  ac_fn_c_check_func "$LINENO" "quiche_conn_set_qlog_fd" "ac_cv_func_quiche_conn_set_qlog_fd"
+if test "x$ac_cv_func_quiche_conn_set_qlog_fd" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_QUICHE_CONN_SET_QLOG_FD 1
+_ACEOF
+
+fi
+done
 
           CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$DIR_QUICHE"
           export CURL_LIBRARY_PATH
@@ -30427,6 +30635,25 @@ else
 $as_echo "#define CURL_SA_FAMILY_T unsigned short" >>confdefs.h
 
 fi
+
+
+fi
+
+
+# check for suseconds_t
+ac_fn_c_check_type "$LINENO" "suseconds_t" "ac_cv_type_suseconds_t" "
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif
+
+"
+if test "x$ac_cv_type_suseconds_t" = xyes; then :
+
+
+$as_echo "#define HAVE_SUSECONDS_T 1" >>confdefs.h
 
 
 fi
@@ -42514,12 +42741,15 @@ if test "x$ac_cv_header_pthread_h" = xyes; then :
 $as_echo "#define HAVE_PTHREAD_H 1" >>confdefs.h
 
       save_CFLAGS="$CFLAGS"
+                                    save_LIBS="$LIBS"
 
+      LIBS=
             ac_fn_c_check_func "$LINENO" "pthread_create" "ac_cv_func_pthread_create"
 if test "x$ac_cv_func_pthread_create" = xyes; then :
   USE_THREADS_POSIX=1
 fi
 
+      LIBS="$save_LIBS"
 
             case $host in
       *-hp-hpux*)
@@ -43168,6 +43398,12 @@ ENABLE_SHARED="$enable_shared"
 ENABLE_STATIC="$enable_static"
 
 
+if test "x$enable_shared" = "xno"; then
+  LIBCURL_NO_SHARED=$LIBCURL_LIBS
+else
+  LIBCURL_NO_SHARED=
+fi
+
 
 
 if test "x$OPENSSL_ENABLED" = "x1"; then
@@ -43223,7 +43459,8 @@ fi
 if test "x$CURL_DISABLE_CRYPTO_AUTH" != "x1"; then
   if test "x$OPENSSL_ENABLED" = "x1" -o "x$USE_WINDOWS_SSPI" = "x1" \
       -o "x$GNUTLS_ENABLED" = "x1" -o "x$MBEDTLS_ENABLED" = "x1" \
-      -o "x$NSS_ENABLED" = "x1" -o "x$SECURETRANSPORT_ENABLED" = "x1"; then
+      -o "x$NSS_ENABLED" = "x1" -o "x$SECURETRANSPORT_ENABLED" = "x1" \
+      -o "x$WOLFSSL_NTLM" = "x1"; then
     SUPPORT_FEATURES="$SUPPORT_FEATURES NTLM"
 
     if test "x$CURL_DISABLE_HTTP" != "x1" -a \
@@ -43315,7 +43552,8 @@ if test "x$CURL_DISABLE_SMB" != "x1" \
     -a "x$CURL_DISABLE_CRYPTO_AUTH" != "x1" \
     -a \( "x$OPENSSL_ENABLED" = "x1" -o "x$USE_WINDOWS_SSPI" = "x1" \
       -o "x$GNUTLS_ENABLED" = "x1" -o "x$MBEDTLS_ENABLED" = "x1" \
-      -o "x$NSS_ENABLED" = "x1" -o "x$SECURETRANSPORT_ENABLED" = "x1" \); then
+      -o "x$NSS_ENABLED" = "x1" -o "x$SECURETRANSPORT_ENABLED" = "x1" \
+      -o "x$WOLFSSL_NTLM" = "x1" \); then
   SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS SMB"
   if test "x$SSL_ENABLED" = "x1"; then
     SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS SMBS"
@@ -43336,7 +43574,6 @@ if test "x$USE_LIBSSH" = "x1"; then
   SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS SFTP"
 fi
 if test "x$USE_WOLFSSH" = "x1"; then
-  SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS SCP"
   SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS SFTP"
 fi
 if test "x$CURL_DISABLE_RTSP" != "x1"; then
