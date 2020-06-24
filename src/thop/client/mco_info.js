@@ -134,7 +134,11 @@ let mco_info = new function() {
         let version = findVersion(route.version);
         let [mco, ghmghs] = await Promise.all([
             data.fetchDictionary('mco'),
-            data.fetchJSON(`${env.base_url}api/mco_ghmghs.json?sector=${route.sector || 'public'}&date=${version.begin_date}`)
+
+            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco_ghmghs.json`, {
+                sector: route.sector || 'public',
+                date: version.begin_date
+            }))
         ]);
 
         document.title = `THOP – Racines de GHM (${version.begin_date})`;
@@ -159,7 +163,11 @@ let mco_info = new function() {
         let version = findVersion(route.version);
         let [mco, ghmghs] = await Promise.all([
             data.fetchDictionary('mco'),
-            data.fetchJSON(`${env.base_url}api/mco_ghmghs.json?sector=${route.sector}&date=${version.begin_date}`)
+
+            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco_ghmghs.json`, {
+                sector: route.sector,
+                date: version.begin_date
+            }))
         ]);
 
         document.title = `THOP – GHM/GHS (${version.begin_date})`;
@@ -218,7 +226,11 @@ let mco_info = new function() {
         let version = findVersion(route.version);
         let [cim10, diagnoses] = await Promise.all([
             data.fetchDictionary('cim10'),
-            data.fetchJSON(`${env.base_url}api/mco_diagnoses.json?date=${version.begin_date}&spec=${route.diagnoses.list || ''}`)
+
+            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco_diagnoses.json`, {
+                date: version.begin_date,
+                spec: route.diagnoses.list
+            }))
         ]);
 
         document.title = `THOP – Diagnostics (${version.begin_date})`;
@@ -257,7 +269,11 @@ let mco_info = new function() {
         let version = findVersion(route.version);
         let [ccam, procedures] = await Promise.all([
             data.fetchDictionary('ccam'),
-            data.fetchJSON(`${env.base_url}api/mco_procedures.json?date=${version.begin_date}&spec=${route.procedures.list || ''}`)
+
+            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco_procedures.json`, {
+                date: version.begin_date,
+                spec: route.procedures.list
+            }))
         ]);
 
         document.title = `THOP – Actes (${version.begin_date})`;
@@ -510,8 +526,15 @@ let mco_info = new function() {
         let version_diff = route.ghs.diff ? findVersion(route.ghs.diff) : null;
         let [mco, ghmghs, ghmghs_diff] = await Promise.all([
             data.fetchDictionary('mco'),
-            data.fetchJSON(`${env.base_url}api/mco_ghmghs.json?sector=${route.sector}&date=${version.begin_date}`),
-            version_diff ? data.fetchJSON(`${env.base_url}api/mco_ghmghs.json?sector=${route.sector}&date=${version_diff.begin_date}`) : null
+
+            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco_ghmghs.json`, {
+                sector: route.sector,
+                date: version.begin_date
+            })),
+            version_diff ? data.fetchJSON(util.pasteURL(`${env.base_url}api/mco_ghmghs.json`, {
+                sector: route.sector,
+                date: version_diff.begin_date
+            })) : null
         ]);
 
         if (!route.ghs.ghm_root)
@@ -892,9 +915,15 @@ let mco_info = new function() {
         let version = findVersion(route.version);
         let [mco, tree_nodes, highlight_map] = await Promise.all([
             data.fetchDictionary('mco'),
-            data.fetchJSON(`${env.base_url}api/mco_tree.json?date=${version.begin_date}`),
-            (route.tree.diag || route.tree.proc) ? data.fetchJSON(`${env.base_url}api/mco_highlight.json?date=${version.begin_date}`+
-                                                                  `&diag=${(route.tree.diag || '').replace('.', '')}&proc=${route.tree.proc || ''}`) : null
+
+            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco_tree.json`, {
+                date: version.begin_date
+            })),
+            (route.tree.diag || route.tree.proc) ? data.fetchJSON(util.pasteURL(`${env.base_url}api/mco_highlight.json`, {
+                date: version.begin_date,
+                diag: route.tree.diag ? route.tree.diag.replace('.', '') : null,
+                proc: route.tree.proc
+            })) : null
         ]);
 
         document.title = `THOP – Arbre de groupage (${version.begin_date})`;

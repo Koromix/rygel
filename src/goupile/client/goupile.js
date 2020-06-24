@@ -215,7 +215,9 @@ let goupile = new function() {
             settings = {};
 
             try {
-                let response = await net.fetch(`${env.base_url}api/settings.json?rnd=${session_rnd || 0}`);
+                let response = await net.fetch(util.pasteURL(`${env.base_url}api/settings.json`, {
+                    rnd: session_rnd
+                }));
 
                 if (response.ok) {
                     settings = await response.json();
