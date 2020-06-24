@@ -563,6 +563,29 @@ let mco_info = new function() {
         if (!columns.length)
             throw new Error(`Racine de GHM '${route.ghs.ghm_root}' inexistante`);
 
+        // With the new gradation stuff, most short (J or T) medical GHMs start with a 9999 GHS
+        // for ambulatory settings. This is noisy. Here we artifically hide this column and add
+        // "Non-ambulatory" condition to remaining columns, unless they already are special.
+        if (columns.some(col => col.special_mode === 'outpatient')) {
+            let ghm;
+            let prolonged = false;
+
+            let j = 0;
+            for (let i = 0; i < columns.length; i++) {
+                prolonged &= (columns[i].ghm === ghm);
+                if (columns[i].special_mode === 'outpatient') {
+                    prolonged = true;
+                } else {
+                    columns[j] = columns[i];
+                    if (prolonged && !columns[j].special_mode)
+                        columns[j].special_mode = 'prolonged';
+                    j++;
+                }
+                ghm = columns[i].ghm;
+            }
+            columns.length = j;
+        }
+
         // Render grid or plot
         if (route.ghs.plot) {
             if (typeof Chart === 'undefined')
@@ -831,6 +854,7 @@ let mco_info = new function() {
             case 'diabetes3': { conditions.push('Diabète < 3 nuits'); } break;
             case 'outpatient': { conditions.push('Ambulatoire'); } break;
             case 'intermediary': { conditions.push('Intermédiaire'); } break;
+            case 'prolonged': { conditions.push('Hors ambulatoire'); } break;
         }
         if (ghs.main_diagnosis)
             conditions.push('DP ' + ghs.main_diagnosis);
