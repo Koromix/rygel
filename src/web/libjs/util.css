@@ -9,6 +9,7 @@ button, input, optgroup, select, textarea {
     font-family: inherit;
     font-size: 100%;
 }
+input[type='checkbox'], input[type='radio'] { vertical-align: -2px; }
 
 /* -------------------- Notifications -------------------- */
 
