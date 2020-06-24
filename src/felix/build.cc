@@ -363,14 +363,16 @@ bool Builder::Build(int jobs, bool verbose)
     };
 
     LogInfo("Building...");
+    int64_t now = GetMonotonicTime();
+
     if (!RunNodes(&async, prep_nodes, verbose, 0, total))
         return false;
     if (!RunNodes(&async, obj_nodes, verbose, prep_nodes.len, total))
         return false;
     if (!RunNodes(&async, link_nodes, verbose, prep_nodes.len + obj_nodes.len, total))
         return false;
-    LogInfo("%!C..100%%%!0 Done!");
 
+    LogInfo("%!C..100%%%!0 Done (%1s)", FmtDouble((double)(GetMonotonicTime() - now) / 1000.0, 1));
     return true;
 }
 
