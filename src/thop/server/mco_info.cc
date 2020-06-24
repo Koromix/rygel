@@ -352,7 +352,7 @@ static bool HighlightNodes(const HighlightContext &ctx, Size node_idx, uint16_t 
         RG_ASSERT(node_idx < ctx.ghm_nodes.len);
 
         const mco_GhmDecisionNode &ghm_node = ctx.ghm_nodes[node_idx];
-        bool highlight = false;
+        bool stop = false;
 
         switch (ghm_node.function) {
             case 0:
@@ -360,8 +360,8 @@ static bool HighlightNodes(const HighlightContext &ctx, Size node_idx, uint16_t 
                 if (!ctx.ignore_diagnoses) {
                     for (const mco_DiagnosisInfo *diag_info: ctx.diagnoses) {
                         uint8_t diag_byte = diag_info->GetByte(ghm_node.u.test.params[0]);
-                        highlight |= diag_byte &&
-                                     HighlightNodes(ctx, ghm_node.u.test.children_idx + diag_byte, flags, out_nodes);
+                        stop |= diag_byte &&
+                                HighlightNodes(ctx, ghm_node.u.test.children_idx + diag_byte, flags, out_nodes);
                     }
                 } else {
                     HighlightChildren(ctx, ghm_node, flags, out_nodes);
@@ -373,8 +373,8 @@ static bool HighlightNodes(const HighlightContext &ctx, Size node_idx, uint16_t 
             case 10: {
                 if (!ctx.ignore_procedures) {
                     for (const mco_ProcedureInfo *proc_info: ctx.procedures) {
-                        highlight |= proc_info->Test(ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
-                                     HighlightNodes(ctx, ghm_node.u.test.children_idx + 1, flags, out_nodes);
+                        stop |= proc_info->Test(ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
+                                HighlightNodes(ctx, ghm_node.u.test.children_idx + 1, flags, out_nodes);
                     }
                 } else {
                     HighlightChildren(ctx, ghm_node, flags, out_nodes);
@@ -405,8 +405,8 @@ static bool HighlightNodes(const HighlightContext &ctx, Size node_idx, uint16_t 
             case 36: {
                 if (!ctx.ignore_diagnoses) {
                     for (const mco_DiagnosisInfo *diag_info: ctx.diagnoses) {
-                        highlight |= diag_info->Test(ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
-                                     HighlightNodes(ctx, ghm_node.u.test.children_idx + 1, flags, out_nodes);
+                        stop |= diag_info->Test(ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
+                                HighlightNodes(ctx, ghm_node.u.test.children_idx + 1, flags, out_nodes);
                     }
                 } else {
                     HighlightChildren(ctx, ghm_node, flags, out_nodes);
@@ -431,8 +431,8 @@ static bool HighlightNodes(const HighlightContext &ctx, Size node_idx, uint16_t 
                 if (!ctx.ignore_diagnoses) {
                     for (const mco_DiagnosisInfo *diag_info: ctx.diagnoses) {
                         uint8_t diag_byte = diag_info->GetByte(ghm_node.u.test.params[0]);
-                        highlight |= (diag_byte == ghm_node.u.test.params[1]) &&
-                                     HighlightNodes(ctx, ghm_node.u.test.children_idx + 1, flags, out_nodes);
+                        stop |= (diag_byte == ghm_node.u.test.params[1]) &&
+                                HighlightNodes(ctx, ghm_node.u.test.children_idx + 1, flags, out_nodes);
                     }
                 } else {
                     HighlightChildren(ctx, ghm_node, flags, out_nodes);
@@ -442,6 +442,19 @@ static bool HighlightNodes(const HighlightContext &ctx, Size node_idx, uint16_t 
             case 20: { // GOTO
                 HighlightNodes(ctx, ghm_node.u.test.children_idx, flags, out_nodes);
                 return false;
+            } break;
+
+            case 28: {
+                // The point of this is to highlight non-blocking error nodes,
+                // such as errors 80 and 222.
+                if (HighlightNodes(ctx, ghm_node.u.test.children_idx, flags, out_nodes)) {
+                    uint16_t *ptr = out_nodes->TrySet((int16_t)node_idx, 0).first;
+                    *ptr |= flags;
+
+                    return true;
+                } else {
+                    return false;
+                }
             } break;
 
             case 30: {
@@ -457,8 +470,8 @@ static bool HighlightNodes(const HighlightContext &ctx, Size node_idx, uint16_t 
 
             case 33: {
                 if (!ctx.ignore_procedures) {
-                    highlight |= (ctx.proc_activities & (1 << ghm_node.u.test.params[0])) &&
-                                 HighlightNodes(ctx, ghm_node.u.test.children_idx + 1, flags, out_nodes);
+                    stop |= (ctx.proc_activities & (1 << ghm_node.u.test.params[0])) &&
+                            HighlightNodes(ctx, ghm_node.u.test.children_idx + 1, flags, out_nodes);
                 } else {
                     HighlightChildren(ctx, ghm_node, flags, out_nodes);
                 }
@@ -468,9 +481,9 @@ static bool HighlightNodes(const HighlightContext &ctx, Size node_idx, uint16_t 
             case 43: {
                 if (!ctx.ignore_diagnoses) {
                     for (const mco_DiagnosisInfo *diag_info: ctx.diagnoses) {
-                        highlight |= (diag_info->cmd == ghm_node.u.test.params[0]) &&
-                                     (diag_info->jump == ghm_node.u.test.params[1]) &&
-                                     HighlightNodes(ctx, ghm_node.u.test.children_idx + 1, flags, out_nodes);
+                        stop |= (diag_info->cmd == ghm_node.u.test.params[0]) &&
+                                (diag_info->jump == ghm_node.u.test.params[1]) &&
+                                HighlightNodes(ctx, ghm_node.u.test.children_idx + 1, flags, out_nodes);
                     }
                 } else {
                     HighlightChildren(ctx, ghm_node, flags, out_nodes);
@@ -482,13 +495,8 @@ static bool HighlightNodes(const HighlightContext &ctx, Size node_idx, uint16_t 
             } break;
         }
 
-        if (highlight) {
-            uint16_t *ptr = out_nodes->TrySet((int16_t)node_idx, 0).first;
-            *ptr |= flags;
-
+        if (stop)
             return true;
-        }
-
         node_idx = ghm_node.u.test.children_idx;
     }
 }
