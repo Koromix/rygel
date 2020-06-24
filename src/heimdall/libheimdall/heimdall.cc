@@ -1233,7 +1233,8 @@ static void DrawView(InterfaceState &state,
     // Handle controls
     double entities_mouse_x = (state.scroll_x + (double)gui_info->input.x - win->ClipRect.Min.x - (state.settings.tree_width + 15.0f));
     if (ImGui::IsWindowHovered()) {
-        if (gui_info->input.buttons & MaskEnum(gui_InputButton::Left)) {
+        if ((gui_info->input.buttons & MaskEnum(gui_InputButton::Left)) &&
+                (double)gui_info->input.x > state.settings.tree_width) {
             if (state.grab_canvas) {
                 state.scroll_x += state.grab_canvas_x - (double)gui_info->input.x;
                 state.scroll_y += state.grab_canvas_y - (double)gui_info->input.y;
