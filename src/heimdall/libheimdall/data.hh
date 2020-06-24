@@ -40,7 +40,6 @@ struct EntitySet {
 
 struct Concept {
     const char *name = nullptr;
-    const char *title = nullptr;
     const char *path = nullptr;
 
     RG_HASHTABLE_HANDLER(Concept, name);

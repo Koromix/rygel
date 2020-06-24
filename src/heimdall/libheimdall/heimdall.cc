@@ -478,6 +478,7 @@ static void DrawMeasures(double x_offset, double y_min, double y_max, double tim
 
 struct LineData {
     const Entity *entity;
+    Span<const char> name;
     Span<const char> path;
     Span<const char> title;
     bool draw;
@@ -886,6 +887,7 @@ static void DrawEntities(ImRect bb, double tree_width, double time_offset,
                                 line = lines.AppendDefault();
                                 line->draw = fully_deployed;
                                 line->entity = &ent;
+                                line->name = elmt.concept_name;
                                 line->path = partial_path;
                                 if (partial_path.len > 1) {
                                     name_offset += (name_offset < partial_path.len &&
@@ -928,6 +930,7 @@ static void DrawEntities(ImRect bb, double tree_width, double time_offset,
                         } else {
                             line = lines.AppendDefault();
                             line->entity = &ent;
+                            line->name = elmt.concept_name;
                             line->path = path;
                             line->title = title;
                             line->draw = fully_deployed;
@@ -985,6 +988,7 @@ static void DrawEntities(ImRect bb, double tree_width, double time_offset,
     Span<const char> deploy_path = {};
     HeapArray<const LineData *> select_lines;
     bool select_enable = false;
+    bool select_leaf = false;
     {
         const Entity *ent = nullptr;
         double ent_offset_y = 0.0f;
@@ -1016,6 +1020,7 @@ static void DrawEntities(ImRect bb, double tree_width, double time_offset,
                 case LineInteraction::Select:
                 case LineInteraction::Menu: {
                     if (line.leaf) {
+                        select_leaf = true;
                         select_lines.Append(&line);
                     }
                     for (Size j = i + 1; j < lines.len && lines[j].depth > line.depth; j++) {
@@ -1063,13 +1068,23 @@ static void DrawEntities(ImRect bb, double tree_width, double time_offset,
         }
 
         state.size_cache_valid = false;
-    } else if (select_enable) {
-        for (const LineData *line: select_lines) {
-             state.select_concepts.Set(line->title, line->path);
+    } else if (select_lines.len) {
+        if (select_leaf) {
+            state.menu_name = select_lines[0]->name.ptr;
+            state.menu_path = select_lines[0]->path.ptr;
+        } else {
+            state.menu_name = nullptr;
+            state.menu_path = nullptr;
         }
-    } else {
-        for (const LineData *line: select_lines) {
-            state.select_concepts.Remove(line->title);
+
+        if (select_enable) {
+            for (const LineData *line: select_lines) {
+                 state.select_concepts.Set(line->title, line->path);
+            }
+        } else {
+            for (const LineData *line: select_lines) {
+                state.select_concepts.Remove(line->title);
+            }
         }
     }
 }
@@ -1438,7 +1453,6 @@ static void AddConceptsToView(const HashMap<Span<const char>, Span<const char>> 
     for (const auto &it: concepts.table) {
         Concept concept_info = {};
         concept_info.name = DuplicateString(it.key, &out_concept_set->str_alloc).ptr;
-        concept_info.title = concept_info.name;
         if (keep_paths) {
             concept_info.path = DuplicateString(it.value, &out_concept_set->str_alloc).ptr;
         } else {
@@ -1528,7 +1542,7 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
         RG_DEFER { ImGui::PopStyleVar(1); };
 
-        const ConceptSet *concept_set;
+        ConceptSet *concept_set;
         if (state.concept_set_idx >= 0 && state.concept_set_idx < concept_sets.len) {
             concept_set = &concept_sets[state.concept_set_idx];
         } else {
@@ -1544,53 +1558,90 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
                 ToggleAlign(state);
             }
             ImGui::Separator();
-            if (concept_set && ImGui::BeginMenu("Add to view")) {
-                ImGui::Text("New view:");
-                static char new_view_buf[128];
-                // XXX: Avoid empty and duplicate names
-                ImGui::InputText("##new_view", new_view_buf, IM_ARRAYSIZE(new_view_buf));
-                if (ImGui::Button("Create")) {
-                    ConceptSet *new_concept_set = CreateView(new_view_buf, &concept_sets);
-                    new_view_buf[0] = 0;
-                    AddConceptsToView(state.select_concepts, true, new_concept_set);
-                    state.select_concepts.Clear();
-                    ImGui::CloseCurrentPopup();
+
+            if (concept_set) {
+                static char path_buf[512];
+                static bool path_init;
+
+                if (ImGui::BeginMenu("Change path", state.menu_name)) {
+                    if (!path_init) {
+                        strncpy(path_buf, state.menu_path, RG_SIZE(path_buf));
+                        path_buf[RG_SIZE(path_buf) - 1] = 0;
+                        path_init = true;
+                    }
+
+                    ImGui::Text("New item:");
+                    ImGui::InputText("##path", path_buf, IM_ARRAYSIZE(path_buf));
+                    if (ImGui::Button("Change")) {
+                        if (path_buf[0] == '/') {
+                            Concept *concept_info = concept_set->concepts_map.TrySetDefault(state.menu_name).first;
+                            if (!concept_info->name) {
+                                concept_info->name = DuplicateString(state.menu_name, &concept_set->str_alloc).ptr;
+                            }
+                            concept_info->path = DuplicateString(path_buf, &concept_set->str_alloc).ptr;
+
+                            state.size_cache_valid = false;
+                            ImGui::CloseCurrentPopup();
+                        } else {
+                            ImGui::Text("Path must start with '/'!");
+                        }
+                    }
+
+                    ImGui::EndMenu();
+                } else {
+                    path_init = false;
                 }
                 ImGui::Separator();
-                for (ConceptSet &it: concept_sets) {
-                    if (ImGui::MenuItem(it.name)) {
-                        AddConceptsToView(state.select_concepts, true, &it);
+
+                if (ImGui::BeginMenu("Add to view")) {
+                    ImGui::Text("New view:");
+                    static char new_view_buf[128];
+                    // XXX: Avoid empty and duplicate names
+                    ImGui::InputText("##new_view", new_view_buf, IM_ARRAYSIZE(new_view_buf));
+                    if (ImGui::Button("Create")) {
+                        ConceptSet *new_concept_set = CreateView(new_view_buf, &concept_sets);
+                        new_view_buf[0] = 0;
+                        AddConceptsToView(state.select_concepts, true, new_concept_set);
                         state.select_concepts.Clear();
+                        ImGui::CloseCurrentPopup();
                     }
+                    ImGui::Separator();
+                    for (ConceptSet &it: concept_sets) {
+                        if (ImGui::MenuItem(it.name)) {
+                            AddConceptsToView(state.select_concepts, true, &it);
+                            state.select_concepts.Clear();
+                        }
+                    }
+                    ImGui::EndMenu();
                 }
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("Add to view (flat)")) {
-                ImGui::Text("New view:");
-                static char new_view_buf[128];
-                // XXX: Avoid empty and duplicate names
-                ImGui::InputText("##new_view", new_view_buf, IM_ARRAYSIZE(new_view_buf));
-                if (ImGui::Button("Create")) {
-                    ConceptSet *new_concept_set = CreateView(new_view_buf, &concept_sets);
-                    new_view_buf[0] = 0;
-                    AddConceptsToView(state.select_concepts, false, new_concept_set);
+                if (ImGui::BeginMenu("Add to view (flat)")) {
+                    ImGui::Text("New view:");
+                    static char new_view_buf[128];
+                    // XXX: Avoid empty and duplicate names
+                    ImGui::InputText("##new_view", new_view_buf, IM_ARRAYSIZE(new_view_buf));
+                    if (ImGui::Button("Create")) {
+                        ConceptSet *new_concept_set = CreateView(new_view_buf, &concept_sets);
+                        new_view_buf[0] = 0;
+                        AddConceptsToView(state.select_concepts, false, new_concept_set);
+                        state.select_concepts.Clear();
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::Separator();
+                    for (ConceptSet &it: concept_sets) {
+                        if (ImGui::MenuItem(it.name)) {
+                            AddConceptsToView(state.select_concepts, false, &it);
+                            state.select_concepts.Clear();
+                        }
+                    }
+                    ImGui::EndMenu();
+                }
+                if (ImGui::MenuItem("Remove from view", nullptr, false,
+                                    state.concept_set_idx >= 0 && state.concept_set_idx < concept_sets.len)) {
+                    RemoveConceptsFromView(state.select_concepts, &concept_sets[state.concept_set_idx]);
                     state.select_concepts.Clear();
-                    ImGui::CloseCurrentPopup();
                 }
-                ImGui::Separator();
-                for (ConceptSet &it: concept_sets) {
-                    if (ImGui::MenuItem(it.name)) {
-                        AddConceptsToView(state.select_concepts, false, &it);
-                        state.select_concepts.Clear();
-                    }
-                }
-                ImGui::EndMenu();
             }
-            if (ImGui::MenuItem("Remove from view", nullptr, false,
-                                state.concept_set_idx >= 0 && state.concept_set_idx < concept_sets.len)) {
-                RemoveConceptsFromView(state.select_concepts, &concept_sets[state.concept_set_idx]);
-                state.select_concepts.Clear();
-            }
+
             ImGui::EndPopup();
         }
 
