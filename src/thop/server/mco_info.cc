@@ -321,6 +321,7 @@ struct HighlightContext {
     bool ignore_procedures;
     HeapArray<const mco_DiagnosisInfo *> diagnoses;
     HeapArray<const mco_ProcedureInfo *> procedures;
+    uint8_t proc_activities;
 
     bool ignore_medical;
 };
@@ -454,6 +455,15 @@ static bool HighlightNodes(const HighlightContext &ctx, Size node_idx, uint16_t 
                 }
             } break;
 
+            case 33: {
+                if (!ctx.ignore_procedures) {
+                    highlight |= (ctx.proc_activities & (1 << ghm_node.u.test.params[0])) &&
+                                 HighlightNodes(ctx, ghm_node.u.test.children_idx + 1, flags, out_nodes);
+                } else {
+                    HighlightChildren(ctx, ghm_node, flags, out_nodes);
+                }
+            } break;
+
             case 41:
             case 43: {
                 if (!ctx.ignore_diagnoses) {
@@ -531,6 +541,7 @@ void ProduceMcoHighlight(const http_RequestInfo &request, const User *user, http
 
             for (const mco_ProcedureInfo &proc_info: index->FindProcedure(proc)) {
                 ctx.procedures.Append(&proc_info);
+                ctx.proc_activities |= proc_info.activities;
             }
             if (!ctx.procedures.len) {
                 LogError("Unknown procedure '%1'", code);
