@@ -87,6 +87,7 @@ struct InterfaceState {
     double minimum_x_unscaled;
     double total_width_unscaled;
     double total_height;
+    double imgui_height;
     Size visible_entities = 0;
 
     Size render_idx = 0;

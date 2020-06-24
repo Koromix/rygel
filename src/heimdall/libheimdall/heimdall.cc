@@ -1191,7 +1191,9 @@ static void DrawView(InterfaceState &state,
     if (prev_scroll_x < state.imgui_scroll_delta_x) {
         state.scroll_x += prev_scroll_x - state.imgui_scroll_delta_x;
     }
-    state.scroll_y = ImGui::GetScrollY() + (state.scroll_y < 0 ? state.scroll_y : 0);
+    state.scroll_y = std::min((double)ImGui::GetScrollY(),
+                              state.imgui_height - win->ClipRect.Max.y + scale_height - 9.0) +
+                     (state.scroll_y < 0 ? state.scroll_y : 0);
 
     // Auto-zoom
     if ((std::isnan(state.time_zoom) || state.autozoom) &&
@@ -1398,6 +1400,8 @@ static void DrawView(InterfaceState &state,
         if (state.scroll_y != prev_scroll_y) {
             ImGui::SetScrollY(set_scroll_y);
         }
+
+        state.imgui_height = height;
     }
     ImGui::ItemSize(ImVec2(0.0f, 0.0f));
 }
