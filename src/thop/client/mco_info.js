@@ -921,8 +921,8 @@ let mco_info = new function() {
             })),
             (route.tree.diag || route.tree.proc) ? data.fetchJSON(util.pasteURL(`${env.base_url}api/mco_highlight.json`, {
                 date: version.begin_date,
-                diag: route.tree.diag ? route.tree.diag.replace('.', '') : null,
-                proc: route.tree.proc
+                diag: route.tree.diag ? route.tree.diag.replace('.', '').trim() : null,
+                proc: route.tree.proc ? route.tree.proc.trim() : null
             })) : null
         ]);
 
