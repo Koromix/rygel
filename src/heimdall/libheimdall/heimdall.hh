@@ -49,7 +49,7 @@ static const char *const TimeUnitNames[] = {
 
 struct InterfaceSettings {
     bool dark_theme = false;
-    float tree_width = 300.0f;
+    float tree_width = 250.0f;
     bool plot_measures = true;
     float deployed_alpha = 0.05f;
     float plot_height = 50.0f;
