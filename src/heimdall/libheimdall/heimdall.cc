@@ -696,6 +696,8 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
                         concept_info = concept_set->concepts_map.Find(src_name);
                         if (!concept_info)
                             continue;
+                    } else if (!concept_info->path) {
+                        continue;
                     }
                     path = concept_info->path;
                 } else {
@@ -858,6 +860,8 @@ static void DrawEntities(ImRect bb, double tree_width, double time_offset,
                             concept_info = concept_set->concepts_map.Find(src_name);
                             if (!concept_info)
                                 continue;
+                        } else if (!concept_info->path) {
+                            continue;
                         }
                         path = concept_info->path;
                     } else {
@@ -1465,8 +1469,11 @@ static void AddConceptsToView(const HashMap<Span<const char>, Span<const char>> 
 static void RemoveConceptsFromView(const HashMap<Span<const char>, Span<const char>> &concepts, ConceptSet *out_concept_set)
 {
     for (const auto &it: concepts.table) {
-        // XXX: We leak string memory (here and elsewhere...) when we remove stuff
-        out_concept_set->concepts_map.Remove(it.key.ptr);
+        Concept *concept_info = out_concept_set->concepts_map.TrySetDefault(it.key.ptr).first;
+        if (!concept_info->name) {
+            concept_info->name = DuplicateString(it.key.ptr, &out_concept_set->str_alloc).ptr;
+        }
+        concept_info->path = nullptr;
     }
 }
 
@@ -1639,6 +1646,8 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
                                     state.concept_set_idx >= 0 && state.concept_set_idx < concept_sets.len)) {
                     RemoveConceptsFromView(state.select_concepts, &concept_sets[state.concept_set_idx]);
                     state.select_concepts.Clear();
+
+                    state.size_cache_valid = false;
                 }
             }
 
