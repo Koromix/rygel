@@ -94,7 +94,7 @@ struct InterfaceState {
     double render_offset = 0.0;
     bool autozoom = false;
 
-    HighlightMode highlight_mode = HighlightMode::Deployed;
+    HighlightMode highlight_mode = HighlightMode::Always;
     Size scroll_to_idx = 0;
     double scroll_offset_y;
     Size highlight_idx = -1;
