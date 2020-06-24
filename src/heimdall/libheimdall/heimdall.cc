@@ -1471,60 +1471,39 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
     // Menu
     double menu_height = 0.0;
     if (ImGui::BeginMainMenuBar()) {
-        ImGui::Text("Views");
+        ImGui::Text("Current view");
         ImGui::PushItemWidth(100.0f);
-        ImGui::Combo("##views", &state.concept_set_idx,
+        ImGui::Combo("##view", &state.concept_set_idx,
                      [](void *udata, int idx, const char **out_text) {
             Span<const ConceptSet> &concept_sets = *(Span<const ConceptSet> *)udata;
             *out_text = concept_sets[idx].name;
             return true;
         }, &concept_sets, (int)concept_sets.len);
         ImGui::Separator();
-
-        if (state.align_concepts.table.count) {
-            if (ImGui::Button("Remove alignement")) {
-                ToggleAlign(state);
-            }
-            ImGui::Separator();
-            // XXX: Fix limited format specifiers on Windows
-            ImGui::Text("Entities: %d / %d",
-                        (int)state.visible_entities, (int)entity_set.entities.len);
-        } else {
-            if (ImGui::ButtonEx("Align", ImVec2(0, 0),
-                                state.select_concepts.table.count ? 0 : ImGuiButtonFlags_Disabled)) {
-                ToggleAlign(state);
-            }
-            ImGui::Separator();
-            ImGui::Text("Entities: %d", (int)entity_set.entities.len);
-        }
-        ImGui::Separator();
-
-        {
-            int highlight_mode = (int)state.highlight_mode;
-            ImGui::Text("Highlight:");
-            if (ImGui::Combo("##highlight_mode", &highlight_mode, "Never\0Deployed\0Always\0")) {
-                state.highlight_mode = (InterfaceState::HighlightMode)highlight_mode;
-            }
-        }
-        ImGui::Separator();
-
-        if (ImGui::Button("Auto-Zoom")) {
-            state.time_zoom = NAN;
-        }
-        ImGui::Separator();
-
-        if (ImGui::InputText("Manual filter", state.filter_text, IM_ARRAYSIZE(state.filter_text))) {
+        ImGui::Text("Text filter");
+        if (ImGui::InputText("##filter", state.filter_text, IM_ARRAYSIZE(state.filter_text))) {
             state.size_cache_valid = false;
             state.autozoom = true;
         }
         ImGui::Separator();
-
+        if (ImGui::ButtonEx("Remove alignement", ImVec2(0, 0),
+                            state.align_concepts.table.count ? 0 : ImGuiButtonFlags_Disabled)) {
+            ToggleAlign(state);
+        }
+        if (ImGui::Button("Reset time zoom")) {
+            state.time_zoom = NAN;
+        }
+        ImGui::Separator();
         ImGui::Checkbox("Other settings", &state.show_settings);
 
-#if 0
-        ImGui::Text("             Framerate: %.1f (%.3f ms/frame)             ",
-                    ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
-#endif
+        ImGui::SameLine(ImGui::GetWindowWidth() - 180);
+        if (state.align_concepts.table.count) {
+            // XXX: Fix limited format specifiers on Windows
+            ImGui::Text("%d / %d entities",
+                        (int)state.visible_entities, (int)entity_set.entities.len);
+        } else {
+            ImGui::Text("%d entities", (int)entity_set.entities.len);
+        }
 
         menu_height = ImGui::GetWindowSize().y;
         ImGui::EndMainMenuBar();
