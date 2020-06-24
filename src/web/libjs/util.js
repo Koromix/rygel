@@ -126,8 +126,11 @@ let util = new function() {
 
     this.pasteURL = function(url, params = {}, hash = null) {
         for (let key in params) {
-            if (params[key] == null)
+            if (params[key] != null) {
+                params[key] = params[key].toString();
+            } else {
                 delete params[key];
+            }
         }
 
         let query_str = new URLSearchParams(params).toString();
