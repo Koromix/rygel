@@ -39,8 +39,8 @@ static ImU32 GetVisColor(VisColor color, float alpha = 1.0f)
     switch (color) {
         case VisColor::Event: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.36f, 0.60f, 0.91f, alpha)); } break;
         case VisColor::Alert: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.97f, 0.36f, 0.34f, alpha)); } break;
-        case VisColor::Plot: { return ImGui::GetColorU32(ImGuiCol_PlotLines, alpha); } break;
-        case VisColor::Limit: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.9f, 0.7f, 0.03f, 0.4f * alpha)); } break;
+        case VisColor::Plot: { return ImGui::GetColorU32(ImGuiCol_Text, alpha); } break;
+        case VisColor::Limit: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.9f, 0.7f, 0.03f, 0.55f * alpha)); } break;
     }
 
     RG_UNREACHABLE();
@@ -389,9 +389,9 @@ static void DrawMeasures(double x_offset, double y_min, double y_max, double tim
             (float)(y_max - 4.0 - y_scaler * (value - min))
         };
     };
-    const auto get_color = [&](const Element *elmt) {
-        return DetectAnomaly(*elmt) ? GetVisColor(VisColor::Alert, alpha)
-                                    : GetVisColor(VisColor::Plot, alpha);
+    const auto get_color = [&](const Element *elmt, float alpha2 = 1.0f) {
+        return DetectAnomaly(*elmt) ? GetVisColor(VisColor::Alert, alpha * alpha2)
+                                    : GetVisColor(VisColor::Plot, alpha * alpha2);
     };
 
     // Draw limits
@@ -424,7 +424,7 @@ static void DrawMeasures(double x_offset, double y_min, double y_max, double tim
         if (i >= measures.len)
             return false;
         *out_point = compute_coordinates(measures[i]->time, measures[i]->u.measure.value);
-        *out_color = get_color(measures[i]);
+        *out_color = get_color(measures[i], 0.85f);
         return true;
     });
 
