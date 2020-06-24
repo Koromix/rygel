@@ -963,8 +963,8 @@ static void DrawEntities(ImRect bb, double tree_width, double time_offset,
             }
             if (i != state.highlight_idx && highlight) {
                 for (Size j = prev_lines_len; j < lines.len; j++) {
-                    lines[j].text_alpha *= 0.05f;
-                    lines[j].elements_alpha *= 0.05f;
+                    lines[j].text_alpha *= 0.3f;
+                    lines[j].elements_alpha *= 0.3f;
                 }
             }
 
