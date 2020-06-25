@@ -106,8 +106,6 @@ struct InterfaceState {
     HashMap<Span<const char>, Span<const char>> select_concepts;
     HashSet<Span<const char>> align_concepts;
     char filter_text[256] = {};
-    const char *menu_name = nullptr;
-    const char *menu_path = nullptr;
 
     bool idle = false;
 };

@@ -992,7 +992,6 @@ static void DrawEntities(ImRect bb, double tree_width, double time_offset,
     Span<const char> deploy_path = {};
     HeapArray<const LineData *> select_lines;
     bool select_enable = false;
-    bool select_leaf = false;
     {
         const Entity *ent = nullptr;
         double ent_offset_y = 0.0f;
@@ -1024,7 +1023,6 @@ static void DrawEntities(ImRect bb, double tree_width, double time_offset,
                 case LineInteraction::Select:
                 case LineInteraction::Menu: {
                     if (line.leaf) {
-                        select_leaf = true;
                         select_lines.Append(&line);
                     }
                     for (Size j = i + 1; j < lines.len && lines[j].depth > line.depth; j++) {
@@ -1073,14 +1071,6 @@ static void DrawEntities(ImRect bb, double tree_width, double time_offset,
 
         state.size_cache_valid = false;
     } else if (select_lines.len) {
-        if (select_leaf) {
-            state.menu_name = select_lines[0]->name.ptr;
-            state.menu_path = select_lines[0]->path.ptr;
-        } else {
-            state.menu_name = nullptr;
-            state.menu_path = nullptr;
-        }
-
         if (select_enable) {
             for (const LineData *line: select_lines) {
                  state.select_concepts.Set(line->title, line->path);
@@ -1496,6 +1486,21 @@ static void RemoveConceptsFromView(const HashMap<Span<const char>, Span<const ch
     }
 }
 
+static void ChangeConceptsPath(ConceptSet *concept_set,
+                               const HashMap<Span<const char>, Span<const char>> &concepts, const char *new_path)
+{
+    new_path = DuplicateString(new_path, &concept_set->str_alloc).ptr;
+
+    for (const auto &it: concepts.table) {
+        Concept *concept_info = concept_set->concepts_map.TrySetDefault(it.key.ptr).first;
+        if (!concept_info->name) {
+            concept_info->name = DuplicateString(it.key.ptr, &concept_set->str_alloc).ptr;
+        }
+
+        concept_info->path = new_path;
+    }
+}
+
 bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSet> &concept_sets,
                   const EntitySet &entity_set)
 {
@@ -1587,24 +1592,35 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
 
             if (concept_set) {
                 static char path_buf[512];
+                static bool path_enable;
                 static bool path_init;
 
-                if (ImGui::BeginMenu("Change path", state.menu_name)) {
-                    if (!path_init) {
-                        strncpy(path_buf, state.menu_path, RG_SIZE(path_buf));
-                        path_buf[RG_SIZE(path_buf) - 1] = 0;
-                        path_init = true;
+                if (!path_init) {
+                    Span<const char> path = {};
+                    int unique_paths = 0;
+                    for (const auto &it: state.select_concepts.table) {
+                        unique_paths += (it.value != path);
+                        path = it.value;
                     }
 
+                    if (unique_paths == 1) {
+                        strncpy(path_buf, path.ptr, RG_SIZE(path_buf));
+                        path_buf[RG_SIZE(path_buf) - 1] = 0;
+
+                        path_enable = true;
+                    } else {
+                        path_enable = false;
+                    }
+
+                    path_init = true;
+                }
+
+                if (ImGui::BeginMenu("Change path", path_enable)) {
                     ImGui::Text("New item:");
                     ImGui::InputText("##path", path_buf, IM_ARRAYSIZE(path_buf));
                     if (ImGui::Button("Change")) {
                         if (path_buf[0] == '/') {
-                            Concept *concept_info = concept_set->concepts_map.TrySetDefault(state.menu_name).first;
-                            if (!concept_info->name) {
-                                concept_info->name = DuplicateString(state.menu_name, &concept_set->str_alloc).ptr;
-                            }
-                            concept_info->path = DuplicateString(path_buf, &concept_set->str_alloc).ptr;
+                            ChangeConceptsPath(concept_set, state.select_concepts, path_buf);
 
                             state.size_cache_valid = false;
                             ImGui::CloseCurrentPopup();
