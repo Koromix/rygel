@@ -92,7 +92,12 @@ let thop = new function() {
         await updateSettings();
 
         // Update again, even though we probably got it right earlier... but maybe not?
-        url = route_mod.makeURL();
+        {
+            let hash = url.substr(url.indexOf('#'));
+            if (hash.startsWith('#'))
+                url = `${route_mod.makeURL()}${hash.startsWith('#') ? hash : ''}`;
+        }
+
         updateHistory(url, false);
         updateScroll(route_url, url);
         updateMenu(url);
@@ -141,12 +146,14 @@ let thop = new function() {
 
             util.assignDeep(route_mod.route, route_mod.parseURL(mod_path, params));
             util.assignDeep(route_mod.route, args);
+
+            return `${route_mod.makeURL()}${url.hash || ''}`;
         } else {
             route_mod = mod || route_mod;
             util.assignDeep(route_mod.route, args);
-        }
 
-        return route_mod.makeURL();
+            return route_mod.makeURL();
+        }
     }
 
     async function run(push_history) {
@@ -218,16 +225,29 @@ let thop = new function() {
 
     function updateScroll(prev_url, new_url) {
         // Cache current scroll state
-        let prev_target = [window.pageXOffset, window.pageYOffset];
-        if (prev_target[0] || prev_target[1]) {
-            scroll_cache.set(prev_url, prev_target);
-        } else {
-            scroll_cache.delete(prev_url);
+        if (!prev_url.includes('#')) {
+            let prev_target = [window.pageXOffset, window.pageYOffset];
+            if (prev_target[0] || prev_target[1]) {
+                scroll_cache.set(prev_url, prev_target);
+            } else {
+                scroll_cache.delete(prev_url);
+            }
         }
 
-        // Restore scroll position for new URL
-        let new_target = scroll_cache.get(new_url) || [0, 0];
-        window.scrollTo(new_target[0], new_target[1]);
+        // Set new scroll position: try URL hash first, use cache otherwise
+        let new_hash = new_url.substr(new_url.indexOf('#'));
+        if (new_hash.startsWith('#')) {
+            let el = document.querySelector(new_hash);
+
+            if (el) {
+                el.scrollIntoView();
+            } else {
+                window.scrollTo(0, 0);
+            }
+        } else {
+            let new_target = scroll_cache.get(new_url) || [0, 0];
+            window.scrollTo(new_target[0], new_target[1]);
+        }
     }
 
     function handleLogoutClick(e) {
