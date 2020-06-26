@@ -107,6 +107,27 @@ function PageBuilder(state, page) {
         return intf;
     };
 
+    this.textArea = function(key, label, options = {}) {
+        options = expandOptions(options);
+        key = decodeKey(key, options);
+
+        let value = readValue(key, options.value);
+
+        let id = makeID(key);
+        let render = intf => renderWrappedWidget(intf, html`
+            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            <textarea id=${id} class="af_input" style=${makeInputStyle(options)}
+                   rows=${options.rows || 5} cols=${options.cols || 40}
+                   placeholder=${options.placeholder || ''} ?disabled=${options.disable}
+                   @input=${e => handleTextInput(e, key)}>${value || ''}</textarea>
+        `);
+
+        let intf = addWidget('text', label, render, options);
+        fillVariableInfo(intf, key, value, value == null);
+
+        return intf;
+    };
+
     this.password = function(key, label, options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
