@@ -94,8 +94,7 @@ let thop = new function() {
         // Update again, even though we probably got it right earlier... but maybe not?
         {
             let hash = url.substr(url.indexOf('#'));
-            if (hash.startsWith('#'))
-                url = `${route_mod.makeURL()}${hash.startsWith('#') ? hash : ''}`;
+            url = `${route_mod.makeURL()}${hash.startsWith('#') ? hash : ''}`;
         }
 
         updateHistory(url, false);
