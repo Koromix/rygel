@@ -42,6 +42,8 @@ let user = new function() {
         // Options
         render('', document.querySelector('#th_options'));
 
+        document.title = 'THOP – Connexion';
+
         // View
         render(html`
             <form class="th_form" @submit=${handleLoginSubmit}>
