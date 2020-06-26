@@ -12,6 +12,7 @@ let thop = new function() {
 
     let route_mod;
     let route_url = '';
+    let prev_url;
     let scroll_cache = new LruMap(128);
     let running = false;
 
@@ -113,6 +114,8 @@ let thop = new function() {
             running = false;
         }
     };
+
+    this.goBack = function() { self.go(prev_url || '/'); };
 
     this.goFake = function(mod, args = {}, push_history = true) {
         let url = route(mod, args);
@@ -225,7 +228,8 @@ let thop = new function() {
     }
 
     function updateHistory(url, push_history) {
-        if (push_history) {
+        if (push_history && url !== route_url) {
+            prev_url = route_url;
             window.history.pushState(null, null, url);
         } else {
             window.history.replaceState(null, null, url);

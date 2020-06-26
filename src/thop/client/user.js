@@ -45,7 +45,7 @@ let user = new function() {
         // View
         render(html`
             <form class="th_form" @submit=${handleLoginSubmit}>
-                <fieldset id="usr_fieldset" style="margin: 0; padding: 0; border: 0;">
+                <fieldset id="usr_fieldset" style="margin: 0; padding: 0; border: 0;" ?disabled=${false}>
                     <label>Utilisateur : <input id="usr_username" type="text"/></label>
                     <label>Mot de passe : <input id="usr_password" type="password"/></label>
 
@@ -66,14 +66,10 @@ let user = new function() {
         let p = self.login(username_el.value, password_el.value);
 
         p.then(success => {
-            fieldset_el.disabled = false;
-
             if (success) {
-                username_el.value = '';
-                password_el.value = '';
-
-                thop.go();
+                thop.goBack();
             } else {
+                fieldset_el.disabled = false;
                 password_el.focus();
             }
         });
