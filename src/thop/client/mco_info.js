@@ -62,6 +62,7 @@ let mco_info = new function() {
                 args.ghs.duration = parseInt(params.duration, 10) || 200;
                 args.ghs.coeff = !!parseInt(params.coeff, 10) || false;
                 args.ghs.plot = !!parseInt(params.plot, 10) || false;
+                args.ghs.raw = !!parseInt(params.raw, 10) || false;
             } break;
 
             case 'tree': {
@@ -122,6 +123,7 @@ let mco_info = new function() {
                 params.duration = (args.ghs.duration !== 200) ? args.ghs.duration : null;
                 params.coeff = args.ghs.coeff ? 1 : null;
                 params.plot = args.ghs.plot ? 1 : null;
+                params.raw = args.ghs.raw ? 1 : null;
             } break;
 
             case 'tree': {
@@ -580,22 +582,37 @@ let mco_info = new function() {
         // With the new gradation stuff, most short (J or T) medical GHMs start with a 9999 GHS
         // for ambulatory settings. This is noisy. Here we artifically hide this column and add
         // "Non-ambulatory" condition to remaining columns, unless they already are special.
-        if (columns.some(col => col.special_mode === 'outpatient')) {
-            let ghm;
-            let prolonged = false;
+        if (!route.ghs.raw) {
+            let prev_ghm;
+            let not_outpatient;
+            let not_diabetes;
 
             let j = 0;
             for (let i = 0; i < columns.length; i++) {
-                prolonged &= (columns[i].ghm === ghm);
-                if (columns[i].special_mode === 'outpatient') {
-                    prolonged = true;
-                } else {
-                    columns[j] = columns[i];
-                    if (prolonged && !columns[j].special_mode)
-                        columns[j].special_mode = 'prolonged';
-                    j++;
+                if (columns[i].ghm !== prev_ghm) {
+                    not_outpatient = false;
+                    not_diabetes = false;
                 }
-                ghm = columns[i].ghm;
+                prev_ghm = columns[i].ghm;
+
+                if (columns[i].ghs === 9999) {
+                    if (columns[i].modes[0] === 'outpatient') {
+                        not_outpatient = true;
+                        continue;
+                    }
+                    if (columns[i].modes[0] === 'diabetes2' || columns[i].modes[0] === 'diabetes3') {
+                        not_diabetes = true;
+                        continue;
+                    }
+                }
+
+                columns[j] = columns[i];
+                columns[j].modes = columns[j].modes.filter(mode => !mode.startsWith('!'));
+                if (not_outpatient && !columns[j].modes.includes('intermediary'))
+                    columns[j].modes.push('!outpatient');
+                if (not_diabetes)
+                    columns[j].modes.push('!diabetes');
+                j++;
             }
             columns.length = j;
         }
@@ -864,12 +881,16 @@ let mco_info = new function() {
             conditions.push('Durée ≥ ' + ghs.minimum_duration);
         if (ghs.minimum_age)
             conditions.push('Âge ≥ ' + ghs.minimum_age);
-        switch (ghs.special_mode) {
-            case 'diabetes2': { conditions.push('Diabète < 2 nuits'); } break;
-            case 'diabetes3': { conditions.push('Diabète < 3 nuits'); } break;
-            case 'outpatient': { conditions.push('Ambulatoire'); } break;
-            case 'intermediary': { conditions.push('Intermédiaire'); } break;
-            case 'prolonged': { conditions.push('Hors ambulatoire'); } break;
+        for (mode of ghs.modes) {
+            switch (mode) {
+                case 'diabetes2': { conditions.push('Diabète < 2 nuits'); } break;
+                case 'diabetes3': { conditions.push('Diabète < 3 nuits'); } break;
+                case '!diabetes': { conditions.push('Hors diabète (FI)'); } break;
+                case 'outpatient': { conditions.push('Ambulatoire'); } break;
+                case '!outpatient': { conditions.push('Hors ambulatoire'); } break;
+                case 'intermediary': { conditions.push('Intermédiaire'); } break;
+
+            }
         }
         if (ghs.main_diagnosis)
             conditions.push('DP ' + ghs.main_diagnosis);

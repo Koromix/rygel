@@ -223,13 +223,15 @@ void ProduceMcoGhmGhs(const http_RequestInfo &request, const User *, http_IO *io
             if (ghm_to_ghs_info.minimum_age) {
                 json.Key("minimum_age"); json.Int(ghm_to_ghs_info.minimum_age);
             }
+            json.Key("modes"); json.StartArray();
             switch (ghm_to_ghs_info.special_mode) {
                 case mco_GhmToGhsInfo::SpecialMode::None: {} break;
-                case mco_GhmToGhsInfo::SpecialMode::Diabetes2: { json.Key("special_mode"); json.String("diabetes2"); } break;
-                case mco_GhmToGhsInfo::SpecialMode::Diabetes3: { json.Key("special_mode"); json.String("diabetes3"); } break;
-                case mco_GhmToGhsInfo::SpecialMode::Outpatient: { json.Key("special_mode"); json.String("outpatient"); } break;
-                case mco_GhmToGhsInfo::SpecialMode::Intermediary: { json.Key("special_mode"); json.String("intermediary"); } break;
+                case mco_GhmToGhsInfo::SpecialMode::Diabetes2: { json.String("diabetes2"); } break;
+                case mco_GhmToGhsInfo::SpecialMode::Diabetes3: { json.String("diabetes3"); } break;
+                case mco_GhmToGhsInfo::SpecialMode::Outpatient: { json.String("outpatient"); } break;
+                case mco_GhmToGhsInfo::SpecialMode::Intermediary: { json.String("intermediary"); } break;
             }
+            json.EndArray();
             if (ghm_to_ghs_info.main_diagnosis_mask.value) {
                 json.Key("main_diagnosis");
                 json.String(Fmt(buf, "D$%1.%2",
