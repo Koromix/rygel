@@ -1225,11 +1225,11 @@ let mco_info = new function() {
         for (;;) {
             let m;
             let frag;
-            if (m = str.match(/A(\-[0-9]+|\$[0-9]+\.[0-9]+)/)) {
+            if (m = str.match(/\bA(\-[0-9]+|\$[0-9]+\.[0-9]+)/)) {
                 frag = html`<a href=${self.makeURL({mode: 'procedures', procedures: {list: m[0], offset: 0}})}>${m[0]}</a>`;
-            } else if (m = str.match(/D(\-[0-9]+|\$[0-9]+\.[0-9]+)/)) {
+            } else if (m = str.match(/\bD(\-[0-9]+|\$[0-9]+\.[0-9]+)/)) {
                 frag = html`<a href=${self.makeURL({mode: 'diagnoses', diagnoses: {list: m[0], offset: 0}})}>${m[0]}</a>`;
-            } else if (m = str.match(/[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?( \[([0-9]{1,3})\])?/)) {
+            } else if (m = str.match(/\b[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?( \[([0-9]{1,3})\])?/)) {
                 let ghm_root = m[0].substr(0, 5);
                 let tooltip = findCachedLabel('mco', 'ghm_roots', ghm_root) || '';
 
@@ -1240,16 +1240,16 @@ let mco_info = new function() {
                 }
 
                 frag = html`<a class="ghm" href=${self.makeURL({mode: 'ghs', ghs: {ghm_root: ghm_root}})} title=${tooltip}>${m[0]}</a>`;
-            } else if (m = str.match(/[A-Z]{4}[0-9+]{3}/)) {
+            } else if (m = str.match(/\b[A-Z]{4}[0-9+]{3}/)) {
                 let tooltip = findCachedLabel('ccam', 'procedures', m[0]);
                 frag = tooltip ? html`<abbr title=${tooltip}>${m[0]}</abbr>` : m[0];
-            } else if (m = str.match(/[A-Z][0-9+]{2}(\.?[0-9+]{1,3})?/)) {
+            } else if (m = str.match(/\b[A-Z][0-9+]{2}(\.?[0-9+]{1,3})?/)) {
                 let code = m[0].replace('.', '');
                 let code_with_dot = code.length >= 4 ? `${code.substr(0, 3)}.${code.substr(3)}` : code;
 
                 let tooltip = findCachedLabel('cim10', 'diagnoses', code);
                 frag = tooltip ? html`<abbr title=${tooltip}>${code_with_dot}</abbr>` : code_with_dot;
-            } else if (m = str.match(/[Nn]oeud ([0-9]+)/)) {
+            } else if (m = str.match(/\b[Nn]oeud ([0-9]+)/)) {
                 frag = html`<a href=${self.makeURL({mode: 'tree'}) + `#n${m[1]}`}>${m[0]}</a>`;
             } else {
                 break;
