@@ -664,7 +664,7 @@ let mco_info = new function() {
                     <tr><th>Niveau</th>${util.mapRLE(columns, col => col.ghm.substr(5, 1),
                         (mode, _, colspan) => html`<td class="desc" colspan=${colspan}>Niveau ${mode}</td>`)}</tr>
                     <tr><th>GHS</th>${columns.map((col, idx) =>
-                        html`<td class="desc">${col.ghs}${conditions[idx].length ? '*' : ''}</td>`)}</tr>
+                        html`<td class="desc">${col.ghs}</td>`)}</tr>
                     <tr><th>Conditions</th>${columns.map((col, idx) =>
                         html`<td class="conditions">${conditions[idx].map(cond => html`${self.addSpecLinks(cond)}<br/>`)}</td>`)}</tr>
                     <tr><th>Borne basse</th>${util.mapRLE(columns, col => col.exb_treshold,
