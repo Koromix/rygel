@@ -5,8 +5,8 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 # Start the script from a command line this way:
-# Rscript flatten_ccam.csv [in.xls] [out.csv]
-# Example: Rscript flatten_ccam.csv CCAM_V57.xls ccam57_plate.csv
+# Rscript flatten_ccam.csv [in.xls] -D [out.csv]
+# Example: Rscript flatten_ccam.csv CCAM_V57.xls -D ccam57_plate.csv
 
 # Make sure we run in UTF-8 encoding (mostly for Windows)
 if (!exists('.script_utf8')) {
@@ -18,14 +18,31 @@ if (!exists('.script_utf8')) {
 }
 
 library(zoo, warn.conflicts = FALSE)
-library(data.table, warn.conflicts = FALSE)
-library(readxl, warn.conflicts = FALSE)
-library(optparse, warn.conflicts = FALSE)
-library(stringr, warn.conflicts = FALSE)
+library(data.table)
+library(readxl)
+library(optparse)
+library(stringr)
+library(jsonlite)
+library(enc)
 
-args <- parse_args(OptionParser(), positional_arguments = 2)
-args_src <- args$args[1]
-args_dest <- args$args[2]
+# ----- Arguments -----
+
+local({
+    args <- parse_args(
+        OptionParser(option_list = list(
+            make_option(c('-D', '--destination'), type = 'character', help = 'destination file'),
+            make_option(c('-f', '--format'), type = 'character', help = 'export format (CSV, THOP)', default = 'CSV')
+        )),
+        positional_arguments = 1
+    )
+
+    if (is.null(args$options$destination))
+        stop('Missing destination directory');
+
+    args_src <<- args$args[1]
+    args_dest <<- args$options$destination
+    args_format <<- args$options$format
+})
 
 # ----- Lecture du fichier brut -----
 
@@ -117,4 +134,16 @@ ccam[gestcomp, gestcomp := i.actes, on = 'code']
 
 # ----- Export -----
 
-write.csv2(ccam, file = args_dest, row.names = FALSE, na = '')
+if (args_format == 'CSV') {
+    write.csv2(ccam, file = args_dest, row.names = FALSE, na = '')
+} else if (args_format == 'THOP') {
+    json <- list(
+        procedures = list(
+            title = unbox('CCAM'),
+            definitions = data.frame(code = ccam$code, label = substring(ccam$desc, 11))
+        )
+    )
+    write_lines_enc(toJSON(json, pretty = 4), path = args_dest)
+} else {
+    stop(str_interp('Unexpected format ${args_format}'))
+}

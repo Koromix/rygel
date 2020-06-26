@@ -142,27 +142,10 @@ load_mco <- function(root, err_filename) {
 }
 
 load_ccam <- function(filename) {
-    ccam <- fread(filename, encoding = 'Latin-1')
-
-    # hiera <- fread(str_interp('${root}/ccam_hiera.csv'), encoding = 'Latin-1')
-
-    # ccam$hiera <- str_pad(as.character(ccam$hiera), 8, 'left', 0)
-    # hiera$hiera <- str_pad(as.character(hiera$hiera), 8, 'left', 0)
-
-    # setorder(hiera, hiera)
-    # for (i in 4:1) {
-    #     hiera$.hiera <- str_pad(substr(hiera$hiera, 1, i * 2), 8, 'right', '0')
-    #     hiera[hiera, lib := ifelse(hiera != i.hiera, paste0(i.lib, '::', lib), lib), on = c('.hiera'='hiera')]
-    # }
-    # hiera$.hiera <- NULL
-
-    # ccam[hiera, `:=`(
-    #     lib = paste0('::', i.lib, '::', lib),
-    #     liblong = paste0('::', i.lib, '::', liblong)
-    # ), on = 'hiera']
+    ccam <- fread(filename, encoding = 'UTF-8')
 
     setorder(ccam, -last_version)
-    ccam <- unique(ccam[, list(code = code, label = liblong)])
+    ccam <- unique(ccam[, list(code = code, label = label)])
 
     return (list(
         procedures = list(
