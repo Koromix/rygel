@@ -8,9 +8,9 @@
     width: 100%;
     border: 1px solid #dfdfdf;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 .pr_grid th, .pr_grid td {
-    min-width: 66px;
     height: 1em;
     padding: 3px;
     overflow: hidden;
@@ -24,7 +24,7 @@
     font-style: italic;
     font-weight: normal;
 }
-.pr_grid th:first-child { width: 90px; }
+.pr_grid col:first-child { width: 90px; }
 .pr_grid .ghm_root { display: none; }
 .pr_grid td {
     position: relative;

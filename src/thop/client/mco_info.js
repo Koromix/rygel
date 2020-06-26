@@ -653,7 +653,9 @@ let mco_info = new function() {
         let conditions = columns.map(col => buildConditionsArray(col));
 
         return html`
-            <table class="pr_grid">
+            <table class="pr_grid" style=${`min-width: calc(${columns.length} * 6em);`}>
+                <colgroup>${columns.map(col => html`<col/>`)}</colgroup>
+
                 <thead>
                     <tr><th colspan=${columns.length} class="ghm_root">${ghm_root}</th></tr>
 
