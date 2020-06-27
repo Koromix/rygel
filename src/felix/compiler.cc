@@ -106,9 +106,9 @@ public:
         Fmt(&buf, warnings ? " -Wall" : " -Wno-everything");
 
         // Platform flags
-        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64");
 #if defined(_WIN32)
-        Fmt(&buf, " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE"
+        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
+                  " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE"
                   " -DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE"
                   " -D_MT -Xclang --dependent-lib=libcmt -Xclang --dependent-lib=oldnames"
                   " -Wno-unknown-warning-option -Wno-unknown-pragmas -Wno-deprecated-declarations");
@@ -119,7 +119,8 @@ public:
 #elif defined(__APPLE__)
         Fmt(&buf, " -pthread -fPIC");
 #else
-        Fmt(&buf, " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4");
+        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
+                  " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4");
         if (compile_mode == CompileMode::Fast || compile_mode == CompileMode::Release) {
             Fmt(&buf, " -D_FORTIFY_SOURCE=2");
         }
@@ -263,14 +264,15 @@ public:
         }
 
         // Platform flags
-        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64");
 #if defined(_WIN32)
-        Fmt(&buf, " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE"
+        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
+                  " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE"
                   " -D__USE_MINGW_ANSI_STDIO=1 -DNOMINMAX");
 #elif defined(__APPLE__)
         Fmt(&buf, " -pthread -fPIC");
 #else
-        Fmt(&buf, " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4");
+        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
+                  " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4");
         if (compile_mode == CompileMode::Fast || compile_mode == CompileMode::Release) {
             Fmt(&buf, " -D_FORTIFY_SOURCE=2");
         }
