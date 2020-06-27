@@ -21,6 +21,64 @@ library(roxygen2)
 library(parallel)
 library(optparse)
 
+bundle_drdR <- function(project_dir, version, build_dir) {
+    list_files <- function(dir) {
+        dir <- str_interp('${project_dir}/${dir}')
+        files <- substring(list.files(dir, full.names = TRUE), nchar(project_dir) + 2)
+
+        return (files)
+    }
+    copy_files <- function(src_files, dest_dir, recursive = FALSE) {
+        src_files <- sapply(src_files, function(path) str_interp('${project_dir}/${path}'))
+        dest_dir <- str_interp('${build_dir}/${dest_dir}/')
+
+        dir.create(dest_dir, recursive = TRUE, showWarnings = FALSE)
+        file.copy(src_files, dest_dir, recursive = recursive, overwrite = TRUE)
+    }
+
+    local({
+        for (name in c('Makevars', 'Makevars.win', 'Makevars.inc')) {
+            copy_files(str_interp('src/drd/drdR/src/${name}'), 'src')
+
+            filename <- str_interp('${build_dir}/src/${name}')
+            lines <- readLines(filename)
+
+            lines <- sub('.o: ../', '.o: drd/drdR/', lines)
+            lines <- lines[!grepl('../R', lines, fixed = TRUE)]
+
+            writeLines(lines, filename)
+        }
+    })
+
+    copy_files(c('src/drd/drdR/DESCRIPTION',
+                 'src/drd/drdR/NAMESPACE',
+                 'src/drd/drdR/drdR.Rproj'), '.')
+    local({
+        filename <- str_interp('${build_dir}/DESCRIPTION')
+        lines <- readLines(filename)
+
+        lines <- ifelse(
+            grepl('Version:', lines, fixed = TRUE),
+            str_interp('Version: ${version}'),
+            lines
+        )
+
+        writeLines(lines, filename)
+    })
+
+    copy_files('src/drd/drdR/src/dummy.cc', 'src')
+    copy_files('src/drd/drdR/drdR_mco.cc', 'src/drd/drdR')
+    copy_files(c('src/drd/drdR/drdR.R',
+                 'src/drd/drdR/drdR_mco.R'), 'R')
+    copy_files(list_files('src/drd/libdrd'), 'src/drd/libdrd')
+    copy_files(list_files('src/core/libcc'), 'src/core/libcc')
+    copy_files(c('src/core/libwrap/Rcc.cc',
+                 'src/core/libwrap/Rcc.hh'), 'src/core/libwrap')
+    copy_files(list_files('vendor/miniz'), 'vendor/miniz')
+
+    return (build_dir)
+}
+
 bundle_heimdallR <- function(project_dir, version, build_dir) {
     list_files <- function(dir) {
         dir <- str_interp('${project_dir}/${dir}')
@@ -118,13 +176,22 @@ local({
     opt_parser <- OptionParser(option_list = list(
         make_option(c('-D', '--destination'), type = 'character', help = 'destination directory')
     ))
-    args <- parse_args(opt_parser, positional_arguments = 0)
+    args <- parse_args(opt_parser, positional_arguments = TRUE)
 
     src_dir <<- rprojroot::find_root('FelixBuild.ini')
     if (!is.null(args$options$destination)) {
         repo_dir <<- args$options$destination
     } else {
         repo_dir <<- str_interp('${src_dir}/bin/R')
+    }
+
+    if (!length(args$args)) {
+        objects <- ls(env = .GlobalEnv)
+        print(objects)
+        objects <- objects[grepl('^bundle_.+', objects)]
+        packages <<- sub('^bundle_', '', objects)
+    } else {
+        packages <<- args$args
     }
 })
 
@@ -154,7 +221,11 @@ local({
 version <- trimws(system(str_interp('git -C "${src_dir}" log -n1 --pretty=format:%ad --date=format:%Y.%m.%d'),
                          show.output.on.console = FALSE, intern = TRUE))
 
-# Bundle, build and register the package
-pkg_dir <- bundle_heimdallR(src_dir, version, str_interp('${repo_dir}/tmp/heimdallR'))
-run_roxygen2(pkg_dir)
-build_package(pkg_dir, repo_dir)
+# Bundle, build and register packages
+for (pkg in packages) {
+    bundle <- get(paste0('bundle_', pkg))
+
+    pkg_dir <- bundle(src_dir, version, str_interp('${repo_dir}/tmp/${pkg}'))
+    run_roxygen2(pkg_dir)
+    build_package(pkg_dir, repo_dir)
+}
