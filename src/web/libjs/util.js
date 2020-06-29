@@ -66,11 +66,11 @@ let util = new function() {
         return arr2;
     };
 
-    this.mapArray = function(arr, key_func) {
+    this.mapArray = function(arr, key_func, value_func = it => it) {
         let obj = {};
         for (let it of arr) {
             let key = key_func(it);
-            obj[key] = it;
+            obj[key] = value_func(it);
         }
 
         return obj;
