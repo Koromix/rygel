@@ -396,8 +396,13 @@ void HandleFileDelete(const http_RequestInfo &request, http_IO *io)
     std::lock_guard<std::shared_mutex> lock_files(files_mutex);
 
     FileEntry *file = files_map.FindValue(request.url, nullptr);
+    if (!file) {
+        io->AttachError(404);
+        return;
+    }
 
-    if (file) {
+    // Update our index
+    {
         file->LockExclusive();
         RG_DEFER { file->UnlockExclusive(); };
 
@@ -434,9 +439,11 @@ void HandleFileDelete(const http_RequestInfo &request, http_IO *io)
                 }
                 files_map.Set(file);
             }
-            files.RemoveFirst(1);
         }
     }
+
+    // Final blow! Needs to be done without file lock, obviously.
+    files.RemoveFirst(1);
 
     io->AttachText(200, "Done!");
 }
