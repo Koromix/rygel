@@ -530,7 +530,7 @@ let goupile = new function() {
         goupile.popup(e, makeLoginForm);
     }
 
-    function makeLoginForm(page) {
+    function makeLoginForm(page, close = null) {
         let username = page.text('*username', 'Nom d\'utilisateur');
         let password = page.password('*password', 'Mot de passe');
 
@@ -547,8 +547,8 @@ let goupile = new function() {
                 let response = await net.fetch(`${env.base_url}api/login.json`, {method: 'POST', body: body});
 
                 if (response.ok) {
-                    if (page.close)
-                        page.close();
+                    if (close)
+                        close();
 
                     // Emergency unlocking
                     deleteLock();
@@ -630,11 +630,11 @@ let goupile = new function() {
     }
 
     function showSyncDialog(e) {
-        goupile.popup(e, page => {
+        goupile.popup(e, (page, close) => {
             page.output('Désirez-vous synchroniser les données ?');
 
             page.submitHandler = () => {
-                page.close();
+                close();
                 syncRecords();
             };
             page.buttons(page.buttons.std.ok_cancel('Synchroniser'));
@@ -844,7 +844,7 @@ let goupile = new function() {
                 }
             });
         } else {
-            goupile.popup(e, page => {
+            goupile.popup(e, (page, close) => {
                 page.output('Entrez le code de verrouillage');
                 let pin = page.pin('*code');
 
@@ -852,7 +852,7 @@ let goupile = new function() {
                     pin.error('Le code doit comporter au moins 4 chiffres', true);
 
                 page.submitHandler = () => {
-                    page.close();
+                    close();
 
                     localStorage.setItem('lock_url', route_url);
                     localStorage.setItem('lock_pin', pin.value);
@@ -883,14 +883,12 @@ let goupile = new function() {
 
         popup_builder = new PageBuilder(popup_state, page);
         popup_builder.changeHandler = () => openPopup(e, func);
-        popup_builder.close = closePopup;
-
         popup_builder.pushOptions({
             missingMode: 'disable',
             wide: true
         });
 
-        func(popup_builder);
+        func(popup_builder, closePopup);
         render(html`
             <form @submit=${e => e.preventDefault()}>
                 ${page.render()}

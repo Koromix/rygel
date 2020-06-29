@@ -288,14 +288,14 @@ function PageBuilder(state, page) {
     }
 
     function handleSliderClick(e, key, value, min, max) {
-        goupile.popup(e, page => {
+        goupile.popup(e, (page, close) => {
             let number = page.number('number', 'Valeur :', {min: min, max: max, value: value});
 
             page.submitHandler = () => {
                 updateValue(key, number.value);
 
                 self.restart();
-                page.close();
+                close();
             };
             page.buttons(page.buttons.std.ok_cancel('Modifier'));
         });

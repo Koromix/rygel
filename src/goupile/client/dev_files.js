@@ -234,7 +234,7 @@ let dev_files = new function() {
     }
 
     function showCreateDialog(e, path, blob) {
-        goupile.popup(e, page => {
+        goupile.popup(e, (page, close) => {
             let blob = page.file('file', 'Fichier :', {mandatory: true});
 
             let default_path = blob.value ? `/files/${blob.value.name}` : null;
@@ -255,7 +255,7 @@ let dev_files = new function() {
             }
 
             page.submitHandler = async () => {
-                page.close();
+                close();
 
                 let entry = new log.Entry;
 
@@ -276,11 +276,11 @@ let dev_files = new function() {
     }
 
     function showSyncDialog(e) {
-        goupile.popup(e, page => {
+        goupile.popup(e, (page, close) => {
             page.output('Voulez-vous vraiment synchroniser les fichiers ?');
 
             page.submitHandler = async () => {
-                page.close();
+                close();
 
                 await syncFiles();
                 await goupile.initApplication();
@@ -290,11 +290,11 @@ let dev_files = new function() {
     }
 
     function showDeleteDialog(e, path) {
-        goupile.popup(e, page => {
+        goupile.popup(e, (page, close) => {
             page.output(`Voulez-vous vraiment supprimer '${path}' ?`);
 
             page.submitHandler = async () => {
-                page.close();
+                close();
 
                 await virt_fs.delete(path);
                 syncBuffer(path, null);
