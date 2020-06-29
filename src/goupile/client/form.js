@@ -531,7 +531,7 @@ let form_executor = new function() {
             let first_set = new Set;
             let sets_map = {};
             for (let variable of variables) {
-                if (variable.page === page.key) {
+                if (variable.frag === page.key) {
                     if (variable.before == null) {
                         first_set.add(variable.key);
                     } else {
@@ -560,7 +560,7 @@ let form_executor = new function() {
 
                         if (!set_ptr.has(variable.after)) {
                             let col = {
-                                page: variable.page,
+                                page: variable.frag,
                                 key: key,
                                 type: variable.type
                             };
