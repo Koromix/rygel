@@ -1,4 +1,4 @@
-data.makeHeader("Suivi d'échelles", page)
+shared.makeHeader("Suivi d'échelles", page)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
 
 page.pushOptions({compact: true})
@@ -15,8 +15,8 @@ let id = form.find("id");
     };
     tsel.setPrefix('Échelles : ');
 
-    for (let i = 0; i < data.echelles.length; i++) {
-        let echelle = data.echelles[i];
+    for (let i = 0; i < shared.echelles.length; i++) {
+        let echelle = shared.echelles[i];
         tsel.addOption([echelle.category, echelle.name], echelle.form,
                        {selected: !scratch.echelles || scratch.echelles.has(echelle.form)});
     }
@@ -29,8 +29,8 @@ let sub = page.boolean('sub', 'Afficher les sous-scores ?', {untoggle: false, va
 
 // Graphique et tableaux
 if (id.value) {
-    let forms = new Set(scratch.echelles || data.echelles.map(echelle => echelle.form));
-    let echelles = data.echelles.filter(echelle => forms.delete(echelle.form));
+    let forms = new Set(scratch.echelles || shared.echelles.map(echelle => echelle.form));
+    let echelles = shared.echelles.filter(echelle => forms.delete(echelle.form));
 
     let p = Promise.all([
         window.Chart || net.loadScript(`${env.base_url}files/resources/chart.bundle.min.js`),
@@ -175,7 +175,7 @@ function updateTables(echelles, tables) {
 }
 
 function showDeleteDialog(e, form, id) {
-    ui.popup(e, popup => {
+    goupile.popup(e, popup => {
         popup.output('Voulez-vous vraiment supprimer cet enregistrement ?');
 
         popup.submitHandler = async () => {

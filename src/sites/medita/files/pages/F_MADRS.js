@@ -1,5 +1,5 @@
-if (data.makeHeader)
-    data.makeHeader("Evalue la gravité des symptômes de dépression", page)
+if (shared.makeHeader)
+    shared.makeHeader("Evalue la gravité des symptômes de dépression", page)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
                                        hidden: goupile.isLocked()}).value
 
@@ -138,5 +138,5 @@ let score = form.value("ideeDeSuicide") +
             form.value("tristesseApparente")
 form.calc("score", "Score total", score, {hidden: goupile.isLocked()})
 
-if (data.makeHeader)
-    data.makeFormFooter(nav, page)
+if (shared.makeHeader)
+    shared.makeFormFooter(nav, page)

@@ -1,5 +1,5 @@
-if (data.makeHeader)
-    data.makeHeader("Inventaire de Beck pour l'anxiété", page)
+if (shared.makeHeader)
+    shared.makeHeader("Inventaire de Beck pour l'anxiété", page)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
                                        hidden: goupile.isLocked()}).value
 
@@ -68,5 +68,5 @@ let score = form.value("a") +
 form.calc("score", "Score total", score, {hidden: goupile.isLocked()})
 
 
-if (data.makeHeader)
-    data.makeFormFooter(nav, page)
+if (shared.makeHeader)
+    shared.makeFormFooter(nav, page)

@@ -1,5 +1,5 @@
-if (data.makeHeader)
-    data.makeHeader("échelle brève d'évaluation du fonctionnement du patient (FAST)", page)
+if (shared.makeHeader)
+    shared.makeHeader("échelle brève d'évaluation du fonctionnement du patient (FAST)", page)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
                                        hidden: goupile.isLocked()}).value
 
@@ -80,5 +80,5 @@ let score = form.value("Q1") +
             form.value("Q24")
 form.calc("score", "Score total", score, {hidden: goupile.isLocked()})
 
-if (data.makeHeader)
-    data.makeFormFooter(nav, page)
+if (shared.makeHeader)
+    shared.makeFormFooter(nav, page)

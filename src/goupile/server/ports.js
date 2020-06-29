@@ -29,7 +29,7 @@ var server = new function() {
 
         // Execute user script
         // XXX: We should fail when data types don't match (string given to number widget)
-        let func = Function('data', 'route', 'go', 'form', 'page', 'scratch', code);
+        let func = Function('shared', 'route', 'go', 'form', 'page', 'scratch', code);
         func({}, {}, () => {}, page_builder, page_builder, {});
 
         let values2 = filterValues(values, page.variables);

@@ -1,5 +1,5 @@
-if (data.makeHeader)
-    data.makeHeader("Echelle de Calgary CDSS", page)
+if (shared.makeHeader)
+    shared.makeHeader("Echelle de Calgary CDSS", page)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
                                        hidden: goupile.isLocked()}).value
 
@@ -105,5 +105,5 @@ let score = form.value("depression") +
             form.value("depressionobservee")
 form.calc("score", "Score total =", score, {hidden: goupile.isLocked()})
 
-if (data.makeHeader)
-    data.makeFormFooter(nav, page)
+if (shared.makeHeader)
+    shared.makeFormFooter(nav, page)

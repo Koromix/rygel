@@ -25,7 +25,7 @@ function Application() {
     this.paths_map = {};
 
     // Used for user globals
-    this.data = {};
+    this.shared = {};
     this.route = {};
 }
 

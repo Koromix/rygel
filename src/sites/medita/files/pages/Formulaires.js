@@ -1,10 +1,10 @@
-data.makeHeader("Formulaires", page)
+shared.makeHeader("Formulaires", page)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
 
-util.mapRLE(data.echelles, echelle => echelle.category, (category, offset, len) => {
+util.mapRLE(shared.echelles, echelle => echelle.category, (category, offset, len) => {
     page.section(category, () => {
         form.buttons(util.mapRange(offset, offset + len, idx => {
-            let echelle = data.echelles[idx];
+            let echelle = shared.echelles[idx];
             return [echelle.name, () => go(echelle.form)]
         }))
     })

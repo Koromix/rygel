@@ -1,5 +1,5 @@
-if (data.makeHeader)
-    data.makeHeader("Echelle abrégée d'évaluation psychiatrique (BPRS)", page)
+if (shared.makeHeader)
+    shared.makeHeader("Echelle abrégée d'évaluation psychiatrique (BPRS)", page)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
 
 form.pushOptions({mandatory: true, missingMode: 'disable'})
@@ -111,5 +111,5 @@ let score = form.value("Q1") +
 
 form.calc("score", "Score total", score);
 
-if (data.makeHeader)
-    data.makeFormFooter(nav, page)
+if (shared.makeHeader)
+    shared.makeFormFooter(nav, page)

@@ -141,8 +141,8 @@ let goupile = new function() {
                 if (code == null)
                     code = await readCode('/files/main.js');
 
-                let func = Function('util', 'app', 'data', 'go', 'route', code);
-                func(util, app_builder, new_app.data, nav.go, new_app.route);
+                let func = Function('util', 'app', 'shared', 'go', 'route', code);
+                func(util, app_builder, new_app.shared, nav.go, new_app.route);
 
                 let known_paths = new Set(new_app.assets.map(asset => asset.path));
                 known_paths.add('/files/main.js');

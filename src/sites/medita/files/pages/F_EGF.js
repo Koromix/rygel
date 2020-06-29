@@ -1,5 +1,5 @@
-if (data.makeHeader)
-    data.makeHeader("ECHELLE D'ÉVALUATION GLOBALE DU FONCTIONNEMENT (EGF (GAF))", page)
+if (shared.makeHeader)
+    shared.makeHeader("ECHELLE D'ÉVALUATION GLOBALE DU FONCTIONNEMENT (EGF (GAF))", page)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
                                        hidden: goupile.isLocked()}).value
 
@@ -57,5 +57,5 @@ form.section("0", () => {
 
 form.slider("score", "Entrez votre score ici :", {min: 0, max: 100, wide: true});
 
-if (data.makeHeader)
-    data.makeFormFooter(nav, page)
+if (shared.makeHeader)
+    shared.makeFormFooter(nav, page)

@@ -1,5 +1,5 @@
-if (data.makeHeader)
-    data.makeHeader("Catatonie", page)
+if (shared.makeHeader)
+    shared.makeHeader("Catatonie", page)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
                                        hidden: goupile.isLocked()}).value
 
@@ -68,5 +68,5 @@ form.output(html`
     <p>En cas de syndrome catatonique : prendre les constantes du patient (tableau ci-dessous) et passer à l'évaluation complète du syndrome catatonique avec l'échelle de Bush Francis.</p>
 `)
 
-if (data.makeHeader)
-    data.makeFormFooter(nav, page)
+if (shared.makeHeader)
+    shared.makeFormFooter(nav, page)

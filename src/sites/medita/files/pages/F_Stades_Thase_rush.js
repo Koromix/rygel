@@ -1,5 +1,5 @@
-if (data.makeHeader)
-    data.makeHeader("Niveau de résistance aux ATD (Thase & Rush)", page)
+if (shared.makeHeader)
+    shared.makeHeader("Niveau de résistance aux ATD (Thase & Rush)", page)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
 
 form.pushOptions({mandatory: true, missingMode: 'disable'})

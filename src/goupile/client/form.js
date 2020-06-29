@@ -64,7 +64,7 @@ let form_executor = new function() {
     };
 
     this.runPage = function(code, panel_el) {
-        let func = Function('util', 'data', 'go', 'form', 'page', 'route', 'scratch', code);
+        let func = Function('util', 'shared', 'go', 'form', 'page', 'route', 'scratch', code);
 
         if (!select_many || select_columns.size) {
             render(html`
@@ -111,7 +111,7 @@ let form_executor = new function() {
 
         // Build it!
         builder.pushOptions({compact: true});
-        func(util, app.data, nav.go, builder, builder, {}, state.scratch);
+        func(util, app.shared, nav.go, builder, builder, {}, state.scratch);
 
         render(html`
             <div class="af_actions">
@@ -146,7 +146,7 @@ let form_executor = new function() {
 
         // Build it!
         builder.errorList();
-        func(util, app.data, nav.go, builder, builder, app.route, state.scratch);
+        func(util, app.shared, nav.go, builder, builder, app.route, state.scratch);
         builder.errorList();
 
         let enable_save = !builder.hasErrors() && state.changed;

@@ -1,5 +1,5 @@
-if (data.makeHeader)
-    data.makeHeader("CTQ", page)
+if (shared.makeHeader)
+    shared.makeHeader("CTQ", page)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
                                        hidden: goupile.isLocked()}).value
 
@@ -55,5 +55,5 @@ let score = form.value("physicalAbuse") +
             form.value("emotionalAbuse")
 form.calc("score", "Score total", score, {hidden: goupile.isLocked()});
 
-if (data.makeHeader)
-    data.makeFormFooter(nav, page)
+if (shared.makeHeader)
+    shared.makeFormFooter(nav, page)

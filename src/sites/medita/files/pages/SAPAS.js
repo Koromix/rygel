@@ -1,5 +1,5 @@
-if (data.makeHeader)
-    data.makeHeader("Echelle SAPAS (Standardised Assessment of Personality – Abbreviated Scale)", page)
+if (shared.makeHeader)
+    shared.makeHeader("Echelle SAPAS (Standardised Assessment of Personality – Abbreviated Scale)", page)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
                                        hidden: goupile.isLocked()}).value
 
@@ -29,5 +29,5 @@ let score = form.value("a") +
             form.value("h")
 form.calc("score", "Score total", score, {hidden: goupile.isLocked()})
 
-if (data.makeHeader)
-    data.makeFormFooter(nav, page)
+if (shared.makeHeader)
+    shared.makeFormFooter(nav, page)

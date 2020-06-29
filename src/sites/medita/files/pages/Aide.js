@@ -1,4 +1,4 @@
-data.makeHeader("Aide", page)
+shared.makeHeader("Aide", page)
 
 page.output(`L'aide n'est pas encore disponible, désolé !`)
 

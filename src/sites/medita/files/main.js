@@ -1,6 +1,6 @@
 // Echelles
 
-data.echelles = [
+shared.echelles = [
 
     {category: "Général", name: "Observation", form: "F_OBSERVATION", keys: ["score"]},
 
@@ -65,7 +65,7 @@ app.form("Suivi", null, {actions: false})
 {
     let handled_set = new Set;
 
-    for (let echelle of data.echelles) {
+    for (let echelle of shared.echelles) {
         if (handled_set.has(echelle.form))
             continue;
 
@@ -76,14 +76,14 @@ app.form("Suivi", null, {actions: false})
 
 // Templates
 
-data.makeHeader = function(title, page) {
+shared.makeHeader = function(title, page) {
     page.output(html`
         <a href=${env.base_url}><img src="${env.base_url}favicon.png" height="48" style="float: right;"></a>
         <h1>${title}</h1><br/>
     `)
 }
 
-data.makeFormFooter = function(nav, page) {
+shared.makeFormFooter = function(nav, page) {
     if (!goupile.isLocked()) {
         page.output(html`
             <br/><br/>
