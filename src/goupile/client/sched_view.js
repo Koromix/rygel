@@ -352,7 +352,7 @@ function ScheduleView(resources_map, meetings_map) {
     }
 
     function showCreateMeetingDialog(e, slot_ref) {
-        ui.popup(e, form => {
+        goupile.popup(e, form => {
             let name = form.text('name', 'Nom :', {mandatory: true});
 
             form.submitHandler = () => {
@@ -364,7 +364,7 @@ function ScheduleView(resources_map, meetings_map) {
     }
 
     function showDeleteMeetingDialog(e, slot_ref) {
-        ui.popup(e, form => {
+        goupile.popup(e, form => {
             form.output('Voulez-vous vraiment supprimer ce rendez-vous ?');
 
             form.submitHandler = () => {
@@ -448,7 +448,7 @@ function ScheduleView(resources_map, meetings_map) {
     }
 
     function showCreateResourceDialog(e, day) {
-        ui.popup(e, form => {
+        goupile.popup(e, form => {
             let time = form.text('time', 'Horaire :', {mandatory: true});
 
             // Check value
@@ -465,7 +465,7 @@ function ScheduleView(resources_map, meetings_map) {
     }
 
     function showDeleteResourceDialog(e, day, res_idx) {
-        ui.popup(e, form => {
+        goupile.popup(e, form => {
             form.output('Voulez-vous vraiment supprimer ces créneaux ?');
 
             form.submitHandler = () => {
@@ -477,7 +477,7 @@ function ScheduleView(resources_map, meetings_map) {
     }
 
     function showCloseDayDialog(e, day) {
-        ui.popup(e, form => {
+        goupile.popup(e, form => {
             form.output('Voulez-vous vraiment fermer cette journée ?',
                         {help: 'Ceci supprime tous les créneaux'});
 

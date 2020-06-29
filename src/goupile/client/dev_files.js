@@ -234,7 +234,7 @@ let dev_files = new function() {
     }
 
     function showCreateDialog(e, path, blob) {
-        ui.popup(e, page => {
+        goupile.popup(e, page => {
             let blob = page.file('file', 'Fichier :', {mandatory: true});
 
             let default_path = blob.value ? `/files/${blob.value.name}` : null;
@@ -276,7 +276,7 @@ let dev_files = new function() {
     }
 
     function showSyncDialog(e) {
-        ui.popup(e, page => {
+        goupile.popup(e, page => {
             page.output('Voulez-vous vraiment synchroniser les fichiers ?');
 
             page.submitHandler = async () => {
@@ -290,7 +290,7 @@ let dev_files = new function() {
     }
 
     function showDeleteDialog(e, path) {
-        ui.popup(e, page => {
+        goupile.popup(e, page => {
             page.output(`Voulez-vous vraiment supprimer '${path}' ?`);
 
             page.submitHandler = async () => {

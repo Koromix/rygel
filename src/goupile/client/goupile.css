@@ -235,7 +235,7 @@ button:not(:disabled) { cursor: pointer; }
     z-index: 9999;
 }
 
-/* -------------------- Login -------------------- */
+/* -------------------- Misc -------------------- */
 
 #gp_login {
     width: 300px;
@@ -244,7 +244,17 @@ button:not(:disabled) { cursor: pointer; }
     background: #efefef;
 }
 
-/* -------------------- Utility -------------------- */
+#gp_popup {
+    display: none;
+    position: fixed;
+    box-sizing: border-box;
+    padding: 6px;
+    border: 1px solid #dfdfdf;
+    background: #efefef;
+    box-shadow: 2px 2px rgba(136, 136, 136, 0.12);
+    z-index: 999999;
+}
+#gp_popup.active { display: block; }
 
 .gp_wip {
     padding: 5px;
