@@ -32,39 +32,27 @@ struct FileEntry {
     mutable std::mutex mutex;
     mutable std::condition_variable cv;
     mutable int readers = 0;
-    mutable bool exclusive = false;
 
-    void Lock() const
+    void LockRead() const
     {
-        std::unique_lock<std::mutex> lock(mutex);
-        while (exclusive) {
-            cv.wait(lock);
-        }
+        std::lock_guard<std::mutex> lock(mutex);
         readers++;
     }
 
-    void Unlock() const
+    void UnlockRead() const
     {
         std::lock_guard<std::mutex> lock(mutex);
-        if (!--readers && !exclusive) {
+        if (!--readers) {
             cv.notify_one();
         }
     }
 
-    void LockExclusive()
+    void WaitForReaders()
     {
         std::unique_lock<std::mutex> lock(mutex);
-        while (readers || exclusive) {
+        while (readers) {
             cv.wait(lock);
         }
-        exclusive = true;
-    }
-
-    void UnlockExclusive()
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        exclusive = false;
-        cv.notify_all();
     }
 
     RG_HASHTABLE_HANDLER(FileEntry, url);
@@ -212,9 +200,9 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
         if (!file)
             return false;
 
-        file->Lock();
+        file->LockRead();
     }
-    io->AddFinalizer([=]() { file->Unlock(); });
+    io->AddFinalizer([=]() { file->UnlockRead(); });
 
     if (etag && TestStr(etag, file->sha256)) {
         MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
@@ -341,13 +329,12 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
 
         // Nothing has failed so far, the upload is complete. Check and update metadata
         // and if things go well, we'll be able to overwrite and delete the old file.
-        std::unique_lock<std::shared_mutex> lock_files(files_mutex);
+        std::lock_guard<std::shared_mutex> lock_files(files_mutex);
 
         FileEntry *file = files_map.FindValue(request.url, nullptr);
 
         if (file) {
-            file->LockExclusive();
-            RG_DEFER { file->UnlockExclusive(); };
+            file->WaitForReaders();
 
             if (!sha256 || !TestStr(sha256, file->sha256)) {
                 LogError("Update refused because of sha256 mismatch");
@@ -400,50 +387,42 @@ void HandleFileDelete(const http_RequestInfo &request, http_IO *io)
         io->AttachError(404);
         return;
     }
+    file->WaitForReaders();
 
-    // Update our index
-    {
-        file->LockExclusive();
-        RG_DEFER { file->UnlockExclusive(); };
-
-        if (!sha256 || !TestStr(sha256, file->sha256)) {
-            LogError("Deletion refused because of sha256 mismatch");
-            io->AttachError(409);
-            return;
-        }
-
-        // Deal with the OS first. The rest can't fail anyway.
-        if (!UnlinkFile(file->filename))
-            return;
-
-        // Delete file entry
-        {
-            FileEntry *file0 = &files[0];
-
-            files_map.Remove(file->url);
-            if (file != file0) {
-                file0->LockExclusive();
-                RG_DEFER { file0->UnlockExclusive(); };
-
-                files_map.Remove(file0->url);
-                if (file->allocator != file0->allocator) {
-                    file->filename = DuplicateString(file0->filename, file->allocator).ptr;
-                    file->size = file0->size;
-                    file->url = DuplicateString(file0->url, file->allocator).ptr;
-                    strcpy(file->sha256, file0->sha256);
-                } else {
-                    file->filename = file0->filename;
-                    file->size = file0->size;
-                    file->url = file0->url;
-                    strcpy(file->sha256, file0->sha256);
-                }
-                files_map.Set(file);
-            }
-        }
+    if (!sha256 || !TestStr(sha256, file->sha256)) {
+        LogError("Deletion refused because of sha256 mismatch");
+        io->AttachError(409);
+        return;
     }
 
-    // Final blow! Needs to be done without file lock, obviously.
-    files.RemoveFirst(1);
+    // Deal with the OS first. The rest can't fail anyway.
+    if (!UnlinkFile(file->filename))
+        return;
+
+    // Delete file entry
+    {
+        FileEntry *file0 = &files[0];
+
+        files_map.Remove(file->url);
+        if (file != file0) {
+            file0->WaitForReaders();
+
+            files_map.Remove(file0->url);
+            if (file->allocator != file0->allocator) {
+                file->filename = DuplicateString(file0->filename, file->allocator).ptr;
+                file->size = file0->size;
+                file->url = DuplicateString(file0->url, file->allocator).ptr;
+                strcpy(file->sha256, file0->sha256);
+            } else {
+                file->filename = file0->filename;
+                file->size = file0->size;
+                file->url = file0->url;
+                strcpy(file->sha256, file0->sha256);
+            }
+            files_map.Set(file);
+        }
+        files.RemoveFirst(1);
+    }
 
     io->AttachText(200, "Done!");
 }
