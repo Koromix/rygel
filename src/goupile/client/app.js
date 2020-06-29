@@ -47,7 +47,7 @@ function ApplicationBuilder(app) {
             key: key,
             options: util.assignDeep({
                 actions: true,
-                validate: true
+                validate: false
             }, options),
 
             pages: [],
