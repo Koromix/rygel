@@ -51,7 +51,6 @@
 
 .af_widget > label {
     display: block;
-    vertical-align: top;
     margin-bottom: 6px;
     padding-top: 3px;
 }
@@ -90,7 +89,7 @@
 .af_widget.compact {
     flex: 1;
     display: flex;
-    align-items: center;
+    align-items: start;
 }
 .af_widget.compact > label {
     width: 250px;
