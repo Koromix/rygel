@@ -99,7 +99,7 @@ configure_listen_reuse (struct MHD_Daemon *daemon)
     MHD_DLOG (daemon,
               MHD_SC_LISTEN_ADDRESS_REUSE_ENABLE_NOT_SUPPORTED,
               _ (
-                "Cannot allow listening address reuse: SO_REUSEPORT not defined\n"));
+                "Cannot allow listening address reuse: SO_REUSEPORT not defined.\n"));
 #endif
     return MHD_SC_LISTEN_ADDRESS_REUSE_ENABLE_NOT_SUPPORTED;
 #endif /* !MHD_WINSOCK_SOCKETS && !SO_REUSEPORT */
@@ -138,7 +138,7 @@ configure_listen_reuse (struct MHD_Daemon *daemon)
   MHD_DLOG (daemon,
             MHD_SC_LISTEN_ADDRESS_REUSE_DISABLE_NOT_SUPPORTED,
             _ (
-              "Cannot disallow listening address reuse: SO_EXCLUSIVEADDRUSE not defined\n"));
+              "Cannot disallow listening address reuse: SO_EXCLUSIVEADDRUSE not defined.\n"));
 #endif
   return MHD_SC_LISTEN_ADDRESS_REUSE_DISABLE_NOT_SUPPORTED;
 #endif /* MHD_WINSOCK_SOCKETS */
@@ -221,7 +221,7 @@ open_listen_socket (struct MHD_Daemon *daemon)
 #ifdef HAVE_MESSAGES
     MHD_DLOG (daemon,
               MHD_SC_IPV6_NOT_SUPPORTED_BY_BUILD,
-              _ ("IPv6 not supported by this build\n"));
+              _ ("IPv6 not supported by this build.\n"));
 #endif
     return MHD_SC_IPV6_NOT_SUPPORTED_BY_BUILD;
 #endif
@@ -281,7 +281,7 @@ try_open_listen_socket:
     MHD_DLOG (daemon,
               MHD_SC_LISTEN_DUAL_STACK_CONFIGURATION_NOT_SUPPORTED,
               _ (
-                "Cannot explicitly setup dual stack behavior on this platform\n"));
+                "Cannot explicitly setup dual stack behavior on this platform.\n"));
 #endif
 #endif
   }
@@ -452,7 +452,7 @@ get_listen_port_number (struct MHD_Daemon *daemon)
     MHD_DLOG (daemon,
               MHD_SC_LISTEN_PORT_INTROSPECTION_FAILURE,
               _ (
-                "Failed to get listen port number (`struct sockaddr_storage` too small!?)\n"));
+                "Failed to get listen port number (`struct sockaddr_storage` too small!?).\n"));
 #endif /* HAVE_MESSAGES */
     return;
   }
@@ -626,7 +626,7 @@ MHD_polling_thread (void *cls)
     switch (daemon->event_loop_syscall)
     {
     case MHD_ELS_AUTO:
-      MHD_PANIC ("MHD_ELS_AUTO should have been mapped to preferred style");
+      MHD_PANIC ("MHD_ELS_AUTO should have been mapped to preferred style.\n");
       break;
     case MHD_ELS_SELECT:
       MHD_daemon_select_ (daemon,
@@ -637,7 +637,7 @@ MHD_polling_thread (void *cls)
       MHD_daemon_poll_ (daemon,
                         MHD_YES);
 #else
-      MHD_PANIC ("MHD_ELS_POLL not supported, should have failed earlier");
+      MHD_PANIC ("MHD_ELS_POLL not supported, should have failed earlier.\n");
 #endif
       break;
     case MHD_ELS_EPOLL:
@@ -645,7 +645,7 @@ MHD_polling_thread (void *cls)
       MHD_daemon_epoll_ (daemon,
                          MHD_YES);
 #else
-      MHD_PANIC ("MHD_ELS_EPOLL not supported, should have failed earlier");
+      MHD_PANIC ("MHD_ELS_EPOLL not supported, should have failed earlier.\n");
 #endif
       break;
     }
@@ -731,7 +731,7 @@ setup_thread_pool (struct MHD_Daemon *daemon)
         MHD_DLOG (daemon,
                   MHD_SC_ITC_DESCRIPTOR_TOO_LARGE,
                   _ (
-                    "File descriptor for inter-thread communication channel exceeds maximum value\n"));
+                    "File descriptor for inter-thread communication channel exceeds maximum value.\n"));
 #endif
         MHD_itc_destroy_chk_ (d->itc);
         sc = MHD_SC_ITC_DESCRIPTOR_TOO_LARGE;
@@ -755,7 +755,7 @@ setup_thread_pool (struct MHD_Daemon *daemon)
 #ifdef HAVE_MESSAGES
       MHD_DLOG (daemon,
                 MHD_SC_THREAD_POOL_CREATE_MUTEX_FAILURE,
-                _ ("MHD failed to initialize cleanup connection mutex\n"));
+                _ ("MHD failed to initialize cleanup connection mutex.\n"));
 #endif
       if (! daemon->disable_itc)
         MHD_itc_destroy_chk_ (d->itc);
@@ -879,7 +879,7 @@ MHD_daemon_start (struct MHD_Daemon *daemon)
       MHD_DLOG (daemon,
                 MHD_SC_ITC_DESCRIPTOR_TOO_LARGE,
                 _ (
-                  "File descriptor for inter-thread communication channel exceeds maximum value\n"));
+                  "File descriptor for inter-thread communication channel exceeds maximum value.\n"));
 #endif
       return MHD_SC_ITC_DESCRIPTOR_TOO_LARGE;
     }

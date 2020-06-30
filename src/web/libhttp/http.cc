@@ -106,9 +106,9 @@ static bool NegociateContentEncoding(MHD_Connection *conn, CompressionType *out_
     }
 }
 
-int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url, const char *method,
-                               const char *, const char *upload_data, size_t *upload_data_size,
-                               void **con_cls)
+MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url, const char *method,
+                                      const char *, const char *upload_data, size_t *upload_data_size,
+                                      void **con_cls)
 {
     http_Daemon *daemon = (http_Daemon *)cls;
     http_IO *io = *(http_IO **)con_cls;

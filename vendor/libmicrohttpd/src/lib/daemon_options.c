@@ -233,7 +233,7 @@ MHD_daemon_listen_backlog (struct MHD_Daemon *daemon,
  * If present true, allow reusing address:port socket (by using
  * SO_REUSEPORT on most platform, or platform-specific ways).  If
  * present and set to false, disallow reusing address:port socket
- * (does nothing on most plaform, but uses SO_EXCLUSIVEADDRUSE on
+ * (does nothing on most platform, but uses SO_EXCLUSIVEADDRUSE on
  * Windows).
  * Ineffective in conjunction with #MHD_daemon_listen_socket().
  *
@@ -248,7 +248,7 @@ MHD_daemon_listen_allow_address_reuse (struct MHD_Daemon *daemon)
 
 /**
  * Use SHOUTcast.  This will cause the response to begin
- * with the SHOUTcast "ICY" line instad of "HTTP".
+ * with the SHOUTcast "ICY" line instead of "HTTP".
  *
  * @param daemon daemon to set SHOUTcast option for
  */
@@ -452,7 +452,7 @@ MHD_daemon_tls_mem_dhparams (struct MHD_Daemon *daemon,
 
 /**
  * Memory pointer for the certificate (ca.pem) to be used by the
- * HTTPS daemon for client authentification.
+ * HTTPS daemon for client authentication.
  *
  * @param daemon daemon to configure tls for
  * @param mem_trust memory pointer to the certificate
@@ -620,7 +620,7 @@ MHD_daemon_connection_memory_limit (struct MHD_Daemon *daemon,
                                     size_t memory_increment_b)
 {
   if (memory_increment_b >= memory_limit_b)
-    MHD_PANIC ("sane memory increment must be below memory limit");
+    MHD_PANIC ("Sane memory increment must be below memory limit.\n");
   daemon->connection_memory_limit_b = memory_limit_b;
   daemon->connection_memory_increment_b = memory_increment_b;
 }
@@ -707,7 +707,7 @@ MHD_daemon_unescape_cb (struct MHD_Daemon *daemon,
 /**
  * Set random values to be used by the Digest Auth module.  Note that
  * the application must ensure that @a buf remains allocated and
- * unmodified while the deamon is running.
+ * unmodified while the daemon is running.
  *
  * @param daemon daemon to configure
  * @param buf_size number of bytes in @a buf
@@ -725,7 +725,7 @@ MHD_daemon_digest_auth_random (struct MHD_Daemon *daemon,
   (void) daemon;
   (void) buf_size;
   (void) buf;
-  MHD_PANIC ("digest authentication not supported by this build");
+  MHD_PANIC ("Digest authentication not supported by this build.\n");
 #endif
 }
 
@@ -747,7 +747,7 @@ MHD_daemon_digest_auth_nc_length (struct MHD_Daemon *daemon,
   {
 #ifdef HAVE_MESSAGES
     MHD_DLOG (daemon,
-              _ ("Specified value for NC_SIZE too large\n"));
+              _ ("Specified value for NC_SIZE too large.\n"));
 #endif
     return MHD_SC_DIGEST_AUTH_NC_LENGTH_TOO_BIG;
   }

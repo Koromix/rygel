@@ -31,7 +31,7 @@
   "hello, hello. This is a 'hello world' message for the world, "   \
   "repeat, for the world.</body></html>"
 
-static int
+static enum MHD_Result
 can_compress (struct MHD_Connection *con)
 {
   const char *ae;
@@ -60,7 +60,7 @@ can_compress (struct MHD_Connection *con)
 }
 
 
-static int
+static enum MHD_Result
 body_compress (void **buf,
                size_t *buf_size)
 {
@@ -90,7 +90,7 @@ body_compress (void **buf,
 }
 
 
-static int
+static enum MHD_Result
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
           const char *url,
@@ -99,8 +99,8 @@ ahc_echo (void *cls,
           const char *upload_data, size_t *upload_data_size, void **ptr)
 {
   struct MHD_Response *response;
-  int ret;
-  int comp;
+  enum MHD_Result ret;
+  enum MHD_Result comp;
   size_t body_len;
   char *body_str;
   (void) cls;               /* Unused. Silent compiler warning. */

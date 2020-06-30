@@ -86,7 +86,7 @@ static const char simple_response_text[] =
   "<body>Simple response text</body></html>";
 
 
-static int
+static enum MHD_Result
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
           const char *url,
@@ -99,7 +99,7 @@ ahc_echo (void *cls,
   static int aptr;
   struct ResponseContentCallbackParam *callback_param;
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
   (void) cls;               /* Unused. Silent compiler warning. */
   (void) url;               /* Unused. Silent compiler warning. */
   (void) version;           /* Unused. Silent compiler warning. */
@@ -156,7 +156,7 @@ main (int argc, char *const *argv)
        (port > UINT16_MAX) )
   {
     fprintf (stderr,
-             "Port must be a number between 1 and 65535\n");
+             "Port must be a number between 1 and 65535.\n");
     return 1;
   }
   d = MHD_start_daemon (/* MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG, */

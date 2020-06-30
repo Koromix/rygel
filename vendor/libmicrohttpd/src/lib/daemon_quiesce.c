@@ -58,7 +58,7 @@ MHD_daemon_quiesce (struct MHD_Daemon *daemon)
 #ifdef HAVE_MESSAGES
     MHD_DLOG (daemon,
               MHD_SC_SYSCALL_QUIESCE_REQUIRES_ITC,
-              "Using MHD_quiesce_daemon in this mode requires ITC\n");
+              "Using MHD_quiesce_daemon in this mode requires ITC.\n");
 #endif
     return MHD_INVALID_SOCKET;
   }
@@ -81,7 +81,7 @@ MHD_daemon_quiesce (struct MHD_Daemon *daemon)
                             EPOLL_CTL_DEL,
                             listen_socket,
                             NULL))
-          MHD_PANIC (_ ("Failed to remove listen FD from epoll set\n"));
+          MHD_PANIC (_ ("Failed to remove listen FD from epoll set.\n"));
         worker->listen_socket_in_epoll = false;
       }
       else
@@ -91,7 +91,7 @@ MHD_daemon_quiesce (struct MHD_Daemon *daemon)
         if (! MHD_itc_activate_ (worker->itc,
                                  "q"))
           MHD_PANIC (_ (
-                       "Failed to signal quiesce via inter-thread communication channel"));
+                       "Failed to signal quiesce via inter-thread communication channel.\n"));
       }
     }
     daemon->was_quiesced = true;
@@ -104,7 +104,7 @@ MHD_daemon_quiesce (struct MHD_Daemon *daemon)
                           EPOLL_CTL_DEL,
                           listen_socket,
                           NULL))
-        MHD_PANIC ("Failed to remove listen FD from epoll set\n");
+        MHD_PANIC ("Failed to remove listen FD from epoll set.\n");
       daemon->listen_socket_in_epoll = false;
     }
 #endif
@@ -114,7 +114,7 @@ MHD_daemon_quiesce (struct MHD_Daemon *daemon)
        (! MHD_itc_activate_ (daemon->itc,
                              "q")) )
     MHD_PANIC (_ (
-                 "Failed to signal quiesce via inter-thread communication channel"));
+                 "Failed to signal quiesce via inter-thread communication channel.\n"));
 
   /* FIXME: we might want some bi-directional communication here
      (in both the thread-pool and single-thread case!)

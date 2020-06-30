@@ -604,7 +604,7 @@
 /* Define to 1 if it is required by headers to expose additional symbols */
 #undef _NETBSD_SOURCE
 
-/* Need with solaris or errno doesnt work */
+/* Need with solaris or errno does not work */
 #undef _REENTRANT
 
 /* Define to 1 if it is required by headers to expose additional symbols */
@@ -614,7 +614,7 @@
 #undef _XOPEN_SOURCE
 
 /* Define to 1 if _XOPEN_SOURCE is defined to value less than 500 and system
-   headers requre this symbol */
+   headers require this symbol */
 #undef _XOPEN_SOURCE_EXTENDED
 
 /* Define to maximum value supported by system headers if _XOPEN_SOURCE is

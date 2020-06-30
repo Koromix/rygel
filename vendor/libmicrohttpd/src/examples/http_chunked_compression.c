@@ -51,13 +51,13 @@ struct Holder
   void *buf;
 };
 
-static int
+static enum MHD_Result
 compress_buf (z_stream *strm, const void *src, size_t src_size, size_t *offset,
               void **dest, size_t *dest_size,
               void *tmp)
 {
   unsigned int have;
-  int ret;
+  enum MHD_Result ret;
   int flush;
   void *tmp_dest;
   *dest = NULL;
@@ -109,6 +109,7 @@ read_cb (void *cls, uint64_t pos, char *mem, size_t size)
   void *buf;
   ssize_t ret;
   size_t offset;
+
   if (pos > SSIZE_MAX)
     return MHD_CONTENT_READER_END_WITH_ERROR;
   offset = (size_t) pos;
@@ -121,7 +122,7 @@ read_cb (void *cls, uint64_t pos, char *mem, size_t size)
     ret = MHD_CONTENT_READER_END_WITH_ERROR;
     goto done;
   }
-  if (0 == size)
+  if (0 == ret)
   {
     ret = MHD_CONTENT_READER_END_OF_STREAM;
     goto done;
@@ -152,14 +153,14 @@ free_cb (void *cls)
 }
 
 
-static int
+static enum MHD_Result
 ahc_echo (void *cls, struct MHD_Connection *con, const char *url, const
           char *method, const char *version,
           const char *upload_data, size_t *upload_size, void **ptr)
 {
   struct Holder *holder;
   struct MHD_Response *res;
-  int ret;
+  enum MHD_Result ret;
   (void) cls;
   (void) url;
   (void) method;

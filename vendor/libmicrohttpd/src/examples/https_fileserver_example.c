@@ -113,7 +113,7 @@ file_free_callback (void *cls)
 
 
 /* HTTP access handler call back */
-static int
+static enum MHD_Result
 http_ahc (void *cls,
           struct MHD_Connection *connection,
           const char *url,
@@ -124,7 +124,7 @@ http_ahc (void *cls,
 {
   static int aptr;
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
   FILE *file;
   int fd;
   struct stat buf;
@@ -219,7 +219,7 @@ main (int argc, char *const *argv)
                       MHD_OPTION_END);
   if (NULL == TLS_daemon)
   {
-    fprintf (stderr, "Error: failed to start TLS_daemon\n");
+    fprintf (stderr, "Error: failed to start TLS_daemon.\n");
     return 1;
   }
   printf ("MHD daemon listening on port %u\n",

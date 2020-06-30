@@ -141,7 +141,7 @@ thread_main_handle_connection (void *data)
   #ifdef HAVE_MESSAGES
           MHD_DLOG (con->daemon,
                     MHD_SC_SOCKET_OUTSIDE_OF_FDSET_RANGE,
-                    _ ("Failed to add FD to fd_set\n"));
+                    _ ("Failed to add FD to fd_set.\n"));
   #endif
           goto exit;
         }
@@ -286,7 +286,7 @@ thread_main_handle_connection (void *data)
 #ifdef HAVE_MESSAGES
         MHD_DLOG (con->daemon,
                   MHD_SC_SOCKET_OUTSIDE_OF_FDSET_RANGE,
-                  _ ("Failed to add FD to fd_set\n"));
+                  _ ("Failed to add FD to fd_set.\n"));
 #endif
         goto exit;
       }
@@ -427,7 +427,7 @@ thread_main_handle_connection (void *data)
 #ifdef HAVE_MESSAGES
   MHD_DLOG (con->daemon,
             MHD_SC_THREAD_TERMINATING,
-            _ ("Processing thread terminating. Closing connection\n"));
+            _ ("Processing thread terminating. Closing connection.\n"));
 #endif
 #endif
   if (MHD_REQUEST_CLOSED != con->request.state)
@@ -669,7 +669,7 @@ internal_add_connection (struct MHD_Daemon *daemon,
 #if DEBUG_CONNECT
   MHD_DLOG (daemon,
             MHD_SC_CONNECTION_ACCEPTED,
-            _ ("Accepted connection on socket %d\n"),
+            _ ("Accepted connection on socket %d.\n"),
             client_socket);
 #endif
 #endif
@@ -893,7 +893,7 @@ internal_add_connection (struct MHD_Daemon *daemon,
     MHD_DLOG (daemon,
               MHD_SC_ITC_USE_FAILED,
               _ (
-                "Failed to signal new connection via inter-thread communication channel (not necessarily fatal, continuing anyway)."));
+                "Failed to signal new connection via inter-thread communication channel (not necessarily fatal, continuing anyway).\n"));
 #endif
   }
   return MHD_SC_OK;
@@ -1044,7 +1044,7 @@ MHD_accept_connection_ (struct MHD_Daemon *daemon)
   {
     const int err = MHD_socket_get_error_ ();
 
-    /* This could be a common occurance with multiple worker threads */
+    /* This could be a common occurrence with multiple worker threads */
     if (MHD_SCKT_ERR_IS_ (err,
                           MHD_SCKT_EINVAL_))
       return MHD_SC_DAEMON_ALREADY_SHUTDOWN;   /* can happen during shutdown, let's hope this is the cause... */
@@ -1124,7 +1124,7 @@ MHD_accept_connection_ (struct MHD_Daemon *daemon)
 #if DEBUG_CONNECT
   MHD_DLOG (daemon,
             MHD_SC_CONNECTION_ACCEPTED,
-            _ ("Accepted connection on socket %d\n"),
+            _ ("Accepted connection on socket %d.\n"),
             s);
 #endif
 #endif

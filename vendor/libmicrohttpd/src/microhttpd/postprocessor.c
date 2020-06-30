@@ -137,8 +137,7 @@ struct MHD_PostProcessor
   void *cls;
 
   /**
-   * Encoding as given by the headers of the
-   * connection.
+   * Encoding as given by the headers of the connection.
    */
   const char *encoding;
 
@@ -176,7 +175,7 @@ struct MHD_PostProcessor
    * Value data left over from previous iteration.
    */
   char xbuf[2];
-  
+
   /**
    * Size of our buffer for the key.
    */
@@ -220,9 +219,9 @@ struct MHD_PostProcessor
   /**
    * Set if we still need to run the unescape logic
    * on the key allocated at the end of this struct.
-   */ 
+   */
   bool must_unescape_key;
-  
+
   /**
    * State of the parser.
    */
@@ -391,7 +390,7 @@ process_value (struct MHD_PostProcessor *pp,
   pp->xbuf_pos = 0;
   if (NULL != last_escape)
   {
-    if (value_end - last_escape < sizeof (pp->xbuf))
+    if (((size_t) (value_end - last_escape)) < sizeof (pp->xbuf))
     {
       pp->xbuf_pos = value_end - last_escape;
       memcpy (pp->xbuf,
@@ -478,7 +477,8 @@ post_process_urlencoded (struct MHD_PostProcessor *pp,
             (pp->state == PP_Callback) ) &&
           (pp->state != PP_Error) )
   {
-    switch (pp->state) {
+    switch (pp->state)
+    {
     case PP_Error:
       /* clearly impossible as per while loop invariant */
       abort ();
@@ -520,7 +520,8 @@ post_process_urlencoded (struct MHD_PostProcessor *pp,
     case PP_ProcessValue:
       if (NULL == start_value)
         start_value = &post_data[poff];
-      switch (post_data[poff]) {
+      switch (post_data[poff])
+      {
       case '=':
         /* case 'key==' */
         pp->state = PP_Error;
@@ -529,8 +530,8 @@ post_process_urlencoded (struct MHD_PostProcessor *pp,
         /* case 'value&' */
         end_value = &post_data[poff];
         poff++;
-        if ( pp->must_ikvi ||
-             (start_value != end_value) )
+        if (pp->must_ikvi ||
+            (start_value != end_value) )
         {
           pp->state = PP_Callback;
         }
@@ -538,7 +539,8 @@ post_process_urlencoded (struct MHD_PostProcessor *pp,
         {
           pp->buffer_pos = 0;
           pp->value_offset = 0;
-          pp->state = PP_Init; 
+          pp->state = PP_Init;
+          start_value = NULL;
         }
         continue;
       case '\n':
@@ -576,7 +578,8 @@ post_process_urlencoded (struct MHD_PostProcessor *pp,
       }
       break; /* end PP_ProcessValue */
     case PP_Done:
-      switch (post_data[poff]) {
+      switch (post_data[poff])
+      {
       case '\n':
       case '\r':
         poff++;
@@ -586,7 +589,7 @@ post_process_urlencoded (struct MHD_PostProcessor *pp,
       pp->state = PP_Error;
       break;
     case PP_Callback:
-      if ( (pp->buffer_pos + (end_key - start_key) >
+      if ( (pp->buffer_pos + (end_key - start_key) >=
             pp->buffer_size) ||
            (pp->buffer_pos + (end_key - start_key) <
             pp->buffer_pos) )
@@ -632,10 +635,15 @@ post_process_urlencoded (struct MHD_PostProcessor *pp,
   }
 
   /* save remaining data for next iteration */
-  if (NULL != start_key) 
+  if (NULL != start_key)
   {
-    if (NULL == end_key) 
+    if (NULL == end_key)
       end_key = &post_data[poff];
+    if (pp->buffer_pos + (end_key - start_key) >= pp->buffer_size)
+    {
+      pp->state = PP_Error;
+      return MHD_NO;
+    }
     memcpy (&kbuf[pp->buffer_pos],
             start_key,
             end_key - start_key);
@@ -662,6 +670,11 @@ post_process_urlencoded (struct MHD_PostProcessor *pp,
                    end_value,
                    last_escape);
     pp->must_ikvi = false;
+  }
+  if (PP_Error == pp->state)
+  {
+    /* State in error, returning failure */
+    return MHD_NO;
   }
   return MHD_YES;
 }
@@ -1366,7 +1379,7 @@ END:
  *         (out-of-memory, iterator aborted, parse error)
  * @ingroup request
  */
-int
+enum MHD_Result
 MHD_post_process (struct MHD_PostProcessor *pp,
                   const char *post_data,
                   size_t post_data_len)
@@ -1404,10 +1417,10 @@ MHD_post_process (struct MHD_PostProcessor *pp,
  *                value of this function
  * @ingroup request
  */
-int
+enum MHD_Result
 MHD_destroy_post_processor (struct MHD_PostProcessor *pp)
 {
-  int ret;
+  enum MHD_Result ret;
 
   if (NULL == pp)
     return MHD_YES;
@@ -1424,7 +1437,8 @@ MHD_destroy_post_processor (struct MHD_PostProcessor *pp)
      the post-processing may have been interrupted
      at any stage */
   if ( (pp->xbuf_pos > 0) ||
-       (pp->state != PP_Done) )
+       ( (pp->state != PP_Done) &&
+         (pp->state != PP_Init) ) )
     ret = MHD_NO;
   else
     ret = MHD_YES;

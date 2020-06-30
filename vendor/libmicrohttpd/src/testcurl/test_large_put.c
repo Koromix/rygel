@@ -118,7 +118,7 @@ copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
 }
 
 
-static int
+static enum MHD_Result
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
           const char *url,
@@ -129,7 +129,7 @@ ahc_echo (void *cls,
 {
   int *done = cls;
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
   static size_t processed;
   (void) version;        /* Unused. Silent compiler warning. */
 

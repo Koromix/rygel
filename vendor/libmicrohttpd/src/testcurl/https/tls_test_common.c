@@ -176,7 +176,7 @@ copyBuffer (void *ptr,
 /**
  *  HTTP access handler call back
  */
-int
+enum MHD_Result
 http_ahc (void *cls,
           struct MHD_Connection *connection,
           const char *url,
@@ -188,7 +188,7 @@ http_ahc (void *cls,
 {
   static int aptr;
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
   (void) cls; (void) url; (void) version;            /* Unused. Silent compiler warning. */
   (void) upload_data; (void) upload_data_size;     /* Unused. Silent compiler warning. */
 
@@ -211,7 +211,7 @@ http_ahc (void *cls,
 
 
 /* HTTP access handler call back */
-int
+enum MHD_Result
 http_dummy_ahc (void *cls,
                 struct MHD_Connection *connection,
                 const char *url,
@@ -401,7 +401,7 @@ test_https_transfer (void *cls,
     goto cleanup;
   }
 
-  /* compare test file & daemon responce */
+  /* compare test file & daemon response */
   if ( (len != strlen (test_data)) ||
        (memcmp (cbc.buf,
                 test_data,

@@ -243,16 +243,16 @@ bin2hex (const uint8_t *bin,
 static int
 check_result (const char *test_name,
               unsigned int check_num,
-              const uint8_t calcualted[MD5_DIGEST_SIZE],
+              const uint8_t calculated[MD5_DIGEST_SIZE],
               const uint8_t expected[MD5_DIGEST_SIZE])
 {
-  int failed = memcmp (calcualted, expected, MD5_DIGEST_SIZE);
+  int failed = memcmp (calculated, expected, MD5_DIGEST_SIZE);
   check_num++; /* Print 1-based numbers */
   if (failed)
   {
     char calc_str[MD5_DIGEST_STRING_LENGTH];
     char expc_str[MD5_DIGEST_STRING_LENGTH];
-    bin2hex (calcualted, MD5_DIGEST_SIZE, calc_str);
+    bin2hex (calculated, MD5_DIGEST_SIZE, calc_str);
     bin2hex (expected, MD5_DIGEST_SIZE, expc_str);
     fprintf (stderr,
              "FAILED: %s check %u: calculated digest %s, expected digest %s.\n",
@@ -262,7 +262,7 @@ check_result (const char *test_name,
   else if (verbose)
   {
     char calc_str[MD5_DIGEST_STRING_LENGTH];
-    bin2hex (calcualted, MD5_DIGEST_SIZE, calc_str);
+    bin2hex (calculated, MD5_DIGEST_SIZE, calc_str);
     printf (
       "PASSED: %s check %u: calculated digest %s match expected digest.\n",
       test_name, check_num, calc_str);

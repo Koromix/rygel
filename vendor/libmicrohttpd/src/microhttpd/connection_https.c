@@ -91,52 +91,6 @@ recv_tls_adapter (struct MHD_Connection *connection,
 
 
 /**
- * Callback for writing data to the socket.
- *
- * @param connection the MHD connection structure
- * @param other data to write
- * @param i number of bytes to write
- * @return positive value for number of bytes actually sent or
- *         negative value for error number MHD_ERR_xxx_
- */
-ssize_t
-send_tls_adapter (struct MHD_Connection *connection,
-                  const void *other,
-                  size_t i)
-{
-  ssize_t res;
-
-  if (i > SSIZE_MAX)
-    i = SSIZE_MAX;
-
-  res = gnutls_record_send (connection->tls_session,
-                            other,
-                            i);
-  if ( (GNUTLS_E_AGAIN == res) ||
-       (GNUTLS_E_INTERRUPTED == res) )
-  {
-#ifdef EPOLL_SUPPORT
-    if (GNUTLS_E_AGAIN == res)
-      connection->epoll_state &= ~MHD_EPOLL_STATE_WRITE_READY;
-#endif
-    return MHD_ERR_AGAIN_;
-  }
-  if (res < 0)
-  {
-    /* Likely 'GNUTLS_E_INVALID_SESSION' (client communication
-       disrupted); interpret as a hard error */
-    return MHD_ERR_NOTCONN_;
-  }
-#ifdef EPOLL_SUPPORT
-  /* Unlike non-TLS connections, do not reset "write-ready" if
-   * sent amount smaller than provided amount, as TLS
-   * connections may break data into smaller parts for sending. */
-#endif /* EPOLL_SUPPORT */
-  return res;
-}
-
-
-/**
  * Give gnuTLS chance to work on the TLS handshake.
  *
  * @param connection connection to handshake on
@@ -172,7 +126,7 @@ MHD_run_tls_handshake_ (struct MHD_Connection *connection)
     connection->tls_state = MHD_TLS_CONN_TLS_FAILED;
 #ifdef HAVE_MESSAGES
     MHD_DLOG (connection->daemon,
-              _ ("Error: received handshake message out of context\n"));
+              _ ("Error: received handshake message out of context.\n"));
 #endif
     MHD_connection_close_ (connection,
                            MHD_REQUEST_TERMINATED_WITH_ERROR);
@@ -192,7 +146,6 @@ void
 MHD_set_https_callbacks (struct MHD_Connection *connection)
 {
   connection->recv_cls = &recv_tls_adapter;
-  connection->send_cls = &send_tls_adapter;
 }
 
 

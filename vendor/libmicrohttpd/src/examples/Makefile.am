@@ -67,7 +67,8 @@ endif
 if HAVE_POSIX_THREADS
 if ENABLE_UPGRADE
 noinst_PROGRAMS += \
- upgrade_example
+ upgrade_example \
+ websocket_threaded_example
 endif
 endif
 
@@ -101,6 +102,14 @@ upgrade_example_SOURCES = \
 upgrade_example_CFLAGS = \
   $(PTHREAD_CFLAGS) $(AM_CFLAGS)
 upgrade_example_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  $(PTHREAD_LIBS)
+
+websocket_threaded_example_SOURCES = \
+ websocket_threaded_example.c
+websocket_threaded_example_CFLAGS = \
+  $(PTHREAD_CFLAGS) $(AM_CFLAGS)
+websocket_threaded_example_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   $(PTHREAD_LIBS)
 

@@ -50,6 +50,10 @@ pre_cork_setsockopt (struct MHD_Connection *connection,
 {
 #if HAVE_MSG_MORE
   /* We use the MSG_MORE option for corking, no need for extra syscalls! */
+
+  (void) connection; /* Mute compiler warning. */
+  (void) want_cork;  /* Mute compiler warning. */
+
 #elif defined(MHD_TCP_CORK_NOPUSH)
   int ret;
 
@@ -63,7 +67,7 @@ pre_cork_setsockopt (struct MHD_Connection *connection,
     return; /* nothing to do *pre* syscall! */
   ret = MHD_socket_cork_ (connection->socket_fd,
                           true);
-  if (0 == ret)
+  if (0 != ret)
   {
     connection->sk_cork_on = true;
     return;
@@ -80,24 +84,24 @@ pre_cork_setsockopt (struct MHD_Connection *connection,
   case EINVAL:
     /* FIXME: optlen invalid, should at least log this, maybe die */
 #ifdef HAVE_MESSAGES
-    MHD_DLOG (daemon,
+    MHD_DLOG (connection->daemon,
               _ ("optlen invalid: %s\n"),
               MHD_socket_last_strerr_ ());
 #endif
     break;
   case EFAULT:
-    /* wopsie, should at leats log this, FIXME: maybe die */
+    /* wopsie, should at least log this, FIXME: maybe die */
 #ifdef HAVE_MESSAGES
-    MHD_DLOG (daemon,
+    MHD_DLOG (connection->daemon,
               _ (
-                "The addresss pointed to by optval is not a valid part of the process address space: %s\n"),
+                "The address pointed to by optval is not a valid part of the process address space: %s\n"),
               MHD_socket_last_strerr_ ());
 #endif
     break;
   case ENOPROTOOPT:
     /* optlen unknown, should at least log this */
 #ifdef HAVE_MESSAGES
-    MHD_DLOG (daemon,
+    MHD_DLOG (connection->daemon,
               _ ("The option is unknown: %s\n"),
               MHD_socket_last_strerr_ ());
 #endif
@@ -135,6 +139,10 @@ post_cork_setsockopt (struct MHD_Connection *connection,
 {
 #if HAVE_MSG_MORE
   /* We use the MSG_MORE option for corking, no need for extra syscalls! */
+
+  (void) connection; /* Mute compiler warning. */
+  (void) want_cork;  /* Mute compiler warning. */
+
 #elif defined(MHD_TCP_CORK_NOPUSH)
   int ret;
 
@@ -150,7 +158,7 @@ post_cork_setsockopt (struct MHD_Connection *connection,
                pre-syscall) */
   ret = MHD_socket_cork_ (connection->socket_fd,
                           false);
-  if (0 == ret)
+  if (0 != ret)
   {
     connection->sk_cork_on = false;
     return;
@@ -167,24 +175,24 @@ post_cork_setsockopt (struct MHD_Connection *connection,
   case EINVAL:
     /* FIXME: optlen invalid, should at least log this, maybe die */
 #ifdef HAVE_MESSAGES
-    MHD_DLOG (daemon,
+    MHD_DLOG (connection->daemon,
               _ ("optlen invalid: %s\n"),
               MHD_socket_last_strerr_ ());
 #endif
     break;
   case EFAULT:
-    /* wopsie, should at leats log this, FIXME: maybe die */
+    /* wopsie, should at least log this, FIXME: maybe die */
 #ifdef HAVE_MESSAGES
-    MHD_DLOG (daemon,
+    MHD_DLOG (connection->daemon,
               _ (
-                "The addresss pointed to by optval is not a valid part of the process address space: %s\n"),
+                "The address pointed to by optval is not a valid part of the process address space: %s\n"),
               MHD_socket_last_strerr_ ());
 #endif
     break;
   case ENOPROTOOPT:
     /* optlen unknown, should at least log this */
 #ifdef HAVE_MESSAGES
-    MHD_DLOG (daemon,
+    MHD_DLOG (connection->daemon,
               _ ("The option is unknown: %s\n"),
               MHD_socket_last_strerr_ ());
 #endif
@@ -305,7 +313,10 @@ MHD_send_on_connection_ (struct MHD_Connection *connection,
 
     if (! want_cork && have_cork)
     {
-      (void) gnutls_record_uncork (connection->tls_session, 0);
+      int err = gnutls_record_uncork (connection->tls_session, 0);
+
+      if (0 > err)
+        return MHD_ERR_AGAIN_;
       connection->sk_cork_on = false;
     }
   }
@@ -349,7 +360,7 @@ MHD_send_on_connection_ (struct MHD_Connection *connection,
     else if (buffer_size > (size_t) ret)
       connection->epoll_state &= ~MHD_EPOLL_STATE_WRITE_READY;
 #endif /* EPOLL_SUPPORT */
-    if (ret == buffer_size)
+    if (buffer_size == (size_t) ret)
       post_cork_setsockopt (connection, want_cork);
   }
 
@@ -390,7 +401,7 @@ MHD_send_on_connection2_ (struct MHD_Connection *connection,
                                    header,
                                    header_size,
                                    MHD_SSO_HDR_CORK);
-    if ( (ret == header_size) &&
+    if ( (header_size == (size_t) ret) &&
          (0 == buffer_size) &&
          connection->sk_cork_on)
     {
@@ -435,7 +446,7 @@ MHD_send_on_connection2_ (struct MHD_Connection *connection,
 
   /* Only if we succeeded sending the full buffer, we need to make sure that
      the OS flushes at the end */
-  if (ret == header_size + buffer_size)
+  if (header_size + buffer_size == (size_t) ret)
     post_cork_setsockopt (connection, false);
 
   return ret;
@@ -657,7 +668,7 @@ MHD_send_sendfile_ (struct MHD_Connection *connection)
 
   /* Make sure we send the data without delay ONLY if we
      provided the complete response (not on partial write) */
-  if (ret == left)
+  if (left == (uint64_t) ret)
     post_cork_setsockopt (connection, false);
 
   return ret;

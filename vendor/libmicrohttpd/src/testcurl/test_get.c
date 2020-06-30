@@ -98,7 +98,7 @@ log_cb (void *cls,
 }
 
 
-static int
+static enum MHD_Result
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
           const char *url,
@@ -110,7 +110,7 @@ ahc_echo (void *cls,
   static int ptr;
   const char *me = cls;
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
   const char *v;
   (void) version;
   (void) upload_data;
@@ -714,7 +714,7 @@ testStopRace (int poll_flag)
 }
 
 
-static int
+static enum MHD_Result
 ahc_empty (void *cls,
            struct MHD_Connection *connection,
            const char *url,
@@ -726,7 +726,7 @@ ahc_empty (void *cls,
 {
   static int ptr;
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
   (void) cls;
   (void) url;
   (void) url;

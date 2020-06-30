@@ -95,11 +95,11 @@ MHD_init (void)
 #if defined(_WIN32) && ! defined(__CYGWIN__)
   if (0 != WSAStartup (MAKEWORD (2, 2),
                        &wsd))
-    MHD_PANIC (_ ("Failed to initialize winsock\n"));
+    MHD_PANIC (_ ("Failed to initialize winsock.\n"));
   mhd_winsock_inited_ = 1;
   if ( (2 != LOBYTE (wsd.wVersion)) &&
        (2 != HIBYTE (wsd.wVersion)) )
-    MHD_PANIC (_ ("Winsock version 2.2 is not available\n"));
+    MHD_PANIC (_ ("Winsock version 2.2 is not available.\n"));
 #endif
   MHD_monotonic_sec_counter_init ();
 #ifdef HAVE_FREEBSD_SENDFILE

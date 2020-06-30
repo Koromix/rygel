@@ -19,5 +19,5 @@ built on similar systems.
 @section History
 
 This tutorial was originally written by Sebastian Gerhardt for MHD
-0.4.0.  It was slighly polished and updated to MHD 0.9.0 by Christian
+0.4.0.  It was slightly polished and updated to MHD 0.9.0 by Christian
 Grothoff.

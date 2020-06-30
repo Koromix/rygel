@@ -36,6 +36,10 @@
 
 #include <errno.h>
 #include <stdbool.h>
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif /* HAVE_UNISTD_H */
+#include <fcntl.h>
 
 #if ! defined(MHD_POSIX_SOCKETS) && ! defined(MHD_WINSOCK_SOCKETS)
 #  if ! defined(_WIN32) || defined(__CYGWIN__)
@@ -854,10 +858,12 @@ static const int _MHD_socket_int_one = 1;
  * @param sock socket to manipulate
  * @return non-zero if succeeded, zero otherwise
  */
-#  define MHD_socket_nosignal_(sock) \
+#define MHD_socket_nosignal_(sock) \
   (! setsockopt ((sock),SOL_SOCKET,SO_NOSIGPIPE,&_MHD_socket_int_one, \
                  sizeof(_MHD_socket_int_one)))
-#endif /* SOL_SOCKET && SO_NOSIGPIPE */
+#elif defined(MHD_POSIX_SOCKETS) && defined(SOCK_NOSIGPIPE) && \
+  defined(SOCK_CLOEXEC)
+#endif
 
 /**
  * Create a listen socket, with noninheritable flag if possible.

@@ -17,18 +17,12 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
-
 /**
  * @file microhttpd/mhd_sockets.c
  * @brief  Implementation for sockets functions
  * @author Karlson2k (Evgeny Grin)
  */
-
 #include "mhd_sockets.h"
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif /* HAVE_UNISTD_H */
-#include <fcntl.h>
 
 #ifdef MHD_WINSOCK_SOCKETS
 
@@ -511,6 +505,11 @@ MHD_socket_cork_ (MHD_socket sock,
   const MHD_SCKT_OPT_BOOL_ on_val = 1;
 
   /* Disable extra buffering */
+  if (MHD_INVALID_SOCKET == sock)
+  {
+    errno = EBADF;
+    return 0; /* failed */
+  }
   if (0 != setsockopt (sock,
                        IPPROTO_TCP,
                        MHD_TCP_CORK_NOPUSH,
@@ -613,12 +612,10 @@ MHD_socket_create_listen_ (int pf)
   if (MHD_INVALID_SOCKET == fd)
     return MHD_INVALID_SOCKET;
 
-#if defined(SOCK_NOSIGPIPE) || defined(MHD_socket_nosignal_)
-  if ( ( (! nosigpipe_set)
-#ifdef MHD_socket_nosignal_
-         || (! MHD_socket_nosignal_ (fd))
-#endif /* MHD_socket_nosignal_ */
-         ) && (0 == MAYBE_MSG_NOSIGNAL) )
+#if defined(MHD_socket_nosignal_)
+  if ( (! nosigpipe_set) &&
+       (0 == MHD_socket_nosignal_ (fd)) &&
+       (0 == MAYBE_MSG_NOSIGNAL) )
   {
     /* SIGPIPE disable is possible on this platform
      * (so application expect that it will be disabled),
@@ -629,7 +626,7 @@ MHD_socket_create_listen_ (int pf)
     MHD_socket_fset_error_ (err);
     return MHD_INVALID_SOCKET;
   }
-#endif /* SOCK_NOSIGPIPE ||  MHD_socket_nosignal_ */
+#endif /* defined(MHD_socket_nosignal_) */
   if (! cloexec_set)
     (void) MHD_socket_noninheritable_ (fd);
 

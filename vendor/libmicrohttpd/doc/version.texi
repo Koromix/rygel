@@ -1,4 +1,4 @@
-@set UPDATED 25 October 2019
-@set UPDATED-MONTH October 2019
-@set EDITION 0.9.70
-@set VERSION 0.9.70
+@set UPDATED 10 June 2020
+@set UPDATED-MONTH June 2020
+@set EDITION 0.9.71
+@set VERSION 0.9.71

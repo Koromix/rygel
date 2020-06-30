@@ -536,7 +536,7 @@ enum MHD_StatusCode
   MHD_SC_TLS_DISABLED = 50000,
 
   /**
-   * The application attempted to setup TLS paramters before
+   * The application attempted to setup TLS parameters before
    * enabling TLS.
    */
   MHD_SC_TLS_BACKEND_UNINITIALIZED = 50003,
@@ -1469,7 +1469,7 @@ enum MHD_Method
  * @param method the HTTP method used (#MHD_HTTP_METHOD_GET,
  *        #MHD_HTTP_METHOD_PUT, etc.)
  * @return action how to proceed, NULL
- *         if the socket must be closed due to a serios
+ *         if the socket must be closed due to a serious
  *         error while handling the request
  */
 typedef const struct MHD_Action *
@@ -2005,7 +2005,7 @@ MHD_NONNULL (1);
  * If present true, allow reusing address:port socket (by using
  * SO_REUSEPORT on most platform, or platform-specific ways).  If
  * present and set to false, disallow reusing address:port socket
- * (does nothing on most plaform, but uses SO_EXCLUSIVEADDRUSE on
+ * (does nothing on most platform, but uses SO_EXCLUSIVEADDRUSE on
  * Windows).
  * Ineffective in conjunction with #MHD_daemon_listen_socket().
  *
@@ -2124,7 +2124,7 @@ MHD_NONNULL (1);
 
 /**
  * Use SHOUTcast.  This will cause the response to begin
- * with the SHOUTcast "ICY" line instad of "HTTP".
+ * with the SHOUTcast "ICY" line instead of "HTTP".
  *
  * @param daemon daemon to set SHOUTcast option for
  */
@@ -2566,7 +2566,7 @@ MHD_NONNULL (1);
 /**
  * Set random values to be used by the Digest Auth module.  Note that
  * the application must ensure that @a buf remains allocated and
- * unmodified while the deamon is running.
+ * unmodified while the daemon is running.
  *
  * @param daemon daemon to configure
  * @param buf_size number of bytes in @a buf
@@ -3886,7 +3886,7 @@ MHD_NONNULL (1,3);
 
 /**
  * Values of this enum are used to specify what
- * information about a deamon is desired.
+ * information about a daemon is desired.
  */
 enum MHD_DaemonInformationType
 {
@@ -3996,8 +3996,8 @@ MHD_NONNULL (1,3);
  * an error message and `abort()`.
  *
  * @param cls user specified value
- * @param file where the error occured
- * @param line where the error occured
+ * @param file where the error occurred
+ * @param line where the error occurred
  * @param reason error detail, may be NULL
  * @ingroup logging
  */

@@ -24,7 +24,7 @@
  */
 
 /*
- * suposing you are in Brazil:
+ * supposing you are in Brazil:
  *
  * # generate the PO file
  * $ msginit --input=po/libmicrohttpd.pot --locale=pt_BR --output=libmicrohttpd.po

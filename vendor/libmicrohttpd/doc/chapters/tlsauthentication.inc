@@ -65,7 +65,7 @@ main ()
 @end verbatim
 @noindent
 
-and then we point the @emph{MHD} daemon to it upon initalization.
+and then we point the @emph{MHD} daemon to it upon initialization.
 @verbatim
 
   daemon = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_SSL,

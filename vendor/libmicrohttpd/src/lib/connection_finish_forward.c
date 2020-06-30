@@ -56,7 +56,7 @@ MHD_connection_finish_forward_ (struct MHD_Connection *connection)
                         connection->socket_fd,
                         NULL)) )
   {
-    MHD_PANIC (_ ("Failed to remove FD from epoll set\n"));
+    MHD_PANIC (_ ("Failed to remove FD from epoll set.\n"));
   }
   if (urh->in_eready_list)
   {
@@ -75,7 +75,7 @@ MHD_connection_finish_forward_ (struct MHD_Connection *connection)
                           urh->mhd.socket,
                           NULL)) )
     {
-      MHD_PANIC (_ ("Failed to remove FD from epoll set\n"));
+      MHD_PANIC (_ ("Failed to remove FD from epoll set.\n"));
     }
 #endif /* EPOLL_SUPPORT */
     /* Reflect remote disconnect to application by breaking

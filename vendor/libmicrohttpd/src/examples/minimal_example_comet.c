@@ -38,7 +38,7 @@ data_generator (void *cls, uint64_t pos, char *buf, size_t max)
 }
 
 
-static int
+static enum MHD_Result
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
           const char *url,
@@ -48,7 +48,7 @@ ahc_echo (void *cls,
 {
   static int aptr;
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
   (void) cls;               /* Unused. Silent compiler warning. */
   (void) url;               /* Unused. Silent compiler warning. */
   (void) version;           /* Unused. Silent compiler warning. */

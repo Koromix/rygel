@@ -962,11 +962,6 @@ struct MHD_Connection
    */
   ReceiveCallback recv_cls;
 
-  /**
-   * Function used for writing HTTP response stream.
-   */
-  TransmitCallback send_cls;
-
 #ifdef UPGRADE_SUPPORT
   /**
    * If this connection was upgraded, this points to
@@ -1463,12 +1458,6 @@ struct MHD_Daemon
   size_t thread_stack_size;
 
   /**
-   * Our #MHD_OPTION_SERVER_INSANITY level, bits indicating
-   * which sanity checks are off.
-   */
-  enum MHD_DisableSanityCheck insanity_level;
-
-  /**
    * Number of worker daemons
    */
   unsigned int worker_pool_size;
@@ -1489,6 +1478,12 @@ struct MHD_Daemon
    */
   MHD_mutex_ cleanup_connection_mutex;
 #endif
+
+  /**
+   * Our #MHD_OPTION_SERVER_INSANITY level, bits indicating
+   * which sanity checks are off.
+   */
+  enum MHD_DisableSanityCheck insanity_level;
 
   /**
    * Listen socket.
@@ -1546,7 +1541,7 @@ struct MHD_Daemon
   volatile bool shutdown;
 
   /**
-   * Has this deamon been quiesced via #MHD_quiesce_daemon()?
+   * Has this daemon been quiesced via #MHD_quiesce_daemon()?
    * If so, we should no longer use the @e listen_fd (including
    * removing it from the @e epoll_fd when possible).
    */
@@ -1910,7 +1905,7 @@ MHD_unescape_plus (char *arg);
  * @return #MHD_YES on success (continue to iterate)
  *         #MHD_NO to signal failure (and abort iteration)
  */
-typedef int
+typedef enum MHD_Result
 (*MHD_ArgumentIterator_)(struct MHD_Connection *connection,
                          const char *key,
                          size_t key_size,
@@ -1933,7 +1928,7 @@ typedef int
  *         #MHD_YES for success (parsing succeeded, @a cb always
  *                               returned #MHD_YES)
  */
-int
+enum MHD_Result
 MHD_parse_arguments_ (struct MHD_Connection *connection,
                       enum MHD_ValueKind kind,
                       char *args,

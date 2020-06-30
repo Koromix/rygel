@@ -49,7 +49,7 @@ We want the server to report internal errors, such as memory shortage or file ac
 adequately. 
 @verbatim
 const char* servererrorpage 
-  = "<html><body>An internal server error has occured.</body></html>";
+  = "<html><body>An internal server error has occurred.</body></html>";
 const char* fileexistspage
   = "<html><body>This file already exists.</body></html>";
 @end verbatim

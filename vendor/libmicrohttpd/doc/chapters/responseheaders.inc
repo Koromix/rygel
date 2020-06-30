@@ -60,7 +60,7 @@ server side and if so, the client should be informed with @code{MHD_HTTP_INTERNA
       /* error accessing file */
      if (fd != -1) close (fd);
       const char *errorstr =
-        "<html><body>An internal server error has occured!\
+        "<html><body>An internal server error has occurred!\
                               </body></html>";
       response =
 	MHD_create_response_from_buffer (strlen (errorstr), 
@@ -79,7 +79,7 @@ server side and if so, the client should be informed with @code{MHD_HTTP_INTERNA
         return MHD_NO;
   if (!ret) 
     {
-      const char *errorstr = "<html><body>An internal server error has occured!\
+      const char *errorstr = "<html><body>An internal server error has occurred!\
                               </body></html>";
 
       if (buffer) free(buffer);
@@ -120,7 +120,7 @@ But in the case of success a response will be constructed directly from the file
 @end verbatim
 @noindent
 
-Note that the response object will take care of closing the file desciptor for us.
+Note that the response object will take care of closing the file descriptor for us.
 
 Up to this point, there was little new. The actual novelty is that we enhance the header with the
 meta data about the content. Aware of the field's name we want to add, it is as easy as that:

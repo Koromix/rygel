@@ -33,7 +33,7 @@
 #include <unistd.h>
 #endif
 
-static int
+static enum MHD_Result
 value_checker (void *cls,
                enum MHD_ValueKind kind,
                const char *key,

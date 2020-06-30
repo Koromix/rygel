@@ -204,7 +204,7 @@ static magic_t magic;
 
 
 /**
- * Mark the given response as HTML for the brower.
+ * Mark the given response as HTML for the browser.
  *
  * @param response response to mark
  */
@@ -264,7 +264,7 @@ struct ResponseDataContext
  * @param dirname name of the directory to list
  * @return #MHD_YES on success, #MHD_NO on error
  */
-static int
+static enum MHD_Result
 list_directory (struct ResponseDataContext *rdc,
                 const char *dirname)
 {
@@ -444,7 +444,7 @@ struct UploadContext
  * @param size number of bytes in 'data'
  * @return #MHD_NO on allocation failure, #MHD_YES on success
  */
-static int
+static enum MHD_Result
 do_append (char **ret,
            const char *data,
            size_t size)
@@ -493,7 +493,7 @@ do_append (char **ret,
  * @return #MHD_YES to continue iterating,
  *         #MHD_NO to abort the iteration
  */
-static int
+static enum MHD_Result
 process_upload_data (void *cls,
                      enum MHD_ValueKind kind,
                      const char *key,
@@ -524,7 +524,7 @@ process_upload_data (void *cls,
   }
   if (NULL == filename)
   {
-    fprintf (stderr, "No filename, aborting upload\n");
+    fprintf (stderr, "No filename, aborting upload.\n");
     return MHD_NO;   /* no filename, error */
   }
   if ( (NULL == uc->category) ||
@@ -662,12 +662,12 @@ response_completed_callback (void *cls,
  * Return the current directory listing.
  *
  * @param connection connection to return the directory for
- * @return MHD_YES on success, MHD_NO on error
+ * @return #MHD_YES on success, #MHD_NO on error
  */
-static int
+static enum MHD_Result
 return_directory_response (struct MHD_Connection *connection)
 {
-  int ret;
+  enum MHD_Result ret;
 
   (void) pthread_mutex_lock (&mutex);
   if (NULL == cached_directory_response)
@@ -696,7 +696,7 @@ return_directory_response (struct MHD_Connection *connection)
  * @param ptr our context
  * @return #MHD_YES on success, #MHD_NO to drop connection
  */
-static int
+static enum MHD_Result
 generate_page (void *cls,
                struct MHD_Connection *connection,
                const char *url,
@@ -706,7 +706,7 @@ generate_page (void *cls,
                size_t *upload_data_size, void **ptr)
 {
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
   int fd;
   struct stat buf;
   (void) cls;               /* Unused. Silent compiler warning. */
@@ -946,7 +946,7 @@ main (int argc, char *const *argv)
                         MHD_OPTION_END);
   if (NULL == d)
     return 1;
-  fprintf (stderr, "HTTP server running. Press ENTER to stop the server\n");
+  fprintf (stderr, "HTTP server running. Press ENTER to stop the server.\n");
   (void) getc (stdin);
   MHD_stop_daemon (d);
   MHD_destroy_response (file_not_found_response);

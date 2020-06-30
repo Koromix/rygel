@@ -46,7 +46,7 @@
 
 static int oneone;
 
-static int
+static enum MHD_Result
 apc_all (void *cls, const struct sockaddr *addr, socklen_t addrlen)
 {
   (void) cls; (void) addr; (void) addrlen;   /* Unused. Silent compiler warning. */
@@ -69,7 +69,7 @@ copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
 }
 
 
-static int
+static enum MHD_Result
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
           const char *url,
@@ -80,7 +80,7 @@ ahc_echo (void *cls,
 {
   const char *me = cls;
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
   (void) version; (void) upload_data;      /* Unused. Silent compiler warning. */
   (void) upload_data_size; (void) unused;  /* Unused. Silent compiler warning. */
 

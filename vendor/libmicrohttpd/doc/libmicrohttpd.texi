@@ -539,7 +539,7 @@ connections).
 Enable optimizations to aggressively improve performance.
 
 Currently, the optimizations this option enables are based on
-opportunistic reads and writes.  Bascially, MHD will simply try to
+opportunistic reads and writes.  Basically, MHD will simply try to
 read or write or accept on a socket before checking that the socket is
 ready for IO using the event loop mechanism.  As the sockets are
 non-blocking, this may fail (at a loss of performance), but generally
@@ -1284,7 +1284,7 @@ Information about an MHD daemon.
 @chapter Callback functions definition
 
 
-@deftypefn {Function Pointer} int {*MHD_AcceptPolicyCallback} (void *cls, const struct sockaddr * addr, socklen_t addrlen)
+@deftypefn {Function Pointer} enum MHD_Result {*MHD_AcceptPolicyCallback} (void *cls, const struct sockaddr * addr, socklen_t addrlen)
 Invoked in the context of a connection to allow or deny a client to
 connect.  This callback return @code{MHD_YES} if connection is allowed,
 @code{MHD_NO} if not.
@@ -1300,7 +1300,7 @@ length of the address information.
 @end deftypefn
 
 
-@deftypefn {Function Pointer} int {*MHD_AccessHandlerCallback} (void *cls, struct MHD_Connection * connection, const char *url, const char *method, const char *version, const char *upload_data, size_t *upload_data_size, void **con_cls)
+@deftypefn {Function Pointer} enum MHD_Result {*MHD_AccessHandlerCallback} (void *cls, struct MHD_Connection * connection, const char *url, const char *method, const char *version, const char *upload_data, size_t *upload_data_size, void **con_cls)
 Invoked in the context of a connection to answer a request from the
 client.  This callback must call MHD functions (example: the
 @code{MHD_Response} ones) to provide content to give back to the client
@@ -1403,7 +1403,7 @@ reason for request termination see @code{MHD_OPTION_NOTIFY_COMPLETED}.
 @end deftypefn
 
 
-@deftypefn {Function Pointer} int {*MHD_KeyValueIterator} (void *cls, enum MHD_ValueKind kind, const char *key, const char *value, size_t value_size)
+@deftypefn {Function Pointer} enum MHD_Result {*MHD_KeyValueIterator} (void *cls, enum MHD_ValueKind kind, const char *key, const char *value, size_t value_size)
 Iterator over key-value pairs.  This iterator can be used to iterate
 over all of the cookies, headers, or @code{POST}-data fields of a
 request, and also to iterate over the headers that have been added to a
@@ -1440,7 +1440,7 @@ iteration.
 @end deftypefn
 
 
-@deftypefn {Function Pointer} int {*MHD_ContentReaderCallback} (void *cls, uint64_t pos, char *buf, size_t max)
+@deftypefn {Function Pointer} ssize_t {*MHD_ContentReaderCallback} (void *cls, uint64_t pos, char *buf, size_t max)
 Callback used by MHD in order to obtain content.  The callback has to
 copy at most @var{max} bytes of content into @var{buf}.  The total
 number of bytes that has been placed into @var{buf} should be returned.
@@ -1496,7 +1496,7 @@ It should be used to free resources associated with the content reader.
 @end deftypefn
 
 
-@deftypefn {Function Pointer} int {*MHD_PostDataIterator} (void *cls, enum MHD_ValueKind kind, const char *key, const char *filename, const char *content_type, const char *transfer_encoding, const char *data, uint64_t off, size_t size)
+@deftypefn {Function Pointer} enum MHD_Result {*MHD_PostDataIterator} (void *cls, enum MHD_ValueKind kind, const char *key, const char *filename, const char *content_type, const char *transfer_encoding, const char *data, uint64_t off, size_t size)
 Iterator over key-value pairs where the value maybe made available in
 increments and/or may not be zero-terminated.  Used for processing
 @code{POST} data.
@@ -1587,7 +1587,7 @@ Return @code{NULL} on error, handle to daemon on success.
 @end deftypefun
 
 
-@deftypefun int MHD_quiesce_daemon (struct MHD_Daemon *daemon)
+@deftypefun MHD_socket MHD_quiesce_daemon (struct MHD_Daemon *daemon)
 @cindex quiesce
 Stop accepting connections from the listening socket.  Allows clients
 to continue processing, but stops accepting new connections.  Note
@@ -1613,7 +1613,7 @@ Shutdown an HTTP daemon.
 @end deftypefun
 
 
-@deftypefun int MHD_run (struct MHD_Daemon *daemon)
+@deftypefun enum MHD_Result MHD_run (struct MHD_Daemon *daemon)
 Run webserver operations (without blocking unless in client callbacks).
 This method should be called by clients in combination with
 @code{MHD_get_fdset()} if the client-controlled @code{select}-method is used.
@@ -1634,7 +1634,7 @@ started with the right options for this call.
 @end deftypefun
 
 
-@deftypefun int MHD_run_from_select (struct MHD_Daemon *daemon, const fd_set *read_fd_set, const fd_set *write_fd_set, const fd_set *except_fd_set)
+@deftypefun enum MHD_Result MHD_run_from_select (struct MHD_Daemon *daemon, const fd_set *read_fd_set, const fd_set *write_fd_set, const fd_set *except_fd_set)
 Run webserver operations given sets of ready socket handles.
 @cindex select
 
@@ -1710,7 +1710,7 @@ to indicate further details about the error.
 @chapter Implementing external @code{select}
 
 
-@deftypefun int MHD_get_fdset (struct MHD_Daemon *daemon, fd_set * read_fd_set, fd_set * write_fd_set, fd_set * except_fd_set, int *max_fd)
+@deftypefun enum MHD_Result MHD_get_fdset (struct MHD_Daemon *daemon, fd_set * read_fd_set, fd_set * write_fd_set, fd_set * except_fd_set, int *max_fd)
 Obtain the @code{select()} sets for this daemon. The daemon's socket
 is added to @var{read_fd_set}. The list of currently existent
 connections is scanned and their file descriptors added to the correct
@@ -1736,12 +1736,12 @@ the right options for this call.
 @end deftypefun
 
 
-@deftypefun int MHD_get_fdset2 (struct MHD_Daemon *daemon, fd_set * read_fd_set, fd_set * write_fd_set, fd_set * except_fd_set, int *max_fd, unsigned int fd_setsize)
+@deftypefun enum MHD_Result MHD_get_fdset2 (struct MHD_Daemon *daemon, fd_set * read_fd_set, fd_set * write_fd_set, fd_set * except_fd_set, int *max_fd, unsigned int fd_setsize)
 Like @code{MHD_get_fdset()}, except that you can manually specify the value of FD_SETSIZE used by your application.
 @end deftypefun
 
 
-@deftypefun int MHD_get_timeout (struct MHD_Daemon *daemon, unsigned long long *timeout)
+@deftypefun enum MHD_Result MHD_get_timeout (struct MHD_Daemon *daemon, unsigned long long *timeout)
 @cindex timeout
 Obtain timeout value for select for this daemon (only needed if
 connection timeout is used).  The returned value is how many
@@ -1761,7 +1761,7 @@ will be set to the timeout (in milliseconds).
 @end table
 
 Return @code{MHD_YES} on success, @code{MHD_NO} if timeouts are not used
-(or no connections exist that would necessiate the use of a timeout
+(or no connections exist that would necessitate the use of a timeout
 right now).
 @end deftypefun
 
@@ -1802,7 +1802,7 @@ would contain the string ``key''.
 @end deftypefun
 
 
-@deftypefun int MHD_set_connection_value (struct MHD_Connection *connection, enum MHD_ValueKind kind, const char *key, const char *value)
+@deftypefun enum MHD_Result MHD_set_connection_value (struct MHD_Connection *connection, enum MHD_ValueKind kind, const char *key, const char *value)
 This function can be used to append an entry to
 the list of HTTP headers of a connection (so that the
 @code{MHD_get_connection_values function} will return
@@ -1837,12 +1837,18 @@ Get a particular header value.  If multiple values match the
 @var{kind}, return one of them (the ``first'', whatever that means).
 @var{key} must reference a zero-terminated ASCII-coded string
 representing the header to look for: it is compared against the
-headers using @code{strcasecmp()}, so case is ignored.  A value of
-@code{NULL} for @var{key} can be used to lookup 'trailing' values without a
-key, for example if a URI is of the form
-``http://example.com/?trailer'', a @var{key} of @code{NULL} can be used to
-access ``tailer" The function returns @code{NULL} if no matching item
-was found.
+headers using (basically) @code{strcasecmp()}, so case is ignored.
+@end deftypefun
+
+@deftypefun {const char *} MHD_lookup_connection_value_n (struct MHD_Connection *connection, enum MHD_ValueKind kind, const char *key, size_t key_size, const char **value_ptr, size_t *value_size_ptr)
+Get a particular header value.  If multiple values match the
+@var{kind}, return one of them (the ``first'', whatever that means).
+@var{key} must reference an ASCII-coded string
+representing the header to look for: it is compared against the
+headers using (basically) @code{strncasecmp()}, so case is ignored.
+The @var{value_ptr} is set to the address of the value found,
+and @var{value_size_ptr} is set to the number of bytes in the
+value.
 @end deftypefun
 
 
@@ -1884,7 +1890,7 @@ response and we finally destroy it only when the daemon shuts down.
 @section Enqueuing a response
 
 
-@deftypefun int MHD_queue_response (struct MHD_Connection *connection, unsigned int status_code, struct MHD_Response *response)
+@deftypefun enum MHD_Result MHD_queue_response (struct MHD_Connection *connection, unsigned int status_code, struct MHD_Response *response)
 Queue a response to be transmitted to the client as soon as possible
 but only after MHD_AccessHandlerCallback returns.  This function
 checks that it is legal to queue a response at this time for the
@@ -2148,7 +2154,7 @@ MHD_destroy_response(response);
 @section Adding headers to a response
 
 
-@deftypefun int MHD_add_response_header (struct MHD_Response *response, const char *header, const char *content)
+@deftypefun enum MHD_Result MHD_add_response_header (struct MHD_Response *response, const char *header, const char *content)
 Add a header line to the response. The strings referenced by
 @var{header} and @var{content} must be zero-terminated and they are
 duplicated into memory blocks embedded in @var{response}.
@@ -2172,7 +2178,7 @@ memory allocation error).
 @end deftypefun
 
 
-@deftypefun int MHD_add_response_footer (struct MHD_Response *response, const char *footer, const char *content)
+@deftypefun enum MHD_Result MHD_add_response_footer (struct MHD_Response *response, const char *footer, const char *content)
 Add a footer line to the response. The strings referenced by
 @var{footer} and @var{content} must be zero-terminated and they are
 duplicated into memory blocks embedded in @var{response}.
@@ -2190,7 +2196,7 @@ memory allocation error).
 
 
 
-@deftypefun int MHD_del_response_header (struct MHD_Response *response, const char *header, const char *content)
+@deftypefun enum MHD_Result MHD_del_response_header (struct MHD_Response *response, const char *header, const char *content)
 Delete a header (or footer) line from the response.  Return @code{MHD_NO} on error
 (arguments are invalid or no such header known).
 @end deftypefun
@@ -2201,7 +2207,7 @@ Delete a header (or footer) line from the response.  Return @code{MHD_NO} on err
 @section Setting response options
 
 
-@deftypefun int MHD_set_response_options (struct MHD_Response *response, enum MHD_ResponseFlags flags, ...)
+@deftypefun enum MHD_Result MHD_set_response_options (struct MHD_Response *response, enum MHD_ResponseFlags flags, ...)
 Set special flags and options for a response.
 
 Calling this functions sets the given flags and options for the response.
@@ -2281,7 +2287,7 @@ a connection by queueing a response (using the
 have been created with the following function:
 
 
-@deftypefun int MHD_create_response_for_upgrade (MHD_UpgradeHandler upgrade_handler, void *upgrade_handler_cls)
+@deftypefun enum MHD_Result MHD_create_response_for_upgrade (MHD_UpgradeHandler upgrade_handler, void *upgrade_handler_cls)
 Create a response suitable for switching protocols.  Returns @code{MHD_YES} on success.  @code{upgrade_handler} must not be @code{NULL}.
 
 When creating this type of response, the ``Connection: Upgrade''
@@ -2322,7 +2328,7 @@ argument for calls to @code{MHD_upgrade_action}.  Applications must eventually u
 
 @end deftypefn
 
-@deftypefun int MHD_upgrade_action (struct MHD_UpgradeResponseHandle *urh, enum MHD_UpgradeAction action, ...)
+@deftypefun enum MHD_Result MHD_upgrade_action (struct MHD_UpgradeResponseHandle *urh, enum MHD_UpgradeAction action, ...)
 Perform special operations related to upgraded connections.
 
 @table @var
@@ -2374,7 +2380,7 @@ Instead, applications using thread modes other than
 @code{MHD_USE_THREAD_PER_CONNECTION} should use the
 following functions to perform flow control.
 
-@deftypefun int MHD_suspend_connection (struct MHD_Connection *connection)
+@deftypefun enum MHD_Result MHD_suspend_connection (struct MHD_Connection *connection)
 Suspend handling of network data for a given connection.  This can
 be used to dequeue a connection from MHD's event loop (external
 select, internal select or thread pool; not applicable to
@@ -2408,7 +2414,7 @@ the connection to suspend
 @end table
 @end deftypefun
 
-@deftypefun int MHD_resume_connection (struct MHD_Connection *connection)
+@deftypefun enum MHD_Result MHD_resume_connection (struct MHD_Connection *connection)
 Resume handling of network data for suspended connection.  It is safe
 to resume a suspended connection at any time.  Calling this function
 on a connection that was not previously suspended will result in
@@ -2602,7 +2608,7 @@ Most of the time it is sound to specify 300 seconds as its values.
 @end deftypefun
 
 
-@deftypefun int MHD_queue_auth_fail_response2 (struct MHD_Connection *connection, const char *realm, const char *opaque, struct MHD_Response *response, int signal_stale, enum MHD_DigestAuthAlgorithm algo)
+@deftypefun enum MHD_Result MHD_queue_auth_fail_response2 (struct MHD_Connection *connection, const char *realm, const char *opaque, struct MHD_Response *response, int signal_stale, enum MHD_DigestAuthAlgorithm algo)
 Queues a response to request authentication from the client,
 return @code{MHD_YES} if successful, otherwise @code{MHD_NO}.
 
@@ -2626,7 +2632,7 @@ must then be selected when checking digests received from clients!
 @end deftypefun
 
 
-@deftypefun int MHD_queue_auth_fail_response (struct MHD_Connection *connection, const char *realm, const char *opaque, struct MHD_Response *response, int signal_stale)
+@deftypefun enum MHD_Result MHD_queue_auth_fail_response (struct MHD_Connection *connection, const char *realm, const char *opaque, struct MHD_Response *response, int signal_stale)
 Queues a response to request authentication from the client,
 return @code{MHD_YES} if successful, otherwise @code{MHD_NO}.
 
@@ -2847,7 +2853,7 @@ a PP handle.
 @end deftypefun
 
 
-@deftypefun int MHD_post_process (struct MHD_PostProcessor *pp, const char *post_data, size_t post_data_len)
+@deftypefun enum MHD_Result MHD_post_process (struct MHD_PostProcessor *pp, const char *post_data, size_t post_data_len)
 Parse and process @code{POST} data.  Call this function when @code{POST}
 data is available (usually during an @code{MHD_AccessHandlerCallback})
 with the @var{upload_data} and @var{upload_data_size}.  Whenever
@@ -2870,7 +2876,7 @@ Return @code{MHD_YES} on success, @code{MHD_NO} on error
 @end deftypefun
 
 
-@deftypefun int MHD_destroy_post_processor (struct MHD_PostProcessor *pp)
+@deftypefun enum MHD_Result MHD_destroy_post_processor (struct MHD_PostProcessor *pp)
 Release PostProcessor resources.  After this function is being called,
 the PostProcessor is guaranteed to no longer call its iterator.  There
 is no special call to the iterator to indicate the end of the post processing

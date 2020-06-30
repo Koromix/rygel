@@ -19,7 +19,7 @@
 #define FILENAME "picture.png"
 #define MIMETYPE "image/png"
 
-static int
+static enum MHD_Result
 answer_to_connection (void *cls, struct MHD_Connection *connection,
                       const char *url, const char *method,
                       const char *version, const char *upload_data,
@@ -27,43 +27,43 @@ answer_to_connection (void *cls, struct MHD_Connection *connection,
 {
   struct MHD_Response *response;
   int fd;
-  int ret;
+  enum MHD_Result ret;
   struct stat sbuf;
-  (void)cls;               /* Unused. Silent compiler warning. */
-  (void)url;               /* Unused. Silent compiler warning. */
-  (void)version;           /* Unused. Silent compiler warning. */
-  (void)upload_data;       /* Unused. Silent compiler warning. */
-  (void)upload_data_size;  /* Unused. Silent compiler warning. */
-  (void)con_cls;           /* Unused. Silent compiler warning. */
+  (void) cls;               /* Unused. Silent compiler warning. */
+  (void) url;               /* Unused. Silent compiler warning. */
+  (void) version;           /* Unused. Silent compiler warning. */
+  (void) upload_data;       /* Unused. Silent compiler warning. */
+  (void) upload_data_size;  /* Unused. Silent compiler warning. */
+  (void) con_cls;           /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (method, "GET"))
     return MHD_NO;
 
   if ( (-1 == (fd = open (FILENAME, O_RDONLY))) ||
        (0 != fstat (fd, &sbuf)) )
-    {
-      const char *errorstr =
-        "<html><body>An internal server error has occured!\
+  {
+    const char *errorstr =
+      "<html><body>An internal server error has occurred!\
                               </body></html>";
-      /* error accessing file */
-      if (fd != -1)
-	(void) close (fd);
-      response =
-	MHD_create_response_from_buffer (strlen (errorstr),
-					 (void *) errorstr,
-					 MHD_RESPMEM_PERSISTENT);
-      if (NULL != response)
-        {
-          ret =
-            MHD_queue_response (connection, MHD_HTTP_INTERNAL_SERVER_ERROR,
-                                response);
-          MHD_destroy_response (response);
+    /* error accessing file */
+    if (fd != -1)
+      (void) close (fd);
+    response =
+      MHD_create_response_from_buffer (strlen (errorstr),
+                                       (void *) errorstr,
+                                       MHD_RESPMEM_PERSISTENT);
+    if (NULL != response)
+    {
+      ret =
+        MHD_queue_response (connection, MHD_HTTP_INTERNAL_SERVER_ERROR,
+                            response);
+      MHD_destroy_response (response);
 
-          return ret;
-        }
-      else
-        return MHD_NO;
+      return ret;
     }
+    else
+      return MHD_NO;
+  }
   response =
     MHD_create_response_from_fd_at_offset64 (sbuf.st_size, fd, 0);
   MHD_add_response_header (response, "Content-Type", MIMETYPE);

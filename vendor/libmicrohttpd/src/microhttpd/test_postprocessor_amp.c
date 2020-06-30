@@ -7,7 +7,7 @@
 
 uint64_t num_errors;
 
-int
+enum MHD_Result
 check_post (void *cls, enum MHD_ValueKind kind, const char*key,
             const char*filename, const char*content_type,
             const char*content_encoding, const char*data,

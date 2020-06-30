@@ -91,7 +91,7 @@ test_secure_get (FILE *test_fd,
 }
 
 
-static int
+static enum MHD_Result
 ahc_empty (void *cls,
            struct MHD_Connection *connection,
            const char *url,
@@ -103,7 +103,7 @@ ahc_empty (void *cls,
 {
   static int ptr;
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
   (void) cls;
   (void) url;
   (void) url;

@@ -97,7 +97,7 @@ copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
  * in that it fails to support incremental processing.
  * (to be fixed in the future)
  */
-static int
+static enum MHD_Result
 post_iterator (void *cls,
                enum MHD_ValueKind kind,
                const char *key,
@@ -120,7 +120,7 @@ post_iterator (void *cls,
 }
 
 
-static int
+static enum MHD_Result
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
           const char *url,
@@ -132,7 +132,7 @@ ahc_echo (void *cls,
   static int eok;
   struct MHD_Response *response;
   struct MHD_PostProcessor *pp;
-  int ret;
+  enum MHD_Result ret;
   (void) cls; (void) version;      /* Unused. Silent compiler warning. */
 
   if (0 != strcasecmp ("POST", method))
@@ -562,7 +562,7 @@ testExternalPost ()
 }
 
 
-static int
+static enum MHD_Result
 ahc_cancel (void *cls,
             struct MHD_Connection *connection,
             const char *url,
@@ -572,7 +572,7 @@ ahc_cancel (void *cls,
             void **unused)
 {
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
   (void) cls; (void) url; (void) version;            /* Unused. Silent compiler warning. */
   (void) upload_data; (void) upload_data_size;     /* Unused. Silent compiler warning. */
 

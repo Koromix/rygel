@@ -126,9 +126,10 @@ check_PROGRAMS = test_str_compare$(EXEEXT) test_str_to_value$(EXEEXT) \
 	test_str_token$(EXEEXT) test_http_reasons$(EXEEXT) \
 	test_md5$(EXEEXT) test_sha256$(EXEEXT) \
 	test_start_stop$(EXEEXT) test_daemon$(EXEEXT) \
-	test_options$(EXEEXT) $(am__EXEEXT_1) $(am__EXEEXT_2) \
-	$(am__EXEEXT_3) $(am__EXEEXT_4) $(am__EXEEXT_5) \
-	$(am__EXEEXT_6) $(am__EXEEXT_7)
+	test_postprocessor_md$(EXEEXT) test_options$(EXEEXT) \
+	$(am__EXEEXT_1) $(am__EXEEXT_2) $(am__EXEEXT_3) \
+	$(am__EXEEXT_4) $(am__EXEEXT_5) $(am__EXEEXT_6) \
+	$(am__EXEEXT_7)
 @ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_POSIX_THREADS_TRUE@am__append_14 = test_upgrade test_upgrade_large
 @ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_W32_THREADS_TRUE@am__append_15 = test_upgrade test_upgrade_large
 @ENABLE_HTTPS_TRUE@@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@@USE_POSIX_THREADS_TRUE@am__append_16 = test_upgrade_tls test_upgrade_large_tls
@@ -314,6 +315,9 @@ test_postprocessor_large_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(test_postprocessor_large_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
+am_test_postprocessor_md_OBJECTS = test_postprocessor_md.$(OBJEXT)
+test_postprocessor_md_OBJECTS = $(am_test_postprocessor_md_OBJECTS)
+test_postprocessor_md_LDADD = $(LDADD)
 am_test_sha256_OBJECTS = test_sha256.$(OBJEXT) sha256.$(OBJEXT)
 test_sha256_OBJECTS = $(am_test_sha256_OBJECTS)
 test_sha256_LDADD = $(LDADD)
@@ -453,6 +457,7 @@ am__depfiles_remade = ./$(DEPDIR)/libmicrohttpd_la-base64.Plo \
 	./$(DEPDIR)/test_postprocessor-test_postprocessor.Po \
 	./$(DEPDIR)/test_postprocessor_amp-test_postprocessor_amp.Po \
 	./$(DEPDIR)/test_postprocessor_large-test_postprocessor_large.Po \
+	./$(DEPDIR)/test_postprocessor_md.Po \
 	./$(DEPDIR)/test_sha256.Po \
 	./$(DEPDIR)/test_shutdown_poll-test_shutdown_select.Po \
 	./$(DEPDIR)/test_shutdown_poll_ignore-test_shutdown_select.Po \
@@ -487,7 +492,8 @@ SOURCES = $(libmicrohttpd_la_SOURCES) $(test_daemon_SOURCES) \
 	$(test_http_reasons_SOURCES) $(test_md5_SOURCES) \
 	$(test_options_SOURCES) $(test_postprocessor_SOURCES) \
 	$(test_postprocessor_amp_SOURCES) \
-	$(test_postprocessor_large_SOURCES) $(test_sha256_SOURCES) \
+	$(test_postprocessor_large_SOURCES) \
+	$(test_postprocessor_md_SOURCES) $(test_sha256_SOURCES) \
 	$(test_shutdown_poll_SOURCES) \
 	$(test_shutdown_poll_ignore_SOURCES) \
 	$(test_shutdown_select_SOURCES) \
@@ -501,7 +507,8 @@ DIST_SOURCES = $(am__libmicrohttpd_la_SOURCES_DIST) \
 	$(test_md5_SOURCES) $(test_options_SOURCES) \
 	$(test_postprocessor_SOURCES) \
 	$(test_postprocessor_amp_SOURCES) \
-	$(test_postprocessor_large_SOURCES) $(test_sha256_SOURCES) \
+	$(test_postprocessor_large_SOURCES) \
+	$(test_postprocessor_md_SOURCES) $(test_sha256_SOURCES) \
 	$(test_shutdown_poll_SOURCES) \
 	$(test_shutdown_poll_ignore_SOURCES) \
 	$(test_shutdown_select_SOURCES) \
@@ -1102,6 +1109,9 @@ test_str_to_value_SOURCES = \
 test_str_token_SOURCES = \
   test_str_token.c mhd_str.c
 
+test_postprocessor_md_SOURCES = \
+  test_postprocessor_md.c
+
 test_http_reasons_SOURCES = \
   test_http_reasons.c \
   reason_phrase.c mhd_str.c mhd_str.h
@@ -1231,6 +1241,10 @@ test_postprocessor_large$(EXEEXT): $(test_postprocessor_large_OBJECTS) $(test_po
 	@rm -f test_postprocessor_large$(EXEEXT)
 	$(AM_V_CCLD)$(test_postprocessor_large_LINK) $(test_postprocessor_large_OBJECTS) $(test_postprocessor_large_LDADD) $(LIBS)
 
+test_postprocessor_md$(EXEEXT): $(test_postprocessor_md_OBJECTS) $(test_postprocessor_md_DEPENDENCIES) $(EXTRA_test_postprocessor_md_DEPENDENCIES) 
+	@rm -f test_postprocessor_md$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_postprocessor_md_OBJECTS) $(test_postprocessor_md_LDADD) $(LIBS)
+
 test_sha256$(EXEEXT): $(test_sha256_OBJECTS) $(test_sha256_DEPENDENCIES) $(EXTRA_test_sha256_DEPENDENCIES) 
 	@rm -f test_sha256$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sha256_OBJECTS) $(test_sha256_LDADD) $(LIBS)
@@ -1322,6 +1336,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_postprocessor-test_postprocessor.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_postprocessor_amp-test_postprocessor_amp.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_postprocessor_large-test_postprocessor_large.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_postprocessor_md.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sha256.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_shutdown_poll-test_shutdown_select.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_shutdown_poll_ignore-test_shutdown_select.Po@am__quote@ # am--include-marker
@@ -1928,6 +1943,13 @@ test_daemon.log: test_daemon$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_postprocessor_md.log: test_postprocessor_md$(EXEEXT)
+	@p='test_postprocessor_md$(EXEEXT)'; \
+	b='test_postprocessor_md'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test_options.log: test_options$(EXEEXT)
 	@p='test_options$(EXEEXT)'; \
 	b='test_options'; \
@@ -2142,6 +2164,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_postprocessor-test_postprocessor.Po
 	-rm -f ./$(DEPDIR)/test_postprocessor_amp-test_postprocessor_amp.Po
 	-rm -f ./$(DEPDIR)/test_postprocessor_large-test_postprocessor_large.Po
+	-rm -f ./$(DEPDIR)/test_postprocessor_md.Po
 	-rm -f ./$(DEPDIR)/test_sha256.Po
 	-rm -f ./$(DEPDIR)/test_shutdown_poll-test_shutdown_select.Po
 	-rm -f ./$(DEPDIR)/test_shutdown_poll_ignore-test_shutdown_select.Po
@@ -2232,6 +2255,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_postprocessor-test_postprocessor.Po
 	-rm -f ./$(DEPDIR)/test_postprocessor_amp-test_postprocessor_amp.Po
 	-rm -f ./$(DEPDIR)/test_postprocessor_large-test_postprocessor_large.Po
+	-rm -f ./$(DEPDIR)/test_postprocessor_md.Po
 	-rm -f ./$(DEPDIR)/test_sha256.Po
 	-rm -f ./$(DEPDIR)/test_shutdown_poll-test_shutdown_select.Po
 	-rm -f ./$(DEPDIR)/test_shutdown_poll_ignore-test_shutdown_select.Po
@@ -2320,6 +2344,8 @@ uninstall-am: uninstall-libLTLIBRARIES
 @HAVE_W32_TRUE@	RC_CPP_FLAGS=" $(DEFAULT_INCLUDES) $(INCLUDES) $(libmicrohttpd_la_CPPFLAGS) $(CPPFLAGS) " && \
 @HAVE_W32_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=RC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(RC) $(RCFLAGS) $(DEFS) $${RC_CPP_FLAGS// -isystem / -I } $< -o $@ && \
 @HAVE_W32_TRUE@	echo > $@-empty.c && $(CC) $(AM_CFLAGS) $(CFLAGS) -c $@-empty.c -o $(@:.lo=.o) && rm -f $@-empty.c
+
+.NOTPARALLEL:
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

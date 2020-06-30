@@ -1,8 +1,8 @@
 This is libmicrohttpd.info, produced by makeinfo version 6.7 from
 libmicrohttpd.texi.
 
-This manual is for GNU libmicrohttpd (version 0.9.70, 25 October 2019),
-a library for embedding an HTTP(S) server into C applications.
+This manual is for GNU libmicrohttpd (version 0.9.71, 10 June 2020), a
+library for embedding an HTTP(S) server into C applications.
 
    Copyright © 2007–2019 Christian Grothoff
 
@@ -23,8 +23,8 @@ File: libmicrohttpd.info,  Node: Top,  Next: microhttpd-intro,  Up: (dir)
 The GNU libmicrohttpd Library
 *****************************
 
-This manual is for GNU libmicrohttpd (version 0.9.70, 25 October 2019),
-a library for embedding an HTTP(S) server into C applications.
+This manual is for GNU libmicrohttpd (version 0.9.71, 10 June 2020), a
+library for embedding an HTTP(S) server into C applications.
 
    Copyright © 2007–2019 Christian Grothoff
 
@@ -473,7 +473,7 @@ File: libmicrohttpd.info,  Node: microhttpd-const,  Next: microhttpd-struct,  Pr
           Enable optimizations to aggressively improve performance.
 
           Currently, the optimizations this option enables are based on
-          opportunistic reads and writes.  Bascially, MHD will simply
+          opportunistic reads and writes.  Basically, MHD will simply
           try to read or write or accept on a socket before checking
           that the socket is ready for IO using the event loop
           mechanism.  As the sockets are non-blocking, this may fail (at
@@ -1122,8 +1122,8 @@ File: libmicrohttpd.info,  Node: microhttpd-cb,  Next: microhttpd-init,  Prev: m
 4 Callback functions definition
 *******************************
 
- -- Function Pointer: int *MHD_AcceptPolicyCallback (void *cls, const
-          struct sockaddr * addr, socklen_t addrlen)
+ -- Function Pointer: enum MHD_Result *MHD_AcceptPolicyCallback (void
+          *cls, const struct sockaddr * addr, socklen_t addrlen)
      Invoked in the context of a connection to allow or deny a client to
      connect.  This callback return ‘MHD_YES’ if connection is allowed,
      ‘MHD_NO’ if not.
@@ -1135,10 +1135,10 @@ File: libmicrohttpd.info,  Node: microhttpd-cb,  Next: microhttpd-init,  Prev: m
      ADDRLEN
           length of the address information.
 
- -- Function Pointer: int *MHD_AccessHandlerCallback (void *cls, struct
-          MHD_Connection * connection, const char *url, const char
-          *method, const char *version, const char *upload_data, size_t
-          *upload_data_size, void **con_cls)
+ -- Function Pointer: enum MHD_Result *MHD_AccessHandlerCallback (void
+          *cls, struct MHD_Connection * connection, const char *url,
+          const char *method, const char *version, const char
+          *upload_data, size_t *upload_data_size, void **con_cls)
      Invoked in the context of a connection to answer a request from the
      client.  This callback must call MHD functions (example: the
      ‘MHD_Response’ ones) to provide content to give back to the client
@@ -1232,9 +1232,9 @@ File: libmicrohttpd.info,  Node: microhttpd-cb,  Next: microhttpd-init,  Prev: m
           reason for request termination see
           ‘MHD_OPTION_NOTIFY_COMPLETED’.
 
- -- Function Pointer: int *MHD_KeyValueIterator (void *cls, enum
-          MHD_ValueKind kind, const char *key, const char *value, size_t
-          value_size)
+ -- Function Pointer: enum MHD_Result *MHD_KeyValueIterator (void *cls,
+          enum MHD_ValueKind kind, const char *key, const char *value,
+          size_t value_size)
      Iterator over key-value pairs.  This iterator can be used to
      iterate over all of the cookies, headers, or ‘POST’-data fields of
      a request, and also to iterate over the headers that have been
@@ -1266,7 +1266,7 @@ File: libmicrohttpd.info,  Node: microhttpd-cb,  Next: microhttpd-init,  Prev: m
      Return ‘MHD_YES’ to continue iterating, ‘MHD_NO’ to abort the
      iteration.
 
- -- Function Pointer: int *MHD_ContentReaderCallback (void *cls,
+ -- Function Pointer: ssize_t *MHD_ContentReaderCallback (void *cls,
           uint64_t pos, char *buf, size_t max)
      Callback used by MHD in order to obtain content.  The callback has
      to copy at most MAX bytes of content into BUF.  The total number of
@@ -1318,10 +1318,11 @@ File: libmicrohttpd.info,  Node: microhttpd-cb,  Next: microhttpd-init,  Prev: m
      It should be used to free resources associated with the content
      reader.
 
- -- Function Pointer: int *MHD_PostDataIterator (void *cls, enum
-          MHD_ValueKind kind, const char *key, const char *filename,
-          const char *content_type, const char *transfer_encoding, const
-          char *data, uint64_t off, size_t size)
+ -- Function Pointer: enum MHD_Result *MHD_PostDataIterator (void *cls,
+          enum MHD_ValueKind kind, const char *key, const char
+          *filename, const char *content_type, const char
+          *transfer_encoding, const char *data, uint64_t off, size_t
+          size)
      Iterator over key-value pairs where the value maybe made available
      in increments and/or may not be zero-terminated.  Used for
      processing ‘POST’ data.
@@ -1406,7 +1407,7 @@ File: libmicrohttpd.info,  Node: microhttpd-init,  Next: microhttpd-inspect,  Pr
 
      Return ‘NULL’ on error, handle to daemon on success.
 
- -- Function: int MHD_quiesce_daemon (struct MHD_Daemon *daemon)
+ -- Function: MHD_socket MHD_quiesce_daemon (struct MHD_Daemon *daemon)
      Stop accepting connections from the listening socket.  Allows
      clients to continue processing, but stops accepting new
      connections.  Note that the caller is responsible for closing the
@@ -1426,7 +1427,7 @@ File: libmicrohttpd.info,  Node: microhttpd-init,  Next: microhttpd-inspect,  Pr
  -- Function: void MHD_stop_daemon (struct MHD_Daemon *daemon)
      Shutdown an HTTP daemon.
 
- -- Function: int MHD_run (struct MHD_Daemon *daemon)
+ -- Function: enum MHD_Result MHD_run (struct MHD_Daemon *daemon)
      Run webserver operations (without blocking unless in client
      callbacks).  This method should be called by clients in combination
      with ‘MHD_get_fdset()’ if the client-controlled ‘select’-method is
@@ -1442,9 +1443,9 @@ File: libmicrohttpd.info,  Node: microhttpd-init,  Next: microhttpd-inspect,  Pr
      Return ‘MHD_YES’ on success, ‘MHD_NO’ if this daemon was not
      started with the right options for this call.
 
- -- Function: int MHD_run_from_select (struct MHD_Daemon *daemon, const
-          fd_set *read_fd_set, const fd_set *write_fd_set, const fd_set
-          *except_fd_set)
+ -- Function: enum MHD_Result MHD_run_from_select (struct MHD_Daemon
+          *daemon, const fd_set *read_fd_set, const fd_set
+          *write_fd_set, const fd_set *except_fd_set)
      Run webserver operations given sets of ready socket handles.
 
      This method should be called by clients in combination with
@@ -1508,9 +1509,9 @@ File: libmicrohttpd.info,  Node: microhttpd-inspect,  Next: microhttpd-requests,
 6 Implementing external ‘select’
 ********************************
 
- -- Function: int MHD_get_fdset (struct MHD_Daemon *daemon, fd_set *
-          read_fd_set, fd_set * write_fd_set, fd_set * except_fd_set,
-          int *max_fd)
+ -- Function: enum MHD_Result MHD_get_fdset (struct MHD_Daemon *daemon,
+          fd_set * read_fd_set, fd_set * write_fd_set, fd_set *
+          except_fd_set, int *max_fd)
      Obtain the ‘select()’ sets for this daemon.  The daemon’s socket is
      added to READ_FD_SET.  The list of currently existent connections
      is scanned and their file descriptors added to the correct set.
@@ -1533,14 +1534,14 @@ File: libmicrohttpd.info,  Node: microhttpd-inspect,  Next: microhttpd-requests,
      (example: ‘NULL’ pointers); this daemon was not started with the
      right options for this call.
 
- -- Function: int MHD_get_fdset2 (struct MHD_Daemon *daemon, fd_set *
-          read_fd_set, fd_set * write_fd_set, fd_set * except_fd_set,
-          int *max_fd, unsigned int fd_setsize)
+ -- Function: enum MHD_Result MHD_get_fdset2 (struct MHD_Daemon *daemon,
+          fd_set * read_fd_set, fd_set * write_fd_set, fd_set *
+          except_fd_set, int *max_fd, unsigned int fd_setsize)
      Like ‘MHD_get_fdset()’, except that you can manually specify the
      value of FD_SETSIZE used by your application.
 
- -- Function: int MHD_get_timeout (struct MHD_Daemon *daemon, unsigned
-          long long *timeout)
+ -- Function: enum MHD_Result MHD_get_timeout (struct MHD_Daemon
+          *daemon, unsigned long long *timeout)
      Obtain timeout value for select for this daemon (only needed if
      connection timeout is used).  The returned value is how many
      milliseconds ‘select’ should at most block, not the timeout value
@@ -1557,7 +1558,7 @@ File: libmicrohttpd.info,  Node: microhttpd-inspect,  Next: microhttpd-requests,
           will be set to the timeout (in milliseconds).
 
      Return ‘MHD_YES’ on success, ‘MHD_NO’ if timeouts are not used (or
-     no connections exist that would necessiate the use of a timeout
+     no connections exist that would necessitate the use of a timeout
      right now).
 
 
@@ -1595,9 +1596,9 @@ File: libmicrohttpd.info,  Node: microhttpd-requests,  Next: microhttpd-response
      which case VALUE would be the string “value” and KEY would contain
      the string “key”.
 
- -- Function: int MHD_set_connection_value (struct MHD_Connection
-          *connection, enum MHD_ValueKind kind, const char *key, const
-          char *value)
+ -- Function: enum MHD_Result MHD_set_connection_value (struct
+          MHD_Connection *connection, enum MHD_ValueKind kind, const
+          char *key, const char *value)
      This function can be used to append an entry to the list of HTTP
      headers of a connection (so that the ‘MHD_get_connection_values
      function’ will return them – and the MHD PostProcessor will also
@@ -1625,11 +1626,19 @@ File: libmicrohttpd.info,  Node: microhttpd-requests,  Next: microhttpd-response
      return one of them (the “first”, whatever that means).  KEY must
      reference a zero-terminated ASCII-coded string representing the
      header to look for: it is compared against the headers using
-     ‘strcasecmp()’, so case is ignored.  A value of ‘NULL’ for KEY can
-     be used to lookup ’trailing’ values without a key, for example if a
-     URI is of the form “http://example.com/?trailer”, a KEY of ‘NULL’
-     can be used to access “tailer" The function returns ‘NULL’ if no
-     matching item was found.
+     (basically) ‘strcasecmp()’, so case is ignored.
+
+ -- Function: const char * MHD_lookup_connection_value_n (struct
+          MHD_Connection *connection, enum MHD_ValueKind kind, const
+          char *key, size_t key_size, const char **value_ptr, size_t
+          *value_size_ptr)
+     Get a particular header value.  If multiple values match the KIND,
+     return one of them (the “first”, whatever that means).  KEY must
+     reference an ASCII-coded string representing the header to look
+     for: it is compared against the headers using (basically)
+     ‘strncasecmp()’, so case is ignored.  The VALUE_PTR is set to the
+     address of the value found, and VALUE_SIZE_PTR is set to the number
+     of bytes in the value.
 
 
 File: libmicrohttpd.info,  Node: microhttpd-responses,  Next: microhttpd-flow,  Prev: microhttpd-requests,  Up: Top
@@ -1666,8 +1675,9 @@ File: libmicrohttpd.info,  Node: microhttpd-response enqueue,  Next: microhttpd-
 8.1 Enqueuing a response
 ========================
 
- -- Function: int MHD_queue_response (struct MHD_Connection *connection,
-          unsigned int status_code, struct MHD_Response *response)
+ -- Function: enum MHD_Result MHD_queue_response (struct MHD_Connection
+          *connection, unsigned int status_code, struct MHD_Response
+          *response)
      Queue a response to be transmitted to the client as soon as
      possible but only after MHD_AccessHandlerCallback returns.  This
      function checks that it is legal to queue a response at this time
@@ -1897,8 +1907,9 @@ File: libmicrohttpd.info,  Node: microhttpd-response headers,  Next: microhttpd-
 8.3 Adding headers to a response
 ================================
 
- -- Function: int MHD_add_response_header (struct MHD_Response
-          *response, const char *header, const char *content)
+ -- Function: enum MHD_Result MHD_add_response_header (struct
+          MHD_Response *response, const char *header, const char
+          *content)
      Add a header line to the response.  The strings referenced by
      HEADER and CONTENT must be zero-terminated and they are duplicated
      into memory blocks embedded in RESPONSE.
@@ -1920,8 +1931,9 @@ File: libmicrohttpd.info,  Node: microhttpd-response headers,  Next: microhttpd-
      Return ‘MHD_NO’ on error (i.e.  invalid header or content format or
      memory allocation error).
 
- -- Function: int MHD_add_response_footer (struct MHD_Response
-          *response, const char *footer, const char *content)
+ -- Function: enum MHD_Result MHD_add_response_footer (struct
+          MHD_Response *response, const char *footer, const char
+          *content)
      Add a footer line to the response.  The strings referenced by
      FOOTER and CONTENT must be zero-terminated and they are duplicated
      into memory blocks embedded in RESPONSE.
@@ -1936,8 +1948,9 @@ File: libmicrohttpd.info,  Node: microhttpd-response headers,  Next: microhttpd-
      Return ‘MHD_NO’ on error (i.e.  invalid header or content format or
      memory allocation error).
 
- -- Function: int MHD_del_response_header (struct MHD_Response
-          *response, const char *header, const char *content)
+ -- Function: enum MHD_Result MHD_del_response_header (struct
+          MHD_Response *response, const char *header, const char
+          *content)
      Delete a header (or footer) line from the response.  Return
      ‘MHD_NO’ on error (arguments are invalid or no such header known).
 
@@ -1947,8 +1960,8 @@ File: libmicrohttpd.info,  Node: microhttpd-response options,  Next: microhttpd-
 8.4 Setting response options
 ============================
 
- -- Function: int MHD_set_response_options (struct MHD_Response
-          *response, enum MHD_ResponseFlags flags, ...)
+ -- Function: enum MHD_Result MHD_set_response_options (struct
+          MHD_Response *response, enum MHD_ResponseFlags flags, ...)
      Set special flags and options for a response.
 
      Calling this functions sets the given flags and options for the
@@ -2016,8 +2029,9 @@ If this flag has been set, applications can upgrade a connection by
 queueing a response (using the ‘MHD_HTTP_SWITCHING_PROTOCOLS’ status
 code) which must have been created with the following function:
 
- -- Function: int MHD_create_response_for_upgrade (MHD_UpgradeHandler
-          upgrade_handler, void *upgrade_handler_cls)
+ -- Function: enum MHD_Result MHD_create_response_for_upgrade
+          (MHD_UpgradeHandler upgrade_handler, void
+          *upgrade_handler_cls)
      Create a response suitable for switching protocols.  Returns
      ‘MHD_YES’ on success.  ‘upgrade_handler’ must not be ‘NULL’.
 
@@ -2083,8 +2097,9 @@ code) which must have been created with the following function:
           eventually use this function to perform the ‘close()’ action
           on the socket.
 
- -- Function: int MHD_upgrade_action (struct MHD_UpgradeResponseHandle
-          *urh, enum MHD_UpgradeAction action, ...)
+ -- Function: enum MHD_Result MHD_upgrade_action (struct
+          MHD_UpgradeResponseHandle *urh, enum MHD_UpgradeAction action,
+          ...)
      Perform special operations related to upgraded connections.
 
      URH
@@ -2126,8 +2141,8 @@ may be responsible for tens of thousands of connections.
 ‘MHD_USE_THREAD_PER_CONNECTION’ should use the following functions to
 perform flow control.
 
- -- Function: int MHD_suspend_connection (struct MHD_Connection
-          *connection)
+ -- Function: enum MHD_Result MHD_suspend_connection (struct
+          MHD_Connection *connection)
      Suspend handling of network data for a given connection.  This can
      be used to dequeue a connection from MHD’s event loop (external
      select, internal select or thread pool; not applicable to
@@ -2157,8 +2172,8 @@ perform flow control.
      CONNECTION
           the connection to suspend
 
- -- Function: int MHD_resume_connection (struct MHD_Connection
-          *connection)
+ -- Function: enum MHD_Result MHD_resume_connection (struct
+          MHD_Connection *connection)
      Resume handling of network data for suspended connection.  It is
      safe to resume a suspended connection at any time.  Calling this
      function on a connection that was not previously suspended will
@@ -2371,9 +2386,9 @@ used to specify which algorithm should be used.
      invalid.  Most of the time it is sound to specify 300 seconds as
      its values.
 
- -- Function: int MHD_queue_auth_fail_response2 (struct MHD_Connection
-          *connection, const char *realm, const char *opaque, struct
-          MHD_Response *response, int signal_stale, enum
+ -- Function: enum MHD_Result MHD_queue_auth_fail_response2 (struct
+          MHD_Connection *connection, const char *realm, const char
+          *opaque, struct MHD_Response *response, int signal_stale, enum
           MHD_DigestAuthAlgorithm algo)
      Queues a response to request authentication from the client, return
      ‘MHD_YES’ if successful, otherwise ‘MHD_NO’.
@@ -2398,9 +2413,9 @@ used to specify which algorithm should be used.
      ALGO which digest algorithm should we use.  The same algorithm must
      then be selected when checking digests received from clients!
 
- -- Function: int MHD_queue_auth_fail_response (struct MHD_Connection
-          *connection, const char *realm, const char *opaque, struct
-          MHD_Response *response, int signal_stale)
+ -- Function: enum MHD_Result MHD_queue_auth_fail_response (struct
+          MHD_Connection *connection, const char *realm, const char
+          *opaque, struct MHD_Response *response, int signal_stale)
      Queues a response to request authentication from the client, return
      ‘MHD_YES’ if successful, otherwise ‘MHD_NO’.
 
@@ -2608,8 +2623,8 @@ File: libmicrohttpd.info,  Node: microhttpd-post api,  Up: microhttpd-post
      Return ‘NULL’ on error (out of memory, unsupported encoding),
      otherwise a PP handle.
 
- -- Function: int MHD_post_process (struct MHD_PostProcessor *pp, const
-          char *post_data, size_t post_data_len)
+ -- Function: enum MHD_Result MHD_post_process (struct MHD_PostProcessor
+          *pp, const char *post_data, size_t post_data_len)
      Parse and process ‘POST’ data.  Call this function when ‘POST’ data
      is available (usually during an ‘MHD_AccessHandlerCallback’) with
      the UPLOAD_DATA and UPLOAD_DATA_SIZE.  Whenever possible, this will
@@ -2627,8 +2642,8 @@ File: libmicrohttpd.info,  Node: microhttpd-post api,  Up: microhttpd-post
      Return ‘MHD_YES’ on success, ‘MHD_NO’ on error (out-of-memory,
      iterator aborted, parse error).
 
- -- Function: int MHD_destroy_post_processor (struct MHD_PostProcessor
-          *pp)
+ -- Function: enum MHD_Result MHD_destroy_post_processor (struct
+          MHD_PostProcessor *pp)
      Release PostProcessor resources.  After this function is being
      called, the PostProcessor is guaranteed to no longer call its
      iterator.  There is no special call to the iterator to indicate the
@@ -4540,25 +4555,15 @@ Function and Data Index
  [index ]
 * Menu:
 
-* *MHD_AcceptPolicyCallback:             microhttpd-cb.       (line   6)
-* *MHD_AccessHandlerCallback:            microhttpd-cb.       (line  19)
 * *MHD_ContentReaderCallback:            microhttpd-cb.       (line 150)
 * *MHD_ContentReaderFreeCallback:        microhttpd-cb.       (line 197)
-* *MHD_KeyValueIterator:                 microhttpd-cb.       (line 116)
-* *MHD_PostDataIterator:                 microhttpd-cb.       (line 202)
 * *MHD_RequestCompletedCallback:         microhttpd-cb.       (line  96)
 * *MHD_UpgradeHandler:                   microhttpd-response upgrade.
-                                                              (line  36)
+                                                              (line  37)
 * MHD_add_connection:                    microhttpd-init.     (line 115)
-* MHD_add_response_footer:               microhttpd-response headers.
-                                                              (line  29)
-* MHD_add_response_header:               microhttpd-response headers.
-                                                              (line   6)
 * MHD_basic_auth_get_username_password:  microhttpd-dauth basic.
                                                               (line  10)
 * MHD_create_post_processor:             microhttpd-post api. (line   6)
-* MHD_create_response_for_upgrade:       microhttpd-response upgrade.
-                                                              (line  23)
 * MHD_create_response_from_buffer:       microhttpd-response create.
                                                               (line  92)
 * MHD_create_response_from_buffer_with_free_callback: microhttpd-response create.
@@ -4571,11 +4576,8 @@ Function and Data Index
                                                               (line  32)
 * MHD_create_response_from_fd_at_offset: microhttpd-response create.
                                                               (line  50)
-* MHD_del_response_header:               microhttpd-response headers.
-                                                              (line  45)
-* MHD_destroy_post_processor:            microhttpd-post api. (line  52)
 * MHD_destroy_response:                  microhttpd-response enqueue.
-                                                              (line  28)
+                                                              (line  29)
 * MHD_digest_auth_check:                 microhttpd-dauth digest.
                                                               (line  55)
 * MHD_digest_auth_check2:                microhttpd-dauth digest.
@@ -4593,42 +4595,56 @@ Function and Data Index
 * MHD_get_connection_values:             microhttpd-requests. (line   6)
 * MHD_get_daemon_info:                   microhttpd-info daemon.
                                                               (line   6)
-* MHD_get_fdset:                         microhttpd-inspect.  (line   6)
-* MHD_get_fdset2:                        microhttpd-inspect.  (line  31)
 * MHD_get_response_header:               microhttpd-response inspect.
                                                               (line  18)
 * MHD_get_response_headers:              microhttpd-response inspect.
                                                               (line   6)
-* MHD_get_timeout:                       microhttpd-inspect.  (line  37)
 * MHD_http_unescape:                     microhttpd-util unescape.
                                                               (line   6)
 * MHD_is_feature_supported:              microhttpd-util feature.
                                                               (line  77)
 * MHD_lookup_connection_value:           microhttpd-requests. (line  58)
-* MHD_post_process:                      microhttpd-post api. (line  33)
-* MHD_queue_auth_fail_response:          microhttpd-dauth digest.
-                                                              (line 153)
-* MHD_queue_auth_fail_response2:         microhttpd-dauth digest.
-                                                              (line 126)
+* MHD_lookup_connection_value_n:         microhttpd-requests. (line  67)
 * MHD_queue_basic_auth_fail_response:    microhttpd-dauth basic.
                                                               (line  21)
-* MHD_queue_response:                    microhttpd-response enqueue.
-                                                              (line   6)
 * MHD_quiesce_daemon:                    microhttpd-init.     (line  50)
-* MHD_resume_connection:                 microhttpd-flow.     (line  51)
-* MHD_run:                               microhttpd-init.     (line  70)
-* MHD_run_from_select:                   microhttpd-init.     (line  86)
+* MHD_Result:                            microhttpd-cb.       (line   6)
+* MHD_Result <1>:                        microhttpd-cb.       (line  19)
+* MHD_Result <2>:                        microhttpd-cb.       (line 116)
+* MHD_Result <3>:                        microhttpd-cb.       (line 202)
+* MHD_Result <4>:                        microhttpd-init.     (line  70)
+* MHD_Result <5>:                        microhttpd-init.     (line  86)
+* MHD_Result <6>:                        microhttpd-inspect.  (line   6)
+* MHD_Result <7>:                        microhttpd-inspect.  (line  31)
+* MHD_Result <8>:                        microhttpd-inspect.  (line  37)
+* MHD_Result <9>:                        microhttpd-requests. (line  35)
+* MHD_Result <10>:                       microhttpd-response enqueue.
+                                                              (line   6)
+* MHD_Result <11>:                       microhttpd-response headers.
+                                                              (line   6)
+* MHD_Result <12>:                       microhttpd-response headers.
+                                                              (line  30)
+* MHD_Result <13>:                       microhttpd-response headers.
+                                                              (line  47)
+* MHD_Result <14>:                       microhttpd-response options.
+                                                              (line   6)
+* MHD_Result <15>:                       microhttpd-response upgrade.
+                                                              (line  23)
+* MHD_Result <16>:                       microhttpd-response upgrade.
+                                                              (line  91)
+* MHD_Result <17>:                       microhttpd-flow.     (line  20)
+* MHD_Result <18>:                       microhttpd-flow.     (line  51)
+* MHD_Result <19>:                       microhttpd-dauth digest.
+                                                              (line 126)
+* MHD_Result <20>:                       microhttpd-dauth digest.
+                                                              (line 153)
+* MHD_Result <21>:                       microhttpd-post api. (line  33)
+* MHD_Result <22>:                       microhttpd-post api. (line  52)
 * MHD_set_connection_option:             microhttpd-option conn.
                                                               (line   6)
-* MHD_set_connection_value:              microhttpd-requests. (line  35)
 * MHD_set_panic_func:                    microhttpd-init.     (line   6)
-* MHD_set_response_options:              microhttpd-response options.
-                                                              (line   6)
 * MHD_start_daemon:                      microhttpd-init.     (line  18)
 * MHD_stop_daemon:                       microhttpd-init.     (line  67)
-* MHD_suspend_connection:                microhttpd-flow.     (line  20)
-* MHD_upgrade_action:                    microhttpd-response upgrade.
-                                                              (line  90)
 
 
 File: libmicrohttpd.info,  Node: Type Index,  Prev: Function and Data Index,  Up: Top
@@ -4663,50 +4679,50 @@ Type Index
 * MHD_ResponseMemoryMode:                microhttpd-const.    (line 634)
 * MHD_ResponseOptions:                   microhttpd-const.    (line 701)
 * MHD_UpgradeAction:                     microhttpd-response upgrade.
-                                                              (line 101)
+                                                              (line 103)
 * MHD_ValueKind:                         microhttpd-const.    (line 591)
 
 
 
 Tag Table:
-Node: Top817
-Node: microhttpd-intro3128
-Ref: fig:performance8045
-Ref: tbl:supported9016
-Node: microhttpd-const16993
-Node: microhttpd-struct52933
-Node: microhttpd-cb53717
-Node: microhttpd-init63915
-Node: microhttpd-inspect69766
-Node: microhttpd-requests72510
-Node: microhttpd-responses76178
-Node: microhttpd-response enqueue77377
-Ref: microhttpd-response enqueue-Footnote-179684
-Node: microhttpd-response create79919
-Node: microhttpd-response headers86589
-Node: microhttpd-response options89021
-Node: microhttpd-response inspect89892
-Node: microhttpd-response upgrade91113
-Node: microhttpd-flow96447
-Node: microhttpd-dauth99741
-Node: microhttpd-dauth basic101292
-Node: microhttpd-dauth digest102686
-Node: microhttpd-post112882
-Node: microhttpd-post api115881
-Node: microhttpd-info118525
-Node: microhttpd-info daemon118947
-Node: microhttpd-info conn122407
-Node: microhttpd-option conn127466
-Node: microhttpd-util128546
-Node: microhttpd-util feature128817
-Node: microhttpd-util unescape132403
-Node: GNU-LGPL133051
-Node: eCos License161242
-Node: GNU-GPL162633
-Node: GNU-FDL181940
-Node: Concept Index207209
-Node: Function and Data Index216655
-Node: Type Index223178
+Node: Top814
+Node: microhttpd-intro3122
+Ref: fig:performance8039
+Ref: tbl:supported9010
+Node: microhttpd-const16987
+Node: microhttpd-struct52927
+Node: microhttpd-cb53711
+Node: microhttpd-init63971
+Node: microhttpd-inspect69853
+Node: microhttpd-requests72634
+Node: microhttpd-responses76714
+Node: microhttpd-response enqueue77913
+Ref: microhttpd-response enqueue-Footnote-180242
+Node: microhttpd-response create80477
+Node: microhttpd-response headers87147
+Node: microhttpd-response options89645
+Node: microhttpd-response inspect90528
+Node: microhttpd-response upgrade91749
+Node: microhttpd-flow97127
+Node: microhttpd-dauth100445
+Node: microhttpd-dauth basic101996
+Node: microhttpd-dauth digest103390
+Node: microhttpd-post113610
+Node: microhttpd-post api116609
+Node: microhttpd-info119277
+Node: microhttpd-info daemon119699
+Node: microhttpd-info conn123159
+Node: microhttpd-option conn128218
+Node: microhttpd-util129298
+Node: microhttpd-util feature129569
+Node: microhttpd-util unescape133155
+Node: GNU-LGPL133803
+Node: eCos License161994
+Node: GNU-GPL163385
+Node: GNU-FDL182692
+Node: Concept Index207961
+Node: Function and Data Index217407
+Node: Type Index224003
 
 End Tag Table
 

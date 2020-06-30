@@ -52,7 +52,7 @@ testStartError ()
 }
 
 
-static int
+static enum MHD_Result
 apc_nothing (void *cls,
              const struct sockaddr *addr,
              socklen_t addrlen)
@@ -63,7 +63,7 @@ apc_nothing (void *cls,
 }
 
 
-static int
+static enum MHD_Result
 apc_all (void *cls,
          const struct sockaddr *addr,
          socklen_t addrlen)
@@ -74,7 +74,7 @@ apc_all (void *cls,
 }
 
 
-static int
+static enum MHD_Result
 ahc_nothing (void *cls,
              struct MHD_Connection *connection,
              const char *url,
@@ -143,14 +143,14 @@ testExternalRun ()
     {
       MHD_stop_daemon (d);
       fprintf (stderr,
-               "Failed in MHD_get_fdset()\n");
+               "Failed in MHD_get_fdset().\n");
       return 256;
     }
     if (MHD_run (d) == MHD_NO)
     {
       MHD_stop_daemon (d);
       fprintf (stderr,
-               "Failed in MHD_run()\n");
+               "Failed in MHD_run().\n");
       return 8;
     }
     i++;
@@ -174,14 +174,14 @@ testThread ()
   if (NULL == d)
   {
     fprintf (stderr,
-             "Failed to start daemon on port %u\n",
+             "Failed to start daemon on port %u.\n",
              1082);
     exit (77);
   }
   if (MHD_run (d) != MHD_NO)
   {
     fprintf (stderr,
-             "Failed in MHD_run()\n");
+             "Failed in MHD_run().\n");
     return 32;
   }
   MHD_stop_daemon (d);
@@ -211,7 +211,7 @@ testMultithread ()
   if (MHD_run (d) != MHD_NO)
   {
     fprintf (stderr,
-             "Failed in MHD_run()\n");
+             "Failed in MHD_run().\n");
     return 128;
   }
   MHD_stop_daemon (d);

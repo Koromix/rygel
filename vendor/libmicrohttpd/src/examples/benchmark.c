@@ -106,7 +106,7 @@ uri_logger_cb (void *cls,
 }
 
 
-static int
+static enum MHD_Result
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
           const char *url,

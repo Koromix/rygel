@@ -116,7 +116,7 @@ information (which could be passed via the next parameter) so the next (sixth) p
 we do not need to pass extra options to the daemon so we just write the MHD_OPTION_END as the last parameter.
 
 As the server daemon runs in the background in its own thread, the execution flow in our main
-function will contine right after the call. Because of this, we must delay the execution flow in the
+function will continue right after the call. Because of this, we must delay the execution flow in the
 main thread or else the program will terminate prematurely. We let it pause in a processing-time
 friendly manner by waiting for the enter key to be pressed. In the end, we stop the daemon so it can
 do its cleanup tasks.
@@ -161,7 +161,7 @@ right after the response has been transferred then.  This is typically not what 
 disables HTTP pipelining.  The correct approach is to simply not queue a message on the first
 callback unless there is an error.  The @code{void**} argument to the callback provides a location
 for storing information about the history of the connection; for the first call, the pointer
-will point to NULL.  A simplistic way to differenciate the first call from others is to check
+will point to NULL.  A simplistic way to differentiate the first call from others is to check
 if the pointer is NULL and set it to a non-NULL value during the first call.
 
 Both of these issues you will find addressed in the official @code{minimal_example.c} residing in

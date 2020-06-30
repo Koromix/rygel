@@ -15,6 +15,8 @@ if HAVE_POSIX_THREADS
     test_https_get_parallel_threads
 endif
 
+.NOTPARALLEL:
+
 CPU_COUNT_DEF = -DCPU_COUNT=$(CPU_COUNT)
 
 AM_CPPFLAGS = \
@@ -35,7 +37,7 @@ THREAD_ONLY_TESTS = \
   test_empty_response
 
 check_PROGRAMS = \
-  test_https_get_select 
+  test_https_get_select
 
 if USE_POSIX_THREADS
 check_PROGRAMS += \
@@ -177,4 +179,3 @@ test_https_get_select_LDADD  = \
   $(top_builddir)/src/testcurl/libcurl_version_check.a \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   $(MHD_TLS_LIB_LDFLAGS) $(MHD_TLS_LIBDEPS) @LIBGCRYPT_LIBS@ @LIBCURL@
-

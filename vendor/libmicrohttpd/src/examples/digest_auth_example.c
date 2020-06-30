@@ -34,7 +34,7 @@
 
 #define MY_OPAQUE_STR "11733b200778ce33060f31c9af70a870ba96ddd4"
 
-static int
+static enum MHD_Result
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
           const char *url,
@@ -46,7 +46,8 @@ ahc_echo (void *cls,
   char *username;
   const char *password = "testpass";
   const char *realm = "test@example.com";
-  int ret;
+  int res;
+  enum MHD_Result ret;
   (void) cls;               /* Unused. Silent compiler warning. */
   (void) url;               /* Unused. Silent compiler warning. */
   (void) method;            /* Unused. Silent compiler warning. */
@@ -68,13 +69,13 @@ ahc_echo (void *cls,
     MHD_destroy_response (response);
     return ret;
   }
-  ret = MHD_digest_auth_check (connection, realm,
+  res = MHD_digest_auth_check (connection, realm,
                                username,
                                password,
                                300);
   MHD_free (username);
-  if ( (ret == MHD_INVALID_NONCE) ||
-       (ret == MHD_NO) )
+  if ( (res == MHD_INVALID_NONCE) ||
+       (res == MHD_NO) )
   {
     response = MHD_create_response_from_buffer (strlen (DENIED),
                                                 DENIED,
@@ -84,7 +85,7 @@ ahc_echo (void *cls,
     ret = MHD_queue_auth_fail_response (connection, realm,
                                         MY_OPAQUE_STR,
                                         response,
-                                        (ret == MHD_INVALID_NONCE) ? MHD_YES :
+                                        (res == MHD_INVALID_NONCE) ? MHD_YES :
                                         MHD_NO);
     MHD_destroy_response (response);
     return ret;

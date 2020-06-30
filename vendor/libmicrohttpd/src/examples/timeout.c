@@ -29,7 +29,7 @@
 
 #define PORT 8080
 
-static int
+static enum MHD_Result
 answer_to_connection (void *cls,
                       struct MHD_Connection *connection,
                       const char *url,
@@ -41,7 +41,7 @@ answer_to_connection (void *cls,
 {
   const char *page = "<html><body>Hello timeout!</body></html>";
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
   (void) cls;               /* Unused. Silent compiler warning. */
   (void) url;               /* Unused. Silent compiler warning. */
   (void) version;           /* Unused. Silent compiler warning. */

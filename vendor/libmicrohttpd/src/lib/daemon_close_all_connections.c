@@ -183,7 +183,7 @@ MHD_daemon_close_all_connections_ (struct MHD_Daemon *daemon)
          (! MHD_itc_activate_ (daemon->itc,
                                "e")) )
       MHD_PANIC (_ (
-                   "Failed to signal shutdown via inter-thread communication channel"));
+                   "Failed to signal shutdown via inter-thread communication channel.\n"));
 #endif
   }
 
@@ -197,7 +197,7 @@ MHD_daemon_close_all_connections_ (struct MHD_Daemon *daemon)
       {
         MHD_mutex_unlock_chk_ (&daemon->cleanup_connection_mutex);
         if (! MHD_join_thread_ (pos->pid.handle))
-          MHD_PANIC (_ ("Failed to join a thread\n"));
+          MHD_PANIC (_ ("Failed to join a thread.\n"));
         MHD_mutex_lock_chk_ (&daemon->cleanup_connection_mutex);
         pos->thread_joined = true;
         /* The thread may have concurrently modified the DLL,
@@ -227,7 +227,7 @@ MHD_daemon_close_all_connections_ (struct MHD_Daemon *daemon)
   {
     if ( (used_thr_p_c) &&
          (! pos->thread_joined) )
-      MHD_PANIC (_ ("Failed to join a thread\n"));
+      MHD_PANIC (_ ("Failed to join a thread.\n"));
     close_connection (pos);
   }
   MHD_connection_cleanup_ (daemon);

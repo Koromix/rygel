@@ -221,7 +221,7 @@ MHD_ip_limit_add (struct MHD_Daemon *daemon,
 #ifdef HAVE_MESSAGES
     MHD_DLOG (daemon,
               MHD_SC_IP_COUNTER_FAILURE,
-              _ ("Failed to add IP connection count node\n"));
+              _ ("Failed to add IP connection count node.\n"));
 #endif
     MHD_ip_count_unlock (daemon);
     free (key);
@@ -279,13 +279,13 @@ MHD_ip_limit_del (struct MHD_Daemon *daemon,
   {
     /* Something's wrong if we couldn't find an IP address
      * that was previously added */
-    MHD_PANIC (_ ("Failed to find previously-added IP address\n"));
+    MHD_PANIC (_ ("Failed to find previously-added IP address.\n"));
   }
   found_key = (struct MHD_IPCount *) *nodep;
   /* Validate existing count for IP address */
   if (0 == found_key->count)
   {
-    MHD_PANIC (_ ("Previously-added IP address had counter of zero\n"));
+    MHD_PANIC (_ ("Previously-added IP address had counter of zero.\n"));
   }
   /* Remove the node entirely if count reduces to 0 */
   if (0 == --found_key->count)

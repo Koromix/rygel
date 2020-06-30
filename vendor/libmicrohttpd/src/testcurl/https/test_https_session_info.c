@@ -41,14 +41,15 @@ struct MHD_Daemon *d;
  * HTTP access handler call back
  * used to query negotiated security parameters
  */
-static int
+static enum MHD_Result
 query_session_ahc (void *cls, struct MHD_Connection *connection,
                    const char *url, const char *method,
                    const char *version, const char *upload_data,
                    size_t *upload_data_size, void **ptr)
 {
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
+  int gret;
   (void) cls; (void) url; (void) method; (void) version;       /* Unused. Silent compiler warning. */
   (void) upload_data; (void) upload_data_size;             /* Unused. Silent compiler warning. */
 
@@ -59,11 +60,11 @@ query_session_ahc (void *cls, struct MHD_Connection *connection,
   }
 
   if (GNUTLS_TLS1_1 !=
-      (ret = MHD_get_connection_info
-               (connection,
-               MHD_CONNECTION_INFO_PROTOCOL)->protocol))
+      (gret = MHD_get_connection_info
+                (connection,
+                MHD_CONNECTION_INFO_PROTOCOL)->protocol))
   {
-    if (GNUTLS_TLS1_2 == ret)
+    if (GNUTLS_TLS1_2 == gret)
     {
       /* as usual, TLS implementations sometimes don't
          quite do what was asked, just mildly complain... */
@@ -76,8 +77,8 @@ query_session_ahc (void *cls, struct MHD_Connection *connection,
       fprintf (stderr,
                "Error: requested protocol mismatch (wanted %d, got %d)\n",
                GNUTLS_TLS1_1,
-               ret);
-      return -1;
+               gret);
+      return MHD_NO;
     }
   }
 

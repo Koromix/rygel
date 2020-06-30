@@ -30,7 +30,7 @@
 /**
  * Stop all worker threads from the worker pool.
  *
- * @param daemon master daemon controling the workers
+ * @param daemon master daemon controlling the workers
  */
 static void
 stop_workers (struct MHD_Daemon *daemon)
@@ -53,7 +53,7 @@ stop_workers (struct MHD_Daemon *daemon)
       if (! MHD_itc_activate_ (daemon->worker_pool[i].itc,
                                "e"))
         MHD_PANIC (_ (
-                     "Failed to signal shutdown via inter-thread communication channel."));
+                     "Failed to signal shutdown via inter-thread communication channel.\n"));
     }
     else
     {
@@ -121,7 +121,7 @@ MHD_daemon_destroy (struct MHD_Daemon *daemon)
         if (! MHD_itc_activate_ (daemon->itc,
                                  "e"))
           MHD_PANIC (_ (
-                       "Failed to signal shutdown via inter-thread communication channel"));
+                       "Failed to signal shutdown via inter-thread communication channel.\n"));
       }
       else
       {
@@ -139,7 +139,7 @@ MHD_daemon_destroy (struct MHD_Daemon *daemon)
 
       if (! MHD_join_thread_ (daemon->pid.handle))
       {
-        MHD_PANIC (_ ("Failed to join a thread\n"));
+        MHD_PANIC (_ ("Failed to join a thread.\n"));
       }
       /* close_all_connections() was called in daemon thread. */
     }

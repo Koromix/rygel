@@ -41,9 +41,9 @@ public:
     void Stop();
 
 private:
-    static int HandleRequest(void *cls, MHD_Connection *conn, const char *url, const char *method,
-                             const char *, const char *upload_data, size_t *upload_data_size,
-                             void **con_cls);
+    static MHD_Result HandleRequest(void *cls, MHD_Connection *conn, const char *url, const char *method,
+                                    const char *, const char *upload_data, size_t *upload_data_size,
+                                    void **con_cls);
     static ssize_t HandleWrite(void *cls, uint64_t pos, char *buf, size_t max);
     void RunNextAsync(http_IO *io);
 

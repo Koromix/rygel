@@ -531,7 +531,7 @@ MHD_daemon_upgrade_connection_with_select_ (struct MHD_Connection *con)
 #ifdef HAVE_MESSAGES
       MHD_DLOG (con->daemon,
                 MHD_SC_SOCKET_OUTSIDE_OF_FDSET_RANGE,
-                _ ("Error preparing select\n"));
+                _ ("Error preparing select.\n"));
 #endif
       break;
     }
@@ -695,7 +695,7 @@ MHD_daemon_select_ (struct MHD_Daemon *daemon,
 #ifdef HAVE_MESSAGES
       MHD_DLOG (daemon,
                 sc,
-                _ ("Could not obtain daemon fdsets"));
+                _ ("Could not obtain daemon fdsets.\n"));
 #endif
     }
   }
@@ -712,7 +712,7 @@ MHD_daemon_select_ (struct MHD_Daemon *daemon,
 #ifdef HAVE_MESSAGES
       MHD_DLOG (daemon,
                 MHD_SC_SOCKET_OUTSIDE_OF_FDSET_RANGE,
-                _ ("Could not add listen socket to fdset"));
+                _ ("Could not add listen socket to fdset.\n"));
 #endif
       return MHD_SC_SOCKET_OUTSIDE_OF_FDSET_RANGE;
     }
@@ -743,7 +743,7 @@ MHD_daemon_select_ (struct MHD_Daemon *daemon,
     MHD_DLOG (daemon,
               sc,
               _ (
-                "Could not add control inter-thread communication channel FD to fdset"));
+                "Could not add control inter-thread communication channel FD to fdset.\n"));
 #endif
 #if defined(MHD_WINSOCK_SOCKETS)
   }

@@ -47,7 +47,7 @@
 #include <windows.h>
 #endif
 
-static int
+static enum MHD_Result
 connection_handler (void *cls,
                     struct MHD_Connection *connection,
                     const char *url,
@@ -76,7 +76,7 @@ connection_handler (void *cls,
   struct MHD_Response *response =
     MHD_create_response_from_buffer (strlen ("Response"), "Response",
                                      MHD_RESPMEM_PERSISTENT);
-  int ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
+  enum MHD_Result ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
   MHD_destroy_response (response);
 
   return ret;

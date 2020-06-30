@@ -158,7 +158,7 @@ MHD_conn_init_static_ (void)
 
 
 /**
- * A serious error occured, close the
+ * A serious error occurred, close the
  * connection (and notify the application).
  *
  * @param connection connection to close with error
@@ -621,7 +621,7 @@ try_ready_normal_body (struct MHD_Request *request)
       CONNECTION_CLOSE_ERROR (connection,
                               MHD_SC_APPLICATION_DATA_GENERATION_FAILURE_CLOSED,
                               _ (
-                                "Closing connection (application reported error generating data)\n"));
+                                "Closing connection (application reported error generating data).\n"));
     return false;
   }
   response->data_start = request->response_write_position;
@@ -671,7 +671,7 @@ try_ready_chunked_body (struct MHD_Request *request)
         /* not enough memory */
         CONNECTION_CLOSE_ERROR (connection,
                                 MHD_SC_CONNECTION_POOL_MALLOC_FAILURE,
-                                _ ("Closing connection (out of memory)\n"));
+                                _ ("Closing connection (out of memory).\n"));
         return false;
       }
       buf = MHD_pool_allocate (connection->pool,
@@ -718,7 +718,7 @@ try_ready_chunked_body (struct MHD_Request *request)
     CONNECTION_CLOSE_ERROR (connection,
                             MHD_SC_APPLICATION_DATA_GENERATION_FAILURE_CLOSED,
                             _ (
-                              "Closing connection (application error generating response)\n"));
+                              "Closing connection (application error generating response).\n"));
     return false;
   }
   if ( (((ssize_t) MHD_CONTENT_READER_END_OF_STREAM) == ret) ||
@@ -886,7 +886,7 @@ MHD_request_handle_write_ (struct MHD_Request *request)
         data_write_offset = request->response_write_position
                             - response->data_start;
         if (data_write_offset > (uint64_t) SIZE_MAX)
-          MHD_PANIC (_ ("Data offset exceeds limit"));
+          MHD_PANIC (_ ("Data offset exceeds limit.\n"));
         ret = connection->send_cls (connection,
                                     &response->data
                                     [(size_t) data_write_offset],
@@ -996,7 +996,7 @@ MHD_request_handle_write_ (struct MHD_Request *request)
     mhd_assert (0);
     CONNECTION_CLOSE_ERROR (connection,
                             MHD_SC_STATEMACHINE_FAILURE_CONNECTION_CLOSED,
-                            _ ("Internal error\n"));
+                            _ ("Internal error.\n"));
     break;
   }
 }
@@ -1641,7 +1641,7 @@ transmit_error_response (struct MHD_Request *request,
     CONNECTION_CLOSE_ERROR (request->connection,
                             ec,
                             _ (
-                              "Closing connection (failed to create response header)\n"));
+                              "Closing connection (failed to create response header).\n"));
   }
   else
   {
@@ -2768,7 +2768,7 @@ process_request_body (struct MHD_Request *request)
                  __FILE__,
                  __LINE__
 #ifdef HAVE_MESSAGES
-                 , _ ("libmicrohttpd API violation")
+                 , _ ("libmicrohttpd API violation.\n")
 #else
                  , NULL
 #endif
@@ -2872,7 +2872,7 @@ cleanup_connection (struct MHD_Connection *connection)
       MHD_DLOG (daemon,
                 MHD_SC_ITC_USE_FAILED,
                 _ (
-                  "Failed to signal end of connection via inter-thread communication channel"));
+                  "Failed to signal end of connection via inter-thread communication channel.\n"));
 #endif
     }
   }
@@ -3366,7 +3366,7 @@ MHD_request_handle_idle_ (struct MHD_Request *request)
         CONNECTION_CLOSE_ERROR (connection,
                                 MHD_SC_FAILED_RESPONSE_HEADER_GENERATION,
                                 _ (
-                                  "Closing connection (failed to create response header)\n"));
+                                  "Closing connection (failed to create response header).\n"));
         continue;
       }
       request->state = MHD_REQUEST_HEADERS_SENDING;
@@ -3481,7 +3481,7 @@ MHD_request_handle_idle_ (struct MHD_Request *request)
         CONNECTION_CLOSE_ERROR (connection,
                                 MHD_SC_FAILED_RESPONSE_HEADER_GENERATION,
                                 _ (
-                                  "Closing connection (failed to create response header)\n"));
+                                  "Closing connection (failed to create response header).\n"));
         continue;
       }
       if ( (! request->have_chunked_upload) ||

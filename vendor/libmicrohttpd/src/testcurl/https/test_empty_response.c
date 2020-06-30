@@ -20,7 +20,7 @@
 
 /**
  * @file test_empty_response.c
- * @brief  Testcase for libmicrohttpd HTTPS GET operations with emtpy reply
+ * @brief  Testcase for libmicrohttpd HTTPS GET operations with empty reply
  * @author Christian Grothoff
  */
 #include "platform.h"
@@ -38,7 +38,7 @@ extern const char srv_self_signed_cert_pem[];
 
 static int oneone;
 
-static int
+static enum MHD_Result
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
           const char *url,
@@ -48,7 +48,7 @@ ahc_echo (void *cls,
           void **unused)
 {
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
   (void) cls; (void) url; (void) method; (void) version;               /* Unused. Silent compiler warning. */
   (void) upload_data; (void) upload_data_size; (void) unused;        /* Unused. Silent compiler warning. */
 

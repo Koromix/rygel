@@ -35,7 +35,7 @@ const char *askpage =
 #define BUSYPAGE \
   "<html><head><title>Webserver busy</title></head><body>We are too busy to process POSTs right now.</body></html>"
 
-static int
+static enum MHD_Result
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
           const char *url,
@@ -46,7 +46,7 @@ ahc_echo (void *cls,
   static int aptr;
   const char *me = cls;
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
   (void) cls;               /* Unused. Silent compiler warning. */
   (void) url;               /* Unused. Silent compiler warning. */
   (void) version;           /* Unused. Silent compiler warning. */

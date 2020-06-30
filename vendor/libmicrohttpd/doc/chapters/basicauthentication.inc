@@ -14,7 +14,7 @@ GET /picture.png?mypassword
 
 In the rare situation where the client is customized enough and the connection occurs
 through secured lines (e.g., a embedded device directly attached to another via wire)
-and where the ability to embedd a password in the URI or to pass on a URI with a
+and where the ability to embed a password in the URI or to pass on a URI with a
 password are desired, this can be a reasonable choice. 
 
 But when it is assumed that the user connecting does so with an ordinary Internet browser,
@@ -37,7 +37,7 @@ Initially, the pointer this parameter references is set by @emph{MHD} in the cal
 also be "remembered" on the next call (for the same connection).
 Thus, we will generate no response until the parameter is non-null---implying the callback was
 called before at least once. We do not need to share information between different calls of the callback,
-so we can set the parameter to any adress that is assured to be not null. The pointer to the 
+so we can set the parameter to any address that is assured to be not null. The pointer to the 
 @code{connection} structure will be pointing to a legal address, so we take this.
 
 The first time @code{answer_to_connection} is called, we will not even look at the headers.

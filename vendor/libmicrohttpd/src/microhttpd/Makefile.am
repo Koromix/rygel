@@ -150,7 +150,7 @@ libmicrohttpd_la_SOURCES += \
   connection_https.c connection_https.h
 endif
 
-
+.NOTPARALLEL:
 
 check_PROGRAMS = \
   test_str_compare \
@@ -161,6 +161,7 @@ check_PROGRAMS = \
   test_sha256 \
   test_start_stop \
   test_daemon \
+  test_postprocessor_md \
   test_options
 
 if HAVE_POSIX_THREADS
@@ -341,6 +342,9 @@ test_str_to_value_SOURCES = \
 
 test_str_token_SOURCES = \
   test_str_token.c mhd_str.c
+
+test_postprocessor_md_SOURCES = \
+  test_postprocessor_md.c
 
 test_http_reasons_SOURCES = \
   test_http_reasons.c \

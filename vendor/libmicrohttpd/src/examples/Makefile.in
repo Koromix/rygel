@@ -119,7 +119,8 @@ noinst_PROGRAMS = benchmark$(EXEEXT) benchmark_https$(EXEEXT) \
 @ENABLE_BAUTH_TRUE@ authorization_example
 
 @ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@am__append_9 = \
-@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@ upgrade_example
+@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@ upgrade_example \
+@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@ websocket_threaded_example
 
 @HAVE_ZLIB_TRUE@am__append_10 = \
 @HAVE_ZLIB_TRUE@ http_compression \
@@ -170,7 +171,8 @@ CONFIG_CLEAN_VPATH_FILES =
 @ENABLE_HTTPS_TRUE@@HAVE_POSIX_THREADS_TRUE@@HAVE_POSTPROCESSOR_TRUE@am__EXEEXT_5 = demo_https$(EXEEXT)
 @ENABLE_DAUTH_TRUE@am__EXEEXT_6 = digest_auth_example$(EXEEXT)
 @ENABLE_BAUTH_TRUE@am__EXEEXT_7 = authorization_example$(EXEEXT)
-@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@am__EXEEXT_8 = upgrade_example$(EXEEXT)
+@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@am__EXEEXT_8 = upgrade_example$(EXEEXT) \
+@ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@	websocket_threaded_example$(EXEEXT)
 @HAVE_ZLIB_TRUE@am__EXEEXT_9 = http_compression$(EXEEXT) \
 @HAVE_ZLIB_TRUE@	http_chunked_compression$(EXEEXT)
 PROGRAMS = $(noinst_PROGRAMS)
@@ -302,6 +304,16 @@ upgrade_example_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(upgrade_example_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
 	-o $@
+am_websocket_threaded_example_OBJECTS = websocket_threaded_example-websocket_threaded_example.$(OBJEXT)
+websocket_threaded_example_OBJECTS =  \
+	$(am_websocket_threaded_example_OBJECTS)
+websocket_threaded_example_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la \
+	$(am__DEPENDENCIES_1)
+websocket_threaded_example_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(websocket_threaded_example_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -338,7 +350,8 @@ am__depfiles_remade = ./$(DEPDIR)/authorization_example.Po \
 	./$(DEPDIR)/refuse_post_example.Po \
 	./$(DEPDIR)/suspend_resume_epoll-suspend_resume_epoll.Po \
 	./$(DEPDIR)/timeout.Po \
-	./$(DEPDIR)/upgrade_example-upgrade_example.Po
+	./$(DEPDIR)/upgrade_example-upgrade_example.Po \
+	./$(DEPDIR)/websocket_threaded_example-websocket_threaded_example.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -373,7 +386,8 @@ SOURCES = $(authorization_example_SOURCES) $(benchmark_SOURCES) \
 	$(minimal_example_empty_tls_SOURCES) $(post_example_SOURCES) \
 	$(querystring_example_SOURCES) $(refuse_post_example_SOURCES) \
 	$(suspend_resume_epoll_SOURCES) $(timeout_SOURCES) \
-	$(upgrade_example_SOURCES)
+	$(upgrade_example_SOURCES) \
+	$(websocket_threaded_example_SOURCES)
 DIST_SOURCES = $(authorization_example_SOURCES) $(benchmark_SOURCES) \
 	$(benchmark_https_SOURCES) $(chunked_example_SOURCES) \
 	$(demo_SOURCES) $(demo_https_SOURCES) \
@@ -389,7 +403,8 @@ DIST_SOURCES = $(authorization_example_SOURCES) $(benchmark_SOURCES) \
 	$(minimal_example_empty_tls_SOURCES) $(post_example_SOURCES) \
 	$(querystring_example_SOURCES) $(refuse_post_example_SOURCES) \
 	$(suspend_resume_epoll_SOURCES) $(timeout_SOURCES) \
-	$(upgrade_example_SOURCES)
+	$(upgrade_example_SOURCES) \
+	$(websocket_threaded_example_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -681,6 +696,16 @@ upgrade_example_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   $(PTHREAD_LIBS)
 
+websocket_threaded_example_SOURCES = \
+ websocket_threaded_example.c
+
+websocket_threaded_example_CFLAGS = \
+  $(PTHREAD_CFLAGS) $(AM_CFLAGS)
+
+websocket_threaded_example_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  $(PTHREAD_LIBS)
+
 timeout_SOURCES = \
  timeout.c
 
@@ -962,6 +987,10 @@ upgrade_example$(EXEEXT): $(upgrade_example_OBJECTS) $(upgrade_example_DEPENDENC
 	@rm -f upgrade_example$(EXEEXT)
 	$(AM_V_CCLD)$(upgrade_example_LINK) $(upgrade_example_OBJECTS) $(upgrade_example_LDADD) $(LIBS)
 
+websocket_threaded_example$(EXEEXT): $(websocket_threaded_example_OBJECTS) $(websocket_threaded_example_DEPENDENCIES) $(EXTRA_websocket_threaded_example_DEPENDENCIES) 
+	@rm -f websocket_threaded_example$(EXEEXT)
+	$(AM_V_CCLD)$(websocket_threaded_example_LINK) $(websocket_threaded_example_OBJECTS) $(websocket_threaded_example_LDADD) $(LIBS)
+
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 
@@ -992,6 +1021,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/suspend_resume_epoll-suspend_resume_epoll.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/timeout.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/upgrade_example-upgrade_example.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/websocket_threaded_example-websocket_threaded_example.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -1120,6 +1150,20 @@ upgrade_example-upgrade_example.obj: upgrade_example.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='upgrade_example.c' object='upgrade_example-upgrade_example.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(upgrade_example_CFLAGS) $(CFLAGS) -c -o upgrade_example-upgrade_example.obj `if test -f 'upgrade_example.c'; then $(CYGPATH_W) 'upgrade_example.c'; else $(CYGPATH_W) '$(srcdir)/upgrade_example.c'; fi`
+
+websocket_threaded_example-websocket_threaded_example.o: websocket_threaded_example.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(websocket_threaded_example_CFLAGS) $(CFLAGS) -MT websocket_threaded_example-websocket_threaded_example.o -MD -MP -MF $(DEPDIR)/websocket_threaded_example-websocket_threaded_example.Tpo -c -o websocket_threaded_example-websocket_threaded_example.o `test -f 'websocket_threaded_example.c' || echo '$(srcdir)/'`websocket_threaded_example.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/websocket_threaded_example-websocket_threaded_example.Tpo $(DEPDIR)/websocket_threaded_example-websocket_threaded_example.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='websocket_threaded_example.c' object='websocket_threaded_example-websocket_threaded_example.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(websocket_threaded_example_CFLAGS) $(CFLAGS) -c -o websocket_threaded_example-websocket_threaded_example.o `test -f 'websocket_threaded_example.c' || echo '$(srcdir)/'`websocket_threaded_example.c
+
+websocket_threaded_example-websocket_threaded_example.obj: websocket_threaded_example.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(websocket_threaded_example_CFLAGS) $(CFLAGS) -MT websocket_threaded_example-websocket_threaded_example.obj -MD -MP -MF $(DEPDIR)/websocket_threaded_example-websocket_threaded_example.Tpo -c -o websocket_threaded_example-websocket_threaded_example.obj `if test -f 'websocket_threaded_example.c'; then $(CYGPATH_W) 'websocket_threaded_example.c'; else $(CYGPATH_W) '$(srcdir)/websocket_threaded_example.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/websocket_threaded_example-websocket_threaded_example.Tpo $(DEPDIR)/websocket_threaded_example-websocket_threaded_example.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='websocket_threaded_example.c' object='websocket_threaded_example-websocket_threaded_example.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(websocket_threaded_example_CFLAGS) $(CFLAGS) -c -o websocket_threaded_example-websocket_threaded_example.obj `if test -f 'websocket_threaded_example.c'; then $(CYGPATH_W) 'websocket_threaded_example.c'; else $(CYGPATH_W) '$(srcdir)/websocket_threaded_example.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -1349,6 +1393,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/suspend_resume_epoll-suspend_resume_epoll.Po
 	-rm -f ./$(DEPDIR)/timeout.Po
 	-rm -f ./$(DEPDIR)/upgrade_example-upgrade_example.Po
+	-rm -f ./$(DEPDIR)/websocket_threaded_example-websocket_threaded_example.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -1418,6 +1463,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/suspend_resume_epoll-suspend_resume_epoll.Po
 	-rm -f ./$(DEPDIR)/timeout.Po
 	-rm -f ./$(DEPDIR)/upgrade_example-upgrade_example.Po
+	-rm -f ./$(DEPDIR)/websocket_threaded_example-websocket_threaded_example.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

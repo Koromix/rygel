@@ -90,7 +90,7 @@ MHD_connection_cleanup_ (struct MHD_Daemon *daemon)
     if ( (MHD_TM_THREAD_PER_CONNECTION == daemon->threading_mode) &&
          (! pos->thread_joined) &&
          (! MHD_join_thread_ (pos->pid.handle)) )
-      MHD_PANIC (_ ("Failed to join a thread\n"));
+      MHD_PANIC (_ ("Failed to join a thread.\n"));
 #ifdef UPGRADE_SUPPORT
     connection_cleanup_upgraded (pos);
 #endif /* UPGRADE_SUPPORT */
@@ -135,7 +135,7 @@ MHD_connection_cleanup_ (struct MHD_Daemon *daemon)
                             EPOLL_CTL_DEL,
                             pos->socket_fd,
                             NULL))
-          MHD_PANIC (_ ("Failed to remove FD from epoll set\n"));
+          MHD_PANIC (_ ("Failed to remove FD from epoll set.\n"));
         pos->epoll_state &= ~MHD_EPOLL_STATE_IN_EPOLL_SET;
       }
     }

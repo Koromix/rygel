@@ -58,7 +58,7 @@ MHD_daemon_get_timeout (struct MHD_Daemon *daemon,
 #ifdef HAVE_MESSAGES
     MHD_DLOG (daemon,
               MHD_SC_CONFIGURATION_MISMATCH_FOR_GET_TIMEOUT,
-              _ ("Illegal call to MHD_get_timeout\n"));
+              _ ("Illegal call to MHD_get_timeout.\n"));
 #endif
     return MHD_SC_CONFIGURATION_MISSMATCH_FOR_GET_TIMEOUT;
   }

@@ -59,7 +59,7 @@ MHD_request_resume (struct MHD_Request *request)
     MHD_DLOG (daemon,
               MHD_SC_ITC_USE_FAILED,
               _ (
-                "Failed to signal resume via inter-thread communication channel."));
+                "Failed to signal resume via inter-thread communication channel.\n"));
 #endif
   }
 }
@@ -144,7 +144,7 @@ MHD_resume_suspended_connections_ (struct MHD_Daemon *daemon)
       if (MHD_ELS_EPOLL == daemon->event_loop_syscall)
       {
         if (0 != (pos->epoll_state & MHD_EPOLL_STATE_IN_EREADY_EDLL))
-          MHD_PANIC ("Resumed connection was already in EREADY set\n");
+          MHD_PANIC ("Resumed connection was already in EREADY set.\n");
         /* we always mark resumed connections as ready, as we
            might have missed the edge poll event during suspension */
         EDLL_insert (daemon->eready_head,
@@ -190,7 +190,7 @@ MHD_resume_suspended_connections_ (struct MHD_Daemon *daemon)
       MHD_DLOG (daemon,
                 MHD_SC_ITC_USE_FAILED,
                 _ (
-                  "Failed to signal resume of connection via inter-thread communication channel."));
+                  "Failed to signal resume of connection via inter-thread communication channel.\n"));
 #endif
     }
   }

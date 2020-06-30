@@ -95,12 +95,12 @@ print_test_result (int test_outcome, char *test_name);
 size_t
 copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx);
 
-int
+enum MHD_Result
 http_ahc (void *cls, struct MHD_Connection *connection,
           const char *url, const char *method, const char *upload_data,
           const char *version, size_t *upload_data_size, void **ptr);
 
-int
+enum MHD_Result
 http_dummy_ahc (void *cls, struct MHD_Connection *connection,
                 const char *url, const char *method, const char *upload_data,
                 const char *version, size_t *upload_data_size,

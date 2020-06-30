@@ -114,10 +114,10 @@ MHD_connection_handle_write (struct MHD_Connection *connection);
  * recv(), send() and response.
  *
  * @param connection connection to handle
- * @return MHD_YES if we should continue to process the
- *         connection (not dead yet), MHD_NO if it died
+ * @return #MHD_YES if we should continue to process the
+ *         connection (not dead yet), #MHD_NO if it died
  */
-int
+enum MHD_Result
 MHD_connection_handle_idle (struct MHD_Connection *connection);
 
 
@@ -165,10 +165,10 @@ MHD_connection_finish_forward_ (struct MHD_Connection *connection);
  * the epoll set if needed.
  *
  * @param connection connection to process
- * @return MHD_YES if we should continue to process the
- *         connection (not dead yet), MHD_NO if it died
+ * @return #MHD_YES if we should continue to process the
+ *         connection (not dead yet), #MHD_NO if it died
  */
-int
+enum MHD_Result
 MHD_connection_epoll_update_ (struct MHD_Connection *connection);
 
 #endif

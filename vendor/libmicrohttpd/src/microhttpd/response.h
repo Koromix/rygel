@@ -49,7 +49,7 @@ MHD_increment_response_rc (struct MHD_Response *response);
  * @return #MHD_YES on success, #MHD_NO on failure (will cause
  *        connection to be closed)
  */
-int
+enum MHD_Result
 MHD_response_execute_upgrade_ (struct MHD_Response *response,
                                struct MHD_Connection *connection);
 

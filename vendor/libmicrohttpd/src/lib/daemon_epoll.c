@@ -266,7 +266,7 @@ MHD_daemon_epoll_ (struct MHD_Daemon *daemon,
                         EPOLL_CTL_DEL,
                         ls,
                         NULL))
-      MHD_PANIC ("Failed to remove listen FD from epoll set\n");
+      MHD_PANIC ("Failed to remove listen FD from epoll set.\n");
     daemon->listen_socket_in_epoll = false;
   }
 
@@ -303,7 +303,7 @@ MHD_daemon_epoll_ (struct MHD_Daemon *daemon,
                         EPOLL_CTL_DEL,
                         ls,
                         NULL))
-      MHD_PANIC (_ ("Failed to remove listen FD from epoll set\n"));
+      MHD_PANIC (_ ("Failed to remove listen FD from epoll set.\n"));
     daemon->listen_socket_in_epoll = false;
   }
 

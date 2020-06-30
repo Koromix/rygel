@@ -47,7 +47,7 @@
 
 static int oneone;
 
-static int
+static enum MHD_Result
 apc_all (void *cls, const struct sockaddr *addr, socklen_t addrlen)
 {
   (void) cls; (void) addr; (void) addrlen;   /* Unused. Silent compiler warning. */
@@ -70,7 +70,7 @@ copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
 }
 
 
-static int
+static enum MHD_Result
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
           const char *url,
@@ -81,7 +81,7 @@ ahc_echo (void *cls,
 {
   const char *me = cls;
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
   (void) version; (void) upload_data;      /* Unused. Silent compiler warning. */
   (void) upload_data_size; (void) unused;  /* Unused. Silent compiler warning. */
 
@@ -128,6 +128,11 @@ testLongUrlGet ()
 
     c = curl_easy_init ();
     url = malloc (VERY_LONG);
+    if (NULL == url)
+    {
+      zzuf_socat_stop ();
+      return 1;
+    }
     memset (url, 'a', VERY_LONG);
     url[VERY_LONG - 1] = '\0';
     memcpy (url, "http://127.0.0.1:11081/",
@@ -189,6 +194,12 @@ testLongHeaderGet ()
     fprintf (stderr, ".");
     c = curl_easy_init ();
     url = malloc (VERY_LONG);
+    if (NULL == url)
+    {
+      zzuf_socat_stop ();
+      curl_easy_cleanup (c);
+      return 16;
+    }
     memset (url, 'a', VERY_LONG);
     url[VERY_LONG - 1] = '\0';
     url[VERY_LONG / 2] = ':';

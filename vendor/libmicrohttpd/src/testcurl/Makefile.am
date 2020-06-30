@@ -25,7 +25,7 @@ THREAD_ONLY_TESTS = \
   test_termination \
   test_timeout
 
-
+.NOTPARALLEL:
 
 if HAVE_POSIX_THREADS
 THREAD_ONLY_TESTS += \

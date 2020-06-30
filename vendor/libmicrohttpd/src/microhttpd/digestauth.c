@@ -83,8 +83,8 @@
  * Check that @a n is below #MAX_NONCE
  */
 #define VLA_CHECK_LEN_DIGEST(n) do { if ((n) > MAX_DIGEST) mhd_panic ( \
-                                         mhd_panic_cls, __FILE__, __LINE__, \
-                                         "VLA too big"); } while (0)
+                                       mhd_panic_cls, __FILE__, __LINE__, \
+                                       "VLA too big.\n"); } while (0)
 
 
 /**
@@ -521,7 +521,7 @@ lookup_sub_value (char *dest,
  * @param nc The nonce counter, zero to add the nonce to the array
  * @return #MHD_YES if successful, #MHD_NO if invalid (or we have no NC array)
  */
-static int
+static enum MHD_Result
 check_nonce_nc (struct MHD_Connection *connection,
                 const char *nonce,
                 uint64_t nc)
@@ -743,7 +743,7 @@ calculate_nonce (uint32_t nonce_time,
  * @return #MHD_YES if the key-value pair is in the headers,
  *         #MHD_NO if not
  */
-static int
+static enum MHD_Result
 test_header (struct MHD_Connection *connection,
              const char *key,
              size_t key_size,
@@ -790,21 +790,21 @@ test_header (struct MHD_Connection *connection,
  * @return #MHD_YES if the arguments match,
  *         #MHD_NO if not
  */
-static int
+static enum MHD_Result
 check_argument_match (struct MHD_Connection *connection,
                       const char *args)
 {
   struct MHD_HTTP_Header *pos;
   char *argb;
   unsigned int num_headers;
-  int ret;
+  enum MHD_Result ret;
 
   argb = strdup (args);
   if (NULL == argb)
   {
 #ifdef HAVE_MESSAGES
     MHD_DLOG (connection->daemon,
-              _ ("Failed to allocate memory for copy of URI arguments\n"));
+              _ ("Failed to allocate memory for copy of URI arguments.\n"));
 #endif /* HAVE_MESSAGES */
     return MHD_NO;
   }
@@ -1041,7 +1041,7 @@ digest_auth_check_all (struct MHD_Connection *connection,
     {
 #ifdef HAVE_MESSAGES
       MHD_DLOG (daemon,
-                _ ("Failed to allocate memory for auth header processing\n"));
+                _ ("Failed to allocate memory for auth header processing.\n"));
 #endif /* HAVE_MESSAGES */
       return MHD_NO;
     }
@@ -1140,7 +1140,7 @@ digest_auth_check_all (struct MHD_Connection *connection,
  * Uses #MHD_DIGEST_ALG_MD5 (for now, for backwards-compatibility).
  * Note that this MAY change to #MHD_DIGEST_ALG_AUTO in the future.
  * If you want to be sure you get MD5, use #MHD_digest_auth_check2
- * and specifiy MD5 explicitly.
+ * and specify MD5 explicitly.
  *
  * @param connection The MHD connection structure
  * @param realm The realm presented to the client
@@ -1278,7 +1278,7 @@ MHD_digest_auth_check_digest2 (struct MHD_Connection *connection,
 
   mhd_assert (NULL != digest);
   if (da.digest_size != digest_size)
-    MHD_PANIC (_ ("digest size missmatch")); /* API violation! */
+    MHD_PANIC (_ ("Digest size mismatch.\n")); /* API violation! */
   return digest_auth_check_all (connection,
                                 &da,
                                 realm,
@@ -1338,7 +1338,7 @@ MHD_digest_auth_check_digest (struct MHD_Connection *connection,
  * @return #MHD_YES on success, #MHD_NO otherwise
  * @ingroup authentication
  */
-int
+enum MHD_Result
 MHD_queue_auth_fail_response2 (struct MHD_Connection *connection,
                                const char *realm,
                                const char *opaque,
@@ -1396,7 +1396,7 @@ MHD_queue_auth_fail_response2 (struct MHD_Connection *connection,
       {
 #ifdef HAVE_MESSAGES
         MHD_DLOG (connection->daemon,
-                  _ ("Failed to allocate memory for auth response header\n"));
+                  _ ("Failed to allocate memory for auth response header.\n"));
 #endif /* HAVE_MESSAGES */
         return MHD_NO;
       }
@@ -1438,7 +1438,7 @@ MHD_queue_auth_fail_response2 (struct MHD_Connection *connection,
   {
 #ifdef HAVE_MESSAGES
     MHD_DLOG (connection->daemon,
-              _ ("Failed to add Digest auth header\n"));
+              _ ("Failed to add Digest auth header.\n"));
 #endif /* HAVE_MESSAGES */
   }
   return ret;
@@ -1461,7 +1461,7 @@ MHD_queue_auth_fail_response2 (struct MHD_Connection *connection,
  * @return #MHD_YES on success, #MHD_NO otherwise
  * @ingroup authentication
  */
-int
+enum MHD_Result
 MHD_queue_auth_fail_response (struct MHD_Connection *connection,
                               const char *realm,
                               const char *opaque,

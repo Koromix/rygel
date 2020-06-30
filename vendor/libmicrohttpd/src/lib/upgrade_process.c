@@ -76,7 +76,7 @@ MHD_upgrade_response_handle_process_ (struct MHD_UpgradeResponseHandle *urh)
                 _ (
                   "Failed to forward to application "
                   MHD_UNSIGNED_LONG_LONG_PRINTF \
-                  " bytes of data received from remote side: application shut down socket\n"),
+                  " bytes of data received from remote side: application shut down socket.\n"),
                 (MHD_UNSIGNED_LONG_LONG) urh->in_buffer_used);
 #endif
 
@@ -376,7 +376,7 @@ MHD_upgrade_response_handle_process_ (struct MHD_UpgradeResponseHandle *urh)
                 _ (
                   "Failed to forward to remote client "
                   MHD_UNSIGNED_LONG_LONG_PRINTF \
-                  " bytes of data received from application: daemon shut down\n"),
+                  " bytes of data received from application: daemon shut down.\n"),
                 (MHD_UNSIGNED_LONG_LONG) urh->out_buffer_used);
 #endif
     /* Discard any data unsent to remote. */

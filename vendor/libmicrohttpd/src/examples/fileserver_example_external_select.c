@@ -48,7 +48,7 @@ free_callback (void *cls)
 }
 
 
-static int
+static enum MHD_Result
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
           const char *url,
@@ -59,7 +59,7 @@ ahc_echo (void *cls,
 {
   static int aptr;
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
   FILE *file;
   int fd;
   struct stat buf;

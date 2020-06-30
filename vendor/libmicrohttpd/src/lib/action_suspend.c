@@ -85,7 +85,7 @@ suspend_action (void *cls,
                           EPOLL_CTL_DEL,
                           connection->socket_fd,
                           NULL))
-        MHD_PANIC (_ ("Failed to remove FD from epoll set\n"));
+        MHD_PANIC (_ ("Failed to remove FD from epoll set.\n"));
       connection->epoll_state &= ~MHD_EPOLL_STATE_IN_EPOLL_SET;
     }
     connection->epoll_state |= MHD_EPOLL_STATE_SUSPENDED;

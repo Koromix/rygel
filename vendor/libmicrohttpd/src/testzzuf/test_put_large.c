@@ -84,7 +84,7 @@ copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
 }
 
 
-static int
+static enum MHD_Result
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
           const char *url,
@@ -95,7 +95,7 @@ ahc_echo (void *cls,
 {
   int *done = cls;
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
   (void) version; (void) unused; /* Unused. Silent compiler warning. */
 
   if (0 != strcmp ("PUT", method))
@@ -376,6 +376,8 @@ main (int argc, char *const *argv)
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 2;
   put_buffer = malloc (PUT_SIZE);
+  if (0 == put_buffer)
+    return 77;
   memset (put_buffer, 1, PUT_SIZE);
   if (MHD_YES == MHD_is_feature_supported (MHD_FEATURE_THREADS))
   {

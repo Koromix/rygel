@@ -333,7 +333,7 @@ ${mhd_mse_sys_features_src}
   m4_ifblank([$1], [dnl
     AH_TEMPLATE([[_XOPEN_SOURCE]], [Define to maximum value supported by system headers])dnl
     AH_TEMPLATE([[_XOPEN_SOURCE_EXTENDED]], [Define to 1 if _XOPEN_SOURCE is defined to value less than 500 ]dnl
-      [and system headers requre this symbol])dnl
+      [and system headers require this symbol])dnl
     AH_TEMPLATE([[_XOPEN_VERSION]], [Define to maximum value supported by system headers if _XOPEN_SOURCE ]dnl
       [is defined to value less than 500 and headers do not support _XOPEN_SOURCE_EXTENDED])dnl
     AH_TEMPLATE([[_GNU_SOURCE]], [Define to 1 to enable GNU-related header features])dnl
@@ -436,8 +436,8 @@ AC_DEFUN([_MHD_CHECK_POSIX2008], [dnl
       _MHD_CHECK_POSIX_FEATURES_SINGLE([
 _MHD_BASIC_INCLUDES
 [
-/* Check will be passed if ALL features are avalable 
- * and failed if ANY feature is not avalable. */
+/* Check will be passed if ALL features are available 
+ * and failed if ANY feature is not available. */
 int main()
 {
 

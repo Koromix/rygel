@@ -1410,7 +1410,7 @@ struct MHD_Daemon
   struct MHD_itc_ itc;
 
   /**
-   * Which threading mode do we use? Postive
+   * Which threading mode do we use? Positive
    * numbers indicate the number of worker threads to be used.
    * Values larger than 1 imply a thread pool.
    */

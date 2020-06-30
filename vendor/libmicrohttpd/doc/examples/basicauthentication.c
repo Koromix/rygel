@@ -17,7 +17,7 @@
 #define PORT 8888
 
 
-static int
+static enum MHD_Result
 answer_to_connection (void *cls, struct MHD_Connection *connection,
                       const char *url, const char *method,
                       const char *version, const char *upload_data,
@@ -28,45 +28,47 @@ answer_to_connection (void *cls, struct MHD_Connection *connection,
   int fail;
   int ret;
   struct MHD_Response *response;
-  (void)cls;               /* Unused. Silent compiler warning. */
-  (void)url;               /* Unused. Silent compiler warning. */
-  (void)version;           /* Unused. Silent compiler warning. */
-  (void)upload_data;       /* Unused. Silent compiler warning. */
-  (void)upload_data_size;  /* Unused. Silent compiler warning. */
+  (void) cls;               /* Unused. Silent compiler warning. */
+  (void) url;               /* Unused. Silent compiler warning. */
+  (void) version;           /* Unused. Silent compiler warning. */
+  (void) upload_data;       /* Unused. Silent compiler warning. */
+  (void) upload_data_size;  /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (method, "GET"))
     return MHD_NO;
   if (NULL == *con_cls)
-    {
-      *con_cls = connection;
-      return MHD_YES;
-    }
+  {
+    *con_cls = connection;
+    return MHD_YES;
+  }
   pass = NULL;
   user = MHD_basic_auth_get_username_password (connection,
                                                &pass);
   fail = ( (NULL == user) ||
-	   (0 != strcmp (user, "root")) ||
-	   (0 != strcmp (pass, "pa$$w0rd") ) );
-  if (NULL != user) MHD_free (user);
-  if (NULL != pass) MHD_free (pass);
+           (0 != strcmp (user, "root")) ||
+           (0 != strcmp (pass, "pa$$w0rd") ) );
+  if (NULL != user)
+    MHD_free (user);
+  if (NULL != pass)
+    MHD_free (pass);
   if (fail)
-    {
-      const char *page = "<html><body>Go away.</body></html>";
-      response =
-	MHD_create_response_from_buffer (strlen (page), (void *) page,
-					 MHD_RESPMEM_PERSISTENT);
-      ret = MHD_queue_basic_auth_fail_response (connection,
-						"my realm",
-						response);
-    }
+  {
+    const char *page = "<html><body>Go away.</body></html>";
+    response =
+      MHD_create_response_from_buffer (strlen (page), (void *) page,
+                                       MHD_RESPMEM_PERSISTENT);
+    ret = MHD_queue_basic_auth_fail_response (connection,
+                                              "my realm",
+                                              response);
+  }
   else
-    {
-      const char *page = "<html><body>A secret.</body></html>";
-      response =
-	MHD_create_response_from_buffer (strlen (page), (void *) page,
-					 MHD_RESPMEM_PERSISTENT);
-      ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
-    }
+  {
+    const char *page = "<html><body>A secret.</body></html>";
+    response =
+      MHD_create_response_from_buffer (strlen (page), (void *) page,
+                                       MHD_RESPMEM_PERSISTENT);
+    ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
+  }
   MHD_destroy_response (response);
   return ret;
 }

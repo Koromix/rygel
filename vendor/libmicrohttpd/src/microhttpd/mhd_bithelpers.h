@@ -100,7 +100,7 @@
 #define _MHD_PUT_64BIT_LE(addr, value64)             \
   ((*(uint64_t*) (addr)) = _MHD_BYTES_SWAP64 (value64))
 #else  /* _MHD_BYTE_ORDER != _MHD_BIG_ENDIAN */
-/* Endianess was not detected or non-standard like PDP-endian */
+/* Endianness was not detected or non-standard like PDP-endian */
 #define _MHD_PUT_64BIT_LE(addr, value64) do {                             \
     ((uint8_t*) (addr))[0] = (uint8_t) ((uint64_t) (value64));           \
     ((uint8_t*) (addr))[1] = (uint8_t) (((uint64_t) (value64)) >> 8);    \
@@ -124,7 +124,7 @@
 #define _MHD_PUT_32BIT_LE(addr, value32)            \
   ((*(uint32_t*) (addr)) = _MHD_BYTES_SWAP32 (value32))
 #else  /* _MHD_BYTE_ORDER != _MHD_BIG_ENDIAN */
-/* Endianess was not detected or non-standard like PDP-endian */
+/* Endianness was not detected or non-standard like PDP-endian */
 #define _MHD_PUT_32BIT_LE(addr, value32) do {                             \
     ((uint8_t*) (addr))[0] = (uint8_t) ((uint32_t) (value32));           \
     ((uint8_t*) (addr))[1] = (uint8_t) (((uint32_t) (value32)) >> 8);    \
@@ -144,7 +144,7 @@
 #define _MHD_GET_32BIT_LE(addr)             \
   _MHD_BYTES_SWAP32 (*(const uint32_t*) (addr))
 #else  /* _MHD_BYTE_ORDER != _MHD_BIG_ENDIAN */
-/* Endianess was not detected or non-standard like PDP-endian */
+/* Endianness was not detected or non-standard like PDP-endian */
 #define _MHD_GET_32BIT_LE(addr)                       \
   ( ( (uint32_t) (((const uint8_t*) addr)[0]))          \
     | (((uint32_t) (((const uint8_t*) addr)[1])) << 8)    \
@@ -164,7 +164,7 @@
 #define _MHD_PUT_64BIT_BE(addr, value64)             \
   ((*(uint64_t*) (addr)) = _MHD_BYTES_SWAP64 (value64))
 #else  /* _MHD_BYTE_ORDER != _MHD_LITTLE_ENDIAN */
-/* Endianess was not detected or non-standard like PDP-endian */
+/* Endianness was not detected or non-standard like PDP-endian */
 #define _MHD_PUT_64BIT_BE(addr, value64) do {                             \
     ((uint8_t*) (addr))[7] = (uint8_t) ((uint64_t) (value64));           \
     ((uint8_t*) (addr))[6] = (uint8_t) (((uint64_t) (value64)) >> 8);    \
@@ -188,7 +188,7 @@
 #define _MHD_PUT_32BIT_BE(addr, value32)             \
   ((*(uint32_t*) (addr)) = _MHD_BYTES_SWAP32 (value32))
 #else  /* _MHD_BYTE_ORDER != _MHD_LITTLE_ENDIAN */
-/* Endianess was not detected or non-standard like PDP-endian */
+/* Endianness was not detected or non-standard like PDP-endian */
 #define _MHD_PUT_32BIT_BE(addr, value32) do {                             \
     ((uint8_t*) (addr))[3] = (uint8_t) ((uint32_t) (value32));           \
     ((uint8_t*) (addr))[2] = (uint8_t) (((uint32_t) (value32)) >> 8);    \
@@ -208,7 +208,7 @@
 #define _MHD_GET_32BIT_BE(addr)             \
   _MHD_BYTES_SWAP32 (*(const uint32_t*) (addr))
 #else  /* _MHD_BYTE_ORDER != _MHD_LITTLE_ENDIAN */
-/* Endianess was not detected or non-standard like PDP-endian */
+/* Endianness was not detected or non-standard like PDP-endian */
 #define _MHD_GET_32BIT_BE(addr)                       \
   ( (((uint32_t) (((const uint8_t*) addr)[0])) << 24)   \
     | (((uint32_t) (((const uint8_t*) addr)[1])) << 16)   \

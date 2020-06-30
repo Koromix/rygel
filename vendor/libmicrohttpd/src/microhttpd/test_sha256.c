@@ -289,16 +289,16 @@ bin2hex (const uint8_t *bin,
 static int
 check_result (const char *test_name,
               unsigned int check_num,
-              const uint8_t calcualted[SHA256_DIGEST_SIZE],
+              const uint8_t calculated[SHA256_DIGEST_SIZE],
               const uint8_t expected[SHA256_DIGEST_SIZE])
 {
-  int failed = memcmp (calcualted, expected, SHA256_DIGEST_SIZE);
+  int failed = memcmp (calculated, expected, SHA256_DIGEST_SIZE);
   check_num++; /* Print 1-based numbers */
   if (failed)
   {
     char calc_str[SHA256_DIGEST_STRING_SIZE];
     char expc_str[SHA256_DIGEST_STRING_SIZE];
-    bin2hex (calcualted, SHA256_DIGEST_SIZE, calc_str);
+    bin2hex (calculated, SHA256_DIGEST_SIZE, calc_str);
     bin2hex (expected, SHA256_DIGEST_SIZE, expc_str);
     fprintf (stderr,
              "FAILED: %s check %u: calculated digest %s, expected digest %s.\n",
@@ -308,7 +308,7 @@ check_result (const char *test_name,
   else if (verbose)
   {
     char calc_str[SHA256_DIGEST_STRING_SIZE];
-    bin2hex (calcualted, SHA256_DIGEST_SIZE, calc_str);
+    bin2hex (calculated, SHA256_DIGEST_SIZE, calc_str);
     printf (
       "PASSED: %s check %u: calculated digest %s match expected digest.\n",
       test_name, check_num, calc_str);

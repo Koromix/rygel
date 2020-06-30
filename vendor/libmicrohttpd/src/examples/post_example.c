@@ -45,19 +45,19 @@
  * Front page. (/)
  */
 #define MAIN_PAGE \
-  "<html><head><title>Welcome</title></head><body><form action=\"/2\" method=\"post\">What is your name? <input type=\"text\" name=\"v1\" value=\"%s\" /><input type=\"submit\" value=\"Next\" /></body></html>"
+  "<html><head><title>Welcome</title></head><body><form action=\"/2\" method=\"post\">What is your name? <input type=\"text\" name=\"v1\" value=\"%s\" /><input type=\"submit\" value=\"Next\" /></form></body></html>"
 
 /**
  * Second page. (/2)
  */
 #define SECOND_PAGE \
-  "<html><head><title>Tell me more</title></head><body><a href=\"/\">previous</a> <form action=\"/S\" method=\"post\">%s, what is your job? <input type=\"text\" name=\"v2\" value=\"%s\" /><input type=\"submit\" value=\"Next\" /></body></html>"
+  "<html><head><title>Tell me more</title></head><body><a href=\"/\">previous</a> <form action=\"/S\" method=\"post\">%s, what is your job? <input type=\"text\" name=\"v2\" value=\"%s\" /><input type=\"submit\" value=\"Next\" /></form></body></html>"
 
 /**
  * Second page (/S)
  */
 #define SUBMIT_PAGE \
-  "<html><head><title>Ready to submit?</title></head><body><form action=\"/F\" method=\"post\"><a href=\"/2\">previous </a> <input type=\"hidden\" name=\"DONE\" value=\"yes\" /><input type=\"submit\" value=\"Submit\" /></body></html>"
+  "<html><head><title>Ready to submit?</title></head><body><form action=\"/F\" method=\"post\"><a href=\"/2\">previous </a> <input type=\"hidden\" name=\"DONE\" value=\"yes\" /><input type=\"submit\" value=\"Submit\" /></form></body></html>"
 
 /**
  * Last page.
@@ -205,10 +205,10 @@ get_session (struct MHD_Connection *connection)
  * @param connection connection to process
  * @param MHD_YES on success, MHD_NO on failure
  */
-typedef int (*PageHandler)(const void *cls,
-                           const char *mime,
-                           struct Session *session,
-                           struct MHD_Connection *connection);
+typedef enum MHD_Result (*PageHandler)(const void *cls,
+                                       const char *mime,
+                                       struct Session *session,
+                                       struct MHD_Connection *connection);
 
 
 /**
@@ -274,13 +274,13 @@ add_session_cookie (struct Session *session,
  * @param session session handle
  * @param connection connection to use
  */
-static int
+static enum MHD_Result
 serve_simple_form (const void *cls,
                    const char *mime,
                    struct Session *session,
                    struct MHD_Connection *connection)
 {
-  int ret;
+  enum MHD_Result ret;
   const char *form = cls;
   struct MHD_Response *response;
 
@@ -310,13 +310,13 @@ serve_simple_form (const void *cls,
  * @param session session handle
  * @param connection connection to use
  */
-static int
+static enum MHD_Result
 fill_v1_form (const void *cls,
               const char *mime,
               struct Session *session,
               struct MHD_Connection *connection)
 {
-  int ret;
+  enum MHD_Result ret;
   size_t slen;
   char *reply;
   struct MHD_Response *response;
@@ -359,13 +359,13 @@ fill_v1_form (const void *cls,
  * @param session session handle
  * @param connection connection to use
  */
-static int
+static enum MHD_Result
 fill_v1_v2_form (const void *cls,
                  const char *mime,
                  struct Session *session,
                  struct MHD_Connection *connection)
 {
-  int ret;
+  enum MHD_Result ret;
   char *reply;
   struct MHD_Response *response;
   size_t slen;
@@ -410,13 +410,13 @@ fill_v1_v2_form (const void *cls,
  * @param session session handle
  * @param connection connection to use
  */
-static int
+static enum MHD_Result
 not_found_page (const void *cls,
                 const char *mime,
                 struct Session *session,
                 struct MHD_Connection *connection)
 {
-  int ret;
+  enum MHD_Result ret;
   struct MHD_Response *response;
   (void) cls;     /* Unused. Silent compiler warning. */
   (void) session; /* Unused. Silent compiler warning. */
@@ -469,7 +469,7 @@ static struct Page pages[] = {
  * @return MHD_YES to continue iterating,
  *         MHD_NO to abort the iteration
  */
-static int
+static enum MHD_Result
 post_iterator (void *cls,
                enum MHD_ValueKind kind,
                const char *key,
@@ -551,10 +551,10 @@ post_iterator (void *cls,
  *        can be set with the MHD_OPTION_NOTIFY_COMPLETED).
  *        Initially, <tt>*con_cls</tt> will be NULL.
  * @return MHS_YES if the connection was handled successfully,
- *         MHS_NO if the socket must be closed due to a serios
+ *         MHS_NO if the socket must be closed due to a serious
  *         error while handling the request
  */
-static int
+static enum MHD_Result
 create_response (void *cls,
                  struct MHD_Connection *connection,
                  const char *url,
@@ -567,7 +567,7 @@ create_response (void *cls,
   struct MHD_Response *response;
   struct Request *request;
   struct Session *session;
-  int ret;
+  enum MHD_Result ret;
   unsigned int i;
   (void) cls;               /* Unused. Silent compiler warning. */
   (void) version;           /* Unused. Silent compiler warning. */

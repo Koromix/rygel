@@ -69,7 +69,7 @@ copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
 }
 
 
-static int
+static enum MHD_Result
 test_values (void *cls,
              enum MHD_ValueKind kind,
              const char *key,
@@ -89,7 +89,7 @@ test_values (void *cls,
 }
 
 
-static int
+static enum MHD_Result
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
           const char *url,
@@ -101,7 +101,7 @@ ahc_echo (void *cls,
   static int ptr;
   const char *me = cls;
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
   (void) version; (void) upload_data; (void) upload_data_size;       /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (me, method))

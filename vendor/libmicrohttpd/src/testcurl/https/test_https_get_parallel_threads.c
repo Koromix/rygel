@@ -61,7 +61,7 @@ https_transfer_thread_adapter (void *args)
   struct https_test_data *cargs = args;
   int ret;
 
-  /* time spread incomming requests */
+  /* time spread incoming requests */
   usleep ((useconds_t) 10.0 * ((double) rand ()) / ((double) RAND_MAX));
   ret = test_https_transfer (cargs->cls, cargs->port,
                              cargs->cipher_suite, cargs->proto_version);
@@ -76,7 +76,7 @@ https_transfer_thread_adapter (void *args)
  *
  * @return: 0 upon all client requests returning '0', -1 otherwise.
  *
- * TODO : make client_count a parameter - numver of curl client threads to spawn
+ * TODO : make client_count a parameter - number of curl client threads to spawn
  */
 static int
 test_single_client (void *cls, int port, const char *cipher_suite,
@@ -99,7 +99,7 @@ test_single_client (void *cls, int port, const char *cipher_suite,
  *
  * @return: 0 upon all client requests returning '0', -1 otherwise.
  *
- * TODO : make client_count a parameter - numver of curl client threads to spawn
+ * TODO : make client_count a parameter - number of curl client threads to spawn
  */
 static int
 test_parallel_clients (void *cls, int port, const char *cipher_suite,

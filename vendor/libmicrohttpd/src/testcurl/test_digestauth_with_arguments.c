@@ -71,7 +71,7 @@ copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
 }
 
 
-static int
+static enum MHD_Result
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
           const char *url,
@@ -84,7 +84,7 @@ ahc_echo (void *cls,
   char *username;
   const char *password = "testpass";
   const char *realm = "test@example.com";
-  int ret;
+  enum MHD_Result ret;
   (void) cls; (void) url;                          /* Unused. Silent compiler warning. */
   (void) method; (void) version; (void) upload_data; /* Unused. Silent compiler warning. */
   (void) upload_data_size; (void) unused;         /* Unused. Silent compiler warning. */

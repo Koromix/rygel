@@ -78,7 +78,7 @@
  * @param content value to add
  * @return #MHD_NO on error (i.e. invalid header or content format).
  */
-static int
+static enum MHD_Result
 add_response_entry (struct MHD_Response *response,
                     enum MHD_ValueKind kind,
                     const char *header,
@@ -129,7 +129,7 @@ add_response_entry (struct MHD_Response *response,
  * @return #MHD_NO on error (i.e. invalid header or content format).
  * @ingroup response
  */
-int
+enum MHD_Result
 MHD_add_response_header (struct MHD_Response *response,
                          const char *header,
                          const char *content)
@@ -173,7 +173,7 @@ MHD_add_response_header (struct MHD_Response *response,
  * @return #MHD_NO on error (i.e. invalid footer or content format).
  * @ingroup response
  */
-int
+enum MHD_Result
 MHD_add_response_footer (struct MHD_Response *response,
                          const char *footer,
                          const char *content)
@@ -194,7 +194,7 @@ MHD_add_response_footer (struct MHD_Response *response,
  * @return #MHD_NO on error (no such header known)
  * @ingroup response
  */
-int
+enum MHD_Result
 MHD_del_response_header (struct MHD_Response *response,
                          const char *header,
                          const char *content)
@@ -412,13 +412,13 @@ MHD_create_response_from_callback (uint64_t size,
  * @param ... #MHD_RO_END terminated list of options
  * @return #MHD_YES on success, #MHD_NO on error
  */
-int
+enum MHD_Result
 MHD_set_response_options (struct MHD_Response *response,
                           enum MHD_ResponseFlags flags,
                           ...)
 {
   va_list ap;
-  int ret;
+  enum MHD_Result ret;
   enum MHD_ResponseOptions ro;
 
   ret = MHD_YES;
@@ -788,7 +788,7 @@ MHD_create_response_from_buffer_with_free_callback (size_t size,
  * @param ... arguments to the action (depends on the action)
  * @return #MHD_NO on error, #MHD_YES on success
  */
-_MHD_EXTERN int
+_MHD_EXTERN enum MHD_Result
 MHD_upgrade_action (struct MHD_UpgradeResponseHandle *urh,
                     enum MHD_UpgradeAction action,
                     ...)
@@ -894,7 +894,7 @@ MHD_upgrade_action (struct MHD_UpgradeResponseHandle *urh,
  * @return #MHD_YES on success, #MHD_NO on failure (will cause
  *        connection to be closed)
  */
-int
+enum MHD_Result
 MHD_response_execute_upgrade_ (struct MHD_Response *response,
                                struct MHD_Connection *connection)
 {
@@ -1073,7 +1073,7 @@ MHD_response_execute_upgrade_ (struct MHD_Response *response,
                             EPOLL_CTL_DEL,
                             connection->socket_fd,
                             &event))
-          MHD_PANIC (_ ("Error cleaning up while handling epoll error"));
+          MHD_PANIC (_ ("Error cleaning up while handling epoll error.\n"));
 #ifdef HAVE_MESSAGES
         MHD_DLOG (daemon,
                   _ ("Call to epoll_ctl failed: %s\n"),

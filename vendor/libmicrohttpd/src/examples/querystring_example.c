@@ -29,7 +29,7 @@
 #define PAGE \
   "<html><head><title>libmicrohttpd demo</title></head><body>Query string for &quot;%s&quot; was &quot;%s&quot;</body></html>"
 
-static int
+static enum MHD_Result
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
           const char *url,
@@ -42,7 +42,7 @@ ahc_echo (void *cls,
   const char *val;
   char *me;
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
   (void) url;               /* Unused. Silent compiler warning. */
   (void) version;           /* Unused. Silent compiler warning. */
   (void) upload_data;       /* Unused. Silent compiler warning. */

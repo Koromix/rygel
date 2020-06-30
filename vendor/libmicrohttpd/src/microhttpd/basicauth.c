@@ -68,7 +68,7 @@ MHD_basic_auth_get_username_password (struct MHD_Connection *connection,
   {
 #ifdef HAVE_MESSAGES
     MHD_DLOG (connection->daemon,
-              _ ("Error decoding basic authentication\n"));
+              _ ("Error decoding basic authentication.\n"));
 #endif
     return NULL;
   }
@@ -78,7 +78,7 @@ MHD_basic_auth_get_username_password (struct MHD_Connection *connection,
   {
 #ifdef HAVE_MESSAGES
     MHD_DLOG (connection->daemon,
-              _ ("Basic authentication doesn't contain ':' separator\n"));
+              _ ("Basic authentication doesn't contain ':' separator.\n"));
 #endif
     free (decode);
     return NULL;
@@ -96,7 +96,7 @@ MHD_basic_auth_get_username_password (struct MHD_Connection *connection,
     {
 #ifdef HAVE_MESSAGES
       MHD_DLOG (connection->daemon,
-                _ ("Failed to allocate memory for password\n"));
+                _ ("Failed to allocate memory for password.\n"));
 #endif
       free (decode);
       free (user);
@@ -135,7 +135,7 @@ MHD_queue_basic_auth_fail_response (struct MHD_Connection *connection,
   {
 #ifdef HAVE_MESSAGES
     MHD_DLOG (connection->daemon,
-              "Failed to allocate memory for auth header\n");
+              "Failed to allocate memory for auth header.\n");
 #endif /* HAVE_MESSAGES */
     return MHD_NO;
   }
@@ -161,7 +161,7 @@ MHD_queue_basic_auth_fail_response (struct MHD_Connection *connection,
   {
 #ifdef HAVE_MESSAGES
     MHD_DLOG (connection->daemon,
-              _ ("Failed to add Basic auth header\n"));
+              _ ("Failed to add Basic auth header.\n"));
 #endif /* HAVE_MESSAGES */
   }
   return ret;

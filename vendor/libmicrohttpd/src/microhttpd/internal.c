@@ -184,7 +184,7 @@ MHD_http_unescape (char *val)
  *         #MHD_YES for success (parsing succeeded, @a cb always
  *                               returned #MHD_YES)
  */
-int
+enum MHD_Result
 MHD_parse_arguments_ (struct MHD_Connection *connection,
                       enum MHD_ValueKind kind,
                       char *args,

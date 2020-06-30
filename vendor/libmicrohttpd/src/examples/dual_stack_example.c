@@ -28,7 +28,7 @@
 #define PAGE \
   "<html><head><title>libmicrohttpd demo</title></head><body>libmicrohttpd demo</body></html>"
 
-static int
+static enum MHD_Result
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
           const char *url,
@@ -39,7 +39,7 @@ ahc_echo (void *cls,
   static int aptr;
   const char *me = cls;
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
   (void) url;               /* Unused. Silent compiler warning. */
   (void) version;           /* Unused. Silent compiler warning. */
   (void) upload_data;       /* Unused. Silent compiler warning. */

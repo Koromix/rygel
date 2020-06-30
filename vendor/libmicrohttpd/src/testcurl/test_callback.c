@@ -58,7 +58,7 @@ called_twice (void *cls, uint64_t pos, char *buf, size_t max)
 }
 
 
-static int
+static enum MHD_Result
 callback (void *cls,
           struct MHD_Connection *connection,
           const char *url,
@@ -70,7 +70,7 @@ callback (void *cls,
 {
   struct callback_closure *cbc = calloc (1, sizeof(struct callback_closure));
   struct MHD_Response *r;
-  int ret;
+  enum MHD_Result ret;
 
   (void) cls;
   (void) url;                          /* Unused. Silent compiler warning. */

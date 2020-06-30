@@ -72,7 +72,7 @@ copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
 }
 
 
-static int
+static enum MHD_Result
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
           const char *url,
@@ -83,7 +83,7 @@ ahc_echo (void *cls,
 {
   static int marker;
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
   (void) cls; (void) url; (void) version;            /* Unused. Silent compiler warning. */
   (void) upload_data; (void) upload_data_size;     /* Unused. Silent compiler warning. */
 

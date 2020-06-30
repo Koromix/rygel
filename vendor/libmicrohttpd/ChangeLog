@@ -1,3 +1,31 @@
+Sun 28 Jun 2020 09:36:01 PM CEST
+        Fix buffer overflow issue in URL parser.
+        Releasing libmicrohttpd 0.9.71. -CG
+
+Tue 16 Jun 2020 08:44:22 PM CEST
+    Add logic to try again if GNUtls uncork() fails. -CG
+
+Wed 10 Jun 2020 09:44:29 PM CEST
+    Fixed PostProcessor bug discovered by MD, which given certain parser
+    boundaries caused the returned values to be wrong. -CG/MD
+
+Wed 08 Apr 2020 10:53:01 PM CEST
+    Introduce `enum MHD_Result` for #MHD_YES/#MHD_NO to avoid using 'int' so much.
+    Note that this change WILL cause compiler warnings until (most) MHD callbacks
+    in application code change their return type from 'int' to 'enum MHD_Result'.
+    That said, avoiding possible confusions of different enums is going to make
+    the code more robust in the future. For conditional compilation, test
+    for "MHD_VERSION >= 0x00097002". -CG
+
+Tue 07 Apr 2020 02:58:39 PM BRT
+    Fixed #5501 (Added example for how to provide a tiny threaded websocket server). -SC
+
+Tue 31 Mar 2020 02:36:40 PM BRT
+    Fixed #6142 (applied several spelling fixes). -DKG/-SC
+
+Sat 07 Mar 2020 05:20:33 PM CET
+    Fixed #6090 (misc. severe socket handling bugs on OS X). -CG
+
 Sat 08 Feb 2020 09:12:54 PM CET
     Fixed 100-continue handling for PATCH method (#6068).
     Fixed FTBFS from wrong #endif position for certain builds (#6025).
@@ -570,7 +598,7 @@ Sun Apr 23 20:05:44 CEST 2017
 	field names if MHD_USE_PEDANTIC_CHECKS is set. -CG
 
 Sun Apr 23 19:20:33 CEST 2017
-	Replace remaining occurences of sprintf() with
+	Replace remaining occurrences of sprintf() with
 	MHD_snprintf_(). Thanks to Ram for pointing this out. -CG
 
 Sat Apr 22 20:39:00 MSK 2017
@@ -1169,7 +1197,7 @@ Tue Dec  1 10:01:12 CET 2015
 
 Wed Nov 25 17:02:53 CET 2015
 	Remove 200ms delay observable with keep-alive on Darwin
-	and *BSD platfroms. -EG
+	and *BSD platforms. -EG
 
 Tue Nov 10 15:25:48 CET 2015
 	Fix issue with shutdown if connection was resumed just
@@ -1533,7 +1561,7 @@ Wed Mar 05 13:15:05 CET 2014
 	Changed configure flag from '--disable-pipe' to
 	'--enable-socketpair'.
 	Added configure flags '--disable-doc' and '--disable-examples'.
-	Narrowed down extrenal lib specific compiler and linker flags
+	Narrowed down external lib specific compiler and linker flags
 	usage. -EG
 
 Wed Feb 26 17:42:34 CET 2014
@@ -1639,7 +1667,7 @@ Tue Dec  3 21:05:38 CET 2013
 Fri Nov 29 20:17:03 CET 2013
 	Eliminating theoretical stack overflow by limiting length
 	of URIs in authentication headers to 32k (only applicable
-	if the application explicitly raised the memroy limits,
+	if the application explicitly raised the memory limits,
 	and only applies to MHD_digest_auth_check). Issue was
 	reported by Florian Weimer. -CG
 
@@ -1867,7 +1895,7 @@ Sun Mar 31 20:03:48 CEST 2013
 	at ~1500 MB/s on this system). -CG
 
 Fri Mar 29 16:44:29 CET 2013
-	Renaming testcases to consistenly begin with test_;
+	Renaming testcases to consistently begin with test_;
 	Changing build system to build examples in doc/.
 	Releasing libmicrohttpd 0.9.26. -CG
 
@@ -2587,11 +2615,11 @@ Sun May 17 03:29:46 MDT 2009
 
 Fri May 15 11:00:20 MDT 2009
 	 Grow reserved read buffer more aggressively so that we are not
-	 needlessly stuck reading only a handfull of bytes in each iteration. -CG
+	 needlessly stuck reading only a handful of bytes in each iteration. -CG
 
 Thu May 14 21:20:30 MDT 2009
 	 Fixed issue where the "NOTIFY_COMPLETED" handler could be called
-	 twice (if a socket error or timeout occured for a pipelined
+	 twice (if a socket error or timeout occurred for a pipelined
 	 connection after successfully completing a request and before
 	 the next request was successfully transmitted).  This could
 	 confuse applications not expecting to see a connection "complete"
@@ -2755,7 +2783,7 @@ Sat Apr 12 15:14:05 MDT 2008
 	 Fixed a problem (introduced in 0.2.3) with handling very
 	 large requests (the code did not return proper error code).
 	 If "--enable-messages" is specified, the code now includes
-	 reasonable default HTML webpages for various build-in
+	 reasonable default HTML webpages for various built-in
 	 errors (such as request too large and malformed requests).
 	 Without that flag, the webpages returned will still be
 	 empty.
@@ -2881,7 +2909,7 @@ Sun Aug 26 03:11:46 MDT 2007
 	 HTTP 400 status back if this is violated). - CG
 
 Tue Aug 21 01:01:46 MDT 2007
-	 Fixing assertion failure that occured when a client
+	 Fixing assertion failure that occurred when a client
 	 closed the connection after sending some data but
 	 not the full headers. - CG
 

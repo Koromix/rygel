@@ -132,7 +132,7 @@ free_crc_data (void *crc_data)
 }
 
 
-static int
+static enum MHD_Result
 http_AccessHandlerCallback (void *cls,
                             struct MHD_Connection *connection,
                             const char *url,
@@ -142,7 +142,7 @@ http_AccessHandlerCallback (void *cls,
                             size_t *upload_data_size,
                             void **con_cls)
 {
-  int ret;
+  enum MHD_Result ret;
   (void) cls; (void) url;                          /* Unused. Silent compiler warning. */
   (void) method; (void) version; (void) upload_data; /* Unused. Silent compiler warning. */
   (void) upload_data_size;                       /* Unused. Silent compiler warning. */

@@ -39,7 +39,7 @@
   "<html><head><title>Access denied</title></head><body>Access denied</body></html>"
 
 
-static int
+static enum MHD_Result
 ahc_echo (void *cls,
           struct MHD_Connection *connection,
           const char *url,
@@ -50,7 +50,7 @@ ahc_echo (void *cls,
   static int aptr;
   const char *me = cls;
   struct MHD_Response *response;
-  int ret;
+  enum MHD_Result ret;
   char *user;
   char *pass;
   int fail;
@@ -120,7 +120,7 @@ main (int argc, char *const *argv)
                         NULL, NULL, &ahc_echo, PAGE, MHD_OPTION_END);
   if (d == NULL)
     return 1;
-  fprintf (stderr, "HTTP server running. Press ENTER to stop the server\n");
+  fprintf (stderr, "HTTP server running. Press ENTER to stop the server.\n");
   (void) getc (stdin);
   MHD_stop_daemon (d);
   return 0;
