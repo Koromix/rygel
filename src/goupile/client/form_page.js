@@ -118,8 +118,9 @@ function PageBuilder(state, page) {
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <textarea id=${id} class="af_input" style=${makeInputStyle(options)}
                    rows=${options.rows || 5} cols=${options.cols || 40}
-                   placeholder=${options.placeholder || ''} ?disabled=${options.disable}
-                   @input=${e => handleTextInput(e, key)}>${value || ''}</textarea>
+                   placeholder=${options.placeholder || ''}
+                   .value=${value || ''} ?disabled=${options.disable}
+                   @input=${e => handleTextInput(e, key)}></textarea>
         `);
 
         let intf = addWidget('text', label, render, options);
