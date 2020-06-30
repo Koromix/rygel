@@ -139,8 +139,8 @@
 .af_pin > button.clear { color: #d72a2a; }
 
 .af_button {
-    margin-right: 2px;
-    padding: 0.3em 0.7em;
+    margin-right: 0.2em;
+    padding: 3px 10px;
     background: #f8f8f8;
     border: 1px solid #ccc;
     border-width: 0.5px;
@@ -153,12 +153,6 @@
     background: #24579d;
     border-color: #24579d;
     color: white;
-}
-@media (pointer: coarse) {
-    .af_button {
-        margin-right: 3px;
-        padding: 0.35em 0.7em;
-    }
 }
 
 .af_buttons { margin-top: 10px; }
