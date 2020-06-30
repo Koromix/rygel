@@ -329,7 +329,7 @@ function PageBuilder(state, page) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <div class="af_select" id=${id}>
+            <div class="af_enum" id=${id}>
                 ${props.map(p =>
                     html`<button type="button" data-value=${util.valueToStr(p.value)}
                                  ?disabled=${options.disable} .className=${value === p.value ? 'af_button active' : 'af_button'}
@@ -381,7 +381,7 @@ function PageBuilder(state, page) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <select id=${id} style=${makeInputStyle(options)}
+            <select id=${id} class="af_select" style=${makeInputStyle(options)}
                     ?disabled=${options.disable} @change=${e => handleEnumDropChange(e, key)}>
                 ${options.untoggle || !props.some(p => p != null && value === p.value) ?
                     html`<option value="undefined" .selected=${value == null}>-- Choisissez une option --</option>` : ''}
@@ -450,7 +450,7 @@ function PageBuilder(state, page) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <div class="af_select" id=${id}>
+            <div class="af_enum" id=${id}>
                 ${props.map(p =>
                     html`<button type="button" data-value=${util.valueToStr(p.value)}
                                  ?disabled=${options.disable} .className=${value.includes(p.value) ? 'af_button active' : 'af_button'}

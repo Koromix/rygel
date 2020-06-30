@@ -110,6 +110,18 @@
     border: 1px solid #ccc;
     border-width: 0.5px;
 }
+.af_enum, .af_radio, .af_multi { display: inline-block; }
+.af_select {
+    padding: 2px 22px 1px 1px;
+    border: 1px solid #ccc;
+    border-width: 0.5px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAALCAYAAAB7/H1+AAAA+UlEQVQokdXQsUeFYRTH8XOjSMMlEUlLWi6RqKGhqaGppX/o93vOeV7P4309Q0O8RFNDLw1NDW3pn4iGiERFbtT4Nj1cSbrdu/TlLGf4OI7IvyzGuAjghuR1jHEh79u2nfgyHRGRsixnAJwCePLer/2IhxCWSN6SvPLez3+Dd0REUkrTAE4AvDjnNn51uaouk7wDcFlV1dwAPogek3w1s61hviKqugLgHsBFSmk275ummSJ5RLJvZttDobmiKHokHwCchxC6dV1PkjwE8KaqO39Cc865VZKPAM5IHpB8V9XdkdCc936d5DOAD1XdGwuaM7NNkvtjRUfpEypChFloulwwAAAAAElFTkSuQmCC");
+    background-repeat: no-repeat;
+    background-position: right;
+}
 
 .af_pin {
     width: 9em;
@@ -124,8 +136,6 @@
     margin: 1px;
 }
 .af_pin > button.clear { color: #d72a2a; }
-
-.af_select, .af_radio, .af_multi { display: inline-block; }
 
 .af_button {
     margin-right: 2px;
