@@ -72,7 +72,7 @@
     -ms-user-select: none;
 }
 .af_error {
-    padding: 3px 0 3px 0;
+    padding: 4px 0 3px 0;
     font-style: italic;
 }
 .af_help {
@@ -83,6 +83,7 @@
 .af_help:before { content: '☞\FE0E  '; }
 .af_prefix, .af_suffix {
     margin-left: 4px;
+    padding-top: 5px;
     font-size: 0.85em;
 }
 
@@ -112,6 +113,7 @@
     border-width: 0.5px;
 }
 .af_enum, .af_radio, .af_multi { display: inline-block; }
+.af_radio, .af_multi { padding-top: 3px; }
 .af_select {
     padding: 3px 22px 3px 2px;
     border: 1px solid #ccc;
