@@ -927,7 +927,7 @@ Valid choices include:
         let render = intf => {
             if (self.hasErrors() || options.force) {
                 return html`
-                    <fieldset class="af_container af_section af_section_error">
+                    <fieldset class="af_container af_section error">
                         <legend>${options.label || 'Liste des erreurs'}</legend>
                         ${!self.hasErrors() ? 'Aucune erreur' : ''}
                         ${page.widgets.map(intf => {
@@ -1061,7 +1061,7 @@ Valid choices include:
         state.changed_variables.delete(key.toString());
 
         if (intf.options.mandatory && intf.missing) {
-            intf.error('Donnée obligatoire manquante', intf.options.missingMode !== 'error');
+            intf.error('Obligatoire !', intf.options.missingMode !== 'error');
             if (intf.options.missingMode === 'disable')
                 valid = false;
         }

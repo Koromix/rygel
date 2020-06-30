@@ -37,18 +37,19 @@
     text-decoration: none;
 }
 
-.af_section_error {
-    background: #f4e6e6;
+.af_section.error {
+    background: #f9e3e3;
     border: 1px dashed #d72a2a;
     padding: 5px 10px;
 }
-.af_section_error > legend {
+.af_section.error > legend {
     background: #d72a2a;
     margin-left: -5px;
 }
 
 /* -------------------- Widgets -------------------- */
 
+.af_widget { position: relative; }
 .af_widget > label {
     display: block;
     margin-bottom: 6px;
@@ -59,9 +60,18 @@
     color: #d72a2a;
 }
 .af_widget.error {
-    background: #d72a2a;
-    outline: 5px solid #d72a2a;
-    color: white;
+    background: #f9e3e3;
+    outline: 3px solid #f9e3e3;
+    color: #d72a2a;
+}
+.af_widget.error:before {
+    position: absolute;
+    left: -22px;
+    top: calc(50% - 11px);
+    z-index: 999;
+    color: #d72a2a;
+    content: "⚠\FE0E";
+    font-size: 1.4em;
 }
 .af_widget.disable {
     opacity: 0.5;
