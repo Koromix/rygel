@@ -52,7 +52,7 @@
 .af_widget > label {
     display: block;
     margin-bottom: 6px;
-    padding-top: 3px;
+    padding-top: 4px;
 }
 .af_widget.mandatory > label:after {
     content: ' *';
@@ -106,13 +106,13 @@
 /* -------------------- Simple widgets -------------------- */
 
 .af_input {
-    padding: 2px 1px;
+    padding: 3px 2px;
     border: 1px solid #ccc;
     border-width: 0.5px;
 }
 .af_enum, .af_radio, .af_multi { display: inline-block; }
 .af_select {
-    padding: 2px 22px 1px 1px;
+    padding: 3px 22px 3px 2px;
     border: 1px solid #ccc;
     border-width: 0.5px;
     -webkit-appearance: none;
