@@ -1021,13 +1021,31 @@ Valid choices include:
         return options.wide ? 'width: 100%;' : '';
     }
 
-    function addWidget(type, label, render, options = {}) {
+    function addWidget(type, label, func, options = {}) {
+        if (label != null) {
+            // Users are allowed to use complex HTML as label. Turn it into text for storage!
+            if (typeof label === 'string' || typeof label === 'number') {
+                label = '' + label;
+            } else if (typeof lithtml !== 'undefined') {
+                let el = document.createElement('span');
+                render(label, el);
+                label = el.textContent;
+            } else {
+                label = '????'; // QuickJS might hit this
+            }
+            label = label.trim();
+
+            // Keep only first line of label
+            let newline_idx = label.indexOf('\n');
+            label = (newline_idx >= 0) ? label.substr(0, newline_idx).trim() : label;
+        }
+
         let intf = {
             type: type,
             label: label,
             render: () => {
                 intf.render = () => '';
-                return render(intf);
+                return func(intf);
             },
             options: options,
             errors: []
