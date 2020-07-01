@@ -103,7 +103,7 @@ bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *con
                 Span<const char> ext = GetPathExtension(filename, &compression_type);
 
                 if (file_type == FileType::File &&
-                        (ext == ".grp" || ext == ".rss" || ext == ".dmpak")) {
+                        (ext == ".grp" || ext == ".rss" || ext == ".dmpak" || ext == ".txt")) {
                     filenames.Append(Fmt(&temp_alloc, "%1%/%2", dir, filename).ptr);
                 }
 
