@@ -64,6 +64,18 @@ function PageBuilder(state, page) {
     this.hasChanged = function() { return state.changed; };
     this.isValid = function() { return page.valid; };
     this.hasErrors = function() { return !!page.errors; };
+    this.triggerErrors = function() {
+        if (self.isValid()) {
+            return true;
+        } else {
+            log.error('Corrigez les erreurs avant de valider');
+
+            state.take_delayed = new Set(page.variables.map(variable => variable.key.toString()));
+            self.restart();
+
+            return false;
+        }
+    };
 
     this.pushOptions = function(options = {}) {
         options = expandOptions(options);
@@ -949,16 +961,8 @@ Valid choices include:
     };
 
     this.submit = async function() {
-        if (!self.isValid()) {
-            log.error('Corrigez les erreurs avant d\'enregistrer');
-
-            state.take_delayed = new Set(page.variables.map(variable => variable.key.toString()));
-            self.restart();
-
-            return;
-        }
-
-        await self.submitHandler();
+        if (self.triggerErrors())
+            await self.submitHandler();
     };
 
     this.restart = function() {
