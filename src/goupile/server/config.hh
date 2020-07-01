@@ -21,7 +21,7 @@ struct Config {
     Size max_file_size = Megabytes(4);
     bool allow_guests = false;
 
-    http_Config http;
+    http_Config http {.port = 8889};
     int max_age = 3600;
 
     BlockAllocator str_alloc;

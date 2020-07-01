@@ -27,7 +27,7 @@ DatabaseFile = database.db
 
 # [HTTP]
 # IPStack = Dual
-# Port = 8888
+# Port = 8889
 # Threads = 4
 # BaseUrl = /
 )";
