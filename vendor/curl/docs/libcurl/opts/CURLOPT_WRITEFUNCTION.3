@@ -20,8 +20,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_WRITEFUNCTION 3 "April 06, 2020" "libcurl 7.71.0" "curl_easy_setopt options"
-
+.TH CURLOPT_WRITEFUNCTION 3 "16 Jun 2014" "libcurl 7.37.0" "curl_easy_setopt options"
 .SH NAME
 CURLOPT_WRITEFUNCTION \- set callback for writing received data
 .SH SYNOPSIS
@@ -53,7 +52,7 @@ means 100K.
 This function may be called with zero bytes data if the transferred file is
 empty.
 
-The data passed to this function will not be zero terminated!
+The data passed to this function will not be null-terminated!
 
 Set the \fIuserdata\fP argument with the \fICURLOPT_WRITEDATA(3)\fP option.
 

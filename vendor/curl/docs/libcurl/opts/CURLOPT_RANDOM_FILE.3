@@ -20,8 +20,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_RANDOM_FILE 3 "May 31, 2017" "libcurl 7.71.0" "curl_easy_setopt options"
-
+.TH CURLOPT_RANDOM_FILE 3 "17 Jun 2014" "libcurl 7.37.0" "curl_easy_setopt options"
 .SH NAME
 CURLOPT_RANDOM_FILE \- specify a source for random data
 .SH SYNOPSIS
@@ -29,7 +28,7 @@ CURLOPT_RANDOM_FILE \- specify a source for random data
 
 CURLcode curl_easy_setopt(CURL *handle, CURLOPT_RANDOM_FILE, char *path);
 .SH DESCRIPTION
-Pass a char * to a zero terminated file name. The file might be used to read
+Pass a char * to a null-terminated file name. The file might be used to read
 from to seed the random engine for SSL and more.
 
 The application does not have to keep the string around after setting this

@@ -36,6 +36,7 @@
  1.17 Add support for IRIs
  1.18 try next proxy if one doesn't work
  1.20 SRV and URI DNS records
+ 1.21 Add return code to CURLMOPT_PUSHFUNCTION to fail the connection
  1.22 CURLINFO_PAUSE_STATE
  1.23 Offer API to flush the connection pool
  1.24 TCP Fast Open for windows
@@ -157,6 +158,7 @@
  18.19 expand ~/ in config files
  18.20 host name sections in config files
  18.21 retry on the redirected-to URL
+ 18.22 Add flag to specify download directory
 
  19. Build
  19.1 roffit
@@ -355,6 +357,13 @@
 
  Offer support for resolving SRV and URI DNS records for libcurl to know which
  server to connect to for various protocols (including HTTP!).
+
+1.21 Add return code to CURLMOPT_PUSHFUNCTION to fail the connection
+
+ Allow the callback to return a value that would stop the entire operation,
+ like it can be done from most other callbacks.
+
+ See https://curl.haxx.se/mail/lib-2020-06/0099.html
 
 1.22 CURLINFO_PAUSE_STATE
 
@@ -1098,6 +1107,12 @@ that doesn't exist on the server, just like --ftp-create-dirs.
  redirects to a separate GET, and that GET is what gets the 529
 
  See https://github.com/curl/curl/issues/5462
+
+18.22 Add flag to specify download directory
+
+ A directory name to basically prepend to the file name -O and -o use. Saves
+ user from having to manually "cd" to the directory. Especially useful for
+ command lines with multiple -O and different download directories.
 
 19. Build
 
