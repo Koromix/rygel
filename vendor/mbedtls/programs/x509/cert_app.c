@@ -51,7 +51,7 @@ int main( void )
            "MBEDTLS_NET_C and/or MBEDTLS_RSA_C and/or "
            "MBEDTLS_X509_CRT_PARSE_C and/or MBEDTLS_FS_IO and/or "
            "MBEDTLS_CTR_DRBG_C not defined.\n");
-    return( 0 );
+    mbedtls_exit( 0 );
 }
 #else
 
@@ -258,7 +258,7 @@ int main( int argc, char *argv[] )
     {
         if( ( ret = mbedtls_x509_crt_parse_path( &cacert, opt.ca_path ) ) < 0 )
         {
-            mbedtls_printf( " failed\n  !  mbedtls_x509_crt_parse_path returned -0x%x\n\n", -ret );
+            mbedtls_printf( " failed\n  !  mbedtls_x509_crt_parse_path returned -0x%x\n\n", (unsigned int) -ret );
             goto exit;
         }
 
@@ -268,7 +268,7 @@ int main( int argc, char *argv[] )
     {
         if( ( ret = mbedtls_x509_crt_parse_file( &cacert, opt.ca_file ) ) < 0 )
         {
-            mbedtls_printf( " failed\n  !  mbedtls_x509_crt_parse_file returned -0x%x\n\n", -ret );
+            mbedtls_printf( " failed\n  !  mbedtls_x509_crt_parse_file returned -0x%x\n\n", (unsigned int) -ret );
             goto exit;
         }
 
@@ -282,7 +282,7 @@ int main( int argc, char *argv[] )
     {
         if( ( ret = mbedtls_x509_crl_parse_file( &cacrl, opt.crl_file ) ) != 0 )
         {
-            mbedtls_printf( " failed\n  !  mbedtls_x509_crl_parse returned -0x%x\n\n", -ret );
+            mbedtls_printf( " failed\n  !  mbedtls_x509_crl_parse returned -0x%x\n\n", (unsigned int) -ret );
             goto exit;
         }
 
@@ -456,9 +456,12 @@ int main( int argc, char *argv[] )
         /*
          * 5. Print the certificate
          */
+#if !defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
+        mbedtls_printf( "  . Peer certificate information    ... skipped\n" );
+#else
         mbedtls_printf( "  . Peer certificate information    ...\n" );
         ret = mbedtls_x509_crt_info( (char *) buf, sizeof( buf ) - 1, "      ",
-                             ssl.session->peer_cert );
+                                     mbedtls_ssl_get_peer_cert( &ssl ) );
         if( ret == -1 )
         {
             mbedtls_printf( " failed\n  !  mbedtls_x509_crt_info returned %d\n\n", ret );
@@ -466,6 +469,7 @@ int main( int argc, char *argv[] )
         }
 
         mbedtls_printf( "%s\n", buf );
+#endif /* MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
 
         mbedtls_ssl_close_notify( &ssl );
 
@@ -493,7 +497,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    return( exit_code );
+    mbedtls_exit( exit_code );
 }
 #endif /* MBEDTLS_BIGNUM_C && MBEDTLS_ENTROPY_C && MBEDTLS_SSL_TLS_C &&
           MBEDTLS_SSL_CLI_C && MBEDTLS_NET_C && MBEDTLS_RSA_C &&

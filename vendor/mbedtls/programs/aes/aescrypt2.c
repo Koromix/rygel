@@ -22,7 +22,7 @@
 /* Enable definition of fileno() even when compiling with -std=c99. Must be
  * set before config.h, which pulls in glibc's features.h indirectly.
  * Harmless on other platforms. */
-#define _POSIX_C_SOURCE 1
+#define _POSIX_C_SOURCE 200112L
 
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
@@ -76,7 +76,7 @@ int main( void )
     mbedtls_printf("MBEDTLS_AES_C and/or MBEDTLS_SHA256_C "
                     "and/or MBEDTLS_FS_IO and/or MBEDTLS_MD_C "
                     "not defined.\n");
-    return( 0 );
+    mbedtls_exit( 0 );
 }
 #else
 
@@ -96,7 +96,7 @@ int main( int argc, char *argv[] )
     unsigned char IV[16];
     unsigned char tmp[16];
     unsigned char key[512];
-    unsigned char digest[32];
+    unsigned char digest[64];
     unsigned char buffer[1024];
     unsigned char diff;
 
@@ -118,7 +118,7 @@ int main( int argc, char *argv[] )
     ret = mbedtls_md_setup( &sha_ctx, mbedtls_md_info_from_type( MBEDTLS_MD_SHA256 ), 1 );
     if( ret != 0 )
     {
-        mbedtls_printf( "  ! mbedtls_md_setup() returned -0x%04x\n", -ret );
+        mbedtls_printf( "  ! mbedtls_md_setup() returned -0x%04x\n", (unsigned int) -ret );
         goto exit;
     }
 
@@ -298,7 +298,7 @@ int main( int argc, char *argv[] )
 
             if( fread( buffer, 1, n, fin ) != (size_t) n )
             {
-                mbedtls_fprintf( stderr, "fread(%d bytes) failed\n", n );
+                mbedtls_fprintf( stderr, "fread(%u bytes) failed\n", n );
                 goto exit;
             }
 
@@ -413,7 +413,7 @@ int main( int argc, char *argv[] )
 
             if( fwrite( buffer, 1, n, fout ) != (size_t) n )
             {
-                mbedtls_fprintf( stderr, "fwrite(%d bytes) failed\n", n );
+                mbedtls_fprintf( stderr, "fwrite(%u bytes) failed\n", n );
                 goto exit;
             }
         }
@@ -465,6 +465,6 @@ exit:
     mbedtls_aes_free( &aes_ctx );
     mbedtls_md_free( &sha_ctx );
 
-    return( exit_code );
+    mbedtls_exit( exit_code );
 }
 #endif /* MBEDTLS_AES_C && MBEDTLS_SHA256_C && MBEDTLS_FS_IO */

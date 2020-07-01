@@ -234,6 +234,14 @@ int query_config( const char *config )
     }
 #endif /* MBEDTLS_PLATFORM_SNPRINTF_ALT */
 
+#if defined(MBEDTLS_PLATFORM_VSNPRINTF_ALT)
+    if( strcmp( "MBEDTLS_PLATFORM_VSNPRINTF_ALT", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_PLATFORM_VSNPRINTF_ALT );
+        return( 0 );
+    }
+#endif /* MBEDTLS_PLATFORM_VSNPRINTF_ALT */
+
 #if defined(MBEDTLS_PLATFORM_NV_SEED_ALT)
     if( strcmp( "MBEDTLS_PLATFORM_NV_SEED_ALT", config ) == 0 )
     {
@@ -978,6 +986,14 @@ int query_config( const char *config )
     }
 #endif /* MBEDTLS_ECP_NIST_OPTIM */
 
+#if defined(MBEDTLS_ECP_NO_INTERNAL_RNG)
+    if( strcmp( "MBEDTLS_ECP_NO_INTERNAL_RNG", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_ECP_NO_INTERNAL_RNG );
+        return( 0 );
+    }
+#endif /* MBEDTLS_ECP_NO_INTERNAL_RNG */
+
 #if defined(MBEDTLS_ECP_RESTARTABLE)
     if( strcmp( "MBEDTLS_ECP_RESTARTABLE", config ) == 0 )
     {
@@ -985,6 +1001,14 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_ECP_RESTARTABLE */
+
+#if defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
+    if( strcmp( "MBEDTLS_ECDH_LEGACY_CONTEXT", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_ECDH_LEGACY_CONTEXT );
+        return( 0 );
+    }
+#endif /* MBEDTLS_ECDH_LEGACY_CONTEXT */
 
 #if defined(MBEDTLS_ECDSA_DETERMINISTIC)
     if( strcmp( "MBEDTLS_ECDSA_DETERMINISTIC", config ) == 0 )
@@ -1146,6 +1170,14 @@ int query_config( const char *config )
     }
 #endif /* MBEDTLS_ENTROPY_NV_SEED */
 
+#if defined(MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER)
+    if( strcmp( "MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER );
+        return( 0 );
+    }
+#endif /* MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER */
+
 #if defined(MBEDTLS_MEMORY_DEBUG)
     if( strcmp( "MBEDTLS_MEMORY_DEBUG", config ) == 0 )
     {
@@ -1186,6 +1218,22 @@ int query_config( const char *config )
     }
 #endif /* MBEDTLS_PKCS1_V21 */
 
+#if defined(MBEDTLS_PSA_CRYPTO_SPM)
+    if( strcmp( "MBEDTLS_PSA_CRYPTO_SPM", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_PSA_CRYPTO_SPM );
+        return( 0 );
+    }
+#endif /* MBEDTLS_PSA_CRYPTO_SPM */
+
+#if defined(MBEDTLS_PSA_INJECT_ENTROPY)
+    if( strcmp( "MBEDTLS_PSA_INJECT_ENTROPY", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_PSA_INJECT_ENTROPY );
+        return( 0 );
+    }
+#endif /* MBEDTLS_PSA_INJECT_ENTROPY */
+
 #if defined(MBEDTLS_RSA_NO_CRT)
     if( strcmp( "MBEDTLS_RSA_NO_CRT", config ) == 0 )
     {
@@ -1210,6 +1258,22 @@ int query_config( const char *config )
     }
 #endif /* MBEDTLS_SHA256_SMALLER */
 
+#if defined(MBEDTLS_SHA512_SMALLER)
+    if( strcmp( "MBEDTLS_SHA512_SMALLER", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SHA512_SMALLER );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SHA512_SMALLER */
+
+#if defined(MBEDTLS_SHA512_NO_SHA384)
+    if( strcmp( "MBEDTLS_SHA512_NO_SHA384", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SHA512_NO_SHA384 );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SHA512_NO_SHA384 */
+
 #if defined(MBEDTLS_SSL_ALL_ALERT_MESSAGES)
     if( strcmp( "MBEDTLS_SSL_ALL_ALERT_MESSAGES", config ) == 0 )
     {
@@ -1218,6 +1282,22 @@ int query_config( const char *config )
     }
 #endif /* MBEDTLS_SSL_ALL_ALERT_MESSAGES */
 
+#if defined(MBEDTLS_SSL_RECORD_CHECKING)
+    if( strcmp( "MBEDTLS_SSL_RECORD_CHECKING", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SSL_RECORD_CHECKING );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_RECORD_CHECKING */
+
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
+    if( strcmp( "MBEDTLS_SSL_DTLS_CONNECTION_ID", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SSL_DTLS_CONNECTION_ID );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
+
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
     if( strcmp( "MBEDTLS_SSL_ASYNC_PRIVATE", config ) == 0 )
     {
@@ -1225,6 +1305,14 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_SSL_ASYNC_PRIVATE */
+
+#if defined(MBEDTLS_SSL_CONTEXT_SERIALIZATION)
+    if( strcmp( "MBEDTLS_SSL_CONTEXT_SERIALIZATION", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SSL_CONTEXT_SERIALIZATION );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_CONTEXT_SERIALIZATION */
 
 #if defined(MBEDTLS_SSL_DEBUG_ALL)
     if( strcmp( "MBEDTLS_SSL_DEBUG_ALL", config ) == 0 )
@@ -1257,6 +1345,14 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_SSL_FALLBACK_SCSV */
+
+#if defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
+    if( strcmp( "MBEDTLS_SSL_KEEP_PEER_CERTIFICATE", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SSL_KEEP_PEER_CERTIFICATE );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
 
 #if defined(MBEDTLS_SSL_HW_RECORD_ACCEL)
     if( strcmp( "MBEDTLS_SSL_HW_RECORD_ACCEL", config ) == 0 )
@@ -1337,6 +1433,14 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    if( strcmp( "MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( strcmp( "MBEDTLS_SSL_PROTO_DTLS", config ) == 0 )
@@ -1426,6 +1530,22 @@ int query_config( const char *config )
     }
 #endif /* MBEDTLS_SSL_TRUNCATED_HMAC_COMPAT */
 
+#if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH)
+    if( strcmp( "MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH */
+
+#if defined(MBEDTLS_TEST_HOOKS)
+    if( strcmp( "MBEDTLS_TEST_HOOKS", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_TEST_HOOKS );
+        return( 0 );
+    }
+#endif /* MBEDTLS_TEST_HOOKS */
+
 #if defined(MBEDTLS_THREADING_ALT)
     if( strcmp( "MBEDTLS_THREADING_ALT", config ) == 0 )
     {
@@ -1441,6 +1561,14 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_THREADING_PTHREAD */
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    if( strcmp( "MBEDTLS_USE_PSA_CRYPTO", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_USE_PSA_CRYPTO );
+        return( 0 );
+    }
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #if defined(MBEDTLS_VERSION_FEATURES)
     if( strcmp( "MBEDTLS_VERSION_FEATURES", config ) == 0 )
@@ -1465,6 +1593,14 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_X509_ALLOW_UNSUPPORTED_CRITICAL_EXTENSION */
+
+#if defined(MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK)
+    if( strcmp( "MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK );
+        return( 0 );
+    }
+#endif /* MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK */
 
 #if defined(MBEDTLS_X509_CHECK_KEY_USAGE)
     if( strcmp( "MBEDTLS_X509_CHECK_KEY_USAGE", config ) == 0 )
@@ -1889,6 +2025,38 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_POLY1305_C */
+
+#if defined(MBEDTLS_PSA_CRYPTO_C)
+    if( strcmp( "MBEDTLS_PSA_CRYPTO_C", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_PSA_CRYPTO_C );
+        return( 0 );
+    }
+#endif /* MBEDTLS_PSA_CRYPTO_C */
+
+#if defined(MBEDTLS_PSA_CRYPTO_SE_C)
+    if( strcmp( "MBEDTLS_PSA_CRYPTO_SE_C", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_PSA_CRYPTO_SE_C );
+        return( 0 );
+    }
+#endif /* MBEDTLS_PSA_CRYPTO_SE_C */
+
+#if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C)
+    if( strcmp( "MBEDTLS_PSA_CRYPTO_STORAGE_C", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_PSA_CRYPTO_STORAGE_C );
+        return( 0 );
+    }
+#endif /* MBEDTLS_PSA_CRYPTO_STORAGE_C */
+
+#if defined(MBEDTLS_PSA_ITS_FILE_C)
+    if( strcmp( "MBEDTLS_PSA_ITS_FILE_C", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_PSA_ITS_FILE_C );
+        return( 0 );
+    }
+#endif /* MBEDTLS_PSA_ITS_FILE_C */
 
 #if defined(MBEDTLS_RIPEMD160_C)
     if( strcmp( "MBEDTLS_RIPEMD160_C", config ) == 0 )
@@ -2378,6 +2546,14 @@ int query_config( const char *config )
     }
 #endif /* MBEDTLS_PLATFORM_SNPRINTF_MACRO */
 
+#if defined(MBEDTLS_PLATFORM_VSNPRINTF_MACRO)
+    if( strcmp( "MBEDTLS_PLATFORM_VSNPRINTF_MACRO", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_PLATFORM_VSNPRINTF_MACRO );
+        return( 0 );
+    }
+#endif /* MBEDTLS_PLATFORM_VSNPRINTF_MACRO */
+
 #if defined(MBEDTLS_PLATFORM_NV_SEED_READ_MACRO)
     if( strcmp( "MBEDTLS_PLATFORM_NV_SEED_READ_MACRO", config ) == 0 )
     {
@@ -2425,6 +2601,38 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_SSL_IN_CONTENT_LEN */
+
+#if defined(MBEDTLS_SSL_CID_IN_LEN_MAX)
+    if( strcmp( "MBEDTLS_SSL_CID_IN_LEN_MAX", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SSL_CID_IN_LEN_MAX );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_CID_IN_LEN_MAX */
+
+#if defined(MBEDTLS_SSL_CID_OUT_LEN_MAX)
+    if( strcmp( "MBEDTLS_SSL_CID_OUT_LEN_MAX", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SSL_CID_OUT_LEN_MAX );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_CID_OUT_LEN_MAX */
+
+#if defined(MBEDTLS_SSL_CID_PADDING_GRANULARITY)
+    if( strcmp( "MBEDTLS_SSL_CID_PADDING_GRANULARITY", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SSL_CID_PADDING_GRANULARITY );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_CID_PADDING_GRANULARITY */
+
+#if defined(MBEDTLS_SSL_TLS1_3_PADDING_GRANULARITY)
+    if( strcmp( "MBEDTLS_SSL_TLS1_3_PADDING_GRANULARITY", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SSL_TLS1_3_PADDING_GRANULARITY );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_TLS1_3_PADDING_GRANULARITY */
 
 #if defined(MBEDTLS_SSL_OUT_CONTENT_LEN)
     if( strcmp( "MBEDTLS_SSL_OUT_CONTENT_LEN", config ) == 0 )
@@ -2513,6 +2721,14 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_PLATFORM_GMTIME_R_ALT */
+
+#if defined(MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED)
+    if( strcmp( "MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED );
+        return( 0 );
+    }
+#endif /* MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED */
 
     /* If the symbol is not found, return an error */
     return( 1 );

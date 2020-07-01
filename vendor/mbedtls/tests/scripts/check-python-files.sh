@@ -1,23 +1,31 @@
 #! /usr/bin/env sh
 
-# This file is part of Mbed TLS (https://tls.mbed.org)
-#
 # Copyright (c) 2018, Arm Limited, All Rights Reserved
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# This file is part of Mbed TLS (https://tls.mbed.org)
 #
 # Purpose:
 #
 # Run 'pylint' on Python files for programming errors and helps enforcing
 # PEP8 coding standards.
 
-# Find the installed version of Pylint. Installed as a distro package this can
-# be pylint3 and as a PEP egg, pylint. We prefer pylint over pylint3
-if type pylint >/dev/null 2>/dev/null; then
-    PYLINT=pylint
-elif type pylint3 >/dev/null 2>/dev/null; then
-    PYLINT=pylint3
+if type python3 >/dev/null 2>/dev/null; then
+    PYTHON=python3
 else
-    echo 'Pylint was not found.'
-    exit 1
+    PYTHON=python
 fi
 
-$PYLINT -j 2 scripts/*.py tests/scripts/*.py
+$PYTHON -m pylint -j 2 scripts/*.py tests/scripts/*.py

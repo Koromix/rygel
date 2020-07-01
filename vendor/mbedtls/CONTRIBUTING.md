@@ -14,7 +14,7 @@ Coding Standards
 
 Making a Contribution
 ---------------------
-1. [Check for open issues](https://github.com/ARMmbed/mbedtls/issues) or [start a discussion](https://tls.mbed.org/discussions) around a feature idea or a bug.
+1. [Check for open issues](https://github.com/ARMmbed/mbedtls/issues) or [start a discussion](https://lists.trustedfirmware.org/mailman/listinfo/mbed-tls) around a feature idea or a bug.
 1. Fork the [Mbed TLS repository on GitHub](https://github.com/ARMmbed/mbedtls) to start making your changes. As a general rule, you should use the ["development" branch](https://github.com/ARMmbed/mbedtls/tree/development) as a basis.
 1. Write a test which shows that the bug was fixed or that the feature works as expected.
 1. Send a pull request (PR) and work with us until it gets merged and published. Contributions may need some modifications, so a few rounds of review and fixing may be necessary. We will include your name in the ChangeLog :)
@@ -79,4 +79,4 @@ Mbed TLS is well documented, but if you think documentation is needed, speak out
 1. Complex parts in the code should include comments.
 1. If needed, a Readme file is advised.
 1. If a [Knowledge Base (KB)](https://tls.mbed.org/kb) article should be added, write this as a comment in the PR description.
-1. A [ChangeLog](https://github.com/ARMmbed/mbedtls/blob/development/ChangeLog) entry should be added for this contribution.
+1. A [ChangeLog](https://github.com/ARMmbed/mbedtls/blob/development/ChangeLog.d/00README.md) entry should be added for this contribution.
