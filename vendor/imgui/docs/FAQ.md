@@ -15,18 +15,21 @@ or view this file with any Markdown viewer.
 | [What is this library called?](#q-what-is-this-library-called) |
 | [Which version should I get?](#q-which-version-should-i-get) |
 | **Q&A: Integration** |
+| **[How to get started?](#q-how-to-get-started)** |
 | **[How can I tell whether to dispatch mouse/keyboard to Dear ImGui or to my application?](#q-how-can-i-tell-whether-to-dispatch-mousekeyboard-to-dear-imgui-or-to-my-application)** |
 | [How can I enable keyboard or gamepad controls?](#q-how-can-i-enable-keyboard-or-gamepad-controls) |
 | [How can I use this on a machine without mouse, keyboard or screen? (input share, remote display)](#q-how-can-i-use-this-on-a-machine-without-mouse-keyboard-or-screen-input-share-remote-display) |
-| [I integrated Dear ImGui in my engine and the text or lines are blurry..](#q-i-integrated-dear-imgui-in-my-engine-and-the-text-or-lines-are-blurry) |
+| [I integrated Dear ImGui in my engine and little squares are showing instead of text..](#q-i-integrated-dear-imgui-in-my-engine-and-little-squares-are-showing-instead-of-text) |
 | [I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-clipping-or-disappearing-when-i-move-windows-around) |
+| [I integrated Dear ImGui in my engine and some elements are displaying outside their expected windows boundaries..](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-displaying-outside-their-expected-windows-boundaries) |
 | **Q&A: Usage** |
-| **[Why are multiple widgets reacting when I interact with a single one?<br>How can I have multiple widgets with the same label or with an empty label?](#q-why-are-multiple-widgets-reacting-when-i-interact-with-a-single-one-q-how-can-i-have-multiple-widgets-with-the-same-label-or-with-an-empty-label)** |
+| **[How can I have widgets with an empty label?<br>How can I have multiple widgets with the same label?<br>Why are multiple widgets reacting when I interact with one?](#q-how-can-i-have-widgets-with-an-empty-label)** |
 | [How can I display an image? What is ImTextureID, how does it work?](#q-how-can-i-display-an-image-what-is-imtextureid-how-does-it-work)|
 | [How can I use my own math types instead of ImVec2/ImVec4?](#q-how-can-i-use-my-own-math-types-instead-of-imvec2imvec4) |
 | [How can I interact with standard C++ types (such as std::string and std::vector)?](#q-how-can-i-interact-with-standard-c-types-such-as-stdstring-and-stdvector) |
 | [How can I display custom shapes? (using low-level ImDrawList API)](#q-how-can-i-display-custom-shapes-using-low-level-imdrawlist-api) |
 | **Q&A: Fonts, Text** |
+| [How should I handle DPI in my application?](#q-how-should-i-handle-dpi-in-my-application) |
 | [How can I load a different font than the default?](#q-how-can-i-load-a-different-font-than-the-default) |
 | [How can I easily use icons in my application?](#q-how-can-i-easily-use-icons-in-my-application) |
 | [How can I load multiple fonts?](#q-how-can-i-load-multiple-fonts) |
@@ -77,11 +80,23 @@ You may use the [docking](https://github.com/ocornut/imgui/tree/docking) branch 
 
 Many projects are using this branch and it is kept in sync with master regularly.
 
+You may merge in the [tables](https://github.com/ocornut/imgui/tree/tables) branch which includes:
+- [Table features](https://github.com/ocornut/imgui/issues/2957)
+
 ##### [Return to Index](#index)
 
 ----
 
 # Q&A: Integration
+
+### Q: How to get started?
+
+Read `PROGRAMMER GUIDE` section of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp).
+Read [examples/README.txt](https://github.com/ocornut/imgui/tree/master/examples/README.txt).
+
+##### [Return to Index](#index)
+
+---
 
 ### Q: How can I tell whether to dispatch mouse/keyboard to Dear ImGui or to my application?
 
@@ -134,20 +149,23 @@ Console SDK also sometimes provide equivalent tooling or wrapper for Synergy-lik
 
 ---
 
-### Q: I integrated Dear ImGui in my engine and the text or lines are blurry..
-In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f).
-Also make sure your orthographic projection matrix and io.DisplaySize matches your actual framebuffer dimension.
+### Q: I integrated Dear ImGui in my engine and little squares are showing instead of text..
+This usually means that: your font texture wasn't uploaded into GPU, or your shader or other rendering state are not reading from the right texture (e.g. texture wasn't bound).
+If this happens using the standard back-ends it is probably that the texture failed to upload, which could happens if for some reason your texture is too big. Also see [docs/FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md).
 
 ##### [Return to Index](#index)
 
 ---
 
 ### Q: I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..
+### Q: I integrated Dear ImGui in my engine and some elements are displaying outside their expected windows boundaries..
 You are probably mishandling the clipping rectangles in your render function.
-Rectangles provided by ImGui are defined as
+Each draw command needs the triangle rendered using the clipping rectangle provided in the ImDrawCmd structure (`ImDrawCmd->CllipRect`).
+Rectangles provided by Dear ImGui are defined as
 `(x1=left,y1=top,x2=right,y2=bottom)`
 and **NOT** as
 `(x1,y1,width,height)`
+Refer to rendering back-ends in the [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder for references of how to handle the `ClipRect` field.
 
 ##### [Return to Index](#index)
 
@@ -155,7 +173,9 @@ and **NOT** as
 
 # Q&A: Usage
 
-### Q: Why are multiple widgets reacting when I interact with a single one? <br>Q: How can I have multiple widgets with the same label or with an empty label?
+### Q: How can I have widgets with an empty label?
+### Q: How can I have multiple widgets with the same label?
+### Q: Why are multiple widgets reacting when I interact with one?
 
 A primer on labels and the ID Stack...
 
@@ -168,7 +188,7 @@ Unique ID are implicitly built from the hash of multiple elements that identify 
 - Unique ID are often derived from a string label and at minimum scoped within their host window:
 ```c
 Begin("MyWindow");
-Button("OK");          // Label = "OK",     ID = hash of ("MyWindow" "OK")
+Button("OK");          // Label = "OK",     ID = hash of ("MyWindow", "OK")
 Button("Cancel");      // Label = "Cancel", ID = hash of ("MyWindow", "Cancel")
 End();
 ```
@@ -277,11 +297,12 @@ if (TreeNode("node"))  // <-- this function call will do a PushID() for you (unl
   TreePop();
 }
 ```
-- When working with trees, ID are used to preserve the open/close state of each tree node.
+
+When working with trees, ID are used to preserve the open/close state of each tree node.
 Depending on your use cases you may want to use strings, indices or pointers as ID.
-e.g. when following a single pointer that may change over time, using a static string as ID
+- e.g. when following a single pointer that may change over time, using a static string as ID
 will preserve your node open/closed state when the targeted object change.
-e.g. when displaying a list of objects, using indices or pointers as ID will preserve the
+- e.g. when displaying a list of objects, using indices or pointers as ID will preserve the
 node open/closed state differently. See what makes more sense in your situation!
 
 ##### [Return to Index](#index)
@@ -441,10 +462,33 @@ ImGui::End();
 
 # Q&A: Fonts, Text
 
+### Q: How should I handle DPI in my application?
+
+The short answer is: obtain the desired DPI scale, load a suitable font resized with that scale (always round down font size to nearest integer), and scale your Style structure accordingly using `style.ScaleAllSizes()`. 
+
+Your application may want to detect DPI change and reload the font and reset style being frames.
+
+Your ui code  should avoid using hardcoded constants for size and positioning. Prefer to express values as multiple of reference values such as `ImGui::GetFontSize()` or `ImGui::GetFrameHeight()`. So e.g. instead of seeing a hardcoded height of 500 for a given item/window, you may want to use `30*ImGui::GetFontSize()` instead.
+
+Down the line Dear ImGui will provide a variety of standardized reference values to facilitate using this.
+
+Applications in the `examples/` folder are not DPI aware partly because they are unable to load a custom font from the file-system (may change that in the future).
+
+The reason DPI is not auto-magically solved in stock examples is that we don't yet have a satisfying solution for the "multi-dpi"  problem (using the `docking` branch: when multiple viewport windows are over multiple monitors using different DPI scale). The current way to handle this on the application side is:
+- Create and maintain one font atlas per active DPI scale (e.g. by iterating `platform_io.Monitors[]` before `NewFrame()`).
+- Hook `platform_io.OnChangedViewport()` to detect when a `Begin()` call makes a Dear ImGui window change monitor (and therefore DPI).
+- In the hook: swap atlas, swap style with correctly sized one, remap the current font from one atlas to the other (may need to maintain a remapping table of your fonts at variying DPI scale).
+
+This approach is relatively easy and functional but come with two issues:
+- It's not possibly to reliably size or position a window ahead of `Begin()` without knowing on which monitor it'll land.
+- Style override may be lost during the `Begin()` call crossing monitor boundaries. You may need to do some custom scaling mumbo-jumbo if you want your `OnChangedViewport()` handler to preserve style overrides.
+
+Please note that if you are not using multi-viewports with multi-monitors using different DPI scale, you can ignore all of this and use the simpler technique recommended at the top.
+
 ### Q: How can I load a different font than the default?
 Use the font atlas to load the TTF/OTF file you want:
 
-```c
+```cpp
 ImGuiIO& io = ImGui::GetIO();
 io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
 io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
@@ -454,12 +498,12 @@ Default is ProggyClean.ttf, monospace, rendered at size 13, embedded in dear img
 
 (Tip: monospace fonts are convenient because they allow to facilitate horizontal alignment directly at the string level.)
 
-(Read the [docs/FONTS.txt](https://github.com/ocornut/imgui/blob/master/docs/FONTS.txt) file for more details about font loading.)
+(Read the [docs/FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md) file for more details about font loading.)
 
 New programmers: remember that in C/C++ and most programming languages if you want to use a
 backslash \ within a string literal, you need to write it double backslash "\\":
 
-```c
+```cpp
 io.Fonts->AddFontFromFileTTF("MyFolder\MyFont.ttf", size);  // WRONG (you are escaping the M here!)
 io.Fonts->AddFontFromFileTTF("MyFolder\\MyFont.ttf", size;  // CORRECT
 io.Fonts->AddFontFromFileTTF("MyFolder/MyFont.ttf", size);  // ALSO CORRECT
@@ -473,9 +517,9 @@ io.Fonts->AddFontFromFileTTF("MyFolder/MyFont.ttf", size);  // ALSO CORRECT
 The most convenient and practical way is to merge an icon font such as FontAwesome inside you
 main font. Then you can refer to icons within your strings.
 You may want to see `ImFontConfig::GlyphMinAdvanceX` to make your icon look monospace to facilitate alignment.
-(Read the [docs/FONTS.txt](https://github.com/ocornut/imgui/blob/master/docs/FONTS.txt) file for more details about icons font loading.)
+(Read the [docs/FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md) file for more details about icons font loading.)
 With some extra effort, you may use colorful icon by registering custom rectangle space inside the font atlas,
-and copying your own graphics data into it. See docs/FONTS.txt about using the AddCustomRectFontGlyph API.
+and copying your own graphics data into it. See docs/FONTS.md about using the AddCustomRectFontGlyph API.
 
 ##### [Return to Index](#index)
 
@@ -483,7 +527,7 @@ and copying your own graphics data into it. See docs/FONTS.txt about using the A
 
 ### Q: How can I load multiple fonts?
 Use the font atlas to pack them into a single texture:
-(Read the [docs/FONTS.txt](https://github.com/ocornut/imgui/blob/master/docs/FONTS.txt) file and the code in ImFontAtlas for more details.)
+(Read the [docs/FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md) file and the code in ImFontAtlas for more details.)
 
 ```cpp
 ImGuiIO& io = ImGui::GetIO();

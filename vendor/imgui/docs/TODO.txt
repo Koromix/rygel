@@ -26,7 +26,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: GetWindowSize() returns (0,0) when not calculated? (#1045)
  - window: investigate better auto-positioning for new windows.
  - window: top most window flag? (#2574)
- - window: the size_on_first_use path of Begin() can probably be removed
  - window/size: manually triggered auto-fit (double-click on grip) shouldn't resize window down to viewport size?
  - window/opt: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. -> this may require enforcing that it is illegal to submit contents if Begin returns false.
  - window/child: background options for child windows, border option (disable rounding).
@@ -35,7 +34,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window/child: border could be emitted in parent as well.
  - window/child: allow SetNextWindowContentSize() to work on child windows.
  - window/clipping: some form of clipping when DisplaySize (or corresponding viewport) is zero.
- - window/tab: add a way to signify that a window or docked window requires attention (e.g. blinking title bar).
+ - window/tabbing: add a way to signify that a window or docked window requires attention (e.g. blinking title bar).
  ! scrolling: exposing horizontal scrolling with Shift+Wheel even when scrollbar is disabled expose lots of issues (#2424, #1463)
  - scrolling: while holding down a scrollbar, try to keep the same contents visible (at least while not moving mouse)
  - scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
@@ -112,7 +111,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input number: applying arithmetics ops (+,-,*,/) messes up with text edit undo stack.
 
  - layout: helper or a way to express ImGui::SameLine(ImGui::GetCursorStartPos().x + ImGui::CalcItemWidth() + ImGui::GetStyle().ItemInnerSpacing.x); in a simpler manner.
- - layout: generalization of the above: a concept equivalent to word processor ruler tab stop ~ mini columns (position in X, no clipping implied) (vaguely relate to #267, #395, also what is used internally for menu items)
+ - layout, font: horizontal tab support, A) text mode: forward only tabs (e.g. every 4 characters/N pixels from pos x1), B) manual mode: explicit tab stops acting as mini columns, no clipping (for menu items, many kind of uses, also vaguely relate to #267, #395)
  - layout: horizontal layout helper (#97)
  - layout: horizontal flow until no space left (#404)
  - layout: more generic alignment state (left/right/centered) for single items?
@@ -168,7 +167,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tabs: explicit api (even if internal) to cleanly manipulate tab order.
  - tabs: Mouse wheel over tab bar could scroll? (#2702)
 
-
  - image/image button: misalignment on padded/bordered button?
  - image/image button: parameters are confusing, image() has tint_col,border_col whereas imagebutton() has bg_col/tint_col. Even thou they are different parameters ordering could be more consistent. can we fix that?
  - image button: not taking an explicit id can be problematic. (#2464, #1390)
@@ -203,12 +201,13 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - listbox: future api should allow to enable horizontal scrolling (#2510)
 
 !- popups/menus: clarify usage of popups id, how MenuItem/Selectable closing parent popups affects the ID, etc. this is quite fishy needs improvement! (#331, #402)
- - popups/modal: make modal title bar blink when trying to click outside the modal
- - popups: reopening context menu at new position should be the behavior by default? (equivalent to internal OpenPopupEx() with reopen_existing=true) (~#1497)
+ - modals: make modal title bar blink when trying to click outside the modal
+ - modals: technically speaking, we could make Begin() with ImGuiWindowFlags_Modal work without involving popup. May help untangle a few things, as modals are more like regular windows than popups.
  - popups: if the popup functions took explicit ImGuiID it would allow the user to manage the scope of those ID. (#331)
  - popups: clicking outside (to close popup) and holding shouldn't drag window below.
  - popups: add variant using global identifier similar to Begin/End (#402)
  - popups: border options. richer api like BeginChild() perhaps? (#197)
+ - popups/modals: although it is sometimes convenient that popups/modals lifetime is owned by imgui, we could also a bool-owned-by-user api as long as Begin() return value testing is enforced.
 
  - tooltip: drag and drop with tooltip near monitor edges lose/changes its last direction instead of locking one. The drag and drop tooltip should always follow without changing direction.
  - tooltip: tooltip that doesn't fit in entire screen seems to lose their "last preferred direction" and may teleport when moving mouse.
@@ -382,6 +381,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - examples: window minimize, maximize (#583)
  - examples: provide a zero frame-rate/idle example.
  - examples: dx11/dx12: try to use new swapchain blit models (#2970)
+ - backends: report it better when not able to create texture?
  - backends: apple: example_apple should be using modern GL3.
  - backends: glfw: could go idle when minimized? if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) { glfwWaitEvents(); continue; } // issue: DeltaTime will be super high on resume, perhaps provide a way to let impl know (#440)
  - backends: opengl: rename imgui_impl_opengl2 to impl_opengl_legacy and imgui_impl_opengl3 to imgui_impl_opengl? (#1900)
@@ -392,7 +392,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - backends: bgfx: https://gist.github.com/RichardGale/6e2b74bc42b3005e08397236e4be0fd0
  - backends: mscriptem: with refactored examples, we could provide a direct imgui_impl_emscripten platform layer (see eg. https://github.com/floooh/sokol-samples/blob/master/html5/imgui-emsc.cc#L42)
 
- - optimization: replace vsnprintf with stb_printf? or enable the defines/infrastructure to allow it (#1038)
+ - optimization: replace vsnprintf with stb_printf? using IMGUI_USE_STB_SPRINTF.(#1038)
  - optimization: add clipping for multi-component widgets (SliderFloatX, ColorEditX, etc.). one problem is that nav branch can't easily clip parent group when there is a move request.
  - optimization: add a flag to disable most of rendering, for the case where the user expect to skip it (#335)
  - optimization: fully covered window (covered by another with non-translucent bg + WindowRounding worth of padding) may want to clip rendering.
