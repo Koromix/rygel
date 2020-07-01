@@ -464,7 +464,7 @@ Options:
                                            <profile_dir>%/mco_authorizations.txt)
 
         --port <port>            Change web server port
-                                 (default: %1))
+                                 (default: %1)
         --base_url <url>         Change base URL
                                  (default: %2))",
                 thop_config.http.port, thop_config.http.base_url);
