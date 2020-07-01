@@ -9,14 +9,14 @@ let idb = new function () {
         if (version != null) {
             req = indexedDB.open(db_name, version);
 
-            req.onupgradeneeded = async e => {
+            req.onupgradeneeded = e => {
                 let db = e.target.result;
                 let intf = new DatabaseInterface(e.target.result, e.target.transaction);
 
                 intf.createStore = function(store, params = {}) { db.createObjectStore(store, params); };
                 intf.deleteStore = function(store) { db.deleteObjectStore(store); };
 
-                await version_func(intf, e.oldVersion || null);
+                version_func(intf, e.oldVersion || null);
             };
         } else {
             req = indexedDB.open(db_name);

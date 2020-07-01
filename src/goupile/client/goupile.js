@@ -104,7 +104,7 @@ let goupile = new function() {
 
     async function openDatabase() {
         let db_name = `goupile:${env.app_key}`;
-        let db = await idb.open(db_name, 1, async (db, old_version) => {
+        let db = await idb.open(db_name, 1, (db, old_version) => {
             switch (old_version) {
                 case null: {
                     db.createStore('fs_entries', {keyPath: 'path'});
