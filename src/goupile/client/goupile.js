@@ -824,7 +824,7 @@ let goupile = new function() {
 
     function toggleLock(e) {
         if (getLockURL()) {
-            goupile.popup(e, page => {
+            goupile.popup(e, (page, close) => {
                 page.output('Entrez le code de déverrouillage');
                 let pin = page.pin('code');
 
@@ -832,7 +832,7 @@ let goupile = new function() {
                     let code = localStorage.getItem('lock_pin');
 
                     if (pin.value === code) {
-                        setTimeout(page.close, 0);
+                        setTimeout(close, 0);
 
                         deleteLock();
 
