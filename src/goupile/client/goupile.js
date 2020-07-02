@@ -14,7 +14,7 @@ let goupile = new function() {
     let tablet_mq = window.matchMedia('(pointer: coarse)');
     let standalone_mq = window.matchMedia('(display-mode: standalone)');
 
-    let settings;
+    let settings = {};
     let settings_rnd;
 
     let route_asset;
@@ -337,14 +337,17 @@ let goupile = new function() {
 
                 // Ensure valid menu and panel configuration
                 if (!getLockURL()) {
-                    let show_data = route_asset && route_asset.form;
+                    let show_develop = settings.develop;
+                    let show_data = settings.edit && route_asset && route_asset.form;
+
                     let correct_mode = (left_panel == null ||
-                                        left_panel === 'files' || left_panel === 'editor' ||
+                                        (left_panel === 'files' && show_develop) ||
+                                        (left_panel === 'editor' && show_develop) ||
                                         (left_panel === 'status' && show_data) ||
                                         (left_panel === 'data' && show_data) ||
                                         (left_panel === 'describe' && show_data));
                     if (!correct_mode)
-                        left_panel = 'editor';
+                        left_panel = show_develop ? 'editor' : null;
 
                     if (!route_asset || !route_asset.overview) {
                         show_overview = false;
@@ -453,17 +456,19 @@ let goupile = new function() {
         }
 
         return html`
-            <div class="gp_dropdown">
-                <button class=${left_panel === 'editor' || left_panel === 'files' ? 'active' : ''}>Code</button>
-                <div>
-                    <button class=${left_panel === 'editor' ? 'active' : ''}
-                            @click=${e => toggleLeftPanel('editor')}>Éditeur</button>
-                    <button class=${left_panel === 'files' ? 'active' : ''}
-                            @click=${e => toggleLeftPanel('files')}>Déploiement</button>
+            ${settings.develop ? html`
+                <div class="gp_dropdown">
+                    <button class=${left_panel === 'editor' || left_panel === 'files' ? 'active' : ''}>Code</button>
+                    <div>
+                        <button class=${left_panel === 'editor' ? 'active' : ''}
+                                @click=${e => toggleLeftPanel('editor')}>Éditeur</button>
+                        <button class=${left_panel === 'files' ? 'active' : ''}
+                                @click=${e => toggleLeftPanel('files')}>Déploiement</button>
+                    </div>
                 </div>
-            </div>
+            ` : ''}
 
-            ${route_asset && route_asset.form ? html`
+            ${settings.edit && route_asset && route_asset.form ? html`
                 <div class="gp_dropdown">
                     <button class=${left_panel === 'status' || left_panel === 'data' ? 'active' : ''}>Recueil</button>
                     <div>
@@ -518,10 +523,11 @@ let goupile = new function() {
                 </div>
             ` : ''}
 
-            <button type="button" class="icon" @click=${showSyncDialog}
-                    style="background-position: -4px calc(-22px + 1.2em);"></button>
-            ${env.use_offline ? html`<button type="button" id="gp_status" class="icon" @click=${toggleStatus} />` : ''}
-            ${!env.use_offline ? html`<div id="gp_status"/>` : ''}
+            ${settings.offline ?
+                html`<button type="button" class="icon" @click=${showSyncDialog}
+                             style="background-position: -4px calc(-22px + 1.2em);"></button>
+                     <button type="button" id="gp_status" class="icon" @click=${toggleStatus} />` : ''}
+            ${!settings.offline ? html`<div id="gp_status"/>` : ''}
             <button type="button" class="icon" @click=${toggleLock}
                     style="background-position: -180px calc(-22px + 1.2em);"></button>
         `;
