@@ -40,31 +40,35 @@ let goupile = new function() {
     });
 
     async function initGoupile() {
-        log.pushHandler(log.notifyHandler);
+        try {
+            log.pushHandler(log.notifyHandler);
 
-        initNavigation();
+            initNavigation();
 
-        let db = await openDatabase();
-        virt_fs = new VirtualFS(db);
-        virt_rec = new VirtualRecords(db);
+            let db = await openDatabase();
+            virt_fs = new VirtualFS(db);
+            virt_rec = new VirtualRecords(db);
 
-        if (navigator.serviceWorker) {
-            navigator.serviceWorker.register(`${env.base_url}sw.pk.js`);
+            if (navigator.serviceWorker) {
+                navigator.serviceWorker.register(`${env.base_url}sw.pk.js`);
 
-            if (env.use_offline) {
-                enablePersistence();
-                await updateApplication();
+                if (env.use_offline) {
+                    enablePersistence();
+                    await updateApplication();
+                }
             }
+
+            nav = new ApplicationNavigator();
+            await self.initApplication();
+
+            // If a run fails and we can run in offline mode, restart it transparently
+            net.changeHandler = online => {
+                if (env.use_offline)
+                    self.go();
+            };
+        } finally {
+            document.body.classList.remove('busy');
         }
-
-        nav = new ApplicationNavigator();
-        await self.initApplication();
-
-        // If a run fails and we can run in offline mode, restart it transparently
-        net.changeHandler = online => {
-            if (env.use_offline)
-                self.go();
-        };
     }
 
     function enablePersistence() {
@@ -198,7 +202,7 @@ let goupile = new function() {
             app = null;
         }
 
-        self.go(route_url || window.location.href, false);
+        await self.go(route_url || window.location.href, false);
     };
 
     async function fetchSettings(force = false) {
@@ -273,14 +277,7 @@ let goupile = new function() {
 
         try {
             running = true;
-
-            let lock_url = getLockURL();
-            if (lock_url) {
-                url = lock_url;
-
-                left_panel = null;
-                show_overview = true;
-            }
+            url = getLockURL() || url;
 
             if (self.isConnected() || env.allow_guests) {
                 if (url) {
@@ -338,8 +335,29 @@ let goupile = new function() {
                     return;
                 }
 
+                // Ensure valid menu and panel configuration
+                if (!getLockURL()) {
+                    let show_data = route_asset && route_asset.form;
+                    let correct_mode = (left_panel == null ||
+                                        left_panel === 'files' || left_panel === 'editor' ||
+                                        (left_panel === 'status' && show_data) ||
+                                        (left_panel === 'data' && show_data) ||
+                                        (left_panel === 'describe' && show_data));
+                    if (!correct_mode)
+                        left_panel = 'editor';
+
+                    if (!route_asset || !route_asset.overview) {
+                        show_overview = false;
+                    } else if (!left_panel) {
+                        show_overview = true;
+                    }
+                } else {
+                    left_panel = null;
+                    show_overview = true;
+                }
+
                 // Render menu and page layout
-                renderPanels();
+                renderAll();
 
                 try {
                     // Run left panel
@@ -358,6 +376,8 @@ let goupile = new function() {
                     } else {
                         document.title = env.app_name;
                     }
+                } catch (err) {
+                    log.error(err.message);
                 } finally {
                     updateStatus();
                 }
@@ -370,149 +390,141 @@ let goupile = new function() {
             if (restart) {
                 restart = false;
                 setTimeout(self.go, 0);
+            } else {
+                for (let panel of document.querySelectorAll('.gp_panel'))
+                    panel.classList.remove('busy');
             }
         }
     };
 
-    function renderPanels() {
-        let menu_el = document.querySelector('#gp_menu');
+    function renderAll() {
+        let in_iframe;
+        try {
+            in_iframe = (document.location.hostname !== window.parent.location.hostname);
+        } catch (e) {
+            in_iframe = true;
+        }
 
-        if (getLockURL()) {
-            render(html`
+        render(html`
+            ${!in_iframe && !getLockURL() ?
+                html`<nav id="gp_menu" class="gp_toolbar">${renderFullMenu()}</nav>`: ''}
+            ${!in_iframe && getLockURL() ? html`<nav id="gp_menu" class="gp_toolbar locked">
                 &nbsp;&nbsp;Application verrouillée
                 <div style="flex: 1;"></div>
                 <button @click=${showLoginDialog}>Connexion</button>
                 <button type="button" class="icon active" @click=${toggleLock}
                         style="background-position: -180px calc(-22px + 1.2em);"></button>
-            `, menu_el);
+            </nav>`: ''}
 
-            menu_el.classList.add('locked');
-        } else {
-            let show_data = route_asset && route_asset.form;
+            <main>
+                ${left_panel === 'files' ?
+                    html`<div id="dev_files" class=${show_overview ? 'gp_panel left busy' : 'gp_panel fixed busy'}></div>` : ''}
+                ${left_panel === 'editor' ?
+                    html`<div id="dev_editor" class=${show_overview ? 'gp_panel left busy' : 'gp_panel fixed'}></div>` : ''}
+                ${left_panel === 'status' ?
+                    html`<div id="dev_status" class=${show_overview ? 'gp_panel left busy' : 'gp_panel fixed busy'}></div>` : ''}
+                ${left_panel === 'data' ?
+                    html`<div id="dev_data" class=${show_overview ? 'gp_panel left busy' : 'gp_panel fixed busy'}></div>` : ''}
+                ${left_panel === 'describe' ?
+                    html`<div id="dev_describe" class=${show_overview ? 'gp_panel left busy' : 'gp_panel fixed busy'}></div>` : ''}
+                <div id="gp_overview" class=${left_panel ? 'gp_panel right busy' : 'gp_panel overview busy'}
+                     style=${show_overview ? '' : 'display: none;'}></div>
 
-            let correct_mode = (left_panel == null ||
-                                left_panel === 'files' || left_panel === 'editor' ||
-                                (left_panel === 'status' && show_data) ||
-                                (left_panel === 'data' && show_data) ||
-                                (left_panel === 'describe' && show_data));
-            if (!correct_mode)
-                left_panel = 'editor';
+                <div id="gp_error" style="display: none;"></div>
+            </main>
+        `, document.body);
+    }
 
-            if (!route_asset || !route_asset.overview) {
-                show_overview = false;
-            } else if (!left_panel) {
-                show_overview = true;
-            }
+    function renderFullMenu() {
+        let show_assets = [];
+        let select_asset;
+        if (route_asset) {
+            let idx = route_asset.idx;
+            while (app.assets[idx].secondary)
+                idx--;
 
-            let show_assets = [];
-            let select_asset;
-            if (route_asset) {
-                let idx = route_asset.idx;
-                while (app.assets[idx].secondary)
-                    idx--;
+            // Main asset
+            show_assets.push(app.assets[idx]);
+            select_asset = app.assets[idx];
 
-                // Main asset
+            // Related secondary assets
+            while (++idx < app.assets.length && app.assets[idx].secondary)
                 show_assets.push(app.assets[idx]);
-                select_asset = app.assets[idx];
-
-                // Related secondary assets
-                while (++idx < app.assets.length && app.assets[idx].secondary)
-                    show_assets.push(app.assets[idx]);
-            }
-
-            render(html`
-                <div class="gp_dropdown">
-                    <button class=${left_panel === 'editor' || left_panel === 'files' ? 'active' : ''}>Code</button>
-                    <div>
-                        <button class=${left_panel === 'editor' ? 'active' : ''}
-                                @click=${e => toggleLeftPanel('editor')}>Éditeur</button>
-                        <button class=${left_panel === 'files' ? 'active' : ''}
-                                @click=${e => toggleLeftPanel('files')}>Déploiement</button>
-                    </div>
-                </div>
-
-                ${show_data ? html`
-                    <div class="gp_dropdown">
-                        <button class=${left_panel === 'status' || left_panel === 'data' ? 'active' : ''}>Recueil</button>
-                        <div>
-                            <button class=${left_panel === 'status' ? 'active' : ''}
-                                    @click=${e => toggleLeftPanel('status')}>Suivi</button>
-                            <button class=${left_panel === 'data' ? 'active' : ''}
-                                    @click=${e => toggleLeftPanel('data')}>Données</button>
-                        </div>
-                    </div>
-                ` :  ''}
-
-                ${show_assets.map(asset => {
-                    if (asset === route_asset) {
-                        return html`<button class=${show_overview ? 'active': ''}
-                                            @click=${e => self.toggleOverview()}>${asset.overview}</button>`;
-                    } else {
-                        return html`<button @click=${e => self.go(asset.url)}>${asset.overview}</button>`;
-                    }
-                })}
-
-                <select id="gp_assets" @change=${e => self.go(e.target.value)}>
-                    ${!route_asset ? html`<option>-- Sélectionnez une page --</option>` : ''}
-                    ${util.mapRLE(app.assets, asset => asset.category, (category, offset, len) => {
-                        if (category == null) {
-                            return '';
-                        } else if (len === 1) {
-                            let asset = app.assets[offset];
-                            return html`<option value=${asset.url}
-                                                .selected=${asset === select_asset}>${asset.category} (${asset.label})</option>`;
-                        } else {
-                            return html`<optgroup label=${category}>${util.mapRange(offset, offset + len, idx => {
-                                let asset = app.assets[idx];
-                                if (!asset.secondary) {
-                                    return html`<option value=${asset.url}
-                                                       .selected=${asset === select_asset}>${asset.label}</option>`;
-                                } else {
-                                    return '';
-                                }
-                            })}</optgroup>`;
-                        }
-                    })}
-                </select>
-
-                ${!self.isConnected() ? html`<button @click=${showLoginDialog}>Connexion</button>` : ''}
-                ${self.isConnected() ? html`
-                    <div class="gp_dropdown right">
-                        <button>${settings.username}</button>
-                        <div>
-                            <button @click=${showLoginDialog}>Changer d'utilisateur</button>
-                            <button @click=${logout}>Déconnexion</button>
-                        </div>
-                    </div>
-                ` : ''}
-
-                <button type="button" class="icon" @click=${showSyncDialog}
-                        style="background-position: -4px calc(-22px + 1.2em);"></button>
-                ${env.use_offline ? html`<button type="button" id="gp_status" class="icon" @click=${toggleStatus} />` : ''}
-                ${!env.use_offline ? html`<div id="gp_status"/>` : ''}
-                <button type="button" class="icon" @click=${toggleLock}
-                        style="background-position: -180px calc(-22px + 1.2em);"></button>
-            `, menu_el);
-
-            menu_el.classList.remove('locked');
         }
 
-        render(html`
-            ${left_panel === 'files' ?
-                html`<div id="dev_files" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
-            ${left_panel === 'editor' ?
-                html`<div id="dev_editor" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
-            ${left_panel === 'status' ?
-                html`<div id="dev_status" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
-            ${left_panel === 'data' ?
-                html`<div id="dev_data" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
-            ${left_panel === 'describe' ?
-                html`<div id="dev_describe" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
-            <div id="gp_overview" class=${left_panel ? 'gp_panel right' : 'gp_panel overview'}
-                 style=${show_overview ? '' : 'display: none;'}></div>
+        return html`
+            <div class="gp_dropdown">
+                <button class=${left_panel === 'editor' || left_panel === 'files' ? 'active' : ''}>Code</button>
+                <div>
+                    <button class=${left_panel === 'editor' ? 'active' : ''}
+                            @click=${e => toggleLeftPanel('editor')}>Éditeur</button>
+                    <button class=${left_panel === 'files' ? 'active' : ''}
+                            @click=${e => toggleLeftPanel('files')}>Déploiement</button>
+                </div>
+            </div>
 
-            <div id="gp_error" style="display: none;"></div>
-        `, document.querySelector('main'));
+            ${route_asset && route_asset.form ? html`
+                <div class="gp_dropdown">
+                    <button class=${left_panel === 'status' || left_panel === 'data' ? 'active' : ''}>Recueil</button>
+                    <div>
+                        <button class=${left_panel === 'status' ? 'active' : ''}
+                                @click=${e => toggleLeftPanel('status')}>Suivi</button>
+                        <button class=${left_panel === 'data' ? 'active' : ''}
+                                @click=${e => toggleLeftPanel('data')}>Données</button>
+                    </div>
+                </div>
+            ` :  ''}
+
+            ${show_assets.map(asset => {
+                if (asset === route_asset) {
+                    return html`<button class=${show_overview ? 'active': ''}
+                                        @click=${e => self.toggleOverview()}>${asset.overview}</button>`;
+                } else {
+                    return html`<button @click=${e => self.go(asset.url)}>${asset.overview}</button>`;
+                }
+            })}
+
+            <select id="gp_assets" @change=${e => self.go(e.target.value)}>
+                ${!route_asset ? html`<option>-- Sélectionnez une page --</option>` : ''}
+                ${util.mapRLE(app.assets, asset => asset.category, (category, offset, len) => {
+                    if (category == null) {
+                        return '';
+                    } else if (len === 1) {
+                        let asset = app.assets[offset];
+                        return html`<option value=${asset.url}
+                                            .selected=${asset === select_asset}>${asset.category} (${asset.label})</option>`;
+                    } else {
+                        return html`<optgroup label=${category}>${util.mapRange(offset, offset + len, idx => {
+                            let asset = app.assets[idx];
+                            if (!asset.secondary) {
+                                return html`<option value=${asset.url}
+                                                   .selected=${asset === select_asset}>${asset.label}</option>`;
+                            } else {
+                                return '';
+                            }
+                        })}</optgroup>`;
+                    }
+                })}
+            </select>
+
+            ${!self.isConnected() ? html`<button @click=${showLoginDialog}>Connexion</button>` : ''}
+            ${self.isConnected() ? html`
+                <div class="gp_dropdown right">
+                    <button>${settings.username}</button>
+                    <div>
+                        <button @click=${showLoginDialog}>Changer d'utilisateur</button>
+                        <button @click=${logout}>Déconnexion</button>
+                    </div>
+                </div>
+            ` : ''}
+
+            <button type="button" class="icon" @click=${showSyncDialog}
+                    style="background-position: -4px calc(-22px + 1.2em);"></button>
+            ${env.use_offline ? html`<button type="button" id="gp_status" class="icon" @click=${toggleStatus} />` : ''}
+            ${!env.use_offline ? html`<div id="gp_status"/>` : ''}
+            <button type="button" class="icon" @click=${toggleLock}
+                    style="background-position: -180px calc(-22px + 1.2em);"></button>
+        `;
     }
 
     async function toggleStatus() {
@@ -785,8 +797,6 @@ let goupile = new function() {
     }
 
     function renderGuest() {
-        render('', document.querySelector('#gp_menu'));
-
         let state = new PageState;
         let update = () => {
             let page = new Page('@login');
@@ -804,9 +814,10 @@ let goupile = new function() {
 
             render(html`
                 <form id="gp_login" @submit=${e => e.preventDefault()}>
+                    <h1>${env.app_name}</h1>
                     ${page.render()}
                 </form>
-            `, document.querySelector('main'));
+            `, document.body);
 
             if (focus) {
                 let el = document.querySelector('#gp_login input');
