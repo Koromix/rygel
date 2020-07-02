@@ -23,4 +23,9 @@ Navigation functions should only be called in reaction to user events, such as b
 
         goupile.go(url, push_history);
     };
+
+    this.isConnected = function() { return  goupile.isConnected(); };
+    this.isTablet = function() { return goupile.isTablet(); };
+    this.isStandalone = function() { return goupile.isStandalone(); };
+    this.isLocked = function() { return goupile.isLocked(); };
 }
