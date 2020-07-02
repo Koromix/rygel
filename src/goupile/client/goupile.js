@@ -790,13 +790,13 @@ let goupile = new function() {
 
         if (el) {
             if (!net.isPlugged()) {
-                el.style.backgroundPosition = '-136px calc(-22px + 1.2em)';
+                el.style.backgroundPosition = '-136px calc(-21px + 1.2em)';
                 el.title = 'Mode hors-ligne forcé';
             } else if (net.isOnline()) {
-                el.style.backgroundPosition = '-48px calc(-22px + 1.2em)';
-                el.title = 'Connecté au serveur';
+                el.style.backgroundPosition = '-48px calc(-21px + 1.2em)';
+                el.title = 'Serveur disponible';
             } else {
-                el.style.backgroundPosition = '-92px calc(-22px + 1.2em)';
+                el.style.backgroundPosition = '-92px calc(-21px + 1.2em)';
                 el.title = 'Serveur non disponible';
             }
         }
