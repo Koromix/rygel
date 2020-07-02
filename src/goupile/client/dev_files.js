@@ -185,7 +185,7 @@ let dev_files = new function() {
             <div class="gp_toolbar">
                 <button @click=${showCreateDialog}>Ajouter</button>
                 <div style="flex: 1;"></div>
-                ${remote ? html`<button ?disabled=${!enable_sync} @click=${showSyncDialog}>Synchroniser</button>` : ''}
+                ${remote ? html`<button ?disabled=${!enable_sync} @click=${showSyncDialog}>Déployer</button>` : ''}
             </div>
 
             <table class="sync_table">

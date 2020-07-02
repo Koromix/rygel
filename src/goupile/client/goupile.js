@@ -414,9 +414,8 @@ let goupile = new function() {
             ${!in_iframe && getLockURL() ? html`<nav id="gp_menu" class="gp_toolbar locked">
                 &nbsp;&nbsp;Application verrouillée
                 <div style="flex: 1;"></div>
+                <button type="button" @click=${toggleLock}>Déverrouiller</button>
                 <button @click=${showLoginDialog}>Connexion</button>
-                <button type="button" class="icon active" @click=${toggleLock}
-                        style="background-position: -180px calc(-22px + 1.2em);"></button>
             </nav>`: ''}
 
             <main>
@@ -517,19 +516,20 @@ let goupile = new function() {
                 <div class="gp_dropdown right">
                     <button>${settings.username}</button>
                     <div>
+                        <button type="button" @click=${toggleLock}>Verrouiller</button>
+                        <hr/>
+                        ${settings.offline ? html`
+                            <button type="button" @click=${showSyncDialog}>Synchroniser</button>
+                            <hr/>
+                        ` : ''}
                         <button @click=${showLoginDialog}>Changer d'utilisateur</button>
                         <button @click=${logout}>Déconnexion</button>
                     </div>
                 </div>
             ` : ''}
 
-            ${settings.offline ?
-                html`<button type="button" class="icon" @click=${showSyncDialog}
-                             style="background-position: -4px calc(-22px + 1.2em);"></button>
-                     <button type="button" id="gp_status" class="icon" @click=${toggleStatus} />` : ''}
+            ${settings.offline ? html`<button type="button" id="gp_status" class="icon" @click=${toggleStatus} />` : ''}
             ${!settings.offline ? html`<div id="gp_status"/>` : ''}
-            <button type="button" class="icon" @click=${toggleLock}
-                    style="background-position: -180px calc(-22px + 1.2em);"></button>
         `;
     }
 

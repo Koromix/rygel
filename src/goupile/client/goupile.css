@@ -144,6 +144,11 @@ body.busy > * { display: none !important; }
     height: 2.5em;
     text-align: left;
 }
+.gp_dropdown hr {
+    width: 94%;
+    border: none;
+    border-top: 0.5px solid #376cb5;
+}
 
 .gp_toolbar.dev { background: #383936; }
 .gp_toolbar.dev button.active { background: #272822; }
