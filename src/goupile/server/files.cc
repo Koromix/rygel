@@ -6,6 +6,7 @@
 #include "config.hh"
 #include "files.hh"
 #include "goupile.hh"
+#include "user.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
 #include <shared_mutex>
@@ -260,6 +261,13 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
 
 void HandleFilePut(const http_RequestInfo &request, http_IO *io)
 {
+    RetainPtr<const Session> session = GetCheckedSession(request, io);
+
+    if (!session || !session->HasPermission(UserPermission::Develop)) {
+        LogError("User is not allowed to deploy changes");
+        io->AttachError(403);
+        return;
+    }
     if (!goupile_config.files_directory) {
         LogError("File upload is disabled");
         io->AttachError(403);
@@ -372,6 +380,13 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
 
 void HandleFileDelete(const http_RequestInfo &request, http_IO *io)
 {
+    RetainPtr<const Session> session = GetCheckedSession(request, io);
+
+    if (!session || !session->HasPermission(UserPermission::Develop)) {
+        LogError("User is not allowed to deploy changes");
+        io->AttachError(403);
+        return;
+    }
     if (!goupile_config.files_directory) {
         LogError("File upload is disabled");
         io->AttachError(403);

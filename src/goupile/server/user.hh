@@ -25,6 +25,8 @@ static const char *const UserPermissionNames[] = {
 struct Session: public RetainObject {
     uint32_t permissions;
     char username[];
+
+    bool HasPermission(UserPermission perm) const { return permissions & (int)perm; }
 };
 
 RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http_IO *io);
