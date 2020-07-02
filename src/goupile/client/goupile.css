@@ -225,6 +225,7 @@ body.busy > * { display: none !important; }
 .gp_panel.overview { width: 100%; }
 
 #gp_menu + main { margin-top: 2.5em; }
+#gp_menu + main * { scroll-margin: 80px; }
 #gp_menu + main > .gp_panel { min-height: calc(100vh - 2.5em); }
 
 .gp_panel.broken {
