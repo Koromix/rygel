@@ -37,21 +37,12 @@ CREATE TABLE users (
     username TEXT NOT NULL,
     password_hash TEXT NOT NULL,
 
-    admin INTEGER CHECK(admin IN (0, 1)) NOT NULL
+    develop INTEGER CHECK(develop IN (0, 1)) NOT NULL,
+    new INTEGER CHECK(new IN (0, 1)) NOT NULL,
+    edit INTEGER CHECK(edit IN (0, 1)) NOT NULL,
+    offline INTEGER CHECK(offline IN (0, 1)) NOT NULL
 );
 CREATE UNIQUE INDEX users_u ON users (username);
-
-CREATE TABLE permissions (
-    username TEXT NOT NULL,
-
-    read INTEGER CHECK(read IN (0, 1)) NOT NULL,
-    query INTEGER CHECK(query IN (0, 1)) NOT NULL,
-    new INTEGER CHECK(new IN (0, 1)) NOT NULL,
-    remove INTEGER CHECK(remove IN (0, 1)) NOT NULL,
-    edit INTEGER CHECK(edit IN (0, 1)) NOT NULL,
-    validate INTEGER CHECK(validate IN (0, 1)) NOT NULL
-);
-CREATE INDEX permissions_u ON permissions (username);
 
 CREATE TABLE files (
     tag TEXT NOT NULL,
@@ -268,11 +259,8 @@ Options:
             return 1;
         }
 
-        if (!database.Run("INSERT INTO users (username, password_hash, admin) VALUES (?, ?, 1)",
+        if (!database.Run("INSERT INTO users (username, password_hash, develop, new, edit, offline) VALUES (?, ?, 1, 1, 1, 1)",
                           default_username, hash))
-            return 1;
-        if (!database.Run("INSERT INTO permissions (username, read, query, new, remove, edit, validate) VALUES (?, 1, 1, 1, 1, 1, 1)",
-                          default_username))
             return 1;
     }
 

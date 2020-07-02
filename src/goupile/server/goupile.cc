@@ -69,14 +69,12 @@ static void HandleSettings(const http_RequestInfo &request, http_IO *io)
     if (session) {
         json.Key("username"); json.String(session->username);
 
-        json.Key("permissions"); json.StartObject();
         for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
             char js_name[64];
             ConvertToJsName(UserPermissionNames[i], js_name);
 
             json.Key(js_name); json.Bool(session->permissions & (1 << i));
         }
-        json.EndObject();
     }
 
     json.EndObject();

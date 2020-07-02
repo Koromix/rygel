@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../core/libcc/libcc.hh"
+#include "config.hh"
 #include "goupile.hh"
 #include "user.hh"
 #include "../../core/libwrap/sqlite.hh"
@@ -37,10 +38,8 @@ void HandleLogin(const http_RequestInfo &request, http_IO *io)
         }
 
         sq_Statement stmt;
-        if (!goupile_db.Prepare(R"(SELECT u.password_hash, u.admin,
-                                          p.read, p.query, p.new, p.remove, p.edit, p.validate
+        if (!goupile_db.Prepare(R"(SELECT u.password_hash, u.develop, u.new, u.edit, u.offline
                                    FROM users u
-                                   INNER JOIN permissions p ON (p.username = u.username)
                                    WHERE u.username = ?)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
@@ -55,13 +54,10 @@ void HandleLogin(const http_RequestInfo &request, http_IO *io)
                 Session *session = (Session *)Allocator::Allocate(nullptr, RG_SIZE(Session) + strlen(username) + 1,
                                                                   (int)Allocator::Flag::Zero);
 
-                session->permissions |= !!sqlite3_column_int(stmt, 1) * (int)UserPermission::Admin;
-                session->permissions |= !!sqlite3_column_int(stmt, 2) * (int)UserPermission::Read;
-                session->permissions |= !!sqlite3_column_int(stmt, 3) * (int)UserPermission::Query;
-                session->permissions |= !!sqlite3_column_int(stmt, 4) * (int)UserPermission::New;
-                session->permissions |= !!sqlite3_column_int(stmt, 5) * (int)UserPermission::Remove;
-                session->permissions |= !!sqlite3_column_int(stmt, 6) * (int)UserPermission::Edit;
-                session->permissions |= !!sqlite3_column_int(stmt, 7) * (int)UserPermission::Validate;
+                session->permissions |= !!sqlite3_column_int(stmt, 1) * (int)UserPermission::Develop;
+                session->permissions |= !!sqlite3_column_int(stmt, 2) * (int)UserPermission::New;
+                session->permissions |= !!sqlite3_column_int(stmt, 3) * (int)UserPermission::Edit;
+                session->permissions |= (sqlite3_column_int(stmt, 4) && goupile_config.use_offline) * (int)UserPermission::Offline;
                 strcpy(session->username, username);
 
                 RetainPtr<Session> ptr(session, [](Session *session) { Allocator::Release(nullptr, session, -1); });
