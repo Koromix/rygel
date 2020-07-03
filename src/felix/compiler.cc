@@ -100,8 +100,9 @@ public:
         // Build options
         switch (compile_mode) {
             case CompileMode::Debug: { Fmt(&buf, " -O0 -g -ftrapv"); } break;
-            case CompileMode::Fast: { Fmt(&buf, " -O2 -g -DNDEBUG"); } break;
-            case CompileMode::Release: { Fmt(&buf, " -O2 -flto -DNDEBUG"); } break;
+            case CompileMode::DebugFast: { Fmt(&buf, " -Og -g -ftrapv"); } break;
+            case CompileMode::Fast: { Fmt(&buf, " -O2 -DNDEBUG"); } break;
+            case CompileMode::LTO: { Fmt(&buf, " -O2 -flto -DNDEBUG"); } break;
         }
         Fmt(&buf, warnings ? " -Wall" : " -Wno-everything");
 
@@ -121,7 +122,7 @@ public:
 #else
         Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
                   " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4");
-        if (compile_mode == CompileMode::Fast || compile_mode == CompileMode::Release) {
+        if (compile_mode == CompileMode::Fast || compile_mode == CompileMode::LTO) {
             Fmt(&buf, " -D_FORTIFY_SOURCE=2");
         }
 #endif
@@ -172,13 +173,11 @@ public:
         out_node->rsp_offset = buf.len;
 
         // Build mode
-        if (compile_mode == CompileMode::Release) {
-            Fmt(&buf, " -flto");
-            if (link_type == LinkType::Executable) {
-                Fmt(&buf, " -static");
-            }
-        } else {
-            Fmt(&buf, " -g");
+        switch (compile_mode) {
+            case CompileMode::Debug:
+            case CompileMode::DebugFast: { Fmt(&buf, " -g"); } break;
+            case CompileMode::Fast: { Fmt(&buf, "%1", link_type == LinkType::Executable ? " -static" : ""); } break;
+            case CompileMode::LTO: { Fmt(&buf, " -flto%1", link_type == LinkType::Executable ? " -static" : ""); } break;
         }
 
         // Objects and libraries
@@ -251,8 +250,9 @@ public:
         // Build options
         switch (compile_mode) {
             case CompileMode::Debug: { Fmt(&buf, " -O0 -g -ftrapv"); } break;
-            case CompileMode::Fast: { Fmt(&buf, " -O2 -g -DNDEBUG"); } break;
-            case CompileMode::Release: { Fmt(&buf, " -O2 -flto -DNDEBUG"); } break;
+            case CompileMode::DebugFast: { Fmt(&buf, " -Og -g -ftrapv"); } break;
+            case CompileMode::Fast: { Fmt(&buf, " -O2 -DNDEBUG"); } break;
+            case CompileMode::LTO: { Fmt(&buf, " -O2 -flto -DNDEBUG"); } break;
         }
         if (warnings) {
             Fmt(&buf, " -Wall");
@@ -273,7 +273,7 @@ public:
 #else
         Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
                   " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4");
-        if (compile_mode == CompileMode::Fast || compile_mode == CompileMode::Release) {
+        if (compile_mode == CompileMode::Fast || compile_mode == CompileMode::LTO) {
             Fmt(&buf, " -D_FORTIFY_SOURCE=2");
         }
 #endif
@@ -324,13 +324,11 @@ public:
         out_node->rsp_offset = buf.len;
 
         // Build mode
-        if (compile_mode == CompileMode::Release) {
-            Fmt(&buf, " -flto -s");
-            if (link_type == LinkType::Executable) {
-                Fmt(&buf, " -static");
-            }
-        } else {
-            Fmt(&buf, " -g");
+        switch (compile_mode) {
+            case CompileMode::Debug:
+            case CompileMode::DebugFast: { Fmt(&buf, " -g"); } break;
+            case CompileMode::Fast: { Fmt(&buf, " -s%1", link_type == LinkType::Executable ? " -static" : ""); } break;
+            case CompileMode::LTO: { Fmt(&buf, " -flto -s%1", link_type == LinkType::Executable ? " -static" : ""); } break;
         }
 
         // Objects and libraries
@@ -409,8 +407,9 @@ public:
         Fmt(&buf, " /MT /EHsc %1", warnings ? "/W3 /wd4200" : "/w");
         switch (compile_mode) {
             case CompileMode::Debug: { Fmt(&buf, " /Od /Z7"); } break;
-            case CompileMode::Fast: { Fmt(&buf, " /O2 /Z7 /DNDEBUG"); } break;
-            case CompileMode::Release: { Fmt(&buf, " /O2 /GL /DNDEBUG"); } break;
+            case CompileMode::DebugFast: { Fmt(&buf, " /O2 /Z7"); } break;
+            case CompileMode::Fast: { Fmt(&buf, " /O2 /DNDEBUG"); } break;
+            case CompileMode::LTO: { Fmt(&buf, " /O2 /GL /DNDEBUG"); } break;
         }
 
         // Platform flags
@@ -463,8 +462,9 @@ public:
         // Build mode
         switch (compile_mode) {
             case CompileMode::Debug: { Fmt(&buf, " /DEBUG:FULL"); } break;
-            case CompileMode::Fast: { Fmt(&buf, " /DEBUG:FULL"); } break;
-            case CompileMode::Release: { Fmt(&buf, " /LTCG /DEBUG:NONE"); } break;
+            case CompileMode::DebugFast: { Fmt(&buf, " /DEBUG:FULL"); } break;
+            case CompileMode::Fast: { Fmt(&buf, " /DEBUG:NONE"); } break;
+            case CompileMode::LTO: { Fmt(&buf, " /LTCG /DEBUG:NONE"); } break;
         }
 
         // Objects and libraries
@@ -510,9 +510,10 @@ void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile
     Fmt(&buf, "\"%1\" pack -O \"%2\"", GetApplicationExecutable(), dest_filename);
 
     switch (compile_mode) {
-        case CompileMode::Debug: { Fmt(&buf, " -m SourceMap"); } break;
+        case CompileMode::Debug:
+        case CompileMode::DebugFast: { Fmt(&buf, " -m SourceMap"); } break;
         case CompileMode::Fast:
-        case CompileMode::Release: { Fmt(&buf, " -m RunTransform"); } break;
+        case CompileMode::LTO: { Fmt(&buf, " -m RunTransform"); } break;
     }
 
     if (pack_options) {

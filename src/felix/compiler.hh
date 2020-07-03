@@ -12,13 +12,15 @@ struct BuildNode;
 
 enum class CompileMode {
     Debug,
+    DebugFast,
     Fast,
-    Release
+    LTO
 };
 static const char *const CompileModeNames[] = {
     "Debug",
+    "DebugFast",
     "Fast",
-    "Release"
+    "LTO"
 };
 
 enum class SourceType {
