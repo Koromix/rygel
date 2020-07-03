@@ -207,10 +207,10 @@ static void DrawEvents(double x_offset, double y_min, double y_max, double time_
             DrawEventsBlock(rect, alpha, events.Take(first_block_event, i - first_block_event),
                             align_offset);
 
-            rect.Min.x = event_pos;
+            rect.Min.x = (float)event_pos;
             first_block_event = i;
         }
-        rect.Max.x = event_pos;
+        rect.Max.x = (float)event_pos;
     }
     if (first_block_event < events.len) {
         DrawEventsBlock(rect, alpha, events.Take(first_block_event, events.len - first_block_event),
@@ -509,9 +509,9 @@ static LineInteraction DrawLineFrame(ImRect bb, double tree_width, const LineDat
     // Layout
     double y = (bb.Min.y + bb.Max.y) / 2.0f - 9.0f;
     ImVec2 text_size = ImGui::CalcTextSize(line.title.ptr, line.title.end());
-    ImRect select_bb(bb.Min.x + 2.0f, y + 2.0f, bb.Min.x + 14.0f, y + 16.0f);
-    ImRect deploy_bb(bb.Min.x + (double)line.depth * 16.0f - 3.0f, y,
-                     bb.Min.x + (double)line.depth * 16.0f + 23.0f + text_size.x, y + 16.0f);
+    ImRect select_bb(bb.Min.x + 2.0f, (float)y + 2.0f, bb.Min.x + 14.0f, (float)y + 16.0f);
+    ImRect deploy_bb(bb.Min.x + (float)line.depth * 16.0f - 3.0f, (float)y,
+                     bb.Min.x + (float)line.depth * 16.0f + 23.0f + text_size.x, (float)y + 16.0f);
     ImRect full_bb(select_bb.Min.x, deploy_bb.Min.y, deploy_bb.Max.x, deploy_bb.Max.y);
 
     LineInteraction interaction = LineInteraction::None;
@@ -551,15 +551,15 @@ static LineInteraction DrawLineFrame(ImRect bb, double tree_width, const LineDat
         RG_DEFER { ImGui::PopStyleColor(1); };
 
         if (!line.leaf) {
-            ImGui::RenderArrow(ImVec2(bb.Min.x + (double)line.depth * 16.0f, y),
+            ImGui::RenderArrow(ImVec2(bb.Min.x + (float)line.depth * 16.0f, (float)y),
                                line.deployed ? ImGuiDir_Down : ImGuiDir_Right);
         }
 
         ImVec4 text_rect {
-            (float)(bb.Min.x + (double)line.depth * 16.0f + 20.0f), bb.Min.y,
+            (float)(bb.Min.x + (float)line.depth * 16.0f + 20.0f), bb.Min.y,
             (float)(bb.Min.x + tree_width), bb.Max.y
         };
-        draw->AddText(nullptr, 0.0f, ImVec2(text_rect.x, y),
+        draw->AddText(nullptr, 0.0f, ImVec2(text_rect.x, (float)y),
                       ImGui::GetColorU32(ImGuiCol_Text),
                       line.title.ptr, line.title.end(), 0.0f, &text_rect);
     }
@@ -739,7 +739,7 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
         }
     }
 
-    return ImRect(min_x, 0.0f, max_x, height);
+    return ImRect((float)min_x, 0.0f, (float)max_x, (float)height);
 }
 
 static void DrawEntities(ImRect bb, double tree_width, double time_offset,
@@ -1007,8 +1007,8 @@ static void DrawEntities(ImRect bb, double tree_width, double time_offset,
                 ent_offset_y = y;
             }
 
-            ImRect line_bb(win->ClipRect.Min.x, y + style.ItemSpacing.y,
-                           win->ClipRect.Max.x, y + style.ItemSpacing.y + line.height);
+            ImRect line_bb(win->ClipRect.Min.x, (float)y + style.ItemSpacing.y,
+                           win->ClipRect.Max.x, (float)y + style.ItemSpacing.y + (float)line.height);
             LineInteraction interaction = DrawLineFrame(line_bb, tree_width, line);
 
             switch (interaction) {
@@ -1046,7 +1046,7 @@ static void DrawEntities(ImRect bb, double tree_width, double time_offset,
 
     // Draw elements
     {
-        draw->PushClipRect(ImVec2(win->ClipRect.Min.x + tree_width, win->ClipRect.Min.y),
+        draw->PushClipRect(ImVec2(win->ClipRect.Min.x + (float)tree_width, win->ClipRect.Min.y),
                            win->ClipRect.Max, true);
         RG_DEFER { draw->PopClipRect(); };
 
@@ -1055,8 +1055,8 @@ static void DrawEntities(ImRect bb, double tree_width, double time_offset,
             if (!line.draw)
                 continue;
 
-            ImRect bb(win->ClipRect.Min.x, y + style.ItemSpacing.y + 0.5f,
-                      win->ClipRect.Max.x, y + style.ItemSpacing.y + line.height + 0.5f);
+            ImRect bb(win->ClipRect.Min.x, (float)y + style.ItemSpacing.y + 0.5f,
+                      win->ClipRect.Max.x, (float)y + style.ItemSpacing.y + (float)line.height + 0.5f);
             DrawLineElements(bb, tree_width, state, time_offset + line.align_offset, line);
             y = bb.Max.y - 0.5f;
         }
@@ -1133,14 +1133,17 @@ static void DrawTime(ImRect bb, double time_offset, double time_zoom,
             double x_exact = round(x);
 
             if (show_text) {
-                draw->AddLine(ImVec2(x_exact, bb.Min.y + 2.0f), ImVec2(x_exact, bb.Max.y - ImGui::GetFontSize() - 4.0f),
+                draw->AddLine(ImVec2((float)x_exact, bb.Min.y + 2.0f),
+                              ImVec2((float)x_exact, bb.Max.y - ImGui::GetFontSize() - 4.0f),
                               ImGui::GetColorU32(ImGuiCol_Text));
                 if (grid_alpha > 0.0f) {
                     if (highlight_zero && std::abs(time) < 0.00001) {
-                        draw->AddLine(ImVec2(x_exact, 0.0f), ImVec2(x_exact, bb.Min.y + 2.0f),
+                        draw->AddLine(ImVec2((float)x_exact, 0.0f),
+                                      ImVec2((float)x_exact, bb.Min.y + 2.0f),
                                       GetVisColor(VisColor::Limit, 0.7f));
                     } else {
-                        draw->AddLine(ImVec2(x_exact, 0.0f), ImVec2(x_exact, bb.Min.y + 2.0f),
+                        draw->AddLine(ImVec2((float)x_exact, 0.0f),
+                                      ImVec2((float)x_exact, bb.Min.y + 2.0f),
                                       ImGui::GetColorU32(ImGuiCol_Text, grid_alpha));
                     }
                 }
@@ -1154,13 +1157,15 @@ static void DrawTime(ImRect bb, double time_offset, double time_zoom,
                 }
                 text_size = ImGui::CalcTextSize(time_str);
 
-                draw->AddText(ImVec2(x - text_size.x / 2.0f, bb.Max.y - ImGui::GetFontSize() - 2.0f),
+                draw->AddText(ImVec2((float)x - text_size.x / 2.0f, bb.Max.y - ImGui::GetFontSize() - 2.0f),
                               ImGui::GetColorU32(ImGuiCol_Text), time_str);
             } else {
-                draw->AddLine(ImVec2(x_exact, bb.Min.y + 2.0f), ImVec2(x_exact, bb.Max.y - ImGui::GetFontSize() - 8.0f),
+                draw->AddLine(ImVec2((float)x_exact, bb.Min.y + 2.0f),
+                              ImVec2((float)x_exact, bb.Max.y - ImGui::GetFontSize() - 8.0f),
                               ImGui::GetColorU32(ImGuiCol_Text));
                 if (grid_alpha > 0.0f) {
-                    draw->AddLine(ImVec2(x_exact, 0.0f), ImVec2(x_exact, bb.Min.y + 2.0f),
+                    draw->AddLine(ImVec2((float)x_exact, 0.0f),
+                                  ImVec2((float)x_exact, bb.Min.y + 2.0f),
                                   ImGui::GetColorU32(ImGuiCol_Text, grid_alpha * 0.5f));
                 }
             }
@@ -1187,11 +1192,11 @@ static void DrawView(InterfaceState &state,
     ImRect scale_rect = win->ClipRect;
     ImRect entity_rect = win->ClipRect;
     ImRect view_rect = win->ClipRect;
-    scale_rect.Min.x = ImMin((float)(scale_rect.Min.x + state.settings.tree_width + 15.0), scale_rect.Max.x);
+    scale_rect.Min.x = ImMin((float)(scale_rect.Min.x + state.settings.tree_width + 15.0f), scale_rect.Max.x);
     scale_rect.Min.y = ImMin((float)(scale_rect.Max.y - scale_height), scale_rect.Max.y);
-    entity_rect.Max.y -= scale_height;
-    view_rect.Min.x += state.settings.tree_width + 15.0;
-    view_rect.Max.y -= scale_height;
+    entity_rect.Max.y -= (float)scale_height;
+    view_rect.Min.x += (float)state.settings.tree_width + 15.0f;
+    view_rect.Max.y -= (float)scale_height;
 
     // Sync scroll from ImGui
     double prev_scroll_x = state.scroll_x;
@@ -1247,7 +1252,7 @@ static void DrawView(InterfaceState &state,
             if (state.grab_canvas) {
                 state.scroll_x += state.grab_canvas_x - (double)gui_info->input.x;
                 state.scroll_y += state.grab_canvas_y - (double)gui_info->input.y;
-            } else if (entity_rect.Contains(ImVec2((double)gui_info->input.x, (double)gui_info->input.y))) {
+            } else if (entity_rect.Contains(ImVec2((float)gui_info->input.x, (float)gui_info->input.y))) {
                 state.grab_canvas = true;
             }
 
@@ -1403,12 +1408,12 @@ static void DrawView(InterfaceState &state,
             set_scroll_y = state.scroll_y;
         }
 
-        ImGui::SetCursorPos(ImVec2(width, height));
+        ImGui::SetCursorPos(ImVec2((float)width, (float)height));
         if (state.scroll_x != prev_scroll_x) {
-            ImGui::SetScrollX(set_scroll_x);
+            ImGui::SetScrollX((float)set_scroll_x);
         }
         if (state.scroll_y != prev_scroll_y) {
-            ImGui::SetScrollY(set_scroll_y);
+            ImGui::SetScrollY((float)set_scroll_y);
         }
 
         state.imgui_height = height;
@@ -1556,9 +1561,9 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
 
     // Main view
     {
-        ImVec2 view_pos = ImVec2(0, menu_height);
+        ImVec2 view_pos = ImVec2(0, (float)menu_height);
         ImVec2 view_size = ImGui::GetIO().DisplaySize;
-        view_size.y -= menu_height;
+        view_size.y -= (float)menu_height;
         ImGuiWindowFlags view_flags = ImGuiWindowFlags_NoBringToFrontOnFocus |
                                       ImGuiWindowFlags_NoTitleBar |
                                       ImGuiWindowFlags_NoResize |
