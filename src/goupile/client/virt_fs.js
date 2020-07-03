@@ -131,15 +131,11 @@ function VirtualFS(db) {
             let remote_file = remote_map[local_file.path];
             let cache_file = cache_map[local_file.path];
 
-            if (remote_file && remote_file.sha256 === local_file.sha256) {
+            if (remote_file) {
                 if (local_file.sha256) {
-                    files.push(makeSyncEntry(local_file.path, local_file, remote_file, 'noop'));
-                } else {
-                    files.push(makeSyncEntry(local_file.path, null, remote_file, 'push'));
-                }
-            } else if (remote_file) {
-                if (local_file.sha256) {
-                    if (cache_file && cache_file.sha256 === local_file.sha256) {
+                    if (local_file.sha256 === remote_file.sha256) {
+                        files.push(makeSyncEntry(local_file.path, local_file, remote_file, 'noop'));
+                    } else if (cache_file && cache_file.sha256 === local_file.sha256) {
                         files.push(makeSyncEntry(local_file.path, local_file, remote_file, 'pull'));
                     } else if (cache_file && cache_file.sha256 === remote_file.sha256) {
                         files.push(makeSyncEntry(local_file.path, local_file, remote_file, 'push'));
