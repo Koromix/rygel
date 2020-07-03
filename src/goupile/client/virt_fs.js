@@ -167,7 +167,7 @@ function VirtualFS(db) {
         // Pull remote-only files
         for (let remote_file of remote_files) {
             if (!local_map[remote_file.path])
-                files.push(makeSyncEntry(remote_file.path, null, remote_file, 'pull'));
+                files.push(makeSyncEntry(remote_file.path, null, remote_file, env.use_offline ? 'pull' : 'noop'));
         }
 
         return files;
@@ -216,8 +216,16 @@ function VirtualFS(db) {
                         throw new Error(err);
                     }
 
-                    delete file2.data;
-                    await db.save('fs_mirror', file2);
+                    if (env.use_offline) {
+                        delete file2.data;
+                        await db.save('fs_mirror', file2);
+                    } else {
+                        await db.transaction('rw', ['fs_entries', 'fs_data', 'fs_mirror'], () => {
+                            db.delete('fs_entries', file.path);
+                            db.delete('fs_data', file.path);
+                            db.delete('fs_mirror', file.path);
+                        });
+                    }
                 } else {
                     let response = await net.fetch(url, {method: 'DELETE'});
                     if (!response.ok && response.status !== 404) {
@@ -240,7 +248,7 @@ function VirtualFS(db) {
                     delete file2.data;
                     await db.save('fs_mirror', file2);
                 } else {
-                    await db.transaction('rw', ['fs_entries', 'fs_mirror', 'fs_data'], () => {
+                    await db.transaction('rw', ['fs_entries', 'fs_data', 'fs_mirror'], () => {
                         db.delete('fs_entries', file.path);
                         db.delete('fs_data', file.path);
                         db.delete('fs_mirror', file.path);
