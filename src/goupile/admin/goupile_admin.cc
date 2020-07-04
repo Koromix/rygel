@@ -39,8 +39,7 @@ CREATE TABLE users (
 
     develop INTEGER CHECK(develop IN (0, 1)) NOT NULL,
     new INTEGER CHECK(new IN (0, 1)) NOT NULL,
-    edit INTEGER CHECK(edit IN (0, 1)) NOT NULL,
-    offline INTEGER CHECK(offline IN (0, 1)) NOT NULL
+    edit INTEGER CHECK(edit IN (0, 1)) NOT NULL
 );
 CREATE UNIQUE INDEX users_u ON users (username);
 
@@ -259,7 +258,7 @@ Options:
             return 1;
         }
 
-        if (!database.Run("INSERT INTO users (username, password_hash, develop, new, edit, offline) VALUES (?, ?, 1, 1, 1, 1)",
+        if (!database.Run("INSERT INTO users (username, password_hash, develop, new, edit) VALUES (?, ?, 1, 1, 1)",
                           default_username, hash))
             return 1;
     }

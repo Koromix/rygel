@@ -518,7 +518,7 @@ let goupile = new function() {
                     <div>
                         <button type="button" @click=${toggleLock}>Verrouiller</button>
                         <hr/>
-                        ${settings.offline ? html`
+                        ${env.use_offline ? html`
                             <button type="button" @click=${showSyncDialog}>Synchroniser</button>
                             <hr/>
                         ` : ''}
@@ -528,8 +528,8 @@ let goupile = new function() {
                 </div>
             ` : ''}
 
-            ${settings.offline ? html`<button type="button" id="gp_status" class="icon" @click=${toggleStatus} />` : ''}
-            ${!settings.offline ? html`<div id="gp_status"/>` : ''}
+            ${env.use_offline ? html`<button type="button" id="gp_status" class="icon" @click=${toggleStatus} />` : ''}
+            ${!env.use_offline ? html`<div id="gp_status"/>` : ''}
         `;
     }
 

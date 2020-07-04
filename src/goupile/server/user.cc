@@ -38,7 +38,7 @@ void HandleLogin(const http_RequestInfo &request, http_IO *io)
         }
 
         sq_Statement stmt;
-        if (!goupile_db.Prepare(R"(SELECT u.password_hash, u.develop, u.new, u.edit, u.offline
+        if (!goupile_db.Prepare(R"(SELECT u.password_hash, u.develop, u.new, u.edit
                                    FROM users u
                                    WHERE u.username = ?)", &stmt))
             return;
@@ -57,7 +57,6 @@ void HandleLogin(const http_RequestInfo &request, http_IO *io)
                 session->permissions |= !!sqlite3_column_int(stmt, 1) * (int)UserPermission::Develop;
                 session->permissions |= !!sqlite3_column_int(stmt, 2) * (int)UserPermission::New;
                 session->permissions |= !!sqlite3_column_int(stmt, 3) * (int)UserPermission::Edit;
-                session->permissions |= (sqlite3_column_int(stmt, 4) && goupile_config.use_offline) * (int)UserPermission::Offline;
                 strcpy(session->username, username);
 
                 RetainPtr<Session> ptr(session, [](Session *session) { Allocator::Release(nullptr, session, -1); });

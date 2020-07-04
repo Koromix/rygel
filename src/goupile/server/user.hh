@@ -12,14 +12,12 @@ namespace RG {
 enum class UserPermission {
     Develop = 1 << 0,
     New = 1 << 1,
-    Edit = 1 << 2,
-    Offline = 1 << 3
+    Edit = 1 << 2
 };
 static const char *const UserPermissionNames[] = {
     "Develop",
     "New",
-    "Edit",
-    "Offline"
+    "Edit"
 };
 
 struct Session: public RetainObject {
