@@ -2960,8 +2960,8 @@ void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg);
 void PushLogFilter(const std::function<LogFilterFunc> &func);
 void PopLogFilter();
 
-const char *GetLastLogError();
-void ClearLastLogError();
+const char *GetThreadError();
+void ClearThreadError();
 
 // ------------------------------------------------------------------------
 // Strings

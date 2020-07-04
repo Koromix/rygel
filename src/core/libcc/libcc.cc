@@ -1317,12 +1317,12 @@ void PopLogFilter()
     delete log_filters[--log_filters_len];
 }
 
-const char *GetLastLogError()
+const char *GetThreadError()
 {
     return log_last_error[0] ? log_last_error : nullptr;
 }
 
-void ClearLastLogError()
+void ClearThreadError()
 {
     log_last_error[0] = 0;
 }
@@ -3180,7 +3180,7 @@ void AsyncPool::RunTask(Task *task)
     async_running_task = true;
 
     // Avoid stale error messages
-    ClearLastLogError();
+    ClearThreadError();
 
     pending_tasks--;
     if (async->success && !task->func()) {

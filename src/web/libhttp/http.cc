@@ -116,7 +116,7 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
     bool first_call = !io;
 
     // Avoid stale messages and messages from other theads in error pages
-    ClearLastLogError();
+    ClearThreadError();
 
     // Init request data
     if (first_call) {
@@ -256,7 +256,7 @@ void http_Daemon::RunNextAsync(http_IO *io)
         async->Run([=]() {
             func();
 
-            const char *err = GetLastLogError();
+            const char *err = GetThreadError();
             io->async_err = err ? DuplicateString(err, &io->allocator).ptr : nullptr;
 
             std::unique_lock<std::mutex> lock(io->mutex);
@@ -422,7 +422,7 @@ bool http_IO::AttachBinary(int code, Span<const uint8_t> data, const char *mime_
 void http_IO::AttachError(int code, const char *details)
 {
     if (!details) {
-        details = async_err ? async_err : GetLastLogError();
+        details = async_err ? async_err : GetThreadError();
     }
 
     Span<char> page = Fmt((Allocator *)nullptr, "Error %1: %2\n%3", code,
