@@ -1,5 +1,9 @@
 "use strict";
 
+var _interopRequireWildcard = require("@babel/runtime/helpers/interopRequireWildcard");
+
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
+
 var _assert = _interopRequireDefault(require("assert"));
 
 var leap = _interopRequireWildcard(require("./leap"));
@@ -7,10 +11,6 @@ var leap = _interopRequireWildcard(require("./leap"));
 var meta = _interopRequireWildcard(require("./meta"));
 
 var util = _interopRequireWildcard(require("./util"));
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj["default"] = obj; return newObj; } }
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
 
 /**
  * Copyright (c) 2014-present, Facebook, Inc.
@@ -771,11 +771,11 @@ Ep.explodeExpression = function (path, ignoreResult) {
       var calleePath = path.get("callee");
       var argsPath = path.get("arguments");
       var newCallee;
-      var newArgs = [];
-      var hasLeapingArgs = false;
-      argsPath.forEach(function (argPath) {
-        hasLeapingArgs = hasLeapingArgs || meta.containsLeap(argPath.node);
+      var newArgs;
+      var hasLeapingArgs = argsPath.some(function (argPath) {
+        return meta.containsLeap(argPath.node);
       });
+      var injectFirstArg = null;
 
       if (t.isMemberExpression(calleePath.node)) {
         if (hasLeapingArgs) {
@@ -788,7 +788,7 @@ Ep.explodeExpression = function (path, ignoreResult) {
           // variable so that we can use it twice without reevaluating it.
           self.makeTempVar(), calleePath.get("object"));
           var newProperty = calleePath.node.computed ? explodeViaTempVar(null, calleePath.get("property")) : calleePath.node.property;
-          newArgs.unshift(newObject);
+          injectFirstArg = newObject;
           newCallee = t.memberExpression(t.memberExpression(t.cloneDeep(newObject), newProperty, calleePath.node.computed), t.identifier("call"), false);
         } else {
           newCallee = self.explodeExpression(calleePath);
@@ -809,12 +809,19 @@ Ep.explodeExpression = function (path, ignoreResult) {
         }
       }
 
-      argsPath.forEach(function (argPath) {
-        newArgs.push(explodeViaTempVar(null, argPath));
-      });
-      return finish(t.callExpression(newCallee, newArgs.map(function (arg) {
-        return t.cloneDeep(arg);
-      })));
+      if (hasLeapingArgs) {
+        newArgs = argsPath.map(function (argPath) {
+          return explodeViaTempVar(null, argPath);
+        });
+        if (injectFirstArg) newArgs.unshift(injectFirstArg);
+        newArgs = newArgs.map(function (arg) {
+          return t.cloneDeep(arg);
+        });
+      } else {
+        newArgs = path.node.arguments;
+      }
+
+      return finish(t.callExpression(newCallee, newArgs));
 
     case "NewExpression":
       return finish(t.newExpression(explodeViaTempVar(null, path.get("callee")), path.get("arguments").map(function (argPath) {
@@ -832,7 +839,11 @@ Ep.explodeExpression = function (path, ignoreResult) {
 
     case "ArrayExpression":
       return finish(t.arrayExpression(path.get("elements").map(function (elemPath) {
-        return explodeViaTempVar(null, elemPath);
+        if (elemPath.isSpreadElement()) {
+          return t.spreadElement(explodeViaTempVar(null, elemPath.get("argument")));
+        } else {
+          return explodeViaTempVar(null, elemPath);
+        }
       })));
 
     case "SequenceExpression":

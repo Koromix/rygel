@@ -127,6 +127,18 @@ const memberExpressionOptimisationVisitor = {
 
 };
 
+function getParamsCount(node) {
+  let count = node.params.length;
+
+  if (count > 0 && _core.types.isIdentifier(node.params[0], {
+    name: "this"
+  })) {
+    count -= 1;
+  }
+
+  return count;
+}
+
 function hasRest(node) {
   const length = node.params.length;
   return length > 0 && _core.types.isRestElement(node.params[length - 1]);
@@ -211,9 +223,10 @@ function convertFunctionRest(path) {
     node.body.body.unshift(declar);
   }
 
+  const paramsCount = getParamsCount(node);
   const state = {
     references: [],
-    offset: node.params.length,
+    offset: paramsCount,
     argumentsNode: argsId,
     outerBinding: scope.getBindingIdentifier(rest.name),
     candidates: [],
@@ -250,13 +263,13 @@ function convertFunctionRest(path) {
     path
   }) => path));
 
-  const start = _core.types.numericLiteral(node.params.length);
+  const start = _core.types.numericLiteral(paramsCount);
 
   const key = scope.generateUidIdentifier("key");
   const len = scope.generateUidIdentifier("len");
   let arrKey, arrLen;
 
-  if (node.params.length) {
+  if (paramsCount) {
     arrKey = _core.types.binaryExpression("-", _core.types.cloneNode(key), _core.types.cloneNode(start));
     arrLen = _core.types.conditionalExpression(_core.types.binaryExpression(">", _core.types.cloneNode(len), _core.types.cloneNode(start)), _core.types.binaryExpression("-", _core.types.cloneNode(len), _core.types.cloneNode(start)), _core.types.numericLiteral(0));
   } else {
