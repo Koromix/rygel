@@ -256,6 +256,9 @@ void http_Daemon::RunNextAsync(http_IO *io)
         async->Run([=]() {
             func();
 
+            const char *err = GetLastLogError();
+            io->async_err = err ? DuplicateString(err, &io->allocator).ptr : nullptr;
+
             std::unique_lock<std::mutex> lock(io->mutex);
 
             if (io->state == http_IO::State::Zombie) {
@@ -418,6 +421,10 @@ bool http_IO::AttachBinary(int code, Span<const uint8_t> data, const char *mime_
 
 void http_IO::AttachError(int code, const char *details)
 {
+    if (!details) {
+        details = async_err ? async_err : GetLastLogError();
+    }
+
     Span<char> page = Fmt((Allocator *)nullptr, "Error %1: %2\n%3", code,
                           MHD_get_reason_phrase_for((unsigned int)code), details ? details : "");
 

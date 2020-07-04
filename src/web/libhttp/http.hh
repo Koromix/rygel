@@ -90,6 +90,7 @@ class http_IO {
     bool suspended = false;
 
     std::function<void()> async_func;
+    const char *async_err = nullptr;
 
     std::condition_variable read_cv;
     Span<uint8_t> read_buf = {};
@@ -122,7 +123,7 @@ public:
     void AttachText(int code, Span<const char> str, const char *mime_type = "text/plain");
     bool AttachBinary(int code, Span<const uint8_t> data, const char *mime_type,
                       CompressionType compression_type = CompressionType::None);
-    void AttachError(int code, const char *details = GetLastLogError());
+    void AttachError(int code, const char *details = nullptr);
 
     // Blocking, do in async context
     bool OpenForRead(StreamReader *out_st);

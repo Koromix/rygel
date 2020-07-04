@@ -1319,7 +1319,7 @@ void PopLogFilter()
 
 const char *GetLastLogError()
 {
-    return log_last_error;
+    return log_last_error[0] ? log_last_error : nullptr;
 }
 
 void ClearLastLogError()
