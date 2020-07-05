@@ -57,14 +57,15 @@ self.addEventListener('fetch', e => {
     e.respondWith(async function() {
         let url = new URL(e.request.url);
 
-        if (e.request.method === 'GET' && url.pathname.startsWith(env.base_url)) {
+        // Ignore sync GET requests for app files (?direct=1)
+        if (e.request.method === 'GET' && url.pathname.startsWith(env.base_url) &&
+                                          !url.searchParams.get('direct')) {
             let path = url.pathname.substr(env.base_url.length - 1);
 
             if (path.startsWith('/app/') || path.startsWith('/main/'))
                 return await caches.match(env.base_url) || await net.fetch(env.base_url);
 
-            // Ignore sync GET requests for app files (for which sha256 is specified)
-            if (path.startsWith('/files/') && !url.searchParams.has('sha256')) {
+            if (path.startsWith('/files/')) {
                 let db_name = `goupile:${env.app_key}`;
                 let db = await idb.open(db_name);
 

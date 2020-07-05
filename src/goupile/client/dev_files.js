@@ -159,68 +159,74 @@ let dev_files = new function() {
 
     this.getBuffer = function(path) {
         let buffer = editor_buffers.get(path);
-        return buffer ? buffer.session.doc.getValue() : null;
+        return (buffer && !buffer.reload) ? buffer.session.doc.getValue() : null;
     };
 
     this.runFiles = async function() {
         files = await virt_fs.status(net.isOnline() || !env.use_offline);
-
-        // Overwrite with user actions (if any)
         for (let file of files)
             file.action = user_actions[file.path] || file.action;
-
-        // Show locally deleted files last
-        files.sort((file1, file2) => (!!file2.sha256 - !!file1.sha256) ||
-                                      util.compareValues(file1.path, file2.path));
 
         renderActions();
     };
 
     function renderActions() {
         let remote = net.isOnline() || !env.use_offline;
-        let enable_sync = files.some(file => file.action !== 'noop') &&
-                          !files.some(file => file.action === 'conflict');
+        let actions = files.reduce((acc, file) => acc + ((user_actions[file.path] || file.action) !== 'noop'), 0);
 
         render(html`
             <div class="gp_toolbar">
                 <button @click=${showCreateDialog}>Ajouter</button>
-                <div style="flex: 1;"></div>
-                ${remote ? html`<button ?disabled=${!enable_sync} @click=${showSyncDialog}>Déployer</button>` : ''}
+                ${remote ? html`
+                    <div style="flex: 1;"></div>
+                    <button ?disabled=${!actions} @click=${showSyncDialog}>Déployer</button>
+                ` : ''}
             </div>
 
             <table class="sync_table">
                 <thead><tr>
-                    <th style="width: 0.7em;"></th>
+                    <th style="width: 1em;"></th>
                     <th>Fichier</th>
-                    <th style="width: 5em;"></th>
+                    <th style="width: 4.6em;"></th>
 
                     ${remote ? html`
-                        <th style="width: 2.8em;"></th>
+                        <th style="width: 8em;"></th>
                         <th>Distant</th>
-                        <th style="width: 5em;"></th>
+                        <th style="width: 4.6em;"></th>
                     ` : ''}
                 </tr></thead>
 
                 <tbody>${files.map(file => {
                     if (file.sha256 || file.remote_sha256) {
-                        return html`<tr>
-                            <td>${file.sha256 ?
-                                html`<a href="#" @click=${e => { showDeleteDialog(e, file.path); e.preventDefault(); }}>x</a>` : ''}</td>
-                            <td class=${file.action == 'pull' ? 'sync_path overwrite' : 'sync_path'}>${file.sha256 ? file.path : ''}</td>
-                            <td class="sync_size">${file.sha256 ? util.formatDiskSize(file.size) : ''}</td>
+                        let action = user_actions[file.path] || file.action;
 
-                            ${remote ? html`
-                                <td class="sync_actions">
-                                    <a href="#" class=${file.action !== 'pull' ? 'gray' : ''}
-                                       @click=${e => { toggleAction(file, 'pull'); e.preventDefault(); }}>&lt;</a>
-                                    <a href="#" class=${file.action !== 'noop' ? 'gray' : ''}
-                                       @click=${e => { toggleAction(file, 'noop'); e.preventDefault(); }}>${file.action === 'conflict' ? '?' : '='}</a>
-                                    <a href="#" class=${file.action !== 'push' ? 'gray' : ''}
-                                       @click=${e => { toggleAction(file, 'push'); e.preventDefault(); }}>&gt;</a>
+                        return html`
+                            <tr class=${file.action === 'conflict' ? 'conflict' : ''}>
+                                <td><a href="#" @click=${e => { showDeleteDialog(e, file.path); e.preventDefault(); }}>x</a></td>
+                                <td>
+                                    <span class=${makeLocalPathClass(file, action)}>${file.path}</span>
+                                    ${(file.sha256 && file.sha256 !== file.remote_sha256) || file.deleted ?
+                                        html`<a href="#" @click=${e => { showResetDialog(e, file); e.preventDefault(); }}>&nbsp;👻\uFE0E</a>` : ''}
                                 </td>
-                                <td class=${file.action == 'push' ? 'sync_path overwrite' : 'sync_path'}>${file.remote_sha256 ? file.path : ''}</td>
-                                <td class="sync_size">${file.remote_sha256 ? util.formatDiskSize(file.remote_size) : ''}</td>
-                            ` : ''}
+                                <td class="sync_size">${file.sha256 ? util.formatDiskSize(file.size) : ''}</td>
+
+                                ${remote ? html`
+                                    <td class="sync_actions">
+                                        <a href="#" class=${action === 'pull' ? 'selected' : (file.action === 'pull' ? 'default' : '')}
+                                           @click=${e => { toggleAction(file, 'pull'); e.preventDefault(); }}>&lt;</a>
+                                        <a href="#" class=${action === 'noop' ? 'selected' : (file.action === 'noop' ? 'default' : '')}
+                                           @click=${e => { toggleAction(file, 'noop'); e.preventDefault(); }}>=</a>
+                                        <a href="#" class=${action === 'push' ? 'selected' : (file.action === 'push' ? 'default' : '')}
+                                           @click=${e => { toggleAction(file, 'push'); e.preventDefault(); }}>&gt;</a>
+                                    </td>
+
+                                    <td class=${makeRemotePathClass(file, action)}>${file.path}</td>
+                                    <td class="sync_size">
+                                        ${file.action === 'conflict' ? html`<span class="sync_conflict" title="Modifications en conflit">⚠\uFE0E</span>&nbsp;` : ''}
+                                        ${file.remote_sha256 ? util.formatDiskSize(file.remote_size) : ''}
+                                    </td>
+                                ` : ''}
+                            </tr>
                         `;
                     } else {
                         // Getting here means that nobody has the file because it was deleted
@@ -231,6 +237,30 @@ let dev_files = new function() {
                 })}</tbody>
             </table>
         `, document.querySelector('#dev_files'));
+    }
+
+    function makeLocalPathClass(file, action) {
+        let cls = 'sync_path';
+
+        if (action === 'pull') {
+            cls += file.remote_sha256 ? ' overwrite' : ' delete';
+        } else if (!file.sha256) {
+            cls += ' virtual' + (file.deleted ? ' delete' : '');
+        }
+
+        return cls;
+    }
+
+    function makeRemotePathClass(file, action) {
+        let cls = 'sync_path';
+
+        if (action === 'push') {
+            cls += file.sha256 ? ' overwrite' : ' delete';
+        } else if (!file.remote_sha256) {
+            cls += ' none';
+        }
+
+        return cls;
     }
 
     function showCreateDialog(e, path, blob) {
@@ -289,6 +319,25 @@ let dev_files = new function() {
         });
     }
 
+    async function showResetDialog(e, file) {
+        if (file.sha256 === file.remote_sha256) {
+            await resetFile(file.path);
+            self.runFiles();
+        } else {
+            goupile.popup(e, (page, close) => {
+                page.output(`Voulez-vous vraiment oublier les modifications locales pour '${file.path}' ?`);
+
+                page.submitHandler = async () => {
+                    close();
+
+                    await resetFile(file.path);
+                    goupile.initApplication();
+                };
+                page.buttons(page.buttons.std.ok_cancel('Oublier'));
+            });
+        }
+    }
+
     function showDeleteDialog(e, path) {
         goupile.popup(e, (page, close) => {
             page.output(`Voulez-vous vraiment supprimer '${path}' ?`);
@@ -296,18 +345,31 @@ let dev_files = new function() {
             page.submitHandler = async () => {
                 close();
 
-                await virt_fs.delete(path);
-                syncBuffer(path, null);
-
-                await goupile.initApplication();
+                await deleteFile(path);
+                goupile.initApplication();
             };
             page.buttons(page.buttons.std.ok_cancel('Supprimer'));
         });
     }
 
-    function toggleAction(file, type) {
-        file.action = type;
-        user_actions[file.path] = file.action;
+    async function resetFile(path) {
+        await virt_fs.reset(path);
+        syncBuffer(path, null);
+        delete user_actions[path];
+    }
+
+    async function deleteFile(path) {
+        await virt_fs.delete(path);
+        syncBuffer(path, null);
+        delete user_actions[path];
+    }
+
+    function toggleAction(file, action) {
+        if (action !== file.action) {
+            user_actions[file.path] = action;
+        } else {
+            delete user_actions[file.path];
+        }
 
         renderActions();
     }
@@ -323,7 +385,13 @@ let dev_files = new function() {
         entry.progress('Synchronisation en cours');
 
         try {
-            await virt_fs.sync(files);
+            let actions = files.map(file => {
+                file = Object.assign({}, file);
+                file.action = user_actions[file.path] || file.action;
+                return file;
+            });
+            await virt_fs.sync(actions);
+
             entry.success('Synchronisation terminée !');
         } catch (err) {
             entry.error(err.message);

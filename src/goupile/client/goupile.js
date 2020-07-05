@@ -25,6 +25,7 @@ let goupile = new function() {
 
     let left_panel = null;
     let show_overview = true;
+    let overview_wanted = false;
 
     let editor_el;
     let style_el;
@@ -108,7 +109,7 @@ let goupile = new function() {
 
     async function openDatabase() {
         let db_name = `goupile:${env.app_key}`;
-        let db = await idb.open(db_name, 1, (db, old_version) => {
+        let db = await idb.open(db_name, 2, (db, old_version) => {
             switch (old_version) {
                 case null: {
                     db.createStore('fs_entries', {keyPath: 'path'});
@@ -118,6 +119,11 @@ let goupile = new function() {
                     db.createStore('rec_entries', {keyPath: '_ikey'});
                     db.createStore('rec_fragments', {keyPath: '_ikey'});
                     db.createStore('rec_variables', {keyPath: '_ikey'});
+                } // fallthrough
+
+                case 1: {
+                    db.deleteStore('fs_mirror');
+                    db.createStore('fs_sync', {keyPath: 'path'});
                 } // fallthrough
             }
         });
@@ -350,8 +356,9 @@ let goupile = new function() {
                         left_panel = show_develop ? 'editor' : null;
 
                     if (!route_asset || !route_asset.overview) {
+                        overview_wanted = show_overview && !self.isTablet();
                         show_overview = false;
-                    } else if (!left_panel) {
+                    } else if (!left_panel || overview_wanted) {
                         show_overview = true;
                     }
                 } else {
@@ -629,6 +636,7 @@ let goupile = new function() {
             left_panel = left_panel || 'editor';
             show_overview = false;
         }
+        overview_wanted = false;
 
         self.go();
     };

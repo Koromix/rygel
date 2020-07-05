@@ -48,6 +48,34 @@ function VirtualFS(db) {
         return sha256.finalize();
     }
 
+    this.reset = async function(path) {
+        if (env.use_offline) {
+            let url = util.pasteURL(`${env.base_url}${path.substr(1)}`, {direct: 1});
+            let response = await net.fetch(url);
+
+            if (response.ok) {
+                let blob = await response.blob();
+                let file = await self.save(path, blob);
+
+                delete file.data;
+                await db.save('fs_sync', file);
+            } else if (response.status === 404) {
+                await db.transaction('rw', ['fs_entries', 'fs_data'], () => {
+                    db.delete('fs_entries', path);
+                    db.delete('fs_data', path);
+                });
+            } else {
+                let err = (await response.text()).trim();
+                throw new Error(err);
+            }
+        } else {
+            await db.transaction('rw', ['fs_entries', 'fs_data'], () => {
+                db.delete('fs_entries', path);
+                db.delete('fs_data', path);
+            });
+        }
+    };
+
     this.delete = async function(path) {
         await db.transaction('rw', ['fs_entries', 'fs_data'], () => {
             db.save('fs_entries', {path: path});
@@ -56,9 +84,10 @@ function VirtualFS(db) {
     };
 
     this.clear = async function() {
-        await db.transaction('rw', ['fs_entries', 'fs_data'], () => {
+        await db.transaction('rw', ['fs_entries', 'fs_data', 'fs_sync'], () => {
             db.clear('fs_entries');
             db.clear('fs_data');
+            db.clear('fs_sync');
         });
     };
 
@@ -86,7 +115,7 @@ function VirtualFS(db) {
                     sha256: response.headers.get('ETag')
                 };
 
-                await db.save('fs_mirror', file);
+                await db.save('fs_sync', file);
 
                 file.data = blob;
                 return file;
@@ -114,14 +143,14 @@ function VirtualFS(db) {
     };
 
     this.status = async function(remote = true) {
-        let [local_files, cache_files, remote_files] = await Promise.all([
+        let [local_files, sync_files, remote_files] = await Promise.all([
             db.loadAll('fs_entries'),
-            db.loadAll('fs_mirror'),
-            remote ? net.fetch(`${env.base_url}api/files.json`).then(response => response.json()) : db.loadAll('fs_mirror')
+            db.loadAll('fs_sync'),
+            remote ? net.fetch(`${env.base_url}api/files.json`).then(response => response.json()) : db.loadAll('fs_sync')
         ]);
 
         let local_map = util.mapArray(local_files, file => file.path);
-        let cache_map = util.mapArray(cache_files, file => file.path);
+        let sync_map = util.mapArray(sync_files, file => file.path);
         let remote_map = util.mapArray(remote_files, file => file.path);
 
         let files = [];
@@ -129,42 +158,56 @@ function VirtualFS(db) {
         // Handle local files
         for (let local_file of local_files) {
             let remote_file = remote_map[local_file.path];
-            let cache_file = cache_map[local_file.path];
+            let sync_file = sync_map[local_file.path];
 
             if (remote_file) {
                 if (local_file.sha256) {
                     if (local_file.sha256 === remote_file.sha256) {
                         files.push(makeSyncEntry(local_file.path, local_file, remote_file, 'noop'));
-                    } else if (cache_file && cache_file.sha256 === local_file.sha256) {
+                    } else if (sync_file && sync_file.sha256 === local_file.sha256) {
                         files.push(makeSyncEntry(local_file.path, local_file, remote_file, 'pull'));
-                    } else if (cache_file && cache_file.sha256 === remote_file.sha256) {
+                    } else if (sync_file && sync_file.sha256 === remote_file.sha256) {
                         files.push(makeSyncEntry(local_file.path, local_file, remote_file, 'push'));
                     } else {
                         files.push(makeSyncEntry(local_file.path, local_file, remote_file, 'conflict'));
                     }
                 } else {
-                    if (cache_file && cache_file.sha256 === remote_file.sha256) {
-                        files.push(makeSyncEntry(local_file.path, null, remote_file, 'push'));
+                    if (sync_file && sync_file.sha256 === remote_file.sha256) {
+                        files.push(makeSyncEntry(local_file.path, local_file, remote_file, 'push'));
                     } else {
-                        files.push(makeSyncEntry(local_file.path, null, remote_file, 'conflict'));
+                        files.push(makeSyncEntry(local_file.path, local_file, remote_file, 'conflict'));
                     }
                 }
             } else {
                 if (!local_file.sha256) {
-                    files.push(makeSyncEntry(local_file.path, null, null, 'noop'));
-                } else if (cache_file && cache_file.sha256 === local_file.sha256) {
+                    // Special case, the file does not exist anywhere anymore but the client
+                    // still has some metadata. This pull action will clean up the pieces.
+                    files.push(makeSyncEntry(local_file.path, local_file, null, 'pull'));
+                } else if (sync_file && sync_file.sha256 === local_file.sha256) {
                     files.push(makeSyncEntry(local_file.path, local_file, null, 'pull'));
                 } else {
-                    files.push(makeSyncEntry(local_file.path, local_file, null, 'push'));
+                    files.push(makeSyncEntry(local_file.path, local_file, null, 'conflict'));
                 }
             }
         }
 
         // Pull remote-only files
-        for (let remote_file of remote_files) {
-            if (!local_map[remote_file.path])
-                files.push(makeSyncEntry(remote_file.path, null, remote_file, env.use_offline ? 'pull' : 'noop'));
+        {
+            let new_sync_files = [];
+
+            for (let remote_file of remote_files) {
+                if (!local_map[remote_file.path]) {
+                    let action = env.use_offline ? 'pull' : 'noop';
+                    files.push(makeSyncEntry(remote_file.path, null, remote_file, action));
+
+                    new_sync_files.push(remote_file);
+                }
+            }
+
+            await db.saveAll('fs_sync', new_sync_files);
         }
+
+        files.sort((file1, file2) => util.compareValues(file1.path, file2.path));
 
         return files;
     };
@@ -176,8 +219,12 @@ function VirtualFS(db) {
         };
 
         if (local) {
-            file.size = local.size;
-            file.sha256 = local.sha256;
+            if (local.sha256) {
+                file.size = local.size;
+                file.sha256 = local.sha256;
+            } else {
+                file.deleted = true;
+            }
         }
         if (remote) {
             file.remote_size = remote.size;
@@ -198,8 +245,10 @@ function VirtualFS(db) {
     };
 
     async function executeSyncAction(file) {
-        let url = util.pasteURL(`${env.base_url}${file.path.substr(1)}`,
-                                {sha256: file.remote_sha256 || ''});
+        let url = util.pasteURL(`${env.base_url}${file.path.substr(1)}`, {
+            direct: 1,
+            sha256: file.remote_sha256 || ''
+        });
 
         switch (file.action) {
             case 'push': {
@@ -212,14 +261,14 @@ function VirtualFS(db) {
                         throw new Error(err);
                     }
 
+                    delete file2.data;
                     if (env.use_offline) {
-                        delete file2.data;
-                        await db.save('fs_mirror', file2);
+                        await db.save('fs_sync', file2);
                     } else {
-                        await db.transaction('rw', ['fs_entries', 'fs_data', 'fs_mirror'], () => {
+                        await db.transaction('rw', ['fs_entries', 'fs_data', 'fs_sync'], () => {
                             db.delete('fs_entries', file.path);
                             db.delete('fs_data', file.path);
-                            db.delete('fs_mirror', file.path);
+                            db.save('fs_sync', file2);
                         });
                     }
                 } else {
@@ -229,9 +278,9 @@ function VirtualFS(db) {
                         throw new Error(err);
                     }
 
-                    await db.transaction('rw', ['fs_entries', 'fs_mirror'], () => {
+                    await db.transaction('rw', ['fs_entries', 'fs_sync'], () => {
                         db.delete('fs_entries', file.path);
-                        db.delete('fs_mirror', file.path);
+                        db.delete('fs_sync', file.path);
                     });
                 }
             } break;
@@ -242,12 +291,12 @@ function VirtualFS(db) {
                     let file2 = await self.save(file.path, blob);
 
                     delete file2.data;
-                    await db.save('fs_mirror', file2);
+                    await db.save('fs_sync', file2);
                 } else {
-                    await db.transaction('rw', ['fs_entries', 'fs_data', 'fs_mirror'], () => {
+                    await db.transaction('rw', ['fs_entries', 'fs_data', 'fs_sync'], () => {
                         db.delete('fs_entries', file.path);
                         db.delete('fs_data', file.path);
-                        db.delete('fs_mirror', file.path);
+                        db.delete('fs_sync', file.path);
                     });
                 }
             } break;
