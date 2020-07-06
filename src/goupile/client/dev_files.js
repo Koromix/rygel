@@ -33,7 +33,7 @@ let dev_files = new function() {
             {name: 'Style', path: '/files/main.css'}
         ];
 
-        if (asset.edit) {
+        if (asset && asset.edit) {
             editor_tabs.unshift({name: asset.edit, path: asset.path});
 
             if (editor_path_forced || !editor_tabs.find(tab => tab.path === editor_path)) {
