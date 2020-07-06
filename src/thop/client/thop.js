@@ -182,7 +182,7 @@ let thop = new function() {
             document.title = 'THOP (erreur)';
 
             render(html`⚠\uFE0E ${err.message.split('\n').map(line => [line, html`<br/>`])}`, view_el);
-            log.error(err.message);
+            log.error(err);
 
             view_el.classList.add('error');
         }

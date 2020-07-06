@@ -442,11 +442,13 @@ let log = new function() {
         }
 
         render(entries.map((entry, idx) => {
+            let msg = (entry.msg instanceof Error) ? entry.msg.message : entry.msg;
+
             return html`<div class=${'ut_log_entry ' + entry.type} @click=${e => closeLogEntry(idx)}>
                 ${entry.type === 'progress' ?
                     html`<div class="ut_log_spin"></div>` :
                     html`<button class="ut_log_close">X</button>`}
-                ${entry.msg.split('\n').map(line => [line, html`<br/>`])}
+                ${msg.split('\n').map(line => [line, html`<br/>`])}
             </div>`;
         }), log_el);
     }
@@ -1139,7 +1141,7 @@ let dates = new function() {
         try {
             return self.parse(str, validate);
         } catch (err) {
-            log.error(err.message);
+            log.error(err);
             return null;
         }
     };
@@ -1257,7 +1259,7 @@ let times = new function() {
         try {
             return self.parse(str, validate);
         } catch (err) {
-            log.error(err.message);
+            log.error(err);
             return null;
         }
     };

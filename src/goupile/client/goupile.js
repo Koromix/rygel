@@ -328,7 +328,7 @@ let goupile = new function() {
                                 case 'page': { await form_executor.route(route_asset, url); } break;
                             }
                         } catch (err) {
-                            log.error(err.message);
+                            log.error(err);
                         }
                     } else {
                         log.error(`URL non supportée '${url.pathname}'`);
@@ -387,7 +387,7 @@ let goupile = new function() {
                         document.title = env.app_name;
                     }
                 } catch (err) {
-                    log.error(err.message);
+                    log.error(err);
                 } finally {
                     updateStatus();
                 }
@@ -585,7 +585,7 @@ let goupile = new function() {
                     entry.error(msg);
                 }
             } catch (err) {
-                entry.error(err.message);
+                entry.error(err);
             }
         };
     }
@@ -605,7 +605,7 @@ let goupile = new function() {
                 entry.error(msg);
             }
         } catch (err) {
-            entry.error(err.message);
+            entry.error(err);
         }
     }
 

@@ -390,7 +390,7 @@ let dev_files = new function() {
 
             entry.success('Synchronisation terminée !');
         } catch (err) {
-            entry.error(err.message);
+            entry.error(err);
         }
 
         let files2 = await virt_fs.listAll(false);
