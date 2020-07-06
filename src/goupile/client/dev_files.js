@@ -264,7 +264,7 @@ let dev_files = new function() {
     }
 
     function showCreateDialog(e, path, blob) {
-        goupile.popup(e, (page, close) => {
+        goupile.popup(e, 'Créer', (page, close) => {
             let blob = page.file('file', 'Fichier :', {mandatory: true});
 
             let default_path = blob.value ? `/files/${blob.value.name}` : null;
@@ -301,12 +301,11 @@ let dev_files = new function() {
                     entry.error(`Echec de l'enregistrement : ${err.message}`);
                 }
             };
-            page.buttons(page.buttons.std.ok_cancel('Créer'));
         });
     }
 
     function showSyncDialog(e) {
-        goupile.popup(e, (page, close) => {
+        goupile.popup(e, 'Synchroniser', (page, close) => {
             page.output('Voulez-vous vraiment synchroniser les fichiers ?');
 
             page.submitHandler = async () => {
@@ -315,7 +314,6 @@ let dev_files = new function() {
                 await syncFiles();
                 await goupile.initApplication();
             };
-            page.buttons(page.buttons.std.ok_cancel('Synchroniser'));
         });
     }
 
@@ -324,7 +322,7 @@ let dev_files = new function() {
             await resetFile(file.path);
             self.runFiles();
         } else {
-            goupile.popup(e, (page, close) => {
+            goupile.popup(e, 'Oublier', (page, close) => {
                 page.output(`Voulez-vous vraiment oublier les modifications locales pour '${file.path}' ?`);
 
                 page.submitHandler = async () => {
@@ -333,13 +331,12 @@ let dev_files = new function() {
                     await resetFile(file.path);
                     goupile.initApplication();
                 };
-                page.buttons(page.buttons.std.ok_cancel('Oublier'));
             });
         }
     }
 
     function showDeleteDialog(e, path) {
-        goupile.popup(e, (page, close) => {
+        goupile.popup(e, 'Supprimer', (page, close) => {
             page.output(`Voulez-vous vraiment supprimer '${path}' ?`);
 
             page.submitHandler = async () => {
@@ -348,7 +345,6 @@ let dev_files = new function() {
                 await deleteFile(path);
                 goupile.initApplication();
             };
-            page.buttons(page.buttons.std.ok_cancel('Supprimer'));
         });
     }
 

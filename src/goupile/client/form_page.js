@@ -301,7 +301,7 @@ function PageBuilder(state, page) {
     }
 
     function handleSliderClick(e, key, value, min, max) {
-        goupile.popup(e, (page, close) => {
+        goupile.popup(e, 'Modifier', (page, close) => {
             let number = page.number('number', 'Valeur :', {min: min, max: max, value: value});
 
             page.submitHandler = () => {
@@ -310,7 +310,6 @@ function PageBuilder(state, page) {
                 self.restart();
                 close();
             };
-            page.buttons(page.buttons.std.ok_cancel('Modifier'));
         });
     }
 
@@ -894,43 +893,19 @@ instead of:
         self.restart();
     }
 
-    // XXX: Get rid of this (used in popups)
-    this.buttons = function(buttons, options = {}) {
+    this.actions = function(buttons, options = {}) {
         options = expandOptions(options);
-
-        if (typeof buttons === 'string') {
-            let type = buttons;
-            let func = self.buttons.std[type];
-            if (!func)
-                throw new Error(`Standard button list '${type}' does not exist.
-
-Valid choices include:
-    ${Object.keys(self.buttons.std).join(', ')}`);
-
-            buttons = func();
-        }
 
         let render = intf => renderWrappedWidget(intf, html`
             <div class="af_buttons">
-                ${buttons.map((button, idx) =>
+                ${buttons.filter(button => button != null).map((button, idx) =>
                     html`<button type=${idx ? 'button' : 'submit'} class="af_button"
                                  ?disabled=${!button[1]} title=${button[2] || ''}
                                  @click=${button[1]}>${button[0]}</button>`)}
             </div>
         `);
 
-        addWidget('buttons', null, render);
-    };
-    this.buttons.std = {
-        save: (label, options = {}) => [
-            [label || 'Enregistrer', self.isValid() ? self.submit : null,
-                                     !self.isValid() ? 'Erreurs ou données obligatoires manquantes' : null]
-        ],
-        ok_cancel: (label, options = {}) => [
-            [label || 'OK', self.isValid() ? self.submit : null,
-                            !self.isValid() ? 'Erreurs ou données obligatoires manquantes' : null],
-            ['Annuler', self.close]
-        ]
+        addWidget('actions', null, render);
     };
 
     this.errorList = function(options = {}) {

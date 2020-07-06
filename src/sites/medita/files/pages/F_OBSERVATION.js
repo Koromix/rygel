@@ -14,8 +14,8 @@ form.section("Contexte de prise en charge", () => {
         [2, "HPDD"],
         [3, "Consultation programmée"],
             ])
- form.text("precisioncontexte", "Précision ?", {mandatory: false})           
-            
+ form.text("precisioncontexte", "Précision ?", {mandatory: false})
+
 })
 
 form.section("Données démographiques", () => {form.text("Prenom", "Prénom ?", {mandatory: false})
@@ -64,7 +64,7 @@ form.section("Antécédents", () => {
         [7, "Hypomanie"],
         [9, "Autre"]
         ]);
-    form.text("autreatcd_psy","Autres antécédents psychiatriques et/ou commentaires") 
+    form.text("autreatcd_psy","Autres antécédents psychiatriques et/ou commentaires")
 
  let atcd_hospit = form.binary("atcd_hospit", "Antécédents d'hospitalisation ?")
      if (atcd_hospit.value) {
@@ -74,7 +74,7 @@ form.section("Antécédents", () => {
      if (atcd_ts.value) {
         form.text("atcd_tsu", "Commentaires")
     }
- 
+
 
  // Variable cases à cocher multiples
     var_bin_types("neuro", "Antécédents neurologiques",
@@ -88,8 +88,8 @@ form.section("Antécédents", () => {
         [7, "Neuropathie ou polyneuropathie"],
         [9, "Autre"]
         ]);
-    form.text("autreatcd_neuro","Autres antécédents neurologiques et/ou commentaires")    
- 
+    form.text("autreatcd_neuro","Autres antécédents neurologiques et/ou commentaires")
+
      // Variable à choix unique (menu déroulant)
     var_bin_types("endoc", "Antécédents endocrinologiques",
                   "Types d'antécédents endocrinologiques", [
@@ -158,6 +158,3 @@ form.section("Autres", () => {
 form.output(html`On peut aussi mettre du <b>HTML directement</b> si on veut...
                  <button class="af_button" @click=${e => go("complicated_help")}>Afficher l'aide</button>`)
 form.output("Ou bien encore mettre du <b>texte brut</b>.")
-
-form.errorList()
-form.buttons("save")

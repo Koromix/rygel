@@ -3,7 +3,7 @@ route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact
 
 util.mapRLE(shared.echelles, echelle => echelle.category, (category, offset, len) => {
     page.section(category, () => {
-        form.buttons(util.mapRange(offset, offset + len, idx => {
+        form.actions(util.mapRange(offset, offset + len, idx => {
             let echelle = shared.echelles[idx];
             return [echelle.name, () => go(echelle.form)]
         }))

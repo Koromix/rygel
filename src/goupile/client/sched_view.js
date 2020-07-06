@@ -352,26 +352,24 @@ function ScheduleView(resources_map, meetings_map) {
     }
 
     function showCreateMeetingDialog(e, slot_ref) {
-        goupile.popup(e, form => {
-            let name = form.text('name', 'Nom :', {mandatory: true});
+        goupile.popup(e, 'Créer', (page, close) => {
+            let name = page.text('name', 'Nom :', {mandatory: true});
 
-            form.submitHandler = () => {
+            page.submitHandler = () => {
                 createMeeting(slot_ref, name.value);
-                form.close();
+                close();
             };
-            form.buttons(form.buttons.std.ok_cancel('Créer'));
         });
     }
 
     function showDeleteMeetingDialog(e, slot_ref) {
-        goupile.popup(e, form => {
-            form.output('Voulez-vous vraiment supprimer ce rendez-vous ?');
+        goupile.popup(e, 'Supprimer', (page, close) => {
+            page.output('Voulez-vous vraiment supprimer ce rendez-vous ?');
 
-            form.submitHandler = () => {
+            page.submitHandler = () => {
                 deleteMeeting(slot_ref);
-                form.close();
+                close();
             };
-            form.buttons(form.buttons.std.ok_cancel('Supprimer'));
         });
     }
 
@@ -446,44 +444,41 @@ function ScheduleView(resources_map, meetings_map) {
     }
 
     function showCreateResourceDialog(e, day) {
-        goupile.popup(e, form => {
-            let time = form.text('time', 'Horaire :', {mandatory: true});
+        goupile.popup(e, 'Créer', (page, close) => {
+            let time = page.text('time', 'Horaire :', {mandatory: true});
 
             // Check value
             let time2 = parseTime(time.value);
             if (time.value && time2 == null)
                 time.error('Non valide (ex : 15h30, 7:30)');
 
-            form.submitHandler = () => {
+            page.submitHandler = () => {
                 createResource(day, time2);
-                form.close();
+                close();
             };
-            form.buttons(form.buttons.std.ok_cancel('Créer'));
         });
     }
 
     function showDeleteResourceDialog(e, day, res_idx) {
-        goupile.popup(e, form => {
-            form.output('Voulez-vous vraiment supprimer ces créneaux ?');
+        goupile.popup(e, 'Supprimer', (page, close) => {
+            page.output('Voulez-vous vraiment supprimer ces créneaux ?');
 
-            form.submitHandler = () => {
+            page.submitHandler = () => {
                 deleteResource(day, res_idx);
-                form.close();
+                lose();
             };
-            form.buttons(form.buttons.std.ok_cancel('Supprimer'));
         });
     }
 
     function showCloseDayDialog(e, day) {
-        goupile.popup(e, form => {
-            form.output('Voulez-vous vraiment fermer cette journée ?',
+        goupile.popup(e, 'Fermer', (page, close) => {
+            page.output('Voulez-vous vraiment fermer cette journée ?',
                         {help: 'Ceci supprime tous les créneaux'});
 
-            form.submitHandler = () => {
+            page.submitHandler = () => {
                 closeDay(day);
-                form.close();
+                close();
             };
-            form.buttons(form.buttons.std.ok_cancel('Fermer'));
         });
     }
 

@@ -175,7 +175,7 @@ function updateTables(echelles, tables) {
 }
 
 function showDeleteDialog(e, form, id) {
-    goupile.popup(e, popup => {
+    goupile.popup(e, 'Supprimer', popup => {
         popup.output('Voulez-vous vraiment supprimer cet enregistrement ?');
 
         popup.submitHandler = async () => {
@@ -184,8 +184,6 @@ function showDeleteDialog(e, form, id) {
             await virt_rec.delete(form, id);
             page.restart();
         };
-        popup.buttons(popup.buttons.std.ok_cancel('Supprimer'));
-
     });
 }
 

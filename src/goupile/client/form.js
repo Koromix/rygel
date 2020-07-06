@@ -255,14 +255,13 @@ let form_executor = new function() {
 
     function handleNewClick(e, confirm) {
         if (confirm) {
-            goupile.popup(e, (page, close) => {
+            goupile.popup(e, 'Fermer l\'enregistrement', (page, close) => {
                 page.output('Cette action entraînera la perte des modifications en cours, êtes-vous sûr(e) ?');
 
                 page.submitHandler = () => {
                     close();
                     goupile.go(makeLink(current_asset.form.key, current_asset.page.key));
                 };
-                page.buttons(page.buttons.std.ok_cancel('Fermer l\'enregistrement'));
             })
         } else {
             goupile.go(makeLink(current_asset.form.key, current_asset.page.key));
@@ -270,14 +269,13 @@ let form_executor = new function() {
     }
 
     function showValidateDialog(e, submit_func) {
-        goupile.popup(e, (page, close) => {
+        goupile.popup(e, 'Valider', (page, close) => {
             page.output('Confirmez-vous la validation de cette page ?');
 
             page.submitHandler = () => {
                 close();
                 submit_func(true);
             };
-            page.buttons(page.buttons.std.ok_cancel('Valider'));
         });
     }
 
@@ -645,7 +643,7 @@ let form_executor = new function() {
     }
 
     function showDeleteDialog(e, record) {
-        goupile.popup(e, (page, close) => {
+        goupile.popup(e, 'Supprimer', (page, close) => {
             page.output('Voulez-vous vraiment supprimer cet enregistrement ?');
 
             page.submitHandler = async () => {
@@ -656,7 +654,6 @@ let form_executor = new function() {
 
                 goupile.go();
             };
-            page.buttons(page.buttons.std.ok_cancel('Supprimer'));
         });
     }
 

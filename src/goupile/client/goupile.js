@@ -552,7 +552,7 @@ let goupile = new function() {
     }
 
     function showLoginDialog(e) {
-        goupile.popup(e, makeLoginForm);
+        goupile.popup(e, 'Connexion', makeLoginForm);
     }
 
     function makeLoginForm(page, close = null) {
@@ -588,7 +588,6 @@ let goupile = new function() {
                 entry.error(err.message);
             }
         };
-        page.buttons(page.buttons.std.ok_cancel('Connexion'));
     }
 
     async function logout() {
@@ -656,14 +655,13 @@ let goupile = new function() {
     }
 
     function showSyncDialog(e) {
-        goupile.popup(e, (page, close) => {
+        goupile.popup(e, 'Synchroniser', (page, close) => {
             page.output('Désirez-vous synchroniser les données ?');
 
             page.submitHandler = () => {
                 close();
                 syncRecords();
             };
-            page.buttons(page.buttons.std.ok_cancel('Synchroniser'));
         });
     }
 
@@ -823,6 +821,7 @@ let goupile = new function() {
             });
 
             makeLoginForm(builder);
+            builder.actions([['Connexion', builder.isValid() ? builder.submit : null]]);
 
             let focus = !document.querySelector('#gp_login');
 
@@ -849,7 +848,7 @@ let goupile = new function() {
 
     function toggleLock(e) {
         if (getLockURL()) {
-            goupile.popup(e, (page, close) => {
+            goupile.popup(e, null, (page, close) => {
                 page.output('Entrez le code de déverrouillage');
                 let pin = page.pin('code');
 
@@ -869,7 +868,7 @@ let goupile = new function() {
                 }
             });
         } else {
-            goupile.popup(e, (page, close) => {
+            goupile.popup(e, 'Verrouiller', (page, close) => {
                 page.output('Entrez le code de verrouillage');
                 let pin = page.pin('*code');
 
@@ -885,7 +884,6 @@ let goupile = new function() {
                     log.success('Application verrouillée !');
                     self.go();
                 };
-                page.buttons(page.buttons.std.ok_cancel('Verrouiller'));
             });
         }
     }
@@ -895,25 +893,30 @@ let goupile = new function() {
         localStorage.removeItem('lock_pin');
     }
 
-    this.popup = function(e, func) {
+    this.popup = function(e, action, func) {
         closePopup();
-        openPopup(e, func);
+        openPopup(e, action, func);
     };
 
-    function openPopup(e, func) {
+    function openPopup(e, action, func) {
         if (!popup_el)
             initPopup();
 
         let page = new Page('@popup');
 
         popup_builder = new PageBuilder(popup_state, page);
-        popup_builder.changeHandler = () => openPopup(e, func);
+        popup_builder.changeHandler = () => openPopup(...arguments);
         popup_builder.pushOptions({
             missingMode: 'disable',
             wide: true
         });
 
         func(popup_builder, closePopup);
+        popup_builder.actions([
+            action != null ? [action, popup_builder.isValid() ? popup_builder.submit : null,
+                                      !popup_builder.isValid() ? 'Erreurs ou données manquantes' : null] : null,
+            ['Annuler', closePopup]
+        ]);
         render(html`
             <form @submit=${e => e.preventDefault()}>
                 ${page.render()}
