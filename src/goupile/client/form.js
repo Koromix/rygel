@@ -177,7 +177,7 @@ let form_executor = new function() {
             ${current_asset.form.options.actions ? html`
                 <div class="af_actions sticky">
                     ${record.mtime != null ? html`
-                        <a href="#" @click=${e => { handleNewClick(e, state.changed); e.preventDefault(); }}>x</a>
+                        <a @click=${e => handleNewClick(e, state.changed)}>x</a>
                         <p>${record.sequence != null ? `ID n°${record.sequence}` : 'Enregistré (local)'}</p>
                     ` : ''}
                     ${record.mtime == null ? html`<p>Nouvelle fiche</p>` : ''}
@@ -413,8 +413,8 @@ let form_executor = new function() {
                         <tr class=${current_records.has(record.id) ? 'selected' : ''}>
                             <td class="id">${record.sequence}</td>
 
-                            ${!select_many ? html`<th><a href="#" @click=${e => { handleEditClick(record); e.preventDefault(); }}>🔍\uFE0E</a>
-                                                      <a href="#" @click=${e => { showDeleteDialog(e, record); e.preventDefault(); }}>✕</a></th>` : ''}
+                            ${!select_many ? html`<th><a @click=${e => handleEditClick(record)}>🔍\uFE0E</a>
+                                                      <a @click=${e => showDeleteDialog(e, record)}>✕</a></th>` : ''}
                             ${select_many ? html`<th><input type="checkbox" .checked=${current_records.has(record.id)}
                                                             @click=${e => handleEditClick(record)} /></th>` : ''}
 

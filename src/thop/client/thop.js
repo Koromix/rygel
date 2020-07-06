@@ -222,7 +222,7 @@ let thop = new function() {
                     html`<a href=${user.makeURL({mode: 'login'})}>Se connecter</a>` : ''}
                 ${user.isConnected() ?
                     html`${settings.username} (<a href=${user.makeURL({mode: 'login'})}>changer</a>,
-                                               <a href="#" @click=${handleLogoutClick}>déconnexion</a>)` : ''}
+                                               <a @click=${handleLogoutClick}>déconnexion</a>)` : ''}
             `, document.querySelector('#th_session'));
         }
     }
@@ -271,8 +271,6 @@ let thop = new function() {
                 self.go();
         });
         p.catch(log.error);
-
-        e.preventDefault();
     }
 
     function updateMenu(current_url) {

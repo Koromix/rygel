@@ -244,8 +244,8 @@ function ScheduleView(resources_map, meetings_map) {
                                 <td class="sc_slot_identity">${slot_ref.identity || ''}</td>
                                 <td class="sc_slot_edit">
                                     ${slot_ref.identity ?
-                                        html`<a href="#" @click=${e => { showDeleteMeetingDialog(e, slot_ref); e.preventDefault(); }}>x</a>` :
-                                        html`<a href="#" @click=${e => { showCreateMeetingDialog(e, slot_ref); e.preventDefault(); }}>+</a>`
+                                        html`<a @click=${e => showDeleteMeetingDialog(e, slot_ref)}>x</a>` :
+                                        html`<a @click=${e => showCreateMeetingDialog(e, slot_ref)}>+</a>`
                                     }
                                 </td>
                             </tr>`;
@@ -413,7 +413,6 @@ function ScheduleView(resources_map, meetings_map) {
                                     self.changeResourcesHandler(day.key, resources);
 
                                     renderAll();
-                                    e.preventDefault();
                                 };
                             }
                             function changeOverbook(delta) {
@@ -422,23 +421,22 @@ function ScheduleView(resources_map, meetings_map) {
                                     self.changeResourcesHandler(day.key, resources);
 
                                     renderAll();
-                                    e.preventDefault();
                                 };
                             }
 
                             return html`<tr>
                                 <td class="sc_slot_time">${formatTime(res.time)}</td>
-                                <td class="sc_slot_option">${res.slots} <a href="#" @click=${changeSlots(1)}>▲</a><a href="#" @click=${changeSlots(-1)}>▼</a></td>
-                                <td class="sc_slot_option">${res.overbook} <a href="#" @click=${changeOverbook(1)}>▲</a><a href="#" @click=${changeOverbook(-1)}>▼</a></td>
-                                <td class="sc_slot_edit"><a href="#" @click=${e => { showDeleteResourceDialog(e, day, res_idx); e.preventDefault(); }}>x</a></td>
+                                <td class="sc_slot_option">${res.slots} <a @click=${changeSlots(1)}>▲</a><a @click=${changeSlots(-1)}>▼</a></td>
+                                <td class="sc_slot_option">${res.overbook} <a @click=${changeOverbook(1)}>▲</a><a @click=${changeOverbook(-1)}>▼</a></td>
+                                <td class="sc_slot_edit"><a @click=${e => showDeleteResourceDialog(e, day, res_idx)}>x</a></td>
                             </tr>`;
                         })}
                     </table>` : ''}
 
                     <div class="sc_actions">
-                        <a href="#" @click=${e => { showCreateResourceDialog(e, day); e.preventDefault(); }}>Nouveau</a> |
-                        <a href="#" @click=${e => { startCopy(day); e.preventDefault(); }}>Copier</a> |
-                        <a href="#" @click=${e => { showCloseDayDialog(e, day); e.preventDefault(); }}>Fermer</a>
+                        <a @click=${e => showCreateResourceDialog(e, day)}>Nouveau</a> |
+                        <a @click=${e => startCopy(day)}>Copier</a> |
+                        <a @click=${e => showCloseDayDialog(e, day)}>Fermer</a>
                     </div>
                 </div>`;
             } else {
@@ -578,10 +576,10 @@ function ScheduleView(resources_map, meetings_map) {
                         <div class="sc_head_count">${(normal_count + overbook_count) ? `${normal_count}+${overbook_count}` : 'Fermé'}</div>
                     </div>
 
-                    <a href="#" style=${copy_ignore.has(day.key) ? 'opacity: 0.3' : ''}
-                       @click=${e => { executeCopy(day); e.preventDefault(); }}>+</a>
-                    <a href="#" style=${copy_ignore.has(day.key) ? 'opacity: 0.3' : ''}
-                       @click=${e => { executeCopyAndEnd(day); e.preventDefault(); }}>⇳</a>
+                    <a style=${copy_ignore.has(day.key) ? 'opacity: 0.3' : ''}
+                       @click=${e => executeCopy(day)}>+</a>
+                    <a style=${copy_ignore.has(day.key) ? 'opacity: 0.3' : ''}
+                       @click=${e => executeCopyAndEnd(day)}>⇳</a>
                 </div>`;
             } else {
                 return html`<div class="sc_skip"></div>`;

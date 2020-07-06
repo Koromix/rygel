@@ -161,7 +161,7 @@ function updateTables(echelles, tables) {
                                 ${values.map(value => html`<td>${value}</td>`)}
                                 <td style="text-align: right;">
                                     <a href=${nav.link(echelle.form, null, record)}>Modifier</a> |
-                                    <a href="#" @click=${e => {showDeleteDialog(e, echelle.form, record.id); e.preventDefault();}}>Supprimer</a>
+                                    <a @click=${e => showDeleteDialog(e, echelle.form, record.id)}>Supprimer</a>
                                 </td>
                             </tr>`;
                         })}</tbody>

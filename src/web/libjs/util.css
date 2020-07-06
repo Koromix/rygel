@@ -11,6 +11,8 @@ button, input, optgroup, select, textarea {
 }
 input[type='checkbox'], input[type='radio'] { vertical-align: -2px; }
 
+a { cursor: pointer; }
+
 /* -------------------- Notifications -------------------- */
 
 #ut_log {

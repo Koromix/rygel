@@ -202,22 +202,22 @@ let dev_files = new function() {
 
                         return html`
                             <tr class=${file.action === 'conflict' ? 'conflict' : ''}>
-                                <td><a href="#" @click=${e => { showDeleteDialog(e, file.path); e.preventDefault(); }}>x</a></td>
+                                <td><a @click=${e => showDeleteDialog(e, file.path)}>x</a></td>
                                 <td>
                                     <span class=${makeLocalPathClass(file, action)}>${file.path}</span>
                                     ${(file.sha256 && file.sha256 !== file.remote_sha256) || file.deleted ?
-                                        html`<a href="#" @click=${e => { showResetDialog(e, file); e.preventDefault(); }}>&nbsp;👻\uFE0E</a>` : ''}
+                                        html`<a @click=${e => showResetDialog(e, file)}>&nbsp;👻\uFE0E</a>` : ''}
                                 </td>
                                 <td class="sync_size">${file.sha256 ? util.formatDiskSize(file.size) : ''}</td>
 
                                 ${remote ? html`
                                     <td class="sync_actions">
-                                        <a href="#" class=${action === 'pull' ? 'selected' : (file.action === 'pull' ? 'default' : '')}
-                                           @click=${e => { toggleAction(file, 'pull'); e.preventDefault(); }}>&lt;</a>
-                                        <a href="#" class=${action === 'noop' ? 'selected' : (file.action === 'noop' ? 'default' : '')}
-                                           @click=${e => { toggleAction(file, 'noop'); e.preventDefault(); }}>=</a>
-                                        <a href="#" class=${action === 'push' ? 'selected' : (file.action === 'push' ? 'default' : '')}
-                                           @click=${e => { toggleAction(file, 'push'); e.preventDefault(); }}>&gt;</a>
+                                        <a class=${action === 'pull' ? 'selected' : (file.action === 'pull' ? 'default' : '')}
+                                           @click=${e => toggleAction(file, 'pull')}>&lt;</a>
+                                        <a class=${action === 'noop' ? 'selected' : (file.action === 'noop' ? 'default' : '')}
+                                           @click=${e => toggleAction(file, 'noop')}>=</a>
+                                        <a class=${action === 'push' ? 'selected' : (file.action === 'push' ? 'default' : '')}
+                                           @click=${e => toggleAction(file, 'push')}>&gt;</a>
                                     </td>
 
                                     <td class=${makeRemotePathClass(file, action)}>${file.path}</td>

@@ -735,8 +735,8 @@ function PageBuilder(state, page) {
                 ${label != null ? html`<legend @click=${e => handleSectionClick(e, label)}>${label}</legend>` : ''}
                 ${deploy ?
                     widgets.map(intf => intf.render()) :
-                    html`<a class="af_deploy" href="#"
-                            @click=${e => { handleSectionClick(e, label); e.preventDefault(); }}>(ouvrir la section)</a>`}
+                    html`<a class="af_deploy"
+                            @click=${e => handleSectionClick(e, label)}>(ouvrir la section)</a>`}
             </fieldset>
         `;
 

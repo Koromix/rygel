@@ -123,8 +123,8 @@ function TreeSelector() {
                                 @click=${e => handleTabClick(e, tab)}>${tab.title}</button>
                     `)}</div>
                     <div class="tsel_shortcuts">
-                        <a href="#" @click=${e => handleSetAll(e, true)}>Tout cocher</a> /
-                        <a href="#" @click=${e => handleSetAll(e, false)}>Tout décocher</a>
+                        <a @click=${e => handleSetAll(e, true)}>Tout cocher</a> /
+                        <a @click=${e => handleSetAll(e, false)}>Tout décocher</a>
                     </div>
 
                     <div class="tsel_list">${current_tab.options.map(opt => {
@@ -161,7 +161,7 @@ function TreeSelector() {
             let sorted_values = Array.from(current_values).sort();
 
             return html`${prefix}
-                ${sorted_values.map(value => html`<a href="#" @click=${handleSummaryClick}
+                ${sorted_values.map(value => html`<a @click=${handleSummaryClick}
                                                      data-value=${util.valueToStr(value)}>${value}</a>`)}
             `;
         } else {
@@ -202,8 +202,6 @@ function TreeSelector() {
 
         render(renderSummary(), summary_el);
         syncCheckboxes(root_el);
-
-        e.preventDefault();
     }
 
     function handleGroupClick(e) {
