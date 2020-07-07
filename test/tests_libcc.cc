@@ -12,6 +12,7 @@
 #include "vendor/musl_fnmatch.h"
 #include "vendor/stb_sprintf.h"
 #include "vendor/fmt/include/fmt/format.h"
+#include "vendor/fmt/include/fmt/compile.h"
 
 namespace RG {
 
@@ -354,7 +355,7 @@ void BenchFmt()
 {
     PrintLn("  Fmt");
 
-    static const int iterations = 800000;
+    static const int iterations = 1600000;
 
 #ifdef _WIN32
     FILE *fp = OpenFile("NUL", OpenFileMode::Write);
@@ -365,21 +366,21 @@ void BenchFmt()
     RG_DEFER { fclose(fp); };
 
     RunBenchmark("printf", iterations, [&]() {
-        fprintf(fp, "%d:%d:%d:%s:%p:%c:%%\n",
-                1234, 42, -313, "str", (void*)1000, 'X');
+        fprintf(fp, "%d:%d:%g:%s:%p:%c:%%\n",
+                1234, 42, -313.3, "str", (void*)1000, 'X');
     });
 
     RunBenchmark("snprintf", iterations, [&]() {
         char buf[1024];
-        snprintf(buf, RG_SIZE(buf), "%d:%d:%d:%s:%p:%c:%%\n",
-                1234, 42, -313, "str", (void*)1000, 'X');
+        snprintf(buf, RG_SIZE(buf), "%d:%d:%g:%s:%p:%c:%%\n",
+                1234, 42, -313.3, "str", (void*)1000, 'X');
     });
 
 #ifndef _WIN32
     RunBenchmark("asprintf", iterations, [&]() {
         char *ret = nullptr;
-        asprintf(&ret, "%d:%d:%d:%s:%p:%c:%%\n",
-                 1234, 42, -313, "str", (void*)1000, 'X');
+        asprintf(&ret, "%d:%d:%g:%s:%p:%c:%%\n",
+                 1234, 42, -313.3, "str", (void*)1000, 'X');
         free(ret);
     });
 #endif
@@ -387,40 +388,40 @@ void BenchFmt()
     RunBenchmark("stbsp_snprintf", iterations, [&]() {
         char buf[1024];
         stbsp_snprintf(buf, RG_SIZE(buf), "%d:%d:%d:%s:%p:%c:%%\n",
-                       1234, 42, -313, "str", (void*)1000, 'X');
+                       1234, 42, -313.3, "str", (void*)1000, 'X');
     });
 
     RunBenchmark("fmt::format", iterations, [&]() {
-        fmt::format("{}:{}:{}:{}:{}:{}%\n", 1234, 42, -313, "str", (void *)1000, 'X');
+        fmt::format(FMT_COMPILE("{}:{}:{}:{}:{}:{}%\n"), 1234, 42, -313.3, "str", (void *)1000, 'X');
     });
 
     RunBenchmark("fmt::format_to", iterations, [&]() {
-        fmt::memory_buffer buf;
-        fmt::format_to(buf, "{}:{}:{}:{}:{}:{}%\n", 1234, 42, -313, "str", (void *)1000, 'X');
+        char buf[1024];
+        fmt::format_to(buf, FMT_COMPILE("{}:{}:{}:{}:{}:{}%\n"), 1234, 42, -313.3, "str", (void *)1000, 'X');
     });
 
     RunBenchmark("libcc Print", iterations, [&]() {
         Print(fp, "%1:%2:%3:%4:%5:%6:%%\n",
-              1234, 42, -313, "str", (void*)1000, 'X');
+              1234, 42, -313.3, "str", (void*)1000, 'X');
     });
 
     RunBenchmark("libcc Fmt (allocator)", iterations, [&]() {
         LinkedAllocator temp_alloc;
         Fmt(&temp_alloc, "%1:%2:%3:%4:%5:%6:%%\n",
-            1234, 42, -313, "str", (void*)1000, 'X');
+            1234, 42, -313.3, "str", (void*)1000, 'X');
     });
 
     RunBenchmark("libcc Fmt (heap)", iterations, [&]() {
         HeapArray<char> buf;
         Fmt(&buf, "%1:%2:%3:%4:%5:%6:%%\n",
-            1234, 42, -313, "str", (void*)1000, 'X');
+            1234, 42, -313.3, "str", (void*)1000, 'X');
         buf.RemoveFrom(0);
     });
 
     RunBenchmark("libcc Fmt (buffer)", iterations, [&]() {
         LocalArray<char, 1024> buf;
         buf.len = Fmt(buf.data, "%1:%2:%3:%4:%5:%6:%%\n",
-                      1234, 42, -313, "str", (void*)1000, 'X').len;
+                      1234, 42, -313.3, "str", (void*)1000, 'X').len;
     });
 }
 
