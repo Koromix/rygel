@@ -10,6 +10,8 @@ namespace RG {
 
 int Main(int argc, char **argv)
 {
+    BlockAllocator temp_alloc;
+
     // Options
     Span <const char> password = {};
 
@@ -45,14 +47,9 @@ Options:
     }
 
     if (!password.ptr) {
-        ConsolePrompter prompter;
-        prompter.prompt = "Password: ";
-        prompter.mask = "*";
-
-        if (!prompter.Read())
+        password = Prompt("Password: ", "*", &temp_alloc);
+        if (!password.ptr)
             return 1;
-
-        password = prompter.str;
     }
 
     char hash[crypto_pwhash_STRBYTES];
