@@ -836,7 +836,7 @@ let goupile = new function() {
 
             if (focus) {
                 let el = document.querySelector('#gp_login input');
-                el.focus();
+                setTimeout(() => el.focus(), 0);
             }
         };
 
