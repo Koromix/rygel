@@ -25,7 +25,7 @@ DatabaseFile = database.db
 # OfflineRecords = Off
 # AllowGuests = Off
 
-# [HTTP]
+[HTTP]
 # IPStack = Dual
 # Port = 8889
 # Threads = 4
