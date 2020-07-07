@@ -5,6 +5,8 @@
 /* -------------------- Layout and basic elements -------------------- */
 
 body {
+    display: flex;
+    flex-direction: column;
     margin: 0;
     padding: 0;
     min-height: 100vh;
@@ -221,7 +223,7 @@ body.busy > * { display: none !important; }
     flex-direction: column;
     overflow: auto;
 }
-.gp_panel.right { margin: 2.5em 0 0 50vw; }
+.gp_panel.right { margin-left: 50vw; }
 .gp_panel.overview { width: 100%; }
 
 #gp_menu + main { margin-top: 2.5em; }
@@ -248,7 +250,7 @@ body.busy > * { display: none !important; }
 
 #gp_login {
     width: 300px;
-    margin: 6em auto 1em auto;
+    margin: 1em auto;
     padding: 12px;
     background: #efefef;
 }

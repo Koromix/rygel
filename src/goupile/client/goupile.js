@@ -826,10 +826,12 @@ let goupile = new function() {
             let focus = !document.querySelector('#gp_login');
 
             render(html`
+                <div style="flex: 1;"></div>
                 <form id="gp_login" @submit=${e => e.preventDefault()}>
                     <h1>${env.app_name}</h1>
                     ${page.render()}
                 </form>
+                <div style="flex: 1;"></div>
             `, document.body);
 
             if (focus) {
