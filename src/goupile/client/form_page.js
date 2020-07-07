@@ -109,7 +109,7 @@ function PageBuilder(state, page) {
             <input id=${id} type="text" class="af_input" style=${makeInputStyle(options)}
                    placeholder=${options.placeholder || ''}
                    .value=${value || ''} ?disabled=${options.disable}
-                   @input=${e => handleTextInput(e, key)}/>
+                   @input=${e => handleTextInput(e, key)} />
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
 
@@ -153,7 +153,7 @@ function PageBuilder(state, page) {
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
             <input id=${id} type="password" class="af_input" style=${makeInputStyle(options)}
                    .value=${value || ''} ?disabled=${options.disable}
-                   @input=${e => handleTextInput(e, key)}/>
+                   @input=${e => handleTextInput(e, key)} />
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
 
@@ -178,7 +178,7 @@ function PageBuilder(state, page) {
             <input id=${id} type="text" class="af_input" style=${makeInputStyle(options)}
                    inputmode="none" .value=${value || ''}
                    placeholder=${options.placeholder || ''} ?disabled=${options.disable}
-                   @input=${e => handleTextInput(e, key)}/>
+                   @input=${e => handleTextInput(e, key)} />
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
             <div class="af_pin">
                 ${[7, 8, 9, 4, 5, 6, 1, 2, 3].map(i =>
@@ -201,17 +201,14 @@ function PageBuilder(state, page) {
 
     function handlePinButton(e, key, value) {
         updateValue(key, (value || '') + e.target.textContent);
-        self.restart();
     }
 
     function handlePinClear(e, key) {
         updateValue(key, undefined);
-        self.restart();
     }
 
     function handleTextInput(e, key) {
         updateValue(key, e.target.value || undefined);
-        self.restart();
     }
 
     this.number = function(key, label, options = {}) {
@@ -296,7 +293,6 @@ function PageBuilder(state, page) {
                 value = undefined;
 
             updateValue(key, value);
-            self.restart();
         }
     }
 
@@ -306,8 +302,6 @@ function PageBuilder(state, page) {
 
             page.submitHandler = () => {
                 updateValue(key, number.value);
-
-                self.restart();
                 close();
             };
         });
@@ -1088,15 +1082,16 @@ instead of:
     }
 
     function updateValue(key, value, refresh = true) {
-        state.values[key] = value;
-        state.changed = true;
+        if (value != state.values[key]) {
+            state.values[key] = value;
+            state.changed = true;
 
-        state.take_delayed.delete(key.toString());
-        state.changed_variables.add(key.toString());
+            state.take_delayed.delete(key.toString());
+            state.changed_variables.add(key.toString());
 
-        self.setValue(key, value);
-
-        if (refresh)
-            self.restart();
+            self.setValue(key, value);
+            if (refresh)
+                self.restart();
+        }
     }
 }
