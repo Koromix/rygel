@@ -11,7 +11,7 @@
 #endif
 #include "vendor/musl_fnmatch.h"
 #include "vendor/stb_sprintf.h"
-#include "vendor/fmt/format.h"
+#include "vendor/fmt/include/fmt/format.h"
 
 namespace RG {
 
