@@ -9,9 +9,9 @@ body {
     min-height: 100vh;
     margin: 0;
     padding: 0;
-    background: linear-gradient(135deg, #f4f4f4 0%, #e4e4e4 100%);
     font-family: 'Open Sans', sans-serif;
     font-size: 14px;
+    background: #f8f8f8;
 }
 
 a {
@@ -110,7 +110,6 @@ main {
     box-sizing: border-box;
     max-width: 870px;
     padding: 2em 1.5em 1.5em 1.5em;
-    background: #f8f8f8;
 }
 
 .slideshow {
