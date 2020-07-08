@@ -19,6 +19,7 @@ let cache_urls = [
     `${env.base_url}static/mode-css.js`,
     `${env.base_url}static/mode-html.js`,
     `${env.base_url}static/mode-javascript.js`,
+    `${env.base_url}static/ext-searchbox.js`,
     `${env.base_url}static/xlsx.core.min.js`,
     `${env.base_url}static/jspdf.min.js`,
     `${env.base_url}static/OpenSans-Regular.woff2`,
