@@ -114,7 +114,6 @@
 
 .st_table thead { background: #dfdfdf; }
 .st_table th { font-weight: normal; }
-.st_table th.id { width: 40px; }
 
 .st_table th, .st_table td {
     height: 1.7em;
@@ -127,19 +126,33 @@
 
 .st_table tbody tr:nth-child(2n + 1) { background: #efefef; }
 .st_table tbody tr:nth-child(2n) { background: #f4f4f4; }
-.st_table tbody tr.selected td.id {
+.st_table tbody tr.selected {
     background: #666;
     color: white;
 }
 
-.st_table td.id { text-align: center; }
-.st_table td.complete {
-    background: #89c28c;
-    color: white;
+.st_table a {
+    color: inherit;
+    text-decoration: none;
+    font-weight: normal;
+    font-style: normal;
 }
-.st_table td.partial {
-    background: #e3af63;
-    color: white;
+
+.st_table td.id { text-align: center; }
+.st_table td.none:before {
+    padding-right: 4px;
+    color: #777;
+    content: '⬤\FE0E';
+}
+.st_table td.partial:before {
+    padding-right: 4px;
+    color: #ff6600;
+    content: '⬤\FE0E';
+}
+.st_table td.complete:before {
+    padding-right: 4px;
+    color: #89c28c;
+    content: '⬤\FE0E ';
 }
 
 /* -------------------- Data -------------------- */
@@ -157,8 +170,9 @@
 }
 
 .rec_table thead { background: #dfdfdf; }
-.rec_table th.actions { width: 2.5em; }
-.rec_table th.id { width: 40px; }
+.rec_table thead th { font-weight: normal; }
+.rec_pages th { font-style: italic; }
+.rec_pages > th + th { background: linear-gradient(black, black) bottom/ calc(100% - 24px) 1px no-repeat; }
 
 .rec_table th, .rec_table td {
     height: 1.7em;
@@ -170,8 +184,6 @@
 }
 .rec_table td:first-child { border-left: 0; }
 .rec_table td:last-child { border-right: 0; }
-
-.rec_table thead th { font-weight: normal; }
 
 .rec_table tbody tr:nth-child(2n + 1) { background: #efefef; }
 .rec_table tbody tr:nth-child(2n) { background: #f4f4f4; }

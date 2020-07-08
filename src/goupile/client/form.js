@@ -305,10 +305,17 @@ let form_executor = new function() {
             </div>
 
             <table class="st_table">
+                <colgroup>
+                    <col style="width: 3em;"/>
+                    <col style="width: 60px;"/>
+                    ${pages.map(col => html`<col/>`)}
+                </colgroup>
+
                 <thead>
                     <tr>
+                        <th class="actions"></th>
                         <th class="id">ID</th>
-                        ${pages.map(page => html`<th>${page.key}</th>`)}
+                        ${pages.map(page => html`<th>${page.label}</th>`)}
                     </tr>
                 </thead>
 
@@ -320,12 +327,17 @@ let form_executor = new function() {
                         if (show_complete || !complete_set.has(record.id)) {
                             return html`
                                 <tr class=${current_records.has(record.id) ? 'selected' : ''}>
+                                    <th>
+                                        <a @click=${e => handleEditClick(record)}>🔍\uFE0E</a>
+                                        <a @click=${e => showDeleteDialog(e, record)}>✕</a>
+                                    </th>
                                     <td class="id">${record.sequence}</td>
+
                                     ${pages.map(page => {
                                         let complete = record.complete[page.key];
 
                                         if (complete == null) {
-                                            return html`<td><a href=${makeLink(current_asset.form.key, page.key, record)}>Non rempli</a></td>`;
+                                            return html`<td class="none"><a href=${makeLink(current_asset.form.key, page.key, record)}>Non rempli</a></td>`;
                                         } else if (complete) {
                                             return html`<td class="complete"><a href=${makeLink(current_asset.form.key, page.key, record)}>Validé</a></td>`;
                                         } else {
@@ -386,15 +398,26 @@ let form_executor = new function() {
             </div>
 
             <table class="rec_table" style=${`min-width: ${30 + 60 * columns.length}px`}>
+                <colgroup>
+                    <col style="width: 3em;"/>
+                    <col style="width: 60px;"/>
+                    ${columns.map(col => html`<col/>`)}
+                </colgroup>
+
                 <thead>
+                    <tr class="rec_pages">
+                        <th colspan="2"></th>
+                        ${util.mapRLE(columns, col => col.page, (page, offset, len) =>
+                            html`<th colspan=${len}>${page}</th>`)}
+                    </tr>
                     <tr>
-                        <th class="id">ID</th>
                         <th class="actions">
                             ${select_many ?
                                 html`<input type="checkbox" .checked=${count1 && !count0}
                                             .indeterminate=${count1 && count0}
                                             @change=${e => toggleAllRecords(records, e.target.checked)} />` : ''}
                         </th>
+                        <th class="id">ID</th>
 
                         ${!columns.length ? html`<th>&nbsp;</th>` : ''}
                         ${!select_many ? columns.map(col => html`<th title=${col.key}>${col.key}</th>`) : ''}
@@ -409,12 +432,11 @@ let form_executor = new function() {
                         html`<tr><td colspan=${2 + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : ''}
                     ${records.map(record => html`
                         <tr class=${current_records.has(record.id) ? 'selected' : ''}>
-                            <td class="id">${record.sequence}</td>
-
                             ${!select_many ? html`<th><a @click=${e => handleEditClick(record)}>🔍\uFE0E</a>
                                                       <a @click=${e => showDeleteDialog(e, record)}>✕</a></th>` : ''}
                             ${select_many ? html`<th><input type="checkbox" .checked=${current_records.has(record.id)}
                                                             @click=${e => handleEditClick(record)} /></th>` : ''}
+                            <td class="id">${record.sequence}</td>
 
                             ${columns.map(col => {
                                 let value = record.values[col.key];
@@ -517,30 +539,41 @@ let form_executor = new function() {
         }
     }
 
-    // XXX: Improve performance and ordering of variables in different pages
     function orderColumns(pages, variables) {
         variables = variables.slice();
         variables.sort((variable1, variable2) => util.compareValues(variable1.key, variable2.key));
 
-        let variables_map = util.mapArray(variables, variable => variable.key);
+        let frags_map = {};
+        for (let variable of variables) {
+            let frag_variables = frags_map[variable.frag];
+            if (!frag_variables) {
+                frag_variables = [];
+                frags_map[variable.frag] = frag_variables;
+            }
+
+            frag_variables.push(variable);
+        }
 
         let columns = [];
         for (let page of pages) {
+            let frag_variables = frags_map[page.key] || [];
+            delete frags_map[page.key];
+
+            let variables_map = util.mapArray(frag_variables, variable => variable.key);
+
             let first_set = new Set;
             let sets_map = {};
-            for (let variable of variables) {
-                if (variable.frag === page.key) {
-                    if (variable.before == null) {
-                        first_set.add(variable.key);
-                    } else {
-                        let set_ptr = sets_map[variable.before];
-                        if (!set_ptr) {
-                            set_ptr = new Set;
-                            sets_map[variable.before] = set_ptr;
-                        }
-
-                        set_ptr.add(variable.key);
+            for (let variable of frag_variables) {
+                if (variable.before == null) {
+                    first_set.add(variable.key);
+                } else {
+                    let set_ptr = sets_map[variable.before];
+                    if (!set_ptr) {
+                        set_ptr = new Set;
+                        sets_map[variable.before] = set_ptr;
                     }
+
+                    set_ptr.add(variable.key);
                 }
             }
 
@@ -558,7 +591,7 @@ let form_executor = new function() {
 
                         if (!set_ptr.has(variable.after)) {
                             let col = {
-                                page: variable.frag,
+                                page: page.label,
                                 key: key,
                                 type: variable.type
                             };
@@ -573,7 +606,7 @@ let form_executor = new function() {
                         let use_key = set_ptr.values().next().value;
 
                         let col = {
-                            page: variables_map[use_key].page,
+                            page: page.label,
                             key: use_key,
                             type: variables_map[use_key].type
                         };
@@ -596,16 +629,16 @@ let form_executor = new function() {
 
                 reverseLastColumns(columns, set_start_idx);
             }
-        }
 
-        // Remaining variables (probably from old forms, or discarded pages)
-        for (let key in variables_map) {
-            let col = {
-                page: variables_map[key].page,
-                key: key,
-                type: variables_map[key].type
+            // Remaining page variables
+            for (let key in variables_map) {
+                let col = {
+                    page: page.label,
+                    key: key,
+                    type: variables_map[key].type
+                }
+                columns.push(col);
             }
-            columns.push(col);
         }
 
         return columns;
