@@ -4786,8 +4786,10 @@ bool ConsolePrompter::Read()
 
             case 0x8:
             case 0x7F: { // Backspace
-                Delete(SkipBackward(str_offset, 1), str_offset);
-                Prompt();
+                if (str.len) {
+                    Delete(SkipBackward(str_offset, 1), str_offset);
+                    Prompt();
+                }
             } break;
             case 0x3: { // Ctrl-C
                 if (str.len) {
