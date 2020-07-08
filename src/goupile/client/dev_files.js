@@ -218,11 +218,11 @@ let dev_files = new function() {
 
                                 ${remote ? html`
                                     <td class="sync_actions">
-                                        <a class=${action === 'pull' ? 'selected' : ''}
+                                        <a class=${action === 'pull' ? 'selected' : (file.sha256 === file.remote_sha256 ? 'disabled' : '')}
                                            @click=${e => toggleAction(file, 'pull')}>&lt;</a>
                                         <a class=${action === 'noop' ? 'selected' : ''}
                                            @click=${e => toggleAction(file, 'noop')}>=</a>
-                                        <a class=${action === 'push' ? 'selected' : (!file.sha256 && !file.deleted ? 'disabled' : '')}
+                                        <a class=${action === 'push' ? 'selected' : (file.sha256 === file.remote_sha256 || (!file.sha256 && !file.deleted) ? 'disabled' : '')}
                                            @click=${e => toggleAction(file, 'push')}>&gt;</a>
                                     </td>
 
