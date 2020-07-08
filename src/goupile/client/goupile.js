@@ -356,7 +356,8 @@ let goupile = new function() {
                         left_panel = show_develop ? 'editor' : null;
 
                     if (!route_asset || !route_asset.overview) {
-                        overview_wanted = show_overview && !self.isTablet();
+                        if (!overview_wanted)
+                            overview_wanted = show_overview && !self.isTablet();
                         show_overview = false;
                     } else if (!left_panel || overview_wanted) {
                         show_overview = true;
