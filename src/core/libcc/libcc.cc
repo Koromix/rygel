@@ -1152,8 +1152,6 @@ static std::function<LogFunc> log_handler = DefaultLogHandler;
 static RG_THREAD_LOCAL std::function<LogFilterFunc> *log_filters[16];
 static RG_THREAD_LOCAL Size log_filters_len;
 
-static RG_THREAD_LOCAL char log_last_error[1024];
-
 bool GetDebugFlag(const char *name)
 {
 #ifdef __EMSCRIPTEN__
@@ -1229,16 +1227,6 @@ bool EnableAnsiOutput()
     return output_is_terminal;
 }
 
-static void CallLogHandler(LogLevel level, const char *ctx, const char *msg)
-{
-    if (level == LogLevel::Error) {
-        strncpy(log_last_error, msg, RG_SIZE(log_last_error));
-        log_last_error[RG_SIZE(log_last_error) - 1] = 0;
-    }
-
-    log_handler(level, ctx, msg);
-}
-
 static void RunLogFilter(Size idx, LogLevel level, const char *ctx, const char *msg)
 {
     const std::function<LogFilterFunc> &func = *log_filters[idx];
@@ -1247,7 +1235,7 @@ static void RunLogFilter(Size idx, LogLevel level, const char *ctx, const char *
         if (idx > 0) {
             RunLogFilter(idx - 1, level, ctx, msg);
         } else {
-            CallLogHandler(level, ctx, msg);
+            log_handler(level, ctx, msg);
         }
     });
 }
@@ -1284,7 +1272,7 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg>
     if (log_filters_len) {
         RunLogFilter(log_filters_len - 1, level, ctx, msg_buf);
     } else {
-        CallLogHandler(level, ctx, msg_buf);
+        log_handler(level, ctx, msg_buf);
     }
 }
 
@@ -1315,16 +1303,6 @@ void PopLogFilter()
 {
     RG_ASSERT(log_filters_len > 0);
     delete log_filters[--log_filters_len];
-}
-
-const char *GetThreadError()
-{
-    return log_last_error[0] ? log_last_error : nullptr;
-}
-
-void ClearThreadError()
-{
-    log_last_error[0] = 0;
 }
 
 // ------------------------------------------------------------------------
@@ -3178,9 +3156,6 @@ void AsyncPool::RunTask(Task *task)
 
     RG_DEFER_C(running = async_running_task) { async_running_task = running; };
     async_running_task = true;
-
-    // Avoid stale error messages
-    ClearThreadError();
 
     pending_tasks--;
     if (async->success && !task->func()) {

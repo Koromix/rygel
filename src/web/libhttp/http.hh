@@ -90,7 +90,7 @@ class http_IO {
     bool suspended = false;
 
     std::function<void()> async_func;
-    const char *async_err = nullptr;
+    const char *last_err = nullptr;
 
     std::condition_variable read_cv;
     Span<uint8_t> read_buf = {};

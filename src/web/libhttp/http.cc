@@ -115,9 +115,6 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
 
     bool first_call = !io;
 
-    // Avoid stale messages and messages from other theads in error pages
-    ClearThreadError();
-
     // Init request data
     if (first_call) {
         io = new http_IO();
@@ -152,6 +149,14 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
 
     // Run handler (sync first, and than async handlers if any)
     if (io->state == http_IO::State::Sync) {
+        PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
+            if (level == LogLevel::Error) {
+                io->last_err = DuplicateString(msg, &io->allocator).ptr;
+            }
+            func(level, ctx, msg);
+        });
+        RG_DEFER { PopLogFilter(); };
+
         daemon->handle_func(*request, io);
         io->state = http_IO::State::Idle;
     }
@@ -254,10 +259,15 @@ void http_Daemon::RunNextAsync(http_IO *io)
         std::swap(io->async_func, func);
 
         async->Run([=]() {
-            func();
+            PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
+                if (level == LogLevel::Error) {
+                    io->last_err = DuplicateString(msg, &io->allocator).ptr;
+                }
+                func(level, ctx, msg);
+            });
+            RG_DEFER { PopLogFilter(); };
 
-            const char *err = GetThreadError();
-            io->async_err = err ? DuplicateString(err, &io->allocator).ptr : nullptr;
+            func();
 
             std::unique_lock<std::mutex> lock(io->mutex);
 
@@ -421,12 +431,8 @@ bool http_IO::AttachBinary(int code, Span<const uint8_t> data, const char *mime_
 
 void http_IO::AttachError(int code, const char *details)
 {
-    if (!details) {
-        details = async_err ? async_err : GetThreadError();
-    }
-
     Span<char> page = Fmt((Allocator *)nullptr, "Error %1: %2\n%3", code,
-                          MHD_get_reason_phrase_for((unsigned int)code), details ? details : "");
+                          MHD_get_reason_phrase_for((unsigned int)code), details ? details : last_err);
 
     MHD_Response *response =
         MHD_create_response_from_buffer_with_free_callback((size_t)page.len, page.ptr,
