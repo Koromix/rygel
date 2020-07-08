@@ -30,7 +30,7 @@ button:not(:disabled) { cursor: pointer; }
 
 /* -------------------- Overlays -------------------- */
 
-#gp_all.busy, .busy:empty {
+.busy {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -39,7 +39,7 @@ button:not(:disabled) { cursor: pointer; }
     animation-fill-mode: forwards;
     animation-delay: 0.3s;
 }
-#gp_all.busy:before, .busy:empty:before {
+.busy:before {
     float: left;
     display: inline-block;
     box-sizing: border-box;
@@ -47,7 +47,7 @@ button:not(:disabled) { cursor: pointer; }
     height: 80px;
     margin: -2px 0 0 -2px;
 }
-#gp_all.busy:after, .busy:empty:after {
+.busy:after {
     content: ' ';
     display: block;
     width: 48px;
@@ -58,7 +58,7 @@ button:not(:disabled) { cursor: pointer; }
     border-color: white transparent white transparent;
     animation: gp_busy_spinner 0.8s ease-in-out infinite;
 }
-#gp_all.busy > * { display: none !important; }
+.busy > * { display: none !important; }
 @keyframes gp_busy {
     100% {
         visibility: visible;
@@ -73,6 +73,14 @@ button:not(:disabled) { cursor: pointer; }
 .broken {
     filter: grayscale(100%);
     opacity: 0.5;
+}
+.broken:after {
+    position: absolute;
+    top: calc(50% - 0.7em);
+    left: calc(50% - 0.3em);
+    font-size: 14em;
+    font-weight: bold;
+    content: 'X';
 }
 
 /* -------------------- Toolbars -------------------- */

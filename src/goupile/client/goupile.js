@@ -347,21 +347,21 @@ let goupile = new function() {
                 renderAll();
 
                 try {
-                    // Run left panel
-                    switch (left_panel) {
-                        case 'files': { await dev_files.runFiles(); } break;
-                        case 'editor': { await dev_files.runEditor(route_asset); } break;
-                        case 'status': { await form_executor.runStatus(); } break;
-                        case 'data': { await form_executor.runData(); } break;
-                        case 'describe': { await form_executor.runDescribe(); } break;
-                    }
-
                     // Run appropriate module
                     if (route_asset) {
                         document.title = `${route_asset.label} — ${env.app_name}`;
                         await runAssetSafe(route_asset);
                     } else {
                         document.title = env.app_name;
+                    }
+
+                    // Run accessory panel
+                    switch (left_panel) {
+                        case 'files': { await dev_files.runFiles(); } break;
+                        case 'editor': { await dev_files.runEditor(route_asset); } break;
+                        case 'status': { await form_executor.runStatus(); } break;
+                        case 'data': { await form_executor.runData(); } break;
+                        case 'describe': { await form_executor.runDescribe(); } break;
                     }
                 } catch (err) {
                     log.error(err);
@@ -378,8 +378,11 @@ let goupile = new function() {
                 restart = false;
                 setTimeout(self.go, 0);
             } else {
-                for (let panel of document.querySelectorAll('.gp_panel'))
+                for (let panel of document.querySelectorAll('.gp_panel')) {
                     panel.classList.remove('busy');
+                    if (!panel.children.length)
+                        panel.classList.add('broken');
+                }
             }
         }
     };
@@ -404,21 +407,26 @@ let goupile = new function() {
 
             <main>
                 ${left_panel === 'files' ?
-                    html`<div id="dev_files" class=${show_overview ? 'gp_panel left busy' : 'gp_panel fixed busy'}></div>` : ''}
+                    html`<div id="dev_files" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
                 ${left_panel === 'editor' ?
-                    html`<div id="dev_editor" class=${show_overview ? 'gp_panel left busy' : 'gp_panel fixed'}></div>` : ''}
+                    html`<div id="dev_editor" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
                 ${left_panel === 'status' ?
-                    html`<div id="dev_status" class=${show_overview ? 'gp_panel left busy' : 'gp_panel fixed busy'}></div>` : ''}
+                    html`<div id="dev_status" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
                 ${left_panel === 'data' ?
-                    html`<div id="dev_data" class=${show_overview ? 'gp_panel left busy' : 'gp_panel fixed busy'}></div>` : ''}
+                    html`<div id="dev_data" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
                 ${left_panel === 'describe' ?
-                    html`<div id="dev_describe" class=${show_overview ? 'gp_panel left busy' : 'gp_panel fixed busy'}></div>` : ''}
-                <div id="gp_overview" class=${left_panel ? 'gp_panel right busy' : 'gp_panel overview busy'}
+                    html`<div id="dev_describe" class=${show_overview ? 'gp_panel left' : 'gp_panel fixed'}></div>` : ''}
+                <div id="gp_overview" class=${left_panel ? 'gp_panel right' : 'gp_panel overview'}
                      style=${show_overview ? '' : 'display: none;'}></div>
 
                 <div id="gp_error" style="display: none;"></div>
             </main>
         `, document.querySelector('#gp_all'));
+
+        for (let panel of document.querySelectorAll('.gp_panel:empty')) {
+            panel.classList.remove('broken');
+            panel.classList.add('busy');
+        }
     }
 
     function renderFullMenu() {
