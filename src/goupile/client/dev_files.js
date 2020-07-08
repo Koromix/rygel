@@ -321,7 +321,12 @@ let dev_files = new function() {
     async function showResetDialog(e, file) {
         if (file.sha256 === file.remote_sha256) {
             await resetFile(file.path);
-            self.runFiles();
+
+            if (self.getBuffer(file.path) != null) {
+                goupile.initApplication();
+            } else {
+                self.runFiles();
+            }
         } else {
             goupile.popup(e, 'Oublier', (page, close) => {
                 page.output(`Voulez-vous vraiment oublier les modifications locales pour '${file.path}' ?`);
@@ -373,7 +378,7 @@ let dev_files = new function() {
 
     function syncBuffer(path, sha256) {
         let buffer = editor_buffers.get(path);
-        if (buffer && buffer.sha256 !== sha256)
+        if (buffer && (sha256 == null || buffer.sha256 !== sha256))
             buffer.reload = true;
     }
 
