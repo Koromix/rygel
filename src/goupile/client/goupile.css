@@ -26,7 +26,7 @@ button {
 }
 button:not(:disabled) { cursor: pointer; }
 
-/* -------------------- Busy animation -------------------- */
+/* -------------------- Overlays -------------------- */
 
 body.busy, .busy:empty {
     display: flex;
@@ -66,6 +66,11 @@ body.busy > * { display: none !important; }
 @keyframes gp_busy_spinner {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+.broken {
+    filter: grayscale(100%);
+    opacity: 0.5;
 }
 
 /* -------------------- Toolbars -------------------- */
@@ -229,11 +234,6 @@ body.busy > * { display: none !important; }
 #gp_menu + main { margin-top: 2.5em; }
 #gp_menu + main * { scroll-margin: 80px; }
 #gp_menu + main > .gp_panel { min-height: calc(100vh - 2.5em); }
-
-.gp_panel.broken {
-    filter: grayscale(100%);
-    opacity: 0.5;
-}
 
 #gp_error {
     position: fixed;

@@ -66,11 +66,18 @@ let dev_files = new function() {
     }
 
     async function toggleEditorFile(path) {
-        editor_path = path;
-        editor_path_forced = false;
+        try {
+            await syncEditor(path);
 
-        renderEditorPanel();
-        await syncEditor(path);
+            editor_path = path;
+            editor_path_forced = false;
+
+            renderEditorPanel();
+            editor_el.classList.remove('broken');
+        } catch (err) {
+            log.error(err);
+            editor_el.classList.add('broken');
+        }
     }
 
     async function syncEditor(path) {
