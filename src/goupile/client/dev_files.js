@@ -217,7 +217,7 @@ let dev_files = new function() {
                                            @click=${e => toggleAction(file, 'pull')}>&lt;</a>
                                         <a class=${action === 'noop' ? 'selected' : ''}
                                            @click=${e => toggleAction(file, 'noop')}>=</a>
-                                        <a class=${action === 'push' ? 'selected' : ''}
+                                        <a class=${action === 'push' ? 'selected' : (!file.sha256 && !file.deleted ? 'disabled' : '')}
                                            @click=${e => toggleAction(file, 'push')}>&gt;</a>
                                     </td>
 
