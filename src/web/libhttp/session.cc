@@ -6,44 +6,12 @@
 #include "session.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
-#ifdef _WIN32
-    #include <ws2tcpip.h>
-#else
-    #include <arpa/inet.h>
-#endif
-
 namespace RG {
 
 static const int64_t PruneDelay = 60 * 60000;
 static const int64_t MaxSessionDelay = 1440 * 60000;
 static const int64_t MaxKeyDelay = 120 * 60000;
 static const int64_t RegenerateDelay = 15 * 60000;
-
-static bool GetClientAddress(MHD_Connection *conn, Span<char> out_address)
-{
-    RG_ASSERT(out_address.len);
-
-    int family;
-    void *addr;
-    {
-        sockaddr *saddr =
-            MHD_get_connection_info(conn, MHD_CONNECTION_INFO_CLIENT_ADDRESS)->client_addr;
-
-        family = saddr->sa_family;
-        switch (saddr->sa_family) {
-            case AF_INET: { addr = &((sockaddr_in *)saddr)->sin_addr; } break;
-            case AF_INET6: { addr = &((sockaddr_in6 *)saddr)->sin6_addr; } break;
-            default: { RG_UNREACHABLE(); } break;
-        }
-    }
-
-    if (!inet_ntop(family, addr, out_address.ptr, out_address.len)) {
-        LogError("Cannot convert network address to text");
-        return false;
-    }
-
-    return true;
-}
 
 void http_SessionManager::Open2(const http_RequestInfo &request, http_IO *io, RetainPtr<RetainObject> udata)
 {
@@ -62,13 +30,6 @@ void http_SessionManager::Open2(const http_RequestInfo &request, http_IO *io, Re
 http_SessionManager::Session *
     http_SessionManager::CreateSession(const http_RequestInfo &request, http_IO *io)
 {
-    char address[65];
-    RG_STATIC_ASSERT(RG_SIZE(address) == RG_SIZE(Session::client_addr));
-    if (!GetClientAddress(request.conn, address)) {
-        io->AttachError(422);
-        return nullptr;
-    }
-
     const char *user_agent = request.GetHeaderValue("User-Agent");
     if (!user_agent) {
         LogError("Missing User-Agent header");
@@ -110,7 +71,7 @@ http_SessionManager::Session *
     }
 
     // Fill extra security values
-    strcpy(session->client_addr, address);
+    strcpy(session->client_addr, request.client_addr);
     strncpy(session->user_agent, user_agent, RG_SIZE(session->user_agent) - 1);
 
     // Set session cookies
@@ -179,14 +140,6 @@ http_SessionManager::Session *
 {
     int64_t now = GetMonotonicTime();
 
-    char address[65];
-    if (!GetClientAddress(request.conn, address)) {
-        if (out_mismatch) {
-            *out_mismatch = false;
-        }
-        return nullptr;
-    }
-
     const char *session_key = request.GetCookieValue("session_key");
     const char *user_agent = request.GetHeaderValue("User-Agent");
     if (!session_key || !user_agent) {
@@ -198,7 +151,7 @@ http_SessionManager::Session *
 
     Session *session = sessions.Find(session_key);
     if (!session ||
-            !TestStr(session->client_addr, address) ||
+            !TestStr(session->client_addr, request.client_addr) ||
             strncmp(session->user_agent, user_agent, RG_SIZE(session->user_agent) - 1) ||
             now - session->login_time >= MaxSessionDelay ||
             now - session->register_time >= MaxKeyDelay) {

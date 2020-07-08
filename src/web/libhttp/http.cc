@@ -6,6 +6,12 @@
 #include "http.hh"
 #include "misc.hh"
 
+#ifdef _WIN32
+    #include <ws2tcpip.h>
+#else
+    #include <arpa/inet.h>
+#endif
+
 namespace RG {
 
 bool http_Daemon::Start(const http_Config &config,
@@ -83,6 +89,32 @@ void http_Daemon::Stop()
     daemon = nullptr;
 }
 
+static bool GetClientAddress(MHD_Connection *conn, Span<char> out_address)
+{
+    RG_ASSERT(out_address.len);
+
+    int family;
+    void *addr;
+    {
+        sockaddr *saddr =
+            MHD_get_connection_info(conn, MHD_CONNECTION_INFO_CLIENT_ADDRESS)->client_addr;
+
+        family = saddr->sa_family;
+        switch (saddr->sa_family) {
+            case AF_INET: { addr = &((sockaddr_in *)saddr)->sin_addr; } break;
+            case AF_INET6: { addr = &((sockaddr_in6 *)saddr)->sin6_addr; } break;
+            default: { RG_UNREACHABLE(); } break;
+        }
+    }
+
+    if (!inet_ntop(family, addr, out_address.ptr, out_address.len)) {
+        LogError("Cannot convert network address to text");
+        return false;
+    }
+
+    return true;
+}
+
 static void ReleaseDataCallback(void *ptr)
 {
     Allocator::Release(nullptr, ptr, -1);
@@ -125,6 +157,11 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
         io->request.conn = conn;
         io->request.method = method;
 
+        if (!GetClientAddress(conn, io->request.client_addr)) {
+            io->AttachError(422);
+            return MHD_queue_response(conn, (unsigned int)io->code, io->response);
+        }
+
         // Trim URL prefix (base_url setting)
         for (Size i = 0; daemon->base_url[i]; i++, url++) {
             if (url[0] != daemon->base_url[i]) {
@@ -147,16 +184,11 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
     std::lock_guard<std::mutex> lock(io->mutex);
     http_RequestInfo *request = &io->request;
 
+    io->PushLogFilter();
+    RG_DEFER { PopLogFilter(); };
+
     // Run handler (sync first, and than async handlers if any)
     if (io->state == http_IO::State::Sync) {
-        PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
-            if (level == LogLevel::Error) {
-                io->last_err = DuplicateString(msg, &io->allocator).ptr;
-            }
-            func(level, ctx, msg);
-        });
-        RG_DEFER { PopLogFilter(); };
-
         daemon->handle_func(*request, io);
         io->state = http_IO::State::Idle;
     }
@@ -259,12 +291,7 @@ void http_Daemon::RunNextAsync(http_IO *io)
         std::swap(io->async_func, func);
 
         async->Run([=]() {
-            PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
-                if (level == LogLevel::Error) {
-                    io->last_err = DuplicateString(msg, &io->allocator).ptr;
-                }
-                func(level, ctx, msg);
-            });
+            io->PushLogFilter();
             RG_DEFER { PopLogFilter(); };
 
             func();
@@ -523,6 +550,20 @@ bool http_IO::ReadPostValues(Allocator *alloc,
 void http_IO::AddFinalizer(const std::function<void()> &func)
 {
     finalizers.Append(func);
+}
+
+void http_IO::PushLogFilter()
+{
+    // This log filter does two things: it keeps a copy of the last log error message,
+    // and it sets the log context to the client address (for log file).
+    RG::PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
+        if (level == LogLevel::Error) {
+            last_err = DuplicateString(msg, &allocator).ptr;
+        }
+
+        ctx = request.client_addr;
+        func(level, ctx, msg);
+    });
 }
 
 Size http_IO::Read(Span<uint8_t> out_buf)

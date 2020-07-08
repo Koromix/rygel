@@ -2944,15 +2944,15 @@ static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args...
 // Shortcut log functions
 #ifndef NDEBUG
 template <typename... Args>
-static inline void LogDebug(Args... args) { Log(LogLevel::Debug, "(debug) ", args...); }
+static inline void LogDebug(Args... args) { Log(LogLevel::Debug, "Debug", args...); }
 #else
 template <typename... Args>
 static inline void LogDebug(Args...) {}
 #endif
 template <typename... Args>
-static inline void LogInfo(Args... args) { Log(LogLevel::Info, "", args...); }
+static inline void LogInfo(Args... args) { Log(LogLevel::Info, nullptr, args...); }
 template <typename... Args>
-static inline void LogError(Args... args) { Log(LogLevel::Error, "Error: ", args...); }
+static inline void LogError(Args... args) { Log(LogLevel::Error, "Error", args...); }
 
 void SetLogHandler(const std::function<LogFunc> &func);
 void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg);

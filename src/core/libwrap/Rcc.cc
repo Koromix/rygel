@@ -30,7 +30,7 @@ RG_INIT(RedirectLog)
 
             case LogLevel::Info:
             case LogLevel::Debug: {
-                PrintLn("%1%2", ctx, msg);
+                PrintLn("%1%2%3", ctx ? ctx : "", ctx ? ": " : "", msg);
             } break;
         }
     });

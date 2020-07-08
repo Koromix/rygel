@@ -1256,7 +1256,7 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg>
     char ctx_buf[512];
     if (log_times) {
         double time = (double)(GetMonotonicTime() - start_time) / 1000;
-        Fmt(ctx_buf, "[%1] %2", FmtDouble(time, 3).Pad(-8), ctx);
+        Fmt(ctx_buf, "[%1] %2", FmtDouble(time, 3).Pad(-8), ctx ? ctx : "");
 
         ctx = ctx_buf;
     }
@@ -1288,8 +1288,8 @@ void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg)
 
     switch (level)  {
         case LogLevel::Debug:
-        case LogLevel::Info: { PrintLn(stderr, "%!D..%1%!0%2", ctx, msg); } break;
-        case LogLevel::Error: { PrintLn(stderr, "%!R..%1%!0%2", ctx, msg); } break;
+        case LogLevel::Info: { PrintLn(stderr, "%!D..%1%2%!0%3", ctx ? ctx : "", ctx ? ": " : "", msg); } break;
+        case LogLevel::Error: { PrintLn(stderr, "%!R..%1%2%!0%3", ctx ? ctx : "", ctx ? ": " : "", msg); } break;
     }
 }
 

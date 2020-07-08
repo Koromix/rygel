@@ -61,6 +61,8 @@ struct http_RequestInfo {
     const char *url;
     CompressionType compression_type;
 
+    char client_addr[65];
+
     const char *GetHeaderValue(const char *key) const
         { return MHD_lookup_connection_value(conn, MHD_HEADER_KIND, key); }
     const char *GetQueryValue(const char *key) const
@@ -134,6 +136,8 @@ public:
     void AddFinalizer(const std::function<void()> &func);
 
 private:
+    void PushLogFilter();
+
     Size Read(Span<uint8_t> out_buf);
     bool Write(Span<const uint8_t> buf);
 
