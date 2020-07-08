@@ -138,10 +138,13 @@
     font-style: normal;
 }
 
-.st_table td.id { text-align: center; }
+.st_table td.id {
+    text-align: center;
+    color: #666;
+}
 .st_table td.none:before {
     padding-right: 4px;
-    color: #777;
+    color: #666;
     content: '⬤\FE0E';
 }
 .st_table td.partial:before {
@@ -199,7 +202,10 @@
     font-style: normal;
 }
 
-.rec_table td.id { text-align: center; }
+.rec_table td.id {
+    text-align: center;
+    color: #666;
+}
 .rec_table td.number { text-align: right; }
 .rec_table td.missing {
     text-align: center;

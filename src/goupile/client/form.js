@@ -331,7 +331,7 @@ let form_executor = new function() {
                                         <a @click=${e => handleEditClick(record)}>🔍\uFE0E</a>
                                         <a @click=${e => showDeleteDialog(e, record)}>✕</a>
                                     </th>
-                                    <td class="id">${record.sequence}</td>
+                                    <td class="id">${record.sequence || 'local'}</td>
 
                                     ${pages.map(page => {
                                         let complete = record.complete[page.key];
@@ -436,13 +436,13 @@ let form_executor = new function() {
                                                       <a @click=${e => showDeleteDialog(e, record)}>✕</a></th>` : ''}
                             ${select_many ? html`<th><input type="checkbox" .checked=${current_records.has(record.id)}
                                                             @click=${e => handleEditClick(record)} /></th>` : ''}
-                            <td class="id">${record.sequence}</td>
+                            <td class="id">${record.sequence || 'local'}</td>
 
                             ${columns.map(col => {
                                 let value = record.values[col.key];
 
                                 if (value == null) {
-                                    return html`<td class="missing" title="Donnée manquante">NA</td>`;
+                                    return html`<td class="missing" title="Donnée manquante">MD</td>`;
                                 } else if (Array.isArray(value)) {
                                     let text = value.join('|');
                                     return html`<td title=${text}>${text}</td>`;
