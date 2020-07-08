@@ -213,11 +213,11 @@ let dev_files = new function() {
 
                                 ${remote ? html`
                                     <td class="sync_actions">
-                                        <a class=${action === 'pull' ? 'selected' : (file.action === 'pull' ? 'default' : '')}
+                                        <a class=${action === 'pull' ? 'selected' : ''}
                                            @click=${e => toggleAction(file, 'pull')}>&lt;</a>
-                                        <a class=${action === 'noop' ? 'selected' : (file.action === 'noop' ? 'default' : '')}
+                                        <a class=${action === 'noop' ? 'selected' : ''}
                                            @click=${e => toggleAction(file, 'noop')}>=</a>
-                                        <a class=${action === 'push' ? 'selected' : (file.action === 'push' ? 'default' : '')}
+                                        <a class=${action === 'push' ? 'selected' : ''}
                                            @click=${e => toggleAction(file, 'push')}>&gt;</a>
                                     </td>
 

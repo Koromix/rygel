@@ -35,10 +35,6 @@
 
 .sync_actions { text-align: center; }
 .sync_actions > a { padding: 0 6px 1px 6px; }
-.sync_actions > a.default {
-    padding-bottom: 0;
-    font-weight: bold;
-}
 .sync_actions > a.selected {
     background: #24579d;
     border-radius: 12px;
