@@ -68,7 +68,7 @@ let goupile = new function() {
                     self.go();
             };
         } finally {
-            document.body.classList.remove('busy');
+            document.querySelector('#gp_all').classList.remove('busy');
         }
     }
 
@@ -418,7 +418,7 @@ let goupile = new function() {
 
                 <div id="gp_error" style="display: none;"></div>
             </main>
-        `, document.body);
+        `, document.querySelector('#gp_all'));
     }
 
     function renderFullMenu() {
@@ -813,7 +813,7 @@ let goupile = new function() {
                     ${page.render()}
                 </form>
                 <div style="flex: 1;"></div>
-            `, document.body);
+            `, document.querySelector('#gp_all'));
 
             if (focus) {
                 let el = document.querySelector('#gp_login input');
@@ -882,8 +882,19 @@ let goupile = new function() {
     };
 
     function openPopup(e, action, func) {
-        if (!popup_el)
-            initPopup();
+        if (!popup_el) {
+            popup_el = document.createElement('div');
+            popup_el.setAttribute('id', 'gp_popup');
+            document.body.appendChild(popup_el);
+
+            popup_el.addEventListener('keydown', e => {
+                if (e.keyCode == 27)
+                    closePopup();
+            });
+
+            popup_el.addEventListener('click', e => e.stopPropagation());
+            document.addEventListener('click', closePopup);
+        }
 
         let page = new Page('@popup');
 
@@ -966,20 +977,6 @@ let goupile = new function() {
             if (first_widget)
                 first_widget.focus();
         }
-    }
-
-    function initPopup() {
-        popup_el = document.createElement('div');
-        popup_el.setAttribute('id', 'gp_popup');
-        document.body.appendChild(popup_el);
-
-        popup_el.addEventListener('keydown', e => {
-            if (e.keyCode == 27)
-                closePopup();
-        });
-
-        popup_el.addEventListener('click', e => e.stopPropagation());
-        document.addEventListener('click', closePopup);
     }
 
     function closePopup() {

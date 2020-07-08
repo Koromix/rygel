@@ -5,14 +5,16 @@
 /* -------------------- Layout and basic elements -------------------- */
 
 body {
-    display: flex;
-    flex-direction: column;
     margin: 0;
     padding: 0;
-    min-height: 100vh;
     background: #f8f8f8;
     font-family: 'Open Sans', sans-serif;
     font-size: 12px;
+}
+#gp_all {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 @media (pointer: coarse) {
     body { font-size: 16px; }
@@ -28,7 +30,7 @@ button:not(:disabled) { cursor: pointer; }
 
 /* -------------------- Overlays -------------------- */
 
-body.busy, .busy:empty {
+#gp_all.busy, .busy:empty {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -37,7 +39,7 @@ body.busy, .busy:empty {
     animation-fill-mode: forwards;
     animation-delay: 0.3s;
 }
-body.busy:before, .busy:empty:before {
+#gp_all.busy:before, .busy:empty:before {
     float: left;
     display: inline-block;
     box-sizing: border-box;
@@ -45,7 +47,7 @@ body.busy:before, .busy:empty:before {
     height: 80px;
     margin: -2px 0 0 -2px;
 }
-body.busy:after, .busy:empty:after {
+#gp_all.busy:after, .busy:empty:after {
     content: ' ';
     display: block;
     width: 48px;
@@ -56,7 +58,7 @@ body.busy:after, .busy:empty:after {
     border-color: white transparent white transparent;
     animation: gp_busy_spinner 0.8s ease-in-out infinite;
 }
-body.busy > * { display: none !important; }
+#gp_all.busy > * { display: none !important; }
 @keyframes gp_busy {
     100% {
         visibility: visible;

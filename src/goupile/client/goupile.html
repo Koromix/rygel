@@ -40,6 +40,9 @@
         {LINK_MANIFEST}
     </head>
 
-    <body><noscript><div class="gp_wip">Cette application nécessite un support Javascript</div></noscript></body>
-    <script>document.body.classList.add('busy');</script>
+    <body>
+        <noscript><div class="gp_wip">Cette application nécessite un support Javascript</div></noscript>
+        <div id="gp_all"></div>
+        <script>document.querySelector('#gp_all').classList.add('busy');</script>
+    </body>
 </html>
