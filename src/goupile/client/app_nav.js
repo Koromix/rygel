@@ -7,6 +7,9 @@ function ApplicationNavigator() {
 
     let block = 0;
 
+    // Used to prevent go() from working when a script is first opened or changed
+    // in the editor, because then we wouldn't be able to come back to the script to
+    // fix the code.
     this.block = function() { block++; };
     this.unblock = function() { block--; };
 

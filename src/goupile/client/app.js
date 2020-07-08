@@ -8,15 +8,7 @@ function Application() {
     this.forms = [];
     this.schedules = [];
 
-    // This assets is always available, even in broken apps
-    this.assets = [{
-        type: 'main',
-        url: `${env.base_url}main/`,
-
-        category: 'Application',
-        label: 'Paramétrage',
-        overview: 'Structure',
-    }];
+    this.assets = [];
 
     // Initialized by goupile.js and main script
     this.home = null;

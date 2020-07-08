@@ -145,9 +145,6 @@ let goupile = new function() {
         await fetchSettings();
 
         if (self.isConnected() || env.allow_guests) {
-            let files = await virt_fs.listAll(net.isOnline() || !env.use_offline);
-            let files_map = util.mapArray(files, file => file.path);
-
             try {
                 let new_app = new Application;
                 let app_builder = new ApplicationBuilder(new_app);
@@ -157,16 +154,6 @@ let goupile = new function() {
 
                 let func = Function('util', 'app', 'shared', 'go', 'route', code);
                 func(util, app_builder, new_app.shared, nav.go, new_app.route);
-
-                let known_paths = new Set(new_app.assets.map(asset => asset.path));
-                known_paths.add('/files/main.js');
-                known_paths.add('/files/main.css');
-
-                // Make unused files available
-                for (let file of files) {
-                    if (!known_paths.has(file.path))
-                        app_builder.file(file);
-                }
 
                 app = new_app;
             } catch (err) {
@@ -184,24 +171,13 @@ let goupile = new function() {
                 app.assets[i].idx = i;
 
             // Select default page
-            if (app.home) {
-                app.urls_map[env.base_url] = app.urls_map[app.home];
-            } else {
-                app.urls_map[env.base_url] =
-                    app.assets.find(asset => asset.type !== 'main' && asset.type !== 'blob') || app.assets[0];
-            }
+            app.urls_map[env.base_url] = app.home ? app.urls_map[app.home] : app.assets[0];
 
-            // Load custom template (if any)
-            {
-                let html = await readCode('/files/main.html') || '';
-                changeTemplate(html);
-            }
-
-            // Update custom CSS (if any)
-            {
-                let css = await readCode('/files/main.css') || '';
-                changeCSS(css);
-            }
+            // Load custom template and CSS (if any)
+            let html = await readCode('/files/main.html') || '';
+            let css = await readCode('/files/main.css') || '';
+            changeTemplate(html);
+            changeCSS(css);
 
             util.deepFreeze(app, 'route');
         } else {
@@ -501,10 +477,6 @@ let goupile = new function() {
                 ${util.mapRLE(app.assets, asset => asset.category, (category, offset, len) => {
                     if (category == null) {
                         return '';
-                    } else if (len === 1) {
-                        let asset = app.assets[offset];
-                        return html`<option value=${asset.url}
-                                            .selected=${asset === select_asset}>${asset.category} (${asset.label})</option>`;
                     } else {
                         return html`<optgroup label=${category}>${util.mapRange(offset, offset + len, idx => {
                             let asset = app.assets[idx];
@@ -681,20 +653,31 @@ let goupile = new function() {
         self.go();
     }
 
-    this.validateCode = function(path, code) {
+    this.validateCode = async function(path, code) {
         if (path === '/files/main.js') {
-            return runAssetSafe(app.assets[0], code);
+            nav.block();
+            try {
+                await self.initApplication(code);
+
+                showScriptError(null);
+                return true;
+            } catch (err) {
+                showScriptError(err);
+                return false;
+            } finally {
+                nav.unblock();
+            }
         } else if (path === '/files/main.css') {
             changeCSS(code);
             return true;
         } else if (path === '/files/main.html') {
             changeTemplate(code);
             if (route_asset)
-                runAssetSafe(route_asset);
+                await runAssetSafe(route_asset);
             return true;
         } else {
             let asset = app.paths_map[path];
-            return asset ? runAssetSafe(asset, code) : true;
+            return asset ? await runAssetSafe(asset, code) : true;
         }
     };
 
@@ -720,21 +703,9 @@ let goupile = new function() {
             test_el = document.createElement('div');
         }
 
-        // We don't want go() to be fired when a script is opened or changed in the editor,
-        // because then we wouldn't be able to come back to the script to fix the code.
         nav.block();
-
         try {
             switch (asset.type) {
-                case 'main': {
-                    if (code != null) {
-                        await self.initApplication();
-                        return true;
-                    }
-
-                    render(html`<div class="gp_wip">Tableau de bord non disponible</div>`, test_el);
-                } break;
-
                 case 'page': {
                     if (code == null)
                         code = await readCode(asset.path);
@@ -753,13 +724,21 @@ let goupile = new function() {
             if (broken_template)
                 throw new Error(`Le modèle ne contient pas d'élément avec l'ID '@page'`);
 
-            // Things are OK!
-            error_el.innerHTML = '';
-            error_el.style.display = 'none';
-            overview_el.classList.remove('broken');
-
+            showScriptError(null);
             return true;
         } catch (err) {
+            showScriptError(err);
+            return false;
+        } finally {
+            nav.unblock();
+        }
+    }
+
+    function showScriptError(err) {
+        let error_el = document.querySelector('#gp_error');
+        let overview_el = document.querySelector('#gp_overview');
+
+        if (err) {
             let err_line = util.parseEvalErrorLine(err);
 
             // XXX: If the user changes page quickly before changes are tested, we can
@@ -774,10 +753,11 @@ let goupile = new function() {
 
             // Make it easier for complex screw ups (which are mine, most of the time)
             console.log(err);
-
-            return false;
-        } finally {
-            nav.unblock();
+        } else {
+            // Things are OK!
+            error_el.innerHTML = '';
+            error_el.style.display = 'none';
+            overview_el.classList.remove('broken');
         }
     }
 
