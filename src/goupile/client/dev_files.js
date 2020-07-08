@@ -37,17 +37,17 @@ let dev_files = new function() {
             editor_tabs.push({name: asset.edit, path: asset.path});
 
             if (editor_path_forced || !editor_tabs.find(tab => tab.path === editor_path)) {
-                editor_path = asset.path;
-                editor_path_forced = false;
+                await syncEditor(asset.path, false);
+            } else {
+                await syncEditor(editor_path, editor_path_forced);
             }
         } else {
             if (!editor_tabs.find(tab => tab.path === editor_path)) {
-                editor_path = '/files/main.js';
-                editor_path_forced = true;
+                await syncEditor('/files/main.js', true);
+            } else {
+                await syncEditor(editor_path, editor_path_forced);
             }
         }
-
-        await syncEditor(editor_path);
 
         // Do this after syncEditor() to avoid flashing wrong file when editor panel is
         // enabled and there was another file rendered in editor_el before.
@@ -66,21 +66,11 @@ let dev_files = new function() {
     }
 
     async function toggleEditorFile(path) {
-        try {
-            await syncEditor(path);
-
-            editor_path = path;
-            editor_path_forced = false;
-
-            renderEditorPanel();
-            editor_el.classList.remove('broken');
-        } catch (err) {
-            log.error(err);
-            editor_el.classList.add('broken');
-        }
+        await syncEditor(path, false);
+        renderEditorPanel();
     }
 
-    async function syncEditor(path) {
+    async function syncEditor(path, forced) {
         if (!editor) {
             editor = ace.edit(editor_el);
 
@@ -92,38 +82,45 @@ let dev_files = new function() {
         let buffer = editor_buffers.get(path);
         let extension = path.substr(path.lastIndexOf('.'));
 
-        if (!buffer || buffer.reload) {
-            let file = await virt_fs.load(path);
-            let code = file ? await file.data.text() : '';
+        if (!buffer || buffer.invalid) {
+            try {
+                let file = await virt_fs.load(path);
+                let code = file ? await file.data.text() : '';
 
-            if (buffer) {
-                buffer.sha256 = file ? file.sha256 : null;
-                buffer.reload = false;
+                if (buffer) {
+                    buffer.sha256 = file ? file.sha256 : null;
+                    buffer.invalid = false;
 
-                editor_ignore_change = true;
-                editor.session.doc.setValue(code);
-                editor_ignore_change = false;
-            } else {
-                let session;
-                switch (extension) {
-                    case '.js': { session = new ace.EditSession(code, 'ace/mode/javascript'); } break;
-                    case '.css': { session = new ace.EditSession(code, 'ace/mode/css'); } break;
-                    case '.html': { session = new ace.EditSession(code, 'ace/mode/html'); } break;
-                    default: { session = new ace.EditSession(code, 'ace/mode/text'); } break;
+                    editor_ignore_change = true;
+                    buffer.session.doc.setValue(code);
+                    editor_ignore_change = false;
+                } else {
+                    let session;
+                    switch (extension) {
+                        case '.js': { session = new ace.EditSession(code, 'ace/mode/javascript'); } break;
+                        case '.css': { session = new ace.EditSession(code, 'ace/mode/css'); } break;
+                        case '.html': { session = new ace.EditSession(code, 'ace/mode/html'); } break;
+                        default: { session = new ace.EditSession(code, 'ace/mode/text'); } break;
+                    }
+
+                    session.setOption('useWorker', false);
+                    session.setUseWrapMode(true);
+                    session.setUndoManager(buffer ? buffer.session.getUndoManager() : new ace.UndoManager());
+                    session.on('change', e => handleEditorChange(path));
+
+                    buffer = {
+                        session: session,
+                        sha256: file ? file.sha256 : null,
+                        invalid: false
+                    };
+
+                    editor_buffers.set(path, buffer);
                 }
+            } catch (err) {
+                log.error(err);
+                editor_el.classList.add('broken');
 
-                session.setOption('useWorker', false);
-                session.setUseWrapMode(true);
-                session.setUndoManager(buffer ? buffer.session.getUndoManager() : new ace.UndoManager());
-                session.on('change', e => handleEditorChange(path));
-
-                buffer = {
-                    session: session,
-                    sha256: file ? file.sha256 : null,
-                    reload: false
-                };
-
-                editor_buffers.set(path, buffer);
+                return;
             }
         }
 
@@ -135,6 +132,9 @@ let dev_files = new function() {
         // Auto-pairing of parentheses is problematic when doing
         // execute-as-you-type, because it easily leads to infinite for loops.
         editor.setBehavioursEnabled(extension !== '.js');
+
+        editor_path = path;
+        editor_path_forced = forced;
 
         editor.resize(false);
     }
@@ -164,7 +164,7 @@ let dev_files = new function() {
 
     this.getBuffer = function(path) {
         let buffer = editor_buffers.get(path);
-        return (buffer && !buffer.reload) ? buffer.session.doc.getValue() : null;
+        return (buffer && !buffer.invalid) ? buffer.session.doc.getValue() : null;
     };
 
     this.runFiles = async function() {
@@ -298,13 +298,13 @@ let dev_files = new function() {
                 entry.progress('Enregistrement du fichier');
                 try {
                     let file = await virt_fs.save(path.value, blob.value || '');
-                    syncBuffer(file.path, file.sha256);
+                    markBufferInvalid(file.path, file.sha256);
 
                     await goupile.initApplication();
 
                     entry.success('Fichier enregistré !');
                 } catch (err) {
-                    entry.error(`Echec de l'enregistrement : ${err.message}`);
+                    entry.error(`Échec de l'enregistrement : ${err.message}`);
                 }
             };
         });
@@ -361,13 +361,13 @@ let dev_files = new function() {
 
     async function resetFile(path) {
         await virt_fs.reset(path);
-        syncBuffer(path, null);
+        markBufferInvalid(path, null);
         delete user_actions[path];
     }
 
     async function deleteFile(path) {
         await virt_fs.delete(path);
-        syncBuffer(path, null);
+        markBufferInvalid(path, null);
         delete user_actions[path];
     }
 
@@ -381,10 +381,10 @@ let dev_files = new function() {
         renderActions();
     }
 
-    function syncBuffer(path, sha256) {
+    function markBufferInvalid(path, sha256) {
         let buffer = editor_buffers.get(path);
         if (buffer && (sha256 == null || buffer.sha256 !== sha256))
-            buffer.reload = true;
+            buffer.invalid = true;
     }
 
     async function syncFiles() {
@@ -409,7 +409,7 @@ let dev_files = new function() {
 
         for (let [path, buffer] of editor_buffers) {
             let file = files2_map[path];
-            buffer.reload = (file && file.sha256 !== buffer.sha256) || (!file && buffer.sha256);
+            buffer.invalid = (file && file.sha256 !== buffer.sha256) || (!file && buffer.sha256);
         }
 
         user_actions = {};
