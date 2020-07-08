@@ -185,7 +185,7 @@ let dev_files = new function() {
 
             <table class="sync_table">
                 <thead><tr>
-                    <th style="width: 1em;"></th>
+                    <th style="width: 2.4em;"></th>
                     <th>Fichier</th>
                     <th style="width: 4.6em;"></th>
 
@@ -199,15 +199,16 @@ let dev_files = new function() {
                 <tbody>${files.map(file => {
                     if (file.sha256 || file.remote_sha256) {
                         let action = user_actions[file.path] || file.action;
+                        let show_reset = file.deleted || (file.sha256 && (!env.use_offline ||
+                                                                          file.sha256 !== file.remote_sha256));
 
                         return html`
                             <tr class=${file.action === 'conflict' ? 'conflict' : ''}>
-                                <td><a @click=${e => showDeleteDialog(e, file.path)}>x</a></td>
                                 <td>
-                                    <span class=${makeLocalPathClass(file, action)}>${file.path}</span>
-                                    ${(file.sha256 && file.sha256 !== file.remote_sha256) || file.deleted ?
-                                        html`<a @click=${e => showResetDialog(e, file)}>&nbsp;👻\uFE0E</a>` : ''}
+                                    <a @click=${e => showDeleteDialog(e, file.path)}>x</a>
+                                    ${show_reset ? html`<a @click=${e => showResetDialog(e, file)}>&nbsp;👻\uFE0E</a>` : ''}
                                 </td>
+                                <td class=${makeLocalPathClass(file, action)}>${file.path}</td>
                                 <td class="sync_size">${file.sha256 ? util.formatDiskSize(file.size) : ''}</td>
 
                                 ${remote ? html`
