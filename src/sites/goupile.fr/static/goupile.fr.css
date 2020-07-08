@@ -218,18 +218,6 @@ main {
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
 }
 
-#wip {
-    display: inline-block;
-    position: sticky;
-    float: right;
-    top: 3.5em;
-    padding: 4px;
-    background: red;
-    color: white;
-    font-size: 1.3em;
-    font-weight: bold;
-}
-
 @media screen and (max-width: 580px) {
     #header { height: auto; }
     #header > div:first-child > a { text-align: right; }
