@@ -337,7 +337,7 @@ let goupile = new function() {
 
                 // Restart application after session changes
                 if (await fetchSettings()) {
-                    await self.initApplication();
+                    self.initApplication();
                     return;
                 }
 
