@@ -444,12 +444,17 @@ let log = new function() {
         render(entries.map((entry, idx) => {
             let msg = (entry.msg instanceof Error) ? entry.msg.message : entry.msg;
 
-            return html`<div class=${'ut_log_entry ' + entry.type} @click=${e => closeLogEntry(idx)}>
-                ${entry.type === 'progress' ?
-                    html`<div class="ut_log_spin"></div>` :
-                    html`<button class="ut_log_close">X</button>`}
-                ${msg.split('\n').map(line => [line, html`<br/>`])}
-            </div>`;
+            if (entry.type === 'progress') {
+                return html`<div class="ut_log_entry progress">
+                    <div class="ut_log_spin"></div>
+                    ${msg.split('\n').map(line => [line, html`<br/>`])}
+                </div>`;
+            } else {
+                return html`<div class=${'ut_log_entry ' + entry.type} @click=${e => closeLogEntry(idx)}>
+                    <button class="ut_log_close">X</button>
+                    ${msg.split('\n').map(line => [line, html`<br/>`])}
+                </div>`;
+            }
         }), log_el);
     }
 
