@@ -183,7 +183,9 @@ function VirtualFS(db) {
                     // Special case, the file does not exist anywhere anymore but the client
                     // still has some metadata. This pull action will clean up the pieces.
                     files.push(makeSyncEntry(local_file.path, local_file, null, 'pull'));
-                } else if (sync_file && sync_file.sha256 === local_file.sha256) {
+                } else if (!sync_file) {
+                    files.push(makeSyncEntry(local_file.path, local_file, null, 'push'));
+                } else if (sync_file.sha256 === local_file.sha256) {
                     files.push(makeSyncEntry(local_file.path, local_file, null, 'pull'));
                 } else {
                     files.push(makeSyncEntry(local_file.path, local_file, null, 'conflict'));
