@@ -218,7 +218,7 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
     }
 
     io->RunAsync([=]() {
-        io->AddCachingHeaders(goupile_config.max_age, file->sha256);
+        io->AddCachingHeaders(0, file->sha256);
 
         if (request.compression_type == CompressionType::None) {
 #ifdef _WIN32
