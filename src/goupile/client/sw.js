@@ -66,11 +66,18 @@ self.addEventListener('fetch', e => {
             if (path.startsWith('/app/') || path.startsWith('/main/'))
                 return await caches.match(env.base_url) || await net.fetch(env.base_url);
 
-            if (path.startsWith('/files/')) {
+            if (path.startsWith('/files/') || path == '/favicon.png') {
+                let db_path;
+                if (path == '/favicon.png') {
+                    db_path = '/files/favicon.png';
+                } else {
+                    db_path = path;
+                }
+
                 let db_name = `goupile:${env.app_key}`;
                 let db = await idb.open(db_name);
 
-                let file_data = await db.load('fs_data', path);
+                let file_data = await db.load('fs_data', db_path);
                 if (file_data)
                     return new Response(file_data);
             }
