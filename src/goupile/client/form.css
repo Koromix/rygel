@@ -126,7 +126,7 @@
 
 .st_table tbody tr:nth-child(2n + 1) { background: #efefef; }
 .st_table tbody tr:nth-child(2n) { background: #f4f4f4; }
-.st_table tbody tr.selected {
+.st_table tbody tr.selected td, .st_table tbody tr.selected th {
     background: #666;
     color: white;
 }
@@ -190,7 +190,7 @@
 
 .rec_table tbody tr:nth-child(2n + 1) { background: #efefef; }
 .rec_table tbody tr:nth-child(2n) { background: #f4f4f4; }
-.rec_table tbody tr.selected {
+.rec_table tbody tr.selected td, .rec_table tbody tr.selected th {
     background: #666;
     color: white;
 }
