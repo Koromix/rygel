@@ -25,7 +25,7 @@
 }
 .af_section > legend {
     padding: 1px 0.7em;
-    background: #24579d;
+    background: #de6a1d;
     font-size: 1.1em;
     color: white;
     cursor: pointer;
@@ -159,11 +159,11 @@
 }
 .af_button::-moz-focus-inner { border: 0; }
 .af_button:not(:disabled):focus { outline: 1px dotted #ccc; }
-.af_button:not(:disabled):hover { border-color: #24579d; }
+.af_button:not(:disabled):hover { border-color: #de6a1d; }
 .af_button:disabled { background: #bbb; }
 .af_button.active {
-    background: #24579d;
-    border-color: #24579d;
+    background: #de6a1d;
+    border-color: #de6a1d;
     color: white;
 }
 
@@ -196,7 +196,7 @@
     top: 2.3em;
     transform: translateX(-50%);
     padding: 0 5px;
-    background: #24579d;
+    background: #de6a1d;
     color: white;
     font-size: 0.9em;
 }
@@ -226,7 +226,7 @@
     width: 1.6em;
     height: 1.6em;
     margin-top: -0.6em;
-    background: #24579d;
+    background: #de6a1d;
     border: none;
     border-radius: 50%;
 }
@@ -235,7 +235,7 @@
     width: 1.6em;
     height: 1.6em;
     margin-top: -0.6em;
-    background: #24579d;
+    background: #de6a1d;
     border: none;
     border-radius: 50%;
 }
