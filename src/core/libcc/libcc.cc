@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "libcc.hh"
-#ifndef LIBCC_NO_MINIZ
+#if !defined(LIBCC_NO_MINIZ) && __has_include("../../../vendor/miniz/miniz.h")
     #define MINIZ_NO_STDIO
     #define MINIZ_NO_TIME
     #define MINIZ_NO_ARCHIVE_APIS
@@ -4039,6 +4039,7 @@ void StreamWriter::ReleaseResources()
     dest.type = DestinationType::Memory;
 }
 
+#ifdef MZ_VERSION
 bool StreamWriter::Deflate(Span<const uint8_t> buf)
 {
     MinizDeflateContext *ctx = compression.u.miniz;
@@ -4060,6 +4061,7 @@ bool StreamWriter::Deflate(Span<const uint8_t> buf)
 
     return true;
 }
+#endif
 
 bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
 {
