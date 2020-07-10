@@ -817,7 +817,7 @@ let goupile = new function() {
             render(html`
                 <div style="flex: 1;"></div>
                 <form id="gp_login" @submit=${e => e.preventDefault()}>
-                    <h1>${env.app_name}</h1>
+                    <img id="gp_logo" src=${`${env.base_url}favicon.png`} alt="" />
                     ${page.render()}
                 </form>
                 <div style="flex: 1;"></div>

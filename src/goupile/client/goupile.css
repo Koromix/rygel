@@ -260,19 +260,16 @@ button:not(:disabled) { cursor: pointer; }
 
 #gp_login {
     width: 300px;
-    margin: 1em auto;
-    padding: 12px;
+    margin: 48px auto 12px auto;
+    padding: 56px 12px 12px 12px;
     background: #efefef;
 }
-#gp_login > h1 {
-    display: block;
-    margin: -12px -12px 6px -12px;
-    padding: 2px;
-    background: #24579d;
-    color: white;
-    text-align: center;
-    font-size: 1.2em;
-    font-weight: normal;
+#gp_logo {
+    position: absolute;
+    left: calc(50% - 48px);
+    margin-top: -96px;
+    width: 96px;
+    height: 96px;
 }
 
 #gp_popup {
