@@ -88,10 +88,11 @@
     position: sticky;
     float: right;
     display: inline-block;
-    top: calc(2.5em + 24px);
+    top: 24px;
     padding-top: 0;
     background: rgba(239, 239, 239, 0.8);
 }
+#gp_menu + main .af_actions.stick { top: calc(2.5em + 24px); }
 
 .af_actions > p {
     margin: 2px 0 6px 0;
