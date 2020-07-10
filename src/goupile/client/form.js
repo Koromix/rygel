@@ -147,7 +147,6 @@ let form_executor = new function() {
         builder.changeHandler = () => runPage(...arguments);
 
         // Build it!
-        builder.errorList();
         func(util, app.shared, nav.go, builder, builder,
              state.values, page.variables, app.route, state.scratch);
         builder.errorList();
