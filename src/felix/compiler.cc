@@ -176,8 +176,13 @@ public:
         switch (compile_mode) {
             case CompileMode::Debug:
             case CompileMode::DebugFast: { Fmt(&buf, " -g"); } break;
+#ifdef _WIN32
             case CompileMode::Fast: { Fmt(&buf, "%1", link_type == LinkType::Executable ? " -static" : ""); } break;
             case CompileMode::LTO: { Fmt(&buf, " -flto%1", link_type == LinkType::Executable ? " -static" : ""); } break;
+#else
+            case CompileMode::Fast: {} break;
+            case CompileMode::LTO: { Fmt(&buf, " -flto"); } break;
+#endif
         }
 
         // Objects and libraries
@@ -327,8 +332,13 @@ public:
         switch (compile_mode) {
             case CompileMode::Debug:
             case CompileMode::DebugFast: { Fmt(&buf, " -g"); } break;
+#ifdef _WIN32
             case CompileMode::Fast: { Fmt(&buf, " -s%1", link_type == LinkType::Executable ? " -static" : ""); } break;
             case CompileMode::LTO: { Fmt(&buf, " -flto -s%1", link_type == LinkType::Executable ? " -static" : ""); } break;
+#else
+            case CompileMode::Fast: { Fmt(&buf, " -s"); } break;
+            case CompileMode::LTO: { Fmt(&buf, " -flto -s"); } break;
+#endif
         }
 
         // Objects and libraries
