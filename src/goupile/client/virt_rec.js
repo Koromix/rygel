@@ -70,8 +70,10 @@ function VirtualRecords(db) {
             db.saveAll('rec_variables', variables);
         });
 
-        entry.complete = record.complete;
-        entry.values = record.values;
+        entry.complete = Object.assign({}, record.complete);
+        entry.complete[page] = false;
+        entry.values = Object.assign({}, record.values);
+
         return entry;
     };
 
