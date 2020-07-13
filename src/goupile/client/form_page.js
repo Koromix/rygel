@@ -697,14 +697,11 @@ function PageBuilder(state, page) {
     this.output = function(content, options = {}) {
         options = expandOptions(options);
 
-        // Don't output function content, helps avoid garbage output when the
-        // user types 'page.oupt(html);'.
-        if (!content || typeof content === 'function')
-            return;
-
-        let render = intf => html`<div class="af_wrap">${content}</div>`;
-
-        return addWidget('output', null, render, options);
+        // This helps avoid garbage output when the user types 'page.output(html);'
+        if (content != null && content !== html && content !== svg) {
+            let render = intf => html`<div class="af_wrap">${content}</div>`;
+            return addWidget('output', null, render, options);
+        }
     };
 
     this.scope = function(func) {
