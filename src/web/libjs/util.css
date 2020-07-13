@@ -17,9 +17,9 @@ a { cursor: pointer; }
 
 #ut_log {
     position: fixed;
-    left: calc(50% - 15em);
+    left: calc(50% - 180px);
     top: 20px;
-    width: 30em;
+    width: 360px;
     z-index: 99999;
     user-select: none;
     -moz-user-select: none;
