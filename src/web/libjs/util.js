@@ -6,6 +6,9 @@ if (typeof lithtml !== 'undefined') {
     window.render = lithtml.render;
     window.html = lithtml.html;
     window.svg = lithtml.svg;
+    window.until = lithtml.until;
+    window.guard = lithtml.guard;
+    window.live = lithtml.live;
 }
 
 // ------------------------------------------------------------------------
