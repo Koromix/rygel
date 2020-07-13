@@ -84,7 +84,7 @@ let dev_files = new function() {
 
         if (!buffer || buffer.invalid) {
             try {
-                let file = await virt_fs.load(path);
+                let file = await vfs.load(path);
                 let code = file ? await file.data.text() : '';
 
                 if (buffer) {
@@ -152,7 +152,7 @@ let dev_files = new function() {
             let code = editor.getValue();
 
             if (await goupile.validateCode(path, code)) {
-                let file = await virt_fs.save(path, code);
+                let file = await vfs.save(path, code);
 
                 // Avoid unwanted buffer reloads in some cases (such as file syncing)
                 let buffer = editor_buffers.get(path);
@@ -168,7 +168,7 @@ let dev_files = new function() {
     };
 
     this.runFiles = async function() {
-        files = await virt_fs.status(net.isOnline() || !env.use_offline);
+        files = await vfs.status(net.isOnline() || !env.use_offline);
         for (let file of files)
             file.action = user_actions[file.path] || file.action;
 
@@ -297,7 +297,7 @@ let dev_files = new function() {
 
                 entry.progress('Enregistrement du fichier');
                 try {
-                    let file = await virt_fs.save(path.value, blob.value || '');
+                    let file = await vfs.save(path.value, blob.value || '');
                     markBufferInvalid(file.path, file.sha256);
 
                     await goupile.initApplication();
@@ -360,13 +360,13 @@ let dev_files = new function() {
     }
 
     async function resetFile(path) {
-        await virt_fs.reset(path);
+        await vfs.reset(path);
         markBufferInvalid(path, null);
         delete user_actions[path];
     }
 
     async function deleteFile(path) {
-        await virt_fs.delete(path);
+        await vfs.delete(path);
         markBufferInvalid(path, null);
         delete user_actions[path];
     }
@@ -397,14 +397,14 @@ let dev_files = new function() {
                 file.action = user_actions[file.path] || file.action;
                 return file;
             });
-            await virt_fs.sync(actions);
+            await vfs.sync(actions);
 
             entry.success('Synchronisation terminée !');
         } catch (err) {
             entry.error(err);
         }
 
-        let files2 = await virt_fs.listAll(false);
+        let files2 = await vfs.listAll(false);
         let files2_map = files2.map(file => file.path);
 
         for (let [path, buffer] of editor_buffers) {

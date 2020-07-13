@@ -5,7 +5,7 @@
 // These globals are initialized below
 let app = null;
 let nav = null;
-let virt_fs = null;
+let vfs = null;
 let vrec = null;
 
 let goupile = new function() {
@@ -47,7 +47,7 @@ let goupile = new function() {
             initNavigation();
 
             let db = await openDatabase();
-            virt_fs = new VirtualFS(db);
+            vfs = new VirtualFS(db);
             vrec = new VirtualRecords(db);
 
             if (navigator.serviceWorker) {
@@ -93,11 +93,11 @@ let goupile = new function() {
 
     async function updateApplication() {
         try {
-            let files = await virt_fs.status();
+            let files = await vfs.status();
 
             if (files.some(file => file.action === 'pull' || file.action === 'conflict')) {
                 if (files.every(file => file.action === 'pull' || file.action === 'noop')) {
-                    await virt_fs.sync(files);
+                    await vfs.sync(files);
                 } else {
                     log.info('Mise à jour non appliquée : il existe des modifications locales')
                 }
@@ -775,7 +775,7 @@ let goupile = new function() {
         if (code != null) {
             return code;
         } else {
-            let file = await virt_fs.load(path);
+            let file = await vfs.load(path);
             return file ? await file.data.text() : null;
         }
     }
