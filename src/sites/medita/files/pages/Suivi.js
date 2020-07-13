@@ -34,7 +34,7 @@ if (id.value) {
 
     let p = Promise.all([
         window.Chart || net.loadScript(`${env.base_url}files/resources/chart.bundle.min.js`),
-        ...echelles.map(echelle => virt_rec.loadAll(echelle.form))
+        ...echelles.map(echelle => vrec.loadAll(echelle.form))
     ]);
 
     scratch.canvas = scratch.canvas || document.createElement('canvas');
@@ -181,7 +181,7 @@ function showDeleteDialog(e, form, id) {
         popup.submitHandler = async () => {
             popup.close();
 
-            await virt_rec.delete(form, id);
+            await vrec.delete(form, id);
             page.restart();
         };
     });

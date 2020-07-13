@@ -6,7 +6,7 @@
 let app = null;
 let nav = null;
 let virt_fs = null;
-let virt_rec = null;
+let vrec = null;
 
 let goupile = new function() {
     let self = this;
@@ -48,7 +48,7 @@ let goupile = new function() {
 
             let db = await openDatabase();
             virt_fs = new VirtualFS(db);
-            virt_rec = new VirtualRecords(db);
+            vrec = new VirtualRecords(db);
 
             if (navigator.serviceWorker) {
                 navigator.serviceWorker.register(`${env.base_url}sw.pk.js`);
@@ -651,7 +651,7 @@ let goupile = new function() {
 
         entry.progress('Synchronisation des données en cours');
         try {
-            await virt_rec.sync();
+            await vrec.sync();
 
             entry.success('Données synchronisées !');
         } catch (err) {
