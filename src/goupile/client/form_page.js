@@ -888,7 +888,7 @@ instead of:
         options = expandOptions(options);
 
         let render = intf => renderWrappedWidget(intf, html`
-            <div class="af_buttons">
+            <div class="af_actions">
                 ${buttons.filter(button => button != null).map((button, idx) =>
                     html`<button type=${idx ? 'button' : 'submit'} class="af_button"
                                  ?disabled=${!button[1]} title=${button[2] || ''}

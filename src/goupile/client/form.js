@@ -67,35 +67,37 @@ let form_executor = new function() {
         let func = Function('util', 'shared', 'go', 'form', 'page',
                             'values', 'variables', 'route', 'scratch', code);
 
-        if (!select_many || select_columns.size) {
-            render(html`
-                <div class="af_page">${util.map(current_records.values(), record => {
-                    let state = page_states[record.id];
-                    if (!state) {
-                        state = new PageState;
-                        page_states[record.id] = state;
-                    }
-
-                    // Pages need to update themselves without doing a full render
-                    let el = document.createElement('div');
-                    if (select_many)
+        if (!current_records.size) {
+            render(html`<div class="af_page">Aucun enregistrement sélectionné</div>`, panel_el);
+        } else if (select_many) {
+            if (select_columns.size) {
+                render(html`
+                    <div class="af_page">${util.map(current_records.values(), record => {
+                        // Each entry needs to update itself without doing a full render
+                        let el = document.createElement('div');
                         el.className = 'af_entry';
 
-                    if (select_many) {
-                        runPageMany(state, func, record, select_columns, el);
-                    } else {
-                        runPage(state, func, record, el);
-                    }
+                        runPageMany(func, record, select_columns, el);
 
-                    return el;
-                })}</div>
-            `, panel_el);
+                        return el;
+                    })}</div>
+                `, panel_el);
+            } else {
+                render(html`<div class="af_page">Aucune colonne sélectionnée</div>`, panel_el);
+            }
         } else {
-            render(html`<div class="af_page">Aucune colonne sélectionnée</div>`, panel_el);
+            let record = current_records.first();
+            runPage(func, record, panel_el);
         }
     };
 
-    function runPageMany(state, func, record, columns, el) {
+    function runPageMany(func, record, columns, el) {
+        let state = page_states[record.id];
+        if (!state) {
+            state = new PageState;
+            page_states[record.id] = state;
+        }
+
         let page = new Page(current_asset.page.key);
         let builder = new PageBuilder(state, page);
 
@@ -116,11 +118,9 @@ let form_executor = new function() {
              state.values, page.variables, {}, state.scratch);
 
         render(html`
-            <div class="af_actions">
-                <button type="button" class="af_button"
-                        ?disabled=${builder.hasErrors() || !state.changed}
-                        @click=${builder.submit}>Enregistrer</button>
-            </div>
+            <button type="button" class="af_button" style="float: right;"
+                    ?disabled=${builder.hasErrors() || !state.changed}
+                    @click=${builder.submit}>Enregistrer</button>
 
             ${page.widgets.map(intf => {
                 let visible = intf.key && columns.has(intf.key.toString());
@@ -131,7 +131,13 @@ let form_executor = new function() {
         window.history.replaceState(null, null, makeURL());
     }
 
-    function runPage(state, func, record, el) {
+    function runPage(func, record, el) {
+        let state = page_states[record.id];
+        if (!state) {
+            state = new PageState;
+            page_states[record.id] = state;
+        }
+
         let page = new Page(current_asset.page.key);
         let builder = new PageBuilder(state, page);
 
@@ -151,46 +157,55 @@ let form_executor = new function() {
              state.values, page.variables, app.route, state.scratch);
         builder.errorList();
 
+        let show_actions = current_asset.form.options.actions && page.variables.length;
         let enable_save = !builder.hasErrors() && state.changed;
         let enable_validate = !builder.hasErrors() && !state.changed &&
                               record.complete[page.key] === false;
 
         render(html`
-            <div class="af_path">${current_asset.form.pages.map(page2 => {
-                let complete = record.complete[page2.key];
+            <div class="af_form">
+                <div class="af_path">${current_asset.form.pages.map(page2 => {
+                    let complete = record.complete[page2.key];
 
-                let cls = '';
-                if (page2.key === page.key)
-                    cls += ' active';
-                if (complete == null) {
-                    // Leave as is
-                } else if (complete) {
-                    cls += ' complete';
-                } else {
-                    cls += ' partial';
-                }
+                    let cls = '';
+                    if (page2.key === page.key)
+                        cls += ' active';
+                    if (complete == null) {
+                        // Leave as is
+                    } else if (complete) {
+                        cls += ' complete';
+                    } else {
+                        cls += ' partial';
+                    }
 
-                return html`<a class=${cls} href=${makeLink(current_asset.form.key, page2.key, record)}>${page2.label}</a>`;
-            })}</div>
+                    return html`<a class=${cls} href=${makeLink(current_asset.form.key, page2.key, record)}>${page2.label}</a>`;
+                })}</div>
 
-            ${current_asset.form.options.actions ? html`
-                <div class="af_actions sticky">
-                    ${record.mtime != null ? html`
-                        <a @click=${e => handleNewClick(e, state.changed)}>x</a>
-                        <p>${record.sequence != null ? `ID n°${record.sequence}` : 'Enregistré (local)'}</p>
-                    ` : ''}
-                    ${record.mtime == null ? html`<p>Nouvelle fiche</p>` : ''}
+                ${show_actions ? html`
+                    <div class="af_id">
+                        ${record.mtime == null ? html`Nouvel enregistrement` : ''}
+                        ${record.mtime != null && record.sequence == null ? html`Enregistrement local` : ''}
+                        ${record.mtime != null && record.sequence != null ? html`Enregistrement n°${record.sequence}` : ''}
+                    </div>
+                ` : ''}
 
-                    <button type="button" class="af_button" ?disabled=${!enable_save}
-                            @click=${builder.submit}>Enregistrer</button>
-                    ${current_asset.form.options.validate ?
-                        html`<button type="button" class="af_button" ?disabled=${!enable_validate}
-                                     @click=${e => showValidateDialog(e, builder.submit)}>Valider</button>`: ''}
-                </div>
-            `: ''}
+                <div class="af_page"><br/>${page.render()}</div>
 
-            <br/>
-            ${page.render()}
+                ${show_actions ? html`
+                    <div class="af_actions">
+                        <button type="button" class="af_button" ?disabled=${!enable_save}
+                                @click=${builder.submit}>Enregistrer</button>
+                        ${current_asset.form.options.validate ?
+                            html`<button type="button" class="af_button" ?disabled=${!enable_validate}
+                                         @click=${e => showValidateDialog(e, builder.submit)}>Valider</button>`: ''}
+                        ${record.mtime != null ? html`
+                            <hr/>
+                            <button type="button" class="af_button" ?disabled=${!state.changed && record.mtime == null}
+                                    @click=${e => handleNewClick(e, state.changed)}>Fermer</button>
+                        ` : ''}
+                    </div>
+                `: ''}
+            </div>
         `, el);
 
         window.history.replaceState(null, null, makeURL());

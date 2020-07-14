@@ -177,15 +177,21 @@
     color: white;
 }
 
-.af_buttons { margin-top: 1.8em; }
-.af_buttons > .af_button {
-    display: block;
+.af_actions {
     width: 60%;
     max-width: 340px;
-    margin-left: auto;
-    margin-right: auto;
+    margin: 24px auto 0 auto;
 }
-.af_buttons > .af_button + .af_button { margin-top: 6px; }
+.af_actions > button {
+    display: block;
+    width: 100%;
+}
+.af_actions > * + * { margin: 6px 0; }
+.af_actions > hr {
+    border: none;
+    border-top: 1px solid #efefef;
+    border-top-width: 0.5px;
+}
 
 .af_calc { font-style: italic; }
 
