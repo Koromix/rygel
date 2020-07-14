@@ -83,7 +83,7 @@
 
 .af_form > .af_actions { margin-top: 6px; }
 
-@media (min-width: 1161px) {
+@media (min-width: 1021px) {
     .gp_panel.overview .af_form > .af_actions {
         position: fixed;
         display: inline-block;
