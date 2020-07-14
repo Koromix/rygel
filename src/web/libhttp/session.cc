@@ -152,7 +152,9 @@ http_SessionManager::Session *
     Session *session = sessions.Find(session_key);
     if (!session ||
             !TestStr(session->client_addr, request.client_addr) ||
+#ifdef NDEBUG
             strncmp(session->user_agent, user_agent, RG_SIZE(session->user_agent) - 1) ||
+#endif
             now - session->login_time >= MaxSessionDelay ||
             now - session->register_time >= MaxKeyDelay) {
         if (out_mismatch) {
