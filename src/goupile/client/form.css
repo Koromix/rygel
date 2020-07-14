@@ -38,9 +38,9 @@
 
 .af_id {
     position: absolute;
-    top: 8px;
+    top: 6px;
     right: 14px;
-    font-size: 0.9em;
+    font-size: 11px;
     color: #777;
     z-index: 999;
 }
