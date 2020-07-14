@@ -74,7 +74,7 @@
 .af_path > a.complete:before {
     padding-right: 4px;
     font-size: 0.9em;
-    content: '✓✓\FE0E';
+    content: '✓\FE0E✓\FE0E';
 }
 .af_path > a:hover { border-color: #de6a1d; }
 
@@ -166,7 +166,7 @@
 .st_table td.complete:before {
     padding-right: 4px;
     font-size: 0.9em;
-    content: '✓✓\FE0E';
+    content: '✓\FE0E✓\FE0E';
 }
 
 /* -------------------- Data -------------------- */
