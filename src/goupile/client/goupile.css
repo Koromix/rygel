@@ -203,7 +203,7 @@ button:not(:disabled) { cursor: pointer; }
     padding-left: 34px;
     background-image: url('icons.png');
     background-repeat: no-repeat;
-    background-size: 22px 462px;
+    background-size: 22px 506px;
 }
 @media screen and (max-width: 580px) {
     .gp_icon {
@@ -221,7 +221,7 @@ button:not(:disabled) { cursor: pointer; }
     min-width: 36px;
     background-image: url('icons.png');
     background-repeat: no-repeat;
-    background-size: 22px 462px;
+    background-size: 22px 506px;
 }
 
 /* -------------------- Panels -------------------- */

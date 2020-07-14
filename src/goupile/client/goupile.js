@@ -401,8 +401,10 @@ let goupile = new function() {
             ${!in_iframe && getLockURL() ? html`<nav id="gp_menu" class="gp_toolbar locked">
                 &nbsp;&nbsp;Application verrouillée
                 <div style="flex: 1;"></div>
-                <button type="button" @click=${toggleLock}>Déverrouiller</button>
-                <button @click=${showLoginDialog}>Connexion</button>
+                <button type="button" class="gp_icon" style="background-position: 0.6em calc(-450px + 1.2em)"
+                        @click=${showLoginDialog}>Connexion</button>
+                <button type="button" class="gp_icon" style="background-position: 0.6em calc(-186px + 1.2em)"
+                        @click=${toggleLock}>Déverrouiller</button>
             </nav>`: ''}
 
             <main>
@@ -504,10 +506,12 @@ let goupile = new function() {
                 })}
             </select>
 
-            ${!self.isConnected() ? html`<button @click=${showLoginDialog}>Connexion</button>` : ''}
+            ${!self.isConnected() ?
+                html`<button class="gp_icon" style="background-position: 0.6em calc(-450px + 1.2em)"
+                             @click=${showLoginDialog}>Connexion</button>` : ''}
             ${self.isConnected() ? html`
                 <div class="gp_dropdown right">
-                    <button class="gp_icon" style="background-position: 0.6em calc(-450px + 1.2em)">${settings.username}</button>
+                    <button class="gp_icon" style="background-position: 0.6em calc(-494px + 1.2em)">${settings.username}</button>
                     <div>
                         <button type="button" @click=${toggleLock}>Verrouiller</button>
                         <hr/>
