@@ -25,8 +25,8 @@
 
 .af_wrap + .af_container,
     .af_container + .af_container,
-    .af_container + .af_wrap { margin-top: 12px; }
-.af_wrap + .af_wrap { margin-top: 6px; }
+    .af_container + .af_wrap,
+    .af_wrap + .af_wrap { margin-top: 0.8em; }
 
 .af_entry + .af_entry {
     margin-top: 9px;
