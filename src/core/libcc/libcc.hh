@@ -3547,9 +3547,7 @@ public:
     ~Async();
 
     void Run(const std::function<bool()> &f);
-
     bool Sync();
-    void Abort();
 
     static bool IsTaskRunning();
     static int GetWorkerIdx();
