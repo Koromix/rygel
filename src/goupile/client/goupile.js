@@ -432,6 +432,9 @@ let goupile = new function() {
     }
 
     function renderFullMenu() {
+        let show_develop = settings.develop;
+        let show_data = settings.edit && route_asset && route_asset.form;
+
         let show_assets = [];
         let select_asset;
         if (route_asset) {
@@ -449,7 +452,7 @@ let goupile = new function() {
         }
 
         return html`
-            ${settings.develop ? html`
+            ${show_develop ? html`
                 <div class="gp_dropdown">
                     <button class=${left_panel === 'editor' || left_panel === 'files' ? 'gp_icon active' : 'gp_icon'}
                             style="background-position-y: calc(-228px + 1.2em)">Code</button>
@@ -462,7 +465,7 @@ let goupile = new function() {
                 </div>
             ` : ''}
 
-            ${settings.edit && route_asset && route_asset.form ? html`
+            ${show_data ? html`
                 <div class="gp_dropdown">
                     <button class=${left_panel === 'status' || left_panel === 'data' ? 'gp_icon active' : 'gp_icon'}
                             style="background-position-y: calc(-274px + 1.2em)">Recueil</button>
@@ -487,24 +490,27 @@ let goupile = new function() {
                 }
             })}
 
-            <select id="gp_assets" @change=${e => self.go(e.target.value)}>
-                ${!route_asset ? html`<option>-- Sélectionnez une page --</option>` : ''}
-                ${util.mapRLE(app.assets, asset => asset.category, (category, offset, len) => {
-                    if (category == null) {
-                        return '';
-                    } else {
-                        return html`<optgroup label=${category}>${util.mapRange(offset, offset + len, idx => {
-                            let asset = app.assets[idx];
-                            if (!asset.secondary) {
-                                return html`<option value=${asset.url}
-                                                   .selected=${asset === select_asset}>${asset.label}</option>`;
-                            } else {
-                                return '';
-                            }
-                        })}</optgroup>`;
-                    }
-                })}
-            </select>
+            ${show_develop ? html`
+                <select id="gp_assets" @change=${e => self.go(e.target.value)}>
+                    ${!route_asset ? html`<option>-- Sélectionnez une page --</option>` : ''}
+                    ${util.mapRLE(app.assets, asset => asset.category, (category, offset, len) => {
+                        if (category == null) {
+                            return '';
+                        } else {
+                            return html`<optgroup label=${category}>${util.mapRange(offset, offset + len, idx => {
+                                let asset = app.assets[idx];
+                                if (!asset.secondary) {
+                                    return html`<option value=${asset.url}
+                                                       .selected=${asset === select_asset}>${asset.label}</option>`;
+                                } else {
+                                    return '';
+                                }
+                            })}</optgroup>`;
+                        }
+                    })}
+                </select>
+            ` : ''}
+            ${!show_develop ? html`<div style="flex: 1;"></div>` : ''}
 
             ${!self.isConnected() ?
                 html`<button class="gp_icon" style="background-position-y: calc(-450px + 1.2em)"
