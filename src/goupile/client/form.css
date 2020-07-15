@@ -19,7 +19,7 @@
     position: relative;
     background: #efefef;
     border: 12px solid #f8f8f8;
-    border-top-width: 24px;
+    border-top-width: 32px;
     padding: 24px 12px 12px 12px;
 }
 
@@ -38,7 +38,7 @@
 
 .af_id {
     position: absolute;
-    top: 6px;
+    top: 14px;
     right: 14px;
     font-size: 11px;
     color: #777;
@@ -47,7 +47,7 @@
 
 .af_path {
     position: absolute;
-    top: 6px;
+    top: 12px;
     width: 100%;
     text-align: center;
     z-index: 999;
@@ -88,14 +88,14 @@
         position: fixed;
         display: inline-block;
         left: calc(50% + 394px);
-        top: 24px;
+        top: 32px;
         width: auto;
         margin-top: 0;
         z-index: 999;
     }
     .gp_panel.overview .af_form > .af_actions > * + * { margin: 4px 0; }
     .gp_panel.overview .af_form > .af_actions > hr { margin: 8px 0; }
-    #gp_menu + main .gp_panel.overview .af_form > .af_actions { top: calc(2.5em + 24px); }
+    #gp_menu + main .gp_panel.overview .af_form > .af_actions { top: calc(2.5em + 32px); }
     .gp_panel.overview .af_form > .af_actions > button { width: 9em; }
 }
 
