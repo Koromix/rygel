@@ -189,7 +189,7 @@ let form_executor = new function() {
                     </div>
                 ` : ''}
 
-                <div class="af_page"><br/>${page.render()}</div>
+                <div class="af_page">${page.render()}</div>
 
                 ${show_actions ? html`
                     <div class="af_actions">
@@ -336,7 +336,7 @@ let form_executor = new function() {
                 <tbody>
                     ${!records.length ?
                         html`<tr><td style="text-align: left;"
-                                     colspan=${1 + Math.max(1, pages.length)}>Aucune donnée à afficher</td></tr>` : ''}
+                                     colspan=${2 + Math.max(1, pages.length)}>Aucune donnée à afficher</td></tr>` : ''}
                     ${records.map(record => {
                         if (show_complete || !complete_set.has(record.id)) {
                             return html`
@@ -415,15 +415,18 @@ let form_executor = new function() {
                 <colgroup>
                     <col style="width: 3em;"/>
                     <col style="width: 60px;"/>
+                    ${!columns.length ? html`<col/>` : ''}
                     ${columns.map(col => html`<col/>`)}
                 </colgroup>
 
                 <thead>
-                    <tr class="rec_pages">
-                        <th colspan="2"></th>
-                        ${util.mapRLE(columns, col => col.page, (page, offset, len) =>
-                            html`<th colspan=${len}>${page}</th>`)}
-                    </tr>
+                    ${columns.length ? html`
+                        <tr>
+                            <th colspan="2"></th>
+                            ${util.mapRLE(columns, col => col.page, (page, offset, len) =>
+                                html`<th class="rec_page" colspan=${len}>${page}</th>`)}
+                        </tr>
+                    ` : ''}
                     <tr>
                         <th class="actions">
                             ${select_many ?

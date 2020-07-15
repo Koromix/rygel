@@ -401,9 +401,9 @@ let goupile = new function() {
             ${!in_iframe && getLockURL() ? html`<nav id="gp_menu" class="gp_toolbar locked">
                 &nbsp;&nbsp;Application verrouillée
                 <div style="flex: 1;"></div>
-                <button type="button" class="gp_icon" style="background-position: 0.6em calc(-450px + 1.2em)"
+                <button type="button" class="gp_icon" style="background-position-y: calc(-450px + 1.2em)"
                         @click=${showLoginDialog}>Connexion</button>
-                <button type="button" class="gp_icon" style="background-position: 0.6em calc(-186px + 1.2em)"
+                <button type="button" class="gp_icon" style="background-position-y: calc(-186px + 1.2em)"
                         @click=${toggleLock}>Déverrouiller</button>
             </nav>`: ''}
 
@@ -452,7 +452,7 @@ let goupile = new function() {
             ${settings.develop ? html`
                 <div class="gp_dropdown">
                     <button class=${left_panel === 'editor' || left_panel === 'files' ? 'gp_icon active' : 'gp_icon'}
-                            style="background-position: 0.6em calc(-228px + 1.2em)">Code</button>
+                            style="background-position-y: calc(-228px + 1.2em)">Code</button>
                     <div>
                         <button class=${left_panel === 'editor' ? 'active' : ''}
                                 @click=${e => toggleLeftPanel('editor')}>Éditeur</button>
@@ -465,7 +465,7 @@ let goupile = new function() {
             ${settings.edit && route_asset && route_asset.form ? html`
                 <div class="gp_dropdown">
                     <button class=${left_panel === 'status' || left_panel === 'data' ? 'gp_icon active' : 'gp_icon'}
-                            style="background-position: 0.6em  calc(-274px + 1.2em)">Recueil</button>
+                            style="background-position-y: calc(-274px + 1.2em)">Recueil</button>
                     <div>
                         <button class=${left_panel === 'status' ? 'active' : ''}
                                 @click=${e => toggleLeftPanel('status')}>Suivi</button>
@@ -479,11 +479,11 @@ let goupile = new function() {
                 if (asset === route_asset) {
                     return html`<button class=${show_overview ? 'gp_icon active': 'gp_icon'}
                                         @click=${e => self.toggleOverview()}
-                                        style="background-position: 0.6em calc(-318px + 1.2em)">${asset.overview}</button>`;
+                                        style="background-position-y: calc(-318px + 1.2em)">${asset.overview}</button>`;
                 } else {
                     return html`<button class="gp_icon"
                                         @click=${e => self.go(asset.url)}
-                                        style="background-position: 0.6em calc(-318px + 1.2em)">${asset.overview}</button>`;
+                                        style="background-position-y: calc(-318px + 1.2em)">${asset.overview}</button>`;
                 }
             })}
 
@@ -507,11 +507,11 @@ let goupile = new function() {
             </select>
 
             ${!self.isConnected() ?
-                html`<button class="gp_icon" style="background-position: 0.6em calc(-450px + 1.2em)"
+                html`<button class="gp_icon" style="background-position-y: calc(-450px + 1.2em)"
                              @click=${showLoginDialog}>Connexion</button>` : ''}
             ${self.isConnected() ? html`
                 <div class="gp_dropdown right">
-                    <button class="gp_icon" style="background-position: 0.6em calc(-494px + 1.2em)">${settings.username}</button>
+                    <button class="gp_icon" style="background-position-y: calc(-494px + 1.2em)">${settings.username}</button>
                     <div>
                         <button type="button" @click=${toggleLock}>Verrouiller</button>
                         <hr/>
@@ -794,13 +794,13 @@ let goupile = new function() {
 
         if (el) {
             if (!net.isPlugged()) {
-                el.style.backgroundPosition = '0.6em calc(-142px + 1.2em)';
+                el.style.backgroundPositionY = 'calc(-142px + 1.2em)';
                 el.title = 'Mode hors-ligne forcé';
             } else if (net.isOnline()) {
-                el.style.backgroundPosition = '0.6em calc(-54px + 1.2em)';
+                el.style.backgroundPositionY = 'calc(-54px + 1.2em)';
                 el.title = 'Serveur disponible';
             } else {
-                el.style.backgroundPosition = '0.6em calc(-98px + 1.2em)';
+                el.style.backgroundPositionY = 'ccalc(-98px + 1.2em)';
                 el.title = 'Serveur non disponible';
             }
         }

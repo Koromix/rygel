@@ -20,7 +20,7 @@
     background: #efefef;
     border: 12px solid #f8f8f8;
     border-top-width: 24px;
-    padding: 12px;
+    padding: 24px 12px 12px 12px;
 }
 
 .af_wrap + .af_container,
@@ -61,7 +61,7 @@
     border: 2px solid #f8f8f8;
     color: black;
     text-decoration: none;
-    font-size: 1.2em;
+    font-size: 1.1em;
 }
 .af_path > a + a { margin-left: 4px; }
 .af_path > a.active {
@@ -169,8 +169,10 @@
 
 .rec_table thead { background: #dfdfdf; }
 .rec_table thead th { font-weight: normal; }
-.rec_pages th { font-style: italic; }
-.rec_pages > th + th { background: linear-gradient(black, black) bottom/ calc(100% - 24px) 1px no-repeat; }
+.rec_page {
+    font-style: italic;
+    background: linear-gradient(black, black) bottom/ calc(100% - 24px) 1px no-repeat;
+}
 
 .rec_table th, .rec_table td {
     height: 1.7em;

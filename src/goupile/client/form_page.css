@@ -131,6 +131,7 @@
 .af_enum, .af_radio, .af_multi { display: inline-block; }
 .af_radio, .af_multi { padding-top: 3px; }
 .af_select {
+    width:100%;
     max-width: 100%;
     padding: 3px 22px 3px 2px;
     border: 1px solid #ccc;
@@ -180,7 +181,7 @@
 .af_actions {
     width: 60%;
     max-width: 340px;
-    margin: 24px auto 0 auto;
+    margin: 24px auto 6px auto;
 }
 .af_actions > button {
     display: block;

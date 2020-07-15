@@ -172,13 +172,13 @@ button:not(:disabled) { cursor: pointer; }
 
 #gp_assets {
     flex-grow: 1;
-    padding: 3px 22px 3px 2px;
+    padding: 3px 28px 3px 6px;
     min-width: 5em;
     background: inherit;
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
-    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAALCAYAAABhwJ3wAAAAmElEQVQ4jbXSsQpBARgFYC+hDLJISZQUA2UymCzKi8uiDEqhUKKw+CyGf7jEdZ064+lbTg55THHPqGtUc0lBAbMMkA3qiUjAipj/gOzQfIsErIRFCuSA9kdIwMpYfoEc0f0KCVgFqw+QE/qpkIDVng96hZwx+AkJWAPbBOSCYSZIwFrYB+SKUaZIwDrPZ90w/gsSsB4mafcPBrf6ZZY6+FYAAAAASUVORK5CYII=");
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAALCAYAAABs3u23AAAAmUlEQVQ4jbXSsQpBARgFYC+hDLJISZQUA2UymCzKi8uiDEqhUKKw+Cx3+AeEe5066/mWk0MeU9wz6hrV3LuggFkG2Ab1t1hAi5inwHZofoQFtITFD9gB7a+wgJax/AI7ovsTFtAKVh9gJ/RTYQGtJY97hZ0xyAQLaAPbJ9gFw0yxgLawD9gVo79gAe0kT7xh/FcsoD1M0u48ACpt+mWbBapLAAAAAElFTkSuQmCC");
     background-repeat: no-repeat;
     background-position: right;
     border: 0;
@@ -198,30 +198,37 @@ button:not(:disabled) { cursor: pointer; }
         color: white;
     }
 }
+@media screen and (max-width: 580px) {
+    #gp_assets { font-size: 1.1em; }
+}
 
 .gp_icon {
-    padding-left: 34px;
+    padding-left: 36px;
     background-image: url('icons.png');
     background-repeat: no-repeat;
     background-size: 22px 506px;
+    background-position-x: 6px;
 }
 @media screen and (max-width: 580px) {
     .gp_icon {
-        padding-left: 0;
-        max-width: 40px;
+        min-width: 3em;
+        max-width: 3em;
+        padding: 0 !important;
         text-indent: 200px;
         white-space: nowrap;
         overflow: hidden;
+        background-position-x: center;
     }
 }
 
 #gp_status {
-    width: 36px;
     height: 100%;
-    min-width: 36px;
+    min-width: 3em;
+    max-width: 3em;
     background-image: url('icons.png');
     background-repeat: no-repeat;
     background-size: 22px 506px;
+    background-position-x: center;
 }
 
 /* -------------------- Panels -------------------- */
