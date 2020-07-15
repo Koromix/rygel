@@ -69,16 +69,18 @@ bool http_Daemon::Start(const http_Config &config,
                               &http_Daemon::HandleRequest, this,
                               MHD_OPTION_NOTIFY_COMPLETED, &http_Daemon::RequestCompleted, this,
                               MHD_OPTION_ARRAY, mhd_options.data, MHD_OPTION_END);
-
     async = new Async(config.async_threads - 1);
 
+    running = true;
     return daemon;
 }
 
 void http_Daemon::Stop()
 {
+    running = false;
+
     if (async) {
-        async->Abort();
+        async->Sync();
         delete async;
     }
     if (daemon) {
@@ -144,6 +146,15 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
 {
     http_Daemon *daemon = (http_Daemon *)cls;
     http_IO *io = *(http_IO **)con_cls;
+
+    if (RG_UNLIKELY(!daemon->running)) {
+        const char *msg = "Server is shutting down";
+
+        MHD_Response *response = MHD_create_response_from_buffer(strlen(msg), (void *)msg, MHD_RESPMEM_PERSISTENT);
+        RG_DEFER { MHD_destroy_response(response); };
+
+        return MHD_queue_response(conn, 503, response);
+    }
 
     bool first_call = !io;
 
@@ -290,11 +301,13 @@ void http_Daemon::RunNextAsync(http_IO *io)
         std::function<void()> func;
         std::swap(io->async_func, func);
 
-        async->Run([=]() {
+        async->Run([=, this]() {
             io->PushLogFilter();
             RG_DEFER { PopLogFilter(); };
 
-            func();
+            if (RG_LIKELY(running)) {
+                func();
+            }
 
             std::unique_lock<std::mutex> lock(io->mutex);
 

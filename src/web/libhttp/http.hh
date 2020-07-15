@@ -26,6 +26,7 @@ class http_Daemon {
     RG_DELETE_COPY(http_Daemon)
 
     MHD_Daemon *daemon = nullptr;
+    std::atomic_bool running {false};
 
     const char *base_url;
     std::function<void(const http_RequestInfo &request, http_IO *io)> handle_func;
