@@ -183,7 +183,8 @@ bool Builder::AddTarget(const TargetInfo &target)
         switch (target.pack_link_mode) {
             case PackLinkMode::Static: { module = false; } break;
             case PackLinkMode::Module: { module = true; } break;
-            case PackLinkMode::ModuleIfDebug: { module = (build.compile_mode == CompileMode::Debug); } break;
+            case PackLinkMode::ModuleIfDebug: { module = (build.compile_mode == CompileMode::Debug ||
+                                                          build.compile_mode == CompileMode::DebugFast); } break;
         }
 
         // Build object file
