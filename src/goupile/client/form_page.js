@@ -1071,11 +1071,10 @@ instead of:
     }
 
     function readValue(key, default_value) {
-        if (state.values.hasOwnProperty(key)) {
-            return state.values[key];
-        } else {
-            return self.getValue(key, default_value);
-        }
+        if (!state.values.hasOwnProperty(key))
+            state.values[key] = self.getValue(key, default_value);
+
+        return state.values[key];
     }
 
     function updateValue(key, value, refresh = true) {
