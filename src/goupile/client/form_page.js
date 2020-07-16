@@ -253,24 +253,21 @@ function PageBuilder(state, page) {
         let value = parseFloat(readValue(key, options.value));
         let missing = (value == null || Number.isNaN(value));
 
-        // Used for rendering value box
-        let thumb_value = !missing ? util.clamp(value, options.min, options.max)
-                                   : ((options.min + options.max) / 2);
-        let thumb_pos = (thumb_value - options.min) / range;
+        let thumb_value = !missing ? value : ((options.max + options.min) / 2);
+        let fix_value = !missing ? util.clamp(value, options.min, options.max)
+                                 : ((options.min + options.max) / 2);
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div class=${missing ? 'af_slider missing' : 'af_slider'} style=${makeInputStyle(options)}>
-                <div>
-                    <span style=${`left: ${thumb_pos * 100}%;${options.untoggle ? ' cursor: pointer;': ''}`}
-                          @click=${e => handleSliderClick(e, key, value, options.min, options.max)}>${value.toFixed(options.decimals)}</span>
-                </div>
+                <div style=${options.untoggle ? ' cursor: pointer;': ''}
+                     @click=${e => handleSliderClick(e, key, value, options.min, options.max)}>${value.toFixed(options.decimals)}</div>
                 <input id=${id} type="range"
                        min=${options.min} max=${options.max} step=${1 / Math.pow(10, options.decimals)}
-                       .value=${!missing ? value : ((options.max + options.min) / 2)}
+                       .value=${thumb_value}
                        placeholder=${options.placeholder || ''} ?disabled=${options.disable}
-                       @click=${e => { e.target.value = thumb_value; handleNumberChange(e, key); }}
+                       @click=${e => { e.target.value = fix_value; handleNumberChange(e, key); }}
                        @dblclick=${e => handleSliderClick(e, key, value, options.min, options.max)}
                        @input=${e => handleNumberChange(e, key)}/>
             </div>
