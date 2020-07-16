@@ -61,6 +61,7 @@
     display: block;
     margin-bottom: 6px;
     padding-top: 4px;
+    color: #444;
 }
 .af_widget.mandatory > label:after {
     content: ' *';
