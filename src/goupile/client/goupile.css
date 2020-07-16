@@ -72,16 +72,17 @@ button:not(:disabled) { cursor: pointer; }
     100% { transform: rotate(360deg); }
 }
 
-.broken {
+.broken:not(:empty) {
     filter: grayscale(100%);
     opacity: 0.5;
 }
-.broken:after {
+.broken:empty:after {
     position: absolute;
     top: calc(50% - 0.7em);
     left: calc(50% - 0.3em);
     font-size: 14em;
     font-weight: bold;
+    color: #d72a2a;
     content: 'X';
 }
 
@@ -259,6 +260,7 @@ button:not(:disabled) { cursor: pointer; }
 }
 .gp_panel.right { margin-left: 50vw; }
 .gp_panel.overview { width: 100%; }
+.gp_panel:empty { background: rgba(136, 136, 136, 0.08); }
 
 #gp_menu + main { margin-top: 2.5em; }
 #gp_menu + main * { scroll-margin: 80px; }
