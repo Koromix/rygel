@@ -42,7 +42,7 @@
     right: 14px;
     font-size: 11px;
     color: #777;
-    z-index: 999;
+    z-index: 998;
 }
 
 .af_path {
@@ -82,6 +82,10 @@
 .af_path > a:hover { border-color: #de6a1d; }
 
 .af_form > .af_actions { margin-top: 6px; }
+
+@media screen and (max-width: 580px) {
+    .af_id { display: none; }
+}
 
 @media (min-width: 1021px) {
     .gp_panel.overview .af_form > .af_actions {
