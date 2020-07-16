@@ -16,6 +16,7 @@
 .af_tabs > .af_button:last-of-type { margin-right: 10px; }
 
 .af_section {
+    position: relative;
     min-height: 24px;
     margin: 0;
     padding: 10px;
@@ -49,9 +50,23 @@
 
 @media (max-width: 580px) {
     .af_section {
-        margin: 0 -12px;
+        margin-left: -12px;
+        margin-right: -12px;
+        padding-top: calc(2em + 6px);
+        background: rgba(136, 136, 136, 0.03);
         box-shadow: none;
     }
+    .af_section > legend {
+        display: block;
+        position: absolute;
+        box-sizing: border-box;
+        left: 0;
+        top: 0;
+        width: 100%;
+        padding: 3px 0.7em;
+    }
+
+    .af_section + .af_section { margin-top: 0; }
 }
 
 /* -------------------- Widgets -------------------- */
