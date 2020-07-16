@@ -271,7 +271,7 @@ button:not(:disabled) { cursor: pointer; }
     bottom: 0;
     right: 0;
     padding: 6px;
-    background: #db0a0a;
+    background: #d72a2a;
     color: white;
     white-space: pre-wrap;
     z-index: 9999;
