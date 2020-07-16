@@ -18,8 +18,8 @@
 .af_section {
     min-height: 24px;
     margin: 0;
-    padding: 10px 10px 6px 10px;
-    background: rgba(136, 136, 136, 0.08);
+    padding: 10px;
+    background: rgba(136, 136, 136, 0.06);
     border: 0;
     box-shadow: 2px 2px rgba(136, 136, 136, 0.12);
 }
@@ -45,6 +45,13 @@
 .af_section.error > legend {
     background: #d72a2a;
     margin-left: -5px;
+}
+
+@media (max-width: 580px) {
+    .af_section {
+        margin: 0 -12px;
+        box-shadow: none;
+    }
 }
 
 /* -------------------- Widgets -------------------- */
