@@ -13,6 +13,9 @@ input[type='checkbox'], input[type='radio'] { vertical-align: -2px; }
 
 a { cursor: pointer; }
 
+p { margin: 0; }
+p + p { margin-top: 1em; }
+
 /* -------------------- Notifications -------------------- */
 
 #ut_log {

@@ -137,9 +137,6 @@
     }
 }
 
-.af_wrap > p:first-child { margin-top: 0; }
-.af_wrap > p:last-child { margin-bottom: 0; }
-
 /* -------------------- Simple widgets -------------------- */
 
 .af_input {
