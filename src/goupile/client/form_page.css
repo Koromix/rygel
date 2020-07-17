@@ -141,7 +141,7 @@
 
 .af_input {
     max-width: 100%;
-    padding: 3px 2px;
+    padding: 3px 4px;
     border: 1px solid #ccc;
     border-width: 0.5px;
     overflow: hidden;
@@ -154,7 +154,7 @@
     /* This width: 100% is combined with an outer div set to max-width: 100% so that
        long options don't wreak havoc. Setting max-width: 100% here does not work correctly. */
     width: 100%;
-    padding: 3px 22px 3px 2px;
+    padding: 3px 22px 3px 4px;
     border: 1px solid #ccc;
     border-width: 0.5px;
     -webkit-appearance: none;
