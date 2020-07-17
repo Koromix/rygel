@@ -383,13 +383,15 @@ function PageBuilder(state, page) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <select id=${id} class="af_select" style=${makeInputStyle(options)}
-                    ?disabled=${options.disable} @change=${e => handleEnumDropChange(e, key)}>
-                ${options.untoggle || !props.some(p => p != null && value === p.value) ?
-                    html`<option value="undefined" .selected=${value == null}>-- Choisissez une option --</option>` : ''}
-                ${props.map(p =>
-                    html`<option value=${util.valueToStr(p.value)} .selected=${value === p.value}>${p.label}</option>`)}
-            </select>
+            <div style=${'display: inline-block; max-width: 100%; ' + makeInputStyle(options)}>
+                <select id=${id} class="af_select"
+                        ?disabled=${options.disable} @change=${e => handleEnumDropChange(e, key)}>
+                    ${options.untoggle || !props.some(p => p != null && value === p.value) ?
+                        html`<option value="undefined" .selected=${value == null}>-- Choisissez une option --</option>` : ''}
+                    ${props.map(p =>
+                        html`<option value=${util.valueToStr(p.value)} .selected=${value === p.value}>${p.label}</option>`)}
+                </select>
+            </div>
         `);
 
         let intf = addWidget('enumDrop', label, render, options);
