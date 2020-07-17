@@ -237,6 +237,18 @@ function PageBuilder(state, page) {
         return intf;
     };
 
+    function handleNumberChange(e, key) {
+        // Hack to accept incomplete values, mainly in the case of a '-' being typed first,
+        // in which case we don't want to clear the field immediately.
+        if (!e.target.validity || e.target.validity.valid) {
+            let value = parseFloat(e.target.value);
+            if (Number.isNaN(value))
+                value = undefined;
+
+            updateValue(key, value);
+        }
+    }
+
     this.slider = function(key, label, options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
@@ -257,19 +269,23 @@ function PageBuilder(state, page) {
         let fix_value = !missing ? util.clamp(value, options.min, options.max)
                                  : ((options.min + options.max) / 2);
 
+        // WebKit and Blink don't have anything like ::-moz-range-progress...
+        // We use a gradient background set from a CSS property. Yuck.
+        let webkit_progress = !missing ? ((fix_value - options.min) / range) : 0;
+
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div class=${missing ? 'af_slider missing' : 'af_slider'} style=${makeInputStyle(options)}>
                 <div style=${options.untoggle ? ' cursor: pointer;': ''}
                      @click=${e => handleSliderClick(e, key, value, options.min, options.max)}>${value.toFixed(options.decimals)}</div>
-                <input id=${id} type="range"
+                <input id=${id} type="range" style=${`--webkit_progress: ${webkit_progress * 100}%`}
                        min=${options.min} max=${options.max} step=${1 / Math.pow(10, options.decimals)}
                        .value=${thumb_value}
                        placeholder=${options.placeholder || ''} ?disabled=${options.disable}
-                       @click=${e => { e.target.value = fix_value; handleNumberChange(e, key); }}
+                       @click=${e => { e.target.value = fix_value; handleSliderChange(e, key); }}
                        @dblclick=${e => handleSliderClick(e, key, value, options.min, options.max)}
-                       @input=${e => handleNumberChange(e, key)}/>
+                       @input=${e => handleSliderChange(e, key)}/>
             </div>
         `);
 
@@ -281,16 +297,22 @@ function PageBuilder(state, page) {
         return intf;
     }
 
-    function handleNumberChange(e, key) {
-        // Hack to accept incomplete values, mainly in the case of a '-' being typed first,
-        // in which case we don't want to clear the field immediately.
-        if (!e.target.validity || e.target.validity.valid) {
-            let value = parseFloat(e.target.value);
-            if (Number.isNaN(value))
-                value = undefined;
+    function handleSliderChange(e, key) {
+        let value = parseFloat(e.target.value);
 
-            updateValue(key, value);
+        if (value == null || Number.isNaN(value)) {
+            value = undefined;
+
+            e.target.style.setProperty('--webkit_progress', '0%');
+        } else {
+            let min = parseFloat(e.target.min);
+            let max = parseFloat(e.target.max);
+
+            let webkit_progress = (value - min) / (max - min);
+            e.target.style.setProperty('--webkit_progress', `${webkit_progress * 100}%`);
         }
+
+        updateValue(key, value);
     }
 
     function handleSliderClick(e, key, value, min, max) {
