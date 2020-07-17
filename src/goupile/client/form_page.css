@@ -217,6 +217,80 @@
 
 .af_calc { font-style: italic; }
 
+/* -------------------- Nice radio and checkboxes -------------------- */
+
+.af_radio > input { display: none; }
+.af_radio > input + label {
+    position: relative;
+    padding-left: 27px;
+    line-height: 20px;
+    cursor: pointer;
+}
+.af_radio > input + label:before {
+    display: inline-block;
+    position: absolute;
+    left: 2px;
+    top: 0.15em;
+    height: 16px;
+    width: 16px;
+    box-sizing: border-box;
+    background: white;
+    border: 1px solid #ccc;
+    border-width: 0.5px;
+    border-radius: 50%;
+    content: ' ';
+}
+.af_radio > input + label:after {
+    display: inline-block;
+    position: absolute;
+    left: 4px;
+    top: calc(0.15em + 2px);
+    height: 12px;
+    width: 12px;
+    box-sizing: border-box;
+    background-color: black;
+    border: 2px solid white;
+    border-radius: 50%;
+}
+.af_radio > input:checked + label:after { content: ''; }
+.af_radio > input:hover + label:before { border-color: #de6a1d; }
+.af_radio > input:hover + label:after { background-color: #de6a1d; }
+
+.af_multi > input { display: none; }
+.af_multi > input + label {
+    position: relative;
+    padding-left: 27px;
+    line-height: 20px;
+    cursor: pointer;
+}
+.af_multi > input + label:before {
+    display: inline-block;
+    position: absolute;
+    left: 2px;
+    top: calc(0.5em - 5px);
+    width: 16px;
+    height: 16px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-width: 0.5px;
+    background: white;
+    content: ' ';
+}
+.af_multi > input + label:after {
+    display: inline-block;
+    position: absolute;
+    left: 6px;
+    top: calc(0.5em - 2px);
+    width: 8px;
+    height: 5px;
+    border-left: 1px solid black;
+    border-bottom: 1px solid black;
+    transform: rotate(-45deg);
+}
+.af_multi > input:checked + label:after { content: ''; }
+.af_multi > input:hover + label:before,
+    .af_multi > input:hover + label:after { border-color: #de6a1d; }
+
 /* -------------------- Slider -------------------- */
 
 .af_slider {
