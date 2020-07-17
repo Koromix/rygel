@@ -401,9 +401,9 @@ let goupile = new function() {
             ${!in_iframe && getLockURL() ? html`<nav id="gp_menu" class="gp_toolbar locked">
                 &nbsp;&nbsp;Application verrouillée
                 <div style="flex: 1;"></div>
-                <button type="button" class="gp_icon" style="background-position-y: calc(-450px + 1.2em)"
+                <button type="button" class="icon" style="background-position-y: calc(-450px + 1.2em)"
                         @click=${showLoginDialog}>Connexion</button>
-                <button type="button" class="gp_icon" style="background-position-y: calc(-186px + 1.2em)"
+                <button type="button" class="icon" style="background-position-y: calc(-186px + 1.2em)"
                         @click=${toggleLock}>Déverrouiller</button>
             </nav>`: ''}
 
@@ -454,7 +454,7 @@ let goupile = new function() {
         return html`
             ${show_develop ? html`
                 <div class="gp_dropdown">
-                    <button class=${left_panel === 'editor' || left_panel === 'files' ? 'gp_icon active' : 'gp_icon'}
+                    <button class=${left_panel === 'editor' || left_panel === 'files' ? 'icon active' : 'icon'}
                             style="background-position-y: calc(-228px + 1.2em)">Code</button>
                     <div>
                         <button class=${left_panel === 'editor' ? 'active' : ''}
@@ -467,7 +467,7 @@ let goupile = new function() {
 
             ${show_data ? html`
                 <div class="gp_dropdown">
-                    <button class=${left_panel === 'status' || left_panel === 'data' ? 'gp_icon active' : 'gp_icon'}
+                    <button class=${left_panel === 'status' || left_panel === 'data' ? 'icon active' : 'icon'}
                             style="background-position-y: calc(-274px + 1.2em)">Recueil</button>
                     <div>
                         <button class=${left_panel === 'status' ? 'active' : ''}
@@ -480,11 +480,11 @@ let goupile = new function() {
 
             ${show_assets.map(asset => {
                 if (asset === route_asset) {
-                    return html`<button class=${show_overview ? 'gp_icon active': 'gp_icon'}
+                    return html`<button class=${show_overview ? 'icon active': 'icon'}
                                         @click=${e => self.toggleOverview()}
                                         style="background-position-y: calc(-318px + 1.2em)">${asset.overview}</button>`;
                 } else {
-                    return html`<button class="gp_icon"
+                    return html`<button class="icon"
                                         @click=${e => self.go(asset.url)}
                                         style="background-position-y: calc(-318px + 1.2em)">${asset.overview}</button>`;
                 }
@@ -513,11 +513,11 @@ let goupile = new function() {
             ${!show_develop ? html`<div style="flex: 1;"></div>` : ''}
 
             ${!self.isConnected() ?
-                html`<button class="gp_icon" style="background-position-y: calc(-450px + 1.2em)"
+                html`<button class="icon" style="background-position-y: calc(-450px + 1.2em)"
                              @click=${showLoginDialog}>Connexion</button>` : ''}
             ${self.isConnected() ? html`
                 <div class="gp_dropdown right">
-                    <button class="gp_icon" style="background-position-y: calc(-494px + 1.2em)">${settings.username}</button>
+                    <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${settings.username}</button>
                     <div>
                         <button type="button" @click=${toggleLock}>Verrouiller</button>
                         <hr/>

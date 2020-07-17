@@ -113,6 +113,7 @@ button:not(:disabled) { cursor: pointer; }
     display: inline-block;
     height: 100%;
     box-sizing: border-box;
+    padding: 0 10px;
     background-color: inherit;
     border: 0;
     color: inherit;
@@ -206,7 +207,7 @@ button:not(:disabled) { cursor: pointer; }
     #gp_assets { font-size: 1.1em; }
 }
 
-.gp_icon {
+.gp_toolbar button.icon {
     padding-left: 36px;
     background-image: url('icons.png');
     background-repeat: no-repeat;
@@ -214,7 +215,7 @@ button:not(:disabled) { cursor: pointer; }
     background-position-x: 6px;
 }
 @media screen and (max-width: 580px) {
-    .gp_icon {
+    .gp_toolbar button.icon {
         min-width: 3em;
         max-width: 3em;
         padding: 0 !important;
