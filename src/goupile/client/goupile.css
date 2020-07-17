@@ -13,10 +13,11 @@ body {
     font-family: 'Open Sans', sans-serif;
     font-size: 13px;
 }
+main { height: 100%; }
 #gp_all {
     display: flex;
     flex-direction: column;
-    min-height: 100%;
+    height: 100%;
 }
 @media (pointer: coarse) {
     body { font-size: 16px; }
@@ -236,7 +237,7 @@ button:not(:disabled) { cursor: pointer; }
 
 /* -------------------- Panels -------------------- */
 
-.gp_panel { min-height: 100vh; }
+.gp_panel { min-height: 100%; }
 .gp_panel.left {
     position: fixed;
     left: 0;
@@ -262,9 +263,12 @@ button:not(:disabled) { cursor: pointer; }
 .gp_panel.overview { width: 100%; }
 .gp_panel:empty { background: rgba(136, 136, 136, 0.08); }
 
-#gp_menu + main { margin-top: 2.5em; }
+#gp_menu + main {
+    height: calc(100% - 2.5em);
+    margin-top: 2.5em;
+}
 #gp_menu + main * { scroll-margin: 80px; }
-#gp_menu + main > .gp_panel { min-height: calc(100vh - 2.5em); }
+#gp_menu + main > .gp_panel { min-height: calc(100% - 2.5em); }
 
 #gp_error {
     position: fixed;
