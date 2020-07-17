@@ -218,7 +218,7 @@
     display: inline-block;
     position: absolute;
     left: 2px;
-    top: 0.15em;
+    top: 1px;
     height: 16px;
     width: 16px;
     box-sizing: border-box;
@@ -232,9 +232,9 @@
     display: inline-block;
     position: absolute;
     left: 4px;
-    top: calc(0.15em + 2px);
-    height: 12px;
+    top: 3px;
     width: 12px;
+    height: 12px;
     box-sizing: border-box;
     background-color: black;
     border: 2px solid white;
@@ -255,7 +255,7 @@
     display: inline-block;
     position: absolute;
     left: 2px;
-    top: calc(0.5em - 5px);
+    top: 1px;
     width: 16px;
     height: 16px;
     box-sizing: border-box;
@@ -268,7 +268,7 @@
     display: inline-block;
     position: absolute;
     left: 6px;
-    top: calc(0.5em - 2px);
+    top: 4px;
     width: 8px;
     height: 5px;
     border-left: 1px solid black;
@@ -278,6 +278,40 @@
 .af_multi > input:checked + label:after { content: ''; }
 .af_multi > input:hover + label:before,
     .af_multi > input:hover + label:after { border-color: #de6a1d; }
+
+@media (pointer: coarse) {
+    .af_radio > input + label {
+        padding-left: 32px;
+        line-height: 28px;
+    }
+    .af_radio > input + label:before {
+        top: 0;
+        width: 22px;
+        height: 22px;
+    }
+    .af_radio > input + label:after {
+        left: 5px;
+        top: 3px;
+        width: 16px;
+        height: 16px;
+    }
+
+    .af_multi > input + label {
+        padding-left: 32px;
+        line-height: 28px;
+    }
+    .af_multi > input + label:before {
+        top: 0;
+        width: 22px;
+        height: 22px;
+    }
+    .af_multi > input + label:after {
+        left: 7px;
+        top: 4px;
+        width: 12px;
+        height: 7px;
+    }
+}
 
 /* -------------------- Slider -------------------- */
 
