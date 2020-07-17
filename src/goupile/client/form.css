@@ -9,7 +9,7 @@
     margin-left: 1px;
 }
 .gp_panel.overview > .af_form {
-    max-width: 800px;
+    max-width: 824px;
     margin: auto;
 }
 
@@ -94,11 +94,11 @@
     .af_id { display: none; }
 }
 
-@media (min-width: 1021px) {
+@media (min-width: 1061px) {
     .gp_panel.overview .af_form > .af_actions {
         position: fixed;
         display: inline-block;
-        left: calc(50% + 394px);
+        left: calc(50% + 406px);
         top: 32px;
         width: auto;
         margin-top: 0;
