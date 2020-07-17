@@ -52,21 +52,8 @@
     .af_section {
         margin-left: -12px;
         margin-right: -12px;
-        padding-top: calc(2em + 6px);
-        background: rgba(136, 136, 136, 0.03);
-        box-shadow: none;
+        box-shadow: 0 2px rgba(136, 136, 136, 0.12);
     }
-    .af_section > legend {
-        display: block;
-        position: absolute;
-        box-sizing: border-box;
-        left: 0;
-        top: 0;
-        width: 100%;
-        padding: 3px 0.7em;
-    }
-
-    .af_section + .af_section { margin-top: 0; }
 }
 
 /* -------------------- Widgets -------------------- */

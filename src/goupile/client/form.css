@@ -36,9 +36,11 @@
 
 @media (max-width: 580px) {
     .af_page {
+        padding-bottom: 2px;
         border-left: 0;
         border-right: 0;
     }
+    .af_page > :not(.af_section):last-child { margin-bottom: 10px; }
 }
 
 /* -------------------- Path and actions -------------------- */
