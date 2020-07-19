@@ -717,7 +717,7 @@ let form_executor = new function() {
         `, document.querySelector('#dev_describe'));
     };
 
-    function makeLink(form_key, page_key = undefined, record = undefined) {
+    function makeLink(form_key, page_key, record = undefined) {
         let url = `${env.base_url}app/${form_key}/${page_key || form_key}/`;
 
         if (record && record.mtime != null) {

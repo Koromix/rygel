@@ -23,7 +23,7 @@ function TreeSelector() {
     this.setPrefix = function(str) { prefix = str; };
     this.getPrefix = function() { return prefix; };
 
-    this.addTab = function(key, title = null) {
+    this.addTab = function(key, title = undefined) {
         let tab = {
             key: key,
             title: title || key,

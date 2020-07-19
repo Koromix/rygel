@@ -184,7 +184,7 @@ function FormBuilder(form) {
 
     let used_keys = new Set;
 
-    this.page = function(key, label = null) {
+    this.page = function(key, label = undefined) {
         if (!key)
             throw new Error('Empty keys are not allowed');
         if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))

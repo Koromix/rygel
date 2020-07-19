@@ -141,7 +141,7 @@ let goupile = new function() {
     }
 
     // Can be launched multiple times (e.g. when main.js is edited)
-    this.initApplication = async function(code = null) {
+    this.initApplication = async function(code = undefined) {
         await fetchSettings();
 
         if (self.isConnected() || env.allow_guests) {
@@ -251,7 +251,7 @@ let goupile = new function() {
     this.isStandalone = function() { return standalone_mq.matches; };
     this.isLocked = function() { return !!getLockURL(); };
 
-    this.go = async function(url = null, push_history = true) {
+    this.go = async function(url = undefined, push_history = true) {
         if (running) {
             restart = true;
             return;
@@ -619,7 +619,7 @@ let goupile = new function() {
         self.go();
     }
 
-    this.toggleOverview = function(enable = null) {
+    this.toggleOverview = function(enable = undefined) {
         if (enable == null)
             enable = !show_overview || goupile.isTablet();
 
@@ -704,7 +704,7 @@ let goupile = new function() {
         }
     };
 
-    async function runAssetSafe(asset, code = null) {
+    async function runAssetSafe(asset, code = undefined) {
         let error_el = document.querySelector('#gp_error');
         let overview_el = document.querySelector('#gp_overview');
 

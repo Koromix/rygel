@@ -15,13 +15,13 @@ function ApplicationNavigator() {
 
     // Avoid async here, because it may fail (see block_go) and the caller
     // may need to catch that synchronously.
-    this.go = function(url = null, push_history = true) {
+    this.go = function(url = undefined, push_history = true) {
         if (block) {
             throw new Error(`A navigation function (e.g. go()) has been interrupted.
 Navigation functions should only be called in reaction to user events, such as button clicks.`);
         }
 
-        if (!url.match(/^((http|ftp|https):\/\/|\/)/g))
+        if (url != null && !url.match(/^((http|ftp|https):\/\/|\/)/g))
             url = `${env.base_url}app/${url}`;
 
         goupile.go(url, push_history);

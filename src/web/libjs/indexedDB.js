@@ -4,7 +4,7 @@
 
 // XXX: Support degraded mode when IDB is not available (e.g. private browsing)
 let idb = new function () {
-    this.open = function(db_name, version = null, version_func = null) {
+    this.open = function(db_name, version = undefined, version_func = undefined) {
         let req;
         if (version != null) {
             req = indexedDB.open(db_name, version);
@@ -24,14 +24,14 @@ let idb = new function () {
 
         return new Promise((resolve, reject) => {
             req.onsuccess = e => {
-                let intf = new DatabaseInterface(e.target.result);
+                let intf = new DatabaseInterface(e.target.result, null);
                 resolve(intf);
             };
             req.onerror = e => logAndReject(reject, 'Failed to open database');
         });
     };
 
-    function DatabaseInterface(db, transaction = null) {
+    function DatabaseInterface(db, transaction) {
         let self = this;
 
         let aborted = false;
@@ -107,7 +107,7 @@ let idb = new function () {
             });
         };
 
-        this.loadAll = function(store, start = null, end = null) {
+        this.loadAll = function(store, start = undefined, end = undefined) {
             let query = makeKeyRange(start, end);
 
             return executeQuery('readonly', store, (t, resolve, reject) => {
@@ -136,7 +136,7 @@ let idb = new function () {
             });
         };
 
-        this.list = function(store, start = null, end = null) {
+        this.list = function(store, start = undefined, end = undefined) {
             let query = makeKeyRange(start, end);
 
             return executeQuery('readonly', store, (t, resolve, reject) => {
@@ -175,7 +175,7 @@ let idb = new function () {
             });
         };
 
-        this.deleteAll = function(store, start = null, end = null) {
+        this.deleteAll = function(store, start = undefined, end = undefined) {
             let query = makeKeyRange(start, end);
 
             if (query) {
