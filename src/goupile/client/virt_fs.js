@@ -5,6 +5,8 @@
 function VirtualFS(db) {
     let self = this;
 
+    let cache = new LruMap(6);
+
     this.save = async function(path, data) {
         if (!(data instanceof Blob))
             data = new Blob([data]);
@@ -20,6 +22,8 @@ function VirtualFS(db) {
             db.save('fs_entries', file);
             db.saveWithKey('fs_data', path, data);
         });
+
+        cache.delete(path);
 
         return file;
     };
@@ -74,6 +78,8 @@ function VirtualFS(db) {
                 db.delete('fs_data', path);
             });
         }
+
+        cache.delete(path);
     };
 
     this.delete = async function(path) {
@@ -81,6 +87,8 @@ function VirtualFS(db) {
             db.save('fs_entries', {path: path});
             db.delete('fs_data', path);
         });
+
+        cache.delete(path);
     };
 
     this.clear = async function() {
@@ -89,9 +97,15 @@ function VirtualFS(db) {
             db.clear('fs_data');
             db.clear('fs_sync');
         });
+
+        cache.clear();
     };
 
     this.load = async function(path) {
+        let cache_file = cache.get(path);
+        if (cache_file)
+            return cache_file;
+
         let [file, data] = await Promise.all([
             db.load('fs_entries', path),
             db.load('fs_data', path)
@@ -100,31 +114,32 @@ function VirtualFS(db) {
         if (file) {
             if (file.sha256) {
                 file.data = data;
-                return file;
             } else {
-                return null;
+                file = null;
             }
         } else if (net.isOnline() || !env.use_offline) {
             let response = await net.fetch(`${env.base_url}${path.substr(1)}`);
 
             if (response.ok) {
                 let blob = await response.blob();
-                let file = {
+
+                file = {
                     path: path,
                     size: blob.size,
                     sha256: response.headers.get('ETag')
                 };
-
                 await db.save('fs_sync', file);
 
                 file.data = blob;
-                return file;
             } else {
-                return null;
+                file = null;
             }
         } else {
-            return null;
+            file = null;
         }
+
+        cache.set(path, file);
+        return file;
     };
 
     this.listAll = async function(remote = true) {
@@ -301,6 +316,8 @@ function VirtualFS(db) {
                         db.delete('fs_sync', file.path);
                     });
                 }
+
+                cache.delete(file.path);
             } break;
         }
     }
