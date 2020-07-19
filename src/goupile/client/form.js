@@ -219,7 +219,7 @@ let form_executor = new function() {
             url = current_asset.url;
         } else {
             let record = current_records.first();
-            url = `${current_asset.url}${record.mtime != null ? record.id : 'new'}`;
+            url = `${current_asset.url}${record.mtime != null ? record.id : ''}`;
         }
 
         return util.pasteURL(url, app.route);
@@ -274,11 +274,11 @@ let form_executor = new function() {
 
                 page.submitHandler = () => {
                     close();
-                    goupile.go(makeLink(current_asset.form.key, current_asset.page.key));
+                    goupile.go(makeLink(current_asset.form.key, current_asset.page.key, null));
                 };
             })
         } else {
-            goupile.go(makeLink(current_asset.form.key, current_asset.page.key));
+            goupile.go(makeLink(current_asset.form.key, current_asset.page.key, null));
         }
     }
 
@@ -717,12 +717,12 @@ let form_executor = new function() {
         `, document.querySelector('#dev_describe'));
     };
 
-    function makeLink(form_key, page_key = null, record = null) {
+    function makeLink(form_key, page_key = undefined, record = undefined) {
         let url = `${env.base_url}app/${form_key}/${page_key || form_key}/`;
 
         if (record && record.mtime != null) {
             url += record.id;
-        } else {
+        } else if (record === null) {
             url += 'new';
         }
 
