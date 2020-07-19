@@ -74,7 +74,7 @@ self.addEventListener('fetch', e => {
                     db_path = path;
                 }
 
-                let db_name = `goupile:${env.app_key}`;
+                let db_name = `goupile+${env.app_key}`;
                 let db = await idb.open(db_name);
 
                 let file_data = await db.load('fs_data', db_path);

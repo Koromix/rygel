@@ -108,22 +108,17 @@ let goupile = new function() {
     }
 
     async function openDatabase() {
-        let db_name = `goupile:${env.app_key}`;
+        let db_name = `goupile+${env.app_key}`;
         let db = await idb.open(db_name, 2, (db, old_version) => {
             switch (old_version) {
                 case null: {
                     db.createStore('fs_entries', {keyPath: 'path'});
                     db.createStore('fs_data');
-                    db.createStore('fs_mirror', {keyPath: 'path'});
+                    db.createStore('fs_sync', {keyPath: 'path'});
 
                     db.createStore('rec_entries', {keyPath: '_ikey'});
                     db.createStore('rec_fragments', {keyPath: '_ikey'});
                     db.createStore('rec_variables', {keyPath: '_ikey'});
-                } // fallthrough
-
-                case 1: {
-                    db.deleteStore('fs_mirror');
-                    db.createStore('fs_sync', {keyPath: 'path'});
                 } // fallthrough
             }
         });
@@ -247,6 +242,8 @@ let goupile = new function() {
     }
 
     this.isConnected = function() { return !!settings_rnd; };
+    this.getUserName = function() { return settings.username || null; };
+
     this.isTablet = function() { return tablet_mq.matches; };
     this.isStandalone = function() { return standalone_mq.matches; };
     this.isLocked = function() { return !!getLockURL(); };

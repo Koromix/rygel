@@ -13,8 +13,9 @@ function VirtualRecords(db) {
             table: table,
             id: id,
 
+            versions: [],
+            version: null,
             mtime: null,
-            fragments: [],
             complete: {},
 
             values: {}
@@ -23,13 +24,13 @@ function VirtualRecords(db) {
         return record;
     };
 
-    this.save = async function(record, page, variables) {
+    this.save = async function(record, page, variables, username) {
         variables = variables.map((variable, idx) => {
             let ret = {
                 _ikey: makeVariableKey(record.table, page, variable.key),
 
                 table: record.table,
-                frag: page,
+                page: page,
                 key: variable.key.toString(),
 
                 before: variables[idx - 1] ? variables[idx - 1].key.toString() : null,
@@ -39,61 +40,84 @@ function VirtualRecords(db) {
             return ret;
         });
 
-        // We need to keep only valid values listed in variables
-        let entry = Object.assign({}, record);
-        entry.mtime = Date.now();
-        entry.fragments = entry.fragments.filter(frag => frag != page);
-        entry.fragments.push(page);
-        delete entry.complete;
-        delete entry.values;
-
         let frag = {
-            _ikey: makeFragmentKey(record.table, record.id, page),
+            _ikey: null,
 
-            table: entry.table,
-            id: entry.id,
-            frag: page,
+            table: record.table,
+            id: record.id,
+            version: null,
+            page: page,
 
+            username: username,
+            mtime: Date.now(),
             complete: false,
+
             values: {}
         };
         for (let variable of variables) {
             if (!variable.missing) {
-                let key = variable.key.toString();
+                let key = variable.key;
                 frag.values[key] = record.values[key];
             }
         }
 
-        await db.transaction('rw', ['rec_entries', 'rec_fragments', 'rec_variables'], () => {
+        await db.transaction('rw', ['rec_entries', 'rec_fragments', 'rec_variables'], async () => {
+            let ikey = makeEntryKey(record.table, record.id);
+            let entry = await db.load('rec_entries', ikey);
+
+            if (!entry) {
+                entry = {
+                    _ikey: ikey,
+
+                    table: record.table,
+                    id: record.id,
+
+                    pages: [],
+                    version: 0
+                };
+            }
+
+            entry.pages = entry.pages.filter(key => key !== page);
+            entry.pages.push(page);
+            frag.version = entry.version++;
+            frag._ikey = makeFragmentKey(record.table, record.id, frag.version);
+
             db.save('rec_entries', entry);
             db.save('rec_fragments', frag);
             db.saveAll('rec_variables', variables);
         });
 
-        entry.complete = Object.assign({}, record.complete);
-        entry.complete[page] = false;
-        entry.values = Object.assign({}, record.values);
+        let record2 = Object.assign({}, record);
+        record2.versions = record.versions.slice();
+        record2.versions.push({
+            version: frag.version,
+            username: frag.username,
+            mtime: frag.mtime
+        });
+        record2.version = frag.version;
+        record2.mtime = frag.mtime;
+        record2.complete = Object.assign({}, record.complete);
+        record2.complete[page] = false;
+        record2.values = Object.assign({}, record.values);
 
-        return entry;
+        return record2;
     };
 
     this.delete = async function(table, id) {
         let ikey = makeEntryKey(table, id);
-        await db.deleteAll('rec_fragments', ikey + ':', ikey + '`');
+        await db.deleteAll('rec_fragments', ikey + '@', ikey + '`');
     };
 
-    this.load = async function(table, id) {
+    this.load = async function(table, id, version = undefined) {
         let ikey = makeEntryKey(table, id);
 
-        let [record, fragments] = await Promise.all([
+        let [entry, fragments] = await Promise.all([
             db.load('rec_entries', ikey),
-            db.loadAll('rec_fragments', ikey)
+            db.loadAll('rec_fragments', ikey + '@', ikey + '`')
         ]);
 
-        if (record && fragments.length) {
-            let fragments_map = util.mapArray(fragments, frag => frag.frag);
-            expandFragments(record, fragments_map);
-
+        if (entry && fragments.length) {
+            let record = expandFragments(entry, fragments, version);
             return record;
         } else {
             return null;
@@ -114,19 +138,14 @@ function VirtualRecords(db) {
             while (k < fragments.length && fragments[k]._ikey < records[i]._ikey)
                 k++;
 
-            let valid = false;
-            let fragments_map = {};
+            let fragments_acc = [];
             while (k < fragments.length && fragments[k].table === table &&
-                                           fragments[k].id === records[i].id) {
-                let frag = fragments[k++];
+                                           fragments[k].id === records[i].id)
+                fragments_acc.push(fragments[k++]);
 
-                fragments_map[frag.frag] = frag;
-                valid = true;
-            }
-
-            if (valid) {
-                expandFragments(records[i], fragments_map);
-                i++;
+            if (fragments_acc.length) {
+                records[i] = expandFragments(records[i], fragments_acc);
+                i += !!records[i];
             }
         }
         records.length = i;
@@ -134,25 +153,50 @@ function VirtualRecords(db) {
         return records;
     };
 
-    function expandFragments(record, fragments_map) {
-        record.complete = {};
-        record.values = {};
+    function expandFragments(entry, fragments, version = undefined) {
+        let record = {
+            _ikey: entry._ikey,
 
-        for (let frag_key of record.fragments) {
-            frag = fragments_map[frag_key];
+            table: entry.table,
+            id: entry.id,
 
-            if (frag) {
-                record.complete[frag_key] = frag.complete;
-                Object.assign(record.values, frag.values);
-            } else {
-                console.log(`Damaged record %1 (missing fragment '%2')`, record.id, frag_key);
+            versions: fragments.map(frag => ({
+                version: frag.version,
+                username: frag.username,
+                mtime: frag.mtime
+            })),
+            version: null,
+            mtime: null,
+            complete: {},
+
+            values: {}
+        };
+
+        let pages_set = new Set(entry.pages);
+
+        for (let i = fragments.length - 1; i >= 0 && pages_set.size; i--) {
+            let frag = fragments[i];
+
+            if (version == null || frag.version <= version) {
+                if (record.version == null) {
+                    record.version = frag.version;
+                    record.mtime = frag.mtime;
+                }
+
+                if (pages_set.delete(frag.page)) {
+                    record.complete[frag.page] = frag.complete;
+                    record.values = Object.assign(frag.values, record.values);
+                }
             }
         }
-    }
 
-    this.listAll = async function(table) {
-        return db.loadAll('rec_entries', table + ':', table + '`');
-    };
+        if (pages_set.size) {
+            let list = Array.from(pages_set);
+            console.error(`Damaged record ${record.id} (missing pages: ${list.join(', ')})`);
+        }
+
+        return record;
+    }
 
     this.listVariables = async function(table) {
         return db.loadAll('rec_variables', table + '@', table + '`');
@@ -166,8 +210,8 @@ function VirtualRecords(db) {
         return `${table}:${id}`;
     }
 
-    function makeFragmentKey(table, id, frag) {
-        return `${table}:${id}@${frag}`;
+    function makeFragmentKey(table, id, version) {
+        return `${table}:${id}@${version.toString().padStart(9, '0')}`;
     }
 
     function makeVariableKey(table, page, key) {

@@ -257,7 +257,7 @@ let form_executor = new function() {
 
         entry.progress('Enregistrement en cours');
         try {
-            let record2 = await vrec.save(record, page.key, page.variables);
+            let record2 = await vrec.save(record, page.key, page.variables, goupile.getUserName());
             entry.success('Données enregistrées');
 
             if (current_records.has(record2.id))
@@ -562,10 +562,10 @@ let form_executor = new function() {
 
         let frags_map = {};
         for (let variable of variables) {
-            let frag_variables = frags_map[variable.frag];
+            let frag_variables = frags_map[variable.page];
             if (!frag_variables) {
                 frag_variables = [];
-                frags_map[variable.frag] = frag_variables;
+                frags_map[variable.page] = frag_variables;
             }
 
             frag_variables.push(variable);
