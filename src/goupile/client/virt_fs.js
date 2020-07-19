@@ -91,16 +91,6 @@ function VirtualFS(db) {
         cache.delete(path);
     };
 
-    this.clear = async function() {
-        await db.transaction('rw', ['fs_entries', 'fs_data', 'fs_sync'], () => {
-            db.clear('fs_entries');
-            db.clear('fs_data');
-            db.clear('fs_sync');
-        });
-
-        cache.clear();
-    };
-
     this.load = async function(path) {
         let cache_file = cache.get(path);
         if (cache_file)

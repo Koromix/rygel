@@ -82,14 +82,6 @@ function VirtualRecords(db) {
         await db.deleteAll('rec_fragments', ikey + ':', ikey + '`');
     };
 
-    this.clear = async function(table) {
-        await db.transaction('rw', ['rec_entries', 'rec_fragments', 'rec_variables'], () => {
-            db.deleteAll('rec_entries', table + ':', table + '`');
-            db.deleteAll('rec_fragments', table + ':', table + '`');
-            db.deleteAll('rec_variables', table + '@', table + '`');
-        });
-    };
-
     this.load = async function(table, id) {
         let ikey = makeEntryKey(table, id);
 
