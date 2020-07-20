@@ -727,12 +727,14 @@ let form_exec = new function() {
     }
 
     function handleEditClick(record) {
-        let show_overview = !context_records.size;
+        let enable_overview = false;
 
         if (!context_records.has(record.id)) {
             if (!multi_mode)
                 context_records.clear();
             context_records.set(record.id, record);
+
+            enable_overview = !multi_mode;
         } else {
             context_records.delete(record.id);
 
@@ -742,7 +744,7 @@ let form_exec = new function() {
             }
         }
 
-        if (show_overview) {
+        if (enable_overview) {
             goupile.toggleOverview(true);
         } else {
             goupile.go();

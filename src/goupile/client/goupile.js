@@ -340,6 +340,9 @@ let goupile = new function() {
                     } else if (!left_panel || overview_wanted) {
                         show_overview = true;
                     }
+
+                    if (show_overview && self.isTablet())
+                        left_panel = null;
                 } else {
                     left_panel = null;
                     show_overview = true;
