@@ -364,7 +364,6 @@ let goupile = new function() {
                         case 'editor': { await dev_files.runEditor(route_asset); } break;
                         case 'status': { await form_executor.runStatus(); } break;
                         case 'data': { await form_executor.runData(); } break;
-                        case 'describe': { await form_executor.runDescribe(); } break;
                     }
                 } catch (err) {
                     log.error(err);

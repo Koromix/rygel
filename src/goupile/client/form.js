@@ -707,16 +707,6 @@ let form_executor = new function() {
         });
     }
 
-    this.runDescribe = async function() {
-        if (typeof Chart === 'undefined')
-            await net.loadScript(`${env.base_url}static/chart.bundle.min.js`);
-
-        render(html`
-            <div class="gp_toolbar"></div>
-            <div class="gp_wip">Graphiques non disponibles</div>
-        `, document.querySelector('#dev_describe'));
-    };
-
     function makeLink(form_key, page_key, record = undefined) {
         let url = `${env.base_url}app/${form_key}/${page_key || form_key}/`;
 
