@@ -344,12 +344,16 @@ let form_exec = new function() {
 
         render(html`
             <div class="gp_toolbar">
+                <p>&nbsp;&nbsp;${records.length} ${records.length > 1 ? 'enregistrements' : 'enregistrement'}
+                   (${complete_set.size} ${complete_set.size > 1 ? 'complets' : 'complet'})</p>
                 <div style="flex: 1;"></div>
-                <p>${records.length} ${records.length > 1 ? 'enregistrements' : 'enregistrement'}
-                   dont ${complete_set.size} ${complete_set.size > 1 ? 'complets' : 'complet'}</p>
-                <div style="flex: 1;"></div>
-                <button type="button" class=${show_complete ? 'active' : ''}
-                        @click=${toggleShowComplete}>Afficher les enregistrements complets</button>
+                <div class="gp_dropdown right">
+                    <button type="button">Options</button>
+                    <div>
+                        <button type="button" class=${!show_complete ? 'active' : ''}
+                                @click=${toggleShowComplete}>Cacher complets</button>
+                    </div>
+                </div>
             </div>
 
             <table class="st_table">
@@ -439,10 +443,22 @@ let form_exec = new function() {
 
         render(html`
             <div class="gp_toolbar">
-                <button type="button" class=${multi_mode ? 'active' : ''}
-                        @click=${e => toggleSelectionMode()}>Sélection multiple</button>
+                <p>&nbsp;&nbsp;${records.length} ${records.length > 1 ? 'enregistrements' : 'enregistrement'}</p>
                 <div style="flex: 1;"></div>
-                <div class="gp_dropdown right">${renderExportMenu()}</div>
+                <div class="gp_dropdown right">
+                    <button type="button">Export</button>
+                    <div>
+                        <button type="button" @click=${e => exportSheets(route_page.form, 'xlsx')}>Excel</button>
+                        <button type="button" @click=${e => exportSheets(route_page.form, 'csv')}>CSV</button>
+                    </div>
+                </div>
+                <div class="gp_dropdown right">
+                    <button type="button">Options</button>
+                    <div>
+                        <button type="button" class=${multi_mode ? 'active' : ''}
+                                @click=${e => toggleSelectionMode()}>Sélection multiple</button>
+                    </div>
+                </div>
             </div>
 
             <table class="rec_table" style=${`min-width: ${30 + 60 * columns.length}px`}>
@@ -508,16 +524,6 @@ let form_exec = new function() {
                 </tbody>
             </table>
         `, document.querySelector('#dev_data'));
-    }
-
-    function renderExportMenu() {
-        return html`
-            <button type="button">Export</button>
-            <div>
-                <button type="button" @click=${e => exportSheets(route_page.form, 'xlsx')}>Excel</button>
-                <button type="button" @click=${e => exportSheets(route_page.form, 'csv')}>CSV</button>
-            </div>
-        `;
     }
 
     function toggleSelectionMode() {
