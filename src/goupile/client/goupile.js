@@ -20,7 +20,7 @@ let goupile = new function() {
     let route_asset;
     let route_url;
 
-    let running = false;
+    let running = 0;
     let restart = false;
 
     let left_panel = null;
@@ -141,6 +141,8 @@ let goupile = new function() {
 
         if (self.isConnected() || env.allow_guests) {
             try {
+                running++;
+
                 let new_app = new Application;
                 let app_builder = new ApplicationBuilder(new_app);
 
@@ -159,6 +161,8 @@ let goupile = new function() {
                     app = new Application;
                     console.log(err);
                 }
+            } finally {
+                running--;
             }
 
             // XXX: Hack for secondary asset thingy that we'll get rid of eventually
@@ -248,6 +252,8 @@ let goupile = new function() {
     this.isStandalone = function() { return standalone_mq.matches; };
     this.isLocked = function() { return !!getLockURL(); };
 
+    this.isRunning = function() { return !!running; }
+
     this.go = async function(url = undefined, push_history = true) {
         if (running) {
             restart = true;
@@ -255,7 +261,7 @@ let goupile = new function() {
         }
 
         try {
-            running = true;
+            running++;
             url = getLockURL() || url;
 
             if (self.isConnected() || env.allow_guests) {
@@ -369,7 +375,7 @@ let goupile = new function() {
                 renderGuest();
             }
         } finally {
-            running = false;
+            running--;
 
             if (restart) {
                 restart = false;
@@ -675,7 +681,6 @@ let goupile = new function() {
 
     this.validateCode = async function(path, code) {
         if (path === '/files/main.js') {
-            nav.block();
             try {
                 await self.initApplication(code);
 
@@ -684,8 +689,6 @@ let goupile = new function() {
             } catch (err) {
                 showScriptError(err);
                 return false;
-            } finally {
-                nav.unblock();
             }
         } else if (path === '/files/main.css') {
             changeCSS(code);
@@ -731,8 +734,9 @@ let goupile = new function() {
             throw err;
         }
 
-        nav.block();
         try {
+            running++;
+
             switch (asset.type) {
                 case 'page': { form_executor.runPage(code, test_el); } break;
                 case 'schedule': { await sched_executor.runMeetings(asset.schedule, test_el); } break;
@@ -752,7 +756,7 @@ let goupile = new function() {
             showScriptError(err);
             return false;
         } finally {
-            nav.unblock();
+            running--;
         }
     }
 

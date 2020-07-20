@@ -5,18 +5,14 @@
 function ApplicationNavigator() {
     let self = this;
 
-    let block = 0;
-
     // Used to prevent go() from working when a script is first opened or changed
     // in the editor, because then we wouldn't be able to come back to the script to
     // fix the code.
-    this.block = function() { block++; };
-    this.unblock = function() { block--; };
 
     // Avoid async here, because it may fail (see block_go) and the caller
     // may need to catch that synchronously.
     this.go = function(url = undefined, push_history = true) {
-        if (block) {
+        if (goupile.isRunning()) {
             throw new Error(`A navigation function (e.g. go()) has been interrupted.
 Navigation functions should only be called in reaction to user events, such as button clicks.`);
         }
