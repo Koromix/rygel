@@ -308,6 +308,7 @@ let goupile = new function() {
                             }
                         } catch (err) {
                             log.error(err);
+                            route_asset = null;
                         }
                     } else {
                         log.error(`URL non supportée '${url.pathname}'`);
