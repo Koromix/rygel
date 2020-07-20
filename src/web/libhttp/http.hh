@@ -13,6 +13,8 @@ struct http_Config {
     IPStack ip_stack = IPStack::Dual;
     int port = 8888;
 
+    int max_connections = 512;
+    int idle_timeout = 60;
     int threads = std::max(GetCoreCount(), 4);
     int async_threads = std::max(GetCoreCount() * 2, 8);
 

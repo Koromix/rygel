@@ -30,6 +30,14 @@ bool http_Daemon::Start(const http_Config &config,
             LogError("HTTP port %1 is invalid (range: 1 - %2)", config.port, UINT16_MAX);
             valid = false;
         }
+        if (config.max_connections < 0) {
+            LogError("HTTP max connections cannot be negative (%1)", config.max_connections);
+            valid = false;
+        }
+        if (config.idle_timeout < 0) {
+            LogError("HTTP idle timeout cannot be negative (%1)", config.idle_timeout);
+            valid = false;
+        }
         if (config.threads <= 0 || config.threads > 128) {
             LogError("HTTP threads %1 is invalid (range: 1 - 128)", config.threads);
             valid = false;
@@ -58,6 +66,10 @@ bool http_Daemon::Start(const http_Config &config,
     if (config.threads > 1) {
         mhd_options.Append({MHD_OPTION_THREAD_POOL_SIZE, config.threads});
     }
+    if (config.max_connections) {
+        mhd_options.Append({MHD_OPTION_CONNECTION_LIMIT, config.max_connections});
+    }
+    mhd_options.Append({MHD_OPTION_CONNECTION_TIMEOUT, config.idle_timeout});
     mhd_options.Append({MHD_OPTION_END, 0, nullptr});
 #ifndef NDEBUG
     flags |= MHD_USE_DEBUG;

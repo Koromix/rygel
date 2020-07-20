@@ -87,6 +87,10 @@ bool ConfigBuilder::LoadIni(StreamReader *st)
                         }
                     } else if (prop.key == "Port") {
                         valid &= ParseDec(prop.value, &config.http.port);
+                    } else if (prop.key == "MaxConnections") {
+                        valid &= ParseDec(prop.value, &config.http.max_connections);
+                    } else if (prop.key == "IdleTimeout") {
+                        valid &= ParseDec(prop.value, &config.http.idle_timeout);
                     } else if (prop.key == "Threads") {
                         valid &= ParseDec(prop.value, &config.http.threads);
                     } else if (prop.key == "AsyncThreads") {
