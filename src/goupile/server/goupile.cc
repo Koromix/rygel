@@ -150,7 +150,8 @@ static void InitAssets()
 
     // Packed static assets
     for (const AssetInfo &asset: assets) {
-        if (TestStr(asset.name, "goupile.html") || TestStr(asset.name, "sw.pk.js") ||
+        if (TestStr(asset.name, "goupile.html") ||
+                TestStr(asset.name, "sw.pk.js") ||
                 TestStr(asset.name, "manifest.json")) {
             AssetInfo asset2 = PatchGoupileVariables(asset, &assets_alloc);
             assets_map.Set(asset2);
