@@ -108,7 +108,8 @@ function PageBuilder(state, page) {
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
             <input id=${id} type="text" class="af_input" style=${makeInputStyle(options)}
                    placeholder=${options.placeholder || ''}
-                   .value=${value || ''} ?disabled=${options.disable}
+                   .value=${value || ''}
+                   ?disabled=${options.disabled} ?readonly=${options.readonly}
                    @input=${e => handleTextInput(e, key)} />
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
@@ -131,7 +132,8 @@ function PageBuilder(state, page) {
             <textarea id=${id} class="af_input" style=${makeInputStyle(options)}
                    rows=${options.rows || 5} cols=${options.cols || 40}
                    placeholder=${options.placeholder || ''}
-                   .value=${value || ''} ?disabled=${options.disable}
+                   .value=${value || ''}
+                   ?disabled=${options.disabled} ?readonly=${options.readonly}
                    @input=${e => handleTextInput(e, key)}></textarea>
         `);
 
@@ -152,7 +154,8 @@ function PageBuilder(state, page) {
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
             <input id=${id} type="password" class="af_input" style=${makeInputStyle(options)}
-                   .value=${value || ''} ?disabled=${options.disable}
+                   .value=${value || ''}
+                   ?disabled=${options.disabled} ?readonly=${options.readonly}
                    @input=${e => handleTextInput(e, key)} />
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
@@ -177,17 +180,22 @@ function PageBuilder(state, page) {
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
             <input id=${id} type="text" class="af_input" style=${makeInputStyle(options)}
                    inputmode="none" .value=${value || ''}
-                   placeholder=${options.placeholder || ''} ?disabled=${options.disable}
+                   placeholder=${options.placeholder || ''}
+                   ?disabled=${options.disabled} ?readonly=${options.readonly}
                    @input=${e => handleTextInput(e, key)} />
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
-            <div class="af_pin">
-                ${[7, 8, 9, 4, 5, 6, 1, 2, 3].map(i =>
-                    html`<button type="button" class="af_button"
-                                 @click=${e => handlePinButton(e, key, value)}>${i}</button>`)}
-                <button type="button" class="af_button" style="visibility: hidden;">?</button>
-                <button type="button" class="af_button" @click=${e => handlePinButton(e, key, value)}>0</button>
-                <button type="button" class="af_button clear" @click=${e => handlePinClear(e, key)}>C</button>
-            </div>
+            ${!options.readonly ? html`
+                <div class="af_pin">
+                    ${[7, 8, 9, 4, 5, 6, 1, 2, 3].map(i =>
+                        html`<button type="button" class="af_button" ?disabled=${options.disabled}
+                                     @click=${e => handlePinButton(e, key, value)}>${i}</button>`)}
+                    <button type="button" class="af_button" ?disabled=${options.disabled} style="visibility: hidden;">?</button>
+                    <button type="button" class="af_button" ?disabled=${options.disabled}
+                            @click=${e => handlePinButton(e, key, value)}>0</button>
+                    <button type="button" class="af_button clear" ?disabled=${options.disabled}
+                            @click=${e => handlePinClear(e, key)}>C</button>
+                </div>
+            `: ''}
         `);
 
         let intf = addWidget('pin', label, render, options);
@@ -208,6 +216,11 @@ function PageBuilder(state, page) {
     }
 
     function handleTextInput(e, key) {
+        if (!isModifiable(key)) {
+            e.preventDefault();
+            return;
+        }
+
         updateValue(key, e.target.value || undefined);
     }
 
@@ -224,7 +237,8 @@ function PageBuilder(state, page) {
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
             <input id=${id} type="number" class="af_input" style=${makeInputStyle(options)}
                    step=${1 / Math.pow(10, options.decimals || 0)} .value=${value}
-                   placeholder=${options.placeholder || ''} ?disabled=${options.disable}
+                   placeholder=${options.placeholder || ''}
+                   ?disabled=${options.disabled} ?readonly=${options.readonly}
                    @input=${e => handleNumberChange(e, key)}/>
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
@@ -238,6 +252,11 @@ function PageBuilder(state, page) {
     };
 
     function handleNumberChange(e, key) {
+        if (!isModifiable(key)) {
+            e.preventDefault();
+            return;
+        }
+
         // Hack to accept incomplete values, mainly in the case of a '-' being typed first,
         // in which case we don't want to clear the field immediately.
         if (!e.target.validity || e.target.validity.valid) {
@@ -276,13 +295,15 @@ function PageBuilder(state, page) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <div class=${missing ? 'af_slider missing' : 'af_slider'} style=${makeInputStyle(options)}>
+            <div class=${'af_slider' + (missing ? ' missing' : '') + (options.readonly ? ' readonly' : '')}
+                 style=${makeInputStyle(options)}>
                 <div style=${options.untoggle ? ' cursor: pointer;': ''}
                      @click=${e => handleSliderClick(e, key, value, options.min, options.max)}>${value.toFixed(options.decimals)}</div>
                 <input id=${id} type="range" style=${`--webkit_progress: ${webkit_progress * 100}%`}
                        min=${options.min} max=${options.max} step=${1 / Math.pow(10, options.decimals)}
                        .value=${thumb_value}
-                       placeholder=${options.placeholder || ''} ?disabled=${options.disable}
+                       placeholder=${options.placeholder || ''}
+                       ?disabled=${options.disabled}
                        @click=${e => { e.target.value = fix_value; handleSliderChange(e, key); }}
                        @dblclick=${e => handleSliderClick(e, key, value, options.min, options.max)}
                        @input=${e => handleSliderChange(e, key)}/>
@@ -298,6 +319,11 @@ function PageBuilder(state, page) {
     }
 
     function handleSliderChange(e, key) {
+        if (!isModifiable(key)) {
+            e.preventDefault();
+            return;
+        }
+
         let value = parseFloat(e.target.value);
 
         if (value == null || Number.isNaN(value)) {
@@ -316,6 +342,11 @@ function PageBuilder(state, page) {
     }
 
     function handleSliderClick(e, key, value, min, max) {
+        if (!isModifiable(key)) {
+            e.preventDefault();
+            return;
+        }
+
         goupile.popup(e, 'Modifier', (page, close) => {
             let number = page.number('number', 'Valeur :', {min: min, max: max, value: value});
 
@@ -353,10 +384,11 @@ function PageBuilder(state, page) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <div class="af_enum" id=${id}>
+            <div class=${options.readonly ? 'af_enum readonly' : 'af_enum'} id=${id}>
                 ${props.map(p =>
                     html`<button type="button" data-value=${util.valueToStr(p.value)}
-                                 ?disabled=${options.disable} .className=${value === p.value ? 'af_button active' : 'af_button'}
+                                 .className=${value === p.value ? 'af_button active' : 'af_button'}
+                                 ?disabled=${options.disabled}
                                  @click=${e => handleEnumChange(e, key, options.untoggle)}>${p.label}</button>`)}
             </div>
         `);
@@ -370,6 +402,11 @@ function PageBuilder(state, page) {
     };
 
     function handleEnumChange(e, key, allow_untoggle) {
+        if (!isModifiable(key)) {
+            e.preventDefault();
+            return;
+        }
+
         let json = e.target.dataset.value;
         let activate = !e.target.classList.contains('active');
 
@@ -406,12 +443,14 @@ function PageBuilder(state, page) {
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div style=${'display: inline-block; max-width: 100%; ' + makeInputStyle(options)}>
-                <select id=${id} class="af_select"
-                        ?disabled=${options.disable} @change=${e => handleEnumDropChange(e, key)}>
+                <select id=${id} class="af_select" ?disabled=${options.disabled}
+                        @change=${e => handleEnumDropChange(e, key)}>
                     ${options.untoggle || !props.some(p => p != null && value === p.value) ?
-                        html`<option value="undefined" .selected=${value == null}>-- Choisissez une option --</option>` : ''}
+                        html`<option value="undefined" .selected=${value == null}
+                                     ?disabled=${options.readonly && value != null}>-- Choisissez une option --</option>` : ''}
                     ${props.map(p =>
-                        html`<option value=${util.valueToStr(p.value)} .selected=${value === p.value}>${p.label}</option>`)}
+                        html`<option value=${util.valueToStr(p.value)} .selected=${value === p.value}
+                                     ?disabled=${options.readonly && value !== p.value}>${p.label}</option>`)}
                 </select>
             </div>
         `);
@@ -425,6 +464,11 @@ function PageBuilder(state, page) {
     };
 
     function handleEnumDropChange(e, key) {
+        if (!isModifiable(key)) {
+            e.preventDefault();
+            return;
+        }
+
         updateValue(key, util.strToValue(e.target.value));
     }
 
@@ -438,10 +482,10 @@ function PageBuilder(state, page) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <div class="af_radio" id=${id}>
+            <div class=${options.readonly ? 'af_radio readonly' : 'af_radio'} id=${id}>
                 ${props.map((p, i) =>
                     html`<input type="radio" name=${id} id=${`${id}.${i}`} value=${util.valueToStr(p.value)}
-                                ?disabled=${options.disable} .checked=${value === p.value}
+                                ?disabled=${options.disabled} .checked=${value === p.value}
                                 @click=${e => handleEnumRadioChange(e, key, options.untoggle && value === p.value)}/>
                          <label for=${`${id}.${i}`}>${p.label}</label><br/>`)}
             </div>
@@ -456,6 +500,11 @@ function PageBuilder(state, page) {
     };
 
     function handleEnumRadioChange(e, key, already_checked) {
+        if (!isModifiable(key)) {
+            e.preventDefault();
+            return;
+        }
+
         if (already_checked) {
             e.target.checked = false;
             updateValue(key, undefined);
@@ -476,10 +525,11 @@ function PageBuilder(state, page) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <div class="af_enum" id=${id}>
+            <div class=${options.readonly ? 'af_enum readonly' : 'af_enum'} id=${id}>
                 ${props.map(p =>
                     html`<button type="button" data-value=${util.valueToStr(p.value)}
-                                 ?disabled=${options.disable} .className=${value.includes(p.value) ? 'af_button active' : 'af_button'}
+                                 .className=${value.includes(p.value) ? 'af_button active' : 'af_button'}
+                                 ?disabled=${options.disabled}
                                  @click=${e => handleMultiChange(e, key)}>${p.label}</button>`)}
             </div>
         `);
@@ -494,6 +544,11 @@ function PageBuilder(state, page) {
     };
 
     function handleMultiChange(e, key) {
+        if (!isModifiable(key)) {
+            e.preventDefault();
+            return;
+        }
+
         e.target.classList.toggle('active');
 
         let els = e.target.parentNode.querySelectorAll('button');
@@ -522,10 +577,10 @@ function PageBuilder(state, page) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <div class="af_multi" id=${id}>
+            <div class=${options.readonly ? 'af_multi readonly' : 'af_multi'} id=${id}>
                 ${props.map((p, idx) =>
                     html`<input type="checkbox" id=${`${id}.${idx}`} value=${util.valueToStr(p.value)}
-                                ?disabled=${options.disable} .checked=${value.includes(p.value)}
+                                ?disabled=${options.disabled} .checked=${value.includes(p.value)}
                                 @click=${e => handleMultiCheckChange(e, key)}/>
                          <label for=${`${id}.${idx}`}>${p.label}</label><br/>`)}
             </div>
@@ -541,6 +596,11 @@ function PageBuilder(state, page) {
     };
 
     function handleMultiCheckChange(e, key) {
+        if (!isModifiable(key)) {
+            e.preventDefault();
+            return;
+        }
+
         let els = e.target.parentNode.querySelectorAll('input');
 
         let nullify = (e.target.checked && e.target.value === 'null');
@@ -601,7 +661,8 @@ function PageBuilder(state, page) {
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
             <input id=${id} type="date" class="af_input" style=${makeInputStyle(options)}
-                   .value=${value ? value.toString() : ''} ?disabled=${options.disable}
+                   .value=${value ? value.toString() : ''}
+                   ?disabled=${options.disabled} ?readonly=${options.readonly}
                    @input=${e => handleDateTimeInput(e, key)}/>
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
@@ -629,7 +690,8 @@ function PageBuilder(state, page) {
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
             <input id=${id} type="time" step class="af_input" style=${makeInputStyle(options)}
                    .value=${value ? value.toString().substr(0, options.seconds ? 8 : 5) : ''}
-                   step=${options.seconds ? 1 : 60} ?disabled=${options.disable}
+                   step=${options.seconds ? 1 : 60}
+                   ?disabled=${options.disabled} ?readonly=${options.readonly}
                    @input=${e => handleDateTimeInput(e, key)}/>
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
@@ -641,6 +703,11 @@ function PageBuilder(state, page) {
     };
 
     function handleDateTimeInput(e, key) {
+        if (!isModifiable(key)) {
+            e.preventDefault();
+            return;
+        }
+
         // Store as string, for serialization purposes
         updateValue(key, e.target.value || undefined);
     }
@@ -669,7 +736,8 @@ function PageBuilder(state, page) {
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <input id=${id} type="file" size="${options.size || 30}" .files=${set_files()}
-                   placeholder=${options.placeholder || ''} ?disabled=${options.disable}
+                   placeholder=${options.placeholder || ''}
+                   ?disabled=${options.disabled} ?readonly=${options.readonly}
                    @input=${e => handleFileInput(e, key)}/>
         `);
 
@@ -680,6 +748,11 @@ function PageBuilder(state, page) {
     };
 
     function handleFileInput(e, key) {
+        if (!isModifiable(key)) {
+            e.preventDefault();
+            return;
+        }
+
         state.file_lists.set(key.toString(), e.target.files);
         updateValue(key, e.target.files[0] || undefined);
     }
@@ -827,7 +900,7 @@ function PageBuilder(state, page) {
 
         let active;
         if (selected_tab === tabs_ref.length || selected_tab === label) {
-            if (!options.disable) {
+            if (!options.disabled) {
                 active = true;
             } else {
                 selected_tab = tabs_ref.length + 1;
@@ -839,7 +912,7 @@ function PageBuilder(state, page) {
 
         let tab = {
             label: label,
-            disable: options.disable
+            disable: options.disabled
         };
         tabs_ref.push(tab);
 
@@ -982,15 +1055,13 @@ instead of:
             let cls = 'af_widget';
             if (intf.errors.length)
                 cls += ' error';
-            if (intf.options.disable)
-                cls += ' disable';
             if (intf.options.mandatory)
                 cls += ' mandatory';
             if (intf.options.compact)
                 cls += ' compact';
 
             return html`
-                <div class="af_wrap">
+                <div class=${intf.options.disabled ? 'af_wrap disabled' : 'af_wrap'}>
                     <div class=${cls}>
                         ${frag}
                         ${intf.errors.length ?
@@ -1096,6 +1167,11 @@ instead of:
             state.values[key] = self.getValue(key, default_value);
 
         return state.values[key];
+    }
+
+    function isModifiable(key) {
+        let intf = variables_map[key];
+        return !intf.options.disabled && !intf.options.readonly;
     }
 
     function updateValue(key, value, refresh = true) {

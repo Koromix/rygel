@@ -88,14 +88,6 @@
     content: "⚠\FE0E";
     font-size: 1.4em;
 }
-.af_widget.disable {
-    opacity: 0.5;
-    pointer-events: none;
-    user-select: none;
-    -moz-user-select: none;
-    -webkit-user-select: none;
-    -ms-user-select: none;
-}
 .af_error {
     padding: 4px 0 3px 0;
     font-style: italic;
@@ -134,14 +126,13 @@
 .af_input {
     max-width: 100%;
     padding: 3px 4px;
+    background: white;
     border: 1px solid #ccc;
     border-width: 0.5px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.af_enum, .af_radio, .af_multi { display: inline-block; }
-.af_radio, .af_multi { padding-top: 3px; }
 .af_select {
     /* This width: 100% is combined with an outer div set to max-width: 100% so that
        long options don't wreak havoc. Setting max-width: 100% here does not work correctly. */
@@ -160,6 +151,9 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+.af_enum, .af_radio, .af_multi { display: inline-block; }
+.af_radio, .af_multi { padding-top: 3px; }
 
 .af_pin {
     width: 9em;
@@ -209,6 +203,11 @@
 }
 
 .af_calc { font-style: italic; }
+
+.af_enum.readonly, .af_radio.readonly, .af_multi.readonly, .af_slider.readonly {
+    pointer-events: none;
+    cursor: inherit;
+}
 
 /* -------------------- Nice radio and checkboxes -------------------- */
 
@@ -354,7 +353,7 @@
     border-width: 0.5px;
     border-radius: 4px;
 }
-.af_slider > input::-moz-range-progress {
+.af_slider:not(.missing) > input::-moz-range-progress {
     height: 6px;
     background-color: #de6a1d;
     border: 1px solid #de6a1d;
