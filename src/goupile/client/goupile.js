@@ -247,12 +247,9 @@ let goupile = new function() {
     }
 
     this.isConnected = function() { return !!settings_rnd; };
-    this.getUserName = function() { return settings.username || null; };
-
     this.isTablet = function() { return tablet_mq.matches; };
     this.isStandalone = function() { return standalone_mq.matches; };
     this.isLocked = function() { return !!user.getLockURL(); };
-
     this.isRunning = function() { return !!running; }
 
     this.go = async function(url = undefined, push_history = true) {

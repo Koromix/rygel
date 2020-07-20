@@ -24,7 +24,7 @@ function VirtualRecords(db) {
         return record;
     };
 
-    this.save = async function(record, page, variables, username) {
+    this.save = async function(record, page, variables) {
         let frag = {
             _ikey: null,
 
@@ -33,7 +33,7 @@ function VirtualRecords(db) {
             version: null,
             page: page,
 
-            username: username,
+            username: null,
             mtime: Date.now(),
             complete: false,
 

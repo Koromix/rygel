@@ -304,7 +304,7 @@ let form_exec = new function() {
 
         entry.progress('Enregistrement en cours');
         try {
-            let record2 = await vrec.save(record, page.key, page.variables, goupile.getUserName());
+            let record2 = await vrec.save(record, page.key, page.variables);
             entry.success('Données enregistrées');
 
             if (context_records.has(record2.id))
