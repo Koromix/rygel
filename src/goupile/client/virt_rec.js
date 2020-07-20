@@ -25,21 +25,6 @@ function VirtualRecords(db) {
     };
 
     this.save = async function(record, page, variables, username) {
-        variables = variables.map((variable, idx) => {
-            let ret = {
-                _ikey: makeVariableKey(record.table, page, variable.key),
-
-                table: record.table,
-                page: page,
-                key: variable.key.toString(),
-
-                before: variables[idx - 1] ? variables[idx - 1].key.toString() : null,
-                after: variables[idx + 1] ? variables[idx + 1].key.toString() : null
-            };
-
-            return ret;
-        });
-
         let frag = {
             _ikey: null,
 
@@ -54,12 +39,23 @@ function VirtualRecords(db) {
 
             values: {}
         };
-        for (let variable of variables) {
-            if (!variable.missing) {
-                let key = variable.key;
-                frag.values[key] = record.values[key];
-            }
-        }
+        for (let variable of variables)
+            frag.values[variable.key] = !variable.missing ? record.values[variable.key] : null;
+
+        variables = variables.map((variable, idx) => {
+            let ret = {
+                _ikey: makeVariableKey(record.table, page, variable.key),
+
+                table: record.table,
+                page: page,
+                key: variable.key.toString(),
+
+                before: variables[idx - 1] ? variables[idx - 1].key.toString() : null,
+                after: variables[idx + 1] ? variables[idx + 1].key.toString() : null
+            };
+
+            return ret;
+        });
 
         await db.transaction('rw', ['rec_entries', 'rec_fragments', 'rec_variables'], async () => {
             let ikey = makeEntryKey(record.table, record.id);
@@ -188,6 +184,13 @@ function VirtualRecords(db) {
                     record.values = Object.assign(frag.values, record.values);
                 }
             }
+        }
+
+        // Keys with undefined value are not actually stored by IndexedDB, so we encode
+        // null when saving and restore undefined values on load.
+        for (let key in record.values) {
+            if (record.values[key] == null)
+                record.values[key] = undefined;
         }
 
         if (pages_set.size) {

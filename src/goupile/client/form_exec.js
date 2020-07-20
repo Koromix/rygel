@@ -509,7 +509,11 @@ let form_exec = new function() {
                                 let value = record.values[col.key];
 
                                 if (value == null) {
-                                    return html`<td class="missing" title="Donnée manquante">MD</td>`;
+                                    if (record.values.hasOwnProperty(col.key)) {
+                                        return html`<td class="missing" title="Donnée manquante">MD</td>`;
+                                    } else {
+                                        return html`<td class="missing" title="Non applicable">NA</td>`;
+                                    }
                                 } else if (Array.isArray(value)) {
                                     let text = value.join('|');
                                     return html`<td title=${text}>${text}</td>`;
