@@ -15,32 +15,52 @@ let form_exec = new function() {
     let multi_columns = new Set;
 
     this.route = async function(page, url) {
-        let parts = url.pathname.substr(page.url.length).split('/');
-        let what = parts[0] || null;
+        let what = url.pathname.substr(page.url.length) || null;
 
-        if (parts.length !== 1)
+        if (what && !what.match(/^(new|multi|[A-Z0-9]{26}(@[0-9]+)?)$/))
             throw new Error(`Adresse incorrecte '${url.pathname}'`);
-        if (what && what !== 'multi' && !what.match(/^[A-Z0-9]{26}(@[0-9]+)?$/))
-            throw new Error(`Adresse incorrecte '${url.pathname}'`);
-
         route_page = page;
 
+        // Clear inappropriate records (wrong form)
         if (context_records.size) {
             let record0 = context_records.first();
+
             if (record0.table !== route_page.form.key)
                 context_records.clear();
         }
 
+        // Sync context records
         if (what === 'multi') {
             multi_mode = true;
-        } else if (what != null) {
+        } else if (what === 'new') {
+            let record = context_records.first();
+
+            if (!record || record.mtime != null)
+                record = vrec.create(route_page.form.key);
+
+            context_records.clear();
+            context_records.set(record.id, record);
+
+            multi_mode = false;
+        } else if (what == null) {
+            let record = vrec.create(route_page.form.key);
+
+            context_records.clear();
+            context_records.set(record.id, record);
+
+            multi_mode = false;
+        } else {
+            context_records.clear();
+
             let [id, version] = what.split('@');
             if (version != null)
                 version = parseInt(version, 10);
 
             let record = context_records.get(id);
             if (record) {
-                if (version != null) {
+                if (record.table !== route_page.form.key) {
+                    record = null;
+                } else if (version != null) {
                     if (version !== record.version)
                         record = null;
                 } else {
@@ -57,19 +77,12 @@ let form_exec = new function() {
                     log.error(`La fiche version @${version} n'existe pas\nVersion chargée : @${record.version}`);
             }
 
-            context_records.clear();
-            context_records.set(record.id, record);
-
-            multi_mode = false;
-        } else {
-            let record = vrec.create(route_page.form.key);
-
-            context_records.clear();
             context_records.set(record.id, record);
 
             multi_mode = false;
         }
 
+        // Clean up unused page states
         let new_states = {};
         for (let id of context_records.keys())
             new_states[id] = page_states[id];
@@ -763,13 +776,17 @@ let form_exec = new function() {
                 url += record.id;
                 if (record.version !== record.versions.length - 1)
                     url += `@${record.version}`;
+            } else {
+                let state = page_states[record.id];
+                if (state && state.changed)
+                    url += 'new';
             }
         }
 
         return util.pasteURL(url, nav.route);
     }
 
-    function makeURL(form_key, page_key, record = undefined, version = undefined) {
+    function makeURL(form_key, page_key, record = null, version = undefined) {
         let url = `${env.base_url}app/${form_key}/${page_key}/`;
 
         if (record && record.mtime != null)
