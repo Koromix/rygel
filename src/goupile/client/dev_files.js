@@ -18,7 +18,7 @@ let dev_files = new function() {
     let files;
     let user_actions = {};
 
-    this.runEditor = async function(asset) {
+    this.runEditor = async function(path = null) {
         // XXX: Make sure we don't run loadScript more than once
         if (typeof ace === 'undefined')
             await net.loadScript(`${env.base_url}static/ace.js`);
@@ -33,11 +33,11 @@ let dev_files = new function() {
             {name: 'Style', path: '/files/main.css'}
         ];
 
-        if (asset && asset.edit) {
-            editor_tabs.push({name: asset.edit, path: asset.path});
+        if (path) {
+            editor_tabs.push({name: 'Page', path: path});
 
             if (editor_path_forced || !editor_tabs.find(tab => tab.path === editor_path)) {
-                await syncEditor(asset.path, false);
+                await syncEditor(path, false);
             } else {
                 await syncEditor(editor_path, editor_path_forced);
             }

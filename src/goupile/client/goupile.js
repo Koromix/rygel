@@ -304,7 +304,7 @@ let goupile = new function() {
                     if (route_asset) {
                         try {
                             switch (route_asset.type) {
-                                case 'page': { await form_exec.route(route_asset, url); } break;
+                                case 'page': { await form_exec.route(route_asset.page, url); } break;
                             }
                         } catch (err) {
                             log.error(err);
@@ -362,7 +362,10 @@ let goupile = new function() {
                     // Run accessory panel
                     switch (left_panel) {
                         case 'files': { await dev_files.runFiles(); } break;
-                        case 'editor': { await dev_files.runEditor(route_asset); } break;
+                        case 'editor': {
+                            let path = route_asset && route_asset.path ? route_asset.path : null;
+                            await dev_files.runEditor(path);
+                        } break;
                         case 'status': { await form_exec.runStatus(); } break;
                         case 'data': { await form_exec.runData(); } break;
                     }

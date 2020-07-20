@@ -37,6 +37,8 @@ function ApplicationBuilder(app) {
 
         let form = {
             key: key,
+            url: `${env.base_url}app/${key}/`,
+
             options: util.assignDeep({
                 actions: true,
                 validate: false
@@ -71,8 +73,7 @@ function ApplicationBuilder(app) {
                 form: form,
                 page: page,
 
-                path: `/files/pages/${page.key}.js`,
-                edit: 'Formulaire'
+                path: `/files/pages/${page.key}.js`
             });
         }
 
@@ -147,19 +148,6 @@ function ApplicationBuilder(app) {
         });
     };
 
-    this.file = function(file) {
-        pushAsset({
-            type: 'blob',
-            url: `${env.base_url}blob${file.path}`,
-
-            category: 'Fichiers',
-            label: file.path,
-            overview: 'Contenu',
-
-            path: file.path
-        });
-    };
-
     function pushAsset(asset) {
         app.assets.push(asset);
 
@@ -195,8 +183,9 @@ function FormBuilder(form) {
         let page = {
             key: key,
             label: label || key,
+            url: `${env.base_url}app/${form.key}/${key}/`,
 
-            url: `${env.base_url}app/${form.key}/${key}/`
+            form: form
         };
         form.pages.push(page);
 

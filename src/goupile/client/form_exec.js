@@ -5,7 +5,7 @@
 let form_exec = new function() {
     let self = this;
 
-    let current_asset = {};
+    let route_page;
     let current_records = new BTree;
     let page_states = {};
 
@@ -14,8 +14,8 @@ let form_exec = new function() {
     let multi_mode = false;
     let multi_columns = new Set;
 
-    this.route = async function(asset, url) {
-        let parts = url.pathname.substr(asset.url.length).split('/');
+    this.route = async function(page, url) {
+        let parts = url.pathname.substr(page.url.length).split('/');
         let what = parts[0] || null;
 
         if (parts.length !== 1)
@@ -23,11 +23,11 @@ let form_exec = new function() {
         if (what && what !== 'multi' && !what.match(/^[A-Z0-9]{26}(@[0-9]+)?$/))
             throw new Error(`Adresse incorrecte '${url.pathname}'`);
 
-        current_asset = asset;
+        route_page = page;
 
         if (current_records.size) {
             let record0 = current_records.first();
-            if (record0.table !== asset.form.key)
+            if (record0.table !== route_page.form.key)
                 current_records.clear();
         }
 
@@ -49,8 +49,8 @@ let form_exec = new function() {
                 }
             }
             if (!record) {
-                record = await vrec.load(asset.form.key, id, version) ||
-                               vrec.create(asset.form.key);
+                record = await vrec.load(route_page.form.key, id, version) ||
+                               vrec.create(route_page.form.key);
                 delete page_states[id];
 
                 if (version != null && record.version !== version)
@@ -62,7 +62,7 @@ let form_exec = new function() {
 
             multi_mode = false;
         } else {
-            let record = vrec.create(asset.form.key);
+            let record = vrec.create(route_page.form.key);
 
             current_records.clear();
             current_records.set(record.id, record);
@@ -100,7 +100,7 @@ let form_exec = new function() {
             }
         } else {
             if (!current_records.size) {
-                let record = vrec.create(current_asset.form.key);
+                let record = vrec.create(route_page.form.key);
                 current_records.set(record.id, record);
             }
 
@@ -116,7 +116,7 @@ let form_exec = new function() {
             page_states[record.id] = state;
         }
 
-        let page = new Page(current_asset.page.key);
+        let page = new Page(route_page.key);
         let builder = new PageBuilder(state, page);
 
         builder.decodeKey = decodeKey;
@@ -156,7 +156,7 @@ let form_exec = new function() {
             page_states[record.id] = state;
         }
 
-        let page = new Page(current_asset.page.key);
+        let page = new Page(route_page.key);
         let builder = new PageBuilder(state, page);
 
         builder.decodeKey = decodeKey;
@@ -175,14 +175,14 @@ let form_exec = new function() {
              state.values, page.variables, app.route, state.scratch);
         builder.errorList();
 
-        let show_actions = current_asset.form.options.actions && page.variables.length;
+        let show_actions = route_page.form.options.actions && page.variables.length;
         let enable_save = !builder.hasErrors() && state.changed;
         let enable_validate = !builder.hasErrors() && !state.changed &&
                               record.complete[page.key] === false;
 
         render(html`
             <div class="fm_form">
-                <div class="fm_path">${current_asset.form.pages.map(page2 => {
+                <div class="fm_path">${route_page.form.pages.map(page2 => {
                     let complete = record.complete[page2.key];
 
                     let cls = '';
@@ -196,7 +196,7 @@ let form_exec = new function() {
                         cls += ' partial';
                     }
 
-                    return html`<a class=${cls} href=${makeLink(current_asset.form.key, page2.key, record)}>${page2.label}</a>`;
+                    return html`<a class=${cls} href=${makeLink(route_page.form.key, page2.key, record)}>${page2.label}</a>`;
                 })}</div>
 
                 ${show_actions ? html`
@@ -215,7 +215,7 @@ let form_exec = new function() {
                     <div class="af_actions">
                         <button type="button" class="af_button" ?disabled=${!enable_save}
                                 @click=${builder.submit}>Enregistrer</button>
-                        ${current_asset.form.options.validate ?
+                        ${route_page.form.options.validate ?
                             html`<button type="button" class="af_button" ?disabled=${!enable_validate}
                                          @click=${e => showValidateDialog(e, builder.submit)}>Valider</button>`: ''}
                         <hr/>
@@ -243,7 +243,7 @@ let form_exec = new function() {
                     <tbody>
                         ${util.mapRange(0, record.versions.length, idx => {
                             let version = record.versions[record.versions.length - idx - 1];
-                            let url = makeLink(current_asset.form.key, current_asset.page.key, record, version.version);
+                            let url = makeLink(route_page.form.key, route_page.key, record, version.version);
 
                             return html`
                                 <tr>
@@ -257,26 +257,6 @@ let form_exec = new function() {
                 </table>
             `);
         });
-    }
-
-    function makeURL() {
-        let url;
-        if (multi_mode) {
-            url = `${current_asset.url}multi`;
-        } else if (!current_records.size) {
-            url = current_asset.url;
-        } else {
-            let record = current_records.first();
-
-            url = current_asset.url;
-            if (record.mtime != null) {
-                url += record.id;
-                if (record.version !== record.versions.length - 1)
-                    url += `@${record.version}`;
-            }
-        }
-
-        return util.pasteURL(url, app.route);
     }
 
     function decodeKey(key) {
@@ -328,11 +308,11 @@ let form_exec = new function() {
 
                 page.submitHandler = () => {
                     close();
-                    goupile.go(makeLink(current_asset.form.key, current_asset.page.key, null));
+                    goupile.go(makeLink(route_page.form.key, route_page.key, null));
                 };
             })
         } else {
-            goupile.go(makeLink(current_asset.form.key, current_asset.page.key, null));
+            goupile.go(makeLink(route_page.form.key, route_page.key, null));
         }
     }
 
@@ -348,12 +328,12 @@ let form_exec = new function() {
     }
 
     this.runStatus = async function() {
-        let records = await vrec.loadAll(current_asset.form.key);
+        let records = await vrec.loadAll(route_page.form.key);
         renderStatus(records);
     };
 
     function renderStatus(records) {
-        let pages = current_asset.form.pages;
+        let pages = route_page.form.pages;
 
         let complete_set = new Set;
         for (let record of records) {
@@ -405,11 +385,11 @@ let form_exec = new function() {
                                         let complete = record.complete[page.key];
 
                                         if (complete == null) {
-                                            return html`<td class="none"><a href=${makeLink(current_asset.form.key, page.key, record)}>Non rempli</a></td>`;
+                                            return html`<td class="none"><a href=${makeLink(route_page.form.key, page.key, record)}>Non rempli</a></td>`;
                                         } else if (complete) {
-                                            return html`<td class="complete"><a href=${makeLink(current_asset.form.key, page.key, record)}>Validé</a></td>`;
+                                            return html`<td class="complete"><a href=${makeLink(route_page.form.key, page.key, record)}>Validé</a></td>`;
                                         } else {
-                                            return html`<td class="partial"><a href=${makeLink(current_asset.form.key, page.key, record)}>Enregistré</a></td>`;
+                                            return html`<td class="partial"><a href=${makeLink(route_page.form.key, page.key, record)}>Enregistré</a></td>`;
                                         }
                                     })}
                                 </tr>
@@ -429,9 +409,9 @@ let form_exec = new function() {
     }
 
     this.runData = async function() {
-        let records = await vrec.loadAll(current_asset.form.key);
-        let variables = await vrec.listVariables(current_asset.form.key);
-        let columns = orderColumns(current_asset.form.pages, variables);
+        let records = await vrec.loadAll(route_page.form.key);
+        let variables = await vrec.listVariables(route_page.form.key);
+        let columns = orderColumns(route_page.form.pages, variables);
 
         renderRecords(records, columns);
     };
@@ -534,8 +514,8 @@ let form_exec = new function() {
         return html`
             <button type="button">Export</button>
             <div>
-                <button type="button" @click=${e => exportSheets(current_asset.form, 'xlsx')}>Excel</button>
-                <button type="button" @click=${e => exportSheets(current_asset.form, 'csv')}>CSV</button>
+                <button type="button" @click=${e => exportSheets(route_page.form, 'xlsx')}>Excel</button>
+                <button type="button" @click=${e => exportSheets(route_page.form, 'csv')}>CSV</button>
             </div>
         `;
     }
@@ -734,7 +714,7 @@ let form_exec = new function() {
             current_records.delete(record.id);
 
             if (!multi_mode && !current_records.size) {
-                let record = vrec.create(current_asset.form.key);
+                let record = vrec.create(route_page.form.key);
                 current_records.set(record.id, record);
             }
         }
@@ -759,6 +739,24 @@ let form_exec = new function() {
                 goupile.go();
             };
         });
+    }
+
+    function makeURL() {
+        let url = `${env.base_url}app/${route_page.form.key}/${route_page.key}/`;
+
+        if (multi_mode) {
+            url += 'multi';
+        } else if (current_records.size) {
+            let record = current_records.first();
+
+            if (record.mtime != null) {
+                url += record.id;
+                if (record.version !== record.versions.length - 1)
+                    url += `@${record.version}`;
+            }
+        }
+
+        return util.pasteURL(url, app.route);
     }
 
     function makeLink(form_key, page_key, record = undefined, version = undefined) {
