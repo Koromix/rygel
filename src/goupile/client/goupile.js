@@ -912,8 +912,15 @@ let goupile = new function() {
                     closePopup();
             });
 
-            popup_el.addEventListener('click', e => e.stopPropagation());
-            document.addEventListener('click', closePopup);
+            document.addEventListener('click', e => {
+                let el = e.target;
+                while (el) {
+                    if (el === popup_el)
+                        return;
+                    el = el.parentNode;
+                }
+                closePopup();
+            });
         }
 
         let page = new Page('@popup');
