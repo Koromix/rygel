@@ -18,7 +18,6 @@ function ApplicationInfo() {
 
     // Used for user globals
     this.shared = {};
-    this.route = {};
 }
 
 function ApplicationBuilder(app) {

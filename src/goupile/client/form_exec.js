@@ -146,7 +146,7 @@ let form_exec = new function() {
             })}
         `, el);
 
-        window.history.replaceState(null, null, makeURL());
+        window.history.replaceState(null, null, makeCurrentURL());
     }
 
     function runPage(func, record, el) {
@@ -172,7 +172,7 @@ let form_exec = new function() {
 
         // Build it!
         func(util, app.shared, nav.go, builder, builder,
-             state.values, page.variables, app.route, state.scratch);
+             state.values, page.variables, nav.route, state.scratch);
         builder.errorList();
 
         let show_actions = route_page.options.actions && page.variables.length;
@@ -206,7 +206,7 @@ let form_exec = new function() {
                         cls += ' partial';
                     }
 
-                    return html`<a class=${cls} href=${makeLink(route_page.form.key, page2.key, record)}>${page2.label}</a>`;
+                    return html`<a class=${cls} href=${makeURL(route_page.form.key, page2.key, record)}>${page2.label}</a>`;
                 })}</div>
 
                 <div class="fm_page">${page.render()}</div>
@@ -226,7 +226,7 @@ let form_exec = new function() {
             </div>
         `, el);
 
-        window.history.replaceState(null, null, makeURL());
+        window.history.replaceState(null, null, makeCurrentURL());
     }
 
     function showTrailDialog(e, record) {
@@ -243,7 +243,7 @@ let form_exec = new function() {
                     <tbody>
                         ${util.mapRange(0, record.versions.length, idx => {
                             let version = record.versions[record.versions.length - idx - 1];
-                            let url = makeLink(route_page.form.key, route_page.key, record, version.version);
+                            let url = makeURL(route_page.form.key, route_page.key, record, version.version);
 
                             return html`
                                 <tr>
@@ -308,11 +308,11 @@ let form_exec = new function() {
 
                 page.submitHandler = () => {
                     close();
-                    goupile.go(makeLink(route_page.form.key, route_page.key, null));
+                    goupile.go(makeURL(route_page.form.key, route_page.key, null));
                 };
             })
         } else {
-            goupile.go(makeLink(route_page.form.key, route_page.key, null));
+            goupile.go(makeURL(route_page.form.key, route_page.key, null));
         }
     }
 
@@ -385,11 +385,11 @@ let form_exec = new function() {
                                         let complete = record.complete[page.key];
 
                                         if (complete == null) {
-                                            return html`<td class="none"><a href=${makeLink(route_page.form.key, page.key, record)}>Non rempli</a></td>`;
+                                            return html`<td class="none"><a href=${makeURL(route_page.form.key, page.key, record)}>Non rempli</a></td>`;
                                         } else if (complete) {
-                                            return html`<td class="complete"><a href=${makeLink(route_page.form.key, page.key, record)}>Validé</a></td>`;
+                                            return html`<td class="complete"><a href=${makeURL(route_page.form.key, page.key, record)}>Validé</a></td>`;
                                         } else {
-                                            return html`<td class="partial"><a href=${makeLink(route_page.form.key, page.key, record)}>Enregistré</a></td>`;
+                                            return html`<td class="partial"><a href=${makeURL(route_page.form.key, page.key, record)}>Enregistré</a></td>`;
                                         }
                                     })}
                                 </tr>
@@ -741,7 +741,7 @@ let form_exec = new function() {
         });
     }
 
-    function makeURL() {
+    function makeCurrentURL() {
         let url = `${env.base_url}app/${route_page.form.key}/${route_page.key}/`;
 
         if (multi_mode) {
@@ -756,13 +756,15 @@ let form_exec = new function() {
             }
         }
 
-        return util.pasteURL(url, app.route);
+        return util.pasteURL(url, nav.route);
     }
 
-    function makeLink(form_key, page_key, record = undefined, version = undefined) {
-        let url = `${env.base_url}app/${form_key}/${page_key || form_key}/`;
+    function makeURL(form_key, page_key, record = undefined, version = undefined) {
+        let url = `${env.base_url}app/${form_key}/${page_key}/`;
+
         if (record && record.mtime != null)
             url += record.id + (version != null ? `@${version}` : '');
-        return url;
+
+        return util.pasteURL(url, nav.route);
     }
 };

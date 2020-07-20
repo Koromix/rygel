@@ -5,6 +5,8 @@
 function ApplicationNavigator() {
     let self = this;
 
+    this.route = {};
+
     // Avoid async here, because it may fail and the caller may need to catch that synchronously
     this.go = function(url = undefined, push_history = true) {
         // Used to prevent go() from working when a script is first opened or changed

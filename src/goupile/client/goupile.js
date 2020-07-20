@@ -178,7 +178,7 @@ let goupile = new function() {
             changeTemplate(html);
             changeCSS(css);
 
-            util.deepFreeze(app, 'route');
+            util.deepFreeze(app);
         } else {
             app = null;
         }
@@ -271,7 +271,7 @@ let goupile = new function() {
                     // Update route application global
                     for (let [key, value] of url.searchParams) {
                         let num = Number(value);
-                        app.route[key] = Number.isNaN(num) ? value : num;
+                        nav.route[key] = Number.isNaN(num) ? value : num;
                     }
 
                     // Find relevant asset
