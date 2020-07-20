@@ -287,20 +287,6 @@ button:not(:disabled) { cursor: pointer; }
 
 /* -------------------- Misc -------------------- */
 
-#gp_login {
-    width: 300px;
-    margin: 48px auto 12px auto;
-    padding: 56px 12px 12px 12px;
-    background: #efefef;
-}
-#gp_logo {
-    position: absolute;
-    left: calc(50% - 48px);
-    margin-top: -96px;
-    width: 96px;
-    height: 96px;
-}
-
 #gp_popup {
     display: none;
     position: fixed;

@@ -1,0 +1,18 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+   License, v. 2.0. If a copy of the MPL was not distributed with this
+   file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#usr_login {
+    width: 300px;
+    margin: 48px auto 12px auto;
+    padding: 56px 12px 12px 12px;
+    background: #efefef;
+}
+
+#usr_logo {
+    position: absolute;
+    left: calc(50% - 48px);
+    margin-top: -96px;
+    width: 96px;
+    height: 96px;
+}

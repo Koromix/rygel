@@ -14,6 +14,7 @@ let goupile = new function() {
     let tablet_mq = window.matchMedia('(pointer: coarse)');
     let standalone_mq = window.matchMedia('(display-mode: standalone)');
 
+    // This probably belongs to user.js
     let settings = {};
     let settings_rnd;
 
@@ -250,7 +251,7 @@ let goupile = new function() {
 
     this.isTablet = function() { return tablet_mq.matches; };
     this.isStandalone = function() { return standalone_mq.matches; };
-    this.isLocked = function() { return !!getLockURL(); };
+    this.isLocked = function() { return !!user.getLockURL(); };
 
     this.isRunning = function() { return !!running; }
 
@@ -262,7 +263,7 @@ let goupile = new function() {
 
         try {
             running++;
-            url = getLockURL() || url;
+            url = user.getLockURL() || url;
 
             if (self.isConnected() || env.allow_guests) {
                 if (url) {
@@ -322,7 +323,7 @@ let goupile = new function() {
                 }
 
                 // Ensure valid menu and panel configuration
-                if (!getLockURL()) {
+                if (!user.getLockURL()) {
                     let show_develop = settings.develop;
                     let show_data = settings.edit && route_asset && route_asset.form;
 
@@ -375,7 +376,7 @@ let goupile = new function() {
                     updateStatus();
                 }
             } else {
-                renderGuest();
+                user.runLogin();
             }
         } finally {
             running--;
@@ -402,15 +403,15 @@ let goupile = new function() {
         }
 
         render(html`
-            ${!in_iframe && !getLockURL() ?
+            ${!in_iframe && !user.getLockURL() ?
                 html`<nav id="gp_menu" class="gp_toolbar">${renderFullMenu()}</nav>`: ''}
-            ${!in_iframe && getLockURL() ? html`<nav id="gp_menu" class="gp_toolbar locked">
+            ${!in_iframe && user.getLockURL() ? html`<nav id="gp_menu" class="gp_toolbar locked">
                 &nbsp;&nbsp;Application verrouillée
                 <div style="flex: 1;"></div>
                 <button type="button" class="icon" style="background-position-y: calc(-450px + 1.2em)"
-                        @click=${showLoginDialog}>Connexion</button>
+                        @click=${user.showLoginDialog}>Connexion</button>
                 <button type="button" class="icon" style="background-position-y: calc(-186px + 1.2em)"
-                        @click=${toggleLock}>Déverrouiller</button>
+                        @click=${user.showUnlockDialog}>Déverrouiller</button>
             </nav>`: ''}
 
             <main>
@@ -520,19 +521,19 @@ let goupile = new function() {
 
             ${!self.isConnected() ?
                 html`<button class="icon" style="background-position-y: calc(-450px + 1.2em)"
-                             @click=${showLoginDialog}>Connexion</button>` : ''}
+                             @click=${user.showLoginDialog}>Connexion</button>` : ''}
             ${self.isConnected() ? html`
                 <div class="gp_dropdown right">
                     <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${settings.username}</button>
                     <div>
-                        <button type="button" @click=${toggleLock}>Verrouiller</button>
+                        <button type="button" @click=${e => user.showLockDialog(e, route_url)}>Verrouiller</button>
                         <hr/>
                         ${env.use_offline ? html`
                             <button type="button" @click=${showSyncDialog}>Synchroniser</button>
                             <hr/>
                         ` : ''}
-                        <button @click=${showLoginDialog}>Changer d'utilisateur</button>
-                        <button @click=${logout}>Déconnexion</button>
+                        <button @click=${user.showLoginDialog}>Changer d'utilisateur</button>
+                        <button @click=${user.logout}>Déconnexion</button>
                     </div>
                 </div>
             ` : ''}
@@ -551,64 +552,6 @@ let goupile = new function() {
         }
 
         await self.go();
-    }
-
-    function showLoginDialog(e) {
-        goupile.popup(e, 'Connexion', makeLoginForm);
-    }
-
-    function makeLoginForm(page, close = null) {
-        let username = page.text('*username', 'Nom d\'utilisateur');
-        let password = page.password('*password', 'Mot de passe');
-
-        page.submitHandler = async () => {
-            let entry = new log.Entry;
-
-            entry.progress('Connexion en cours');
-            try {
-                let body = new URLSearchParams({
-                    username: username.value.toLowerCase(),
-                    password: password.value
-                });
-
-                let response = await net.fetch(`${env.base_url}api/login.json`, {method: 'POST', body: body});
-
-                if (response.ok) {
-                    if (close)
-                        close();
-
-                    // Emergency unlocking
-                    deleteLock();
-
-                    entry.success('Connexion réussie');
-                    await self.initApplication();
-                } else {
-                    let msg = await response.text();
-                    entry.error(msg);
-                }
-            } catch (err) {
-                entry.error(err);
-            }
-        };
-    }
-
-    async function logout() {
-        let entry = new log.Entry;
-
-        entry.progress('Déconnexion en cours');
-        try {
-            let response = await net.fetch(`${env.base_url}api/logout.json`, {method: 'POST'});
-
-            if (response.ok) {
-                entry.success('Déconnexion réussie');
-                await self.initApplication();
-            } else {
-                let msg = await response.text();
-                entry.error(msg);
-            }
-        } catch (err) {
-            entry.error(err);
-        }
     }
 
     function toggleLeftPanel(mode) {
@@ -816,93 +759,6 @@ let goupile = new function() {
                 el.title = 'Serveur non disponible';
             }
         }
-    }
-
-    function renderGuest() {
-        let state = new PageState;
-        let update = () => {
-            let page = new Page('@login');
-
-            let builder = new PageBuilder(state, page);
-            builder.changeHandler = update;
-            builder.pushOptions({
-                missingMode: 'disable',
-                wide: true
-            });
-
-            makeLoginForm(builder);
-            builder.actions([['Connexion', builder.isValid() ? builder.submit : null]]);
-
-            let focus = !document.querySelector('#gp_login');
-
-            render(html`
-                <div style="flex: 1;"></div>
-                <form id="gp_login" @submit=${e => e.preventDefault()}>
-                    <img id="gp_logo" src=${`${env.base_url}favicon.png`} alt="" />
-                    ${page.render()}
-                </form>
-                <div style="flex: 1;"></div>
-            `, document.querySelector('#gp_all'));
-
-            if (focus) {
-                let el = document.querySelector('#gp_login input');
-                setTimeout(() => el.focus(), 0);
-            }
-        };
-
-        update();
-    }
-
-    function getLockURL() {
-        let url = localStorage.getItem('lock_url');
-        return url;
-    }
-
-    function toggleLock(e) {
-        if (getLockURL()) {
-            goupile.popup(e, null, (page, close) => {
-                page.output('Entrez le code de déverrouillage');
-                let pin = page.pin('code');
-
-                if (pin.value && pin.value.length >= 4) {
-                    let code = localStorage.getItem('lock_pin');
-
-                    if (pin.value === code) {
-                        setTimeout(close, 0);
-
-                        deleteLock();
-
-                        log.success('Application déverrouillée !');
-                        self.go();
-                    } else if (pin.value.length >= code.length) {
-                        pin.error('Code erroné');
-                    }
-                }
-            });
-        } else {
-            goupile.popup(e, 'Verrouiller', (page, close) => {
-                page.output('Entrez le code de verrouillage');
-                let pin = page.pin('*code');
-
-                if (pin.value && pin.value.length < 4)
-                    pin.error('Le code doit comporter au moins 4 chiffres', true);
-
-                page.submitHandler = () => {
-                    close();
-
-                    localStorage.setItem('lock_url', route_url);
-                    localStorage.setItem('lock_pin', pin.value);
-
-                    log.success('Application verrouillée !');
-                    self.go();
-                };
-            });
-        }
-    }
-
-    function deleteLock() {
-        localStorage.removeItem('lock_url');
-        localStorage.removeItem('lock_pin');
     }
 
     this.popup = function(e, action, func) {
