@@ -6,7 +6,7 @@ let form_exec = new function() {
     let self = this;
 
     let route_page;
-    let current_records = new BTree;
+    let context_records = new BTree;
     let page_states = {};
 
     let show_complete = true;
@@ -25,10 +25,10 @@ let form_exec = new function() {
 
         route_page = page;
 
-        if (current_records.size) {
-            let record0 = current_records.first();
+        if (context_records.size) {
+            let record0 = context_records.first();
             if (record0.table !== route_page.form.key)
-                current_records.clear();
+                context_records.clear();
         }
 
         if (what === 'multi') {
@@ -38,7 +38,7 @@ let form_exec = new function() {
             if (version != null)
                 version = parseInt(version, 10);
 
-            let record = current_records.get(id);
+            let record = context_records.get(id);
             if (record) {
                 if (version != null) {
                     if (version !== record.version)
@@ -57,21 +57,21 @@ let form_exec = new function() {
                     log.error(`La fiche version @${version} n'existe pas\nVersion chargée : @${record.version}`);
             }
 
-            current_records.clear();
-            current_records.set(record.id, record);
+            context_records.clear();
+            context_records.set(record.id, record);
 
             multi_mode = false;
         } else {
             let record = vrec.create(route_page.form.key);
 
-            current_records.clear();
-            current_records.set(record.id, record);
+            context_records.clear();
+            context_records.set(record.id, record);
 
             multi_mode = false;
         }
 
         let new_states = {};
-        for (let id of current_records.keys())
+        for (let id of context_records.keys())
             new_states[id] = page_states[id];
         page_states = new_states;
     };
@@ -81,9 +81,9 @@ let form_exec = new function() {
                             'values', 'variables', 'route', 'scratch', code);
 
         if (multi_mode) {
-            if (current_records.size && multi_columns.size) {
+            if (context_records.size && multi_columns.size) {
                 render(html`
-                    <div class="fm_page">${util.map(current_records.values(), record => {
+                    <div class="fm_page">${util.map(context_records.values(), record => {
                         // Each entry needs to update itself without doing a full render
                         let el = document.createElement('div');
                         el.className = 'fm_entry';
@@ -93,18 +93,18 @@ let form_exec = new function() {
                         return el;
                     })}</div>
                 `, panel_el);
-            } else if (!current_records.size) {
+            } else if (!context_records.size) {
                 render(html`<div class="fm_page">Aucun enregistrement sélectionné</div>`, panel_el);
             } else {
                 render(html`<div class="fm_page">Aucune colonne sélectionnée</div>`, panel_el);
             }
         } else {
-            if (!current_records.size) {
+            if (!context_records.size) {
                 let record = vrec.create(route_page.form.key);
-                current_records.set(record.id, record);
+                context_records.set(record.id, record);
             }
 
-            let record = current_records.first();
+            let record = context_records.first();
             runPage(func, record, panel_el);
         }
     };
@@ -294,8 +294,8 @@ let form_exec = new function() {
             let record2 = await vrec.save(record, page.key, page.variables, goupile.getUserName());
             entry.success('Données enregistrées');
 
-            if (current_records.has(record2.id))
-                current_records.set(record2.id, record2);
+            if (context_records.has(record2.id))
+                context_records.set(record2.id, record2);
         } catch (err) {
             entry.error(`Échec de l\'enregistrement : ${err.message}`);
         }
@@ -374,7 +374,7 @@ let form_exec = new function() {
                     ${records.map(record => {
                         if (show_complete || !complete_set.has(record.id)) {
                             return html`
-                                <tr class=${current_records.has(record.id) ? 'selected' : ''}>
+                                <tr class=${context_records.has(record.id) ? 'selected' : ''}>
                                     <th>
                                         <a @click=${e => handleEditClick(record)}>🔍\uFE0E</a>
                                         <a @click=${e => showDeleteDialog(e, record)}>✕</a>
@@ -429,7 +429,7 @@ let form_exec = new function() {
         let count0 = 0;
         if (multi_mode) {
             for (let record of records) {
-                if (current_records.has(record.id)) {
+                if (context_records.has(record.id)) {
                     count1++;
                 } else {
                     count0++;
@@ -482,10 +482,10 @@ let form_exec = new function() {
                     ${empty_msg ?
                         html`<tr><td colspan=${2 + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : ''}
                     ${records.map(record => html`
-                        <tr class=${current_records.has(record.id) ? 'selected' : ''}>
+                        <tr class=${context_records.has(record.id) ? 'selected' : ''}>
                             ${!multi_mode ? html`<th><a @click=${e => handleEditClick(record)}>🔍\uFE0E</a>
                                                       <a @click=${e => showDeleteDialog(e, record)}>✕</a></th>` : ''}
-                            ${multi_mode ? html`<th><input type="checkbox" .checked=${current_records.has(record.id)}
+                            ${multi_mode ? html`<th><input type="checkbox" .checked=${context_records.has(record.id)}
                                                             @click=${e => handleEditClick(record)} /></th>` : ''}
                             <td class="id">${record.sequence || 'local'}</td>
 
@@ -523,26 +523,26 @@ let form_exec = new function() {
     function toggleSelectionMode() {
         multi_mode = !multi_mode;
 
-        let record0 = current_records.size ? current_records.values().next().value : null;
+        let record0 = context_records.size ? context_records.values().next().value : null;
 
         if (multi_mode) {
             multi_columns.clear();
             if (record0 && record0.mtime == null)
-                current_records.clear();
+                context_records.clear();
         } else if (record0) {
-            current_records.clear();
-            current_records.set(record0.id, record0);
+            context_records.clear();
+            context_records.set(record0.id, record0);
         }
 
         goupile.go();
     }
 
     function toggleAllRecords(records, enable) {
-        current_records.clear();
+        context_records.clear();
 
         if (enable) {
             for (let record of records)
-                current_records.set(record.id, record);
+                context_records.set(record.id, record);
         }
 
         goupile.go();
@@ -704,18 +704,18 @@ let form_exec = new function() {
     }
 
     function handleEditClick(record) {
-        let show_overview = !current_records.size;
+        let show_overview = !context_records.size;
 
-        if (!current_records.has(record.id)) {
+        if (!context_records.has(record.id)) {
             if (!multi_mode)
-                current_records.clear();
-            current_records.set(record.id, record);
+                context_records.clear();
+            context_records.set(record.id, record);
         } else {
-            current_records.delete(record.id);
+            context_records.delete(record.id);
 
-            if (!multi_mode && !current_records.size) {
+            if (!multi_mode && !context_records.size) {
                 let record = vrec.create(route_page.form.key);
-                current_records.set(record.id, record);
+                context_records.set(record.id, record);
             }
         }
 
@@ -734,7 +734,7 @@ let form_exec = new function() {
                 close();
 
                 await vrec.delete(record.table, record.id);
-                current_records.delete(record.id, record);
+                context_records.delete(record.id, record);
 
                 goupile.go();
             };
@@ -746,8 +746,8 @@ let form_exec = new function() {
 
         if (multi_mode) {
             url += 'multi';
-        } else if (current_records.size) {
-            let record = current_records.first();
+        } else if (context_records.size) {
+            let record = context_records.first();
 
             if (record.mtime != null) {
                 url += record.id;
