@@ -4,18 +4,18 @@
 
 /* -------------------- Layout and basic elements -------------------- */
 
-.af_form {
+.fm_form {
     position: relative;
     margin-left: 1px;
 }
-.gp_panel.overview > .af_form {
+.gp_panel.overview > .fm_form {
     max-width: 824px;
     margin: auto;
 }
 
-.af_form a { color: #de6a1d; }
+.fm_form a { color: #de6a1d; }
 
-.af_page {
+.fm_page {
     position: relative;
     background: #efefef;
     border: 12px solid #f8f8f8;
@@ -23,29 +23,24 @@
     padding: 24px 12px 12px 12px;
 }
 
-.af_wrap + .af_container,
-    .af_container + .af_container,
-    .af_container + .af_wrap,
-    .af_wrap + .af_wrap { margin-top: 0.8em; }
-
-.af_entry + .af_entry {
+.fm_entry + .fm_entry {
     margin-top: 9px;
     padding-top: 9px;
     border-top: 1px solid #dfdfdf;
 }
 
 @media (max-width: 580px) {
-    .af_page {
+    .fm_page {
         padding-bottom: 2px;
         border-left: 0;
         border-right: 0;
     }
-    .af_page > :not(.af_section):last-child { margin-bottom: 10px; }
+    .fm_page > :not(.af_section):last-child { margin-bottom: 10px; }
 }
 
 /* -------------------- Path and actions -------------------- */
 
-.af_id {
+.fm_id {
     position: absolute;
     top: 14px;
     right: 14px;
@@ -54,14 +49,14 @@
     z-index: 998;
 }
 
-.af_path {
+.fm_path {
     position: absolute;
     top: 12px;
     width: 100%;
     text-align: center;
     z-index: 999;
 }
-.af_path > a {
+.fm_path > a {
     position: relative;
     display: inline-block;
     height: 1.2em;
@@ -72,32 +67,32 @@
     text-decoration: none;
     font-size: 1.1em;
 }
-.af_path > a + a { margin-left: 4px; }
-.af_path > a.active {
+.fm_path > a + a { margin-left: 4px; }
+.fm_path > a.active {
     background: #de6a1d;
     border: 2px solid #de6a1d;
     color: white;
 }
-.af_path > a.partial:before {
+.fm_path > a.partial:before {
     padding-right: 4px;
     font-size: 0.9em;
     content: '✓\FE0E';
 }
-.af_path > a.complete:before {
+.fm_path > a.complete:before {
     padding-right: 4px;
     font-size: 0.9em;
     content: '✓\FE0E✓\FE0E';
 }
-.af_path > a:hover { border-color: #de6a1d; }
+.fm_path > a:hover { border-color: #de6a1d; }
 
-.af_form > .af_actions { margin-top: 6px; }
+.fm_form > .af_actions { margin-top: 6px; }
 
 @media screen and (max-width: 580px) {
-    .af_id { display: none; }
+    .fm_id { display: none; }
 }
 
 @media (min-width: 1061px) {
-    .gp_panel.overview .af_form > .af_actions {
+    .gp_panel.overview .fm_form > .af_actions {
         position: fixed;
         display: inline-block;
         left: calc(50% + 406px);
@@ -106,10 +101,10 @@
         margin-top: 0;
         z-index: 999;
     }
-    .gp_panel.overview .af_form > .af_actions > * + * { margin: 4px 0; }
-    .gp_panel.overview .af_form > .af_actions > hr { margin: 8px 0; }
-    #gp_menu + main .gp_panel.overview .af_form > .af_actions { top: calc(2.5em + 32px); }
-    .gp_panel.overview .af_form > .af_actions > button { width: 9em; }
+    .gp_panel.overview .fm_form > .af_actions > * + * { margin: 4px 0; }
+    .gp_panel.overview .fm_form > .af_actions > hr { margin: 8px 0; }
+    #gp_menu + main .gp_panel.overview .fm_form > .af_actions { top: calc(2.5em + 32px); }
+    .gp_panel.overview .fm_form > .af_actions > button { width: 9em; }
 }
 
 /* -------------------- Status -------------------- */

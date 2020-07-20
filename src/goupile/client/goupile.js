@@ -143,7 +143,7 @@ let goupile = new function() {
             try {
                 running++;
 
-                let new_app = new Application;
+                let new_app = new ApplicationInfo;
                 let app_builder = new ApplicationBuilder(new_app);
 
                 if (code == null)
@@ -158,7 +158,7 @@ let goupile = new function() {
                     throw err;
                 } else {
                     // Empty application, so that the user can still fix main.js or reset everything
-                    app = new Application;
+                    app = new ApplicationInfo;
                     console.log(err);
                 }
             } finally {
@@ -304,7 +304,7 @@ let goupile = new function() {
                     if (route_asset) {
                         try {
                             switch (route_asset.type) {
-                                case 'page': { await form_executor.route(route_asset, url); } break;
+                                case 'page': { await form_exec.route(route_asset, url); } break;
                             }
                         } catch (err) {
                             log.error(err);
@@ -362,8 +362,8 @@ let goupile = new function() {
                     switch (left_panel) {
                         case 'files': { await dev_files.runFiles(); } break;
                         case 'editor': { await dev_files.runEditor(route_asset); } break;
-                        case 'status': { await form_executor.runStatus(); } break;
-                        case 'data': { await form_executor.runData(); } break;
+                        case 'status': { await form_exec.runStatus(); } break;
+                        case 'data': { await form_exec.runData(); } break;
                     }
                 } catch (err) {
                     log.error(err);
@@ -737,9 +737,9 @@ let goupile = new function() {
             running++;
 
             switch (asset.type) {
-                case 'page': { form_executor.runPage(code, test_el); } break;
-                case 'schedule': { await sched_executor.runMeetings(asset.schedule, test_el); } break;
-                case 'schedule_settings': { await sched_executor.runSettings(asset.schedule, test_el); } break;
+                case 'page': { form_exec.runPage(code, test_el); } break;
+                case 'schedule': { await sched_exec.runMeetings(asset.schedule, test_el); } break;
+                case 'schedule_settings': { await sched_exec.runSettings(asset.schedule, test_el); } break;
 
                 default: {
                     render(html`<div class="gp_wip">Aperçu non disponible</div>`, test_el);

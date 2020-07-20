@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let form_executor = new function() {
+let form_exec = new function() {
     let self = this;
 
     let current_asset = {};
@@ -68,14 +68,14 @@ let form_executor = new function() {
                             'values', 'variables', 'route', 'scratch', code);
 
         if (!current_records.size) {
-            render(html`<div class="af_page">Aucun enregistrement sélectionné</div>`, panel_el);
+            render(html`<div class="fm_page">Aucun enregistrement sélectionné</div>`, panel_el);
         } else if (select_many) {
             if (select_columns.size) {
                 render(html`
-                    <div class="af_page">${util.map(current_records.values(), record => {
+                    <div class="fm_page">${util.map(current_records.values(), record => {
                         // Each entry needs to update itself without doing a full render
                         let el = document.createElement('div');
-                        el.className = 'af_entry';
+                        el.className = 'fm_entry';
 
                         runPageMany(func, record, select_columns, el);
 
@@ -83,7 +83,7 @@ let form_executor = new function() {
                     })}</div>
                 `, panel_el);
             } else {
-                render(html`<div class="af_page">Aucune colonne sélectionnée</div>`, panel_el);
+                render(html`<div class="fm_page">Aucune colonne sélectionnée</div>`, panel_el);
             }
         } else {
             let record = current_records.first();
@@ -163,8 +163,8 @@ let form_executor = new function() {
                               record.complete[page.key] === false;
 
         render(html`
-            <div class="af_form">
-                <div class="af_path">${current_asset.form.pages.map(page2 => {
+            <div class="fm_form">
+                <div class="fm_path">${current_asset.form.pages.map(page2 => {
                     let complete = record.complete[page2.key];
 
                     let cls = '';
@@ -182,14 +182,14 @@ let form_executor = new function() {
                 })}</div>
 
                 ${show_actions ? html`
-                    <div class="af_id">
+                    <div class="fm_id">
                         ${record.mtime == null ? html`Nouvel enregistrement` : ''}
                         ${record.mtime != null && record.sequence == null ? html`Enregistrement local` : ''}
                         ${record.mtime != null && record.sequence != null ? html`Enregistrement n°${record.sequence}` : ''}
                     </div>
                 ` : ''}
 
-                <div class="af_page">${page.render()}</div>
+                <div class="fm_page">${page.render()}</div>
 
                 ${show_actions ? html`
                     <div class="af_actions">

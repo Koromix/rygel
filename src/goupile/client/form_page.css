@@ -4,6 +4,11 @@
 
 /* -------------------- Containers -------------------- */
 
+.af_wrap + .af_container,
+    .af_container + .af_container,
+    .af_container + .af_wrap,
+    .af_wrap + .af_wrap { margin-top: 0.8em; }
+
 .af_tabs > .af_section {
     margin-top: -10px;
     padding-top: 16px;
