@@ -812,7 +812,7 @@ let goupile = new function() {
                 el.style.backgroundPositionY = 'calc(-54px + 1.2em)';
                 el.title = 'Serveur disponible';
             } else {
-                el.style.backgroundPositionY = 'ccalc(-98px + 1.2em)';
+                el.style.backgroundPositionY = 'calc(-98px + 1.2em)';
                 el.title = 'Serveur non disponible';
             }
         }
