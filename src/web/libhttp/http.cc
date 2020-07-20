@@ -471,8 +471,12 @@ bool http_IO::AttachBinary(int code, Span<const uint8_t> data, const char *mime_
 
 void http_IO::AttachError(int code, const char *details)
 {
+    if (!details) {
+        details = last_err ? last_err : "";
+    }
+
     Span<char> page = Fmt((Allocator *)nullptr, "Error %1: %2\n%3", code,
-                          MHD_get_reason_phrase_for((unsigned int)code), details ? details : last_err);
+                          MHD_get_reason_phrase_for((unsigned int)code), details);
 
     MHD_Response *response =
         MHD_create_response_from_buffer_with_free_callback((size_t)page.len, page.ptr,
