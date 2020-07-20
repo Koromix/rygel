@@ -48,7 +48,7 @@ Options:
 
     if (!password.ptr) {
         password = Prompt("Password: ", "*", &temp_alloc);
-        if (!password.ptr)
+        if (!password.len)
             return 1;
     }
 
