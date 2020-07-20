@@ -11,87 +11,105 @@ let form_exec = new function() {
 
     let show_complete = true;
 
-    let select_many = false;
-    let select_columns = new Set;
+    let multi_mode = false;
+    let multi_columns = new Set;
 
     this.route = async function(asset, url) {
         let parts = url.pathname.substr(asset.url.length).split('/');
-        let id = parts[0] || null;
+        let what = parts[0] || null;
 
         if (parts.length !== 1)
             throw new Error(`Adresse incorrecte '${url.pathname}'`);
-        if (id && id !== 'many' && id !== 'new' && !id.match(/^[A-Z0-9]{26}$/))
+        if (what && what !== 'multi' && !what.match(/^[A-Z0-9]{26}(@[0-9]+)?$/))
             throw new Error(`Adresse incorrecte '${url.pathname}'`);
 
-        if (asset !== current_asset || !current_records.size || id != null) {
-            current_asset = asset;
+        current_asset = asset;
 
-            if (current_records.size) {
-                let record0 = current_records.first();
-                if (record0.table !== current_asset.form.key)
-                    current_records.clear();
-            }
-            if (!current_records.size && id == null)
-                id = 'new';
-
-            if (id === 'many') {
-                select_many = true;
-            } else if (id === 'new') {
-                if (current_records.size != 1 || current_records.first().mtime != null) {
-                    let record = vrec.create(current_asset.form.key);
-
-                    current_records.clear();
-                    current_records.set(record.id, record);
-                }
-
-                select_many = false;
-            } else if (id != null) {
-                let record = current_records.get(id) ||
-                             await vrec.load(current_asset.form.key, id) ||
-                             vrec.create(current_asset.form.key);
-
+        if (current_records.size) {
+            let record0 = current_records.first();
+            if (record0.table !== asset.form.key)
                 current_records.clear();
-                current_records.set(record.id, record);
+        }
 
-                select_many = false;
+        if (what === 'multi') {
+            multi_mode = true;
+        } else if (what != null) {
+            let [id, version] = what.split('@');
+            if (version != null)
+                version = parseInt(version, 10);
+
+            let record = current_records.get(id);
+            if (record) {
+                if (version != null) {
+                    if (version !== record.version)
+                        record = null;
+                } else {
+                    if (record.version !== record.versions.length - 1)
+                        record = null;
+                }
+            }
+            if (!record) {
+                record = await vrec.load(asset.form.key, id, version) ||
+                               vrec.create(asset.form.key);
+                delete page_states[id];
+
+                if (version != null && record.version !== version)
+                    log.error(`La fiche version @${version} n'existe pas\nVersion chargée : @${record.version}`);
             }
 
-            let new_states = {};
-            for (let id of current_records.keys())
-                new_states[id] = page_states[id];
-            page_states = new_states;
+            current_records.clear();
+            current_records.set(record.id, record);
+
+            multi_mode = false;
+        } else {
+            let record = vrec.create(asset.form.key);
+
+            current_records.clear();
+            current_records.set(record.id, record);
+
+            multi_mode = false;
         }
+
+        let new_states = {};
+        for (let id of current_records.keys())
+            new_states[id] = page_states[id];
+        page_states = new_states;
     };
 
     this.runPage = function(code, panel_el) {
         let func = Function('util', 'shared', 'go', 'form', 'page',
                             'values', 'variables', 'route', 'scratch', code);
 
-        if (!current_records.size) {
-            render(html`<div class="fm_page">Aucun enregistrement sélectionné</div>`, panel_el);
-        } else if (select_many) {
-            if (select_columns.size) {
+        if (multi_mode) {
+            if (current_records.size && multi_columns.size) {
                 render(html`
                     <div class="fm_page">${util.map(current_records.values(), record => {
                         // Each entry needs to update itself without doing a full render
                         let el = document.createElement('div');
                         el.className = 'fm_entry';
 
-                        runPageMany(func, record, select_columns, el);
+                        runPageMulti(func, record, multi_columns, el);
 
                         return el;
                     })}</div>
                 `, panel_el);
+            } else if (!current_records.size) {
+                render(html`<div class="fm_page">Aucun enregistrement sélectionné</div>`, panel_el);
             } else {
                 render(html`<div class="fm_page">Aucune colonne sélectionnée</div>`, panel_el);
             }
         } else {
+            if (!current_records.size) {
+                let record = vrec.create(current_asset.form.key);
+                current_records.set(record.id, record);
+            }
+
             let record = current_records.first();
             runPage(func, record, panel_el);
         }
     };
 
-    function runPageMany(func, record, columns, el) {
+    function runPageMulti(func, record, columns, el) {
         let state = page_states[record.id];
         if (!state) {
             state = new PageState;
@@ -110,7 +128,7 @@ let form_exec = new function() {
 
             await goupile.go();
         };
-        builder.changeHandler = () => runPageMany(...arguments);
+        builder.changeHandler = () => runPageMulti(...arguments);
 
         // Build it!
         builder.pushOptions({compact: true});
@@ -186,6 +204,8 @@ let form_exec = new function() {
                         ${record.mtime == null ? html`Nouvel enregistrement` : ''}
                         ${record.mtime != null && record.sequence == null ? html`Enregistrement local` : ''}
                         ${record.mtime != null && record.sequence != null ? html`Enregistrement n°${record.sequence}` : ''}
+
+                        ${record.mtime != null ? html`(<a @click=${e => showTrailDialog(e, record)}>trail</a>)` : ''}
                     </div>
                 ` : ''}
 
@@ -198,11 +218,9 @@ let form_exec = new function() {
                         ${current_asset.form.options.validate ?
                             html`<button type="button" class="af_button" ?disabled=${!enable_validate}
                                          @click=${e => showValidateDialog(e, builder.submit)}>Valider</button>`: ''}
-                        ${record.mtime != null ? html`
-                            <hr/>
-                            <button type="button" class="af_button" ?disabled=${!state.changed && record.mtime == null}
-                                    @click=${e => handleNewClick(e, state.changed)}>Fermer</button>
-                        ` : ''}
+                        <hr/>
+                        <button type="button" class="af_button" ?disabled=${!state.changed && record.mtime == null}
+                                @click=${e => handleNewClick(e, state.changed)}>Fermer</button>
                     </div>
                 `: ''}
             </div>
@@ -211,15 +229,51 @@ let form_exec = new function() {
         window.history.replaceState(null, null, makeURL());
     }
 
+    function showTrailDialog(e, record) {
+        goupile.popup(e, null, (page, close) => {
+            page.output(html`
+                <table class="tr_table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Modification</th>
+                            <th>Utilisateur</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${util.mapRange(0, record.versions.length, idx => {
+                            let version = record.versions[record.versions.length - idx - 1];
+                            let url = makeLink(current_asset.form.key, current_asset.page.key, record, version.version);
+
+                            return html`
+                                <tr>
+                                    <td><a href=${url}>🔍\uFE0E</a></td>
+                                    <td>${version.mtime}</td>
+                                    <td>${version.username || '(local)'}</td>
+                                </tr>
+                            `;
+                        })}
+                    </tbody>
+                </table>
+            `);
+        });
+    }
+
     function makeURL() {
         let url;
-        if (select_many) {
-            url = `${current_asset.url}many`;
+        if (multi_mode) {
+            url = `${current_asset.url}multi`;
         } else if (!current_records.size) {
             url = current_asset.url;
         } else {
             let record = current_records.first();
-            url = `${current_asset.url}${record.mtime != null ? record.id : ''}`;
+
+            url = current_asset.url;
+            if (record.mtime != null) {
+                url += record.id;
+                if (record.version !== record.versions.length - 1)
+                    url += `@${record.version}`;
+            }
         }
 
         return util.pasteURL(url, app.route);
@@ -393,7 +447,7 @@ let form_exec = new function() {
 
         let count1 = 0;
         let count0 = 0;
-        if (select_many) {
+        if (multi_mode) {
             for (let record of records) {
                 if (current_records.has(record.id)) {
                     count1++;
@@ -405,7 +459,7 @@ let form_exec = new function() {
 
         render(html`
             <div class="gp_toolbar">
-                <button type="button" class=${select_many ? 'active' : ''}
+                <button type="button" class=${multi_mode ? 'active' : ''}
                         @click=${e => toggleSelectionMode()}>Sélection multiple</button>
                 <div style="flex: 1;"></div>
                 <div class="gp_dropdown right">${renderExportMenu()}</div>
@@ -429,7 +483,7 @@ let form_exec = new function() {
                     ` : ''}
                     <tr>
                         <th class="actions">
-                            ${select_many ?
+                            ${multi_mode ?
                                 html`<input type="checkbox" .checked=${count1 && !count0}
                                             .indeterminate=${count1 && count0}
                                             @change=${e => toggleAllRecords(records, e.target.checked)} />` : ''}
@@ -437,9 +491,9 @@ let form_exec = new function() {
                         <th class="id">ID</th>
 
                         ${!columns.length ? html`<th>&nbsp;</th>` : ''}
-                        ${!select_many ? columns.map(col => html`<th title=${col.key}>${col.key}</th>`) : ''}
-                        ${select_many ? columns.map(col =>
-                            html`<th title=${col.key}><input type="checkbox" .checked=${select_columns.has(col.key)}
+                        ${!multi_mode ? columns.map(col => html`<th title=${col.key}>${col.key}</th>`) : ''}
+                        ${multi_mode ? columns.map(col =>
+                            html`<th title=${col.key}><input type="checkbox" .checked=${multi_columns.has(col.key)}
                                                              @change=${e => toggleColumn(col.key)} />${col.key}</th>`) : ''}
                     </tr>
                 </thead>
@@ -449,9 +503,9 @@ let form_exec = new function() {
                         html`<tr><td colspan=${2 + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : ''}
                     ${records.map(record => html`
                         <tr class=${current_records.has(record.id) ? 'selected' : ''}>
-                            ${!select_many ? html`<th><a @click=${e => handleEditClick(record)}>🔍\uFE0E</a>
+                            ${!multi_mode ? html`<th><a @click=${e => handleEditClick(record)}>🔍\uFE0E</a>
                                                       <a @click=${e => showDeleteDialog(e, record)}>✕</a></th>` : ''}
-                            ${select_many ? html`<th><input type="checkbox" .checked=${current_records.has(record.id)}
+                            ${multi_mode ? html`<th><input type="checkbox" .checked=${current_records.has(record.id)}
                                                             @click=${e => handleEditClick(record)} /></th>` : ''}
                             <td class="id">${record.sequence || 'local'}</td>
 
@@ -487,12 +541,12 @@ let form_exec = new function() {
     }
 
     function toggleSelectionMode() {
-        select_many = !select_many;
+        multi_mode = !multi_mode;
 
         let record0 = current_records.size ? current_records.values().next().value : null;
 
-        if (select_many) {
-            select_columns.clear();
+        if (multi_mode) {
+            multi_columns.clear();
             if (record0 && record0.mtime == null)
                 current_records.clear();
         } else if (record0) {
@@ -515,10 +569,10 @@ let form_exec = new function() {
     }
 
     function toggleColumn(key) {
-        if (select_columns.has(key)) {
-            select_columns.delete(key);
+        if (multi_columns.has(key)) {
+            multi_columns.delete(key);
         } else {
-            select_columns.add(key);
+            multi_columns.add(key);
         }
 
         goupile.go();
@@ -673,13 +727,13 @@ let form_exec = new function() {
         let show_overview = !current_records.size;
 
         if (!current_records.has(record.id)) {
-            if (!select_many)
+            if (!multi_mode)
                 current_records.clear();
             current_records.set(record.id, record);
         } else {
             current_records.delete(record.id);
 
-            if (!select_many && !current_records.size) {
+            if (!multi_mode && !current_records.size) {
                 let record = vrec.create(current_asset.form.key);
                 current_records.set(record.id, record);
             }
@@ -707,15 +761,10 @@ let form_exec = new function() {
         });
     }
 
-    function makeLink(form_key, page_key, record = undefined) {
+    function makeLink(form_key, page_key, record = undefined, version = undefined) {
         let url = `${env.base_url}app/${form_key}/${page_key || form_key}/`;
-
-        if (record && record.mtime != null) {
-            url += record.id;
-        } else if (record === null) {
-            url += 'new';
-        }
-
+        if (record && record.mtime != null)
+            url += record.id + (version != null ? `@${version}` : '');
         return url;
     }
 };

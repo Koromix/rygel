@@ -46,7 +46,7 @@
     right: 14px;
     font-size: 11px;
     color: #777;
-    z-index: 998;
+    z-index: 9999;
 }
 
 .fm_path {
@@ -105,6 +105,36 @@
     .gp_panel.overview .fm_form > .af_actions > hr { margin: 8px 0; }
     #gp_menu + main .gp_panel.overview .fm_form > .af_actions { top: calc(2.5em + 32px); }
     .gp_panel.overview .fm_form > .af_actions > button { width: 9em; }
+}
+
+/* -------------------- Audit trail -------------------- */
+
+.tr_table {
+    width: 300px;
+    border-collapse: collapse;
+    border: 0;
+}
+
+.tr_table thead { background: #dfdfdf; }
+.tr_table th { font-weight: normal; }
+
+.tr_table th, .tr_table td {
+    padding: 3px;
+    border: 1px solid #dfdfdf;
+    text-align: center;
+}
+
+.tr_table tbody tr { background: #f4f4f4; }
+.tr_table tbody tr.selected td, .tr_table tbody tr.selected th {
+    background: #666;
+    color: white;
+}
+
+.tr_table a {
+    color: inherit;
+    text-decoration: none;
+    font-weight: normal;
+    font-style: normal;
 }
 
 /* -------------------- Status -------------------- */
