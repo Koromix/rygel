@@ -182,6 +182,16 @@ let form_exec = new function() {
 
         render(html`
             <div class="fm_form">
+                ${show_actions ? html`
+                    <div class="fm_id">
+                        ${record.mtime == null ? html`Nouvel enregistrement` : ''}
+                        ${record.mtime != null && record.sequence == null ? html`Enregistrement local` : ''}
+                        ${record.mtime != null && record.sequence != null ? html`Enregistrement n°${record.sequence}` : ''}
+
+                        ${record.mtime != null ? html`(<a @click=${e => showTrailDialog(e, record)}>trail</a>)` : ''}
+                    </div>
+                ` : ''}
+
                 <div class="fm_path">${route_page.form.pages.map(page2 => {
                     let complete = record.complete[page2.key];
 
@@ -198,16 +208,6 @@ let form_exec = new function() {
 
                     return html`<a class=${cls} href=${makeLink(route_page.form.key, page2.key, record)}>${page2.label}</a>`;
                 })}</div>
-
-                ${show_actions ? html`
-                    <div class="fm_id">
-                        ${record.mtime == null ? html`Nouvel enregistrement` : ''}
-                        ${record.mtime != null && record.sequence == null ? html`Enregistrement local` : ''}
-                        ${record.mtime != null && record.sequence != null ? html`Enregistrement n°${record.sequence}` : ''}
-
-                        ${record.mtime != null ? html`(<a @click=${e => showTrailDialog(e, record)}>trail</a>)` : ''}
-                    </div>
-                ` : ''}
 
                 <div class="fm_page">${page.render()}</div>
 

@@ -19,8 +19,7 @@
     position: relative;
     background: #efefef;
     border: 12px solid #f8f8f8;
-    border-top-width: 32px;
-    padding: 24px 12px 12px 12px;
+    padding: 12px 12px 12px 12px;
 }
 
 .fm_entry + .fm_entry {
@@ -85,6 +84,10 @@
 }
 .fm_path > a:hover { border-color: #de6a1d; }
 
+.fm_path + .fm_page {
+    padding-top: 24px;
+    border-top-width: 32px;
+}
 .fm_form > .af_actions { margin-top: 6px; }
 
 @media screen and (max-width: 580px) {
