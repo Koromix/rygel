@@ -723,16 +723,18 @@ let goupile = new function() {
             test_el = document.createElement('div');
         }
 
+        try {
+            if (asset.path && code == null)
+                code = await readCode(asset.path);
+        } catch (err) {
+            overview_el.classList.add('broken');
+            throw err;
+        }
+
         nav.block();
         try {
             switch (asset.type) {
-                case 'page': {
-                    if (code == null)
-                        code = await readCode(asset.path);
-
-                    form_executor.runPage(code, test_el);
-                } break;
-
+                case 'page': { form_executor.runPage(code, test_el); } break;
                 case 'schedule': { await sched_executor.runMeetings(asset.schedule, test_el); } break;
                 case 'schedule_settings': { await sched_executor.runSettings(asset.schedule, test_el); } break;
 
