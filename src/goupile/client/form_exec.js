@@ -175,7 +175,7 @@ let form_exec = new function() {
              state.values, page.variables, app.route, state.scratch);
         builder.errorList();
 
-        let show_actions = route_page.form.options.actions && page.variables.length;
+        let show_actions = route_page.options.actions && page.variables.length;
         let enable_save = !builder.hasErrors() && state.changed;
         let enable_validate = !builder.hasErrors() && !state.changed &&
                               record.complete[page.key] === false;
@@ -215,7 +215,7 @@ let form_exec = new function() {
                     <div class="af_actions">
                         <button type="button" class="af_button" ?disabled=${!enable_save}
                                 @click=${builder.submit}>Enregistrer</button>
-                        ${route_page.form.options.validate ?
+                        ${route_page.options.validate ?
                             html`<button type="button" class="af_button" ?disabled=${!enable_validate}
                                          @click=${e => showValidateDialog(e, builder.submit)}>Valider</button>`: ''}
                         <hr/>

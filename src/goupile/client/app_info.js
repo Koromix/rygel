@@ -32,17 +32,12 @@ function ApplicationBuilder(app) {
         app.home = url;
     };
 
-    this.form = function(key, func = null, options = {}) {
+    this.form = function(key, func = null) {
         checkKey(key);
 
         let form = {
             key: key,
             url: `${env.base_url}app/${key}/`,
-
-            options: util.assignDeep({
-                actions: true,
-                validate: false
-            }, options),
 
             pages: [],
             links: []
@@ -172,7 +167,7 @@ function FormBuilder(form) {
 
     let used_keys = new Set;
 
-    this.page = function(key, label = undefined) {
+    this.page = function(key, label = undefined, options = {}) {
         if (!key)
             throw new Error('Empty keys are not allowed');
         if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
@@ -185,7 +180,11 @@ function FormBuilder(form) {
             label: label || key,
             url: `${env.base_url}app/${form.key}/${key}/`,
 
-            form: form
+            form: form,
+            options: util.assignDeep({
+                actions: true,
+                validate: false
+            }, options)
         };
         form.pages.push(page);
 
