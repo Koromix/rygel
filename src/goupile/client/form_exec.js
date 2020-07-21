@@ -493,7 +493,7 @@ let form_exec = new function() {
                     ${columns.length ? html`
                         <tr>
                             <th colspan="2"></th>
-                            ${util.mapRLE(columns, col => col.page, (page, offset, len) =>
+                            ${util.mapRLE(columns, col => col.category, (page, offset, len) =>
                                 html`<th class="rec_page" colspan=${len}>${page}</th>`)}
                         </tr>
                     ` : ''}
@@ -528,11 +528,13 @@ let form_exec = new function() {
                             ${columns.map(col => {
                                 let value = record.values[col.key];
 
-                                if (value == null) {
-                                    if (record.values.hasOwnProperty(col.key)) {
-                                        return html`<td class="missing" title="Donnée manquante">MD</td>`;
-                                    } else {
+                                if (record.complete[col.page] == null) {
+                                    return html`<td class="missing" title="Page non remplie"></td>`;
+                                } else if (value == null) {
+                                    if (!record.values.hasOwnProperty(col.key)) {
                                         return html`<td class="missing" title="Non applicable">NA</td>`;
+                                    } else {
+                                        return html`<td class="missing" title="Donnée manquante">MD</td>`;
                                     }
                                 } else if (Array.isArray(value)) {
                                     let text = value.join('|');
@@ -672,7 +674,8 @@ let form_exec = new function() {
 
                         if (!set_ptr.has(variable.after)) {
                             let col = {
-                                page: page.label,
+                                page: page.key,
+                                category: page.label,
                                 key: key,
                                 type: variable.type
                             };
@@ -687,7 +690,8 @@ let form_exec = new function() {
                         let use_key = set_ptr.values().next().value;
 
                         let col = {
-                            page: page.label,
+                            page: page.key,
+                            category: page.label,
                             key: use_key,
                             type: variables_map[use_key].type
                         };
@@ -714,7 +718,8 @@ let form_exec = new function() {
             // Remaining page variables
             for (let key in variables_map) {
                 let col = {
-                    page: page.label,
+                    page: page.key,
+                    category: page.label,
                     key: key,
                     type: variables_map[key].type
                 }
