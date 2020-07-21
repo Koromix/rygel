@@ -76,12 +76,22 @@ self.addEventListener('fetch', e => {
                     db_path = path;
                 }
 
-                let db_name = `goupile+${env.app_key}`;
-                let db = await idb.open(db_name);
+                try {
+                    let db_name = `goupile+${env.app_key}`;
+                    let db = await idb.open(db_name);
 
-                let file_data = await db.load('fs_data', db_path);
-                if (file_data)
-                    return new Response(file_data);
+                    let file_data = await db.load('fs_data', db_path);
+                    if (file_data)
+                        return new Response(file_data);
+                } catch (err) {
+                    // IndexedDB sucks, you can't open a database without creating it
+                    // if it does not exist. And right now, you can't even test if a database
+                    // exists beforehand on all browsers... F*cking crap.
+                    // Still, we want this to be transparent. If the database does not exist,
+                    // it will get created by the idb.open() call with version 1. The code
+                    // in goupile.js will upgrade it to version 2 (or more). All we have to do
+                    // here is ignore errors, such as missing object store.
+                }
             }
 
             return await caches.match(e.request) || await net.fetch(e.request);

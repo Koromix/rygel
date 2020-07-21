@@ -112,7 +112,10 @@ let goupile = new function() {
         let db_name = `goupile+${env.app_key}`;
         let db = await idb.open(db_name, 2, (db, old_version) => {
             switch (old_version) {
-                case null: {
+                // See sw.js for why we need to use version 2 at a minimum.
+                // TLDR: IndexedDB sucks.
+                case null:
+                case 1: {
                     db.createStore('fs_entries', {keyPath: 'path'});
                     db.createStore('fs_data');
                     db.createStore('fs_sync', {keyPath: 'path'});
