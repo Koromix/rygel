@@ -216,10 +216,8 @@ function PageBuilder(state, page, readonly = false) {
     }
 
     function handleTextInput(e, key) {
-        if (!isModifiable(key)) {
-            e.preventDefault();
+        if (!isModifiable(key))
             return;
-        }
 
         updateValue(key, e.target.value || undefined);
     }
@@ -252,10 +250,8 @@ function PageBuilder(state, page, readonly = false) {
     };
 
     function handleNumberChange(e, key) {
-        if (!isModifiable(key)) {
-            e.preventDefault();
+        if (!isModifiable(key))
             return;
-        }
 
         // Hack to accept incomplete values, mainly in the case of a '-' being typed first,
         // in which case we don't want to clear the field immediately.
@@ -301,7 +297,7 @@ function PageBuilder(state, page, readonly = false) {
                      @click=${e => handleSliderClick(e, key, value, options.min, options.max)}>${value.toFixed(options.decimals)}</div>
                 <input id=${id} type="range" style=${`--webkit_progress: ${webkit_progress * 100}%`}
                        min=${options.min} max=${options.max} step=${1 / Math.pow(10, options.decimals)}
-                       .value=${thumb_value}
+                       .value=${thumb_value} data-value=${thumb_value}
                        placeholder=${options.placeholder || ''}
                        ?disabled=${options.disabled}
                        @click=${e => { e.target.value = fix_value; handleSliderChange(e, key); }}
@@ -320,7 +316,7 @@ function PageBuilder(state, page, readonly = false) {
 
     function handleSliderChange(e, key) {
         if (!isModifiable(key)) {
-            e.preventDefault();
+            e.target.value = e.target.dataset.value;
             return;
         }
 
@@ -342,10 +338,8 @@ function PageBuilder(state, page, readonly = false) {
     }
 
     function handleSliderClick(e, key, value, min, max) {
-        if (!isModifiable(key)) {
-            e.preventDefault();
+        if (!isModifiable(key))
             return;
-        }
 
         goupile.popup(e, 'Modifier', (page, close) => {
             let number = page.number('number', 'Valeur :', {min: min, max: max, value: value});
@@ -402,10 +396,8 @@ function PageBuilder(state, page, readonly = false) {
     };
 
     function handleEnumChange(e, key, allow_untoggle) {
-        if (!isModifiable(key)) {
-            e.preventDefault();
+        if (!isModifiable(key))
             return;
-        }
 
         let json = e.target.dataset.value;
         let activate = !e.target.classList.contains('active');
@@ -464,10 +456,8 @@ function PageBuilder(state, page, readonly = false) {
     };
 
     function handleEnumDropChange(e, key) {
-        if (!isModifiable(key)) {
-            e.preventDefault();
+        if (!isModifiable(key))
             return;
-        }
 
         updateValue(key, util.strToValue(e.target.value));
     }
@@ -500,10 +490,8 @@ function PageBuilder(state, page, readonly = false) {
     };
 
     function handleEnumRadioChange(e, key, already_checked) {
-        if (!isModifiable(key)) {
-            e.preventDefault();
+        if (!isModifiable(key))
             return;
-        }
 
         if (already_checked) {
             e.target.checked = false;
@@ -544,10 +532,8 @@ function PageBuilder(state, page, readonly = false) {
     };
 
     function handleMultiChange(e, key) {
-        if (!isModifiable(key)) {
-            e.preventDefault();
+        if (!isModifiable(key))
             return;
-        }
 
         e.target.classList.toggle('active');
 
@@ -596,10 +582,8 @@ function PageBuilder(state, page, readonly = false) {
     };
 
     function handleMultiCheckChange(e, key) {
-        if (!isModifiable(key)) {
-            e.preventDefault();
+        if (!isModifiable(key))
             return;
-        }
 
         let els = e.target.parentNode.querySelectorAll('input');
 
@@ -703,10 +687,8 @@ function PageBuilder(state, page, readonly = false) {
     };
 
     function handleDateTimeInput(e, key) {
-        if (!isModifiable(key)) {
-            e.preventDefault();
+        if (!isModifiable(key))
             return;
-        }
 
         // Store as string, for serialization purposes
         updateValue(key, e.target.value || undefined);
@@ -748,10 +730,8 @@ function PageBuilder(state, page, readonly = false) {
     };
 
     function handleFileInput(e, key) {
-        if (!isModifiable(key)) {
-            e.preventDefault();
+        if (!isModifiable(key))
             return;
-        }
 
         state.file_lists.set(key.toString(), e.target.files);
         updateValue(key, e.target.files[0] || undefined);
