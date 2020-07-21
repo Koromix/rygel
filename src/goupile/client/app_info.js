@@ -129,17 +129,6 @@ function ApplicationBuilder(app) {
 
             schedule: schedule
         });
-        pushAsset({
-            type: 'schedule_settings',
-            url: `${schedule.url}settings/`,
-
-            category: 'Agendas',
-            label: schedule.key,
-            overview: 'Créneaux',
-            secondary: true,
-
-            schedule: schedule
-        });
     };
 
     function pushAsset(asset) {

@@ -166,10 +166,6 @@ let goupile = new function() {
                 running--;
             }
 
-            // XXX: Hack for secondary asset thingy that we'll get rid of eventually
-            for (let i = 0; i < app.assets.length; i++)
-                app.assets[i].idx = i;
-
             // Select default page
             app.urls_map[env.base_url] = app.home ? app.urls_map[app.home] : app.assets[0];
 
@@ -442,22 +438,6 @@ let goupile = new function() {
         let show_develop = settings.develop;
         let show_data = settings.edit && route_asset && route_asset.form;
 
-        let show_assets = [];
-        let select_asset;
-        if (route_asset) {
-            let idx = route_asset.idx;
-            while (app.assets[idx].secondary)
-                idx--;
-
-            // Main asset
-            show_assets.push(app.assets[idx]);
-            select_asset = app.assets[idx];
-
-            // Related secondary assets
-            while (++idx < app.assets.length && app.assets[idx].secondary)
-                show_assets.push(app.assets[idx]);
-        }
-
         return html`
             ${show_develop ? html`
                 <div class="gp_dropdown">
@@ -471,7 +451,6 @@ let goupile = new function() {
                     </div>
                 </div>
             ` : ''}
-
             ${show_data ? html`
                 <div class="gp_dropdown">
                     <button class=${left_panel === 'status' || left_panel === 'data' ? 'icon active' : 'icon'}
@@ -484,18 +463,11 @@ let goupile = new function() {
                     </div>
                 </div>
             ` :  ''}
-
-            ${show_assets.map(asset => {
-                if (asset === route_asset) {
-                    return html`<button class=${show_overview ? 'icon active': 'icon'}
-                                        @click=${e => self.toggleOverview()}
-                                        style="background-position-y: calc(-318px + 1.2em)">${asset.overview}</button>`;
-                } else {
-                    return html`<button class="icon"
-                                        @click=${e => self.go(asset.url)}
-                                        style="background-position-y: calc(-318px + 1.2em)">${asset.overview}</button>`;
-                }
-            })}
+            ${route_asset ? html`
+                <button class=${show_overview ? 'icon active': 'icon'}
+                        @click=${e => self.toggleOverview()}
+                        style="background-position-y: calc(-318px + 1.2em)">${route_asset.overview}</button>
+            ` : ''}
 
             ${show_develop ? html`
                 <select id="gp_assets" @change=${e => self.go(e.target.value)}>
@@ -506,12 +478,8 @@ let goupile = new function() {
                         } else {
                             return html`<optgroup label=${category}>${util.mapRange(offset, offset + len, idx => {
                                 let asset = app.assets[idx];
-                                if (!asset.secondary) {
-                                    return html`<option value=${asset.url}
-                                                       .selected=${asset === select_asset}>${asset.label}</option>`;
-                                } else {
-                                    return '';
-                                }
+                                return html`<option value=${asset.url}
+                                                    .selected=${asset === route_asset}>${asset.label}</option>`;
                             })}</optgroup>`;
                         }
                     })}
@@ -584,20 +552,6 @@ let goupile = new function() {
 
         self.go();
     };
-
-    function toggleAssetView(asset) {
-        if (goupile.isTablet() || asset !== route_asset) {
-            left_panel = null;
-            show_overview = true;
-        } else if (!show_overview) {
-            show_overview = true;
-        } else {
-            left_panel = left_panel || 'editor';
-            show_overview = false;
-        }
-
-        self.go(asset.url);
-    }
 
     function showSyncDialog(e) {
         goupile.popup(e, 'Synchroniser', (page, close) => {
@@ -686,11 +640,6 @@ let goupile = new function() {
             switch (asset.type) {
                 case 'page': { form_exec.runPage(code, test_el); } break;
                 case 'schedule': { await sched_exec.runMeetings(asset.schedule, test_el); } break;
-                case 'schedule_settings': { await sched_exec.runSettings(asset.schedule, test_el); } break;
-
-                default: {
-                    render(html`<div class="gp_wip">Aperçu non disponible</div>`, test_el);
-                } break;
             }
 
             if (broken_template)
