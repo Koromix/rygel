@@ -83,6 +83,10 @@
     content: '✓\FE0E✓\FE0E';
 }
 .fm_path > a:hover { border-color: #de6a1d; }
+.fm_path > a:focus {
+    outline: 2px dotted #999;
+    outline-offset: 1px;
+}
 
 .fm_path + .fm_page {
     padding-top: 24px;

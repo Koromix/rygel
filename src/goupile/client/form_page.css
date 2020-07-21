@@ -177,7 +177,7 @@
     border-width: 0.5px;
 }
 .af_button::-moz-focus-inner { border: 0; }
-.af_button:not(:disabled):focus { outline: 1px dotted #ccc; }
+.af_button:not(:disabled):focus { outline: 2px dotted #999; }
 .af_button:not(:disabled):hover { border-color: #de6a1d; }
 .af_button:disabled { background: #bbb; }
 .af_button.active {
@@ -204,6 +204,10 @@
 
 .af_calc { font-style: italic; }
 
+.af_button:focus, .af_input:focus, .af_select:focus {
+    outline: 2px dotted #999;
+    outline-offset: 1px;
+}
 .af_enum.readonly, .af_radio.readonly, .af_multi.readonly, .af_slider.readonly {
     pointer-events: none;
     cursor: inherit;
@@ -211,7 +215,10 @@
 
 /* -------------------- Nice radio and checkboxes -------------------- */
 
-.af_radio > input { display: none; }
+.af_radio > input {
+    position: absolute;
+    opacity: 0;
+}
 .af_radio > input + label {
     position: relative;
     padding-left: 27px;
@@ -247,8 +254,15 @@
 .af_radio > input:checked + label:after { content: ''; }
 .af_radio > input:hover + label:before { border-color: #de6a1d; }
 .af_radio > input:hover + label:after { background-color: #de6a1d; }
+.af_radio > input:focus + label {
+    outline: 2px dotted #999;
+    outline-offset: 1px;
+}
 
-.af_multi > input { display: none; }
+.af_multi > input {
+    position: absolute;
+    opacity: 0;
+}
 .af_multi > input + label {
     position: relative;
     padding-left: 27px;
@@ -282,6 +296,10 @@
 .af_multi > input:checked + label:after { content: ''; }
 .af_multi > input:hover + label:before,
     .af_multi > input:hover + label:after { border-color: #de6a1d; }
+.af_multi > input:focus + label {
+    outline: 2px dotted #999;
+    outline-offset: 1px;
+}
 
 @media (pointer: coarse) {
     .af_radio > input + label {
@@ -378,7 +396,10 @@
     border: none;
     border-radius: 50%;
 }
-.af_slider > input:focus { outline: none; }
+.af_slider > input:focus {
+    outline: 2px dotted #999;
+    outline-offset: 1px;
+}
 
 .af_slider.missing > div { visibility: hidden; }
 .af_slider.missing > input::-webkit-slider-thumb { background: #ccc; }
