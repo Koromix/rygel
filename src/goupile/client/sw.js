@@ -51,6 +51,8 @@ self.addEventListener('activate', e => {
             if (key !== env.cache_key)
                 await caches.delete(key);
         }
+
+        await clients.claim();
     }());
 });
 
