@@ -69,12 +69,18 @@ let form_exec = new function() {
                 }
             }
             if (!record) {
-                record = await vrec.load(route_page.form.key, id, version) ||
-                               vrec.create(route_page.form.key);
-                delete page_states[id];
+                record = await vrec.load(route_page.form.key, id, version);
 
-                if (version != null && record.version !== version)
-                    log.error(`La fiche version @${version} n'existe pas\nVersion chargée : @${record.version}`);
+                if (record) {
+                    if (version != null && record.version !== version)
+                        log.error(`La fiche version @${version} n'existe pas\n`+
+                                  `Version chargée : @${record.version}`);
+                } else {
+                    log.error(`La fiche ${id} n'existe pas`);
+                    record = vrec.create(route_page.form.key);
+                }
+
+                delete page_states[id];
             }
 
             context_records.set(record.id, record);
