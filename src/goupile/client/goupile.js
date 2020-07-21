@@ -371,6 +371,10 @@ let goupile = new function() {
                 } finally {
                     updateStatus();
                 }
+
+                // Give popup (if any) a chance to refresh too
+                if (popup_builder)
+                    popup_builder.changeHandler();
             } else {
                 user.runLogin();
             }

@@ -208,7 +208,7 @@ let form_exec = new function() {
                         ${record.mtime != null && record.sequence == null ? html`Enregistrement local` : ''}
                         ${record.mtime != null && record.sequence != null ? html`Enregistrement n°${record.sequence}` : ''}
 
-                        ${record.mtime != null ? html`(<a @click=${e => showTrailDialog(e, record)}>trail</a>)` : ''}
+                        ${record.mtime != null ? html`(<a @click=${e => showTrailDialog(e, record.id)}>trail</a>)` : ''}
                     </div>
                 ` : ''}
 
@@ -249,31 +249,28 @@ let form_exec = new function() {
         window.history.replaceState(null, null, makeCurrentURL());
     }
 
-    function showTrailDialog(e, record) {
+    function showTrailDialog(e, id) {
         goupile.popup(e, null, (page, close) => {
+            // Goupile restarts popup functions after major state changes to give
+            // them a chance to update. This allows us to change the highlighted version!
+            let record = context_records.get(id);
+            if (!record)
+                close();
+
             page.output(html`
                 <table class="tr_table">
-                    <thead>
-                        <tr>
-                            <th></th>
-                            <th>Modification</th>
-                            <th>Utilisateur</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${util.mapRange(0, record.versions.length, idx => {
-                            let version = record.versions[record.versions.length - idx - 1];
-                            let url = makeURL(route_page.form.key, route_page.key, record, version.version);
+                    ${util.mapRange(0, record.versions.length, idx => {
+                        let version = record.versions[record.versions.length - idx - 1];
+                        let url = makeURL(route_page.form.key, route_page.key, record, version.version);
 
-                            return html`
-                                <tr>
-                                    <td><a href=${url}>🔍\uFE0E</a></td>
-                                    <td>${version.mtime.toLocaleString()}</td>
-                                    <td>${version.username || '(local)'}</td>
-                                </tr>
-                            `;
-                        })}
-                    </tbody>
+                        return html`
+                            <tr class=${record.version === version.version ? 'selected' : ''}>
+                                <td><a href=${url}>🔍\uFE0E</a></td>
+                                <td>${version.mtime.toLocaleString()}</td>
+                                <td>${version.username || '(local)'}</td>
+                            </tr>
+                        `;
+                    })}
                 </table>
             `);
         });

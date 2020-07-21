@@ -124,22 +124,17 @@
     border-collapse: collapse;
     border: 0;
 }
-
-.tr_table thead { background: #dfdfdf; }
-.tr_table th { font-weight: normal; }
-
-.tr_table th, .tr_table td {
-    padding: 3px;
-    border: 1px solid #dfdfdf;
-    text-align: center;
-}
-
-.tr_table tbody tr { background: #f4f4f4; }
-.tr_table tbody tr.selected td, .tr_table tbody tr.selected th {
+.tr_table tr { background: #f4f4f4; }
+.tr_table tr.selected {
     background: #666;
     color: white;
 }
-
+.tr_table td {
+    padding: 3px;
+    border: 1px solid #dfdfdf;
+    text-align: center;
+    color: inherit;
+}
 .tr_table a {
     color: inherit;
     text-decoration: none;
