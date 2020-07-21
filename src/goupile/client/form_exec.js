@@ -170,7 +170,8 @@ let form_exec = new function() {
         }
 
         let page = new Page(route_page.key);
-        let builder = new PageBuilder(state, page);
+        let readonly = (record.mtime != null && record.version !== record.versions.length - 1);
+        let builder = new PageBuilder(state, page, readonly);
 
         builder.decodeKey = decodeKey;
         builder.setValue = (key, value) => setValue(record, key, value);

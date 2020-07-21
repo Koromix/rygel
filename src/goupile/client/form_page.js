@@ -36,7 +36,7 @@ function PageState() {
     this.scratch = {};
 }
 
-function PageBuilder(state, page) {
+function PageBuilder(state, page, readonly = false) {
     let self = this;
 
     let variables_map = {};
@@ -1043,6 +1043,8 @@ instead of:
 
     function expandOptions(options) {
         options = Object.assign({}, options_stack[options_stack.length - 1], options);
+        if (readonly)
+            options.readonly = true;
         return options;
     }
 
