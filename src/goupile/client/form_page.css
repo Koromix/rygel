@@ -202,7 +202,7 @@
     border-top-width: 0.5px;
 }
 
-.af_calc { font-style: italic; }
+.af_calc { font-weight: bold; }
 
 .af_button:focus, .af_input:focus, .af_select:focus {
     outline: 2px dotted #999;
