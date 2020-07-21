@@ -39,49 +39,38 @@ let util = new function() {
         return Math.min(Math.max(value, min), max);
     };
 
-    this.mapRange = function(start, end, func) {
-        let len = end - start;
-        let arr = Array.from({length: len});
-
-        for (let i = 0; i < len; i++)
-            arr[i] = func(start + i);
-
-        return arr;
+    this.map = function*(obj, func) {
+        for (let it of obj)
+            yield func(it);
     };
 
-    this.mapRLE = function(arr, key_func, func) {
-        let arr2 = Array.from({length: arr.length});
+    this.mapRange = function*(start, end, func) {
+        for (let i = start; i < end; i++)
+            yield func(i);
+    };
 
-        let arr2_len = 0;
+    this.mapRLE = function*(arr, key_func, func) {
         for (let i = 0; i < arr.length;) {
             let current_key = key_func(arr[i]);
 
             let j = i + 1;
-            while (j < arr.length && key_func(arr[j]) === current_key) {
+            while (j < arr.length && key_func(arr[j]) === current_key)
                 j++;
-            }
 
-            arr2[arr2_len++] = func(current_key, i, j - i);
+            yield func(current_key, i, j - i);
             i = j;
         }
-        arr2.length = arr2_len;
-
-        return arr2;
     };
 
-    this.mapArray = function(arr, key_func, value_func = it => it) {
+    this.arrayToObject = function(iter, key_func, value_func = it => it) {
         let obj = {};
-        for (let it of arr) {
+
+        for (let it of iter) {
             let key = key_func(it);
             obj[key] = value_func(it);
         }
 
         return obj;
-    };
-
-    this.map = function*(obj, func) {
-        for (let it of obj)
-            yield func(it);
     };
 
     this.assignDeep = function(obj, ...sources) {

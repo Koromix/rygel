@@ -390,7 +390,7 @@ function PageBuilder(state, page, readonly = false) {
         let intf = addWidget('enum', label, render, options);
         fillVariableInfo(intf, key, value, value == null);
         intf.props = props;
-        intf.props_map = util.mapArray(props, prop => prop.value, prop => prop.label);
+        intf.props_map = util.arrayToObject(props, prop => prop.value, prop => prop.label);
 
         return intf;
     };
@@ -450,7 +450,7 @@ function PageBuilder(state, page, readonly = false) {
         let intf = addWidget('enumDrop', label, render, options);
         fillVariableInfo(intf, key, value, value == null);
         intf.props = props;
-        intf.props_map = util.mapArray(props, prop => prop.value, prop => prop.label);
+        intf.props_map = util.arrayToObject(props, prop => prop.value, prop => prop.label);
 
         return intf;
     };
@@ -484,7 +484,7 @@ function PageBuilder(state, page, readonly = false) {
         let intf = addWidget('enumRadio', label, render, options);
         fillVariableInfo(intf, key, value, value == null);
         intf.props = props;
-        intf.props_map = util.mapArray(props, prop => prop.value, prop => prop.label);
+        intf.props_map = util.arrayToObject(props, prop => prop.value, prop => prop.label);
 
         return intf;
     };
@@ -526,7 +526,7 @@ function PageBuilder(state, page, readonly = false) {
         let missing = !value.length && props.some(p => p.value == null);
         fillVariableInfo(intf, key, value, missing);
         intf.props = props;
-        intf.props_map = util.mapArray(props, prop => prop.value, prop => prop.label);
+        intf.props_map = util.arrayToObject(props, prop => prop.value, prop => prop.label);
 
         return intf;
     };
@@ -576,7 +576,7 @@ function PageBuilder(state, page, readonly = false) {
         let missing = !value.length && props.some(p => p.value == null);
         fillVariableInfo(intf, key, value, missing);
         intf.props = props;
-        intf.props_map = util.mapArray(props, prop => prop.value, prop => prop.label);
+        intf.props_map = util.arrayToObject(props, prop => prop.value, prop => prop.label);
 
         return intf;
     };

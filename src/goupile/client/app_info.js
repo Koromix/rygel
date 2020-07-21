@@ -12,7 +12,7 @@ function ApplicationInfo() {
 
     // Initialized by goupile.js and main script
     this.home = null;
-    this.urls_map = util.mapArray(this.assets, asset => asset.url);
+    this.urls_map = util.arrayToObject(this.assets, asset => asset.url);
     this.aliases_map = {};
     this.paths_map = {};
 

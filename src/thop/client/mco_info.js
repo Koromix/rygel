@@ -630,7 +630,7 @@ let mco_info = new function() {
         } else {
             let diff_map;
             if (version_diff) {
-                diff_map = util.mapArray(ghmghs_diff, it => it.ghs);
+                diff_map = util.arrayToObject(ghmghs_diff, it => it.ghs);
                 if (!columns.some(col => !!diff_map[col.ghs]))
                     throw new Error(`La racine de GHM '${route.ghs.ghm_root}' n'existait pas dans la version ${version_diff.begin_date.toLocaleString()}`);
             }
@@ -1074,7 +1074,9 @@ let mco_info = new function() {
                     let pseudo_idx = (j > 1) ? `${node_idx}-${j}` : node_idx;
                     let pseudo_text = `${node.text} ${nodes[node.children_idx + j].header}`;
 
-                    let children = buildTreeRec(nodes, highlight_map, mask, mco, node.children_idx + j, recurse_str, indices);
+                    let children = buildTreeRec(nodes, highlight_map, mask, mco,
+                                                node.children_idx + j, recurse_str, indices);
+
                     let irrelevant = highlight_map && !((highlight_map[node.children_idx + j] & mask) === mask);
                     let li = renderTreeTest(pseudo_idx, pseudo_text, irrelevant, children, recurse_str);
 
@@ -1083,7 +1085,9 @@ let mco_info = new function() {
             } else if (node.children_count === 2) {
                 let recurse_str = chain_str + node.key;
 
-                let children = buildTreeRec(nodes, highlight_map, mask, mco, node.children_idx + !node.reverse, recurse_str, indices);
+                let children = buildTreeRec(nodes, highlight_map, mask, mco,
+                                            node.children_idx + !node.reverse, recurse_str, indices);
+
                 let irrelevant = highlight_map && !((highlight_map[node_idx] & mask) === mask);
                 let li = renderTreeTest(node_idx, node.reverse || node.text, irrelevant, children, recurse_str);
 
@@ -1093,7 +1097,10 @@ let mco_info = new function() {
                 let leaf = !node.children_count || node.children_count == 1;
 
                 let children = util.mapRange(1, node.children_count,
-                                             j => buildTreeRec(nodes, highlight_map, mask, mco, node.children_idx + j, recurse_str, indices));
+                                             j => buildTreeRec(nodes, highlight_map, mask, mco,
+                                                               node.children_idx + j, recurse_str, indices));
+                children = Array.from(children);
+
                 let irrelevant = highlight_map && !((highlight_map[node_idx] & mask) === mask);
                 let li = renderTreeTest(node_idx, node.text, irrelevant, children, recurse_str);
 

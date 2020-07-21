@@ -639,7 +639,7 @@ let form_exec = new function() {
             let frag_variables = frags_map[page.key] || [];
             delete frags_map[page.key];
 
-            let variables_map = util.mapArray(frag_variables, variable => variable.key);
+            let variables_map = util.arrayToObject(frag_variables, variable => variable.key);
 
             let first_set = new Set;
             let sets_map = {};

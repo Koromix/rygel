@@ -154,9 +154,9 @@ function VirtualFS(db) {
             remote ? net.fetch(`${env.base_url}api/files.json`).then(response => response.json()) : db.loadAll('fs_sync')
         ]);
 
-        let local_map = util.mapArray(local_files, file => file.path);
-        let sync_map = util.mapArray(sync_files, file => file.path);
-        let remote_map = util.mapArray(remote_files, file => file.path);
+        let local_map = util.arrayToObject(local_files, file => file.path);
+        let sync_map = util.arrayToObject(sync_files, file => file.path);
+        let remote_map = util.arrayToObject(remote_files, file => file.path);
 
         let files = [];
 
