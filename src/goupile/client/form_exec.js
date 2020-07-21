@@ -50,13 +50,13 @@ let form_exec = new function() {
 
             multi_mode = false;
         } else {
-            context_records.clear();
-
             let [id, version] = what.split('@');
             if (version != null)
                 version = parseInt(version, 10);
 
             let record = context_records.get(id);
+            context_records.clear();
+
             if (record) {
                 if (record.table !== route_page.form.key) {
                     record = null;
