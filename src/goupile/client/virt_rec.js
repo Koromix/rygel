@@ -34,7 +34,7 @@ function VirtualRecords(db) {
             page: page,
 
             username: null,
-            mtime: Date.now(),
+            mtime: new Date,
             complete: false,
 
             values: {}

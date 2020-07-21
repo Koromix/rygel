@@ -262,7 +262,7 @@ let form_exec = new function() {
                             return html`
                                 <tr>
                                     <td><a href=${url}>🔍\uFE0E</a></td>
-                                    <td>${version.mtime}</td>
+                                    <td>${version.mtime.toLocaleString()}</td>
                                     <td>${version.username || '(local)'}</td>
                                 </tr>
                             `;
