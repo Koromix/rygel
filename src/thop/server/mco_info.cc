@@ -147,6 +147,9 @@ void ProduceMcoProcedures(const http_RequestInfo &request, const User *, http_IO
             if (proc_info.extensions > 1) {
                 json.Key("extensions"); json.String(proc_info.ExtensionsToStr(buf).ptr);
             }
+            if (proc_info.Test(0, 0x80) || proc_info.Test(23, 0x80)) {
+                json.Key("classifying"); json.Bool(true);
+            }
             json.EndObject();
         }
     }

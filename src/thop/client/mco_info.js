@@ -313,14 +313,16 @@ let mco_info = new function() {
             export: `Actes_${version.begin_date}`,
 
             columns: [
-                {key: 'code', title: 'Code', func: proc => proc.proc},
+                {key: 'code', title: 'Code',
+                    func: proc => proc.proc + (proc.phase ? `/${proc.phase}` : '')},
                 {key: 'label', title: 'Libellé', func: proc => ccam.procedures.label(proc.proc),
                     sort: (label1, label2) => label1.localeCompare(label2)},
                 {key: 'begin_date', title: 'Début', tooltip: 'Date de début incluse',
                     func: proc => dates.parseLog(proc.begin_date)},
                 {key: 'end_date', title: 'Fin', tooltip: 'Date de fin exclue',
                     func: proc => dates.parseLog(proc.end_date)},
-                {key: 'phase', title: 'Phase', func: proc => proc.phase || null},
+                {key: 'classifying', title: 'Classant', tooltip: 'Acte classant',
+                    func: proc => proc.classifying ? 'Majeur' : ''},
                 {key: 'activities', title: 'Activités', func: proc => proc.activities},
                 {key: 'extensions', title: 'Extensions', tooltip: 'CCAM descriptive',
                     func: proc => proc.extensions}
