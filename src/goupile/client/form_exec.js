@@ -792,8 +792,21 @@ let form_exec = new function() {
     function makeURL(form_key, page_key, record = null, version = undefined) {
         let url = `${env.base_url}app/${form_key}/${page_key}/`;
 
-        if (record && record.mtime != null)
-            url += record.id + (version != null ? `@${version}` : '');
+        if (record) {
+            if (record.mtime != null) {
+                url += record.id;
+
+                if (version != null) {
+                    url += `@${version}`;
+                } else if (record.version !== record.versions.length - 1) {
+                    url += `@${record.version}`;
+                }
+            } else {
+                let state = page_states[record.id];
+                if (state && state.changed)
+                    url += 'new';
+            }
+        }
 
         return util.pasteURL(url, nav.route);
     }
