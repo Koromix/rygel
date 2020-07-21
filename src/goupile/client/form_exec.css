@@ -92,7 +92,10 @@
     padding-top: 24px;
     border-top-width: 32px;
 }
-.fm_form > .af_actions { margin-top: 6px; }
+.fm_form > .af_actions {
+    margin-top: 12px;
+    margin-bottom: 12px;
+}
 
 @media screen and (max-width: 580px) {
     .fm_id { display: none; }

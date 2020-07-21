@@ -189,7 +189,7 @@
 .af_actions {
     width: 60%;
     max-width: 340px;
-    margin: 24px auto 6px auto;
+    margin: 24px auto 0 auto;
 }
 .af_actions > button {
     display: block;
