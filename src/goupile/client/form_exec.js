@@ -204,12 +204,15 @@ let form_exec = new function() {
             <div class="fm_form">
                 <div class="fm_id">
                     ${readonly ?
-                        html`<span style="color: red;" title=${`Enregistrement historique du ${record.mtime.toLocaleString()}`}>⚠\uFE0E ${record.mtime.toLocaleString()}</span>` : ''}
+                        html`<span style="color: red;"
+                                   title=${`Enregistrement historique du ${record.mtime.toLocaleString()}`}>⚠\uFE0E ${record.mtime.toLocaleString()}</span>` : ''}
                     <div style="flex: 1;"></div>
-                    ${record.mtime == null ? html`Nouvel enregistrement` : ''}
-                    ${record.mtime != null && record.sequence == null ? html`Enregistrement local` : ''}
-                    ${record.mtime != null && record.sequence != null ? html`Enregistrement n°${record.sequence}` : ''}
-                    ${record.mtime != null ? html`(<a @click=${e => showTrailDialog(e, record.id)}>trail</a>)` : ''}
+                    <span>
+                        ${record.mtime == null ? html`Nouvel enregistrement` : ''}
+                        ${record.mtime != null && record.sequence == null ? html`Enregistrement local` : ''}
+                        ${record.mtime != null && record.sequence != null ? html`Enregistrement n°${record.sequence}` : ''}
+                        ${record.mtime != null ? html`(<a @click=${e => showTrailDialog(e, record.id)}>trail</a>)` : ''}
+                    </span>
                 </div>
 
                 <div class="fm_path">${route_page.form.pages.map(page2 => {

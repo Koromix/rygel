@@ -48,7 +48,9 @@
     font-size: 11px;
     color: #777;
     z-index: 999;
+    pointer-events: none;
 }
+.fm_id > span { pointer-events: auto; }
 
 .fm_path {
     position: absolute;
