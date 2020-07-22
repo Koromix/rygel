@@ -202,15 +202,14 @@ let form_exec = new function() {
 
         render(html`
             <div class="fm_form">
-                ${show_actions ? html`
-                    <div class="fm_id">
-                        ${record.mtime == null ? html`Nouvel enregistrement` : ''}
-                        ${record.mtime != null && record.sequence == null ? html`Enregistrement local` : ''}
-                        ${record.mtime != null && record.sequence != null ? html`Enregistrement n°${record.sequence}` : ''}
-
-                        ${record.mtime != null ? html`(<a @click=${e => showTrailDialog(e, record.id)}>trail</a>)` : ''}
-                    </div>
-                ` : ''}
+                <div class="fm_id">
+                    <span style="color: red;">${readonly ? `Version : ${record.mtime.toLocaleString()}` : ''}</span>
+                    <div style="flex: 1;"></div>
+                    ${record.mtime == null ? html`Nouvel enregistrement` : ''}
+                    ${record.mtime != null && record.sequence == null ? html`Enregistrement local` : ''}
+                    ${record.mtime != null && record.sequence != null ? html`Enregistrement n°${record.sequence}` : ''}
+                    ${record.mtime != null ? html`(<a @click=${e => showTrailDialog(e, record.id)}>trail</a>)` : ''}
+                </div>
 
                 <div class="fm_path">${route_page.form.pages.map(page2 => {
                     let complete = record.complete[page2.key];

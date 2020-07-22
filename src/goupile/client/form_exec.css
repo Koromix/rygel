@@ -41,8 +41,10 @@
 
 .fm_id {
     position: absolute;
+    display: flex;
     top: 14px;
-    right: 14px;
+    left: 14px;
+    width: calc(100% - 28px);
     font-size: 11px;
     color: #777;
     z-index: 9999;
