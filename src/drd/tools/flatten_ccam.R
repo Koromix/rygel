@@ -136,6 +136,14 @@ ccam[gestcomp, gestcomp := i.actes, on = 'code']
 
 if (args_format == 'CSV') {
     write.csv2(ccam, file = args_dest, row.names = FALSE, na = '')
+} else if (args_format == 'JSON') {
+    ccam$activite1 <- (ccam$activite1 == 1)
+    ccam$activite2 <- (ccam$activite2 == 1)
+    ccam$activite3 <- (ccam$activite3 == 1)
+    ccam$activite4 <- (ccam$activite4 == 1)
+    ccam$activite5 <- (ccam$activite5 == 1)
+
+    write_lines_enc(toJSON(ccam, pretty = 4), path = args_dest)
 } else if (args_format == 'THOP') {
     json <- list(
         procedures = list(
