@@ -43,7 +43,7 @@ p + p { margin-top: 1em; }
     .ut_log_entry:hover { filter: opacity(40%); }
 }
 .ut_log_entry.success { background: #016a27; }
-.ut_log_entry.error { background: #d72a2a; }
+.ut_log_entry.error { background: #db0a0a; }
 
 .ut_log_close {
     float: right;

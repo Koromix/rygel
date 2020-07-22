@@ -45,11 +45,11 @@
 
 .af_section.error {
     background: #f9e3e3;
-    border: 1px dashed #d72a2a;
+    border: 1px dashed red;
     padding: 5px 10px;
 }
 .af_section.error > legend {
-    background: #d72a2a;
+    background: #db0a0a;
     margin-left: -5px;
 }
 
@@ -72,19 +72,19 @@
 }
 .af_widget.mandatory > label:after {
     content: ' *';
-    color: #d72a2a;
+    color: red;
 }
 .af_widget.error {
     background: #f9e3e3;
     outline: 3px solid #f9e3e3;
-    color: #d72a2a;
+    color: red;
 }
 .af_widget.error:before {
     position: absolute;
     left: -22px;
     top: calc(50% - 11px);
     z-index: 999;
-    color: #d72a2a;
+    color: red;
     content: "⚠\FE0E";
     font-size: 1.4em;
 }
@@ -167,7 +167,7 @@
     height: 2.7em;
     margin: 1px;
 }
-.af_pin > button.clear { color: #d72a2a; }
+.af_pin > button.clear { color: red; }
 
 .af_button {
     margin-right: 0.2em;

@@ -32,7 +32,7 @@
 
 #sc_toolbar .sc_warn:before { content: '⚠\FE0E  '; }
 #sc_toolbar .sc_warn:not(.active) {
-    background: #d72a2a;
+    background: #db0a0a;
     color: white;
 }
 
@@ -75,7 +75,7 @@
 .sc_day_disabled .sc_head { background: #373737; }
 .sc_day_some .sc_head { background: #24579d; }
 .sc_day_full .sc_head { background: green; }
-.sc_day_warn .sc_head { background: #d72a2a; }
+.sc_day_warn .sc_head { background: #db0a0a; }
 .sc_opt_empty .sc_head {
     background: repeating-linear-gradient(
         -45deg,
@@ -139,7 +139,7 @@
 .sc_slot_used .sc_slot_time { cursor: grab; }
 .sc_slot_identity { text-align: left; }
 .sc_slot_warn.sc_slot_used {
-    background: #d72a2a;
+    background: #db0a0a;
     color: white;
     font-style: italic;
 }

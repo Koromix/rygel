@@ -86,7 +86,7 @@ button:not(:disabled) { cursor: pointer; }
     left: calc(50% - 0.3em);
     font-size: 14em;
     font-weight: bold;
-    color: #d72a2a;
+    color: red;
     content: 'X';
 }
 
@@ -279,7 +279,7 @@ button:not(:disabled) { cursor: pointer; }
     bottom: 0;
     right: 0;
     padding: 6px;
-    background: #d72a2a;
+    background: #db0a0a;
     color: white;
     white-space: pre-wrap;
     z-index: 9999;

@@ -43,7 +43,7 @@
 }
 
 .sync_path.overwrite {
-    color: #d72a2a;
+    color: red;
     font-style: italic;
 }
 .sync_path.delete {
@@ -60,5 +60,5 @@
 }
 .sync_conflict {
     font-style: normal;
-    color: #d72a2a;
+    color: red;
 }
