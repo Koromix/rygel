@@ -203,7 +203,8 @@ let form_exec = new function() {
         render(html`
             <div class="fm_form">
                 <div class="fm_id">
-                    <span style="color: red;">${readonly ? `Version : ${record.mtime.toLocaleString()}` : ''}</span>
+                    ${readonly ?
+                        html`<span style="color: red;" title=${`Enregistrement historique du ${record.mtime.toLocaleString()}`}>⚠\uFE0E ${record.mtime.toLocaleString()}</span>` : ''}
                     <div style="flex: 1;"></div>
                     ${record.mtime == null ? html`Nouvel enregistrement` : ''}
                     ${record.mtime != null && record.sequence == null ? html`Enregistrement local` : ''}
