@@ -47,7 +47,7 @@
     width: calc(100% - 28px);
     font-size: 11px;
     color: #777;
-    z-index: 9999;
+    z-index: 999;
 }
 
 .fm_path {
@@ -55,7 +55,8 @@
     top: 12px;
     width: 100%;
     text-align: center;
-    z-index: 999;
+    z-index: 9999;
+    pointer-events: none;
 }
 .fm_path > a {
     position: relative;
@@ -67,6 +68,7 @@
     color: black;
     text-decoration: none;
     font-size: 1.1em;
+    pointer-events: auto;
 }
 .fm_path > a + a { margin-left: 4px; }
 .fm_path > a.active {
