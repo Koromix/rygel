@@ -37,7 +37,7 @@ local({
     )
 
     if (is.null(args$options$destination))
-        stop('Missing destination directory');
+        stop('Missing destination filename');
 
     args_src <<- args$args[1]
     args_dest <<- args$options$destination
