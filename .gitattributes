@@ -1,1 +1,3 @@
+src/**/*.hh linguist-language=C++
+test/**/*.hh linguist-language=C++
 vendor/* linguist-vendored
