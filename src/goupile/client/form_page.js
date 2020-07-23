@@ -379,11 +379,12 @@ function PageBuilder(state, page, readonly = false) {
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div class=${options.readonly ? 'af_enum readonly' : 'af_enum'} id=${id}>
-                ${props.map(p =>
+                ${props.map((p, i) =>
                     html`<button type="button" data-value=${util.valueToStr(p.value)}
                                  .className=${value === p.value ? 'af_button active' : 'af_button'}
                                  ?disabled=${options.disabled}
-                                 @click=${e => handleEnumChange(e, key, options.untoggle)}>${p.label}</button>`)}
+                                 @click=${e => handleEnumChange(e, key, options.untoggle)}
+                                 @keydown=${handleEnumOrMultiKey} tabindex=${i ? -1 : 0}>${p.label}</button>`)}
             </div>
         `);
 
@@ -476,7 +477,8 @@ function PageBuilder(state, page, readonly = false) {
                 ${props.map((p, i) =>
                     html`<input type="radio" name=${id} id=${`${id}.${i}`} value=${util.valueToStr(p.value)}
                                 ?disabled=${options.disabled} .checked=${value === p.value}
-                                @click=${e => handleEnumRadioChange(e, key, options.untoggle && value === p.value)}/>
+                                @click=${e => handleEnumRadioChange(e, key, options.untoggle && value === p.value)}
+                                @keydown=${handleRadioOrCheckKey} tabindex=${i ? -1 : 0} />
                          <label for=${`${id}.${i}`}>${p.label}</label><br/>`)}
             </div>
         `);
@@ -514,11 +516,12 @@ function PageBuilder(state, page, readonly = false) {
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div class=${options.readonly ? 'af_enum readonly' : 'af_enum'} id=${id}>
-                ${props.map(p =>
+                ${props.map((p, i) =>
                     html`<button type="button" data-value=${util.valueToStr(p.value)}
                                  .className=${value.includes(p.value) ? 'af_button active' : 'af_button'}
                                  ?disabled=${options.disabled}
-                                 @click=${e => handleMultiChange(e, key)}>${p.label}</button>`)}
+                                 @click=${e => handleMultiChange(e, key)}
+                                 @keydown=${handleEnumOrMultiKey} tabindex=${i ? -1 : 0}>${p.label}</button>`)}
             </div>
         `);
 
@@ -551,6 +554,23 @@ function PageBuilder(state, page, readonly = false) {
         updateValue(key, value);
     }
 
+    function handleEnumOrMultiKey(e) {
+        switch (e.keyCode) {
+            case 37: { // left
+                let prev = e.target.previousElementSibling;
+                if (prev)
+                    prev.focus();
+                e.preventDefault();
+            } break;
+            case 39: { // right
+                let next = e.target.nextElementSibling;
+                if (next)
+                    next.focus();
+                e.preventDefault();
+            } break;
+        }
+    }
+
     this.multiCheck = function(key, label, props = [], options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
@@ -564,11 +584,12 @@ function PageBuilder(state, page, readonly = false) {
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div class=${options.readonly ? 'af_multi readonly' : 'af_multi'} id=${id}>
-                ${props.map((p, idx) =>
-                    html`<input type="checkbox" id=${`${id}.${idx}`} value=${util.valueToStr(p.value)}
+                ${props.map((p, i) =>
+                    html`<input type="checkbox" id=${`${id}.${i}`} value=${util.valueToStr(p.value)}
                                 ?disabled=${options.disabled} .checked=${value.includes(p.value)}
-                                @click=${e => handleMultiCheckChange(e, key)}/>
-                         <label for=${`${id}.${idx}`}>${p.label}</label><br/>`)}
+                                @click=${e => handleMultiCheckChange(e, key)}
+                                @keydown=${handleRadioOrCheckKey} tabindex=${i ? -1 : 0} />
+                         <label for=${`${id}.${i}`}>${p.label}</label><br/>`)}
             </div>
         `);
 
@@ -597,6 +618,27 @@ function PageBuilder(state, page, readonly = false) {
         }
 
         updateValue(key, value);
+    }
+
+    function handleRadioOrCheckKey(e) {
+        switch (e.keyCode) {
+            case 38: { // up
+                let prev = e.target.previousElementSibling;
+                while (prev && prev.tagName !== 'INPUT')
+                    prev = prev.previousElementSibling;
+                if (prev)
+                    prev.focus();
+                e.preventDefault();
+            } break;
+            case 40: { // down
+                let next = e.target.nextElementSibling;
+                while (next && next.tagName !== 'INPUT')
+                    next = next.nextElementSibling;
+                if (next)
+                    next.focus();
+                e.preventDefault();
+            } break;
+        }
     }
 
     this.proposition = function(value, label) {
