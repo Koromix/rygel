@@ -317,6 +317,7 @@
         top: 0;
         width: 22px;
         height: 22px;
+        border: 5px solid white;
     }
 
     .af_multi > input + label {
