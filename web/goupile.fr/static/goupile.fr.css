@@ -15,8 +15,9 @@ body {
 }
 
 a {
-    color: #24579d;
+    color: #de6a1d;
     cursor: pointer;
+    text-decoration: none;
 }
 p:first-child { margin-top: 0; }
 p:last-child { margin-bottom: 0; }
