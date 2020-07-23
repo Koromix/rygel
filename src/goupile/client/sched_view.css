@@ -30,7 +30,7 @@
     font-weight: bold;
 }
 
-#sc_toolbar .sc_warn:before { content: '⚠\FE0E  '; }
+#sc_toolbar .sc_warn::before { content: '⚠\FE0E  '; }
 #sc_toolbar .sc_warn:not(.active) {
     background: #db0a0a;
     color: white;
@@ -38,7 +38,7 @@
 
 /* -------------------- Schedule layout -------------------- */
 
-.sc_days:after {
+.sc_days::after {
     display: table;
     content: " ";
     clear: both;
@@ -143,7 +143,7 @@
     color: white;
     font-style: italic;
 }
-.sc_slot_warn .sc_slot_identity:after {
+.sc_slot_warn .sc_slot_identity::after {
     float: right;
     margin-right: 3px;
     content: '⚠\FE0E';
@@ -155,7 +155,7 @@
     color: white;
     font-style: italic;
 }
-.sc_slot_overbook .sc_slot_identity:after {
+.sc_slot_overbook .sc_slot_identity::after {
     float: right;
     margin-right: 3px;
     content: '≈';

@@ -78,12 +78,12 @@
     border: 2px solid #de6a1d;
     color: white;
 }
-.fm_path > a.partial:before {
+.fm_path > a.partial::before {
     padding-right: 4px;
     font-size: 0.9em;
     content: '✓\FE0E';
 }
-.fm_path > a.complete:before {
+.fm_path > a.complete::before {
     padding-right: 4px;
     font-size: 0.9em;
     content: '✓\FE0E✓\FE0E';
@@ -191,12 +191,12 @@
     font-style: italic;
     color: #cbcbcb;
 }
-.st_table td.partial:before {
+.st_table td.partial::before {
     padding-right: 4px;
     font-size: 0.9em;
     content: '✓\FE0E';
 }
-.st_table td.complete:before {
+.st_table td.complete::before {
     padding-right: 4px;
     font-size: 0.9em;
     content: '✓\FE0E✓\FE0E';

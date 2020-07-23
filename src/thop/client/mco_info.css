@@ -63,7 +63,7 @@
     color: black;
 }
 .pr_grid .diff { min-width: 72px; }
-.pr_grid .diff:before {
+.pr_grid .diff::before {
     position: absolute;
     left: 0;
     top: 0;
@@ -71,25 +71,25 @@
     width: 18px;
     text-align: center;
 }
-.pr_grid .lower:before {
+.pr_grid .lower::before {
     content: "↘\FE0E";
     background: #ff8888 !important;
     color: black;
 }
-.pr_grid .higher:before {
+.pr_grid .higher::before {
     content: "↗\FE0E";
     background: #a2d4b6 !important;
     color: black;
 }
-.pr_grid .neutral:before {
+.pr_grid .neutral::before {
     content: " ";
     background: #d7d7d7 !important;
     color: black;
 }
-.pr_grid .removed:after { content: '*'; }
-.pr_grid .added:after { content: '*'; }
+.pr_grid .removed::after { content: '*'; }
+.pr_grid .added::after { content: '*'; }
 
-.pr_grid .info:not(.diff):before {
+.pr_grid .info:not(.diff)::before {
     position: absolute;
     margin-left: -1.2em;
     content: "⚠\FE0E";
@@ -98,7 +98,7 @@
     filter: grayscale(90%) !important;
     color: #555;
 }
-.pr_grid .warn:not(.diff):before {
+.pr_grid .warn:not(.diff)::before {
     position: absolute;
     margin-left: -1.2em;
     content: "⚠\FE0E";
@@ -122,7 +122,7 @@
         text-align: center;
     }
     .pr_grid tbody { counter-reset: duration -1; }
-    .pr_grid .duration td:first-of-type:before {
+    .pr_grid .duration td:first-of-type::before {
         display: block;
         position: absolute;
         left: 0;
@@ -165,7 +165,7 @@
 .tr_tree li.collapse { background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAMCAYAAABbayygAAAAPUlEQVQYlWNgGFpgPgMDgwIxCv9DcQGxCv8zMDCcx2f6fyy4nxiF76HOEMCncD8hq88zMDAEEPALdmtgAAAziBiJaRyRUwAAAABJRU5ErkJggg=='); }
 .tr_tree li.leaf { background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAMCAYAAABbayygAAAAPElEQVQYlWNgGObAgIGBwYGQonoGBob/UHwen0n/0XABNoUKxCpkgFoHU/SegYFBAJ87E6AmKeBThBMAANf6EaFwwYgUAAAAAElFTkSuQmCC'); }
 .tr_tree .direct .n { padding-left: 0; }
-.tr_tree .direct:before { content: ' → '; }
+.tr_tree .direct::before { content: ' → '; }
 .tr_tree li.irrelevant {
     padding-top: 1px;
     background-position: 3px 3px;

@@ -45,7 +45,7 @@ button:not(:disabled) { cursor: pointer; }
     animation-fill-mode: forwards;
     animation-delay: 0.3s;
 }
-.busy:before {
+.busy::before {
     float: left;
     display: inline-block;
     box-sizing: border-box;
@@ -53,7 +53,7 @@ button:not(:disabled) { cursor: pointer; }
     height: 80px;
     margin: -2px 0 0 -2px;
 }
-.busy:after {
+.busy::after {
     content: ' ';
     display: block;
     width: 48px;
@@ -80,7 +80,7 @@ button:not(:disabled) { cursor: pointer; }
     filter: grayscale(100%);
     opacity: 0.5;
 }
-.broken:empty:after {
+.broken:empty::after {
     position: absolute;
     top: calc(50% - 0.7em);
     left: calc(50% - 0.3em);
@@ -304,7 +304,7 @@ button:not(:disabled) { cursor: pointer; }
     font-size: 2em;
     text-align: center;
 }
-.gp_wip:before {
+.gp_wip::before {
     content: '⚠\FE0E';
     padding-right: 10px;
 }

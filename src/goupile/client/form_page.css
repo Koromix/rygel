@@ -70,7 +70,7 @@
     padding-top: 4px;
     color: #303030;
 }
-.af_widget.mandatory > label:after {
+.af_widget.mandatory > label::after {
     content: ' *';
     color: red;
 }
@@ -79,7 +79,7 @@
     outline: 3px solid #f9e3e3;
     color: red;
 }
-.af_widget.error:before {
+.af_widget.error::before {
     position: absolute;
     left: -22px;
     top: calc(50% - 11px);
@@ -97,7 +97,7 @@
     font-style: italic;
     margin: 2px 0 0 20px;
 }
-.af_help:before { content: '☞\FE0E  '; }
+.af_help::before { content: '☞\FE0E  '; }
 .af_prefix, .af_suffix {
     margin-left: 4px;
     padding-top: 5px;
@@ -225,7 +225,7 @@
     line-height: 20px;
     cursor: pointer;
 }
-.af_radio > input + label:before {
+.af_radio > input + label::before {
     display: inline-block;
     position: absolute;
     left: 2px;
@@ -240,7 +240,7 @@
     z-index: 1;
     content: ' ';
 }
-.af_radio > input + label:after {
+.af_radio > input + label::after {
     display: inline-block;
     position: absolute;
     left: 2px;
@@ -252,10 +252,10 @@
     border: 4px solid white;
     border-radius: 50%;
 }
-.af_radio > input:checked + label:before { background: none; }
-.af_radio > input:checked + label:after { content: ''; }
-.af_radio > input:hover + label:before { border-color: #de6a1d; }
-.af_radio > input:hover + label:after { background-color: #de6a1d; }
+.af_radio > input:checked + label::before { background: none; }
+.af_radio > input:checked + label::after { content: ''; }
+.af_radio > input:hover + label::before { border-color: #de6a1d; }
+.af_radio > input:hover + label::after { background-color: #de6a1d; }
 .af_radio > input:focus + label {
     outline: 2px dotted #999;
     outline-offset: 1px;
@@ -271,7 +271,7 @@
     line-height: 20px;
     cursor: pointer;
 }
-.af_multi > input + label:before {
+.af_multi > input + label::before {
     display: inline-block;
     position: absolute;
     left: 2px;
@@ -284,7 +284,7 @@
     background: white;
     content: ' ';
 }
-.af_multi > input + label:after {
+.af_multi > input + label::after {
     display: inline-block;
     position: absolute;
     left: 6px;
@@ -295,9 +295,9 @@
     border-bottom: 1px solid black;
     transform: rotate(-45deg);
 }
-.af_multi > input:checked + label:after { content: ''; }
-.af_multi > input:hover + label:before,
-    .af_multi > input:hover + label:after { border-color: #de6a1d; }
+.af_multi > input:checked + label::after { content: ''; }
+.af_multi > input:hover + label::before,
+    .af_multi > input:hover + label::after { border-color: #de6a1d; }
 .af_multi > input:focus + label {
     outline: 2px dotted #999;
     outline-offset: 1px;
@@ -308,12 +308,12 @@
         padding-left: 32px;
         line-height: 28px;
     }
-    .af_radio > input + label:before {
+    .af_radio > input + label::before {
         top: 0;
         width: 22px;
         height: 22px;
     }
-    .af_radio > input + label:after {
+    .af_radio > input + label::after {
         top: 0;
         width: 22px;
         height: 22px;
@@ -323,12 +323,12 @@
         padding-left: 32px;
         line-height: 28px;
     }
-    .af_multi > input + label:before {
+    .af_multi > input + label::before {
         top: 0;
         width: 22px;
         height: 22px;
     }
-    .af_multi > input + label:after {
+    .af_multi > input + label::after {
         left: 7px;
         top: 4px;
         width: 12px;
