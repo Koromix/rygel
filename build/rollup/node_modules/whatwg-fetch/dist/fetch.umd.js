@@ -2,14 +2,18 @@
   typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
   typeof define === 'function' && define.amd ? define(['exports'], factory) :
   (factory((global.WHATWGFetch = {})));
-}(this, (function (exports) { 'use strict';
+}(this, (function (exports) {
 
+  var global = (function(self) {
+    return self
+    // eslint-disable-next-line no-invalid-this
+  })(typeof self !== 'undefined' ? self : this);
   var support = {
-    searchParams: 'URLSearchParams' in self,
-    iterable: 'Symbol' in self && 'iterator' in Symbol,
+    searchParams: 'URLSearchParams' in global,
+    iterable: 'Symbol' in global && 'iterator' in Symbol,
     blob:
-      'FileReader' in self &&
-      'Blob' in self &&
+      'FileReader' in global &&
+      'Blob' in global &&
       (function() {
         try {
           new Blob();
@@ -18,8 +22,8 @@
           return false
         }
       })(),
-    formData: 'FormData' in self,
-    arrayBuffer: 'ArrayBuffer' in self
+    formData: 'FormData' in global,
+    arrayBuffer: 'ArrayBuffer' in global
   };
 
   function isDataView(obj) {
@@ -360,6 +364,21 @@
       throw new TypeError('Body not allowed for GET or HEAD requests')
     }
     this._initBody(body);
+
+    if (this.method === 'GET' || this.method === 'HEAD') {
+      if (options.cache === 'no-store' || options.cache === 'no-cache') {
+        // Search for a '_' parameter in the query string
+        var reParamSearch = /([?&])_=[^&]*/;
+        if (reParamSearch.test(this.url)) {
+          // If it already exists then set the value with the current time
+          this.url = this.url.replace(reParamSearch, '$1_=' + new Date().getTime());
+        } else {
+          // Otherwise add a new '_' parameter to the end with the current time
+          var reQueryString = /\?/;
+          this.url += (reQueryString.test(this.url) ? '&' : '?') + '_=' + new Date().getTime();
+        }
+      }
+    }
   }
 
   Request.prototype.clone = function() {
@@ -441,10 +460,9 @@
     return new Response(null, {status: status, headers: {location: url}})
   };
 
-  exports.DOMException = self.DOMException;
-  try {
-    new exports.DOMException();
-  } catch (err) {
+  exports.DOMException = global.DOMException;
+
+  if (typeof exports.DOMException !== 'function') {
     exports.DOMException = function(message, name) {
       this.message = message;
       this.name = name;
@@ -502,7 +520,7 @@
 
       function fixUrl(url) {
         try {
-          return url === '' && self.location.href ? self.location.href : url
+          return url === '' && global.location.href ? global.location.href : url
         } catch (e) {
           return url
         }
@@ -521,6 +539,7 @@
           xhr.responseType = 'blob';
         } else if (
           support.arrayBuffer &&
+          request.headers.get('Content-Type') &&
           request.headers.get('Content-Type').indexOf('application/octet-stream') !== -1
         ) {
           xhr.responseType = 'arraybuffer';
@@ -548,11 +567,11 @@
 
   fetch.polyfill = true;
 
-  if (!self.fetch) {
-    self.fetch = fetch;
-    self.Headers = Headers;
-    self.Request = Request;
-    self.Response = Response;
+  if (!global.fetch) {
+    global.fetch = fetch;
+    global.Headers = Headers;
+    global.Request = Request;
+    global.Response = Response;
   }
 
   exports.Headers = Headers;
