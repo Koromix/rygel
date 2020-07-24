@@ -30,7 +30,7 @@ function VirtualRecords(db) {
 
             table: record.table,
             id: record.id,
-            version: null,
+            version: 0,
             page: page,
 
             username: null,
@@ -61,7 +61,12 @@ function VirtualRecords(db) {
             let ikey = makeEntryKey(record.table, record.id);
             let entry = await db.load('rec_entries', ikey);
 
-            if (!entry) {
+            if (entry) {
+                if (entry.version !== record.version) {
+                    console.log(entry, record);
+                    throw new Error(`Cannot save old version of record ${record.id}`);
+                }
+            } else {
                 entry = {
                     _ikey: ikey,
 
@@ -69,13 +74,13 @@ function VirtualRecords(db) {
                     id: record.id,
 
                     pages: [],
-                    version: 0
+                    version: record.version || -1
                 };
             }
 
             entry.pages = entry.pages.filter(key => key !== page);
             entry.pages.push(page);
-            frag.version = entry.version++;
+            frag.version = ++entry.version;
             frag._ikey = makeFragmentKey(record.table, record.id, frag.version);
 
             db.save('rec_entries', entry);

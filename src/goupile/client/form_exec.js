@@ -183,10 +183,10 @@ let form_exec = new function() {
         builder.setValue = (key, value) => setValue(record, key, value);
         builder.getValue = (key, default_value) => getValue(record, key, default_value);
         builder.submitHandler = async () => {
-            await saveRecord(record, page);
-            state.changed = false;
-
-            await goupile.go();
+            if (await saveRecord(record, page)) {
+                state.changed = false;
+                await goupile.go();
+            }
         };
         builder.changeHandler = () => runPage(...arguments);
 
@@ -316,8 +316,11 @@ let form_exec = new function() {
 
             if (context_records.has(record2.id))
                 context_records.set(record2.id, record2);
+
+            return true;
         } catch (err) {
             entry.error(`Échec de l\'enregistrement : ${err.message}`);
+            return false;
         }
     }
 
