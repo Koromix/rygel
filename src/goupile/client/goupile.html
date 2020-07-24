@@ -35,6 +35,12 @@
                 document.head.appendChild(script);
             }
         </script>
+        <script>
+            document.addEventListener('readystatechange', e => {
+                if (document.readyState === 'complete')
+                    goupile.initAll();
+            });
+        </script>
 
         <link rel="stylesheet" href="{BASE_URL}static/goupile.pk.css"/>
         {LINK_MANIFEST}

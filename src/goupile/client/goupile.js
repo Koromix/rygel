@@ -36,12 +36,7 @@ let goupile = new function() {
     let popup_state;
     let popup_builder;
 
-    document.addEventListener('readystatechange', e => {
-        if (document.readyState === 'complete')
-            initGoupile();
-    });
-
-    async function initGoupile() {
+    this.initAll = async function() {
         try {
             log.pushHandler(log.notifyHandler);
 
@@ -71,7 +66,7 @@ let goupile = new function() {
         } finally {
             document.querySelector('#gp_all').classList.remove('busy');
         }
-    }
+    };
 
     function enablePersistence() {
         let storage_warning = 'Impossible d\'activer le stockage local persistant';
