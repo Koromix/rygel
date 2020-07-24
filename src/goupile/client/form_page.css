@@ -114,6 +114,7 @@
         width: 250px;
         min-width: 250px;
         margin-bottom: 0;
+        padding-right: 4px;
     }
     .af_widget.compact .af_error {
         flex: 1;
