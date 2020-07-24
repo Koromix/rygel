@@ -249,7 +249,7 @@ let dev_files = new function() {
         let cls = 'sync_path';
 
         if (action === 'pull') {
-            cls += file.remote_sha256 ? ' overwrite' : ' delete';
+            cls += file.remote_sha256 ? ' overwrite' : ' overwrite delete';
         } else if (!file.sha256) {
             cls += ' virtual' + (file.deleted ? ' delete' : '');
         }
@@ -261,7 +261,7 @@ let dev_files = new function() {
         let cls = 'sync_path';
 
         if (action === 'push') {
-            cls += file.sha256 ? ' overwrite' : ' delete';
+            cls += file.sha256 ? ' overwrite' : ' overwrite delete';
         } else if (!file.remote_sha256) {
             cls += ' none';
         }

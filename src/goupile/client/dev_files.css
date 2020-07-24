@@ -47,8 +47,8 @@
     font-style: italic;
 }
 .sync_path.delete {
-    text-decoration: line-through;
     font-style: italic;
+    text-decoration: line-through;
 }
 .sync_path.virtual { opacity: 0.25; }
 .sync_path.none { opacity: 0; }
