@@ -105,7 +105,7 @@ let goupile = new function() {
 
     async function openDatabase() {
         let db_name = `goupile+${env.app_key}`;
-        let db = await idb.open(db_name, 2, (db, old_version) => {
+        let db = await idb.open(db_name, 3, (db, old_version) => {
             switch (old_version) {
                 // See sw.js for why we need to use version 2 at a minimum.
                 // TLDR: IndexedDB sucks.
@@ -118,6 +118,11 @@ let goupile = new function() {
                     db.createStore('rec_entries', {keyPath: '_ikey'});
                     db.createStore('rec_fragments', {keyPath: '_ikey'});
                     db.createStore('rec_variables', {keyPath: '_ikey'});
+                } // fallthrough
+
+                case 2: {
+                    db.deleteStore('rec_variables');
+                    db.createStore('rec_columns', {keyPath: 'key'});
                 } // fallthrough
             }
         });

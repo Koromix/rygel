@@ -437,8 +437,8 @@ let form_exec = new function() {
 
     this.runData = async function() {
         let records = await vrec.loadAll(route_page.form.key);
-        let variables = await vrec.listVariables(route_page.form.key);
-        let columns = orderColumns(route_page.form.pages, variables);
+        let raw_columns = await vrec.listColumns(route_page.form.key);
+        let columns = orderColumns(route_page.form.pages, raw_columns);
 
         renderRecords(records, columns);
     };
@@ -489,7 +489,7 @@ let form_exec = new function() {
                     <col style="width: 3em;"/>
                     <col style="width: 60px;"/>
                     ${!columns.length ? html`<col/>` : ''}
-                    ${columns.map(col => html`<col/>`)}
+                    ${columns.map(col => html`<col style="width: 8em;"/>`)}
                 </colgroup>
 
                 <thead>
@@ -510,10 +510,10 @@ let form_exec = new function() {
                         <th class="id">ID</th>
 
                         ${!columns.length ? html`<th>&nbsp;</th>` : ''}
-                        ${!multi_mode ? columns.map(col => html`<th title=${col.key}>${col.key}</th>`) : ''}
+                        ${!multi_mode ? columns.map(col => html`<th title=${col.title}>${col.title}</th>`) : ''}
                         ${multi_mode ? columns.map(col =>
-                            html`<th title=${col.key}><input type="checkbox" .checked=${multi_columns.has(col.key)}
-                                                             @change=${e => toggleColumn(col.key)} />${col.key}</th>`) : ''}
+                            html`<th title=${col.title}><input type="checkbox" .checked=${multi_columns.has(col.variable)}
+                                                               @change=${e => toggleColumn(col.variable)} />${col.title}</th>`) : ''}
                     </tr>
                 </thead>
 
@@ -529,19 +529,24 @@ let form_exec = new function() {
                             <td class="id">${record.sequence || 'local'}</td>
 
                             ${columns.map(col => {
-                                let value = record.values[col.key];
+                                let value = record.values[col.variable];
 
                                 if (record.complete[col.page] == null) {
                                     return html`<td class="missing" title="Page non remplie"></td>`;
                                 } else if (value == null) {
-                                    if (!record.values.hasOwnProperty(col.key)) {
+                                    if (!record.values.hasOwnProperty(col.variable)) {
                                         return html`<td class="missing" title="Non applicable">NA</td>`;
                                     } else {
                                         return html`<td class="missing" title="Donnée manquante">MD</td>`;
                                     }
                                 } else if (Array.isArray(value)) {
-                                    let text = value.join('|');
-                                    return html`<td title=${text}>${text}</td>`;
+                                    if (col.hasOwnProperty('prop')) {
+                                        let text = value.includes(col.prop) ? 1 : 0;
+                                        return html`<td title=${text}>${text}</td>`;
+                                    } else {
+                                        let text = value.join('|');
+                                        return html`<td title=${text}>${text}</td>`;
+                                    }
                                 } else if (typeof value === 'number') {
                                     return html`<td class="number" title=${value}>${value}</td>`;
                                 } else {
@@ -598,8 +603,8 @@ let form_exec = new function() {
             await net.loadScript(`${env.base_url}static/xlsx.core.min.js`);
 
         let records = await vrec.loadAll(form.key);
-        let variables = await vrec.listVariables(form.key);
-        let columns = orderColumns(form.pages, variables);
+        let raw_columns = await vrec.listColumns(form.key);
+        let columns = orderColumns(form.pages, raw_columns);
 
         if (!columns.length) {
             log.error('Impossible d\'exporter pour le moment (colonnes inconnues)');
@@ -607,9 +612,9 @@ let form_exec = new function() {
         }
 
         // Worksheet
-        let ws = XLSX.utils.aoa_to_sheet([columns.map(col => col.key)]);
+        let ws = XLSX.utils.aoa_to_sheet([columns.map(col => col.variable)]);
         for (let record of records) {
-            let values = columns.map(col => record.values[col.key]);
+            let values = columns.map(col => record.values[col.variable]);
             XLSX.utils.sheet_add_aoa(ws, [values], {origin: -1});
         }
 
@@ -625,41 +630,41 @@ let form_exec = new function() {
         }
     }
 
-    function orderColumns(pages, variables) {
-        variables = variables.slice();
-        variables.sort((variable1, variable2) => util.compareValues(variable1.key, variable2.key));
+    function orderColumns(pages, raw_columns) {
+        raw_columns = raw_columns.slice();
+        raw_columns.sort((col1, col2) => util.compareValues(col1.key, col2.key));
 
         let frags_map = {};
-        for (let variable of variables) {
-            let frag_variables = frags_map[variable.page];
-            if (!frag_variables) {
-                frag_variables = [];
-                frags_map[variable.page] = frag_variables;
+        for (let col of raw_columns) {
+            let frag_columns = frags_map[col.page];
+            if (!frag_columns) {
+                frag_columns = [];
+                frags_map[col.page] = frag_columns;
             }
 
-            frag_variables.push(variable);
+            frag_columns.push(col);
         }
 
         let columns = [];
         for (let page of pages) {
-            let frag_variables = frags_map[page.key] || [];
+            let frag_columns = frags_map[page.key] || [];
             delete frags_map[page.key];
 
-            let variables_map = util.arrayToObject(frag_variables, variable => variable.key);
+            let cols_map = util.arrayToObject(frag_columns, col => col.key);
 
             let first_set = new Set;
             let sets_map = {};
-            for (let variable of frag_variables) {
-                if (variable.before == null) {
-                    first_set.add(variable.key);
+            for (let col of frag_columns) {
+                if (col.before == null) {
+                    first_set.add(col.key);
                 } else {
-                    let set_ptr = sets_map[variable.before];
+                    let set_ptr = sets_map[col.before];
                     if (!set_ptr) {
                         set_ptr = new Set;
-                        sets_map[variable.before] = set_ptr;
+                        sets_map[col.before] = set_ptr;
                     }
 
-                    set_ptr.add(variable.key);
+                    set_ptr.add(col.key);
                 }
             }
 
@@ -673,60 +678,48 @@ let form_exec = new function() {
                     let frag_start_idx = columns.length;
 
                     for (let key of set_ptr) {
-                        let variable = variables_map[key];
+                        let col = cols_map[key];
 
-                        if (!set_ptr.has(variable.after)) {
-                            let col = {
-                                page: page.key,
-                                category: page.label,
-                                key: key,
-                                type: variable.type
-                            };
-                            columns.push(col);
+                        if (!set_ptr.has(col.after)) {
+                            let col2 = makeColumnInfo(page, col);
+                            columns.push(col2);
                         }
                     }
 
-                    reverseLastColumns(columns, frag_start_idx);
+                    if (frag_start_idx < columns.length) {
+                        reverseLastColumns(columns, frag_start_idx);
 
-                    // Avoid infinite loop that may happen in rare cases
-                    if (columns.length === frag_start_idx) {
+                        for (let i = frag_start_idx; i < columns.length; i++) {
+                            let key = columns[i].key;
+
+                            let next_set = sets_map[key];
+                            if (next_set) {
+                                next_sets.push(next_set);
+                                delete sets_map[key];
+                            }
+
+                            delete cols_map[key];
+                            set_ptr.delete(key);
+                        }
+                    } else {
+                        // Avoid infinite loop that may happen in rare cases
                         let use_key = set_ptr.values().next().value;
+                        let col = cols_map[use_key];
 
-                        let col = {
-                            page: page.key,
-                            category: page.label,
-                            key: use_key,
-                            type: variables_map[use_key].type
-                        };
-                        columns.push(col);
-                    }
-
-                    for (let i = frag_start_idx; i < columns.length; i++) {
-                        let key = columns[i].key;
-
-                        let next_set = sets_map[key];
-                        if (next_set) {
-                            next_sets.push(next_set);
-                            delete sets_map[key];
-                        }
-
-                        delete variables_map[key];
-                        set_ptr.delete(key);
+                        let col2 = makeColumnInfo(page, col);
+                        columns.push(col2);
                     }
                 }
 
                 reverseLastColumns(columns, set_start_idx);
             }
 
-            // Remaining page variables
-            for (let key in variables_map) {
-                let col = {
-                    page: page.key,
-                    category: page.label,
-                    key: key,
-                    type: variables_map[key].type
-                }
-                columns.push(col);
+            // Remaining page cols
+            for (let key in cols_map) {
+                let col = cols_map[use_key];
+
+                let col2 = makeColumnInfo(page, col);
+                columns.push(col2);
             }
         }
 
@@ -739,6 +732,21 @@ let form_exec = new function() {
             columns[start_idx + i] = columns[columns.length - i - 1];
             columns[columns.length - i - 1] = tmp;
         }
+    }
+
+    function makeColumnInfo(page, col) {
+        let col2 = {
+            key: col.key,
+
+            page: page.key,
+            category: page.label,
+            title: col.hasOwnProperty('prop') ? `${col.variable}@${col.prop}` : col.variable,
+            variable: col.variable,
+            prop: col.prop,
+            type: col.type
+        };
+
+        return col2;
     }
 
     function handleEditClick(record) {

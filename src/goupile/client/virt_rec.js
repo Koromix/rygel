@@ -42,22 +42,46 @@ function VirtualRecords(db) {
         for (let variable of variables)
             frag.values[variable.key] = !variable.missing ? record.values[variable.key] : null;
 
-        variables = variables.map((variable, idx) => {
-            let ret = {
-                _ikey: makeVariableKey(record.table, page, variable.key),
+        let columns = variables.flatMap((variable, idx) => {
+            if (variable.multi) {
+                let ret = variable.props.map(prop => ({
+                    key: makeColumnKeyMulti(record.table, page, variable.key, prop.value),
 
-                table: record.table,
-                page: page,
-                key: variable.key.toString(),
+                    table: record.table,
+                    page: page,
+                    variable: variable.key.toString(),
+                    type: variable.type,
+                    prop: prop.value,
 
-                before: variables[idx - 1] ? variables[idx - 1].key.toString() : null,
-                after: variables[idx + 1] ? variables[idx + 1].key.toString() : null
-            };
+                    before: null,
+                    after: null
+                }));
 
-            return ret;
+                return ret;
+            } else {
+                let ret = {
+                    key: makeColumnKey(record.table, page, variable.key),
+
+                    table: record.table,
+                    page: page,
+                    variable: variable.key.toString(),
+                    type: variable.type,
+
+                    before: null,
+                    after: null
+                };
+
+                return ret;
+            }
         });
+        for (let i = 0; i < columns.length; i++) {
+            let col = columns[i];
 
-        await db.transaction('rw', ['rec_entries', 'rec_fragments', 'rec_variables'], async () => {
+            col.before = i ? columns[i - 1].key : null;
+            col.after = i < (columns.length - 1) ? columns[i + 1].key : null;
+        }
+
+        await db.transaction('rw', ['rec_entries', 'rec_fragments', 'rec_columns'], async () => {
             let ikey = makeEntryKey(record.table, record.id);
             let entry = await db.load('rec_entries', ikey);
 
@@ -85,7 +109,7 @@ function VirtualRecords(db) {
 
             db.save('rec_entries', entry);
             db.save('rec_fragments', frag);
-            db.saveAll('rec_variables', variables);
+            db.saveAll('rec_columns', columns);
         });
 
         let record2 = Object.assign({}, record);
@@ -206,8 +230,8 @@ function VirtualRecords(db) {
         return record;
     }
 
-    this.listVariables = async function(table) {
-        return db.loadAll('rec_variables', table + '@', table + '`');
+    this.listColumns = async function(table) {
+        return db.loadAll('rec_columns', table + '@', table + '`');
     };
 
     this.sync = function() {
@@ -222,7 +246,10 @@ function VirtualRecords(db) {
         return `${table}:${id}@${version.toString().padStart(9, '0')}`;
     }
 
-    function makeVariableKey(table, page, key) {
+    function makeColumnKey(table, page, key) {
         return `${table}@${page}.${key}`;
+    }
+    function makeColumnKeyMulti(table, page, key, prop) {
+        return `${table}@${page}.${key}@${prop}`;
     }
 }
