@@ -18,12 +18,7 @@ let thop = new function() {
 
     let settings_rnd;
 
-    document.addEventListener('readystatechange', e => {
-        if (document.readyState === 'complete')
-            initThop();
-    });
-
-    async function initThop() {
+    this.startApp = async function() {
         log.pushHandler(log.notifyHandler);
         initNavigation();
 

@@ -68,7 +68,7 @@ let user = new function() {
                     deleteLock();
 
                     entry.success('Connexion réussie');
-                    await goupile.initApplication();
+                    await goupile.initMain();
                 } else {
                     let msg = await response.text();
                     entry.error(msg);
@@ -88,7 +88,7 @@ let user = new function() {
 
             if (response.ok) {
                 entry.success('Déconnexion réussie');
-                await goupile.initApplication();
+                await goupile.initMain();
             } else {
                 let msg = await response.text();
                 entry.error(msg);

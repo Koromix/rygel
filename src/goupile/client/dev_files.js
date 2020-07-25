@@ -300,7 +300,7 @@ let dev_files = new function() {
                     let file = await vfs.save(path.value, blob.value || '');
                     markBufferInvalid(file.path, file.sha256);
 
-                    await goupile.initApplication();
+                    await goupile.initMain();
 
                     entry.success('Fichier enregistré !');
                 } catch (err) {
@@ -318,7 +318,7 @@ let dev_files = new function() {
                 close();
 
                 await syncFiles();
-                await goupile.initApplication();
+                await goupile.initMain();
             };
         });
     }
@@ -328,7 +328,7 @@ let dev_files = new function() {
             await resetFile(file.path);
 
             if (self.getBuffer(file.path) != null) {
-                goupile.initApplication();
+                goupile.initMain();
             } else {
                 self.runFiles();
             }
@@ -340,7 +340,7 @@ let dev_files = new function() {
                     close();
 
                     await resetFile(file.path);
-                    goupile.initApplication();
+                    goupile.initMain();
                 };
             });
         }
@@ -354,7 +354,7 @@ let dev_files = new function() {
                 close();
 
                 await deleteFile(path);
-                goupile.initApplication();
+                goupile.initMain();
             };
         });
     }

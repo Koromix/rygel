@@ -36,7 +36,7 @@ let goupile = new function() {
     let popup_state;
     let popup_builder;
 
-    this.initAll = async function() {
+    this.startApp = async function() {
         try {
             log.pushHandler(log.notifyHandler);
 
@@ -56,7 +56,7 @@ let goupile = new function() {
             }
 
             nav = new ApplicationNavigator();
-            await self.initApplication();
+            await self.initMain();
 
             // If a run fails and we can run in offline mode, restart it transparently
             net.changeHandler = online => {
@@ -135,7 +135,7 @@ let goupile = new function() {
     }
 
     // Can be launched multiple times (e.g. when main.js is edited)
-    this.initApplication = async function(code = undefined) {
+    this.initMain = async function(code = undefined) {
         await fetchSettings();
 
         if (self.isConnected() || env.allow_guests) {
@@ -309,7 +309,7 @@ let goupile = new function() {
 
                 // Restart application after session changes
                 if (await fetchSettings()) {
-                    self.initApplication();
+                    self.initMain();
                     return;
                 }
 
@@ -584,7 +584,7 @@ let goupile = new function() {
     this.validateCode = async function(path, code) {
         if (path === '/files/main.js') {
             try {
-                await self.initApplication(code);
+                await self.initMain(code);
 
                 showScriptError(null);
                 return true;
