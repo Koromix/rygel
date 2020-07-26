@@ -2,25 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function Page(key) {
-    let self = this;
-
-    this.key = key;
-
-    this.widgets = [];
-    this.widgets0 = [];
-    this.variables = [];
-
-    this.errors = 0;
-    this.valid = true;
-
-    this.render = function() { return self.widgets0.map(intf => intf.render()); };
-}
-
 function PageState() {
     this.values = {};
-
-    // Use this to track changes!
     this.changed = false;
 
     this.sections_state = {};
@@ -36,7 +19,23 @@ function PageState() {
     this.scratch = {};
 }
 
-function PageBuilder(state, page, readonly = false) {
+function PageModel(key) {
+    let self = this;
+
+    this.key = key;
+
+    this.widgets = [];
+    this.widgets0 = [];
+    this.values = {};
+    this.variables = [];
+
+    this.errors = 0;
+    this.valid = true;
+
+    this.render = function() { return self.widgets0.map(intf => intf.render()); };
+}
+
+function PageBuilder(state, model, readonly = false) {
     let self = this;
 
     let variables_map = {};
@@ -44,7 +43,7 @@ function PageBuilder(state, page, readonly = false) {
         deploy: true,
         untoggle: true
     }];
-    let widgets_ref = page.widgets0;
+    let widgets_ref = model.widgets0;
 
     let tabs_keys = new Set;
     let tabs_ref;
@@ -58,19 +57,19 @@ function PageBuilder(state, page, readonly = false) {
     this.getValue = (key, default_value) => default_value;
 
     // Change and submission handling
-    this.changeHandler = page => {};
+    this.changeHandler = model => {};
     this.submitHandler = null;
 
     this.hasChanged = function() { return state.changed; };
-    this.isValid = function() { return page.valid; };
-    this.hasErrors = function() { return !!page.errors; };
+    this.isValid = function() { return model.valid; };
+    this.hasErrors = function() { return !!model.errors; };
     this.triggerErrors = function() {
         if (self.isValid()) {
             return true;
         } else {
             log.error('Corrigez les erreurs avant de valider');
 
-            state.take_delayed = new Set(page.variables.map(variable => variable.key.toString()));
+            state.take_delayed = new Set(model.variables.map(variable => variable.key.toString()));
             self.restart();
 
             return false;
@@ -773,8 +772,7 @@ function PageBuilder(state, page, readonly = false) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
-        if (value !== state.values[key])
-            updateValue(key, value, false);
+        updateValue(key, value, false);
 
         let text = value;
         if (!options.raw && typeof value !== 'string') {
@@ -1014,7 +1012,7 @@ instead of:
                     <fieldset class="af_container af_section error">
                         <legend>${options.label || 'Liste des erreurs'}</legend>
                         ${!self.hasErrors() ? 'Aucune erreur' : ''}
-                        ${page.widgets.map(intf => {
+                        ${model.widgets.map(intf => {
                             if (intf.errors.length) {
                                 return html`${intf.errors.length} ${intf.errors.length > 1 ? 'erreurs' : 'erreur'} sur :
                                             <a href=${'#' + makeID(intf.key)}>${intf.label}</a><br/>`;
@@ -1061,7 +1059,7 @@ instead of:
     }
 
     function makeID(key) {
-        return `af_var_${page.key}_${key}`;
+        return `af_var_${model.key}_${key}`;
     }
 
     function renderWrappedWidget(intf, frag) {
@@ -1124,7 +1122,7 @@ instead of:
         };
 
         widgets_ref.push(intf);
-        page.widgets.push(intf);
+        model.widgets.push(intf);
 
         return intf;
     }
@@ -1134,7 +1132,7 @@ instead of:
             throw new Error(`Variable '${key}' already exists`);
 
         Object.assign(intf, {
-            page: page.key,
+            page: model.key,
             key: key,
             value: value,
 
@@ -1144,10 +1142,10 @@ instead of:
             error: (msg, delay = false) => {
                 if (!delay || state.take_delayed.has(key.toString())) {
                     intf.errors.push(msg || '');
-                    page.errors++;
+                    model.errors++;
                 }
 
-                page.valid = false;
+                model.valid = false;
 
                 return intf;
             }
@@ -1166,8 +1164,10 @@ instead of:
                 valid = false;
         }
 
-        page.variables.push(intf);
+        model.variables.push(intf);
         variables_map[key] = intf;
+
+        model.values[key] = value;
 
         return intf;
     }
@@ -1195,7 +1195,7 @@ instead of:
     }
 
     function updateValue(key, value, refresh = true) {
-        if (value != state.values[key]) {
+        if (value !== state.values[key]) {
             state.values[key] = value;
             state.changed = true;
 

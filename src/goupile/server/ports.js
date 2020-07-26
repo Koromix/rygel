@@ -21,10 +21,10 @@ var server = new function() {
     let self = this;
 
     this.validateRecord = function(code, values) {
-        let page = new Page;
+        let model = new PageModel;
 
         // We don't care about PageState (single execution)
-        let page_builder = new PageBuilder(new PageState, page);
+        let page_builder = new PageBuilder(new PageState, model);
         page_builder.getValue = (key, default_value) => getValue(values, key, default_value);
 
         // Execute user script
@@ -32,14 +32,14 @@ var server = new function() {
         let func = Function('shared', 'route', 'go', 'form', 'page', 'scratch', code);
         func({}, {}, () => {}, page_builder, page_builder, {});
 
-        let values2 = filterValues(values, page.variables);
-        let variables = page.variables.map(variable => variable.key);
+        let values2 = filterValues(values, model.variables);
+        let variables = model.variables.map(variable => variable.key);
 
         // Make it easy for the C++ caller to store in database
         let ret = {
             json: JSON.stringify(values2),
             variables: variables,
-            errors: page.errors.length
+            errors: model.errors.length
         };
 
         return ret;

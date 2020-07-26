@@ -744,9 +744,9 @@ let goupile = new function() {
             });
         }
 
-        let page = new Page('@popup');
+        let model = new PageModel('@popup');
 
-        popup_builder = new PageBuilder(popup_state, page);
+        popup_builder = new PageBuilder(popup_state, model);
         popup_builder.changeHandler = () => openPopup(...arguments);
         popup_builder.pushOptions({
             missingMode: 'disable',
@@ -761,7 +761,7 @@ let goupile = new function() {
         ]);
         render(html`
             <form @submit=${e => e.preventDefault()}>
-                ${page.render()}
+                ${model.render()}
             </form>
         `, popup_el);
 

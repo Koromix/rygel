@@ -9,9 +9,9 @@ let user = new function() {
         let state = new PageState;
 
         let update = () => {
-            let page = new Page('@login');
+            let model = new PageModel('@login');
 
-            let builder = new PageBuilder(state, page);
+            let builder = new PageBuilder(state, model);
             builder.changeHandler = update;
             builder.pushOptions({
                 missingMode: 'disable',
@@ -27,7 +27,7 @@ let user = new function() {
                 <div style="flex: 1;"></div>
                 <form id="usr_login" @submit=${e => e.preventDefault()}>
                     <img id="usr_logo" src=${`${env.base_url}favicon.png`} alt="" />
-                    ${page.render()}
+                    ${model.render()}
                 </form>
                 <div style="flex: 1;"></div>
             `, document.querySelector('#gp_all'));

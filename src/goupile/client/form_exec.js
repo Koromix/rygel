@@ -135,14 +135,14 @@ let form_exec = new function() {
             page_states[record.id] = state;
         }
 
-        let page = new Page(route_page.key);
-        let builder = new PageBuilder(state, page);
+        let model = PageModel(route_page.key);
+        let builder = new PageBuilder(state, model);
 
         builder.decodeKey = decodeKey;
         builder.setValue = (key, value) => setValue(record, key, value);
         builder.getValue = (key, default_value) => getValue(record, key, default_value);
         builder.submitHandler = async () => {
-            await saveRecord(record, page);
+            await saveRecord(record, model);
             state.changed = false;
 
             await goupile.go();
@@ -152,14 +152,14 @@ let form_exec = new function() {
         // Build it!
         builder.pushOptions({compact: true});
         func(util, app.shared, nav.go, builder, builder,
-             state.values, page.variables, {}, state.scratch);
+             model.values, model.variables, {}, state.scratch);
 
         render(html`
             <button type="button" class="af_button" style="float: right;"
                     ?disabled=${builder.hasErrors() || !state.changed}
                     @click=${builder.submit}>Enregistrer</button>
 
-            ${page.widgets.map(intf => {
+            ${model.widgets.map(intf => {
                 let visible = intf.key && columns.has(intf.key.toString());
                 return visible ? intf.render() : '';
             })}
@@ -175,15 +175,15 @@ let form_exec = new function() {
             page_states[record.id] = state;
         }
 
-        let page = new Page(route_page.key);
+        let model = new PageModel(route_page.key);
         let readonly = (record.mtime != null && record.version !== record.versions.length - 1);
-        let builder = new PageBuilder(state, page, readonly);
+        let builder = new PageBuilder(state, model, readonly);
 
         builder.decodeKey = decodeKey;
         builder.setValue = (key, value) => setValue(record, key, value);
         builder.getValue = (key, default_value) => getValue(record, key, default_value);
         builder.submitHandler = async () => {
-            if (await saveRecord(record, page)) {
+            if (await saveRecord(record, model)) {
                 state.changed = false;
                 await goupile.go();
             }
@@ -192,13 +192,13 @@ let form_exec = new function() {
 
         // Build it!
         func(util, app.shared, nav.go, builder, builder,
-             state.values, page.variables, nav.route, state.scratch);
+             model.values, model.variables, nav.route, state.scratch);
         builder.errorList();
 
-        let show_actions = route_page.options.actions && page.variables.length;
+        let show_actions = route_page.options.actions && model.variables.length;
         let enable_save = !builder.hasErrors() && state.changed;
         let enable_validate = !builder.hasErrors() && !state.changed &&
-                              record.complete[page.key] === false;
+                              record.complete[model.key] === false;
 
         render(html`
             <div class="fm_form">
@@ -219,7 +219,7 @@ let form_exec = new function() {
                     let complete = record.complete[page2.key];
 
                     let cls = '';
-                    if (page2.key === page.key)
+                    if (page2.key === model.key)
                         cls += ' active';
                     if (complete == null) {
                         // Leave as is
@@ -232,7 +232,7 @@ let form_exec = new function() {
                     return html`<a class=${cls} href=${makeURL(route_page.form.key, page2.key, record)}>${page2.label}</a>`;
                 })}</div>
 
-                <div class="fm_page">${page.render()}</div>
+                <div class="fm_page">${model.render()}</div>
 
                 ${show_actions ? html`
                     <div class="af_actions">
@@ -306,12 +306,12 @@ let form_exec = new function() {
         return record.values[key];
     }
 
-    async function saveRecord(record, page) {
+    async function saveRecord(record, model) {
         let entry = new log.Entry();
 
         entry.progress('Enregistrement en cours');
         try {
-            let record2 = await vrec.save(record, page.key, page.variables);
+            let record2 = await vrec.save(record, model.key, model.variables);
             entry.success('Données enregistrées');
 
             if (context_records.has(record2.id))
