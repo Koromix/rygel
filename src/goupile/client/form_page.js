@@ -389,9 +389,7 @@ function PageBuilder(state, page, readonly = false) {
         `);
 
         let intf = addWidget('enum', label, render, options);
-        fillVariableInfo(intf, key, value, value == null);
-        intf.props = props;
-        intf.props_map = util.arrayToObject(props, prop => prop.value, prop => prop.label);
+        fillVariableInfo(intf, key, value, value == null, props, false);
 
         return intf;
     };
@@ -449,9 +447,7 @@ function PageBuilder(state, page, readonly = false) {
         `);
 
         let intf = addWidget('enumDrop', label, render, options);
-        fillVariableInfo(intf, key, value, value == null);
-        intf.props = props;
-        intf.props_map = util.arrayToObject(props, prop => prop.value, prop => prop.label);
+        fillVariableInfo(intf, key, value, value == null, props, false);
 
         return intf;
     };
@@ -484,9 +480,7 @@ function PageBuilder(state, page, readonly = false) {
         `);
 
         let intf = addWidget('enumRadio', label, render, options);
-        fillVariableInfo(intf, key, value, value == null);
-        intf.props = props;
-        intf.props_map = util.arrayToObject(props, prop => prop.value, prop => prop.label);
+        fillVariableInfo(intf, key, value, value == null, props, false);
 
         return intf;
     };
@@ -527,9 +521,7 @@ function PageBuilder(state, page, readonly = false) {
 
         let intf = addWidget('multi', label, render, options);
         let missing = !value.length && props.some(p => p.value == null);
-        fillVariableInfo(intf, key, value, missing, true);
-        intf.props = props;
-        intf.props_map = util.arrayToObject(props, prop => prop.value, prop => prop.label);
+        fillVariableInfo(intf, key, value, missing, props, true);
 
         return intf;
     };
@@ -595,9 +587,7 @@ function PageBuilder(state, page, readonly = false) {
 
         let intf = addWidget('multiCheck', label, render, options);
         let missing = !value.length && props.some(p => p.value == null);
-        fillVariableInfo(intf, key, value, missing, true);
-        intf.props = props;
-        intf.props_map = util.arrayToObject(props, prop => prop.value, prop => prop.label);
+        fillVariableInfo(intf, key, value, missing, props, true);
 
         return intf;
     };
@@ -1139,7 +1129,7 @@ instead of:
         return intf;
     }
 
-    function fillVariableInfo(intf, key, value, missing, multi = false) {
+    function fillVariableInfo(intf, key, value, missing, props = null, multi = false) {
         if (variables_map[key])
             throw new Error(`Variable '${key}' already exists`);
 
@@ -1147,7 +1137,6 @@ instead of:
             page: page.key,
             key: key,
             value: value,
-            multi: multi,
 
             missing: missing || intf.options.missing,
             changed: state.changed_variables.has(key.toString()),
@@ -1164,6 +1153,12 @@ instead of:
             }
         });
         state.changed_variables.delete(key.toString());
+
+        if (props != null) {
+            intf.props = props;
+            intf.props_map = util.arrayToObject(props, prop => prop.value, prop => prop.label);
+            intf.multi = multi;
+        }
 
         if (intf.options.mandatory && intf.missing) {
             intf.error('Obligatoire !', intf.options.missingMode !== 'error');
