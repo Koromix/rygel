@@ -15,26 +15,26 @@
 
 .fm_form a { color: #de6a1d; }
 
-.fm_page {
-    position: relative;
-    background: #efefef;
-    border: 12px solid #f8f8f8;
-    padding: 12px 12px 12px 12px;
-}
-
 .fm_entry + .fm_entry {
     margin-top: 9px;
     padding-top: 9px;
     border-top: 1px solid #dfdfdf;
 }
 
+.fm_form > .af_main {
+    position: relative;
+    padding: 12px 12px 12px 12px;
+    background: #efefef;
+    border: 12px solid #f8f8f8;
+}
+
 @media (max-width: 580px) {
-    .fm_page {
+    .fm_form > .af_main {
         padding-bottom: 2px;
         border-left: 0;
         border-right: 0;
     }
-    .fm_page > :not(.af_section):last-child { margin-bottom: 10px; }
+    .fm_form > .af_main > :not(.af_section):last-child { margin-bottom: 10px; }
 }
 
 /* -------------------- Path and actions -------------------- */
@@ -94,7 +94,7 @@
     outline-offset: 1px;
 }
 
-.fm_path + .fm_page {
+.fm_path + .af_main {
     padding-top: 24px;
     border-top-width: 32px;
 }

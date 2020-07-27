@@ -19,7 +19,7 @@ let user = new function() {
             });
 
             makeLoginForm(builder);
-            builder.actions([['Connexion', builder.isValid() ? builder.submit : null]]);
+            builder.action('Connexion', {disabled: !builder.isValid()}, builder.submit);
 
             let focus = !document.querySelector('#usr_login');
 

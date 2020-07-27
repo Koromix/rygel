@@ -9,8 +9,7 @@ function PageState() {
     this.sections_state = {};
     this.tabs_state = {};
     this.file_lists = new Map;
-    this.pressed_buttons = new Set;
-    this.clicked_buttons = new Set;
+    this.click_events = new Set;
 
     this.take_delayed = new Set;
     this.changed_variables = new Set;
@@ -26,13 +25,20 @@ function PageModel(key) {
 
     this.widgets = [];
     this.widgets0 = [];
+    this.actions = [];
+
     this.values = {};
     this.variables = [];
 
     this.errors = 0;
     this.valid = true;
 
-    this.render = function() { return self.widgets0.map(intf => intf.render()); };
+    this.render = function() {
+        return html`
+            <div class="af_main">${self.widgets0.map(intf => intf.render())}</div>
+            <div class="af_actions">${self.actions.map(action => action.render())}</div>
+        `;
+    };
 }
 
 function PageBuilder(state, model, readonly = false) {
@@ -113,8 +119,9 @@ function PageBuilder(state, model, readonly = false) {
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
 
-        let intf = addWidget('text', label, render, options);
+        let intf = makeWidget('text', label, render, options);
         fillVariableInfo(intf, key, value, value == null);
+        addWidget(intf);
 
         return intf;
     };
@@ -136,8 +143,9 @@ function PageBuilder(state, model, readonly = false) {
                    @input=${e => handleTextInput(e, key)}></textarea>
         `);
 
-        let intf = addWidget('text', label, render, options);
+        let intf = makeWidget('text', label, render, options);
         fillVariableInfo(intf, key, value, value == null);
+        addWidget(intf);
 
         return intf;
     };
@@ -159,8 +167,9 @@ function PageBuilder(state, model, readonly = false) {
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
 
-        let intf = addWidget('password', label, render, options);
+        let intf = makeWidget('password', label, render, options);
         fillVariableInfo(intf, key, value, value == null);
+        addWidget(intf);
 
         return intf;
     };
@@ -197,8 +206,9 @@ function PageBuilder(state, model, readonly = false) {
             `: ''}
         `);
 
-        let intf = addWidget('pin', label, render, options);
+        let intf = makeWidget('pin', label, render, options);
         fillVariableInfo(intf, key, value, value == null);
+        addWidget(intf);
 
         if (value && !value.match(/^[0-9]*$/))
             intf.error('Le code doit comporter uniquement des chiffres');
@@ -240,8 +250,9 @@ function PageBuilder(state, model, readonly = false) {
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
 
-        let intf = addWidget('number', label, render, options);
+        let intf = makeWidget('number', label, render, options);
         fillVariableInfo(intf, key, value, missing);
+        addWidget(intf);
 
         validateNumber(intf);
 
@@ -305,8 +316,9 @@ function PageBuilder(state, model, readonly = false) {
             </div>
         `);
 
-        let intf = addWidget('slider', label, render, options);
+        let intf = makeWidget('slider', label, render, options);
         fillVariableInfo(intf, key, value, missing);
+        addWidget(intf);
 
         validateNumber(intf);
 
@@ -387,8 +399,9 @@ function PageBuilder(state, model, readonly = false) {
             </div>
         `);
 
-        let intf = addWidget('enum', label, render, options);
+        let intf = makeWidget('enum', label, render, options);
         fillVariableInfo(intf, key, value, value == null, props, false);
+        addWidget(intf);
 
         return intf;
     };
@@ -445,8 +458,9 @@ function PageBuilder(state, model, readonly = false) {
             </div>
         `);
 
-        let intf = addWidget('enumDrop', label, render, options);
+        let intf = makeWidget('enumDrop', label, render, options);
         fillVariableInfo(intf, key, value, value == null, props, false);
+        addWidget(intf);
 
         return intf;
     };
@@ -478,8 +492,9 @@ function PageBuilder(state, model, readonly = false) {
             </div>
         `);
 
-        let intf = addWidget('enumRadio', label, render, options);
+        let intf = makeWidget('enumRadio', label, render, options);
         fillVariableInfo(intf, key, value, value == null, props, false);
+        addWidget(intf);
 
         return intf;
     };
@@ -518,9 +533,10 @@ function PageBuilder(state, model, readonly = false) {
             </div>
         `);
 
-        let intf = addWidget('multi', label, render, options);
+        let intf = makeWidget('multi', label, render, options);
         let missing = !value.length && props.some(p => p.value == null);
         fillVariableInfo(intf, key, value, missing, props, true);
+        addWidget(intf);
 
         return intf;
     };
@@ -584,9 +600,10 @@ function PageBuilder(state, model, readonly = false) {
             </div>
         `);
 
-        let intf = addWidget('multiCheck', label, render, options);
+        let intf = makeWidget('multiCheck', label, render, options);
         let missing = !value.length && props.some(p => p.value == null);
         fillVariableInfo(intf, key, value, missing, props, true);
+        addWidget(intf);
 
         return intf;
     };
@@ -682,8 +699,9 @@ function PageBuilder(state, model, readonly = false) {
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
 
-        let intf = addWidget('date', label, render, options);
+        let intf = makeWidget('date', label, render, options);
         fillVariableInfo(intf, key, value, value == null);
+        addWidget(intf);
 
         return intf;
     };
@@ -711,8 +729,9 @@ function PageBuilder(state, model, readonly = false) {
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
 
-        let intf = addWidget('date', label, render, options);
+        let intf = makeWidget('date', label, render, options);
         fillVariableInfo(intf, key, value, value == null);
+        addWidget(intf);
 
         return intf;
     };
@@ -754,8 +773,9 @@ function PageBuilder(state, model, readonly = false) {
                    @input=${e => handleFileInput(e, key)}/>
         `);
 
-        let intf = addWidget('file', label, render, options);
+        let intf = makeWidget('file', label, render, options);
         fillVariableInfo(intf, key, value, value == null);
+        addWidget(intf);
 
         return intf;
     };
@@ -792,8 +812,9 @@ function PageBuilder(state, model, readonly = false) {
             <span id="${id}" class="af_calc">${text}</span>
         `);
 
-        let intf = addWidget('calc', label, render, options);
+        let intf = makeWidget('calc', label, render, options);
         fillVariableInfo(intf, key, value, value == null || Number.isNaN(value));
+        addWidget(intf);
 
         return intf;
     };
@@ -804,7 +825,11 @@ function PageBuilder(state, model, readonly = false) {
         // This helps avoid garbage output when the user types 'page.output(html);'
         if (content != null && content !== html && content !== svg) {
             let render = intf => html`<div class="af_wrap">${content}</div>`;
-            return addWidget('output', null, render, options);
+
+            let intf = makeWidget('output', null, render, options);
+            addWidget(intf);
+
+            return intf;
         }
     };
 
@@ -834,13 +859,46 @@ function PageBuilder(state, model, readonly = false) {
             </fieldset>
         `;
 
-        return addWidget('section', label, render);
+        let intf = makeWidget('section', label, render);
+        addWidget(intf);
+
+        return intf;
     };
 
     function handleSectionClick(e, label) {
         state.sections_state[label] = !state.sections_state[label];
         self.restart();
     }
+
+    this.errorList = function(options = {}) {
+        options = expandOptions(options);
+
+        let render = intf => {
+            if (self.hasErrors() || options.force) {
+                return html`
+                    <fieldset class="af_container af_section error">
+                        <legend>${options.label || 'Liste des erreurs'}</legend>
+                        ${!self.hasErrors() ? 'Aucune erreur' : ''}
+                        ${model.widgets.map(intf => {
+                            if (intf.errors.length) {
+                                return html`${intf.errors.length} ${intf.errors.length > 1 ? 'erreurs' : 'erreur'} sur :
+                                            <a href=${'#' + makeID(intf.key)}>${intf.label}</a><br/>`;
+                             } else {
+                                return '';
+                             }
+                        })}
+                    </fieldset>
+                `;
+            } else {
+                return '';
+            }
+        };
+
+        let intf = makeWidget('errorList', null, render);
+        addWidget(intf);
+
+        return intf;
+    };
 
     this.tabs = function(key, func, options = {}) {
         options = expandOptions(options);
@@ -895,7 +953,10 @@ function PageBuilder(state, model, readonly = false) {
             </div>
         `;
 
-        return addWidget('tabs', null, render, options);
+        let intf = makeWidget('tabs', null, render, options);
+        addWidget(intf);
+
+        return intf;
     };
 
     this.tab = function(label, options = {}) {
@@ -962,73 +1023,31 @@ instead of:
         return widgets;
     }
 
-    this.button = function(label, options = {}) {
+    this.action = function(label, options = {}, func = null) {
         options = expandOptions(options);
 
-        let pressed = state.pressed_buttons.has(label);
-        let clicked = state.clicked_buttons.has(label);
-        state.clicked_buttons.delete(label);
+        if (func == null)
+            func = e => handleActionClick(e, label);
 
-        let render = intf => renderWrappedWidget(intf, html`
-            <button type="button" class="af_button"
-                    @click=${e => handleButtonClick(e, label)}>${label}</button>
-        `);
+        let clicked = state.click_events.has(label);
+        state.click_events.delete(label);
 
-        let intf = addWidget('button', label, render, options);
-        intf.pressed = pressed;
+        let render = intf => html`
+            <button type="button" class="af_button" ?disabled=${options.disabled}
+                    @click=${func}>${label}</button>
+        `;
+
+        let intf = makeWidget('action', label, render, options);
         intf.clicked = clicked;
+        model.actions.push(intf);
 
         return intf;
     };
 
-    function handleButtonClick(e, label) {
-        state.pressed_buttons.add(label);
-        state.clicked_buttons.add(label);
-
+    function handleActionClick(e, label) {
+        state.click_events.set(label, e);
         self.restart();
     }
-
-    this.actions = function(buttons, options = {}) {
-        options = expandOptions(options);
-
-        let render = intf => renderWrappedWidget(intf, html`
-            <div class="af_actions">
-                ${buttons.filter(button => button != null).map((button, idx) =>
-                    html`<button type=${idx ? 'button' : 'submit'} class="af_button"
-                                 ?disabled=${!button[1]} title=${button[2] || ''}
-                                 @click=${button[1]}>${button[0]}</button>`)}
-            </div>
-        `);
-
-        addWidget('actions', null, render);
-    };
-
-    this.errorList = function(options = {}) {
-        options = expandOptions(options);
-
-        let render = intf => {
-            if (self.hasErrors() || options.force) {
-                return html`
-                    <fieldset class="af_container af_section error">
-                        <legend>${options.label || 'Liste des erreurs'}</legend>
-                        ${!self.hasErrors() ? 'Aucune erreur' : ''}
-                        ${model.widgets.map(intf => {
-                            if (intf.errors.length) {
-                                return html`${intf.errors.length} ${intf.errors.length > 1 ? 'erreurs' : 'erreur'} sur :
-                                            <a href=${'#' + makeID(intf.key)}>${intf.label}</a><br/>`;
-                             } else {
-                                return '';
-                             }
-                        })}
-                    </fieldset>
-                `;
-            } else {
-                return '';
-            }
-        };
-
-        addWidget('errorList', null, render);
-    };
 
     this.submit = async function() {
         if (self.triggerErrors())
@@ -1091,7 +1110,7 @@ instead of:
         return options.wide ? 'width: 100%;' : '';
     }
 
-    function addWidget(type, label, func, options = {}) {
+    function makeWidget(type, label, func, options = {}) {
         if (label != null) {
             // Users are allowed to use complex HTML as label. Turn it into text for storage!
             if (typeof label === 'string' || typeof label === 'number') {
@@ -1121,10 +1140,12 @@ instead of:
             errors: []
         };
 
+        return intf;
+    }
+
+    function addWidget(intf) {
         widgets_ref.push(intf);
         model.widgets.push(intf);
-
-        return intf;
     }
 
     function fillVariableInfo(intf, key, value, missing, props = null, multi = false) {

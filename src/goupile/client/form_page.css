@@ -2,6 +2,19 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/* -------------------- Layout -------------------- */
+
+.af_actions {
+    width: 60%;
+    max-width: 340px;
+    margin: 24px auto 0 auto;
+}
+.af_actions > button {
+    display: block;
+    width: 100%;
+}
+.af_actions > button + button { margin-top: 6px; }
+
 /* -------------------- Containers -------------------- */
 
 .af_wrap + .af_container,
@@ -185,22 +198,6 @@
     background: #de6a1d;
     border-color: #de6a1d;
     color: white;
-}
-
-.af_actions {
-    width: 60%;
-    max-width: 340px;
-    margin: 24px auto 0 auto;
-}
-.af_actions > button {
-    display: block;
-    width: 100%;
-}
-.af_actions > * + * { margin: 6px 0; }
-.af_actions > hr {
-    border: none;
-    border-top: 1px solid #efefef;
-    border-top-width: 0.5px;
 }
 
 .af_calc { font-weight: bold; }

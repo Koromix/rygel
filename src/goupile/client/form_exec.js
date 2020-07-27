@@ -102,7 +102,7 @@ let form_exec = new function() {
         if (multi_mode) {
             if (context_records.size && multi_columns.size) {
                 render(html`
-                    <div class="fm_page">${util.map(context_records.values(), record => {
+                    <div class="af_main">${util.map(context_records.values(), record => {
                         // Each entry needs to update itself without doing a full render
                         let el = document.createElement('div');
                         el.className = 'fm_entry';
@@ -113,9 +113,9 @@ let form_exec = new function() {
                     })}</div>
                 `, panel_el);
             } else if (!context_records.size) {
-                render(html`<div class="fm_page">Aucun enregistrement sélectionné</div>`, panel_el);
+                render(html`<div class="af_main">Aucun enregistrement sélectionné</div>`, panel_el);
             } else {
-                render(html`<div class="fm_page">Aucune colonne sélectionnée</div>`, panel_el);
+                render(html`<div class="af_main">Aucune colonne sélectionnée</div>`, panel_el);
             }
         } else {
             if (!context_records.size) {
@@ -200,6 +200,13 @@ let form_exec = new function() {
         let enable_validate = !builder.hasErrors() && !state.changed &&
                               record.complete[model.key] === false;
 
+        if (show_actions) {
+            builder.action('Enregistrer', {disabled: !enable_save}, e => builder.submit());
+            if (route_page.options.validate)
+                builder.action('Valider', {disabled: !enable_save}, e => showValidateDialog(e, builder.submit));
+            builder.action('Fermer', {disabled: !state.changed && record.mtime == null}, e => handleNewClick(e, state.changed));
+        }
+
         render(html`
             <div class="fm_form">
                 ${route_page.options.actions ? html`
@@ -234,20 +241,7 @@ let form_exec = new function() {
                     return html`<a class=${cls} href=${makeURL(route_page.form.key, page2.key, record)}>${page2.label}</a>`;
                 })}</div>
 
-                <div class="fm_page">${model.render()}</div>
-
-                ${show_actions ? html`
-                    <div class="af_actions">
-                        <button type="button" class="af_button" ?disabled=${!enable_save}
-                                @click=${builder.submit}>Enregistrer</button>
-                        ${route_page.options.validate ?
-                            html`<button type="button" class="af_button" ?disabled=${!enable_validate}
-                                         @click=${e => showValidateDialog(e, builder.submit)}>Valider</button>`: ''}
-                        <hr/>
-                        <button type="button" class="af_button" ?disabled=${!state.changed && record.mtime == null}
-                                @click=${e => handleNewClick(e, state.changed)}>Fermer</button>
-                    </div>
-                `: ''}
+                ${model.render()}
             </div>
         `, el);
 

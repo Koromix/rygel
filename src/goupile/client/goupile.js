@@ -754,11 +754,10 @@ let goupile = new function() {
         });
 
         func(popup_builder, closePopup);
-        popup_builder.actions([
-            action != null ? [action, popup_builder.isValid() ? popup_builder.submit : null,
-                                      !popup_builder.isValid() ? 'Erreurs ou données manquantes' : null] : null,
-            ['Annuler', closePopup]
-        ]);
+        if (action != null)
+            popup_builder.action(action, {disabled: !popup_builder.isValid()}, popup_builder.submit);
+        popup_builder.action('Annuler', closePopup);
+
         render(html`
             <form @submit=${e => e.preventDefault()}>
                 ${model.render()}
