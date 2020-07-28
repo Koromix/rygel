@@ -9,7 +9,7 @@ conversation (for a minimum of two minutes in each position). Symptoms observed 
 example while engaged in activity on the ward, may also be rated. Subsequently, the subjective phenomena
 should be elicited by direct questioning.</p>
 `)
-form.pushOptions({mandatory: true, missingMode: 'disable'})
+form.pushOptions({mandatory: true, missing_mode: 'disable'})
 
 form.section("Objective", () => {
     form.enumRadio("objective", "", [

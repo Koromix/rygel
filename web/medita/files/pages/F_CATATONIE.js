@@ -3,7 +3,7 @@ if (shared.makeHeader)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
                                        hidden: goupile.isLocked()}).value
 
-form.pushOptions({mandatory: false, missingMode: 'disable'})
+form.pushOptions({mandatory: false, missing_mode: 'disable'})
 
 form.section("STUPEUR", () => {
     form.binary("stupeur","Absence d'activité psychomotrice, pas de relation active avec l'environnement.",[""])

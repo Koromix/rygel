@@ -7,7 +7,7 @@ let cotation1 = [[5, "Tous les jours"], [4, "Au moins deux fois par semaine"],[3
 
 let cotation2 = [[1, "Très satisfait(e)"], [2, "Plutôt satisfait(e)"],[3, "Moyennement satisfait(e)"],[4, "Plutôt insatisfait(e)"], [5, "Très insatisfait(e)"]]
 
-form.pushOptions({mandatory: true, missingMode: 'disable'})
+form.pushOptions({mandatory: true, missing_mode: 'disable'})
 
 form.section("ACTIVITES", () => {
 form.enum("Q1", "1. Au cours de ces 2 dernières semaines, à quelle fréquence avez-vous accompli l’une ou l’autre de ces activités (activités professionnelles, études, activités en atelier protégé ou dans une structure de soins, activités bénévoles, recherche d’emploi,…) ?",cotation1)

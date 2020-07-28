@@ -8,7 +8,7 @@ form.output(html`
 
 `)
 
-form.pushOptions({mandatory: true, missingMode: 'disable'})
+form.pushOptions({mandatory: true, missing_mode: 'disable'})
 
 form.binary("Q1", "1. Moins d'heures de sommeil.")
 form.binary("Q2", "2. Davantage d'énergie et de résistance physique.")

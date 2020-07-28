@@ -9,7 +9,7 @@ form.output(html`
     <p><b>N.B :</b> Utiliser des codes intermédiaires lorsque cela est justifié : p. ex. 45, 68, 72</p>
 `)
 
-form.pushOptions({mandatory: true, missingMode: 'disable'})
+form.pushOptions({mandatory: true, missing_mode: 'disable'})
 
 form.section("De 91 à 100", () => {
     form.output(html`Niveau supérieur de fonctionnement dans une grande variété d’activités. N’est jamais débordé par les problèmes rencontrés. Est recherché par autrui en raison de ses nombreuses qualités.Absence de symptômes.`)

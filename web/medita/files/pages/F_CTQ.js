@@ -3,7 +3,7 @@ if (shared.makeHeader)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
                                        hidden: goupile.isLocked()}).value
 
-form.pushOptions({mandatory: true, missingMode: 'disable'})
+form.pushOptions({mandatory: true, missing_mode: 'disable'})
 
 let dataQSpecial = [[5, "Jamais"], [4 , "Rarement"],[3, "Quelquefois"], [2, "Souvent"], [1, "Très souvent"]]
 let dataQ = [[1, "Jamais"], [2, "Rarement"],[3, "Quelquefois"],[4, "Souvent"],[5, "Très souvent"]]

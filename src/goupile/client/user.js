@@ -14,7 +14,7 @@ let user = new function() {
             let builder = new PageBuilder(state, model);
             builder.changeHandler = update;
             builder.pushOptions({
-                missingMode: 'disable',
+                missing_mode: 'disable',
                 wide: true
             });
 

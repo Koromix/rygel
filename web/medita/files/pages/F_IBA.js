@@ -12,7 +12,7 @@ par…
 
 `)
 
-form.pushOptions({mandatory: true, missingMode: 'disable'})
+form.pushOptions({mandatory: true, missing_mode: 'disable'})
 
 let reponses = [
     [1, "Pas du tout"],

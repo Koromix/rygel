@@ -749,7 +749,7 @@ let goupile = new function() {
         popup_builder = new PageBuilder(popup_state, model);
         popup_builder.changeHandler = () => openPopup(...arguments);
         popup_builder.pushOptions({
-            missingMode: 'disable',
+            missing_mode: 'disable',
             wide: true
         });
 

@@ -10,7 +10,7 @@ form.output(html`
     `)
 
 
-form.pushOptions({mandatory: true, missingMode: 'disable'})
+form.pushOptions({mandatory: true, missing_mode: 'disable'})
 
 form.section("1. DÉPRESSION ", () => {
     form.enumRadio("depression", "Comment pourriez-vous décrire votre humeur durant les 2 dernières semaines : avez-vous pu demeurer raisonnablement gai ou est ce que vous avez été très déprimé ou plutôt triste ces derniers temps ? Combien de fois vous êtes-vous senti ainsi, tous les jours ? toute la journée ? ", [

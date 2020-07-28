@@ -2,7 +2,7 @@ if (shared.makeHeader)
     shared.makeHeader("Catatonie", page)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
 
-form.pushOptions({mandatory: true, missingMode: 'disable'})
+form.pushOptions({mandatory: true, missing_mode: 'disable'})
 
 form.section("STUPEUR", () => {
     form.binary("stupeur","Absence d'activité psychomotrice, pas de relation active avec l'environnement.",[""])

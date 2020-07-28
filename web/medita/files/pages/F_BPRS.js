@@ -2,7 +2,7 @@ if (shared.makeHeader)
     shared.makeHeader("Echelle abrégée d'évaluation psychiatrique (BPRS)", page)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true}).value
 
-form.pushOptions({mandatory: true, missingMode: 'disable'})
+form.pushOptions({mandatory: true, missing_mode: 'disable'})
 
 let dataQ = [[0, "Absent"], [1, "Très peu"],[2, "Peu"], [3, "Moyen"], [4, "Assez important"], [5, "Important"], [6, "Extrêmement important"]]
 

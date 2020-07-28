@@ -5,7 +5,7 @@ route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact
 
 let cotation = [[0, "Aucune difficulté"], [1, "Difficulté légère"],[2, "Difficulté modérée"],[3, "Difficulté sévère"]]
 
-form.pushOptions({mandatory: true, missingMode: 'disable'})
+form.pushOptions({mandatory: true, missing_mode: 'disable'})
 
 form.section("AUTONOMIE", () => {
 form.enum("Q1", "1. Prendre des responsabilités au sein de la maison",cotation)

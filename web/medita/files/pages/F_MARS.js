@@ -8,7 +8,7 @@ form.output(html`
     <p>Veuillez répondre aux questions suivantes en cochant la réponse qui correspond le mieux à votre comportement ou attitude vis-à-vis du traitement que vous preniez durant la semaine avant votre hospitalisation.
 `)
 
-form.pushOptions({mandatory: true, missingMode: 'disable'})
+form.pushOptions({mandatory: true, missing_mode: 'disable'})
 
 form.binary("Q1", "1. Vous est-t-il parfois arrivé d'oublier de prendre vos médicaments ?")
 form.binary("Q2", "2. Négligez-vous parfois l'heure de prise d'un de vos médicaments ?")

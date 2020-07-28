@@ -13,7 +13,7 @@ senti(e) la semaine dernière.
     `)
 
 
-form.pushOptions({mandatory: true, missingMode: 'disable'})
+form.pushOptions({mandatory: true, missing_mode: 'disable'})
 
 form.section("QUESTION 1 ", () => {
     form.enumRadio("Q1", "", [

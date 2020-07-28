@@ -7,7 +7,7 @@ form.output(html`
     <p>Cochez Oui (ou Non pour la question 3) si le patient pense que la description s’applique la plupart du temps et dans la plupart des situation.</p>
 `)
 
-form.pushOptions({mandatory: true, missingMode: 'disable'})
+form.pushOptions({mandatory: true, missing_mode: 'disable'})
 
 form.binary("a", "1. En général, avez-vous des difficultés à vous faire et à garder des amis ?")
 form.binary("b", "2. Vous décririez vous comme un(e) solitaire ?")

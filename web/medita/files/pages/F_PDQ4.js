@@ -23,7 +23,7 @@ Vous pouvez prendre tout le temps qu'il vous faut.
 
 let dataQ = [[1, "VRAI"], [2, "FAUX"]]
 
-form.pushOptions({mandatory: true, missingMode: 'disable'})
+form.pushOptions({mandatory: true, missing_mode: 'disable'})
 
 form.enum("p1", "1. J'évite de travailler avec des gens qui pourraient me critiquer.", dataQ)
 form.enum("p2", "2. Je ne peux prendre aucune décision sans le conseil ou le soutien des autres.", dataQ)

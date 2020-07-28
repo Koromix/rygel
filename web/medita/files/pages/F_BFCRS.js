@@ -5,7 +5,7 @@ route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact
 
 form.output(html`<p>Ne côter que les items bien définis. En cas de doute sur la présence d'un item, côter 0.</p>`)
 
-form.pushOptions({mandatory: true, missingMode: 'disable'})
+form.pushOptions({mandatory: true, missing_mode: 'disable'})
 
 form.section("1 - AGITATION", () => {
     form.enumRadio("agitation", "Hyperactivité extrême, agitation motrice constante qui semble sans but. Ne pas attribuer à de l'akathisie ou à une agitation dirigée.", [

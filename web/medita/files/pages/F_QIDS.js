@@ -3,7 +3,7 @@ if (shared.makeHeader)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
                                        hidden: goupile.isLocked()}).value
 
-form.pushOptions({mandatory: true, missingMode: 'disable'})
+form.pushOptions({mandatory: true, missing_mode: 'disable'})
 
 form.section("Partie 1", () => {
     form.output(html`

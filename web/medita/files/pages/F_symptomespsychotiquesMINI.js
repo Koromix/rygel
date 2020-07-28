@@ -4,7 +4,7 @@ route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact
                                        hidden: goupile.isLocked()}).value
 
 
-form.pushOptions({mandatory: true, missingMode: 'disable'})
+form.pushOptions({mandatory: true, missing_mode: 'disable'})
 
 form.binary("a", "1. Avez-vous déjà eu l’impression que quelqu’un vous espionnait, ou complotait contre vous, ou bien encore que l’on essayait de vous faire du mal ?")
 form.binary("b", "2. Avez-vous déjà eu l’impression que l’on pouvait lire ou entendre vos pensées ou que vous pouviez lire ou entendre les pensées des autres ?")

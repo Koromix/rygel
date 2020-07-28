@@ -3,7 +3,7 @@ if (shared.makeHeader)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
                                        hidden: goupile.isLocked()}).value
 
-form.pushOptions({mandatory: true, missingMode: 'disable'})
+form.pushOptions({mandatory: true, missing_mode: 'disable'})
 
 form.section("1. Tristesse apparente", () => {
     form.enumRadio("tristesseApparente", "Correspond au découragement, à la dépression et au désespoir (plus qu'un simple cafard passager) reflétés par la parole, la mimique et la posture. Coter selon la profondeur et l'incapacité à se dérider.", [

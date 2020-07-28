@@ -1180,8 +1180,8 @@ instead of:
         }
 
         if (intf.options.mandatory && intf.missing) {
-            intf.error('Obligatoire !', intf.options.missingMode !== 'error');
-            if (intf.options.missingMode === 'disable')
+            intf.error('Obligatoire !', intf.options.missing_mode !== 'error');
+            if (intf.options.missing_mode === 'disable')
                 valid = false;
         }
 

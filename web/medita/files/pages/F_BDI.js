@@ -10,7 +10,7 @@ form.output(html`
     `)
 
 
-form.pushOptions({mandatory: true, missingMode: 'disable'})
+form.pushOptions({mandatory: true, missing_mode: 'disable'})
 
 form.section("A", () => {
     form.multiCheck("A", "", [

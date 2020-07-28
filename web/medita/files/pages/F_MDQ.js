@@ -3,7 +3,7 @@ if (shared.makeHeader)
 route.id = page.text("id", "Patient", {value: route.id, mandatory: true, compact: true,
                                        hidden: goupile.isLocked()}).value
 
-form.pushOptions({mandatory: true, missingMode: 'disable'})
+form.pushOptions({mandatory: true, missing_mode: 'disable'})
 
 form.section("1- Y a-t-il jamais eu des périodes de temps où vous n’étiez pas comme d’habitude et où…", ()=> {
     form.binary("a", "Vous vous sentiez si bien et si remonté que d’autres personnes pensaient que vous n’étiez pas comme d’habitude ou que vous étiez si remonté que vous alliez vous attirer des ennuis.")
