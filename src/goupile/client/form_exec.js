@@ -736,7 +736,7 @@ let form_exec = new function() {
 
             page: page.key,
             category: page.label,
-            title: col.hasOwnProperty('prop') ? `${col.variable}@${col.prop}` : col.variable,
+            title: col.hasOwnProperty('prop') ? `${col.variable}.${col.prop}` : col.variable,
             variable: col.variable,
             prop: col.prop,
             type: col.type
