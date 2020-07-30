@@ -44,7 +44,7 @@
 }
 .af_section > legend {
     padding: 1px 0.7em;
-    background: #de6a1d;
+    background: #e66d1d;
     font-size: 1.1em;
     color: white;
     cursor: pointer;
@@ -192,11 +192,11 @@
 }
 .af_button::-moz-focus-inner { border: 0; }
 .af_button:not(:disabled):focus { outline: 2px dotted #999; }
-.af_button:not(:disabled):hover { border-color: #de6a1d; }
+.af_button:not(:disabled):hover { border-color: #e66d1d; }
 .af_button:disabled { background: #bbb; }
 .af_button.active {
-    background: #de6a1d;
-    border-color: #de6a1d;
+    background: #e66d1d;
+    border-color: #e66d1d;
     color: white;
 }
 
@@ -252,8 +252,8 @@
 }
 .af_radio > input:checked + label::before { background: none; }
 .af_radio > input:checked + label::after { content: ''; }
-.af_radio > input:hover + label::before { border-color: #de6a1d; }
-.af_radio > input:hover + label::after { background-color: #de6a1d; }
+.af_radio > input:hover + label::before { border-color: #e66d1d; }
+.af_radio > input:hover + label::after { background-color: #e66d1d; }
 .af_radio > input:focus + label {
     outline: 2px dotted #999;
     outline-offset: 1px;
@@ -295,7 +295,7 @@
 }
 .af_multi > input:checked + label::after { content: ''; }
 .af_multi > input:hover + label::before,
-    .af_multi > input:hover + label::after { border-color: #de6a1d; }
+    .af_multi > input:hover + label::after { border-color: #e66d1d; }
 .af_multi > input:focus + label {
     outline: 2px dotted #999;
     outline-offset: 1px;
@@ -357,7 +357,7 @@
     width: 100%;
     height: 8px;
     background: white;
-    background-image: linear-gradient(90deg, #de6a1d var(--webkit_progress),
+    background-image: linear-gradient(90deg, #e66d1d var(--webkit_progress),
                                              white var(--webkit_progress));
     border: 1px solid #dfdfdf;
     border-width: 0.5px;
@@ -373,8 +373,8 @@
 }
 .af_slider:not(.missing) > input::-moz-range-progress {
     height: 6px;
-    background-color: #de6a1d;
-    border: 1px solid #de6a1d;
+    background-color: #e66d1d;
+    border: 1px solid #e66d1d;
     border-width: 0.5px;
     border-radius: 4px;
 }
@@ -383,7 +383,7 @@
     width: 1.6em;
     height: 1.6em;
     margin-top: -0.6em;
-    background: #de6a1d;
+    background: #e66d1d;
     border: none;
     border-radius: 50%;
 }
@@ -392,7 +392,7 @@
     width: 1.6em;
     height: 1.6em;
     margin-top: -0.6em;
-    background: #de6a1d;
+    background: #e66d1d;
     border: none;
     border-radius: 50%;
 }

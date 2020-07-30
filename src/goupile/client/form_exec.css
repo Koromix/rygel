@@ -13,7 +13,7 @@
     margin: auto;
 }
 
-.fm_form a { color: #de6a1d; }
+.fm_form a { color: #e66d1d; }
 
 .fm_entry + .fm_entry {
     margin-top: 9px;
@@ -74,8 +74,8 @@
 }
 .fm_path > a + a { margin-left: 4px; }
 .fm_path > a.active {
-    background: #de6a1d;
-    border: 2px solid #de6a1d;
+    background: #e66d1d;
+    border: 2px solid #e66d1d;
     color: white;
 }
 .fm_path > a.partial::before {
@@ -88,7 +88,7 @@
     font-size: 0.9em;
     content: '✓\FE0E✓\FE0E';
 }
-.fm_path > a:hover { border-color: #de6a1d; }
+.fm_path > a:hover { border-color: #e66d1d; }
 .fm_path > a:focus {
     outline: 2px dotted #999;
     outline-offset: 1px;
