@@ -83,8 +83,8 @@ http_SessionManager::Session *
 
 static void DeleteSessionCookies(const http_RequestInfo &request, http_IO *io)
 {
-    io->AddCookieHeader(request.base_url, "session_key", nullptr);
-    io->AddCookieHeader(request.base_url, "session_rnd", nullptr);
+    io->AddCookieHeader(request.base_url, "session_key", nullptr, true);
+    io->AddCookieHeader(request.base_url, "session_rnd", nullptr, false);
 }
 
 void http_SessionManager::Close(const http_RequestInfo &request, http_IO *io)

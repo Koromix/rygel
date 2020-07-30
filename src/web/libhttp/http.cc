@@ -399,15 +399,18 @@ void http_IO::AddEncodingHeader(CompressionType compression_type)
 void http_IO::AddCookieHeader(const char *path, const char *name, const char *value,
                               bool http_only)
 {
-    char cookie_buf[512];
+    LocalArray<char, 1024> buf;
+
     if (value) {
-        Fmt(cookie_buf, "%1=%2; Path=%3; SameSite=Lax;%4",
-            name, value, path, http_only ? " HttpOnly;" : "");
+        buf.len = Fmt(buf.data, "%1=%2; Path=%3;", name, value, path).len;
     } else {
-        Fmt(cookie_buf, "%1=; Path=%2; Max-Age=0;", name, path);
+        buf.len = Fmt(buf.data, "%1=; Path=%2; Max-Age=0;", name, path).len;
     }
 
-    AddHeader("Set-Cookie", cookie_buf);
+    RG_ASSERT(buf.Available() >= 64);
+    buf.len += Fmt(buf.TakeAvailable(), " SameSite=Lax;%1", http_only ? " HttpOnly;" : "").len;
+
+    AddHeader("Set-Cookie", buf.data);
 }
 
 void http_IO::AddCachingHeaders(int max_age, const char *etag)
