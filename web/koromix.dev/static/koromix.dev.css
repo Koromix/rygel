@@ -98,7 +98,7 @@ pre {
     counter-reset: line;
     font-size: 12px;
 }
-pre span:before {
+pre .line:before {
     display: inline-block;
     width: 2em;
     padding-left: 0.6em;
