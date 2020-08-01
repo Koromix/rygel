@@ -89,13 +89,14 @@ td {
 }
 
 pre {
-    max-height: 300px;
-    margin: 1em 30px;
+    max-height: 360px;
+    margin: 1em 20px;
     padding: 0;
     border: 1px solid #ebebeb;
     background: #ffffff;
     overflow: auto;
     counter-reset: line;
+    font-size: 12px;
 }
 pre span:before {
     display: inline-block;
@@ -241,4 +242,6 @@ code {
     .js nav#top_menu a:not(.active) { display: none; }
     nav#top_menu ul { height: auto; }
     nav#top_menu.active a { display: block !important; }
+
+    pre { margin: 1em 0; }
 }
