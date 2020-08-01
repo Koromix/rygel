@@ -35,9 +35,7 @@ nav#side_menu ul {
     margin: 0;
     padding: 0;
 }
-nav#side_menu li {
-    list-style-type: none;
-}
+nav#side_menu li { list-style-type: none; }
 nav#side_menu a {
     display: block;
     padding: 1px;
@@ -65,6 +63,18 @@ footer {
     /* Avoid margin collapse */
     overflow: auto;
     text-align: right;
+}
+
+h1, h2, h3 { margin-top: 0.3em; }
+* + h1, * + h2, * + h3 { margin: 0.8em 0 0 0; }
+h1 {
+    font-size: 1.5em;
+    font-variant: small-caps;
+}
+h2 { font-size: 1.2em; }
+h3 {
+    font-size: 1em;
+    font-style: italic;
 }
 
 a {
@@ -117,10 +127,8 @@ code {
 }
 
 @media screen and (min-width: 801px) {
-    html {
-        /* Fix stupid scrollbar behavior */
-        width: calc(100vw - 17px);
-    }
+    /* Fix stupid scrollbar behavior */
+    html { width: calc(100vw - 17px); }
     body {
         display: flex;
         flex-direction: column;
@@ -137,9 +145,8 @@ code {
         border-top: 8px solid white;
         border-bottom: 2px solid #f8f8f8;
     }
-    nav#top_menu a {
-        line-height: 32px;
-    }
+    nav#top_menu a { line-height: 32px; }
+    :target { scroll-margin-top: 48px; }
 
     div#content {
         display: flex;
@@ -155,9 +162,7 @@ code {
         position: fixed;
         width: inherit;
     }
-    nav#side_menu a {
-        text-decoration: none;
-    }
+    nav#side_menu a { text-decoration: none; }
     nav#side_menu a.active {
         background: #24579d;
         color: white;
@@ -177,16 +182,6 @@ code {
         box-sizing: border-box;
         width: 80vw;
         max-width: 800px;
-    }
-
-    /* Going to an anchored heading puts it at the top, behind the fixed header.
-       This fixes it, in addition to the hack just above for the first heading on
-       the page. */
-    h1:before, h2:before, h3:before, h4:before, h5:before, h6:before {
-        display: block;
-        height: 50px;
-        margin: -50px 0 0;
-        content: "";
     }
 }
 
@@ -212,14 +207,10 @@ code {
         padding-top: 20px;
         background: #f8f8f8;
     }
-    nav#side_menu.active {
-        display: block;
-    }
-    main {
-        /* Fill viewport, does not work on Android 2.3.7 but
-           this is a minor issue. */
-        min-height: calc(100vh - 40px);
-    }
+    nav#side_menu.active { display: block; }
+    /* Fill viewport, does not work on Android 2.3.7 but
+       this is a minor issue. */
+    main { min-height: calc(100vh - 40px); }
 }
 
 @media screen and (max-width: 580px) {
