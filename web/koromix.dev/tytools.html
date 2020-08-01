@@ -129,23 +129,26 @@
                 <h2 id="tycmd_list">List devices</h2>
                 <p><code>tycmd list</code> lists plugged Teensy devices. Here is how it looks:</p>
 
-<pre><span>add 34130@usb-1-2 Teensy 3.1</span>
-<span>add 29460@usb-4-2 Teensy</span>
-<span>add 32250@usb-4-3 Teensy 3.0</span>
+<pre>
+<span class="line">add 34130@usb-1-2 Teensy 3.1</span>
+<span class="line">add 29460@usb-4-2 Teensy</span>
+<span class="line">add 32250@usb-4-3 Teensy 3.0</span>
 </pre>
 
                 <p>Use <code>--verbose</code> if you want detailed information about available devices:</p>
 
-<pre><span>add 32250@usb-4-3 Teensy 3.0</span>
-<span>  + capabilities:</span>
-<span>    - upload</span>
-<span>    - reset</span>
-<span>  + interfaces:</span>
-<span>    - HalfKay Bootloader: /dev/hidraw2</span>
+<pre>
+<span class="line">add 32250@usb-4-3 Teensy 3.0</span>
+<span class="line">  + capabilities:</span>
+<span class="line">    - upload</span>
+<span class="line">    - reset</span>
+<span class="line">  + interfaces:</span>
+<span class="line">    - HalfKay Bootloader: /dev/hidraw2</span>
 </pre>
 
-<pre><span>{"action": "add", "tag": "714230@usb-6-3", "serial": 714230, "location": "usb-6-3", "model": "Teensy", "capabilities": ["reboot", "serial"], "interfaces": [["Seremu", "/dev/hidraw4"]]}</span>
-<span>{"action": "add", "tag": "1126140@usb-6-2", "serial": 1126140, "location": "usb-6-2", "model": "Teensy LC", "capabilities": ["upload", "reset"], "interfaces": [["HalfKay Bootloader", "/dev/hidraw3"]]}</span>
+<pre>
+<span class="line">{"action": "add", "tag": "714230@usb-6-3", "serial": 714230, "location": "usb-6-3", "model": "Teensy", "capabilities": ["reboot", "serial"], "interfaces": [["Seremu", "/dev/hidraw4"]]}</span>
+<span class="line">{"action": "add", "tag": "1126140@usb-6-2", "serial": 1126140, "location": "usb-6-2", "model": "Teensy LC", "capabilities": ["upload", "reset"], "interfaces": [["HalfKay Bootloader", "/dev/hidraw3"]]}</span>
 </pre>
 
                 <p>You can also watch device changes with <code>--watch</code>, both in plain and JSON mode.</p>
@@ -219,11 +222,12 @@
                 <p>To build TyTools with MSVC 2015 32-bit, launch <em>VS2015 x86 Native Tools Command Prompt</em>,
                 navigate to the project directory and execute CMake:</p>
 
-<pre><span>REM You can of course use another build directory if you prefer.</span>
-<span>mkdir build</span>
-<span>mkdir build/win32</span>
-<span>cd build/win32</span>
-<span>cmake ../..</span>
+<pre>
+<span class="line">REM You can of course use another build directory if you prefer.</span>
+<span class="line">mkdir build</span>
+<span class="line">mkdir build/win32</span>
+<span class="line">cd build/win32</span>
+<span class="line">cmake ../..</span>
 </pre>
 
                 <p>This will create Visual Studio project and solution files in <em>build/win32</em>. You can then open
@@ -246,15 +250,17 @@
                 <p>After Qt is ready, you can build TyTools by executing the following commands in the
                 project directory:</p>
 
-<pre><span># You can of course use another directory if you prefer.</span>
-<span>mkdir -p build/darwin &amp;&amp; cd build/darwin</span>
-<span>cd build/darwin</span>
-<span>cmake ../..</span>
+<pre>
+<span class="line"># You can of course use another directory if you prefer.</span>
+<span class="line">mkdir -p build/darwin &amp;&amp; cd build/darwin</span>
+<span class="line">cd build/darwin</span>
+<span class="line">cmake ../..</span>
 </pre>
 
                 <p>If you want to build debug binaries instead, you should specify the build type:</p>
 
-<pre><span>cmake -DCMAKE_BUILD_TYPE=Debug ../..</span>
+<pre>
+<span class="line">cmake -DCMAKE_BUILD_TYPE=Debug ../..</span>
 </pre>
 
                 <h2 id="build_linux">Build on Linux</h2>
@@ -263,26 +269,30 @@
                 <h3>Prerequisites</h3>
                 <p>To install the dependencies on Debian or Ubuntu execute:</p>
 
-<pre><span>sudo apt-get install build-essential cmake libudev-dev qtbase5-dev</span>
+<pre>
+<span class="line">sudo apt-get install build-essential cmake libudev-dev qtbase5-dev</span>
 </pre>
 
                 <p>On Arch Linux you can do so (as root):</p>
 
-<pre><span>pacman -S --needed base-devel cmake udev qt5-base</span>
+<pre>
+<span class="line">pacman -S --needed base-devel cmake udev qt5-base</span>
 </pre>
 
                 <h3>Compilation</h3>
                 <p>Open the project directory in a terminal and execute:</p>
 
-<pre><span># You can of course use another directory if you prefer.</span>
-<span>mkdir -p build/linux &amp;&amp; cd build/linux</span>
-<span>cmake ../..</span>
-<span>make</span>
+<pre>
+<span class="line"># You can of course use another directory if you prefer.</span>
+<span class="line">mkdir -p build/linux &amp;&amp; cd build/linux</span>
+<span class="line">cmake ../..</span>
+<span class="line">make</span>
 </pre>
 
                 <p>If you want to build debug binaries instead, you should specify the build type:</p>
 
-<pre><span>cmake -DCMAKE_BUILD_TYPE=Debug ../..</span>
+<pre>
+<span class="line">cmake -DCMAKE_BUILD_TYPE=Debug ../..</span>
 </pre>
 
             </main>
