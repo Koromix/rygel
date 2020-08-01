@@ -121,7 +121,7 @@ pre .line:before {
     -webkit-user-select: none;
 }
 code {
-    padding: 0.25em 0.5em;
+    padding: 0.1em 0.5em;
     background: #ebebeb;
     color: black;
 }
