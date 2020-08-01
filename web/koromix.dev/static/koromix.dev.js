@@ -45,7 +45,7 @@ function initMenuHighlight() {
         let idx;
         for (idx = 0; idx < items.length; idx++) {
             let rect = items[idx][1].getBoundingClientRect();
-            if (rect.top >= 40)
+            if (rect.top >= 50)
                 break;
         }
         if (idx)

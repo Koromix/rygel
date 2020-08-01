@@ -78,9 +78,9 @@ h3 {
 }
 
 a {
-    color: #24579d;
-    text-decoration: underline;
+    color: #df6c1f;
     cursor: pointer;
+    text-decoration: none;
 }
 
 table {
@@ -162,7 +162,10 @@ code {
         position: fixed;
         width: inherit;
     }
-    nav#side_menu a { text-decoration: none; }
+    nav#side_menu a {
+        text-decoration: none;
+        color: #24579d;
+    }
     nav#side_menu a.active {
         background: #24579d;
         color: white;
