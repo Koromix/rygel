@@ -206,7 +206,7 @@ main {
     height: 100vh;
     justify-content: center;
     align-items: center;
-    background: rgba(0, 0, 0, 0.96);
+    background: rgba(0, 0, 0, 0.9);
     cursor: pointer;
     z-index: 999;
 }
