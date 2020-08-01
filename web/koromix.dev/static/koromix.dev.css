@@ -67,6 +67,7 @@ footer {
 a {
     color: #24579d;
     text-decoration: underline;
+    cursor: pointer;
 }
 
 table {

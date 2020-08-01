@@ -12,7 +12,7 @@
 
     <body class="js">
         <div id="top">
-            <a id="top_deploy" href="#" onclick="parentNode.query('#top_menu').toggleClass('active'); return false;"></a>
+            <a id="top_deploy" onclick="parentNode.querySelector('#top_menu').classList.toggle('active');"></a>
             <nav id="top_menu">
                 <ul>
                     <li><a href="/index">Home</a></li>
@@ -26,7 +26,7 @@
         </div>
 
         <div id="content">
-            <a id="side_deploy" href="#" onclick="parentNode.query('#side_menu').toggleClass('active'); return false;"></a>
+            <a id="side_deploy" onclick="parentNode.querySelector('#side_menu').classList.toggle('active');"></a>
             <nav id="side_menu">
                 <ul>
                     <li><a href="#overview" class="lv1">Overview</a></li>
