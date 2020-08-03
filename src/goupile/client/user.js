@@ -49,35 +49,44 @@ let user = new function() {
         let password = page.password('*password', 'Mot de passe');
 
         page.submitHandler = async () => {
-            let entry = new log.Entry;
-
-            entry.progress('Connexion en cours');
-            try {
-                let body = new URLSearchParams({
-                    username: username.value.toLowerCase(),
-                    password: password.value
-                });
-
-                let response = await net.fetch(`${env.base_url}api/login.json`, {method: 'POST', body: body});
-
-                if (response.ok) {
-                    if (close)
-                        close();
-
-                    // Emergency unlocking
-                    deleteLock();
-
-                    entry.success('Connexion réussie');
-                    await goupile.initMain();
-                } else {
-                    let msg = await response.text();
-                    entry.error(msg);
-                }
-            } catch (err) {
-                entry.error(err);
-            }
+            let success = await self.login(username.value, password.value);
+            if (success && close != null)
+                close();
         };
     }
+
+    this.login = async function(username, password) {
+        let entry = new log.Entry;
+
+        entry.progress('Connexion en cours');
+        try {
+            let response = await net.fetch(`${env.base_url}api/login.json`, {
+                method: 'POST',
+                body: new URLSearchParams({
+                    username: username.toLowerCase(),
+                    password: password
+                })
+            });
+
+            if (response.ok) {
+                // Emergency unlocking
+                deleteLock();
+
+                entry.success('Connexion réussie');
+                await goupile.initMain();
+
+                return true;
+            } else {
+                let msg = await response.text();
+                entry.error(msg);
+
+                return false;
+            }
+        } catch (err) {
+            entry.error(err);
+            return false;
+        }
+    };
 
     this.logout = async function() {
         let entry = new log.Entry;
@@ -89,12 +98,17 @@ let user = new function() {
             if (response.ok) {
                 entry.success('Déconnexion réussie');
                 await goupile.initMain();
+
+                return true;
             } else {
                 let msg = await response.text();
                 entry.error(msg);
+
+                return false;
             }
         } catch (err) {
             entry.error(err);
+            return false;
         }
     };
 
