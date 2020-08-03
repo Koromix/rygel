@@ -1045,7 +1045,7 @@ instead of:
     };
 
     function handleActionClick(e, label) {
-        state.click_events.set(label, e);
+        state.click_events.add(label, e);
         self.restart();
     }
 
