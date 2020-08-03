@@ -167,8 +167,8 @@ bool Builder::AddTarget(const TargetInfo &target)
             node.text = Fmt(&str_alloc, "Pack %1 assets", target.name).ptr;
             node.dest_filename = src_filename;
 
-            MakePackCommand(target.pack_filenames, build.compile_mode,
-                            target.pack_options, src_filename, &str_alloc, &node);
+            build.compiler->MakePackCommand(target.pack_filenames, build.compile_mode,
+                                            target.pack_options, src_filename, &str_alloc, &node);
 
             if (NeedsRebuild(src_filename, node, target.pack_filenames)) {
                 if (!EnsureDirectoryExists(src_filename))

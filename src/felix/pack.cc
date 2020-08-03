@@ -261,22 +261,41 @@ static const char *CreateVariableName(const char *name, Allocator *alloc)
     return var_name;
 }
 
-static void PrintAsHexArray(Span<const uint8_t> bytes, StreamWriter *out_st)
+static void PrintAsC(Span<const uint8_t> bytes, bool as_array, StreamWriter *out_st)
 {
-    Size i = 0;
-    for (Size end = bytes.len / 8 * 8; i < end; i += 8) {
-        Print(out_st, "0x%1, 0x%2, 0x%3, 0x%4, 0x%5, 0x%6, 0x%7, 0x%8, ",
-              FmtHex(bytes[i + 0]).Pad0(-2), FmtHex(bytes[i + 1]).Pad0(-2),
-              FmtHex(bytes[i + 2]).Pad0(-2), FmtHex(bytes[i + 3]).Pad0(-2),
-              FmtHex(bytes[i + 4]).Pad0(-2), FmtHex(bytes[i + 5]).Pad0(-2),
-              FmtHex(bytes[i + 6]).Pad0(-2), FmtHex(bytes[i + 7]).Pad0(-2));
-    }
-    for (; i < bytes.len; i++) {
-        Print(out_st, "0x%1, ", FmtHex(bytes[i]).Pad0(-2));
+    if (as_array) {
+        Size i = 0;
+        for (Size end = bytes.len / 8 * 8; i < end; i += 8) {
+            Print(out_st, "0x%1, 0x%2, 0x%3, 0x%4, 0x%5, 0x%6, 0x%7, 0x%8, ",
+                  FmtHex(bytes[i + 0]).Pad0(-2), FmtHex(bytes[i + 1]).Pad0(-2),
+                  FmtHex(bytes[i + 2]).Pad0(-2), FmtHex(bytes[i + 3]).Pad0(-2),
+                  FmtHex(bytes[i + 4]).Pad0(-2), FmtHex(bytes[i + 5]).Pad0(-2),
+                  FmtHex(bytes[i + 6]).Pad0(-2), FmtHex(bytes[i + 7]).Pad0(-2));
+        }
+        for (; i < bytes.len; i++) {
+            Print(out_st, "0x%1, ", FmtHex(bytes[i]).Pad0(-2));
+        }
+    } else {
+        Size i = 0;
+        for (Size end = bytes.len / 8 * 8; i < end; i += 8) {
+            Print(out_st, "\"\\x%1\\x%2\\x%3\\x%4\\x%5\\x%6\\x%7\\x%8\" ",
+                  FmtHex(bytes[i + 0]).Pad0(-2), FmtHex(bytes[i + 1]).Pad0(-2),
+                  FmtHex(bytes[i + 2]).Pad0(-2), FmtHex(bytes[i + 3]).Pad0(-2),
+                  FmtHex(bytes[i + 4]).Pad0(-2), FmtHex(bytes[i + 5]).Pad0(-2),
+                  FmtHex(bytes[i + 6]).Pad0(-2), FmtHex(bytes[i + 7]).Pad0(-2));
+        }
+
+        if (i < bytes.len) {
+            Print(out_st, "\"");
+            for (; i < bytes.len; i++) {
+                Print(out_st, "\\x%1", FmtHex(bytes[i]).Pad0(-2));
+            }
+            Print(out_st, "\" ");
+        }
     }
 }
 
-bool PackToC(Span<const PackAssetInfo> assets, const char *output_path)
+bool PackToC(Span<const PackAssetInfo> assets, bool use_arrays, const char *output_path)
 {
     BlockAllocator temp_alloc;
 
@@ -307,12 +326,12 @@ static const uint8_t raw_data[] = {)");
 
             PrintLn(&st, "    // %1", blob.str_name);
             Print(&st, "    ");
-            blob.len = PackAsset(asset, [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
+            blob.len = PackAsset(asset, [&](Span<const uint8_t> buf) { PrintAsC(buf, use_arrays, &st); });
             if (blob.len < 0)
                 return false;
 
             // Put NUL byte at the end to make it a valid C string
-            PrintAsHexArray(0, &st);
+            PrintAsC(0, use_arrays, &st);
             PrintLn(&st);
 
             if (asset.source_map_name) {
@@ -326,11 +345,11 @@ static const uint8_t raw_data[] = {)");
 
                 PrintLn(&st, "    // %1", blob_map.str_name);
                 Print(&st, "    ");
-                blob_map.len = PackSourceMap(asset, [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
+                blob_map.len = PackSourceMap(asset, [&](Span<const uint8_t> buf) { PrintAsC(buf, use_arrays, &st); });
                 if (blob_map.len < 0)
                     return false;
 
-                PrintAsHexArray(0, &st);
+                PrintAsC(0, use_arrays, &st);
                 PrintLn(&st);
 
                 blobs.Append(blob);
@@ -446,7 +465,8 @@ bool PackToFiles(Span<const PackAssetInfo> assets, const char *output_path)
 bool PackAssets(Span<const PackAssetInfo> assets, const char *output_path, PackMode mode)
 {
     switch (mode) {
-        case PackMode::C: return PackToC(assets, output_path);
+        case PackMode::Cstring: return PackToC(assets, false, output_path);
+        case PackMode::Carray: return PackToC(assets, true, output_path);
         case PackMode::Files: return PackToFiles(assets, output_path);
     }
 

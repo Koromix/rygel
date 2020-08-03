@@ -49,6 +49,33 @@ static void AddEnvironmentFlags(Span<const char *const> names, HeapArray<char> *
     }
 }
 
+static void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
+                            bool use_arrays, const char *pack_options, const char *dest_filename,
+                            Allocator *alloc, BuildNode *out_node)
+{
+    HeapArray<char> buf(alloc);
+
+    Fmt(&buf, "\"%1\" pack -O \"%2\"", GetApplicationExecutable(), dest_filename);
+
+    Fmt(&buf, use_arrays ? " -t Carray" : " -t Cstring");
+    switch (compile_mode) {
+        case CompileMode::Debug:
+        case CompileMode::DebugFast: { Fmt(&buf, " -m SourceMap"); } break;
+        case CompileMode::Fast:
+        case CompileMode::LTO: { Fmt(&buf, " -m RunTransform"); } break;
+    }
+
+    if (pack_options) {
+        Fmt(&buf, " %1", pack_options);
+    }
+    for (const char *pack_filename: pack_filenames) {
+        Fmt(&buf, " \"%1\"", pack_filename);
+    }
+
+    out_node->cache_len = buf.len;
+    out_node->cmd_line = buf.TrimAndLeak(1);
+}
+
 bool Compiler::Test() const
 {
     if (!test_init) {
@@ -62,6 +89,14 @@ bool Compiler::Test() const
 class ClangCompiler: public Compiler {
 public:
     ClangCompiler(const char *name) : Compiler(name, "clang") {}
+
+    void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
+                         const char *pack_options, const char *dest_filename,
+                         Allocator *alloc, BuildNode *out_node) const override
+    {
+        RG::MakePackCommand(pack_filenames, compile_mode, false, pack_options,
+                            dest_filename, alloc, out_node);
+    }
 
     void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
                         bool warnings, Span<const char *const> definitions,
@@ -217,6 +252,14 @@ public:
 class GnuCompiler: public Compiler {
 public:
     GnuCompiler(const char *name) : Compiler(name, "gcc") {}
+
+    void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
+                         const char *pack_options, const char *dest_filename,
+                         Allocator *alloc, BuildNode *out_node) const override
+    {
+        RG::MakePackCommand(pack_filenames, compile_mode, false, pack_options,
+                            dest_filename, alloc, out_node);
+    }
 
     void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
                         bool warnings, Span<const char *const> definitions,
@@ -378,6 +421,15 @@ class MsCompiler: public Compiler {
 public:
     MsCompiler(const char *name) : Compiler(name, "cl") {}
 
+    void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
+                         const char *pack_options, const char *dest_filename,
+                         Allocator *alloc, BuildNode *out_node) const override
+    {
+        // Strings literals are limited in length in MSVC, even with concatenation (64kiB)
+        RG::MakePackCommand(pack_filenames, compile_mode, true, pack_options,
+                            dest_filename, alloc, out_node);
+    }
+
     void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
                         bool warnings, Span<const char *const> definitions,
                         Span<const char *const> include_directories, bool env_flags,
@@ -510,31 +562,5 @@ static const Compiler *const CompilerTable[] = {
     &GnuCompiler
 };
 const Span<const Compiler *const> Compilers = CompilerTable;
-
-void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
-                     const char *pack_options, const char *dest_filename,
-                     Allocator *alloc, BuildNode *out_node)
-{
-    HeapArray<char> buf(alloc);
-
-    Fmt(&buf, "\"%1\" pack -O \"%2\"", GetApplicationExecutable(), dest_filename);
-
-    switch (compile_mode) {
-        case CompileMode::Debug:
-        case CompileMode::DebugFast: { Fmt(&buf, " -m SourceMap"); } break;
-        case CompileMode::Fast:
-        case CompileMode::LTO: { Fmt(&buf, " -m RunTransform"); } break;
-    }
-
-    if (pack_options) {
-        Fmt(&buf, " %1", pack_options);
-    }
-    for (const char *pack_filename: pack_filenames) {
-        Fmt(&buf, " \"%1\"", pack_filename);
-    }
-
-    out_node->cache_len = buf.len;
-    out_node->cmd_line = buf.TrimAndLeak(1);
-}
 
 }

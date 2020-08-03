@@ -10,15 +10,17 @@
 namespace RG {
 
 enum class PackMode {
-    C,
+    Cstring,
+    Carray,
     Files
 };
 static const char *const PackModeNames[] = {
-    "C",
+    "Cstring",
+    "Carray",
     "Files"
 };
 
-bool PackToC(Span<const PackAssetInfo> assets, const char *output_path);
+bool PackToC(Span<const PackAssetInfo> assets, bool use_arrays, const char *output_path);
 bool PackToFiles(Span<const PackAssetInfo> assets, const char *output_path);
 
 bool PackAssets(Span<const PackAssetInfo> assets, const char *output_path, PackMode mode);

@@ -48,6 +48,10 @@ public:
 
     bool Test() const;
 
+    virtual void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
+                                 const char *pack_options, const char *dest_filename,
+                                 Allocator *alloc, BuildNode *out_node) const = 0;
+
     virtual void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
                                 bool warnings, Span<const char *const> definitions,
                                 Span<const char *const> include_directories, bool env_flags,
@@ -66,9 +70,5 @@ public:
 };
 
 extern const Span<const Compiler *const> Compilers;
-
-void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
-                     const char *pack_options, const char *dest_filename,
-                     Allocator *alloc, BuildNode *out_node);
 
 }
