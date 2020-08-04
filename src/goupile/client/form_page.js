@@ -1049,6 +1049,14 @@ instead of:
         self.restart();
     }
 
+    // XXX: Deprecated, remove soon
+    this.actions = function(actions, options = {}) {
+        console.error('page.actions() is deprecated and will eventually be removed');
+
+        for (let action of actions)
+            self.action(action[0], {disabled: !action[1]}, action[1]);
+    };
+
     this.submit = async function() {
         if (self.triggerErrors())
             await self.submitHandler();
