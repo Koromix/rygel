@@ -1032,8 +1032,9 @@ instead of:
         let clicked = state.click_events.has(label);
         state.click_events.delete(label);
 
+        let type = model.actions.length ? 'button' : 'submit';
         let render = intf => html`
-            <button type="button" class="af_button" ?disabled=${options.disabled}
+            <button type=${type} class="af_button" ?disabled=${options.disabled}
                     @click=${func}>${label}</button>
         `;
 
