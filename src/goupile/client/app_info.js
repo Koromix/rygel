@@ -154,9 +154,10 @@ function FormBuilder(form) {
     let self = this;
 
     let options_stack = [{
-        actions: true,
+        show_id: true,
+        default_actions: true,
         float_actions: true,
-        validate: false
+        use_validation: false
     }];
 
     let used_keys = new Set;

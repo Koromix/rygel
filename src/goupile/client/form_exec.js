@@ -195,21 +195,20 @@ let form_exec = new function() {
              model.values, model.variables, nav.route, state.scratch);
         builder.errorList();
 
-        let show_actions = route_page.options.actions && model.variables.length;
-        let enable_save = !builder.hasErrors() && state.changed;
-        let enable_validate = !builder.hasErrors() && !state.changed &&
-                              record.complete[model.key] === false;
+        if (route_page.options.default_actions && model.variables.length) {
+            let enable_save = !builder.hasErrors() && state.changed;
+            let enable_validate = !builder.hasErrors() && !state.changed &&
+                                  record.complete[model.key] === false;
 
-        if (show_actions) {
-            builder.action('Enregistrer', {disabled: !enable_save}, e => builder.submit());
-            if (route_page.options.validate)
+            builder.action('Enregistrer', {disabled: !enable_save}, e => uilder.submit());
+            if (route_page.options.use_validation)
                 builder.action('Valider', {disabled: !enable_save}, e => showValidateDialog(e, builder.submit));
             builder.action('Fermer', {disabled: !state.changed && record.mtime == null}, e => handleNewClick(e, state.changed));
         }
 
         render(html`
             <div class="fm_form">
-                ${route_page.options.actions ? html`
+                ${route_page.options.show_id ? html`
                     <div class="fm_id">
                         ${readonly ?
                             html`<span style="color: red;"
