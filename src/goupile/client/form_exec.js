@@ -241,7 +241,8 @@ let form_exec = new function() {
                     return html`<a class=${cls} href=${makeURL(route_page.form.key, page2.key, record)}>${page2.label}</a>`;
                 })}</div>
 
-                ${model.render()}
+                <div class="af_main">${model.renderWidgets()}</div>
+                <div class=${route_page.options.float_actions ? 'af_actions float' : 'af_actions'}>${model.renderActions()}</div>
             </div>
         `, el);
 

@@ -108,7 +108,7 @@
 }
 
 @media (min-width: 1061px) {
-    .gp_panel.overview .fm_form > .af_actions {
+    .gp_panel.overview .fm_form > .af_actions.float {
         position: fixed;
         display: inline-block;
         left: calc(50% + 406px);
@@ -117,10 +117,10 @@
         margin-top: 0;
         z-index: 999;
     }
-    .gp_panel.overview .fm_form > .af_actions > * + * { margin: 4px 0; }
-    .gp_panel.overview .fm_form > .af_actions > hr { margin: 8px 0; }
-    #gp_menu + main .gp_panel.overview .fm_form > .af_actions { top: calc(2.5em + 32px); }
-    .gp_panel.overview .fm_form > .af_actions > button { width: 9em; }
+    .gp_panel.overview .fm_form > .af_actions.float > * + * { margin: 4px 0; }
+    .gp_panel.overview .fm_form > .af_actions.float > hr { margin: 8px 0; }
+    #gp_menu + main .gp_panel.overview .fm_form > .af_actions.float { top: calc(2.5em + 32px); }
+    .gp_panel.overview .fm_form > .af_actions.float > button { width: 9em; }
 }
 
 /* -------------------- Audit trail -------------------- */

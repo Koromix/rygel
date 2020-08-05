@@ -35,10 +35,12 @@ function PageModel(key) {
 
     this.render = function() {
         return html`
-            <div class="af_main">${self.widgets0.map(intf => intf.render())}</div>
-            <div class="af_actions">${self.actions.map(action => action.render())}</div>
+            <div class="af_main">${self.renderWidgets()}</div>
+            <div class="af_actions">${self.renderActions()}</div>
         `;
     };
+    this.renderWidgets = function() { return self.widgets0.map(intf => intf.render()); };
+    this.renderActions = function() { return self.actions.map(intf => intf.render()); };
 }
 
 function PageBuilder(state, model, readonly = false) {

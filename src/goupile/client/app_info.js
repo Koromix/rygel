@@ -153,7 +153,24 @@ function ApplicationBuilder(app) {
 function FormBuilder(form) {
     let self = this;
 
+    let options_stack = [{
+        actions: true,
+        float_actions: true,
+        validate: false
+    }];
+
     let used_keys = new Set;
+
+    this.pushOptions = function(options = {}) {
+        options = expandOptions(options);
+        options_stack.push(options);
+    };
+    this.popOptions = function() {
+        if (options_stack.length < 2)
+            throw new Error('Too many popOptions() operations');
+
+        options_stack.pop();
+    };
 
     this.page = function(key, label = undefined, options = {}) {
         if (!key)
@@ -163,19 +180,23 @@ function FormBuilder(form) {
         if (used_keys.has(key))
             throw new Error(`Page '${key}' is already used in this form`);
 
+        options = expandOptions(options);
+
         let page = {
             key: key,
             label: label || key,
             url: `${env.base_url}app/${form.key}/${key}/`,
 
             form: form,
-            options: util.assignDeep({
-                actions: true,
-                validate: false
-            }, options)
+            options: options
         };
         form.pages.push(page);
 
         used_keys.add(key);
     };
+
+    function expandOptions(options) {
+        options = Object.assign({}, options_stack[options_stack.length - 1], options);
+        return options;
+    }
 }
