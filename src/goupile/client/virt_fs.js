@@ -93,8 +93,10 @@ function VirtualFS(db) {
 
     this.load = async function(path) {
         let cache_file = cache.get(path);
-        if (cache_file)
-            return cache_file;
+        if (cache_file) {
+            let file = Object.assign({}, cache_file);
+            return file;
+        }
 
         let [file, data] = await Promise.all([
             db.load('fs_entries', path),
@@ -128,7 +130,11 @@ function VirtualFS(db) {
             file = null;
         }
 
-        cache.set(path, file);
+        if (cache_file) {
+            cache_file = Object.assign({}, file);
+            cache.set(path, cache_file);
+        }
+
         return file;
     };
 
