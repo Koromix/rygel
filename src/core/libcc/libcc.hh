@@ -3468,6 +3468,9 @@ bool TestFile(const char *filename, FileType type = FileType::Unknown);
 bool MatchPathName(const char *path, const char *spec);
 bool MatchPathSpec(const char *path, const char *spec);
 
+bool FindExecutableInPath(const char *name, Allocator *alloc = nullptr,
+                          const char **out_path = nullptr);
+
 bool SetWorkingDirectory(const char *directory);
 const char *GetWorkingDirectory();
 

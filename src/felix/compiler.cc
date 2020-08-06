@@ -8,36 +8,6 @@
 
 namespace RG {
 
-static bool TestBinary(const char *name)
-{
-    Span<const char> env = getenv("PATH");
-
-    while (env.len) {
-        Span<const char> path = SplitStr(env, RG_PATH_DELIMITER, &env);
-
-        LocalArray<char, 4096> buf;
-        buf.len = Fmt(buf.data, "%1%/%2", path, name).len;
-
-#ifdef _WIN32
-        static const Span<const char> extensions[] = {".com", ".exe", ".bat", ".cmd"};
-
-        for (Span<const char> ext: extensions) {
-            if (RG_LIKELY(ext.len < buf.Available() - 1)) {
-                memcpy(buf.end(), ext.ptr, ext.len + 1);
-
-                if (TestFile(buf.data))
-                    return true;
-            }
-        }
-#else
-        if (RG_LIKELY(buf.len < RG_SIZE(buf.data) - 1) && TestFile(buf.data))
-            return true;
-#endif
-    }
-
-    return false;
-}
-
 static void AddEnvironmentFlags(Span<const char *const> names, HeapArray<char> *out_buf)
 {
     for (const char *name: names) {
@@ -79,7 +49,7 @@ static void MakePackCommand(Span<const char *const> pack_filenames, CompileMode 
 bool Compiler::Test() const
 {
     if (!test_init) {
-        test = TestBinary(binary);
+        test = FindExecutableInPath(binary);
         test_init = true;
     }
 

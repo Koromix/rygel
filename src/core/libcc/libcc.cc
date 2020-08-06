@@ -1816,6 +1816,45 @@ bool MatchPathSpec(const char *path, const char *spec)
     return false;
 }
 
+bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_path)
+{
+    // XXX: Non-Unicode friendly on Win32
+    Span<const char> env = getenv("PATH");
+
+    while (env.len) {
+        Span<const char> path = SplitStr(env, RG_PATH_DELIMITER, &env);
+
+        LocalArray<char, 4096> buf;
+        buf.len = Fmt(buf.data, "%1%/%2", path, name).len;
+
+#ifdef _WIN32
+        static const Span<const char> extensions[] = {".com", ".exe", ".bat", ".cmd"};
+
+        for (Span<const char> ext: extensions) {
+            if (RG_LIKELY(ext.len < buf.Available() - 1)) {
+                memcpy(buf.end(), ext.ptr, ext.len + 1);
+
+                if (TestFile(buf.data)) {
+                    if (out_path) {
+                        *out_path = DuplicateString(buf.data, alloc).ptr;
+                    }
+                    return true;
+                }
+            }
+        }
+#else
+        if (RG_LIKELY(buf.len < RG_SIZE(buf.data) - 1) && TestFile(buf.data)) {
+            if (out_path) {
+                *out_path = DuplicateString(buf.data, alloc).ptr;
+            }
+            return true;
+        }
+#endif
+    }
+
+    return false;
+}
+
 bool SetWorkingDirectory(const char *directory)
 {
 #ifdef _WIN32
