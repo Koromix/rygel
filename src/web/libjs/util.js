@@ -130,21 +130,33 @@ let util = new function() {
     };
 
     // Why the f*ck is there still no good cookie API?
-    this.getCookie = function(name) {
-        let cookie = ' ' + document.cookie;
+    this.getCookie = function(key) {
+        let cookies = document.cookie;
+        let offset = 0;
 
-        let start = cookie.indexOf(' ' + name + '=');
-        if (start < 0)
-            return null;
+        while (offset < cookies.length) {
+            let name_end = cookies.indexOf('=', offset);
+            let value_end = cookies.indexOf(';', name_end + 1);
+            if (value_end < 0)
+                value_end = cookies.length;
 
-        start = cookie.indexOf('=', start) + 1;
-        let end = cookie.indexOf(';', start);
-        if (end < 0)
-            end = cookie.length;
+            let name = cookies.substring(offset, name_end);
+            name = decodeURIComponent(name);
 
-        let value = unescape(cookie.substring(start, end));
+            if (name === key) {
+                let value = cookies.substring(name_end + 1, value_end);
+                value = decodeURIComponent(value);
 
-        return value;
+                return value;
+            }
+
+            // Find next cookie
+            offset = value_end + 1;
+            while (cookies[offset] === ' ')
+                offset++;
+        }
+
+        return null;
     };
 
     this.roundTo = function(n, digits) {
