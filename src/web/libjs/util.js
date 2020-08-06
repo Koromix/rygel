@@ -159,6 +159,19 @@ let util = new function() {
         return null;
     };
 
+    this.setCookie = function(name, value, path, seconds = null) {
+        let cookie = `${name}=${encodeURIComponent(value)}; Path=${path}; SameSite=Lax;`;
+
+        if (seconds != null)
+            cookie += ` Max-Age=${seconds};`;
+
+        document.cookie = cookie;
+    };
+
+    this.deleteCookie = function(name, path) {
+        self.setCookie(name, '', path, 0);
+    };
+
     this.roundTo = function(n, digits) {
         if (digits === undefined)
             digits = 0;
