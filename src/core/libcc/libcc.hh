@@ -581,7 +581,7 @@ protected:
     virtual void Release(void *ptr, Size size) = 0;
 };
 
-class LinkedAllocator: public Allocator {
+class LinkedAllocator final: public Allocator {
     struct Node {
         Node *prev;
         Node *next;
@@ -651,11 +651,11 @@ private:
         { return (RG_SIZE(Bucket) + size + 7) / 8 * 8 - RG_SIZE(Bucket); }
 };
 
-class BlockAllocator: public BlockAllocatorBase {
+class BlockAllocator final: public BlockAllocatorBase {
     LinkedAllocator allocator;
 
 protected:
-    virtual LinkedAllocator *GetAllocator() { return &allocator; }
+    LinkedAllocator *GetAllocator() override { return &allocator; }
 
 public:
     BlockAllocator(Size block_size = RG_BLOCK_ALLOCATOR_DEFAULT_SIZE)
@@ -667,11 +667,11 @@ public:
     void ReleaseAll();
 };
 
-class IndirectBlockAllocator: public BlockAllocatorBase {
+class IndirectBlockAllocator final: public BlockAllocatorBase {
     LinkedAllocator *allocator;
 
 protected:
-    virtual LinkedAllocator *GetAllocator() { return allocator; }
+    LinkedAllocator *GetAllocator() override { return allocator; }
 
 public:
     IndirectBlockAllocator(LinkedAllocator *alloc, Size block_size = RG_BLOCK_ALLOCATOR_DEFAULT_SIZE)

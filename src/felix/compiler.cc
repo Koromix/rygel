@@ -86,7 +86,7 @@ bool Compiler::Test() const
     return test;
 }
 
-class ClangCompiler: public Compiler {
+class ClangCompiler final: public Compiler {
 public:
     ClangCompiler(const char *name) : Compiler(name, "clang") {}
 
@@ -249,7 +249,7 @@ public:
     }
 };
 
-class GnuCompiler: public Compiler {
+class GnuCompiler final: public Compiler {
 public:
     GnuCompiler(const char *name) : Compiler(name, "gcc") {}
 
@@ -417,7 +417,7 @@ public:
 };
 
 #ifdef _WIN32
-class MsCompiler: public Compiler {
+class MsCompiler final: public Compiler {
 public:
     MsCompiler(const char *name) : Compiler(name, "cl") {}
 
