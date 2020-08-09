@@ -1162,48 +1162,56 @@ const TypeInfo *Parser::ParseType()
     return type;
 }
 
-static int GetOperatorPrecedence(TokenKind kind)
+static int GetOperatorPrecedence(TokenKind kind, bool expect_unary)
 {
-    switch (kind) {
-        case TokenKind::Reassign:
-        case TokenKind::PlusAssign:
-        case TokenKind::MinusAssign:
-        case TokenKind::MultiplyAssign:
-        case TokenKind::DivideAssign:
-        case TokenKind::ModuloAssign:
-        case TokenKind::LeftShiftAssign:
-        case TokenKind::RightShiftAssign:
-        case TokenKind::LeftRotateAssign:
-        case TokenKind::RightRotateAssign:
-        case TokenKind::AndAssign:
-        case TokenKind::OrAssign:
-        case TokenKind::XorAssign: { return 0; } break;
+    if (expect_unary) {
+        switch (kind) {
+            case TokenKind::XorOrComplement:
+            case TokenKind::Plus:
+            case TokenKind::Minus:
+            case TokenKind::Not: { return 12; } break;
 
-        case TokenKind::OrOr: { return 2; } break;
-        case TokenKind::AndAnd: { return 3; } break;
-        case TokenKind::Equal:
-        case TokenKind::NotEqual: { return 4; } break;
-        case TokenKind::Greater:
-        case TokenKind::GreaterOrEqual:
-        case TokenKind::Less:
-        case TokenKind::LessOrEqual: { return 5; } break;
-        case TokenKind::Or: { return 6; } break;
-        case TokenKind::Xor: { return 7; } break;
-        case TokenKind::And: { return 8; } break;
-        case TokenKind::LeftShift:
-        case TokenKind::RightShift:
-        case TokenKind::LeftRotate:
-        case TokenKind::RightRotate: { return 9; } break;
-        // Unary '+' and '-' operators are dealt with directly in ParseExpression()
-        case TokenKind::Plus:
-        case TokenKind::Minus: { return 10; } break;
-        case TokenKind::Multiply:
-        case TokenKind::Divide:
-        case TokenKind::Modulo: { return 11; } break;
-        case TokenKind::Complement:
-        case TokenKind::Not: { return 12; } break;
+            default: { return -1; } break;
+        }
+    } else {
+        switch (kind) {
+            case TokenKind::Reassign:
+            case TokenKind::PlusAssign:
+            case TokenKind::MinusAssign:
+            case TokenKind::MultiplyAssign:
+            case TokenKind::DivideAssign:
+            case TokenKind::ModuloAssign:
+            case TokenKind::LeftShiftAssign:
+            case TokenKind::RightShiftAssign:
+            case TokenKind::LeftRotateAssign:
+            case TokenKind::RightRotateAssign:
+            case TokenKind::AndAssign:
+            case TokenKind::OrAssign:
+            case TokenKind::XorAssign: { return 0; } break;
 
-        default: { return -1; } break;
+            case TokenKind::OrOr: { return 2; } break;
+            case TokenKind::AndAnd: { return 3; } break;
+            case TokenKind::Equal:
+            case TokenKind::NotEqual: { return 4; } break;
+            case TokenKind::Greater:
+            case TokenKind::GreaterOrEqual:
+            case TokenKind::Less:
+            case TokenKind::LessOrEqual: { return 5; } break;
+            case TokenKind::Or: { return 6; } break;
+            case TokenKind::XorOrComplement: { return 7; } break;
+            case TokenKind::And: { return 8; } break;
+            case TokenKind::LeftShift:
+            case TokenKind::RightShift:
+            case TokenKind::LeftRotate:
+            case TokenKind::RightRotate: { return 9; } break;
+            case TokenKind::Plus:
+            case TokenKind::Minus: { return 10; } break;
+            case TokenKind::Multiply:
+            case TokenKind::Divide:
+            case TokenKind::Modulo: { return 11; } break;
+
+            default: { return -1; } break;
+        }
     }
 }
 
@@ -1310,8 +1318,8 @@ StackSlot Parser::ParseExpression(bool tolerate_assign)
             PendingOperator op = {};
 
             op.kind = tok.kind;
-            op.prec = GetOperatorPrecedence(tok.kind);
-            op.unary = (tok.kind == TokenKind::Complement || tok.kind == TokenKind::Not);
+            op.prec = GetOperatorPrecedence(tok.kind, expect_value);
+            op.unary = expect_value;
             op.pos = pos - 1;
 
             // Not an operator? There's a few cases to deal with, including a perfectly
@@ -1334,21 +1342,15 @@ StackSlot Parser::ParseExpression(bool tolerate_assign)
 
                     // Pretend the user meant '==' to recover
                     op.kind = TokenKind::Equal;
-                    op.prec = GetOperatorPrecedence(TokenKind::Equal);
+                    op.prec = GetOperatorPrecedence(TokenKind::Equal, expect_value);
                 } else {
                     pos--;
                     break;
                 }
             }
 
-            if (expect_value != op.unary) {
-                if (RG_LIKELY(tok.kind == TokenKind::Plus || tok.kind == TokenKind::Minus)) {
-                    op.prec = 12;
-                    op.unary = true;
-                } else {
-                    goto unexpected;
-                }
-            }
+            if (expect_value != op.unary)
+                goto unexpected;
             expect_value = true;
 
             while (operators.len) {
@@ -1628,13 +1630,14 @@ void Parser::ProduceOperator(const PendingOperator &op)
                 success = EmitOperator2(PrimitiveType::Int, Opcode::OrInt, stack[stack.len - 2].type) ||
                           EmitOperator2(PrimitiveType::Bool, Opcode::OrBool, stack[stack.len - 2].type);
             } break;
-            case TokenKind::Xor: {
-                success = EmitOperator2(PrimitiveType::Int, Opcode::XorInt, stack[stack.len - 2].type) ||
-                          EmitOperator2(PrimitiveType::Bool, Opcode::NotEqualBool, stack[stack.len - 2].type);
-            } break;
-            case TokenKind::Complement: {
-                success = EmitOperator1(PrimitiveType::Int, Opcode::ComplementInt, stack[stack.len - 1].type) ||
-                          EmitOperator1(PrimitiveType::Bool, Opcode::NotBool, stack[stack.len - 1].type);
+            case TokenKind::XorOrComplement: {
+                if (op.unary) {
+                    success = EmitOperator1(PrimitiveType::Int, Opcode::ComplementInt, stack[stack.len - 1].type) ||
+                              EmitOperator1(PrimitiveType::Bool, Opcode::NotBool, stack[stack.len - 1].type);
+                } else {
+                    success = EmitOperator2(PrimitiveType::Int, Opcode::XorInt, stack[stack.len - 1].type) ||
+                              EmitOperator2(PrimitiveType::Bool, Opcode::NotEqualBool, stack[stack.len - 1].type);
+                }
             } break;
             case TokenKind::LeftShift: {
                 success = EmitOperator2(PrimitiveType::Int, Opcode::LeftShiftInt, stack[stack.len - 2].type);

@@ -424,8 +424,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
             case '*': { Token2('=', TokenKind::MultiplyAssign) || Token1(TokenKind::Multiply); } break;
             case '/': { Token2('=', TokenKind::DivideAssign) || Token1(TokenKind::Divide); } break;
             case '%': { Token2('=', TokenKind::ModuloAssign) || Token1(TokenKind::Modulo); } break;
-            case '^': { Token2('=', TokenKind::XorAssign) || Token1(TokenKind::Xor); } break;
-            case '~': { Token1(TokenKind::Complement); } break;
+            case '~': { Token2('=', TokenKind::XorAssign) || Token1(TokenKind::XorOrComplement); } break;
             case '&': { Token2('=', TokenKind::AndAssign) || Token2('&', TokenKind::AndAnd) || Token1(TokenKind::And); } break;
             case '|': { Token2('=', TokenKind::OrAssign) || Token2('|', TokenKind::OrOr) || Token1(TokenKind::Or); } break;
             case '!': { Token2('=', TokenKind::NotEqual) || Token1(TokenKind::Not); } break;
