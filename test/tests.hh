@@ -16,18 +16,10 @@ namespace RG {
 
 static inline void ReportTestResults(Size tests, Size failures)
 {
-    if (EnableAnsiOutput()) {
-        if (failures) {
-            PrintLn(stderr, "\n    \x1B[31mFailed\x1B[0m (%1/%2)", failures, tests);
-        } else {
-            PrintLn(stderr, " \x1B[32mSuccess\x1B[0m (%1)", tests);
-        }
+    if (failures) {
+        PrintLn(stderr, "\n    %!R..Failed%!0 (%1/%2)", failures, tests);
     } else {
-        if (failures) {
-            PrintLn(stderr, "\n    Failed (%1/%2)", failures, tests);
-        } else {
-            PrintLn(stderr, " Success (%1)", tests);
-        }
+        PrintLn(stderr, " %!G..Success%!0 (%1)", tests);
     }
 }
 
@@ -35,7 +27,7 @@ static inline void ReportTestResults(Size tests, Size failures)
     do { \
         tests++; \
         if (!(Condition)) { \
-            Print(stderr, "\n    [%1:%2] ", SplitStrReverseAny(__FILE__, RG_PATH_SEPARATORS), __LINE__); \
+            Print(stderr, "\n    %!D..[%1:%2]%!0 ", SplitStrReverseAny(__FILE__, RG_PATH_SEPARATORS), __LINE__); \
             Print(stderr, __VA_ARGS__); \
             failures++; \
         } \
