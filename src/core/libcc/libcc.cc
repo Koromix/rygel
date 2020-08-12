@@ -1011,21 +1011,16 @@ Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Span<char> out_buf)
         return {};
     out_buf.len--;
 
-    Size real_len = 0;
+    Size available_len = out_buf.len;
 
-    DoFormat(fmt, args, [&](Span<const char> fragment) {
-        if (RG_LIKELY(real_len < out_buf.len)) {
-            Size copy_len = fragment.len;
-            if (copy_len > out_buf.len - real_len) {
-                copy_len = out_buf.len - real_len;
-            }
-            memcpy(out_buf.ptr + real_len, fragment.ptr, (size_t)copy_len);
-        }
-        real_len += fragment.len;
+    DoFormat(fmt, args, [&](Span<const char> frag) {
+        Size copy_len = std::min(frag.len, available_len);
+
+        memcpy(out_buf.end() - available_len, frag.ptr, (size_t)copy_len);
+        available_len -= copy_len;
     });
-    if (real_len < out_buf.len) {
-        out_buf.len = real_len;
-    }
+
+    out_buf.len -= available_len;
     out_buf.ptr[out_buf.len] = 0;
 
     return out_buf;
