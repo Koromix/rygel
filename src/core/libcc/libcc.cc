@@ -114,39 +114,10 @@ protected:
     }
 };
 
-static Allocator *GetDefaultAllocator()
+Allocator *GetDefaultAllocator()
 {
     static Allocator *default_allocator = new RG_DEFAULT_ALLOCATOR;
     return default_allocator;
-}
-
-void *Allocator::Allocate(Allocator *alloc, Size size, unsigned int flags)
-{
-    RG_ASSERT(size >= 0);
-
-    if (!alloc) {
-        alloc = GetDefaultAllocator();
-    }
-    return alloc->Allocate(size, flags);
-}
-
-void Allocator::Resize(Allocator *alloc, void **ptr, Size old_size, Size new_size,
-                       unsigned int flags)
-{
-    RG_ASSERT(new_size >= 0);
-
-    if (!alloc) {
-        alloc = GetDefaultAllocator();
-    }
-    alloc->Resize(ptr, old_size, new_size, flags);
-}
-
-void Allocator::Release(Allocator *alloc, void *ptr, Size size)
-{
-    if (!alloc) {
-        alloc = GetDefaultAllocator();
-    }
-    alloc->Release(ptr, size);
 }
 
 LinkedAllocator& LinkedAllocator::operator=(LinkedAllocator &&other)

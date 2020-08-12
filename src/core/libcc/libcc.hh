@@ -558,6 +558,10 @@ struct Vec3 {
 // Memory / Allocator
 // ------------------------------------------------------------------------
 
+class Allocator;
+
+Allocator *GetDefaultAllocator();
+
 class Allocator {
     RG_DELETE_COPY(Allocator)
 
@@ -570,10 +574,34 @@ public:
     Allocator() = default;
     virtual ~Allocator() = default;
 
-    static void *Allocate(Allocator *alloc, Size size, unsigned int flags = 0);
+    static void *Allocate(Allocator *alloc, Size size, unsigned int flags = 0)
+    {
+        RG_ASSERT(size >= 0);
+
+        if (!alloc) {
+            alloc = GetDefaultAllocator();
+        }
+        return alloc->Allocate(size, flags);
+    }
+
     static void Resize(Allocator *alloc, void **ptr, Size old_size, Size new_size,
-                       unsigned int flags = 0);
-    static void Release(Allocator *alloc, void *ptr, Size size);
+                       unsigned int flags = 0)
+    {
+        RG_ASSERT(new_size >= 0);
+
+        if (!alloc) {
+            alloc = GetDefaultAllocator();
+        }
+        alloc->Resize(ptr, old_size, new_size, flags);
+    }
+
+    static void Release(Allocator *alloc, void *ptr, Size size)
+    {
+        if (!alloc) {
+            alloc = GetDefaultAllocator();
+        }
+        alloc->Release(ptr, size);
+    }
 
 protected:
     virtual void *Allocate(Size size, unsigned int flags = 0) = 0;
