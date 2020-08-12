@@ -261,7 +261,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                 // Don't replace with int64_t or debug builds will crash on overflow!
                 uint64_t value = code[offset] - '0';
                 bool overflow = false;
-                bool dot = false;
+                bool fp = false;
 
                 while (next < code.len) {
                     unsigned int digit = (unsigned int)(code[next] - '0');
@@ -271,7 +271,10 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                         value = (value * 10) + (code[next] - '0');
                     } else if (code[next] == '.') {
                         // Could be a range operator (.., ...), don't mess it up!
-                        dot = (next + 1 >= code.len || code[next + 1] != '.');
+                        fp = (next + 1 >= code.len || code[next + 1] != '.');
+                        break;
+                    } else if (code[next] == 'e' || code[next] == 'E') {
+                        fp = true;
                         break;
                     } else if (code[next] == '_') {
                         // Ignore underscores in number literals (e.g. 10_000_000)
@@ -282,7 +285,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     next++;
                 }
 
-                if (dot) {
+                if (fp) {
                     next++;
                     TokenizeFloat();
                 } else {
@@ -409,7 +412,8 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
             } break;
 
             case '.': {
-                if (RG_UNLIKELY(next < code.len && IsAsciiDigit(code[next]))) {
+                if (RG_UNLIKELY(next < code.len && (IsAsciiDigit(code[next]) ||
+                                                    code[next] == 'e' || code[next] == 'E'))) {
                     // Support '.dddd' float literals
                     TokenizeFloat();
                 } else {
@@ -580,7 +584,7 @@ void Lexer::TokenizeFloat()
         }
     }
     while (next < code.len) {
-        if (IsAsciiDigit(code[next])) {
+        if (IsAsciiDigit(code[next]) || code[next] == 'e' || code[next] == 'E') {
             if (RG_UNLIKELY(buf.len >= RG_SIZE(buf.data) - 2)) {
                 MarkError(offset, "Number literal is too long (max = %1 characters)", RG_SIZE(buf.data) - 1);
                 return;
