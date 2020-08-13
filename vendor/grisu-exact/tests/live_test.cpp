@@ -43,7 +43,6 @@ jkj::signed_fp_t<Float> decompose_float(Float x) {
 #include <iostream>
 #include <iomanip>
 #include <string>
-#include <charconv>
 
 template <class Float>
 void live_test()
@@ -55,9 +54,15 @@ void live_test()
 		std::string x_str;
 		while (true) {
 			std::getline(std::cin, x_str);
-			auto ret = std::from_chars(x_str.c_str(), x_str.c_str() + x_str.length(), x);
-
-			if (std::make_error_code(ret.ec) || *ret.ptr != '\0') {
+			try {
+				if constexpr (sizeof(Float) == 4) {
+					x = std::stof(x_str);
+				}
+				else {
+					x = std::stod(x_str);
+				}
+			}
+			catch (...) {
 				std::cout << "Not a valid input; input again.\n";
 				continue;
 			}
@@ -65,13 +70,15 @@ void live_test()
 		}
 
 		auto xx = decompose_float(x);
-		//std::cout << "               sign: " << (xx.is_negative ? "-" : "+") << std::endl;
+		std::cout << "               sign: " << (xx.is_negative ? "-" : "+") << std::endl;
 		std::cout << "           exponent: " << xx.exponent << std::endl;
 		std::cout << "        significand: " << "0x" << std::hex << std::setfill('0');
-		if constexpr (sizeof(Float) == 4)
+		if constexpr (sizeof(Float) == 4) {
 			std::cout << std::setw(8);
-		else
+		}
+		else {
 			std::cout << std::setw(16);
+		}
 		std::cout << xx.significand << std::dec << std::endl;
 
 		jkj::fp_to_chars(x, buffer);

@@ -202,15 +202,19 @@ void verify_incorrect_rounding_removal()
 		return success;
 	};
 
-	if (verify_single_type(common_info<float>{}))
+	if (verify_single_type(common_info<float>{})) {
 		std::cout << "Incorrect rounding removal for binary32: verified." << std::endl;
-	else
+	}
+	else {
 		std::cout << "Incorrect rounding removal for binary32: failed." << std::endl;
+	}
 
-	if (verify_single_type(common_info<double>{}))
+	if (verify_single_type(common_info<double>{})) {
 		std::cout << "Incorrect rounding removal for binary64: verified." << std::endl;
-	else
+	}
+	else {
 		std::cout << "Incorrect rounding removal for binary64: failed." << std::endl;
+	}
 
 	std::cout << "Done.\n\n\n";
 }

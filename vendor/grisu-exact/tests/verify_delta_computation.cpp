@@ -57,15 +57,19 @@ void verify_delta_computation()
 		return true;
 	};
 
-	if (verify_single_type(common_info<float>{}, "float"))
+	if (verify_single_type(common_info<float>{}, "float")) {
 		std::cout << "delta computation for binary32: verified." << std::endl;
-	else
+	}
+	else {
 		std::cout << "delta computation for binary32: failed." << std::endl;
+	}
 
-	if (verify_single_type(common_info<double>{}, "double"))
+	if (verify_single_type(common_info<double>{}, "double")) {
 		std::cout << "delta computation for binary64: verified." << std::endl;
-	else
+	}
+	else {
 		std::cout << "delta computation for binary64: failed." << std::endl;
+	}
 
 	std::cout << "Done.\n\n\n";
 }

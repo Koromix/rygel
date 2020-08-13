@@ -50,6 +50,9 @@
     <ClInclude Include="..\benchmark\benchmark.h">
       <Filter>benchmark</Filter>
     </ClInclude>
+    <ClInclude Include="..\benchmark\ryu\f2s_intrinsics.h">
+      <Filter>benchmark\ryu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\tests\generate_cache.cpp">

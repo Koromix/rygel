@@ -35,12 +35,12 @@
 // I have no idea why MSVC thinks some functions here are vulnerable to the buffer overrun attacks
 // No, they aren't.
 #ifndef __clang__
-#define JKJ_GRISU_EXACT_SAFEBUFFERS __declspec(safebuffers)
+#define JKJ_SAFEBUFFERS __declspec(safebuffers)
 #else
-#define JKJ_GRISU_EXACT_SAFEBUFFERS
+#define JKJ_SAFEBUFFERS
 #endif
 #else
-#define JKJ_GRISU_EXACT_SAFEBUFFERS
+#define JKJ_SAFEBUFFERS
 #endif
 
 namespace jkj {
@@ -83,7 +83,7 @@ namespace jkj {
 #endif
 		};
 
-		JKJ_GRISU_EXACT_SAFEBUFFERS
+		JKJ_SAFEBUFFERS
 		inline uint128 umul128(std::uint64_t x, std::uint64_t y) noexcept {
 #if (defined(__GNUC__) || defined(__clang__)) && defined(__SIZEOF_INT128__) && defined(__x86_64__)
 			return (unsigned __int128)(x) * (unsigned __int128)(y);
@@ -111,7 +111,7 @@ namespace jkj {
 #endif
 		}
 
-		JKJ_GRISU_EXACT_SAFEBUFFERS
+		JKJ_SAFEBUFFERS
 		inline std::uint64_t umul128_upper64(std::uint64_t x, std::uint64_t y) noexcept {
 #if (defined(__GNUC__) || defined(__clang__)) && defined(__SIZEOF_INT128__) && defined(__x86_64__)
 			auto p = (unsigned __int128)(x) * (unsigned __int128)(y);
@@ -138,7 +138,7 @@ namespace jkj {
 		}
 
 		// Get upper 64-bits of multiplication of a 64-bit unsigned integer and a 128-bit unsigned integer
-		JKJ_GRISU_EXACT_SAFEBUFFERS
+		JKJ_SAFEBUFFERS
 		inline std::uint64_t umul192_upper64(std::uint64_t x, uint128 y) noexcept {
 			auto g0 = umul128(x, y.high());
 			auto g10 = umul128_upper64(x, y.low());
@@ -163,8 +163,7 @@ namespace jkj {
 
 		// Compute b^e in compile-time
 		template <class UInt>
-		constexpr UInt compute_power(UInt b, unsigned int e) noexcept
-		{
+		constexpr UInt compute_power(UInt b, unsigned int e) noexcept {
 			UInt r = 1;
 			for (unsigned int i = 0; i < e; ++i) {
 				r *= b;
@@ -181,9 +180,14 @@ namespace jkj {
 #if (defined(__GNUC__) || defined(__clang__)) && defined(__x86_64__)
 			int index;
 			if constexpr (std::is_same_v<UInt, std::uint32_t>) {
-				static_assert(sizeof(unsigned long) == 4,
-					"jkj::grisu_exact: unsigned long should be 4 bytes long");
-				index = __builtin_ctz((unsigned long)x);
+				if constexpr (sizeof(unsigned long) == 4) {
+					index = __builtin_ctzl((unsigned long)x);
+				}
+				else {
+					static_assert(sizeof(unsigned int) == 4,
+						"jkj::grisu_exact: at least one of unsigned int and unsigned long should be 4 bytes long");
+					index = __builtin_ctz((unsigned int)x);
+				}
 			}
 			else {
 				static_assert(sizeof(unsigned long long) == 8,
@@ -204,15 +208,14 @@ namespace jkj {
 			if (exp >= int(sizeof(UInt) * 8)) {
 				return false;
 			}
-			return x == ((x >> exp) << exp);
+			return x == ((x >> exp) << exp); 
 #endif
 		}
 
 		// Check if a number is a multiple of 5^exp
-		// Use the algorithm introduced in
-		// "Quick Modular Calculations" by Cassio Neri, Dec. 2019, ACCU Overload Journal #154, page 13
+		// Use the algorithm introduced in Section 9 of Granlund-Montgomery
 		template <class UInt>
-		constexpr UInt compute_modular_inverse_of_5() {
+		constexpr UInt compute_modular_inverse_of_5() noexcept {
 			// Use Euler's theorem
 			// phi(p^k) = p^(k-1) * (p-1), so phi(2^n) = 2^(n-1).
 			// Hence, we need to compute 5^(2^(n-1) - 1), which is equal to
@@ -1748,7 +1751,6 @@ namespace jkj {
 			using common_info<Float>::integer_check_exponent_upper_bound_for_p_p2;
 			using common_info<Float>::integer_check_exponent_upper_bound_for_p_p1;
 
-			// Clang/MSVC (clang-cl) fails when return type is set to auto for some reason
 			template <unsigned int e>
 			static constexpr extended_significand_type power_of_10 = compute_power(extended_significand_type(10), e);
 
@@ -1756,7 +1758,7 @@ namespace jkj {
 			//// The main algorithm assumes the input is a normal/subnormal finite number
 
 			template <bool return_sign, class IntervalTypeProvider, class CorrectRoundingSearch>
-			JKJ_GRISU_EXACT_SAFEBUFFERS
+			JKJ_SAFEBUFFERS
 			static fp_t<Float, return_sign> compute(bit_representation_t<Float> br) noexcept
 			{
 				//////////////////////////////////////////////////////////////////////
@@ -2267,7 +2269,6 @@ namespace jkj {
 									}
 								}
 								else {
-									static_assert(sizeof(Float) == 8);
 									if (exponent == -203) {
 										goto return_label;
 									}
@@ -2661,5 +2662,5 @@ namespace jkj {
 	}
 }
 
-#undef JKJ_GRISU_EXACT_SAFEBUFFERS
+#undef JKJ_SAFEBUFFERS
 #endif

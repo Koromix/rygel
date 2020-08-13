@@ -114,15 +114,19 @@ void verify_correct_rounding_bound()
 		return success;
 	};
 
-	if (verify_single_type(common_info<float>{}))
+	if (verify_single_type(common_info<float>{})) {
 		std::cout << "correct rounding bound computation for binary32: verified." << std::endl;
-	else
+	}
+	else {
 		std::cout << "correct rounding bound computation for binary32: failed." << std::endl;
+	}
 
-	if (verify_single_type(common_info<double>{}))
+	if (verify_single_type(common_info<double>{})) {
 		std::cout << "correct rounding bound computation for binary64: verified." << std::endl;
-	else
+	}
+	else {
 		std::cout << "correct rounding bound computation for binary64: failed." << std::endl;
+	}
 
 	std::cout << "Done.\n\n\n";
 }
