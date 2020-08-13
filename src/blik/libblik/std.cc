@@ -23,7 +23,7 @@ static Value DoPrint(VirtualMachine *vm, Span<const Value> args)
             case PrimitiveType::Null: { Print("null"); } break;
             case PrimitiveType::Bool: { Print("%1", args[i].b); } break;
             case PrimitiveType::Int: { Print("%1", args[i].i); } break;
-            case PrimitiveType::Float: { Print("%1", args[i].d); } break;
+            case PrimitiveType::Float: { Print("%1", FmtDouble(args[i].d, 1, INT_MAX)); } break;
             case PrimitiveType::String: { Print("%1", args[i].str); } break;
             case PrimitiveType::Type: { Print("%1", args[i].type->signature); } break;
         }

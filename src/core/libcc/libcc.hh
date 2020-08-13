@@ -2787,7 +2787,8 @@ public:
         uint64_t u;
         struct {
             double value;
-            int precision;
+            int min_prec;
+            int max_prec;
         } d;
         const void *ptr;
         Size size;
@@ -2820,8 +2821,8 @@ public:
     FmtArg(unsigned long i) : type(FmtType::Unsigned) { u.u = i; }
     FmtArg(long long i) : type(FmtType::Integer) { u.i = i; }
     FmtArg(unsigned long long i) : type(FmtType::Unsigned) { u.u = i; }
-    FmtArg(float f) : type(FmtType::Double) { u.d = { (double)f, -1 }; }
-    FmtArg(double d) : type(FmtType::Double) { u.d = { d, -1 }; }
+    FmtArg(float f) : type(FmtType::Double) { u.d = { (double)f, 0, INT_MAX }; }
+    FmtArg(double d) : type(FmtType::Double) { u.d = { d, 0, INT_MAX }; }
     FmtArg(const void *ptr) : type(FmtType::Hexadecimal) { u.u = (uint64_t)ptr; }
     FmtArg(const Date &date) : type(FmtType::Date) { u.date = date; }
 
@@ -2845,14 +2846,17 @@ static inline FmtArg FmtHex(uint64_t u)
     return arg;
 }
 
-static inline FmtArg FmtDouble(double d, int precision = -1)
+static inline FmtArg FmtDouble(double d, int min_prec, int max_prec)
 {
     FmtArg arg;
     arg.type = FmtType::Double;
     arg.u.d.value = d;
-    arg.u.d.precision = precision;
+    arg.u.d.min_prec = min_prec;
+    arg.u.d.max_prec = max_prec;
     return arg;
 }
+static inline FmtArg FmtDouble(double d, int prec) { return FmtDouble(d, prec, prec); }
+static inline FmtArg FmtDouble(double d) { return FmtDouble(d, 0, INT_MAX); }
 
 static inline FmtArg FmtMemSize(Size size)
 {

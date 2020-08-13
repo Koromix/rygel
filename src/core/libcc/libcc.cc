@@ -13,6 +13,7 @@
     #define MINIZ_NO_MALLOC
     #include "../../../vendor/miniz/miniz.h"
 #endif
+#include "../../../vendor/grisu-exact/grisu_exact.h"
 
 #ifdef _WIN32
     #define WIN32_LEAN_AND_MEAN
@@ -555,13 +556,13 @@ Span<char> DuplicateString(Span<const char> str, Allocator *alloc)
 // Format
 // ------------------------------------------------------------------------
 
-static Span<const char> FormatUnsignedToDecimal(uint64_t value, char out_buf[32])
-{
-    static char digit_pairs[201] = "00010203040506070809101112131415161718192021222324"
-                                   "25262728293031323334353637383940414243444546474849"
-                                   "50515253545556575859606162636465666768697071727374"
-                                   "75767778798081828384858687888990919293949596979899";
+static const char DigitPairs[201] = "00010203040506070809101112131415161718192021222324"
+                                    "25262728293031323334353637383940414243444546474849"
+                                    "50515253545556575859606162636465666768697071727374"
+                                    "75767778798081828384858687888990919293949596979899";
 
+static Span<char> FormatUnsignedToDecimal(uint64_t value, char out_buf[32])
+{
     Size offset = 32;
     {
         int pair_idx;
@@ -569,7 +570,7 @@ static Span<const char> FormatUnsignedToDecimal(uint64_t value, char out_buf[32]
             pair_idx = (int)((value % 100) * 2);
             value /= 100;
             offset -= 2;
-            memcpy(out_buf + offset, digit_pairs + pair_idx, 2);
+            memcpy(out_buf + offset, DigitPairs + pair_idx, 2);
         } while (value);
         offset += (pair_idx < 20);
     }
@@ -577,7 +578,7 @@ static Span<const char> FormatUnsignedToDecimal(uint64_t value, char out_buf[32]
     return MakeSpan(out_buf + offset, 32 - offset);
 }
 
-static Span<const char> FormatUnsignedToHex(uint64_t value, char out_buf[32])
+static Span<char> FormatUnsignedToHex(uint64_t value, char out_buf[32])
 {
     static const char literals[] = "0123456789ABCDEF";
 
@@ -591,7 +592,7 @@ static Span<const char> FormatUnsignedToHex(uint64_t value, char out_buf[32])
     return MakeSpan(out_buf + offset, 32 - offset);
 }
 
-static Span<const char> FormatUnsignedToBinary(uint64_t value, char out_buf[64])
+static Span<char> FormatUnsignedToBinary(uint64_t value, char out_buf[64])
 {
     Size msb = 64 - (Size)CountLeadingZeros(value);
     if (!msb) {
@@ -606,18 +607,142 @@ static Span<const char> FormatUnsignedToBinary(uint64_t value, char out_buf[64])
     return MakeSpan(out_buf, msb);
 }
 
-static Span<const char> FormatDouble(double value, int precision, char out_buf[256])
+static int FakeDoublePrecision(Span<char> buf, int K, int min_prec, int max_prec)
 {
-    // That's the lazy way to do it, it'll do for now
-    int buf_len;
-    if (precision >= 0) {
-        buf_len = snprintf(out_buf, 256, "%.*f", precision, value);
-    } else {
-        buf_len = snprintf(out_buf, 256, "%g", value);
-    }
-    RG_ASSERT(buf_len >= 0 && buf_len < 256);
+    if (-K < min_prec) {
+        int delta = min_prec + K;
+        memset(buf.end(), '0', delta);
 
-    return MakeSpan(out_buf, (Size)buf_len);
+        return delta;
+    } else if (-K > max_prec) {
+        int truncate = (int)buf.len + K + max_prec;
+
+        if (buf[truncate] >= '5') {
+            int i = truncate;
+            while (i > (int)buf.len + K) {
+                if (buf[i - 1] == '9') {
+                    buf[--i] = '0';
+                } else {
+                    buf[i - 1]++;
+                    break;
+                }
+            }
+
+            truncate = std::max(i, (int)buf.len + K + min_prec);
+        }
+
+        return truncate - (int)buf.len;
+    } else {
+        return 0;
+    }
+}
+
+static Span<char> PrettifyDouble(Span<char> buf, int K, int min_prec, int max_prec)
+{
+    // Apply precision settings after conversion
+    {
+        int fake = FakeDoublePrecision(buf, K, min_prec, max_prec);
+        buf.len += fake;
+        K -= fake;
+    }
+
+    int KK = (int)buf.len + K;
+
+    if (K >= 0) {
+        // 1234e7 -> 12340000000
+
+        memset(buf.end(), '0', (size_t)K);
+        buf.len += K;
+    } else if (KK > 0) {
+        // 1234e-2 -> 12.34
+
+        memmove(buf.ptr + KK + 1, buf.ptr + KK, (size_t)(buf.len - KK));
+        buf.ptr[KK] = '.';
+        buf.len++;
+    } else {
+        // 1234e-6 -> 0.001234
+
+        int offset = 2 - KK;
+        memmove(buf.ptr + offset, buf.ptr, (size_t)buf.len);
+        memset(buf.ptr, '0', (size_t)offset);
+        buf.ptr[1] = '.';
+        buf.len += offset;
+    }
+
+    return buf;
+}
+
+static Span<char> ExponentiateDouble(Span<char> buf, int K, int min_prec, int max_prec)
+{
+    // Apply precision settings after conversion
+    {
+        int fake = FakeDoublePrecision(buf, 1 - buf.len, min_prec, max_prec);
+        buf.len += fake;
+        K -= fake;
+    }
+
+    int exponent = (int)buf.len + K - 1;
+
+    if (buf.len > 1) {
+        memmove(buf.ptr + 2, buf.ptr + 1, (size_t)(buf.len - 1));
+        buf.ptr[1] = '.';
+        buf.ptr[buf.len + 1] = 'e';
+        buf.len += 2;
+    } else {
+        buf.ptr[1] = 'e';
+        buf.len = 2;
+    }
+
+    if (exponent > 0) {
+        buf.ptr[buf.len++] = '+';
+    } else {
+        buf.ptr[buf.len++] = '-';
+        exponent = -exponent;
+    }
+
+    if (exponent >= 100) {
+        buf.ptr[buf.len++] = (char)('0' + exponent / 100);
+        exponent %= 100;
+
+        int pair_idx = (int)(exponent * 2);
+        memcpy(buf.end(), DigitPairs + pair_idx, 2);
+        buf.len += 2;
+    } else if (exponent >= 10) {
+        int pair_idx = (int)(exponent * 2);
+        memcpy(buf.end(), DigitPairs + pair_idx, 2);
+        buf.len += 2;
+    } else {
+        buf.ptr[buf.len++] = (char)('0' + exponent);
+    }
+
+    return buf;
+}
+
+// NaN and Inf are handled by caller
+static Span<const char> FormatDouble(double value, int min_prec, int max_prec, char out_buf[32])
+{
+    auto v = jkj::grisu_exact(value);
+
+    Span<char> buf = FormatUnsignedToDecimal(v.significand, out_buf);
+    int KK = (int)buf.len + v.exponent;
+
+    if (!v.significand) {
+        buf.ptr[0] = '0';
+
+        if (min_prec) {
+            buf.ptr[1] = '.';
+            memset(buf.ptr + 2, '0', min_prec);
+            buf.len = 2 + min_prec;
+        } else {
+            buf.len = 1;
+        }
+
+        return buf;
+    } else if (KK <= -6 || KK > 21) {
+        return ExponentiateDouble(buf, v.exponent, min_prec, max_prec);
+    } else {
+        return PrettifyDouble(buf, v.exponent, min_prec, max_prec);
+    }
 }
 
 template <typename AppendFunc>
@@ -625,7 +750,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
 {
     for (int i = 0; i < arg.repeat; i++) {
         LocalArray<char, 512> out_buf;
-        char num_buf[256];
+        char num_buf[128];
         Span<const char> out;
 
         Size pad_len = arg.pad_len;
@@ -652,6 +777,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                     } else {
                         out_buf.Append('-');
                     }
+
                     out_buf.Append(FormatUnsignedToDecimal((uint64_t)-arg.u.i, num_buf));
                     out = out_buf;
                 } else {
@@ -662,13 +788,35 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 out = FormatUnsignedToDecimal(arg.u.u, num_buf);
             } break;
             case FmtType::Double: {
-                if (arg.u.i < 0 && arg.pad_len < 0 && arg.pad_char == '0') {
-                    append('-');
-                    pad_len++;
+                static const uint64_t ExponentMask = 0x7FF0000000000000ull;
+                static const uint64_t MantissaMask = 0x000FFFFFFFFFFFFFull;
+                static const uint64_t SignMask = 0x8000000000000000ull;
 
-                    out = FormatDouble(-arg.u.d.value, arg.u.d.precision, num_buf);
+                union { double d; uint64_t u64; } u;
+                u.d = arg.u.d.value;
+
+                if ((u.u64 & ExponentMask) == ExponentMask) {
+                    uint64_t mantissa = u.u64 & MantissaMask;
+
+                    if (mantissa) {
+                        out = "NaN";
+                    } else {
+                        out = (u.u64 & SignMask) ? "-Inf" : "Inf";
+                    }
                 } else {
-                    out = FormatDouble(arg.u.d.value, arg.u.d.precision, num_buf);
+                    if (u.u64 & SignMask) {
+                        if (arg.pad_len < 0 && arg.pad_char == '0') {
+                            append('-');
+                            pad_len++;
+                        } else {
+                            out_buf.Append('-');
+                        }
+
+                        out_buf.Append(FormatDouble(-u.d, arg.u.d.min_prec, arg.u.d.max_prec, num_buf));
+                        out = out_buf;
+                    } else {
+                        out = FormatDouble(u.d, arg.u.d.min_prec, arg.u.d.max_prec, num_buf);
+                    }
                 }
             } break;
             case FmtType::Binary: {
@@ -693,11 +841,11 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 }
                 if (size_unsigned > 1024 * 1024) {
                     double size_mib = (double)size_unsigned / (1024.0 * 1024.0);
-                    out_buf.Append(FormatDouble(size_mib, 2, num_buf));
+                    out_buf.Append(FormatDouble(size_mib, 2, 2, num_buf));
                     out_buf.Append(" MiB");
                 } else if (size_unsigned > 1024) {
                     double size_kib = (double)size_unsigned / 1024.0;
-                    out_buf.Append(FormatDouble(size_kib, 2, num_buf));
+                    out_buf.Append(FormatDouble(size_kib, 2, 2, num_buf));
                     out_buf.Append(" kiB");
                 } else {
                     out_buf.Append(FormatUnsignedToDecimal(size_unsigned, num_buf));
@@ -720,11 +868,11 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 }
                 if (size_unsigned > 1000 * 1000) {
                     double size_mib = (double)size_unsigned / (1000.0 * 1000.0);
-                    out_buf.Append(FormatDouble(size_mib, 2, num_buf));
+                    out_buf.Append(FormatDouble(size_mib, 2, 2, num_buf));
                     out_buf.Append(" MB");
                 } else if (size_unsigned > 1000) {
                     double size_kib = (double)size_unsigned / 1000.0;
-                    out_buf.Append(FormatDouble(size_kib, 2, num_buf));
+                    out_buf.Append(FormatDouble(size_kib, 2, 2, num_buf));
                     out_buf.Append(" kB");
                 } else {
                     out_buf.Append(FormatUnsignedToDecimal(size_unsigned, num_buf));
@@ -795,7 +943,8 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                                 case RG_SIZE(float): { arg2.u.d.value = *(const float *)ptr; } break;
                                 default: { RG_UNREACHABLE(); } break;
                             }
-                            arg2.u.d.precision = -1;
+                            arg2.u.d.min_prec = 0;
+                            arg2.u.d.max_prec = INT_MAX;
                         } break;
                         case FmtType::MemorySize: { arg2.u.size = *(const Size *)ptr; } break;
                         case FmtType::DiskSize: { arg2.u.size = *(const Size *)ptr; } break;

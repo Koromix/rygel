@@ -16,6 +16,35 @@
 
 namespace RG {
 
+void TestFormatDouble()
+{
+    TEST_FUNCTION("FormatDouble");
+
+    char buf[512];
+
+    // Simple stuff
+    TEST_STR(Fmt(buf, "%1", 0.0), "0");
+    TEST_STR(Fmt(buf, "%1", 1e-4), "0.0001");
+    TEST_STR(Fmt(buf, "%1", 1e-7), "1e-7");
+    TEST_STR(Fmt(buf, "%1", 9.999e-7), "9.999e-7");
+    TEST_STR(Fmt(buf, "%1", 1e10), "10000000000");
+    TEST_STR(Fmt(buf, "%1", 1e11), "100000000000");
+    TEST_STR(Fmt(buf, "%1", 1234e7), "12340000000");
+    TEST_STR(Fmt(buf, "%1", 1234e-2), "12.34");
+    TEST_STR(Fmt(buf, "%1", 1234e-6), "0.001234");
+    TEST_STR(Fmt(buf, "%1", 0.1), "0.1");
+    TEST_STR(Fmt(buf, "%1", double(0.1f)), "0.10000000149011612");
+
+    // Typical Grisu/Grisu2/Grisu3 errors
+    TEST_STR(Fmt(buf, "%1", 1e23), "1e+23");
+    TEST_STR(Fmt(buf, "%1", 9e-265), "9e-265");
+    TEST_STR(Fmt(buf, "%1", 5.423717798060526e+125), "5.423717798060526e+125");
+    TEST_STR(Fmt(buf, "%1", 1.372371880954233e-288), "1.372371880954233e-288");
+    TEST_STR(Fmt(buf, "%1", 55388492.622190244), "55388492.622190244");
+    TEST_STR(Fmt(buf, "%1", 2.2506787569811123e-253), "2.2506787569811123e-253");
+    TEST_STR(Fmt(buf, "%1", 2.9802322387695312e-8), "2.9802322387695312e-8");
+}
+
 void TestMatchPathName()
 {
     TEST_FUNCTION("MatchPathName");

@@ -7,6 +7,7 @@
 
 namespace RG {
 
+void TestFormatDouble();
 void TestMatchPathName();
 void TestOptionParser();
 
@@ -53,6 +54,7 @@ Options:
 
     if (test) {
         PrintLn(stderr, "Testing libcc");
+        TestFormatDouble();
         TestMatchPathName();
         TestOptionParser();
 
