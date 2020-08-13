@@ -85,12 +85,12 @@ namespace jkj {
 
 		JKJ_GRISU_EXACT_SAFEBUFFERS
 		inline uint128 umul128(std::uint64_t x, std::uint64_t y) noexcept {
-#if defined(_MSC_VER) && defined(_M_X64)
+#if (defined(__GNUC__) || defined(__clang__)) && defined(__SIZEOF_INT128__) && defined(__x86_64__)
+			return (unsigned __int128)(x) * (unsigned __int128)(y);
+#elif defined(_MSC_VER) && defined(_M_X64)
 			uint128 result;
 			result.low_ = _umul128(x, y, &result.high_);
 			return result;
-#elif (defined(__GNUC__) || defined(__clang__)) && defined(__SIZEOF_INT128__) && defined(__x86_64__)
-			return (unsigned __int128)(x) * (unsigned __int128)(y);
 #else
 			constexpr auto mask = (std::uint64_t(1) << 32) - std::uint64_t(1);
 
@@ -113,11 +113,11 @@ namespace jkj {
 
 		JKJ_GRISU_EXACT_SAFEBUFFERS
 		inline std::uint64_t umul128_upper64(std::uint64_t x, std::uint64_t y) noexcept {
-#if defined(_MSC_VER) && defined(_M_X64)
-			return __umulh(x, y);
-#elif (defined(__GNUC__) || defined(__clang__)) && defined(__SIZEOF_INT128__) && defined(__x86_64__)
+#if (defined(__GNUC__) || defined(__clang__)) && defined(__SIZEOF_INT128__) && defined(__x86_64__)
 			auto p = (unsigned __int128)(x) * (unsigned __int128)(y);
 			return std::uint64_t(p >> 64);
+#elif defined(_MSC_VER) && defined(_M_X64)
+			return __umulh(x, y);
 #else
 			constexpr auto mask = (std::uint64_t(1) << 32) - std::uint64_t(1);
 
@@ -143,13 +143,13 @@ namespace jkj {
 			auto g0 = umul128(x, y.high());
 			auto g10 = umul128_upper64(x, y.low());
 
-#if defined(_MSC_VER) && defined(_M_X64)
+#if (defined(__GNUC__) || defined(__clang__)) && defined(__SIZEOF_INT128__) && defined(__x86_64__)
+			return uint128{ g0.internal_ + g10 }.high();
+#elif defined(_MSC_VER) && defined(_M_X64)
 			std::uint64_t high, low;
 			auto carry = _addcarry_u64(0, g0.low(), g10, &low);
 			_addcarry_u64(carry, g0.high(), 0, &high);
 			return high;
-#elif (defined(__GNUC__) || defined(__clang__)) && defined(__SIZEOF_INT128__) && defined(__x86_64__)
-			return uint128{ g0.internal_ + g10 }.high();
 #else
 			auto intermediate = g0.low() + g10;
 			return g0.high() + (intermediate < g10);
@@ -178,16 +178,7 @@ namespace jkj {
 			static_assert(std::is_same_v<UInt, std::uint32_t> || std::is_same_v<UInt, std::uint64_t>);
 			assert(exp >= 1);
 			assert(x != 0);
-#if defined(_MSC_VER) && defined(_M_X64)
-			unsigned long index;
-			if constexpr (std::is_same_v<UInt, std::uint32_t>) {
-				_BitScanForward(&index, x);
-			}
-			else {
-				_BitScanForward64(&index, x);
-			}
-			return int(index) >= exp;
-#elif (defined(__GNUC__) || defined(__clang__)) && defined(__x86_64__)
+#if (defined(__GNUC__) || defined(__clang__)) && defined(__x86_64__)
 			int index;
 			if constexpr (std::is_same_v<UInt, std::uint32_t>) {
 				static_assert(sizeof(unsigned long) == 4,
@@ -200,6 +191,15 @@ namespace jkj {
 				index = __builtin_ctzll((unsigned long long)x);
 			}
 			return index >= exp;
+#elif defined(_MSC_VER) && defined(_M_X64)
+			unsigned long index;
+			if constexpr (std::is_same_v<UInt, std::uint32_t>) {
+				_BitScanForward(&index, x);
+			}
+			else {
+				_BitScanForward64(&index, x);
+			}
+			return int(index) >= exp;
 #else
 			if (exp >= int(sizeof(UInt) * 8)) {
 				return false;
@@ -1748,8 +1748,9 @@ namespace jkj {
 			using common_info<Float>::integer_check_exponent_upper_bound_for_p_p2;
 			using common_info<Float>::integer_check_exponent_upper_bound_for_p_p1;
 
+			// Clang/MSVC (clang-cl) fails when return type is set to auto for some reason
 			template <unsigned int e>
-			static constexpr auto power_of_10 = compute_power(extended_significand_type(10), e);
+			static constexpr extended_significand_type power_of_10 = compute_power(extended_significand_type(10), e);
 
 
 			//// The main algorithm assumes the input is a normal/subnormal finite number
