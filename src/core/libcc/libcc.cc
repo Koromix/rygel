@@ -607,13 +607,14 @@ static Span<char> FormatUnsignedToBinary(uint64_t value, char out_buf[64])
     return MakeSpan(out_buf, msb);
 }
 
-static int FakeDoublePrecision(Span<char> buf, int K, int min_prec, int max_prec)
+static Size FakeFloatPrecision(Span<char> buf, int K, int min_prec, int max_prec, int *out_K)
 {
     if (-K < min_prec) {
         int delta = min_prec + K;
         memset(buf.end(), '0', delta);
 
-        return delta;
+        *out_K -= delta;
+        return buf.len + delta;
     } else if (-K > max_prec) {
         int truncate = (int)buf.len + K + max_prec;
 
@@ -631,20 +632,17 @@ static int FakeDoublePrecision(Span<char> buf, int K, int min_prec, int max_prec
             truncate = std::max(i, (int)buf.len + K + min_prec);
         }
 
-        return truncate - (int)buf.len;
+        *out_K -= (int)(truncate - buf.len);
+        return truncate;
     } else {
-        return 0;
+        return buf.len;
     }
 }
 
-static Span<char> PrettifyDouble(Span<char> buf, int K, int min_prec, int max_prec)
+static Span<char> PrettifyFloat(Span<char> buf, int K, int min_prec, int max_prec)
 {
     // Apply precision settings after conversion
-    {
-        int fake = FakeDoublePrecision(buf, K, min_prec, max_prec);
-        buf.len += fake;
-        K -= fake;
-    }
+    buf.len = FakeFloatPrecision(buf, K, min_prec, max_prec, &K);
 
     int KK = (int)buf.len + K;
 
@@ -672,14 +670,10 @@ static Span<char> PrettifyDouble(Span<char> buf, int K, int min_prec, int max_pr
     return buf;
 }
 
-static Span<char> ExponentiateDouble(Span<char> buf, int K, int min_prec, int max_prec)
+static Span<char> ExponentiateFloat(Span<char> buf, int K, int min_prec, int max_prec)
 {
     // Apply precision settings after conversion
-    {
-        int fake = FakeDoublePrecision(buf, 1 - buf.len, min_prec, max_prec);
-        buf.len += fake;
-        K -= fake;
-    }
+    buf.len = FakeFloatPrecision(buf, (int)(1 - buf.len), min_prec, max_prec, &K);
 
     int exponent = (int)buf.len + K - 1;
 
@@ -719,7 +713,8 @@ static Span<char> ExponentiateDouble(Span<char> buf, int K, int min_prec, int ma
 }
 
 // NaN and Inf are handled by caller
-static Span<const char> FormatDouble(double value, int min_prec, int max_prec, char out_buf[32])
+template <typename T>
+Span<const char> FormatFloatingPoint(T value, int min_prec, int max_prec, char out_buf[32])
 {
     auto v = jkj::grisu_exact(value);
 
@@ -738,10 +733,10 @@ static Span<const char> FormatDouble(double value, int min_prec, int max_prec, c
         }
 
         return buf;
-    } else if (KK <= -6 || KK > 21) {
-        return ExponentiateDouble(buf, v.exponent, min_prec, max_prec);
+    } else if (KK > -6 && KK <= 21) {
+        return PrettifyFloat(buf, v.exponent, min_prec, max_prec);
     } else {
-        return PrettifyDouble(buf, v.exponent, min_prec, max_prec);
+        return ExponentiateFloat(buf, v.exponent, min_prec, max_prec);
     }
 }
 
@@ -787,6 +782,38 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             case FmtType::Unsigned: {
                 out = FormatUnsignedToDecimal(arg.u.u, num_buf);
             } break;
+            case FmtType::Float: {
+                static const uint32_t ExponentMask = 0x7f800000u;
+                static const uint32_t MantissaMask = 0x007fffffu;
+                static const uint32_t SignMask = 0x80000000u;
+
+                union { float f; uint32_t u32; } u;
+                u.f = arg.u.f.value;
+
+                if ((u.u32 & ExponentMask) == ExponentMask) {
+                    uint32_t mantissa = u.u32 & MantissaMask;
+
+                    if (mantissa) {
+                        out = "NaN";
+                    } else {
+                        out = (u.u32 & SignMask) ? "-Inf" : "Inf";
+                    }
+                } else {
+                    if (u.u32 & SignMask) {
+                        if (arg.pad_len < 0 && arg.pad_char == '0') {
+                            append('-');
+                            pad_len++;
+                        } else {
+                            out_buf.Append('-');
+                        }
+
+                        out_buf.Append(FormatFloatingPoint(-u.f, arg.u.f.min_prec, arg.u.f.max_prec, num_buf));
+                        out = out_buf;
+                    } else {
+                        out = FormatFloatingPoint(u.f, arg.u.f.min_prec, arg.u.f.max_prec, num_buf);
+                    }
+                }
+            } break;
             case FmtType::Double: {
                 static const uint64_t ExponentMask = 0x7FF0000000000000ull;
                 static const uint64_t MantissaMask = 0x000FFFFFFFFFFFFFull;
@@ -812,10 +839,10 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                             out_buf.Append('-');
                         }
 
-                        out_buf.Append(FormatDouble(-u.d, arg.u.d.min_prec, arg.u.d.max_prec, num_buf));
+                        out_buf.Append(FormatFloatingPoint(-u.d, arg.u.d.min_prec, arg.u.d.max_prec, num_buf));
                         out = out_buf;
                     } else {
-                        out = FormatDouble(u.d, arg.u.d.min_prec, arg.u.d.max_prec, num_buf);
+                        out = FormatFloatingPoint(u.d, arg.u.d.min_prec, arg.u.d.max_prec, num_buf);
                     }
                 }
             } break;
@@ -841,11 +868,11 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 }
                 if (size_unsigned > 1024 * 1024) {
                     double size_mib = (double)size_unsigned / (1024.0 * 1024.0);
-                    out_buf.Append(FormatDouble(size_mib, 2, 2, num_buf));
+                    out_buf.Append(FormatFloatingPoint(size_mib, 2, 2, num_buf));
                     out_buf.Append(" MiB");
                 } else if (size_unsigned > 1024) {
                     double size_kib = (double)size_unsigned / 1024.0;
-                    out_buf.Append(FormatDouble(size_kib, 2, 2, num_buf));
+                    out_buf.Append(FormatFloatingPoint(size_kib, 2, 2, num_buf));
                     out_buf.Append(" kiB");
                 } else {
                     out_buf.Append(FormatUnsignedToDecimal(size_unsigned, num_buf));
@@ -868,11 +895,11 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 }
                 if (size_unsigned > 1000 * 1000) {
                     double size_mib = (double)size_unsigned / (1000.0 * 1000.0);
-                    out_buf.Append(FormatDouble(size_mib, 2, 2, num_buf));
+                    out_buf.Append(FormatFloatingPoint(size_mib, 2, 2, num_buf));
                     out_buf.Append(" MB");
                 } else if (size_unsigned > 1000) {
                     double size_kib = (double)size_unsigned / 1000.0;
-                    out_buf.Append(FormatDouble(size_kib, 2, 2, num_buf));
+                    out_buf.Append(FormatFloatingPoint(size_kib, 2, 2, num_buf));
                     out_buf.Append(" kB");
                 } else {
                     out_buf.Append(FormatUnsignedToDecimal(size_unsigned, num_buf));
@@ -937,12 +964,13 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                                 default: { RG_UNREACHABLE(); } break;
                             }
                         } break;
+                        case FmtType::Float: {
+                            arg2.u.f.value = *(const float *)ptr;
+                            arg2.u.d.min_prec = 0;
+                            arg2.u.d.max_prec = INT_MAX;
+                        } break;
                         case FmtType::Double: {
-                            switch (arg.u.span.type_len) {
-                                case RG_SIZE(double): { arg2.u.d.value = *(const double *)ptr; } break;
-                                case RG_SIZE(float): { arg2.u.d.value = *(const float *)ptr; } break;
-                                default: { RG_UNREACHABLE(); } break;
-                            }
+                            arg2.u.d.value = *(const double *)ptr;
                             arg2.u.d.min_prec = 0;
                             arg2.u.d.max_prec = INT_MAX;
                         } break;

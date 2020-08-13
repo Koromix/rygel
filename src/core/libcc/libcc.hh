@@ -2765,6 +2765,7 @@ enum class FmtType {
     Bool,
     Integer,
     Unsigned,
+    Float,
     Double,
     Binary,
     Hexadecimal,
@@ -2785,6 +2786,11 @@ public:
         bool b;
         int64_t i;
         uint64_t u;
+        struct {
+            float value;
+            int min_prec;
+            int max_prec;
+        } f;
         struct {
             double value;
             int min_prec;
@@ -2821,7 +2827,7 @@ public:
     FmtArg(unsigned long i) : type(FmtType::Unsigned) { u.u = i; }
     FmtArg(long long i) : type(FmtType::Integer) { u.i = i; }
     FmtArg(unsigned long long i) : type(FmtType::Unsigned) { u.u = i; }
-    FmtArg(float f) : type(FmtType::Double) { u.d = { (double)f, 0, INT_MAX }; }
+    FmtArg(float f) : type(FmtType::Float) { u.f = { f, 0, INT_MAX }; }
     FmtArg(double d) : type(FmtType::Double) { u.d = { d, 0, INT_MAX }; }
     FmtArg(const void *ptr) : type(FmtType::Hexadecimal) { u.u = (uint64_t)ptr; }
     FmtArg(const Date &date) : type(FmtType::Date) { u.date = date; }
@@ -2845,6 +2851,18 @@ static inline FmtArg FmtHex(uint64_t u)
     arg.u.u = u;
     return arg;
 }
+
+static inline FmtArg FmtFloat(float f, int min_prec, int max_prec)
+{
+    FmtArg arg;
+    arg.type = FmtType::Float;
+    arg.u.f.value = f;
+    arg.u.f.min_prec = min_prec;
+    arg.u.f.max_prec = max_prec;
+    return arg;
+}
+static inline FmtArg FmtFloat(float f, int prec) { return FmtFloat(f, prec, prec); }
+static inline FmtArg FmtFloat(float f) { return FmtFloat(f, 0, INT_MAX); }
 
 static inline FmtArg FmtDouble(double d, int min_prec, int max_prec)
 {

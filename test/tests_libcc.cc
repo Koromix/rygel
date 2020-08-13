@@ -32,7 +32,9 @@ void TestFormatDouble()
     TEST_STR(Fmt(buf, "%1", 1234e7), "12340000000");
     TEST_STR(Fmt(buf, "%1", 1234e-2), "12.34");
     TEST_STR(Fmt(buf, "%1", 1234e-6), "0.001234");
-    TEST_STR(Fmt(buf, "%1", 0.1), "0.1");
+
+    // Float vs Double
+    TEST_STR(Fmt(buf, "%1", 0.1f), "0.1");
     TEST_STR(Fmt(buf, "%1", double(0.1f)), "0.10000000149011612");
 
     // Typical Grisu/Grisu2/Grisu3 errors
