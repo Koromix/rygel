@@ -25,8 +25,8 @@ printLn("Test Unicode = ", изменяемый + α)
 # Les boucles for permettront à terme d'itérer sur différents objets, en attendant d'avoir
 # des objets on peut déjà itérer sur un intervalle d'entiers.
 
-for i in 2...5
-    for j in 3..6
+for i in 2:5
+    for j in 3:6
         printLn("for loop ", i, " ", j)
     end
 end
@@ -51,7 +51,7 @@ p := 5
 # boucle et continue court-circuite le reste du contenue et va directement à l'itération suivante.
 
 printLn("Testing break and continue")
-for i in 1..8
+for i in 1:8
     print("Outler loop ", i)
     if i == 3
         printLn("    [SKIPPING!!]")
@@ -135,7 +135,7 @@ let nn: Null = test()
 printLn(nn)
 
 func test()
-    for j in 0..8
+    for j in 0:8
     end
 end
 

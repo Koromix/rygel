@@ -269,11 +269,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     if (digit < 10) {
                         overflow |= (value > ((uint64_t)INT64_MAX - digit) / 10);
                         value = (value * 10) + (code[next] - '0');
-                    } else if (code[next] == '.') {
-                        // Could be a range operator (.., ...), don't mess it up!
-                        fp = (next + 1 >= code.len || code[next + 1] != '.');
-                        break;
-                    } else if (code[next] == 'e' || code[next] == 'E') {
+                    } else if (code[next] == '.' || code[next] == 'e' || code[next] == 'E') {
                         fp = true;
                         break;
                     } else if (code[next] == '_') {
@@ -417,7 +413,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     // Support '.dddd' float literals
                     TokenizeFloat();
                 } else {
-                    Token3('.', '.', TokenKind::DotDotDot) || Token2('.', TokenKind::DotDot) || Token1(TokenKind::Dot);
+                    Token1(TokenKind::Dot);
                 }
             } break;
             case ':': { Token2('=', TokenKind::Reassign) || Token1(TokenKind::Colon); } break;
@@ -594,13 +590,8 @@ void Lexer::TokenizeFloat()
         } else if (code[next] == '_') {
             // Skip
         } else if (code[next] == '.') {
-            // Could be a range operator!
-            if (next + 1 >= code.len || code[next + 1] != '.') {
-                MarkError(next, "Number literals cannot contain multiple '.' characters");
-                return;
-            }
-
-            break;
+            MarkError(next, "Number literals cannot contain multiple '.' characters");
+            return;
         } else {
             break;
         }

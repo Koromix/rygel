@@ -32,8 +32,6 @@ TOKEN(Identifier, "<identifier>")
 
 // Operators
 TOKEN(Dot, ".")
-TOKEN(DotDot, "..")
-TOKEN(DotDotDot, "...")
 TOKEN(Colon, ":")
 TOKEN(LeftParenthesis, "(")
 TOKEN(RightParenthesis, ")")

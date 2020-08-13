@@ -1045,15 +1045,9 @@ void Parser::ParseFor()
         return;
     }
 
-    bool inclusive;
     ConsumeToken(TokenKind::In);
     ParseExpressionOfType(GetBasicType(PrimitiveType::Int));
-    if (MatchToken(TokenKind::DotDotDot)) {
-        inclusive = false;
-    } else {
-        ConsumeToken(TokenKind::DotDot);
-        inclusive = true;
-    }
+    ConsumeToken(TokenKind::Colon);
     ParseExpressionOfType(GetBasicType(PrimitiveType::Int));
 
     // Make sure start and end value remain on the stack
@@ -1067,7 +1061,7 @@ void Parser::ParseFor()
 
     ir.Append({Opcode::LoadLocalInt, {.i = it->offset}});
     ir.Append({Opcode::LoadLocalInt, {.i = it->offset - 1}});
-    ir.Append({inclusive ? Opcode::LessOrEqualInt : Opcode::LessThanInt});
+    ir.Append({Opcode::LessThanInt});
     ir.Append({Opcode::BranchIfFalse});
 
     // Break and continue need to apply to for loop blocks

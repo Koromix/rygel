@@ -3,7 +3,7 @@ func fib(n: Int): Int
     return fib(n - 1) + fib(n - 2)
 end
 
-for iter in 1..11
+for iter in 1:11
     printLn("---------------------------")
     printLn("ITERATION ", iter)
     printLn("---------------------------")
@@ -123,4 +123,4 @@ func func0(): String
 end
 func inline0(): String do return "inline0()"
 
-for i in 1..14 do printLn(i)
+for i in 1:14 do printLn(i)

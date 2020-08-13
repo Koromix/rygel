@@ -27,7 +27,7 @@ var BlikHighlightRules = function() {
             regex: "(?:let|for|func|if|else|while|begin|end|return|in|do|mut|break|continue)\\b"
         }, {
             token: "keyword.operator",
-            regex: /<<=?|>>=?|&&|\|\||[:*%\/+\-&\^|~!<>=]=?|\.\.\.?/
+            regex: /<<=?|>>=?|&&|\|\||[:*%\/+\-&\^|~!<>=]=?/
         }, {
             token: "storage.type",
             regex: "(Null|Bool|Int|Float|String)\\b"
