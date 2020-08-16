@@ -200,7 +200,7 @@ let form_exec = new function() {
             let enable_validate = !builder.hasErrors() && !state.changed &&
                                   record.complete[model.key] === false;
 
-            builder.action('Enregistrer', {disabled: !enable_save}, e => uilder.submit());
+            builder.action('Enregistrer', {disabled: !enable_save}, e => builder.submit());
             if (route_page.options.use_validation)
                 builder.action('Valider', {disabled: !enable_save}, e => showValidateDialog(e, builder.submit));
             builder.action('Fermer', {disabled: !state.changed && record.mtime == null}, e => handleNewClick(e, state.changed));
