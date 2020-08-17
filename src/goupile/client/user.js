@@ -5,6 +5,9 @@
 let user = new function() {
     let self = this;
 
+    let settings = {};
+    let session_rnd = null;
+
     this.runLogin = function() {
         let state = new PageState;
 
@@ -111,6 +114,46 @@ let user = new function() {
             return false;
         }
     };
+
+    this.fetchSettings = async function(force = false) {
+        let new_rnd = util.getCookie('session_rnd');
+
+        if (!force) {
+            if (new_rnd == session_rnd) {
+                return false;
+            } else if (new_rnd == null) {
+                settings = {};
+                session_rnd = null;
+
+                return true;
+            }
+        }
+
+        if (net.isPlugged() || force) {
+            settings = {};
+            session_rnd = null;
+
+            try {
+                let response = await net.fetch(util.pasteURL(`${env.base_url}api/settings.json`, {_dc: new_rnd}));
+
+                if (response.ok) {
+                    settings = await response.json();
+                    session_rnd = new_rnd;
+                } else {
+                    // The request has failed and could have deleted the session_rnd cookie
+                    session_rnd = util.getCookie('session_rnd');
+                }
+            } catch (err) {
+                // Too bad :)
+            }
+
+            return true;
+        }
+    };
+
+    this.isConnected = function() { return !!session_rnd; };
+    this.getUserName = function() { return settings.username; };
+    this.hasPermission = function(perm) { return settings.permissions && !!settings.permissions[perm]; };
 
     this.getLockURL = function() {
         let url = localStorage.getItem('lock_url');

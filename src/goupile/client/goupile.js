@@ -14,10 +14,6 @@ let goupile = new function() {
     let tablet_mq = window.matchMedia('(pointer: coarse)');
     let standalone_mq = window.matchMedia('(display-mode: standalone)');
 
-    // This probably belongs to user.js
-    let settings = {};
-    let settings_rnd;
-
     let route_asset;
     let route_url;
 
@@ -141,7 +137,7 @@ let goupile = new function() {
 
     // Can be launched multiple times (e.g. when main.js is edited)
     this.initMain = async function(code = undefined) {
-        await fetchSettings();
+        await user.fetchSettings();
 
         if (self.isConnected() || env.allow_guests) {
             try {
@@ -186,45 +182,6 @@ let goupile = new function() {
         await self.go(route_url || window.location.href, false);
     };
 
-    async function fetchSettings(force = false) {
-        let session_rnd = util.getCookie('session_rnd');
-
-        if (!force) {
-            if (session_rnd == settings_rnd) {
-                return false;
-            } else if (session_rnd == null) {
-                settings = {};
-                settings_rnd = null;
-
-                return true;
-            }
-        }
-
-        if (net.isPlugged() || force) {
-            settings = {};
-
-            try {
-                let response = await net.fetch(util.pasteURL(`${env.base_url}api/settings.json`, {
-                    rnd: session_rnd
-                }));
-
-                if (response.ok) {
-                    settings = await response.json();
-                } else {
-                    // The request has failed and could have deleted the session_rnd cookie
-                    session_rnd = util.getCookie('session_rnd');
-                }
-
-                settings_rnd = session_rnd;
-                return true;
-            } catch (err) {
-                // Too bad :)
-            }
-
-            return true;
-        }
-    }
-
     function changeCSS(css) {
         if (!style_el) {
             style_el = document.createElement('style');
@@ -245,7 +202,7 @@ let goupile = new function() {
         }
     }
 
-    this.isConnected = function() { return !!settings_rnd; };
+    this.isConnected = function() { return user.isConnected(); };
     this.isTablet = function() { return tablet_mq.matches; };
     this.isStandalone = function() { return standalone_mq.matches; };
     this.isLocked = function() { return !!user.getLockURL(); };
@@ -313,15 +270,15 @@ let goupile = new function() {
                 }
 
                 // Restart application after session changes
-                if (await fetchSettings()) {
+                if (await user.fetchSettings()) {
                     self.initMain();
                     return;
                 }
 
                 // Ensure valid menu and panel configuration
                 if (!user.getLockURL()) {
-                    let show_develop = settings.develop;
-                    let show_data = settings.edit && route_asset && route_asset.form;
+                    let show_develop = user.hasPermission('develop');
+                    let show_data = user.hasPermission('edit') && route_asset && route_asset.form;
 
                     let correct_mode = (left_panel == null ||
                                         (left_panel === 'files' && show_develop) ||
@@ -442,8 +399,8 @@ let goupile = new function() {
     }
 
     function renderFullMenu() {
-        let show_develop = settings.develop;
-        let show_data = settings.edit && route_asset && route_asset.form;
+        let show_develop = user.hasPermission('develop');
+        let show_data = user.hasPermission('edit') && route_asset && route_asset.form;
 
         return html`
             ${show_develop ? html`
@@ -499,7 +456,7 @@ let goupile = new function() {
                              @click=${user.showLoginDialog}>Connexion</button>` : ''}
             ${self.isConnected() ? html`
                 <div class="gp_dropdown right">
-                    <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${settings.username}</button>
+                    <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${user.getUserName()}</button>
                     <div>
                         <button type="button" @click=${e => user.showLockDialog(e, route_url)}>Verrouiller</button>
                         <hr/>
@@ -523,7 +480,7 @@ let goupile = new function() {
             net.setPlugged(false);
         } else {
             net.setPlugged(true);
-            await fetchSettings(true);
+            await user.fetchSettings(true);
         }
 
         await self.go();
