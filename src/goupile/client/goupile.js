@@ -713,7 +713,7 @@ let goupile = new function() {
         func(popup_builder, closePopup);
         if (action != null)
             popup_builder.action(action, {disabled: !popup_builder.isValid()}, popup_builder.submit);
-        popup_builder.action('Annuler', closePopup);
+        popup_builder.action('Annuler', {}, closePopup);
 
         render(html`
             <form @submit=${e => e.preventDefault()}>
