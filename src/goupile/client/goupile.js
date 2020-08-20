@@ -16,7 +16,6 @@ let goupile = new function() {
     let standalone_mq = window.matchMedia('(display-mode: standalone)');
 
     let route_asset;
-    let route_url;
 
     let running = 0;
     let restart = false;
@@ -186,7 +185,7 @@ let goupile = new function() {
             app = null;
         }
 
-        await self.go(route_url || window.location.href, false);
+        await self.go(window.location.href, false);
     };
 
     function changeCSS(css) {
@@ -256,10 +255,9 @@ let goupile = new function() {
                         }
                     }
 
-                    // Update URL and history
-                    route_url = url.pathname;
+                    // Update history
                     if (push_history)
-                        window.history.pushState(null, null, route_url);
+                        window.history.pushState(null, null, url.pathname);
 
                     // Route URL through appropriate controller
                     if (route_asset) {
