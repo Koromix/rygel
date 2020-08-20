@@ -248,7 +248,7 @@ function VirtualRecords(db) {
                 record.values[key] = undefined;
         }
 
-        if (pages_set.size) {
+        if (record.version === record.versions.length - 1 && pages_set.size) {
             let list = Array.from(pages_set);
             console.error(`Damaged record ${record.id} (missing pages: ${list.join(', ')})`);
         }
