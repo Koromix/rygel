@@ -6,8 +6,8 @@ let form_exec = new function() {
     let self = this;
 
     let route_page;
-    let context_records = new BTree;
-    let page_states = {};
+    let ctx_records = new BTree;
+    let ctx_states = {};
 
     let show_complete = true;
 
@@ -22,31 +22,31 @@ let form_exec = new function() {
         route_page = page;
 
         // Clear inappropriate records (wrong form)
-        if (context_records.size) {
-            let record0 = context_records.first();
+        if (ctx_records.size) {
+            let record0 = ctx_records.first();
 
             if (record0.table !== route_page.form.key)
-                context_records.clear();
+                ctx_records.clear();
         }
 
         // Sync context records
         if (what === 'multi') {
             multi_mode = true;
         } else if (what === 'new') {
-            let record = context_records.first();
+            let record = ctx_records.first();
 
             if (!record || record.mtime != null)
                 record = vrec.create(route_page.form.key);
 
-            context_records.clear();
-            context_records.set(record.id, record);
+            ctx_records.clear();
+            ctx_records.set(record.id, record);
 
             multi_mode = false;
         } else if (what == null) {
             let record = vrec.create(route_page.form.key);
 
-            context_records.clear();
-            context_records.set(record.id, record);
+            ctx_records.clear();
+            ctx_records.set(record.id, record);
 
             multi_mode = false;
         } else {
@@ -54,8 +54,8 @@ let form_exec = new function() {
             if (version != null)
                 version = parseInt(version, 10);
 
-            let record = context_records.get(id);
-            context_records.clear();
+            let record = ctx_records.get(id);
+            ctx_records.clear();
 
             if (record) {
                 if (record.table !== route_page.form.key) {
@@ -80,19 +80,19 @@ let form_exec = new function() {
                     record = vrec.create(route_page.form.key);
                 }
 
-                delete page_states[id];
+                delete ctx_states[id];
             }
 
-            context_records.set(record.id, record);
+            ctx_records.set(record.id, record);
 
             multi_mode = false;
         }
 
         // Clean up unused page states
         let new_states = {};
-        for (let id of context_records.keys())
-            new_states[id] = page_states[id];
-        page_states = new_states;
+        for (let id of ctx_records.keys())
+            new_states[id] = ctx_states[id];
+        ctx_states = new_states;
     };
 
     this.runPage = function(code, panel_el) {
@@ -100,9 +100,9 @@ let form_exec = new function() {
                             'values', 'variables', 'route', 'scratch', code);
 
         if (multi_mode) {
-            if (context_records.size && multi_columns.size) {
+            if (ctx_records.size && multi_columns.size) {
                 render(html`
-                    <div class="af_main">${util.map(context_records.values(), record => {
+                    <div class="af_main">${util.map(ctx_records.values(), record => {
                         // Each entry needs to update itself without doing a full render
                         let el = document.createElement('div');
                         el.className = 'fm_entry';
@@ -112,27 +112,27 @@ let form_exec = new function() {
                         return el;
                     })}</div>
                 `, panel_el);
-            } else if (!context_records.size) {
+            } else if (!ctx_records.size) {
                 render(html`<div class="af_main">Aucun enregistrement sélectionné</div>`, panel_el);
             } else {
                 render(html`<div class="af_main">Aucune colonne sélectionnée</div>`, panel_el);
             }
         } else {
-            if (!context_records.size) {
+            if (!ctx_records.size) {
                 let record = vrec.create(route_page.form.key);
-                context_records.set(record.id, record);
+                ctx_records.set(record.id, record);
             }
 
-            let record = context_records.first();
+            let record = ctx_records.first();
             runPage(func, record, panel_el);
         }
     };
 
     function runPageMulti(func, record, columns, el) {
-        let state = page_states[record.id];
+        let state = ctx_states[record.id];
         if (!state) {
             state = new PageState;
-            page_states[record.id] = state;
+            ctx_states[record.id] = state;
         }
 
         let model = PageModel(route_page.key);
@@ -169,10 +169,10 @@ let form_exec = new function() {
     }
 
     function runPage(func, record, el) {
-        let state = page_states[record.id];
+        let state = ctx_states[record.id];
         if (!state) {
             state = new PageState;
-            page_states[record.id] = state;
+            ctx_states[record.id] = state;
         }
 
         let model = new PageModel(route_page.key);
@@ -252,7 +252,7 @@ let form_exec = new function() {
         goupile.popup(e, null, (page, close) => {
             // Goupile restarts popup functions after major state changes to give
             // them a chance to update. This allows us to change the highlighted version!
-            let record = context_records.get(id);
+            let record = ctx_records.get(id);
             if (!record)
                 close();
 
@@ -310,8 +310,8 @@ let form_exec = new function() {
             let record2 = await vrec.save(record, model.key, model.variables);
             entry.success('Données enregistrées');
 
-            if (context_records.has(record2.id))
-                context_records.set(record2.id, record2);
+            if (ctx_records.has(record2.id))
+                ctx_records.set(record2.id, record2);
 
             return true;
         } catch (err) {
@@ -397,7 +397,7 @@ let form_exec = new function() {
                     ${records.map(record => {
                         if (show_complete || !complete_set.has(record.id)) {
                             return html`
-                                <tr class=${context_records.has(record.id) ? 'selected' : ''}>
+                                <tr class=${ctx_records.has(record.id) ? 'selected' : ''}>
                                     <th>
                                         <a @click=${e => handleEditClick(record)}>🔍\uFE0E</a>
                                         <a @click=${e => showDeleteDialog(e, record)}>✕</a>
@@ -434,7 +434,7 @@ let form_exec = new function() {
     this.runData = async function() {
         let records = await vrec.loadAll(route_page.form.key);
         let raw_columns = await vrec.listColumns(route_page.form.key);
-        let columns = orderColumns(route_page.form.pages, raw_columns);
+        let columns = self.orderColumns(route_page.form.pages, raw_columns);
 
         renderRecords(records, columns);
     };
@@ -452,7 +452,7 @@ let form_exec = new function() {
         let count0 = 0;
         if (multi_mode) {
             for (let record of records) {
-                if (context_records.has(record.id)) {
+                if (ctx_records.has(record.id)) {
                     count1++;
                 } else {
                     count0++;
@@ -517,10 +517,10 @@ let form_exec = new function() {
                     ${empty_msg ?
                         html`<tr><td colspan=${2 + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : ''}
                     ${records.map(record => html`
-                        <tr class=${context_records.has(record.id) ? 'selected' : ''}>
+                        <tr class=${ctx_records.has(record.id) ? 'selected' : ''}>
                             ${!multi_mode ? html`<th><a @click=${e => handleEditClick(record)}>🔍\uFE0E</a>
                                                       <a @click=${e => showDeleteDialog(e, record)}>✕</a></th>` : ''}
-                            ${multi_mode ? html`<th><input type="checkbox" .checked=${context_records.has(record.id)}
+                            ${multi_mode ? html`<th><input type="checkbox" .checked=${ctx_records.has(record.id)}
                                                             @click=${e => handleEditClick(record)} /></th>` : ''}
                             <td class="id">${record.sequence || 'local'}</td>
 
@@ -559,26 +559,26 @@ let form_exec = new function() {
     function toggleSelectionMode() {
         multi_mode = !multi_mode;
 
-        let record0 = context_records.size ? context_records.values().next().value : null;
+        let record0 = ctx_records.size ? ctx_records.values().next().value : null;
 
         if (multi_mode) {
             multi_columns.clear();
             if (record0 && record0.mtime == null)
-                context_records.clear();
+                ctx_records.clear();
         } else if (record0) {
-            context_records.clear();
-            context_records.set(record0.id, record0);
+            ctx_records.clear();
+            ctx_records.set(record0.id, record0);
         }
 
         goupile.go();
     }
 
     function toggleAllRecords(records, enable) {
-        context_records.clear();
+        ctx_records.clear();
 
         if (enable) {
             for (let record of records)
-                context_records.set(record.id, record);
+                ctx_records.set(record.id, record);
         }
 
         goupile.go();
@@ -600,7 +600,7 @@ let form_exec = new function() {
 
         let records = await vrec.loadAll(form.key);
         let raw_columns = await vrec.listColumns(form.key);
-        let columns = orderColumns(form.pages, raw_columns);
+        let columns = self.orderColumns(form.pages, raw_columns);
 
         if (!columns.length) {
             log.error('Impossible d\'exporter pour le moment (colonnes inconnues)');
@@ -626,7 +626,8 @@ let form_exec = new function() {
         }
     }
 
-    function orderColumns(pages, raw_columns) {
+    // XXX: This belongs in VirtualRecords, and it should be able to enumerate pages
+    this.orderColumns = function(pages, raw_columns) {
         raw_columns = raw_columns.slice();
         raw_columns.sort((col1, col2) => util.compareValues(col1.key, col2.key));
 
@@ -738,9 +739,11 @@ let form_exec = new function() {
             category: page.label,
             title: col.hasOwnProperty('prop') ? `${col.variable}.${col.prop}` : col.variable,
             variable: col.variable,
-            prop: col.prop,
             type: col.type
         };
+
+        if (col.hasOwnProperty('prop'))
+            col2.prop = col.prop;
 
         return col2;
     }
@@ -748,18 +751,18 @@ let form_exec = new function() {
     function handleEditClick(record) {
         let enable_overview = false;
 
-        if (!context_records.has(record.id)) {
+        if (!ctx_records.has(record.id)) {
             if (!multi_mode)
-                context_records.clear();
-            context_records.set(record.id, record);
+                ctx_records.clear();
+            ctx_records.set(record.id, record);
 
             enable_overview = !multi_mode;
         } else {
-            context_records.delete(record.id);
+            ctx_records.delete(record.id);
 
-            if (!multi_mode && !context_records.size) {
+            if (!multi_mode && !ctx_records.size) {
                 let record = vrec.create(route_page.form.key);
-                context_records.set(record.id, record);
+                ctx_records.set(record.id, record);
             }
         }
 
@@ -778,7 +781,7 @@ let form_exec = new function() {
                 close();
 
                 await vrec.delete(record.table, record.id);
-                context_records.delete(record.id, record);
+                ctx_records.delete(record.id, record);
 
                 goupile.go();
             };
@@ -790,15 +793,15 @@ let form_exec = new function() {
 
         if (multi_mode) {
             url += 'multi';
-        } else if (context_records.size) {
-            let record = context_records.first();
+        } else if (ctx_records.size) {
+            let record = ctx_records.first();
 
             if (record.mtime != null) {
                 url += record.id;
                 if (record.version !== record.versions.length - 1)
                     url += `@${record.version}`;
             } else {
-                let state = page_states[record.id];
+                let state = ctx_states[record.id];
                 if (state && state.changed)
                     url += 'new';
             }
@@ -820,7 +823,7 @@ let form_exec = new function() {
                     url += `@${record.version}`;
                 }
             } else {
-                let state = page_states[record.id];
+                let state = ctx_states[record.id];
                 if (state && state.changed)
                     url += 'new';
             }
